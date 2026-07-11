@@ -28,7 +28,7 @@ import { DEFAULT_OCR_ZONES, inspectPrintQuality, type OcrZone } from '@/lib/ocr'
 import type { PrintQualityReport } from '@/lib/validation';
 
 type ReadingMode = 'precision' | 'fast';
-type ResultTab = 'resumo' | 'ficha' | 'habilidades' | 'posicoes' | 'dados';
+type ResultTab = 'resumo' | 'mapa' | 'ficha' | 'habilidades' | 'posicoes' | 'dados';
 
 type ManualFields = {
   playerName: string;
@@ -477,6 +477,218 @@ const tacticalLabels: Record<string, string> = {
   longBall: 'Passe longo'
 };
 
+const teamMapLabels: Record<string, string> = {
+  marcacao: 'Marcação',
+  cobertura: 'Cobertura',
+  saidaDeBola: 'Saída de bola',
+  passe: 'Passe',
+  criacao: 'Criação',
+  aceleracao: 'Aceleração',
+  finalizacao: 'Ataque/finalização',
+  jogoAereo: 'Jogo aéreo',
+  fisico: 'Físico'
+};
+
+type SquadPhaseKey = keyof AnalysisResult['teamMap']['sectorScores'];
+type SquadReport = {
+  playerCount: number;
+  phaseScores: Record<SquadPhaseKey, number>;
+  globalScore: number;
+  balanceLabel: string;
+  composition: { goleiros: number; defensores: number; meio: number; ataque: number; lateraisAlas: number; volantes: number; criadores: number; finalizadores: number };
+  topByPhase: Array<{ title: string; player: string; position: string; score: number; functionLabel: string }>;
+  warnings: string[];
+  suggestions: string[];
+  gamePlan: string[];
+};
+
+const PHASE_KEYS: SquadPhaseKey[] = ['marcacao', 'cobertura', 'saidaDeBola', 'passe', 'criacao', 'aceleracao', 'finalizacao', 'jogoAereo', 'fisico'];
+
+function avgNumbers(values: number[]) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  if (!clean.length) return 0;
+  return Math.round(clean.reduce((sum, value) => sum + value, 0) / clean.length);
+}
+
+function clampTeamScore(value: number) {
+  return Math.max(1, Math.min(100, Math.round(value)));
+}
+
+function uniqueSavedResults(history: SavedAnalysis[]) {
+  const map = new Map<string, AnalysisResult>();
+  for (const item of history) {
+    const key = `${item.result.parsed.playerName.toLowerCase()}-${item.result.bestPosition.code}-${item.result.parsed.playstyle ?? ''}`;
+    if (!map.has(key)) map.set(key, item.result);
+  }
+  return Array.from(map.values()).slice(0, 30);
+}
+
+function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation, teamStyle: TacticalStyle): SquadReport | null {
+  const results = uniqueSavedResults(history);
+  if (!results.length) return null;
+
+  const phaseScores = Object.fromEntries(PHASE_KEYS.map((key) => [key, avgNumbers(results.map((result) => Number(result.teamMap?.sectorScores?.[key] ?? 0))) ])) as Record<SquadPhaseKey, number>;
+  const globalScore = clampTeamScore(avgNumbers([
+    phaseScores.marcacao,
+    phaseScores.cobertura,
+    phaseScores.saidaDeBola,
+    phaseScores.passe,
+    phaseScores.criacao,
+    phaseScores.finalizacao,
+    phaseScores.jogoAereo,
+    phaseScores.fisico
+  ]));
+
+  const count = (codes: PositionCode[]) => results.filter((result) => codes.includes(result.bestPosition.code)).length;
+  const composition = {
+    goleiros: count(['GK']),
+    defensores: count(['CB', 'LB', 'RB']),
+    meio: count(['DMF', 'CMF', 'AMF', 'LMF', 'RMF']),
+    ataque: count(['CF', 'SS', 'LWF', 'RWF']),
+    lateraisAlas: count(['LB', 'RB', 'LMF', 'RMF', 'LWF', 'RWF']),
+    volantes: count(['DMF', 'CMF']),
+    criadores: results.filter((result) => /criador|orquestrador|armador|clássico|classico|passe|organizador/i.test(`${result.teamMap?.functionLabel ?? ''} ${result.parsed.playstyle ?? ''}`)).length,
+    finalizadores: results.filter((result) => ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(result.bestPosition.code) && Number(result.teamMap?.sectorScores?.finalizacao ?? 0) >= 76).length
+  };
+
+  const phaseLeaders: Array<[string, SquadPhaseKey]> = [
+    ['Melhor marcador', 'marcacao'],
+    ['Melhor cobertura', 'cobertura'],
+    ['Melhor saída', 'saidaDeBola'],
+    ['Melhor passe', 'passe'],
+    ['Melhor criação', 'criacao'],
+    ['Melhor ataque', 'finalizacao']
+  ];
+  const topByPhase = phaseLeaders.map(([title, key]) => {
+    const leader = [...results].sort((a, b) => Number(b.teamMap?.sectorScores?.[key] ?? 0) - Number(a.teamMap?.sectorScores?.[key] ?? 0))[0];
+    return {
+      title,
+      player: leader.parsed.playerName,
+      position: leader.bestPosition.label,
+      score: Number(leader.teamMap?.sectorScores?.[key] ?? 0),
+      functionLabel: leader.teamMap?.functionLabel ?? leader.buildName
+    };
+  });
+
+  const warnings: string[] = [];
+  const suggestions: string[] = [];
+
+  if (!composition.goleiros) warnings.push('Falta salvar pelo menos um goleiro para o mapa ficar completo.');
+  if (composition.defensores < 3 && !String(formation).startsWith('3')) warnings.push('Poucos defensores salvos: o app ainda não consegue medir bem cobertura e bola aérea da última linha.');
+  if (composition.volantes < 1) warnings.push('Falta um VOL/MLG de proteção para medir equilíbrio entre defesa e ataque.');
+  if (composition.criadores < 1) warnings.push('Falta um criador/orquestrador salvo para medir último passe e saída limpa.');
+  if (composition.finalizadores < 1) warnings.push('Falta um finalizador claro para medir poder de gol.');
+  if (phaseScores.marcacao < 72) suggestions.push('Melhorar marcação: priorize VOL/ZAG com Interceptação, Bloqueador, Marcação individual e ímpetos Defesa/Roubo de bola.');
+  if (phaseScores.saidaDeBola < 72) suggestions.push('Melhorar saída de bola: use um VOL orquestrador ou ZAG defensor criativo com Passe de primeira e Passe na medida.');
+  if (phaseScores.criacao < 72) suggestions.push('Melhorar criação: adicione MAT/MLG/SA com Armador criativo, Orquestrador ou Clássico nº 10.');
+  if (phaseScores.finalizacao < 72) suggestions.push('Melhorar ataque: use CA Artilheiro/Homem de área com habilidades de finalização, não habilidade defensiva.');
+  if (phaseScores.jogoAereo < 68) suggestions.push('Melhorar bola aérea: tenha ao menos um ZAG forte e um CA/pivô com Cabeçada ou Superioridade aérea.');
+
+  if (teamStyle === 'POSSE_DE_BOLA' && phaseScores.passe < 76) suggestions.push('Para Posse de bola, seu time precisa de mais Passe de primeira, Passe em profundidade e Proteção de Posse no meio.');
+  if (teamStyle === 'CONTRA_ATAQUE_RAPIDO' && phaseScores.aceleracao < 76) suggestions.push('Para Contra-ataque rápido, falta aceleração/verticalidade nos atacantes e meias de transição.');
+  if (teamStyle === 'POR_FORA' && composition.lateraisAlas < 3) suggestions.push('Para jogar Por fora, salve e use laterais/alas/pontas com Cruzamento preciso e velocidade.');
+  if (teamStyle === 'PASSE_LONGO' && phaseScores.jogoAereo < 72) suggestions.push('Para Passe longo, faltam alvo físico, jogo aéreo e segunda bola no meio.');
+
+  const gamePlan: string[] = [];
+  if (teamStyle === 'POSSE_DE_BOLA') gamePlan.push('Defenda com bloco médio, recupere e saia com passe curto pelo VOL/MLG; não force lançamento se o meio não aproximar.');
+  else if (teamStyle === 'CONTRA_ATAQUE_RAPIDO') gamePlan.push('Roube e verticalize rápido: primeiro passe no MAT/SA, segundo passe no CA/ponta atacando espaço.');
+  else if (teamStyle === 'POR_FORA') gamePlan.push('Abra amplitude com laterais/pontas, atraia por um lado e inverta para cruzar ou cortar para dentro.');
+  else if (teamStyle === 'PASSE_LONGO') gamePlan.push('Use ZAG/VOL com passe alto, procure pivô/CA forte e ataque a segunda bola com MLG/SA.');
+  else gamePlan.push('Mantenha estrutura: um jogador de contenção, um criador, dois aceleradores e um finalizador claro.');
+
+  if (formation !== 'AUTO') gamePlan.push(`Na formação ${formation}, preserve cobertura antes de acelerar; o app calcula o time por função real, não só por GER.`);
+  gamePlan.push('Use o Cofre para salvar 11 titulares e reservas; quanto mais cartas confirmadas, mais preciso fica o mapa completo.');
+
+  const balanceLabel = globalScore >= 84 ? 'Time muito equilibrado' : globalScore >= 74 ? 'Time competitivo com ajustes pontuais' : globalScore >= 62 ? 'Time promissor, mas com buracos táticos' : 'Time incompleto ou desequilibrado';
+
+  return {
+    playerCount: results.length,
+    phaseScores,
+    globalScore,
+    balanceLabel,
+    composition,
+    topByPhase,
+    warnings: warnings.slice(0, 5),
+    suggestions: suggestions.length ? suggestions.slice(0, 6) : ['O mapa não encontrou buraco crítico. Continue salvando titulares e reservas para refinar o diagnóstico.'],
+    gamePlan
+  };
+}
+
+function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAnalysis[]; formation: TacticalFormation; teamStyle: TacticalStyle }) {
+  const report = useMemo(() => buildSquadReport(history, formation, teamStyle), [history, formation, teamStyle]);
+
+  if (!report) {
+    return (
+      <article className="squad-map-card empty-squad-map">
+        <div className="tactical-guide-head">
+          <div>
+            <p className="kicker"><ShieldCheck size={14} /> Mapa Total do Time</p>
+            <h3>Salve fichas para mapear seu elenco</h3>
+          </div>
+        </div>
+        <p>Quando você salvar jogadores no Cofre, o app vai calcular marcação, cobertura, saída de bola, passe, criação, ataque, físico e jogo aéreo do time inteiro.</p>
+        <small>Para máxima precisão: salve GOL, zagueiros, laterais, VOL/MLG, criador, pontas/SA e CA finalizador.</small>
+      </article>
+    );
+  }
+
+  return (
+    <article className="squad-map-card">
+      <div className="tactical-guide-head">
+        <div>
+          <p className="kicker"><ShieldCheck size={14} /> Mapa Total do Time</p>
+          <h3>{report.balanceLabel}</h3>
+        </div>
+        <strong className="squad-score">{report.globalScore}/100</strong>
+      </div>
+
+      <div className="squad-meta-grid">
+        <span><b>{report.playerCount}</b> fichas</span>
+        <span><b>{report.composition.defensores}</b> defensores</span>
+        <span><b>{report.composition.volantes}</b> VOL/MLG</span>
+        <span><b>{report.composition.finalizadores}</b> finalizadores</span>
+      </div>
+
+      <div className="squad-phase-grid">
+        {PHASE_KEYS.map((key) => (
+          <div key={key} className="squad-phase-item">
+            <span>{teamMapLabels[key]}</span>
+            <strong>{report.phaseScores[key]}</strong>
+            <i><b style={{ width: `${report.phaseScores[key]}%` }} /></i>
+          </div>
+        ))}
+      </div>
+
+      <div className="squad-leader-grid">
+        {report.topByPhase.slice(0, 4).map((item) => (
+          <div key={item.title} className="squad-leader-item">
+            <span>{item.title}</span>
+            <strong>{item.player}</strong>
+            <em>{item.position} • {item.score}/100 • {item.functionLabel}</em>
+          </div>
+        ))}
+      </div>
+
+      {!!report.warnings.length && (
+        <div className="squad-alert-box">
+          <strong>Ajustes que aumentam precisão</strong>
+          {report.warnings.map((item) => <span key={item}>{item}</span>)}
+        </div>
+      )}
+
+      <div className="squad-plan-box">
+        <strong>Plano do time</strong>
+        {report.gamePlan.map((item) => <span key={item}>{item}</span>)}
+      </div>
+
+      <div className="squad-suggestion-box">
+        <strong>Melhorias recomendadas</strong>
+        {report.suggestions.map((item) => <span key={item}>{item}</span>)}
+      </div>
+    </article>
+  );
+}
+
 function normalizeLine(line: string) {
   return line.replace(/\s+/g, ' ').trim();
 }
@@ -644,10 +856,16 @@ function skillReason(skill: string) {
     'Chute de primeira': 'finaliza rápido sem dominar a bola',
     'Precisão à distância': 'melhora chute de fora da área',
     'Finalização acrobática': 'aumenta gols em posição difícil',
+    'Efeito de longe': 'melhora chute colocado de média/longa distância',
+    'Controle da cavadinha': 'ajuda a finalizar contra goleiro adiantado',
+    'Toque de calcanhar': 'facilita pivôs, tabelas e passes em espaço curto',
     Cabeçada: 'melhora finalização aérea',
     'Superioridade aérea': 'vence duelos pelo alto com frequência',
     Carrinho: 'melhora desarme de emergência',
-    'Super substituto': 'aumenta impacto vindo do banco'
+    'Super substituto': 'aumenta impacto vindo do banco',
+    'Defesa de pênalti': 'melhora defesa de cobranças de pênalti',
+    'Arremesso longo de goleiro': 'acelera a reposição com as mãos',
+    'Lançamento baixo de goleiro': 'ajuda a sair jogando com passe longo baixo'
   };
   return reasons[skill] ?? 'completa a função real da carta sem repetir habilidade nativa';
 }
@@ -659,7 +877,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.15 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Melhor posição: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -668,11 +886,19 @@ function copyBuildText(result: AnalysisResult) {
     'Plano Elite:',
     training,
     '',
-    'Habilidades adicionais:',
-    result.recommendedSkills.map((skill, index) => `${index + 1}. ${skill}`).join('\n'),
+    'Mapeamento do time:',
+    `Função real: ${result.teamMap?.functionLabel ?? result.buildName}`,
+    `Marcação: ${result.teamMap?.sectorScores?.marcacao ?? '-'} | Passe: ${result.teamMap?.sectorScores?.passe ?? '-'} | Ataque: ${result.teamMap?.sectorScores?.finalizacao ?? '-'}`,
+    result.teamMap?.matchPlan?.slice(0, 3).join('\n') ?? '',
+    '',
+    'Top 5 habilidades adicionais:',
+    result.recommendedSkills.slice(0, 5).map((skill, index) => `${index + 1}. ${skill}`).join('\n'),
+    '',
+    'Evitar nesta função:',
+    (result.avoidSkills ?? result.skillRecommendations?.filter((item) => item.tier === 'evitar').map((item) => item.name) ?? []).slice(0, 5).map((skill, index) => `${index + 1}. ${skill}`).join('\n') || 'Nenhuma restrição crítica.',
     '',
     'Ímpetos recomendados:',
-    result.recommendedImpetos.filter((item) => item.tier !== 'evitar').map((item, index) => `${index + 1}. ${item.name} — ${item.attributes.join(', ')}`).join('\n'),
+    result.recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 5).map((item, index) => `${index + 1}. ${item.name} — ${item.attributes.join(', ')}`).join('\n'),
     '',
     'Como usar:',
     result.usageTips.join('\n')
@@ -709,7 +935,9 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
   const positionItems = result.positionScores.slice(0, 8);
   const cardPositions = Array.from(new Set([card.mainPosition, ...card.positions])).slice(0, 10);
   const nativeSkills = card.nativeSkills.slice(0, 8);
-  const recommendedSkills = result.recommendedSkills.slice(0, 8);
+  const skillRecommendations = result.skillRecommendations ?? result.recommendedSkills.map((skill) => ({ name: skill, tier: 'alternativa' as const, reason: skillReason(skill) }));
+  const recommendedSkills = result.recommendedSkills.slice(0, 5);
+  const avoidSkillItems = skillRecommendations.filter((item) => item.tier === 'evitar').slice(0, 5);
   const skillInfo = skillProgressInfo(recommendedSkills, skillProgress);
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
@@ -765,6 +993,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
       <nav className="elite-tabs" aria-label="Seções do resultado">
         {[
           ['resumo', 'Painel'],
+          ['mapa', 'Mapa do time'],
           ['ficha', 'Plano'],
           ['habilidades', 'Habilidades'],
           ['posicoes', 'Funções'],
@@ -796,6 +1025,29 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                   <span>{label}</span>
                   <strong>{value}</strong>
                   <i><b style={{ width: `${Math.min(100, Number(value))}%` }} /></i>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Mapa de desempenho no time</p>
+            <div className="section-title-row">
+              <h3>{result.teamMap?.functionLabel ?? result.buildName}</h3>
+              <span>{result.teamMap?.coachFit ?? 'Função ajustada ao time'}</span>
+            </div>
+            <div className="stat-bars five-cols">
+              {[
+                ['Marcação', result.teamMap?.sectorScores?.marcacao],
+                ['Saída', result.teamMap?.sectorScores?.saidaDeBola],
+                ['Passe', result.teamMap?.sectorScores?.passe],
+                ['Criação', result.teamMap?.sectorScores?.criacao],
+                ['Ataque', result.teamMap?.sectorScores?.finalizacao]
+              ].map(([label, value]) => (
+                <div key={String(label)}>
+                  <span>{label}</span>
+                  <strong>{value ?? '-'}</strong>
+                  <i><b style={{ width: `${Math.min(100, Number(value ?? 0))}%` }} /></i>
                 </div>
               ))}
             </div>
@@ -836,6 +1088,68 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             <ul className="clean-list">
               {result.recommendationExplanation.slice(0, 5).map((line) => <li key={line}>{line}</li>)}
             </ul>
+          </article>
+        </div>
+      )}
+
+      {tab === 'mapa' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker">Mapeamento do time</p>
+                <h3>{result.teamMap?.tacticalIdentity ?? result.buildName}</h3>
+              </div>
+              <span>{result.bestPosition.label}</span>
+            </div>
+            <p className="panel-note">{result.teamMap?.coachFit}</p>
+            <div className="data-grid">
+              {Object.entries(result.teamMap?.sectorScores ?? {}).map(([key, value]) => (
+                <div key={key}>
+                  <span>{teamMapLabels[key] ?? key}</span>
+                  <strong>{value}/100</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Função em cada fase do jogo</p>
+            <div className="skill-grid">
+              {[
+                ['Marcação', result.teamMap?.defensiveJob],
+                ['Saída de bola', result.teamMap?.buildupJob],
+                ['Ataque', result.teamMap?.attackingJob],
+                ['Pressão', result.teamMap?.pressingJob]
+              ].map(([title, text]) => (
+                <div key={String(title)} className="skill-check-card">
+                  <strong>{title}</strong>
+                  <span>{text}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Melhores parceiros e plano de partida</p>
+            <div className="chip-cloud purple">
+              {(result.teamMap?.idealPartners ?? []).map((item) => <span key={item}>{item}</span>)}
+            </div>
+            <ul className="clean-list">
+              {(result.teamMap?.matchPlan ?? []).map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Alertas para não perder desempenho</p>
+            <div className="skill-grid">
+              {(result.teamMap?.riskAlerts ?? []).map((item) => (
+                <div key={item} className="skill-check-card muted">
+                  <strong>Atenção</strong>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
           </article>
         </div>
       )}
@@ -905,20 +1219,32 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
       {tab === 'habilidades' && (
         <div className="result-section-grid">
           <article className="luxury-panel wide-card">
-            <p className="kicker">Sugeridas adicionais</p>
+            <p className="kicker">Top 5 habilidades adicionais</p>
             <div className="skill-grid">
               {recommendedSkills.length ? recommendedSkills.map((skill, index) => {
                 const completed = Boolean(skillProgress?.[skill]);
+                const detail = skillRecommendations.find((item) => item.name === skill);
                 return (
                   <div key={skill} className={completed ? 'skill-check-card completed' : 'skill-check-card'}>
                     <strong>{String(index + 1).padStart(2, '0')} • {skill}</strong>
-                    <span>{skillReason(skill)}</span>
+                    <span>{detail?.reason ?? skillReason(skill)}</span>
                     <button type="button" onClick={() => onSkillToggle?.(skill)}>
                       {completed ? '✓ Concluída' : 'Marcar como feita'}
                     </button>
                   </div>
                 );
               }) : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada.</p>}
+            </div>
+          </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Evitar nesta função</p>
+            <div className="skill-grid">
+              {avoidSkillItems.length ? avoidSkillItems.map((item) => (
+                <div key={item.name} className="skill-check-card muted">
+                  <strong>{item.name}</strong>
+                  <span>{item.reason}</span>
+                </div>
+              )) : <p className="panel-note">Nenhuma restrição crítica para esta função.</p>}
             </div>
           </article>
           <article className="luxury-panel wide-card">
@@ -989,7 +1315,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             </div>
           </article>
           <article className="luxury-panel wide-card">
-            <p className="kicker">Ímpetos recomendados</p>
+            <p className="kicker">Melhores ímpetos e alertas</p>
             <div className="skill-grid">
               {recommendedImpetos.length ? recommendedImpetos.map((item) => (
                 <div key={`${item.name}-${item.tier}`}>
@@ -1428,6 +1754,13 @@ export function CardVisionApp() {
     setStatus('Central reiniciada. Escolha o Leitor Elite de Carta ou a Central de Precisão Manual para começar.');
   }
 
+  function openCofreDeJogadores() {
+    setLibraryOpen(true);
+    setStatus(history.length
+      ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).`
+      : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui automaticamente.');
+  }
+
   function restoreHistory(item: SavedAnalysis) {
     lastSavedKey.current = `${item.saveKey}-${item.result.trainingPointsUsed}-${item.result.trainingPointsTotal}`;
     setActiveHistoryId(item.id);
@@ -1759,6 +2092,7 @@ export function CardVisionApp() {
         </div>
         <div className="session-badge"><ShieldCheck size={16} /> Sessão protegida</div>
         <div className="topbar-actions">
+          <button type="button" onClick={openCofreDeJogadores}><History size={16} /> Cofre</button>
           <button type="button" onClick={resetAnalysis}><RotateCcw size={16} /> Nova</button>
           <button type="button" onClick={logout}><LogOut size={16} /> Sair</button>
         </div>
@@ -1795,6 +2129,13 @@ export function CardVisionApp() {
               <strong>Central de Precisão Manual</strong>
               <span>Modo de precisão máxima: você informa posição, estilo, pontos e atributos. Ideal quando quer zero risco de leitura errada.</span>
             </article>
+
+            <button className="manual-premium-card vault-entry-card cofre-entry-button" type="button" onClick={openCofreDeJogadores}>
+              <div className="manual-premium-icon"><History size={28} /></div>
+              <strong>Cofre de Jogadores</strong>
+              <span>Abra fichas salvas, acompanhe habilidades pendentes e apague jogadores quando quiser.</span>
+              <em>{history.length} ficha(s) salva(s)</em>
+            </button>
           </div>
 
           <div className="upload-box premium-upload-box">
@@ -1955,6 +2296,8 @@ export function CardVisionApp() {
             )}
           </article>
 
+          <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} />
+
           <button className="elite-button generate-button" type="button" onClick={() => runAnalysis(false)} disabled={!canProceed}>
             {loading ? <Loader2 className="spin" size={18} /> : <Zap size={18} />}
             {loading ? 'Processando ficha...' : result ? 'Reabrir auditoria Elite' : 'Gerar prévia Elite'}
@@ -1979,48 +2322,55 @@ export function CardVisionApp() {
             </details>
           )}
 
-          {history.length > 0 && (
-            <div className="history-strip library-strip">
-              <div className="history-head">
-                <div>
-                  <p className="kicker"><History size={14} /> Cofre de Fichas</p>
-                  <small>Salvo neste aparelho até você apagar. Com Neon configurado, também sincroniza na nuvem.</small>
-                </div>
-                <button type="button" onClick={() => setLibraryOpen((current) => !current)}>{libraryOpen ? 'Recolher' : 'Ver tudo'}</button>
+          <div className="history-strip library-strip cofre-section">
+            <div className="history-head">
+              <div>
+                <p className="kicker"><History size={14} /> Cofre de Jogadores</p>
+                <small>{history.length ? `${history.length} ficha(s) salva(s) neste aparelho.` : 'Nenhuma ficha salva ainda. Finalize uma análise para ela aparecer aqui.'} Com Neon configurado, também sincroniza na nuvem.</small>
               </div>
-              <div className="history-actions cloud-history-actions">
-                <button type="button" onClick={exportHistoryBackup}><Download size={14} /> Exportar backup</button>
-                <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
-                <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
-                <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
-                <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
-              </div>
-              <div className="cloud-status-card">
-                <ShieldCheck size={14} />
-                <span>{cloudStatus}</span>
-              </div>
-              <label className="history-search">
-                <Search size={14} />
-                <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador salvo" />
-              </label>
-              {(libraryOpen ? filteredHistory : filteredHistory.slice(0, 4)).map((item) => {
-                const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
-                return (
-                  <div className="saved-ficha-row" key={item.id}>
-                    <button type="button" onClick={() => restoreHistory(item)}>
-                      <strong>{item.result.parsed.playerName}</strong>
-                      <span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts</span>
-                      <em>{info.done}/{info.total} habilidades concluídas</em>
-                      <i><b style={{ width: `${info.percent}%` }} /></i>
-                    </button>
-                    <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}>
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                );
-              })}
+              <button type="button" onClick={() => setLibraryOpen((current) => !current)}>{libraryOpen ? 'Recolher' : 'Abrir cofre'}</button>
             </div>
-          )}
+            <div className="history-actions cloud-history-actions">
+              <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><Download size={14} /> Exportar backup</button>
+              <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
+              <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
+              <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
+              <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
+            </div>
+            <div className="cloud-status-card">
+              <ShieldCheck size={14} />
+              <span>{cloudStatus}</span>
+            </div>
+            {history.length > 0 ? (
+              <>
+                <label className="history-search">
+                  <Search size={14} />
+                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador salvo" />
+                </label>
+                {(libraryOpen ? filteredHistory : filteredHistory.slice(0, 4)).map((item) => {
+                  const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+                  return (
+                    <div className="saved-ficha-row" key={item.id}>
+                      <button type="button" onClick={() => restoreHistory(item)}>
+                        <strong>{item.result.parsed.playerName}</strong>
+                        <span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts</span>
+                        <em>{info.done}/{info.total} habilidades concluídas</em>
+                        <i><b style={{ width: `${info.percent}%` }} /></i>
+                      </button>
+                      <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}>
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <div className="empty-cofre-card">
+                <strong>Nenhum jogador salvo ainda</strong>
+                <span>Gere uma ficha pelo Leitor Elite ou pela Central Manual. Depois de finalizar o plano, ela aparece aqui no Cofre de Jogadores.</span>
+              </div>
+            )}
+          </div>
         </aside>
 
         <section className="preview-panel">

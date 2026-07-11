@@ -91,6 +91,12 @@ export type ImpetoRecommendation = {
   reason: string;
 };
 
+export type SkillRecommendation = {
+  name: string;
+  tier: 'essencial' | 'alternativa' | 'evitar';
+  reason: string;
+};
+
 export type PhysicalProfile = {
   armLength?: number | null;
   shoulderWidth?: number | null;
@@ -159,6 +165,32 @@ export type ParsedCard = {
   warnings: string[];
 };
 
+export type TeamMapPhaseScores = {
+  marcacao: number;
+  cobertura: number;
+  saidaDeBola: number;
+  passe: number;
+  criacao: number;
+  aceleracao: number;
+  finalizacao: number;
+  jogoAereo: number;
+  fisico: number;
+};
+
+export type TeamMapAnalysis = {
+  functionLabel: string;
+  tacticalIdentity: string;
+  defensiveJob: string;
+  buildupJob: string;
+  attackingJob: string;
+  pressingJob: string;
+  idealPartners: string[];
+  riskAlerts: string[];
+  matchPlan: string[];
+  sectorScores: TeamMapPhaseScores;
+  coachFit: string;
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -175,11 +207,14 @@ export type AnalysisResult = {
   buildVariants: BuildVariant[];
   recommendationExplanation: string[];
   tacticalProfile: TacticalProfile;
+  teamMap: TeamMapAnalysis;
   profileTips: string[];
   validation: PrecisionValidation;
   permittedPositions: Array<{ code: PositionCode; label: string; reason: string; rating?: number | null }>;
   avoidPositions: Array<{ code: PositionCode; label: string; reason: string }>;
   recommendedSkills: string[];
+  skillRecommendations: SkillRecommendation[];
+  avoidSkills: string[];
   recommendedImpetos: ImpetoRecommendation[];
   buildName: string;
   strengths: string[];
@@ -1899,21 +1934,21 @@ function trainingFor(position: PositionCode, objective: Objective, a: Required<A
 }
 
 function trainingCostRuleText() {
-  return 'Motor Elite Tático v24.4 Habilidades Oficiais: usa lista separada para jogador de linha, goleiro e ímpetos criáveis, sem habilidades inventadas.';
+  return 'Motor Elite Tático v24.15 Mapeamento Total: ficha, 5 habilidades, ímpetos, função real e plano de time cruzam posição, estilo do jogador, atributos, formação, modelo do técnico e equilíbrio do elenco.';
 }
 
 function skillPriority(position: PositionCode, objective: Objective) {
   const byPosition: Record<PositionCode, string[]> = {
-    CF: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Cabeçada', 'Superioridade aérea', 'Espírito guerreiro', 'Super substituto'],
-    SS: ['Toque duplo', 'Controle com a sola', 'Passe de primeira', 'Passe em profundidade', 'Chute de primeira', 'Precisão à distância'],
-    LWF: ['Toque duplo', 'Controle com a sola', 'Elástico', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância'],
-    RWF: ['Toque duplo', 'Controle com a sola', 'Elástico', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância'],
+    CF: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe', 'Cabeçada', 'Controle da cavadinha', 'Toque de calcanhar', 'Passe de primeira', 'Super substituto'],
+    SS: ['Toque duplo', 'Controle com a sola', 'Passe de primeira', 'Passe em profundidade', 'Chute de primeira', 'Precisão à distância', 'Toque de calcanhar'],
+    LWF: ['Toque duplo', 'Controle com a sola', 'Elástico', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância', 'Passe de primeira'],
+    RWF: ['Toque duplo', 'Controle com a sola', 'Elástico', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância', 'Passe de primeira'],
     LMF: ['Cruzamento preciso', 'Passe de primeira', 'Passe na medida', 'Interceptação', 'Volta para marcar', 'Curva para fora'],
     RMF: ['Cruzamento preciso', 'Passe de primeira', 'Passe na medida', 'Interceptação', 'Volta para marcar', 'Curva para fora'],
-    AMF: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe sem olhar', 'Controle com a sola', 'Curva para fora'],
+    AMF: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe sem olhar', 'Controle com a sola', 'Curva para fora', 'Toque duplo'],
     CMF: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Interceptação', 'Espírito guerreiro', 'Volta para marcar'],
     DMF: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Volta para marcar', 'Passe de primeira', 'Espírito guerreiro'],
-    CB: ['Bloqueador', 'Interceptação', 'Marcação individual', 'Superioridade aérea', 'Carrinho', 'Espírito guerreiro'],
+    CB: ['Bloqueador', 'Interceptação', 'Marcação individual', 'Superioridade aérea', 'Carrinho', 'Afastamento acrobático', 'Espírito guerreiro'],
     LB: ['Cruzamento preciso', 'Passe de primeira', 'Interceptação', 'Volta para marcar', 'Bloqueador', 'Curva para fora'],
     RB: ['Cruzamento preciso', 'Passe de primeira', 'Interceptação', 'Volta para marcar', 'Bloqueador', 'Curva para fora'],
     GK: ['Defesa de pênalti', 'Arremesso longo de goleiro', 'Lançamento baixo de goleiro', 'Liderança', 'Espírito guerreiro']
@@ -1921,7 +1956,7 @@ function skillPriority(position: PositionCode, objective: Objective) {
   if (position === 'GK') return byPosition.GK;
   const extras: Record<Objective, string[]> = {
     COMPETITIVE: ['Espírito guerreiro', 'Passe de primeira'],
-    FINISHER: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática'],
+    FINISHER: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe'],
     CREATOR: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida'],
     DRIBBLER: ['Toque duplo', 'Controle com a sola', 'Elástico'],
     PRESSING: ['Volta para marcar', 'Interceptação', 'Espírito guerreiro'],
@@ -1934,11 +1969,409 @@ function skillPriority(position: PositionCode, objective: Objective) {
   return Array.from(new Set([...(extras[objective] ?? []), ...(byPosition[position] ?? [])]));
 }
 
+const DEFENSIVE_FIELD_SKILLS = ['Volta para marcar', 'Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Afastamento acrobático'];
+const CROSSING_SIDE_SKILLS = ['Cruzamento preciso', 'Passe aéreo baixo', 'Arremesso lateral longo'];
+const PURE_CF_FINISHER_STYLES = /artilheiro|goal poacher|homem de area|homem de área|atacante matador|fox in the box/;
+const TARGET_CF_STYLES = /pivo|pivô|atacante pivo|atacante pivô|target man|puxa marcacao|puxa marcação/;
+const PRESSING_WING_STYLES = /ala produtivo|lateral movel|lateral móvel|ponta prolifico|ponta prolífico|flanco movel|flanco móvel|atacante surpresa|jogador de infiltracao|jogador de infiltração/;
+
+function isPureFinisherCf(position: PositionCode, playstyle: string) {
+  return position === 'CF' && PURE_CF_FINISHER_STYLES.test(playstyle) && !TARGET_CF_STYLES.test(playstyle);
+}
+
+function shouldRecommendTrackBack(position: PositionCode, playstyle: string, objective: Objective, attributes: Required<Attributes>) {
+  if (position === 'GK' || position === 'CB') return false;
+  if (isPureFinisherCf(position, playstyle)) return false;
+  if (position === 'CF') {
+    return objective === 'PRESSING' && TARGET_CF_STYLES.test(playstyle) && attributes.stamina >= 82 && attributes.aggression >= 76;
+  }
+  if (position === 'LWF' || position === 'RWF' || position === 'SS' || position === 'LMF' || position === 'RMF') {
+    return objective === 'PRESSING' || PRESSING_WING_STYLES.test(playstyle) || attributes.stamina >= 83;
+  }
+  return position === 'DMF' || position === 'CMF' || position === 'LB' || position === 'RB' || objective === 'PRESSING';
+}
+
+type SkillBlueprint = {
+  label: string;
+  essentials: string[];
+  alternatives: string[];
+  avoid: string[];
+};
+
+function knownStyleBlueprint(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>): SkillBlueprint | null {
+  const style = normalize(parsed.playstyle ?? '').toLowerCase();
+  const isAerial = attributes.heading >= 76 || attributes.jump >= 78 || attributes.physicalContact >= 80;
+  const isCreatorPos = selectedPosition === 'AMF' || selectedPosition === 'CMF' || selectedPosition === 'SS' || selectedPosition === 'DMF';
+
+  if (!style) return null;
+
+  if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || /goleiro/.test(style)) return null;
+
+  if (selectedPosition === 'CB') {
+    if (/atacante surpresa|extra frontman/.test(style)) {
+      return {
+        label: 'ZAG atacante surpresa com segurança',
+        essentials: ['Interceptação', 'Bloqueador', 'Superioridade aérea', 'Passe de primeira', 'Afastamento acrobático'],
+        alternatives: ['Marcação individual', 'Cabeçada', 'Passe na medida', 'Espírito guerreiro'],
+        avoid: ['Chute de primeira', 'Precisão à distância', 'Toque duplo', 'Controle da cavadinha', 'Volta para marcar']
+      };
+    }
+    if (/defensor criativo|construtor|build up/.test(style)) {
+      return {
+        label: 'ZAG defensor criativo / saída de bola',
+        essentials: ['Interceptação', 'Bloqueador', 'Passe de primeira', 'Passe na medida', 'Superioridade aérea'],
+        alternatives: ['Marcação individual', 'Afastamento acrobático', 'Espírito guerreiro', 'Cabeçada'],
+        avoid: ['Chute de primeira', 'Finalização acrobática', 'Controle da cavadinha', 'Volta para marcar', 'Toque duplo']
+      };
+    }
+    if (/destruidor|destroyer/.test(style)) {
+      return {
+        label: 'ZAG destruidor de combate',
+        essentials: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Superioridade aérea'],
+        alternatives: ['Afastamento acrobático', 'Espírito guerreiro', 'Cabeçada', 'Passe de primeira'],
+        avoid: ['Chute de primeira', 'Precisão à distância', 'Toque duplo', 'Controle da cavadinha', 'Cruzamento preciso']
+      };
+    }
+  }
+
+  if (selectedPosition === 'LB' || selectedPosition === 'RB' || selectedPosition === 'LMF' || selectedPosition === 'RMF') {
+    if (/lateral defensivo|defensive full/.test(style)) {
+      return {
+        label: `${POSITION_PT[selectedPosition]} lateral defensivo de recomposição`,
+        essentials: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Volta para marcar', 'Passe de primeira'],
+        alternatives: ['Cruzamento preciso', 'Passe na medida', 'Espírito guerreiro', 'Carrinho'],
+        avoid: ['Chute de primeira', 'Finalização acrobática', 'Controle da cavadinha']
+      };
+    }
+    if (/perito em cruzamento|cross specialist/.test(style)) {
+      return {
+        label: `${POSITION_PT[selectedPosition]} especialista em cruzamento`,
+        essentials: ['Cruzamento preciso', 'Passe na medida', 'Passe aéreo baixo', 'Curva para fora', 'Passe de primeira'],
+        alternatives: ['Volta para marcar', 'Interceptação', 'Controle com a sola', 'Espírito guerreiro'],
+        avoid: ['Chute de primeira', 'Finalização acrobática', 'Marcação individual', 'Carrinho']
+      };
+    }
+    if (/lateral ofensivo|lateral atacante|offensive full|full back finisher/.test(style)) {
+      return {
+        label: `${POSITION_PT[selectedPosition]} lateral de apoio ofensivo`,
+        essentials: ['Cruzamento preciso', 'Passe de primeira', 'Volta para marcar', 'Interceptação', 'Curva para fora'],
+        alternatives: ['Passe na medida', 'Controle com a sola', 'Toque duplo', 'Bloqueador'],
+        avoid: ['Chute de primeira', 'Finalização acrobática', 'Controle da cavadinha']
+      };
+    }
+  }
+
+  if (selectedPosition === 'DMF' || selectedPosition === 'CMF') {
+    if (/primeiro volante|ancora|âncora|anchor/.test(style)) {
+      return {
+        label: '1º volante protetor da zaga',
+        essentials: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Passe de primeira', 'Espírito guerreiro'],
+        alternatives: ['Volta para marcar', 'Carrinho', 'Passe em profundidade', 'Passe na medida'],
+        avoid: ['Chute de primeira', 'Finalização acrobática', 'Controle da cavadinha', 'Elástico']
+      };
+    }
+    if (/destruidor|destroyer/.test(style)) {
+      return {
+        label: selectedPosition === 'DMF' ? 'VOL destruidor de contenção' : 'MLG marcador agressivo',
+        essentials: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Volta para marcar', 'Passe de primeira'],
+        alternatives: ['Carrinho', 'Espírito guerreiro', 'Passe em profundidade', 'Passe na medida'],
+        avoid: ['Chute de primeira', 'Finalização acrobática', 'Controle da cavadinha', 'Cruzamento preciso']
+      };
+    }
+    if (/orquestrador|orchestrator/.test(style)) {
+      return {
+        label: selectedPosition === 'DMF' ? 'VOL orquestrador de saída' : 'MLG orquestrador',
+        essentials: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Interceptação'],
+        alternatives: ['Passe sem olhar', 'Espírito guerreiro', 'Volta para marcar', 'Toque de calcanhar'],
+        avoid: ['Carrinho', 'Chute de primeira', 'Finalização acrobática', 'Cruzamento preciso']
+      };
+    }
+    if (/meia versatil|box-to-box|todo campo/.test(style)) {
+      return {
+        label: 'Meia versátil box-to-box',
+        essentials: ['Passe de primeira', 'Interceptação', 'Volta para marcar', 'Passe em profundidade', 'Espírito guerreiro'],
+        alternatives: ['Passe na medida', 'Controle com a sola', 'Precisão à distância', 'Toque de calcanhar'],
+        avoid: ['Controle da cavadinha', 'Cruzamento preciso', 'Carrinho']
+      };
+    }
+  }
+
+  if (isCreatorPos) {
+    if (/classico n[oº]? 10|clássico n[oº]? 10|classic/.test(style)) {
+      return {
+        label: 'Clássico 10 criador técnico',
+        essentials: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Precisão à distância'],
+        alternatives: ['Passe sem olhar', 'Toque de calcanhar', 'Chute de primeira', 'Efeito de longe'],
+        avoid: ['Volta para marcar', 'Carrinho', 'Bloqueador', 'Marcação individual']
+      };
+    }
+    if (/armador criativo|criador de jogadas|creative playmaker/.test(style)) {
+      return {
+        label: 'Armador criativo de último passe',
+        essentials: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe sem olhar', 'Controle com a sola'],
+        alternatives: ['Toque de calcanhar', 'Precisão à distância', 'Chute de primeira', 'Toque duplo'],
+        avoid: ['Carrinho', 'Bloqueador', 'Marcação individual', 'Superioridade aérea']
+      };
+    }
+    if (/jogador de infiltracao|jogador de infiltração|hole player|atacante surpresa/.test(style)) {
+      return {
+        label: 'Meia de infiltração / chegada',
+        essentials: ['Chute de primeira', 'Passe de primeira', 'Passe em profundidade', 'Precisão à distância', 'Toque duplo'],
+        alternatives: ['Finalização acrobática', 'Efeito de longe', 'Controle com a sola', 'Toque de calcanhar'],
+        avoid: ['Carrinho', 'Bloqueador', 'Marcação individual', 'Afastamento acrobático']
+      };
+    }
+  }
+
+  if (selectedPosition === 'LWF' || selectedPosition === 'RWF' || selectedPosition === 'LMF' || selectedPosition === 'RMF') {
+    if (/ala produtivo|ponta prolifico|ponta prolífico|prolific winger/.test(style)) {
+      return {
+        label: `${POSITION_PT[selectedPosition]} ala produtivo`,
+        essentials: ['Toque duplo', 'Controle com a sola', 'Chute de primeira', 'Cruzamento preciso', 'Passe de primeira'],
+        alternatives: ['Precisão à distância', 'Elástico', 'Curva para fora', 'Volta para marcar'],
+        avoid: ['Carrinho', 'Marcação individual', 'Bloqueador', 'Afastamento acrobático']
+      };
+    }
+    if (/lateral movel|lateral móvel|flanco movel|flanco móvel|roaming flank/.test(style)) {
+      return {
+        label: `${POSITION_PT[selectedPosition]} lateral móvel / diagonal`,
+        essentials: ['Toque duplo', 'Controle com a sola', 'Passe de primeira', 'Precisão à distância', 'Cruzamento preciso'],
+        alternatives: ['Chute de primeira', 'Passe em profundidade', 'Volta para marcar', 'Curva para fora'],
+        avoid: ['Carrinho', 'Marcação individual', 'Superioridade aérea', 'Afastamento acrobático']
+      };
+    }
+  }
+
+  if (selectedPosition === 'CF' || selectedPosition === 'SS') {
+    if (/atacante pivo|atacante pivô|pivo|pivô|target man/.test(style)) {
+      return {
+        label: selectedPosition === 'CF' ? 'CA pivô / referência' : 'SA pivô de apoio',
+        essentials: ['Passe de primeira', 'Toque de calcanhar', 'Chute de primeira', ...(isAerial ? ['Cabeçada'] : ['Controle com a sola']), 'Espírito guerreiro'],
+        alternatives: ['Precisão à distância', 'Superioridade aérea', 'Finalização acrobática', ...(shouldRecommendTrackBack(selectedPosition, style, objective, attributes) ? ['Volta para marcar'] : [])],
+        avoid: ['Marcação individual', 'Interceptação', 'Carrinho', 'Bloqueador', 'Cruzamento preciso']
+      };
+    }
+    if (/homem de area|homem de área|fox in the box/.test(style)) {
+      return {
+        label: 'Homem de área',
+        essentials: ['Chute de primeira', 'Cabeçada', 'Superioridade aérea', 'Finalização acrobática', 'Controle da cavadinha'],
+        alternatives: ['Precisão à distância', 'Efeito de longe', 'Toque de calcanhar', 'Passe de primeira'],
+        avoid: ['Volta para marcar', 'Marcação individual', 'Interceptação', 'Carrinho', 'Bloqueador']
+      };
+    }
+    if (/puxa marcacao|puxa marcação|deep lying forward/.test(style)) {
+      return {
+        label: 'Atacante que puxa marcação',
+        essentials: ['Passe de primeira', 'Toque de calcanhar', 'Chute de primeira', 'Controle com a sola', 'Precisão à distância'],
+        alternatives: ['Espírito guerreiro', 'Finalização acrobática', 'Volta para marcar', 'Passe em profundidade'],
+        avoid: ['Marcação individual', 'Carrinho', 'Bloqueador', 'Interceptação']
+      };
+    }
+    if (/artilheiro|goal poacher|atacante matador/.test(style)) {
+      return {
+        label: selectedPosition === 'SS' ? 'SA artilheiro de ruptura' : 'CA artilheiro finalizador',
+        essentials: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe', isAerial ? 'Cabeçada' : 'Controle da cavadinha'],
+        alternatives: ['Passe de primeira', 'Toque de calcanhar', 'Super substituto', ...(isAerial ? ['Superioridade aérea'] : [])],
+        avoid: ['Volta para marcar', 'Marcação individual', 'Interceptação', 'Carrinho', 'Bloqueador', 'Cruzamento preciso']
+      };
+    }
+  }
+
+  return null;
+}
+
+function skillBlueprint(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>): SkillBlueprint {
+  const playstyle = normalize(parsed.playstyle ?? '').toLowerCase();
+  const isAerial = attributes.heading >= 76 || attributes.jump >= 78 || attributes.physicalContact >= 80;
+  const highPass = attributes.lowPass >= 78 || attributes.loftedPass >= 78;
+  const highDribble = attributes.dribbling >= 80 || attributes.tightPossession >= 80 || attributes.ballControl >= 82;
+  const highSpeed = attributes.speed >= 82 || attributes.acceleration >= 82;
+  const pressingContext = objective === 'PRESSING' || attributes.stamina >= 84 || attributes.aggression >= 82;
+  const styleBlueprint = knownStyleBlueprint(parsed, selectedPosition, objective, attributes);
+  if (styleBlueprint) return styleBlueprint;
+
+  if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || isGoalkeeperStyle(parsed.playstyle)) {
+    return {
+      label: /ofensivo|offensive/i.test(playstyle) ? 'Goleiro de saída rápida' : 'Goleiro seguro',
+      essentials: ['Defesa de pênalti', 'Arremesso longo de goleiro', 'Lançamento baixo de goleiro', 'Liderança', 'Espírito guerreiro'],
+      alternatives: ['Saída rápida de goleiro'],
+      avoid: ['Chute de primeira', 'Passe de primeira', 'Toque duplo', 'Interceptação', 'Bloqueador', 'Marcação individual', 'Volta para marcar', 'Carrinho']
+    };
+  }
+
+  if (selectedPosition === 'CF') {
+    if (TARGET_CF_STYLES.test(playstyle)) {
+      return {
+        label: 'CA pivô / referência',
+        essentials: ['Passe de primeira', 'Toque de calcanhar', 'Chute de primeira', ...(isAerial ? ['Cabeçada', 'Superioridade aérea'] : ['Finalização acrobática'])],
+        alternatives: ['Precisão à distância', 'Efeito de longe', 'Controle da cavadinha', 'Espírito guerreiro', ...(shouldRecommendTrackBack(selectedPosition, playstyle, objective, attributes) ? ['Volta para marcar'] : [])],
+        avoid: ['Marcação individual', 'Interceptação', 'Carrinho', 'Bloqueador', 'Cruzamento preciso', 'Arremesso lateral longo']
+      };
+    }
+    return {
+      label: 'CA finalizador',
+      essentials: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe', ...(isAerial ? ['Cabeçada'] : ['Controle da cavadinha'])],
+      alternatives: ['Passe de primeira', 'Toque de calcanhar', 'Super substituto', ...(isAerial ? ['Superioridade aérea'] : ['Controle da cavadinha'])],
+      avoid: ['Volta para marcar', 'Marcação individual', 'Interceptação', 'Carrinho', 'Bloqueador', 'Cruzamento preciso', 'Arremesso lateral longo', 'Passe aéreo baixo']
+    };
+  }
+
+  if (selectedPosition === 'SS') {
+    return {
+      label: 'SA de apoio e ruptura',
+      essentials: ['Passe de primeira', 'Chute de primeira', 'Passe em profundidade', ...(highDribble ? ['Toque duplo'] : ['Controle com a sola']), 'Toque de calcanhar'],
+      alternatives: ['Precisão à distância', 'Finalização acrobática', 'Passe sem olhar', ...(pressingContext ? ['Volta para marcar'] : [])],
+      avoid: ['Carrinho', 'Marcação individual', 'Afastamento acrobático', 'Arremesso lateral longo']
+    };
+  }
+
+  if (selectedPosition === 'LWF' || selectedPosition === 'RWF') {
+    return {
+      label: 'Ponta de aceleração',
+      essentials: ['Toque duplo', 'Controle com a sola', ...(highDribble ? ['Elástico'] : ['Pedalada simples']), ...(highPass ? ['Cruzamento preciso'] : ['Curva para fora']), 'Passe de primeira'],
+      alternatives: ['Precisão à distância', 'Passe em profundidade', 'Finalização acrobática', ...(pressingContext ? ['Volta para marcar'] : [])],
+      avoid: ['Carrinho', 'Marcação individual', 'Afastamento acrobático', 'Arremesso lateral longo']
+    };
+  }
+
+  if (selectedPosition === 'AMF') {
+    return {
+      label: 'MAT criador',
+      essentials: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe sem olhar', ...(highDribble ? ['Controle com a sola'] : ['Toque de calcanhar'])],
+      alternatives: ['Curva para fora', 'Toque duplo', 'Precisão à distância', 'De letra'],
+      avoid: ['Carrinho', 'Marcação individual', 'Bloqueador', 'Afastamento acrobático', 'Arremesso lateral longo']
+    };
+  }
+
+  if (selectedPosition === 'CMF') {
+    return {
+      label: /orquestrador|armador|classico|clássico/i.test(playstyle) ? 'MLG organizador' : 'MLG ida e volta',
+      essentials: ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', ...(attributes.defensiveAwareness >= 76 ? ['Interceptação'] : ['Controle com a sola']), 'Espírito guerreiro'],
+      alternatives: ['Volta para marcar', 'Marcação individual', 'Passe sem olhar', 'Toque de calcanhar'],
+      avoid: ['Controle da cavadinha', 'Finalização acrobática', 'Chute ascendente', 'Folha seca', 'Arremesso lateral longo']
+    };
+  }
+
+  if (selectedPosition === 'DMF') {
+    return {
+      label: /destruidor|primeiro volante|ancora|âncora|anchor/i.test(playstyle) ? 'VOL marcador' : 'VOL construtor',
+      essentials: ['Interceptação', 'Bloqueador', 'Marcação individual', ...(shouldRecommendTrackBack(selectedPosition, playstyle, objective, attributes) ? ['Volta para marcar'] : ['Espírito guerreiro']), 'Passe de primeira'],
+      alternatives: ['Passe em profundidade', 'Passe na medida', 'Superioridade aérea', 'Carrinho'],
+      avoid: ['Controle da cavadinha', 'Finalização acrobática', 'Efeito de longe', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente']
+    };
+  }
+
+  if (selectedPosition === 'CB') {
+    return {
+      label: 'ZAG de segurança',
+      essentials: ['Bloqueador', 'Interceptação', 'Marcação individual', ...(isAerial ? ['Superioridade aérea'] : ['Afastamento acrobático']), 'Espírito guerreiro'],
+      alternatives: ['Carrinho', 'Cabeçada', 'Passe de primeira', 'Passe na medida'],
+      avoid: ['Toque duplo', 'Elástico', 'Controle da cavadinha', 'Precisão à distância', 'Finalização acrobática', 'Chute de primeira', 'Efeito de longe']
+    };
+  }
+
+  if (selectedPosition === 'LB' || selectedPosition === 'RB' || selectedPosition === 'LMF' || selectedPosition === 'RMF') {
+    const defensiveSide = selectedPosition === 'LB' || selectedPosition === 'RB';
+    return {
+      label: defensiveSide ? 'Lateral equilibrado' : 'Meia aberto',
+      essentials: ['Cruzamento preciso', 'Passe de primeira', ...(defensiveSide ? ['Interceptação'] : ['Passe na medida']), ...(pressingContext ? ['Volta para marcar'] : ['Curva para fora']), highSpeed ? 'Controle com a sola' : 'Espírito guerreiro'],
+      alternatives: ['Passe aéreo baixo', 'Bloqueador', 'Marcação individual', 'Toque duplo'],
+      avoid: ['Controle da cavadinha', 'Finalização acrobática', 'Chute de primeira', 'Carrinho']
+    };
+  }
+
+  return {
+    label: 'Função híbrida',
+    essentials: skillPriority(selectedPosition, objective).slice(0, 5),
+    alternatives: skillPriority(selectedPosition, objective).slice(5),
+    avoid: []
+  };
+}
+
+function buildAvoidSkills(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>): string[] {
+  const blueprint = skillBlueprint(parsed, selectedPosition, objective, attributes);
+  return uniqueSkillList(blueprint.avoid).slice(0, 6);
+}
+
+function skillTierReason(skill: string, tier: SkillRecommendation['tier'], blueprint: SkillBlueprint) {
+  if (tier === 'essencial') return `prioridade para ${blueprint.label}: combina diretamente com posição, estilo e função real`;
+  if (tier === 'alternativa') return `boa alternativa se você quiser variar a função sem fugir do desempenho em campo`;
+  return `evite para ${blueprint.label}: gasta habilidade e entrega pouco para a função principal`;
+}
+
+function buildSkillRecommendations(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>, recommendedSkills: string[]): SkillRecommendation[] {
+  const blueprint = skillBlueprint(parsed, selectedPosition, objective, attributes);
+  const result: SkillRecommendation[] = [];
+  for (const skill of recommendedSkills) {
+    const key = skillKey(skill);
+    const essential = blueprint.essentials.some((item) => skillKey(item) === key);
+    result.push({ name: skill, tier: essential ? 'essencial' : 'alternativa', reason: skillTierReason(skill, essential ? 'essencial' : 'alternativa', blueprint) });
+  }
+  for (const skill of buildAvoidSkills(parsed, selectedPosition, objective, attributes)) {
+    if (result.some((item) => skillKey(item.name) === skillKey(skill))) continue;
+    result.push({ name: skill, tier: 'evitar', reason: skillTierReason(skill, 'evitar', blueprint) });
+  }
+  return result;
+}
+
+function contextualSkillBans(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>) {
+  const playstyle = normalize(parsed.playstyle ?? '').toLowerCase();
+  const banned = new Set<string>();
+  const ban = (skills: string[]) => skills.forEach((skill) => banned.add(skillKey(skill)));
+  ban(skillBlueprint(parsed, selectedPosition, objective, attributes).avoid);
+
+  if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || isGoalkeeperStyle(parsed.playstyle)) {
+    ban(Object.keys(SKILL_PROFILES).filter((skill) => SKILL_PROFILES[skill].category !== 'GOLEIRO' && !['Liderança', 'Espírito guerreiro'].includes(skill)));
+    return banned;
+  }
+
+  if (isPureFinisherCf(selectedPosition, playstyle)) {
+    ban(DEFENSIVE_FIELD_SKILLS);
+    ban(CROSSING_SIDE_SKILLS);
+  }
+
+  if ((selectedPosition === 'CF' || selectedPosition === 'SS') && !shouldRecommendTrackBack(selectedPosition, playstyle, objective, attributes)) {
+    banned.add(skillKey('Volta para marcar'));
+  }
+
+  if (selectedPosition === 'CB') {
+    ban(['Toque duplo', 'Elástico', 'Controle da cavadinha', 'Efeito de longe', 'Precisão à distância', 'Finalização acrobática', 'Chute de primeira']);
+  }
+
+  if (selectedPosition === 'DMF' && /destruidor|primeiro volante|anchor|ancora|âncora/.test(playstyle)) {
+    ban(['Controle da cavadinha', 'Finalização acrobática', 'Efeito de longe', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente']);
+  }
+
+  return banned;
+}
+
+function finalSkillScoreAdjustments(skill: string, parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>) {
+  const playstyle = normalize(parsed.playstyle ?? '').toLowerCase();
+  let bonus = 0;
+
+  if (selectedPosition === 'CF') {
+    if (PURE_CF_FINISHER_STYLES.test(playstyle)) {
+      if (['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe', 'Controle da cavadinha'].includes(skill)) bonus += 24;
+      if (skill === 'Cabeçada' && (attributes.heading >= 74 || attributes.jump >= 76 || attributes.physicalContact >= 78)) bonus += 18;
+      if (skill === 'Passe de primeira' && attributes.lowPass >= 74) bonus += 10;
+      if (skill === 'Toque de calcanhar' && attributes.ballControl >= 75) bonus += 8;
+    }
+    if (TARGET_CF_STYLES.test(playstyle)) {
+      if (['Passe de primeira', 'Toque de calcanhar', 'Cabeçada', 'Superioridade aérea', 'Chute de primeira'].includes(skill)) bonus += 18;
+    }
+  }
+
+  if ((selectedPosition === 'LWF' || selectedPosition === 'RWF') && ['Toque duplo', 'Controle com a sola', 'Elástico', 'Cruzamento preciso', 'Curva para fora'].includes(skill)) bonus += 14;
+  if ((selectedPosition === 'DMF' || selectedPosition === 'CB') && ['Interceptação', 'Bloqueador', 'Marcação individual', 'Superioridade aérea'].includes(skill)) bonus += 16;
+  if (skill === 'Volta para marcar' && !shouldRecommendTrackBack(selectedPosition, playstyle, objective, attributes)) bonus -= 200;
+  return bonus;
+}
+
 
 
 const IMPETO_NAMES = [
   'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa', 'Duelo',
-  'Agilidade', 'Fisicalidade', 'Goleiro', 'Instinto artilheiro', 'Guardião', 'Motor do time', 'Defesaça',
+  'Agilidade', 'Fisicalidade', 'Goleiro', 'Guardião', 'Motor do time', 'Defesaça',
   'Cruzamento', 'Fantasista', 'Volante criativo', 'Reconstrução', 'Precisão', 'Criador ofensivo',
   'Proteção de Posse', 'Equilibrado', 'Transição ofensiva', 'Bloqueio Aéreo', 'Rompe-barreira', 'Força',
   'Movimento sem a bola', 'Roubo de bola'
@@ -1984,26 +2417,35 @@ function desiredImpetoGroups(position: PositionCode, playstyle?: string | null, 
   if (position === 'CB') groups.push('defensor', 'zagueiro-aereo');
   if (position === 'DMF') groups.push('volante-defensivo', 'volante-criador', 'pressao');
   if (position === 'CMF') groups.push('meia-versatil', 'meia', 'volante-criador');
-  if (position === 'AMF') groups.push('criador', 'meia-ofensivo', 'driblador');
+  if (position === 'AMF') groups.push('criador', 'meia-ofensivo', 'posse');
   if (position === 'LMF' || position === 'RMF') groups.push('ala', 'lateral', 'meia-versatil', 'ponta');
   if (position === 'LB' || position === 'RB') groups.push('lateral', 'lateral-defensivo', 'defensor');
   if (position === 'LWF' || position === 'RWF') groups.push('ponta', 'driblador', 'finalizador');
   if (position === 'SS') groups.push('segundo-atacante', 'criador', 'infiltrador');
-  if (position === 'CF') groups.push('finalizador', 'pivo', 'finalizador-aereo', 'finalizador-fisico');
+
+  if (position === 'CF') {
+    if (/homem de area|homem de área|pivo|pivô|atacante pivo|atacante pivô|target man|puxa marcacao|puxa marcação/.test(style)) {
+      groups.push('pivo', 'finalizador-aereo', 'finalizador-fisico', 'finalizador');
+    } else {
+      // CA artilheiro/finalizador não deve puxar grupos de pressão ou defesa.
+      groups.push('finalizador', 'infiltrador', 'finalizador-fisico');
+    }
+  }
 
   if (/destruidor|primeiro volante|ancora|anchor man|destroyer/.test(style)) groups.unshift('volante-defensivo', 'defensor', 'pressao');
   if (/meia versatil|box-to-box|todo campo/.test(style)) groups.unshift('meia-versatil', 'pressao');
   if (/orquestrador|armador criativo|criador de jogadas|classico/.test(style)) groups.unshift('criador', 'posse', 'meia');
   if (/jogador de infiltracao|jogador sem bola|hole player|atacante surpresa/.test(style)) groups.unshift('infiltrador', 'finalizador');
-  if (/homem de area|pivo|atacante pivo|target man|puxa marcacao|puxa marcação/.test(style)) groups.unshift('pivo', 'finalizador-aereo', 'finalizador-fisico');
+  if (/homem de area|homem de área|pivo|pivô|atacante pivo|atacante pivô|target man|puxa marcacao|puxa marcação/.test(style)) groups.unshift('pivo', 'finalizador-aereo', 'finalizador-fisico');
   if (/artilheiro|goal poacher|atacante matador/.test(style)) groups.unshift('finalizador', 'infiltrador');
   if (/lateral ofensivo|lateral atacante|perito em cruzamento/.test(style)) groups.unshift('lateral', 'ala');
-  if (/ala produtivo|lateral movel|ponta prolifico|flanco movel/.test(style)) groups.unshift('ponta', 'ala', 'driblador');
+  if (/ala produtivo|lateral movel|lateral móvel|ponta prolifico|ponta prolífico|flanco movel|flanco móvel/.test(style)) groups.unshift('ponta', 'ala', 'driblador');
 
-  if (objective === 'DEFENSIVE' || objective === 'PRESSING') groups.unshift('volante-defensivo', 'defensor', 'pressao');
+  if (objective === 'DEFENSIVE' || (objective === 'PRESSING' && !isPureFinisherCf(position, style))) groups.unshift('volante-defensivo', 'defensor', 'pressao');
   if (objective === 'CREATOR' || objective === 'POSSESSION') groups.unshift('criador', 'posse', 'meia');
   if (objective === 'FINISHER' || objective === 'AERIAL') groups.unshift('finalizador', 'finalizador-aereo');
-  if (objective === 'DRIBBLER' || objective === 'QUICK_COUNTER') groups.unshift('driblador', 'ponta', 'infiltrador');
+  if (objective === 'DRIBBLER') groups.unshift('driblador', 'ponta');
+  if (objective === 'QUICK_COUNTER') groups.unshift(position === 'CF' ? 'infiltrador' : 'ponta', 'driblador');
 
   return Array.from(new Set(groups));
 }
@@ -2056,40 +2498,51 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     ...parsed.impetos.map((item) => skillKey(item.name))
   ]);
   const bannedAdditional = new Set(SPECIAL_SKILL_NAMES.map(skillKey));
+  const contextualBans = contextualSkillBans(parsed, selectedPosition, objective, attributes);
+  const blueprint = skillBlueprint(parsed, selectedPosition, objective, attributes);
 
   const add = (skill: string, score: number) => {
     if (!SKILL_PROFILES[skill]) return;
     const key = skillKey(skill);
     if (ownedSkillKeys.has(key)) return;
     if (bannedAdditional.has(key)) return;
-    candidateScores.set(skill, Math.max(candidateScores.get(skill) ?? 0, score));
+    if (contextualBans.has(key)) return;
+    const adjusted = score + finalSkillScoreAdjustments(skill, parsed, selectedPosition, objective, attributes);
+    if (adjusted <= 0) return;
+    candidateScores.set(skill, Math.max(candidateScores.get(skill) ?? 0, adjusted));
   };
 
   if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || isGoalkeeperStyle(parsed.playstyle)) {
     const profile = goalkeeperProfile(parsed, attributes);
-    add('Defesa de pênalti', profile.weakReflex ? 118 : 108);
-    add('Arremesso longo de goleiro', profile.offensive ? 112 : 98);
-    add('Lançamento baixo de goleiro', profile.offensive ? 106 : 96);
-    add('Liderança', 88);
-    add('Espírito guerreiro', 80);
+    blueprint.essentials.forEach((skill, index) => add(skill, 130 - index * 8));
+    if (profile.offensive) add('Arremesso longo de goleiro', 116);
+    if (profile.weakReflex) add('Defesa de pênalti', 118);
+    blueprint.alternatives.forEach((skill, index) => add(skill, 82 - index * 5));
     return Array.from(candidateScores.entries())
       .sort((left, right) => right[1] - left[1])
       .map(([skill]) => skill)
       .slice(0, 5);
   }
 
-  // 1) Função principal escolhida pelo motor local.
-  skillPriority(selectedPosition, objective).forEach((skill, index) => add(skill, 100 - index * 6));
+  // 1) Função principal escolhida pelo motor local: a lista é separada em essenciais e alternativas.
+  blueprint.essentials.forEach((skill, index) => add(skill, 145 - index * 7));
+  blueprint.alternatives.forEach((skill, index) => add(skill, 96 - index * 5));
+
+  // 1.1) Herança segura por posição, com peso menor que a função real.
+  skillPriority(selectedPosition, objective).forEach((skill, index) => add(skill, 84 - index * 5));
 
   // 2) Posições reais da carta lidas no grid do eFHUB/eFootBase.
   // Isso evita recomendar só por "LE" quando a carta também rende como VOL/MC/ZAG etc.
   const ratedPositions = topRatedPositions(parsed.positionRatings);
   const cardPositions = ratedPositions.length ? ratedPositions : parsed.positions;
-  cardPositions.slice(0, 4).forEach((position, posIndex) => {
-    skillPriority(position, objective).forEach((skill, index) => add(skill, 78 - posIndex * 8 - index * 4));
-  });
-
   const playstyle = normalize(parsed.playstyle ?? '').toLowerCase();
+  const useCrossPositionHints = !isPureFinisherCf(selectedPosition, playstyle);
+  if (useCrossPositionHints) {
+    cardPositions.slice(0, 3).forEach((position, posIndex) => {
+      skillPriority(position, objective).forEach((skill, index) => add(skill, 66 - posIndex * 8 - index * 4));
+    });
+  }
+
   const isDestroyer = /destruidor|destroyer/.test(playstyle);
   const isFullback = selectedPosition === 'LB' || selectedPosition === 'RB' || cardPositions.includes('LB') || cardPositions.includes('RB');
   const isMidfielder = selectedPosition === 'DMF' || selectedPosition === 'CMF' || selectedPosition === 'AMF' || cardPositions.some((p) => ['DMF', 'CMF', 'AMF'].includes(p));
@@ -2100,7 +2553,7 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     add('Interceptação', 112);
     add('Bloqueador', 108);
     add('Marcação individual', 104);
-    add('Volta para marcar', 98);
+    if (shouldRecommendTrackBack(selectedPosition, playstyle, objective, attributes)) add('Volta para marcar', 98);
     add('Passe de primeira', 92);
     add('Espírito guerreiro', 88);
     add('Passe em profundidade', 84);
@@ -2116,12 +2569,14 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     add('Controle com a sola', 82);
   }
 
-  if (/artilheiro|goal poacher|homem de area|atacante matador|pivo|target man|fox/.test(playstyle)) {
-    add('Chute de primeira', 112);
-    add('Precisão à distância', 98);
-    add('Finalização acrobática', 92);
-    add('Cabeçada', 86);
-    add('Superioridade aérea', 82);
+  if (/artilheiro|goal poacher|homem de area|homem de área|atacante matador|pivo|pivô|target man|fox/.test(playstyle)) {
+    add('Chute de primeira', 116);
+    add('Precisão à distância', 106);
+    add('Finalização acrobática', 98);
+    add('Efeito de longe', 94);
+    add('Controle da cavadinha', 84);
+    if (attributes.heading >= 74 || attributes.jump >= 76 || attributes.physicalContact >= 78) add('Cabeçada', 90);
+    if (attributes.heading >= 76 || attributes.jump >= 78 || attributes.physicalContact >= 80) add('Superioridade aérea', 84);
   }
 
   // 4) Ajuste por atributos. Aqui é onde a recomendação fica mais "gameplay real".
@@ -2131,7 +2586,7 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     add('Marcação individual', 96);
   }
   if (attributes.aggression >= 78 || attributes.stamina >= 80) {
-    add('Volta para marcar', 92);
+    if (shouldRecommendTrackBack(selectedPosition, playstyle, objective, attributes)) add('Volta para marcar', 92);
     add('Espírito guerreiro', 84);
   }
   if (attributes.lowPass >= 76 || isMidfielder) {
@@ -2152,9 +2607,10 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     if (isForward) add('Elástico', 74);
   }
   if (attributes.finishing >= 78 || isForward) {
-    add('Chute de primeira', 94);
-    add('Precisão à distância', 82);
-    add('Finalização acrobática', 74);
+    add('Chute de primeira', 96);
+    add('Precisão à distância', 86);
+    add('Finalização acrobática', 78);
+    if (attributes.curl >= 72 || attributes.kickingPower >= 78) add('Efeito de longe', 76);
   }
   if (attributes.heading >= 76 || attributes.jump >= 76 || attributes.physicalContact >= 80) {
     add('Superioridade aérea', 86);
@@ -2766,6 +3222,12 @@ function tacticalProfileTips(profile: TacticalProfile, selected: PositionCode) {
   if (profile.style === 'CONTRA_ATAQUE_RAPIDO') tips.push('Estilo do técnico — Contra-ataque rápido: aceleração, velocidade e passe vertical pesam mais na recomendação; ataque o espaço logo após recuperar.');
   if (profile.style === 'POR_FORA') tips.push('Estilo do técnico — Por fora: use laterais/alas e pontas para abrir campo, cruzar e inverter jogadas.');
   if (profile.style === 'PASSE_LONGO') tips.push('Estilo do técnico — Passe longo: valoriza passe alto, físico e jogo aéreo; use pivô, segunda bola e atacantes fortes.');
+  if (profile.style === 'CONTRA_ATAQUE_RAPIDO' && (selected === 'CF' || selected === 'SS' || selected === 'LWF' || selected === 'RWF')) tips.push('Dica prática: no contra-ataque rápido, o primeiro passe precisa achar o atacante já de frente; use Chute de primeira e Passe em profundidade antes de pensar em recomposição.');
+  if (profile.style === 'POSSE_DE_BOLA' && (selected === 'CMF' || selected === 'AMF' || selected === 'SS')) tips.push('Dica prática: na posse, a carta precisa oferecer linha curta; Passe de primeira, Controle com a sola e Passe na medida valem mais que correria isolada.');
+  if (profile.style === 'POR_FORA' && (selected === 'LB' || selected === 'RB' || selected === 'LWF' || selected === 'RWF' || selected === 'LMF' || selected === 'RMF')) tips.push('Dica prática: por fora rende melhor com amplitude; force 2 contra 1 no corredor, cruze rasteiro/alto e tenha um CA atacando a primeira trave.');
+  if (profile.style === 'PASSE_LONGO' && (selected === 'CF' || selected === 'CB' || selected === 'DMF')) tips.push('Dica prática: no passe longo, use zagueiros/volantes com lançamento e CA com físico; priorize segunda bola e não tente driblar no meio congestionado.');
+  if (selected === 'CF') tips.push('Para CA, escolha habilidade de finalização primeiro; pressão só entra como plano alternativo se o atleta for pivô ou atacante de desgaste.');
+  if (selected === 'DMF') tips.push('Para VOL, proteja a entrada da área: Interceptação, Bloqueador e Passe de primeira costumam render mais que subir demais.');
   if (!tips.length) tips.push(`Perfil tático automático: a ficha foi feita para o melhor rendimento da posição ${POSITION_PT[selected]}.`);
   return tips;
 }
@@ -2856,6 +3318,232 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
   ];
 }
 
+
+function positionFamily(position: PositionCode) {
+  if (position === 'GK') return 'goleiro';
+  if (position === 'CB') return 'zagueiro';
+  if (position === 'LB' || position === 'RB') return 'lateral';
+  if (position === 'DMF') return 'volante';
+  if (position === 'CMF') return 'meia de ligação';
+  if (position === 'AMF') return 'meia atacante';
+  if (position === 'LMF' || position === 'RMF') return 'meia lateral';
+  if (position === 'LWF' || position === 'RWF') return 'ponta';
+  if (position === 'SS') return 'segundo atacante';
+  return 'centroavante';
+}
+
+function realFunctionLabel(parsed: ParsedCard, selected: PositionCode, objective: Objective, a: Required<Attributes>) {
+  const style = normalize(parsed.playstyle ?? '').toLowerCase();
+  if (selected === 'GK') {
+    if (/ofensivo/.test(style) || a.lowPass >= 72 || a.kickingPower >= 82) return 'GOL de reposição e saída rápida';
+    if (a.goalkeeperReflexes >= a.goalkeeperReach + 3) return 'GOL de reflexo';
+    return 'GOL seguro de posicionamento';
+  }
+  if (selected === 'CB') {
+    if (/atacante surpresa|extra frontman/.test(style)) return 'ZAG atacante surpresa com avanço controlado';
+    if (/defensor criativo|construtor|build up/.test(style) || a.lowPass >= 76 || a.loftedPass >= 76) return 'ZAG defensor criativo / saída de bola';
+    if (/destruidor|destroyer/.test(style)) return 'ZAG destruidor de combate';
+    if (a.speed >= 78 || a.acceleration >= 78) return 'ZAG de cobertura';
+    return 'ZAG de combate e bloqueio';
+  }
+  if (selected === 'LB' || selected === 'RB') {
+    if (/lateral defensivo/.test(style) || objective === 'DEFENSIVE' || a.defensiveAwareness >= 78) return `${POSITION_PT[selected]} defensivo de recomposição`;
+    if (/perito em cruzamento/.test(style)) return `${POSITION_PT[selected]} especialista em cruzamentos`;
+    if (/lateral ofensivo|lateral atacante|ala produtivo/.test(style) || a.loftedPass >= 78 || a.speed >= 82) return `${POSITION_PT[selected]} ofensivo de amplitude`;
+    return `${POSITION_PT[selected]} equilibrado`;
+  }
+  if (selected === 'DMF') {
+    if (/primeiro volante|ancora|âncora|anchor/.test(style)) return '1º VOL protetor da zaga';
+    if (/destruidor|destroyer/.test(style) || a.tackling >= 80 || a.aggression >= 80) return 'VOL destruidor de contenção';
+    if (/orquestrador|defensor criativo|construtor/.test(style) || a.lowPass >= 80 || a.loftedPass >= 78) return 'VOL construtor de saída';
+    return 'VOL híbrido de proteção';
+  }
+  if (selected === 'CMF') {
+    if (/orquestrador/.test(style) || a.lowPass >= 82) return 'MLG orquestrador';
+    if (/armador|criativo/.test(style)) return 'MLG armador de apoio';
+    if (/meia versatil|box-to-box|todo campo/.test(style) || a.stamina >= 83) return 'MLG box-to-box';
+    if (a.defensiveAwareness >= 77) return 'MLG marcador de apoio';
+    return 'MLG de ligação';
+  }
+  if (selected === 'AMF') {
+    if (/jogador de infiltracao|jogador de infiltração|atacante surpresa|hole/.test(style) || a.finishing >= 76) return 'MAT infiltrador';
+    if (/classico|clássico/.test(style)) return 'MAT clássico 10 de criação';
+    if (/armador criativo/.test(style)) return 'MAT armador criativo';
+    return 'MAT criador de último passe';
+  }
+  if (selected === 'LWF' || selected === 'RWF') {
+    if (/perito em cruzamento/.test(style) || a.loftedPass >= 78) return `${POSITION_PT[selected]} cruzador`;
+    if (/ala produtivo/.test(style)) return `${POSITION_PT[selected]} ala produtivo`;
+    if (/lateral movel|lateral móvel|flanco|roaming/.test(style) || a.finishing >= 78) return `${POSITION_PT[selected]} finalizador diagonal`;
+    if (objective === 'PRESSING' || a.stamina >= 84) return `${POSITION_PT[selected]} de pressão e recomposição`;
+    return `${POSITION_PT[selected]} driblador/velocista`;
+  }
+  if (selected === 'SS') {
+    if (/armador|criativo/.test(style) || a.lowPass >= 80) return 'SA criador entre linhas';
+    if (objective === 'PRESSING' || a.stamina >= 84) return 'SA de pressão e apoio';
+    return 'SA de ruptura';
+  }
+  if (/puxa marcacao|puxa marcação/.test(style)) return 'CA que puxa marcação e abre espaço';
+  if (/homem de area|homem de área/.test(style)) return 'CA homem de área';
+  if (TARGET_CF_STYLES.test(style)) return 'CA pivô/referência';
+  if (/artilheiro|goal poacher|atacante matador/.test(style)) return 'CA artilheiro finalizador';
+  if (objective === 'PRESSING' && a.stamina >= 85 && a.aggression >= 78) return 'CA de pressão situacional';
+  return 'CA finalizador de máximo rendimento';
+}
+
+function buildSectorScores(position: PositionCode, a: Required<Attributes>, pri: Record<string, number>, objective: Objective, profile: TacticalProfile): TeamMapPhaseScores {
+  const defenseBase = avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.aggression, a.physicalContact);
+  const passBase = avg(a.lowPass, a.loftedPass, a.ballControl);
+  const creationBase = avg(a.lowPass, a.ballControl, a.tightPossession, a.dribbling, a.curl);
+  const speedBase = avg(a.speed, a.acceleration, a.balance);
+  const finishBase = avg(a.finishing, a.offensiveAwareness, a.kickingPower, a.curl);
+  const aerialBase = avg(a.heading, a.jump, a.physicalContact);
+  const gkBase = avg(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach);
+
+  const roleBoost = (roles: PositionCode[], amount: number) => roles.includes(position) ? amount : 0;
+  const styleBoost = profile.style === 'CONTRA_ATAQUE_RAPIDO' ? 3 : profile.style === 'POSSE_DE_BOLA' ? 2 : profile.style === 'POR_FORA' ? 2 : 0;
+  const pressureBoost = objective === 'PRESSING' ? 5 : 0;
+
+  if (position === 'GK') {
+    return {
+      marcacao: Math.round(clampDecimal(gkBase, 1, 100)),
+      cobertura: Math.round(clampDecimal(avg(a.goalkeeperReach, a.goalkeeperAwareness, a.jump), 1, 100)),
+      saidaDeBola: Math.round(clampDecimal(avg(a.kickingPower, a.lowPass, a.loftedPass, a.goalkeeperAwareness), 1, 100)),
+      passe: Math.round(clampDecimal(avg(a.kickingPower, a.loftedPass, a.lowPass), 1, 100)),
+      criacao: Math.round(clampDecimal(avg(a.kickingPower, a.loftedPass), 1, 100)),
+      aceleracao: Math.round(clampDecimal(avg(a.goalkeeperReflexes, a.jump), 1, 100)),
+      finalizacao: 1,
+      jogoAereo: Math.round(clampDecimal(avg(a.goalkeeperReach, a.jump, a.goalkeeperAwareness), 1, 100)),
+      fisico: Math.round(clampDecimal(avg(a.physicalContact, a.jump, a.balance), 1, 100))
+    };
+  }
+
+  return {
+    marcacao: Math.round(clampDecimal(defenseBase + roleBoost(['CB', 'DMF', 'LB', 'RB'], 7) + pressureBoost, 1, 100)),
+    cobertura: Math.round(clampDecimal(avg(defenseBase, speedBase, a.stamina) + roleBoost(['CB', 'LB', 'RB', 'DMF'], 5), 1, 100)),
+    saidaDeBola: Math.round(clampDecimal(passBase + roleBoost(['DMF', 'CMF', 'CB'], 5) + (profile.style === 'POSSE_DE_BOLA' ? 4 : 0), 1, 100)),
+    passe: Math.round(clampDecimal(passBase + roleBoost(['CMF', 'AMF', 'DMF', 'SS'], 5), 1, 100)),
+    criacao: Math.round(clampDecimal(creationBase + roleBoost(['AMF', 'CMF', 'SS', 'LWF', 'RWF'], 5), 1, 100)),
+    aceleracao: Math.round(clampDecimal(speedBase + roleBoost(['LWF', 'RWF', 'CF', 'SS', 'LB', 'RB'], 4) + styleBoost, 1, 100)),
+    finalizacao: Math.round(clampDecimal(finishBase + roleBoost(['CF', 'SS', 'LWF', 'RWF', 'AMF'], 6), 1, 100)),
+    jogoAereo: Math.round(clampDecimal(aerialBase + roleBoost(['CB', 'CF'], 5), 1, 100)),
+    fisico: Math.round(clampDecimal(avg(a.physicalContact, a.balance, a.stamina, a.jump) + roleBoost(['CB', 'DMF', 'CF'], 4), 1, 100))
+  };
+}
+
+function buildTeamMapAnalysis(parsed: ParsedCard, selected: PositionCode, objective: Objective, a: Required<Attributes>, pri: Record<string, number>, profile: TacticalProfile, skills: string[], impetos: ImpetoRecommendation[]): TeamMapAnalysis {
+  const functionLabel = realFunctionLabel(parsed, selected, objective, a);
+  const family = positionFamily(selected);
+  const scores = buildSectorScores(selected, a, pri, objective, profile);
+  const styleName: Record<TacticalStyle, string> = {
+    AUTO: 'Automático inteligente', POSSE_DE_BOLA: 'Posse de bola', CONTRA_ATAQUE: 'Contra-ataque normal', CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido', POR_FORA: 'Por fora', PASSE_LONGO: 'Passe longo'
+  };
+
+  let defensiveJob = 'Manter posição, proteger zona próxima e evitar sair no bote sem cobertura.';
+  let buildupJob = 'Dar opção de passe seguro e acelerar quando encontrar linha limpa.';
+  let attackingJob = 'Apoiar a fase ofensiva sem perder a função principal.';
+  let pressingJob = 'Pressionar por gatilhos: passe fraco, domínio de costas ou adversário sem linha de passe.';
+  let idealPartners: string[] = [];
+  let riskAlerts: string[] = [];
+  let matchPlan: string[] = [];
+
+  if (selected === 'GK') {
+    defensiveJob = 'Ficar seguro na meta: priorizar reflexo, alcance, firmeza e posicionamento em finalizações curtas.';
+    buildupJob = 'Repor rápido quando o adversário estiver aberto; se o passe não estiver limpo, prefira reposição segura.';
+    attackingJob = 'Não participar como jogador de linha; o valor ofensivo é acelerar a saída com reposição.';
+    pressingJob = 'Sair manualmente só quando a bola estiver longa e o zagueiro não alcançar.';
+    idealPartners = ['ZAG veloz para cobertura', 'ZAG forte no alto', 'VOL que bloqueia chute frontal'];
+    riskAlerts = ['Evite habilidades de linha no goleiro.', 'Se a defesa joga alta, use GOL com alcance/reflexo alto.'];
+    matchPlan = ['Defesa: proteger a entrada da área.', 'Saída: usar reposição rápida só com alvo livre.', 'Ataque: iniciar contra-ataque após defesa segura.'];
+  } else if (selected === 'CB') {
+    defensiveJob = 'Cobrir profundidade, bloquear chute e cortar passe antes do atacante girar.';
+    buildupJob = a.lowPass >= 76 || a.loftedPass >= 76 ? 'Iniciar saída com passe curto/longo sem forçar condução.' : 'Tocar simples no VOL/MLG e evitar conduzir sob pressão.';
+    attackingJob = 'Subir apenas em bola parada; em jogo corrido, manter cobertura.';
+    pressingJob = 'Não quebrar linha à toa; só dar bote quando o VOL atrasar o portador.';
+    idealPartners = ['VOL destruidor na frente', 'ZAG complementar veloz/forte', 'Laterais que recomponham'];
+    riskAlerts = ['Se velocidade for baixa, não use linha defensiva muito alta.', 'Evite gastar habilidade ofensiva em ZAG de combate.'];
+    matchPlan = ['Marcação: fechar corredor central.', 'Passe: primeira bola no VOL/MLG.', 'Ataque: ficar pronto para segunda bola.'];
+  } else if (selected === 'DMF') {
+    defensiveJob = 'Ser a trava do time: cortar passe central, proteger zagueiros e impedir chute frontal.';
+    buildupJob = 'Receber dos zagueiros e soltar passe limpo no MLG/MAT; evitar girar pressionado.';
+    attackingJob = 'Apoiar atrás da jogada para rebote e cobertura, não invadir área sem necessidade.';
+    pressingJob = 'Pressionar só quando houver cobertura; o valor é bloquear linha de passe.';
+    idealPartners = ['MLG construtor', 'ZAG de cobertura', 'MAT com passe vertical'];
+    riskAlerts = ['Se subir demais, o meio abre buraco.', 'Não priorize drible se a função é contenção.'];
+    matchPlan = ['Defesa: proteger a meia-lua.', 'Construção: passe curto seguro.', 'Ataque: ficar no rebote e cortar contra-ataque.'];
+  } else if (selected === 'CMF') {
+    defensiveJob = 'Ajudar o VOL na pressão e cobrir corredor central quando o lateral subir.';
+    buildupJob = 'Ligar defesa e ataque com passe rápido, condução curta e inversão quando houver espaço.';
+    attackingJob = 'Chegar como segunda linha, sem abandonar o equilíbrio do meio.';
+    pressingJob = 'Pressionar após perda com fôlego; se não roubar, atrasar a jogada.';
+    idealPartners = ['VOL fixo', 'MAT criador', 'Lateral que dê amplitude'];
+    riskAlerts = ['Se tiver pouca defesa, use ao lado de VOL forte.', 'Se tiver pouco passe, não use como organizador principal.'];
+    matchPlan = ['Marcação: encurtar no meio.', 'Passe: triangular com VOL/MAT.', 'Ataque: chegar de trás.'];
+  } else if (selected === 'AMF') {
+    defensiveJob = 'Fechar primeira linha de passe do volante rival, sem virar marcador principal.';
+    buildupJob = 'Receber entre linhas, girar rápido e achar passe em profundidade.';
+    attackingJob = 'Ser o cérebro do último passe e finalizar quando sobrar espaço na entrada da área.';
+    pressingJob = 'Pressionar o volante rival quando ele dominar de costas.';
+    idealPartners = ['CA finalizador', 'Ponta veloz', 'MLG que proteja suas costas'];
+    riskAlerts = ['Não transforme MAT criador em volante.', 'Se for lento, evite condução longa.'];
+    matchPlan = ['Criação: passe entre linhas.', 'Ataque: tabela curta com CA/SA.', 'Defesa: fechar o volante adversário.'];
+  } else if (selected === 'LB' || selected === 'RB' || selected === 'LMF' || selected === 'RMF') {
+    defensiveJob = 'Recompor corredor lateral e impedir cruzamento fácil.';
+    buildupJob = 'Dar amplitude, receber aberto e tocar por dentro quando pressionado.';
+    attackingJob = 'Criar superioridade pelo lado com cruzamento, tabela ou passe rasteiro para trás.';
+    pressingJob = 'Pressionar lateral/ponta adversário com cobertura do MLG/VOL.';
+    idealPartners = ['MLG que cubra o corredor', 'Ponta que puxe marcação', 'CA que ataque a área'];
+    riskAlerts = ['Se os dois laterais sobem juntos, o contra-ataque adversário fica perigoso.', 'Não use lateral ofensivo sem VOL de cobertura.'];
+    matchPlan = ['Marcação: fechar lado forte.', 'Construção: abrir campo.', 'Ataque: cruzar ou tocar para trás.'];
+  } else if (selected === 'LWF' || selected === 'RWF') {
+    defensiveJob = 'Pressionar saída adversária pelo lado e acompanhar lateral quando necessário.';
+    buildupJob = 'Receber aberto para carregar ou cortar por dentro, sempre com opção de passe curto.';
+    attackingJob = 'Atacar 1 contra 1, cruzar ou finalizar diagonal conforme o pé e atributos.';
+    pressingJob = 'Pressionar lateral/zagueiro no primeiro toque; Volta para marcar só se for ponta de recomposição.';
+    idealPartners = ['Lateral de apoio', 'CA finalizador', 'MLG que inverta jogo'];
+    riskAlerts = ['Se usar ponta sem recomposição, proteja o lado com lateral defensivo.', 'Não priorize habilidade defensiva em ponta finalizador.'];
+    matchPlan = ['Ataque: isolar no 1 contra 1.', 'Passe: diagonal no CA/SA.', 'Defesa: recompor quando o lateral subir.'];
+  } else if (selected === 'SS') {
+    defensiveJob = 'Fechar o primeiro passe no meio e ajudar a pressionar sem perder posição entre linhas.';
+    buildupJob = 'Aproximar do CA/MAT para tabela e passe de primeira.';
+    attackingJob = 'Atacar espaço nas costas do volante/zagueiro e finalizar como segundo homem.';
+    pressingJob = 'Pressionar com o CA em dupla quando o rival sair curto.';
+    idealPartners = ['CA pivô ou finalizador', 'MAT criador', 'Ponta que abra espaço'];
+    riskAlerts = ['Se virar ponta fixo, perde parte da função entre linhas.', 'Não coloque habilidades só defensivas em SA criativo.'];
+    matchPlan = ['Criação: tabela curta.', 'Ataque: ruptura por dentro.', 'Marcação: pressão coordenada com CA.'];
+  } else {
+    defensiveJob = 'Fechar linha de passe inicial e orientar a saída adversária para o lado, sem abandonar a área.';
+    buildupJob = 'Servir de apoio para tabela/pivô e devolver rápido para quem vem de frente.';
+    attackingJob = 'Atacar espaço, finalizar em poucos toques e ocupar a área na hora certa.';
+    pressingJob = TARGET_CF_STYLES.test(normalize(parsed.playstyle ?? '').toLowerCase()) ? 'Pressionar zagueiro quando houver cobertura, sem sair demais da referência.' : 'Pressionar só em gatilhos; o foco é finalizar, não virar marcador.';
+    idealPartners = ['SA/MAT de passe', 'Ponta com cruzamento ou diagonal', 'MLG que ache passe vertical'];
+    riskAlerts = ['Não priorize habilidade defensiva em CA finalizador.', 'Se o CA sair demais para marcar, falta presença na área.'];
+    matchPlan = ['Ataque: receber e finalizar rápido.', 'Construção: pivô curto se tiver físico.', 'Defesa: orientar pressão, sem abandonar a zona de gol.'];
+  }
+
+  const coachFit = profile.style === 'AUTO'
+    ? `Função ajustada para ${family}; escolha o estilo do técnico para refinar ainda mais.`
+    : `${functionLabel} combina melhor com ${styleName[profile.style]} quando a ficha respeita a função principal e não força habilidade fora de contexto.`;
+
+  const bestImpetoNames = impetos.filter((item) => item.tier !== 'evitar').slice(0, 3).map((item) => item.name);
+  if (bestImpetoNames.length) matchPlan.push(`Ímpetos prioritários: ${bestImpetoNames.join(', ')}.`);
+  if (skills.length) matchPlan.push(`Habilidades prioritárias: ${skills.slice(0, 3).join(', ')}.`);
+
+  return {
+    functionLabel,
+    tacticalIdentity: `${POSITION_PT[selected]} • ${functionLabel}`,
+    defensiveJob,
+    buildupJob,
+    attackingJob,
+    pressingJob,
+    idealPartners,
+    riskAlerts,
+    matchPlan,
+    sectorScores: scores,
+    coachFit
+  };
+}
+
 function recommendationExplanation(parsed: ParsedCard, selected: PositionCode, attributes: Required<Attributes>, pri: Record<string, number>, avoidPositions: Array<{ code: PositionCode; label: string; reason: string }>, profile: TacticalProfile) {
   const lines: string[] = [];
   const style = parsed.playstyle ? `estilo ${parsed.playstyle}` : 'estilo não confirmado';
@@ -2899,7 +3587,10 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const trainingPointsUsed = Math.min(trainingPlanTotalCost(training), trainingPointsTotal);
   const trainingPointsRemaining = Math.max(0, trainingPointsTotal - trainingPointsUsed);
   const recommendedSkills = recommendAdditionalSkills(parsed, selected.code, objective, attributes);
+  const skillRecommendations = buildSkillRecommendations(parsed, selected.code, objective, attributes, recommendedSkills);
+  const avoidSkills = skillRecommendations.filter((item) => item.tier === 'evitar').map((item) => item.name);
   const recommendedImpetos = recommendImpetos(parsed, selected.code, objective);
+  const teamMap = buildTeamMapAnalysis(parsed, selected.code, objective, attributes, pri, tacticalProfile, recommendedSkills, recommendedImpetos);
   const { strengths, weaknesses } = strengthsWeaknesses(attributes, pri, selected.code);
   const tips = usageTips(selected.code, objective, attributes);
   const buildName = `${POSITION_PT[selected.code]} ${selected.role}`;
@@ -2918,5 +3609,5 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
       : parsed.confidence >= 60
         ? 'Confiança média. O motor local preservou a identidade provável da carta e compensou dados faltantes com regras de rendimento real.'
         : 'Confiança baixa. O motor local usou fallback seguro; revise os dados lidos para aumentar a precisão.';
-  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips], note };
+  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note };
 }

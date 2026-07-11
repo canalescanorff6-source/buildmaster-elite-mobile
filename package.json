@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-10-apk-fiel",
-  "version": "24.10.0",
+  "name": "buildmaster-elite-tatico-v24-15-mapeamento-total-apk-fiel",
+  "version": "24.15.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.10 - APK fiel ao projeto web estável, com visual original embutido no aplicativo Android via Capacitor.",
+  "description": "BuildMaster Elite Tático v24.15 - APK fiel com Motor por Estilo de Jogo e Mapeamento Total do Time: ficha, top 5 habilidades, ímpetos, fases do jogo e equilíbrio completo do elenco.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

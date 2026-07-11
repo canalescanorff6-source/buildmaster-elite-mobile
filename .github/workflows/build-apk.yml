@@ -1,4 +1,4 @@
-name: Gerar APK Android Fiel ao Projeto
+name: Gerar APK Android Fiel v24.15
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build APK fiel ao BuildMaster web
+    name: Build APK fiel com Mapeamento Total
     runs-on: ubuntu-latest
 
     steps:
@@ -62,5 +62,5 @@ jobs:
       - name: Enviar APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v24-10-APK-Fiel
+          name: BuildMaster-Elite-Tatico-v24-15-Mapeamento-Total-APK-Fiel
           path: android/app/build/outputs/apk/debug/app-debug.apk
