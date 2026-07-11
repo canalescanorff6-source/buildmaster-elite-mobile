@@ -1,28 +1,27 @@
 {
-  "name": "buildmaster-elite-mobile-rn-v1",
-  "version": "1.0.0",
+  "name": "buildmaster-elite-mobile-rn-v1-1-apk-fix",
+  "version": "1.1.0",
   "private": true,
-  "description": "BuildMaster Elite Mobile - React Native/Expo. Aplicativo Android real, sem PWA e sem WebView de site.",
+  "description": "BuildMaster Elite Mobile - React Native/Expo com TypeScript fixado e geração de APK debug pelo GitHub Actions.",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "prebuild:android": "expo prebuild --platform android --clean",
+    "prebuild:android": "expo prebuild --platform android --clean --no-install",
     "typecheck": "tsc --noEmit",
-    "build:apk:debug": "npm run prebuild:android && cd android && ./gradlew assembleDebug",
-    "build:apk:release": "npm run prebuild:android && cd android && ./gradlew assembleRelease"
+    "build:apk:debug": "npm run prebuild:android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "latest",
-    "expo": "latest",
-    "expo-image-picker": "latest",
-    "expo-status-bar": "latest",
-    "react": "latest",
-    "react-native": "latest"
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "expo": "~51.0.39",
+    "expo-image-picker": "~15.0.7",
+    "expo-status-bar": "~1.12.1",
+    "react": "18.2.0",
+    "react-native": "0.74.5"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "typescript": "latest"
+    "@types/react": "~18.2.79",
+    "typescript": "~5.3.3"
   },
   "engines": {
     "node": ">=20"

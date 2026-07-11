@@ -1,19 +1,26 @@
-# Gerar APK React Native sem navegador
+# BuildMaster Elite Mobile — APK React Native
 
-Esta versão é React Native/Expo. Ela não usa WebView para abrir o site publicado.
+Esta versão corrige o erro do GitHub Actions:
 
-## Passos no GitHub
+`Option 'baseUrl' has been removed`
 
-1. Envie o projeto para o repositório.
-2. Entre em **Actions**.
-3. Abra **Gerar APK React Native**.
+## O que foi corrigido
+
+- Removido `baseUrl` do `tsconfig.json`.
+- TypeScript fixado em versão estável 5.3.3.
+- Dependências Expo/React Native fixadas em versões compatíveis.
+- Workflow alterado para gerar APK debug instalável, sem exigir assinatura release.
+
+## Como gerar o APK
+
+1. Suba esses arquivos no repositório `buildmaster-elite-mobile`.
+2. Abra a aba **Actions**.
+3. Clique em **Gerar APK React Native**.
 4. Clique em **Run workflow**.
-5. Aguarde o check verde.
-6. Baixe o artifact.
-7. Instale o APK no celular.
+5. Espere terminar com check verde.
+6. Baixe o artifact `buildmaster-elite-mobile-rn-apk-debug`.
+7. Instale o arquivo `app-debug.apk` no Android.
 
-## Observação sobre Neon
+## Importante
 
-A senha do Neon não deve ficar dentro do APK. Para sincronizar com Neon no app nativo, o certo é o app conversar com uma API segura no Vercel, e a API conversa com o Neon.
-
-Por isso esta primeira versão salva localmente no celular. A sincronização com nuvem deve entrar depois, por API.
+Este projeto é separado da versão web/Vercel. Não envie por cima do repositório `buildmaster-ai`.

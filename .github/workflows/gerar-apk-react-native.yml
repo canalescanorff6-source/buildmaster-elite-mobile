@@ -28,16 +28,16 @@ jobs:
         run: npm run typecheck
 
       - name: Gerar projeto Android nativo
-        run: npx expo prebuild --platform android --clean --no-install
+        run: npm run prebuild:android
 
-      - name: Gerar APK release
+      - name: Gerar APK debug instalável
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Enviar APK como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: buildmaster-elite-mobile-rn-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: buildmaster-elite-mobile-rn-apk-debug
+          path: android/app/build/outputs/apk/debug/*.apk
