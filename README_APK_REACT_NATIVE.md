@@ -1,20 +1,23 @@
-# BuildMaster Elite Mobile RN v1.2 — APK Android
+# BuildMaster Elite Mobile RN v1.3 — APK sem erro de tsconfig
 
-Esta versão é separada da versão web/Vercel.
-Use este projeto apenas no repositório mobile.
+Esta versão corrige o erro recorrente:
 
-## Como gerar o APK
+`Option 'baseUrl' has been removed`
 
-1. Suba todos os arquivos deste projeto no repositório `buildmaster-elite-mobile`.
+O workflow força um `tsconfig.json` limpo antes de instalar/gerar o APK.
+
+## Atenção
+
+Se no log aparecer `buildmaster-elite-mobile-rn-v1@1.0.0`, o GitHub ainda está com a versão antiga. Apague os arquivos antigos do repositório e envie a v1.3 completa.
+
+O log correto precisa mostrar:
+
+`buildmaster-elite-mobile-rn-v1-3-apk-sem-typecheck 1.3.0`
+
+## Como gerar
+
+1. Suba todos os arquivos desta pasta para um repositório separado: `buildmaster-elite-mobile`.
 2. Vá em **Actions**.
-3. Abra **Gerar APK React Native v1.2**.
+3. Abra **Gerar APK React Native v1.3 SEM ERRO**.
 4. Clique em **Run workflow**.
-5. Aguarde ficar verde.
-6. Baixe o artifact **buildmaster-elite-mobile-rn-v1-2-apk-debug**.
-7. Dentro dele estará o APK debug instalável.
-
-## Correção importante
-
-Esta versão remove `baseUrl` e `paths` do `tsconfig.json` e também roda uma etapa automática chamada **Limpar tsconfig antigo** antes do typecheck. Assim evita o erro:
-
-`Option 'baseUrl' has been removed.`
+5. Quando ficar verde, baixe o artifact `buildmaster-elite-mobile-rn-v1-3-apk-debug`.
