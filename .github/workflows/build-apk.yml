@@ -1,64 +1,66 @@
-name: Gerar APK React Native v1.5 RELEASE OFFLINE
+name: Gerar APK Android Fiel ao Projeto
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   build-apk:
+    name: Build APK fiel ao BuildMaster web
     runs-on: ubuntu-latest
+
     steps:
       - name: Baixar código
         uses: actions/checkout@v4
 
-      - name: Configurar Node 20
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24'
 
-      - name: Configurar Java 17
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Mostrar versão do projeto
-        run: |
-          node -e "const p=require('./package.json'); console.log(p.name, p.version); if(!p.name.includes('v1-5')){ console.error('ERRO: versão antiga no repositório. Apague os arquivos antigos e envie a v1.5.'); process.exit(1); }"
-          test -f metro.config.js
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Instalar dependências
-        run: npm install --registry=https://registry.npmjs.org/
+        run: npm install --registry=https://registry.npmjs.org/ --no-audit --no-fund
 
-      - name: Corrigir tsconfig antigo
-        run: npm run fix:tsconfig
-
-      - name: Conferir TypeScript
+      - name: Validar TypeScript
         run: npm run typecheck
 
-      - name: Gerar projeto Android nativo
-        run: npx expo prebuild --platform android --clean --no-install
+      - name: Rodar testes do motor
+        run: npm run test:all
 
-      - name: Embutir JavaScript offline
+      - name: Preparar exportação estática para APK
         run: |
-          mkdir -p android/app/src/main/assets
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file index.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res \
-            --config metro.config.js \
-            --reset-cache
-          ls -lh android/app/src/main/assets/index.android.bundle
+          rm -rf out android
+          if [ -d src/app/api ]; then
+            mv src/app/api src/app/_api_desativada_no_apk
+          fi
+          if [ -f middleware.ts ]; then
+            mv middleware.ts middleware.desativado-no-apk.ts
+          fi
 
-      - name: Gerar APK release offline
-        run: |
-          cd android
-          chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
+      - name: Gerar app web embutido
+        env:
+          BUILDMASTER_ANDROID_STATIC: '1'
+          NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
+        run: npm run build
 
-      - name: Enviar APK release como artifact
+      - name: Criar projeto Android
+        run: npx cap add android
+
+      - name: Sincronizar arquivos dentro do APK
+        run: npx cap sync android
+
+      - name: Gerar APK instalável
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Enviar APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: buildmaster-elite-mobile-v1-5-apk-release-offline
-          path: android/app/build/outputs/apk/release/*.apk
+          name: BuildMaster-Elite-Tatico-v24-10-APK-Fiel
+          path: android/app/build/outputs/apk/debug/app-debug.apk

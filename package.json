@@ -1,34 +1,42 @@
 {
-  "name": "buildmaster-elite-mobile-rn-v1-5-apk-release-offline",
-  "version": "1.5.0",
+  "name": "buildmaster-elite-tatico-v24-10-apk-fiel",
+  "version": "24.10.0",
   "private": true,
-  "description": "BuildMaster Elite Mobile React Native/Expo: APK Android release com bundle offline embutido, sem Metro e sem navegador.",
-  "main": "index.js",
+  "description": "BuildMaster Elite Tático v24.10 - APK fiel ao projeto web estável, com visual original embutido no aplicativo Android via Capacitor.",
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "prebuild:android": "expo prebuild --platform android --clean --no-install",
-    "typecheck": "node scripts/check-tsconfig.js",
-    "build:apk:debug": "npm run prebuild:android && cd android && ./gradlew assembleDebug",
-    "fix:tsconfig": "node scripts/fix-tsconfig.js",
-    "bundle:android": "mkdir -p android/app/src/main/assets && npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache",
-    "build:apk:offline-debug": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleDebug --no-daemon",
-    "build:apk:offline-release": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleRelease --no-daemon",
-    "build:apk:release-offline": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleRelease --no-daemon"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "vercel-build": "next build",
+    "test:cards": "tsx tests/card-regression.ts",
+    "test:prints": "tsx tests/print-regression.ts",
+    "test:all": "npm run test:cards && npm run test:prints",
+    "apk:doctor": "npx cap doctor",
+    "apk:add-android": "npx cap add android",
+    "apk:sync": "npx cap sync android",
+    "apk:open": "npx cap open android",
+    "apk:build-web": "BUILDMASTER_ANDROID_STATIC=1 next build"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "1.23.1",
-    "expo": "~51.0.39",
-    "expo-image-picker": "~15.0.7",
-    "expo-status-bar": "~1.12.1",
-    "react": "18.2.0",
-    "react-native": "0.74.5"
+    "lucide-react": "^1.23.0",
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tesseract.js": "^5.1.1",
+    "@neondatabase/serverless": "^1.0.0",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/android": "^7.4.4"
   },
   "devDependencies": {
-    "@types/react": "~18.2.79",
-    "typescript": "~5.3.3"
+    "@types/node": "^24.10.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3",
+    "@capacitor/cli": "^7.4.4"
   },
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   }
 }
