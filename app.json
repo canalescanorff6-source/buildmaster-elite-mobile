@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "BuildMaster Elite Mobile",
-    "slug": "buildmaster-elite-mobile",
-    "version": "1.0.0",
+    "slug": "buildmaster-elite-mobile-rn",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

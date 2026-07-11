@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-mobile-rn-v1-1-apk-fix",
-  "version": "1.1.0",
+  "name": "buildmaster-elite-mobile-rn-v1-2-apk-fix",
+  "version": "1.2.0",
   "private": true,
-  "description": "BuildMaster Elite Mobile - React Native/Expo com TypeScript fixado e geração de APK debug pelo GitHub Actions.",
+  "description": "BuildMaster Elite Mobile - React Native/Expo com correção definitiva do tsconfig e geração de APK debug pelo GitHub Actions.",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
