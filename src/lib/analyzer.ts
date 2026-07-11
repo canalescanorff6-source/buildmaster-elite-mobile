@@ -143,7 +143,7 @@ export type ParsedCard = {
   level?: number | null;
   trainingPointsTotal?: number | null;
   trainingPointsUsed?: number | null;
-  trainingPointSource?: 'TRAINING_READ' | 'OCR' | 'LEVEL_INFERRED' | 'FALLBACK';
+  trainingPointSource?: 'MANUAL' | 'TRAINING_READ' | 'OCR' | 'LEVEL_INFERRED' | 'FALLBACK';
   autoTrainingPlan?: TrainingPlan | null;
   autoTrainingPoints?: number | null;
   condition: PlayerCondition;
@@ -1934,7 +1934,7 @@ function trainingFor(position: PositionCode, objective: Objective, a: Required<A
 }
 
 function trainingCostRuleText() {
-  return 'Motor Elite Tático v24.15 Mapeamento Total: ficha, 5 habilidades, ímpetos, função real e plano de time cruzam posição, estilo do jogador, atributos, formação, modelo do técnico e equilíbrio do elenco.';
+  return 'Motor Elite Tático v24.17 Orçamento Dinâmico: ficha, 5 habilidades, ímpetos, função real e mapa do time respeitam exatamente os pontos/nível digitados na Auditoria Elite.';
 }
 
 function skillPriority(position: PositionCode, objective: Objective) {
@@ -2835,11 +2835,55 @@ function inferTrainingPointsFromLevel(level?: number | null): number | null {
   return points;
 }
 
+
+type ManualBudgetOverride = { total: number; sourceText: string } | null;
+
+function manualBlockScope(text: string): string {
+  const match = text.match(/\[AJUSTES MANUAIS\]([\s\S]*?)\[FIM AJUSTES\]/i);
+  if (match?.[1]) return match[1];
+  return text.split(/\r?\n/).slice(0, 24).join('\n');
+}
+
+function parseManualTrainingBudget(text: string): ManualBudgetOverride {
+  const scope = normalize(manualBlockScope(text)).replace(/\r?\n/g, ' ');
+  const totalPatterns = [
+    /(?:pontos\s*(?:totais|total|dispon[ií]veis|de\s*progresso|progressao|progressão)|progression\s*points|training\s*points)\s*[:=\-]?\s*(\d{1,3})/i,
+    /(?:or[cç]amento\s*(?:manual|de\s*pontos))\s*[:=\-]?\s*(\d{1,3})/i
+  ];
+  for (const pattern of totalPatterns) {
+    const match = scope.match(pattern);
+    if (!match?.[1]) continue;
+    const total = Number(match[1]);
+    if (Number.isFinite(total) && total >= MIN_AUTO_TRAINING_BUDGET && total <= MAX_AUTO_TRAINING_BUDGET) {
+      return { total: Math.round(total), sourceText: `pontos informados manualmente: ${Math.round(total)}` };
+    }
+  }
+
+  const levelMatch = scope.match(/(?:n[ií]vel|nivel|level)(?:\s*(?:m[aá]ximo|max|maximo))?\s*[:=\-]?\s*(\d{1,3})/i);
+  if (levelMatch?.[1]) {
+    const level = Number(levelMatch[1]);
+    const inferred = inferTrainingPointsFromLevel(level);
+    if (inferred && inferred >= MIN_AUTO_TRAINING_BUDGET && inferred <= MAX_AUTO_TRAINING_BUDGET) {
+      return { total: inferred, sourceText: `nível máximo manual ${level}: ${inferred} pontos` };
+    }
+  }
+
+  return null;
+}
+
 function resolveTrainingPointBudget(
   parsedPoints: { used: number | null; total: number | null; ignoredReason?: string },
   inferredPoints: number | null,
-  trainingAllocationPoints: number | null
-): { used: number; total: number; source: 'TRAINING_READ' | 'OCR' | 'LEVEL_INFERRED' | 'FALLBACK'; warning?: string } {
+  trainingAllocationPoints: number | null,
+  manualBudget: ManualBudgetOverride
+): { used: number; total: number; source: 'MANUAL' | 'TRAINING_READ' | 'OCR' | 'LEVEL_INFERRED' | 'FALLBACK'; warning?: string } {
+  // Prioridade máxima: o que o usuário digitou na Auditoria Elite.
+  // Se o usuário informou nível máximo ou pontos de progresso, o app deve recalcular a ficha por esse orçamento,
+  // mesmo que o OCR tenha lido uma ficha automática diferente no print.
+  if (manualBudget && manualBudget.total >= MIN_AUTO_TRAINING_BUDGET && manualBudget.total <= MAX_AUTO_TRAINING_BUDGET) {
+    return { used: manualBudget.total, total: manualBudget.total, source: 'MANUAL', warning: parsedPoints.ignoredReason };
+  }
+
   // Regra v6 local: se o print trouxe a ficha automática já distribuída, o app soma o custo real dela.
   // Esse é o orçamento mais confiável porque usa os próprios níveis de treino visíveis no print.
   if (trainingAllocationPoints && trainingAllocationPoints >= MIN_AUTO_TRAINING_BUDGET && trainingAllocationPoints <= MAX_AUTO_TRAINING_BUDGET) {
@@ -2921,7 +2965,8 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const autoTraining = parseTrainingAllocation(text);
   const inferredPoints = inferTrainingPointsFromLevel(level);
   const parsedPoints = parseTrainingPoints(text, inferredPoints);
-  const pointBudget = resolveTrainingPointBudget(parsedPoints, inferredPoints, autoTraining?.points ?? null);
+  const manualBudget = parseManualTrainingBudget(text);
+  const pointBudget = resolveTrainingPointBudget(parsedPoints, inferredPoints, autoTraining?.points ?? null, manualBudget);
   const trainingPointsTotal = pointBudget.total;
   const trainingPointsUsed = pointBudget.used;
   const trainingPointSource: ParsedCard['trainingPointSource'] = pointBudget.source;
@@ -2955,6 +3000,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   if (!playstyle) warnings.push('O estilo de jogo não foi lido com alta confiança no topo da carta. A recomendação foi gerada sem alterar a identidade visual.');
   if (Object.keys(positionRatings).length < 4) warnings.push('A grade de posições não foi lida por completo. O app preservou a identidade lida no topo da carta e usou a função real só para recomendar a melhor posição abaixo.');
   if (!overall && !maxOverall) warnings.push('GER não identificado. O programa estimou a análise pela posição e atributos lidos.');
+  if (trainingPointSource === 'MANUAL') warnings.push(`Orçamento manual aplicado pela Auditoria Elite: ${trainingPointsTotal} pontos. A ficha foi recalculada usando esse limite.`);
   if (trainingPointSource === 'TRAINING_READ') warnings.push(`Orçamento de pontos identificado pela ficha automática visível no print: ${trainingPointsTotal} pontos.`);
   if (trainingPointSource === 'LEVEL_INFERRED') warnings.push(`Orçamento de pontos calculado pelo nível máximo ${level}: ${trainingPointsTotal} pontos.`);
   if (trainingPointSource === 'FALLBACK') warnings.push(pointBudget.warning ?? 'Pontos e nível não foram lidos com segurança; usando orçamento competitivo padrão de 64 pontos.');
@@ -3298,11 +3344,12 @@ function aggressiveTraining(plan: TrainingPlan, position: PositionCode): Trainin
   return normalizeTrainingPlan(next);
 }
 
-function buildTrainingVariants(selected: PositionCode, selectedLabel: string, training: TrainingPlan, scored: Array<{ code: PositionCode; label: string; score: number }>): BuildVariant[] {
-  const safe = softenTraining(training, selected);
-  const competitive = aggressiveTraining(training, selected);
+function buildTrainingVariants(selected: PositionCode, selectedLabel: string, training: TrainingPlan, scored: Array<{ code: PositionCode; label: string; score: number }>, budget: number, objective: Objective, parsed: ParsedCard): BuildVariant[] {
+  const basePriority = trainingTemplate(selected, objective, fillAttributes(parsed), parsed).priority;
+  const safe = fitTrainingToBudget(softenTraining(training, selected), basePriority, budget);
+  const competitive = fitTrainingToBudget(aggressiveTraining(training, selected), basePriority, budget);
   if (selected === 'GK') {
-    const distribution = normalizeTrainingPlan({ ...training, lowerBodyStrength: Math.max(training.lowerBodyStrength, 3), shooting: 0, passing: 0, dribbling: 0, defending: 0 });
+    const distribution = fitTrainingToBudget(normalizeTrainingPlan({ ...training, lowerBodyStrength: Math.max(training.lowerBodyStrength, 3), shooting: 0, passing: 0, dribbling: 0, defending: 0 }), basePriority, budget);
     return [
       { kind: 'safe', title: 'Ficha goleiro segura', positionLabel: selectedLabel, training: safe, pointsUsed: trainingPlanTotalCost(safe), note: 'Mais firmeza e posicionamento para reduzir rebote e falhas em chutes próximos.' },
       { kind: 'competitive', title: 'Ficha goleiro reflexo', positionLabel: selectedLabel, training: competitive, pointsUsed: trainingPlanTotalCost(competitive), note: 'Mais reflexo, alcance e salto para defender chutes fortes e finalizações rápidas.' },
@@ -3314,7 +3361,7 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
   return [
     { kind: 'safe', title: 'Ficha segura', positionLabel: selectedLabel, training: safe, pointsUsed: trainingPlanTotalCost(safe), note: 'Mais equilibrada, reduz risco de perder consistência em partidas ranqueadas.' },
     { kind: 'competitive', title: 'Ficha competitiva', positionLabel: selectedLabel, training: competitive, pointsUsed: trainingPlanTotalCost(competitive), note: 'Mais agressiva para extrair o máximo da função principal.' },
-    { kind: 'alternative', title: 'Ficha alternativa', positionLabel: alternativePosition, training, pointsUsed: trainingPlanTotalCost(training), note: 'Usar quando quiser testar outra função sem apagar a identidade da carta.' }
+    { kind: 'alternative', title: 'Ficha alternativa', positionLabel: alternativePosition, training: fitTrainingToBudget(training, basePriority, budget), pointsUsed: trainingPlanTotalCost(fitTrainingToBudget(training, basePriority, budget)), note: 'Usar quando quiser testar outra função sem apagar a identidade da carta.' }
   ];
 }
 
@@ -3599,7 +3646,7 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const avoidPositions = buildAvoidPositions(parsed, attributes);
   const validation = validateAnalysis(parsed, selected, visiblePositionScores, attributes, avoidPositions);
   const trainingComparison = compareTraining(parsed.autoTrainingPlan, training);
-  const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], training, visiblePositionScores);
+  const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], training, visiblePositionScores, trainingPointsTotal, objective, parsed);
   const profileTips = tacticalProfileTips(tacticalProfile, selected.code);
   const explanation = recommendationExplanation(parsed, selected.code, attributes, pri, avoidPositions, tacticalProfile);
   const note = validation.level === 'blocked'

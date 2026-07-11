@@ -1,7 +1,7 @@
 {
-  "name": "BuildMaster Elite Tático v24.15",
-  "short_name": "BuildMaster v24.15",
-  "description": "Motor por Estilo de Jogo e Mapeamento Total do Time: ficha, habilidades, ímpetos e equilíbrio completo do elenco.",
+  "name": "BuildMaster Elite Tático v24.17",
+  "short_name": "BuildMaster v24.17",
+  "description": "Orçamento Dinâmico: ficha recalculada pelos pontos/nível digitados, habilidades, ímpetos e mapa total do time.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020712",

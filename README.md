@@ -1,8 +1,8 @@
-# BuildMaster Elite Tático v24.15 — Mapeamento Total do Time
+# BuildMaster Elite Tático v24.17 — Orçamento Dinâmico
 
 Versão fiel ao projeto web/APK com foco em máxima precisão de jogabilidade.
 
-## Novidades da v24.15
+## Novidades da v24.17
 
 - Motor por **posição + estilo de jogo + atributos + formação + modelo do técnico**.
 - Regras específicas para GOL, ZAG, laterais, VOL, MLG, MAT, pontas, SA e CA.
@@ -22,3 +22,16 @@ npm run build
 ```
 
 Para gerar APK fiel, use o workflow do GitHub Actions: **Gerar APK Android Fiel ao Projeto**.
+
+
+### Orçamento dinâmico confirmado
+
+Agora, quando você digitar manualmente **Nível máximo** ou **Pontos de progresso disponíveis** na Auditoria Elite, esse valor passa a mandar na ficha. O app recalcula a distribuição respeitando exatamente o orçamento informado, antes de copiar/salvar o plano.
+
+Prioridade usada pelo motor:
+
+1. Pontos digitados manualmente.
+2. Nível máximo digitado manualmente.
+3. Ficha automática lida do print.
+4. Nível/OCR.
+5. Padrão seguro.

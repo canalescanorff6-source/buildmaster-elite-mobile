@@ -1663,7 +1663,7 @@ select { max-width: 100%; text-overflow: ellipsis; }
   color: #ffd587;
 }
 
-/* v24.15 — Mapa Total do Time completo */
+/* v24.17 — Orçamento Dinâmico e Mapa Total */
 .squad-map-card {
   display: grid;
   gap: 14px;

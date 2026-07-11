@@ -877,7 +877,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.15 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.17 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Melhor posição: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -942,8 +942,10 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
   const attributes = Object.entries(card.attributes).filter(([, value]) => Number.isFinite(value));
-  const sourceLabel = card.trainingPointSource === 'TRAINING_READ'
-    ? 'Plano automático somado'
+  const sourceLabel = card.trainingPointSource === 'MANUAL'
+    ? 'Orçamento manual confirmado'
+    : card.trainingPointSource === 'TRAINING_READ'
+      ? 'Plano automático somado'
     : card.trainingPointSource === 'LEVEL_INFERRED'
       ? 'Calculado pelo nível'
       : card.trainingPointSource === 'OCR'
@@ -1423,7 +1425,7 @@ function ReviewPanel({
           {criticalIssues.length ? criticalIssues.map((issue) => <span key={issue.code}>⚠ {issue.message}</span>) : <span>✓ Nenhum bloqueio crítico encontrado.</span>}
           {reviewIssues.map((issue) => <span key={issue.code}>• {issue.message}</span>)}
         </div>
-        <p className="panel-note">A ficha final só deve ser gerada quando posição, estilo, nível/pontos e atributos principais estiverem corretos.</p>
+        <p className="panel-note">A ficha final só deve ser gerada quando posição, estilo, nível/pontos e atributos principais estiverem corretos. Se você digitar pontos totais, esse valor manda na ficha acima do OCR.</p>
       </article>
 
       <div className="review-grid">
@@ -1458,8 +1460,8 @@ function ReviewPanel({
               <input inputMode="numeric" value={manualFields.level} onChange={(event) => setManualFields((current) => ({ ...current, level: event.target.value.replace(/[^0-9]/g, '').slice(0, 2) }))} placeholder={card.level ? String(card.level) : 'Ex.: 32'} />
             </label>
             <label>
-              <span>Pontos totais disponíveis</span>
-              <input inputMode="numeric" value={manualFields.trainingPointsTotal} onChange={(event) => setManualFields((current) => ({ ...current, trainingPointsTotal: event.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))} placeholder={String(draft.trainingPointsTotal)} />
+              <span>Pontos de progresso disponíveis</span>
+              <input inputMode="numeric" value={manualFields.trainingPointsTotal} onChange={(event) => setManualFields((current) => ({ ...current, trainingPointsTotal: event.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))} placeholder={manualFields.level ? String((Number(manualFields.level) - 1) * 2) : String(draft.trainingPointsTotal)} />
             </label>
           </div>
         </article>
@@ -1510,7 +1512,7 @@ function ReviewPanel({
       </div>
 
       <div className="review-actions">
-        <button type="button" className="secondary-action" onClick={onRefresh}>Atualizar prévia premium</button>
+        <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular com meus pontos</button>
         <button type="button" className="elite-button" onClick={onConfirm}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
       </div>
     </section>

@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-15-mapeamento-total-apk-fiel",
-  "version": "24.15.0",
+  "name": "buildmaster-elite-tatico-v24-17-orcamento-dinamico-apk-fiel",
+  "version": "24.17.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.15 - APK fiel com Motor por Estilo de Jogo e Mapeamento Total do Time: ficha, top 5 habilidades, ímpetos, fases do jogo e equilíbrio completo do elenco.",
+  "description": "BuildMaster Elite Tático v24.17 - APK fiel com Orçamento Dinâmico: ficha recalculada pelos pontos/nível digitados, habilidades, ímpetos e mapa total do time.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
