@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-mobile-rn-v1-4-apk-offline-bundle",
-  "version": "1.4.0",
+  "name": "buildmaster-elite-mobile-rn-v1-5-apk-release-offline",
+  "version": "1.5.0",
   "private": true,
-  "description": "BuildMaster Elite Mobile React Native/Expo: APK Android com bundle JavaScript embutido para abrir sem Metro e sem navegador.",
+  "description": "BuildMaster Elite Mobile React Native/Expo: APK Android release com bundle offline embutido, sem Metro e sem navegador.",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -13,7 +13,8 @@
     "fix:tsconfig": "node scripts/fix-tsconfig.js",
     "bundle:android": "mkdir -p android/app/src/main/assets && npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache",
     "build:apk:offline-debug": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleDebug --no-daemon",
-    "build:apk:offline-release": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleRelease --no-daemon"
+    "build:apk:offline-release": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleRelease --no-daemon",
+    "build:apk:release-offline": "npm run fix:tsconfig && npm run prebuild:android && npm run bundle:android && cd android && ./gradlew assembleRelease --no-daemon"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.23.1",

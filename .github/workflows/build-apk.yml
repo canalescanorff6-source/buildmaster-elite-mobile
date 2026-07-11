@@ -1,4 +1,4 @@
-name: Gerar APK React Native v1.4 OFFLINE
+name: Gerar APK React Native v1.5 RELEASE OFFLINE
 
 on:
   workflow_dispatch:
@@ -23,7 +23,8 @@ jobs:
 
       - name: Mostrar versão do projeto
         run: |
-          node -e "const p=require('./package.json'); console.log(p.name, p.version); if(!p.name.includes('v1-4')){ console.error('ERRO: versão antiga no repositório. Apague os arquivos antigos e envie a v1.4.'); process.exit(1); }"
+          node -e "const p=require('./package.json'); console.log(p.name, p.version); if(!p.name.includes('v1-5')){ console.error('ERRO: versão antiga no repositório. Apague os arquivos antigos e envie a v1.5.'); process.exit(1); }"
+          test -f metro.config.js
 
       - name: Instalar dependências
         run: npm install --registry=https://registry.npmjs.org/
@@ -37,20 +38,27 @@ jobs:
       - name: Gerar projeto Android nativo
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Embutir JavaScript no APK
+      - name: Embutir JavaScript offline
         run: |
           mkdir -p android/app/src/main/assets
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res \
+            --config metro.config.js \
+            --reset-cache
           ls -lh android/app/src/main/assets/index.android.bundle
 
-      - name: Gerar APK instalável sem Metro
+      - name: Gerar APK release offline
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Enviar APK como artifact
+      - name: Enviar APK release como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: buildmaster-elite-mobile-v1-4-apk-offline-debug
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: buildmaster-elite-mobile-v1-5-apk-release-offline
+          path: android/app/build/outputs/apk/release/*.apk

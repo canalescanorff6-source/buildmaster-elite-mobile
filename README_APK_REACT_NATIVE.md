@@ -1,28 +1,29 @@
-# APK React Native sem erro de Metro
+# BuildMaster Elite Mobile RN v1.5 — APK release offline
 
-Se o APK abre uma tela vermelha dizendo que não conseguiu carregar o script, o APK foi gerado sem o bundle JavaScript embutido.
+Esta versão corrige o erro **No Metro config found** e gera um APK release com o JavaScript embutido dentro do app.
 
-Esta versão resolve isso no GitHub Actions com a etapa:
+## Como gerar pelo GitHub Actions
 
-```bash
-npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
-```
-
-Depois disso, o workflow gera o APK debug instalável.
-
-## Passo a passo
-
-1. Apague os arquivos antigos do repositório mobile.
-2. Envie todos os arquivos desta v1.4.
-3. Confirme que o `package.json` está com:
+1. Envie esta versão para o repositório `buildmaster-elite-mobile`.
+2. Confirme que o `package.json` mostra:
 
 ```json
-"name": "buildmaster-elite-mobile-rn-v1-4-apk-offline-bundle",
-"version": "1.4.0"
+"name": "buildmaster-elite-mobile-rn-v1-5-apk-release-offline",
+"version": "1.5.0"
 ```
 
-4. Vá em **Actions**.
-5. Rode **Gerar APK React Native v1.4 OFFLINE**.
-6. Baixe o artifact.
+3. Vá em **Actions**.
+4. Rode o workflow **Gerar APK React Native v1.5 RELEASE OFFLINE**.
+5. Baixe o artifact **buildmaster-elite-mobile-v1-5-apk-release-offline**.
+6. Instale o APK de `android/app/build/outputs/apk/release/`.
 
-O APK correto é o `app-debug.apk` dentro do artifact.
+## O que foi corrigido
+
+- Adicionado `metro.config.js`.
+- O bundle offline é criado com `--config metro.config.js`.
+- O APK gerado agora é `assembleRelease`, não debug dependente de Metro.
+- O app não deve abrir tela vermelha pedindo `npx react-native start`.
+
+## Importante
+
+Não use **Re-run jobs** em execução antiga. Rode uma execução nova desse workflow v1.5.
