@@ -1,23 +1,28 @@
-# BuildMaster Elite Mobile RN v1.3 — APK sem erro de tsconfig
+# APK React Native sem erro de Metro
 
-Esta versão corrige o erro recorrente:
+Se o APK abre uma tela vermelha dizendo que não conseguiu carregar o script, o APK foi gerado sem o bundle JavaScript embutido.
 
-`Option 'baseUrl' has been removed`
+Esta versão resolve isso no GitHub Actions com a etapa:
 
-O workflow força um `tsconfig.json` limpo antes de instalar/gerar o APK.
+```bash
+npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
+```
 
-## Atenção
+Depois disso, o workflow gera o APK debug instalável.
 
-Se no log aparecer `buildmaster-elite-mobile-rn-v1@1.0.0`, o GitHub ainda está com a versão antiga. Apague os arquivos antigos do repositório e envie a v1.3 completa.
+## Passo a passo
 
-O log correto precisa mostrar:
+1. Apague os arquivos antigos do repositório mobile.
+2. Envie todos os arquivos desta v1.4.
+3. Confirme que o `package.json` está com:
 
-`buildmaster-elite-mobile-rn-v1-3-apk-sem-typecheck 1.3.0`
+```json
+"name": "buildmaster-elite-mobile-rn-v1-4-apk-offline-bundle",
+"version": "1.4.0"
+```
 
-## Como gerar
+4. Vá em **Actions**.
+5. Rode **Gerar APK React Native v1.4 OFFLINE**.
+6. Baixe o artifact.
 
-1. Suba todos os arquivos desta pasta para um repositório separado: `buildmaster-elite-mobile`.
-2. Vá em **Actions**.
-3. Abra **Gerar APK React Native v1.3 SEM ERRO**.
-4. Clique em **Run workflow**.
-5. Quando ficar verde, baixe o artifact `buildmaster-elite-mobile-rn-v1-3-apk-debug`.
+O APK correto é o `app-debug.apk` dentro do artifact.

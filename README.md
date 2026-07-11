@@ -1,18 +1,21 @@
-# BuildMaster Elite Mobile RN v1.1 APK Fix
+# BuildMaster Elite Mobile RN v1.4 — APK Offline Bundle
 
-Aplicativo Android em React Native/Expo para o BuildMaster Elite.
+Versão React Native/Expo para gerar APK Android real, sem abrir navegador e sem depender do Metro.
 
-Esta versão foi ajustada para corrigir o erro de TypeScript do GitHub Actions e gerar APK instalável.
+Esta versão corrige o erro vermelho no celular:
 
-## Comandos principais
+`Unable to load script. Make sure you're either running Metro...`
 
-```bash
-npm install --registry=https://registry.npmjs.org/
-npm run typecheck
-npm run prebuild:android
-cd android && ./gradlew assembleDebug
-```
+A correção é feita embutindo o arquivo `index.android.bundle` dentro do APK antes do build.
 
-## Gerar APK pelo GitHub
+## Como gerar o APK
 
-Use a aba **Actions** e rode **Gerar APK React Native**.
+1. Suba esta versão em um repositório separado do projeto web.
+2. Abra a aba **Actions**.
+3. Rode o workflow **Gerar APK React Native v1.4 OFFLINE**.
+4. Baixe o artifact **buildmaster-elite-mobile-v1-4-apk-offline-debug**.
+5. Instale o `app-debug.apk` no celular.
+
+## Importante
+
+Não use `Re-run jobs` em execuções antigas. Rode uma execução nova do workflow v1.4.

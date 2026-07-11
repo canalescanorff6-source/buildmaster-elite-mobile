@@ -1,4 +1,4 @@
-name: Gerar APK React Native v1.3 SEM ERRO
+name: Gerar APK React Native v1.4 OFFLINE
 
 on:
   workflow_dispatch:
@@ -23,35 +23,27 @@ jobs:
 
       - name: Mostrar versão do projeto
         run: |
-          node -e "const p=require('./package.json'); console.log(p.name, p.version)"
-
-      - name: Forçar tsconfig limpo
-        run: |
-          cat > tsconfig.json <<'EOF'
-          {
-            "extends": "expo/tsconfig.base",
-            "compilerOptions": {
-              "strict": false,
-              "noEmit": true,
-              "skipLibCheck": true,
-              "jsx": "react-native"
-            },
-            "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx"]
-          }
-          EOF
-          cat tsconfig.json
+          node -e "const p=require('./package.json'); console.log(p.name, p.version); if(!p.name.includes('v1-4')){ console.error('ERRO: versão antiga no repositório. Apague os arquivos antigos e envie a v1.4.'); process.exit(1); }"
 
       - name: Instalar dependências
         run: npm install --registry=https://registry.npmjs.org/
 
-      - name: Conferir que não é versão antiga
-        run: |
-          node -e "const p=require('./package.json'); if(!p.name.includes('v1-3')){ console.error('ERRO: o GitHub ainda está com versão antiga. Apague os arquivos antigos e envie a v1.3.'); process.exit(1) } console.log('Versão correta:', p.name, p.version)"
+      - name: Corrigir tsconfig antigo
+        run: npm run fix:tsconfig
+
+      - name: Conferir TypeScript
+        run: npm run typecheck
 
       - name: Gerar projeto Android nativo
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Gerar APK debug instalável
+      - name: Embutir JavaScript no APK
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
+          ls -lh android/app/src/main/assets/index.android.bundle
+
+      - name: Gerar APK instalável sem Metro
         run: |
           cd android
           chmod +x ./gradlew
@@ -60,5 +52,5 @@ jobs:
       - name: Enviar APK como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: buildmaster-elite-mobile-rn-v1-3-apk-debug
+          name: buildmaster-elite-mobile-v1-4-apk-offline-debug
           path: android/app/build/outputs/apk/debug/*.apk

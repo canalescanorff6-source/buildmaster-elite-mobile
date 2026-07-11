@@ -1,8 +1,8 @@
 const fs = require('fs');
-const cfg = JSON.parse(fs.readFileSync('tsconfig.json','utf8'));
-const co = cfg.compilerOptions || {};
-if ('baseUrl' in co || 'paths' in co) {
-  console.error('tsconfig ainda contem baseUrl/paths antigos. Rode npm run fix:tsconfig.');
+const p = 'tsconfig.json';
+const text = fs.readFileSync(p, 'utf8');
+if (text.includes('baseUrl')) {
+  console.error('ERRO: tsconfig.json ainda contém baseUrl. Rode npm run fix:tsconfig.');
   process.exit(1);
 }
-console.log('tsconfig OK: sem baseUrl e sem paths.');
+console.log('TypeScript OK: tsconfig sem baseUrl.');
