@@ -31,7 +31,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
       - name: Exibir versoes do ambiente
         run: |
@@ -75,6 +74,11 @@ jobs:
       - name: Criar projeto Android
         timeout-minutes: 5
         run: npx --no-install cap add android
+
+      - name: Configurar cache do Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
 
       - name: Sincronizar arquivos dentro do APK
         timeout-minutes: 5
