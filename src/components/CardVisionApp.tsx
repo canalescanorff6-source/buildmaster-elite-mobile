@@ -85,6 +85,28 @@ const objectives: Array<{ value: Objective; title: string; hint: string }> = [
 const playstyleOptions = PLAYSTYLE_OPTIONS;
 const officialSkillOptions = OFFICIAL_ADDITIONAL_SKILLS;
 
+const realRoleOptions = [
+  { value: 'AUTO', label: 'Automático pela carta' },
+  { value: 'CA Finalizador', label: 'CA Finalizador / Artilheiro' },
+  { value: 'CA Pivô', label: 'CA Pivô / Referência' },
+  { value: 'CA de pressão', label: 'CA de pressão' },
+  { value: 'SA Criador', label: 'SA Criador / Apoio' },
+  { value: 'Ponta driblador', label: 'Ponta driblador / velocista' },
+  { value: 'Ponta recompositor', label: 'Ponta recompositor' },
+  { value: 'Ponta cruzador', label: 'Ponta / Ala de cruzamento' },
+  { value: 'MAT Criador', label: 'MAT Criador / Armador' },
+  { value: 'MLG Box-to-box', label: 'MLG Box-to-box / Meia versátil' },
+  { value: 'VOL destruidor', label: 'VOL destruidor / marcador' },
+  { value: 'VOL construtor', label: 'VOL construtor / orquestrador' },
+  { value: 'ZAG cobertura', label: 'ZAG de cobertura' },
+  { value: 'ZAG combate', label: 'ZAG de combate / destruidor' },
+  { value: 'ZAG saída de bola', label: 'ZAG saída de bola / defensor criativo' },
+  { value: 'Lateral defensivo', label: 'Lateral defensivo' },
+  { value: 'Lateral ofensivo', label: 'Lateral ofensivo / apoio' },
+  { value: 'Goleiro reflexo', label: 'Goleiro seguro / reflexo' },
+  { value: 'Goleiro reposição', label: 'Goleiro reposição / saída rápida' }
+] as const;
+
 const trainingLabels: Record<string, string> = {
   shooting: 'Finalização',
   passing: 'Passe',
@@ -285,6 +307,7 @@ function resultHistoryKey(result: AnalysisResult) {
     result.parsed.mainPosition,
     result.bestPosition.code,
     result.buildName,
+    result.parsed.manualRole ?? '',
     result.trainingPointsTotal
   ].join(' '));
 }
@@ -1368,6 +1391,8 @@ function ReviewPanel({
   setPlaystyleOverride,
   targetPosition,
   setTargetPosition,
+  targetRole,
+  setTargetRole,
   confirmedNativeSkills,
   setConfirmedNativeSkills,
   skillsConfirmed,
@@ -1387,6 +1412,8 @@ function ReviewPanel({
   setPlaystyleOverride: (value: string) => void;
   targetPosition: PositionCode | 'AUTO';
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
+  targetRole: string;
+  setTargetRole: (value: string) => void;
   confirmedNativeSkills: string[];
   setConfirmedNativeSkills: (value: string[] | ((current: string[]) => string[])) => void;
   skillsConfirmed: boolean;
@@ -1428,7 +1455,7 @@ function ReviewPanel({
         <div className="result-intro">
           <p className="kicker"><ShieldCheck size={16} /> Auditoria Elite</p>
           <h2>Revise antes do plano final</h2>
-          <p className="review-copy">Fluxo de precisão: você confirma posição, estilo, pontos e atributos antes de finalizar. Assim o programa não depende de leitura automática e reduz erros de ficha.</p>
+          <p className="review-copy">Fluxo de precisão: você confirma posição, estilo, função real, pontos, atributos e habilidades existentes antes de finalizar. Assim o programa não depende cegamente do OCR.</p>
           <div className="metric-grid">
             <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
             <div><span>Posição lida</span><strong>{card.mainPositionPt}</strong></div>
@@ -1472,6 +1499,12 @@ function ReviewPanel({
               <span>Função alvo premium</span>
               <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
                 {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Função real de uso</span>
+              <select value={targetRole} onChange={(event) => setTargetRole(event.target.value)}>
+                {realRoleOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
             </label>
             <label>
@@ -1533,7 +1566,7 @@ function ReviewPanel({
             <button type="button" className="elite-button" onClick={() => setSkillsConfirmed(true)}><CheckCircle2 size={18} /> Confirmar habilidades</button>
           </div>
           <p className={skillsConfirmed ? 'panel-note success-note' : 'panel-note danger-note'}>
-            {skillsConfirmed ? 'Habilidades existentes confirmadas. A ficha final pode ser gerada com segurança.' : 'Confirme as habilidades antes de finalizar para evitar repetição ou recomendação errada.'}
+            {skillsConfirmed ? 'Habilidades existentes confirmadas. Escolha também a função real de uso para liberar a ficha premium.' : 'Confirme as habilidades antes de finalizar para evitar repetição ou recomendação errada.'}
           </p>
         </article>
 
@@ -1566,7 +1599,7 @@ function ReviewPanel({
 
       <div className="review-actions">
         <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular com meus pontos</button>
-        <button type="button" className="elite-button" onClick={onConfirm} disabled={!skillsConfirmed}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
+        <button type="button" className="elite-button" onClick={onConfirm} disabled={!skillsConfirmed || targetRole === 'AUTO'}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
       </div>
     </section>
   );
@@ -1582,6 +1615,7 @@ export function CardVisionApp() {
   const [rawText, setRawText] = useState('');
   const [objective, setObjective] = useState<Objective>('COMPETITIVE');
   const [targetPosition, setTargetPosition] = useState<PositionCode | 'AUTO'>('AUTO');
+  const [targetRole, setTargetRole] = useState<string>('AUTO');
   const [cardPositionOverride, setCardPositionOverride] = useState<PositionCode | 'AUTO'>('AUTO');
   const [playstyleOverride, setPlaystyleOverride] = useState<string>('AUTO');
   const [readingMode, setReadingMode] = useState<ReadingMode>('precision');
@@ -1810,6 +1844,7 @@ export function CardVisionApp() {
     setSkillsConfirmed(false);
     setSkillFilter('');
     setManualMode(false);
+    setTargetRole('AUTO');
     setCardPositionOverride('AUTO');
     setPlaystyleOverride('AUTO');
     setQualityReport(null);
@@ -1884,7 +1919,7 @@ export function CardVisionApp() {
   function backupPayloadText() {
     return JSON.stringify({
       app: 'BuildMaster Elite Tático',
-      version: '24.19.0',
+      version: '24.20.0',
       exportedAt: new Date().toISOString(),
       items: history
     }, null, 2);
@@ -2012,6 +2047,7 @@ export function CardVisionApp() {
     const learnedPoints = learned?.trainingPointsTotal ?? '';
     if (manualFields.playerName.trim() || learnedName) locks.push(`NOME DO JOGADOR: ${manualFields.playerName.trim() || learnedName}`);
     if (cardPositionOverride !== 'AUTO' || learnedPosition !== 'AUTO') locks.push(`POSIÇÃO PRINCIPAL: ${cardPositionOverride !== 'AUTO' ? cardPositionOverride : learnedPosition}`);
+    if (targetRole !== 'AUTO') locks.push(`FUNÇÃO REAL: ${targetRole}`);
     if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
     if (manualFields.level.trim()) locks.push(`NÍVEL MÁXIMO: ${manualFields.level.trim()}`);
     if (manualFields.trainingPointsTotal.trim() || learnedPoints) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim() || learnedPoints}`);
@@ -2043,6 +2079,7 @@ export function CardVisionApp() {
       attributes: nextAttributes
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
+    if (nextResult.parsed.manualRole) setTargetRole(nextResult.parsed.manualRole);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
     setConfirmedNativeSkills(nextResult.parsed.nativeSkills ?? []);
     setSkillsConfirmed(false);
@@ -2053,6 +2090,7 @@ export function CardVisionApp() {
       'NOME DO JOGADOR: ',
       'POSIÇÃO PRINCIPAL: CF',
       'ESTILO DE JOGO: AUTO',
+      'FUNÇÃO REAL: AUTO',
       'NÍVEL MÁXIMO: ',
       'PONTOS TOTAIS: ',
       '',
@@ -2067,6 +2105,7 @@ export function CardVisionApp() {
     setOcrDone(true);
     setResult(null);
     setCardPositionOverride('CF');
+    setTargetRole('AUTO');
     setPlaystyleOverride('AUTO');
     setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
     setConfirmedNativeSkills([]);
@@ -2525,6 +2564,8 @@ export function CardVisionApp() {
               setPlaystyleOverride={setPlaystyleOverride}
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
+              targetRole={targetRole}
+              setTargetRole={setTargetRole}
               confirmedNativeSkills={confirmedNativeSkills}
               setConfirmedNativeSkills={setConfirmedNativeSkills}
               skillsConfirmed={skillsConfirmed}

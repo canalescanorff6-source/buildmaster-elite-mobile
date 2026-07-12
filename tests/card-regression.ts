@@ -317,3 +317,63 @@ if (nativeSkillResult.recommendedSkills.some((skill) => ['Volta para marcar', 'I
 }
 
 console.log('OK: leitura blindada de habilidades nativas passou.');
+
+const roleLockedText = `
+[AJUSTES MANUAIS]
+CONFIRMAÇÃO MANUAL: SIM
+NOME DO JOGADOR: Atacante de Pressão
+POSIÇÃO PRINCIPAL: CF
+ESTILO DE JOGO: Pivô
+FUNÇÃO REAL: CA de pressão
+NÍVEL MÁXIMO: 31
+PONTOS TOTAIS: 62
+Finalização: 84
+Talento ofensivo: 84
+Passe rasteiro: 79
+Controle de bola: 82
+Contato físico: 84
+Resistência: 88
+Agressividade: 82
+[FIM AJUSTES]
+### HABILIDADES CONFIRMADAS MANUALMENTE
+Chute de primeira
+`;
+const roleLockedResult = analyzeCard(roleLockedText, 'PRESSING', 'AUTO', 'ca-pressao.txt');
+if (!roleLockedResult.parsed.manualRole || !/press/i.test(roleLockedResult.parsed.manualRole)) {
+  throw new Error('Função real manual não foi preservada na análise.');
+}
+if (roleLockedResult.recommendedSkills.includes('Chute de primeira')) {
+  throw new Error(`Habilidade existente foi recomendada de novo: ${roleLockedResult.recommendedSkills.join(', ')}`);
+}
+if (!roleLockedResult.recommendedSkills.includes('Volta para marcar')) {
+  throw new Error(`CA de pressão confirmado deve poder receber Volta para marcar: ${roleLockedResult.recommendedSkills.join(', ')}`);
+}
+
+const matCreatorText = `
+[AJUSTES MANUAIS]
+CONFIRMAÇÃO MANUAL: SIM
+NOME DO JOGADOR: Meia Criador
+POSIÇÃO PRINCIPAL: AMF
+ESTILO DE JOGO: Armador criativo
+FUNÇÃO REAL: MAT Criador
+NÍVEL MÁXIMO: 31
+PONTOS TOTAIS: 62
+Controle de bola: 90
+Passe rasteiro: 91
+Passe alto: 87
+Drible: 86
+Condução firme: 88
+Finalização: 75
+[FIM AJUSTES]
+### HABILIDADES CONFIRMADAS MANUALMENTE
+NENHUMA
+`;
+const matCreatorResult = analyzeCard(matCreatorText, 'CREATOR', 'AUTO', 'mat-criador.txt');
+if (matCreatorResult.recommendedSkills.some((skill) => ['Carrinho', 'Bloqueador', 'Marcação individual', 'Afastamento acrobático'].includes(skill))) {
+  throw new Error(`MAT Criador recebeu habilidade defensiva indevida: ${matCreatorResult.recommendedSkills.join(', ')}`);
+}
+if (!matCreatorResult.recommendedSkills.some((skill) => ['Passe de primeira', 'Passe em profundidade', 'Passe na medida'].includes(skill))) {
+  throw new Error(`MAT Criador não recebeu habilidade de criação: ${matCreatorResult.recommendedSkills.join(', ')}`);
+}
+
+console.log('OK: Auditoria Premium v24.20 passou nos testes de função real e habilidades manuais.');

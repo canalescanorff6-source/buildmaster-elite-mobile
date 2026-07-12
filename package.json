@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-19-premium-lock-apk-fiel",
-  "version": "24.19.0",
+  "name": "buildmaster-elite-tatico-v24-20-auditoria-premium-apk-fiel",
+  "version": "24.20.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.19 - Premium Lock com confirmação manual de habilidades, backup blindado e motor de habilidade/ficha/ímpeto mais preciso por posição, estilo e função real.",
+  "description": "BuildMaster Elite Tático v24.20 - Auditoria Premium com função real obrigatória, habilidades oficiais confirmadas manualmente, Top 5 por whitelist de posição/estilo, fichas por orçamento exato, mapa total do time e backup blindado.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
