@@ -11,6 +11,15 @@ import {
   Save,
   Search,
   Trash2,
+  Star,
+  Filter,
+  FileText,
+  Palette,
+  Layers,
+  Trophy,
+  Target,
+  LayoutDashboard,
+  SlidersHorizontal,
   ImagePlus,
   Loader2,
   LogOut,
@@ -20,15 +29,24 @@ import {
   Sparkles,
   UploadCloud,
   Wand2,
-  Zap
+  Zap,
+  Ban,
+  ThumbsUp,
+  BrainCircuit
 } from 'lucide-react';
 import { clearBuildMasterSession } from '@/components/AuthGate';
 import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
 import { DEFAULT_OCR_ZONES, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
+import { buildEliteTeamReport } from '@/lib/teamOptimizer';
+import { buildOpponentPlans, buildUltimatePlayerCoach, getOneHundredUpgradeChecklist } from '@/lib/ultimateCoach';
 import type { PrintQualityReport } from '@/lib/validation';
 
 type ReadingMode = 'precision' | 'fast';
-type ResultTab = 'resumo' | 'mapa' | 'ficha' | 'habilidades' | 'posicoes' | 'dados';
+type AppTheme = 'dark' | 'light';
+type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
+type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
+type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
+type ResultTab = 'resumo' | 'mapa' | 'ficha' | 'habilidades' | 'treinador' | 'correcao' | 'regras' | 'validacao' | 'exportar' | 'posicoes' | 'dados';
 
 type ManualFields = {
   playerName: string;
@@ -39,6 +57,7 @@ type ManualFields = {
 };
 
 type SavedSkillProgress = Record<string, boolean>;
+type SavedHistoryEvent = { at: string; action: string; note: string };
 
 function emptyManualFields(): ManualFields {
   return { playerName: '', level: '', trainingPointsTotal: '', attributes: {}, nativeSkills: [] };
@@ -56,6 +75,12 @@ type SavedAnalysis = {
   result: AnalysisResult;
   skillProgress: SavedSkillProgress;
   notes?: string;
+  favorite?: boolean;
+  statusTag?: 'completo' | 'pendente' | 'revisar';
+  personalTags?: string[];
+  tacticalRoleNote?: string;
+  changeLog?: SavedHistoryEvent[];
+  lastOpenedAt?: string;
 };
 
  type ActiveSessionSnapshot = {
@@ -85,7 +110,10 @@ const HISTORY_DB_NAME = 'buildmaster_cofre_fichas_db_v1';
 const HISTORY_STORE_NAME = 'fichas';
 const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
 const LEARNING_KEY = 'buildmaster_local_learning_v24_3';
-const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_20_estado_seguro';
+const CORRECTION_KEY = 'buildmaster_local_corrections_v24_29';
+const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_29_regras_atualizaveis';
+const RULE_PACK_KEY = 'buildmaster_rule_pack_v24_29';
+const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
 const HISTORY_LIMIT = 200;
 const DEFAULT_CLOUD_API_URL = 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas';
 const CLOUD_API_URL = process.env.NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL || '/api/cloud/fichas';
@@ -147,6 +175,108 @@ type LearnedCardMemory = {
   trainingPointsTotal?: string;
   updatedAt: string;
 };
+
+type LocalCorrectionProfile = {
+  blockedSkills: string[];
+  promotedSkills: string[];
+  blockedImpetos: string[];
+  promotedImpetos: string[];
+  notes: string[];
+  updatedAt: string;
+};
+
+type LocalCorrectionStore = Record<string, LocalCorrectionProfile>;
+
+type DynamicRuleMatch = {
+  position?: PositionCode | 'ANY';
+  playstyleIncludes?: string[];
+  functionIncludes?: string[];
+  objective?: Objective | 'ANY';
+};
+
+type DynamicRule = {
+  id: string;
+  title: string;
+  match: DynamicRuleMatch;
+  promoteSkills?: string[];
+  blockSkills?: string[];
+  promoteImpetos?: string[];
+  blockImpetos?: string[];
+  note?: string;
+};
+
+type DynamicRulePack = {
+  version: string;
+  updatedAt: string;
+  source: string;
+  rules: DynamicRule[];
+  globalBlockedSkills?: string[];
+  globalBlockedImpetos?: string[];
+};
+
+const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
+  version: '24.29.0-local',
+  updatedAt: new Date().toISOString(),
+  source: 'Pacote local embutido v24.29',
+  globalBlockedSkills: [],
+  globalBlockedImpetos: [],
+  rules: [
+    {
+      id: 'cf-finalizador-nao-marca',
+      title: 'CA finalizador não vira marcador',
+      match: { position: 'CF', playstyleIncludes: ['artilheiro', 'homem de área'] },
+      blockSkills: ['Volta para marcar', 'Interceptação', 'Marcação individual', 'Carrinho', 'Bloqueador'],
+      promoteSkills: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe', 'Controle da cavadinha'],
+      promoteImpetos: ['Chute', 'Instinto artilheiro', 'Movimento sem a bola'],
+      note: 'Regra atualizável: CA finalizador mantém foco em gol e não em recomposição pesada.'
+    },
+    {
+      id: 'goleiro-oficial',
+      title: 'Goleiro usa habilidades oficiais de GOL',
+      match: { position: 'GK' },
+      blockSkills: ['Chute de primeira', 'Precisão à distância', 'Toque duplo', 'Cruzamento preciso', 'Marcação individual', 'Carrinho', 'Bloqueador'],
+      promoteSkills: ['Pegador de pênalti', 'Arremesso longo do goleiro', 'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Liderança'],
+      promoteImpetos: ['Goleiro', 'Defesaça'],
+      note: 'Regra atualizável: GOL fica separado de jogadores de linha.'
+    },
+    {
+      id: 'vol-destruidor',
+      title: 'VOL/ZAG destruidor prioriza roubo e bloqueio',
+      match: { position: 'ANY', playstyleIncludes: ['destruidor'] },
+      promoteSkills: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Passe de primeira'],
+      promoteImpetos: ['Roubo de bola', 'Defesa', 'Duelo', 'Motor do time'],
+      blockSkills: ['Controle da cavadinha', 'Finalização acrobática'],
+      note: 'Regra atualizável: destruidor ganha prioridade defensiva sem virar atacante.'
+    },
+    {
+      id: 'orquestrador-construtor',
+      title: 'Orquestrador é construtor, não cão de guarda puro',
+      match: { position: 'ANY', playstyleIncludes: ['orquestrador'] },
+      promoteSkills: ['Passe de primeira', 'Passe em profundidade', 'Passe longo', 'Controle orientado', 'Interceptação'],
+      promoteImpetos: ['Reconstrução', 'Passe', 'Proteção de Posse', 'Volante criativo'],
+      blockSkills: ['Chute acrobático', 'Finalização acrobática', 'Controle da cavadinha'],
+      note: 'Regra atualizável: orquestrador precisa saída de bola e passe antes de combate extremo.'
+    },
+    {
+      id: 'lateral-cruzamento',
+      title: 'Lateral perito em cruzamento prioriza corredor',
+      match: { position: 'ANY', playstyleIncludes: ['perito em cruzamento', 'lateral ofensivo', 'lateral atacante'] },
+      promoteSkills: ['Cruzamento preciso', 'Passe de primeira', 'Passe longo', 'Interceptação', 'Volta para marcar'],
+      promoteImpetos: ['Cruzamento', 'Agilidade', 'Transição ofensiva', 'Fisicalidade'],
+      note: 'Regra atualizável: lateral ofensivo precisa apoiar sem perder recomposição.'
+    }
+  ]
+};
+
+
+const emptyCorrectionProfile = (): LocalCorrectionProfile => ({
+  blockedSkills: [],
+  promotedSkills: [],
+  blockedImpetos: [],
+  promotedImpetos: [],
+  notes: [],
+  updatedAt: new Date().toISOString()
+});
 
 const formations: Array<{ value: TacticalFormation; label: string }> = [
   { value: 'AUTO', label: 'Automático inteligente' },
@@ -325,6 +455,7 @@ function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0
   for (const skill of recommended) {
     if (progress[skill] === undefined) progress[skill] = false;
   }
+  const changeLog = Array.isArray(entry.changeLog) ? entry.changeLog.slice(0, 20) : [{ at: savedAt, action: 'criado', note: 'Ficha adicionada ao Cofre.' }];
   return {
     id: entry.id || `${saveKey || 'ficha'}-${fallbackIndex}`,
     saveKey,
@@ -335,7 +466,13 @@ function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0
     fullPreview: entry.fullPreview ?? null,
     result: entry.result,
     skillProgress: progress,
-    notes: entry.notes || ''
+    notes: entry.notes || '',
+    favorite: Boolean(entry.favorite),
+    statusTag: entry.statusTag,
+    personalTags: Array.isArray(entry.personalTags) ? entry.personalTags : [],
+    tacticalRoleNote: entry.tacticalRoleNote || '',
+    changeLog,
+    lastOpenedAt: entry.lastOpenedAt
   };
 }
 
@@ -351,6 +488,232 @@ function skillProgressInfo(skills: string[], progress: SavedSkillProgress | unde
   const unique = Array.from(new Set(skills));
   const done = unique.filter((skill) => progress?.[skill]).length;
   return { done, total: unique.length, percent: unique.length ? Math.round((done / unique.length) * 100) : 0 };
+}
+
+function savedStatusLabel(item: SavedAnalysis) {
+  const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+  if (item.statusTag) return item.statusTag;
+  if (!info.total) return 'revisar';
+  return info.done >= info.total ? 'completo' : 'pendente';
+}
+
+function appendSavedEvent(item: SavedAnalysis, action: string, note: string): SavedAnalysis {
+  const at = new Date().toLocaleString('pt-BR');
+  const changeLog = [{ at, action, note }, ...(item.changeLog ?? [])].slice(0, 20);
+  return { ...item, updatedAt: at, changeLog };
+}
+
+function savedStatusText(item: SavedAnalysis) {
+  const status = savedStatusLabel(item);
+  if (status === 'completo') return 'Completo';
+  if (status === 'revisar') return 'Revisar ficha';
+  const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+  return `Faltam ${Math.max(0, info.total - info.done)} habilidade(s)`;
+}
+
+function savedPositionGroup(item: SavedAnalysis) {
+  return item.result.bestPosition.code;
+}
+
+function downloadTextFile(filename: string, content: string, type = 'text/plain;charset=utf-8') {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+
+function downloadBlobFile(filename: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function buildProfessionalReportHtml(result: AnalysisResult, notes = '') {
+  const trainingRows = Object.entries(result.training)
+    .filter(([, value]) => Number(value) > 0)
+    .map(([key, value]) => `<tr><td>${escapeHtml(trainingLabels[key] ?? key)}</td><td>+${escapeHtml(value)}</td><td>${escapeHtml(result.trainingCost[key as keyof typeof result.trainingCost] ?? 0)} pts</td></tr>`)
+    .join('');
+  const skills = result.recommendedSkills.slice(0, 5).map((skill, index) => `<li><b>${index + 1}.</b> ${escapeHtml(skill)}</li>`).join('');
+  const avoid = result.avoidSkills.slice(0, 7).map((skill) => `<span>${escapeHtml(skill)}</span>`).join('');
+  const impetos = result.recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.reason)}</small></li>`).join('');
+  const tips = result.usageTips.slice(0, 6).map((tip) => `<li>${escapeHtml(tip)}</li>`).join('');
+  const explanation = result.recommendationExplanation.slice(0, 6).map((line) => `<li>${escapeHtml(line)}</li>`).join('');
+  const teamMap = result.teamMap?.sectorScores ? Object.entries(result.teamMap.sectorScores).map(([key, value]) => `<div><span>${escapeHtml(teamMapLabels[key] ?? key)}</span><b>${escapeHtml(value)}/100</b></div>`).join('') : '';
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BuildMaster Elite — ${escapeHtml(result.parsed.playerName)}</title>
+<style>
+  :root { color-scheme: dark; --bg:#030712; --panel:#0b1220; --muted:#9fb1c8; --text:#f8fafc; --accent:#34d399; --gold:#f7c76b; --stroke:#243044; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, Arial, sans-serif; background: radial-gradient(circle at top, #12332b, #030712 45%, #020617); color: var(--text); padding: 28px; }
+  .sheet { max-width: 920px; margin: 0 auto; border: 1px solid var(--stroke); border-radius: 28px; overflow: hidden; background: linear-gradient(145deg, rgba(15,23,42,.98), rgba(2,6,23,.98)); box-shadow: 0 26px 80px rgba(0,0,0,.35); }
+  header { padding: 30px; background: linear-gradient(135deg, rgba(52,211,153,.18), rgba(247,199,107,.12)); display:grid; gap: 16px; }
+  .brand { text-transform: uppercase; letter-spacing: .14em; color: var(--gold); font-size: 12px; font-weight: 900; }
+  h1 { margin: 0; font-size: clamp(30px, 5vw, 52px); line-height: .95; }
+  .subtitle { margin:0; color: var(--muted); font-size: 15px; }
+  .metrics { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 18px 30px; background: rgba(255,255,255,.035); border-block: 1px solid var(--stroke); }
+  .metric { padding: 14px; border-radius: 18px; border: 1px solid var(--stroke); background: rgba(255,255,255,.04); }
+  .metric span { display:block; color: var(--muted); font-size: 12px; font-weight: 800; }
+  .metric b { display:block; font-size: 20px; margin-top: 4px; color: #fff; }
+  section { padding: 22px 30px; border-bottom: 1px solid var(--stroke); }
+  h2 { margin: 0 0 14px; font-size: 20px; }
+  table { width:100%; border-collapse: collapse; overflow: hidden; border-radius: 16px; }
+  td, th { padding: 12px; border-bottom: 1px solid var(--stroke); text-align:left; }
+  th { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  ul { margin:0; padding-left: 18px; }
+  li { margin: 8px 0; }
+  .skills { list-style: none; padding:0; display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .skills li { margin:0; padding: 12px 14px; border:1px solid rgba(52,211,153,.25); border-radius: 16px; background: rgba(52,211,153,.08); }
+  .skills b { color: var(--accent); margin-right: 8px; }
+  .impetos { list-style:none; padding:0; display:grid; gap: 10px; }
+  .impetos li { padding: 12px 14px; border:1px solid var(--stroke); border-radius: 16px; background: rgba(255,255,255,.04); }
+  .impetos small { display:block; color: var(--muted); margin-top: 5px; }
+  .avoid { display:flex; flex-wrap:wrap; gap: 8px; }
+  .avoid span { border:1px solid rgba(248,113,113,.32); color:#fecaca; background: rgba(127,29,29,.22); padding: 8px 11px; border-radius: 999px; font-weight: 800; font-size: 12px; }
+  .team { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .team div { padding:12px; border:1px solid var(--stroke); border-radius: 16px; background: rgba(255,255,255,.04); }
+  .team span { display:block; color: var(--muted); font-size: 12px; }
+  .team b { font-size: 18px; }
+  .notes { white-space: pre-wrap; color: var(--muted); }
+  footer { padding: 18px 30px; color: var(--muted); font-size: 12px; display:flex; justify-content: space-between; gap: 12px; }
+  @media print { body { background:#fff; color:#111827; padding:0; } .sheet { box-shadow:none; border:0; border-radius:0; max-width:none; } header, section, .metrics, footer { break-inside: avoid; } }
+  @media (max-width: 720px) { body { padding: 12px; } .metrics, .team, .skills { grid-template-columns: 1fr; } header, section, .metrics, footer { padding-inline: 18px; } }
+</style>
+</head>
+<body>
+<main class="sheet">
+  <header>
+    <div class="brand">BuildMaster Elite Tático • Relatório profissional</div>
+    <h1>${escapeHtml(result.parsed.playerName)}</h1>
+    <p class="subtitle">${escapeHtml(result.teamMap?.functionLabel ?? result.buildName)} • ${escapeHtml(result.parsed.mainPositionPt)} • ${escapeHtml(result.parsed.playstyle ?? 'Estilo não informado')}</p>
+  </header>
+  <div class="metrics">
+    <div class="metric"><span>Melhor posição</span><b>${escapeHtml(result.bestPosition.label)}</b></div>
+    <div class="metric"><span>Pontos</span><b>${escapeHtml(result.trainingPointsUsed)}/${escapeHtml(result.trainingPointsTotal)}</b></div>
+    <div class="metric"><span>PRI em campo</span><b>${escapeHtml(result.pri.GER)}</b></div>
+    <div class="metric"><span>Confiança</span><b>${escapeHtml(result.parsed.confidence)}%</b></div>
+  </div>
+  <section><h2>Ficha de treino</h2><table><thead><tr><th>Atributo</th><th>Treino</th><th>Custo</th></tr></thead><tbody>${trainingRows || '<tr><td colspan="3">Sem pontos distribuídos.</td></tr>'}</tbody></table></section>
+  <section><h2>Top 5 habilidades adicionais</h2><ul class="skills">${skills || '<li>Nenhuma habilidade segura encontrada.</li>'}</ul></section>
+  <section><h2>Ímpetos recomendados</h2><ul class="impetos">${impetos || '<li>Nenhum ímpeto recomendado com segurança.</li>'}</ul></section>
+  <section><h2>Evitar nesta função</h2><div class="avoid">${avoid || '<span>Nenhum alerta crítico.</span>'}</div></section>
+  <section><h2>Mapa do jogador no time</h2><div class="team">${teamMap || '<div><span>Mapa</span><b>Não disponível</b></div>'}</div></section>
+  <section><h2>Como usar em campo</h2><ul>${tips}</ul></section>
+  <section><h2>Por que esta ficha?</h2><ul>${explanation}</ul></section>
+  ${notes ? `<section><h2>Observações pessoais</h2><div class="notes">${escapeHtml(notes)}</div></section>` : ''}
+  <footer><span>Gerado em ${new Date().toLocaleString('pt-BR')}</span><span>Ficha validada para desempenho real em campo</span></footer>
+</main>
+</body>
+</html>`;
+}
+
+function buildProfessionalCardSvg(result: AnalysisResult) {
+  const training = Object.entries(result.training)
+    .filter(([, value]) => Number(value) > 0)
+    .slice(0, 8)
+    .map(([key, value]) => `${trainingLabels[key] ?? key} +${value}`);
+  const skills = result.recommendedSkills.slice(0, 5);
+  const impetos = result.recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 3).map((item) => item.name);
+  const safeTraining = training.length ? training : ['Sem pontos distribuídos'];
+  const safeSkills = skills.length ? skills : ['Nenhuma habilidade segura'];
+  const safeImpetos = impetos.length ? impetos : ['Nenhum ímpeto seguro'];
+  const row = (text: string, y: number, color = '#e5e7eb') => `<text x="70" y="${y}" fill="${color}" font-size="28" font-weight="700">${escapeHtml(text)}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#052e2b"/><stop offset="0.42" stop-color="#071323"/><stop offset="1" stop-color="#020617"/></linearGradient>
+      <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f7c76b"/><stop offset="1" stop-color="#34d399"/></linearGradient>
+      <filter id="shadow"><feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#000" flood-opacity="0.45"/></filter>
+    </defs>
+    <rect width="1080" height="1350" rx="54" fill="url(#bg)"/>
+    <circle cx="930" cy="110" r="250" fill="#34d399" opacity="0.13"/>
+    <circle cx="80" cy="1260" r="280" fill="#f7c76b" opacity="0.10"/>
+    <rect x="46" y="44" width="988" height="1262" rx="44" fill="rgba(15,23,42,.72)" stroke="#2c3d55" stroke-width="2" filter="url(#shadow)"/>
+    <text x="70" y="106" fill="#f7c76b" font-size="24" font-weight="900" letter-spacing="4">BUILDMASTER ELITE TÁTICO</text>
+    <text x="70" y="178" fill="#ffffff" font-size="62" font-weight="900">${escapeHtml(result.parsed.playerName)}</text>
+    <text x="70" y="226" fill="#9fb1c8" font-size="28" font-weight="700">${escapeHtml(result.teamMap?.functionLabel ?? result.buildName)} • ${escapeHtml(result.bestPosition.label)}</text>
+    <rect x="70" y="270" width="940" height="148" rx="28" fill="rgba(255,255,255,.06)" stroke="#26374f"/>
+    <text x="106" y="328" fill="#9fb1c8" font-size="22" font-weight="800">PONTOS</text><text x="106" y="376" fill="#fff" font-size="42" font-weight="900">${escapeHtml(result.trainingPointsUsed)}/${escapeHtml(result.trainingPointsTotal)}</text>
+    <text x="372" y="328" fill="#9fb1c8" font-size="22" font-weight="800">PRI</text><text x="372" y="376" fill="#fff" font-size="42" font-weight="900">${escapeHtml(result.pri.GER)}</text>
+    <text x="566" y="328" fill="#9fb1c8" font-size="22" font-weight="800">ESTILO</text><text x="566" y="376" fill="#fff" font-size="32" font-weight="900">${escapeHtml(result.parsed.playstyle ?? '—')}</text>
+    <text x="70" y="480" fill="#34d399" font-size="30" font-weight="900">Ficha de treino</text>
+    ${safeTraining.map((item, i) => row(item, 535 + i * 42)).join('')}
+    <text x="70" y="910" fill="#34d399" font-size="30" font-weight="900">Top 5 habilidades</text>
+    ${safeSkills.map((item, i) => row(`${i + 1}. ${item}`, 965 + i * 42)).join('')}
+    <text x="570" y="910" fill="#f7c76b" font-size="30" font-weight="900">Ímpetos</text>
+    ${safeImpetos.map((item, i) => `<text x="570" y="${965 + i * 42}" fill="#e5e7eb" font-size="28" font-weight="700">${escapeHtml(item)}</text>`).join('')}
+    <rect x="70" y="1180" width="940" height="76" rx="24" fill="url(#gold)" opacity="0.96"/>
+    <text x="102" y="1228" fill="#03110d" font-size="27" font-weight="900">${escapeHtml((result.usageTips[0] ?? 'Use conforme a função real em campo.').slice(0, 78))}</text>
+  </svg>`;
+}
+
+function formatReportMarkdown(result: AnalysisResult, notes = '') {
+  const training = Object.entries(result.training)
+    .filter(([, value]) => Number(value) > 0)
+    .map(([key, value]) => `- ${trainingLabels[key] ?? key}: +${value} (${result.trainingCost[key as keyof typeof result.trainingCost]} pts)`)
+    .join('\n');
+  return [
+    `# BuildMaster Elite — ${result.parsed.playerName}`,
+    '',
+    `**Função real:** ${result.teamMap?.functionLabel ?? result.buildName}`,
+    `**Posição da carta:** ${result.parsed.mainPositionPt}`,
+    `**Melhor posição:** ${result.bestPosition.label}`,
+    `**Estilo:** ${result.parsed.playstyle ?? 'Não informado'}`,
+    `**Pontos:** ${result.trainingPointsUsed}/${result.trainingPointsTotal}`,
+    '',
+    '## Ficha de treino',
+    training || '- Sem pontos distribuídos.',
+    '',
+    '## Top 5 habilidades adicionais',
+    ...(result.recommendedSkills.slice(0, 5).map((skill) => `- ${skill}`)),
+    '',
+    '## Ímpetos recomendados',
+    ...(result.recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 5).map((item) => `- ${item.name}: ${item.reason}`)),
+    '',
+    '## Evitar',
+    ...(result.avoidSkills.slice(0, 6).map((skill) => `- ${skill}`)),
+    '',
+    '## Como usar em campo',
+    ...(result.usageTips.slice(0, 6).map((tip) => `- ${tip}`)),
+    '',
+    notes ? `## Observações\n${notes}` : ''
+  ].join('\n');
+}
+
+function buildDashboardStats(history: SavedAnalysis[]) {
+  const total = history.length;
+  const pending = history.filter((item) => savedStatusLabel(item) === 'pendente').length;
+  const complete = history.filter((item) => savedStatusLabel(item) === 'completo').length;
+  const favorites = history.filter((item) => item.favorite).length;
+  const positions = new Set(history.map((item) => item.result.bestPosition.code));
+  const review = history.filter((item) => savedStatusLabel(item) === 'revisar').length;
+  const skillsTotal = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).total, 0);
+  const skillsDone = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).done, 0);
+  const completion = skillsTotal ? Math.round((skillsDone / skillsTotal) * 100) : 0;
+  return { total, pending, complete, favorites, positions: positions.size, review, skillsTotal, skillsDone, completion };
 }
 
 function openHistoryDb(): Promise<IDBDatabase> {
@@ -495,6 +858,211 @@ function saveLearnedCard(memory: LearnedCardMemory) {
   } catch {
     // Aprendizado local é opcional e não pode travar a ficha.
   }
+}
+
+
+
+function normalizeRuleText(value: string | null | undefined) {
+  return memoryKey(String(value ?? ''));
+}
+
+function sanitizeRulePack(input: unknown): DynamicRulePack {
+  const fallback = DEFAULT_DYNAMIC_RULE_PACK;
+  if (!input || typeof input !== 'object') return fallback;
+  const raw = input as Partial<DynamicRulePack>;
+  const rules = Array.isArray(raw.rules) ? raw.rules.filter((rule): rule is DynamicRule => Boolean(rule && typeof rule === 'object' && typeof (rule as DynamicRule).id === 'string')) : [];
+  return {
+    version: typeof raw.version === 'string' ? raw.version : fallback.version,
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
+    source: typeof raw.source === 'string' ? raw.source : 'Pacote importado',
+    rules,
+    globalBlockedSkills: Array.isArray(raw.globalBlockedSkills) ? raw.globalBlockedSkills.filter((item): item is string => typeof item === 'string') : [],
+    globalBlockedImpetos: Array.isArray(raw.globalBlockedImpetos) ? raw.globalBlockedImpetos.filter((item): item is string => typeof item === 'string') : []
+  };
+}
+
+function readDynamicRulePack(): DynamicRulePack {
+  if (typeof window === 'undefined') return DEFAULT_DYNAMIC_RULE_PACK;
+  try {
+    const raw = localStorage.getItem(RULE_PACK_KEY);
+    if (!raw) return DEFAULT_DYNAMIC_RULE_PACK;
+    const parsed = sanitizeRulePack(JSON.parse(raw));
+    return parsed.rules.length ? parsed : DEFAULT_DYNAMIC_RULE_PACK;
+  } catch {
+    return DEFAULT_DYNAMIC_RULE_PACK;
+  }
+}
+
+function writeDynamicRulePack(pack: DynamicRulePack) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(RULE_PACK_KEY, JSON.stringify(sanitizeRulePack(pack)));
+  } catch {
+    // Regras atualizáveis são opcionais e não podem travar a ficha.
+  }
+}
+
+function ruleMatchesResult(rule: DynamicRule, result: AnalysisResult) {
+  const match = rule.match ?? {};
+  if (match.position && match.position !== 'ANY' && match.position !== result.bestPosition.code && match.position !== result.parsed.mainPosition) return false;
+  if (match.objective && match.objective !== 'ANY' && match.objective !== 'COMPETITIVE') return false;
+  const playstyle = normalizeRuleText(result.parsed.playstyle);
+  if (match.playstyleIncludes?.length && !match.playstyleIncludes.some((item) => playstyle.includes(normalizeRuleText(item)))) return false;
+  const functionText = normalizeRuleText(`${result.teamMap?.functionLabel ?? ''} ${result.buildName ?? ''}`);
+  if (match.functionIncludes?.length && !match.functionIncludes.some((item) => functionText.includes(normalizeRuleText(item)))) return false;
+  return true;
+}
+
+function dynamicRulesForResult(result: AnalysisResult): LocalCorrectionProfile {
+  const pack = readDynamicRulePack();
+  const profile = emptyCorrectionProfile();
+  const add = (target: string[], values?: string[]) => {
+    for (const value of values ?? []) {
+      if (value && !target.some((item) => item.toLowerCase() === value.toLowerCase())) target.push(value);
+    }
+  };
+  add(profile.blockedSkills, pack.globalBlockedSkills);
+  add(profile.blockedImpetos, pack.globalBlockedImpetos);
+  for (const rule of pack.rules) {
+    if (!ruleMatchesResult(rule, result)) continue;
+    add(profile.blockedSkills, rule.blockSkills);
+    add(profile.promotedSkills, rule.promoteSkills);
+    add(profile.blockedImpetos, rule.blockImpetos);
+    add(profile.promotedImpetos, rule.promoteImpetos);
+    if (rule.note) add(profile.notes, [rule.note]);
+  }
+  profile.updatedAt = pack.updatedAt;
+  return profile;
+}
+
+function readCorrectionStore(): LocalCorrectionStore {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(CORRECTION_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCorrectionStore(store: LocalCorrectionStore) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CORRECTION_KEY, JSON.stringify(store));
+  } catch {
+    // Regras atualizáveis é local e não pode travar a ficha.
+  }
+}
+
+function correctionKeysForResult(result: AnalysisResult) {
+  const player = memoryKey(result.parsed.playerName || 'jogador');
+  const style = memoryKey(result.parsed.playstyle || 'sem-estilo');
+  const role = memoryKey(result.teamMap?.functionLabel || result.buildName || result.bestPosition.label);
+  return {
+    player: `player:${player}`,
+    role: `role:${result.parsed.mainPosition}:${style}:${role}`
+  };
+}
+
+function mergeCorrectionProfiles(...profiles: Array<LocalCorrectionProfile | undefined>): LocalCorrectionProfile {
+  const merged = emptyCorrectionProfile();
+  const add = (target: string[], values?: string[]) => {
+    for (const value of values ?? []) {
+      if (value && !target.some((item) => item.toLowerCase() === value.toLowerCase())) target.push(value);
+    }
+  };
+  for (const profile of profiles) {
+    if (!profile) continue;
+    add(merged.blockedSkills, profile.blockedSkills);
+    add(merged.promotedSkills, profile.promotedSkills);
+    add(merged.blockedImpetos, profile.blockedImpetos);
+    add(merged.promotedImpetos, profile.promotedImpetos);
+    add(merged.notes, profile.notes?.slice(-8));
+    if (profile.updatedAt > merged.updatedAt) merged.updatedAt = profile.updatedAt;
+  }
+  return merged;
+}
+
+function getMergedCorrectionsForResult(result: AnalysisResult): LocalCorrectionProfile {
+  const store = readCorrectionStore();
+  const keys = correctionKeysForResult(result);
+  const dynamicRules = dynamicRulesForResult(result);
+  return mergeCorrectionProfiles(dynamicRules, store[keys.role], store[keys.player]);
+}
+
+function upsertCorrectionForResult(result: AnalysisResult, patch: Partial<LocalCorrectionProfile>, scope: 'player' | 'role' = 'role') {
+  const store = readCorrectionStore();
+  const keys = correctionKeysForResult(result);
+  const key = scope === 'player' ? keys.player : keys.role;
+  const existing = store[key] ?? emptyCorrectionProfile();
+  const next = { ...existing, updatedAt: new Date().toISOString() };
+  const add = (target: string[], values?: string[]) => {
+    for (const value of values ?? []) {
+      if (value && !target.some((item) => item.toLowerCase() === value.toLowerCase())) target.push(value);
+    }
+  };
+  add(next.blockedSkills, patch.blockedSkills);
+  add(next.promotedSkills, patch.promotedSkills);
+  add(next.blockedImpetos, patch.blockedImpetos);
+  add(next.promotedImpetos, patch.promotedImpetos);
+  add(next.notes, patch.notes);
+  // Se o usuário mudou de ideia, a última ação vence.
+  for (const skill of patch.blockedSkills ?? []) next.promotedSkills = next.promotedSkills.filter((item) => item.toLowerCase() !== skill.toLowerCase());
+  for (const skill of patch.promotedSkills ?? []) next.blockedSkills = next.blockedSkills.filter((item) => item.toLowerCase() !== skill.toLowerCase());
+  for (const impeto of patch.blockedImpetos ?? []) next.promotedImpetos = next.promotedImpetos.filter((item) => item.toLowerCase() !== impeto.toLowerCase());
+  for (const impeto of patch.promotedImpetos ?? []) next.blockedImpetos = next.blockedImpetos.filter((item) => item.toLowerCase() !== impeto.toLowerCase());
+  store[key] = next;
+  writeCorrectionStore(store);
+}
+
+function clearCorrectionsForResult(result: AnalysisResult) {
+  const store = readCorrectionStore();
+  const keys = correctionKeysForResult(result);
+  delete store[keys.player];
+  delete store[keys.role];
+  writeCorrectionStore(store);
+}
+
+function applyLocalCorrectionsToResult(result: AnalysisResult): AnalysisResult {
+  const corrections = getMergedCorrectionsForResult(result);
+  const blockedSkills = new Set(corrections.blockedSkills.map((item) => item.toLowerCase()));
+  const promotedSkills = corrections.promotedSkills.filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]));
+  const blockedImpetos = new Set(corrections.blockedImpetos.map((item) => item.toLowerCase()));
+  const promotedImpetos = corrections.promotedImpetos;
+  const ownedSkills = new Set(result.parsed.nativeSkills.map((item) => item.toLowerCase()));
+  const isAllowedSkill = (skill: string) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]) && !ownedSkills.has(skill.toLowerCase()) && !blockedSkills.has(skill.toLowerCase());
+
+  const candidates: string[] = [];
+  const pushSkill = (skill: string) => {
+    if (isAllowedSkill(skill) && !candidates.some((item) => item.toLowerCase() === skill.toLowerCase())) candidates.push(skill);
+  };
+  promotedSkills.forEach(pushSkill);
+  result.recommendedSkills.forEach(pushSkill);
+  result.skillRecommendations.filter((item) => item.tier !== 'evitar').forEach((item) => pushSkill(item.name));
+
+  const recommendedSkills = candidates.slice(0, 5);
+  const existingRecommendations = result.skillRecommendations.filter((item) => !blockedSkills.has(item.name.toLowerCase()));
+  const promotedRecommendations = promotedSkills.map((name) => ({ name, tier: 'essencial' as const, reason: 'Priorizada por correção inteligente local nesta função/jogador.' }));
+  const blockedRecommendations = corrections.blockedSkills.map((name) => ({ name, tier: 'evitar' as const, reason: 'Você marcou como não combina; o app passa a evitar automaticamente.' }));
+  const skillRecommendations = [...promotedRecommendations, ...existingRecommendations, ...blockedRecommendations]
+    .filter((item, index, array) => array.findIndex((other) => other.name.toLowerCase() === item.name.toLowerCase() && other.tier === item.tier) === index);
+
+  const recommendedImpetos = [
+    ...promotedImpetos.map((name) => ({ name, tier: 'ideal' as const, attributes: ['Correção local'], reason: 'Priorizado por correção inteligente local.' })),
+    ...result.recommendedImpetos.filter((item) => !blockedImpetos.has(item.name.toLowerCase()))
+  ].filter((item, index, array) => array.findIndex((other) => other.name.toLowerCase() === item.name.toLowerCase()) === index);
+
+  const avoidSkills = Array.from(new Set([...(result.avoidSkills ?? []), ...corrections.blockedSkills]));
+  const noteSuffix = corrections.notes.length ? ' Correções locais aplicadas nesta função/jogador.' : '';
+
+  return {
+    ...result,
+    recommendedSkills,
+    skillRecommendations,
+    recommendedImpetos,
+    avoidSkills,
+    note: `${result.note}${noteSuffix}`.trim()
+  };
 }
 
 const tacticalLabels: Record<string, string> = {
@@ -642,8 +1210,335 @@ function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation
   };
 }
 
+function FormationMiniBoard({ history, formation }: { history: SavedAnalysis[]; formation: TacticalFormation }) {
+  const players = uniqueSavedResults(history);
+  const byLine = {
+    gol: players.filter((item) => item.bestPosition.code === 'GK').slice(0, 1),
+    defesa: players.filter((item) => ['CB', 'LB', 'RB'].includes(item.bestPosition.code)).slice(0, 5),
+    meio: players.filter((item) => ['DMF', 'CMF', 'AMF', 'LMF', 'RMF'].includes(item.bestPosition.code)).slice(0, 5),
+    ataque: players.filter((item) => ['CF', 'SS', 'LWF', 'RWF'].includes(item.bestPosition.code)).slice(0, 4)
+  };
+  const row = (label: string, items: AnalysisResult[], min: number) => {
+    const padded = [...items];
+    while (padded.length < min) padded.push(null as unknown as AnalysisResult);
+    return (
+      <div className="formation-row">
+        <span>{label}</span>
+        <div>
+          {padded.slice(0, Math.max(min, items.length)).map((item, index) => (
+            <em key={`${label}-${index}`} className={item ? 'filled' : ''}>{item ? `${item.parsed.playerName.split(' ')[0]} • ${item.bestPosition.label}` : 'vaga'}</em>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  return (
+    <div className="formation-board">
+      <strong><Layers size={15} /> Mapa visual da formação {formation === 'AUTO' ? 'automática' : formation}</strong>
+      {row('ATA', byLine.ataque, 2)}
+      {row('MEI', byLine.meio, 3)}
+      {row('DEF', byLine.defesa, 4)}
+      {row('GOL', byLine.gol, 1)}
+    </div>
+  );
+}
+
+
+
+type VisualLineupSlot = {
+  id: string;
+  label: string;
+  preferred: PositionCode[];
+  line: 'ataque' | 'meio' | 'defesa' | 'goleiro';
+  duty: string;
+};
+
+type VisualLineupPick = VisualLineupSlot & {
+  player: AnalysisResult | null;
+  fit: number;
+  reason: string;
+};
+
+const formationVisualLayouts: Record<Exclude<TacticalFormation, 'AUTO'>, VisualLineupSlot[]> = {
+  '4-2-2-2': [
+    { id: 'cf1', label: 'CA 1', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalizar e atacar espaço.' },
+    { id: 'cf2', label: 'CA 2', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Apoiar, tabelar ou puxar marcação.' },
+    { id: 'am1', label: 'Meia E', preferred: ['AMF', 'LMF', 'CMF', 'SS'], line: 'meio', duty: 'Criar por dentro e acelerar transição.' },
+    { id: 'am2', label: 'Meia D', preferred: ['AMF', 'RMF', 'CMF', 'SS'], line: 'meio', duty: 'Último passe e apoio aos atacantes.' },
+    { id: 'dm1', label: 'VOL', preferred: ['DMF', 'CMF'], line: 'meio', duty: 'Proteger a zaga e cortar passe.' },
+    { id: 'dm2', label: 'MLG', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Saída de bola e cobertura lateral.' },
+    { id: 'lb', label: 'LE', preferred: ['LB', 'LMF'], line: 'defesa', duty: 'Cobrir o lado esquerdo.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate e cobertura.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura e bola aérea.' },
+    { id: 'rb', label: 'LD', preferred: ['RB', 'RMF'], line: 'defesa', duty: 'Cobrir o lado direito.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança e reflexo.' }
+  ],
+  '4-3-3': [
+    { id: 'lw', label: 'PE', preferred: ['LWF', 'LMF', 'SS'], line: 'ataque', duty: 'Amplitude, drible e diagonal.' },
+    { id: 'cf', label: 'CA', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalização e presença de área.' },
+    { id: 'rw', label: 'PD', preferred: ['RWF', 'RMF', 'SS'], line: 'ataque', duty: 'Amplitude, corte e finalização.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'AMF', 'DMF'], line: 'meio', duty: 'Apoio e passe vertical.' },
+    { id: 'dm', label: 'VOL', preferred: ['DMF', 'CMF'], line: 'meio', duty: 'Equilíbrio e proteção central.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'AMF', 'DMF'], line: 'meio', duty: 'Cobertura e chegada.' },
+    { id: 'lb', label: 'LE', preferred: ['LB', 'LMF'], line: 'defesa', duty: 'Apoio controlado.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'rb', label: 'LD', preferred: ['RB', 'RMF'], line: 'defesa', duty: 'Apoio controlado.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Reposição e segurança.' }
+  ],
+  '4-1-2-3': [
+    { id: 'lw', label: 'PE', preferred: ['LWF', 'LMF', 'SS'], line: 'ataque', duty: 'Amplitude e diagonal.' },
+    { id: 'cf', label: 'CA', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalização.' },
+    { id: 'rw', label: 'PD', preferred: ['RWF', 'RMF', 'SS'], line: 'ataque', duty: 'Amplitude e último toque.' },
+    { id: 'am1', label: 'MLG E', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Criar linha de passe.' },
+    { id: 'am2', label: 'MLG D', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Criação e pressão.' },
+    { id: 'dm', label: '1º VOL', preferred: ['DMF'], line: 'meio', duty: 'Proteger o centro.' },
+    { id: 'lb', label: 'LE', preferred: ['LB', 'LMF'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Bola aérea.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB', 'RMF'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '4-2-1-3': [
+    { id: 'lw', label: 'PE', preferred: ['LWF', 'LMF', 'SS'], line: 'ataque', duty: 'Profundidade.' },
+    { id: 'cf', label: 'CA', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalização.' },
+    { id: 'rw', label: 'PD', preferred: ['RWF', 'RMF', 'SS'], line: 'ataque', duty: 'Diagonal.' },
+    { id: 'am', label: 'MAT', preferred: ['AMF', 'SS', 'CMF'], line: 'meio', duty: 'Último passe.' },
+    { id: 'dm1', label: 'VOL', preferred: ['DMF', 'CMF'], line: 'meio', duty: 'Marcação.' },
+    { id: 'dm2', label: 'MLG', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Saída.' },
+    { id: 'lb', label: 'LE', preferred: ['LB', 'LMF'], line: 'defesa', duty: 'Apoio moderado.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB', 'RMF'], line: 'defesa', duty: 'Apoio moderado.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '4-2-3-1': [
+    { id: 'cf', label: 'CA', preferred: ['CF'], line: 'ataque', duty: 'Referência e finalização.' },
+    { id: 'lm', label: 'ME', preferred: ['LMF', 'LWF', 'AMF'], line: 'meio', duty: 'Amplitude e criação.' },
+    { id: 'am', label: 'MAT', preferred: ['AMF', 'SS', 'CMF'], line: 'meio', duty: 'Último passe.' },
+    { id: 'rm', label: 'MD', preferred: ['RMF', 'RWF', 'AMF'], line: 'meio', duty: 'Amplitude e pressão.' },
+    { id: 'dm1', label: 'VOL', preferred: ['DMF', 'CMF'], line: 'meio', duty: 'Proteção.' },
+    { id: 'dm2', label: 'MLG', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Saída de bola.' },
+    { id: 'lb', label: 'LE', preferred: ['LB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '4-3-1-2': [
+    { id: 'cf1', label: 'CA 1', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalizador.' },
+    { id: 'cf2', label: 'CA 2', preferred: ['SS', 'CF'], line: 'ataque', duty: 'Apoio/pivô.' },
+    { id: 'am', label: 'MAT', preferred: ['AMF', 'SS'], line: 'meio', duty: 'Criação central.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Cobertura.' },
+    { id: 'dm', label: 'VOL', preferred: ['DMF'], line: 'meio', duty: 'Proteção.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Saída e passe.' },
+    { id: 'lb', label: 'LE', preferred: ['LB'], line: 'defesa', duty: 'Largura.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB'], line: 'defesa', duty: 'Largura.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '4-1-3-2': [
+    { id: 'cf1', label: 'CA 1', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalizador.' },
+    { id: 'cf2', label: 'CA 2', preferred: ['SS', 'CF'], line: 'ataque', duty: 'Apoio.' },
+    { id: 'lm', label: 'ME', preferred: ['LMF', 'LWF', 'AMF'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'am', label: 'MAT', preferred: ['AMF', 'CMF'], line: 'meio', duty: 'Criação.' },
+    { id: 'rm', label: 'MD', preferred: ['RMF', 'RWF', 'AMF'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'dm', label: 'VOL', preferred: ['DMF'], line: 'meio', duty: 'Proteção única.' },
+    { id: 'lb', label: 'LE', preferred: ['LB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '4-4-2': [
+    { id: 'cf1', label: 'CA 1', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalização.' },
+    { id: 'cf2', label: 'CA 2', preferred: ['SS', 'CF'], line: 'ataque', duty: 'Apoio.' },
+    { id: 'lm', label: 'ME', preferred: ['LMF', 'LWF'], line: 'meio', duty: 'Amplitude e recomposição.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Equilíbrio.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Passe.' },
+    { id: 'rm', label: 'MD', preferred: ['RMF', 'RWF'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'lb', label: 'LE', preferred: ['LB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '4-1-4-1': [
+    { id: 'cf', label: 'CA', preferred: ['CF'], line: 'ataque', duty: 'Referência.' },
+    { id: 'lm', label: 'ME', preferred: ['LMF', 'LWF'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Passe.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Cobertura.' },
+    { id: 'rm', label: 'MD', preferred: ['RMF', 'RWF'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'dm', label: 'VOL', preferred: ['DMF'], line: 'meio', duty: 'Proteção.' },
+    { id: 'lb', label: 'LE', preferred: ['LB'], line: 'defesa', duty: 'Seguro.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'cb2', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'rb', label: 'LD', preferred: ['RB'], line: 'defesa', duty: 'Seguro.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '3-2-4-1': [
+    { id: 'cf', label: 'CA', preferred: ['CF'], line: 'ataque', duty: 'Referência.' },
+    { id: 'lw', label: 'ALA E', preferred: ['LWF', 'LMF', 'LB'], line: 'meio', duty: 'Amplitude e pressão.' },
+    { id: 'am1', label: 'MEI E', preferred: ['AMF', 'CMF', 'SS'], line: 'meio', duty: 'Criação.' },
+    { id: 'am2', label: 'MEI D', preferred: ['AMF', 'CMF', 'SS'], line: 'meio', duty: 'Último passe.' },
+    { id: 'rw', label: 'ALA D', preferred: ['RWF', 'RMF', 'RB'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'dm1', label: 'VOL', preferred: ['DMF', 'CMF'], line: 'meio', duty: 'Proteção.' },
+    { id: 'dm2', label: 'MLG', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Saída.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB', 'LB'], line: 'defesa', duty: 'Cobertura lado.' },
+    { id: 'cb2', label: 'ZAG C', preferred: ['CB'], line: 'defesa', duty: 'Central.' },
+    { id: 'cb3', label: 'ZAG D', preferred: ['CB', 'RB'], line: 'defesa', duty: 'Cobertura lado.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Linha alta.' }
+  ],
+  '3-4-3': [
+    { id: 'lw', label: 'PE', preferred: ['LWF', 'LMF'], line: 'ataque', duty: 'Amplitude.' },
+    { id: 'cf', label: 'CA', preferred: ['CF'], line: 'ataque', duty: 'Finalização.' },
+    { id: 'rw', label: 'PD', preferred: ['RWF', 'RMF'], line: 'ataque', duty: 'Amplitude.' },
+    { id: 'lm', label: 'ALA E', preferred: ['LMF', 'LB', 'LWF'], line: 'meio', duty: 'Vai e volta.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Cobertura.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Passe.' },
+    { id: 'rm', label: 'ALA D', preferred: ['RMF', 'RB', 'RWF'], line: 'meio', duty: 'Vai e volta.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB', 'LB'], line: 'defesa', duty: 'Cobertura lado.' },
+    { id: 'cb2', label: 'ZAG C', preferred: ['CB'], line: 'defesa', duty: 'Central.' },
+    { id: 'cb3', label: 'ZAG D', preferred: ['CB', 'RB'], line: 'defesa', duty: 'Cobertura lado.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '3-5-2': [
+    { id: 'cf1', label: 'CA 1', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalizador.' },
+    { id: 'cf2', label: 'CA 2', preferred: ['SS', 'CF'], line: 'ataque', duty: 'Apoio.' },
+    { id: 'lm', label: 'ALA E', preferred: ['LMF', 'LB'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Passe.' },
+    { id: 'dm', label: 'VOL', preferred: ['DMF'], line: 'meio', duty: 'Proteção.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Cobertura.' },
+    { id: 'rm', label: 'ALA D', preferred: ['RMF', 'RB'], line: 'meio', duty: 'Amplitude.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Cobertura.' },
+    { id: 'cb2', label: 'ZAG C', preferred: ['CB'], line: 'defesa', duty: 'Central.' },
+    { id: 'cb3', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Combate.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '5-3-2': [
+    { id: 'cf1', label: 'CA 1', preferred: ['CF', 'SS'], line: 'ataque', duty: 'Finalizador.' },
+    { id: 'cf2', label: 'CA 2', preferred: ['SS', 'CF'], line: 'ataque', duty: 'Apoio.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Transição.' },
+    { id: 'dm', label: 'VOL', preferred: ['DMF', 'CMF'], line: 'meio', duty: 'Proteção.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Cobertura.' },
+    { id: 'lwb', label: 'ALA E', preferred: ['LB', 'LMF'], line: 'defesa', duty: 'Corredor.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Lado.' },
+    { id: 'cb2', label: 'ZAG C', preferred: ['CB'], line: 'defesa', duty: 'Central.' },
+    { id: 'cb3', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Lado.' },
+    { id: 'rwb', label: 'ALA D', preferred: ['RB', 'RMF'], line: 'defesa', duty: 'Corredor.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ],
+  '5-2-3': [
+    { id: 'lw', label: 'PE', preferred: ['LWF', 'LMF'], line: 'ataque', duty: 'Transição pelo lado.' },
+    { id: 'cf', label: 'CA', preferred: ['CF'], line: 'ataque', duty: 'Finalização.' },
+    { id: 'rw', label: 'PD', preferred: ['RWF', 'RMF'], line: 'ataque', duty: 'Transição pelo lado.' },
+    { id: 'cm1', label: 'MLG E', preferred: ['CMF', 'DMF'], line: 'meio', duty: 'Cobertura.' },
+    { id: 'cm2', label: 'MLG D', preferred: ['CMF', 'AMF'], line: 'meio', duty: 'Passe rápido.' },
+    { id: 'lwb', label: 'ALA E', preferred: ['LB', 'LMF'], line: 'defesa', duty: 'Corredor.' },
+    { id: 'cb1', label: 'ZAG E', preferred: ['CB'], line: 'defesa', duty: 'Lado.' },
+    { id: 'cb2', label: 'ZAG C', preferred: ['CB'], line: 'defesa', duty: 'Central.' },
+    { id: 'cb3', label: 'ZAG D', preferred: ['CB'], line: 'defesa', duty: 'Lado.' },
+    { id: 'rwb', label: 'ALA D', preferred: ['RB', 'RMF'], line: 'defesa', duty: 'Corredor.' },
+    { id: 'gk', label: 'GOL', preferred: ['GK'], line: 'goleiro', duty: 'Segurança.' }
+  ]
+};
+
+function lineupScoreForSlot(result: AnalysisResult, slot: VisualLineupSlot) {
+  const code = result.bestPosition.code;
+  const scoreMap = result.teamMap?.sectorScores;
+  const base = Number(result.pri?.GER ?? 70);
+  let score = base;
+  if (slot.preferred.includes(code)) score += 35;
+  else if (slot.line === 'defesa' && ['CB', 'LB', 'RB', 'DMF'].includes(code)) score += 12;
+  else if (slot.line === 'meio' && ['DMF', 'CMF', 'AMF', 'LMF', 'RMF'].includes(code)) score += 14;
+  else if (slot.line === 'ataque' && ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(code)) score += 14;
+  else score -= 28;
+
+  if (slot.line === 'defesa') score += Number(scoreMap?.marcacao ?? 0) * 0.24 + Number(scoreMap?.cobertura ?? 0) * 0.18;
+  if (slot.line === 'meio') score += Number(scoreMap?.passe ?? 0) * 0.18 + Number(scoreMap?.criacao ?? 0) * 0.14 + Number(scoreMap?.marcacao ?? 0) * 0.10;
+  if (slot.line === 'ataque') score += Number(scoreMap?.finalizacao ?? 0) * 0.24 + Number(scoreMap?.aceleracao ?? 0) * 0.12 + Number(scoreMap?.criacao ?? 0) * 0.10;
+  if (slot.line === 'goleiro') score += code === 'GK' ? 55 : -80;
+
+  return Math.round(score);
+}
+
+function buildVisualLineup(history: SavedAnalysis[], formation: TacticalFormation): VisualLineupPick[] {
+  const selectedFormation: Exclude<TacticalFormation, 'AUTO'> = formation === 'AUTO' ? '4-2-2-2' : formation;
+  const slots = formationVisualLayouts[selectedFormation] ?? formationVisualLayouts['4-2-2-2'];
+  const players = uniqueSavedResults(history);
+  const used = new Set<string>();
+  return slots.map((slot) => {
+    const ranked = players
+      .filter((player) => !used.has(player.parsed.playerName))
+      .map((player) => ({ player, fit: lineupScoreForSlot(player, slot) }))
+      .sort((a, b) => b.fit - a.fit);
+    const best = ranked[0];
+    if (!best || best.fit < 55) return { ...slot, player: null, fit: 0, reason: 'Nenhum jogador salvo encaixa com segurança nesta função.' };
+    used.add(best.player.parsed.playerName);
+    const exact = slot.preferred.includes(best.player.bestPosition.code);
+    const reason = exact
+      ? `Encaixe natural em ${best.player.bestPosition.label}.`
+      : `Encaixe adaptado: função real ${best.player.teamMap?.functionLabel ?? best.player.buildName}.`;
+    return { ...slot, player: best.player, fit: Math.max(0, Math.min(100, Math.round(best.fit / 2))), reason };
+  });
+}
+
+function VisualLineupPitch({ history, formation, teamStyle }: { history: SavedAnalysis[]; formation: TacticalFormation; teamStyle: TacticalStyle }) {
+  const picks = useMemo(() => buildVisualLineup(history, formation), [history, formation]);
+  const rows: Array<{ key: VisualLineupSlot['line']; title: string }> = [
+    { key: 'ataque', title: 'Ataque' },
+    { key: 'meio', title: 'Meio' },
+    { key: 'defesa', title: 'Defesa' },
+    { key: 'goleiro', title: 'Goleiro' }
+  ];
+  const filledCount = picks.filter((pick) => pick.player).length;
+  const averageFit = picks.length ? Math.round(picks.reduce((sum, pick) => sum + (pick.player ? pick.fit : 0), 0) / Math.max(1, filledCount || picks.length)) : 0;
+  return (
+    <div className="visual-pitch-card">
+      <div className="visual-pitch-head">
+        <div>
+          <p className="kicker"><LayoutDashboard size={14} /> Escalação visual</p>
+          <h3>{formation === 'AUTO' ? 'Mapa automático do elenco' : `Mapa ${formation}`}</h3>
+        </div>
+        <strong>{filledCount}/11 • {averageFit}/100</strong>
+      </div>
+      <div className="visual-pitch-meta">
+        <span>Estilo: {tacticalStyleName[teamStyle] ?? 'Automático'}</span>
+        <span>Arrume o Cofre com titulares e reservas para o encaixe ficar mais preciso.</span>
+      </div>
+      <div className="visual-pitch-field">
+        {rows.map((row) => {
+          const items = picks.filter((pick) => pick.line === row.key);
+          return (
+            <div key={row.key} className={`pitch-line pitch-line-${row.key}`}>
+              <span className="pitch-line-title">{row.title}</span>
+              <div className="pitch-line-slots">
+                {items.map((pick) => (
+                  <div key={pick.id} className={pick.player ? 'pitch-player-slot filled' : 'pitch-player-slot empty'}>
+                    <span>{pick.label}</span>
+                    <strong>{pick.player ? pick.player.parsed.playerName.split(' ').slice(0, 2).join(' ') : 'Vaga'}</strong>
+                    <em>{pick.player ? `${pick.player.bestPosition.label} • ${pick.fit}/100` : pick.duty}</em>
+                    <small>{pick.player ? pick.reason : 'Salve uma ficha compatível no Cofre.'}</small>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="visual-pitch-legend">
+        <span><b /> Encaixe natural</span>
+        <span><i /> Vaga sem jogador salvo</span>
+        <span>O app prioriza função real, não GER alto.</span>
+      </div>
+    </div>
+  );
+}
+
 function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAnalysis[]; formation: TacticalFormation; teamStyle: TacticalStyle }) {
   const report = useMemo(() => buildSquadReport(history, formation, teamStyle), [history, formation, teamStyle]);
+  const eliteReport = useMemo(() => buildEliteTeamReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
 
   if (!report) {
     return (
@@ -676,6 +1571,9 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
         <span><b>{report.composition.volantes}</b> VOL/MLG</span>
         <span><b>{report.composition.finalizadores}</b> finalizadores</span>
       </div>
+
+      <FormationMiniBoard history={history} formation={formation} />
+      <VisualLineupPitch history={history} formation={formation} teamStyle={teamStyle} />
 
       <div className="squad-phase-grid">
         {PHASE_KEYS.map((key) => (
@@ -713,6 +1611,74 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
         <strong>Melhorias recomendadas</strong>
         {report.suggestions.map((item) => <span key={item}>{item}</span>)}
       </div>
+
+      {eliteReport && (
+        <>
+          <div className="squad-plan-box elite-team-box">
+            <strong>Formação e estilo mais compatíveis</strong>
+            <span>{eliteReport.bestFormation} — {eliteReport.bestFormationReason}</span>
+            <span>{eliteReport.bestStyleReason}</span>
+            <span>Nota do mapeamento completo: {eliteReport.globalScore}/100</span>
+          </div>
+
+          <div className="squad-lineup-grid">
+            {eliteReport.lineup.map((pick) => (
+              <div key={pick.slot.id} className={pick.playerName ? 'squad-lineup-slot' : 'squad-lineup-slot missing'}>
+                <span>{pick.slot.label}</span>
+                <strong>{pick.playerName ?? 'Vaga aberta'}</strong>
+                <em>{pick.playerName ? `${pick.position} • ${pick.functionLabel} • ${pick.score}/100` : pick.warning}</em>
+              </div>
+            ))}
+          </div>
+
+          <div className="squad-leader-grid">
+            {eliteReport.roleCoverage.map((item) => (
+              <div key={item.label} className={item.ok ? 'squad-leader-item validator-ok' : 'squad-leader-item validator-bad'}>
+                <span>{item.ok ? 'Coberto' : 'Falta'}</span>
+                <strong>{item.label} ({item.count})</strong>
+                <em>{item.note}</em>
+              </div>
+            ))}
+          </div>
+
+          <div className="squad-leader-grid">
+            {eliteReport.validators.map((item) => (
+              <div key={item.label} className={item.ok ? 'squad-leader-item validator-ok' : 'squad-leader-item validator-bad'}>
+                <span>{item.ok ? '✓ Seguro' : '⚠ Revisar'}</span>
+                <strong>{item.label}</strong>
+                <em>{item.note}</em>
+              </div>
+            ))}
+          </div>
+
+          <div className="squad-alert-box">
+            <strong>Alertas táticos premium</strong>
+            {eliteReport.tacticalAlerts.map((item) => <span key={item}>{item}</span>)}
+          </div>
+
+          <div className="squad-suggestion-box">
+            <strong>Prioridade de evolução do elenco</strong>
+            {eliteReport.upgradePriorities.map((item) => <span key={item}>{item}</span>)}
+          </div>
+
+          <div className="squad-plan-box">
+            <strong>Plano completo: defesa, saída e ataque</strong>
+            {[...eliteReport.defensivePlan, ...eliteReport.buildupPlan, ...eliteReport.attackingPlan, ...eliteReport.pressingPlan].slice(0, 10).map((item) => <span key={item}>{item}</span>)}
+          </div>
+
+          {!!eliteReport.bench.length && (
+            <div className="squad-leader-grid">
+              {eliteReport.bench.slice(0, 4).map((item) => (
+                <div key={`${item.playerName}-${item.position}`} className="squad-leader-item">
+                  <span>Alternativa do banco</span>
+                  <strong>{item.playerName}</strong>
+                  <em>{item.position} • {item.functionLabel} • {item.score}/100 — {item.use}</em>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </article>
   );
 }
@@ -906,7 +1872,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.20 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.29 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Melhor posição: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -955,7 +1921,7 @@ function trainingSummary(plan: Record<string, number>) {
     .join(' • ');
 }
 
-function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void }) {
+function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void }) {
   const [tab, setTab] = useState<ResultTab>('resumo');
   const card = result.parsed;
   const GER = card.maxOverall ?? card.overall ?? '--';
@@ -967,6 +1933,16 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
   const skillRecommendations = result.skillRecommendations ?? result.recommendedSkills.map((skill) => ({ name: skill, tier: 'alternativa' as const, reason: skillReason(skill) }));
   const recommendedSkills = result.recommendedSkills.slice(0, 5);
   const avoidSkillItems = skillRecommendations.filter((item) => item.tier === 'evitar').slice(0, 5);
+  const alternativeSkillItems = skillRecommendations.filter((item) => item.tier === 'alternativa' && !recommendedSkills.includes(item.name)).slice(0, 6);
+  const duplicateRecommendedSkills = recommendedSkills.filter((skill) => card.nativeSkills.some((owned) => owned.toLowerCase() === skill.toLowerCase()));
+  const finalValidatorItems = [
+    { label: 'Pontos dentro do limite', ok: result.trainingPointsUsed <= result.trainingPointsTotal, note: `${result.trainingPointsUsed}/${result.trainingPointsTotal} pontos` },
+    { label: 'Top 5 sem repetição', ok: duplicateRecommendedSkills.length === 0, note: duplicateRecommendedSkills.length ? `Revisar: ${duplicateRecommendedSkills.join(', ')}` : 'habilidades já existentes foram filtradas' },
+    { label: 'Lista oficial de habilidades', ok: recommendedSkills.length > 0, note: recommendedSkills.length ? 'recomendações travadas na lista local oficial' : 'nenhuma habilidade segura encontrada' },
+    { label: 'Ímpetos separados das habilidades', ok: result.recommendedImpetos.length > 0, note: 'ímpeto não é tratado como habilidade adicional' },
+    { label: 'Função real detectada', ok: Boolean(result.teamMap?.functionLabel), note: result.teamMap?.functionLabel ?? result.buildName },
+    { label: 'Conferência/OCR', ok: result.validation?.level !== 'blocked', note: result.validation?.level === 'blocked' ? 'precisa revisar dados antes de usar' : 'análise liberada' }
+  ];
   const skillInfo = skillProgressInfo(recommendedSkills, skillProgress);
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
@@ -980,6 +1956,13 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
       : card.trainingPointSource === 'OCR'
         ? 'Informado no registro técnico'
         : 'Padrão seguro';
+  const ultimateCoach = useMemo(() => buildUltimatePlayerCoach(result), [result]);
+  const opponentPlans = useMemo(() => buildOpponentPlans(result.tacticalProfile.formation, result.tacticalProfile.style), [result]);
+  const upgradeChecklist = useMemo(() => getOneHundredUpgradeChecklist(), []);
+  const activeUpgradeCount = upgradeChecklist.filter((item) => item.status === 'ativo').length;
+  const partialUpgradeCount = upgradeChecklist.filter((item) => item.status === 'parcial').length;
+  const localCorrections = useMemo(() => getMergedCorrectionsForResult(result), [result]);
+  const hasLocalCorrections = Boolean(localCorrections.blockedSkills.length || localCorrections.promotedSkills.length || localCorrections.blockedImpetos.length || localCorrections.promotedImpetos.length);
 
   return (
     <section className="result-panel">
@@ -1021,12 +2004,32 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       )}
 
+      <div className="result-premium-scoreboard luxury-panel">
+        <div>
+          <span>Validação visual</span>
+          <strong>{result.trainingPointsUsed <= result.trainingPointsTotal ? 'Ficha dentro do orçamento' : 'Revisar orçamento'}</strong>
+        </div>
+        <div>
+          <span>Função real</span>
+          <strong>{result.teamMap?.functionLabel ?? result.buildName}</strong>
+        </div>
+        <div>
+          <span>Habilidades</span>
+          <strong>{recommendedSkills.length}/5 oficiais</strong>
+        </div>
+      </div>
+
       <nav className="elite-tabs" aria-label="Seções do resultado">
         {[
           ['resumo', 'Painel'],
           ['mapa', 'Mapa do time'],
           ['ficha', 'Plano'],
           ['habilidades', 'Habilidades'],
+          ['treinador', 'Treinador'],
+          ['correcao', 'Correção local'],
+          ['regras', 'Regras online'],
+          ['validacao', 'Validador'],
+          ['exportar', 'Exportar'],
           ['posicoes', 'Funções'],
           ['dados', 'Base técnica']
         ].map(([value, label]) => (
@@ -1262,11 +2265,31 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                     <button type="button" onClick={() => onSkillToggle?.(skill)}>
                       {completed ? '✓ Concluída' : 'Marcar como feita'}
                     </button>
+                    <div className="correction-actions">
+                      <button type="button" onClick={() => onPromoteSkill?.(skill)}><ThumbsUp size={14} /> Priorizar</button>
+                      <button type="button" onClick={() => onRejectSkill?.(skill)}><Ban size={14} /> Não combina</button>
+                    </div>
                   </div>
                 );
               }) : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada.</p>}
             </div>
           </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Boas alternativas</p>
+            <div className="skill-grid">
+              {alternativeSkillItems.length ? alternativeSkillItems.map((item) => (
+                <div key={item.name} className="skill-check-card">
+                  <strong>{item.name}</strong>
+                  <span>{item.reason}</span>
+                  <div className="correction-actions">
+                    <button type="button" onClick={() => onPromoteSkill?.(item.name)}><ThumbsUp size={14} /> Subir para Top 5</button>
+                    <button type="button" onClick={() => onRejectSkill?.(item.name)}><Ban size={14} /> Evitar</button>
+                  </div>
+                </div>
+              )) : <p className="panel-note">O Top 5 já cobre as melhores opções. Sem alternativa extra segura.</p>}
+            </div>
+          </article>
+
           <article className="luxury-panel wide-card">
             <p className="kicker">Evitar nesta função</p>
             <div className="skill-grid">
@@ -1283,6 +2306,320 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             <div className="chip-cloud">
               {nativeSkills.length ? nativeSkills.map((skill) => <span key={skill}>{skill}</span>) : <span>Nenhuma habilidade lida</span>}
             </div>
+          </article>
+        </div>
+      )}
+
+
+      {tab === 'treinador' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card ultimate-hero-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker">Treinador Elite 100+</p>
+                <h3>{ultimateCoach.title}</h3>
+              </div>
+              <span>{activeUpgradeCount} ativos • {partialUpgradeCount} parciais</span>
+            </div>
+            <p className="panel-note">{ultimateCoach.summary}</p>
+            <div className="function-score-grid">
+              {ultimateCoach.functionScores.map((item) => (
+                <div key={item.role}>
+                  <span>{item.role}</span>
+                  <strong>{item.score}/100</strong>
+                  <i><b style={{ width: `${item.score}%` }} /></i>
+                  <em>{item.note}</em>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Execução em campo</p>
+            <div className="skill-grid">
+              {ultimateCoach.executionPlan.map((item) => (
+                <div key={item.title} className={`skill-check-card priority-${item.priority}`}>
+                  <strong>{item.title}</strong>
+                  <span>{item.details}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Travas anti-erro</p>
+            <div className="skill-grid">
+              {ultimateCoach.antiErrorLocks.map((item) => (
+                <div key={item.title} className="skill-check-card validator-ok">
+                  <strong>{item.title}</strong>
+                  <span>{item.details}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Foco da evolução</p>
+            <div className="skill-grid">
+              {ultimateCoach.trainingFocus.map((item) => (
+                <div key={item.title} className={`skill-check-card priority-${item.priority}`}>
+                  <strong>{item.title}</strong>
+                  <span>{item.details}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Planos contra adversários</p>
+            <div className="opponent-plan-grid">
+              {opponentPlans.map((plan) => (
+                <div key={plan.opponent}>
+                  <strong>{plan.opponent}</strong>
+                  <span><b>Defesa:</b> {plan.defensivePlan}</span>
+                  <span><b>Saída:</b> {plan.buildupPlan}</span>
+                  <span><b>Ataque:</b> {plan.attackingPlan}</span>
+                  <em>{plan.danger}</em>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Notas do treinador</p>
+            <ul className="clean-list">
+              {ultimateCoach.coachNotes.map((note) => <li key={note}>{note}</li>)}
+            </ul>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Checklist 100 melhorias</p>
+            <div className="upgrade-checklist-grid">
+              {upgradeChecklist.slice(0, 30).map((item) => (
+                <div key={`${item.group}-${item.title}`} className={`upgrade-chip status-${item.status}`}>
+                  <span>{item.group}</span>
+                  <strong>{item.title}</strong>
+                  <em>{item.note}</em>
+                </div>
+              ))}
+            </div>
+            <p className="panel-note">O pacote completo tem 100 itens organizados por leitura, ficha, habilidades, ímpetos, time, tática, cofre, design e profissionalização. A tela mostra os 30 principais para não poluir o celular.</p>
+          </article>
+        </div>
+      )}
+
+
+      {tab === 'correcao' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card correction-hero-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker"><BrainCircuit size={14} /> Regras atualizáveis</p>
+                <h3>O app aprende quando você diz que uma habilidade ou ímpeto não combina.</h3>
+              </div>
+              <span>{hasLocalCorrections ? 'Ativo' : 'Sem correções'}</span>
+            </div>
+            <p className="panel-note">As correções ficam salvas somente neste aparelho/navegador. Quando você marcar “Não combina” ou “Priorizar”, o BuildMaster evita repetir o erro para este jogador e para a função real parecida.</p>
+            <div className="correction-summary-grid">
+              <div><span>Habilidades bloqueadas</span><strong>{localCorrections.blockedSkills.length}</strong></div>
+              <div><span>Habilidades priorizadas</span><strong>{localCorrections.promotedSkills.length}</strong></div>
+              <div><span>Ímpetos bloqueados</span><strong>{localCorrections.blockedImpetos.length}</strong></div>
+              <div><span>Ímpetos priorizados</span><strong>{localCorrections.promotedImpetos.length}</strong></div>
+            </div>
+            <button type="button" className="secondary-action" onClick={onResetCorrections} disabled={!hasLocalCorrections}><RotateCcw size={16} /> Limpar correções deste jogador/função</button>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Regras locais aplicadas</p>
+            <div className="skill-grid">
+              <div className="skill-check-card muted"><strong>Evitar habilidades</strong><span>{localCorrections.blockedSkills.length ? localCorrections.blockedSkills.join(' • ') : 'Nenhuma habilidade bloqueada.'}</span></div>
+              <div className="skill-check-card"><strong>Priorizar habilidades</strong><span>{localCorrections.promotedSkills.length ? localCorrections.promotedSkills.join(' • ') : 'Nenhuma habilidade priorizada.'}</span></div>
+              <div className="skill-check-card muted"><strong>Evitar ímpetos</strong><span>{localCorrections.blockedImpetos.length ? localCorrections.blockedImpetos.join(' • ') : 'Nenhum ímpeto bloqueado.'}</span></div>
+              <div className="skill-check-card"><strong>Priorizar ímpetos</strong><span>{localCorrections.promotedImpetos.length ? localCorrections.promotedImpetos.join(' • ') : 'Nenhum ímpeto priorizado.'}</span></div>
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Como usar</p>
+            <ul className="clean-list">
+              <li>Na aba Habilidades, toque em <b>Não combina</b> quando o app recomendar algo errado para a função.</li>
+              <li>Toque em <b>Priorizar</b> quando uma alternativa fizer mais sentido para seu estilo de jogo.</li>
+              <li>Na área de ímpetos, bloqueie um ímpeto incompatível para o app ajustar a próxima ficha.</li>
+              <li>Isso não usa IA paga; é memória local do seu próprio app.</li>
+            </ul>
+          </article>
+        </div>
+      )}
+
+
+      {tab === 'regras' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card correction-hero-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker"><BrainCircuit size={14} /> Regras atualizáveis sem refazer APK</p>
+                <h3>Atualize habilidade, ímpeto e bloqueios por função usando um JSON online.</h3>
+              </div>
+              <span>v24.29</span>
+            </div>
+            <p className="panel-note">Essa área permite ajustar recomendações depois que o APK já estiver instalado. Você hospeda um arquivo JSON público, cola a URL e toca em atualizar. O app salva o pacote no aparelho e aplica nas próximas fichas.</p>
+            <div className="input-row">
+              <label>
+                URL do pacote de regras
+                <input value={rulesUrl} onChange={(event) => setRulesUrl(event.target.value)} placeholder="https://seusite.com/buildmaster-regras.json" />
+              </label>
+            </div>
+            <div className="export-pro-actions">
+              <button type="button" onClick={onLoadRulesFromUrl}><UploadCloud size={18} /> Atualizar regras</button>
+              <button type="button" onClick={onResetRules}><RotateCcw size={18} /> Restaurar pacote local</button>
+              <button type="button" onClick={onExportRulePack}><Download size={18} /> Exportar modelo JSON</button>
+            </div>
+            <p className="panel-note">{rulesStatus}</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Pacote ativo</p>
+            <div className="correction-summary-grid">
+              <div><span>Versão</span><strong>{rulePackInfo.version}</strong></div>
+              <div><span>Regras</span><strong>{rulePackInfo.rules.length}</strong></div>
+              <div><span>Fonte</span><strong>{rulePackInfo.source}</strong></div>
+              <div><span>Atualizado</span><strong>{new Date(rulePackInfo.updatedAt).toLocaleDateString('pt-BR')}</strong></div>
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Regras ativas principais</p>
+            <div className="upgrade-checklist-grid">
+              {rulePackInfo.rules.slice(0, 12).map((rule) => (
+                <div key={rule.id} className="upgrade-chip status-ativo">
+                  <span>{rule.id}</span>
+                  <strong>{rule.title}</strong>
+                  <em>{rule.note ?? 'Regra dinâmica aplicada quando posição/estilo/função combinarem.'}</em>
+                </div>
+              ))}
+            </div>
+            <p className="panel-note">Use isso para corrigir rapidamente casos como CA recebendo habilidade defensiva, goleiro recebendo habilidade de linha, VOL orquestrador recebendo ficha de destruidor puro ou lateral ofensivo sem prioridade de corredor.</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Formato do JSON</p>
+            <pre className="raw-text-box">{`{
+  "version": "minhas-regras-1",
+  "updatedAt": "2026-07-12T00:00:00.000Z",
+  "source": "Meu pacote online",
+  "rules": [
+    {
+      "id": "ca-finalizador",
+      "title": "CA finalizador",
+      "match": { "position": "CF", "playstyleIncludes": ["artilheiro"] },
+      "promoteSkills": ["Chute de primeira", "Precisão à distância"],
+      "blockSkills": ["Volta para marcar", "Interceptação"],
+      "promoteImpetos": ["Chute", "Instinto artilheiro"],
+      "note": "Foco total em finalização."
+    }
+  ]
+}`}</pre>
+          </article>
+        </div>
+      )}
+
+      {tab === 'validacao' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Validador final de precisão</p>
+            <div className="squad-leader-grid">
+              {finalValidatorItems.map((item) => (
+                <div key={item.label} className={item.ok ? 'squad-leader-item validator-ok' : 'squad-leader-item validator-bad'}>
+                  <span>{item.ok ? '✓ Aprovado' : '⚠ Revisar'}</span>
+                  <strong>{item.label}</strong>
+                  <em>{item.note}</em>
+                </div>
+              ))}
+            </div>
+            <p className="panel-note">Esta etapa bloqueia os erros mais comuns: pontos acima do orçamento, habilidade inexistente, habilidade repetida e ímpeto usado como habilidade.</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Habilidades por prioridade</p>
+            <div className="skill-grid">
+              <div className="skill-check-card">
+                <strong>Essenciais</strong>
+                <span>{recommendedSkills.length ? recommendedSkills.join(' • ') : 'Nenhuma essencial segura encontrada'}</span>
+              </div>
+              <div className="skill-check-card">
+                <strong>Boas alternativas</strong>
+                <span>{alternativeSkillItems.length ? alternativeSkillItems.map((item) => item.name).join(' • ') : 'Sem alternativa extra após o Top 5'}</span>
+              </div>
+              <div className="skill-check-card muted">
+                <strong>Evitar</strong>
+                <span>{avoidSkillItems.length ? avoidSkillItems.map((item) => item.name).join(' • ') : 'Nenhuma restrição crítica'}</span>
+              </div>
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Checklist da ficha</p>
+            <ul className="clean-list">
+              <li>Ficha usa custo progressivo real e respeita o orçamento manual quando você digita pontos.</li>
+              <li>Top 5 habilidades considera posição, estilo de jogo, função real, atributos e habilidades que o jogador já possui.</li>
+              <li>Ímpetos são ranqueados por função e aparecem separados das habilidades adicionais.</li>
+              <li>Goleiro usa motor separado com Pegador de pênalti, Arremesso longo do goleiro e reposições oficiais.</li>
+            </ul>
+          </article>
+        </div>
+      )}
+
+      {tab === 'exportar' && (
+        <div className="result-section-grid export-pro-grid">
+          <article className="luxury-panel wide-card export-hero-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker">Exportação profissional</p>
+                <h3>Compartilhe ou arquive esta ficha sem perder o visual premium.</h3>
+              </div>
+              <span>v24.29</span>
+            </div>
+            <p className="panel-note">Todos os formatos usam a ficha validada, os pontos exatos, as 5 habilidades oficiais, os ímpetos e o plano de uso em campo.</p>
+            <div className="export-pro-actions">
+              <button type="button" onClick={onExportImage}><ImagePlus size={18} /> Exportar imagem da ficha</button>
+              <button type="button" onClick={onPrintReport}><Download size={18} /> Gerar PDF profissional</button>
+              <button type="button" onClick={onExportReport}><FileText size={18} /> Relatório HTML</button>
+              <button type="button" onClick={onExportText}><Copy size={18} /> Relatório técnico</button>
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card printable-preview-card">
+            <p className="kicker">Prévia do relatório</p>
+            <div className="printable-report-preview">
+              <div>
+                <span>Jogador</span>
+                <strong>{card.playerName}</strong>
+              </div>
+              <div>
+                <span>Função real</span>
+                <strong>{result.teamMap?.functionLabel ?? result.buildName}</strong>
+              </div>
+              <div>
+                <span>Pontos</span>
+                <strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong>
+              </div>
+              <div>
+                <span>Top habilidades</span>
+                <strong>{recommendedSkills.slice(0, 3).join(' • ') || '—'}</strong>
+              </div>
+            </div>
+          </article>
+
+          <article className="luxury-panel compact-card">
+            <p className="kicker">Imagem SVG</p>
+            <h3>Card visual</h3>
+            <p className="panel-note">Bom para galeria, WhatsApp, Drive e comparação rápida.</p>
+          </article>
+
+          <article className="luxury-panel compact-card">
+            <p className="kicker">PDF</p>
+            <h3>Relatório de impressão</h3>
+            <p className="panel-note">Abre uma tela limpa; no Android/PC escolha “Salvar como PDF”.</p>
           </article>
         </div>
       )}
@@ -1352,6 +2689,10 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                 <div key={`${item.name}-${item.tier}`}>
                   <strong>{item.tier === 'ideal' ? 'Ideal' : item.tier === 'alternativo' ? 'Alternativo' : 'Evitar'} • {item.name}</strong>
                   <span>{item.attributes.join(', ')} — {item.reason}</span>
+                  <div className="correction-actions">
+                    <button type="button" onClick={() => onPromoteImpeto?.(item.name)}><ThumbsUp size={14} /> Priorizar</button>
+                    <button type="button" onClick={() => onRejectImpeto?.(item.name)}><Ban size={14} /> Não combina</button>
+                  </div>
                 </div>
               )) : <p className="panel-note">Nenhum ímpeto recomendado com segurança.</p>}
             </div>
@@ -1378,6 +2719,9 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       <div className="result-floating-actions">
         <button className="copy-floating" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar ficha</button>
+        <button className="copy-floating" type="button" onClick={onExportImage}><ImagePlus size={16} /> Imagem</button>
+        <button className="copy-floating" type="button" onClick={onPrintReport}><Download size={16} /> PDF</button>
+        <button className="copy-floating" type="button" onClick={onExportReport}><FileText size={16} /> Relatório</button>
         <button className="copy-floating" type="button" onClick={() => copyBuildText(result)}><Copy size={16} /> Copiar plano</button>
       </div>
     </section>
@@ -1433,6 +2777,10 @@ function ReviewPanel({
   };
 
   const nativeSkillSet = new Set(manualFields.nativeSkills ?? []);
+  const typedPoints = Number(manualFields.trainingPointsTotal || draft.trainingPointsTotal || 0);
+  const usedPoints = draft.trainingPointsUsed;
+  const remainingPoints = Math.max(0, typedPoints - usedPoints);
+  const budgetPercent = Math.min(100, Math.round((usedPoints / Math.max(1, typedPoints || draft.trainingPointsTotal)) * 100));
 
   return (
     <section className="review-panel result-panel">
@@ -1455,6 +2803,12 @@ function ReviewPanel({
             <div><span>Posição lida</span><strong>{card.mainPositionPt}</strong></div>
             <div><span>Estilo</span><strong>{card.playstyle ?? 'revisar'}</strong></div>
             <div><span>Pontos</span><strong>{draft.trainingPointsTotal}</strong></div>
+          </div>
+          <div className="budget-simulator">
+            <span>Simulador de orçamento</span>
+            <strong>{usedPoints}/{typedPoints || draft.trainingPointsTotal} pts</strong>
+            <i><b style={{ width: `${budgetPercent}%` }} /></i>
+            <em>{remainingPoints ? `${remainingPoints} ponto(s) livres depois do recálculo` : 'Orçamento fechado ou usando total detectado'}</em>
           </div>
         </div>
       </div>
@@ -1602,7 +2956,17 @@ export function CardVisionApp() {
   const [manualMode, setManualMode] = useState(false);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [historySearch, setHistorySearch] = useState('');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('ALL');
+  const [historySort, setHistorySort] = useState<HistorySort>('UPDATED');
+  const [onlyPendingSkills, setOnlyPendingSkills] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [appTheme, setAppTheme] = useState<AppTheme>('dark');
+  const [accentTheme, setAccentTheme] = useState<AccentTheme>('emerald');
+  const [advancedMode, setAdvancedMode] = useState(true);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [rulesUrl, setRulesUrl] = useState('');
+  const [rulesStatus, setRulesStatus] = useState('Regras atualizáveis: use o pacote local ou cole uma URL JSON para atualizar sem refazer APK.');
+  const [rulePackInfo, setRulePackInfo] = useState<DynamicRulePack>(DEFAULT_DYNAMIC_RULE_PACK);
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudStatus, setCloudStatus] = useState('Neon opcional: configure DATABASE_URL no Vercel para sincronizar na nuvem.');
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
@@ -1620,9 +2984,32 @@ export function CardVisionApp() {
   }, [history, activeHistoryId, result]);
   const filteredHistory = useMemo(() => {
     const query = memoryKey(historySearch);
-    if (!query) return history;
-    return history.filter((item) => memoryKey(`${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''}`).includes(query));
-  }, [history, historySearch]);
+    let items = history.filter((item) => {
+      const matchesQuery = !query || memoryKey(`${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''} ${item.notes ?? ''}`).includes(query);
+      if (!matchesQuery) return false;
+      if (onlyPendingSkills && savedStatusLabel(item) !== 'pendente') return false;
+      if (historyFilter === 'FAVORITES') return Boolean(item.favorite);
+      if (historyFilter === 'PENDING') return savedStatusLabel(item) === 'pendente';
+      if (historyFilter === 'COMPLETE') return savedStatusLabel(item) === 'completo';
+      if (historyFilter === 'REVIEW') return savedStatusLabel(item) === 'revisar';
+      if (historyFilter !== 'ALL') return savedPositionGroup(item) === historyFilter;
+      return true;
+    });
+
+    items = [...items].sort((a, b) => {
+      if (historySort === 'NAME') return a.result.parsed.playerName.localeCompare(b.result.parsed.playerName, 'pt-BR');
+      if (historySort === 'POSITION') return a.result.bestPosition.label.localeCompare(b.result.bestPosition.label, 'pt-BR');
+      if (historySort === 'PENDING') {
+        const ai = skillProgressInfo(a.result.recommendedSkills, a.skillProgress);
+        const bi = skillProgressInfo(b.result.recommendedSkills, b.skillProgress);
+        return (bi.total - bi.done) - (ai.total - ai.done);
+      }
+      return String(b.updatedAt || b.savedAt).localeCompare(String(a.updatedAt || a.savedAt), 'pt-BR');
+    });
+
+    return items;
+  }, [history, historySearch, historyFilter, historySort, onlyPendingSkills]);
+  const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
 
   useEffect(() => {
     let mounted = true;
@@ -1636,6 +3023,25 @@ export function CardVisionApp() {
       .catch(() => {
         if (mounted) setHistory([]);
       });
+
+    try {
+      const ui = JSON.parse(localStorage.getItem('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean };
+      if (ui.appTheme === 'light' || ui.appTheme === 'dark') setAppTheme(ui.appTheme);
+      if (['emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
+      if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
+    } catch {
+      // Preferências visuais são opcionais.
+    }
+
+    try {
+      const storedRulesUrl = localStorage.getItem(RULE_PACK_URL_KEY) || '';
+      setRulesUrl(storedRulesUrl);
+      const pack = readDynamicRulePack();
+      setRulePackInfo(pack);
+      setRulesStatus(`Pacote ativo: ${pack.source} • ${pack.rules.length} regra(s) • versão ${pack.version}`);
+    } catch {
+      setRulePackInfo(DEFAULT_DYNAMIC_RULE_PACK);
+    }
 
     try {
       const storedZones = localStorage.getItem(CALIBRATION_KEY);
@@ -1693,6 +3099,14 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode }));
+    } catch {
+      // Preferências visuais são opcionais.
+    }
+  }, [appTheme, accentTheme, advancedMode]);
+
+  useEffect(() => {
+    try {
       const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
       if (!hasWork) {
         localStorage.removeItem(ACTIVE_SESSION_KEY);
@@ -1735,7 +3149,7 @@ export function CardVisionApp() {
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
       const existing = current.find((entry) => entry.saveKey === key);
-      const item: SavedAnalysis = {
+      const base: SavedAnalysis = {
         id: existing?.id ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         saveKey: key,
         savedAt: existing?.savedAt ?? now,
@@ -1745,8 +3159,14 @@ export function CardVisionApp() {
         fullPreview: preview,
         result,
         skillProgress: ensureSkillProgress(existing?.skillProgress, result.recommendedSkills),
-        notes: existing?.notes ?? ''
+        notes: existing?.notes ?? '',
+        favorite: existing?.favorite ?? false,
+        statusTag: existing?.statusTag,
+        personalTags: existing?.personalTags ?? [],
+        tacticalRoleNote: existing?.tacticalRoleNote ?? '',
+        changeLog: existing?.changeLog ?? []
       };
+      const item = appendSavedEvent(base, existing ? 'atualizado' : 'criado', existing ? 'Ficha atualizada por cima da versão salva.' : 'Ficha salva no Cofre avançado.');
 
       setActiveHistoryId(item.id);
       const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
@@ -1756,6 +3176,51 @@ export function CardVisionApp() {
     });
   }, [result, rawText, playerCardImage, preview]);
 
+
+  function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
+    writeDynamicRulePack(pack);
+    setRulePackInfo(pack);
+    setRulesStatus(message);
+    setResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+  }
+
+  async function loadRulesFromUrl() {
+    const url = rulesUrl.trim();
+    if (!url) {
+      setRulesStatus('Cole uma URL JSON pública para atualizar as regras. Se deixar vazio, o app usa o pacote local embutido.');
+      return;
+    }
+    try {
+      localStorage.setItem(RULE_PACK_URL_KEY, url);
+      setRulesStatus('Baixando pacote de regras...');
+      const response = await fetch(url, { cache: 'no-store' });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload) throw new Error('Não consegui ler o JSON desta URL.');
+      const pack = sanitizeRulePack(payload);
+      if (!pack.rules.length) throw new Error('O pacote não tem regras válidas.');
+      applyRulePackAndRefresh(pack, `Regras atualizadas sem refazer APK: ${pack.source} • ${pack.rules.length} regra(s) • versão ${pack.version}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao atualizar regras.';
+      setRulesStatus(`${message} O pacote local continua ativo.`);
+    }
+  }
+
+  function resetRulesToDefault() {
+    try {
+      localStorage.removeItem(RULE_PACK_KEY);
+      localStorage.removeItem(RULE_PACK_URL_KEY);
+    } catch {}
+    setRulesUrl('');
+    applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base.`);
+  }
+
+  function exportRulePack() {
+    const pack = readDynamicRulePack();
+    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json;charset=utf-8' });
+    downloadBlobFile(`buildmaster-regras-${pack.version || 'local'}.json`, blob);
+    setRulesStatus('Pacote de regras exportado. Você pode hospedar esse JSON e atualizar o APK por URL depois.');
+  }
 
   async function pushCloudHistory(items: SavedAnalysis[] = history, silent = false) {
     if (!items.length) {
@@ -1898,6 +3363,12 @@ export function CardVisionApp() {
     setDraftResult(null);
     setResult(item.result);
     setManualMode(true);
+    const now = new Date().toLocaleString('pt-BR');
+    setHistory((current) => {
+      const next = current.map((entry) => entry.id === item.id ? appendSavedEvent({ ...entry, lastOpenedAt: now }, 'aberto', 'Ficha restaurada para consulta/edição.') : entry);
+      void persistHistoryStore(next);
+      return next;
+    });
     setStatus(`Análise restaurada: ${item.result.parsed.playerName}.`);
   }
 
@@ -1907,7 +3378,7 @@ export function CardVisionApp() {
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
       const existing = current.find((entry) => entry.saveKey === key);
-      const item: SavedAnalysis = {
+      const base: SavedAnalysis = {
         id: existing?.id ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         saveKey: key,
         savedAt: existing?.savedAt ?? now,
@@ -1917,8 +3388,14 @@ export function CardVisionApp() {
         fullPreview: preview,
         result,
         skillProgress: ensureSkillProgress(existing?.skillProgress, result.recommendedSkills),
-        notes: existing?.notes ?? ''
+        notes: existing?.notes ?? '',
+        favorite: existing?.favorite ?? false,
+        statusTag: existing?.statusTag,
+        personalTags: existing?.personalTags ?? [],
+        tacticalRoleNote: existing?.tacticalRoleNote ?? '',
+        changeLog: existing?.changeLog ?? []
       };
+      const item = appendSavedEvent(base, existing ? 'atualizado' : 'criado', existing ? 'Ficha atualizada por cima da versão salva.' : 'Ficha salva no Cofre avançado.');
       setActiveHistoryId(item.id);
       const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
       void persistHistoryStore(next);
@@ -1936,7 +3413,7 @@ export function CardVisionApp() {
         if (entry.id !== activeHistoryId && entry.saveKey !== key) return entry;
         const skillProgress = ensureSkillProgress(entry.skillProgress, result.recommendedSkills);
         skillProgress[skill] = !skillProgress[skill];
-        return { ...entry, skillProgress, updatedAt: new Date().toLocaleString('pt-BR') };
+        return appendSavedEvent({ ...entry, skillProgress }, skillProgress[skill] ? 'habilidade concluída' : 'habilidade pendente', skill);
       });
       void persistHistoryStore(next);
       void pushCloudHistory(next, true);
@@ -1947,8 +3424,10 @@ export function CardVisionApp() {
   function exportHistoryBackup() {
     const payload = {
       app: 'BuildMaster Elite Tático',
-      version: '24.7.0',
+      version: '24.29.0',
+      module: 'Regras atualizáveis',
       exportedAt: new Date().toISOString(),
+      stats: buildDashboardStats(history),
       items: history
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1999,6 +3478,129 @@ export function CardVisionApp() {
     });
     if (item) void deleteCloudHistoryItem(item);
     if (activeHistoryId === id) setActiveHistoryId(null);
+  }
+
+  function toggleFavoriteHistory(id: string) {
+    setHistory((current) => {
+      const next = current.map((entry) => entry.id === id ? appendSavedEvent({ ...entry, favorite: !entry.favorite }, !entry.favorite ? 'favoritado' : 'removido dos favoritos', entry.result.parsed.playerName) : entry);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+  }
+
+  function duplicateHistoryItem(id: string) {
+    const item = history.find((entry) => entry.id === id);
+    if (!item) return;
+    const copy: SavedAnalysis = {
+      ...item,
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      saveKey: `${item.saveKey}-variante-${Date.now()}`,
+      savedAt: new Date().toLocaleString('pt-BR'),
+      updatedAt: new Date().toLocaleString('pt-BR'),
+      notes: `${item.notes ?? ''}${item.notes ? '\n' : ''}Variação criada para testar outra função/ficha.`,
+      changeLog: [{ at: new Date().toLocaleString('pt-BR'), action: 'variação criada', note: 'Cópia da ficha original para testar outra função/ficha.' }, ...(item.changeLog ?? [])]
+    };
+    setHistory((current) => {
+      const next = [copy, ...current].slice(0, HISTORY_LIMIT);
+      void persistHistoryStore(next);
+      return next;
+    });
+    setLibraryOpen(true);
+    setStatus(`Variação criada para ${item.result.parsed.playerName}.`);
+  }
+
+
+  function updateHistoryStatus(id: string, statusTag: SavedAnalysis['statusTag']) {
+    setHistory((current) => {
+      const next = current.map((entry) => entry.id === id ? appendSavedEvent({ ...entry, statusTag }, 'status alterado', statusTag === 'completo' ? 'Marcado como completo.' : statusTag === 'pendente' ? 'Marcado como pendente.' : 'Marcado para revisar.') : entry);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+  }
+
+  function updateHistoryRoleNote(id: string, tacticalRoleNote: string) {
+    setHistory((current) => {
+      const next = current.map((entry) => entry.id === id ? { ...entry, tacticalRoleNote, updatedAt: new Date().toLocaleString('pt-BR') } : entry);
+      void persistHistoryStore(next);
+      return next;
+    });
+  }
+
+  function markAllHistorySkills(id: string, done: boolean) {
+    setHistory((current) => {
+      const next = current.map((entry) => {
+        if (entry.id !== id) return entry;
+        const progress = ensureSkillProgress(entry.skillProgress, entry.result.recommendedSkills);
+        for (const skill of entry.result.recommendedSkills.slice(0, 5)) progress[skill] = done;
+        return appendSavedEvent({ ...entry, skillProgress: progress }, done ? 'habilidades finalizadas' : 'habilidades reabertas', done ? 'Top 5 marcado como concluído.' : 'Top 5 voltou para pendente.');
+      });
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+  }
+
+  function exportSingleHistoryItem(item: SavedAnalysis) {
+    const content = buildProfessionalReportHtml(item.result, item.notes ?? '');
+    downloadTextFile(`buildmaster-${memoryKey(item.result.parsed.playerName || 'jogador')}.html`, content, 'text/html;charset=utf-8');
+    setStatus(`Relatório profissional individual exportado: ${item.result.parsed.playerName}.`);
+  }
+
+  function updateHistoryNotes(id: string, notes: string) {
+    setHistory((current) => {
+      const next = current.map((entry) => entry.id === id ? { ...entry, notes, updatedAt: new Date().toLocaleString('pt-BR') } : entry);
+      void persistHistoryStore(next);
+      return next;
+    });
+  }
+
+  function exportCurrentReport() {
+    if (!result) return;
+    const active = activeSavedAnalysis;
+    const filename = `buildmaster-${memoryKey(result.parsed.playerName)}-${new Date().toISOString().slice(0, 10)}.html`;
+    const html = buildProfessionalReportHtml(result, active?.notes ?? '');
+    downloadTextFile(filename, html, 'text/html;charset=utf-8');
+    setStatus('Relatório profissional em HTML exportado. Abra o arquivo para imprimir ou guardar junto com a ficha.');
+  }
+
+  function exportCurrentMarkdownReport() {
+    if (!result) return;
+    const active = activeSavedAnalysis;
+    const filename = `buildmaster-${memoryKey(result.parsed.playerName)}-${new Date().toISOString().slice(0, 10)}.md`;
+    downloadTextFile(filename, formatReportMarkdown(result, active?.notes ?? ''));
+    setStatus('Relatório técnico em texto exportado.');
+  }
+
+  function exportCurrentVisualCard() {
+    if (!result) return;
+    const svg = buildProfessionalCardSvg(result);
+    const filename = `buildmaster-card-${memoryKey(result.parsed.playerName)}-${new Date().toISOString().slice(0, 10)}.svg`;
+    downloadBlobFile(filename, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    setStatus('Imagem profissional da ficha exportada em SVG.');
+  }
+
+  function printCurrentReport() {
+    if (!result) return;
+    try {
+      const active = activeSavedAnalysis;
+      const html = buildProfessionalReportHtml(result, active?.notes ?? '');
+      const popup = window.open('', '_blank', 'noopener,noreferrer,width=980,height=1200');
+      if (!popup) {
+        window.print();
+        setStatus('Relatório aberto para impressão/exportação em PDF.');
+        return;
+      }
+      popup.document.open();
+      popup.document.write(html);
+      popup.document.close();
+      popup.focus();
+      setTimeout(() => popup.print(), 450);
+      setStatus('Relatório profissional aberto. Escolha “Salvar como PDF” na tela de impressão.');
+    } catch {
+      exportCurrentReport();
+    }
   }
 
   async function handleFile(file: File) {
@@ -2092,7 +3694,7 @@ export function CardVisionApp() {
     setCardPositionOverride('CF');
     setPlaystyleOverride('AUTO');
     setManualFields(emptyManualFields());
-    const nextResult = analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile);
+    const nextResult = applyLocalCorrectionsToResult(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile));
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
@@ -2141,7 +3743,7 @@ export function CardVisionApp() {
         const learnedText = applyLearningToText(mergedText);
         const lockedText = textWithManualLocks(learnedText);
         setRawText(lockedText);
-        const autoResult = analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile);
+        const autoResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
         hydrateReviewFields(autoResult);
         setDraftResult(autoResult);
         setResult(null);
@@ -2189,7 +3791,7 @@ export function CardVisionApp() {
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
     const lockedText = textWithManualLocks(rawText, confirmed);
     if (lockedText !== rawText) setRawText(lockedText);
-    const nextResult = analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile);
+    const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
     if (confirmed) {
       saveLearnedCard({
         playerName: nextResult.parsed.playerName,
@@ -2209,17 +3811,74 @@ export function CardVisionApp() {
     }
   }
 
+
+  function refreshResultWithCorrections(message: string) {
+    setResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    setStatus(message);
+  }
+
+  function rejectSkillLocally(skill: string) {
+    const base = result ?? draftResult;
+    if (!base) return;
+    upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Evitar habilidade: ${skill}`] }, 'role');
+    upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Evitar habilidade: ${skill}`] }, 'player');
+    refreshResultWithCorrections(`Correção salva: ${skill} não combina com esta função. O app vai evitar essa habilidade.`);
+  }
+
+  function promoteSkillLocally(skill: string) {
+    const base = result ?? draftResult;
+    if (!base) return;
+    upsertCorrectionForResult(base, { promotedSkills: [skill], notes: [`Priorizar habilidade: ${skill}`] }, 'role');
+    upsertCorrectionForResult(base, { promotedSkills: [skill], notes: [`Priorizar habilidade: ${skill}`] }, 'player');
+    refreshResultWithCorrections(`Correção salva: ${skill} ganhou prioridade para esta função/jogador.`);
+  }
+
+  function rejectImpetoLocally(impeto: string) {
+    const base = result ?? draftResult;
+    if (!base) return;
+    upsertCorrectionForResult(base, { blockedImpetos: [impeto], notes: [`Evitar ímpeto: ${impeto}`] }, 'role');
+    upsertCorrectionForResult(base, { blockedImpetos: [impeto], notes: [`Evitar ímpeto: ${impeto}`] }, 'player');
+    refreshResultWithCorrections(`Correção salva: ${impeto} será evitado nesta função.`);
+  }
+
+  function promoteImpetoLocally(impeto: string) {
+    const base = result ?? draftResult;
+    if (!base) return;
+    upsertCorrectionForResult(base, { promotedImpetos: [impeto], notes: [`Priorizar ímpeto: ${impeto}`] }, 'role');
+    upsertCorrectionForResult(base, { promotedImpetos: [impeto], notes: [`Priorizar ímpeto: ${impeto}`] }, 'player');
+    refreshResultWithCorrections(`Correção salva: ${impeto} ganhou prioridade nesta função.`);
+  }
+
+  function resetLocalCorrectionsForCurrent() {
+    const base = result ?? draftResult;
+    if (!base) return;
+    clearCorrectionsForResult(base);
+    refreshResultWithCorrections('Correções locais deste jogador/função foram apagadas. Recalcule a ficha para voltar ao padrão do motor.');
+  }
+
   return (
-    <main className="premium-app">
+    <main className={`premium-app theme-${appTheme} accent-${accentTheme} ${advancedMode ? 'mode-advanced' : 'mode-basic'}`}>
       <header className="app-topbar luxury-panel">
         <div className="brand-lockup">
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático</span>
+            <span>Elite Tático v24.29</span>
           </div>
         </div>
         <div className="session-badge"><ShieldCheck size={16} /> Sessão protegida</div>
+        <div className="quick-ui-tools">
+          <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')}><Palette size={15} /> {appTheme === 'dark' ? 'Claro' : 'Escuro'}</button>
+          <select aria-label="Cor principal" value={accentTheme} onChange={(event) => setAccentTheme(event.target.value as AccentTheme)}>
+            <option value="emerald">Verde elite</option>
+            <option value="gold">Dourado</option>
+            <option value="blue">Azul</option>
+            <option value="red">Vermelho</option>
+            <option value="purple">Roxo</option>
+          </select>
+          <button type="button" onClick={() => setAdvancedMode((value) => !value)}><SlidersHorizontal size={15} /> {advancedMode ? 'Avançado' : 'Simples'}</button>
+        </div>
         <div className="topbar-actions">
           <button type="button" onClick={openCofreDeJogadores}><History size={16} /> Cofre</button>
           <button type="button" onClick={resetAnalysis}><RotateCcw size={16} /> Nova</button>
@@ -2230,10 +3889,86 @@ export function CardVisionApp() {
       <section className="hero-redesign">
         <div>
           <p className="kicker"><Sparkles size={16} /> BuildMaster Elite Tático</p>
-          <h1>Monte uma ficha premium por print ou manual, com auditoria antes do plano final.</h1>
-          <p>Use o Leitor Elite de Carta para leitura local ou o Central de Precisão Manual para máxima precisão. GER é apenas referência; o motor prioriza função, atributos úteis, estilo e melhor posicionamento.</p>
+          <h1>Design Premium completo para ficha, elenco e decisão tática.</h1>
+          <p>Agora a tela principal foi reorganizada como um painel de controle: atalhos grandes, status visual, selos de confiança, modo compacto no celular e navegação mais clara para Leitor, Manual, Cofre e Mapa do Time.</p>
         </div>
         <div className="orb-ball" aria-hidden="true" />
+      </section>
+
+      <section className="elite-dashboard luxury-panel">
+        <div className="dashboard-title">
+          <p className="kicker"><LayoutDashboard size={15} /> Dashboard premium</p>
+          <h2>Controle do elenco, precisão da ficha e progresso das habilidades</h2>
+        </div>
+        <div className="dashboard-stat-grid">
+          <button type="button" onClick={openCofreDeJogadores}><strong>{dashboardStats.total}</strong><span>Jogadores salvos</span></button>
+          <button type="button" onClick={() => { setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{dashboardStats.pending}</strong><span>Com pendências</span></button>
+          <button type="button" onClick={() => { setHistoryFilter('COMPLETE'); setLibraryOpen(true); }}><strong>{dashboardStats.complete}</strong><span>Completos</span></button>
+          <button type="button" onClick={() => { setHistoryFilter('FAVORITES'); setLibraryOpen(true); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
+          <button type="button" onClick={() => setTutorialOpen((value) => !value)}><strong>{dashboardStats.positions}</strong><span>Posições cobertas</span></button>
+        </div>
+        {tutorialOpen && (
+          <div className="tutorial-guide">
+            <span>1. Envie o print ou abra a Central Manual.</span>
+            <span>2. Confirme posição, estilo, nível e pontos antes de finalizar.</span>
+            <span>3. Marque habilidades já existentes para evitar repetição.</span>
+            <span>4. Salve no Cofre e acompanhe as pendências.</span>
+            <span>5. Use o Mapa Total para descobrir buracos do time.</span>
+          </div>
+        )}
+      </section>
+
+      <section className="design-premium-hub luxury-panel">
+        <div className="design-hub-title">
+          <div>
+            <p className="kicker"><Trophy size={15} /> Design Premium completo</p>
+            <h2>Central de comando visual</h2>
+            <span>Atalhos grandes, status de fluxo, aparência ajustável e leitura mais clara no celular.</span>
+          </div>
+          <div className="premium-quality-seals">
+            <em><CheckCircle2 size={14} /> Pontos exatos</em>
+            <em><ShieldCheck size={14} /> Lista oficial</em>
+            <em><Sparkles size={14} /> Visual premium</em>
+          </div>
+        </div>
+
+        <div className="premium-command-grid">
+          <button type="button" onClick={() => document.getElementById('leitor-elite')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+            <ScanText size={24} />
+            <strong>Leitor Elite</strong>
+            <span>Usar print com auditoria antes da ficha</span>
+          </button>
+          <button type="button" onClick={() => { setManualMode(true); document.getElementById('central-manual')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+            <ShieldCheck size={24} />
+            <strong>Manual Pro</strong>
+            <span>Digitar dados para máxima precisão</span>
+          </button>
+          <button type="button" onClick={openCofreDeJogadores}>
+            <History size={24} />
+            <strong>Cofre</strong>
+            <span>Ver fichas salvas e pendências</span>
+          </button>
+          <button type="button" onClick={() => setTutorialOpen((value) => !value)}>
+            <Target size={24} />
+            <strong>Guia rápido</strong>
+            <span>Como usar sem errar o processo</span>
+          </button>
+        </div>
+
+        <div className="flow-status-premium" aria-label="Status visual da análise">
+          {[
+            ['Entrada', selectedFile || manualMode],
+            ['Auditoria', draftResult || result],
+            ['Plano final', result],
+            ['Salvo', activeSavedAnalysis]
+          ].map(([label, done], index) => (
+            <div key={String(label)} className={done ? 'done' : index === 0 ? 'active' : ''}>
+              <i>{index + 1}</i>
+              <strong>{String(label)}</strong>
+              <span>{done ? 'pronto' : 'pendente'}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="workspace-grid">
@@ -2247,13 +3982,13 @@ export function CardVisionApp() {
           </div>
 
           <div className="premium-entry-grid">
-            <article className="manual-premium-card vision-entry-card">
+            <article id="leitor-elite" className="manual-premium-card vision-entry-card">
               <div className="manual-premium-icon"><ScanText size={28} /></div>
               <strong>Leitor Elite de Carta</strong>
               <span>Envie o print completo da carta. O programa faz leitura local, aplica calibração por zonas e abre a Auditoria Elite antes de finalizar a ficha.</span>
             </article>
 
-            <article className="manual-premium-card manual-entry-card">
+            <article id="central-manual" className="manual-premium-card manual-entry-card">
               <div className="manual-premium-icon"><ShieldCheck size={28} /></div>
               <strong>Central de Precisão Manual</strong>
               <span>Modo de precisão máxima: você informa posição, estilo, pontos e atributos. Ideal quando quer zero risco de leitura errada.</span>
@@ -2472,23 +4207,84 @@ export function CardVisionApp() {
             </div>
             {history.length > 0 ? (
               <>
-                <label className="history-search">
-                  <Search size={14} />
-                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador salvo" />
-                </label>
+                <div className="cofre-advanced-dashboard">
+                  <div><span>Total salvo</span><strong>{dashboardStats.total}</strong><em>jogadores</em></div>
+                  <div><span>Progresso geral</span><strong>{dashboardStats.completion}%</strong><em>{dashboardStats.skillsDone}/{dashboardStats.skillsTotal} habilidades</em></div>
+                  <div><span>Pendentes</span><strong>{dashboardStats.pending}</strong><em>precisam completar habilidade</em></div>
+                  <div><span>Favoritos</span><strong>{dashboardStats.favorites}</strong><em>prioridade do elenco</em></div>
+                  <div><span>Revisar</span><strong>{dashboardStats.review}</strong><em>marcados para conferir</em></div>
+                </div>
+                <div className="cofre-filter-grid">
+                  <label className="history-search">
+                    <Search size={14} />
+                    <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo ou nota" />
+                  </label>
+                  <label><Filter size={14} /><select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}>
+                    <option value="ALL">Todos</option>
+                    <option value="FAVORITES">Favoritos</option>
+                    <option value="PENDING">Com pendências</option>
+                    <option value="COMPLETE">Completos</option>
+                    <option value="REVIEW">Para revisar</option>
+                    {POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+                  </select></label>
+                  <label><SlidersHorizontal size={14} /><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}>
+                    <option value="UPDATED">Mais recentes</option>
+                    <option value="NAME">Nome</option>
+                    <option value="POSITION">Posição</option>
+                    <option value="PENDING">Mais pendentes</option>
+                    <option value="STATUS">Status</option>
+                  </select></label>
+                  <button type="button" className={onlyPendingSkills ? 'active-filter' : ''} onClick={() => setOnlyPendingSkills((value) => !value)}>Só pendentes</button>
+                </div>
                 {(libraryOpen ? filteredHistory : filteredHistory.slice(0, 4)).map((item) => {
                   const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+                  const statusText = savedStatusText(item);
                   return (
-                    <div className="saved-ficha-row" key={item.id}>
+                    <div className={item.favorite ? 'saved-ficha-row favorite-row' : 'saved-ficha-row'} key={item.id}>
                       <button type="button" onClick={() => restoreHistory(item)}>
-                        <strong>{item.result.parsed.playerName}</strong>
-                        <span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts</span>
+                        <strong>{item.favorite ? '★ ' : ''}{item.result.parsed.playerName}</strong>
+                        <span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts • {statusText}</span>
                         <em>{info.done}/{info.total} habilidades concluídas</em>
                         <i><b style={{ width: `${info.percent}%` }} /></i>
                       </button>
-                      <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}>
-                        <Trash2 size={15} />
-                      </button>
+                      <div className="saved-row-actions">
+                        <button type="button" title="Favoritar" onClick={() => toggleFavoriteHistory(item.id)}><Star size={15} /></button>
+                        <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={15} /></button>
+                        <button type="button" title="Exportar relatório individual" onClick={() => exportSingleHistoryItem(item)}><FileText size={15} /></button>
+                        <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}>
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                      {libraryOpen && (
+                        <div className="saved-advanced-editor">
+                          <label className="saved-status-select">
+                            <span>Status</span>
+                            <select value={savedStatusLabel(item)} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}>
+                              <option value="pendente">Pendente</option>
+                              <option value="completo">Completo</option>
+                              <option value="revisar">Revisar</option>
+                            </select>
+                          </label>
+                          <div className="saved-skill-bulk">
+                            <button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Marcar top 5 concluídas</button>
+                            <button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir pendências</button>
+                          </div>
+                          <label className="saved-notes">
+                            <span>Notas pessoais</span>
+                            <textarea value={item.notes ?? ''} onChange={(event) => updateHistoryNotes(item.id, event.target.value)} placeholder="Ex.: usar como VOL no 4-2-2-2, falta Interceptação..." />
+                          </label>
+                          <label className="saved-notes">
+                            <span>Função no seu time</span>
+                            <textarea value={item.tacticalRoleNote ?? ''} onChange={(event) => updateHistoryRoleNote(item.id, event.target.value)} placeholder="Ex.: titular no 4-2-2-2, reserva para segundo tempo, dupla ideal com CA pivô..." />
+                          </label>
+                          <div className="saved-timeline">
+                            <strong>Histórico da ficha</strong>
+                            {(item.changeLog ?? []).slice(0, 4).map((event) => (
+                              <span key={`${event.at}-${event.action}-${event.note}`}><b>{event.action}</b> • {event.note} <em>{event.at}</em></span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -2503,7 +4299,7 @@ export function CardVisionApp() {
         </aside>
 
         <section className="preview-panel">
-          {result ? <ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} /> : draftResult ? (
+          {result ? <ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} /> : draftResult ? (
             <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}

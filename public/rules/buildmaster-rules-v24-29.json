@@ -1,0 +1,67 @@
+{
+  "version": "24.29.0-modelo",
+  "updatedAt": "2026-07-12T00:00:00.000Z",
+  "source": "Modelo público BuildMaster v24.29",
+  "globalBlockedSkills": [],
+  "globalBlockedImpetos": [],
+  "rules": [
+    {
+      "id": "ca-finalizador-nao-marca",
+      "title": "CA finalizador não vira marcador",
+      "match": {
+        "position": "CF",
+        "playstyleIncludes": [
+          "artilheiro",
+          "homem de área"
+        ]
+      },
+      "promoteSkills": [
+        "Chute de primeira",
+        "Precisão à distância",
+        "Finalização acrobática",
+        "Efeito de longe",
+        "Controle da cavadinha"
+      ],
+      "blockSkills": [
+        "Volta para marcar",
+        "Interceptação",
+        "Marcação individual",
+        "Carrinho",
+        "Bloqueador"
+      ],
+      "promoteImpetos": [
+        "Chute",
+        "Instinto artilheiro",
+        "Movimento sem a bola"
+      ],
+      "note": "CA finalizador mantém foco em gol e não em recomposição pesada."
+    },
+    {
+      "id": "goleiro-oficial",
+      "title": "Goleiro usa habilidades oficiais",
+      "match": {
+        "position": "GK"
+      },
+      "promoteSkills": [
+        "Pegador de pênalti",
+        "Arremesso longo do goleiro",
+        "Reposição alta do goleiro",
+        "Reposição baixa do goleiro",
+        "Liderança"
+      ],
+      "blockSkills": [
+        "Chute de primeira",
+        "Toque duplo",
+        "Cruzamento preciso",
+        "Marcação individual",
+        "Carrinho",
+        "Bloqueador"
+      ],
+      "promoteImpetos": [
+        "Goleiro",
+        "Defesaça"
+      ],
+      "note": "GOL fica separado de jogadores de linha."
+    }
+  ]
+}

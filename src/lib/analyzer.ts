@@ -1952,7 +1952,7 @@ function trainingFor(position: PositionCode, objective: Objective, a: Required<A
 }
 
 function trainingCostRuleText() {
-  return 'Motor Elite Tático v24.20 Goleiro Oficial + Estado Seguro: ficha, 5 habilidades, ímpetos, função real e mapa do time respeitam pontos digitados, habilidades oficiais de GOL e não perdem a análise ao trocar de tela.';
+  return 'Motor Elite Tático v24.29 Regras Atualizáveis: ficha, 5 habilidades, ímpetos, função real, validação de pontos, mapa do campo e relatórios exportáveis respeitam o orçamento digitado e o encaixe tático.';
 }
 
 function skillPriority(position: PositionCode, objective: Objective) {

@@ -1,33 +1,53 @@
-# BuildMaster Elite Tático v24.20 — Goleiro Oficial + Estado Seguro Corrigidas
+# BuildMaster Elite Tático v24.29 — Regras Atualizáveis
 
-Versão fiel ao projeto com correção na Auditoria Elite de habilidades.
+Versão fiel ao projeto com a etapa **v24.29 — Regras atualizáveis sem refazer APK** concluída.
 
-## Correções principais
+## O que entrou
 
-- A escolha das habilidades que o jogador já possui agora é **opcional**.
-- O botão **Finalizar plano Elite** não deve travar por falta de habilidade marcada.
-- O painel deixa claro que você marca somente as habilidades que já existem na carta.
-- O app usa essas habilidades apenas para não recomendar repetidas e escolher as 5 melhores que ainda faltam.
-- A lista continua usando somente habilidades oficiais locais baseadas nos prints enviados.
-- Mantém orçamento dinâmico por pontos digitados, motor de máxima performance, ímpetos oficiais, mapa do time e APK fiel.
+- Nova aba **Regras online** no resultado da ficha.
+- Pacote local de regras embutido no APK.
+- Campo para colar uma **URL JSON pública** com regras novas.
+- Botão **Atualizar regras** para baixar ajustes sem gerar APK novo.
+- Botão **Restaurar pacote local**.
+- Botão **Exportar modelo JSON**.
+- As regras atualizáveis conseguem:
+  - priorizar habilidades;
+  - bloquear habilidades;
+  - priorizar ímpetos;
+  - bloquear ímpetos;
+  - agir por posição, estilo de jogo e função real.
+- As correções locais da v24.28 continuam funcionando.
+- Mantém design premium, cofre avançado, escalação visual, exportação profissional e motor de time.
 
 ## Como usar
 
-1. Envie o print ou abra a Central Manual.
-2. Confira posição, estilo, nível e pontos.
-3. Em **Habilidades que o jogador já possui**, marque apenas as que já aparecem na carta.
-4. Se não souber as habilidades, deixe sem marcar e finalize normalmente.
-5. O resultado entrega as melhores 5 habilidades adicionais restantes.
+1. Gere uma ficha normalmente.
+2. Abra a aba **Regras online**.
+3. Use o pacote local ou cole uma URL JSON pública.
+4. Toque em **Atualizar regras**.
+5. O app passa a aplicar essas regras nas próximas fichas, sem precisar refazer APK.
+
+## Exemplo de arquivo público
+
+O projeto já inclui um modelo em:
+
+```text
+public/rules/buildmaster-rules-v24-29.json
+```
+
+Você pode hospedar esse JSON em qualquer lugar público e editar as regras depois.
+
+## Limite importante
+
+- Ajustes de habilidades, ímpetos e regras de função podem atualizar sem APK.
+- Mudanças de tela, layout, botão novo ou código ainda precisam gerar APK novo.
 
 ## APK
 
-Use o workflow:
+Workflow:
 
-```txt
-Gerar APK Android Fiel v24.20
+```text
+Gerar APK Android Fiel v24.29 Regras Atualizáveis
 ```
 
-
-## v24.20
-- Adiciona habilidades oficiais de goleiro: Pegador de pênalti, Arremesso longo do goleiro, Reposição alta do goleiro e Reposição baixa do goleiro.
-- Salva a sessão ativa no aparelho para evitar perder a ficha ao trocar de tela/recarregar o app.
+Use cache limpo no GitHub Actions se trocar de versão.
