@@ -1,4 +1,4 @@
-name: Gerar APK Android Fiel v24.17
+name: Gerar APK Android Fiel v24.19
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build APK fiel com Orçamento Dinâmico
+    name: Build APK fiel com Premium Lock
     runs-on: ubuntu-latest
 
     steps:
@@ -62,5 +62,5 @@ jobs:
       - name: Enviar APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v24-17-Orcamento-Dinamico-APK-Fiel
+          name: BuildMaster-Elite-Tatico-v24-19-Premium-Lock-APK-Fiel
           path: android/app/build/outputs/apk/debug/app-debug.apk

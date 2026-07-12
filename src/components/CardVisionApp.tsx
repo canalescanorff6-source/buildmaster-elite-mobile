@@ -23,7 +23,7 @@ import {
   Zap
 } from 'lucide-react';
 import { clearBuildMasterSession } from '@/components/AuthGate';
-import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
+import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILLS, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
 import { DEFAULT_OCR_ZONES, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
 import type { PrintQualityReport } from '@/lib/validation';
 
@@ -83,6 +83,7 @@ const objectives: Array<{ value: Objective; title: string; hint: string }> = [
 ];
 
 const playstyleOptions = PLAYSTYLE_OPTIONS;
+const officialSkillOptions = OFFICIAL_ADDITIONAL_SKILLS;
 
 const trainingLabels: Record<string, string> = {
   shooting: 'Finalização',
@@ -1367,6 +1368,12 @@ function ReviewPanel({
   setPlaystyleOverride,
   targetPosition,
   setTargetPosition,
+  confirmedNativeSkills,
+  setConfirmedNativeSkills,
+  skillsConfirmed,
+  setSkillsConfirmed,
+  skillFilter,
+  setSkillFilter,
   onRefresh,
   onConfirm
 }: {
@@ -1380,6 +1387,12 @@ function ReviewPanel({
   setPlaystyleOverride: (value: string) => void;
   targetPosition: PositionCode | 'AUTO';
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
+  confirmedNativeSkills: string[];
+  setConfirmedNativeSkills: (value: string[] | ((current: string[]) => string[])) => void;
+  skillsConfirmed: boolean;
+  setSkillsConfirmed: (value: boolean) => void;
+  skillFilter: string;
+  setSkillFilter: (value: string) => void;
   onRefresh: () => void;
   onConfirm: () => void;
 }) {
@@ -1392,6 +1405,12 @@ function ReviewPanel({
       ...current,
       attributes: { ...current.attributes, [key]: cleaned }
     }));
+  };
+  const skillFilterKey = skillFilter.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const visibleSkillOptions = officialSkillOptions.filter((skill) => !skillFilterKey || skill.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(skillFilterKey));
+  const toggleConfirmedSkill = (skill: string) => {
+    setSkillsConfirmed(false);
+    setConfirmedNativeSkills((current) => current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill]);
   };
 
   return (
@@ -1484,6 +1503,40 @@ function ReviewPanel({
           <p className="panel-note">Preencha os valores que você deseja usar na ficha. Os demais dados seguem o motor local, banco de cartas e regras premium de desempenho em campo.</p>
         </article>
 
+        <article className="luxury-panel wide-card skill-confirmation-card">
+          <div className="section-title-row">
+            <div>
+              <p className="kicker">Habilidades que o jogador já possui</p>
+              <h3>Confirmação obrigatória</h3>
+            </div>
+            <span>{confirmedNativeSkills.length} selecionada(s)</span>
+          </div>
+          <p className="panel-note">Marque somente as habilidades que aparecem na carta. O app não vai recomendar novamente habilidades que você confirmar aqui.</p>
+          <label className="history-search skill-search-box">
+            <Search size={14} />
+            <input value={skillFilter} onChange={(event) => setSkillFilter(event.target.value)} placeholder="Buscar habilidade oficial" />
+          </label>
+          <div className="official-skill-selector">
+            {visibleSkillOptions.map((skill) => (
+              <button
+                key={skill}
+                type="button"
+                className={confirmedNativeSkills.includes(skill) ? 'selected' : ''}
+                onClick={() => toggleConfirmedSkill(skill)}
+              >
+                {confirmedNativeSkills.includes(skill) ? '✓ ' : ''}{skill}
+              </button>
+            ))}
+          </div>
+          <div className="review-actions inline-actions">
+            <button type="button" className="secondary-action" onClick={() => { setConfirmedNativeSkills([]); setSkillsConfirmed(true); }}>Confirmar: não possui habilidades</button>
+            <button type="button" className="elite-button" onClick={() => setSkillsConfirmed(true)}><CheckCircle2 size={18} /> Confirmar habilidades</button>
+          </div>
+          <p className={skillsConfirmed ? 'panel-note success-note' : 'panel-note danger-note'}>
+            {skillsConfirmed ? 'Habilidades existentes confirmadas. A ficha final pode ser gerada com segurança.' : 'Confirme as habilidades antes de finalizar para evitar repetição ou recomendação errada.'}
+          </p>
+        </article>
+
         <article className="luxury-panel wide-card">
           <p className="kicker">Funções separadas</p>
           <div className="position-list">
@@ -1513,7 +1566,7 @@ function ReviewPanel({
 
       <div className="review-actions">
         <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular com meus pontos</button>
-        <button type="button" className="elite-button" onClick={onConfirm}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
+        <button type="button" className="elite-button" onClick={onConfirm} disabled={!skillsConfirmed}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
       </div>
     </section>
   );
@@ -1543,6 +1596,11 @@ export function CardVisionApp() {
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
   const [manualFields, setManualFields] = useState<ManualFields>({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
   const [manualMode, setManualMode] = useState(false);
+  const [confirmedNativeSkills, setConfirmedNativeSkills] = useState<string[]>([]);
+  const [skillsConfirmed, setSkillsConfirmed] = useState(false);
+  const [skillFilter, setSkillFilter] = useState('');
+  const [backupText, setBackupText] = useState('');
+  const [importBackupText, setImportBackupText] = useState('');
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [historySearch, setHistorySearch] = useState('');
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -1748,6 +1806,9 @@ export function CardVisionApp() {
     setResult(null);
     setDraftResult(null);
     setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
+    setConfirmedNativeSkills([]);
+    setSkillsConfirmed(false);
+    setSkillFilter('');
     setManualMode(false);
     setCardPositionOverride('AUTO');
     setPlaystyleOverride('AUTO');
@@ -1820,23 +1881,59 @@ export function CardVisionApp() {
     });
   }
 
-  function exportHistoryBackup() {
-    const payload = {
+  function backupPayloadText() {
+    return JSON.stringify({
       app: 'BuildMaster Elite Tático',
-      version: '24.7.0',
+      version: '24.19.0',
       exportedAt: new Date().toISOString(),
       items: history
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `buildmaster-fichario-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setStatus('Backup do Cofre de Fichas exportado. Guarde esse arquivo para recuperar em outro navegador ou celular.');
+    }, null, 2);
+  }
+
+  function mergeImportedBackupText(text: string) {
+    const parsed = JSON.parse(text) as { items?: unknown[] } | unknown[];
+    const entries = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : [];
+    const imported = normalizeHistoryList(entries);
+    if (!imported.length) {
+      setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
+      return;
+    }
+
+    setHistory((current) => {
+      const next = [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+    setLibraryOpen(true);
+    setStatus(`Backup importado com ${imported.length} ficha(s). Elas ficam no cofre até você apagar.`);
+  }
+
+  async function exportHistoryBackup() {
+    const text = backupPayloadText();
+    setBackupText(text);
+    try {
+      await navigator.clipboard?.writeText(text);
+    } catch {
+      // Alguns WebViews bloqueiam clipboard; o textarea abaixo continua disponível.
+    }
+
+    try {
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `buildmaster-fichario-${new Date().toISOString().slice(0, 10)}.json`;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch {
+      // O backup manual via texto é a saída segura no APK.
+    }
+
+    setStatus('Backup preparado. Se o arquivo não baixar no APK, copie o texto exibido e guarde no Drive/WhatsApp.');
   }
 
   async function importHistoryBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -1845,24 +1942,18 @@ export function CardVisionApp() {
     if (!file) return;
 
     try {
-      const parsed = JSON.parse(await file.text()) as { items?: unknown[] } | unknown[];
-      const entries = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : [];
-      const imported = normalizeHistoryList(entries);
-      if (!imported.length) {
-        setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
-        return;
-      }
-
-      setHistory((current) => {
-        const next = [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT);
-        void persistHistoryStore(next);
-        void pushCloudHistory(next, true);
-        return next;
-      });
-      setLibraryOpen(true);
-      setStatus(`Backup importado com ${imported.length} ficha(s). Elas ficam no cofre até você apagar.`);
+      mergeImportedBackupText(await file.text());
     } catch {
-      setStatus('Não consegui importar esse backup. Use um arquivo JSON exportado pelo próprio BuildMaster.');
+      setStatus('Não consegui importar esse backup. Use um arquivo JSON exportado pelo próprio BuildMaster ou cole o texto do backup.');
+    }
+  }
+
+  function importBackupFromText() {
+    try {
+      mergeImportedBackupText(importBackupText.trim());
+      setImportBackupText('');
+    } catch {
+      setStatus('Texto de backup inválido. Cole o JSON completo exportado pelo BuildMaster.');
     }
   }
 
@@ -1885,6 +1976,9 @@ export function CardVisionApp() {
     setResult(null);
     setDraftResult(null);
     setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
+    setConfirmedNativeSkills([]);
+    setSkillsConfirmed(false);
+    setSkillFilter('');
     setManualMode(false);
     setRawText('');
     setOcrDone(false);
@@ -1902,7 +1996,7 @@ export function CardVisionApp() {
   }
 
   function stripManualBlock(text: string) {
-    return text.replace(/\[AJUSTES MANUAIS\][\s\S]*?\[FIM AJUSTES\]\s*/gi, '').trimStart();
+    return text.replace(/\[AJUSTES MANUAIS\][\s\S]*?\[FIM AJUSTES\]\s*/gi, '').replace(/^###\s+HABILIDADES CONFIRMADAS MANUALMENTE[\s\S]*?(?=^###\s+|(?![\s\S]))/gim, '').trimStart();
   }
 
   function textWithManualLocks(text: string, confirmed = false) {
@@ -1925,6 +2019,14 @@ export function CardVisionApp() {
       const value = manualFields.attributes[item.key]?.trim();
       if (value) locks.push(`${item.label}: ${value}`);
     }
+    if (skillsConfirmed) {
+      locks.push('### HABILIDADES CONFIRMADAS MANUALMENTE');
+      if (confirmedNativeSkills.length) {
+        locks.push(...confirmedNativeSkills);
+      } else {
+        locks.push('NENHUMA');
+      }
+    }
     locks.push('[FIM AJUSTES]');
     return `${locks.join('\n')}\n${cleaned}`.trim();
   }
@@ -1942,6 +2044,8 @@ export function CardVisionApp() {
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
+    setConfirmedNativeSkills(nextResult.parsed.nativeSkills ?? []);
+    setSkillsConfirmed(false);
   }
 
   function startManualPreciseMode() {
@@ -1965,6 +2069,9 @@ export function CardVisionApp() {
     setCardPositionOverride('CF');
     setPlaystyleOverride('AUTO');
     setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
+    setConfirmedNativeSkills([]);
+    setSkillsConfirmed(false);
+    setSkillFilter('');
     const nextResult = analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile);
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
@@ -1980,6 +2087,9 @@ export function CardVisionApp() {
     setResult(null);
     setDraftResult(null);
     setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
+    setConfirmedNativeSkills([]);
+    setSkillsConfirmed(false);
+    setSkillFilter('');
     setManualMode(false);
     setRawText('');
     setOcrDone(false);
@@ -2059,6 +2169,10 @@ export function CardVisionApp() {
   }
 
   function runAnalysis(confirmed = false) {
+    if (confirmed && !skillsConfirmed) {
+      setStatus('Confirme as habilidades que o jogador já possui antes de finalizar. Isso evita recomendação repetida ou errada.');
+      return;
+    }
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
     const lockedText = textWithManualLocks(rawText, confirmed);
     if (lockedText !== rawText) setRawText(lockedText);
@@ -2334,7 +2448,8 @@ export function CardVisionApp() {
             </div>
             <div className="history-actions cloud-history-actions">
               <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><Download size={14} /> Exportar backup</button>
-              <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
+              <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar arquivo</button>
+              <button type="button" onClick={() => setImportBackupText((current) => current ? '' : ' ')}><UploadCloud size={14} /> Colar backup</button>
               <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
               <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
               <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
@@ -2343,6 +2458,28 @@ export function CardVisionApp() {
               <ShieldCheck size={14} />
               <span>{cloudStatus}</span>
             </div>
+            {backupText && (
+              <div className="backup-text-panel">
+                <strong>Backup manual pronto</strong>
+                <span>Se o Android não baixar o arquivo, copie este texto e salve no Drive/WhatsApp. Para restaurar, cole no campo de importação.</span>
+                <textarea value={backupText} readOnly />
+                <div className="history-actions">
+                  <button type="button" onClick={() => navigator.clipboard?.writeText(backupText).then(() => setStatus('Backup copiado para a área de transferência.')).catch(() => setStatus('Selecione o texto do backup e copie manualmente.'))}>Copiar texto</button>
+                  <button type="button" onClick={() => setBackupText('')}>Fechar</button>
+                </div>
+              </div>
+            )}
+            {importBackupText && (
+              <div className="backup-text-panel">
+                <strong>Importar backup por texto</strong>
+                <span>Cole aqui o JSON exportado pelo BuildMaster. Isso funciona mesmo quando o seletor de arquivo falhar no APK.</span>
+                <textarea value={importBackupText.trim() ? importBackupText : ''} onChange={(event) => setImportBackupText(event.target.value)} placeholder="Cole o backup JSON aqui" />
+                <div className="history-actions">
+                  <button type="button" onClick={importBackupFromText}>Restaurar backup colado</button>
+                  <button type="button" onClick={() => setImportBackupText('')}>Cancelar</button>
+                </div>
+              </div>
+            )}
             {history.length > 0 ? (
               <>
                 <label className="history-search">
@@ -2388,6 +2525,12 @@ export function CardVisionApp() {
               setPlaystyleOverride={setPlaystyleOverride}
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
+              confirmedNativeSkills={confirmedNativeSkills}
+              setConfirmedNativeSkills={setConfirmedNativeSkills}
+              skillsConfirmed={skillsConfirmed}
+              setSkillsConfirmed={setSkillsConfirmed}
+              skillFilter={skillFilter}
+              setSkillFilter={setSkillFilter}
               onRefresh={() => runAnalysis(false)}
               onConfirm={() => runAnalysis(true)}
             />

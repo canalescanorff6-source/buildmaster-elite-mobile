@@ -1,7 +1,7 @@
 {
-  "name": "BuildMaster Elite Tático v24.17",
-  "short_name": "BuildMaster v24.17",
-  "description": "Orçamento Dinâmico: ficha recalculada pelos pontos/nível digitados, habilidades, ímpetos e mapa total do time.",
+  "name": "BuildMaster Elite Tático v24.19",
+  "short_name": "BuildMaster v24.19",
+  "description": "Premium Lock: leitura blindada das habilidades existentes e recomendações por posição, estilo e função real.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020712",

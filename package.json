@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-17-orcamento-dinamico-apk-fiel",
-  "version": "24.17.0",
+  "name": "buildmaster-elite-tatico-v24-19-premium-lock-apk-fiel",
+  "version": "24.19.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.17 - APK fiel com Orçamento Dinâmico: ficha recalculada pelos pontos/nível digitados, habilidades, ímpetos e mapa total do time.",
+  "description": "BuildMaster Elite Tático v24.19 - Premium Lock com confirmação manual de habilidades, backup blindado e motor de habilidade/ficha/ímpeto mais preciso por posição, estilo e função real.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-elite-tatico-v24-17-orcamento-dinamico';
+const CACHE_NAME = 'buildmaster-elite-tatico-v24-19-premium-lock';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

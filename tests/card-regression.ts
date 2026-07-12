@@ -274,3 +274,46 @@ for (const item of styleMatrixCases) {
 }
 
 console.log(`OK: ${styleMatrixCases.length} testes do motor por estilo passaram.`);
+
+const nativeSkillText = `
+[AJUSTES MANUAIS]
+CONFIRMAÇÃO MANUAL: SIM
+NOME DO JOGADOR: Atacante Teste
+POSIÇÃO PRINCIPAL: CF
+ESTILO DE JOGO: Artilheiro
+NÍVEL MÁXIMO: 31
+PONTOS TOTAIS: 62
+Finalização: 90
+Talento ofensivo: 88
+Passe rasteiro: 75
+Drible: 80
+Velocidade: 84
+Aceleração: 86
+Força do chute: 88
+[FIM AJUSTES]
+### Habilidades
+Chute de primeira
+Precisão à distância
+Passe de primeira
+### Painel
+Top 5 habilidades adicionais
+Finalização acrobática
+Volta para marcar
+Interceptação
+`;
+
+const nativeSkillResult = analyzeCard(nativeSkillText, 'COMPETITIVE', 'AUTO', 'atacante-habilidades.txt');
+if (!nativeSkillResult.parsed.nativeSkills.includes('Chute de primeira') || !nativeSkillResult.parsed.nativeSkills.includes('Precisão à distância')) {
+  throw new Error(`Leitura de habilidades nativas falhou: ${nativeSkillResult.parsed.nativeSkills.join(', ')}`);
+}
+if (nativeSkillResult.parsed.nativeSkills.includes('Volta para marcar') || nativeSkillResult.parsed.nativeSkills.includes('Interceptação')) {
+  throw new Error(`OCR confundiu recomendações do app com habilidades nativas: ${nativeSkillResult.parsed.nativeSkills.join(', ')}`);
+}
+if (nativeSkillResult.recommendedSkills.includes('Chute de primeira') || nativeSkillResult.recommendedSkills.includes('Precisão à distância') || nativeSkillResult.recommendedSkills.includes('Passe de primeira')) {
+  throw new Error(`Programa sugeriu habilidade que o jogador já possui: ${nativeSkillResult.recommendedSkills.join(', ')}`);
+}
+if (nativeSkillResult.recommendedSkills.some((skill) => ['Volta para marcar', 'Interceptação', 'Marcação individual', 'Carrinho', 'Bloqueador'].includes(skill))) {
+  throw new Error(`CA com habilidades lidas recebeu habilidade defensiva indevida: ${nativeSkillResult.recommendedSkills.join(', ')}`);
+}
+
+console.log('OK: leitura blindada de habilidades nativas passou.');

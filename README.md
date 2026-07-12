@@ -1,8 +1,8 @@
-# BuildMaster Elite Tático v24.17 — Orçamento Dinâmico
+# BuildMaster Elite Tático v24.19 — Premium Lock
 
 Versão fiel ao projeto web/APK com foco em máxima precisão de jogabilidade.
 
-## Novidades da v24.17
+## Novidades da v24.19
 
 - Motor por **posição + estilo de jogo + atributos + formação + modelo do técnico**.
 - Regras específicas para GOL, ZAG, laterais, VOL, MLG, MAT, pontas, SA e CA.
