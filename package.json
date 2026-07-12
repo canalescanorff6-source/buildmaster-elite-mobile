@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-20-auditoria-premium-apk-fiel",
-  "version": "24.20.0",
+  "name": "buildmaster-elite-tatico-v24-19-habilidades-opcionais-apk-fiel",
+  "version": "24.19.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.20 - Auditoria Premium com função real obrigatória, habilidades oficiais confirmadas manualmente, Top 5 por whitelist de posição/estilo, fichas por orçamento exato, mapa total do time e backup blindado.",
+  "description": "BuildMaster Elite Tático v24.19 - APK fiel com habilidades já possuídas opcionais, finalização corrigida e top 5 adicionais sem repetir habilidades nativas.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

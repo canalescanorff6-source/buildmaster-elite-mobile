@@ -1824,86 +1824,31 @@ select { max-width: 100%; text-overflow: ellipsis; }
   }
 }
 
-/* v24.19 Premium Lock: confirmação manual de habilidades + backup blindado */
-.skill-confirmation-card {
-  border-color: rgba(57, 255, 149, .22);
-}
-.skill-search-box {
-  margin: 14px 0 10px;
-}
-.official-skill-selector {
+
+.skill-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
   max-height: 320px;
   overflow: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 9px;
-  padding: 8px 2px 4px;
+  padding-right: 4px;
 }
-.official-skill-selector button {
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 16px;
-  padding: 11px 12px;
-  background: rgba(255,255,255,.045);
-  color: var(--text);
-  text-align: left;
-  font-weight: 800;
-  line-height: 1.2;
-}
-.official-skill-selector button.selected {
-  border-color: rgba(57,255,149,.55);
-  background: linear-gradient(135deg, rgba(57,255,149,.22), rgba(42,210,255,.18));
-  color: #fff;
-}
-.inline-actions {
-  margin-top: 14px;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-}
-.success-note {
-  color: var(--green) !important;
-}
-.danger-note {
-  color: #ffbf47 !important;
-}
-.backup-text-panel {
-  display: grid;
-  gap: 10px;
-  margin: 12px 0;
-  padding: 14px;
-  border: 1px solid rgba(42,210,255,.18);
-  border-radius: 18px;
-  background: rgba(42,210,255,.06);
-}
-.backup-text-panel strong {
-  color: #fff;
-  font-size: 14px;
-}
-.backup-text-panel span {
-  color: var(--soft);
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-.backup-text-panel textarea {
-  width: 100%;
-  min-height: 150px;
-  resize: vertical;
-  border: 1px solid rgba(255,255,255,.12);
+.skill-picker-chip {
+  border: 1px solid var(--stroke);
   border-radius: 14px;
-  padding: 10px;
-  color: #fff;
-  background: rgba(0,0,0,.22);
-  font-size: 12px;
-  line-height: 1.35;
+  padding: 11px 12px;
+  color: var(--soft);
+  background: rgba(255,255,255,.045);
+  font-weight: 900;
+  text-align: left;
 }
-.elite-button:disabled,
-.secondary-action:disabled,
-.history-actions button:disabled {
-  opacity: .48;
-  cursor: not-allowed;
+.skill-picker-chip.selected {
+  color: #03111c;
+  border-color: rgba(57,255,149,.75);
+  background: linear-gradient(100deg, var(--green), var(--cyan));
 }
-@media (max-width: 520px) {
-  .official-skill-selector {
-    grid-template-columns: 1fr;
-    max-height: 360px;
-  }
+.panel-note.no-top { margin-top: 0; }
+@media (max-width: 640px) {
+  .skill-picker-grid { grid-template-columns: 1fr; max-height: 360px; }
 }

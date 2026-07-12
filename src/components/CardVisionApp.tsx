@@ -23,7 +23,7 @@ import {
   Zap
 } from 'lucide-react';
 import { clearBuildMasterSession } from '@/components/AuthGate';
-import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILLS, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
+import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
 import { DEFAULT_OCR_ZONES, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
 import type { PrintQualityReport } from '@/lib/validation';
 
@@ -35,9 +35,15 @@ type ManualFields = {
   level: string;
   trainingPointsTotal: string;
   attributes: Partial<Record<AttributeKey, string>>;
+  nativeSkills: string[];
 };
 
 type SavedSkillProgress = Record<string, boolean>;
+
+function emptyManualFields(): ManualFields {
+  return { playerName: '', level: '', trainingPointsTotal: '', attributes: {}, nativeSkills: [] };
+}
+
 
 type SavedAnalysis = {
   id: string;
@@ -83,29 +89,6 @@ const objectives: Array<{ value: Objective; title: string; hint: string }> = [
 ];
 
 const playstyleOptions = PLAYSTYLE_OPTIONS;
-const officialSkillOptions = OFFICIAL_ADDITIONAL_SKILLS;
-
-const realRoleOptions = [
-  { value: 'AUTO', label: 'Automático pela carta' },
-  { value: 'CA Finalizador', label: 'CA Finalizador / Artilheiro' },
-  { value: 'CA Pivô', label: 'CA Pivô / Referência' },
-  { value: 'CA de pressão', label: 'CA de pressão' },
-  { value: 'SA Criador', label: 'SA Criador / Apoio' },
-  { value: 'Ponta driblador', label: 'Ponta driblador / velocista' },
-  { value: 'Ponta recompositor', label: 'Ponta recompositor' },
-  { value: 'Ponta cruzador', label: 'Ponta / Ala de cruzamento' },
-  { value: 'MAT Criador', label: 'MAT Criador / Armador' },
-  { value: 'MLG Box-to-box', label: 'MLG Box-to-box / Meia versátil' },
-  { value: 'VOL destruidor', label: 'VOL destruidor / marcador' },
-  { value: 'VOL construtor', label: 'VOL construtor / orquestrador' },
-  { value: 'ZAG cobertura', label: 'ZAG de cobertura' },
-  { value: 'ZAG combate', label: 'ZAG de combate / destruidor' },
-  { value: 'ZAG saída de bola', label: 'ZAG saída de bola / defensor criativo' },
-  { value: 'Lateral defensivo', label: 'Lateral defensivo' },
-  { value: 'Lateral ofensivo', label: 'Lateral ofensivo / apoio' },
-  { value: 'Goleiro reflexo', label: 'Goleiro seguro / reflexo' },
-  { value: 'Goleiro reposição', label: 'Goleiro reposição / saída rápida' }
-] as const;
 
 const trainingLabels: Record<string, string> = {
   shooting: 'Finalização',
@@ -307,7 +290,6 @@ function resultHistoryKey(result: AnalysisResult) {
     result.parsed.mainPosition,
     result.bestPosition.code,
     result.buildName,
-    result.parsed.manualRole ?? '',
     result.trainingPointsTotal
   ].join(' '));
 }
@@ -887,9 +869,6 @@ function skillReason(skill: string) {
     'Superioridade aérea': 'vence duelos pelo alto com frequência',
     Carrinho: 'melhora desarme de emergência',
     'Super substituto': 'aumenta impacto vindo do banco',
-    'Defesa de pênalti': 'melhora defesa de cobranças de pênalti',
-    'Arremesso longo de goleiro': 'acelera a reposição com as mãos',
-    'Lançamento baixo de goleiro': 'ajuda a sair jogando com passe longo baixo'
   };
   return reasons[skill] ?? 'completa a função real da carta sem repetir habilidade nativa';
 }
@@ -901,7 +880,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.17 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.18 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Melhor posição: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -1391,14 +1370,6 @@ function ReviewPanel({
   setPlaystyleOverride,
   targetPosition,
   setTargetPosition,
-  targetRole,
-  setTargetRole,
-  confirmedNativeSkills,
-  setConfirmedNativeSkills,
-  skillsConfirmed,
-  setSkillsConfirmed,
-  skillFilter,
-  setSkillFilter,
   onRefresh,
   onConfirm
 }: {
@@ -1412,14 +1383,6 @@ function ReviewPanel({
   setPlaystyleOverride: (value: string) => void;
   targetPosition: PositionCode | 'AUTO';
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
-  targetRole: string;
-  setTargetRole: (value: string) => void;
-  confirmedNativeSkills: string[];
-  setConfirmedNativeSkills: (value: string[] | ((current: string[]) => string[])) => void;
-  skillsConfirmed: boolean;
-  setSkillsConfirmed: (value: boolean) => void;
-  skillFilter: string;
-  setSkillFilter: (value: string) => void;
   onRefresh: () => void;
   onConfirm: () => void;
 }) {
@@ -1433,12 +1396,17 @@ function ReviewPanel({
       attributes: { ...current.attributes, [key]: cleaned }
     }));
   };
-  const skillFilterKey = skillFilter.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const visibleSkillOptions = officialSkillOptions.filter((skill) => !skillFilterKey || skill.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(skillFilterKey));
-  const toggleConfirmedSkill = (skill: string) => {
-    setSkillsConfirmed(false);
-    setConfirmedNativeSkills((current) => current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill]);
+
+  const toggleNativeSkill = (skill: string) => {
+    setManualFields((current) => {
+      const selected = new Set(current.nativeSkills ?? []);
+      if (selected.has(skill)) selected.delete(skill);
+      else selected.add(skill);
+      return { ...current, nativeSkills: Array.from(selected) };
+    });
   };
+
+  const nativeSkillSet = new Set(manualFields.nativeSkills ?? []);
 
   return (
     <section className="review-panel result-panel">
@@ -1455,7 +1423,7 @@ function ReviewPanel({
         <div className="result-intro">
           <p className="kicker"><ShieldCheck size={16} /> Auditoria Elite</p>
           <h2>Revise antes do plano final</h2>
-          <p className="review-copy">Fluxo de precisão: você confirma posição, estilo, função real, pontos, atributos e habilidades existentes antes de finalizar. Assim o programa não depende cegamente do OCR.</p>
+          <p className="review-copy">Fluxo de precisão: você confirma posição, estilo, pontos e atributos antes de finalizar. Assim o programa não depende de leitura automática e reduz erros de ficha.</p>
           <div className="metric-grid">
             <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
             <div><span>Posição lida</span><strong>{card.mainPositionPt}</strong></div>
@@ -1471,7 +1439,7 @@ function ReviewPanel({
           {criticalIssues.length ? criticalIssues.map((issue) => <span key={issue.code}>⚠ {issue.message}</span>) : <span>✓ Nenhum bloqueio crítico encontrado.</span>}
           {reviewIssues.map((issue) => <span key={issue.code}>• {issue.message}</span>)}
         </div>
-        <p className="panel-note">A ficha final só deve ser gerada quando posição, estilo, nível/pontos e atributos principais estiverem corretos. Se você digitar pontos totais, esse valor manda na ficha acima do OCR.</p>
+        <p className="panel-note">A ficha final deve usar posição, estilo, nível/pontos e atributos corretos. As habilidades que o jogador já possui são opcionais: elas só ajudam o app a não recomendar habilidade repetida.</p>
       </article>
 
       <div className="review-grid">
@@ -1502,12 +1470,6 @@ function ReviewPanel({
               </select>
             </label>
             <label>
-              <span>Função real de uso</span>
-              <select value={targetRole} onChange={(event) => setTargetRole(event.target.value)}>
-                {realRoleOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
-            </label>
-            <label>
               <span>Nível máximo</span>
               <input inputMode="numeric" value={manualFields.level} onChange={(event) => setManualFields((current) => ({ ...current, level: event.target.value.replace(/[^0-9]/g, '').slice(0, 2) }))} placeholder={card.level ? String(card.level) : 'Ex.: 32'} />
             </label>
@@ -1515,6 +1477,23 @@ function ReviewPanel({
               <span>Pontos de progresso disponíveis</span>
               <input inputMode="numeric" value={manualFields.trainingPointsTotal} onChange={(event) => setManualFields((current) => ({ ...current, trainingPointsTotal: event.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))} placeholder={manualFields.level ? String((Number(manualFields.level) - 1) * 2) : String(draft.trainingPointsTotal)} />
             </label>
+          </div>
+        </article>
+
+        <article className="luxury-panel wide-card">
+          <p className="kicker">Habilidades que o jogador já possui</p>
+          <p className="panel-note no-top">Opcional: marque somente as habilidades que já aparecem na carta. Isso serve para o app não recomendar habilidade repetida e escolher as 5 melhores habilidades que ainda faltam. Se não souber, pode finalizar sem marcar nada.</p>
+          <div className="skill-picker-grid">
+            {OFFICIAL_ADDITIONAL_SKILL_NAMES.map((skill) => (
+              <button
+                key={skill}
+                type="button"
+                className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected' : 'skill-picker-chip'}
+                onClick={() => toggleNativeSkill(skill)}
+              >
+                {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
+              </button>
+            ))}
           </div>
         </article>
 
@@ -1534,40 +1513,6 @@ function ReviewPanel({
             ))}
           </div>
           <p className="panel-note">Preencha os valores que você deseja usar na ficha. Os demais dados seguem o motor local, banco de cartas e regras premium de desempenho em campo.</p>
-        </article>
-
-        <article className="luxury-panel wide-card skill-confirmation-card">
-          <div className="section-title-row">
-            <div>
-              <p className="kicker">Habilidades que o jogador já possui</p>
-              <h3>Confirmação obrigatória</h3>
-            </div>
-            <span>{confirmedNativeSkills.length} selecionada(s)</span>
-          </div>
-          <p className="panel-note">Marque somente as habilidades que aparecem na carta. O app não vai recomendar novamente habilidades que você confirmar aqui.</p>
-          <label className="history-search skill-search-box">
-            <Search size={14} />
-            <input value={skillFilter} onChange={(event) => setSkillFilter(event.target.value)} placeholder="Buscar habilidade oficial" />
-          </label>
-          <div className="official-skill-selector">
-            {visibleSkillOptions.map((skill) => (
-              <button
-                key={skill}
-                type="button"
-                className={confirmedNativeSkills.includes(skill) ? 'selected' : ''}
-                onClick={() => toggleConfirmedSkill(skill)}
-              >
-                {confirmedNativeSkills.includes(skill) ? '✓ ' : ''}{skill}
-              </button>
-            ))}
-          </div>
-          <div className="review-actions inline-actions">
-            <button type="button" className="secondary-action" onClick={() => { setConfirmedNativeSkills([]); setSkillsConfirmed(true); }}>Confirmar: não possui habilidades</button>
-            <button type="button" className="elite-button" onClick={() => setSkillsConfirmed(true)}><CheckCircle2 size={18} /> Confirmar habilidades</button>
-          </div>
-          <p className={skillsConfirmed ? 'panel-note success-note' : 'panel-note danger-note'}>
-            {skillsConfirmed ? 'Habilidades existentes confirmadas. Escolha também a função real de uso para liberar a ficha premium.' : 'Confirme as habilidades antes de finalizar para evitar repetição ou recomendação errada.'}
-          </p>
         </article>
 
         <article className="luxury-panel wide-card">
@@ -1599,7 +1544,7 @@ function ReviewPanel({
 
       <div className="review-actions">
         <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular com meus pontos</button>
-        <button type="button" className="elite-button" onClick={onConfirm} disabled={!skillsConfirmed || targetRole === 'AUTO'}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
+        <button type="button" className="elite-button" onClick={onConfirm}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
       </div>
     </section>
   );
@@ -1615,7 +1560,6 @@ export function CardVisionApp() {
   const [rawText, setRawText] = useState('');
   const [objective, setObjective] = useState<Objective>('COMPETITIVE');
   const [targetPosition, setTargetPosition] = useState<PositionCode | 'AUTO'>('AUTO');
-  const [targetRole, setTargetRole] = useState<string>('AUTO');
   const [cardPositionOverride, setCardPositionOverride] = useState<PositionCode | 'AUTO'>('AUTO');
   const [playstyleOverride, setPlaystyleOverride] = useState<string>('AUTO');
   const [readingMode, setReadingMode] = useState<ReadingMode>('precision');
@@ -1628,13 +1572,8 @@ export function CardVisionApp() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
-  const [manualFields, setManualFields] = useState<ManualFields>({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
+  const [manualFields, setManualFields] = useState<ManualFields>(emptyManualFields());
   const [manualMode, setManualMode] = useState(false);
-  const [confirmedNativeSkills, setConfirmedNativeSkills] = useState<string[]>([]);
-  const [skillsConfirmed, setSkillsConfirmed] = useState(false);
-  const [skillFilter, setSkillFilter] = useState('');
-  const [backupText, setBackupText] = useState('');
-  const [importBackupText, setImportBackupText] = useState('');
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [historySearch, setHistorySearch] = useState('');
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -1839,12 +1778,8 @@ export function CardVisionApp() {
     setRawText('');
     setResult(null);
     setDraftResult(null);
-    setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
-    setConfirmedNativeSkills([]);
-    setSkillsConfirmed(false);
-    setSkillFilter('');
+    setManualFields(emptyManualFields());
     setManualMode(false);
-    setTargetRole('AUTO');
     setCardPositionOverride('AUTO');
     setPlaystyleOverride('AUTO');
     setQualityReport(null);
@@ -1916,59 +1851,23 @@ export function CardVisionApp() {
     });
   }
 
-  function backupPayloadText() {
-    return JSON.stringify({
+  function exportHistoryBackup() {
+    const payload = {
       app: 'BuildMaster Elite Tático',
-      version: '24.20.0',
+      version: '24.7.0',
       exportedAt: new Date().toISOString(),
       items: history
-    }, null, 2);
-  }
-
-  function mergeImportedBackupText(text: string) {
-    const parsed = JSON.parse(text) as { items?: unknown[] } | unknown[];
-    const entries = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : [];
-    const imported = normalizeHistoryList(entries);
-    if (!imported.length) {
-      setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
-      return;
-    }
-
-    setHistory((current) => {
-      const next = [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT);
-      void persistHistoryStore(next);
-      void pushCloudHistory(next, true);
-      return next;
-    });
-    setLibraryOpen(true);
-    setStatus(`Backup importado com ${imported.length} ficha(s). Elas ficam no cofre até você apagar.`);
-  }
-
-  async function exportHistoryBackup() {
-    const text = backupPayloadText();
-    setBackupText(text);
-    try {
-      await navigator.clipboard?.writeText(text);
-    } catch {
-      // Alguns WebViews bloqueiam clipboard; o textarea abaixo continua disponível.
-    }
-
-    try {
-      const blob = new Blob([text], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `buildmaster-fichario-${new Date().toISOString().slice(0, 10)}.json`;
-      link.rel = 'noopener';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-    } catch {
-      // O backup manual via texto é a saída segura no APK.
-    }
-
-    setStatus('Backup preparado. Se o arquivo não baixar no APK, copie o texto exibido e guarde no Drive/WhatsApp.');
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `buildmaster-fichario-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus('Backup do Cofre de Fichas exportado. Guarde esse arquivo para recuperar em outro navegador ou celular.');
   }
 
   async function importHistoryBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -1977,18 +1876,24 @@ export function CardVisionApp() {
     if (!file) return;
 
     try {
-      mergeImportedBackupText(await file.text());
-    } catch {
-      setStatus('Não consegui importar esse backup. Use um arquivo JSON exportado pelo próprio BuildMaster ou cole o texto do backup.');
-    }
-  }
+      const parsed = JSON.parse(await file.text()) as { items?: unknown[] } | unknown[];
+      const entries = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : [];
+      const imported = normalizeHistoryList(entries);
+      if (!imported.length) {
+        setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
+        return;
+      }
 
-  function importBackupFromText() {
-    try {
-      mergeImportedBackupText(importBackupText.trim());
-      setImportBackupText('');
+      setHistory((current) => {
+        const next = [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT);
+        void persistHistoryStore(next);
+        void pushCloudHistory(next, true);
+        return next;
+      });
+      setLibraryOpen(true);
+      setStatus(`Backup importado com ${imported.length} ficha(s). Elas ficam no cofre até você apagar.`);
     } catch {
-      setStatus('Texto de backup inválido. Cole o JSON completo exportado pelo BuildMaster.');
+      setStatus('Não consegui importar esse backup. Use um arquivo JSON exportado pelo próprio BuildMaster.');
     }
   }
 
@@ -2010,10 +1915,7 @@ export function CardVisionApp() {
     setPlayerCardImage(null);
     setResult(null);
     setDraftResult(null);
-    setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
-    setConfirmedNativeSkills([]);
-    setSkillsConfirmed(false);
-    setSkillFilter('');
+    setManualFields(emptyManualFields());
     setManualMode(false);
     setRawText('');
     setOcrDone(false);
@@ -2031,13 +1933,13 @@ export function CardVisionApp() {
   }
 
   function stripManualBlock(text: string) {
-    return text.replace(/\[AJUSTES MANUAIS\][\s\S]*?\[FIM AJUSTES\]\s*/gi, '').replace(/^###\s+HABILIDADES CONFIRMADAS MANUALMENTE[\s\S]*?(?=^###\s+|(?![\s\S]))/gim, '').trimStart();
+    return text.replace(/\[AJUSTES MANUAIS\][\s\S]*?\[FIM AJUSTES\]\s*/gi, '').trimStart();
   }
 
   function textWithManualLocks(text: string, confirmed = false) {
     const learned = findLearnedCard(text, fileName);
     const cleaned = stripManualBlock(text)
-      .replace(/^(POSIÇÃO PRINCIPAL|POSICAO PRINCIPAL|ESTILO DE JOGO|NOME|NOME DO JOGADOR|NÍVEL MÁXIMO|NIVEL MAXIMO|PONTOS TOTAIS)\s*[:=\-].*$/gim, '')
+      .replace(/^(POSIÇÃO PRINCIPAL|POSICAO PRINCIPAL|ESTILO DE JOGO|NOME|NOME DO JOGADOR|NÍVEL MÁXIMO|NIVEL MAXIMO|PONTOS TOTAIS|HABILIDADES JÁ POSSUI|HABILIDADES JA POSSUI|HABILIDADES DO JOGADOR|HABILIDADES NATIVAS)\s*[:=\-].*$/gim, '')
       .replace(/^\s+/, '');
     const locks: string[] = ['[AJUSTES MANUAIS]'];
     if (confirmed) locks.push('CONFIRMAÇÃO MANUAL: SIM');
@@ -2047,21 +1949,14 @@ export function CardVisionApp() {
     const learnedPoints = learned?.trainingPointsTotal ?? '';
     if (manualFields.playerName.trim() || learnedName) locks.push(`NOME DO JOGADOR: ${manualFields.playerName.trim() || learnedName}`);
     if (cardPositionOverride !== 'AUTO' || learnedPosition !== 'AUTO') locks.push(`POSIÇÃO PRINCIPAL: ${cardPositionOverride !== 'AUTO' ? cardPositionOverride : learnedPosition}`);
-    if (targetRole !== 'AUTO') locks.push(`FUNÇÃO REAL: ${targetRole}`);
     if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
     if (manualFields.level.trim()) locks.push(`NÍVEL MÁXIMO: ${manualFields.level.trim()}`);
     if (manualFields.trainingPointsTotal.trim() || learnedPoints) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim() || learnedPoints}`);
+    const selectedNativeSkills = Array.from(new Set(manualFields.nativeSkills)).filter(Boolean);
+    if (selectedNativeSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedNativeSkills.join(', ')}`);
     for (const item of ATTRIBUTE_INPUTS) {
       const value = manualFields.attributes[item.key]?.trim();
       if (value) locks.push(`${item.label}: ${value}`);
-    }
-    if (skillsConfirmed) {
-      locks.push('### HABILIDADES CONFIRMADAS MANUALMENTE');
-      if (confirmedNativeSkills.length) {
-        locks.push(...confirmedNativeSkills);
-      } else {
-        locks.push('NENHUMA');
-      }
     }
     locks.push('[FIM AJUSTES]');
     return `${locks.join('\n')}\n${cleaned}`.trim();
@@ -2076,13 +1971,11 @@ export function CardVisionApp() {
       playerName: nextResult.parsed.playerName !== 'Jogador não identificado' ? nextResult.parsed.playerName : '',
       level: nextResult.parsed.level ? String(nextResult.parsed.level) : '',
       trainingPointsTotal: nextResult.trainingPointsTotal ? String(nextResult.trainingPointsTotal) : '',
-      attributes: nextAttributes
+      attributes: nextAttributes,
+      nativeSkills: nextResult.parsed.nativeSkills.filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]))
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
-    if (nextResult.parsed.manualRole) setTargetRole(nextResult.parsed.manualRole);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
-    setConfirmedNativeSkills(nextResult.parsed.nativeSkills ?? []);
-    setSkillsConfirmed(false);
   }
 
   function startManualPreciseMode() {
@@ -2090,7 +1983,6 @@ export function CardVisionApp() {
       'NOME DO JOGADOR: ',
       'POSIÇÃO PRINCIPAL: CF',
       'ESTILO DE JOGO: AUTO',
-      'FUNÇÃO REAL: AUTO',
       'NÍVEL MÁXIMO: ',
       'PONTOS TOTAIS: ',
       '',
@@ -2105,12 +1997,8 @@ export function CardVisionApp() {
     setOcrDone(true);
     setResult(null);
     setCardPositionOverride('CF');
-    setTargetRole('AUTO');
     setPlaystyleOverride('AUTO');
-    setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
-    setConfirmedNativeSkills([]);
-    setSkillsConfirmed(false);
-    setSkillFilter('');
+    setManualFields(emptyManualFields());
     const nextResult = analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile);
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
@@ -2125,10 +2013,7 @@ export function CardVisionApp() {
     setLoading(true);
     setResult(null);
     setDraftResult(null);
-    setManualFields({ playerName: '', level: '', trainingPointsTotal: '', attributes: {} });
-    setConfirmedNativeSkills([]);
-    setSkillsConfirmed(false);
-    setSkillFilter('');
+    setManualFields(emptyManualFields());
     setManualMode(false);
     setRawText('');
     setOcrDone(false);
@@ -2208,10 +2093,6 @@ export function CardVisionApp() {
   }
 
   function runAnalysis(confirmed = false) {
-    if (confirmed && !skillsConfirmed) {
-      setStatus('Confirme as habilidades que o jogador já possui antes de finalizar. Isso evita recomendação repetida ou errada.');
-      return;
-    }
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
     const lockedText = textWithManualLocks(rawText, confirmed);
     if (lockedText !== rawText) setRawText(lockedText);
@@ -2487,8 +2368,7 @@ export function CardVisionApp() {
             </div>
             <div className="history-actions cloud-history-actions">
               <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><Download size={14} /> Exportar backup</button>
-              <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar arquivo</button>
-              <button type="button" onClick={() => setImportBackupText((current) => current ? '' : ' ')}><UploadCloud size={14} /> Colar backup</button>
+              <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
               <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
               <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
               <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
@@ -2497,28 +2377,6 @@ export function CardVisionApp() {
               <ShieldCheck size={14} />
               <span>{cloudStatus}</span>
             </div>
-            {backupText && (
-              <div className="backup-text-panel">
-                <strong>Backup manual pronto</strong>
-                <span>Se o Android não baixar o arquivo, copie este texto e salve no Drive/WhatsApp. Para restaurar, cole no campo de importação.</span>
-                <textarea value={backupText} readOnly />
-                <div className="history-actions">
-                  <button type="button" onClick={() => navigator.clipboard?.writeText(backupText).then(() => setStatus('Backup copiado para a área de transferência.')).catch(() => setStatus('Selecione o texto do backup e copie manualmente.'))}>Copiar texto</button>
-                  <button type="button" onClick={() => setBackupText('')}>Fechar</button>
-                </div>
-              </div>
-            )}
-            {importBackupText && (
-              <div className="backup-text-panel">
-                <strong>Importar backup por texto</strong>
-                <span>Cole aqui o JSON exportado pelo BuildMaster. Isso funciona mesmo quando o seletor de arquivo falhar no APK.</span>
-                <textarea value={importBackupText.trim() ? importBackupText : ''} onChange={(event) => setImportBackupText(event.target.value)} placeholder="Cole o backup JSON aqui" />
-                <div className="history-actions">
-                  <button type="button" onClick={importBackupFromText}>Restaurar backup colado</button>
-                  <button type="button" onClick={() => setImportBackupText('')}>Cancelar</button>
-                </div>
-              </div>
-            )}
             {history.length > 0 ? (
               <>
                 <label className="history-search">
@@ -2564,14 +2422,6 @@ export function CardVisionApp() {
               setPlaystyleOverride={setPlaystyleOverride}
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
-              targetRole={targetRole}
-              setTargetRole={setTargetRole}
-              confirmedNativeSkills={confirmedNativeSkills}
-              setConfirmedNativeSkills={setConfirmedNativeSkills}
-              skillsConfirmed={skillsConfirmed}
-              setSkillsConfirmed={setSkillsConfirmed}
-              skillFilter={skillFilter}
-              setSkillFilter={setSkillFilter}
               onRefresh={() => runAnalysis(false)}
               onConfirm={() => runAnalysis(true)}
             />
