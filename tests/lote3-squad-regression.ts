@@ -1,0 +1,11 @@
+import { analyzeCard } from '../src/lib/analyzer';
+import { buildSquadRotationReport, OFFICIAL_INDIVIDUAL_INSTRUCTIONS } from '../src/lib/squadRotation';
+const positions=['GK','CB','CB','LB','RB','DMF','CMF','AMF','LWF','RWF','CF','CB','DMF','CMF','SS','CF'];
+const results=positions.map((p,i)=>{ const r=analyzeCard(`POSICAO: ${p}\nNIVEL: 30\nPONTOS DE TREINO: 40\nCONFIRMACAO MANUAL: SIM`, 'COMPETITIVE', p as any, null, {formation:'4-3-3',style:'CONTRA_ATAQUE_RAPIDO'}); r.parsed.playerName=`Jogador ${i+1}`; r.parsed.internalId=`jogador-${i+1}`; return r; });
+const report=buildSquadRotationReport(results,'4-3-3','CONTRA_ATAQUE_RAPIDO','PERDENDO_1','BAIXA');
+if(!report) throw new Error('Relatório ausente');
+if(report.starterCount!==11) throw new Error('Titulares inválidos');
+if(report.benchCount<1) throw new Error('Banco ausente');
+if(!report.substitutions.length) throw new Error('Trocas reais ausentes');
+if(report.instructions.some(x=>!OFFICIAL_INDIVIDUAL_INSTRUCTIONS.includes(x.instruction))) throw new Error('Instrução fora do catálogo');
+console.log('Lote 3 OK', {bench:report.benchCount, subs:report.substitutions.length, instructions:report.instructions.length});

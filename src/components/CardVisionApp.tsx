@@ -17,7 +17,7 @@ import {
   Palette,
   Layers,
   Trophy,
-  Target,
+  Target, Clock3,
   LayoutDashboard,
   SlidersHorizontal,
   ImagePlus,
@@ -32,21 +32,31 @@ import {
   Zap,
   Ban,
   ThumbsUp,
-  BrainCircuit
+  BrainCircuit,
+  Users
 } from 'lucide-react';
 import { clearBuildMasterSession } from '@/components/AuthGate';
 import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
 import { DEFAULT_OCR_ZONES, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
 import { buildEliteTeamReport } from '@/lib/teamOptimizer';
+import { buildSquadChemistryReport } from '@/lib/squadChemistry';
+import { buildAssistedLineupReport } from '@/lib/assistedLineup';
+import { buildOpponentAnalysisReport, OPPONENT_PROFILE_LABELS, OPPONENT_STRENGTH_LABELS, type OpponentProfile, type OpponentStrength } from '@/lib/opponentAnalysis';
+import { readOpponentPrintText, type OpponentPrintReport } from '@/lib/opponentPrintReader';
+import { buildGamePlanReport, type MatchState, type TeamEnergy } from '@/lib/gamePlan';
+import { buildSquadRotationReport } from '@/lib/squadRotation';
+import { MANAGERS, getManager } from '@/lib/managers';
 import { buildOpponentPlans, buildUltimatePlayerCoach, getOneHundredUpgradeChecklist } from '@/lib/ultimateCoach';
 import type { PrintQualityReport } from '@/lib/validation';
+import { buildCalibrationReport, type MatchFeedback, type MatchFeedbackKey } from '@/lib/realMatchCalibration';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
 type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type ResultTab = 'resumo' | 'mapa' | 'ficha' | 'habilidades' | 'treinador' | 'correcao' | 'regras' | 'validacao' | 'exportar' | 'posicoes' | 'dados';
+type ResultTab = 'leitura' | 'calibracao' | 'ficha' | 'habilidades' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
+type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 
 type ManualFields = {
   playerName: string;
@@ -96,6 +106,7 @@ type SavedAnalysis = {
   readingMode: ReadingMode;
   formation: TacticalFormation;
   teamStyle: TacticalStyle;
+  managerId: string;
   result: AnalysisResult | null;
   draftResult: AnalysisResult | null;
   manualFields: ManualFields;
@@ -612,7 +623,7 @@ function buildProfessionalReportHtml(result: AnalysisResult, notes = '') {
     <p class="subtitle">${escapeHtml(result.teamMap?.functionLabel ?? result.buildName)} • ${escapeHtml(result.parsed.mainPositionPt)} • ${escapeHtml(result.parsed.playstyle ?? 'Estilo não informado')}</p>
   </header>
   <div class="metrics">
-    <div class="metric"><span>Melhor posição</span><b>${escapeHtml(result.bestPosition.label)}</b></div>
+    <div class="metric"><span>Posição escolhida</span><b>${escapeHtml(result.bestPosition.label)}</b></div>
     <div class="metric"><span>Pontos</span><b>${escapeHtml(result.trainingPointsUsed)}/${escapeHtml(result.trainingPointsTotal)}</b></div>
     <div class="metric"><span>PRI em campo</span><b>${escapeHtml(result.pri.GER)}</b></div>
     <div class="metric"><span>Confiança</span><b>${escapeHtml(result.parsed.confidence)}%</b></div>
@@ -680,7 +691,7 @@ function formatReportMarkdown(result: AnalysisResult, notes = '') {
     '',
     `**Função real:** ${result.teamMap?.functionLabel ?? result.buildName}`,
     `**Posição da carta:** ${result.parsed.mainPositionPt}`,
-    `**Melhor posição:** ${result.bestPosition.label}`,
+    `**Posição escolhida:** ${result.bestPosition.label}`,
     `**Estilo:** ${result.parsed.playstyle ?? 'Não informado'}`,
     `**Pontos:** ${result.trainingPointsUsed}/${result.trainingPointsTotal}`,
     '',
@@ -1537,8 +1548,45 @@ function VisualLineupPitch({ history, formation, teamStyle }: { history: SavedAn
 }
 
 function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAnalysis[]; formation: TacticalFormation; teamStyle: TacticalStyle }) {
+  const [opponentProfile, setOpponentProfile] = useState<OpponentProfile>('CONTRA_RAPIDO');
+  const [opponentFormation, setOpponentFormation] = useState<TacticalFormation>('4-3-3');
+  const [opponentStrength, setOpponentStrength] = useState<OpponentStrength>('VELOCIDADE');
+  const [matchState, setMatchState] = useState<MatchState>('EMPATANDO');
+  const [teamEnergy, setTeamEnergy] = useState<TeamEnergy>('MEDIA');
+  const [opponentPrintPreview, setOpponentPrintPreview] = useState<string | null>(null);
+  const [opponentPrintReport, setOpponentPrintReport] = useState<OpponentPrintReport | null>(null);
+  const [opponentPrintLoading, setOpponentPrintLoading] = useState(false);
+
+  async function analyzeOpponentPrint(file: File) {
+    setOpponentPrintLoading(true);
+    setOpponentPrintPreview(URL.createObjectURL(file));
+    setOpponentPrintReport(null);
+    try {
+      const quality = await inspectPrintQuality(file).catch(() => null);
+      const processed = await preprocessImage(file, 'sharp');
+      const Tesseract = await import('tesseract.js');
+      const pass = await Tesseract.recognize(processed, 'por+eng');
+      const nextReport = readOpponentPrintText(pass.data.text || '');
+      if (quality?.issues.length) nextReport.warnings.unshift(quality.issues[0].message);
+      setOpponentPrintReport(nextReport);
+    } catch {
+      setOpponentPrintReport(readOpponentPrintText(''));
+    } finally { setOpponentPrintLoading(false); }
+  }
+
+  function applyOpponentPrintReading() {
+    if (!opponentPrintReport) return;
+    if (opponentPrintReport.profile.value) setOpponentProfile(opponentPrintReport.profile.value);
+    if (opponentPrintReport.formation.value) setOpponentFormation(opponentPrintReport.formation.value);
+    if (opponentPrintReport.strength.value && opponentPrintReport.strength.confidence !== 'baixa') setOpponentStrength(opponentPrintReport.strength.value);
+  }
   const report = useMemo(() => buildSquadReport(history, formation, teamStyle), [history, formation, teamStyle]);
   const eliteReport = useMemo(() => buildEliteTeamReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
+  const chemistryReport = useMemo(() => buildSquadChemistryReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
+  const assistedLineup = useMemo(() => buildAssistedLineupReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
+  const opponentReport = useMemo(() => buildOpponentAnalysisReport(history.map((item) => item.result), formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength }), [history, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
+  const gamePlan = useMemo(() => opponentReport ? buildGamePlanReport({ matchState, energy: teamEnergy, opponentProfile, ownFormation: formation, ownStyle: teamStyle }, opponentReport) : null, [opponentReport, matchState, teamEnergy, opponentProfile, formation, teamStyle]);
+  const rotationReport = useMemo(() => buildSquadRotationReport(history.map((item) => item.result), formation, teamStyle, matchState, teamEnergy), [history, formation, teamStyle, matchState, teamEnergy]);
 
   if (!report) {
     return (
@@ -1574,6 +1622,185 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
 
       <FormationMiniBoard history={history} formation={formation} />
       <VisualLineupPitch history={history} formation={formation} teamStyle={teamStyle} />
+
+      {assistedLineup && (
+        <section className="assisted-lineup-panel">
+          <div className="chemistry-head">
+            <div>
+              <p className="kicker"><Sparkles size={14} /> Escalação automática assistida</p>
+              <h3>Três caminhos, decisão final sempre sua</h3>
+              <span>{assistedLineup.generatedCount} combinações comparadas com {assistedLineup.playerCount} jogadores salvos</span>
+            </div>
+          </div>
+          {assistedLineup.warning && <div className="squad-alert-box"><strong>Escalação ainda incompleta</strong><span>{assistedLineup.warning}</span></div>}
+          <div className="assisted-option-grid">
+            {assistedLineup.options.map((option) => (
+              <article key={option.id} className={`assisted-option-card ${option.id}`}>
+                <div className="assisted-option-head">
+                  <div><span>{option.title}</span><strong>{option.formation} • {tacticalStyleName[option.style]}</strong></div>
+                  <b>{option.score}/100</b>
+                </div>
+                <p>{option.subtitle}</p>
+                <div className="assisted-mini-scores"><span>Entrosamento <b>{option.chemistry}</b></span><span>Estilo <b>{option.styleFit}</b></span><span>{option.complete ? '11/11 completos' : 'Há vagas abertas'}</span></div>
+                <div className="assisted-lineup-list">
+                  {option.lineup.map((pick) => <span key={pick.slot.id}><b>{pick.slot.label}</b><em>{pick.playerName ?? 'Vaga aberta'} • {pick.score}/100</em></span>)}
+                </div>
+                <div className="assisted-detail"><strong>Por que esta opção?</strong><span>{option.reason}</span><small>{option.decisionNote}</small></div>
+                <div className="assisted-detail"><strong>Ajustes em relação à sua base</strong>{option.changes.map((item) => <span key={item}>{item}</span>)}</div>
+                <div className="chemistry-columns"><div className="chemistry-box good"><strong>Pontos fortes</strong>{option.strengths.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box warn"><strong>Riscos</strong>{option.risks.map((item) => <span key={item}>{item}</span>)}</div></div>
+              </article>
+            ))}
+          </div>
+          <div className="squad-suggestion-box"><strong>Recomendação assistida</strong><span>{assistedLineup.recommendation}</span><span>Nenhum jogador, posição, formação ou estilo é aplicado automaticamente.</span></div>
+        </section>
+      )}
+
+      {opponentReport && (
+        <section className="opponent-analysis-panel">
+          <div className="chemistry-head">
+            <div>
+              <p className="kicker"><Target size={14} /> Análise do adversário</p>
+              <h3>Ajustes conforme o estilo do outro time</h3>
+              <span>Você informa o perfil; o app sugere respostas sem alterar sua escalação.</span>
+            </div>
+            <strong>{opponentReport.matchupScore}/100</strong>
+          </div>
+          <div className="opponent-print-reader">
+            <div className="opponent-print-actions">
+              <label className="opponent-print-upload"><ScanText size={18}/><span>{opponentPrintLoading ? 'Lendo print...' : 'Ler escalação por print'}</span><input type="file" accept="image/*" disabled={opponentPrintLoading} onChange={(event)=>{ const file=event.target.files?.[0]; if(file) void analyzeOpponentPrint(file); event.currentTarget.value=''; }}/></label>
+              <small>A leitura cria um rascunho. Nada é aplicado sem sua confirmação.</small>
+            </div>
+            {opponentPrintPreview && <img className="opponent-print-preview" src={opponentPrintPreview} alt="Print do adversário"/>}
+            {opponentPrintReport && <div className="opponent-print-review">
+              <div className="opponent-print-confidence"><strong>Confiança geral: {opponentPrintReport.overallConfidence}</strong><span>{opponentPrintReport.visibleNames.length} nome(s) possivelmente visível(is)</span></div>
+              <div className="opponent-print-fields">
+                <span><b>Formação</b>{opponentPrintReport.formation.value ?? 'Não confirmada'}<small>{opponentPrintReport.formation.confidence}</small></span>
+                <span><b>Estilo</b>{opponentPrintReport.profile.value ? OPPONENT_PROFILE_LABELS[opponentPrintReport.profile.value] : 'Não confirmado'}<small>{opponentPrintReport.profile.confidence}</small></span>
+                <span><b>Força</b>{opponentPrintReport.strength.value ? OPPONENT_STRENGTH_LABELS[opponentPrintReport.strength.value] : 'Não confirmada'}<small>{opponentPrintReport.strength.confidence}</small></span>
+                <span><b>Técnico</b>{opponentPrintReport.manager.value ?? 'Não confirmado'}<small>{opponentPrintReport.manager.confidence}</small></span>
+              </div>
+              {opponentPrintReport.warnings.map((warning)=><p key={warning}>{warning}</p>)}
+              <button type="button" onClick={applyOpponentPrintReading}><CheckCircle2 size={16}/> Aplicar leitura confirmada</button>
+            </div>}
+          </div>
+          <div className="opponent-input-grid">
+            <label><span>Estilo do adversário</span><select value={opponentProfile} onChange={(event) => setOpponentProfile(event.target.value as OpponentProfile)}>{Object.entries(OPPONENT_PROFILE_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label><span>Formação observada</span><select value={opponentFormation} onChange={(event) => setOpponentFormation(event.target.value as TacticalFormation)}>{['AUTO','4-2-2-2','4-3-3','4-1-2-3','4-2-1-3','4-2-3-1','4-3-1-2','4-1-3-2','4-4-2','4-1-4-1','3-2-4-1','3-4-3','3-5-2','5-3-2','5-2-3'].map((value) => <option key={value} value={value}>{value === 'AUTO' ? 'Ainda não sei' : value}</option>)}</select></label>
+            <label><span>Maior força percebida</span><select value={opponentStrength} onChange={(event) => setOpponentStrength(event.target.value as OpponentStrength)}>{Object.entries(OPPONENT_STRENGTH_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          </div>
+          <div className="opponent-score-strip"><span>Ameaça estimada <b>{opponentReport.threatScore}/100</b></span><span>Seu encaixe atual <b>{opponentReport.matchupScore}/100</b></span><span>{opponentReport.verdict}</span></div>
+          <div className="squad-alert-box"><strong>Leitura informada</strong><span>{opponentReport.opponentSummary}</span></div>
+          <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Principais ameaças</strong>{opponentReport.mainThreats.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Onde explorar</strong>{opponentReport.exploitableWeaknesses.map((item) => <span key={item}>{item}</span>)}</div></div>
+          <div className="opponent-adjustment-grid">{opponentReport.adjustments.map((item) => <article key={`${item.area}-${item.title}`} className={`opponent-adjustment-card priority-${item.priority}`}><div><span>{item.area}</span><b>{item.priority}</b></div><strong>{item.title}</strong><p>{item.action}</p><small>{item.reason}</small></article>)}</div>
+          <div className="squad-suggestion-box"><strong>Resposta assistida sugerida</strong><span>{opponentReport.recommendedFormation} • {tacticalStyleName[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>
+          <div className="opponent-locks">{opponentReport.locks.map((item) => <span key={item}><ShieldCheck size={14} /> {item}</span>)}</div>
+        </section>
+      )}
+
+      {gamePlan && (
+        <section className="game-plan-panel">
+          <div className="chemistry-head"><div><p className="kicker"><Clock3 size={14} /> Plano de jogo e substituições</p><h3>Início, intervalo e reta final</h3><span>Mudanças guiadas por placar, energia e leitura do adversário.</span></div><strong>{gamePlan.controlScore}/100</strong></div>
+          <div className="opponent-input-grid">
+            <label><span>Situação do placar</span><select value={matchState} onChange={(event) => setMatchState(event.target.value as MatchState)}><option value="EMPATANDO">Empatando</option><option value="VENCENDO_1">Vencendo por 1</option><option value="VENCENDO_2">Vencendo por 2+</option><option value="PERDENDO_1">Perdendo por 1</option><option value="PERDENDO_2">Perdendo por 2+</option></select></label>
+            <label><span>Energia do time</span><select value={teamEnergy} onChange={(event) => setTeamEnergy(event.target.value as TeamEnergy)}><option value="ALTA">Alta</option><option value="MEDIA">Média</option><option value="BAIXA">Baixa</option></select></label>
+            <div className="game-plan-score"><span>Controle <b>{gamePlan.controlScore}</b></span><span>Risco <b>{gamePlan.riskScore}</b></span></div>
+          </div>
+          <div className="squad-alert-box"><strong>Contexto atual</strong><span>{gamePlan.headline}</span></div>
+          <div className="game-phase-grid">{gamePlan.phases.map((phase) => <article key={phase.moment} className="game-phase-card"><div><span>{phase.moment}</span><strong>{phase.title}</strong></div><p>{phase.objective}</p><ul>{phase.instructions.map((item) => <li key={item}>{item}</li>)}</ul>{phase.substitutions.length > 0 && <div className="substitution-list"><b>Substituições por gatilho</b>{phase.substitutions.map((sub) => <div key={`${sub.minute}-${sub.trigger}`}><span>{sub.minute} • {sub.priority}</span><strong>{sub.outProfile} → {sub.inProfile}</strong><small>{sub.trigger}. {sub.objective}</small></div>)}</div>}{phase.formationSuggestion && <small>Opção assistida: {phase.formationSuggestion} • {tacticalStyleName[phase.styleSuggestion!]}</small>}</article>)}</div>
+          <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Gatilhos de emergência</strong>{gamePlan.emergencyTriggers.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Controle do usuário</strong>{gamePlan.locks.map((item) => <span key={item}>{item}</span>)}</div></div>
+        </section>
+      )}
+
+      {rotationReport && (
+        <section className="rotation-panel">
+          <div className="chemistry-head"><div><p className="kicker"><Users size={14} /> Lote 3 • Banco, trocas e instruções</p><h3>Rotação do elenco com jogadores reais</h3><span>{rotationReport.headline}</span></div><strong>{rotationReport.coverageScore}/100</strong></div>
+          <div className="opponent-score-strip"><span>Elenco <b>{rotationReport.squadCount}</b></span><span>Titulares <b>{rotationReport.starterCount}/11</b></span><span>Banco <b>{rotationReport.benchCount}</b></span><span>Rotação <b>{rotationReport.rotationScore}/100</b></span></div>
+          <div className="rotation-grid">
+            <article className="rotation-card"><strong>v24.51 • Banco e rotação</strong>{rotationReport.bench.length ? rotationReport.bench.map((item)=><div key={item.player.id}><span>{item.player.name} • {item.player.positionLabel}</span><b>{item.label}</b><small>{item.reason}</small></div>) : <p>Salve mais de 11 jogadores no Cofre para formar o banco.</p>}</article>
+            <article className="rotation-card"><strong>Coberturas que faltam</strong>{(rotationReport.missingCoverage.length?rotationReport.missingCoverage:['O elenco salvo cobre os principais setores.']).map((item)=><span key={item}>{item}</span>)}</article>
+          </div>
+          <div className="rotation-card"><strong>v24.52 • Substituições com jogadores reais</strong><div className="real-sub-grid">{rotationReport.substitutions.length ? rotationReport.substitutions.map((sub)=><div key={`${sub.outPlayer}-${sub.inPlayer}`}><span>{sub.minute} • prioridade {sub.priority} • {sub.score}/100</span><b>{sub.outPlayer} → {sub.inPlayer}</b><small>{sub.trigger}. {sub.reason}</small></div>) : <p>Adicione reservas ao Cofre para receber trocas nominais.</p>}</div></div>
+          <div className="rotation-card"><strong>v24.54 • Instruções individuais</strong><div className="real-sub-grid">{rotationReport.instructions.map((item)=><div key={`${item.player}-${item.instruction}`}><span>{item.instruction} • confiança {item.confidence}/100</span><b>{item.player}</b><small>{item.reason}{item.warning ? ` ${item.warning}` : ''}</small></div>)}</div></div>
+          <div className="opponent-locks">{rotationReport.locks.map((item)=><span key={item}><ShieldCheck size={14}/> {item}</span>)}</div>
+        </section>
+      )}
+
+      {chemistryReport && (
+        <section className="chemistry-panel">
+          <div className="chemistry-head">
+            <div>
+              <p className="kicker"><Users size={14} /> Entrosamento dos 11</p>
+              <h3>{chemistryReport.chemistryLabel}</h3>
+              <span>{chemistryReport.selectedCount}/11 jogadores analisados • compatibilidade com o estilo {chemistryReport.styleFit}/100</span>
+            </div>
+            <strong>{chemistryReport.globalScore}/100</strong>
+          </div>
+
+          <div className="chemistry-sector-grid">
+            {chemistryReport.sectors.map((sector) => (
+              <div key={sector.key} className="chemistry-sector-card">
+                <span>{sector.label}</span>
+                <strong>{sector.score}/100</strong>
+                <i><b style={{ width: `${sector.score}%` }} /></i>
+                <small>{sector.verdict}</small>
+              </div>
+            ))}
+          </div>
+
+          <div className="chemistry-columns">
+            <div className="chemistry-box good">
+              <strong>Forças coletivas</strong>
+              {(chemistryReport.strengths.length ? chemistryReport.strengths : ['Nenhuma força dominante foi confirmada ainda.']).map((item) => <span key={item}>{item}</span>)}
+            </div>
+            <div className="chemistry-box warn">
+              <strong>Fraquezas coletivas</strong>
+              {(chemistryReport.weaknesses.length ? chemistryReport.weaknesses : ['Nenhuma fraqueza crítica foi detectada.']).map((item) => <span key={item}>{item}</span>)}
+            </div>
+          </div>
+
+          {!!chemistryReport.synergies.length && (
+            <div className="chemistry-pair-grid">
+              {chemistryReport.synergies.map((item) => (
+                <div key={`${item.title}-${item.players}`} className="chemistry-pair-card synergy">
+                  <span>{item.title}</span>
+                  <strong>{item.players}</strong>
+                  <em>{item.score}/100</em>
+                  <small>{item.reason}</small>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!!chemistryReport.conflicts.length && (
+            <div className="chemistry-pair-grid">
+              {chemistryReport.conflicts.map((item) => (
+                <div key={`${item.title}-${item.players}`} className={`chemistry-pair-card conflict ${item.severity}`}>
+                  <span>{item.title}</span>
+                  <strong>{item.players}</strong>
+                  <em>Risco {item.severity}</em>
+                  <small>{item.reason}</small>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="chemistry-role-grid">
+            {chemistryReport.roleBalance.map((item) => (
+              <div key={item.role} className={`chemistry-role-card ${item.status}`}>
+                <span>{item.status === 'ok' ? '✓ Equilibrado' : item.status === 'falta' ? '⚠ Falta' : '↔ Excesso'}</span>
+                <strong>{item.role}</strong>
+                <em>{item.count} no time • ideal {item.ideal}</em>
+              </div>
+            ))}
+          </div>
+
+          <div className="squad-suggestion-box">
+            <strong>Recomendações para os 11 juntos</strong>
+            <span>{chemistryReport.styleVerdict}</span>
+            {chemistryReport.recommendations.map((item) => <span key={item}>{item}</span>)}
+          </div>
+        </section>
+      )}
 
       <div className="squad-phase-grid">
         {PHASE_KEYS.map((key) => (
@@ -1872,9 +2099,9 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.29 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.38 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
-    `Melhor posição: ${result.bestPosition.label}`,
+    `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
     `Pontos: ${result.trainingPointsUsed}/${result.trainingPointsTotal}`,
     '',
@@ -1921,8 +2148,64 @@ function trainingSummary(plan: Record<string, number>) {
     .join(' • ');
 }
 
+
+const CALIBRATION_STORAGE_KEY = 'buildmaster_real_match_calibration_v24_64';
+const FEEDBACK_LABELS: Array<{ key: MatchFeedbackKey; label: string }> = [
+  { key: 'workedWell', label: 'Jogou bem' }, { key: 'feltSlow', label: 'Ficou lento' },
+  { key: 'tiredEarly', label: 'Cansou cedo' }, { key: 'missedPasses', label: 'Errou passes' },
+  { key: 'defendedWell', label: 'Defendeu bem' }, { key: 'lackedPhysical', label: 'Faltou físico' },
+  { key: 'createdLittle', label: 'Criou pouco' }, { key: 'finishedPoorly', label: 'Finalizou mal' },
+  { key: 'outOfPosition', label: 'Ficou fora de posição' }
+];
+
+function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
+  const storageId = `${result.parsed.internalId}:${result.bestPosition.code}`;
+  const [feedbacks, setFeedbacks] = useState<MatchFeedback[]>([]);
+  const [draft, setDraft] = useState<MatchFeedback>({ rating: 7, minutes: 90 });
+  useEffect(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
+      setFeedbacks(Array.isArray(all[storageId]) ? all[storageId] : []);
+    } catch { setFeedbacks([]); }
+  }, [storageId]);
+  const report = useMemo(() => buildCalibrationReport(result, feedbacks), [result, feedbacks]);
+  function saveFeedback() {
+    const item: MatchFeedback = { ...draft, createdAt: new Date().toISOString() };
+    const next = [item, ...feedbacks].slice(0, 20);
+    setFeedbacks(next);
+    try {
+      const all = JSON.parse(localStorage.getItem(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
+      all[storageId] = next;
+      localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(all));
+    } catch {}
+    setDraft({ rating: 7, minutes: 90 });
+  }
+  return <div className="result-section-grid">
+    <article className="luxury-panel wide-card">
+      <div className="section-title-row"><div><p className="kicker">v24.64 • Resultados reais</p><h3>Calibração pós-partida</h3></div><span>{report.sampleCount} jogo(s)</span></div>
+      <p className="panel-note">Registre o que você realmente sentiu em campo. O app procura padrões repetidos, mas nunca altera sua ficha sem sua decisão.</p>
+      <div className="chip-cloud purple">{FEEDBACK_LABELS.map(({key,label}) => <button type="button" key={key} className={draft[key] ? 'active' : ''} onClick={() => setDraft((current) => ({ ...current, [key]: !current[key] }))}>{draft[key] ? '✓ ' : ''}{label}</button>)}</div>
+      <div className="data-grid">
+        <label><span>Minutos jogados</span><input inputMode="numeric" value={draft.minutes ?? 90} onChange={(e) => setDraft((current) => ({...current, minutes: Number(e.target.value) || 0}))}/></label>
+        <label><span>Nota pessoal (0–10)</span><input inputMode="decimal" value={draft.rating ?? 7} onChange={(e) => setDraft((current) => ({...current, rating: Math.max(0, Math.min(10, Number(e.target.value) || 0))}))}/></label>
+      </div>
+      <label className="wide-input"><span>Observação opcional</span><textarea value={draft.notes ?? ''} onChange={(e) => setDraft((current) => ({...current, notes: e.target.value}))} placeholder="Ex.: perdeu duelos no segundo tempo, mas passou bem..." /></label>
+      <button type="button" className="elite-button" onClick={saveFeedback}><Save size={17}/> Salvar resultado da partida</button>
+    </article>
+    <article className="luxury-panel wide-card">
+      <div className="section-title-row"><div><p className="kicker">Aprendizado controlado</p><h3>Diagnóstico da ficha</h3></div><span>Confiança {report.confidence}</span></div>
+      <p className="panel-note"><b>{report.verdict}</b></p>
+      {report.positives.map((item) => <p key={item} className="panel-note">✓ {item}</p>)}
+      {report.corrections.map((item) => <div key={item.title} className="skill-check-card"><strong>{item.title} • prioridade {item.priority}</strong><span>{item.reason}</span><small>Treinos relacionados: {item.trainingGroups.join(', ')}</small></div>)}
+      {!report.corrections.length && <p className="panel-note">Continue registrando partidas para confirmar tendências e evitar ajustes baseados em uma única impressão.</p>}
+      <div className="chip-cloud">{Object.entries(report.learnedWeights).map(([key,value]) => <span key={key}>{key}: +{value}</span>)}</div>
+      {report.safeguards.map((item) => <small key={item}>• {item}</small>)}
+    </article>
+  </div>;
+}
+
 function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void }) {
-  const [tab, setTab] = useState<ResultTab>('resumo');
+  const [tab, setTab] = useState<ResultTab>('ficha');
   const card = result.parsed;
   const GER = card.maxOverall ?? card.overall ?? '--';
   const trainingItems = Object.entries(result.training).filter(([, value]) => Number(value) > 0);
@@ -1990,7 +2273,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
           <div className="metric-grid">
             <div><span>GER lido</span><strong>{GER}</strong></div>
             <div><span>Pos. carta</span><strong>{card.mainPositionPt}</strong></div>
-            <div><span>Melhor pos.</span><strong>{result.bestPosition.label}</strong></div>
+            <div><span>Posição ficha</span><strong>{result.bestPosition.label}</strong></div>
             <div><span>PRI em campo</span><strong>{result.pri.GER}</strong></div>
             <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
             <div className="wide-metric"><span>Pontos totais</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
@@ -2019,25 +2302,73 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       </div>
 
-      <nav className="elite-tabs" aria-label="Seções do resultado">
-        {[
-          ['resumo', 'Painel'],
-          ['mapa', 'Mapa do time'],
-          ['ficha', 'Plano'],
-          ['habilidades', 'Habilidades'],
-          ['treinador', 'Treinador'],
-          ['correcao', 'Correção local'],
-          ['regras', 'Regras online'],
-          ['validacao', 'Validador'],
-          ['exportar', 'Exportar'],
-          ['posicoes', 'Funções'],
-          ['dados', 'Base técnica']
-        ].map(([value, label]) => (
-          <button key={value} className={tab === value ? 'active' : ''} type="button" onClick={() => setTab(value as ResultTab)}>
-            {label}
-          </button>
-        ))}
-      </nav>
+      <div className="result-subtab-shell luxury-panel">
+        <div className="result-subtab-head">
+          <div>
+            <p className="kicker">Resultado organizado</p>
+            <strong>Escolha exatamente o que quer ver</strong>
+          </div>
+          <span>{result.trainingPointsUsed}/{result.trainingPointsTotal} pts</span>
+        </div>
+        <nav className="elite-tabs result-fixed-tabs" aria-label="Subabas do resultado">
+          {[
+            ['leitura', 'Leitura'],
+            ['calibracao', 'Calibração'],
+            ['ficha', 'Ficha'],
+            ['habilidades', 'Habilidades'],
+            ['impetos', 'Ímpetos'],
+            ['treinador', 'Treinador'],
+            ['mapa', 'Mapa'],
+            ['exportar', 'Exportar'],
+            ['validacao', 'Validação'],
+            ['correcao', 'Correção'],
+            ['regras', 'Regras'],
+            ['posicoes', 'Funções'],
+            ['dados', 'Dados']
+          ].map(([value, label]) => (
+            <button key={value} className={tab === value ? 'active' : ''} type="button" onClick={() => setTab(value as ResultTab)}>
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {tab === 'leitura' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">Análise profunda do print</p><h3>Separação entre leitura, inferência e recomendação</h3></div>
+              <span>Confiança {result.deepAnalysis.confidenceLevel}</span>
+            </div>
+            <div className="data-grid">
+              <div><span>Identidade original</span><strong>{result.deepAnalysis.originalIdentity}</strong></div>
+              <div><span>Função recomendada</span><strong>{result.deepAnalysis.recommendedFunction}</strong></div>
+              <div><span>Campos incertos</span><strong>{result.deepAnalysis.uncertainFields.length || 'Nenhum crítico'}</strong></div>
+              <div><span>Confiança numérica</span><strong>{card.confidence}%</strong></div>
+            </div>
+          </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Auditoria campo por campo</p>
+            <div className="position-list">
+              {result.deepAnalysis.readingItems.map((item) => (
+                <div key={item.field}>
+                  <strong>{item.field}: {item.value}</strong>
+                  <span>{item.source} • confiança {item.confidence}</span>
+                  <em>{item.note}</em>
+                </div>
+              ))}
+            </div>
+          </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Travas anti-invenção</p>
+            <ul className="clean-list">{result.deepAnalysis.safeguards.map((item) => <li key={item}>{item}</li>)}</ul>
+          </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Por que os pontos foram usados assim</p>
+            <ul className="clean-list">{result.deepAnalysis.pointRationale.map((item) => <li key={item}>{item}</li>)}</ul>
+          </article>
+        </div>
+      )}
 
       {tab === 'resumo' && (
         <div className="result-section-grid">
@@ -2226,17 +2557,96 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
           </article>
 
           <article className="luxury-panel wide-card">
-            <p className="kicker">Perfil seguro / competitivo / alternativo</p>
+            <p className="kicker">Três fichas adaptativas para a posição escolhida</p>
             <div className="variant-grid">
               {result.buildVariants.map((variant) => (
                 <div key={variant.kind}>
                   <strong>{variant.title}</strong>
-                  <span>{variant.positionLabel} • {variant.pointsUsed} pts</span>
+                  <span>{variant.positionLabel} • {variant.pointsUsed} pts{variant.qualityScore ? ` • Qualidade ${variant.qualityScore}/100` : ''}</span>
+                  {variant.adaptationLabel && <b>{variant.adaptationLabel}</b>}
                   <em>{trainingSummary(variant.training)}</em>
                   <p>{variant.note}</p>
+                  {variant.verdict && <small><b>Veredito:</b> {variant.verdict}</small>}
+                  {(variant.efficiencyScore || variant.balanceScore) && (
+                    <div className="variant-metrics">
+                      <span>Eficiência <b>{variant.efficiencyScore}/100</b></span>
+                      <span>Equilíbrio <b>{variant.balanceScore}/100</b></span>
+                      <span>Simulações <b>{variant.simulationsTested}</b></span>
+                    </div>
+                  )}
+                  {variant.scenarioScores && (
+                    <div className="scenario-score-grid">
+                      <span>Posse <b>{variant.scenarioScores.possession}</b></span>
+                      <span>Contra-ataque <b>{variant.scenarioScores.counterAttack}</b></span>
+                      <span>Pressão <b>{variant.scenarioScores.pressing}</b></span>
+                      <span>Duelo físico <b>{variant.scenarioScores.physicalDuels}</b></span>
+                      <span>Consistência <b>{variant.scenarioScores.consistency}</b></span>
+                    </div>
+                  )}
+                  {variant.highlights?.map((item) => <small key={item}>✓ {item}</small>)}
+                  {variant.tradeOffs?.map((item) => <small key={item}>↔ {item}</small>)}
+                  {variant.risks?.map((item) => <small key={item}>⚠ {item}</small>)}
                 </div>
               ))}
             </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.48 • Motor físico</p><h3>Corpo, mobilidade e resistência na posição escolhida</h3></div>
+              <span>{result.physicalEngine.suitabilityScore}/100</span>
+            </div>
+            <div className="data-grid">
+              <div><span>Altura</span><strong>{result.physicalEngine.heightCm ? `${result.physicalEngine.heightCm} cm` : 'Não confirmada'}</strong></div>
+              <div><span>Peso</span><strong>{result.physicalEngine.weightKg ? `${result.physicalEngine.weightKg} kg` : 'Não confirmado'}</strong></div>
+              <div><span>Perfil corporal</span><strong>{result.physicalEngine.bodyProfile}</strong></div>
+              <div><span>Mobilidade</span><strong>{result.physicalEngine.mobilityScore}/100</strong></div>
+              <div><span>Força funcional</span><strong>{result.physicalEngine.strengthScore}/100</strong></div>
+              <div><span>Jogo aéreo</span><strong>{result.physicalEngine.aerialScore}/100</strong></div>
+              <div><span>Resistência</span><strong>{result.physicalEngine.staminaScore}/100</strong></div>
+              <div><span>Perna dominante</span><strong>{result.physicalEngine.dominantFoot ?? 'Não confirmada'}</strong></div>
+            </div>
+            <div className="chip-cloud">{result.physicalEngine.advantages.map((item) => <span key={item}>✓ {item}</span>)}</div>
+            {result.physicalEngine.limitations.map((item) => <p key={item} className="panel-note">⚠ {item}</p>)}
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.49 • Metas de atributos</p><h3>Faixas necessárias para {result.bestPosition.label}</h3></div>
+              <span>{result.attributeGoals.readinessScore}/100</span>
+            </div>
+            <div className="comparison-table">
+              <div><strong>Atributo</strong><strong>Atual</strong><strong>Mín.</strong><strong>Ideal</strong></div>
+              {result.attributeGoals.goals.map((goal) => <div key={goal.attribute}><span>{goal.label}</span><span>{goal.current}</span><span>{goal.targetMin}</span><strong>{goal.targetIdeal}</strong><small>{goal.status} • {goal.reason}</small></div>)}
+            </div>
+            <p className="panel-note">{result.attributeGoals.summary} As metas são faixas de rendimento, não nomes inventados nem valores obrigatórios.</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.50 • Otimizador avançado</p><h3>Auditoria da ficha vencedora</h3></div>
+              <span>{result.advancedOptimizer.winnerScore}/100</span>
+            </div>
+            <div className="data-grid">
+              <div><span>Ficha vencedora</span><strong>{result.advancedOptimizer.winnerTitle}</strong></div>
+              <div><span>Combinações</span><strong>{result.advancedOptimizer.combinationsTested}</strong></div>
+              <div><span>Eficiência</span><strong>{result.advancedOptimizer.efficiencyScore}/100</strong></div>
+              <div><span>Desperdício estimado</span><strong>{result.advancedOptimizer.wasteScore}/100</strong></div>
+              <div><span>Pontos sem uso</span><strong>{result.advancedOptimizer.unusedPoints}</strong></div>
+              <div><span>Orçamento</span><strong>{result.advancedOptimizer.budgetRespected ? 'Respeitado' : 'Revisar'}</strong></div>
+            </div>
+            {result.advancedOptimizer.decisionReasons.map((item) => <p key={item} className="panel-note">✓ {item}</p>)}
+            {result.advancedOptimizer.detectedWaste.map((item) => <p key={item} className="panel-note">⚙ {item}</p>)}
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.46 • Função tática avançada</p><h3>Posição escolhida + estilo oficial preservado</h3></div>
+              <span>{result.advancedTacticalFunction.compatibilityScore}/100</span>
+            </div>
+            <p className="panel-note"><b>{result.advancedTacticalFunction.officialPlaystyle ?? 'Estilo não identificado'}</b> • adaptação {result.advancedTacticalFunction.fitLabel}. {result.advancedTacticalFunction.activationNote}</p>
+            <div className="chip-cloud purple">{result.advancedTacticalFunction.priorities.map((item) => <span key={item}>{item}</span>)}</div>
+            <small>{result.advancedTacticalFunction.officialNameGuard}</small>
           </article>
 
           <article className="luxury-panel wide-card">
@@ -2250,8 +2660,22 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       )}
 
+      {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
+
       {tab === 'habilidades' && (
         <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.50 • Habilidades especiais</p><h3>Impacto das habilidades oficiais na posição escolhida</h3></div>
+              <span>{result.specialSkillsAnalysis.coverageScore}/100</span>
+            </div>
+            <div className="skill-grid">
+              {result.specialSkillsAnalysis.usefulOwned.slice(0,6).map((item) => <div key={item.name} className="skill-check-card completed"><strong>{item.name} • {item.score}</strong><span>{item.impact}</span></div>)}
+              {!result.specialSkillsAnalysis.usefulOwned.length && <p className="panel-note">Nenhuma habilidade oficial existente foi confirmada na carta.</p>}
+            </div>
+            <p className="panel-note">Catálogo oficial validado: {result.specialSkillsAnalysis.officialCatalogOnly ? 'sim' : 'não'}. O app não cria nomes de habilidades.</p>
+          </article>
+
           <article className="luxury-panel wide-card">
             <p className="kicker">Top 5 habilidades adicionais</p>
             <div className="skill-grid">
@@ -2305,6 +2729,58 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             <p className="kicker">Detectadas na carta</p>
             <div className="chip-cloud">
               {nativeSkills.length ? nativeSkills.map((skill) => <span key={skill}>{skill}</span>) : <span>Nenhuma habilidade lida</span>}
+            </div>
+          </article>
+        </div>
+      )}
+
+
+      {tab === 'impetos' && (
+        <div className="result-section-grid impeto-focus-grid">
+          <article className="luxury-panel wide-card impeto-master-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker">Ímpetos principais</p>
+                <h3>Prioridade para máximo desempenho</h3>
+              </div>
+              <span>{recommendedImpetos.filter((item) => item.tier !== 'evitar').length} opções</span>
+            </div>
+            <div className="impeto-rank-list">
+              {recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 6).map((item, index) => (
+                <div key={`${item.name}-${index}`} className={item.tier === 'ideal' ? 'impeto-row ideal' : 'impeto-row'}>
+                  <strong>{String(index + 1).padStart(2, '0')} • {item.name}</strong>
+                  <span>{item.attributes.join(' • ')}</span>
+                  <em>{item.reason}</em>
+                  <div className="correction-actions">
+                    <button type="button" onClick={() => onPromoteImpeto?.(item.name)}><ThumbsUp size={14} /> Priorizar</button>
+                    <button type="button" onClick={() => onRejectImpeto?.(item.name)}><Ban size={14} /> Não combina</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="panel-note">Os ímpetos são calculados separados das habilidades adicionais, usando posição, estilo de jogo, função real, formação e modelo de jogo.</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Ímpetos a evitar</p>
+            <div className="skill-grid">
+              {recommendedImpetos.filter((item) => item.tier === 'evitar').length ? recommendedImpetos.filter((item) => item.tier === 'evitar').slice(0, 6).map((item) => (
+                <div key={item.name} className="skill-check-card muted">
+                  <strong>{item.name}</strong>
+                  <span>{item.reason}</span>
+                  <em>{item.attributes.join(' • ')}</em>
+                </div>
+              )) : <p className="panel-note">Nenhum ímpeto crítico para evitar nesta função.</p>}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Resumo de encaixe</p>
+            <div className="data-grid">
+              <div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div>
+              <div><span>Formação</span><strong>{result.tacticalProfile.formation}</strong></div>
+              <div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div>
+              <div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div>
             </div>
           </article>
         </div>
@@ -2460,7 +2936,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                 <p className="kicker"><BrainCircuit size={14} /> Regras atualizáveis sem refazer APK</p>
                 <h3>Atualize habilidade, ímpeto e bloqueios por função usando um JSON online.</h3>
               </div>
-              <span>v24.29</span>
+              <span>v24.38</span>
             </div>
             <p className="panel-note">Essa área permite ajustar recomendações depois que o APK já estiver instalado. Você hospeda um arquivo JSON público, cola a URL e toca em atualizar. O app salva o pacote no aparelho e aplica nas próximas fichas.</p>
             <div className="input-row">
@@ -2577,7 +3053,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                 <p className="kicker">Exportação profissional</p>
                 <h3>Compartilhe ou arquive esta ficha sem perder o visual premium.</h3>
               </div>
-              <span>v24.29</span>
+              <span>v24.38</span>
             </div>
             <p className="panel-note">Todos os formatos usam a ficha validada, os pontos exatos, as 5 habilidades oficiais, os ímpetos e o plano de uso em campo.</p>
             <div className="export-pro-actions">
@@ -2672,7 +3148,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             <div className="data-grid">
               <div><span>Posição da carta</span><strong>{card.mainPositionPt}</strong></div>
               <div><span>Estilo de jogo</span><strong>{card.playstyle ?? '—'}</strong></div>
-              <div><span>Melhor posição</span><strong>{result.bestPosition.label}</strong></div>
+              <div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div>
               <div><span>Nível máximo</span><strong>{card.level ?? '—'}</strong></div>
               <div><span>Total de pontos</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
               <div><span>Origem dos pontos</span><strong>{sourceLabel}</strong></div>
@@ -2948,6 +3424,7 @@ export function CardVisionApp() {
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
+  const [managerId, setManagerId] = useState<string>('AUTO');
   const [status, setStatus] = useState('Escolha o Leitor Elite de Carta ou a Central de Precisão Manual. O Cofre salva localmente e pode sincronizar com Neon.');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -2964,6 +3441,8 @@ export function CardVisionApp() {
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('emerald');
   const [advancedMode, setAdvancedMode] = useState(true);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [mainSection, setMainSection] = useState<MainSection>('inicio');
   const [rulesUrl, setRulesUrl] = useState('');
   const [rulesStatus, setRulesStatus] = useState('Regras atualizáveis: use o pacote local ou cole uma URL JSON para atualizar sem refazer APK.');
   const [rulePackInfo, setRulePackInfo] = useState<DynamicRulePack>(DEFAULT_DYNAMIC_RULE_PACK);
@@ -2975,7 +3454,8 @@ export function CardVisionApp() {
   const restoredSessionRef = useRef(false);
 
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
-  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle }), [formation, teamStyle]);
+  const selectedManager = useMemo(() => getManager(managerId), [managerId]);
+  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null }), [formation, teamStyle, selectedManager]);
   const selectedFormationGuide = formation === 'AUTO' ? null : formationGuides[formation];
   const activeSavedAnalysis = useMemo(() => {
     if (!result) return null;
@@ -3010,6 +3490,36 @@ export function CardVisionApp() {
     return items;
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
+  const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
+    { id: 'inicio', label: 'Início', hint: 'Dashboard', icon: 'dashboard' },
+    { id: 'leitor', label: 'Leitor', hint: 'Print da carta', icon: 'scan' },
+    { id: 'manual', label: 'Manual', hint: 'Precisão máxima', icon: 'manual' },
+    { id: 'resultado', label: 'Resultado', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
+    { id: 'cofre', label: 'Cofre', hint: `${history.length} salvos`, icon: 'vault' },
+    { id: 'time', label: 'Meu Time', hint: 'Mapa tático', icon: 'team' },
+    { id: 'ajustes', label: 'Ajustes', hint: 'Tema e guia', icon: 'settings' }
+  ], [history.length, result, draftResult]);
+
+  function openMainSection(section: MainSection) {
+    setMainSection(section);
+    if (section === 'cofre') {
+      setLibraryOpen(true);
+      setStatus(history.length ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
+    }
+    if (section === 'manual' && !manualMode && !draftResult && !result) {
+      startManualPreciseMode();
+      return;
+    }
+    if (section === 'resultado' && !result && draftResult) {
+      setStatus('Resultado em auditoria. Confirme os dados para finalizar o plano Elite.');
+    }
+  }
+
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowSplash(false), 1150);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -3071,6 +3581,7 @@ export function CardVisionApp() {
           if (snapshot.readingMode) setReadingMode(snapshot.readingMode);
           if (snapshot.formation) setFormation(snapshot.formation);
           if (snapshot.teamStyle) setTeamStyle(snapshot.teamStyle);
+          if (typeof snapshot.managerId === 'string') setManagerId(snapshot.managerId);
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
@@ -3126,6 +3637,7 @@ export function CardVisionApp() {
         readingMode,
         formation,
         teamStyle,
+        managerId,
         result,
         draftResult,
         manualFields,
@@ -3137,7 +3649,7 @@ export function CardVisionApp() {
     } catch {
       // Não interrompe o app se o armazenamento estiver cheio.
     }
-  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, result, draftResult, manualFields, manualMode, activeHistoryId]);
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
 
   useEffect(() => {
     if (!result) return;
@@ -3346,6 +3858,7 @@ export function CardVisionApp() {
   }
 
   function openCofreDeJogadores() {
+    setMainSection('cofre');
     setLibraryOpen(true);
     setStatus(history.length
       ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).`
@@ -3353,6 +3866,7 @@ export function CardVisionApp() {
   }
 
   function restoreHistory(item: SavedAnalysis) {
+    setMainSection('resultado');
     lastSavedKey.current = `${item.saveKey}-${item.result.trainingPointsUsed}-${item.result.trainingPointsTotal}`;
     setActiveHistoryId(item.id);
     setSelectedFile(null);
@@ -3424,8 +3938,8 @@ export function CardVisionApp() {
   function exportHistoryBackup() {
     const payload = {
       app: 'BuildMaster Elite Tático',
-      version: '24.29.0',
-      module: 'Regras atualizáveis',
+      version: '24.31.0',
+      module: 'App Premium Visual',
       exportedAt: new Date().toISOString(),
       stats: buildDashboardStats(history),
       items: history
@@ -3674,6 +4188,7 @@ export function CardVisionApp() {
   }
 
   function startManualPreciseMode() {
+    setMainSection('manual');
     const template = [
       'NOME DO JOGADOR: ',
       'POSIÇÃO PRINCIPAL: CF',
@@ -3700,6 +4215,7 @@ export function CardVisionApp() {
   }
 
   async function analyzeSelectedImage() {
+    setMainSection('resultado');
     if (!selectedFile) {
       if (rawText.trim().length > 2) runAnalysis();
       return;
@@ -3857,14 +4373,25 @@ export function CardVisionApp() {
     refreshResultWithCorrections('Correções locais deste jogador/função foram apagadas. Recalcule a ficha para voltar ao padrão do motor.');
   }
 
+  const currentPanelResult = result ?? draftResult;
+
   return (
-    <main className={`premium-app theme-${appTheme} accent-${accentTheme} ${advancedMode ? 'mode-advanced' : 'mode-basic'}`}>
+    <main className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+      {showSplash && (
+        <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
+          <div className="splash-orbit"><Sparkles size={38} /></div>
+          <strong>BuildMaster Elite</strong>
+          <span>Preparando ambiente tático premium</span>
+          <i><b /></i>
+        </div>
+      )}
+
       <header className="app-topbar luxury-panel">
         <div className="brand-lockup">
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v24.29</span>
+            <span>Elite Tático v24.38</span>
           </div>
         </div>
         <div className="session-badge"><ShieldCheck size={16} /> Sessão protegida</div>
@@ -3886,11 +4413,80 @@ export function CardVisionApp() {
         </div>
       </header>
 
+      <nav className="main-section-tabs luxury-panel" aria-label="Navegação principal do BuildMaster">
+        {mainNavigation.map((item) => {
+          const Icon = item.icon === 'dashboard' ? LayoutDashboard
+            : item.icon === 'scan' ? ScanText
+            : item.icon === 'manual' ? ShieldCheck
+            : item.icon === 'result' ? Trophy
+            : item.icon === 'vault' ? History
+            : item.icon === 'team' ? Target
+            : SlidersHorizontal;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={mainSection === item.id ? 'active-section' : ''}
+              disabled={Boolean(item.disabled)}
+              onClick={() => openMainSection(item.id)}
+            >
+              <Icon size={18} />
+              <strong>{item.label}</strong>
+              <span>{item.hint}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <nav className="mobile-bottom-nav luxury-panel" aria-label="Menu inferior">
+        {mainNavigation.map((item) => {
+          const Icon = item.icon === 'dashboard' ? LayoutDashboard
+            : item.icon === 'scan' ? ScanText
+            : item.icon === 'manual' ? ShieldCheck
+            : item.icon === 'result' ? Trophy
+            : item.icon === 'vault' ? History
+            : item.icon === 'team' ? Target
+            : SlidersHorizontal;
+          return (
+            <button
+              key={`bottom-${item.id}`}
+              type="button"
+              className={mainSection === item.id ? 'active-section' : ''}
+              disabled={Boolean(item.disabled)}
+              onClick={() => openMainSection(item.id)}
+            >
+              <Icon size={19} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {currentPanelResult && (
+        <aside className="sticky-player-summary luxury-panel" aria-label="Resumo fixo do jogador">
+          <div>
+            <span>Jogador atual</span>
+            <strong>{currentPanelResult.parsed.playerName || 'Carta em análise'}</strong>
+          </div>
+          <div>
+            <span>Função</span>
+            <strong>{currentPanelResult.teamMap?.functionLabel ?? currentPanelResult.buildName}</strong>
+          </div>
+          <div>
+            <span>Pontos</span>
+            <strong>{currentPanelResult.trainingPointsUsed}/{currentPanelResult.trainingPointsTotal}</strong>
+          </div>
+          <button type="button" onClick={() => setMainSection('resultado')}>Ver resultado</button>
+        </aside>
+      )}
+
+      {mainSection === 'inicio' && (
+      <>
       <section className="hero-redesign">
         <div>
           <p className="kicker"><Sparkles size={16} /> BuildMaster Elite Tático</p>
-          <h1>Design Premium completo para ficha, elenco e decisão tática.</h1>
-          <p>Agora a tela principal foi reorganizada como um painel de controle: atalhos grandes, status visual, selos de confiança, modo compacto no celular e navegação mais clara para Leitor, Manual, Cofre e Mapa do Time.</p>
+          <h1>App Premium Visual para ficha, elenco e decisão tática.</h1>
+          <p>Interface refinada para parecer app pago: menu inferior fixo, splash screen, resumo fixo do jogador, botões flutuantes, cards mais limpos, toque mobile melhor, badges de confiança e acabamento premium em todas as áreas.</p>
         </div>
         <div className="orb-ball" aria-hidden="true" />
       </section>
@@ -3921,9 +4517,9 @@ export function CardVisionApp() {
       <section className="design-premium-hub luxury-panel">
         <div className="design-hub-title">
           <div>
-            <p className="kicker"><Trophy size={15} /> Design Premium completo</p>
+            <p className="kicker"><Trophy size={15} /> App Premium Visual</p>
             <h2>Central de comando visual</h2>
-            <span>Atalhos grandes, status de fluxo, aparência ajustável e leitura mais clara no celular.</span>
+            <span>Atalhos grandes, status de fluxo, aparência ajustável, microinterações, cards mais limpos e leitura mais clara no celular.</span>
           </div>
           <div className="premium-quality-seals">
             <em><CheckCircle2 size={14} /> Pontos exatos</em>
@@ -3933,12 +4529,12 @@ export function CardVisionApp() {
         </div>
 
         <div className="premium-command-grid">
-          <button type="button" onClick={() => document.getElementById('leitor-elite')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+          <button type="button" onClick={() => setMainSection('leitor')}>
             <ScanText size={24} />
             <strong>Leitor Elite</strong>
             <span>Usar print com auditoria antes da ficha</span>
           </button>
-          <button type="button" onClick={() => { setManualMode(true); document.getElementById('central-manual')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+          <button type="button" onClick={() => startManualPreciseMode()}>
             <ShieldCheck size={24} />
             <strong>Manual Pro</strong>
             <span>Digitar dados para máxima precisão</span>
@@ -3970,9 +4566,11 @@ export function CardVisionApp() {
           ))}
         </div>
       </section>
+      </>
+      )}
 
       <section className="workspace-grid">
-        <aside className="control-panel luxury-panel">
+        <aside className={`control-panel luxury-panel panel-${mainSection}`}>
           <div className="panel-heading">
             <div>
               <p className="kicker">Painel premium</p>
@@ -4106,6 +4704,43 @@ export function CardVisionApp() {
                 {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
             </label>
+
+            <label>
+              <span>Técnico e versão</span>
+              <select value={managerId} onChange={(event) => {
+                const nextId = event.target.value;
+                setManagerId(nextId);
+                const manager = getManager(nextId);
+                if (manager) setTeamStyle(manager.primaryStyle);
+              }}>
+                <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
+                <optgroup label="Lendários e Épicos — Booster Duplo">
+                  {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                </optgroup>
+                <optgroup label="Pacotes especiais e seleções">
+                  {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                </optgroup>
+                <optgroup label="Catálogo padrão (GP)">
+                  {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                </optgroup>
+              </select>
+            </label>
+
+            {selectedManager && (
+              <article className="manager-context-card">
+                <div>
+                  <span>Técnico ativo</span>
+                  <strong>{selectedManager.name}</strong>
+                  <em>{selectedManager.version} • booster {selectedManager.booster}</em>
+                </div>
+                <div>
+                  <span>Estilo principal</span>
+                  <strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>
+                  {selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}
+                </div>
+                <small>O técnico refina as prioridades e a simulação. Sua posição escolhida continua soberana e nunca é trocada automaticamente.</small>
+              </article>
+            )}
 
             <label>
               <span>Função alvo em campo</span>
@@ -4333,6 +4968,14 @@ export function CardVisionApp() {
           )}
         </section>
       </section>
+
+      {result && (
+        <div className="floating-premium-dock" aria-label="Ações rápidas">
+          <button type="button" onClick={saveCurrentFicha}><Save size={18} /><span>Salvar</span></button>
+          <button type="button" onClick={openCofreDeJogadores}><History size={18} /><span>Cofre</span></button>
+          <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><Zap size={18} /><span>Topo</span></button>
+        </div>
+      )}
     </main>
   );
 }

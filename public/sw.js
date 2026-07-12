@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v24-29-regras-atualizaveis';
+const CACHE_NAME = 'buildmaster-v24-34-fichas-mais-precisas';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

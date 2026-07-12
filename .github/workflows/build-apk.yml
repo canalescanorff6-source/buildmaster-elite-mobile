@@ -1,4 +1,4 @@
-name: Gerar APK Android Fiel v24.29 Regras Atualizáveis
+name: Gerar APK Android Fiel v24.40 Simulador Desempenho Premium
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build APK fiel com Regras Atualizáveis
+    name: Build APK fiel com Analise Profunda
     runs-on: ubuntu-latest
 
     steps:
@@ -62,5 +62,5 @@ jobs:
       - name: Enviar APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v24-29-Correcao-Inteligente-Local-APK-Fiel
+          name: BuildMaster-Elite-Tatico-v24-37-Escolha-Soberana-APK-Fiel
           path: android/app/build/outputs/apk/debug/app-debug.apk

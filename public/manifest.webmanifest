@@ -1,11 +1,11 @@
 {
-  "name": "BuildMaster Elite Tático v24.29 Regras Atualizáveis",
-  "short_name": "BuildMaster v24.29",
-  "description": "BuildMaster Elite Tático v24.29 — correção inteligente local para habilidades e ímpetos, mantendo cofre avançado, escalação visual e exportação profissional.",
+  "name": "BuildMaster Elite Tático v24.34 Fichas Mais Precisas",
+  "short_name": "BuildMaster v24.34",
+  "description": "BuildMaster Elite Tático v24.34 — fichas mais precisas por função real, estilo de jogo e pontos exatos.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020712",
-  "theme_color": "#020712",
+  "theme_color": "#061323",
   "orientation": "portrait-primary",
   "icons": [
     {

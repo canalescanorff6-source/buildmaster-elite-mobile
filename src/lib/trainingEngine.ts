@@ -7,6 +7,16 @@ export type BuildVariant = {
   training: TrainingPlan;
   pointsUsed: number;
   note: string;
+  qualityScore?: number;
+  adaptationLabel?: string;
+  highlights?: string[];
+  risks?: string[];
+  efficiencyScore?: number;
+  balanceScore?: number;
+  scenarioScores?: Record<'possession' | 'counterAttack' | 'pressing' | 'physicalDuels' | 'consistency', number>;
+  verdict?: string;
+  tradeOffs?: string[];
+  simulationsTested?: number;
 };
 
 export type TrainingComparisonItem = {

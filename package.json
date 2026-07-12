@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-29-regras-atualizaveis",
-  "version": "24.29.0",
+  "name": "buildmaster-elite-tatico-v24-64-calibracao-resultados-reais",
+  "version": "24.64.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.29 - Regras atualizáveis para habilidades e ímpetos, mantendo exportação profissional, cofre avançado e escalação visual.",
+  "description": "BuildMaster Elite Tático v24.64 - calibração com resultados reais.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,7 +11,8 @@
     "vercel-build": "next build",
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
-    "test:all": "npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate",
+    "test:lote1": "tsx tests/lote1-official-regression.ts",
+    "test:all": "npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -19,7 +20,17 @@
     "apk:build-web": "BUILDMASTER_ANDROID_STATIC=1 next build",
     "test:team": "tsx tests/team-engine-regression.ts",
     "test:premium": "tsx tests/premium-plus-regression.ts",
-    "test:ultimate": "tsx tests/ultimate-coach-regression.ts"
+    "test:ultimate": "tsx tests/ultimate-coach-regression.ts",
+    "test:ficha": "tsx tests/ficha-precision-regression.ts",
+    "test:managers": "tsx tests/manager-system-regression.ts",
+    "test:chemistry": "tsx tests/squad-chemistry-regression.ts",
+    "test:lineup": "tsx tests/assisted-lineup-regression.ts",
+    "test:opponent": "tsx tests/opponent-analysis-regression.ts",
+    "test:gameplan": "tsx tests/game-plan-regression.ts",
+    "test:lote2": "tsx tests/lote2-advanced-regression.ts",
+    "test:lote3": "tsx tests/lote3-squad-regression.ts",
+    "test:opponent-print": "tsx tests/opponent-print-regression.ts",
+    "test:calibration": "tsx tests/real-match-calibration-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

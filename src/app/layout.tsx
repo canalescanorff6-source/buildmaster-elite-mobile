@@ -4,12 +4,12 @@ import { RegisterServiceWorker } from '@/components/RegisterServiceWorker';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'BuildMaster Elite Tático v24.29 Regras Atualizáveis',
-  description: 'App premium privado com dashboard, cofre avançado, escalação visual, mapa do campo, ficha precisa, habilidades, ímpetos, imagem profissional e PDF, sem IA paga.',
+  title: 'BuildMaster Elite Tático v24.34 Fichas Mais Precisas',
+  description: 'App premium privado com dashboard, menu inferior, cofre avançado, escalação visual, ficha precisa, habilidades, ímpetos, imagem profissional e visual de aplicativo pago.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'BuildMaster v24.29',
+    title: 'BuildMaster v24.34',
     statusBarStyle: 'black-translucent'
   },
   icons: {
