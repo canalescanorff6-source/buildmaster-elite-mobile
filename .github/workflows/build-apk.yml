@@ -39,12 +39,12 @@ jobs:
           java -version
 
       - name: Instalar dependencias travadas
-        timeout-minutes: 12
+        timeout-minutes: 25
         env:
           npm_config_fetch_retries: '3'
           npm_config_fetch_retry_mintimeout: '10000'
           npm_config_fetch_retry_maxtimeout: '60000'
-        run: npm ci --no-audit --no-fund --prefer-offline
+        run: npm ci --registry=https://registry.npmjs.org/ --no-audit --no-fund --loglevel=info
 
       - name: Validar TypeScript
         timeout-minutes: 5
