@@ -58,12 +58,34 @@ type SavedAnalysis = {
   notes?: string;
 };
 
+ type ActiveSessionSnapshot = {
+  preview: string | null;
+  playerCardImage: string | null;
+  fileName: string | null;
+  ocrDone: boolean;
+  rawText: string;
+  objective: Objective;
+  targetPosition: PositionCode | 'AUTO';
+  cardPositionOverride: PositionCode | 'AUTO';
+  playstyleOverride: string;
+  readingMode: ReadingMode;
+  formation: TacticalFormation;
+  teamStyle: TacticalStyle;
+  result: AnalysisResult | null;
+  draftResult: AnalysisResult | null;
+  manualFields: ManualFields;
+  manualMode: boolean;
+  activeHistoryId: string | null;
+  savedAt: number;
+};
+
 const HISTORY_KEY = 'buildmaster_history_v24_6_cofre_persistente';
 const OLD_HISTORY_KEYS = ['buildmaster_history_v24_5_fichario_elite', 'buildmaster_history_v24_3_goleiro_stable', 'buildmaster_history_v24_4_habilidades_oficiais_stable'];
 const HISTORY_DB_NAME = 'buildmaster_cofre_fichas_db_v1';
 const HISTORY_STORE_NAME = 'fichas';
 const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
 const LEARNING_KEY = 'buildmaster_local_learning_v24_3';
+const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_20_estado_seguro';
 const HISTORY_LIMIT = 200;
 const DEFAULT_CLOUD_API_URL = 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas';
 const CLOUD_API_URL = process.env.NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL || '/api/cloud/fichas';
@@ -859,6 +881,10 @@ function skillReason(skill: string) {
     'Marcação individual': 'gruda melhor no alvo defensivo',
     'Volta para marcar': 'ajuda na pressão e recomposição',
     'Espírito guerreiro': 'mantém desempenho cansado ou pressionado',
+    'Pegador de pênalti': 'melhora desempenho em cobranças de pênalti',
+    'Arremesso longo do goleiro': 'ajuda reposição rápida com as mãos',
+    'Reposição alta do goleiro': 'qualifica lançamento alto do goleiro',
+    'Reposição baixa do goleiro': 'qualifica passe longo com trajetória baixa',
     'Chute de primeira': 'finaliza rápido sem dominar a bola',
     'Precisão à distância': 'melhora chute de fora da área',
     'Finalização acrobática': 'aumenta gols em posição difícil',
@@ -880,7 +906,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.18 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.20 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Melhor posição: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -1582,6 +1608,7 @@ export function CardVisionApp() {
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const lastSavedKey = useRef<string | null>(null);
   const backupInputRef = useRef<HTMLInputElement | null>(null);
+  const restoredSessionRef = useRef(false);
 
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
   const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle }), [formation, teamStyle]);
@@ -1620,6 +1647,37 @@ export function CardVisionApp() {
       setOcrZones(DEFAULT_OCR_ZONES);
     }
 
+    try {
+      const storedSession = localStorage.getItem(ACTIVE_SESSION_KEY);
+      if (storedSession) {
+        const snapshot = JSON.parse(storedSession) as Partial<ActiveSessionSnapshot>;
+        const ageMs = Date.now() - Number(snapshot.savedAt ?? 0);
+        if (Number.isFinite(ageMs) && ageMs < 1000 * 60 * 60 * 24 * 7) {
+          if (typeof snapshot.rawText === 'string') setRawText(snapshot.rawText);
+          if (typeof snapshot.preview === 'string' && snapshot.preview.startsWith('data:')) setPreview(snapshot.preview);
+          if (typeof snapshot.playerCardImage === 'string') setPlayerCardImage(snapshot.playerCardImage);
+          if (typeof snapshot.fileName === 'string') setFileName(snapshot.fileName);
+          if (typeof snapshot.ocrDone === 'boolean') setOcrDone(snapshot.ocrDone);
+          if (snapshot.objective) setObjective(snapshot.objective);
+          if (snapshot.targetPosition) setTargetPosition(snapshot.targetPosition);
+          if (snapshot.cardPositionOverride) setCardPositionOverride(snapshot.cardPositionOverride);
+          if (typeof snapshot.playstyleOverride === 'string') setPlaystyleOverride(snapshot.playstyleOverride);
+          if (snapshot.readingMode) setReadingMode(snapshot.readingMode);
+          if (snapshot.formation) setFormation(snapshot.formation);
+          if (snapshot.teamStyle) setTeamStyle(snapshot.teamStyle);
+          if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
+          if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
+          if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
+          if (snapshot.result) setResult(snapshot.result);
+          if (snapshot.draftResult) setDraftResult(snapshot.draftResult);
+          restoredSessionRef.current = true;
+          setStatus('Sessão restaurada. Você pode continuar a ficha de onde parou.');
+        }
+      }
+    } catch {
+      // Sessão ativa é proteção contra reload; se corromper, o app segue normal.
+    }
+
     return () => {
       mounted = false;
     };
@@ -1632,6 +1690,40 @@ export function CardVisionApp() {
       // Calibração é local e opcional.
     }
   }, [ocrZones]);
+
+  useEffect(() => {
+    try {
+      const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
+      if (!hasWork) {
+        localStorage.removeItem(ACTIVE_SESSION_KEY);
+        return;
+      }
+      const safePreview = preview && preview.startsWith('data:') ? preview : null;
+      const snapshot: ActiveSessionSnapshot = {
+        preview: safePreview,
+        playerCardImage,
+        fileName,
+        ocrDone,
+        rawText,
+        objective,
+        targetPosition,
+        cardPositionOverride,
+        playstyleOverride,
+        readingMode,
+        formation,
+        teamStyle,
+        result,
+        draftResult,
+        manualFields,
+        manualMode,
+        activeHistoryId,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Não interrompe o app se o armazenamento estiver cheio.
+    }
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, result, draftResult, manualFields, manualMode, activeHistoryId]);
 
   useEffect(() => {
     if (!result) return;
@@ -1770,6 +1862,7 @@ export function CardVisionApp() {
   }
 
   function resetAnalysis() {
+    try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch {}
     setPreview(null);
     setPlayerCardImage(null);
     setFileName(null);

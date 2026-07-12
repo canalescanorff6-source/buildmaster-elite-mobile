@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v24.19 — Habilidades Opcionais Corrigidas
+# BuildMaster Elite Tático v24.20 — Goleiro Oficial + Estado Seguro Corrigidas
 
 Versão fiel ao projeto com correção na Auditoria Elite de habilidades.
 
@@ -24,5 +24,10 @@ Versão fiel ao projeto com correção na Auditoria Elite de habilidades.
 Use o workflow:
 
 ```txt
-Gerar APK Android Fiel v24.19
+Gerar APK Android Fiel v24.20
 ```
+
+
+## v24.20
+- Adiciona habilidades oficiais de goleiro: Pegador de pênalti, Arremesso longo do goleiro, Reposição alta do goleiro e Reposição baixa do goleiro.
+- Salva a sessão ativa no aparelho para evitar perder a ficha ao trocar de tela/recarregar o app.

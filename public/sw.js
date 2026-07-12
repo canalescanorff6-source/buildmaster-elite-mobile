@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v24-19-habilidades-opcionais';
+const CACHE_NAME = 'buildmaster-v24-20-goleiro-estado-seguro';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

@@ -1,7 +1,7 @@
 {
-  "name": "BuildMaster Elite Tático v24.19",
-  "short_name": "BM Elite v24.19",
-  "description": "Orçamento Dinâmico: ficha recalculada pelos pontos/nível digitados, habilidades, ímpetos e mapa total do time.",
+  "name": "BuildMaster Elite Tático v24.20",
+  "short_name": "BuildMaster v24.20",
+  "description": "Goleiro Oficial + Estado Seguro: habilidades oficiais de GK e sessão protegida contra reinício ao trocar de tela.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020712",

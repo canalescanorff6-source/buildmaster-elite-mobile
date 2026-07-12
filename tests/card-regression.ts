@@ -274,3 +274,11 @@ for (const item of styleMatrixCases) {
 }
 
 console.log(`OK: ${styleMatrixCases.length} testes do motor por estilo passaram.`);
+
+const goalkeeperOfficialSkills = ['Pegador de pênalti', 'Arremesso longo do goleiro', 'Reposição alta do goleiro', 'Reposição baixa do goleiro'];
+for (const skill of goalkeeperOfficialSkills) {
+  if (!goalkeeperResult.recommendedSkills.includes(skill)) {
+    throw new Error(`Goleiro precisa considerar habilidade oficial "${skill}". Veio: ${goalkeeperResult.recommendedSkills.join(', ')}`);
+  }
+}
+console.log('OK: habilidades oficiais de goleiro presentes.');

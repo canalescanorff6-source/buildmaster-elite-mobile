@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-19-habilidades-opcionais-apk-fiel",
-  "version": "24.19.0",
+  "name": "buildmaster-elite-tatico-v24-20-goleiro-estado-seguro-apk-fiel",
+  "version": "24.20.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.19 - APK fiel com habilidades já possuídas opcionais, finalização corrigida e top 5 adicionais sem repetir habilidades nativas.",
+  "description": "BuildMaster Elite Tático v24.20 - APK fiel com habilidades oficiais de goleiro e estado seguro para não reiniciar ao trocar de tela.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

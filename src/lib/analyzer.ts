@@ -503,6 +503,10 @@ const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<Record<
   'Liderança': { category: 'MENTAL', boosts: { stamina: 2, pressure: 2 }, aliases: ['Captaincy'] },
   'Super substituto': { category: 'MENTAL', boosts: { finishing: 2, mobility: 2 }, aliases: ['Super-sub', 'Super Sub'] },
   'Espírito guerreiro': { category: 'MENTAL', boosts: { stamina: 4, pressure: 2 }, aliases: ['Fighting Spirit', 'Espirito guerreiro'] },
+  'Pegador de pênalti': { category: 'GOLEIRO', boosts: { goalkeeper: 5, pressure: 2 }, aliases: ['Penalty Saver', 'Defesa de pênalti', 'Pegador de penalti', 'Defesa de penalti'] },
+  'Arremesso longo do goleiro': { category: 'GOLEIRO', boosts: { goalkeeper: 2, creation: 2 }, aliases: ['GK Long Throw', 'Arremesso longo de goleiro'] },
+  'Reposição alta do goleiro': { category: 'GOLEIRO', boosts: { goalkeeper: 3, creation: 2 }, aliases: ['GK High Punt', 'Reposicao alta do goleiro', 'Reposição alta de goleiro'] },
+  'Reposição baixa do goleiro': { category: 'GOLEIRO', boosts: { goalkeeper: 3, creation: 2 }, aliases: ['GK Low Punt', 'Reposicao baixa do goleiro', 'Reposição baixa de goleiro'] },
   'Esticada de Perna': { category: 'ÍMPETO', boosts: { defense: 2, physical: 1 }, aliases: ['Long Legs', 'Esticada da Perna', 'Esticada de perna'] },
   'Sombra veloz': { category: 'ÍMPETO', boosts: { mobility: 2, pressure: 1 }, aliases: ['Speeding Bullet', 'Sombra Veloz'] },
 };
@@ -516,7 +520,8 @@ export const OFFICIAL_ADDITIONAL_SKILL_NAMES = [
   'Curva para fora', 'De letra', 'Passe sem olhar', 'Passe aéreo baixo', 'Arremesso lateral longo',
   'Especialista em pênalti', 'Malícia', 'Marcação individual', 'Volta para marcar', 'Interceptação',
   'Bloqueador', 'Superioridade aérea', 'Carrinho', 'Afastamento acrobático', 'Liderança',
-  'Super substituto', 'Espírito guerreiro'
+  'Super substituto', 'Espírito guerreiro', 'Pegador de pênalti', 'Arremesso longo do goleiro',
+  'Reposição alta do goleiro', 'Reposição baixa do goleiro'
 ] as const;
 
 const OFFICIAL_ADDITIONAL_SKILLS = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
@@ -1947,7 +1952,7 @@ function trainingFor(position: PositionCode, objective: Objective, a: Required<A
 }
 
 function trainingCostRuleText() {
-  return 'Motor Elite Tático v24.18 Habilidades Oficiais: ficha, 5 habilidades, ímpetos, função real e mapa do time respeitam exatamente os pontos/nível digitados na Auditoria Elite.';
+  return 'Motor Elite Tático v24.20 Goleiro Oficial + Estado Seguro: ficha, 5 habilidades, ímpetos, função real e mapa do time respeitam pontos digitados, habilidades oficiais de GOL e não perdem a análise ao trocar de tela.';
 }
 
 function skillPriority(position: PositionCode, objective: Objective) {
@@ -2204,10 +2209,13 @@ function skillBlueprint(parsed: ParsedCard, selectedPosition: PositionCode, obje
   if (styleBlueprint) return styleBlueprint;
 
   if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || isGoalkeeperStyle(parsed.playstyle)) {
+    const isOffensiveKeeper = /ofensivo|offensive/i.test(playstyle);
     return {
-      label: /ofensivo|offensive/i.test(playstyle) ? 'Goleiro de saída rápida' : 'Goleiro seguro',
-      essentials: ['Liderança', 'Espírito guerreiro'],
-      alternatives: [],
+      label: isOffensiveKeeper ? 'Goleiro de saída rápida' : 'Goleiro seguro',
+      essentials: isOffensiveKeeper
+        ? ['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Pegador de pênalti', 'Liderança']
+        : ['Pegador de pênalti', 'Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Liderança'],
+      alternatives: ['Espírito guerreiro'],
       avoid: ['Chute de primeira', 'Passe de primeira', 'Toque duplo', 'Interceptação', 'Bloqueador', 'Marcação individual', 'Volta para marcar', 'Carrinho']
     };
   }
