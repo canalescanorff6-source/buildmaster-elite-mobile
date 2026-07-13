@@ -65,13 +65,15 @@ type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
 type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
 type ResultGroup = 'visao' | 'analise' | 'desenvolvimento' | 'tatica' | 'ferramentas';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
+type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
+type SettingsView = 'aparencia' | 'desempenho' | 'seguranca';
 
 const RESULT_GROUPS: Array<{ id: ResultGroup; label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
-  { id: 'visao', label: 'Visão geral', tabs: [{ value: 'ficha', label: 'Ficha' }, { value: 'resumo', label: 'Resumo' }, { value: 'dados', label: 'Dados' }] },
+  { id: 'visao', label: 'Geral', tabs: [{ value: 'ficha', label: 'Ficha' }, { value: 'resumo', label: 'Resumo' }, { value: 'dados', label: 'Dados' }] },
   { id: 'analise', label: 'Análise', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correção' }] },
-  { id: 'desenvolvimento', label: 'Desenvolvimento', tabs: [{ value: 'habilidades', label: 'Habilidades' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
+  { id: 'desenvolvimento', label: 'Treino', tabs: [{ value: 'habilidades', label: 'Habilidades' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
   { id: 'tatica', label: 'Tática', tabs: [{ value: 'treinador', label: 'Treinador' }, { value: 'mapa', label: 'Mapa' }] },
-  { id: 'ferramentas', label: 'Ferramentas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'exportar', label: 'Exportar' }, { value: 'regras', label: 'Regras' }] }
+  { id: 'ferramentas', label: 'Mais', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'exportar', label: 'Exportar' }, { value: 'regras', label: 'Regras' }] }
 ];
 
 type ManualFields = {
@@ -2395,6 +2397,8 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void }) {
   const [resultGroup, setResultGroup] = useState<ResultGroup>('visao');
   const [tab, setTab] = useState<ResultTab>('ficha');
+  const [heroExpanded, setHeroExpanded] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const reliabilityCenter = useMemo(() => buildReliabilityCenter(result), [result]);
   const inconsistencyReport = useMemo(() => detectInconsistencies(result), [result]);
   const buildComparison = useMemo(() => compareBuildVariants(result), [result]);
@@ -2441,7 +2445,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
   return (
     <section className="result-panel">
-      <div className="result-head luxury-panel">
+      <div className={`result-head result-head-compact luxury-panel ${heroExpanded ? 'is-expanded' : ''}`}>
         <div className="premium-card-art">
           {playerImage && <img src={playerImage} alt={`Imagem de ${card.playerName}`} />}
           <div className="card-shine" />
@@ -2453,23 +2457,42 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
 
         <div className="result-intro">
-          <p className="kicker">Painel</p>
-          <h2>{card.playerName}</h2>
-          <div className="playstyle-pill">{card.playstyle ?? 'Estilo não lido'}</div>
-          <div className="save-progress-card">
-            <span>Progresso das habilidades</span>
-            <strong>{skillInfo.done}/{skillInfo.total || recommendedSkills.length}</strong>
-            <i><b style={{ width: `${skillInfo.percent}%` }} /></i>
+          <div className="result-title-row">
+            <div>
+              <p className="kicker">Ficha atual</p>
+              <h2>{card.playerName}</h2>
+              <div className="playstyle-pill">{card.playstyle ?? 'Estilo não lido'}</div>
+            </div>
+            <button className="result-details-toggle" type="button" onClick={() => setHeroExpanded((value) => !value)} aria-expanded={heroExpanded}>
+              {heroExpanded ? 'Menos detalhes' : 'Ver detalhes'}
+            </button>
           </div>
-          <p className="identity-note">Identidade preservada: {card.mainPositionPt}{card.playstyle ? ` • ${card.playstyle}` : ''}. O programa não altera a posição/estilo da carta; só recomenda abaixo onde ela rende mais.</p>
-          <div className="metric-grid">
-            <div><span>GER lido</span><strong>{GER}</strong></div>
-            <div><span>Pos. carta</span><strong>{card.mainPositionPt}</strong></div>
-            <div><span>Posição ficha</span><strong>{result.bestPosition.label}</strong></div>
-            <div><span>PRI em campo</span><strong>{result.pri.GER}</strong></div>
+
+          <div className="result-quick-metrics">
+            <div><span>Posição</span><strong>{result.bestPosition.label}</strong></div>
+            <div><span>Pontos</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
             <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
-            <div className="wide-metric"><span>Pontos totais</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
+            <div><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}/100</strong></div>
           </div>
+
+          {heroExpanded && (
+            <div className="result-expanded-details">
+              <div className="save-progress-card">
+                <span>Progresso das habilidades</span>
+                <strong>{skillInfo.done}/{skillInfo.total || recommendedSkills.length}</strong>
+                <i><b style={{ width: `${skillInfo.percent}%` }} /></i>
+              </div>
+              <p className="identity-note">Identidade preservada: {card.mainPositionPt}{card.playstyle ? ` • ${card.playstyle}` : ''}. A posição escolhida continua soberana e o app apenas explica o aproveitamento.</p>
+              <div className="metric-grid">
+                <div><span>GER lido</span><strong>{GER}</strong></div>
+                <div><span>Pos. carta</span><strong>{card.mainPositionPt}</strong></div>
+                <div><span>Posição ficha</span><strong>{result.bestPosition.label}</strong></div>
+                <div><span>PRI em campo</span><strong>{result.pri.GER}</strong></div>
+                <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
+                <div className="wide-metric"><span>Pontos totais</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -3475,12 +3498,15 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       )}
 
-      <div className="result-floating-actions">
-        <button className="copy-floating" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar ficha</button>
-        <button className="copy-floating" type="button" onClick={onExportImage}><ImagePlus size={16} /> Imagem</button>
-        <button className="copy-floating" type="button" onClick={onPrintReport}><Download size={16} /> PDF</button>
-        <button className="copy-floating" type="button" onClick={onExportReport}><FileText size={16} /> Relatório</button>
-        <button className="copy-floating" type="button" onClick={() => copyBuildText(result)}><Copy size={16} /> Copiar plano</button>
+      <div className={`result-floating-actions ${actionsOpen ? 'is-open' : ''}`}>
+        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar ficha</button>
+        <button className="copy-floating result-actions-toggle" type="button" onClick={() => setActionsOpen((value) => !value)} aria-expanded={actionsOpen}><SlidersHorizontal size={16} /> {actionsOpen ? 'Fechar' : 'Mais ações'}</button>
+        <div className="result-more-actions">
+          <button className="copy-floating" type="button" onClick={onExportImage}><ImagePlus size={16} /> Imagem</button>
+          <button className="copy-floating" type="button" onClick={onPrintReport}><Download size={16} /> PDF</button>
+          <button className="copy-floating" type="button" onClick={onExportReport}><FileText size={16} /> Relatório</button>
+          <button className="copy-floating" type="button" onClick={() => copyBuildText(result)}><Copy size={16} /> Copiar plano</button>
+        </div>
       </div>
     </section>
   );
@@ -3763,6 +3789,8 @@ export function CardVisionApp() {
   const [historySort, setHistorySort] = useState<HistorySort>('UPDATED');
   const [onlyPendingSkills, setOnlyPendingSkills] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [vaultView, setVaultView] = useState<VaultView>('jogadores');
+  const [settingsView, setSettingsView] = useState<SettingsView>('aparencia');
   const [comparePlayerIds, setComparePlayerIds] = useState<string[]>([]);
   const [comparePosition, setComparePosition] = useState<PositionCode>('CF');
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
@@ -4925,7 +4953,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v25.80</span>
+            <span>Elite Tático v25.81</span>
           </div>
         </div>
         <div className="topbar-current-page">
@@ -4967,7 +4995,7 @@ ${variantText}`);
       <nav className="mobile-bottom-nav luxury-panel" aria-label="Menu inferior">
         <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} onClick={() => openMainSection('inicio')}><LayoutDashboard size={19} /><span>Início</span></button>
         <button type="button" className={mainSection === 'leitor' || mainSection === 'manual' ? 'active-section' : ''} onClick={() => setMobileLauncher('create')}><ScanText size={19} /><span>Criar</span></button>
-        <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={19} /><span>Resultado</span></button>
+        <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={19} /><span>Ficha</span></button>
         <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} onClick={openCofreDeJogadores}><History size={19} /><span>Cofre</span></button>
         <button type="button" className={mainSection === 'time' || mainSection === 'ajustes' ? 'active-section' : ''} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={19} /><span>Mais</span></button>
       </nav>
@@ -5060,11 +5088,7 @@ ${variantText}`);
           <button type="button" onClick={() => smartHome.recentPlayer && openCofreDeJogadores()}><strong>{smartHome.recentPlayer ?? '—'}</strong><span>Último jogador</span></button>
         </div>
         <div className="smart-next-action"><Target size={18} /><div><strong>Próxima ação sugerida</strong><span>{smartHome.nextAction}</span></div></div>
-        {smartHome.alerts.length > 0 && <div className="smart-alert-list">{smartHome.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
-        <div className="mode-choice-card">
-          <div><strong>v25.41 • Modo simples e avançado</strong><span>{advancedMode ? 'Todos os controles técnicos estão visíveis.' : 'Fluxo direto: entrada, confirmação e ficha.'}</span></div>
-          <button type="button" onClick={() => setAdvancedMode((value) => !value)}><SlidersHorizontal size={16} /> {advancedMode ? 'Usar modo simples' : 'Usar modo avançado'}</button>
-        </div>
+        {smartHome.alerts.length > 0 && <details className="smart-alert-details"><summary>Ver {smartHome.alerts.length} alerta(s) do Cofre</summary><div className="smart-alert-list">{smartHome.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div></details>}
       </section>
 
 
@@ -5344,220 +5368,221 @@ ${variantText}`);
           </>)}
 
           {mainSection === 'cofre' && (
-          <div className="history-strip library-strip cofre-section">
-            <div className="history-head">
+          <div className="cofre-section cofre-premium-layout">
+            <section className="cofre-summary-card luxury-panel">
               <div>
                 <p className="kicker"><History size={14} /> Cofre de Jogadores</p>
-                <small>{history.length ? `${history.length} ficha(s) salva(s) neste aparelho.` : 'Nenhuma ficha salva ainda. Finalize uma análise para ela aparecer aqui.'} Com Neon configurado, também sincroniza na nuvem.</small>
+                <h2>{history.length ? `${history.length} jogador(es) organizados` : 'Seu Cofre está vazio'}</h2>
+                <span>{history.length ? 'Pesquise, organize, compare ou faça backup sem misturar todas as ferramentas na mesma tela.' : 'Finalize uma ficha para começar seu elenco.'}</span>
               </div>
-              <button type="button" onClick={() => setLibraryOpen((current) => !current)}>{libraryOpen ? 'Recolher' : 'Abrir cofre'}</button>
-            </div>
-            <div className="history-actions cloud-history-actions">
-              <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><Download size={14} /> Exportar backup</button>
-              <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
-              <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
-              <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
-              <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
-            </div>
-            <div className="cloud-status-card">
-              <ShieldCheck size={14} />
-              <span>{cloudStatus}</span>
-            </div>
-            {history.length > 0 ? (
-              <>
-                <div className="cofre-advanced-dashboard">
-                  <div><span>Total salvo</span><strong>{dashboardStats.total}</strong><em>jogadores</em></div>
-                  <div><span>Progresso geral</span><strong>{dashboardStats.completion}%</strong><em>{dashboardStats.skillsDone}/{dashboardStats.skillsTotal} habilidades</em></div>
-                  <div><span>Pendentes</span><strong>{dashboardStats.pending}</strong><em>precisam completar habilidade</em></div>
-                  <div><span>Favoritos</span><strong>{dashboardStats.favorites}</strong><em>prioridade do elenco</em></div>
-                  <div><span>Revisar</span><strong>{dashboardStats.review}</strong><em>marcados para conferir</em></div>
-                </div>
-                <div className="vault-organization-panel luxury-panel">
-                  <div className="section-title-row"><div><p className="kicker"><Layers size={14} /> v25.33 • Pastas</p><h3>Organize o Cofre sem perder fichas</h3></div><span>{vaultFolders.length} pastas</span></div>
-                  <div className="vault-folder-tabs">{vaultFolders.map((folder) => <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, folderId: folder.id }))}>{folder.name}<small>{folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length}</small></button>)}</div>
-                  <div className="create-folder-row"><input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Nova pasta: Ex. Time principal" /><button type="button" onClick={createVaultFolder}>Criar pasta</button></div>
+              <div className="cofre-summary-metrics">
+                <button type="button" onClick={() => { setVaultView('jogadores'); resetVaultFilters(); }}><strong>{dashboardStats.total}</strong><span>Salvos</span></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setVaultFilters((current) => ({ ...current, favoritesOnly: true })); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
+              </div>
+            </section>
+
+            <nav className="section-segmented-tabs luxury-panel" aria-label="Áreas do Cofre">
+              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Jogadores</span></button>
+              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Organizar</span></button>
+              <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
+              <button type="button" className={vaultView === 'backup' ? 'active' : ''} onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
+            </nav>
+
+            {vaultView === 'jogadores' && (
+              <section className="vault-view-panel luxury-panel">
+                <div className="vault-toolbar-premium">
+                  <label className="history-search">
+                    <Search size={16} />
+                    <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar nome, posição, estilo, habilidade ou nota" />
+                  </label>
+                  <button type="button" className={libraryOpen ? 'active-filter' : ''} onClick={() => setLibraryOpen((value) => !value)}><SlidersHorizontal size={16} /> {libraryOpen ? 'Concluir edição' : 'Editar fichas'}</button>
                 </div>
 
-                <div className="advanced-search-panel luxury-panel">
-                  <div className="section-title-row"><div><p className="kicker"><Search size={14} /> v25.34–v25.35 • Pesquisa e filtros combinados</p><h3>Encontre o jogador certo por vários critérios</h3></div><button type="button" onClick={resetVaultFilters}>Limpar filtros</button></div>
+                <div className="cofre-quick-filters">
+                  <label><Filter size={14} /><select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}>
+                    <option value="ALL">Todos</option><option value="FAVORITES">Favoritos</option><option value="PENDING">Pendentes</option><option value="COMPLETE">Completos</option><option value="REVIEW">Revisar</option>
+                    {POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+                  </select></label>
+                  <label><Clock3 size={14} /><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}>
+                    <option value="UPDATED">Mais recentes</option><option value="NAME">Nome</option><option value="POSITION">Posição</option><option value="PENDING">Mais pendentes</option><option value="STATUS">Status</option>
+                  </select></label>
+                </div>
+
+                <details className="cofre-filter-drawer">
+                  <summary><SlidersHorizontal size={16} /> Filtros avançados <span>{filteredHistory.length} resultado(s)</span></summary>
                   <div className="advanced-filter-grid">
+                    <label><span>Pasta</span><select value={vaultFilters.folderId} onChange={(event) => setVaultFilters((current) => ({ ...current, folderId: event.target.value }))}>{vaultFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
                     <label><span>Posição escolhida</span><select value={vaultFilters.position} onChange={(event) => setVaultFilters((current) => ({ ...current, position: event.target.value as VaultFilterState['position'] }))}><option value="ALL">Todas</option>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
                     <label><span>Estilo oficial</span><select value={vaultFilters.playstyle} onChange={(event) => setVaultFilters((current) => ({ ...current, playstyle: event.target.value }))}><option value="">Todos</option>{availablePlaystyles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                     <label><span>Habilidade</span><select value={vaultFilters.skill} onChange={(event) => setVaultFilters((current) => ({ ...current, skill: event.target.value }))}><option value="">Todas</option>{availableSkills.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                     <label><span>Confiança mínima: {vaultFilters.minConfidence}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, minConfidence: Number(event.target.value) }))} /></label>
-                    <label><span>Confiança máxima: {vaultFilters.maxConfidence}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.maxConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, maxConfidence: Number(event.target.value) }))} /></label>
                     <label><span>Eficiência mínima: {vaultFilters.minEfficiency}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minEfficiency} onChange={(event) => setVaultFilters((current) => ({ ...current, minEfficiency: Number(event.target.value) }))} /></label>
                   </div>
                   <div className="combined-filter-chips">
                     <button type="button" className={vaultFilters.favoritesOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, favoritesOnly: !current.favoritesOnly }))}>Favoritos</button>
                     <button type="button" className={vaultFilters.pendingOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, pendingOnly: !current.pendingOnly }))}>Pendentes</button>
                     <button type="button" className={vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}>Revisar</button>
-                    <span>{filteredHistory.length} resultado(s) encontrado(s)</span>
+                    <button type="button" onClick={resetVaultFilters}>Limpar filtros</button>
                   </div>
-                </div>
+                </details>
 
-                <div className="player-comparison-hub luxury-panel">
-                  <div className="section-title-row"><div><p className="kicker">v24.67 • Comparador de jogadores</p><h3>Compare para a posição que você escolher</h3></div><span>{comparePlayerIds.length} selecionado(s)</span></div>
-                  <div className="cofre-filter-grid">
-                    <label><Target size={14} /><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
-                    <button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar 4 recentes</button>
-                    <button type="button" onClick={() => setComparePlayerIds([])}>Limpar comparação</button>
+                {history.length ? (
+                  <div className="vault-player-list">
+                    {filteredHistory.map((item) => {
+                      const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+                      const statusText = savedStatusText(item);
+                      return (
+                        <article className={item.favorite ? 'saved-ficha-row favorite-row' : 'saved-ficha-row'} key={item.id}>
+                          <button className="saved-player-main" type="button" onClick={() => restoreHistory(item)}>
+                            <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt="" /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
+                            <div><strong>{item.favorite ? '★ ' : ''}{item.result.parsed.playerName}</strong><span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts</span><em>{statusText} • {info.done}/{info.total} habilidades</em></div>
+                            <i><b style={{ width: `${info.percent}%` }} /></i>
+                          </button>
+                          <div className="saved-row-actions">
+                            <button type="button" title="Favoritar" onClick={() => toggleFavoriteHistory(item.id)}><Star size={15} /></button>
+                            <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={15} /></button>
+                            <button type="button" title="Exportar relatório" onClick={() => exportSingleHistoryItem(item)}><FileText size={15} /></button>
+                            <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}><Trash2 size={15} /></button>
+                          </div>
+                          {libraryOpen && (
+                            <div className="saved-advanced-editor">
+                              <label className="saved-status-select"><span>Pasta</span><select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>{vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+                              <label className="saved-status-select"><span>Status</span><select value={savedStatusLabel(item)} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}><option value="pendente">Pendente</option><option value="completo">Completo</option><option value="revisar">Revisar</option></select></label>
+                              <div className="saved-skill-bulk"><button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Concluir top 5</button><button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir</button></div>
+                              <label className="saved-notes"><span>Notas pessoais</span><textarea value={item.notes ?? ''} onChange={(event) => updateHistoryNotes(item.id, event.target.value)} placeholder="Como pretende usar este jogador?" /></label>
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                    {!filteredHistory.length && <div className="empty-cofre-card"><strong>Nenhum resultado com esses filtros</strong><span>Limpe ou ajuste os filtros para exibir outras fichas.</span></div>}
                   </div>
-                  <div className="compare-player-picker">{history.map((item) => <button type="button" className={comparePlayerIds.includes(item.id) ? 'selected' : ''} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}>{comparePlayerIds.includes(item.id) ? '✓ ' : ''}{item.result.parsed.playerName}</button>)}</div>
-                  {playerComparison.ranking.length > 0 ? <div className="player-ranking"><p><strong>Melhor encaixe:</strong> {playerComparison.winner} • {playerComparison.reason}</p>{playerComparison.ranking.map((item, index) => <div key={item.id}><b>#{index + 1} {item.name}</b><span>{item.score}/100 • adaptação {item.adaptation}</span><small>Físico {item.physical} • habilidades {item.skills} • metas {item.goals} • eficiência {item.efficiency}</small><em>{item.risks.length ? `Riscos: ${item.risks.join(' • ')}` : 'Sem risco crítico registrado.'}</em></div>)}</div> : <p className="panel-note">Selecione pelo menos dois jogadores do Cofre. O app compara sem alterar nenhuma ficha.</p>}
+                ) : <div className="empty-cofre-card"><strong>Nenhum jogador salvo ainda</strong><span>Gere uma ficha pelo Leitor Elite ou pelo Manual Pro.</span></div>}
+              </section>
+            )}
+
+            {vaultView === 'organizar' && (
+              <section className="vault-view-panel luxury-panel">
+                <div className="section-title-row"><div><p className="kicker"><Layers size={14} /> Pastas e status</p><h3>Organize sem perder fichas</h3></div><span>{vaultFolders.length} pastas</span></div>
+                <div className="vault-folder-tabs">{vaultFolders.map((folder) => <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, folderId: folder.id }))}>{folder.name}<small>{folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length}</small></button>)}</div>
+                <div className="create-folder-row"><input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Nova pasta: Ex. Time principal" /><button type="button" onClick={createVaultFolder}>Criar pasta</button></div>
+                <div className="cofre-advanced-dashboard compact-dashboard">
+                  <div><span>Completos</span><strong>{dashboardStats.complete}</strong><em>prontos para usar</em></div>
+                  <div><span>Pendentes</span><strong>{dashboardStats.pending}</strong><em>faltam habilidades</em></div>
+                  <div><span>Revisar</span><strong>{dashboardStats.review}</strong><em>dados para conferir</em></div>
+                  <div><span>Progresso</span><strong>{dashboardStats.completion}%</strong><em>do Cofre</em></div>
                 </div>
-                <div className="cofre-filter-grid">
-                  <label className="history-search">
-                    <Search size={14} />
-                    <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo ou nota" />
-                  </label>
-                  <label><Filter size={14} /><select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}>
-                    <option value="ALL">Todos</option>
-                    <option value="FAVORITES">Favoritos</option>
-                    <option value="PENDING">Com pendências</option>
-                    <option value="COMPLETE">Completos</option>
-                    <option value="REVIEW">Para revisar</option>
-                    {POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-                  </select></label>
-                  <label><SlidersHorizontal size={14} /><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}>
-                    <option value="UPDATED">Mais recentes</option>
-                    <option value="NAME">Nome</option>
-                    <option value="POSITION">Posição</option>
-                    <option value="PENDING">Mais pendentes</option>
-                    <option value="STATUS">Status</option>
-                  </select></label>
-                  <button type="button" className={onlyPendingSkills ? 'active-filter' : ''} onClick={() => setOnlyPendingSkills((value) => !value)}>Só pendentes</button>
+                <p className="panel-note">Para mover jogadores entre pastas ou alterar o status, abra a aba Jogadores e toque em “Editar fichas”.</p>
+              </section>
+            )}
+
+            {vaultView === 'comparar' && (
+              <section className="player-comparison-hub vault-view-panel luxury-panel">
+                <div className="section-title-row"><div><p className="kicker">Comparador de jogadores</p><h3>Compare para a posição que você escolher</h3></div><span>{comparePlayerIds.length} selecionado(s)</span></div>
+                <div className="cofre-filter-grid"><label><Target size={14} /><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label><button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button><button type="button" onClick={() => setComparePlayerIds([])}>Limpar</button></div>
+                <div className="compare-player-picker">{history.map((item) => <button type="button" className={comparePlayerIds.includes(item.id) ? 'selected' : ''} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}>{comparePlayerIds.includes(item.id) ? '✓ ' : ''}{item.result.parsed.playerName}</button>)}</div>
+                {playerComparison.ranking.length > 0 ? <div className="player-ranking"><p><strong>Melhor encaixe:</strong> {playerComparison.winner} • {playerComparison.reason}</p>{playerComparison.ranking.map((item, index) => <div key={item.id}><b>#{index + 1} {item.name}</b><span>{item.score}/100 • adaptação {item.adaptation}</span><small>Físico {item.physical} • habilidades {item.skills} • metas {item.goals} • eficiência {item.efficiency}</small><em>{item.risks.length ? `Riscos: ${item.risks.join(' • ')}` : 'Sem risco crítico registrado.'}</em></div>)}</div> : <p className="panel-note">Selecione pelo menos dois jogadores. A comparação não altera nenhuma ficha.</p>}
+              </section>
+            )}
+
+            {vaultView === 'backup' && (
+              <section className="vault-view-panel luxury-panel">
+                <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Backup e nuvem</p><h3>Proteja o Cofre sem poluir a lista de jogadores</h3></div><span>{history.length} ficha(s)</span></div>
+                <div className="history-actions cloud-history-actions">
+                  <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><Download size={14} /> Exportar backup</button>
+                  <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
+                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
+                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
+                  <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
                 </div>
-                {(libraryOpen ? filteredHistory : filteredHistory.slice(0, 4)).map((item) => {
-                  const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
-                  const statusText = savedStatusText(item);
-                  return (
-                    <div className={item.favorite ? 'saved-ficha-row favorite-row' : 'saved-ficha-row'} key={item.id}>
-                      <button type="button" onClick={() => restoreHistory(item)}>
-                        <strong>{item.favorite ? '★ ' : ''}{item.result.parsed.playerName}</strong>
-                        <span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts • {statusText}</span>
-                        <em>{info.done}/{info.total} habilidades concluídas</em>
-                        <i><b style={{ width: `${info.percent}%` }} /></i>
-                      </button>
-                      <div className="saved-row-actions">
-                        <button type="button" title="Favoritar" onClick={() => toggleFavoriteHistory(item.id)}><Star size={15} /></button>
-                        <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={15} /></button>
-                        <button type="button" title="Exportar relatório individual" onClick={() => exportSingleHistoryItem(item)}><FileText size={15} /></button>
-                        <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}>
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                      {libraryOpen && (
-                        <div className="saved-advanced-editor">
-                          <label className="saved-status-select">
-                            <span>Pasta</span>
-                            <select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>
-                              {vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-                            </select>
-                          </label>
-                          <label className="saved-status-select">
-                            <span>Status</span>
-                            <select value={savedStatusLabel(item)} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}>
-                              <option value="pendente">Pendente</option>
-                              <option value="completo">Completo</option>
-                              <option value="revisar">Revisar</option>
-                            </select>
-                          </label>
-                          <div className="saved-skill-bulk">
-                            <button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Marcar top 5 concluídas</button>
-                            <button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir pendências</button>
-                          </div>
-                          <label className="saved-notes">
-                            <span>Notas pessoais</span>
-                            <textarea value={item.notes ?? ''} onChange={(event) => updateHistoryNotes(item.id, event.target.value)} placeholder="Ex.: usar como VOL no 4-2-2-2, falta Interceptação..." />
-                          </label>
-                          <label className="saved-notes">
-                            <span>Função no seu time</span>
-                            <textarea value={item.tacticalRoleNote ?? ''} onChange={(event) => updateHistoryRoleNote(item.id, event.target.value)} placeholder="Ex.: titular no 4-2-2-2, reserva para segundo tempo, dupla ideal com CA pivô..." />
-                          </label>
-                          <div className="saved-timeline">
-                            <strong>Histórico da ficha</strong>
-                            {(item.changeLog ?? []).slice(0, 4).map((event) => (
-                              <span key={`${event.at}-${event.action}-${event.note}`}><b>{event.action}</b> • {event.note} <em>{event.at}</em></span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            ) : (
-              <div className="empty-cofre-card">
-                <strong>Nenhum jogador salvo ainda</strong>
-                <span>Gere uma ficha pelo Leitor Elite ou pela Central Manual. Depois de finalizar o plano, ela aparece aqui no Cofre de Jogadores.</span>
-              </div>
+                <div className="cloud-status-card"><ShieldCheck size={14} /><span>{cloudStatus}</span></div>
+                <p className="panel-note">O backup completo e a restauração seletiva permanecem em Ajustes › Segurança.</p>
+              </section>
             )}
           </div>
           )}
 
           {mainSection === 'ajustes' && (
-            <>
-            <section className="appearance-settings-panel luxury-panel">
-              <div className="section-title-row">
-                <div><p className="kicker"><Palette size={15} /> Aparência</p><h3>Personalize sem poluir as outras telas</h3></div>
-                <span>{advancedMode ? 'Modo avançado' : 'Modo simples'}</span>
-              </div>
-              <div className="appearance-control-grid">
-                <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')}><Palette size={18} /><strong>Tema</strong><span>{appTheme === 'dark' ? 'Escuro' : 'Claro'}</span></button>
-                <label><span>Cor principal</span><select aria-label="Cor principal" value={accentTheme} onChange={(event) => setAccentTheme(event.target.value as AccentTheme)}><option value="emerald">Verde elite</option><option value="gold">Dourado</option><option value="blue">Azul</option><option value="red">Vermelho</option><option value="purple">Roxo</option></select></label>
-                <button type="button" onClick={() => setAdvancedMode((value) => !value)}><SlidersHorizontal size={18} /><strong>Nível de detalhes</strong><span>{advancedMode ? 'Avançado' : 'Simples'}</span></button>
-              </div>
-            </section>
-            <DelayResponsePanel />
-            <section className="safety-quality-panel luxury-panel">
-              <div className="section-title-row">
-                <div><p className="kicker"><ShieldCheck size={15} /> v25.64 • Segurança e qualidade</p><h3>Painel de saúde do projeto</h3></div>
-                <span>{healthSummary.score}/100 • {healthSummary.status}</span>
-              </div>
+            <div className="settings-premium-layout">
+              <nav className="section-segmented-tabs luxury-panel" aria-label="Áreas dos Ajustes">
+                <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={17} /><span>Aparência</span></button>
+                <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={17} /><span>Desempenho</span></button>
+                <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={17} /><span>Segurança</span></button>
+              </nav>
 
-              <div className="health-score-grid">
-                <article><strong>{localIntegrity.score}</strong><span>Integridade dos dados</span></article>
-                <article><strong>{history.length}</strong><span>Fichas protegidas</span></article>
-                <article><strong>{lastBackupAt ? new Date(lastBackupAt).toLocaleDateString('pt-BR') : 'Nunca'}</strong><span>Último backup</span></article>
-                <article><strong>{localIntegrity.totals.malformed}</strong><span>Registros malformados</span></article>
-              </div>
+              {settingsView === 'aparencia' && (
+                <section className="appearance-settings-panel luxury-panel settings-view-panel">
+                  <div className="section-title-row">
+                    <div><p className="kicker"><Palette size={15} /> Aparência</p><h3>Personalize o app sem afetar o conteúdo</h3></div>
+                    <span>{advancedMode ? 'Modo avançado' : 'Modo simples'}</span>
+                  </div>
+                  <div className="appearance-control-grid">
+                    <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')}><Palette size={18} /><strong>Tema</strong><span>{appTheme === 'dark' ? 'Escuro' : 'Claro'}</span></button>
+                    <label><span>Cor principal</span><select aria-label="Cor principal" value={accentTheme} onChange={(event) => setAccentTheme(event.target.value as AccentTheme)}><option value="emerald">Verde elite</option><option value="gold">Dourado</option><option value="blue">Azul</option><option value="red">Vermelho</option><option value="purple">Roxo</option></select></label>
+                    <button type="button" onClick={() => setAdvancedMode((value) => !value)}><SlidersHorizontal size={18} /><strong>Nível de detalhes</strong><span>{advancedMode ? 'Avançado' : 'Simples'}</span></button>
+                  </div>
+                  <div className="settings-explanation-card"><Sparkles size={19} /><div><strong>Modo simples</strong><span>Mostra somente o necessário para criar, revisar e salvar uma ficha. O modo avançado libera auditorias e ferramentas técnicas.</span></div></div>
+                </section>
+              )}
 
-              <div className="safety-actions-grid">
-                <button type="button" onClick={exportFullBackup}><Download size={17} /><strong>Backup completo</strong><span>Cofre, preferências, calibração, planos, pastas e regras.</span></button>
-                <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={17} /><strong>Restaurar backup</strong><span>Escolha as áreas que deseja recuperar.</span></button>
-                <button type="button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><strong>Exportar diagnóstico</strong><span>Gera relatório técnico sem modificar seus dados.</span></button>
-                <input ref={fullBackupInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
-              </div>
+              {settingsView === 'desempenho' && (
+                <section className="settings-view-panel settings-delay-wrapper">
+                  <DelayResponsePanel />
+                </section>
+              )}
 
-              <div className="restore-select-panel">
-                <strong>Restauração seletiva</strong>
-                <div className="restore-check-grid">
-                  {([
-                    ['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['session', 'Sessão em andamento']
-                  ] as Array<[BackupSection, string]>).map(([key, label]) => (
-                    <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>
-                  ))}
-                </div>
-                <p className="panel-note">A restauração só substitui as áreas marcadas. O arquivo é validado por assinatura antes de ser aplicado.</p>
-              </div>
+              {settingsView === 'seguranca' && (
+                <section className="safety-quality-panel luxury-panel settings-view-panel">
+                  <div className="section-title-row">
+                    <div><p className="kicker"><ShieldCheck size={15} /> Segurança e qualidade</p><h3>Saúde, backup e migração</h3></div>
+                    <span>{healthSummary.score}/100 • {healthSummary.status}</span>
+                  </div>
 
-              <div className="integrity-report-panel">
-                <strong>Verificação de integridade</strong>
-                {localIntegrity.issues.length ? localIntegrity.issues.slice(0, 8).map((issue) => <span key={`${issue.code}-${issue.message}`} className={`integrity-${issue.level}`}><b>{issue.level === 'critical' ? 'Crítico' : issue.level === 'warning' ? 'Revisar' : 'Informação'}</b>{issue.message}</span>) : <span className="integrity-ok"><CheckCircle2 size={15} /> Dados locais sem incoerências detectadas.</span>}
-              </div>
+                  <div className="health-score-grid">
+                    <article><strong>{localIntegrity.score}</strong><span>Integridade</span></article>
+                    <article><strong>{history.length}</strong><span>Fichas protegidas</span></article>
+                    <article><strong>{lastBackupAt ? new Date(lastBackupAt).toLocaleDateString('pt-BR') : 'Nunca'}</strong><span>Último backup</span></article>
+                    <article><strong>{localIntegrity.totals.malformed}</strong><span>Problemas</span></article>
+                  </div>
 
-              <div className="migration-health-panel">
-                <strong>Migração entre versões</strong>
-                <span>Esquema atual: {APP_DATA_VERSION}</span>
-                <span>Backups antigos do Cofre são convertidos antes da restauração.</span>
-                <span>Campos novos recebem valores seguros sem apagar informações antigas.</span>
-                {migrationLog.length > 0 && migrationLog.map((item) => <em key={item}>{item}</em>)}
-              </div>
+                  <div className="safety-actions-grid">
+                    <button type="button" onClick={exportFullBackup}><Download size={17} /><strong>Backup completo</strong><span>Cofre, preferências, calibração, planos, pastas e regras.</span></button>
+                    <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={17} /><strong>Restaurar backup</strong><span>Escolha as áreas que deseja recuperar.</span></button>
+                    <button type="button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><strong>Exportar diagnóstico</strong><span>Gera relatório técnico sem modificar seus dados.</span></button>
+                    <input ref={fullBackupInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
+                  </div>
 
-              {healthSummary.alerts.length > 0 && <div className="health-alert-list">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
-            </section>
-            </>
+                  <details className="settings-details-card">
+                    <summary>Restauração seletiva</summary>
+                    <div className="restore-select-panel">
+                      <div className="restore-check-grid">
+                        {([
+                          ['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['session', 'Sessão em andamento']
+                        ] as Array<[BackupSection, string]>).map(([key, label]) => (
+                          <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>
+                        ))}
+                      </div>
+                      <p className="panel-note">Somente as áreas marcadas são substituídas. O arquivo é validado antes da aplicação.</p>
+                    </div>
+                  </details>
+
+                  <details className="settings-details-card">
+                    <summary>Verificação de integridade</summary>
+                    <div className="integrity-report-panel">
+                      {localIntegrity.issues.length ? localIntegrity.issues.slice(0, 8).map((issue) => <span key={`${issue.code}-${issue.message}`} className={`integrity-${issue.level}`}><b>{issue.level === 'critical' ? 'Crítico' : issue.level === 'warning' ? 'Revisar' : 'Informação'}</b>{issue.message}</span>) : <span className="integrity-ok"><CheckCircle2 size={15} /> Dados locais sem incoerências detectadas.</span>}
+                    </div>
+                  </details>
+
+                  <details className="settings-details-card">
+                    <summary>Migração entre versões</summary>
+                    <div className="migration-health-panel"><span>Esquema atual: {APP_DATA_VERSION}</span><span>Backups antigos são convertidos antes da restauração.</span><span>Campos novos recebem valores seguros sem apagar informações antigas.</span>{migrationLog.length > 0 && migrationLog.map((item) => <em key={item}>{item}</em>)}</div>
+                  </details>
+
+                  {healthSummary.alerts.length > 0 && <div className="health-alert-list">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
+                </section>
+              )}
+            </div>
           )}
         </aside>
         )}

@@ -1,4 +1,4 @@
-name: Gerar APK Android Fiel v25.80 Reorganizacao Visual Premium
+name: Gerar APK Android Fiel v25.81 Polimento UX Premium
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-apk:
-    name: Build APK Fiel v25.80
+    name: Build APK Fiel v25.81 UX Premium
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -55,21 +55,14 @@ jobs:
         run: npm run test:all
 
       - name: Preparar exportacao estatica para APK
-        run: |
-          rm -rf out android
-          if [ -d src/app/api ]; then
-            mv src/app/api src/app/_api_desativada_no_apk
-          fi
-          if [ -f middleware.ts ]; then
-            mv middleware.ts middleware.desativado-no-apk.ts
-          fi
+        run: rm -rf out android .buildmaster-static-disabled
 
       - name: Gerar app web embutido
         timeout-minutes: 10
         env:
           BUILDMASTER_ANDROID_STATIC: '1'
           NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
-        run: npm run build
+        run: npm run apk:build-web
 
       - name: Criar projeto Android
         timeout-minutes: 5
@@ -96,12 +89,12 @@ jobs:
         run: |
           mkdir -p dist-apk
           cp android/app/build/outputs/apk/debug/app-debug.apk \
-            dist-apk/BuildMaster-Elite-Tatico-v25.80.apk
+            dist-apk/BuildMaster-Elite-Tatico-v25.81.apk
 
       - name: Enviar APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v25.80-APK-Fiel
-          path: dist-apk/BuildMaster-Elite-Tatico-v25.80.apk
+          name: BuildMaster-Elite-Tatico-v25.81-APK-Fiel
+          path: dist-apk/BuildMaster-Elite-Tatico-v25.81.apk
           if-no-files-found: error
           retention-days: 14

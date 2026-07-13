@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v25-80-reorganizacao-visual-premium",
-  "version": "25.80.0",
+  "name": "buildmaster-elite-tatico-v25-81-polimento-ux-premium",
+  "version": "25.81.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v25.80 - reorganização visual premium completa.",
+  "description": "BuildMaster Elite Tático v25.81 - polimento premium guiado por inspeção em vídeo.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",

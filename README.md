@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v25.80
+# BuildMaster Elite Tático v25.81 — Polimento UX Premium
 
 > Interface reorganizada por páginas e navegação premium. Consulte `README_REORGANIZACAO_V25_80.md`.
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v25-80-reorganizacao-visual-premium';
+const CACHE_NAME = 'buildmaster-v25-81-polimento-ux-premium';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
