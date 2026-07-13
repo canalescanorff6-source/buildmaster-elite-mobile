@@ -55,13 +55,14 @@ import { buildAdvancedCalibration, signatureForResult } from '@/lib/advancedCali
 import { buildReliabilityCenter, compareBuildVariants, comparePlayers, detectInconsistencies } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
+import { DelayResponsePanel, SkillAndTrainingPanel } from '@/components/DevelopmentPanels';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
 type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
+type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 
 type ManualFields = {
@@ -2406,6 +2407,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             ['calibracao', 'Calibração'],
             ['ficha', 'Ficha'],
             ['habilidades', 'Habilidades'],
+            ['treino', 'Treino'],
             ['impetos', 'Ímpetos'],
             ['treinador', 'Treinador'],
             ['mapa', 'Mapa'],
@@ -2827,6 +2829,8 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
       )}
 
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
+
+      {tab === 'treino' && <SkillAndTrainingPanel result={result} />}
 
       {tab === 'habilidades' && (
         <div className="result-section-grid">
@@ -5450,6 +5454,8 @@ ${variantText}`);
           </div>
 
           {mainSection === 'ajustes' && (
+            <>
+            <DelayResponsePanel />
             <section className="safety-quality-panel luxury-panel">
               <div className="section-title-row">
                 <div><p className="kicker"><ShieldCheck size={15} /> v25.64 • Segurança e qualidade</p><h3>Painel de saúde do projeto</h3></div>
@@ -5497,6 +5503,7 @@ ${variantText}`);
 
               {healthSummary.alerts.length > 0 && <div className="health-alert-list">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
             </section>
+            </>
           )}
         </aside>
 

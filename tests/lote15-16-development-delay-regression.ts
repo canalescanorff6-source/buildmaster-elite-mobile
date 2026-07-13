@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { analyzeCard } from '../src/lib/analyzer';
+import { buildSpecialSkillUsage, buildWeeklyPlan, diagnoseDelay, summarizeTapSamples, TRAINING_DRILLS } from '../src/lib/playerDevelopment';
+
+const result = analyzeCard(`Jogador Teste\nPD\nPonta Prolífico\nBlitz Curler\nToque duplo\nFinalização 84\nCurva 91\nVelocidade 86\nAceleração 88\nControle de bola 87\nDrible 89\nPasse rasteiro 78\nResistência 80\nPontos de progresso 60`, 'COMPETITIVE', 'SS');
+assert.equal(result.bestPosition.code, 'SS');
+const skill = buildSpecialSkillUsage(result);
+assert.ok(skill.items.some(item => item.name === 'Blitz Curler'));
+assert.ok(skill.items.every(item => item.score >= 0 && item.score <= 100));
+assert.ok(TRAINING_DRILLS.some(item => item.area === 'defesa'));
+assert.ok(TRAINING_DRILLS.some(item => item.area === 'ataque'));
+const plan = buildWeeklyPlan(['puxei o zagueiro','dei bote errado','passei tarde'], 3);
+assert.equal(plan.length, 3);
+assert.ok(plan.every(day => day.drills.length === 2));
+const delay = diagnoseDelay({fps:30,graphics:'alta',wifi:'2.4 GHz',signal:'fraco',temperature:'quente',backgroundApps:true,batterySaver:true,symptoms:['passe atrasado','imagem trava','fica pesado depois de minutos']});
+assert.ok(delay.ranked[0][1] > 0);
+assert.ok(delay.recommendations.length >= 5);
+const taps = summarizeTapSamples([0,100,205,300,410,505]);
+assert.ok(taps.average > 0);
+console.log('Lote 15-16 aprovado: habilidades, treinos, erros, plano semanal e delay.');

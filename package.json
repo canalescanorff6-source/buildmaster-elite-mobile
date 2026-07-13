@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v25-64-lote-14-seguranca-qualidade",
-  "version": "25.64.0",
+  "name": "buildmaster-elite-tatico-v25-72-lotes-15-16-habilidades-treino-delay",
+  "version": "25.72.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v25.64 - Lote 14: backup, restauração, integridade, migração e painel de saúde.",
+  "description": "BuildMaster Elite Tático v25.72 - habilidades especiais, treinos, correção, plano semanal e diagnóstico de delay.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +12,7 @@
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
     "test:lote1": "tsx tests/lote1-official-regression.ts",
-    "test:all": "npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
+    "test:all": "npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -39,7 +39,8 @@
     "test:lote11": "tsx tests/lote11-opponent-advanced-regression.ts",
     "test:lote12": "tsx tests/lote12-advanced-calibration-regression.ts",
     "test:lote13": "tsx tests/lote13-vault-usability-regression.ts",
-    "test:lote14": "tsx tests/lote14-security-quality-regression.ts"
+    "test:lote14": "tsx tests/lote14-security-quality-regression.ts",
+    "test:lote15-16": "tsx tests/lote15-16-development-delay-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
