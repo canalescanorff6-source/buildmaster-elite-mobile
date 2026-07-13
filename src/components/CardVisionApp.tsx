@@ -467,10 +467,28 @@ function resultHistoryKey(result: AnalysisResult) {
 }
 
 function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0): SavedAnalysis | null {
-  if (!entry?.result?.parsed?.playerName) return null;
-  const saveKey = entry.saveKey || resultHistoryKey(entry.result);
+  if (!entry || typeof entry !== 'object') return null;
+
+  let safeResult = entry.result as AnalysisResult | undefined;
+  if (!isRenderableAnalysisResult(safeResult)) {
+    const legacyRawText = typeof entry.rawText === 'string' ? entry.rawText.trim() : '';
+    const legacyTarget = String((safeResult as Partial<AnalysisResult> | undefined)?.bestPosition?.code
+      ?? (safeResult as Partial<AnalysisResult> | undefined)?.parsed?.mainPosition
+      ?? 'CF') as PositionCode;
+    if (legacyRawText.length > 2) {
+      try {
+        const rebuilt = analyzeCard(legacyRawText, 'COMPETITIVE', legacyTarget, 'migracao-segura-cofre');
+        if (isRenderableAnalysisResult(rebuilt)) safeResult = rebuilt;
+      } catch {
+        safeResult = undefined;
+      }
+    }
+  }
+
+  if (!isRenderableAnalysisResult(safeResult)) return null;
+  const saveKey = entry.saveKey || resultHistoryKey(safeResult);
   const savedAt = entry.savedAt || new Date().toLocaleString('pt-BR');
-  const recommended = entry.result.recommendedSkills ?? [];
+  const recommended = safeResult.recommendedSkills ?? [];
   const progress: SavedSkillProgress = { ...(entry.skillProgress ?? {}) };
   for (const skill of recommended) {
     if (progress[skill] === undefined) progress[skill] = false;
@@ -484,7 +502,7 @@ function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0
     rawText: entry.rawText || '',
     playerImage: entry.playerImage ?? null,
     fullPreview: entry.fullPreview ?? null,
-    result: entry.result,
+    result: safeResult,
     skillProgress: progress,
     notes: entry.notes || '',
     favorite: Boolean(entry.favorite),
@@ -724,14 +742,15 @@ function formatReportMarkdown(result: AnalysisResult, notes = '') {
 }
 
 function buildDashboardStats(history: SavedAnalysis[]) {
-  const total = history.length;
-  const pending = history.filter((item) => savedStatusLabel(item) === 'pendente').length;
-  const complete = history.filter((item) => savedStatusLabel(item) === 'completo').length;
-  const favorites = history.filter((item) => item.favorite).length;
-  const positions = new Set(history.map((item) => item.result.bestPosition.code));
-  const review = history.filter((item) => savedStatusLabel(item) === 'revisar').length;
-  const skillsTotal = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).total, 0);
-  const skillsDone = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).done, 0);
+  const safeHistory = history.filter((item) => isRenderableAnalysisResult(item?.result));
+  const total = safeHistory.length;
+  const pending = safeHistory.filter((item) => savedStatusLabel(item) === 'pendente').length;
+  const complete = safeHistory.filter((item) => savedStatusLabel(item) === 'completo').length;
+  const favorites = safeHistory.filter((item) => item.favorite).length;
+  const positions = new Set(safeHistory.map((item) => item.result.bestPosition.code));
+  const review = safeHistory.filter((item) => savedStatusLabel(item) === 'revisar').length;
+  const skillsTotal = safeHistory.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).total, 0);
+  const skillsDone = safeHistory.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).done, 0);
   const completion = skillsTotal ? Math.round((skillsDone / skillsTotal) * 100) : 0;
   return { total, pending, complete, favorites, positions: positions.size, review, skillsTotal, skillsDone, completion };
 }
@@ -2226,7 +2245,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v25.75 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v25.76 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -3830,8 +3849,12 @@ export function CardVisionApp() {
     void loadHistoryStore()
       .then((next) => {
         if (!mounted) return;
-        setHistory(next);
-        if (next.length) void persistHistoryStore(next);
+        const repaired = next.filter((item) => isRenderableAnalysisResult(item.result));
+        setHistory(repaired);
+        void persistHistoryStore(repaired);
+        if (next.length !== repaired.length) {
+          setStatus(`${next.length - repaired.length} ficha(s) antiga(s) incompatível(is) foram isoladas. O app foi reparado sem apagar as fichas válidas.`);
+        }
       })
       .catch(() => {
         if (mounted) setHistory([]);
@@ -3982,7 +4005,7 @@ export function CardVisionApp() {
   }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
 
   useEffect(() => {
-    if (!result) return;
+    if (!result || !isRenderableAnalysisResult(result)) return;
     const key = resultHistoryKey(result);
     const autoSaveKey = `${key}-${result.trainingPointsUsed}-${result.trainingPointsTotal}`;
     if (lastSavedKey.current === autoSaveKey) return;
@@ -4895,7 +4918,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v24.38</span>
+            <span>Elite Tático v25.76</span>
           </div>
         </div>
         <div className="session-badge"><ShieldCheck size={16} /> Sessão protegida</div>
