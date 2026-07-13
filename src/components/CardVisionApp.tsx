@@ -466,29 +466,51 @@ function resultHistoryKey(result: AnalysisResult) {
   ].join(' '));
 }
 
-function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0): SavedAnalysis | null {
-  if (!entry || typeof entry !== 'object') return null;
-
-  let safeResult = entry.result as AnalysisResult | undefined;
-  if (!isRenderableAnalysisResult(safeResult)) {
-    const legacyRawText = typeof entry.rawText === 'string' ? entry.rawText.trim() : '';
-    const legacyTarget = String((safeResult as Partial<AnalysisResult> | undefined)?.bestPosition?.code
-      ?? (safeResult as Partial<AnalysisResult> | undefined)?.parsed?.mainPosition
-      ?? 'CF') as PositionCode;
-    if (legacyRawText.length > 2) {
-      try {
-        const rebuilt = analyzeCard(legacyRawText, 'COMPETITIVE', legacyTarget, 'migracao-segura-cofre');
-        if (isRenderableAnalysisResult(rebuilt)) safeResult = rebuilt;
-      } catch {
-        safeResult = undefined;
-      }
-    }
+function buildLegacyRecoveryText(result: Partial<AnalysisResult> | null | undefined, rawText = '') {
+  const parsed = result?.parsed as Partial<AnalysisResult['parsed']> | undefined;
+  const lines: string[] = [];
+  if (rawText.trim()) lines.push(rawText.trim());
+  if (parsed?.playerName) lines.push(`NOME DO JOGADOR: ${parsed.playerName}`);
+  if (parsed?.mainPosition) lines.push(`POSIÇÃO PRINCIPAL: ${parsed.mainPosition}`);
+  if (parsed?.playstyle) lines.push(`ESTILO DE JOGO: ${parsed.playstyle}`);
+  if (Number.isFinite(Number(parsed?.overall))) lines.push(`GER: ${Number(parsed?.overall)}`);
+  if (Number.isFinite(Number(parsed?.maxOverall))) lines.push(`GER MÁXIMO: ${Number(parsed?.maxOverall)}`);
+  if (Number.isFinite(Number(parsed?.level))) lines.push(`NÍVEL: ${Number(parsed?.level)}`);
+  const total = Number(result?.trainingPointsTotal ?? parsed?.trainingPointsTotal);
+  if (Number.isFinite(total) && total >= 0) lines.push(`PONTOS TOTAIS: ${Math.round(total)}`);
+  const positions = Array.isArray(parsed?.positions) ? parsed.positions.filter(Boolean) : [];
+  if (positions.length) lines.push(`POSIÇÕES: ${positions.join(', ')}`);
+  const skills = Array.isArray(parsed?.nativeSkills) ? parsed.nativeSkills.filter(Boolean) : [];
+  if (skills.length) lines.push(`HABILIDADES: ${skills.join(', ')}`);
+  const attrs = parsed?.attributes && typeof parsed.attributes === 'object' ? parsed.attributes : {};
+  for (const [key, value] of Object.entries(attrs)) {
+    const num = Number(value);
+    if (Number.isFinite(num)) lines.push(`${ATTRIBUTE_PT[key as AttributeKey] ?? key}: ${num}`);
   }
+  return lines.join('\n');
+}
 
-  if (!isRenderableAnalysisResult(safeResult)) return null;
-  const saveKey = entry.saveKey || resultHistoryKey(safeResult);
+export function migrateAnalysisResult(value: unknown, rawText = '', imageFileName?: string | null): AnalysisResult | null {
+  if (isRenderableAnalysisResult(value)) return value;
+  if (!value || typeof value !== 'object') return null;
+  const legacy = value as Partial<AnalysisResult>;
+  const target = typeof legacy.bestPosition?.code === 'string' ? legacy.bestPosition.code as PositionCode : 'AUTO';
+  const source = buildLegacyRecoveryText(legacy, rawText);
+  if (!source.trim()) return null;
+  try {
+    return analyzeCard(source, 'COMPETITIVE', target, imageFileName ?? null, { formation: 'AUTO', style: 'AUTO' });
+  } catch (error) {
+    console.error('Não foi possível migrar uma ficha antiga do Cofre:', error);
+    return null;
+  }
+}
+
+export function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0): SavedAnalysis | null {
+  const migratedResult = migrateAnalysisResult(entry?.result, entry?.rawText || '', entry?.playerImage ?? null);
+  if (!migratedResult?.parsed?.playerName) return null;
+  const saveKey = entry.saveKey || resultHistoryKey(migratedResult);
   const savedAt = entry.savedAt || new Date().toLocaleString('pt-BR');
-  const recommended = safeResult.recommendedSkills ?? [];
+  const recommended = migratedResult.recommendedSkills ?? [];
   const progress: SavedSkillProgress = { ...(entry.skillProgress ?? {}) };
   for (const skill of recommended) {
     if (progress[skill] === undefined) progress[skill] = false;
@@ -502,7 +524,7 @@ function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0
     rawText: entry.rawText || '',
     playerImage: entry.playerImage ?? null,
     fullPreview: entry.fullPreview ?? null,
-    result: safeResult,
+    result: migratedResult,
     skillProgress: progress,
     notes: entry.notes || '',
     favorite: Boolean(entry.favorite),
@@ -742,15 +764,14 @@ function formatReportMarkdown(result: AnalysisResult, notes = '') {
 }
 
 function buildDashboardStats(history: SavedAnalysis[]) {
-  const safeHistory = history.filter((item) => isRenderableAnalysisResult(item?.result));
-  const total = safeHistory.length;
-  const pending = safeHistory.filter((item) => savedStatusLabel(item) === 'pendente').length;
-  const complete = safeHistory.filter((item) => savedStatusLabel(item) === 'completo').length;
-  const favorites = safeHistory.filter((item) => item.favorite).length;
-  const positions = new Set(safeHistory.map((item) => item.result.bestPosition.code));
-  const review = safeHistory.filter((item) => savedStatusLabel(item) === 'revisar').length;
-  const skillsTotal = safeHistory.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).total, 0);
-  const skillsDone = safeHistory.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).done, 0);
+  const total = history.length;
+  const pending = history.filter((item) => savedStatusLabel(item) === 'pendente').length;
+  const complete = history.filter((item) => savedStatusLabel(item) === 'completo').length;
+  const favorites = history.filter((item) => item.favorite).length;
+  const positions = new Set(history.map((item) => item.result.bestPosition.code));
+  const review = history.filter((item) => savedStatusLabel(item) === 'revisar').length;
+  const skillsTotal = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).total, 0);
+  const skillsDone = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).done, 0);
   const completion = skillsTotal ? Math.round((skillsDone / skillsTotal) * 100) : 0;
   return { total, pending, complete, favorites, positions: positions.size, review, skillsTotal, skillsDone, completion };
 }
@@ -2245,7 +2266,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v25.76 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v25.75 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -3849,12 +3870,8 @@ export function CardVisionApp() {
     void loadHistoryStore()
       .then((next) => {
         if (!mounted) return;
-        const repaired = next.filter((item) => isRenderableAnalysisResult(item.result));
-        setHistory(repaired);
-        void persistHistoryStore(repaired);
-        if (next.length !== repaired.length) {
-          setStatus(`${next.length - repaired.length} ficha(s) antiga(s) incompatível(is) foram isoladas. O app foi reparado sem apagar as fichas válidas.`);
-        }
+        setHistory(next);
+        if (next.length) void persistHistoryStore(next);
       })
       .catch(() => {
         if (mounted) setHistory([]);
@@ -3918,8 +3935,10 @@ export function CardVisionApp() {
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
-          if (snapshot.result && isRenderableAnalysisResult(snapshot.result)) setResult(snapshot.result);
-          if (snapshot.draftResult && isRenderableAnalysisResult(snapshot.draftResult)) setDraftResult(snapshot.draftResult);
+          // Resultados antigos não são reabertos automaticamente no APK.
+          // Os dados de entrada são preservados e a ficha é recalculada no motor atual.
+          setResult(null);
+          setDraftResult(null);
           restoredSessionRef.current = true;
           setStatus('Sessão restaurada. Você pode continuar a ficha de onde parou.');
         }
@@ -3991,8 +4010,8 @@ export function CardVisionApp() {
         formation,
         teamStyle,
         managerId,
-        result,
-        draftResult,
+        result: null,
+        draftResult: null,
         manualFields,
         manualMode,
         activeHistoryId,
@@ -4004,42 +4023,11 @@ export function CardVisionApp() {
     }
   }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
 
-  useEffect(() => {
-    if (!result || !isRenderableAnalysisResult(result)) return;
-    const key = resultHistoryKey(result);
-    const autoSaveKey = `${key}-${result.trainingPointsUsed}-${result.trainingPointsTotal}`;
-    if (lastSavedKey.current === autoSaveKey) return;
-    lastSavedKey.current = autoSaveKey;
+  // v25.77: a ficha não é mais salva automaticamente ao finalizar.
+  // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
+  // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
+  // derrubem o resultado no mesmo instante da geração.
 
-    const now = new Date().toLocaleString('pt-BR');
-    setHistory((current) => {
-      const existing = current.find((entry) => entry.saveKey === key);
-      const base: SavedAnalysis = {
-        id: existing?.id ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        saveKey: key,
-        savedAt: existing?.savedAt ?? now,
-        updatedAt: now,
-        rawText,
-        playerImage: playerCardImage,
-        fullPreview: preview,
-        result,
-        skillProgress: ensureSkillProgress(existing?.skillProgress, result.recommendedSkills),
-        notes: existing?.notes ?? '',
-        favorite: existing?.favorite ?? false,
-        statusTag: existing?.statusTag,
-        personalTags: existing?.personalTags ?? [],
-        tacticalRoleNote: existing?.tacticalRoleNote ?? '',
-        changeLog: existing?.changeLog ?? []
-      };
-      const item = appendSavedEvent(base, existing ? 'atualizado' : 'criado', existing ? 'Ficha atualizada por cima da versão salva.' : 'Ficha salva no Cofre avançado.');
-
-      setActiveHistoryId(item.id);
-      const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
-      void persistHistoryStore(next);
-      void pushCloudHistory(next, true);
-      return next;
-    });
-  }, [result, rawText, playerCardImage, preview]);
 
 
   function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
@@ -4831,17 +4819,25 @@ ${variantText}`);
       const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
-      saveLearnedCard({
-        playerName: nextResult.parsed.playerName,
-        mainPosition: nextResult.parsed.mainPosition,
-        playstyle: nextResult.parsed.playstyle,
-        targetPosition,
-        trainingPointsTotal: String(nextResult.trainingPointsTotal),
-        updatedAt: new Date().toISOString()
-      });
-      setResult(nextResult);
-      setDraftResult(null);
-      setStatus(nextResult.note);
+        saveLearnedCard({
+          playerName: nextResult.parsed.playerName,
+          mainPosition: nextResult.parsed.mainPosition,
+          playstyle: nextResult.parsed.playstyle,
+          targetPosition,
+          trainingPointsTotal: String(nextResult.trainingPointsTotal),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Finalização segura para Android/WebView: libera recortes e imagens temporárias
+        // antes de montar o painel completo. Isso evita estouro de memória após OCR.
+        setPremiumReadings([]);
+        setReadingConfirmations({});
+        setEnhancedPreview(null);
+        setPreview(null);
+        setDraftResult(null);
+        setResult(nextResult);
+        setMainSection('resultado');
+        setStatus(nextResult.note);
       } else {
         setDraftResult(nextResult);
         setResult(null);
@@ -4918,7 +4914,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v25.76</span>
+            <span>Elite Tático v25.77</span>
           </div>
         </div>
         <div className="session-badge"><ShieldCheck size={16} /> Sessão protegida</div>

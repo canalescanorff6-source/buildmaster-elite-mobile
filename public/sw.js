@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v25-76-recuperacao-total-ficha';
+const CACHE_NAME = 'buildmaster-v25-77-correcao-definitiva-runtime';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

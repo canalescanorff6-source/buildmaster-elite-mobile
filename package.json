@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v25-76-reparo-cofre-runtime",
-  "version": "25.76.0",
+  "name": "buildmaster-elite-tatico-v25-77-finalizacao-segura",
+  "version": "25.77.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v25.76 - reparo definitivo de fichas antigas, cofre e runtime mobile.",
+  "description": "BuildMaster Elite Tático v25.77 - finalização segura da ficha no Android.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,12 +12,12 @@
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
     "test:lote1": "tsx tests/lote1-official-regression.ts",
-    "test:all": "npm run test:release && npm run test:runtime-cofre && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
+    "test:all": "npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
     "apk:open": "npx cap open android",
-    "apk:build-web": "BUILDMASTER_ANDROID_STATIC=1 next build",
+    "apk:build-web": "node scripts/build-static.mjs",
     "test:team": "tsx tests/team-engine-regression.ts",
     "test:premium": "tsx tests/premium-plus-regression.ts",
     "test:ultimate": "tsx tests/ultimate-coach-regression.ts",
@@ -43,7 +43,7 @@
     "test:lote15-16": "tsx tests/lote15-16-development-delay-regression.ts",
     "test:runtime-ficha": "tsx tests/runtime-ficha-legacy-regression.ts",
     "test:release": "tsx tests/release-integrity-regression.ts",
-    "test:runtime-cofre": "tsx tests/runtime-cofre-regression.ts"
+    "test:cofre-migration": "tsx tests/cofre-legacy-migration-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
