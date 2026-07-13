@@ -14,6 +14,29 @@ export type Objective =
   | 'AERIAL'
   | 'GOALKEEPER';
 
+const VALID_OBJECTIVES: readonly Objective[] = [
+  'COMPETITIVE', 'FINISHER', 'CREATOR', 'DRIBBLER', 'PRESSING',
+  'POSSESSION', 'QUICK_COUNTER', 'DEFENSIVE', 'AERIAL', 'GOALKEEPER'
+];
+
+export function normalizeObjective(value: unknown): Objective {
+  const raw = String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const legacy: Record<string, Objective> = {
+    BALANCED: 'COMPETITIVE', EQUILIBRADO: 'COMPETITIVE', COMPETITIVO: 'COMPETITIVE',
+    FINISHING: 'FINISHER', FINALIZADOR: 'FINISHER',
+    CREATIVE: 'CREATOR', CRIADOR: 'CREATOR',
+    DRIBBLE: 'DRIBBLER', DRIBLADOR: 'DRIBBLER',
+    PRESSAO: 'PRESSING',
+    POSSE: 'POSSESSION', POSSE_DE_BOLA: 'POSSESSION',
+    CONTRA_ATAQUE_RAPIDO: 'QUICK_COUNTER', QUICKCOUNTER: 'QUICK_COUNTER',
+    DEFESA: 'DEFENSIVE', DEFENSIVO: 'DEFENSIVE',
+    AEREO: 'AERIAL',
+    GOLEIRO: 'GOALKEEPER', GK: 'GOALKEEPER'
+  };
+  if (VALID_OBJECTIVES.includes(raw as Objective)) return raw as Objective;
+  return legacy[raw] ?? 'COMPETITIVE';
+}
+
 export type TacticalFormation = '4-2-2-2' | '4-3-3' | '4-1-2-3' | '4-2-1-3' | '4-2-3-1' | '4-3-1-2' | '4-1-3-2' | '4-4-2' | '4-1-4-1' | '3-2-4-1' | '3-4-3' | '3-5-2' | '5-3-2' | '5-2-3' | 'AUTO';
 export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'AUTO';
 export type TacticalProfile = { formation: TacticalFormation; style: TacticalStyle; managerId?: string | null; managerName?: string | null; managerProficiency?: number | null; managerBooster?: 'duplo' | 'especial' | 'padrao' | null };
@@ -2283,7 +2306,7 @@ function trainingKeyWeight(key: TrainingKey, position: PositionCode, objective: 
     GOALKEEPER: { gk1: 1.8, gk2: 2.2, gk3: 1.8, aerialStrength: .4, lowerBodyStrength: .3 }
   };
 
-  let weight = (baseByPosition[position][key] ?? 0) + (objectiveBoost[objective][key] ?? 0) + (role?.weightAdjust?.[key] ?? 0);
+  let weight = (baseByPosition[position][key] ?? 0) + (objectiveBoost[normalizeObjective(objective)]?.[key] ?? 0) + (role?.weightAdjust?.[key] ?? 0);
   const style = normalize(parsed.playstyle ?? '').toLowerCase();
   if (position === 'CF' && /homem de area|pivo|target man|fox|artilheiro|goal poacher|atacante matador/.test(style)) {
     if (key === 'shooting') weight += 1.5;
@@ -4370,6 +4393,7 @@ function buildAdvancedOptimizer(variants: BuildVariant[], training: TrainingPlan
 }
 
 export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE', targetPosition: PositionCode | 'AUTO' = 'AUTO', imageFileName?: string | null, tacticalProfile: TacticalProfile = { formation: 'AUTO', style: 'AUTO' }): AnalysisResult {
+  objective = normalizeObjective(objective);
   const parsed = parseCard(rawText, imageFileName);
   const attributes = fillAttributes(parsed);
   const allowedPositions = parsed.positions.length ? parsed.positions : [parsed.mainPosition];

@@ -36,7 +36,7 @@ import {
   Users
 } from 'lucide-react';
 import { clearBuildMasterSession } from '@/components/AuthGate';
-import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
+import { analyzeCard, normalizeObjective, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
 import { DEFAULT_OCR_ZONES, createZoneOriginPreview, enhanceImageLocally, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
 import { READING_CONFIRMATION_STAGES, buildStageSummary, ensureZoneCoverage, qualityLabel, qualityScore, readingStatus, suggestedEnhancement, type PremiumEnhancementMode, type PremiumZoneReading } from '@/lib/premiumReading';
 import { buildEliteTeamReport } from '@/lib/teamOptimizer';
@@ -2173,7 +2173,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.80 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v25.74 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -3831,7 +3831,7 @@ export function CardVisionApp() {
           if (typeof snapshot.playerCardImage === 'string') setPlayerCardImage(snapshot.playerCardImage);
           if (typeof snapshot.fileName === 'string') setFileName(snapshot.fileName);
           if (typeof snapshot.ocrDone === 'boolean') setOcrDone(snapshot.ocrDone);
-          if (snapshot.objective) setObjective(snapshot.objective);
+          if (snapshot.objective) setObjective(normalizeObjective(snapshot.objective));
           if (snapshot.targetPosition) setTargetPosition(snapshot.targetPosition);
           if (snapshot.cardPositionOverride) setCardPositionOverride(snapshot.cardPositionOverride);
           if (typeof snapshot.playstyleOverride === 'string') setPlaystyleOverride(snapshot.playstyleOverride);
@@ -4744,10 +4744,13 @@ ${variantText}`);
 
   function runAnalysis(confirmed = false) {
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
-    const lockedText = textWithManualLocks(rawText, confirmed);
-    if (lockedText !== rawText) setRawText(lockedText);
-    const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
-    if (confirmed) {
+    try {
+      const safeObjective = normalizeObjective(objective);
+      if (safeObjective !== objective) setObjective(safeObjective);
+      const lockedText = textWithManualLocks(rawText, confirmed);
+      if (lockedText !== rawText) setRawText(lockedText);
+      const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
+      if (confirmed) {
       saveLearnedCard({
         playerName: nextResult.parsed.playerName,
         mainPosition: nextResult.parsed.mainPosition,
@@ -4759,10 +4762,15 @@ ${variantText}`);
       setResult(nextResult);
       setDraftResult(null);
       setStatus(nextResult.note);
-    } else {
-      setDraftResult(nextResult);
+      } else {
+        setDraftResult(nextResult);
+        setResult(null);
+        setStatus('Prévia Elite atualizada. Revise os dados e finalize o plano premium.');
+      }
+    } catch (error) {
+      console.error('Falha ao gerar ficha', error);
       setResult(null);
-      setStatus('Prévia Elite atualizada. Revise os dados e finalize o plano premium.');
+      setStatus('Não foi possível finalizar a ficha. Os dados foram preservados; revise objetivo, posição e pontos e tente novamente.');
     }
   }
 
