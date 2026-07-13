@@ -1,3 +1,7 @@
+# BuildMaster Elite Tático v25.80
+
+> Interface reorganizada por páginas e navegação premium. Consulte `README_REORGANIZACAO_V25_80.md`.
+
 # BuildMaster Elite Tático v25.19 — Lote 10: Banco e Planos
 
 Esta versão amplia a gestão coletiva sem retirar a decisão do usuário.
