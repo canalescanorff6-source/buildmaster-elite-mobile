@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v25-74-revisao-preventiva';
+const CACHE_NAME = 'buildmaster-v25-75-recuperacao-total-ficha';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

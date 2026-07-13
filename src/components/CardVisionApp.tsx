@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import { Component, useEffect, useMemo, useRef, useState } from 'react';
+import type { ChangeEvent, ErrorInfo, ReactNode } from 'react';
 import {
   Camera,
   CheckCircle2,
@@ -1083,6 +1083,59 @@ function applyLocalCorrectionsToResult(result: AnalysisResult): AnalysisResult {
     avoidSkills,
     note: `${result.note}${noteSuffix}`.trim()
   };
+}
+
+
+
+function isRenderableAnalysisResult(value: unknown): value is AnalysisResult {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<AnalysisResult>;
+  if (!item.parsed || typeof item.parsed !== 'object') return false;
+  if (!item.bestPosition || typeof item.bestPosition !== 'object' || typeof item.bestPosition.code !== 'string') return false;
+  if (!item.training || typeof item.training !== 'object') return false;
+  if (!Array.isArray(item.buildVariants) || !Array.isArray(item.recommendedSkills) || !Array.isArray(item.skillRecommendations)) return false;
+  if (!item.deepAnalysis || !item.advancedTacticalFunction || !item.specialSkillsAnalysis || !item.physicalEngine) return false;
+  if (!item.attributeGoals || !item.advancedOptimizer || !item.correctionLimit || !item.errorTolerance || !item.skillPriority) return false;
+  if (!Array.isArray(item.marginalReturn)) return false;
+  const special = item.specialSkillsAnalysis as AnalysisResult['specialSkillsAnalysis'];
+  const priority = item.skillPriority as AnalysisResult['skillPriority'];
+  const tolerance = item.errorTolerance as AnalysisResult['errorTolerance'];
+  return Array.isArray(special.usefulOwned)
+    && Array.isArray(priority.ordered)
+    && Array.isArray(priority.context)
+    && Boolean(tolerance.conservative && tolerance.probable && tolerance.optimistic);
+}
+
+type ResultSafetyBoundaryProps = { children: ReactNode; onRecover: () => void };
+type ResultSafetyBoundaryState = { failed: boolean };
+
+class ResultSafetyBoundary extends Component<ResultSafetyBoundaryProps, ResultSafetyBoundaryState> {
+  state: ResultSafetyBoundaryState = { failed: false };
+
+  static getDerivedStateFromError(): ResultSafetyBoundaryState {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Falha isolada na tela da ficha:', error, info);
+  }
+
+  private recover = () => {
+    this.setState({ failed: false });
+    this.props.onRecover();
+  };
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <article className="luxury-panel wide-card" role="alert">
+        <p className="kicker">Recuperação segura da ficha</p>
+        <h3>A ficha foi preservada, mas um painel apresentou dados incompatíveis.</h3>
+        <p className="panel-note">O Cofre não foi apagado. Volte para a revisão, confirme os dados e gere novamente com o formato atual.</p>
+        <button type="button" className="elite-button" onClick={this.recover}>Revisar e gerar novamente</button>
+      </article>
+    );
+  }
 }
 
 const tacticalLabels: Record<string, string> = {
@@ -2173,7 +2226,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v25.74 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v25.75 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -3842,14 +3895,17 @@ export function CardVisionApp() {
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
-          if (snapshot.result) setResult(snapshot.result);
-          if (snapshot.draftResult) setDraftResult(snapshot.draftResult);
+          if (snapshot.result && isRenderableAnalysisResult(snapshot.result)) setResult(snapshot.result);
+          if (snapshot.draftResult && isRenderableAnalysisResult(snapshot.draftResult)) setDraftResult(snapshot.draftResult);
           restoredSessionRef.current = true;
           setStatus('Sessão restaurada. Você pode continuar a ficha de onde parou.');
         }
       }
     } catch {
-      // Sessão ativa é proteção contra reload; se corromper, o app segue normal.
+      try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch {}
+      setResult(null);
+      setDraftResult(null);
+      setStatus('Uma sessão incompatível foi descartada com segurança. O Cofre foi preservado.');
     }
 
     return () => {
@@ -4750,6 +4806,7 @@ ${variantText}`);
       const lockedText = textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
       const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
+      if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
       saveLearnedCard({
         playerName: nextResult.parsed.playerName,
@@ -5516,7 +5573,7 @@ ${variantText}`);
         </aside>
 
         <section className="preview-panel">
-          {result ? <ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} /> : draftResult ? (
+          {result ? <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} /></ResultSafetyBoundary> : draftResult ? (
             <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}

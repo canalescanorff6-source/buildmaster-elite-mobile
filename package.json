@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v25-74-revisao-preventiva",
-  "version": "25.74.0",
+  "name": "buildmaster-elite-tatico-v25-75-recuperacao-total-ficha",
+  "version": "25.75.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v25.74 - revisão preventiva completa, recuperação de sessão e identidade de versão alinhada.",
+  "description": "BuildMaster Elite Tático v25.75 - recuperação total da geração de ficha, validação runtime e isolamento de falhas.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
