@@ -281,6 +281,42 @@ export type AdvancedOptimizerAnalysis = {
   budgetRespected: boolean;
 };
 
+
+export type CorrectionLimitAnalysis = {
+  score: number;
+  protectedStrengths: string[];
+  correctionCaps: Array<{ training: TrainingKey; label: string; currentLevel: number; recommendedMax: number; reason: string }>;
+  naturalLimits: string[];
+  summary: string;
+};
+
+export type MarginalReturnItem = {
+  training: TrainingKey;
+  label: string;
+  currentLevel: number;
+  nextPointCost: number;
+  marginalGain: number;
+  returnLabel: 'alto' | 'médio' | 'baixo';
+  recommendation: string;
+};
+
+export type ErrorToleranceAnalysis = {
+  confidence: 'alta' | 'média' | 'baixa';
+  conservative: TrainingPlan;
+  probable: TrainingPlan;
+  optimistic: TrainingPlan;
+  sensitiveGroups: string[];
+  stableGroups: string[];
+  note: string;
+};
+
+export type SkillPriorityAnalysis = {
+  ordered: Array<{ name: string; score: number; tier: 'prioridade máxima' | 'alta' | 'útil'; reasons: string[] }>;
+  ownedCoverage: number;
+  officialOnly: boolean;
+  context: string[];
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -317,6 +353,10 @@ export type AnalysisResult = {
   physicalEngine: PhysicalEngineAnalysis;
   attributeGoals: AttributeGoalsAnalysis;
   advancedOptimizer: AdvancedOptimizerAnalysis;
+  correctionLimit: CorrectionLimitAnalysis;
+  marginalReturn: MarginalReturnItem[];
+  errorTolerance: ErrorToleranceAnalysis;
+  skillPriority: SkillPriorityAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {
@@ -3781,9 +3821,11 @@ function adaptivePlanScore(plan: TrainingPlan, position: PositionCode, objective
   let waste = 0;
   for (const key of Object.keys(plan) as TrainingKey[]) {
     const level = plan[key];
-    value += level * weights[key];
+    const saturationStart = key === 'defending' && (position === 'CB' || position === 'DMF') ? 12 : key === 'shooting' && position === 'CF' ? 12 : 10;
+    const effectiveLevel = Math.min(level, saturationStart) + Math.max(0, level - saturationStart) * 0.35;
+    value += effectiveLevel * weights[key];
     if (weights[key] <= .35 && level > 3) waste += (level - 3) * 1.4;
-    if (level > 10) waste += (level - 10) * .7;
+    if (level > saturationStart) waste += (level - saturationStart) * 1.15;
   }
   const unused = Math.max(0, budget - used);
   const efficiency = used > 0 ? value / used : 0;
@@ -4258,6 +4300,69 @@ function buildAttributeGoals(selected: PositionCode, a: Required<Attributes>): A
  return {position:selected,goals,achievedCount:achieved,priorityCount:priority,readinessScore:readiness,summary:priority?`${priority} meta(s) ainda exigem prioridade para ${POSITION_PT[selected]}.`:`As metas principais de ${POSITION_PT[selected]} estão em faixa funcional.`};
 }
 
+
+function nextTrainingPointCost(level: number) {
+  if (level < 4) return 1;
+  if (level < 8) return 2;
+  if (level < 12) return 3;
+  return 4;
+}
+
+function buildCorrectionLimit(selected: PositionCode, objective: Objective, a: Required<Attributes>, plan: TrainingPlan): CorrectionLimitAnalysis {
+  const weights = adaptiveTrainingWeights(selected, objective, a);
+  const keys = Object.keys(plan) as TrainingKey[];
+  const protectedStrengths: string[] = [];
+  const caps = keys.filter(k => plan[k] > 0).map(k => {
+    const max = weights[k] >= 2 ? 13 : weights[k] >= 1.2 ? 11 : weights[k] >= .7 ? 9 : 6;
+    if (plan[k] > max) return { training:k, label:TRAINING_LABELS[k], currentLevel:plan[k], recommendedMax:max, reason:'O retorno cai depois desta faixa e pode descaracterizar qualidades úteis.' };
+    return null;
+  }).filter(Boolean) as CorrectionLimitAnalysis['correctionCaps'];
+  if (a.lowPass >= 82) protectedStrengths.push('Passe natural protegido contra cortes excessivos.');
+  if (a.speed >= 84) protectedStrengths.push('Velocidade natural preservada; não precisa consumir o orçamento inteiro.');
+  if (a.finishing >= 84) protectedStrengths.push('Finalização forte preservada mesmo em adaptação de posição.');
+  if (a.defensiveAwareness >= 84) protectedStrengths.push('Base defensiva forte preservada.');
+  const naturalLimits: string[] = [];
+  if ((selected === 'CB' || selected === 'CF') && a.heading < 68 && a.jump < 70) naturalLimits.push('Jogo aéreo é limitação natural; o motor evita gastar pontos demais tentando anulá-la.');
+  if (a.speed < 68) naturalLimits.push('Velocidade muito baixa não é tratada como totalmente corrigível apenas com treino.');
+  if (a.physicalContact < 68 && (selected === 'CB' || selected === 'DMF' || selected === 'CF')) naturalLimits.push('Contato físico baixo continua sendo risco estrutural da adaptação.');
+  const score = Math.max(1, 100 - caps.length * 12 - naturalLimits.length * 5);
+  return { score, protectedStrengths, correctionCaps:caps, naturalLimits, summary:caps.length ? 'Há grupos acima da faixa de melhor retorno; a ficha limita correções exageradas.' : 'Nenhuma correção exagerada foi detectada na ficha recomendada.' };
+}
+
+function buildMarginalReturn(selected: PositionCode, objective: Objective, a: Required<Attributes>, plan: TrainingPlan): MarginalReturnItem[] {
+  const weights = adaptiveTrainingWeights(selected, objective, a);
+  return (Object.keys(plan) as TrainingKey[]).filter(k => selected === 'GK' ? ['gk1','gk2','gk3','lowerBodyStrength','aerialStrength'].includes(k) : !k.startsWith('gk')).map(k => {
+    const level=plan[k]; const cost=nextTrainingPointCost(level); const saturation=level >= 12 ? .35 : level >= 10 ? .6 : 1;
+    const gain=Math.round(Math.max(1, weights[k] * saturation * 18 / cost));
+    const returnLabel = gain >= 20 ? 'alto' : gain >= 10 ? 'médio' : 'baixo';
+    return { training:k,label:TRAINING_LABELS[k],currentLevel:level,nextPointCost:cost,marginalGain:gain,returnLabel,recommendation:returnLabel==='alto'?'Próximo investimento recomendado.':returnLabel==='médio'?'Só investir se combinar com sua prioridade.':'Evitar por enquanto; o custo supera o ganho provável.' } as MarginalReturnItem;
+  }).sort((x,y)=>y.marginalGain-x.marginalGain);
+}
+
+function shiftForTolerance(plan: TrainingPlan, selected: PositionCode, direction: 'conservative'|'optimistic'): TrainingPlan {
+  const p={...plan}; const main = selected==='GK'?'gk2':selected==='CB'||selected==='DMF'?'defending':selected==='CF'?'shooting':selected==='AMF'||selected==='CMF'?'passing':'dexterity';
+  const secondary = selected==='GK'?'gk1':selected==='CB'?'lowerBodyStrength':selected==='CF'?'dexterity':'lowerBodyStrength';
+  if(direction==='conservative'){ p[main]=Math.max(0,p[main]-1); p[secondary]+=1; }
+  else { p[main]+=1; p[secondary]=Math.max(0,p[secondary]-1); }
+  return normalizeTrainingPlan(p);
+}
+
+function buildErrorTolerance(parsed: ParsedCard, selected: PositionCode, plan: TrainingPlan, budget:number, priority: TrainingKey[]): ErrorToleranceAnalysis {
+  const confidence = parsed.confidence >= 85 && parsed.evidence.attributeCount >= 18 ? 'alta' : parsed.confidence >= 60 && parsed.evidence.attributeCount >= 8 ? 'média' : 'baixa';
+  const probable=fitTrainingToBudget(plan,priority,budget);
+  const conservative=fitTrainingToBudget(shiftForTolerance(probable,selected,'conservative'),priority,budget);
+  const optimistic=fitTrainingToBudget(shiftForTolerance(probable,selected,'optimistic'),priority,budget);
+  const sensitiveGroups = confidence==='alta'?[]:['Atributos não confirmados podem mudar a ordem entre os dois principais grupos de treino.'];
+  const stableGroups=(Object.keys(probable) as TrainingKey[]).filter(k=>probable[k]>=6).map(k=>TRAINING_LABELS[k]).slice(0,4);
+  return { confidence, conservative, probable, optimistic, sensitiveGroups, stableGroups, note:'Os três cenários respeitam o mesmo orçamento e a posição escolhida. Eles existem para reduzir o risco de um dado lido incorretamente.' };
+}
+
+function buildSkillPriority(parsed: ParsedCard, selected: PositionCode, analysis: SpecialSkillsAnalysis): SkillPriorityAnalysis {
+  const official = new Set(OFFICIAL_ADDITIONAL_SKILL_NAMES);
+  const ordered=analysis.missingRecommended.filter(x=>official.has(x.name as any)).map((x,index)=>({name:x.name,score:Math.max(1,Math.min(100,x.score + (index<2?8:0))),tier:(index===0?'prioridade máxima':index<3?'alta':'útil') as 'prioridade máxima'|'alta'|'útil',reasons:[x.impact,`Compatível com ${POSITION_PT[selected]}.`, parsed.playstyle?`Considera o estilo oficial ${parsed.playstyle}.`:'Sem estilo confirmado: prioridade calculada pela posição e atributos.']})).sort((a,b)=>b.score-a.score).slice(0,8);
+  return { ordered, ownedCoverage:analysis.coverageScore, officialOnly:ordered.every(x=>official.has(x.name as any)), context:[`Posição escolhida: ${POSITION_PT[selected]}.`, parsed.playstyle?`Estilo oficial: ${parsed.playstyle}.`:'Estilo oficial não confirmado.', 'Habilidades já existentes foram removidas da fila.'] };
+}
+
 function buildAdvancedOptimizer(variants: BuildVariant[], training: TrainingPlan, budget:number, selected:PositionCode, objective: Objective, a: Required<Attributes>): AdvancedOptimizerAnalysis {
  const winner=[...variants].sort((a,b)=>(b.qualityScore??0)-(a.qualityScore??0))[0] ?? variants[0];
  const used=trainingPlanTotalCost(winner?.training ?? training); const inactive=(Object.keys(winner?.training??training) as TrainingKey[]).filter(k=>(winner?.training??training)[k]>=5 && adaptiveTrainingWeights(selected,objective,a)[k]<=.35);
@@ -4319,6 +4424,10 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const physicalEngine = buildPhysicalEngine(parsed, selected.code, attributes);
   const attributeGoals = buildAttributeGoals(selected.code, attributes);
   const advancedOptimizer = buildAdvancedOptimizer(buildVariants, training, trainingPointsTotal, selected.code, objective, attributes);
+  const correctionLimit = buildCorrectionLimit(selected.code, objective, attributes, buildVariants[0]?.training ?? training);
+  const marginalReturn = buildMarginalReturn(selected.code, objective, attributes, buildVariants[0]?.training ?? training);
+  const errorTolerance = buildErrorTolerance(parsed, selected.code, buildVariants[0]?.training ?? training, trainingPointsTotal, trainingTemplate(selected.code, objective, attributes, parsed).priority);
+  const skillPriority = buildSkillPriority(parsed, selected.code, specialSkillsAnalysis);
   const profileTips = tacticalProfileTips(tacticalProfile, selected.code);
   const explanation = recommendationExplanation(parsed, selected.code, attributes, pri, avoidPositions, tacticalProfile);
   if (explicitTarget) explanation.unshift(`Posição escolhida por você: ${POSITION_PT[selected.code]}. Toda a ficha foi recalculada para essa função. O app apenas avalia a adaptação; a decisão final é sua.`);
@@ -4354,5 +4463,5 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
     ],
     pointRationale: explanation.slice(0, 5)
   };
-  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer };
+  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority };
 }

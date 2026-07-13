@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v24-64-calibracao-resultados-reais",
-  "version": "24.64.0",
+  "name": "buildmaster-elite-tatico-v25-64-lote-14-seguranca-qualidade",
+  "version": "25.64.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v24.64 - calibração com resultados reais.",
+  "description": "BuildMaster Elite Tático v25.64 - Lote 14: backup, restauração, integridade, migração e painel de saúde.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +12,7 @@
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
     "test:lote1": "tsx tests/lote1-official-regression.ts",
-    "test:all": "npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
+    "test:all": "npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -30,7 +30,16 @@
     "test:lote2": "tsx tests/lote2-advanced-regression.ts",
     "test:lote3": "tsx tests/lote3-squad-regression.ts",
     "test:opponent-print": "tsx tests/opponent-print-regression.ts",
-    "test:calibration": "tsx tests/real-match-calibration-regression.ts"
+    "test:calibration": "tsx tests/real-match-calibration-regression.ts",
+    "test:lote6": "tsx tests/lote6-confidence-comparison-regression.ts",
+    "test:lote7": "tsx tests/lote7-premium-reading-regression.ts",
+    "test:lote8": "tsx tests/lote8-intelligence-regression.ts",
+    "test:lote9": "tsx tests/lote9-team-sectors-regression.ts",
+    "test:lote10": "tsx tests/lote10-bench-plans-regression.ts",
+    "test:lote11": "tsx tests/lote11-opponent-advanced-regression.ts",
+    "test:lote12": "tsx tests/lote12-advanced-calibration-regression.ts",
+    "test:lote13": "tsx tests/lote13-vault-usability-regression.ts",
+    "test:lote14": "tsx tests/lote14-security-quality-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

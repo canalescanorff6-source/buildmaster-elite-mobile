@@ -1,7 +1,7 @@
 import type { AnalysisResult, AttributeKey, TrainingKey } from './analyzer';
 
 export type MatchFeedbackKey = 'workedWell' | 'feltSlow' | 'tiredEarly' | 'missedPasses' | 'defendedWell' | 'lackedPhysical' | 'createdLittle' | 'finishedPoorly' | 'outOfPosition';
-export type MatchFeedback = Partial<Record<MatchFeedbackKey, boolean>> & { minutes?: number; rating?: number; notes?: string; createdAt?: string };
+export type MatchFeedback = Partial<Record<MatchFeedbackKey, boolean>> & { minutes?: number; rating?: number; notes?: string; createdAt?: string; buildSignature?: string; buildLabel?: string; managerId?: string | null; managerName?: string | null; formation?: string; tacticalStyle?: string; predictedScore?: number };
 export type CalibrationSuggestion = { title: string; reason: string; trainingGroups: TrainingKey[]; attributes: AttributeKey[]; priority: 'alta' | 'média' | 'baixa' };
 export type CalibrationReport = {
   sampleCount: number;

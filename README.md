@@ -1,15 +1,37 @@
-# BuildMaster Elite Tático v24.64 — Calibração com Resultados Reais
+# BuildMaster Elite Tático v25.19 — Lote 10: Banco e Planos
 
-Esta versão adiciona feedback pós-partida por jogador e posição escolhida.
+Esta versão amplia a gestão coletiva sem retirar a decisão do usuário.
 
 ## Novidades
-- Registro de até 20 partidas por jogador/posição.
-- Feedbacks: jogou bem, ficou lento, cansou cedo, errou passes, defendeu bem, faltou físico, criou pouco, finalizou mal e ficou fora de posição.
-- Confiança inicial, moderada ou alta conforme o número de jogos.
-- Detecção de padrões repetidos e pesos aprendidos por grupo de treino.
-- Diagnóstico com correções sugeridas e pontos positivos confirmados.
-- Nenhuma ficha é alterada automaticamente.
-- Posição escolhida e nomes oficiais são preservados.
 
-## Testes
-Use `npm ci`, `npm run typecheck`, `npm run test:all` e `npm run build`.
+- v25.07: cobertura real nas 13 posições oficiais;
+- v25.08: melhor reserva para cada titular;
+- v25.09: equilíbrio do banco por defesa, meio, ataque, velocidade, criação, energia e versatilidade;
+- v25.19: Planos A, B e C salvos localmente e comparáveis.
+
+## Regras preservadas
+
+- nenhuma troca é automática;
+- nenhuma formação ou estilo é aplicado sem confirmação;
+- nomes oficiais continuam vindo dos catálogos internos;
+- posição escolhida e fichas já salvas continuam preservadas.
+
+## Validação
+
+Execute:
+
+```bash
+npm ci
+npm run typecheck
+npm run test:all
+npm run build
+```
+
+O APK é gerado pelo workflow `Gerar APK Android Fiel v25.19 Lote 10 Banco e Planos`.
+
+## v25.16 — Lote 11: Adversário avançado
+- Comparação entre sua defesa/meio/ataque e os setores equivalentes do rival.
+- Duelos individuais estimados com jogador real da sua escalação.
+- Mapa de ameaças por zona, com nível e proteção sugerida.
+- Mapa de fraquezas com oportunidades e forma de explorar.
+- Nenhuma alteração automática de escalação, ficha, formação ou plano.

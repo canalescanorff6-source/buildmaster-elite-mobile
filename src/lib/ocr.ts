@@ -82,3 +82,59 @@ export async function inspectPrintQuality(file: File | Blob): Promise<PrintQuali
     issues
   };
 }
+
+
+export async function createZoneOriginPreview(file: File | Blob, zone: OcrZone): Promise<string | null> {
+  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return null;
+  const cropX = Math.max(0, Math.round(bitmap.width * zone.x));
+  const cropY = Math.max(0, Math.round(bitmap.height * zone.y));
+  const cropW = Math.max(1, Math.round(bitmap.width * zone.w));
+  const cropH = Math.max(1, Math.round(bitmap.height * zone.h));
+  const targetWidth = Math.min(900, Math.max(320, cropW));
+  const scale = targetWidth / cropW;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(cropW * scale);
+  canvas.height = Math.round(cropH * scale);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+export async function enhanceImageLocally(file: File | Blob, mode: 'adaptive' | 'contrast' | 'sharp' = 'adaptive'): Promise<Blob | File> {
+  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return file;
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return file;
+  const maxWidth = 1800;
+  const scale = Math.min(2.2, Math.max(1, maxWidth / Math.max(1, bitmap.width)));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return file;
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = image.data;
+  let sum = 0;
+  for (let i = 0; i < data.length; i += 4) sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+  const mean = sum / Math.max(1, data.length / 4);
+  const contrast = mode === 'contrast' ? 1.7 : mode === 'sharp' ? 1.45 : 1.35;
+  const brightnessLift = Math.max(-22, Math.min(28, 132 - mean));
+  for (let i = 0; i < data.length; i += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      const value = (data[i + channel] - 128) * contrast + 128 + brightnessLift;
+      data[i + channel] = Math.max(0, Math.min(255, value));
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+  if (mode === 'sharp' || mode === 'adaptive') {
+    ctx.globalAlpha = mode === 'sharp' ? 0.42 : 0.22;
+    ctx.filter = 'contrast(1.25) saturate(0.88)';
+    ctx.drawImage(canvas, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.filter = 'none';
+  }
+  return await new Promise<Blob | File>((resolve) => canvas.toBlob((blob) => resolve(blob ?? file), 'image/png', 0.96));
+}

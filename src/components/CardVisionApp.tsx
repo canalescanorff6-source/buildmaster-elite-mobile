@@ -37,11 +37,13 @@ import {
 } from 'lucide-react';
 import { clearBuildMasterSession } from '@/components/AuthGate';
 import { analyzeCard, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
-import { DEFAULT_OCR_ZONES, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
+import { DEFAULT_OCR_ZONES, createZoneOriginPreview, enhanceImageLocally, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
+import { READING_CONFIRMATION_STAGES, buildStageSummary, ensureZoneCoverage, qualityLabel, qualityScore, readingStatus, suggestedEnhancement, type PremiumEnhancementMode, type PremiumZoneReading } from '@/lib/premiumReading';
 import { buildEliteTeamReport } from '@/lib/teamOptimizer';
 import { buildSquadChemistryReport } from '@/lib/squadChemistry';
 import { buildAssistedLineupReport } from '@/lib/assistedLineup';
 import { buildOpponentAnalysisReport, OPPONENT_PROFILE_LABELS, OPPONENT_STRENGTH_LABELS, type OpponentProfile, type OpponentStrength } from '@/lib/opponentAnalysis';
+import { buildAdvancedOpponentReport } from '@/lib/opponentAdvanced';
 import { readOpponentPrintText, type OpponentPrintReport } from '@/lib/opponentPrintReader';
 import { buildGamePlanReport, type MatchState, type TeamEnergy } from '@/lib/gamePlan';
 import { buildSquadRotationReport } from '@/lib/squadRotation';
@@ -49,13 +51,17 @@ import { MANAGERS, getManager } from '@/lib/managers';
 import { buildOpponentPlans, buildUltimatePlayerCoach, getOneHundredUpgradeChecklist } from '@/lib/ultimateCoach';
 import type { PrintQualityReport } from '@/lib/validation';
 import { buildCalibrationReport, type MatchFeedback, type MatchFeedbackKey } from '@/lib/realMatchCalibration';
+import { buildAdvancedCalibration, signatureForResult } from '@/lib/advancedCalibration';
+import { buildReliabilityCenter, compareBuildVariants, comparePlayers, detectInconsistencies } from '@/lib/confidenceComparison';
+import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
+import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
 type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type ResultTab = 'leitura' | 'calibracao' | 'ficha' | 'habilidades' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
+type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 
 type ManualFields = {
@@ -91,6 +97,7 @@ type SavedAnalysis = {
   tacticalRoleNote?: string;
   changeLog?: SavedHistoryEvent[];
   lastOpenedAt?: string;
+  folderId?: string;
 };
 
  type ActiveSessionSnapshot = {
@@ -123,6 +130,7 @@ const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
 const LEARNING_KEY = 'buildmaster_local_learning_v24_3';
 const CORRECTION_KEY = 'buildmaster_local_corrections_v24_29';
 const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_29_regras_atualizaveis';
+const VAULT_FOLDERS_KEY = 'buildmaster_vault_folders_v25_33';
 const RULE_PACK_KEY = 'buildmaster_rule_pack_v24_29';
 const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
 const HISTORY_LIMIT = 200;
@@ -1556,6 +1564,19 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
   const [opponentPrintPreview, setOpponentPrintPreview] = useState<string | null>(null);
   const [opponentPrintReport, setOpponentPrintReport] = useState<OpponentPrintReport | null>(null);
   const [opponentPrintLoading, setOpponentPrintLoading] = useState(false);
+  const [savedTeamPlans, setSavedTeamPlans] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try { setSavedTeamPlans(JSON.parse(localStorage.getItem('buildmaster_team_plans_v25_19') || '{}')); } catch { setSavedTeamPlans({}); }
+  }, []);
+
+  function toggleSavedTeamPlan(planId: string) {
+    setSavedTeamPlans((current) => {
+      const next = { ...current, [planId]: !current[planId] };
+      try { localStorage.setItem('buildmaster_team_plans_v25_19', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
 
   async function analyzeOpponentPrint(file: File) {
     setOpponentPrintLoading(true);
@@ -1585,6 +1606,7 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
   const chemistryReport = useMemo(() => buildSquadChemistryReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
   const assistedLineup = useMemo(() => buildAssistedLineupReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
   const opponentReport = useMemo(() => buildOpponentAnalysisReport(history.map((item) => item.result), formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength }), [history, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
+  const advancedOpponentReport = useMemo(() => buildAdvancedOpponentReport(history.map((item) => item.result), formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength }), [history, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
   const gamePlan = useMemo(() => opponentReport ? buildGamePlanReport({ matchState, energy: teamEnergy, opponentProfile, ownFormation: formation, ownStyle: teamStyle }, opponentReport) : null, [opponentReport, matchState, teamEnergy, opponentProfile, formation, teamStyle]);
   const rotationReport = useMemo(() => buildSquadRotationReport(history.map((item) => item.result), formation, teamStyle, matchState, teamEnergy), [history, formation, teamStyle, matchState, teamEnergy]);
 
@@ -1693,6 +1715,17 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
           <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Principais ameaças</strong>{opponentReport.mainThreats.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Onde explorar</strong>{opponentReport.exploitableWeaknesses.map((item) => <span key={item}>{item}</span>)}</div></div>
           <div className="opponent-adjustment-grid">{opponentReport.adjustments.map((item) => <article key={`${item.area}-${item.title}`} className={`opponent-adjustment-card priority-${item.priority}`}><div><span>{item.area}</span><b>{item.priority}</b></div><strong>{item.title}</strong><p>{item.action}</p><small>{item.reason}</small></article>)}</div>
           <div className="squad-suggestion-box"><strong>Resposta assistida sugerida</strong><span>{opponentReport.recommendedFormation} • {tacticalStyleName[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>
+          {advancedOpponentReport && (
+            <section className="advanced-opponent-suite">
+              <div className="chemistry-head"><div><p className="kicker"><Target size={14}/> Adversário avançado</p><h3>Setores, duelos e mapas do confronto</h3><span>{advancedOpponentReport.confidenceNote}</span></div><strong>{advancedOpponentReport.overallSectorEdge}/100</strong></div>
+              <div className="opponent-score-strip"><span>Vantagem por setores <b>{advancedOpponentReport.overallSectorEdge}/100</b></span><span>Vantagem nos duelos <b>{advancedOpponentReport.duelEdge}/100</b></span><span>Alerta principal <b>{advancedOpponentReport.mainWarning}</b></span></div>
+              <div className="advanced-opponent-block"><strong>Comparação de setores</strong><div className="sector-comparison-grid">{advancedOpponentReport.sectorComparisons.map((item)=><article key={item.key} className={`sector-comparison-card ${item.status}`}><div><span>{item.label}</span><b>{item.advantage}/100</b></div><small>Seu setor {item.ownScore} × Rival {item.opponentScore}</small><p>{item.verdict}</p></article>)}</div></div>
+              <div className="advanced-opponent-block"><strong>Duelos individuais estimados</strong><div className="duel-grid">{advancedOpponentReport.duels.map((duel,index)=><article key={`${duel.ownPlayer}-${duel.opponentRole}-${index}`} className={`duel-card ${duel.status}`}><div><span>{duel.zone}</span><b>{duel.duelScore}/100</b></div><strong>{duel.ownPlayer}</strong><small>{duel.ownRole} × {duel.opponentRole}</small><p>{duel.reason}</p><em>{duel.adjustment}</em></article>)}</div></div>
+              <div className="advanced-map-columns"><div className="advanced-opponent-block threat-map"><strong>Mapa de ameaças</strong>{advancedOpponentReport.threats.map((item)=><article key={`${item.zone}-${item.title}`} className={`map-item ${item.severity}`}><div><span>{item.zone}</span><b>{item.level}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.protection}</small></article>)}</div><div className="advanced-opponent-block weakness-map"><strong>Mapa de fraquezas</strong>{advancedOpponentReport.weaknesses.map((item)=><article key={`${item.zone}-${item.title}`} className="map-item opportunity"><div><span>{item.zone}</span><b>{item.opportunity}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.howToExplore}</small></article>)}</div></div>
+              <div className="squad-suggestion-box"><strong>Melhor oportunidade encontrada</strong><span>{advancedOpponentReport.bestOpportunity}</span><span>Use como referência e confirme no comportamento real do adversário.</span></div>
+              <div className="opponent-locks">{advancedOpponentReport.locks.map((item)=><span key={item}><ShieldCheck size={14}/> {item}</span>)}</div>
+            </section>
+          )}
           <div className="opponent-locks">{opponentReport.locks.map((item) => <span key={item}><ShieldCheck size={14} /> {item}</span>)}</div>
         </section>
       )}
@@ -1721,6 +1754,15 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
           </div>
           <div className="rotation-card"><strong>v24.52 • Substituições com jogadores reais</strong><div className="real-sub-grid">{rotationReport.substitutions.length ? rotationReport.substitutions.map((sub)=><div key={`${sub.outPlayer}-${sub.inPlayer}`}><span>{sub.minute} • prioridade {sub.priority} • {sub.score}/100</span><b>{sub.outPlayer} → {sub.inPlayer}</b><small>{sub.trigger}. {sub.reason}</small></div>) : <p>Adicione reservas ao Cofre para receber trocas nominais.</p>}</div></div>
           <div className="rotation-card"><strong>v24.54 • Instruções individuais</strong><div className="real-sub-grid">{rotationReport.instructions.map((item)=><div key={`${item.player}-${item.instruction}`}><span>{item.instruction} • confiança {item.confidence}/100</span><b>{item.player}</b><small>{item.reason}{item.warning ? ` ${item.warning}` : ''}</small></div>)}</div></div>
+
+          <div className="rotation-card"><strong>v25.07 • Cobertura real por posição</strong><div className="real-sub-grid">{rotationReport.positionCoverage.map((item)=><div key={item.position}><span>{item.status} • {item.score}/100</span><b>{item.label} • {item.total} opção(ões)</b><small>{item.warning}{item.players.length ? ` ${item.players.join(', ')}.` : ''}</small></div>)}</div></div>
+
+          <div className="rotation-card"><strong>v25.08 • Melhor reserva por titular</strong><div className="real-sub-grid">{rotationReport.reserveByStarter.map((item)=><div key={`${item.starter}-${item.reserve ?? 'sem-reserva'}`}><span>{item.level} • encaixe {item.fit}/100</span><b>{item.starter} → {item.reserve ?? 'Sem reserva segura'}</b><small>{item.starterPosition}{item.reservePosition ? ` • reserva ${item.reservePosition}` : ''}. {item.reason}</small></div>)}</div></div>
+
+          <div className="rotation-card"><strong>v25.09 • Banco equilibrado</strong><div className="chemistry-head"><div><span>{rotationReport.benchBalance.label}</span></div><strong>{rotationReport.benchBalance.score}/100</strong></div><div className="real-sub-grid">{rotationReport.benchBalance.dimensions.map((item)=><div key={item.key}><span>{item.status}</span><b>{item.label} • {item.score}/100</b><small>{item.note}</small></div>)}</div>{rotationReport.benchBalance.alerts.map((item)=><p key={item}>{item}</p>)}</div>
+
+          <div className="rotation-card"><strong>v25.19 • Planos A, B e C</strong><div className="game-phase-grid">{rotationReport.plans.map((plan)=><article key={plan.id} className="game-phase-card"><div><span>{plan.id} • {plan.formation} • {tacticalStyleName[plan.style]}</span><strong>{plan.title}</strong></div><p>{plan.purpose}</p><small>Nota do plano: {plan.score}/100</small><ul>{plan.changes.map((item)=><li key={item}>{item}</li>)}</ul><b>Orientações</b><ul>{plan.instructions.map((item)=><li key={item}>{item}</li>)}</ul><small>{plan.decisionNote}</small><button type="button" onClick={()=>toggleSavedTeamPlan(plan.id)}>{savedTeamPlans[plan.id] ? <CheckCircle2 size={15}/> : <Save size={15}/>} {savedTeamPlans[plan.id] ? 'Plano salvo' : 'Salvar plano'}</button></article>)}</div></div>
+
           <div className="opponent-locks">{rotationReport.locks.map((item)=><span key={item}><ShieldCheck size={14}/> {item}</span>)}</div>
         </section>
       )}
@@ -1792,6 +1834,37 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
                 <em>{item.count} no time • ideal {item.ideal}</em>
               </div>
             ))}
+          </div>
+
+          <div className="team-sector-suite">
+            <article className="team-sector-block">
+              <p className="kicker">v25.00 • Dependência entre jogadores</p>
+              <div className="chemistry-pair-grid">
+                {chemistryReport.dependencies.map((item) => (
+                  <div key={`${item.source}-${item.target}-${item.relation}`} className="chemistry-pair-card synergy">
+                    <span>{item.relation}</span><strong>{item.source} ↔ {item.target}</strong><em>{item.strength}/100</em><small>{item.risk}</small>
+                  </div>
+                ))}
+              </div>
+            </article>
+            <article className="team-sector-block">
+              <p className="kicker">v25.01 • Análise por corredor</p>
+              <div className="sector-intelligence-grid">
+                {chemistryReport.corridors.map((item) => <div key={item.key} className="sector-intelligence-card"><strong>{item.label}</strong><span>Ataque {item.attack} • Defesa {item.defense}</span><span>Criação {item.creation} • Cobertura {item.coverage}</span><em>Risco {item.risk}/100</em><small>{item.verdict}</small></div>)}
+              </div>
+            </article>
+            <article className="team-sector-block">
+              <p className="kicker">v25.02 • Análise por linhas</p>
+              <div className="sector-intelligence-grid">
+                {chemistryReport.lines.map((item) => <div key={item.key} className="sector-intelligence-card"><strong>{item.label}</strong><span>Com bola {item.withBall} • Sem bola {item.withoutBall}</span><span>Conexão {item.connection} • Risco {item.risk}</span><small>{item.verdict}</small></div>)}
+              </div>
+            </article>
+            <article className="team-sector-block possession-balance-card">
+              <p className="kicker">v25.04 • Equilíbrio com e sem bola</p>
+              <div className="opponent-score-strip"><span>Com bola <b>{chemistryReport.possessionBalance.withBall}/100</b></span><span>Sem bola <b>{chemistryReport.possessionBalance.withoutBall}/100</b></span><span>Transição <b>{chemistryReport.possessionBalance.transition}/100</b></span></div>
+              <strong>{chemistryReport.possessionBalance.verdict}</strong>
+              {chemistryReport.possessionBalance.alerts.map((item) => <span key={item}>{item}</span>)}
+            </article>
           </div>
 
           <div className="squad-suggestion-box">
@@ -2005,31 +2078,31 @@ async function cropImage(file: File, region: { x: number; y: number; w: number; 
   });
 }
 
-async function createOcrVariants(file: File, readingMode: ReadingMode, zones: OcrZone[] = DEFAULT_OCR_ZONES): Promise<Array<{ label: string; image: File | Blob }>> {
+async function createOcrVariants(file: File, readingMode: ReadingMode, zones: OcrZone[] = DEFAULT_OCR_ZONES): Promise<Array<{ key: OcrZone['key'] | 'full'; label: string; image: File | Blob; enhancement: PremiumEnhancementMode }>> {
   const fullContrast = await preprocessImage(file, 'contrast');
-  const variants: Array<{ label: string; image: File | Blob }> = [];
+  const variants: Array<{ key: OcrZone['key'] | 'full'; label: string; image: File | Blob; enhancement: PremiumEnhancementMode }> = [];
   const enabledZones = zones.filter((zone) => zone.enabled);
 
   for (const zone of enabledZones) {
     const widthTarget = zone.key === 'attributes' || zone.key === 'positionGrid' || zone.key === 'autoTraining' ? 2350 : 2200;
     const image = await cropImage(file, { x: zone.x, y: zone.y, w: zone.w, h: zone.h }, widthTarget);
-    variants.push({ label: zone.label.toUpperCase(), image });
+    variants.push({ key: zone.key, label: zone.label.toUpperCase(), image, enhancement: 'contrast' });
   }
 
   if (readingMode === 'fast') {
     return [
       ...variants.slice(0, 5),
-      { label: 'imagem original', image: file },
-      { label: 'imagem otimizada', image: fullContrast }
+      { key: 'full', label: 'imagem original', image: file, enhancement: 'original' },
+      { key: 'full', label: 'imagem otimizada', image: fullContrast, enhancement: 'contrast' }
     ];
   }
 
   const sharp = await preprocessImage(file, 'sharp');
   return [
     ...variants,
-    { label: 'imagem original', image: file },
-    { label: 'imagem otimizada', image: fullContrast },
-    { label: 'imagem reforçada', image: sharp }
+    { key: 'full', label: 'imagem original', image: file, enhancement: 'original' },
+    { key: 'full', label: 'imagem otimizada', image: fullContrast, enhancement: 'contrast' },
+    { key: 'full', label: 'imagem reforçada', image: sharp, enhancement: 'sharp' }
   ];
 }
 
@@ -2099,7 +2172,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v24.38 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v24.80 — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -2169,8 +2242,9 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
     } catch { setFeedbacks([]); }
   }, [storageId]);
   const report = useMemo(() => buildCalibrationReport(result, feedbacks), [result, feedbacks]);
+  const advanced = useMemo(() => buildAdvancedCalibration(result, feedbacks), [result, feedbacks]);
   function saveFeedback() {
-    const item: MatchFeedback = { ...draft, createdAt: new Date().toISOString() };
+    const item: MatchFeedback = { ...draft, createdAt: new Date().toISOString(), buildSignature: signatureForResult(result), buildLabel: result.buildName, managerId: result.tacticalProfile.managerId, managerName: result.tacticalProfile.managerName, formation: result.tacticalProfile.formation, tacticalStyle: result.tacticalProfile.style, predictedScore: Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0) };
     const next = [item, ...feedbacks].slice(0, 20);
     setFeedbacks(next);
     try {
@@ -2193,6 +2267,17 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
       <button type="button" className="elite-button" onClick={saveFeedback}><Save size={17}/> Salvar resultado da partida</button>
     </article>
     <article className="luxury-panel wide-card">
+      <div className="section-title-row"><div><p className="kicker">v25.26–v25.32 • Calibração avançada</p><h3>Ficha, técnico, formação e realidade</h3></div><span>Confiança {advanced.prediction.confidence}</span></div>
+      <div className="data-grid">
+        {[advanced.byBuild, advanced.byManager, advanced.byFormation].map((item) => <div key={item.label} className="skill-check-card"><strong>{item.label}</strong><span>{item.sampleCount} jogo(s) • nota média {item.averageRating || '--'}/10</span><small>Positivos {item.positiveRate}% • problemas {item.issueRate}% • confiança {item.confidence}</small></div>)}
+      </div>
+      <div className="skill-check-card"><strong>Previsão versus realidade</strong><span>Previsto {advanced.prediction.predicted}/100 • Real {advanced.prediction.actual ?? '--'}/100</span><small>{advanced.prediction.verdict}</small></div>
+      <div className="section-title-row"><div><p className="kicker">Preferência pessoal</p><h3>O que seu histórico valoriza</h3></div><span>{advanced.preference.sampleCount} jogo(s)</span></div>
+      {advanced.preference.priorities.map((item) => <div key={item.key} className="skill-check-card"><strong>{item.label} • evidência {item.score}</strong><span>{item.reason}</span></div>)}
+      {!advanced.preference.priorities.length && <p className="panel-note">{advanced.preference.note}</p>}
+      {advanced.preference.avoidances.map((item) => <small key={item}>• {item}</small>)}
+    </article>
+    <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker">Aprendizado controlado</p><h3>Diagnóstico da ficha</h3></div><span>Confiança {report.confidence}</span></div>
       <p className="panel-note"><b>{report.verdict}</b></p>
       {report.positives.map((item) => <p key={item} className="panel-note">✓ {item}</p>)}
@@ -2206,6 +2291,9 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 
 function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void }) {
   const [tab, setTab] = useState<ResultTab>('ficha');
+  const reliabilityCenter = useMemo(() => buildReliabilityCenter(result), [result]);
+  const inconsistencyReport = useMemo(() => detectInconsistencies(result), [result]);
+  const buildComparison = useMemo(() => compareBuildVariants(result), [result]);
   const card = result.parsed;
   const GER = card.maxOverall ?? card.overall ?? '--';
   const trainingItems = Object.entries(result.training).filter(([, value]) => Number(value) > 0);
@@ -2313,6 +2401,8 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         <nav className="elite-tabs result-fixed-tabs" aria-label="Subabas do resultado">
           {[
             ['leitura', 'Leitura'],
+            ['confianca', 'Confiança'],
+            ['comparar', 'Comparar fichas'],
             ['calibracao', 'Calibração'],
             ['ficha', 'Ficha'],
             ['habilidades', 'Habilidades'],
@@ -2366,6 +2456,48 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
           <article className="luxury-panel wide-card">
             <p className="kicker">Por que os pontos foram usados assim</p>
             <ul className="clean-list">{result.deepAnalysis.pointRationale.map((item) => <li key={item}>{item}</li>)}</ul>
+          </article>
+        </div>
+      )}
+
+      {tab === 'confianca' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row"><div><p className="kicker">v24.65 • Central de confiabilidade</p><h3>O que sustenta esta ficha</h3></div><span>{reliabilityCenter.score}/100 • {reliabilityCenter.level}</span></div>
+            <div className="data-grid">
+              <div><span>Confirmados</span><strong>{reliabilityCenter.confirmed}</strong></div>
+              <div><span>Inferidos</span><strong>{reliabilityCenter.inferred}</strong></div>
+              <div><span>Pendentes</span><strong>{reliabilityCenter.unresolved}</strong></div>
+              <div><span>Integridade</span><strong>{inconsistencyReport.score}/100</strong></div>
+            </div>
+          </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Origem e impacto dos dados</p>
+            <div className="position-list">{reliabilityCenter.items.map((item) => <div key={`${item.field}-${item.value}`}><strong>{item.field}: {item.value}</strong><span>{item.source} • {item.confidence}% • impacto {item.impact}</span><em>{item.note}</em></div>)}</div>
+          </article>
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row"><div><p className="kicker">v24.68 • Detector de incoerências</p><h3>{inconsistencyReport.status === 'aprovado' ? 'Nenhum erro crítico encontrado' : 'Itens que precisam de revisão'}</h3></div><span>{inconsistencyReport.canGenerate ? 'Pode gerar' : 'Bloqueado'}</span></div>
+            {inconsistencyReport.issues.length ? <div className="position-list">{inconsistencyReport.issues.map((issue) => <div key={issue.code}><strong>{issue.severity.toUpperCase()} • {issue.title}</strong><span>{issue.detail}</span><em>{issue.correction}</em></div>)}</div> : <p>A posição escolhida, o orçamento, os atributos e os nomes oficiais passaram nas verificações.</p>}
+          </article>
+          {reliabilityCenter.alerts.length > 0 && <article className="luxury-panel wide-card"><p className="kicker">Atenção antes de finalizar</p><ul className="clean-list">{reliabilityCenter.alerts.map((x) => <li key={x}>{x}</li>)}</ul></article>}
+        </div>
+      )}
+
+      {tab === 'comparar' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row"><div><p className="kicker">v24.66 • Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
+            <p>{buildComparison.reason}</p>
+          </article>
+          <article className="luxury-panel wide-card comparison-table-card">
+            <div className="comparison-table">
+              <div className="comparison-row comparison-head"><strong>Critério</strong>{buildComparison.variants.map((v) => <b key={v.title}>{v.title}</b>)}</div>
+              {buildComparison.rows.map((row) => <div className="comparison-row" key={row.key}><strong>{row.label}</strong>{row.values.map((cell) => <span className={cell.best ? 'comparison-best' : ''} key={`${row.key}-${cell.title}`}>{cell.value}</span>)}</div>)}
+            </div>
+          </article>
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Riscos de cada opção</p>
+            <div className="position-list">{buildComparison.variants.map((v) => <div key={v.title}><strong>{v.title} • {v.points} pts</strong><span>Qualidade {v.score} • eficiência {v.efficiency} • equilíbrio {v.balance}</span><em>{v.risks.length ? v.risks.join(' • ') : 'Sem risco crítico identificado.'}</em></div>)}</div>
           </article>
         </div>
       )}
@@ -2641,6 +2773,40 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
+              <div><p className="kicker">v24.72 • Limite de correção</p><h3>Corrigir sem descaracterizar o jogador</h3></div>
+              <span>{result.correctionLimit.score}/100</span>
+            </div>
+            <p className="panel-note">{result.correctionLimit.summary}</p>
+            <div className="chip-cloud">{result.correctionLimit.protectedStrengths.map((item) => <span key={item}>✓ {item}</span>)}</div>
+            {result.correctionLimit.correctionCaps.map((item) => <p key={item.training} className="panel-note">⚠ {item.label}: nível {item.currentLevel}; faixa recomendada até {item.recommendedMax}. {item.reason}</p>)}
+            {result.correctionLimit.naturalLimits.map((item) => <p key={item} className="panel-note">◇ {item}</p>)}
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.73 • Retorno marginal</p><h3>Ganho do próximo ponto de treino</h3></div>
+              <span>{result.marginalReturn[0]?.marginalGain ?? 0} melhor ganho</span>
+            </div>
+            <div className="comparison-table">
+              <div><strong>Grupo</strong><strong>Nível</strong><strong>Custo</strong><strong>Retorno</strong></div>
+              {result.marginalReturn.map((item) => <div key={item.training}><span>{item.label}</span><span>{item.currentLevel}</span><span>{item.nextPointCost}</span><strong>{item.returnLabel} • {item.marginalGain}</strong><small>{item.recommendation}</small></div>)}
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.74 • Tolerância a erro</p><h3>Três cenários para dados incertos</h3></div>
+              <span>Confiança {result.errorTolerance.confidence}</span>
+            </div>
+            <div className="build-variant-grid">
+              {[['Conservador', result.errorTolerance.conservative], ['Provável', result.errorTolerance.probable], ['Otimista', result.errorTolerance.optimistic]].map(([title, plan]) => <div key={String(title)} className="build-variant-card"><strong>{String(title)}</strong><div className="variant-metrics">{Object.entries(plan as Record<string, number>).filter(([,value])=>value>0).map(([key,value])=><span key={key}>{trainingLabels[key] ?? key} <b>{value}</b></span>)}</div></div>)}
+            </div>
+            <p className="panel-note">{result.errorTolerance.note}</p>
+            {result.errorTolerance.sensitiveGroups.map((item)=><p key={item} className="panel-note">⚠ {item}</p>)}
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
               <div><p className="kicker">v24.46 • Função tática avançada</p><h3>Posição escolhida + estilo oficial preservado</h3></div>
               <span>{result.advancedTacticalFunction.compatibilityScore}/100</span>
             </div>
@@ -2674,6 +2840,17 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
               {!result.specialSkillsAnalysis.usefulOwned.length && <p className="panel-note">Nenhuma habilidade oficial existente foi confirmada na carta.</p>}
             </div>
             <p className="panel-note">Catálogo oficial validado: {result.specialSkillsAnalysis.officialCatalogOnly ? 'sim' : 'não'}. O app não cria nomes de habilidades.</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v24.89 • Prioridade de habilidades</p><h3>Fila oficial por impacto real</h3></div>
+              <span>{result.skillPriority.officialOnly ? 'Catálogo oficial' : 'Revisar catálogo'}</span>
+            </div>
+            <div className="skill-grid">
+              {result.skillPriority.ordered.map((item, index)=><div key={item.name} className="skill-check-card"><strong>{index+1}. {item.name} • {item.score}/100</strong><span>{item.tier}</span><small>{item.reasons.join(' • ')}</small></div>)}
+            </div>
+            <p className="panel-note">Cobertura atual {result.skillPriority.ownedCoverage}/100. {result.skillPriority.context.join(' ')}</p>
           </article>
 
           <article className="luxury-panel wide-card">
@@ -3216,6 +3393,9 @@ function ReviewPanel({
   setPlaystyleOverride,
   targetPosition,
   setTargetPosition,
+  premiumReadings,
+  readingConfirmations,
+  setReadingConfirmations,
   onRefresh,
   onConfirm
 }: {
@@ -3229,6 +3409,9 @@ function ReviewPanel({
   setPlaystyleOverride: (value: string) => void;
   targetPosition: PositionCode | 'AUTO';
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
+  premiumReadings: PremiumZoneReading[];
+  readingConfirmations: Record<string, boolean>;
+  setReadingConfirmations: (value: Record<string, boolean> | ((current: Record<string, boolean>) => Record<string, boolean>)) => void;
   onRefresh: () => void;
   onConfirm: () => void;
 }) {
@@ -3257,6 +3440,7 @@ function ReviewPanel({
   const usedPoints = draft.trainingPointsUsed;
   const remainingPoints = Math.max(0, typedPoints - usedPoints);
   const budgetPercent = Math.min(100, Math.round((usedPoints / Math.max(1, typedPoints || draft.trainingPointsTotal)) * 100));
+  const allRequiredConfirmed = READING_CONFIRMATION_STAGES.filter((stage) => stage.required).every((stage) => readingConfirmations[stage.id]);
 
   return (
     <section className="review-panel result-panel">
@@ -3297,6 +3481,39 @@ function ReviewPanel({
         </div>
         <p className="panel-note">A ficha final deve usar posição, estilo, nível/pontos e atributos corretos. As habilidades que o jogador já possui são opcionais: elas só ajudam o app a não recomendar habilidade repetida.</p>
       </article>
+
+      {premiumReadings.length > 0 && (
+        <article className="luxury-panel wide-card premium-confirmation-card">
+          <p className="kicker"><ScanText size={16} /> Confirmação em etapas</p>
+          <p className="panel-note no-top">Revise a origem visual e confirme cada etapa obrigatória. Habilidades continuam opcionais quando não estiverem visíveis.</p>
+          <div className="confirmation-stage-grid">
+            {READING_CONFIRMATION_STAGES.map((stage) => {
+              const summary = buildStageSummary(premiumReadings, stage);
+              const checked = Boolean(readingConfirmations[stage.id]);
+              return (
+                <label key={stage.id} className={checked ? 'confirmation-stage confirmed' : 'confirmation-stage'}>
+                  <input type="checkbox" checked={checked} onChange={() => setReadingConfirmations((current) => ({ ...current, [stage.id]: !current[stage.id] }))} />
+                  <span>
+                    <strong>{stage.title}{stage.required ? ' • obrigatória' : ' • opcional'}</strong>
+                    <em>{stage.description}</em>
+                    <small>{summary.found}/{summary.total} áreas lidas • confiança média {summary.average}%{summary.review ? ` • ${summary.review} para revisar` : ''}</small>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="zone-origin-grid">
+            {premiumReadings.map((reading) => (
+              <details key={reading.key} className={`zone-origin-card status-${reading.status}`}>
+                <summary><strong>{reading.label}</strong><span>{reading.confidence}% • {reading.status === 'confirmed' ? 'boa' : reading.status === 'review' ? 'revisar' : 'não lida'}</span></summary>
+                {reading.originPreview && <img src={reading.originPreview} alt={`Origem visual: ${reading.label}`} />}
+                <pre>{reading.text || 'Nenhum texto confirmado nesta área.'}</pre>
+                <em>Origem: recorte da área • tratamento {reading.enhancement}</em>
+              </details>
+            ))}
+          </div>
+        </article>
+      )}
 
       <div className="review-grid">
         <article className="luxury-panel wide-card">
@@ -3400,7 +3617,7 @@ function ReviewPanel({
 
       <div className="review-actions">
         <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular com meus pontos</button>
-        <button type="button" className="elite-button" onClick={onConfirm}><CheckCircle2 size={18} /> Finalizar plano Elite</button>
+        <button type="button" className="elite-button" onClick={onConfirm} disabled={premiumReadings.length > 0 && !allRequiredConfirmed}><CheckCircle2 size={18} /> {premiumReadings.length > 0 && !allRequiredConfirmed ? 'Confirme as etapas obrigatórias' : 'Finalizar plano Elite'}</button>
       </div>
     </section>
   );
@@ -3422,6 +3639,10 @@ export function CardVisionApp() {
   const [ocrZones, setOcrZones] = useState<OcrZone[]>(DEFAULT_OCR_ZONES);
   const [calibratorOpen, setCalibratorOpen] = useState(false);
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
+  const [premiumReadings, setPremiumReadings] = useState<PremiumZoneReading[]>([]);
+  const [readingConfirmations, setReadingConfirmations] = useState<Record<string, boolean>>({});
+  const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
+  const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
   const [managerId, setManagerId] = useState<string>('AUTO');
@@ -3437,6 +3658,11 @@ export function CardVisionApp() {
   const [historySort, setHistorySort] = useState<HistorySort>('UPDATED');
   const [onlyPendingSkills, setOnlyPendingSkills] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [comparePlayerIds, setComparePlayerIds] = useState<string[]>([]);
+  const [comparePosition, setComparePosition] = useState<PositionCode>('CF');
+  const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('emerald');
   const [advancedMode, setAdvancedMode] = useState(true);
@@ -3451,6 +3677,10 @@ export function CardVisionApp() {
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const lastSavedKey = useRef<string | null>(null);
   const backupInputRef = useRef<HTMLInputElement | null>(null);
+  const fullBackupInputRef = useRef<HTMLInputElement | null>(null);
+  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false });
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+  const [migrationLog, setMigrationLog] = useState<string[]>([]);
   const restoredSessionRef = useRef(false);
 
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
@@ -3465,8 +3695,9 @@ export function CardVisionApp() {
   const filteredHistory = useMemo(() => {
     const query = memoryKey(historySearch);
     let items = history.filter((item) => {
-      const matchesQuery = !query || memoryKey(`${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''} ${item.notes ?? ''}`).includes(query);
-      if (!matchesQuery) return false;
+      const searchable = `${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''} ${(item.result.parsed.nativeSkills ?? []).join(' ')} ${(item.result.recommendedSkills ?? []).join(' ')} ${(item.personalTags ?? []).join(' ')} ${item.notes ?? ''} ${item.tacticalRoleNote ?? ''}`;
+      const matchesQuery = !query || memoryKey(searchable).includes(query);
+      if (!matchesQuery || !entryMatchesAdvancedFilters(item, vaultFilters)) return false;
       if (onlyPendingSkills && savedStatusLabel(item) !== 'pendente') return false;
       if (historyFilter === 'FAVORITES') return Boolean(item.favorite);
       if (historyFilter === 'PENDING') return savedStatusLabel(item) === 'pendente';
@@ -3488,8 +3719,23 @@ export function CardVisionApp() {
     });
 
     return items;
-  }, [history, historySearch, historyFilter, historySort, onlyPendingSkills]);
+  }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
+  const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
+  const localIntegrity = useMemo(() => inspectDataIntegrity({
+    history,
+    settings: { appTheme, accentTheme, advancedMode },
+    calibration: { ocrZones },
+    folders: vaultFolders,
+    plans: {},
+  }), [history, appTheme, accentTheme, advancedMode, ocrZones, vaultFolders]);
+  const healthSummary = useMemo(() => {
+    const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
+    return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
+  }, [localIntegrity, lastBackupAt, smartHome.needsReview, smartHome.lowConfidence, history.length]);
+  const availablePlaystyles = useMemo(() => Array.from(new Set(history.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
+  const availableSkills = useMemo(() => Array.from(new Set(history.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
+  const playerComparison = useMemo(() => comparePlayers(history.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), [history, comparePlayerIds, comparePosition]);
   const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
     { id: 'inicio', label: 'Início', hint: 'Dashboard', icon: 'dashboard' },
     { id: 'leitor', label: 'Leitor', hint: 'Print da carta', icon: 'scan' },
@@ -3541,6 +3787,13 @@ export function CardVisionApp() {
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
     } catch {
       // Preferências visuais são opcionais.
+    }
+
+    try {
+      const lastBackup = localStorage.getItem('buildmaster_last_full_backup_v25_49');
+      if (lastBackup) setLastBackupAt(lastBackup);
+    } catch {
+      setLastBackupAt(null);
     }
 
     try {
@@ -3615,6 +3868,23 @@ export function CardVisionApp() {
       // Preferências visuais são opcionais.
     }
   }, [appTheme, accentTheme, advancedMode]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(VAULT_FOLDERS_KEY) || '[]') as VaultFolder[];
+      if (Array.isArray(stored) && stored.length) setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...stored.filter((folder) => folder.kind === 'custom' && !DEFAULT_VAULT_FOLDERS.some((base) => base.id === folder.id))]);
+    } catch {
+      setVaultFolders(DEFAULT_VAULT_FOLDERS);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VAULT_FOLDERS_KEY, JSON.stringify(vaultFolders.filter((folder) => folder.kind === 'custom')));
+    } catch {
+      // Pastas personalizadas continuam opcionais.
+    }
+  }, [vaultFolders]);
 
   useEffect(() => {
     try {
@@ -3857,6 +4127,25 @@ export function CardVisionApp() {
     setStatus('Central reiniciada. Escolha o Leitor Elite de Carta ou a Central de Precisão Manual para começar.');
   }
 
+  function createVaultFolder() {
+    const name = newFolderName.trim();
+    if (!name) return;
+    const id = `custom-${memoryKey(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
+    if (vaultFolders.some((folder) => folder.id === id || memoryKey(folder.name) === memoryKey(name))) { setStatus('Essa pasta já existe.'); return; }
+    setVaultFolders((current) => [...current, { id, name, kind: 'custom' }]);
+    setNewFolderName('');
+    setStatus(`Pasta “${name}” criada no Cofre.`);
+  }
+
+  function moveHistoryToFolder(id: string, folderId: string) {
+    setHistory((current) => current.map((item) => item.id === id ? appendSavedEvent({ ...item, folderId, updatedAt: new Date().toISOString() }, 'organizado', `Movido para a pasta ${vaultFolders.find((folder) => folder.id === folderId)?.name ?? folderId}.`) : item));
+  }
+
+  function resetVaultFilters() {
+    setVaultFilters({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
+    setHistorySearch(''); setHistoryFilter('ALL'); setOnlyPendingSkills(false);
+  }
+
   function openCofreDeJogadores() {
     setMainSection('cofre');
     setLibraryOpen(true);
@@ -3933,6 +4222,126 @@ export function CardVisionApp() {
       void pushCloudHistory(next, true);
       return next;
     });
+  }
+
+  function readJsonStorage(key: string, fallback: unknown = null) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function collectFullBackupSections(): BackupEnvelope['sections'] {
+    return {
+      history,
+      settings: readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode }),
+      calibration: {
+        matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
+        ocrZones: readJsonStorage(CALIBRATION_KEY, ocrZones),
+        learning: readJsonStorage(LEARNING_KEY, {}),
+        corrections: readJsonStorage(CORRECTION_KEY, {})
+      },
+      plans: readJsonStorage('buildmaster_team_plans_v25_19', {}),
+      folders: readJsonStorage(VAULT_FOLDERS_KEY, []),
+      rules: {
+        pack: readJsonStorage(RULE_PACK_KEY, null),
+        url: localStorage.getItem(RULE_PACK_URL_KEY) || ''
+      },
+      session: readJsonStorage(ACTIVE_SESSION_KEY, null)
+    };
+  }
+
+  function exportFullBackup() {
+    const envelope = createBackupEnvelope(collectFullBackupSections());
+    const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    localStorage.setItem('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
+    setLastBackupAt(envelope.exportedAt);
+    setStatus('Backup completo criado com assinatura de integridade. Guarde o arquivo em local seguro.');
+  }
+
+  function writeStorage(key: string, value: unknown) {
+    if (value == null) return;
+    localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+  }
+
+  async function importFullBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const raw = JSON.parse(await file.text()) as unknown;
+      const checked = validateBackupEnvelope(raw);
+      if (!checked.valid || !checked.migrated) {
+        setStatus(checked.issues.map((item) => item.message).join(' ') || 'Backup inválido.');
+        return;
+      }
+      const migrated = migrateBackup(checked.migrated);
+      const sections = migrated.envelope.sections;
+      if (restoreSections.history && Array.isArray(sections.history)) {
+        const imported = normalizeHistoryList(sections.history);
+        setHistory(imported.slice(0, HISTORY_LIMIT));
+        await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
+      }
+      if (restoreSections.settings && sections.settings && typeof sections.settings === 'object') {
+        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean };
+        writeStorage('buildmaster_ui_prefs_v24_24', ui);
+        if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
+        if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
+        if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
+      }
+      if (restoreSections.calibration && sections.calibration && typeof sections.calibration === 'object') {
+        const calibration = sections.calibration as Record<string, unknown>;
+        writeStorage(CALIBRATION_STORAGE_KEY, calibration.matches ?? {});
+        writeStorage(CALIBRATION_KEY, calibration.ocrZones ?? DEFAULT_OCR_ZONES);
+        writeStorage(LEARNING_KEY, calibration.learning ?? {});
+        writeStorage(CORRECTION_KEY, calibration.corrections ?? {});
+        if (Array.isArray(calibration.ocrZones)) setOcrZones(calibration.ocrZones as OcrZone[]);
+      }
+      if (restoreSections.plans) writeStorage('buildmaster_team_plans_v25_19', sections.plans ?? {});
+      if (restoreSections.folders && Array.isArray(sections.folders)) {
+        writeStorage(VAULT_FOLDERS_KEY, sections.folders);
+        setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...(sections.folders as VaultFolder[]).filter((folder) => folder.kind === 'custom')]);
+      }
+      if (restoreSections.rules && sections.rules && typeof sections.rules === 'object') {
+        const rules = sections.rules as Record<string, unknown>;
+        if (rules.pack) writeStorage(RULE_PACK_KEY, rules.pack);
+        if (typeof rules.url === 'string') localStorage.setItem(RULE_PACK_URL_KEY, rules.url);
+      }
+      if (restoreSections.session && sections.session) writeStorage(ACTIVE_SESSION_KEY, sections.session);
+      setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
+      setStatus(`Restauração concluída. ${migrated.steps.length ? 'Dados antigos foram migrados com segurança.' : 'O backup já estava no formato atual.'}`);
+    } catch {
+      setStatus('Não consegui restaurar este arquivo. Use um backup completo exportado pelo BuildMaster.');
+    }
+  }
+
+  function exportIntegrityDiagnostic() {
+    const payload = {
+      app: 'BuildMaster Elite Tático',
+      version: APP_DATA_VERSION,
+      generatedAt: new Date().toISOString(),
+      health: healthSummary,
+      integrity: localIntegrity,
+      migrationLog
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `buildmaster-diagnostico-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus('Diagnóstico de integridade exportado.');
   }
 
   function exportHistoryBackup() {
@@ -4129,6 +4538,9 @@ export function CardVisionApp() {
     setRawText('');
     setOcrDone(false);
     setLoading(false);
+    setPremiumReadings([]);
+    setReadingConfirmations({});
+    setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
 
     const croppedPreview = await createPlayerCardPreview(file).catch(() => null);
@@ -4136,6 +4548,10 @@ export function CardVisionApp() {
 
     const quality = await inspectPrintQuality(file).catch(() => null);
     setQualityReport(quality);
+    const nextMode = suggestedEnhancement(quality);
+    setEnhancementMode(nextMode);
+    const enhanced = await enhanceImageLocally(file, nextMode === 'original' ? 'adaptive' : nextMode).catch(() => null);
+    if (enhanced) setEnhancedPreview(URL.createObjectURL(enhanced));
     if (quality?.issues.length) {
       setStatus(`Imagem selecionada, mas revise o print: ${quality.issues[0].message}`);
     }
@@ -4228,7 +4644,9 @@ export function CardVisionApp() {
     setManualMode(false);
     setRawText('');
     setOcrDone(false);
-    setStatus('Preparando imagem para leitura local premium...');
+    setPremiumReadings([]);
+    setReadingConfirmations({});
+    setStatus('Preparando imagem por áreas para leitura local premium...');
 
     try {
       const Tesseract = await import('tesseract.js');
@@ -4237,6 +4655,7 @@ export function CardVisionApp() {
 
       const variants = await createOcrVariants(selectedFile, readingMode, ocrZones);
       const texts: string[] = [];
+      const zoneResults: PremiumZoneReading[] = [];
 
       for (let index = 0; index < variants.length; index += 1) {
         const variant = variants[index];
@@ -4249,9 +4668,25 @@ export function CardVisionApp() {
           }
         });
         const variantText = pass.data.text.trim();
-        if (variantText) texts.push(`### ${variant.label}\n${variantText}`);
+        const confidence = Math.max(0, Math.min(100, Math.round(pass.data.confidence || 0)));
+        if (variantText) texts.push(`### ${variant.label}
+${variantText}`);
+        if (variant.key !== 'full') {
+          const zone = ocrZones.find((item) => item.key === variant.key);
+          const originPreview = zone ? await createZoneOriginPreview(selectedFile, zone).catch(() => null) : null;
+          zoneResults.push({
+            key: variant.key,
+            label: variant.label,
+            text: variantText,
+            confidence,
+            status: readingStatus(confidence, variantText),
+            originPreview,
+            enhancement: variant.enhancement
+          });
+        }
       }
 
+      setPremiumReadings(ensureZoneCoverage(ocrZones, zoneResults));
       const mergedText = mergeOcrTexts(...texts);
       setOcrDone(true);
 
@@ -4263,7 +4698,7 @@ export function CardVisionApp() {
         hydrateReviewFields(autoResult);
         setDraftResult(autoResult);
         setResult(null);
-        setStatus('Carta lida. Confira posição, estilo, pontos e atributos antes de gerar a ficha final.');
+        setStatus('Leitura por áreas concluída. Confirme as quatro etapas antes de gerar a ficha final.');
       } else {
         setStatus('Não consegui ler texto suficiente. Tente print direto da tela com nome, posição, estilo e ficha automática visíveis.');
       }
@@ -4514,6 +4949,22 @@ export function CardVisionApp() {
         )}
       </section>
 
+      <section className="smart-home-panel luxury-panel">
+        <div className="section-title-row"><div><p className="kicker"><BrainCircuit size={15} /> v25.40 • Tela inicial inteligente</p><h2>O que precisa da sua atenção agora</h2></div><span>{smartHome.total} jogador(es)</span></div>
+        <div className="smart-home-grid">
+          <button type="button" onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, reviewOnly: true })); setLibraryOpen(true); }}><strong>{smartHome.needsReview}</strong><span>Para revisar</span></button>
+          <button type="button" onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); setLibraryOpen(true); }}><strong>{smartHome.lowConfidence}</strong><span>Confiança baixa</span></button>
+          <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{smartHome.incomplete}</strong><span>Pendências</span></button>
+          <button type="button" onClick={() => smartHome.recentPlayer && openCofreDeJogadores()}><strong>{smartHome.recentPlayer ?? '—'}</strong><span>Último jogador</span></button>
+        </div>
+        <div className="smart-next-action"><Target size={18} /><div><strong>Próxima ação sugerida</strong><span>{smartHome.nextAction}</span></div></div>
+        {smartHome.alerts.length > 0 && <div className="smart-alert-list">{smartHome.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
+        <div className="mode-choice-card">
+          <div><strong>v25.41 • Modo simples e avançado</strong><span>{advancedMode ? 'Todos os controles técnicos estão visíveis.' : 'Fluxo direto: entrada, confirmação e ficha.'}</span></div>
+          <button type="button" onClick={() => setAdvancedMode((value) => !value)}><SlidersHorizontal size={16} /> {advancedMode ? 'Usar modo simples' : 'Usar modo avançado'}</button>
+        </div>
+      </section>
+
       <section className="design-premium-hub luxury-panel">
         <div className="design-hub-title">
           <div>
@@ -4646,6 +5097,32 @@ export function CardVisionApp() {
               ) : (
                 <em>Print em condição boa para leitura local.</em>
               )}
+            </div>
+          )}
+
+
+          {preview && qualityReport && (
+            <div className="premium-image-lab">
+              <div className="premium-image-lab-head">
+                <div><strong>Laboratório local da imagem</strong><span>Qualidade {qualityScore(qualityReport)}/100 • {qualityLabel(qualityScore(qualityReport))}</span></div>
+                <select value={enhancementMode} onChange={async (event) => {
+                  const mode = event.target.value as PremiumEnhancementMode;
+                  setEnhancementMode(mode);
+                  if (!selectedFile || mode === 'original') { setEnhancedPreview(null); return; }
+                  const enhanced = await enhanceImageLocally(selectedFile, mode === 'adaptive' ? 'adaptive' : mode).catch(() => null);
+                  if (enhanced) setEnhancedPreview(URL.createObjectURL(enhanced));
+                }}>
+                  <option value="adaptive">Melhoria automática</option>
+                  <option value="contrast">Contraste reforçado</option>
+                  <option value="sharp">Nitidez reforçada</option>
+                  <option value="original">Imagem original</option>
+                </select>
+              </div>
+              <div className="image-before-after">
+                <figure><img src={preview} alt="Print original" /><figcaption>Original</figcaption></figure>
+                <figure><img src={enhancedPreview ?? preview} alt="Print melhorado localmente" /><figcaption>{enhancedPreview ? 'Melhoria local' : 'Sem alteração'}</figcaption></figure>
+              </div>
+              <p>O tratamento ocorre somente no aparelho e não modifica o arquivo original. Ele melhora contraste, brilho e nitidez usados pela leitura.</p>
             </div>
           )}
 
@@ -4849,6 +5326,40 @@ export function CardVisionApp() {
                   <div><span>Favoritos</span><strong>{dashboardStats.favorites}</strong><em>prioridade do elenco</em></div>
                   <div><span>Revisar</span><strong>{dashboardStats.review}</strong><em>marcados para conferir</em></div>
                 </div>
+                <div className="vault-organization-panel luxury-panel">
+                  <div className="section-title-row"><div><p className="kicker"><Layers size={14} /> v25.33 • Pastas</p><h3>Organize o Cofre sem perder fichas</h3></div><span>{vaultFolders.length} pastas</span></div>
+                  <div className="vault-folder-tabs">{vaultFolders.map((folder) => <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, folderId: folder.id }))}>{folder.name}<small>{folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length}</small></button>)}</div>
+                  <div className="create-folder-row"><input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Nova pasta: Ex. Time principal" /><button type="button" onClick={createVaultFolder}>Criar pasta</button></div>
+                </div>
+
+                <div className="advanced-search-panel luxury-panel">
+                  <div className="section-title-row"><div><p className="kicker"><Search size={14} /> v25.34–v25.35 • Pesquisa e filtros combinados</p><h3>Encontre o jogador certo por vários critérios</h3></div><button type="button" onClick={resetVaultFilters}>Limpar filtros</button></div>
+                  <div className="advanced-filter-grid">
+                    <label><span>Posição escolhida</span><select value={vaultFilters.position} onChange={(event) => setVaultFilters((current) => ({ ...current, position: event.target.value as VaultFilterState['position'] }))}><option value="ALL">Todas</option>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
+                    <label><span>Estilo oficial</span><select value={vaultFilters.playstyle} onChange={(event) => setVaultFilters((current) => ({ ...current, playstyle: event.target.value }))}><option value="">Todos</option>{availablePlaystyles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                    <label><span>Habilidade</span><select value={vaultFilters.skill} onChange={(event) => setVaultFilters((current) => ({ ...current, skill: event.target.value }))}><option value="">Todas</option>{availableSkills.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                    <label><span>Confiança mínima: {vaultFilters.minConfidence}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, minConfidence: Number(event.target.value) }))} /></label>
+                    <label><span>Confiança máxima: {vaultFilters.maxConfidence}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.maxConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, maxConfidence: Number(event.target.value) }))} /></label>
+                    <label><span>Eficiência mínima: {vaultFilters.minEfficiency}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minEfficiency} onChange={(event) => setVaultFilters((current) => ({ ...current, minEfficiency: Number(event.target.value) }))} /></label>
+                  </div>
+                  <div className="combined-filter-chips">
+                    <button type="button" className={vaultFilters.favoritesOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, favoritesOnly: !current.favoritesOnly }))}>Favoritos</button>
+                    <button type="button" className={vaultFilters.pendingOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, pendingOnly: !current.pendingOnly }))}>Pendentes</button>
+                    <button type="button" className={vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}>Revisar</button>
+                    <span>{filteredHistory.length} resultado(s) encontrado(s)</span>
+                  </div>
+                </div>
+
+                <div className="player-comparison-hub luxury-panel">
+                  <div className="section-title-row"><div><p className="kicker">v24.67 • Comparador de jogadores</p><h3>Compare para a posição que você escolher</h3></div><span>{comparePlayerIds.length} selecionado(s)</span></div>
+                  <div className="cofre-filter-grid">
+                    <label><Target size={14} /><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
+                    <button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar 4 recentes</button>
+                    <button type="button" onClick={() => setComparePlayerIds([])}>Limpar comparação</button>
+                  </div>
+                  <div className="compare-player-picker">{history.map((item) => <button type="button" className={comparePlayerIds.includes(item.id) ? 'selected' : ''} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}>{comparePlayerIds.includes(item.id) ? '✓ ' : ''}{item.result.parsed.playerName}</button>)}</div>
+                  {playerComparison.ranking.length > 0 ? <div className="player-ranking"><p><strong>Melhor encaixe:</strong> {playerComparison.winner} • {playerComparison.reason}</p>{playerComparison.ranking.map((item, index) => <div key={item.id}><b>#{index + 1} {item.name}</b><span>{item.score}/100 • adaptação {item.adaptation}</span><small>Físico {item.physical} • habilidades {item.skills} • metas {item.goals} • eficiência {item.efficiency}</small><em>{item.risks.length ? `Riscos: ${item.risks.join(' • ')}` : 'Sem risco crítico registrado.'}</em></div>)}</div> : <p className="panel-note">Selecione pelo menos dois jogadores do Cofre. O app compara sem alterar nenhuma ficha.</p>}
+                </div>
                 <div className="cofre-filter-grid">
                   <label className="history-search">
                     <Search size={14} />
@@ -4893,6 +5404,12 @@ export function CardVisionApp() {
                       {libraryOpen && (
                         <div className="saved-advanced-editor">
                           <label className="saved-status-select">
+                            <span>Pasta</span>
+                            <select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>
+                              {vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+                            </select>
+                          </label>
+                          <label className="saved-status-select">
                             <span>Status</span>
                             <select value={savedStatusLabel(item)} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}>
                               <option value="pendente">Pendente</option>
@@ -4931,6 +5448,56 @@ export function CardVisionApp() {
               </div>
             )}
           </div>
+
+          {mainSection === 'ajustes' && (
+            <section className="safety-quality-panel luxury-panel">
+              <div className="section-title-row">
+                <div><p className="kicker"><ShieldCheck size={15} /> v25.64 • Segurança e qualidade</p><h3>Painel de saúde do projeto</h3></div>
+                <span>{healthSummary.score}/100 • {healthSummary.status}</span>
+              </div>
+
+              <div className="health-score-grid">
+                <article><strong>{localIntegrity.score}</strong><span>Integridade dos dados</span></article>
+                <article><strong>{history.length}</strong><span>Fichas protegidas</span></article>
+                <article><strong>{lastBackupAt ? new Date(lastBackupAt).toLocaleDateString('pt-BR') : 'Nunca'}</strong><span>Último backup</span></article>
+                <article><strong>{localIntegrity.totals.malformed}</strong><span>Registros malformados</span></article>
+              </div>
+
+              <div className="safety-actions-grid">
+                <button type="button" onClick={exportFullBackup}><Download size={17} /><strong>Backup completo</strong><span>Cofre, preferências, calibração, planos, pastas e regras.</span></button>
+                <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={17} /><strong>Restaurar backup</strong><span>Escolha as áreas que deseja recuperar.</span></button>
+                <button type="button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><strong>Exportar diagnóstico</strong><span>Gera relatório técnico sem modificar seus dados.</span></button>
+                <input ref={fullBackupInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
+              </div>
+
+              <div className="restore-select-panel">
+                <strong>Restauração seletiva</strong>
+                <div className="restore-check-grid">
+                  {([
+                    ['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['session', 'Sessão em andamento']
+                  ] as Array<[BackupSection, string]>).map(([key, label]) => (
+                    <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>
+                  ))}
+                </div>
+                <p className="panel-note">A restauração só substitui as áreas marcadas. O arquivo é validado por assinatura antes de ser aplicado.</p>
+              </div>
+
+              <div className="integrity-report-panel">
+                <strong>Verificação de integridade</strong>
+                {localIntegrity.issues.length ? localIntegrity.issues.slice(0, 8).map((issue) => <span key={`${issue.code}-${issue.message}`} className={`integrity-${issue.level}`}><b>{issue.level === 'critical' ? 'Crítico' : issue.level === 'warning' ? 'Revisar' : 'Informação'}</b>{issue.message}</span>) : <span className="integrity-ok"><CheckCircle2 size={15} /> Dados locais sem incoerências detectadas.</span>}
+              </div>
+
+              <div className="migration-health-panel">
+                <strong>Migração entre versões</strong>
+                <span>Esquema atual: {APP_DATA_VERSION}</span>
+                <span>Backups antigos do Cofre são convertidos antes da restauração.</span>
+                <span>Campos novos recebem valores seguros sem apagar informações antigas.</span>
+                {migrationLog.length > 0 && migrationLog.map((item) => <em key={item}>{item}</em>)}
+              </div>
+
+              {healthSummary.alerts.length > 0 && <div className="health-alert-list">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
+            </section>
+          )}
         </aside>
 
         <section className="preview-panel">
@@ -4946,6 +5513,9 @@ export function CardVisionApp() {
               setPlaystyleOverride={setPlaystyleOverride}
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
+              premiumReadings={premiumReadings}
+              readingConfirmations={readingConfirmations}
+              setReadingConfirmations={setReadingConfirmations}
               onRefresh={() => runAnalysis(false)}
               onConfirm={() => runAnalysis(true)}
             />

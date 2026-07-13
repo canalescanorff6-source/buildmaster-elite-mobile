@@ -22,6 +22,10 @@ export type SquadChemistryReport = {
   styleFit: number;
   styleVerdict: string;
   recommendations: string[];
+  dependencies: Array<{ source: string; target: string; relation: string; strength: number; risk: string }>;
+  corridors: Array<{ key: 'esquerdo' | 'centro' | 'direito'; label: string; attack: number; defense: number; creation: number; coverage: number; risk: number; verdict: string }>;
+  lines: Array<{ key: 'defesa' | 'meio' | 'ataque'; label: string; withBall: number; withoutBall: number; connection: number; risk: number; verdict: string }>;
+  possessionBalance: { withBall: number; withoutBall: number; transition: number; difference: number; verdict: string; alerts: string[] };
 };
 
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
@@ -130,6 +134,79 @@ export function buildSquadChemistryReport(results: AnalysisResult[], formation: 
     { key: 'equilibrio', label: 'Equilíbrio geral', score: balanceScore, verdict: verdict(balanceScore, 'Funções complementares e poucos excessos.', 'Boa base com alguns desequilíbrios.', 'Funções repetidas ou setores descobertos.') }
   ];
 
+  const sideOf = (label: string): 'esquerdo' | 'direito' | 'centro' => {
+    const value = label.toUpperCase();
+    if (/\b(E|LE|PE|ME)\b|ESQ/.test(value)) return 'esquerdo';
+    if (/\b(D|LD|PD|MD)\b|DIR/.test(value)) return 'direito';
+    return 'centro';
+  };
+  const corridorItems = {
+    esquerdo: selected.filter(({ pick }) => sideOf(pick.slot.label) === 'esquerdo'),
+    centro: selected.filter(({ pick }) => sideOf(pick.slot.label) === 'centro'),
+    direito: selected.filter(({ pick }) => sideOf(pick.slot.label) === 'direito')
+  };
+  const corridors = (Object.entries(corridorItems) as Array<['esquerdo'|'centro'|'direito', typeof selected]>).map(([key, items]) => {
+    const ps = items.map((item) => item.player);
+    const attack = clamp(avg(ps.map((p) => avg([score(p,'aceleracao'), score(p,'finalizacao'), score(p,'criacao')]))));
+    const defenseValue = clamp(avg(ps.map((p) => avg([score(p,'marcacao'), score(p,'cobertura'), score(p,'fisico')]))));
+    const creation = clamp(avg(ps.map((p) => avg([score(p,'passe'), score(p,'criacao'), score(p,'saidaDeBola')]))));
+    const coverage = clamp(avg(ps.map((p) => avg([score(p,'cobertura'), score(p,'aceleracao'), score(p,'marcacao')]))));
+    const risk = clamp(100 - avg([defenseValue, coverage]) + Math.max(0, attack - defenseValue) * .35 + (items.length < 2 ? 12 : 0));
+    const label = key === 'esquerdo' ? 'Corredor esquerdo' : key === 'direito' ? 'Corredor direito' : 'Corredor central';
+    const verdictText = risk >= 60 ? 'Corredor exposto: ataque e cobertura não estão equilibrados.' : risk >= 40 ? 'Corredor funcional, mas exige compensação em transições.' : 'Corredor bem protegido e capaz de progredir com segurança.';
+    return { key, label, attack, defense: defenseValue, creation, coverage, risk, verdict: verdictText };
+  });
+
+  const lineGroups = {
+    defesa: selected.filter(({ pick }) => ['cobertura','marcacao'].includes(pick.slot.phase)),
+    meio: selected.filter(({ pick }) => ['saidaDeBola','passe','criacao'].includes(pick.slot.phase)),
+    ataque: selected.filter(({ pick }) => ['aceleracao','finalizacao'].includes(pick.slot.phase))
+  };
+  const lines = (Object.entries(lineGroups) as Array<['defesa'|'meio'|'ataque', typeof selected]>).map(([key, items]) => {
+    const ps = items.map((item) => item.player);
+    const withBall = clamp(avg(ps.map((p) => avg([score(p,'passe'), score(p,'saidaDeBola'), score(p,'criacao'), score(p,'aceleracao')]))));
+    const withoutBall = clamp(avg(ps.map((p) => avg([score(p,'marcacao'), score(p,'cobertura'), score(p,'fisico')]))));
+    const connection = key === 'defesa' ? clamp(avg([withBall, midfieldScore])) : key === 'meio' ? clamp(avg([defenseScore, attackScore, withBall])) : clamp(avg([midfieldScore, withBall]));
+    const risk = clamp(100 - avg([withoutBall, connection]));
+    const label = key === 'defesa' ? 'Linha defensiva' : key === 'meio' ? 'Linha de meio-campo' : 'Linha de ataque';
+    const verdictText = risk >= 58 ? 'Linha desconectada ou vulnerável quando perde a bola.' : risk >= 38 ? 'Linha competitiva, com pontos de conexão ainda ajustáveis.' : 'Linha estável, conectada e funcional nos dois momentos.';
+    return { key, label, withBall, withoutBall, connection, risk, verdict: verdictText };
+  });
+
+  const dependencies: SquadChemistryReport['dependencies'] = [];
+  const addDependency = (source: AnalysisResult | undefined, target: AnalysisResult | undefined, relation: string, strengthValue: number, risk: string) => {
+    if (!source || !target || source.parsed.internalId === target.parsed.internalId) return;
+    dependencies.push({ source: source.parsed.playerName, target: target.parsed.playerName, relation, strength: clamp(strengthValue), risk });
+  };
+  const left = corridorItems.esquerdo.map((i) => i.player);
+  const right = corridorItems.direito.map((i) => i.player);
+  const central = corridorItems.centro.map((i) => i.player);
+  const bestCover = [...players].sort((a,b) => score(b,'cobertura') - score(a,'cobertura'))[0];
+  const bestCreator = [...players].sort((a,b) => score(b,'criacao') - score(a,'criacao'))[0];
+  const bestFinisher = [...players].sort((a,b) => score(b,'finalizacao') - score(a,'finalizacao'))[0];
+  const leftRunner = [...left].sort((a,b) => score(b,'aceleracao') - score(a,'aceleracao'))[0];
+  const rightRunner = [...right].sort((a,b) => score(b,'aceleracao') - score(a,'aceleracao'))[0];
+  addDependency(leftRunner, bestCover, 'Cobertura do corredor esquerdo', avg([score(leftRunner,'aceleracao'), score(bestCover,'cobertura')]), 'Se os dois avançarem ao mesmo tempo, o lado esquerdo fica exposto.');
+  addDependency(rightRunner, bestCover, 'Cobertura do corredor direito', avg([score(rightRunner,'aceleracao'), score(bestCover,'cobertura')]), 'Se a proteção central atrasar, o lado direito perde segurança.');
+  addDependency(bestCreator, bestFinisher, 'Criação e conclusão', avg([score(bestCreator,'criacao'), score(bestFinisher,'finalizacao')]), 'Se o finalizador ficar isolado, a criação perde efeito prático.');
+  if (builders.length && destroyers.length) addDependency(builders[0], destroyers[0], 'Saída de bola protegida', avg([score(builders[0],'saidaDeBola'), score(destroyers[0],'marcacao')]), 'A saída fica vulnerável quando o protetor abandona a zona central.');
+  dependencies.sort((a,b) => b.strength - a.strength);
+
+  const withBall = clamp(avg([midfieldScore, attackScore, fit, avg(players.map((p) => score(p,'passe'))), avg(players.map((p) => score(p,'criacao')))]));
+  const withoutBall = clamp(avg([defenseScore, transitionScore, avg(players.map((p) => score(p,'marcacao'))), avg(players.map((p) => score(p,'cobertura')))]));
+  const transitionBalance = clamp(avg([transitionScore, widthScore, balanceScore]));
+  const difference = Math.abs(withBall - withoutBall);
+  const possessionAlerts: string[] = [];
+  if (withBall - withoutBall >= 12) possessionAlerts.push('O time produz bem com a bola, mas perde proteção quando a jogada termina ou há perda de posse.');
+  if (withoutBall - withBall >= 12) possessionAlerts.push('O time protege bem sem a bola, porém pode ter dificuldade para progredir e criar chances.');
+  if (transitionBalance < 70) possessionAlerts.push('A mudança entre atacar e defender ainda é lenta ou desorganizada.');
+  if (!possessionAlerts.length) possessionAlerts.push('O time mantém equilíbrio aceitável entre construção, perda da bola e recuperação.');
+  const possessionBalance = {
+    withBall, withoutBall, transition: transitionBalance, difference,
+    verdict: difference <= 7 && transitionBalance >= 78 ? 'Equipe equilibrada nos dois momentos do jogo.' : difference <= 14 ? 'Boa base, com pequena inclinação ofensiva ou defensiva.' : 'Existe desequilíbrio claro entre jogar com a bola e defender sem ela.',
+    alerts: possessionAlerts
+  };
+
   const globalScore = clamp(avg([defenseScore, midfieldScore, attackScore, transitionScore, widthScore, balanceScore, fit]));
   return {
     selectedCount: players.length,
@@ -144,6 +221,10 @@ export function buildSquadChemistryReport(results: AnalysisResult[], formation: 
     roleBalance,
     styleFit: fit,
     styleVerdict: fit >= 82 ? 'O elenco combina muito bem com o estilo selecionado.' : fit >= 72 ? 'O estilo funciona, mas alguns jogadores exigem compensação.' : 'O elenco atual não aproveita plenamente o estilo selecionado.',
-    recommendations: recommendations.slice(0,7)
+    recommendations: recommendations.slice(0,7),
+    dependencies: dependencies.slice(0,6),
+    corridors,
+    lines,
+    possessionBalance
   };
 }

@@ -1,194 +1,80 @@
-import type { AnalysisResult, PositionCode, TacticalFormation, TacticalStyle } from './analyzer';
+import { POSITION_LABELS, type AnalysisResult, type PositionCode, type TacticalFormation, type TacticalStyle } from './analyzer';
 import type { MatchState, TeamEnergy } from './gamePlan';
 
 export const OFFICIAL_INDIVIDUAL_INSTRUCTIONS = [
-  'Ofensivo',
-  'Defensivo',
-  'Manter posição',
-  'Contra-ataque',
-  'Marcação individual',
-  'Marcação cerrada',
-  'Linha defensiva recuada',
-  'Contra-ataque nos jogadores avançados'
+  'Ofensivo','Defensivo','Manter posição','Contra-ataque','Marcação individual','Marcação cerrada','Linha defensiva recuada','Contra-ataque nos jogadores avançados'
 ] as const;
 export type OfficialIndividualInstruction = typeof OFFICIAL_INDIVIDUAL_INSTRUCTIONS[number];
 
-type PlayerSummary = {
-  id: string;
-  name: string;
-  position: PositionCode;
-  positionLabel: string;
-  score: number;
-  stamina: number;
-  speed: number;
-  defense: number;
-  creation: number;
-  finishing: number;
-  aerial: number;
-  versatility: number;
+export type PlayerSummary = {
+  id: string; name: string; position: PositionCode; positionLabel: string; score: number;
+  stamina: number; speed: number; defense: number; creation: number; finishing: number; aerial: number; versatility: number;
+  coveredPositions: PositionCode[];
 };
+export type BenchRole = { player: PlayerSummary; label: string; reason: string; coverage: string[]; priority: 'alta'|'média'|'baixa' };
+export type RealSubstitution = { minute:string; trigger:string; outPlayer:string; inPlayer:string; score:number; gain:string; reason:string; priority:'alta'|'média'|'baixa' };
+export type IndividualInstructionSuggestion = { player:string; instruction:OfficialIndividualInstruction; confidence:number; reason:string; warning?:string };
 
-export type BenchRole = {
-  player: PlayerSummary;
-  label: string;
-  reason: string;
-  coverage: string[];
-  priority: 'alta' | 'média' | 'baixa';
+export type PositionCoverage = {
+  position: PositionCode; label: string; total: number; starters: number; reserves: number;
+  score: number; status: 'coberta'|'curta'|'sem reserva'|'vazia'; players: string[]; warning: string;
 };
-
-export type RealSubstitution = {
-  minute: string;
-  trigger: string;
-  outPlayer: string;
-  inPlayer: string;
-  score: number;
-  gain: string;
-  reason: string;
-  priority: 'alta' | 'média' | 'baixa';
+export type StarterReservePair = {
+  starter: string; starterPosition: string; reserve: string|null; reservePosition: string|null;
+  fit: number; level: 'ideal'|'adequada'|'emergencial'|'sem reserva'; reason: string;
 };
-
-export type IndividualInstructionSuggestion = {
-  player: string;
-  instruction: OfficialIndividualInstruction;
-  confidence: number;
-  reason: string;
-  warning?: string;
+export type BenchBalanceDimension = { key:'defesa'|'meio'|'ataque'|'velocidade'|'criacao'|'energia'|'versatilidade'; label:string; score:number; status:'forte'|'adequado'|'fraco'; note:string };
+export type TacticalPlan = {
+  id:'A'|'B'|'C'; title:string; purpose:string; formation:TacticalFormation; style:TacticalStyle;
+  score:number; starters:string[]; changes:string[]; instructions:string[]; risks:string[]; decisionNote:string;
 };
 
 export type SquadRotationReport = {
-  squadCount: number;
-  starterCount: number;
-  benchCount: number;
-  coverageScore: number;
-  rotationScore: number;
-  headline: string;
-  starters: PlayerSummary[];
-  bench: BenchRole[];
-  missingCoverage: string[];
-  substitutions: RealSubstitution[];
-  instructions: IndividualInstructionSuggestion[];
-  locks: string[];
+  squadCount:number; starterCount:number; benchCount:number; coverageScore:number; rotationScore:number; headline:string;
+  starters:PlayerSummary[]; bench:BenchRole[]; missingCoverage:string[]; substitutions:RealSubstitution[]; instructions:IndividualInstructionSuggestion[]; locks:string[];
+  positionCoverage: PositionCoverage[]; reserveByStarter: StarterReservePair[]; benchBalance: { score:number; label:string; dimensions:BenchBalanceDimension[]; alerts:string[] };
+  plans: TacticalPlan[];
 };
 
 const clamp=(n:number)=>Math.max(0,Math.min(100,Math.round(n)));
 const attr=(r:AnalysisResult, keys:string[])=> Math.round(keys.reduce((s,k)=>s+Number((r.parsed.attributes as Record<string,number|undefined>)[k]??0),0)/Math.max(1,keys.length));
-
-function summarize(r:AnalysisResult, index:number):PlayerSummary {
-  const p=r.bestPosition.code;
-  const ratings=Object.values(r.parsed.positionRatings).filter((x):x is number=>typeof x==='number');
-  const versatility=ratings.length ? clamp(ratings.filter(v=>v>=70).length*14+35) : clamp((r.permittedPositions?.length??1)*12+35);
-  return {
-    id:`${r.parsed.internalId||r.parsed.playerName}-${index}`,
-    name:r.parsed.playerName||`Jogador ${index+1}`,
-    position:p,
-    positionLabel:r.bestPosition.label,
-    score:clamp(Number(r.pri?.GER??r.bestPosition.score??70)),
-    stamina:attr(r,['stamina']), speed:attr(r,['speed','acceleration']),
-    defense:attr(r,['defensiveAwareness','defensiveEngagement','tackling','aggression']),
-    creation:attr(r,['lowPass','loftedPass','ballControl','tightPossession']),
-    finishing:attr(r,['finishing','offensiveAwareness','kickingPower']),
-    aerial:attr(r,['heading','jump','physicalContact']), versatility
-  };
-}
-
+const ALL_POSITIONS: PositionCode[]=['GK','CB','LB','RB','DMF','CMF','AMF','LMF','RMF','LWF','RWF','SS','CF'];
 const line=(p:PositionCode)=>p==='GK'?'GK':['CB','LB','RB'].includes(p)?'DEF':['DMF','CMF','AMF','LMF','RMF'].includes(p)?'MID':'ATT';
 const ideal:Record<string,number>={GK:1,DEF:4,MID:3,ATT:3};
+const styleLabel:Record<TacticalStyle,string>={AUTO:'Automático inteligente',POSSE_DE_BOLA:'Posse de bola',CONTRA_ATAQUE:'Contra-ataque longo',CONTRA_ATAQUE_RAPIDO:'Contra-ataque rápido',POR_FORA:'Por fora',PASSE_LONGO:'Passe longo'};
+const positionLabel=(code:PositionCode)=>POSITION_LABELS.find(item=>item.code===code)?.label??code;
 
-function starterValue(p:PlayerSummary, style:TacticalStyle){
-  let v=p.score*.55+p.versatility*.08+p.stamina*.1;
-  if(style==='POSSE_DE_BOLA')v+=p.creation*.22;
-  else if(style==='CONTRA_ATAQUE_RAPIDO')v+=p.speed*.22+p.finishing*.08;
-  else if(style==='CONTRA_ATAQUE')v+=p.defense*.1+p.aerial*.12+p.speed*.08;
-  else if(style==='POR_FORA')v+=p.speed*.12+p.creation*.1+p.aerial*.06;
-  else v+=p.creation*.1+p.aerial*.1;
-  return v;
+function summarize(r:AnalysisResult,index:number):PlayerSummary {
+  const p=r.bestPosition.code;
+  const ratings=Object.entries(r.parsed.positionRatings).filter(([,v])=>typeof v==='number'&&v>=65).map(([k])=>k as PositionCode);
+  const permitted=(r.permittedPositions??[]).map((x)=>x.code).filter((x):x is PositionCode=>ALL_POSITIONS.includes(x));
+  const coveredPositions=[...new Set<PositionCode>([p,...ratings,...permitted])];
+  const versatility=clamp(Math.max(coveredPositions.length*12+28, ratings.length*14+35));
+  return { id:`${r.parsed.internalId||r.parsed.playerName}-${index}`, name:r.parsed.playerName||`Jogador ${index+1}`, position:p, positionLabel:r.bestPosition.label,
+    score:clamp(Number(r.pri?.GER??r.bestPosition.score??70)), stamina:attr(r,['stamina']), speed:attr(r,['speed','acceleration']),
+    defense:attr(r,['defensiveAwareness','defensiveEngagement','tackling','aggression']), creation:attr(r,['lowPass','loftedPass','ballControl','tightPossession']),
+    finishing:attr(r,['finishing','offensiveAwareness','kickingPower']), aerial:attr(r,['heading','jump','physicalContact']), versatility, coveredPositions };
 }
+function starterValue(p:PlayerSummary,style:TacticalStyle){let v=p.score*.55+p.versatility*.08+p.stamina*.1;if(style==='POSSE_DE_BOLA')v+=p.creation*.22;else if(style==='CONTRA_ATAQUE_RAPIDO')v+=p.speed*.22+p.finishing*.08;else if(style==='CONTRA_ATAQUE')v+=p.defense*.1+p.aerial*.12+p.speed*.08;else if(style==='POR_FORA')v+=p.speed*.12+p.creation*.1+p.aerial*.06;else v+=p.creation*.1+p.aerial*.1;return v;}
+function pickStarters(players:PlayerSummary[],style:TacticalStyle){const used=new Set<string>(),out:PlayerSummary[]=[];for(const group of ['GK','DEF','MID','ATT']){const candidates=players.filter(p=>line(p.position)===group).sort((a,b)=>starterValue(b,style)-starterValue(a,style));for(const p of candidates.slice(0,ideal[group])){out.push(p);used.add(p.id)}}for(const p of players.filter(p=>!used.has(p.id)).sort((a,b)=>starterValue(b,style)-starterValue(a,style))){if(out.length<11){out.push(p);used.add(p.id)}}return out.slice(0,11);}
+function benchRole(p:PlayerSummary):BenchRole{const coverage=p.coveredPositions.map(x=>positionLabel(x));if(p.versatility>=70)coverage.push('cobertura versátil');let label='Reserva de equilíbrio',reason='Mantém o nível sem concentrar o time em uma única característica.',priority:'média'|'alta'|'baixa'='média';if(p.speed>=82){label='Impacto de velocidade';reason='Pode acelerar transições e explorar defesas cansadas.';priority='alta'}else if(p.stamina>=84){label='Controle de energia';reason='É uma opção segura quando o setor perde intensidade.';priority='alta'}else if(p.finishing>=82){label='Busca de gol';reason='Aumenta presença ofensiva e capacidade de decisão.';priority='alta'}else if(p.defense>=82){label='Proteção de resultado';reason='Reforça marcação, duelos e cobertura na reta final.';priority='alta'}else if(p.creation>=82){label='Criação contra bloco baixo';reason='Melhora passe e retenção quando o jogo fica congestionado.'}return {player:p,label,reason,coverage:[...new Set(coverage)],priority};}
+function substitutions(starters:PlayerSummary[],bench:BenchRole[],state:MatchState,energy:TeamEnergy):RealSubstitution[]{if(!bench.length||!starters.length)return[];const losing=state.startsWith('PERDENDO'),winning=state.startsWith('VENCENDO'),candidates:RealSubstitution[]=[];for(const b of bench){const bp=b.player;const ranked=starters.map(s=>{let gain=0;if(losing)gain=(bp.finishing-s.finishing)*.45+(bp.speed-s.speed)*.25+(bp.creation-s.creation)*.2;else if(winning)gain=(bp.defense-s.defense)*.4+(bp.stamina-s.stamina)*.25+(bp.speed-s.speed)*.15;else gain=(bp.stamina-s.stamina)*.35+(bp.versatility-s.versatility)*.2+Math.abs(bp.creation-s.creation)*.08;if(energy==='BAIXA')gain+=(bp.stamina-s.stamina)*.25;if(bp.coveredPositions.includes(s.position))gain+=18;else if(line(bp.position)===line(s.position))gain+=10;return{s,gain}}).sort((a,b)=>b.gain-a.gain)[0];if(!ranked)continue;candidates.push({minute:energy==='BAIXA'?'55–65':losing?'65–75':winning?'70–80':'60–75',trigger:energy==='BAIXA'?'queda de intensidade confirmada':losing?'necessidade de criar ou finalizar mais':winning?'necessidade de proteger sem perder saída':'setor com menor rendimento',outPlayer:ranked.s.name,inPlayer:bp.name,score:clamp(62+ranked.gain),gain:losing?'mais criação, velocidade ou finalização':winning?'mais proteção, energia e controle':'renovação funcional do setor',reason:`${bp.name} oferece ${b.label.toLowerCase()} e substitui ${ranked.s.name} com encaixe mais útil para o estado atual.`,priority:ranked.gain>18?'alta':ranked.gain>5?'média':'baixa'});}const seen=new Set<string>();return candidates.sort((a,b)=>b.score-a.score).filter(x=>{const k=x.outPlayer+'|'+x.inPlayer;if(seen.has(k))return false;seen.add(k);return true}).slice(0,5);}
+function instructionSuggestions(starters:PlayerSummary[],style:TacticalStyle):IndividualInstructionSuggestion[]{const out:IndividualInstructionSuggestion[]=[];const bestDefense=[...starters].sort((a,b)=>b.defense-a.defense)[0],fastest=[...starters].filter(p=>line(p.position)==='ATT').sort((a,b)=>b.speed-a.speed)[0],creator=[...starters].sort((a,b)=>b.creation-a.creation)[0],fullbacks=starters.filter(p=>['LB','RB'].includes(p.position)).sort((a,b)=>b.stamina-a.stamina);if(bestDefense)out.push({player:bestDefense.name,instruction:'Marcação individual',confidence:clamp(bestDefense.defense),reason:'É o titular com melhor base defensiva para acompanhar a principal ameaça rival.',warning:'Use apenas se o alvo adversário estiver claramente identificado.'});if(fastest)out.push({player:fastest.name,instruction:'Contra-ataque nos jogadores avançados',confidence:clamp((fastest.speed+fastest.finishing)/2),reason:'Preserva energia e mantém profundidade para atacar após a recuperação.'});if(creator&&style==='POSSE_DE_BOLA')out.push({player:creator.name,instruction:'Manter posição',confidence:clamp((creator.creation+creator.stamina)/2),reason:'Ajuda a conservar uma referência de passe e evita que o principal criador abandone sua zona.'});if(fullbacks[0])out.push({player:fullbacks[0].name,instruction:style==='POR_FORA'?'Ofensivo':'Defensivo',confidence:clamp((fullbacks[0].stamina+fullbacks[0].speed)/2),reason:style==='POR_FORA'?'Apoia a amplitude e os cruzamentos do estilo selecionado.':'Mantém cobertura em um dos corredores enquanto o restante do time avança.'});return out.slice(0,4);}
 
-function pickStarters(players:PlayerSummary[], style:TacticalStyle){
-  const used=new Set<string>(); const out:PlayerSummary[]=[];
-  for(const group of ['GK','DEF','MID','ATT']){
-    const qty=ideal[group];
-    const candidates=players.filter(p=>line(p.position)===group).sort((a,b)=>starterValue(b,style)-starterValue(a,style));
-    for(const p of candidates.slice(0,qty)){out.push(p);used.add(p.id)}
-  }
-  for(const p of players.filter(p=>!used.has(p.id)).sort((a,b)=>starterValue(b,style)-starterValue(a,style))){if(out.length<11){out.push(p);used.add(p.id)}}
-  return out.slice(0,11);
-}
+function buildPositionCoverage(players:PlayerSummary[],starters:PlayerSummary[]):PositionCoverage[]{const starterIds=new Set(starters.map(p=>p.id));return ALL_POSITIONS.map(position=>{const eligible=players.filter(p=>p.coveredPositions.includes(position));const starterCount=eligible.filter(p=>starterIds.has(p.id)).length;const reserveCount=eligible.length-starterCount;let status:PositionCoverage['status']='coberta';if(!eligible.length)status='vazia';else if(!reserveCount)status='sem reserva';else if(eligible.length<2)status='curta';const score=clamp(eligible.length*25+reserveCount*18+(eligible.some(p=>p.position===position)?18:0));const warning=status==='vazia'?'Nenhum jogador salvo cobre esta posição.':status==='sem reserva'?'Existe opção titular, mas não há substituto disponível.':status==='curta'?'Cobertura limitada para rotação ou emergência.':'Há titular e alternativa de banco para esta posição.';return{position,label:positionLabel(position),total:eligible.length,starters:starterCount,reserves:reserveCount,score,status,players:eligible.map(p=>p.name).slice(0,5),warning};});}
+function buildReservePairs(starters:PlayerSummary[],benchPlayers:PlayerSummary[]):StarterReservePair[]{return starters.map(starter=>{const ranked=benchPlayers.map(reserve=>{const exact=reserve.coveredPositions.includes(starter.position),sameLine=line(reserve.position)===line(starter.position);const fit=clamp((exact?45:sameLine?25:4)+reserve.score*.2+reserve.stamina*.12+reserve.versatility*.15+Math.max(0,100-Math.abs(reserve.speed-starter.speed))*.08);return{reserve,fit,exact,sameLine}}).sort((a,b)=>b.fit-a.fit);const best=ranked[0];if(!best)return{starter:starter.name,starterPosition:starter.positionLabel,reserve:null,reservePosition:null,fit:0,level:'sem reserva',reason:'Nenhum jogador de banco está disponível para cobrir este titular.'};const level:StarterReservePair['level']=best.exact&&best.fit>=78?'ideal':best.sameLine&&best.fit>=62?'adequada':best.fit>=45?'emergencial':'sem reserva';return{starter:starter.name,starterPosition:starter.positionLabel,reserve:level==='sem reserva'?null:best.reserve.name,reservePosition:level==='sem reserva'?null:best.reserve.positionLabel,fit:best.fit,level,reason:level==='ideal'?'Cobre a posição escolhida e mantém características próximas.':level==='adequada'?'Mantém o setor com perda controlada de características.':level==='emergencial'?'Pode atuar como adaptação, mas muda o comportamento do setor.':'Não existe substituto seguro no banco atual.'};});}
+function buildBenchBalance(benchPlayers:PlayerSummary[]){const average=(fn:(p:PlayerSummary)=>number)=>benchPlayers.length?benchPlayers.reduce((s,p)=>s+fn(p),0)/benchPlayers.length:0;const groups={defesa:benchPlayers.filter(p=>line(p.position)==='DEF'||p.position==='GK'),meio:benchPlayers.filter(p=>line(p.position)==='MID'),ataque:benchPlayers.filter(p=>line(p.position)==='ATT')};const raw:[BenchBalanceDimension['key'],string,number,string][]=[['defesa','Proteção defensiva',clamp(groups.defesa.length*22+average(p=>p.defense)*.45),'Opções para proteger o resultado e renovar a defesa.'],['meio','Meio-campo',clamp(groups.meio.length*24+average(p=>p.creation)*.36),'Alternativas para manter passe, criação e controle.'],['ataque','Ataque',clamp(groups.ataque.length*25+average(p=>p.finishing)*.35),'Rotas para buscar gol e mudar o comportamento ofensivo.'],['velocidade','Velocidade',clamp(average(p=>p.speed)),'Capacidade de acelerar a partida com reservas frescos.'],['criacao','Criação',clamp(average(p=>p.creation)),'Qualidade para desmontar pressão ou bloco baixo.'],['energia','Energia',clamp(average(p=>p.stamina)),'Intensidade disponível para o segundo tempo.'],['versatilidade','Versatilidade',clamp(average(p=>p.versatility)),'Cobertura de várias posições com poucas vagas no banco.']];const dimensions=raw.map(([key,label,score,note])=>({key,label,score,status:score>=78?'forte':score>=62?'adequado':'fraco',note} as BenchBalanceDimension));const score=clamp(dimensions.reduce((s,d)=>s+d.score,0)/dimensions.length);const alerts=dimensions.filter(d=>d.status==='fraco').map(d=>`${d.label}: ${d.note}`);return{score,label:score>=82?'Banco completo e versátil':score>=68?'Banco funcional com algumas carências':'Banco desequilibrado ou curto',dimensions,alerts:alerts.length?alerts:['O banco apresenta alternativas para proteger, criar e atacar.']};}
+function buildPlans(starters:PlayerSummary[],benchPlayers:PlayerSummary[],formation:TacticalFormation,style:TacticalStyle):TacticalPlan[]{const baseFormation=formation==='AUTO'?'4-2-2-2':formation,baseStyle=style==='AUTO'?'CONTRA_ATAQUE_RAPIDO':style;const bestAtt=[...benchPlayers].sort((a,b)=>(b.speed+b.finishing+b.creation)-(a.speed+a.finishing+a.creation))[0];const bestDef=[...benchPlayers].sort((a,b)=>(b.defense+b.stamina+b.aerial)-(a.defense+a.stamina+a.aerial))[0];const weakestAtt=[...starters].filter(p=>line(p.position)==='ATT').sort((a,b)=>(a.finishing+a.speed)-(b.finishing+b.speed))[0];const weakestDef=[...starters].filter(p=>line(p.position)==='DEF'||p.position==='DMF').sort((a,b)=>(a.defense+a.stamina)-(b.defense+b.stamina))[0];const names=starters.map(p=>p.name);const avg=(keys:(keyof PlayerSummary)[])=>clamp(starters.reduce((s,p)=>s+keys.reduce((x,k)=>x+Number(p[k]),0)/keys.length,0)/Math.max(1,starters.length));return[
+{id:'A',title:'Plano A • Base principal',purpose:'Começar com a estrutura escolhida e confirmar o comportamento do adversário.',formation:baseFormation,style:baseStyle,score:clamp(avg(['score','stamina','creation'])),starters:names,changes:['Mantém os 11 titulares sugeridos e a proposta atual.'],instructions:['Circular com segurança nos primeiros minutos.','Confirmar o corredor mais perigoso antes de alterar marcações.'],risks:['Pode exigir ajuste se o adversário apresentar uma ameaça não prevista.'],decisionNote:'Plano principal; só é ativado ou salvo por você.'},
+{id:'B',title:'Plano B • Buscar o jogo',purpose:'Aumentar criação, velocidade e presença ofensiva quando for necessário buscar gol.',formation:'4-2-1-3',style:'CONTRA_ATAQUE_RAPIDO',score:clamp(avg(['speed','creation','finishing'])+(bestAtt?6:0)),starters:names,changes:[bestAtt&&weakestAtt?`${bestAtt.name} entra no lugar de ${weakestAtt.name} para aumentar impacto ofensivo.`:'O banco ainda não oferece troca ofensiva clara.','Adiantar a circulação e atacar o espaço com mais frequência.'],instructions:['Preservar ao menos um jogador de proteção central.','Subir apenas um lateral por vez para não abrir os dois corredores.'],risks:['Maior exposição após perda da bola.','Pode reduzir controle se a equipe acelerar sem opções de passe.'],decisionNote:'Plano opcional para buscar gol; você escolhe quando e quais trocas usar.'},
+{id:'C',title:'Plano C • Proteger e controlar',purpose:'Reduzir riscos, renovar energia e proteger vantagem sem abandonar a saída.',formation:'5-3-2',style:'CONTRA_ATAQUE',score:clamp(avg(['defense','stamina','aerial'])+(bestDef?6:0)),starters:names,changes:[bestDef&&weakestDef?`${bestDef.name} entra no lugar de ${weakestDef.name} para reforçar proteção e energia.`:'O banco ainda não oferece troca defensiva clara.','Compactar os setores e manter uma rota de contra-ataque.'],instructions:['Evitar recuar todos os jogadores para dentro da própria área.','Manter um atacante disponível para saída e alívio da pressão.'],risks:['Excesso de recuo pode entregar território.','A equipe pode perder criação se retirar o principal passador.'],decisionNote:'Plano opcional para proteger resultado; nenhuma mudança é automática.'}
+];}
 
-function benchRole(p:PlayerSummary):BenchRole{
-  const coverage=[p.positionLabel];
-  if(p.versatility>=70)coverage.push('cobertura versátil');
-  let label='Reserva de equilíbrio', reason='Mantém o nível sem concentrar o time em uma única característica.', priority:'média'|'alta'|'baixa'='média';
-  if(p.speed>=82){label='Impacto de velocidade';reason='Pode acelerar transições e explorar defesas cansadas.';priority='alta'}
-  else if(p.stamina>=84){label='Controle de energia';reason='É uma opção segura quando o setor perde intensidade.';priority='alta'}
-  else if(p.finishing>=82){label='Busca de gol';reason='Aumenta presença ofensiva e capacidade de decisão.';priority='alta'}
-  else if(p.defense>=82){label='Proteção de resultado';reason='Reforça marcação, duelos e cobertura na reta final.';priority='alta'}
-  else if(p.creation>=82){label='Criação contra bloco baixo';reason='Melhora passe e retenção quando o jogo fica congestionado.'}
-  return {player:p,label,reason,coverage,priority};
-}
-
-function substitutions(starters:PlayerSummary[], bench:BenchRole[], state:MatchState, energy:TeamEnergy):RealSubstitution[]{
-  if(!bench.length||!starters.length)return [];
-  const losing=state.startsWith('PERDENDO'); const winning=state.startsWith('VENCENDO');
-  const candidates:RealSubstitution[]=[];
-  for(const b of bench){
-    const bp=b.player;
-    const ranked=starters.map(s=>{
-      let gain=0;
-      if(losing) gain=(bp.finishing-s.finishing)*.45+(bp.speed-s.speed)*.25+(bp.creation-s.creation)*.2;
-      else if(winning) gain=(bp.defense-s.defense)*.4+(bp.stamina-s.stamina)*.25+(bp.speed-s.speed)*.15;
-      else gain=(bp.stamina-s.stamina)*.35+(bp.versatility-s.versatility)*.2+Math.abs(bp.creation-s.creation)*.08;
-      if(energy==='BAIXA')gain+=(bp.stamina-s.stamina)*.25;
-      if(line(bp.position)===line(s.position))gain+=12;
-      return {s,gain};
-    }).sort((a,b)=>b.gain-a.gain)[0];
-    if(!ranked)continue;
-    candidates.push({
-      minute:energy==='BAIXA'?'55–65':losing?'65–75':winning?'70–80':'60–75',
-      trigger:energy==='BAIXA'?'queda de intensidade confirmada':losing?'necessidade de criar ou finalizar mais':winning?'necessidade de proteger sem perder saída':'setor com menor rendimento',
-      outPlayer:ranked.s.name,inPlayer:bp.name,score:clamp(62+ranked.gain),
-      gain:losing?'mais criação, velocidade ou finalização':winning?'mais proteção, energia e controle':'renovação funcional do setor',
-      reason:`${bp.name} oferece ${b.label.toLowerCase()} e substitui ${ranked.s.name} com encaixe mais útil para o estado atual.`,
-      priority:ranked.gain>18?'alta':ranked.gain>5?'média':'baixa'
-    });
-  }
-  const seen=new Set<string>(); return candidates.sort((a,b)=>b.score-a.score).filter(x=>{const k=x.outPlayer+'|'+x.inPlayer;if(seen.has(k))return false;seen.add(k);return true}).slice(0,5);
-}
-
-function instructionSuggestions(starters:PlayerSummary[], style:TacticalStyle):IndividualInstructionSuggestion[]{
-  const out:IndividualInstructionSuggestion[]=[];
-  const bestDefense=[...starters].sort((a,b)=>b.defense-a.defense)[0];
-  const fastest=[...starters].filter(p=>line(p.position)==='ATT').sort((a,b)=>b.speed-a.speed)[0];
-  const creator=[...starters].sort((a,b)=>b.creation-a.creation)[0];
-  const fullbacks=starters.filter(p=>['LB','RB'].includes(p.position)).sort((a,b)=>b.stamina-a.stamina);
-  if(bestDefense)out.push({player:bestDefense.name,instruction:'Marcação individual',confidence:clamp(bestDefense.defense),reason:'É o titular com melhor base defensiva para acompanhar a principal ameaça rival.',warning:'Use apenas se o alvo adversário estiver claramente identificado.'});
-  if(fastest)out.push({player:fastest.name,instruction:'Contra-ataque nos jogadores avançados',confidence:clamp((fastest.speed+fastest.finishing)/2),reason:'Preserva energia e mantém profundidade para atacar após a recuperação.'});
-  if(creator && style==='POSSE_DE_BOLA')out.push({player:creator.name,instruction:'Manter posição',confidence:clamp((creator.creation+creator.stamina)/2),reason:'Ajuda a conservar uma referência de passe e evita que o principal criador abandone sua zona.'});
-  if(fullbacks[0])out.push({player:fullbacks[0].name,instruction:style==='POR_FORA'?'Ofensivo':'Defensivo',confidence:clamp((fullbacks[0].stamina+fullbacks[0].speed)/2),reason:style==='POR_FORA'?'Apoia a amplitude e os cruzamentos do estilo selecionado.':'Mantém cobertura em um dos corredores enquanto o restante do time avança.'});
-  return out.slice(0,4);
-}
-
-export function buildSquadRotationReport(results:AnalysisResult[], formation:TacticalFormation, style:TacticalStyle, state:MatchState, energy:TeamEnergy):SquadRotationReport|null{
-  const unique=new Map<string,AnalysisResult>();
-  for(const r of results){const k=(r.parsed.internalId||r.parsed.playerName).toLowerCase();if(!unique.has(k))unique.set(k,r)}
-  const players=[...unique.values()].map(summarize);
-  if(!players.length)return null;
-  const starters=pickStarters(players,style);
-  const ids=new Set(starters.map(p=>p.id));
-  const benchPlayers=players.filter(p=>!ids.has(p.id)).sort((a,b)=>b.versatility+b.stamina-(a.versatility+a.stamina));
-  const bench=benchPlayers.slice(0,12).map(benchRole);
-  const counts={GK:0,DEF:0,MID:0,ATT:0}; players.forEach(p=>counts[line(p.position)]++);
-  const missing:string[]=[];
-  if(counts.GK<2)missing.push('Falta um goleiro reserva confiável.');
-  if(counts.DEF<6)missing.push('Cobertura defensiva curta para zaga e laterais.');
-  if(counts.MID<5)missing.push('Poucas alternativas para renovar ou mudar o meio-campo.');
-  if(counts.ATT<4)missing.push('Banco com poucas rotas ofensivas diferentes.');
-  const coverage=clamp(100-missing.length*18+Math.min(12,bench.length)*2);
-  const rotation=clamp(bench.length?bench.reduce((s,b)=>s+(b.player.stamina+b.player.versatility)/2,0)/bench.length:35);
-  return {
-    squadCount:players.length,starterCount:starters.length,benchCount:bench.length,coverageScore:coverage,rotationScore:rotation,
-    headline:`${players.length} jogadores analisados para ${formation}; ${starters.length} titulares e ${bench.length} opções de banco.`,
-    starters,bench,missingCoverage:missing,substitutions:substitutions(starters,bench,state,energy),instructions:instructionSuggestions(starters,style),
-    locks:['Nenhuma troca ou instrução é aplicada automaticamente.','Os nomes das instruções vêm somente do catálogo validado do módulo.','Você confirma titulares, reservas, substituições e instruções antes de usar.']
-  };
+export function buildSquadRotationReport(results:AnalysisResult[],formation:TacticalFormation,style:TacticalStyle,state:MatchState,energy:TeamEnergy):SquadRotationReport|null{
+  const unique=new Map<string,AnalysisResult>();for(const [index,r] of results.entries()){const raw=(r.parsed.internalId||r.parsed.playerName||`jogador-${index}`).toLowerCase();const k=unique.has(raw)?`${raw}-${index}`:raw;unique.set(k,r)}
+  const players=[...unique.values()].map(summarize);if(!players.length)return null;const starters=pickStarters(players,style),ids=new Set(starters.map(p=>p.id));const benchPlayers=players.filter(p=>!ids.has(p.id)).sort((a,b)=>b.versatility+b.stamina-(a.versatility+a.stamina)),bench=benchPlayers.slice(0,12).map(benchRole);
+  const positionCoverage=buildPositionCoverage(players,starters),reserveByStarter=buildReservePairs(starters,benchPlayers),benchBalance=buildBenchBalance(benchPlayers),plans=buildPlans(starters,benchPlayers,formation,style);
+  const missing=positionCoverage.filter(x=>['vazia','sem reserva'].includes(x.status)).map(x=>`${x.label}: ${x.warning}`);
+  const coverage=clamp(positionCoverage.reduce((s,p)=>s+p.score,0)/positionCoverage.length),rotation=clamp((benchBalance.score+(reserveByStarter.reduce((s,p)=>s+p.fit,0)/Math.max(1,reserveByStarter.length)))/2);
+  return {squadCount:players.length,starterCount:starters.length,benchCount:bench.length,coverageScore:coverage,rotationScore:rotation,headline:`${players.length} jogadores analisados para ${formation}; ${starters.length} titulares e ${bench.length} opções de banco.`,starters,bench,missingCoverage:missing,substitutions:substitutions(starters,bench,state,energy),instructions:instructionSuggestions(starters,style),positionCoverage,reserveByStarter,benchBalance,plans,locks:['Nenhuma troca, instrução ou plano é aplicado automaticamente.','Posições, estilos e instruções continuam vindo dos catálogos validados do app.','Você confirma titulares, reservas, substituições e Planos A, B e C antes de usar.']};
 }
