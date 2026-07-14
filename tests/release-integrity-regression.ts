@@ -8,11 +8,11 @@ const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const manifest = fs.readFileSync('public/manifest.webmanifest', 'utf8');
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 
-assert.equal(pkg.version, '26.60.0');
+assert.equal(pkg.version, '26.70.0');
 assert.equal(lock.version, pkg.version);
 assert.equal(lock.packages[''].version, pkg.version);
-for (const content of [workflow, layout, manifest]) assert.match(content, /26\.60/);
-assert.match(sw, /26-60/);
+for (const content of [workflow, layout, manifest]) assert.match(content, /26\.70/);
+assert.match(sw, /26-70/);
 assert.doesNotMatch(workflow, /v26\.50-APK-Fiel|v25\.96|v25\.82|v25\.77|v25\.72/);
 assert.doesNotMatch(layout, /v24\.80|v24\.34/);
 assert.doesNotMatch(manifest, /v24\.34/);

@@ -1,87 +1,63 @@
-# BuildMaster Elite Tático v26.60 — Inteligência da Comunidade 2026
+# BuildMaster Elite Tático v26.70 — Backup e Atualizações
 
-A v26.60 preserva todo o Universo Meta da v26.50 e adiciona uma Central de Inteligência baseada em fontes públicas oficiais e comunitárias.
+A v26.70 preserva todos os recursos da v26.60, incluindo Universo Meta, fichas DNA, Inteligência da Comunidade, Cofre, equipe, treinamento e análise de delay, e adiciona duas melhorias centrais:
 
-## Nova Central de conhecimento
+- backup dedicado das fichas e dos jogadores treinados;
+- Central de Atualizações integrada ao aplicativo.
 
-A aba **Resultado > Mais > Comunidade** separa claramente:
+## Backup de jogadores treinados
 
-- mecânicas oficiais da Konami;
-- análises atribuídas a pro players;
-- guias de YouTube;
-- discussões recentes da comunidade;
-- recomendações experimentais ou controversas.
+Disponível em **Cofre → Backup** e em **Ajustes → Segurança**.
 
-O pacote inicial contém:
+O arquivo inclui:
 
-- 24 fontes públicas revisadas;
-- 35 dicas normalizadas;
-- 10 áreas do aplicativo;
-- 18 recomendações personalizadas por carta;
-- conflitos e ressalvas mostrados na interface.
-
-## Personalização
-
-As dicas são ordenadas conforme:
-
+- fichas salvas e versões da carta;
 - posição escolhida;
-- Estilo de Jogo oficial da carta;
-- habilidade especial confirmada;
-- formação;
-- estilo coletivo;
-- pontos fortes e limitações do jogador;
-- contexto da ficha.
+- distribuição de treinamento;
+- habilidades concluídas e pendentes;
+- pastas e organização do Cofre;
+- calibração, aprendizado e correções locais.
 
-Uma formação usada por pro player não é aplicada automaticamente. Ela só sobe no ranking quando combina com o elenco e o contexto escolhido.
+O backup completo continua disponível para incluir também preferências, Planos A/B/C, regras e sessão em andamento.
 
-## Áreas cobertas
+## Central de Atualizações
 
-- fichas e progressão;
-- ataque;
-- defesa;
-- drible;
-- tática;
-- formações;
-- habilidades especiais;
-- treinos;
-- delay;
-- configurações mobile.
+Disponível em **Ajustes → Atualizações**.
 
-## Proteções
+Ela mostra:
 
-- conteúdo oficial e opinião comunitária nunca são misturados;
-- nenhuma dica muda automaticamente ficha, formação ou configuração;
-- conteúdo dos criadores é resumido, não copiado;
-- dicas de TikTok e redes de indexação limitada não são tratadas como cobertura completa;
-- o pacote é datado e precisa ser revisado após atualizações importantes do jogo;
-- DNS, FPS ou uma configuração única nunca são apresentados como garantia contra delay de servidor.
+- versão e build instalados;
+- última verificação;
+- versão disponível;
+- notas da atualização;
+- busca manual e automática;
+- botão **Backup e atualizar**.
 
-## Fontes oficiais principais
+Ao receber uma nova revisão, o aplicativo exibe um aviso no topo e leva diretamente para essa central.
 
-- eFootball v5.0.0;
-- eFootball v5.2.0;
-- eFootball v5.4.0;
-- aviso mobile da v5.4.0;
-- manual oficial de controles mobile;
-- página oficial do eFootball Mobile.
+## Publicação pelo GitHub Actions
 
-## Validação
+O workflow **Gerar APK e publicar atualização v26.70** executa, a cada push para `main`:
 
-- TypeScript aprovado;
-- teste próprio da Central aprovado;
-- 24 fontes e 35 dicas validadas;
-- Universo Meta com 15.120 combinações preservado;
-- Lotes anteriores aprovados;
-- a suíte completa atingiu o limite de tempo depois de passar os módulos principais; os testes restantes foram executados separadamente e aprovados;
-- build web aprovado;
-- exportação estática para APK aprovada.
+1. `npm ci`;
+2. TypeScript;
+3. testes do projeto;
+4. exportação estática do app;
+5. compilação Android;
+6. criação de `update-manifest.json`;
+7. publicação da release `buildmaster-latest`, quando a assinatura persistente estiver configurada.
 
-## Gerar o APK
+## Assinatura persistente
 
-Execute no GitHub Actions:
+Para instalar atualizações por cima sem desinstalar, configure os Secrets explicados em:
 
-`Gerar APK Android Fiel v26.60 Inteligência da Comunidade 2026`
+- `README_ASSINATURA_ATUALIZACOES.md`
 
-Artefato:
+Sem esses Secrets, o workflow ainda gera o APK como artefato, mas não publica uma atualização que poderia ter assinatura incompatível.
 
-`BuildMaster-Elite-Tatico-v26.60.apk`
+## Documentação
+
+- `README_V26_70.md` — funcionamento de backup e atualizações;
+- `README_ASSINATURA_ATUALIZACOES.md` — criação e configuração da chave Android;
+- `README_APK_FIEL.md` — geração do APK;
+- `README_V26_60.md` — histórico da Inteligência da Comunidade.

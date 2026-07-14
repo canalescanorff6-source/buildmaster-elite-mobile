@@ -1,44 +1,27 @@
-# APK Nativo — BuildMaster Elite Tático v24.9
+# APK Nativo — BuildMaster Elite Tático v26.70
 
-Esta versão gera um APK que abre o programa dentro do próprio aplicativo Android, em tela cheia, usando WebView interna do Capacitor.
+O projeto usa Capacitor para abrir o aplicativo dentro do próprio APK Android, sem redirecionar a interface principal para o navegador.
 
-Diferente da versão anterior, ela **não abre o navegador** e **não depende de um atalho para o site**.
+## Build pelo GitHub
 
-## Como gerar pelo GitHub
+O workflow executa:
 
-1. Envie todos os arquivos desta versão para o GitHub.
-2. Abra a aba **Actions**.
-3. Clique em **Gerar APK Android Nativo**.
-4. Clique em **Run workflow**.
-5. Aguarde terminar.
-6. Baixe o artefato **BuildMaster-Elite-Tatico-v24-9-apk-nativo**.
-7. Dentro dele estará o arquivo `app-debug.apk`.
+1. instalação travada com `npm ci`;
+2. TypeScript e testes;
+3. exportação estática segura;
+4. geração do projeto Android;
+5. compilação do APK;
+6. assinatura persistente, quando os Secrets estiverem configurados;
+7. publicação do APK e de `update-manifest.json` na release `buildmaster-latest`.
 
-## Sobre o Neon Cloud no APK
+## Neon Cloud
 
-O app fica embutido no APK, mas a sincronização com Neon precisa chamar uma API online.
+O APK estático pode chamar uma API online. Configure a variável de repositório:
 
-Por padrão, o APK usa:
+`BUILDMASTER_CLOUD_API_URL=https://SEU-DOMINIO/api/cloud/fichas`
 
-`https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas`
+Sem uma API válida, os recursos locais continuam disponíveis, mas a sincronização Neon não funcionará.
 
-Se seu link principal no Vercel for outro, crie uma variável no GitHub:
+## Atualizações
 
-`BUILDMASTER_CLOUD_API_URL=https://SEU-LINK-DO-VERCEL/api/cloud/fichas`
-
-Caminho no GitHub:
-
-`Settings > Secrets and variables > Actions > Variables > New repository variable`
-
-## O que continua igual
-
-- Motor de fichas da v24 estável.
-- Regras de goleiro.
-- Habilidades oficiais.
-- Cofre local.
-- Sincronização Neon quando configurada.
-- Táticas e formações.
-
-## Observação
-
-Este APK é debug. Para publicar na Play Store, precisa gerar versão release assinada.
+A Central de Atualizações consulta o manifesto publicado pelo workflow. O Android exige confirmação do usuário para instalar um APK baixado. Alterações nativas sempre exigem um novo APK.

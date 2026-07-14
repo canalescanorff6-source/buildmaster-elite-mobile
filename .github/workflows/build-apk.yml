@@ -1,22 +1,25 @@
-name: Gerar APK Android Fiel v26.60 Inteligência da Comunidade 2026
+name: Gerar APK e publicar atualização v26.70
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 concurrency:
-  group: buildmaster-apk-${{ github.ref }}
+  group: buildmaster-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-apk:
-    name: Build APK Fiel v26.60 Inteligência da Comunidade 2026
+    name: Build, testes, APK e atualização
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
 
     steps:
-      - name: Baixar codigo
+      - name: Baixar código
         uses: actions/checkout@v4
 
       - name: Configurar Node.js
@@ -32,13 +35,13 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Exibir versoes do ambiente
+      - name: Exibir versões do ambiente
         run: |
           node --version
           npm --version
           java -version
 
-      - name: Instalar dependencias travadas
+      - name: Instalar dependências travadas
         timeout-minutes: 25
         env:
           npm_config_fetch_retries: '3'
@@ -47,26 +50,48 @@ jobs:
         run: npm ci --registry=https://registry.npmjs.org/ --no-audit --no-fund --loglevel=info
 
       - name: Validar TypeScript
-        timeout-minutes: 5
+        timeout-minutes: 6
         run: npm run typecheck
 
       - name: Rodar testes do motor
-        timeout-minutes: 10
+        timeout-minutes: 14
         run: npm run test:all
 
-      - name: Preparar exportacao estatica para APK
-        run: rm -rf out android .buildmaster-static-disabled
+      - name: Preparar exportação estática para APK
+        run: rm -rf out android .buildmaster-static-disabled dist-apk
 
       - name: Gerar app web embutido
-        timeout-minutes: 10
+        timeout-minutes: 12
         env:
           BUILDMASTER_ANDROID_STATIC: '1'
+          NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
+          NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL: https://github.com/${{ github.repository }}/releases/download/buildmaster-latest/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
         run: npm run apk:build-web
 
       - name: Criar projeto Android
         timeout-minutes: 5
         run: npx --no-install cap add android
+
+      - name: Atualizar versão interna do Android
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, re
+          candidates = [pathlib.Path('android/app/build.gradle'), pathlib.Path('android/app/build.gradle.kts')]
+          target = next((item for item in candidates if item.exists()), None)
+          if target is None:
+              raise SystemExit('Arquivo Gradle do aplicativo não encontrado.')
+          text = target.read_text(encoding='utf-8')
+          code = max(1, int(os.environ['ANDROID_VERSION_CODE']))
+          text, count_code = re.subn(r'versionCode\s*[= ]\s*\d+', f'versionCode {code}', text, count=1)
+          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', 'versionName "26.70.0"', text, count=1)
+          if not count_code:
+              raise SystemExit('versionCode não encontrado no Gradle.')
+          target.write_text(text, encoding='utf-8')
+          print(f'Android versionCode={code}; versionName=26.70.0')
+          PY
 
       - name: Configurar cache do Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -77,24 +102,122 @@ jobs:
         timeout-minutes: 5
         run: npx --no-install cap sync android
 
-      - name: Dar permissao ao Gradle
+      - name: Dar permissão ao Gradle
         run: chmod +x android/gradlew
 
-      - name: Gerar APK instalavel
+      - name: Gerar APK instalável
         timeout-minutes: 15
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug
 
-      - name: Renomear APK
+      - name: Verificar assinatura persistente
+        id: signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            mkdir -p signing
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > signing/buildmaster.keystore
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Assinatura persistente configurada."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secrets de assinatura ausentes. O APK será gerado como artefato, mas a release automática não será publicada."
+          fi
+
+      - name: Preparar arquivos da atualização
+        env:
+          VERSION: '26.70.0'
         run: |
           mkdir -p dist-apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk \
-            dist-apk/BuildMaster-Elite-Tatico-v26.60.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-v26.70.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-latest.apk
+          python - <<'PY'
+          import json, os
+          repo = os.environ['GITHUB_REPOSITORY']
+          sha = os.environ['GITHUB_SHA']
+          version = os.environ['VERSION']
+          manifest = {
+            'appId': 'com.buildmaster.elitetatico',
+            'version': version,
+            'buildId': sha,
+            'publishedAt': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
+            'channel': 'stable',
+            'updateType': 'apk',
+            'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk',
+            'notes': [
+              'Backup dedicado de fichas e jogadores treinados.',
+              'Restauração compatível com backup simples e completo.',
+              'Verificação automática de atualização ao abrir o app.',
+              'Backup de segurança criado antes de baixar uma atualização.'
+            ],
+            'mandatory': False,
+            'minNativeVersion': '26.70.0'
+          }
+          with open('dist-apk/update-manifest.json', 'w', encoding='utf-8') as handle:
+            json.dump(manifest, handle, ensure_ascii=False, indent=2)
+          PY
+          cat > dist-apk/RELEASE_NOTES.md <<'NOTES'
+          ## BuildMaster Elite Tático v26.70
 
-      - name: Enviar APK como artefato
+          - Backup específico de fichas e jogadores treinados.
+          - Backup completo com restauração seletiva preservado.
+          - Central de atualizações dentro do aplicativo.
+          - Busca automática de novas revisões.
+          - Backup de segurança antes de abrir o download do APK.
+
+          O Android ainda solicita confirmação para instalar um APK baixado. Alterações nativas sempre exigem um novo APK.
+          NOTES
+
+      - name: Assinar APK para atualização por cima
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          test -x "$APKSIGNER"
+          "$APKSIGNER" sign             --ks signing/buildmaster.keystore             --ks-pass env:ANDROID_KEYSTORE_PASSWORD             --ks-key-alias "$ANDROID_KEY_ALIAS"             --key-pass env:ANDROID_KEY_PASSWORD             --out dist-apk/BuildMaster-Elite-Tatico-signed.apk             android/app/build/outputs/apk/debug/app-debug.apk
+          "$APKSIGNER" verify --verbose dist-apk/BuildMaster-Elite-Tatico-signed.apk
+          mv dist-apk/BuildMaster-Elite-Tatico-signed.apk dist-apk/BuildMaster-Elite-Tatico-latest.apk
+          cp dist-apk/BuildMaster-Elite-Tatico-latest.apk dist-apk/BuildMaster-Elite-Tatico-v26.70.apk
+
+      - name: Finalizar manifesto com integridade do APK
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib
+          apk = pathlib.Path('dist-apk/BuildMaster-Elite-Tatico-latest.apk')
+          manifest_path = pathlib.Path('dist-apk/update-manifest.json')
+          digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['checksum'] = digest
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(f'SHA-256 do APK: {digest}')
+          PY
+
+      - name: Enviar APK como artefato do workflow
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v26.60-APK-Fiel
-          path: dist-apk/BuildMaster-Elite-Tatico-v26.60.apk
+          name: BuildMaster-Elite-Tatico-v26.70-APK-e-Manifesto
+          path: |
+            dist-apk/BuildMaster-Elite-Tatico-v26.70.apk
+            dist-apk/update-manifest.json
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publicar atualização estável
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete buildmaster-latest --yes --cleanup-tag || true
+          gh release create buildmaster-latest \
+            --target "$GITHUB_SHA" \
+            --title "BuildMaster Elite Tático v26.70 — atualização automática" \
+            --notes-file dist-apk/RELEASE_NOTES.md \
+            dist-apk/BuildMaster-Elite-Tatico-latest.apk \
+            dist-apk/update-manifest.json

@@ -1,14 +1,20 @@
-# APK Fiel — BuildMaster Elite Tático v24.34
+# APK Fiel — BuildMaster Elite Tático v26.70
 
-Esta versão mantém o visual fiel do seu projeto e melhora o motor de fichas.
+Esta versão mantém o aplicativo completo embutido no APK e adiciona backup dedicado de jogadores treinados e uma Central de Atualizações.
 
 ## Como gerar
 
-1. Suba os arquivos no GitHub.
+1. Envie o projeto completo para o GitHub.
 2. Vá em **Actions**.
-3. Rode **Gerar APK Android Fiel v24.34 Fichas Mais Precisas**.
-4. Baixe o artifact do APK.
+3. Execute **Gerar APK e publicar atualização v26.70**.
+4. Baixe o artefato `BuildMaster-Elite-Tatico-v26.70-APK-e-Manifesto`.
 
-## Observação
+## Atualização por cima
 
-Não desinstale o app antigo antes de instalar por cima se quiser manter fichas locais salvas.
+Para instalar versões futuras sem desinstalar, configure uma assinatura persistente usando os Secrets descritos em `README_ASSINATURA_ATUALIZACOES.md`.
+
+Sem assinatura persistente, o APK ainda é gerado como artefato, mas não é publicado como atualização automática.
+
+## Dados locais
+
+Antes de trocar de assinatura ou desinstalar o aplicativo, use **Cofre › Backup › Jogadores treinados** ou **Ajustes › Segurança › Backup completo**.

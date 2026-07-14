@@ -1,59 +1,26 @@
-# BuildMaster Elite Tático v24.8 — APK sem mexer no motor estável
+# BuildMaster Elite Tático v26.70 — Build Android seguro
 
-Esta versão foi criada para gerar APK Android sem repetir os erros das versões v25/v26/v27.
+## Antes de gerar
 
-## O que esta versão faz
+- mantenha `package.json` e `package-lock.json` sincronizados;
+- não envie `node_modules`, `.next`, `out` ou `android` antigos;
+- use a branch `main` para a publicação automática;
+- configure a assinatura persistente antes de distribuir atualizações por cima.
 
-- Mantém a base estável v24.7 Neon Cloud.
-- Não altera o motor de ficha, goleiro, habilidades, tática ou cofre.
-- Cria um APK Android com Capacitor.
-- O APK abre o seu app publicado no Vercel dentro de um aplicativo Android.
-- O Neon continua funcionando porque a parte de nuvem roda no Vercel.
+## Workflow
 
-## Por que este método é mais seguro
+Execute **Gerar APK e publicar atualização v26.70**. Ele cria:
 
-O app v24.7 usa rota online `/api/cloud/fichas` para o Neon. Se o APK fosse 100% offline, essa rota não existiria dentro do celular.
-Por isso, esta versão gera um APK que abre o site estável publicado no Vercel. Assim, o programa continua igual ao que já está funcionando.
+- `BuildMaster-Elite-Tatico-v26.70.apk`;
+- `update-manifest.json`;
+- artefato do GitHub Actions;
+- release móvel `buildmaster-latest`, quando a assinatura persistente estiver habilitada.
 
-## Como gerar o APK sem instalar Android Studio
+## Se o app antigo tiver outra assinatura
 
-1. Suba todos os arquivos desta versão no GitHub.
-2. Entre no repositório no GitHub.
-3. Vá na aba **Actions**.
-4. Abra **Gerar APK Android**.
-5. Clique em **Run workflow**.
-6. Espere terminar.
-7. Baixe o artefato chamado **BuildMaster-Elite-Tatico-v24-8-debug-apk**.
-8. Dentro dele estará o arquivo:
+1. Exporte o backup dos jogadores treinados.
+2. Desinstale a versão antiga.
+3. Instale uma vez o APK assinado de forma persistente.
+4. Restaure o backup.
 
-```text
-app-debug.apk
-```
-
-Esse APK é para instalar manualmente no celular Android.
-
-## Configurar o link do app
-
-Por padrão, o APK abre:
-
-```text
-https://buildmaster-ai-git-main-buildmaster-ai.vercel.app
-```
-
-Se o seu link principal for outro, no GitHub vá em:
-
-```text
-Settings > Secrets and variables > Actions > Variables > New repository variable
-```
-
-Crie:
-
-```text
-BUILDMASTER_WEB_URL=https://SEU-LINK-DO-VERCEL.vercel.app
-```
-
-Depois rode a Action novamente.
-
-## Observação importante
-
-Este APK precisa de internet para abrir o app, porque ele usa o site do Vercel. Esse é o jeito mais seguro para manter o Neon Cloud funcionando sem expor a senha do banco dentro do APK.
+A partir daí, os APKs futuros assinados com a mesma chave podem ser instalados por cima.

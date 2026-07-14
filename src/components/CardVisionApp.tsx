@@ -59,6 +59,7 @@ import { DelayResponsePanel, SkillAndTrainingPanel } from '@/components/Developm
 import { EliteEvolutionPanel, StabilityDiagnosticsPanel, VideoReviewPanel } from '@/components/EliteEvolutionPanels';
 import { MetaBuildLabPanel } from '@/components/MetaBuildLabPanel';
 import { CommunityIntelligencePanel } from '@/components/CommunityIntelligencePanel';
+import { UpdateAutoChecker, UpdateCenterPanel } from '@/components/UpdateCenterPanel';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
@@ -69,7 +70,7 @@ type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' |
 type ResultGroup = 'visao' | 'analise' | 'desenvolvimento' | 'tatica' | 'ferramentas';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
-type SettingsView = 'aparencia' | 'desempenho' | 'seguranca';
+type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'atualizacoes';
 
 const RESULT_GROUPS: Array<{ id: ResultGroup; label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { id: 'visao', label: 'Geral', tabs: [{ value: 'ficha', label: 'Ficha' }, { value: 'resumo', label: 'Resumo' }, { value: 'dados', label: 'Dados' }] },
@@ -3897,6 +3898,7 @@ export function CardVisionApp() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [vaultView, setVaultView] = useState<VaultView>('jogadores');
   const [settingsView, setSettingsView] = useState<SettingsView>('aparencia');
+  const [updateNotice, setUpdateNotice] = useState<string | null>(null);
   const [comparePlayerIds, setComparePlayerIds] = useState<string[]>([]);
   const [comparePosition, setComparePosition] = useState<PositionCode>('CF');
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
@@ -4007,6 +4009,16 @@ export function CardVisionApp() {
   useEffect(() => {
     const timer = window.setTimeout(() => setShowSplash(false), 1150);
     return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const onUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ version?: string; reason?: string }>).detail;
+      setUpdateNotice(detail?.version ? `Nova versão ${detail.version} disponível` : 'Nova atualização disponível');
+      setStatus(detail?.reason || 'Uma atualização nova está disponível em Ajustes › Atualizações.');
+    };
+    window.addEventListener('buildmaster:update-available', onUpdate);
+    return () => window.removeEventListener('buildmaster:update-available', onUpdate);
   }, []);
 
   useEffect(() => {
@@ -4452,7 +4464,11 @@ export function CardVisionApp() {
   function collectFullBackupSections(): BackupEnvelope['sections'] {
     return {
       history,
-      settings: readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode }),
+      settings: {
+        ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode }) || {}) as Record<string, unknown>),
+        updateManifestUrl: localStorage.getItem('buildmaster_update_manifest_url') || localStorage.getItem('buildmaster_update_manifest_url_v26_70') || '',
+        autoUpdateCheck: (localStorage.getItem('buildmaster_auto_update_check') ?? localStorage.getItem('buildmaster_auto_update_check_v26_70')) !== '0'
+      },
       calibration: {
         matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
         ocrZones: readJsonStorage(CALIBRATION_KEY, ocrZones),
@@ -4469,20 +4485,46 @@ export function CardVisionApp() {
     };
   }
 
-  function exportFullBackup() {
-    const envelope = createBackupEnvelope(collectFullBackupSections());
-    const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' });
+  function downloadJsonFile(payload: unknown, fileName: string) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportFullBackup() {
+    const envelope = createBackupEnvelope(collectFullBackupSections());
+    downloadJsonFile(envelope, `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`);
     localStorage.setItem('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
     setLastBackupAt(envelope.exportedAt);
     setStatus('Backup completo criado com assinatura de integridade. Guarde o arquivo em local seguro.');
+  }
+
+  function exportPlayersBackup(reason: 'manual' | 'update' = 'manual') {
+    const envelope = createBackupEnvelope({
+      history,
+      folders: vaultFolders,
+      calibration: {
+        matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
+        learning: readJsonStorage(LEARNING_KEY, {}),
+        corrections: readJsonStorage(CORRECTION_KEY, {})
+      }
+    });
+    const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
+    downloadJsonFile(envelope, `buildmaster-${suffix}-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`);
+    localStorage.setItem('buildmaster_last_players_backup', envelope.exportedAt);
+    setStatus(reason === 'update'
+      ? 'Backup de jogadores e fichas criado antes da atualização.'
+      : `Backup criado com ${history.length} jogador(es), fichas, habilidades concluídas e calibração.`);
+  }
+
+  function prepareBackupForUpdate() {
+    exportPlayersBackup('update');
   }
 
   function writeStorage(key: string, value: unknown) {
@@ -4509,11 +4551,13 @@ export function CardVisionApp() {
         await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
       }
       if (restoreSections.settings && sections.settings && typeof sections.settings === 'object') {
-        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean };
+        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; updateManifestUrl?: string; autoUpdateCheck?: boolean };
         writeStorage('buildmaster_ui_prefs_v24_24', ui);
         if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
         if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
         if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
+        if (typeof ui.updateManifestUrl === 'string') localStorage.setItem('buildmaster_update_manifest_url', ui.updateManifestUrl);
+        if (typeof ui.autoUpdateCheck === 'boolean') localStorage.setItem('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
       }
       if (restoreSections.calibration && sections.calibration && typeof sections.calibration === 'object') {
         const calibration = sections.calibration as Record<string, unknown>;
@@ -4563,8 +4607,8 @@ export function CardVisionApp() {
   function exportHistoryBackup() {
     const payload = {
       app: 'BuildMaster Elite Tático',
-      version: '24.31.0',
-      module: 'App Premium Visual',
+      version: APP_DATA_VERSION,
+      module: 'Cofre de jogadores treinados',
       exportedAt: new Date().toISOString(),
       stats: buildDashboardStats(history),
       items: history
@@ -4587,8 +4631,41 @@ export function CardVisionApp() {
     if (!file) return;
 
     try {
-      const parsed = JSON.parse(await file.text()) as { items?: unknown[] } | unknown[];
-      const entries = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : [];
+      const parsed = JSON.parse(await file.text()) as unknown;
+      let entries: unknown[] = [];
+      let restoredExtras = false;
+
+      if (Array.isArray(parsed)) {
+        entries = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        const record = parsed as { items?: unknown[]; sections?: BackupEnvelope['sections'] };
+        if (record.sections) {
+          const checked = validateBackupEnvelope(parsed);
+          if (!checked.valid || !checked.migrated) {
+            setStatus(checked.issues.map((item) => item.message).join(' ') || 'Backup inválido.');
+            return;
+          }
+          const migrated = migrateBackup(checked.migrated);
+          entries = Array.isArray(migrated.envelope.sections.history) ? migrated.envelope.sections.history : [];
+          if (Array.isArray(migrated.envelope.sections.folders)) {
+            const customFolders = (migrated.envelope.sections.folders as VaultFolder[]).filter((folder) => folder.kind === 'custom');
+            writeStorage(VAULT_FOLDERS_KEY, customFolders);
+            setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...customFolders]);
+            restoredExtras = true;
+          }
+          if (migrated.envelope.sections.calibration && typeof migrated.envelope.sections.calibration === 'object') {
+            const calibration = migrated.envelope.sections.calibration as Record<string, unknown>;
+            writeStorage(CALIBRATION_STORAGE_KEY, calibration.matches ?? {});
+            writeStorage(LEARNING_KEY, calibration.learning ?? {});
+            writeStorage(CORRECTION_KEY, calibration.corrections ?? {});
+            restoredExtras = true;
+          }
+          setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
+        } else if (Array.isArray(record.items)) {
+          entries = record.items;
+        }
+      }
+
       const imported = normalizeHistoryList(entries);
       if (!imported.length) {
         setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
@@ -4602,7 +4679,7 @@ export function CardVisionApp() {
         return next;
       });
       setLibraryOpen(true);
-      setStatus(`Backup importado com ${imported.length} ficha(s). Elas ficam no cofre até você apagar.`);
+      setStatus(`Backup importado com ${imported.length} ficha(s)${restoredExtras ? ', pastas e calibração' : ''}. Elas ficam no Cofre até você apagar.`);
     } catch {
       setStatus('Não consegui importar esse backup. Use um arquivo JSON exportado pelo próprio BuildMaster.');
     }
@@ -5045,6 +5122,7 @@ ${variantText}`);
 
   return (
     <main className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+      <UpdateAutoChecker />
       {showSplash && (
         <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
           <div className="splash-orbit"><Sparkles size={38} /></div>
@@ -5059,7 +5137,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.60</span>
+            <span>Elite Tático v26.70</span>
           </div>
         </div>
         <div className="topbar-current-page">
@@ -5072,6 +5150,12 @@ ${variantText}`);
           <button type="button" onClick={logout}><LogOut size={16} /> Sair</button>
         </div>
       </header>
+
+      {updateNotice && (
+        <button type="button" className="global-update-notice" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); setUpdateNotice(null); }}>
+          <RotateCcw size={16} /><strong>{updateNotice}</strong><span>Toque para revisar, criar backup e atualizar.</span>
+        </button>
+      )}
 
       <nav className="main-section-tabs luxury-panel" aria-label="Navegação principal do BuildMaster">
         {mainNavigation.map((item) => {
@@ -5596,13 +5680,15 @@ ${variantText}`);
               <section className="vault-view-panel luxury-panel">
                 <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Backup e nuvem</p><h3>Proteja o Cofre sem poluir a lista de jogadores</h3></div><span>{history.length} ficha(s)</span></div>
                 <div className="history-actions cloud-history-actions">
-                  <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><Download size={14} /> Exportar backup</button>
+                  <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Download size={14} /> Jogadores treinados</button>
+                  <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><FileText size={14} /> Backup simples</button>
                   <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
                   <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
                   <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
                   <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
                 </div>
                 <div className="cloud-status-card"><ShieldCheck size={14} /><span>{cloudStatus}</span></div>
+                <div className="settings-explanation-card"><Save size={18} /><div><strong>Backup de jogadores treinados</strong><span>Inclui fichas, posição escolhida, distribuição, habilidades concluídas, pastas e calibração. O arquivo pode ser restaurado em outro celular.</span></div></div>
                 <p className="panel-note">O backup completo e a restauração seletiva permanecem em Ajustes › Segurança.</p>
               </section>
             )}
@@ -5615,6 +5701,7 @@ ${variantText}`);
                 <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={17} /><span>Aparência</span></button>
                 <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={17} /><span>Desempenho</span></button>
                 <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={17} /><span>Segurança</span></button>
+                <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={17} /><span>Atualizações</span></button>
               </nav>
 
               {settingsView === 'aparencia' && (
@@ -5639,6 +5726,11 @@ ${variantText}`);
                 </section>
               )}
 
+
+              {settingsView === 'atualizacoes' && (
+                <UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} />
+              )}
+
               {settingsView === 'seguranca' && (
                 <section className="safety-quality-panel luxury-panel settings-view-panel">
                   <div className="section-title-row">
@@ -5654,6 +5746,7 @@ ${variantText}`);
                   </div>
 
                   <div className="safety-actions-grid">
+                    <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Save size={17} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span></button>
                     <button type="button" onClick={exportFullBackup}><Download size={17} /><strong>Backup completo</strong><span>Cofre, preferências, calibração, planos, pastas e regras.</span></button>
                     <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={17} /><strong>Restaurar backup</strong><span>Escolha as áreas que deseja recuperar.</span></button>
                     <button type="button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><strong>Exportar diagnóstico</strong><span>Gera relatório técnico sem modificar seus dados.</span></button>
