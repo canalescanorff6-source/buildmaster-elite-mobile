@@ -1,18 +1,19 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "26.70.0",
-  "buildId": "44e8a85c2cdf9f1216c617e27f3aa7dbd99d87a3",
-  "publishedAt": "2026-07-14T04:49:02.607742+00:00",
+  "version": "26.72.0",
+  "buildId": "fd2bac2db1cbfa26040416dc5fb50b5eec1b9935",
+  "versionCode": 267129,
+  "publishedAt": "2026-07-14T16:08:30.671160+00:00",
   "channel": "stable",
   "updateType": "apk",
   "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk",
   "notes": [
-    "Backup dedicado de fichas e jogadores treinados.",
-    "Restauração compatível com backup simples e completo.",
-    "Verificação automática de atualização ao abrir o app.",
-    "Backup de segurança criado antes de baixar uma atualização."
+    "Login fechado apenas com usuário e senha.",
+    "Painel exclusivo para o administrador criar, renovar e bloquear contas.",
+    "Prazo de uso e limite de aparelhos verificados no servidor.",
+    "Cofre local e nuvem separados por usuário."
   ],
   "mandatory": false,
-  "minNativeVersion": "26.70.0",
-  "checksum": "6b0f51ee1082d429ae06c6dd535d8e171ca8b59326bf9fbb34202c883018e380"
+  "minNativeVersion": "26.72.0",
+  "checksum": "8a2a320f693b28bf59b5028b0575f6775cca9c0415c84b3708659b44425947dc"
 }
