@@ -5132,7 +5132,7 @@ input, select, textarea { caret-color: var(--accent, #37ff8f); }
   .community-source-card{grid-template-columns:1fr auto}
 }
 
-/* v26.71 — Contas, licenças, backup e atualizações */
+/* v26.72 — Contas, licenças, backup e atualizações */
 .update-center-panel{overflow:hidden}
 .update-center-panel .health-score-grid{margin:1rem 0}
 .update-center-panel .cloud-status-card.update-available{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:var(--accent-soft)}
@@ -5154,7 +5154,7 @@ input, select, textarea { caret-color: var(--accent, #37ff8f); }
 .global-update-notice strong{font-size:.9rem}.global-update-notice span{margin-left:auto;color:var(--muted);font-size:.8rem}
 @media(max-width:720px){.global-update-notice{align-items:flex-start;flex-wrap:wrap}.global-update-notice span{width:100%;margin-left:0;padding-left:1.65rem}}
 
-/* v26.71 — Contas fechadas, licenças e painel administrativo */
+/* v26.72 — Contas fechadas, licenças e painel administrativo */
 .offline-license-banner {
   position: fixed;
   z-index: 1200;

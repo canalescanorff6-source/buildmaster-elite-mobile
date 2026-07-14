@@ -1,4 +1,4 @@
-name: Gerar APK e publicar atualização v26.70
+name: Gerar APK e publicar atualização v26.72
 
 on:
   workflow_dispatch:
@@ -67,6 +67,9 @@ jobs:
           NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
           NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL: https://github.com/${{ github.repository }}/releases/download/buildmaster-latest/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK: ${{ vars.NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK || '0' }}
         run: npm run apk:build-web
 
       - name: Criar projeto Android
@@ -84,13 +87,13 @@ jobs:
           if target is None:
               raise SystemExit('Arquivo Gradle do aplicativo não encontrado.')
           text = target.read_text(encoding='utf-8')
-          code = max(1, int(os.environ['ANDROID_VERSION_CODE']))
+          code = 267100 + max(1, int(os.environ['ANDROID_VERSION_CODE']))
           text, count_code = re.subn(r'versionCode\s*[= ]\s*\d+', f'versionCode {code}', text, count=1)
-          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', 'versionName "26.70.0"', text, count=1)
+          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', 'versionName "26.72.0"', text, count=1)
           if not count_code:
               raise SystemExit('versionCode não encontrado no Gradle.')
           target.write_text(text, encoding='utf-8')
-          print(f'Android versionCode={code}; versionName=26.70.0')
+          print(f'Android versionCode={code}; versionName=26.72.0')
           PY
 
       - name: Configurar cache do Gradle
@@ -130,10 +133,10 @@ jobs:
 
       - name: Preparar arquivos da atualização
         env:
-          VERSION: '26.70.0'
+          VERSION: '26.72.0'
         run: |
           mkdir -p dist-apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-v26.70.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-v26.72.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-latest.apk
           python - <<'PY'
           import json, os
@@ -144,30 +147,31 @@ jobs:
             'appId': 'com.buildmaster.elitetatico',
             'version': version,
             'buildId': sha,
+            'versionCode': 267100 + int(os.environ.get('GITHUB_RUN_NUMBER', '1')),
             'publishedAt': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
             'channel': 'stable',
             'updateType': 'apk',
             'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk',
             'notes': [
-              'Backup dedicado de fichas e jogadores treinados.',
-              'Restauração compatível com backup simples e completo.',
-              'Verificação automática de atualização ao abrir o app.',
-              'Backup de segurança criado antes de baixar uma atualização.'
+              'Login fechado apenas com usuário e senha.',
+              'Painel exclusivo para o administrador criar, renovar e bloquear contas.',
+              'Prazo de uso e limite de aparelhos verificados no servidor.',
+              'Cofre local e nuvem separados por usuário.'
             ],
             'mandatory': False,
-            'minNativeVersion': '26.70.0'
+            'minNativeVersion': '26.72.0'
           }
           with open('dist-apk/update-manifest.json', 'w', encoding='utf-8') as handle:
             json.dump(manifest, handle, ensure_ascii=False, indent=2)
           PY
           cat > dist-apk/RELEASE_NOTES.md <<'NOTES'
-          ## BuildMaster Elite Tático v26.70
+          ## BuildMaster Elite Tático v26.72
 
-          - Backup específico de fichas e jogadores treinados.
-          - Backup completo com restauração seletiva preservado.
-          - Central de atualizações dentro do aplicativo.
-          - Busca automática de novas revisões.
-          - Backup de segurança antes de abrir o download do APK.
+          - Cadastro fechado: somente o administrador cria contas.
+          - Login por nome de usuário e senha, sem e-mail visível.
+          - Validade, renovação, suspensão, bloqueio e limite de aparelhos.
+          - Cofre separado por usuário e sincronização protegida por RLS.
+          - Modo local temporário preservado até a configuração do Supabase.
 
           O Android ainda solicita confirmação para instalar um APK baixado. Alterações nativas sempre exigem um novo APK.
           NOTES
@@ -184,7 +188,7 @@ jobs:
           "$APKSIGNER" sign             --ks signing/buildmaster.keystore             --ks-pass env:ANDROID_KEYSTORE_PASSWORD             --ks-key-alias "$ANDROID_KEY_ALIAS"             --key-pass env:ANDROID_KEY_PASSWORD             --out dist-apk/BuildMaster-Elite-Tatico-signed.apk             android/app/build/outputs/apk/debug/app-debug.apk
           "$APKSIGNER" verify --verbose dist-apk/BuildMaster-Elite-Tatico-signed.apk
           mv dist-apk/BuildMaster-Elite-Tatico-signed.apk dist-apk/BuildMaster-Elite-Tatico-latest.apk
-          cp dist-apk/BuildMaster-Elite-Tatico-latest.apk dist-apk/BuildMaster-Elite-Tatico-v26.70.apk
+          cp dist-apk/BuildMaster-Elite-Tatico-latest.apk dist-apk/BuildMaster-Elite-Tatico-v26.72.apk
 
       - name: Finalizar manifesto com integridade do APK
         run: |
@@ -202,9 +206,9 @@ jobs:
       - name: Enviar APK como artefato do workflow
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v26.70-APK-e-Manifesto
+          name: BuildMaster-Elite-Tatico-v26.72-APK-e-Manifesto
           path: |
-            dist-apk/BuildMaster-Elite-Tatico-v26.70.apk
+            dist-apk/BuildMaster-Elite-Tatico-v26.72.apk
             dist-apk/update-manifest.json
           if-no-files-found: error
           retention-days: 14
@@ -217,7 +221,7 @@ jobs:
           gh release delete buildmaster-latest --yes --cleanup-tag || true
           gh release create buildmaster-latest \
             --target "$GITHUB_SHA" \
-            --title "BuildMaster Elite Tático v26.70 — atualização automática" \
+            --title "BuildMaster Elite Tático v26.72 — atualização automática" \
             --notes-file dist-apk/RELEASE_NOTES.md \
             dist-apk/BuildMaster-Elite-Tatico-latest.apk \
             dist-apk/update-manifest.json

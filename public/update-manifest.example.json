@@ -1,6 +1,6 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "26.71.0",
+  "version": "26.72.0",
   "buildId": "exemplo-build-id",
   "publishedAt": "2026-07-14T00:00:00.000Z",
   "channel": "stable",
@@ -11,5 +11,5 @@
     "Central de atualizações automáticas."
   ],
   "mandatory": false,
-  "minNativeVersion": "26.71.0"
+  "minNativeVersion": "26.72.0"
 }

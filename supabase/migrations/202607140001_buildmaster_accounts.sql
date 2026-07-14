@@ -1,4 +1,4 @@
--- BuildMaster Elite Tático v26.71
+-- BuildMaster Elite Tático v26.72
 -- Contas fechadas por usuário, licença com prazo e separação de dados.
 
 create extension if not exists citext;

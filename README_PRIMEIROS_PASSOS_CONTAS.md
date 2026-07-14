@@ -1,4 +1,4 @@
-# Primeiros passos — contas por usuário v26.71
+# Primeiros passos — contas por usuário v26.72
 
 ## 1. Criar o Supabase
 
@@ -49,7 +49,7 @@ Em **Settings → Secrets and variables → Actions → Variables** no GitHub, c
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK` = `0`
 
-Gere o APK pelo workflow **Gerar APK e publicar atualização v26.71**.
+Gere o APK pelo workflow **Gerar APK e publicar atualização v26.72**.
 
 ## 5. Criar os usuários comuns
 

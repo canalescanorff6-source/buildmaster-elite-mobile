@@ -1,4 +1,4 @@
-# APK Fiel — BuildMaster Elite Tático v26.71
+# APK Fiel — BuildMaster Elite Tático v26.70
 
 Esta versão mantém o aplicativo completo embutido no APK e adiciona backup dedicado de jogadores treinados e uma Central de Atualizações.
 
@@ -6,8 +6,8 @@ Esta versão mantém o aplicativo completo embutido no APK e adiciona backup ded
 
 1. Envie o projeto completo para o GitHub.
 2. Vá em **Actions**.
-3. Execute **Gerar APK e publicar atualização v26.71**.
-4. Baixe o artefato `BuildMaster-Elite-Tatico-v26.71-APK-e-Manifesto`.
+3. Execute **Gerar APK e publicar atualização v26.70**.
+4. Baixe o artefato `BuildMaster-Elite-Tatico-v26.70-APK-e-Manifesto`.
 
 ## Atualização por cima
 

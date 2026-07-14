@@ -44,4 +44,4 @@ assert.match(adminFunction, /app_metadata:\s*\{ buildmaster_managed: true \}/);
 assert.match(adminFunction, /auth\.admin\.updateUserById/);
 assert.match(adminFunction, /safeAuditDetails/);
 assert.doesNotMatch(adminFunction, /details:\s*body\s*\}/, 'senha não pode ser gravada no log administrativo');
-console.log('✓ Contas, prazos, aparelhos, RLS e painel administrativo v26.71 validados.');
+console.log('✓ Contas, prazos, aparelhos, RLS e painel administrativo v26.72 validados.');

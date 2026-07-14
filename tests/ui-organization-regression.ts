@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 
-assert.match(component, /Elite Tático v26\.71/);
+assert.match(component, /Elite Tático v26\.72/);
 assert.match(component, /const RESULT_GROUPS/);
 assert.match(component, /label: 'Geral'/);
 assert.match(component, /label: 'Treino'/);
@@ -23,4 +23,4 @@ assert.match(css, /\.section-segmented-tabs/);
 
 assert.match(component, /label: 'Comunidade'/);
 assert.match(component, /CommunityIntelligencePanel/);
-console.log('UI v26.71 organizada: resultado, Cofre, Ajustes e navegação aprovados.');
+console.log('UI v26.72 organizada: resultado, Cofre, Ajustes e navegação aprovados.');
