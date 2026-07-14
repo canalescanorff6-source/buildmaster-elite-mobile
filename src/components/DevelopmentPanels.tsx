@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { AnalysisResult } from '@/lib/analyzer';
+import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { buildSpecialSkillUsage, buildWeeklyPlan, diagnoseDelay, ERROR_OPTIONS, summarizeTapSamples, TRAINING_DRILLS, type DelayContext, type DelaySymptom } from '@/lib/playerDevelopment';
 
 const TRAINING_LOG_KEY='buildmaster_training_logs_v25_69';
@@ -16,10 +17,10 @@ export function SkillAndTrainingPanel({result}:{result:AnalysisResult}){
   const [score,setScore]=useState(7);
   const [note,setNote]=useState('');
   const [sessions,setSessions]=useState(3);
-  useEffect(()=>{try{setLogs(JSON.parse(localStorage.getItem(TRAINING_LOG_KEY)??'[]'));}catch{}},[]);
+  useEffect(()=>{try{setLogs(JSON.parse(readAccountStorage(TRAINING_LOG_KEY)??'[]'));}catch{}},[]);
   const errorCounts=useMemo(()=>{const c:Record<string,number>={};logs.flatMap(l=>l.errors).forEach(e=>c[e]=(c[e]??0)+1);selectedErrors.forEach(e=>c[e]=(c[e]??0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1]);},[logs,selectedErrors]);
   const weekly=useMemo(()=>buildWeeklyPlan(errorCounts.map(([e])=>e),sessions),[errorCounts,sessions]);
-  function saveDrill(drillId:string){const next=[{at:new Date().toISOString(),drillId,score,errors:selectedErrors,note},...logs].slice(0,100);setLogs(next);localStorage.setItem(TRAINING_LOG_KEY,JSON.stringify(next));setNote('');}
+  function saveDrill(drillId:string){const next=[{at:new Date().toISOString(),drillId,score,errors:selectedErrors,note},...logs].slice(0,100);setLogs(next);writeAccountStorage(TRAINING_LOG_KEY,JSON.stringify(next));setNote('');}
   return <div className="result-section-grid">
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker">v25.65 • Habilidades especiais</p><h3>Aproveitamento real na posição escolhida</h3></div><span>{skillUsage.overall}/100</span></div>

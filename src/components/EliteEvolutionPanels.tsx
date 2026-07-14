@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisResult } from '@/lib/analyzer';
+import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 
 const TRAINING_LABELS: Record<string,string> = {
   shooting:'Finalização', passing:'Passe', dribbling:'Drible', dexterity:'Destreza', lowerBodyStrength:'Força pernas',
@@ -22,13 +23,13 @@ function AbExperimentPanel({result}:{result:AnalysisResult}){
   const [build,setBuild]=useState<'A'|'B'>('A');
   const [rating,setRating]=useState(7);
   const [note,setNote]=useState('');
-  useEffect(()=>{if(!experiment)return;try{setRecords(JSON.parse(localStorage.getItem(storageKey)??'[]'));}catch{setRecords([]);}},[experiment,storageKey]);
+  useEffect(()=>{if(!experiment)return;try{setRecords(JSON.parse(readAccountStorage(storageKey)??'[]'));}catch{setRecords([]);}},[experiment,storageKey]);
   const summary=useMemo(()=>{
     const avg=(key:'A'|'B')=>{const rows=records.filter(r=>r.build===key);return rows.length?rows.reduce((s,r)=>s+r.rating,0)/rows.length:0;};
     return {a:avg('A'),b:avg('B'),countA:records.filter(r=>r.build==='A').length,countB:records.filter(r=>r.build==='B').length};
   },[records]);
   if(!experiment)return null;
-  function save(){const next=[{at:new Date().toISOString(),build,rating,note},...records].slice(0,40);setRecords(next);localStorage.setItem(storageKey,JSON.stringify(next));setNote('');}
+  function save(){const next=[{at:new Date().toISOString(),build,rating,note},...records].slice(0,40);setRecords(next);writeAccountStorage(storageKey,JSON.stringify(next));setNote('');}
   return <article className="luxury-panel wide-card">
     <div className="section-title-row"><div><p className="kicker">v26.06–v26.09 • Aprendizado por carta</p><h3>Experimento A/B controlado</h3></div><span>{experiment.id}</span></div>
     <div className="skill-grid">
@@ -100,12 +101,12 @@ export function VideoReviewPanel({result}:{result:AnalysisResult}){
   const [note,setNote]=useState('');
   const key=e?`buildmaster_video_markers_${e.learning.versionSignature}_${result.bestPosition.code}`:'buildmaster_video_markers';
   const [markers,setMarkers]=useState<VideoMarker[]>([]);
-  useEffect(()=>{try{setMarkers(JSON.parse(localStorage.getItem(key)??'[]'));}catch{setMarkers([]);}},[key]);
+  useEffect(()=>{try{setMarkers(JSON.parse(readAccountStorage(key)??'[]'));}catch{setMarkers([]);}},[key]);
   useEffect(()=>()=>{if(videoUrl)URL.revokeObjectURL(videoUrl);},[videoUrl]);
   if(!e)return null;
   function chooseVideo(file?:File){if(!file)return;if(videoUrl)URL.revokeObjectURL(videoUrl);setVideoUrl(URL.createObjectURL(file));}
-  function addMarker(){const seconds=Math.round(videoRef.current?.currentTime??0);const row={id:`${Date.now()}-${seconds}`,at:new Date().toISOString(),seconds,error:markerType,note};const next=[...markers,row].sort((a,b)=>a.seconds-b.seconds);setMarkers(next);localStorage.setItem(key,JSON.stringify(next));setNote('');}
-  function remove(id:string){const next=markers.filter(x=>x.id!==id);setMarkers(next);localStorage.setItem(key,JSON.stringify(next));}
+  function addMarker(){const seconds=Math.round(videoRef.current?.currentTime??0);const row={id:`${Date.now()}-${seconds}`,at:new Date().toISOString(),seconds,error:markerType,note};const next=[...markers,row].sort((a,b)=>a.seconds-b.seconds);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));setNote('');}
+  function remove(id:string){const next=markers.filter(x=>x.id!==id);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));}
   return <article className="luxury-panel wide-card video-review-card">
     <div className="section-title-row"><div><p className="kicker">v26.10–v26.13 • Vídeo e treino adaptativo</p><h3>Análise assistida da jogabilidade</h3></div><span>{markers.length} lance(s)</span></div>
     <label className="file-picker"><span>Selecionar vídeo do aparelho</span><input type="file" accept="video/*" onChange={event=>chooseVideo(event.target.files?.[0])}/></label>
@@ -127,12 +128,12 @@ export function StabilityDiagnosticsPanel({result}:{result?:AnalysisResult}){
   const [rating,setRating]=useState(7);
   const [symptom,setSymptom]=useState('sem atraso perceptível');
   const [note,setNote]=useState('');
-  useEffect(()=>{try{setRecords(JSON.parse(localStorage.getItem(storageKey)??'[]'));}catch{setRecords([]);}},[]);
+  useEffect(()=>{try{setRecords(JSON.parse(readAccountStorage(storageKey)??'[]'));}catch{setRecords([]);}},[]);
   const profiles=e?.stability.profiles??[
     {name:'Competitivo',fps:60 as const,graphics:'baixa' as const,network:'5 GHz' as const,batterySaver:false,backgroundApps:false,purpose:'menor latência local'},
     {name:'Aquecimento controlado',fps:30 as const,graphics:'baixa' as const,network:'5 GHz' as const,batterySaver:false,backgroundApps:false,purpose:'reduzir carga térmica'}
   ];
-  function save(){const row={at:new Date().toISOString(),profile,rating,symptom,note};const next=[row,...records].slice(0,60);setRecords(next);localStorage.setItem(storageKey,JSON.stringify(next));setNote('');}
+  function save(){const row={at:new Date().toISOString(),profile,rating,symptom,note};const next=[row,...records].slice(0,60);setRecords(next);writeAccountStorage(storageKey,JSON.stringify(next));setNote('');}
   function exportReport(){const payload={version:'26.25',createdAt:new Date().toISOString(),records,notice:'Relatório local; não mede diretamente o servidor do eFootball.'};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='buildmaster-diagnostico-estabilidade.json';a.click();URL.revokeObjectURL(url);}
   return <section className="luxury-panel wide-card">
     <div className="section-title-row"><div><p className="kicker">v26.14–v26.17 • Estabilidade comparativa</p><h3>Teste condições, salve perfis e separe as causas</h3></div><span>{records.length} teste(s)</span></div>

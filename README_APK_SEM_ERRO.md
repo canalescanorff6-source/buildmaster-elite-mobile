@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v26.70 — Build Android seguro
+# BuildMaster Elite Tático v26.71 — Build Android seguro
 
 ## Antes de gerar
 
@@ -9,9 +9,9 @@
 
 ## Workflow
 
-Execute **Gerar APK e publicar atualização v26.70**. Ele cria:
+Execute **Gerar APK e publicar atualização v26.71**. Ele cria:
 
-- `BuildMaster-Elite-Tatico-v26.70.apk`;
+- `BuildMaster-Elite-Tatico-v26.71.apk`;
 - `update-manifest.json`;
 - artefato do GitHub Actions;
 - release móvel `buildmaster-latest`, quando a assinatura persistente estiver habilitada.

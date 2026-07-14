@@ -2,7 +2,7 @@
 
 O Android só aceita atualizar um aplicativo instalado quando o novo APK usa a **mesma chave de assinatura** e possui um `versionCode` igual ou maior.
 
-O workflow v26.70 aumenta o `versionCode` em cada execução usando `github.run_number`. Para manter a mesma assinatura, configure estes Secrets no repositório:
+O workflow v26.71 aumenta o `versionCode` em cada execução usando `github.run_number`. Para manter a mesma assinatura, configure estes Secrets no repositório:
 
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEYSTORE_PASSWORD`

@@ -1,63 +1,42 @@
-# BuildMaster Elite Tático v26.70 — Backup e Atualizações
+# BuildMaster Elite Tático v26.71 — Contas e Licenças
 
-A v26.70 preserva todos os recursos da v26.60, incluindo Universo Meta, fichas DNA, Inteligência da Comunidade, Cofre, equipe, treinamento e análise de delay, e adiciona duas melhorias centrais:
+A v26.71 preserva os recursos da v26.70 e adiciona um sistema fechado de acesso:
 
-- backup dedicado das fichas e dos jogadores treinados;
-- Central de Atualizações integrada ao aplicativo.
+- login apenas com nome de usuário e senha;
+- nenhum e-mail visível no aplicativo;
+- somente o administrador cria contas;
+- prazo de uso, renovação, suspensão e bloqueio;
+- limite de aparelhos;
+- redefinição de senha pelo administrador;
+- Cofre local e nuvem separados por usuário;
+- período offline controlado;
+- painel administrativo em **Ajustes → Contas**.
 
-## Backup de jogadores treinados
+## Configuração obrigatória
 
-Disponível em **Cofre → Backup** e em **Ajustes → Segurança**.
+A autenticação segura utiliza Supabase Auth, banco com Row Level Security e Edge Functions. Siga o guia completo:
 
-O arquivo inclui:
+`README_CONTAS_LICENCAS_V26_71.md`
 
-- fichas salvas e versões da carta;
-- posição escolhida;
-- distribuição de treinamento;
-- habilidades concluídas e pendentes;
-- pastas e organização do Cofre;
-- calibração, aprendizado e correções locais.
+Os arquivos de backend estão em:
 
-O backup completo continua disponível para incluir também preferências, Planos A/B/C, regras e sessão em andamento.
+- `supabase/migrations/202607140001_buildmaster_accounts.sql`
+- `supabase/functions/license-session/index.ts`
+- `supabase/functions/admin-users/index.ts`
 
-## Central de Atualizações
+## Modo local temporário
 
-Disponível em **Ajustes → Atualizações**.
+Enquanto o Supabase não estiver configurado, o APK pode manter o login local antigo se:
 
-Ela mostra:
+`NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK=1`
 
-- versão e build instalados;
-- última verificação;
-- versão disponível;
-- notas da atualização;
-- busca manual e automática;
-- botão **Backup e atualizar**.
+Depois de validar a conta administrativa em nuvem, altere para `0` e gere outro APK. O modo local é apenas uma transição e não deve ser usado para distribuir contas pagas.
 
-Ao receber uma nova revisão, o aplicativo exibe um aviso no topo e leva diretamente para essa central.
+## GitHub Actions
 
-## Publicação pelo GitHub Actions
+- `build-apk.yml`: testa, gera, assina e publica o APK v26.71.
+- `deploy-supabase.yml`: aplica a migração e publica as Edge Functions quando executado manualmente.
 
-O workflow **Gerar APK e publicar atualização v26.70** executa, a cada push para `main`:
+## Backup e atualização
 
-1. `npm ci`;
-2. TypeScript;
-3. testes do projeto;
-4. exportação estática do app;
-5. compilação Android;
-6. criação de `update-manifest.json`;
-7. publicação da release `buildmaster-latest`, quando a assinatura persistente estiver configurada.
-
-## Assinatura persistente
-
-Para instalar atualizações por cima sem desinstalar, configure os Secrets explicados em:
-
-- `README_ASSINATURA_ATUALIZACOES.md`
-
-Sem esses Secrets, o workflow ainda gera o APK como artefato, mas não publica uma atualização que poderia ter assinatura incompatível.
-
-## Documentação
-
-- `README_V26_70.md` — funcionamento de backup e atualizações;
-- `README_ASSINATURA_ATUALIZACOES.md` — criação e configuração da chave Android;
-- `README_APK_FIEL.md` — geração do APK;
-- `README_V26_60.md` — histórico da Inteligência da Comunidade.
+Os backups existentes continuam disponíveis. O Cofre agora é armazenado sob o identificador da conta ativa. A Central de Atualizações permanece em **Ajustes → Atualizações**.

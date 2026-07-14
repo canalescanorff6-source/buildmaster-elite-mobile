@@ -13,8 +13,8 @@ Mudanças desta versão:
 
 Credenciais padrão:
 
-- Usuário: `thiago0126`
-- Senha: `iu1fsaa67a`
+- Usuário: `seu_usuario_admin`
+- Senha: `defina-uma-senha-forte`
 
 Variáveis opcionais na Vercel:
 

@@ -1,4 +1,4 @@
-# APK Nativo — BuildMaster Elite Tático v26.70
+# APK Nativo — BuildMaster Elite Tático v26.71
 
 O projeto usa Capacitor para abrir o aplicativo dentro do próprio APK Android, sem redirecionar a interface principal para o navegador.
 

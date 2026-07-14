@@ -5132,7 +5132,7 @@ input, select, textarea { caret-color: var(--accent, #37ff8f); }
   .community-source-card{grid-template-columns:1fr auto}
 }
 
-/* v26.70 — Backup de jogadores e Central de Atualizações */
+/* v26.71 — Contas, licenças, backup e atualizações */
 .update-center-panel{overflow:hidden}
 .update-center-panel .health-score-grid{margin:1rem 0}
 .update-center-panel .cloud-status-card.update-available{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:var(--accent-soft)}
@@ -5153,3 +5153,178 @@ input, select, textarea { caret-color: var(--accent, #37ff8f); }
 .global-update-notice{display:flex;align-items:center;gap:.65rem;width:min(1180px,calc(100% - 2rem));margin:.65rem auto 0;padding:.78rem 1rem;border:1px solid color-mix(in srgb,var(--accent) 58%,var(--border));border-radius:16px;background:var(--accent-soft);color:var(--text);text-align:left;box-shadow:0 12px 28px rgba(0,0,0,.16);cursor:pointer}
 .global-update-notice strong{font-size:.9rem}.global-update-notice span{margin-left:auto;color:var(--muted);font-size:.8rem}
 @media(max-width:720px){.global-update-notice{align-items:flex-start;flex-wrap:wrap}.global-update-notice span{width:100%;margin-left:0;padding-left:1.65rem}}
+
+/* v26.71 — Contas fechadas, licenças e painel administrativo */
+.offline-license-banner {
+  position: fixed;
+  z-index: 1200;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 190, 80, .45);
+  border-radius: 999px;
+  background: rgba(42, 25, 5, .94);
+  color: #ffd48a;
+  box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.auth-license-message { min-height: auto; }
+.account-topbar-chip { max-width: 180px; }
+.account-topbar-chip svg { flex: 0 0 auto; }
+
+.account-admin-workspace {
+  display: grid;
+  gap: 14px;
+}
+
+.account-admin-panel,
+.account-create-panel,
+.account-users-panel {
+  min-width: 0;
+}
+
+.account-setup-warning,
+.settings-explanation-card.account-warning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid rgba(255, 191, 71, .35);
+  border-radius: 18px;
+  background: rgba(255, 176, 39, .08);
+}
+.account-setup-warning svg { color: #ffbe47; flex: 0 0 auto; }
+.account-setup-warning div { display: grid; gap: 4px; }
+.account-setup-warning span { color: var(--muted); line-height: 1.5; }
+.account-setup-steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.account-setup-steps span {
+  padding: 11px 13px;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+}
+
+.account-license-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.account-license-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  background: rgba(255,255,255,.04);
+}
+.account-license-grid strong { font-size: 17px; overflow-wrap: anywhere; }
+.account-license-grid span { color: var(--muted); font-size: 12px; }
+
+.account-create-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.account-create-grid label { display: grid; gap: 7px; }
+.account-create-grid label > span { color: var(--muted); font-size: 12px; font-weight: 800; }
+.account-create-grid input,
+.account-create-grid select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: var(--input-bg, rgba(255,255,255,.055));
+  color: inherit;
+  outline: none;
+}
+.account-create-grid input:focus,
+.account-create-grid select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.account-create-grid .elite-button { align-self: end; min-height: 46px; }
+
+.account-success {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  color: #6affad;
+  font-weight: 800;
+}
+
+.account-user-list { display: grid; gap: 10px; margin-top: 14px; }
+.account-user-card {
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  background: rgba(255,255,255,.035);
+}
+.account-user-head,
+.account-user-meta,
+.account-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.account-user-head { justify-content: space-between; }
+.account-user-head > div { display: grid; gap: 3px; min-width: 0; }
+.account-user-head strong { font-size: 16px; }
+.account-user-head span:not(.account-status),
+.account-user-meta { color: var(--muted); font-size: 12px; }
+.account-user-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.account-user-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--stroke);
+  border-radius: 11px;
+  background: rgba(255,255,255,.04);
+  color: inherit;
+}
+.account-user-actions .danger-action { color: #ff8c8c; border-color: rgba(255, 100, 100, .28); }
+
+.account-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+.account-status-active { color: #63f4a5; background: rgba(54, 231, 138, .12); border: 1px solid rgba(54, 231, 138, .25); }
+.account-status-suspended { color: #ffd17d; background: rgba(255, 187, 64, .12); border: 1px solid rgba(255, 187, 64, .25); }
+.account-status-blocked,
+.account-status-expired { color: #ff8e8e; background: rgba(255, 90, 90, .12); border: 1px solid rgba(255, 90, 90, .25); }
+
+@media (max-width: 820px) {
+  .account-license-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .account-create-grid { grid-template-columns: 1fr; }
+  .account-topbar-chip { display: none !important; }
+}
+
+@media (max-width: 520px) {
+  .account-license-grid { grid-template-columns: 1fr 1fr; }
+  .account-user-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .account-user-actions button { justify-content: center; }
+  .section-segmented-tabs[aria-label="Áreas dos Ajustes"] { overflow-x: auto; grid-template-columns: repeat(5, minmax(105px, 1fr)); }
+}

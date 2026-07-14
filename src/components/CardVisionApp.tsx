@@ -35,7 +35,7 @@ import {
   BrainCircuit,
   Users
 } from 'lucide-react';
-import { clearBuildMasterSession } from '@/components/AuthGate';
+import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { analyzeCard, normalizeObjective, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
 import { DEFAULT_OCR_ZONES, createZoneOriginPreview, enhanceImageLocally, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
 import { READING_CONFIRMATION_STAGES, buildStageSummary, ensureZoneCoverage, qualityLabel, qualityScore, readingStatus, suggestedEnhancement, type PremiumEnhancementMode, type PremiumZoneReading } from '@/lib/premiumReading';
@@ -60,6 +60,9 @@ import { EliteEvolutionPanel, StabilityDiagnosticsPanel, VideoReviewPanel } from
 import { MetaBuildLabPanel } from '@/components/MetaBuildLabPanel';
 import { CommunityIntelligencePanel } from '@/components/CommunityIntelligencePanel';
 import { UpdateAutoChecker, UpdateCenterPanel } from '@/components/UpdateCenterPanel';
+import { AccountAdminPanel } from '@/components/AccountAdminPanel';
+import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
@@ -70,7 +73,7 @@ type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' |
 type ResultGroup = 'visao' | 'analise' | 'desenvolvimento' | 'tatica' | 'ferramentas';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
-type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'atualizacoes';
+type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'atualizacoes' | 'contas';
 
 const RESULT_GROUPS: Array<{ id: ResultGroup; label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { id: 'visao', label: 'Geral', tabs: [{ value: 'ficha', label: 'Ficha' }, { value: 'resumo', label: 'Resumo' }, { value: 'dados', label: 'Dados' }] },
@@ -799,7 +802,7 @@ function openHistoryDb(): Promise<IDBDatabase> {
       return;
     }
 
-    const request = window.indexedDB.open(HISTORY_DB_NAME, 1);
+    const request = window.indexedDB.open(accountDatabaseName(HISTORY_DB_NAME), 1);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(HISTORY_STORE_NAME)) {
@@ -823,6 +826,32 @@ async function readIndexedHistory(): Promise<SavedAnalysis[]> {
     tx.onerror = () => {
       db.close();
       reject(tx.error ?? new Error('Falha na leitura do fichário'));
+    };
+  });
+}
+
+async function readLegacyIndexedHistoryForAdmin(): Promise<SavedAnalysis[]> {
+  const identity = getActiveAccountIdentity();
+  if (identity?.role !== 'admin' || typeof window === 'undefined' || !('indexedDB' in window)) return [];
+  return new Promise((resolve) => {
+    const request = window.indexedDB.open(HISTORY_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(HISTORY_STORE_NAME)) db.createObjectStore(HISTORY_STORE_NAME);
+    };
+    request.onerror = () => resolve([]);
+    request.onsuccess = () => {
+      const db = request.result;
+      try {
+        const tx = db.transaction(HISTORY_STORE_NAME, 'readonly');
+        const get = tx.objectStore(HISTORY_STORE_NAME).get(HISTORY_KEY);
+        get.onsuccess = () => resolve(Array.isArray(get.result) ? get.result : []);
+        get.onerror = () => resolve([]);
+        tx.oncomplete = () => db.close();
+        tx.onerror = () => { db.close(); resolve([]); };
+      } catch {
+        db.close(); resolve([]);
+      }
     };
   });
 }
@@ -869,6 +898,11 @@ async function loadHistoryStore(): Promise<SavedAnalysis[]> {
     for (const item of normalizeHistoryList(await readIndexedHistory())) {
       if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
     }
+    if (!loaded.length) {
+      const legacy = normalizeHistoryList(await readLegacyIndexedHistoryForAdmin());
+      for (const item of legacy) if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
+      if (legacy.length) await writeIndexedHistory(legacy);
+    }
   } catch {
     // Se o IndexedDB falhar, o app tenta recuperar pelo armazenamento antigo.
   }
@@ -876,7 +910,7 @@ async function loadHistoryStore(): Promise<SavedAnalysis[]> {
   try {
     const keys = [HISTORY_KEY, ...OLD_HISTORY_KEYS];
     for (const key of keys) {
-      const stored = localStorage.getItem(key);
+      const stored = readAccountStorage(key);
       if (!stored) continue;
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) continue;
@@ -900,7 +934,7 @@ async function persistHistoryStore(items: SavedAnalysis[]) {
   }
 
   try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+    writeAccountStorage(HISTORY_KEY, JSON.stringify(next));
   } catch {
     // LocalStorage pode estourar limite quando há imagens; o IndexedDB continua sendo o cofre principal.
   }
@@ -908,7 +942,7 @@ async function persistHistoryStore(items: SavedAnalysis[]) {
 
 function readLearningStore(): Record<string, LearnedCardMemory> {
   try {
-    const raw = localStorage.getItem(LEARNING_KEY);
+    const raw = readAccountStorage(LEARNING_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -930,7 +964,7 @@ function saveLearnedCard(memory: LearnedCardMemory) {
   const store = readLearningStore();
   store[key] = memory;
   try {
-    localStorage.setItem(LEARNING_KEY, JSON.stringify(store));
+    writeAccountStorage(LEARNING_KEY, JSON.stringify(store));
   } catch {
     // Aprendizado local é opcional e não pode travar a ficha.
   }
@@ -960,7 +994,7 @@ function sanitizeRulePack(input: unknown): DynamicRulePack {
 function readDynamicRulePack(): DynamicRulePack {
   if (typeof window === 'undefined') return DEFAULT_DYNAMIC_RULE_PACK;
   try {
-    const raw = localStorage.getItem(RULE_PACK_KEY);
+    const raw = readAccountStorage(RULE_PACK_KEY);
     if (!raw) return DEFAULT_DYNAMIC_RULE_PACK;
     const parsed = sanitizeRulePack(JSON.parse(raw));
     return parsed.rules.length ? parsed : DEFAULT_DYNAMIC_RULE_PACK;
@@ -972,7 +1006,7 @@ function readDynamicRulePack(): DynamicRulePack {
 function writeDynamicRulePack(pack: DynamicRulePack) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(RULE_PACK_KEY, JSON.stringify(sanitizeRulePack(pack)));
+    writeAccountStorage(RULE_PACK_KEY, JSON.stringify(sanitizeRulePack(pack)));
   } catch {
     // Regras atualizáveis são opcionais e não podem travar a ficha.
   }
@@ -1014,7 +1048,7 @@ function dynamicRulesForResult(result: AnalysisResult): LocalCorrectionProfile {
 function readCorrectionStore(): LocalCorrectionStore {
   if (typeof window === 'undefined') return {};
   try {
-    const raw = localStorage.getItem(CORRECTION_KEY);
+    const raw = readAccountStorage(CORRECTION_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -1024,7 +1058,7 @@ function readCorrectionStore(): LocalCorrectionStore {
 function writeCorrectionStore(store: LocalCorrectionStore) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(CORRECTION_KEY, JSON.stringify(store));
+    writeAccountStorage(CORRECTION_KEY, JSON.stringify(store));
   } catch {
     // Regras atualizáveis é local e não pode travar a ficha.
   }
@@ -1677,13 +1711,13 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
   const [savedTeamPlans, setSavedTeamPlans] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    try { setSavedTeamPlans(JSON.parse(localStorage.getItem('buildmaster_team_plans_v25_19') || '{}')); } catch { setSavedTeamPlans({}); }
+    try { setSavedTeamPlans(JSON.parse(readAccountStorage('buildmaster_team_plans_v25_19') || '{}')); } catch { setSavedTeamPlans({}); }
   }, []);
 
   function toggleSavedTeamPlan(planId: string) {
     setSavedTeamPlans((current) => {
       const next = { ...current, [planId]: !current[planId] };
-      try { localStorage.setItem('buildmaster_team_plans_v25_19', JSON.stringify(next)); } catch {}
+      try { writeAccountStorage('buildmaster_team_plans_v25_19', JSON.stringify(next)); } catch {}
       return next;
     });
   }
@@ -2347,7 +2381,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
   const [draft, setDraft] = useState<MatchFeedback>({ rating: 7, minutes: 90 });
   useEffect(() => {
     try {
-      const all = JSON.parse(localStorage.getItem(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
+      const all = JSON.parse(readAccountStorage(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
       setFeedbacks(Array.isArray(all[storageId]) ? all[storageId] : []);
     } catch { setFeedbacks([]); }
   }, [storageId]);
@@ -2358,9 +2392,9 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
     const next = [item, ...feedbacks].slice(0, 20);
     setFeedbacks(next);
     try {
-      const all = JSON.parse(localStorage.getItem(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
+      const all = JSON.parse(readAccountStorage(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
       all[storageId] = next;
-      localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(all));
+      writeAccountStorage(CALIBRATION_STORAGE_KEY, JSON.stringify(all));
     } catch {}
     setDraft({ rating: 7, minutes: 90 });
   }
@@ -3863,6 +3897,7 @@ function ReviewPanel({
 
 
 export function CardVisionApp() {
+  const account = useBuildMasterAccount();
   const [preview, setPreview] = useState<string | null>(null);
   const [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -3884,7 +3919,7 @@ export function CardVisionApp() {
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
   const [managerId, setManagerId] = useState<string>('AUTO');
-  const [status, setStatus] = useState('Escolha o Leitor Elite de Carta ou a Central de Precisão Manual. O Cofre salva localmente e pode sincronizar com Neon.');
+  const [status, setStatus] = useState('Escolha o Leitor Elite de Carta ou a Central de Precisão Manual. O Cofre é separado por usuário e pode sincronizar com a conta.');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
@@ -4035,7 +4070,7 @@ export function CardVisionApp() {
       });
 
     try {
-      const ui = JSON.parse(localStorage.getItem('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean };
+      const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean };
       if (ui.appTheme === 'light' || ui.appTheme === 'dark') setAppTheme(ui.appTheme);
       if (['emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
@@ -4044,14 +4079,14 @@ export function CardVisionApp() {
     }
 
     try {
-      const lastBackup = localStorage.getItem('buildmaster_last_full_backup_v25_49');
+      const lastBackup = readAccountStorage('buildmaster_last_full_backup_v25_49');
       if (lastBackup) setLastBackupAt(lastBackup);
     } catch {
       setLastBackupAt(null);
     }
 
     try {
-      const storedRulesUrl = localStorage.getItem(RULE_PACK_URL_KEY) || '';
+      const storedRulesUrl = readAccountStorage(RULE_PACK_URL_KEY) || '';
       setRulesUrl(storedRulesUrl);
       const pack = readDynamicRulePack();
       setRulePackInfo(pack);
@@ -4061,7 +4096,7 @@ export function CardVisionApp() {
     }
 
     try {
-      const storedZones = localStorage.getItem(CALIBRATION_KEY);
+      const storedZones = readAccountStorage(CALIBRATION_KEY);
       if (storedZones) {
         const parsedZones = JSON.parse(storedZones) as OcrZone[];
         if (Array.isArray(parsedZones) && parsedZones.length) setOcrZones(parsedZones);
@@ -4071,7 +4106,7 @@ export function CardVisionApp() {
     }
 
     try {
-      const storedSession = localStorage.getItem(ACTIVE_SESSION_KEY);
+      const storedSession = readAccountStorage(ACTIVE_SESSION_KEY);
       if (storedSession) {
         const snapshot = JSON.parse(storedSession) as Partial<ActiveSessionSnapshot>;
         const ageMs = Date.now() - Number(snapshot.savedAt ?? 0);
@@ -4101,7 +4136,7 @@ export function CardVisionApp() {
         }
       }
     } catch {
-      try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch {}
+      try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
       setResult(null);
       setDraftResult(null);
       setStatus('Uma sessão incompatível foi descartada com segurança. O Cofre foi preservado.');
@@ -4114,7 +4149,7 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(CALIBRATION_KEY, JSON.stringify(ocrZones));
+      writeAccountStorage(CALIBRATION_KEY, JSON.stringify(ocrZones));
     } catch {
       // Calibração é local e opcional.
     }
@@ -4122,7 +4157,7 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode }));
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode }));
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -4130,7 +4165,7 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem(VAULT_FOLDERS_KEY) || '[]') as VaultFolder[];
+      const stored = JSON.parse(readAccountStorage(VAULT_FOLDERS_KEY) || '[]') as VaultFolder[];
       if (Array.isArray(stored) && stored.length) setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...stored.filter((folder) => folder.kind === 'custom' && !DEFAULT_VAULT_FOLDERS.some((base) => base.id === folder.id))]);
     } catch {
       setVaultFolders(DEFAULT_VAULT_FOLDERS);
@@ -4139,7 +4174,7 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(VAULT_FOLDERS_KEY, JSON.stringify(vaultFolders.filter((folder) => folder.kind === 'custom')));
+      writeAccountStorage(VAULT_FOLDERS_KEY, JSON.stringify(vaultFolders.filter((folder) => folder.kind === 'custom')));
     } catch {
       // Pastas personalizadas continuam opcionais.
     }
@@ -4149,7 +4184,7 @@ export function CardVisionApp() {
     try {
       const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
       if (!hasWork) {
-        localStorage.removeItem(ACTIVE_SESSION_KEY);
+        removeAccountStorage(ACTIVE_SESSION_KEY);
         return;
       }
       const safePreview = preview && preview.startsWith('data:') ? preview : null;
@@ -4174,7 +4209,7 @@ export function CardVisionApp() {
         activeHistoryId,
         savedAt: Date.now()
       };
-      localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(snapshot));
+      writeAccountStorage(ACTIVE_SESSION_KEY, JSON.stringify(snapshot));
     } catch {
       // Não interrompe o app se o armazenamento estiver cheio.
     }
@@ -4202,7 +4237,7 @@ export function CardVisionApp() {
       return;
     }
     try {
-      localStorage.setItem(RULE_PACK_URL_KEY, url);
+      writeAccountStorage(RULE_PACK_URL_KEY, url);
       setRulesStatus('Baixando pacote de regras...');
       const response = await fetch(url, { cache: 'no-store' });
       const payload = await response.json().catch(() => null);
@@ -4218,8 +4253,8 @@ export function CardVisionApp() {
 
   function resetRulesToDefault() {
     try {
-      localStorage.removeItem(RULE_PACK_KEY);
-      localStorage.removeItem(RULE_PACK_URL_KEY);
+      removeAccountStorage(RULE_PACK_KEY);
+      removeAccountStorage(RULE_PACK_URL_KEY);
     } catch {}
     setRulesUrl('');
     applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base.`);
@@ -4234,12 +4269,20 @@ export function CardVisionApp() {
 
   async function pushCloudHistory(items: SavedAnalysis[] = history, silent = false) {
     if (!items.length) {
-      if (!silent) setCloudStatus('Nenhuma ficha local para enviar ao Neon.');
+      if (!silent) setCloudStatus('Nenhuma ficha local para enviar à nuvem.');
       return;
     }
 
     setCloudLoading(true);
     try {
+      if (account?.cloudEnabled) {
+        await syncAccountVault({ items: items.slice(0, HISTORY_LIMIT), version: APP_DATA_VERSION });
+        const message = `Nuvem da conta atualizada com ${items.length} ficha(s).`;
+        setCloudStatus(message);
+        if (!silent) setStatus(message);
+        return;
+      }
+
       const response = await fetch(getCloudApiUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4251,10 +4294,10 @@ export function CardVisionApp() {
       setCloudStatus(message);
       if (!silent) setStatus(message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao sincronizar com o Neon.';
+      const message = error instanceof Error ? error.message : 'Falha ao sincronizar a nuvem.';
       if (!silent) {
         setCloudStatus(message);
-        setStatus(`${message} O Cofre local continua funcionando normalmente.`);
+        setStatus(`${message} O Cofre local da conta continua funcionando normalmente.`);
       }
     } finally {
       setCloudLoading(false);
@@ -4264,12 +4307,18 @@ export function CardVisionApp() {
   async function pullCloudHistory() {
     setCloudLoading(true);
     try {
-      const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
-      const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
-      if (!response.ok) throw new Error(payload?.message || 'Não consegui buscar fichas no Neon agora.');
-      const cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
+      let cloudItems: SavedAnalysis[] = [];
+      if (account?.cloudEnabled) {
+        const snapshot = await loadAccountVault<{ items?: unknown[] }>();
+        cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
+      } else {
+        const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
+        const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
+        if (!response.ok) throw new Error(payload?.message || 'Não consegui buscar fichas no Neon agora.');
+        cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
+      }
       if (!cloudItems.length) {
-        setCloudStatus('Neon conectado, mas ainda não há fichas salvas na nuvem.');
+        setCloudStatus('A nuvem está conectada, mas ainda não há fichas salvas nesta conta.');
         return;
       }
 
@@ -4279,13 +4328,13 @@ export function CardVisionApp() {
         return next;
       });
       setLibraryOpen(true);
-      const message = `Baixei ${cloudItems.length} ficha(s) do Neon para este aparelho.`;
+      const message = `Baixei ${cloudItems.length} ficha(s) da nuvem desta conta.`;
       setCloudStatus(message);
       setStatus(message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao baixar fichas do Neon.';
+      const message = error instanceof Error ? error.message : 'Falha ao baixar fichas da nuvem.';
       setCloudStatus(message);
-      setStatus(`${message} Verifique a variável DATABASE_URL no Vercel.`);
+      setStatus(`${message} O Cofre local permanece protegido.`);
     } finally {
       setCloudLoading(false);
     }
@@ -4294,28 +4343,39 @@ export function CardVisionApp() {
   async function syncCloudHistory() {
     setCloudLoading(true);
     try {
-      const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
-      const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
-      if (!response.ok) throw new Error(payload?.message || 'Neon ainda não está configurado.');
-      const cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
+      let cloudItems: SavedAnalysis[] = [];
+      if (account?.cloudEnabled) {
+        const snapshot = await loadAccountVault<{ items?: unknown[] }>();
+        cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
+      } else {
+        const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
+        const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
+        if (!response.ok) throw new Error(payload?.message || 'Neon ainda não está configurado.');
+        cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
+      }
+
       const merged = mergeHistoryLists(history, cloudItems);
       await persistHistoryStore(merged);
       setHistory(merged);
 
-      const saveResponse = await fetch(getCloudApiUrl(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: merged })
-      });
-      const savePayload = await saveResponse.json().catch(() => null) as { count?: number; message?: string } | null;
-      if (!saveResponse.ok) throw new Error(savePayload?.message || 'Não consegui atualizar o Neon.');
+      if (account?.cloudEnabled) {
+        await syncAccountVault({ items: merged, version: APP_DATA_VERSION });
+      } else {
+        const saveResponse = await fetch(getCloudApiUrl(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: merged })
+        });
+        const savePayload = await saveResponse.json().catch(() => null) as { message?: string } | null;
+        if (!saveResponse.ok) throw new Error(savePayload?.message || 'Não consegui atualizar o Neon.');
+      }
 
       setLibraryOpen(true);
-      const message = `Sincronização concluída: ${merged.length} ficha(s) no Cofre local + Neon.`;
+      const message = `Sincronização concluída: ${merged.length} ficha(s) na conta.`;
       setCloudStatus(message);
       setStatus(message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao sincronizar com o Neon.';
+      const message = error instanceof Error ? error.message : 'Falha ao sincronizar a nuvem.';
       setCloudStatus(message);
       setStatus(`${message} O salvamento local permanece ativo.`);
     } finally {
@@ -4325,7 +4385,13 @@ export function CardVisionApp() {
 
   async function deleteCloudHistoryItem(item: SavedAnalysis) {
     try {
-      await fetch(`${getCloudApiUrl()}?id=${encodeURIComponent(item.saveKey || item.id)}`,  { method: 'DELETE' });
+      if (account?.cloudEnabled) {
+        const next = history.filter((entry) => entry.id !== item.id && entry.saveKey !== item.saveKey);
+        if (next.length) await syncAccountVault({ items: next, version: APP_DATA_VERSION });
+        else await deleteAccountVault();
+        return;
+      }
+      await fetch(`${getCloudApiUrl()}?id=${encodeURIComponent(item.saveKey || item.id)}`, { method: 'DELETE' });
     } catch {
       // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
@@ -4333,11 +4399,12 @@ export function CardVisionApp() {
 
   function logout() {
     clearBuildMasterSession();
+    void account?.logout();
     window.location.href = '/';
   }
 
   function resetAnalysis() {
-    try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch {}
+    try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
     setPreview(null);
     setPlayerCardImage(null);
     setFileName(null);
@@ -4454,7 +4521,7 @@ export function CardVisionApp() {
 
   function readJsonStorage(key: string, fallback: unknown = null) {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = readAccountStorage(key);
       return raw ? JSON.parse(raw) : fallback;
     } catch {
       return fallback;
@@ -4479,7 +4546,7 @@ export function CardVisionApp() {
       folders: readJsonStorage(VAULT_FOLDERS_KEY, []),
       rules: {
         pack: readJsonStorage(RULE_PACK_KEY, null),
-        url: localStorage.getItem(RULE_PACK_URL_KEY) || ''
+        url: readAccountStorage(RULE_PACK_URL_KEY) || ''
       },
       session: readJsonStorage(ACTIVE_SESSION_KEY, null)
     };
@@ -4500,7 +4567,7 @@ export function CardVisionApp() {
   function exportFullBackup() {
     const envelope = createBackupEnvelope(collectFullBackupSections());
     downloadJsonFile(envelope, `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`);
-    localStorage.setItem('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
+    writeAccountStorage('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
     setLastBackupAt(envelope.exportedAt);
     setStatus('Backup completo criado com assinatura de integridade. Guarde o arquivo em local seguro.');
   }
@@ -4517,7 +4584,7 @@ export function CardVisionApp() {
     });
     const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
     downloadJsonFile(envelope, `buildmaster-${suffix}-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`);
-    localStorage.setItem('buildmaster_last_players_backup', envelope.exportedAt);
+    writeAccountStorage('buildmaster_last_players_backup', envelope.exportedAt);
     setStatus(reason === 'update'
       ? 'Backup de jogadores e fichas criado antes da atualização.'
       : `Backup criado com ${history.length} jogador(es), fichas, habilidades concluídas e calibração.`);
@@ -4529,7 +4596,7 @@ export function CardVisionApp() {
 
   function writeStorage(key: string, value: unknown) {
     if (value == null) return;
-    localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+    writeAccountStorage(key, typeof value === 'string' ? value : JSON.stringify(value));
   }
 
   async function importFullBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -4575,7 +4642,7 @@ export function CardVisionApp() {
       if (restoreSections.rules && sections.rules && typeof sections.rules === 'object') {
         const rules = sections.rules as Record<string, unknown>;
         if (rules.pack) writeStorage(RULE_PACK_KEY, rules.pack);
-        if (typeof rules.url === 'string') localStorage.setItem(RULE_PACK_URL_KEY, rules.url);
+        if (typeof rules.url === 'string') writeAccountStorage(RULE_PACK_URL_KEY, rules.url);
       }
       if (restoreSections.session && sections.session) writeStorage(ACTIVE_SESSION_KEY, sections.session);
       setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
@@ -5137,7 +5204,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.70</span>
+            <span>Elite Tático v26.71</span>
           </div>
         </div>
         <div className="topbar-current-page">
@@ -5147,7 +5214,7 @@ ${variantText}`);
         <div className="topbar-actions">
           <button type="button" onClick={resetAnalysis}><RotateCcw size={16} /> Nova ficha</button>
           <button type="button" onClick={openCofreDeJogadores}><History size={16} /> Cofre</button>
-          <button type="button" onClick={logout}><LogOut size={16} /> Sair</button>
+          <button type="button" className="account-topbar-chip" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }}><Users size={16} /> {account?.profile.username || 'Conta'}</button><button type="button" onClick={logout}><LogOut size={16} /> Sair</button>
         </div>
       </header>
 
@@ -5683,8 +5750,8 @@ ${variantText}`);
                   <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Download size={14} /> Jogadores treinados</button>
                   <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><FileText size={14} /> Backup simples</button>
                   <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
-                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar Neon</button>
-                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar nuvem</button>
+                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar {account?.cloudEnabled ? 'conta' : 'Neon'}</button>
+                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar {account?.cloudEnabled ? 'conta' : 'nuvem'}</button>
                   <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
                 </div>
                 <div className="cloud-status-card"><ShieldCheck size={14} /><span>{cloudStatus}</span></div>
@@ -5702,6 +5769,7 @@ ${variantText}`);
                 <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={17} /><span>Desempenho</span></button>
                 <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={17} /><span>Segurança</span></button>
                 <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={17} /><span>Atualizações</span></button>
+                <button type="button" className={settingsView === 'contas' ? 'active' : ''} onClick={() => setSettingsView('contas')}><Users size={17} /><span>Contas</span></button>
               </nav>
 
               {settingsView === 'aparencia' && (
@@ -5726,6 +5794,10 @@ ${variantText}`);
                 </section>
               )}
 
+
+              {settingsView === 'contas' && (
+                <AccountAdminPanel />
+              )}
 
               {settingsView === 'atualizacoes' && (
                 <UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} />
