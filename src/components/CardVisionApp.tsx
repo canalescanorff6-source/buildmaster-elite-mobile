@@ -58,13 +58,14 @@ import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectData
 import { DelayResponsePanel, SkillAndTrainingPanel } from '@/components/DevelopmentPanels';
 import { EliteEvolutionPanel, StabilityDiagnosticsPanel, VideoReviewPanel } from '@/components/EliteEvolutionPanels';
 import { MetaBuildLabPanel } from '@/components/MetaBuildLabPanel';
+import { CommunityIntelligencePanel } from '@/components/CommunityIntelligencePanel';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
 type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo';
+type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade';
 type ResultGroup = 'visao' | 'analise' | 'desenvolvimento' | 'tatica' | 'ferramentas';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
@@ -75,7 +76,7 @@ const RESULT_GROUPS: Array<{ id: ResultGroup; label: string; tabs: Array<{ value
   { id: 'analise', label: 'Análise', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correção' }] },
   { id: 'desenvolvimento', label: 'Treino', tabs: [{ value: 'habilidades', label: 'Habilidades' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
   { id: 'tatica', label: 'Tática', tabs: [{ value: 'treinador', label: 'Treinador' }, { value: 'mapa', label: 'Mapa' }] },
-  { id: 'ferramentas', label: 'Mais', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'exportar', label: 'Exportar' }, { value: 'regras', label: 'Regras' }] }
+  { id: 'ferramentas', label: 'Mais', tabs: [{ value: 'comunidade', label: 'Comunidade' }, { value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'exportar', label: 'Exportar' }, { value: 'regras', label: 'Regras' }] }
 ];
 
 type ManualFields = {
@@ -3054,6 +3055,9 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       )}
 
+
+      {tab === 'comunidade' && <CommunityIntelligencePanel result={result} />}
+
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
 
       {tab === 'treino' && <div className="result-section-grid"><SkillAndTrainingPanel result={result} /><VideoReviewPanel result={result} /></div>}
@@ -5055,7 +5059,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.50</span>
+            <span>Elite Tático v26.60</span>
           </div>
         </div>
         <div className="topbar-current-page">

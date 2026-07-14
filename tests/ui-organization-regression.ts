@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 
-assert.match(component, /Elite Tático v26\.50/);
+assert.match(component, /Elite Tático v26\.60/);
 assert.match(component, /const RESULT_GROUPS/);
 assert.match(component, /label: 'Geral'/);
 assert.match(component, /label: 'Treino'/);
@@ -21,4 +21,6 @@ assert.match(css, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
 assert.match(css, /\.result-subtab-shell,[\s\S]*\.review-actions[\s\S]*position: static !important/);
 assert.match(css, /\.section-segmented-tabs/);
 
-console.log('UI v26.50 organizada: resultado, Cofre, Ajustes e navegação aprovados.');
+assert.match(component, /label: 'Comunidade'/);
+assert.match(component, /CommunityIntelligencePanel/);
+console.log('UI v26.60 organizada: resultado, Cofre, Ajustes e navegação aprovados.');
