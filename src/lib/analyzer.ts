@@ -1,6 +1,9 @@
 import { LOCAL_CARD_RULES, type LocalCardRule } from './cardDatabase';
 import { isImpossibleByCoreStyle } from './positionRules';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
+import { buildMaxPrecisionAnalysis, type MaxPrecisionAnalysis } from './maxPrecision';
+import { buildEliteEvolutionAnalysis, type EliteEvolutionAnalysis } from './eliteEvolution';
+import { buildMetaBuildUniverse, type MetaBuildUniverse } from './metaBuildUniverse';
 
 export type Objective =
   | 'COMPETITIVE'
@@ -12,11 +15,12 @@ export type Objective =
   | 'QUICK_COUNTER'
   | 'DEFENSIVE'
   | 'AERIAL'
-  | 'GOALKEEPER';
+  | 'GOALKEEPER'
+  | 'META_2026';
 
 const VALID_OBJECTIVES: readonly Objective[] = [
   'COMPETITIVE', 'FINISHER', 'CREATOR', 'DRIBBLER', 'PRESSING',
-  'POSSESSION', 'QUICK_COUNTER', 'DEFENSIVE', 'AERIAL', 'GOALKEEPER'
+  'POSSESSION', 'QUICK_COUNTER', 'DEFENSIVE', 'AERIAL', 'GOALKEEPER', 'META_2026'
 ];
 
 export function normalizeObjective(value: unknown): Objective {
@@ -31,7 +35,8 @@ export function normalizeObjective(value: unknown): Objective {
     CONTRA_ATAQUE_RAPIDO: 'QUICK_COUNTER', QUICKCOUNTER: 'QUICK_COUNTER',
     DEFESA: 'DEFENSIVE', DEFENSIVO: 'DEFENSIVE',
     AEREO: 'AERIAL',
-    GOLEIRO: 'GOALKEEPER', GK: 'GOALKEEPER'
+    GOLEIRO: 'GOALKEEPER', GK: 'GOALKEEPER',
+    META: 'META_2026', META_2026: 'META_2026', COMPETITIVO_2026: 'META_2026'
   };
   if (VALID_OBJECTIVES.includes(raw as Objective)) return raw as Objective;
   return legacy[raw] ?? 'COMPETITIVE';
@@ -340,6 +345,97 @@ export type SkillPriorityAnalysis = {
   context: string[];
 };
 
+export type PlayerIdentityAnalysis = {
+  signature: string;
+  profileLabel: string;
+  individualityScore: number;
+  naturalStrengths: string[];
+  criticalCorrections: string[];
+  decisiveFactors: string[];
+  protectedCharacteristics: string[];
+  localReference: string | null;
+  note: string;
+};
+
+
+export type IndividualAttributeGoal = {
+  training: TrainingKey;
+  label: string;
+  current: number;
+  functionalMin: number;
+  personalizedIdeal: number;
+  recommendedCeiling: number;
+  priority: 'proteger' | 'corrigir' | 'especializar' | 'manter';
+  reason: string;
+};
+
+export type SelectiveWeaknessStrategy = {
+  training: TrainingKey;
+  label: string;
+  current: number;
+  gap: number;
+  importance: 'crítica' | 'relevante' | 'aceitável';
+  correctability: 'alta' | 'parcial' | 'baixa';
+  maxInvestment: number;
+  strategy: string;
+};
+
+export type SpecialSkillSynergyItem = {
+  name: string;
+  source: 'habilidade especial' | 'habilidade oficial' | 'ímpeto';
+  activationScore: number;
+  attributeSupport: number;
+  positionFit: number;
+  expectedFrequency: 'alta' | 'média' | 'baixa';
+  status: 'aproveitamento máximo' | 'bem aproveitada' | 'parcial' | 'desperdiçada';
+  helpfulAttributes: string[];
+  trainingGroups: TrainingKey[];
+  recommendation: string;
+  wasteRisk: string | null;
+};
+
+export type OnFieldBehaviorSimulation = {
+  passUnderPressure: number;
+  turnAndCarry: number;
+  offBallMovement: number;
+  defensiveRecovery: number;
+  physicalDuels: number;
+  reactionSpeed: number;
+  matchConsistency: number;
+  creation: number;
+  finishing: number;
+  specialSkillUsage: number;
+  strongestBehaviors: string[];
+  limitingBehaviors: string[];
+  summary: string;
+};
+
+export type AntiCloneAnalysis = {
+  fingerprint: string;
+  individualityScore: number;
+  identityContribution: number;
+  positionTemplateContribution: number;
+  distributionDiversity: number;
+  distanceFromGenericTemplate: number;
+  cloneRisk: 'baixo' | 'médio' | 'alto';
+  recalculationTriggered: boolean;
+  reasons: string[];
+};
+
+export type CardDnaAnalysis = {
+  versionSignature: string;
+  identityLabel: string;
+  protectedStrengths: string[];
+  weaknessStrategies: SelectiveWeaknessStrategy[];
+  individualGoals: IndividualAttributeGoal[];
+  skillSynergies: SpecialSkillSynergyItem[];
+  behavior: OnFieldBehaviorSimulation;
+  antiClone: AntiCloneAnalysis;
+  buildPhilosophies: Array<{ title: string; purpose: string; difference: string }>;
+  lifeLikeSummary: string;
+  note: string;
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -380,6 +476,11 @@ export type AnalysisResult = {
   marginalReturn: MarginalReturnItem[];
   errorTolerance: ErrorToleranceAnalysis;
   skillPriority: SkillPriorityAnalysis;
+  playerIdentity?: PlayerIdentityAnalysis;
+  cardDna?: CardDnaAnalysis;
+  maxPrecision?: MaxPrecisionAnalysis;
+  eliteEvolution?: EliteEvolutionAnalysis;
+  metaBuildUniverse?: MetaBuildUniverse;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {
@@ -955,7 +1056,7 @@ function gameplayPositionWeight(position: PositionCode, mainPosition: PositionCo
 }
 
 function detectExplicitMainPosition(text: string): PositionCode | null {
-  const compact = normalize(text).replace(/\r?\n/g, ' ');
+  const compact = normalize(text).replace(/[:=]\s*(?=\d)/g, ' ').replace(/\r?\n/g, ' ');
   const tokenGroup = POSITION_ALIAS_ENTRIES.flatMap(([, aliases]) => aliases).map(escapeRegex).join('|');
   const patterns = [
     new RegExp(`(?:posi[cç][aã]o\\s+principal|posição\\s+principal|main\\s*position|primary\\s*position|posicao)\\s*[:=\\-]?\\s*(${tokenGroup})\\b`, 'i'),
@@ -1254,7 +1355,7 @@ function detectName(rawText: string, fileName?: string | null) {
 
 function parseAttributes(text: string): Attributes {
   const attributes: Attributes = {};
-  const compact = normalize(text).replace(/\r?\n/g, ' ');
+  const compact = normalize(text).replace(/[:=]\s*(?=\d)/g, ' ').replace(/\r?\n/g, ' ');
   for (const [key, patterns] of ATTRIBUTE_LABELS) {
     const value = readNumber(compact, patterns);
     if (value !== null && value >= 1 && value <= 110) attributes[key] = value;
@@ -2086,6 +2187,10 @@ function trainingTemplate(position: PositionCode, objective: Objective, a: Requi
   if (objective === 'PRESSING' || objective === 'DEFENSIVE') priority = ['defending', 'lowerBodyStrength', ...priority.filter((key) => !['defending', 'lowerBodyStrength'].includes(key))];
   if (objective === 'QUICK_COUNTER') priority = ['lowerBodyStrength', 'dexterity', ...priority.filter((key) => !['lowerBodyStrength', 'dexterity'].includes(key))];
   if (objective === 'AERIAL') priority = ['aerialStrength', 'defending', ...priority.filter((key) => !['aerialStrength', 'defending'].includes(key))];
+  if (objective === 'META_2026') {
+    const metaPriority: TrainingKey[] = position === 'CB' || position === 'DMF' ? ['defending', 'lowerBodyStrength', 'passing'] : position === 'CF' ? ['shooting', 'dexterity', 'lowerBodyStrength'] : position === 'LWF' || position === 'RWF' || position === 'SS' || position === 'AMF' ? ['dribbling', 'dexterity', 'shooting', 'passing'] : ['passing', 'dribbling', 'lowerBodyStrength', 'defending'];
+    priority = [...metaPriority, ...priority.filter((key) => !metaPriority.includes(key))];
+  }
 
   target = mergeTrainingTarget(target, role);
   priority = mergeTrainingPriority(priority, role);
@@ -2210,6 +2315,11 @@ function trainingCaps(position: PositionCode, objective: Objective, a: Required<
     caps.lowerBodyStrength = Math.min(16, caps.lowerBodyStrength + 1);
   }
   if (objective === 'AERIAL') caps.aerialStrength = Math.min(16, caps.aerialStrength + 3);
+  if (objective === 'META_2026') {
+    if (position === 'CB' || position === 'DMF') { caps.defending = Math.min(16, caps.defending + 1); caps.lowerBodyStrength = Math.min(16, caps.lowerBodyStrength + 1); }
+    else if (position === 'CF') { caps.shooting = Math.min(16, caps.shooting + 1); caps.dexterity = Math.min(16, caps.dexterity + 1); }
+    else { caps.dribbling = Math.min(16, caps.dribbling + 1); caps.dexterity = Math.min(16, caps.dexterity + 1); }
+  }
   if (objective === 'QUICK_COUNTER') {
     caps.lowerBodyStrength = Math.min(16, caps.lowerBodyStrength + 2);
     caps.dexterity = Math.min(16, caps.dexterity + 1);
@@ -2236,7 +2346,8 @@ function objectiveBonus(objective: Objective, position: PositionCode, a: Require
     QUICK_COUNTER: avg(a.speed, a.acceleration, a.finishing, a.kickingPower),
     DEFENSIVE: avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.physicalContact),
     AERIAL: avg(a.heading, a.jump, a.physicalContact),
-    GOALKEEPER: avg(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach)
+    GOALKEEPER: avg(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach),
+    META_2026: position === 'CB' || position === 'DMF' ? avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.physicalContact, a.acceleration) : position === 'CF' ? avg(a.offensiveAwareness, a.finishing, a.kickingPower, a.acceleration, a.balance) : avg(a.dribbling, a.acceleration, a.balance, a.lowPass, a.stamina)
   };
   return values[objective] ?? values.COMPETITIVE;
 }
@@ -2303,10 +2414,12 @@ function trainingKeyWeight(key: TrainingKey, position: PositionCode, objective: 
     QUICK_COUNTER: { lowerBodyStrength: 2.1, dexterity: 1.3, shooting: .6 },
     DEFENSIVE: { defending: 2.2, aerialStrength: .7, lowerBodyStrength: .9 },
     AERIAL: { aerialStrength: 2.4, shooting: position === 'CF' ? .8 : 0, defending: position === 'CB' ? .8 : 0 },
-    GOALKEEPER: { gk1: 1.8, gk2: 2.2, gk3: 1.8, aerialStrength: .4, lowerBodyStrength: .3 }
+    GOALKEEPER: { gk1: 1.8, gk2: 2.2, gk3: 1.8, aerialStrength: .4, lowerBodyStrength: .3 },
+    META_2026: position === 'CB' || position === 'DMF' ? { defending: 2.1, lowerBodyStrength: .9, passing: .35 } : position === 'CF' ? { shooting: 1.8, dexterity: 1.2, lowerBodyStrength: .5 } : { dribbling: 1.35, dexterity: 1.25, passing: .55, shooting: .4 }
   };
 
-  let weight = (baseByPosition[position][key] ?? 0) + (objectiveBoost[normalizeObjective(objective)]?.[key] ?? 0) + (role?.weightAdjust?.[key] ?? 0);
+  const individual = individualTrainingAdjustments(position, a, parsed);
+  let weight = (baseByPosition[position][key] ?? 0) + (objectiveBoost[normalizeObjective(objective)]?.[key] ?? 0) + (role?.weightAdjust?.[key] ?? 0) + individual[key];
   const style = normalize(parsed.playstyle ?? '').toLowerCase();
   if (position === 'CF' && /homem de area|pivo|target man|fox|artilheiro|goal poacher|atacante matador/.test(style)) {
     if (key === 'shooting') weight += 1.5;
@@ -2431,7 +2544,8 @@ function skillPriority(position: PositionCode, objective: Objective) {
     QUICK_COUNTER: ['Passe em profundidade', 'Chute de primeira', 'Toque duplo'],
     DEFENSIVE: ['Interceptação', 'Bloqueador', 'Marcação individual'],
     AERIAL: ['Cabeçada', 'Superioridade aérea', 'Afastamento acrobático'],
-    GOALKEEPER: ['Liderança', 'Espírito guerreiro']
+    GOALKEEPER: ['Liderança', 'Espírito guerreiro'],
+    META_2026: position === 'CB' || position === 'DMF' ? ['Interceptação', 'Bloqueador', 'Marcação individual', 'Passe de primeira'] : position === 'CF' ? ['Chute de primeira', 'Precisão à distância', 'Controle da cavadinha'] : ['Toque duplo', 'Controle com a sola', 'Passe de primeira', 'Precisão à distância']
   };
   return Array.from(new Set([...(extras[objective] ?? []), ...(byPosition[position] ?? [])]));
 }
@@ -3167,6 +3281,7 @@ function usageTips(position: PositionCode, objective: Objective, a: Required<Att
   if (objective === 'QUICK_COUNTER') tips.push('No contra-ataque rápido, procure passes verticais cedo e evite prender a bola no meio.');
   if (objective === 'POSSESSION') tips.push('Na posse de bola, mantenha aproximação curta e use Passe de primeira para acelerar triangulações.');
   if (objective === 'PRESSING') tips.push('Em pressão alta, controle o fôlego: use pressão manual em gatilhos, não o tempo todo.');
+  if (objective === 'META_2026') tips.push('Meta 2026 é uma tendência datada: valorize resposta curta, leitura defensiva e uma ação decisiva, mas preserve a identidade da carta.');
   return tips;
 }
 
@@ -3820,7 +3935,176 @@ function aggressiveTraining(plan: TrainingPlan, position: PositionCode): Trainin
   return normalizeTrainingPlan(next);
 }
 
-function adaptiveTrainingWeights(position: PositionCode, objective: Objective, a: Required<Attributes>): Record<TrainingKey, number> {
+
+const TRAINING_GROUP_ATTRIBUTES: Record<TrainingKey, AttributeKey[]> = {
+  shooting: ['offensiveAwareness', 'finishing', 'placeKicking', 'curl', 'kickingPower'],
+  passing: ['ballControl', 'lowPass', 'loftedPass', 'curl'],
+  dribbling: ['ballControl', 'dribbling', 'tightPossession', 'balance'],
+  dexterity: ['offensiveAwareness', 'acceleration', 'balance'],
+  lowerBodyStrength: ['speed', 'acceleration', 'kickingPower', 'stamina'],
+  aerialStrength: ['heading', 'jump', 'physicalContact'],
+  defending: ['defensiveAwareness', 'defensiveEngagement', 'tackling', 'aggression'],
+  gk1: ['goalkeeperAwareness', 'goalkeeperCatching'],
+  gk2: ['goalkeeperParrying', 'goalkeeperReflexes'],
+  gk3: ['goalkeeperReach', 'jump']
+};
+
+const IDENTITY_CORE_GROUPS: Record<PositionCode, TrainingKey[]> = {
+  CF: ['shooting','dexterity','lowerBodyStrength','aerialStrength'],
+  SS: ['shooting','passing','dribbling','dexterity'],
+  LWF: ['shooting','dribbling','dexterity','lowerBodyStrength'],
+  RWF: ['shooting','dribbling','dexterity','lowerBodyStrength'],
+  LMF: ['passing','dribbling','dexterity','lowerBodyStrength','defending'],
+  RMF: ['passing','dribbling','dexterity','lowerBodyStrength','defending'],
+  AMF: ['shooting','passing','dribbling','dexterity'],
+  CMF: ['passing','dribbling','lowerBodyStrength','defending'],
+  DMF: ['passing','lowerBodyStrength','aerialStrength','defending'],
+  CB: ['passing','lowerBodyStrength','aerialStrength','defending'],
+  LB: ['passing','dribbling','dexterity','lowerBodyStrength','defending'],
+  RB: ['passing','dribbling','dexterity','lowerBodyStrength','defending'],
+  GK: ['gk1','gk2','gk3','aerialStrength','lowerBodyStrength']
+};
+
+function trainingGroupAverage(key: TrainingKey, a: Required<Attributes>) {
+  return avg(...TRAINING_GROUP_ATTRIBUTES[key].map((attribute) => a[attribute]));
+}
+
+function emptyTrainingWeights(): Record<TrainingKey, number> {
+  return { shooting:0, passing:0, dribbling:0, dexterity:0, lowerBodyStrength:0, aerialStrength:0, defending:0, gk1:0, gk2:0, gk3:0 };
+}
+
+function addSkillIdentityWeights(weights: Record<TrainingKey, number>, parsed: ParsedCard) {
+  const names = Array.from(new Set([...(parsed.nativeSkills ?? []), ...(parsed.specialSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
+  const add = (key: TrainingKey, amount: number) => { weights[key] += amount; };
+  const special: Record<string, Partial<Record<TrainingKey, number>>> = {
+    'Blitz Curler': { shooting:1.8, dribbling:.8, dexterity:.55 },
+    'Momentum Dribbling': { dribbling:1.65, dexterity:.85 },
+    'Phenomenal Finishing': { shooting:1.85, dexterity:.55 },
+    'Phenomenal Pass': { passing:1.9, dribbling:.45 },
+    'Game-changing Pass': { passing:1.65, lowerBodyStrength:.35 },
+    'Fortress': { defending:1.65, aerialStrength:.55 },
+    'Edged Crossing': { passing:1.55, lowerBodyStrength:.55 },
+    'Bullet Header': { aerialStrength:1.75, shooting:.65 },
+    'Esticada de Perna': { defending:1.55, lowerBodyStrength:.7 },
+    'Sombra veloz': { dexterity:1.05, lowerBodyStrength:1.15 }
+  };
+  for (const name of names) {
+    for (const [key, value] of Object.entries(special[name] ?? {}) as Array<[TrainingKey, number]>) add(key, value);
+    const boosts = SKILL_PROFILES[name]?.boosts ?? {};
+    for (const [boost, amountRaw] of Object.entries(boosts)) {
+      const amount = Number(amountRaw) * .12;
+      if (boost === 'finishing') add('shooting', amount);
+      if (boost === 'creation') add('passing', amount);
+      if (boost === 'dribbling') add('dribbling', amount);
+      if (boost === 'mobility') { add('dexterity', amount * .65); add('lowerBodyStrength', amount * .35); }
+      if (boost === 'defense') add('defending', amount);
+      if (boost === 'pressure') { add('defending', amount * .55); add('lowerBodyStrength', amount * .45); }
+      if (boost === 'physical') { add('lowerBodyStrength', amount * .55); add('aerialStrength', amount * .45); }
+      if (boost === 'aerial') add('aerialStrength', amount);
+      if (boost === 'stamina') add('lowerBodyStrength', amount);
+      if (boost === 'goalkeeper') { add('gk1', amount * .34); add('gk2', amount * .36); add('gk3', amount * .3); }
+    }
+  }
+}
+
+function addPlaystyleIdentityWeights(weights: Record<TrainingKey, number>, parsed: ParsedCard, position: PositionCode) {
+  const style = normalize(parsed.playstyle ?? '').toLowerCase();
+  const add = (key: TrainingKey, amount: number) => { weights[key] += amount; };
+  if (/armador criativo|creative playmaker|classico 10|clássico 10|orquestrador/.test(style)) { add('passing',1.15); add('dribbling',.55); }
+  if (/jogador de infiltracao|jogador de infiltração|hole player|atacante surpresa/.test(style)) { add('dexterity',1.1); add('shooting',.75); }
+  if (/artilheiro|goal poacher|atacante matador/.test(style)) { add('shooting',1.25); add('dexterity',.65); }
+  if (/homem de area|homem de área|fox in the box/.test(style)) { add('shooting',1.05); add('aerialStrength',1.0); }
+  if (/pivo|pivô|target man|puxa marcacao|puxa marcação/.test(style)) { add('lowerBodyStrength',1.1); add('passing',.7); add('aerialStrength',.65); }
+  if (/ala produtivo|ponta prolifico|ponta prolífico|prolific winger/.test(style)) { add('dribbling',.95); add('dexterity',.85); add('shooting',.45); }
+  if (/lateral movel|lateral móvel|roaming flank|flanco movel|flanco móvel/.test(style)) { add('dexterity',.9); add('lowerBodyStrength',.85); add('dribbling',.55); }
+  if (/perito em cruzamento|cross specialist/.test(style)) { add('passing',1.3); add('lowerBodyStrength',.45); }
+  if (/primeiro volante|anchor man|ancora|âncora/.test(style)) { add('defending',1.25); add('lowerBodyStrength',.65); }
+  if (/destruidor|destroyer/.test(style)) { add('defending',1.35); add('lowerBodyStrength',.7); }
+  if (/defensor criativo|build up/.test(style)) { add('defending',.9); add('passing',.85); }
+  if (/lateral ofensivo|offensive full-back|lateral atacante/.test(style)) { add('lowerBodyStrength',.85); add('passing',.75); add('dexterity',.55); }
+  if (/lateral defensivo|defensive full-back/.test(style)) { add('defending',1.1); add('lowerBodyStrength',.65); }
+  if (/goleiro ofensivo/.test(style) && position === 'GK') { add('gk2',.9); add('gk3',.75); add('lowerBodyStrength',.35); }
+  if (/goleiro defensivo/.test(style) && position === 'GK') { add('gk1',.9); add('gk2',.75); }
+}
+
+function individualTrainingAdjustments(position: PositionCode, a: Required<Attributes>, parsed: ParsedCard): Record<TrainingKey, number> {
+  const weights = emptyTrainingWeights();
+  const active = position === 'GK' ? IDENTITY_CORE_GROUPS.GK : (Object.keys(weights) as TrainingKey[]).filter((key) => !key.startsWith('gk'));
+  const playerMean = avg(...active.map((key) => trainingGroupAverage(key, a)));
+  const reference = BASE_BY_POSITION[position];
+  const core = new Set(IDENTITY_CORE_GROUPS[position]);
+
+  for (const key of active) {
+    const current = trainingGroupAverage(key, a);
+    const target = trainingGroupAverage(key, reference);
+    const standout = current - playerMean;
+    const gap = target - current;
+    // A posição define o mínimo funcional, mas a identidade da carta define onde vale especializar.
+    weights[key] += Math.max(-.55, Math.min(1.15, standout / 13));
+    if (core.has(key)) weights[key] += Math.max(-.45, Math.min(1.2, gap / 13));
+    else if (gap > 8) weights[key] -= Math.min(.55, gap / 28);
+    if (current >= target + 7) weights[key] -= .22; // evita inflar atributo já saturado
+  }
+
+  addPlaystyleIdentityWeights(weights, parsed, position);
+  addSkillIdentityWeights(weights, parsed);
+
+  if (parsed.height) {
+    if (parsed.height >= 190) { weights.aerialStrength += .8; weights.dexterity -= .18; }
+    else if (parsed.height <= 175) { weights.dexterity += .45; weights.aerialStrength -= .5; }
+  }
+  if (parsed.weight) {
+    if (parsed.weight >= 88) { weights.lowerBodyStrength += .42; weights.aerialStrength += .22; }
+    else if (parsed.weight <= 68) { weights.dribbling += .32; weights.dexterity += .28; weights.aerialStrength -= .22; }
+  }
+
+  return weights;
+}
+
+function identityHash(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36).toUpperCase();
+}
+
+function buildPlayerIdentity(parsed: ParsedCard, selected: PositionCode, a: Required<Attributes>): PlayerIdentityAnalysis {
+  const keys = selected === 'GK' ? IDENTITY_CORE_GROUPS.GK : (Object.keys(TRAINING_GROUP_ATTRIBUTES) as TrainingKey[]).filter((key) => !key.startsWith('gk'));
+  const scores = keys.map((key) => ({ key, score: trainingGroupAverage(key, a) })).sort((left, right) => right.score - left.score);
+  const reference = BASE_BY_POSITION[selected];
+  const corrections = IDENTITY_CORE_GROUPS[selected]
+    .map((key) => ({ key, gap: trainingGroupAverage(key, reference) - trainingGroupAverage(key, a) }))
+    .filter((item) => item.gap > 4)
+    .sort((left, right) => right.gap - left.gap)
+    .slice(0, 3);
+  const localRule = findLocalCardRule(parsed.playerName, parsed.playerName);
+  const skillNames = Array.from(new Set([...(parsed.specialSkills ?? []), ...(parsed.nativeSkills ?? [])]));
+  const profileLabel = scores.slice(0, 2).map((item) => TRAINING_LABELS[item.key]).join(' + ') || POSITION_PT[selected];
+  const signatureSource = [parsed.playerName, parsed.playstyle ?? '', selected, parsed.height ?? '', parsed.weight ?? '', ...scores.map((item) => `${item.key}:${Math.round(item.score)}`), ...skillNames.sort()].join('|');
+  const evidence = parsed.evidence.attributeCount * 2.6 + (parsed.playstyle ? 12 : 0) + Math.min(18, skillNames.length * 3) + (parsed.height ? 5 : 0) + (parsed.weight ? 4 : 0);
+  const decisiveFactors = [
+    `Posição escolhida: ${POSITION_PT[selected]}.`,
+    parsed.playstyle ? `Estilo de Jogo oficial preservado: ${parsed.playstyle}.` : 'Estilo de Jogo não confirmado; a identidade foi calculada pelos atributos.',
+    skillNames.length ? `${skillNames.length} habilidade(s) confirmada(s) influenciaram os pesos da ficha.` : 'Nenhuma habilidade confirmada alterou artificialmente a distribuição.',
+    parsed.height || parsed.weight ? `Perfil físico considerado${parsed.height ? `: ${parsed.height} cm` : ''}${parsed.weight ? `, ${parsed.weight} kg` : ''}.` : 'Altura e peso não confirmados; nenhum perfil físico foi inventado.'
+  ];
+  if (localRule?.note) decisiveFactors.push(localRule.note);
+  return {
+    signature: `ID-${identityHash(signatureSource)}`,
+    profileLabel: `Perfil técnico da carta: ${profileLabel}`,
+    individualityScore: Math.round(clampDecimal(evidence, 35, 99)),
+    naturalStrengths: scores.slice(0, 4).map((item) => `${TRAINING_LABELS[item.key]} (${Math.round(item.score)})`),
+    criticalCorrections: corrections.length ? corrections.map((item) => `${TRAINING_LABELS[item.key]} precisa de correção funcional para ${POSITION_PT[selected]}.`) : [`A carta já possui uma base funcional equilibrada para ${POSITION_PT[selected]}.`],
+    decisiveFactors,
+    protectedCharacteristics: scores.slice(0, 3).map((item) => `${TRAINING_LABELS[item.key]} foi preservado como característica natural, sem copiar um molde genérico da posição.`),
+    localReference: localRule?.note ?? null,
+    note: 'Este perfil é descritivo do app, não um novo Estilo de Jogo oficial. A ficha é calculada pela identidade desta carta e pode coincidir com outra apenas quando os dados forem realmente muito parecidos.'
+  };
+}
+
+function positionRequirementWeights(position: PositionCode, objective: Objective, a: Required<Attributes>): Record<TrainingKey, number> {
   const weights: Record<TrainingKey, number> = { shooting: .3, passing: .5, dribbling: .5, dexterity: .6, lowerBodyStrength: .6, aerialStrength: .3, defending: .3, gk1: 0, gk2: 0, gk3: 0 };
   const add = (key: TrainingKey, value: number) => { weights[key] += value; };
   if (position === 'GK') return { shooting: 0, passing: 0, dribbling: 0, dexterity: 0, lowerBodyStrength: .45, aerialStrength: .35, defending: 0, gk1: 2.2, gk2: 2.35, gk3: 2.1 };
@@ -3834,25 +4118,79 @@ function adaptiveTrainingWeights(position: PositionCode, objective: Objective, a
   if (position === 'CF') { add('shooting', 2.15); add('dexterity', 1.3); add('lowerBodyStrength', 1.15); add('aerialStrength', a.heading >= 78 || a.physicalContact >= 82 ? .95 : .35); add('dribbling', .45); }
   if (objective === 'DEFENSIVE') { add('defending', .55); add('aerialStrength', .2); }
   if (objective === 'CREATOR') { add('passing', .55); add('dribbling', .35); }
+  if (objective === 'FINISHER') { add('shooting', .65); add('dexterity', .25); }
+  if (objective === 'DRIBBLER') { add('dribbling', .65); add('dexterity', .35); }
+  if (objective === 'PRESSING') { add('defending', .35); add('lowerBodyStrength', .45); }
+  if (objective === 'POSSESSION') { add('passing', .45); add('dribbling', .3); }
+  if (objective === 'QUICK_COUNTER') { add('dexterity', .35); add('lowerBodyStrength', .45); }
+  if (objective === 'AERIAL') { add('aerialStrength', .7); }
+  if (objective === 'META_2026') {
+    if (position === 'CB' || position === 'DMF') { add('defending', .72); add('lowerBodyStrength', .28); add('passing', .12); }
+    else if (position === 'CF') { add('shooting', .58); add('dexterity', .34); add('lowerBodyStrength', .18); }
+    else if (position === 'LWF' || position === 'RWF' || position === 'SS' || position === 'AMF') { add('dribbling', .48); add('dexterity', .42); add('shooting', .28); }
+    else { add('passing', .36); add('dribbling', .22); add('lowerBodyStrength', .22); add('defending', .14); }
+  }
   return weights;
 }
 
-function adaptivePlanScore(plan: TrainingPlan, position: PositionCode, objective: Objective, a: Required<Attributes>, budget: number) {
-  const weights = adaptiveTrainingWeights(position, objective, a);
+function adaptiveTrainingWeights(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): Record<TrainingKey, number> {
+  const weights = positionRequirementWeights(position, objective, a);
+  const individual = individualTrainingAdjustments(position, a, parsed);
+  for (const key of Object.keys(weights) as TrainingKey[]) weights[key] += individual[key];
+  return weights;
+}
+
+function planDistance(left: TrainingPlan, right: TrainingPlan, keys: TrainingKey[]) {
+  return keys.reduce((sum, key) => sum + Math.abs((left[key] ?? 0) - (right[key] ?? 0)), 0);
+}
+
+function scorePlanByWeights(plan: TrainingPlan, weights: Record<TrainingKey, number>, budget: number, saturationBoost: Partial<Record<TrainingKey, number>> = {}) {
   const used = trainingPlanTotalCost(plan);
   let value = 0;
   let waste = 0;
   for (const key of Object.keys(plan) as TrainingKey[]) {
     const level = plan[key];
-    const saturationStart = key === 'defending' && (position === 'CB' || position === 'DMF') ? 12 : key === 'shooting' && position === 'CF' ? 12 : 10;
-    const effectiveLevel = Math.min(level, saturationStart) + Math.max(0, level - saturationStart) * 0.35;
-    value += effectiveLevel * weights[key];
-    if (weights[key] <= .35 && level > 3) waste += (level - 3) * 1.4;
-    if (level > saturationStart) waste += (level - saturationStart) * 1.15;
+    const saturationStart = saturationBoost[key] ?? 10;
+    const effectiveLevel = Math.min(level, saturationStart) + Math.max(0, level - saturationStart) * .32;
+    value += effectiveLevel * Math.max(.02, weights[key]);
+    if (weights[key] <= .35 && level > 3) waste += (level - 3) * 1.45;
+    if (level > saturationStart) waste += (level - saturationStart) * 1.2;
   }
   const unused = Math.max(0, budget - used);
   const efficiency = used > 0 ? value / used : 0;
   return value * 5.2 + efficiency * 18 - waste * 4 - unused * .18;
+}
+
+function identityPlanScore(plan: TrainingPlan, position: PositionCode, a: Required<Attributes>, budget: number, parsed: ParsedCard) {
+  const keys = (position === 'GK' ? IDENTITY_CORE_GROUPS.GK : (Object.keys(TRAINING_GROUP_ATTRIBUTES) as TrainingKey[]).filter((key) => !key.startsWith('gk'))) as TrainingKey[];
+  const averages = keys.map((key) => trainingGroupAverage(key, a));
+  const mean = avg(...averages);
+  const individual = individualTrainingAdjustments(position, a, parsed);
+  const weights = emptyTrainingWeights();
+  for (const key of keys) {
+    const standout = (trainingGroupAverage(key, a) - mean) / 10;
+    weights[key] = .45 + Math.max(-.15, standout) + Math.max(0, individual[key]) * 1.45;
+  }
+  return scorePlanByWeights(plan, weights, budget);
+}
+
+function adaptationPlanScore(plan: TrainingPlan, position: PositionCode, objective: Objective, a: Required<Attributes>, budget: number) {
+  const requirements = positionRequirementWeights(position, objective, a);
+  const reference = BASE_BY_POSITION[position];
+  const core = new Set(IDENTITY_CORE_GROUPS[position]);
+  const weights = emptyTrainingWeights();
+  for (const key of Object.keys(weights) as TrainingKey[]) {
+    const gap = trainingGroupAverage(key, reference) - trainingGroupAverage(key, a);
+    weights[key] = requirements[key] + (core.has(key) ? Math.max(0, gap) / 8 : Math.max(0, gap) / 18);
+  }
+  return scorePlanByWeights(plan, weights, budget, position === 'GK' ? { gk1: 12, gk2: 12, gk3: 12 } : { defending: position === 'CB' || position === 'DMF' ? 12 : 10, shooting: position === 'CF' ? 12 : 10 });
+}
+
+function adaptivePlanScore(plan: TrainingPlan, position: PositionCode, objective: Objective, a: Required<Attributes>, budget: number, parsed: ParsedCard) {
+  const weights = adaptiveTrainingWeights(position, objective, a, parsed);
+  return scorePlanByWeights(plan, weights, budget, position === 'GK'
+    ? { gk1: 12, gk2: 12, gk3: 12 }
+    : { defending: position === 'CB' || position === 'DMF' ? 12 : 10, shooting: position === 'CF' ? 12 : 10 });
 }
 
 function adaptationAssessment(position: PositionCode, parsed: ParsedCard, a: Required<Attributes>) {
@@ -3909,7 +4247,7 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
   const keys = (selected === 'GK' ? ['gk1','gk2','gk3','lowerBodyStrength','aerialStrength'] : ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending']) as TrainingKey[];
   for (const plus of keys) for (const minus of keys) {
     if (plus === minus) continue;
-    for (const amount of [1, 2, 3]) {
+    for (const amount of [1, 2, 3, 4]) {
       const shifted = { ...training };
       shifted[plus] += amount;
       shifted[minus] = Math.max(0, shifted[minus] - amount);
@@ -3919,41 +4257,292 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
   for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
     for (const minus of keys) {
       if (minus === keys[i] || minus === keys[j]) continue;
-      const mixed = { ...training };
-      mixed[keys[i]] += 1;
-      mixed[keys[j]] += 1;
-      mixed[minus] = Math.max(0, mixed[minus] - 2);
-      push(mixed);
+      for (const amount of [1, 2]) {
+        const mixed = { ...training };
+        mixed[keys[i]] += amount;
+        mixed[keys[j]] += amount;
+        mixed[minus] = Math.max(0, mixed[minus] - amount * 2);
+        push(mixed);
+      }
     }
   }
-  const ranked = candidates.map((plan) => ({ plan, score: adaptivePlanScore(plan, selected, objective, attributes, budget) })).sort((a,b) => b.score-a.score);
-  const recommended = ranked[0]?.plan ?? training;
-  const balanced = [...ranked].sort((a,b) => (planBalanceScore(b.plan, keys) - planBalanceScore(a.plan, keys)) || (b.score-a.score))[0]?.plan ?? recommended;
-  const weights = adaptiveTrainingWeights(selected, objective, attributes);
-  const specialistKey = [...keys].sort((a,b)=>weights[b]-weights[a])[0];
-  const specialist = ranked.find(({plan}) => plan[specialistKey] >= recommended[specialistKey] + 1)?.plan ?? ranked[1]?.plan ?? recommended;
-  const maxScore = Math.max(1, ranked[0]?.score ?? 1);
-  const quality = (plan: TrainingPlan) => Math.round(clampDecimal(76 + (adaptivePlanScore(plan, selected, objective, attributes, budget) / maxScore) * 22, 1, 99));
+
+  const hybridRanked = candidates.map((plan) => ({ plan, score: adaptivePlanScore(plan, selected, objective, attributes, budget, parsed) })).sort((a,b) => b.score-a.score);
+  const identityRanked = candidates.map((plan) => ({ plan, score: identityPlanScore(plan, selected, attributes, budget, parsed) })).sort((a,b) => b.score-a.score);
+  const adaptationRanked = candidates.map((plan) => ({ plan, score: adaptationPlanScore(plan, selected, objective, attributes, budget) })).sort((a,b) => b.score-a.score);
+
+  const genericParsed: ParsedCard = {
+    ...parsed,
+    playerName: 'Modelo genérico da posição',
+    playstyle: null,
+    nativeSkills: [],
+    specialSkills: [],
+    impetos: [],
+    specialTag: null,
+    height: null,
+    weight: null,
+    evidence: { ...parsed.evidence, localRuleMatched: null }
+  };
+  const genericPlan = trainingFor(selected, objective, BASE_BY_POSITION[selected], genericParsed);
+  const evidenceStrength = parsed.evidence.attributeCount * 2 + (parsed.playstyle ? 10 : 0) + Math.min(16, (parsed.nativeSkills.length + parsed.specialSkills.length) * 2) + (parsed.height ? 4 : 0) + (parsed.weight ? 3 : 0);
+  let hybrid = hybridRanked[0]?.plan ?? training;
+  let antiCloneAdjusted = false;
+  if (evidenceStrength >= 34 && planDistance(hybrid, genericPlan, keys) < 3) {
+    const topScore = hybridRanked[0]?.score ?? 0;
+    const alternative = hybridRanked.find((item) => item.score >= topScore - Math.abs(topScore) * .1 && planDistance(item.plan, genericPlan, keys) >= 3);
+    if (alternative) { hybrid = alternative.plan; antiCloneAdjusted = true; }
+  }
+
+  const usedKeys = new Set([JSON.stringify(hybrid)]);
+  const chooseDistinct = (ranked: Array<{ plan: TrainingPlan; score: number }>, fallback: TrainingPlan) => {
+    const found = ranked.find((item) => !usedKeys.has(JSON.stringify(item.plan)))?.plan ?? fallback;
+    usedKeys.add(JSON.stringify(found));
+    return found;
+  };
+  const identity = chooseDistinct(identityRanked, hybridRanked[1]?.plan ?? hybrid);
+  const adaptation = chooseDistinct(adaptationRanked, hybridRanked[2]?.plan ?? hybrid);
+
+  const maxHybrid = Math.max(1, hybridRanked[0]?.score ?? 1);
+  const maxIdentity = Math.max(1, identityRanked[0]?.score ?? 1);
+  const maxAdaptation = Math.max(1, adaptationRanked[0]?.score ?? 1);
+  const quality = (plan: TrainingPlan) => {
+    const h = adaptivePlanScore(plan, selected, objective, attributes, budget, parsed) / maxHybrid;
+    const i = identityPlanScore(plan, selected, attributes, budget, parsed) / maxIdentity;
+    const a = adaptationPlanScore(plan, selected, objective, attributes, budget) / maxAdaptation;
+    return Math.round(clampDecimal(74 + (h * .5 + i * .27 + a * .23) * 24, 1, 99));
+  };
   const efficiency = (plan: TrainingPlan) => {
     const used = Math.max(1, trainingPlanTotalCost(plan));
-    const relative = adaptivePlanScore(plan, selected, objective, attributes, budget) / used;
-    const bestRelative = Math.max(...ranked.map(({plan: item}) => adaptivePlanScore(item, selected, objective, attributes, budget) / Math.max(1, trainingPlanTotalCost(item))));
-    return Math.round(clampDecimal(70 + (relative / Math.max(.01, bestRelative)) * 29, 1, 99));
+    const relative = adaptivePlanScore(plan, selected, objective, attributes, budget, parsed) / used;
+    const bestRelative = Math.max(...hybridRanked.map(({plan: item}) => adaptivePlanScore(item, selected, objective, attributes, budget, parsed) / Math.max(1, trainingPlanTotalCost(item))));
+    return Math.round(clampDecimal(68 + (relative / Math.max(.01, bestRelative)) * 31, 1, 99));
   };
   const adapt = adaptationAssessment(selected, parsed, attributes);
   const label = (key: TrainingKey) => TRAINING_LABELS[key];
-  const topKeys = [...keys].sort((a,b)=>weights[b]-weights[a]).slice(0,3);
-  const make = (kind: BuildVariant['kind'], title: string, plan: TrainingPlan, highlights: string[], risks: string[], note: string, verdict: string): BuildVariant => ({
+  const identityWeights = individualTrainingAdjustments(selected, attributes, parsed);
+  const requirementWeights = positionRequirementWeights(selected, objective, attributes);
+  const identityKeys = [...keys].sort((a,b)=>identityWeights[b]-identityWeights[a]).slice(0,3);
+  const adaptationKeys = [...keys].sort((a,b)=>requirementWeights[b]-requirementWeights[a]).slice(0,3);
+  const hybridKeys = [...keys].sort((a,b)=>adaptiveTrainingWeights(selected, objective, attributes, parsed)[b]-adaptiveTrainingWeights(selected, objective, attributes, parsed)[a]).slice(0,3);
+  const make = (kind: BuildVariant['kind'], title: string, plan: TrainingPlan, highlights: string[], risks: string[], note: string, verdict: string, tradeOffs: string[]): BuildVariant => ({
     kind, title, positionLabel: selectedLabel, training: plan, pointsUsed: trainingPlanTotalCost(plan), qualityScore: quality(plan), adaptationLabel: adapt.label,
     efficiencyScore: efficiency(plan), balanceScore: planBalanceScore(plan, keys), scenarioScores: scenarioScores(plan, selected, objective), simulationsTested: candidates.length,
-    highlights, risks, note, verdict,
-    tradeOffs: kind === 'alternative' ? [`Ganha mais ${label(specialistKey)}, mas pode perder regularidade em outros setores.`] : kind === 'safe' ? ['Entrega menos pico de desempenho, porém reduz os pontos fracos.'] : ['É a melhor média geral; uma ficha especialista ainda pode ser superior em uma necessidade muito específica.']
+    highlights, risks, note, verdict, tradeOffs
   });
   return [
-    make('competitive', 'Ficha recomendada Elite', recommended, topKeys.map(key=>`Prioridade inteligente em ${label(key)}`), [adapt.risk], 'Selecionada após comparar diversas distribuições e penalizar pontos com pouco retorno para a função escolhida.', 'Melhor escolha geral para rendimento competitivo e aproveitamento do orçamento.'),
-    make('alternative', `Ficha especialista em ${label(specialistKey)}`, specialist, [`Maximiza ${label(specialistKey)} sem ultrapassar o orçamento`, `Mantém a posição escolhida: ${selectedLabel}`], ['Pode abrir mão de um pouco de equilíbrio para aumentar a característica principal.'], 'Versão agressiva para destacar a maior necessidade competitiva da função.', `Indicada quando você quer que o jogador se destaque principalmente em ${label(specialistKey).toLowerCase()}.`),
-    make('safe', 'Ficha equilibrada', balanced, ['Reduz fraquezas graves', 'Distribuição mais estável para partidas ranqueadas'], [adapt.risk], 'Versão conservadora para manter consistência técnica, física e tática.', 'Indicada para quem prefere regularidade e menos vulnerabilidades durante a partida.')
+    make('competitive', 'Ficha híbrida DNA — recomendada', hybrid, [
+      ...hybridKeys.map((key)=>`Equilibra identidade e exigência de ${selectedLabel} em ${label(key)}`),
+      antiCloneAdjusted ? 'Detector anticlone afastou a distribuição do molde genérico da posição.' : 'A distribuição já apresentou distância segura do molde genérico.'
+    ], [adapt.risk], 'Combina as qualidades naturais desta carta com as correções realmente necessárias para a posição escolhida.', 'Melhor escolha geral para manter o jogador reconhecível e, ao mesmo tempo, funcional na nova posição.', ['Não maximiza um único setor: prioriza o melhor desempenho total desta versão da carta.']),
+    make('alternative', 'Ficha identidade', identity, identityKeys.map((key)=>`Protege e amplia ${label(key)} como diferencial natural`), ['Pode manter uma limitação da posição quando corrigi-la custaria identidade demais.'], 'Preserva ao máximo a maneira natural desta carta jogar, incluindo Estilo de Jogo, físico e habilidades confirmadas.', 'Indicada quando você quer que o jogador continue parecendo com sua identidade real dentro da posição escolhida.', ['Entrega menos correção estrutural do que a ficha de adaptação.']),
+    make('safe', 'Ficha adaptação', adaptation, adaptationKeys.map((key)=>`Corrige a exigência funcional de ${selectedLabel} em ${label(key)}`), [adapt.risk], 'Prioriza as lacunas mais importantes da posição escolhida e limita investimentos em características secundárias.', 'Indicada quando a prioridade é transformar a carta para cumprir melhor as exigências da posição escolhida.', ['Pode reduzir parte da especialização natural para corrigir fraquezas críticas.'])
   ];
+}
+
+
+const DNA_SPECIAL_SKILL_RULES: Record<string, { positions: PositionCode[]; attrs: AttributeKey[]; groups: TrainingKey[]; use: string }> = {
+  'Blitz Curler': { positions:['LWF','RWF','SS','AMF','CF'], attrs:['curl','finishing','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], use:'cortar para o pé dominante e finalizar com curva sem perder a preparação corporal' },
+  'Esticada de Perna': { positions:['CB','DMF','LB','RB','CMF'], attrs:['tackling','defensiveEngagement','aggression','physicalContact'], groups:['defending','lowerBodyStrength'], use:'fechar linhas de passe e recuperar a bola sem desmontar o bloco' },
+  'Sombra veloz': { positions:['LWF','RWF','SS','CF','LMF','RMF'], attrs:['speed','acceleration','stamina'], groups:['dexterity','lowerBodyStrength'], use:'atacar espaço com aceleração e mudança curta de direção' },
+  'Momentum Dribbling': { positions:['LWF','RWF','SS','AMF'], attrs:['dribbling','tightPossession','balance','acceleration'], groups:['dribbling','dexterity'], use:'vencer o duelo curto e conduzir em velocidade' },
+  'Phenomenal Finishing': { positions:['CF','SS','LWF','RWF','AMF'], attrs:['finishing','kickingPower','balance','offensiveAwareness'], groups:['shooting','dexterity'], use:'finalizar mesmo sob contato ou postura corporal desfavorável' },
+  'Phenomenal Pass': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], use:'executar passes difíceis sob pressão e em pouco espaço' },
+  'Game-changing Pass': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','stamina'], groups:['passing','lowerBodyStrength'], use:'aumentar a criação quando a partida exige uma jogada decisiva' },
+  'Fortress': { positions:['CB','DMF','LB','RB','GK'], attrs:['defensiveAwareness','tackling','physicalContact','defensiveEngagement'], groups:['defending','aerialStrength'], use:'proteger a área e sustentar a vantagem com posicionamento e contato' },
+  'Edged Crossing': { positions:['LWF','RWF','LMF','RMF','LB','RB'], attrs:['loftedPass','curl','kickingPower'], groups:['passing','lowerBodyStrength'], use:'cruzar com trajetória rápida a partir do corredor' },
+  'Bullet Header': { positions:['CF','SS','CB'], attrs:['heading','jump','physicalContact','offensiveAwareness'], groups:['aerialStrength','shooting'], use:'atacar cruzamentos e bolas paradas com impulsão e presença de área' }
+};
+
+function dnaGroupKeys(position: PositionCode): TrainingKey[] {
+  return (position === 'GK' ? ['gk1','gk2','gk3','lowerBodyStrength','aerialStrength'] : ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending']) as TrainingKey[];
+}
+
+function buildIndividualGoals(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): IndividualAttributeGoal[] {
+  const reference = BASE_BY_POSITION[position];
+  const keys = dnaGroupKeys(position);
+  const mean = avg(...keys.map((key) => trainingGroupAverage(key, a)));
+  const identity = individualTrainingAdjustments(position, a, parsed);
+  const requirements = positionRequirementWeights(position, objective, a);
+  const core = new Set(IDENTITY_CORE_GROUPS[position]);
+  return keys.map((key) => {
+    const current = trainingGroupAverage(key, a);
+    const target = trainingGroupAverage(key, reference);
+    const natural = current >= mean + 4;
+    const gap = target - current;
+    let priority: IndividualAttributeGoal['priority'] = 'manter';
+    if (natural && identity[key] >= .35) priority = 'proteger';
+    if (core.has(key) && gap > 5) priority = 'corrigir';
+    if (natural && identity[key] >= 1.05 && requirements[key] >= .8) priority = 'especializar';
+    const functionalMin = Math.round(clampDecimal(target - (core.has(key) ? 2 : 5), 45, 94));
+    const personalizedIdeal = Math.round(clampDecimal(
+      priority === 'corrigir' ? Math.max(functionalMin, target + 1) :
+      priority === 'especializar' ? Math.max(current + 4, target + 2) :
+      priority === 'proteger' ? Math.max(current + 2, functionalMin) : Math.max(current, functionalMin),
+      45, 99
+    ));
+    const recommendedCeiling = Math.round(clampDecimal(Math.max(personalizedIdeal, current + (priority === 'especializar' ? 6 : 3)), 48, 99));
+    const reason = priority === 'corrigir'
+      ? `${TRAINING_LABELS[key]} está abaixo da necessidade funcional de ${POSITION_PT[position]}, mas será corrigido apenas até uma faixa eficiente.`
+      : priority === 'especializar'
+        ? `${TRAINING_LABELS[key]} é forte nesta carta e também ajuda diretamente a posição escolhida.`
+        : priority === 'proteger'
+          ? `${TRAINING_LABELS[key]} é parte da identidade natural e não deve ser sacrificado para copiar um molde da posição.`
+          : `${TRAINING_LABELS[key]} já está em faixa aceitável; o motor evita investimento excessivo.`;
+    return { training:key, label:TRAINING_LABELS[key], current:Math.round(current), functionalMin, personalizedIdeal, recommendedCeiling, priority, reason };
+  }).sort((left,right) => {
+    const rank = { corrigir:4, especializar:3, proteger:2, manter:1 } as const;
+    return rank[right.priority] - rank[left.priority] || right.personalizedIdeal - left.personalizedIdeal;
+  });
+}
+
+function buildSelectiveWeaknesses(position: PositionCode, a: Required<Attributes>, parsed: ParsedCard): SelectiveWeaknessStrategy[] {
+  const reference = BASE_BY_POSITION[position];
+  const core = new Set(IDENTITY_CORE_GROUPS[position]);
+  return dnaGroupKeys(position).map((key) => {
+    const current = trainingGroupAverage(key, a);
+    const target = trainingGroupAverage(key, reference);
+    const gap = Math.max(0, target - current);
+    let correctability: SelectiveWeaknessStrategy['correctability'] = gap <= 6 ? 'alta' : gap <= 12 ? 'parcial' : 'baixa';
+    if (key === 'aerialStrength' && parsed.height != null && parsed.height <= 175) correctability = 'baixa';
+    if (key === 'lowerBodyStrength' && parsed.weight != null && parsed.weight >= 90 && a.acceleration < 72) correctability = 'parcial';
+    const importance: SelectiveWeaknessStrategy['importance'] = core.has(key) && gap >= 8 ? 'crítica' : gap >= 5 ? 'relevante' : 'aceitável';
+    const maxInvestment = correctability === 'alta' ? 9 : correctability === 'parcial' ? 6 : 4;
+    const strategy = gap <= 3
+      ? 'Não precisa de correção relevante; preservar pontos para diferenciais da carta.'
+      : correctability === 'baixa'
+        ? `Fazer apenas correção funcional em ${TRAINING_LABELS[key]}; tentar eliminar completamente a limitação desperdiçaria pontos.`
+        : correctability === 'parcial'
+          ? `Reduzir a fraqueza até uma faixa segura e compensar o restante com posicionamento, parceiro e plano de jogo.`
+          : `Corrigir de forma direta porque o retorno por ponto ainda é alto para ${POSITION_PT[position]}.`;
+    return { training:key, label:TRAINING_LABELS[key], current:Math.round(current), gap:Math.round(gap), importance, correctability, maxInvestment, strategy };
+  }).filter((item) => item.gap > 2).sort((a,b) => (b.importance === 'crítica' ? 2 : b.importance === 'relevante' ? 1 : 0) - (a.importance === 'crítica' ? 2 : a.importance === 'relevante' ? 1 : 0) || b.gap-a.gap).slice(0,5);
+}
+
+function inferSkillTrainingGroups(name: string): TrainingKey[] {
+  const boosts = SKILL_PROFILES[name]?.boosts ?? {};
+  const groups = new Set<TrainingKey>();
+  for (const boost of Object.keys(boosts)) {
+    if (boost === 'finishing') groups.add('shooting');
+    if (boost === 'creation') groups.add('passing');
+    if (boost === 'dribbling') groups.add('dribbling');
+    if (boost === 'mobility') { groups.add('dexterity'); groups.add('lowerBodyStrength'); }
+    if (boost === 'defense' || boost === 'pressure') groups.add('defending');
+    if (boost === 'physical' || boost === 'stamina') groups.add('lowerBodyStrength');
+    if (boost === 'aerial') groups.add('aerialStrength');
+    if (boost === 'goalkeeper') { groups.add('gk1'); groups.add('gk2'); groups.add('gk3'); }
+  }
+  return [...groups];
+}
+
+function buildSkillSynergies(parsed: ParsedCard, position: PositionCode, a: Required<Attributes>, plan: TrainingPlan): SpecialSkillSynergyItem[] {
+  const names = Array.from(new Set([...(parsed.specialSkills ?? []), ...(parsed.nativeSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
+  return names.map((name) => {
+    const rule = DNA_SPECIAL_SKILL_RULES[name];
+    const groups = rule?.groups ?? inferSkillTrainingGroups(name);
+    const attrs = rule?.attrs ?? groups.flatMap((group) => TRAINING_GROUP_ATTRIBUTES[group] ?? []).slice(0,4);
+    const attributeSupport = attrs.length ? Math.round(avg(...attrs.map((key) => a[key]))) : Math.round(avg(...IDENTITY_CORE_GROUPS[position].map((key) => trainingGroupAverage(key, a))));
+    const positionFit = rule ? (rule.positions.includes(position) ? 96 : 48) : 72;
+    const trainedSupport = groups.length ? Math.round(avg(...groups.map((group) => Math.min(100, trainingGroupAverage(group, a) + plan[group] * 1.15)))) : attributeSupport;
+    const activationScore = Math.round(clampDecimal(attributeSupport * .42 + trainedSupport * .28 + positionFit * .3, 1, 99));
+    const expectedFrequency: SpecialSkillSynergyItem['expectedFrequency'] = positionFit >= 88 ? 'alta' : positionFit >= 60 ? 'média' : 'baixa';
+    const status: SpecialSkillSynergyItem['status'] = activationScore >= 90 ? 'aproveitamento máximo' : activationScore >= 76 ? 'bem aproveitada' : activationScore >= 58 ? 'parcial' : 'desperdiçada';
+    const source: SpecialSkillSynergyItem['source'] = parsed.specialSkills.includes(name) || parsed.specialTag === name ? 'habilidade especial' : parsed.nativeSkills.includes(name) ? 'habilidade oficial' : 'ímpeto';
+    const helpfulAttributes = attrs.slice(0,4).map((key) => ATTRIBUTE_PT[key]);
+    const recommendation = rule
+      ? `${rule.use}. ${activationScore < 76 ? `Reforce ${groups.map((group) => TRAINING_LABELS[group]).join(' e ')} somente até melhorar o suporte da habilidade.` : 'A base atual já permite usar a habilidade sem desviar demais a ficha.'}`
+      : `A habilidade foi mantida no DNA da carta. O app usa os grupos ${groups.map((group) => TRAINING_LABELS[group]).join(', ') || 'relacionados à posição'} sem inventar requisitos não confirmados.`;
+    const wasteRisk = expectedFrequency === 'baixa'
+      ? `Na posição ${POSITION_PT[position]}, as situações de uso tendem a ser raras; não vale construir toda a ficha ao redor desta habilidade.`
+      : attributeSupport < 70
+        ? 'A habilidade existe, mas os atributos de suporte ainda limitam sua execução.'
+        : null;
+    return { name, source, activationScore, attributeSupport, positionFit, expectedFrequency, status, helpfulAttributes, trainingGroups:groups, recommendation, wasteRisk };
+  }).sort((a,b)=>b.activationScore-a.activationScore);
+}
+
+function buildBehaviorSimulation(position: PositionCode, a: Required<Attributes>, plan: TrainingPlan, skillSynergies: SpecialSkillSynergyItem[]): OnFieldBehaviorSimulation {
+  const boost = (key: TrainingKey) => plan[key] * 1.05;
+  const score = (...values: number[]) => Math.round(clampDecimal(avg(...values), 1, 99));
+  const passUnderPressure = score(a.ballControl + boost('dribbling'), a.tightPossession + boost('dribbling'), a.lowPass + boost('passing'), a.balance + boost('dexterity'));
+  const turnAndCarry = score(a.ballControl + boost('dribbling'), a.dribbling + boost('dribbling'), a.tightPossession + boost('dribbling'), a.balance + boost('dexterity'), a.acceleration + boost('dexterity'));
+  const offBallMovement = score(a.offensiveAwareness + boost('dexterity'), a.acceleration + boost('dexterity'), a.stamina + boost('lowerBodyStrength'));
+  const defensiveRecovery = score(a.defensiveAwareness + boost('defending'), a.defensiveEngagement + boost('defending'), a.tackling + boost('defending'), a.speed + boost('lowerBodyStrength'), a.stamina + boost('lowerBodyStrength'));
+  const physicalDuels = score(a.physicalContact + boost('aerialStrength'), a.balance + boost('dexterity'), a.jump + boost('aerialStrength'), a.heading + boost('aerialStrength'));
+  const reactionSpeed = score(a.acceleration + boost('dexterity'), a.balance + boost('dexterity'), a.defensiveEngagement + boost('defending'));
+  const matchConsistency = score(a.stamina + boost('lowerBodyStrength'), a.balance + boost('dexterity'), passUnderPressure, reactionSpeed);
+  const creation = Math.round(clampDecimal(a.lowPass * .34 + a.loftedPass * .25 + a.ballControl * .22 + a.offensiveAwareness * .19 + boost('passing') * .72 + boost('dribbling') * .18, 1, 99));
+  const finishing = Math.round(clampDecimal(a.finishing * .45 + a.kickingPower * .2 + a.offensiveAwareness * .25 + a.balance * .1 + boost('shooting') * .58 + boost('dexterity') * .16, 1, 99));
+  const specialSkillUsage = skillSynergies.length ? Math.round(avg(...skillSynergies.map((item) => item.activationScore))) : 0;
+  const entries = [
+    ['Passe sob pressão',passUnderPressure],['Giro e condução',turnAndCarry],['Movimentação sem bola',offBallMovement],['Recuperação defensiva',defensiveRecovery],['Duelo físico',physicalDuels],['Velocidade de reação',reactionSpeed],['Consistência',matchConsistency],['Criação',creation],['Finalização',finishing],['Habilidades especiais',specialSkillUsage]
+  ] as Array<[string,number]>;
+  const ordered = [...entries].sort((a,b)=>b[1]-a[1]);
+  const strongestBehaviors = ordered.filter(([,value])=>value>=75).slice(0,4).map(([label,value])=>`${label} (${value})`);
+  const limitingBehaviors = [...ordered].reverse().filter(([,value])=>value<72).slice(0,3).map(([label,value])=>`${label} (${value})`);
+  return {
+    passUnderPressure, turnAndCarry, offBallMovement, defensiveRecovery, physicalDuels, reactionSpeed, matchConsistency, creation, finishing, specialSkillUsage,
+    strongestBehaviors,
+    limitingBehaviors,
+    summary: `Na posição ${POSITION_PT[position]}, a projeção mais forte é ${ordered[0][0].toLowerCase()} (${ordered[0][1]}/100). ${limitingBehaviors.length ? `O principal limite provável é ${limitingBehaviors[0].toLowerCase()}.` : 'Não foi detectada limitação grave no comportamento simulado.'}`
+  };
+}
+
+function buildAntiCloneAnalysis(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard, variants: BuildVariant[]): AntiCloneAnalysis {
+  const keys = dnaGroupKeys(position);
+  const genericParsed: ParsedCard = { ...parsed, playerName:'Modelo genérico da posição', playstyle:null, nativeSkills:[], specialSkills:[], impetos:[], specialTag:null, height:null, weight:null, evidence:{...parsed.evidence, localRuleMatched:null} };
+  const genericPlan = trainingFor(position, objective, BASE_BY_POSITION[position], genericParsed);
+  const mainPlan = variants[0]?.training ?? emptyTraining();
+  const distanceFromGenericTemplate = planDistance(mainPlan, genericPlan, keys);
+  const individual = individualTrainingAdjustments(position, a, parsed);
+  const requirements = positionRequirementWeights(position, objective, a);
+  const individualMagnitude = keys.reduce((sum,key)=>sum+Math.abs(individual[key]),0);
+  const totalMagnitude = individualMagnitude + keys.reduce((sum,key)=>sum+Math.abs(requirements[key]),0);
+  const identityContribution = Math.round(clampDecimal((individualMagnitude / Math.max(.01,totalMagnitude))*100, 1, 99));
+  const positionTemplateContribution = 100-identityContribution;
+  const pairDistances:number[]=[];
+  for(let i=0;i<variants.length;i++) for(let j=i+1;j<variants.length;j++) pairDistances.push(planDistance(variants[i].training,variants[j].training,keys));
+  const distributionDiversity = Math.round(clampDecimal((pairDistances.length?avg(...pairDistances):0)*8,1,99));
+  const evidence = parsed.evidence.attributeCount*2 + (parsed.playstyle?10:0) + Math.min(18,(parsed.nativeSkills.length+parsed.specialSkills.length)*2) + (parsed.height?4:0) + (parsed.weight?3:0);
+  const individualityScore = Math.round(clampDecimal(identityContribution*.48 + Math.min(100,evidence)*.27 + Math.min(100,distanceFromGenericTemplate*12)*.25, 20,99));
+  const cloneRisk: AntiCloneAnalysis['cloneRisk'] = individualityScore>=76 && distanceFromGenericTemplate>=3 ? 'baixo' : individualityScore>=55 ? 'médio' : 'alto';
+  const recalculationTriggered = evidence>=34 && distanceFromGenericTemplate>=3;
+  const fingerprintSource=[parsed.internalId,parsed.playerName,parsed.playstyle??'',position,...keys.map((key)=>`${key}:${mainPlan[key]}`),...Object.entries(parsed.attributes).map(([key,value])=>`${key}:${value}`)].join('|');
+  const reasons=[
+    `Contribuição da identidade da carta: ${identityContribution}%; molde da posição: ${positionTemplateContribution}%.`,
+    `Distância da ficha genérica de ${POSITION_PT[position]}: ${distanceFromGenericTemplate} nível(is) distribuído(s).`,
+    `As três filosofias apresentam diversidade ${distributionDiversity}/100.`,
+    cloneRisk==='baixo'?'A distribuição possui diferenciação suficiente para esta carta.':'A leitura ainda possui poucos dados exclusivos; confirme atributos, estilo, físico e habilidades para reduzir semelhanças.'
+  ];
+  return { fingerprint:`DNA-${identityHash(fingerprintSource)}`, individualityScore, identityContribution, positionTemplateContribution, distributionDiversity, distanceFromGenericTemplate, cloneRisk, recalculationTriggered, reasons };
+}
+
+function buildCardDnaAnalysis(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard, variants: BuildVariant[]): CardDnaAnalysis {
+  const goals=buildIndividualGoals(position,objective,a,parsed);
+  const weaknessStrategies=buildSelectiveWeaknesses(position,a,parsed);
+  const plan=variants[0]?.training ?? emptyTraining();
+  const skillSynergies=buildSkillSynergies(parsed,position,a,plan);
+  const behavior=buildBehaviorSimulation(position,a,plan,skillSynergies);
+  const antiClone=buildAntiCloneAnalysis(position,objective,a,parsed,variants);
+  const protectedStrengths=goals.filter((goal)=>goal.priority==='proteger'||goal.priority==='especializar').slice(0,5).map((goal)=>`${goal.label}: ${goal.reason}`);
+  const topBehavior=behavior.strongestBehaviors[0] ?? 'equilíbrio geral';
+  const identityLabel=`DNA ${POSITION_PT[position]} • ${parsed.playstyle ?? 'sem Estilo de Jogo confirmado'} • ${topBehavior}`;
+  return {
+    versionSignature:`${parsed.internalId}-${antiClone.fingerprint}`,
+    identityLabel,
+    protectedStrengths:protectedStrengths.length?protectedStrengths:['Nenhuma força foi presumida: confirme mais atributos para aumentar a individualização.'],
+    weaknessStrategies,
+    individualGoals:goals,
+    skillSynergies,
+    behavior,
+    antiClone,
+    buildPhilosophies:[
+      {title:'Ficha identidade',purpose:'Preservar a maneira natural desta versão da carta atuar.',difference:'Dá mais peso aos pontos fortes, Estilo de Jogo, físico e habilidades confirmadas.'},
+      {title:'Ficha adaptação',purpose:`Cumprir melhor as exigências de ${POSITION_PT[position]}.`,difference:'Corrige lacunas críticas mesmo quando isso reduz parte da especialização original.'},
+      {title:'Ficha híbrida DNA',purpose:'Unir identidade e adaptação com o melhor retorno total.',difference:'É a recomendação principal quando nenhuma necessidade específica foi escolhida.'}
+    ],
+    lifeLikeSummary:`A projeção procura manter o jogador reconhecível: ${topBehavior.toLowerCase()}. ${parsed.playstyle?`O Estilo de Jogo oficial ${parsed.playstyle} foi preservado como comportamento de referência.`:'Sem estilo confirmado, o app não inventou comportamento; usou somente atributos, físico e habilidades.'}`,
+    note:'O DNA é calculado para esta versão da carta. Ele não cria Estilos de Jogo oficiais e não altera a posição escolhida pelo usuário.'
+  };
 }
 
 function positionFamily(position: PositionCode) {
@@ -4331,8 +4920,8 @@ function nextTrainingPointCost(level: number) {
   return 4;
 }
 
-function buildCorrectionLimit(selected: PositionCode, objective: Objective, a: Required<Attributes>, plan: TrainingPlan): CorrectionLimitAnalysis {
-  const weights = adaptiveTrainingWeights(selected, objective, a);
+function buildCorrectionLimit(selected: PositionCode, objective: Objective, a: Required<Attributes>, plan: TrainingPlan, parsed: ParsedCard): CorrectionLimitAnalysis {
+  const weights = adaptiveTrainingWeights(selected, objective, a, parsed);
   const keys = Object.keys(plan) as TrainingKey[];
   const protectedStrengths: string[] = [];
   const caps = keys.filter(k => plan[k] > 0).map(k => {
@@ -4352,8 +4941,8 @@ function buildCorrectionLimit(selected: PositionCode, objective: Objective, a: R
   return { score, protectedStrengths, correctionCaps:caps, naturalLimits, summary:caps.length ? 'Há grupos acima da faixa de melhor retorno; a ficha limita correções exageradas.' : 'Nenhuma correção exagerada foi detectada na ficha recomendada.' };
 }
 
-function buildMarginalReturn(selected: PositionCode, objective: Objective, a: Required<Attributes>, plan: TrainingPlan): MarginalReturnItem[] {
-  const weights = adaptiveTrainingWeights(selected, objective, a);
+function buildMarginalReturn(selected: PositionCode, objective: Objective, a: Required<Attributes>, plan: TrainingPlan, parsed: ParsedCard): MarginalReturnItem[] {
+  const weights = adaptiveTrainingWeights(selected, objective, a, parsed);
   return (Object.keys(plan) as TrainingKey[]).filter(k => selected === 'GK' ? ['gk1','gk2','gk3','lowerBodyStrength','aerialStrength'].includes(k) : !k.startsWith('gk')).map(k => {
     const level=plan[k]; const cost=nextTrainingPointCost(level); const saturation=level >= 12 ? .35 : level >= 10 ? .6 : 1;
     const gain=Math.round(Math.max(1, weights[k] * saturation * 18 / cost));
@@ -4386,9 +4975,9 @@ function buildSkillPriority(parsed: ParsedCard, selected: PositionCode, analysis
   return { ordered, ownedCoverage:analysis.coverageScore, officialOnly:ordered.every(x=>official.has(x.name as any)), context:[`Posição escolhida: ${POSITION_PT[selected]}.`, parsed.playstyle?`Estilo oficial: ${parsed.playstyle}.`:'Estilo oficial não confirmado.', 'Habilidades já existentes foram removidas da fila.'] };
 }
 
-function buildAdvancedOptimizer(variants: BuildVariant[], training: TrainingPlan, budget:number, selected:PositionCode, objective: Objective, a: Required<Attributes>): AdvancedOptimizerAnalysis {
+function buildAdvancedOptimizer(variants: BuildVariant[], training: TrainingPlan, budget:number, selected:PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): AdvancedOptimizerAnalysis {
  const winner=[...variants].sort((a,b)=>(b.qualityScore??0)-(a.qualityScore??0))[0] ?? variants[0];
- const used=trainingPlanTotalCost(winner?.training ?? training); const inactive=(Object.keys(winner?.training??training) as TrainingKey[]).filter(k=>(winner?.training??training)[k]>=5 && adaptiveTrainingWeights(selected,objective,a)[k]<=.35);
+ const used=trainingPlanTotalCost(winner?.training ?? training); const inactive=(Object.keys(winner?.training??training) as TrainingKey[]).filter(k=>(winner?.training??training)[k]>=5 && adaptiveTrainingWeights(selected,objective,a,parsed)[k]<=.35);
  return {combinationsTested:Math.max(...variants.map(v=>v.simulationsTested??0),0),winnerTitle:winner?.title??'Ficha recomendada Elite',winnerScore:winner?.qualityScore??0,efficiencyScore:winner?.efficiencyScore??0,wasteScore:Math.max(0,100-(winner?.efficiencyScore??0)),unusedPoints:Math.max(0,budget-used),usefulInvestment:(winner?.highlights??[]).slice(0,4),detectedWaste:inactive.length?inactive.map(k=>`${TRAINING_LABELS[k]} recebeu investimento acima do retorno estimado.`):['Nenhum desperdício crítico detectado na ficha vencedora.'],decisionReasons:[winner?.verdict??'Melhor média geral.',winner?.note??'Selecionada pelo motor adaptativo.',`A posição ${POSITION_PT[selected]} foi preservada em todas as simulações.`],positionPreserved:true,budgetRespected:used<=budget};
 }
 
@@ -4425,7 +5014,9 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const pri = calculatePri(selected.code, attributes, parsed.nativeSkills);
   const tacticalFit = calculateTacticalFit(selected.code, attributes, pri);
   const trainingPointsTotal = trainingBudgetFromCard(parsed);
-  const training = trainingFor(selected.code, objective, attributes, parsed);
+  const baseTraining = trainingFor(selected.code, objective, attributes, parsed);
+  const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], baseTraining, positionScores.slice(0, 10), trainingPointsTotal, objective, parsed);
+  const training = buildVariants[0]?.training ?? baseTraining;
   const trainingCost = trainingPlanCost(training);
   const trainingPointsUsed = Math.min(trainingPlanTotalCost(training), trainingPointsTotal);
   const trainingPointsRemaining = Math.max(0, trainingPointsTotal - trainingPointsUsed);
@@ -4442,18 +5033,23 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const avoidPositions = buildAvoidPositions(parsed, attributes);
   const validation = validateAnalysis(parsed, selected, visiblePositionScores, attributes, avoidPositions, explicitTarget);
   const trainingComparison = compareTraining(parsed.autoTrainingPlan, training);
-  const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], training, visiblePositionScores, trainingPointsTotal, objective, parsed);
   const advancedTacticalFunction = buildAdvancedTacticalFunction(parsed, selected.code, selected.score);
   const specialSkillsAnalysis = buildSpecialSkillsAnalysis(parsed, selected.code, recommendedSkills, avoidSkills);
   const physicalEngine = buildPhysicalEngine(parsed, selected.code, attributes);
   const attributeGoals = buildAttributeGoals(selected.code, attributes);
-  const advancedOptimizer = buildAdvancedOptimizer(buildVariants, training, trainingPointsTotal, selected.code, objective, attributes);
-  const correctionLimit = buildCorrectionLimit(selected.code, objective, attributes, buildVariants[0]?.training ?? training);
-  const marginalReturn = buildMarginalReturn(selected.code, objective, attributes, buildVariants[0]?.training ?? training);
+  const advancedOptimizer = buildAdvancedOptimizer(buildVariants, training, trainingPointsTotal, selected.code, objective, attributes, parsed);
+  const correctionLimit = buildCorrectionLimit(selected.code, objective, attributes, buildVariants[0]?.training ?? training, parsed);
+  const marginalReturn = buildMarginalReturn(selected.code, objective, attributes, buildVariants[0]?.training ?? training, parsed);
   const errorTolerance = buildErrorTolerance(parsed, selected.code, buildVariants[0]?.training ?? training, trainingPointsTotal, trainingTemplate(selected.code, objective, attributes, parsed).priority);
   const skillPriority = buildSkillPriority(parsed, selected.code, specialSkillsAnalysis);
+  const playerIdentity = buildPlayerIdentity(parsed, selected.code, attributes);
+  const cardDna = buildCardDnaAnalysis(selected.code, objective, attributes, parsed, buildVariants);
+  const maxPrecision = buildMaxPrecisionAnalysis({ parsed, position: selected.code, selectedScore: selected.score, objective, tacticalProfile, baseAttributes: attributes, variants: buildVariants, trainingPointsTotal });
+  const eliteEvolution = buildEliteEvolutionAnalysis({ parsed, position: selected.code, objective, tacticalProfile, baseAttributes: attributes, variants: buildVariants, maxPrecision });
+  const metaBuildUniverse = buildMetaBuildUniverse({ parsed, position: selected.code, objective, tacticalProfile, baseAttributes: attributes, variants: buildVariants, maxPrecision, trainingPointsTotal });
   const profileTips = tacticalProfileTips(tacticalProfile, selected.code);
   const explanation = recommendationExplanation(parsed, selected.code, attributes, pri, avoidPositions, tacticalProfile);
+  explanation.unshift(`${playerIdentity.profileLabel}. ${cardDna.lifeLikeSummary}`);
   if (explicitTarget) explanation.unshift(`Posição escolhida por você: ${POSITION_PT[selected.code]}. Toda a ficha foi recalculada para essa função. O app apenas avalia a adaptação; a decisão final é sua.`);
   const note = validation.level === 'blocked'
     ? 'Conferência obrigatória: revise posição, estilo, atributos e pontos antes de gerar a ficha final.'
@@ -4487,5 +5083,5 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
     ],
     pointRationale: explanation.slice(0, 5)
   };
-  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority };
+  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse };
 }

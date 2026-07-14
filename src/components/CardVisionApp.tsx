@@ -56,6 +56,8 @@ import { buildReliabilityCenter, compareBuildVariants, comparePlayers, detectInc
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { DelayResponsePanel, SkillAndTrainingPanel } from '@/components/DevelopmentPanels';
+import { EliteEvolutionPanel, StabilityDiagnosticsPanel, VideoReviewPanel } from '@/components/EliteEvolutionPanels';
+import { MetaBuildLabPanel } from '@/components/MetaBuildLabPanel';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
@@ -158,6 +160,7 @@ function getCloudApiUrl() {
 
 const objectives: Array<{ value: Objective; title: string; hint: string }> = [
   { value: 'COMPETITIVE', title: 'Desempenho máximo', hint: 'rendimento real em campo, não GER alto' },
+  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.5.0, separada de dados oficiais' },
   { value: 'FINISHER', title: 'Finalizador', hint: 'gols, área e chute' },
   { value: 'CREATOR', title: 'Criador', hint: 'passe, controle e assistência' },
   { value: 'DRIBBLER', title: 'Driblador', hint: 'giro curto e 1 contra 1' },
@@ -2779,6 +2782,105 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       {tab === 'ficha' && (
         <div className="result-section-grid">
+          {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v25.96 • Identidade da versão</p><h3>Ficha única desta carta</h3></div>
+              <span>{result.playerIdentity.signature}</span>
+            </div>
+            <p className="panel-note"><b>{result.playerIdentity.profileLabel}</b> • Individualidade {result.playerIdentity.individualityScore}/100</p>
+            <div className="skill-grid">
+              <div className="skill-check-card"><strong>Pontos fortes naturais</strong>{result.playerIdentity.naturalStrengths.map((item) => <span key={item}>✓ {item}</span>)}</div>
+              <div className="skill-check-card"><strong>Correções necessárias</strong>{result.playerIdentity.criticalCorrections.map((item) => <span key={item}>↗ {item}</span>)}</div>
+            </div>
+            <div className="chip-cloud">{result.playerIdentity.protectedCharacteristics.map((item) => <span key={item}>{item}</span>)}</div>
+            {result.playerIdentity.decisiveFactors.map((item) => <p key={item} className="panel-note">• {item}</p>)}
+            <p className="panel-note">{result.playerIdentity.note}</p>
+          </article>}
+
+          {result.cardDna && <article className="luxury-panel wide-card dna-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v25.96 • DNA, precisão máxima e anticlone</p><h3>{result.cardDna.identityLabel}</h3></div>
+              <span>{result.cardDna.antiClone.fingerprint}</span>
+            </div>
+            <div className="health-score-grid dna-score-grid">
+              <article><strong>{result.cardDna.antiClone.individualityScore}</strong><span>Individualidade</span></article>
+              <article><strong>{result.cardDna.antiClone.identityContribution}%</strong><span>DNA da carta</span></article>
+              <article><strong>{result.cardDna.antiClone.distributionDiversity}</strong><span>Diversidade</span></article>
+              <article><strong>{result.cardDna.antiClone.cloneRisk}</strong><span>Risco de clone</span></article>
+            </div>
+            <p className="panel-note">{result.cardDna.lifeLikeSummary}</p>
+            <div className="stat-bars five-cols dna-behavior-bars">
+              {[
+                ['Passe sob pressão', result.cardDna.behavior.passUnderPressure],
+                ['Giro e condução', result.cardDna.behavior.turnAndCarry],
+                ['Movimentação', result.cardDna.behavior.offBallMovement],
+                ['Recuperação', result.cardDna.behavior.defensiveRecovery],
+                ['Consistência', result.cardDna.behavior.matchConsistency]
+              ].map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value}</strong><i><b style={{ width: `${Math.min(100, Number(value))}%` }} /></i></div>)}
+            </div>
+            <div className="skill-grid">
+              <div className="skill-check-card"><strong>Características protegidas</strong>{result.cardDna.protectedStrengths.slice(0,4).map((item) => <span key={item}>✓ {item}</span>)}</div>
+              <div className="skill-check-card"><strong>Comportamento projetado</strong>{result.cardDna.behavior.strongestBehaviors.map((item) => <span key={item}>↑ {item}</span>)}{result.cardDna.behavior.limitingBehaviors.map((item) => <span key={item}>⚠ {item}</span>)}</div>
+            </div>
+            <details className="settings-details-card">
+              <summary>Metas individuais desta carta</summary>
+              <div className="dna-goal-list">{result.cardDna.individualGoals.map((goal) => <div key={goal.training}><strong>{goal.label}</strong><span>{goal.current} atual • mínimo {goal.functionalMin} • ideal {goal.personalizedIdeal} • teto {goal.recommendedCeiling}</span><em>{goal.priority}</em><small>{goal.reason}</small></div>)}</div>
+            </details>
+            <details className="settings-details-card">
+              <summary>Correção seletiva de fraquezas</summary>
+              <div className="dna-goal-list">{result.cardDna.weaknessStrategies.length ? result.cardDna.weaknessStrategies.map((item) => <div key={item.training}><strong>{item.label}</strong><span>Gap {item.gap} • correção {item.correctability} • limite {item.maxInvestment}</span><em>{item.importance}</em><small>{item.strategy}</small></div>) : <p className="panel-note">Nenhuma fraqueza estrutural importante foi detectada.</p>}</div>
+            </details>
+            <details className="settings-details-card">
+              <summary>Aproveitamento profundo das habilidades</summary>
+              <div className="dna-skill-list">{result.cardDna.skillSynergies.length ? result.cardDna.skillSynergies.map((item) => <div key={`${item.source}-${item.name}`}><strong>{item.name}</strong><span>{item.status} • ativação {item.activationScore}/100 • frequência {item.expectedFrequency}</span><small>{item.recommendation}</small>{item.wasteRisk && <em>⚠ {item.wasteRisk}</em>}</div>) : <p className="panel-note">Nenhuma habilidade foi confirmada para análise profunda.</p>}</div>
+            </details>
+            {result.cardDna.antiClone.reasons.map((item) => <p key={item} className="panel-note">• {item}</p>)}
+            <p className="panel-note">{result.cardDna.note}</p>
+          </article>}
+
+          {result.maxPrecision && <article className="luxury-panel wide-card precision-max-card">
+            <div className="section-title-row">
+              <div><p className="kicker">v25.84–v25.96 • Precisão máxima + Meta 2026</p><h3>Ficha cirúrgica desta versão</h3></div>
+              <span>{result.maxPrecision.versionIdentity.signature}</span>
+            </div>
+            <p className="panel-note"><b>{result.maxPrecision.versionIdentity.detectedVersion}</b> • confiança {result.maxPrecision.versionIdentity.confidence}/100</p>
+            <div className="health-score-grid dna-score-grid">
+              <article><strong>{result.maxPrecision.signatureProtection.identityRetentionScore}</strong><span>Identidade preservada</span></article>
+              <article><strong>{result.maxPrecision.conversion.score}</strong><span>Conversão</span></article>
+              <article><strong>{result.maxPrecision.antiCloneDistance}</strong><span>Distância anticlone</span></article>
+              <article><strong>{result.maxPrecision.meta2026.playerMetaFit}</strong><span>Meta 2026</span></article>
+            </div>
+            <p className="panel-note">Ficha recomendada: <b>{result.maxPrecision.recommendedVariantTitle}</b>. {result.maxPrecision.conversion.verdict}</p>
+            <div className="chip-cloud">{result.maxPrecision.versionIdentity.differentiators.map((item)=><span key={item}>{item}</span>)}</div>
+            <details className="settings-details-card" open>
+              <summary>Atributos finais reais e faixas individuais</summary>
+              <div className="dna-goal-list">{result.maxPrecision.finalAttributes.map((item)=><div key={item.attribute}><strong>{item.label}</strong><span>{item.before} → {item.after} • mínimo {item.functionalMin} • ideal {item.personalizedIdeal} • teto {item.usefulCeiling}</span><em>{item.status}</em><small>{item.note}</small></div>)}</div>
+            </details>
+            <details className="settings-details-card">
+              <summary>Simulação de ações em campo</summary>
+              <div className="comparison-table"><div><strong>Ação</strong><strong>Antes</strong><strong>Depois</strong><strong>Ganho</strong></div>{result.maxPrecision.actions.map((item)=><div key={item.action}><span>{item.action}</span><span>{item.before}</span><span>{item.after}</span><strong>{item.gain>0?`+${item.gain}`:item.gain}</strong></div>)}</div>
+            </details>
+            <details className="settings-details-card">
+              <summary>Auditoria ponto por ponto</summary>
+              <div className="dna-goal-list">{result.maxPrecision.pointAudit.map((item)=><div key={item.training}><strong>{item.label} +{item.level}</strong><span>Custo real {item.realCost} • ganho útil {item.usefulGain} • retorno {item.marginalReturn}</span><em>{item.affectedAttributes.join(' • ')}</em><small>{item.verdict}</small></div>)}</div>
+            </details>
+            <details className="settings-details-card">
+              <summary>Cinco alternativas comparadas</summary>
+              <div className="variant-grid">{result.maxPrecision.alternatives.map((item)=><div key={item.title}><strong>{item.title}</strong><span>Nota {item.score}/100 • identidade {item.identityScore} • adaptação {item.adaptationScore}</span><em>Habilidade {item.skillScore} • Meta {item.metaScore} • desperdício {item.wasteScore}</em><p>{item.why}</p></div>)}</div>
+            </details>
+            <details className="settings-details-card">
+              <summary>Meta atual do eFootball 2026 — v5.5.0</summary>
+              <p className="panel-note"><b>{result.maxPrecision.meta2026.classification}</b> • atualização {result.maxPrecision.meta2026.updatedAt} • encaixe {result.maxPrecision.meta2026.fitLabel}</p>
+              <div className="skill-grid"><div className="skill-check-card"><strong>Mecânicas oficiais consideradas</strong>{result.maxPrecision.meta2026.officialMechanics.map((item)=><span key={item}>✓ {item}</span>)}</div><div className="skill-check-card"><strong>Tendências competitivas</strong>{result.maxPrecision.meta2026.competitiveTrends.map((item)=><span key={item.name}>{item.name} • confiança {item.confidence}: {item.note}</span>)}</div></div>
+              <div className="skill-grid"><div className="skill-check-card"><strong>Pontos fortes no meta</strong>{result.maxPrecision.meta2026.strongestMetaTraits.map((item)=><span key={item}>↑ {item}</span>)}</div><div className="skill-check-card muted"><strong>O que ainda falta</strong>{result.maxPrecision.meta2026.missingMetaTraits.map((item)=><span key={item}>⚠ {item}</span>)}</div></div>
+              <p className="panel-note">{result.maxPrecision.meta2026.recommendedMetaUse}</p><p className="panel-note">{result.maxPrecision.meta2026.disclaimer}</p>
+            </details>
+            {result.maxPrecision.explanation.map((item)=><p key={item} className="panel-note">• {item}</p>)}
+          </article>}
+          {result.metaBuildUniverse && <MetaBuildLabPanel universe={result.metaBuildUniverse} />}
+
+          <EliteEvolutionPanel result={result} />
+
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
               <div>
@@ -2815,7 +2917,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
           </article>
 
           <article className="luxury-panel wide-card">
-            <p className="kicker">Três fichas adaptativas para a posição escolhida</p>
+            <p className="kicker">Três fichas DNA realmente personalizadas</p>
             <div className="variant-grid">
               {result.buildVariants.map((variant) => (
                 <div key={variant.kind}>
@@ -2954,7 +3056,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
 
-      {tab === 'treino' && <SkillAndTrainingPanel result={result} />}
+      {tab === 'treino' && <div className="result-section-grid"><SkillAndTrainingPanel result={result} /><VideoReviewPanel result={result} /></div>}
 
       {tab === 'habilidades' && (
         <div className="result-section-grid">
@@ -4953,7 +5055,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v25.81</span>
+            <span>Elite Tático v26.50</span>
           </div>
         </div>
         <div className="topbar-current-page">
@@ -5482,7 +5584,7 @@ ${variantText}`);
                 <div className="section-title-row"><div><p className="kicker">Comparador de jogadores</p><h3>Compare para a posição que você escolher</h3></div><span>{comparePlayerIds.length} selecionado(s)</span></div>
                 <div className="cofre-filter-grid"><label><Target size={14} /><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label><button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button><button type="button" onClick={() => setComparePlayerIds([])}>Limpar</button></div>
                 <div className="compare-player-picker">{history.map((item) => <button type="button" className={comparePlayerIds.includes(item.id) ? 'selected' : ''} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}>{comparePlayerIds.includes(item.id) ? '✓ ' : ''}{item.result.parsed.playerName}</button>)}</div>
-                {playerComparison.ranking.length > 0 ? <div className="player-ranking"><p><strong>Melhor encaixe:</strong> {playerComparison.winner} • {playerComparison.reason}</p>{playerComparison.ranking.map((item, index) => <div key={item.id}><b>#{index + 1} {item.name}</b><span>{item.score}/100 • adaptação {item.adaptation}</span><small>Físico {item.physical} • habilidades {item.skills} • metas {item.goals} • eficiência {item.efficiency}</small><em>{item.risks.length ? `Riscos: ${item.risks.join(' • ')}` : 'Sem risco crítico registrado.'}</em></div>)}</div> : <p className="panel-note">Selecione pelo menos dois jogadores. A comparação não altera nenhuma ficha.</p>}
+                {playerComparison.ranking.length > 0 ? <div className="player-ranking"><p><strong>Melhor encaixe:</strong> {playerComparison.winner} • {playerComparison.reason}</p>{playerComparison.ranking.map((item, index) => <div key={item.id}><b>#{index + 1} {item.name}</b><span>{item.score}/100 • adaptação {item.adaptation}</span><small>Físico {item.physical} • habilidades {item.skills} • metas {item.goals} • eficiência {item.efficiency} • DNA {item.dna}</small><small>Individualidade {item.individuality}/100 • risco de clone {item.cloneRisk} • diferencial: {item.uniqueEdge}</small><em>{item.behavior}</em><em>{item.risks.length ? `Riscos: ${item.risks.join(' • ')}` : 'Sem risco crítico registrado.'}</em></div>)}</div> : <p className="panel-note">Selecione pelo menos dois jogadores. A comparação não altera nenhuma ficha.</p>}
               </section>
             )}
 
@@ -5529,6 +5631,7 @@ ${variantText}`);
               {settingsView === 'desempenho' && (
                 <section className="settings-view-panel settings-delay-wrapper">
                   <DelayResponsePanel />
+                  <StabilityDiagnosticsPanel result={result ?? undefined} />
                 </section>
               )}
 

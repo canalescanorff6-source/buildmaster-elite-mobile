@@ -1,4 +1,4 @@
-name: Gerar APK Android Fiel v25.81 Polimento UX Premium
+name: Gerar APK Android Fiel v26.50 Universo Meta 2026
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-apk:
-    name: Build APK Fiel v25.81 UX Premium
+    name: Build APK Fiel v26.50 Universo Meta 2026
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -89,12 +89,12 @@ jobs:
         run: |
           mkdir -p dist-apk
           cp android/app/build/outputs/apk/debug/app-debug.apk \
-            dist-apk/BuildMaster-Elite-Tatico-v25.81.apk
+            dist-apk/BuildMaster-Elite-Tatico-v26.50.apk
 
       - name: Enviar APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v25.81-APK-Fiel
-          path: dist-apk/BuildMaster-Elite-Tatico-v25.81.apk
+          name: BuildMaster-Elite-Tatico-v26.50-APK-Fiel
+          path: dist-apk/BuildMaster-Elite-Tatico-v26.50.apk
           if-no-files-found: error
           retention-days: 14

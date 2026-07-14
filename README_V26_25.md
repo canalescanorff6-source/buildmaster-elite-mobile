@@ -1,10 +1,4 @@
-# BuildMaster Elite Tático v26.50 — Universo Meta 2026
-
-## Nova evolução principal
-
-A v26.50 adiciona um laboratório Meta por carta. O motor avalia 15.120 combinações de contexto envolvendo seis bases individuais, dez categorias competitivas, seis estilos/contextos, seis formações comunitárias e sete cenários de partida. Distribuições repetidas são removidas e as 36 melhores ficam disponíveis com filtros por categoria, estilo, formação e cenário.
-
-A posição escolhida continua soberana. Mecânicas oficiais da Konami ficam separadas das tendências competitivas da comunidade. Nenhuma ficha é apresentada como garantia de vitória.
+# BuildMaster Elite Tático v26.25 — Evolução Total Premium
 
 Esta versão integra os Lotes 18 a 24 sobre a base v25.96.
 
@@ -87,8 +81,8 @@ O vídeo não é salvo no app nem enviado. Apenas os marcadores textuais ficam n
 
 Envie o projeto completo ao GitHub e execute o workflow:
 
-`Gerar APK Android Fiel v26.50 Universo Meta 2026`
+`Gerar APK Android Fiel v26.25 Evolução Total Premium`
 
 O artefato será gerado como:
 
-`BuildMaster-Elite-Tatico-v26.50.apk`
+`BuildMaster-Elite-Tatico-v26.25.apk`

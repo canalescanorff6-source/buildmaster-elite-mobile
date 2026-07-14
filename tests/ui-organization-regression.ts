@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 
-assert.match(component, /Elite Tático v25\.81/);
+assert.match(component, /Elite Tático v26\.50/);
 assert.match(component, /const RESULT_GROUPS/);
 assert.match(component, /label: 'Geral'/);
 assert.match(component, /label: 'Treino'/);
@@ -16,9 +16,9 @@ assert.match(component, /result-more-actions/);
 assert.match(component, /Como deseja criar a ficha\?/);
 assert.doesNotMatch(component, /className="sticky-player-summary"/);
 assert.doesNotMatch(component, /className="floating-premium-dock"/);
-assert.match(css, /v25\.81 — Polimento Premium guiado por inspeção completa em vídeo/);
+assert.match(css, /v25\.82 — Polimento Premium guiado por inspeção completa em vídeo/);
 assert.match(css, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
 assert.match(css, /\.result-subtab-shell,[\s\S]*\.review-actions[\s\S]*position: static !important/);
 assert.match(css, /\.section-segmented-tabs/);
 
-console.log('UI v25.81 organizada: resultado, Cofre, Ajustes e navegação aprovados.');
+console.log('UI v26.50 organizada: resultado, Cofre, Ajustes e navegação aprovados.');

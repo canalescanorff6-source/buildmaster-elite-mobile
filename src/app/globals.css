@@ -4346,7 +4346,7 @@ input, select, textarea { caret-color: var(--accent, #37ff8f); }
   .result-group-tabs button { min-width: 116px; }
 }
 
-/* v25.81 — Polimento Premium guiado por inspeção completa em vídeo */
+/* v25.82 — Polimento Premium guiado por inspeção completa em vídeo */
 :root {
   --premium-radius-lg: 22px;
   --premium-radius-md: 16px;
@@ -5051,3 +5051,40 @@ input, select, textarea { caret-color: var(--accent, #37ff8f); }
     grid-template-columns: 1fr;
   }
 }
+
+/* v25.83 — DNA individual e anticlone */
+.dna-card{display:grid;gap:14px}.dna-score-grid article strong{text-transform:capitalize}.dna-behavior-bars{margin-top:2px}.dna-goal-list,.dna-skill-list{display:grid;gap:9px;margin-top:12px}.dna-goal-list>div,.dna-skill-list>div{display:grid;grid-template-columns:minmax(120px,.75fr) minmax(180px,1.25fr) auto;gap:7px 12px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.035)}.dna-goal-list strong,.dna-skill-list strong{font-size:.92rem}.dna-goal-list span,.dna-skill-list span{font-size:.82rem;opacity:.82}.dna-goal-list em,.dna-skill-list em{font-style:normal;font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.dna-goal-list small,.dna-skill-list small{grid-column:1/-1;line-height:1.45;opacity:.78}.dna-skill-list>div{grid-template-columns:minmax(150px,.8fr) minmax(180px,1.2fr)}.dna-skill-list em{grid-column:1/-1;color:#ffca7a;text-transform:none;letter-spacing:0}.dna-card .settings-details-card{margin:0}.dna-card .settings-details-card summary{cursor:pointer}
+@media(max-width:720px){.dna-score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dna-goal-list>div,.dna-skill-list>div{grid-template-columns:1fr}.dna-goal-list small,.dna-skill-list small,.dna-skill-list em{grid-column:1}.dna-behavior-bars{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v25.96 — Precisão máxima por carta e Meta 2026 */
+.precision-max-card { border-color: color-mix(in srgb, var(--accent, #7c5cff) 34%, transparent); }
+.precision-max-card .comparison-table > div { grid-template-columns: minmax(140px, 1.6fr) repeat(3, minmax(58px, .7fr)); }
+.precision-max-card .settings-details-card[open] { background: color-mix(in srgb, var(--panel, #0b1325) 92%, var(--accent, #7c5cff)); }
+@media (max-width: 720px) {
+  .precision-max-card .comparison-table { overflow-x: auto; }
+  .precision-max-card .comparison-table > div { min-width: 520px; }
+}
+
+/* v26.25 — evolução total premium */
+.evolution-executive-card{border-color:color-mix(in srgb,var(--accent,#34d399) 34%,transparent)}
+.video-review-card video{display:block;width:100%;max-height:54vh;border-radius:18px;background:#05070a;margin:14px 0;object-fit:contain}
+.file-picker{display:flex;align-items:center;justify-content:center;min-height:54px;border:1px dashed color-mix(in srgb,var(--accent,#34d399) 45%,transparent);border-radius:16px;padding:12px;cursor:pointer}
+.file-picker input{display:none}
+.wide-field{grid-column:1/-1}
+.video-review-card .position-list button{width:auto;min-height:36px;padding:6px 12px;margin-top:8px}
+@media (max-width:720px){
+  .evolution-executive-card .health-score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .video-review-card video{max-height:42vh}
+}
+
+/* v26.50 — Universo de Fichas Meta 2026 */
+.meta-universe-card{overflow:hidden}
+.meta-champion-card{display:grid;gap:.55rem;margin:1rem 0;padding:1rem;border:1px solid color-mix(in srgb,var(--accent,#7c5cff) 42%,transparent);border-radius:18px;background:linear-gradient(145deg,color-mix(in srgb,var(--accent,#7c5cff) 13%,transparent),color-mix(in srgb,var(--panel,#121624) 94%,transparent));box-shadow:0 14px 34px rgba(0,0,0,.16)}
+.meta-champion-card h4{margin:0;font-size:1.08rem}
+.meta-champion-card>strong{font-size:1rem;line-height:1.45}
+.meta-champion-card>span,.meta-champion-card>p{margin:0;color:var(--muted,#9aa3b8);line-height:1.55}
+.meta-build-grid>div{display:grid;gap:.48rem;align-content:start;min-height:210px}
+.meta-build-grid small{color:var(--muted,#9aa3b8);line-height:1.45}
+.meta-build-grid b{font-size:.78rem;color:#f2b867;font-weight:650}
+@media (max-width:720px){.meta-build-grid{grid-template-columns:1fr}.meta-build-grid>div{min-height:auto}.meta-champion-card{padding:.9rem}}
+.meta-filter-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;margin:1rem 0}.meta-filter-bar label{display:grid;gap:.38rem;font-size:.78rem;color:var(--muted,#9aa3b8)}.meta-filter-bar label:first-child{display:grid;grid-template-columns:auto 1fr;align-items:center}.meta-filter-bar label:first-child select{grid-column:1/-1}.meta-filter-bar select{width:100%;border:1px solid color-mix(in srgb,var(--accent,#7c5cff) 22%,transparent);border-radius:12px;background:var(--panel,#121624);color:inherit;padding:.72rem}.meta-result-count{margin:.2rem 0 .8rem;color:var(--muted,#9aa3b8);font-size:.82rem}.meta-build-option{display:grid;gap:.48rem;width:100%;text-align:left;border:1px solid color-mix(in srgb,var(--accent,#7c5cff) 18%,transparent);border-radius:16px;padding:.9rem;background:color-mix(in srgb,var(--panel,#121624) 94%,transparent);color:inherit;cursor:pointer;transition:.18s ease}.meta-build-option:hover,.meta-build-option.active{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent,#7c5cff) 62%,transparent);box-shadow:0 12px 28px rgba(0,0,0,.15)}.meta-build-option span,.meta-build-option p,.meta-build-option small{color:var(--muted,#9aa3b8);margin:0;line-height:1.45}.meta-build-option em{font-style:normal;font-weight:700}.meta-build-option b{color:#f2b867}.meta-champion-card .secondary-button{justify-self:start;display:inline-flex;align-items:center;gap:.45rem}@media(max-width:860px){.meta-filter-bar{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.meta-filter-bar{grid-template-columns:1fr}}

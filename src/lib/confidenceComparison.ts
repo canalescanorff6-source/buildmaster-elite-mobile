@@ -11,7 +11,7 @@ export type InconsistencyReport = { status: 'aprovado' | 'revisar' | 'bloqueado'
 export type BuildComparisonRow = { key: string; label: string; values: Array<{ title: string; value: string | number; best?: boolean }> };
 export type BuildComparisonReport = { winner: string; reason: string; rows: BuildComparisonRow[]; variants: Array<{ title: string; score: number; efficiency: number; balance: number; points: number; risks: string[] }> };
 
-export type PlayerComparisonItem = { id: string; name: string; originalPosition: string; targetPosition: string; score: number; adaptation: string; confidence: number; efficiency: number; physical: number; skills: number; goals: number; strengths: string[]; risks: string[] };
+export type PlayerComparisonItem = { id: string; name: string; originalPosition: string; targetPosition: string; score: number; adaptation: string; confidence: number; efficiency: number; physical: number; skills: number; goals: number; dna: number; individuality: number; cloneRisk: 'baixo' | 'médio' | 'alto' | 'não calculado'; uniqueEdge: string; behavior: string; strengths: string[]; risks: string[] };
 export type PlayerComparisonReport = { targetPosition: PositionCode; targetLabel: string; ranking: PlayerComparisonItem[]; winner: string | null; reason: string };
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
@@ -80,8 +80,13 @@ export function comparePlayers(entries: Array<{ id: string; result: AnalysisResu
     const efficiency = result.advancedOptimizer?.efficiencyScore ?? 50;
     const sameTarget = result.bestPosition.code === targetPosition;
     const adaptation = sameTarget ? (result.advancedTacticalFunction?.fitLabel ?? 'boa') : 'requer nova ficha';
-    const score = clamp((physical * .2) + (skills * .18) + (goals * .25) + (efficiency * .22) + (result.parsed.confidence * .15) + (sameTarget ? 8 : -8));
-    return { id, name: result.parsed.playerName, originalPosition: result.parsed.mainPositionPt, targetPosition: POSITION_PT[targetPosition], score, adaptation, confidence: result.parsed.confidence, efficiency, physical, skills, goals, strengths: result.strengths.slice(0,3), risks: result.weaknesses.slice(0,3) };
+    const individuality = result.cardDna?.antiClone.individualityScore ?? result.playerIdentity?.individualityScore ?? 50;
+    const dna = result.cardDna ? clamp((individuality * .45) + (result.cardDna.behavior.matchConsistency * .25) + (result.cardDna.behavior.specialSkillUsage * .15) + (result.cardDna.antiClone.distributionDiversity * .15)) : individuality;
+    const score = clamp((physical * .16) + (skills * .14) + (goals * .2) + (efficiency * .18) + (result.parsed.confidence * .12) + (dna * .2) + (sameTarget ? 8 : -8));
+    const uniqueEdge = result.cardDna?.behavior.strongestBehaviors[0] ?? result.playerIdentity?.naturalStrengths[0] ?? result.strengths[0] ?? 'Identidade ainda não calculada';
+    const behavior = result.cardDna?.behavior.summary ?? 'Gere novamente a ficha nesta versão para calcular o comportamento em campo.';
+    const cloneRisk: PlayerComparisonItem['cloneRisk'] = result.cardDna?.antiClone.cloneRisk ?? 'não calculado';
+    return { id, name: result.parsed.playerName, originalPosition: result.parsed.mainPositionPt, targetPosition: POSITION_PT[targetPosition], score, adaptation, confidence: result.parsed.confidence, efficiency, physical, skills, goals, dna, individuality, cloneRisk, uniqueEdge, behavior, strengths: result.strengths.slice(0,3), risks: result.weaknesses.slice(0,3) };
   }).sort((a,b) => b.score - a.score);
-  return { targetPosition, targetLabel: POSITION_PT[targetPosition], ranking, winner: ranking[0]?.name ?? null, reason: ranking[0] ? `${ranking[0].name} apresentou o melhor conjunto para ${POSITION_PT[targetPosition]} entre os jogadores comparados.` : 'Selecione jogadores do Cofre para comparar.' };
+  return { targetPosition, targetLabel: POSITION_PT[targetPosition], ranking, winner: ranking[0]?.name ?? null, reason: ranking[0] ? `${ranking[0].name} apresentou o melhor conjunto para ${POSITION_PT[targetPosition]}, considerando também DNA, comportamento projetado e risco de ficha clonada.` : 'Selecione jogadores do Cofre para comparar.' };
 }
