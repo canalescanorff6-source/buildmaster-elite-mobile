@@ -20,6 +20,15 @@ assert.ok(layout.includes('v26.72'), 'Metadados da interface não correspondem �
 assert.ok(manifest.includes('v26.72'), 'manifest.webmanifest não corresponde à v26.72.');
 assert.ok(sw.includes('26-72'), 'Cache do service worker não corresponde à v26.72.');
 assert.doesNotMatch(workflow, /BuildMaster-Elite-Tatico-v26\.70|VERSION:\s*'26\.70\.0'/, 'Workflow v26.70 antigo ainda está presente.');
+
+assert.ok(workflow.includes('ANDROID_SIGNING_BUNDLE'), 'Workflow precisa usar o Secret único de assinatura permanente.');
+assert.ok(workflow.includes('assembleRelease'), 'APK distribuído precisa ser build release.');
+assert.ok(workflow.includes('zipalign'), 'APK release precisa ser alinhado antes da assinatura.');
+assert.ok(workflow.includes('apksigner'), 'APK release precisa ser assinado e verificado.');
+assert.ok(workflow.includes('gh release upload'), 'A release estável precisa ser atualizada automaticamente.');
+assert.doesNotMatch(workflow, /assembleDebug/, 'Não distribua APK de depuração como atualização de produção.');
+assert.doesNotMatch(workflow, /gh release delete buildmaster-latest/, 'Não apague a última release antes de a nova estar pronta.');
+
 assert.ok(fs.existsSync('src/app/error.tsx'));
 assert.ok(fs.existsSync('src/app/global-error.tsx'));
 console.log('release integrity v26.72: workflow, APK, manifesto e cache alinhados.');

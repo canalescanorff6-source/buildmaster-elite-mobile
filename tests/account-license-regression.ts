@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { evaluateCachedLicense, normalizeUsername, usernameToInternalEmail, validateUsername, type LicenseValidation } from '../src/lib/accountAuth';
+import { evaluateCachedLicense, isSupabaseConfigurationValid, normalizeUsername, usernameToInternalEmail, validateUsername, type LicenseValidation } from '../src/lib/accountAuth';
 
 assert.equal(normalizeUsername(' João 10! '), 'joao10');
 assert.equal(normalizeUsername('PLAYER.Pro_01'), 'player.pro_01');
 assert.equal(validateUsername('ab'), 'Use pelo menos 3 caracteres.');
 assert.equal(validateUsername('joao10'), null);
 assert.equal(usernameToInternalEmail('Joao10'), 'joao10@accounts.buildmaster.app');
+assert.equal(isSupabaseConfigurationValid('https://example.supabase.co', 'sb_publishable_test'), false);
+assert.equal(isSupabaseConfigurationValid('https://abc123.supabase.co', 'sb_publishable_real_key'), true);
+assert.equal(isSupabaseConfigurationValid('https://abc123.supabase.co', 'eyJlegacyAnonKey'), true);
 
 const base: LicenseValidation = {
   profile: {

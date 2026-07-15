@@ -1,65 +1,37 @@
-# Assinatura persistente para atualizar o APK por cima
+# Assinatura permanente — configuração simples
 
-O Android só aceita atualizar um aplicativo instalado quando o novo APK usa a **mesma chave de assinatura** e possui um `versionCode` igual ou maior.
+O Android só atualiza um APK por cima quando o aplicativo novo usa o mesmo `applicationId`, a mesma assinatura e um `versionCode` não inferior.
 
-O workflow v26.70 aumenta o `versionCode` em cada execução usando `github.run_number`. Para manter a mesma assinatura, configure estes Secrets no repositório:
+Esta versão usa apenas **um Secret** no GitHub:
 
-- `ANDROID_KEYSTORE_BASE64`
-- `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_ALIAS`
-- `ANDROID_KEY_PASSWORD`
-
-## 1. Criar a chave uma única vez
-
-No computador com Java instalado:
-
-```bash
-keytool -genkeypair -v \
-  -keystore buildmaster-release.keystore \
-  -alias buildmaster \
-  -keyalg RSA \
-  -keysize 2048 \
-  -validity 10000
+```text
+ANDROID_SIGNING_BUNDLE
 ```
 
-Guarde o arquivo e as senhas. Se perder essa chave, não será possível atualizar por cima dos APKs assinados com ela.
+## Como configurar
 
-## 2. Converter para Base64
+1. Abra o pacote privado `CHAVE-PRIVADA-BUILDMASTER-NAO-ENVIAR-AO-GITHUB.zip`.
+2. Abra `ANDROID_SIGNING_BUNDLE.txt` e copie todo o conteúdo da única linha.
+3. No GitHub, abra **Settings → Secrets and variables → Actions → Secrets**.
+4. Clique em **New repository secret**.
+5. Nome: `ANDROID_SIGNING_BUNDLE`.
+6. Cole o conteúdo e salve.
+7. Envie o projeto corrigido para a branch `main` ou execute o workflow manualmente.
 
-### Windows PowerShell
+## Primeira instalação com a chave permanente
 
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("buildmaster-release.keystore")) | Set-Content -NoNewline buildmaster-keystore-base64.txt
-```
+O APK que está instalado hoje provavelmente usa uma assinatura de teste diferente. Por isso, será necessário apenas uma vez:
 
-### Linux
-
-```bash
-base64 -w 0 buildmaster-release.keystore > buildmaster-keystore-base64.txt
-```
-
-## 3. Criar os Secrets
-
-No GitHub:
-
-**Settings → Secrets and variables → Actions → New repository secret**
-
-Use o conteúdo de `buildmaster-keystore-base64.txt` no Secret `ANDROID_KEYSTORE_BASE64`. Cadastre também as senhas e o alias nos outros três Secrets.
-
-## 4. Primeira instalação
-
-Se a versão atualmente instalada foi assinada por uma chave de debug diferente, será necessário:
-
-1. exportar o backup;
+1. criar backup;
 2. desinstalar a versão antiga;
-3. instalar uma vez o primeiro APK assinado com a chave persistente;
-4. restaurar o backup.
+3. instalar o primeiro APK gerado por este workflow;
+4. restaurar o backup, quando necessário.
 
-Depois disso, os próximos APKs publicados pelo mesmo workflow poderão ser instalados por cima, preservando os dados.
+Depois disso, todas as versões geradas com o mesmo Secret serão instaladas por cima e manterão os dados.
 
 ## Segurança
 
-- Não envie o arquivo `.keystore` para o repositório.
-- Não coloque senhas em arquivos do projeto.
-- Guarde uma cópia offline segura da chave.
-- A release automática é pulada quando os Secrets não estão configurados; o workflow ainda gera um APK de teste como artefato.
+- Não envie o ZIP da chave privada ao GitHub.
+- Não publique o conteúdo de `ANDROID_SIGNING_BUNDLE.txt`.
+- Guarde duas cópias privadas do ZIP.
+- Se perder essa chave, não será possível atualizar os APKs assinados com ela.

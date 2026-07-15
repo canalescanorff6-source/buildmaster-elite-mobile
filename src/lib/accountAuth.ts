@@ -56,8 +56,18 @@ function storageAvailable() {
   return typeof window !== 'undefined';
 }
 
+export function isSupabaseConfigurationValid(url = SUPABASE_URL, anonKey = SUPABASE_ANON_KEY) {
+  const cleanUrl = url.trim().replace(/\/$/, '');
+  const cleanKey = anonKey.trim();
+  const validUrl = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cleanUrl)
+    && !/example|seu_project_ref/i.test(cleanUrl);
+  const validKey = (cleanKey.startsWith('sb_publishable_') || cleanKey.startsWith('eyJ'))
+    && !/test|sua_chave/i.test(cleanKey);
+  return validUrl && validKey;
+}
+
 export function isCloudAccountsConfigured() {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+  return isSupabaseConfigurationValid();
 }
 
 export function normalizeUsername(input: string): string {
@@ -232,17 +242,43 @@ export async function validateOnlineLicense(session?: AccountSession): Promise<L
   return validation;
 }
 
+function explainAuthFailure(payload: Record<string, unknown> | null, status: number): string {
+  const code = String(payload?.error_code ?? payload?.code ?? '').toLowerCase();
+  const rawMessage = String(payload?.message ?? payload?.msg ?? payload?.error_description ?? payload?.error ?? '').trim();
+  const message = rawMessage.toLowerCase();
+
+  if (code.includes('email_not_confirmed') || message.includes('email not confirmed')) {
+    return 'A conta existe, mas ainda não foi confirmada no Supabase.';
+  }
+  if (code.includes('invalid_credentials') || message.includes('invalid login credentials')) {
+    return 'Usuário ou senha incorretos.';
+  }
+  if (message.includes('invalid api key') || message.includes('no api key') || code.includes('invalid_api_key')) {
+    return 'Este APK foi gerado com uma chave incorreta do Supabase. Gere e instale um APK novo.';
+  }
+  if (status >= 500) return 'O servidor de contas está temporariamente indisponível. Tente novamente.';
+  if (rawMessage) return `Não foi possível entrar: ${rawMessage}`;
+  return `Não foi possível entrar no servidor de contas (código ${status}).`;
+}
+
 export async function signInWithUsername(username: string, password: string): Promise<LicenseValidation> {
   const usernameError = validateUsername(username);
   if (usernameError) throw new Error(usernameError);
   if (password.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
-  const response = await supabaseFetch('/auth/v1/token?grant_type=password', {
-    method: 'POST',
-    body: JSON.stringify({ email: usernameToInternalEmail(username), password })
-  });
+
+  let response: Response;
+  try {
+    response = await supabaseFetch('/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      body: JSON.stringify({ email: usernameToInternalEmail(username), password })
+    });
+  } catch {
+    throw new Error('Não consegui conectar ao Supabase. Verifique a internet ou instale um APK novo com a URL correta.');
+  }
+
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
   if (!response.ok || !payload?.access_token || !payload.refresh_token) {
-    throw new Error('Usuário ou senha incorretos.');
+    throw new Error(explainAuthFailure(payload, response.status));
   }
   const session: AccountSession = {
     accessToken: String(payload.access_token),
