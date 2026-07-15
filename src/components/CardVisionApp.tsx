@@ -33,7 +33,9 @@ import {
   Ban,
   ThumbsUp,
   BrainCircuit,
-  Users
+  Users,
+  Share2,
+  ChevronDown
 } from 'lucide-react';
 import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { analyzeCard, normalizeObjective, ATTRIBUTE_INPUTS, ATTRIBUTE_PT, OFFICIAL_ADDITIONAL_SKILL_NAMES, PLAYSTYLE_OPTIONS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle } from '@/lib/analyzer';
@@ -67,20 +69,30 @@ import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/ac
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
 type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
+type TextScale = 'compact' | 'standard' | 'large';
+type DensityMode = 'compact' | 'comfortable';
+type MotionPreference = 'system' | 'reduced' | 'full';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
 type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade';
-type ResultGroup = 'visao' | 'analise' | 'desenvolvimento' | 'tatica' | 'ferramentas';
+type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'tatica' | 'exportar';
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
-type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'atualizacoes' | 'contas';
+type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
+type TeamCenterView = 'visao' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
 
-const RESULT_GROUPS: Array<{ id: ResultGroup; label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
-  { id: 'visao', label: 'Geral', tabs: [{ value: 'ficha', label: 'Ficha' }, { value: 'resumo', label: 'Resumo' }, { value: 'dados', label: 'Dados' }] },
-  { id: 'analise', label: 'Análise', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correção' }] },
-  { id: 'desenvolvimento', label: 'Treino', tabs: [{ value: 'habilidades', label: 'Habilidades' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { id: 'tatica', label: 'Tática', tabs: [{ value: 'treinador', label: 'Treinador' }, { value: 'mapa', label: 'Mapa' }] },
-  { id: 'ferramentas', label: 'Mais', tabs: [{ value: 'comunidade', label: 'Comunidade' }, { value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'exportar', label: 'Exportar' }, { value: 'regras', label: 'Regras' }] }
+const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
+  { id: 'resumo', label: 'Resumo', hint: 'Visão principal' },
+  { id: 'ficha', label: 'Ficha', hint: 'Distribuição de pontos' },
+  { id: 'habilidades', label: 'Habilidades', hint: 'Top 5 oficial' },
+  { id: 'tatica', label: 'Tática', hint: 'Função e uso' },
+  { id: 'exportar', label: 'Exportar', hint: 'Imagem e relatório' }
+];
+
+const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
+  { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
+  { label: 'Desenvolvimento', tabs: [{ value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
+  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }] }
 ];
 
 type ManualFields = {
@@ -1700,6 +1712,7 @@ function VisualLineupPitch({ history, formation, teamStyle }: { history: SavedAn
 }
 
 function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAnalysis[]; formation: TacticalFormation; teamStyle: TacticalStyle }) {
+  const [teamCenterView, setTeamCenterView] = useState<TeamCenterView>('visao');
   const [opponentProfile, setOpponentProfile] = useState<OpponentProfile>('CONTRA_RAPIDO');
   const [opponentFormation, setOpponentFormation] = useState<TacticalFormation>('4-3-3');
   const [opponentStrength, setOpponentStrength] = useState<OpponentStrength>('VELOCIDADE');
@@ -1736,7 +1749,9 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
       setOpponentPrintReport(nextReport);
     } catch {
       setOpponentPrintReport(readOpponentPrintText(''));
-    } finally { setOpponentPrintLoading(false); }
+    } finally {
+      setOpponentPrintLoading(false);
+    }
   }
 
   function applyOpponentPrintReading() {
@@ -1745,6 +1760,7 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
     if (opponentPrintReport.formation.value) setOpponentFormation(opponentPrintReport.formation.value);
     if (opponentPrintReport.strength.value && opponentPrintReport.strength.confidence !== 'baixa') setOpponentStrength(opponentPrintReport.strength.value);
   }
+
   const report = useMemo(() => buildSquadReport(history, formation, teamStyle), [history, formation, teamStyle]);
   const eliteReport = useMemo(() => buildEliteTeamReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
   const chemistryReport = useMemo(() => buildSquadChemistryReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
@@ -1753,379 +1769,232 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
   const advancedOpponentReport = useMemo(() => buildAdvancedOpponentReport(history.map((item) => item.result), formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength }), [history, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
   const gamePlan = useMemo(() => opponentReport ? buildGamePlanReport({ matchState, energy: teamEnergy, opponentProfile, ownFormation: formation, ownStyle: teamStyle }, opponentReport) : null, [opponentReport, matchState, teamEnergy, opponentProfile, formation, teamStyle]);
   const rotationReport = useMemo(() => buildSquadRotationReport(history.map((item) => item.result), formation, teamStyle, matchState, teamEnergy), [history, formation, teamStyle, matchState, teamEnergy]);
+  const visualLineup = useMemo(() => buildVisualLineup(history, formation), [history, formation]);
+
+  const starterCount = visualLineup.filter((pick) => pick.player).length;
+  const averageStarterFit = starterCount
+    ? Math.round(visualLineup.reduce((sum, pick) => sum + (pick.player ? pick.fit : 0), 0) / starterCount)
+    : 0;
+  const strongestSector = chemistryReport?.sectors.reduce((best, sector) => sector.score > best.score ? sector : best, chemistryReport.sectors[0]);
+  const weakestSector = chemistryReport?.sectors.reduce((worst, sector) => sector.score < worst.score ? sector : worst, chemistryReport.sectors[0]);
+  const tacticalAlerts = [
+    ...(report?.warnings ?? []),
+    ...(chemistryReport?.weaknesses ?? []),
+    ...(eliteReport?.tacticalAlerts ?? [])
+  ].filter(Boolean).slice(0, 4);
+  const tacticalSuggestions = [
+    ...(chemistryReport?.recommendations ?? []),
+    ...(report?.suggestions ?? []),
+    ...(eliteReport?.upgradePriorities ?? [])
+  ].filter(Boolean).slice(0, 4);
 
   if (!report) {
     return (
-      <article className="squad-map-card empty-squad-map">
-        <div className="tactical-guide-head">
-          <div>
-            <p className="kicker"><ShieldCheck size={14} /> Mapa Total do Time</p>
-            <h3>Salve fichas para mapear seu elenco</h3>
-          </div>
+      <article className="team-center-empty luxury-panel">
+        <div className="team-empty-icon"><Users size={30} /></div>
+        <p className="kicker"><ShieldCheck size={14} /> Central tática</p>
+        <h3>Monte seu elenco pelo Cofre</h3>
+        <p>Salve as fichas para liberar titulares, reservas, setores, entrosamento, banco, substituições e Planos A, B e C.</p>
+        <div className="team-empty-steps">
+          <span><b>1</b> Salve pelo menos 11 jogadores</span>
+          <span><b>2</b> Cubra defesa, meio e ataque</span>
+          <span><b>3</b> Volte aqui para montar a central</span>
         </div>
-        <p>Quando você salvar jogadores no Cofre, o app vai calcular marcação, cobertura, saída de bola, passe, criação, ataque, físico e jogo aéreo do time inteiro.</p>
-        <small>Para máxima precisão: salve GOL, zagueiros, laterais, VOL/MLG, criador, pontas/SA e CA finalizador.</small>
       </article>
     );
   }
 
   return (
-    <article className="squad-map-card">
-      <div className="tactical-guide-head">
-        <div>
-          <p className="kicker"><ShieldCheck size={14} /> Mapa Total do Time</p>
-          <h3>{report.balanceLabel}</h3>
+    <article className="squad-map-card team-center-shell">
+      <section className="team-center-hero">
+        <div className="team-center-hero-copy">
+          <p className="kicker"><ShieldCheck size={14} /> Meu Time • Central tática</p>
+          <h2>{report.balanceLabel}</h2>
+          <p>Veja o essencial primeiro e abra cada camada somente quando precisar ajustar o elenco.</p>
+          <div className="team-center-tags">
+            <span>{formation === 'AUTO' ? 'Formação assistida' : formation}</span>
+            <span>{tacticalStyleName[teamStyle] ?? 'Estilo automático'}</span>
+            <span>{starterCount}/11 titulares preenchidos</span>
+          </div>
         </div>
-        <strong className="squad-score">{report.globalScore}/100</strong>
+        <div className="team-center-main-score">
+          <span>Equilíbrio</span>
+          <strong>{report.globalScore}</strong>
+          <small>/100</small>
+          <i><b style={{ width: `${report.globalScore}%` }} /></i>
+        </div>
+      </section>
+
+      <div className="team-center-summary-grid">
+        <button type="button" onClick={() => setTeamCenterView('escalacao')}><span>Titulares</span><strong>{starterCount}/11</strong><small>encaixe médio {averageStarterFit}/100</small></button>
+        <button type="button" onClick={() => setTeamCenterView('elenco')}><span>Reservas</span><strong>{rotationReport?.benchCount ?? Math.max(0, report.playerCount - starterCount)}</strong><small>{rotationReport?.benchBalance.label ?? 'Banco em formação'}</small></button>
+        <button type="button" onClick={() => setTeamCenterView('entrosamento')}><span>Entrosamento</span><strong>{chemistryReport?.globalScore ?? '—'}</strong><small>{chemistryReport?.chemistryLabel ?? 'Aguardando 11 jogadores'}</small></button>
+        <button type="button" onClick={() => setTeamCenterView('planos')}><span>Planos salvos</span><strong>{Object.values(savedTeamPlans).filter(Boolean).length}/3</strong><small>A, B e C</small></button>
       </div>
 
-      <div className="squad-meta-grid">
-        <span><b>{report.playerCount}</b> fichas</span>
-        <span><b>{report.composition.defensores}</b> defensores</span>
-        <span><b>{report.composition.volantes}</b> VOL/MLG</span>
-        <span><b>{report.composition.finalizadores}</b> finalizadores</span>
-      </div>
+      <nav className="team-center-tabs" aria-label="Áreas da central tática">
+        <button type="button" className={teamCenterView === 'visao' ? 'active' : ''} onClick={() => setTeamCenterView('visao')}><LayoutDashboard size={17}/><span>Visão geral</span></button>
+        <button type="button" className={teamCenterView === 'escalacao' ? 'active' : ''} onClick={() => setTeamCenterView('escalacao')}><Target size={17}/><span>Escalação</span></button>
+        <button type="button" className={teamCenterView === 'elenco' ? 'active' : ''} onClick={() => setTeamCenterView('elenco')}><Users size={17}/><span>Elenco</span></button>
+        <button type="button" className={teamCenterView === 'entrosamento' ? 'active' : ''} onClick={() => setTeamCenterView('entrosamento')}><Layers size={17}/><span>Setores</span></button>
+        <button type="button" className={teamCenterView === 'planos' ? 'active' : ''} onClick={() => setTeamCenterView('planos')}><Clock3 size={17}/><span>Planos</span></button>
+        <button type="button" className={teamCenterView === 'adversario' ? 'active' : ''} onClick={() => setTeamCenterView('adversario')}><Trophy size={17}/><span>Adversário</span></button>
+      </nav>
 
-      <FormationMiniBoard history={history} formation={formation} />
-      <VisualLineupPitch history={history} formation={formation} teamStyle={teamStyle} />
+      {teamCenterView === 'visao' && (
+        <section className="team-overview-layer">
+          <div className="team-overview-sector-grid">
+            <article><span>Setor mais forte</span><strong>{strongestSector?.label ?? 'Em análise'}</strong><b>{strongestSector?.score ?? '—'}/100</b><small>{strongestSector?.verdict ?? 'Salve mais jogadores para confirmar.'}</small></article>
+            <article><span>Setor prioritário</span><strong>{weakestSector?.label ?? 'Em análise'}</strong><b>{weakestSector?.score ?? '—'}/100</b><small>{weakestSector?.verdict ?? 'Aguardando cobertura do elenco.'}</small></article>
+            <article><span>Banco</span><strong>{rotationReport?.benchBalance.label ?? 'Em formação'}</strong><b>{rotationReport?.benchBalance.score ?? '—'}/100</b><small>{rotationReport?.missingCoverage[0] ?? 'Sem falta crítica confirmada.'}</small></article>
+          </div>
 
-      {assistedLineup && (
-        <section className="assisted-lineup-panel">
-          <div className="chemistry-head">
-            <div>
-              <p className="kicker"><Sparkles size={14} /> Escalação automática assistida</p>
-              <h3>Três caminhos, decisão final sempre sua</h3>
-              <span>{assistedLineup.generatedCount} combinações comparadas com {assistedLineup.playerCount} jogadores salvos</span>
+          <div className="team-overview-columns">
+            <article className="team-layer-card danger"><div><Target size={18}/><strong>Ameaças e fraquezas</strong></div>{(tacticalAlerts.length ? tacticalAlerts : ['Nenhuma fraqueza crítica foi detectada.']).map((item) => <span key={item}>{item}</span>)}</article>
+            <article className="team-layer-card good"><div><Sparkles size={18}/><strong>Sugestões táticas</strong></div>{(tacticalSuggestions.length ? tacticalSuggestions : ['O elenco está equilibrado para a configuração atual.']).map((item) => <span key={item}>{item}</span>)}</article>
+          </div>
+
+          {eliteReport && (
+            <div className="team-recommendation-banner">
+              <div><Sparkles size={19}/><span>Melhor encaixe sugerido</span><strong>{eliteReport.bestFormation} • {eliteReport.bestStyleReason}</strong></div>
+              <b>{eliteReport.globalScore}/100</b>
             </div>
-          </div>
-          {assistedLineup.warning && <div className="squad-alert-box"><strong>Escalação ainda incompleta</strong><span>{assistedLineup.warning}</span></div>}
-          <div className="assisted-option-grid">
-            {assistedLineup.options.map((option) => (
-              <article key={option.id} className={`assisted-option-card ${option.id}`}>
-                <div className="assisted-option-head">
-                  <div><span>{option.title}</span><strong>{option.formation} • {tacticalStyleName[option.style]}</strong></div>
-                  <b>{option.score}/100</b>
-                </div>
-                <p>{option.subtitle}</p>
-                <div className="assisted-mini-scores"><span>Entrosamento <b>{option.chemistry}</b></span><span>Estilo <b>{option.styleFit}</b></span><span>{option.complete ? '11/11 completos' : 'Há vagas abertas'}</span></div>
-                <div className="assisted-lineup-list">
-                  {option.lineup.map((pick) => <span key={pick.slot.id}><b>{pick.slot.label}</b><em>{pick.playerName ?? 'Vaga aberta'} • {pick.score}/100</em></span>)}
-                </div>
-                <div className="assisted-detail"><strong>Por que esta opção?</strong><span>{option.reason}</span><small>{option.decisionNote}</small></div>
-                <div className="assisted-detail"><strong>Ajustes em relação à sua base</strong>{option.changes.map((item) => <span key={item}>{item}</span>)}</div>
-                <div className="chemistry-columns"><div className="chemistry-box good"><strong>Pontos fortes</strong>{option.strengths.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box warn"><strong>Riscos</strong>{option.risks.map((item) => <span key={item}>{item}</span>)}</div></div>
-              </article>
-            ))}
-          </div>
-          <div className="squad-suggestion-box"><strong>Recomendação assistida</strong><span>{assistedLineup.recommendation}</span><span>Nenhum jogador, posição, formação ou estilo é aplicado automaticamente.</span></div>
+          )}
+
+          <details className="team-layer-details">
+            <summary>Ver relatório geral por fases</summary>
+            <div className="team-layer-details-body">
+              <div className="squad-phase-grid">{PHASE_KEYS.map((key) => <div key={key} className="squad-phase-item"><span>{teamMapLabels[key]}</span><strong>{report.phaseScores[key]}</strong><i><b style={{ width: `${report.phaseScores[key]}%` }} /></i></div>)}</div>
+              <div className="squad-leader-grid">{report.topByPhase.slice(0, 4).map((item) => <div key={item.title} className="squad-leader-item"><span>{item.title}</span><strong>{item.player}</strong><em>{item.position} • {item.score}/100 • {item.functionLabel}</em></div>)}</div>
+              <div className="squad-plan-box"><strong>Plano-base do time</strong>{report.gamePlan.map((item) => <span key={item}>{item}</span>)}</div>
+            </div>
+          </details>
         </section>
       )}
 
-      {opponentReport && (
-        <section className="opponent-analysis-panel">
-          <div className="chemistry-head">
-            <div>
-              <p className="kicker"><Target size={14} /> Análise do adversário</p>
-              <h3>Ajustes conforme o estilo do outro time</h3>
-              <span>Você informa o perfil; o app sugere respostas sem alterar sua escalação.</span>
-            </div>
-            <strong>{opponentReport.matchupScore}/100</strong>
-          </div>
-          <div className="opponent-print-reader">
-            <div className="opponent-print-actions">
-              <label className="opponent-print-upload"><ScanText size={18}/><span>{opponentPrintLoading ? 'Lendo print...' : 'Ler escalação por print'}</span><input type="file" accept="image/*" disabled={opponentPrintLoading} onChange={(event)=>{ const file=event.target.files?.[0]; if(file) void analyzeOpponentPrint(file); event.currentTarget.value=''; }}/></label>
-              <small>A leitura cria um rascunho. Nada é aplicado sem sua confirmação.</small>
-            </div>
-            {opponentPrintPreview && <img className="opponent-print-preview" src={opponentPrintPreview} alt="Print do adversário"/>}
-            {opponentPrintReport && <div className="opponent-print-review">
-              <div className="opponent-print-confidence"><strong>Confiança geral: {opponentPrintReport.overallConfidence}</strong><span>{opponentPrintReport.visibleNames.length} nome(s) possivelmente visível(is)</span></div>
-              <div className="opponent-print-fields">
-                <span><b>Formação</b>{opponentPrintReport.formation.value ?? 'Não confirmada'}<small>{opponentPrintReport.formation.confidence}</small></span>
-                <span><b>Estilo</b>{opponentPrintReport.profile.value ? OPPONENT_PROFILE_LABELS[opponentPrintReport.profile.value] : 'Não confirmado'}<small>{opponentPrintReport.profile.confidence}</small></span>
-                <span><b>Força</b>{opponentPrintReport.strength.value ? OPPONENT_STRENGTH_LABELS[opponentPrintReport.strength.value] : 'Não confirmada'}<small>{opponentPrintReport.strength.confidence}</small></span>
-                <span><b>Técnico</b>{opponentPrintReport.manager.value ?? 'Não confirmado'}<small>{opponentPrintReport.manager.confidence}</small></span>
+      {teamCenterView === 'escalacao' && (
+        <section className="team-layer-section">
+          <div className="team-layer-heading"><div><p className="kicker">Titulares e escalação</p><h3>Mapa dos 11 e alternativas assistidas</h3></div><span>{starterCount}/11 preenchidos</span></div>
+          <FormationMiniBoard history={history} formation={formation} />
+          <VisualLineupPitch history={history} formation={formation} teamStyle={teamStyle} />
+
+          {assistedLineup && (
+            <details className="team-layer-details" open={starterCount < 11}>
+              <summary>Comparar escalações assistidas</summary>
+              <div className="team-layer-details-body">
+                {assistedLineup.warning && <div className="squad-alert-box"><strong>Escalação ainda incompleta</strong><span>{assistedLineup.warning}</span></div>}
+                <div className="assisted-option-grid">
+                  {assistedLineup.options.map((option) => (
+                    <article key={option.id} className={`assisted-option-card ${option.id}`}>
+                      <div className="assisted-option-head"><div><span>{option.title}</span><strong>{option.formation} • {tacticalStyleName[option.style]}</strong></div><b>{option.score}/100</b></div>
+                      <p>{option.subtitle}</p>
+                      <div className="assisted-mini-scores"><span>Entrosamento <b>{option.chemistry}</b></span><span>Estilo <b>{option.styleFit}</b></span><span>{option.complete ? '11/11 completos' : 'Há vagas abertas'}</span></div>
+                      <div className="assisted-lineup-list">{option.lineup.map((pick) => <span key={pick.slot.id}><b>{pick.slot.label}</b><em>{pick.playerName ?? 'Vaga aberta'} • {pick.score}/100</em></span>)}</div>
+                      <details><summary>Por que esta opção?</summary><p>{option.reason}</p>{option.changes.map((item) => <span key={item}>{item}</span>)}<small>{option.decisionNote}</small></details>
+                    </article>
+                  ))}
+                </div>
+                <div className="squad-suggestion-box"><strong>Recomendação assistida</strong><span>{assistedLineup.recommendation}</span><span>Nada é aplicado automaticamente.</span></div>
               </div>
-              {opponentPrintReport.warnings.map((warning)=><p key={warning}>{warning}</p>)}
-              <button type="button" onClick={applyOpponentPrintReading}><CheckCircle2 size={16}/> Aplicar leitura confirmada</button>
-            </div>}
+            </details>
+          )}
+        </section>
+      )}
+
+      {teamCenterView === 'elenco' && (
+        <section className="team-layer-section">
+          <div className="team-layer-heading"><div><p className="kicker">Elenco e banco</p><h3>Titulares, reservas e substituições</h3></div><span>{rotationReport?.squadCount ?? report.playerCount} jogadores</span></div>
+
+          <div className="team-starter-list">
+            {visualLineup.map((pick) => <article key={pick.id} className={pick.player ? '' : 'missing'}><span>{pick.label}</span><strong>{pick.player?.parsed.playerName ?? 'Vaga aberta'}</strong><small>{pick.player ? `${pick.player.bestPosition.label} • encaixe ${pick.fit}/100` : pick.reason}</small></article>)}
           </div>
+
+          {rotationReport && (
+            <>
+              <div className="opponent-score-strip"><span>Elenco <b>{rotationReport.squadCount}</b></span><span>Titulares <b>{rotationReport.starterCount}/11</b></span><span>Banco <b>{rotationReport.benchCount}</b></span><span>Rotação <b>{rotationReport.rotationScore}/100</b></span></div>
+              <div className="rotation-grid">
+                <article className="rotation-card"><strong>Banco disponível</strong>{rotationReport.bench.length ? rotationReport.bench.map((item)=><div key={item.player.id}><span>{item.player.name} • {item.player.positionLabel}</span><b>{item.label}</b><small>{item.reason}</small></div>) : <p>Salve mais de 11 jogadores no Cofre para formar o banco.</p>}</article>
+                <article className="rotation-card"><strong>Coberturas que faltam</strong>{(rotationReport.missingCoverage.length ? rotationReport.missingCoverage : ['O elenco salvo cobre os principais setores.']).map((item)=><span key={item}>{item}</span>)}</article>
+              </div>
+
+              <article className="rotation-card"><strong>Substituições com jogadores reais</strong><div className="real-sub-grid">{rotationReport.substitutions.length ? rotationReport.substitutions.map((sub)=><div key={`${sub.outPlayer}-${sub.inPlayer}`}><span>{sub.minute} • prioridade {sub.priority} • {sub.score}/100</span><b>{sub.outPlayer} → {sub.inPlayer}</b><small>{sub.trigger}. {sub.reason}</small></div>) : <p>Adicione reservas ao Cofre para receber trocas nominais.</p>}</div></article>
+
+              <details className="team-layer-details"><summary>Ver cobertura, reservas e instruções individuais</summary><div className="team-layer-details-body">
+                <article className="rotation-card"><strong>Melhor reserva por titular</strong><div className="real-sub-grid">{rotationReport.reserveByStarter.map((item)=><div key={`${item.starter}-${item.reserve ?? 'sem-reserva'}`}><span>{item.level} • encaixe {item.fit}/100</span><b>{item.starter} → {item.reserve ?? 'Sem reserva segura'}</b><small>{item.reason}</small></div>)}</div></article>
+                <article className="rotation-card"><strong>Cobertura por posição</strong><div className="real-sub-grid">{rotationReport.positionCoverage.map((item)=><div key={item.position}><span>{item.status} • {item.score}/100</span><b>{item.label} • {item.total} opção(ões)</b><small>{item.warning}{item.players.length ? ` ${item.players.join(', ')}.` : ''}</small></div>)}</div></article>
+                <article className="rotation-card"><strong>Instruções individuais</strong><div className="real-sub-grid">{rotationReport.instructions.map((item)=><div key={`${item.player}-${item.instruction}`}><span>{item.instruction} • confiança {item.confidence}/100</span><b>{item.player}</b><small>{item.reason}{item.warning ? ` ${item.warning}` : ''}</small></div>)}</div></article>
+                <article className="rotation-card"><strong>Equilíbrio do banco</strong><div className="chemistry-head"><div><span>{rotationReport.benchBalance.label}</span></div><strong>{rotationReport.benchBalance.score}/100</strong></div><div className="real-sub-grid">{rotationReport.benchBalance.dimensions.map((item)=><div key={item.key}><span>{item.status}</span><b>{item.label} • {item.score}/100</b><small>{item.note}</small></div>)}</div></article>
+              </div></details>
+            </>
+          )}
+        </section>
+      )}
+
+      {teamCenterView === 'entrosamento' && chemistryReport && (
+        <section className="team-layer-section chemistry-panel">
+          <div className="chemistry-head"><div><p className="kicker"><Users size={14}/> Setores e entrosamento</p><h3>{chemistryReport.chemistryLabel}</h3><span>{chemistryReport.selectedCount}/11 analisados • estilo {chemistryReport.styleFit}/100</span></div><strong>{chemistryReport.globalScore}/100</strong></div>
+          <div className="chemistry-sector-grid">{chemistryReport.sectors.map((sector) => <div key={sector.key} className="chemistry-sector-card"><span>{sector.label}</span><strong>{sector.score}/100</strong><i><b style={{ width: `${sector.score}%` }} /></i><small>{sector.verdict}</small></div>)}</div>
+          <div className="chemistry-columns"><div className="chemistry-box good"><strong>Forças coletivas</strong>{(chemistryReport.strengths.length ? chemistryReport.strengths : ['Nenhuma força dominante confirmada.']).map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box warn"><strong>Fraquezas coletivas</strong>{(chemistryReport.weaknesses.length ? chemistryReport.weaknesses : ['Nenhuma fraqueza crítica detectada.']).map((item) => <span key={item}>{item}</span>)}</div></div>
+          <div className="squad-suggestion-box"><strong>Sugestões para os 11 juntos</strong><span>{chemistryReport.styleVerdict}</span>{chemistryReport.recommendations.slice(0, 4).map((item) => <span key={item}>{item}</span>)}</div>
+
+          <details className="team-layer-details"><summary>Ver sinergias, conflitos, corredores e linhas</summary><div className="team-layer-details-body">
+            {!!chemistryReport.synergies.length && <div className="chemistry-pair-grid">{chemistryReport.synergies.map((item) => <div key={`${item.title}-${item.players}`} className="chemistry-pair-card synergy"><span>{item.title}</span><strong>{item.players}</strong><em>{item.score}/100</em><small>{item.reason}</small></div>)}</div>}
+            {!!chemistryReport.conflicts.length && <div className="chemistry-pair-grid">{chemistryReport.conflicts.map((item) => <div key={`${item.title}-${item.players}`} className={`chemistry-pair-card conflict ${item.severity}`}><span>{item.title}</span><strong>{item.players}</strong><em>Risco {item.severity}</em><small>{item.reason}</small></div>)}</div>}
+            <div className="chemistry-role-grid">{chemistryReport.roleBalance.map((item) => <div key={item.role} className={`chemistry-role-card ${item.status}`}><span>{item.status === 'ok' ? '✓ Equilibrado' : item.status === 'falta' ? '⚠ Falta' : '↔ Excesso'}</span><strong>{item.role}</strong><em>{item.count} no time • ideal {item.ideal}</em></div>)}</div>
+            <div className="sector-intelligence-grid">{chemistryReport.corridors.map((item) => <div key={item.key} className="sector-intelligence-card"><strong>{item.label}</strong><span>Ataque {item.attack} • Defesa {item.defense}</span><span>Criação {item.creation} • Cobertura {item.coverage}</span><em>Risco {item.risk}/100</em><small>{item.verdict}</small></div>)}</div>
+            <div className="sector-intelligence-grid">{chemistryReport.lines.map((item) => <div key={item.key} className="sector-intelligence-card"><strong>{item.label}</strong><span>Com bola {item.withBall} • Sem bola {item.withoutBall}</span><span>Conexão {item.connection} • Risco {item.risk}</span><small>{item.verdict}</small></div>)}</div>
+          </div></details>
+        </section>
+      )}
+
+      {teamCenterView === 'planos' && (
+        <section className="team-layer-section">
+          <div className="team-layer-heading"><div><p className="kicker">Plano de jogo</p><h3>Planos A, B e C e substituições por contexto</h3></div><span>{Object.values(savedTeamPlans).filter(Boolean).length} salvo(s)</span></div>
+          {gamePlan && (
+            <>
+              <div className="opponent-input-grid">
+                <label><span>Situação do placar</span><select value={matchState} onChange={(event) => setMatchState(event.target.value as MatchState)}><option value="EMPATANDO">Empatando</option><option value="VENCENDO_1">Vencendo por 1</option><option value="VENCENDO_2">Vencendo por 2+</option><option value="PERDENDO_1">Perdendo por 1</option><option value="PERDENDO_2">Perdendo por 2+</option></select></label>
+                <label><span>Energia do time</span><select value={teamEnergy} onChange={(event) => setTeamEnergy(event.target.value as TeamEnergy)}><option value="ALTA">Alta</option><option value="MEDIA">Média</option><option value="BAIXA">Baixa</option></select></label>
+                <div className="game-plan-score"><span>Controle <b>{gamePlan.controlScore}</b></span><span>Risco <b>{gamePlan.riskScore}</b></span></div>
+              </div>
+              <div className="squad-alert-box"><strong>Contexto atual</strong><span>{gamePlan.headline}</span></div>
+              <div className="game-phase-grid">{gamePlan.phases.map((phase) => <article key={phase.moment} className="game-phase-card"><div><span>{phase.moment}</span><strong>{phase.title}</strong></div><p>{phase.objective}</p><details><summary>Ver instruções e trocas</summary><ul>{phase.instructions.map((item) => <li key={item}>{item}</li>)}</ul>{phase.substitutions.length > 0 && <div className="substitution-list"><b>Substituições por gatilho</b>{phase.substitutions.map((sub) => <div key={`${sub.minute}-${sub.trigger}`}><span>{sub.minute} • {sub.priority}</span><strong>{sub.outProfile} → {sub.inProfile}</strong><small>{sub.trigger}. {sub.objective}</small></div>)}</div>}</details></article>)}</div>
+            </>
+          )}
+
+          {rotationReport && (
+            <div className="rotation-card team-plans-card"><strong>Planos A, B e C</strong><div className="game-phase-grid">{rotationReport.plans.map((plan) => <article key={plan.id} className="game-phase-card"><div><span>{plan.id} • {plan.formation} • {tacticalStyleName[plan.style]}</span><strong>{plan.title}</strong></div><p>{plan.purpose}</p><small>Nota do plano: {plan.score}/100</small><details><summary>Ver mudanças e orientações</summary><ul>{plan.changes.map((item) => <li key={item}>{item}</li>)}</ul><b>Orientações</b><ul>{plan.instructions.map((item) => <li key={item}>{item}</li>)}</ul><small>{plan.decisionNote}</small></details><button type="button" onClick={() => toggleSavedTeamPlan(plan.id)}>{savedTeamPlans[plan.id] ? <CheckCircle2 size={15}/> : <Save size={15}/>} {savedTeamPlans[plan.id] ? 'Plano salvo' : 'Salvar plano'}</button></article>)}</div></div>
+          )}
+        </section>
+      )}
+
+      {teamCenterView === 'adversario' && opponentReport && (
+        <section className="team-layer-section opponent-analysis-panel">
+          <div className="chemistry-head"><div><p className="kicker"><Target size={14}/> Ameaças e fraquezas</p><h3>Análise do adversário</h3><span>Informe o perfil ou leia um print. Nada altera sua escalação automaticamente.</span></div><strong>{opponentReport.matchupScore}/100</strong></div>
+
+          <div className="opponent-print-reader">
+            <div className="opponent-print-actions"><label className="opponent-print-upload"><ScanText size={18}/><span>{opponentPrintLoading ? 'Lendo print...' : 'Ler escalação por print'}</span><input type="file" accept="image/*" disabled={opponentPrintLoading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void analyzeOpponentPrint(file); event.currentTarget.value=''; }}/></label><small>A leitura cria um rascunho para sua confirmação.</small></div>
+            {opponentPrintPreview && <img className="opponent-print-preview" src={opponentPrintPreview} alt="Print do adversário"/>}
+            {opponentPrintReport && <div className="opponent-print-review"><div className="opponent-print-confidence"><strong>Confiança geral: {opponentPrintReport.overallConfidence}</strong><span>{opponentPrintReport.visibleNames.length} nome(s) possivelmente visível(is)</span></div><div className="opponent-print-fields"><span><b>Formação</b>{opponentPrintReport.formation.value ?? 'Não confirmada'}<small>{opponentPrintReport.formation.confidence}</small></span><span><b>Estilo</b>{opponentPrintReport.profile.value ? OPPONENT_PROFILE_LABELS[opponentPrintReport.profile.value] : 'Não confirmado'}<small>{opponentPrintReport.profile.confidence}</small></span><span><b>Força</b>{opponentPrintReport.strength.value ? OPPONENT_STRENGTH_LABELS[opponentPrintReport.strength.value] : 'Não confirmada'}<small>{opponentPrintReport.strength.confidence}</small></span></div>{opponentPrintReport.warnings.map((warning) => <p key={warning}>{warning}</p>)}<button type="button" onClick={applyOpponentPrintReading}><CheckCircle2 size={16}/> Aplicar leitura confirmada</button></div>}
+          </div>
+
           <div className="opponent-input-grid">
             <label><span>Estilo do adversário</span><select value={opponentProfile} onChange={(event) => setOpponentProfile(event.target.value as OpponentProfile)}>{Object.entries(OPPONENT_PROFILE_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label><span>Formação observada</span><select value={opponentFormation} onChange={(event) => setOpponentFormation(event.target.value as TacticalFormation)}>{['AUTO','4-2-2-2','4-3-3','4-1-2-3','4-2-1-3','4-2-3-1','4-3-1-2','4-1-3-2','4-4-2','4-1-4-1','3-2-4-1','3-4-3','3-5-2','5-3-2','5-2-3'].map((value) => <option key={value} value={value}>{value === 'AUTO' ? 'Ainda não sei' : value}</option>)}</select></label>
             <label><span>Maior força percebida</span><select value={opponentStrength} onChange={(event) => setOpponentStrength(event.target.value as OpponentStrength)}>{Object.entries(OPPONENT_STRENGTH_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           </div>
-          <div className="opponent-score-strip"><span>Ameaça estimada <b>{opponentReport.threatScore}/100</b></span><span>Seu encaixe atual <b>{opponentReport.matchupScore}/100</b></span><span>{opponentReport.verdict}</span></div>
-          <div className="squad-alert-box"><strong>Leitura informada</strong><span>{opponentReport.opponentSummary}</span></div>
+          <div className="opponent-score-strip"><span>Ameaça <b>{opponentReport.threatScore}/100</b></span><span>Seu encaixe <b>{opponentReport.matchupScore}/100</b></span><span>{opponentReport.verdict}</span></div>
           <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Principais ameaças</strong>{opponentReport.mainThreats.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Onde explorar</strong>{opponentReport.exploitableWeaknesses.map((item) => <span key={item}>{item}</span>)}</div></div>
-          <div className="opponent-adjustment-grid">{opponentReport.adjustments.map((item) => <article key={`${item.area}-${item.title}`} className={`opponent-adjustment-card priority-${item.priority}`}><div><span>{item.area}</span><b>{item.priority}</b></div><strong>{item.title}</strong><p>{item.action}</p><small>{item.reason}</small></article>)}</div>
-          <div className="squad-suggestion-box"><strong>Resposta assistida sugerida</strong><span>{opponentReport.recommendedFormation} • {tacticalStyleName[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>
-          {advancedOpponentReport && (
-            <section className="advanced-opponent-suite">
-              <div className="chemistry-head"><div><p className="kicker"><Target size={14}/> Adversário avançado</p><h3>Setores, duelos e mapas do confronto</h3><span>{advancedOpponentReport.confidenceNote}</span></div><strong>{advancedOpponentReport.overallSectorEdge}/100</strong></div>
-              <div className="opponent-score-strip"><span>Vantagem por setores <b>{advancedOpponentReport.overallSectorEdge}/100</b></span><span>Vantagem nos duelos <b>{advancedOpponentReport.duelEdge}/100</b></span><span>Alerta principal <b>{advancedOpponentReport.mainWarning}</b></span></div>
-              <div className="advanced-opponent-block"><strong>Comparação de setores</strong><div className="sector-comparison-grid">{advancedOpponentReport.sectorComparisons.map((item)=><article key={item.key} className={`sector-comparison-card ${item.status}`}><div><span>{item.label}</span><b>{item.advantage}/100</b></div><small>Seu setor {item.ownScore} × Rival {item.opponentScore}</small><p>{item.verdict}</p></article>)}</div></div>
-              <div className="advanced-opponent-block"><strong>Duelos individuais estimados</strong><div className="duel-grid">{advancedOpponentReport.duels.map((duel,index)=><article key={`${duel.ownPlayer}-${duel.opponentRole}-${index}`} className={`duel-card ${duel.status}`}><div><span>{duel.zone}</span><b>{duel.duelScore}/100</b></div><strong>{duel.ownPlayer}</strong><small>{duel.ownRole} × {duel.opponentRole}</small><p>{duel.reason}</p><em>{duel.adjustment}</em></article>)}</div></div>
-              <div className="advanced-map-columns"><div className="advanced-opponent-block threat-map"><strong>Mapa de ameaças</strong>{advancedOpponentReport.threats.map((item)=><article key={`${item.zone}-${item.title}`} className={`map-item ${item.severity}`}><div><span>{item.zone}</span><b>{item.level}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.protection}</small></article>)}</div><div className="advanced-opponent-block weakness-map"><strong>Mapa de fraquezas</strong>{advancedOpponentReport.weaknesses.map((item)=><article key={`${item.zone}-${item.title}`} className="map-item opportunity"><div><span>{item.zone}</span><b>{item.opportunity}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.howToExplore}</small></article>)}</div></div>
-              <div className="squad-suggestion-box"><strong>Melhor oportunidade encontrada</strong><span>{advancedOpponentReport.bestOpportunity}</span><span>Use como referência e confirme no comportamento real do adversário.</span></div>
-              <div className="opponent-locks">{advancedOpponentReport.locks.map((item)=><span key={item}><ShieldCheck size={14}/> {item}</span>)}</div>
-            </section>
-          )}
-          <div className="opponent-locks">{opponentReport.locks.map((item) => <span key={item}><ShieldCheck size={14} /> {item}</span>)}</div>
+          <div className="opponent-adjustment-grid">{opponentReport.adjustments.slice(0, 6).map((item) => <article key={`${item.area}-${item.title}`} className={`opponent-adjustment-card priority-${item.priority}`}><div><span>{item.area}</span><b>{item.priority}</b></div><strong>{item.title}</strong><p>{item.action}</p><small>{item.reason}</small></article>)}</div>
+          <div className="squad-suggestion-box"><strong>Resposta assistida</strong><span>{opponentReport.recommendedFormation} • {tacticalStyleName[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>
+
+          {advancedOpponentReport && <details className="team-layer-details"><summary>Ver comparação avançada, duelos e mapas</summary><div className="team-layer-details-body"><div className="sector-comparison-grid">{advancedOpponentReport.sectorComparisons.map((item) => <article key={item.key} className={`sector-comparison-card ${item.status}`}><div><span>{item.label}</span><b>{item.advantage}/100</b></div><small>Seu setor {item.ownScore} × Rival {item.opponentScore}</small><p>{item.verdict}</p></article>)}</div><div className="duel-grid">{advancedOpponentReport.duels.map((duel,index) => <article key={`${duel.ownPlayer}-${index}`} className={`duel-card ${duel.status}`}><div><span>{duel.zone}</span><b>{duel.duelScore}/100</b></div><strong>{duel.ownPlayer}</strong><small>{duel.ownRole} × {duel.opponentRole}</small><p>{duel.reason}</p><em>{duel.adjustment}</em></article>)}</div><div className="advanced-map-columns"><div className="advanced-opponent-block threat-map"><strong>Mapa de ameaças</strong>{advancedOpponentReport.threats.map((item) => <article key={`${item.zone}-${item.title}`} className={`map-item ${item.severity}`}><div><span>{item.zone}</span><b>{item.level}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.protection}</small></article>)}</div><div className="advanced-opponent-block weakness-map"><strong>Mapa de fraquezas</strong>{advancedOpponentReport.weaknesses.map((item) => <article key={`${item.zone}-${item.title}`} className="map-item opportunity"><div><span>{item.zone}</span><b>{item.opportunity}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.howToExplore}</small></article>)}</div></div></div></details>}
         </section>
-      )}
-
-      {gamePlan && (
-        <section className="game-plan-panel">
-          <div className="chemistry-head"><div><p className="kicker"><Clock3 size={14} /> Plano de jogo e substituições</p><h3>Início, intervalo e reta final</h3><span>Mudanças guiadas por placar, energia e leitura do adversário.</span></div><strong>{gamePlan.controlScore}/100</strong></div>
-          <div className="opponent-input-grid">
-            <label><span>Situação do placar</span><select value={matchState} onChange={(event) => setMatchState(event.target.value as MatchState)}><option value="EMPATANDO">Empatando</option><option value="VENCENDO_1">Vencendo por 1</option><option value="VENCENDO_2">Vencendo por 2+</option><option value="PERDENDO_1">Perdendo por 1</option><option value="PERDENDO_2">Perdendo por 2+</option></select></label>
-            <label><span>Energia do time</span><select value={teamEnergy} onChange={(event) => setTeamEnergy(event.target.value as TeamEnergy)}><option value="ALTA">Alta</option><option value="MEDIA">Média</option><option value="BAIXA">Baixa</option></select></label>
-            <div className="game-plan-score"><span>Controle <b>{gamePlan.controlScore}</b></span><span>Risco <b>{gamePlan.riskScore}</b></span></div>
-          </div>
-          <div className="squad-alert-box"><strong>Contexto atual</strong><span>{gamePlan.headline}</span></div>
-          <div className="game-phase-grid">{gamePlan.phases.map((phase) => <article key={phase.moment} className="game-phase-card"><div><span>{phase.moment}</span><strong>{phase.title}</strong></div><p>{phase.objective}</p><ul>{phase.instructions.map((item) => <li key={item}>{item}</li>)}</ul>{phase.substitutions.length > 0 && <div className="substitution-list"><b>Substituições por gatilho</b>{phase.substitutions.map((sub) => <div key={`${sub.minute}-${sub.trigger}`}><span>{sub.minute} • {sub.priority}</span><strong>{sub.outProfile} → {sub.inProfile}</strong><small>{sub.trigger}. {sub.objective}</small></div>)}</div>}{phase.formationSuggestion && <small>Opção assistida: {phase.formationSuggestion} • {tacticalStyleName[phase.styleSuggestion!]}</small>}</article>)}</div>
-          <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Gatilhos de emergência</strong>{gamePlan.emergencyTriggers.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Controle do usuário</strong>{gamePlan.locks.map((item) => <span key={item}>{item}</span>)}</div></div>
-        </section>
-      )}
-
-      {rotationReport && (
-        <section className="rotation-panel">
-          <div className="chemistry-head"><div><p className="kicker"><Users size={14} /> Lote 3 • Banco, trocas e instruções</p><h3>Rotação do elenco com jogadores reais</h3><span>{rotationReport.headline}</span></div><strong>{rotationReport.coverageScore}/100</strong></div>
-          <div className="opponent-score-strip"><span>Elenco <b>{rotationReport.squadCount}</b></span><span>Titulares <b>{rotationReport.starterCount}/11</b></span><span>Banco <b>{rotationReport.benchCount}</b></span><span>Rotação <b>{rotationReport.rotationScore}/100</b></span></div>
-          <div className="rotation-grid">
-            <article className="rotation-card"><strong>v24.51 • Banco e rotação</strong>{rotationReport.bench.length ? rotationReport.bench.map((item)=><div key={item.player.id}><span>{item.player.name} • {item.player.positionLabel}</span><b>{item.label}</b><small>{item.reason}</small></div>) : <p>Salve mais de 11 jogadores no Cofre para formar o banco.</p>}</article>
-            <article className="rotation-card"><strong>Coberturas que faltam</strong>{(rotationReport.missingCoverage.length?rotationReport.missingCoverage:['O elenco salvo cobre os principais setores.']).map((item)=><span key={item}>{item}</span>)}</article>
-          </div>
-          <div className="rotation-card"><strong>v24.52 • Substituições com jogadores reais</strong><div className="real-sub-grid">{rotationReport.substitutions.length ? rotationReport.substitutions.map((sub)=><div key={`${sub.outPlayer}-${sub.inPlayer}`}><span>{sub.minute} • prioridade {sub.priority} • {sub.score}/100</span><b>{sub.outPlayer} → {sub.inPlayer}</b><small>{sub.trigger}. {sub.reason}</small></div>) : <p>Adicione reservas ao Cofre para receber trocas nominais.</p>}</div></div>
-          <div className="rotation-card"><strong>v24.54 • Instruções individuais</strong><div className="real-sub-grid">{rotationReport.instructions.map((item)=><div key={`${item.player}-${item.instruction}`}><span>{item.instruction} • confiança {item.confidence}/100</span><b>{item.player}</b><small>{item.reason}{item.warning ? ` ${item.warning}` : ''}</small></div>)}</div></div>
-
-          <div className="rotation-card"><strong>v25.07 • Cobertura real por posição</strong><div className="real-sub-grid">{rotationReport.positionCoverage.map((item)=><div key={item.position}><span>{item.status} • {item.score}/100</span><b>{item.label} • {item.total} opção(ões)</b><small>{item.warning}{item.players.length ? ` ${item.players.join(', ')}.` : ''}</small></div>)}</div></div>
-
-          <div className="rotation-card"><strong>v25.08 • Melhor reserva por titular</strong><div className="real-sub-grid">{rotationReport.reserveByStarter.map((item)=><div key={`${item.starter}-${item.reserve ?? 'sem-reserva'}`}><span>{item.level} • encaixe {item.fit}/100</span><b>{item.starter} → {item.reserve ?? 'Sem reserva segura'}</b><small>{item.starterPosition}{item.reservePosition ? ` • reserva ${item.reservePosition}` : ''}. {item.reason}</small></div>)}</div></div>
-
-          <div className="rotation-card"><strong>v25.09 • Banco equilibrado</strong><div className="chemistry-head"><div><span>{rotationReport.benchBalance.label}</span></div><strong>{rotationReport.benchBalance.score}/100</strong></div><div className="real-sub-grid">{rotationReport.benchBalance.dimensions.map((item)=><div key={item.key}><span>{item.status}</span><b>{item.label} • {item.score}/100</b><small>{item.note}</small></div>)}</div>{rotationReport.benchBalance.alerts.map((item)=><p key={item}>{item}</p>)}</div>
-
-          <div className="rotation-card"><strong>v25.19 • Planos A, B e C</strong><div className="game-phase-grid">{rotationReport.plans.map((plan)=><article key={plan.id} className="game-phase-card"><div><span>{plan.id} • {plan.formation} • {tacticalStyleName[plan.style]}</span><strong>{plan.title}</strong></div><p>{plan.purpose}</p><small>Nota do plano: {plan.score}/100</small><ul>{plan.changes.map((item)=><li key={item}>{item}</li>)}</ul><b>Orientações</b><ul>{plan.instructions.map((item)=><li key={item}>{item}</li>)}</ul><small>{plan.decisionNote}</small><button type="button" onClick={()=>toggleSavedTeamPlan(plan.id)}>{savedTeamPlans[plan.id] ? <CheckCircle2 size={15}/> : <Save size={15}/>} {savedTeamPlans[plan.id] ? 'Plano salvo' : 'Salvar plano'}</button></article>)}</div></div>
-
-          <div className="opponent-locks">{rotationReport.locks.map((item)=><span key={item}><ShieldCheck size={14}/> {item}</span>)}</div>
-        </section>
-      )}
-
-      {chemistryReport && (
-        <section className="chemistry-panel">
-          <div className="chemistry-head">
-            <div>
-              <p className="kicker"><Users size={14} /> Entrosamento dos 11</p>
-              <h3>{chemistryReport.chemistryLabel}</h3>
-              <span>{chemistryReport.selectedCount}/11 jogadores analisados • compatibilidade com o estilo {chemistryReport.styleFit}/100</span>
-            </div>
-            <strong>{chemistryReport.globalScore}/100</strong>
-          </div>
-
-          <div className="chemistry-sector-grid">
-            {chemistryReport.sectors.map((sector) => (
-              <div key={sector.key} className="chemistry-sector-card">
-                <span>{sector.label}</span>
-                <strong>{sector.score}/100</strong>
-                <i><b style={{ width: `${sector.score}%` }} /></i>
-                <small>{sector.verdict}</small>
-              </div>
-            ))}
-          </div>
-
-          <div className="chemistry-columns">
-            <div className="chemistry-box good">
-              <strong>Forças coletivas</strong>
-              {(chemistryReport.strengths.length ? chemistryReport.strengths : ['Nenhuma força dominante foi confirmada ainda.']).map((item) => <span key={item}>{item}</span>)}
-            </div>
-            <div className="chemistry-box warn">
-              <strong>Fraquezas coletivas</strong>
-              {(chemistryReport.weaknesses.length ? chemistryReport.weaknesses : ['Nenhuma fraqueza crítica foi detectada.']).map((item) => <span key={item}>{item}</span>)}
-            </div>
-          </div>
-
-          {!!chemistryReport.synergies.length && (
-            <div className="chemistry-pair-grid">
-              {chemistryReport.synergies.map((item) => (
-                <div key={`${item.title}-${item.players}`} className="chemistry-pair-card synergy">
-                  <span>{item.title}</span>
-                  <strong>{item.players}</strong>
-                  <em>{item.score}/100</em>
-                  <small>{item.reason}</small>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!!chemistryReport.conflicts.length && (
-            <div className="chemistry-pair-grid">
-              {chemistryReport.conflicts.map((item) => (
-                <div key={`${item.title}-${item.players}`} className={`chemistry-pair-card conflict ${item.severity}`}>
-                  <span>{item.title}</span>
-                  <strong>{item.players}</strong>
-                  <em>Risco {item.severity}</em>
-                  <small>{item.reason}</small>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="chemistry-role-grid">
-            {chemistryReport.roleBalance.map((item) => (
-              <div key={item.role} className={`chemistry-role-card ${item.status}`}>
-                <span>{item.status === 'ok' ? '✓ Equilibrado' : item.status === 'falta' ? '⚠ Falta' : '↔ Excesso'}</span>
-                <strong>{item.role}</strong>
-                <em>{item.count} no time • ideal {item.ideal}</em>
-              </div>
-            ))}
-          </div>
-
-          <div className="team-sector-suite">
-            <article className="team-sector-block">
-              <p className="kicker">v25.00 • Dependência entre jogadores</p>
-              <div className="chemistry-pair-grid">
-                {chemistryReport.dependencies.map((item) => (
-                  <div key={`${item.source}-${item.target}-${item.relation}`} className="chemistry-pair-card synergy">
-                    <span>{item.relation}</span><strong>{item.source} ↔ {item.target}</strong><em>{item.strength}/100</em><small>{item.risk}</small>
-                  </div>
-                ))}
-              </div>
-            </article>
-            <article className="team-sector-block">
-              <p className="kicker">v25.01 • Análise por corredor</p>
-              <div className="sector-intelligence-grid">
-                {chemistryReport.corridors.map((item) => <div key={item.key} className="sector-intelligence-card"><strong>{item.label}</strong><span>Ataque {item.attack} • Defesa {item.defense}</span><span>Criação {item.creation} • Cobertura {item.coverage}</span><em>Risco {item.risk}/100</em><small>{item.verdict}</small></div>)}
-              </div>
-            </article>
-            <article className="team-sector-block">
-              <p className="kicker">v25.02 • Análise por linhas</p>
-              <div className="sector-intelligence-grid">
-                {chemistryReport.lines.map((item) => <div key={item.key} className="sector-intelligence-card"><strong>{item.label}</strong><span>Com bola {item.withBall} • Sem bola {item.withoutBall}</span><span>Conexão {item.connection} • Risco {item.risk}</span><small>{item.verdict}</small></div>)}
-              </div>
-            </article>
-            <article className="team-sector-block possession-balance-card">
-              <p className="kicker">v25.04 • Equilíbrio com e sem bola</p>
-              <div className="opponent-score-strip"><span>Com bola <b>{chemistryReport.possessionBalance.withBall}/100</b></span><span>Sem bola <b>{chemistryReport.possessionBalance.withoutBall}/100</b></span><span>Transição <b>{chemistryReport.possessionBalance.transition}/100</b></span></div>
-              <strong>{chemistryReport.possessionBalance.verdict}</strong>
-              {chemistryReport.possessionBalance.alerts.map((item) => <span key={item}>{item}</span>)}
-            </article>
-          </div>
-
-          <div className="squad-suggestion-box">
-            <strong>Recomendações para os 11 juntos</strong>
-            <span>{chemistryReport.styleVerdict}</span>
-            {chemistryReport.recommendations.map((item) => <span key={item}>{item}</span>)}
-          </div>
-        </section>
-      )}
-
-      <div className="squad-phase-grid">
-        {PHASE_KEYS.map((key) => (
-          <div key={key} className="squad-phase-item">
-            <span>{teamMapLabels[key]}</span>
-            <strong>{report.phaseScores[key]}</strong>
-            <i><b style={{ width: `${report.phaseScores[key]}%` }} /></i>
-          </div>
-        ))}
-      </div>
-
-      <div className="squad-leader-grid">
-        {report.topByPhase.slice(0, 4).map((item) => (
-          <div key={item.title} className="squad-leader-item">
-            <span>{item.title}</span>
-            <strong>{item.player}</strong>
-            <em>{item.position} • {item.score}/100 • {item.functionLabel}</em>
-          </div>
-        ))}
-      </div>
-
-      {!!report.warnings.length && (
-        <div className="squad-alert-box">
-          <strong>Ajustes que aumentam precisão</strong>
-          {report.warnings.map((item) => <span key={item}>{item}</span>)}
-        </div>
-      )}
-
-      <div className="squad-plan-box">
-        <strong>Plano do time</strong>
-        {report.gamePlan.map((item) => <span key={item}>{item}</span>)}
-      </div>
-
-      <div className="squad-suggestion-box">
-        <strong>Melhorias recomendadas</strong>
-        {report.suggestions.map((item) => <span key={item}>{item}</span>)}
-      </div>
-
-      {eliteReport && (
-        <>
-          <div className="squad-plan-box elite-team-box">
-            <strong>Formação e estilo mais compatíveis</strong>
-            <span>{eliteReport.bestFormation} — {eliteReport.bestFormationReason}</span>
-            <span>{eliteReport.bestStyleReason}</span>
-            <span>Nota do mapeamento completo: {eliteReport.globalScore}/100</span>
-          </div>
-
-          <div className="squad-lineup-grid">
-            {eliteReport.lineup.map((pick) => (
-              <div key={pick.slot.id} className={pick.playerName ? 'squad-lineup-slot' : 'squad-lineup-slot missing'}>
-                <span>{pick.slot.label}</span>
-                <strong>{pick.playerName ?? 'Vaga aberta'}</strong>
-                <em>{pick.playerName ? `${pick.position} • ${pick.functionLabel} • ${pick.score}/100` : pick.warning}</em>
-              </div>
-            ))}
-          </div>
-
-          <div className="squad-leader-grid">
-            {eliteReport.roleCoverage.map((item) => (
-              <div key={item.label} className={item.ok ? 'squad-leader-item validator-ok' : 'squad-leader-item validator-bad'}>
-                <span>{item.ok ? 'Coberto' : 'Falta'}</span>
-                <strong>{item.label} ({item.count})</strong>
-                <em>{item.note}</em>
-              </div>
-            ))}
-          </div>
-
-          <div className="squad-leader-grid">
-            {eliteReport.validators.map((item) => (
-              <div key={item.label} className={item.ok ? 'squad-leader-item validator-ok' : 'squad-leader-item validator-bad'}>
-                <span>{item.ok ? '✓ Seguro' : '⚠ Revisar'}</span>
-                <strong>{item.label}</strong>
-                <em>{item.note}</em>
-              </div>
-            ))}
-          </div>
-
-          <div className="squad-alert-box">
-            <strong>Alertas táticos premium</strong>
-            {eliteReport.tacticalAlerts.map((item) => <span key={item}>{item}</span>)}
-          </div>
-
-          <div className="squad-suggestion-box">
-            <strong>Prioridade de evolução do elenco</strong>
-            {eliteReport.upgradePriorities.map((item) => <span key={item}>{item}</span>)}
-          </div>
-
-          <div className="squad-plan-box">
-            <strong>Plano completo: defesa, saída e ataque</strong>
-            {[...eliteReport.defensivePlan, ...eliteReport.buildupPlan, ...eliteReport.attackingPlan, ...eliteReport.pressingPlan].slice(0, 10).map((item) => <span key={item}>{item}</span>)}
-          </div>
-
-          {!!eliteReport.bench.length && (
-            <div className="squad-leader-grid">
-              {eliteReport.bench.slice(0, 4).map((item) => (
-                <div key={`${item.playerName}-${item.position}`} className="squad-leader-item">
-                  <span>Alternativa do banco</span>
-                  <strong>{item.playerName}</strong>
-                  <em>{item.position} • {item.functionLabel} • {item.score}/100 — {item.use}</em>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
       )}
     </article>
   );
 }
+
 
 function normalizeLine(line: string) {
   return line.replace(/\s+/g, ' ').trim();
@@ -2433,11 +2302,11 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
   </div>;
 }
 
-function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void }) {
-  const [resultGroup, setResultGroup] = useState<ResultGroup>('visao');
-  const [tab, setTab] = useState<ResultTab>('ficha');
+function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void }) {
+  const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
-  const [actionsOpen, setActionsOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
   const reliabilityCenter = useMemo(() => buildReliabilityCenter(result), [result]);
   const inconsistencyReport = useMemo(() => detectInconsistencies(result), [result]);
   const buildComparison = useMemo(() => compareBuildVariants(result), [result]);
@@ -2481,112 +2350,159 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
   const partialUpgradeCount = upgradeChecklist.filter((item) => item.status === 'parcial').length;
   const localCorrections = useMemo(() => getMergedCorrectionsForResult(result), [result]);
   const hasLocalCorrections = Boolean(localCorrections.blockedSkills.length || localCorrections.promotedSkills.length || localCorrections.blockedImpetos.length || localCorrections.promotedImpetos.length);
+  const pointsAvailable = Math.max(0, result.trainingPointsTotal - result.trainingPointsUsed);
+  const advancedTabs = RESULT_ADVANCED_GROUPS.flatMap((group) => group.tabs.map((item) => item.value));
+  const advancedSelected = advancedTabs.includes(tab);
+
+  function openPrimaryResult(view: ResultPrimaryView) {
+    setAdvancedOpen(false);
+    if (view === 'tatica') setTab('treinador');
+    else setTab(view);
+  }
+
+  function primaryIsActive(view: ResultPrimaryView) {
+    if (view === 'tatica') return tab === 'treinador' || tab === 'mapa';
+    return tab === view;
+  }
+
+  async function shareCurrentResult() {
+    const text = [
+      `${card.playerName} • ${result.bestPosition.label}`,
+      `Estilo: ${card.playstyle ?? 'não informado'}`,
+      `Pontos: ${result.trainingPointsUsed}/${result.trainingPointsTotal}`,
+      `Habilidades: ${recommendedSkills.join(', ') || 'sem recomendação segura'}`
+    ].join('\n');
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ title: `Ficha BuildMaster • ${card.playerName}`, text });
+        setShareMessage('Ficha enviada para o compartilhamento do aparelho.');
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setShareMessage('Resumo copiado. Agora você pode colar onde desejar.');
+      } else {
+        copyBuildText(result);
+        setShareMessage('Plano copiado para a área de transferência.');
+      }
+    } catch (cause) {
+      if (cause instanceof Error && cause.name === 'AbortError') return;
+      copyBuildText(result);
+      setShareMessage('Não foi possível abrir o compartilhamento; o plano foi copiado.');
+    }
+    window.setTimeout(() => setShareMessage(''), 3200);
+  }
 
   return (
     <section className="result-panel">
-      <div className={`result-head result-head-compact luxury-panel ${heroExpanded ? 'is-expanded' : ''}`}>
-        <div className="premium-card-art">
-          {playerImage && <img src={playerImage} alt={`Imagem de ${card.playerName}`} />}
-          <div className="card-shine" />
-          <div className="card-number">
-            <strong>{GER}</strong>
-            <span>{card.mainPositionPt}</span>
-          </div>
-          <em>{card.playstyle ?? 'BuildMaster'}</em>
-        </div>
+      <section className={`result-player-hero luxury-panel ${heroExpanded ? 'is-expanded' : ''}`}>
+        <figure className="result-player-art">
+          {playerImage ? <img src={playerImage} alt={`Imagem de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
+          <div className="result-player-art-overlay" />
+          <div className="result-player-rating"><strong>{GER}</strong><span>{card.mainPositionPt}</span></div>
+          <figcaption>{card.playstyle ?? 'BuildMaster Elite'}</figcaption>
+        </figure>
 
-        <div className="result-intro">
-          <div className="result-title-row">
+        <div className="result-player-summary">
+          <div className="result-player-heading">
             <div>
-              <p className="kicker">Ficha atual</p>
+              <p className="kicker"><Sparkles size={14} /> Resultado validado</p>
               <h2>{card.playerName}</h2>
-              <div className="playstyle-pill">{card.playstyle ?? 'Estilo não lido'}</div>
+              <div className="result-identity-line">
+                <span className="result-position-badge">{result.bestPosition.label}</span>
+                <span>{card.playstyle ?? 'Estilo não informado'}</span>
+                <em>carta original: {card.mainPositionPt}</em>
+              </div>
             </div>
             <button className="result-details-toggle" type="button" onClick={() => setHeroExpanded((value) => !value)} aria-expanded={heroExpanded}>
-              {heroExpanded ? 'Menos detalhes' : 'Ver detalhes'}
+              {heroExpanded ? 'Ocultar detalhes' : 'Mais detalhes'} <ChevronDown size={16} />
             </button>
           </div>
 
-          <div className="result-quick-metrics">
-            <div><span>Posição</span><strong>{result.bestPosition.label}</strong></div>
-            <div><span>Pontos</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
-            <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
-            <div><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}/100</strong></div>
+          <div className="result-key-metrics">
+            <article><span>Pontos usados</span><strong>{result.trainingPointsUsed}</strong><small>de {result.trainingPointsTotal}</small></article>
+            <article><span>Disponíveis</span><strong>{pointsAvailable}</strong><small>pontos restantes</small></article>
+            <article><span>Confiança</span><strong>{card.confidence}%</strong><small>{result.validation?.level === 'blocked' ? 'revisão necessária' : 'análise liberada'}</small></article>
+            <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>
           </div>
+
+          <div className="result-budget-line">
+            <div><span>Uso do orçamento</span><strong>{pointPercent}%</strong></div>
+            <i><b style={{ width: `${pointPercent}%` }} /></i>
+          </div>
+
+          <div className="result-hero-actions">
+            <button className="result-action-primary" type="button" onClick={onSaveFicha}><Save size={17} /> Salvar ficha</button>
+            <button type="button" onClick={onRecalculate}><RotateCcw size={17} /> Recalcular</button>
+            <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
+          </div>
+          {shareMessage && <p className="result-share-feedback"><CheckCircle2 size={15} /> {shareMessage}</p>}
 
           {heroExpanded && (
             <div className="result-expanded-details">
               <div className="save-progress-card">
-                <span>Progresso das habilidades</span>
+                <span>Habilidades concluídas</span>
                 <strong>{skillInfo.done}/{skillInfo.total || recommendedSkills.length}</strong>
                 <i><b style={{ width: `${skillInfo.percent}%` }} /></i>
               </div>
-              <p className="identity-note">Identidade preservada: {card.mainPositionPt}{card.playstyle ? ` • ${card.playstyle}` : ''}. A posição escolhida continua soberana e o app apenas explica o aproveitamento.</p>
-              <div className="metric-grid">
-                <div><span>GER lido</span><strong>{GER}</strong></div>
-                <div><span>Pos. carta</span><strong>{card.mainPositionPt}</strong></div>
-                <div><span>Posição ficha</span><strong>{result.bestPosition.label}</strong></div>
+              <div className="result-detail-grid">
+                <div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div>
                 <div><span>PRI em campo</span><strong>{result.pri.GER}</strong></div>
-                <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
-                <div className="wide-metric"><span>Pontos totais</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
+                <div><span>Origem dos pontos</span><strong>{sourceLabel}</strong></div>
+                <div><span>Habilidades oficiais</span><strong>{recommendedSkills.length}/5</strong></div>
               </div>
+              <p className="identity-note">A posição escolhida continua soberana. O BuildMaster preserva a identidade original da carta e apenas explica o melhor aproveitamento.</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {card.warnings.length > 0 && (
-        <div className="alert-strip">
+        <div className="alert-strip result-alert-strip">
           {card.warnings.slice(0, 2).map((warning) => <span key={warning}>{warning}</span>)}
         </div>
       )}
 
-      <div className="result-premium-scoreboard luxury-panel">
-        <div>
-          <span>Validação visual</span>
-          <strong>{result.trainingPointsUsed <= result.trainingPointsTotal ? 'Ficha dentro do orçamento' : 'Revisar orçamento'}</strong>
-        </div>
-        <div>
-          <span>Função real</span>
-          <strong>{result.teamMap?.functionLabel ?? result.buildName}</strong>
-        </div>
-        <div>
-          <span>Habilidades</span>
-          <strong>{recommendedSkills.length}/5 oficiais</strong>
-        </div>
-      </div>
-
-      <div className="result-subtab-shell luxury-panel">
-        <div className="result-subtab-head">
-          <div>
-            <p className="kicker">Resultado organizado</p>
-            <strong>Informações separadas por assunto</strong>
-          </div>
+      <section className="result-navigation-shell luxury-panel">
+        <div className="result-navigation-head">
+          <div><p className="kicker">Resultado completo</p><strong>O essencial primeiro; detalhes técnicos ficam separados.</strong></div>
           <span>{result.trainingPointsUsed}/{result.trainingPointsTotal} pts</span>
         </div>
-        <nav className="result-group-tabs" aria-label="Grupos do resultado">
-          {RESULT_GROUPS.map((group) => (
-            <button
-              key={group.id}
-              className={resultGroup === group.id ? 'active' : ''}
-              type="button"
-              onClick={() => {
-                setResultGroup(group.id);
-                setTab(group.tabs[0].value);
-              }}
-            >
-              {group.label}
-            </button>
-          ))}
+
+        <nav className="result-primary-tabs" aria-label="Áreas principais do resultado">
+          {RESULT_PRIMARY_TABS.map((item) => {
+            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'tatica' ? Target : Download;
+            return (
+              <button key={item.id} className={primaryIsActive(item.id) ? 'active' : ''} type="button" onClick={() => openPrimaryResult(item.id)}>
+                <Icon size={18} /><span><strong>{item.label}</strong><small>{item.hint}</small></span>
+              </button>
+            );
+          })}
         </nav>
-        <nav className="elite-tabs result-fixed-tabs" aria-label="Subabas do grupo selecionado">
-          {RESULT_GROUPS.find((group) => group.id === resultGroup)?.tabs.map((item) => (
-            <button key={item.value} className={tab === item.value ? 'active' : ''} type="button" onClick={() => setTab(item.value)}>
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+
+        {(tab === 'treinador' || tab === 'mapa') && (
+          <nav className="result-context-tabs" aria-label="Áreas da tática">
+            <button type="button" className={tab === 'treinador' ? 'active' : ''} onClick={() => setTab('treinador')}>Visão tática</button>
+            <button type="button" className={tab === 'mapa' ? 'active' : ''} onClick={() => setTab('mapa')}>Mapa e posição</button>
+          </nav>
+        )}
+
+        <div className="result-advanced-bar">
+          <div><SlidersHorizontal size={17} /><span><strong>Área avançada</strong><small>Auditoria, treino, dados e ferramentas técnicas.</small></span></div>
+          <button type="button" className={advancedOpen || advancedSelected ? 'active' : ''} onClick={() => setAdvancedOpen((value) => !value)} aria-expanded={advancedOpen}>
+            {advancedOpen ? 'Fechar' : 'Abrir detalhes'} <ChevronDown size={16} />
+          </button>
+        </div>
+
+        {advancedOpen && (
+          <div className="result-advanced-panel">
+            {RESULT_ADVANCED_GROUPS.map((group) => (
+              <section key={group.label}>
+                <strong>{group.label}</strong>
+                <div>{group.tabs.map((item) => <button key={item.value} type="button" className={tab === item.value ? 'active' : ''} onClick={() => setTab(item.value)}>{item.label}</button>)}</div>
+              </section>
+            ))}
+          </div>
+        )}
+      </section>
 
       {tab === 'leitura' && (
         <div className="result-section-grid">
@@ -3639,15 +3555,10 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       )}
 
-      <div className={`result-floating-actions ${actionsOpen ? 'is-open' : ''}`}>
-        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar ficha</button>
-        <button className="copy-floating result-actions-toggle" type="button" onClick={() => setActionsOpen((value) => !value)} aria-expanded={actionsOpen}><SlidersHorizontal size={16} /> {actionsOpen ? 'Fechar' : 'Mais ações'}</button>
-        <div className="result-more-actions">
-          <button className="copy-floating" type="button" onClick={onExportImage}><ImagePlus size={16} /> Imagem</button>
-          <button className="copy-floating" type="button" onClick={onPrintReport}><Download size={16} /> PDF</button>
-          <button className="copy-floating" type="button" onClick={onExportReport}><FileText size={16} /> Relatório</button>
-          <button className="copy-floating" type="button" onClick={() => copyBuildText(result)}><Copy size={16} /> Copiar plano</button>
-        </div>
+      <div className="result-floating-actions result-clean-actions">
+        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar</button>
+        <button className="copy-floating" type="button" onClick={onRecalculate}><RotateCcw size={16} /> Recalcular</button>
+        <button className="copy-floating" type="button" onClick={() => void shareCurrentResult()}><Share2 size={16} /> Compartilhar</button>
       </div>
     </section>
   );
@@ -3713,9 +3624,26 @@ function ReviewPanel({
   const remainingPoints = Math.max(0, typedPoints - usedPoints);
   const budgetPercent = Math.min(100, Math.round((usedPoints / Math.max(1, typedPoints || draft.trainingPointsTotal)) * 100));
   const allRequiredConfirmed = READING_CONFIRMATION_STAGES.filter((stage) => stage.required).every((stage) => readingConfirmations[stage.id]);
+  const identityConfirmed = Boolean(manualFields.playerName.trim() || (card.playerName && card.playerName !== 'Jogador não identificado'));
+  const positionConfirmed = cardPositionOverride !== 'AUTO';
+  const styleConfirmed = playstyleOverride !== 'AUTO' || Boolean(card.playstyle);
+  const pointsConfirmed = typedPoints > 0;
+  const reviewConfirmationCount = [identityConfirmed, positionConfirmed, styleConfirmed, pointsConfirmed].filter(Boolean).length;
+  const reviewProgress = reviewConfirmationCount * 25;
 
   return (
-    <section className="review-panel result-panel">
+    <section className="review-panel result-panel creation-review-panel">
+      <div className="review-workflow-banner luxury-panel">
+        <div><span className="creation-stage-number">4</span><div><p className="kicker">Revisão obrigatória</p><h2>Confirme os dados essenciais</h2><p>Nada será tratado como ficha final até você revisar identidade, posição, estilo e pontos.</p></div></div>
+        <div className="review-progress-summary"><strong>{reviewProgress}%</strong><span>{reviewConfirmationCount}/4 confirmações</span><i><b style={{ width: `${reviewProgress}%` }} /></i></div>
+        <div className="review-essential-checks">
+          <span className={identityConfirmed ? 'confirmed' : ''}>{identityConfirmed ? <CheckCircle2 size={15} /> : '1'} Identidade</span>
+          <span className={positionConfirmed ? 'confirmed' : ''}>{positionConfirmed ? <CheckCircle2 size={15} /> : '2'} Posição</span>
+          <span className={styleConfirmed ? 'confirmed' : ''}>{styleConfirmed ? <CheckCircle2 size={15} /> : '3'} Estilo</span>
+          <span className={pointsConfirmed ? 'confirmed' : ''}>{pointsConfirmed ? <CheckCircle2 size={15} /> : '4'} Pontos</span>
+        </div>
+      </div>
+
       <div className="result-head luxury-panel">
         <div className="premium-card-art compact-art">
           {playerImage && <img src={playerImage} alt={`Imagem de ${card.playerName}`} />}
@@ -3788,32 +3716,50 @@ function ReviewPanel({
       )}
 
       <div className="review-grid">
-        <article className="luxury-panel wide-card">
-          <p className="kicker">Identidade da carta</p>
-          <div className="review-form-grid">
-            <label>
-              <span>Nome do jogador</span>
-              <input value={manualFields.playerName} onChange={(event) => setManualFields((current) => ({ ...current, playerName: event.target.value }))} placeholder={card.playerName} />
-            </label>
+        <article className={`luxury-panel review-step-card ${identityConfirmed ? 'is-confirmed' : ''}`}>
+          <div className="review-step-heading"><span>1</span><div><p className="kicker">Identidade da carta</p><h3>Quem é o jogador?</h3></div>{identityConfirmed && <CheckCircle2 size={19} />}</div>
+          <label className="review-featured-field">
+            <span>Nome do jogador</span>
+            <input value={manualFields.playerName} onChange={(event) => setManualFields((current) => ({ ...current, playerName: event.target.value }))} placeholder={card.playerName} />
+            <small>Confira a grafia para manter o Cofre organizado.</small>
+          </label>
+        </article>
+
+        <article className={`luxury-panel review-step-card ${positionConfirmed ? 'is-confirmed' : ''}`}>
+          <div className="review-step-heading"><span>2</span><div><p className="kicker">Confirmação da posição</p><h3>Origem e função final</h3></div>{positionConfirmed && <CheckCircle2 size={19} />}</div>
+          <div className="review-form-grid review-position-grid">
             <label>
               <span>Posição principal correta</span>
               <select value={cardPositionOverride} onChange={(event) => setCardPositionOverride(event.target.value as PositionCode | 'AUTO')}>
                 {POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
               </select>
+              <small>Posição oficial mostrada na carta.</small>
             </label>
             <label>
-              <span>Estilo de jogo correto</span>
-              <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
-                <option value="AUTO">Automático / não sei</option>
-                {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>Função alvo premium</span>
+              <span>Função alvo da ficha</span>
               <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
                 {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
               </select>
+              <small>Sua escolha é soberana e não será trocada.</small>
             </label>
+          </div>
+        </article>
+
+        <article className={`luxury-panel review-step-card ${styleConfirmed ? 'is-confirmed' : ''}`}>
+          <div className="review-step-heading"><span>3</span><div><p className="kicker">Confirmação do estilo</p><h3>Como a carta se movimenta?</h3></div>{styleConfirmed && <CheckCircle2 size={19} />}</div>
+          <label className="review-featured-field">
+            <span>Estilo de jogo correto</span>
+            <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
+              <option value="AUTO">Automático / não sei</option>
+              {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
+            </select>
+            <small>O estilo altera prioridades, movimentação e habilidades recomendadas.</small>
+          </label>
+        </article>
+
+        <article className={`luxury-panel review-step-card ${pointsConfirmed ? 'is-confirmed' : ''}`}>
+          <div className="review-step-heading"><span>4</span><div><p className="kicker">Definição dos pontos</p><h3>Feche o orçamento exato</h3></div>{pointsConfirmed && <CheckCircle2 size={19} />}</div>
+          <div className="review-form-grid review-points-grid">
             <label>
               <span>Nível máximo</span>
               <input inputMode="numeric" value={manualFields.level} onChange={(event) => setManualFields((current) => ({ ...current, level: event.target.value.replace(/[^0-9]/g, '').slice(0, 2) }))} placeholder={card.level ? String(card.level) : 'Ex.: 32'} />
@@ -3823,9 +3769,10 @@ function ReviewPanel({
               <input inputMode="numeric" value={manualFields.trainingPointsTotal} onChange={(event) => setManualFields((current) => ({ ...current, trainingPointsTotal: event.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))} placeholder={manualFields.level ? String((Number(manualFields.level) - 1) * 2) : String(draft.trainingPointsTotal)} />
             </label>
           </div>
+          <div className="review-budget-inline"><div><span>Distribuição atual</span><strong>{usedPoints}/{typedPoints || draft.trainingPointsTotal} pts</strong></div><i><b style={{ width: `${budgetPercent}%` }} /></i><small>{remainingPoints ? `${remainingPoints} ponto(s) ainda livres` : 'Orçamento fechado ou usando o total detectado'}</small></div>
         </article>
 
-        <article className="luxury-panel wide-card">
+        <article className="luxury-panel wide-card review-optional-card">
           <p className="kicker">Habilidades que o jogador já possui</p>
           <p className="panel-note no-top">Opcional: marque somente as habilidades que já aparecem na carta. Isso serve para o app não recomendar habilidade repetida e escolher as 5 melhores habilidades que ainda faltam. Se não souber, pode finalizar sem marcar nada.</p>
           <div className="skill-picker-grid">
@@ -3842,7 +3789,7 @@ function ReviewPanel({
           </div>
         </article>
 
-        <article className="luxury-panel wide-card">
+        <article className="luxury-panel wide-card review-optional-card">
           <p className="kicker">Atributos revisáveis</p>
           <div className="attribute-editor-grid">
             {ATTRIBUTE_INPUTS.map((item) => (
@@ -3860,7 +3807,7 @@ function ReviewPanel({
           <p className="panel-note">Preencha os valores que você deseja usar na ficha. Os demais dados seguem o motor local, banco de cartas e regras premium de desempenho em campo.</p>
         </article>
 
-        <article className="luxury-panel wide-card">
+        <article className="luxury-panel wide-card review-optional-card">
           <p className="kicker">Funções separadas</p>
           <div className="position-list">
             {draft.permittedPositions.map((item) => (
@@ -3887,9 +3834,12 @@ function ReviewPanel({
         </article>
       </div>
 
-      <div className="review-actions">
-        <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular com meus pontos</button>
-        <button type="button" className="elite-button" onClick={onConfirm} disabled={premiumReadings.length > 0 && !allRequiredConfirmed}><CheckCircle2 size={18} /> {premiumReadings.length > 0 && !allRequiredConfirmed ? 'Confirme as etapas obrigatórias' : 'Finalizar plano Elite'}</button>
+      <div className="review-finalize-shell luxury-panel">
+        <div className="review-finalize-copy"><span className="creation-stage-number">5</span><div><p className="kicker">Gerar ficha</p><h3>{reviewProgress === 100 ? 'Dados essenciais confirmados' : 'Revise os itens pendentes'}</h3><p>{reviewProgress === 100 ? 'Você pode recalcular ou gerar o plano final com os dados confirmados.' : 'O aplicativo permite continuar, mas os itens não confirmados podem reduzir a precisão.'}</p></div></div>
+        <div className="review-actions">
+          <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular prévia</button>
+          <button type="button" className="elite-button" onClick={onConfirm} disabled={premiumReadings.length > 0 && !allRequiredConfirmed}><CheckCircle2 size={18} /> {premiumReadings.length > 0 && !allRequiredConfirmed ? 'Confirme as etapas obrigatórias' : 'Gerar ficha final'}</button>
+        </div>
       </div>
     </section>
   );
@@ -3942,6 +3892,10 @@ export function CardVisionApp() {
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('emerald');
   const [advancedMode, setAdvancedMode] = useState(true);
+  const [textScale, setTextScale] = useState<TextScale>('standard');
+  const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
+  const [motionPreference, setMotionPreference] = useState<MotionPreference>('system');
+  const [highContrast, setHighContrast] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [mainSection, setMainSection] = useState<MainSection>('inicio');
@@ -4001,11 +3955,11 @@ export function CardVisionApp() {
   const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
-    settings: { appTheme, accentTheme, advancedMode },
+    settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast },
     calibration: { ocrZones },
     folders: vaultFolders,
     plans: {},
-  }), [history, appTheme, accentTheme, advancedMode, ocrZones, vaultFolders]);
+  }), [history, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, ocrZones, vaultFolders]);
   const healthSummary = useMemo(() => {
     const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
     return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
@@ -4013,10 +3967,24 @@ export function CardVisionApp() {
   const availablePlaystyles = useMemo(() => Array.from(new Set(history.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const availableSkills = useMemo(() => Array.from(new Set(history.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const playerComparison = useMemo(() => comparePlayers(history.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), [history, comparePlayerIds, comparePosition]);
+  const activeVaultFilterCount = useMemo(() => [
+    Boolean(historySearch.trim()),
+    historyFilter !== 'ALL',
+    vaultFilters.folderId !== 'all',
+    vaultFilters.position !== 'ALL',
+    Boolean(vaultFilters.playstyle),
+    Boolean(vaultFilters.skill),
+    vaultFilters.minConfidence > 0,
+    vaultFilters.maxConfidence < 100,
+    vaultFilters.minEfficiency > 0,
+    vaultFilters.favoritesOnly,
+    vaultFilters.pendingOnly,
+    vaultFilters.reviewOnly
+  ].filter(Boolean).length, [historySearch, historyFilter, vaultFilters]);
   const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
     { id: 'inicio', label: 'Início', hint: 'Dashboard', icon: 'dashboard' },
-    { id: 'leitor', label: 'Leitor', hint: 'Print da carta', icon: 'scan' },
-    { id: 'manual', label: 'Manual', hint: 'Precisão máxima', icon: 'manual' },
+    { id: 'leitor', label: 'Criar Ficha', hint: 'Leitor por print', icon: 'scan' },
+    { id: 'manual', label: 'Criar Ficha', hint: 'Manual Pro', icon: 'manual' },
     { id: 'resultado', label: 'Resultado', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
     { id: 'cofre', label: 'Cofre', hint: `${history.length} salvos`, icon: 'vault' },
     { id: 'time', label: 'Meu Time', hint: 'Mapa tático', icon: 'team' },
@@ -4042,7 +4010,7 @@ export function CardVisionApp() {
 
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setShowSplash(false), 1150);
+    const timer = window.setTimeout(() => setShowSplash(false), 1350);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -4070,10 +4038,14 @@ export function CardVisionApp() {
       });
 
     try {
-      const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean };
+      const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean };
       if (ui.appTheme === 'light' || ui.appTheme === 'dark') setAppTheme(ui.appTheme);
       if (['emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
+      if (['compact', 'standard', 'large'].includes(String(ui.textScale))) setTextScale(ui.textScale as TextScale);
+      if (['compact', 'comfortable'].includes(String(ui.densityMode))) setDensityMode(ui.densityMode as DensityMode);
+      if (['system', 'reduced', 'full'].includes(String(ui.motionPreference))) setMotionPreference(ui.motionPreference as MotionPreference);
+      if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -4157,11 +4129,11 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode }));
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }));
     } catch {
       // Preferências visuais são opcionais.
     }
-  }, [appTheme, accentTheme, advancedMode]);
+  }, [appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast]);
 
   useEffect(() => {
     try {
@@ -4532,7 +4504,7 @@ export function CardVisionApp() {
     return {
       history,
       settings: {
-        ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode }) || {}) as Record<string, unknown>),
+        ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }) || {}) as Record<string, unknown>),
         updateManifestUrl: localStorage.getItem('buildmaster_update_manifest_url') || localStorage.getItem('buildmaster_update_manifest_url_v26_70') || '',
         autoUpdateCheck: (localStorage.getItem('buildmaster_auto_update_check') ?? localStorage.getItem('buildmaster_auto_update_check_v26_70')) !== '0'
       },
@@ -4618,11 +4590,15 @@ export function CardVisionApp() {
         await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
       }
       if (restoreSections.settings && sections.settings && typeof sections.settings === 'object') {
-        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; updateManifestUrl?: string; autoUpdateCheck?: boolean };
+        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; updateManifestUrl?: string; autoUpdateCheck?: boolean };
         writeStorage('buildmaster_ui_prefs_v24_24', ui);
         if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
         if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
         if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
+        if (ui.textScale && ['compact', 'standard', 'large'].includes(ui.textScale)) setTextScale(ui.textScale);
+        if (ui.densityMode && ['compact', 'comfortable'].includes(ui.densityMode)) setDensityMode(ui.densityMode);
+        if (ui.motionPreference && ['system', 'reduced', 'full'].includes(ui.motionPreference)) setMotionPreference(ui.motionPreference);
+        if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
         if (typeof ui.updateManifestUrl === 'string') localStorage.setItem('buildmaster_update_manifest_url', ui.updateManifestUrl);
         if (typeof ui.autoUpdateCheck === 'boolean') localStorage.setItem('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
       }
@@ -5186,35 +5162,73 @@ ${variantText}`);
   }
 
   const currentPanelResult = result ?? draftResult;
+  const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
+  const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile) : manualMode;
+  const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
+  const creationStage = result ? 5 : draftResult ? 4 : creationSourceReady && creationConfigurationReady ? 3 : creationSourceReady ? 2 : 1;
+  const creationProgress = [12, 34, 58, 82, 100][creationStage - 1];
+  const creationSteps = [
+    { number: 1, label: 'Método', detail: mainSection === 'leitor' ? 'Leitor por print' : 'Manual Pro' },
+    { number: 2, label: 'Entrada', detail: mainSection === 'leitor' ? (selectedFile?.name || 'Importar carta') : 'Dados da carta' },
+    { number: 3, label: 'Configuração', detail: 'Posição, estilo e pontos' },
+    { number: 4, label: 'Revisão', detail: 'Confirmar informações' },
+    { number: 5, label: 'Ficha', detail: 'Gerar plano final' }
+  ];
+  const recentVaultEntry = useMemo(() => {
+    return [...history].sort((a, b) => {
+      const aTime = Date.parse(String(a.updatedAt || a.savedAt)) || 0;
+      const bTime = Date.parse(String(b.updatedAt || b.savedAt)) || 0;
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [history]);
+  const homeAttentionTotal = smartHome.needsReview + smartHome.lowConfidence + smartHome.incomplete;
+  const vaultReadiness = dashboardStats.total ? Math.round((dashboardStats.complete / dashboardStats.total) * 100) : 0;
+  const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
 
   return (
-    <main className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+    <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+      <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       <UpdateAutoChecker />
       {showSplash && (
         <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
-          <div className="splash-orbit"><Sparkles size={38} /></div>
-          <strong>BuildMaster Elite</strong>
-          <span>Preparando ambiente tático premium</span>
-          <i><b /></i>
+          <div className="splash-premium-shell">
+            <div className="splash-brand-row">
+              <div className="splash-orbit"><Sparkles size={34} /></div>
+              <div><span>BuildMaster</span><strong>Elite Tático</strong></div>
+            </div>
+            <div className="splash-secure-badge"><ShieldCheck size={15} /> Ambiente protegido</div>
+            <h2>Preparando sua central tática</h2>
+            <p>Carregando fichas, Cofre e preferências da sua conta.</p>
+            <div className="splash-module-row" aria-hidden="true"><span>Conta</span><span>Fichas</span><span>Cofre</span><span>Elenco</span></div>
+            <i className="splash-progress"><b /></i>
+            <small>Precisão em campo. Organização fora dele.</small>
+          </div>
         </div>
       )}
 
-      <header className="app-topbar luxury-panel">
-        <div className="brand-lockup">
+      <header className="app-topbar app-command-bar luxury-panel">
+        <button type="button" className="brand-lockup brand-home-button" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
             <span>Elite Tático v26.73</span>
           </div>
-        </div>
-        <div className="topbar-current-page">
-          <span>{currentNavigation.label}</span>
-          <strong>{currentNavigation.hint}</strong>
-        </div>
-        <div className="topbar-actions">
-          <button type="button" onClick={resetAnalysis}><RotateCcw size={16} /> Nova ficha</button>
-          <button type="button" onClick={openCofreDeJogadores}><History size={16} /> Cofre</button>
-          <button type="button" className="account-topbar-chip" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }}><Users size={16} /> {account?.profile.username || 'Conta'}</button><button type="button" onClick={logout}><LogOut size={16} /> Sair</button>
+        </button>
+
+        <nav className="desktop-primary-nav" aria-label="Navegação principal">
+          <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} onClick={() => openMainSection('inicio')}><LayoutDashboard size={16} /><span>Início</span></button>
+          <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={16} /><span>Ficha</span></button>
+          <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} onClick={openCofreDeJogadores}><History size={16} /><span>Cofre</span></button>
+          <button type="button" className={mainSection === 'time' ? 'active-section' : ''} onClick={() => openMainSection('time')}><Target size={16} /><span>Meu Time</span></button>
+        </nav>
+
+        <div className="topbar-actions topbar-premium-actions">
+          <button type="button" className="topbar-create-action" onClick={() => setMobileLauncher('create')}><Sparkles size={16} /><span>Criar</span></button>
+          <button type="button" className="topbar-more-action" onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={16} /><span>Mais</span></button>
+          <button type="button" className="topbar-account-avatar" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
+            <b>{accountInitial}</b>
+            <span><strong>{account?.profile.username || 'Conta'}</strong><small>{account?.profile.role === 'admin' ? 'Administrador' : 'Licença ativa'}</small></span>
+          </button>
         </div>
       </header>
 
@@ -5224,34 +5238,9 @@ ${variantText}`);
         </button>
       )}
 
-      <nav className="main-section-tabs luxury-panel" aria-label="Navegação principal do BuildMaster">
-        {mainNavigation.map((item) => {
-          const Icon = item.icon === 'dashboard' ? LayoutDashboard
-            : item.icon === 'scan' ? ScanText
-            : item.icon === 'manual' ? ShieldCheck
-            : item.icon === 'result' ? Trophy
-            : item.icon === 'vault' ? History
-            : item.icon === 'team' ? Target
-            : SlidersHorizontal;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={mainSection === item.id ? 'active-section' : ''}
-              disabled={Boolean(item.disabled)}
-              onClick={() => openMainSection(item.id)}
-            >
-              <Icon size={18} />
-              <strong>{item.label}</strong>
-              <span>{item.hint}</span>
-            </button>
-          );
-        })}
-      </nav>
-
       <nav className="mobile-bottom-nav luxury-panel" aria-label="Menu inferior">
         <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} onClick={() => openMainSection('inicio')}><LayoutDashboard size={19} /><span>Início</span></button>
-        <button type="button" className={mainSection === 'leitor' || mainSection === 'manual' ? 'active-section' : ''} onClick={() => setMobileLauncher('create')}><ScanText size={19} /><span>Criar</span></button>
+        <button type="button" className={mainSection === 'leitor' || mainSection === 'manual' ? 'active-section' : ''} onClick={() => setMobileLauncher('create')}><span className="mobile-create-icon"><Sparkles size={20} /></span><span>Criar</span></button>
         <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={19} /><span>Ficha</span></button>
         <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} onClick={openCofreDeJogadores}><History size={19} /><span>Cofre</span></button>
         <button type="button" className={mainSection === 'time' || mainSection === 'ajustes' ? 'active-section' : ''} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={19} /><span>Mais</span></button>
@@ -5259,25 +5248,40 @@ ${variantText}`);
 
       {mobileLauncher && (
         <div className="mobile-action-sheet-backdrop" role="presentation" onClick={() => setMobileLauncher(null)}>
-          <section className="mobile-action-sheet luxury-panel" role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
+          <section className={`mobile-action-sheet premium-launcher-sheet luxury-panel launcher-${mobileLauncher}`} role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
             <div className="mobile-sheet-handle" />
-            <div className="section-title-row">
-              <div><p className="kicker">Navegação rápida</p><h3>{mobileLauncher === 'create' ? 'Como deseja criar a ficha?' : 'Outras áreas do aplicativo'}</h3></div>
-              <button type="button" onClick={() => setMobileLauncher(null)}>Fechar</button>
+            <div className="launcher-sheet-heading">
+              <div>
+                <p className="kicker">{mobileLauncher === 'create' ? 'Nova análise' : 'Central do aplicativo'}</p>
+                <h3>{mobileLauncher === 'create' ? 'Como deseja criar a ficha?' : 'Mais áreas e configurações'}</h3>
+                <span>{mobileLauncher === 'create' ? 'Escolha o fluxo ideal para a carta que será analisada.' : `Conta conectada: ${account?.profile.username || 'usuário'}`}</span>
+              </div>
+              <button type="button" className="launcher-close-button" onClick={() => setMobileLauncher(null)}>Fechar</button>
             </div>
-            <div className="mobile-sheet-grid">
-              {mobileLauncher === 'create' ? (
-                <>
-                  <button type="button" onClick={() => openMainSection('leitor')}><ScanText size={23} /><strong>Leitor por print</strong><span>Importar a carta e revisar a leitura.</span></button>
-                  <button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={23} /><strong>Manual Pro</strong><span>Preencher os dados com máxima precisão.</span></button>
-                </>
-              ) : (
-                <>
-                  <button type="button" onClick={() => openMainSection('time')}><Target size={23} /><strong>Meu Time</strong><span>Elenco, setores, banco e planos.</span></button>
-                  <button type="button" onClick={() => openMainSection('ajustes')}><SlidersHorizontal size={23} /><strong>Ajustes</strong><span>Aparência, delay, backup e saúde.</span></button>
-                </>
-              )}
-            </div>
+
+            {mobileLauncher === 'create' ? (
+              <div className="launcher-action-grid launcher-create-grid">
+                <button type="button" className="launcher-featured-action" onClick={() => openMainSection('leitor')}>
+                  <span><ScanText size={25} /></span><div><strong>Leitor por print</strong><small>Importe a carta, confira a leitura e gere a ficha.</small></div><em>Recomendado</em>
+                </button>
+                <button type="button" onClick={() => openMainSection('manual')}>
+                  <span><ShieldCheck size={25} /></span><div><strong>Manual Pro</strong><small>Preenchimento controlado para máxima precisão.</small></div>
+                </button>
+                {currentPanelResult && (
+                  <button type="button" onClick={() => openMainSection('resultado')}>
+                    <span><Trophy size={25} /></span><div><strong>Continuar ficha atual</strong><small>{currentPanelResult.parsed.playerName || 'Carta em análise'} • {currentPanelResult.trainingPointsUsed}/{currentPanelResult.trainingPointsTotal} pts</small></div>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="launcher-action-grid launcher-more-grid">
+                <button type="button" onClick={() => openMainSection('time')}><span><Target size={23} /></span><div><strong>Meu Time</strong><small>Elenco, setores, banco e planos.</small></div></button>
+                <button type="button" onClick={() => openMainSection('ajustes')}><span><SlidersHorizontal size={23} /></span><div><strong>Ajustes</strong><small>Aparência, desempenho e segurança.</small></div></button>
+                <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); setMobileLauncher(null); }}><span><Users size={23} /></span><div><strong>Conta e usuários</strong><small>Licença atual e administração de acessos.</small></div></button>
+                <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); setMobileLauncher(null); }}><span><RotateCcw size={23} /></span><div><strong>Atualizações</strong><small>Backup, versão instalada e novo APK.</small></div></button>
+                <button type="button" className="launcher-logout-action" onClick={logout}><span><LogOut size={23} /></span><div><strong>Sair da conta</strong><small>Encerra a sessão neste aparelho.</small></div></button>
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -5299,61 +5303,115 @@ ${variantText}`);
       )}
 
       {mainSection === 'inicio' && (
-      <>
-      <section className="hero-redesign">
-        <div>
-          <p className="kicker"><Sparkles size={16} /> BuildMaster Elite Tático</p>
-          <h1>Ficha, elenco e tática em um fluxo simples.</h1>
-          <p>Escolha uma área, conclua uma etapa por vez e mantenha cada jogador organizado no Cofre.</p>
-          <div className="hero-primary-actions">
-            <button type="button" onClick={() => openMainSection('leitor')}><ScanText size={19} /> Ler uma carta</button>
-            <button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={19} /> Preencher manualmente</button>
+      <div className="premium-home-shell">
+        <section className="home-command-center luxury-panel">
+          <div className="home-command-copy">
+            <div className="home-account-status"><span className={account?.offline ? 'offline' : 'online'} /><strong>{account?.offline ? 'Modo offline temporário' : 'Conta e licença verificadas'}</strong></div>
+            <p className="kicker"><Sparkles size={15} /> Central BuildMaster</p>
+            <h1>Seu elenco começa com uma ficha bem construída.</h1>
+            <p>Crie, revise e organize jogadores com um fluxo direto. As ferramentas avançadas ficam disponíveis sem poluir o que é essencial.</p>
+            <div className="home-primary-actions">
+              <button type="button" className="home-create-primary" onClick={() => setMobileLauncher('create')}><Sparkles size={19} /><span><strong>Criar nova ficha</strong><small>Print ou Manual Pro</small></span></button>
+              <button type="button" className="home-open-vault" onClick={openCofreDeJogadores}><History size={19} /><span><strong>Abrir Cofre</strong><small>{dashboardStats.total} jogador(es)</small></span></button>
+            </div>
+            <div className="home-account-meta">
+              <span><ShieldCheck size={14} /> {account?.profile.role === 'admin' ? 'Acesso administrador' : 'Acesso licenciado'}</span>
+              <span><CheckCircle2 size={14} /> {dashboardStats.complete} ficha(s) concluída(s)</span>
+              <span><Target size={14} /> {dashboardStats.positions} posição(ões) coberta(s)</span>
+            </div>
           </div>
-        </div>
-        <div className="orb-ball" aria-hidden="true" />
-      </section>
 
-      <section className="elite-dashboard luxury-panel">
-        <div className="dashboard-title">
-          <p className="kicker"><LayoutDashboard size={15} /> Dashboard premium</p>
-          <h2>Controle do elenco, precisão da ficha e progresso das habilidades</h2>
-        </div>
-        <div className="dashboard-stat-grid">
-          <button type="button" onClick={openCofreDeJogadores}><strong>{dashboardStats.total}</strong><span>Jogadores salvos</span></button>
-          <button type="button" onClick={() => { setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{dashboardStats.pending}</strong><span>Com pendências</span></button>
-          <button type="button" onClick={() => { setHistoryFilter('COMPLETE'); setLibraryOpen(true); }}><strong>{dashboardStats.complete}</strong><span>Completos</span></button>
-          <button type="button" onClick={() => { setHistoryFilter('FAVORITES'); setLibraryOpen(true); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
-          <button type="button" onClick={() => setTutorialOpen((value) => !value)}><strong>{dashboardStats.positions}</strong><span>Posições cobertas</span></button>
-        </div>
-        {tutorialOpen && (
-          <div className="tutorial-guide">
-            <span>1. Envie o print ou abra a Central Manual.</span>
-            <span>2. Confirme posição, estilo, nível e pontos antes de finalizar.</span>
-            <span>3. Marque habilidades já existentes para evitar repetição.</span>
-            <span>4. Salve no Cofre e acompanhe as pendências.</span>
-            <span>5. Use o Mapa Total para descobrir buracos do time.</span>
+          <aside className="home-next-step-card">
+            <div className="home-next-step-icon"><BrainCircuit size={24} /></div>
+            <span>Próxima ação sugerida</span>
+            <strong>{smartHome.nextAction}</strong>
+            <div className="home-next-step-footer"><b>{homeAttentionTotal}</b><small>ponto(s) de atenção no Cofre</small></div>
+          </aside>
+        </section>
+
+        <section className="home-quick-section">
+          <div className="home-section-heading"><div><p className="kicker">Acesso rápido</p><h2>Continue de onde precisa</h2></div><span>Fluxo simplificado</span></div>
+          <div className="home-quick-grid">
+            <button type="button" className="quick-action-create" onClick={() => setMobileLauncher('create')}><span><Sparkles size={22} /></span><div><strong>Nova ficha</strong><small>Começar análise</small></div></button>
+            <button type="button" disabled={!currentPanelResult} onClick={() => openMainSection('resultado')}><span><Trophy size={22} /></span><div><strong>Ficha atual</strong><small>{currentPanelResult?.parsed.playerName || 'Nenhuma aberta'}</small></div></button>
+            <button type="button" onClick={openCofreDeJogadores}><span><History size={22} /></span><div><strong>Cofre</strong><small>Buscar e organizar</small></div></button>
+            <button type="button" onClick={() => openMainSection('time')}><span><Target size={22} /></span><div><strong>Meu Time</strong><small>Elenco e tática</small></div></button>
+            <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('seguranca'); }}><span><ShieldCheck size={22} /></span><div><strong>Backup</strong><small>Proteger dados</small></div></button>
+            <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Mais</strong><small>Ajustes e conta</small></div></button>
           </div>
-        )}
-      </section>
+        </section>
 
-      <section className="smart-home-panel luxury-panel">
-        <div className="section-title-row"><div><p className="kicker"><BrainCircuit size={15} /> v25.40 • Tela inicial inteligente</p><h2>O que precisa da sua atenção agora</h2></div><span>{smartHome.total} jogador(es)</span></div>
-        <div className="smart-home-grid">
-          <button type="button" onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, reviewOnly: true })); setLibraryOpen(true); }}><strong>{smartHome.needsReview}</strong><span>Para revisar</span></button>
-          <button type="button" onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); setLibraryOpen(true); }}><strong>{smartHome.lowConfidence}</strong><span>Confiança baixa</span></button>
-          <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{smartHome.incomplete}</strong><span>Pendências</span></button>
-          <button type="button" onClick={() => smartHome.recentPlayer && openCofreDeJogadores()}><strong>{smartHome.recentPlayer ?? '—'}</strong><span>Último jogador</span></button>
-        </div>
-        <div className="smart-next-action"><Target size={18} /><div><strong>Próxima ação sugerida</strong><span>{smartHome.nextAction}</span></div></div>
-        {smartHome.alerts.length > 0 && <details className="smart-alert-details"><summary>Ver {smartHome.alerts.length} alerta(s) do Cofre</summary><div className="smart-alert-list">{smartHome.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div></details>}
-      </section>
+        <section className="home-overview-grid">
+          <article className="home-vault-summary luxury-panel">
+            <div className="home-card-heading"><div><p className="kicker"><History size={14} /> Resumo do Cofre</p><h2>Seu acervo de jogadores</h2></div><button type="button" onClick={openCofreDeJogadores}>Ver tudo</button></div>
+            <div className="home-vault-metrics">
+              <button type="button" onClick={openCofreDeJogadores}><strong>{dashboardStats.total}</strong><span>Salvos</span></button>
+              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('COMPLETE'); setLibraryOpen(true); }}><strong>{dashboardStats.complete}</strong><span>Completos</span></button>
+              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span></button>
+              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('FAVORITES'); setLibraryOpen(true); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
+            </div>
+            <div className="home-vault-progress"><div><span>Prontidão do Cofre</span><strong>{vaultReadiness}%</strong></div><i><b style={{ width: `${vaultReadiness}%` }} /></i><small>{dashboardStats.complete} de {dashboardStats.total || 0} fichas marcadas como completas.</small></div>
+          </article>
 
+          <article className="home-recent-player luxury-panel">
+            <div className="home-card-heading"><div><p className="kicker"><Clock3 size={14} /> Último jogador analisado</p><h2>{recentVaultEntry ? 'Continue a análise mais recente' : 'Nenhuma ficha salva'}</h2></div></div>
+            {recentVaultEntry ? (
+              <button type="button" className="recent-player-content" onClick={() => restoreHistory(recentVaultEntry)}>
+                <div className="recent-player-image">{recentVaultEntry.playerImage || recentVaultEntry.fullPreview ? <img src={recentVaultEntry.playerImage || recentVaultEntry.fullPreview || ''} alt={`Carta de ${recentVaultEntry.result.parsed.playerName}`} /> : <Trophy size={27} />}</div>
+                <div><strong>{recentVaultEntry.result.parsed.playerName}</strong><span>{recentVaultEntry.result.bestPosition.label} • {recentVaultEntry.result.parsed.playstyle || 'Estilo não informado'}</span><small>Confiança {recentVaultEntry.result.parsed.confidence ?? 0}% • {recentVaultEntry.result.trainingPointsUsed}/{recentVaultEntry.result.trainingPointsTotal} pts</small></div>
+                <em>Abrir</em>
+              </button>
+            ) : (
+              <div className="recent-player-empty"><Trophy size={25} /><span>Crie sua primeira ficha para acompanhar o último jogador aqui.</span><button type="button" onClick={() => setMobileLauncher('create')}>Criar ficha</button></div>
+            )}
+          </article>
+        </section>
 
-      </>
+        <section className="home-alert-center luxury-panel">
+          <div className="home-card-heading"><div><p className="kicker"><ShieldCheck size={14} /> Alertas importantes</p><h2>{homeAttentionTotal ? 'O que merece sua atenção' : 'Tudo organizado por enquanto'}</h2></div><span className={homeAttentionTotal ? 'attention' : 'clear'}>{homeAttentionTotal ? `${homeAttentionTotal} alerta(s)` : 'Sem alertas'}</span></div>
+          {homeAttentionTotal ? (
+            <div className="home-alert-grid">
+              <button type="button" className={smartHome.needsReview ? 'has-alert' : ''} onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, reviewOnly: true })); setLibraryOpen(true); }}><span><ShieldCheck size={19} /></span><div><strong>{smartHome.needsReview}</strong><small>Para revisar</small></div></button>
+              <button type="button" className={smartHome.lowConfidence ? 'has-warning' : ''} onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); setLibraryOpen(true); }}><span><BrainCircuit size={19} /></span><div><strong>{smartHome.lowConfidence}</strong><small>Confiança baixa</small></div></button>
+              <button type="button" className={smartHome.incomplete ? 'has-pending' : ''} onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><span><Clock3 size={19} /></span><div><strong>{smartHome.incomplete}</strong><small>Pendências</small></div></button>
+            </div>
+          ) : (
+            <div className="home-alert-clear"><CheckCircle2 size={22} /><div><strong>Cofre em ordem</strong><span>Não há fichas marcadas para revisão, com baixa confiança ou pendências.</span></div></div>
+          )}
+          {smartHome.alerts.length > 0 && <div className="home-alert-notes">{smartHome.alerts.slice(0, 3).map((alert) => <span key={alert}>{alert}</span>)}</div>}
+        </section>
+      </div>
       )}
 
       {mainSection !== 'inicio' && (
-      <section className="workspace-grid">
+      <section className={`workspace-grid ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
+        {isCreationSection && (
+          <section className="creation-hub luxury-panel">
+            <div className="creation-hub-copy">
+              <p className="kicker"><Sparkles size={15} /> Criar Ficha</p>
+              <h1>Uma etapa por vez, sem misturar informações.</h1>
+              <p>Escolha o método, informe os dados essenciais, revise posição, estilo e pontos e só então gere a ficha final.</p>
+            </div>
+            <div className="creation-mode-selector" role="tablist" aria-label="Método de criação da ficha">
+              <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
+                <span><ScanText size={22} /></span><div><strong>Leitor por print</strong><small>Importe a carta e revise a leitura.</small></div>{mainSection === 'leitor' && <CheckCircle2 size={18} />}
+              </button>
+              <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
+                <span><ShieldCheck size={22} /></span><div><strong>Manual Pro</strong><small>Controle total dos dados e pontos.</small></div>{mainSection === 'manual' && <CheckCircle2 size={18} />}
+              </button>
+            </div>
+            <div className="creation-progress-shell" aria-label={`Progresso da criação: ${creationProgress}%`}>
+              <div className="creation-progress-head"><span>Progresso da ficha</span><strong>{creationProgress}%</strong></div>
+              <i className="creation-progress-track"><b style={{ width: `${creationProgress}%` }} /></i>
+              <div className="creation-stepper">
+                {creationSteps.map((step) => {
+                  const state = step.number < creationStage ? 'done' : step.number === creationStage ? 'active' : 'pending';
+                  return <div key={step.number} className={`creation-step ${state}`}><span>{state === 'done' ? <CheckCircle2 size={16} /> : step.number}</span><div><strong>{step.label}</strong><small>{step.detail}</small></div></div>;
+                })}
+              </div>
+            </div>
+          </section>
+        )}
         {mainSection !== 'resultado' && (
         <aside className={`control-panel luxury-panel panel-${mainSection}`}>
           <div className="panel-heading">
@@ -5365,30 +5423,38 @@ ${variantText}`);
           </div>
 
           {mainSection === 'leitor' && (<>
-          <div className="upload-box premium-upload-box">
-            {preview ? (
-              <img src={preview} alt="Print selecionado da carta" />
-            ) : (
-              <div>
-                <UploadCloud size={34} />
-                <strong>Enviar print da carta</strong>
-                <span>Use print completo, sem corte, com nome, posição, estilo, grade e atributos visíveis.</span>
-              </div>
-            )}
-          </div>
+          <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
+            <div className="creation-source-heading">
+              <span className="creation-stage-number">2</span>
+              <div><p className="kicker">Entrada da carta</p><h3>{preview ? 'Print pronto para leitura' : 'Importe um print completo'}</h3><small>{preview ? selectedFile?.name || fileName || 'Imagem selecionada' : 'A imagem fica no aparelho e será revisada antes da ficha final.'}</small></div>
+              {preview && <span className="creation-ready-badge"><CheckCircle2 size={15} /> Pronto</span>}
+            </div>
+            <div className="upload-box premium-upload-box creation-upload-box">
+              {preview ? (
+                <figure><img src={preview} alt="Print selecionado da carta" /><figcaption><span>Imagem selecionada</span><strong>{qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'}</strong></figcaption></figure>
+              ) : (
+                <div className="creation-upload-empty">
+                  <span className="upload-orbit"><UploadCloud size={34} /></span>
+                  <strong>Escolha a carta abaixo</strong>
+                  <span>Use um print sem cortes, com nome, posição, estilo, nível e atributos visíveis.</span>
+                  <div className="upload-requirements"><em>Print completo</em><em>Boa nitidez</em><em>Sem zoom excessivo</em></div>
+                </div>
+              )}
+            </div>
 
-          <div className="upload-buttons premium-upload-actions">
-            <label>
-              <ImagePlus size={17} /> Importar print
-              <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
-            </label>
-            <label>
-              <Camera size={17} /> Câmera
-              <input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
-            </label>
-          </div>
+            <div className="upload-buttons premium-upload-actions creation-upload-actions">
+              <label className="primary-upload-action">
+                <ImagePlus size={18} /><span><strong>{preview ? 'Trocar imagem' : 'Escolher da galeria'}</strong><small>PNG, JPG ou captura de tela</small></span>
+                <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
+              </label>
+              <label>
+                <Camera size={18} /><span><strong>Usar câmera</strong><small>Fotografar agora</small></span>
+                <input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
+              </label>
+            </div>
+          </section>
 
-          <div className="vision-toolbar">
+          <div className="vision-toolbar creation-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={analyzeSelectedImage} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
               {loading ? 'Lendo carta...' : 'Executar Leitor Elite'}
@@ -5472,8 +5538,17 @@ ${variantText}`);
           )}
           </>)}
 
+          {mainSection === 'manual' && (
+            <section className="manual-pro-welcome">
+              <div className="manual-pro-welcome-icon"><ShieldCheck size={26} /></div>
+              <div><p className="kicker">Entrada controlada</p><h3>Manual Pro ativado</h3><p>Preencha somente os dados que você conhece. A posição escolhida continua soberana e os pontos informados serão respeitados pelo motor.</p></div>
+              <div className="manual-pro-checklist"><span><CheckCircle2 size={15} /> Sem OCR</span><span><CheckCircle2 size={15} /> Sem alterar posição</span><span><CheckCircle2 size={15} /> Pontos exatos</span></div>
+            </section>
+          )}
+
           {(mainSection === 'leitor' || mainSection === 'manual' || mainSection === 'time') && (
-          <div className="select-stack">
+          <div className={isCreationSection ? 'select-stack creation-config-stack' : 'select-stack'}>
+            {isCreationSection && <div className="creation-config-heading"><span className="creation-stage-number">3</span><div><p className="kicker">Configuração da ficha</p><h3>Defina objetivo, posição, estilo e contexto tático</h3><small>Os dados essenciais serão confirmados novamente antes de finalizar.</small></div></div>}
             {mainSection !== 'time' && (
             <label>
               <span>Perfil de performance</span>
@@ -5604,14 +5679,12 @@ ${variantText}`);
             {loading ? 'Processando ficha...' : result ? 'Reabrir auditoria Elite' : 'Gerar prévia Elite'}
           </button>
 
-          <div className="flow-steps">
-            <span className={selectedFile || manualMode ? 'done' : ''}>1. Print ou manual</span>
-            <span className={draftResult || result ? 'done' : (manualMode || selectedFile) ? 'active' : ''}>2. Auditoria Elite</span>
-            <span className={draftResult ? 'active' : result ? 'done' : ''}>3. Conferência</span>
-            <span className={result ? 'done' : ''}>4. Plano final</span>
+          <div className="creation-next-step-card">
+            <div><span>Próxima etapa</span><strong>{draftResult ? 'Revise e confirme os dados' : mainSection === 'leitor' && !selectedFile ? 'Importe o print da carta' : 'Gerar a prévia para revisão'}</strong><small>{draftResult ? 'Confira posição, estilo e pontos no painel de revisão.' : 'Nada será salvo como ficha final antes da sua confirmação.'}</small></div>
+            <span className="creation-next-progress">{creationProgress}%</span>
           </div>
 
-          <div className="status-card">
+          <div className="status-card creation-status-card" role="status" aria-live="polite">
             <ShieldCheck size={18} />
             <p>{status}</p>
           </div>
@@ -5626,234 +5699,381 @@ ${variantText}`);
 
           {mainSection === 'cofre' && (
           <div className="cofre-section cofre-premium-layout">
-            <section className="cofre-summary-card luxury-panel">
-              <div>
+            <section className="cofre-summary-card vault-catalog-hero luxury-panel">
+              <div className="vault-hero-copy">
                 <p className="kicker"><History size={14} /> Cofre de Jogadores</p>
-                <h2>{history.length ? `${history.length} jogador(es) organizados` : 'Seu Cofre está vazio'}</h2>
-                <span>{history.length ? 'Pesquise, organize, compare ou faça backup sem misturar todas as ferramentas na mesma tela.' : 'Finalize uma ficha para começar seu elenco.'}</span>
+                <h2>{history.length ? 'Seu elenco, organizado como catálogo' : 'Seu catálogo começa com a primeira ficha'}</h2>
+                <span>{history.length ? 'Encontre qualquer jogador, acompanhe pendências, compare opções e proteja tudo em um só lugar.' : 'Crie uma ficha pelo Leitor ou Manual Pro e ela aparecerá aqui automaticamente.'}</span>
+                <div className="vault-readiness-line">
+                  <div><strong>{vaultReadiness}%</strong><span>prontidão do Cofre</span></div>
+                  <i><b style={{ width: `${vaultReadiness}%` }} /></i>
+                </div>
               </div>
-              <div className="cofre-summary-metrics">
-                <button type="button" onClick={() => { setVaultView('jogadores'); resetVaultFilters(); }}><strong>{dashboardStats.total}</strong><span>Salvos</span></button>
-                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span></button>
-                <button type="button" onClick={() => { setVaultView('jogadores'); setVaultFilters((current) => ({ ...current, favoritesOnly: true })); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
+              <div className="cofre-summary-metrics vault-hero-metrics">
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); resetVaultFilters(); }}><strong>{dashboardStats.total}</strong><span>Jogadores</span><small>catálogo completo</small></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('COMPLETE'); }}><strong>{dashboardStats.complete}</strong><span>Prontos</span><small>sem pendências</small></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span><small>pedem atenção</small></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); }}><strong>{smartHome.lowConfidence}</strong><span>Baixa confiança</span><small>revisar leitura</small></button>
               </div>
             </section>
 
-            <nav className="section-segmented-tabs luxury-panel" aria-label="Áreas do Cofre">
-              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Jogadores</span></button>
-              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Organizar</span></button>
+            <nav className="section-segmented-tabs vault-main-tabs luxury-panel" aria-label="Áreas do Cofre">
+              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Catálogo</span></button>
+              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Pastas</span></button>
               <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
               <button type="button" className={vaultView === 'backup' ? 'active' : ''} onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
             </nav>
 
             {vaultView === 'jogadores' && (
-              <section className="vault-view-panel luxury-panel">
-                <div className="vault-toolbar-premium">
-                  <label className="history-search">
-                    <Search size={16} />
-                    <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar nome, posição, estilo, habilidade ou nota" />
-                  </label>
-                  <button type="button" className={libraryOpen ? 'active-filter' : ''} onClick={() => setLibraryOpen((value) => !value)}><SlidersHorizontal size={16} /> {libraryOpen ? 'Concluir edição' : 'Editar fichas'}</button>
+              <section className="vault-view-panel vault-catalog-panel luxury-panel">
+                <div className="vault-catalog-heading">
+                  <div>
+                    <p className="kicker"><Users size={14} /> Catálogo premium</p>
+                    <h3>{filteredHistory.length === history.length ? `${history.length} jogador(es) no Cofre` : `${filteredHistory.length} de ${history.length} jogador(es)`}</h3>
+                    <span>Abra uma ficha, favorite, mova para pastas ou filtre por confiança e situação.</span>
+                  </div>
+                  <div className="vault-filter-counter"><strong>{activeVaultFilterCount}</strong><span>filtro(s) ativo(s)</span></div>
                 </div>
 
-                <div className="cofre-quick-filters">
-                  <label><Filter size={14} /><select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}>
-                    <option value="ALL">Todos</option><option value="FAVORITES">Favoritos</option><option value="PENDING">Pendentes</option><option value="COMPLETE">Completos</option><option value="REVIEW">Revisar</option>
-                    {POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-                  </select></label>
-                  <label><Clock3 size={14} /><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}>
-                    <option value="UPDATED">Mais recentes</option><option value="NAME">Nome</option><option value="POSITION">Posição</option><option value="PENDING">Mais pendentes</option><option value="STATUS">Status</option>
-                  </select></label>
+                <div className="vault-search-premium">
+                  <Search size={20} />
+                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo, habilidade ou anotação" aria-label="Buscar no Cofre" />
+                  {historySearch && <button type="button" onClick={() => setHistorySearch('')}><RotateCcw size={15} /> Limpar</button>}
                 </div>
 
-                <details className="cofre-filter-drawer">
+                <div className="vault-quick-filter-strip" aria-label="Filtros rápidos do Cofre">
+                  <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 100 && !vaultFilters.favoritesOnly && !vaultFilters.pendingOnly && !vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, minConfidence: 0, maxConfidence: 100 })); }}>Todos <b>{history.length}</b></button>
+                  <button type="button" className={historyFilter === 'FAVORITES' ? 'selected' : ''} onClick={() => { setHistoryFilter('FAVORITES'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, maxConfidence: 100 })); }}><Star size={14} /> Favoritos <b>{dashboardStats.favorites}</b></button>
+                  <button type="button" className={historyFilter === 'COMPLETE' ? 'selected' : ''} onClick={() => { setHistoryFilter('COMPLETE'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><CheckCircle2 size={14} /> Prontos <b>{dashboardStats.complete}</b></button>
+                  <button type="button" className={historyFilter === 'PENDING' ? 'selected' : ''} onClick={() => { setHistoryFilter('PENDING'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><Clock3 size={14} /> Pendentes <b>{dashboardStats.pending}</b></button>
+                  <button type="button" className={historyFilter === 'REVIEW' ? 'selected' : ''} onClick={() => { setHistoryFilter('REVIEW'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><ShieldCheck size={14} /> Revisar <b>{dashboardStats.review}</b></button>
+                  <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 69 ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, minConfidence: 0, maxConfidence: 69, favoritesOnly: false, pendingOnly: false, reviewOnly: false })); }}><Filter size={14} /> Confiança baixa <b>{smartHome.lowConfidence}</b></button>
+                </div>
+
+                <div className="vault-catalog-toolbar">
+                  <label><Clock3 size={15} /><span>Ordenar</span><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}><option value="UPDATED">Mais recentes</option><option value="NAME">Nome</option><option value="POSITION">Posição</option><option value="PENDING">Mais pendentes</option><option value="STATUS">Status</option></select></label>
+                  <button type="button" className={libraryOpen ? 'active-filter' : ''} onClick={() => setLibraryOpen((value) => !value)}><SlidersHorizontal size={16} /> {libraryOpen ? 'Finalizar organização' : 'Organizar fichas'}</button>
+                  {(activeVaultFilterCount > 0) && <button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar tudo</button>}
+                </div>
+
+                <details className="cofre-filter-drawer vault-filter-drawer-premium">
                   <summary><SlidersHorizontal size={16} /> Filtros avançados <span>{filteredHistory.length} resultado(s)</span></summary>
                   <div className="advanced-filter-grid">
                     <label><span>Pasta</span><select value={vaultFilters.folderId} onChange={(event) => setVaultFilters((current) => ({ ...current, folderId: event.target.value }))}>{vaultFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
                     <label><span>Posição escolhida</span><select value={vaultFilters.position} onChange={(event) => setVaultFilters((current) => ({ ...current, position: event.target.value as VaultFilterState['position'] }))}><option value="ALL">Todas</option>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
                     <label><span>Estilo oficial</span><select value={vaultFilters.playstyle} onChange={(event) => setVaultFilters((current) => ({ ...current, playstyle: event.target.value }))}><option value="">Todos</option>{availablePlaystyles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                     <label><span>Habilidade</span><select value={vaultFilters.skill} onChange={(event) => setVaultFilters((current) => ({ ...current, skill: event.target.value }))}><option value="">Todas</option>{availableSkills.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-                    <label><span>Confiança mínima: {vaultFilters.minConfidence}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, minConfidence: Number(event.target.value) }))} /></label>
-                    <label><span>Eficiência mínima: {vaultFilters.minEfficiency}</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minEfficiency} onChange={(event) => setVaultFilters((current) => ({ ...current, minEfficiency: Number(event.target.value) }))} /></label>
+                    <label><span>Confiança mínima: {vaultFilters.minConfidence}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, minConfidence: Number(event.target.value) }))} /></label>
+                    <label><span>Confiança máxima: {vaultFilters.maxConfidence}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.maxConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, maxConfidence: Number(event.target.value) }))} /></label>
+                    <label><span>Eficiência mínima: {vaultFilters.minEfficiency}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minEfficiency} onChange={(event) => setVaultFilters((current) => ({ ...current, minEfficiency: Number(event.target.value) }))} /></label>
                   </div>
                   <div className="combined-filter-chips">
-                    <button type="button" className={vaultFilters.favoritesOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, favoritesOnly: !current.favoritesOnly }))}>Favoritos</button>
-                    <button type="button" className={vaultFilters.pendingOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, pendingOnly: !current.pendingOnly }))}>Pendentes</button>
-                    <button type="button" className={vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}>Revisar</button>
-                    <button type="button" onClick={resetVaultFilters}>Limpar filtros</button>
+                    <button type="button" className={vaultFilters.favoritesOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, favoritesOnly: !current.favoritesOnly }))}>Somente favoritos</button>
+                    <button type="button" className={vaultFilters.pendingOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, pendingOnly: !current.pendingOnly }))}>Somente pendentes</button>
+                    <button type="button" className={vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}>Somente revisão</button>
+                    <button type="button" onClick={resetVaultFilters}>Restaurar filtros</button>
                   </div>
                 </details>
 
                 {history.length ? (
-                  <div className="vault-player-list">
+                  <div className="vault-player-list vault-player-catalog-grid">
                     {filteredHistory.map((item) => {
                       const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+                      const status = savedStatusLabel(item);
                       const statusText = savedStatusText(item);
+                      const confidence = item.result.parsed.confidence ?? 0;
+                      const efficiency = item.result.advancedOptimizer?.efficiencyScore ?? 0;
+                      const folderName = vaultFolders.find((folder) => folder.id === folderForEntry(item))?.name ?? 'Sem pasta';
                       return (
-                        <article className={item.favorite ? 'saved-ficha-row favorite-row' : 'saved-ficha-row'} key={item.id}>
-                          <button className="saved-player-main" type="button" onClick={() => restoreHistory(item)}>
-                            <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt="" /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
-                            <div><strong>{item.favorite ? '★ ' : ''}{item.result.parsed.playerName}</strong><span>{item.result.bestPosition.label} • {item.result.trainingPointsUsed}/{item.result.trainingPointsTotal} pts</span><em>{statusText} • {info.done}/{info.total} habilidades</em></div>
-                            <i><b style={{ width: `${info.percent}%` }} /></i>
-                          </button>
-                          <div className="saved-row-actions">
-                            <button type="button" title="Favoritar" onClick={() => toggleFavoriteHistory(item.id)}><Star size={15} /></button>
-                            <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={15} /></button>
-                            <button type="button" title="Exportar relatório" onClick={() => exportSingleHistoryItem(item)}><FileText size={15} /></button>
-                            <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}><Trash2 size={15} /></button>
+                        <article className={`vault-player-card status-${status}${item.favorite ? ' favorite-row' : ''}`} key={item.id}>
+                          <div className="vault-player-card-head">
+                            <button className="vault-player-identity" type="button" onClick={() => restoreHistory(item)}>
+                              <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt={`Carta de ${item.result.parsed.playerName}`} /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
+                              <div><strong>{item.result.parsed.playerName}</strong><span>{item.result.parsed.playstyle || 'Estilo não informado'}</span><small>{item.result.buildName}</small></div>
+                            </button>
+                            <button type="button" className={item.favorite ? 'vault-favorite-button selected' : 'vault-favorite-button'} title={item.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={() => toggleFavoriteHistory(item.id)}><Star size={18} fill={item.favorite ? 'currentColor' : 'none'} /></button>
                           </div>
+
+                          <div className="vault-card-badges">
+                            <span className="position-badge">{item.result.bestPosition.label}</span>
+                            <span className={`status-badge status-${status}`}>{status === 'completo' ? 'Pronto' : status === 'revisar' ? 'Revisar' : 'Pendente'}</span>
+                            <span className={confidence < 70 ? 'confidence-badge low' : 'confidence-badge'}>Confiança {confidence}%</span>
+                          </div>
+
+                          <div className="vault-card-metrics">
+                            <div><span>Pontos</span><strong>{item.result.trainingPointsUsed}/{item.result.trainingPointsTotal}</strong></div>
+                            <div><span>Eficiência</span><strong>{efficiency}%</strong></div>
+                            <div><span>Pasta</span><strong>{folderName}</strong></div>
+                          </div>
+
+                          <div className="vault-skill-progress">
+                            <div><span>Habilidades concluídas</span><strong>{info.done}/{info.total}</strong></div>
+                            <i><b style={{ width: `${info.percent}%` }} /></i>
+                            <small>{statusText}</small>
+                          </div>
+
+                          {item.notes && <p className="vault-card-note">{item.notes}</p>}
+
+                          <div className="vault-card-actions">
+                            <button type="button" className="vault-open-player" onClick={() => restoreHistory(item)}><Trophy size={16} /> Abrir ficha</button>
+                            <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={16} /></button>
+                            <button type="button" title="Exportar relatório" onClick={() => exportSingleHistoryItem(item)}><FileText size={16} /></button>
+                            <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}><Trash2 size={16} /></button>
+                          </div>
+
                           {libraryOpen && (
-                            <div className="saved-advanced-editor">
+                            <div className="saved-advanced-editor vault-card-editor">
                               <label className="saved-status-select"><span>Pasta</span><select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>{vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
-                              <label className="saved-status-select"><span>Status</span><select value={savedStatusLabel(item)} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}><option value="pendente">Pendente</option><option value="completo">Completo</option><option value="revisar">Revisar</option></select></label>
-                              <div className="saved-skill-bulk"><button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Concluir top 5</button><button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir</button></div>
+                              <label className="saved-status-select"><span>Status</span><select value={status} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}><option value="pendente">Pendente</option><option value="completo">Completo</option><option value="revisar">Revisar</option></select></label>
+                              <div className="saved-skill-bulk"><button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Concluir habilidades</button><button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir</button></div>
                               <label className="saved-notes"><span>Notas pessoais</span><textarea value={item.notes ?? ''} onChange={(event) => updateHistoryNotes(item.id, event.target.value)} placeholder="Como pretende usar este jogador?" /></label>
                             </div>
                           )}
                         </article>
                       );
                     })}
-                    {!filteredHistory.length && <div className="empty-cofre-card"><strong>Nenhum resultado com esses filtros</strong><span>Limpe ou ajuste os filtros para exibir outras fichas.</span></div>}
+                    {!filteredHistory.length && <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Search size={28} /></div><strong>Nenhum jogador corresponde aos filtros</strong><span>Altere a busca ou limpe os filtros para voltar a exibir o catálogo.</span><button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar filtros</button></div>}
                   </div>
-                ) : <div className="empty-cofre-card"><strong>Nenhum jogador salvo ainda</strong><span>Gere uma ficha pelo Leitor Elite ou pelo Manual Pro.</span></div>}
+                ) : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><History size={30} /></div><strong>Seu Cofre ainda está vazio</strong><span>Crie a primeira ficha para começar seu catálogo de jogadores.</span><div><button type="button" onClick={() => openMainSection('leitor')}><ScanText size={16} /> Ler uma carta</button><button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={16} /> Manual Pro</button></div></div>}
               </section>
             )}
 
             {vaultView === 'organizar' && (
-              <section className="vault-view-panel luxury-panel">
-                <div className="section-title-row"><div><p className="kicker"><Layers size={14} /> Pastas e status</p><h3>Organize sem perder fichas</h3></div><span>{vaultFolders.length} pastas</span></div>
-                <div className="vault-folder-tabs">{vaultFolders.map((folder) => <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, folderId: folder.id }))}>{folder.name}<small>{folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length}</small></button>)}</div>
-                <div className="create-folder-row"><input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Nova pasta: Ex. Time principal" /><button type="button" onClick={createVaultFolder}>Criar pasta</button></div>
-                <div className="cofre-advanced-dashboard compact-dashboard">
-                  <div><span>Completos</span><strong>{dashboardStats.complete}</strong><em>prontos para usar</em></div>
-                  <div><span>Pendentes</span><strong>{dashboardStats.pending}</strong><em>faltam habilidades</em></div>
-                  <div><span>Revisar</span><strong>{dashboardStats.review}</strong><em>dados para conferir</em></div>
-                  <div><span>Progresso</span><strong>{dashboardStats.completion}%</strong><em>do Cofre</em></div>
+              <section className="vault-view-panel vault-organization-panel luxury-panel">
+                <div className="vault-catalog-heading">
+                  <div><p className="kicker"><Layers size={14} /> Organização do elenco</p><h3>Pastas, situação e progresso do Cofre</h3><span>Separe titulares, reservas, testes e grupos personalizados sem duplicar fichas.</span></div>
+                  <div className="vault-filter-counter"><strong>{vaultFolders.length - 1}</strong><span>pastas disponíveis</span></div>
                 </div>
-                <p className="panel-note">Para mover jogadores entre pastas ou alterar o status, abra a aba Jogadores e toque em “Editar fichas”.</p>
+
+                <div className="vault-folder-catalog">
+                  {vaultFolders.map((folder) => {
+                    const count = folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length;
+                    const percent = history.length ? Math.round((count / history.length) * 100) : 0;
+                    return <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'vault-folder-card selected' : 'vault-folder-card'} onClick={() => { setVaultFilters((current) => ({ ...current, folderId: folder.id })); setVaultView('jogadores'); }}><div><Layers size={18} /><span>{folder.kind === 'custom' ? 'Pasta personalizada' : 'Pasta do sistema'}</span></div><strong>{folder.name}</strong><small>{count} jogador(es)</small><i><b style={{ width: `${percent}%` }} /></i></button>;
+                  })}
+                </div>
+
+                <div className="create-folder-premium">
+                  <div><p className="kicker">Nova pasta</p><strong>Crie um grupo para seu jeito de jogar</strong><span>Ex.: Time principal, Divisão, Eventos ou Jogadores em teste.</span></div>
+                  <div className="create-folder-row"><input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Nome da nova pasta" /><button type="button" onClick={createVaultFolder}><Layers size={16} /> Criar pasta</button></div>
+                </div>
+
+                <div className="vault-status-dashboard">
+                  <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('COMPLETE'); }}><CheckCircle2 size={19} /><div><span>Prontos</span><strong>{dashboardStats.complete}</strong><small>fichas concluídas</small></div></button>
+                  <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><Clock3 size={19} /><div><span>Pendentes</span><strong>{dashboardStats.pending}</strong><small>habilidades faltando</small></div></button>
+                  <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('REVIEW'); }}><ShieldCheck size={19} /><div><span>Revisar</span><strong>{dashboardStats.review}</strong><small>dados para conferir</small></div></button>
+                  <button type="button" onClick={() => setVaultView('jogadores')}><Trophy size={19} /><div><span>Progresso</span><strong>{dashboardStats.completion}%</strong><small>do Cofre organizado</small></div></button>
+                </div>
+
+                <div className="settings-explanation-card"><SlidersHorizontal size={19} /><div><strong>Edição em lote visual</strong><span>Abra o Catálogo e toque em “Organizar fichas” para alterar pasta, status, habilidades e anotações dentro de cada card.</span></div></div>
               </section>
             )}
 
             {vaultView === 'comparar' && (
-              <section className="player-comparison-hub vault-view-panel luxury-panel">
-                <div className="section-title-row"><div><p className="kicker">Comparador de jogadores</p><h3>Compare para a posição que você escolher</h3></div><span>{comparePlayerIds.length} selecionado(s)</span></div>
-                <div className="cofre-filter-grid"><label><Target size={14} /><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label><button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button><button type="button" onClick={() => setComparePlayerIds([])}>Limpar</button></div>
-                <div className="compare-player-picker">{history.map((item) => <button type="button" className={comparePlayerIds.includes(item.id) ? 'selected' : ''} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}>{comparePlayerIds.includes(item.id) ? '✓ ' : ''}{item.result.parsed.playerName}</button>)}</div>
-                {playerComparison.ranking.length > 0 ? <div className="player-ranking"><p><strong>Melhor encaixe:</strong> {playerComparison.winner} • {playerComparison.reason}</p>{playerComparison.ranking.map((item, index) => <div key={item.id}><b>#{index + 1} {item.name}</b><span>{item.score}/100 • adaptação {item.adaptation}</span><small>Físico {item.physical} • habilidades {item.skills} • metas {item.goals} • eficiência {item.efficiency} • DNA {item.dna}</small><small>Individualidade {item.individuality}/100 • risco de clone {item.cloneRisk} • diferencial: {item.uniqueEdge}</small><em>{item.behavior}</em><em>{item.risks.length ? `Riscos: ${item.risks.join(' • ')}` : 'Sem risco crítico registrado.'}</em></div>)}</div> : <p className="panel-note">Selecione pelo menos dois jogadores. A comparação não altera nenhuma ficha.</p>}
+              <section className="player-comparison-hub vault-view-panel vault-comparison-panel luxury-panel">
+                <div className="vault-catalog-heading">
+                  <div><p className="kicker"><Trophy size={14} /> Comparador de jogadores</p><h3>Escolha a função e encontre o melhor encaixe</h3><span>Selecione de 2 a 6 jogadores. A comparação não modifica nenhuma ficha.</span></div>
+                  <div className="vault-filter-counter"><strong>{comparePlayerIds.length}</strong><span>selecionado(s)</span></div>
+                </div>
+
+                <div className="comparison-control-bar">
+                  <label><Target size={16} /><span>Posição comparada</span><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
+                  <button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button>
+                  <button type="button" onClick={() => setComparePlayerIds([])}>Limpar seleção</button>
+                </div>
+
+                {history.length ? <div className="compare-player-catalog">{history.map((item) => {
+                  const selected = comparePlayerIds.includes(item.id);
+                  return <button type="button" className={selected ? 'compare-player-card selected' : 'compare-player-card'} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}><div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt="" /> : <span>{item.result.bestPosition.label.slice(0,3)}</span>}</div><div><strong>{item.result.parsed.playerName}</strong><span>{item.result.bestPosition.label}</span><small>Confiança {item.result.parsed.confidence ?? 0}%</small></div><i>{selected ? '✓' : '+'}</i></button>;
+                })}</div> : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}
+
+                {playerComparison.ranking.length > 0 ? <div className="player-ranking premium-player-ranking"><div className="comparison-winner-card"><Trophy size={22} /><div><span>Melhor encaixe para {POSITION_LABELS.find((item) => item.code === comparePosition)?.label ?? comparePosition}</span><strong>{playerComparison.winner}</strong><small>{playerComparison.reason}</small></div></div>{playerComparison.ranking.map((item, index) => <article key={item.id} className={index === 0 ? 'ranking-player-card winner' : 'ranking-player-card'}><div className="ranking-place">#{index + 1}</div><div className="ranking-main"><strong>{item.name}</strong><span>{item.score}/100 • adaptação {item.adaptation}</span><i><b style={{ width: `${item.score}%` }} /></i></div><div className="ranking-metrics"><span>Físico <b>{item.physical}</b></span><span>Habilidades <b>{item.skills}</b></span><span>Eficiência <b>{item.efficiency}</b></span><span>DNA <b>{item.dna}</b></span></div><small>{item.behavior}</small>{item.risks.length > 0 && <em>Riscos: {item.risks.join(' • ')}</em>}</article>)}</div> : comparePlayerIds.length > 0 ? <div className="empty-cofre-card compact-empty-state"><strong>Selecione pelo menos dois jogadores</strong><span>Você escolheu {comparePlayerIds.length}. Adicione mais um para gerar o ranking.</span></div> : null}
               </section>
             )}
 
             {vaultView === 'backup' && (
-              <section className="vault-view-panel luxury-panel">
-                <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Backup e nuvem</p><h3>Proteja o Cofre sem poluir a lista de jogadores</h3></div><span>{history.length} ficha(s)</span></div>
-                <div className="history-actions cloud-history-actions">
-                  <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Download size={14} /> Jogadores treinados</button>
-                  <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><FileText size={14} /> Backup simples</button>
-                  <button type="button" onClick={() => backupInputRef.current?.click()}><UploadCloud size={14} /> Importar backup</button>
-                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <UploadCloud size={14} />} Sincronizar {account?.cloudEnabled ? 'conta' : 'Neon'}</button>
-                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Baixar {account?.cloudEnabled ? 'conta' : 'nuvem'}</button>
+              <section className="vault-view-panel vault-backup-panel luxury-panel">
+                <div className="vault-catalog-heading">
+                  <div><p className="kicker"><ShieldCheck size={14} /> Proteção do Cofre</p><h3>Backup local e sincronização da conta</h3><span>Escolha o tipo de proteção sem misturar essas ações com o catálogo de jogadores.</span></div>
+                  <div className="vault-backup-health"><ShieldCheck size={18} /><div><strong>{history.length} ficha(s)</strong><span>{lastBackupAt ? `Último backup: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Backup manual ainda não registrado'}</span></div></div>
+                </div>
+
+                <div className="vault-backup-actions-grid">
+                  <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
+                  <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo JSON leve</small></button>
+                  <button type="button" onClick={() => backupInputRef.current?.click()}><div><UploadCloud size={21} /></div><strong>Importar backup</strong><span>Restaure fichas salvas em outro aparelho.</span><small>O arquivo é validado antes</small></button>
+                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Nuvem opcional'}</small></button>
+                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <Download size={21} />}</div><strong>Baixar da conta</strong><span>Recupere a versão salva no servidor.</span><small>Mesclagem protegida</small></button>
+                  <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><div><Save size={21} /></div><strong>Backup completo</strong><span>Preferências, planos, regras e sessão atual.</span><small>Abrir Segurança</small></button>
                   <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
                 </div>
-                <div className="cloud-status-card"><ShieldCheck size={14} /><span>{cloudStatus}</span></div>
-                <div className="settings-explanation-card"><Save size={18} /><div><strong>Backup de jogadores treinados</strong><span>Inclui fichas, posição escolhida, distribuição, habilidades concluídas, pastas e calibração. O arquivo pode ser restaurado em outro celular.</span></div></div>
-                <p className="panel-note">O backup completo e a restauração seletiva permanecem em Ajustes › Segurança.</p>
+
+                <div className="cloud-status-card vault-cloud-status"><ShieldCheck size={16} /><div><strong>Status da proteção</strong><span>{cloudStatus}</span></div></div>
+                <div className="settings-explanation-card"><Save size={18} /><div><strong>Seus jogadores continuam separados por conta</strong><span>O backup do Cofre preserva fichas, posição escolhida, distribuição, habilidades concluídas, pastas e calibração. O backup completo permanece em Ajustes › Backup.</span></div></div>
               </section>
             )}
           </div>
           )}
 
           {mainSection === 'ajustes' && (
-            <div className="settings-premium-layout">
-              <nav className="section-segmented-tabs luxury-panel" aria-label="Áreas dos Ajustes">
-                <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={17} /><span>Aparência</span></button>
-                <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={17} /><span>Desempenho</span></button>
-                <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={17} /><span>Segurança</span></button>
-                <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={17} /><span>Atualizações</span></button>
-                <button type="button" className={settingsView === 'contas' ? 'active' : ''} onClick={() => setSettingsView('contas')}><Users size={17} /><span>Contas</span></button>
+            <div className="settings-premium-layout settings-final-layout">
+              <section className="settings-command-hero luxury-panel">
+                <div className="settings-command-copy">
+                  <p className="kicker"><SlidersHorizontal size={15} /> Central de preferências</p>
+                  <h2>Seu BuildMaster, do seu jeito.</h2>
+                  <p>Aparência, desempenho, proteção, backup, atualizações e contas em áreas separadas e fáceis de usar.</p>
+                </div>
+                <div className="settings-command-status">
+                  <article><span>Conta</span><strong>{account?.profile.username || 'Usuário'}</strong><small>{account?.cloudEnabled ? 'Licença online' : 'Modo local'}</small></article>
+                  <article><span>Saúde local</span><strong>{healthSummary.score}/100</strong><small>{healthSummary.status}</small></article>
+                  <article><span>Cofre</span><strong>{history.length}</strong><small>ficha(s) protegida(s)</small></article>
+                </div>
+              </section>
+
+              <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
+                <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={18} /><div><strong>Aparência</strong><span>Tema e acessibilidade</span></div></button>
+                <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Resposta e estabilidade</span></div></button>
+                <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={18} /><div><strong>Segurança</strong><span>Integridade e saúde</span></div></button>
+                <button type="button" className={settingsView === 'backup' ? 'active' : ''} onClick={() => setSettingsView('backup')}><Save size={18} /><div><strong>Backup</strong><span>Proteger e restaurar</span></div></button>
+                <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={18} /><div><strong>Atualizações</strong><span>Versão e novo APK</span></div></button>
+                <button type="button" className={settingsView === 'contas' ? 'active' : ''} onClick={() => setSettingsView('contas')}><Users size={18} /><div><strong>Contas</strong><span>Licença e usuários</span></div></button>
               </nav>
 
-              {settingsView === 'aparencia' && (
-                <section className="appearance-settings-panel luxury-panel settings-view-panel">
-                  <div className="section-title-row">
-                    <div><p className="kicker"><Palette size={15} /> Aparência</p><h3>Personalize o app sem afetar o conteúdo</h3></div>
-                    <span>{advancedMode ? 'Modo avançado' : 'Modo simples'}</span>
-                  </div>
-                  <div className="appearance-control-grid">
-                    <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')}><Palette size={18} /><strong>Tema</strong><span>{appTheme === 'dark' ? 'Escuro' : 'Claro'}</span></button>
-                    <label><span>Cor principal</span><select aria-label="Cor principal" value={accentTheme} onChange={(event) => setAccentTheme(event.target.value as AccentTheme)}><option value="emerald">Verde elite</option><option value="gold">Dourado</option><option value="blue">Azul</option><option value="red">Vermelho</option><option value="purple">Roxo</option></select></label>
-                    <button type="button" onClick={() => setAdvancedMode((value) => !value)}><SlidersHorizontal size={18} /><strong>Nível de detalhes</strong><span>{advancedMode ? 'Avançado' : 'Simples'}</span></button>
-                  </div>
-                  <div className="settings-explanation-card"><Sparkles size={19} /><div><strong>Modo simples</strong><span>Mostra somente o necessário para criar, revisar e salvar uma ficha. O modo avançado libera auditorias e ferramentas técnicas.</span></div></div>
-                </section>
-              )}
+              <div className="settings-final-content">
+                {settingsView === 'aparencia' && (
+                  <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
+                    <div className="settings-panel-heading">
+                      <div><p className="kicker"><Palette size={15} /> Aparência e acessibilidade</p><h3>Conforto visual em qualquer celular</h3><span>As preferências ficam salvas somente na sua conta neste aparelho e também entram no backup completo.</span></div>
+                      <span className="settings-state-pill">{appTheme === 'dark' ? 'Tema escuro' : 'Tema claro'}</span>
+                    </div>
 
-              {settingsView === 'desempenho' && (
-                <section className="settings-view-panel settings-delay-wrapper">
-                  <DelayResponsePanel />
-                  <StabilityDiagnosticsPanel result={result ?? undefined} />
-                </section>
-              )}
+                    <div className="appearance-live-preview" aria-label="Prévia da aparência selecionada">
+                      <div className="appearance-preview-top"><span><Sparkles size={15} /> BuildMaster</span><i /></div>
+                      <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Visual limpo, contraste equilibrado e ações fáceis de identificar.</span><button type="button" tabIndex={-1}>Ação principal</button></div>
+                    </div>
 
-
-              {settingsView === 'contas' && (
-                <AccountAdminPanel />
-              )}
-
-              {settingsView === 'atualizacoes' && (
-                <UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} />
-              )}
-
-              {settingsView === 'seguranca' && (
-                <section className="safety-quality-panel luxury-panel settings-view-panel">
-                  <div className="section-title-row">
-                    <div><p className="kicker"><ShieldCheck size={15} /> Segurança e qualidade</p><h3>Saúde, backup e migração</h3></div>
-                    <span>{healthSummary.score}/100 • {healthSummary.status}</span>
-                  </div>
-
-                  <div className="health-score-grid">
-                    <article><strong>{localIntegrity.score}</strong><span>Integridade</span></article>
-                    <article><strong>{history.length}</strong><span>Fichas protegidas</span></article>
-                    <article><strong>{lastBackupAt ? new Date(lastBackupAt).toLocaleDateString('pt-BR') : 'Nunca'}</strong><span>Último backup</span></article>
-                    <article><strong>{localIntegrity.totals.malformed}</strong><span>Problemas</span></article>
-                  </div>
-
-                  <div className="safety-actions-grid">
-                    <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Save size={17} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span></button>
-                    <button type="button" onClick={exportFullBackup}><Download size={17} /><strong>Backup completo</strong><span>Cofre, preferências, calibração, planos, pastas e regras.</span></button>
-                    <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={17} /><strong>Restaurar backup</strong><span>Escolha as áreas que deseja recuperar.</span></button>
-                    <button type="button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><strong>Exportar diagnóstico</strong><span>Gera relatório técnico sem modificar seus dados.</span></button>
-                    <input ref={fullBackupInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
-                  </div>
-
-                  <details className="settings-details-card">
-                    <summary>Restauração seletiva</summary>
-                    <div className="restore-select-panel">
-                      <div className="restore-check-grid">
-                        {([
-                          ['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['session', 'Sessão em andamento']
-                        ] as Array<[BackupSection, string]>).map(([key, label]) => (
-                          <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>
-                        ))}
+                    <div className="settings-control-section">
+                      <div className="settings-control-heading"><strong>Tema do aplicativo</strong><span>Escolha a base visual mais confortável.</span></div>
+                      <div className="theme-choice-grid">
+                        <button type="button" className={appTheme === 'dark' ? 'selected' : ''} aria-pressed={appTheme === 'dark'} onClick={() => setAppTheme('dark')}><i className="theme-preview-dark" /><strong>Escuro premium</strong><span>Mais confortável à noite e em telas AMOLED.</span></button>
+                        <button type="button" className={appTheme === 'light' ? 'selected' : ''} aria-pressed={appTheme === 'light'} onClick={() => setAppTheme('light')}><i className="theme-preview-light" /><strong>Claro elegante</strong><span>Leitura forte em ambientes iluminados.</span></button>
                       </div>
-                      <p className="panel-note">Somente as áreas marcadas são substituídas. O arquivo é validado antes da aplicação.</p>
                     </div>
-                  </details>
 
-                  <details className="settings-details-card">
-                    <summary>Verificação de integridade</summary>
-                    <div className="integrity-report-panel">
-                      {localIntegrity.issues.length ? localIntegrity.issues.slice(0, 8).map((issue) => <span key={`${issue.code}-${issue.message}`} className={`integrity-${issue.level}`}><b>{issue.level === 'critical' ? 'Crítico' : issue.level === 'warning' ? 'Revisar' : 'Informação'}</b>{issue.message}</span>) : <span className="integrity-ok"><CheckCircle2 size={15} /> Dados locais sem incoerências detectadas.</span>}
+                    <div className="settings-control-section">
+                      <div className="settings-control-heading"><strong>Cor de destaque</strong><span>Uma única cor principal mantém o app sofisticado.</span></div>
+                      <div className="accent-choice-row">
+                        {(['emerald', 'gold', 'blue', 'red', 'purple'] as AccentTheme[]).map((accent) => <button key={accent} type="button" data-accent={accent} className={accentTheme === accent ? 'selected' : ''} aria-pressed={accentTheme === accent} onClick={() => setAccentTheme(accent)}><i /><span>{accent === 'emerald' ? 'Verde elite' : accent === 'gold' ? 'Dourado' : accent === 'blue' ? 'Azul' : accent === 'red' ? 'Vermelho' : 'Roxo'}</span></button>)}
+                      </div>
                     </div>
-                  </details>
 
-                  <details className="settings-details-card">
-                    <summary>Migração entre versões</summary>
-                    <div className="migration-health-panel"><span>Esquema atual: {APP_DATA_VERSION}</span><span>Backups antigos são convertidos antes da restauração.</span><span>Campos novos recebem valores seguros sem apagar informações antigas.</span>{migrationLog.length > 0 && migrationLog.map((item) => <em key={item}>{item}</em>)}</div>
-                  </details>
+                    <div className="settings-preference-grid">
+                      <div className="settings-preference-card">
+                        <strong>Tamanho dos textos</strong><span>Amplia a interface sem alterar os cálculos.</span>
+                        <div className="settings-segmented-control" role="group" aria-label="Tamanho dos textos"><button type="button" className={textScale === 'compact' ? 'selected' : ''} onClick={() => setTextScale('compact')}>Compacto</button><button type="button" className={textScale === 'standard' ? 'selected' : ''} onClick={() => setTextScale('standard')}>Padrão</button><button type="button" className={textScale === 'large' ? 'selected' : ''} onClick={() => setTextScale('large')}>Grande</button></div>
+                      </div>
+                      <div className="settings-preference-card">
+                        <strong>Espaçamento</strong><span>Define quantas informações aparecem por tela.</span>
+                        <div className="settings-segmented-control" role="group" aria-label="Espaçamento da interface"><button type="button" className={densityMode === 'compact' ? 'selected' : ''} onClick={() => setDensityMode('compact')}>Compacto</button><button type="button" className={densityMode === 'comfortable' ? 'selected' : ''} onClick={() => setDensityMode('comfortable')}>Confortável</button></div>
+                      </div>
+                      <div className="settings-preference-card">
+                        <strong>Animações</strong><span>Reduza movimentos para conforto e economia.</span>
+                        <div className="settings-segmented-control" role="group" aria-label="Preferência de animações"><button type="button" className={motionPreference === 'system' ? 'selected' : ''} onClick={() => setMotionPreference('system')}>Sistema</button><button type="button" className={motionPreference === 'reduced' ? 'selected' : ''} onClick={() => setMotionPreference('reduced')}>Reduzidas</button><button type="button" className={motionPreference === 'full' ? 'selected' : ''} onClick={() => setMotionPreference('full')}>Completas</button></div>
+                      </div>
+                      <div className="settings-preference-card settings-toggle-card">
+                        <div><strong>Contraste reforçado</strong><span>Bordas e textos mais visíveis.</span></div><button type="button" className={highContrast ? 'is-on' : ''} role="switch" aria-checked={highContrast} onClick={() => setHighContrast((value) => !value)}><i /></button>
+                      </div>
+                      <div className="settings-preference-card settings-toggle-card">
+                        <div><strong>Ferramentas avançadas</strong><span>Libera auditorias e módulos técnicos.</span></div><button type="button" className={advancedMode ? 'is-on' : ''} role="switch" aria-checked={advancedMode} onClick={() => setAdvancedMode((value) => !value)}><i /></button>
+                      </div>
+                    </div>
+                  </section>
+                )}
 
-                  {healthSummary.alerts.length > 0 && <div className="health-alert-list">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
-                </section>
-              )}
+                {settingsView === 'desempenho' && (
+                  <section className="settings-view-panel settings-delay-wrapper settings-final-panel-stack">
+                    <div className="performance-settings-hero luxury-panel">
+                      <div><p className="kicker"><Zap size={15} /> Desempenho</p><h3>Resposta rápida sem sacrificar estabilidade</h3><span>Use as recomendações em camadas: primeiro o essencial, depois os diagnósticos técnicos.</span></div>
+                      <div className="performance-mode-chips"><span>Android otimizado</span><span>Rede e dispositivo</span><span>Sem alterar fichas</span></div>
+                    </div>
+                    <DelayResponsePanel />
+                    <StabilityDiagnosticsPanel result={result ?? undefined} />
+                  </section>
+                )}
+
+                {settingsView === 'seguranca' && (
+                  <section className="safety-quality-panel luxury-panel settings-view-panel settings-final-panel">
+                    <div className="settings-panel-heading">
+                      <div><p className="kicker"><ShieldCheck size={15} /> Segurança e qualidade</p><h3>Integridade dos dados e saúde do aplicativo</h3><span>Esta área verifica os dados sem modificar fichas, contas ou configurações.</span></div>
+                      <span className="settings-state-pill">{healthSummary.score}/100 • {healthSummary.status}</span>
+                    </div>
+
+                    <div className="health-score-grid security-health-grid">
+                      <article><strong>{localIntegrity.score}</strong><span>Integridade local</span><small>estrutura das fichas</small></article>
+                      <article><strong>{Math.max(0, localIntegrity.totals.records - localIntegrity.totals.malformed)}</strong><span>Itens válidos</span><small>dados reconhecidos</small></article>
+                      <article><strong>{localIntegrity.totals.malformed}</strong><span>Problemas</span><small>itens para revisar</small></article>
+                      <article><strong>{account?.cloudEnabled ? 'Online' : 'Local'}</strong><span>Licença</span><small>{account?.offline ? 'graça offline ativa' : 'validada no servidor'}</small></article>
+                    </div>
+
+                    <div className="security-boundary-grid">
+                      <article><ShieldCheck size={20} /><div><strong>Dados separados por conta</strong><span>O Cofre e as preferências usam uma identidade própria para cada usuário.</span></div></article>
+                      <article><CheckCircle2 size={20} /><div><strong>Restauração validada</strong><span>Arquivos antigos são conferidos e migrados antes de substituir dados.</span></div></article>
+                      <article><FileText size={20} /><div><strong>Diagnóstico sem alterações</strong><span>O relatório técnico apenas lê o estado atual do aplicativo.</span></div></article>
+                    </div>
+
+                    <button type="button" className="settings-diagnostic-button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><div><strong>Exportar diagnóstico técnico</strong><span>Gera um relatório para conferir integridade sem incluir senhas.</span></div></button>
+
+                    <details className="settings-details-card" open={localIntegrity.issues.length > 0}>
+                      <summary>Verificação de integridade</summary>
+                      <div className="integrity-report-panel">
+                        {localIntegrity.issues.length ? localIntegrity.issues.slice(0, 10).map((issue) => <span key={`${issue.code}-${issue.message}`} className={`integrity-${issue.level}`}><b>{issue.level === 'critical' ? 'Crítico' : issue.level === 'warning' ? 'Revisar' : 'Informação'}</b>{issue.message}</span>) : <span className="integrity-ok"><CheckCircle2 size={15} /> Dados locais sem incoerências detectadas.</span>}
+                      </div>
+                    </details>
+
+                    <details className="settings-details-card">
+                      <summary>Migração e compatibilidade</summary>
+                      <div className="migration-health-panel"><span>Esquema atual: {APP_DATA_VERSION}</span><span>Backups antigos são convertidos antes da restauração.</span><span>Campos novos recebem valores seguros sem apagar informações antigas.</span>{migrationLog.length > 0 && migrationLog.map((item) => <em key={item}>{item}</em>)}</div>
+                    </details>
+
+                    {healthSummary.alerts.length > 0 && <div className="health-alert-list" role="status">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
+                  </section>
+                )}
+
+                {settingsView === 'backup' && (
+                  <section className="backup-settings-panel luxury-panel settings-view-panel settings-final-panel">
+                    <div className="settings-panel-heading">
+                      <div><p className="kicker"><Save size={15} /> Backup e restauração</p><h3>Proteja tudo antes de trocar ou atualizar</h3><span>Escolha um backup rápido do Cofre ou uma cópia completa do aplicativo.</span></div>
+                      <span className="settings-state-pill">{lastBackupAt ? `Último: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Ainda não realizado'}</span>
+                    </div>
+
+                    <div className="backup-readiness-banner"><ShieldCheck size={20} /><div><strong>{history.length} ficha(s) prontas para proteção</strong><span>O backup completo inclui preferências visuais, calibração, planos, pastas, regras e dados do Cofre.</span></div></div>
+
+                    <div className="safety-actions-grid backup-final-actions">
+                      <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
+                      <button type="button" onClick={exportFullBackup}><Download size={18} /><strong>Backup completo</strong><span>Cofre, preferências, planos, pastas, regras e sessão.</span><small>Proteção máxima</small></button>
+                      <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={18} /><strong>Restaurar arquivo</strong><span>Valida e migra o arquivo antes de aplicar.</span><small>Você escolhe as áreas</small></button>
+                      <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}<strong>Enviar Cofre para a conta</strong><span>Sincroniza somente os jogadores deste usuário.</span><small>{account?.cloudEnabled ? 'Servidor conectado' : 'Nuvem indisponível'}</small></button>
+                      <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <Download size={18} />}<strong>Baixar Cofre da conta</strong><span>Recupera a versão salva e mescla com segurança.</span><small>Dados separados por usuário</small></button>
+                      <input ref={fullBackupInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
+                    </div>
+
+                    <div className="cloud-status-card backup-cloud-status" role="status"><ShieldCheck size={16} /><div><strong>Status da sincronização</strong><span>{cloudStatus}</span></div></div>
+
+                    <details className="settings-details-card">
+                      <summary>Escolher áreas da restauração</summary>
+                      <div className="restore-select-panel">
+                        <div className="restore-check-grid">
+                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
+                        </div>
+                        <p className="panel-note">Somente as áreas marcadas são substituídas. Faça um backup atual antes de restaurar outro arquivo.</p>
+                      </div>
+                    </details>
+                  </section>
+                )}
+
+                {settingsView === 'contas' && <AccountAdminPanel />}
+                {settingsView === 'atualizacoes' && <UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} />}
+              </div>
             </div>
           )}
         </aside>
@@ -5862,7 +6082,13 @@ ${variantText}`);
         {(mainSection === 'resultado' || mainSection === 'leitor' || mainSection === 'manual') && (
         <section className="preview-panel">
           {mainSection === 'resultado' ? (
-            result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
+            loading && !result && !draftResult ? (
+              <div className="creation-processing-card luxury-panel" role="status" aria-live="polite">
+                <div className="creation-processing-visual"><span><ScanText size={30} /></span><i /><i /><i /></div>
+                <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando a carta por áreas</h2><p>{status}</p></div>
+                <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
+              </div>
+            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
               manualFields={manualFields}

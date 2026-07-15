@@ -246,10 +246,18 @@ async function invokeFunction<T>(name: string, body: unknown, accessToken: strin
       body: JSON.stringify(body)
     }, accessToken);
   } catch {
-    throw new Error(`Não consegui acessar a função ${name} do Supabase. Verifique a internet e se a função está publicada.`);
+    throw new Error(`Não consegui conectar ao serviço ${name}. Confira a internet e tente novamente.`);
   }
   const payload = await response.json().catch(() => null) as T & { error?: string; message?: string } | null;
-  if (!response.ok) throw new Error(payload?.error || payload?.message || `Falha na função ${name}.`);
+  if (!response.ok) {
+    const serverMessage = payload?.error || payload?.message;
+    if (response.status === 404) throw new Error(`O serviço de licença ${name} não foi encontrado no Supabase.`);
+    if (response.status === 401) throw new Error('Sua sessão não é mais válida. Entre novamente.');
+    if (response.status === 403) throw new Error('Esta conta não tem permissão para concluir essa operação.');
+    if (response.status === 429) throw new Error('Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.');
+    if (response.status >= 500) throw new Error('O servidor de licenças está temporariamente indisponível. Tente novamente em instantes.');
+    throw new Error(serverMessage || `Não foi possível concluir a validação no serviço ${name}.`);
+  }
   return payload as T;
 }
 
@@ -286,8 +294,10 @@ function explainAuthFailure(payload: Record<string, unknown> | null, status: num
   if (message.includes('invalid api key') || message.includes('no api key') || code.includes('invalid_api_key')) {
     return 'Este APK foi gerado com uma chave incorreta do Supabase. Gere e instale um APK novo.';
   }
-  if (status >= 500) return 'O servidor de contas está temporariamente indisponível. Tente novamente.';
-  if (rawMessage) return `Não foi possível entrar: ${rawMessage}`;
+  if (status === 429) return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.';
+  if (status === 404) return 'O serviço de autenticação não foi encontrado neste projeto Supabase.';
+  if (status >= 500) return 'O servidor de contas está temporariamente indisponível. Tente novamente em instantes.';
+  if (rawMessage) return `O servidor recusou o acesso: ${rawMessage}`;
   return `Não foi possível entrar no servidor de contas (código ${status}).`;
 }
 

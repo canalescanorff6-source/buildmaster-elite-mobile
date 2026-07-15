@@ -4,8 +4,8 @@
   "description": "Backup de jogadores treinados e atualizações automáticas.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#020712",
-  "theme_color": "#061323",
+  "background_color": "#06090d",
+  "theme_color": "#0a0f15",
   "orientation": "portrait-primary",
   "icons": [
     {
