@@ -5204,7 +5204,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.72</span>
+            <span>Elite Tático v26.73</span>
           </div>
         </div>
         <div className="topbar-current-page">

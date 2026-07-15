@@ -1,5 +1,5 @@
-export const APP_RELEASE_VERSION = '26.72.0';
-export const APP_NATIVE_VERSION = '26.72.0';
+export const APP_RELEASE_VERSION = '26.73.0';
+export const APP_NATIVE_VERSION = '26.73.0';
 export const CURRENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILDMASTER_BUILD_ID || 'local-build';
 export const DEFAULT_UPDATE_MANIFEST_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL || '';
 

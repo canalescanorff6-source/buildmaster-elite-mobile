@@ -4,12 +4,12 @@ import { RegisterServiceWorker } from '@/components/RegisterServiceWorker';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'BuildMaster Elite Tático v26.72',
-  description: 'BuildMaster Elite Tático v26.72 com inteligência comunitária curada, Universo Meta 2026, fontes oficiais e recomendações contextualizadas por carta, técnico, formação e estilo.',
+  title: 'BuildMaster Elite Tático v26.73',
+  description: 'BuildMaster Elite Tático v26.73 com inteligência comunitária curada, Universo Meta 2026, fontes oficiais e recomendações contextualizadas por carta, técnico, formação e estilo.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'BuildMaster v26.72',
+    title: 'BuildMaster v26.73',
     statusBarStyle: 'black-translucent'
   },
   icons: {

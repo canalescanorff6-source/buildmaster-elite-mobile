@@ -1,6 +1,6 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "26.72.0",
+  "version": "26.73.0",
   "buildId": "fd2bac2db1cbfa26040416dc5fb50b5eec1b9935",
   "versionCode": 267129,
   "publishedAt": "2026-07-14T16:08:30.671160+00:00",
@@ -14,6 +14,6 @@
     "Cofre local e nuvem separados por usuário."
   ],
   "mandatory": false,
-  "minNativeVersion": "26.72.0",
+  "minNativeVersion": "26.73.0",
   "checksum": "8a2a320f693b28bf59b5028b0575f6775cca9c0415c84b3708659b44425947dc"
 }
