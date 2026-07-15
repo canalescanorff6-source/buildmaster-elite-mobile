@@ -1,3 +1,4 @@
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { clearActiveAccountIdentity, setActiveAccountIdentity } from '@/lib/accountStorage';
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
@@ -132,7 +133,31 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
   headers.set('apikey', SUPABASE_ANON_KEY);
   if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-  return fetch(`${SUPABASE_URL}${path}`, { ...init, headers, cache: 'no-store' });
+
+  const url = `${SUPABASE_URL}${path}`;
+  try {
+    return await fetch(url, { ...init, headers, cache: 'no-store' });
+  } catch (webError) {
+    if (!Capacitor.isNativePlatform()) throw webError;
+
+    const nativeResponse = await CapacitorHttp.request({
+      url,
+      method: String(init.method || 'GET'),
+      headers: Object.fromEntries(headers.entries()),
+      data: typeof init.body === 'string' ? init.body : undefined,
+      connectTimeout: 20_000,
+      readTimeout: 30_000,
+      responseType: 'text'
+    });
+
+    const responseBody = typeof nativeResponse.data === 'string'
+      ? nativeResponse.data
+      : JSON.stringify(nativeResponse.data ?? null);
+    return new Response(responseBody, {
+      status: nativeResponse.status,
+      headers: nativeResponse.headers
+    });
+  }
 }
 
 async function refreshSession(current: AccountSession): Promise<AccountSession> {
@@ -214,10 +239,15 @@ export function evaluateCachedLicense(validation: LicenseValidation, now = Date.
 }
 
 async function invokeFunction<T>(name: string, body: unknown, accessToken: string): Promise<T> {
-  const response = await supabaseFetch(`/functions/v1/${name}`, {
-    method: 'POST',
-    body: JSON.stringify(body)
-  }, accessToken);
+  let response: Response;
+  try {
+    response = await supabaseFetch(`/functions/v1/${name}`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }, accessToken);
+  } catch {
+    throw new Error(`Não consegui acessar a função ${name} do Supabase. Verifique a internet e se a função está publicada.`);
+  }
   const payload = await response.json().catch(() => null) as T & { error?: string; message?: string } | null;
   if (!response.ok) throw new Error(payload?.error || payload?.message || `Falha na função ${name}.`);
   return payload as T;
