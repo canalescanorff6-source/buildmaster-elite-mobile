@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v26-73-login-supabase-corrigido",
-  "version": "26.73.0",
+  "name": "buildmaster-elite-tatico-v26-76-ficha-studio",
+  "version": "26.76.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v26.73 - conexão Supabase validada no APK e diagnóstico correto de login.",
+  "description": "BuildMaster Elite Tático v26.76 - Ficha Studio premium, criação por camadas, segurança v26.75 preservada e fluxo visual refinado.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -12,7 +12,7 @@
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
     "test:lote1": "tsx tests/lote1-official-regression.ts",
-    "test:all": "npm run test:etapa8 && npm run test:accounts && npm run test:backup-updates && npm run test:community && npm run test:meta-universe && npm run test:lote18-24 && npm run test:lote17 && npm run test:dna && npm run test:unique && npm run test:ui && npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
+    "test:all": "npm run test:studio-v2676 && npm run test:security-v2675 && npm run test:polish && npm run test:etapa8 && npm run test:accounts && npm run test:backup-updates && npm run test:community && npm run test:meta-universe && npm run test:lote18-24 && npm run test:lote17 && npm run test:dna && npm run test:unique && npm run test:ui && npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -54,7 +54,10 @@
     "test:community": "tsx tests/community-intelligence-regression.ts",
     "test:backup-updates": "tsx tests/backup-updates-regression.ts",
     "test:accounts": "tsx tests/account-license-regression.ts",
-    "test:etapa8": "tsx tests/etapa8-settings-final-regression.ts"
+    "test:etapa8": "tsx tests/etapa8-settings-final-regression.ts",
+    "test:polish": "tsx tests/v26-74-polish-regression.ts",
+    "test:security-v2675": "tsx tests/v26-75-security-regression.ts",
+    "test:studio-v2676": "tsx tests/v26-76-ficha-studio-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

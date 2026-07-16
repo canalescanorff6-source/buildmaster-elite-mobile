@@ -1,4 +1,4 @@
-name: Gerar APK e publicar atualização segura v26.73
+name: Gerar APK e publicar atualização segura v26.76
 
 on:
   workflow_dispatch:
@@ -108,6 +108,9 @@ jobs:
         timeout-minutes: 5
         run: npx --no-install cap add android
 
+      - name: Instalar armazenamento seguro, identidade do aparelho e instalador verificado
+        run: node scripts/install-android-security-plugin.mjs
+
       - name: Atualizar versão interna do Android
         env:
           ANDROID_VERSION_CODE: ${{ github.run_number }}
@@ -119,13 +122,13 @@ jobs:
           if target is None:
               raise SystemExit('Arquivo Gradle do aplicativo não encontrado.')
           text = target.read_text(encoding='utf-8')
-          code = 267100 + max(1, int(os.environ['ANDROID_VERSION_CODE']))
+          code = 267600 + max(1, int(os.environ['ANDROID_VERSION_CODE']))
           text, count_code = re.subn(r'versionCode\s*[= ]\s*\d+', f'versionCode {code}', text, count=1)
-          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', 'versionName "26.73.0"', text, count=1)
+          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', 'versionName "26.76.0"', text, count=1)
           if not count_code or not count_name:
               raise SystemExit('versionCode/versionName não encontrados no Gradle.')
           target.write_text(text, encoding='utf-8')
-          print(f'Android versionCode={code}; versionName=26.73.0')
+          print(f'Android versionCode={code}; versionName=26.76.0')
           PY
 
       - name: Configurar cache do Gradle
@@ -136,6 +139,17 @@ jobs:
       - name: Sincronizar arquivos dentro do APK
         timeout-minutes: 5
         run: npx --no-install cap sync android
+
+      - name: Confirmar proteções nativas de segurança
+        run: |
+          test -f android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterSecurityPlugin.java || { echo '::error::Plugin nativo de segurança ausente.'; exit 1; }
+          grep -RqsF 'AndroidKeyStore' android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterSecurityPlugin.java || { echo '::error::Android Keystore não foi configurado.'; exit 1; }
+          grep -RqsF 'REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml || { echo '::error::Permissão controlada de instalação ausente.'; exit 1; }
+          grep -RqsF 'androidx.core.content.FileProvider' android/app/src/main/AndroidManifest.xml || { echo '::error::FileProvider seguro ausente.'; exit 1; }
+          grep -RqsF 'usesCleartextTraffic="false"' android/app/src/main/AndroidManifest.xml || { echo '::error::Tráfego HTTP inseguro não foi bloqueado.'; exit 1; }
+          grep -RqsF 'allowBackup="false"' android/app/src/main/AndroidManifest.xml || { echo '::error::Backup Android não autorizado ainda está ativo.'; exit 1; }
+          grep -RqsF '@xml/buildmaster_file_paths' android/app/src/main/AndroidManifest.xml || { echo '::error::FileProvider não está limitado ao cache verificado.'; exit 1; }
+          echo 'Keystore, identidade criptográfica e instalador verificado confirmados.'
 
       - name: Confirmar Supabase dentro dos arquivos do Android
         env:
@@ -210,19 +224,19 @@ jobs:
           rm -f dist-apk/BuildMaster-Elite-Tatico-aligned.apk
           "$APKSIGNER" verify --verbose --print-certs dist-apk/BuildMaster-Elite-Tatico-latest.apk
           "$AAPT" dump badging dist-apk/BuildMaster-Elite-Tatico-latest.apk | head -n 3
-          cp dist-apk/BuildMaster-Elite-Tatico-latest.apk dist-apk/BuildMaster-Elite-Tatico-v26.73.apk
+          cp dist-apk/BuildMaster-Elite-Tatico-latest.apk dist-apk/BuildMaster-Elite-Tatico-v26.76.apk
 
       - name: Preparar APK de teste sem assinatura permanente
         if: steps.signing.outputs.enabled != 'true'
         run: |
           mkdir -p dist-apk
           cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-latest.apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-v26.73.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-v26.76.apk
           echo "APK de teste preparado. Para atualização automática por cima, configure ANDROID_SIGNING_BUNDLE depois."
 
       - name: Preparar manifesto e notas da atualização
         env:
-          VERSION: '26.73.0'
+          VERSION: '26.76.0'
         run: |
           python - <<'PY'
           import datetime, hashlib, json, os, pathlib
@@ -232,43 +246,44 @@ jobs:
             'appId': 'com.buildmaster.elitetatico',
             'version': os.environ['VERSION'],
             'buildId': os.environ['GITHUB_SHA'],
-            'versionCode': 267100 + int(os.environ.get('GITHUB_RUN_NUMBER', '1')),
+            'versionCode': 267600 + int(os.environ.get('GITHUB_RUN_NUMBER', '1')),
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'channel': 'stable',
             'updateType': 'apk',
             'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk',
             'notes': [
-              'Login fechado apenas com usuário e senha.',
-              'Painel exclusivo para o administrador criar, renovar e bloquear contas.',
-              'Prazo de uso e limite de aparelhos verificados no servidor.',
-              'Cofre local e nuvem separados por usuário.',
-              'Atualização publicada com assinatura Android permanente.'
+              'APKs antigos bloqueados pelo servidor após a ativação da versão mínima.',
+              'MFA obrigatório para abrir o painel administrativo.',
+              'Tokens protegidos pelo Android Keystore e aparelho identificado por chave criptográfica.',
+              'Atualização com URL oficial fixa e verificação SHA-256 antes da instalação.',
+              'Backup criptografado, período offline reduzido e rate limit administrativo.'
             ],
-            'mandatory': False,
-            'minNativeVersion': '26.73.0',
+            'mandatory': True,
+            'minNativeVersion': '26.75.0',
             'checksum': hashlib.sha256(apk.read_bytes()).hexdigest()
           }
           pathlib.Path('dist-apk/update-manifest.json').write_text(
               json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<'NOTES'
-          ## BuildMaster Elite Tático v26.73
+          ## BuildMaster Elite Tático v26.76
 
-          - Login e contas conectados ao Supabase.
-          - Cadastro fechado: somente o administrador cria contas.
-          - Validade, bloqueio e limite de aparelhos.
-          - Cofre separado por usuário.
-          - APK release assinado com chave permanente para atualizar por cima.
+          - Bloqueio de APKs abaixo da versão mínima no servidor.
+          - MFA obrigatório para ações administrativas.
+          - Tokens protegidos pelo Android Keystore.
+          - Identidade criptográfica do aparelho e proteção contra clonagem simples.
+          - Atualização por canal oficial fixo, com verificação SHA-256.
+          - Backup AES-256, período offline reduzido e rate limit administrativo.
 
-          O Android solicita sua confirmação para instalar o APK. A assinatura permanente preserva os dados nas próximas atualizações.
+          Instale esta versão antes de ativar o bloqueio de versões antigas no Supabase.
           NOTES
 
       - name: Enviar APK como artefato do workflow
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v26.73-APK-e-Manifesto
+          name: BuildMaster-Elite-Tatico-v26.76-APK-e-Manifesto
           path: |
-            dist-apk/BuildMaster-Elite-Tatico-v26.73.apk
+            dist-apk/BuildMaster-Elite-Tatico-v26.76.apk
             dist-apk/update-manifest.json
           if-no-files-found: error
           retention-days: 14
@@ -282,14 +297,14 @@ jobs:
           git push origin refs/tags/buildmaster-latest --force
           if gh release view buildmaster-latest >/dev/null 2>&1; then
             gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático v26.73 — atualização segura" \
+              --title "BuildMaster Elite Tático v26.76 — Ficha Studio" \
               --notes-file dist-apk/RELEASE_NOTES.md
             gh release upload buildmaster-latest dist-apk/BuildMaster-Elite-Tatico-latest.apk --clobber
             gh release upload buildmaster-latest dist-apk/update-manifest.json --clobber
           else
             gh release create buildmaster-latest \
               --verify-tag \
-              --title "BuildMaster Elite Tático v26.73 — atualização segura" \
+              --title "BuildMaster Elite Tático v26.76 — Ficha Studio" \
               --notes-file dist-apk/RELEASE_NOTES.md \
               dist-apk/BuildMaster-Elite-Tatico-latest.apk \
               dist-apk/update-manifest.json

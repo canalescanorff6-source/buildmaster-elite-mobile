@@ -19,7 +19,7 @@ try {
     }
   }
 
-  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build', '--webpack'], {
+  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build'], {
     stdio: 'inherit',
     env: { ...process.env, BUILDMASTER_ANDROID_STATIC: '1' },
   });

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 
-assert.match(component, /Elite Tático v26\.73/);
+assert.match(component, /Elite Tático v26\.76/);
 assert.match(component, /const RESULT_PRIMARY_TABS/);
 assert.match(component, /const RESULT_ADVANCED_GROUPS/);
 assert.match(component, /label: 'Resumo'/);
@@ -47,4 +47,4 @@ assert.match(component, /Conta e usuários/);
 assert.match(css, /ETAPA 3 — NAVEGAÇÃO PREMIUM E NOVA TELA INICIAL/);
 assert.match(css, /\.home-command-center/);
 assert.match(css, /\.premium-launcher-sheet/);
-console.log('UI v26.73 organizada: resultado premium, Cofre, Ajustes e navegação aprovados.');
+console.log('UI v26.76 organizada: resultado premium, Cofre, Ajustes e navegação aprovados.');

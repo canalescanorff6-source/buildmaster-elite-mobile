@@ -1,19 +1,17 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "26.73.0",
-  "buildId": "fd2bac2db1cbfa26040416dc5fb50b5eec1b9935",
-  "versionCode": 267129,
-  "publishedAt": "2026-07-14T16:08:30.671160+00:00",
+  "version": "26.76.0",
+  "buildId": "ficha-studio-v2676-placeholder",
+  "publishedAt": "2026-07-16T00:00:00.000Z",
   "channel": "stable",
   "updateType": "apk",
   "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk",
   "notes": [
-    "Login fechado apenas com usuário e senha.",
-    "Painel exclusivo para o administrador criar, renovar e bloquear contas.",
-    "Prazo de uso e limite de aparelhos verificados no servidor.",
-    "Cofre local e nuvem separados por usuário."
+    "Novo Ficha Studio com criação por camadas e prévia viva.",
+    "Tela de geração mais limpa, premium e com menos informação concorrendo.",
+    "Segurança v26.75, sessão persistente, Supabase e Cofre preservados."
   ],
-  "mandatory": false,
-  "minNativeVersion": "26.73.0",
-  "checksum": "8a2a320f693b28bf59b5028b0575f6775cca9c0415c84b3708659b44425947dc"
+  "mandatory": true,
+  "minNativeVersion": "26.75.0",
+  "checksum": "0000000000000000000000000000000000000000000000000000000000000000"
 }

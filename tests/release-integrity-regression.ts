@@ -10,15 +10,15 @@ const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const manifest = fs.readFileSync('public/manifest.webmanifest', 'utf8');
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 
-assert.equal(pkg.version, '26.73.0', 'package.json precisa estar na v26.73.0');
+assert.equal(pkg.version, '26.76.0', 'package.json precisa estar na v26.76.0');
 assert.equal(lock.version, pkg.version, 'package-lock.json precisa ter a mesma versão do package.json');
 assert.equal(lock.packages[''].version, pkg.version, 'raiz do package-lock precisa ter a mesma versão');
-assert.ok(workflow.includes('v26.73'), 'Workflow antigo detectado: substitua também a pasta .github pelo arquivo desta versão.');
-assert.ok(workflow.includes('BuildMaster-Elite-Tatico-v26.73.apk'), 'Nome do APK no workflow não corresponde à v26.73.');
-assert.ok(workflow.includes("VERSION: '26.73.0'"), 'Manifesto de atualização do workflow não corresponde à v26.73.0.');
-assert.ok(layout.includes('v26.73'), 'Metadados da interface não correspondem à v26.73.');
-assert.ok(manifest.includes('v26.73'), 'manifest.webmanifest não corresponde à v26.73.');
-assert.ok(sw.includes('26-73'), 'Cache do service worker não corresponde à v26.73.');
+assert.ok(workflow.includes('v26.76'), 'Workflow antigo detectado: substitua também a pasta .github pelo arquivo desta versão.');
+assert.ok(workflow.includes('BuildMaster-Elite-Tatico-v26.76.apk'), 'Nome do APK no workflow não corresponde à v26.76.');
+assert.ok(workflow.includes("VERSION: '26.76.0'"), 'Manifesto de atualização do workflow não corresponde à v26.76.0.');
+assert.ok(layout.includes('v26.76'), 'Metadados da interface não correspondem à v26.76.');
+assert.ok(manifest.includes('v26.76'), 'manifest.webmanifest não corresponde à v26.76.');
+assert.ok(sw.includes('26-76'), 'Cache do service worker não corresponde à v26.76.');
 assert.doesNotMatch(workflow, /BuildMaster-Elite-Tatico-v26\.70|VERSION:\s*'26\.70\.0'/, 'Workflow v26.70 antigo ainda está presente.');
 
 assert.ok(workflow.includes('ANDROID_SIGNING_BUNDLE'), 'Workflow precisa usar o Secret único de assinatura permanente.');
@@ -33,4 +33,4 @@ assert.doesNotMatch(workflow, /gh release delete buildmaster-latest/, 'Não apag
 
 assert.ok(fs.existsSync('src/app/error.tsx'));
 assert.ok(fs.existsSync('src/app/global-error.tsx'));
-console.log('release integrity v26.73: workflow, APK, manifesto e cache alinhados.');
+console.log('release integrity v26.76: workflow, APK, manifesto e cache alinhados.');

@@ -1,0 +1,13 @@
+ORDEM OBRIGATÓRIA
+
+1. Gere e baixe o APK v26.75 antes de mexer no Supabase.
+2. No Supabase > SQL Editor, execute todo o arquivo 1-INSTALAR-SEGURANCA-V26.75.sql.
+3. Em Edge Functions, abra license-session, substitua todo o código pelo arquivo 2-license-session.txt e publique.
+4. Em Edge Functions, abra admin-users, substitua todo o código pelo arquivo 3-admin-users.txt e publique.
+5. Instale o APK v26.75, entre com sua conta e ative o MFA em Ajustes > Contas.
+
+IMPORTANTE
+- Os nomes das funções devem continuar exatamente: license-session e admin-users.
+- Não crie funções com nomes automáticos diferentes.
+- APKs anteriores à v26.75 deixarão de validar a licença depois da publicação.
+- Todos os aparelhos antigos serão desconectados uma única vez para receber a nova identidade protegida pelo Android Keystore.

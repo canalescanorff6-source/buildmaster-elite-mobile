@@ -65,6 +65,8 @@ import { UpdateAutoChecker, UpdateCenterPanel } from '@/components/UpdateCenterP
 import { AccountAdminPanel } from '@/components/AccountAdminPanel';
 import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
+import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
+import { secureGet, secureSet } from '@/lib/secureStorage';
 
 type ReadingMode = 'precision' | 'fast';
 type AppTheme = 'dark' | 'light';
@@ -3706,7 +3708,7 @@ function ReviewPanel({
             {premiumReadings.map((reading) => (
               <details key={reading.key} className={`zone-origin-card status-${reading.status}`}>
                 <summary><strong>{reading.label}</strong><span>{reading.confidence}% • {reading.status === 'confirmed' ? 'boa' : reading.status === 'review' ? 'revisar' : 'não lida'}</span></summary>
-                {reading.originPreview && <img src={reading.originPreview} alt={`Origem visual: ${reading.label}`} />}
+                {reading.originPreview && <img src={reading.originPreview} alt={`Origem visual: ${reading.label}`} loading="lazy" decoding="async" />}
                 <pre>{reading.text || 'Nenhum texto confirmado nesta área.'}</pre>
                 <em>Origem: recorte da área • tratamento {reading.enhancement}</em>
               </details>
@@ -3904,7 +3906,7 @@ export function CardVisionApp() {
   const [rulesStatus, setRulesStatus] = useState('Regras atualizáveis: use o pacote local ou cole uma URL JSON para atualizar sem refazer APK.');
   const [rulePackInfo, setRulePackInfo] = useState<DynamicRulePack>(DEFAULT_DYNAMIC_RULE_PACK);
   const [cloudLoading, setCloudLoading] = useState(false);
-  const [cloudStatus, setCloudStatus] = useState('Neon opcional: configure DATABASE_URL no Vercel para sincronizar na nuvem.');
+  const [cloudStatus, setCloudStatus] = useState('Nuvem da conta pronta para sincronizar o Cofre quando você solicitar.');
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const lastSavedKey = useRef<string | null>(null);
   const backupInputRef = useRef<HTMLInputElement | null>(null);
@@ -3912,7 +3914,40 @@ export function CardVisionApp() {
   const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false });
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [migrationLog, setMigrationLog] = useState<string[]>([]);
+  const [backupPassword, setBackupPassword] = useState('');
+  const [backupPasswordConfirm, setBackupPasswordConfirm] = useState('');
+  const [rememberBackupPassword, setRememberBackupPassword] = useState(true);
+  const [backupPasswordReady, setBackupPasswordReady] = useState(false);
   const restoredSessionRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    void secureGet('buildmaster_backup_password_v2675').then((saved) => {
+      if (!active || !saved) return;
+      setBackupPassword(saved);
+      setBackupPasswordConfirm(saved);
+      setBackupPasswordReady(true);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!mobileLauncher) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    document.body.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => document.querySelector<HTMLElement>('.launcher-close-button')?.focus(), 20);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileLauncher(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [mobileLauncher]);
 
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
@@ -4261,8 +4296,8 @@ export function CardVisionApp() {
         body: JSON.stringify({ items: items.slice(0, HISTORY_LIMIT) })
       });
       const payload = await response.json().catch(() => null) as { count?: number; message?: string } | null;
-      if (!response.ok) throw new Error(payload?.message || 'Não consegui salvar no Neon agora.');
-      const message = `Neon atualizado com ${payload?.count ?? items.length} ficha(s).`;
+      if (!response.ok) throw new Error(payload?.message || 'Não consegui salvar na nuvem agora.');
+      const message = `Nuvem atualizada com ${payload?.count ?? items.length} ficha(s).`;
       setCloudStatus(message);
       if (!silent) setStatus(message);
     } catch (error) {
@@ -4286,7 +4321,7 @@ export function CardVisionApp() {
       } else {
         const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
         const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
-        if (!response.ok) throw new Error(payload?.message || 'Não consegui buscar fichas no Neon agora.');
+        if (!response.ok) throw new Error(payload?.message || 'Não consegui buscar fichas na nuvem agora.');
         cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
       }
       if (!cloudItems.length) {
@@ -4322,7 +4357,7 @@ export function CardVisionApp() {
       } else {
         const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
         const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
-        if (!response.ok) throw new Error(payload?.message || 'Neon ainda não está configurado.');
+        if (!response.ok) throw new Error(payload?.message || 'A nuvem ainda não está configurada.');
         cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
       }
 
@@ -4339,7 +4374,7 @@ export function CardVisionApp() {
           body: JSON.stringify({ items: merged })
         });
         const savePayload = await saveResponse.json().catch(() => null) as { message?: string } | null;
-        if (!saveResponse.ok) throw new Error(savePayload?.message || 'Não consegui atualizar o Neon.');
+        if (!saveResponse.ok) throw new Error(savePayload?.message || 'Não consegui atualizar a nuvem.');
       }
 
       setLibraryOpen(true);
@@ -4505,7 +4540,6 @@ export function CardVisionApp() {
       history,
       settings: {
         ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }) || {}) as Record<string, unknown>),
-        updateManifestUrl: localStorage.getItem('buildmaster_update_manifest_url') || localStorage.getItem('buildmaster_update_manifest_url_v26_70') || '',
         autoUpdateCheck: (localStorage.getItem('buildmaster_auto_update_check') ?? localStorage.getItem('buildmaster_auto_update_check_v26_70')) !== '0'
       },
       calibration: {
@@ -4524,8 +4558,8 @@ export function CardVisionApp() {
     };
   }
 
-  function downloadJsonFile(payload: unknown, fileName: string) {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  function downloadTextFile(payload: string, fileName: string, contentType = 'application/octet-stream') {
+    const blob = new Blob([payload], { type: contentType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -4536,34 +4570,65 @@ export function CardVisionApp() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function exportFullBackup() {
-    const envelope = createBackupEnvelope(collectFullBackupSections());
-    downloadJsonFile(envelope, `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`);
-    writeAccountStorage('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
-    setLastBackupAt(envelope.exportedAt);
-    setStatus('Backup completo criado com assinatura de integridade. Guarde o arquivo em local seguro.');
+  async function resolveBackupPassword() {
+    const clean = backupPassword;
+    const issue = validateBackupPassword(clean);
+    if (issue) throw new Error(issue);
+    if (backupPasswordConfirm && backupPasswordConfirm !== clean) throw new Error('A confirmação da senha do backup não confere.');
+    if (rememberBackupPassword) await secureSet('buildmaster_backup_password_v2675', clean);
+    setBackupPasswordReady(true);
+    return clean;
   }
 
-  function exportPlayersBackup(reason: 'manual' | 'update' = 'manual') {
-    const envelope = createBackupEnvelope({
-      history,
-      folders: vaultFolders,
-      calibration: {
-        matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
-        learning: readJsonStorage(LEARNING_KEY, {}),
-        corrections: readJsonStorage(CORRECTION_KEY, {})
-      }
-    });
-    const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
-    downloadJsonFile(envelope, `buildmaster-${suffix}-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`);
-    writeAccountStorage('buildmaster_last_players_backup', envelope.exportedAt);
-    setStatus(reason === 'update'
-      ? 'Backup de jogadores e fichas criado antes da atualização.'
-      : `Backup criado com ${history.length} jogador(es), fichas, habilidades concluídas e calibração.`);
+  async function downloadEncryptedBackup(envelope: BackupEnvelope, fileName: string) {
+    const password = await resolveBackupPassword();
+    const encrypted = await encryptBackupPayload(envelope, password);
+    downloadTextFile(JSON.stringify(encrypted, null, 2), fileName, 'application/vnd.buildmaster.backup+json');
   }
 
-  function prepareBackupForUpdate() {
-    exportPlayersBackup('update');
+  async function exportFullBackup() {
+    try {
+      const envelope = createBackupEnvelope(collectFullBackupSections());
+      await downloadEncryptedBackup(envelope, `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
+      writeAccountStorage('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
+      setLastBackupAt(envelope.exportedAt);
+      setStatus('Backup completo criptografado com AES-256. Guarde a senha em local seguro.');
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup criptografado.');
+      throw cause;
+    }
+  }
+
+  async function exportPlayersBackup(reason: 'manual' | 'update' = 'manual') {
+    try {
+      const envelope = createBackupEnvelope({
+        history,
+        folders: vaultFolders,
+        calibration: {
+          matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
+          learning: readJsonStorage(LEARNING_KEY, {}),
+          corrections: readJsonStorage(CORRECTION_KEY, {})
+        }
+      });
+      const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
+      await downloadEncryptedBackup(envelope, `buildmaster-${suffix}-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
+      writeAccountStorage('buildmaster_last_players_backup', envelope.exportedAt);
+      setStatus(reason === 'update' ? 'Backup criptografado criado antes da atualização.' : `Backup criptografado criado com ${history.length} jogador(es).`);
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup criptografado.');
+      throw cause;
+    }
+  }
+
+  async function prepareBackupForUpdate() {
+    await exportPlayersBackup('update');
+  }
+
+  async function readBackupFile(file: File): Promise<unknown> {
+    const parsed = JSON.parse(await file.text()) as unknown;
+    if (!isEncryptedBackupFile(parsed)) return parsed;
+    const password = await resolveBackupPassword();
+    return decryptBackupPayload(parsed, password);
   }
 
   function writeStorage(key: string, value: unknown) {
@@ -4576,7 +4641,7 @@ export function CardVisionApp() {
     event.target.value = '';
     if (!file) return;
     try {
-      const raw = JSON.parse(await file.text()) as unknown;
+      const raw = await readBackupFile(file);
       const checked = validateBackupEnvelope(raw);
       if (!checked.valid || !checked.migrated) {
         setStatus(checked.issues.map((item) => item.message).join(' ') || 'Backup inválido.');
@@ -4590,7 +4655,7 @@ export function CardVisionApp() {
         await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
       }
       if (restoreSections.settings && sections.settings && typeof sections.settings === 'object') {
-        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; updateManifestUrl?: string; autoUpdateCheck?: boolean };
+        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; autoUpdateCheck?: boolean };
         writeStorage('buildmaster_ui_prefs_v24_24', ui);
         if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
         if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
@@ -4599,7 +4664,6 @@ export function CardVisionApp() {
         if (ui.densityMode && ['compact', 'comfortable'].includes(ui.densityMode)) setDensityMode(ui.densityMode);
         if (ui.motionPreference && ['system', 'reduced', 'full'].includes(ui.motionPreference)) setMotionPreference(ui.motionPreference);
         if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
-        if (typeof ui.updateManifestUrl === 'string') localStorage.setItem('buildmaster_update_manifest_url', ui.updateManifestUrl);
         if (typeof ui.autoUpdateCheck === 'boolean') localStorage.setItem('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
       }
       if (restoreSections.calibration && sections.calibration && typeof sections.calibration === 'object') {
@@ -4623,8 +4687,9 @@ export function CardVisionApp() {
       if (restoreSections.session && sections.session) writeStorage(ACTIVE_SESSION_KEY, sections.session);
       setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
       setStatus(`Restauração concluída. ${migrated.steps.length ? 'Dados antigos foram migrados com segurança.' : 'O backup já estava no formato atual.'}`);
-    } catch {
-      setStatus('Não consegui restaurar este arquivo. Use um backup completo exportado pelo BuildMaster.');
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : '';
+      setStatus(message || 'Não consegui restaurar este arquivo. Use um backup completo exportado pelo BuildMaster.');
     }
   }
 
@@ -4647,25 +4712,15 @@ export function CardVisionApp() {
     setStatus('Diagnóstico de integridade exportado.');
   }
 
-  function exportHistoryBackup() {
-    const payload = {
-      app: 'BuildMaster Elite Tático',
-      version: APP_DATA_VERSION,
-      module: 'Cofre de jogadores treinados',
-      exportedAt: new Date().toISOString(),
-      stats: buildDashboardStats(history),
-      items: history
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `buildmaster-fichario-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setStatus('Backup do Cofre de Fichas exportado. Guarde esse arquivo para recuperar em outro navegador ou celular.');
+  async function exportHistoryBackup() {
+    if (!history.length) return;
+    try {
+      const envelope = createBackupEnvelope({ history });
+      await downloadEncryptedBackup(envelope, `buildmaster-cofre-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
+      setStatus('Backup rápido do Cofre criado e criptografado.');
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup do Cofre.');
+    }
   }
 
   async function importHistoryBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -4674,7 +4729,7 @@ export function CardVisionApp() {
     if (!file) return;
 
     try {
-      const parsed = JSON.parse(await file.text()) as unknown;
+      const parsed = await readBackupFile(file);
       let entries: unknown[] = [];
       let restoredExtras = false;
 
@@ -4723,8 +4778,9 @@ export function CardVisionApp() {
       });
       setLibraryOpen(true);
       setStatus(`Backup importado com ${imported.length} ficha(s)${restoredExtras ? ', pastas e calibração' : ''}. Elas ficam no Cofre até você apagar.`);
-    } catch {
-      setStatus('Não consegui importar esse backup. Use um arquivo JSON exportado pelo próprio BuildMaster.');
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : '';
+      setStatus(message || 'Não consegui importar esse backup. Use um arquivo .bmbak ou JSON exportado pelo próprio BuildMaster.');
     }
   }
 
@@ -5184,6 +5240,29 @@ ${variantText}`);
   const homeAttentionTotal = smartHome.needsReview + smartHome.lowConfidence + smartHome.incomplete;
   const vaultReadiness = dashboardStats.total ? Math.round((dashboardStats.complete / dashboardStats.total) * 100) : 0;
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
+  const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
+  const creationTargetLabel = targetPosition === 'AUTO'
+    ? 'Definir na revisão'
+    : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition;
+  const creationOriginalLabel = cardPositionOverride === 'AUTO'
+    ? 'Ler da carta'
+    : POSITION_LABELS.find((item) => item.code === cardPositionOverride)?.label ?? cardPositionOverride;
+  const creationStyleLabel = playstyleOverride === 'AUTO' ? 'Confirmar na revisão' : playstyleOverride;
+  const creationPointsValue = Number(
+    manualFields.trainingPointsTotal
+      || draftResult?.trainingPointsTotal
+      || result?.trainingPointsTotal
+      || 0
+  );
+  const creationReadinessSignals = [
+    { label: mainSection === 'leitor' ? 'Print da carta' : 'Entrada manual', ready: creationSourceReady },
+    { label: 'Posição-alvo', ready: targetPosition !== 'AUTO' },
+    { label: 'Posição original', ready: cardPositionOverride !== 'AUTO' },
+    { label: 'Estilo', ready: playstyleOverride !== 'AUTO' },
+    { label: 'Pontos', ready: creationPointsValue > 0 }
+  ];
+  const creationReadinessCount = creationReadinessSignals.filter((item) => item.ready).length;
+  const creationReadinessPercent = Math.round((creationReadinessCount / creationReadinessSignals.length) * 100);
 
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
@@ -5211,20 +5290,20 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.73</span>
+            <span>Elite Tático v26.76</span>
           </div>
         </button>
 
         <nav className="desktop-primary-nav" aria-label="Navegação principal">
-          <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} onClick={() => openMainSection('inicio')}><LayoutDashboard size={16} /><span>Início</span></button>
-          <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={16} /><span>Ficha</span></button>
-          <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} onClick={openCofreDeJogadores}><History size={16} /><span>Cofre</span></button>
-          <button type="button" className={mainSection === 'time' ? 'active-section' : ''} onClick={() => openMainSection('time')}><Target size={16} /><span>Meu Time</span></button>
+          <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} aria-current={mainSection === 'inicio' ? 'page' : undefined} onClick={() => openMainSection('inicio')}><LayoutDashboard size={16} /><span>Início</span></button>
+          <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} aria-current={mainSection === 'resultado' ? 'page' : undefined} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={16} /><span>Ficha</span></button>
+          <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} aria-current={mainSection === 'cofre' ? 'page' : undefined} onClick={openCofreDeJogadores}><History size={16} /><span>Cofre</span></button>
+          <button type="button" className={mainSection === 'time' ? 'active-section' : ''} aria-current={mainSection === 'time' ? 'page' : undefined} onClick={() => openMainSection('time')}><Target size={16} /><span>Meu Time</span></button>
         </nav>
 
         <div className="topbar-actions topbar-premium-actions">
-          <button type="button" className="topbar-create-action" onClick={() => setMobileLauncher('create')}><Sparkles size={16} /><span>Criar</span></button>
-          <button type="button" className="topbar-more-action" onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={16} /><span>Mais</span></button>
+          <button type="button" className="topbar-create-action" aria-expanded={mobileLauncher === 'create'} onClick={() => setMobileLauncher('create')}><Sparkles size={16} /><span>Criar</span></button>
+          <button type="button" className="topbar-more-action" aria-expanded={mobileLauncher === 'more'} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={16} /><span>Mais</span></button>
           <button type="button" className="topbar-account-avatar" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
             <b>{accountInitial}</b>
             <span><strong>{account?.profile.username || 'Conta'}</strong><small>{account?.profile.role === 'admin' ? 'Administrador' : 'Licença ativa'}</small></span>
@@ -5239,11 +5318,11 @@ ${variantText}`);
       )}
 
       <nav className="mobile-bottom-nav luxury-panel" aria-label="Menu inferior">
-        <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} onClick={() => openMainSection('inicio')}><LayoutDashboard size={19} /><span>Início</span></button>
-        <button type="button" className={mainSection === 'leitor' || mainSection === 'manual' ? 'active-section' : ''} onClick={() => setMobileLauncher('create')}><span className="mobile-create-icon"><Sparkles size={20} /></span><span>Criar</span></button>
-        <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={19} /><span>Ficha</span></button>
-        <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} onClick={openCofreDeJogadores}><History size={19} /><span>Cofre</span></button>
-        <button type="button" className={mainSection === 'time' || mainSection === 'ajustes' ? 'active-section' : ''} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={19} /><span>Mais</span></button>
+        <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} aria-current={mainSection === 'inicio' ? 'page' : undefined} onClick={() => openMainSection('inicio')}><LayoutDashboard size={19} /><span>Início</span></button>
+        <button type="button" className={mainSection === 'leitor' || mainSection === 'manual' ? 'active-section' : ''} aria-current={mainSection === 'leitor' || mainSection === 'manual' ? 'page' : undefined} aria-expanded={mobileLauncher === 'create'} onClick={() => setMobileLauncher('create')}><span className="mobile-create-icon"><Sparkles size={20} /></span><span>Criar</span></button>
+        <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} aria-current={mainSection === 'resultado' ? 'page' : undefined} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={19} /><span>Ficha</span></button>
+        <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} aria-current={mainSection === 'cofre' ? 'page' : undefined} onClick={openCofreDeJogadores}><History size={19} /><span>Cofre</span></button>
+        <button type="button" className={mainSection === 'time' || mainSection === 'ajustes' ? 'active-section' : ''} aria-current={mainSection === 'time' || mainSection === 'ajustes' ? 'page' : undefined} aria-expanded={mobileLauncher === 'more'} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={19} /><span>Mais</span></button>
       </nav>
 
       {mobileLauncher && (
@@ -5286,7 +5365,7 @@ ${variantText}`);
         </div>
       )}
 
-      {mainSection !== 'inicio' && (
+      {mainSection !== 'inicio' && !isCreationSection && (
         <section className="page-context-card luxury-panel">
           <div>
             <p className="kicker">Área atual</p>
@@ -5336,7 +5415,7 @@ ${variantText}`);
             <button type="button" disabled={!currentPanelResult} onClick={() => openMainSection('resultado')}><span><Trophy size={22} /></span><div><strong>Ficha atual</strong><small>{currentPanelResult?.parsed.playerName || 'Nenhuma aberta'}</small></div></button>
             <button type="button" onClick={openCofreDeJogadores}><span><History size={22} /></span><div><strong>Cofre</strong><small>Buscar e organizar</small></div></button>
             <button type="button" onClick={() => openMainSection('time')}><span><Target size={22} /></span><div><strong>Meu Time</strong><small>Elenco e tática</small></div></button>
-            <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('seguranca'); }}><span><ShieldCheck size={22} /></span><div><strong>Backup</strong><small>Proteger dados</small></div></button>
+            <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><span><ShieldCheck size={22} /></span><div><strong>Backup</strong><small>Proteger dados</small></div></button>
             <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Mais</strong><small>Ajustes e conta</small></div></button>
           </div>
         </section>
@@ -5386,41 +5465,59 @@ ${variantText}`);
       {mainSection !== 'inicio' && (
       <section className={`workspace-grid ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
         {isCreationSection && (
-          <section className="creation-hub luxury-panel">
-            <div className="creation-hub-copy">
-              <p className="kicker"><Sparkles size={15} /> Criar Ficha</p>
-              <h1>Uma etapa por vez, sem misturar informações.</h1>
-              <p>Escolha o método, informe os dados essenciais, revise posição, estilo e pontos e só então gere a ficha final.</p>
+          <section className="creation-hub creation-studio-hero luxury-panel">
+            <div className="creation-studio-topline">
+              <div className="creation-studio-brand">
+                <span className="creation-studio-mark"><Sparkles size={22} /></span>
+                <div>
+                  <p className="kicker">Build Studio</p>
+                  <h1>Construa a ficha com clareza e controle.</h1>
+                  <p>O essencial fica em primeiro plano. Contexto tático e ferramentas técnicas permanecem disponíveis sem poluir a criação.</p>
+                </div>
+              </div>
+              <div className="creation-live-summary" aria-label="Resumo atual da ficha">
+                <article><span>Modo</span><strong>{mainSection === 'leitor' ? 'Leitor' : 'Manual Pro'}</strong></article>
+                <article><span>Destino</span><strong>{creationTargetLabel}</strong></article>
+                <article><span>Pontos</span><strong>{creationPointsValue || '—'}</strong></article>
+                <article className={creationReadinessCount >= 3 ? 'is-ready' : ''}><span>Prontidão</span><strong>{creationReadinessPercent}%</strong></article>
+              </div>
             </div>
-            <div className="creation-mode-selector" role="tablist" aria-label="Método de criação da ficha">
-              <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
-                <span><ScanText size={22} /></span><div><strong>Leitor por print</strong><small>Importe a carta e revise a leitura.</small></div>{mainSection === 'leitor' && <CheckCircle2 size={18} />}
-              </button>
-              <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
-                <span><ShieldCheck size={22} /></span><div><strong>Manual Pro</strong><small>Controle total dos dados e pontos.</small></div>{mainSection === 'manual' && <CheckCircle2 size={18} />}
-              </button>
-            </div>
-            <div className="creation-progress-shell" aria-label={`Progresso da criação: ${creationProgress}%`}>
-              <div className="creation-progress-head"><span>Progresso da ficha</span><strong>{creationProgress}%</strong></div>
-              <i className="creation-progress-track"><b style={{ width: `${creationProgress}%` }} /></i>
-              <div className="creation-stepper">
-                {creationSteps.map((step) => {
-                  const state = step.number < creationStage ? 'done' : step.number === creationStage ? 'active' : 'pending';
-                  return <div key={step.number} className={`creation-step ${state}`}><span>{state === 'done' ? <CheckCircle2 size={16} /> : step.number}</span><div><strong>{step.label}</strong><small>{step.detail}</small></div></div>;
-                })}
+
+            <div className="creation-studio-controls">
+              <div className="creation-mode-selector" role="tablist" aria-label="Método de criação da ficha">
+                <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
+                  <span><ScanText size={22} /></span><div><strong>Leitor por print</strong><small>Importe a carta e revise cada dado.</small></div>{mainSection === 'leitor' && <CheckCircle2 size={18} />}
+                </button>
+                <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
+                  <span><ShieldCheck size={22} /></span><div><strong>Manual Pro</strong><small>Preenchimento controlado e pontos exatos.</small></div>{mainSection === 'manual' && <CheckCircle2 size={18} />}
+                </button>
+              </div>
+
+              <div className="creation-progress-shell" aria-label={`Progresso da criação: ${creationProgress}%`}>
+                <div className="creation-progress-head"><span>Fluxo da ficha</span><strong>{creationProgress}%</strong></div>
+                <i className="creation-progress-track"><b style={{ width: `${creationProgress}%` }} /></i>
+                <div className="creation-stepper">
+                  {creationSteps.map((step) => {
+                    const state = step.number < creationStage ? 'done' : step.number === creationStage ? 'active' : 'pending';
+                    return <div key={step.number} className={`creation-step ${state}`}><span>{state === 'done' ? <CheckCircle2 size={16} /> : step.number}</span><div><strong>{step.label}</strong><small>{step.detail}</small></div></div>;
+                  })}
+                </div>
               </div>
             </div>
           </section>
         )}
+
         {mainSection !== 'resultado' && (
         <aside className={`control-panel luxury-panel panel-${mainSection}`}>
-          <div className="panel-heading">
-            <div>
-              <p className="kicker">{currentNavigation.hint}</p>
-              <h2>{currentNavigation.label}</h2>
+          {!isCreationSection && (
+            <div className="panel-heading">
+              <div>
+                <p className="kicker">{currentNavigation.hint}</p>
+                <h2>{currentNavigation.label}</h2>
+              </div>
+              <ShieldCheck size={24} />
             </div>
-            <ShieldCheck size={24} />
-          </div>
+          )}
 
           {mainSection === 'leitor' && (<>
           <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
@@ -5546,156 +5643,256 @@ ${variantText}`);
             </section>
           )}
 
-          {(mainSection === 'leitor' || mainSection === 'manual' || mainSection === 'time') && (
-          <div className={isCreationSection ? 'select-stack creation-config-stack' : 'select-stack'}>
-            {isCreationSection && <div className="creation-config-heading"><span className="creation-stage-number">3</span><div><p className="kicker">Configuração da ficha</p><h3>Defina objetivo, posição, estilo e contexto tático</h3><small>Os dados essenciais serão confirmados novamente antes de finalizar.</small></div></div>}
-            {mainSection !== 'time' && (
-            <label>
-              <span>Perfil de performance</span>
-              <select value={objective} onChange={(event) => setObjective(event.target.value as Objective)}>
-                {objectives.map((item) => <option key={item.value} value={item.value}>{item.title} — {item.hint}</option>)}
-              </select>
-            </label>
-            )}
-
-            <label>
-              <span>Sistema tático</span>
-              <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
-                {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
-            </label>
-
-            <label>
-              <span>Modelo de jogo</span>
-              <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
-                {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
-            </label>
-
-            <label>
-              <span>Técnico e versão</span>
-              <select value={managerId} onChange={(event) => {
-                const nextId = event.target.value;
-                setManagerId(nextId);
-                const manager = getManager(nextId);
-                if (manager) setTeamStyle(manager.primaryStyle);
-              }}>
-                <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
-                <optgroup label="Lendários e Épicos — Booster Duplo">
-                  {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                </optgroup>
-                <optgroup label="Pacotes especiais e seleções">
-                  {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                </optgroup>
-                <optgroup label="Catálogo padrão (GP)">
-                  {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                </optgroup>
-              </select>
-            </label>
-
-            {selectedManager && (
-              <article className="manager-context-card">
+          {isCreationSection && (
+            <div className="select-stack creation-config-stack">
+              <div className="creation-config-heading">
+                <span className="creation-stage-number">3</span>
                 <div>
-                  <span>Técnico ativo</span>
-                  <strong>{selectedManager.name}</strong>
-                  <em>{selectedManager.version} • booster {selectedManager.booster}</em>
+                  <p className="kicker">Essenciais da ficha</p>
+                  <h3>Defina o jogador antes de abrir os ajustes táticos.</h3>
+                  <small>Posição escolhida, estilo e objetivo ficam visíveis. Formação e técnico permanecem em uma camada opcional.</small>
                 </div>
-                <div>
-                  <span>Estilo principal</span>
-                  <strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>
-                  {selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}
+              </div>
+
+              <div className="creation-essential-grid">
+                <label className="creation-field-card">
+                  <span>Perfil de performance</span>
+                  <select value={objective} onChange={(event) => setObjective(event.target.value as Objective)}>
+                    {objectives.map((item) => <option key={item.value} value={item.value}>{item.title} — {item.hint}</option>)}
+                  </select>
+                  <small>{creationObjectiveLabel}</small>
+                </label>
+
+                <label className="creation-field-card creation-field-priority">
+                  <span>Função alvo em campo</span>
+                  <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
+                    {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+                  </select>
+                  <small>A posição escolhida continua soberana.</small>
+                </label>
+
+                <label className="creation-field-card">
+                  <span>Posição original da carta</span>
+                  <select value={cardPositionOverride} onChange={(event) => setCardPositionOverride(event.target.value as PositionCode | 'AUTO')}>
+                    {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+                  </select>
+                  <small>{creationOriginalLabel}</small>
+                </label>
+
+                <label className="creation-field-card">
+                  <span>Estilo real da carta</span>
+                  <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
+                    <option value="AUTO">Confirmar na revisão</option>
+                    {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
+                  </select>
+                  <small>{creationStyleLabel}</small>
+                </label>
+              </div>
+
+              <details className="creation-advanced-details">
+                <summary>
+                  <span><SlidersHorizontal size={18} /></span>
+                  <div><strong>Contexto tático opcional</strong><small>Formação, modelo de jogo e técnico refinam a recomendação, mas não substituem a posição escolhida.</small></div>
+                  <em>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</em>
+                </summary>
+
+                <div className="creation-tactical-grid">
+                  <label>
+                    <span>Sistema tático</span>
+                    <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
+                      {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Modelo de jogo</span>
+                    <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
+                      {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </label>
+
+                  <label className="creation-manager-field">
+                    <span>Técnico e versão</span>
+                    <select value={managerId} onChange={(event) => {
+                      const nextId = event.target.value;
+                      setManagerId(nextId);
+                      const manager = getManager(nextId);
+                      if (manager) setTeamStyle(manager.primaryStyle);
+                    }}>
+                      <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
+                      <optgroup label="Lendários e Épicos — Booster Duplo">
+                        {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                      </optgroup>
+                      <optgroup label="Pacotes especiais e seleções">
+                        {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                      </optgroup>
+                      <optgroup label="Catálogo padrão (GP)">
+                        {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                      </optgroup>
+                    </select>
+                  </label>
                 </div>
-                <small>O técnico refina as prioridades e a simulação. Sua posição escolhida continua soberana e nunca é trocada automaticamente.</small>
-              </article>
-            )}
 
-            {mainSection !== 'time' && (
-            <label>
-              <span>Função alvo em campo</span>
-              <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
-                {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-              </select>
-            </label>
-            )}
+                {selectedManager && (
+                  <article className="manager-context-card creation-manager-context">
+                    <div>
+                      <span>Técnico ativo</span>
+                      <strong>{selectedManager.name}</strong>
+                      <em>{selectedManager.version} • booster {selectedManager.booster}</em>
+                    </div>
+                    <div>
+                      <span>Estilo principal</span>
+                      <strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>
+                      {selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}
+                    </div>
+                    <small>O técnico refina prioridades e simulação. A posição escolhida nunca é trocada automaticamente.</small>
+                  </article>
+                )}
 
-            {mainSection !== 'time' && (
-            <label>
-              <span>Posição original da carta</span>
-              <select value={cardPositionOverride} onChange={(event) => setCardPositionOverride(event.target.value as PositionCode | 'AUTO')}>
-                {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-              </select>
-            </label>
-            )}
-
-            {mainSection !== 'time' && (
-            <label>
-              <span>Estilo real da carta</span>
-              <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
-                <option value="AUTO">Automático</option>
-                {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-              </select>
-            </label>
-            )}
-          </div>
+                <article className="tactical-guide-card creation-tactical-guide">
+                  <div className="tactical-guide-head">
+                    <div>
+                      <p className="kicker">Leitura tática</p>
+                      <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
+                    </div>
+                    {selectedFormationGuide && (
+                      <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
+                        Aplicar estilo sugerido
+                      </button>
+                    )}
+                  </div>
+                  {selectedFormationGuide ? (
+                    <>
+                      <div className="guide-highlight">
+                        <span>Melhor encaixe</span>
+                        <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
+                        <em>{selectedFormationGuide.styleReason}</em>
+                      </div>
+                      <p>{selectedFormationGuide.howToPlay}</p>
+                      <div className="role-chip-grid">
+                        {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
+                      </div>
+                    </>
+                  ) : (
+                    <p>Selecione uma formação para ver a orientação tática.</p>
+                  )}
+                </article>
+              </details>
+            </div>
           )}
 
-          {(mainSection === 'leitor' || mainSection === 'manual' || mainSection === 'time') && (
-          <article className="tactical-guide-card">
-            <div className="tactical-guide-head">
-              <div>
-                <p className="kicker">Guia tático premium</p>
-                <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
+          {mainSection === 'time' && (
+            <>
+              <div className="select-stack">
+                <label>
+                  <span>Sistema tático</span>
+                  <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
+                    {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Modelo de jogo</span>
+                  <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
+                    {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Técnico e versão</span>
+                  <select value={managerId} onChange={(event) => {
+                    const nextId = event.target.value;
+                    setManagerId(nextId);
+                    const manager = getManager(nextId);
+                    if (manager) setTeamStyle(manager.primaryStyle);
+                  }}>
+                    <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
+                    <optgroup label="Lendários e Épicos — Booster Duplo">
+                      {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                    </optgroup>
+                    <optgroup label="Pacotes especiais e seleções">
+                      {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                    </optgroup>
+                    <optgroup label="Catálogo padrão (GP)">
+                      {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                    </optgroup>
+                  </select>
+                </label>
               </div>
-              {selectedFormationGuide && (
-                <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
-                  Aplicar estilo sugerido
-                </button>
-              )}
-            </div>
-            {selectedFormationGuide ? (
-              <>
-                <div className="guide-highlight">
-                  <span>Melhor estilo do técnico</span>
-                  <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
-                  <em>{selectedFormationGuide.styleReason}</em>
+
+              <article className="tactical-guide-card">
+                <div className="tactical-guide-head">
+                  <div>
+                    <p className="kicker">Guia tático premium</p>
+                    <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
+                  </div>
+                  {selectedFormationGuide && (
+                    <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
+                      Aplicar estilo sugerido
+                    </button>
+                  )}
                 </div>
-                <p>{selectedFormationGuide.howToPlay}</p>
-                <div className="role-chip-grid">
-                  {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
-                </div>
-                <small>Selecionado agora: {teamStyle === 'AUTO' ? 'automático premium' : tacticalStyleName[teamStyle]}.</small>
-              </>
-            ) : (
-              <p>Selecione uma formação para ver o estilo de técnico recomendado, como jogar nela e a função principal de cada setor.</p>
-            )}
-          </article>
+                {selectedFormationGuide ? (
+                  <>
+                    <div className="guide-highlight">
+                      <span>Melhor estilo do técnico</span>
+                      <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
+                      <em>{selectedFormationGuide.styleReason}</em>
+                    </div>
+                    <p>{selectedFormationGuide.howToPlay}</p>
+                    <div className="role-chip-grid">
+                      {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
+                    </div>
+                    <small>Selecionado agora: {teamStyle === 'AUTO' ? 'automático premium' : tacticalStyleName[teamStyle]}.</small>
+                  </>
+                ) : (
+                  <p>Selecione uma formação para ver o estilo de técnico recomendado, como jogar nela e a função principal de cada setor.</p>
+                )}
+              </article>
+            </>
           )}
 
           {mainSection === 'time' && <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} />}
 
           {(mainSection === 'leitor' || mainSection === 'manual') && (<>
-          <button className="elite-button generate-button" type="button" onClick={() => runAnalysis(false)} disabled={!canProceed}>
-            {loading ? <Loader2 className="spin" size={18} /> : <Zap size={18} />}
-            {loading ? 'Processando ficha...' : result ? 'Reabrir auditoria Elite' : 'Gerar prévia Elite'}
-          </button>
+          <section className="creation-action-dock">
+            <div className="creation-action-copy">
+              <span>Próxima decisão</span>
+              <strong>{draftResult ? 'Revise e confirme os dados' : mainSection === 'leitor' && !selectedFile ? 'Importe o print da carta' : 'Gerar uma prévia auditável'}</strong>
+              <small>{draftResult ? 'A posição, o estilo e os pontos ainda precisam da sua confirmação final.' : 'A prévia não é salva como ficha definitiva antes da revisão.'}</small>
+              <div className="creation-readiness-chips" aria-label={`${creationReadinessCount} de ${creationReadinessSignals.length} itens preparados`}>
+                {creationReadinessSignals.map((item) => (
+                  <span key={item.label} className={item.ready ? 'ready' : ''}>
+                    {item.ready ? <CheckCircle2 size={13} /> : <Clock3 size={13} />}
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-          <div className="creation-next-step-card">
-            <div><span>Próxima etapa</span><strong>{draftResult ? 'Revise e confirme os dados' : mainSection === 'leitor' && !selectedFile ? 'Importe o print da carta' : 'Gerar a prévia para revisão'}</strong><small>{draftResult ? 'Confira posição, estilo e pontos no painel de revisão.' : 'Nada será salvo como ficha final antes da sua confirmação.'}</small></div>
-            <span className="creation-next-progress">{creationProgress}%</span>
-          </div>
+            <button className="elite-button generate-button creation-primary-cta" type="button" onClick={() => runAnalysis(false)} disabled={!canProceed}>
+              {loading ? <Loader2 className="spin" size={19} /> : <Zap size={19} />}
+              <span>
+                <strong>{loading ? 'Processando ficha' : draftResult || result ? 'Atualizar prévia' : 'Gerar prévia'}</strong>
+                <small>{loading ? 'Aguarde a leitura' : 'Abrir revisão antes de finalizar'}</small>
+              </span>
+            </button>
+          </section>
 
-          <div className="status-card creation-status-card" role="status" aria-live="polite">
+          <div className="status-card creation-status-card creation-status-quiet" role="status" aria-live="polite">
             <ShieldCheck size={18} />
             <p>{status}</p>
+            <span>{creationProgress}%</span>
           </div>
 
           {rawText && (
-            <details className="raw-details">
+            <details className="raw-details creation-technical-log">
               <summary>Registro técnico da leitura</summary>
               <textarea value={rawText} onChange={(event) => setRawText(event.target.value)} spellCheck={false} />
             </details>
           )}
           </>)}
+
 
           {mainSection === 'cofre' && (
           <div className="cofre-section cofre-premium-layout">
@@ -5788,7 +5985,7 @@ ${variantText}`);
                         <article className={`vault-player-card status-${status}${item.favorite ? ' favorite-row' : ''}`} key={item.id}>
                           <div className="vault-player-card-head">
                             <button className="vault-player-identity" type="button" onClick={() => restoreHistory(item)}>
-                              <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt={`Carta de ${item.result.parsed.playerName}`} /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
+                              <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt={`Carta de ${item.result.parsed.playerName}`} loading="lazy" decoding="async" /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
                               <div><strong>{item.result.parsed.playerName}</strong><span>{item.result.parsed.playstyle || 'Estilo não informado'}</span><small>{item.result.buildName}</small></div>
                             </button>
                             <button type="button" className={item.favorite ? 'vault-favorite-button selected' : 'vault-favorite-button'} title={item.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={() => toggleFavoriteHistory(item.id)}><Star size={18} fill={item.favorite ? 'currentColor' : 'none'} /></button>
@@ -5899,13 +6096,13 @@ ${variantText}`);
                 </div>
 
                 <div className="vault-backup-actions-grid">
-                  <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
-                  <button type="button" onClick={exportHistoryBackup} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo JSON leve</small></button>
+                  <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
+                  <button type="button" onClick={() => void exportHistoryBackup()} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo criptografado</small></button>
                   <button type="button" onClick={() => backupInputRef.current?.click()}><div><UploadCloud size={21} /></div><strong>Importar backup</strong><span>Restaure fichas salvas em outro aparelho.</span><small>O arquivo é validado antes</small></button>
                   <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Nuvem opcional'}</small></button>
                   <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <Download size={21} />}</div><strong>Baixar da conta</strong><span>Recupere a versão salva no servidor.</span><small>Mesclagem protegida</small></button>
-                  <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><div><Save size={21} /></div><strong>Backup completo</strong><span>Preferências, planos, regras e sessão atual.</span><small>Abrir Segurança</small></button>
-                  <input ref={backupInputRef} className="sr-only" type="file" accept="application/json,.json" onChange={importHistoryBackup} />
+                  <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><div><Save size={21} /></div><strong>Backup completo</strong><span>Preferências, planos, regras e sessão atual.</span><small>Abrir Backup</small></button>
+                  <input ref={backupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={importHistoryBackup} />
                 </div>
 
                 <div className="cloud-status-card vault-cloud-status"><ShieldCheck size={16} /><div><strong>Status da proteção</strong><span>{cloudStatus}</span></div></div>
@@ -6048,13 +6245,23 @@ ${variantText}`);
 
                     <div className="backup-readiness-banner"><ShieldCheck size={20} /><div><strong>{history.length} ficha(s) prontas para proteção</strong><span>O backup completo inclui preferências visuais, calibração, planos, pastas, regras e dados do Cofre.</span></div></div>
 
+                    <div className="backup-password-panel">
+                      <div><ShieldCheck size={19} /><div><strong>Senha de criptografia</strong><span>Obrigatória para criar e restaurar arquivos .bmbak. Não existe recuperação sem essa senha.</span></div></div>
+                      <div className="backup-password-grid">
+                        <label><span>Senha do backup</span><input type="password" autoComplete="new-password" value={backupPassword} onChange={(event) => { setBackupPassword(event.target.value); setBackupPasswordReady(false); }} placeholder="Mínimo 12 caracteres e um número" /></label>
+                        <label><span>Confirmar senha</span><input type="password" autoComplete="new-password" value={backupPasswordConfirm} onChange={(event) => setBackupPasswordConfirm(event.target.value)} placeholder="Repita a mesma senha" /></label>
+                      </div>
+                      <label className="update-toggle"><input type="checkbox" checked={rememberBackupPassword} onChange={(event) => setRememberBackupPassword(event.target.checked)} /><span>Guardar no cofre seguro do Android neste aparelho</span></label>
+                      <small>{backupPasswordReady ? 'Senha disponível no armazenamento seguro.' : 'Defina a senha antes de exportar, restaurar ou atualizar.'}</small>
+                    </div>
+
                     <div className="safety-actions-grid backup-final-actions">
-                      <button type="button" onClick={() => exportPlayersBackup('manual')} disabled={!history.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
-                      <button type="button" onClick={exportFullBackup}><Download size={18} /><strong>Backup completo</strong><span>Cofre, preferências, planos, pastas, regras e sessão.</span><small>Proteção máxima</small></button>
+                      <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
+                      <button type="button" onClick={() => void exportFullBackup()}><Download size={18} /><strong>Backup completo</strong><span>Cofre, preferências, planos, pastas, regras e sessão.</span><small>Proteção máxima</small></button>
                       <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={18} /><strong>Restaurar arquivo</strong><span>Valida e migra o arquivo antes de aplicar.</span><small>Você escolhe as áreas</small></button>
                       <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}<strong>Enviar Cofre para a conta</strong><span>Sincroniza somente os jogadores deste usuário.</span><small>{account?.cloudEnabled ? 'Servidor conectado' : 'Nuvem indisponível'}</small></button>
                       <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <Download size={18} />}<strong>Baixar Cofre da conta</strong><span>Recupera a versão salva e mescla com segurança.</span><small>Dados separados por usuário</small></button>
-                      <input ref={fullBackupInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
+                      <input ref={fullBackupInputRef} type="file" accept=".bmbak,application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
                     </div>
 
                     <div className="cloud-status-card backup-cloud-status" role="status"><ShieldCheck size={16} /><div><strong>Status da sincronização</strong><span>{cloudStatus}</span></div></div>
@@ -6130,11 +6337,35 @@ ${variantText}`);
               <button type="button" className="elite-button" onClick={() => openMainSection('resultado')}>Abrir resultado</button>
             </div>
           ) : (
-            <div className="empty-state luxury-panel">
-              <div className="empty-icon"><Wand2 size={34} /></div>
-              <h2>{mainSection === 'leitor' ? 'Envie um print para começar' : 'Preencha os dados da carta'}</h2>
-              <p>{mainSection === 'leitor' ? 'A auditoria será exibida aqui depois da leitura.' : 'A prévia e a confirmação aparecerão aqui sem misturar outras áreas.'}</p>
-            </div>
+            <section className="creation-blueprint luxury-panel">
+              <div className="creation-blueprint-visual">
+                <div className={`creation-card-silhouette ${preview ? 'has-image' : ''}`}>
+                  {preview ? <img src={preview} alt="Prévia da carta selecionada" /> : <><span><Sparkles size={29} /></span><strong>BUILD</strong><small>STUDIO</small></>}
+                </div>
+                <div className="creation-blueprint-orbit" aria-hidden="true"><i /><i /><i /></div>
+              </div>
+
+              <div className="creation-blueprint-copy">
+                <p className="kicker"><Wand2 size={14} /> Prévia da construção</p>
+                <h2>{mainSection === 'leitor' ? (preview ? 'Carta pronta para entrar no motor' : 'Seu build começa com um bom print') : 'Entrada manual sob seu controle'}</h2>
+                <p>{mainSection === 'leitor' ? 'Acompanhe aqui o destino da ficha antes da auditoria. O resultado final só aparece depois da confirmação.' : 'Os dados informados serão reunidos aqui antes da ficha final.'}</p>
+
+                <div className="creation-blueprint-grid">
+                  <article><span>Objetivo</span><strong>{creationObjectiveLabel}</strong></article>
+                  <article><span>Posição-alvo</span><strong>{creationTargetLabel}</strong></article>
+                  <article><span>Posição original</span><strong>{creationOriginalLabel}</strong></article>
+                  <article><span>Estilo</span><strong>{creationStyleLabel}</strong></article>
+                  <article><span>Pontos</span><strong>{creationPointsValue || 'Na revisão'}</strong></article>
+                  <article><span>Contexto</span><strong>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</strong></article>
+                </div>
+
+                <div className="creation-blueprint-readiness">
+                  <div><span>Prontidão para auditoria</span><strong>{creationReadinessPercent}%</strong></div>
+                  <i><b style={{ width: `${creationReadinessPercent}%` }} /></i>
+                  <small>{creationReadinessCount >= 3 ? 'Base suficiente para gerar a prévia. Os dados restantes serão confirmados.' : 'Complete a entrada e as escolhas essenciais para avançar.'}</small>
+                </div>
+              </div>
+            </section>
           )}
         </section>
         )}

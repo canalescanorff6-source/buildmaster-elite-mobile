@@ -4,6 +4,10 @@ const isAndroidStatic = process.env.BUILDMASTER_ANDROID_STATIC === '1';
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // O workflow executa `npm run typecheck` antes do build. No export Android,
+  // evitamos repetir a mesma verificação dentro do Next.js, que pode manter
+  // o worker aberto em alguns runners mesmo após o TypeScript já ter passado.
+  typescript: { ignoreBuildErrors: isAndroidStatic },
   ...(isAndroidStatic
     ? {
         output: 'export',

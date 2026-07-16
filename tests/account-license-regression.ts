@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { evaluateCachedLicense, isSupabaseConfigurationValid, normalizeUsername, usernameToInternalEmail, validateUsername, type LicenseValidation } from '../src/lib/accountAuth';
+import { evaluateCachedLicense, isSupabaseConfigurationValid, isTransientAccountError, normalizeUsername, usernameToInternalEmail, validateUsername, type LicenseValidation } from '../src/lib/accountAuth';
 
 assert.equal(normalizeUsername(' João 10! '), 'joao10');
 assert.equal(normalizeUsername('PLAYER.Pro_01'), 'player.pro_01');
@@ -11,16 +11,22 @@ assert.equal(isSupabaseConfigurationValid('https://example.supabase.co', 'sb_pub
 assert.equal(isSupabaseConfigurationValid('https://abc123.supabase.co', 'sb_publishable_real_key'), true);
 assert.equal(isSupabaseConfigurationValid('https://abc123.supabase.co', 'eyJlegacyAnonKey'), true);
 
+assert.equal(isTransientAccountError(new Error('Não consegui conectar ao serviço license-session. Confira a internet e tente novamente.')), true);
+assert.equal(isTransientAccountError(new Error('O servidor de contas está temporariamente indisponível.')), true);
+assert.equal(isTransientAccountError(new Error('Request timeout')), true);
+assert.equal(isTransientAccountError(new Error('Sua sessão expirou. Entre novamente.')), false);
+assert.equal(isTransientAccountError(new Error('Esta conta está bloqueada.')), false);
+
 const base: LicenseValidation = {
   profile: {
     id: 'user-1', username: 'joao10', displayName: 'João', role: 'user', status: 'active', plan: 'premium',
-    expiresAt: '2026-08-14T00:00:00.000Z', maxDevices: 1, offlineGraceHours: 24
+    expiresAt: '2026-08-14T00:00:00.000Z', maxDevices: 1, offlineGraceHours: 4
   },
   deviceId: 'device-1',
   validatedAt: '2026-07-14T10:00:00.000Z',
   offline: false
 };
-assert.equal(evaluateCachedLicense(base, Date.parse('2026-07-14T20:00:00.000Z')).valid, true);
+assert.equal(evaluateCachedLicense(base, Date.parse('2026-07-14T13:00:00.000Z')).valid, true);
 assert.equal(evaluateCachedLicense(base, Date.parse('2026-07-16T20:00:00.000Z')).valid, false);
 assert.equal(evaluateCachedLicense(base, Date.parse('2026-07-14T09:00:00.000Z')).valid, false, 'retrocesso do relógio deve invalidar cache offline');
 assert.equal(evaluateCachedLicense({ ...base, profile: { ...base.profile, status: 'blocked' } }, Date.parse('2026-07-14T11:00:00.000Z')).valid, false);
@@ -35,6 +41,9 @@ assert.match(auth, /signInWithUsername/);
 assert.match(auth, /Somente o administrador cria usuários/);
 assert.doesNotMatch(auth, /thiago0126|iu1fsaa67a/, 'credenciais antigas não podem permanecer no APK');
 assert.match(auth, /NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK === '1'/);
+assert.match(auth, /isTransientAccountError\(cause\)/, 'falha temporária ao retomar não pode derrubar a sessão');
+assert.match(auth, /setValidation\(\(current\) => current \? \{ \.\.\.current, offline: true \} : current\)/, 'sessão atual deve ser preservada em falha transitória');
+assert.match(auth, /window\.setTimeout\(\(\) => void revalidate\(\), 1800\)/, 'retomada deve aguardar a rede do Android estabilizar');
 assert.match(admin, /Criar usuário/);
 assert.match(admin, /\+30 dias/);
 assert.match(sql, /enable row level security/);
@@ -47,4 +56,4 @@ assert.match(adminFunction, /app_metadata:\s*\{ buildmaster_managed: true \}/);
 assert.match(adminFunction, /auth\.admin\.updateUserById/);
 assert.match(adminFunction, /safeAuditDetails/);
 assert.doesNotMatch(adminFunction, /details:\s*body\s*\}/, 'senha não pode ser gravada no log administrativo');
-console.log('✓ Contas, prazos, aparelhos, RLS e painel administrativo v26.73 validados.');
+console.log('✓ Contas, prazos, aparelhos, RLS e painel administrativo v26.75 validados.');

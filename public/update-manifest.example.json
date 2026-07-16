@@ -1,15 +1,17 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "26.73.0",
-  "buildId": "exemplo-build-id",
-  "publishedAt": "2026-07-14T00:00:00.000Z",
+  "version": "26.76.0",
+  "buildId": "ficha-studio-v2676-placeholder",
+  "publishedAt": "2026-07-16T00:00:00.000Z",
   "channel": "stable",
   "updateType": "apk",
   "apkUrl": "https://github.com/OWNER/REPOSITORY/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk",
   "notes": [
-    "Backup dedicado de jogadores treinados.",
-    "Central de atualizações automáticas."
+    "Novo Ficha Studio com criação por camadas e prévia viva.",
+    "Tela de geração mais limpa, premium e com menos informação concorrendo.",
+    "Segurança v26.75, sessão persistente, Supabase e Cofre preservados."
   ],
-  "mandatory": false,
-  "minNativeVersion": "26.73.0"
+  "mandatory": true,
+  "minNativeVersion": "26.75.0",
+  "checksum": "SHA256_DO_APK_COM_64_CARACTERES"
 }

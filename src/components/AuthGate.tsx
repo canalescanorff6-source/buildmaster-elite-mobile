@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import {
   isCloudAccountsConfigured,
+  isTransientAccountError,
   restoreAccountAccess,
   signInWithUsername,
   signOutAccount,
@@ -320,7 +321,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
 
           <div className="auth-showcase-footer">
             <span><BadgeCheck size={15} /> BuildMaster Elite</span>
-            <small>Ambiente tático premium • v26.73</small>
+            <small>Ambiente tático premium • v26.76</small>
           </div>
         </aside>
 
@@ -459,6 +460,8 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   const [validation, setValidation] = useState<{ profile: AccountProfile; offline: boolean } | null>(null);
   const [restoreError, setRestoreError] = useState('');
   const [restoreStep, setRestoreStep] = useState<RestoreStep>('session');
+  const [recheckNonce, setRecheckNonce] = useState(0);
+  const [rechecking, setRechecking] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -496,10 +499,25 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     if (!validation || !isCloudAccountsConfigured()) return;
     let mounted = true;
     let validating = false;
+    let resumeTimer: number | null = null;
+    let reconnectTimer: number | null = null;
+    let reconnectAttempt = 0;
+
+    function scheduleReconnect() {
+      if (!mounted || reconnectTimer !== null || reconnectAttempt >= 3) return;
+      const delays = [4_000, 12_000, 30_000];
+      const delay = delays[reconnectAttempt] ?? 30_000;
+      reconnectAttempt += 1;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null;
+        void revalidate();
+      }, delay);
+    }
 
     async function revalidate() {
       if (validating) return;
       validating = true;
+      if (mounted) setRechecking(true);
       try {
         const cloud = await restoreAccountAccess();
         if (!mounted) return;
@@ -508,29 +526,50 @@ export function AuthGate({ children }: { children?: ReactNode }) {
           setValidation(null);
           return;
         }
+        reconnectAttempt = 0;
         setValidation({ profile: cloud.profile, offline: cloud.offline });
         setRestoreError('');
       } catch (cause) {
         if (!mounted) return;
+
+        // Ao voltar do WhatsApp, navegador ou tela bloqueada, a rede do Android pode
+        // demorar alguns instantes para responder. Uma falha temporária não encerra
+        // a sessão nem devolve o usuário para a tela de login.
+        if (isTransientAccountError(cause)) {
+          setRestoreError('');
+          setValidation((current) => current ? { ...current, offline: true } : current);
+          scheduleReconnect();
+          return;
+        }
+
         setRestoreError(cause instanceof Error ? cause.message : 'Não foi possível validar sua licença.');
         setValidation(null);
       } finally {
         validating = false;
+        if (mounted) setRechecking(false);
       }
     }
 
     const timer = window.setInterval(() => void revalidate(), 5 * 60 * 1000);
-    const onVisibility = () => { if (document.visibilityState === 'visible') void revalidate(); };
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (resumeTimer !== null) window.clearTimeout(resumeTimer);
+      // Pequeno atraso para o WebView recuperar Wi‑Fi/dados móveis antes da validação.
+      resumeTimer = window.setTimeout(() => void revalidate(), 1800);
+    };
     const onOnline = () => void revalidate();
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('online', onOnline);
+    if (recheckNonce > 0) void revalidate();
     return () => {
       mounted = false;
       window.clearInterval(timer);
+      if (resumeTimer !== null) window.clearTimeout(resumeTimer);
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('online', onOnline);
     };
-  }, [validation?.profile.id]);
+  }, [validation?.profile.id, recheckNonce]);
 
   const context = useMemo<BuildMasterAccountContextValue | null>(() => validation ? {
     profile: validation.profile,
@@ -557,7 +596,15 @@ export function AuthGate({ children }: { children?: ReactNode }) {
 
   return (
     <AccountContext.Provider value={context}>
-      {validation.offline && validation.profile.role !== 'admin' && <div className="offline-license-banner" role="status"><WifiOff size={15} /> Modo offline temporário. Conecte-se antes do fim do período permitido.</div>}
+      {validation.offline && (
+        <div className="offline-license-banner" role="status" aria-live="polite">
+          <span><WifiOff size={15} /><strong>Conexão temporária</strong><small>Sua sessão foi mantida. O app tentará validar novamente sem pedir a senha.</small></span>
+          <button type="button" onClick={() => setRecheckNonce((value) => value + 1)} disabled={rechecking}>
+            {rechecking ? <Loader2 className="spin" size={14} /> : <RefreshCw size={14} />}
+            {rechecking ? 'Verificando' : 'Tentar agora'}
+          </button>
+        </div>
+      )}
       {children}
     </AccountContext.Provider>
   );
