@@ -63,6 +63,8 @@ import { MetaBuildLabPanel } from '@/components/MetaBuildLabPanel';
 import { CommunityIntelligencePanel } from '@/components/CommunityIntelligencePanel';
 import { UpdateAutoChecker, UpdateCenterPanel } from '@/components/UpdateCenterPanel';
 import { AccountAdminPanel } from '@/components/AccountAdminPanel';
+import { PrecisionBuildPanel } from '@/components/PrecisionBuildPanel';
+import { FormationRoleLabPanel } from '@/components/FormationRoleLabPanel';
 import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
@@ -81,7 +83,7 @@ type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'tatica' | 'export
 type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
-type TeamCenterView = 'visao' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
+type TeamCenterView = 'visao' | 'formacoes' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
   { id: 'resumo', label: 'Resumo', hint: 'Visão principal' },
@@ -1836,12 +1838,17 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
 
       <nav className="team-center-tabs" aria-label="Áreas da central tática">
         <button type="button" className={teamCenterView === 'visao' ? 'active' : ''} onClick={() => setTeamCenterView('visao')}><LayoutDashboard size={17}/><span>Visão geral</span></button>
+        <button type="button" className={teamCenterView === 'formacoes' ? 'active' : ''} onClick={() => setTeamCenterView('formacoes')}><Layers size={17}/><span>Formações</span></button>
         <button type="button" className={teamCenterView === 'escalacao' ? 'active' : ''} onClick={() => setTeamCenterView('escalacao')}><Target size={17}/><span>Escalação</span></button>
         <button type="button" className={teamCenterView === 'elenco' ? 'active' : ''} onClick={() => setTeamCenterView('elenco')}><Users size={17}/><span>Elenco</span></button>
         <button type="button" className={teamCenterView === 'entrosamento' ? 'active' : ''} onClick={() => setTeamCenterView('entrosamento')}><Layers size={17}/><span>Setores</span></button>
         <button type="button" className={teamCenterView === 'planos' ? 'active' : ''} onClick={() => setTeamCenterView('planos')}><Clock3 size={17}/><span>Planos</span></button>
         <button type="button" className={teamCenterView === 'adversario' ? 'active' : ''} onClick={() => setTeamCenterView('adversario')}><Trophy size={17}/><span>Adversário</span></button>
       </nav>
+
+      {teamCenterView === 'formacoes' && (
+        <FormationRoleLabPanel results={history.map((item) => item.result)} activeFormation={formation} activeStyle={teamStyle} />
+      )}
 
       {teamCenterView === 'visao' && (
         <section className="team-overview-layer">
@@ -2736,6 +2743,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       {tab === 'ficha' && (
         <div className="result-section-grid">
+          <PrecisionBuildPanel result={result} />
           {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
             <div className="section-title-row">
               <div><p className="kicker">v25.96 • Identidade da versão</p><h3>Ficha única desta carta</h3></div>
@@ -5290,7 +5298,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.76</span>
+            <span>Elite Tático v26.78</span>
           </div>
         </button>
 

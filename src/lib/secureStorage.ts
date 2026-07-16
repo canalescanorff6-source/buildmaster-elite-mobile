@@ -1,4 +1,27 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+
+export type NativeInstallInfo = {
+  packageName: string;
+  versionName: string;
+  versionCode: number;
+  canInstallPackages: boolean;
+  platform: 'android';
+};
+
+export type ApkDownloadProgress = {
+  phase: 'connecting' | 'downloading' | 'verifying' | 'ready';
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
+};
+
+type ApkInstallResult = {
+  verified: boolean;
+  checksum?: string;
+  needsPermission?: boolean;
+  versionCode?: number;
+  versionName?: string;
+};
 
 type SecureStoragePlugin = {
   set(options: { key: string; value: string }): Promise<void>;
@@ -7,7 +30,17 @@ type SecureStoragePlugin = {
   clear(): Promise<void>;
   getDeviceIdentity(): Promise<{ deviceId: string; publicKey: string; algorithm: string }>;
   signDeviceMessage(options: { message: string }): Promise<{ signature: string; algorithm: string }>;
-  downloadAndInstallApk(options: { url: string; checksum: string }): Promise<{ verified: boolean; checksum: string }>;
+  getAppInstallInfo(): Promise<NativeInstallInfo>;
+  openInstallPermissionSettings(): Promise<void>;
+  downloadAndInstallApk(options: {
+    url: string;
+    checksum: string;
+    expectedPackageName: string;
+    expectedVersionCode: number;
+    expectedVersionName: string;
+    expectedSizeBytes?: number;
+  }): Promise<ApkInstallResult>;
+  addListener(eventName: 'apkDownloadProgress', listener: (event: ApkDownloadProgress) => void): Promise<PluginListenerHandle>;
 };
 
 const BuildMasterSecurity = registerPlugin<SecureStoragePlugin>('BuildMasterSecurity');
@@ -67,7 +100,29 @@ export async function signNativeDeviceMessage(message: string): Promise<{ signat
   return BuildMasterSecurity.signDeviceMessage({ message });
 }
 
-export async function downloadVerifyAndInstallApk(url: string, checksum: string): Promise<{ verified: boolean; checksum: string }> {
+export async function getNativeInstallInfo(): Promise<NativeInstallInfo | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  return BuildMasterSecurity.getAppInstallInfo();
+}
+
+export async function openInstallPermissionSettings(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) throw new Error('A permissão de instalação existe somente no Android.');
+  await BuildMasterSecurity.openInstallPermissionSettings();
+}
+
+export async function onApkDownloadProgress(listener: (event: ApkDownloadProgress) => void): Promise<PluginListenerHandle | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+  return BuildMasterSecurity.addListener('apkDownloadProgress', listener);
+}
+
+export async function downloadVerifyAndInstallApk(options: {
+  url: string;
+  checksum: string;
+  expectedPackageName: string;
+  expectedVersionCode: number;
+  expectedVersionName: string;
+  expectedSizeBytes?: number;
+}): Promise<ApkInstallResult> {
   if (!Capacitor.isNativePlatform()) throw new Error('A instalação verificada está disponível somente no APK Android.');
-  return BuildMasterSecurity.downloadAndInstallApk({ url, checksum });
+  return BuildMasterSecurity.downloadAndInstallApk(options);
 }

@@ -1,4 +1,4 @@
-name: Gerar APK e publicar atualização segura v26.76
+name: Gerar APK e publicar atualização definitiva
 
 on:
   workflow_dispatch:
@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   build-apk:
-    name: Build, testes, APK assinado e atualização
+    name: Build, testes, assinatura e publicação verificada
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
 
     steps:
       - name: Baixar código
@@ -36,25 +36,40 @@ jobs:
           java-version: '21'
 
       - name: Conferir configuração obrigatória
-        id: signing
         env:
           ANDROID_SIGNING_BUNDLE: ${{ secrets.ANDROID_SIGNING_BUNDLE }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          if [ -n "$ANDROID_SIGNING_BUNDLE" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "Assinatura permanente disponível: o APK poderá ser publicado como atualização."
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::ANDROID_SIGNING_BUNDLE ainda não foi criado. Será gerado um APK de teste instalável, sem publicar atualização automática."
-          fi
+          test -n "$ANDROID_SIGNING_BUNDLE" || { echo "::error::ANDROID_SIGNING_BUNDLE é obrigatório. Um APK sem a assinatura permanente não pode ser publicado como atualização."; exit 1; }
           test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo "::error::A Variable NEXT_PUBLIC_SUPABASE_URL não foi configurada."; exit 1; }
           test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || { echo "::error::A Variable NEXT_PUBLIC_SUPABASE_ANON_KEY não foi configurada."; exit 1; }
           [[ "$NEXT_PUBLIC_SUPABASE_URL" =~ ^https://[a-z0-9-]+\.supabase\.co/?$ ]] || { echo "::error::NEXT_PUBLIC_SUPABASE_URL não é uma URL válida do Supabase."; exit 1; }
           [[ "$NEXT_PUBLIC_SUPABASE_URL" != *example* ]] || { echo "::error::A URL ainda está com o valor de exemplo."; exit 1; }
           [[ "$NEXT_PUBLIC_SUPABASE_ANON_KEY" == sb_publishable_* || "$NEXT_PUBLIC_SUPABASE_ANON_KEY" == eyJ* ]] || { echo "::error::Use a Publishable key ou a chave anon pública."; exit 1; }
           [[ "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != *test* ]] || { echo "::error::A chave ainda está com valor de teste."; exit 1; }
+          echo "Assinatura permanente e Supabase confirmados."
+
+      - name: Calcular versão Android monotônica
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          import json, pathlib
+          version = str(json.loads(pathlib.Path('package.json').read_text(encoding='utf-8'))['version'])
+          major, minor, patch = [int(part) for part in version.split('.')[:3]]
+          run = max(1, int(os.environ['RUN_NUMBER'])) % 10000
+          version_code = major * 50_000_000 + minor * 100_000 + patch * 10_000 + run
+          short_sha = os.environ['GIT_SHA'][:8]
+          asset = f'BuildMaster-Elite-Tatico-v{version}-{version_code}-{short_sha}.apk'
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as handle:
+              handle.write(f'BUILDMASTER_VERSION={version}\n')
+              handle.write(f'ANDROID_VERSION_CODE={version_code}\n')
+              handle.write(f'APK_ASSET_NAME={asset}\n')
+          print(f'Versão {version}; versionCode {version_code}; asset {asset}')
+          PY
 
       - name: Exibir versões do ambiente
         run: |
@@ -75,17 +90,19 @@ jobs:
         run: npm run typecheck
 
       - name: Rodar testes do motor
-        timeout-minutes: 14
+        timeout-minutes: 16
         run: npm run test:all
 
       - name: Preparar exportação estática para APK
-        run: rm -rf out android .buildmaster-static-disabled dist-apk signing
+        run: rm -rf out android .buildmaster-static-disabled dist-apk signing verify-release
 
       - name: Gerar app web embutido
         timeout-minutes: 12
         env:
           BUILDMASTER_ANDROID_STATIC: '1'
           NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
+          NEXT_PUBLIC_BUILDMASTER_VERSION: ${{ env.BUILDMASTER_VERSION }}
+          NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL: https://github.com/${{ github.repository }}/releases/download/buildmaster-latest/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
@@ -93,7 +110,7 @@ jobs:
           NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK: ${{ vars.NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK || '0' }}
         run: npm run apk:build-web
 
-      - name: Confirmar Supabase real no app gerado
+      - name: Confirmar configuração real dentro do app
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -102,18 +119,16 @@ jobs:
           ! grep -RqsF 'sb_publishable_test' out || { echo '::error::O build ainda contém a chave de teste.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_URL" out || { echo '::error::A URL real do Supabase não entrou no app.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_ANON_KEY" out || { echo '::error::A chave pública real não entrou no app.'; exit 1; }
-          echo 'Supabase real confirmado dentro do app web.'
+          grep -RqsF 'update-manifest.json' out || { echo '::error::O canal de atualização não entrou no build.'; exit 1; }
 
       - name: Criar projeto Android
         timeout-minutes: 5
         run: npx --no-install cap add android
 
-      - name: Instalar armazenamento seguro, identidade do aparelho e instalador verificado
+      - name: Instalar Keystore, identidade e atualizador nativo
         run: node scripts/install-android-security-plugin.mjs
 
       - name: Atualizar versão interna do Android
-        env:
-          ANDROID_VERSION_CODE: ${{ github.run_number }}
         run: |
           python - <<'PY'
           import os, pathlib, re
@@ -122,13 +137,14 @@ jobs:
           if target is None:
               raise SystemExit('Arquivo Gradle do aplicativo não encontrado.')
           text = target.read_text(encoding='utf-8')
-          code = 267600 + max(1, int(os.environ['ANDROID_VERSION_CODE']))
+          code = int(os.environ['ANDROID_VERSION_CODE'])
+          version = os.environ['BUILDMASTER_VERSION']
           text, count_code = re.subn(r'versionCode\s*[= ]\s*\d+', f'versionCode {code}', text, count=1)
-          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', 'versionName "26.76.0"', text, count=1)
+          text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', f'versionName "{version}"', text, count=1)
           if not count_code or not count_name:
               raise SystemExit('versionCode/versionName não encontrados no Gradle.')
           target.write_text(text, encoding='utf-8')
-          print(f'Android versionCode={code}; versionName=26.76.0')
+          print(f'Android versionCode={code}; versionName={version}')
           PY
 
       - name: Configurar cache do Gradle
@@ -140,43 +156,31 @@ jobs:
         timeout-minutes: 5
         run: npx --no-install cap sync android
 
-      - name: Confirmar proteções nativas de segurança
+      - name: Confirmar atualizador nativo completo
         run: |
-          test -f android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterSecurityPlugin.java || { echo '::error::Plugin nativo de segurança ausente.'; exit 1; }
-          grep -RqsF 'AndroidKeyStore' android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterSecurityPlugin.java || { echo '::error::Android Keystore não foi configurado.'; exit 1; }
+          PLUGIN=android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterSecurityPlugin.java
+          test -f "$PLUGIN" || { echo '::error::Plugin nativo ausente.'; exit 1; }
+          grep -qF 'AndroidKeyStore' "$PLUGIN" || { echo '::error::Android Keystore ausente.'; exit 1; }
+          grep -qF 'getAppInstallInfo' "$PLUGIN" || { echo '::error::Leitura de versionCode instalada ausente.'; exit 1; }
+          grep -qF 'canRequestPackageInstalls' "$PLUGIN" || { echo '::error::Fluxo de permissão de instalação ausente.'; exit 1; }
+          grep -qF 'apkDownloadProgress' "$PLUGIN" || { echo '::error::Progresso de download ausente.'; exit 1; }
+          grep -qF 'hasSigningCertificate' "$PLUGIN" || { echo '::error::Validação da assinatura do APK ausente.'; exit 1; }
+          grep -qF 'getPackageArchiveInfo' "$PLUGIN" || { echo '::error::Validação do pacote baixado ausente.'; exit 1; }
+          grep -qF 'SHA-256 do APK não confere' "$PLUGIN" || { echo '::error::Validação SHA-256 ausente.'; exit 1; }
           grep -RqsF 'REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml || { echo '::error::Permissão controlada de instalação ausente.'; exit 1; }
           grep -RqsF 'androidx.core.content.FileProvider' android/app/src/main/AndroidManifest.xml || { echo '::error::FileProvider seguro ausente.'; exit 1; }
           grep -RqsF 'usesCleartextTraffic="false"' android/app/src/main/AndroidManifest.xml || { echo '::error::Tráfego HTTP inseguro não foi bloqueado.'; exit 1; }
           grep -RqsF 'allowBackup="false"' android/app/src/main/AndroidManifest.xml || { echo '::error::Backup Android não autorizado ainda está ativo.'; exit 1; }
-          grep -RqsF '@xml/buildmaster_file_paths' android/app/src/main/AndroidManifest.xml || { echo '::error::FileProvider não está limitado ao cache verificado.'; exit 1; }
-          echo 'Keystore, identidade criptográfica e instalador verificado confirmados.'
 
-      - name: Confirmar Supabase dentro dos arquivos do Android
+      - name: Confirmar Supabase nos arquivos Android
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_URL" android/app/src/main/assets/public || { echo '::error::A URL real não foi copiada para o APK.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_ANON_KEY" android/app/src/main/assets/public || { echo '::error::A chave real não foi copiada para o APK.'; exit 1; }
-          echo 'Supabase real confirmado nos arquivos que serão empacotados no APK.'
-
-      - name: Dar permissão ao Gradle
-        run: chmod +x android/gradlew
-
-      - name: Gerar APK release sem assinatura
-        if: steps.signing.outputs.enabled == 'true'
-        timeout-minutes: 15
-        working-directory: android
-        run: ./gradlew --no-daemon assembleRelease
-
-      - name: Gerar APK de teste instalável
-        if: steps.signing.outputs.enabled != 'true'
-        timeout-minutes: 15
-        working-directory: android
-        run: ./gradlew --no-daemon assembleDebug
 
       - name: Preparar chave permanente
-        if: steps.signing.outputs.enabled == 'true'
         env:
           ANDROID_SIGNING_BUNDLE: ${{ secrets.ANDROID_SIGNING_BUNDLE }}
         run: |
@@ -200,11 +204,17 @@ jobs:
               handle.write(f'ANDROID_KEYSTORE_PATH={path.resolve()}\n')
               handle.write(f'ANDROID_KEYSTORE_PASSWORD={password}\n')
               handle.write('ANDROID_KEY_ALIAS=buildmaster\n')
-          print('Chave permanente carregada com segurança.')
           PY
 
-      - name: Alinhar e assinar APK de produção
-        if: steps.signing.outputs.enabled == 'true'
+      - name: Dar permissão ao Gradle
+        run: chmod +x android/gradlew
+
+      - name: Gerar APK release
+        timeout-minutes: 16
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Alinhar, assinar e validar APK oficial
         run: |
           mkdir -p dist-apk
           UNSIGNED_APK=$(find android/app/build/outputs/apk/release -type f -name '*-unsigned.apk' | head -n 1)
@@ -213,83 +223,82 @@ jobs:
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
           test -x "$ZIPALIGN" && test -x "$APKSIGNER" && test -x "$AAPT"
-          "$ZIPALIGN" -p -f 4 "$UNSIGNED_APK" dist-apk/BuildMaster-Elite-Tatico-aligned.apk
+          "$ZIPALIGN" -p -f 4 "$UNSIGNED_APK" dist-apk/BuildMaster-aligned.apk
           "$APKSIGNER" sign \
             --ks "$ANDROID_KEYSTORE_PATH" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
             --ks-key-alias "$ANDROID_KEY_ALIAS" \
             --key-pass env:ANDROID_KEYSTORE_PASSWORD \
-            --out dist-apk/BuildMaster-Elite-Tatico-latest.apk \
-            dist-apk/BuildMaster-Elite-Tatico-aligned.apk
-          rm -f dist-apk/BuildMaster-Elite-Tatico-aligned.apk
-          "$APKSIGNER" verify --verbose --print-certs dist-apk/BuildMaster-Elite-Tatico-latest.apk
-          "$AAPT" dump badging dist-apk/BuildMaster-Elite-Tatico-latest.apk | head -n 3
-          cp dist-apk/BuildMaster-Elite-Tatico-latest.apk dist-apk/BuildMaster-Elite-Tatico-v26.76.apk
+            --out "dist-apk/$APK_ASSET_NAME" \
+            dist-apk/BuildMaster-aligned.apk
+          rm -f dist-apk/BuildMaster-aligned.apk
+          "$APKSIGNER" verify --verbose --print-certs "dist-apk/$APK_ASSET_NAME" | tee dist-apk/signing-report.txt
+          BADGING=$("$AAPT" dump badging "dist-apk/$APK_ASSET_NAME" | head -n 1)
+          echo "$BADGING"
+          echo "$BADGING" | grep -q "package: name='com.buildmaster.elitetatico'" || { echo '::error::appId incorreto no APK.'; exit 1; }
+          echo "$BADGING" | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::versionCode incorreto no APK.'; exit 1; }
+          echo "$BADGING" | grep -q "versionName='$BUILDMASTER_VERSION'" || { echo '::error::versionName incorreto no APK.'; exit 1; }
+          cp "dist-apk/$APK_ASSET_NAME" "dist-apk/BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk"
+          cp "dist-apk/$APK_ASSET_NAME" "dist-apk/BuildMaster-Elite-Tatico-latest.apk"
 
-      - name: Preparar APK de teste sem assinatura permanente
-        if: steps.signing.outputs.enabled != 'true'
-        run: |
-          mkdir -p dist-apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-latest.apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/BuildMaster-Elite-Tatico-v26.76.apk
-          echo "APK de teste preparado. Para atualização automática por cima, configure ANDROID_SIGNING_BUNDLE depois."
-
-      - name: Preparar manifesto e notas da atualização
-        env:
-          VERSION: '26.76.0'
+      - name: Preparar manifesto da atualização
         run: |
           python - <<'PY'
           import datetime, hashlib, json, os, pathlib
-          apk = pathlib.Path('dist-apk/BuildMaster-Elite-Tatico-latest.apk')
+          asset_name = os.environ['APK_ASSET_NAME']
+          apk = pathlib.Path('dist-apk') / asset_name
           repo = os.environ['GITHUB_REPOSITORY']
           manifest = {
             'appId': 'com.buildmaster.elitetatico',
-            'version': os.environ['VERSION'],
+            'version': os.environ['BUILDMASTER_VERSION'],
+            'versionCode': int(os.environ['ANDROID_VERSION_CODE']),
             'buildId': os.environ['GITHUB_SHA'],
-            'versionCode': 267600 + int(os.environ.get('GITHUB_RUN_NUMBER', '1')),
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'channel': 'stable',
             'updateType': 'apk',
-            'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk',
+            'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build={os.environ["GITHUB_SHA"][:8]}&code={os.environ["ANDROID_VERSION_CODE"]}',
             'notes': [
-              'APKs antigos bloqueados pelo servidor após a ativação da versão mínima.',
-              'MFA obrigatório para abrir o painel administrativo.',
-              'Tokens protegidos pelo Android Keystore e aparelho identificado por chave criptográfica.',
-              'Atualização com URL oficial fixa e verificação SHA-256 antes da instalação.',
-              'Backup criptografado, período offline reduzido e rate limit administrativo.'
+              'Atualização automática refeita com versionCode real e detecção ao abrir, retornar ou reconectar.',
+              'Download mostra progresso e aceita redirecionamentos oficiais do GitHub.',
+              'APK validado por tamanho, SHA-256, pacote, versão e assinatura antes da instalação.',
+              'Permissão “Permitir desta fonte” guiada dentro do fluxo.',
+              'Publicação usa arquivo imutável por build e verificação pós-release.',
+              'Motor de identidade, formações, segurança e sessão persistente preservados.'
             ],
             'mandatory': True,
             'minNativeVersion': '26.75.0',
-            'checksum': hashlib.sha256(apk.read_bytes()).hexdigest()
+            'checksum': hashlib.sha256(apk.read_bytes()).hexdigest(),
+            'sizeBytes': apk.stat().st_size
           }
-          pathlib.Path('dist-apk/update-manifest.json').write_text(
-              json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+          pathlib.Path('dist-apk/update-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
-          cat > dist-apk/RELEASE_NOTES.md <<'NOTES'
-          ## BuildMaster Elite Tático v26.76
+          cat > dist-apk/RELEASE_NOTES.md <<NOTES
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Definitiva
 
-          - Bloqueio de APKs abaixo da versão mínima no servidor.
-          - MFA obrigatório para ações administrativas.
-          - Tokens protegidos pelo Android Keystore.
-          - Identidade criptográfica do aparelho e proteção contra clonagem simples.
-          - Atualização por canal oficial fixo, com verificação SHA-256.
-          - Backup AES-256, período offline reduzido e rate limit administrativo.
-
-          Instale esta versão antes de ativar o bloqueio de versões antigas no Supabase.
+          - Detecção automática ao abrir, voltar ao app e reconectar.
+          - Comparação pelo versionCode real instalado.
+          - APK único por build para evitar cache antigo.
+          - Download nativo com progresso e redirecionamentos oficiais do GitHub.
+          - Verificação de tamanho, SHA-256, pacote, versionCode, versionName e assinatura.
+          - Permissão de instalação guiada pelo próprio aplicativo.
+          - Publicação bloqueada sem a chave permanente.
+          - Teste pós-publicação baixa a release e confirma o checksum.
           NOTES
 
-      - name: Enviar APK como artefato do workflow
+      - name: Enviar APK e manifesto como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: BuildMaster-Elite-Tatico-v26.76-APK-e-Manifesto
+          name: BuildMaster-Elite-Tatico-v${{ env.BUILDMASTER_VERSION }}-APK-e-Manifesto
           path: |
-            dist-apk/BuildMaster-Elite-Tatico-v26.76.apk
+            dist-apk/BuildMaster-Elite-Tatico-v${{ env.BUILDMASTER_VERSION }}.apk
+            dist-apk/${{ env.APK_ASSET_NAME }}
+            dist-apk/BuildMaster-Elite-Tatico-latest.apk
             dist-apk/update-manifest.json
+            dist-apk/signing-report.txt
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publicar atualização estável sem apagar a última versão antes da hora
-        if: steps.signing.outputs.enabled == 'true'
+      - name: Publicar APK único e manifesto por último
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -297,15 +306,47 @@ jobs:
           git push origin refs/tags/buildmaster-latest --force
           if gh release view buildmaster-latest >/dev/null 2>&1; then
             gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático v26.76 — Ficha Studio" \
+              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Definitiva" \
               --notes-file dist-apk/RELEASE_NOTES.md
-            gh release upload buildmaster-latest dist-apk/BuildMaster-Elite-Tatico-latest.apk --clobber
-            gh release upload buildmaster-latest dist-apk/update-manifest.json --clobber
           else
             gh release create buildmaster-latest \
               --verify-tag \
-              --title "BuildMaster Elite Tático v26.76 — Ficha Studio" \
-              --notes-file dist-apk/RELEASE_NOTES.md \
-              dist-apk/BuildMaster-Elite-Tatico-latest.apk \
-              dist-apk/update-manifest.json
+              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Definitiva" \
+              --notes-file dist-apk/RELEASE_NOTES.md
           fi
+          gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME" --clobber
+          gh release upload buildmaster-latest dist-apk/BuildMaster-Elite-Tatico-latest.apk --clobber
+          gh release upload buildmaster-latest dist-apk/update-manifest.json --clobber
+          gh release upload buildmaster-latest dist-apk/signing-report.txt --clobber
+
+      - name: Verificar release publicada de ponta a ponta
+        run: |
+          mkdir -p verify-release
+          MANIFEST_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json?verify=$GITHUB_SHA"
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 90 "$MANIFEST_URL" -o verify-release/update-manifest.json; then break; fi
+            sleep $((attempt * 5))
+          done
+          test -s verify-release/update-manifest.json || { echo '::error::Manifesto publicado não pôde ser baixado.'; exit 1; }
+          python - <<'PY'
+          import json, os, pathlib
+          manifest = json.loads(pathlib.Path('verify-release/update-manifest.json').read_text(encoding='utf-8'))
+          assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
+          assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
+          assert manifest['buildId'] == os.environ['GITHUB_SHA']
+          assert '/BuildMaster-Elite-Tatico-latest.apk?' in manifest['apkUrl']
+          pathlib.Path('verify-release/apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
+          pathlib.Path('verify-release/checksum.txt').write_text(manifest['checksum'], encoding='utf-8')
+          pathlib.Path('verify-release/size.txt').write_text(str(manifest['sizeBytes']), encoding='utf-8')
+          PY
+          APK_URL=$(cat verify-release/apk-url.txt)
+          curl --fail --silent --show-error --location --retry 6 --retry-all-errors --connect-timeout 30 --max-time 300 "$APK_URL?verify=$GITHUB_SHA" -o verify-release/released.apk
+          ACTUAL_SHA=$(sha256sum verify-release/released.apk | awk '{print $1}')
+          EXPECTED_SHA=$(cat verify-release/checksum.txt)
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA" || { echo '::error::Checksum do APK publicado não confere com o manifesto.'; exit 1; }
+          test "$(stat -c%s verify-release/released.apk)" = "$(cat verify-release/size.txt)" || { echo '::error::Tamanho do APK publicado não confere.'; exit 1; }
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          "$APKSIGNER" verify --verbose --print-certs verify-release/released.apk
+          "$AAPT" dump badging verify-release/released.apk | head -n 1 | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::APK publicado tem versionCode incorreto.'; exit 1; }
+          echo 'Release verificada: manifesto, APK, checksum, tamanho, assinatura e versionCode corretos.'
