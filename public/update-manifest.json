@@ -2,19 +2,14 @@
   "appId": "com.buildmaster.elitetatico",
   "version": "26.78.0",
   "versionCode": 1307800001,
-  "buildId": "update-engine-v2678-placeholder",
+  "buildId": "GITHUB_SHA",
   "publishedAt": "2026-07-16T00:00:00.000Z",
   "channel": "stable",
   "updateType": "apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build=abcdef12&code=1307800001",
-  "notes": [
-    "Atualização automática com versionCode real e detecção ao retornar ao aplicativo.",
-    "Download nativo com progresso e permissão guiada do Android.",
-    "Verificação de tamanho, SHA-256, pacote, versão e assinatura.",
-    "APK único por build para evitar cache de versões antigas."
-  ],
+  "apkUrl": "https://github.com/OWNER/REPOSITORY/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build=abcdef12&code=1307800001",
+  "notes": ["Resumo da versão"],
   "mandatory": true,
   "minNativeVersion": "26.75.0",
-  "checksum": "0000000000000000000000000000000000000000000000000000000000000000",
-  "sizeBytes": 1
+  "checksum": "SHA256_DO_APK_COM_64_CARACTERES",
+  "sizeBytes": 12345678
 }
