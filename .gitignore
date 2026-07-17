@@ -1,0 +1,23 @@
+# Dependencies and generated builds
+node_modules/
+.next/
+out/
+android/
+dist-apk/
+.buildmaster-static-disabled/
+tsconfig.tsbuildinfo
+
+# Local environment and signing material
+.env
+.env.local
+.env.*.local
+*.jks
+*.keystore
+ANDROID_SIGNING_BUNDLE.txt
+*.pem
+*.p12
+
+# Temporary files
+*.log
+.DS_Store
+Thumbs.db

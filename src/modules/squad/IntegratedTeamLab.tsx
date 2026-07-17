@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, Layers, ShieldCheck, Target, Users } from 'lucide-react';
 import type { TeamDiagnosis } from '@/modules/core/centralIntelligence';
+import { SquadGapPanel } from '@/components/SquadGapPanel';
 
 export function IntegratedTeamLab({ team, onOpenFormationLab, onPrepareMatch }: { team: TeamDiagnosis; onOpenFormationLab: () => void; onPrepareMatch: () => void }) {
   return <section className="v27-module v27-team-lab">
@@ -40,6 +41,7 @@ export function IntegratedTeamLab({ team, onOpenFormationLab, onPrepareMatch }: 
         <div className="v27-panel-heading"><div><p className="kicker"><Users size={14}/> Banco recomendado</p><h3>Cobertura para os titulares</h3></div><span>{team.benchSuggestions.length}</span></div>
         <div className="v27-bench-list">{team.benchSuggestions.map((player) => <div key={player.id}><strong>{player.name}</strong><span>{player.role}</span><small>{player.reason}</small><b>{player.score}</b></div>)}{!team.benchSuggestions.length && <p>Cadastre mais jogadores para montar um banco complementar.</p>}</div>
       </article>
+      <SquadGapPanel team={team} />
       <article className="luxury-panel v27-pairing-card">
         <div className="v27-panel-heading"><div><p className="kicker"><Target size={14}/> Combinações</p><h3>Como as funções se conectam</h3></div></div>
         <div className="v27-pairing-list">{team.pairingNotes.map((note) => <span key={note}><CheckCircle2 size={15}/>{note}</span>)}</div>

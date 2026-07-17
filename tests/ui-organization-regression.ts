@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-const css = fs.readFileSync('src/app/globals.css', 'utf8');
+const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 
-assert.match(component, /Elite Tático v27\.00/);
+assert.match(component, /Elite Tático v27\.10/);
 assert.match(component, /const RESULT_PRIMARY_TABS/);
 assert.match(component, /const RESULT_ADVANCED_GROUPS/);
 assert.match(component, /label: 'Resumo'/);
@@ -55,4 +55,4 @@ assert.match(component, /IntegratedTeamLab/);
 assert.match(component, /MatchLaboratory/);
 assert.match(component, /BuildMasterAssistant/);
 assert.match(css, /v27\.00 — Central Inteligente Integrada/);
-console.log('UI v27.00 organizada: central integrada, resultado premium, Cofre, Ajustes e navegação aprovados.');
+console.log('UI v27.10 organizada: central integrada, resultado premium, Cofre, Ajustes e navegação aprovados.');

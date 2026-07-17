@@ -58,19 +58,7 @@ import { buildAdvancedCalibration, signatureForResult } from '@/lib/advancedCali
 import { buildReliabilityCenter, compareBuildVariants, comparePlayers, detectInconsistencies } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
-import { DelayResponsePanel, SkillAndTrainingPanel } from '@/components/DevelopmentPanels';
-import { EliteEvolutionPanel, StabilityDiagnosticsPanel, VideoReviewPanel } from '@/components/EliteEvolutionPanels';
-import { MetaBuildLabPanel } from '@/components/MetaBuildLabPanel';
-import { CommunityIntelligencePanel } from '@/components/CommunityIntelligencePanel';
-import { UpdateAutoChecker, UpdateCenterPanel } from '@/components/UpdateCenterPanel';
-import { AccountAdminPanel } from '@/components/AccountAdminPanel';
-import { PrecisionBuildPanel } from '@/components/PrecisionBuildPanel';
-import { FormationRoleLabPanel } from '@/components/FormationRoleLabPanel';
-import { FirstUseOnboarding } from '@/components/FirstUseOnboarding';
-import { DecisionWeightPanel } from '@/components/DecisionWeightPanel';
-import { VerifiedCardRegistryPanel } from '@/components/VerifiedCardRegistryPanel';
-import { MatchValidationCenter } from '@/components/MatchValidationCenter';
-import { TotalCardReaderPanel } from '@/components/TotalCardReaderPanel';
+import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
 import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
@@ -78,12 +66,38 @@ const PlayerLaboratory = dynamic(() => import('@/modules/players/PlayerLaborator
 const IntegratedTeamLab = dynamic(() => import('@/modules/squad/IntegratedTeamLab').then((module) => module.IntegratedTeamLab), { ssr: false });
 const MatchLaboratory = dynamic(() => import('@/modules/matches/MatchLaboratory').then((module) => module.MatchLaboratory), { ssr: false });
 const BuildMasterAssistant = dynamic(() => import('@/modules/assistant/BuildMasterAssistant').then((module) => module.BuildMasterAssistant), { ssr: false });
+const DelayResponsePanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.DelayResponsePanel), { ssr: false });
+const SkillAndTrainingPanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.SkillAndTrainingPanel), { ssr: false });
+const EliteEvolutionPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.EliteEvolutionPanel), { ssr: false });
+const StabilityDiagnosticsPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.StabilityDiagnosticsPanel), { ssr: false });
+const VideoReviewPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.VideoReviewPanel), { ssr: false });
+const MetaBuildLabPanel = dynamic(() => import('@/components/MetaBuildLabPanel').then((module) => module.MetaBuildLabPanel), { ssr: false });
+const CommunityIntelligencePanel = dynamic(() => import('@/components/CommunityIntelligencePanel').then((module) => module.CommunityIntelligencePanel), { ssr: false });
+const UpdateCenterPanel = dynamic(() => import('@/components/UpdateCenterPanel').then((module) => module.UpdateCenterPanel), { ssr: false });
+const AccountAdminPanel = dynamic(() => import('@/components/AccountAdminPanel').then((module) => module.AccountAdminPanel), { ssr: false });
+const PrecisionBuildPanel = dynamic(() => import('@/components/PrecisionBuildPanel').then((module) => module.PrecisionBuildPanel), { ssr: false });
+const FormationRoleLabPanel = dynamic(() => import('@/components/FormationRoleLabPanel').then((module) => module.FormationRoleLabPanel), { ssr: false });
+const FirstUseOnboarding = dynamic(() => import('@/components/FirstUseOnboarding').then((module) => module.FirstUseOnboarding), { ssr: false });
+const DecisionWeightPanel = dynamic(() => import('@/components/DecisionWeightPanel').then((module) => module.DecisionWeightPanel), { ssr: false });
+const InvestmentTracePanel = dynamic(() => import('@/components/InvestmentTracePanel').then((module) => module.InvestmentTracePanel), { ssr: false });
+const VerifiedCardRegistryPanel = dynamic(() => import('@/components/VerifiedCardRegistryPanel').then((module) => module.VerifiedCardRegistryPanel), { ssr: false });
+const MatchValidationCenter = dynamic(() => import('@/components/MatchValidationCenter').then((module) => module.MatchValidationCenter), { ssr: false });
+const TotalCardReaderPanel = dynamic(() => import('@/components/TotalCardReaderPanel').then((module) => module.TotalCardReaderPanel), { ssr: false });
+const SinglePrintEvidencePanel = dynamic(() => import('@/components/SinglePrintEvidencePanel').then((module) => module.SinglePrintEvidencePanel), { ssr: false });
+const CompactSharePanel = dynamic(() => import('@/components/CompactSharePanel').then((module) => module.CompactSharePanel), { ssr: false });
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
+import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
+import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
+import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
+import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
+import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
+import { enqueueOcrFile, listOcrQueue, queueJobAsFile, removeOcrQueueJob, updateOcrQueueJob, type OcrQueueJob } from '@/modules/card-reader/ocrQueue';
+import { cropImage, mergeOcrTexts, preprocessImage } from '@/modules/card-reader/imageProcessing';
 
 type ReadingMode = 'precision' | 'fast';
 type ReaderCaptureMode = 'single' | 'complete';
@@ -224,18 +238,7 @@ const trainingLabels: Record<string, string> = {
   gk3: 'Goleiro 3'
 };
 
-const priLabels: Record<string, string> = {
-  finishing: 'Finalização',
-  creation: 'Criação',
-  dribbling: 'Drible',
-  mobility: 'Mobilidade',
-  pressure: 'Pressão',
-  defense: 'Defesa',
-  physical: 'Físico',
-  stamina: 'Resistência',
-  aerial: 'Jogo aéreo',
-  GER: 'PRI geral'
-};
+
 
 
 type LearnedCardMemory = {
@@ -494,10 +497,6 @@ const formationGuides: Record<Exclude<TacticalFormation, 'AUTO'>, FormationGuide
   }
 };
 
-function zoneKeyLabel(key: string) {
-  return DEFAULT_OCR_ZONES.find((zone) => zone.key === key)?.label ?? key;
-}
-
 function memoryKey(value: string) {
   return value
     .normalize('NFD')
@@ -625,19 +624,6 @@ function savedStatusText(item: SavedAnalysis) {
 function savedPositionGroup(item: SavedAnalysis) {
   return item.result.bestPosition.code;
 }
-
-function downloadTextFile(filename: string, content: string, type = 'text/plain;charset=utf-8') {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
 
 function downloadBlobFile(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
@@ -2021,152 +2007,10 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
 }
 
 
-function normalizeLine(line: string) {
-  return line.replace(/\s+/g, ' ').trim();
-}
-
-function mergeOcrTexts(...texts: string[]) {
-  const lines = new Map<string, string>();
-
-  for (const text of texts) {
-    for (const line of text.split(/\r?\n/).map(normalizeLine).filter(Boolean)) {
-      const key = line
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '');
-      if (key && !lines.has(key)) lines.set(key, line);
-    }
-  }
-
-  return Array.from(lines.values()).join('\n');
-}
-
-async function imageToCanvas(file: File | Blob) {
-  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-
-  const bitmap = await createImageBitmap(file);
-  const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
-  ctx.drawImage(bitmap, 0, 0);
-  return { bitmap, canvas, ctx };
-}
-
-async function preprocessImage(file: File | Blob, mode: 'contrast' | 'sharp' = 'contrast'): Promise<Blob | File> {
-  const setup = await imageToCanvas(file).catch(() => null);
-  if (!setup) return file as File;
-
-  const { bitmap, canvas, ctx } = setup;
-  const scale = Math.max(2, Math.min(4, 3000 / Math.max(1, bitmap.width)));
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  for (let index = 0; index < data.length; index += 4) {
-    const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
-    const boost = mode === 'sharp' ? 2.18 : 1.76;
-    const contrasted = Math.max(0, Math.min(255, (gray - 108) * boost + 158));
-    data[index] = contrasted;
-    data[index + 1] = contrasted;
-    data[index + 2] = contrasted;
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  return await new Promise<Blob | File>((resolve) => {
-    canvas.toBlob((blob) => resolve(blob ?? (file as File)), 'image/png', 0.96);
-  });
-}
-
-async function cropImage(file: File, region: { x: number; y: number; w: number; h: number }, widthTarget = 1900, mode: 'contrast' | 'sharp' = 'contrast'): Promise<Blob | File> {
-  const setup = await imageToCanvas(file).catch(() => null);
-  if (!setup) return file;
-
-  const { bitmap } = setup;
-  const cropX = Math.round(bitmap.width * region.x);
-  const cropY = Math.round(bitmap.height * region.y);
-  const cropW = Math.round(bitmap.width * region.w);
-  const cropH = Math.round(bitmap.height * region.h);
-  const scale = Math.max(1.6, widthTarget / Math.max(1, cropW));
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(cropW * scale);
-  canvas.height = Math.round(cropH * scale);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return file;
-  ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  for (let index = 0; index < data.length; index += 4) {
-    const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
-    const boost = mode === 'sharp' ? 2.25 : 1.92;
-    const offset = mode === 'sharp' ? 168 : 160;
-    const contrasted = Math.max(0, Math.min(255, (gray - 110) * boost + offset));
-    data[index] = contrasted;
-    data[index + 1] = contrasted;
-    data[index + 2] = contrasted;
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  return await new Promise<Blob | File>((resolve) => {
-    canvas.toBlob((blob) => resolve(blob ?? file), 'image/png', 0.96);
-  });
-}
-
-async function createOcrVariants(file: File, readingMode: ReadingMode, zones: OcrZone[] = DEFAULT_OCR_ZONES): Promise<Array<{ key: OcrZone['key'] | 'full'; label: string; image: File | Blob; enhancement: PremiumEnhancementMode }>> {
-  const fullContrast = await preprocessImage(file, 'contrast');
-  const variants: Array<{ key: OcrZone['key'] | 'full'; label: string; image: File | Blob; enhancement: PremiumEnhancementMode }> = [];
-  const enabledZones = zones.filter((zone) => zone.enabled);
-
-  for (const zone of enabledZones) {
-    const widthTarget = zone.key === 'attributes' || zone.key === 'positionGrid' || zone.key === 'autoTraining' ? 2350 : 2200;
-    const image = await cropImage(file, { x: zone.x, y: zone.y, w: zone.w, h: zone.h }, widthTarget);
-    variants.push({ key: zone.key, label: zone.label.toUpperCase(), image, enhancement: 'contrast' });
-  }
-
-  if (readingMode === 'fast') {
-    return [
-      ...variants.slice(0, 5),
-      { key: 'full', label: 'imagem original', image: file, enhancement: 'original' },
-      { key: 'full', label: 'imagem otimizada', image: fullContrast, enhancement: 'contrast' }
-    ];
-  }
-
-  const sharp = await preprocessImage(file, 'sharp');
-  return [
-    ...variants,
-    { key: 'full', label: 'imagem original', image: file, enhancement: 'original' },
-    { key: 'full', label: 'imagem otimizada', image: fullContrast, enhancement: 'contrast' },
-    { key: 'full', label: 'imagem reforçada', image: sharp, enhancement: 'sharp' }
-  ];
-}
-
 async function createPlayerCardPreview(file: File): Promise<string | null> {
-  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-
   try {
-    const bitmap = await createImageBitmap(file);
-    const canvas = document.createElement('canvas');
-    const width = bitmap.width;
-    const height = bitmap.height;
-
-    const cropX = Math.round(width * 0.035);
-    const cropY = Math.round(height * 0.04);
-    const cropW = Math.round(width * 0.31);
-    const cropH = Math.round(height * 0.42);
-
-    canvas.width = 600;
-    canvas.height = 800;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.92);
+    const geometry = await inspectSinglePrintGeometry(file);
+    return await createZoneOriginPreview(file, geometry.cardArtZone);
   } catch {
     return null;
   }
@@ -2639,6 +2483,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
           </article>
 
           <DecisionWeightPanel result={result} />
+          <InvestmentTracePanel result={result} />
 
           <article className="luxury-panel wide-card">
             <p className="kicker">Mapa de desempenho no time</p>
@@ -3442,6 +3287,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       {tab === 'exportar' && (
         <div className="result-section-grid export-pro-grid">
+          <CompactSharePanel result={result} playerImage={playerImage} onExportImage={() => onExportImage?.()} />
           <article className="luxury-panel wide-card export-hero-card">
             <div className="section-title-row">
               <div>
@@ -3601,6 +3447,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 function ReviewPanel({
   draft,
   playerImage,
+  originalPreview,
   manualFields,
   setManualFields,
   cardPositionOverride,
@@ -3611,6 +3458,8 @@ function ReviewPanel({
   setTargetPosition,
   premiumReadings,
   totalReadingSession,
+  singlePrintSession,
+  onUseSingleCandidate,
   readingConfirmations,
   setReadingConfirmations,
   onRefresh,
@@ -3618,6 +3467,7 @@ function ReviewPanel({
 }: {
   draft: AnalysisResult;
   playerImage: string | null;
+  originalPreview: string | null;
   manualFields: ManualFields;
   setManualFields: (updater: ManualFields | ((current: ManualFields) => ManualFields)) => void;
   cardPositionOverride: PositionCode | 'AUTO';
@@ -3628,6 +3478,8 @@ function ReviewPanel({
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
   premiumReadings: PremiumZoneReading[];
   totalReadingSession: TotalReadingSession | null;
+  singlePrintSession: SinglePrintSession | null;
+  onUseSingleCandidate: (field: SingleFieldEvidence['key'], value: string) => void;
   readingConfirmations: Record<string, boolean>;
   setReadingConfirmations: (value: Record<string, boolean> | ((current: Record<string, boolean>) => Record<string, boolean>)) => void;
   onRefresh: () => void;
@@ -3717,6 +3569,10 @@ function ReviewPanel({
         </div>
         <p className="panel-note">A ficha final deve usar posição, estilo, nível/pontos e atributos corretos. As habilidades que o jogador já possui são opcionais: elas só ajudam o app a não recomendar habilidade repetida.</p>
       </article>
+
+      {singlePrintSession && (
+        <SinglePrintEvidencePanel session={singlePrintSession} originalPreview={originalPreview} onUseCandidate={onUseSingleCandidate} />
+      )}
 
       {totalReadingSession && (
         <article className="luxury-panel wide-card total-reading-audit">
@@ -3940,6 +3796,9 @@ export function CardVisionApp() {
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
   const [premiumReadings, setPremiumReadings] = useState<PremiumZoneReading[]>([]);
   const [totalReadingSession, setTotalReadingSession] = useState<TotalReadingSession | null>(null);
+  const [singlePrintSession, setSinglePrintSession] = useState<SinglePrintSession | null>(null);
+  const [ocrCancelable, setOcrCancelable] = useState(false);
+  const [ocrQueue, setOcrQueue] = useState<OcrQueueJob[]>([]);
   const [readingConfirmations, setReadingConfirmations] = useState<Record<string, boolean>>({});
   const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
   const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
@@ -3975,7 +3834,6 @@ export function CardVisionApp() {
   const [highContrast, setHighContrast] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [mainSection, setMainSection] = useState<MainSection>('inicio');
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -4111,6 +3969,15 @@ export function CardVisionApp() {
       // O índice é derivável; falhar ao persistir não apaga nem bloqueia os dados originais.
     }
   }, [centralEntityIndex]);
+  useEffect(() => {
+    const cards = readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []) as unknown[];
+    void syncStructuredRepository({
+      cards: Array.isArray(cards) ? cards : [],
+      builds: history,
+      formations: [centralEntityIndex.team],
+      matches: centralMatchRecords
+    }).catch((cause) => recordSafeRuntimeError({ area: 'structured-repository', code: 'sync_failed', message: cause instanceof Error ? cause.message : 'Falha ao sincronizar banco estruturado' }));
+  }, [history, centralMatchRecords, centralEntityIndex]);
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
     settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast },
@@ -4175,6 +4042,10 @@ export function CardVisionApp() {
   }, []);
 
   useEffect(() => {
+    void refreshOcrQueue();
+  }, []);
+
+  useEffect(() => {
     const onUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ version?: string; reason?: string }>).detail;
       setUpdateNotice(detail?.version ? `Nova versão ${detail.version} disponível` : 'Nova atualização disponível');
@@ -4186,6 +4057,8 @@ export function CardVisionApp() {
 
   useEffect(() => {
     let mounted = true;
+
+    void migrateLegacyRuntimeData().catch(() => ({ migrated: 0, skipped: 0 }));
 
     void loadHistoryStore()
       .then((next) => {
@@ -4558,24 +4431,7 @@ export function CardVisionApp() {
     window.location.href = '/';
   }
 
-  function resetAnalysis() {
-    try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
-    setPreview(null);
-    setPlayerCardImage(null);
-    setFileName(null);
-    setSelectedFile(null);
-    setOcrDone(false);
-    setRawText('');
-    setResult(null);
-    setDraftResult(null);
-    setManualFields(emptyManualFields());
-    setManualMode(false);
-    setCardPositionOverride('AUTO');
-    setPlaystyleOverride('AUTO');
-    setQualityReport(null);
-    setActiveHistoryId(null);
-    setStatus('Central reiniciada. Escolha o Leitor Elite de Carta ou a Central de Precisão Manual para começar.');
-  }
+
 
   function createVaultFolder() {
     const name = newFolderName.trim();
@@ -4904,23 +4760,26 @@ export function CardVisionApp() {
     }
   }
 
-  function exportIntegrityDiagnostic() {
-    const payload = {
-      app: 'BuildMaster Elite Tático',
-      version: APP_DATA_VERSION,
-      generatedAt: new Date().toISOString(),
-      health: healthSummary,
-      integrity: localIntegrity,
-      migrationLog
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `buildmaster-diagnostico-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setStatus('Diagnóstico de integridade exportado.');
+  async function exportIntegrityDiagnostic() {
+    try {
+      const payload = await createSafeDiagnosticReport({
+        version: APP_DATA_VERSION,
+        health: healthSummary,
+        integrity: localIntegrity,
+        migrationLog
+      });
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `buildmaster-diagnostico-seguro-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus('Diagnóstico seguro exportado. Senhas, tokens, conta e conteúdo dos prints foram removidos.');
+    } catch (cause) {
+      await recordSafeRuntimeError({ area: 'diagnostico', code: 'export_failed', message: cause instanceof Error ? cause.message : 'Falha ao exportar diagnóstico' });
+      setStatus('Não foi possível gerar o diagnóstico agora. Nenhum dado foi alterado.');
+    }
   }
 
   async function exportHistoryBackup() {
@@ -5046,13 +4905,7 @@ export function CardVisionApp() {
     });
   }
 
-  function updateHistoryRoleNote(id: string, tacticalRoleNote: string) {
-    setHistory((current) => {
-      const next = current.map((entry) => entry.id === id ? { ...entry, tacticalRoleNote, updatedAt: new Date().toLocaleString('pt-BR') } : entry);
-      void persistHistoryStore(next);
-      return next;
-    });
-  }
+
 
   function markAllHistorySkills(id: string, done: boolean) {
     setHistory((current) => {
@@ -5129,6 +4982,24 @@ export function CardVisionApp() {
     }
   }
 
+  function applySinglePrintCandidate(field: SingleFieldEvidence['key'], value: string) {
+    if (!value) return;
+    if (field === 'playerName') setManualFields((current) => ({ ...current, playerName: value }));
+    if (field === 'level') setManualFields((current) => ({ ...current, level: value.replace(/[^0-9]/g, '').slice(0, 2) }));
+    if (field === 'points') setManualFields((current) => ({ ...current, trainingPointsTotal: value.replace(/[^0-9]/g, '').slice(0, 3) }));
+    if (field === 'position') setCardPositionOverride(value as PositionCode);
+    if (field === 'playstyle') setPlaystyleOverride(value);
+    setStatus(`${value} aplicado como correção de ${field}. Recalcule a prévia e confirme antes de finalizar.`);
+  }
+
+  async function cancelCurrentOcr() {
+    setStatus('Cancelando leitura...');
+    await cancelOcrProcessing();
+    setOcrCancelable(false);
+    setLoading(false);
+    setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
+  }
+
   async function handleFile(file: File) {
     setFileName(file.name);
     setSelectedFile(file);
@@ -5143,6 +5014,7 @@ export function CardVisionApp() {
     setLoading(false);
     setPremiumReadings([]);
     setTotalReadingSession(null);
+    setSinglePrintSession(null);
     setReadingConfirmations({});
     setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
@@ -5207,6 +5079,42 @@ export function CardVisionApp() {
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
   }
 
+  async function refreshOcrQueue() {
+    setOcrQueue(await listOcrQueue());
+  }
+
+  async function queueSelectedPrint() {
+    if (!selectedFile) return;
+    try {
+      const { duplicate } = await enqueueOcrFile(selectedFile);
+      await refreshOcrQueue();
+      setStatus(duplicate ? 'Este print já estava na fila local.' : 'Print guardado na fila local. Ele continuará disponível mesmo sem internet.');
+    } catch (cause) {
+      await recordSafeRuntimeError({ area: 'ocr-queue', code: 'enqueue_failed', message: cause instanceof Error ? cause.message : 'Falha ao guardar print na fila' });
+      setStatus('Não foi possível guardar o print na fila local. A imagem atual continua selecionada.');
+    }
+  }
+
+  async function openQueuedPrint(job: OcrQueueJob) {
+    try {
+      await updateOcrQueueJob(job.id, { status: 'processing', attempts: job.attempts + 1, error: undefined });
+      const file = queueJobAsFile(job);
+      await handleFile(file);
+      await removeOcrQueueJob(job.id);
+      await refreshOcrQueue();
+      setStatus('Print carregado da fila. Toque em Executar Print Único Pro para analisar.');
+    } catch (cause) {
+      await updateOcrQueueJob(job.id, { status: 'failed', attempts: job.attempts + 1, error: cause instanceof Error ? cause.message : 'Falha ao abrir' });
+      await refreshOcrQueue();
+      setStatus('Não foi possível abrir este item da fila. Os demais continuam protegidos.');
+    }
+  }
+
+  async function discardQueuedPrint(id: string) {
+    await removeOcrQueueJob(id).catch(() => undefined);
+    await refreshOcrQueue();
+  }
+
   function startManualPreciseMode() {
     setMainSection('manual');
     const template = [
@@ -5242,6 +5150,7 @@ export function CardVisionApp() {
     }
 
     setLoading(true);
+    setOcrCancelable(true);
     setResult(null);
     setDraftResult(null);
     setManualFields(emptyManualFields());
@@ -5250,66 +5159,180 @@ export function CardVisionApp() {
     setOcrDone(false);
     setPremiumReadings([]);
     setTotalReadingSession(null);
+    setSinglePrintSession(null);
     setReadingConfirmations({});
-    setStatus('Preparando imagem por áreas para leitura local premium...');
+    setStatus('Print Único Pro: identificando resolução, barras da tela, orientação e áreas da interface...');
+
+    const unsubscribe = subscribeOcrProgress((progress) => {
+      setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
+    });
 
     try {
-      const Tesseract = await import('tesseract.js');
-      const croppedPreview = await createPlayerCardPreview(selectedFile);
-      if (croppedPreview) setPlayerCardImage(croppedPreview);
+      const geometry = await inspectSinglePrintGeometry(selectedFile);
+      const imageHash = await fileDigest(selectedFile);
+      const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', 120).catch(() => []);
+      const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
+      setOcrZones(geometry.zones);
 
-      const variants = await createOcrVariants(selectedFile, readingMode, ocrZones);
-      const texts: string[] = [];
+      const cachedArt = await runtimeGet<string>('image-thumbnails', imageHash).catch(() => null);
+      const artPreview = cachedArt || await createZoneOriginPreview(selectedFile, geometry.cardArtZone).catch(() => null);
+      if (artPreview) {
+        setPlayerCardImage(artPreview);
+        if (!cachedArt) void runtimePut('image-thumbnails', imageHash, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
+      }
+
+      const fullOptimized = await preprocessImage(selectedFile, 'contrast');
+      const fullPass = await recognizeWithOcrWorker(fullOptimized, {
+        label: 'Print completo • identificação da tela',
+        kind: 'general',
+        cacheKey: `${imageHash}:full:contrast`
+      });
+
       const zoneResults: PremiumZoneReading[] = [];
-
-      for (let index = 0; index < variants.length; index += 1) {
-        const variant = variants[index];
-        setStatus(`Lendo ${variant.label} (${index + 1}/${variants.length})...`);
-        const pass = await Tesseract.recognize(variant.image, 'por+eng', {
-          logger: (message) => {
-            if (message.status) {
-              setStatus(`${variant.label}: ${message.status}${message.progress ? ` ${Math.round(message.progress * 100)}%` : ''}`);
-            }
-          }
+      const enabledZones = geometry.zones.filter((zone) => zone.enabled);
+      for (let index = 0; index < enabledZones.length; index += 1) {
+        const zone = enabledZones[index];
+        setStatus(`Print Único Pro: ${zone.label} (${index + 1}/${enabledZones.length})...`);
+        const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
+        const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid';
+        const target = numeric ? 1180 : wide ? 1850 : 1500;
+        const contrastImage = await cropImage(selectedFile, zone, target, 'contrast');
+        const contrastPass = await recognizeWithOcrWorker(contrastImage, {
+          label: zone.label,
+          kind: ocrKindForZone(zone.key),
+          cacheKey: `${imageHash}:${geometry.template}:${zone.key}:contrast`
         });
-        const variantText = pass.data.text.trim();
-        const confidence = Math.max(0, Math.min(100, Math.round(pass.data.confidence || 0)));
-        if (variantText) texts.push(`### ${variant.label}
-${variantText}`);
-        if (variant.key !== 'full') {
-          const zone = ocrZones.find((item) => item.key === variant.key);
-          const originPreview = zone ? await createZoneOriginPreview(selectedFile, zone).catch(() => null) : null;
-          zoneResults.push({
-            key: variant.key,
-            label: variant.label,
-            text: variantText,
-            confidence,
-            status: readingStatus(confidence, variantText),
+        const originPreview = await createZoneOriginPreview(selectedFile, zone).catch(() => null);
+        const candidates: PremiumZoneReading[] = [{
+          id: `${imageHash}-${zone.key}-contrast`,
+          sourceId: imageHash,
+          sourceLabel: 'Print único',
+          screenType: geometry.template,
+          key: zone.key,
+          label: zone.label,
+          text: contrastPass.text,
+          confidence: contrastPass.confidence,
+          status: readingStatus(contrastPass.confidence, contrastPass.text),
+          originPreview,
+          enhancement: 'contrast',
+          passCount: 1,
+          alternatives: []
+        }];
+
+        const needsSecondPass = readingMode === 'precision'
+          && (contrastPass.confidence < (numeric ? 88 : 80) || contrastPass.text.trim().length < (numeric ? 1 : 4));
+        if (needsSecondPass) {
+          const sharpImage = await cropImage(selectedFile, zone, target, 'sharp');
+          const sharpPass = await recognizeWithOcrWorker(sharpImage, {
+            label: `${zone.label} • segunda passagem`,
+            kind: ocrKindForZone(zone.key),
+            cacheKey: `${imageHash}:${geometry.template}:${zone.key}:sharp`
+          });
+          candidates.push({
+            id: `${imageHash}-${zone.key}-sharp`,
+            sourceId: imageHash,
+            sourceLabel: 'Print único',
+            screenType: geometry.template,
+            key: zone.key,
+            label: zone.label,
+            text: sharpPass.text,
+            confidence: sharpPass.confidence,
+            status: readingStatus(sharpPass.confidence, sharpPass.text),
             originPreview,
-            enhancement: variant.enhancement
+            enhancement: 'sharp',
+            passCount: 2,
+            alternatives: []
           });
         }
+
+        const best = chooseBestZoneReading(candidates);
+        best.id = `${imageHash}-${zone.key}`;
+        best.passCount = candidates.length;
+        best.alternatives = candidates.filter((candidate) => candidate !== best).map((candidate) => ({ text: candidate.text, confidence: candidate.confidence, enhancement: candidate.enhancement }));
+        zoneResults.push(best);
       }
 
-      setPremiumReadings(ensureZoneCoverage(ocrZones, zoneResults));
-      const mergedText = mergeOcrTexts(...texts);
+      let session = buildSinglePrintSession({
+        imageHash,
+        template: geometry.template,
+        width: geometry.width,
+        height: geometry.height,
+        readings: zoneResults,
+        fullText: fullPass.text,
+        layoutBounds: geometry.anchorReport.bounds,
+        layoutConfidence: geometry.anchorReport.confidence,
+        zones: geometry.zones
+      });
+
+      const storedPreview = toStoredSinglePrintScan(session);
+      const previous = storedScanEntries.map((entry) => entry.value).find((entry) => entry.identityKey && entry.identityKey === storedPreview.identityKey && entry.imageHash !== imageHash) ?? null;
+      if (previous) {
+        session = buildSinglePrintSession({
+          imageHash,
+          template: geometry.template,
+          width: geometry.width,
+          height: geometry.height,
+          readings: zoneResults,
+          fullText: fullPass.text,
+          previous,
+          layoutBounds: geometry.anchorReport.bounds,
+          layoutConfidence: geometry.anchorReport.confidence,
+          zones: geometry.zones
+        });
+      }
+
+      const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 120).catch(() => [])).map((entry) => entry.value);
+      session = applyStoredOcrCorrections(session, corrections);
+      if (exactDuplicate) {
+        session = { ...session, warnings: [...new Set(['Este arquivo é idêntico a um print já analisado. O cache foi reutilizado quando disponível.', ...session.warnings])] };
+      }
+      setSinglePrintSession(session);
+      setPremiumReadings(ensureZoneCoverage(geometry.zones, zoneResults));
       setOcrDone(true);
 
-      if (mergedText.trim().length > 2) {
-        const learnedText = applyLearningToText(mergedText);
-        const lockedText = textWithManualLocks(learnedText);
-        setRawText(lockedText);
-        const autoResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
-        hydrateReviewFields(autoResult);
-        setDraftResult(autoResult);
-        setResult(null);
-        setStatus('Leitura por áreas concluída. Confirme as quatro etapas antes de gerar a ficha final.');
+      const mergedText = mergeOcrTexts(session.canonicalText, fullPass.text, ...zoneResults.map((reading) => `### ${reading.label}\n${reading.text}`));
+      const learnedText = applyLearningToText(mergedText);
+      const lockedText = textWithManualLocks(learnedText);
+      setRawText(lockedText);
+      const autoResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
+      hydrateReviewFields(autoResult);
+      setDraftResult(autoResult);
+      setResult(null);
+
+      const name = fieldByKey(session, 'playerName');
+      const position = fieldByKey(session, 'position');
+      const style = fieldByKey(session, 'playstyle');
+      const level = fieldByKey(session, 'level');
+      const attributes = fieldByKey(session, 'attributes');
+      const points = fieldByKey(session, 'points');
+      setReadingConfirmations({
+        identity: Boolean(name?.status === 'confirmed' && level?.status === 'confirmed'),
+        card: Boolean(position?.status === 'confirmed' && style?.status === 'confirmed'),
+        attributes: Boolean(attributes?.status === 'confirmed'),
+        progression: Boolean(level?.status === 'confirmed' && points?.status !== 'missing'),
+        skills: fieldByKey(session, 'skills')?.status === 'confirmed'
+      });
+
+      const stored = toStoredSinglePrintScan(session);
+      await runtimePut('scan-history', `${Date.now()}:${imageHash}`, stored).catch(() => undefined);
+      void runtimeTrimStore('scan-history', 120).catch(() => undefined);
+
+      if (session.blockingFields.length) {
+        setStatus(`Print lido. Confirme os campos críticos: ${session.blockingFields.join(', ')}.`);
       } else {
-        setStatus('Não consegui ler texto suficiente. Tente print direto da tela com nome, posição, estilo e ficha automática visíveis.');
+        setStatus('Print Único Pro concluído. Nível, GER, posição e estilo foram separados por evidência visual; revise e finalize.');
       }
-    } catch {
-      setStatus('Não consegui ler automaticamente. Tente outro print direto da tela com nome, posição, estilo e ficha automática visíveis.');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setStatus('Leitura cancelada. O arquivo não foi alterado.');
+      } else {
+        console.error('Falha no Print Único Pro:', error);
+        void recordSafeRuntimeError({ area: 'print-unico-pro', code: 'ocr_failed', message: error instanceof Error ? error.message : 'Falha na leitura' });
+        setStatus('Não foi possível concluir a leitura. Tente um print direto da tela, sem corte e sem compressão.');
+      }
     } finally {
+      unsubscribe();
+      setOcrCancelable(false);
       setLoading(false);
     }
   }
@@ -5319,6 +5342,7 @@ ${variantText}`);
     if (!captures.length) return;
     setMainSection('resultado');
     setLoading(true);
+    setOcrCancelable(true);
     setResult(null);
     setDraftResult(null);
     setManualFields(emptyManualFields());
@@ -5327,11 +5351,15 @@ ${variantText}`);
     setOcrDone(false);
     setPremiumReadings([]);
     setTotalReadingSession(null);
+    setSinglePrintSession(null);
     setReadingConfirmations({});
     setStatus(`Leitor Total iniciado: preparando ${captures.length} tela(s) da carta...`);
 
+    const unsubscribe = subscribeOcrProgress((progress) => {
+      setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
+    });
+
     try {
-      const Tesseract = await import('tesseract.js');
       const allTexts: string[] = [];
       const allReadings: PremiumZoneReading[] = [];
       const audits: CaptureReadingAudit[] = [];
@@ -5343,15 +5371,8 @@ ${variantText}`);
       if (croppedPreview) setPlayerCardImage(croppedPreview);
 
       const recognize = async (image: File | Blob, label: string) => {
-        const pass = await Tesseract.recognize(image, 'por+eng', {
-          logger: (message) => {
-            if (message.status) setStatus(`${label}: ${message.status}${message.progress ? ` ${Math.round(message.progress * 100)}%` : ''}`);
-          }
-        });
-        return {
-          text: pass.data.text.trim(),
-          confidence: Math.max(0, Math.min(100, Math.round(pass.data.confidence || 0)))
-        };
+        const pass = await recognizeWithOcrWorker(image, { label, kind: 'general' });
+        return { text: pass.text, confidence: pass.confidence };
       };
 
       for (let captureIndex = 0; captureIndex < captures.length; captureIndex += 1) {
@@ -5464,6 +5485,8 @@ ${variantText}`);
       console.error('Falha no Leitor Total:', error);
       setStatus('Não foi possível concluir a leitura completa. Tente prints diretos, sem cortes, e mantenha cada tela no espaço correto.');
     } finally {
+      unsubscribe();
+      setOcrCancelable(false);
       setLoading(false);
     }
   }
@@ -5507,6 +5530,19 @@ ${variantText}`);
       const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
+        if (singlePrintSession) {
+          const correctionValues: Array<[SingleFieldEvidence['key'], string]> = [
+            ['playerName', manualFields.playerName.trim()],
+            ['level', manualFields.level.trim()],
+            ['points', manualFields.trainingPointsTotal.trim()],
+            ['position', cardPositionOverride === 'AUTO' ? '' : cardPositionOverride],
+            ['playstyle', playstyleOverride === 'AUTO' ? '' : playstyleOverride]
+          ];
+          for (const [field, correctedValue] of correctionValues) {
+            const correction = createCorrectionRecord(singlePrintSession, field, correctedValue);
+            if (correction) void runtimePut('ocr-corrections', correction.id, correction).then(() => runtimeTrimStore('ocr-corrections', 120)).catch(() => undefined);
+          }
+        }
         saveLearnedCard({
           playerName: nextResult.parsed.playerName,
           mainPosition: nextResult.parsed.mainPosition,
@@ -5526,6 +5562,7 @@ ${variantText}`);
         setResult(nextResult);
         setMainSection('resultado');
         setStatus(nextResult.note);
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.(22);
       } else {
         setDraftResult(nextResult);
         setResult(null);
@@ -5533,6 +5570,7 @@ ${variantText}`);
       }
     } catch (error) {
       console.error('Falha ao gerar ficha', error);
+      void recordSafeRuntimeError({ area: 'ficha', code: 'analysis_failed', message: error instanceof Error ? error.message : 'Falha ao gerar ficha' });
       setResult(null);
       setStatus('Não foi possível finalizar a ficha. Os dados foram preservados; revise objetivo, posição e pontos e tente novamente.');
     }
@@ -5666,7 +5704,7 @@ ${variantText}`);
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v27.00</span>
+            <span>Elite Tático v27.10</span>
           </div>
         </button>
 
@@ -5928,11 +5966,11 @@ ${variantText}`);
 
           {mainSection === 'leitor' && (<>
           <div className="reader-capture-mode" role="tablist" aria-label="Modo de leitura do print">
-            <button type="button" role="tab" aria-selected={readerCaptureMode === 'complete'} className={readerCaptureMode === 'complete' ? 'active' : ''} onClick={() => { setReaderCaptureMode('complete'); setTotalReadingSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
+            <button type="button" role="tab" aria-selected={readerCaptureMode === 'complete'} className={readerCaptureMode === 'complete' ? 'active' : ''} onClick={() => { setReaderCaptureMode('complete'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
               <span><Layers size={19} /></span><div><strong>Leitura completa</strong><small>Vários prints da mesma carta</small></div><em>Mais preciso</em>
             </button>
-            <button type="button" role="tab" aria-selected={readerCaptureMode === 'single'} className={readerCaptureMode === 'single' ? 'active' : ''} onClick={() => { setReaderCaptureMode('single'); setTotalReadingSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
-              <span><ScanText size={19} /></span><div><strong>Print único</strong><small>Fluxo rápido com calibração</small></div>
+            <button type="button" role="tab" aria-selected={readerCaptureMode === 'single'} className={readerCaptureMode === 'single' ? 'active' : ''} onClick={() => { setReaderCaptureMode('single'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
+              <span><ScanText size={19} /></span><div><strong>Print Único Pro</strong><small>Nível, GER e dados separados</small></div><em>Adaptativo</em>
             </button>
           </div>
 
@@ -5973,12 +6011,21 @@ ${variantText}`);
           <div className="vision-toolbar creation-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={analyzeSelectedImage} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
-              {loading ? 'Lendo carta...' : 'Executar Leitor Elite'}
+              {loading ? 'Lendo por campos...' : 'Executar Print Único Pro'}
             </button>
-            <button className="manual-mode-button calibrator-action" type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview}>
+            {ocrCancelable && <button className="manual-mode-button cancel-ocr-action" type="button" onClick={() => void cancelCurrentOcr()}><Ban size={17} /> Cancelar leitura</button>}
+            <button className="manual-mode-button calibrator-action" type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
               <Wand2 size={17} /> Ajustar zonas
             </button>
+            <button className="manual-mode-button" type="button" onClick={() => void queueSelectedPrint()} disabled={!selectedFile || loading}>
+              <Save size={17} /> Guardar na fila
+            </button>
           </div>
+
+          {ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
+            <strong>{ocrQueue.length} print(s) na fila local</strong>
+            {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}
+          </div>}
 
 
           {qualityReport && (
@@ -6641,7 +6688,7 @@ ${variantText}`);
                       <article><FileText size={20} /><div><strong>Diagnóstico sem alterações</strong><span>O relatório técnico apenas lê o estado atual do aplicativo.</span></div></article>
                     </div>
 
-                    <button type="button" className="settings-diagnostic-button" onClick={exportIntegrityDiagnostic}><FileText size={17} /><div><strong>Exportar diagnóstico técnico</strong><span>Gera um relatório para conferir integridade sem incluir senhas.</span></div></button>
+                    <button type="button" className="settings-diagnostic-button" onClick={() => void exportIntegrityDiagnostic()}><FileText size={17} /><div><strong>Exportar diagnóstico técnico</strong><span>Gera um relatório para conferir integridade sem incluir senhas.</span></div></button>
 
                     <details className="settings-details-card" open={localIntegrity.issues.length > 0}>
                       <summary>Verificação de integridade</summary>
@@ -6721,6 +6768,7 @@ ${variantText}`);
             ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
+              originalPreview={preview}
               manualFields={manualFields}
               setManualFields={setManualFields}
               cardPositionOverride={cardPositionOverride}
@@ -6731,6 +6779,8 @@ ${variantText}`);
               setTargetPosition={setTargetPosition}
               premiumReadings={premiumReadings}
               totalReadingSession={totalReadingSession}
+              singlePrintSession={singlePrintSession}
+              onUseSingleCandidate={applySinglePrintCandidate}
               readingConfirmations={readingConfirmations}
               setReadingConfirmations={setReadingConfirmations}
               onRefresh={() => runAnalysis(false)}
@@ -6741,6 +6791,7 @@ ${variantText}`);
           ) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
+              originalPreview={preview}
               manualFields={manualFields}
               setManualFields={setManualFields}
               cardPositionOverride={cardPositionOverride}
@@ -6751,6 +6802,8 @@ ${variantText}`);
               setTargetPosition={setTargetPosition}
               premiumReadings={premiumReadings}
               totalReadingSession={totalReadingSession}
+              singlePrintSession={singlePrintSession}
+              onUseSingleCandidate={applySinglePrintCandidate}
               readingConfirmations={readingConfirmations}
               setReadingConfirmations={setReadingConfirmations}
               onRefresh={() => runAnalysis(false)}

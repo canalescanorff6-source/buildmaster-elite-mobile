@@ -1,68 +1,79 @@
-# BuildMaster Elite Tático v27.00 — Central Inteligente Integrada
+# BuildMaster Elite Tático v27.10 — Reconstrução Completa
 
-> Leia primeiro: `LEIA-PRIMEIRO-V27.00-CENTRAL-INTELIGENTE.txt`  
-> Documentação completa: `README_V27_00_CENTRAL_INTELIGENTE.md`
+A v27.10 consolida a Central Inteligente v27.00 e aplica a auditoria completa do projeto: **Print Único Pro adaptativo**, correção da separação entre nível e GER, armazenamento estruturado, fila e cache de OCR, Design System premium, diagnóstico seguro, inteligência de elenco e modularização progressiva.
 
-# BuildMaster Elite Tático v26.70 — Backup e Atualizações
+## Leia primeiro
 
-A v26.70 preserva todos os recursos da v26.60, incluindo Universo Meta, fichas DNA, Inteligência da Comunidade, Cofre, equipe, treinamento e análise de delay, e adiciona duas melhorias centrais:
+- `LEIA-PRIMEIRO-V27.10-RECONSTRUCAO-COMPLETA.txt`
+- `README_V27_10_RECONSTRUCAO_COMPLETA.md`
+- `MATRIZ_IMPLEMENTACAO_V27_10.md`
+- `TESTE_APARELHO_REAL_V27_10.md`
 
-- backup dedicado das fichas e dos jogadores treinados;
-- Central de Atualizações integrada ao aplicativo.
+## Fluxo principal
 
-## Backup de jogadores treinados
+```text
+Print único ou leitura completa
+→ auditoria dos campos reconhecidos
+→ confirmação da identidade da carta
+→ escolha soberana da posição
+→ ficha exata com explicação dos investimentos
+→ encaixe no time e nas formações
+→ validação pós-jogo
+```
 
-Disponível em **Cofre → Backup** e em **Ajustes → Segurança**.
+## Áreas principais
 
-O arquivo inclui:
+- **Início:** prioridades, pendências e recomendações.
+- **Jogadores:** carta, leitor, ficha, habilidades e histórico.
+- **Meu Time:** formação, lacunas, titulares, banco e planos.
+- **Partidas:** preparação, adversário, substituições e pós-jogo.
+- **Ajustes:** conta, segurança, backup, atualização e diagnóstico.
 
-- fichas salvas e versões da carta;
-- posição escolhida;
-- distribuição de treinamento;
-- habilidades concluídas e pendentes;
-- pastas e organização do Cofre;
-- calibração, aprendizado e correções locais.
+## Desenvolvimento
 
-O backup completo continua disponível para incluir também preferências, Planos A/B/C, regras e sessão em andamento.
+Requisitos:
 
-## Central de Atualizações
+- Node.js 22.16 ou superior, abaixo da versão 25;
+- npm com `package-lock.json` preservado.
 
-Disponível em **Ajustes → Atualizações**.
+Comandos principais:
 
-Ela mostra:
+```bash
+npm ci --ignore-scripts
+npm run typecheck
+npm run test:all
+npm run apk:build-web
+```
 
-- versão e build instalados;
-- última verificação;
-- versão disponível;
-- notas da atualização;
-- busca manual e automática;
-- botão **Backup e atualizar**.
+A exportação estática local para teste exige variáveis válidas ou o fallback explicitamente habilitado apenas em desenvolvimento. O workflow de produção rejeita valores de exemplo.
 
-Ao receber uma nova revisão, o aplicativo exibe um aviso no topo e leva diretamente para essa central.
+## APK e atualização
 
-## Publicação pelo GitHub Actions
+Use o workflow:
 
-O workflow **Gerar APK e publicar atualização v26.70** executa, a cada push para `main`:
+```text
+Gerar APK e publicar atualização definitiva
+```
 
-1. `npm ci`;
-2. TypeScript;
-3. testes do projeto;
-4. exportação estática do app;
-5. compilação Android;
-6. criação de `update-manifest.json`;
-7. publicação da release `buildmaster-latest`, quando a assinatura persistente estiver configurada.
+Mantenha o Secret permanente:
 
-## Assinatura persistente
+```text
+ANDROID_SIGNING_BUNDLE
+```
 
-Para instalar atualizações por cima sem desinstalar, configure os Secrets explicados em:
+Não envie keystore, arquivo de chave, `.env`, token ou credencial para o repositório.
 
-- `README_ASSINATURA_ATUALIZACOES.md`
+## Estrutura atual
 
-Sem esses Secrets, o workflow ainda gera o APK como artefato, mas não publica uma atualização que poderia ter assinatura incompatível.
+```text
+src/modules/card-reader   Print Único Pro, fila e processamento
+src/modules/builds        orçamento de pontos e motor de fichas
+src/modules/players       Laboratório do Jogador
+src/modules/squad         time, encaixe e detector de lacunas
+src/modules/matches       partida e pós-jogo
+src/modules/core          repositório e inteligência integrada
+src/app                   entrada CSS, compatibilidade e Design System
+tests                     regressões e casos críticos de OCR
+```
 
-## Documentação
-
-- `README_V26_70.md` — funcionamento de backup e atualizações;
-- `README_ASSINATURA_ATUALIZACOES.md` — criação e configuração da chave Android;
-- `README_APK_FIEL.md` — geração do APK;
-- `README_V26_60.md` — histórico da Inteligência da Comunidade.
+Os documentos antigos foram preservados em `docs/archive/` apenas para histórico. Eles não substituem a documentação atual.

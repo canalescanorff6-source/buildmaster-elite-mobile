@@ -1,576 +1,13 @@
 import { LOCAL_CARD_RULES, type LocalCardRule } from './cardDatabase';
 import { isImpossibleByCoreStyle } from './positionRules';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
-import { buildMaxPrecisionAnalysis, type MaxPrecisionAnalysis } from './maxPrecision';
-import { buildEliteEvolutionAnalysis, type EliteEvolutionAnalysis } from './eliteEvolution';
-import { buildMetaBuildUniverse, type MetaBuildUniverse } from './metaBuildUniverse';
+import { buildMaxPrecisionAnalysis } from './maxPrecision';
+import { buildEliteEvolutionAnalysis } from './eliteEvolution';
+import { buildMetaBuildUniverse } from './metaBuildUniverse';
+import { MAX_PLAYER_TRAINING_BUDGET, MIN_PLAYER_TRAINING_BUDGET, SAFE_PLAYER_TRAINING_BUDGET, inferPointsFromCardLevel, normalizePlayerTrainingBudget, parseCardLevelFromText } from '../modules/builds/pointBudget';
 
-export type Objective =
-  | 'COMPETITIVE'
-  | 'FINISHER'
-  | 'CREATOR'
-  | 'DRIBBLER'
-  | 'PRESSING'
-  | 'POSSESSION'
-  | 'QUICK_COUNTER'
-  | 'DEFENSIVE'
-  | 'AERIAL'
-  | 'GOALKEEPER'
-  | 'META_2026';
-
-const VALID_OBJECTIVES: readonly Objective[] = [
-  'COMPETITIVE', 'FINISHER', 'CREATOR', 'DRIBBLER', 'PRESSING',
-  'POSSESSION', 'QUICK_COUNTER', 'DEFENSIVE', 'AERIAL', 'GOALKEEPER', 'META_2026'
-];
-
-export function normalizeObjective(value: unknown): Objective {
-  const raw = String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  const legacy: Record<string, Objective> = {
-    BALANCED: 'COMPETITIVE', EQUILIBRADO: 'COMPETITIVE', COMPETITIVO: 'COMPETITIVE',
-    FINISHING: 'FINISHER', FINALIZADOR: 'FINISHER',
-    CREATIVE: 'CREATOR', CRIADOR: 'CREATOR',
-    DRIBBLE: 'DRIBBLER', DRIBLADOR: 'DRIBBLER',
-    PRESSAO: 'PRESSING',
-    POSSE: 'POSSESSION', POSSE_DE_BOLA: 'POSSESSION',
-    CONTRA_ATAQUE_RAPIDO: 'QUICK_COUNTER', QUICKCOUNTER: 'QUICK_COUNTER',
-    DEFESA: 'DEFENSIVE', DEFENSIVO: 'DEFENSIVE',
-    AEREO: 'AERIAL',
-    GOLEIRO: 'GOALKEEPER', GK: 'GOALKEEPER',
-    META: 'META_2026', META_2026: 'META_2026', COMPETITIVO_2026: 'META_2026'
-  };
-  if (VALID_OBJECTIVES.includes(raw as Objective)) return raw as Objective;
-  return legacy[raw] ?? 'COMPETITIVE';
-}
-
-export type TacticalFormation = '4-2-2-2' | '4-3-3' | '4-1-2-3' | '4-2-1-3' | '4-2-3-1' | '4-3-1-2' | '4-1-3-2' | '4-4-2' | '4-1-4-1' | '3-2-4-1' | '3-4-3' | '3-5-2' | '5-3-2' | '5-2-3' | 'AUTO';
-export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'AUTO';
-export type TacticalProfile = { formation: TacticalFormation; style: TacticalStyle; managerId?: string | null; managerName?: string | null; managerProficiency?: number | null; managerBooster?: 'duplo' | 'especial' | 'padrao' | null };
-
-export type PositionCode = 'CF' | 'SS' | 'LWF' | 'RWF' | 'LMF' | 'RMF' | 'AMF' | 'CMF' | 'DMF' | 'CB' | 'LB' | 'RB' | 'GK';
-
-export type AttributeKey =
-  | 'offensiveAwareness'
-  | 'ballControl'
-  | 'dribbling'
-  | 'tightPossession'
-  | 'lowPass'
-  | 'loftedPass'
-  | 'finishing'
-  | 'heading'
-  | 'placeKicking'
-  | 'curl'
-  | 'defensiveAwareness'
-  | 'defensiveEngagement'
-  | 'tackling'
-  | 'aggression'
-  | 'goalkeeperAwareness'
-  | 'goalkeeperCatching'
-  | 'goalkeeperParrying'
-  | 'goalkeeperReflexes'
-  | 'goalkeeperReach'
-  | 'speed'
-  | 'acceleration'
-  | 'kickingPower'
-  | 'jump'
-  | 'physicalContact'
-  | 'balance'
-  | 'stamina';
-
-export type Attributes = Partial<Record<AttributeKey, number>>;
-export type PositionRatings = Partial<Record<PositionCode, number>>;
-
-export type PrecisionIssue = {
-  severity: 'ok' | 'review' | 'block';
-  code: string;
-  message: string;
-};
-
-export type PrecisionValidation = {
-  level: 'safe' | 'review' | 'blocked';
-  confirmed: boolean;
-  canGenerate: boolean;
-  issues: PrecisionIssue[];
-};
-
-export type TrainingKey =
-  | 'shooting'
-  | 'passing'
-  | 'dribbling'
-  | 'dexterity'
-  | 'lowerBodyStrength'
-  | 'aerialStrength'
-  | 'defending'
-  | 'gk1'
-  | 'gk2'
-  | 'gk3';
-
-export type TrainingPlan = Record<TrainingKey, number>;
-
-export type Impetus = {
-  name: string;
-  value?: number | null;
-  active?: boolean;
-};
-
-export type ImpetoRecommendation = {
-  name: string;
-  tier: 'ideal' | 'alternativo' | 'evitar';
-  attributes: string[];
-  reason: string;
-};
-
-export type SkillRecommendation = {
-  name: string;
-  tier: 'essencial' | 'alternativa' | 'evitar';
-  reason: string;
-};
-
-export type PhysicalProfile = {
-  armLength?: number | null;
-  shoulderWidth?: number | null;
-  neckLength?: number | null;
-  chest?: number | null;
-  neckSize?: number | null;
-  shoulderHeight?: number | null;
-  legLength?: number | null;
-  thighSize?: number | null;
-  waistSize?: number | null;
-  armSize?: number | null;
-  calfSize?: number | null;
-  legCoverageRadius?: number | null;
-  armCoverageRadius?: number | null;
-  jumpHeight?: number | null;
-  trunkCollision?: number | null;
-  baseHeight?: number | null;
-};
-
-export type PlayerCondition = {
-  weakFootFrequency?: string | null;
-  weakFootAccuracy?: string | null;
-  form?: string | null;
-  injuryResistance?: string | null;
-};
-
-export type ParsedCard = {
-  playerName: string;
-  cardType: string;
-  specialTag?: string | null;
-  country?: string | null;
-  mainPosition: PositionCode;
-  mainPositionPt: string;
-  positions: PositionCode[];
-  positionsPt: string[];
-  positionRatings: PositionRatings;
-  playstyle?: string | null;
-  dominantFoot?: string | null;
-  overall?: number | null;
-  maxOverall?: number | null;
-  height?: number | null;
-  weight?: number | null;
-  age?: number | null;
-  level?: number | null;
-  trainingPointsTotal?: number | null;
-  trainingPointsUsed?: number | null;
-  trainingPointSource?: 'MANUAL' | 'TRAINING_READ' | 'OCR' | 'LEVEL_INFERRED' | 'FALLBACK';
-  autoTrainingPlan?: TrainingPlan | null;
-  autoTrainingPoints?: number | null;
-  condition: PlayerCondition;
-  impetos: Impetus[];
-  nativeSkills: string[];
-  specialSkills: string[];
-  attributes: Attributes;
-  physicalProfile: PhysicalProfile;
-  manualConfirmed: boolean;
-  evidence: {
-    positionLocked: boolean;
-    playstyleLocked: boolean;
-    attributeCount: number;
-    positionRatingsCount: number;
-    localRuleMatched?: string | null;
-  };
-  internalId: string;
-  confidence: number;
-  warnings: string[];
-};
-
-export type TeamMapPhaseScores = {
-  marcacao: number;
-  cobertura: number;
-  saidaDeBola: number;
-  passe: number;
-  criacao: number;
-  aceleracao: number;
-  finalizacao: number;
-  jogoAereo: number;
-  fisico: number;
-};
-
-export type TeamMapAnalysis = {
-  functionLabel: string;
-  tacticalIdentity: string;
-  defensiveJob: string;
-  buildupJob: string;
-  attackingJob: string;
-  pressingJob: string;
-  idealPartners: string[];
-  riskAlerts: string[];
-  matchPlan: string[];
-  sectorScores: TeamMapPhaseScores;
-  coachFit: string;
-};
-
-export type DeepReadingItem = {
-  field: string;
-  value: string;
-  source: 'lido' | 'confirmado' | 'inferido' | 'fallback';
-  confidence: 'alta' | 'media' | 'baixa';
-  note: string;
-};
-
-export type DeepAnalysis = {
-  confidenceLevel: 'alta' | 'media' | 'baixa';
-  originalIdentity: string;
-  recommendedFunction: string;
-  readingItems: DeepReadingItem[];
-  uncertainFields: string[];
-  safeguards: string[];
-  pointRationale: string[];
-};
-
-
-export type AdvancedTacticalFunction = {
-  position: PositionCode;
-  officialPlaystyle: string | null;
-  status: 'oficial_confirmado' | 'nao_identificado';
-  activationNote: string;
-  priorities: string[];
-  compatibilityScore: number;
-  fitLabel: 'excelente' | 'boa' | 'razoável' | 'difícil';
-  officialNameGuard: string;
-};
-
-export type SpecialSkillsAnalysis = {
-  ownedOfficial: string[];
-  usefulOwned: Array<{ name: string; impact: string; score: number }>;
-  missingRecommended: Array<{ name: string; impact: string; score: number }>;
-  redundant: Array<{ name: string; reason: string }>;
-  coverageScore: number;
-  officialCatalogOnly: boolean;
-  validationNotes: string[];
-};
-
-
-export type PhysicalEngineAnalysis = {
-  heightCm: number | null;
-  weightKg: number | null;
-  dominantFoot: string | null;
-  bodyProfile: 'leve' | 'equilibrado' | 'forte' | 'alto' | 'não confirmado';
-  mobilityScore: number;
-  strengthScore: number;
-  aerialScore: number;
-  staminaScore: number;
-  suitabilityScore: number;
-  advantages: string[];
-  limitations: string[];
-  notes: string[];
-};
-
-export type AttributeGoalItem = {
-  attribute: AttributeKey;
-  label: string;
-  current: number;
-  targetMin: number;
-  targetIdeal: number;
-  status: 'atingida' | 'próxima' | 'prioritária';
-  gap: number;
-  reason: string;
-};
-
-export type AttributeGoalsAnalysis = {
-  position: PositionCode;
-  goals: AttributeGoalItem[];
-  achievedCount: number;
-  priorityCount: number;
-  readinessScore: number;
-  summary: string;
-};
-
-export type AdvancedOptimizerAnalysis = {
-  combinationsTested: number;
-  winnerTitle: string;
-  winnerScore: number;
-  efficiencyScore: number;
-  wasteScore: number;
-  unusedPoints: number;
-  usefulInvestment: string[];
-  detectedWaste: string[];
-  decisionReasons: string[];
-  positionPreserved: boolean;
-  budgetRespected: boolean;
-};
-
-
-export type CorrectionLimitAnalysis = {
-  score: number;
-  protectedStrengths: string[];
-  correctionCaps: Array<{ training: TrainingKey; label: string; currentLevel: number; recommendedMax: number; reason: string }>;
-  naturalLimits: string[];
-  summary: string;
-};
-
-export type MarginalReturnItem = {
-  training: TrainingKey;
-  label: string;
-  currentLevel: number;
-  nextPointCost: number;
-  marginalGain: number;
-  returnLabel: 'alto' | 'médio' | 'baixo';
-  recommendation: string;
-};
-
-export type ErrorToleranceAnalysis = {
-  confidence: 'alta' | 'média' | 'baixa';
-  conservative: TrainingPlan;
-  probable: TrainingPlan;
-  optimistic: TrainingPlan;
-  sensitiveGroups: string[];
-  stableGroups: string[];
-  note: string;
-};
-
-export type SkillPriorityAnalysis = {
-  ordered: Array<{ name: string; score: number; tier: 'prioridade máxima' | 'alta' | 'útil'; reasons: string[] }>;
-  ownedCoverage: number;
-  officialOnly: boolean;
-  context: string[];
-};
-
-export type PlayerIdentityAnalysis = {
-  signature: string;
-  profileLabel: string;
-  individualityScore: number;
-  naturalStrengths: string[];
-  criticalCorrections: string[];
-  decisiveFactors: string[];
-  protectedCharacteristics: string[];
-  localReference: string | null;
-  note: string;
-};
-
-
-export type IndividualAttributeGoal = {
-  training: TrainingKey;
-  label: string;
-  current: number;
-  functionalMin: number;
-  personalizedIdeal: number;
-  recommendedCeiling: number;
-  priority: 'proteger' | 'corrigir' | 'especializar' | 'manter';
-  reason: string;
-};
-
-export type SelectiveWeaknessStrategy = {
-  training: TrainingKey;
-  label: string;
-  current: number;
-  gap: number;
-  importance: 'crítica' | 'relevante' | 'aceitável';
-  correctability: 'alta' | 'parcial' | 'baixa';
-  maxInvestment: number;
-  strategy: string;
-};
-
-export type SpecialSkillSynergyItem = {
-  name: string;
-  source: 'habilidade especial' | 'habilidade oficial' | 'ímpeto';
-  activationScore: number;
-  attributeSupport: number;
-  positionFit: number;
-  expectedFrequency: 'alta' | 'média' | 'baixa';
-  status: 'aproveitamento máximo' | 'bem aproveitada' | 'parcial' | 'desperdiçada';
-  helpfulAttributes: string[];
-  trainingGroups: TrainingKey[];
-  recommendation: string;
-  wasteRisk: string | null;
-};
-
-export type OnFieldBehaviorSimulation = {
-  passUnderPressure: number;
-  turnAndCarry: number;
-  offBallMovement: number;
-  defensiveRecovery: number;
-  physicalDuels: number;
-  reactionSpeed: number;
-  matchConsistency: number;
-  creation: number;
-  finishing: number;
-  specialSkillUsage: number;
-  strongestBehaviors: string[];
-  limitingBehaviors: string[];
-  summary: string;
-};
-
-export type AntiCloneAnalysis = {
-  fingerprint: string;
-  individualityScore: number;
-  identityContribution: number;
-  positionTemplateContribution: number;
-  distributionDiversity: number;
-  distanceFromGenericTemplate: number;
-  cloneRisk: 'baixo' | 'médio' | 'alto';
-  recalculationTriggered: boolean;
-  reasons: string[];
-};
-
-export type CardDnaAnalysis = {
-  versionSignature: string;
-  identityLabel: string;
-  protectedStrengths: string[];
-  weaknessStrategies: SelectiveWeaknessStrategy[];
-  individualGoals: IndividualAttributeGoal[];
-  skillSynergies: SpecialSkillSynergyItem[];
-  behavior: OnFieldBehaviorSimulation;
-  antiClone: AntiCloneAnalysis;
-  buildPhilosophies: Array<{ title: string; purpose: string; difference: string }>;
-  lifeLikeSummary: string;
-  note: string;
-};
-
-export type AnalysisResult = {
-  parsed: ParsedCard;
-  bestPosition: { code: PositionCode; label: string; score: number };
-  positionScores: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>;
-  pri: Record<string, number>;
-  tacticalFit: Record<string, number>;
-  training: TrainingPlan;
-  trainingCost: TrainingPlan;
-  trainingPointsUsed: number;
-  trainingPointsTotal: number;
-  trainingPointsRemaining: number;
-  trainingCostRule: string;
-  trainingComparison: TrainingComparisonItem[];
-  buildVariants: BuildVariant[];
-  recommendationExplanation: string[];
-  tacticalProfile: TacticalProfile;
-  teamMap: TeamMapAnalysis;
-  profileTips: string[];
-  validation: PrecisionValidation;
-  permittedPositions: Array<{ code: PositionCode; label: string; reason: string; rating?: number | null }>;
-  avoidPositions: Array<{ code: PositionCode; label: string; reason: string }>;
-  recommendedSkills: string[];
-  skillRecommendations: SkillRecommendation[];
-  avoidSkills: string[];
-  recommendedImpetos: ImpetoRecommendation[];
-  buildName: string;
-  strengths: string[];
-  weaknesses: string[];
-  usageTips: string[];
-  note: string;
-  deepAnalysis: DeepAnalysis;
-  advancedTacticalFunction: AdvancedTacticalFunction;
-  specialSkillsAnalysis: SpecialSkillsAnalysis;
-  physicalEngine: PhysicalEngineAnalysis;
-  attributeGoals: AttributeGoalsAnalysis;
-  advancedOptimizer: AdvancedOptimizerAnalysis;
-  correctionLimit: CorrectionLimitAnalysis;
-  marginalReturn: MarginalReturnItem[];
-  errorTolerance: ErrorToleranceAnalysis;
-  skillPriority: SkillPriorityAnalysis;
-  playerIdentity?: PlayerIdentityAnalysis;
-  cardDna?: CardDnaAnalysis;
-  maxPrecision?: MaxPrecisionAnalysis;
-  eliteEvolution?: EliteEvolutionAnalysis;
-  metaBuildUniverse?: MetaBuildUniverse;
-};
-
-export const POSITION_PT: Record<PositionCode, string> = {
-  CF: 'CA',
-  SS: 'SA',
-  LWF: 'PE',
-  RWF: 'PD',
-  LMF: 'ME',
-  RMF: 'MD',
-  AMF: 'MAT',
-  CMF: 'MLG',
-  DMF: 'VOL',
-  CB: 'ZAG',
-  LB: 'LE',
-  RB: 'LD',
-  GK: 'GOL'
-};
-
-export const ATTRIBUTE_PT: Record<AttributeKey, string> = {
-  offensiveAwareness: 'Talento ofensivo',
-  ballControl: 'Controle de bola',
-  dribbling: 'Drible',
-  tightPossession: 'Condução firme',
-  lowPass: 'Passe rasteiro',
-  loftedPass: 'Passe alto',
-  finishing: 'Finalização',
-  heading: 'Cabeçada',
-  placeKicking: 'Bola parada',
-  curl: 'Curva',
-  defensiveAwareness: 'Talento defensivo',
-  defensiveEngagement: 'Dedicação defensiva',
-  tackling: 'Desarme',
-  aggression: 'Agressividade',
-  goalkeeperAwareness: 'Talento de GO',
-  goalkeeperCatching: 'Firmeza de GO',
-  goalkeeperParrying: 'Defesa de GO',
-  goalkeeperReflexes: 'Reflexos de GO',
-  goalkeeperReach: 'Alcance de GO',
-  speed: 'Velocidade',
-  acceleration: 'Aceleração',
-  kickingPower: 'Força do chute',
-  jump: 'Salto',
-  physicalContact: 'Contato físico',
-  balance: 'Equilíbrio',
-  stamina: 'Resistência'
-};
-
-export const ATTRIBUTE_INPUTS: Array<{ key: AttributeKey; label: string }> = Object.entries(ATTRIBUTE_PT).map(([key, label]) => ({ key: key as AttributeKey, label }));
-
-export const PLAYSTYLE_OPTIONS = [
-  'Clássico nº 10',
-  'Jogador de infiltração',
-  'Meia versátil',
-  'Primeiro volante',
-  'O destruidor',
-  'Orquestrador',
-  'Defensor criativo',
-  'Atacante surpresa',
-  'Lateral ofensivo',
-  'Lateral defensivo',
-  'Lateral atacante',
-  'Goleiro ofensivo',
-  'Goleiro defensivo',
-  'Homem de área',
-  'Artilheiro',
-  'Puxa marcação',
-  'Pivô',
-  'Armador criativo',
-  'Ala produtivo',
-  'Lateral móvel',
-  'Perito em cruzamento',
-  'Atacante matador'
-] as const;
-
-export const POSITION_LABELS: Array<{ code: PositionCode | 'AUTO'; label: string }> = [
-  { code: 'AUTO', label: 'Automático' },
-  { code: 'CF', label: 'CA - Centroavante' },
-  { code: 'SS', label: 'SA - Segundo atacante' },
-  { code: 'LWF', label: 'PE - Ponta esquerda' },
-  { code: 'RWF', label: 'PD - Ponta direita' },
-  { code: 'LMF', label: 'ME - Meia esquerda' },
-  { code: 'RMF', label: 'MD - Meia direita' },
-  { code: 'AMF', label: 'MAT - Meia atacante' },
-  { code: 'CMF', label: 'MLG - Meia de ligação' },
-  { code: 'DMF', label: 'VOL - Volante' },
-  { code: 'CB', label: 'ZAG - Zagueiro' },
-  { code: 'LB', label: 'LE - Lateral esquerdo' },
-  { code: 'RB', label: 'LD - Lateral direito' },
-  { code: 'GK', label: 'GOL - Goleiro' }
-];
+import { Objective, TacticalStyle, TacticalProfile, PositionCode, AttributeKey, Attributes, PositionRatings, PrecisionIssue, PrecisionValidation, TrainingKey, TrainingPlan, Impetus, ImpetoRecommendation, SkillRecommendation, PhysicalProfile, PlayerCondition, ParsedCard, TeamMapPhaseScores, TeamMapAnalysis, DeepReadingItem, DeepAnalysis, AdvancedTacticalFunction, SpecialSkillsAnalysis, PhysicalEngineAnalysis, AttributeGoalItem, AttributeGoalsAnalysis, AdvancedOptimizerAnalysis, CorrectionLimitAnalysis, MarginalReturnItem, ErrorToleranceAnalysis, SkillPriorityAnalysis, PlayerIdentityAnalysis, IndividualAttributeGoal, SelectiveWeaknessStrategy, SpecialSkillSynergyItem, OnFieldBehaviorSimulation, AntiCloneAnalysis, CardDnaAnalysis, AnalysisResult, normalizeObjective, POSITION_PT, ATTRIBUTE_PT, PLAYSTYLE_OPTIONS,  } from './analyzerDomain';
+export * from './analyzerDomain';
 
 const ALL_POSITIONS = Object.keys(POSITION_PT) as PositionCode[];
 
@@ -907,10 +344,6 @@ function styleText(playstyle?: string | null) {
   return normalize(playstyle ?? '').toLowerCase();
 }
 
-function hasAnyPosition(positions: PositionCode[], code: PositionCode) {
-  return positions.length === 0 || positions.includes(code);
-}
-
 function preferredPositionsByPlaystyle(playstyle?: string | null): PositionCode[] {
   const style = styleText(playstyle);
 
@@ -1003,14 +436,7 @@ function gameplayPriorityByMainPosition(mainPosition: PositionCode, playstyle?: 
   return preferredPositionsByPlaystyle(playstyle);
 }
 
-function lockMainPositionByGameplay(candidate: PositionCode, positions: PositionCode[], playstyle?: string | null): PositionCode {
-  const preferred = gameplayPriorityByMainPosition(candidate, playstyle);
-  if (preferred.includes(candidate)) return candidate;
-  for (const code of preferred) {
-    if (hasAnyPosition(positions, code)) return code;
-  }
-  return candidate;
-}
+
 
 function gameplayPositionWeight(position: PositionCode, mainPosition: PositionCode, playstyle?: string | null) {
   const preferred = gameplayPriorityByMainPosition(mainPosition, playstyle);
@@ -1665,16 +1091,14 @@ function calculateTacticalFit(position: PositionCode, a: Required<Attributes>, p
 
 const TRAINING_KEYS: TrainingKey[] = ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending', 'gk1', 'gk2', 'gk3'];
 
-const SAFE_DEFAULT_TRAINING_BUDGET = 64;
-const MIN_AUTO_TRAINING_BUDGET = 20;
-const MAX_AUTO_TRAINING_BUDGET = 80;
+const SAFE_DEFAULT_TRAINING_BUDGET = SAFE_PLAYER_TRAINING_BUDGET;
+const MIN_AUTO_TRAINING_BUDGET = MIN_PLAYER_TRAINING_BUDGET;
+const MAX_AUTO_TRAINING_BUDGET = MAX_PLAYER_TRAINING_BUDGET;
 // Cartas especiais/booster do eFHUB/eFootBase normalmente ficam nessa faixa.
 // Se o OCR ler 116, 140 etc. vindo de outro número da tela, o app descarta e usa fallback seguro.
 
 function normalizeTrainingBudget(value: number | null | undefined): number {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n < MIN_AUTO_TRAINING_BUDGET || n > MAX_AUTO_TRAINING_BUDGET) return SAFE_DEFAULT_TRAINING_BUDGET;
-  return Math.round(n);
+  return normalizePlayerTrainingBudget(value);
 }
 
 function emptyTraining(): TrainingPlan {
@@ -1864,7 +1288,7 @@ function styleContains(playstyle: string, pattern: RegExp) {
   return pattern.test(normalize(playstyle).toLowerCase());
 }
 
-function trainingRoleProfile(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): TrainingRoleProfile | null {
+function trainingRoleProfile(position: PositionCode, _objective: Objective, a: Required<Attributes>, parsed: ParsedCard): TrainingRoleProfile | null {
   const style = normalize(parsed.playstyle ?? '').toLowerCase();
   const highAerial = a.heading >= 78 || a.jump >= 78 || a.physicalContact >= 82;
   const strongFinisher = a.finishing >= 86 || a.kickingPower >= 86;
@@ -2234,30 +1658,7 @@ function fitTrainingToBudget(target: TrainingPlan, priority: TrainingKey[], budg
   return plan;
 }
 
-const TRAINING_ATTRIBUTE_GAINS: Record<TrainingKey, Partial<Record<AttributeKey, number>>> = {
-  shooting: { finishing: 1, placeKicking: 1, curl: 1 },
-  passing: { lowPass: 1, loftedPass: 1 },
-  dribbling: { ballControl: 1, dribbling: 1, tightPossession: 1 },
-  dexterity: { offensiveAwareness: 1, acceleration: 1, balance: 1 },
-  lowerBodyStrength: { speed: 1, kickingPower: 1, stamina: 1 },
-  aerialStrength: { heading: 1, jump: 1, physicalContact: 1 },
-  defending: { defensiveAwareness: 1, defensiveEngagement: 1, tackling: 1, aggression: 1 },
-  gk1: { goalkeeperAwareness: 1, goalkeeperCatching: 1 },
-  gk2: { goalkeeperParrying: 1, goalkeeperReflexes: 1 },
-  gk3: { goalkeeperReach: 1, jump: 1 }
-};
 
-function applyTrainingToAttributes(base: Required<Attributes>, plan: TrainingPlan): Required<Attributes> {
-  const boosted = { ...base } as Required<Attributes>;
-  for (const key of TRAINING_KEYS) {
-    const level = plan[key] ?? 0;
-    const gains = TRAINING_ATTRIBUTE_GAINS[key] ?? {};
-    for (const [attribute, gain] of Object.entries(gains) as Array<[AttributeKey, number]>) {
-      boosted[attribute] = clamp((boosted[attribute] ?? 0) + level * gain, 1, 110);
-    }
-  }
-  return boosted;
-}
 
 function trainingCaps(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): TrainingPlan {
   const playstyle = normalize(parsed.playstyle ?? '').toLowerCase();
@@ -2326,64 +1727,6 @@ function trainingCaps(position: PositionCode, objective: Objective, a: Required<
   }
 
   return applyCapAdjustments(caps, role);
-}
-
-function objectiveBonus(objective: Objective, position: PositionCode, a: Required<Attributes>) {
-  if (position === 'GK') {
-    const base = avg(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach);
-    const command = avg(a.jump, a.physicalContact, a.kickingPower);
-    if (objective === 'AERIAL') return avg(a.goalkeeperReach, a.jump, a.physicalContact, base);
-    return avg(base, base, command);
-  }
-
-  const values: Record<Objective, number> = {
-    COMPETITIVE: avg(a.stamina, a.balance, a.physicalContact, position === 'CF' ? a.finishing : a.lowPass),
-    FINISHER: avg(a.finishing, a.offensiveAwareness, a.kickingPower, a.curl),
-    CREATOR: avg(a.lowPass, a.loftedPass, a.ballControl, a.tightPossession),
-    DRIBBLER: avg(a.dribbling, a.ballControl, a.tightPossession, a.balance, a.acceleration),
-    PRESSING: avg(a.stamina, a.aggression, a.defensiveEngagement, a.speed),
-    POSSESSION: avg(a.lowPass, a.ballControl, a.tightPossession, a.balance),
-    QUICK_COUNTER: avg(a.speed, a.acceleration, a.finishing, a.kickingPower),
-    DEFENSIVE: avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.physicalContact),
-    AERIAL: avg(a.heading, a.jump, a.physicalContact),
-    GOALKEEPER: avg(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach),
-    META_2026: position === 'CB' || position === 'DMF' ? avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.physicalContact, a.acceleration) : position === 'CF' ? avg(a.offensiveAwareness, a.finishing, a.kickingPower, a.acceleration, a.balance) : avg(a.dribbling, a.acceleration, a.balance, a.lowPass, a.stamina)
-  };
-  return values[objective] ?? values.COMPETITIVE;
-}
-
-function eliteBuildScore(position: PositionCode, objective: Objective, base: Required<Attributes>, plan: TrainingPlan, parsed: ParsedCard): number {
-  const a = applyTrainingToAttributes(base, plan);
-  const pri = calculatePri(position, a, parsed.nativeSkills).overall;
-  let score = pri * 1.85 + objectiveBonus(objective, position, a) * 0.85;
-
-  // Thresholds de gameplay real. O motor prefere passar de cortes úteis em campo, não inflar overall.
-  if (position === 'CF') {
-    score += Math.min(8, Math.max(0, a.finishing - 88) * 0.6);
-    score += Math.min(6, Math.max(0, a.offensiveAwareness - 88) * 0.45);
-    score += Math.min(5, Math.max(0, a.kickingPower - 86) * 0.35);
-    if (/homem de area|pivo|target man|fox/.test(normalize(parsed.playstyle ?? '').toLowerCase())) {
-      score += Math.min(7, Math.max(0, avg(a.heading, a.jump, a.physicalContact) - 82) * 0.45);
-    }
-    if (a.lowPass < 68) score -= 3;
-  }
-  if (position === 'DMF' || position === 'CB') {
-    score += Math.min(10, Math.max(0, avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement) - 86) * 0.55);
-    score += Math.min(5, Math.max(0, a.physicalContact - 82) * 0.35);
-    if (position === 'DMF') score += Math.min(4, Math.max(0, a.lowPass - 78) * 0.25);
-  }
-  if (position === 'AMF' || position === 'CMF' || position === 'SS') {
-    score += Math.min(8, Math.max(0, avg(a.lowPass, a.ballControl, a.tightPossession) - 84) * 0.45);
-  }
-  if (position === 'LWF' || position === 'RWF' || position === 'LB' || position === 'RB' || position === 'LMF' || position === 'RMF') {
-    score += Math.min(8, Math.max(0, avg(a.speed, a.acceleration, a.stamina) - 86) * 0.4);
-  }
-
-  // Penaliza gastar ponto em atributo que não conversa com a função.
-  if (position !== 'GK' && (plan.gk1 || plan.gk2 || plan.gk3)) score -= 100;
-  if (position === 'CF' && plan.defending > 0) score -= plan.defending * 3;
-  if ((position === 'CB' || position === 'DMF') && plan.shooting > 4) score -= (plan.shooting - 4) * 2;
-  return score;
 }
 
 function trainingKeyWeight(key: TrainingKey, position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): number {
@@ -2877,7 +2220,7 @@ function buildAvoidSkills(parsed: ParsedCard, selectedPosition: PositionCode, ob
   return uniqueSkillList(blueprint.avoid).slice(0, 6);
 }
 
-function skillTierReason(skill: string, tier: SkillRecommendation['tier'], blueprint: SkillBlueprint) {
+function skillTierReason(_skill: string, tier: SkillRecommendation['tier'], blueprint: SkillBlueprint) {
   if (tier === 'essencial') return `prioridade para ${blueprint.label}: combina diretamente com posição, estilo e função real`;
   if (tier === 'alternativa') return `boa alternativa se você quiser variar a função sem fugir do desempenho em campo`;
   return `evite para ${blueprint.label}: gasta habilidade e entrega pouco para a função principal`;
@@ -3098,7 +2441,6 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
   };
 
   if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || isGoalkeeperStyle(parsed.playstyle)) {
-    const profile = goalkeeperProfile(parsed, attributes);
     blueprint.essentials.forEach((skill, index) => add(skill, 130 - index * 8));
     blueprint.alternatives.forEach((skill, index) => add(skill, 82 - index * 5));
     return Array.from(candidateScores.entries())
@@ -3321,25 +2663,7 @@ function detectMainPosition(positions: PositionCode[], positionRatings: Position
 type TrainingPointCandidate = { used: number | null; total: number; source: string };
 
 function parseLevel(text: string): number | null {
-  const compact = normalize(text).replace(/\r?\n/g, ' ');
-  const candidates: number[] = [];
-  const patterns = [
-    /(?:n[ií]vel|nivel|level)(?:\s*(?:m[aá]ximo|max|maximo))?[^0-9]{0,18}(\d{1,3})/gi,
-    /(?:lv|lvl)[^0-9]{0,8}(\d{1,3})/gi
-  ];
-
-  for (const pattern of patterns) {
-    for (const match of compact.matchAll(pattern)) {
-      const value = Number(match[1]);
-      if (Number.isFinite(value)) candidates.push(value);
-    }
-  }
-
-  // Erro comum: OCR lê "Nível 32" como "Nível 2".
-  // Nível 1–9 não deve virar orçamento 2/2, 4/4 etc.
-  const plausible = candidates.filter((value) => value >= 10 && value <= 99);
-  if (plausible.length) return plausible[0];
-  return null;
+  return parseCardLevelFromText(text);
 }
 
 function collectTrainingPointCandidates(text: string): TrainingPointCandidate[] {
@@ -3409,14 +2733,7 @@ function parseTrainingPoints(text: string, inferredPoints: number | null): { use
 }
 
 function inferTrainingPointsFromLevel(level?: number | null): number | null {
-  if (!Number.isFinite(level ?? NaN)) return null;
-  const safeLevel = Number(level);
-  // Níveis muito baixos ou muito altos quase sempre são ruído do OCR.
-  // Para eFHUB/eFootBase, cartas de jogador lidas por print normalmente ficam nessa faixa.
-  if (safeLevel < 10 || safeLevel > 45) return null;
-  const points = (safeLevel - 1) * 2;
-  if (points < MIN_AUTO_TRAINING_BUDGET || points > MAX_AUTO_TRAINING_BUDGET) return null;
-  return points;
+  return inferPointsFromCardLevel(level);
 }
 
 
@@ -3688,7 +3005,7 @@ function buildAvoidPositions(parsed: ParsedCard, attributes: Required<Attributes
     .slice(0, 8);
 }
 
-function buildPermittedPositions(parsed: ParsedCard, scored: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>) {
+function buildPermittedPositions(_parsed: ParsedCard, scored: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>) {
   return scored.map((item, index) => ({
     code: item.code,
     label: item.label,
@@ -3705,7 +3022,7 @@ function validateAnalysis(
   parsed: ParsedCard,
   selected: { code: PositionCode; label: string; score: number; role: string; cardRating?: number | null },
   scored: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>,
-  attributes: Required<Attributes>,
+  _attributes: Required<Attributes>,
   avoidPositions: Array<{ code: PositionCode; label: string; reason: string }>,
   explicitTarget = false
 ): PrecisionValidation {
@@ -4209,7 +3526,7 @@ function planBalanceScore(plan: TrainingPlan, keys: TrainingKey[]) {
   return Math.round(clampDecimal(100 - Math.sqrt(variance) * 8.5, 1, 99));
 }
 
-function scenarioScores(plan: TrainingPlan, position: PositionCode, objective: Objective) {
+function scenarioScores(plan: TrainingPlan, position: PositionCode, _objective: Objective) {
   const n = (key: TrainingKey) => Number(plan[key] ?? 0);
   const scale = (raw: number) => Math.round(clampDecimal(42 + raw * 4.6, 1, 99));
   const goalkeeper = position === 'GK';
@@ -4233,7 +3550,7 @@ function scenarioScores(plan: TrainingPlan, position: PositionCode, objective: O
   };
 }
 
-function buildTrainingVariants(selected: PositionCode, selectedLabel: string, training: TrainingPlan, scored: Array<{ code: PositionCode; label: string; score: number }>, budget: number, objective: Objective, parsed: ParsedCard): BuildVariant[] {
+function buildTrainingVariants(selected: PositionCode, selectedLabel: string, training: TrainingPlan, _scored: Array<{ code: PositionCode; label: string; score: number }>, budget: number, objective: Objective, parsed: ParsedCard): BuildVariant[] {
   const attributes = fillAttributes(parsed);
   const basePriority = trainingTemplate(selected, objective, attributes, parsed).priority;
   const candidates: TrainingPlan[] = [];
@@ -4617,7 +3934,7 @@ function realFunctionLabel(parsed: ParsedCard, selected: PositionCode, objective
   return 'CA finalizador de máximo rendimento';
 }
 
-function buildSectorScores(position: PositionCode, a: Required<Attributes>, pri: Record<string, number>, objective: Objective, profile: TacticalProfile): TeamMapPhaseScores {
+function buildSectorScores(position: PositionCode, a: Required<Attributes>, _pri: Record<string, number>, objective: Objective, profile: TacticalProfile): TeamMapPhaseScores {
   const defenseBase = avg(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.aggression, a.physicalContact);
   const passBase = avg(a.lowPass, a.loftedPass, a.ballControl);
   const creationBase = avg(a.lowPass, a.ballControl, a.tightPossession, a.dribbling, a.curl);

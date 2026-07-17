@@ -1,5 +1,4 @@
 import type {
-  AttributeKey,
   Attributes,
   Objective,
   ParsedCard,
@@ -223,13 +222,7 @@ const POSITION_GROUP_PRIORITY: Record<PositionCode, TrainingKey[]> = {
   GK: ['gk1','gk2','gk3','aerialStrength']
 };
 
-const ATTR_TO_GROUP: Partial<Record<AttributeKey, TrainingKey>> = {
-  finishing:'shooting', placeKicking:'shooting', curl:'shooting', lowPass:'passing', loftedPass:'passing',
-  ballControl:'dribbling', dribbling:'dribbling', tightPossession:'dribbling', offensiveAwareness:'dexterity', acceleration:'dexterity', balance:'dexterity',
-  speed:'lowerBodyStrength', kickingPower:'lowerBodyStrength', stamina:'lowerBodyStrength', heading:'aerialStrength', jump:'aerialStrength', physicalContact:'aerialStrength',
-  defensiveAwareness:'defending', defensiveEngagement:'defending', tackling:'defending', aggression:'defending', goalkeeperAwareness:'gk1', goalkeeperCatching:'gk1',
-  goalkeeperParrying:'gk2', goalkeeperReflexes:'gk2', goalkeeperReach:'gk3'
-};
+
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value)));
@@ -362,7 +355,7 @@ function buildUsageContext(position: PositionCode, profile: TacticalProfile, par
 
 function buildWhatIf(
   base: TrainingPlan,
-  variants: BuildVariant[],
+  _variants: BuildVariant[],
   position: PositionCode,
   objective: Objective,
   baseScore: number,

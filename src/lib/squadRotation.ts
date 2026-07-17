@@ -41,7 +41,6 @@ const attr=(r:AnalysisResult, keys:string[])=> Math.round(keys.reduce((s,k)=>s+N
 const ALL_POSITIONS: PositionCode[]=['GK','CB','LB','RB','DMF','CMF','AMF','LMF','RMF','LWF','RWF','SS','CF'];
 const line=(p:PositionCode)=>p==='GK'?'GK':['CB','LB','RB'].includes(p)?'DEF':['DMF','CMF','AMF','LMF','RMF'].includes(p)?'MID':'ATT';
 const ideal:Record<string,number>={GK:1,DEF:4,MID:3,ATT:3};
-const styleLabel:Record<TacticalStyle,string>={AUTO:'Automático inteligente',POSSE_DE_BOLA:'Posse de bola',CONTRA_ATAQUE:'Contra-ataque longo',CONTRA_ATAQUE_RAPIDO:'Contra-ataque rápido',POR_FORA:'Por fora',PASSE_LONGO:'Passe longo'};
 const positionLabel=(code:PositionCode)=>POSITION_LABELS.find(item=>item.code===code)?.label??code;
 
 function summarize(r:AnalysisResult,index:number):PlayerSummary {

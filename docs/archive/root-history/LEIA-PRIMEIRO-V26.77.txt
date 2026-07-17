@@ -1,0 +1,9 @@
+BUILDMASTER ELITE TÁTICO v26.77
+MOTOR DE IDENTIDADE REAL + LABORATÓRIO DE FORMAÇÕES
+
+1. Este pacote é completo.
+2. Ele deve substituir a pasta inteira do projeto no GitHub.
+3. Não precisa alterar o Supabase nesta versão.
+4. Faça um novo commit e uma nova execução do workflow v26.77.
+5. A aba Resultado > Ficha contém o novo motor de precisão.
+6. A aba Meu Time > Formações contém o laboratório de formações, estilos por posição e editor personalizado.

@@ -290,7 +290,7 @@ export function buildMaxPrecisionAnalysis(args: {
   variants: BuildVariant[];
   trainingPointsTotal: number;
 }): MaxPrecisionAnalysis {
-  const {parsed,position,selectedScore,objective,tacticalProfile,baseAttributes,variants,trainingPointsTotal}=args;
+  const {parsed,position,selectedScore,objective,baseAttributes,variants,trainingPointsTotal}=args;
   const winner = variants[0];
   const final = applyPlan(baseAttributes,winner.training);
   const mean = playerMean(baseAttributes,position);
@@ -304,7 +304,7 @@ export function buildMaxPrecisionAnalysis(args: {
 
   const allValues = (Object.keys(baseAttributes) as AttributeKey[]).map((key)=>({key,value:baseAttributes[key]})).sort((a,b)=>b.value-a.value);
   const protectedAttributes = allValues.slice(0,5).map(({key,value})=>({attribute:key,label:ATTRIBUTE_LABELS[key],value:Math.round(value),reason:`Está entre as maiores qualidades desta versão e não deve ser sacrificada para copiar um molde de ${position}.`}));
-  const blocked = protectedAttributes.filter((item)=>!TRAINING_GAINS[winner.training?('passing' as TrainingKey):'passing']).slice(0,0).map(()=> '');
+  const blocked = protectedAttributes.filter(()=>!TRAINING_GAINS[winner.training?('passing' as TrainingKey):'passing']).slice(0,0).map(()=> '');
   const signatureProtection:SignatureProtection={
     protectedAttributes,
     identityRetentionScore:clamp(78+protectedAttributes.filter(x=>final[x.attribute]>=x.value).length*4),

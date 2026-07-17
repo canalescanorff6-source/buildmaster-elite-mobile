@@ -1,0 +1,34 @@
+BUILMASTER ELITE TÁTICO v26.76 — FICHA STUDIO
+
+Este pacote completo foi criado sobre o v26.75 Segurança Reforçada.
+
+O QUE MUDOU
+- Tela Criar Ficha reformulada.
+- Cabeçalho duplicado removido.
+- Essenciais separados do contexto tático.
+- Formação, estilo do time e técnico ficam em uma área opcional.
+- Prévia viva da ficha antes da auditoria.
+- Prontidão, pendências e próxima ação reunidas.
+- Melhor adaptação para celular.
+- Segurança, sessão persistente, Supabase, contas e Cofre preservados.
+
+COMO USAR
+1. Extraia este ZIP.
+2. Substitua o conteúdo do seu repositório pelo conteúdo da pasta.
+3. Preserve as Variables e Secrets já configuradas no GitHub.
+4. Faça um novo commit no branch main.
+5. Abra Actions e execute:
+   Gerar APK e publicar atualização segura v26.76
+
+Não use apenas Re-run de uma execução antiga, porque ela usa o commit anterior.
+
+NÃO É NECESSÁRIO
+- recriar o Supabase;
+- recriar usuários;
+- publicar novamente as Edge Functions;
+- refazer a segurança v26.75.
+
+VERSÕES
+- App: 26.76.0
+- Versão mínima no servidor: 26.75.0
+- Esquema de backup: 26.75.0

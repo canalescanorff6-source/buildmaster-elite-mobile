@@ -1,0 +1,16 @@
+BUILDMASTER ELITE TÁTICO v27.00 — CENTRAL INTELIGENTE INTEGRADA
+
+1. Use este projeto completo como substituição da v26.81.
+2. Envie os arquivos para o branch main em um NOVO commit.
+3. Não use apenas Re-run de uma execução associada ao commit antigo.
+4. Mantenha o mesmo Repository Secret ANDROID_SIGNING_BUNDLE.
+5. Mantenha as Variables NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.
+6. Execute o workflow "Gerar APK e publicar atualização definitiva".
+7. Aguarde a verificação de ponta a ponta ficar verde.
+8. Instale a atualização por cima para preservar os dados.
+
+A migração v27 é não destrutiva. Ela preserva fichas, Cofre, formações, partidas, preferências, login e sistema de atualização.
+
+NÃO é necessário executar SQL ou publicar novamente as Edge Functions do Supabase.
+
+O Assistente BuildMaster funciona localmente com os dados do próprio aplicativo. Ele não usa um serviço externo de IA e não inventa jogadores fora do Cofre.

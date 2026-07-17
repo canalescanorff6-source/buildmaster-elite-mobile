@@ -1,0 +1,14 @@
+BUILDMASTER ELITE TÁTICO v27.10 — RECONSTRUÇÃO COMPLETA
+
+1. Use preferencialmente o ZIP completo, não misture pastas de versões diferentes.
+2. Envie o projeto em um novo commit para a branch usada pelo workflow.
+3. Mantenha o mesmo Secret ANDROID_SIGNING_BUNDLE.
+4. Não envie node_modules, .next, out, android antigo, keystore ou arquivos .env.
+5. Execute “Gerar APK e publicar atualização definitiva”.
+6. Confirme que todas as etapas, inclusive a verificação da release, ficaram verdes.
+7. Instale o APK e execute o checklist TESTE_APARELHO_REAL_V27_10.md.
+8. Faça backup antes da primeira atualização de uma instalação assinada por outra chave.
+
+A v27.10 não exige mudança adicional no Supabase quando a infraestrutura v26.75 já está publicada.
+
+O Print Único Pro reduz a confusão entre nível e GER, mas qualquer OCR depende da informação estar visível e legível. Campos críticos com baixa confiança ficam pendentes de confirmação; não são aceitos silenciosamente.

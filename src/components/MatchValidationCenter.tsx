@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, History, RotateCcw, Save, Target, Trash2 } from 'lucide-react';
+import { CheckCircle2, History, Save, Target, Trash2 } from 'lucide-react';
 import type { AnalysisResult } from '@/lib/analyzer';
 import { MATCH_PROBLEM_TAGS, MATCH_VALIDATION_STORAGE_KEY, cardFingerprint, createMatchValidationRecord, summarizeMatchValidation, type MatchValidationRating, type MatchValidationRecord } from '@/lib/appEvolution';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';

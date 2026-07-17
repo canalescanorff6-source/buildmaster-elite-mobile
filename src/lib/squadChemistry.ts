@@ -180,7 +180,6 @@ export function buildSquadChemistryReport(results: AnalysisResult[], formation: 
   };
   const left = corridorItems.esquerdo.map((i) => i.player);
   const right = corridorItems.direito.map((i) => i.player);
-  const central = corridorItems.centro.map((i) => i.player);
   const bestCover = [...players].sort((a,b) => score(b,'cobertura') - score(a,'cobertura'))[0];
   const bestCreator = [...players].sort((a,b) => score(b,'criacao') - score(a,'criacao'))[0];
   const bestFinisher = [...players].sort((a,b) => score(b,'finalizacao') - score(a,'finalizacao'))[0];
