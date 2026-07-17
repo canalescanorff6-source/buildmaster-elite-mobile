@@ -292,6 +292,12 @@ public class BuildMasterSecurityPlugin extends Plugin {
         }
     }
 
+    private static URL withDownloadNonce(URL source, int attempt) throws Exception {
+        String raw = source.toString();
+        String separator = raw.contains("?") ? "&" : "?";
+        return new URL(raw + separator + "bmDownloadAttempt=" + attempt + "-" + System.currentTimeMillis());
+    }
+
     private static HttpURLConnection openDownloadConnection(URL initial) throws Exception {
         URL current = initial;
         for (int redirect = 0; redirect <= MAX_REDIRECTS; redirect++) {
@@ -300,10 +306,14 @@ public class BuildMasterSecurityPlugin extends Plugin {
             connection.setConnectTimeout(30_000);
             connection.setReadTimeout(120_000);
             connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
+            connection.setDefaultUseCaches(false);
             connection.setRequestProperty("Accept", "application/vnd.android.package-archive,application/octet-stream;q=0.9,*/*;q=0.8");
-            connection.setRequestProperty("Cache-Control", "no-cache");
+            connection.setRequestProperty("Accept-Encoding", "identity");
+            connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
             connection.setRequestProperty("Pragma", "no-cache");
-            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.0 Android");
+            connection.setRequestProperty("Connection", "close");
+            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.12 Android");
             int status = connection.getResponseCode();
             if (status >= 300 && status < 400) {
                 String location = connection.getHeaderField("Location");
@@ -319,6 +329,16 @@ public class BuildMasterSecurityPlugin extends Plugin {
             return connection;
         }
         throw new IllegalStateException("O download excedeu o limite de redirecionamentos.");
+    }
+
+    private static boolean isRetryableDownloadError(Exception error) {
+        if (error instanceof java.io.IOException) return true;
+        String message = error.getMessage() == null ? "" : error.getMessage().toLowerCase();
+        return message.contains("tamanho do apk")
+                || message.contains("sha-256")
+                || message.contains("http 5")
+                || message.contains("timeout")
+                || message.contains("temporar");
     }
 
     private static Signature[] archiveSignatures(PackageInfo info) {
@@ -396,13 +416,6 @@ public class BuildMasterSecurityPlugin extends Plugin {
             File partial = null;
             File apk = null;
             try {
-                emitProgress("connecting", 0, 0, expectedSize == null ? 0 : expectedSize);
-                URL initial = new URL(urlValue);
-                HttpURLConnection connection = openDownloadConnection(initial);
-                long contentLength = connection.getContentLength();
-                long expectedTotal = expectedSize != null && expectedSize > 0 ? expectedSize : contentLength;
-                if (contentLength > MAX_APK_BYTES || expectedTotal > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
-
                 File updatesDir = new File(getContext().getCacheDir(), "verified_updates");
                 if (!updatesDir.exists() && !updatesDir.mkdirs()) throw new IllegalStateException("Não foi possível preparar a pasta de atualização.");
                 partial = new File(updatesDir, "BuildMaster-update.part");
@@ -410,37 +423,69 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 if (partial.exists()) partial.delete();
                 if (apk.exists()) apk.delete();
 
-                MessageDigest digest = MessageDigest.getInstance("SHA-256");
                 long total = 0;
-                int lastPercent = -1;
-                try (BufferedInputStream input = new BufferedInputStream(connection.getInputStream());
-                     FileOutputStream fileOutput = new FileOutputStream(partial);
-                     BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
-                    byte[] buffer = new byte[32 * 1024];
-                    int read;
-                    while ((read = input.read(buffer)) != -1) {
-                        total += read;
-                        if (total > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
-                        digest.update(buffer, 0, read);
-                        output.write(buffer, 0, read);
-                        int percent = expectedTotal > 0 ? (int) Math.min(99, (total * 100L) / expectedTotal) : 0;
-                        if (percent != lastPercent && (percent == 0 || percent >= lastPercent + 2)) {
-                            lastPercent = percent;
-                            emitProgress("downloading", percent, total, expectedTotal);
+                long expectedTotal = expectedSize == null ? 0 : expectedSize;
+                String actualChecksum = "";
+                Exception finalDownloadError = null;
+
+                for (int downloadAttempt = 1; downloadAttempt <= 3; downloadAttempt++) {
+                    HttpURLConnection connection = null;
+                    try {
+                        if (partial.exists()) partial.delete();
+                        emitProgress("connecting", 0, 0, expectedSize == null ? 0 : expectedSize);
+                        URL initial = withDownloadNonce(new URL(urlValue), downloadAttempt);
+                        connection = openDownloadConnection(initial);
+                        long contentLength = connection.getContentLengthLong();
+                        expectedTotal = expectedSize != null && expectedSize > 0 ? expectedSize : contentLength;
+                        if (contentLength > MAX_APK_BYTES || expectedTotal > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
+
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        total = 0;
+                        int lastPercent = -1;
+                        try (BufferedInputStream input = new BufferedInputStream(connection.getInputStream());
+                             FileOutputStream fileOutput = new FileOutputStream(partial);
+                             BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
+                            byte[] buffer = new byte[32 * 1024];
+                            int read;
+                            while ((read = input.read(buffer)) != -1) {
+                                total += read;
+                                if (total > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
+                                digest.update(buffer, 0, read);
+                                output.write(buffer, 0, read);
+                                int percent = expectedTotal > 0 ? (int) Math.min(99, (total * 100L) / expectedTotal) : 0;
+                                if (percent != lastPercent && (percent == 0 || percent >= lastPercent + 2)) {
+                                    lastPercent = percent;
+                                    emitProgress("downloading", percent, total, expectedTotal);
+                                }
+                            }
+                            output.flush();
+                            fileOutput.getFD().sync();
                         }
+
+                        if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
+                            throw new SecurityException("Tamanho do APK não confere com o manifesto (esperado " + expectedSize + ", recebido " + total + ").");
+                        }
+                        emitProgress("verifying", 99, total, expectedTotal);
+                        actualChecksum = hex(digest.digest());
+                        if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) {
+                            throw new SecurityException("SHA-256 do APK não confere com o manifesto.");
+                        }
+                        finalDownloadError = null;
+                        break;
+                    } catch (Exception downloadError) {
+                        finalDownloadError = downloadError;
+                        if (partial.exists()) partial.delete();
+                        if (downloadAttempt >= 3 || !isRetryableDownloadError(downloadError)) throw downloadError;
+                        try { Thread.sleep(downloadAttempt * 1200L); } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            throw interrupted;
+                        }
+                    } finally {
+                        if (connection != null) connection.disconnect();
                     }
-                    output.flush();
-                    fileOutput.getFD().sync();
-                } finally {
-                    connection.disconnect();
                 }
 
-                if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
-                    throw new SecurityException("Tamanho do APK não confere com o manifesto.");
-                }
-                emitProgress("verifying", 99, total, expectedTotal);
-                String actualChecksum = hex(digest.digest());
-                if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) throw new SecurityException("SHA-256 do APK não confere. Instalação bloqueada.");
+                if (finalDownloadError != null) throw finalDownloadError;
                 if (!partial.renameTo(apk)) throw new IllegalStateException("Não foi possível concluir o arquivo de atualização.");
 
                 PackageInfo current = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);

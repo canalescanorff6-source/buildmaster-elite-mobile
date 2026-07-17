@@ -92,7 +92,7 @@ function updateErrorMessage(cause: unknown) {
     return 'O pacote publicado não possui um versionCode maior que o instalado. Gere uma nova execução do GitHub Actions.';
   }
   if (lower.includes('sha-256') || lower.includes('checksum') || lower.includes('tamanho')) {
-    return 'O arquivo baixado não corresponde ao manifesto oficial. A instalação foi bloqueada para proteger o aparelho.';
+    return 'O GitHub entregou uma cópia incompleta ou antiga do APK. O app descartou o arquivo e não abriu o instalador. Toque em “Verificar agora” e tente novamente.';
   }
   if (lower.includes('http 404')) return 'A release oficial ainda não contém o APK ou o manifesto desta versão.';
   if (lower.includes('timeout') || lower.includes('timed out') || lower.includes('alcançar') || lower.includes('network')) {
@@ -249,13 +249,30 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
     setInstalling(true);
     setProgress(null);
     try {
+      const current = await refreshInstalledInfo();
+      // Nunca instala usando apenas o manifesto guardado no aparelho. A publicação pode
+      // ter sido refeita, e o SHA-256 precisa pertencer ao URL que será baixado agora.
+      setMessage('Atualizando os dados do pacote oficial...');
+      const freshResult = evaluateUpdateManifest(await fetchManifestJson(), current, CURRENT_BUILD_ID, '');
+      if (!freshResult.valid || !freshResult.manifest) throw new Error(freshResult.reason);
+      if (!freshResult.available) {
+        setManifest(freshResult.manifest);
+        setAvailable(false);
+        localStorage.removeItem(PENDING_KEY);
+        setMessage(freshResult.reason);
+        return;
+      }
+      const targetManifest = freshResult.manifest;
+      setManifest(targetManifest);
+      setAvailable(true);
+      localStorage.setItem(PENDING_KEY, JSON.stringify(targetManifest));
+
       if (!Capacitor.isNativePlatform()) {
-        window.open(manifest.apkUrl, '_blank', 'noopener,noreferrer');
+        window.open(targetManifest.apkUrl, '_blank', 'noopener,noreferrer');
         setMessage('No navegador, baixe somente o APK da release oficial. A instalação automática funciona dentro do APK Android.');
         return;
       }
 
-      const current = await refreshInstalledInfo();
       if (!current.canInstallPackages) {
         setAwaitingPermission(true);
         setMessage('O Android precisa permitir que o BuildMaster instale a atualização. Ative “Permitir desta fonte” e volte ao app.');
@@ -263,20 +280,20 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         return;
       }
 
-      if (localStorage.getItem(BACKUP_READY_KEY) !== manifest.buildId) {
+      if (localStorage.getItem(BACKUP_READY_KEY) !== targetManifest.buildId) {
         setMessage('Protegendo seus dados antes da atualização...');
         await onPrepareBackup();
-        localStorage.setItem(BACKUP_READY_KEY, manifest.buildId);
+        localStorage.setItem(BACKUP_READY_KEY, targetManifest.buildId);
       }
 
-      setMessage('Baixando o APK oficial. Não feche o aplicativo...');
+      setMessage('Baixando o APK oficial sem usar cópias em cache. Não feche o aplicativo...');
       const result = await downloadVerifyAndInstallApk({
-        url: manifest.apkUrl,
-        checksum: manifest.checksum,
-        expectedPackageName: manifest.appId,
-        expectedVersionCode: manifest.versionCode,
-        expectedVersionName: manifest.version,
-        expectedSizeBytes: manifest.sizeBytes
+        url: targetManifest.apkUrl,
+        checksum: targetManifest.checksum,
+        expectedPackageName: targetManifest.appId,
+        expectedVersionCode: targetManifest.versionCode,
+        expectedVersionName: targetManifest.version,
+        expectedSizeBytes: targetManifest.sizeBytes
       });
 
       if (result.needsPermission) {

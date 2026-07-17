@@ -1,19 +1,16 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "27.11.0",
-  "versionCode": 1351000001,
-  "buildId": "reconstrucao-completa-v2710-placeholder",
+  "version": "27.12.0",
+  "versionCode": 1351200001,
+  "buildId": "abcdef1234567890",
   "publishedAt": "2026-07-17T00:00:00.000Z",
   "channel": "stable",
   "updateType": "apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.11.0-1351100001-abcdef12.apk?build=abcdef12&code=1351100001",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.12.0-135120000101-abcdef12.apk?publication=123456789-1-abcdef12&code=1351200001",
   "notes": [
-    "Print Único Pro adaptativo separa nível, GER, posição, estilo, pontos, atributos, habilidades e arte da carta.",
-    "Alinhamento por barras e área útil da tela, OCR reutilizável, cache por hash, fila local e cancelamento.",
-    "Níveis 27, 30, 31, 32, 48 e demais valores válidos não são confundidos com GER 90–105.",
-    "Auditoria visual mostra o recorte de origem, alternativas e histórico de confiança de cada campo.",
-    "Banco local estruturado, miniaturas separadas, diagnóstico seguro e comparação com leituras anteriores.",
-    "Design System premium, acessibilidade, cartão compacto, lacunas do elenco e planos ligados ao banco."
+    "APK exclusivo por execução e tentativa, sem sobrescrever conteúdo já publicado.",
+    "Propagação pública validada antes de o manifesto ficar disponível.",
+    "Download Android sem cache e com repetição automática quando houver arquivo incompleto."
   ],
   "mandatory": true,
   "minNativeVersion": "26.75.0",
