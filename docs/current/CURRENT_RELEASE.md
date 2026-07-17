@@ -1,6 +1,6 @@
 # Release atual
 
-- Versão: `27.10.0`
+- Versão: `27.11.0`
 - Nome: Reconstrução Completa
 - Base de segurança mínima: v26.75
 - Canal móvel: `buildmaster-latest`

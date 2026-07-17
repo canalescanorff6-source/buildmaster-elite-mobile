@@ -1,12 +1,12 @@
 {
   "appId": "com.buildmaster.elitetatico",
-  "version": "27.10.0",
+  "version": "27.11.0",
   "versionCode": 1351000001,
   "buildId": "reconstrucao-completa-v2710-placeholder",
   "publishedAt": "2026-07-17T00:00:00.000Z",
   "channel": "stable",
   "updateType": "apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build=abcdef12&code=1351000001",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.11.0-1351100001-abcdef12.apk?build=abcdef12&code=1351100001",
   "notes": [
     "Print Único Pro adaptativo separa nível, GER, posição, estilo, pontos, atributos, habilidades e arte da carta.",
     "Alinhamento por barras e área útil da tela, OCR reutilizável, cache por hash, fila local e cancelamento.",

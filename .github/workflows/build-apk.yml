@@ -281,13 +281,14 @@ jobs:
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'channel': 'stable',
             'updateType': 'apk',
-            'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build={os.environ["GITHUB_SHA"][:8]}&code={os.environ["ANDROID_VERSION_CODE"]}',
+            'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}?build={os.environ["GITHUB_SHA"][:8]}&code={os.environ["ANDROID_VERSION_CODE"]}',
             'notes': [
               'Print Único Pro adaptativo separa nível, GER, posição, estilo, pontos, atributos, habilidades e arte da carta.',
               'Alinhamento pela área útil da tela, OCR reutilizável, cache por hash, fila local e cancelamento.',
               'Nível validado por rótulo, região, alternativas e coerência com GER e pontos visíveis.',
               'Auditoria visual com recortes, histórico de confiança e memória de correções confirmadas.',
-              'Design System premium, banco estruturado, diagnóstico seguro e inteligência integrada.'
+              'Design System premium, banco estruturado, diagnóstico seguro e inteligência integrada.',
+              'Atualização usa APK versionado e imutável para eliminar conflito entre manifesto novo e arquivo latest em cache.'
             ],
             'mandatory': True,
             'minNativeVersion': '26.75.0',
@@ -329,12 +330,12 @@ jobs:
           git push origin refs/tags/buildmaster-latest --force
           if gh release view buildmaster-latest >/dev/null 2>&1; then
             gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Evolução Total" \
+              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização imutável" \
               --notes-file dist-apk/RELEASE_NOTES.md
           else
             gh release create buildmaster-latest \
               --verify-tag \
-              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Evolução Total" \
+              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização imutável" \
               --notes-file dist-apk/RELEASE_NOTES.md
           fi
           gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME" --clobber
@@ -357,13 +358,13 @@ jobs:
           assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
           assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
           assert manifest['buildId'] == os.environ['GITHUB_SHA']
-          assert '/BuildMaster-Elite-Tatico-latest.apk?' in manifest['apkUrl']
+          assert f'/{os.environ["APK_ASSET_NAME"]}?' in manifest['apkUrl']
           pathlib.Path('verify-release/apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
           pathlib.Path('verify-release/checksum.txt').write_text(manifest['checksum'], encoding='utf-8')
           pathlib.Path('verify-release/size.txt').write_text(str(manifest['sizeBytes']), encoding='utf-8')
           PY
           APK_URL=$(cat verify-release/apk-url.txt)
-          curl --fail --silent --show-error --location --retry 6 --retry-all-errors --connect-timeout 30 --max-time 300 "$APK_URL?verify=$GITHUB_SHA" -o verify-release/released.apk
+          curl --fail --silent --show-error --location --retry 6 --retry-all-errors --connect-timeout 30 --max-time 300 "$APK_URL&verify=$GITHUB_SHA" -o verify-release/released.apk
           ACTUAL_SHA=$(sha256sum verify-release/released.apk | awk '{print $1}')
           EXPECTED_SHA=$(cat verify-release/checksum.txt)
           test "$ACTUAL_SHA" = "$EXPECTED_SHA" || { echo '::error::Checksum do APK publicado não confere com o manifesto.'; exit 1; }

@@ -321,7 +321,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
 
           <div className="auth-showcase-footer">
             <span><BadgeCheck size={15} /> BuildMaster Elite</span>
-            <small>Ambiente tático premium • v27.10</small>
+            <small>Ambiente tático premium • v27.11</small>
           </div>
         </aside>
 

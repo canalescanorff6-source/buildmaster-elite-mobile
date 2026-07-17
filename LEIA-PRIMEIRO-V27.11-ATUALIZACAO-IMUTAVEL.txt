@@ -1,0 +1,6 @@
+BUILDMASTER ELITE TÁTICO v27.11 — ATUALIZAÇÃO IMUTÁVEL
+
+Use o projeto completo e faça um NOVO COMMIT no GitHub.
+Não repita a execução antiga.
+Mantenha o mesmo Secret ANDROID_SIGNING_BUNDLE.
+O workflow publicará o APK versionado e o manifesto alinhados.
