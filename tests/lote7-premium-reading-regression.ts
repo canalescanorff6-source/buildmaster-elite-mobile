@@ -37,7 +37,7 @@ assert.ok(covered.some((item) => item.key === 'attributes' && item.status === 'u
 const identity = READING_CONFIRMATION_STAGES.find((stage) => stage.id === 'identity');
 assert.ok(identity);
 const summary = buildStageSummary(covered, identity!);
-assert.equal(summary.total, 2);
+assert.equal(summary.total, 4);
 assert.equal(summary.found, 1);
 assert.equal(READING_CONFIRMATION_STAGES.filter((stage) => stage.required).length, 4);
 

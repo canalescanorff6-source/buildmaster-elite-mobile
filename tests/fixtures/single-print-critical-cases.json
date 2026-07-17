@@ -1,0 +1,8 @@
+[
+  {"name":"nível 27 e GER 90","levelText":"Nível máximo 27","overallText":"GER 90","pointsText":"Pontos de progresso 52","expectedLevel":27,"expectedOverall":90,"expectedPoints":52},
+  {"name":"nível 30 e GER 94","levelText":"Lv. 30","overallText":"Overall 94","pointsText":"Pontos 58","expectedLevel":30,"expectedOverall":94,"expectedPoints":58},
+  {"name":"nível atual/máximo 31","levelText":"31/31","overallText":"GER 97","pointsText":"60 / 60 pontos","expectedLevel":31,"expectedOverall":97,"expectedPoints":60},
+  {"name":"nível 32 e GER 99","levelText":"Nível Máx.: 32","overallText":"99 GER","pointsText":"Pontos disponíveis 62","expectedLevel":32,"expectedOverall":99,"expectedPoints":62},
+  {"name":"nível 48 e GER 101","levelText":"LEVEL 48","overallText":"GER: 101","pointsText":"94 pontos de progresso","expectedLevel":48,"expectedOverall":101,"expectedPoints":94},
+  {"name":"nível 23 e GER 105","levelText":"Lvl-23","overallText":"Overall 105","pointsText":"44 pontos","expectedLevel":23,"expectedOverall":105,"expectedPoints":44}
+]

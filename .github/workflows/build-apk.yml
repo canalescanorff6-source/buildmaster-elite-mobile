@@ -77,13 +77,38 @@ jobs:
           npm --version
           java -version
 
+      - name: Garantir registro público do npm
+        run: |
+          npm config set registry https://registry.npmjs.org/
+          npm config set replace-registry-host always
+          node scripts/verify-public-npm-registry.mjs
+          test "$(npm config get registry)" = "https://registry.npmjs.org/"
+
       - name: Instalar dependências travadas
-        timeout-minutes: 25
+        timeout-minutes: 30
         env:
-          npm_config_fetch_retries: '3'
-          npm_config_fetch_retry_mintimeout: '10000'
-          npm_config_fetch_retry_maxtimeout: '60000'
-        run: npm ci --registry=https://registry.npmjs.org/ --no-audit --no-fund --loglevel=info
+          npm_config_registry: https://registry.npmjs.org/
+          npm_config_replace_registry_host: always
+          npm_config_fetch_retries: '4'
+          npm_config_fetch_retry_factor: '2'
+          npm_config_fetch_retry_mintimeout: '15000'
+          npm_config_fetch_retry_maxtimeout: '120000'
+          npm_config_fetch_timeout: '300000'
+        run: |
+          set -e
+          for tentativa in 1 2 3; do
+            echo "Tentativa $tentativa de 3 para instalar dependências pelo registro público..."
+            if npm ci --no-audit --no-fund --loglevel=info; then
+              exit 0
+            fi
+            if [ "$tentativa" -lt 3 ]; then
+              espera=$((tentativa * 20))
+              echo "Falha temporária de rede. Nova tentativa em ${espera}s."
+              sleep "$espera"
+            fi
+          done
+          echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
+          exit 1
 
       - name: Validar TypeScript
         timeout-minutes: 6
@@ -258,11 +283,11 @@ jobs:
             'updateType': 'apk',
             'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build={os.environ["GITHUB_SHA"][:8]}&code={os.environ["ANDROID_VERSION_CODE"]}',
             'notes': [
-              'Leitor Total com visão geral, atributos, habilidades, progressão e posições da mesma carta.',
-              'Detecção automática do tipo de tela e adaptação das áreas de leitura.',
-              'Múltiplas passagens locais com contraste e nitidez quando a confiança estiver baixa.',
-              'Cruzamento de identidade para evitar mistura entre versões diferentes do mesmo jogador.',
-              'Auditoria por campo com origem visual e confirmação antes da ficha final.'
+              'Print Único Pro adaptativo separa nível, GER, posição, estilo, pontos, atributos, habilidades e arte da carta.',
+              'Alinhamento pela área útil da tela, OCR reutilizável, cache por hash, fila local e cancelamento.',
+              'Nível validado por rótulo, região, alternativas e coerência com GER e pontos visíveis.',
+              'Auditoria visual com recortes, histórico de confiança e memória de correções confirmadas.',
+              'Design System premium, banco estruturado, diagnóstico seguro e inteligência integrada.'
             ],
             'mandatory': True,
             'minNativeVersion': '26.75.0',
@@ -272,13 +297,14 @@ jobs:
           pathlib.Path('dist-apk/update-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Leitor Total
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Reconstrução Completa
 
-          - Leitura combinada de visão geral, atributos, habilidades, progressão e posições.
-          - Detecção automática do tipo de cada tela.
-          - Segunda passagem local para áreas com baixa confiança.
-          - Cruzamento de identidade para impedir mistura entre versões diferentes.
-          - Auditoria visual por campo antes de gerar a ficha final.
+          - Print Único Pro adaptativo com separação rígida entre nível, GER, pontos e atributos.
+          - OCR reutilizável, cache por hash, fila local, cancelamento e limites de memória.
+          - Evidência visual por campo, histórico de confiança e memória de correções confirmadas.
+          - Banco local estruturado com cartas, fichas, formações, partidas e miniaturas indexadas.
+          - Design System premium, acessibilidade, diagnóstico seguro e módulos carregados sob demanda.
+          - Detector de lacunas do elenco, rastro dos pontos, planos ligados ao banco e cartão compartilhável.
           - Atualizador definitivo, assinatura permanente e teste pós-publicação preservados.
           NOTES
 

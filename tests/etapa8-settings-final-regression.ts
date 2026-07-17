@@ -5,7 +5,7 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const auth = fs.readFileSync('src/components/AuthGate.tsx', 'utf8');
 const accounts = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
 const updates = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
-const css = fs.readFileSync('src/app/globals.css', 'utf8');
+const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 
 assert.match(app, /type SettingsView = 'aparencia' \| 'desempenho' \| 'seguranca' \| 'backup' \| 'atualizacoes' \| 'contas'/);
 assert.match(app, /type TextScale = 'compact' \| 'standard' \| 'large'/);

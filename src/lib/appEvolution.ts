@@ -23,7 +23,7 @@ export type DecisionWeight = {
   reason: string;
 };
 
-export type CardRegistrySource = 'print' | 'manual' | 'imported';
+export type CardRegistrySource = 'print' | 'manual' | 'imported' | 'official_source';
 export type CardRegistryStatus = 'confirmed' | 'review';
 
 export type CardRegistryEntry = {
@@ -38,6 +38,10 @@ export type CardRegistryEntry = {
   nativeSkills: string[];
   attributeSignature: string;
   source: CardRegistrySource;
+  sourceLabel: string;
+  sourceUrl: string;
+  cardVersion: string;
+  observedAt: string;
   status: CardRegistryStatus;
   confirmedAt: string;
   updatedAt: string;
@@ -124,7 +128,7 @@ export function buildSignature(result: AnalysisResult) {
   return `build-${stableHash(`${cardFingerprint(result)}::${result.bestPosition.code}::${normalize(result.buildName)}::${training}`)}`;
 }
 
-export function createCardRegistryEntry(result: AnalysisResult, source: CardRegistrySource, note = ''): CardRegistryEntry {
+export function createCardRegistryEntry(result: AnalysisResult, source: CardRegistrySource, note = '', metadata: { sourceLabel?: string; sourceUrl?: string; cardVersion?: string; observedAt?: string } = {}): CardRegistryEntry {
   const now = new Date().toISOString();
   const fingerprint = cardFingerprint(result);
   return {
@@ -139,6 +143,10 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
     nativeSkills: [...result.parsed.nativeSkills],
     attributeSignature: roundedAttributes(result),
     source,
+    sourceLabel: metadata.sourceLabel?.trim() || (source === 'official_source' ? 'Fonte oficial informada pelo usuário' : source === 'print' ? 'Print revisado' : source === 'manual' ? 'Preenchimento manual' : 'Registro importado'),
+    sourceUrl: metadata.sourceUrl?.trim() || '',
+    cardVersion: metadata.cardVersion?.trim() || '',
+    observedAt: metadata.observedAt || now,
     status: result.parsed.confidence >= 85 && result.validation.level !== 'blocked' ? 'confirmed' : 'review',
     confirmedAt: now,
     updatedAt: now,

@@ -240,26 +240,43 @@ export function buildCentralDashboard(players: IntegratedPlayerRecord[], matches
 
 export function buildMatchScenarioPlans(team: TeamDiagnosis): MatchScenarioPlan[] {
   const weak = team.weakestLine.toLowerCase();
+  const bench = team.benchSuggestions;
+  const defensive = bench.filter((item) => /vol|defens|zague|lateral|cobertura/i.test(`${item.role} ${item.reason}`));
+  const creative = bench.filter((item) => /meia|armador|orquestr|passe|cria/i.test(`${item.role} ${item.reason}`));
+  const attacking = bench.filter((item) => /ca|atac|ponta|ala|final|veloc/i.test(`${item.role} ${item.reason}`));
+  const named = (items: typeof bench, fallback: string) => items[0] ? `${items[0].name} — ${items[0].role}` : fallback;
   return [
     {
       id: 'protect', label: 'Segurar resultado', objective: 'Reduzir transições e proteger o setor mais vulnerável.',
       formationAdvice: `Mantenha a ${team.formation}, abaixe a agressividade do lado mais exposto e preserve cobertura em ${team.weakestLine}.`,
       playerProfile: 'Priorize 1º Volante, lateral defensivo, jogador resistente e atacante que segure a bola.',
-      substitutions: ['Trocar o jogador mais cansado do corredor.', 'Adicionar um meio-campista de cobertura.', 'Manter um atacante para aliviar a pressão.'],
+      substitutions: [
+        `Primeira opção do seu banco: ${named(defensive, 'meio-campista de cobertura')}.`,
+        'Trocar o jogador mais cansado do corredor sem retirar toda a saída de bola.',
+        `Manter uma válvula de escape: ${named(attacking, 'atacante que proteja a posse')}.`
+      ],
       risks: [`Não recuar todos ao mesmo tempo; ${weak} já é o setor mais frágil.`, 'Evitar os dois laterais avançando juntos.']
     },
     {
       id: 'control', label: 'Controlar a partida', objective: 'Manter equilíbrio e escolher o momento de acelerar.',
       formationAdvice: `Use a estrutura base da ${team.formation} e preserve as funções complementares do meio.`,
       playerProfile: 'Orquestrador ou Armador Criativo para circulação, com um jogador de cobertura atrás.',
-      substitutions: ['Renovar o meio entre 55 e 70 minutos.', 'Trocar o atacante de menor participação.', 'Preservar ao menos um jogador rápido para transição.'],
+      substitutions: [
+        `Renovar a criação entre 55 e 70 minutos com ${named(creative, 'um meia de passe seguro')}.`,
+        'Trocar o atacante de menor participação, não apenas o de menor overall.',
+        `Preservar transição com ${named(attacking, 'um reserva rápido')}.`
+      ],
       risks: ['Não repetir três jogadores com a mesma função.', 'Não deixar o CA isolado sem aproximação.']
     },
     {
       id: 'chase', label: 'Buscar empate ou virada', objective: 'Aumentar presença ofensiva sem desmontar completamente a proteção.',
       formationAdvice: `Transforme um meio em Infiltração ou Armador Criativo e ataque o lado de melhor encaixe da ${team.formation}.`,
       playerProfile: 'Artilheiro, Ala Produtivo, Infiltração e um Pivô ou Puxa Marcação para criar espaços.',
-      substitutions: ['Colocar o melhor finalizador disponível.', 'Adicionar velocidade no corredor mais fraco do adversário.', 'Manter um volante para cortar contra-ataques.'],
+      substitutions: [
+        `Adicionar impacto ofensivo com ${named(attacking, 'o melhor finalizador disponível')}.`,
+        `Aumentar criação com ${named(creative, 'um Armador Criativo ou Infiltração')}.`,
+        `Manter proteção com ${named(defensive, 'um volante de cobertura')}.`
+      ],
       risks: ['Não retirar toda a proteção central.', 'Evitar dois zagueiros lentos expostos em linha alta.']
     }
   ];

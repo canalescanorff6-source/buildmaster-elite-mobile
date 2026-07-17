@@ -1,20 +1,15 @@
-# APK Fiel — BuildMaster Elite Tático v26.70
+# APK fiel — BuildMaster v27.10
 
-Esta versão mantém o aplicativo completo embutido no APK e adiciona backup dedicado de jogadores treinados e uma Central de Atualizações.
+O APK contém a exportação estática do aplicativo e usa Capacitor, sem transformar a interface principal em uma página remota.
 
-## Como gerar
+## Geração
 
 1. Envie o projeto completo para o GitHub.
-2. Vá em **Actions**.
-3. Execute **Gerar APK e publicar atualização v26.70**.
-4. Baixe o artefato `BuildMaster-Elite-Tatico-v26.70-APK-e-Manifesto`.
+2. Confirme as Variables válidas do Supabase.
+3. Confirme o Secret `ANDROID_SIGNING_BUNDLE`.
+4. Execute **Gerar APK e publicar atualização definitiva**.
+5. Aguarde a verificação de ponta a ponta da release.
 
-## Atualização por cima
+O workflow gera um APK versionado e um APK com endereço estável para o atualizador. O `update-manifest.json` real é criado durante a publicação; o arquivo do repositório é apenas um exemplo.
 
-Para instalar versões futuras sem desinstalar, configure uma assinatura persistente usando os Secrets descritos em `README_ASSINATURA_ATUALIZACOES.md`.
-
-Sem assinatura persistente, o APK ainda é gerado como artefato, mas não é publicado como atualização automática.
-
-## Dados locais
-
-Antes de trocar de assinatura ou desinstalar o aplicativo, use **Cofre › Backup › Jogadores treinados** ou **Ajustes › Segurança › Backup completo**.
+Não envie pastas de build ou chaves privadas.

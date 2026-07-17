@@ -1,0 +1,9 @@
+CORREÇÃO DO ERRO "FAILED TO FETCH"
+
+Esta versão habilita o CapacitorHttp nativo no Android e adiciona uma segunda tentativa de conexão nativa com o Supabase. Isso evita bloqueios de CORS/WebView que podem ocorrer depois que a senha é aceita e o aplicativo chama a função license-session.
+
+Arquivos alterados:
+- capacitor.config.ts
+- src/lib/accountAuth.ts
+
+Envie esta pasta completa ao GitHub substituindo os arquivos antigos e execute uma NOVA execução do workflow de APK.
