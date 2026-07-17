@@ -8,6 +8,8 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const capacitor = fs.readFileSync('capacitor.config.ts', 'utf8');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
+const displayVersion = pkg.version.split('.').slice(0, 2).join('.');
 
 assert.match(auth, /scheduleReconnect/);
 assert.match(auth, /Tentar agora/);
@@ -23,7 +25,7 @@ assert.match(accounts, /Gerar outra senha segura/);
 assert.match(app, /aria-current=/);
 assert.match(app, /previousFocus\?\.focus\(\)/);
 assert.match(app, /setSettingsView\('backup'\)/);
-assert.match(app, /Elite Tático v27\.10/);
+assert.ok(app.includes(`Elite Tático v${displayVersion}`), `A interface precisa mostrar a versão atual v${displayVersion}.`);
 
 assert.match(css, /v26\.75 — SEGURANÇA REFORÇADA/);
 assert.match(css, /label:focus-within[\s\S]*outline: none !important/);
@@ -34,4 +36,4 @@ assert.match(layout, /colorScheme: 'dark light'/);
 assert.match(capacitor, /webContentsDebuggingEnabled: false/);
 assert.match(capacitor, /allowMixedContent: false/);
 
-console.log('✓ v27.10: sessão resiliente, foco limpo, diálogos premium e acessibilidade validados.');
+console.log(`✓ v${displayVersion}: sessão resiliente, foco limpo, diálogos premium e acessibilidade validados.`);
