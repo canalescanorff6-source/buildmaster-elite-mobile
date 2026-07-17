@@ -1,7 +1,7 @@
-export const CURRENT_DATA_SCHEMA = 2675;
-export const APP_DATA_VERSION = '26.75.0';
+export const CURRENT_DATA_SCHEMA = 2700;
+export const APP_DATA_VERSION = '27.0.0';
 
-export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session';
+export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution';
 
 export type BackupEnvelope = {
   app: 'BuildMaster Elite Tático';
@@ -117,6 +117,19 @@ export function migrateBackup(envelope: BackupEnvelope): { envelope: BackupEnvel
   if (!sections.folders) { sections.folders = []; steps.push('Pastas personalizadas inicializadas.'); }
   if (!sections.settings) { sections.settings = {}; steps.push('Preferências visuais inicializadas.'); }
   if (!sections.plans) { sections.plans = {}; steps.push('Área de Planos A, B e C inicializada.'); }
+  if (!sections.evolution) { sections.evolution = {}; steps.push('Registro de cartas e validação real inicializados.'); }
+  if (sections.evolution && typeof sections.evolution === 'object') {
+    const evolution = { ...(sections.evolution as Record<string, unknown>) };
+    if (!evolution.centralIntelligence) {
+      evolution.centralIntelligence = { schemaVersion: 27, migratedAt: envelope.exportedAt, preservedKeys: [], note: 'Migração não destrutiva da Central Inteligente.' };
+      steps.push('Central Inteligente vinculada aos dados existentes sem apagar o Cofre.');
+    }
+    if (!evolution.centralEntityIndex) {
+      evolution.centralEntityIndex = null;
+      steps.push('Índice unificado preparado para relacionar cartas, fichas, formações e partidas.');
+    }
+    sections.evolution = evolution;
+  }
   if (envelope.schema < CURRENT_DATA_SCHEMA) steps.push(`Dados migrados do esquema ${envelope.schema || 'legado'} para ${CURRENT_DATA_SCHEMA}.`);
   return { envelope: createBackupEnvelope(sections, envelope.exportedAt), steps };
 }

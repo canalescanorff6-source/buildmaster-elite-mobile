@@ -258,12 +258,11 @@ jobs:
             'updateType': 'apk',
             'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build={os.environ["GITHUB_SHA"][:8]}&code={os.environ["ANDROID_VERSION_CODE"]}',
             'notes': [
-              'Atualização automática refeita com versionCode real e detecção ao abrir, retornar ou reconectar.',
-              'Download mostra progresso e aceita redirecionamentos oficiais do GitHub.',
-              'APK validado por tamanho, SHA-256, pacote, versão e assinatura antes da instalação.',
-              'Permissão “Permitir desta fonte” guiada dentro do fluxo.',
-              'Publicação usa arquivo imutável por build e verificação pós-release.',
-              'Motor de identidade, formações, segurança e sessão persistente preservados.'
+              'Leitor Total com visão geral, atributos, habilidades, progressão e posições da mesma carta.',
+              'Detecção automática do tipo de tela e adaptação das áreas de leitura.',
+              'Múltiplas passagens locais com contraste e nitidez quando a confiança estiver baixa.',
+              'Cruzamento de identidade para evitar mistura entre versões diferentes do mesmo jogador.',
+              'Auditoria por campo com origem visual e confirmação antes da ficha final.'
             ],
             'mandatory': True,
             'minNativeVersion': '26.75.0',
@@ -273,16 +272,14 @@ jobs:
           pathlib.Path('dist-apk/update-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Definitiva
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Leitor Total
 
-          - Detecção automática ao abrir, voltar ao app e reconectar.
-          - Comparação pelo versionCode real instalado.
-          - APK único por build para evitar cache antigo.
-          - Download nativo com progresso e redirecionamentos oficiais do GitHub.
-          - Verificação de tamanho, SHA-256, pacote, versionCode, versionName e assinatura.
-          - Permissão de instalação guiada pelo próprio aplicativo.
-          - Publicação bloqueada sem a chave permanente.
-          - Teste pós-publicação baixa a release e confirma o checksum.
+          - Leitura combinada de visão geral, atributos, habilidades, progressão e posições.
+          - Detecção automática do tipo de cada tela.
+          - Segunda passagem local para áreas com baixa confiança.
+          - Cruzamento de identidade para impedir mistura entre versões diferentes.
+          - Auditoria visual por campo antes de gerar a ficha final.
+          - Atualizador definitivo, assinatura permanente e teste pós-publicação preservados.
           NOTES
 
       - name: Enviar APK e manifesto como artefato
@@ -306,12 +303,12 @@ jobs:
           git push origin refs/tags/buildmaster-latest --force
           if gh release view buildmaster-latest >/dev/null 2>&1; then
             gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Definitiva" \
+              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Evolução Total" \
               --notes-file dist-apk/RELEASE_NOTES.md
           else
             gh release create buildmaster-latest \
               --verify-tag \
-              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Definitiva" \
+              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Evolução Total" \
               --notes-file dist-apk/RELEASE_NOTES.md
           fi
           gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME" --clobber

@@ -5,6 +5,10 @@ export type PremiumReadingStatus = 'confirmed' | 'review' | 'unread';
 export type PremiumEnhancementMode = 'original' | 'adaptive' | 'contrast' | 'sharp';
 
 export type PremiumZoneReading = {
+  id?: string;
+  sourceId?: string;
+  sourceLabel?: string;
+  screenType?: string;
   key: OcrZoneKey | 'full';
   label: string;
   text: string;
@@ -12,10 +16,13 @@ export type PremiumZoneReading = {
   status: PremiumReadingStatus;
   originPreview: string | null;
   enhancement: PremiumEnhancementMode;
+  passCount?: number;
+  consistency?: number;
+  alternatives?: Array<{ text: string; confidence: number; enhancement: PremiumEnhancementMode }>;
 };
 
 export type ReadingConfirmationStage = {
-  id: 'identity' | 'card' | 'attributes' | 'skills';
+  id: 'identity' | 'card' | 'attributes' | 'progression' | 'skills';
   title: string;
   description: string;
   zoneKeys: OcrZoneKey[];
@@ -27,7 +34,7 @@ export const READING_CONFIRMATION_STAGES: ReadingConfirmationStage[] = [
     id: 'identity',
     title: '1. Identidade',
     description: 'Confirme nome e GER antes de usar os demais dados.',
-    zoneKeys: ['name', 'overall'],
+    zoneKeys: ['name', 'overall', 'cardType', 'level'],
     required: true
   },
   {
@@ -41,12 +48,19 @@ export const READING_CONFIRMATION_STAGES: ReadingConfirmationStage[] = [
     id: 'attributes',
     title: '3. Atributos e pontos',
     description: 'Revise atributos e ficha automática antes do cálculo final.',
-    zoneKeys: ['attributes', 'autoTraining'],
+    zoneKeys: ['attributes'],
+    required: true
+  },
+  {
+    id: 'progression',
+    title: '4. Progressão e pontos',
+    description: 'Confirme nível, pontos disponíveis e a progressão lida.',
+    zoneKeys: ['level', 'points', 'progression', 'autoTraining'],
     required: true
   },
   {
     id: 'skills',
-    title: '4. Habilidades',
+    title: '5. Habilidades',
     description: 'Confirme apenas as habilidades que estiverem visíveis.',
     zoneKeys: ['skills'],
     required: false

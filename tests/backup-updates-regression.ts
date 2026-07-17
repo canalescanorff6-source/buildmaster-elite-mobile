@@ -4,30 +4,32 @@ import path from 'node:path';
 import { APP_DATA_VERSION, createBackupEnvelope, validateBackupEnvelope } from '../src/lib/dataSafety';
 import { APP_RELEASE_VERSION, compareVersions, evaluateUpdateManifest, validateUpdateManifest } from '../src/lib/appUpdates';
 
-assert.equal(APP_DATA_VERSION, '26.75.0');
-assert.equal(APP_RELEASE_VERSION, '26.78.0');
-assert.equal(compareVersions('26.79.0', '26.78.0'), 1);
-assert.equal(compareVersions('26.78.0', '26.78.0'), 0);
-assert.equal(compareVersions('26.77.9', '26.78.0'), -1);
+assert.equal(APP_DATA_VERSION, '27.0.0');
+assert.equal(APP_RELEASE_VERSION, '27.0.0');
+assert.equal(compareVersions('27.1.0', '27.0.0'), 1);
+assert.equal(compareVersions('27.0.0', '27.0.0'), 0);
+assert.equal(compareVersions('26.99.9', '27.0.0'), -1);
 
 const backup = createBackupEnvelope({
   history: [{ id: 'player-1', result: { parsed: { playerName: 'Jogador Teste' } } }],
   folders: [{ id: 'titulares', name: 'Titulares' }],
-  calibration: { matches: { 'player-1': [{ rating: 8 }] } }
+  calibration: { matches: { 'player-1': [{ rating: 8 }] } },
+  evolution: { cardRegistry: [{ id: 'card-1' }], matchValidation: [{ id: 'match-1' }] }
 }, '2026-07-14T00:00:00.000Z');
 const checked = validateBackupEnvelope(backup);
 assert.equal(checked.valid, true);
 assert.ok(Array.isArray(checked.migrated?.sections.history));
+assert.ok(checked.migrated?.sections.evolution);
 
 const manifest = {
   appId: 'com.buildmaster.elitetatico',
-  version: '26.79.0',
-  versionCode: 1307900020,
+  version: '27.0.0',
+  versionCode: 1350000020,
   buildId: 'new-build',
   publishedAt: '2026-07-14T00:00:00.000Z',
   channel: 'stable',
   updateType: 'apk',
-  apkUrl: 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v26.79.0-1307900020-abcdef12.apk',
+  apkUrl: 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.0.0-1350000020-abcdef12.apk',
   checksum: 'a'.repeat(64),
   sizeBytes: 25_000_000,
   notes: ['Teste']
@@ -37,9 +39,9 @@ assert.equal(validateUpdateManifest({ ...manifest, apkUrl: 'javascript:alert(1)'
 assert.equal(validateUpdateManifest({ ...manifest, checksum: 'invalido' }), null);
 assert.equal(validateUpdateManifest({ ...manifest, versionCode: 0 }), null);
 assert.equal(validateUpdateManifest({ ...manifest, publishedAt: 'data-invalida' }), null);
-assert.equal(evaluateUpdateManifest(manifest, { versionName: '26.78.0', versionCode: 1307800010 }, 'old-build').available, true);
-assert.equal(evaluateUpdateManifest({ ...manifest, version: '26.78.0', versionCode: 1307800010, buildId: 'old-build' }, { versionName: '26.78.0', versionCode: 1307800010 }, 'old-build').available, false);
-assert.equal(evaluateUpdateManifest({ ...manifest, appId: 'outro.app' }, { versionName: '26.78.0', versionCode: 1307800010 }, 'old-build').valid, false);
+assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.0.0', versionCode: 1349900010 }, 'old-build').available, true);
+assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.0.0', versionCode: 1349900010, buildId: 'old-build' }, { versionName: '27.0.0', versionCode: 1349900010 }, 'old-build').available, false);
+assert.equal(evaluateUpdateManifest({ ...manifest, appId: 'outro.app' }, { versionName: '27.0.0', versionCode: 1349900010 }, 'old-build').valid, false);
 
 const appSource = fs.readFileSync(path.join(process.cwd(), 'src/components/CardVisionApp.tsx'), 'utf8');
 assert.match(appSource, /exportPlayersBackup/);
@@ -55,4 +57,4 @@ assert.match(workflow, /Verificar release publicada de ponta a ponta/);
 assert.doesNotMatch(appSource, /updateManifestUrl:/);
 assert.match(appSource, /encryptBackupPayload/);
 
-console.log('✓ Backup e motor de atualização definitiva v26.78 validados.');
+console.log('✓ Backup e motor de atualização definitiva v27.00 validados.');

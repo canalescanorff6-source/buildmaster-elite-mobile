@@ -39,6 +39,6 @@ assert.ok(identity);
 const summary = buildStageSummary(covered, identity!);
 assert.equal(summary.total, 2);
 assert.equal(summary.found, 1);
-assert.equal(READING_CONFIRMATION_STAGES.filter((stage) => stage.required).length, 3);
+assert.equal(READING_CONFIRMATION_STAGES.filter((stage) => stage.required).length, 4);
 
 console.log('Lote 7 leitura premium: OK');

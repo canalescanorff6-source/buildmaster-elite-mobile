@@ -10,15 +10,15 @@ const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const manifest = fs.readFileSync('public/manifest.webmanifest', 'utf8');
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 
-assert.equal(pkg.version, '26.78.0', 'package.json precisa estar na v26.78.0');
+assert.equal(pkg.version, '27.0.0', 'package.json precisa estar na v27.0.0');
 assert.equal(lock.version, pkg.version, 'package-lock.json precisa ter a mesma versão do package.json');
 assert.equal(lock.packages[''].version, pkg.version, 'raiz do package-lock precisa ter a mesma versão');
 assert.ok(workflow.includes("json.loads(pathlib.Path('package.json')"), 'Workflow precisa ler a versão do package.json.');
 assert.ok(workflow.includes('BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk'), 'Nome do APK precisa acompanhar automaticamente a versão.');
 assert.ok(workflow.includes('BUILDMASTER_VERSION=') || workflow.includes('BUILDMASTER_VERSION'), 'Versão dinâmica não foi preparada.');
-assert.ok(layout.includes('v26.78'), 'Metadados da interface não correspondem à v26.78.');
-assert.ok(manifest.includes('v26.78'), 'manifest.webmanifest não corresponde à v26.78.');
-assert.ok(sw.includes('26-78'), 'Cache do service worker não corresponde à v26.78.');
+assert.ok(layout.includes('v27.00'), 'Metadados da interface não correspondem à v27.00.');
+assert.ok(manifest.includes('v27.00'), 'manifest.webmanifest não corresponde à v27.00.');
+assert.ok(sw.includes('27-00'), 'Cache do service worker não corresponde à v27.00.');
 
 assert.ok(workflow.includes('ANDROID_SIGNING_BUNDLE'), 'Workflow precisa usar o Secret de assinatura permanente.');
 assert.match(workflow, /ANDROID_SIGNING_BUNDLE é obrigatório/, 'Workflow oficial não pode publicar APK de teste.');
@@ -34,4 +34,4 @@ assert.doesNotMatch(workflow, /gh release delete buildmaster-latest/, 'Não apag
 
 assert.ok(fs.existsSync('src/app/error.tsx'));
 assert.ok(fs.existsSync('src/app/global-error.tsx'));
-console.log('release integrity v26.78: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');
+console.log('release integrity v27.00: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');

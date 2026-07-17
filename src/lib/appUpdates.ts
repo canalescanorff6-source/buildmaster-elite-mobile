@@ -1,5 +1,5 @@
-export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '26.78.0';
-export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '26.78.0';
+export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.0.0';
+export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.0.0';
 export const CURRENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILDMASTER_BUILD_ID || 'local-build';
 export const DEFAULT_UPDATE_MANIFEST_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL || 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json';
 

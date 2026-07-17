@@ -8,21 +8,21 @@ import {
   validateUpdateManifest
 } from '../src/lib/appUpdates';
 
-assert.equal(APP_RELEASE_VERSION, '26.78.0');
-assert.equal(APP_NATIVE_VERSION, '26.78.0');
+assert.equal(APP_RELEASE_VERSION, '27.0.0');
+assert.equal(APP_NATIVE_VERSION, '27.0.0');
 
-const apkUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v26.79.0-1307900042-abcdef12.apk';
+const apkUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.0.0-1350000042-abcdef12.apk';
 assert.equal(isTrustedApkUrl(apkUrl), true);
-const bridgeUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build=abcdef12&code=1307900042';
+const bridgeUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?build=abcdef12&code=1350000042';
 assert.equal(isTrustedApkUrl(bridgeUrl), true);
 
 assert.equal(isTrustedApkUrl('https://evil.example/BuildMaster.apk'), false);
-assert.equal(isTrustedApkUrl('https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/outra-tag/BuildMaster-Elite-Tatico-v26.79.0-1307900042-abcdef12.apk'), false);
+assert.equal(isTrustedApkUrl('https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/outra-tag/BuildMaster-Elite-Tatico-v27.0.0-1350000042-abcdef12.apk'), false);
 
 const manifest = {
   appId: 'com.buildmaster.elitetatico' as const,
-  version: '26.79.0',
-  versionCode: 1307900042,
+  version: '27.0.0',
+  versionCode: 1350000042,
   buildId: 'abcdef123456',
   publishedAt: new Date().toISOString(),
   channel: 'stable' as const,
@@ -35,9 +35,9 @@ const manifest = {
   sizeBytes: 31_000_000
 };
 assert.ok(validateUpdateManifest(manifest));
-assert.equal(evaluateUpdateManifest(manifest, { versionName: '26.78.0', versionCode: 1307800010 }, 'old').available, true);
-assert.equal(evaluateUpdateManifest({ ...manifest, version: '26.78.0', versionCode: 1307800010 }, { versionName: '26.78.0', versionCode: 1307800010 }, 'abcdef123456').available, false);
-assert.equal(evaluateUpdateManifest({ ...manifest, versionCode: 1307709999 }, { versionName: '26.78.0', versionCode: 1307800010 }, 'old').available, false);
+assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.0.0', versionCode: 1349900010 }, 'old').available, true);
+assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.0.0', versionCode: 1349900010 }, { versionName: '27.0.0', versionCode: 1349900010 }, 'abcdef123456').available, false);
+assert.equal(evaluateUpdateManifest({ ...manifest, versionCode: 1349809999 }, { versionName: '27.0.0', versionCode: 1349900010 }, 'old').available, false);
 
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const storage = fs.readFileSync('src/lib/secureStorage.ts', 'utf8');
@@ -65,4 +65,4 @@ assert.match(workflow, /Verificar release publicada de ponta a ponta/);
 assert.match(workflow, /ANDROID_SIGNING_BUNDLE é obrigatório/);
 assert.doesNotMatch(workflow, /assembleDebug/);
 
-console.log('✓ v26.78: detecção, versionCode, APK único, progresso, permissão, SHA-256, pacote e assinatura validados.');
+console.log('✓ v27.00: detecção, versionCode, APK único, progresso, permissão, SHA-256, pacote e assinatura validados.');

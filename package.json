@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v26-78-atualizacao-definitiva",
-  "version": "26.78.0",
+  "name": "buildmaster-elite-tatico-v27-central-inteligente",
+  "version": "27.0.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v26.78 - atualização automática definitiva com detecção, download, integridade e instalação Android verificados.",
+  "description": "BuildMaster Elite Tático v27.00 - Central Inteligente Integrada com Laboratório do Jogador, Time, Partida, Assistente local e migração não destrutiva.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -12,7 +12,7 @@
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
     "test:lote1": "tsx tests/lote1-official-regression.ts",
-    "test:all": "npm run test:update-v2678 && npm run test:identity-v2677 && npm run test:studio-v2677 && npm run test:security-v2675 && npm run test:polish && npm run test:etapa8 && npm run test:accounts && npm run test:backup-updates && npm run test:community && npm run test:meta-universe && npm run test:lote18-24 && npm run test:lote17 && npm run test:dna && npm run test:unique && npm run test:ui && npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
+    "test:all": "npm run test:central-v27 && npm run test:reader-v2681 && npm run test:evolution-v2680 && npm run test:layout-v2679 && npm run test:update-v2678 && npm run test:identity-v2677 && npm run test:studio-v2677 && npm run test:security-v2675 && npm run test:polish && npm run test:etapa8 && npm run test:accounts && npm run test:backup-updates && npm run test:community && npm run test:meta-universe && npm run test:lote18-24 && npm run test:lote17 && npm run test:dna && npm run test:unique && npm run test:ui && npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -59,7 +59,11 @@
     "test:security-v2675": "tsx tests/v26-75-security-regression.ts",
     "test:studio-v2677": "tsx tests/v26-77-ficha-studio-regression.ts",
     "test:identity-v2677": "tsx tests/v26-77-identity-formation-regression.ts",
-    "test:update-v2678": "tsx tests/v26-78-update-engine-regression.ts"
+    "test:update-v2678": "tsx tests/v26-78-update-engine-regression.ts",
+    "test:layout-v2679": "tsx tests/v26-79-ficha-layout-regression.ts",
+    "test:evolution-v2680": "tsx tests/v26-80-evolution-total-regression.ts",
+    "test:reader-v2681": "tsx tests/v26-81-total-reader-regression.ts",
+    "test:central-v27": "tsx tests/v27-central-intelligence-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

@@ -1,3 +1,8 @@
+# BuildMaster Elite Tático v27.00 — Central Inteligente Integrada
+
+> Leia primeiro: `LEIA-PRIMEIRO-V27.00-CENTRAL-INTELIGENTE.txt`  
+> Documentação completa: `README_V27_00_CENTRAL_INTELIGENTE.md`
+
 # BuildMaster Elite Tático v26.70 — Backup e Atualizações
 
 A v26.70 preserva todos os recursos da v26.60, incluindo Universo Meta, fichas DNA, Inteligência da Comunidade, Cofre, equipe, treinamento e análise de delay, e adiciona duas melhorias centrais:

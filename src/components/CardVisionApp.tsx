@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import type { ChangeEvent, ErrorInfo, ReactNode } from 'react';
 import {
   Camera,
@@ -65,12 +66,27 @@ import { UpdateAutoChecker, UpdateCenterPanel } from '@/components/UpdateCenterP
 import { AccountAdminPanel } from '@/components/AccountAdminPanel';
 import { PrecisionBuildPanel } from '@/components/PrecisionBuildPanel';
 import { FormationRoleLabPanel } from '@/components/FormationRoleLabPanel';
+import { FirstUseOnboarding } from '@/components/FirstUseOnboarding';
+import { DecisionWeightPanel } from '@/components/DecisionWeightPanel';
+import { VerifiedCardRegistryPanel } from '@/components/VerifiedCardRegistryPanel';
+import { MatchValidationCenter } from '@/components/MatchValidationCenter';
+import { TotalCardReaderPanel } from '@/components/TotalCardReaderPanel';
+import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
+import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
+import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
+const PlayerLaboratory = dynamic(() => import('@/modules/players/PlayerLaboratory').then((module) => module.PlayerLaboratory), { ssr: false });
+const IntegratedTeamLab = dynamic(() => import('@/modules/squad/IntegratedTeamLab').then((module) => module.IntegratedTeamLab), { ssr: false });
+const MatchLaboratory = dynamic(() => import('@/modules/matches/MatchLaboratory').then((module) => module.MatchLaboratory), { ssr: false });
+const BuildMasterAssistant = dynamic(() => import('@/modules/assistant/BuildMasterAssistant').then((module) => module.BuildMasterAssistant), { ssr: false });
+import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
+import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
 
 type ReadingMode = 'precision' | 'fast';
+type ReaderCaptureMode = 'single' | 'complete';
 type AppTheme = 'dark' | 'light';
 type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type TextScale = 'compact' | 'standard' | 'large';
@@ -78,9 +94,9 @@ type DensityMode = 'compact' | 'comfortable';
 type MotionPreference = 'system' | 'reduced' | 'full';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade';
+type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade';
 type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'tatica' | 'exportar';
-type MainSection = 'inicio' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
+type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
 type TeamCenterView = 'visao' | 'formacoes' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
@@ -95,7 +111,7 @@ const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: s
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
-  { label: 'Desenvolvimento', tabs: [{ value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
+  { label: 'Desenvolvimento', tabs: [{ value: 'partidas', label: 'Validação real' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
   { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }] }
 ];
 
@@ -2066,7 +2082,7 @@ async function preprocessImage(file: File | Blob, mode: 'contrast' | 'sharp' = '
   });
 }
 
-async function cropImage(file: File, region: { x: number; y: number; w: number; h: number }, widthTarget = 1900): Promise<Blob | File> {
+async function cropImage(file: File, region: { x: number; y: number; w: number; h: number }, widthTarget = 1900, mode: 'contrast' | 'sharp' = 'contrast'): Promise<Blob | File> {
   const setup = await imageToCanvas(file).catch(() => null);
   if (!setup) return file;
 
@@ -2088,7 +2104,9 @@ async function cropImage(file: File, region: { x: number; y: number; w: number; 
   const data = imageData.data;
   for (let index = 0; index < data.length; index += 4) {
     const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
-    const contrasted = Math.max(0, Math.min(255, (gray - 110) * 1.92 + 160));
+    const boost = mode === 'sharp' ? 2.25 : 1.92;
+    const offset = mode === 'sharp' ? 168 : 160;
+    const contrasted = Math.max(0, Math.min(255, (gray - 110) * boost + offset));
     data[index] = contrasted;
     data[index + 1] = contrasted;
     data[index + 2] = contrasted;
@@ -2547,6 +2565,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             <p className="kicker">Por que os pontos foram usados assim</p>
             <ul className="clean-list">{result.deepAnalysis.pointRationale.map((item) => <li key={item}>{item}</li>)}</ul>
           </article>
+          <VerifiedCardRegistryPanel result={result} />
         </div>
       )}
 
@@ -2592,6 +2611,8 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         </div>
       )}
 
+      {tab === 'partidas' && <MatchValidationCenter result={result} />}
+
       {tab === 'resumo' && (
         <div className="result-section-grid">
           <article className="luxury-panel elite-build-card">
@@ -2616,6 +2637,8 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
               ))}
             </div>
           </article>
+
+          <DecisionWeightPanel result={result} />
 
           <article className="luxury-panel wide-card">
             <p className="kicker">Mapa de desempenho no time</p>
@@ -3587,6 +3610,7 @@ function ReviewPanel({
   targetPosition,
   setTargetPosition,
   premiumReadings,
+  totalReadingSession,
   readingConfirmations,
   setReadingConfirmations,
   onRefresh,
@@ -3603,6 +3627,7 @@ function ReviewPanel({
   targetPosition: PositionCode | 'AUTO';
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
   premiumReadings: PremiumZoneReading[];
+  totalReadingSession: TotalReadingSession | null;
   readingConfirmations: Record<string, boolean>;
   setReadingConfirmations: (value: Record<string, boolean> | ((current: Record<string, boolean>) => Record<string, boolean>)) => void;
   onRefresh: () => void;
@@ -3633,7 +3658,8 @@ function ReviewPanel({
   const usedPoints = draft.trainingPointsUsed;
   const remainingPoints = Math.max(0, typedPoints - usedPoints);
   const budgetPercent = Math.min(100, Math.round((usedPoints / Math.max(1, typedPoints || draft.trainingPointsTotal)) * 100));
-  const allRequiredConfirmed = READING_CONFIRMATION_STAGES.filter((stage) => stage.required).every((stage) => readingConfirmations[stage.id]);
+  const sameCardConfirmed = !totalReadingSession || totalReadingSession.mismatchRisk === 'none' || Boolean(readingConfirmations.sameCard);
+  const allRequiredConfirmed = READING_CONFIRMATION_STAGES.filter((stage) => stage.required).every((stage) => readingConfirmations[stage.id]) && sameCardConfirmed;
   const identityConfirmed = Boolean(manualFields.playerName.trim() || (card.playerName && card.playerName !== 'Jogador não identificado'));
   const positionConfirmed = cardPositionOverride !== 'AUTO';
   const styleConfirmed = playstyleOverride !== 'AUTO' || Boolean(card.playstyle);
@@ -3644,7 +3670,7 @@ function ReviewPanel({
   return (
     <section className="review-panel result-panel creation-review-panel">
       <div className="review-workflow-banner luxury-panel">
-        <div><span className="creation-stage-number">4</span><div><p className="kicker">Revisão obrigatória</p><h2>Confirme os dados essenciais</h2><p>Nada será tratado como ficha final até você revisar identidade, posição, estilo e pontos.</p></div></div>
+        <div><span className="creation-stage-number">3</span><div><p className="kicker">Revisão obrigatória</p><h2>Confirme os dados essenciais</h2><p>Nada será tratado como ficha final até você revisar identidade, posição, estilo e pontos.</p></div></div>
         <div className="review-progress-summary"><strong>{reviewProgress}%</strong><span>{reviewConfirmationCount}/4 confirmações</span><i><b style={{ width: `${reviewProgress}%` }} /></i></div>
         <div className="review-essential-checks">
           <span className={identityConfirmed ? 'confirmed' : ''}>{identityConfirmed ? <CheckCircle2 size={15} /> : '1'} Identidade</span>
@@ -3692,6 +3718,45 @@ function ReviewPanel({
         <p className="panel-note">A ficha final deve usar posição, estilo, nível/pontos e atributos corretos. As habilidades que o jogador já possui são opcionais: elas só ajudam o app a não recomendar habilidade repetida.</p>
       </article>
 
+      {totalReadingSession && (
+        <article className="luxury-panel wide-card total-reading-audit">
+          <div className="total-reading-audit-head">
+            <div><p className="kicker"><ScanText size={16} /> Cruzamento das telas</p><h3>Leitura completa da mesma carta</h3><p>O app comparou identidade, tipo de tela, qualidade e campos críticos antes de liberar a ficha.</p></div>
+            <strong>{totalReadingSession.mergedConfidence}%<span>confiança combinada</span></strong>
+          </div>
+          <div className="total-reading-coverage">
+            {totalReadingSession.coverage.map((item) => (
+              <span key={item.type} className={item.present ? 'covered' : item.required ? 'missing required' : 'missing'}>{item.present ? <CheckCircle2 size={14} /> : '—'} {item.label}{item.required ? ' • obrigatória' : ''}</span>
+            ))}
+          </div>
+          <div className="total-reading-capture-list">
+            {totalReadingSession.captures.map((capture) => (
+              <details key={capture.id} className={capture.warnings.length ? 'capture-audit-card has-warning' : 'capture-audit-card'}>
+                <summary><span><strong>{capture.label}</strong><small>Detectado: {capture.detectedType === 'unknown' ? capture.declaredType : capture.detectedType}</small></span><b>{capture.confidence}%</b></summary>
+                <div className="capture-audit-details">
+                  <span>Nome: {capture.identity.playerName || 'não confirmado'}</span>
+                  <span>Posição: {capture.identity.position || 'não confirmada'}</span>
+                  <span>Nível: {capture.identity.level ?? 'não confirmado'}</span>
+                  <span>Tipo: {capture.identity.cardType || 'não confirmado'}</span>
+                </div>
+                {capture.warnings.map((warning) => <em key={warning}>⚠ {warning}</em>)}
+              </details>
+            ))}
+          </div>
+          <div className="total-critical-field-grid">
+            {totalReadingSession.criticalFields.map((field) => (
+              <div key={field.key} className={`critical-field status-${field.status}`}><strong>{field.label}</strong><span>{field.reason}</span></div>
+            ))}
+          </div>
+          {totalReadingSession.mismatchRisk !== 'none' && (
+            <label className={`same-card-confirmation risk-${totalReadingSession.mismatchRisk}`}>
+              <input type="checkbox" checked={Boolean(readingConfirmations.sameCard)} onChange={() => setReadingConfirmations((current) => ({ ...current, sameCard: !current.sameCard }))} />
+              <span><strong>Confirmo que todos os prints são da mesma versão da carta</strong><em>{totalReadingSession.mismatchReasons.join(' ') || 'O leitor encontrou uma divergência que precisa de confirmação humana.'}</em></span>
+            </label>
+          )}
+        </article>
+      )}
+
       {premiumReadings.length > 0 && (
         <article className="luxury-panel wide-card premium-confirmation-card">
           <p className="kicker"><ScanText size={16} /> Confirmação em etapas</p>
@@ -3714,11 +3779,11 @@ function ReviewPanel({
           </div>
           <div className="zone-origin-grid">
             {premiumReadings.map((reading) => (
-              <details key={reading.key} className={`zone-origin-card status-${reading.status}`}>
-                <summary><strong>{reading.label}</strong><span>{reading.confidence}% • {reading.status === 'confirmed' ? 'boa' : reading.status === 'review' ? 'revisar' : 'não lida'}</span></summary>
+              <details key={reading.id ?? `${reading.sourceId ?? 'single'}-${reading.key}-${reading.label}`} className={`zone-origin-card status-${reading.status}`}>
+                <summary><strong>{reading.sourceLabel ? `${reading.sourceLabel} • ${reading.label}` : reading.label}</strong><span>{reading.confidence}% • {reading.status === 'confirmed' ? 'boa' : reading.status === 'review' ? 'revisar' : 'não lida'}</span></summary>
                 {reading.originPreview && <img src={reading.originPreview} alt={`Origem visual: ${reading.label}`} loading="lazy" decoding="async" />}
                 <pre>{reading.text || 'Nenhum texto confirmado nesta área.'}</pre>
-                <em>Origem: recorte da área • tratamento {reading.enhancement}</em>
+                <em>Origem: {reading.sourceLabel ? `${reading.sourceLabel} • ` : ''}recorte da área • tratamento {reading.enhancement}{reading.passCount && reading.passCount > 1 ? ` • ${reading.passCount} passagens` : ''}</em>
               </details>
             ))}
           </div>
@@ -3845,7 +3910,7 @@ function ReviewPanel({
       </div>
 
       <div className="review-finalize-shell luxury-panel">
-        <div className="review-finalize-copy"><span className="creation-stage-number">5</span><div><p className="kicker">Gerar ficha</p><h3>{reviewProgress === 100 ? 'Dados essenciais confirmados' : 'Revise os itens pendentes'}</h3><p>{reviewProgress === 100 ? 'Você pode recalcular ou gerar o plano final com os dados confirmados.' : 'O aplicativo permite continuar, mas os itens não confirmados podem reduzir a precisão.'}</p></div></div>
+        <div className="review-finalize-copy"><span className="creation-stage-number">4</span><div><p className="kicker">Gerar ficha</p><h3>{reviewProgress === 100 ? 'Dados essenciais confirmados' : 'Revise os itens pendentes'}</h3><p>{reviewProgress === 100 ? 'Você pode recalcular ou gerar o plano final com os dados confirmados.' : 'O aplicativo permite continuar, mas os itens não confirmados podem reduzir a precisão.'}</p></div></div>
         <div className="review-actions">
           <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular prévia</button>
           <button type="button" className="elite-button" onClick={onConfirm} disabled={premiumReadings.length > 0 && !allRequiredConfirmed}><CheckCircle2 size={18} /> {premiumReadings.length > 0 && !allRequiredConfirmed ? 'Confirme as etapas obrigatórias' : 'Gerar ficha final'}</button>
@@ -3869,10 +3934,12 @@ export function CardVisionApp() {
   const [cardPositionOverride, setCardPositionOverride] = useState<PositionCode | 'AUTO'>('AUTO');
   const [playstyleOverride, setPlaystyleOverride] = useState<string>('AUTO');
   const [readingMode, setReadingMode] = useState<ReadingMode>('precision');
+  const [readerCaptureMode, setReaderCaptureMode] = useState<ReaderCaptureMode>('complete');
   const [ocrZones, setOcrZones] = useState<OcrZone[]>(DEFAULT_OCR_ZONES);
   const [calibratorOpen, setCalibratorOpen] = useState(false);
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
   const [premiumReadings, setPremiumReadings] = useState<PremiumZoneReading[]>([]);
+  const [totalReadingSession, setTotalReadingSession] = useState<TotalReadingSession | null>(null);
   const [readingConfirmations, setReadingConfirmations] = useState<Record<string, boolean>>({});
   const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
   const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
@@ -3906,9 +3973,14 @@ export function CardVisionApp() {
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
   const [motionPreference, setMotionPreference] = useState<MotionPreference>('system');
   const [highContrast, setHighContrast] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [mainSection, setMainSection] = useState<MainSection>('inicio');
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [centralMatchRecords, setCentralMatchRecords] = useState<MatchValidationRecord[]>([]);
+  const [centralMigrationNote, setCentralMigrationNote] = useState('');
   const [mobileLauncher, setMobileLauncher] = useState<'create' | 'more' | null>(null);
   const [rulesUrl, setRulesUrl] = useState('');
   const [rulesStatus, setRulesStatus] = useState('Regras atualizáveis: use o pacote local ou cole uma URL JSON para atualizar sem refazer APK.');
@@ -3919,7 +3991,7 @@ export function CardVisionApp() {
   const lastSavedKey = useRef<string | null>(null);
   const backupInputRef = useRef<HTMLInputElement | null>(null);
   const fullBackupInputRef = useRef<HTMLInputElement | null>(null);
-  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false });
+  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true });
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [migrationLog, setMigrationLog] = useState<string[]>([]);
   const [backupPassword, setBackupPassword] = useState('');
@@ -3937,6 +4009,37 @@ export function CardVisionApp() {
       setBackupPasswordReady(true);
     }).catch(() => undefined);
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const reloadMatches = () => {
+      try {
+        const parsed = JSON.parse(readAccountStorage(MATCH_VALIDATION_STORAGE_KEY) || '[]') as MatchValidationRecord[];
+        setCentralMatchRecords(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setCentralMatchRecords([]);
+      }
+    };
+    reloadMatches();
+    window.addEventListener('buildmaster:match-validation-updated', reloadMatches);
+    return () => window.removeEventListener('buildmaster:match-validation-updated', reloadMatches);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const existing = readAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY);
+      if (existing) {
+        const parsed = JSON.parse(existing) as { note?: string };
+        setCentralMigrationNote(parsed.note || 'Dados anteriores integrados à Central Inteligente.');
+        return;
+      }
+      const preservedKeys = [HISTORY_KEY, ACTIVE_SESSION_KEY, ONBOARDING_STORAGE_KEY, CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, VAULT_FOLDERS_KEY];
+      const report = createCentralMigrationReport(preservedKeys.filter((key) => Boolean(readAccountStorage(key))));
+      writeAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY, JSON.stringify(report));
+      setCentralMigrationNote(report.note);
+    } catch {
+      setCentralMigrationNote('A Central Inteligente usa migração não destrutiva e mantém os dados nas chaves originais.');
+    }
   }, []);
 
   useEffect(() => {
@@ -3996,6 +4099,18 @@ export function CardVisionApp() {
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
   const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
+  const integratedPlayers = useMemo(() => buildIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
+  const integratedTeam = useMemo(() => buildTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
+  const centralDashboard = useMemo(() => buildCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
+  const centralMatchPlans = useMemo(() => buildMatchScenarioPlans(integratedTeam), [integratedTeam]);
+  const centralEntityIndex = useMemo(() => buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords), [integratedPlayers, integratedTeam, centralMatchRecords]);
+  useEffect(() => {
+    try {
+      writeAccountStorage(CENTRAL_INDEX_STORAGE_KEY, JSON.stringify(centralEntityIndex));
+    } catch {
+      // O índice é derivável; falhar ao persistir não apaga nem bloqueia os dados originais.
+    }
+  }, [centralEntityIndex]);
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
     settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast },
@@ -4025,14 +4140,16 @@ export function CardVisionApp() {
     vaultFilters.reviewOnly
   ].filter(Boolean).length, [historySearch, historyFilter, vaultFilters]);
   const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
-    { id: 'inicio', label: 'Início', hint: 'Dashboard', icon: 'dashboard' },
-    { id: 'leitor', label: 'Criar Ficha', hint: 'Leitor por print', icon: 'scan' },
-    { id: 'manual', label: 'Criar Ficha', hint: 'Manual Pro', icon: 'manual' },
-    { id: 'resultado', label: 'Resultado', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
-    { id: 'cofre', label: 'Cofre', hint: `${history.length} salvos`, icon: 'vault' },
-    { id: 'time', label: 'Meu Time', hint: 'Mapa tático', icon: 'team' },
-    { id: 'ajustes', label: 'Ajustes', hint: 'Tema e guia', icon: 'settings' }
-  ], [history.length, result, draftResult]);
+    { id: 'inicio', label: 'Início', hint: 'Central inteligente', icon: 'dashboard' },
+    { id: 'jogadores', label: 'Jogadores', hint: `${history.length} no banco`, icon: 'vault' },
+    { id: 'time', label: 'Meu Time', hint: 'Escalação integrada', icon: 'team' },
+    { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} registros`, icon: 'result' },
+    { id: 'ajustes', label: 'Ajustes', hint: 'Conta e sistema', icon: 'settings' },
+    { id: 'leitor', label: 'Leitor Total', hint: 'Fluxo do jogador', icon: 'scan' },
+    { id: 'manual', label: 'Manual Pro', hint: 'Fluxo do jogador', icon: 'manual' },
+    { id: 'resultado', label: 'Ficha do jogador', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
+    { id: 'cofre', label: 'Registro do jogador', hint: `${history.length} salvos`, icon: 'vault' }
+  ], [history.length, result, draftResult, centralMatchRecords.length]);
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
 
   function openMainSection(section: MainSection) {
@@ -4091,6 +4208,18 @@ export function CardVisionApp() {
       if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
     } catch {
       // Preferências visuais são opcionais.
+    }
+
+    try {
+      const storedOnboarding = readAccountStorage(ONBOARDING_STORAGE_KEY);
+      if (storedOnboarding) {
+        const profile = JSON.parse(storedOnboarding) as OnboardingProfile;
+        setOnboardingProfile(profile);
+      } else {
+        setOnboardingOpen(true);
+      }
+    } catch {
+      setOnboardingOpen(true);
     }
 
     try {
@@ -4235,6 +4364,17 @@ export function CardVisionApp() {
   // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
   // derrubem o resultado no mesmo instante da geração.
 
+
+
+  function completeOnboarding(profile: OnboardingProfile) {
+    setOnboardingProfile(profile);
+    setAdvancedMode(profile.experienceMode === 'advanced');
+    setFormation(profile.favoriteFormation);
+    setTeamStyle(profile.teamStyle);
+    setOnboardingOpen(false);
+    try { writeAccountStorage(ONBOARDING_STORAGE_KEY, JSON.stringify(profile)); } catch {}
+    setStatus(`Configuração inicial concluída: modo ${profile.experienceMode === 'advanced' ? 'avançado' : 'simples'}, formação ${profile.favoriteFormation}.`);
+  }
 
 
   function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
@@ -4485,6 +4625,39 @@ export function CardVisionApp() {
     setStatus(`Análise restaurada: ${item.result.parsed.playerName}.`);
   }
 
+  function openIntegratedPlayer(id: string, destination: 'vault' | 'result' | 'matches' = 'result') {
+    const item = history.find((entry) => entry.id === id);
+    if (!item) {
+      setStatus('O jogador não foi encontrado no banco unificado.');
+      return;
+    }
+    if (destination === 'vault') {
+      setHistorySearch(item.result.parsed.playerName);
+      setVaultView('jogadores');
+      openCofreDeJogadores();
+      return;
+    }
+    restoreHistory(item);
+    if (destination === 'matches') {
+      setStatus(`Ficha de ${item.result.parsed.playerName} aberta. Entre em Validação real para registrar a partida.`);
+    }
+  }
+
+  function handleCentralRecommendation(item: CentralRecommendation) {
+    if (item.playerId) {
+      openIntegratedPlayer(item.playerId, item.action === 'vault' ? 'vault' : 'result');
+      return;
+    }
+    if (item.action === 'players') setMainSection('jogadores');
+    else if (item.action === 'reader') openMainSection('leitor');
+    else if (item.action === 'manual') openMainSection('manual');
+    else if (item.action === 'vault') openCofreDeJogadores();
+    else if (item.action === 'team') setMainSection('time');
+    else if (item.action === 'matches') setMainSection('partidas');
+    else if (item.action === 'settings') setMainSection('ajustes');
+    else if (item.action === 'result' && (result || draftResult)) setMainSection('resultado');
+  }
+
   function saveCurrentFicha() {
     if (!result) return;
     const key = resultHistoryKey(result);
@@ -4562,6 +4735,13 @@ export function CardVisionApp() {
         pack: readJsonStorage(RULE_PACK_KEY, null),
         url: readAccountStorage(RULE_PACK_URL_KEY) || ''
       },
+      evolution: {
+        onboarding: readJsonStorage(ONBOARDING_STORAGE_KEY, null),
+        cardRegistry: readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []),
+        matchValidation: readJsonStorage(MATCH_VALIDATION_STORAGE_KEY, []),
+        centralIntelligence: readJsonStorage(CENTRAL_MIGRATION_STORAGE_KEY, null),
+        centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null)
+      },
       session: readJsonStorage(ACTIVE_SESSION_KEY, null)
     };
   }
@@ -4616,6 +4796,13 @@ export function CardVisionApp() {
           matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
           learning: readJsonStorage(LEARNING_KEY, {}),
           corrections: readJsonStorage(CORRECTION_KEY, {})
+        },
+        evolution: {
+          onboarding: readJsonStorage(ONBOARDING_STORAGE_KEY, null),
+          cardRegistry: readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []),
+          matchValidation: readJsonStorage(MATCH_VALIDATION_STORAGE_KEY, []),
+          centralIntelligence: readJsonStorage(CENTRAL_MIGRATION_STORAGE_KEY, null),
+        centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null)
         }
       });
       const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
@@ -4691,6 +4878,22 @@ export function CardVisionApp() {
         const rules = sections.rules as Record<string, unknown>;
         if (rules.pack) writeStorage(RULE_PACK_KEY, rules.pack);
         if (typeof rules.url === 'string') writeAccountStorage(RULE_PACK_URL_KEY, rules.url);
+      }
+      if (restoreSections.evolution && sections.evolution && typeof sections.evolution === 'object') {
+        const evolution = sections.evolution as Record<string, unknown>;
+        writeStorage(ONBOARDING_STORAGE_KEY, evolution.onboarding ?? null);
+        writeStorage(CARD_REGISTRY_STORAGE_KEY, evolution.cardRegistry ?? []);
+        writeStorage(MATCH_VALIDATION_STORAGE_KEY, evolution.matchValidation ?? []);
+        writeStorage(CENTRAL_MIGRATION_STORAGE_KEY, evolution.centralIntelligence ?? createCentralMigrationReport([]));
+        writeStorage(CENTRAL_INDEX_STORAGE_KEY, evolution.centralEntityIndex ?? null);
+        window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated'));
+        if (evolution.onboarding && typeof evolution.onboarding === 'object') {
+          const profile = evolution.onboarding as OnboardingProfile;
+          setOnboardingProfile(profile);
+          setAdvancedMode(profile.experienceMode === 'advanced');
+          setFormation(profile.favoriteFormation);
+          setTeamStyle(profile.teamStyle);
+        }
       }
       if (restoreSections.session && sections.session) writeStorage(ACTIVE_SESSION_KEY, sections.session);
       setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
@@ -4939,6 +5142,7 @@ export function CardVisionApp() {
     setOcrDone(false);
     setLoading(false);
     setPremiumReadings([]);
+    setTotalReadingSession(null);
     setReadingConfirmations({});
     setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
@@ -5045,6 +5249,7 @@ export function CardVisionApp() {
     setRawText('');
     setOcrDone(false);
     setPremiumReadings([]);
+    setTotalReadingSession(null);
     setReadingConfirmations({});
     setStatus('Preparando imagem por áreas para leitura local premium...');
 
@@ -5104,6 +5309,160 @@ ${variantText}`);
       }
     } catch {
       setStatus('Não consegui ler automaticamente. Tente outro print direto da tela com nome, posição, estilo e ficha automática visíveis.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  async function analyzeTotalCardCaptures(captures: TotalCardCaptureInput[]) {
+    if (!captures.length) return;
+    setMainSection('resultado');
+    setLoading(true);
+    setResult(null);
+    setDraftResult(null);
+    setManualFields(emptyManualFields());
+    setManualMode(false);
+    setRawText('');
+    setOcrDone(false);
+    setPremiumReadings([]);
+    setTotalReadingSession(null);
+    setReadingConfirmations({});
+    setStatus(`Leitor Total iniciado: preparando ${captures.length} tela(s) da carta...`);
+
+    try {
+      const Tesseract = await import('tesseract.js');
+      const allTexts: string[] = [];
+      const allReadings: PremiumZoneReading[] = [];
+      const audits: CaptureReadingAudit[] = [];
+      const overview = captures.find((capture) => capture.declaredType === 'overview') ?? captures[0];
+      setFileName(`leitura-total-${overview.file.name}`);
+      setSelectedFile(overview.file);
+      setPreview(overview.preview);
+      const croppedPreview = await createPlayerCardPreview(overview.file).catch(() => null);
+      if (croppedPreview) setPlayerCardImage(croppedPreview);
+
+      const recognize = async (image: File | Blob, label: string) => {
+        const pass = await Tesseract.recognize(image, 'por+eng', {
+          logger: (message) => {
+            if (message.status) setStatus(`${label}: ${message.status}${message.progress ? ` ${Math.round(message.progress * 100)}%` : ''}`);
+          }
+        });
+        return {
+          text: pass.data.text.trim(),
+          confidence: Math.max(0, Math.min(100, Math.round(pass.data.confidence || 0)))
+        };
+      };
+
+      for (let captureIndex = 0; captureIndex < captures.length; captureIndex += 1) {
+        const capture = captures[captureIndex];
+        setStatus(`Tela ${captureIndex + 1}/${captures.length}: identificando ${capture.label}...`);
+        const fullImage = await preprocessImage(capture.file, 'contrast');
+        const fullPass = await recognize(fullImage, `${capture.label} • identificação`);
+        const detection = detectCardScreenType(fullPass.text, capture.file.name);
+        const detectedType = detection.type;
+        const effectiveType = detectedType !== 'unknown' && detection.confidence >= 70 ? detectedType : capture.declaredType;
+        const warnings: string[] = [];
+        if (detectedType !== 'unknown' && detectedType !== capture.declaredType && detection.confidence >= 70) {
+          warnings.push(`Esta imagem foi enviada como ${capture.label}, mas parece ser uma tela de ${detectedType}. O leitor adaptou as áreas automaticamente.`);
+        }
+        if (capture.quality?.issues.length) warnings.push(...capture.quality.issues.map((issue) => issue.message));
+
+        const template = SCREEN_ZONE_TEMPLATES[effectiveType];
+        const captureReadings: PremiumZoneReading[] = [];
+        for (let zoneIndex = 0; zoneIndex < template.length; zoneIndex += 1) {
+          const zone = template[zoneIndex];
+          setStatus(`${capture.label}: lendo ${zone.label} (${zoneIndex + 1}/${template.length})...`);
+          const contrastImage = await cropImage(capture.file, zone, zoneWidthTarget(zone.key), 'contrast');
+          const contrastPass = await recognize(contrastImage, `${capture.label} • ${zone.label}`);
+          const originPreview = await createZoneOriginPreview(capture.file, zone).catch(() => null);
+          const candidates: PremiumZoneReading[] = [{
+            id: `${capture.id}-${zone.key}-${zoneIndex}-contrast`,
+            sourceId: capture.id,
+            sourceLabel: capture.label,
+            screenType: effectiveType,
+            key: zone.key,
+            label: zone.label,
+            text: contrastPass.text,
+            confidence: contrastPass.confidence,
+            status: readingStatus(contrastPass.confidence, contrastPass.text),
+            originPreview,
+            enhancement: 'contrast'
+          }];
+
+          if (readingMode === 'precision' && (contrastPass.confidence < 82 || contrastPass.text.trim().length < 5)) {
+            const sharpImage = await cropImage(capture.file, zone, zoneWidthTarget(zone.key), 'sharp');
+            const sharpPass = await recognize(sharpImage, `${capture.label} • ${zone.label} • segunda passagem`);
+            candidates.push({
+              id: `${capture.id}-${zone.key}-${zoneIndex}-sharp`,
+              sourceId: capture.id,
+              sourceLabel: capture.label,
+              screenType: effectiveType,
+              key: zone.key,
+              label: zone.label,
+              text: sharpPass.text,
+              confidence: sharpPass.confidence,
+              status: readingStatus(sharpPass.confidence, sharpPass.text),
+              originPreview,
+              enhancement: 'sharp'
+            });
+          }
+
+          const best = chooseBestZoneReading(candidates);
+          best.id = `${capture.id}-${zone.key}-${zoneIndex}`;
+          captureReadings.push(best);
+          allReadings.push(best);
+        }
+
+        const captureText = mergeOcrTexts(fullPass.text, ...captureReadings.map((reading) => reading.text));
+        const identity = extractCaptureIdentity(captureText);
+        const confidenceValues = [fullPass.confidence, ...captureReadings.map((reading) => reading.confidence)].filter(Number.isFinite);
+        const confidence = confidenceValues.length ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length) : 0;
+        allTexts.push(`### TELA ${capture.label.toUpperCase()} (${effectiveType})\n${captureText}`);
+        audits.push({
+          id: capture.id,
+          label: capture.label,
+          declaredType: capture.declaredType,
+          detectedType,
+          confidence,
+          text: captureText,
+          quality: capture.quality,
+          identity,
+          warnings,
+          readings: captureReadings
+        });
+      }
+
+      const mergedText = mergeOcrTexts(...allTexts);
+      const session = buildTotalReadingSession(audits, mergedText);
+      setTotalReadingSession(session);
+      setPremiumReadings(allReadings);
+      setReadingConfirmations({ sameCard: session.mismatchRisk === 'none' });
+      setOcrDone(true);
+
+      if (mergedText.trim().length <= 2) {
+        setStatus('A leitura completa não encontrou texto suficiente. Confira se os prints são capturas diretas das telas do jogador.');
+        return;
+      }
+
+      const learnedText = applyLearningToText(mergedText);
+      const lockedText = textWithManualLocks(learnedText);
+      setRawText(lockedText);
+      const autoResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile));
+      hydrateReviewFields(autoResult);
+      setDraftResult(autoResult);
+      setResult(null);
+
+      if (session.mismatchRisk === 'block') {
+        setStatus('Leitura concluída, mas há divergência entre os prints. Confirme que todas as telas pertencem à mesma versão da carta antes da ficha final.');
+      } else if (session.missingCriticalScreens.length) {
+        setStatus(`Leitura combinada concluída. Revise os campos e, se possível, envie também: ${session.missingCriticalScreens.join(', ')}.`);
+      } else {
+        setStatus('Leitura completa concluída. As telas foram cruzadas; confirme somente os campos destacados antes de gerar a ficha final.');
+      }
+    } catch (error) {
+      console.error('Falha no Leitor Total:', error);
+      setStatus('Não foi possível concluir a leitura completa. Tente prints diretos, sem cortes, e mantenha cada tela no espaço correto.');
     } finally {
       setLoading(false);
     }
@@ -5229,14 +5588,13 @@ ${variantText}`);
   const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
   const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile) : manualMode;
   const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
-  const creationStage = result ? 5 : draftResult ? 4 : creationSourceReady && creationConfigurationReady ? 3 : creationSourceReady ? 2 : 1;
-  const creationProgress = [12, 34, 58, 82, 100][creationStage - 1];
+  const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
+  const creationProgress = [20, 50, 75, 100][creationStage - 1];
   const creationSteps = [
-    { number: 1, label: 'Método', detail: mainSection === 'leitor' ? 'Leitor por print' : 'Manual Pro' },
-    { number: 2, label: 'Entrada', detail: mainSection === 'leitor' ? (selectedFile?.name || 'Importar carta') : 'Dados da carta' },
-    { number: 3, label: 'Configuração', detail: 'Posição, estilo e pontos' },
-    { number: 4, label: 'Revisão', detail: 'Confirmar informações' },
-    { number: 5, label: 'Ficha', detail: 'Gerar plano final' }
+    { number: 1, label: 'Entrada', detail: mainSection === 'leitor' ? (selectedFile?.name || 'Importar carta') : 'Dados manuais' },
+    { number: 2, label: 'Identidade', detail: 'Posição, estilo e pontos' },
+    { number: 3, label: 'Revisão', detail: 'Confirmar informações' },
+    { number: 4, label: 'Resultado', detail: 'Ficha final organizada' }
   ];
   const recentVaultEntry = useMemo(() => {
     return [...history].sort((a, b) => {
@@ -5246,6 +5604,8 @@ ${variantText}`);
     })[0] ?? null;
   }, [history]);
   const homeAttentionTotal = smartHome.needsReview + smartHome.lowConfidence + smartHome.incomplete;
+  const homePriorityLabel = onboardingProfile?.goal === 'elenco' ? 'Organizar o elenco' : onboardingProfile?.goal === 'formacoes' ? 'Formações e encaixes' : onboardingProfile?.goal === 'treino' ? 'Treinos e pós-jogo' : 'Fichas precisas';
+  const homeSuggestedAction = homeAttentionTotal > 0 ? smartHome.nextAction : onboardingProfile?.goal === 'elenco' ? 'Abra Meu Time e revise setores sem cobertura.' : onboardingProfile?.goal === 'formacoes' ? `Analise a formação ${onboardingProfile.favoriteFormation}.` : onboardingProfile?.goal === 'treino' ? 'Abra uma ficha salva e registre uma partida real.' : 'Crie ou revise a próxima ficha do seu elenco.';
   const vaultReadiness = dashboardStats.total ? Math.round((dashboardStats.complete / dashboardStats.total) * 100) : 0;
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
   const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
@@ -5293,20 +5653,29 @@ ${variantText}`);
         </div>
       )}
 
+      <FirstUseOnboarding
+        open={onboardingOpen && !showSplash}
+        onClose={() => setOnboardingOpen(false)}
+        onComplete={completeOnboarding}
+        onCreatePrint={() => openMainSection('leitor')}
+        onCreateManual={() => openMainSection('manual')}
+      />
+
       <header className="app-topbar app-command-bar luxury-panel">
         <button type="button" className="brand-lockup brand-home-button" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v26.78</span>
+            <span>Elite Tático v27.00</span>
           </div>
         </button>
 
-        <nav className="desktop-primary-nav" aria-label="Navegação principal">
+        <nav className="desktop-primary-nav v27-primary-nav" aria-label="Navegação principal">
           <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} aria-current={mainSection === 'inicio' ? 'page' : undefined} onClick={() => openMainSection('inicio')}><LayoutDashboard size={16} /><span>Início</span></button>
-          <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} aria-current={mainSection === 'resultado' ? 'page' : undefined} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={16} /><span>Ficha</span></button>
-          <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} aria-current={mainSection === 'cofre' ? 'page' : undefined} onClick={openCofreDeJogadores}><History size={16} /><span>Cofre</span></button>
+          <button type="button" className={['jogadores','leitor','manual','resultado','cofre'].includes(mainSection) ? 'active-section' : ''} aria-current={mainSection === 'jogadores' ? 'page' : undefined} onClick={() => openMainSection('jogadores')}><Users size={16} /><span>Jogadores</span></button>
           <button type="button" className={mainSection === 'time' ? 'active-section' : ''} aria-current={mainSection === 'time' ? 'page' : undefined} onClick={() => openMainSection('time')}><Target size={16} /><span>Meu Time</span></button>
+          <button type="button" className={mainSection === 'partidas' ? 'active-section' : ''} aria-current={mainSection === 'partidas' ? 'page' : undefined} onClick={() => openMainSection('partidas')}><Trophy size={16} /><span>Partidas</span></button>
+          <button type="button" className={mainSection === 'ajustes' ? 'active-section' : ''} aria-current={mainSection === 'ajustes' ? 'page' : undefined} onClick={() => openMainSection('ajustes')}><SlidersHorizontal size={16} /><span>Ajustes</span></button>
         </nav>
 
         <div className="topbar-actions topbar-premium-actions">
@@ -5325,12 +5694,12 @@ ${variantText}`);
         </button>
       )}
 
-      <nav className="mobile-bottom-nav luxury-panel" aria-label="Menu inferior">
+      <nav className="mobile-bottom-nav luxury-panel v27-mobile-nav" aria-label="Menu inferior">
         <button type="button" className={mainSection === 'inicio' ? 'active-section' : ''} aria-current={mainSection === 'inicio' ? 'page' : undefined} onClick={() => openMainSection('inicio')}><LayoutDashboard size={19} /><span>Início</span></button>
-        <button type="button" className={mainSection === 'leitor' || mainSection === 'manual' ? 'active-section' : ''} aria-current={mainSection === 'leitor' || mainSection === 'manual' ? 'page' : undefined} aria-expanded={mobileLauncher === 'create'} onClick={() => setMobileLauncher('create')}><span className="mobile-create-icon"><Sparkles size={20} /></span><span>Criar</span></button>
-        <button type="button" className={mainSection === 'resultado' ? 'active-section' : ''} aria-current={mainSection === 'resultado' ? 'page' : undefined} disabled={!result && !draftResult} onClick={() => openMainSection('resultado')}><Trophy size={19} /><span>Ficha</span></button>
-        <button type="button" className={mainSection === 'cofre' ? 'active-section' : ''} aria-current={mainSection === 'cofre' ? 'page' : undefined} onClick={openCofreDeJogadores}><History size={19} /><span>Cofre</span></button>
-        <button type="button" className={mainSection === 'time' || mainSection === 'ajustes' ? 'active-section' : ''} aria-current={mainSection === 'time' || mainSection === 'ajustes' ? 'page' : undefined} aria-expanded={mobileLauncher === 'more'} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={19} /><span>Mais</span></button>
+        <button type="button" className={['jogadores','leitor','manual','resultado','cofre'].includes(mainSection) ? 'active-section' : ''} aria-current={mainSection === 'jogadores' ? 'page' : undefined} onClick={() => openMainSection('jogadores')}><Users size={19} /><span>Jogadores</span></button>
+        <button type="button" className={mainSection === 'time' ? 'active-section' : ''} aria-current={mainSection === 'time' ? 'page' : undefined} onClick={() => openMainSection('time')}><Target size={19} /><span>Meu Time</span></button>
+        <button type="button" className={mainSection === 'partidas' ? 'active-section' : ''} aria-current={mainSection === 'partidas' ? 'page' : undefined} onClick={() => openMainSection('partidas')}><Trophy size={19} /><span>Partidas</span></button>
+        <button type="button" className={mainSection === 'ajustes' ? 'active-section' : ''} aria-current={mainSection === 'ajustes' ? 'page' : undefined} onClick={() => openMainSection('ajustes')}><SlidersHorizontal size={19} /><span>Ajustes</span></button>
       </nav>
 
       {mobileLauncher && (
@@ -5373,7 +5742,7 @@ ${variantText}`);
         </div>
       )}
 
-      {mainSection !== 'inicio' && !isCreationSection && (
+      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','partidas'].includes(mainSection) && (
         <section className="page-context-card luxury-panel">
           <div>
             <p className="kicker">Área atual</p>
@@ -5390,6 +5759,10 @@ ${variantText}`);
       )}
 
       {mainSection === 'inicio' && (
+        <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} onAction={handleCentralRecommendation} />
+      )}
+
+      {mainSection === 'inicio' && false && (
       <div className="premium-home-shell">
         <section className="home-command-center luxury-panel">
           <div className="home-command-copy">
@@ -5411,7 +5784,8 @@ ${variantText}`);
           <aside className="home-next-step-card">
             <div className="home-next-step-icon"><BrainCircuit size={24} /></div>
             <span>Próxima ação sugerida</span>
-            <strong>{smartHome.nextAction}</strong>
+            <strong>{homeSuggestedAction}</strong>
+            <small className="home-priority-label">Foco atual: {homePriorityLabel}</small>
             <div className="home-next-step-footer"><b>{homeAttentionTotal}</b><small>ponto(s) de atenção no Cofre</small></div>
           </aside>
         </section>
@@ -5470,17 +5844,42 @@ ${variantText}`);
       </div>
       )}
 
-      {mainSection !== 'inicio' && (
+      {mainSection === 'jogadores' && (
+        <PlayerLaboratory
+          players={integratedPlayers}
+          onReadCard={() => openMainSection('leitor')}
+          onManualCard={() => openMainSection('manual')}
+          onOpenVault={openCofreDeJogadores}
+          onOpenPlayer={(id) => openIntegratedPlayer(id, 'vault')}
+          onOpenResult={(id) => openIntegratedPlayer(id, 'result')}
+        />
+      )}
+
+      {mainSection === 'partidas' && (
+        <MatchLaboratory
+          team={integratedTeam}
+          players={integratedPlayers}
+          records={centralMatchRecords}
+          plans={centralMatchPlans}
+          onValidatePlayer={(id) => openIntegratedPlayer(id, 'matches')}
+          onOpenTeam={() => openMainSection('time')}
+        />
+      )}
+
+      {mainSection !== 'inicio' && mainSection !== 'jogadores' && mainSection !== 'partidas' && (
       <section className={`workspace-grid ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
+        {mainSection === 'time' && (
+          <IntegratedTeamLab team={integratedTeam} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} />
+        )}
         {isCreationSection && (
           <section className="creation-hub creation-studio-hero luxury-panel">
             <div className="creation-studio-topline">
               <div className="creation-studio-brand">
                 <span className="creation-studio-mark"><Sparkles size={22} /></span>
                 <div>
-                  <p className="kicker">Build Studio</p>
-                  <h1>Construa a ficha com clareza e controle.</h1>
-                  <p>O essencial fica em primeiro plano. Contexto tático e ferramentas técnicas permanecem disponíveis sem poluir a criação.</p>
+                  <p className="kicker">Build Studio • Ficha Flow</p>
+                  <h1>Crie a ficha em blocos simples.</h1>
+                  <p>Primeiro a carta, depois a identidade e por último a revisão. Os ajustes avançados só aparecem quando você abrir.</p>
                 </div>
               </div>
               <div className="creation-live-summary" aria-label="Resumo atual da ficha">
@@ -5528,9 +5927,21 @@ ${variantText}`);
           )}
 
           {mainSection === 'leitor' && (<>
+          <div className="reader-capture-mode" role="tablist" aria-label="Modo de leitura do print">
+            <button type="button" role="tab" aria-selected={readerCaptureMode === 'complete'} className={readerCaptureMode === 'complete' ? 'active' : ''} onClick={() => { setReaderCaptureMode('complete'); setTotalReadingSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
+              <span><Layers size={19} /></span><div><strong>Leitura completa</strong><small>Vários prints da mesma carta</small></div><em>Mais preciso</em>
+            </button>
+            <button type="button" role="tab" aria-selected={readerCaptureMode === 'single'} className={readerCaptureMode === 'single' ? 'active' : ''} onClick={() => { setReaderCaptureMode('single'); setTotalReadingSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
+              <span><ScanText size={19} /></span><div><strong>Print único</strong><small>Fluxo rápido com calibração</small></div>
+            </button>
+          </div>
+
+          {readerCaptureMode === 'complete' ? (
+            <TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} />
+          ) : (<>
           <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
             <div className="creation-source-heading">
-              <span className="creation-stage-number">2</span>
+              <span className="creation-stage-number">1</span>
               <div><p className="kicker">Entrada da carta</p><h3>{preview ? 'Print pronto para leitura' : 'Importe um print completo'}</h3><small>{preview ? selectedFile?.name || fileName || 'Imagem selecionada' : 'A imagem fica no aparelho e será revisada antes da ficha final.'}</small></div>
               {preview && <span className="creation-ready-badge"><CheckCircle2 size={15} /> Pronto</span>}
             </div>
@@ -5642,6 +6053,7 @@ ${variantText}`);
             </details>
           )}
           </>)}
+          </>)}
 
           {mainSection === 'manual' && (
             <section className="manual-pro-welcome">
@@ -5654,11 +6066,11 @@ ${variantText}`);
           {isCreationSection && (
             <div className="select-stack creation-config-stack">
               <div className="creation-config-heading">
-                <span className="creation-stage-number">3</span>
+                <span className="creation-stage-number">2</span>
                 <div>
-                  <p className="kicker">Essenciais da ficha</p>
-                  <h3>Defina o jogador antes de abrir os ajustes táticos.</h3>
-                  <small>Posição escolhida, estilo e objetivo ficam visíveis. Formação e técnico permanecem em uma camada opcional.</small>
+                  <p className="kicker">Identidade da ficha</p>
+                  <h3>Confirme somente o que define esta carta.</h3>
+                  <small>Posição escolhida, posição original, estilo e objetivo ficam juntos. Formação e técnico continuam opcionais.</small>
                 </div>
               </div>
 
@@ -6135,6 +6547,8 @@ ${variantText}`);
                 </div>
               </section>
 
+              <section className="v27-migration-status luxury-panel"><ShieldCheck size={18}/><div><strong>Migração v27 concluída sem apagar dados</strong><span>{centralMigrationNote || 'Fichas, Cofre, formações, partidas, preferências, login e atualizações foram preservados.'}</span></div></section>
+
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
                 <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={18} /><div><strong>Aparência</strong><span>Tema e acessibilidade</span></div></button>
                 <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Resposta e estabilidade</span></div></button>
@@ -6191,6 +6605,7 @@ ${variantText}`);
                       <div className="settings-preference-card settings-toggle-card">
                         <div><strong>Ferramentas avançadas</strong><span>Libera auditorias e módulos técnicos.</span></div><button type="button" className={advancedMode ? 'is-on' : ''} role="switch" aria-checked={advancedMode} onClick={() => setAdvancedMode((value) => !value)}><i /></button>
                       </div>
+                      <button type="button" className="settings-onboarding-reopen" onClick={() => setOnboardingOpen(true)}><Sparkles size={17} /><div><strong>Refazer configuração inicial</strong><span>Escolher novamente modo, formação, estilo e prioridade.</span></div></button>
                     </div>
                   </section>
                 )}
@@ -6278,7 +6693,7 @@ ${variantText}`);
                       <summary>Escolher áreas da restauração</summary>
                       <div className="restore-select-panel">
                         <div className="restore-check-grid">
-                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
+                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['evolution', 'Cartas e validação real'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
                         </div>
                         <p className="panel-note">Somente as áreas marcadas são substituídas. Faça um backup atual antes de restaurar outro arquivo.</p>
                       </div>
@@ -6315,6 +6730,7 @@ ${variantText}`);
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
               premiumReadings={premiumReadings}
+              totalReadingSession={totalReadingSession}
               readingConfirmations={readingConfirmations}
               setReadingConfirmations={setReadingConfirmations}
               onRefresh={() => runAnalysis(false)}
@@ -6334,6 +6750,7 @@ ${variantText}`);
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
               premiumReadings={premiumReadings}
+              totalReadingSession={totalReadingSession}
               readingConfirmations={readingConfirmations}
               setReadingConfirmations={setReadingConfirmations}
               onRefresh={() => runAnalysis(false)}
@@ -6380,6 +6797,8 @@ ${variantText}`);
 
       </section>
       )}
+
+      <BuildMasterAssistant open={assistantOpen} onOpenChange={setAssistantOpen} players={integratedPlayers} team={integratedTeam} />
     </main>
   );
 }

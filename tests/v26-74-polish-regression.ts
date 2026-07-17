@@ -23,7 +23,7 @@ assert.match(accounts, /Gerar outra senha segura/);
 assert.match(app, /aria-current=/);
 assert.match(app, /previousFocus\?\.focus\(\)/);
 assert.match(app, /setSettingsView\('backup'\)/);
-assert.match(app, /Elite Tático v26\.78/);
+assert.match(app, /Elite Tático v27\.00/);
 
 assert.match(css, /v26\.75 — SEGURANÇA REFORÇADA/);
 assert.match(css, /label:focus-within[\s\S]*outline: none !important/);
@@ -34,4 +34,4 @@ assert.match(layout, /colorScheme: 'dark light'/);
 assert.match(capacitor, /webContentsDebuggingEnabled: false/);
 assert.match(capacitor, /allowMixedContent: false/);
 
-console.log('✓ v26.77: sessão resiliente, foco limpo, diálogos premium e acessibilidade validados.');
+console.log('✓ v27.00: sessão resiliente, foco limpo, diálogos premium e acessibilidade validados.');
