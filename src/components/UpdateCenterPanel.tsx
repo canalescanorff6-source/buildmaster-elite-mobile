@@ -97,7 +97,7 @@ function updateErrorMessage(cause: unknown) {
     return 'O pacote publicado não possui um versionCode maior que o instalado. Uma nova publicação precisa ser gerada.';
   }
   if (lower.includes('sha-256') || lower.includes('checksum') || lower.includes('tamanho')) {
-    return 'O arquivo recebido não corresponde ao pacote publicado. A cópia inválida foi apagada e o app pode tentar novamente pela rota imutável.';
+    return 'O arquivo recebido não corresponde ao pacote publicado. A cópia inválida foi apagada e o app alternará automaticamente entre o canal direto e a release imutável.';
   }
   if (lower.includes('manifesto') || lower.includes('json válido') || lower.includes('release indicada')) {
     return `O canal de atualização respondeu com dados inválidos. Detalhe: ${message}`;
@@ -130,8 +130,8 @@ type DiagnosticItem = {
 type Props = { onPrepareBackup: () => Promise<void> | void };
 
 function channelLabel(source: UpdateChannelSource | null) {
-  if (source === 'release-api') return 'Release imutável (API Latest)';
-  if (source === 'legacy-manifest') return 'Ponte de compatibilidade';
+  if (source === 'legacy-manifest') return 'Canal automático direto';
+  if (source === 'release-api') return 'Release imutável de reserva';
   return 'Ainda não consultado';
 }
 
@@ -377,7 +377,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         id: 'trusted-channel',
         label: 'Endereços oficiais',
         status: channelReady ? 'ok' : 'error',
-        detail: channelReady ? 'API Latest e manifesto de compatibilidade pertencem ao repositório oficial.' : 'O APK não contém um canal confiável configurado.'
+        detail: channelReady ? 'Canal direto e release imutável de reserva pertencem ao repositório oficial.' : 'O APK não contém um canal confiável configurado.'
       });
 
       const current = await refreshInstalledInfo();

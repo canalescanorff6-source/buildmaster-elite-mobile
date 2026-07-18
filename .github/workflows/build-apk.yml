@@ -1,4 +1,4 @@
-name: Gerar APK v27.23 e publicar atualização automática
+name: Gerar APK v27.24 e publicar atualização automática direta
 
 on:
   workflow_dispatch:
@@ -301,10 +301,10 @@ jobs:
             'channel': 'stable',
             'updateType': 'apk',
             'notes': [
-              'Atualização automática compatível com a versão 27.00 já instalada.',
-              'Nova central com diagnóstico do atualizador sem baixar o APK.',
-              'Histórico técnico local para identificar canal, permissão, download e instalação.',
-              'O APK recebe um nome exclusivo e nunca substitui um arquivo antigo.',
+              'O canal fixo é a rota principal e não depende da API releases/latest.',
+              'A API Latest permanece disponível somente como rota automática de reserva.',
+              'O manifesto fixo aponta diretamente para o APK da release imutável.',
+              'O APK é publicado uma única vez e nunca é sobrescrito.',
               'O APK público é baixado e validado antes de o manifesto ser ativado.',
               'Recuperação em três rodadas no app, além das tentativas do downloader nativo.',
               'Download sem cache com validação de tamanho, SHA-256, pacote, versão e assinatura.',
@@ -324,10 +324,13 @@ jobs:
               json.dumps(immutable, ensure_ascii=False, indent=2), encoding='utf-8')
 
           legacy = dict(base)
-          legacy['releaseTag'] = 'buildmaster-latest'
+          # O endereço fixo do manifesto continua compatível com a v27.00, mas
+          # o APK apontado fica na release imutável. Assim o app não depende da
+          # API Latest e o mesmo arquivo nunca é duplicado nem sobrescrito.
+          legacy['releaseTag'] = release_tag
           legacy['apkUrl'] = (
-              f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}'
-              f'?publication={os.environ["APK_PUBLICATION_ID"]}&code={os.environ["ANDROID_VERSION_CODE"]}'
+              f'https://github.com/{repo}/releases/download/{release_tag}/{asset_name}'
+              f'?bridge={os.environ["APK_PUBLICATION_ID"]}&code={os.environ["ANDROID_VERSION_CODE"]}'
           )
           legacy_dir = pathlib.Path('dist-apk', 'legacy')
           legacy_dir.mkdir(parents=True, exist_ok=True)
@@ -335,16 +338,15 @@ jobs:
               json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Automática com Diagnóstico
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Automática Direta
 
-          - Atualização da v27.00 pelo próprio botão do aplicativo, sem baixar APK manualmente.
-          - Central com teste do canal, versão, permissão e armazenamento sem baixar o APK.
-          - Histórico técnico copiável para localizar falhas no aparelho.
-          - APK exclusivo por execução; arquivos antigos nunca são sobrescritos ou removidos.
-          - O canal só troca o manifesto depois que o novo APK público foi baixado e validado.
-          - Manifestos em cache continuam válidos porque seus APKs históricos permanecem disponíveis.
+          - O manifesto fixo é a rota principal e não depende da API Latest do GitHub.
+          - A API Latest permanece como rota de reserva automática.
+          - O manifesto fixo aponta diretamente para o APK da release imutável.
+          - O APK é publicado uma única vez, validado publicamente e nunca sobrescrito.
+          - Atualização pelo próprio botão do aplicativo, sem baixar APK manualmente.
           - Verificação de tamanho, SHA-256, pacote, versionCode, versão e assinatura.
-          - Release imutável para as versões novas e canal buildmaster-latest para as versões antigas.
+          - Histórico técnico e diagnóstico local continuam disponíveis na Central de Atualizações.
           NOTES
 
       - name: Enviar pacote como artefato do workflow
@@ -427,56 +429,22 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs verify-release/immutable.apk
           "$AAPT" dump badging verify-release/immutable.apk | head -n 1 | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::versionCode imutável incorreto.'; exit 1; }
 
-      - name: Preparar canal automático das versões antigas
+      - name: Preparar endereço fixo do canal automático
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # O release fixo já existe na maioria dos casos. Não movemos nem recriamos
-          # o release durante uma atualização normal; apenas acrescentamos um APK novo.
+          # A release fixa guarda somente o manifesto ativo. O APK fica em sua
+          # release imutável e é publicado uma única vez.
           if gh release view buildmaster-latest >/dev/null 2>&1; then
             gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático — Canal automático" \
+              --title "BuildMaster Elite Tático — Canal automático direto" \
               --notes-file dist-apk/RELEASE_NOTES.md
           else
             gh release create buildmaster-latest \
               --target "$GITHUB_SHA" \
-              --title "BuildMaster Elite Tático — Canal automático" \
+              --title "BuildMaster Elite Tático — Canal automático direto" \
               --notes-file dist-apk/RELEASE_NOTES.md
           fi
-
-          # O nome contém versão, versionCode/tentativa e SHA. Não use --clobber aqui.
-          # Assim um manifesto antigo nunca passa a baixar bytes de outro APK.
-          gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME"
-
-      - name: Validar APK do canal antigo antes de trocar o manifesto
-        run: |
-          LEGACY_APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/$APK_ASSET_NAME?preactivate=$APK_PUBLICATION_ID"
-          ready=0
-          for attempt in 1 2 3 4 5 6 7 8; do
-            rm -f verify-release/legacy-preactivate.apk
-            if curl --fail --silent --show-error --location --retry 4 --retry-all-errors \
-              --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache' \
-              --connect-timeout 25 --max-time 300 \
-              "$LEGACY_APK_URL&attempt=$attempt&ts=$(date +%s%N)" \
-              -o verify-release/legacy-preactivate.apk; then
-              ACTUAL_SHA=$(sha256sum verify-release/legacy-preactivate.apk | awk '{print $1}')
-              ACTUAL_SIZE=$(stat -c%s verify-release/legacy-preactivate.apk)
-              if [ "$ACTUAL_SHA" = "$(cat verify-release/expected-sha.txt)" ] && [ "$ACTUAL_SIZE" = "$(cat verify-release/expected-size.txt)" ]; then
-                ready=1
-                break
-              fi
-              echo "Tentativa $attempt ainda recebeu bytes divergentes; o manifesto continua no pacote anterior."
-            fi
-            sleep $((attempt * 7))
-          done
-          test "$ready" = 1 || { echo '::error::O APK do canal antigo não foi validado; o manifesto antigo foi mantido para evitar bloqueio no celular.'; exit 1; }
-
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
-          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
-          "$APKSIGNER" verify --verbose --print-certs verify-release/legacy-preactivate.apk
-          "$AAPT" dump badging verify-release/legacy-preactivate.apk | head -n 1 | grep -q "package: name='com.buildmaster.elitetatico'" || { echo '::error::Pacote incorreto no canal antigo.'; exit 1; }
-          "$AAPT" dump badging verify-release/legacy-preactivate.apk | head -n 1 | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::versionCode incorreto no canal antigo.'; exit 1; }
-          echo 'APK do canal antigo validado. Agora é seguro ativar o novo manifesto.'
 
       - name: Ativar manifesto automático por último
         env:
@@ -503,11 +471,11 @@ jobs:
               manifest = json.loads(pathlib.Path('verify-release/legacy-manifest.json').read_text(encoding='utf-8'))
               assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
               assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
-              assert manifest['releaseTag'] == 'buildmaster-latest'
+              assert manifest['releaseTag'] == os.environ['RELEASE_TAG']
               assert manifest['assetName'] == os.environ['APK_ASSET_NAME']
               assert manifest['checksum'] == pathlib.Path('verify-release/expected-sha.txt').read_text().strip()
               assert manifest['sizeBytes'] == int(pathlib.Path('verify-release/expected-size.txt').read_text().strip())
-              expected_prefix = f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/releases/download/buildmaster-latest/'
+              expected_prefix = f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/releases/download/{os.environ["RELEASE_TAG"]}/'
               assert manifest['apkUrl'].startswith(expected_prefix)
               file_name = manifest['apkUrl'].split('/')[-1].split('?')[0]
               assert file_name == os.environ['APK_ASSET_NAME']
@@ -532,7 +500,7 @@ jobs:
             -o verify-release/legacy-final.apk
           test "$(sha256sum verify-release/legacy-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::A ponte automática baixou um APK diferente do manifesto.'; exit 1; }
           test "$(stat -c%s verify-release/legacy-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::A ponte automática recebeu tamanho diferente do manifesto.'; exit 1; }
-          echo 'Ponte automática aprovada: a v27.00 pode baixar o APK único pelo próprio aplicativo.'
+          echo 'Canal direto aprovado: o manifesto fixo aponta para o APK imutável e a API Latest ficou apenas como reserva.'
 
       - name: Ativar release nova como Latest
         env:
@@ -545,5 +513,5 @@ jobs:
           echo "Versão: $BUILDMASTER_VERSION"
           echo "versionCode: $ANDROID_VERSION_CODE"
           echo "APK imutável: $APK_ASSET_NAME"
-          echo "Canal antigo: buildmaster-latest/update-manifest.json"
-          echo "Ordem aplicada: APK publicado -> APK público validado -> manifesto ativado -> conjunto final validado."
+          echo "Canal principal: buildmaster-latest/update-manifest.json -> release imutável"
+          echo "Ordem aplicada: APK imutável publicado -> APK público validado -> manifesto fixo ativado -> download final validado."

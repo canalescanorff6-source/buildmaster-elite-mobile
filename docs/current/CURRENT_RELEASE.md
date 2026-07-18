@@ -1,5 +1,3 @@
-# Versão atual — BuildMaster Elite Tático v27.23.0
+# Versão atual — BuildMaster Elite Tático v27.24.0
 
-Pacote de melhorias com Central de Atualizações diagnosticável, histórico técnico, recuperação em três rodadas e publicação automática compatível com versões antigas.
-
-Consulte `VALIDACAO_V27_23_MELHORIAS_ATUALIZACAO.md`.
+Atualização Android com rota direta estável como canal principal e release imutável como reserva.

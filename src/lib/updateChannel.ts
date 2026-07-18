@@ -75,12 +75,30 @@ async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): 
 }
 
 /**
- * Consulta primeiro a release imutável marcada como Latest. Se a API estiver
- * indisponível, usa o manifesto fixo de compatibilidade das versões antigas.
- * O retorno já contém um manifesto validado e informa qual rota respondeu.
+ * A rota principal é o manifesto fixo do canal automático. Ela não depende da
+ * API do GitHub, evita limite de requisições e sempre aponta para um APK de
+ * release imutável. A API releases/latest fica somente como rota de reserva.
  */
 export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> {
   const errors: string[] = [];
+
+  if (isTrustedManifestUrl()) {
+    try {
+      const payload = await fetchJsonUrl(DEFAULT_UPDATE_MANIFEST_URL);
+      const manifest = validateUpdateManifest(payload);
+      if (!manifest) throw new Error('O manifesto direto do canal automático é inválido.');
+      return {
+        payload,
+        manifest,
+        source: 'legacy-manifest',
+        endpoint: DEFAULT_UPDATE_MANIFEST_URL,
+        checkedAt: new Date().toISOString(),
+        previousErrors: errors
+      };
+    } catch (cause) {
+      errors.push(`Canal direto: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
+  }
 
   if (isTrustedReleaseApiUrl()) {
     try {
@@ -105,25 +123,7 @@ export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> 
         previousErrors: errors
       };
     } catch (cause) {
-      errors.push(cause instanceof Error ? cause.message : String(cause));
-    }
-  }
-
-  if (isTrustedManifestUrl()) {
-    try {
-      const payload = await fetchJsonUrl(DEFAULT_UPDATE_MANIFEST_URL);
-      const manifest = validateUpdateManifest(payload);
-      if (!manifest) throw new Error('O manifesto de compatibilidade é inválido.');
-      return {
-        payload,
-        manifest,
-        source: 'legacy-manifest',
-        endpoint: DEFAULT_UPDATE_MANIFEST_URL,
-        checkedAt: new Date().toISOString(),
-        previousErrors: errors
-      };
-    } catch (cause) {
-      errors.push(cause instanceof Error ? cause.message : String(cause));
+      errors.push(`Release reserva: ${cause instanceof Error ? cause.message : String(cause)}`);
     }
   }
 

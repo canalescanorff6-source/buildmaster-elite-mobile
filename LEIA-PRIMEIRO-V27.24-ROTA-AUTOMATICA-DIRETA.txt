@@ -1,0 +1,12 @@
+BUILDMASTER ELITE TÁTICO v27.24 — ROTA AUTOMÁTICA DIRETA
+
+Esta revisão corrige a falha da primeira rota do GitHub:
+
+1. O app consulta primeiro o manifesto fixo buildmaster-latest/update-manifest.json.
+2. Esse manifesto aponta diretamente para o APK de uma release imutável.
+3. A API releases/latest deixou de ser obrigatória e passou a ser apenas reserva.
+4. O APK é publicado uma única vez; não existe mais cópia duplicada no canal fixo.
+5. O workflow só ativa o manifesto depois de baixar e validar publicamente o APK.
+
+Para publicar, substitua o conteúdo do repositório e faça um novo commit na main.
+Depois, teste pelo botão Atualizar aplicativo. Não é necessário baixar o APK em Releases.

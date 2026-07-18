@@ -19,21 +19,21 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const staticBuilder = fs.readFileSync('scripts/build-static.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.23.0');
-assert.equal(APP_RELEASE_VERSION, '27.23.0');
-assert.equal(APP_NATIVE_VERSION, '27.23.0');
+assert.equal(pkg.version, '27.24.0');
+assert.equal(APP_RELEASE_VERSION, '27.24.0');
+assert.equal(APP_NATIVE_VERSION, '27.24.0');
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
-const releaseTag = 'buildmaster-v27.23.0-1352300043-01';
-const apkName = 'BuildMaster-Elite-Tatico-v27.23.0-135230004301-acde1234.apk';
-const manifestName = 'update-manifest-v27.23.0-1352300043.json';
+const releaseTag = 'buildmaster-v27.24.0-1352300043-01';
+const apkName = 'BuildMaster-Elite-Tatico-v27.24.0-135230004301-acde1234.apk';
+const manifestName = 'update-manifest-v27.24.0-1352300043.json';
 const apkUrl = `https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/${releaseTag}/${apkName}`;
 const manifestUrl = `https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/${releaseTag}/${manifestName}`;
 
 assert.equal(isTrustedApkUrl(apkUrl), true);
 assert.equal(isTrustedManifestUrl(manifestUrl), true);
-assert.equal(isTrustedApkUrl(apkUrl.replace(releaseTag, 'buildmaster-v27.23.0-malicioso')), false);
+assert.equal(isTrustedApkUrl(apkUrl.replace(releaseTag, 'buildmaster-v27.24.0-malicioso')), false);
 assert.equal(isTrustedManifestUrl(manifestUrl.replace('update-manifest-', 'manifesto-')), false);
 assert.equal(isTrustedReleaseApiUrl('https://api.github.com/repos/outro/projeto/releases/latest'), false);
 
@@ -52,7 +52,7 @@ assert.equal(selectManifestAssetFromRelease({ tag_name: releaseTag, draft: true,
 const manifest = {
   schemaVersion: 2,
   appId: 'com.buildmaster.elitetatico' as const,
-  version: '27.23.0',
+  version: '27.24.0',
   versionCode: 1352300043,
   buildId: 'acde1234acde1234',
   publishedAt: new Date().toISOString(),
@@ -61,7 +61,7 @@ const manifest = {
   apkUrl,
   notes: ['Atualizador definitivo'],
   mandatory: true,
-  minNativeVersion: '27.23.0',
+  minNativeVersion: '27.24.0',
   checksum: 'a'.repeat(64),
   sizeBytes: 4_000_000,
   releaseTag,
@@ -78,13 +78,13 @@ assert.match(workflow, /gh release create "\$RELEASE_TAG"[\s\S]*--prerelease/);
 assert.match(workflow, /gh release edit "\$RELEASE_TAG" --prerelease=false --latest/);
 assert.match(workflow, /api\.github\.com\/repos\/\$GITHUB_REPOSITORY\/releases\/latest/);
 assert.match(workflow, /dist-apk\/legacy\/update-manifest\.json/);
-assert.match(workflow, /Ponte automática aprovada/);
+assert.match(workflow, /Canal direto aprovado/);
 assert.match(workflow, /NEXT_PUBLIC_BUILDMASTER_UPDATE_RELEASE_API_URL/);
 
 assert.match(channel, /responseType: 'text'/);
 assert.match(channel, /parseJsonPayload/);
 assert.match(channel, /selectManifestAssetFromRelease/);
-assert.match(channel, /manifesto de compatibilidade/i);
+assert.match(channel, /manifesto fixo|canal automático/i);
 assert.match(panel, /round <= 3/);
 assert.match(panel, /Rota atualizada/);
 
@@ -98,4 +98,4 @@ assert.ok(nativePlugin.includes(String.raw`buildmaster-v\\\\d+`));
 assert.match(staticBuilder, /restoreInterruptedBuild/);
 assert.doesNotMatch(staticBuilder, /--webpack/);
 
-console.log('✓ v27.23: API latest, release imutável, fallback antigo, quatro tentativas e instalador reforçado aprovados.');
+console.log('✓ v27.24: canal direto, release imutável, API reserva, quatro tentativas e instalador reforçado aprovados.');

@@ -11,20 +11,22 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: st
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const oldUpdater = fs.readFileSync('tests/fixtures/v27-00-updater-contract.txt', 'utf8');
 
-assert.equal(pkg.version, '27.23.0');
+assert.equal(pkg.version, '27.24.0');
 assert.equal(
   DEFAULT_UPDATE_MANIFEST_URL,
   'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json'
 );
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
-// Contrato real aceito pelo APK v27.00 já instalado.
-const version = '27.23.0';
-const versionCode = 1352300048;
+// O APK v27.00 continua consultando o mesmo manifesto fixo e aceita o nome
+// versionado. O manifesto agora pode apontar para a release imutável.
+const version = '27.24.0';
+const versionCode = 1352400048;
 const attempt = 2;
 const token = `${versionCode}${String(attempt).padStart(2, '0')}`;
 const apkName = `BuildMaster-Elite-Tatico-v${version}-${token}-abcde123.apk`;
-const apkUrl = `https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/${apkName}?publication=123-2-abcde123&code=${versionCode}`;
+const releaseTag = `buildmaster-v${version}-${versionCode}-${String(attempt).padStart(2, '0')}`;
+const apkUrl = `https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/${releaseTag}/${apkName}?bridge=123-2-abcde123&code=${versionCode}`;
 assert.match(apkName, /^BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk$/i);
 assert.equal(isTrustedApkUrl(apkUrl), true);
 assert.match(oldUpdater, /buildmaster-latest\/update-manifest\.json/);
@@ -40,43 +42,29 @@ const manifest = {
   channel: 'stable' as const,
   updateType: 'apk' as const,
   apkUrl,
-  notes: ['Ponte automática'],
+  notes: ['Canal automático direto'],
   mandatory: true,
   minNativeVersion: '27.0.0',
   checksum: 'a'.repeat(64),
   sizeBytes: 4_000_000,
-  releaseTag: 'buildmaster-latest',
+  releaseTag,
   assetName: apkName
 };
 assert.ok(validateUpdateManifest(manifest));
 
-const uploadApkIndex = workflow.indexOf('gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME"');
-const verifyBeforeManifestIndex = workflow.indexOf('Validar APK do canal antigo antes de trocar o manifesto');
+const immutableUploadIndex = workflow.indexOf('gh release upload "$RELEASE_TAG"');
+const immutableVerifyIndex = workflow.indexOf('Validar release imutável publicamente');
 const uploadManifestIndex = workflow.indexOf('gh release upload buildmaster-latest dist-apk/legacy/update-manifest.json --clobber');
 const finalVerifyIndex = workflow.indexOf('Validar a ponte automática da v27.00');
 
-assert.ok(uploadApkIndex > 0, 'O APK único precisa ser enviado ao canal antigo.');
-assert.ok(verifyBeforeManifestIndex > uploadApkIndex, 'O APK público precisa ser validado depois do upload.');
-assert.ok(uploadManifestIndex > verifyBeforeManifestIndex, 'O manifesto só pode ser ativado depois de validar o APK público.');
-assert.ok(finalVerifyIndex > uploadManifestIndex, 'O conjunto final precisa ser testado depois da ativação.');
-
-assert.doesNotMatch(
-  workflow,
-  /gh release upload buildmaster-latest[^\n]*\$APK_ASSET_NAME[^\n]*--clobber/,
-  'O APK versionado nunca pode ser sobrescrito.'
-);
-assert.doesNotMatch(
-  workflow,
-  /gh release delete|gh api[^\n]+-X DELETE[^\n]+assets/,
-  'APKs históricos não podem ser apagados porque manifestos em cache dependem deles.'
-);
-assert.doesNotMatch(
-  workflow,
-  /legacy\['apkUrl'\][\s\S]{0,250}BuildMaster-Elite-Tatico-latest\.apk/,
-  'O manifesto antigo não pode apontar para o alias mutável latest.apk.'
-);
-assert.match(workflow, /O APK do canal antigo não foi validado; o manifesto antigo foi mantido/);
+assert.ok(immutableUploadIndex > 0, 'O APK precisa ser enviado à release imutável.');
+assert.ok(immutableVerifyIndex > immutableUploadIndex, 'O APK imutável precisa ser validado publicamente.');
+assert.ok(uploadManifestIndex > immutableVerifyIndex, 'O manifesto fixo só pode ser ativado depois da validação pública.');
+assert.ok(finalVerifyIndex > uploadManifestIndex, 'A URL final do manifesto precisa ser testada depois da ativação.');
+assert.doesNotMatch(workflow, /gh release upload buildmaster-latest "dist-apk\/\$APK_ASSET_NAME"/);
+assert.doesNotMatch(workflow, /gh release delete|gh api[^\n]+-X DELETE[^\n]+assets/);
+assert.match(workflow, /legacy\['releaseTag'\] = release_tag/);
 assert.match(workflow, /Mesma regra usada pelo APK v27\.00 já instalado/);
-assert.match(workflow, /Ponte automática aprovada/);
+assert.match(workflow, /Canal direto aprovado/);
 
-console.log('✓ v27.23: ponte automática da v27.00, publicação atômica e APK histórico imutável aprovados.');
+console.log('✓ v27.24: URL fixa da v27.00, APK imutável único e ativação atômica do manifesto aprovados.');
