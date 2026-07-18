@@ -59,6 +59,9 @@ import { buildReliabilityCenter, compareBuildVariants, comparePlayers, detectInc
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
+import { BuildQualityGatePanel } from '@/components/BuildQualityGatePanel';
+import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
+import { buildBuildQualityGate, type BuildQualityTarget } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
 import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
@@ -106,6 +109,7 @@ type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type TextScale = 'compact' | 'standard' | 'large';
 type DensityMode = 'compact' | 'comfortable';
 type MotionPreference = 'system' | 'reduced' | 'full';
+type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
 type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade';
@@ -2220,6 +2224,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
   const activeUpgradeCount = upgradeChecklist.filter((item) => item.status === 'ativo').length;
   const partialUpgradeCount = upgradeChecklist.filter((item) => item.status === 'parcial').length;
   const localCorrections = useMemo(() => getMergedCorrectionsForResult(result), [result]);
+  const buildQualityGate = useMemo(() => buildBuildQualityGate(result), [result]);
   const hasLocalCorrections = Boolean(localCorrections.blockedSkills.length || localCorrections.promotedSkills.length || localCorrections.blockedImpetos.length || localCorrections.promotedImpetos.length);
   const pointsAvailable = Math.max(0, result.trainingPointsTotal - result.trainingPointsUsed);
   const advancedTabs = RESULT_ADVANCED_GROUPS.flatMap((group) => group.tabs.map((item) => item.value));
@@ -2234,6 +2239,12 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
   function primaryIsActive(view: ResultPrimaryView) {
     if (view === 'tatica') return tab === 'treinador' || tab === 'mapa';
     return tab === view;
+  }
+
+  function openQualityTarget(target: BuildQualityTarget) {
+    const isAdvanced = !['resumo', 'ficha', 'habilidades', 'treinador'].includes(target);
+    setAdvancedOpen(isAdvanced);
+    setTab(target);
   }
 
   async function shareCurrentResult() {
@@ -2459,6 +2470,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       {tab === 'resumo' && (
         <div className="result-section-grid">
+          <BuildQualityGatePanel report={buildQualityGate} onOpenTarget={openQualityTarget} />
           <article className="luxury-panel elite-build-card">
             <p className="kicker">Plano Elite recomendado</p>
             <div className="section-title-row">
@@ -3832,6 +3844,9 @@ export function CardVisionApp() {
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
   const [motionPreference, setMotionPreference] = useState<MotionPreference>('system');
   const [highContrast, setHighContrast] = useState(false);
+  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('balanced');
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
@@ -3918,6 +3933,25 @@ export function CardVisionApp() {
     };
   }, [mobileLauncher]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandPaletteOpen((value) => !value);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => () => {
+    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  useEffect(() => () => {
+    if (enhancedPreview?.startsWith('blob:')) URL.revokeObjectURL(enhancedPreview);
+  }, [enhancedPreview]);
+
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null }), [formation, teamStyle, selectedManager]);
@@ -3980,11 +4014,11 @@ export function CardVisionApp() {
   }, [history, centralMatchRecords, centralEntityIndex]);
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
-    settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast },
+    settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
     calibration: { ocrZones },
     folders: vaultFolders,
     plans: {},
-  }), [history, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, ocrZones, vaultFolders]);
+  }), [history, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders]);
   const healthSummary = useMemo(() => {
     const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
     return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
@@ -4071,7 +4105,7 @@ export function CardVisionApp() {
       });
 
     try {
-      const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean };
+      const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode };
       if (ui.appTheme === 'light' || ui.appTheme === 'dark') setAppTheme(ui.appTheme);
       if (['emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
@@ -4079,6 +4113,7 @@ export function CardVisionApp() {
       if (['compact', 'comfortable'].includes(String(ui.densityMode))) setDensityMode(ui.densityMode as DensityMode);
       if (['system', 'reduced', 'full'].includes(String(ui.motionPreference))) setMotionPreference(ui.motionPreference as MotionPreference);
       if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
+      if (ui.performanceMode === 'balanced' || ui.performanceMode === 'economy') setPerformanceMode(ui.performanceMode);
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -4174,11 +4209,11 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }));
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
     } catch {
       // Preferências visuais são opcionais.
     }
-  }, [appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast]);
+  }, [appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode]);
 
   useEffect(() => {
     try {
@@ -4198,38 +4233,47 @@ export function CardVisionApp() {
   }, [vaultFolders]);
 
   useEffect(() => {
-    try {
-      const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
-      if (!hasWork) {
-        removeAccountStorage(ACTIVE_SESSION_KEY);
-        return;
-      }
-      const safePreview = preview && preview.startsWith('data:') ? preview : null;
-      const snapshot: ActiveSessionSnapshot = {
-        preview: safePreview,
-        playerCardImage,
-        fileName,
-        ocrDone,
-        rawText,
-        objective,
-        targetPosition,
-        cardPositionOverride,
-        playstyleOverride,
-        readingMode,
-        formation,
-        teamStyle,
-        managerId,
-        result: null,
-        draftResult: null,
-        manualFields,
-        manualMode,
-        activeHistoryId,
-        savedAt: Date.now()
-      };
-      writeAccountStorage(ACTIVE_SESSION_KEY, JSON.stringify(snapshot));
-    } catch {
-      // Não interrompe o app se o armazenamento estiver cheio.
+    const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
+    if (!hasWork) {
+      try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
+      setSessionSaveState('idle');
+      return;
     }
+
+    setSessionSaveState('saving');
+    const timer = window.setTimeout(() => {
+      try {
+        const safePreview = preview && preview.startsWith('data:') && preview.length < 700_000 ? preview : null;
+        const safePlayerCardImage = playerCardImage && playerCardImage.length < 700_000 ? playerCardImage : null;
+        const snapshot: ActiveSessionSnapshot = {
+          preview: safePreview,
+          playerCardImage: safePlayerCardImage,
+          fileName,
+          ocrDone,
+          rawText,
+          objective,
+          targetPosition,
+          cardPositionOverride,
+          playstyleOverride,
+          readingMode,
+          formation,
+          teamStyle,
+          managerId,
+          result: null,
+          draftResult: null,
+          manualFields,
+          manualMode,
+          activeHistoryId,
+          savedAt: Date.now()
+        };
+        writeAccountStorage(ACTIVE_SESSION_KEY, JSON.stringify(snapshot));
+        setSessionSaveState('saved');
+      } catch {
+        setSessionSaveState('error');
+      }
+    }, 450);
+
+    return () => window.clearTimeout(timer);
   }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
 
   // v25.77: a ficha não é mais salva automaticamente ao finalizar.
@@ -4516,6 +4560,8 @@ export function CardVisionApp() {
 
   function saveCurrentFicha() {
     if (!result) return;
+    const quality = buildBuildQualityGate(result);
+    const saveAsReview = !quality.readyToSave;
     const key = resultHistoryKey(result);
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
@@ -4527,12 +4573,12 @@ export function CardVisionApp() {
         updatedAt: now,
         rawText,
         playerImage: playerCardImage,
-        fullPreview: preview,
+        fullPreview: preview?.startsWith('data:') ? preview : null,
         result,
         skillProgress: ensureSkillProgress(existing?.skillProgress, result.recommendedSkills),
         notes: existing?.notes ?? '',
         favorite: existing?.favorite ?? false,
-        statusTag: existing?.statusTag,
+        statusTag: saveAsReview ? 'revisar' : existing?.statusTag,
         personalTags: existing?.personalTags ?? [],
         tacticalRoleNote: existing?.tacticalRoleNote ?? '',
         changeLog: existing?.changeLog ?? []
@@ -4544,7 +4590,7 @@ export function CardVisionApp() {
       void pushCloudHistory(next, true);
       return next;
     });
-    setStatus(`Ficha salva no Cofre de Fichas: ${result.parsed.playerName}.`);
+    setStatus(saveAsReview ? `Ficha salva como “Revisar”: ${quality.blockers[0]?.detail ?? 'confira os avisos do controle final.'}` : `Ficha salva no Cofre de Fichas: ${result.parsed.playerName}.`);
   }
 
   function toggleSavedSkill(skill: string) {
@@ -4706,7 +4752,7 @@ export function CardVisionApp() {
         await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
       }
       if (restoreSections.settings && sections.settings && typeof sections.settings === 'object') {
-        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; autoUpdateCheck?: boolean };
+        const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; autoUpdateCheck?: boolean };
         writeStorage('buildmaster_ui_prefs_v24_24', ui);
         if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
         if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
@@ -4715,6 +4761,7 @@ export function CardVisionApp() {
         if (ui.densityMode && ['compact', 'comfortable'].includes(ui.densityMode)) setDensityMode(ui.densityMode);
         if (ui.motionPreference && ['system', 'reduced', 'full'].includes(ui.motionPreference)) setMotionPreference(ui.motionPreference);
         if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
+        if (ui.performanceMode === 'balanced' || ui.performanceMode === 'economy') setPerformanceMode(ui.performanceMode);
         if (typeof ui.autoUpdateCheck === 'boolean') localStorage.setItem('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
       }
       if (restoreSections.calibration && sections.calibration && typeof sections.calibration === 'object') {
@@ -5669,9 +5716,26 @@ export function CardVisionApp() {
   ];
   const creationReadinessCount = creationReadinessSignals.filter((item) => item.ready).length;
   const creationReadinessPercent = Math.round((creationReadinessCount / creationReadinessSignals.length) * 100);
+  const appCommands: AppCommand[] = [
+    { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
+    { id: 'new-print', group: 'Criar ficha', label: 'Nova ficha por print', description: 'Abre o Print Único Pro para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
+    { id: 'new-manual', group: 'Criar ficha', label: 'Nova ficha Manual Pro', description: 'Preencha posição, estilo, pontos e atributos manualmente.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
+    { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${history.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
+    { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
+    { id: 'team', group: 'Time', label: 'Abrir Meu Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
+    { id: 'matches', group: 'Partidas', label: 'Abrir Partidas', description: `${centralMatchRecords.length} registro(s) de validação real.`, keywords: ['treino', 'pós-jogo'], run: () => openMainSection('partidas') },
+    ...(result || draftResult ? [{ id: 'current-result', group: 'Ficha atual', label: 'Abrir resultado atual', description: result ? `Ficha de ${result.parsed.playerName}.` : 'Revisão da ficha em andamento.', keywords: ['resultado', 'auditoria'], run: () => openMainSection('resultado') }] : []),
+    { id: 'appearance', group: 'Ajustes', label: 'Aparência e acessibilidade', description: 'Tema, textos, contraste, animações e densidade.', keywords: ['visual', 'design'], run: () => { setMainSection('ajustes'); setSettingsView('aparencia'); } },
+    { id: 'performance', group: 'Ajustes', label: 'Desempenho do aplicativo', description: 'Ative o modo econômico e revise estabilidade.', keywords: ['rápido', 'leve', 'delay'], run: () => { setMainSection('ajustes'); setSettingsView('desempenho'); } },
+    { id: 'security', group: 'Ajustes', label: 'Segurança e integridade', description: 'Saúde local, diagnóstico e compatibilidade.', keywords: ['proteção', 'erros'], run: () => { setMainSection('ajustes'); setSettingsView('seguranca'); } },
+    { id: 'backup', group: 'Ajustes', label: 'Backup e restauração', description: 'Proteja fichas e configurações antes de atualizar.', keywords: ['cofre', 'restaurar'], run: () => { setMainSection('ajustes'); setSettingsView('backup'); } },
+    { id: 'updates', group: 'Ajustes', label: 'Atualizações do APK', description: 'Verifique versão, manifesto e instalação segura.', keywords: ['apk', 'versão'], run: () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); } },
+    { id: 'accounts', group: 'Ajustes', label: 'Conta e licença', description: 'Abra os dados da conta e o painel administrativo.', keywords: ['usuário', 'licença'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
+    { id: 'assistant', group: 'Assistente', label: 'Abrir Assistente BuildMaster', description: 'Use os dados integrados de jogadores, time e partidas.', keywords: ['ajuda', 'recomendação'], run: () => setAssistantOpen(true) }
+  ];
 
   return (
-    <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+    <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       <UpdateAutoChecker />
       {showSplash && (
@@ -5704,7 +5768,7 @@ export function CardVisionApp() {
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v27.12</span>
+            <span>Elite Tático v27.20</span>
           </div>
         </button>
 
@@ -5717,6 +5781,8 @@ export function CardVisionApp() {
         </nav>
 
         <div className="topbar-actions topbar-premium-actions">
+          <button type="button" className="topbar-search-action" onClick={() => setCommandPaletteOpen(true)} aria-label="Buscar áreas e ações no aplicativo"><Search size={16} /><span>Buscar</span><kbd>Ctrl K</kbd></button>
+          <span className={`session-save-indicator save-${sessionSaveState}`} role="status" aria-live="polite">{sessionSaveState === 'saving' ? 'Salvando…' : sessionSaveState === 'saved' ? 'Rascunho salvo' : sessionSaveState === 'error' ? 'Falha no rascunho' : 'Pronto'}</span>
           <button type="button" className="topbar-create-action" aria-expanded={mobileLauncher === 'create'} onClick={() => setMobileLauncher('create')}><Sparkles size={16} /><span>Criar</span></button>
           <button type="button" className="topbar-more-action" aria-expanded={mobileLauncher === 'more'} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={16} /><span>Mais</span></button>
           <button type="button" className="topbar-account-avatar" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
@@ -6663,6 +6729,14 @@ export function CardVisionApp() {
                       <div><p className="kicker"><Zap size={15} /> Desempenho</p><h3>Resposta rápida sem sacrificar estabilidade</h3><span>Use as recomendações em camadas: primeiro o essencial, depois os diagnósticos técnicos.</span></div>
                       <div className="performance-mode-chips"><span>Android otimizado</span><span>Rede e dispositivo</span><span>Sem alterar fichas</span></div>
                     </div>
+                    <div className="app-performance-mode luxury-panel">
+                      <div><Zap size={20} /><div><strong>Modo de renderização do BuildMaster</strong><span>O modo econômico reduz transparências, sombras e animações pesadas sem mudar cálculos, OCR ou fichas.</span></div></div>
+                      <div className="settings-segmented-control" role="group" aria-label="Modo de desempenho do aplicativo">
+                        <button type="button" className={performanceMode === 'balanced' ? 'selected' : ''} onClick={() => setPerformanceMode('balanced')}>Equilibrado</button>
+                        <button type="button" className={performanceMode === 'economy' ? 'selected' : ''} onClick={() => setPerformanceMode('economy')}>Econômico</button>
+                      </div>
+                      <small>{performanceMode === 'economy' ? 'Ativo: interface mais leve para celulares que aquecem ou engasgam.' : 'Ativo: visual completo com transparências e movimentos premium.'}</small>
+                    </div>
                     <DelayResponsePanel />
                     <StabilityDiagnosticsPanel result={result ?? undefined} />
                   </section>
@@ -6851,6 +6925,7 @@ export function CardVisionApp() {
       </section>
       )}
 
+      <AppCommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} commands={appCommands} />
       <BuildMasterAssistant open={assistantOpen} onOpenChange={setAssistantOpen} players={integratedPlayers} team={integratedTeam} />
     </main>
   );

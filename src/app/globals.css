@@ -2,3 +2,4 @@
    A camada histórica é carregada primeiro; o Design System premium prevalece depois. */
 @import "./legacy-compat.css";
 @import "./design-system-v2710.css";
+@import "./design-system-v2720.css";

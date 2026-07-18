@@ -1,12 +1,12 @@
-# BuildMaster Elite Tático v27.10 — Reconstrução Completa
+# BuildMaster Elite Tático v27.20 — Auditoria Premium e Estrutura
 
-A v27.10 consolida a Central Inteligente v27.00 e aplica a auditoria completa do projeto: **Print Único Pro adaptativo**, correção da separação entre nível e GER, armazenamento estruturado, fila e cache de OCR, Design System premium, diagnóstico seguro, inteligência de elenco e modularização progressiva.
+A v27.20 preserva a reconstrução da v27.10 e a atualização imutável da v27.12, adicionando **Controle Final da Ficha**, busca global, modo econômico para Android, rascunho otimizado e correções de memória nas prévias de imagens.
 
 ## Leia primeiro
 
-- `LEIA-PRIMEIRO-V27.10-RECONSTRUCAO-COMPLETA.txt`
-- `README_V27_10_RECONSTRUCAO_COMPLETA.md`
-- `MATRIZ_IMPLEMENTACAO_V27_10.md`
+- `LEIA-PRIMEIRO-V27.20-AUDITORIA-PREMIUM.txt`
+- `docs/current/AUDITORIA_COMPLETA_V27_20.md`
+- `docs/current/CURRENT_RELEASE.md`
 - `TESTE_APARELHO_REAL_V27_10.md`
 
 ## Fluxo principal
@@ -41,6 +41,7 @@ Comandos principais:
 ```bash
 npm ci --ignore-scripts
 npm run typecheck
+npm run test:v2720
 npm run test:all
 npm run apk:build-web
 ```

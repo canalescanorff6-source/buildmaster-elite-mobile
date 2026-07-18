@@ -123,7 +123,7 @@ assert.match(migration.note, /não destrutiva/i);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
-assert.equal(pkg.version, '27.12.0');
+assert.equal(pkg.version, '27.20.0');
 assert.match(app, /IntegratedHomePanel/);
 assert.match(app, /PlayerLaboratory/);
 assert.match(app, /dynamic\(\(\) => import\('@\/modules\/players\/PlayerLaboratory'\)/);
@@ -137,4 +137,4 @@ assert.match(css, /v27-assistant-panel/);
 assert.match(css, /v27-quick-action-grid/);
 assert.match(css, /v27-team-support-grid/);
 
-console.log('✓ v27.12: central integrada, jogadores, time, partidas, assistente e migração não destrutiva aprovados.');
+console.log('✓ v27.20: central integrada, jogadores, time, partidas, assistente e migração não destrutiva aprovados.');

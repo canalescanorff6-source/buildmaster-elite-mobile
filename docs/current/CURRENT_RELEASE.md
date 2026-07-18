@@ -1,9 +1,7 @@
-# Release atual
+# Versão atual
 
-- Versão: `27.12.0`
-- Nome: Atualização sem conflito de cache
-- Base de segurança mínima: v26.75
-- Canal móvel: `buildmaster-latest`
-- Workflow: `Gerar APK e publicar atualização definitiva`
-- Manifesto real: gerado somente pelo workflow na publicação
-- Supabase: nenhuma migração adicional exigida sobre a infraestrutura já publicada
+- Versão: `27.20.0`
+- Nome: Auditoria Premium e Estrutura
+- Base: v27.12 com atualização imutável preservada
+- Recursos principais: Controle Final da Ficha, busca global, modo econômico, rascunho otimizado e limpeza de imagens temporárias
+- Teste próprio: `npm run test:v2720`
