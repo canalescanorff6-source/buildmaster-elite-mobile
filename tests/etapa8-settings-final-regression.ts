@@ -5,6 +5,7 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const auth = fs.readFileSync('src/components/AuthGate.tsx', 'utf8');
 const accounts = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
 const updates = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
+const updateChannel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 
 assert.match(app, /type SettingsView = 'aparencia' \| 'desempenho' \| 'seguranca' \| 'backup' \| 'atualizacoes' \| 'contas'/);
@@ -24,7 +25,7 @@ assert.match(accounts, /Gerar senha segura/);
 assert.match(accounts, /Renovação rápida/);
 assert.match(accounts, /\+90 dias/);
 assert.match(accounts, /validateOnlineLicense/);
-assert.match(updates, /CapacitorHttp/);
+assert.match(updateChannel, /CapacitorHttp/);
 assert.match(updates, /Atualizar aplicativo/);
 assert.match(updates, /SHA-256 e assinatura/);
 assert.match(updates, /Verificar agora/);

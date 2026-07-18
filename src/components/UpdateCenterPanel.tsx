@@ -1,22 +1,40 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
-import { AlertTriangle, CheckCircle2, Download, ExternalLink, Loader2, RefreshCw, Settings, ShieldCheck, Smartphone } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Clipboard,
+  Download,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  Smartphone,
+  Trash2,
+  WifiOff
+} from 'lucide-react';
 import {
   APP_NATIVE_VERSION,
   APP_RELEASE_VERSION,
   CURRENT_BUILD_ID,
-  DEFAULT_UPDATE_MANIFEST_URL,
-  DEFAULT_UPDATE_RELEASE_API_URL,
   evaluateUpdateManifest,
   isTrustedManifestUrl,
   isTrustedReleaseApiUrl,
-  selectManifestAssetFromRelease,
-  validateUpdateManifest,
   type AppUpdateManifest,
   type InstalledAppInfo
 } from '@/lib/appUpdates';
+import { fetchUpdateManifest, type UpdateChannelSource } from '@/lib/updateChannel';
+import {
+  appendUpdateAudit,
+  clearUpdateAudit,
+  formatUpdateAudit,
+  readUpdateAudit,
+  type UpdateAuditEntry
+} from '@/lib/updateAudit';
 import {
   downloadVerifyAndInstallApk,
   getNativeInstallInfo,
@@ -48,95 +66,6 @@ async function readInstalledInfo(): Promise<InstalledAppInfo> {
   return native ?? webInstallInfo();
 }
 
-function parseJsonPayload(payload: unknown): unknown {
-  if (payload && typeof payload === 'object') return payload;
-  if (typeof payload !== 'string') throw new Error('O servidor não retornou dados JSON válidos.');
-  const normalized = payload.replace(/^\uFEFF/, '').trim();
-  if (!normalized) throw new Error('O servidor retornou uma resposta vazia.');
-  try {
-    return JSON.parse(normalized) as unknown;
-  } catch {
-    throw new Error('O servidor retornou um arquivo que não é um manifesto JSON válido.');
-  }
-}
-
-function withCacheNonce(url: string, label: string) {
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}${label}=${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): Promise<unknown> {
-  const target = withCacheNonce(url, 'buildmasterCache');
-  const requestHeaders = {
-    Accept: 'application/json, application/vnd.github+json, application/octet-stream;q=0.9',
-    'Cache-Control': 'no-cache, no-store, max-age=0',
-    Pragma: 'no-cache',
-    ...headers
-  };
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const native = await CapacitorHttp.get({
-        url: target,
-        headers: requestHeaders,
-        connectTimeout: 30_000,
-        readTimeout: 60_000,
-        responseType: 'text'
-      });
-      if (native.status >= 200 && native.status < 300) return parseJsonPayload(native.data as unknown);
-      throw new Error(`HTTP ${native.status} ao consultar o canal oficial.`);
-    } catch (nativeError) {
-      try {
-        const response = await fetch(target, { cache: 'no-store', headers: requestHeaders });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return parseJsonPayload(await response.text());
-      } catch {
-        throw nativeError;
-      }
-    }
-  }
-
-  const response = await fetch(target, { cache: 'no-store', headers: requestHeaders });
-  if (!response.ok) throw new Error(`HTTP ${response.status} ao consultar o canal oficial.`);
-  return parseJsonPayload(await response.text());
-}
-
-async function fetchManifestJson(): Promise<unknown> {
-  const errors: string[] = [];
-
-  if (isTrustedReleaseApiUrl()) {
-    try {
-      const release = await fetchJsonUrl(DEFAULT_UPDATE_RELEASE_API_URL, {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-      });
-      const asset = selectManifestAssetFromRelease(release);
-      if (!asset) throw new Error('A release mais recente não contém um manifesto oficial.');
-      const manifestPayload = await fetchJsonUrl(asset.url);
-      const manifest = validateUpdateManifest(manifestPayload);
-      if (!manifest) throw new Error('O manifesto da release mais recente é inválido.');
-      if (manifest.releaseTag && manifest.releaseTag !== asset.tag) {
-        throw new Error('O manifesto não pertence à release indicada pelo GitHub.');
-      }
-      return manifestPayload;
-    } catch (cause) {
-      errors.push(cause instanceof Error ? cause.message : String(cause));
-    }
-  }
-
-  if (isTrustedManifestUrl()) {
-    try {
-      const legacyPayload = await fetchJsonUrl(DEFAULT_UPDATE_MANIFEST_URL);
-      if (!validateUpdateManifest(legacyPayload)) throw new Error('O manifesto de compatibilidade é inválido.');
-      return legacyPayload;
-    } catch (cause) {
-      errors.push(cause instanceof Error ? cause.message : String(cause));
-    }
-  }
-
-  throw new Error(errors.filter(Boolean).join(' | ') || 'Nenhum canal oficial de atualização está configurado neste APK.');
-}
-
 function formatBytes(value?: number) {
   if (!value || value <= 0) return 'tamanho confirmado após o download';
   const mb = value / (1024 * 1024);
@@ -162,13 +91,13 @@ function updateErrorMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : String(cause || '');
   const lower = message.toLowerCase();
   if (lower.includes('assinatura') || lower.includes('signature')) {
-    return 'A assinatura do APK instalado é diferente da assinatura oficial. Será necessária uma instalação manual única da versão oficial; depois disso, as próximas versões atualizarão por cima.';
+    return 'O Android recusou a atualização porque a assinatura instalada não corresponde à assinatura permanente do canal oficial.';
   }
   if (lower.includes('versioncode') || lower.includes('não é mais nova')) {
-    return 'O pacote publicado não possui um versionCode maior que o instalado. Gere uma nova execução do GitHub Actions.';
+    return 'O pacote publicado não possui um versionCode maior que o instalado. Uma nova publicação precisa ser gerada.';
   }
   if (lower.includes('sha-256') || lower.includes('checksum') || lower.includes('tamanho')) {
-    return 'O arquivo recebido não corresponde ao pacote publicado. O app apagou a cópia inválida. Verifique novamente; o novo canal imutável trocará automaticamente para a release correta.';
+    return 'O arquivo recebido não corresponde ao pacote publicado. A cópia inválida foi apagada e o app pode tentar novamente pela rota imutável.';
   }
   if (lower.includes('manifesto') || lower.includes('json válido') || lower.includes('release indicada')) {
     return `O canal de atualização respondeu com dados inválidos. Detalhe: ${message}`;
@@ -189,7 +118,37 @@ function updateErrorMessage(cause: unknown) {
   return message || 'A instalação segura não pôde ser iniciada.';
 }
 
+type DiagnosticStatus = 'ok' | 'warning' | 'error';
+
+type DiagnosticItem = {
+  id: string;
+  label: string;
+  status: DiagnosticStatus;
+  detail: string;
+};
+
 type Props = { onPrepareBackup: () => Promise<void> | void };
+
+function channelLabel(source: UpdateChannelSource | null) {
+  if (source === 'release-api') return 'Release imutável (API Latest)';
+  if (source === 'legacy-manifest') return 'Ponte de compatibilidade';
+  return 'Ainda não consultado';
+}
+
+async function copyText(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+}
 
 export function UpdateAutoChecker() {
   const lastAttemptRef = useRef(0);
@@ -206,9 +165,16 @@ export function UpdateAutoChecker() {
       try {
         const installed = await readInstalledInfo();
         const ignored = localStorage.getItem(IGNORED_KEY) || '';
-        const result = evaluateUpdateManifest(await fetchManifestJson(), installed, CURRENT_BUILD_ID, ignored);
+        const fetched = await fetchUpdateManifest();
+        const result = evaluateUpdateManifest(fetched.payload, installed, CURRENT_BUILD_ID, ignored);
         const checkedAt = new Date().toISOString();
         localStorage.setItem(LAST_CHECK_KEY, checkedAt);
+        appendUpdateAudit({
+          phase: 'auto-check',
+          outcome: result.available ? 'success' : 'info',
+          message: result.available ? `Atualização v${result.manifest?.version} detectada automaticamente.` : result.reason,
+          detail: `Rota: ${channelLabel(fetched.source)}`
+        });
         if (!result.available || !result.manifest) {
           localStorage.removeItem(PENDING_KEY);
           return;
@@ -217,8 +183,13 @@ export function UpdateAutoChecker() {
         window.dispatchEvent(new CustomEvent('buildmaster:update-available', {
           detail: { version: result.manifest.version, reason: result.reason, mandatory: result.mandatory }
         }));
-      } catch {
-        // A verificação silenciosa nunca bloqueia a abertura do app.
+      } catch (cause) {
+        appendUpdateAudit({
+          phase: 'auto-check',
+          outcome: 'warning',
+          message: 'A verificação automática não conseguiu alcançar o canal.',
+          detail: updateErrorMessage(cause)
+        });
       }
     }
 
@@ -245,6 +216,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
   const [autoCheck, setAutoCheck] = useState(true);
   const [checking, setChecking] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
   const [awaitingPermission, setAwaitingPermission] = useState(false);
   const [message, setMessage] = useState('Aguardando verificação do canal oficial.');
   const [manifest, setManifest] = useState<AppUpdateManifest | null>(null);
@@ -252,6 +224,10 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
   const [available, setAvailable] = useState(false);
   const [lastCheck, setLastCheck] = useState<string | null>(null);
   const [progress, setProgress] = useState<ApkDownloadProgress | null>(null);
+  const [channelSource, setChannelSource] = useState<UpdateChannelSource | null>(null);
+  const [diagnostic, setDiagnostic] = useState<DiagnosticItem[]>([]);
+  const [audit, setAudit] = useState<UpdateAuditEntry[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const channelReady = isTrustedManifestUrl() || isTrustedReleaseApiUrl();
 
@@ -261,14 +237,47 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
     return next;
   }, []);
 
+  const recordAudit = useCallback((entry: Parameters<typeof appendUpdateAudit>[0]) => {
+    setAudit(appendUpdateAudit(entry));
+  }, []);
+
   useEffect(() => {
+    let active = true;
+    setAudit(readUpdateAudit());
     try {
       setAutoCheck(localStorage.getItem(AUTO_KEY) !== '0');
       setLastCheck(localStorage.getItem(LAST_CHECK_KEY));
-      const pending = localStorage.getItem(PENDING_KEY);
-      if (pending) setManifest(JSON.parse(pending) as AppUpdateManifest);
     } catch { /* opcional */ }
-    void refreshInstalledInfo();
+
+    void refreshInstalledInfo().then((current) => {
+      if (!active) return;
+      try {
+        const pending = localStorage.getItem(PENDING_KEY);
+        if (!pending) return;
+        const parsed = JSON.parse(pending) as AppUpdateManifest;
+        const result = evaluateUpdateManifest(parsed, current, CURRENT_BUILD_ID, localStorage.getItem(IGNORED_KEY) || '');
+        setManifest(result.manifest);
+        setAvailable(result.available);
+        if (result.available) setMessage(`Atualização v${result.manifest?.version} já detectada. Pronta para validar e instalar.`);
+      } catch {
+        localStorage.removeItem(PENDING_KEY);
+      }
+    });
+
+    const onUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ version?: string; reason?: string }>).detail;
+      setAvailable(true);
+      setMessage(detail?.version ? `Nova versão v${detail.version} detectada automaticamente.` : detail?.reason || 'Nova atualização detectada.');
+      try {
+        const pending = localStorage.getItem(PENDING_KEY);
+        if (pending) setManifest(JSON.parse(pending) as AppUpdateManifest);
+      } catch { /* sem bloqueio */ }
+    };
+    window.addEventListener('buildmaster:update-available', onUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener('buildmaster:update-available', onUpdate);
+    };
   }, [refreshInstalledInfo]);
 
   useEffect(() => {
@@ -285,14 +294,15 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         void refreshInstalledInfo().then((info) => {
           if (info.canInstallPackages) {
             setAwaitingPermission(false);
-            setMessage('Permissão liberada. Toque novamente em instalar para continuar.');
+            setMessage('Permissão liberada. Toque novamente em atualizar para continuar.');
+            recordAudit({ phase: 'install', outcome: 'success', message: 'Permissão “Instalar apps desconhecidos” liberada.' });
           }
         });
       }, 700);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [awaitingPermission, refreshInstalledInfo]);
+  }, [awaitingPermission, recordAudit, refreshInstalledInfo]);
 
   const checkForUpdates = useCallback(async (silent = false) => {
     if (!channelReady) {
@@ -304,21 +314,31 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
     try {
       const current = await refreshInstalledInfo();
       const ignored = localStorage.getItem(IGNORED_KEY) || '';
-      const result = evaluateUpdateManifest(await fetchManifestJson(), current, CURRENT_BUILD_ID, ignored);
+      const fetched = await fetchUpdateManifest();
+      setChannelSource(fetched.source);
+      const result = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, ignored);
       setManifest(result.manifest);
       setAvailable(result.available);
       setMessage(result.reason);
-      const checkedAt = new Date().toISOString();
+      const checkedAt = fetched.checkedAt;
       setLastCheck(checkedAt);
       localStorage.setItem(LAST_CHECK_KEY, checkedAt);
       if (result.available && result.manifest) localStorage.setItem(PENDING_KEY, JSON.stringify(result.manifest));
       else localStorage.removeItem(PENDING_KEY);
+      recordAudit({
+        phase: silent ? 'auto-check' : 'manual-check',
+        outcome: result.available ? 'success' : result.valid ? 'info' : 'error',
+        message: result.reason,
+        detail: `Rota: ${channelLabel(fetched.source)}${fetched.previousErrors.length ? ` • fallback após: ${fetched.previousErrors.join(' | ')}` : ''}`
+      });
     } catch (cause) {
-      if (!silent) setMessage(updateErrorMessage(cause));
+      const friendly = updateErrorMessage(cause);
+      if (!silent) setMessage(friendly);
+      recordAudit({ phase: silent ? 'auto-check' : 'manual-check', outcome: 'error', message: 'Falha ao verificar atualização.', detail: friendly });
     } finally {
       setChecking(false);
     }
-  }, [channelReady, refreshInstalledInfo]);
+  }, [channelReady, recordAudit, refreshInstalledInfo]);
 
   useEffect(() => {
     if (!autoCheck || !channelReady) return;
@@ -332,46 +352,144 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
       : progress?.phase === 'verifying' ? 'Conferindo arquivo e assinatura'
         : progress?.phase === 'ready' ? 'APK validado' : '';
 
+  const diagnosticSummary = useMemo(() => {
+    if (!diagnostic.length) return null;
+    const errors = diagnostic.filter((item) => item.status === 'error').length;
+    const warnings = diagnostic.filter((item) => item.status === 'warning').length;
+    if (errors) return { className: 'error', label: `${errors} bloqueio(s) encontrado(s)` };
+    if (warnings) return { className: 'warning', label: `${warnings} atenção(ões), sem bloqueio crítico` };
+    return { className: 'ok', label: 'Tudo pronto para a atualização automática' };
+  }, [diagnostic]);
+
+  async function runDiagnostic() {
+    setDiagnosing(true);
+    setDiagnostic([]);
+    setMessage('Executando teste do atualizador sem baixar o APK...');
+    const items: DiagnosticItem[] = [];
+    try {
+      items.push({
+        id: 'network',
+        label: 'Conexão do aparelho',
+        status: typeof navigator !== 'undefined' && navigator.onLine === false ? 'warning' : 'ok',
+        detail: typeof navigator !== 'undefined' && navigator.onLine === false ? 'O aparelho informa que está offline.' : 'O aparelho informa conexão disponível.'
+      });
+      items.push({
+        id: 'trusted-channel',
+        label: 'Endereços oficiais',
+        status: channelReady ? 'ok' : 'error',
+        detail: channelReady ? 'API Latest e manifesto de compatibilidade pertencem ao repositório oficial.' : 'O APK não contém um canal confiável configurado.'
+      });
+
+      const current = await refreshInstalledInfo();
+      items.push({
+        id: 'installed-package',
+        label: 'Identidade instalada',
+        status: current.packageName === 'com.buildmaster.elitetatico' ? 'ok' : 'error',
+        detail: `${current.packageName} • versão ${current.versionName} • versionCode ${current.versionCode || 'web'}`
+      });
+
+      const fetched = await fetchUpdateManifest();
+      setChannelSource(fetched.source);
+      const result = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, localStorage.getItem(IGNORED_KEY) || '');
+      setManifest(result.manifest);
+      setAvailable(result.available);
+      items.push({
+        id: 'manifest',
+        label: 'Manifesto oficial',
+        status: result.valid ? 'ok' : 'error',
+        detail: result.valid && result.manifest
+          ? `v${result.manifest.version} • code ${result.manifest.versionCode} • ${channelLabel(fetched.source)}`
+          : result.reason
+      });
+      items.push({
+        id: 'comparison',
+        label: 'Comparação de versões',
+        status: result.valid ? 'ok' : 'error',
+        detail: result.reason
+      });
+      items.push({
+        id: 'permission',
+        label: 'Permissão do instalador',
+        status: current.platform === 'web' || current.canInstallPackages ? 'ok' : 'warning',
+        detail: current.platform === 'web' ? 'Teste web: a instalação real ocorre no APK Android.' : current.canInstallPackages ? 'Permissão liberada para abrir o instalador.' : 'O Android pedirá “Permitir desta fonte” antes da primeira instalação pelo app.'
+      });
+
+      try {
+        const testKey = `buildmaster-update-storage-test-${Date.now()}`;
+        localStorage.setItem(testKey, 'ok');
+        localStorage.removeItem(testKey);
+        items.push({ id: 'storage', label: 'Estado local do atualizador', status: 'ok', detail: 'Cache, manifesto pendente e histórico podem ser gravados normalmente.' });
+      } catch {
+        items.push({ id: 'storage', label: 'Estado local do atualizador', status: 'error', detail: 'O armazenamento local está bloqueado; o app não consegue guardar o estado da atualização.' });
+      }
+
+      setDiagnostic(items);
+      const errors = items.filter((item) => item.status === 'error').length;
+      const warnings = items.filter((item) => item.status === 'warning').length;
+      const finalMessage = errors
+        ? 'O teste encontrou um bloqueio. Veja o item vermelho abaixo.'
+        : warnings
+          ? 'O canal está funcionando. Há uma permissão ou condição que será resolvida durante a instalação.'
+          : 'Teste aprovado. O atualizador está pronto para detectar, baixar, validar e abrir o instalador.';
+      setMessage(finalMessage);
+      recordAudit({ phase: 'diagnostic', outcome: errors ? 'error' : warnings ? 'warning' : 'success', message: finalMessage, detail: items.map((item) => `${item.label}: ${item.status}`).join(' • ') });
+    } catch (cause) {
+      const friendly = updateErrorMessage(cause);
+      items.push({ id: 'channel-failure', label: 'Consulta pública', status: 'error', detail: friendly });
+      setDiagnostic(items);
+      setMessage(friendly);
+      recordAudit({ phase: 'diagnostic', outcome: 'error', message: 'Teste do atualizador falhou.', detail: friendly });
+    } finally {
+      setDiagnosing(false);
+    }
+  }
+
   async function installUpdate() {
     if (!manifest?.apkUrl || !manifest.checksum) return;
     setInstalling(true);
     setProgress(null);
     try {
       const current = await refreshInstalledInfo();
-      // Nunca instala usando apenas o manifesto guardado no aparelho. A publicação pode
-      // ter sido refeita, e o SHA-256 precisa pertencer ao URL que será baixado agora.
+      // Nunca instala usando apenas o manifesto guardado: o SHA-256 e o URL
+      // são atualizados diretamente no canal oficial antes de cada download.
       setMessage('Atualizando os dados do pacote oficial...');
-      const freshResult = evaluateUpdateManifest(await fetchManifestJson(), current, CURRENT_BUILD_ID, '');
+      const fetched = await fetchUpdateManifest();
+      setChannelSource(fetched.source);
+      const freshResult = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, '');
       if (!freshResult.valid || !freshResult.manifest) throw new Error(freshResult.reason);
       if (!freshResult.available) {
         setManifest(freshResult.manifest);
         setAvailable(false);
         localStorage.removeItem(PENDING_KEY);
         setMessage(freshResult.reason);
+        recordAudit({ phase: 'install', outcome: 'info', message: freshResult.reason });
         return;
       }
-      const targetManifest = freshResult.manifest;
+      let targetManifest = freshResult.manifest;
       setManifest(targetManifest);
       setAvailable(true);
       localStorage.setItem(PENDING_KEY, JSON.stringify(targetManifest));
 
       if (!Capacitor.isNativePlatform()) {
         window.open(targetManifest.apkUrl, '_blank', 'noopener,noreferrer');
-        setMessage('No navegador, baixe somente o APK da release oficial. A instalação automática funciona dentro do APK Android.');
+        setMessage('No navegador, o APK é aberto externamente. O fluxo automático completo funciona dentro do aplicativo Android.');
         return;
       }
 
       if (!current.canInstallPackages) {
         setAwaitingPermission(true);
-        setMessage('O Android precisa permitir que o BuildMaster instale a atualização. Ative “Permitir desta fonte” e volte ao app.');
+        setMessage('O Android precisa permitir que o BuildMaster abra o instalador. Ative “Permitir desta fonte” e volte ao app.');
+        recordAudit({ phase: 'install', outcome: 'warning', message: 'Permissão de instalação solicitada ao Android.' });
         await openInstallPermissionSettings();
         return;
       }
 
       if (localStorage.getItem(BACKUP_READY_KEY) !== targetManifest.buildId) {
         setMessage('Protegendo seus dados antes da atualização...');
+        recordAudit({ phase: 'backup', outcome: 'info', message: `Preparando backup antes da v${targetManifest.version}.` });
         await onPrepareBackup();
         localStorage.setItem(BACKUP_READY_KEY, targetManifest.buildId);
+        recordAudit({ phase: 'backup', outcome: 'success', message: 'Backup de segurança concluído.' });
       }
 
       const runVerifiedInstall = (target: AppUpdateManifest) => downloadVerifyAndInstallApk({
@@ -383,34 +501,46 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         expectedSizeBytes: target.sizeBytes
       });
 
-      setMessage('Baixando o APK oficial sem usar cópias em cache. Não feche o aplicativo...');
-      let installManifest = targetManifest;
-      let result: Awaited<ReturnType<typeof downloadVerifyAndInstallApk>>;
-      try {
-        result = await runVerifiedInstall(installManifest);
-      } catch (firstFailure) {
-        if (!isIntegrityDownloadError(firstFailure)) throw firstFailure;
-        setMessage('A primeira rota do GitHub falhou. Atualizando a release e tentando novamente...');
-        await new Promise((resolve) => window.setTimeout(resolve, 1600));
-        const retryResult = evaluateUpdateManifest(await fetchManifestJson(), current, CURRENT_BUILD_ID, '');
-        if (!retryResult.valid || !retryResult.available || !retryResult.manifest) throw firstFailure;
-        installManifest = retryResult.manifest;
-        setManifest(installManifest);
-        localStorage.setItem(PENDING_KEY, JSON.stringify(installManifest));
-        setProgress(null);
-        setMessage('Nova rota oficial confirmada. Refazendo o download seguro...');
-        result = await runVerifiedInstall(installManifest);
+      let result: Awaited<ReturnType<typeof downloadVerifyAndInstallApk>> | null = null;
+      let lastFailure: unknown = null;
+      for (let round = 1; round <= 3; round += 1) {
+        setMessage(round === 1
+          ? 'Baixando o APK oficial sem usar cópias em cache. Não feche o aplicativo...'
+          : `Rota atualizada. Repetindo a validação segura (${round}/3)...`);
+        recordAudit({ phase: 'download', outcome: 'info', message: `Iniciando tentativa segura ${round}/3.`, detail: `v${targetManifest.version} • ${targetManifest.assetName || 'APK oficial'}` });
+        try {
+          result = await runVerifiedInstall(targetManifest);
+          break;
+        } catch (cause) {
+          lastFailure = cause;
+          recordAudit({ phase: 'download', outcome: isIntegrityDownloadError(cause) ? 'warning' : 'error', message: `Tentativa ${round}/3 falhou.`, detail: updateErrorMessage(cause) });
+          if (!isIntegrityDownloadError(cause) || round === 3) throw cause;
+          await new Promise((resolve) => window.setTimeout(resolve, 1200 * round));
+          const retryFetched = await fetchUpdateManifest();
+          setChannelSource(retryFetched.source);
+          const retryResult = evaluateUpdateManifest(retryFetched.payload, current, CURRENT_BUILD_ID, '');
+          if (!retryResult.valid || !retryResult.available || !retryResult.manifest) throw lastFailure;
+          targetManifest = retryResult.manifest;
+          setManifest(targetManifest);
+          localStorage.setItem(PENDING_KEY, JSON.stringify(targetManifest));
+          setProgress(null);
+        }
       }
 
+      if (!result) throw lastFailure || new Error('A instalação segura não retornou resultado.');
       if (result.needsPermission) {
         setAwaitingPermission(true);
         setMessage('Libere “Permitir desta fonte” nas configurações do Android e tente novamente.');
+        recordAudit({ phase: 'install', outcome: 'warning', message: 'O Android solicitou a permissão de instalação.' });
         await openInstallPermissionSettings();
       } else if (result.verified) {
         setMessage('APK oficial validado. Confirme “Atualizar” na tela do instalador Android. Seus dados serão mantidos.');
+        recordAudit({ phase: 'install', outcome: 'success', message: `APK v${targetManifest.version} validado e entregue ao instalador Android.`, detail: `SHA-256 ${result.checksum || targetManifest.checksum}` });
       }
     } catch (cause) {
-      setMessage(updateErrorMessage(cause));
+      const friendly = updateErrorMessage(cause);
+      setMessage(friendly);
+      recordAudit({ phase: 'install', outcome: 'error', message: 'A atualização não pôde ser iniciada.', detail: friendly });
     } finally {
       setInstalling(false);
     }
@@ -421,25 +551,62 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
     localStorage.setItem(IGNORED_KEY, manifest.buildId);
     setAvailable(false);
     setMessage('Esta revisão foi ignorada neste aparelho.');
+    recordAudit({ phase: 'cache', outcome: 'info', message: `Revisão ${manifest.version} ignorada neste aparelho.` });
+  }
+
+  async function copyDiagnostic() {
+    const report = [
+      'BuildMaster Elite Tático — Diagnóstico do Atualizador',
+      `App: ${APP_RELEASE_VERSION} (${CURRENT_BUILD_ID})`,
+      `Instalado: ${installed.versionName} • code ${installed.versionCode} • ${installed.packageName}`,
+      `Plataforma: ${installed.platform}`,
+      `Canal: ${channelLabel(channelSource)}`,
+      `Mensagem atual: ${message}`,
+      '',
+      'TESTE:',
+      ...(diagnostic.length ? diagnostic.map((item) => `- [${item.status.toUpperCase()}] ${item.label}: ${item.detail}`) : ['- Teste ainda não executado.']),
+      '',
+      'HISTÓRICO:',
+      formatUpdateAudit(audit) || 'Sem eventos registrados.'
+    ].join('\n');
+    await copyText(report);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  function resetUpdateState() {
+    localStorage.removeItem(IGNORED_KEY);
+    localStorage.removeItem(PENDING_KEY);
+    localStorage.removeItem(BACKUP_READY_KEY);
+    localStorage.removeItem(LAST_CHECK_KEY);
+    clearUpdateAudit();
+    setAudit([]);
+    setDiagnostic([]);
+    setManifest(null);
+    setAvailable(false);
+    setLastCheck(null);
+    setProgress(null);
+    setMessage('Estado do atualizador limpo. Toque em “Verificar agora” para consultar novamente.');
+    recordAudit({ phase: 'cache', outcome: 'success', message: 'Cache do atualizador limpo sem apagar fichas ou configurações do app.' });
   }
 
   return (
     <section className="update-center-panel luxury-panel settings-view-panel settings-final-panel">
       <div className="settings-panel-heading">
-        <div><p className="kicker"><RefreshCw size={15} /> Atualizações</p><h3>Atualização automática verificada</h3><span>Detecta a nova versão, protege seus dados, confere o APK e abre o instalador Android.</span></div>
+        <div><p className="kicker"><RefreshCw size={15} /> Atualizações</p><h3>Atualização automática com diagnóstico</h3><span>Detecta a nova versão, protege seus dados, confere o APK e abre o instalador Android sem baixar manualmente pelo GitHub.</span></div>
         <span className="settings-state-pill">v{installed.versionName || APP_RELEASE_VERSION} • {buildShort}</span>
       </div>
 
       <div className="update-readiness-grid">
         <article className="is-ready"><CheckCircle2 size={18} /><div><span>Versão instalada</span><strong>{installed.versionName || APP_RELEASE_VERSION}</strong><small>versionCode {installed.versionCode || 'web'} • base {APP_NATIVE_VERSION}</small></div></article>
-        <article className={channelReady ? 'is-ready' : 'needs-attention'}><ShieldCheck size={18} /><div><span>Canal oficial</span><strong>{channelReady ? 'API + fallback oficial' : 'Não configurado'}</strong><small>release imutável do seu repositório GitHub</small></div></article>
-        <article className={!Capacitor.isNativePlatform() || installed.canInstallPackages ? 'is-ready' : 'needs-attention'}><Settings size={18} /><div><span>Permissão Android</span><strong>{!Capacitor.isNativePlatform() ? 'Teste web' : installed.canInstallPackages ? 'Liberada' : 'Precisa liberar'}</strong><small>necessária uma única vez</small></div></article>
+        <article className={channelReady ? 'is-ready' : 'needs-attention'}><ShieldCheck size={18} /><div><span>Canal oficial</span><strong>{channelReady ? channelLabel(channelSource) : 'Não configurado'}</strong><small>release imutável + ponte para versões antigas</small></div></article>
+        <article className={!Capacitor.isNativePlatform() || installed.canInstallPackages ? 'is-ready' : 'needs-attention'}><Settings size={18} /><div><span>Permissão Android</span><strong>{!Capacitor.isNativePlatform() ? 'Teste web' : installed.canInstallPackages ? 'Liberada' : 'Será solicitada'}</strong><small>o Android exige confirmação do usuário</small></div></article>
         <article className={available ? 'update-ready' : 'is-ready'}>{available ? <Download size={18} /> : <CheckCircle2 size={18} />}<div><span>Situação</span><strong>{available ? `Nova v${manifest?.version}` : 'Atualizado'}</strong><small>{manifest ? `code ${manifest.versionCode}` : 'aguardando manifesto'}</small></div></article>
       </div>
 
       <div className={`cloud-status-card update-status-final ${available ? 'update-available' : ''}`} role="status" aria-live="polite">
-        {checking || installing ? <Loader2 className="spin" size={17} /> : available ? <Download size={17} /> : <CheckCircle2 size={17} />}
-        <div><strong>{installing ? progressLabel || 'Instalação segura' : checking ? 'Verificando canal' : available ? 'Atualização disponível' : 'Status da atualização'}</strong><span>{message}</span></div>
+        {checking || installing || diagnosing ? <Loader2 className="spin" size={17} /> : available ? <Download size={17} /> : <CheckCircle2 size={17} />}
+        <div><strong>{installing ? progressLabel || 'Instalação segura' : diagnosing ? 'Testando atualizador' : checking ? 'Verificando canal' : available ? 'Atualização disponível' : 'Status da atualização'}</strong><span>{message}</span></div>
       </div>
 
       {installing && progress && (
@@ -458,19 +625,45 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
       )}
 
       {awaitingPermission && (
-        <div className="settings-explanation-card update-permission-help"><AlertTriangle size={19} /><div><strong>Permissão de instalação pendente</strong><span>Na tela do Android, ative “Permitir desta fonte”, volte ao BuildMaster e toque novamente no botão de instalar.</span></div></div>
+        <div className="settings-explanation-card update-permission-help"><AlertTriangle size={19} /><div><strong>Permissão de instalação pendente</strong><span>Na tela do Android, ative “Permitir desta fonte”, volte ao BuildMaster e toque novamente no botão de atualizar.</span></div></div>
       )}
 
       <div className="safety-actions-grid update-actions-grid update-final-actions">
-        <button type="button" onClick={() => void checkForUpdates(false)} disabled={checking || installing}><RefreshCw size={18} /><strong>Verificar agora</strong><span>Consulta versão, versionCode e integridade.</span><small>Não modifica o aplicativo</small></button>
-        <button type="button" onClick={() => void installUpdate()} disabled={!available || !manifest || installing}><Download size={18} /><strong>{awaitingPermission ? 'Continuar instalação' : 'Atualizar aplicativo'}</strong><span>Backup, download, SHA-256 e assinatura.</span><small>{manifest ? formatBytes(manifest.sizeBytes) : 'APK oficial'}</small></button>
+        <button type="button" onClick={() => void checkForUpdates(false)} disabled={checking || installing || diagnosing}><RefreshCw size={18} /><strong>Verificar agora</strong><span>Consulta versão, versionCode e integridade.</span><small>Não modifica o aplicativo</small></button>
+        <button type="button" onClick={() => void installUpdate()} disabled={!available || !manifest || installing || diagnosing}><Download size={18} /><strong>{awaitingPermission ? 'Continuar atualização' : 'Atualizar aplicativo'}</strong><span>Backup, download, SHA-256 e assinatura.</span><small>{manifest ? formatBytes(manifest.sizeBytes) : 'APK oficial'}</small></button>
+        <button type="button" onClick={() => void runDiagnostic()} disabled={checking || installing || diagnosing}><Activity size={18} /><strong>Testar atualizador</strong><span>Confere canal, versão, permissão e armazenamento.</span><small>Sem baixar o APK</small></button>
         <button type="button" onClick={ignoreCurrent} disabled={!available || !manifest || Boolean(manifest.mandatory)}><Smartphone size={18} /><strong>Ignorar esta revisão</strong><span>Somente para atualização opcional.</span><small>Obrigatórias não podem ser ignoradas</small></button>
       </div>
 
+      {diagnostic.length > 0 && (
+        <section className="update-diagnostic-panel" aria-label="Resultado do teste do atualizador">
+          <div className="update-diagnostic-heading"><div><Activity size={18} /><strong>Teste do atualizador</strong></div>{diagnosticSummary && <span className={`diagnostic-summary-${diagnosticSummary.className}`}>{diagnosticSummary.label}</span>}</div>
+          <div className="update-diagnostic-grid">
+            {diagnostic.map((item) => (
+              <article key={item.id} className={`diagnostic-${item.status}`}>
+                {item.status === 'ok' ? <CheckCircle2 size={17} /> : item.status === 'warning' ? <AlertTriangle size={17} /> : <WifiOff size={17} />}
+                <div><strong>{item.label}</strong><span>{item.detail}</span></div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <label className="update-toggle"><input type="checkbox" checked={autoCheck} onChange={(event) => { setAutoCheck(event.target.checked); localStorage.setItem(AUTO_KEY, event.target.checked ? '1' : '0'); }} /><span>Verificar automaticamente ao abrir, voltar ao app e reconectar à internet</span></label>
 
+      <details className="settings-details-card update-audit-card" open={audit.some((entry) => entry.outcome === 'error')}>
+        <summary>Histórico técnico do atualizador ({audit.length})</summary>
+        <div className="update-audit-actions">
+          <button type="button" onClick={() => void copyDiagnostic()}><Clipboard size={15} /> {copied ? 'Copiado' : 'Copiar diagnóstico'}</button>
+          <button type="button" onClick={resetUpdateState}><Trash2 size={15} /> Limpar somente o atualizador</button>
+        </div>
+        <div className="update-audit-list">
+          {audit.length ? audit.slice(0, 12).map((entry) => <article key={entry.id} className={`audit-${entry.outcome}`}><span>{new Date(entry.at).toLocaleString('pt-BR')}</span><strong>{entry.message}</strong>{entry.detail && <small>{entry.detail}</small>}</article>) : <p className="panel-note">Nenhuma tentativa registrada ainda.</p>}
+        </div>
+      </details>
+
       <div className="update-install-steps"><article><i>1</i><div><strong>Detectar</strong><span>Compara a versão e o versionCode reais.</span></div></article><article><i>2</i><div><strong>Validar</strong><span>Confere tamanho, SHA-256, pacote e assinatura.</span></div></article><article><i>3</i><div><strong>Atualizar</strong><span>O Android instala por cima e mantém seus dados.</span></div></article></div>
-      <div className="settings-explanation-card"><ExternalLink size={19} /><div><strong>Primeira instalação oficial</strong><span>Se uma versão antiga foi assinada com outra chave, será necessária uma reinstalação manual única. A partir desta base, o workflow só publica APK com a assinatura permanente.</span></div></div>
+      <div className="settings-explanation-card"><ExternalLink size={19} /><div><strong>Fluxo automático do aplicativo</strong><span>O BuildMaster detecta e baixa o APK sozinho. Por segurança do Android, a tela final do instalador ainda exige tocar em “Atualizar”.</span></div></div>
       {lastCheck && <p className="panel-note">Última consulta: {new Date(lastCheck).toLocaleString('pt-BR')}.</p>}
     </section>
   );

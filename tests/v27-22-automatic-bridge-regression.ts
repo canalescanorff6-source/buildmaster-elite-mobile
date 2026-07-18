@@ -11,7 +11,7 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: st
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const oldUpdater = fs.readFileSync('tests/fixtures/v27-00-updater-contract.txt', 'utf8');
 
-assert.equal(pkg.version, '27.22.0');
+assert.equal(pkg.version, '27.23.0');
 assert.equal(
   DEFAULT_UPDATE_MANIFEST_URL,
   'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json'
@@ -19,8 +19,8 @@ assert.equal(
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
 // Contrato real aceito pelo APK v27.00 já instalado.
-const version = '27.22.0';
-const versionCode = 1352200048;
+const version = '27.23.0';
+const versionCode = 1352300048;
 const attempt = 2;
 const token = `${versionCode}${String(attempt).padStart(2, '0')}`;
 const apkName = `BuildMaster-Elite-Tatico-v${version}-${token}-abcde123.apk`;
@@ -79,4 +79,4 @@ assert.match(workflow, /O APK do canal antigo não foi validado; o manifesto ant
 assert.match(workflow, /Mesma regra usada pelo APK v27\.00 já instalado/);
 assert.match(workflow, /Ponte automática aprovada/);
 
-console.log('✓ v27.22: ponte automática da v27.00, publicação atômica e APK histórico imutável aprovados.');
+console.log('✓ v27.23: ponte automática da v27.00, publicação atômica e APK histórico imutável aprovados.');

@@ -1,9 +1,5 @@
-# Versão atual
+# Versão atual — BuildMaster Elite Tático v27.23.0
 
-- Versão: `27.21.0`
-- Nome: Atualizador Definitivo
-- Base: v27.20 Auditoria Premium preservada
-- Correção principal: atualização Android reconstruída com release imutável, descoberta pela API oficial do GitHub e canal antigo de compatibilidade
-- Validações: manifesto, tamanho, SHA-256, cabeçalho APK/ZIP, pacote, versionCode, versão e assinatura
-- Teste próprio: `npm run test:v2721`
-- Auditoria anterior: `docs/current/AUDITORIA_COMPLETA_V27_20.md`
+Pacote de melhorias com Central de Atualizações diagnosticável, histórico técnico, recuperação em três rodadas e publicação automática compatível com versões antigas.
+
+Consulte `VALIDACAO_V27_23_MELHORIAS_ATUALIZACAO.md`.

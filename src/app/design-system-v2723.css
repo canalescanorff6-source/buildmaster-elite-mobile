@@ -1,0 +1,187 @@
+/* BuildMaster v27.23 — Central de atualização com diagnóstico e histórico. */
+
+.update-diagnostic-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent, #42d392) 24%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-2, #111820) 92%, transparent);
+}
+
+.update-diagnostic-heading,
+.update-diagnostic-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.update-diagnostic-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.update-diagnostic-heading > div strong {
+  font-size: .98rem;
+}
+
+.update-diagnostic-heading > span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.diagnostic-summary-ok {
+  color: #87efbe;
+  background: rgba(38, 185, 111, .13);
+  border: 1px solid rgba(83, 225, 151, .25);
+}
+
+.diagnostic-summary-warning {
+  color: #ffd98a;
+  background: rgba(225, 157, 37, .13);
+  border: 1px solid rgba(255, 202, 94, .25);
+}
+
+.diagnostic-summary-error {
+  color: #ff9f9f;
+  background: rgba(225, 66, 66, .13);
+  border: 1px solid rgba(255, 112, 112, .25);
+}
+
+.update-diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.update-diagnostic-grid article {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .025);
+}
+
+.update-diagnostic-grid article > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.update-diagnostic-grid article > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.update-diagnostic-grid article strong {
+  font-size: .86rem;
+}
+
+.update-diagnostic-grid article span {
+  color: var(--muted, #9ca8b7);
+  font-size: .78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.update-diagnostic-grid .diagnostic-ok {
+  border-color: rgba(70, 210, 139, .22);
+}
+
+.update-diagnostic-grid .diagnostic-ok > svg {
+  color: #63df9e;
+}
+
+.update-diagnostic-grid .diagnostic-warning {
+  border-color: rgba(244, 188, 66, .25);
+}
+
+.update-diagnostic-grid .diagnostic-warning > svg {
+  color: #f6c768;
+}
+
+.update-diagnostic-grid .diagnostic-error {
+  border-color: rgba(244, 91, 91, .28);
+}
+
+.update-diagnostic-grid .diagnostic-error > svg {
+  color: #ff7777;
+}
+
+.update-audit-card {
+  overflow: hidden;
+}
+
+.update-audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 12px 0;
+}
+
+.update-audit-actions button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .045);
+  color: inherit;
+  font-weight: 750;
+}
+
+.update-audit-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.update-audit-list article {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border-left: 3px solid rgba(255, 255, 255, .12);
+  border-radius: 0 12px 12px 0;
+  background: rgba(255, 255, 255, .025);
+}
+
+.update-audit-list article span {
+  color: var(--muted, #9ca8b7);
+  font-size: .69rem;
+}
+
+.update-audit-list article strong {
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
+.update-audit-list article small {
+  color: var(--muted, #9ca8b7);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.update-audit-list .audit-success { border-left-color: #56d993; }
+.update-audit-list .audit-warning { border-left-color: #f1bd58; }
+.update-audit-list .audit-error { border-left-color: #f06c6c; }
+.update-audit-list .audit-info { border-left-color: #6aaee9; }
+
+@media (max-width: 720px) {
+  .update-diagnostic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .update-audit-actions button {
+    flex: 1 1 180px;
+  }
+}

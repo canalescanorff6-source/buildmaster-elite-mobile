@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v27-22-ponte-automatica",
-  "version": "27.22.0",
+  "name": "buildmaster-elite-tatico-v27-23-melhorias-teste-automatico",
+  "version": "27.23.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v27.22 — ponte automática compatível com a v27.00: APK único, verificado publicamente e manifesto ativado por último.",
+  "description": "BuildMaster Elite Tático v27.23 — atualização automática com diagnóstico, histórico técnico, três rotas de recuperação e melhorias de interface.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -12,7 +12,7 @@
     "test:cards": "tsx tests/card-regression.ts",
     "test:prints": "tsx tests/print-regression.ts",
     "test:lote1": "tsx tests/lote1-official-regression.ts",
-    "test:all": "npm run test:v2722 && npm run test:v2721 && npm run test:v2720 && npm run test:v2712 && npm run test:v2710 && npm run test:ocr-critical && npm run test:central-v27 && npm run test:reader-v2681 && npm run test:evolution-v2680 && npm run test:layout-v2679 && npm run test:update-v2678 && npm run test:identity-v2677 && npm run test:studio-v2677 && npm run test:security-v2675 && npm run test:polish && npm run test:etapa8 && npm run test:accounts && npm run test:backup-updates && npm run test:community && npm run test:meta-universe && npm run test:lote18-24 && npm run test:lote17 && npm run test:dna && npm run test:unique && npm run test:ui && npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
+    "test:all": "npm run test:v2723 && npm run test:v2722 && npm run test:v2721 && npm run test:v2720 && npm run test:v2712 && npm run test:v2710 && npm run test:ocr-critical && npm run test:central-v27 && npm run test:reader-v2681 && npm run test:evolution-v2680 && npm run test:layout-v2679 && npm run test:update-v2678 && npm run test:identity-v2677 && npm run test:studio-v2677 && npm run test:security-v2675 && npm run test:polish && npm run test:etapa8 && npm run test:accounts && npm run test:backup-updates && npm run test:community && npm run test:meta-universe && npm run test:lote18-24 && npm run test:lote17 && npm run test:dna && npm run test:unique && npm run test:ui && npm run test:cofre-migration && npm run test:release && npm run test:runtime-ficha && npm run test:lote15-16 && npm run test:lote14 && npm run test:lote13 && npm run test:lote12 && npm run test:lote11 && npm run test:lote10 && npm run test:lote9 && npm run test:lote8 && npm run test:lote7 && npm run test:lote6 && npm run test:calibration && npm run test:opponent-print && npm run test:lote3 && npm run test:lote2 && npm run test:lote1 && npm run test:cards && npm run test:prints && npm run test:team && npm run test:premium && npm run test:ultimate && npm run test:ficha && npm run test:managers && npm run test:chemistry && npm run test:lineup && npm run test:opponent && npm run test:gameplan",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -70,7 +70,8 @@
     "test:v2712": "tsx tests/v27-20-immutable-update-regression.ts",
     "test:v2720": "tsx tests/v27-20-quality-structure-regression.ts",
     "test:v2721": "tsx tests/v27-21-update-definitive-regression.ts",
-    "test:v2722": "tsx tests/v27-22-automatic-bridge-regression.ts"
+    "test:v2722": "tsx tests/v27-22-automatic-bridge-regression.ts",
+    "test:v2723": "tsx tests/v27-23-update-health-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

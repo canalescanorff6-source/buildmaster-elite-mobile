@@ -91,7 +91,7 @@ const design = fs.readFileSync(path.join(root, 'src/app/design-system-v2710.css'
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public/manifest.webmanifest'), 'utf8')) as { name: string; icons: Array<{ src: string; purpose?: string }> };
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string; scripts: Record<string, string> };
 
-assert.equal(pkg.version, '27.22.0');
+assert.equal(pkg.version, '27.23.0');
 assert.match(source, /Print Único Pro/);
 assert.match(source, /enqueueOcrFile/);
 assert.match(source, /createSafeDiagnosticReport/);
@@ -106,4 +106,4 @@ assert.match(design, /compact-share-panel/);
 assert.match(design, /single-print-map-canvas/);
 assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable' && icon.src.includes('icon-maskable')));
 
-console.log('✓ v27.22: Print Único Pro, nível/GER, desempenho, banco estruturado, diagnóstico seguro, design e acessibilidade aprovados.');
+console.log('✓ v27.23: Print Único Pro, nível/GER, desempenho, banco estruturado, diagnóstico seguro, design e acessibilidade aprovados.');

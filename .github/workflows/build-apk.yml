@@ -1,4 +1,4 @@
-name: Gerar APK e publicar ponte automática
+name: Gerar APK v27.23 e publicar atualização automática
 
 on:
   workflow_dispatch:
@@ -301,10 +301,12 @@ jobs:
             'channel': 'stable',
             'updateType': 'apk',
             'notes': [
-              'Ponte automática compatível com a versão 27.00 já instalada.',
+              'Atualização automática compatível com a versão 27.00 já instalada.',
+              'Nova central com diagnóstico do atualizador sem baixar o APK.',
+              'Histórico técnico local para identificar canal, permissão, download e instalação.',
               'O APK recebe um nome exclusivo e nunca substitui um arquivo antigo.',
               'O APK público é baixado e validado antes de o manifesto ser ativado.',
-              'Um manifesto antigo continua apontando para seu APK antigo, que permanece disponível.',
+              'Recuperação em três rodadas no app, além das tentativas do downloader nativo.',
               'Download sem cache com validação de tamanho, SHA-256, pacote, versão e assinatura.',
               'O botão Atualizar aplicativo baixa e abre o instalador sem download manual pelo GitHub.'
             ],
@@ -333,9 +335,11 @@ jobs:
               json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Ponte Automática
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Automática com Diagnóstico
 
           - Atualização da v27.00 pelo próprio botão do aplicativo, sem baixar APK manualmente.
+          - Central com teste do canal, versão, permissão e armazenamento sem baixar o APK.
+          - Histórico técnico copiável para localizar falhas no aparelho.
           - APK exclusivo por execução; arquivos antigos nunca são sobrescritos ou removidos.
           - O canal só troca o manifesto depois que o novo APK público foi baixado e validado.
           - Manifestos em cache continuam válidos porque seus APKs históricos permanecem disponíveis.
