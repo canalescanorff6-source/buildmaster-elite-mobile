@@ -1,10 +1,10 @@
-# BuildMaster Elite Tático v27.21 — Atualizador Definitivo
+# BuildMaster Elite Tático v27.22 — Atualizador Definitivo
 
-A v27.21 preserva todas as melhorias da v27.20 e reconstrói o sistema de atualização Android para eliminar a dependência de um arquivo mutável. O novo canal usa **release imutável**, consulta pela **API oficial de releases do GitHub**, validação pública antes de ativar e fallback compatível com APKs antigos.
+A v27.22 preserva todas as melhorias da v27.20 e reconstrói o sistema de atualização Android para eliminar a dependência de um arquivo mutável. O novo canal usa **release imutável**, consulta pela **API oficial de releases do GitHub**, validação pública antes de ativar e fallback compatível com APKs antigos.
 
 ## Leia primeiro
 
-- `LEIA-PRIMEIRO-V27.21-ATUALIZADOR-DEFINITIVO.txt`
+- `LEIA-PRIMEIRO-V27.22-ATUALIZADOR-DEFINITIVO.txt`
 - `docs/current/ATUALIZADOR_DEFINITIVO_V27_21.md`
 - `docs/current/AUDITORIA_COMPLETA_V27_20.md`
 - `TESTE_APARELHO_REAL_V27_10.md`
@@ -23,7 +23,7 @@ build release assinado
 → canal antigo atualizado para compatibilidade
 ```
 
-A v27.21 consulta a API `releases/latest`. Se a API estiver temporariamente indisponível, usa o manifesto oficial da release `buildmaster-latest`.
+A v27.22 consulta a API `releases/latest`. Se a API estiver temporariamente indisponível, usa o manifesto oficial da release `buildmaster-latest`.
 
 ## Fluxo principal do app
 

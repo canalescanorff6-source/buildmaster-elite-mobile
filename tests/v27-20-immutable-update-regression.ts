@@ -7,17 +7,17 @@ const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.21.0');
+assert.equal(pkg.version, '27.22.0');
 assert.match(workflow, /RUN_ATTEMPT: \$\{\{ github\.run_attempt \}\}/);
 assert.match(workflow, /asset_token = f'\{version_code\}\{attempt:02d\}'/);
 assert.match(workflow, /APK_PUBLICATION_ID=/);
 assert.match(workflow, /release_tag = f'buildmaster-v\{version\}-\{version_code\}-\{attempt:02d\}'/);
 assert.match(workflow, /manifest_asset = f'update-manifest-v\{version\}-\{version_code\}\.json'/);
-assert.match(workflow, /legacy\['apkUrl'\] = f'https:\/\/github\.com\/\{repo\}\/releases\/download\/buildmaster-latest\/\{asset_name\}\?publication=/);
-assert.match(workflow, /Criar release imutável fora do canal ativo/);
-assert.match(workflow, /Verificar release imutável antes de ativar/);
-assert.match(workflow, /Ativar release imutável como a mais recente/);
-assert.match(workflow, /Atualizar canal de compatibilidade para APKs antigos/);
+assert.match(workflow, /legacy\['apkUrl'\] = \([\s\S]*releases\/download\/buildmaster-latest\/\{asset_name\}[\s\S]*publication=/);
+assert.match(workflow, /Criar release imutável em espera/);
+assert.match(workflow, /Validar release imutável publicamente/);
+assert.match(workflow, /Ativar release nova como Latest/);
+assert.match(workflow, /Preparar canal automático das versões antigas/);
 assert.match(workflow, /Accept-Encoding: identity/);
 assert.match(workflow, /cancel-in-progress: false/);
 
@@ -30,4 +30,4 @@ assert.match(nativePlugin, /connection\.setUseCaches\(false\)/);
 assert.match(nativePlugin, /connection\.setRequestProperty\("Accept-Encoding", "identity"\)/);
 assert.match(nativePlugin, /MAX_DOWNLOAD_ATTEMPTS = 4/);
 
-console.log('✓ compatibilidade v27.20: ativo único, sem cache e canal antigo preservado na arquitetura v27.21.');
+console.log('✓ compatibilidade v27.20: ativo único, sem cache e canal antigo preservado na arquitetura v27.22.');

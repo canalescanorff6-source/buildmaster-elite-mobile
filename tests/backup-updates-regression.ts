@@ -5,10 +5,10 @@ import { APP_DATA_VERSION, createBackupEnvelope, validateBackupEnvelope } from '
 import { APP_RELEASE_VERSION, compareVersions, evaluateUpdateManifest, validateUpdateManifest } from '../src/lib/appUpdates';
 
 assert.equal(APP_DATA_VERSION, '27.10.0');
-assert.equal(APP_RELEASE_VERSION, '27.21.0');
-assert.equal(compareVersions('27.1.0', '27.21.0'), -1);
-assert.equal(compareVersions('27.21.0', '27.21.0'), 0);
-assert.equal(compareVersions('26.99.9', '27.21.0'), -1);
+assert.equal(APP_RELEASE_VERSION, '27.22.0');
+assert.equal(compareVersions('27.1.0', '27.22.0'), -1);
+assert.equal(compareVersions('27.22.0', '27.22.0'), 0);
+assert.equal(compareVersions('26.99.9', '27.22.0'), -1);
 
 const backup = createBackupEnvelope({
   history: [{ id: 'player-1', result: { parsed: { playerName: 'Jogador Teste' } } }],
@@ -23,13 +23,13 @@ assert.ok(checked.migrated?.sections.evolution);
 
 const manifest = {
   appId: 'com.buildmaster.elitetatico',
-  version: '27.21.0',
+  version: '27.22.0',
   versionCode: 1352100020,
   buildId: 'new-build',
   publishedAt: '2026-07-14T00:00:00.000Z',
   channel: 'stable',
   updateType: 'apk',
-  apkUrl: 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.21.0-1352100020-abcdef12.apk',
+  apkUrl: 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.22.0-1352100020-abcdef12.apk',
   checksum: 'a'.repeat(64),
   sizeBytes: 25_000_000,
   notes: ['Teste']
@@ -39,9 +39,9 @@ assert.equal(validateUpdateManifest({ ...manifest, apkUrl: 'javascript:alert(1)'
 assert.equal(validateUpdateManifest({ ...manifest, checksum: 'invalido' }), null);
 assert.equal(validateUpdateManifest({ ...manifest, versionCode: 0 }), null);
 assert.equal(validateUpdateManifest({ ...manifest, publishedAt: 'data-invalida' }), null);
-assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.21.0', versionCode: 1350900010 }, 'old-build').available, true);
-assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.21.0', versionCode: 1350900010, buildId: 'old-build' }, { versionName: '27.21.0', versionCode: 1350900010 }, 'old-build').available, false);
-assert.equal(evaluateUpdateManifest({ ...manifest, appId: 'outro.app' }, { versionName: '27.21.0', versionCode: 1350900010 }, 'old-build').valid, false);
+assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.22.0', versionCode: 1350900010 }, 'old-build').available, true);
+assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.22.0', versionCode: 1350900010, buildId: 'old-build' }, { versionName: '27.22.0', versionCode: 1350900010 }, 'old-build').available, false);
+assert.equal(evaluateUpdateManifest({ ...manifest, appId: 'outro.app' }, { versionName: '27.22.0', versionCode: 1350900010 }, 'old-build').valid, false);
 
 const appSource = fs.readFileSync(path.join(process.cwd(), 'src/components/CardVisionApp.tsx'), 'utf8');
 assert.match(appSource, /exportPlayersBackup/);
@@ -53,9 +53,9 @@ assert.match(workflow, /update-manifest\.json/);
 assert.match(workflow, /versionCode/);
 assert.match(workflow, /APK_ASSET_NAME/);
 assert.match(workflow, /hashlib\.sha256/);
-assert.match(workflow, /Verificar release imutável antes de ativar/);
-assert.match(workflow, /Verificar canal novo, API e compatibilidade antiga/);
+assert.match(workflow, /Validar release imutável publicamente/);
+assert.match(workflow, /Validar a ponte automática da v27\.00/);
 assert.doesNotMatch(appSource, /updateManifestUrl:/);
 assert.match(appSource, /encryptBackupPayload/);
 
-console.log('✓ Backup e motor de atualização definitiva v27.21 validados.');
+console.log('✓ Backup e motor de atualização definitiva v27.22 validados.');

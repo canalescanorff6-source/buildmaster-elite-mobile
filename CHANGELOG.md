@@ -1,6 +1,6 @@
 # Changelog
 
-## 27.21.0 — Atualizador Definitivo
+## 27.22.0 — Atualizador Definitivo
 
 - release imutável exclusiva por execução e tentativa;
 - descoberta da versão aprovada pela API oficial `releases/latest`;
