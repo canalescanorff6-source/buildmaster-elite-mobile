@@ -11,7 +11,7 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: st
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const oldUpdater = fs.readFileSync('tests/fixtures/v27-00-updater-contract.txt', 'utf8');
 
-assert.equal(pkg.version, '27.25.0');
+assert.equal(pkg.version, '27.26.0');
 assert.equal(
   DEFAULT_UPDATE_MANIFEST_URL,
   'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json'
@@ -20,7 +20,7 @@ assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
 // O APK v27.00 continua consultando o mesmo manifesto fixo e aceita o nome
 // versionado. O manifesto agora pode apontar para a release imutável.
-const version = '27.25.0';
+const version = '27.26.0';
 const versionCode = 1352400048;
 const attempt = 2;
 const token = `${versionCode}${String(attempt).padStart(2, '0')}`;
@@ -65,6 +65,6 @@ assert.doesNotMatch(workflow, /gh release upload buildmaster-latest "dist-apk\/\
 assert.doesNotMatch(workflow, /gh release delete|gh api[^\n]+-X DELETE[^\n]+assets/);
 assert.match(workflow, /legacy\['releaseTag'\] = release_tag/);
 assert.match(workflow, /Mesma regra usada pelo APK v27\.00 já instalado/);
-assert.match(workflow, /Canal direto aprovado/);
+assert.match(workflow, /Ponte antiga aprovada|Validar canal independente publicamente/);
 
-console.log('✓ v27.25: URL fixa da v27.00, APK imutável único e ativação atômica do manifesto aprovados.');
+console.log('✓ v27.26: URL fixa da v27.00, APK imutável único e ativação atômica do manifesto aprovados.');

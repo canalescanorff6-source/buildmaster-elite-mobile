@@ -1,4 +1,4 @@
-name: Gerar APK v27.25 e publicar atualização automática direta
+name: Gerar APK v27.26 e publicar atualização automática em três canais
 
 on:
   workflow_dispatch:
@@ -64,7 +64,7 @@ jobs:
           major, minor, patch = [int(part) for part in version.split('.')[:3]]
           run = max(1, int(os.environ['RUN_NUMBER'])) % 10000
           attempt = max(1, int(os.environ['RUN_ATTEMPT']))
-          version_code = major * 50_000_000 + minor * 100_000 + patch * 10_000 + run
+          version_code = major * 50_000_000 + minor * 1_000_000 + patch * 10_000 + (run % 1000) * 10 + min(attempt, 9)
           # O token do nome inclui a tentativa. Assim, "Re-run jobs" nunca sobrescreve
           # um APK que já pode estar em cache no GitHub ou no aparelho.
           asset_token = f'{version_code}{attempt:02d}'
@@ -140,6 +140,7 @@ jobs:
           NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
           NEXT_PUBLIC_BUILDMASTER_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: ${{ env.BUILDMASTER_VERSION }}
+          NEXT_PUBLIC_BUILDMASTER_UPDATE_PRIMARY_URL: https://raw.githubusercontent.com/${{ github.repository }}/buildmaster-update/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL: https://github.com/${{ github.repository }}/releases/download/buildmaster-latest/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_UPDATE_RELEASE_API_URL: https://api.github.com/repos/${{ github.repository }}/releases/latest
           NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
@@ -158,6 +159,8 @@ jobs:
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_URL" out || { echo '::error::A URL real do Supabase não entrou no app.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_ANON_KEY" out || { echo '::error::A chave pública real não entrou no app.'; exit 1; }
           grep -RqsF 'update-manifest.json' out || { echo '::error::O canal de atualização não entrou no build.'; exit 1; }
+          grep -RqsF "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/buildmaster-update/update-manifest.json" out || { echo '::error::O canal independente raw não entrou no build.'; exit 1; }
+          grep -RqsF "https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json" out || { echo '::error::A ponte para versões antigas não entrou no build.'; exit 1; }
           grep -RqsF "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" out || { echo '::error::A API latest não entrou no build.'; exit 1; }
 
       - name: Criar projeto Android
@@ -301,11 +304,14 @@ jobs:
             'channel': 'stable',
             'updateType': 'apk',
             'notes': [
-              'O canal fixo é a rota principal e não depende da API releases/latest.',
-              'A API Latest permanece disponível somente como rota automática de reserva.',
-              'O manifesto fixo aponta diretamente para o APK da release imutável.',
+              'Um canal independente em raw.githubusercontent.com é a rota principal.',
+              'A ponte buildmaster-latest mantém compatibilidade com APKs antigos.',
+              'A API Latest permanece como terceira rota automática de reserva.',
+              'Todas as rotas apontam para o mesmo APK da release imutável.',
               'O APK é publicado uma única vez e nunca é sobrescrito.',
               'O APK público é baixado e validado antes de o manifesto ser ativado.',
+              'O app compara todos os manifestos válidos e escolhe sempre o maior versionCode.',
+              'Detecção, download e abertura do instalador podem iniciar automaticamente.',
               'Recuperação em três rodadas no app, além das tentativas do downloader nativo.',
               'Download sem cache com validação de tamanho, SHA-256, pacote, versão e assinatura.',
               'O botão Atualizar aplicativo baixa e abre o instalador sem download manual pelo GitHub.'
@@ -338,13 +344,15 @@ jobs:
               json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Automática Direta
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Automática em Três Canais
 
-          - O manifesto fixo é a rota principal e não depende da API Latest do GitHub.
-          - A API Latest permanece como rota de reserva automática.
-          - O manifesto fixo aponta diretamente para o APK da release imutável.
+          - O canal independente raw é a rota principal e não depende do estado visual de Releases.
+          - A ponte buildmaster-latest continua atendendo APKs antigos.
+          - A API Latest permanece como terceira rota de reserva automática.
+          - O app compara as rotas válidas e usa o maior versionCode publicado.
           - O APK é publicado uma única vez, validado publicamente e nunca sobrescrito.
-          - Atualização pelo próprio botão do aplicativo, sem baixar APK manualmente.
+          - Verificação, download e abertura do instalador automáticos quando a permissão Android já estiver liberada.
+          - Sem baixar APK manualmente pelo GitHub.
           - Verificação de tamanho, SHA-256, pacote, versionCode, versão e assinatura.
           - Histórico técnico e diagnóstico local continuam disponíveis na Central de Atualizações.
           NOTES
@@ -429,6 +437,85 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs verify-release/immutable.apk
           "$AAPT" dump badging verify-release/immutable.apk | head -n 1 | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::versionCode imutável incorreto.'; exit 1; }
 
+      - name: Publicar canal independente na branch buildmaster-update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CHANNEL_BRANCH=buildmaster-update
+          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$CHANNEL_BRANCH" >/dev/null 2>&1; then
+            echo "Criando branch dedicada $CHANNEL_BRANCH a partir de $GITHUB_SHA..."
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/heads/$CHANNEL_BRANCH" \
+              -f sha="$GITHUB_SHA" >/dev/null
+          fi
+
+          CONTENT=$(base64 -w0 "dist-apk/$MANIFEST_ASSET_NAME")
+          EXISTING_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/update-manifest.json?ref=$CHANNEL_BRANCH" --jq '.sha' 2>/dev/null || true)
+          for attempt in 1 2 3; do
+            if [ -n "$EXISTING_SHA" ]; then
+              if gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update-manifest.json" \
+                -f message="Ativar canal automático v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE" \
+                -f content="$CONTENT" \
+                -f branch="$CHANNEL_BRANCH" \
+                -f sha="$EXISTING_SHA" >/dev/null; then
+                break
+              fi
+            else
+              if gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update-manifest.json" \
+                -f message="Criar canal automático v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE" \
+                -f content="$CONTENT" \
+                -f branch="$CHANNEL_BRANCH" >/dev/null; then
+                break
+              fi
+            fi
+            test "$attempt" -lt 3 || { echo '::error::Não foi possível publicar o canal independente.'; exit 1; }
+            sleep $((attempt * 5))
+            EXISTING_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/update-manifest.json?ref=$CHANNEL_BRANCH" --jq '.sha' 2>/dev/null || true)
+          done
+
+      - name: Validar canal independente publicamente
+        run: |
+          RAW_MANIFEST_URL="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/buildmaster-update/update-manifest.json"
+          ready=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            rm -f verify-release/raw-manifest.json
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+              --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache' \
+              --connect-timeout 20 --max-time 90 \
+              "$RAW_MANIFEST_URL?verify=$APK_PUBLICATION_ID&attempt=$attempt&ts=$(date +%s%N)" \
+              -o verify-release/raw-manifest.json; then
+              if python - <<'PY'
+          import json, os, pathlib, sys
+          try:
+              manifest = json.loads(pathlib.Path('verify-release/raw-manifest.json').read_text(encoding='utf-8'))
+              assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
+              assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
+              assert manifest['releaseTag'] == os.environ['RELEASE_TAG']
+              assert manifest['assetName'] == os.environ['APK_ASSET_NAME']
+              assert manifest['checksum'] == pathlib.Path('verify-release/expected-sha.txt').read_text().strip()
+              assert manifest['sizeBytes'] == int(pathlib.Path('verify-release/expected-size.txt').read_text().strip())
+              assert f'/releases/download/{os.environ["RELEASE_TAG"]}/{os.environ["APK_ASSET_NAME"]}' in manifest['apkUrl']
+              pathlib.Path('verify-release/raw-final-apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
+          except Exception as exc:
+              print(f'O canal raw ainda não propagou: {exc}')
+              sys.exit(1)
+          PY
+              then ready=1; break; fi
+            fi
+            sleep $((attempt * 6))
+          done
+          test "$ready" = 1 || { echo '::error::O canal independente não ficou disponível publicamente.'; exit 1; }
+
+          RAW_FINAL_APK_URL=$(cat verify-release/raw-final-apk-url.txt)
+          curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
+            --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache' \
+            --connect-timeout 30 --max-time 300 \
+            "$RAW_FINAL_APK_URL?rawVerify=$APK_PUBLICATION_ID-$(date +%s%N)" \
+            -o verify-release/raw-final.apk
+          test "$(sha256sum verify-release/raw-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::O canal independente baixou um APK diferente do manifesto.'; exit 1; }
+          test "$(stat -c%s verify-release/raw-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::O canal independente recebeu tamanho diferente do manifesto.'; exit 1; }
+
       - name: Preparar endereço fixo do canal automático
         env:
           GH_TOKEN: ${{ github.token }}
@@ -496,11 +583,11 @@ jobs:
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache' \
             --connect-timeout 30 --max-time 300 \
-            "$LEGACY_FINAL_APK_URL&finalVerify=$APK_PUBLICATION_ID-$(date +%s%N)" \
+            "$LEGACY_FINAL_APK_URL?finalVerify=$APK_PUBLICATION_ID-$(date +%s%N)" \
             -o verify-release/legacy-final.apk
           test "$(sha256sum verify-release/legacy-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::A ponte automática baixou um APK diferente do manifesto.'; exit 1; }
           test "$(stat -c%s verify-release/legacy-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::A ponte automática recebeu tamanho diferente do manifesto.'; exit 1; }
-          echo 'Canal direto aprovado: o manifesto fixo aponta para o APK imutável e a API Latest ficou apenas como reserva.'
+          echo 'Ponte antiga aprovada: o manifesto fixo aponta para o mesmo APK imutável do canal independente.'
 
       - name: Ativar release nova como Latest
         env:
@@ -513,5 +600,7 @@ jobs:
           echo "Versão: $BUILDMASTER_VERSION"
           echo "versionCode: $ANDROID_VERSION_CODE"
           echo "APK imutável: $APK_ASSET_NAME"
-          echo "Canal principal: buildmaster-latest/update-manifest.json -> release imutável"
-          echo "Ordem aplicada: APK imutável publicado -> APK público validado -> manifesto fixo ativado -> download final validado."
+          echo "Canal principal: buildmaster-update/update-manifest.json (raw) -> release imutável"
+          echo "Ponte antiga: buildmaster-latest/update-manifest.json -> mesma release imutável"
+          echo "Reserva: API releases/latest"
+          echo "Ordem aplicada: APK imutável -> validação pública -> canal raw -> ponte antiga -> Latest."

@@ -1,4 +1,4 @@
-BUILDMASTER ELITE TÁTICO v27.25 — CRIAR CONTAS RESTAURADO
+BUILDMASTER ELITE TÁTICO v27.26 — CRIAR CONTAS RESTAURADO
 
 O que mudou:
 
@@ -12,7 +12,7 @@ Para publicar:
 
 - Substitua todo o conteúdo do repositório, incluindo a pasta .github.
 - Faça um novo commit na branch main.
-- Aguarde o workflow Gerar APK v27.25 terminar em verde.
+- Aguarde o workflow Gerar APK v27.26 terminar em verde.
 - No aplicativo instalado, use Ajustes > Atualizações > Verificar agora > Atualizar aplicativo.
 
 Depois da atualização, entre com a conta administradora e abra:

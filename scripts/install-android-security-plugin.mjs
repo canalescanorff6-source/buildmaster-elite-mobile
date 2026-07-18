@@ -324,7 +324,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
             connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
             connection.setRequestProperty("Pragma", "no-cache");
             connection.setRequestProperty("Connection", "close");
-            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.21 Android");
+            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.26 Android");
             int status = connection.getResponseCode();
             if (status >= 300 && status < 400) {
                 String location = connection.getHeaderField("Location");
@@ -552,7 +552,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 String downloadedName = archive.versionName == null ? "" : archive.versionName;
                 if (expectedVersionName != null && !expectedVersionName.equals(downloadedName)) throw new SecurityException("A versão do APK não confere com o manifesto.");
                 if (!signaturesCompatible(getContext().getPackageManager(), getContext().getPackageName(), archive)) {
-                    throw new SignatureException("A assinatura do APK é diferente da versão instalada. Faça uma instalação manual única da versão oficial.");
+                    throw new SignatureException("A assinatura do APK é diferente da versão instalada. A atualização foi bloqueada para preservar o aplicativo e os dados.");
                 }
 
                 emitProgress("ready", 100, total, expectedTotal);
@@ -566,7 +566,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 call.resolve(result);
             } catch (Exception error) {
                 if (partial != null) partial.delete();
-                if (apk != null && !(error instanceof SignatureException)) apk.delete();
+                if (apk != null) apk.delete();
                 call.reject("Atualização bloqueada: " + (error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage()), error);
             } finally {
                 call.setKeepAlive(false);

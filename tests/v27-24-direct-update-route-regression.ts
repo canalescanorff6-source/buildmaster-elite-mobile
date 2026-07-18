@@ -35,7 +35,7 @@ assert.match(workflow, /legacy\['releaseTag'\] = release_tag/);
 assert.match(workflow, /releases\/download\/\{release_tag\}\/\{asset_name\}/);
 assert.doesNotMatch(workflow, /gh release upload buildmaster-latest "dist-apk\/\$APK_ASSET_NAME"/);
 assert.match(workflow, /A release fixa guarda somente o manifesto ativo/);
-assert.match(workflow, /Canal direto aprovado/);
-assert.match(workflow, /API Latest ficou apenas como reserva/);
+assert.match(workflow, /Ponte antiga aprovada|Validar canal independente publicamente/);
+assert.match(workflow, /Reserva: API releases\/latest|API Latest permanece como terceira rota/);
 
 console.log('✓ v27.24: canal fixo direto como rota principal, APK imutável único e API Latest como reserva aprovados.');

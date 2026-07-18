@@ -1,7 +1,9 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import {
+  DEFAULT_UPDATE_PRIMARY_URL,
   DEFAULT_UPDATE_MANIFEST_URL,
   DEFAULT_UPDATE_RELEASE_API_URL,
+  compareVersions,
   isTrustedManifestUrl,
   isTrustedReleaseApiUrl,
   selectManifestAssetFromRelease,
@@ -9,15 +11,24 @@ import {
   type AppUpdateManifest
 } from '@/lib/appUpdates';
 
-export type UpdateChannelSource = 'release-api' | 'legacy-manifest';
+export type UpdateChannelSource = 'primary-channel' | 'legacy-manifest' | 'release-api';
 
-export type UpdateManifestFetchResult = {
+export type UpdateManifestCandidate = {
   payload: unknown;
   manifest: AppUpdateManifest;
   source: UpdateChannelSource;
   endpoint: string;
+};
+
+export type UpdateManifestFetchResult = UpdateManifestCandidate & {
   checkedAt: string;
   previousErrors: string[];
+  candidates: Array<{
+    source: UpdateChannelSource;
+    endpoint: string;
+    version: string;
+    versionCode: number;
+  }>;
 };
 
 function parseJsonPayload(payload: unknown): unknown {
@@ -52,8 +63,8 @@ async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): 
       const native = await CapacitorHttp.get({
         url: target,
         headers: nativeHeaders,
-        connectTimeout: 30_000,
-        readTimeout: 60_000,
+        connectTimeout: 25_000,
+        readTimeout: 45_000,
         responseType: 'text'
       });
       if (native.status >= 200 && native.status < 300) return parseJsonPayload(native.data as unknown);
@@ -74,58 +85,102 @@ async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): 
   return parseJsonPayload(await response.text());
 }
 
+function sourcePriority(source: UpdateChannelSource): number {
+  if (source === 'primary-channel') return 3;
+  if (source === 'release-api') return 2;
+  return 1;
+}
+
 /**
- * A rota principal é o manifesto fixo do canal automático. Ela não depende da
- * API do GitHub, evita limite de requisições e sempre aponta para um APK de
- * release imutável. A API releases/latest fica somente como rota de reserva.
+ * Seleciona a publicação mais nova entre todas as rotas válidas. Uma rota que
+ * responda com um manifesto antigo não pode esconder uma versão mais nova
+ * publicada em outra rota.
+ */
+export function chooseBestUpdateCandidate(candidates: UpdateManifestCandidate[]): UpdateManifestCandidate | null {
+  if (!candidates.length) return null;
+  return [...candidates].sort((left, right) => {
+    const codeDelta = right.manifest.versionCode - left.manifest.versionCode;
+    if (codeDelta !== 0) return codeDelta;
+    const versionDelta = compareVersions(right.manifest.version, left.manifest.version);
+    if (versionDelta !== 0) return versionDelta;
+    const dateDelta = Date.parse(right.manifest.publishedAt) - Date.parse(left.manifest.publishedAt);
+    if (dateDelta !== 0) return dateDelta;
+    return sourcePriority(right.source) - sourcePriority(left.source);
+  })[0] ?? null;
+}
+
+async function loadDirectManifest(source: 'primary-channel' | 'legacy-manifest', endpoint: string): Promise<UpdateManifestCandidate> {
+  const payload = await fetchJsonUrl(endpoint);
+  const manifest = validateUpdateManifest(payload);
+  if (!manifest) throw new Error(source === 'primary-channel'
+    ? 'O manifesto do canal principal é inválido.'
+    : 'O manifesto de compatibilidade é inválido.');
+  return { payload, manifest, source, endpoint };
+}
+
+async function loadLatestReleaseManifest(): Promise<UpdateManifestCandidate> {
+  const release = await fetchJsonUrl(DEFAULT_UPDATE_RELEASE_API_URL, {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  });
+  const asset = selectManifestAssetFromRelease(release);
+  if (!asset) throw new Error('A release mais recente não contém um manifesto oficial.');
+  const payload = await fetchJsonUrl(asset.url);
+  const manifest = validateUpdateManifest(payload);
+  if (!manifest) throw new Error('O manifesto da release mais recente é inválido.');
+  if (manifest.releaseTag && manifest.releaseTag !== asset.tag) {
+    throw new Error('O manifesto não pertence à release indicada pelo GitHub.');
+  }
+  return { payload, manifest, source: 'release-api', endpoint: asset.url };
+}
+
+/**
+ * Consulta três rotas independentes e escolhe a publicação com maior
+ * versionCode. A rota principal usa raw.githubusercontent.com; a release fixa
+ * mantém compatibilidade com APKs antigos; a API Latest é a terceira defesa.
  */
 export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> {
-  const errors: string[] = [];
+  const jobs: Array<Promise<{ candidate?: UpdateManifestCandidate; error?: string }>> = [];
 
-  if (isTrustedManifestUrl()) {
-    try {
-      const payload = await fetchJsonUrl(DEFAULT_UPDATE_MANIFEST_URL);
-      const manifest = validateUpdateManifest(payload);
-      if (!manifest) throw new Error('O manifesto direto do canal automático é inválido.');
-      return {
-        payload,
-        manifest,
-        source: 'legacy-manifest',
-        endpoint: DEFAULT_UPDATE_MANIFEST_URL,
-        checkedAt: new Date().toISOString(),
-        previousErrors: errors
-      };
-    } catch (cause) {
-      errors.push(`Canal direto: ${cause instanceof Error ? cause.message : String(cause)}`);
-    }
+  if (isTrustedManifestUrl(DEFAULT_UPDATE_PRIMARY_URL)) {
+    jobs.push(loadDirectManifest('primary-channel', DEFAULT_UPDATE_PRIMARY_URL)
+      .then((candidate) => ({ candidate }))
+      .catch((cause) => ({ error: `Canal principal: ${cause instanceof Error ? cause.message : String(cause)}` })));
+  }
+
+  if (isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL)) {
+    jobs.push(loadDirectManifest('legacy-manifest', DEFAULT_UPDATE_MANIFEST_URL)
+      .then((candidate) => ({ candidate }))
+      .catch((cause) => ({ error: `Ponte de compatibilidade: ${cause instanceof Error ? cause.message : String(cause)}` })));
   }
 
   if (isTrustedReleaseApiUrl()) {
-    try {
-      const release = await fetchJsonUrl(DEFAULT_UPDATE_RELEASE_API_URL, {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-      });
-      const asset = selectManifestAssetFromRelease(release);
-      if (!asset) throw new Error('A release mais recente não contém um manifesto oficial.');
-      const payload = await fetchJsonUrl(asset.url);
-      const manifest = validateUpdateManifest(payload);
-      if (!manifest) throw new Error('O manifesto da release mais recente é inválido.');
-      if (manifest.releaseTag && manifest.releaseTag !== asset.tag) {
-        throw new Error('O manifesto não pertence à release indicada pelo GitHub.');
-      }
-      return {
-        payload,
-        manifest,
-        source: 'release-api',
-        endpoint: asset.url,
-        checkedAt: new Date().toISOString(),
-        previousErrors: errors
-      };
-    } catch (cause) {
-      errors.push(`Release reserva: ${cause instanceof Error ? cause.message : String(cause)}`);
-    }
+    jobs.push(loadLatestReleaseManifest()
+      .then((candidate) => ({ candidate }))
+      .catch((cause) => ({ error: `Release de reserva: ${cause instanceof Error ? cause.message : String(cause)}` })));
   }
 
-  throw new Error(errors.filter(Boolean).join(' | ') || 'Nenhum canal oficial de atualização está configurado neste APK.');
+  if (!jobs.length) throw new Error('Nenhum canal oficial de atualização está configurado neste APK.');
+
+  const settled = await Promise.all(jobs);
+  const candidates = settled.flatMap((item) => item.candidate ? [item.candidate] : []);
+  const errors = settled.flatMap((item) => item.error ? [item.error] : []);
+  const selected = chooseBestUpdateCandidate(candidates);
+  if (!selected) throw new Error(errors.filter(Boolean).join(' | ') || 'Nenhuma rota oficial retornou um manifesto válido.');
+
+  const staleRoutes = candidates
+    .filter((candidate) => candidate !== selected && candidate.manifest.versionCode < selected.manifest.versionCode)
+    .map((candidate) => `${candidate.source} respondeu code ${candidate.manifest.versionCode} e foi ignorada por estar atrás do code ${selected.manifest.versionCode}.`);
+
+  return {
+    ...selected,
+    checkedAt: new Date().toISOString(),
+    previousErrors: [...errors, ...staleRoutes],
+    candidates: candidates.map((candidate) => ({
+      source: candidate.source,
+      endpoint: candidate.endpoint,
+      version: candidate.manifest.version,
+      versionCode: candidate.manifest.versionCode
+    }))
+  };
 }

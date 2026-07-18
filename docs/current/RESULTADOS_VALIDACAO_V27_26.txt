@@ -1,0 +1,27 @@
+BuildMaster Elite Tático v27.26.0 — Resultados finais
+Data: 2026-07-18
+
+APROVADO
+- npm ci com package-lock travado
+- TypeScript estrito (sem emitir arquivos)
+- todos os 65 testes de regressão do projeto, executados em blocos
+- teste específico v27.26 após a correção final da URL pública
+- exportação estática Next.js para o APK
+- ausência de manifesto local ativo/obsoleto
+- criação e sincronização do projeto Android pelo Capacitor
+- geração e análise sintática do plugin Java nativo
+- Manifest Android: REQUEST_INSTALL_PACKAGES, FileProvider, cleartext bloqueado e allowBackup=false
+- YAML do workflow
+- sintaxe bash dos 31 blocos run do workflow
+- varredura por chaves privadas, tokens, keystores e APKs indevidos no pacote fonte
+
+LIMITAÇÃO DO AMBIENTE LOCAL
+A compilação Gradle assinada não foi concluída localmente porque o ambiente não
+conseguiu acessar services.gradle.org e não tinha o Gradle/Android SDK em cache.
+A geração final assinada é responsabilidade do GitHub Actions, onde o secret
+ANDROID_SIGNING_BUNDLE e o SDK Android estão disponíveis.
+
+PROVA FINAL EXTERNA NECESSÁRIA
+- workflow da main concluído em verde;
+- instalação/atualização testada no aparelho real;
+- mesma chave de assinatura do APK atualmente instalado.

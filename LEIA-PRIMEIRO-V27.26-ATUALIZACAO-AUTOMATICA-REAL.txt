@@ -1,0 +1,41 @@
+BUILDMASTER ELITE TÁTICO v27.26.0
+ATUALIZAÇÃO AUTOMÁTICA REAL — TRÊS CANAIS
+
+O projeto foi auditado por inteiro, com foco especial no caminho completo da atualização:
+manifesto -> descoberta -> download -> validações -> permissão Android -> instalador.
+
+O que foi corrigido:
+- três rotas oficiais são consultadas em paralelo;
+- o app escolhe sempre o maior versionCode válido, e não a primeira resposta;
+- uma rota antiga, lenta ou fora do ar não esconde uma publicação mais nova;
+- o canal principal usa a branch buildmaster-update em raw.githubusercontent.com;
+- a ponte buildmaster-latest continua atendendo versões antigas já instaladas;
+- a API releases/latest funciona como terceira reserva;
+- cada APK é imutável, tem nome exclusivo e nunca é sobrescrito;
+- manifesto e APK são conferidos publicamente antes de o workflow terminar;
+- o app cria uma cópia local de recuperação antes da atualização;
+- na v27.26, a verificação, o download e a abertura do instalador começam automaticamente;
+- tamanho, SHA-256, cabeçalho APK, pacote, versão, versionCode e assinatura são validados;
+- qualquer APK recusado é apagado do cache;
+- o manifesto local antigo e inseguro foi removido.
+
+IMPORTANTE SOBRE A PRIMEIRA TRANSIÇÃO
+A versão antiga que já está instalada não pode receber código novo antes de ser atualizada.
+Por isso, ela poderá detectar a v27.26 pela ponte antiga e baixar pelo botão do próprio app,
+sem entrar no GitHub e sem baixar APK manualmente. Depois que a v27.26 estiver instalada,
+as próximas versões passam a ser detectadas, baixadas e abertas automaticamente.
+
+O Android continuará exigindo duas autorizações do sistema:
+1. liberar “Instalar apps desconhecidos” para o BuildMaster na primeira vez;
+2. tocar em “Atualizar” na tela final do instalador.
+Aplicativos Android comuns não podem remover essas confirmações.
+
+PARA PUBLICAR
+1. Extraia este pacote.
+2. Substitua todo o conteúdo do repositório, inclusive a pasta oculta .github.
+3. Faça um novo commit na branch main.
+4. Aguarde o workflow “Gerar APK v27.26 e publicar atualização automática em três canais” ficar verde.
+5. Não baixe APK em Releases. Use a Central de Atualizações do app instalado.
+
+A chave de assinatura ANDROID_SIGNING_BUNDLE precisa ser a mesma usada no APK atualmente instalado.
+Se a chave for diferente, o Android bloqueará qualquer atualização por cima, independentemente do código.

@@ -17,9 +17,9 @@ const css = fs.readFileSync('src/app/design-system-v2723.css', 'utf8');
 const globals = fs.readFileSync('src/app/globals.css', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 
-assert.equal(pkg.version, '27.25.0');
-assert.equal(APP_RELEASE_VERSION, '27.25.0');
-assert.equal(APP_NATIVE_VERSION, '27.25.0');
+assert.equal(pkg.version, '27.26.0');
+assert.equal(APP_RELEASE_VERSION, '27.26.0');
+assert.equal(APP_NATIVE_VERSION, '27.26.0');
 assert.match(pkg.scripts['test:all'], /test:v2723/);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
@@ -42,12 +42,12 @@ assert.match(panel, /for \(let round = 1; round <= 3; round \+= 1\)/);
 assert.match(panel, /Copiar diagnóstico/);
 assert.match(panel, /Limpar somente o atualizador/);
 assert.match(panel, /buildmaster:update-available/);
-assert.match(panel, /O BuildMaster detecta e baixa o APK sozinho/);
+assert.match(panel, /O BuildMaster detecta, escolhe a rota mais nova, baixa e valida o APK sozinho/);
 
 assert.match(globals, /design-system-v2723\.css/);
 assert.match(css, /update-diagnostic-panel/);
 assert.match(css, /update-audit-list/);
-assert.match(workflow, /v27\.25/);
+assert.match(workflow, /v27\.26/);
 assert.match(workflow, /diagnóstico|histórico técnico/i);
 
-console.log('✓ v27.25: diagnóstico do atualizador, histórico técnico, recuperação em três rodadas e interface responsiva aprovados.');
+console.log('✓ v27.26: diagnóstico do atualizador, histórico técnico, recuperação em três rodadas e interface responsiva aprovados.');

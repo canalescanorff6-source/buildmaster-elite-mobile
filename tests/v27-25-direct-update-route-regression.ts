@@ -14,28 +14,27 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.25.0');
-assert.equal(APP_RELEASE_VERSION, '27.25.0');
-assert.equal(APP_NATIVE_VERSION, '27.25.0');
+assert.equal(pkg.version, '27.26.0');
+assert.equal(APP_RELEASE_VERSION, '27.26.0');
+assert.equal(APP_NATIVE_VERSION, '27.26.0');
 assert.match(pkg.scripts['test:all'], /test:v2725/);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
 
-const directPosition = channel.indexOf('if (isTrustedManifestUrl())');
-const apiPosition = channel.indexOf('if (isTrustedReleaseApiUrl())');
-assert.ok(directPosition >= 0 && apiPosition > directPosition, 'O manifesto fixo deve ser consultado antes da API Latest.');
-assert.match(channel, /A rota principal é o manifesto fixo/);
-assert.match(channel, /Release reserva:/);
-assert.match(channel, /Canal direto:/);
-assert.match(panel, /Canal automático direto/);
-assert.match(panel, /Release imutável de reserva/);
+assert.match(channel, /primary-channel/);
+assert.match(channel, /legacy-manifest/);
+assert.match(channel, /release-api/);
+assert.match(channel, /chooseBestUpdateCandidate/);
+assert.match(panel, /Canal principal independente/);
+assert.match(panel, /Ponte para versões antigas/);
 
-assert.match(workflow, /Gerar APK v27\.25 e publicar atualização automática direta/);
+assert.match(workflow, /Gerar APK v27\.26 e publicar atualização automática em três canais/);
 assert.match(workflow, /legacy\['releaseTag'\] = release_tag/);
 assert.match(workflow, /releases\/download\/\{release_tag\}\/\{asset_name\}/);
 assert.doesNotMatch(workflow, /gh release upload buildmaster-latest "dist-apk\/\$APK_ASSET_NAME"/);
 assert.match(workflow, /A release fixa guarda somente o manifesto ativo/);
-assert.match(workflow, /Canal direto aprovado/);
-assert.match(workflow, /API Latest ficou apenas como reserva/);
+assert.match(workflow, /Validar canal independente publicamente/);
+assert.match(workflow, /Validar a ponte automática da v27\.00/);
+assert.match(workflow, /API releases\/latest/);
 
-console.log('✓ v27.25: canal fixo direto como rota principal, APK imutável único e API Latest como reserva aprovados.');
+console.log('✓ v27.26: canal fixo direto como rota principal, APK imutável único e API Latest como reserva aprovados.');

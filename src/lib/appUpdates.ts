@@ -1,10 +1,14 @@
-export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.25.0';
-export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.25.0';
+export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.26.0';
+export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.26.0';
 export const CURRENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILDMASTER_BUILD_ID || 'local-build';
 
 const TRUSTED_OWNER = 'canalescanorff6-source';
 const TRUSTED_REPOSITORY = 'buildmaster-elite-mobile';
 const TRUSTED_REPOSITORY_PATH = `${TRUSTED_OWNER}/${TRUSTED_REPOSITORY}`;
+const TRUSTED_CHANNEL_BRANCH = 'buildmaster-update';
+
+export const DEFAULT_UPDATE_PRIMARY_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_PRIMARY_URL
+  || `https://raw.githubusercontent.com/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_CHANNEL_BRANCH}/update-manifest.json`;
 
 export const DEFAULT_UPDATE_MANIFEST_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL
   || `https://github.com/${TRUSTED_REPOSITORY_PATH}/releases/download/buildmaster-latest/update-manifest.json`;
@@ -62,18 +66,6 @@ export type GithubReleaseDescriptor = {
   assets?: GithubReleaseAsset[];
 };
 
-function trustedRepositoryFromManifestUrl(): string | null {
-  try {
-    const url = new URL(DEFAULT_UPDATE_MANIFEST_URL);
-    if (url.protocol !== 'https:' || url.hostname !== 'github.com') return null;
-    const parts = url.pathname.split('/').filter(Boolean);
-    if (parts.length < 2) return null;
-    return `${parts[0]}/${parts[1]}`.toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
 function parseReleaseDownloadPath(value: string): { repository: string; tag: string; fileName: string } | null {
   try {
     const url = new URL(value);
@@ -95,10 +87,21 @@ function isTrustedReleaseTag(tag: string): boolean {
     || /^buildmaster-v\d+\.\d+\.\d+-\d+(?:-\d{2})?$/i.test(tag);
 }
 
-export function isTrustedManifestUrl(value = DEFAULT_UPDATE_MANIFEST_URL): boolean {
+function isTrustedRawManifestUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:'
+      && url.hostname === 'raw.githubusercontent.com'
+      && url.pathname.toLowerCase() === `/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_CHANNEL_BRANCH}/update-manifest.json`;
+  } catch {
+    return false;
+  }
+}
+
+export function isTrustedManifestUrl(value = DEFAULT_UPDATE_PRIMARY_URL): boolean {
+  if (isTrustedRawManifestUrl(value)) return true;
   const parsed = parseReleaseDownloadPath(value);
-  const repository = trustedRepositoryFromManifestUrl();
-  if (!parsed || !repository || parsed.repository !== repository || !isTrustedReleaseTag(parsed.tag)) return false;
+  if (!parsed || parsed.repository !== TRUSTED_REPOSITORY_PATH || !isTrustedReleaseTag(parsed.tag)) return false;
   return /^update-manifest(?:-v\d+\.\d+\.\d+-\d+)?\.json$/i.test(parsed.fileName);
 }
 
@@ -116,8 +119,7 @@ export function isTrustedReleaseApiUrl(value = DEFAULT_UPDATE_RELEASE_API_URL): 
 export function isTrustedApkUrl(value: unknown): value is string {
   if (typeof value !== 'string' || !value.trim()) return false;
   const parsed = parseReleaseDownloadPath(value);
-  const repository = trustedRepositoryFromManifestUrl();
-  if (!parsed || !repository || parsed.repository !== repository || !isTrustedReleaseTag(parsed.tag)) return false;
+  if (!parsed || parsed.repository !== TRUSTED_REPOSITORY_PATH || !isTrustedReleaseTag(parsed.tag)) return false;
   return /^BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk$/i.test(parsed.fileName)
     || parsed.fileName === 'BuildMaster-Elite-Tatico-latest.apk';
 }

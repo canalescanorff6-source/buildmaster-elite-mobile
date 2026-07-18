@@ -1,5 +1,20 @@
 # Changelog
 
+## 27.26.0 — Atualização Automática Real em Três Canais
+
+- auditoria integral da base enviada e reconstrução do fluxo de atualização;
+- consulta paralela do canal raw, ponte antiga e API Latest;
+- seleção obrigatória do maior `versionCode` válido;
+- download e abertura automática do instalador na v27.26;
+- permissão Android guiada e continuação ao retornar ao app;
+- cópia local de recuperação automática, sem exportação manual;
+- APK imutável único, manifesto ativado somente após validação pública;
+- validação de tamanho, SHA-256, pacote, versão, `versionCode` e assinatura;
+- exclusão de qualquer APK rejeitado do cache;
+- remoção do manifesto local obsoleto;
+- correção da URL final de validação da ponte antiga;
+- novo teste de regressão `test:v2726`.
+
 ## 27.22.0 — Atualizador Definitivo
 
 - release imutável exclusiva por execução e tentativa;

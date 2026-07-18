@@ -1,24 +1,23 @@
-# BuildMaster Elite Tático v27.25 — Atualização Automática Direta
+# BuildMaster Elite Tático v27.26
 
-A v27.25 corrige a falha da primeira rota do GitHub. O aplicativo agora consulta primeiro o manifesto fixo do canal automático, que aponta diretamente para um APK de release imutável. A API `releases/latest` continua disponível, mas somente como rota de reserva.
+Aplicativo Android/Next.js para criação de fichas, análise de jogadores, gestão tática, Cofre, contas/licenças e leitura de prints do eFootball.
 
-## O que mudou
+## Atualização automática em três canais
 
-- Canal direto como rota principal, sem depender da API do GitHub.
-- APK publicado uma única vez na release imutável.
-- Manifesto fixo compatível com versões antigas.
-- Validação pública antes e depois da ativação do manifesto.
-- SHA-256, tamanho, pacote, versionCode, versão e assinatura conferidos.
-- Diagnóstico e histórico técnico mantidos na Central de Atualizações.
+A v27.26 compara simultaneamente o canal independente `buildmaster-update`, a ponte `buildmaster-latest` para versões antigas e a API `releases/latest`. O app escolhe sempre o manifesto com o maior `versionCode`, cria uma cópia local de recuperação, baixa o APK, valida integridade/pacote/versão/assinatura e abre o instalador Android automaticamente quando a permissão estiver liberada.
 
-## Validação local
+O Android ainda exige a liberação inicial de “Instalar apps desconhecidos” e o toque final em “Atualizar”.
+
+Leia primeiro: `LEIA-PRIMEIRO-V27.26-ATUALIZACAO-AUTOMATICA-REAL.txt`  
+Relatório: `docs/current/VALIDACAO_V27_26_ATUALIZACAO_AUTOMATICA_REAL.md`
+
+## Comandos principais
 
 ```bash
 npm ci
 npm run typecheck
 npm run test:all
+npm run apk:build-web
 ```
 
-## Publicação
-
-Envie todo o conteúdo para a branch `main`, incluindo a pasta `.github`. O workflow **Gerar APK v27.25 e publicar atualização automática direta** criará e publicará o pacote.
+A geração e assinatura do APK oficial são feitas pelo workflow `.github/workflows/build-apk.yml` com o secret permanente `ANDROID_SIGNING_BUNDLE`.

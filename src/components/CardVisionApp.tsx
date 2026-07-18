@@ -4719,7 +4719,16 @@ export function CardVisionApp() {
   }
 
   async function prepareBackupForUpdate() {
-    await exportPlayersBackup('update');
+    await persistHistoryStore(history);
+    const envelope = createBackupEnvelope(collectFullBackupSections());
+    await runtimePut('builds', 'update-recovery', {
+      createdAt: envelope.exportedAt,
+      dataVersion: APP_DATA_VERSION,
+      account: getActiveAccountIdentity(),
+      envelope
+    });
+    writeAccountStorage('buildmaster_last_update_recovery', envelope.exportedAt);
+    setStatus('Cópia local de recuperação atualizada antes da instalação.');
   }
 
   async function readBackupFile(file: File): Promise<unknown> {
@@ -5738,7 +5747,7 @@ export function CardVisionApp() {
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
-      <UpdateAutoChecker />
+      <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />
       {showSplash && (
         <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
           <div className="splash-premium-shell">
@@ -5769,7 +5778,7 @@ export function CardVisionApp() {
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v27.25</span>
+            <span>Elite Tático v27.26</span>
           </div>
         </button>
 
@@ -6800,7 +6809,7 @@ export function CardVisionApp() {
                         <label><span>Confirmar senha</span><input type="password" autoComplete="new-password" value={backupPasswordConfirm} onChange={(event) => setBackupPasswordConfirm(event.target.value)} placeholder="Repita a mesma senha" /></label>
                       </div>
                       <label className="update-toggle"><input type="checkbox" checked={rememberBackupPassword} onChange={(event) => setRememberBackupPassword(event.target.checked)} /><span>Guardar no cofre seguro do Android neste aparelho</span></label>
-                      <small>{backupPasswordReady ? 'Senha disponível no armazenamento seguro.' : 'Defina a senha antes de exportar, restaurar ou atualizar.'}</small>
+                      <small>{backupPasswordReady ? 'Senha disponível no armazenamento seguro.' : 'Defina a senha antes de exportar ou restaurar.'}</small>
                     </div>
 
                     <div className="safety-actions-grid backup-final-actions">

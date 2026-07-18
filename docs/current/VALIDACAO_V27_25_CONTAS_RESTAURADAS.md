@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v27.25 — Criação de contas restaurada
+# BuildMaster Elite Tático v27.26 — Criação de contas restaurada
 
 ## Problema identificado
 
@@ -18,7 +18,7 @@ Além disso, os atalhos usavam nomes genéricos como **Conta e usuários** ou **
 - Login comum mostra uma explicação clara de que o perfil está registrado como `user`, e não como `admin`.
 - APK sem configuração do Supabase informa que a área não foi removida e aponta exatamente o que falta no build.
 - Formulário real continua protegido por MFA, preservando a segurança do painel administrativo.
-- Motor de atualização automática da v27.24 foi preservado na v27.25.
+- Motor de atualização automática da v27.24 foi preservado na v27.26.
 
 ## Caminhos para abrir
 
