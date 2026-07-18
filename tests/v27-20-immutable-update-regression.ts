@@ -7,26 +7,27 @@ const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.20.0');
+assert.equal(pkg.version, '27.21.0');
 assert.match(workflow, /RUN_ATTEMPT: \$\{\{ github\.run_attempt \}\}/);
 assert.match(workflow, /asset_token = f'\{version_code\}\{attempt:02d\}'/);
 assert.match(workflow, /APK_PUBLICATION_ID=/);
-assert.match(workflow, /apkUrl': f'https:\/\/github\.com\/\{repo\}\/releases\/download\/buildmaster-latest\/\{asset_name\}\?publication=/);
-assert.doesNotMatch(workflow, /'apkUrl': f'.*BuildMaster-Elite-Tatico-latest\.apk/);
-assert.match(workflow, /gh release upload buildmaster-latest "dist-apk\/\$APK_ASSET_NAME"\n/);
-assert.doesNotMatch(workflow, /gh release upload buildmaster-latest "dist-apk\/\$APK_ASSET_NAME" --clobber/);
-assert.match(workflow, /Validar propagação pública antes do manifesto/);
-assert.match(workflow, /Publicar atalhos e manifesto por último/);
-assert.ok(workflow.indexOf('Validar propagação pública antes do manifesto') < workflow.indexOf('Publicar atalhos e manifesto por último'));
+assert.match(workflow, /release_tag = f'buildmaster-v\{version\}-\{version_code\}-\{attempt:02d\}'/);
+assert.match(workflow, /manifest_asset = f'update-manifest-v\{version\}-\{version_code\}\.json'/);
+assert.match(workflow, /legacy\['apkUrl'\] = f'https:\/\/github\.com\/\{repo\}\/releases\/download\/buildmaster-latest\/\{asset_name\}\?publication=/);
+assert.match(workflow, /Criar release imutável fora do canal ativo/);
+assert.match(workflow, /Verificar release imutável antes de ativar/);
+assert.match(workflow, /Ativar release imutável como a mais recente/);
+assert.match(workflow, /Atualizar canal de compatibilidade para APKs antigos/);
 assert.match(workflow, /Accept-Encoding: identity/);
 assert.match(workflow, /cancel-in-progress: false/);
 
-assert.match(updates, /BuildMaster-Elite-Tatico-v\\d\+\\\.\\d\+\\\.\\d\+-\\d\+-\[a-f0-9\]/i);
+assert.match(updates, /DEFAULT_UPDATE_RELEASE_API_URL/);
+assert.match(updates, /buildmaster-v\\d\+\\\.\\d\+\\\.\\d\+-\\d\+/i);
 assert.match(panel, /evaluateUpdateManifest\(await fetchManifestJson\(\), current, CURRENT_BUILD_ID, ''\)/);
 assert.match(panel, /Nunca instala usando apenas o manifesto guardado/);
 assert.match(nativePlugin, /bmDownloadAttempt=/);
 assert.match(nativePlugin, /connection\.setUseCaches\(false\)/);
 assert.match(nativePlugin, /connection\.setRequestProperty\("Accept-Encoding", "identity"\)/);
-assert.match(nativePlugin, /downloadAttempt <= 3/);
+assert.match(nativePlugin, /MAX_DOWNLOAD_ATTEMPTS = 4/);
 
-console.log('✓ v27.20: APK único por tentativa, pré-validação pública, manifesto por último e download sem cache aprovados.');
+console.log('✓ compatibilidade v27.20: ativo único, sem cache e canal antigo preservado na arquitetura v27.21.');

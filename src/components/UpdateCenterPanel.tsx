@@ -8,8 +8,12 @@ import {
   APP_RELEASE_VERSION,
   CURRENT_BUILD_ID,
   DEFAULT_UPDATE_MANIFEST_URL,
+  DEFAULT_UPDATE_RELEASE_API_URL,
   evaluateUpdateManifest,
   isTrustedManifestUrl,
+  isTrustedReleaseApiUrl,
+  selectManifestAssetFromRelease,
+  validateUpdateManifest,
   type AppUpdateManifest,
   type InstalledAppInfo
 } from '@/lib/appUpdates';
@@ -44,42 +48,114 @@ async function readInstalledInfo(): Promise<InstalledAppInfo> {
   return native ?? webInstallInfo();
 }
 
-async function fetchManifestJson(): Promise<unknown> {
-  if (!isTrustedManifestUrl()) throw new Error('O canal oficial de atualização não foi configurado neste APK.');
-  const separator = DEFAULT_UPDATE_MANIFEST_URL.includes('?') ? '&' : '?';
-  const target = `${DEFAULT_UPDATE_MANIFEST_URL}${separator}buildmasterCache=${Date.now()}`;
+function parseJsonPayload(payload: unknown): unknown {
+  if (payload && typeof payload === 'object') return payload;
+  if (typeof payload !== 'string') throw new Error('O servidor não retornou dados JSON válidos.');
+  const normalized = payload.replace(/^\uFEFF/, '').trim();
+  if (!normalized) throw new Error('O servidor retornou uma resposta vazia.');
+  try {
+    return JSON.parse(normalized) as unknown;
+  } catch {
+    throw new Error('O servidor retornou um arquivo que não é um manifesto JSON válido.');
+  }
+}
+
+function withCacheNonce(url: string, label: string) {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}${label}=${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): Promise<unknown> {
+  const target = withCacheNonce(url, 'buildmasterCache');
+  const requestHeaders = {
+    Accept: 'application/json, application/vnd.github+json, application/octet-stream;q=0.9',
+    'Cache-Control': 'no-cache, no-store, max-age=0',
+    Pragma: 'no-cache',
+    ...headers
+  };
 
   if (Capacitor.isNativePlatform()) {
     try {
       const native = await CapacitorHttp.get({
         url: target,
-        headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+        headers: requestHeaders,
         connectTimeout: 30_000,
-        readTimeout: 45_000,
-        responseType: 'json'
+        readTimeout: 60_000,
+        responseType: 'text'
       });
-      if (native.status >= 200 && native.status < 300) return native.data as unknown;
-      throw new Error(`O canal oficial retornou HTTP ${native.status}.`);
+      if (native.status >= 200 && native.status < 300) return parseJsonPayload(native.data as unknown);
+      throw new Error(`HTTP ${native.status} ao consultar o canal oficial.`);
     } catch (nativeError) {
       try {
-        const response = await fetch(target, { cache: 'no-store', headers: { Accept: 'application/json' } });
+        const response = await fetch(target, { cache: 'no-store', headers: requestHeaders });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json() as unknown;
+        return parseJsonPayload(await response.text());
       } catch {
         throw nativeError;
       }
     }
   }
 
-  const response = await fetch(target, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`O canal oficial retornou HTTP ${response.status}.`);
-  return await response.json() as unknown;
+  const response = await fetch(target, { cache: 'no-store', headers: requestHeaders });
+  if (!response.ok) throw new Error(`HTTP ${response.status} ao consultar o canal oficial.`);
+  return parseJsonPayload(await response.text());
+}
+
+async function fetchManifestJson(): Promise<unknown> {
+  const errors: string[] = [];
+
+  if (isTrustedReleaseApiUrl()) {
+    try {
+      const release = await fetchJsonUrl(DEFAULT_UPDATE_RELEASE_API_URL, {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      });
+      const asset = selectManifestAssetFromRelease(release);
+      if (!asset) throw new Error('A release mais recente não contém um manifesto oficial.');
+      const manifestPayload = await fetchJsonUrl(asset.url);
+      const manifest = validateUpdateManifest(manifestPayload);
+      if (!manifest) throw new Error('O manifesto da release mais recente é inválido.');
+      if (manifest.releaseTag && manifest.releaseTag !== asset.tag) {
+        throw new Error('O manifesto não pertence à release indicada pelo GitHub.');
+      }
+      return manifestPayload;
+    } catch (cause) {
+      errors.push(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
+  if (isTrustedManifestUrl()) {
+    try {
+      const legacyPayload = await fetchJsonUrl(DEFAULT_UPDATE_MANIFEST_URL);
+      if (!validateUpdateManifest(legacyPayload)) throw new Error('O manifesto de compatibilidade é inválido.');
+      return legacyPayload;
+    } catch (cause) {
+      errors.push(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
+  throw new Error(errors.filter(Boolean).join(' | ') || 'Nenhum canal oficial de atualização está configurado neste APK.');
 }
 
 function formatBytes(value?: number) {
   if (!value || value <= 0) return 'tamanho confirmado após o download';
   const mb = value / (1024 * 1024);
   return `${mb.toFixed(mb >= 10 ? 1 : 2)} MB`;
+}
+
+function isIntegrityDownloadError(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : String(cause || '');
+  const lower = message.toLowerCase();
+  return lower.includes('sha-256')
+    || lower.includes('checksum')
+    || lower.includes('tamanho do apk')
+    || lower.includes('apk/zip')
+    || lower.includes('apk android válido')
+    || lower.includes('no lugar do apk')
+    || lower.includes('http 403')
+    || lower.includes('http 408')
+    || lower.includes('http 429')
+    || lower.includes('http 5');
 }
 
 function updateErrorMessage(cause: unknown) {
@@ -92,7 +168,19 @@ function updateErrorMessage(cause: unknown) {
     return 'O pacote publicado não possui um versionCode maior que o instalado. Gere uma nova execução do GitHub Actions.';
   }
   if (lower.includes('sha-256') || lower.includes('checksum') || lower.includes('tamanho')) {
-    return 'O GitHub entregou uma cópia incompleta ou antiga do APK. O app descartou o arquivo e não abriu o instalador. Toque em “Verificar agora” e tente novamente.';
+    return 'O arquivo recebido não corresponde ao pacote publicado. O app apagou a cópia inválida. Verifique novamente; o novo canal imutável trocará automaticamente para a release correta.';
+  }
+  if (lower.includes('manifesto') || lower.includes('json válido') || lower.includes('release indicada')) {
+    return `O canal de atualização respondeu com dados inválidos. Detalhe: ${message}`;
+  }
+  if (lower.includes('http 403') || lower.includes('http 429')) {
+    return 'O GitHub limitou temporariamente as consultas. Aguarde alguns minutos e toque em “Verificar agora”.';
+  }
+  if (lower.includes('apk android válido') || lower.includes('arquivo não é um apk') || lower.includes('zip')) {
+    return 'O download não era um APK Android válido. O arquivo foi descartado antes de abrir o instalador.';
+  }
+  if (lower.includes('instalador de pacotes')) {
+    return 'O Android não encontrou o instalador de pacotes. Reinicie o aparelho e tente novamente.';
   }
   if (lower.includes('http 404')) return 'A release oficial ainda não contém o APK ou o manifesto desta versão.';
   if (lower.includes('timeout') || lower.includes('timed out') || lower.includes('alcançar') || lower.includes('network')) {
@@ -111,7 +199,7 @@ export function UpdateAutoChecker() {
     let timer: number | null = null;
 
     async function check() {
-      if (!active || localStorage.getItem(AUTO_KEY) === '0' || !isTrustedManifestUrl()) return;
+      if (!active || localStorage.getItem(AUTO_KEY) === '0' || (!isTrustedManifestUrl() && !isTrustedReleaseApiUrl())) return;
       const now = Date.now();
       if (now - lastAttemptRef.current < AUTO_THROTTLE_MS) return;
       lastAttemptRef.current = now;
@@ -165,7 +253,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
   const [lastCheck, setLastCheck] = useState<string | null>(null);
   const [progress, setProgress] = useState<ApkDownloadProgress | null>(null);
 
-  const channelReady = isTrustedManifestUrl();
+  const channelReady = isTrustedManifestUrl() || isTrustedReleaseApiUrl();
 
   const refreshInstalledInfo = useCallback(async () => {
     const next = await readInstalledInfo();
@@ -286,15 +374,33 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         localStorage.setItem(BACKUP_READY_KEY, targetManifest.buildId);
       }
 
-      setMessage('Baixando o APK oficial sem usar cópias em cache. Não feche o aplicativo...');
-      const result = await downloadVerifyAndInstallApk({
-        url: targetManifest.apkUrl,
-        checksum: targetManifest.checksum,
-        expectedPackageName: targetManifest.appId,
-        expectedVersionCode: targetManifest.versionCode,
-        expectedVersionName: targetManifest.version,
-        expectedSizeBytes: targetManifest.sizeBytes
+      const runVerifiedInstall = (target: AppUpdateManifest) => downloadVerifyAndInstallApk({
+        url: target.apkUrl,
+        checksum: target.checksum,
+        expectedPackageName: target.appId,
+        expectedVersionCode: target.versionCode,
+        expectedVersionName: target.version,
+        expectedSizeBytes: target.sizeBytes
       });
+
+      setMessage('Baixando o APK oficial sem usar cópias em cache. Não feche o aplicativo...');
+      let installManifest = targetManifest;
+      let result: Awaited<ReturnType<typeof downloadVerifyAndInstallApk>>;
+      try {
+        result = await runVerifiedInstall(installManifest);
+      } catch (firstFailure) {
+        if (!isIntegrityDownloadError(firstFailure)) throw firstFailure;
+        setMessage('A primeira rota do GitHub falhou. Atualizando a release e tentando novamente...');
+        await new Promise((resolve) => window.setTimeout(resolve, 1600));
+        const retryResult = evaluateUpdateManifest(await fetchManifestJson(), current, CURRENT_BUILD_ID, '');
+        if (!retryResult.valid || !retryResult.available || !retryResult.manifest) throw firstFailure;
+        installManifest = retryResult.manifest;
+        setManifest(installManifest);
+        localStorage.setItem(PENDING_KEY, JSON.stringify(installManifest));
+        setProgress(null);
+        setMessage('Nova rota oficial confirmada. Refazendo o download seguro...');
+        result = await runVerifiedInstall(installManifest);
+      }
 
       if (result.needsPermission) {
         setAwaitingPermission(true);
@@ -326,7 +432,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
 
       <div className="update-readiness-grid">
         <article className="is-ready"><CheckCircle2 size={18} /><div><span>Versão instalada</span><strong>{installed.versionName || APP_RELEASE_VERSION}</strong><small>versionCode {installed.versionCode || 'web'} • base {APP_NATIVE_VERSION}</small></div></article>
-        <article className={channelReady ? 'is-ready' : 'needs-attention'}><ShieldCheck size={18} /><div><span>Canal oficial</span><strong>{channelReady ? 'Fixo e verificado' : 'Não configurado'}</strong><small>somente o seu repositório GitHub</small></div></article>
+        <article className={channelReady ? 'is-ready' : 'needs-attention'}><ShieldCheck size={18} /><div><span>Canal oficial</span><strong>{channelReady ? 'API + fallback oficial' : 'Não configurado'}</strong><small>release imutável do seu repositório GitHub</small></div></article>
         <article className={!Capacitor.isNativePlatform() || installed.canInstallPackages ? 'is-ready' : 'needs-attention'}><Settings size={18} /><div><span>Permissão Android</span><strong>{!Capacitor.isNativePlatform() ? 'Teste web' : installed.canInstallPackages ? 'Liberada' : 'Precisa liberar'}</strong><small>necessária uma única vez</small></div></article>
         <article className={available ? 'update-ready' : 'is-ready'}>{available ? <Download size={18} /> : <CheckCircle2 size={18} />}<div><span>Situação</span><strong>{available ? `Nova v${manifest?.version}` : 'Atualizado'}</strong><small>{manifest ? `code ${manifest.versionCode}` : 'aguardando manifesto'}</small></div></article>
       </div>
@@ -347,7 +453,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
       {manifest && (
         <div className="update-release-card update-release-final-card">
           <div className="update-release-version"><span>Versão publicada</span><strong>v{manifest.version}</strong><small>versionCode {manifest.versionCode} • {formatBytes(manifest.sizeBytes)}</small></div>
-          <div className="update-release-details"><span>Publicada em {new Date(manifest.publishedAt).toLocaleString('pt-BR')}</span>{manifest.notes.length > 0 && <ul>{manifest.notes.slice(0, 6).map((note) => <li key={note}>{note}</li>)}</ul>}<small>SHA-256: {manifest.checksum}</small>{manifest.mandatory && <b><ShieldCheck size={14} /> Atualização obrigatória</b>}</div>
+          <div className="update-release-details"><span>Publicada em {new Date(manifest.publishedAt).toLocaleString('pt-BR')}</span>{manifest.notes.length > 0 && <ul>{manifest.notes.slice(0, 6).map((note) => <li key={note}>{note}</li>)}</ul>}<small>Canal: {manifest.releaseTag || 'compatibilidade'} • SHA-256: {manifest.checksum}</small>{manifest.mandatory && <b><ShieldCheck size={14} /> Atualização obrigatória</b>}</div>
         </div>
       )}
 

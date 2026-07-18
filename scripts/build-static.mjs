@@ -8,7 +8,19 @@ const moves = [
 ];
 const moved = [];
 
+function restoreInterruptedBuild() {
+  for (const [from, backup] of moves) {
+    if (!existsSync(from) && existsSync(backup)) {
+      mkdirSync(from.split('/').slice(0, -1).join('/') || '.', { recursive: true });
+      renameSync(backup, from);
+    }
+  }
+}
+
 try {
+  // Se um processo anterior foi interrompido durante o build, restaura primeiro
+  // os arquivos de servidor antes de limpar a pasta temporária.
+  restoreInterruptedBuild();
   rmSync(tempRoot, { recursive: true, force: true });
   mkdirSync(tempRoot, { recursive: true });
 
@@ -19,7 +31,9 @@ try {
     }
   }
 
-  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build', '--webpack'], {
+  // Next.js 16 usa Turbopack por padrão. No export estático ele evita a etapa
+  // de rastreamento NFT do servidor, que não é necessária dentro do APK.
+  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build'], {
     stdio: 'inherit',
     env: { ...process.env, BUILDMASTER_ANDROID_STATIC: '1' },
   });
@@ -28,5 +42,6 @@ try {
   for (const [from, to] of moved.reverse()) {
     if (existsSync(from) && !existsSync(to)) renameSync(from, to);
   }
+  restoreInterruptedBuild();
   rmSync(tempRoot, { recursive: true, force: true });
 }

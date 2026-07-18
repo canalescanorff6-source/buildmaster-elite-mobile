@@ -1,9 +1,19 @@
-export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.20.0';
-export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.20.0';
+export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.21.0';
+export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.21.0';
 export const CURRENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILDMASTER_BUILD_ID || 'local-build';
-export const DEFAULT_UPDATE_MANIFEST_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL || 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json';
+
+const TRUSTED_OWNER = 'canalescanorff6-source';
+const TRUSTED_REPOSITORY = 'buildmaster-elite-mobile';
+const TRUSTED_REPOSITORY_PATH = `${TRUSTED_OWNER}/${TRUSTED_REPOSITORY}`;
+
+export const DEFAULT_UPDATE_MANIFEST_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL
+  || `https://github.com/${TRUSTED_REPOSITORY_PATH}/releases/download/buildmaster-latest/update-manifest.json`;
+
+export const DEFAULT_UPDATE_RELEASE_API_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_RELEASE_API_URL
+  || `https://api.github.com/repos/${TRUSTED_REPOSITORY_PATH}/releases/latest`;
 
 export type AppUpdateManifest = {
+  schemaVersion?: number;
   appId: 'com.buildmaster.elitetatico';
   version: string;
   versionCode: number;
@@ -17,6 +27,8 @@ export type AppUpdateManifest = {
   minNativeVersion?: string;
   checksum: string;
   sizeBytes?: number;
+  releaseTag?: string;
+  assetName?: string;
 };
 
 export type InstalledAppInfo = {
@@ -35,6 +47,21 @@ export type UpdateCheckResult = {
   manifest: AppUpdateManifest | null;
 };
 
+export type GithubReleaseAsset = {
+  name: string;
+  browser_download_url: string;
+  size?: number;
+  state?: string;
+};
+
+export type GithubReleaseDescriptor = {
+  tag_name: string;
+  draft?: boolean;
+  prerelease?: boolean;
+  published_at?: string;
+  assets?: GithubReleaseAsset[];
+};
+
 function trustedRepositoryFromManifestUrl(): string | null {
   try {
     const url = new URL(DEFAULT_UPDATE_MANIFEST_URL);
@@ -47,12 +74,40 @@ function trustedRepositoryFromManifestUrl(): string | null {
   }
 }
 
-export function isTrustedManifestUrl(value = DEFAULT_UPDATE_MANIFEST_URL): boolean {
+function parseReleaseDownloadPath(value: string): { repository: string; tag: string; fileName: string } | null {
   try {
     const url = new URL(value);
-    const repository = trustedRepositoryFromManifestUrl();
-    if (!repository || url.protocol !== 'https:' || url.hostname !== 'github.com') return false;
-    return url.pathname.toLowerCase() === `/${repository}/releases/download/buildmaster-latest/update-manifest.json`;
+    if (url.protocol !== 'https:' || url.hostname !== 'github.com') return null;
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length < 6 || parts[2] !== 'releases' || parts[3] !== 'download') return null;
+    return {
+      repository: `${parts[0]}/${parts[1]}`.toLowerCase(),
+      tag: decodeURIComponent(parts[4]),
+      fileName: decodeURIComponent(parts.slice(5).join('/'))
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isTrustedReleaseTag(tag: string): boolean {
+  return tag === 'buildmaster-latest'
+    || /^buildmaster-v\d+\.\d+\.\d+-\d+(?:-\d{2})?$/i.test(tag);
+}
+
+export function isTrustedManifestUrl(value = DEFAULT_UPDATE_MANIFEST_URL): boolean {
+  const parsed = parseReleaseDownloadPath(value);
+  const repository = trustedRepositoryFromManifestUrl();
+  if (!parsed || !repository || parsed.repository !== repository || !isTrustedReleaseTag(parsed.tag)) return false;
+  return /^update-manifest(?:-v\d+\.\d+\.\d+-\d+)?\.json$/i.test(parsed.fileName);
+}
+
+export function isTrustedReleaseApiUrl(value = DEFAULT_UPDATE_RELEASE_API_URL): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:'
+      && url.hostname === 'api.github.com'
+      && url.pathname.toLowerCase() === `/repos/${TRUSTED_REPOSITORY_PATH}/releases/latest`;
   } catch {
     return false;
   }
@@ -60,18 +115,25 @@ export function isTrustedManifestUrl(value = DEFAULT_UPDATE_MANIFEST_URL): boole
 
 export function isTrustedApkUrl(value: unknown): value is string {
   if (typeof value !== 'string' || !value.trim()) return false;
-  try {
-    const url = new URL(value);
-    const repository = trustedRepositoryFromManifestUrl();
-    if (!repository || url.protocol !== 'https:' || url.hostname !== 'github.com') return false;
-    const expectedPrefix = `/${repository}/releases/download/buildmaster-latest/`;
-    if (!url.pathname.toLowerCase().startsWith(expectedPrefix)) return false;
-    const fileName = decodeURIComponent(url.pathname.slice(expectedPrefix.length));
-    return /^BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk$/i.test(fileName)
-      || fileName === 'BuildMaster-Elite-Tatico-latest.apk';
-  } catch {
-    return false;
-  }
+  const parsed = parseReleaseDownloadPath(value);
+  const repository = trustedRepositoryFromManifestUrl();
+  if (!parsed || !repository || parsed.repository !== repository || !isTrustedReleaseTag(parsed.tag)) return false;
+  return /^BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk$/i.test(parsed.fileName)
+    || parsed.fileName === 'BuildMaster-Elite-Tatico-latest.apk';
+}
+
+export function selectManifestAssetFromRelease(input: unknown): { url: string; tag: string; assetName: string } | null {
+  if (!input || typeof input !== 'object') return null;
+  const release = input as GithubReleaseDescriptor;
+  if (!release.tag_name || release.draft || !isTrustedReleaseTag(String(release.tag_name))) return null;
+  const assets = Array.isArray(release.assets) ? release.assets : [];
+  const candidates = assets
+    .filter((asset) => asset && typeof asset.name === 'string' && typeof asset.browser_download_url === 'string')
+    .filter((asset) => /^update-manifest(?:-v\d+\.\d+\.\d+-\d+)?\.json$/i.test(asset.name))
+    .filter((asset) => isTrustedManifestUrl(asset.browser_download_url));
+  const preferred = candidates.find((asset) => asset.name !== 'update-manifest.json') ?? candidates.find((asset) => asset.name === 'update-manifest.json');
+  if (!preferred) return null;
+  return { url: preferred.browser_download_url, tag: String(release.tag_name), assetName: preferred.name };
 }
 
 function isSha256(value: unknown): value is string {
@@ -98,7 +160,7 @@ export function compareVersions(left: string, right: string): number {
 }
 
 export function validateUpdateManifest(input: unknown): AppUpdateManifest | null {
-  if (!input || typeof input !== 'object' || !isTrustedManifestUrl()) return null;
+  if (!input || typeof input !== 'object') return null;
   const raw = input as Partial<AppUpdateManifest>;
   if (raw.appId !== 'com.buildmaster.elitetatico') return null;
   if (!raw.version || !isPositiveInteger(raw.versionCode) || !raw.buildId || !raw.publishedAt || Number.isNaN(Date.parse(String(raw.publishedAt)))) return null;
@@ -106,7 +168,15 @@ export function validateUpdateManifest(input: unknown): AppUpdateManifest | null
   if (raw.updateType !== 'apk') return null;
   if (!isTrustedApkUrl(raw.apkUrl) || !isSha256(raw.checksum)) return null;
   if (raw.sizeBytes !== undefined && (!isPositiveInteger(raw.sizeBytes) || raw.sizeBytes > 300 * 1024 * 1024)) return null;
+  if (raw.schemaVersion !== undefined && (!isPositiveInteger(raw.schemaVersion) || raw.schemaVersion > 2)) return null;
+
+  const parsedApk = parseReleaseDownloadPath(String(raw.apkUrl));
+  if (!parsedApk) return null;
+  if (raw.releaseTag && raw.releaseTag !== parsedApk.tag) return null;
+  if (raw.assetName && raw.assetName !== parsedApk.fileName) return null;
+
   return {
+    schemaVersion: raw.schemaVersion ?? 1,
     appId: 'com.buildmaster.elitetatico',
     version: String(raw.version),
     versionCode: raw.versionCode,
@@ -119,7 +189,9 @@ export function validateUpdateManifest(input: unknown): AppUpdateManifest | null
     mandatory: Boolean(raw.mandatory),
     minNativeVersion: raw.minNativeVersion ? String(raw.minNativeVersion) : undefined,
     checksum: String(raw.checksum).toLowerCase(),
-    sizeBytes: raw.sizeBytes
+    sizeBytes: raw.sizeBytes,
+    releaseTag: raw.releaseTag ? String(raw.releaseTag) : parsedApk.tag,
+    assetName: raw.assetName ? String(raw.assetName) : parsedApk.fileName
   };
 }
 

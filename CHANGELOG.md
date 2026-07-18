@@ -1,5 +1,21 @@
 # Changelog
 
+## 27.21.0 — Atualizador Definitivo
+
+- release imutável exclusiva por execução e tentativa;
+- descoberta da versão aprovada pela API oficial `releases/latest`;
+- fallback para `buildmaster-latest`, mantendo compatibilidade com APKs antigos;
+- manifesto schema 2 vinculado à tag e ao nome exato do APK;
+- leitura segura de JSON mesmo com `application/octet-stream`;
+- nova consulta imediatamente antes de instalar;
+- repetição completa após falha temporária ou divergência de integridade;
+- quatro tentativas nativas sem cache e com `Accept-Encoding: identity`;
+- bloqueio de HTML/JSON recebido no lugar do APK;
+- conferência do cabeçalho APK/ZIP;
+- abertura reforçada do instalador Android;
+- verificação pública de APK e manifesto antes de marcar a release como latest;
+- teste de regressão específico `test:v2721`.
+
 ## 27.20.0 — Auditoria Premium e Estrutura
 
 - Controle Final da Ficha com nota, aprovados, avisos e bloqueios;

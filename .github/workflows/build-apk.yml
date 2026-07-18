@@ -71,12 +71,16 @@ jobs:
           short_sha = os.environ['GIT_SHA'][:8]
           asset = f'BuildMaster-Elite-Tatico-v{version}-{asset_token}-{short_sha}.apk'
           publication_id = f'{os.environ["RUN_ID"]}-{attempt}-{short_sha}'
+          release_tag = f'buildmaster-v{version}-{version_code}-{attempt:02d}'
+          manifest_asset = f'update-manifest-v{version}-{version_code}.json'
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as handle:
               handle.write(f'BUILDMASTER_VERSION={version}\n')
               handle.write(f'ANDROID_VERSION_CODE={version_code}\n')
               handle.write(f'APK_ASSET_NAME={asset}\n')
               handle.write(f'APK_PUBLICATION_ID={publication_id}\n')
-          print(f'Versão {version}; versionCode {version_code}; tentativa {attempt}; asset imutável {asset}')
+              handle.write(f'RELEASE_TAG={release_tag}\n')
+              handle.write(f'MANIFEST_ASSET_NAME={manifest_asset}\n')
+          print(f'Versão {version}; versionCode {version_code}; release imutável {release_tag}; asset {asset}')
           PY
 
       - name: Exibir versões do ambiente
@@ -137,6 +141,7 @@ jobs:
           NEXT_PUBLIC_BUILDMASTER_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL: https://github.com/${{ github.repository }}/releases/download/buildmaster-latest/update-manifest.json
+          NEXT_PUBLIC_BUILDMASTER_UPDATE_RELEASE_API_URL: https://api.github.com/repos/${{ github.repository }}/releases/latest
           NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL: ${{ vars.BUILDMASTER_CLOUD_API_URL || 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -153,6 +158,7 @@ jobs:
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_URL" out || { echo '::error::A URL real do Supabase não entrou no app.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_ANON_KEY" out || { echo '::error::A chave pública real não entrou no app.'; exit 1; }
           grep -RqsF 'update-manifest.json' out || { echo '::error::O canal de atualização não entrou no build.'; exit 1; }
+          grep -RqsF "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" out || { echo '::error::A API latest não entrou no build.'; exit 1; }
 
       - name: Criar projeto Android
         timeout-minutes: 5
@@ -274,14 +280,17 @@ jobs:
           cp "dist-apk/$APK_ASSET_NAME" "dist-apk/BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk"
           cp "dist-apk/$APK_ASSET_NAME" "dist-apk/BuildMaster-Elite-Tatico-latest.apk"
 
-      - name: Preparar manifesto da atualização
+      - name: Preparar manifestos imutável e de compatibilidade
         run: |
           python - <<'PY'
           import datetime, hashlib, json, os, pathlib
           asset_name = os.environ['APK_ASSET_NAME']
+          release_tag = os.environ['RELEASE_TAG']
+          manifest_asset = os.environ['MANIFEST_ASSET_NAME']
           apk = pathlib.Path('dist-apk') / asset_name
           repo = os.environ['GITHUB_REPOSITORY']
-          manifest = {
+          base = {
+            'schemaVersion': 2,
             'appId': 'com.buildmaster.elitetatico',
             'version': os.environ['BUILDMASTER_VERSION'],
             'versionCode': int(os.environ['ANDROID_VERSION_CODE']),
@@ -289,33 +298,45 @@ jobs:
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'channel': 'stable',
             'updateType': 'apk',
-            'apkUrl': f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}?publication={os.environ["APK_PUBLICATION_ID"]}&code={os.environ["ANDROID_VERSION_CODE"]}',
             'notes': [
-              'Print Único Pro adaptativo separa nível, GER, posição, estilo, pontos, atributos, habilidades e arte da carta.',
-              'Alinhamento pela área útil da tela, OCR reutilizável, cache por hash, fila local e cancelamento.',
-              'Nível validado por rótulo, região, alternativas e coerência com GER e pontos visíveis.',
-              'Auditoria visual com recortes, histórico de confiança e memória de correções confirmadas.',
-              'Design System premium, banco estruturado, diagnóstico seguro e inteligência integrada.',
-              'Atualização usa APK exclusivo por execução e tentativa, sem sobrescrever arquivo que possa estar em cache.',
-              'O app refaz a validação antes de instalar e tenta novamente com URL sem cache quando a rede entrega arquivo incompleto.'
+              'Atualizador reconstruído com release imutável por publicação.',
+              'Consulta principal pela API oficial do GitHub e fallback para aparelhos antigos.',
+              'Manifesto lido como texto ou JSON para evitar falha por content-type octet-stream.',
+              'Download com até quatro tentativas, sem cache, validação ZIP, tamanho e SHA-256.',
+              'Validação do pacote, versionCode, versão e assinatura antes de abrir o Android.',
+              'Instalador Android com concessão explícita de leitura e método alternativo de abertura.',
+              'Dados locais preservados com backup antes de instalar.'
             ],
             'mandatory': True,
-            'minNativeVersion': '26.75.0',
+            'minNativeVersion': '27.21.0',
             'checksum': hashlib.sha256(apk.read_bytes()).hexdigest(),
-            'sizeBytes': apk.stat().st_size
+            'sizeBytes': apk.stat().st_size,
+            'assetName': asset_name
           }
-          pathlib.Path('dist-apk/update-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+          immutable = dict(base)
+          immutable['releaseTag'] = release_tag
+          immutable['apkUrl'] = f'https://github.com/{repo}/releases/download/{release_tag}/{asset_name}'
+          payload = json.dumps(immutable, ensure_ascii=False, indent=2)
+          pathlib.Path('dist-apk', manifest_asset).write_text(payload, encoding='utf-8')
+          pathlib.Path('dist-apk', 'update-manifest.json').write_text(payload, encoding='utf-8')
+
+          legacy = dict(base)
+          legacy['releaseTag'] = 'buildmaster-latest'
+          legacy['apkUrl'] = f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}?publication={os.environ["APK_PUBLICATION_ID"]}&code={os.environ["ANDROID_VERSION_CODE"]}'
+          legacy_dir = pathlib.Path('dist-apk', 'legacy')
+          legacy_dir.mkdir(parents=True, exist_ok=True)
+          (legacy_dir / 'update-manifest.json').write_text(json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Reconstrução Completa
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualizador Definitivo
 
-          - Print Único Pro adaptativo com separação rígida entre nível, GER, pontos e atributos.
-          - OCR reutilizável, cache por hash, fila local, cancelamento e limites de memória.
-          - Evidência visual por campo, histórico de confiança e memória de correções confirmadas.
-          - Banco local estruturado com cartas, fichas, formações, partidas e miniaturas indexadas.
-          - Design System premium, acessibilidade, diagnóstico seguro e módulos carregados sob demanda.
-          - Detector de lacunas do elenco, rastro dos pontos, planos ligados ao banco e cartão compartilhável.
-          - Atualizador definitivo, assinatura permanente e teste pós-publicação preservados.
+          - Release imutável por execução, sem substituir os bytes já publicados.
+          - Descoberta da atualização pela API oficial de releases do GitHub.
+          - Canal antigo preservado para compatibilidade com APKs já instalados.
+          - Download sem cache com quatro tentativas e validação de APK/ZIP.
+          - Conferência de tamanho, SHA-256, pacote, versionCode, versão e assinatura.
+          - Abertura reforçada do instalador Android e permissão guiada.
+          - Backup dos dados antes da instalação.
           NOTES
 
       - name: Enviar APK e manifesto como artefato
@@ -327,106 +348,135 @@ jobs:
             dist-apk/${{ env.APK_ASSET_NAME }}
             dist-apk/BuildMaster-Elite-Tatico-latest.apk
             dist-apk/update-manifest.json
+            dist-apk/${{ env.MANIFEST_ASSET_NAME }}
+            dist-apk/legacy/update-manifest.json
             dist-apk/signing-report.txt
           if-no-files-found: error
           retention-days: 14
 
-      - name: Preparar release estável sem cancelar publicação anterior
+      - name: Criar release imutável fora do canal ativo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG"             --target "$GITHUB_SHA"             --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Pacote imutável"             --notes-file dist-apk/RELEASE_NOTES.md             --prerelease
+
+      - name: Publicar pacote e manifesto imutáveis
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_TAG"             "dist-apk/$APK_ASSET_NAME"             "dist-apk/$MANIFEST_ASSET_NAME"             dist-apk/signing-report.txt
+
+      - name: Verificar release imutável antes de ativar
+        run: |
+          mkdir -p verify-release
+          MANIFEST_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG/$MANIFEST_ASSET_NAME?preflight=$APK_PUBLICATION_ID-$(date +%s)"
+          ready=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            rm -f verify-release/immutable-manifest.json
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors               --header 'Accept-Encoding: identity' --connect-timeout 20 --max-time 90               "$MANIFEST_URL&attempt=$attempt" -o verify-release/immutable-manifest.json; then
+              if python - <<'PY'
+          import json, os, pathlib, sys
+          try:
+              manifest = json.loads(pathlib.Path('verify-release/immutable-manifest.json').read_text(encoding='utf-8'))
+              assert manifest['schemaVersion'] == 2
+              assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
+              assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
+              assert manifest['buildId'] == os.environ['GITHUB_SHA']
+              assert manifest['releaseTag'] == os.environ['RELEASE_TAG']
+              assert manifest['assetName'] == os.environ['APK_ASSET_NAME']
+              assert f'/releases/download/{os.environ["RELEASE_TAG"]}/{os.environ["APK_ASSET_NAME"]}' in manifest['apkUrl']
+          except Exception as exc:
+              print(f'Manifesto imutável ainda indisponível: {exc}')
+              sys.exit(1)
+          pathlib.Path('verify-release/apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
+          pathlib.Path('verify-release/checksum.txt').write_text(manifest['checksum'], encoding='utf-8')
+          pathlib.Path('verify-release/size.txt').write_text(str(manifest['sizeBytes']), encoding='utf-8')
+          PY
+              then ready=1; break; fi
+            fi
+            sleep $((attempt * 8))
+          done
+          test "$ready" = 1 || { echo '::error::A release imutável não ficou disponível publicamente.'; exit 1; }
+
+          APK_URL=$(cat verify-release/apk-url.txt)
+          curl --fail --silent --show-error --location --retry 8 --retry-all-errors             --header 'Accept-Encoding: identity' --connect-timeout 30 --max-time 300             "$APK_URL?verify=$APK_PUBLICATION_ID-$(date +%s)" -o verify-release/immutable.apk
+          test "$(sha256sum verify-release/immutable.apk | awk '{print $1}')" = "$(cat verify-release/checksum.txt)" || { echo '::error::Checksum imutável divergente.'; exit 1; }
+          test "$(stat -c%s verify-release/immutable.apk)" = "$(cat verify-release/size.txt)" || { echo '::error::Tamanho imutável divergente.'; exit 1; }
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          "$APKSIGNER" verify --verbose --print-certs verify-release/immutable.apk
+          "$AAPT" dump badging verify-release/immutable.apk | head -n 1 | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::versionCode imutável incorreto.'; exit 1; }
+
+      - name: Ativar release imutável como a mais recente
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "$RELEASE_TAG" --prerelease=false --latest
+
+      - name: Atualizar canal de compatibilidade para APKs antigos
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git tag -f buildmaster-latest "$GITHUB_SHA"
           git push origin refs/tags/buildmaster-latest --force
           if gh release view buildmaster-latest >/dev/null 2>&1; then
-            gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização verificada" \
-              --notes-file dist-apk/RELEASE_NOTES.md
+            gh release edit buildmaster-latest               --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Canal de compatibilidade"               --notes-file dist-apk/RELEASE_NOTES.md
           else
-            gh release create buildmaster-latest \
-              --verify-tag \
-              --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização verificada" \
-              --notes-file dist-apk/RELEASE_NOTES.md
+            gh release create buildmaster-latest               --verify-tag               --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Canal de compatibilidade"               --notes-file dist-apk/RELEASE_NOTES.md
           fi
-
-      - name: Publicar APK imutável da tentativa
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Sem --clobber: um nome imutável jamais pode trocar de conteúdo.
           gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME"
-
-      - name: Validar propagação pública antes do manifesto
-        run: |
-          mkdir -p verify-release
-          IMMUTABLE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/$APK_ASSET_NAME?publication=$APK_PUBLICATION_ID&preflight=$(date +%s)"
-          EXPECTED_SHA=$(sha256sum "dist-apk/$APK_ASSET_NAME" | awk '{print $1}')
-          EXPECTED_SIZE=$(stat -c%s "dist-apk/$APK_ASSET_NAME")
-          validated=0
-          for attempt in 1 2 3 4 5 6 7 8; do
-            rm -f verify-release/preflight.apk
-            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --header 'Accept-Encoding: identity' --connect-timeout 30 --max-time 300 \
-              "$IMMUTABLE_URL&attempt=$attempt" -o verify-release/preflight.apk; then
-              ACTUAL_SHA=$(sha256sum verify-release/preflight.apk | awk '{print $1}')
-              ACTUAL_SIZE=$(stat -c%s verify-release/preflight.apk)
-              if [ "$ACTUAL_SHA" = "$EXPECTED_SHA" ] && [ "$ACTUAL_SIZE" = "$EXPECTED_SIZE" ]; then
-                validated=1
-                break
-              fi
-              echo "Propagação ainda divergente na tentativa $attempt: size=$ACTUAL_SIZE sha=$ACTUAL_SHA"
-            fi
-            sleep $((attempt * 8))
-          done
-          test "$validated" = 1 || { echo '::error::O APK imutável não ficou disponível publicamente com os mesmos bytes. Manifesto não será publicado.'; exit 1; }
-
-      - name: Publicar atalhos e manifesto por último
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
           gh release upload buildmaster-latest dist-apk/BuildMaster-Elite-Tatico-latest.apk --clobber
           gh release upload buildmaster-latest dist-apk/signing-report.txt --clobber
-          gh release upload buildmaster-latest dist-apk/update-manifest.json --clobber
+          gh release upload buildmaster-latest dist-apk/legacy/update-manifest.json --clobber
 
-      - name: Verificar release publicada de ponta a ponta
+      - name: Verificar canal novo, API e compatibilidade antiga
         run: |
-          MANIFEST_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json?publication=$APK_PUBLICATION_ID&verify=$(date +%s)"
-          for attempt in 1 2 3 4 5 6 7 8; do
-            rm -f verify-release/update-manifest.json
-            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --header 'Accept-Encoding: identity' --connect-timeout 20 --max-time 90 \
-              "$MANIFEST_URL&attempt=$attempt" -o verify-release/update-manifest.json; then
+          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest?verify=$APK_PUBLICATION_ID-$(date +%s)"
+          api_ready=0
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location               --header 'Accept: application/vnd.github+json'               --header 'Cache-Control: no-cache'               "$API_URL&attempt=$attempt" -o verify-release/latest-release.json; then
               if python - <<'PY'
           import json, os, pathlib, sys
-          path = pathlib.Path('verify-release/update-manifest.json')
           try:
-              manifest = json.loads(path.read_text(encoding='utf-8'))
+              release = json.loads(pathlib.Path('verify-release/latest-release.json').read_text(encoding='utf-8'))
+              assert release['tag_name'] == os.environ['RELEASE_TAG']
+              names = {asset['name'] for asset in release.get('assets', [])}
+              assert os.environ['APK_ASSET_NAME'] in names
+              assert os.environ['MANIFEST_ASSET_NAME'] in names
+          except Exception as exc:
+              print(f'API latest ainda não aponta para a release imutável: {exc}')
+              sys.exit(1)
+          PY
+              then api_ready=1; break; fi
+            fi
+            sleep $((attempt * 6))
+          done
+          test "$api_ready" = 1 || { echo '::error::A API latest não apontou para a nova release.'; exit 1; }
+
+          LEGACY_MANIFEST="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json?verify=$APK_PUBLICATION_ID-$(date +%s)"
+          legacy_ready=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors               --header 'Accept-Encoding: identity' --connect-timeout 20 --max-time 90               "$LEGACY_MANIFEST&attempt=$attempt" -o verify-release/legacy-manifest.json; then
+              if python - <<'PY'
+          import json, os, pathlib, sys
+          try:
+              manifest = json.loads(pathlib.Path('verify-release/legacy-manifest.json').read_text(encoding='utf-8'))
               assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
               assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
-              assert manifest['buildId'] == os.environ['GITHUB_SHA']
-              assert f'/{os.environ["APK_ASSET_NAME"]}?' in manifest['apkUrl']
-              assert os.environ['APK_PUBLICATION_ID'] in manifest['apkUrl']
+              assert manifest['releaseTag'] == 'buildmaster-latest'
+              assert f'/releases/download/buildmaster-latest/{os.environ["APK_ASSET_NAME"]}?' in manifest['apkUrl']
           except Exception as exc:
-              print(f'Manifesto ainda não propagado: {exc}')
+              print(f'Canal antigo ainda não propagado: {exc}')
               sys.exit(1)
-          pathlib.Path('verify-release/apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
-          pathlib.Path('verify-release/checksum.txt').write_text(manifest['checksum'], encoding='utf-8')
-          pathlib.Path('verify-release/size.txt').write_text(str(manifest['sizeBytes']), encoding='utf-8')
+          pathlib.Path('verify-release/legacy-apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
+          pathlib.Path('verify-release/legacy-checksum.txt').write_text(manifest['checksum'], encoding='utf-8')
           PY
-              then break; fi
+              then legacy_ready=1; break; fi
             fi
             sleep $((attempt * 8))
           done
-          test -s verify-release/apk-url.txt || { echo '::error::Manifesto novo não ficou disponível publicamente.'; exit 1; }
-          APK_URL=$(cat verify-release/apk-url.txt)
-          curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --header 'Accept-Encoding: identity' --connect-timeout 30 --max-time 300 \
-            "$APK_URL&verify=$APK_PUBLICATION_ID-$(date +%s)" -o verify-release/released.apk
-          ACTUAL_SHA=$(sha256sum verify-release/released.apk | awk '{print $1}')
-          EXPECTED_SHA=$(cat verify-release/checksum.txt)
-          test "$ACTUAL_SHA" = "$EXPECTED_SHA" || { echo '::error::Checksum do APK publicado não confere com o manifesto.'; exit 1; }
-          test "$(stat -c%s verify-release/released.apk)" = "$(cat verify-release/size.txt)" || { echo '::error::Tamanho do APK publicado não confere.'; exit 1; }
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
-          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
-          "$APKSIGNER" verify --verbose --print-certs verify-release/released.apk
-          "$AAPT" dump badging verify-release/released.apk | head -n 1 | grep -q "versionCode='$ANDROID_VERSION_CODE'" || { echo '::error::APK publicado tem versionCode incorreto.'; exit 1; }
-          echo 'Release verificada: ativo imutável, manifesto, checksum, tamanho, assinatura e versionCode corretos.'
+          test "$legacy_ready" = 1 || { echo '::error::O canal de compatibilidade não propagou.'; exit 1; }
+          LEGACY_APK_URL=$(cat verify-release/legacy-apk-url.txt)
+          curl --fail --silent --show-error --location --retry 8 --retry-all-errors             --header 'Accept-Encoding: identity' --connect-timeout 30 --max-time 300             "$LEGACY_APK_URL&verify=$APK_PUBLICATION_ID-$(date +%s)" -o verify-release/legacy.apk
+          test "$(sha256sum verify-release/legacy.apk | awk '{print $1}')" = "$(cat verify-release/legacy-checksum.txt)" || { echo '::error::Checksum do canal antigo divergente.'; exit 1; }
+          echo 'Publicação concluída: release imutável, API latest e canal de compatibilidade validados.'

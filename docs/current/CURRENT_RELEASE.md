@@ -1,7 +1,9 @@
 # Versão atual
 
-- Versão: `27.20.0`
-- Nome: Auditoria Premium e Estrutura
-- Base: v27.12 com atualização imutável preservada
-- Recursos principais: Controle Final da Ficha, busca global, modo econômico, rascunho otimizado e limpeza de imagens temporárias
-- Teste próprio: `npm run test:v2720`
+- Versão: `27.21.0`
+- Nome: Atualizador Definitivo
+- Base: v27.20 Auditoria Premium preservada
+- Correção principal: atualização Android reconstruída com release imutável, descoberta pela API oficial do GitHub e canal antigo de compatibilidade
+- Validações: manifesto, tamanho, SHA-256, cabeçalho APK/ZIP, pacote, versionCode, versão e assinatura
+- Teste próprio: `npm run test:v2721`
+- Auditoria anterior: `docs/current/AUDITORIA_COMPLETA_V27_20.md`

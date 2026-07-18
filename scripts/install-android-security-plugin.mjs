@@ -24,12 +24,14 @@ public class MainActivity extends BridgeActivity {
 
 const plugin = `package com.buildmaster.elitetatico;
 
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Build;
@@ -50,6 +52,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -80,7 +83,8 @@ public class BuildMasterSecurityPlugin extends Plugin {
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
     private static final String EXPECTED_PACKAGE = "com.buildmaster.elitetatico";
     private static final int MAX_APK_BYTES = 300 * 1024 * 1024;
-    private static final int MAX_REDIRECTS = 6;
+    private static final int MAX_REDIRECTS = 10;
+    private static final int MAX_DOWNLOAD_ATTEMPTS = 4;
 
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -275,10 +279,17 @@ public class BuildMasterSecurityPlugin extends Plugin {
     private static void validateInitialApkUrl(URL url) throws Exception {
         if (!"https".equalsIgnoreCase(url.getProtocol())) throw new SecurityException("Atualização sem HTTPS bloqueada.");
         if (!"github.com".equalsIgnoreCase(url.getHost())) throw new SecurityException("Servidor de atualização não autorizado.");
-        String prefix = "/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/";
+        String prefix = "/canalescanorff6-source/buildmaster-elite-mobile/releases/download/";
         String path = url.getPath();
         if (!path.startsWith(prefix)) throw new SecurityException("Caminho de atualização não autorizado.");
-        String file = path.substring(prefix.length());
+        String remainder = path.substring(prefix.length());
+        int separator = remainder.indexOf('/');
+        if (separator <= 0 || separator >= remainder.length() - 1) throw new SecurityException("Caminho de atualização incompleto.");
+        String tag = remainder.substring(0, separator);
+        String file = remainder.substring(separator + 1);
+        boolean trustedTag = "buildmaster-latest".equals(tag)
+                || tag.matches("(?i)^buildmaster-v\\\\d+\\\\.\\\\d+\\\\.\\\\d+-\\\\d+(?:-\\\\d{2})?$");
+        if (!trustedTag) throw new SecurityException("Release de atualização não autorizada.");
         if (!(file.matches("(?i)^BuildMaster-Elite-Tatico-v\\\\d+\\\\.\\\\d+\\\\.\\\\d+-\\\\d+-[a-f0-9]{7,12}\\\\.apk$") || "BuildMaster-Elite-Tatico-latest.apk".equals(file))) {
             throw new SecurityException("Arquivo de atualização não autorizado.");
         }
@@ -313,7 +324,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
             connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
             connection.setRequestProperty("Pragma", "no-cache");
             connection.setRequestProperty("Connection", "close");
-            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.20 Android");
+            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.21 Android");
             int status = connection.getResponseCode();
             if (status >= 300 && status < 400) {
                 String location = connection.getHeaderField("Location");
@@ -326,6 +337,14 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 connection.disconnect();
                 throw new IllegalStateException("Download retornou HTTP " + status);
             }
+            String contentType = connection.getContentType();
+            if (contentType != null) {
+                String normalizedType = contentType.toLowerCase();
+                if (normalizedType.contains("text/html") || normalizedType.contains("application/json")) {
+                    connection.disconnect();
+                    throw new IllegalStateException("O servidor retornou " + contentType + " no lugar do APK.");
+                }
+            }
             return connection;
         }
         throw new IllegalStateException("O download excedeu o limite de redirecionamentos.");
@@ -336,9 +355,13 @@ public class BuildMasterSecurityPlugin extends Plugin {
         String message = error.getMessage() == null ? "" : error.getMessage().toLowerCase();
         return message.contains("tamanho do apk")
                 || message.contains("sha-256")
+                || message.contains("http 403")
+                || message.contains("http 408")
+                || message.contains("http 429")
                 || message.contains("http 5")
                 || message.contains("timeout")
-                || message.contains("temporar");
+                || message.contains("temporar")
+                || message.contains("no lugar do apk");
     }
 
     private static Signature[] archiveSignatures(PackageInfo info) {
@@ -368,6 +391,18 @@ public class BuildMasterSecurityPlugin extends Plugin {
         return installedDigests.equals(downloadedDigests);
     }
 
+    private static void assertApkZipHeader(File apk) throws Exception {
+        byte[] header = new byte[4];
+        try (FileInputStream input = new FileInputStream(apk)) {
+            if (input.read(header) != header.length) throw new SecurityException("O arquivo baixado está vazio ou incompleto.");
+        }
+        boolean validZip = header[0] == 0x50 && header[1] == 0x4b
+                && ((header[2] == 0x03 && header[3] == 0x04)
+                || (header[2] == 0x05 && header[3] == 0x06)
+                || (header[2] == 0x07 && header[3] == 0x08));
+        if (!validZip) throw new SecurityException("O arquivo baixado não é um APK/ZIP válido.");
+    }
+
     private PackageInfo inspectDownloadedApk(File apk) throws Exception {
         PackageManager manager = getContext().getPackageManager();
         int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
@@ -381,9 +416,27 @@ public class BuildMasterSecurityPlugin extends Plugin {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(uri, "application/vnd.android.package-archive");
         intent.setClipData(ClipData.newRawUri("BuildMaster update", uri));
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (intent.resolveActivity(getContext().getPackageManager()) == null) throw new IllegalStateException("O instalador de pacotes do Android não está disponível.");
-        getContext().startActivity(intent);
+        intent.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PackageManager manager = getContext().getPackageManager();
+        List<ResolveInfo> handlers = manager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        for (ResolveInfo handler : handlers) {
+            if (handler.activityInfo != null && handler.activityInfo.packageName != null) {
+                getContext().grantUriPermission(handler.activityInfo.packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+        }
+        if (handlers.isEmpty() && intent.resolveActivity(manager) == null) {
+            throw new IllegalStateException("O instalador de pacotes do Android não está disponível.");
+        }
+        try {
+            getContext().startActivity(intent);
+        } catch (ActivityNotFoundException firstError) {
+            Intent fallback = new Intent(Intent.ACTION_INSTALL_PACKAGE, uri);
+            fallback.setClipData(ClipData.newRawUri("BuildMaster update", uri));
+            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(fallback);
+        }
     }
 
     @PluginMethod
@@ -418,8 +471,8 @@ public class BuildMasterSecurityPlugin extends Plugin {
             try {
                 File updatesDir = new File(getContext().getCacheDir(), "verified_updates");
                 if (!updatesDir.exists() && !updatesDir.mkdirs()) throw new IllegalStateException("Não foi possível preparar a pasta de atualização.");
-                partial = new File(updatesDir, "BuildMaster-update.part");
-                apk = new File(updatesDir, "BuildMaster-Elite-Tatico-verificado.apk");
+                partial = new File(updatesDir, "BuildMaster-update-" + expectedVersionCode + ".part");
+                apk = new File(updatesDir, "BuildMaster-Elite-Tatico-" + expectedVersionCode + "-verificado.apk");
                 if (partial.exists()) partial.delete();
                 if (apk.exists()) apk.delete();
 
@@ -428,7 +481,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 String actualChecksum = "";
                 Exception finalDownloadError = null;
 
-                for (int downloadAttempt = 1; downloadAttempt <= 3; downloadAttempt++) {
+                for (int downloadAttempt = 1; downloadAttempt <= MAX_DOWNLOAD_ATTEMPTS; downloadAttempt++) {
                     HttpURLConnection connection = null;
                     try {
                         if (partial.exists()) partial.delete();
@@ -463,19 +516,19 @@ public class BuildMasterSecurityPlugin extends Plugin {
                         }
 
                         if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
-                            throw new SecurityException("Tamanho do APK não confere com o manifesto (esperado " + expectedSize + ", recebido " + total + ").");
+                            throw new SecurityException("Tamanho do APK não confere com o manifesto: esperado=" + expectedSize + ", recebido=" + total + ".");
                         }
                         emitProgress("verifying", 99, total, expectedTotal);
                         actualChecksum = hex(digest.digest());
                         if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) {
-                            throw new SecurityException("SHA-256 do APK não confere com o manifesto.");
+                            throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actualChecksum.substring(0, 12) + ".");
                         }
                         finalDownloadError = null;
                         break;
                     } catch (Exception downloadError) {
                         finalDownloadError = downloadError;
                         if (partial.exists()) partial.delete();
-                        if (downloadAttempt >= 3 || !isRetryableDownloadError(downloadError)) throw downloadError;
+                        if (downloadAttempt >= MAX_DOWNLOAD_ATTEMPTS || !isRetryableDownloadError(downloadError)) throw downloadError;
                         try { Thread.sleep(downloadAttempt * 1200L); } catch (InterruptedException interrupted) {
                             Thread.currentThread().interrupt();
                             throw interrupted;
@@ -487,6 +540,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
 
                 if (finalDownloadError != null) throw finalDownloadError;
                 if (!partial.renameTo(apk)) throw new IllegalStateException("Não foi possível concluir o arquivo de atualização.");
+                assertApkZipHeader(apk);
 
                 PackageInfo current = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
                 PackageInfo archive = inspectDownloadedApk(apk);

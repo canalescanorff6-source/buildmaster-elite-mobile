@@ -1,15 +1,31 @@
-# BuildMaster Elite Tático v27.20 — Auditoria Premium e Estrutura
+# BuildMaster Elite Tático v27.21 — Atualizador Definitivo
 
-A v27.20 preserva a reconstrução da v27.10 e a atualização imutável da v27.12, adicionando **Controle Final da Ficha**, busca global, modo econômico para Android, rascunho otimizado e correções de memória nas prévias de imagens.
+A v27.21 preserva todas as melhorias da v27.20 e reconstrói o sistema de atualização Android para eliminar a dependência de um arquivo mutável. O novo canal usa **release imutável**, consulta pela **API oficial de releases do GitHub**, validação pública antes de ativar e fallback compatível com APKs antigos.
 
 ## Leia primeiro
 
-- `LEIA-PRIMEIRO-V27.20-AUDITORIA-PREMIUM.txt`
+- `LEIA-PRIMEIRO-V27.21-ATUALIZADOR-DEFINITIVO.txt`
+- `docs/current/ATUALIZADOR_DEFINITIVO_V27_21.md`
 - `docs/current/AUDITORIA_COMPLETA_V27_20.md`
-- `docs/current/CURRENT_RELEASE.md`
 - `TESTE_APARELHO_REAL_V27_10.md`
 
-## Fluxo principal
+## Atualização Android
+
+O fluxo de produção é:
+
+```text
+build release assinado
+→ release imutável isolada
+→ upload do APK e manifesto
+→ download público de verificação
+→ tamanho + SHA-256 + assinatura + versionCode
+→ release marcada como latest
+→ canal antigo atualizado para compatibilidade
+```
+
+A v27.21 consulta a API `releases/latest`. Se a API estiver temporariamente indisponível, usa o manifesto oficial da release `buildmaster-latest`.
+
+## Fluxo principal do app
 
 ```text
 Print único ou leitura completa
@@ -20,14 +36,6 @@ Print único ou leitura completa
 → encaixe no time e nas formações
 → validação pós-jogo
 ```
-
-## Áreas principais
-
-- **Início:** prioridades, pendências e recomendações.
-- **Jogadores:** carta, leitor, ficha, habilidades e histórico.
-- **Meu Time:** formação, lacunas, titulares, banco e planos.
-- **Partidas:** preparação, adversário, substituições e pós-jogo.
-- **Ajustes:** conta, segurança, backup, atualização e diagnóstico.
 
 ## Desenvolvimento
 
@@ -41,28 +49,20 @@ Comandos principais:
 ```bash
 npm ci --ignore-scripts
 npm run typecheck
-npm run test:v2720
+npm run test:v2721
 npm run test:all
 npm run apk:build-web
 ```
 
-A exportação estática local para teste exige variáveis válidas ou o fallback explicitamente habilitado apenas em desenvolvimento. O workflow de produção rejeita valores de exemplo.
+## APK e publicação
 
-## APK e atualização
-
-Use o workflow:
+Use somente o workflow:
 
 ```text
 Gerar APK e publicar atualização definitiva
 ```
 
-Mantenha o Secret permanente:
-
-```text
-ANDROID_SIGNING_BUNDLE
-```
-
-Não envie keystore, arquivo de chave, `.env`, token ou credencial para o repositório.
+Mantenha o Secret permanente `ANDROID_SIGNING_BUNDLE` e as Variables do Supabase. Não envie keystore, `.env`, token ou credencial ao repositório.
 
 ## Estrutura atual
 
@@ -73,8 +73,7 @@ src/modules/players       Laboratório do Jogador
 src/modules/squad         time, encaixe e detector de lacunas
 src/modules/matches       partida e pós-jogo
 src/modules/core          repositório e inteligência integrada
-src/app                   entrada CSS, compatibilidade e Design System
-tests                     regressões e casos críticos de OCR
+src/lib/appUpdates.ts     confiança, manifesto e avaliação de atualização
+scripts/install-android-security-plugin.mjs  download e instalação nativa
+tests                     regressões funcionais e de publicação
 ```
-
-Os documentos antigos foram preservados em `docs/archive/` apenas para histórico. Eles não substituem a documentação atual.

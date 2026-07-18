@@ -1,0 +1,19 @@
+BUILDMASTER ELITE TÁTICO v27.21.0 — ATUALIZADOR DEFINITIVO
+
+1. Extraia este pacote.
+2. Substitua TODO o conteúdo do repositório GitHub pelo conteúdo extraído.
+3. Preserve os Secrets e Variables já configurados no GitHub.
+4. Faça um NOVO commit na branch main.
+5. Espere o workflow “Gerar APK e publicar atualização definitiva” concluir em verde.
+6. No aparelho, abra Ajustes > Atualizações > Verificar agora > Atualizar aplicativo.
+
+IMPORTANTE
+- Não publique o APK manualmente por cima do arquivo antigo.
+- Não altere update-manifest.json manualmente.
+- Não use uma chave de assinatura diferente.
+- Não desinstale o app antes de fazer backup.
+- Se o APK instalado foi assinado por outra chave, será necessária uma instalação manual única da v27.21.
+
+DOCUMENTAÇÃO COMPLETA
+- docs/current/ATUALIZADOR_DEFINITIVO_V27_21.md
+- docs/current/CURRENT_RELEASE.md
