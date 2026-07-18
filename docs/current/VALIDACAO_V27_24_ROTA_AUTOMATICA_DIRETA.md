@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v27.24 — rota automática direta
+# BuildMaster Elite Tático v27.25 — rota automática direta
 
 ## Problema tratado
 

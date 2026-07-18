@@ -35,6 +35,7 @@ import {
   ThumbsUp,
   BrainCircuit,
   Users,
+  UserPlus,
   Share2,
   ChevronDown
 } from 'lucide-react';
@@ -5730,7 +5731,7 @@ export function CardVisionApp() {
     { id: 'security', group: 'Ajustes', label: 'Segurança e integridade', description: 'Saúde local, diagnóstico e compatibilidade.', keywords: ['proteção', 'erros'], run: () => { setMainSection('ajustes'); setSettingsView('seguranca'); } },
     { id: 'backup', group: 'Ajustes', label: 'Backup e restauração', description: 'Proteja fichas e configurações antes de atualizar.', keywords: ['cofre', 'restaurar'], run: () => { setMainSection('ajustes'); setSettingsView('backup'); } },
     { id: 'updates', group: 'Ajustes', label: 'Atualizações do APK', description: 'Verifique versão, manifesto e instalação segura.', keywords: ['apk', 'versão'], run: () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); } },
-    { id: 'accounts', group: 'Ajustes', label: 'Conta e licença', description: 'Abra os dados da conta e o painel administrativo.', keywords: ['usuário', 'licença'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
+    { id: 'accounts', group: 'Ajustes', label: account?.profile.role === 'admin' ? 'Criar e gerenciar contas' : 'Minha conta e licença', description: account?.profile.role === 'admin' ? 'Abra diretamente a criação de usuários, prazos e aparelhos.' : 'Consulte os dados e a validade da sua licença.', keywords: ['usuário', 'licença', 'criar conta', 'admin'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
     { id: 'assistant', group: 'Assistente', label: 'Abrir Assistente BuildMaster', description: 'Use os dados integrados de jogadores, time e partidas.', keywords: ['ajuda', 'recomendação'], run: () => setAssistantOpen(true) }
   ];
 
@@ -5768,7 +5769,7 @@ export function CardVisionApp() {
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v27.24</span>
+            <span>Elite Tático v27.25</span>
           </div>
         </button>
 
@@ -5785,6 +5786,7 @@ export function CardVisionApp() {
           <span className={`session-save-indicator save-${sessionSaveState}`} role="status" aria-live="polite">{sessionSaveState === 'saving' ? 'Salvando…' : sessionSaveState === 'saved' ? 'Rascunho salvo' : sessionSaveState === 'error' ? 'Falha no rascunho' : 'Pronto'}</span>
           <button type="button" className="topbar-create-action" aria-expanded={mobileLauncher === 'create'} onClick={() => setMobileLauncher('create')}><Sparkles size={16} /><span>Criar</span></button>
           <button type="button" className="topbar-more-action" aria-expanded={mobileLauncher === 'more'} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={16} /><span>Mais</span></button>
+          {account?.profile.role === 'admin' && <button type="button" className="topbar-admin-account-action" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Criar e gerenciar contas"><UserPlus size={16} /><span>Criar conta</span></button>}
           <button type="button" className="topbar-account-avatar" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
             <b>{accountInitial}</b>
             <span><strong>{account?.profile.username || 'Conta'}</strong><small>{account?.profile.role === 'admin' ? 'Administrador' : 'Licença ativa'}</small></span>
@@ -5837,7 +5839,7 @@ export function CardVisionApp() {
               <div className="launcher-action-grid launcher-more-grid">
                 <button type="button" onClick={() => openMainSection('time')}><span><Target size={23} /></span><div><strong>Meu Time</strong><small>Elenco, setores, banco e planos.</small></div></button>
                 <button type="button" onClick={() => openMainSection('ajustes')}><span><SlidersHorizontal size={23} /></span><div><strong>Ajustes</strong><small>Aparência, desempenho e segurança.</small></div></button>
-                <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); setMobileLauncher(null); }}><span><Users size={23} /></span><div><strong>Conta e usuários</strong><small>Licença atual e administração de acessos.</small></div></button>
+                <button type="button" aria-label="Conta e usuários" className={account?.profile.role === 'admin' ? 'launcher-admin-account-action' : ''} onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); setMobileLauncher(null); }}><span>{account?.profile.role === 'admin' ? <UserPlus size={23} /> : <Users size={23} />}</span><div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><small>{account?.profile.role === 'admin' ? 'Criar usuários, renovar prazos e controlar aparelhos.' : 'Licença, validade e aparelhos autorizados.'}</small></div></button>
                 <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); setMobileLauncher(null); }}><span><RotateCcw size={23} /></span><div><strong>Atualizações</strong><small>Backup, versão instalada e novo APK.</small></div></button>
                 <button type="button" className="launcher-logout-action" onClick={logout}><span><LogOut size={23} /></span><div><strong>Sair da conta</strong><small>Encerra a sessão neste aparelho.</small></div></button>
               </div>
@@ -6662,13 +6664,15 @@ export function CardVisionApp() {
 
               <section className="v27-migration-status luxury-panel"><ShieldCheck size={18}/><div><strong>Migração v27 concluída sem apagar dados</strong><span>{centralMigrationNote || 'Fichas, Cofre, formações, partidas, preferências, login e atualizações foram preservados.'}</span></div></section>
 
+              {account?.profile.role === 'admin' && <button type="button" className="settings-admin-account-shortcut luxury-panel" onClick={() => setSettingsView('contas')}><span><UserPlus size={22} /></span><div><strong>Criar e gerenciar contas</strong><small>Acesso direto para cadastrar clientes, definir prazo, senha e limite de aparelhos.</small></div><em>Abrir</em></button>}
+
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
                 <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={18} /><div><strong>Aparência</strong><span>Tema e acessibilidade</span></div></button>
                 <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Resposta e estabilidade</span></div></button>
                 <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={18} /><div><strong>Segurança</strong><span>Integridade e saúde</span></div></button>
                 <button type="button" className={settingsView === 'backup' ? 'active' : ''} onClick={() => setSettingsView('backup')}><Save size={18} /><div><strong>Backup</strong><span>Proteger e restaurar</span></div></button>
                 <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={18} /><div><strong>Atualizações</strong><span>Versão e novo APK</span></div></button>
-                <button type="button" className={settingsView === 'contas' ? 'active' : ''} onClick={() => setSettingsView('contas')}><Users size={18} /><div><strong>Contas</strong><span>Licença e usuários</span></div></button>
+                <button type="button" className={settingsView === 'contas' ? 'active admin-account-navigation' : 'admin-account-navigation'} onClick={() => setSettingsView('contas')}>{account?.profile.role === 'admin' ? <UserPlus size={18} /> : <Users size={18} />}<div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><span>{account?.profile.role === 'admin' ? 'Usuários e licenças' : 'Licença e aparelhos'}</span></div></button>
               </nav>
 
               <div className="settings-final-content">

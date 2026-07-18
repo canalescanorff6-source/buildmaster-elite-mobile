@@ -1,0 +1,19 @@
+BUILDMASTER ELITE TÁTICO v27.25 — CRIAR CONTAS RESTAURADO
+
+O que mudou:
+
+1. A opção CRIAR CONTAS voltou a ficar visível para o administrador.
+2. Existe acesso direto na barra superior, no menu Mais e em Ajustes.
+3. A tela de segurança não esconde mais a função; ela mostra a área e pede o código MFA para desbloquear.
+4. Usuário comum recebe uma explicação clara de que somente o perfil admin pode criar contas.
+5. O sistema de atualização automática da v27.24 foi mantido.
+
+Para publicar:
+
+- Substitua todo o conteúdo do repositório, incluindo a pasta .github.
+- Faça um novo commit na branch main.
+- Aguarde o workflow Gerar APK v27.25 terminar em verde.
+- No aplicativo instalado, use Ajustes > Atualizações > Verificar agora > Atualizar aplicativo.
+
+Depois da atualização, entre com a conta administradora e abra:
+Ajustes > Criar contas

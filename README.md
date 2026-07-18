@@ -1,6 +1,6 @@
-# BuildMaster Elite Tático v27.24 — Atualização Automática Direta
+# BuildMaster Elite Tático v27.25 — Atualização Automática Direta
 
-A v27.24 corrige a falha da primeira rota do GitHub. O aplicativo agora consulta primeiro o manifesto fixo do canal automático, que aponta diretamente para um APK de release imutável. A API `releases/latest` continua disponível, mas somente como rota de reserva.
+A v27.25 corrige a falha da primeira rota do GitHub. O aplicativo agora consulta primeiro o manifesto fixo do canal automático, que aponta diretamente para um APK de release imutável. A API `releases/latest` continua disponível, mas somente como rota de reserva.
 
 ## O que mudou
 
@@ -21,4 +21,4 @@ npm run test:all
 
 ## Publicação
 
-Envie todo o conteúdo para a branch `main`, incluindo a pasta `.github`. O workflow **Gerar APK v27.24 e publicar atualização automática direta** criará e publicará o pacote.
+Envie todo o conteúdo para a branch `main`, incluindo a pasta `.github`. O workflow **Gerar APK v27.25 e publicar atualização automática direta** criará e publicará o pacote.

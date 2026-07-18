@@ -1,4 +1,4 @@
-name: Gerar APK v27.24 e publicar atualização automática direta
+name: Gerar APK v27.25 e publicar atualização automática direta
 
 on:
   workflow_dispatch:
