@@ -20,7 +20,7 @@ assert.ok(legacy.issues.some((item) => item.code === 'legacy-history'));
 
 const migrated = migrateBackup({ ...backup, schema: 1 });
 assert.ok(migrated.steps.length > 0);
-assert.equal(migrated.envelope.schema, 2700);
+assert.equal(migrated.envelope.schema, 2729);
 
 const health = buildHealthSummary({ integrity, backupAgeDays: null, pendingReviews: 2, lowConfidence: 1, totalHistory: 1 });
 assert.ok(health.alerts.length >= 2);

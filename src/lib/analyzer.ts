@@ -4287,9 +4287,9 @@ function buildErrorTolerance(parsed: ParsedCard, selected: PositionCode, plan: T
 }
 
 function buildSkillPriority(parsed: ParsedCard, selected: PositionCode, analysis: SpecialSkillsAnalysis): SkillPriorityAnalysis {
-  const official = new Set(OFFICIAL_ADDITIONAL_SKILL_NAMES);
-  const ordered=analysis.missingRecommended.filter(x=>official.has(x.name as any)).map((x,index)=>({name:x.name,score:Math.max(1,Math.min(100,x.score + (index<2?8:0))),tier:(index===0?'prioridade máxima':index<3?'alta':'útil') as 'prioridade máxima'|'alta'|'útil',reasons:[x.impact,`Compatível com ${POSITION_PT[selected]}.`, parsed.playstyle?`Considera o estilo oficial ${parsed.playstyle}.`:'Sem estilo confirmado: prioridade calculada pela posição e atributos.']})).sort((a,b)=>b.score-a.score).slice(0,8);
-  return { ordered, ownedCoverage:analysis.coverageScore, officialOnly:ordered.every(x=>official.has(x.name as any)), context:[`Posição escolhida: ${POSITION_PT[selected]}.`, parsed.playstyle?`Estilo oficial: ${parsed.playstyle}.`:'Estilo oficial não confirmado.', 'Habilidades já existentes foram removidas da fila.'] };
+  const official = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
+  const ordered=analysis.missingRecommended.filter(x=>official.has(x.name)).map((x,index)=>({name:x.name,score:Math.max(1,Math.min(100,x.score + (index<2?8:0))),tier:(index===0?'prioridade máxima':index<3?'alta':'útil') as 'prioridade máxima'|'alta'|'útil',reasons:[x.impact,`Compatível com ${POSITION_PT[selected]}.`, parsed.playstyle?`Considera o estilo oficial ${parsed.playstyle}.`:'Sem estilo confirmado: prioridade calculada pela posição e atributos.']})).sort((a,b)=>b.score-a.score).slice(0,8);
+  return { ordered, ownedCoverage:analysis.coverageScore, officialOnly:ordered.every(x=>official.has(x.name)), context:[`Posição escolhida: ${POSITION_PT[selected]}.`, parsed.playstyle?`Estilo oficial: ${parsed.playstyle}.`:'Estilo oficial não confirmado.', 'Habilidades já existentes foram removidas da fila.'] };
 }
 
 function buildAdvancedOptimizer(variants: BuildVariant[], training: TrainingPlan, budget:number, selected:PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): AdvancedOptimizerAnalysis {

@@ -32,6 +32,9 @@ import {
   type LicenseValidation
 } from '@/lib/accountAuth';
 import { clearActiveAccountIdentity, setActiveAccountIdentity } from '@/lib/accountStorage';
+import { safeStorageGetJson, safeStorageRemove, safeStorageSetJson } from '@/lib/safeLocalStorage';
+import { createStableId } from '@/lib/stableId';
+import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 
 const LOCAL_AUTH_KEY = 'buildmaster_local_auth_v15_premium';
 const LOCAL_LOGIN_USER = process.env.NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_USER || '';
@@ -78,30 +81,23 @@ function localAdminProfile(): AccountProfile {
 }
 
 function makeSessionToken() {
-  return `bm-local-pro-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return createStableId('bm-local-pro');
 }
 
 function readValidLocalSession(): AccountProfile | null {
   if (typeof window === 'undefined' || !ALLOW_LOCAL_FALLBACK) return null;
-  try {
-    const raw = localStorage.getItem(LOCAL_AUTH_KEY);
-    if (!raw) return null;
-    const session = JSON.parse(raw) as { token?: string; createdAt?: number; username?: string };
-    if (!session.token || !session.createdAt || Date.now() - session.createdAt > SESSION_DURATION) {
-      localStorage.removeItem(LOCAL_AUTH_KEY);
-      return null;
-    }
-    const profile = localAdminProfile();
-    setActiveAccountIdentity({ id: profile.id, username: profile.username, role: profile.role, expiresAt: null, mode: 'local' });
-    return profile;
-  } catch {
-    localStorage.removeItem(LOCAL_AUTH_KEY);
+  const session = safeStorageGetJson<{ token?: string; createdAt?: number; username?: string } | null>(LOCAL_AUTH_KEY, null);
+  if (!session?.token || !session.createdAt || Date.now() - session.createdAt > SESSION_DURATION) {
+    safeStorageRemove(LOCAL_AUTH_KEY);
     return null;
   }
+  const profile = localAdminProfile();
+  setActiveAccountIdentity({ id: profile.id, username: profile.username, role: profile.role, expiresAt: null, mode: 'local' });
+  return profile;
 }
 
 function saveLocalSession() {
-  localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify({ token: makeSessionToken(), createdAt: Date.now(), username: LOCAL_LOGIN_USER }));
+  safeStorageSetJson(LOCAL_AUTH_KEY, { token: makeSessionToken(), createdAt: Date.now(), username: LOCAL_LOGIN_USER });
   const profile = localAdminProfile();
   setActiveAccountIdentity({ id: profile.id, username: profile.username, role: profile.role, expiresAt: null, mode: 'local' });
   return profile;
@@ -109,8 +105,8 @@ function saveLocalSession() {
 
 export function clearBuildMasterSession() {
   try {
-    localStorage.removeItem(LOCAL_AUTH_KEY);
-    localStorage.removeItem('buildmaster_local_auth_v6_1');
+    safeStorageRemove(LOCAL_AUTH_KEY);
+    safeStorageRemove('buildmaster_local_auth_v6_1');
     clearActiveAccountIdentity();
   } catch {
     // Alguns navegadores bloqueiam localStorage em modo privado.
@@ -321,7 +317,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
 
           <div className="auth-showcase-footer">
             <span><BadgeCheck size={15} /> BuildMaster Elite</span>
-            <small>Ambiente tático premium • v27.28</small>
+            <small>Ambiente tático premium • v{APP_RELEASE_VERSION}</small>
           </div>
         </aside>
 

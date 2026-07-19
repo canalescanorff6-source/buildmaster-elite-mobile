@@ -1,4 +1,4 @@
-name: Gerar APK v27.28 e publicar atualização automática em três canais
+name: Gerar APK v27.29 e publicar atualização automática em três canais
 
 on:
   workflow_dispatch:
@@ -126,6 +126,10 @@ jobs:
           done
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
+
+      - name: Auditar estrutura, segurança e publicação
+        timeout-minutes: 4
+        run: npm run quality:audit
 
       - name: Validar TypeScript
         timeout-minutes: 6
@@ -315,7 +319,7 @@ jobs:
               'O nome versionado evita cache antigo e continua compatível com o atualizador da v27.26.',
               'A release imutável permanece como segunda rota independente.',
               'O arquivo BuildMaster-Elite-Tatico-latest.apk permanece somente para versões muito antigas.',
-              'O aplicativo v27.28 alterna de verdade entre URLs diferentes quando uma rota diverge.',
+              'O aplicativo v27.29 alterna de verdade entre URLs diferentes quando uma rota diverge.',
               'Cada download é validado por tamanho, SHA-256, pacote, versionCode, versão e assinatura.',
               'O workflow baixa novamente cada ativo público com o mesmo User-Agent do Android antes de ativar os manifestos.'
             ],
@@ -365,7 +369,7 @@ jobs:
           - A release imutável continua como segunda rota.
           - BuildMaster-Elite-Tatico-latest.apk permanece como ponte exclusiva para versões muito antigas.
           - Os ativos públicos são validados com o mesmo User-Agent do atualizador Android.
-          - O v27.28 registra o tamanho e os 12 primeiros caracteres do hash recebido em caso de divergência.
+          - O v27.29 registra o tamanho e os 12 primeiros caracteres do hash recebido em caso de divergência.
           NOTES
 
       - name: Enviar pacote como artefato do workflow

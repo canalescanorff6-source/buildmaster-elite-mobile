@@ -69,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -85,6 +86,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
     private static final int MAX_APK_BYTES = 300 * 1024 * 1024;
     private static final int MAX_REDIRECTS = 10;
     private static final int MAX_DOWNLOAD_ATTEMPTS = 4;
+    private static final AtomicBoolean UPDATE_IN_PROGRESS = new AtomicBoolean(false);
 
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -322,10 +324,11 @@ public class BuildMasterSecurityPlugin extends Plugin {
         connection.setUseCaches(false);
         connection.setDefaultUseCaches(false);
         connection.setRequestProperty("Accept", "application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8");
-        if (strictIdentity) connection.setRequestProperty("Accept-Encoding", "identity");
+        connection.setRequestProperty("Accept-Encoding", "identity");
+        connection.setRequestProperty("Connection", "close");
         connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.28 Android");
+        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.29 Android");
     }
 
     private static void validateDownloadResponse(HttpURLConnection connection, int status) throws Exception {
@@ -503,6 +506,8 @@ public class BuildMasterSecurityPlugin extends Plugin {
         String expectedVersionName = call.getString("expectedVersionName");
         Long expectedVersionCode = call.getLong("expectedVersionCode");
         Long expectedSize = call.getLong("expectedSizeBytes");
+        Integer requestedAttempts = call.getInt("maxAttempts");
+        final int maxAttempts = requestedAttempts == null ? 2 : Math.max(1, Math.min(MAX_DOWNLOAD_ATTEMPTS, requestedAttempts));
 
         if (urlValue == null || expectedChecksum == null || !expectedChecksum.matches("(?i)^[a-f0-9]{64}$") || expectedVersionCode == null || expectedVersionCode <= 0) {
             call.reject("URL, versão ou SHA-256 inválido.");
@@ -517,6 +522,10 @@ public class BuildMasterSecurityPlugin extends Plugin {
             result.put("verified", false);
             result.put("needsPermission", true);
             call.resolve(result);
+            return;
+        }
+        if (!UPDATE_IN_PROGRESS.compareAndSet(false, true)) {
+            call.reject("Já existe uma atualização em andamento. Aguarde a tentativa atual terminar.");
             return;
         }
 
@@ -535,9 +544,15 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 long total = 0;
                 long expectedTotal = expectedSize == null ? 0 : expectedSize;
                 String actualChecksum = "";
+                String finalUrl = "";
+                String responseHost = "";
+                String responseContentType = "";
+                String responseContentEncoding = "";
+                String responseEtag = "";
+                long responseContentLength = -1;
                 Exception finalDownloadError = null;
 
-                for (int downloadAttempt = 1; downloadAttempt <= MAX_DOWNLOAD_ATTEMPTS; downloadAttempt++) {
+                for (int downloadAttempt = 1; downloadAttempt <= maxAttempts; downloadAttempt++) {
                     HttpURLConnection connection = null;
                     try {
                         if (partial.exists()) partial.delete();
@@ -547,6 +562,8 @@ public class BuildMasterSecurityPlugin extends Plugin {
                         long contentLength = connection.getContentLengthLong();
                         expectedTotal = expectedSize != null && expectedSize > 0 ? expectedSize : contentLength;
                         if (contentLength > MAX_APK_BYTES || expectedTotal > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
+                        // Alguns CDNs anunciam um Content-Length intermediário durante o redirecionamento.
+                        // A decisão final usa sempre a quantidade realmente gravada e o SHA-256 completo.
 
                         MessageDigest digest = MessageDigest.getInstance("SHA-256");
                         total = 0;
@@ -579,12 +596,19 @@ public class BuildMasterSecurityPlugin extends Plugin {
                         if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) {
                             throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actualChecksum.substring(0, 12) + ", bytes=" + total + ". " + downloadTrace(connection));
                         }
+                        URL verifiedUrl = connection.getURL();
+                        finalUrl = verifiedUrl == null ? "" : verifiedUrl.toString();
+                        responseHost = verifiedUrl == null ? "" : verifiedUrl.getHost();
+                        responseContentType = String.valueOf(connection.getContentType());
+                        responseContentEncoding = String.valueOf(connection.getContentEncoding());
+                        responseContentLength = connection.getContentLengthLong();
+                        responseEtag = String.valueOf(connection.getHeaderField("ETag"));
                         finalDownloadError = null;
                         break;
                     } catch (Exception downloadError) {
                         finalDownloadError = downloadError;
                         if (partial.exists()) partial.delete();
-                        if (downloadAttempt >= MAX_DOWNLOAD_ATTEMPTS || !isRetryableDownloadError(downloadError)) throw downloadError;
+                        if (downloadAttempt >= maxAttempts || !isRetryableDownloadError(downloadError)) throw downloadError;
                         try { Thread.sleep(downloadAttempt * 1200L); } catch (InterruptedException interrupted) {
                             Thread.currentThread().interrupt();
                             throw interrupted;
@@ -619,12 +643,19 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 result.put("needsPermission", false);
                 result.put("versionCode", downloadedCode);
                 result.put("versionName", downloadedName);
+                result.put("finalUrl", finalUrl);
+                result.put("responseHost", responseHost);
+                result.put("contentType", responseContentType);
+                result.put("contentEncoding", responseContentEncoding);
+                result.put("contentLength", responseContentLength);
+                result.put("etag", responseEtag);
                 call.resolve(result);
             } catch (Exception error) {
                 if (partial != null) partial.delete();
                 if (apk != null) apk.delete();
                 call.reject("Atualização bloqueada: " + (error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage()), error);
             } finally {
+                UPDATE_IN_PROGRESS.set(false);
                 call.setKeepAlive(false);
             }
         }).start();
@@ -654,4 +685,4 @@ if (!manifest.includes('android:usesCleartextTraffic=')) {
   manifest = manifest.replace('<application', '<application\n        android:usesCleartextTraffic="false"');
 }
 fs.writeFileSync(manifestPath, manifest);
-console.log('Plugin Android instalado: Keystore, diagnóstico da versão, permissão guiada, download com progresso, SHA-256, package/versionCode e assinatura verificados.');
+console.log('Plugin Android v27.29 instalado: download exclusivo, identidade sem compressão, progresso, SHA-256, pacote/versionCode e assinatura verificados.');

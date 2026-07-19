@@ -1,4 +1,5 @@
 import { accountDatabaseName } from './accountStorage';
+import { safeStorageGet, safeStorageRemove } from './safeLocalStorage';
 
 const DB_BASE_NAME = 'buildmaster_runtime_v27_10';
 const DB_VERSION = 3;
@@ -92,13 +93,13 @@ export async function migrateLegacyRuntimeData(): Promise<{ migrated: number; sk
     'buildmaster_diagnostics_v27'
   ];
   for (const key of legacyKeys) {
-    const raw = window.localStorage.getItem(key);
+    const raw = safeStorageGet(key);
     if (!raw) continue;
     try {
       const parsed = JSON.parse(raw) as unknown;
       const target: RuntimeStoreName = key.includes('corrections') ? 'ocr-corrections' : key.includes('diagnostics') ? 'diagnostics' : 'scan-history';
       await runtimePut(target, `legacy:${key}`, parsed);
-      window.localStorage.removeItem(key);
+      safeStorageRemove(key);
       migrated += 1;
     } catch {
       skipped += 1;

@@ -1,23 +1,34 @@
-# BuildMaster Elite Tático v27.26
+# BuildMaster Elite Tático v27.29
 
-Aplicativo Android/Next.js para criação de fichas, análise de jogadores, gestão tática, Cofre, contas/licenças e leitura de prints do eFootball.
+Aplicativo Android/Next.js para criação de fichas, análise de jogadores, gestão tática, Cofre, contas/licenças, leitura de prints e preparação de partidas do eFootball.
 
-## Atualização automática em três canais
+## Atualização automática reforçada
 
-A v27.26 compara simultaneamente o canal independente `buildmaster-update`, a ponte `buildmaster-latest` para versões antigas e a API `releases/latest`. O app escolhe sempre o manifesto com o maior `versionCode`, cria uma cópia local de recuperação, baixa o APK, valida integridade/pacote/versão/assinatura e abre o instalador Android automaticamente quando a permissão estiver liberada.
+A v27.29 consulta os canais oficiais, escolhe o maior `versionCode` válido e ordena as rotas pelo histórico de sucesso do aparelho. O download nativo impede concorrência, solicita bytes sem compressão intermediária, alterna o tratamento de redirecionamentos e valida o arquivo recebido por tamanho real, SHA-256, estrutura APK, pacote, versão, `versionCode` e assinatura antes de abrir o instalador Android.
 
-O Android ainda exige a liberação inicial de “Instalar apps desconhecidos” e o toque final em “Atualizar”.
+O fluxo de publicação mantém:
 
-Leia primeiro: `LEIA-PRIMEIRO-V27.26-ATUALIZACAO-AUTOMATICA-REAL.txt`  
-Relatório: `docs/current/VALIDACAO_V27_26_ATUALIZACAO_AUTOMATICA_REAL.md`
+- release imutável por compilação;
+- ativo versionado na ponte `buildmaster-latest`;
+- `BuildMaster-Elite-Tatico-latest.apk` para clientes antigos;
+- canal independente e API Latest como rotas adicionais;
+- manifesto ativado somente depois da validação pública do APK.
 
-## Comandos principais
+Não é necessário alterar o Supabase nem substituir o secret `ANDROID_SIGNING_BUNDLE`. O Android ainda exige a autorização inicial para instalar apps desconhecidos e a confirmação final **Atualizar**.
+
+## Qualidade e segurança
+
+A auditoria da v27.29 cobre armazenamento local seguro, backups, isolamento de falhas, acessibilidade, service worker, workflow, assinatura, integridade do APK e regressões das fichas. A verificação obrigatória pode ser executada com:
 
 ```bash
 npm ci
 npm run typecheck
+npm run quality:audit
 npm run test:all
 npm run apk:build-web
 ```
+
+Relatório: `docs/current/AUDITORIA_COMPLETA_V27_29.md`  
+Instruções: `LEIA-PRIMEIRO-V27.29-AUDITORIA-TOTAL.txt`
 
 A geração e assinatura do APK oficial são feitas pelo workflow `.github/workflows/build-apk.yml` com o secret permanente `ANDROID_SIGNING_BUNDLE`.

@@ -59,36 +59,41 @@ import { buildAdvancedCalibration, signatureForResult } from '@/lib/advancedCali
 import { buildReliabilityCenter, compareBuildVariants, comparePlayers, detectInconsistencies } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
+import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
+import { createStableId } from '@/lib/stableId';
 import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
 import { BuildQualityGatePanel } from '@/components/BuildQualityGatePanel';
+import { PanelLoadingFallback } from '@/components/PanelLoadingFallback';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
 import { buildBuildQualityGate, type BuildQualityTarget } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
 import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
-const PlayerLaboratory = dynamic(() => import('@/modules/players/PlayerLaboratory').then((module) => module.PlayerLaboratory), { ssr: false });
-const IntegratedTeamLab = dynamic(() => import('@/modules/squad/IntegratedTeamLab').then((module) => module.IntegratedTeamLab), { ssr: false });
-const MatchLaboratory = dynamic(() => import('@/modules/matches/MatchLaboratory').then((module) => module.MatchLaboratory), { ssr: false });
-const BuildMasterAssistant = dynamic(() => import('@/modules/assistant/BuildMasterAssistant').then((module) => module.BuildMasterAssistant), { ssr: false });
-const DelayResponsePanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.DelayResponsePanel), { ssr: false });
-const SkillAndTrainingPanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.SkillAndTrainingPanel), { ssr: false });
-const EliteEvolutionPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.EliteEvolutionPanel), { ssr: false });
-const StabilityDiagnosticsPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.StabilityDiagnosticsPanel), { ssr: false });
-const VideoReviewPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.VideoReviewPanel), { ssr: false });
-const MetaBuildLabPanel = dynamic(() => import('@/components/MetaBuildLabPanel').then((module) => module.MetaBuildLabPanel), { ssr: false });
-const CommunityIntelligencePanel = dynamic(() => import('@/components/CommunityIntelligencePanel').then((module) => module.CommunityIntelligencePanel), { ssr: false });
-const UpdateCenterPanel = dynamic(() => import('@/components/UpdateCenterPanel').then((module) => module.UpdateCenterPanel), { ssr: false });
-const AccountAdminPanel = dynamic(() => import('@/components/AccountAdminPanel').then((module) => module.AccountAdminPanel), { ssr: false });
-const PrecisionBuildPanel = dynamic(() => import('@/components/PrecisionBuildPanel').then((module) => module.PrecisionBuildPanel), { ssr: false });
-const FormationRoleLabPanel = dynamic(() => import('@/components/FormationRoleLabPanel').then((module) => module.FormationRoleLabPanel), { ssr: false });
-const FirstUseOnboarding = dynamic(() => import('@/components/FirstUseOnboarding').then((module) => module.FirstUseOnboarding), { ssr: false });
-const DecisionWeightPanel = dynamic(() => import('@/components/DecisionWeightPanel').then((module) => module.DecisionWeightPanel), { ssr: false });
-const InvestmentTracePanel = dynamic(() => import('@/components/InvestmentTracePanel').then((module) => module.InvestmentTracePanel), { ssr: false });
-const VerifiedCardRegistryPanel = dynamic(() => import('@/components/VerifiedCardRegistryPanel').then((module) => module.VerifiedCardRegistryPanel), { ssr: false });
-const MatchValidationCenter = dynamic(() => import('@/components/MatchValidationCenter').then((module) => module.MatchValidationCenter), { ssr: false });
-const TotalCardReaderPanel = dynamic(() => import('@/components/TotalCardReaderPanel').then((module) => module.TotalCardReaderPanel), { ssr: false });
-const SinglePrintEvidencePanel = dynamic(() => import('@/components/SinglePrintEvidencePanel').then((module) => module.SinglePrintEvidencePanel), { ssr: false });
-const CompactSharePanel = dynamic(() => import('@/components/CompactSharePanel').then((module) => module.CompactSharePanel), { ssr: false });
+const PlayerLaboratory = dynamic(() => import('@/modules/players/PlayerLaboratory').then((module) => module.PlayerLaboratory), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const IntegratedTeamLab = dynamic(() => import('@/modules/squad/IntegratedTeamLab').then((module) => module.IntegratedTeamLab), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const MatchLaboratory = dynamic(() => import('@/modules/matches/MatchLaboratory').then((module) => module.MatchLaboratory), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const BuildMasterAssistant = dynamic(() => import('@/modules/assistant/BuildMasterAssistant').then((module) => module.BuildMasterAssistant), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const DelayResponsePanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.DelayResponsePanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const SkillAndTrainingPanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.SkillAndTrainingPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const EliteEvolutionPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.EliteEvolutionPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const StabilityDiagnosticsPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.StabilityDiagnosticsPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const VideoReviewPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.VideoReviewPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const MetaBuildLabPanel = dynamic(() => import('@/components/MetaBuildLabPanel').then((module) => module.MetaBuildLabPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const CommunityIntelligencePanel = dynamic(() => import('@/components/CommunityIntelligencePanel').then((module) => module.CommunityIntelligencePanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const UpdateCenterPanel = dynamic(() => import('@/components/UpdateCenterPanel').then((module) => module.UpdateCenterPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const AccountAdminPanel = dynamic(() => import('@/components/AccountAdminPanel').then((module) => module.AccountAdminPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const PrecisionBuildPanel = dynamic(() => import('@/components/PrecisionBuildPanel').then((module) => module.PrecisionBuildPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const FormationRoleLabPanel = dynamic(() => import('@/components/FormationRoleLabPanel').then((module) => module.FormationRoleLabPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const FirstUseOnboarding = dynamic(() => import('@/components/FirstUseOnboarding').then((module) => module.FirstUseOnboarding), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const DecisionWeightPanel = dynamic(() => import('@/components/DecisionWeightPanel').then((module) => module.DecisionWeightPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const InvestmentTracePanel = dynamic(() => import('@/components/InvestmentTracePanel').then((module) => module.InvestmentTracePanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const VerifiedCardRegistryPanel = dynamic(() => import('@/components/VerifiedCardRegistryPanel').then((module) => module.VerifiedCardRegistryPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const MatchValidationCenter = dynamic(() => import('@/components/MatchValidationCenter').then((module) => module.MatchValidationCenter), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const TotalCardReaderPanel = dynamic(() => import('@/components/TotalCardReaderPanel').then((module) => module.TotalCardReaderPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const SinglePrintEvidencePanel = dynamic(() => import('@/components/SinglePrintEvidencePanel').then((module) => module.SinglePrintEvidencePanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const CompactSharePanel = dynamic(() => import('@/components/CompactSharePanel').then((module) => module.CompactSharePanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
@@ -650,7 +655,7 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, '&#039;');
 }
 
-function buildProfessionalReportHtml(result: AnalysisResult, notes = '') {
+function buildProfessionalReportHtml(result: AnalysisResult, notes = '', autoPrint = false) {
   const trainingRows = Object.entries(result.training)
     .filter(([, value]) => Number(value) > 0)
     .map(([key, value]) => `<tr><td>${escapeHtml(trainingLabels[key] ?? key)}</td><td>+${escapeHtml(value)}</td><td>${escapeHtml(result.trainingCost[key as keyof typeof result.trainingCost] ?? 0)} pts</td></tr>`)
@@ -729,6 +734,7 @@ function buildProfessionalReportHtml(result: AnalysisResult, notes = '') {
   ${notes ? `<section><h2>Observações pessoais</h2><div class="notes">${escapeHtml(notes)}</div></section>` : ''}
   <footer><span>Gerado em ${new Date().toLocaleString('pt-BR')}</span><span>Ficha validada para desempenho real em campo</span></footer>
 </main>
+${autoPrint ? `<script>window.addEventListener('load',()=>window.setTimeout(()=>window.print(),350),{once:true});</script>` : ''}
 </body>
 </html>`;
 }
@@ -1854,7 +1860,7 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
       </nav>
 
       {teamCenterView === 'formacoes' && (
-        <FormationRoleLabPanel results={history.map((item) => item.result)} activeFormation={formation} activeStyle={teamStyle} />
+        <SectionErrorBoundary area="laboratorio-formacoes"><FormationRoleLabPanel results={history.map((item) => item.result)} activeFormation={formation} activeStyle={teamStyle} /></SectionErrorBoundary>
       )}
 
       {teamCenterView === 'visao' && (
@@ -2061,7 +2067,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v25.75 — ${result.parsed.playerName}`,
+    `BuildMaster Elite Tático v${APP_RELEASE_VERSION} — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -4070,6 +4076,15 @@ export function CardVisionApp() {
     }
   }
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const main = document.getElementById('buildmaster-main-content');
+      main?.focus({ preventScroll: true });
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mainSection]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowSplash(false), 1350);
@@ -4568,7 +4583,7 @@ export function CardVisionApp() {
     setHistory((current) => {
       const existing = current.find((entry) => entry.saveKey === key);
       const base: SavedAnalysis = {
-        id: existing?.id ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: existing?.id ?? createStableId('ficha'),
         saveKey: key,
         savedAt: existing?.savedAt ?? now,
         updatedAt: now,
@@ -4624,7 +4639,7 @@ export function CardVisionApp() {
       history,
       settings: {
         ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }) || {}) as Record<string, unknown>),
-        autoUpdateCheck: (localStorage.getItem('buildmaster_auto_update_check') ?? localStorage.getItem('buildmaster_auto_update_check_v26_70')) !== '0'
+        autoUpdateCheck: (safeStorageGet('buildmaster_auto_update_check') ?? safeStorageGet('buildmaster_auto_update_check_v26_70')) !== '0'
       },
       calibration: {
         matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
@@ -4772,7 +4787,7 @@ export function CardVisionApp() {
         if (ui.motionPreference && ['system', 'reduced', 'full'].includes(ui.motionPreference)) setMotionPreference(ui.motionPreference);
         if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
         if (ui.performanceMode === 'balanced' || ui.performanceMode === 'economy') setPerformanceMode(ui.performanceMode);
-        if (typeof ui.autoUpdateCheck === 'boolean') localStorage.setItem('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
+        if (typeof ui.autoUpdateCheck === 'boolean') safeStorageSet('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
       }
       if (restoreSections.calibration && sections.calibration && typeof sections.calibration === 'object') {
         const calibration = sections.calibration as Record<string, unknown>;
@@ -4936,8 +4951,8 @@ export function CardVisionApp() {
     if (!item) return;
     const copy: SavedAnalysis = {
       ...item,
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      saveKey: `${item.saveKey}-variante-${Date.now()}`,
+      id: createStableId('ficha-variante'),
+      saveKey: `${item.saveKey}-variante-${createStableId('copia')}`,
       savedAt: new Date().toLocaleString('pt-BR'),
       updatedAt: new Date().toLocaleString('pt-BR'),
       notes: `${item.notes ?? ''}${item.notes ? '\n' : ''}Variação criada para testar outra função/ficha.`,
@@ -5021,18 +5036,22 @@ export function CardVisionApp() {
     if (!result) return;
     try {
       const active = activeSavedAnalysis;
-      const html = buildProfessionalReportHtml(result, active?.notes ?? '');
-      const popup = window.open('', '_blank', 'noopener,noreferrer,width=980,height=1200');
+      const html = buildProfessionalReportHtml(result, active?.notes ?? '', true);
+      const reportUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+      const popup = window.open(reportUrl, '_blank', 'width=980,height=1200');
       if (!popup) {
+        URL.revokeObjectURL(reportUrl);
         window.print();
         setStatus('Relatório aberto para impressão/exportação em PDF.');
         return;
       }
-      popup.document.open();
-      popup.document.write(html);
-      popup.document.close();
-      popup.focus();
-      setTimeout(() => popup.print(), 450);
+      try {
+        popup.opener = null;
+        popup.focus();
+      } catch {
+        // A janela pode ficar isolada pelo navegador; o próprio relatório dispara a impressão.
+      }
+      window.setTimeout(() => URL.revokeObjectURL(reportUrl), 60_000);
       setStatus('Relatório profissional aberto. Escolha “Salvar como PDF” na tela de impressão.');
     } catch {
       exportCurrentReport();
@@ -5765,20 +5784,20 @@ export function CardVisionApp() {
         </div>
       )}
 
-      <FirstUseOnboarding
+      <SectionErrorBoundary area="primeiro-uso"><FirstUseOnboarding
         open={onboardingOpen && !showSplash}
         onClose={() => setOnboardingOpen(false)}
         onComplete={completeOnboarding}
         onCreatePrint={() => openMainSection('leitor')}
         onCreateManual={() => openMainSection('manual')}
-      />
+      /></SectionErrorBoundary>
 
       <header className="app-topbar app-command-bar luxury-panel">
         <button type="button" className="brand-lockup brand-home-button" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v27.28</span>
+            <span>Elite Tático v{APP_RELEASE_VERSION}</span>
           </div>
         </button>
 
@@ -5960,31 +5979,31 @@ export function CardVisionApp() {
       )}
 
       {mainSection === 'jogadores' && (
-        <PlayerLaboratory
+        <SectionErrorBoundary area="jogadores"><PlayerLaboratory
           players={integratedPlayers}
           onReadCard={() => openMainSection('leitor')}
           onManualCard={() => openMainSection('manual')}
           onOpenVault={openCofreDeJogadores}
           onOpenPlayer={(id) => openIntegratedPlayer(id, 'vault')}
           onOpenResult={(id) => openIntegratedPlayer(id, 'result')}
-        />
+        /></SectionErrorBoundary>
       )}
 
       {mainSection === 'partidas' && (
-        <MatchLaboratory
+        <SectionErrorBoundary area="partidas"><MatchLaboratory
           team={integratedTeam}
           players={integratedPlayers}
           records={centralMatchRecords}
           plans={centralMatchPlans}
           onValidatePlayer={(id) => openIntegratedPlayer(id, 'matches')}
           onOpenTeam={() => openMainSection('time')}
-        />
+        /></SectionErrorBoundary>
       )}
 
       {mainSection !== 'inicio' && mainSection !== 'jogadores' && mainSection !== 'partidas' && (
       <section className={`workspace-grid ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
         {mainSection === 'time' && (
-          <IntegratedTeamLab team={integratedTeam} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} />
+          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} /></SectionErrorBoundary>
         )}
         {isCreationSection && (
           <section className="creation-hub creation-studio-hero luxury-panel">
@@ -6052,7 +6071,7 @@ export function CardVisionApp() {
           </div>
 
           {readerCaptureMode === 'complete' ? (
-            <TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} />
+            <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} /></SectionErrorBoundary>
           ) : (<>
           <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
             <div className="creation-source-heading">
@@ -6835,8 +6854,8 @@ export function CardVisionApp() {
                   </section>
                 )}
 
-                {settingsView === 'contas' && <AccountAdminPanel />}
-                {settingsView === 'atualizacoes' && <UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} />}
+                {settingsView === 'contas' && <SectionErrorBoundary area="contas"><AccountAdminPanel /></SectionErrorBoundary>}
+                {settingsView === 'atualizacoes' && <SectionErrorBoundary area="atualizacoes"><UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} /></SectionErrorBoundary>}
               </div>
             </div>
           )}
@@ -6939,7 +6958,7 @@ export function CardVisionApp() {
       )}
 
       <AppCommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} commands={appCommands} />
-      <BuildMasterAssistant open={assistantOpen} onOpenChange={setAssistantOpen} players={integratedPlayers} team={integratedTeam} />
+      <SectionErrorBoundary area="assistente"><BuildMasterAssistant open={assistantOpen} onOpenChange={setAssistantOpen} players={integratedPlayers} team={integratedTeam} /></SectionErrorBoundary>
     </main>
   );
 }

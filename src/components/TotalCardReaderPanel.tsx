@@ -5,6 +5,7 @@ import { CheckCircle2, ImagePlus, Images, Loader2, RotateCcw, ScanLine, ShieldCh
 import { inspectPrintQuality } from '@/lib/ocr';
 import { qualityLabel, qualityScore } from '@/lib/premiumReading';
 import { TOTAL_CAPTURE_SLOTS, type CardScreenType, type TotalCardCaptureInput } from '@/lib/totalCardReader';
+import { createStableId } from '@/lib/stableId';
 
 type SlotState = Omit<TotalCardCaptureInput, 'id' | 'declaredType' | 'label' | 'requirement'> & { id: string };
 
@@ -15,7 +16,7 @@ type Props = {
 };
 
 function captureId(type: string) {
-  return `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  return createStableId(`capture-${type}`);
 }
 
 export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected }: Props) {

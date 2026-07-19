@@ -1,5 +1,5 @@
-export const CURRENT_DATA_SCHEMA = 2700;
-export const APP_DATA_VERSION = '27.10.0';
+export const CURRENT_DATA_SCHEMA = 2729;
+export const APP_DATA_VERSION = '27.29.0';
 
 export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution';
 
@@ -26,11 +26,65 @@ export type IntegrityReport = {
   totals: { sections: number; records: number; malformed: number };
 };
 
-function stableStringify(value: unknown): string {
+const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution']);
+const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const MAX_BACKUP_DEPTH = 18;
+const MAX_BACKUP_NODES = 250_000;
+const MAX_ARRAY_ITEMS = 20_000;
+const MAX_OBJECT_KEYS = 20_000;
+const MAX_STRING_LENGTH = 16 * 1024 * 1024;
+
+type SanitizeBudget = { nodes: number };
+
+function sanitizeBackupValue(value: unknown, depth = 0, budget: SanitizeBudget = { nodes: 0 }): unknown {
+  budget.nodes += 1;
+  if (budget.nodes > MAX_BACKUP_NODES) throw new Error('O backup contém dados demais para ser restaurado com segurança.');
+  if (depth > MAX_BACKUP_DEPTH) throw new Error('O backup possui uma estrutura profunda demais.');
+  if (value === null || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    if (value.length > MAX_STRING_LENGTH) throw new Error('O backup contém um campo de texto ou imagem acima do limite seguro.');
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (value.length > MAX_ARRAY_ITEMS) throw new Error('O backup contém uma lista acima do limite seguro.');
+    return value.map((item) => sanitizeBackupValue(item, depth + 1, budget));
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length > MAX_OBJECT_KEYS) throw new Error('O backup contém um objeto acima do limite seguro.');
+    const clean: Record<string, unknown> = {};
+    for (const [key, item] of entries) {
+      if (FORBIDDEN_OBJECT_KEYS.has(key)) continue;
+      clean[key] = sanitizeBackupValue(item, depth + 1, budget);
+    }
+    return clean;
+  }
+  return null;
+}
+
+function sanitizeSections(value: unknown): BackupEnvelope['sections'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('As seções do backup são inválidas.');
+  const clean: BackupEnvelope['sections'] = {};
+  const budget: SanitizeBudget = { nodes: 0 };
+  for (const [key, section] of Object.entries(value as Record<string, unknown>)) {
+    if (!BACKUP_SECTIONS.has(key as BackupSection)) continue;
+    clean[key as BackupSection] = sanitizeBackupValue(section, 1, budget);
+  }
+  return clean;
+}
+
+function stableStringify(value: unknown, seen = new WeakSet<object>()): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  const record = value as Record<string, unknown>;
-  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`;
+  if (seen.has(value)) throw new Error('Não é possível gerar integridade para dados circulares.');
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item, seen)).join(',')}]`;
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(record[key], seen)}`).join(',')}}`;
+  } finally {
+    seen.delete(value);
+  }
 }
 
 export function checksumFor(value: unknown): string {
@@ -44,29 +98,49 @@ export function checksumFor(value: unknown): string {
 }
 
 export function createBackupEnvelope(sections: BackupEnvelope['sections'], exportedAt = new Date().toISOString()): BackupEnvelope {
-  const core = { app: 'BuildMaster Elite Tático' as const, version: APP_DATA_VERSION, schema: CURRENT_DATA_SCHEMA, exportedAt, sections };
+  const safeSections = sanitizeSections(sections);
+  const safeDate = Number.isNaN(Date.parse(exportedAt)) ? new Date().toISOString() : exportedAt;
+  const core = { app: 'BuildMaster Elite Tático' as const, version: APP_DATA_VERSION, schema: CURRENT_DATA_SCHEMA, exportedAt: safeDate, sections: safeSections };
   return { ...core, checksum: checksumFor(core) };
 }
 
 export function validateBackupEnvelope(input: unknown): { valid: boolean; migrated: BackupEnvelope | null; issues: IntegrityIssue[] } {
   const issues: IntegrityIssue[] = [];
-  if (!input || typeof input !== 'object') return { valid: false, migrated: null, issues: [{ level: 'critical', code: 'invalid-root', message: 'O arquivo não contém um backup válido.' }] };
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return { valid: false, migrated: null, issues: [{ level: 'critical', code: 'invalid-root', message: 'O arquivo não contém um backup válido.' }] };
+  }
   const raw = input as Partial<BackupEnvelope> & { items?: unknown[] };
-  if (Array.isArray(raw.items) && !raw.sections) {
-    const migrated = createBackupEnvelope({ history: raw.items });
-    issues.push({ level: 'info', code: 'legacy-history', message: 'Backup antigo do Cofre convertido para o formato atual.', section: 'history' });
-    return { valid: true, migrated, issues };
+  try {
+    if (Array.isArray(raw.items) && !raw.sections) {
+      const migrated = createBackupEnvelope({ history: raw.items });
+      issues.push({ level: 'info', code: 'legacy-history', message: 'Backup antigo do Cofre convertido para o formato atual.', section: 'history' });
+      return { valid: true, migrated, issues };
+    }
+    if (raw.app !== 'BuildMaster Elite Tático' || !raw.sections || typeof raw.sections !== 'object' || Array.isArray(raw.sections)) {
+      return { valid: false, migrated: null, issues: [{ level: 'critical', code: 'wrong-app', message: 'O arquivo não foi reconhecido como backup do BuildMaster.' }] };
+    }
+    const schema = Number(raw.schema || 0);
+    if (!Number.isSafeInteger(schema) || schema < 0) {
+      return { valid: false, migrated: null, issues: [{ level: 'critical', code: 'invalid-schema', message: 'O esquema do backup é inválido.' }] };
+    }
+    if (schema > CURRENT_DATA_SCHEMA) issues.push({ level: 'warning', code: 'future-schema', message: 'O backup foi criado por uma versão mais nova do app.' });
+    const exportedAt = String(raw.exportedAt || '');
+    if (!exportedAt || Number.isNaN(Date.parse(exportedAt))) issues.push({ level: 'warning', code: 'invalid-date', message: 'A data do backup não pôde ser confirmada.' });
+    const safeSections = sanitizeSections(raw.sections);
+    const core = { app: raw.app, version: String(raw.version || 'desconhecida'), schema, exportedAt, sections: safeSections };
+    const expected = checksumFor(core);
+    if (!raw.checksum || raw.checksum !== expected) {
+      issues.push({ level: 'critical', code: 'checksum', message: 'O código de integridade do backup não confere. O arquivo pode ter sido alterado ou corrompido.' });
+    }
+    const migrated = createBackupEnvelope(safeSections, exportedAt || new Date().toISOString());
+    return { valid: !issues.some((issue) => issue.level === 'critical'), migrated, issues };
+  } catch (cause) {
+    return {
+      valid: false,
+      migrated: null,
+      issues: [{ level: 'critical', code: 'unsafe-payload', message: cause instanceof Error ? cause.message : 'O backup ultrapassa os limites seguros.' }]
+    };
   }
-  if (raw.app !== 'BuildMaster Elite Tático' || !raw.sections || typeof raw.sections !== 'object') {
-    return { valid: false, migrated: null, issues: [{ level: 'critical', code: 'wrong-app', message: 'O arquivo não foi reconhecido como backup do BuildMaster.' }] };
-  }
-  const schema = Number(raw.schema || 0);
-  if (schema > CURRENT_DATA_SCHEMA) issues.push({ level: 'warning', code: 'future-schema', message: 'O backup foi criado por uma versão mais nova do app.' });
-  const core = { app: raw.app, version: String(raw.version || 'desconhecida'), schema, exportedAt: String(raw.exportedAt || ''), sections: raw.sections };
-  const expected = checksumFor(core);
-  if (raw.checksum && raw.checksum !== expected) issues.push({ level: 'critical', code: 'checksum', message: 'A assinatura do backup não confere. O arquivo pode ter sido alterado ou corrompido.' });
-  const migrated = createBackupEnvelope(raw.sections as BackupEnvelope['sections'], core.exportedAt || new Date().toISOString());
-  return { valid: !issues.some((issue) => issue.level === 'critical'), migrated, issues };
 }
 
 function countRecords(value: unknown): number {
@@ -121,7 +195,7 @@ export function migrateBackup(envelope: BackupEnvelope): { envelope: BackupEnvel
   if (sections.evolution && typeof sections.evolution === 'object') {
     const evolution = { ...(sections.evolution as Record<string, unknown>) };
     if (!evolution.centralIntelligence) {
-      evolution.centralIntelligence = { schemaVersion: 27, migratedAt: envelope.exportedAt, preservedKeys: [], note: 'Migração não destrutiva da Central Inteligente.' };
+      evolution.centralIntelligence = { schemaVersion: 29, migratedAt: envelope.exportedAt, preservedKeys: [], note: 'Migração não destrutiva da Central Inteligente.' };
       steps.push('Central Inteligente vinculada aos dados existentes sem apagar o Cofre.');
     }
     if (!evolution.centralEntityIndex) {

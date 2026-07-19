@@ -9,6 +9,7 @@ import {
   secureSet,
   signNativeDeviceMessage
 } from '@/lib/secureStorage';
+import { createStableId } from './stableId';
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -167,9 +168,7 @@ async function getLegacyWebDeviceId(): Promise<string> {
     await secureSet(DEVICE_ID_KEY, current);
     return current;
   }
-  const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `device-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  const id = createStableId('device');
   await secureSet(DEVICE_ID_KEY, id);
   return id;
 }

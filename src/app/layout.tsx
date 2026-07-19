@@ -1,15 +1,17 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { RegisterServiceWorker } from '@/components/RegisterServiceWorker';
+import { AppRuntimeStatus } from '@/components/AppRuntimeStatus';
+import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'BuildMaster Elite Tático v27.28',
+  title: `BuildMaster Elite Tático v${APP_RELEASE_VERSION}`,
   description: 'Central premium para criar fichas, organizar o Cofre, analisar elenco, tática, habilidades e contas do BuildMaster Elite Tático.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'BuildMaster v27.28',
+    title: `BuildMaster v${APP_RELEASE_VERSION}`,
     statusBarStyle: 'black-translucent'
   },
   icons: {
@@ -32,7 +34,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body><RegisterServiceWorker />{children}</body>
+      <body><RegisterServiceWorker /><AppRuntimeStatus />{children}</body>
     </html>
   );
 }

@@ -16,16 +16,26 @@ const nextConfig = {
       }
     : {
         async headers() {
+          const securityHeaders = [
+            { key: 'X-Content-Type-Options', value: 'nosniff' },
+            { key: 'X-Frame-Options', value: 'DENY' },
+            { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+            { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()' },
+            { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
+          ];
           return [
+            { source: '/(.*)', headers: securityHeaders },
             {
               source: '/sw.js',
               headers: [
+                ...securityHeaders,
                 { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' }
               ]
             },
             {
               source: '/manifest.webmanifest',
               headers: [
+                ...securityHeaders,
                 { key: 'Cache-Control', value: 'no-cache, must-revalidate' }
               ]
             }

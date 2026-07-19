@@ -12648,7 +12648,7 @@ label:focus-within {
 @media(max-width:980px){.v27-quick-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v27-team-support-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.v27-quick-action-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory}.v27-quick-action-grid>button{min-width:230px;scroll-snap-align:start}.v27-team-support-grid{gap:10px}.v27-bench-card,.v27-pairing-card{padding:13px}}
 
-/* v27.28 — acesso visível para criação e administração de contas */
+/* v27.29 — acesso visível para criação e administração de contas */
 .topbar-admin-account-action {
   display: inline-flex;
   align-items: center;

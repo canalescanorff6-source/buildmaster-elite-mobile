@@ -1,0 +1,277 @@
+/* BuildMaster v27.29 — acabamento transversal: acessibilidade, desempenho e proteção contra sobreposição. */
+
+:root {
+  --bm-safe-top: env(safe-area-inset-top, 0px);
+  --bm-safe-right: env(safe-area-inset-right, 0px);
+  --bm-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bm-safe-left: env(safe-area-inset-left, 0px);
+  --bm-focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent, #34d399) 38%, transparent);
+}
+
+html {
+  min-width: 320px;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: calc(88px + var(--bm-safe-top));
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  padding-left: var(--bm-safe-left);
+  padding-right: var(--bm-safe-right);
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"],
+input,
+select,
+textarea,
+summary,
+a {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"],
+summary,
+a {
+  min-height: 44px;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent, #34d399) 82%, white 18%);
+  outline-offset: 3px;
+  box-shadow: var(--bm-focus-ring);
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .56;
+}
+
+img,
+canvas,
+video {
+  max-width: 100%;
+}
+
+.app-main,
+.main-content,
+.settings-view-panel,
+.result-shell,
+.team-center-shell,
+.vault-shell {
+  overflow-wrap: anywhere;
+}
+
+/* Áreas extensas deixam o navegador adiar pintura fora da tela. */
+.luxury-panel,
+.settings-view-panel,
+.update-release-card,
+.update-diagnostic-panel,
+.ficha-workspace-shell > section,
+.ficha-workspace-shell > article {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
+}
+
+.panel-loading-fallback,
+.section-error-fallback {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 116px;
+  padding: 20px;
+}
+
+.panel-loading-fallback > div,
+.section-error-fallback > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.panel-loading-fallback span,
+.section-error-fallback span {
+  color: var(--muted, #94a3b8);
+  line-height: 1.5;
+}
+
+.section-error-fallback {
+  border-color: color-mix(in srgb, #fb7185 42%, transparent);
+}
+
+.section-error-fallback > button {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.update-readiness-grid article,
+.update-release-version,
+.update-release-details,
+.update-diagnostic-grid article,
+.update-audit-list article {
+  min-width: 0;
+}
+
+.update-readiness-grid strong,
+.update-readiness-grid small,
+.update-release-card small,
+.update-release-card li,
+.update-audit-list strong,
+.update-audit-list small,
+.cloud-status-card span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.update-release-details > small {
+  display: block;
+  max-width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  user-select: text;
+}
+
+.update-download-progress i {
+  overflow: hidden;
+}
+
+.update-download-progress i > b {
+  transition: width .24s ease;
+}
+
+.section-error-boundary {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  body {
+    padding-bottom: calc(92px + var(--bm-safe-bottom));
+  }
+
+  .app-shell,
+  .app-main,
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .mobile-bottom-nav,
+  .bottom-navigation,
+  .app-bottom-nav {
+    padding-bottom: max(10px, var(--bm-safe-bottom));
+  }
+
+  .settings-panel-heading,
+  .update-diagnostic-heading,
+  .ficha-workspace-header,
+  .ficha-recommended-head {
+    align-items: flex-start;
+  }
+
+  .settings-state-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .section-error-fallback {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .section-error-fallback > button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .update-actions-grid button,
+  .safety-actions-grid button {
+    min-height: 96px;
+  }
+}
+
+@media (max-width: 420px) {
+  .luxury-panel,
+  .settings-view-panel,
+  .update-center-panel {
+    border-radius: 18px;
+  }
+
+  .update-readiness-grid,
+  .update-diagnostic-grid,
+  .safety-actions-grid,
+  .update-actions-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .update-release-version strong {
+    font-size: clamp(2rem, 14vw, 3.2rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+.app-runtime-status {
+  position: fixed;
+  z-index: 1200;
+  top: calc(12px + var(--bm-safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 24px - var(--bm-safe-left) - var(--bm-safe-right)));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, #111827 94%, transparent);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .32);
+  backdrop-filter: blur(16px);
+}
+
+.app-runtime-status > div {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.app-runtime-status span,
+.app-runtime-status small {
+  overflow-wrap: anywhere;
+  color: var(--muted, #cbd5e1);
+}
+
+.app-runtime-status > button {
+  width: 40px;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}

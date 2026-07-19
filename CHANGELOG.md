@@ -1,3 +1,20 @@
+## 27.29.0 — Auditoria total, estabilidade e atualizador resiliente
+
+- auditoria automatizada de código, segurança, interface, armazenamento, backup, workflow e Android;
+- atualizador com memória de saúde por rota, bloqueio de downloads simultâneos e alternância real após falhas;
+- download nativo com `Accept-Encoding: identity`, tentativas limitadas e diagnóstico HTTP completo;
+- validação final por bytes reais, SHA-256, cabeçalho APK, pacote, versão, `versionCode` e assinatura;
+- armazenamento local protegido contra indisponibilidade, quota e dados corrompidos;
+- restauração de backup limitada por profundidade, volume e tamanho, com bloqueio de poluição de protótipo;
+- identificadores estáveis com `crypto.randomUUID` quando disponível;
+- isolamento de falhas e carregamento progressivo dos módulos pesados;
+- avisos de modo offline, falha de armazenamento e erros globais recuperáveis;
+- melhorias de área segura, foco, toque mínimo, movimento reduzido e telas pequenas;
+- remoção de `any` explícito, `document.write` e injeções diretas de HTML;
+- cabeçalhos de segurança web, service worker restrito à mesma origem e cache renovado;
+- auditoria obrigatória no GitHub Actions antes da assinatura e publicação;
+- suíte completa de regressão aprovada e build estático do APK concluído.
+
 ## v27.26.0 — correção do workflow de atualização
 
 - remove automaticamente `public/update-manifest.json` antes dos testes e do build;

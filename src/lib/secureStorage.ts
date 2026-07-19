@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import { safeStorageGet, safeStorageRemove, safeStorageSet } from './safeLocalStorage';
 
 export type NativeInstallInfo = {
   packageName: string;
@@ -15,12 +16,18 @@ export type ApkDownloadProgress = {
   totalBytes: number;
 };
 
-type ApkInstallResult = {
+export type ApkInstallResult = {
   verified: boolean;
   checksum?: string;
   needsPermission?: boolean;
   versionCode?: number;
   versionName?: string;
+  finalUrl?: string;
+  responseHost?: string;
+  contentType?: string;
+  contentEncoding?: string;
+  contentLength?: number;
+  etag?: string;
 };
 
 type SecureStoragePlugin = {
@@ -39,18 +46,15 @@ type SecureStoragePlugin = {
     expectedVersionCode: number;
     expectedVersionName: string;
     expectedSizeBytes?: number;
+    maxAttempts?: number;
   }): Promise<ApkInstallResult>;
   addListener(eventName: 'apkDownloadProgress', listener: (event: ApkDownloadProgress) => void): Promise<PluginListenerHandle>;
 };
 
 const BuildMasterSecurity = registerPlugin<SecureStoragePlugin>('BuildMasterSecurity');
 
-function webStorageAvailable() {
-  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-}
-
 function requireWebStorage() {
-  if (!webStorageAvailable()) throw new Error('Armazenamento local indisponível.');
+  if (typeof window === 'undefined') throw new Error('Armazenamento local indisponível.');
 }
 
 export async function secureSet(key: string, value: string): Promise<void> {
@@ -59,7 +63,7 @@ export async function secureSet(key: string, value: string): Promise<void> {
     return;
   }
   requireWebStorage();
-  localStorage.setItem(key, value);
+  if (!safeStorageSet(key, value)) throw new Error('Armazenamento local indisponível ou sem espaço.');
 }
 
 export async function secureGet(key: string): Promise<string | null> {
@@ -68,7 +72,7 @@ export async function secureGet(key: string): Promise<string | null> {
     return result.value ?? null;
   }
   requireWebStorage();
-  return localStorage.getItem(key);
+  return safeStorageGet(key);
 }
 
 export async function secureRemove(key: string): Promise<void> {
@@ -76,17 +80,17 @@ export async function secureRemove(key: string): Promise<void> {
     await BuildMasterSecurity.remove({ key });
     return;
   }
-  if (webStorageAvailable()) localStorage.removeItem(key);
+  safeStorageRemove(key);
 }
 
 export async function migrateLegacyValueToSecureStorage(key: string): Promise<string | null> {
   const secure = await secureGet(key);
   if (secure != null) return secure;
-  if (!webStorageAvailable()) return null;
-  const legacy = localStorage.getItem(key);
+  if (typeof window === 'undefined') return null;
+  const legacy = safeStorageGet(key);
   if (legacy == null) return null;
   await secureSet(key, legacy);
-  localStorage.removeItem(key);
+  safeStorageRemove(key);
   return legacy;
 }
 
@@ -122,6 +126,7 @@ export async function downloadVerifyAndInstallApk(options: {
   expectedVersionCode: number;
   expectedVersionName: string;
   expectedSizeBytes?: number;
+  maxAttempts?: number;
 }): Promise<ApkInstallResult> {
   if (!Capacitor.isNativePlatform()) throw new Error('A instalação verificada está disponível somente no APK Android.');
   return BuildMasterSecurity.downloadAndInstallApk(options);

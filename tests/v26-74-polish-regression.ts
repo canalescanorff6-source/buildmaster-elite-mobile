@@ -25,7 +25,10 @@ assert.match(accounts, /Gerar outra senha segura/);
 assert.match(app, /aria-current=/);
 assert.match(app, /previousFocus\?\.focus\(\)/);
 assert.match(app, /setSettingsView\('backup'\)/);
-assert.ok(app.includes(`Elite Tático v${displayVersion}`), `A interface precisa mostrar a versão atual v${displayVersion}.`);
+assert.ok(
+  app.includes('APP_RELEASE_VERSION') && layout.includes('APP_RELEASE_VERSION'),
+  `A interface precisa usar a versão centralizada v${displayVersion}.`,
+);
 
 assert.match(css, /v26\.75 — SEGURANÇA REFORÇADA/);
 assert.match(css, /label:focus-within[\s\S]*outline: none !important/);

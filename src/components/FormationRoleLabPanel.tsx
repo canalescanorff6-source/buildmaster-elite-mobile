@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Copy, Layers, Plus, Save, ShieldCheck, Sparkles, Target, Trash2, Users } from 'lucide-react';
 import type { AnalysisResult, PositionCode, TacticalStyle } from '@/lib/analyzer';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { createStableId } from '@/lib/stableId';
 import {
   FORMATION_BLUEPRINTS,
   FORMATION_ROLE_CATALOG,
@@ -27,7 +28,7 @@ function cloneBlueprint(source: FormationBlueprint, name: string): SavedCustomFo
   const now = new Date().toISOString();
   return {
     ...source,
-    id: `custom-${Date.now()}`,
+    id: createStableId('custom-formation'),
     name,
     family: 'personalizada',
     description: `Formação personalizada baseada na ${source.name}.`,

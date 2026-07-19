@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisResult } from '@/lib/analyzer';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { createStableId } from '@/lib/stableId';
 
 const TRAINING_LABELS: Record<string,string> = {
   shooting:'Finalização', passing:'Passe', dribbling:'Drible', dexterity:'Destreza', lowerBodyStrength:'Força pernas',
@@ -105,7 +106,7 @@ export function VideoReviewPanel({result}:{result:AnalysisResult}){
   useEffect(()=>()=>{if(videoUrl)URL.revokeObjectURL(videoUrl);},[videoUrl]);
   if(!e)return null;
   function chooseVideo(file?:File){if(!file)return;if(videoUrl)URL.revokeObjectURL(videoUrl);setVideoUrl(URL.createObjectURL(file));}
-  function addMarker(){const seconds=Math.round(videoRef.current?.currentTime??0);const row={id:`${Date.now()}-${seconds}`,at:new Date().toISOString(),seconds,error:markerType,note};const next=[...markers,row].sort((a,b)=>a.seconds-b.seconds);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));setNote('');}
+  function addMarker(){const seconds=Math.round(videoRef.current?.currentTime??0);const row={id:createStableId('video-marker'),at:new Date().toISOString(),seconds,error:markerType,note};const next=[...markers,row].sort((a,b)=>a.seconds-b.seconds);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));setNote('');}
   function remove(id:string){const next=markers.filter(x=>x.id!==id);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));}
   return <article className="luxury-panel wide-card video-review-card">
     <div className="section-title-row"><div><p className="kicker">v26.10–v26.13 • Vídeo e treino adaptativo</p><h3>Análise assistida da jogabilidade</h3></div><span>{markers.length} lance(s)</span></div>

@@ -6,7 +6,7 @@ const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSy
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 const displayVersion = pkg.version.split('.').slice(0, 2).join('.');
 
-assert.ok(component.includes(`Elite Tático v${displayVersion}`), `A interface precisa mostrar a versão atual v${displayVersion}.`);
+assert.ok(component.includes('APP_RELEASE_VERSION'), `A interface precisa usar a versão centralizada v${displayVersion}.`);
 assert.match(component, /const RESULT_PRIMARY_TABS/);
 assert.match(component, /const RESULT_ADVANCED_GROUPS/);
 assert.match(component, /label: 'Resumo'/);

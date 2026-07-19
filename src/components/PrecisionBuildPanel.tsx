@@ -11,6 +11,7 @@ import {
   trainingPlanPoints,
   type MatchFeedbackKey
 } from '@/lib/precisionBuildEngine';
+import { safeStorageSetJson } from '@/lib/safeLocalStorage';
 
 const KEYS: TrainingKey[] = ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending','gk1','gk2','gk3'];
 const FEEDBACK: Array<{ key: MatchFeedbackKey; label: string }> = [
@@ -74,19 +75,17 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
   }
 
   function saveExperiment() {
-    try {
-      const storageKey = `buildmaster_precision_experiment_${result.parsed.internalId}_${result.bestPosition.code}`;
-      localStorage.setItem(storageKey, JSON.stringify({
-        savedAt: new Date().toISOString(),
-        plan: customPlan,
-        comparison,
-        feedback,
-        correction: feedbackCorrection
-      }));
-      setSavedMessage('Variante salva como teste. A ficha recomendada original foi preservada.');
-    } catch {
-      setSavedMessage('Não foi possível salvar a variante neste aparelho.');
-    }
+    const storageKey = `buildmaster_precision_experiment_${result.parsed.internalId}_${result.bestPosition.code}`;
+    const saved = safeStorageSetJson(storageKey, {
+      savedAt: new Date().toISOString(),
+      plan: customPlan,
+      comparison,
+      feedback,
+      correction: feedbackCorrection
+    });
+    setSavedMessage(saved
+      ? 'Variante salva como teste. A ficha recomendada original foi preservada.'
+      : 'Não foi possível salvar a variante neste aparelho.');
   }
 
   function openProposal(id: ProposalId) {

@@ -16,10 +16,10 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativeInstaller = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.28.0');
-assert.equal(APP_RELEASE_VERSION, '27.28.0');
-assert.equal(APP_NATIVE_VERSION, '27.28.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2728 && npm run test:v2727 && npm run test:v2726 &&/);
+assert.equal(pkg.version, '27.29.0');
+assert.equal(APP_RELEASE_VERSION, '27.29.0');
+assert.equal(APP_NATIVE_VERSION, '27.29.0');
+assert.match(pkg.scripts['test:all'], /^npm run test:v2729 && npm run quality:audit && npm run test:v2728 && npm run test:v2727 && npm run test:v2726 &&/);
 
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_PRIMARY_URL), true);
 assert.equal(
@@ -56,7 +56,7 @@ const stale: UpdateManifestCandidate = {
 };
 const newest: UpdateManifestCandidate = {
   payload: {},
-  manifest: manifest('27.28.0', 1_376_000_011, 'buildmaster-v27.28.0-1376000011-01'),
+  manifest: manifest('27.29.0', 1_376_000_011, 'buildmaster-v27.29.0-1376000011-01'),
   source: 'primary-channel',
   endpoint: 'primary'
 };
@@ -92,8 +92,8 @@ assert.equal(fs.existsSync('public/update-manifest.json'), false, 'Manifesto pla
 assert.match(nativeInstaller, /SHA-256 do APK não confere/);
 assert.match(nativeInstaller, /getPackageArchiveInfo/);
 assert.match(nativeInstaller, /hasSigningCertificate/);
-assert.match(nativeInstaller, /BuildMaster-Elite-Tatico-Updater\/27\.28 Android/);
+assert.match(nativeInstaller, /BuildMaster-Elite-Tatico-Updater\/27\.29 Android/);
 assert.doesNotMatch(nativeInstaller, /instalação manual única/i);
 assert.match(nativeInstaller, /if \(apk != null\) apk\.delete\(\);/, 'APK rejeitado deve ser apagado inclusive quando a assinatura divergir.');
 
-console.log('✓ v27.28: seleção do maior versionCode, três canais, cópia local e abertura automática do instalador aprovados.');
+console.log('✓ v27.29: seleção do maior versionCode, três canais, cópia local e abertura automática do instalador aprovados.');

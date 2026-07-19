@@ -1,5 +1,6 @@
 import { getOcrRuntimeState } from './ocrWorkerManager';
 import { runtimeList, runtimePut, runtimeTrimStore } from './localDatabase';
+import { createStableId } from './stableId';
 
 const SENSITIVE_KEY = /(password|passwd|secret|token|authorization|cookie|session|credential|private|keystore|anon[_-]?key|service[_-]?role|api[_-]?key|email|username|user[_-]?id)/i;
 const SENSITIVE_VALUE = /(bearer\s+[a-z0-9._-]+|eyJ[a-zA-Z0-9_-]{12,}\.|sb_(?:secret|publishable)_[a-zA-Z0-9_-]+|-----BEGIN [A-Z ]+PRIVATE KEY-----)/i;
@@ -72,7 +73,7 @@ export async function recordSafeRuntimeError(input: { area: string; code?: strin
     code: (input.code || 'runtime').slice(0, 50),
     message: String(redactDiagnosticValue(input.message)).slice(0, 400)
   };
-  await runtimePut('diagnostics', `${Date.now()}:${Math.random().toString(36).slice(2, 8)}`, record).catch(() => undefined);
+  await runtimePut('diagnostics', createStableId('diagnostic'), record).catch(() => undefined);
   await runtimeTrimStore('diagnostics', 80).catch(() => undefined);
 }
 

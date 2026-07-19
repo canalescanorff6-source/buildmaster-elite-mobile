@@ -7,7 +7,7 @@ const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'u
 const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.28.0');
+assert.equal(pkg.version, '27.29.0');
 assert.match(workflow, /primary\['releaseTag'\] = 'buildmaster-latest'/);
 assert.match(workflow, /releases\/download\/buildmaster-latest\/\{asset_name\}/);
 assert.match(workflow, /Publicar APK versionado na ponte fixa/);
@@ -28,4 +28,4 @@ assert.match(panel, /fetched\.alternatives/);
 assert.match(panel, /Tentando a origem oficial/);
 assert.match(panel, /Detalhe técnico:/);
 
-console.log('✓ v27.28: ponte versionada, validação com cliente Android, rotas reais e diagnóstico de hash aprovados.');
+console.log('✓ v27.29: ponte versionada, validação com cliente Android, rotas reais e diagnóstico de hash aprovados.');

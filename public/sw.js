@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v27-28';
+const CACHE_NAME = 'buildmaster-v27-29';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -15,6 +15,26 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.includes('update-manifest') || url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request).catch(() => caches.match('/')));
+    return;
+  }
+
+  if (STATIC_ASSETS.includes(url.pathname)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+  }
 });

@@ -1,6 +1,8 @@
+import { safeStorageGet, safeStorageGetJson, safeStorageRemove, safeStorageSet, safeStorageSetJson } from './safeLocalStorage';
+
 export const ACTIVE_ACCOUNT_IDENTITY_KEY = 'buildmaster_account_identity_v1';
 
-type AccountIdentity = {
+export type AccountIdentity = {
   id: string;
   username: string;
   role: 'admin' | 'user';
@@ -11,32 +13,23 @@ type AccountIdentity = {
 const SAFE_ID = /[^a-zA-Z0-9_-]+/g;
 
 export function getActiveAccountIdentity(): AccountIdentity | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(ACTIVE_ACCOUNT_IDENTITY_KEY);
-    if (!raw) return null;
-    const value = JSON.parse(raw) as Partial<AccountIdentity>;
-    if (!value.id || !value.username || (value.role !== 'admin' && value.role !== 'user')) return null;
-    return {
-      id: String(value.id),
-      username: String(value.username),
-      role: value.role,
-      expiresAt: value.expiresAt ? String(value.expiresAt) : null,
-      mode: value.mode === 'cloud' ? 'cloud' : 'local'
-    };
-  } catch {
-    return null;
-  }
+  const value = safeStorageGetJson<Partial<AccountIdentity> | null>(ACTIVE_ACCOUNT_IDENTITY_KEY, null);
+  if (!value?.id || !value.username || (value.role !== 'admin' && value.role !== 'user')) return null;
+  return {
+    id: String(value.id).slice(0, 160),
+    username: String(value.username).slice(0, 120),
+    role: value.role,
+    expiresAt: value.expiresAt ? String(value.expiresAt) : null,
+    mode: value.mode === 'cloud' ? 'cloud' : 'local'
+  };
 }
 
 export function setActiveAccountIdentity(identity: AccountIdentity) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(ACTIVE_ACCOUNT_IDENTITY_KEY, JSON.stringify(identity));
+  safeStorageSetJson(ACTIVE_ACCOUNT_IDENTITY_KEY, identity);
 }
 
 export function clearActiveAccountIdentity() {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(ACTIVE_ACCOUNT_IDENTITY_KEY);
+  safeStorageRemove(ACTIVE_ACCOUNT_IDENTITY_KEY);
 }
 
 export function activeAccountNamespace(): string {
@@ -54,30 +47,21 @@ export function accountDatabaseName(baseName: string): string {
 }
 
 export function readAccountStorage(baseKey: string, options?: { migrateLegacy?: boolean }): string | null {
-  if (typeof window === 'undefined') return null;
   const scoped = accountStorageKey(baseKey);
-  const current = localStorage.getItem(scoped);
+  const current = safeStorageGet(scoped);
   if (current != null) return current;
   const identity = getActiveAccountIdentity();
   const mayMigrateLegacy = options?.migrateLegacy ?? (identity?.role === 'admin');
   if (!mayMigrateLegacy) return null;
-  const legacy = localStorage.getItem(baseKey);
-  if (legacy != null) {
-    try {
-      localStorage.setItem(scoped, legacy);
-    } catch {
-      // A migração é auxiliar; o dado legado continua disponível.
-    }
-  }
+  const legacy = safeStorageGet(baseKey);
+  if (legacy != null) safeStorageSet(scoped, legacy);
   return legacy;
 }
 
-export function writeAccountStorage(baseKey: string, value: string) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(accountStorageKey(baseKey), value);
+export function writeAccountStorage(baseKey: string, value: string): boolean {
+  return safeStorageSet(accountStorageKey(baseKey), value);
 }
 
-export function removeAccountStorage(baseKey: string) {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(accountStorageKey(baseKey));
+export function removeAccountStorage(baseKey: string): boolean {
+  return safeStorageRemove(accountStorageKey(baseKey));
 }

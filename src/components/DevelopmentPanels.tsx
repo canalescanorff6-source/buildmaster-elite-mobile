@@ -56,10 +56,10 @@ export function DelayResponsePanel(){
     <div className="section-title-row"><div><p className="kicker">v25.70–v25.72 • Delay e resposta</p><h3>Configuração, teste local e diagnóstico</h3></div><span>Causa provável: {diagnosis.primary}</span></div>
     <div className="form-grid">
       <label><span>FPS</span><select value={ctx.fps} onChange={e=>setCtx({...ctx,fps:Number(e.target.value) as 30|60})}><option value={60}>60 FPS</option><option value={30}>30 FPS</option></select></label>
-      <label><span>Gráficos</span><select value={ctx.graphics} onChange={e=>setCtx({...ctx,graphics:e.target.value as any})}><option>baixa</option><option>média</option><option>alta</option></select></label>
-      <label><span>Conexão</span><select value={ctx.wifi} onChange={e=>setCtx({...ctx,wifi:e.target.value as any})}><option>5 GHz</option><option>2.4 GHz</option><option>dados móveis</option></select></label>
-      <label><span>Sinal</span><select value={ctx.signal} onChange={e=>setCtx({...ctx,signal:e.target.value as any})}><option>forte</option><option>médio</option><option>fraco</option></select></label>
-      <label><span>Temperatura</span><select value={ctx.temperature} onChange={e=>setCtx({...ctx,temperature:e.target.value as any})}><option>frio</option><option>morno</option><option>quente</option></select></label>
+      <label><span>Gráficos</span><select value={ctx.graphics} onChange={e=>setCtx({...ctx,graphics:e.target.value as DelayContext['graphics']})}><option>baixa</option><option>média</option><option>alta</option></select></label>
+      <label><span>Conexão</span><select value={ctx.wifi} onChange={e=>setCtx({...ctx,wifi:e.target.value as DelayContext['wifi']})}><option>5 GHz</option><option>2.4 GHz</option><option>dados móveis</option></select></label>
+      <label><span>Sinal</span><select value={ctx.signal} onChange={e=>setCtx({...ctx,signal:e.target.value as DelayContext['signal']})}><option>forte</option><option>médio</option><option>fraco</option></select></label>
+      <label><span>Temperatura</span><select value={ctx.temperature} onChange={e=>setCtx({...ctx,temperature:e.target.value as DelayContext['temperature']})}><option>frio</option><option>morno</option><option>quente</option></select></label>
       <label><span><input type="checkbox" checked={ctx.backgroundApps} onChange={e=>setCtx({...ctx,backgroundApps:e.target.checked})}/> Apps pesados abertos</span></label>
       <label><span><input type="checkbox" checked={ctx.batterySaver} onChange={e=>setCtx({...ctx,batterySaver:e.target.checked})}/> Economia de bateria</span></label>
     </div>

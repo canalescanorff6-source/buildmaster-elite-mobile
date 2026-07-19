@@ -1,10 +1,12 @@
 'use client';
 
+import { safeStorageRemove } from '@/lib/safeLocalStorage';
+
 const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_29_regras_atualizaveis';
 
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   function recover() {
-    try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch {}
+    safeStorageRemove(ACTIVE_SESSION_KEY)
     window.location.href = '/';
   }
   return (

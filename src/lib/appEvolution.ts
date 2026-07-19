@@ -1,4 +1,5 @@
 import type { AnalysisResult, PositionCode, TacticalFormation, TacticalStyle } from '@/lib/analyzer';
+import { createStableId } from './stableId';
 
 export const ONBOARDING_STORAGE_KEY = 'buildmaster_onboarding_v2680';
 export const CARD_REGISTRY_STORAGE_KEY = 'buildmaster_verified_card_registry_v2680';
@@ -214,7 +215,7 @@ export function buildDecisionWeights(result: AnalysisResult): DecisionWeight[] {
 export function createMatchValidationRecord(result: AnalysisResult, input: Omit<MatchValidationRecord, 'id' | 'cardFingerprint' | 'playerName' | 'targetPosition' | 'formation' | 'teamStyle' | 'buildName' | 'buildSignature' | 'playedAt'>): MatchValidationRecord {
   const playedAt = new Date().toISOString();
   return {
-    id: `match-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createStableId('match'),
     cardFingerprint: cardFingerprint(result),
     playerName: result.parsed.playerName,
     targetPosition: result.bestPosition.code,

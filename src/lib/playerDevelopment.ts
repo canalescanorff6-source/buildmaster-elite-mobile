@@ -25,7 +25,7 @@ const SPECIAL_RULES: Record<string, { positions: PositionCode[]; attrs: string[]
 };
 
 export function buildSpecialSkillUsage(result: AnalysisResult): { items: SpecialSkillUse[]; overall: number; summary: string[] } {
-  const names = Array.from(new Set([...(result.parsed.specialSkills ?? []), ...(result.parsed.nativeSkills ?? []), ...(result.parsed.impetos ?? []).map((item: any) => typeof item === 'string' ? item : item?.name).filter(Boolean), result.parsed.specialTag ?? ''].filter(Boolean)));
+  const names = Array.from(new Set([...(result.parsed.specialSkills ?? []), ...(result.parsed.nativeSkills ?? []), ...(result.parsed.impetos ?? []).map((item) => item.name).filter(Boolean), result.parsed.specialTag ?? ''].filter(Boolean)));
   const items = names.map((name) => {
     const rule = SPECIAL_RULES[name];
     const owned = result.specialSkillsAnalysis.usefulOwned.find((item) => item.name === name);
