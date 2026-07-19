@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "appId": "com.buildmaster.elitetatico",
+  "version": "27.26.0",
+  "versionCode": 1376000521,
+  "buildId": "02a4b2f77c91662d2abe6b77bce048437c80b2b7-1",
+  "publishedAt": "2026-07-19T14:15:12.676465+00:00",
+  "channel": "stable",
+  "updateType": "apk",
+  "notes": [
+    "Um canal independente em raw.githubusercontent.com é a rota principal.",
+    "A ponte buildmaster-latest mantém compatibilidade com APKs antigos.",
+    "A API Latest permanece como terceira rota automática de reserva.",
+    "Todas as rotas apontam para o mesmo APK da release imutável.",
+    "O APK é publicado uma única vez e nunca é sobrescrito.",
+    "O APK público é baixado e validado antes de o manifesto ser ativado.",
+    "O app compara todos os manifestos válidos e escolhe sempre o maior versionCode.",
+    "Detecção, download e abertura do instalador podem iniciar automaticamente.",
+    "Recuperação em três rodadas no app, além das tentativas do downloader nativo.",
+    "Download sem cache com validação de tamanho, SHA-256, pacote, versão e assinatura.",
+    "O botão Atualizar aplicativo baixa e abre o instalador sem download manual pelo GitHub."
+  ],
+  "mandatory": true,
+  "minNativeVersion": "27.0.0",
+  "checksum": "70c09e727e778ee431e6fd15cef8762dbd731e6dec7be6f0baa708acc362c3c5",
+  "sizeBytes": 3888721,
+  "assetName": "BuildMaster-Elite-Tatico-v27.26.0-137600052101-02a4b2f7.apk",
+  "releaseTag": "buildmaster-v27.26.0-1376000521-01",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-v27.26.0-1376000521-01/BuildMaster-Elite-Tatico-v27.26.0-137600052101-02a4b2f7.apk"
+}
