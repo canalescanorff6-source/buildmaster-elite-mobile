@@ -102,7 +102,7 @@ function updateErrorMessage(cause: unknown) {
     return 'O pacote publicado não possui um versionCode maior que o instalado. Uma nova publicação precisa ser gerada.';
   }
   if (lower.includes('sha-256') || lower.includes('checksum') || lower.includes('tamanho')) {
-    return 'O arquivo recebido não corresponde ao pacote publicado. A cópia inválida foi apagada e o app alternará automaticamente entre o canal direto e a release imutável.';
+    return `O arquivo recebido não corresponde ao pacote publicado. Ele foi apagado e o app tentará outra rota oficial. Detalhe técnico: ${message}`;
   }
   if (lower.includes('manifesto') || lower.includes('json válido') || lower.includes('release indicada')) {
     return `O canal de atualização respondeu com dados inválidos. Detalhe: ${message}`;
@@ -174,7 +174,9 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
       window.dispatchEvent(new CustomEvent('buildmaster:auto-update-status', { detail: { message, outcome } }));
     }
 
-    async function tryAutomaticInstall(manifest: AppUpdateManifest, installed: InstalledAppInfo) {
+    async function tryAutomaticInstall(manifests: AppUpdateManifest[], installed: InstalledAppInfo) {
+      const manifest = manifests[0];
+      if (!manifest) return;
       if (!active || !Capacitor.isNativePlatform() || localStorage.getItem(AUTO_INSTALL_KEY) === '0' || autoInstallRunningRef.current) return;
       if (!installed.canInstallPackages) {
         appendUpdateAudit({
@@ -222,15 +224,39 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
           });
         }
 
-        const result = await downloadVerifyAndInstallApk({
-          url: manifest.apkUrl,
-          checksum: manifest.checksum,
-          expectedPackageName: manifest.appId,
-          expectedVersionCode: manifest.versionCode,
-          expectedVersionName: manifest.version,
-          expectedSizeBytes: manifest.sizeBytes
-        });
-        if (result.needsPermission) {
+        let installedResult: Awaited<ReturnType<typeof downloadVerifyAndInstallApk>> | null = null;
+        let lastRouteError: unknown = null;
+        for (let routeIndex = 0; routeIndex < manifests.length; routeIndex += 1) {
+          const routeManifest = manifests[routeIndex];
+          appendUpdateAudit({
+            phase: 'download',
+            outcome: 'info',
+            message: `Rota automática ${routeIndex + 1}/${manifests.length}.`,
+            detail: `${routeManifest.releaseTag || 'canal oficial'} • ${routeManifest.assetName || 'APK oficial'}`
+          });
+          try {
+            installedResult = await downloadVerifyAndInstallApk({
+              url: routeManifest.apkUrl,
+              checksum: routeManifest.checksum,
+              expectedPackageName: routeManifest.appId,
+              expectedVersionCode: routeManifest.versionCode,
+              expectedVersionName: routeManifest.version,
+              expectedSizeBytes: routeManifest.sizeBytes
+            });
+            break;
+          } catch (routeError) {
+            lastRouteError = routeError;
+            if (!isIntegrityDownloadError(routeError) || routeIndex === manifests.length - 1) throw routeError;
+            appendUpdateAudit({
+              phase: 'download',
+              outcome: 'warning',
+              message: 'A rota recebida não passou na integridade; tentando a próxima origem oficial.',
+              detail: routeError instanceof Error ? routeError.message : String(routeError)
+            });
+          }
+        }
+        if (!installedResult) throw lastRouteError || new Error('Nenhuma rota oficial entregou o APK.');
+        if (installedResult.needsPermission) {
           localStorage.removeItem(AUTO_INSTALL_ATTEMPT_KEY);
           lastAttemptRef.current = 0;
           emitStatus('Ative “Permitir desta fonte”; ao voltar, a atualização continuará automaticamente.', 'warning');
@@ -238,13 +264,13 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
           try { await openInstallPermissionSettings(); } catch { /* orientação permanece na central */ }
           return;
         }
-        if (result.verified) {
+        if (installedResult.verified) {
           emitStatus(`APK v${manifest.version} validado. Confirme “Atualizar” na tela do Android.`, 'success');
           appendUpdateAudit({
             phase: 'install',
             outcome: 'success',
             message: `APK v${manifest.version} baixado e validado automaticamente.`,
-            detail: `SHA-256 ${result.checksum || manifest.checksum}`
+            detail: `SHA-256 ${installedResult.checksum || manifest.checksum}`
           });
         }
       } catch (cause) {
@@ -283,7 +309,11 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
         window.dispatchEvent(new CustomEvent('buildmaster:update-available', {
           detail: { version: result.manifest.version, reason: result.reason, mandatory: result.mandatory }
         }));
-        await tryAutomaticInstall(result.manifest, installed);
+        const autoManifests = fetched.alternatives
+          .map((candidate) => candidate.manifest)
+          .filter((candidate, index, all) => candidate.versionCode === result.manifest?.versionCode
+            && all.findIndex((other) => other.apkUrl === candidate.apkUrl && other.checksum === candidate.checksum) === index);
+        await tryAutomaticInstall(autoManifests.length ? autoManifests : [result.manifest], installed);
       } catch (cause) {
         appendUpdateAudit({
           phase: 'auto-check',
@@ -628,33 +658,49 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         expectedSizeBytes: target.sizeBytes
       });
 
+      const routeCandidates = fetched.alternatives
+        .filter((candidate) => candidate.manifest.versionCode === targetManifest.versionCode)
+        .filter((candidate, index, all) => all.findIndex((other) => other.manifest.apkUrl === candidate.manifest.apkUrl
+          && other.manifest.checksum === candidate.manifest.checksum) === index);
+      if (!routeCandidates.some((candidate) => candidate.manifest.apkUrl === targetManifest.apkUrl)) {
+        routeCandidates.unshift({ ...fetched, manifest: targetManifest, payload: targetManifest });
+      }
+
       let result: Awaited<ReturnType<typeof downloadVerifyAndInstallApk>> | null = null;
       let lastFailure: unknown = null;
-      for (let round = 1; round <= 3; round += 1) {
-        setMessage(round === 1
-          ? 'Baixando o APK oficial sem usar cópias em cache. Não feche o aplicativo...'
-          : `Rota atualizada. Repetindo a validação segura (${round}/3)...`);
-        recordAudit({ phase: 'download', outcome: 'info', message: `Iniciando tentativa segura ${round}/3.`, detail: `v${targetManifest.version} • ${targetManifest.assetName || 'APK oficial'}` });
+      for (let routeIndex = 0; routeIndex < routeCandidates.length; routeIndex += 1) {
+        const route = routeCandidates[routeIndex];
+        targetManifest = route.manifest;
+        setChannelSource(route.source);
+        setManifest(targetManifest);
+        localStorage.setItem(PENDING_KEY, JSON.stringify(targetManifest));
+        setProgress(null);
+        setMessage(routeIndex === 0
+          ? 'Baixando o APK oficial pela rota principal validada...'
+          : `A rota anterior divergiu. Tentando a origem oficial ${routeIndex + 1}/${routeCandidates.length}...`);
+        recordAudit({
+          phase: 'download',
+          outcome: 'info',
+          message: `Testando rota oficial ${routeIndex + 1}/${routeCandidates.length}.`,
+          detail: `${channelLabel(route.source)} • ${targetManifest.releaseTag || 'canal'} • ${targetManifest.assetName || 'APK oficial'}`
+        });
         try {
           result = await runVerifiedInstall(targetManifest);
           break;
         } catch (cause) {
           lastFailure = cause;
-          recordAudit({ phase: 'download', outcome: isIntegrityDownloadError(cause) ? 'warning' : 'error', message: `Tentativa ${round}/3 falhou.`, detail: updateErrorMessage(cause) });
-          if (!isIntegrityDownloadError(cause) || round === 3) throw cause;
-          await new Promise((resolve) => window.setTimeout(resolve, 1200 * round));
-          const retryFetched = await fetchUpdateManifest();
-          setChannelSource(retryFetched.source);
-          const retryResult = evaluateUpdateManifest(retryFetched.payload, current, CURRENT_BUILD_ID, '');
-          if (!retryResult.valid || !retryResult.available || !retryResult.manifest) throw lastFailure;
-          targetManifest = retryResult.manifest;
-          setManifest(targetManifest);
-          localStorage.setItem(PENDING_KEY, JSON.stringify(targetManifest));
-          setProgress(null);
+          recordAudit({
+            phase: 'download',
+            outcome: isIntegrityDownloadError(cause) ? 'warning' : 'error',
+            message: `A rota ${routeIndex + 1} não concluiu a validação.`,
+            detail: cause instanceof Error ? cause.message : String(cause)
+          });
+          if (!isIntegrityDownloadError(cause) || routeIndex === routeCandidates.length - 1) throw cause;
+          await new Promise((resolve) => window.setTimeout(resolve, 1000 * (routeIndex + 1)));
         }
       }
 
-      if (!result) throw lastFailure || new Error('A instalação segura não retornou resultado.');
+      if (!result) throw lastFailure || new Error('Nenhuma rota oficial entregou um APK íntegro.');
       if (result.needsPermission) {
         setAwaitingPermission(true);
         setMessage('Libere “Permitir desta fonte” nas configurações do Android e tente novamente.');

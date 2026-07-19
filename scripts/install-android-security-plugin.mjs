@@ -303,28 +303,66 @@ public class BuildMasterSecurityPlugin extends Plugin {
         }
     }
 
+    private static boolean isMutableLatestUrl(URL source) {
+        return source.getPath() != null && source.getPath().endsWith("/BuildMaster-Elite-Tatico-latest.apk");
+    }
+
     private static URL withDownloadNonce(URL source, int attempt) throws Exception {
+        // Ativos versionados são imutáveis e devem ser baixados pela URL exata.
+        // O nonce só é necessário para o nome latest, que pode ser substituído.
+        if (!isMutableLatestUrl(source)) return source;
         String raw = source.toString();
         String separator = raw.contains("?") ? "&" : "?";
         return new URL(raw + separator + "bmDownloadAttempt=" + attempt + "-" + System.currentTimeMillis());
     }
 
-    private static HttpURLConnection openDownloadConnection(URL initial) throws Exception {
+    private static void applyDownloadHeaders(HttpURLConnection connection, boolean strictIdentity) {
+        connection.setConnectTimeout(30_000);
+        connection.setReadTimeout(150_000);
+        connection.setUseCaches(false);
+        connection.setDefaultUseCaches(false);
+        connection.setRequestProperty("Accept", "application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8");
+        if (strictIdentity) connection.setRequestProperty("Accept-Encoding", "identity");
+        connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
+        connection.setRequestProperty("Pragma", "no-cache");
+        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.28 Android");
+    }
+
+    private static void validateDownloadResponse(HttpURLConnection connection, int status) throws Exception {
+        if (status < 200 || status >= 300) throw new IllegalStateException("Download retornou HTTP " + status);
+        String contentType = connection.getContentType();
+        if (contentType != null) {
+            String normalizedType = contentType.toLowerCase();
+            if (normalizedType.contains("text/html") || normalizedType.contains("application/json")) {
+                throw new IllegalStateException("O servidor retornou " + contentType + " no lugar do APK.");
+            }
+        }
+    }
+
+    private static HttpURLConnection openAutomaticDownloadConnection(URL initial) throws Exception {
+        validateInitialApkUrl(initial);
+        HttpURLConnection connection = (HttpURLConnection) initial.openConnection();
+        connection.setInstanceFollowRedirects(true);
+        applyDownloadHeaders(connection, false);
+        int status = connection.getResponseCode();
+        URL finalUrl = connection.getURL();
+        if (!finalUrl.equals(initial)) validateRedirectUrl(finalUrl);
+        try {
+            validateDownloadResponse(connection, status);
+            return connection;
+        } catch (Exception error) {
+            connection.disconnect();
+            throw error;
+        }
+    }
+
+    private static HttpURLConnection openManualDownloadConnection(URL initial) throws Exception {
         URL current = initial;
         for (int redirect = 0; redirect <= MAX_REDIRECTS; redirect++) {
             if (redirect == 0) validateInitialApkUrl(current); else validateRedirectUrl(current);
             HttpURLConnection connection = (HttpURLConnection) current.openConnection();
-            connection.setConnectTimeout(30_000);
-            connection.setReadTimeout(120_000);
             connection.setInstanceFollowRedirects(false);
-            connection.setUseCaches(false);
-            connection.setDefaultUseCaches(false);
-            connection.setRequestProperty("Accept", "application/vnd.android.package-archive,application/octet-stream;q=0.9,*/*;q=0.8");
-            connection.setRequestProperty("Accept-Encoding", "identity");
-            connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
-            connection.setRequestProperty("Pragma", "no-cache");
-            connection.setRequestProperty("Connection", "close");
-            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.27 Android");
+            applyDownloadHeaders(connection, true);
             int status = connection.getResponseCode();
             if (status >= 300 && status < 400) {
                 String location = connection.getHeaderField("Location");
@@ -333,21 +371,39 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 current = new URL(current, location);
                 continue;
             }
-            if (status < 200 || status >= 300) {
+            try {
+                validateDownloadResponse(connection, status);
+                return connection;
+            } catch (Exception error) {
                 connection.disconnect();
-                throw new IllegalStateException("Download retornou HTTP " + status);
+                throw error;
             }
-            String contentType = connection.getContentType();
-            if (contentType != null) {
-                String normalizedType = contentType.toLowerCase();
-                if (normalizedType.contains("text/html") || normalizedType.contains("application/json")) {
-                    connection.disconnect();
-                    throw new IllegalStateException("O servidor retornou " + contentType + " no lugar do APK.");
-                }
-            }
-            return connection;
         }
         throw new IllegalStateException("O download excedeu o limite de redirecionamentos.");
+    }
+
+    private static HttpURLConnection openDownloadConnection(URL initial, int attempt) throws Exception {
+        // Alterna entre o redirecionamento manual estrito e o mecanismo nativo do Android.
+        // Isso contorna diferenças de ROM/WebView sem enfraquecer a validação final por SHA-256.
+        return attempt % 2 == 0
+                ? openAutomaticDownloadConnection(initial)
+                : openManualDownloadConnection(initial);
+    }
+
+    private static String downloadTrace(HttpURLConnection connection) {
+        if (connection == null) return "sem resposta HTTP";
+        try {
+            URL finalUrl = connection.getURL();
+            return "host=" + (finalUrl == null ? "desconhecido" : finalUrl.getHost())
+                    + ", caminho=" + (finalUrl == null ? "desconhecido" : finalUrl.getPath())
+                    + ", HTTP=" + connection.getResponseCode()
+                    + ", tipo=" + String.valueOf(connection.getContentType())
+                    + ", encoding=" + String.valueOf(connection.getContentEncoding())
+                    + ", contentLength=" + connection.getContentLengthLong()
+                    + ", etag=" + String.valueOf(connection.getHeaderField("ETag"));
+        } catch (Exception ignored) {
+            return "resposta HTTP sem metadados completos";
+        }
     }
 
     private static boolean isRetryableDownloadError(Exception error) {
@@ -487,7 +543,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                         if (partial.exists()) partial.delete();
                         emitProgress("connecting", 0, 0, expectedSize == null ? 0 : expectedSize);
                         URL initial = withDownloadNonce(new URL(urlValue), downloadAttempt);
-                        connection = openDownloadConnection(initial);
+                        connection = openDownloadConnection(initial, downloadAttempt);
                         long contentLength = connection.getContentLengthLong();
                         expectedTotal = expectedSize != null && expectedSize > 0 ? expectedSize : contentLength;
                         if (contentLength > MAX_APK_BYTES || expectedTotal > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
@@ -516,12 +572,12 @@ public class BuildMasterSecurityPlugin extends Plugin {
                         }
 
                         if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
-                            throw new SecurityException("Tamanho do APK não confere com o manifesto: esperado=" + expectedSize + ", recebido=" + total + ".");
+                            throw new SecurityException("Tamanho do APK não confere com o manifesto: esperado=" + expectedSize + ", recebido=" + total + ". " + downloadTrace(connection));
                         }
                         emitProgress("verifying", 99, total, expectedTotal);
                         actualChecksum = hex(digest.digest());
                         if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) {
-                            throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actualChecksum.substring(0, 12) + ".");
+                            throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actualChecksum.substring(0, 12) + ", bytes=" + total + ". " + downloadTrace(connection));
                         }
                         finalDownloadError = null;
                         break;

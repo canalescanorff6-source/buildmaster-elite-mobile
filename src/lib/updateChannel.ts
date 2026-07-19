@@ -28,7 +28,9 @@ export type UpdateManifestFetchResult = UpdateManifestCandidate & {
     endpoint: string;
     version: string;
     versionCode: number;
+    apkUrl: string;
   }>;
+  alternatives: UpdateManifestCandidate[];
 };
 
 function parseJsonPayload(payload: unknown): unknown {
@@ -172,6 +174,18 @@ export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> 
     .filter((candidate) => candidate !== selected && candidate.manifest.versionCode < selected.manifest.versionCode)
     .map((candidate) => `${candidate.source} respondeu code ${candidate.manifest.versionCode} e foi ignorada por estar atrás do code ${selected.manifest.versionCode}.`);
 
+  const ordered = [...candidates].sort((left, right) => {
+    const codeDelta = right.manifest.versionCode - left.manifest.versionCode;
+    if (codeDelta !== 0) return codeDelta;
+    const versionDelta = compareVersions(right.manifest.version, left.manifest.version);
+    if (versionDelta !== 0) return versionDelta;
+    return sourcePriority(right.source) - sourcePriority(left.source);
+  });
+  const uniqueAlternatives = ordered.filter((candidate, index, all) =>
+    all.findIndex((other) => other.manifest.apkUrl === candidate.manifest.apkUrl
+      && other.manifest.checksum === candidate.manifest.checksum
+      && other.manifest.versionCode === candidate.manifest.versionCode) === index);
+
   return {
     ...selected,
     checkedAt: new Date().toISOString(),
@@ -180,7 +194,9 @@ export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> 
       source: candidate.source,
       endpoint: candidate.endpoint,
       version: candidate.manifest.version,
-      versionCode: candidate.manifest.versionCode
-    }))
+      versionCode: candidate.manifest.versionCode,
+      apkUrl: candidate.manifest.apkUrl
+    })),
+    alternatives: uniqueAlternatives
   };
 }

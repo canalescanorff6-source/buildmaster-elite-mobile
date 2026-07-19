@@ -16,10 +16,10 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativeInstaller = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.27.0');
-assert.equal(APP_RELEASE_VERSION, '27.27.0');
-assert.equal(APP_NATIVE_VERSION, '27.27.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2727 && npm run test:v2726 &&/);
+assert.equal(pkg.version, '27.28.0');
+assert.equal(APP_RELEASE_VERSION, '27.28.0');
+assert.equal(APP_NATIVE_VERSION, '27.28.0');
+assert.match(pkg.scripts['test:all'], /^npm run test:v2728 && npm run test:v2727 && npm run test:v2726 &&/);
 
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_PRIMARY_URL), true);
 assert.equal(
@@ -56,7 +56,7 @@ const stale: UpdateManifestCandidate = {
 };
 const newest: UpdateManifestCandidate = {
   payload: {},
-  manifest: manifest('27.27.0', 1_376_000_011, 'buildmaster-v27.27.0-1376000011-01'),
+  manifest: manifest('27.28.0', 1_376_000_011, 'buildmaster-v27.28.0-1376000011-01'),
   source: 'primary-channel',
   endpoint: 'primary'
 };
@@ -78,12 +78,13 @@ assert.match(app, /runtimePut\('builds', 'update-recovery'/);
 assert.doesNotMatch(app, /prepareBackupForUpdate\(\)[\s\S]{0,160}exportPlayersBackup\('update'\)/);
 
 assert.match(workflow, /buildmaster-update/);
-assert.ok(workflow.includes('$LEGACY_FINAL_APK_URL&finalVerify='), 'a URL da ponte já possui publication e deve acrescentar finalVerify com &');
-assert.ok(!workflow.includes('$LEGACY_FINAL_APK_URL?finalVerify='), 'não pode iniciar uma segunda query string no APK latest');
+assert.ok(workflow.includes('$PRIMARY_APK_URL&bmDownloadAttempt='), 'a rota versionada já possui query string e deve acrescentar a tentativa com &');
+assert.ok(workflow.includes('$LEGACY_APK_URL&bmDownloadAttempt='), 'a cópia latest antiga também deve acrescentar a tentativa com &');
+assert.ok(!workflow.includes('$PRIMARY_APK_URL?bmDownloadAttempt='), 'não pode iniciar uma segunda query string na rota principal');
 assert.match(workflow, /raw\.githubusercontent\.com/);
 assert.match(workflow, /gh api --method PUT/);
-assert.match(workflow, /Validar canal independente publicamente/);
-assert.match(workflow, /Validar a ponte automática da v27\.00/);
+assert.match(workflow, /Validar canal principal e o APK apontado/);
+assert.match(workflow, /Validar ponte legacy completa/);
 assert.match(workflow, /releases\/latest/);
 assert.match(workflow, /version_code = major \* 50_000_000 \+ minor \* 1_000_000/);
 assert.equal(fs.existsSync('public/update-manifest.json'), false, 'Manifesto placeholder antigo não pode ser empacotado no APK.');
@@ -91,8 +92,8 @@ assert.equal(fs.existsSync('public/update-manifest.json'), false, 'Manifesto pla
 assert.match(nativeInstaller, /SHA-256 do APK não confere/);
 assert.match(nativeInstaller, /getPackageArchiveInfo/);
 assert.match(nativeInstaller, /hasSigningCertificate/);
-assert.match(nativeInstaller, /BuildMaster-Elite-Tatico-Updater\/27\.27 Android/);
+assert.match(nativeInstaller, /BuildMaster-Elite-Tatico-Updater\/27\.28 Android/);
 assert.doesNotMatch(nativeInstaller, /instalação manual única/i);
 assert.match(nativeInstaller, /if \(apk != null\) apk\.delete\(\);/, 'APK rejeitado deve ser apagado inclusive quando a assinatura divergir.');
 
-console.log('✓ v27.27: seleção do maior versionCode, três canais, cópia local e abertura automática do instalador aprovados.');
+console.log('✓ v27.28: seleção do maior versionCode, três canais, cópia local e abertura automática do instalador aprovados.');

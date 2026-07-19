@@ -11,14 +11,14 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: st
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const oldUpdater = fs.readFileSync('tests/fixtures/v27-00-updater-contract.txt', 'utf8');
 
-assert.equal(pkg.version, '27.27.0');
+assert.equal(pkg.version, '27.28.0');
 assert.equal(
   DEFAULT_UPDATE_MANIFEST_URL,
   'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json'
 );
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
-const version = '27.27.0';
+const version = '27.28.0';
 const versionCode = 1_377_000_001;
 const apkName = 'BuildMaster-Elite-Tatico-latest.apk';
 const releaseTag = 'buildmaster-latest';
@@ -50,10 +50,10 @@ const manifest = {
 assert.ok(validateUpdateManifest(manifest));
 
 const immutableVerifyIndex = workflow.indexOf('Validar release imutável publicamente');
-const publishLatestIndex = workflow.indexOf('Publicar BuildMaster-Elite-Tatico-latest.apk na ponte antiga');
-const verifyLatestIndex = workflow.indexOf('Validar publicamente o APK latest antes do manifesto');
+const publishLatestIndex = workflow.indexOf('Atualizar cópia latest para versões muito antigas');
+const verifyLatestIndex = workflow.indexOf('Validar cópia latest antes do manifesto legado');
 const uploadManifestIndex = workflow.indexOf('gh release upload buildmaster-latest dist-apk/legacy/update-manifest.json --clobber');
-const finalVerifyIndex = workflow.indexOf('Validar a ponte automática da v27.00');
+const finalVerifyIndex = workflow.indexOf('Validar ponte legacy completa');
 
 assert.ok(immutableVerifyIndex > 0, 'O APK imutável precisa ser verificado primeiro.');
 assert.ok(publishLatestIndex > immutableVerifyIndex, 'A cópia latest só pode ser publicada depois da validação imutável.');
@@ -63,6 +63,6 @@ assert.ok(finalVerifyIndex > uploadManifestIndex, 'A ponte final precisa ser tes
 assert.match(workflow, /gh release delete-asset buildmaster-latest BuildMaster-Elite-Tatico-latest\.apk/);
 assert.match(workflow, /legacy\['releaseTag'\] = 'buildmaster-latest'/);
 assert.match(workflow, /legacy\['assetName'\] = 'BuildMaster-Elite-Tatico-latest\.apk'/);
-assert.match(workflow, /Contrato real do APK v27\.00/);
+assert.match(oldUpdater, /Contrato real do APK v27\.00/);
 
-console.log('✓ v27.27: contrato da v27.00 restaurado com release e APK em buildmaster-latest.');
+console.log('✓ v27.28: contrato da v27.00 restaurado com release e APK em buildmaster-latest.');

@@ -5778,7 +5778,7 @@ export function CardVisionApp() {
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v27.27</span>
+            <span>Elite Tático v27.28</span>
           </div>
         </button>
 

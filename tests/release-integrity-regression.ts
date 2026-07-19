@@ -10,15 +10,15 @@ const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const manifest = fs.readFileSync('public/manifest.webmanifest', 'utf8');
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 
-assert.equal(pkg.version, '27.27.0', 'package.json precisa estar na v27.27.0');
+assert.equal(pkg.version, '27.28.0', 'package.json precisa estar na v27.28.0');
 assert.equal(lock.version, pkg.version, 'package-lock.json precisa ter a mesma versão do package.json');
 assert.equal(lock.packages[''].version, pkg.version, 'raiz do package-lock precisa ter a mesma versão');
 assert.ok(workflow.includes("json.loads(pathlib.Path('package.json')"), 'Workflow precisa ler a versão do package.json.');
 assert.ok(workflow.includes('BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk'), 'Nome do APK precisa acompanhar automaticamente a versão.');
 assert.ok(workflow.includes('BUILDMASTER_VERSION=') || workflow.includes('BUILDMASTER_VERSION'), 'Versão dinâmica não foi preparada.');
-assert.ok(layout.includes('v27.27'), 'Metadados da interface não correspondem à v27.27.');
-assert.ok(manifest.includes('v27.27'), 'manifest.webmanifest não corresponde à v27.27.');
-assert.ok(sw.includes('27-27'), 'Cache do service worker não corresponde à v27.27.');
+assert.ok(layout.includes('v27.28'), 'Metadados da interface não correspondem à v27.28.');
+assert.ok(manifest.includes('v27.28'), 'manifest.webmanifest não corresponde à v27.28.');
+assert.ok(sw.includes('27-28'), 'Cache do service worker não corresponde à v27.28.');
 
 assert.ok(workflow.includes('ANDROID_SIGNING_BUNDLE'), 'Workflow precisa usar o Secret de assinatura permanente.');
 assert.match(workflow, /ANDROID_SIGNING_BUNDLE é obrigatório/, 'Workflow oficial não pode publicar APK de teste.');
@@ -30,9 +30,9 @@ assert.ok(workflow.includes('APK_ASSET_NAME'), 'APK publicado precisa usar nome 
 assert.ok(workflow.includes('gh release upload'), 'A release estável precisa ser atualizada automaticamente.');
 assert.ok(workflow.includes('Publicar APK e manifesto imutáveis'), 'APK e manifesto imutáveis precisam ser publicados juntos na release isolada.');
 assert.ok(workflow.includes('Validar release imutável publicamente'), 'A release precisa ser baixada e conferida antes de virar latest.');
-assert.ok(workflow.includes('Validar a ponte automática da v27.00'), 'O canal de compatibilidade da v27.00 precisa ser verificado após a publicação.');
+assert.ok(workflow.includes('Validar ponte legacy completa'), 'O canal de compatibilidade da v27.00 precisa ser verificado após a publicação.');
 assert.doesNotMatch(workflow, /gh release delete buildmaster-latest/, 'Não apague a release anterior antes de a nova estar pronta.');
 
 assert.ok(fs.existsSync('src/app/error.tsx'));
 assert.ok(fs.existsSync('src/app/global-error.tsx'));
-console.log('release integrity v27.27: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');
+console.log('release integrity v27.28: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');

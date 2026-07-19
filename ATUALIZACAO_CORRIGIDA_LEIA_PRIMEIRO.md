@@ -1,23 +1,7 @@
-# Atualização corrigida — diagnóstico e solução
+# Atualização automática corrigida — v27.28.0
 
-## Problema encontrado
+O erro visto na v27.26 acontece depois que a atualização é encontrada e antes do instalador Android: o APK recebido não corresponde ao tamanho/SHA-256 informado pelo manifesto.
 
-Os builds mais recentes terminavam em verde, mas mostravam o aviso de que os Secrets de assinatura estavam ausentes. Nessa situação o GitHub criava apenas um artefato temporário e não substituía a release usada pelo aplicativo.
+A v27.28 corrige a causa estrutural. A rota principal usa um APK versionado e imutável dentro de `buildmaster-latest`; o workflow valida publicamente esse mesmo endereço antes de publicar o manifesto. A nova versão também percorre rotas realmente diferentes e mostra o diagnóstico completo quando houver divergência.
 
-Por isso, o app continuava consultando uma release antiga e não encontrava a revisão nova. Além disso, cada APK de depuração podia usar uma chave diferente e o Android recusava a instalação por cima.
-
-## O que foi corrigido
-
-- um único Secret de assinatura: `ANDROID_SIGNING_BUNDLE`;
-- o workflow falha claramente quando a assinatura não foi configurada;
-- build de produção `assembleRelease`, sem distribuir APK de depuração;
-- alinhamento com `zipalign` e assinatura com `apksigner`;
-- verificação da assinatura antes de publicar;
-- publicação da release e do manifesto em toda execução bem-sucedida;
-- substituição dos arquivos da release sem apagar a versão anterior antes de concluir;
-- APK, manifesto, build ID, `versionCode` e SHA-256 gerados juntos;
-- URL de atualização continua apontando para `buildmaster-latest`.
-
-## Resultado esperado
-
-Depois da primeira instalação com a chave permanente, as próximas versões poderão ser instaladas por cima, mantendo conta, configurações e dados locais. O Android ainda pedirá confirmação do usuário para instalar, pois o app não está na Play Store.
+Não altere Supabase nem `ANDROID_SIGNING_BUNDLE`. Substitua todo o repositório, incluindo `.github`, faça um novo commit na `main` e aguarde o workflow da v27.28 terminar em verde.

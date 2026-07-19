@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
   "appId": "com.buildmaster.elitetatico",
-  "version": "27.27.0",
+  "version": "27.28.0",
   "versionCode": 1377000001,
-  "buildId": "example-v27.27",
+  "buildId": "example-v27.28",
   "publishedAt": "2026-07-18T00:00:00.000Z",
   "channel": "stable",
   "updateType": "apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=example-v27.27&code=1377000001",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=example-v27.28&code=1377000001",
   "notes": [
     "Release imutável por publicação.",
     "Descoberta pela API latest com fallback para o canal antigo.",

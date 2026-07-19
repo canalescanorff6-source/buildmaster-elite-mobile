@@ -1,14 +1,3 @@
-## v27.27.0 — ponte `latest.apk` compatível com a v27.00
-
-- restaura o contrato real usado pelo APK v27.00 já instalado;
-- publica `BuildMaster-Elite-Tatico-latest.apk` dentro da release fixa `buildmaster-latest`;
-- faz o manifesto antigo apontar para a mesma release e para o nome exato aceito pelo atualizador antigo;
-- preserva a release imutável para as versões novas do aplicativo;
-- valida publicamente tamanho e SHA-256 da cópia `latest.apk` antes de ativar o manifesto;
-- publica o manifesto somente por último, após a cópia compatível estar disponível;
-- adiciona três tentativas de publicação e até doze verificações de propagação da CDN;
-- adiciona regressão `test:v2727` baseada no contrato real da v27.00.
-
 ## v27.26.0 — correção do workflow de atualização
 
 - remove automaticamente `public/update-manifest.json` antes dos testes e do build;
@@ -82,3 +71,13 @@
 - testes de casos críticos e TypeScript estrito;
 - documentação atual separada do histórico;
 - remoção do manifesto local de publicação.
+
+## v27.28.0 — Atualizador com ponte versionada
+
+- Corrigida a falsa alternância de rotas da v27.26.
+- Canal principal passa a usar APK versionado dentro de `buildmaster-latest`.
+- Ativo público é validado com o mesmo perfil HTTP do Android antes da ativação do manifesto.
+- Download de ativos versionados usa URL exata, sem nonce desnecessário.
+- Alternância real entre URLs oficiais distintas.
+- Diagnóstico detalhado de tamanho, SHA-256, host, status HTTP e tipo de conteúdo.
+- Mantidas release imutável, ponte para versões antigas e validação de assinatura.

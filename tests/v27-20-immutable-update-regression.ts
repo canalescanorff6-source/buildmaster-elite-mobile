@@ -7,7 +7,7 @@ const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.27.0');
+assert.equal(pkg.version, '27.28.0');
 assert.match(workflow, /RUN_ATTEMPT: \$\{\{ github\.run_attempt \}\}/);
 assert.match(workflow, /asset_token = f'\{version_code\}\{attempt:02d\}'/);
 assert.match(workflow, /APK_PUBLICATION_ID=/);
@@ -17,7 +17,7 @@ assert.match(workflow, /legacy\['apkUrl'\] = \([\s\S]*releases\/download\/buildm
 assert.match(workflow, /Criar release imutável em espera/);
 assert.match(workflow, /Validar release imutável publicamente/);
 assert.match(workflow, /Ativar release nova como Latest/);
-assert.match(workflow, /Preparar release fixa compatível com o APK v27\.00/);
+assert.match(workflow, /Preparar release fixa buildmaster-latest/);
 assert.match(workflow, /Accept-Encoding: identity/);
 assert.match(workflow, /cancel-in-progress: false/);
 
@@ -31,4 +31,4 @@ assert.match(nativePlugin, /connection\.setUseCaches\(false\)/);
 assert.match(nativePlugin, /connection\.setRequestProperty\("Accept-Encoding", "identity"\)/);
 assert.match(nativePlugin, /MAX_DOWNLOAD_ATTEMPTS = 4/);
 
-console.log('✓ compatibilidade v27.20: ativo único, sem cache e canal antigo preservado na arquitetura v27.27.');
+console.log('✓ compatibilidade v27.20: ativo único, sem cache e canal antigo preservado na arquitetura v27.28.');

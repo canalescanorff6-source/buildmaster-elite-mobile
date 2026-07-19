@@ -1,0 +1,24 @@
+BUILDMASTER ELITE TÁTICO v27.28.0
+CORREÇÃO DO ERRO “O ARQUIVO RECEBIDO NÃO CORRESPONDE AO PACOTE PUBLICADO”
+
+O print do aparelho confirmou que a v27.26 encontra a atualização, mas recebe bytes que não batem com o tamanho/SHA-256 do manifesto. Não é problema do Supabase e ainda não é erro de assinatura, pois o processo nem chegou ao instalador Android.
+
+A v27.28 corrige a estrutura assim:
+- o manifesto principal aponta para um APK versionado e único dentro de buildmaster-latest;
+- o APK público é baixado e validado antes de o manifesto ser ativado;
+- a v27.28 percorre rotas realmente diferentes;
+- o erro passa a mostrar tamanho, hash, host e resposta recebida;
+- a release imutável continua como reserva;
+- latest.apk permanece apenas para versões antigas.
+
+PUBLICAÇÃO:
+1. Extraia o ZIP.
+2. Substitua todo o repositório, incluindo a pasta oculta .github.
+3. Faça um novo commit na main.
+4. Aguarde “Gerar APK v27.28 e publicar atualização automática em três canais” ficar verde.
+5. Na v27.26 instalada, abra Ajustes > Atualizações > Verificar agora > Atualizar aplicativo.
+
+NÃO altere o Supabase.
+NÃO troque o ANDROID_SIGNING_BUNDLE.
+NÃO crie release manual.
+NÃO use apenas Re-run em um commit antigo.

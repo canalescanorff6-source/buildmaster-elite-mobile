@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v27-27';
+const CACHE_NAME = 'buildmaster-v27-28';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

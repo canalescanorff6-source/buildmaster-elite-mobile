@@ -6,7 +6,7 @@ const panel = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
 const css = fs.readFileSync('src/app/legacy-compat.css', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.27.0');
+assert.equal(pkg.version, '27.28.0');
 assert.match(app, /topbar-admin-account-action/);
 assert.match(app, /Criar e gerenciar contas/);
 assert.match(app, /account\?\.profile\.role === 'admin' \? 'Criar contas' : 'Minha conta'/);
@@ -18,9 +18,9 @@ assert.match(panel, /Confirmar e abrir Criar contas/);
 assert.match(panel, /Este login está registrado como usuário comum/);
 assert.match(panel, /Criar acesso para um cliente/);
 assert.match(panel, /Criar usuário/);
-assert.match(css, /v27\.27 — acesso visível para criação e administração de contas/);
+assert.match(css, /v27\.28 — acesso visível para criação e administração de contas/);
 assert.match(css, /\.topbar-admin-account-action/);
 assert.match(css, /\.settings-admin-account-shortcut/);
 assert.match(css, /\.account-create-locked-preview/);
 
-console.log('✓ v27.27: opção Criar contas visível, acesso direto do administrador e proteção MFA preservados.');
+console.log('✓ v27.28: opção Criar contas visível, acesso direto do administrador e proteção MFA preservados.');
