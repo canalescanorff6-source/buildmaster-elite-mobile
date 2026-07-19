@@ -22,6 +22,11 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
 
+      - name: Remover manifesto local antigo antes dos testes
+        run: |
+          node scripts/sanitize-update-source.mjs
+          test ! -e public/update-manifest.json || { echo '::error::O manifesto local antigo não foi removido.'; exit 1; }
+
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:

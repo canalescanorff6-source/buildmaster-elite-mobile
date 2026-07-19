@@ -1,3 +1,10 @@
+## v27.26.0 — correção do workflow de atualização
+
+- remove automaticamente `public/update-manifest.json` antes dos testes e do build;
+- impede que manifesto placeholder antigo seja empacotado no APK;
+- mantém o manifesto oficial sendo gerado apenas depois da validação do APK publicado;
+- adiciona regressão para impedir a volta do erro no GitHub Actions.
+
 # Changelog
 
 ## 27.26.0 — Atualização Automática Real em Três Canais

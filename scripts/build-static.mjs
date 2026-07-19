@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { sanitizeUpdateSource } from './sanitize-update-source.mjs';
 
 const tempRoot = '.buildmaster-static-disabled';
 const moves = [
@@ -18,6 +19,8 @@ function restoreInterruptedBuild() {
 }
 
 try {
+  // Remove qualquer manifesto antigo que tenha permanecido no repositório.
+  sanitizeUpdateSource();
   // Se um processo anterior foi interrompido durante o build, restaura primeiro
   // os arquivos de servidor antes de limpar a pasta temporária.
   restoreInterruptedBuild();

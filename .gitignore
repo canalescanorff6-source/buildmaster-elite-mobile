@@ -21,3 +21,6 @@ ANDROID_SIGNING_BUNDLE.txt
 *.log
 .DS_Store
 Thumbs.db
+
+# Manifesto oficial é gerado apenas pelo GitHub Actions
+/public/update-manifest.json
