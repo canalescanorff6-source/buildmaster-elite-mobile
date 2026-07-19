@@ -1,8 +1,14 @@
-Manifest URL fixa do APK v27.00:
+Contrato real do APK v27.00 instalado:
+
+Manifesto fixo:
 https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json
 
-Regex TypeScript aceita:
-^BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk$
+O APK também precisa estar na tag buildmaster-latest.
+Prefixo obrigatório:
+https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/
 
-Regex Java aceita:
-^BuildMaster-Elite-Tatico-v\\d+\\.\\d+\\.\\d+-\\d+-[a-f0-9]{7,12}\\.apk$
+Nome de máxima compatibilidade:
+BuildMaster-Elite-Tatico-latest.apk
+
+O v27.00 também aceitava um nome versionado dentro da mesma tag:
+^BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk$

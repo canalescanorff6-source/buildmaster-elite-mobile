@@ -324,7 +324,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
             connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
             connection.setRequestProperty("Pragma", "no-cache");
             connection.setRequestProperty("Connection", "close");
-            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.26 Android");
+            connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.27 Android");
             int status = connection.getResponseCode();
             if (status >= 300 && status < 400) {
                 String location = connection.getHeaderField("Location");

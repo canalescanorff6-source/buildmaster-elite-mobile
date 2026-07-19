@@ -1,4 +1,4 @@
-name: Gerar APK v27.26 e publicar atualização automática em três canais
+name: Gerar APK v27.27 e publicar atualização automática em três canais
 
 on:
   workflow_dispatch:
@@ -312,8 +312,9 @@ jobs:
               'Um canal independente em raw.githubusercontent.com é a rota principal.',
               'A ponte buildmaster-latest mantém compatibilidade com APKs antigos.',
               'A API Latest permanece como terceira rota automática de reserva.',
-              'Todas as rotas apontam para o mesmo APK da release imutável.',
-              'O APK é publicado uma única vez e nunca é sobrescrito.',
+              'O canal principal e a API apontam para o APK imutável.',
+              'A ponte antiga usa BuildMaster-Elite-Tatico-latest.apk na release buildmaster-latest.',
+              'A cópia de compatibilidade é validada publicamente antes de o manifesto antigo ser ativado.',
               'O APK público é baixado e validado antes de o manifesto ser ativado.',
               'O app compara todos os manifestos válidos e escolhe sempre o maior versionCode.',
               'Detecção, download e abertura do instalador podem iniciar automaticamente.',
@@ -335,13 +336,16 @@ jobs:
               json.dumps(immutable, ensure_ascii=False, indent=2), encoding='utf-8')
 
           legacy = dict(base)
-          # O endereço fixo do manifesto continua compatível com a v27.00, mas
-          # o APK apontado fica na release imutável. Assim o app não depende da
-          # API Latest e o mesmo arquivo nunca é duplicado nem sobrescrito.
-          legacy['releaseTag'] = release_tag
+          # Compatibilidade real com o APK v27.00 já instalado:
+          # ele aceita o manifesto em buildmaster-latest e exige que o APK também
+          # esteja na mesma release fixa. O nome latest é mantido para versões ainda
+          # mais antigas que foram publicadas antes do validador de nomes versionados.
+          legacy['releaseTag'] = 'buildmaster-latest'
+          legacy['assetName'] = 'BuildMaster-Elite-Tatico-latest.apk'
           legacy['apkUrl'] = (
-              f'https://github.com/{repo}/releases/download/{release_tag}/{asset_name}'
-              f'?bridge={os.environ["APK_PUBLICATION_ID"]}&code={os.environ["ANDROID_VERSION_CODE"]}'
+              f'https://github.com/{repo}/releases/download/buildmaster-latest/'
+              f'BuildMaster-Elite-Tatico-latest.apk'
+              f'?publication={os.environ["APK_PUBLICATION_ID"]}&code={os.environ["ANDROID_VERSION_CODE"]}'
           )
           legacy_dir = pathlib.Path('dist-apk', 'legacy')
           legacy_dir.mkdir(parents=True, exist_ok=True)
@@ -352,10 +356,10 @@ jobs:
           ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualização Automática em Três Canais
 
           - O canal independente raw é a rota principal e não depende do estado visual de Releases.
-          - A ponte buildmaster-latest continua atendendo APKs antigos.
+          - A ponte buildmaster-latest volta a publicar BuildMaster-Elite-Tatico-latest.apk para o APK v27.00.
           - A API Latest permanece como terceira rota de reserva automática.
           - O app compara as rotas válidas e usa o maior versionCode publicado.
-          - O APK é publicado uma única vez, validado publicamente e nunca sobrescrito.
+          - O APK imutável continua preservado; a cópia latest é publicada e conferida antes do manifesto antigo.
           - Verificação, download e abertura do instalador automáticos quando a permissão Android já estiver liberada.
           - Sem baixar APK manualmente pelo GitHub.
           - Verificação de tamanho, SHA-256, pacote, versionCode, versão e assinatura.
@@ -370,6 +374,7 @@ jobs:
             dist-apk/BuildMaster-Elite-Tatico-v${{ env.BUILDMASTER_VERSION }}.apk
             dist-apk/${{ env.APK_ASSET_NAME }}
             dist-apk/${{ env.MANIFEST_ASSET_NAME }}
+            dist-apk/BuildMaster-Elite-Tatico-latest.apk
             dist-apk/legacy/update-manifest.json
             dist-apk/signing-report.txt
           if-no-files-found: error
@@ -521,29 +526,68 @@ jobs:
           test "$(sha256sum verify-release/raw-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::O canal independente baixou um APK diferente do manifesto.'; exit 1; }
           test "$(stat -c%s verify-release/raw-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::O canal independente recebeu tamanho diferente do manifesto.'; exit 1; }
 
-      - name: Preparar endereço fixo do canal automático
+      - name: Preparar release fixa compatível com o APK v27.00
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # A release fixa guarda somente o manifesto ativo. O APK fica em sua
-          # release imutável e é publicado uma única vez.
           if gh release view buildmaster-latest >/dev/null 2>&1; then
             gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático — Canal automático direto" \
+              --title "BuildMaster Elite Tático — Ponte automática compatível" \
               --notes-file dist-apk/RELEASE_NOTES.md
           else
             gh release create buildmaster-latest \
               --target "$GITHUB_SHA" \
-              --title "BuildMaster Elite Tático — Canal automático direto" \
+              --title "BuildMaster Elite Tático — Ponte automática compatível" \
               --notes-file dist-apk/RELEASE_NOTES.md
           fi
+
+      - name: Publicar BuildMaster-Elite-Tatico-latest.apk na ponte antiga
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # O APK v27.00 valida tanto a release quanto o nome do arquivo. Por isso
+          # a cópia latest precisa existir em buildmaster-latest antes do manifesto.
+          uploaded=0
+          for attempt in 1 2 3; do
+            gh release delete-asset buildmaster-latest BuildMaster-Elite-Tatico-latest.apk -y >/dev/null 2>&1 || true
+            if gh release upload buildmaster-latest dist-apk/BuildMaster-Elite-Tatico-latest.apk; then
+              uploaded=1
+              break
+            fi
+            sleep $((attempt * 6))
+          done
+          test "$uploaded" = 1 || { echo '::error::Não foi possível publicar BuildMaster-Elite-Tatico-latest.apk na ponte antiga.'; exit 1; }
+
+      - name: Validar publicamente o APK latest antes do manifesto
+        run: |
+          BRIDGE_APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=$APK_PUBLICATION_ID&code=$ANDROID_VERSION_CODE"
+          ready=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            rm -f verify-release/bridge-latest.apk
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+              --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache' \
+              --connect-timeout 20 --max-time 180 \
+              "$BRIDGE_APK_URL&attempt=$attempt&ts=$(date +%s%N)" \
+              -o verify-release/bridge-latest.apk; then
+              BRIDGE_SHA=$(sha256sum verify-release/bridge-latest.apk | awk '{print $1}')
+              BRIDGE_SIZE=$(stat -c%s verify-release/bridge-latest.apk)
+              if [ "$BRIDGE_SHA" = "$(cat verify-release/expected-sha.txt)" ] && \
+                 [ "$BRIDGE_SIZE" = "$(cat verify-release/expected-size.txt)" ]; then
+                ready=1
+                break
+              fi
+              echo "A CDN ainda entregou outra cópia: sha=$BRIDGE_SHA tamanho=$BRIDGE_SIZE"
+            fi
+            sleep $((attempt * 7))
+          done
+          test "$ready" = 1 || { echo '::error::BuildMaster-Elite-Tatico-latest.apk não propagou com o mesmo SHA-256 do manifesto.'; exit 1; }
 
       - name: Ativar manifesto automático por último
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Este é o único arquivo sobrescrito. Se o GitHub servir temporariamente o
-          # manifesto anterior, ele continuará apontando para um APK histórico intacto.
+          # O manifesto só muda depois que o arquivo latest público já foi baixado
+          # e conferido com o mesmo SHA-256 e tamanho do APK assinado.
           gh release upload buildmaster-latest dist-apk/legacy/update-manifest.json --clobber
 
       - name: Validar a ponte automática da v27.00
@@ -563,16 +607,16 @@ jobs:
               manifest = json.loads(pathlib.Path('verify-release/legacy-manifest.json').read_text(encoding='utf-8'))
               assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
               assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
-              assert manifest['releaseTag'] == os.environ['RELEASE_TAG']
-              assert manifest['assetName'] == os.environ['APK_ASSET_NAME']
+              assert manifest['releaseTag'] == 'buildmaster-latest'
+              assert manifest['assetName'] == 'BuildMaster-Elite-Tatico-latest.apk'
               assert manifest['checksum'] == pathlib.Path('verify-release/expected-sha.txt').read_text().strip()
               assert manifest['sizeBytes'] == int(pathlib.Path('verify-release/expected-size.txt').read_text().strip())
-              expected_prefix = f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/releases/download/{os.environ["RELEASE_TAG"]}/'
+              expected_prefix = f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/releases/download/buildmaster-latest/'
               assert manifest['apkUrl'].startswith(expected_prefix)
               file_name = manifest['apkUrl'].split('/')[-1].split('?')[0]
-              assert file_name == os.environ['APK_ASSET_NAME']
-              # Mesma regra usada pelo APK v27.00 já instalado.
-              assert re.fullmatch(r'BuildMaster-Elite-Tatico-v\d+\.\d+\.\d+-\d+-[a-f0-9]{7,12}\.apk', file_name, re.I)
+              assert file_name == 'BuildMaster-Elite-Tatico-latest.apk'
+              # Contrato real do APK v27.00: manifesto e APK na tag buildmaster-latest.
+              assert re.fullmatch(r'BuildMaster-Elite-Tatico-latest\.apk', file_name, re.I)
               pathlib.Path('verify-release/legacy-final-apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
           except Exception as exc:
               print(f'O novo manifesto ainda não propagou: {exc}')
@@ -588,11 +632,11 @@ jobs:
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache' \
             --connect-timeout 30 --max-time 300 \
-            "$LEGACY_FINAL_APK_URL?finalVerify=$APK_PUBLICATION_ID-$(date +%s%N)" \
+            "$LEGACY_FINAL_APK_URL&finalVerify=$APK_PUBLICATION_ID-$(date +%s%N)" \
             -o verify-release/legacy-final.apk
           test "$(sha256sum verify-release/legacy-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::A ponte automática baixou um APK diferente do manifesto.'; exit 1; }
           test "$(stat -c%s verify-release/legacy-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::A ponte automática recebeu tamanho diferente do manifesto.'; exit 1; }
-          echo 'Ponte antiga aprovada: o manifesto fixo aponta para o mesmo APK imutável do canal independente.'
+          echo 'Ponte antiga aprovada: o manifesto fixo aponta para BuildMaster-Elite-Tatico-latest.apk em buildmaster-latest.'
 
       - name: Ativar release nova como Latest
         env:
@@ -606,6 +650,6 @@ jobs:
           echo "versionCode: $ANDROID_VERSION_CODE"
           echo "APK imutável: $APK_ASSET_NAME"
           echo "Canal principal: buildmaster-update/update-manifest.json (raw) -> release imutável"
-          echo "Ponte antiga: buildmaster-latest/update-manifest.json -> mesma release imutável"
+          echo "Ponte antiga: buildmaster-latest/update-manifest.json -> BuildMaster-Elite-Tatico-latest.apk"
           echo "Reserva: API releases/latest"
-          echo "Ordem aplicada: APK imutável -> validação pública -> canal raw -> ponte antiga -> Latest."
+          echo "Ordem aplicada: APK imutável -> canal raw -> APK latest validado -> manifesto antigo -> Latest."
