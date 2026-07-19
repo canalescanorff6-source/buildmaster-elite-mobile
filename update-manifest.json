@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "appId": "com.buildmaster.elitetatico",
-  "version": "27.28.0",
-  "versionCode": 1378000541,
-  "buildId": "f1295df200c9b89a4323a30ad0179cc38256d5e7-1",
-  "publishedAt": "2026-07-19T16:42:01.292209+00:00",
+  "version": "27.29.0",
+  "versionCode": 1379000551,
+  "buildId": "a641d02a69103da1a595b5684f5f7a07e9ccaf0c-1",
+  "publishedAt": "2026-07-19T18:21:25.927840+00:00",
   "channel": "stable",
   "updateType": "apk",
   "notes": [
@@ -12,15 +12,15 @@
     "O nome versionado evita cache antigo e continua compatível com o atualizador da v27.26.",
     "A release imutável permanece como segunda rota independente.",
     "O arquivo BuildMaster-Elite-Tatico-latest.apk permanece somente para versões muito antigas.",
-    "O aplicativo v27.28 alterna de verdade entre URLs diferentes quando uma rota diverge.",
+    "O aplicativo v27.29 alterna de verdade entre URLs diferentes quando uma rota diverge.",
     "Cada download é validado por tamanho, SHA-256, pacote, versionCode, versão e assinatura.",
     "O workflow baixa novamente cada ativo público com o mesmo User-Agent do Android antes de ativar os manifestos."
   ],
   "mandatory": true,
   "minNativeVersion": "27.0.0",
-  "checksum": "a59e6c51d77e329e35b7ebb0685aab3b3a87a24de34b805fd03b11025205c31f",
-  "sizeBytes": 3888721,
+  "checksum": "7b35101f3ecdfa6e51dd34b8fe6819cfa2a17dca065bf38d86b92144a2959468",
+  "sizeBytes": 3901105,
   "releaseTag": "buildmaster-latest",
-  "assetName": "BuildMaster-Elite-Tatico-v27.28.0-137800054101-f1295df2.apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.28.0-137800054101-f1295df2.apk?publication=29695274382-1-f1295df2&code=1378000541"
+  "assetName": "BuildMaster-Elite-Tatico-v27.29.0-137900055101-a641d02a.apk",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.29.0-137900055101-a641d02a.apk?publication=29698501295-1-a641d02a&code=1379000551"
 }
