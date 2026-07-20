@@ -1,4 +1,4 @@
-name: Gerar APK v27.29 e publicar atualização automática em três canais
+name: Gerar APK v27.33 e publicar atualização automática pelo sistema Android
 
 on:
   workflow_dispatch:
@@ -215,6 +215,9 @@ jobs:
           grep -qF 'getAppInstallInfo' "$PLUGIN" || { echo '::error::Leitura de versionCode instalada ausente.'; exit 1; }
           grep -qF 'canRequestPackageInstalls' "$PLUGIN" || { echo '::error::Fluxo de permissão de instalação ausente.'; exit 1; }
           grep -qF 'apkDownloadProgress' "$PLUGIN" || { echo '::error::Progresso de download ausente.'; exit 1; }
+          grep -qF 'DownloadManager' "$PLUGIN" || { echo '::error::DownloadManager do Android ausente.'; exit 1; }
+          grep -qF 'downloadWithSystemManager' "$PLUGIN" || { echo '::error::Transporte principal do sistema ausente.'; exit 1; }
+          grep -qF 'downloadWithHttpStream' "$PLUGIN" || { echo '::error::Transporte HTTP de reserva ausente.'; exit 1; }
           grep -qF 'hasSigningCertificate' "$PLUGIN" || { echo '::error::Validação da assinatura do APK ausente.'; exit 1; }
           grep -qF 'getPackageArchiveInfo' "$PLUGIN" || { echo '::error::Validação do pacote baixado ausente.'; exit 1; }
           grep -qF 'SHA-256 do APK não confere' "$PLUGIN" || { echo '::error::Validação SHA-256 ausente.'; exit 1; }
@@ -304,6 +307,15 @@ jobs:
           version_code = os.environ['ANDROID_VERSION_CODE']
           apk = pathlib.Path('dist-apk') / asset_name
           repo = os.environ['GITHUB_REPOSITORY']
+          immutable_url = f'https://github.com/{repo}/releases/download/{release_tag}/{asset_name}'
+          versioned_bridge_url = (
+              f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}'
+              f'?publication={publication_id}&code={version_code}'
+          )
+          legacy_url = (
+              f'https://github.com/{repo}/releases/download/buildmaster-latest/'
+              f'BuildMaster-Elite-Tatico-latest.apk?publication={publication_id}&code={version_code}'
+          )
 
           common = {
             'schemaVersion': 2,
@@ -315,13 +327,11 @@ jobs:
             'channel': 'stable',
             'updateType': 'apk',
             'notes': [
-              'A rota principal aponta para um APK versionado e imutável dentro da ponte buildmaster-latest.',
-              'O nome versionado evita cache antigo e continua compatível com o atualizador da v27.26.',
-              'A release imutável permanece como segunda rota independente.',
-              'O arquivo BuildMaster-Elite-Tatico-latest.apk permanece somente para versões muito antigas.',
-              'O aplicativo v27.29 alterna de verdade entre URLs diferentes quando uma rota diverge.',
-              'Cada download é validado por tamanho, SHA-256, pacote, versionCode, versão e assinatura.',
-              'O workflow baixa novamente cada ativo público com o mesmo User-Agent do Android antes de ativar os manifestos.'
+              'O APK imutável é a rota principal e nunca é substituído depois da publicação.',
+              'O Android DownloadManager é o transporte principal da v27.33; HTTP direto é apenas reserva.',
+              'As rotas versionada e latest permanecem como espelhos para compatibilidade.',
+              'Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.',
+              'O Estúdio Tático Local cria artes SVG e PNG sem API paga.'
             ],
             'mandatory': True,
             'minNativeVersion': '27.0.0',
@@ -332,17 +342,16 @@ jobs:
           immutable = dict(common)
           immutable['releaseTag'] = release_tag
           immutable['assetName'] = asset_name
-          immutable['apkUrl'] = f'https://github.com/{repo}/releases/download/{release_tag}/{asset_name}'
+          immutable['apkUrl'] = immutable_url
+          immutable['mirrors'] = [versioned_bridge_url, legacy_url]
           pathlib.Path('dist-apk', manifest_asset).write_text(
               json.dumps(immutable, ensure_ascii=False, indent=2), encoding='utf-8')
 
           primary = dict(common)
-          primary['releaseTag'] = 'buildmaster-latest'
+          primary['releaseTag'] = release_tag
           primary['assetName'] = asset_name
-          primary['apkUrl'] = (
-              f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}'
-              f'?publication={publication_id}&code={version_code}'
-          )
+          primary['apkUrl'] = immutable_url
+          primary['mirrors'] = [versioned_bridge_url, legacy_url]
           primary_dir = pathlib.Path('dist-apk', 'primary')
           primary_dir.mkdir(parents=True, exist_ok=True)
           (primary_dir / 'update-manifest.json').write_text(
@@ -351,10 +360,8 @@ jobs:
           legacy = dict(common)
           legacy['releaseTag'] = 'buildmaster-latest'
           legacy['assetName'] = 'BuildMaster-Elite-Tatico-latest.apk'
-          legacy['apkUrl'] = (
-              f'https://github.com/{repo}/releases/download/buildmaster-latest/'
-              f'BuildMaster-Elite-Tatico-latest.apk?publication={publication_id}&code={version_code}'
-          )
+          legacy['apkUrl'] = legacy_url
+          legacy['mirrors'] = [immutable_url, versioned_bridge_url]
           legacy_dir = pathlib.Path('dist-apk', 'legacy')
           legacy_dir.mkdir(parents=True, exist_ok=True)
           (legacy_dir / 'update-manifest.json').write_text(
@@ -362,14 +369,13 @@ jobs:
           PY
 
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Ponte versionada sem cache
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualizador do sistema + Estúdio Tático
 
-          - A rota principal usa um APK versionado dentro de buildmaster-latest.
-          - A v27.26 instalada aceita esse endereço, mas não recebe um arquivo substituído com o mesmo nome.
-          - A release imutável continua como segunda rota.
-          - BuildMaster-Elite-Tatico-latest.apk permanece como ponte exclusiva para versões muito antigas.
-          - Os ativos públicos são validados com o mesmo User-Agent do atualizador Android.
-          - O v27.29 registra o tamanho e os 12 primeiros caracteres do hash recebido em caso de divergência.
+          - Download principal feito pelo DownloadManager do Android.
+          - HTTP direto mantido como transporte reserva.
+          - Manifesto principal aponta para APK imutável e inclui dois espelhos oficiais.
+          - APK validado por tamanho, SHA-256, pacote, versão, versionCode e assinatura.
+          - Estúdio Tático Local exporta artes premium em SVG e PNG sem API paga.
           NOTES
 
       - name: Enviar pacote como artefato do workflow
@@ -417,7 +423,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             rm -f verify-release/immutable.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.26 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.33 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -465,7 +471,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-bridge.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.26 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.33 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -519,7 +525,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.26 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.33 Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
               -o verify-release/primary-manifest.json; then
@@ -529,12 +535,14 @@ jobs:
               manifest = json.loads(pathlib.Path('verify-release/primary-manifest.json').read_text(encoding='utf-8'))
               assert manifest['version'] == os.environ['BUILDMASTER_VERSION']
               assert manifest['versionCode'] == int(os.environ['ANDROID_VERSION_CODE'])
-              assert manifest['releaseTag'] == 'buildmaster-latest'
+              assert manifest['releaseTag'] == os.environ['RELEASE_TAG']
               assert manifest['assetName'] == os.environ['APK_ASSET_NAME']
               assert manifest['checksum'] == pathlib.Path('verify-release/expected-sha.txt').read_text().strip()
               assert manifest['sizeBytes'] == int(pathlib.Path('verify-release/expected-size.txt').read_text().strip())
-              expected = f'/releases/download/buildmaster-latest/{os.environ["APK_ASSET_NAME"]}'
+              expected = f'/releases/download/{os.environ["RELEASE_TAG"]}/{os.environ["APK_ASSET_NAME"]}'
               assert expected in manifest['apkUrl']
+              assert len(manifest.get('mirrors', [])) >= 2
+              assert any('/releases/download/buildmaster-latest/' in item for item in manifest['mirrors'])
               pathlib.Path('verify-release/primary-apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
           except Exception as exc:
               print(f'Canal principal ainda não propagou: {exc}')
@@ -548,10 +556,10 @@ jobs:
 
           URL=$(cat verify-release/primary-apk-url.txt)
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/27.26 Android' \
+            --user-agent 'BuildMaster-Elite-Tatico-Updater/27.33 Android' \
             --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
-            "$URL&bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk
+            "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk
           test "$(sha256sum verify-release/primary-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::O canal principal apontou para bytes diferentes.'; exit 1; }
           test "$(stat -c%s verify-release/primary-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::O canal principal apontou para tamanho diferente.'; exit 1; }
 
@@ -578,7 +586,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             rm -f verify-release/legacy-latest.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.0 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.33 Legacy-Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$LEGACY_APK_URL&bmDownloadAttempt=$attempt-$(date +%s%N)" \
               -o verify-release/legacy-latest.apk; then
@@ -606,7 +614,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/legacy-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.0 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.33 Legacy-Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$LEGACY_MANIFEST_URL&attempt=$attempt&ts=$(date +%s%N)" \
               -o verify-release/legacy-manifest.json; then
@@ -620,6 +628,7 @@ jobs:
               assert manifest['assetName'] == 'BuildMaster-Elite-Tatico-latest.apk'
               assert manifest['checksum'] == pathlib.Path('verify-release/expected-sha.txt').read_text().strip()
               assert manifest['sizeBytes'] == int(pathlib.Path('verify-release/expected-size.txt').read_text().strip())
+              assert any(f'/releases/download/{os.environ["RELEASE_TAG"]}/' in item for item in manifest.get('mirrors', []))
           except Exception as exc:
               print(f'Manifesto legado ainda não propagou: {exc}')
               sys.exit(1)
@@ -639,7 +648,7 @@ jobs:
         run: |
           echo "Versão: $BUILDMASTER_VERSION"
           echo "versionCode: $ANDROID_VERSION_CODE"
-          echo "Rota principal: buildmaster-update -> buildmaster-latest/$APK_ASSET_NAME"
-          echo "Rota reserva: releases/latest -> $RELEASE_TAG/$APK_ASSET_NAME"
+          echo "Rota principal: buildmaster-update -> $RELEASE_TAG/$APK_ASSET_NAME (imutável)"
+          echo "Espelhos: buildmaster-latest/$APK_ASSET_NAME e BuildMaster-Elite-Tatico-latest.apk"
           echo "Rota antiga: buildmaster-latest/update-manifest.json -> BuildMaster-Elite-Tatico-latest.apk"
-          echo "Ordem: APK imutável -> APK versionado na ponte -> manifesto principal -> latest antigo -> manifesto legado -> Latest."
+          echo "Ordem: APK imutável -> espelho versionado -> manifesto principal -> espelho latest -> manifesto legado -> Latest."

@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const panel = fs.readFileSync('src/components/TacticalPosterStudioPanel.tsx', 'utf8');
+const engine = fs.readFileSync('src/lib/tacticalPoster.ts', 'utf8');
+const library = fs.readFileSync('src/lib/tacticalPosterLibrary.ts', 'utf8');
+const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
+const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
+const updates = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
+
+assert.equal(pkg.version, '27.33.0');
+assert.match(panel, /Estúdio Tático Completo/);
+assert.match(panel, /Cores personalizadas/);
+assert.match(panel, /Setas e linhas editáveis/);
+assert.match(panel, /Tornar automáticas editáveis/);
+assert.match(panel, /Imprimir \/ PDF/);
+assert.match(panel, /PNG em alta/);
+assert.match(panel, /SVG editável/);
+assert.match(panel, /Projeto JSON/);
+assert.match(panel, /Compartilhar/);
+assert.match(panel, /Qualidade PNG/);
+assert.match(engine, /TacticalPosterArrowKind = 'support' \| 'recycle' \| 'defend' \| 'movement'/);
+assert.match(engine, /createDefaultTacticalPosterArrows/);
+assert.match(engine, /manualArrows/);
+assert.match(engine, /customColors/);
+assert.match(engine, /arrowMovement/);
+assert.match(library, /MAX_PROJECTS = 60/);
+assert.match(library, /schema: 2733/);
+assert.match(library, /LEGACY_STORAGE_KEY/);
+assert.match(library, /normalizeTacticalPosterState/);
+assert.match(workflow, /^name: Gerar APK v27\.33/m);
+assert.match(workflow, /permissions:\s*\n\s*contents: write/);
+assert.match(plugin, /ParcelFileDescriptor/);
+assert.match(plugin, /manager\.openDownloadedFile/);
+assert.match(plugin, /VISIBILITY_VISIBLE_NOTIFY_COMPLETED/);
+assert.match(plugin, /downloadWithSystemManager/);
+assert.match(plugin, /downloadWithHttpStream/);
+assert.match(updates, /Baixar e abrir o instalador automaticamente/);
+assert.match(updates, /rankUpdateCandidatesByHealth/);
+
+console.log('✓ v27.33: app completo, Estúdio Tático editável, exportações, biblioteca e atualizador Android reforçado aprovados.');

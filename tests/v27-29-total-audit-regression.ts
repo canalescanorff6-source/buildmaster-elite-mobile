@@ -8,20 +8,20 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json')) as { version: string; scripts: Record<string, string> };
 
-assert.equal(pkg.version, '27.29.0');
-assert.equal(APP_RELEASE_VERSION, '27.29.0');
-assert.equal(APP_NATIVE_VERSION, '27.29.0');
-assert.equal(APP_DATA_VERSION, '27.29.0');
+assert.equal(pkg.version, '27.33.0');
+assert.equal(APP_RELEASE_VERSION, pkg.version);
+assert.equal(APP_NATIVE_VERSION, pkg.version);
+assert.equal(APP_DATA_VERSION, pkg.version);
 assert.equal(CURRENT_DATA_SCHEMA, 2729);
-assert.match(pkg.scripts['test:all'], /^npm run test:v2729/);
+assert.match(pkg.scripts['test:all'], /^npm run test:v2733 && npm run test:v2729/);
 assert.equal(pkg.scripts['quality:audit'], 'node scripts/audit-project.mjs');
 
 const native = read('scripts/install-android-security-plugin.mjs');
 assert.match(native, /AtomicBoolean/);
 assert.match(native, /Accept-Encoding", "identity/);
 assert.match(native, /maxAttempts/);
-assert.match(native, /quantidade realmente gravada e o SHA-256 completo/);
-assert.doesNotMatch(native, /servidor anunciou um tamanho diferente do manifesto/);
+assert.match(native, /downloadWithSystemManager/);
+assert.match(native, /downloadWithHttpStream/);
 assert.match(native, /responseHost/);
 assert.match(native, /signaturesCompatible/);
 
@@ -29,7 +29,7 @@ const updateCenter = read('src/components/UpdateCenterPanel.tsx');
 assert.match(updateCenter, /rankUpdateCandidatesByHealth/);
 assert.match(updateCenter, /recordUpdateRouteFailure/);
 assert.match(updateCenter, /recordUpdateRouteSuccess/);
-assert.match(updateCenter, /maxAttempts: 2/);
+assert.match(updateCenter, /maxAttempts: 4/);
 
 const app = read('src/components/CardVisionApp.tsx');
 assert.match(app, /SectionErrorBoundary/);
@@ -54,7 +54,7 @@ assert.doesNotMatch(workflow, /\n\s+-f content="\$CONTENT"[^\n]+\n\s+-f content=
 
 const backup = createBackupEnvelope({ history: [{ id: '1', result: {} }], settings: {} }, '2026-07-19T12:00:00.000Z');
 assert.equal(validateBackupEnvelope(backup).valid, true);
-const polluted = JSON.parse('{"app":"BuildMaster Elite Tático","version":"27.29.0","schema":2729,"exportedAt":"2026-07-19T12:00:00.000Z","checksum":"bad","sections":{"settings":{"__proto__":{"admin":true}}}}');
+const polluted = JSON.parse('{"app":"BuildMaster Elite Tático","version":"27.33.0","schema":2729,"exportedAt":"2026-07-19T12:00:00.000Z","checksum":"bad","sections":{"settings":{"__proto__":{"admin":true}}}}');
 const checked = validateBackupEnvelope(polluted);
 assert.equal(checked.valid, false);
 assert.ok(checked.issues.some((issue) => issue.code === 'checksum'));

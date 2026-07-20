@@ -10,7 +10,7 @@ export type NativeInstallInfo = {
 };
 
 export type ApkDownloadProgress = {
-  phase: 'connecting' | 'downloading' | 'verifying' | 'ready';
+  phase: 'connecting' | 'downloading' | 'downloading-system' | 'downloading-http' | 'verifying' | 'ready';
   percent: number;
   downloadedBytes: number;
   totalBytes: number;
@@ -28,6 +28,7 @@ export type ApkInstallResult = {
   contentEncoding?: string;
   contentLength?: number;
   etag?: string;
+  transport?: 'android-download-manager' | 'http-automatic-redirect' | 'http-manual-redirect' | string;
 };
 
 type SecureStoragePlugin = {

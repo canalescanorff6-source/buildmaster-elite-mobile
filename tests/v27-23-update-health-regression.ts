@@ -17,9 +17,9 @@ const css = fs.readFileSync('src/app/design-system-v2723.css', 'utf8');
 const globals = fs.readFileSync('src/app/globals.css', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 
-assert.equal(pkg.version, '27.29.0');
-assert.equal(APP_RELEASE_VERSION, '27.29.0');
-assert.equal(APP_NATIVE_VERSION, '27.29.0');
+assert.equal(pkg.version, '27.33.0');
+assert.equal(APP_RELEASE_VERSION, '27.33.0');
+assert.equal(APP_NATIVE_VERSION, '27.33.0');
 assert.match(pkg.scripts['test:all'], /test:v2723/);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
@@ -47,7 +47,7 @@ assert.match(panel, /O BuildMaster detecta, escolhe a rota mais nova, baixa e va
 assert.match(globals, /design-system-v2723\.css/);
 assert.match(css, /update-diagnostic-panel/);
 assert.match(css, /update-audit-list/);
-assert.match(workflow, /v27\.29/);
+assert.match(workflow, /v27\.33/);
 assert.match(panel, /Detalhe técnico|histórico técnico/i);
 
 console.log('✓ v27.29: diagnóstico do atualizador, histórico técnico, recuperação em três rodadas e interface responsiva aprovados.');

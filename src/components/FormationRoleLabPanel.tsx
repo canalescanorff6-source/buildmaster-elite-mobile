@@ -5,6 +5,7 @@ import { CheckCircle2, Copy, Layers, Plus, Save, ShieldCheck, Sparkles, Target, 
 import type { AnalysisResult, PositionCode, TacticalStyle } from '@/lib/analyzer';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { createStableId } from '@/lib/stableId';
+import { TacticalPosterStudioPanel } from '@/components/TacticalPosterStudioPanel';
 import {
   FORMATION_BLUEPRINTS,
   FORMATION_ROLE_CATALOG,
@@ -111,7 +112,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
   return (
     <section className="formation-role-lab">
       <article className="formation-lab-hero luxury-panel">
-        <div><p className="kicker"><Sparkles size={15}/> v26.77 • Laboratório de formações</p><h3>Qual jogador e estilo encaixam em cada espaço</h3><p>Escolha a formação. O app explica a função ideal, os estilos oficiais compatíveis e procura o melhor jogador do seu Cofre.</p></div>
+        <div><p className="kicker"><Sparkles size={15}/> v27.33 • Laboratório de formações</p><h3>Qual jogador e estilo encaixam em cada espaço</h3><p>Escolha a formação. O app explica a função ideal, os estilos oficiais compatíveis e procura o melhor jogador do seu Cofre.</p></div>
         <div className="formation-lab-score"><span>Elenco preenchido</span><strong>{filled}/11</strong><small>encaixe médio {averageFit}/100</small></div>
       </article>
 
@@ -178,6 +179,8 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
           <p className="panel-note"><ShieldCheck size={14}/> As formações personalizadas ficam separadas por conta e não alteram automaticamente a escalação principal.</p>
         </article>
       )}
+
+      <TacticalPosterStudioPanel formation={selected} lineup={lineup} style={style}/>
 
       {message && <p className="formation-lab-message"><CheckCircle2 size={16}/> {message}</p>}
     </section>

@@ -1,24 +1,37 @@
-# BuildMaster Elite Tático v27.29
+# BuildMaster Elite Tático v27.33
 
-Aplicativo Android/Next.js para criação de fichas, análise de jogadores, gestão tática, Cofre, contas/licenças, leitura de prints e preparação de partidas do eFootball.
+Aplicativo Android/Next.js para criação de fichas, leitura de prints, análise de jogadores, gestão do elenco, planos de partida, Cofre, contas/licenças, treinos e produção de artes táticas do eFootball.
 
-## Atualização automática reforçada
+## Estúdio Tático Completo
 
-A v27.29 consulta os canais oficiais, escolhe o maior `versionCode` válido e ordena as rotas pelo histórico de sucesso do aparelho. O download nativo impede concorrência, solicita bytes sem compressão intermediária, alterna o tratamento de redirecionamentos e valida o arquivo recebido por tamanho real, SHA-256, estrutura APK, pacote, versão, `versionCode` e assinatura antes de abrir o instalador Android.
+A v27.33 transforma as formações do BuildMaster em pôsteres táticos locais, sem API paga:
 
-O fluxo de publicação mantém:
+- formação e escalação automáticas;
+- funções oficiais por posição;
+- setas automáticas ou editáveis;
+- quatro tipos de linha: apoio, reciclagem, defesa e movimentação;
+- textos, instruções e princípios editáveis;
+- cinco temas e cores personalizadas;
+- biblioteca por conta, duplicação e rascunho automático;
+- exportação PNG, SVG, impressão/PDF, JSON e compartilhamento.
 
-- release imutável por compilação;
-- ativo versionado na ponte `buildmaster-latest`;
-- `BuildMaster-Elite-Tatico-latest.apk` para clientes antigos;
-- canal independente e API Latest como rotas adicionais;
-- manifesto ativado somente depois da validação pública do APK.
+## Atualização Android reforçada
 
-Não é necessário alterar o Supabase nem substituir o secret `ANDROID_SIGNING_BUNDLE`. O Android ainda exige a autorização inicial para instalar apps desconhecidos e a confirmação final **Atualizar**.
+O atualizador usa o `DownloadManager` do Android como transporte principal. Ao concluir o download, os bytes são lidos pela API oficial `openDownloadedFile`, copiados para o armazenamento privado do aplicativo e conferidos antes da instalação. O transporte HTTP permanece como reserva.
 
-## Qualidade e segurança
+A validação inclui:
 
-A auditoria da v27.29 cobre armazenamento local seguro, backups, isolamento de falhas, acessibilidade, service worker, workflow, assinatura, integridade do APK e regressões das fichas. A verificação obrigatória pode ser executada com:
+- tamanho real e SHA-256;
+- cabeçalho do APK;
+- pacote, versão e `versionCode`;
+- certificado de assinatura;
+- ativo imutável e espelhos oficiais;
+- exclusão automática de arquivos incompletos;
+- diagnóstico técnico e memória de saúde das rotas.
+
+O workflow `.github/workflows/build-apk.yml` publica o APK somente depois dos testes e ativa o manifesto apenas após validar publicamente o mesmo arquivo.
+
+## Validação local
 
 ```bash
 npm ci
@@ -28,7 +41,7 @@ npm run test:all
 npm run apk:build-web
 ```
 
-Relatório: `docs/current/AUDITORIA_COMPLETA_V27_29.md`  
-Instruções: `LEIA-PRIMEIRO-V27.29-AUDITORIA-TOTAL.txt`
+Relatório: `docs/current/VALIDACAO_V27_33_APP_COMPLETO.md`  
+Instruções: `LEIA-PRIMEIRO-V27.33-APP-COMPLETO.txt`
 
-A geração e assinatura do APK oficial são feitas pelo workflow `.github/workflows/build-apk.yml` com o secret permanente `ANDROID_SIGNING_BUNDLE`.
+O APK oficial assinado é gerado pelo GitHub Actions com o secret permanente `ANDROID_SIGNING_BUNDLE`.

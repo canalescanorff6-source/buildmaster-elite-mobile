@@ -24,9 +24,11 @@ public class MainActivity extends BridgeActivity {
 
 const plugin = `package com.buildmaster.elitetatico;
 
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
+import android.database.Cursor;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -35,6 +37,9 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
+import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
@@ -54,6 +59,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -87,6 +93,19 @@ public class BuildMasterSecurityPlugin extends Plugin {
     private static final int MAX_REDIRECTS = 10;
     private static final int MAX_DOWNLOAD_ATTEMPTS = 4;
     private static final AtomicBoolean UPDATE_IN_PROGRESS = new AtomicBoolean(false);
+    private static final long DOWNLOAD_TIMEOUT_MS = 6 * 60 * 1000L;
+
+    private static class TransportResult {
+        String transport = "unknown";
+        String finalUrl = "";
+        String responseHost = "";
+        String contentType = "";
+        String contentEncoding = "";
+        String responseEtag = "";
+        long responseContentLength = -1;
+        long bytes = 0;
+        String checksum = "";
+    }
 
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -328,7 +347,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
         connection.setRequestProperty("Connection", "close");
         connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.29 Android");
+        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.33 Android");
     }
 
     private static void validateDownloadResponse(HttpURLConnection connection, int status) throws Exception {
@@ -423,6 +442,178 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 || message.contains("no lugar do apk");
     }
 
+    private static void verifyExpectedDownload(File file, Long expectedSize, String expectedChecksum, String trace) throws Exception {
+        if (!file.exists() || !file.isFile() || file.length() <= 0) {
+            throw new SecurityException("O arquivo baixado está vazio ou não foi criado. " + trace);
+        }
+        long total = file.length();
+        if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
+            throw new SecurityException("Tamanho do APK não confere com o manifesto: esperado=" + expectedSize + ", recebido=" + total + ". " + trace);
+        }
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = input.read(buffer)) != -1) digest.update(buffer, 0, read);
+        }
+        String actual = hex(digest.digest());
+        if (!actual.equalsIgnoreCase(expectedChecksum)) {
+            throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actual.substring(0, 12) + ", bytes=" + total + ". " + trace);
+        }
+    }
+
+    private static void copyVerifiedFile(File source, File destination) throws Exception {
+        if (destination.exists() && !destination.delete()) throw new IOException("Não foi possível limpar o download parcial anterior.");
+        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(source));
+             FileOutputStream fileOutput = new FileOutputStream(destination);
+             BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+            output.flush();
+            fileOutput.getFD().sync();
+        }
+    }
+
+    private TransportResult downloadWithSystemManager(URL initial, File partial, Long expectedSize, String expectedChecksum) throws Exception {
+        validateInitialApkUrl(initial);
+        DownloadManager manager = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+        if (manager == null) throw new IllegalStateException("O gerenciador de downloads do Android não está disponível.");
+        File externalRoot = getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (externalRoot == null) throw new IllegalStateException("O Android não liberou a pasta privada de downloads.");
+        File directory = new File(externalRoot, "buildmaster_updates");
+        if (!directory.exists() && !directory.mkdirs()) throw new IllegalStateException("Não foi possível preparar a pasta privada de download.");
+        String fileName = "BuildMaster-system-" + System.currentTimeMillis() + ".apk.part";
+        File systemFile = new File(directory, fileName);
+        if (systemFile.exists()) systemFile.delete();
+
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(initial.toString()));
+        request.setTitle("Atualização do BuildMaster");
+        request.setDescription("Baixando e conferindo o APK oficial");
+        request.setMimeType("application/vnd.android.package-archive");
+        request.setAllowedOverMetered(true);
+        request.setAllowedOverRoaming(true);
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        request.addRequestHeader("Accept", "application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8");
+        request.addRequestHeader("Accept-Encoding", "identity");
+        request.addRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
+        request.addRequestHeader("Pragma", "no-cache");
+        request.addRequestHeader("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.33 Android-System");
+        request.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, "buildmaster_updates/" + fileName);
+
+        long downloadId = manager.enqueue(request);
+        long deadline = SystemClock.elapsedRealtime() + DOWNLOAD_TIMEOUT_MS;
+        long total = expectedSize == null ? 0 : expectedSize;
+        String reasonText = "";
+        try {
+            while (SystemClock.elapsedRealtime() < deadline) {
+                DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
+                try (Cursor cursor = manager.query(query)) {
+                    if (cursor == null || !cursor.moveToFirst()) throw new IOException("O Android perdeu o registro do download.");
+                    int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                    long downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                    long reportedTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                    if (reportedTotal > 0) total = reportedTotal;
+                    int percent = total > 0 ? (int) Math.min(99, (downloaded * 100L) / total) : 0;
+                    emitProgress("downloading-system", percent, downloaded, total);
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) break;
+                    if (status == DownloadManager.STATUS_FAILED) {
+                        int reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON));
+                        reasonText = String.valueOf(reason);
+                        throw new IOException("O gerenciador de downloads falhou (motivo Android " + reason + ").");
+                    }
+                }
+                SystemClock.sleep(450L);
+            }
+            if (SystemClock.elapsedRealtime() >= deadline) throw new IOException("Timeout no gerenciador de downloads do Android.");
+            // Lê o arquivo pelo próprio DownloadManager. Essa é a origem oficial do
+            // download concluído e evita diferenças de caminho em ROMs modificadas.
+            if (partial.exists() && !partial.delete()) throw new IOException("Não foi possível limpar o download parcial anterior.");
+            try (ParcelFileDescriptor descriptor = manager.openDownloadedFile(downloadId);
+                 FileInputStream input = new FileInputStream(descriptor.getFileDescriptor());
+                 FileOutputStream fileOutput = new FileOutputStream(partial);
+                 BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
+                byte[] buffer = new byte[64 * 1024];
+                long copied = 0;
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    copied += read;
+                    if (copied > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
+                    output.write(buffer, 0, read);
+                }
+                output.flush();
+                fileOutput.getFD().sync();
+            }
+            verifyExpectedDownload(partial, expectedSize, expectedChecksum, "transporte=DownloadManager, motivo=" + reasonText);
+            TransportResult result = new TransportResult();
+            result.transport = "android-download-manager";
+            result.finalUrl = initial.toString();
+            result.responseHost = initial.getHost();
+            result.contentType = "application/vnd.android.package-archive";
+            result.contentEncoding = "identity";
+            result.responseContentLength = partial.length();
+            result.bytes = partial.length();
+            result.checksum = expectedChecksum.toLowerCase();
+            return result;
+        } finally {
+            try { manager.remove(downloadId); } catch (Exception ignored) { }
+            if (systemFile.exists()) systemFile.delete();
+        }
+    }
+
+    private TransportResult downloadWithHttpStream(URL initial, File partial, Long expectedSize, String expectedChecksum, int attempt) throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            connection = openDownloadConnection(initial, attempt);
+            long contentLength = connection.getContentLengthLong();
+            long expectedTotal = expectedSize != null && expectedSize > 0 ? expectedSize : contentLength;
+            if (contentLength > MAX_APK_BYTES || expectedTotal > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            long total = 0;
+            int lastPercent = -1;
+            try (BufferedInputStream input = new BufferedInputStream(connection.getInputStream());
+                 FileOutputStream fileOutput = new FileOutputStream(partial);
+                 BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    total += read;
+                    if (total > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
+                    digest.update(buffer, 0, read);
+                    output.write(buffer, 0, read);
+                    int percent = expectedTotal > 0 ? (int) Math.min(99, (total * 100L) / expectedTotal) : 0;
+                    if (percent != lastPercent && (percent == 0 || percent >= lastPercent + 2)) {
+                        lastPercent = percent;
+                        emitProgress("downloading-http", percent, total, expectedTotal);
+                    }
+                }
+                output.flush();
+                fileOutput.getFD().sync();
+            }
+            if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
+                throw new SecurityException("Tamanho do APK não confere com o manifesto: esperado=" + expectedSize + ", recebido=" + total + ". " + downloadTrace(connection));
+            }
+            String actualChecksum = hex(digest.digest());
+            if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) {
+                throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actualChecksum.substring(0, 12) + ", bytes=" + total + ". " + downloadTrace(connection));
+            }
+            URL verifiedUrl = connection.getURL();
+            TransportResult result = new TransportResult();
+            result.transport = attempt % 2 == 0 ? "http-automatic-redirect" : "http-manual-redirect";
+            result.finalUrl = verifiedUrl == null ? "" : verifiedUrl.toString();
+            result.responseHost = verifiedUrl == null ? "" : verifiedUrl.getHost();
+            result.contentType = String.valueOf(connection.getContentType());
+            result.contentEncoding = String.valueOf(connection.getContentEncoding());
+            result.responseContentLength = connection.getContentLengthLong();
+            result.responseEtag = String.valueOf(connection.getHeaderField("ETag"));
+            result.bytes = total;
+            result.checksum = actualChecksum;
+            return result;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
     private static Signature[] archiveSignatures(PackageInfo info) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null) {
             return info.signingInfo.hasMultipleSigners() ? info.signingInfo.getApkContentsSigners() : info.signingInfo.getSigningCertificateHistory();
@@ -507,7 +698,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
         Long expectedVersionCode = call.getLong("expectedVersionCode");
         Long expectedSize = call.getLong("expectedSizeBytes");
         Integer requestedAttempts = call.getInt("maxAttempts");
-        final int maxAttempts = requestedAttempts == null ? 2 : Math.max(1, Math.min(MAX_DOWNLOAD_ATTEMPTS, requestedAttempts));
+        final int maxAttempts = requestedAttempts == null ? MAX_DOWNLOAD_ATTEMPTS : Math.max(1, Math.min(MAX_DOWNLOAD_ATTEMPTS, requestedAttempts));
 
         if (urlValue == null || expectedChecksum == null || !expectedChecksum.matches("(?i)^[a-f0-9]{64}$") || expectedVersionCode == null || expectedVersionCode <= 0) {
             call.reject("URL, versão ou SHA-256 inválido.");
@@ -541,84 +732,45 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 if (partial.exists()) partial.delete();
                 if (apk.exists()) apk.delete();
 
-                long total = 0;
-                long expectedTotal = expectedSize == null ? 0 : expectedSize;
-                String actualChecksum = "";
-                String finalUrl = "";
-                String responseHost = "";
-                String responseContentType = "";
-                String responseContentEncoding = "";
-                String responseEtag = "";
-                long responseContentLength = -1;
+                TransportResult transportResult = null;
                 Exception finalDownloadError = null;
 
                 for (int downloadAttempt = 1; downloadAttempt <= maxAttempts; downloadAttempt++) {
-                    HttpURLConnection connection = null;
                     try {
                         if (partial.exists()) partial.delete();
                         emitProgress("connecting", 0, 0, expectedSize == null ? 0 : expectedSize);
                         URL initial = withDownloadNonce(new URL(urlValue), downloadAttempt);
-                        connection = openDownloadConnection(initial, downloadAttempt);
-                        long contentLength = connection.getContentLengthLong();
-                        expectedTotal = expectedSize != null && expectedSize > 0 ? expectedSize : contentLength;
-                        if (contentLength > MAX_APK_BYTES || expectedTotal > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
-                        // Alguns CDNs anunciam um Content-Length intermediário durante o redirecionamento.
-                        // A decisão final usa sempre a quantidade realmente gravada e o SHA-256 completo.
-
-                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                        total = 0;
-                        int lastPercent = -1;
-                        try (BufferedInputStream input = new BufferedInputStream(connection.getInputStream());
-                             FileOutputStream fileOutput = new FileOutputStream(partial);
-                             BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
-                            byte[] buffer = new byte[32 * 1024];
-                            int read;
-                            while ((read = input.read(buffer)) != -1) {
-                                total += read;
-                                if (total > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
-                                digest.update(buffer, 0, read);
-                                output.write(buffer, 0, read);
-                                int percent = expectedTotal > 0 ? (int) Math.min(99, (total * 100L) / expectedTotal) : 0;
-                                if (percent != lastPercent && (percent == 0 || percent >= lastPercent + 2)) {
-                                    lastPercent = percent;
-                                    emitProgress("downloading", percent, total, expectedTotal);
-                                }
-                            }
-                            output.flush();
-                            fileOutput.getFD().sync();
-                        }
-
-                        if (expectedSize != null && expectedSize > 0 && total != expectedSize) {
-                            throw new SecurityException("Tamanho do APK não confere com o manifesto: esperado=" + expectedSize + ", recebido=" + total + ". " + downloadTrace(connection));
-                        }
-                        emitProgress("verifying", 99, total, expectedTotal);
-                        actualChecksum = hex(digest.digest());
-                        if (!actualChecksum.equalsIgnoreCase(expectedChecksum)) {
-                            throw new SecurityException("SHA-256 do APK não confere com o manifesto: esperado=" + expectedChecksum.substring(0, 12) + ", recebido=" + actualChecksum.substring(0, 12) + ", bytes=" + total + ". " + downloadTrace(connection));
-                        }
-                        URL verifiedUrl = connection.getURL();
-                        finalUrl = verifiedUrl == null ? "" : verifiedUrl.toString();
-                        responseHost = verifiedUrl == null ? "" : verifiedUrl.getHost();
-                        responseContentType = String.valueOf(connection.getContentType());
-                        responseContentEncoding = String.valueOf(connection.getContentEncoding());
-                        responseContentLength = connection.getContentLengthLong();
-                        responseEtag = String.valueOf(connection.getHeaderField("ETag"));
+                        // O transporte do sistema é o principal porque usa a mesma infraestrutura
+                        // que consegue baixar o APK manualmente no Android. O fluxo HTTP próprio
+                        // permanece como reserva independente para ROMs sem DownloadManager funcional.
+                        transportResult = downloadAttempt % 2 == 1
+                                ? downloadWithSystemManager(initial, partial, expectedSize, expectedChecksum)
+                                : downloadWithHttpStream(initial, partial, expectedSize, expectedChecksum, downloadAttempt);
+                        emitProgress("verifying", 99, transportResult.bytes, expectedSize == null ? transportResult.bytes : expectedSize);
                         finalDownloadError = null;
                         break;
                     } catch (Exception downloadError) {
                         finalDownloadError = downloadError;
                         if (partial.exists()) partial.delete();
                         if (downloadAttempt >= maxAttempts || !isRetryableDownloadError(downloadError)) throw downloadError;
-                        try { Thread.sleep(downloadAttempt * 1200L); } catch (InterruptedException interrupted) {
+                        try { Thread.sleep(downloadAttempt * 1400L); } catch (InterruptedException interrupted) {
                             Thread.currentThread().interrupt();
                             throw interrupted;
                         }
-                    } finally {
-                        if (connection != null) connection.disconnect();
                     }
                 }
 
                 if (finalDownloadError != null) throw finalDownloadError;
+                if (transportResult == null) throw new IllegalStateException("Nenhum transporte conseguiu concluir o download.");
+                long total = transportResult.bytes;
+                long expectedTotal = expectedSize == null ? total : expectedSize;
+                String actualChecksum = transportResult.checksum;
+                String finalUrl = transportResult.finalUrl;
+                String responseHost = transportResult.responseHost;
+                String responseContentType = transportResult.contentType;
+                String responseContentEncoding = transportResult.contentEncoding;
+                String responseEtag = transportResult.responseEtag;
+                long responseContentLength = transportResult.responseContentLength;
                 if (!partial.renameTo(apk)) throw new IllegalStateException("Não foi possível concluir o arquivo de atualização.");
                 assertApkZipHeader(apk);
 
@@ -649,6 +801,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 result.put("contentEncoding", responseContentEncoding);
                 result.put("contentLength", responseContentLength);
                 result.put("etag", responseEtag);
+                result.put("transport", transportResult.transport);
                 call.resolve(result);
             } catch (Exception error) {
                 if (partial != null) partial.delete();
@@ -685,4 +838,4 @@ if (!manifest.includes('android:usesCleartextTraffic=')) {
   manifest = manifest.replace('<application', '<application\n        android:usesCleartextTraffic="false"');
 }
 fs.writeFileSync(manifestPath, manifest);
-console.log('Plugin Android v27.29 instalado: download exclusivo, identidade sem compressão, progresso, SHA-256, pacote/versionCode e assinatura verificados.');
+console.log('Plugin Android v27.33 instalado: DownloadManager lido pela API oficial + HTTP reserva, progresso, SHA-256, pacote/versionCode e assinatura verificados.');

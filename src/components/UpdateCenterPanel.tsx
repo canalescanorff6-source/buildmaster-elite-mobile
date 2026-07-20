@@ -257,7 +257,7 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
               expectedVersionCode: routeManifest.versionCode,
               expectedVersionName: routeManifest.version,
               expectedSizeBytes: routeManifest.sizeBytes,
-              maxAttempts: 2
+              maxAttempts: 4
             });
             recordUpdateRouteSuccess(routeManifest);
             break;
@@ -516,7 +516,8 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
 
   const buildShort = useMemo(() => CURRENT_BUILD_ID === 'local-build' ? 'local' : CURRENT_BUILD_ID.slice(0, 8), []);
   const progressLabel = progress?.phase === 'connecting' ? 'Conectando ao GitHub'
-    : progress?.phase === 'downloading' ? `Baixando ${progress.percent}%`
+    : progress?.phase === 'downloading-system' ? `Android baixando ${progress.percent}%`
+    : progress?.phase === 'downloading-http' || progress?.phase === 'downloading' ? `Baixando pela rota reserva ${progress.percent}%`
       : progress?.phase === 'verifying' ? 'Conferindo arquivo e assinatura'
         : progress?.phase === 'ready' ? 'APK validado' : '';
 
@@ -681,7 +682,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         expectedVersionCode: target.versionCode,
         expectedVersionName: target.version,
         expectedSizeBytes: target.sizeBytes,
-        maxAttempts: 2
+        maxAttempts: 4
       });
 
       const routeCandidates = rankUpdateCandidatesByHealth(fetched.alternatives)
@@ -736,7 +737,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         await openInstallPermissionSettings();
       } else if (result.verified) {
         setMessage('APK oficial validado. Confirme “Atualizar” na tela do instalador Android. Seus dados serão mantidos.');
-        recordAudit({ phase: 'install', outcome: 'success', message: `APK v${targetManifest.version} validado e entregue ao instalador Android.`, detail: `SHA-256 ${result.checksum || targetManifest.checksum} • host ${result.responseHost || 'não informado'} • tipo ${result.contentType || 'não informado'} • bytes ${result.contentLength ?? targetManifest.sizeBytes ?? 'não informado'}${result.etag ? ` • etag ${result.etag}` : ''}` });
+        recordAudit({ phase: 'install', outcome: 'success', message: `APK v${targetManifest.version} validado e entregue ao instalador Android.`, detail: `SHA-256 ${result.checksum || targetManifest.checksum} • host ${result.responseHost || 'não informado'} • tipo ${result.contentType || 'não informado'} • transporte ${result.transport || 'não informado'} • bytes ${result.contentLength ?? targetManifest.sizeBytes ?? 'não informado'}${result.etag ? ` • etag ${result.etag}` : ''}` });
       }
     } catch (cause) {
       const friendly = updateErrorMessage(cause);

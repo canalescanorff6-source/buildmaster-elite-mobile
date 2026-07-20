@@ -181,7 +181,23 @@ export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> 
     if (versionDelta !== 0) return versionDelta;
     return sourcePriority(right.source) - sourcePriority(left.source);
   });
-  const uniqueAlternatives = ordered.filter((candidate, index, all) =>
+  // Cada manifesto pode publicar espelhos oficiais do mesmo APK. Eles são
+  // transformados em rotas reais para que uma URL/CDN com comportamento ruim
+  // não seja repetida como se fosse uma alternativa diferente.
+  const expandedAlternatives = ordered.flatMap((candidate) => {
+    const mirrors = candidate.manifest.mirrors ?? [];
+    return [candidate, ...mirrors.map((apkUrl) => ({
+      ...candidate,
+      endpoint: `${candidate.endpoint}#mirror`,
+      manifest: {
+        ...candidate.manifest,
+        apkUrl,
+        releaseTag: undefined,
+        assetName: apkUrl.split('/').pop()?.split('?')[0] || 'APK espelho'
+      }
+    }))];
+  });
+  const uniqueAlternatives = expandedAlternatives.filter((candidate, index, all) =>
     all.findIndex((other) => other.manifest.apkUrl === candidate.manifest.apkUrl
       && other.manifest.checksum === candidate.manifest.checksum
       && other.manifest.versionCode === candidate.manifest.versionCode) === index);

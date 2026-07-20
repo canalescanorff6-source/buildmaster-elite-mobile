@@ -6,7 +6,7 @@ const panel = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
 const css = fs.readFileSync('src/app/legacy-compat.css', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.29.0');
+assert.equal(pkg.version, '27.33.0');
 assert.match(app, /topbar-admin-account-action/);
 assert.match(app, /Criar e gerenciar contas/);
 assert.match(app, /account\?\.profile\.role === 'admin' \? 'Criar contas' : 'Minha conta'/);

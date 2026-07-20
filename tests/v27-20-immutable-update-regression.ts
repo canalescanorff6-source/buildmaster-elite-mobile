@@ -7,13 +7,14 @@ const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.29.0');
+assert.equal(pkg.version, '27.33.0');
 assert.match(workflow, /RUN_ATTEMPT: \$\{\{ github\.run_attempt \}\}/);
 assert.match(workflow, /asset_token = f'\{version_code\}\{attempt:02d\}'/);
 assert.match(workflow, /APK_PUBLICATION_ID=/);
 assert.match(workflow, /release_tag = f'buildmaster-v\{version\}-\{version_code\}-\{attempt:02d\}'/);
 assert.match(workflow, /manifest_asset = f'update-manifest-v\{version\}-\{version_code\}\.json'/);
-assert.match(workflow, /legacy\['apkUrl'\] = \([\s\S]*releases\/download\/buildmaster-latest\/[\s\S]*BuildMaster-Elite-Tatico-latest\.apk[\s\S]*publication=/);
+assert.match(workflow, /legacy_url = \([\s\S]*releases\/download\/buildmaster-latest\/[\s\S]*BuildMaster-Elite-Tatico-latest\.apk\?publication=/);
+assert.match(workflow, /legacy\['apkUrl'\] = legacy_url/);
 assert.match(workflow, /Criar release imutável em espera/);
 assert.match(workflow, /Validar release imutável publicamente/);
 assert.match(workflow, /Ativar release nova como Latest/);

@@ -1,5 +1,5 @@
-export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.29.0';
-export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.29.0';
+export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.33.0';
+export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.33.0';
 export const CURRENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILDMASTER_BUILD_ID || 'local-build';
 
 const TRUSTED_OWNER = 'canalescanorff6-source';
@@ -33,6 +33,7 @@ export type AppUpdateManifest = {
   sizeBytes?: number;
   releaseTag?: string;
   assetName?: string;
+  mirrors?: string[];
 };
 
 export type InstalledAppInfo = {
@@ -193,7 +194,10 @@ export function validateUpdateManifest(input: unknown): AppUpdateManifest | null
     checksum: String(raw.checksum).toLowerCase(),
     sizeBytes: raw.sizeBytes,
     releaseTag: raw.releaseTag ? String(raw.releaseTag) : parsedApk.tag,
-    assetName: raw.assetName ? String(raw.assetName) : parsedApk.fileName
+    assetName: raw.assetName ? String(raw.assetName) : parsedApk.fileName,
+    mirrors: Array.isArray(raw.mirrors)
+      ? raw.mirrors.map(String).filter((url, index, all) => isTrustedApkUrl(url) && url !== raw.apkUrl && all.indexOf(url) === index).slice(0, 4)
+      : []
   };
 }
 

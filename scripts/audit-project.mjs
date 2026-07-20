@@ -44,17 +44,19 @@ const layout = read('src/app/layout.tsx');
 const manifest = read('public/manifest.webmanifest');
 const sw = read('public/sw.js');
 
-check(/^27\.29\.\d+$/.test(expectedVersion), 'Versão de auditoria v27.29 configurada', `encontrada ${expectedVersion}`);
+check(/^27\.33\.\d+$/.test(expectedVersion), 'Versão de auditoria v27.33 configurada', `encontrada ${expectedVersion}`);
 check(appUpdates.includes(`'${expectedVersion}'`), 'Motor de atualização usa a versão do pacote');
 check(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface usam versão centralizada');
 check(manifest.includes(`v${expectedMinor}`), 'Manifesto PWA acompanha a versão atual');
-check(sw.includes('27-29'), 'Cache do service worker foi renovado');
-check(globals.includes('design-system-v2729.css'), 'Camada final de design e acessibilidade carregada');
+check(sw.includes('27-33'), 'Cache do service worker foi renovado');
+check(globals.includes('design-system-v2729.css') && globals.includes('tactical-poster-v2733.css'), 'Camada final de design, acessibilidade e Estúdio Tático carregada');
 check(exists('src/components/SectionErrorBoundary.tsx'), 'Isolamento de falhas por módulo presente');
 check(exists('src/components/PanelLoadingFallback.tsx'), 'Fallback de carregamento por módulo presente');
 check(exists('src/lib/safeLocalStorage.ts'), 'Armazenamento local protegido presente');
 check(exists('src/lib/updateRouteHealth.ts'), 'Memória de saúde das rotas do atualizador presente');
 check(nativeInstaller.includes('AtomicBoolean'), 'Atualizador bloqueia downloads concorrentes');
+check(nativeInstaller.includes('DownloadManager') && nativeInstaller.includes('downloadWithSystemManager'), 'DownloadManager do Android é o transporte principal');
+check(nativeInstaller.includes('downloadWithHttpStream'), 'Transporte HTTP permanece como reserva');
 check(nativeInstaller.includes("Accept-Encoding",) && nativeInstaller.includes('identity'), 'Download do APK força bytes sem compressão intermediária');
 check(nativeInstaller.includes('maxAttempts'), 'Tentativas nativas limitadas por rota');
 check(nativeInstaller.includes('SHA-256'), 'APK é validado por SHA-256');
@@ -63,6 +65,8 @@ check(workflow.includes('permissions:\n  contents: write'), 'Workflow possui per
 check(workflow.includes('npm run quality:audit'), 'Auditoria automática executa no GitHub Actions');
 check(workflow.includes('BuildMaster-Elite-Tatico-latest.apk'), 'Ponte para APKs antigos continua publicada');
 check(workflow.includes('Validar release imutável publicamente'), 'Release pública é conferida antes da ativação');
+check(workflow.includes("'mirrors'") && workflow.includes('immutable_url'), 'Manifestos publicam rota imutável e espelhos oficiais');
+check(exists('src/lib/tacticalPoster.ts') && exists('src/components/TacticalPosterStudioPanel.tsx'), 'Estúdio Tático Local presente');
 check(!exists('public/update-manifest.json'), 'Manifesto de produção não está empacotado dentro do APK');
 
 const forbiddenExtensions = new Set(['.jks', '.keystore', '.p12', '.pfx', '.apk', '.aab']);

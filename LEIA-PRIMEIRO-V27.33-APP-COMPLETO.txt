@@ -1,0 +1,19 @@
+BUILDMASTER ELITE TÁTICO v27.33 — APP COMPLETO
+
+1. Extraia este pacote.
+2. Substitua TODO o conteúdo do repositório, inclusive a pasta oculta .github.
+3. Não envie node_modules, .next, out ou android: o workflow cria esses diretórios.
+4. Faça um novo commit na branch main.
+5. Aguarde o workflow "Gerar APK v27.33 e publicar atualização automática pelo sistema Android" terminar verde.
+6. No app instalado, abra Ajustes > Atualizações > Verificar agora.
+
+NÃO ALTERE:
+- ANDROID_SIGNING_BUNDLE, caso seja a chave permanente usada desde as versões anteriores;
+- o packageId com.buildmaster.elitetatico;
+- o Supabase apenas para tentar corrigir download de APK.
+
+O atualizador usa DownloadManager + leitura oficial dos bytes + HTTP reserva, valida tamanho, SHA-256, APK, pacote, versão, versionCode e assinatura.
+
+O Estúdio Tático funciona localmente, sem API paga, e exporta PNG, SVG, impressão/PDF, JSON e compartilhamento.
+
+IMPORTANTE: o Android pode exigir a autorização "Instalar apps desconhecidos" e o toque final em "Atualizar". Aplicativos comuns não podem concluir uma instalação silenciosa sem essa confirmação do sistema.

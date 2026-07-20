@@ -1,3 +1,23 @@
+# v27.33.0 — App completo, Estúdio Tático editável e atualizador Android reforçado
+
+- Estúdio Tático com setas automáticas e editor manual completo;
+- temas e cores personalizadas;
+- biblioteca com migração, rascunho por formação e até 60 projetos;
+- exportação PNG, SVG, impressão/PDF, JSON e compartilhamento;
+- leitura do DownloadManager por `openDownloadedFile` e `ParcelFileDescriptor`;
+- cópia dos bytes para armazenamento privado antes de validar e instalar;
+- HTTP reserva, integridade, pacote, versão, versionCode e assinatura preservados;
+- teste v27.33, auditoria, regressões, build estático e Capacitor validados.
+
+# v27.30.0 — Atualizador do sistema e Estúdio Tático Local
+
+- DownloadManager do Android virou o transporte principal do APK.
+- HTTP próprio permanece como reserva e as tentativas alternam os transportes.
+- Manifesto principal usa APK imutável e publica dois espelhos oficiais.
+- Diagnóstico registra transporte, host, tamanho e integridade.
+- Estúdio Tático Local gera infográficos em SVG/PNG sem API paga.
+- Versão, PWA, cache, workflow, auditoria e testes atualizados.
+
 ## 27.29.0 — Auditoria total, estabilidade e atualizador resiliente
 
 - auditoria automatizada de código, segurança, interface, armazenamento, backup, workflow e Android;

@@ -7,16 +7,16 @@ const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'u
 const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.29.0');
-assert.match(workflow, /primary\['releaseTag'\] = 'buildmaster-latest'/);
-assert.match(workflow, /releases\/download\/buildmaster-latest\/\{asset_name\}/);
+assert.equal(pkg.version, '27.33.0');
+assert.match(workflow, /primary\['releaseTag'\] = release_tag/);
+assert.match(workflow, /primary\['apkUrl'\] = immutable_url/);
 assert.match(workflow, /Publicar APK versionado na ponte fixa/);
 assert.match(workflow, /Publicar canal principal somente após o APK versionado/);
 assert.ok(
   workflow.indexOf('Publicar APK versionado na ponte fixa') < workflow.indexOf('Publicar canal principal somente após o APK versionado'),
   'O APK versionado precisa existir e ser validado antes do manifesto principal.'
 );
-assert.match(workflow, /BuildMaster-Elite-Tatico-Updater\/27\.26 Android/);
+assert.match(workflow, /BuildMaster-Elite-Tatico-Updater\/27\.33 Android/);
 assert.match(workflow, /O nome é único por execução\. Nunca usamos --clobber/);
 assert.match(plugin, /if \(!isMutableLatestUrl\(source\)\) return source;/);
 assert.match(plugin, /openAutomaticDownloadConnection/);
