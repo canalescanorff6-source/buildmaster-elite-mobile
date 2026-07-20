@@ -39,7 +39,7 @@ assert.ok(comparison.score >= 1 && comparison.score <= 99);
 assert.ok(FORMATION_BLUEPRINTS.length >= 15, 'Catálogo precisa incluir formações do app e extras.');
 const fourTwoTwoTwo = getFormationBlueprint('4-2-2-2');
 assert.equal(fourTwoTwoTwo.slots.length, 11);
-assert.ok(fourTwoTwoTwo.slots.some((slot) => slot.label === 'CA E' && slot.primaryRoles.includes('pivo')));
+assert.ok(fourTwoTwoTwo.slots.some((slot) => slot.label === 'CA E' && slot.primaryRoles.includes('artilheiro') && slot.complementaryRoles.includes('atacante-pivo')));
 assert.equal(FORMATION_ROLE_CATALOG['artilheiro'].officialName, 'Artilheiro');
 assert.equal(FORMATION_ROLE_CATALOG['primeiro-volante'].officialName, '1º Volante');
 

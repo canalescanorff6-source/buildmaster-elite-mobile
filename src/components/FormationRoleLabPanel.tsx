@@ -13,15 +13,17 @@ import {
   getFormationBlueprint,
   styleAdviceForFormation,
   styleLabel,
+  getFormationRoleMeta2026,
   type FormationBlueprint,
   type FormationRoleId,
   type FormationSlot
 } from '@/lib/formationRoleEngine';
+import { CANONICAL_PLAYER_PLAYSTYLES, FORMATION_COACH_STYLE_OPTIONS, getPlayerStyleMeta2026, normalizeFormationCoachStyle, playerStyleTierLabel } from '@/lib/efootball2026Playstyles';
 
 const STORAGE_KEY = 'buildmaster_custom_formations_v26_77';
 const POSITIONS: PositionCode[] = ['CF','SS','LWF','RWF','LMF','RMF','AMF','CMF','DMF','CB','LB','RB','GK'];
 const POSITION_LABELS: Record<PositionCode,string> = { CF:'CA',SS:'SA',LWF:'PE',RWF:'PD',LMF:'ME',RMF:'MD',AMF:'MAT',CMF:'MLG',DMF:'VOL',CB:'ZAG',LB:'LE',RB:'LD',GK:'GOL' };
-const STYLES: TacticalStyle[] = ['AUTO','POSSE_DE_BOLA','CONTRA_ATAQUE','CONTRA_ATAQUE_RAPIDO','POR_FORA','PASSE_LONGO'];
+const STYLES: TacticalStyle[] = FORMATION_COACH_STYLE_OPTIONS.map((item) => item.value);
 
 type SavedCustomFormation = FormationBlueprint & { createdAt: string; updatedAt: string };
 
@@ -49,7 +51,7 @@ function readCustomFormations(): SavedCustomFormation[] {
 export function FormationRoleLabPanel({ results, activeFormation, activeStyle }: { results: AnalysisResult[]; activeFormation: string; activeStyle: TacticalStyle }) {
   const initialId = activeFormation !== 'AUTO' && FORMATION_BLUEPRINTS.some((item) => item.id === activeFormation) ? activeFormation : '4-2-2-2';
   const [formationId, setFormationId] = useState(initialId);
-  const [style, setStyle] = useState<TacticalStyle>(activeStyle);
+  const [style, setStyle] = useState<TacticalStyle>(normalizeFormationCoachStyle(activeStyle));
   const [customFormations, setCustomFormations] = useState<SavedCustomFormation[]>([]);
   const [editing, setEditing] = useState<SavedCustomFormation | null>(null);
   const [message, setMessage] = useState('');
@@ -112,7 +114,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
   return (
     <section className="formation-role-lab">
       <article className="formation-lab-hero luxury-panel">
-        <div><p className="kicker"><Sparkles size={15}/> v27.33 • Laboratório de formações</p><h3>Qual jogador e estilo encaixam em cada espaço</h3><p>Escolha a formação. O app explica a função ideal, os estilos oficiais compatíveis e procura o melhor jogador do seu Cofre.</p></div>
+        <div><p className="kicker"><Sparkles size={15}/> v27.34 • Meta eFootball 2026</p><h3>Formações com estilos oficiais e regras competitivas</h3><p>O técnico usa somente Posse de bola, Contra-ataque rápido ou Contra-ataque normal. Cada jogador mantém o estilo oficial da carta e recebe a avaliação Meta 2026.</p></div>
         <div className="formation-lab-score"><span>Elenco preenchido</span><strong>{filled}/11</strong><small>encaixe médio {averageFit}/100</small></div>
       </article>
 
@@ -122,7 +124,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
           <optgroup label="Formações extras">{FORMATION_BLUEPRINTS.filter((item)=>item.family==='extra').map((item)=><option key={item.id} value={item.id}>{item.name} • extra</option>)}</optgroup>
           {customFormations.length > 0 && <optgroup label="Personalizadas">{customFormations.map((item)=><option key={item.id} value={item.id}>{item.name}</option>)}</optgroup>}
         </select></label>
-        <label><span>Estilo coletivo</span><select value={style} onChange={(event)=>setStyle(event.target.value as TacticalStyle)}>{STYLES.map((item)=><option key={item} value={item}>{styleLabel(item)}</option>)}</select></label>
+        <label><span>Estilo do técnico</span><select value={style} onChange={(event)=>setStyle(normalizeFormationCoachStyle(event.target.value))}>{STYLES.map((item)=><option key={item} value={item}>{styleLabel(item)}</option>)}</select><small>Somente os 3 estilos definidos para as formações.</small></label>
         <div className="formation-lab-buttons"><button type="button" onClick={createCustom}><Plus size={16}/> Criar personalizada</button><button type="button" onClick={duplicateSelected}><Copy size={16}/> Duplicar</button>{selected.family==='personalizada' && <button type="button" onClick={deleteCustom}><Trash2 size={16}/> Excluir</button>}</div>
       </article>
 
@@ -151,6 +153,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
                 <div className="formation-slot-detail">
                   <p>{pick.slot.duty}</p>
                   <div className="formation-role-chips"><span>Principal: {pick.slot.primaryRoles.map((id)=>FORMATION_ROLE_CATALOG[id].officialName).join(' ou ')}</span>{pick.slot.complementaryRoles.length>0 && <span>Alternativa: {pick.slot.complementaryRoles.map((id)=>FORMATION_ROLE_CATALOG[id].officialName).join(' ou ')}</span>}</div>
+                  <div className="formation-meta-chips">{pick.slot.primaryRoles.map((id) => { const meta = getFormationRoleMeta2026(id, pick.slot.position); return meta ? <span key={id} className={`meta-${meta.tier}`}><b>{FORMATION_ROLE_CATALOG[id].officialName}</b> • {playerStyleTierLabel(meta.tier)}</span> : null; })}</div>
                   <small>Atributos-chave: {pick.slot.keyTraits.join(' • ')}</small>
                   {pick.slot.pairingNote && <small>Combinação: {pick.slot.pairingNote}</small>}
                   {pick.player && <><div className="formation-fit-bars"><span>Posição <b>{pick.positionFit}</b></span><span>Estilo/função <b>{pick.roleFit}</b></span></div>{pick.reasons.map((reason)=><small key={reason}>✓ {reason}</small>)}{pick.warnings.map((warning)=><small key={warning} className="warn">⚠ {warning}</small>)}</>}
@@ -170,7 +173,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
               <div key={slotItem.id}>
                 <strong>{slotItem.label}</strong>
                 <label><span>Posição</span><select value={slotItem.position} onChange={(event)=>updateSlot(slotItem.id,{position:event.target.value as PositionCode})}>{POSITIONS.map((position)=><option key={position} value={position}>{POSITION_LABELS[position]}</option>)}</select></label>
-                <label><span>Estilo principal</span><select value={slotItem.primaryRoles[0]} onChange={(event)=>updateSlot(slotItem.id,{primaryRoles:[event.target.value as FormationRoleId]})}>{Object.values(FORMATION_ROLE_CATALOG).filter((role)=>role.positions.includes(slotItem.position)).map((role)=><option key={role.id} value={role.id}>{role.officialName}</option>)}</select></label>
+                <label><span>Estilo principal</span><select value={slotItem.primaryRoles[0]} onChange={(event)=>updateSlot(slotItem.id,{primaryRoles:[event.target.value as FormationRoleId]})}>{Object.values(FORMATION_ROLE_CATALOG).filter((role)=>role.positions.includes(slotItem.position) || role.usablePositions?.includes(slotItem.position)).sort((a,b)=>(getFormationRoleMeta2026(b.id, slotItem.position)?.score ?? 0)-(getFormationRoleMeta2026(a.id, slotItem.position)?.score ?? 0)).map((role)=>{ const meta=getFormationRoleMeta2026(role.id,slotItem.position); return <option key={role.id} value={role.id}>{role.officialName}{meta ? ` • ${meta.verdict}` : ''}</option>; })}</select></label>
                 <label><span>Horizontal</span><input type="range" min={5} max={95} value={slotItem.x} onChange={(event)=>updateSlot(slotItem.id,{x:Number(event.target.value)})}/></label>
                 <label><span>Vertical</span><input type="range" min={7} max={94} value={slotItem.y} onChange={(event)=>updateSlot(slotItem.id,{y:Number(event.target.value)})}/></label>
               </div>
@@ -179,6 +182,11 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
           <p className="panel-note"><ShieldCheck size={14}/> As formações personalizadas ficam separadas por conta e não alteram automaticamente a escalação principal.</p>
         </article>
       )}
+
+      <article className="formation-meta-catalog luxury-panel">
+        <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14}/> Base oficial do jogador</p><h3>22 estilos cadastrados com sua avaliação Meta 2026</h3></div><span>{CANONICAL_PLAYER_PLAYSTYLES.length} estilos</span></div>
+        <div className="formation-meta-grid">{CANONICAL_PLAYER_PLAYSTYLES.map((name) => { const meta=getPlayerStyleMeta2026(name); return meta ? <details key={name} className={`meta-card meta-${meta.tier}`}><summary><strong>{name}</strong><span>{meta.verdict}</span></summary><p>{meta.advice}</p>{meta.restrictions?.map((rule)=><small key={rule}>⚠ {rule}</small>)}</details> : null; })}</div>
+      </article>
 
       <TacticalPosterStudioPanel formation={selected} lineup={lineup} style={style}/>
 

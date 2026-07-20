@@ -15,7 +15,7 @@ const poster = read('src/lib/tacticalPoster.ts');
 const posterPanel = read('src/components/TacticalPosterStudioPanel.tsx');
 const formationPanel = read('src/components/FormationRoleLabPanel.tsx');
 
-assert.equal(pkg.version, '27.33.0');
+assert.equal(pkg.version, '27.34.0');
 assert.match(native, /android\.app\.DownloadManager/);
 assert.match(native, /downloadWithSystemManager/);
 assert.match(native, /setDestinationInExternalFilesDir/);
@@ -40,4 +40,4 @@ assert.match(posterPanel, /image\/svg\+xml/);
 assert.match(formationPanel, /TacticalPosterStudioPanel/);
 assert.doesNotMatch(posterPanel, /dangerouslySetInnerHTML/);
 
-console.log('v27.33: atualizador do sistema e Estúdio Tático Local aprovados.');
+console.log('v27.34: atualizador do sistema e Estúdio Tático Local aprovados.');

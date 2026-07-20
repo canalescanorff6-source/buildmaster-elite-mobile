@@ -1,13 +1,15 @@
-# BuildMaster Elite Tático v27.33
+# BuildMaster Elite Tático v27.34
 
 Aplicativo Android/Next.js para criação de fichas, leitura de prints, análise de jogadores, gestão do elenco, planos de partida, Cofre, contas/licenças, treinos e produção de artes táticas do eFootball.
 
 ## Estúdio Tático Completo
 
-A v27.33 transforma as formações do BuildMaster em pôsteres táticos locais, sem API paga:
+A v27.34 transforma as formações do BuildMaster em pôsteres táticos locais, sem API paga, usando os estilos oficiais da carta e o Meta eFootball 2026:
 
 - formação e escalação automáticas;
-- funções oficiais por posição;
+- 22 estilos oficiais de jogador, normalizados por posição;
+- somente Posse de bola, Contra-ataque rápido e Contra-ataque normal como estilos do técnico nas formações;
+- regras Meta 2026, incluindo um único ZAG Destruidor e prioridade para 1º Volante + Meia versátil;
 - setas automáticas ou editáveis;
 - quatro tipos de linha: apoio, reciclagem, defesa e movimentação;
 - textos, instruções e princípios editáveis;
@@ -41,7 +43,7 @@ npm run test:all
 npm run apk:build-web
 ```
 
-Relatório: `docs/current/VALIDACAO_V27_33_APP_COMPLETO.md`  
-Instruções: `LEIA-PRIMEIRO-V27.33-APP-COMPLETO.txt`
+Relatório: `docs/current/VALIDACAO_V27_34_META_EFOOTBALL_2026.md`  
+Instruções: `LEIA-PRIMEIRO-V27.34-META-EFOOTBALL-2026.txt`
 
 O APK oficial assinado é gerado pelo GitHub Actions com o secret permanente `ANDROID_SIGNING_BUNDLE`.

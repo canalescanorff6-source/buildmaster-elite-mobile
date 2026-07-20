@@ -529,28 +529,28 @@ export const ATTRIBUTE_PT: Record<AttributeKey, string> = {
 export const ATTRIBUTE_INPUTS: Array<{ key: AttributeKey; label: string }> = Object.entries(ATTRIBUTE_PT).map(([key, label]) => ({ key: key as AttributeKey, label }));
 
 export const PLAYSTYLE_OPTIONS = [
-  'Clássico nº 10',
-  'Jogador de infiltração',
-  'Meia versátil',
-  'Primeiro volante',
-  'O destruidor',
+  'Goleiro Ofensivo',
+  'Goleiro Defensivo',
+  'Atacante Surpresa',
+  'Defensor Criativo',
+  'Destruidor',
+  'Lateral Ofensivo',
+  'Lateral Atacante',
+  'Perito em Cruzamento',
+  'Lateral Defensivo',
   'Orquestrador',
-  'Defensor criativo',
-  'Atacante surpresa',
-  'Lateral ofensivo',
-  'Lateral defensivo',
-  'Lateral atacante',
-  'Goleiro ofensivo',
-  'Goleiro defensivo',
-  'Homem de área',
-  'Artilheiro',
-  'Puxa marcação',
+  '1º Volante',
+  'Meia versátil',
+  'Infiltração',
+  'Clássico 10',
+  'Lateral Móvel',
+  'Ala Produtivo',
+  'Armador Criativo',
+  'Atacante Pivô',
   'Pivô',
-  'Armador criativo',
-  'Ala produtivo',
-  'Lateral móvel',
-  'Perito em cruzamento',
-  'Atacante matador'
+  'Homem de Área',
+  'Puxa Marcação',
+  'Artilheiro'
 ] as const;
 
 export const POSITION_LABELS: Array<{ code: PositionCode | 'AUTO'; label: string }> = [

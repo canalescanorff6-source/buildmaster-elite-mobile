@@ -1,11 +1,12 @@
 import type { AnalysisResult, PositionCode, TacticalStyle } from './analyzer';
+import { canonicalizePlayerPlaystyle, getPlayerStyleMeta2026, normalizeFormationCoachStyle, type FormationCoachStyle } from './efootball2026Playstyles';
 
 export type FormationFamily = 'oficial-app' | 'extra' | 'personalizada';
 export type FormationRoleId =
-  | 'artilheiro' | 'homem-area' | 'pivo' | 'puxa-marcacao'
+  | 'artilheiro' | 'homem-area' | 'pivo' | 'atacante-pivo' | 'puxa-marcacao'
   | 'armador-criativo' | 'classico-10' | 'infiltracao' | 'meia-versatil' | 'orquestrador'
   | 'primeiro-volante' | 'volante-destruidor'
-  | 'ala-produtivo' | 'lateral-movel' | 'lateral-ofensivo' | 'lateral-defensivo' | 'perito-cruzamento'
+  | 'ala-produtivo' | 'lateral-movel' | 'lateral-ofensivo' | 'lateral-atacante' | 'lateral-defensivo' | 'perito-cruzamento'
   | 'zagueiro-destruidor' | 'defensor-criativo' | 'atacante-surpresa'
   | 'goleiro-ofensivo' | 'goleiro-defensivo';
 
@@ -15,6 +16,7 @@ export type FormationRole = {
   positions: PositionCode[];
   purpose: string;
   strengths: string[];
+  usablePositions?: PositionCode[];
 };
 
 export type FormationSlot = {
@@ -56,23 +58,25 @@ export type FormationSlotFit = {
 export const FORMATION_ROLE_CATALOG: Record<FormationRoleId, FormationRole> = {
   'artilheiro': { id:'artilheiro', officialName:'Artilheiro', positions:['CF','SS'], purpose:'Atacar a última linha e finalizar com poucos toques.', strengths:['Finalização','Talento ofensivo','Aceleração'] },
   'homem-area': { id:'homem-area', officialName:'Homem de Área', positions:['CF'], purpose:'Permanecer próximo da área para atacar cruzamentos e rebotes.', strengths:['Finalização','Cabeceio','Contato físico'] },
-  'pivo': { id:'pivo', officialName:'Pivô', positions:['CF','SS'], purpose:'Prender zagueiros, proteger a bola e aproximar os meias.', strengths:['Contato físico','Controle de bola','Passe curto'] },
+  'pivo': { id:'pivo', officialName:'Pivô', positions:['CF'], purpose:'Prender zagueiros e disputar a bola direta.', strengths:['Contato físico','Controle de bola','Cabeceio'] },
+  'atacante-pivo': { id:'atacante-pivo', officialName:'Atacante Pivô', positions:['CF','SS'], purpose:'Recuar para participar da criação e voltar a atacar a área.', strengths:['Controle de bola','Passe curto','Finalização'] },
   'puxa-marcacao': { id:'puxa-marcacao', officialName:'Puxa Marcação', positions:['CF','SS'], purpose:'Sair da referência para abrir corredor ao parceiro.', strengths:['Movimentação','Passe','Controle de bola'] },
   'armador-criativo': { id:'armador-criativo', officialName:'Armador Criativo', positions:['AMF','CMF','SS','LWF','RWF'], purpose:'Receber entre linhas e produzir o passe decisivo.', strengths:['Passe','Controle de bola','Condução firme'] },
   'classico-10': { id:'classico-10', officialName:'Clássico 10', positions:['AMF','CMF'], purpose:'Organizar o ataque em ritmo controlado.', strengths:['Passe','Controle de bola','Posicionamento'] },
-  'infiltracao': { id:'infiltracao', officialName:'Infiltração', positions:['AMF','CMF','LMF','RMF','SS'], purpose:'Atacar espaço sem bola e chegar na área.', strengths:['Aceleração','Talento ofensivo','Finalização'] },
+  'infiltracao': { id:'infiltracao', officialName:'Infiltração', positions:['AMF','SS'], usablePositions:['CMF','LMF','RMF'], purpose:'Atacar espaço sem bola e chegar na área.', strengths:['Aceleração','Talento ofensivo','Finalização'] },
   'meia-versatil': { id:'meia-versatil', officialName:'Meia versátil', positions:['CMF','LMF','RMF','DMF'], purpose:'Ajudar em todas as fases e ocupar espaços livres.', strengths:['Resistência','Passe','Dedicação defensiva'] },
-  'orquestrador': { id:'orquestrador', officialName:'Orquestrador', positions:['CMF','DMF'], purpose:'Controlar a saída e inverter o jogo com segurança.', strengths:['Passe rasteiro','Passe alto','Controle de bola'] },
+  'orquestrador': { id:'orquestrador', officialName:'Orquestrador', positions:['CMF','DMF'], purpose:'Controlar a saída e inverter o jogo.', strengths:['Passe rasteiro','Passe alto','Controle de bola'] },
   'primeiro-volante': { id:'primeiro-volante', officialName:'1º Volante', positions:['DMF'], purpose:'Fixar à frente da defesa e proteger a zona central.', strengths:['Consciência defensiva','Desarme','Posicionamento'] },
-  'volante-destruidor': { id:'volante-destruidor', officialName:'Volante Destruidor', positions:['DMF','CMF'], purpose:'Saltar na pressão, recuperar e interromper transições.', strengths:['Agressividade','Desarme','Contato físico'] },
-  'ala-produtivo': { id:'ala-produtivo', officialName:'Ala Produtivo', positions:['LWF','RWF','LMF','RMF'], purpose:'Dar amplitude, vencer duelo e produzir gol ou assistência.', strengths:['Drible','Velocidade','Finalização'] },
-  'lateral-movel': { id:'lateral-movel', officialName:'Lateral móvel', positions:['LB','RB','LMF','RMF'], purpose:'Variar entre corredor, apoio interno e recomposição.', strengths:['Resistência','Velocidade','Passe'] },
-  'lateral-ofensivo': { id:'lateral-ofensivo', officialName:'Lateral ofensivo', positions:['LB','RB'], purpose:'Apoiar por fora e criar superioridade no corredor.', strengths:['Velocidade','Passe alto','Resistência'] },
-  'lateral-defensivo': { id:'lateral-defensivo', officialName:'Lateral defensivo', positions:['LB','RB'], purpose:'Preservar a linha e controlar o ponta adversário.', strengths:['Defesa','Velocidade','Contato físico'] },
-  'perito-cruzamento': { id:'perito-cruzamento', officialName:'Perito em Cruzamento', positions:['LB','RB','LMF','RMF','LWF','RWF'], purpose:'Produzir cruzamentos de alta qualidade.', strengths:['Passe alto','Curva','Força do chute'] },
+  'volante-destruidor': { id:'volante-destruidor', officialName:'Destruidor', positions:['DMF','CMF'], purpose:'Saltar na pressão e interromper transições.', strengths:['Agressividade','Desarme','Contato físico'] },
+  'ala-produtivo': { id:'ala-produtivo', officialName:'Ala Produtivo', positions:['LWF','RWF'], usablePositions:['SS'], purpose:'Dar amplitude e produzir gol ou assistência.', strengths:['Drible','Velocidade','Finalização'] },
+  'lateral-movel': { id:'lateral-movel', officialName:'Lateral Móvel', positions:['LWF','RWF','LMF','RMF'], purpose:'Circular pelo corredor e por zonas internas.', strengths:['Resistência','Velocidade','Passe'] },
+  'lateral-ofensivo': { id:'lateral-ofensivo', officialName:'Lateral Ofensivo', positions:['LB','RB'], purpose:'Apoiar por fora e criar superioridade no corredor.', strengths:['Velocidade','Passe alto','Resistência'] },
+  'lateral-atacante': { id:'lateral-atacante', officialName:'Lateral Atacante', positions:['LB','RB'], purpose:'Entrar por dentro e aparecer em zonas ofensivas.', strengths:['Aceleração','Controle de bola','Finalização'] },
+  'lateral-defensivo': { id:'lateral-defensivo', officialName:'Lateral Defensivo', positions:['LB','RB'], purpose:'Preservar a linha e controlar o ponta adversário.', strengths:['Defesa','Velocidade','Contato físico'] },
+  'perito-cruzamento': { id:'perito-cruzamento', officialName:'Perito em Cruzamento', positions:['LB','RB','LMF','RMF','LWF','RWF'], purpose:'Produzir cruzamentos de alta qualidade sem atacar tanto o espaço interior.', strengths:['Passe alto','Curva','Força do chute'] },
   'zagueiro-destruidor': { id:'zagueiro-destruidor', officialName:'Destruidor', positions:['CB'], purpose:'Antecipar, combater e dominar o duelo físico.', strengths:['Agressividade','Desarme','Contato físico'] },
   'defensor-criativo': { id:'defensor-criativo', officialName:'Defensor Criativo', positions:['CB'], purpose:'Iniciar a construção e quebrar a primeira linha.', strengths:['Passe','Consciência defensiva','Controle de bola'] },
-  'atacante-surpresa': { id:'atacante-surpresa', officialName:'Atacante Surpresa', positions:['CB'], purpose:'Aparecer à frente em momentos específicos sem abandonar a função defensiva.', strengths:['Jogo aéreo','Finalização','Contato físico'] },
+  'atacante-surpresa': { id:'atacante-surpresa', officialName:'Atacante Surpresa', positions:['CB'], purpose:'Aparecer à frente em momentos específicos.', strengths:['Jogo aéreo','Finalização','Contato físico'] },
   'goleiro-ofensivo': { id:'goleiro-ofensivo', officialName:'Goleiro Ofensivo', positions:['GK'], purpose:'Cobrir a linha alta e participar da saída.', strengths:['Alcance','Reflexos','Passe'] },
   'goleiro-defensivo': { id:'goleiro-defensivo', officialName:'Goleiro Defensivo', positions:['GK'], purpose:'Priorizar posicionamento e defesa da área.', strengths:['Consciência de GO','Reflexos','Firmeza'] }
 };
@@ -113,7 +117,7 @@ export const FORMATION_BLUEPRINTS: FormationBlueprint[] = [
     risk:'Pode faltar amplitude quando laterais e meias não ocupam os corredores.',
     behavior:'Recuperar por dentro, acelerar no meia e combinar dois atacantes com funções diferentes.',
     slots:[
-      slot('cf1','CA E','CF',['SS'],35,14,'ataque',['puxa-marcacao','pivo'],['artilheiro'],'Aproximar, tabelar e abrir espaço.',['Controle','Passe','Físico'],'Combine com um Artilheiro ou Homem de Área.'),
+      slot('cf1','CA E','CF',['SS'],35,14,'ataque',['puxa-marcacao','pivo'],['artilheiro'],'Aproximar, tabelar e abrir espaço.',['Controle','Passe','Físico'],'Combine com outro Artilheiro ou com um Atacante Pivô apenas como alternativa.'),
       slot('cf2','CA D','CF',['SS'],65,14,'ataque',['artilheiro','homem-area'],['pivo'],'Atacar profundidade e finalizar.',['Finalização','Aceleração','Talento ofensivo'],'Evite dois atacantes que saiam ao mesmo tempo da área.'),
       slot('am1','MEI E','AMF',['LMF','SS'],28,36,'meio',['armador-criativo','infiltracao'],['classico-10'],'Criar entre linhas e atacar o meio-espaço.',['Passe','Drible','Aceleração']),
       slot('am2','MEI D','AMF',['RMF','SS'],72,36,'meio',['infiltracao','armador-criativo'],['classico-10'],'Produzir último passe e chegada à área.',['Passe','Movimentação','Finalização']),
@@ -126,7 +130,7 @@ export const FORMATION_BLUEPRINTS: FormationBlueprint[] = [
     id:'4-4-2', name:'4-4-2', family:'oficial-app', idealStyles:['CONTRA_ATAQUE','POR_FORA'],
     description:'Duas linhas compactas, amplitude natural e dois atacantes.', risk:'Meio pode ficar previsível sem um central criativo.', behavior:'Defender em bloco e sair por corredor ou passe direto.',
     slots:[
-      slot('cf1','CA E','CF',['SS'],37,14,'ataque',['pivo','puxa-marcacao'],['artilheiro'],'Apoiar e conectar a saída.',['Físico','Controle','Passe'],'Parceiro ideal: Artilheiro ou Homem de Área.'),
+      slot('cf1','CA E','CF',['SS'],37,14,'ataque',['pivo','puxa-marcacao'],['artilheiro'],'Apoiar e conectar a saída.',['Físico','Controle','Passe'],'Parceiro ideal: outro Artilheiro; Atacante Pivô é alternativa situacional.'),
       slot('cf2','CA D','CF',['SS'],63,14,'ataque',['artilheiro','homem-area'],['pivo'],'Finalizar e atacar a área.',['Finalização','Talento ofensivo','Cabeceio']),
       slot('lm','ME','LMF',['LWF'],10,42,'meio',['ala-produtivo','perito-cruzamento'],['meia-versatil'],'Amplitute e recomposição.',['Velocidade','Cruzamento','Resistência']),
       slot('cm1','MLG E','CMF',['DMF'],38,51,'meio',['orquestrador','meia-versatil'],['primeiro-volante'],'Organizar e cobrir o corredor.',['Passe','Controle','Resistência']),
@@ -318,6 +322,81 @@ export const FORMATION_BLUEPRINTS: FormationBlueprint[] = [
   }
 ];
 
+function uniqueRoleIds(items: FormationRoleId[]): FormationRoleId[] {
+  return Array.from(new Set(items));
+}
+
+function metaRolesForBuiltInSlot(slotItem: FormationSlot): { primary: FormationRoleId[]; complementary: FormationRoleId[] } {
+  const original = [...slotItem.primaryRoles, ...slotItem.complementaryRoles];
+  const has = (id: FormationRoleId) => original.includes(id);
+  switch (slotItem.position) {
+    case 'GK':
+      return { primary: ['goleiro-ofensivo', 'goleiro-defensivo'], complementary: [] };
+    case 'CB': {
+      const destroyerSlot = /(?:\bC\b|2|central|combate|área)/i.test(`${slotItem.label} ${slotItem.duty}`);
+      return destroyerSlot
+        ? { primary: ['zagueiro-destruidor', 'defensor-criativo'], complementary: [] }
+        : { primary: ['defensor-criativo'], complementary: ['zagueiro-destruidor'] };
+    }
+    case 'LB':
+    case 'RB':
+      return { primary: ['lateral-defensivo'], complementary: ['perito-cruzamento', 'lateral-ofensivo', 'lateral-atacante'] };
+    case 'DMF': {
+      const builder = /sa[ií]da|primeiro passe|distribu|acelerar|organizar|cobrir o parceiro/i.test(slotItem.duty);
+      return builder
+        ? { primary: ['meia-versatil'], complementary: ['primeiro-volante'] }
+        : { primary: ['primeiro-volante'], complementary: ['meia-versatil'] };
+    }
+    case 'CMF': {
+      const attacking = has('infiltracao') || /chegar|infiltrar|frente|atacar/i.test(slotItem.duty);
+      return attacking
+        ? { primary: ['meia-versatil', 'infiltracao', 'armador-criativo'], complementary: [] }
+        : { primary: ['meia-versatil', 'armador-criativo', 'infiltracao'], complementary: ['primeiro-volante'] };
+    }
+    case 'AMF':
+      return { primary: ['infiltracao', 'armador-criativo'], complementary: ['meia-versatil'] };
+    case 'SS':
+      return { primary: ['infiltracao', 'armador-criativo', 'artilheiro'], complementary: ['atacante-pivo', 'ala-produtivo'] };
+    case 'CF':
+      return { primary: ['artilheiro'], complementary: ['atacante-pivo'] };
+    case 'LWF':
+    case 'RWF':
+      return { primary: ['armador-criativo'], complementary: ['ala-produtivo'] };
+    case 'LMF':
+    case 'RMF': {
+      const wingBack = /ala|corredor|cruz/i.test(`${slotItem.label} ${slotItem.duty}`);
+      return wingBack
+        ? { primary: ['perito-cruzamento', 'meia-versatil'], complementary: ['lateral-defensivo'] }
+        : { primary: ['meia-versatil', 'infiltracao', 'armador-criativo'], complementary: ['perito-cruzamento'] };
+    }
+    default:
+      return { primary: slotItem.primaryRoles, complementary: slotItem.complementaryRoles };
+  }
+}
+
+function normalizeIdealFormationStyles(styles: TacticalStyle[]): FormationCoachStyle[] {
+  const converted = styles.map((style) => {
+    if (style === 'POR_FORA') return 'POSSE_DE_BOLA';
+    if (style === 'PASSE_LONGO') return 'CONTRA_ATAQUE';
+    if (style === 'AUTO') return 'POSSE_DE_BOLA';
+    return normalizeFormationCoachStyle(style);
+  });
+  return Array.from(new Set(converted));
+}
+
+for (const formation of FORMATION_BLUEPRINTS) {
+  formation.idealStyles = normalizeIdealFormationStyles(formation.idealStyles);
+  formation.slots = formation.slots.map((slotItem) => {
+    const roles = metaRolesForBuiltInSlot(slotItem);
+    return {
+      ...slotItem,
+      primaryRoles: uniqueRoleIds(roles.primary),
+      complementaryRoles: uniqueRoleIds(roles.complementary).filter((id) => !roles.primary.includes(id))
+    };
+  });
+}
+
+
 export function getFormationBlueprint(id: string): FormationBlueprint {
   return FORMATION_BLUEPRINTS.find((formation) => formation.id === id) ?? FORMATION_BLUEPRINTS[0];
 }
@@ -330,16 +409,27 @@ function roleText(result: AnalysisResult) {
   return normalizeText(`${result.parsed.playstyle ?? ''} ${result.teamMap?.functionLabel ?? ''} ${result.buildName ?? ''}`);
 }
 
-function roleMatchScore(result: AnalysisResult, roleIds: FormationRoleId[]) {
+export function getFormationRoleMeta2026(roleId: FormationRoleId, position: PositionCode) {
+  const role = FORMATION_ROLE_CATALOG[roleId];
+  return getPlayerStyleMeta2026(role.officialName, position);
+}
+
+function roleMatchScore(result: AnalysisResult, roleIds: FormationRoleId[], position: PositionCode) {
   const text = roleText(result);
+  const actualStyle = canonicalizePlayerPlaystyle(result.parsed.playstyle);
   let best = 0;
   for (const roleId of roleIds) {
     const role = FORMATION_ROLE_CATALOG[roleId];
+    const roleCanonical = canonicalizePlayerPlaystyle(role.officialName);
+    const meta = getPlayerStyleMeta2026(role.officialName, position);
+    const metaScore = meta?.score ?? 50;
     const roleName = normalizeText(role.officialName);
-    if (text.includes(roleName)) best = Math.max(best, 100);
-    else if (role.positions.includes(result.bestPosition.code)) best = Math.max(best, 58);
+    const exactStyle = Boolean(actualStyle && roleCanonical && actualStyle === roleCanonical);
+    if (exactStyle) best = Math.max(best, Math.round(25 + metaScore * .75));
+    else if (text.includes(roleName)) best = Math.max(best, Math.round(18 + metaScore * .62));
+    else if (role.positions.includes(result.bestPosition.code) || role.usablePositions?.includes(result.bestPosition.code)) best = Math.max(best, Math.round(28 + metaScore * .34));
     const matchedTraits = role.strengths.filter((trait) => text.includes(normalizeText(trait))).length;
-    best = Math.max(best, 45 + matchedTraits * 12);
+    best = Math.max(best, Math.round(24 + matchedTraits * 9 + metaScore * .22));
   }
   return Math.min(100, best);
 }
@@ -361,8 +451,8 @@ function positionMatchScore(result: AnalysisResult, slotItem: FormationSlot) {
 
 export function scorePlayerForFormationSlot(result: AnalysisResult, slotItem: FormationSlot): FormationSlotFit {
   const positionFit = positionMatchScore(result, slotItem);
-  const primaryFit = roleMatchScore(result, slotItem.primaryRoles);
-  const complementaryFit = roleMatchScore(result, slotItem.complementaryRoles);
+  const primaryFit = roleMatchScore(result, slotItem.primaryRoles, slotItem.position);
+  const complementaryFit = roleMatchScore(result, slotItem.complementaryRoles, slotItem.position);
   const phase = result.teamMap?.sectorScores;
   const phaseScore = slotItem.line === 'ataque'
     ? ((phase?.finalizacao ?? 60) * .5 + (phase?.aceleracao ?? 60) * .25 + (phase?.criacao ?? 60) * .25)
@@ -371,50 +461,75 @@ export function scorePlayerForFormationSlot(result: AnalysisResult, slotItem: Fo
       : slotItem.line === 'defesa'
         ? ((phase?.marcacao ?? 60) * .42 + (phase?.cobertura ?? 60) * .32 + (phase?.fisico ?? 60) * .16 + (phase?.passe ?? 60) * .1)
         : result.bestPosition.code === 'GK' ? 90 : 10;
-  const score = Math.max(0, Math.min(100, Math.round(positionFit * .46 + primaryFit * .28 + complementaryFit * .08 + phaseScore * .18)));
+  const actualMeta = getPlayerStyleMeta2026(result.parsed.playstyle, slotItem.position);
+  const metaScore = actualMeta?.score ?? 55;
+  const score = Math.max(0, Math.min(100, Math.round(positionFit * .42 + primaryFit * .27 + complementaryFit * .07 + phaseScore * .14 + metaScore * .10)));
   const reasons = [
     positionFit >= 90 ? `Posição natural para ${slotItem.label}.` : positionFit >= 70 ? `Pode atuar em ${slotItem.label} com adaptação segura.` : `Posição exige adaptação relevante.`,
-    primaryFit >= 85 ? 'O estilo/função combina com a prioridade deste espaço.' : primaryFit >= 58 ? 'A função é compatível, mas não é o encaixe mais específico.' : 'O estilo não corresponde à primeira recomendação do espaço.',
+    primaryFit >= 85 ? 'O estilo oficial combina com a prioridade deste espaço.' : primaryFit >= 58 ? 'A função é compatível, mas não é o encaixe mais específico.' : 'O estilo não corresponde à primeira recomendação do espaço.',
+    actualMeta ? `Meta 2026: ${actualMeta.verdict}. ${actualMeta.advice}` : 'Estilo oficial ainda precisa ser confirmado.',
     `${slotItem.duty}`
   ];
   const warnings: string[] = [];
   if (positionFit < 55) warnings.push('Evite forçar este jogador fora da linha natural.');
+  if (actualMeta?.tier === 'evitar') warnings.push(`Estilo marcado como “${actualMeta.verdict}” para esta posição.`);
+  for (const restriction of actualMeta?.restrictions ?? []) warnings.push(restriction);
   if (score < 65) warnings.push('Procure outra carta ou ajuste a função do espaço.');
   return { slot: slotItem, player: result, score, roleFit: primaryFit, positionFit, reasons, warnings };
 }
 
 export function buildFormationLineup(results: AnalysisResult[], blueprint: FormationBlueprint): FormationSlotFit[] {
   const used = new Set<string>();
-  return blueprint.slots.map((slotItem) => {
+  const styleCounts = new Map<string, number>();
+  const output: FormationSlotFit[] = [];
+
+  for (const slotItem of blueprint.slots) {
     const ranked = results
       .filter((result) => !used.has(result.parsed.internalId))
       .map((result) => scorePlayerForFormationSlot(result, slotItem))
       .sort((a,b) => b.score - a.score);
-    const best = ranked[0];
-    if (!best || best.score < 48) return { slot: slotItem, player: null, score: 0, roleFit: 0, positionFit: 0, reasons:['Nenhum jogador salvo encaixa com segurança.'], warnings:['Adicione ou treine uma carta para esta função.'] };
+
+    const compatible = ranked.find((candidate) => {
+      const style = canonicalizePlayerPlaystyle(candidate.player?.parsed.playstyle);
+      if (!style) return true;
+      if (slotItem.position === 'CB' && style === 'Destruidor' && (styleCounts.get('CB:Destruidor') ?? 0) >= 1) return false;
+      if (['LB', 'RB'].includes(slotItem.position) && ['Lateral Ofensivo', 'Lateral Atacante'].includes(style) && (styleCounts.get('FB:ofensivo') ?? 0) >= 1) return false;
+      return true;
+    });
+
+    const best = compatible ?? ranked[0];
+    if (!best || best.score < 48) {
+      output.push({ slot: slotItem, player: null, score: 0, roleFit: 0, positionFit: 0, reasons:['Nenhum jogador salvo encaixa com segurança.'], warnings:['Adicione ou treine uma carta para esta função.'] });
+      continue;
+    }
+
+    const style = canonicalizePlayerPlaystyle(best.player?.parsed.playstyle);
+    if (style === 'Destruidor' && slotItem.position === 'CB') styleCounts.set('CB:Destruidor', (styleCounts.get('CB:Destruidor') ?? 0) + 1);
+    if (style && ['Lateral Ofensivo', 'Lateral Atacante'].includes(style) && ['LB', 'RB'].includes(slotItem.position)) styleCounts.set('FB:ofensivo', (styleCounts.get('FB:ofensivo') ?? 0) + 1);
     used.add(best.player!.parsed.internalId);
-    return best;
-  });
+    output.push(best);
+  }
+
+  return output;
 }
 
 export function styleAdviceForFormation(formation: FormationBlueprint, style: TacticalStyle) {
-  if (style === 'AUTO') return {
-    fit: 82,
-    label: 'Escolha assistida',
-    note: `Os estilos mais naturais são ${formation.idealStyles.map((item) => styleLabel(item)).join(' ou ')}.`
-  };
-  const fit = formation.idealStyles.includes(style) ? 94 : 68;
+  const safeStyle = normalizeFormationCoachStyle(style);
+  const idealStyles = normalizeIdealFormationStyles(formation.idealStyles);
+  const fit = idealStyles.includes(safeStyle) ? 94 : 72;
   return {
     fit,
     label: fit >= 90 ? 'Encaixe forte' : 'Encaixe adaptado',
-    note: fit >= 90 ? `${styleLabel(style)} favorece o comportamento desta formação.` : `É possível usar ${styleLabel(style)}, mas preserve cobertura e funções complementares.`
+    note: fit >= 90
+      ? `${styleLabel(safeStyle)} favorece o comportamento desta formação.`
+      : `É possível usar ${styleLabel(safeStyle)}, mas preserve cobertura e funções complementares.`
   };
 }
 
 export function styleLabel(style: TacticalStyle) {
   const labels: Record<TacticalStyle,string> = {
-    AUTO:'Automático inteligente', POSSE_DE_BOLA:'Posse de bola', CONTRA_ATAQUE:'Contra-ataque',
-    CONTRA_ATAQUE_RAPIDO:'Contra-ataque rápido', POR_FORA:'Por fora', PASSE_LONGO:'Passe longo'
+    AUTO:'Posse de bola', POSSE_DE_BOLA:'Posse de bola', CONTRA_ATAQUE:'Contra-ataque normal',
+    CONTRA_ATAQUE_RAPIDO:'Contra-ataque rápido', POR_FORA:'Posse de bola', PASSE_LONGO:'Contra-ataque normal'
   };
   return labels[style];
 }

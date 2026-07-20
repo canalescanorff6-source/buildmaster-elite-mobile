@@ -48,7 +48,7 @@ import {
 } from '@/lib/tacticalPosterLibrary';
 import { createStableId } from '@/lib/stableId';
 
-const DRAFT_KEY_PREFIX = 'buildmaster_tactical_poster_draft_v2733';
+const DRAFT_KEY_PREFIX = 'buildmaster_tactical_poster_draft_v2734';
 
 type TacticalPosterStudioPanelProps = {
   formation: FormationBlueprint;
@@ -123,7 +123,7 @@ function createInitialState(formation: FormationBlueprint, style: TacticalStyle)
   const instructions = defaultTacticalPosterInstructions(formation, style);
   return {
     title: 'BuildMaster Elite Tático 2026',
-    subtitle: formation.name,
+    subtitle: `${formation.name} • estilos oficiais`,
     focus: 'Segurança, construção curta e finalização inteligente.',
     palette: 'ouro',
     orientation: 'vertical',
@@ -264,7 +264,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setDraftStatus('salvando rascunho…');
     const timer = window.setTimeout(() => {
       writeAccountStorage(`${DRAFT_KEY_PREFIX}_${formation.id}`, JSON.stringify({
-        schema: 2733,
+        schema: 2734,
         formationId: formation.id,
         savedAt: new Date().toISOString(),
         state: editableState
@@ -452,7 +452,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   function exportProjectJson(): void {
     const payload = {
       app: 'BuildMaster Elite Tático',
-      schema: 2733,
+      schema: 2734,
       exportedAt: new Date().toISOString(),
       formationId: formation.id,
       formationName: formation.name,
@@ -534,7 +534,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     <article className="tactical-poster-studio luxury-panel">
       <div className="section-title-row tactical-poster-heading">
         <div>
-          <p className="kicker"><Sparkles size={15}/> v27.33 • Estúdio Tático Completo</p>
+          <p className="kicker"><Sparkles size={15}/> v27.34 • Estúdio Tático Completo • Meta 2026</p>
           <h3>Gere, edite, salve e compartilhe artes premium da sua formação</h3>
           <p>O app desenha campo, jogadores, setas e textos localmente em SVG, PNG e PDF. Não existe cobrança por imagem e nenhuma API de inteligência artificial é usada.</p>
         </div>

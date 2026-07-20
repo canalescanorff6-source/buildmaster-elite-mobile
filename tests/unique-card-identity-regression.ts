@@ -53,8 +53,8 @@ if ((finisher.cardDna?.behavior.finishing ?? 0) <= (creator.cardDna?.behavior.fi
   throw new Error('O infiltrador finalizador deveria projetar mais finalização.');
 }
 if (creator.playerIdentity!.signature === finisher.playerIdentity!.signature) throw new Error('Assinaturas de identidade ficaram iguais.');
-if (!creator.playerIdentity!.decisiveFactors.some((item) => item.includes('Armador criativo'))) throw new Error('Estilo oficial não entrou na identidade do criador.');
-if (!finisher.playerIdentity!.decisiveFactors.some((item) => item.includes('Jogador de infiltração'))) throw new Error('Estilo oficial não entrou na identidade do finalizador.');
+if (!creator.playerIdentity!.decisiveFactors.some((item) => item.includes('Armador Criativo'))) throw new Error('Estilo oficial não entrou na identidade do criador.');
+if (!finisher.playerIdentity!.decisiveFactors.some((item) => item.includes('Infiltração'))) throw new Error('Estilo oficial não entrou na identidade do finalizador.');
 
 const fastCb = analyzeCard(`
 [AJUSTES MANUAIS]

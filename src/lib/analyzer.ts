@@ -349,7 +349,7 @@ function preferredPositionsByPlaystyle(playstyle?: string | null): PositionCode[
 
   if (/homem de area|fox in the box|pivo|atacante pivo|target man|atacante matador|artilheiro|goal poacher|puxa marcacao|puxa marcação/.test(style)) return ['CF', 'SS'];
   if (/destruidor|destroyer/.test(style)) return ['DMF', 'CMF', 'CB'];
-  if (/primeiro volante|ancora|anchor man/.test(style)) return ['DMF', 'CMF', 'CB'];
+  if (/1 volante|primeiro volante|ancora|anchor man/.test(style)) return ['DMF', 'CMF', 'CB'];
   if (/meia versatil|box-to-box|todo campo/.test(style)) return ['CMF', 'DMF', 'AMF', 'LMF', 'RMF'];
   if (/orquestrador|orchestrator/.test(style)) return ['CMF', 'DMF', 'AMF'];
   if (/defensor criativo|construtor|build up/.test(style)) return ['CB', 'DMF', 'CMF'];
@@ -371,7 +371,7 @@ function midfieldPriority(mainPosition: PositionCode, style: string): PositionCo
     if (mainPosition === 'AMF') return ['CMF', 'AMF', 'DMF'];
     if (mainPosition === 'LMF' || mainPosition === 'RMF') return [mainPosition, 'CMF', 'DMF'];
   }
-  if (/primeiro volante|ancora|anchor man/.test(style)) {
+  if (/1 volante|primeiro volante|ancora|anchor man/.test(style)) {
     if (mainPosition === 'CB') return ['CB', 'DMF', 'CMF'];
     if (mainPosition === 'CMF') return ['CMF', 'DMF', 'CB'];
     return ['DMF', 'CMF', 'CB'];
@@ -658,28 +658,28 @@ function detectSpecialTag(text: string) {
 }
 
 const PLAYSTYLE_PATTERNS: Array<[RegExp, string]> = [
-  [/classico\s*n[oº]?\s*10|classic\s*no\.?\s*10/i, 'Clássico nº 10'],
-  [/jogador\s+de\s+infiltra[cç][aã]o|jogador\s+sem\s+bola|hole\s+player/i, 'Jogador de infiltração'],
-  [/meia\s+vers[aá]til|box\s*to\s*box|todo\s+campo/i, 'Meia versátil'],
-  [/primeiro\s+volante|(?:^|\s)(ancora|âncora|anchor\s+man)(?:\s|$)/i, 'Primeiro volante'],
-  [/destruidor|destroyer/i, 'O destruidor'],
+  [/goleiro\s+ofensivo|offensive\s+goalkeeper/i, 'Goleiro Ofensivo'],
+  [/goleiro\s+defensivo|defensive\s+goalkeeper/i, 'Goleiro Defensivo'],
+  [/atacante\s+surpresa|extra\s+frontman/i, 'Atacante Surpresa'],
+  [/defensor\s+criativo|construtor|build\s+up/i, 'Defensor Criativo'],
+  [/destruidor|destroyer/i, 'Destruidor'],
+  [/lateral\s+ofensivo|offensive\s+full/i, 'Lateral Ofensivo'],
+  [/lateral\s+atacante|full\s*back\s*finisher/i, 'Lateral Atacante'],
+  [/perito\s+em\s+cruzamento|cross\s+specialist/i, 'Perito em Cruzamento'],
+  [/lateral\s+defensivo|defensive\s+full/i, 'Lateral Defensivo'],
   [/orquestrador|orchestrator/i, 'Orquestrador'],
-  [/defensor\s+criativo|construtor|build\s+up/i, 'Defensor criativo'],
-  [/atacante\s+surpresa|extra\s+frontman/i, 'Atacante surpresa'],
-  [/lateral\s+ofensivo|offensive\s+full/i, 'Lateral ofensivo'],
-  [/lateral\s+defensivo|defensive\s+full/i, 'Lateral defensivo'],
-  [/lateral\s+atacante|full\s*back\s*finisher/i, 'Lateral atacante'],
-  [/goleiro\s+ofensivo|offensive\s+goalkeeper/i, 'Goleiro ofensivo'],
-  [/goleiro\s+defensivo|defensive\s+goalkeeper/i, 'Goleiro defensivo'],
-  [/homem\s+de\s+[aá]rea|fox\s+in\s+the\s+box/i, 'Homem de área'],
-  [/artilheiro|goal\s+poacher/i, 'Artilheiro'],
-  [/puxa\s+marca[cç][aã]o|deep\s+lying\s+forward/i, 'Puxa marcação'],
-  [/atacante\s+piv[oô]|piv[oô]|target\s+man/i, 'Pivô'],
-  [/armador\s+criativo|criador\s+de\s+jogadas|creative\s+playmaker/i, 'Armador criativo'],
-  [/ala\s+produtivo|ponta\s+prol[ií]fico|prolific\s+winger/i, 'Ala produtivo'],
-  [/lateral\s+m[oó]vel|flanco\s+m[oó]vel|roaming\s+flank/i, 'Lateral móvel'],
-  [/perito\s+em\s+cruzamento|cross\s+specialist/i, 'Perito em cruzamento'],
-  [/atacante\s+matador/i, 'Atacante matador']
+  [/(?:1[oº]?|primeiro)\s+volante|(?:^|\s)(ancora|âncora|anchor\s+man)(?:\s|$)/i, '1º Volante'],
+  [/meia\s+vers[aá]til|box\s*to\s*box|todo\s+campo/i, 'Meia versátil'],
+  [/jogador\s+de\s+infiltra[cç][aã]o|infiltra[cç][aã]o|jogador\s+sem\s+bola|hole\s+player/i, 'Infiltração'],
+  [/cl[aá]ssico\s*n[oº]?\s*10|classic\s*no\.?\s*10/i, 'Clássico 10'],
+  [/lateral\s+m[oó]vel|flanco\s+m[oó]vel|roaming\s+flank/i, 'Lateral Móvel'],
+  [/ala\s+produtivo|ponta\s+prol[ií]fico|prolific\s+winger/i, 'Ala Produtivo'],
+  [/armador\s+criativo|criador\s+de\s+jogadas|creative\s+playmaker/i, 'Armador Criativo'],
+  [/atacante\s+piv[oô]|deep\s+lying\s+forward/i, 'Atacante Pivô'],
+  [/(?:^|\s)piv[oô](?:\s|$)|target\s+man/i, 'Pivô'],
+  [/homem\s+de\s+[aá]rea|fox\s+in\s+the\s+box/i, 'Homem de Área'],
+  [/puxa\s+marca[cç][aã]o|dummy\s+runner/i, 'Puxa Marcação'],
+  [/artilheiro|goal\s+poacher|atacante\s+matador/i, 'Artilheiro']
 ];
 
 function findPlaystyleInText(text: string): string | null {
@@ -704,8 +704,8 @@ function playstyleFitsPosition(playstyle: string | null | undefined, position: P
 
   const isGoalkeeper = /goleiro/.test(style);
   const isCentralDefender = /destruidor|defensor criativo|construtor|build up|atacante surpresa|extra frontman/.test(style);
-  const isDefensiveMid = /destruidor|primeiro volante|ancora|anchor man|orquestrador|meia versatil|box-to-box|todo campo/.test(style);
-  const isCreator = /armador criativo|criador de jogadas|creative playmaker|classico n[oº]?\s*10|orquestrador|jogador de infiltracao|hole player/.test(style);
+  const isDefensiveMid = /destruidor|1 volante|primeiro volante|ancora|anchor man|orquestrador|meia versatil|box-to-box|todo campo/.test(style);
+  const isCreator = /armador criativo|criador de jogadas|creative playmaker|classico n[oº]?\s*10|orquestrador|infiltracao|jogador de infiltracao|hole player/.test(style);
   const isForward = /homem de area|artilheiro|pivo|atacante pivo|target man|puxa marcacao|puxa marcação|atacante matador|goal poacher|fox in the box/.test(style);
   const isWide = /ala produtivo|lateral movel|ponta prolifico|prolific winger|flanco movel|roaming flank|perito em cruzamento|cross specialist/.test(style);
   const isFullback = /lateral ofensivo|lateral defensivo|lateral atacante|offensive full|defensive full|full\s*back/.test(style);
@@ -713,13 +713,13 @@ function playstyleFitsPosition(playstyle: string | null | undefined, position: P
   if (position === 'GK') return isGoalkeeper;
   if (isGoalkeeper) return false;
 
-  if (position === 'CB') return isCentralDefender || /primeiro volante|ancora|anchor man/.test(style);
+  if (position === 'CB') return isCentralDefender || /1 volante|primeiro volante|ancora|anchor man/.test(style);
   if (position === 'DMF') return isDefensiveMid || isCentralDefender;
-  if (position === 'CMF') return isDefensiveMid || isCreator || /jogador de infiltracao|hole player/.test(style);
-  if (position === 'AMF') return isCreator || /jogador de infiltracao|hole player|meia versatil|box-to-box/.test(style);
-  if (position === 'CF' || position === 'SS') return isForward || isCreator || /jogador de infiltracao|hole player/.test(style);
-  if (position === 'LWF' || position === 'RWF') return isWide || isForward || /jogador de infiltracao|hole player/.test(style);
-  if (position === 'LMF' || position === 'RMF') return isWide || isFullback || /meia versatil|box-to-box|jogador de infiltracao|hole player/.test(style);
+  if (position === 'CMF') return isDefensiveMid || isCreator || /infiltracao|jogador de infiltracao|hole player/.test(style);
+  if (position === 'AMF') return isCreator || /infiltracao|jogador de infiltracao|hole player|meia versatil|box-to-box/.test(style);
+  if (position === 'CF' || position === 'SS') return isForward || isCreator || /infiltracao|jogador de infiltracao|hole player/.test(style);
+  if (position === 'LWF' || position === 'RWF') return isWide || isForward || /infiltracao|jogador de infiltracao|hole player/.test(style);
+  if (position === 'LMF' || position === 'RMF') return isWide || isFullback || /meia versatil|box-to-box|infiltracao|jogador de infiltracao|hole player/.test(style);
   if (position === 'LB' || position === 'RB') return isFullback || /destruidor|defensor criativo|construtor|perito em cruzamento|cross specialist/.test(style);
 
   return true;
@@ -2077,7 +2077,7 @@ function knownStyleBlueprint(parsed: ParsedCard, selectedPosition: PositionCode,
     }
     if (/homem de area|homem de área|fox in the box/.test(style)) {
       return {
-        label: 'Homem de área',
+        label: 'Homem de Área',
         essentials: ['Chute de primeira', 'Cabeçada', 'Superioridade aérea', 'Finalização acrobática', 'Controle da cavadinha'],
         alternatives: ['Precisão à distância', 'Efeito de longe', 'Toque de calcanhar', 'Passe de primeira'],
         avoid: ['Volta para marcar', 'Marcação individual', 'Interceptação', 'Carrinho', 'Bloqueador']

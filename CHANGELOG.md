@@ -1,13 +1,15 @@
-# v27.33.0 — App completo, Estúdio Tático editável e atualizador Android reforçado
+# v27.34.0 — Meta eFootball 2026 e estilos oficiais
 
-- Estúdio Tático com setas automáticas e editor manual completo;
-- temas e cores personalizadas;
-- biblioteca com migração, rascunho por formação e até 60 projetos;
-- exportação PNG, SVG, impressão/PDF, JSON e compartilhamento;
-- leitura do DownloadManager por `openDownloadedFile` e `ParcelFileDescriptor`;
-- cópia dos bytes para armazenamento privado antes de validar e instalar;
-- HTTP reserva, integridade, pacote, versão, versionCode e assinatura preservados;
-- teste v27.33, auditoria, regressões, build estático e Capacitor validados.
+- somente Posse de bola, Contra-ataque rápido e Contra-ataque normal nas formações;
+- catálogo central com 22 estilos canônicos de jogador;
+- nomes legados e ingleses normalizados sem inventar nomenclaturas;
+- Deep-Lying Forward corrigido para Atacante Pivô e Dummy Runner para Puxa Marcação;
+- avaliação Meta 2026 aplicada por estilo e posição;
+- máximo de um ZAG Destruidor e alerta para laterais Ofensivo/Atacante;
+- 1º Volante e Meia versátil priorizados no duplo pivô;
+- Estúdio Tático exibe o estilo oficial real da carta antes da função recomendada;
+- nova amostra SVG/PNG gerada localmente;
+- TypeScript, auditoria, regressões, build estático e dependências validados.
 
 # v27.30.0 — Atualizador do sistema e Estúdio Tático Local
 

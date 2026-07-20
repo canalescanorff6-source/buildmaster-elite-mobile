@@ -44,11 +44,11 @@ const layout = read('src/app/layout.tsx');
 const manifest = read('public/manifest.webmanifest');
 const sw = read('public/sw.js');
 
-check(/^27\.33\.\d+$/.test(expectedVersion), 'Versão de auditoria v27.33 configurada', `encontrada ${expectedVersion}`);
+check(/^27\.34\.\d+$/.test(expectedVersion), 'Versão de auditoria v27.34 configurada', `encontrada ${expectedVersion}`);
 check(appUpdates.includes(`'${expectedVersion}'`), 'Motor de atualização usa a versão do pacote');
 check(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface usam versão centralizada');
 check(manifest.includes(`v${expectedMinor}`), 'Manifesto PWA acompanha a versão atual');
-check(sw.includes('27-33'), 'Cache do service worker foi renovado');
+check(sw.includes('27-34'), 'Cache do service worker foi renovado');
 check(globals.includes('design-system-v2729.css') && globals.includes('tactical-poster-v2733.css'), 'Camada final de design, acessibilidade e Estúdio Tático carregada');
 check(exists('src/components/SectionErrorBoundary.tsx'), 'Isolamento de falhas por módulo presente');
 check(exists('src/components/PanelLoadingFallback.tsx'), 'Fallback de carregamento por módulo presente');

@@ -9,8 +9,8 @@ import type {
   TacticalPosterPlayerOverride
 } from './tacticalPoster';
 
-const STORAGE_KEY = 'buildmaster_tactical_poster_library_v2733';
-const LEGACY_STORAGE_KEY = 'buildmaster_tactical_poster_library_v2732';
+const STORAGE_KEY = 'buildmaster_tactical_poster_library_v2734';
+const LEGACY_STORAGE_KEYS = ['buildmaster_tactical_poster_library_v2733', 'buildmaster_tactical_poster_library_v2732'];
 const MAX_PROJECTS = 60;
 const MAX_ARROWS = 24;
 const PALETTES: TacticalPosterPalette[] = ['ouro', 'ciano', 'rubi', 'esmeralda', 'grafite'];
@@ -44,7 +44,7 @@ export type SavedTacticalPosterProject = TacticalPosterEditableState & {
   formationName: string;
   createdAt: string;
   updatedAt: string;
-  schema: 2733;
+  schema: 2734;
 };
 
 function cleanText(value: unknown, max: number): string {
@@ -148,13 +148,13 @@ function normalizeProject(value: unknown): SavedTacticalPosterProject | null {
     formationName: cleanText(raw.formationName, 120),
     createdAt: cleanText(raw.createdAt, 40) || new Date().toISOString(),
     updatedAt: cleanText(raw.updatedAt, 40) || new Date().toISOString(),
-    schema: 2733
+    schema: 2734
   };
 }
 
 function readRawLibrary(): unknown[] {
   const currentRaw = readAccountStorage(STORAGE_KEY);
-  const legacyRaw = currentRaw ? '' : readAccountStorage(LEGACY_STORAGE_KEY);
+  const legacyRaw = currentRaw ? '' : (LEGACY_STORAGE_KEYS.map((key) => readAccountStorage(key)).find(Boolean) || '');
   const source = currentRaw || legacyRaw || '[]';
   try {
     const parsed = JSON.parse(source) as unknown;
@@ -202,7 +202,7 @@ export function saveTacticalPosterProject(input: {
     formationName: input.formationName,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
-    schema: 2733
+    schema: 2734
   });
   if (!project) throw new Error('Não foi possível preparar o projeto tático.');
   const library = persist([project, ...current.filter((item) => item.id !== project.id)]);
