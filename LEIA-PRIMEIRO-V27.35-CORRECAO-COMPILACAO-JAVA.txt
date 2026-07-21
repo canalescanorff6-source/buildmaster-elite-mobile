@@ -1,0 +1,19 @@
+BUILDMASTER ELITE TÁTICO v27.35 — CORREÇÃO DA COMPILAÇÃO JAVA
+
+O erro do GitHub Actions não estava na assinatura nem no Supabase.
+O Java bloqueava a compilação porque a Thread do atualizador capturava variáveis
+que haviam sido alteradas durante a normalização dos dados do manifesto.
+
+A correção está aplicada no plugin Android pronto e também no script que recria
+o plugin, evitando que o defeito volte durante o workflow.
+
+COMO PUBLICAR
+1. Extraia este ZIP.
+2. Substitua todo o conteúdo do repositório, incluindo a pasta oculta .github.
+3. Faça um NOVO COMMIT na branch main.
+4. Aguarde uma nova execução do GitHub Actions.
+
+Não use apenas “Re-run jobs” na execução antiga, pois ela usa o commit que ainda
+contém o Java defeituoso.
+
+Não altere ANDROID_SIGNING_BUNDLE e não altere o Supabase.

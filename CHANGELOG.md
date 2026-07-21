@@ -1,3 +1,10 @@
+# Correção de compilação — v27.35
+
+- Corrigida a captura de variáveis mutáveis na lambda da Thread do atualizador Android.
+- Criados snapshots finais para URL, SHA-256, versionCode, tamanho e versionName.
+- Correção aplicada ao plugin gerado e ao instalador que o recria.
+- Teste de regressão agora bloqueia o retorno do erro “must be final or effectively final”.
+
 # v27.35.0 — correção real do atualizador e armazenamento
 
 - corrigida a leitura de `expectedVersionCode` e `expectedSizeBytes` na ponte Capacitor/Android;

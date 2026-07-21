@@ -755,6 +755,15 @@ public class BuildMasterSecurityPlugin extends Plugin {
             return;
         }
 
+        // Variáveis capturadas pela Thread precisam ser finais ou efetivamente finais.
+        // As opções acima são normalizadas antes da validação; criamos snapshots
+        // imutáveis para o código assíncrono e evitamos erro de compilação do Java.
+        final String downloadUrl = urlValue;
+        final String checksumSha256 = expectedChecksum;
+        final long manifestVersionCode = expectedVersionCode.longValue();
+        final Long manifestSizeBytes = expectedSize;
+        final String manifestVersionName = expectedVersionName;
+
         call.setKeepAlive(true);
         new Thread(() -> {
             File partial = null;
@@ -762,8 +771,8 @@ public class BuildMasterSecurityPlugin extends Plugin {
             try {
                 File updatesDir = new File(getContext().getCacheDir(), "verified_updates");
                 if (!updatesDir.exists() && !updatesDir.mkdirs()) throw new IllegalStateException("Não foi possível preparar a pasta de atualização.");
-                partial = new File(updatesDir, "BuildMaster-update-" + expectedVersionCode + ".part");
-                apk = new File(updatesDir, "BuildMaster-Elite-Tatico-" + expectedVersionCode + "-verificado.apk");
+                partial = new File(updatesDir, "BuildMaster-update-" + manifestVersionCode + ".part");
+                apk = new File(updatesDir, "BuildMaster-Elite-Tatico-" + manifestVersionCode + "-verificado.apk");
                 if (partial.exists()) partial.delete();
                 if (apk.exists()) apk.delete();
 
@@ -773,15 +782,15 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 for (int downloadAttempt = 1; downloadAttempt <= maxAttempts; downloadAttempt++) {
                     try {
                         if (partial.exists()) partial.delete();
-                        emitProgress("connecting", 0, 0, expectedSize == null ? 0 : expectedSize);
-                        URL initial = withDownloadNonce(new URL(urlValue), downloadAttempt);
+                        emitProgress("connecting", 0, 0, manifestSizeBytes == null ? 0 : manifestSizeBytes);
+                        URL initial = withDownloadNonce(new URL(downloadUrl), downloadAttempt);
                         // O transporte do sistema é o principal porque usa a mesma infraestrutura
                         // que consegue baixar o APK manualmente no Android. O fluxo HTTP próprio
                         // permanece como reserva independente para ROMs sem DownloadManager funcional.
                         transportResult = downloadAttempt % 2 == 1
-                                ? downloadWithSystemManager(initial, partial, expectedSize, expectedChecksum)
-                                : downloadWithHttpStream(initial, partial, expectedSize, expectedChecksum, downloadAttempt);
-                        emitProgress("verifying", 99, transportResult.bytes, expectedSize == null ? transportResult.bytes : expectedSize);
+                                ? downloadWithSystemManager(initial, partial, manifestSizeBytes, checksumSha256)
+                                : downloadWithHttpStream(initial, partial, manifestSizeBytes, checksumSha256, downloadAttempt);
+                        emitProgress("verifying", 99, transportResult.bytes, manifestSizeBytes == null ? transportResult.bytes : manifestSizeBytes);
                         finalDownloadError = null;
                         break;
                     } catch (Exception downloadError) {
@@ -798,7 +807,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 if (finalDownloadError != null) throw finalDownloadError;
                 if (transportResult == null) throw new IllegalStateException("Nenhum transporte conseguiu concluir o download.");
                 long total = transportResult.bytes;
-                long expectedTotal = expectedSize == null ? total : expectedSize;
+                long expectedTotal = manifestSizeBytes == null ? total : manifestSizeBytes;
                 String actualChecksum = transportResult.checksum;
                 String finalUrl = transportResult.finalUrl;
                 String responseHost = transportResult.responseHost;
@@ -814,10 +823,10 @@ public class BuildMasterSecurityPlugin extends Plugin {
                 if (!EXPECTED_PACKAGE.equals(archive.packageName)) throw new SecurityException("O APK pertence a outro aplicativo.");
                 long downloadedCode = versionCode(archive);
                 long currentCode = versionCode(current);
-                if (downloadedCode != expectedVersionCode) throw new SecurityException("O versionCode do APK não confere com o manifesto.");
+                if (downloadedCode != manifestVersionCode) throw new SecurityException("O versionCode do APK não confere com o manifesto.");
                 if (downloadedCode <= currentCode) throw new SecurityException("A atualização não é mais nova que o aplicativo instalado.");
                 String downloadedName = archive.versionName == null ? "" : archive.versionName;
-                if (expectedVersionName != null && !expectedVersionName.equals(downloadedName)) throw new SecurityException("A versão do APK não confere com o manifesto.");
+                if (manifestVersionName != null && !manifestVersionName.equals(downloadedName)) throw new SecurityException("A versão do APK não confere com o manifesto.");
                 if (!signaturesCompatible(getContext().getPackageManager(), getContext().getPackageName(), archive)) {
                     throw new SignatureException("A assinatura do APK é diferente da versão instalada. A atualização foi bloqueada para preservar o aplicativo e os dados.");
                 }
