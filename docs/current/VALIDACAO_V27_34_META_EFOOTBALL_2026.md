@@ -1,4 +1,4 @@
-# Validação v27.34 — Estilos oficiais e Meta eFootball 2026
+# Validação v27.35 — Estilos oficiais e Meta eFootball 2026
 
 ## Objetivo
 

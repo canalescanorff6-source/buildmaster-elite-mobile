@@ -1,6 +1,6 @@
 # Versão atual do projeto
 
-**BuildMaster Elite Tático v27.34.0 — Meta eFootball 2026 e estilos oficiais**
+**BuildMaster Elite Tático v27.35.0 — Meta eFootball 2026 e estilos oficiais**
 
 O Estúdio Tático e o Laboratório de Formações agora separam o estilo coletivo do técnico, o estilo oficial da carta e a função tática da formação.
 

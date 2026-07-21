@@ -14,9 +14,9 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.34.0');
-assert.equal(APP_RELEASE_VERSION, '27.34.0');
-assert.equal(APP_NATIVE_VERSION, '27.34.0');
+assert.equal(pkg.version, '27.35.0');
+assert.equal(APP_RELEASE_VERSION, '27.35.0');
+assert.equal(APP_NATIVE_VERSION, '27.35.0');
 assert.match(pkg.scripts['test:all'], /test:v2725/);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
@@ -28,7 +28,7 @@ assert.match(channel, /chooseBestUpdateCandidate/);
 assert.match(panel, /Canal principal independente/);
 assert.match(panel, /Ponte para versões antigas/);
 
-assert.match(workflow, /Gerar APK v27\.34 e publicar atualização automática pelo sistema Android/);
+assert.match(workflow, /Gerar APK v27\.35 e publicar atualização automática pelo sistema Android/);
 assert.match(workflow, /legacy\['releaseTag'\] = 'buildmaster-latest'/);
 assert.match(workflow, /legacy\['assetName'\] = 'BuildMaster-Elite-Tatico-latest\.apk'/);
 assert.match(workflow, /releases\/download\/buildmaster-latest\//);

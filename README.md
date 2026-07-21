@@ -1,10 +1,10 @@
-# BuildMaster Elite Tático v27.34
+# BuildMaster Elite Tático v27.35
 
 Aplicativo Android/Next.js para criação de fichas, leitura de prints, análise de jogadores, gestão do elenco, planos de partida, Cofre, contas/licenças, treinos e produção de artes táticas do eFootball.
 
 ## Estúdio Tático Completo
 
-A v27.34 transforma as formações do BuildMaster em pôsteres táticos locais, sem API paga, usando os estilos oficiais da carta e o Meta eFootball 2026:
+A v27.35 transforma as formações do BuildMaster em pôsteres táticos locais, sem API paga, usando os estilos oficiais da carta e o Meta eFootball 2026:
 
 - formação e escalação automáticas;
 - 22 estilos oficiais de jogador, normalizados por posição;
@@ -17,7 +17,9 @@ A v27.34 transforma as formações do BuildMaster em pôsteres táticos locais, 
 - biblioteca por conta, duplicação e rascunho automático;
 - exportação PNG, SVG, impressão/PDF, JSON e compartilhamento.
 
-## Atualização Android reforçada
+## Atualização Android corrigida
+
+A v27.35 corrige a ponte numérica do Capacitor: valores JavaScript que chegavam como `Integer` eram lidos com `PluginCall.getLong()` e viravam `null`, bloqueando a atualização antes do download. Agora qualquer `Number` é convertido com segurança para `long`.
 
 O atualizador usa o `DownloadManager` do Android como transporte principal. Ao concluir o download, os bytes são lidos pela API oficial `openDownloadedFile`, copiados para o armazenamento privado do aplicativo e conferidos antes da instalação. O transporte HTTP permanece como reserva.
 
@@ -43,7 +45,7 @@ npm run test:all
 npm run apk:build-web
 ```
 
-Relatório: `docs/current/VALIDACAO_V27_34_META_EFOOTBALL_2026.md`  
-Instruções: `LEIA-PRIMEIRO-V27.34-META-EFOOTBALL-2026.txt`
+Relatório: `docs/current/VALIDACAO_V27_35_ATUALIZADOR_CORRIGIDO.md`  
+Instruções: `LEIA-PRIMEIRO-V27.35-ATUALIZADOR-CORRIGIDO.txt`
 
 O APK oficial assinado é gerado pelo GitHub Actions com o secret permanente `ANDROID_SIGNING_BUNDLE`.

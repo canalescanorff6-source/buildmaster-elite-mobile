@@ -8,7 +8,7 @@ const library = fs.readFileSync('src/lib/tacticalPosterLibrary.ts', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.34.0');
+assert.equal(pkg.version, '27.35.0');
 assert.match(panel, /Estúdio Tático Automático/);
 assert.match(panel, /Premium completo/);
 assert.match(panel, /Quadro do técnico/);
@@ -29,11 +29,11 @@ assert.match(library, /MAX_PROJECTS = 40/);
 assert.match(library, /saveTacticalPosterProject/);
 assert.match(library, /duplicateTacticalPosterProject/);
 assert.match(library, /schema: 2734/);
-assert.match(workflow, /^name: Gerar APK v27\.34/m);
+assert.match(workflow, /^name: Gerar APK v27\.35/m);
 assert.match(workflow, /permissions:\s*\n\s*contents: write/);
 assert.match(workflow, /DownloadManager/);
 assert.match(plugin, /DownloadManager/);
 assert.match(plugin, /downloadWithSystemManager/);
 assert.match(plugin, /downloadWithHttpStream/);
 
-console.log('v27.34: Estúdio Tático completo, biblioteca, editor, formatos e atualizador Android preservados.');
+console.log('v27.35: Estúdio Tático completo, biblioteca, editor, formatos e atualizador Android preservados.');

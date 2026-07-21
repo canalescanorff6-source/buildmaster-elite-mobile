@@ -1,15 +1,14 @@
-# v27.34.0 — Meta eFootball 2026 e estilos oficiais
+# v27.35.0 — correção real do atualizador e armazenamento
 
-- somente Posse de bola, Contra-ataque rápido e Contra-ataque normal nas formações;
-- catálogo central com 22 estilos canônicos de jogador;
-- nomes legados e ingleses normalizados sem inventar nomenclaturas;
-- Deep-Lying Forward corrigido para Atacante Pivô e Dummy Runner para Puxa Marcação;
-- avaliação Meta 2026 aplicada por estilo e posição;
-- máximo de um ZAG Destruidor e alerta para laterais Ofensivo/Atacante;
-- 1º Volante e Meia versátil priorizados no duplo pivô;
-- Estúdio Tático exibe o estilo oficial real da carta antes da função recomendada;
-- nova amostra SVG/PNG gerada localmente;
-- TypeScript, auditoria, regressões, build estático e dependências validados.
+- corrigida a leitura de `expectedVersionCode` e `expectedSizeBytes` na ponte Capacitor/Android;
+- números JavaScript recebidos como `Integer`, `Long` ou outro `Number` agora são convertidos corretamente para `long`;
+- eliminada a falsa mensagem genérica “URL, versão ou SHA-256 inválido” causada por `versionCode` nulo;
+- mensagens específicas para URL, checksum e versionCode inválidos;
+- DownloadManager, HTTP reserva, SHA-256, pacote, versão, versionCode e assinatura preservados;
+- removida a duplicação pesada do Cofre no localStorage após gravação confirmada no IndexedDB;
+- fallback do histórico compactado sem imagens base64 e prévias completas;
+- regressão v27.35 adicionada para impedir a volta do erro;
+- TypeScript, auditoria, build estático e regressões principais aprovados.
 
 # v27.30.0 — Atualizador do sistema e Estúdio Tático Local
 

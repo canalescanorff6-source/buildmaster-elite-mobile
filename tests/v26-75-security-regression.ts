@@ -5,8 +5,8 @@ import { APP_RELEASE_VERSION, DEFAULT_UPDATE_MANIFEST_URL, isTrustedApkUrl, isTr
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile } from '../src/lib/backupCrypto';
 
 async function main() {
-  assert.equal(APP_RELEASE_VERSION, '27.34.0');
-  assert.equal(APP_DATA_VERSION, '27.34.0');
+  assert.equal(APP_RELEASE_VERSION, '27.35.0');
+  assert.equal(APP_DATA_VERSION, '27.35.0');
   assert.equal(isTrustedManifestUrl(), true);
   assert.match(DEFAULT_UPDATE_MANIFEST_URL, /github\.com\/canalescanorff6-source\/buildmaster-elite-mobile\/releases\/download\/buildmaster-latest\/update-manifest\.json/);
   const apkUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.29.0-1352300001-abcdef12.apk';
@@ -14,7 +14,7 @@ async function main() {
   assert.equal(isTrustedApkUrl('https://github.com/outro/projeto/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk'), false);
   const manifest = {
     appId: 'com.buildmaster.elitetatico' as const,
-    version: '27.34.0', versionCode: 1352300001, buildId: 'abc', publishedAt: new Date().toISOString(), channel: 'stable' as const,
+    version: '27.35.0', versionCode: 1352300001, buildId: 'abc', publishedAt: new Date().toISOString(), channel: 'stable' as const,
     updateType: 'apk' as const, apkUrl: 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.29.0-1352300001-abcdef12.apk', notes: [], mandatory: true, minNativeVersion: '26.75.0', checksum: 'a'.repeat(64), sizeBytes: 123
   };
   assert.ok(validateUpdateManifest(manifest));

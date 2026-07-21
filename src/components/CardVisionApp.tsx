@@ -954,18 +954,39 @@ async function loadHistoryStore(): Promise<SavedAnalysis[]> {
   return loaded.slice(0, HISTORY_LIMIT);
 }
 
+function compactHistoryForLocalFallback(items: SavedAnalysis[]): SavedAnalysis[] {
+  // O localStorage é apenas a rota de emergência. Imagens base64 e prévias completas
+  // podem ultrapassar a cota do WebView; o conteúdo integral permanece no IndexedDB.
+  return items.slice(0, 40).map((item) => ({
+    ...item,
+    playerImage: null,
+    fullPreview: null,
+    rawText: String(item.rawText || '').slice(0, 12_000),
+    changeLog: item.changeLog?.slice(-20)
+  }));
+}
+
 async function persistHistoryStore(items: SavedAnalysis[]) {
   const next = items.slice(0, HISTORY_LIMIT);
+  let indexedSaved = false;
   try {
     await writeIndexedHistory(next);
+    indexedSaved = true;
   } catch {
-    // IndexedDB pode ser bloqueado em modo privado. Nesse caso usamos fallback.
+    // IndexedDB pode ser bloqueado em modo privado. Nesse caso usamos fallback compacto.
+  }
+
+  if (indexedSaved) {
+    // Remove a cópia antiga e pesada que causava o aviso “Armazenamento com atenção”.
+    // O cofre integral já foi confirmado no IndexedDB da conta.
+    removeAccountStorage(HISTORY_KEY);
+    return;
   }
 
   try {
-    writeAccountStorage(HISTORY_KEY, JSON.stringify(next));
+    writeAccountStorage(HISTORY_KEY, JSON.stringify(compactHistoryForLocalFallback(next)));
   } catch {
-    // LocalStorage pode estourar limite quando há imagens; o IndexedDB continua sendo o cofre principal.
+    // A falha do fallback não apaga o estado mantido em memória durante a sessão.
   }
 }
 

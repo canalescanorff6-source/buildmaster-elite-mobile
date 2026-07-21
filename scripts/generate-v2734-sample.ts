@@ -16,7 +16,7 @@ const manualArrows = createDefaultTacticalPosterArrows(lineup).slice(0, 12).map(
 
 const svg = createTacticalPosterSvg({
   title: 'BuildMaster Elite Tático 2026',
-  subtitle: `${formation.name} • Estilos oficiais • v27.34`,
+  subtitle: `${formation.name} • Estilos oficiais • v27.35`,
   focus: 'Meta 2026: segurança, construção curta, compactação e finalização inteligente.',
   formation,
   lineup,
@@ -44,4 +44,4 @@ const svg = createTacticalPosterSvg({
 });
 
 fs.writeFileSync('docs/current/AMOSTRA_ESTUDIO_TATICO_V27_34.svg', svg);
-console.log('Amostra SVG v27.34 gerada com estilos oficiais do jogador.');
+console.log('Amostra SVG v27.35 gerada com estilos oficiais do jogador.');

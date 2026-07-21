@@ -179,6 +179,27 @@ public class BuildMasterSecurityPlugin extends Plugin {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? info.getLongVersionCode() : info.versionCode;
     }
 
+    /**
+     * Capacitor/JSONObject representa números JavaScript pequenos como Integer,
+     * não como Long. PluginCall.getLong() aceita somente instâncias Long e por
+     * isso retornava null para versionCode e sizeBytes válidos. Esta leitura
+     * converte qualquer Number e também aceita string decimal para manter
+     * compatibilidade entre versões do Capacitor e diferentes WebViews Android.
+     */
+    private static Long readLongOption(PluginCall call, String key) {
+        try {
+            Object value = call.getData().opt(key);
+            if (value == null || value == org.json.JSONObject.NULL) return null;
+            if (value instanceof Number) return ((Number) value).longValue();
+            if (value instanceof String) {
+                String normalized = ((String) value).trim();
+                if (normalized.isEmpty()) return null;
+                return Long.parseLong(normalized);
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
     private boolean canInstallPackages() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getContext().getPackageManager().canRequestPackageInstalls();
     }
@@ -347,7 +368,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
         connection.setRequestProperty("Connection", "close");
         connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.34 Android");
+        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.35 Android");
     }
 
     private static void validateDownloadResponse(HttpURLConnection connection, int status) throws Exception {
@@ -498,7 +519,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
         request.addRequestHeader("Accept-Encoding", "identity");
         request.addRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
         request.addRequestHeader("Pragma", "no-cache");
-        request.addRequestHeader("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.34 Android-System");
+        request.addRequestHeader("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.35 Android-System");
         request.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, "buildmaster_updates/" + fileName);
 
         long downloadId = manager.enqueue(request);
@@ -695,15 +716,29 @@ public class BuildMasterSecurityPlugin extends Plugin {
         String expectedChecksum = call.getString("checksum");
         String expectedPackage = call.getString("expectedPackageName", EXPECTED_PACKAGE);
         String expectedVersionName = call.getString("expectedVersionName");
-        Long expectedVersionCode = call.getLong("expectedVersionCode");
-        Long expectedSize = call.getLong("expectedSizeBytes");
+        Long expectedVersionCode = readLongOption(call, "expectedVersionCode");
+        Long expectedSize = readLongOption(call, "expectedSizeBytes");
+        if (urlValue != null) urlValue = urlValue.trim();
+        if (expectedChecksum != null) expectedChecksum = expectedChecksum.trim().toLowerCase();
+        if (expectedPackage != null) expectedPackage = expectedPackage.trim();
+        if (expectedVersionName != null) expectedVersionName = expectedVersionName.trim();
         Integer requestedAttempts = call.getInt("maxAttempts");
         final int maxAttempts = requestedAttempts == null ? MAX_DOWNLOAD_ATTEMPTS : Math.max(1, Math.min(MAX_DOWNLOAD_ATTEMPTS, requestedAttempts));
 
-        if (urlValue == null || expectedChecksum == null || !expectedChecksum.matches("(?i)^[a-f0-9]{64}$") || expectedVersionCode == null || expectedVersionCode <= 0) {
-            call.reject("URL, versão ou SHA-256 inválido.");
+        if (urlValue == null || urlValue.isEmpty()) {
+            call.reject("URL do APK ausente no manifesto.", "UPDATE_URL_INVALID");
             return;
         }
+        if (expectedChecksum == null || !expectedChecksum.matches("(?i)^[a-f0-9]{64}$")) {
+            call.reject("SHA-256 inválido ou ausente no manifesto.", "UPDATE_CHECKSUM_INVALID");
+            return;
+        }
+        if (expectedVersionCode == null || expectedVersionCode <= 0) {
+            Object rawVersionCode = call.getData().opt("expectedVersionCode");
+            call.reject("versionCode inválido na ponte JavaScript/Android: " + String.valueOf(rawVersionCode), "UPDATE_VERSION_CODE_INVALID");
+            return;
+        }
+        if (expectedSize != null && expectedSize <= 0) expectedSize = null;
         if (!EXPECTED_PACKAGE.equals(expectedPackage)) {
             call.reject("Pacote de atualização não autorizado.");
             return;
@@ -838,4 +873,4 @@ if (!manifest.includes('android:usesCleartextTraffic=')) {
   manifest = manifest.replace('<application', '<application\n        android:usesCleartextTraffic="false"');
 }
 fs.writeFileSync(manifestPath, manifest);
-console.log('Plugin Android v27.34 instalado: DownloadManager lido pela API oficial + HTTP reserva, progresso, SHA-256, pacote/versionCode e assinatura verificados.');
+console.log('Plugin Android v27.35 instalado: ponte numérica corrigida, DownloadManager + HTTP reserva, SHA-256, pacote/versionCode e assinatura verificados.');
