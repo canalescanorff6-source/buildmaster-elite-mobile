@@ -93,7 +93,8 @@
     "sample:v2733": "tsx scripts/generate-v2733-sample.ts",
     "test:v2734": "tsx tests/v27-34-efootball-meta-regression.ts",
     "sample:v2734": "tsx scripts/generate-v2734-sample.ts",
-    "test:v2735": "node tests/v27-35-native-number-bridge-regression.mjs"
+    "test:v2735": "node tests/v27-35-native-number-bridge-regression.mjs && npm run test:v2735java",
+    "test:v2735java": "node tests/v27-35-generated-java-compilation-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

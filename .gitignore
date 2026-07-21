@@ -2,6 +2,7 @@
 node_modules/
 .next/
 out/
+# Projeto Android é recriado do zero pelo GitHub Actions; não é fonte versionada.
 android/
 dist-apk/
 .buildmaster-static-disabled/

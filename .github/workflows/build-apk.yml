@@ -16,7 +16,7 @@ jobs:
   build-apk:
     name: Build, testes, assinatura e publicação verificada
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 90
 
     steps:
       - name: Baixar código
@@ -172,9 +172,11 @@ jobs:
           grep -RqsF "https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json" out || { echo '::error::A ponte para versões antigas não entrou no build.'; exit 1; }
           grep -RqsF "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" out || { echo '::error::A API latest não entrou no build.'; exit 1; }
 
-      - name: Criar projeto Android
+      - name: Criar projeto Android limpo
         timeout-minutes: 5
-        run: npx --no-install cap add android
+        run: |
+          rm -rf android
+          npx --no-install cap add android
 
       - name: Instalar Keystore, identidade e atualizador nativo
         run: node scripts/install-android-security-plugin.mjs
@@ -234,6 +236,14 @@ jobs:
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_URL" android/app/src/main/assets/public || { echo '::error::A URL real não foi copiada para o APK.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_ANON_KEY" android/app/src/main/assets/public || { echo '::error::A chave real não foi copiada para o APK.'; exit 1; }
 
+      - name: Dar permissão ao Gradle
+        run: chmod +x android/gradlew
+
+      - name: Pré-compilar Java do atualizador
+        timeout-minutes: 10
+        working-directory: android
+        run: ./gradlew --no-daemon :app:compileReleaseJavaWithJavac
+
       - name: Preparar chave permanente
         env:
           ANDROID_SIGNING_BUNDLE: ${{ secrets.ANDROID_SIGNING_BUNDLE }}
@@ -259,9 +269,6 @@ jobs:
               handle.write(f'ANDROID_KEYSTORE_PASSWORD={password}\n')
               handle.write('ANDROID_KEY_ALIAS=buildmaster\n')
           PY
-
-      - name: Dar permissão ao Gradle
-        run: chmod +x android/gradlew
 
       - name: Gerar APK release
         timeout-minutes: 16

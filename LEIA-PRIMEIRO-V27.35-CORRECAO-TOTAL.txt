@@ -1,0 +1,22 @@
+BUILDMASTER ELITE TÁTICO v27.35 — CORREÇÃO TOTAL DO GITHUB
+
+O erro ENOENT do BuildMasterSecurityPlugin.java foi corrigido na origem.
+O diretório android é gerado pelo workflow e não precisa estar no repositório.
+
+FAÇA ASSIM:
+1. Extraia o ZIP.
+2. Substitua todo o repositório, inclusive a pasta oculta .github.
+3. Faça um NOVO COMMIT na main.
+4. Aguarde o workflow novo terminar.
+
+NÃO faça somente Re-run jobs na execução antiga.
+NÃO altere o Supabase.
+NÃO altere ou recrie ANDROID_SIGNING_BUNDLE.
+
+O workflow agora:
+- testa o plugin em checkout limpo;
+- compila o Java gerado antes do APK;
+- recria Android do zero;
+- evita arquivos Android antigos;
+- mantém o job por até 90 minutos;
+- valida o APK publicado antes de ativar os manifestos.
