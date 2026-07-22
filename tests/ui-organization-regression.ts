@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
+const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 const displayVersion = pkg.version.split('.').slice(0, 2).join('.');
 

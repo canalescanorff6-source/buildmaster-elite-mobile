@@ -8,6 +8,7 @@ import {
   detectCardScreenType,
   extractCaptureIdentity
 } from '../src/lib/totalCardReader';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const overview = `
 NOME DO JOGADOR: Paolo Maldini
@@ -103,7 +104,7 @@ assert.ok(session.mergedConfidence >= 80);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const panel = fs.readFileSync('src/components/TotalCardReaderPanel.tsx', 'utf8');
-const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
+const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 assert.match(app, /analyzeTotalCardCaptures/);
 assert.match(app, /totalReadingSession/);
 assert.match(app, /Confirmo que todos os prints são da mesma versão da carta/);

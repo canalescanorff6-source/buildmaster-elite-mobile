@@ -13,6 +13,7 @@ import {
 } from '../src/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '../src/modules/core/centralRepository';
 import { BUILDMASTER_V27_MODULES } from '../src/modules/core/moduleRegistry';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const striker = analyzeCard(`
 [AJUSTES MANUAIS]
@@ -121,7 +122,7 @@ assert.equal(migration.schemaVersion, CENTRAL_SCHEMA_VERSION);
 assert.match(migration.note, /não destrutiva/i);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
+const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 assert.equal(pkg.version, '27.36.0');
 assert.match(app, /IntegratedHomePanel/);

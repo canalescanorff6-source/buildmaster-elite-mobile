@@ -10,6 +10,7 @@ import {
   createMatchValidationRecord,
   summarizeMatchValidation
 } from '../src/lib/appEvolution';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const result = analyzeCard(`
 [AJUSTES MANUAIS]
@@ -90,7 +91,7 @@ assert.ok(summary.repeatedProblems.some((item) => item.tag === 'Marcou bem' && i
 assert.ok(summary.strongestAreas.some((item) => item.startsWith('Defesa')));
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
+const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 assert.match(app, /FirstUseOnboarding/);
 assert.match(app, /DecisionWeightPanel/);
 assert.match(app, /VerifiedCardRegistryPanel/);

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const panel = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
-const css = fs.readFileSync('src/app/legacy-compat.css', 'utf8');
+const css = readLegacyCssBundle();
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
 assert.equal(pkg.version, '27.36.0');

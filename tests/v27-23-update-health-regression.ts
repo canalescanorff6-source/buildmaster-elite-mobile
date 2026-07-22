@@ -47,7 +47,7 @@ assert.match(panel, /O BuildMaster detecta, escolhe a rota mais nova, baixa e va
 assert.match(globals, /design-system-v2723\.css/);
 assert.match(css, /update-diagnostic-panel/);
 assert.match(css, /update-audit-list/);
-assert.match(workflow, /v27\.35/);
+assert.ok(workflow.includes(`v${pkg.version.split('.').slice(0, 2).join('.')}`));
 assert.match(panel, /Detalhe técnico|histórico técnico/i);
 
 console.log('✓ v27.29: diagnóstico do atualizador, histórico técnico, recuperação em três rodadas e interface responsiva aprovados.');

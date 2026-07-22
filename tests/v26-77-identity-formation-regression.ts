@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { analyzeCard } from '../src/lib/analyzer';
 import { buildPrecisionBuildReport, compareTrainingPlan, trainingPlanPoints } from '../src/lib/precisionBuildEngine';
 import { FORMATION_BLUEPRINTS, FORMATION_ROLE_CATALOG, buildFormationLineup, getFormationBlueprint, scorePlayerForFormationSlot } from '../src/lib/formationRoleEngine';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const striker = analyzeCard(`
 [AJUSTES MANUAIS]
@@ -54,7 +55,7 @@ assert.equal(lineup.length, 11);
 assert.ok(lineup.some((item) => item.player?.parsed.playerName.startsWith('Centroavante Teste')));
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx','utf8');
-const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
+const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 assert.match(app, /PrecisionBuildPanel/);
 assert.match(app, /FormationRoleLabPanel/);
 assert.match(app, /teamCenterView === 'formacoes'/);

@@ -40,7 +40,8 @@ const adminFunction = fs.readFileSync('supabase/functions/admin-users/index.ts',
 assert.match(auth, /signInWithUsername/);
 assert.match(auth, /Somente o administrador cria usuários/);
 assert.doesNotMatch(auth, /thiago0126|iu1fsaa67a/, 'credenciais antigas não podem permanecer no APK');
-assert.match(auth, /NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK === '1'/);
+assert.doesNotMatch(auth, /NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK|NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_(?:USER|PASSWORD)/, 'o login local não pode voltar ao APK');
+assert.match(auth, /O login local foi removido por segurança/);
 assert.match(auth, /isTransientAccountError\(cause\)/, 'falha temporária ao retomar não pode derrubar a sessão');
 assert.match(auth, /setValidation\(\(current\) => current \? \{ \.\.\.current, offline: true \} : current\)/, 'sessão atual deve ser preservada em falha transitória');
 assert.match(auth, /window\.setTimeout\(\(\) => void revalidate\(\), 1800\)/, 'retomada deve aguardar a rede do Android estabilizar');

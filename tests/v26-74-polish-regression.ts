@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
 const auth = fs.readFileSync('src/components/AuthGate.tsx', 'utf8');
 const accountAuth = fs.readFileSync('src/lib/accountAuth.ts', 'utf8');
 const accounts = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-const css = [fs.readFileSync('src/app/legacy-compat.css', 'utf8'), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
+const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const capacitor = fs.readFileSync('capacitor.config.ts', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
