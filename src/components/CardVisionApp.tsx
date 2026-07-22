@@ -1755,6 +1755,13 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
   const opponentPrintObjectUrlRef = useRef<string | null>(null);
   const [savedTeamPlans, setSavedTeamPlans] = useState<Record<string, boolean>>({});
 
+  useEffect(() => () => {
+    if (opponentPrintObjectUrlRef.current) {
+      URL.revokeObjectURL(opponentPrintObjectUrlRef.current);
+      opponentPrintObjectUrlRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     try { setSavedTeamPlans(JSON.parse(readAccountStorage('buildmaster_team_plans_v25_19') || '{}')); } catch { setSavedTeamPlans({}); }
   }, []);
@@ -3844,7 +3851,6 @@ export function CardVisionApp() {
   useEffect(() => () => {
     if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
     if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current);
-    if (opponentPrintObjectUrlRef.current) URL.revokeObjectURL(opponentPrintObjectUrlRef.current);
   }, []);
   const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');

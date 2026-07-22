@@ -31,7 +31,7 @@ import {
   type AccountProfile,
   type LicenseValidation
 } from '@/lib/accountAuth';
-import { clearActiveAccountIdentity, setActiveAccountIdentity } from '@/lib/accountStorage';
+import { clearActiveAccountIdentity } from '@/lib/accountStorage';
 import { safeStorageRemove } from '@/lib/safeLocalStorage';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 

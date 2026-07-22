@@ -51,6 +51,15 @@ assert.match(exportUtils, /URL\.revokeObjectURL/);
 assert.match(exportUtils, /canvas\.width = 1/);
 assert.match(app, /previewObjectUrlRef/);
 assert.doesNotMatch(app, /Tesseract\.recognize/);
+assert.doesNotMatch(auth, /setActiveAccountIdentity/);
+const teamMapStart = app.indexOf('function TeamFullMapPanel');
+const mainAppStart = app.indexOf('export function CardVisionApp');
+assert.ok(teamMapStart >= 0 && mainAppStart > teamMapStart);
+const teamMapSource = app.slice(teamMapStart, mainAppStart);
+const mainAppSource = app.slice(mainAppStart);
+assert.match(teamMapSource, /const opponentPrintObjectUrlRef = useRef/);
+assert.match(teamMapSource, /URL\.revokeObjectURL\(opponentPrintObjectUrlRef\.current\)/);
+assert.doesNotMatch(mainAppSource, /opponentPrintObjectUrlRef/);
 
 // 7 e 8. Formatos ampliados e galeria por conta.
 assert.match(studio, /image\/jpeg,image\/png,image\/webp,image\/gif,image\/bmp/);
