@@ -32,15 +32,8 @@ import {
   type LicenseValidation
 } from '@/lib/accountAuth';
 import { clearActiveAccountIdentity, setActiveAccountIdentity } from '@/lib/accountStorage';
-import { safeStorageGetJson, safeStorageRemove, safeStorageSetJson } from '@/lib/safeLocalStorage';
-import { createStableId } from '@/lib/stableId';
+import { safeStorageRemove } from '@/lib/safeLocalStorage';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
-
-const LOCAL_AUTH_KEY = 'buildmaster_local_auth_v15_premium';
-const LOCAL_LOGIN_USER = process.env.NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_USER || '';
-const LOCAL_LOGIN_PASSWORD = process.env.NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_PASSWORD || '';
-const ALLOW_LOCAL_FALLBACK = process.env.NEXT_PUBLIC_BUILDMASTER_ALLOW_LOCAL_FALLBACK === '1' && Boolean(LOCAL_LOGIN_USER && LOCAL_LOGIN_PASSWORD);
-const SESSION_DURATION = 1000 * 60 * 60 * 24 * 14;
 
 type RestoreStep = 'session' | 'license' | 'workspace';
 type LoginPhase = 'idle' | 'credentials' | 'license' | 'authorized';
@@ -66,46 +59,9 @@ export function useBuildMasterAccount() {
   return useContext(AccountContext);
 }
 
-function localAdminProfile(): AccountProfile {
-  return {
-    id: 'local-admin',
-    username: LOCAL_LOGIN_USER,
-    displayName: 'Administrador local',
-    role: 'admin',
-    status: 'active',
-    plan: 'local',
-    expiresAt: null,
-    maxDevices: 1,
-    offlineGraceHours: 0
-  };
-}
-
-function makeSessionToken() {
-  return createStableId('bm-local-pro');
-}
-
-function readValidLocalSession(): AccountProfile | null {
-  if (typeof window === 'undefined' || !ALLOW_LOCAL_FALLBACK) return null;
-  const session = safeStorageGetJson<{ token?: string; createdAt?: number; username?: string } | null>(LOCAL_AUTH_KEY, null);
-  if (!session?.token || !session.createdAt || Date.now() - session.createdAt > SESSION_DURATION) {
-    safeStorageRemove(LOCAL_AUTH_KEY);
-    return null;
-  }
-  const profile = localAdminProfile();
-  setActiveAccountIdentity({ id: profile.id, username: profile.username, role: profile.role, expiresAt: null, mode: 'local' });
-  return profile;
-}
-
-function saveLocalSession() {
-  safeStorageSetJson(LOCAL_AUTH_KEY, { token: makeSessionToken(), createdAt: Date.now(), username: LOCAL_LOGIN_USER });
-  const profile = localAdminProfile();
-  setActiveAccountIdentity({ id: profile.id, username: profile.username, role: profile.role, expiresAt: null, mode: 'local' });
-  return profile;
-}
-
 export function clearBuildMasterSession() {
   try {
-    safeStorageRemove(LOCAL_AUTH_KEY);
+    safeStorageRemove('buildmaster_local_auth_v15_premium');
     safeStorageRemove('buildmaster_local_auth_v6_1');
     clearActiveAccountIdentity();
   } catch {
@@ -244,7 +200,7 @@ function AccessMessage({ profile, type }: { profile: AccountProfile; type: 'bloc
 
 function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation: LicenseValidation | { profile: AccountProfile; offline: boolean }) => void; initialError?: string }) {
   const cloudConfigured = isCloudAccountsConfigured();
-  const [username, setUsername] = useState(cloudConfigured ? '' : LOCAL_LOGIN_USER);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [phase, setPhase] = useState<LoginPhase>('idle');
@@ -270,22 +226,12 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
 
     try {
       phaseTimer = window.setTimeout(() => setPhase('license'), 450);
-      if (cloudConfigured) {
-        const validation = await signInWithUsername(cleanUser, cleanPassword);
-        window.clearTimeout(phaseTimer);
-        setPhase('authorized');
-        await wait(260);
-        onSuccess(validation);
-        return;
-      }
-
-      if (!ALLOW_LOCAL_FALLBACK) throw new Error('O servidor de contas ainda não foi configurado neste APK.');
-      if (cleanUser !== LOCAL_LOGIN_USER || cleanPassword.trim() !== LOCAL_LOGIN_PASSWORD) throw new Error('Usuário ou senha incorretos.');
-      const profile = saveLocalSession();
+      if (!cloudConfigured) throw new Error('O servidor oficial de contas não está configurado neste APK. O login local foi removido por segurança.');
+      const validation = await signInWithUsername(cleanUser, cleanPassword);
       window.clearTimeout(phaseTimer);
       setPhase('authorized');
       await wait(260);
-      onSuccess({ profile, offline: true });
+      onSuccess(validation);
     } catch (cause) {
       if (phaseTimer) window.clearTimeout(phaseTimer);
       setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.');
@@ -339,7 +285,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
               <span>Status da licença</span>
               <strong>{cloudConfigured ? 'Validação online ativa' : 'Servidor não configurado'}</strong>
             </div>
-            <i>{cloudConfigured ? 'Protegido' : 'Local'}</i>
+            <i>{cloudConfigured ? 'Protegido' : 'Bloqueado'}</i>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate aria-busy={loading}>
@@ -471,12 +417,6 @@ export function AuthGate({ children }: { children?: ReactNode }) {
           if (mounted && cloud) {
             setRestoreStep('workspace');
             setValidation({ profile: cloud.profile, offline: cloud.offline });
-          }
-        } else {
-          const local = readValidLocalSession();
-          if (mounted && local) {
-            setRestoreStep('workspace');
-            setValidation({ profile: local, offline: true });
           }
         }
       } catch (cause) {

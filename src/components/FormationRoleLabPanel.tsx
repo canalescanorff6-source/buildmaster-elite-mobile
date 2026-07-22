@@ -114,7 +114,7 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
   return (
     <section className="formation-role-lab">
       <article className="formation-lab-hero luxury-panel">
-        <div><p className="kicker"><Sparkles size={15}/> v27.35 • Meta eFootball 2026</p><h3>Formações com estilos oficiais e regras competitivas</h3><p>O técnico usa somente Posse de bola, Contra-ataque rápido ou Contra-ataque normal. Cada jogador mantém o estilo oficial da carta e recebe a avaliação Meta 2026.</p></div>
+        <div><p className="kicker"><Sparkles size={15}/> v27.36 • Meta eFootball 2026</p><h3>Formações com estilos oficiais e regras competitivas</h3><p>O técnico usa somente Posse de bola, Contra-ataque rápido ou Contra-ataque normal. Cada jogador mantém o estilo oficial da carta e recebe a avaliação Meta 2026.</p></div>
         <div className="formation-lab-score"><span>Elenco preenchido</span><strong>{filled}/11</strong><small>encaixe médio {averageFit}/100</small></div>
       </article>
 

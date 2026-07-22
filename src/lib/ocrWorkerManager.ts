@@ -39,6 +39,10 @@ export function subscribeOcrProgress(listener: (progress: OcrProgress) => void) 
 async function createReusableWorker(): Promise<WorkerLike> {
   const Tesseract = await import('tesseract.js');
   const worker = await Tesseract.createWorker(['por', 'eng'], Tesseract.OEM.LSTM_ONLY, {
+    workerPath: '/tesseract/worker.min.js',
+    corePath: '/tesseract/core',
+    langPath: '/tesseract/lang',
+    gzip: true,
     logger: (message) => emit(message.status || 'processando', Number(message.progress || 0))
   });
   workerInstance = worker;

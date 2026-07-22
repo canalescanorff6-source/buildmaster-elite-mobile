@@ -1,51 +1,50 @@
-# BuildMaster Elite Tático v27.35
+# BuildMaster Elite Tático v27.36.0
 
-Aplicativo Android/Next.js para criação de fichas, leitura de prints, análise de jogadores, gestão do elenco, planos de partida, Cofre, contas/licenças, treinos e produção de artes táticas do eFootball.
+Pacote-fonte limpo do aplicativo BuildMaster Elite Tático, preparado para desenvolvimento, testes, Supabase e geração do APK oficial pelo GitHub Actions.
 
-## Estúdio Tático Completo
+## O que foi mantido
 
-A v27.35 transforma as formações do BuildMaster em pôsteres táticos locais, sem API paga, usando os estilos oficiais da carta e o Meta eFootball 2026:
+- `src/`: aplicativo Next.js/React e motores do BuildMaster;
+- `public/`: ícones, regras e arquivos públicos usados pelo app;
+- `supabase/`: migrations e Edge Functions de contas, licenças e segurança;
+- `scripts/`: build estático, auditoria, OCR offline e instalação do plugin Android seguro;
+- `tests/`: regressões executadas antes da publicação;
+- `.github/workflows/`: build do APK e implantação do Supabase;
+- arquivos de configuração do Next.js, TypeScript, Capacitor, npm e Vercel.
 
-- formação e escalação automáticas;
-- 22 estilos oficiais de jogador, normalizados por posição;
-- somente Posse de bola, Contra-ataque rápido e Contra-ataque normal como estilos do técnico nas formações;
-- regras Meta 2026, incluindo um único ZAG Destruidor e prioridade para 1º Volante + Meia versátil;
-- setas automáticas ou editáveis;
-- quatro tipos de linha: apoio, reciclagem, defesa e movimentação;
-- textos, instruções e princípios editáveis;
-- cinco temas e cores personalizadas;
-- biblioteca por conta, duplicação e rascunho automático;
-- exportação PNG, SVG, impressão/PDF, JSON e compartilhamento.
+## Por que a pasta Android não está no pacote
 
-## Atualização Android corrigida
+O workflow oficial remove qualquer pasta `android` antiga e executa `npx cap add android` para criar um projeto Android novo. Depois, `scripts/install-android-security-plugin.mjs` instala novamente o Keystore, a identidade do aparelho, o atualizador nativo, o FileProvider e as proteções do manifesto.
 
-A v27.35 corrige a ponte numérica do Capacitor: valores JavaScript que chegavam como `Integer` eram lidos com `PluginCall.getLong()` e viravam `null`, bloqueando a atualização antes do download. Agora qualquer `Number` é convertido com segurança para `long`.
+Manter uma pasta Android pré-gerada seria duplicação e poderia carregar assets ou versões antigas. Para gerar localmente:
 
-O atualizador usa o `DownloadManager` do Android como transporte principal. Ao concluir o download, os bytes são lidos pela API oficial `openDownloadedFile`, copiados para o armazenamento privado do aplicativo e conferidos antes da instalação. O transporte HTTP permanece como reserva.
+```bash
+npm ci
+npm run vendor:ocr
+npm run apk:build-web
+npx cap add android
+node scripts/install-android-security-plugin.mjs
+npx cap sync android
+```
 
-A validação inclui:
-
-- tamanho real e SHA-256;
-- cabeçalho do APK;
-- pacote, versão e `versionCode`;
-- certificado de assinatura;
-- ativo imutável e espelhos oficiais;
-- exclusão automática de arquivos incompletos;
-- diagnóstico técnico e memória de saúde das rotas.
-
-O workflow `.github/workflows/build-apk.yml` publica o APK somente depois dos testes e ativa o manifesto apenas após validar publicamente o mesmo arquivo.
-
-## Validação local
+## Validar o projeto
 
 ```bash
 npm ci
 npm run typecheck
 npm run quality:audit
 npm run test:all
-npm run apk:build-web
 ```
 
-Relatório: `docs/current/VALIDACAO_V27_35_ATUALIZADOR_CORRIGIDO.md`  
-Instruções: `LEIA-PRIMEIRO-V27.35-ATUALIZADOR-CORRIGIDO.txt`
+## Gerar o APK oficial
 
-O APK oficial assinado é gerado pelo GitHub Actions com o secret permanente `ANDROID_SIGNING_BUNDLE`.
+1. Envie o conteúdo desta pasta para a branch `main` do repositório oficial.
+2. Configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` nas Variables do GitHub.
+3. Configure `ANDROID_SIGNING_BUNDLE` nos Secrets do GitHub.
+4. Execute `.github/workflows/build-apk.yml`.
+
+O workflow baixa os arquivos OCR oficiais, gera o Android do zero, executa os testes, assina o APK e valida tamanho, SHA-256, pacote, `versionCode`, versão e certificado antes de publicar.
+
+## Arquivos que não devem ser enviados
+
+Não adicione ao repositório: `node_modules`, `.next`, `out`, `android`, APKs, keystores, `.env`, logs, caches ou `public/update-manifest.json`. Essas exclusões já estão configuradas em `.gitignore`.

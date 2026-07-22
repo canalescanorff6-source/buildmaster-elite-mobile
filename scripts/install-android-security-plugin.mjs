@@ -368,7 +368,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
         connection.setRequestProperty("Connection", "close");
         connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
         connection.setRequestProperty("Pragma", "no-cache");
-        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.35 Android");
+        connection.setRequestProperty("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.36 Android");
     }
 
     private static void validateDownloadResponse(HttpURLConnection connection, int status) throws Exception {
@@ -519,7 +519,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
         request.addRequestHeader("Accept-Encoding", "identity");
         request.addRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
         request.addRequestHeader("Pragma", "no-cache");
-        request.addRequestHeader("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.35 Android-System");
+        request.addRequestHeader("User-Agent", "BuildMaster-Elite-Tatico-Updater/27.36 Android-System");
         request.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, "buildmaster_updates/" + fileName);
 
         long downloadId = manager.enqueue(request);
@@ -882,4 +882,4 @@ if (!manifest.includes('android:usesCleartextTraffic=')) {
   manifest = manifest.replace('<application', '<application\n        android:usesCleartextTraffic="false"');
 }
 fs.writeFileSync(manifestPath, manifest);
-console.log('Plugin Android v27.35 instalado: ponte numérica corrigida, DownloadManager + HTTP reserva, SHA-256, pacote/versionCode e assinatura verificados.');
+console.log('Plugin Android v27.36 instalado: ponte numérica corrigida, DownloadManager + HTTP reserva, SHA-256, pacote/versionCode e assinatura verificados.');

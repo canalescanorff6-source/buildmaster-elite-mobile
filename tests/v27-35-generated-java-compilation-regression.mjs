@@ -88,7 +88,7 @@ try {
 
   assert.ok(fs.existsSync(path.join(outputDir, 'com/buildmaster/elitetatico/BuildMasterSecurityPlugin.class')));
   assert.ok(fs.existsSync(path.join(outputDir, 'com/buildmaster/elitetatico/MainActivity.class')));
-  console.log('✓ v27.35: Java gerado pelo workflow compila em checkout limpo, incluindo plugin e MainActivity.');
+  console.log('✓ v27.36: Java gerado pelo workflow compila em checkout limpo, incluindo plugin e MainActivity.');
 } catch (error) {
   const stdout = error?.stdout?.toString?.() ?? '';
   const stderr = error?.stderr?.toString?.() ?? '';

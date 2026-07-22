@@ -9,7 +9,7 @@ const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const updates = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.35.0');
+assert.equal(pkg.version, '27.36.0');
 assert.match(panel, /Estúdio Tático Completo/);
 assert.match(panel, /Cores personalizadas/);
 assert.match(panel, /Setas e linhas editáveis/);
@@ -26,10 +26,10 @@ assert.match(engine, /manualArrows/);
 assert.match(engine, /customColors/);
 assert.match(engine, /arrowMovement/);
 assert.match(library, /MAX_PROJECTS = 60/);
-assert.match(library, /schema: 2734/);
+assert.match(library, /schema: 2736/);
 assert.match(library, /LEGACY_STORAGE_KEYS/);
 assert.match(library, /normalizeTacticalPosterState/);
-assert.match(workflow, /^name: Gerar APK v27\.35/m);
+assert.match(workflow, /^name: Gerar APK v27\.36/m);
 assert.match(workflow, /permissions:\s*\n\s*contents: write/);
 assert.match(plugin, /ParcelFileDescriptor/);
 assert.match(plugin, /manager\.openDownloadedFile/);
@@ -39,4 +39,4 @@ assert.match(plugin, /downloadWithHttpStream/);
 assert.match(updates, /Baixar e abrir o instalador automaticamente/);
 assert.match(updates, /rankUpdateCandidatesByHealth/);
 
-console.log('✓ v27.35: app completo, Estúdio Tático editável, exportações, biblioteca e atualizador Android reforçado aprovados.');
+console.log('✓ v27.36: app completo, Estúdio Tático editável, exportações, biblioteca e atualizador Android reforçado aprovados.');

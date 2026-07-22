@@ -9,8 +9,8 @@ import type {
   TacticalPosterPlayerOverride
 } from './tacticalPoster';
 
-const STORAGE_KEY = 'buildmaster_tactical_poster_library_v2734';
-const LEGACY_STORAGE_KEYS = ['buildmaster_tactical_poster_library_v2733', 'buildmaster_tactical_poster_library_v2732'];
+const STORAGE_KEY = 'buildmaster_tactical_poster_library_v2736';
+const LEGACY_STORAGE_KEYS = ['buildmaster_tactical_poster_library_v2734', 'buildmaster_tactical_poster_library_v2733', 'buildmaster_tactical_poster_library_v2732'];
 const MAX_PROJECTS = 60;
 const MAX_ARROWS = 24;
 const PALETTES: TacticalPosterPalette[] = ['ouro', 'ciano', 'rubi', 'esmeralda', 'grafite'];
@@ -24,6 +24,8 @@ export type TacticalPosterEditableState = {
   orientation: TacticalPosterOrientation;
   options: TacticalPosterDisplayOptions;
   playerOverrides: Record<string, TacticalPosterPlayerOverride>;
+  backgroundImageId?: string;
+  backgroundImageOpacity: number;
   customColors: TacticalPosterCustomColors;
   useAutomaticArrows: boolean;
   manualArrows: TacticalPosterArrow[];
@@ -44,7 +46,7 @@ export type SavedTacticalPosterProject = TacticalPosterEditableState & {
   formationName: string;
   createdAt: string;
   updatedAt: string;
-  schema: 2734;
+  schema: 2736;
 };
 
 function cleanText(value: unknown, max: number): string {
@@ -74,7 +76,7 @@ function normalizeOverrides(value: unknown): Record<string, TacticalPosterPlayer
     const item = raw as TacticalPosterPlayerOverride;
     const safeId = cleanText(slotId, 100);
     if (!safeId) return [];
-    return [[safeId, { name: cleanText(item.name, 90), role: cleanText(item.role, 90) }] as const];
+    return [[safeId, { name: cleanText(item.name, 90), role: cleanText(item.role, 90), x: Number.isFinite(Number(item.x)) ? Math.max(2, Math.min(98, Number(item.x))) : undefined, y: Number.isFinite(Number(item.y)) ? Math.max(2, Math.min(98, Number(item.y))) : undefined }] as const];
   });
   return Object.fromEntries(entries);
 }
@@ -121,6 +123,8 @@ export function normalizeTacticalPosterState(value: unknown): TacticalPosterEdit
       showFooter: options.showFooter !== false
     },
     playerOverrides: normalizeOverrides(raw.playerOverrides),
+    backgroundImageId: cleanText(raw.backgroundImageId, 180) || undefined,
+    backgroundImageOpacity: Math.max(0.05, Math.min(0.8, Number(raw.backgroundImageOpacity) || 0.2)),
     customColors: normalizeCustomColors(raw.customColors),
     useAutomaticArrows: raw.useAutomaticArrows !== false,
     manualArrows: normalizeArrows(raw.manualArrows),
@@ -148,7 +152,7 @@ function normalizeProject(value: unknown): SavedTacticalPosterProject | null {
     formationName: cleanText(raw.formationName, 120),
     createdAt: cleanText(raw.createdAt, 40) || new Date().toISOString(),
     updatedAt: cleanText(raw.updatedAt, 40) || new Date().toISOString(),
-    schema: 2734
+    schema: 2736
   };
 }
 
@@ -202,7 +206,7 @@ export function saveTacticalPosterProject(input: {
     formationName: input.formationName,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
-    schema: 2734
+    schema: 2736
   });
   if (!project) throw new Error('Não foi possível preparar o projeto tático.');
   const library = persist([project, ...current.filter((item) => item.id !== project.id)]);
@@ -222,4 +226,13 @@ export function duplicateTacticalPosterProject(id: string): { project: SavedTact
     formationName: source.formationName,
     state: source
   });
+}
+
+export function exportTacticalPosterLibrary(): SavedTacticalPosterProject[] {
+  return readTacticalPosterLibrary();
+}
+
+export function replaceTacticalPosterLibrary(value: unknown): SavedTacticalPosterProject[] {
+  if (!Array.isArray(value)) throw new Error('A biblioteca do Estúdio Tático é inválida.');
+  return persist(value.map(normalizeProject).filter((item): item is SavedTacticalPosterProject => Boolean(item)));
 }

@@ -24,6 +24,8 @@ export type TacticalPosterDisplayOptions = {
 export type TacticalPosterPlayerOverride = {
   name?: string;
   role?: string;
+  x?: number;
+  y?: number;
 };
 
 export type TacticalPosterCustomColors = {
@@ -57,6 +59,8 @@ export type TacticalPosterConfig = {
   customColors?: TacticalPosterCustomColors;
   useAutomaticArrows?: boolean;
   manualArrows?: TacticalPosterArrow[];
+  backgroundImageDataUrl?: string;
+  backgroundImageOpacity?: number;
   instructions: {
     passing: string[];
     recycle: string[];
@@ -256,8 +260,11 @@ function nameForPick(pick: FormationSlotFit, config: TacticalPosterConfig): stri
 function posterPlayers(config: TacticalPosterConfig, fieldX: number, fieldY: number, fieldW: number, fieldH: number, accent: string): string {
   const options = resolvedOptions(config);
   return config.lineup.map((pick) => {
-    const x = fieldX + (pick.slot.x / 100) * fieldW;
-    const y = fieldY + (pick.slot.y / 100) * fieldH;
+    const override = config.playerOverrides?.[pick.slot.id];
+    const normalizedX = Math.max(2, Math.min(98, Number(override?.x ?? pick.slot.x)));
+    const normalizedY = Math.max(2, Math.min(98, Number(override?.y ?? pick.slot.y)));
+    const x = fieldX + (normalizedX / 100) * fieldW;
+    const y = fieldY + (normalizedY / 100) * fieldH;
     return shirt(x, y, pick.slot.label, roleForPick(pick, config), nameForPick(pick, config), accent, pick.score, options);
   }).join('');
 }
@@ -265,12 +272,12 @@ function posterPlayers(config: TacticalPosterConfig, fieldX: number, fieldY: num
 function pointMap(config: TacticalPosterConfig, fieldX: number, fieldY: number, fieldW: number, fieldH: number): Map<string, PosterPoint> {
   return new Map(config.lineup.map((pick) => [pick.slot.id, {
     pick,
-    x: fieldX + (pick.slot.x / 100) * fieldW,
-    y: fieldY + (pick.slot.y / 100) * fieldH
+    x: fieldX + (Math.max(2, Math.min(98, Number(config.playerOverrides?.[pick.slot.id]?.x ?? pick.slot.x))) / 100) * fieldW,
+    y: fieldY + (Math.max(2, Math.min(98, Number(config.playerOverrides?.[pick.slot.id]?.y ?? pick.slot.y))) / 100) * fieldH
   }]));
 }
 
-export function createDefaultTacticalPosterArrows(lineup: FormationSlotFit[]): TacticalPosterArrow[] {
+export function createDefaultTacticalPosterArrows(lineup: FormationSlotFit[], style: TacticalStyle = 'AUTO'): TacticalPosterArrow[] {
   const byLine = (line: FormationSlotFit['slot']['line']) => lineup.filter((pick) => pick.slot.line === line).sort((a, b) => a.slot.x - b.slot.x);
   const attack = byLine('ataque');
   const midfield = byLine('meio');
@@ -279,33 +286,61 @@ export function createDefaultTacticalPosterArrows(lineup: FormationSlotFit[]): T
   const arrows: TacticalPosterArrow[] = [];
   let sequence = 0;
   const add = (fromSlotId: string, toSlotId: string, kind: TacticalPosterArrowKind, bend: number, label = '') => {
+    if (!fromSlotId || !toSlotId || fromSlotId === toSlotId) return;
+    if (arrows.some((item) => item.fromSlotId === fromSlotId && item.toSlotId === toSlotId && item.kind === kind)) return;
     sequence += 1;
     arrows.push({ id: `auto-${sequence}-${fromSlotId}-${toSlotId}`, fromSlotId, toSlotId, kind, bend, label, enabled: true });
   };
-  const connectNeighbors = (group: FormationSlotFit[], kind: TacticalPosterArrowKind) => {
-    group.slice(0, -1).forEach((pick, index) => add(pick.slot.id, group[index + 1].slot.id, kind, index % 2 ? 12 : -12));
-  };
-  connectNeighbors(attack, 'support');
-  connectNeighbors(midfield, 'support');
-  connectNeighbors(defense, 'defend');
-  midfield.forEach((mid, index) => {
-    if (!attack.length) return;
-    const target = attack[Math.min(attack.length - 1, Math.round(index * (attack.length - 1) / Math.max(1, midfield.length - 1)))];
-    add(mid.slot.id, target.slot.id, 'support', index % 2 ? 26 : -26);
-  });
-  defense.forEach((back, index) => {
-    if (!midfield.length) return;
-    const target = midfield[Math.min(midfield.length - 1, Math.round(index * (midfield.length - 1) / Math.max(1, defense.length - 1)))];
-    add(back.slot.id, target.slot.id, 'defend', index % 2 ? 18 : -18);
-  });
+  const nearest = (source: FormationSlotFit, targets: FormationSlotFit[]) => targets.slice().sort((a, b) => Math.abs(a.slot.x - source.slot.x) - Math.abs(b.slot.x - source.slot.x))[0];
+  const roleText = (pick: FormationSlotFit) => `${pick.player?.parsed.playstyle || ''} ${pick.slot.primaryRoles.join(' ')} ${pick.slot.duty}`.toLowerCase();
+  const hasRole = (pick: FormationSlotFit, terms: string[]) => terms.some((term) => roleText(pick).includes(term));
+
+  // Saída de bola: goleiro e zagueiros/laterais mais próximos.
   if (keeper && defense.length) {
-    add(keeper.slot.id, defense[0].slot.id, 'recycle', -36, 'saída curta');
-    add(keeper.slot.id, defense[defense.length - 1].slot.id, 'recycle', 36, 'saída curta');
+    const sorted = defense.slice().sort((a, b) => Math.abs(a.slot.x - 50) - Math.abs(b.slot.x - 50));
+    sorted.slice(0, Math.min(3, sorted.length)).forEach((back, index) => add(keeper.slot.id, back.slot.id, 'recycle', (index - 1) * 28, index === 0 ? 'saída segura' : 'apoio'));
   }
-  if (attack.length > 0 && midfield.length > 0) {
-    const target = attack[Math.floor(attack.length / 2)];
-    const source = midfield[Math.floor(midfield.length / 2)];
-    add(target.slot.id, source.slot.id, 'movement', attack.length > 1 ? 34 : -34, 'apoio');
+
+  // Defesa: conexão curta, cobertura interior e progressão para o meio do mesmo corredor.
+  defense.slice(0, -1).forEach((pick, index) => add(pick.slot.id, defense[index + 1].slot.id, 'defend', index % 2 ? 10 : -10, 'cobertura'));
+  defense.forEach((back, index) => {
+    const target = nearest(back, midfield);
+    if (target) add(back.slot.id, target.slot.id, style === 'PASSE_LONGO' ? 'support' : 'defend', index % 2 ? 16 : -16, style === 'PASSE_LONGO' ? 'quebra linha' : 'saída');
+  });
+
+  // Meio: orquestradores reciclam, destruidores cobrem, infiltradores atacam espaço.
+  midfield.slice(0, -1).forEach((pick, index) => add(pick.slot.id, midfield[index + 1].slot.id, 'support', index % 2 ? 12 : -12, 'triângulo'));
+  midfield.forEach((mid, index) => {
+    const target = nearest(mid, attack);
+    if (!target) return;
+    if (hasRole(mid, ['primeiro-volante', 'orquestrador', 'clássico 10', 'classico-10', 'armador'])) {
+      add(mid.slot.id, target.slot.id, 'support', index % 2 ? 24 : -24, 'passe-chave');
+    } else if (hasRole(mid, ['destruidor', 'volante'])) {
+      const back = nearest(mid, defense);
+      if (back) add(mid.slot.id, back.slot.id, 'defend', index % 2 ? 20 : -20, 'cobertura');
+    } else {
+      add(mid.slot.id, target.slot.id, 'movement', index % 2 ? 28 : -28, 'infiltração');
+    }
+  });
+
+  // Ataque: pontas diagonais, pivôs em apoio e artilheiros em profundidade.
+  attack.forEach((forward, index) => {
+    const source = nearest(forward, midfield);
+    if (!source) return;
+    if (hasRole(forward, ['pivô', 'pivo', 'puxa', 'apoio'])) add(forward.slot.id, source.slot.id, 'movement', index % 2 ? 30 : -30, 'apoio');
+    else if (forward.slot.position === 'LWF' || forward.slot.position === 'RWF' || forward.slot.position === 'LMF' || forward.slot.position === 'RMF') add(source.slot.id, forward.slot.id, 'movement', forward.slot.x < 50 ? -36 : 36, style === 'POR_FORA' ? 'amplitude' : 'diagonal');
+    else add(source.slot.id, forward.slot.id, 'movement', index % 2 ? 22 : -22, 'profundidade');
+  });
+
+  if (style === 'POSSE_DE_BOLA' && defense.length && midfield.length) {
+    const centralBack = nearest({ ...midfield[0], slot: { ...midfield[0].slot, x: 50 } }, defense);
+    const centralMid = nearest({ ...defense[0], slot: { ...defense[0].slot, x: 50 } }, midfield);
+    if (centralBack && centralMid) add(centralMid.slot.id, centralBack.slot.id, 'recycle', -34, 'reiniciar');
+  }
+  if (style === 'CONTRA_ATAQUE_RAPIDO' && attack.length && midfield.length) {
+    const centralMid = midfield.slice().sort((a, b) => Math.abs(a.slot.x - 50) - Math.abs(b.slot.x - 50))[0];
+    const fastestLane = attack.slice().sort((a, b) => (b.player?.parsed.attributes.speed || 0) - (a.player?.parsed.attributes.speed || 0))[0];
+    if (centralMid && fastestLane) add(centralMid.slot.id, fastestLane.slot.id, 'movement', fastestLane.slot.x < 50 ? -42 : 42, 'transição');
   }
   return arrows.slice(0, 24);
 }
@@ -313,7 +348,7 @@ export function createDefaultTacticalPosterArrows(lineup: FormationSlotFit[]): T
 function posterArrows(config: TacticalPosterConfig, fieldX: number, fieldY: number, fieldW: number, fieldH: number, theme: PosterTheme): string {
   if (!resolvedOptions(config).showArrows) return '';
   const points = pointMap(config, fieldX, fieldY, fieldW, fieldH);
-  const automatic = config.useAutomaticArrows === false ? [] : createDefaultTacticalPosterArrows(config.lineup);
+  const automatic = config.useAutomaticArrows === false ? [] : createDefaultTacticalPosterArrows(config.lineup, config.style);
   const manual = Array.isArray(config.manualArrows) ? config.manualArrows : [];
   const arrows = [...automatic, ...manual]
     .filter((item) => item.enabled !== false)
@@ -337,8 +372,9 @@ function svgDefs(theme: PosterTheme): string {
   return `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${theme.bg0}"/><stop offset=".55" stop-color="${theme.bg1}"/><stop offset="1" stop-color="#010308"/></linearGradient><linearGradient id="panelGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${theme.panel0}"/><stop offset="1" stop-color="${theme.panel1}"/></linearGradient><linearGradient id="field" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${theme.field0}"/><stop offset="1" stop-color="${theme.field1}"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><pattern id="grain" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".7" fill="#fff" opacity=".05"/><circle cx="10" cy="11" r=".5" fill="#fff" opacity=".04"/></pattern><marker id="arrowGold" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="${theme.accent}"/></marker><marker id="arrowCyan" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="${theme.secondary}"/></marker><marker id="arrowBlue" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#2e78e8"/></marker><marker id="arrowMovement" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#f7dc63"/></marker></defs>`;
 }
 
-function pitch(fieldX: number, fieldY: number, fieldW: number, fieldH: number, content: string): string {
-  return `<g><rect x="${fieldX}" y="${fieldY}" width="${fieldW}" height="${fieldH}" rx="20" fill="url(#field)" stroke="#9bb788" stroke-width="3"/><rect x="${fieldX + 16}" y="${fieldY + 16}" width="${fieldW - 32}" height="${fieldH - 32}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><line x1="${fieldX + 16}" y1="${fieldY + fieldH / 2}" x2="${fieldX + fieldW - 16}" y2="${fieldY + fieldH / 2}" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><circle cx="${fieldX + fieldW / 2}" cy="${fieldY + fieldH / 2}" r="${Math.min(fieldW, fieldH) * .095}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><circle cx="${fieldX + fieldW / 2}" cy="${fieldY + fieldH / 2}" r="4" fill="#d6e1c9" opacity=".7"/><rect x="${fieldX + fieldW * .26}" y="${fieldY + 16}" width="${fieldW * .48}" height="${fieldH * .15}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><rect x="${fieldX + fieldW * .26}" y="${fieldY + fieldH - 16 - fieldH * .15}" width="${fieldW * .48}" height="${fieldH * .15}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/>${content}</g>`;
+function pitch(fieldX: number, fieldY: number, fieldW: number, fieldH: number, content: string, backgroundImageDataUrl = '', backgroundImageOpacity = 0.2): string {
+  const background = backgroundImageDataUrl ? `<image href="${escapeXml(backgroundImageDataUrl)}" x="${fieldX}" y="${fieldY}" width="${fieldW}" height="${fieldH}" preserveAspectRatio="xMidYMid slice" opacity="${Math.max(0.05, Math.min(0.8, backgroundImageOpacity))}" clip-path="inset(0 round 20px)"/>` : '';
+  return `<g><rect x="${fieldX}" y="${fieldY}" width="${fieldW}" height="${fieldH}" rx="20" fill="url(#field)" stroke="#9bb788" stroke-width="3"/><rect x="${fieldX + 16}" y="${fieldY + 16}" width="${fieldW - 32}" height="${fieldH - 32}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><line x1="${fieldX + 16}" y1="${fieldY + fieldH / 2}" x2="${fieldX + fieldW - 16}" y2="${fieldY + fieldH / 2}" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><circle cx="${fieldX + fieldW / 2}" cy="${fieldY + fieldH / 2}" r="${Math.min(fieldW, fieldH) * .095}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><circle cx="${fieldX + fieldW / 2}" cy="${fieldY + fieldH / 2}" r="4" fill="#d6e1c9" opacity=".7"/><rect x="${fieldX + fieldW * .26}" y="${fieldY + 16}" width="${fieldW * .48}" height="${fieldH * .15}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/><rect x="${fieldX + fieldW * .26}" y="${fieldY + fieldH - 16 - fieldH * .15}" width="${fieldW * .48}" height="${fieldH * .15}" fill="none" stroke="#d6e1c9" stroke-opacity=".58" stroke-width="2"/>${background}${content}</g>`;
 }
 
 function legend(x: number, y: number, width: number, height: number, theme: PosterTheme, focus: string[]): string {
@@ -382,7 +418,7 @@ function createVerticalPosterSvg(config: TacticalPosterConfig): string {
   const titleFontSize = safeTitle.length > 30 ? 36 : safeTitle.length > 24 ? 46 : safeTitle.length > 19 ? 57 : 64;
   const focus = wrapText(config.focus || 'Segurança, construção e finalização inteligente.', 18, 4);
   const fieldContent = `${posterArrows(config, fieldX, fieldY, fieldW, fieldH, theme)}${posterPlayers(config, fieldX, fieldY, fieldW, fieldH, theme.accent)}`;
-  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536" role="img" aria-labelledby="posterTitle posterDescription"><title id="posterTitle">${escapeXml(safeTitle)} — ${escapeXml(config.formation.name)}</title><desc id="posterDescription">Infográfico tático criado localmente pelo BuildMaster, sem serviço externo.</desc>${svgDefs(theme)}<rect width="1024" height="1536" fill="url(#bg)"/><rect width="1024" height="1536" fill="url(#grain)"/><path d="M0 110 L125 0 M0 170 L185 0 M840 1536 L1024 1352 M900 1536 L1024 1412" stroke="${theme.accent}" stroke-width="3" opacity=".65"/><g filter="url(#glow)"><circle cx="92" cy="82" r="42" fill="#071522" stroke="${theme.accent}" stroke-width="3"/><path d="M67 82 Q92 57 117 82 Q92 107 67 82 Z" fill="none" stroke="${theme.accent}" stroke-width="7"/><text x="151" y="95" fill="${theme.accent}" font-size="${titleFontSize}" font-weight="1000" letter-spacing="1.4" font-family="Inter,Arial,sans-serif">${escapeXml(safeTitle.toUpperCase())}</text></g>${textLines([safeSubtitle], 512, 137, { size: 21, weight: 700, fill: '#c3d0dc', anchor: 'middle' })}<g><rect x="96" y="162" width="832" height="62" rx="16" fill="#07111b" stroke="${theme.accent}" stroke-width="2"/><text x="127" y="201" fill="#f2f6fa" font-size="24" font-weight="800" font-family="Inter,Arial,sans-serif">ESTILO DO TÉCNICO:</text><text x="415" y="201" fill="${theme.accent}" font-size="24" font-weight="900" font-family="Inter,Arial,sans-serif">${escapeXml(coachStyle.toUpperCase())}</text><rect x="96" y="236" width="832" height="62" rx="16" fill="#07111b" stroke="${theme.accent}" stroke-width="2"/><text x="127" y="275" fill="#f2f6fa" font-size="24" font-weight="800" font-family="Inter,Arial,sans-serif">FORMAÇÃO:</text><text x="300" y="275" fill="${theme.accent}" font-size="24" font-weight="900" font-family="Inter,Arial,sans-serif">${escapeXml(config.formation.name.toUpperCase())}</text></g>${options.showInstructionPanels ? `${panel(18, 330, 185, 190, theme.accent, '1. Passe certo', config.instructions.passing, '◎')}${panel(18, 530, 185, 190, theme.secondary, '2. Voltar a bola', config.instructions.recycle, '↻')}${panel(18, 730, 185, 190, theme.accent, '3. Atacar', config.instructions.attack, '↗')}${panel(18, 930, 185, 190, '#3e8cff', '4. Defender', config.instructions.defend, '⬡')}` : ''}${pitch(fieldX, fieldY, fieldW, fieldH, fieldContent)}${options.showLegend ? legend(822, 360, 184, 500, theme, focus) : ''}${options.showPrinciples ? `<g><rect x="18" y="1140" width="988" height="252" rx="22" fill="url(#panelGradient)" stroke="#33495b" stroke-width="2"/>${bulletColumn('Princípios ofensivos', config.instructions.offensive, 54, 1183, 287, theme.accent)}${bulletColumn('Princípios defensivos', config.instructions.defensive, 376, 1183, 287, '#3e8cff')}${bulletColumn('Por que rende', config.instructions.whyItWorks, 697, 1183, 270, theme.accent)}</g>` : ''}<g><rect x="35" y="1407" width="954" height="75" rx="18" fill="#160a0d" stroke="${theme.danger}" stroke-width="2"/><text x="63" y="1438" fill="${theme.danger}" font-size="18" font-weight="900" font-family="Inter,Arial,sans-serif">ERROS A EVITAR</text>${config.instructions.avoid.slice(0, 3).map((item, index) => `<text x="${250 + (index % 2) * 355}" y="${1435 + Math.floor(index / 2) * 27}" fill="#f1c4c7" font-size="14" font-weight="650" font-family="Inter,Arial,sans-serif">× ${escapeXml(truncate(item, 42))}</text>`).join('')}</g>${options.showFooter ? `<text x="512" y="1515" text-anchor="middle" fill="#7f93a4" font-size="13" font-weight="600" font-family="Inter,Arial,sans-serif">GERADO LOCALMENTE PELO BUILDMASTER • SEM API PAGA • SVG/PNG EDITÁVEL</text>` : ''}</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536" role="img" aria-labelledby="posterTitle posterDescription"><title id="posterTitle">${escapeXml(safeTitle)} — ${escapeXml(config.formation.name)}</title><desc id="posterDescription">Infográfico tático criado localmente pelo BuildMaster, sem serviço externo.</desc>${svgDefs(theme)}<rect width="1024" height="1536" fill="url(#bg)"/><rect width="1024" height="1536" fill="url(#grain)"/><path d="M0 110 L125 0 M0 170 L185 0 M840 1536 L1024 1352 M900 1536 L1024 1412" stroke="${theme.accent}" stroke-width="3" opacity=".65"/><g filter="url(#glow)"><circle cx="92" cy="82" r="42" fill="#071522" stroke="${theme.accent}" stroke-width="3"/><path d="M67 82 Q92 57 117 82 Q92 107 67 82 Z" fill="none" stroke="${theme.accent}" stroke-width="7"/><text x="151" y="95" fill="${theme.accent}" font-size="${titleFontSize}" font-weight="1000" letter-spacing="1.4" font-family="Inter,Arial,sans-serif">${escapeXml(safeTitle.toUpperCase())}</text></g>${textLines([safeSubtitle], 512, 137, { size: 21, weight: 700, fill: '#c3d0dc', anchor: 'middle' })}<g><rect x="96" y="162" width="832" height="62" rx="16" fill="#07111b" stroke="${theme.accent}" stroke-width="2"/><text x="127" y="201" fill="#f2f6fa" font-size="24" font-weight="800" font-family="Inter,Arial,sans-serif">ESTILO DO TÉCNICO:</text><text x="415" y="201" fill="${theme.accent}" font-size="24" font-weight="900" font-family="Inter,Arial,sans-serif">${escapeXml(coachStyle.toUpperCase())}</text><rect x="96" y="236" width="832" height="62" rx="16" fill="#07111b" stroke="${theme.accent}" stroke-width="2"/><text x="127" y="275" fill="#f2f6fa" font-size="24" font-weight="800" font-family="Inter,Arial,sans-serif">FORMAÇÃO:</text><text x="300" y="275" fill="${theme.accent}" font-size="24" font-weight="900" font-family="Inter,Arial,sans-serif">${escapeXml(config.formation.name.toUpperCase())}</text></g>${options.showInstructionPanels ? `${panel(18, 330, 185, 190, theme.accent, '1. Passe certo', config.instructions.passing, '◎')}${panel(18, 530, 185, 190, theme.secondary, '2. Voltar a bola', config.instructions.recycle, '↻')}${panel(18, 730, 185, 190, theme.accent, '3. Atacar', config.instructions.attack, '↗')}${panel(18, 930, 185, 190, '#3e8cff', '4. Defender', config.instructions.defend, '⬡')}` : ''}${pitch(fieldX, fieldY, fieldW, fieldH, fieldContent, config.backgroundImageDataUrl, config.backgroundImageOpacity)}${options.showLegend ? legend(822, 360, 184, 500, theme, focus) : ''}${options.showPrinciples ? `<g><rect x="18" y="1140" width="988" height="252" rx="22" fill="url(#panelGradient)" stroke="#33495b" stroke-width="2"/>${bulletColumn('Princípios ofensivos', config.instructions.offensive, 54, 1183, 287, theme.accent)}${bulletColumn('Princípios defensivos', config.instructions.defensive, 376, 1183, 287, '#3e8cff')}${bulletColumn('Por que rende', config.instructions.whyItWorks, 697, 1183, 270, theme.accent)}</g>` : ''}<g><rect x="35" y="1407" width="954" height="75" rx="18" fill="#160a0d" stroke="${theme.danger}" stroke-width="2"/><text x="63" y="1438" fill="${theme.danger}" font-size="18" font-weight="900" font-family="Inter,Arial,sans-serif">ERROS A EVITAR</text>${config.instructions.avoid.slice(0, 3).map((item, index) => `<text x="${250 + (index % 2) * 355}" y="${1435 + Math.floor(index / 2) * 27}" fill="#f1c4c7" font-size="14" font-weight="650" font-family="Inter,Arial,sans-serif">× ${escapeXml(truncate(item, 42))}</text>`).join('')}</g>${options.showFooter ? `<text x="512" y="1515" text-anchor="middle" fill="#7f93a4" font-size="13" font-weight="600" font-family="Inter,Arial,sans-serif">GERADO LOCALMENTE PELO BUILDMASTER • SEM API PAGA • SVG/PNG EDITÁVEL</text>` : ''}</svg>`;
 }
 
 function createHorizontalPosterSvg(config: TacticalPosterConfig): string {
@@ -397,7 +433,7 @@ function createHorizontalPosterSvg(config: TacticalPosterConfig): string {
   const titleFontSize = safeTitle.length > 34 ? 42 : safeTitle.length > 27 ? 48 : 55;
   const focus = wrapText(config.focus || 'Segurança, construção e finalização inteligente.', 44, 3);
   const fieldContent = `${posterArrows(config, fieldX, fieldY, fieldW, fieldH, theme)}${posterPlayers(config, fieldX, fieldY, fieldW, fieldH, theme.accent)}`;
-  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024" role="img" aria-labelledby="posterTitleHorizontal"><title id="posterTitleHorizontal">${escapeXml(safeTitle)} — ${escapeXml(config.formation.name)}</title>${svgDefs(theme)}<rect width="1536" height="1024" fill="url(#bg)"/><rect width="1536" height="1024" fill="url(#grain)"/><path d="M0 105 L130 0 M0 155 L185 0 M1350 1024 L1536 838 M1410 1024 L1536 898" stroke="${theme.accent}" stroke-width="3" opacity=".6"/><g filter="url(#glow)"><circle cx="78" cy="72" r="38" fill="#071522" stroke="${theme.accent}" stroke-width="3"/><path d="M56 72 Q78 50 100 72 Q78 94 56 72 Z" fill="none" stroke="${theme.accent}" stroke-width="6"/><text x="135" y="85" fill="${theme.accent}" font-size="${titleFontSize}" font-weight="1000" font-family="Inter,Arial,sans-serif">${escapeXml(safeTitle.toUpperCase())}</text></g>${textLines([safeSubtitle], 805, 122, { size: 22, weight: 800, fill: '#cbd7e1', anchor: 'middle' })}<rect x="45" y="145" width="1450" height="44" rx="13" fill="#07111b" stroke="${theme.accent}" stroke-width="2"/><text x="72" y="174" fill="#f2f6fa" font-size="19" font-weight="800" font-family="Inter,Arial,sans-serif">ESTILO: <tspan fill="${theme.accent}">${escapeXml(styleLabel(normalizeFormationCoachStyle(config.style)).toUpperCase())}</tspan>  •  FORMAÇÃO: <tspan fill="${theme.accent}">${escapeXml(config.formation.name.toUpperCase())}</tspan></text>${pitch(fieldX, fieldY, fieldW, fieldH, fieldContent)}${options.showInstructionPanels ? `${panel(930, 205, 275, 205, theme.accent, '1. Passe certo', config.instructions.passing, '◎', true)}${panel(1220, 205, 275, 205, theme.secondary, '2. Voltar', config.instructions.recycle, '↻', true)}${panel(930, 425, 275, 205, theme.accent, '3. Atacar', config.instructions.attack, '↗', true)}${panel(1220, 425, 275, 205, '#3e8cff', '4. Defender', config.instructions.defend, '⬡', true)}` : ''}${options.showLegend ? legend(930, 645, 565, 250, theme, focus) : ''}${options.showPrinciples ? `<g><rect x="45" y="915" width="1450" height="82" rx="18" fill="url(#panelGradient)" stroke="#33495b" stroke-width="2"/><text x="75" y="947" fill="${theme.accent}" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">OFENSIVO:</text>${textLines([truncate(config.instructions.offensive.join(' • '), 100)], 190, 947, { size: 14 })}<text x="75" y="977" fill="#3e8cff" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">DEFENSIVO:</text>${textLines([truncate(config.instructions.defensive.join(' • '), 100)], 190, 977, { size: 14 })}<text x="930" y="947" fill="${theme.danger}" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">EVITAR:</text>${textLines([truncate(config.instructions.avoid.join(' • '), 62)], 1010, 947, { size: 14 })}<text x="930" y="977" fill="${theme.accent}" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">RENDE:</text>${textLines([truncate(config.instructions.whyItWorks.join(' • '), 62)], 1000, 977, { size: 14 })}</g>` : ''}${options.showFooter ? `<text x="1490" y="1008" text-anchor="end" fill="#7f93a4" font-size="11" font-family="Inter,Arial,sans-serif">BUILDMASTER • LOCAL • SEM API PAGA</text>` : ''}</svg>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024" role="img" aria-labelledby="posterTitleHorizontal"><title id="posterTitleHorizontal">${escapeXml(safeTitle)} — ${escapeXml(config.formation.name)}</title>${svgDefs(theme)}<rect width="1536" height="1024" fill="url(#bg)"/><rect width="1536" height="1024" fill="url(#grain)"/><path d="M0 105 L130 0 M0 155 L185 0 M1350 1024 L1536 838 M1410 1024 L1536 898" stroke="${theme.accent}" stroke-width="3" opacity=".6"/><g filter="url(#glow)"><circle cx="78" cy="72" r="38" fill="#071522" stroke="${theme.accent}" stroke-width="3"/><path d="M56 72 Q78 50 100 72 Q78 94 56 72 Z" fill="none" stroke="${theme.accent}" stroke-width="6"/><text x="135" y="85" fill="${theme.accent}" font-size="${titleFontSize}" font-weight="1000" font-family="Inter,Arial,sans-serif">${escapeXml(safeTitle.toUpperCase())}</text></g>${textLines([safeSubtitle], 805, 122, { size: 22, weight: 800, fill: '#cbd7e1', anchor: 'middle' })}<rect x="45" y="145" width="1450" height="44" rx="13" fill="#07111b" stroke="${theme.accent}" stroke-width="2"/><text x="72" y="174" fill="#f2f6fa" font-size="19" font-weight="800" font-family="Inter,Arial,sans-serif">ESTILO: <tspan fill="${theme.accent}">${escapeXml(styleLabel(normalizeFormationCoachStyle(config.style)).toUpperCase())}</tspan>  •  FORMAÇÃO: <tspan fill="${theme.accent}">${escapeXml(config.formation.name.toUpperCase())}</tspan></text>${pitch(fieldX, fieldY, fieldW, fieldH, fieldContent, config.backgroundImageDataUrl, config.backgroundImageOpacity)}${options.showInstructionPanels ? `${panel(930, 205, 275, 205, theme.accent, '1. Passe certo', config.instructions.passing, '◎', true)}${panel(1220, 205, 275, 205, theme.secondary, '2. Voltar', config.instructions.recycle, '↻', true)}${panel(930, 425, 275, 205, theme.accent, '3. Atacar', config.instructions.attack, '↗', true)}${panel(1220, 425, 275, 205, '#3e8cff', '4. Defender', config.instructions.defend, '⬡', true)}` : ''}${options.showLegend ? legend(930, 645, 565, 250, theme, focus) : ''}${options.showPrinciples ? `<g><rect x="45" y="915" width="1450" height="82" rx="18" fill="url(#panelGradient)" stroke="#33495b" stroke-width="2"/><text x="75" y="947" fill="${theme.accent}" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">OFENSIVO:</text>${textLines([truncate(config.instructions.offensive.join(' • '), 100)], 190, 947, { size: 14 })}<text x="75" y="977" fill="#3e8cff" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">DEFENSIVO:</text>${textLines([truncate(config.instructions.defensive.join(' • '), 100)], 190, 977, { size: 14 })}<text x="930" y="947" fill="${theme.danger}" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">EVITAR:</text>${textLines([truncate(config.instructions.avoid.join(' • '), 62)], 1010, 947, { size: 14 })}<text x="930" y="977" fill="${theme.accent}" font-size="17" font-weight="900" font-family="Inter,Arial,sans-serif">RENDE:</text>${textLines([truncate(config.instructions.whyItWorks.join(' • '), 62)], 1000, 977, { size: 14 })}</g>` : ''}${options.showFooter ? `<text x="1490" y="1008" text-anchor="end" fill="#7f93a4" font-size="11" font-family="Inter,Arial,sans-serif">BUILDMASTER • LOCAL • SEM API PAGA</text>` : ''}</svg>`;
 }
 
 export function createTacticalPosterSvg(config: TacticalPosterConfig): string {

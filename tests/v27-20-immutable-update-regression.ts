@@ -7,7 +7,7 @@ const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '27.35.0');
+assert.equal(pkg.version, '27.36.0');
 assert.match(workflow, /RUN_ATTEMPT: \$\{\{ github\.run_attempt \}\}/);
 assert.match(workflow, /asset_token = f'\{version_code\}\{attempt:02d\}'/);
 assert.match(workflow, /APK_PUBLICATION_ID=/);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Copy,
   Download,
@@ -47,8 +48,17 @@ import {
   type TacticalPosterEditableState
 } from '@/lib/tacticalPosterLibrary';
 import { createStableId } from '@/lib/stableId';
+import {
+  addTacticalImage,
+  deleteTacticalImage,
+  getTacticalImage,
+  listTacticalImages,
+  type TacticalImageSummary
+} from '@/modules/images/accountImageLibrary';
+import { blobToDataUrl } from '@/modules/images/imageSafety';
+import { downloadBlob, escapeHtml, safeFileName, svgToPngBlob } from '@/modules/tactical-studio/exportUtils';
 
-const DRAFT_KEY_PREFIX = 'buildmaster_tactical_poster_draft_v2734';
+const DRAFT_KEY_PREFIX = 'buildmaster_tactical_poster_draft_v2736';
 
 type TacticalPosterStudioPanelProps = {
   formation: FormationBlueprint;
@@ -98,27 +108,6 @@ function textToLines(value: string): string[] {
   return value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 8);
 }
 
-function safeFileName(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase() || 'buildmaster-tatico';
-}
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = 'noopener';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-
 function createInitialState(formation: FormationBlueprint, style: TacticalStyle): TacticalPosterEditableState {
   const instructions = defaultTacticalPosterInstructions(formation, style);
   return {
@@ -129,6 +118,8 @@ function createInitialState(formation: FormationBlueprint, style: TacticalStyle)
     orientation: 'vertical',
     options: { ...DEFAULT_TACTICAL_POSTER_OPTIONS },
     playerOverrides: {},
+    backgroundImageId: undefined,
+    backgroundImageOpacity: 0.2,
     customColors: {},
     useAutomaticArrows: true,
     manualArrows: [],
@@ -152,6 +143,11 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   const [orientation, setOrientation] = useState<TacticalPosterOrientation>(initialState.orientation);
   const [options, setOptions] = useState<TacticalPosterDisplayOptions>(initialState.options);
   const [playerOverrides, setPlayerOverrides] = useState<Record<string, TacticalPosterPlayerOverride>>({});
+  const [backgroundImageId, setBackgroundImageId] = useState<string | undefined>(undefined);
+  const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(0.2);
+  const [backgroundImageDataUrl, setBackgroundImageDataUrl] = useState('');
+  const [imageLibrary, setImageLibrary] = useState<TacticalImageSummary[]>([]);
+  const [imageThumbnailUrls, setImageThumbnailUrls] = useState<Record<string, string>>({});
   const [customColors, setCustomColors] = useState<TacticalPosterCustomColors>({});
   const [useAutomaticArrows, setUseAutomaticArrows] = useState(true);
   const [manualArrows, setManualArrows] = useState<TacticalPosterArrow[]>([]);
@@ -182,6 +178,8 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     orientation,
     options,
     playerOverrides,
+    backgroundImageId,
+    backgroundImageOpacity,
     customColors,
     useAutomaticArrows,
     manualArrows,
@@ -193,7 +191,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     defensive,
     avoid,
     whyItWorks
-  }), [attack, avoid, customColors, defend, defensive, focus, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, subtitle, title, useAutomaticArrows, whyItWorks]);
+  }), [attack, avoid, backgroundImageId, backgroundImageOpacity, customColors, defend, defensive, focus, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, subtitle, title, useAutomaticArrows, whyItWorks]);
 
   function applyEditableState(state: TacticalPosterEditableState): void {
     setTitle(state.title);
@@ -203,6 +201,8 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setOrientation(state.orientation);
     setOptions({ ...DEFAULT_TACTICAL_POSTER_OPTIONS, ...state.options });
     setPlayerOverrides(state.playerOverrides ?? {});
+    setBackgroundImageId(state.backgroundImageId);
+    setBackgroundImageOpacity(state.backgroundImageOpacity ?? 0.2);
     setCustomColors(state.customColors ?? {});
     setUseAutomaticArrows(state.useAutomaticArrows !== false);
     setManualArrows(state.manualArrows ?? []);
@@ -228,10 +228,43 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setMessage('Nova arte iniciada sem alterar os projetos salvos.');
   }
 
+  async function refreshImageLibrary(): Promise<void> {
+    try {
+      setImageLibrary(await listTacticalImages());
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível carregar a galeria.');
+    }
+  }
+
+  useEffect(() => {
+    void refreshImageLibrary();
+  }, []);
+
+  useEffect(() => {
+    const urls: Record<string, string> = {};
+    imageLibrary.forEach((item) => { urls[item.id] = URL.createObjectURL(item.thumbnail); });
+    setImageThumbnailUrls(urls);
+    return () => Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
+  }, [imageLibrary]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!backgroundImageId) {
+      setBackgroundImageDataUrl('');
+      return () => { cancelled = true; };
+    }
+    void getTacticalImage(backgroundImageId).then(async (item) => {
+      if (!item || cancelled) return;
+      const dataUrl = await blobToDataUrl(item.original);
+      if (!cancelled) setBackgroundImageDataUrl(dataUrl);
+    }).catch(() => { if (!cancelled) setBackgroundImageDataUrl(''); });
+    return () => { cancelled = true; };
+  }, [backgroundImageId]);
+
   useEffect(() => {
     setLibrary(readTacticalPosterLibrary());
     const draftKey = `${DRAFT_KEY_PREFIX}_${formation.id}`;
-    const rawDraft = readAccountStorage(draftKey) || readAccountStorage('buildmaster_tactical_poster_draft_v2732');
+    const rawDraft = readAccountStorage(draftKey) || readAccountStorage('buildmaster_tactical_poster_draft_v2734') || readAccountStorage('buildmaster_tactical_poster_draft_v2732');
     if (rawDraft) {
       try {
         const parsed = JSON.parse(rawDraft) as { formationId?: string; state?: unknown };
@@ -264,7 +297,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setDraftStatus('salvando rascunho…');
     const timer = window.setTimeout(() => {
       writeAccountStorage(`${DRAFT_KEY_PREFIX}_${formation.id}`, JSON.stringify({
-        schema: 2734,
+        schema: 2736,
         formationId: formation.id,
         savedAt: new Date().toISOString(),
         state: editableState
@@ -285,6 +318,8 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     orientation,
     options,
     playerOverrides,
+    backgroundImageDataUrl,
+    backgroundImageOpacity,
     customColors,
     useAutomaticArrows,
     manualArrows,
@@ -298,7 +333,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
       avoid: textToLines(avoid),
       whyItWorks: textToLines(whyItWorks)
     }
-  }), [attack, avoid, customColors, defend, defensive, focus, formation, lineup, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, style, subtitle, title, useAutomaticArrows, whyItWorks]);
+  }), [attack, avoid, backgroundImageDataUrl, backgroundImageOpacity, customColors, defend, defensive, focus, formation, lineup, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, style, subtitle, title, useAutomaticArrows, whyItWorks]);
 
   const svg = useMemo(() => createTacticalPosterSvg(config), [config]);
 
@@ -329,7 +364,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   }
 
   function convertAutomaticArrows(): void {
-    setManualArrows(createDefaultTacticalPosterArrows(lineup).map((item) => ({ ...item, id: createStableId('poster-arrow') })));
+    setManualArrows(createDefaultTacticalPosterArrows(lineup, style).map((item) => ({ ...item, id: createStableId('poster-arrow') })));
     setUseAutomaticArrows(false);
     setMessage('As linhas automáticas viraram linhas editáveis. Agora você pode alterar origem, destino, tipo e curvatura.');
   }
@@ -360,40 +395,10 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setMessage('Arte SVG salva. Ela continua editável e nítida em qualquer tamanho.');
   }
 
-  async function loadSvgImage(): Promise<HTMLImageElement> {
-    const image = new window.Image();
-    const objectUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-    try {
-      image.src = objectUrl;
-      if (typeof image.decode === 'function') {
-        await image.decode();
-      } else {
-        await new Promise<void>((resolve, reject) => {
-          image.onload = () => resolve();
-          image.onerror = () => reject(new Error('Não foi possível renderizar a arte SVG.'));
-        });
-      }
-      return image;
-    } finally {
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    }
-  }
-
   async function createPngBlob(): Promise<Blob> {
-    const image = await loadSvgImage();
     const baseWidth = orientation === 'horizontal' ? 1536 : 1024;
     const baseHeight = orientation === 'horizontal' ? 1024 : 1536;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(baseWidth * exportScale);
-    canvas.height = Math.round(baseHeight * exportScale);
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Canvas indisponível neste aparelho.');
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((result) => result ? resolve(result) : reject(new Error('Falha ao converter a arte para PNG.')), 'image/png', 0.96);
-    });
+    return svgToPngBlob(svg, baseWidth, baseHeight, exportScale);
   }
 
   async function exportPng(): Promise<void> {
@@ -437,7 +442,8 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     frame.style.height = '1px';
     frame.style.opacity = '0';
     frame.style.pointerEvents = 'none';
-    frame.srcdoc = `<html><head><meta charset="utf-8"><title>${title}</title><style>@page{size:${orientation === 'horizontal' ? 'landscape' : 'portrait'};margin:0}html,body{margin:0;background:#000}svg{display:block;width:100%;height:auto}</style></head><body>${svg}</body></html>`;
+    frame.setAttribute('sandbox', 'allow-modals allow-same-origin');
+    frame.srcdoc = `<html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'"><title>${escapeHtml(title)}</title><style>@page{size:${orientation === 'horizontal' ? 'landscape' : 'portrait'};margin:0}html,body{margin:0;background:#000}svg{display:block;width:100%;height:auto}</style></head><body>${svg}</body></html>`;
     frame.onload = () => {
       window.setTimeout(() => {
         frame.contentWindow?.focus();
@@ -452,7 +458,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   function exportProjectJson(): void {
     const payload = {
       app: 'BuildMaster Elite Tático',
-      schema: 2734,
+      schema: 2736,
       exportedAt: new Date().toISOString(),
       formationId: formation.id,
       formationName: formation.name,
@@ -477,6 +483,45 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível importar o projeto.');
     }
+  }
+
+  async function importStudioFile(file: File): Promise<void> {
+    if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
+      await importProjectJson(file);
+      return;
+    }
+    setMessage('Validando e importando imagem com segurança…');
+    try {
+      const item = await addTacticalImage(file);
+      await refreshImageLibrary();
+      setBackgroundImageId(item.id);
+      setBackgroundImageOpacity(0.2);
+      setMessage(item.kind === 'gif'
+        ? 'GIF importado com segurança. A arte usa o primeiro quadro como imagem estática.'
+        : `${item.name} foi adicionada à galeria desta conta e aplicada ao campo.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível importar a imagem.');
+    }
+  }
+
+  async function removeGalleryImage(id: string): Promise<void> {
+    try {
+      await deleteTacticalImage(id);
+      if (backgroundImageId === id) setBackgroundImageId(undefined);
+      await refreshImageLibrary();
+      setMessage('Imagem removida da galeria. Nenhum outro projeto foi apagado.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível remover a imagem.');
+    }
+  }
+
+  function movePlayerFromPointer(slotId: string, event: ReactPointerEvent<HTMLButtonElement>): void {
+    const pitch = event.currentTarget.parentElement;
+    if (!pitch) return;
+    const rect = pitch.getBoundingClientRect();
+    const x = Math.max(2, Math.min(98, ((event.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(2, Math.min(98, ((event.clientY - rect.top) / rect.height) * 100));
+    updatePlayerOverride(slotId, { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
   }
 
   function saveProject(): void {
@@ -534,7 +579,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     <article className="tactical-poster-studio luxury-panel">
       <div className="section-title-row tactical-poster-heading">
         <div>
-          <p className="kicker"><Sparkles size={15}/> v27.35 • Estúdio Tático Completo • Meta 2026</p>
+          <p className="kicker"><Sparkles size={15}/> v27.36 • Estúdio Tático Completo • Meta 2026</p>
           <h3>Gere, edite, salve e compartilhe artes premium da sua formação</h3>
           <p>O app desenha campo, jogadores, setas e textos localmente em SVG, PNG e PDF. Não existe cobrança por imagem e nenhuma API de inteligência artificial é usada.</p>
         </div>
@@ -594,10 +639,34 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
             <button type="button" onClick={() => setCustomColors({})}><RefreshCcw size={15}/> Usar cores do tema</button>
           </div></details>
 
+          <details open><summary>Galeria de imagens da conta</summary><div className="tactical-image-library">
+            <div className="tactical-image-library-toolbar">
+              <button type="button" onClick={() => importInputRef.current?.click()}><Upload size={15}/> Importar JPG, PNG e outros</button>
+              <button type="button" onClick={() => setBackgroundImageId(undefined)} disabled={!backgroundImageId}><RefreshCcw size={15}/> Remover fundo</button>
+              <label><span>Opacidade {Math.round(backgroundImageOpacity * 100)}%</span><input type="range" min={5} max={80} value={Math.round(backgroundImageOpacity * 100)} onChange={(event) => setBackgroundImageOpacity(Number(event.target.value) / 100)}/></label>
+            </div>
+            {imageLibrary.length === 0 ? <p className="panel-note">Nenhuma imagem importada. A galeria é local, separada por conta e não apaga arquivos antigos automaticamente.</p> : <div className="tactical-image-grid">
+              {imageLibrary.map((item) => <div key={item.id} className={backgroundImageId === item.id ? 'active' : ''}>
+                {imageThumbnailUrls[item.id] ? <img src={imageThumbnailUrls[item.id]} alt={item.name}/> : <span>Prévia</span>}
+                <strong title={item.name}>{item.name}</strong><small>{item.width}×{item.height} • {Math.max(1, Math.round(item.size / 1024))} KB</small>
+                <div><button type="button" onClick={() => setBackgroundImageId(item.id)}>Usar</button><button type="button" className="danger" onClick={() => void removeGalleryImage(item.id)}><Trash2 size={14}/></button></div>
+              </div>)}
+            </div>}
+          </div></details>
+
           <details><summary>Jogadores e funções exibidas</summary><div className="tactical-player-overrides">
+            <div className="tactical-position-editor" aria-label="Editor de posição dos jogadores">
+              {lineup.map((pick) => {
+                const override = playerOverrides[pick.slot.id] ?? {};
+                const x = override.x ?? pick.slot.x;
+                const y = override.y ?? pick.slot.y;
+                return <button key={pick.slot.id} type="button" style={{ left: `${x}%`, top: `${y}%` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePlayerFromPointer(pick.slot.id, event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePlayerFromPointer(pick.slot.id, event); }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><strong>{pick.slot.label}</strong><span>{override.name || pick.player?.parsed.playerName || pick.slot.duty}</span></button>;
+              })}
+            </div>
+            <p className="panel-note">Arraste cada jogador no mini campo. A posição fica salva no projeto e também altera as linhas inteligentes.</p>
             {lineup.map((pick) => {
               const override = playerOverrides[pick.slot.id] ?? {};
-              return <div key={pick.slot.id}><strong>{pick.slot.label}</strong><input aria-label={`Nome em ${pick.slot.label}`} placeholder={pick.player?.parsed.playerName || 'Nome opcional'} value={override.name ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { name: event.target.value })}/><input aria-label={`Função em ${pick.slot.label}`} placeholder={pick.slot.duty} value={override.role ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { role: event.target.value })}/></div>;
+              return <div className="tactical-player-row" key={pick.slot.id}><strong>{pick.slot.label}</strong><input aria-label={`Nome em ${pick.slot.label}`} placeholder={pick.player?.parsed.playerName || 'Nome opcional'} value={override.name ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { name: event.target.value })}/><input aria-label={`Função em ${pick.slot.label}`} placeholder={pick.slot.duty} value={override.role ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { role: event.target.value })}/><button type="button" onClick={() => updatePlayerOverride(pick.slot.id, { x: pick.slot.x, y: pick.slot.y })}>Centralizar</button></div>;
             })}
           </div></details>
 
@@ -644,7 +713,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
             <button type="button" className="elite-button secondary" onClick={() => importInputRef.current?.click()}><Upload size={16}/> Importar</button>
             <button type="button" className="elite-button secondary" onClick={resetAutomatic}><RefreshCcw size={16}/> Gerar automático</button>
           </div>
-          <input ref={importInputRef} className="tactical-hidden-input" type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importProjectJson(file); event.currentTarget.value = ''; }}/>
+          <input ref={importInputRef} className="tactical-hidden-input" type="file" accept="application/json,.json,image/jpeg,image/png,image/webp,image/gif,image/bmp,image/svg+xml,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.heic,.heif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importStudioFile(file); event.currentTarget.value = ''; }}/>
           {message && <p className="panel-note tactical-poster-message" role="status">{message}</p>}
         </div>
 

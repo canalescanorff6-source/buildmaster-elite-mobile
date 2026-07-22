@@ -10,15 +10,15 @@ const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const manifest = fs.readFileSync('public/manifest.webmanifest', 'utf8');
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 
-assert.equal(pkg.version, '27.35.0', 'package.json precisa estar na v27.35.0');
+assert.equal(pkg.version, '27.36.0', 'package.json precisa estar na v27.36.0');
 assert.equal(lock.version, pkg.version, 'package-lock.json precisa ter a mesma versão do package.json');
 assert.equal(lock.packages[''].version, pkg.version, 'raiz do package-lock precisa ter a mesma versão');
 assert.ok(workflow.includes("json.loads(pathlib.Path('package.json')"), 'Workflow precisa ler a versão do package.json.');
 assert.ok(workflow.includes('BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk'), 'Nome do APK precisa acompanhar automaticamente a versão.');
 assert.ok(workflow.includes('BUILDMASTER_VERSION=') || workflow.includes('BUILDMASTER_VERSION'), 'Versão dinâmica não foi preparada.');
 assert.ok(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface precisam usar a versão centralizada.');
-assert.ok(manifest.includes('v27.35'), 'manifest.webmanifest não corresponde à v27.35.');
-assert.ok(sw.includes('27-35'), 'Cache do service worker não corresponde à v27.35.');
+assert.ok(manifest.includes('v27.36'), 'manifest.webmanifest não corresponde à v27.36.');
+assert.ok(sw.includes('27-36'), 'Cache do service worker não corresponde à v27.36.');
 
 assert.ok(workflow.includes('ANDROID_SIGNING_BUNDLE'), 'Workflow precisa usar o Secret de assinatura permanente.');
 assert.match(workflow, /ANDROID_SIGNING_BUNDLE é obrigatório/, 'Workflow oficial não pode publicar APK de teste.');
@@ -35,4 +35,4 @@ assert.doesNotMatch(workflow, /gh release delete buildmaster-latest/, 'Não apag
 
 assert.ok(fs.existsSync('src/app/error.tsx'));
 assert.ok(fs.existsSync('src/app/global-error.tsx'));
-console.log('release integrity v27.35: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');
+console.log('release integrity v27.36: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');

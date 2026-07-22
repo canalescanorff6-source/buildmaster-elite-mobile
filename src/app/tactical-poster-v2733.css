@@ -73,5 +73,31 @@
 @media(max-width:760px){.tactical-custom-colors{grid-template-columns:1fr 1fr}.tactical-arrow-toolbar{display:grid;grid-template-columns:1fr}.tactical-arrow-row{grid-template-columns:1fr 1fr}.tactical-arrow-row>strong{grid-column:1/-1}.tactical-arrow-row>button{width:100%}}
 @media(max-width:480px){.tactical-custom-colors,.tactical-arrow-row{grid-template-columns:1fr}.tactical-arrow-row>strong{grid-column:auto}}
 
-/* v27.35 — estilos oficiais e meta eFootball 2026 */
+/* v27.36 — estilos oficiais e meta eFootball 2026 */
 .formation-meta-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.formation-meta-chips span,.formation-meta-catalog summary span{border:1px solid rgba(148,163,184,.25);border-radius:999px;padding:5px 9px;font-size:.72rem}.formation-meta-catalog{margin-top:18px}.formation-meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px}.formation-meta-grid details{border:1px solid rgba(148,163,184,.22);border-radius:14px;padding:10px;background:rgba(4,12,21,.66)}.formation-meta-grid summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}.formation-meta-grid p{margin:10px 0 4px;color:var(--text-soft,#c8d2dc);font-size:.86rem;line-height:1.45}.formation-meta-grid small{display:block;margin-top:5px;color:#f6c86c}.meta-muito-bom{border-color:rgba(74,222,128,.42)!important}.meta-muito-bom summary span,.formation-meta-chips .meta-muito-bom{color:#76e6a2;background:rgba(22,101,52,.2)}.meta-usavel{border-color:rgba(250,204,21,.38)!important}.meta-usavel summary span,.formation-meta-chips .meta-usavel{color:#f4cf58;background:rgba(113,63,18,.18)}.meta-situacional{border-color:rgba(56,189,248,.36)!important}.meta-situacional summary span,.formation-meta-chips .meta-situacional{color:#67d4ff;background:rgba(12,74,110,.2)}.meta-neutro{border-color:rgba(203,213,225,.35)!important}.meta-neutro summary span,.formation-meta-chips .meta-neutro{color:#d7e0e8;background:rgba(71,85,105,.22)}.meta-evitar{border-color:rgba(248,113,113,.4)!important}.meta-evitar summary span,.formation-meta-chips .meta-evitar{color:#ff9292;background:rgba(127,29,29,.2)}
+
+/* v27.36 — galeria segura, imagem de fundo e arrastar jogadores */
+.tactical-image-library{display:grid;gap:12px}
+.tactical-image-library-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.tactical-image-library-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;border:1px solid rgba(89,164,210,.33);background:rgba(20,50,70,.66);color:#eaf6ff;border-radius:11px;padding:9px 11px;font-weight:780;cursor:pointer}
+.tactical-image-library-toolbar button:disabled{opacity:.45;cursor:not-allowed}
+.tactical-image-library-toolbar label{display:grid;gap:5px;min-width:190px;color:var(--text-muted,#8294a5);font-size:.7rem;font-weight:760}
+.tactical-image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}
+.tactical-image-grid>div{display:grid;gap:6px;padding:8px;border:1px solid rgba(119,151,179,.2);background:rgba(8,22,33,.64);border-radius:13px;min-width:0}
+.tactical-image-grid>div.active{border-color:rgba(244,197,66,.78);box-shadow:0 0 0 2px rgba(244,197,66,.12)}
+.tactical-image-grid img{width:100%;height:94px;object-fit:cover;border-radius:9px;background:#02060a}
+.tactical-image-grid strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#eaf6ff;font-size:.76rem}
+.tactical-image-grid small{color:var(--text-muted,#8294a5);font-size:.66rem}
+.tactical-image-grid>div>div{display:flex;gap:6px}
+.tactical-image-grid button{flex:1;min-height:34px;border:1px solid rgba(89,164,210,.3);background:rgba(20,50,70,.72);color:#eaf6ff;border-radius:9px;font-weight:750;cursor:pointer}
+.tactical-image-grid button.danger{flex:0 0 38px;color:#ff9aa3;border-color:rgba(255,90,95,.3);background:rgba(93,20,31,.45)}
+.tactical-position-editor{position:relative;aspect-ratio:3/4;max-height:520px;overflow:hidden;border:2px solid rgba(255,255,255,.38);border-radius:16px;background:linear-gradient(90deg,rgba(255,255,255,.035) 50%,transparent 50%),repeating-linear-gradient(0deg,#234f29 0 12.5%,#28582e 12.5% 25%);touch-action:none}
+.tactical-position-editor::before{content:"";position:absolute;inset:3% 4%;border:1px solid rgba(255,255,255,.5);pointer-events:none}
+.tactical-position-editor::after{content:"";position:absolute;left:4%;right:4%;top:50%;border-top:1px solid rgba(255,255,255,.5);pointer-events:none}
+.tactical-position-editor>button{position:absolute;z-index:2;transform:translate(-50%,-50%);display:grid;place-items:center;gap:1px;min-width:68px;max-width:100px;padding:6px 7px;border:1px solid rgba(95,214,255,.72);border-radius:999px;background:rgba(5,19,29,.92);color:#eef9ff;box-shadow:0 5px 14px rgba(0,0,0,.38);cursor:grab;touch-action:none;user-select:none}
+.tactical-position-editor>button:active{cursor:grabbing;border-color:#f4c542;z-index:5}
+.tactical-position-editor>button strong{min-height:auto;border:0;background:none;color:#71d4ff;font-size:.64rem}
+.tactical-position-editor>button span{max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.58rem}
+.tactical-player-overrides>.tactical-player-row{display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr) auto;gap:9px;align-items:center}
+.tactical-player-row>button{min-height:42px;border:1px solid rgba(89,164,210,.3);background:rgba(20,50,70,.62);color:#dff4ff;border-radius:10px;padding:8px 10px;font-weight:730;cursor:pointer}
+@media(max-width:700px){.tactical-image-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tactical-player-overrides>.tactical-player-row{grid-template-columns:58px 1fr}.tactical-player-row>input:last-of-type,.tactical-player-row>button{grid-column:2}.tactical-position-editor>button{min-width:58px;max-width:78px;padding:5px}.tactical-position-editor>button span{max-width:68px}}

@@ -8,8 +8,8 @@ import {
   validateUpdateManifest
 } from '../src/lib/appUpdates';
 
-assert.equal(APP_RELEASE_VERSION, '27.35.0');
-assert.equal(APP_NATIVE_VERSION, '27.35.0');
+assert.equal(APP_RELEASE_VERSION, '27.36.0');
+assert.equal(APP_NATIVE_VERSION, '27.36.0');
 
 const apkUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.29.0-1352300042-abcdef12.apk';
 assert.equal(isTrustedApkUrl(apkUrl), true);
@@ -23,7 +23,7 @@ assert.equal(isTrustedApkUrl('https://github.com/canalescanorff6-source/buildmas
 
 const manifest = {
   appId: 'com.buildmaster.elitetatico' as const,
-  version: '27.35.0',
+  version: '27.36.0',
   versionCode: 1352300042,
   buildId: 'abcdef123456',
   publishedAt: new Date().toISOString(),
@@ -37,9 +37,9 @@ const manifest = {
   sizeBytes: 31_000_000
 };
 assert.ok(validateUpdateManifest(manifest));
-assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.35.0', versionCode: 1350900010 }, 'old').available, true);
-assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.35.0', versionCode: 1350900010 }, { versionName: '27.35.0', versionCode: 1350900010 }, 'abcdef123456').available, false);
-assert.equal(evaluateUpdateManifest({ ...manifest, versionCode: 1350809999 }, { versionName: '27.35.0', versionCode: 1350900010 }, 'old').available, false);
+assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.36.0', versionCode: 1350900010 }, 'old').available, true);
+assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.36.0', versionCode: 1350900010 }, { versionName: '27.36.0', versionCode: 1350900010 }, 'abcdef123456').available, false);
+assert.equal(evaluateUpdateManifest({ ...manifest, versionCode: 1350809999 }, { versionName: '27.36.0', versionCode: 1350900010 }, 'old').available, false);
 
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const storage = fs.readFileSync('src/lib/secureStorage.ts', 'utf8');

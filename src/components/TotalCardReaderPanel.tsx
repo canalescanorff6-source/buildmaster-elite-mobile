@@ -6,6 +6,7 @@ import { inspectPrintQuality } from '@/lib/ocr';
 import { qualityLabel, qualityScore } from '@/lib/premiumReading';
 import { TOTAL_CAPTURE_SLOTS, type CardScreenType, type TotalCardCaptureInput } from '@/lib/totalCardReader';
 import { createStableId } from '@/lib/stableId';
+import { validateImageFile } from '@/modules/images/imageSafety';
 
 type SlotState = Omit<TotalCardCaptureInput, 'id' | 'declaredType' | 'label' | 'requirement'> & { id: string };
 
@@ -22,6 +23,7 @@ function captureId(type: string) {
 export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected }: Props) {
   const [slots, setSlots] = useState<Partial<Record<Exclude<CardScreenType, 'unknown'>, SlotState>>>({});
   const urlsRef = useRef<string[]>([]);
+  const [fileError, setFileError] = useState('');
 
   useEffect(() => () => {
     for (const url of urlsRef.current) URL.revokeObjectURL(url);
@@ -32,11 +34,21 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected }: 
   const completeness = Math.round((selectedCount / TOTAL_CAPTURE_SLOTS.length) * 100);
 
   async function selectFile(type: Exclude<CardScreenType, 'unknown'>, file: File) {
-    const preview = URL.createObjectURL(file);
-    urlsRef.current.push(preview);
-    const quality = await inspectPrintQuality(file).catch(() => null);
-    setSlots((current) => ({ ...current, [type]: { id: captureId(type), file, preview, quality } }));
-    if (type === 'overview') await onPrimarySelected?.(file);
+    setFileError('');
+    try {
+      await validateImageFile(file);
+      const preview = URL.createObjectURL(file);
+      urlsRef.current.push(preview);
+      const quality = await inspectPrintQuality(file).catch(() => null);
+      setSlots((current) => {
+        const old = current[type];
+        if (old?.preview) URL.revokeObjectURL(old.preview);
+        return { ...current, [type]: { id: captureId(type), file, preview, quality } };
+      });
+      if (type === 'overview') await onPrimarySelected?.(file);
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : 'Imagem inválida.');
+    }
   }
 
   function removeFile(type: Exclude<CardScreenType, 'unknown'>) {
@@ -106,20 +118,22 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected }: 
                     {item.quality?.issues.length ? <em><TriangleAlert size={13} /> {item.quality.issues[0].message}</em> : <em><CheckCircle2 size={13} /> Imagem pronta</em>}
                   </div>
                   <div className="total-capture-actions">
-                    <label><ImagePlus size={15} /> Trocar<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void selectFile(slot.type, file); event.currentTarget.value = ''; }} /></label>
+                    <label><ImagePlus size={15} /> Trocar<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.heif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void selectFile(slot.type, file); event.currentTarget.value = ''; }} /></label>
                     <button type="button" onClick={() => removeFile(slot.type)}>Remover</button>
                   </div>
                 </>
               ) : (
                 <label className="total-capture-empty">
                   <ImagePlus size={23} /><strong>Adicionar print</strong><span>{slot.description}</span>
-                  <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void selectFile(slot.type, file); event.currentTarget.value = ''; }} />
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.heif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void selectFile(slot.type, file); event.currentTarget.value = ''; }} />
                 </label>
               )}
             </article>
           );
         })}
       </div>
+
+      {fileError && <p className="panel-note danger" role="alert">{fileError}</p>}
 
       <div className="total-reader-footer">
         <div><strong>{requiredReady ? 'Captura mínima pronta' : 'Faltam telas obrigatórias'}</strong><span>{requiredReady ? 'Você já pode executar a leitura combinada. Habilidades e posições aumentam a precisão.' : 'Envie visão geral, atributos e progressão antes de continuar.'}</span></div>

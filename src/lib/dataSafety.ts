@@ -1,7 +1,7 @@
-export const CURRENT_DATA_SCHEMA = 2729;
-export const APP_DATA_VERSION = '27.35.0';
+export const CURRENT_DATA_SCHEMA = 2736;
+export const APP_DATA_VERSION = '27.36.0';
 
-export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution';
+export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery';
 
 export type BackupEnvelope = {
   app: 'BuildMaster Elite Tático';
@@ -26,13 +26,13 @@ export type IntegrityReport = {
   totals: { sections: number; records: number; malformed: number };
 };
 
-const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution']);
+const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery']);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const MAX_BACKUP_DEPTH = 18;
 const MAX_BACKUP_NODES = 250_000;
 const MAX_ARRAY_ITEMS = 20_000;
 const MAX_OBJECT_KEYS = 20_000;
-const MAX_STRING_LENGTH = 16 * 1024 * 1024;
+const MAX_STRING_LENGTH = 32 * 1024 * 1024;
 
 type SanitizeBudget = { nodes: number };
 
@@ -192,6 +192,9 @@ export function migrateBackup(envelope: BackupEnvelope): { envelope: BackupEnvel
   if (!sections.settings) { sections.settings = {}; steps.push('Preferências visuais inicializadas.'); }
   if (!sections.plans) { sections.plans = {}; steps.push('Área de Planos A, B e C inicializada.'); }
   if (!sections.evolution) { sections.evolution = {}; steps.push('Registro de cartas e validação real inicializados.'); }
+  if (!sections.tacticalStudio) { sections.tacticalStudio = []; steps.push('Biblioteca do Estúdio Tático inicializada.'); }
+  if (!sections.customFormations) { sections.customFormations = []; steps.push('Formações personalizadas inicializadas.'); }
+  if (!sections.imageGallery) { sections.imageGallery = []; steps.push('Galeria de imagens inicializada.'); }
   if (sections.evolution && typeof sections.evolution === 'object') {
     const evolution = { ...(sections.evolution as Record<string, unknown>) };
     if (!evolution.centralIntelligence) {

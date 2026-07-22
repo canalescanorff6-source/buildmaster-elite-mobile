@@ -98,6 +98,9 @@ import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STO
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
+import { validateImageFile } from '@/modules/images/imageSafety';
+import { exportTacticalImageLibrary, importTacticalImageLibrary } from '@/modules/images/accountImageLibrary';
+import { exportTacticalPosterLibrary, replaceTacticalPosterLibrary } from '@/lib/tacticalPosterLibrary';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
@@ -209,16 +212,6 @@ const VAULT_FOLDERS_KEY = 'buildmaster_vault_folders_v25_33';
 const RULE_PACK_KEY = 'buildmaster_rule_pack_v24_29';
 const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
 const HISTORY_LIMIT = 200;
-const DEFAULT_CLOUD_API_URL = 'https://buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas';
-const CLOUD_API_URL = process.env.NEXT_PUBLIC_BUILDMASTER_CLOUD_API_URL || '/api/cloud/fichas';
-
-function getCloudApiUrl() {
-  if (typeof window === 'undefined') return CLOUD_API_URL;
-  const isEmbeddedApk = ['capacitor:', 'file:'].includes(window.location.protocol) || window.location.hostname === 'localhost';
-  if (isEmbeddedApk && CLOUD_API_URL.startsWith('/')) return DEFAULT_CLOUD_API_URL;
-  return CLOUD_API_URL;
-}
-
 const objectives: Array<{ value: Objective; title: string; hint: string }> = [
   { value: 'COMPETITIVE', title: 'Desempenho máximo', hint: 'rendimento real em campo, não GER alto' },
   { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.5.0, separada de dados oficiais' },
@@ -1759,6 +1752,7 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
   const [opponentPrintPreview, setOpponentPrintPreview] = useState<string | null>(null);
   const [opponentPrintReport, setOpponentPrintReport] = useState<OpponentPrintReport | null>(null);
   const [opponentPrintLoading, setOpponentPrintLoading] = useState(false);
+  const opponentPrintObjectUrlRef = useRef<string | null>(null);
   const [savedTeamPlans, setSavedTeamPlans] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -1775,18 +1769,22 @@ function TeamFullMapPanel({ history, formation, teamStyle }: { history: SavedAna
 
   async function analyzeOpponentPrint(file: File) {
     setOpponentPrintLoading(true);
-    setOpponentPrintPreview(URL.createObjectURL(file));
     setOpponentPrintReport(null);
     try {
+      await validateImageFile(file);
+      if (opponentPrintObjectUrlRef.current) URL.revokeObjectURL(opponentPrintObjectUrlRef.current);
+      opponentPrintObjectUrlRef.current = URL.createObjectURL(file);
+      setOpponentPrintPreview(opponentPrintObjectUrlRef.current);
       const quality = await inspectPrintQuality(file).catch(() => null);
       const processed = await preprocessImage(file, 'sharp');
-      const Tesseract = await import('tesseract.js');
-      const pass = await Tesseract.recognize(processed, 'por+eng');
-      const nextReport = readOpponentPrintText(pass.data.text || '');
+      const pass = await recognizeWithOcrWorker(processed, { label: 'Adversário • escalação', kind: 'general', cacheKey: await fileDigest(file) });
+      const nextReport = readOpponentPrintText(pass.text || '');
       if (quality?.issues.length) nextReport.warnings.unshift(quality.issues[0].message);
       setOpponentPrintReport(nextReport);
-    } catch {
-      setOpponentPrintReport(readOpponentPrintText(''));
+    } catch (error) {
+      const report = readOpponentPrintText('');
+      report.warnings.unshift(error instanceof Error ? error.message : 'Não foi possível ler o print do adversário.');
+      setOpponentPrintReport(report);
     } finally {
       setOpponentPrintLoading(false);
     }
@@ -3841,6 +3839,13 @@ export function CardVisionApp() {
   const [ocrQueue, setOcrQueue] = useState<OcrQueueJob[]>([]);
   const [readingConfirmations, setReadingConfirmations] = useState<Record<string, boolean>>({});
   const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
+  const previewObjectUrlRef = useRef<string | null>(null);
+  const enhancedObjectUrlRef = useRef<string | null>(null);
+  useEffect(() => () => {
+    if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
+    if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current);
+    if (opponentPrintObjectUrlRef.current) URL.revokeObjectURL(opponentPrintObjectUrlRef.current);
+  }, []);
   const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
@@ -3892,7 +3897,7 @@ export function CardVisionApp() {
   const lastSavedKey = useRef<string | null>(null);
   const backupInputRef = useRef<HTMLInputElement | null>(null);
   const fullBackupInputRef = useRef<HTMLInputElement | null>(null);
-  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true });
+  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true });
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [migrationLog, setMigrationLog] = useState<string[]>([]);
   const [backupPassword, setBackupPassword] = useState('');
@@ -4376,34 +4381,24 @@ export function CardVisionApp() {
     setRulesStatus('Pacote de regras exportado. Você pode hospedar esse JSON e atualizar o APK por URL depois.');
   }
 
+  function requireSecureAccountCloud(): void {
+    if (!account?.cloudEnabled) throw new Error('A nuvem segura desta conta não está disponível. O Cofre antigo e compartilhado foi removido.');
+  }
+
   async function pushCloudHistory(items: SavedAnalysis[] = history, silent = false) {
     if (!items.length) {
       if (!silent) setCloudStatus('Nenhuma ficha local para enviar à nuvem.');
       return;
     }
-
     setCloudLoading(true);
     try {
-      if (account?.cloudEnabled) {
-        await syncAccountVault({ items: items.slice(0, HISTORY_LIMIT), version: APP_DATA_VERSION });
-        const message = `Nuvem da conta atualizada com ${items.length} ficha(s).`;
-        setCloudStatus(message);
-        if (!silent) setStatus(message);
-        return;
-      }
-
-      const response = await fetch(getCloudApiUrl(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: items.slice(0, HISTORY_LIMIT) })
-      });
-      const payload = await response.json().catch(() => null) as { count?: number; message?: string } | null;
-      if (!response.ok) throw new Error(payload?.message || 'Não consegui salvar na nuvem agora.');
-      const message = `Nuvem atualizada com ${payload?.count ?? items.length} ficha(s).`;
+      requireSecureAccountCloud();
+      await syncAccountVault({ items: items.slice(0, HISTORY_LIMIT), version: APP_DATA_VERSION });
+      const message = `Nuvem segura da conta atualizada com ${items.length} ficha(s).`;
       setCloudStatus(message);
       if (!silent) setStatus(message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao sincronizar a nuvem.';
+      const message = error instanceof Error ? error.message : 'Falha ao sincronizar a nuvem segura.';
       if (!silent) {
         setCloudStatus(message);
         setStatus(`${message} O Cofre local da conta continua funcionando normalmente.`);
@@ -4416,32 +4411,24 @@ export function CardVisionApp() {
   async function pullCloudHistory() {
     setCloudLoading(true);
     try {
-      let cloudItems: SavedAnalysis[] = [];
-      if (account?.cloudEnabled) {
-        const snapshot = await loadAccountVault<{ items?: unknown[] }>();
-        cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
-      } else {
-        const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
-        const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
-        if (!response.ok) throw new Error(payload?.message || 'Não consegui buscar fichas na nuvem agora.');
-        cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
-      }
+      requireSecureAccountCloud();
+      const snapshot = await loadAccountVault<{ items?: unknown[] }>();
+      const cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
       if (!cloudItems.length) {
-        setCloudStatus('A nuvem está conectada, mas ainda não há fichas salvas nesta conta.');
+        setCloudStatus('A nuvem segura está conectada, mas ainda não há fichas salvas nesta conta.');
         return;
       }
-
       setHistory((current) => {
         const next = mergeHistoryLists(cloudItems, current);
         void persistHistoryStore(next);
         return next;
       });
       setLibraryOpen(true);
-      const message = `Baixei ${cloudItems.length} ficha(s) da nuvem desta conta.`;
+      const message = `Baixei ${cloudItems.length} ficha(s) da nuvem segura desta conta.`;
       setCloudStatus(message);
       setStatus(message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao baixar fichas da nuvem.';
+      const message = error instanceof Error ? error.message : 'Falha ao baixar fichas da nuvem segura.';
       setCloudStatus(message);
       setStatus(`${message} O Cofre local permanece protegido.`);
     } finally {
@@ -4452,39 +4439,19 @@ export function CardVisionApp() {
   async function syncCloudHistory() {
     setCloudLoading(true);
     try {
-      let cloudItems: SavedAnalysis[] = [];
-      if (account?.cloudEnabled) {
-        const snapshot = await loadAccountVault<{ items?: unknown[] }>();
-        cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
-      } else {
-        const response = await fetch(getCloudApiUrl(), { method: 'GET', cache: 'no-store' });
-        const payload = await response.json().catch(() => null) as { items?: unknown[]; message?: string } | null;
-        if (!response.ok) throw new Error(payload?.message || 'A nuvem ainda não está configurada.');
-        cloudItems = normalizeHistoryList(Array.isArray(payload?.items) ? payload.items : []);
-      }
-
+      requireSecureAccountCloud();
+      const snapshot = await loadAccountVault<{ items?: unknown[] }>();
+      const cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
       const merged = mergeHistoryLists(history, cloudItems);
       await persistHistoryStore(merged);
       setHistory(merged);
-
-      if (account?.cloudEnabled) {
-        await syncAccountVault({ items: merged, version: APP_DATA_VERSION });
-      } else {
-        const saveResponse = await fetch(getCloudApiUrl(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: merged })
-        });
-        const savePayload = await saveResponse.json().catch(() => null) as { message?: string } | null;
-        if (!saveResponse.ok) throw new Error(savePayload?.message || 'Não consegui atualizar a nuvem.');
-      }
-
+      await syncAccountVault({ items: merged, version: APP_DATA_VERSION });
       setLibraryOpen(true);
-      const message = `Sincronização concluída: ${merged.length} ficha(s) na conta.`;
+      const message = `Sincronização segura concluída: ${merged.length} ficha(s) nesta conta.`;
       setCloudStatus(message);
       setStatus(message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao sincronizar a nuvem.';
+      const message = error instanceof Error ? error.message : 'Falha ao sincronizar a nuvem segura.';
       setCloudStatus(message);
       setStatus(`${message} O salvamento local permanece ativo.`);
     } finally {
@@ -4494,13 +4461,10 @@ export function CardVisionApp() {
 
   async function deleteCloudHistoryItem(item: SavedAnalysis) {
     try {
-      if (account?.cloudEnabled) {
-        const next = history.filter((entry) => entry.id !== item.id && entry.saveKey !== item.saveKey);
-        if (next.length) await syncAccountVault({ items: next, version: APP_DATA_VERSION });
-        else await deleteAccountVault();
-        return;
-      }
-      await fetch(`${getCloudApiUrl()}?id=${encodeURIComponent(item.saveKey || item.id)}`, { method: 'DELETE' });
+      if (!account?.cloudEnabled) return;
+      const next = history.filter((entry) => entry.id !== item.id && entry.saveKey !== item.saveKey);
+      if (next.length) await syncAccountVault({ items: next, version: APP_DATA_VERSION });
+      else await deleteAccountVault();
     } catch {
       // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
@@ -4655,7 +4619,7 @@ export function CardVisionApp() {
     }
   }
 
-  function collectFullBackupSections(): BackupEnvelope['sections'] {
+  async function collectFullBackupSections(): Promise<BackupEnvelope['sections']> {
     return {
       history,
       settings: {
@@ -4681,7 +4645,10 @@ export function CardVisionApp() {
         centralIntelligence: readJsonStorage(CENTRAL_MIGRATION_STORAGE_KEY, null),
         centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null)
       },
-      session: readJsonStorage(ACTIVE_SESSION_KEY, null)
+      session: readJsonStorage(ACTIVE_SESSION_KEY, null),
+      tacticalStudio: exportTacticalPosterLibrary(),
+      customFormations: readJsonStorage('buildmaster_custom_formations_v26_77', []),
+      imageGallery: await exportTacticalImageLibrary()
     };
   }
 
@@ -4715,7 +4682,7 @@ export function CardVisionApp() {
 
   async function exportFullBackup() {
     try {
-      const envelope = createBackupEnvelope(collectFullBackupSections());
+      const envelope = createBackupEnvelope(await collectFullBackupSections());
       await downloadEncryptedBackup(envelope, `buildmaster-backup-completo-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
       writeAccountStorage('buildmaster_last_full_backup_v25_49', envelope.exportedAt);
       setLastBackupAt(envelope.exportedAt);
@@ -4756,7 +4723,7 @@ export function CardVisionApp() {
 
   async function prepareBackupForUpdate() {
     await persistHistoryStore(history);
-    const envelope = createBackupEnvelope(collectFullBackupSections());
+    const envelope = createBackupEnvelope(await collectFullBackupSections());
     await runtimePut('builds', 'update-recovery', {
       createdAt: envelope.exportedAt,
       dataVersion: APP_DATA_VERSION,
@@ -4768,6 +4735,7 @@ export function CardVisionApp() {
   }
 
   async function readBackupFile(file: File): Promise<unknown> {
+    if (file.size > 240 * 1024 * 1024) throw new Error('O backup ultrapassa o limite seguro de 240 MB.');
     const parsed = JSON.parse(await file.text()) as unknown;
     if (!isEncryptedBackupFile(parsed)) return parsed;
     const password = await resolveBackupPassword();
@@ -4844,6 +4812,9 @@ export function CardVisionApp() {
           setTeamStyle(profile.teamStyle);
         }
       }
+      if (restoreSections.tacticalStudio && sections.tacticalStudio) replaceTacticalPosterLibrary(sections.tacticalStudio);
+      if (restoreSections.customFormations && Array.isArray(sections.customFormations)) writeStorage('buildmaster_custom_formations_v26_77', sections.customFormations);
+      if (restoreSections.imageGallery && sections.imageGallery) await importTacticalImageLibrary(sections.imageGallery);
       if (restoreSections.session && sections.session) writeStorage(ACTIVE_SESSION_KEY, sections.session);
       setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
       setStatus(`Restauração concluída. ${migrated.steps.length ? 'Dados antigos foram migrados com segurança.' : 'O backup já estava no formato atual.'}`);
@@ -5098,9 +5069,17 @@ export function CardVisionApp() {
   }
 
   async function handleFile(file: File) {
+    try {
+      await validateImageFile(file);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Imagem inválida.');
+      return;
+    }
     setFileName(file.name);
     setSelectedFile(file);
-    setPreview(URL.createObjectURL(file));
+    if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
+    previewObjectUrlRef.current = URL.createObjectURL(file);
+    setPreview(previewObjectUrlRef.current);
     setPlayerCardImage(null);
     setResult(null);
     setDraftResult(null);
@@ -5113,6 +5092,7 @@ export function CardVisionApp() {
     setTotalReadingSession(null);
     setSinglePrintSession(null);
     setReadingConfirmations({});
+    if (enhancedObjectUrlRef.current) { URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = null; }
     setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
 
@@ -5124,7 +5104,11 @@ export function CardVisionApp() {
     const nextMode = suggestedEnhancement(quality);
     setEnhancementMode(nextMode);
     const enhanced = await enhanceImageLocally(file, nextMode === 'original' ? 'adaptive' : nextMode).catch(() => null);
-    if (enhanced) setEnhancedPreview(URL.createObjectURL(enhanced));
+    if (enhanced) {
+      if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current);
+      enhancedObjectUrlRef.current = URL.createObjectURL(enhanced);
+      setEnhancedPreview(enhancedObjectUrlRef.current);
+    }
     if (quality?.issues.length) {
       setStatus(`Imagem selecionada, mas revise o print: ${quality.issues[0].message}`);
     }
@@ -6167,7 +6151,7 @@ export function CardVisionApp() {
                   setEnhancementMode(mode);
                   if (!selectedFile || mode === 'original') { setEnhancedPreview(null); return; }
                   const enhanced = await enhanceImageLocally(selectedFile, mode === 'adaptive' ? 'adaptive' : mode).catch(() => null);
-                  if (enhanced) setEnhancedPreview(URL.createObjectURL(enhanced));
+                  if (enhanced) { if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = URL.createObjectURL(enhanced); setEnhancedPreview(enhancedObjectUrlRef.current); }
                 }}>
                   <option value="adaptive">Melhoria automática</option>
                   <option value="contrast">Contraste reforçado</option>
@@ -6683,8 +6667,8 @@ export function CardVisionApp() {
                   <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
                   <button type="button" onClick={() => void exportHistoryBackup()} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo criptografado</small></button>
                   <button type="button" onClick={() => backupInputRef.current?.click()}><div><UploadCloud size={21} /></div><strong>Importar backup</strong><span>Restaure fichas salvas em outro aparelho.</span><small>O arquivo é validado antes</small></button>
-                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Nuvem opcional'}</small></button>
-                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <Download size={21} />}</div><strong>Baixar da conta</strong><span>Recupere a versão salva no servidor.</span><small>Mesclagem protegida</small></button>
+                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Supabase obrigatório'}</small></button>
+                  <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <Download size={21} />}</div><strong>Baixar da conta</strong><span>Recupere a versão salva no servidor.</span><small>Mesclagem protegida</small></button>
                   <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><div><Save size={21} /></div><strong>Backup completo</strong><span>Preferências, planos, regras e sessão atual.</span><small>Abrir Backup</small></button>
                   <input ref={backupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={importHistoryBackup} />
                 </div>
@@ -6854,10 +6838,10 @@ export function CardVisionApp() {
 
                     <div className="safety-actions-grid backup-final-actions">
                       <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
-                      <button type="button" onClick={() => void exportFullBackup()}><Download size={18} /><strong>Backup completo</strong><span>Cofre, preferências, planos, pastas, regras e sessão.</span><small>Proteção máxima</small></button>
+                      <button type="button" onClick={() => void exportFullBackup()}><Download size={18} /><strong>Backup completo</strong><span>Cofre, Estúdio Tático, imagens, formações, preferências, planos e regras.</span><small>Proteção máxima</small></button>
                       <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={18} /><strong>Restaurar arquivo</strong><span>Valida e migra o arquivo antes de aplicar.</span><small>Você escolhe as áreas</small></button>
-                      <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}<strong>Enviar Cofre para a conta</strong><span>Sincroniza somente os jogadores deste usuário.</span><small>{account?.cloudEnabled ? 'Servidor conectado' : 'Nuvem indisponível'}</small></button>
-                      <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <Download size={18} />}<strong>Baixar Cofre da conta</strong><span>Recupera a versão salva e mescla com segurança.</span><small>Dados separados por usuário</small></button>
+                      <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length || !account?.cloudEnabled}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}<strong>Enviar Cofre para a conta</strong><span>Sincroniza somente os jogadores deste usuário.</span><small>{account?.cloudEnabled ? 'Servidor conectado' : 'Nuvem indisponível'}</small></button>
+                      <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading || !account?.cloudEnabled}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <Download size={18} />}<strong>Baixar Cofre da conta</strong><span>Recupera a versão salva e mescla com segurança.</span><small>Dados separados por usuário</small></button>
                       <input ref={fullBackupInputRef} type="file" accept=".bmbak,application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
                     </div>
 
@@ -6867,7 +6851,7 @@ export function CardVisionApp() {
                       <summary>Escolher áreas da restauração</summary>
                       <div className="restore-select-panel">
                         <div className="restore-check-grid">
-                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['evolution', 'Cartas e validação real'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
+                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['evolution', 'Cartas e validação real'], ['tacticalStudio', 'Projetos do Estúdio Tático'], ['customFormations', 'Formações personalizadas'], ['imageGallery', 'Galeria de imagens'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
                         </div>
                         <p className="panel-note">Somente as áreas marcadas são substituídas. Faça um backup atual antes de restaurar outro arquivo.</p>
                       </div>
