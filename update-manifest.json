@@ -1,28 +1,28 @@
 {
   "schemaVersion": 2,
   "appId": "com.buildmaster.elitetatico",
-  "version": "27.38.0",
-  "versionCode": 1388000681,
-  "buildId": "699c0857e8f05dbb0417933b8d3bd8494830e0ad-1",
-  "publishedAt": "2026-07-23T17:16:52.575432+00:00",
+  "version": "27.39.0",
+  "versionCode": 1389000691,
+  "buildId": "6634ea05941054010f38892f5e90e073cbee1322-1",
+  "publishedAt": "2026-07-23T22:54:47.553646+00:00",
   "channel": "stable",
   "updateType": "apk",
   "notes": [
     "O APK imutável é a rota principal e nunca é substituído depois da publicação.",
-    "O Android DownloadManager é o transporte principal da v27.38; HTTP direto é apenas reserva.",
+    "O Android DownloadManager é o transporte principal da v27.39; HTTP direto é apenas reserva.",
     "As rotas versionada e latest permanecem como espelhos para compatibilidade.",
     "Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.",
     "O Estúdio Tático Local cria artes SVG e PNG sem API paga."
   ],
   "mandatory": true,
   "minNativeVersion": "27.0.0",
-  "checksum": "a5091386c707d626ec1e9db13a0745d31af86b65374d16ef0f848f2eedc68443",
-  "sizeBytes": 14830395,
-  "releaseTag": "buildmaster-v27.38.0-1388000681-01",
-  "assetName": "BuildMaster-Elite-Tatico-v27.38.0-138800068101-699c0857.apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-v27.38.0-1388000681-01/BuildMaster-Elite-Tatico-v27.38.0-138800068101-699c0857.apk",
+  "checksum": "f8dff55e9e491bf379542f3e5efb0af73c7c5bd587463201e916a1798fe04c55",
+  "sizeBytes": 14850875,
+  "releaseTag": "buildmaster-v27.39.0-1389000691-01",
+  "assetName": "BuildMaster-Elite-Tatico-v27.39.0-138900069101-6634ea05.apk",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-v27.39.0-1389000691-01/BuildMaster-Elite-Tatico-v27.39.0-138900069101-6634ea05.apk",
   "mirrors": [
-    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.38.0-138800068101-699c0857.apk?publication=30028515138-1-699c0857&code=1388000681",
-    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=30028515138-1-699c0857&code=1388000681"
+    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.39.0-138900069101-6634ea05.apk?publication=30051318944-1-6634ea05&code=1389000691",
+    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=30051318944-1-6634ea05&code=1389000691"
   ]
 }
