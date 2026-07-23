@@ -1857,7 +1857,7 @@ function trainingFor(position: PositionCode, objective: Objective, a: Required<A
 }
 
 function trainingCostRuleText() {
-  return 'Motor Adaptativo Elite v24.39: qualquer jogador de linha pode receber ficha para qualquer posição de linha escolhida. A posição-alvo manda; posição original, estilo e atributos servem apenas para preservar qualidades úteis, sem limitar a conversão, mantendo custo progressivo e orçamento real.';
+  return 'Motor Adaptativo Elite: qualquer jogador de linha pode receber ficha para qualquer posição de linha escolhida. A posição-alvo manda; posição original, estilo e atributos servem apenas para preservar qualidades úteis, sem limitar a conversão, mantendo custo progressivo e orçamento real.';
 }
 
 function skillPriority(position: PositionCode, objective: Objective) {

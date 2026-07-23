@@ -16,7 +16,7 @@ const backup = read('src/lib/dataSafety.ts');
 const workflow = read('.github/workflows/build-apk.yml');
 const oldStudioTest = read('tests/v27-32-tactical-studio-complete-regression.mjs');
 
-assert.equal(pkg.version, '27.38.0');
+assert.equal(pkg.version, '27.39.0');
 
 // 1. Cofre antigo removido.
 assert.equal(fs.existsSync('src/app/api/cloud/fichas/route.ts'), false);

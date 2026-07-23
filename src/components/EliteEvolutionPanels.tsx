@@ -32,7 +32,7 @@ function AbExperimentPanel({result}:{result:AnalysisResult}){
   if(!experiment)return null;
   function save(){const next=[{at:new Date().toISOString(),build,rating,note},...records].slice(0,40);setRecords(next);writeAccountStorage(storageKey,JSON.stringify(next));setNote('');}
   return <article className="luxury-panel wide-card">
-    <div className="section-title-row"><div><p className="kicker">v26.06–v26.09 • Aprendizado por carta</p><h3>Experimento A/B controlado</h3></div><span>{experiment.id}</span></div>
+    <div className="section-title-row"><div><p className="kicker">Aprendizado por carta</p><h3>Experimento A/B controlado</h3></div><span>{experiment.id}</span></div>
     <div className="skill-grid">
       <div className="skill-check-card"><strong>Ficha A</strong><span>{experiment.buildA}</span><em>{summary.countA} jogo(s) • média {summary.a?summary.a.toFixed(1):'—'}</em></div>
       <div className="skill-check-card"><strong>Ficha B</strong><span>{experiment.buildB}</span><em>{summary.countB} jogo(s) • média {summary.b?summary.b.toFixed(1):'—'}</em></div>
@@ -53,7 +53,7 @@ export function EliteEvolutionPanel({result}:{result:AnalysisResult}){
   if(!e)return null;
   return <>
     <article className="luxury-panel wide-card evolution-executive-card">
-      <div className="section-title-row"><div><p className="kicker">v25.97–v26.25 • Evolução total</p><h3>Resumo executivo desta ficha</h3></div><span>Confiança {e.confidence.score}/100</span></div>
+      <div className="section-title-row"><div><p className="kicker">Evolução total</p><h3>Resumo executivo desta ficha</h3></div><span>Confiança {e.confidence.score}/100</span></div>
       <div className="health-score-grid dna-score-grid">
         <article><strong>{e.usageContext.contextScore}</strong><span>Contexto real</span></article>
         <article><strong>{e.proof.candidatesTested}</strong><span>Fichas testadas</span></article>
@@ -109,7 +109,7 @@ export function VideoReviewPanel({result}:{result:AnalysisResult}){
   function addMarker(){const seconds=Math.round(videoRef.current?.currentTime??0);const row={id:createStableId('video-marker'),at:new Date().toISOString(),seconds,error:markerType,note};const next=[...markers,row].sort((a,b)=>a.seconds-b.seconds);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));setNote('');}
   function remove(id:string){const next=markers.filter(x=>x.id!==id);setMarkers(next);writeAccountStorage(key,JSON.stringify(next));}
   return <article className="luxury-panel wide-card video-review-card">
-    <div className="section-title-row"><div><p className="kicker">v26.10–v26.13 • Vídeo e treino adaptativo</p><h3>Análise assistida da jogabilidade</h3></div><span>{markers.length} lance(s)</span></div>
+    <div className="section-title-row"><div><p className="kicker">Vídeo e treino adaptativo</p><h3>Análise assistida da jogabilidade</h3></div><span>{markers.length} lance(s)</span></div>
     <label className="file-picker"><span>Selecionar vídeo do aparelho</span><input type="file" accept="video/*" onChange={event=>chooseVideo(event.target.files?.[0])}/></label>
     {videoUrl?<video ref={videoRef} controls playsInline src={videoUrl}/>:<p className="panel-note">O vídeo não é enviado. Ele é aberto localmente e apenas os marcadores são salvos.</p>}
     <div className="form-grid"><label><span>Erro ou ação</span><select value={markerType} onChange={e2=>setMarkerType(e2.target.value)}>{e.videoAssist.supportedMarkers.map(item=><option key={item}>{item}</option>)}</select></label><label className="wide-field"><span>Correção/observação</span><input value={note} onChange={e2=>setNote(e2.target.value)} placeholder="O que deveria fazer neste lance?"/></label></div>
@@ -137,7 +137,7 @@ export function StabilityDiagnosticsPanel({result}:{result?:AnalysisResult}){
   function save(){const row={at:new Date().toISOString(),profile,rating,symptom,note};const next=[row,...records].slice(0,60);setRecords(next);writeAccountStorage(storageKey,JSON.stringify(next));setNote('');}
   function exportReport(){const payload={version:'26.25',createdAt:new Date().toISOString(),records,notice:'Relatório local; não mede diretamente o servidor do eFootball.'};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='buildmaster-diagnostico-estabilidade.json';a.click();URL.revokeObjectURL(url);}
   return <section className="luxury-panel wide-card">
-    <div className="section-title-row"><div><p className="kicker">v26.14–v26.17 • Estabilidade comparativa</p><h3>Teste condições, salve perfis e separe as causas</h3></div><span>{records.length} teste(s)</span></div>
+    <div className="section-title-row"><div><p className="kicker">Estabilidade comparativa</p><h3>Teste condições, salve perfis e separe as causas</h3></div><span>{records.length} teste(s)</span></div>
     <div className="skill-grid">{profiles.map(item=><div className="skill-check-card" key={item.name}><strong>{item.name}</strong><span>{item.fps} FPS • gráfico {item.graphics} • {item.network}</span><small>{item.batterySaver?'Economia ligada':'Economia desligada'} • {item.backgroundApps?'apps abertos':'apps fechados'}</small><em>{item.purpose}</em></div>)}</div>
     <div className="form-grid"><label><span>Perfil testado</span><select value={profile} onChange={ev=>setProfile(ev.target.value)}>{profiles.map(item=><option key={item.name}>{item.name}</option>)}</select></label><label><span>Resposta percebida: {rating}/10</span><input type="range" min="0" max="10" value={rating} onChange={ev=>setRating(Number(ev.target.value))}/></label><label><span>Sintoma</span><select value={symptom} onChange={ev=>setSymptom(ev.target.value)}><option>sem atraso perceptível</option><option>passe atrasado</option><option>queda visual/FPS</option><option>piora após alguns minutos</option><option>troca de marcador lenta</option><option>comando duplo</option></select></label><label className="wide-field"><span>Observação</span><input value={note} onChange={ev=>setNote(ev.target.value)} placeholder="Temperatura, rede, horário, partida..."/></label></div>
     <button type="button" onClick={save}>Salvar teste comparativo</button> <button type="button" onClick={exportReport}>Exportar diagnóstico</button>

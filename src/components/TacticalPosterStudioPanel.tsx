@@ -76,6 +76,7 @@ type PosterTemplate = {
 };
 
 type ExportScale = 1 | 1.5 | 2;
+type StudioTab = 'editar' | 'movimentos' | 'instrucoes' | 'exportar';
 
 const PALETTES: Array<{ value: TacticalPosterPalette; label: string }> = [
   { value: 'ouro', label: 'Ouro Premium' },
@@ -169,6 +170,16 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   const [projectName, setProjectName] = useState(`${formation.name} • arte tática`);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const initialLoadRef = useRef(false);
+  const [studioTab, setStudioTab] = useState<StudioTab>('editar');
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [lockedPlayers, setLockedPlayers] = useState<string[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [, setHistoryRevision] = useState(0);
+  const undoStackRef = useRef<TacticalPosterEditableState[]>([]);
+  const redoStackRef = useRef<TacticalPosterEditableState[]>([]);
+  const lastStateRef = useRef<TacticalPosterEditableState | null>(null);
+  const skipHistoryRef = useRef(false);
 
   const editableState = useMemo<TacticalPosterEditableState>(() => ({
     title,
@@ -193,6 +204,25 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     whyItWorks
   }), [attack, avoid, backgroundImageId, backgroundImageOpacity, customColors, defend, defensive, focus, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, subtitle, title, useAutomaticArrows, whyItWorks]);
 
+  useEffect(() => {
+    if (!initialLoadRef.current) {
+      lastStateRef.current = editableState;
+      return;
+    }
+    if (skipHistoryRef.current) {
+      skipHistoryRef.current = false;
+      lastStateRef.current = editableState;
+      return;
+    }
+    const previous = lastStateRef.current;
+    if (previous && JSON.stringify(previous) !== JSON.stringify(editableState)) {
+      undoStackRef.current = [...undoStackRef.current, previous].slice(-40);
+      redoStackRef.current = [];
+      setHistoryRevision((value) => value + 1);
+    }
+    lastStateRef.current = editableState;
+  }, [editableState]);
+
   function applyEditableState(state: TacticalPosterEditableState): void {
     setTitle(state.title);
     setSubtitle(state.subtitle);
@@ -214,6 +244,55 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setDefensive(state.defensive);
     setAvoid(state.avoid);
     setWhyItWorks(state.whyItWorks);
+  }
+
+  function applyHistoryState(state: TacticalPosterEditableState): void {
+    skipHistoryRef.current = true;
+    applyEditableState(state);
+  }
+
+  function undoEdit(): void {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return;
+    redoStackRef.current = [editableState, ...redoStackRef.current].slice(0, 40);
+    applyHistoryState(previous);
+    setHistoryRevision((value) => value + 1);
+    setMessage('Última alteração desfeita.');
+  }
+
+  function redoEdit(): void {
+    const next = redoStackRef.current.shift();
+    if (!next) return;
+    undoStackRef.current = [...undoStackRef.current, editableState].slice(-40);
+    applyHistoryState(next);
+    setHistoryRevision((value) => value + 1);
+    setMessage('Alteração refeita.');
+  }
+
+  function togglePlayerLock(slotId: string): void {
+    setLockedPlayers((current) => current.includes(slotId) ? current.filter((id) => id !== slotId) : [...current, slotId]);
+  }
+
+  function togglePlayerSelection(slotId: string): void {
+    setSelectedPlayers((current) => current.includes(slotId) ? current.filter((id) => id !== slotId) : [...current, slotId]);
+  }
+
+  function centerSelectedPlayers(): void {
+    if (!selectedPlayers.length) return;
+    setPlayerOverrides((current) => {
+      const next = { ...current };
+      for (const pick of lineup) {
+        if (!selectedPlayers.includes(pick.slot.id)) continue;
+        next[pick.slot.id] = { ...next[pick.slot.id], x: pick.slot.x, y: pick.slot.y };
+      }
+      return next;
+    });
+    setMessage(`${selectedPlayers.length} jogador(es) centralizado(s).`);
+  }
+
+  function lockSelectedPlayers(): void {
+    setLockedPlayers((current) => [...new Set([...current, ...selectedPlayers])]);
+    setMessage(`${selectedPlayers.length} jogador(es) bloqueado(s).`);
   }
 
   function resetAutomatic(): void {
@@ -390,6 +469,14 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setManualArrows((current) => current.filter((item) => item.id !== id));
   }
 
+  function duplicateManualArrow(id: string): void {
+    setManualArrows((current) => {
+      const source = current.find((item) => item.id === id);
+      if (!source || current.length >= 24) return current;
+      return [...current, { ...source, id: createStableId('poster-arrow'), label: source.label ? `${source.label} cópia` : '' }];
+    });
+  }
+
   function exportSvg(): void {
     downloadBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), `${safeFileName(`${title}-${formation.name}-${orientation}`)}.svg`);
     setMessage('Arte SVG salva. Ela continua editável e nítida em qualquer tamanho.');
@@ -516,12 +603,15 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   }
 
   function movePlayerFromPointer(slotId: string, event: ReactPointerEvent<HTMLButtonElement>): void {
+    if (lockedPlayers.includes(slotId)) return;
     const pitch = event.currentTarget.parentElement;
     if (!pitch) return;
     const rect = pitch.getBoundingClientRect();
-    const x = Math.max(2, Math.min(98, ((event.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(2, Math.min(98, ((event.clientY - rect.top) / rect.height) * 100));
-    updatePlayerOverride(slotId, { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
+    const rawX = Math.max(2, Math.min(98, ((event.clientX - rect.left) / rect.width) * 100));
+    const rawY = Math.max(2, Math.min(98, ((event.clientY - rect.top) / rect.height) * 100));
+    const x = snapToGrid ? Math.round(rawX / 5) * 5 : Math.round(rawX * 10) / 10;
+    const y = snapToGrid ? Math.round(rawY / 5) * 5 : Math.round(rawY * 10) / 10;
+    updatePlayerOverride(slotId, { x, y });
   }
 
   function saveProject(): void {
@@ -571,22 +661,42 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     setMessage('Projeto removido da biblioteca.');
   }
 
+  const exportWarnings = useMemo(() => {
+    const warnings: string[] = [];
+    if (!title.trim()) warnings.push('Defina um título antes de exportar.');
+    if (!options.showPlayerNames) warnings.push('Os nomes dos jogadores estão ocultos.');
+    if (!options.showArrows) warnings.push('As setas táticas estão ocultas.');
+    if (backgroundImageOpacity > 0.55) warnings.push('O fundo está forte e pode reduzir a leitura dos textos.');
+    if (manualArrows.filter((item) => item.enabled).length > 16) warnings.push('Muitas setas podem deixar a arte poluída.');
+    return warnings;
+  }, [backgroundImageOpacity, manualArrows, options.showArrows, options.showPlayerNames, title]);
+
   const outputSize = orientation === 'vertical'
     ? `${Math.round(1024 * exportScale)} × ${Math.round(1536 * exportScale)}`
     : `${Math.round(1536 * exportScale)} × ${Math.round(1024 * exportScale)}`;
 
   return (
-    <article className="tactical-poster-studio luxury-panel">
+    <article className={`tactical-poster-studio luxury-panel studio-tab-${studioTab}`}>
       <div className="section-title-row tactical-poster-heading">
         <div>
-          <p className="kicker"><Sparkles size={15}/> v27.38 • Estúdio Tático Completo • Meta 2026</p>
+          <p className="kicker"><Sparkles size={15}/> Estúdio Tático Completo • Meta 2026</p>
           <h3>Gere, edite, salve e compartilhe artes premium da sua formação</h3>
           <p>O app desenha campo, jogadores, setas e textos localmente em SVG, PNG e PDF. Não existe cobrança por imagem e nenhuma API de inteligência artificial é usada.</p>
         </div>
         <span className="tactical-local-badge"><ImageIcon size={15}/> offline e gratuito</span>
       </div>
 
-      <div className="tactical-template-strip" aria-label="Templates de arte tática">
+      <nav className="tactical-studio-tabs" aria-label="Etapas do Estúdio Tático">
+        <button type="button" className={studioTab === 'editar' ? 'active' : ''} onClick={() => setStudioTab('editar')}><Palette size={16}/> Editar</button>
+        <button type="button" className={studioTab === 'movimentos' ? 'active' : ''} onClick={() => setStudioTab('movimentos')}><WandSparkles size={16}/> Movimentos</button>
+        <button type="button" className={studioTab === 'instrucoes' ? 'active' : ''} onClick={() => setStudioTab('instrucoes')}><FileJson size={16}/> Instruções</button>
+        <button type="button" className={studioTab === 'exportar' ? 'active' : ''} onClick={() => setStudioTab('exportar')}><Download size={16}/> Exportar</button>
+        <span/>
+        <button type="button" onClick={undoEdit} disabled={!undoStackRef.current.length}><RefreshCcw size={15}/> Desfazer</button>
+        <button type="button" onClick={redoEdit} disabled={!redoStackRef.current.length}><RefreshCcw size={15}/> Refazer</button>
+      </nav>
+
+      <div className="tactical-template-strip studio-group-edit" aria-label="Templates de arte tática">
         {TEMPLATES.map((template) => (
           <button key={template.id} type="button" onClick={() => applyTemplate(template)}>
             <LayoutTemplate size={17}/><span><strong>{template.label}</strong><small>{template.description}</small></span>
@@ -610,7 +720,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
 
       <div className="tactical-poster-grid">
         <div className="tactical-poster-editor">
-          <div className="tactical-poster-fields">
+          <div className="tactical-poster-fields studio-group-edit">
             <label><span>Título</span><input value={title} maxLength={58} onChange={(event) => setTitle(event.target.value)}/></label>
             <label><span>Subtítulo</span><input value={subtitle} maxLength={70} onChange={(event) => setSubtitle(event.target.value)}/></label>
             <label className="wide"><span>Foco da estratégia</span><input value={focus} maxLength={160} onChange={(event) => setFocus(event.target.value)}/></label>
@@ -619,7 +729,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
             <label><span>Qualidade PNG</span><select value={String(exportScale)} onChange={(event) => setExportScale(Number(event.target.value) as ExportScale)}><option value="1">Padrão</option><option value="1.5">Alta</option><option value="2">Ultra</option></select></label>
           </div>
 
-          <details open><summary>Elementos visuais</summary><div className="tactical-poster-toggles">
+          <details open className="studio-group-edit"><summary>Elementos visuais</summary><div className="tactical-poster-toggles">
             {([
               ['showArrows', 'Setas e linhas táticas'],
               ['showLegend', 'Legenda das linhas'],
@@ -631,7 +741,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
             ] as Array<[keyof TacticalPosterDisplayOptions, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={options[key]} onChange={(event) => updateOption(key, event.target.checked)}/><span>{label}</span></label>)}
           </div></details>
 
-          <details><summary>Cores personalizadas</summary><div className="tactical-custom-colors">
+          <details className="studio-group-edit"><summary>Cores personalizadas</summary><div className="tactical-custom-colors">
             <label><span>Destaque principal</span><input type="color" value={customColors.accent || '#f4c542'} onChange={(event) => updateCustomColor('accent', event.target.value)}/></label>
             <label><span>Reciclagem</span><input type="color" value={customColors.secondary || '#1fd3df'} onChange={(event) => updateCustomColor('secondary', event.target.value)}/></label>
             <label><span>Alertas</span><input type="color" value={customColors.danger || '#ff5a5f'} onChange={(event) => updateCustomColor('danger', event.target.value)}/></label>
@@ -639,7 +749,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
             <button type="button" onClick={() => setCustomColors({})}><RefreshCcw size={15}/> Usar cores do tema</button>
           </div></details>
 
-          <details open><summary>Galeria de imagens da conta</summary><div className="tactical-image-library">
+          <details open className="studio-group-edit"><summary>Galeria de imagens da conta</summary><div className="tactical-image-library">
             <div className="tactical-image-library-toolbar">
               <button type="button" onClick={() => importInputRef.current?.click()}><Upload size={15}/> Importar JPG, PNG e outros</button>
               <button type="button" onClick={() => setBackgroundImageId(undefined)} disabled={!backgroundImageId}><RefreshCcw size={15}/> Remover fundo</button>
@@ -654,23 +764,24 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
             </div>}
           </div></details>
 
-          <details><summary>Jogadores e funções exibidas</summary><div className="tactical-player-overrides">
-            <div className="tactical-position-editor" aria-label="Editor de posição dos jogadores">
+          <details className="studio-group-move"><summary>Jogadores e funções exibidas</summary><div className="tactical-player-overrides">
+            <div className="tactical-movement-toolbar"><label><input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)}/> Mostrar grade</label><label><input type="checkbox" checked={snapToGrid} onChange={(event) => setSnapToGrid(event.target.checked)}/> Encaixar em 5%</label><button type="button" onClick={() => setSelectedPlayers(lineup.map((pick) => pick.slot.id))}>Selecionar todos</button><button type="button" disabled={!selectedPlayers.length} onClick={centerSelectedPlayers}>Centralizar seleção</button><button type="button" disabled={!selectedPlayers.length} onClick={lockSelectedPlayers}>Bloquear seleção</button><button type="button" onClick={() => { setLockedPlayers([]); setSelectedPlayers([]); }}>Limpar seleção</button></div>
+            <div className={`tactical-position-editor ${showGrid ? 'show-grid' : ''}`} aria-label="Editor de posição dos jogadores">
               {lineup.map((pick) => {
                 const override = playerOverrides[pick.slot.id] ?? {};
                 const x = override.x ?? pick.slot.x;
                 const y = override.y ?? pick.slot.y;
-                return <button key={pick.slot.id} type="button" style={{ left: `${x}%`, top: `${y}%` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePlayerFromPointer(pick.slot.id, event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePlayerFromPointer(pick.slot.id, event); }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><strong>{pick.slot.label}</strong><span>{override.name || pick.player?.parsed.playerName || pick.slot.duty}</span></button>;
+                return <button key={pick.slot.id} type="button" className={`${lockedPlayers.includes(pick.slot.id) ? 'locked' : ''} ${selectedPlayers.includes(pick.slot.id) ? 'selected' : ''}`} aria-label={`${pick.slot.label}: ${lockedPlayers.includes(pick.slot.id) ? 'bloqueado' : 'arraste para mover'}`} style={{ left: `${x}%`, top: `${y}%` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePlayerFromPointer(pick.slot.id, event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePlayerFromPointer(pick.slot.id, event); }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><strong>{pick.slot.label}</strong><span>{override.name || pick.player?.parsed.playerName || pick.slot.duty}</span></button>;
               })}
             </div>
             <p className="panel-note">Arraste cada jogador no mini campo. A posição fica salva no projeto e também altera as linhas inteligentes.</p>
             {lineup.map((pick) => {
               const override = playerOverrides[pick.slot.id] ?? {};
-              return <div className="tactical-player-row" key={pick.slot.id}><strong>{pick.slot.label}</strong><input aria-label={`Nome em ${pick.slot.label}`} placeholder={pick.player?.parsed.playerName || 'Nome opcional'} value={override.name ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { name: event.target.value })}/><input aria-label={`Função em ${pick.slot.label}`} placeholder={pick.slot.duty} value={override.role ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { role: event.target.value })}/><button type="button" onClick={() => updatePlayerOverride(pick.slot.id, { x: pick.slot.x, y: pick.slot.y })}>Centralizar</button></div>;
+              return <div className="tactical-player-row" key={pick.slot.id}><strong>{pick.slot.label}</strong><input aria-label={`Nome em ${pick.slot.label}`} placeholder={pick.player?.parsed.playerName || 'Nome opcional'} value={override.name ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { name: event.target.value })}/><input aria-label={`Função em ${pick.slot.label}`} placeholder={pick.slot.duty} value={override.role ?? ''} onChange={(event) => updatePlayerOverride(pick.slot.id, { role: event.target.value })}/><button type="button" aria-pressed={selectedPlayers.includes(pick.slot.id)} onClick={() => togglePlayerSelection(pick.slot.id)}>{selectedPlayers.includes(pick.slot.id) ? 'Selecionado' : 'Selecionar'}</button><button type="button" onClick={() => updatePlayerOverride(pick.slot.id, { x: pick.slot.x, y: pick.slot.y })}>Centralizar</button><button type="button" aria-pressed={lockedPlayers.includes(pick.slot.id)} onClick={() => togglePlayerLock(pick.slot.id)}>{lockedPlayers.includes(pick.slot.id) ? 'Desbloquear' : 'Bloquear'}</button></div>;
             })}
           </div></details>
 
-          <details open><summary>Setas e linhas editáveis</summary><div className="tactical-arrow-editor">
+          <details open className="studio-group-move"><summary>Setas e linhas editáveis</summary><div className="tactical-arrow-editor">
             <div className="tactical-arrow-toolbar">
               <label><input type="checkbox" checked={useAutomaticArrows} onChange={(event) => setUseAutomaticArrows(event.target.checked)}/><span>Manter linhas automáticas inteligentes</span></label>
               <button type="button" onClick={convertAutomaticArrows}><WandSparkles size={15}/> Tornar automáticas editáveis</button>
@@ -685,26 +796,28 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
                 <label><span>Curva {item.bend}</span><input type="range" min={-90} max={90} step={5} value={item.bend} onChange={(event) => updateManualArrow(item.id, { bend: Number(event.target.value) })}/></label>
                 <label><span>Legenda opcional</span><input value={item.label || ''} maxLength={40} onChange={(event) => updateManualArrow(item.id, { label: event.target.value })}/></label>
                 <label className="tactical-arrow-enabled"><input type="checkbox" checked={item.enabled} onChange={(event) => updateManualArrow(item.id, { enabled: event.target.checked })}/><span>Ativa</span></label>
+                <button type="button" aria-label={`Duplicar linha ${index + 1}`} onClick={() => duplicateManualArrow(item.id)}><Copy size={15}/></button>
                 <button type="button" aria-label={`Excluir linha ${index + 1}`} onClick={() => removeManualArrow(item.id)}><Trash2 size={15}/></button>
               </div>)}
             </div>}
           </div></details>
 
-          <details open><summary>Instruções durante a partida</summary><div className="tactical-poster-textareas">
+          <details open className="studio-group-instructions"><summary>Instruções durante a partida</summary><div className="tactical-poster-textareas">
             <label><span>Passe certo</span><textarea value={passing} onChange={(event) => setPassing(event.target.value)} rows={5}/></label>
             <label><span>Quando voltar</span><textarea value={recycle} onChange={(event) => setRecycle(event.target.value)} rows={5}/></label>
             <label><span>Quando atacar</span><textarea value={attack} onChange={(event) => setAttack(event.target.value)} rows={5}/></label>
             <label><span>Como defender</span><textarea value={defend} onChange={(event) => setDefend(event.target.value)} rows={5}/></label>
           </div></details>
 
-          <details><summary>Princípios, riscos e explicação</summary><div className="tactical-poster-textareas">
+          <details className="studio-group-instructions"><summary>Princípios, riscos e explicação</summary><div className="tactical-poster-textareas">
             <label><span>Princípios ofensivos</span><textarea value={offensive} onChange={(event) => setOffensive(event.target.value)} rows={5}/></label>
             <label><span>Princípios defensivos</span><textarea value={defensive} onChange={(event) => setDefensive(event.target.value)} rows={5}/></label>
             <label><span>Erros a evitar</span><textarea value={avoid} onChange={(event) => setAvoid(event.target.value)} rows={5}/></label>
             <label><span>Por que rende</span><textarea value={whyItWorks} onChange={(event) => setWhyItWorks(event.target.value)} rows={5}/></label>
           </div></details>
 
-          <div className="tactical-poster-actions">
+          <section className="tactical-export-preflight studio-group-export" aria-label="Validação antes da exportação"><strong>Validação visual</strong>{exportWarnings.length ? exportWarnings.map((warning) => <span key={warning}>{warning}</span>) : <span>Arte pronta: área segura, título e elementos principais verificados.</span>}<small>Tamanho de saída: {outputSize}</small></section>
+          <div className="tactical-poster-actions studio-group-export">
             <button type="button" className="elite-button" onClick={exportSvg}><Download size={16}/> SVG editável</button>
             <button type="button" className="elite-button secondary" onClick={() => void exportPng()} disabled={exporting}><FileImage size={16}/> {exporting ? 'Gerando…' : 'PNG em alta'}</button>
             <button type="button" className="elite-button secondary" onClick={printOrPdf}><Printer size={16}/> Imprimir / PDF</button>

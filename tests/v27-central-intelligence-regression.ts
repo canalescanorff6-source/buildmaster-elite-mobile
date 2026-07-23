@@ -124,7 +124,7 @@ assert.match(migration.note, /não destrutiva/i);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
-assert.equal(pkg.version, '27.38.0');
+assert.equal(pkg.version, '27.39.0');
 assert.match(app, /IntegratedHomePanel/);
 assert.match(app, /PlayerLaboratory/);
 assert.match(app, /dynamic\(\(\) => import\('@\/modules\/players\/PlayerLaboratory'\)/);

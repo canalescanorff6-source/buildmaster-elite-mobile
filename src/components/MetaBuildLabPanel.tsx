@@ -28,7 +28,7 @@ export function MetaBuildLabPanel({universe}:{universe:MetaBuildUniverse}){
     try{await navigator.clipboard.writeText(text);}catch{/* WebViews antigos podem negar clipboard. */}
   }
   return <article className="luxury-panel wide-card meta-universe-card">
-    <div className="section-title-row"><div><p className="kicker">v26.50 • Universo de Fichas Meta 2026</p><h3>Laboratório Meta desta carta</h3></div><span>{universe.candidatesAnalyzed.toLocaleString('pt-BR')} combinações</span></div>
+    <div className="section-title-row"><div><p className="kicker">Universo de Fichas Meta 2026</p><h3>Laboratório Meta desta carta</h3></div><span>{universe.candidatesAnalyzed.toLocaleString('pt-BR')} combinações</span></div>
     <p className="panel-note">{universe.verdict}</p>
     <div className="health-score-grid dna-score-grid">
       <article><strong>{universe.topBuilds[0]?.score??0}</strong><span>Melhor nota meta</span></article>

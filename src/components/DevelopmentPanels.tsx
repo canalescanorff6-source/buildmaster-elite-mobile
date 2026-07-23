@@ -23,24 +23,24 @@ export function SkillAndTrainingPanel({result}:{result:AnalysisResult}){
   function saveDrill(drillId:string){const next=[{at:new Date().toISOString(),drillId,score,errors:selectedErrors,note},...logs].slice(0,100);setLogs(next);writeAccountStorage(TRAINING_LOG_KEY,JSON.stringify(next));setNote('');}
   return <div className="result-section-grid">
     <article className="luxury-panel wide-card">
-      <div className="section-title-row"><div><p className="kicker">v25.65 • Habilidades especiais</p><h3>Aproveitamento real na posição escolhida</h3></div><span>{skillUsage.overall}/100</span></div>
+      <div className="section-title-row"><div><p className="kicker">Habilidades especiais</p><h3>Aproveitamento real na posição escolhida</h3></div><span>{skillUsage.overall}/100</span></div>
       <div className="skill-grid">{skillUsage.items.map(item=><div className="skill-check-card" key={item.name}><strong>{item.name} • {item.score}/100</strong><span>{item.activation} • {item.source}</span><small>Fortalecer: {item.helpfulAttributes.join(' • ')}</small><em>Uso: {item.bestUse}</em>{item.warning&&<b>{item.warning}</b>}</div>)}{!skillUsage.items.length&&<p className="panel-note">Nenhuma habilidade especial foi confirmada. Revise o print ou marque as habilidades existentes.</p>}</div>
       <p className="panel-note">{skillUsage.summary.join(' ')}</p>
     </article>
     <article className="luxury-panel wide-card">
-      <div className="section-title-row"><div><p className="kicker">v25.66–v25.67 • Treinos repetíveis</p><h3>Defesa e ataque com erro, correção e meta</h3></div><span>{logs.length} registros</span></div>
+      <div className="section-title-row"><div><p className="kicker">Treinos repetíveis</p><h3>Defesa e ataque com erro, correção e meta</h3></div><span>{logs.length} registros</span></div>
       <div className="segmented"><button className={area==='defesa'?'active':''} onClick={()=>setArea('defesa')}>Defesa</button><button className={area==='ataque'?'active':''} onClick={()=>setArea('ataque')}>Ataque</button></div>
       <div className="skill-grid">{TRAINING_DRILLS.filter(d=>d.area===area).map(drill=><div className="skill-check-card" key={drill.id}><strong>{drill.title}</strong><span>{drill.duration} min • {drill.repetitions} repetições</span><small>{drill.objective}</small><em>Erro comum: {drill.commonError}</em><b>Correção: {drill.correction}</b><button onClick={()=>saveDrill(drill.id)}>Registrar treino • nota {score}/10</button></div>)}</div>
       <label><span>Nota do bloco: {score}/10</span><input type="range" min="0" max="10" value={score} onChange={e=>setScore(Number(e.target.value))}/></label>
       <label><span>Observação</span><input value={note} onChange={e=>setNote(e.target.value)} placeholder="O que melhorou ou ainda errou?"/></label>
     </article>
     <article className="luxury-panel wide-card">
-      <div className="section-title-row"><div><p className="kicker">v25.68 • Erros e correção</p><h3>Marque o que aconteceu no treino ou partida</h3></div><span>{selectedErrors.length} selecionados</span></div>
+      <div className="section-title-row"><div><p className="kicker">Erros e correção</p><h3>Marque o que aconteceu no treino ou partida</h3></div><span>{selectedErrors.length} selecionados</span></div>
       <div className="restore-check-grid">{ERROR_OPTIONS.map(error=><label key={error}><input type="checkbox" checked={selectedErrors.includes(error)} onChange={()=>setSelectedErrors(v=>v.includes(error)?v.filter(x=>x!==error):[...v,error])}/><span>{error}</span></label>)}</div>
       <div className="integrity-report-panel">{errorCounts.slice(0,5).map(([error,count])=><span key={error}><b>{count}x</b>{error}</span>)}{!errorCounts.length&&<span>Registre erros para o app encontrar padrões.</span>}</div>
     </article>
     <article className="luxury-panel wide-card">
-      <div className="section-title-row"><div><p className="kicker">v25.69 • Plano semanal</p><h3>Rotina adaptada aos erros mais repetidos</h3></div><select value={sessions} onChange={e=>setSessions(Number(e.target.value))}><option value={2}>2 dias</option><option value={3}>3 dias</option><option value={4}>4 dias</option><option value={5}>5 dias</option></select></div>
+      <div className="section-title-row"><div><p className="kicker">Plano semanal</p><h3>Rotina adaptada aos erros mais repetidos</h3></div><select value={sessions} onChange={e=>setSessions(Number(e.target.value))}><option value={2}>2 dias</option><option value={3}>3 dias</option><option value={4}>4 dias</option><option value={5}>5 dias</option></select></div>
       <div className="skill-grid">{weekly.map(day=><div className="skill-check-card" key={day.day}><strong>Dia {day.day}</strong><span>{day.drills.map(d=>d.title).join(' + ')}</span><small>{day.drills.reduce((s,d)=>s+d.duration,0)} minutos</small><em>{day.review}</em></div>)}</div>
     </article>
   </div>;
@@ -53,7 +53,7 @@ export function DelayResponsePanel(){
   const tap=useMemo(()=>summarizeTapSamples(samples),[samples]);
   const symptoms:DelaySymptom[]=['passe atrasado','jogador demora a virar','chute não responde','troca lenta','comando duplo','imagem trava','fica pesado depois de minutos'];
   return <section className="luxury-panel wide-card">
-    <div className="section-title-row"><div><p className="kicker">v25.70–v25.72 • Delay e resposta</p><h3>Configuração, teste local e diagnóstico</h3></div><span>Causa provável: {diagnosis.primary}</span></div>
+    <div className="section-title-row"><div><p className="kicker">Delay e resposta</p><h3>Configuração, teste local e diagnóstico</h3></div><span>Causa provável: {diagnosis.primary}</span></div>
     <div className="form-grid">
       <label><span>FPS</span><select value={ctx.fps} onChange={e=>setCtx({...ctx,fps:Number(e.target.value) as 30|60})}><option value={60}>60 FPS</option><option value={30}>30 FPS</option></select></label>
       <label><span>Gráficos</span><select value={ctx.graphics} onChange={e=>setCtx({...ctx,graphics:e.target.value as DelayContext['graphics']})}><option>baixa</option><option>média</option><option>alta</option></select></label>

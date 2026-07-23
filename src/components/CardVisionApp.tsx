@@ -67,6 +67,10 @@ import { BuildQualityGatePanel } from '@/components/BuildQualityGatePanel';
 import { PanelLoadingFallback } from '@/components/PanelLoadingFallback';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
+import { RefinedNavigation } from '@/components/RefinedNavigation';
+import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
+import { LiveStatusRegion } from '@/components/LiveStatusRegion';
+import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
 import { buildBuildQualityGate, type BuildQualityTarget } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
 import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
@@ -110,6 +114,7 @@ import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/ac
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
 import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
+import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
 import { enqueueOcrFile, listOcrQueue, queueJobAsFile, removeOcrQueueJob, updateOcrQueueJob, type OcrQueueJob } from '@/modules/card-reader/ocrQueue';
 import { cropImage, mergeOcrTexts, preprocessImage } from '@/modules/card-reader/imageProcessing';
 
@@ -126,6 +131,21 @@ type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
 type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'tatica' | 'exportar';
 type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
+
+function navigationGroupFor(section: MainSection): MainNavigationGroup {
+  if (section === 'inicio' || section === 'time' || section === 'partidas' || section === 'ajustes') return section;
+  return 'jogadores';
+}
+
+function playerWorkspaceFor(section: MainSection): PlayerWorkspace {
+  if (section === 'leitor' || section === 'manual' || section === 'resultado' || section === 'cofre') return section;
+  return 'visao-geral';
+}
+
+function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorkspace = 'visao-geral'): MainSection {
+  if (group !== 'jogadores') return group;
+  return workspace === 'visao-geral' ? 'jogadores' : workspace;
+}
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
 type TeamCenterView = 'visao' | 'formacoes' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
@@ -296,7 +316,7 @@ type DynamicRulePack = {
 const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
   version: '24.29.0-local',
   updatedAt: new Date().toISOString(),
-  source: 'Pacote local embutido v24.29',
+  source: 'Pacote local embutido',
   globalBlockedSkills: [],
   globalBlockedImpetos: [],
   rules: [
@@ -2179,7 +2199,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
   }
   return <div className="result-section-grid">
     <article className="luxury-panel wide-card">
-      <div className="section-title-row"><div><p className="kicker">v24.64 • Resultados reais</p><h3>Calibração pós-partida</h3></div><span>{report.sampleCount} jogo(s)</span></div>
+      <div className="section-title-row"><div><p className="kicker">Resultados reais</p><h3>Calibração pós-partida</h3></div><span>{report.sampleCount} jogo(s)</span></div>
       <p className="panel-note">Registre o que você realmente sentiu em campo. O app procura padrões repetidos, mas nunca altera sua ficha sem sua decisão.</p>
       <div className="chip-cloud purple">{FEEDBACK_LABELS.map(({key,label}) => <button type="button" key={key} className={draft[key] ? 'active' : ''} onClick={() => setDraft((current) => ({ ...current, [key]: !current[key] }))}>{draft[key] ? '✓ ' : ''}{label}</button>)}</div>
       <div className="data-grid">
@@ -2190,7 +2210,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
       <button type="button" className="elite-button" onClick={saveFeedback}><Save size={17}/> Salvar resultado da partida</button>
     </article>
     <article className="luxury-panel wide-card">
-      <div className="section-title-row"><div><p className="kicker">v25.26–v25.32 • Calibração avançada</p><h3>Ficha, técnico, formação e realidade</h3></div><span>Confiança {advanced.prediction.confidence}</span></div>
+      <div className="section-title-row"><div><p className="kicker">Calibração avançada</p><h3>Ficha, técnico, formação e realidade</h3></div><span>Confiança {advanced.prediction.confidence}</span></div>
       <div className="data-grid">
         {[advanced.byBuild, advanced.byManager, advanced.byFormation].map((item) => <div key={item.label} className="skill-check-card"><strong>{item.label}</strong><span>{item.sampleCount} jogo(s) • nota média {item.averageRating || '--'}/10</span><small>Positivos {item.positiveRate}% • problemas {item.issueRate}% • confiança {item.confidence}</small></div>)}
       </div>
@@ -2471,7 +2491,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
       {tab === 'confianca' && (
         <div className="result-section-grid">
           <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker">v24.65 • Central de confiabilidade</p><h3>O que sustenta esta ficha</h3></div><span>{reliabilityCenter.score}/100 • {reliabilityCenter.level}</span></div>
+            <div className="section-title-row"><div><p className="kicker">Central de confiabilidade</p><h3>O que sustenta esta ficha</h3></div><span>{reliabilityCenter.score}/100 • {reliabilityCenter.level}</span></div>
             <div className="data-grid">
               <div><span>Confirmados</span><strong>{reliabilityCenter.confirmed}</strong></div>
               <div><span>Inferidos</span><strong>{reliabilityCenter.inferred}</strong></div>
@@ -2484,7 +2504,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
             <div className="position-list">{reliabilityCenter.items.map((item) => <div key={`${item.field}-${item.value}`}><strong>{item.field}: {item.value}</strong><span>{item.source} • {item.confidence}% • impacto {item.impact}</span><em>{item.note}</em></div>)}</div>
           </article>
           <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker">v24.68 • Detector de incoerências</p><h3>{inconsistencyReport.status === 'aprovado' ? 'Nenhum erro crítico encontrado' : 'Itens que precisam de revisão'}</h3></div><span>{inconsistencyReport.canGenerate ? 'Pode gerar' : 'Bloqueado'}</span></div>
+            <div className="section-title-row"><div><p className="kicker">Detector de incoerências</p><h3>{inconsistencyReport.status === 'aprovado' ? 'Nenhum erro crítico encontrado' : 'Itens que precisam de revisão'}</h3></div><span>{inconsistencyReport.canGenerate ? 'Pode gerar' : 'Bloqueado'}</span></div>
             {inconsistencyReport.issues.length ? <div className="position-list">{inconsistencyReport.issues.map((issue) => <div key={issue.code}><strong>{issue.severity.toUpperCase()} • {issue.title}</strong><span>{issue.detail}</span><em>{issue.correction}</em></div>)}</div> : <p>A posição escolhida, o orçamento, os atributos e os nomes oficiais passaram nas verificações.</p>}
           </article>
           {reliabilityCenter.alerts.length > 0 && <article className="luxury-panel wide-card"><p className="kicker">Atenção antes de finalizar</p><ul className="clean-list">{reliabilityCenter.alerts.map((x) => <li key={x}>{x}</li>)}</ul></article>}
@@ -2494,7 +2514,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
       {tab === 'comparar' && (
         <div className="result-section-grid">
           <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker">v24.66 • Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
+            <div className="section-title-row"><div><p className="kicker">Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
             <p>{buildComparison.reason}</p>
           </article>
           <article className="luxury-panel wide-card comparison-table-card">
@@ -2670,7 +2690,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
           <PrecisionBuildPanel result={result} />
           {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
             <div className="section-title-row">
-              <div><p className="kicker">v25.96 • Identidade da versão</p><h3>Ficha única desta carta</h3></div>
+              <div><p className="kicker">Identidade da versão</p><h3>Ficha única desta carta</h3></div>
               <span>{result.playerIdentity.signature}</span>
             </div>
             <p className="panel-note"><b>{result.playerIdentity.profileLabel}</b> • Individualidade {result.playerIdentity.individualityScore}/100</p>
@@ -2685,7 +2705,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           {result.cardDna && <article className="luxury-panel wide-card dna-card">
             <div className="section-title-row">
-              <div><p className="kicker">v25.96 • DNA, precisão máxima e anticlone</p><h3>{result.cardDna.identityLabel}</h3></div>
+              <div><p className="kicker">DNA, precisão máxima e anticlone</p><h3>{result.cardDna.identityLabel}</h3></div>
               <span>{result.cardDna.antiClone.fingerprint}</span>
             </div>
             <div className="health-score-grid dna-score-grid">
@@ -2726,7 +2746,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           {result.maxPrecision && <article className="luxury-panel wide-card precision-max-card">
             <div className="section-title-row">
-              <div><p className="kicker">v25.84–v25.96 • Precisão máxima + Meta 2026</p><h3>Ficha cirúrgica desta versão</h3></div>
+              <div><p className="kicker">Precisão máxima + Meta 2026</p><h3>Ficha cirúrgica desta versão</h3></div>
               <span>{result.maxPrecision.versionIdentity.signature}</span>
             </div>
             <p className="panel-note"><b>{result.maxPrecision.versionIdentity.detectedVersion}</b> • confiança {result.maxPrecision.versionIdentity.confidence}/100</p>
@@ -2839,7 +2859,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.48 • Motor físico</p><h3>Corpo, mobilidade e resistência na posição escolhida</h3></div>
+              <div><p className="kicker">Motor físico</p><h3>Corpo, mobilidade e resistência na posição escolhida</h3></div>
               <span>{result.physicalEngine.suitabilityScore}/100</span>
             </div>
             <div className="data-grid">
@@ -2858,7 +2878,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.49 • Metas de atributos</p><h3>Faixas necessárias para {result.bestPosition.label}</h3></div>
+              <div><p className="kicker">Metas de atributos</p><h3>Faixas necessárias para {result.bestPosition.label}</h3></div>
               <span>{result.attributeGoals.readinessScore}/100</span>
             </div>
             <div className="comparison-table">
@@ -2870,7 +2890,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.50 • Otimizador avançado</p><h3>Auditoria da ficha vencedora</h3></div>
+              <div><p className="kicker">Otimizador avançado</p><h3>Auditoria da ficha vencedora</h3></div>
               <span>{result.advancedOptimizer.winnerScore}/100</span>
             </div>
             <div className="data-grid">
@@ -2887,7 +2907,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.72 • Limite de correção</p><h3>Corrigir sem descaracterizar o jogador</h3></div>
+              <div><p className="kicker">Limite de correção</p><h3>Corrigir sem descaracterizar o jogador</h3></div>
               <span>{result.correctionLimit.score}/100</span>
             </div>
             <p className="panel-note">{result.correctionLimit.summary}</p>
@@ -2898,7 +2918,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.73 • Retorno marginal</p><h3>Ganho do próximo ponto de treino</h3></div>
+              <div><p className="kicker">Retorno marginal</p><h3>Ganho do próximo ponto de treino</h3></div>
               <span>{result.marginalReturn[0]?.marginalGain ?? 0} melhor ganho</span>
             </div>
             <div className="comparison-table">
@@ -2909,7 +2929,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.74 • Tolerância a erro</p><h3>Três cenários para dados incertos</h3></div>
+              <div><p className="kicker">Tolerância a erro</p><h3>Três cenários para dados incertos</h3></div>
               <span>Confiança {result.errorTolerance.confidence}</span>
             </div>
             <div className="build-variant-grid">
@@ -2921,7 +2941,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.46 • Função tática avançada</p><h3>Posição escolhida + estilo oficial preservado</h3></div>
+              <div><p className="kicker">Função tática avançada</p><h3>Posição escolhida + estilo oficial preservado</h3></div>
               <span>{result.advancedTacticalFunction.compatibilityScore}/100</span>
             </div>
             <p className="panel-note"><b>{result.advancedTacticalFunction.officialPlaystyle ?? 'Estilo não identificado'}</b> • adaptação {result.advancedTacticalFunction.fitLabel}. {result.advancedTacticalFunction.activationNote}</p>
@@ -2953,7 +2973,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
         <div className="result-section-grid">
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.50 • Habilidades especiais</p><h3>Impacto das habilidades oficiais na posição escolhida</h3></div>
+              <div><p className="kicker">Habilidades especiais</p><h3>Impacto das habilidades oficiais na posição escolhida</h3></div>
               <span>{result.specialSkillsAnalysis.coverageScore}/100</span>
             </div>
             <div className="skill-grid">
@@ -2965,7 +2985,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
-              <div><p className="kicker">v24.89 • Prioridade de habilidades</p><h3>Fila oficial por impacto real</h3></div>
+              <div><p className="kicker">Prioridade de habilidades</p><h3>Fila oficial por impacto real</h3></div>
               <span>{result.skillPriority.officialOnly ? 'Catálogo oficial' : 'Revisar catálogo'}</span>
             </div>
             <div className="skill-grid">
@@ -3234,7 +3254,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                 <p className="kicker"><BrainCircuit size={14} /> Regras atualizáveis sem refazer APK</p>
                 <h3>Atualize habilidade, ímpeto e bloqueios por função usando um JSON online.</h3>
               </div>
-              <span>v24.38</span>
+              <span>Ficha técnica</span>
             </div>
             <p className="panel-note">Essa área permite ajustar recomendações depois que o APK já estiver instalado. Você hospeda um arquivo JSON público, cola a URL e toca em atualizar. O app salva o pacote no aparelho e aplica nas próximas fichas.</p>
             <div className="input-row">
@@ -3352,7 +3372,7 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
                 <p className="kicker">Exportação profissional</p>
                 <h3>Compartilhe ou arquive esta ficha sem perder o visual premium.</h3>
               </div>
-              <span>v24.38</span>
+              <span>Ficha técnica</span>
             </div>
             <p className="panel-note">Todos os formatos usam a ficha validada, os pontos exatos, as 5 habilidades oficiais, os ímpetos e o plano de uso em campo.</p>
             <div className="export-pro-actions">
@@ -3876,6 +3896,7 @@ export function CardVisionApp() {
   const [manualFields, setManualFields] = useState<ManualFields>(emptyManualFields());
   const [manualMode, setManualMode] = useState(false);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
+  const [vaultTrash, setVaultTrash] = useState<VaultTrashItem<SavedAnalysis>[]>(() => readVaultTrash<SavedAnalysis>());
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('ALL');
   const [historySort, setHistorySort] = useState<HistorySort>('UPDATED');
@@ -3902,7 +3923,19 @@ export function CardVisionApp() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-  const [mainSection, setMainSection] = useState<MainSection>('inicio');
+  const [mainSection, setMainSection] = useState<MainSection>(() => {
+    if (typeof window === 'undefined') return 'inicio';
+    const deepLink = parseInternalDeepLink(window.location.hash);
+    if (deepLink) return sectionForNavigation(deepLink.group, deepLink.workspace);
+    const snapshot = readNavigationSnapshot();
+    return snapshot ? sectionForNavigation(snapshot.group, snapshot.playerWorkspace) : 'inicio';
+  });
+  const [playerWorkspace, setPlayerWorkspace] = useState<PlayerWorkspace>(() => {
+    if (typeof window === 'undefined') return 'visao-geral';
+    return parseInternalDeepLink(window.location.hash)?.workspace ?? readNavigationSnapshot()?.playerWorkspace ?? 'visao-geral';
+  });
+  const scrollPositionsRef = useRef<Partial<Record<MainSection, number>>>({});
+  const [navigationTrail, setNavigationTrail] = useState<MainSection[]>([]);
   const [resultTabRequest, setResultTabRequest] = useState<ResultTabRequest | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [centralMatchRecords, setCentralMatchRecords] = useState<MatchValidationRecord[]>([]);
@@ -3917,6 +3950,7 @@ export function CardVisionApp() {
   const lastSavedKey = useRef<string | null>(null);
   const backupInputRef = useRef<HTMLInputElement | null>(null);
   const fullBackupInputRef = useRef<HTMLInputElement | null>(null);
+  const verifyBackupInputRef = useRef<HTMLInputElement | null>(null);
   const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true });
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [migrationLog, setMigrationLog] = useState<string[]>([]);
@@ -4123,6 +4157,8 @@ export function CardVisionApp() {
     { id: 'cofre', label: 'Registro do jogador', hint: `${history.length} salvos`, icon: 'vault' }
   ], [history.length, result, draftResult, centralMatchRecords.length]);
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
+  const currentNavigationGroup = navigationGroupFor(mainSection);
+  const currentPlayerWorkspace = playerWorkspaceFor(mainSection);
   const sectionGuide = useMemo(() => {
     const guides: Record<MainSection, { title: string; description: string; steps: string[] }> = {
       inicio: { title: 'Central inteligente', description: 'Veja prioridades, jogadores e próximos passos em um único painel.', steps: ['Resumo', 'Atalhos', 'Recomendações'] },
@@ -4138,11 +4174,19 @@ export function CardVisionApp() {
     return guides[mainSection];
   }, [mainSection]);
 
-  function openMainSection(section: MainSection) {
+  function openMainSection(section: MainSection, options: { track?: boolean } = {}) {
     setMobileLauncher(null);
+    scrollPositionsRef.current[mainSection] = window.scrollY;
+    if (options.track !== false && section !== mainSection) {
+      setNavigationTrail((current) => current[current.length - 1] === mainSection ? current : [...current, mainSection].slice(-20));
+    }
+    const group = navigationGroupFor(section);
+    const workspace = playerWorkspaceFor(section);
+    if (group === 'jogadores') setPlayerWorkspace(workspace);
+    writeNavigationSnapshot({ group, playerWorkspace: group === 'jogadores' ? workspace : playerWorkspace, scrollY: scrollPositionsRef.current[section] ?? 0 });
+    window.history.replaceState(null, '', group === 'jogadores' ? `#/${group}/${workspace}` : `#/${group}`);
     setMainSection(section);
     if (section === 'cofre') {
-      setLibraryOpen(true);
       setStatus(history.length ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
     }
     if (section === 'manual' && !manualMode && !draftResult && !result) {
@@ -4154,12 +4198,29 @@ export function CardVisionApp() {
     }
   }
 
+  function openNavigationGroup(group: MainNavigationGroup) {
+    openMainSection(sectionForNavigation(group, group === 'jogadores' ? playerWorkspace : 'visao-geral'));
+  }
+
+  function openPlayerWorkspace(workspace: PlayerWorkspace) {
+    setPlayerWorkspace(workspace);
+    openMainSection(sectionForNavigation('jogadores', workspace));
+  }
+
+  function goBackInsideApp() {
+    const previous = navigationTrail[navigationTrail.length - 1];
+    if (!previous) return;
+    setNavigationTrail((current) => current.slice(0, -1));
+    openMainSection(previous, { track: false });
+  }
+
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const main = document.getElementById('buildmaster-main-content');
       main?.focus({ preventScroll: true });
       const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      const top = scrollPositionsRef.current[mainSection] ?? 0;
+      window.scrollTo({ top, left: 0, behavior: reduceMotion ? 'auto' : top ? 'auto' : 'smooth' });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [mainSection]);
@@ -4746,6 +4807,54 @@ export function CardVisionApp() {
     }
   }
 
+  async function exportIncrementalBackup() {
+    try {
+      const cutoff = lastBackupAt ? Date.parse(lastBackupAt) : 0;
+      const changed = history.filter((item) => {
+        const updated = Date.parse(item.updatedAt || item.savedAt || '');
+        return !cutoff || !Number.isFinite(updated) || updated > cutoff;
+      });
+      if (!changed.length) {
+        setStatus('Nenhuma ficha mudou desde o último backup registrado.');
+        return;
+      }
+      const envelope = createBackupEnvelope({
+        history: changed,
+        folders: vaultFolders,
+        evolution: {
+          matchValidation: readJsonStorage(MATCH_VALIDATION_STORAGE_KEY, []),
+          creatorBuildResearch: exportCreatorBuildResearch()
+        }
+      });
+      await downloadEncryptedBackup(envelope, `buildmaster-backup-incremental-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
+      writeAccountStorage('buildmaster_last_incremental_backup_v2739', envelope.exportedAt);
+      setLastBackupAt(envelope.exportedAt);
+      setStatus(`Backup incremental criado com ${changed.length} ficha(s) alterada(s).`);
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup incremental.');
+    }
+  }
+
+  async function verifyBackupFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const parsed = await readBackupFile(file);
+      const checked = validateBackupEnvelope(parsed);
+      if (!checked.valid || !checked.migrated) {
+        setStatus(checked.issues.map((item) => item.message).join(' ') || 'Backup inválido. Nenhum dado foi alterado.');
+        return;
+      }
+      const migrated = migrateBackup(checked.migrated);
+      const temporary = structuredClone(migrated.envelope.sections);
+      const report = inspectDataIntegrity(temporary);
+      setStatus(`Verificação concluída em ambiente temporário: ${report.status}, ${report.score}/100, ${report.totals.records} registro(s). Nenhum dado foi alterado.`);
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'Não foi possível verificar o backup. Nenhum dado foi alterado.');
+    }
+  }
+
   async function exportPlayersBackup(reason: 'manual' | 'update' = 'manual') {
     try {
       const envelope = createBackupEnvelope({
@@ -4975,13 +5084,93 @@ export function CardVisionApp() {
 
   function deleteHistoryItem(id: string) {
     const item = history.find((entry) => entry.id === id);
+    if (!item) return;
+    moveToVaultTrash(item.id, item.result.parsed.playerName || 'Jogador sem nome', item);
+    setVaultTrash(readVaultTrash<SavedAnalysis>());
     setHistory((current) => {
       const next = current.filter((entry) => entry.id !== id);
       void persistHistoryStore(next);
       return next;
     });
-    if (item) void deleteCloudHistoryItem(item);
+    void deleteCloudHistoryItem(item);
     if (activeHistoryId === id) setActiveHistoryId(null);
+    setStatus(`${item.result.parsed.playerName} foi movido para a Lixeira por 30 dias.`);
+  }
+
+  function restoreTrashItem(id: string) {
+    const item = restoreFromVaultTrash<SavedAnalysis>(id);
+    if (!item) return;
+    setVaultTrash(readVaultTrash<SavedAnalysis>());
+    setHistory((current) => {
+      const next = [item, ...current.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+    setStatus(`${item.result.parsed.playerName} foi restaurado para o Cofre.`);
+  }
+
+  function permanentlyDeleteTrashItem(id: string) {
+    removeFromVaultTrash(id);
+    setVaultTrash(readVaultTrash<SavedAnalysis>());
+    setStatus('Item apagado definitivamente da Lixeira local.');
+  }
+
+  function emptyVaultTrash() {
+    clearVaultTrash();
+    setVaultTrash([]);
+    setStatus('Lixeira local esvaziada.');
+  }
+
+  function batchFavoriteHistory(ids: string[], favorite: boolean) {
+    const selected = new Set(ids);
+    setHistory((current) => {
+      const next = current.map((entry) => selected.has(entry.id) ? appendSavedEvent({ ...entry, favorite }, favorite ? 'favoritado em lote' : 'removido dos favoritos em lote', entry.result.parsed.playerName) : entry);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+    setStatus(`${ids.length} jogador(es) ${favorite ? 'adicionado(s) aos favoritos' : 'removido(s) dos favoritos'}.`);
+  }
+
+  function batchStatusHistory(ids: string[], statusTag: SavedAnalysis['statusTag']) {
+    const selected = new Set(ids);
+    setHistory((current) => {
+      const next = current.map((entry) => selected.has(entry.id) ? appendSavedEvent({ ...entry, statusTag }, 'status alterado em lote', statusTag || 'pendente') : entry);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+    setStatus(`${ids.length} jogador(es) marcado(s) como ${statusTag || 'pendente'}.`);
+  }
+
+  function mergeSelectedHistory(ids: string[]) {
+    const selected = history.filter((entry) => ids.includes(entry.id)).sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0));
+    if (selected.length < 2) return;
+    const primary = selected[0];
+    const duplicates = selected.slice(1);
+    const merged: SavedAnalysis = appendSavedEvent({
+      ...primary,
+      favorite: selected.some((entry) => entry.favorite),
+      personalTags: [...new Set(selected.flatMap((entry) => entry.personalTags ?? []))].slice(0, 20),
+      notes: [...new Set(selected.map((entry) => entry.notes?.trim()).filter(Boolean) as string[])].join('\n\n'),
+      statusTag: selected.some((entry) => entry.statusTag === 'revisar') ? 'revisar' : selected.every((entry) => entry.statusTag === 'completo') ? 'completo' : 'pendente',
+      updatedAt: new Date().toISOString(),
+      changeLog: selected.flatMap((entry) => entry.changeLog ?? []).slice(0, 120)
+    }, 'registros mesclados', `${duplicates.length} duplicata(s) incorporada(s) sem alterar a ficha principal.`);
+    for (const duplicate of duplicates) {
+      moveToVaultTrash(duplicate.id, duplicate.result.parsed.playerName || 'Jogador sem nome', duplicate);
+      void deleteCloudHistoryItem(duplicate);
+    }
+    setVaultTrash(readVaultTrash<SavedAnalysis>());
+    setHistory((current) => {
+      const removed = new Set(duplicates.map((entry) => entry.id));
+      const next = current.map((entry) => entry.id === primary.id ? merged : entry).filter((entry) => !removed.has(entry.id));
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+    setStatus(`${selected.length} registros foram mesclados. As duplicatas permanecerão na Lixeira por 30 dias.`);
   }
 
   function toggleFavoriteHistory(id: string) {
@@ -5885,6 +6074,17 @@ export function CardVisionApp() {
         </div>
       </header>
 
+      <RefinedNavigation
+        group={currentNavigationGroup}
+        workspace={currentPlayerWorkspace}
+        hasResult={Boolean(currentPanelResult)}
+        onGroupChange={openNavigationGroup}
+        onWorkspaceChange={openPlayerWorkspace}
+        onSearch={() => setCommandPaletteOpen(true)}
+      />
+      <LiveStatusRegion message={status} urgent={sessionSaveState === 'error'} />
+      {navigationTrail.length > 0 && mainSection !== 'inicio' && <button type="button" className="refined-back-button internal-back-button" onClick={goBackInsideApp}>Voltar para a área anterior</button>}
+
       <aside className="app-side-rail luxury-panel" aria-label="Guias do BuildMaster">
         <div className="side-rail-heading">
           <span className="side-rail-logo"><Sparkles size={20} /></span>
@@ -5993,7 +6193,7 @@ export function CardVisionApp() {
       )}
 
       {mainSection === 'inicio' && (
-        <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} onAction={handleCentralRecommendation} />
+        <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} healthScore={healthSummary.score} lastBackupAt={lastBackupAt} onAction={handleCentralRecommendation} />
       )}
 
       {mainSection === 'inicio' && false && (
@@ -6086,6 +6286,9 @@ export function CardVisionApp() {
           onOpenVault={openCofreDeJogadores}
           onOpenPlayer={(id) => openIntegratedPlayer(id, 'vault')}
           onOpenResult={(id) => openIntegratedPlayer(id, 'result')}
+          onBatchFavorite={batchFavoriteHistory}
+          onBatchStatus={batchStatusHistory}
+          onMergeSelected={mergeSelectedHistory}
         /></SectionErrorBoundary>
       )}
 
@@ -6103,7 +6306,7 @@ export function CardVisionApp() {
       {mainSection !== 'inicio' && mainSection !== 'jogadores' && mainSection !== 'partidas' && (
       <section className={`workspace-grid ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
         {mainSection === 'time' && (
-          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} /></SectionErrorBoundary>
+          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
         )}
         {isCreationSection && (
           <section className="creation-hub creation-studio-hero luxury-panel">
@@ -6761,14 +6964,23 @@ export function CardVisionApp() {
                 <div className="vault-backup-actions-grid">
                   <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
                   <button type="button" onClick={() => void exportHistoryBackup()} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo criptografado</small></button>
+                  <button type="button" onClick={() => void exportIncrementalBackup()} disabled={!history.length}><div><Save size={21} /></div><strong>Backup incremental</strong><span>Inclui apenas fichas alteradas desde o último backup.</span><small>Mais leve e rápido</small></button>
+                  <button type="button" onClick={() => verifyBackupInputRef.current?.click()}><div><ShieldCheck size={21} /></div><strong>Verificar arquivo</strong><span>Testa integridade em ambiente temporário.</span><small>Nenhum dado é substituído</small></button>
                   <button type="button" onClick={() => backupInputRef.current?.click()}><div><UploadCloud size={21} /></div><strong>Importar backup</strong><span>Restaure fichas salvas em outro aparelho.</span><small>O arquivo é validado antes</small></button>
                   <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Supabase obrigatório'}</small></button>
                   <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <Download size={21} />}</div><strong>Baixar da conta</strong><span>Recupere a versão salva no servidor.</span><small>Mesclagem protegida</small></button>
                   <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><div><Save size={21} /></div><strong>Backup completo</strong><span>Preferências, planos, regras e sessão atual.</span><small>Abrir Backup</small></button>
                   <input ref={backupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={importHistoryBackup} />
+                  <input ref={verifyBackupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={(event) => void verifyBackupFile(event)} />
                 </div>
 
                 <div className="cloud-status-card vault-cloud-status"><ShieldCheck size={16} /><div><strong>Status da proteção</strong><span>{cloudStatus}</span></div></div>
+
+                <section className="vault-trash-panel" aria-label="Lixeira do Cofre">
+                  <div className="vault-trash-heading"><div><p className="kicker"><Trash2 size={14} /> Lixeira de segurança</p><strong>{vaultTrash.length} item(ns) recuperável(is)</strong><span>Exclusões ficam somente nesta conta por até 30 dias antes de expirar.</span></div>{vaultTrash.length > 0 && <button type="button" onClick={emptyVaultTrash}><Trash2 size={16} /> Esvaziar</button>}</div>
+                  <div className="vault-trash-list">{vaultTrash.map((trashItem) => <article key={trashItem.id}><div><strong>{trashItem.label}</strong><span>Excluído em {new Date(trashItem.deletedAt).toLocaleString('pt-BR')}</span><small>Expira em {new Date(trashItem.expiresAt).toLocaleDateString('pt-BR')}</small></div><div><button type="button" onClick={() => restoreTrashItem(trashItem.id)}><RotateCcw size={16} /> Restaurar</button><button type="button" className="danger" aria-label={`Apagar ${trashItem.label} definitivamente`} onClick={() => permanentlyDeleteTrashItem(trashItem.id)}><Trash2 size={16} /> Apagar</button></div></article>)}{!vaultTrash.length && <div className="v27-empty"><CheckCircle2 size={24} /><strong>Lixeira vazia</strong><span>Jogadores apagados poderão ser restaurados aqui.</span></div>}</div>
+                </section>
+
                 <div className="settings-explanation-card"><Save size={18} /><div><strong>Seus jogadores continuam separados por conta</strong><span>O backup do Cofre preserva fichas, posição escolhida, distribuição, habilidades concluídas, pastas e calibração. O backup completo permanece em Ajustes › Backup.</span></div></div>
               </section>
             )}
@@ -6909,6 +7121,7 @@ export function CardVisionApp() {
                     </details>
 
                     {healthSummary.alerts.length > 0 && <div className="health-alert-list" role="status">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
+                    <RefinementCenterPanel players={integratedPlayers} appVersion={APP_RELEASE_VERSION} healthScore={healthSummary.score} onOpenPlayer={(id) => openIntegratedPlayer(id, 'result')} />
                   </section>
                 )}
 

@@ -16,10 +16,10 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativeInstaller = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.38.0');
-assert.equal(APP_RELEASE_VERSION, '27.38.0');
-assert.equal(APP_NATIVE_VERSION, '27.38.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2738 && npm run test:v2737 && npm run test:v2736 && npm run test:v2735 && npm run test:v2734 && npm run test:v2733 && npm run test:v2729 && npm run quality:audit && npm run test:v2728 && npm run test:v2727 && npm run test:v2726 &&/);
+assert.equal(pkg.version, '27.39.0');
+assert.equal(APP_RELEASE_VERSION, '27.39.0');
+assert.equal(APP_NATIVE_VERSION, '27.39.0');
+assert.match(pkg.scripts['test:all'], /^npm run test:v2739 && npm run test:v2738 && npm run test:v2737 && npm run test:v2736 && npm run test:v2735 && npm run test:v2734 && npm run test:v2733 && npm run test:v2729 && npm run quality:audit && npm run test:v2728 && npm run test:v2727 && npm run test:v2726 &&/);
 
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_PRIMARY_URL), true);
 assert.equal(
@@ -56,7 +56,7 @@ const stale: UpdateManifestCandidate = {
 };
 const newest: UpdateManifestCandidate = {
   payload: {},
-  manifest: manifest('27.38.0', 1_380_000_011, 'buildmaster-v27.38.0-1380000011-01'),
+  manifest: manifest('27.39.0', 1_380_000_011, 'buildmaster-v27.39.0-1380000011-01'),
   source: 'primary-channel',
   endpoint: 'primary'
 };
@@ -92,7 +92,7 @@ assert.equal(fs.existsSync('public/update-manifest.json'), false, 'Manifesto pla
 assert.match(nativeInstaller, /SHA-256 do APK não confere/);
 assert.match(nativeInstaller, /getPackageArchiveInfo/);
 assert.match(nativeInstaller, /hasSigningCertificate/);
-assert.match(nativeInstaller, /BuildMaster-Elite-Tatico-Updater\/27\.38 Android/);
+assert.match(nativeInstaller, /BuildMaster-Elite-Tatico-Updater\/27\.39 Android/);
 assert.doesNotMatch(nativeInstaller, /instalação manual única/i);
 assert.match(nativeInstaller, /if \(apk != null\) apk\.delete\(\);/, 'APK rejeitado deve ser apagado inclusive quando a assinatura divergir.');
 

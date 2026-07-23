@@ -205,8 +205,17 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
   const [showPassword, setShowPassword] = useState(false);
   const [phase, setPhase] = useState<LoginPhase>('idle');
   const [error, setError] = useState(initialError);
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
+  const [capsLock, setCapsLock] = useState(false);
   const loading = phase !== 'idle';
   const feedback = error ? describeLoginError(error) : null;
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
 
   const phaseLabel = phase === 'credentials'
     ? 'Conferindo credenciais...'
@@ -225,6 +234,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
     let phaseTimer: number | undefined;
 
     try {
+      if (!online) throw new Error('Sem internet no momento. Conecte o aparelho e tente novamente.');
       phaseTimer = window.setTimeout(() => setPhase('license'), 450);
       if (!cloudConfigured) throw new Error('O servidor oficial de contas não está configurado neste APK. O login local foi removido por segurança.');
       const validation = await signInWithUsername(cleanUser, cleanPassword);
@@ -284,13 +294,13 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
             </div>
           </div>
 
-          <div className={`auth-license-status ${cloudConfigured ? 'is-online' : 'is-local'}`}>
-            <div className="auth-license-icon">{cloudConfigured ? <Server size={19} /> : <WifiOff size={19} />}</div>
+          <div className={`auth-license-status ${cloudConfigured && online ? 'is-online' : 'is-local'}`}>
+            <div className="auth-license-icon">{cloudConfigured && online ? <Server size={19} /> : <WifiOff size={19} />}</div>
             <div>
               <span>Status da licença</span>
-              <strong>{cloudConfigured ? 'Validação online ativa' : 'Servidor não configurado'}</strong>
+              <strong>{!online ? 'Aparelho sem internet' : cloudConfigured ? 'Validação online ativa' : 'Servidor não configurado'}</strong>
             </div>
-            <i>{cloudConfigured ? 'Protegido' : 'Bloqueado'}</i>
+            <i>{cloudConfigured && online ? 'Protegido' : 'Bloqueado'}</i>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate aria-busy={loading}>
@@ -322,6 +332,8 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
                 <input
                   value={password}
                   onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }}
+                  onKeyUp={(event) => setCapsLock(event.getModifierState('CapsLock'))}
+                  onKeyDown={(event) => setCapsLock(event.getModifierState('CapsLock'))}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Digite sua senha"
                   autoComplete="current-password"
@@ -336,6 +348,9 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
               </div>
             </label>
 
+            {capsLock && <div className="auth-caps-warning" role="status"><AlertTriangle size={16}/><span>Caps Lock está ativo. Confira letras maiúsculas na senha.</span></div>}
+            {!online && <div className="auth-network-warning" role="status"><WifiOff size={16}/><span>Sem internet. O login será liberado quando a conexão voltar.</span></div>}
+
             {feedback && (
               <div className={`auth-feedback auth-feedback-${feedback.tone}`} role="alert">
                 <AlertTriangle size={19} />
@@ -343,7 +358,9 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
               </div>
             )}
 
-            <button className={`elite-button auth-submit ${phase === 'authorized' ? 'is-authorized' : ''}`} type="submit" disabled={loading} aria-busy={loading}>
+            {feedback && <button type="button" className="auth-retry-button" onClick={() => { setError(''); setPhase('idle'); }}><RefreshCw size={16}/> Tentar novamente</button>}
+
+            <button className={`elite-button auth-submit ${phase === 'authorized' ? 'is-authorized' : ''}`} type="submit" disabled={loading || !online || !cloudConfigured} aria-busy={loading}>
               {phase === 'authorized' ? <CheckCircle2 size={19} /> : loading ? <Loader2 className="spin" size={19} /> : <ShieldCheck size={18} />}
               <span>{phaseLabel}</span>
             </button>

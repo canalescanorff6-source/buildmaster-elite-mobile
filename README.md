@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v27.38.0
+# BuildMaster Elite Tático v27.39.0
 
 Pacote-fonte limpo do aplicativo BuildMaster Elite Tático, preparado para desenvolvimento, testes, Supabase e geração do APK oficial pelo GitHub Actions.
 
@@ -74,6 +74,23 @@ Este pacote corrige os dois erros de TypeScript identificados no GitHub Actions:
 O teste `v27-36-creator-research-typescript-hotfix-regression.mjs` impede a reintrodução desses erros.
 
 
-## v27.38 — Redesign Visual Premium
+## v27.39 — Refinamento total
 
-Tema mais claro, contraste reforçado, botão de login visível, navegação lateral, guias por fluxo, tipografia revisada e identidade colorida por módulo.
+A v27.39 reorganiza o aplicativo sem remover os módulos existentes:
+
+- cinco grupos principais de navegação, com Leitor, Manual, Ficha e Cofre reunidos em Jogadores;
+- menu lateral em telas grandes e barra inferior no celular;
+- histórico de navegação, restauração de rolagem, busca global e atalhos personalizáveis;
+- Central de refinamento com saúde local, comparação, presets, relatório mensal, ajuda offline e importador de projetos antigos;
+- Home integrada, laboratório de jogadores, laboratório do time e laboratório de partidas carregados por módulo;
+- lixeira por conta, restauração, exclusão definitiva, detecção e mesclagem de duplicatas;
+- backup incremental criptografado e verificação temporária antes da restauração;
+- login com contraste reforçado, Caps Lock, diagnóstico de conexão e erros diferenciados;
+- Estúdio Tático com etapas, desfazer/refazer, grade, encaixe, seleção múltipla, bloqueio e pré-validação da exportação;
+- treino com planejamento, cronômetro, repetições, erros rápidos, meta semanal e relatório;
+- tokens visuais, foco visível, toque mínimo, movimento reduzido e regiões ao vivo para acessibilidade;
+- auditoria, orçamento de fonte e orçamento do bundle compilado no GitHub Actions.
+
+## Validação final
+
+O pacote não inclui dependências instaladas nem artefatos de build. A confirmação oficial deve ser feita pelo workflow do GitHub Actions, que executa `npm ci`, TypeScript, testes, build web, geração Android, assinatura e validação do APK. Depois do workflow verde, teste em um aparelho Android o login, OCR, backup/restauração e atualização sobre a versão anterior.

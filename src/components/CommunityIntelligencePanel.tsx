@@ -42,7 +42,7 @@ export function CommunityIntelligencePanel({ result }: { result: AnalysisResult 
   return <article className="luxury-panel wide-card community-intelligence-card">
     <div className="section-title-row">
       <div>
-        <p className="kicker">v26.60 • Inteligência de pro players e criadores</p>
+        <p className="kicker">Inteligência de pro players e criadores</p>
         <h3>Central de conhecimento competitivo 2026</h3>
       </div>
       <span>{report.sources.length} fontes</span>

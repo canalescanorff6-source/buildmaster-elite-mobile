@@ -54,6 +54,23 @@ export function safeStorageRemove(key: string): boolean {
   }
 }
 
+
+export function safeStorageEntries(): Array<[string, string]> {
+  if (!storageAvailable()) return [];
+  try {
+    const entries: Array<[string, string]> = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key) continue;
+      entries.push([key, window.localStorage.getItem(key) ?? '']);
+    }
+    return entries;
+  } catch (cause) {
+    reportFailure('read', '*', cause);
+    return [];
+  }
+}
+
 export function safeStorageGetJson<T>(key: string, fallback: T): T {
   const raw = safeStorageGet(key);
   if (!raw) return fallback;

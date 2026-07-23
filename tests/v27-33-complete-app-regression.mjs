@@ -9,7 +9,7 @@ const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const updates = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.38.0');
+assert.equal(pkg.version, '27.39.0');
 assert.match(panel, /Estúdio Tático Completo/);
 assert.match(panel, /Cores personalizadas/);
 assert.match(panel, /Setas e linhas editáveis/);
@@ -29,7 +29,7 @@ assert.match(library, /MAX_PROJECTS = 60/);
 assert.match(library, /schema: 2736/);
 assert.match(library, /LEGACY_STORAGE_KEYS/);
 assert.match(library, /normalizeTacticalPosterState/);
-assert.match(workflow, /^name: Gerar APK v27\.38/m);
+assert.match(workflow, /^name: Gerar APK v27\.39/m);
 assert.match(workflow, /permissions:\s*\n\s*contents: write/);
 assert.match(plugin, /ParcelFileDescriptor/);
 assert.match(plugin, /manager\.openDownloadedFile/);

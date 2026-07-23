@@ -10,8 +10,8 @@ const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'),
 const auth = fs.readFileSync(path.join(root, 'src/components/AuthGate.tsx'), 'utf8');
 const updates = fs.readFileSync(path.join(root, 'src/lib/appUpdates.ts'), 'utf8');
 
-assert.equal(pkg.version, '27.38.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2738 && npm run test:v2737/);
+assert.equal(pkg.version, '27.39.0');
+assert.match(pkg.scripts['test:all'], /^npm run test:v2739 && npm run test:v2738 && npm run test:v2737/);
 assert.match(globals, /design-system-v2738-rainbow\.css/);
 assert.match(visual, /\.auth-submit[\s\S]*background:\s*var\(--v2738-rainbow\)/);
 assert.match(visual, /\.app-side-rail/);
@@ -26,5 +26,5 @@ assert.match(app, /className="app-side-rail luxury-panel"/);
 assert.match(app, /className={`app-section-guide guide-\$\{mainSection\}`}/);
 assert.match(app, /Fichas atuais|Ficha atual/);
 assert.match(auth, /auth-visual-guide/);
-assert.match(updates, /27\.38\.0/);
-console.log('v27.38 visual redesign regression: ok');
+assert.match(updates, /27\.39\.0/);
+console.log('v27.39 visual redesign regression: ok');

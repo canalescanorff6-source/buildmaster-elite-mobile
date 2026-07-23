@@ -7,7 +7,7 @@ const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'u
 const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '27.38.0');
+assert.equal(pkg.version, '27.39.0');
 assert.match(workflow, /primary\['releaseTag'\] = release_tag/);
 assert.match(workflow, /primary\['apkUrl'\] = immutable_url/);
 assert.match(workflow, /Publicar APK versionado na ponte fixa/);
@@ -16,7 +16,7 @@ assert.ok(
   workflow.indexOf('Publicar APK versionado na ponte fixa') < workflow.indexOf('Publicar canal principal somente após o APK versionado'),
   'O APK versionado precisa existir e ser validado antes do manifesto principal.'
 );
-assert.match(workflow, /BuildMaster-Elite-Tatico-Updater\/27\.38 Android/);
+assert.match(workflow, /BuildMaster-Elite-Tatico-Updater\/27\.39 Android/);
 assert.match(workflow, /O nome é único por execução\. Nunca usamos --clobber/);
 assert.match(plugin, /if \(!isMutableLatestUrl\(source\)\) return source;/);
 assert.match(plugin, /openAutomaticDownloadConnection/);
