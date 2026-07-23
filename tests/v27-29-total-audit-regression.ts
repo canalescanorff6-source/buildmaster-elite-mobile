@@ -8,12 +8,12 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json')) as { version: string; scripts: Record<string, string> };
 
-assert.equal(pkg.version, '27.36.0');
+assert.equal(pkg.version, '27.38.0');
 assert.equal(APP_RELEASE_VERSION, pkg.version);
 assert.equal(APP_NATIVE_VERSION, pkg.version);
 assert.equal(APP_DATA_VERSION, pkg.version);
 assert.equal(CURRENT_DATA_SCHEMA, 2736);
-assert.match(pkg.scripts['test:all'], /^npm run test:v2737 && npm run test:v2736 && npm run test:v2735 && npm run test:v2734 && npm run test:v2733 && npm run test:v2729/);
+assert.match(pkg.scripts['test:all'], /^npm run test:v2738 && npm run test:v2737 && npm run test:v2736 && npm run test:v2735 && npm run test:v2734 && npm run test:v2733 && npm run test:v2729/);
 assert.equal(pkg.scripts['quality:audit'], 'node scripts/audit-project.mjs');
 
 const native = read('scripts/install-android-security-plugin.mjs');

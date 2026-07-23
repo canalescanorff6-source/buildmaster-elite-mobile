@@ -277,6 +277,11 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
             <span className="auth-login-kicker"><LockKeyhole size={14} /> Área segura</span>
             <h1>Bem-vindo de volta</h1>
             <p>Entre com o usuário e a senha fornecidos pelo administrador.</p>
+            <div className="auth-visual-guide" aria-label="Como acessar">
+              <span><b>1</b> Informe o usuário</span>
+              <span><b>2</b> Digite a senha</span>
+              <span><b>3</b> Toque em Entrar</span>
+            </div>
           </div>
 
           <div className={`auth-license-status ${cloudConfigured ? 'is-online' : 'is-local'}`}>

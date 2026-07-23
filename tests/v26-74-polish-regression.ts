@@ -36,7 +36,7 @@ assert.match(css, /label:focus-within[\s\S]*outline: none !important/);
 assert.match(css, /bm-dialog-backdrop/);
 assert.match(css, /offline-license-banner > button/);
 assert.doesNotMatch(layout, /maximumScale/);
-assert.match(layout, /colorScheme: 'dark light'/);
+assert.match(layout, /colorScheme: 'light dark'/);
 assert.match(capacitor, /webContentsDebuggingEnabled: false/);
 assert.match(capacitor, /allowMixedContent: false/);
 

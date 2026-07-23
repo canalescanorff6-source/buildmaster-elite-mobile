@@ -1,4 +1,4 @@
-name: Gerar APK v27.36 e publicar atualização automática pelo sistema Android
+name: Gerar APK v27.38 e publicar atualização automática pelo sistema Android
 
 on:
   workflow_dispatch:
@@ -340,7 +340,7 @@ jobs:
             'updateType': 'apk',
             'notes': [
               'O APK imutável é a rota principal e nunca é substituído depois da publicação.',
-              'O Android DownloadManager é o transporte principal da v27.36; HTTP direto é apenas reserva.',
+              'O Android DownloadManager é o transporte principal da v27.38; HTTP direto é apenas reserva.',
               'As rotas versionada e latest permanecem como espelhos para compatibilidade.',
               'Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.',
               'O Estúdio Tático Local cria artes SVG e PNG sem API paga.'
@@ -435,7 +435,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             rm -f verify-release/immutable.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.36 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.38 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -483,7 +483,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-bridge.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.36 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.38 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -537,7 +537,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.36 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.38 Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
               -o verify-release/primary-manifest.json; then
@@ -568,7 +568,7 @@ jobs:
 
           URL=$(cat verify-release/primary-apk-url.txt)
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/27.36 Android' \
+            --user-agent 'BuildMaster-Elite-Tatico-Updater/27.38 Android' \
             --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
             "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk
@@ -598,7 +598,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             rm -f verify-release/legacy-latest.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.36 Legacy-Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.38 Legacy-Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$LEGACY_APK_URL&bmDownloadAttempt=$attempt-$(date +%s%N)" \
               -o verify-release/legacy-latest.apk; then
@@ -626,7 +626,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/legacy-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.36 Legacy-Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.38 Legacy-Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$LEGACY_MANIFEST_URL&attempt=$attempt&ts=$(date +%s%N)" \
               -o verify-release/legacy-manifest.json; then

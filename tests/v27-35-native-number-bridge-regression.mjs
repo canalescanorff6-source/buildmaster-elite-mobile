@@ -10,7 +10,7 @@ const installerPath = path.join(root, 'scripts/install-android-security-plugin.m
 const installer = fs.readFileSync(installerPath, 'utf8');
 const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8');
 
-assert.equal(pkg.version, '27.36.0');
+assert.equal(pkg.version, '27.38.0');
 
 // O diretório android é gerado pelo Capacitor no workflow e fica fora do Git.
 // Para testar o Java produzido sem depender de arquivos gerados no repositório,

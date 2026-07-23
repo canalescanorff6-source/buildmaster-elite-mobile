@@ -73,7 +73,7 @@ export function readOpponentPrintText(rawText: string): OpponentPrintReport {
   const visibleNames = rawText.split(/\n+/).map((line) => line.trim()).filter((line) => /^[A-Za-zÀ-ÿ.' -]{4,32}$/.test(line) && !/posse|contra|formacao|equipe|time|overall|jogador/i.test(line)).slice(0, 11);
   const confirmed = [formation, profile, strength, manager].filter((item) => item.confidence === 'alta' || item.confidence === 'média').length;
   const overallConfidence: ReadConfidence = confirmed >= 3 ? 'alta' : confirmed === 2 ? 'média' : confirmed === 1 ? 'baixa' : 'não confirmado';
-  const warnings = [];
+  const warnings: string[] = [];
   if (!formation.value) warnings.push('Formação não confirmada; selecione manualmente antes de aplicar.');
   if (!profile.value) warnings.push('Estilo coletivo não confirmado; o print pode não mostrar essa área.');
   if (strength.confidence === 'baixa') warnings.push('A força principal foi apenas inferida por palavras soltas e precisa de confirmação.');

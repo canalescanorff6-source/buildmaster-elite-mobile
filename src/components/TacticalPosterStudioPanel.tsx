@@ -579,7 +579,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
     <article className="tactical-poster-studio luxury-panel">
       <div className="section-title-row tactical-poster-heading">
         <div>
-          <p className="kicker"><Sparkles size={15}/> v27.36 • Estúdio Tático Completo • Meta 2026</p>
+          <p className="kicker"><Sparkles size={15}/> v27.38 • Estúdio Tático Completo • Meta 2026</p>
           <h3>Gere, edite, salve e compartilhe artes premium da sua formação</h3>
           <p>O app desenha campo, jogadores, setas e textos localmente em SVG, PNG e PDF. Não existe cobrança por imagem e nenhuma API de inteligência artificial é usada.</p>
         </div>

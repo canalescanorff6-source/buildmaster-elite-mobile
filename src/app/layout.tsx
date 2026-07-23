@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: `BuildMaster v${APP_RELEASE_VERSION}`,
-    statusBarStyle: 'black-translucent'
+    statusBarStyle: 'default'
   },
   icons: {
     icon: [
@@ -27,8 +27,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  colorScheme: 'dark light',
-  themeColor: '#06090d'
+  colorScheme: 'light dark',
+  themeColor: '#eef3fb'
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v27.36.0
+# BuildMaster Elite Tático v27.38.0
 
 Pacote-fonte limpo do aplicativo BuildMaster Elite Tático, preparado para desenvolvimento, testes, Supabase e geração do APK oficial pelo GitHub Actions.
 
@@ -72,3 +72,8 @@ Este pacote corrige os dois erros de TypeScript identificados no GitHub Actions:
 - o atalho do YouTube usa um ícone compatível com a versão travada do `lucide-react`.
 
 O teste `v27-36-creator-research-typescript-hotfix-regression.mjs` impede a reintrodução desses erros.
+
+
+## v27.38 — Redesign Visual Premium
+
+Tema mais claro, contraste reforçado, botão de login visível, navegação lateral, guias por fluxo, tipografia revisada e identidade colorida por módulo.

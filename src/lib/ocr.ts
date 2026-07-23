@@ -1,4 +1,4 @@
-import type { PrintQualityReport } from './validation';
+import type { PrintQualityIssue, PrintQualityReport } from './validation';
 
 export type OcrZoneKey = 'name' | 'overall' | 'mainPosition' | 'playstyle' | 'level' | 'points' | 'cardType' | 'attributes' | 'progression' | 'autoTraining' | 'positionGrid' | 'skills' | 'specialSkill';
 
@@ -67,7 +67,7 @@ export async function inspectPrintQuality(file: File | Blob): Promise<PrintQuali
     const brightness = sum / total;
     const contrast = Math.sqrt(Math.max(0, sumSq / total - brightness * brightness));
     const sharpness = edgeSum / Math.max(1, edgeCount);
-    const issues = [];
+    const issues: PrintQualityIssue[] = [];
     if (width < 900 || height < 1100) issues.push({ code: 'LOW_RESOLUTION', severity: 'review' as const, message: 'Resolução baixa: envie print direto da tela, sem compressão.' });
     if (sharpness < 10) issues.push({ code: 'LOW_SHARPNESS', severity: 'review' as const, message: 'Print pouco nítido: o OCR pode confundir posição, estilo e números.' });
     if (brightness < 45 || brightness > 215) issues.push({ code: 'BAD_BRIGHTNESS', severity: 'review' as const, message: 'Brilho fora do ideal: use print normal, sem filtro e sem tela escura demais.' });

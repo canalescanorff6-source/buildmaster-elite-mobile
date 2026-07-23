@@ -1,5 +1,5 @@
 export const CURRENT_DATA_SCHEMA = 2736;
-export const APP_DATA_VERSION = '27.36.0';
+export const APP_DATA_VERSION = '27.38.0';
 
 export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery';
 

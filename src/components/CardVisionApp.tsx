@@ -116,7 +116,7 @@ import { cropImage, mergeOcrTexts, preprocessImage } from '@/modules/card-reader
 type ReadingMode = 'precision' | 'fast';
 type ReaderCaptureMode = 'single' | 'complete';
 type AppTheme = 'dark' | 'light';
-type AccentTheme = 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
+type AccentTheme = 'prism' | 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
 type TextScale = 'compact' | 'standard' | 'large';
 type DensityMode = 'compact' | 'comfortable';
 type MotionPreference = 'system' | 'reduced' | 'full';
@@ -3889,8 +3889,8 @@ export function CardVisionApp() {
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
   const [newFolderName, setNewFolderName] = useState('');
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
-  const [appTheme, setAppTheme] = useState<AppTheme>('dark');
-  const [accentTheme, setAccentTheme] = useState<AccentTheme>('emerald');
+  const [appTheme, setAppTheme] = useState<AppTheme>('light');
+  const [accentTheme, setAccentTheme] = useState<AccentTheme>('prism');
   const [advancedMode, setAdvancedMode] = useState(true);
   const [textScale, setTextScale] = useState<TextScale>('standard');
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
@@ -3925,6 +3925,24 @@ export function CardVisionApp() {
   const [rememberBackupPassword, setRememberBackupPassword] = useState(true);
   const [backupPasswordReady, setBackupPasswordReady] = useState(false);
   const restoredSessionRef = useRef(false);
+
+
+  useEffect(() => {
+    const migrationKey = 'buildmaster_visual_refresh_v2738';
+    if (readAccountStorage(migrationKey)) return;
+    try {
+      const previous = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as Record<string, unknown>;
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ ...previous, appTheme: 'light', accentTheme: 'prism', textScale: 'standard', densityMode: 'comfortable', highContrast: false }));
+    } catch {
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme: 'light', accentTheme: 'prism', textScale: 'standard', densityMode: 'comfortable', highContrast: false }));
+    }
+    setAppTheme('light');
+    setAccentTheme('prism');
+    setTextScale('standard');
+    setDensityMode('comfortable');
+    setHighContrast(false);
+    writeAccountStorage(migrationKey, 'applied');
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -4105,6 +4123,20 @@ export function CardVisionApp() {
     { id: 'cofre', label: 'Registro do jogador', hint: `${history.length} salvos`, icon: 'vault' }
   ], [history.length, result, draftResult, centralMatchRecords.length]);
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
+  const sectionGuide = useMemo(() => {
+    const guides: Record<MainSection, { title: string; description: string; steps: string[] }> = {
+      inicio: { title: 'Central inteligente', description: 'Veja prioridades, jogadores e próximos passos em um único painel.', steps: ['Resumo', 'Atalhos', 'Recomendações'] },
+      jogadores: { title: 'Banco de jogadores', description: 'Encontre cartas, abra fichas e continue análises salvas.', steps: ['Buscar', 'Filtrar', 'Abrir ficha'] },
+      partidas: { title: 'Validação em jogo', description: 'Registre desempenho real, erros e evolução depois das partidas.', steps: ['Preparar', 'Jogar', 'Avaliar'] },
+      leitor: { title: 'Leitura por print', description: 'Importe uma imagem nítida, confira os dados e só depois gere a ficha.', steps: ['Importar print', 'Conferir leitura', 'Gerar ficha'] },
+      manual: { title: 'Manual Pro', description: 'Preencha os dados da carta e controle cada ponto sem depender do OCR.', steps: ['Identidade', 'Atributos', 'Revisão'] },
+      resultado: { title: 'Ficha completa', description: 'Comece pelo resumo e navegue para ficha, habilidades, treino e fontes.', steps: ['Resumo', 'Ficha', 'Treino e fontes'] },
+      cofre: { title: 'Cofre de jogadores', description: 'Organize fichas, favoritos, revisões e backups da sua conta.', steps: ['Organizar', 'Comparar', 'Proteger'] },
+      time: { title: 'Meu Time', description: 'Monte o elenco, escolha formações e prepare planos para cada partida.', steps: ['Elenco', 'Formação', 'Plano de jogo'] },
+      ajustes: { title: 'Ajustes do aplicativo', description: 'Personalize aparência, desempenho, segurança, backup e atualização.', steps: ['Aparência', 'Segurança', 'Atualizações'] }
+    };
+    return guides[mainSection];
+  }, [mainSection]);
 
   function openMainSection(section: MainSection) {
     setMobileLauncher(null);
@@ -4169,7 +4201,7 @@ export function CardVisionApp() {
     try {
       const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode };
       if (ui.appTheme === 'light' || ui.appTheme === 'dark') setAppTheme(ui.appTheme);
-      if (['emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
+      if (['prism', 'emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
       if (['compact', 'standard', 'large'].includes(String(ui.textScale))) setTextScale(ui.textScale as TextScale);
       if (['compact', 'comfortable'].includes(String(ui.densityMode))) setDensityMode(ui.densityMode as DensityMode);
@@ -4791,7 +4823,7 @@ export function CardVisionApp() {
         const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; autoUpdateCheck?: boolean };
         writeStorage('buildmaster_ui_prefs_v24_24', ui);
         if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
-        if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
+        if (ui.accentTheme && ['prism', 'emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
         if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
         if (ui.textScale && ['compact', 'standard', 'large'].includes(ui.textScale)) setTextScale(ui.textScale);
         if (ui.densityMode && ['compact', 'comfortable'].includes(ui.densityMode)) setDensityMode(ui.densityMode);
@@ -5828,7 +5860,7 @@ export function CardVisionApp() {
           <div className="brand-icon"><Sparkles size={19} /></div>
           <div>
             <strong>BuildMaster</strong>
-            <span>Elite Tático v{APP_RELEASE_VERSION}</span>
+            <span>Elite • v{APP_RELEASE_VERSION}</span>
           </div>
         </button>
 
@@ -5853,10 +5885,47 @@ export function CardVisionApp() {
         </div>
       </header>
 
+      <aside className="app-side-rail luxury-panel" aria-label="Guias do BuildMaster">
+        <div className="side-rail-heading">
+          <span className="side-rail-logo"><Sparkles size={20} /></span>
+          <div><strong>BuildMaster</strong><small>Central tática</small></div>
+        </div>
+        <nav className="side-rail-navigation">
+          <span className="side-rail-group-label">Principal</span>
+          <button type="button" className={mainSection === 'inicio' ? 'active' : ''} onClick={() => openMainSection('inicio')}><LayoutDashboard size={19} /><span><strong>Início</strong><small>Visão geral</small></span></button>
+          <button type="button" className={mainSection === 'jogadores' ? 'active' : ''} onClick={() => openMainSection('jogadores')}><Users size={19} /><span><strong>Jogadores</strong><small>Banco integrado</small></span></button>
+          <button type="button" className={mainSection === 'time' ? 'active' : ''} onClick={() => openMainSection('time')}><Target size={19} /><span><strong>Meu Time</strong><small>Elenco e tática</small></span></button>
+          <button type="button" className={mainSection === 'partidas' ? 'active' : ''} onClick={() => openMainSection('partidas')}><Trophy size={19} /><span><strong>Partidas</strong><small>Treino e evolução</small></span></button>
+
+          <span className="side-rail-group-label">Criar e analisar</span>
+          <button type="button" className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}><ScanText size={19} /><span><strong>Ler print</strong><small>OCR por áreas</small></span></button>
+          <button type="button" className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}><ShieldCheck size={19} /><span><strong>Manual Pro</strong><small>Dados controlados</small></span></button>
+          <button type="button" className={mainSection === 'resultado' ? 'active' : ''} disabled={!currentPanelResult} onClick={() => openMainSection('resultado')}><FileText size={19} /><span><strong>Ficha atual</strong><small>{currentPanelResult?.parsed.playerName || 'Nenhuma aberta'}</small></span></button>
+          <button type="button" disabled={!currentPanelResult} onClick={() => { setResultTabRequest({ tab: 'treino', token: Date.now() }); openMainSection('resultado'); }}><Zap size={19} /><span><strong>Treinos</strong><small>Ataque e defesa</small></span></button>
+          <button type="button" className={mainSection === 'cofre' ? 'active' : ''} onClick={() => openMainSection('cofre')}><History size={19} /><span><strong>Cofre</strong><small>Fichas salvas</small></span></button>
+
+          <span className="side-rail-group-label">Sistema</span>
+          <button type="button" className={mainSection === 'ajustes' ? 'active' : ''} onClick={() => openMainSection('ajustes')}><SlidersHorizontal size={19} /><span><strong>Ajustes</strong><small>Visual e conta</small></span></button>
+          <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); }}><RotateCcw size={19} /><span><strong>Atualizações</strong><small>APK seguro</small></span></button>
+        </nav>
+        <div className="side-rail-current-guide">
+          <span>Guia atual</span>
+          <strong>{sectionGuide.title}</strong>
+          <small>{sectionGuide.description}</small>
+        </div>
+      </aside>
+
       {updateNotice && (
         <button type="button" className="global-update-notice" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); setUpdateNotice(null); }}>
           <RotateCcw size={16} /><strong>{updateNotice}</strong><span>Toque para revisar, criar backup e atualizar.</span>
         </button>
+      )}
+
+      {mainSection !== 'inicio' && (
+        <section className={`app-section-guide guide-${mainSection}`} aria-label={`Guia da área ${sectionGuide.title}`}>
+          <div><span><Sparkles size={17} /></span><div><strong>{sectionGuide.title}</strong><small>{sectionGuide.description}</small></div></div>
+          <ol>{sectionGuide.steps.map((step, index) => <li key={step}><b>{index + 1}</b><span>{step}</span></li>)}</ol>
+        </section>
       )}
 
       <nav className="mobile-bottom-nav luxury-panel v27-mobile-nav" aria-label="Menu inferior">
@@ -6756,9 +6825,9 @@ export function CardVisionApp() {
                     </div>
 
                     <div className="settings-control-section">
-                      <div className="settings-control-heading"><strong>Cor de destaque</strong><span>Uma única cor principal mantém o app sofisticado.</span></div>
+                      <div className="settings-control-heading"><strong>Cor de destaque</strong><span>Use o Prisma para combinar cores por módulo ou escolha uma cor principal.</span></div>
                       <div className="accent-choice-row">
-                        {(['emerald', 'gold', 'blue', 'red', 'purple'] as AccentTheme[]).map((accent) => <button key={accent} type="button" data-accent={accent} className={accentTheme === accent ? 'selected' : ''} aria-pressed={accentTheme === accent} onClick={() => setAccentTheme(accent)}><i /><span>{accent === 'emerald' ? 'Verde elite' : accent === 'gold' ? 'Dourado' : accent === 'blue' ? 'Azul' : accent === 'red' ? 'Vermelho' : 'Roxo'}</span></button>)}
+                        {(['prism', 'emerald', 'gold', 'blue', 'red', 'purple'] as AccentTheme[]).map((accent) => <button key={accent} type="button" data-accent={accent} className={accentTheme === accent ? 'selected' : ''} aria-pressed={accentTheme === accent} onClick={() => setAccentTheme(accent)}><i /><span>{accent === 'prism' ? 'Prisma dinâmico' : accent === 'emerald' ? 'Verde elite' : accent === 'gold' ? 'Dourado' : accent === 'blue' ? 'Azul' : accent === 'red' ? 'Vermelho' : 'Roxo'}</span></button>)}
                       </div>
                     </div>
 

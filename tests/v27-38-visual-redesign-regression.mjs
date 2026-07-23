@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root = process.cwd();
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const globals = fs.readFileSync(path.join(root, 'src/app/globals.css'), 'utf8');
+const visual = fs.readFileSync(path.join(root, 'src/app/design-system-v2738-rainbow.css'), 'utf8');
+const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8');
+const auth = fs.readFileSync(path.join(root, 'src/components/AuthGate.tsx'), 'utf8');
+const updates = fs.readFileSync(path.join(root, 'src/lib/appUpdates.ts'), 'utf8');
+
+assert.equal(pkg.version, '27.38.0');
+assert.match(pkg.scripts['test:all'], /^npm run test:v2738 && npm run test:v2737/);
+assert.match(globals, /design-system-v2738-rainbow\.css/);
+assert.match(visual, /\.auth-submit[\s\S]*background:\s*var\(--v2738-rainbow\)/);
+assert.match(visual, /\.app-side-rail/);
+assert.match(visual, /\.app-section-guide/);
+assert.match(visual, /\.accent-choice-row button\[data-accent="prism"\]/);
+assert.match(visual, /\.section-leitor/);
+assert.match(visual, /\.section-resultado/);
+assert.match(visual, /\.mobile-bottom-nav/);
+assert.match(app, /type AccentTheme = 'prism'/);
+assert.match(app, /buildmaster_visual_refresh_v2738/);
+assert.match(app, /className="app-side-rail luxury-panel"/);
+assert.match(app, /className={`app-section-guide guide-\$\{mainSection\}`}/);
+assert.match(app, /Fichas atuais|Ficha atual/);
+assert.match(auth, /auth-visual-guide/);
+assert.match(updates, /27\.38\.0/);
+console.log('v27.38 visual redesign regression: ok');
