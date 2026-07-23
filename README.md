@@ -63,3 +63,12 @@ A ficha final possui a aba **Ferramentas técnicas → Fichas de criadores**. O 
 - salva tudo por conta e inclui os registros no backup criptografado.
 
 O APK abre as pesquisas e os vídeos nas plataformas oficiais. Ele não tenta quebrar bloqueios, baixar vídeos ou extrair conteúdo privado. A confirmação dos blocos permanece auditável pelo usuário, evitando que um título, comentário ou carta parecida seja tratado como fonte correta.
+
+## Hotfix do módulo Fichas de Criadores
+
+Este pacote corrige os dois erros de TypeScript identificados no GitHub Actions:
+
+- acesso à aba `fontes` agora é solicitado pelo estado do aplicativo, sem chamar `setTab` fora do componente de resultado;
+- o atalho do YouTube usa um ícone compatível com a versão travada do `lucide-react`.
+
+O teste `v27-36-creator-research-typescript-hotfix-regression.mjs` impede a reintrodução desses erros.

@@ -95,7 +95,7 @@
     "test:v2735java": "node tests/v27-35-generated-java-compilation-regression.mjs",
     "vendor:ocr": "node scripts/vendor-tesseract-assets.mjs",
     "test:v2736": "node tests/v27-36-corrections-regression.mjs",
-    "test:v2737": "tsx tests/v27-37-creator-build-research-regression.ts && node tests/v27-37-creator-build-ui-regression.mjs"
+    "test:v2737": "tsx tests/v27-37-creator-build-research-regression.ts && node tests/v27-37-creator-build-ui-regression.mjs && node tests/v27-36-creator-research-typescript-hotfix-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

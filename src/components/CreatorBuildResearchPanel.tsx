@@ -13,8 +13,7 @@ import {
   Search,
   ShieldCheck,
   Trash2,
-  TriangleAlert,
-  Youtube
+  TriangleAlert
 } from 'lucide-react';
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from '@/lib/analyzerDomain';
 import { validateImageFile } from '@/modules/images/imageSafety';
@@ -218,7 +217,7 @@ ${ocrNote}` : ocrNote };
         <Search size={18} />
         <span><strong>Pesquisa preparada</strong><small>{searchQuery}</small></span>
       </div>
-      <a href={searchUrls.youtube} target="_blank" rel="noreferrer"><Youtube size={17} /> Pesquisar no YouTube</a>
+      <a href={searchUrls.youtube} target="_blank" rel="noreferrer"><ExternalLink size={17} /> Pesquisar no YouTube</a>
       <a href={searchUrls.tiktok} target="_blank" rel="noreferrer"><ExternalLink size={17} /> Pesquisar no TikTok</a>
       <button type="button" onClick={() => setFormOpen((current) => !current)}><Plus size={17} /> Registrar vídeo</button>
     </section>
