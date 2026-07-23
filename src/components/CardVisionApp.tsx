@@ -82,6 +82,7 @@ const StabilityDiagnosticsPanel = dynamic(() => import('@/components/EliteEvolut
 const VideoReviewPanel = dynamic(() => import('@/components/EliteEvolutionPanels').then((module) => module.VideoReviewPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const MetaBuildLabPanel = dynamic(() => import('@/components/MetaBuildLabPanel').then((module) => module.MetaBuildLabPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const CommunityIntelligencePanel = dynamic(() => import('@/components/CommunityIntelligencePanel').then((module) => module.CommunityIntelligencePanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const CreatorBuildResearchPanel = dynamic(() => import('@/components/CreatorBuildResearchPanel').then((module) => module.CreatorBuildResearchPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const UpdateCenterPanel = dynamic(() => import('@/components/UpdateCenterPanel').then((module) => module.UpdateCenterPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const AccountAdminPanel = dynamic(() => import('@/components/AccountAdminPanel').then((module) => module.AccountAdminPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const PrecisionBuildPanel = dynamic(() => import('@/components/PrecisionBuildPanel').then((module) => module.PrecisionBuildPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
@@ -101,6 +102,7 @@ import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrPr
 import { validateImageFile } from '@/modules/images/imageSafety';
 import { exportTacticalImageLibrary, importTacticalImageLibrary } from '@/modules/images/accountImageLibrary';
 import { exportTacticalPosterLibrary, replaceTacticalPosterLibrary } from '@/lib/tacticalPosterLibrary';
+import { exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { accountDatabaseName, getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
@@ -121,7 +123,7 @@ type MotionPreference = 'system' | 'reduced' | 'full';
 type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade';
+type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'tatica' | 'exportar';
 type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
@@ -139,7 +141,7 @@ const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: s
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
   { label: 'Desenvolvimento', tabs: [{ value: 'partidas', label: 'Validação real' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }] }
+  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
 ];
 
 type ManualFields = {
@@ -2932,6 +2934,8 @@ function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveF
 
       {tab === 'comunidade' && <CommunityIntelligencePanel result={result} />}
 
+      {tab === 'fontes' && <CreatorBuildResearchPanel result={result} />}
+
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
 
       {tab === 'treino' && <div className="result-section-grid"><SkillAndTrainingPanel result={result} /><VideoReviewPanel result={result} /></div>}
@@ -4649,7 +4653,8 @@ export function CardVisionApp() {
         cardRegistry: readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []),
         matchValidation: readJsonStorage(MATCH_VALIDATION_STORAGE_KEY, []),
         centralIntelligence: readJsonStorage(CENTRAL_MIGRATION_STORAGE_KEY, null),
-        centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null)
+        centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null),
+        creatorBuildResearch: exportCreatorBuildResearch()
       },
       session: readJsonStorage(ACTIVE_SESSION_KEY, null),
       tacticalStudio: exportTacticalPosterLibrary(),
@@ -4714,7 +4719,8 @@ export function CardVisionApp() {
           cardRegistry: readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []),
           matchValidation: readJsonStorage(MATCH_VALIDATION_STORAGE_KEY, []),
           centralIntelligence: readJsonStorage(CENTRAL_MIGRATION_STORAGE_KEY, null),
-        centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null)
+          centralEntityIndex: readJsonStorage(CENTRAL_INDEX_STORAGE_KEY, null),
+          creatorBuildResearch: exportCreatorBuildResearch()
         }
       });
       const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
@@ -4809,6 +4815,7 @@ export function CardVisionApp() {
         writeStorage(MATCH_VALIDATION_STORAGE_KEY, evolution.matchValidation ?? []);
         writeStorage(CENTRAL_MIGRATION_STORAGE_KEY, evolution.centralIntelligence ?? createCentralMigrationReport([]));
         writeStorage(CENTRAL_INDEX_STORAGE_KEY, evolution.centralEntityIndex ?? null);
+        if (Array.isArray(evolution.creatorBuildResearch)) importCreatorBuildResearch(evolution.creatorBuildResearch);
         window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated'));
         if (evolution.onboarding && typeof evolution.onboarding === 'object') {
           const profile = evolution.onboarding as OnboardingProfile;
@@ -5764,7 +5771,10 @@ export function CardVisionApp() {
     { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
     { id: 'team', group: 'Time', label: 'Abrir Meu Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
     { id: 'matches', group: 'Partidas', label: 'Abrir Partidas', description: `${centralMatchRecords.length} registro(s) de validação real.`, keywords: ['treino', 'pós-jogo'], run: () => openMainSection('partidas') },
-    ...(result || draftResult ? [{ id: 'current-result', group: 'Ficha atual', label: 'Abrir resultado atual', description: result ? `Ficha de ${result.parsed.playerName}.` : 'Revisão da ficha em andamento.', keywords: ['resultado', 'auditoria'], run: () => openMainSection('resultado') }] : []),
+    ...(result || draftResult ? [
+      { id: 'current-result', group: 'Ficha atual', label: 'Abrir resultado atual', description: result ? `Ficha de ${result.parsed.playerName}.` : 'Revisão da ficha em andamento.', keywords: ['resultado', 'auditoria'], run: () => openMainSection('resultado') },
+      ...(result ? [{ id: 'creator-builds', group: 'Ficha atual', label: 'Comparar fichas de criadores', description: `YouTube, TikTok e consenso por blocos para ${result.parsed.playerName}.`, keywords: ['youtube', 'tiktok', 'progressão', 'ficha', 'criadores'], run: () => { openMainSection('resultado'); setTab('fontes'); } }] : [])
+    ] : []),
     { id: 'appearance', group: 'Ajustes', label: 'Aparência e acessibilidade', description: 'Tema, textos, contraste, animações e densidade.', keywords: ['visual', 'design'], run: () => { setMainSection('ajustes'); setSettingsView('aparencia'); } },
     { id: 'performance', group: 'Ajustes', label: 'Desempenho do aplicativo', description: 'Ative o modo econômico e revise estabilidade.', keywords: ['rápido', 'leve', 'delay'], run: () => { setMainSection('ajustes'); setSettingsView('desempenho'); } },
     { id: 'security', group: 'Ajustes', label: 'Segurança e integridade', description: 'Saúde local, diagnóstico e compatibilidade.', keywords: ['proteção', 'erros'], run: () => { setMainSection('ajustes'); setSettingsView('seguranca'); } },

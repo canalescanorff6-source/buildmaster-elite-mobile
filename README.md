@@ -48,3 +48,18 @@ O workflow baixa os arquivos OCR oficiais, gera o Android do zero, executa os te
 ## Arquivos que não devem ser enviados
 
 Não adicione ao repositório: `node_modules`, `.next`, `out`, `android`, APKs, keystores, `.env`, logs, caches ou `public/update-manifest.json`. Essas exclusões já estão configuradas em `.gitignore`.
+
+## Pesquisa de fichas de criadores
+
+A ficha final possui a aba **Ferramentas técnicas → Fichas de criadores**. O módulo:
+
+- prepara pesquisas específicas para YouTube e TikTok usando jogador, tipo da carta, edição e overall;
+- registra links, canal, país, plataforma, posição usada e teste em partidas;
+- guarda exatamente os dez blocos oficiais de progressão;
+- calcula o custo real dos pontos conforme a regra do eFootball;
+- separa versões diferentes da mesma carta;
+- compara cada vídeo com a ficha criada pelo BuildMaster;
+- gera consenso ponderado, confiança, faixa de valores e alertas de divergência;
+- salva tudo por conta e inclui os registros no backup criptografado.
+
+O APK abre as pesquisas e os vídeos nas plataformas oficiais. Ele não tenta quebrar bloqueios, baixar vídeos ou extrair conteúdo privado. A confirmação dos blocos permanece auditável pelo usuário, evitando que um título, comentário ou carta parecida seja tratado como fonte correta.
