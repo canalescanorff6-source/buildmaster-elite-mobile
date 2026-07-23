@@ -33,4 +33,4 @@ assert.match(navigation, /aria-label="Navegação inferior"/);
 assert.match(live, /aria-live=\{urgent \? 'assertive' : 'polite'\}/);
 assert.match(live, /aria-atomic="true"/);
 
-console.log('Visual/A11y v27.39: contraste AA das ações, toque, foco, movimento reduzido e regiões ao vivo aprovados.');
+console.log('Visual/A11y v27.40: contraste AA das ações, toque, foco, movimento reduzido e regiões ao vivo aprovados.');

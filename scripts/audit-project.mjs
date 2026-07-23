@@ -44,7 +44,7 @@ const layout = read('src/app/layout.tsx');
 const manifest = read('public/manifest.webmanifest');
 const sw = read('public/sw.js');
 
-check(/^27\.39\.\d+$/.test(expectedVersion), 'Versão de auditoria v27.39 configurada', `encontrada ${expectedVersion}`);
+check(/^27\.40\.\d+$/.test(expectedVersion), 'Versão de auditoria v27.40 configurada', `encontrada ${expectedVersion}`);
 check(appUpdates.includes(`'${expectedVersion}'`), 'Motor de atualização usa a versão do pacote');
 check(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface usam versão centralizada');
 check(manifest.includes(`v${expectedMinor}`), 'Manifesto PWA acompanha a versão atual');

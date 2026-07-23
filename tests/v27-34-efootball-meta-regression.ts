@@ -16,7 +16,7 @@ import {
 import { createTacticalPosterSvg } from '../src/lib/tacticalPoster';
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
-assert.equal(pkg.version, '27.39.0');
+assert.equal(pkg.version, '27.40.0');
 assert.equal(CANONICAL_PLAYER_PLAYSTYLES.length, 22);
 assert.deepEqual(FORMATION_COACH_STYLES, ['POSSE_DE_BOLA', 'CONTRA_ATAQUE_RAPIDO', 'CONTRA_ATAQUE']);
 assert.equal(canonicalizePlayerPlaystyle('Deep-Lying Forward'), 'Atacante Pivô');

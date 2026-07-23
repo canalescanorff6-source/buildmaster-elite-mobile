@@ -5,6 +5,7 @@ import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
 import { buildMetaBuildUniverse } from './metaBuildUniverse';
 import { MAX_PLAYER_TRAINING_BUDGET, MIN_PLAYER_TRAINING_BUDGET, SAFE_PLAYER_TRAINING_BUDGET, inferPointsFromCardLevel, normalizePlayerTrainingBudget, parseCardLevelFromText } from '../modules/builds/pointBudget';
+import { TRAINING_KEYS, addTrainingLevel, applyPlanEntries, emptyTraining, normalizeTrainingPlan, parseTrainingAllocation, removeTrainingLevel, trainingLevelCost, trainingPlanCost, trainingPlanTotalCost, trainingTotalCost } from './trainingPlanCore';
 
 import { Objective, TacticalStyle, TacticalProfile, PositionCode, AttributeKey, Attributes, PositionRatings, PrecisionIssue, PrecisionValidation, TrainingKey, TrainingPlan, Impetus, ImpetoRecommendation, SkillRecommendation, PhysicalProfile, PlayerCondition, ParsedCard, TeamMapPhaseScores, TeamMapAnalysis, DeepReadingItem, DeepAnalysis, AdvancedTacticalFunction, SpecialSkillsAnalysis, PhysicalEngineAnalysis, AttributeGoalItem, AttributeGoalsAnalysis, AdvancedOptimizerAnalysis, CorrectionLimitAnalysis, MarginalReturnItem, ErrorToleranceAnalysis, SkillPriorityAnalysis, PlayerIdentityAnalysis, IndividualAttributeGoal, SelectiveWeaknessStrategy, SpecialSkillSynergyItem, OnFieldBehaviorSimulation, AntiCloneAnalysis, CardDnaAnalysis, AnalysisResult, normalizeObjective, POSITION_PT, ATTRIBUTE_PT, PLAYSTYLE_OPTIONS,  } from './analyzerDomain';
 export * from './analyzerDomain';
@@ -1089,8 +1090,6 @@ function calculateTacticalFit(position: PositionCode, a: Required<Attributes>, p
 }
 
 
-const TRAINING_KEYS: TrainingKey[] = ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending', 'gk1', 'gk2', 'gk3'];
-
 const SAFE_DEFAULT_TRAINING_BUDGET = SAFE_PLAYER_TRAINING_BUDGET;
 const MIN_AUTO_TRAINING_BUDGET = MIN_PLAYER_TRAINING_BUDGET;
 const MAX_AUTO_TRAINING_BUDGET = MAX_PLAYER_TRAINING_BUDGET;
@@ -1099,101 +1098,6 @@ const MAX_AUTO_TRAINING_BUDGET = MAX_PLAYER_TRAINING_BUDGET;
 
 function normalizeTrainingBudget(value: number | null | undefined): number {
   return normalizePlayerTrainingBudget(value);
-}
-
-function emptyTraining(): TrainingPlan {
-  return { shooting: 0, passing: 0, dribbling: 0, dexterity: 0, lowerBodyStrength: 0, aerialStrength: 0, defending: 0, gk1: 0, gk2: 0, gk3: 0 };
-}
-
-function normalizeTrainingPlan(plan: TrainingPlan): TrainingPlan {
-  const clean = emptyTraining();
-  for (const key of TRAINING_KEYS) clean[key] = Math.max(0, Math.min(16, Math.round(Number(plan[key] ?? 0))));
-  return clean;
-}
-
-function trainingLevelCost(level: number): number {
-  if (level <= 0) return 0;
-  return Math.ceil(level / 4);
-}
-
-function trainingTotalCost(level: number): number {
-  let cost = 0;
-  for (let current = 1; current <= Math.max(0, level); current += 1) cost += trainingLevelCost(current);
-  return cost;
-}
-
-function trainingPlanCost(plan: TrainingPlan): TrainingPlan {
-  const costs = emptyTraining();
-  for (const key of TRAINING_KEYS) costs[key] = trainingTotalCost(plan[key] ?? 0);
-  return costs;
-}
-
-function trainingPlanTotalCost(plan: TrainingPlan): number {
-  return Object.values(trainingPlanCost(plan)).reduce((sum, value) => sum + value, 0);
-}
-
-
-const TRAINING_ALIASES: Record<TrainingKey, string[]> = {
-  shooting: ['finalizacao', 'finalização', 'chute', 'chutes', 'tiro', 'tiros', 'shooting'],
-  passing: ['passe', 'passes', 'passing'],
-  dribbling: ['drible treino', 'drible', 'dribbling'],
-  dexterity: ['destreza', 'dexterity'],
-  lowerBodyStrength: ['forca nas pernas', 'força nas pernas', 'forca pernas', 'força pernas', 'forca de pernas', 'força de pernas', 'forca inferior', 'lower body strength'],
-  aerialStrength: ['forca em bola aerea', 'força em bola aérea', 'forca bola aerea', 'força bola aérea', 'bola aerea', 'bola aérea', 'jogo aereo', 'jogo aéreo', 'aerial strength'],
-  defending: ['defesa', 'defending'],
-  gk1: ['go 1', 'gol 1', 'goleiro 1', 'gk 1', 'gk1'],
-  gk2: ['go 2', 'gol 2', 'goleiro 2', 'gk 2', 'gk2'],
-  gk3: ['go 3', 'gol 3', 'goleiro 3', 'gk 3', 'gk3']
-};
-
-function aliasToRegex(alias: string): string {
-  return normalize(alias)
-    .toLowerCase()
-    .split(/\s+/)
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('\\s+');
-}
-
-function parseTrainingAllocation(text: string): { plan: TrainingPlan; points: number; keysRead: number } | null {
-  const normalized = normalize(text)
-    .replace(/\r/g, '\n')
-    .replace(/[=:+]/g, ' ')
-    .replace(/\s+/g, ' ');
-  const plan = emptyTraining();
-  const found = new Set<TrainingKey>();
-
-  for (const key of TRAINING_KEYS) {
-    for (const alias of TRAINING_ALIASES[key]) {
-      const pattern = new RegExp(`(?:^|[\\s,;|•])${aliasToRegex(alias)}\\s*(\\d{1,2})(?=\\b)`, 'gi');
-      for (const match of normalized.matchAll(pattern)) {
-        const value = Number(match[1]);
-        if (!Number.isFinite(value) || value < 0 || value > 16) continue;
-        plan[key] = Math.max(plan[key] ?? 0, value);
-        found.add(key);
-      }
-    }
-  }
-
-  const points = trainingPlanTotalCost(plan);
-  const nonZero = TRAINING_KEYS.filter((key) => (plan[key] ?? 0) > 0).length;
-
-  // Só confia quando parece mesmo a seção de treino da ficha automática.
-  // Isso impede que atributos como "Finalização 91" ou "Passe rasteiro 80" virem pontos.
-  if (found.size < 4 || nonZero < 2) return null;
-  if (points < MIN_AUTO_TRAINING_BUDGET || points > MAX_AUTO_TRAINING_BUDGET) return null;
-  return { plan, points, keysRead: found.size };
-}
-
-function addTrainingLevel(plan: TrainingPlan, key: TrainingKey, maxLevel = 16): boolean {
-  if ((plan[key] ?? 0) >= maxLevel) return false;
-  plan[key] = (plan[key] ?? 0) + 1;
-  return true;
-}
-
-function removeTrainingLevel(plan: TrainingPlan, key: TrainingKey): boolean {
-  if ((plan[key] ?? 0) <= 0) return false;
-  plan[key] = (plan[key] ?? 0) - 1;
-  return true;
 }
 
 function trainingBudgetFromCard(parsed: ParsedCard): number {
@@ -1209,9 +1113,6 @@ function trainingBudgetFromCard(parsed: ParsedCard): number {
   return SAFE_DEFAULT_TRAINING_BUDGET;
 }
 
-function applyPlanEntries(entries: Partial<TrainingPlan>): TrainingPlan {
-  return { ...emptyTraining(), ...entries };
-}
 
 function isGoalkeeperStyle(playstyle?: string | null) {
   return /goleiro ofensivo|goleiro defensivo|offensive goalkeeper|defensive goalkeeper/i.test(normalize(playstyle ?? ''));

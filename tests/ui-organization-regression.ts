@@ -14,7 +14,7 @@ assert.match(component, /label: 'Resumo'/);
 assert.match(component, /label: 'Habilidades'/);
 assert.match(component, /label: 'Tática'/);
 assert.match(component, /type VaultView = 'jogadores' \| 'organizar' \| 'comparar' \| 'backup'/);
-assert.match(component, /type SettingsView = 'aparencia' \| 'desempenho' \| 'seguranca' \| 'backup' \| 'atualizacoes' \| 'contas'/);
+assert.match(component, /type SettingsView = 'evolucao' \| 'aparencia' \| 'desempenho' \| 'seguranca' \| 'backup' \| 'atualizacoes' \| 'contas'/);
 assert.match(component, /section-segmented-tabs/);
 assert.match(component, /result-player-hero/);
 assert.match(component, /result-primary-tabs/);

@@ -23,10 +23,10 @@ const trash = read('src/lib/vaultTrash.ts');
 const updates = read('src/lib/appUpdates.ts');
 const dataSafety = read('src/lib/dataSafety.ts');
 
-assert.equal(pkg.version, '27.39.0');
-assert.equal(lock.version, '27.39.0');
-assert.equal(lock.packages[''].version, '27.39.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2739 && npm run test:v2738/);
+assert.equal(pkg.version, '27.40.0');
+assert.equal(lock.version, '27.40.0');
+assert.equal(lock.packages[''].version, '27.40.0');
+assert.match(pkg.scripts['test:all'], /^npm run test:v2740 && npm run test:v2739 && npm run test:v2738/);
 assert.match(globals, /design-system-v2739-refinement\.css/);
 assert.match(refinementCss, /--bm-touch:\s*48px/);
 assert.match(refinementCss, /:focus-visible/);
@@ -73,8 +73,8 @@ assert.match(refinement, /Importador inteligente de projetos antigos/);
 assert.match(dataTools, /buildMonthlyEvolutionReport/);
 assert.match(dataTools, /inspectLegacyProject/);
 assert.match(trash, /RETENTION_DAYS\s*=\s*30/);
-assert.match(updates, /27\.39\.0/);
-assert.match(dataSafety, /APP_DATA_VERSION\s*=\s*'27\.39\.0'/);
+assert.match(updates, /27\.40\.0/);
+assert.match(dataSafety, /APP_DATA_VERSION\s*=\s*'27\.40\.0'/);
 
 for (const file of [
   'src/lib/appRefinement.ts',
@@ -93,4 +93,4 @@ assert.equal(exists('public/update-manifest.json'), false);
 assert.doesNotMatch(app, /NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_PASSWORD/);
 assert.doesNotMatch(app, /api\/cloud\/fichas/);
 
-console.log('v27.39 total refinement regression: ok');
+console.log('v27.40 total refinement regression: ok');

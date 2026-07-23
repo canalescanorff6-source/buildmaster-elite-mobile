@@ -19,9 +19,9 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const staticBuilder = fs.readFileSync('scripts/build-static.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.39.0');
-assert.equal(APP_RELEASE_VERSION, '27.39.0');
-assert.equal(APP_NATIVE_VERSION, '27.39.0');
+assert.equal(pkg.version, '27.40.0');
+assert.equal(APP_RELEASE_VERSION, '27.40.0');
+assert.equal(APP_NATIVE_VERSION, '27.40.0');
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
@@ -52,7 +52,7 @@ assert.equal(selectManifestAssetFromRelease({ tag_name: releaseTag, draft: true,
 const manifest = {
   schemaVersion: 2,
   appId: 'com.buildmaster.elitetatico' as const,
-  version: '27.39.0',
+  version: '27.40.0',
   versionCode: 1352300043,
   buildId: 'acde1234acde1234',
   publishedAt: new Date().toISOString(),
@@ -61,7 +61,7 @@ const manifest = {
   apkUrl,
   notes: ['Atualizador definitivo'],
   mandatory: true,
-  minNativeVersion: '27.39.0',
+  minNativeVersion: '27.40.0',
   checksum: 'a'.repeat(64),
   sizeBytes: 4_000_000,
   releaseTag,

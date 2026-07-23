@@ -9,7 +9,7 @@ const updates = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const updateChannel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 
-assert.match(app, /type SettingsView = 'aparencia' \| 'desempenho' \| 'seguranca' \| 'backup' \| 'atualizacoes' \| 'contas'/);
+assert.match(app, /type SettingsView = 'evolucao' \| 'aparencia' \| 'desempenho' \| 'seguranca' \| 'backup' \| 'atualizacoes' \| 'contas'/);
 assert.match(app, /type TextScale = 'compact' \| 'standard' \| 'large'/);
 assert.match(app, /type MotionPreference = 'system' \| 'reduced' \| 'full'/);
 assert.match(app, /settings-navigation-rail/);

@@ -1,8 +1,8 @@
 'use client';
 
-import { Component, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import type { ChangeEvent, ErrorInfo, ReactNode } from 'react';
+import type { ChangeEvent } from 'react';
 import {
   Camera,
   CheckCircle2,
@@ -66,11 +66,13 @@ import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
 import { BuildQualityGatePanel } from '@/components/BuildQualityGatePanel';
 import { PanelLoadingFallback } from '@/components/PanelLoadingFallback';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
+import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
 import { RefinedNavigation } from '@/components/RefinedNavigation';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
+import type { AdaptiveExperienceProfile, EvolutionInput, EvolutionTarget } from '@/lib/appEvolutionV2740';
 import { buildBuildQualityGate, type BuildQualityTarget } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
 import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
@@ -89,6 +91,9 @@ const CommunityIntelligencePanel = dynamic(() => import('@/components/CommunityI
 const CreatorBuildResearchPanel = dynamic(() => import('@/components/CreatorBuildResearchPanel').then((module) => module.CreatorBuildResearchPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const UpdateCenterPanel = dynamic(() => import('@/components/UpdateCenterPanel').then((module) => module.UpdateCenterPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const AccountAdminPanel = dynamic(() => import('@/components/AccountAdminPanel').then((module) => module.AccountAdminPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const EvolutionCommandCenter = dynamic(() => import('@/components/EvolutionCommandCenter').then((module) => module.EvolutionCommandCenter), { ssr: false, loading: () => <PanelLoadingFallback /> });
+const EvolutionNotificationHub = dynamic(() => import('@/components/EvolutionNotificationHub').then((module) => module.EvolutionNotificationHub), { ssr: false, loading: () => <span className="evolution-hub-loading" aria-hidden="true" /> });
+const SmartQuickDock = dynamic(() => import('@/components/SmartQuickDock').then((module) => module.SmartQuickDock), { ssr: false });
 const PrecisionBuildPanel = dynamic(() => import('@/components/PrecisionBuildPanel').then((module) => module.PrecisionBuildPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const FormationRoleLabPanel = dynamic(() => import('@/components/FormationRoleLabPanel').then((module) => module.FormationRoleLabPanel), { ssr: false, loading: () => <PanelLoadingFallback /> });
 const FirstUseOnboarding = dynamic(() => import('@/components/FirstUseOnboarding').then((module) => module.FirstUseOnboarding), { ssr: false, loading: () => <PanelLoadingFallback /> });
@@ -147,7 +152,7 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
   return workspace === 'visao-geral' ? 'jogadores' : workspace;
 }
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
-type SettingsView = 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
+type SettingsView = 'evolucao' | 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
 type TeamCenterView = 'visao' | 'formacoes' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
@@ -1259,38 +1264,6 @@ function isRenderableAnalysisResult(value: unknown): value is AnalysisResult {
     && Array.isArray(priority.ordered)
     && Array.isArray(priority.context)
     && Boolean(tolerance.conservative && tolerance.probable && tolerance.optimistic);
-}
-
-type ResultSafetyBoundaryProps = { children: ReactNode; onRecover: () => void };
-type ResultSafetyBoundaryState = { failed: boolean };
-
-class ResultSafetyBoundary extends Component<ResultSafetyBoundaryProps, ResultSafetyBoundaryState> {
-  state: ResultSafetyBoundaryState = { failed: false };
-
-  static getDerivedStateFromError(): ResultSafetyBoundaryState {
-    return { failed: true };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Falha isolada na tela da ficha:', error, info);
-  }
-
-  private recover = () => {
-    this.setState({ failed: false });
-    this.props.onRecover();
-  };
-
-  render() {
-    if (!this.state.failed) return this.props.children;
-    return (
-      <article className="luxury-panel wide-card" role="alert">
-        <p className="kicker">Recuperação segura da ficha</p>
-        <h3>A ficha foi preservada, mas um painel apresentou dados incompatíveis.</h3>
-        <p className="panel-note">O Cofre não foi apagado. Volte para a revisão, confirme os dados e gere novamente com o formato atual.</p>
-        <button type="button" className="elite-button" onClick={this.recover}>Revisar e gerar novamente</button>
-      </article>
-    );
-  }
 }
 
 const tacticalLabels: Record<string, string> = {
@@ -5994,6 +5967,40 @@ export function CardVisionApp() {
   ];
   const creationReadinessCount = creationReadinessSignals.filter((item) => item.ready).length;
   const creationReadinessPercent = Math.round((creationReadinessCount / creationReadinessSignals.length) * 100);
+  const evolutionInput: EvolutionInput = {
+    healthScore: healthSummary.score,
+    playerCount: history.length,
+    pendingReviewCount: smartHome.needsReview,
+    incompleteCount: smartHome.incomplete,
+    lowConfidenceCount: smartHome.lowConfidence,
+    matchCount: centralMatchRecords.length,
+    ocrQueueCount: ocrQueue.length,
+    trashCount: vaultTrash.length,
+    lastBackupAt,
+    hasCurrentResult: Boolean(result || draftResult),
+    updateNotice
+  };
+
+  function openEvolutionTarget(target: EvolutionTarget) {
+    if (target === 'reader') return openMainSection('leitor');
+    if (target === 'manual') return openMainSection('manual');
+    if (target === 'vault') return openCofreDeJogadores();
+    if (target === 'team') return openMainSection('time');
+    if (target === 'matches') return openMainSection('partidas');
+    setMainSection('ajustes');
+    if (target === 'backup') setSettingsView('backup');
+    else if (target === 'updates') setSettingsView('atualizacoes');
+    else if (target === 'appearance') setSettingsView('aparencia');
+    else if (target === 'performance') setSettingsView('desempenho');
+  }
+
+  function applyAdaptiveExperienceProfile(profile: AdaptiveExperienceProfile) {
+    setDensityMode(profile.recommendedDensity);
+    setPerformanceMode(profile.recommendedPerformance);
+    if (profile.reducedMotion) setMotionPreference('reduced');
+    setStatus(`Perfil adaptativo aplicado: densidade ${profile.recommendedDensity === 'compact' ? 'compacta' : 'confortável'} e desempenho ${profile.recommendedPerformance === 'economy' ? 'econômico' : 'equilibrado'}.`);
+  }
+
   const appCommands: AppCommand[] = [
     { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
     { id: 'new-print', group: 'Criar ficha', label: 'Nova ficha por print', description: 'Abre o Print Único Pro para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
@@ -6006,6 +6013,7 @@ export function CardVisionApp() {
       { id: 'current-result', group: 'Ficha atual', label: 'Abrir resultado atual', description: result ? `Ficha de ${result.parsed.playerName}.` : 'Revisão da ficha em andamento.', keywords: ['resultado', 'auditoria'], run: () => openMainSection('resultado') },
       ...(result ? [{ id: 'creator-builds', group: 'Ficha atual', label: 'Comparar fichas de criadores', description: `YouTube, TikTok e consenso por blocos para ${result.parsed.playerName}.`, keywords: ['youtube', 'tiktok', 'progressão', 'ficha', 'criadores'], run: () => { setResultTabRequest({ tab: 'fontes', token: Date.now() }); openMainSection('resultado'); } }] : [])
     ] : []),
+    { id: 'evolution-360', group: 'Ajustes', label: 'Abrir Evolução 360', description: 'Pendências, metas, foco, rotinas guiadas, experiência adaptável, diagnóstico e manutenção.', keywords: ['evolução', 'metas', 'saúde', 'notificações', 'rotinas', 'diagnóstico', 'contraste', 'letras'], run: () => { setMainSection('ajustes'); setSettingsView('evolucao'); } },
     { id: 'appearance', group: 'Ajustes', label: 'Aparência e acessibilidade', description: 'Tema, textos, contraste, animações e densidade.', keywords: ['visual', 'design'], run: () => { setMainSection('ajustes'); setSettingsView('aparencia'); } },
     { id: 'performance', group: 'Ajustes', label: 'Desempenho do aplicativo', description: 'Ative o modo econômico e revise estabilidade.', keywords: ['rápido', 'leve', 'delay'], run: () => { setMainSection('ajustes'); setSettingsView('desempenho'); } },
     { id: 'security', group: 'Ajustes', label: 'Segurança e integridade', description: 'Saúde local, diagnóstico e compatibilidade.', keywords: ['proteção', 'erros'], run: () => { setMainSection('ajustes'); setSettingsView('seguranca'); } },
@@ -6063,6 +6071,7 @@ export function CardVisionApp() {
 
         <div className="topbar-actions topbar-premium-actions">
           <button type="button" className="topbar-search-action" onClick={() => setCommandPaletteOpen(true)} aria-label="Buscar áreas e ações no aplicativo"><Search size={16} /><span>Buscar</span><kbd>Ctrl K</kbd></button>
+          <EvolutionNotificationHub input={evolutionInput} onOpenTarget={openEvolutionTarget} onOpenCenter={() => { setMainSection('ajustes'); setSettingsView('evolucao'); }} />
           <span className={`session-save-indicator save-${sessionSaveState}`} role="status" aria-live="polite">{sessionSaveState === 'saving' ? 'Salvando…' : sessionSaveState === 'saved' ? 'Rascunho salvo' : sessionSaveState === 'error' ? 'Falha no rascunho' : 'Pronto'}</span>
           <button type="button" className="topbar-create-action" aria-expanded={mobileLauncher === 'create'} onClick={() => setMobileLauncher('create')}><Sparkles size={16} /><span>Criar</span></button>
           <button type="button" className="topbar-more-action" aria-expanded={mobileLauncher === 'more'} onClick={() => setMobileLauncher('more')}><SlidersHorizontal size={16} /><span>Mais</span></button>
@@ -6106,6 +6115,7 @@ export function CardVisionApp() {
 
           <span className="side-rail-group-label">Sistema</span>
           <button type="button" className={mainSection === 'ajustes' ? 'active' : ''} onClick={() => openMainSection('ajustes')}><SlidersHorizontal size={19} /><span><strong>Ajustes</strong><small>Visual e conta</small></span></button>
+          <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('evolucao'); }}><Sparkles size={19} /><span><strong>Evolução 360</strong><small>Metas e manutenção</small></span></button>
           <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); }}><RotateCcw size={19} /><span><strong>Atualizações</strong><small>APK seguro</small></span></button>
         </nav>
         <div className="side-rail-current-guide">
@@ -6168,6 +6178,7 @@ export function CardVisionApp() {
                 <button type="button" onClick={() => openMainSection('time')}><span><Target size={23} /></span><div><strong>Meu Time</strong><small>Elenco, setores, banco e planos.</small></div></button>
                 <button type="button" onClick={() => openMainSection('ajustes')}><span><SlidersHorizontal size={23} /></span><div><strong>Ajustes</strong><small>Aparência, desempenho e segurança.</small></div></button>
                 <button type="button" aria-label="Conta e usuários" className={account?.profile.role === 'admin' ? 'launcher-admin-account-action' : ''} onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); setMobileLauncher(null); }}><span>{account?.profile.role === 'admin' ? <UserPlus size={23} /> : <Users size={23} />}</span><div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><small>{account?.profile.role === 'admin' ? 'Criar usuários, renovar prazos e controlar aparelhos.' : 'Licença, validade e aparelhos autorizados.'}</small></div></button>
+                <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('evolucao'); setMobileLauncher(null); }}><span><Sparkles size={23} /></span><div><strong>Evolução 360</strong><small>Pendências, metas, foco e manutenção.</small></div></button>
                 <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); setMobileLauncher(null); }}><span><RotateCcw size={23} /></span><div><strong>Atualizações</strong><small>Backup, versão instalada e novo APK.</small></div></button>
                 <button type="button" className="launcher-logout-action" onClick={logout}><span><LogOut size={23} /></span><div><strong>Sair da conta</strong><small>Encerra a sessão neste aparelho.</small></div></button>
               </div>
@@ -7007,6 +7018,7 @@ export function CardVisionApp() {
               {account?.profile.role === 'admin' && <button type="button" className="settings-admin-account-shortcut luxury-panel" onClick={() => setSettingsView('contas')}><span><UserPlus size={22} /></span><div><strong>Criar e gerenciar contas</strong><small>Acesso direto para cadastrar clientes, definir prazo, senha e limite de aparelhos.</small></div><em>Abrir</em></button>}
 
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
+                <button type="button" className={settingsView === 'evolucao' ? 'active settings-evolution-navigation' : 'settings-evolution-navigation'} onClick={() => setSettingsView('evolucao')}><Sparkles size={18} /><div><strong>Evolução 360</strong><span>Metas e manutenção</span></div></button>
                 <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={18} /><div><strong>Aparência</strong><span>Tema e acessibilidade</span></div></button>
                 <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Resposta e estabilidade</span></div></button>
                 <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={18} /><div><strong>Segurança</strong><span>Integridade e saúde</span></div></button>
@@ -7016,6 +7028,8 @@ export function CardVisionApp() {
               </nav>
 
               <div className="settings-final-content">
+                {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
+
                 {settingsView === 'aparencia' && (
                   <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
                     <div className="settings-panel-heading">
@@ -7270,7 +7284,8 @@ export function CardVisionApp() {
       </section>
       )}
 
-      <AppCommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} commands={appCommands} />
+      <SmartQuickDock hasResult={Boolean(result || draftResult)} pendingReviewCount={smartHome.needsReview} mainArea={mainSection} onOpenTarget={openEvolutionTarget} onOpenCurrentResult={() => openMainSection('resultado')} />
+            <AppCommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} commands={appCommands} />
       <SectionErrorBoundary area="assistente"><BuildMasterAssistant open={assistantOpen} onOpenChange={setAssistantOpen} players={integratedPlayers} team={integratedTeam} /></SectionErrorBoundary>
     </main>
   );

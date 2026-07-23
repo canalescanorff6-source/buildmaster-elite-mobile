@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { RegisterServiceWorker } from '@/components/RegisterServiceWorker';
 import { AppRuntimeStatus } from '@/components/AppRuntimeStatus';
+import { ExperiencePreferenceBootstrap } from '@/components/ExperiencePreferenceBootstrap';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import './globals.css';
 
@@ -34,7 +35,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body><RegisterServiceWorker /><AppRuntimeStatus />{children}</body>
+      <body><ExperiencePreferenceBootstrap /><RegisterServiceWorker /><AppRuntimeStatus />{children}</body>
     </html>
   );
 }
