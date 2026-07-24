@@ -59,8 +59,68 @@ export type AdminUserRow = AccountProfile & {
   deviceCount?: number;
 };
 
+export type AdminDeviceRow = {
+  id: string;
+  userId: string;
+  username: string;
+  deviceId: string;
+  deviceName: string;
+  platform: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  revokedAt: string | null;
+  securityVersion: number;
+  protected: boolean;
+};
+
+export type AdminAuditRow = {
+  id: string;
+  adminId: string | null;
+  adminUsername: string;
+  targetUserId: string | null;
+  targetUsername: string | null;
+  action: string;
+  outcome: 'success' | 'denied' | 'error';
+  appVersion: string | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AdminSecuritySettings = {
+  minAppVersion: string;
+  allowLegacyClients: boolean;
+  requireDeviceProof: boolean;
+  adminMfaRequired: boolean;
+  userOfflineGraceHours: number;
+  adminOfflineGraceHours: number;
+  updatedAt: string;
+};
+
+export type AdminRateLimitRow = {
+  action: string;
+  requestCount: number;
+  windowStartedAt: string;
+  updatedAt: string;
+};
+
+export type AdminOverview = {
+  users: AdminUserRow[];
+  devices: AdminDeviceRow[];
+  audit: AdminAuditRow[];
+  settings: AdminSecuritySettings;
+  rateLimits: AdminRateLimitRow[];
+  generatedAt: string;
+};
+
 export type AdminUserAction =
   | { action: 'list' }
+  | { action: 'overview'; auditLimit?: number }
+  | { action: 'list_devices'; userId?: string; includeRevoked?: boolean }
+  | { action: 'revoke_device'; userId: string; deviceId: string }
+  | { action: 'list_audit'; limit?: number; targetUserId?: string }
+  | { action: 'get_security_settings' }
+  | { action: 'update_security_settings'; settings: Partial<Omit<AdminSecuritySettings, 'updatedAt'>> }
+  | { action: 'rate_limit_status' }
   | { action: 'create'; username: string; password: string; displayName?: string; durationDays: number; maxDevices: number; plan?: string }
   | { action: 'renew'; userId: string; durationDays: number }
   | { action: 'set_status'; userId: string; status: Exclude<AccountStatus, 'expired'> }

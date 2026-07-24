@@ -20,10 +20,10 @@ const workflows = read('src/components/GuidedWorkflowPanel.tsx');
 const diagnostics = read('src/components/AppHealthDiagnosticsPanel.tsx');
 const layout = read('src/app/layout.tsx');
 
-assert.equal(pkg.version, '27.40.0');
-assert.equal(lock.version, '27.40.0');
-assert.equal(lock.packages[''].version, '27.40.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2740 && npm run test:v2739/);
+assert.equal(pkg.version, '29.10.0');
+assert.equal(lock.version, '29.10.0');
+assert.equal(lock.packages[''].version, '29.10.0');
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739/);
 assert.match(pkg.scripts['test:v2740'], /v27-40-evolution-360-regression\.mjs/);
 assert.match(pkg.scripts['test:v2740'], /v27-40-training-core-regression\.ts/);
 assert.match(pkg.scripts['test:v2740'], /v27-40-experience-regression\.ts/);
@@ -99,4 +99,4 @@ assert.equal(exists('public/update-manifest.json'), false);
 assert.doesNotMatch(app, /NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_PASSWORD/);
 assert.doesNotMatch(app, /api\/cloud\/fichas/);
 
-console.log('v27.40 evolution 360 regression: ok');
+console.log('v28.10 evolution 360 regression: ok');

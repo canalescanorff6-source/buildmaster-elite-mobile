@@ -6,6 +6,7 @@ const auth = fs.readFileSync('src/components/AuthGate.tsx', 'utf8');
 const accountAuth = fs.readFileSync('src/lib/accountAuth.ts', 'utf8');
 const accounts = fs.readFileSync('src/components/AccountAdminPanel.tsx', 'utf8');
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const navigation = fs.readFileSync('src/components/RefinedNavigation.tsx', 'utf8');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const capacitor = fs.readFileSync('capacitor.config.ts', 'utf8');
@@ -23,7 +24,7 @@ assert.match(accounts, /bm-admin-dialog/);
 assert.match(accounts, /shareCreatedCredentials/);
 assert.match(accounts, /Gerar outra senha segura/);
 
-assert.match(app, /aria-current=/);
+assert.match(navigation, /aria-current=/);
 assert.match(app, /previousFocus\?\.focus\(\)/);
 assert.match(app, /setSettingsView\('backup'\)/);
 assert.ok(

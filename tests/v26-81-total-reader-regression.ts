@@ -104,10 +104,11 @@ assert.ok(session.mergedConfidence >= 80);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const panel = fs.readFileSync('src/components/TotalCardReaderPanel.tsx', 'utf8');
+const resultWorkspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 assert.match(app, /analyzeTotalCardCaptures/);
 assert.match(app, /totalReadingSession/);
-assert.match(app, /Confirmo que todos os prints são da mesma versão da carta/);
+assert.match(resultWorkspace, /Confirmo que todos os prints são da mesma versão da carta/);
 assert.match(panel, /Leitor Total de Carta/);
 assert.match(panel, /Analisar carta completa/);
 assert.match(css, /v26\.81 — Leitor Total/);

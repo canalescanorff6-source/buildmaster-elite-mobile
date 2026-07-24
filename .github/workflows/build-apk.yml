@@ -1,7 +1,45 @@
-name: Gerar APK v27.40 e publicar atualização automática pelo sistema Android
+name: Gerar APK v29.10 com canais, rollout e rollback seguro
 
 on:
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Canal da publicação
+        type: choice
+        required: true
+        default: stable
+        options: [stable, beta]
+      rollout_percentage:
+        description: Percentual inicial de aparelhos (1 a 100)
+        type: number
+        required: true
+        default: 100
+      mandatory:
+        description: Atualização obrigatória
+        type: boolean
+        required: true
+        default: false
+      paused:
+        description: Publicar o manifesto pausado
+        type: boolean
+        required: true
+        default: false
+      source_ref:
+        description: Commit/tag opcional para recompilar uma versão conhecida como boa
+        type: string
+        required: false
+      release_version:
+        description: Versão nova opcional para rollback (ex. 29.11.0)
+        type: string
+        required: false
+      rollback_from_version:
+        description: Versão problemática substituída por este rollback
+        type: string
+        required: false
+      rollback_reason:
+        description: Motivo do rollback
+        type: string
+        required: false
   push:
     branches: [main]
 
@@ -21,6 +59,9 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.source_ref || github.ref }}
+          fetch-depth: 0
 
       - name: Remover manifesto local antigo antes dos testes
         run: |
@@ -61,19 +102,49 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           GIT_SHA: ${{ github.sha }}
+          INPUT_SOURCE_REF: ${{ github.event.inputs.source_ref || '' }}
+          INPUT_CHANNEL: ${{ github.event.inputs.channel || 'stable' }}
+          INPUT_ROLLOUT: ${{ github.event.inputs.rollout_percentage || '100' }}
+          INPUT_MANDATORY: ${{ github.event.inputs.mandatory || 'false' }}
+          INPUT_PAUSED: ${{ github.event.inputs.paused || 'false' }}
+          INPUT_RELEASE_VERSION: ${{ github.event.inputs.release_version || '' }}
+          INPUT_ROLLBACK_FROM: ${{ github.event.inputs.rollback_from_version || '' }}
+          INPUT_ROLLBACK_REASON: ${{ github.event.inputs.rollback_reason || '' }}
         run: |
           python - <<'PY'
           import os
-          import json, pathlib
-          version = str(json.loads(pathlib.Path('package.json').read_text(encoding='utf-8'))['version'])
+          import json, pathlib, subprocess
+          package_version = str(json.loads(pathlib.Path('package.json').read_text(encoding='utf-8'))['version'])
+          version = (os.environ.get('INPUT_RELEASE_VERSION') or package_version).strip()
+          source_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          rollback_from = os.environ.get('INPUT_ROLLBACK_FROM', '').strip()
+          rollback_reason = os.environ.get('INPUT_ROLLBACK_REASON', '').strip()
+          source_ref = os.environ.get('INPUT_SOURCE_REF', '').strip()
+          if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', version):
+              raise SystemExit('release_version precisa usar o formato 29.10.0')
+          def version_tuple(value):
+              return tuple(int(part) for part in value.split('.'))
+          if rollback_from:
+              if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', rollback_from):
+                  raise SystemExit('rollback_from_version precisa usar o formato 29.10.0')
+              if not os.environ.get('INPUT_RELEASE_VERSION', '').strip() or not source_ref or not rollback_reason:
+                  raise SystemExit('Rollback exige source_ref, release_version nova e rollback_reason.')
+              if version_tuple(version) <= version_tuple(rollback_from):
+                  raise SystemExit('A versão do rollback precisa ser maior que a versão problemática para gerar versionCode superior.')
           major, minor, patch = [int(part) for part in version.split('.')[:3]]
+          channel = os.environ.get('INPUT_CHANNEL', 'stable').strip().lower()
+          if channel not in {'stable', 'beta'}:
+              raise SystemExit('Canal inválido.')
+          rollout = max(1, min(100, int(os.environ.get('INPUT_ROLLOUT', '100'))))
+          # A base de 60 milhões mantém a v29.x acima da série v28.x
+          # sem ultrapassar o limite assinado do Android nas versões planejadas.
           run = max(1, int(os.environ['RUN_NUMBER'])) % 10000
           attempt = max(1, int(os.environ['RUN_ATTEMPT']))
-          version_code = major * 50_000_000 + minor * 1_000_000 + patch * 10_000 + (run % 1000) * 10 + min(attempt, 9)
+          version_code = major * 60_000_000 + minor * 500_000 + patch * 5_000 + (run % 500) * 10 + min(attempt, 9)
           # O token do nome inclui a tentativa. Assim, "Re-run jobs" nunca sobrescreve
           # um APK que já pode estar em cache no GitHub ou no aparelho.
           asset_token = f'{version_code}{attempt:02d}'
-          short_sha = os.environ['GIT_SHA'][:8]
+          short_sha = source_sha[:8]
           asset = f'BuildMaster-Elite-Tatico-v{version}-{asset_token}-{short_sha}.apk'
           publication_id = f'{os.environ["RUN_ID"]}-{attempt}-{short_sha}'
           release_tag = f'buildmaster-v{version}-{version_code}-{attempt:02d}'
@@ -85,7 +156,17 @@ jobs:
               handle.write(f'APK_PUBLICATION_ID={publication_id}\n')
               handle.write(f'RELEASE_TAG={release_tag}\n')
               handle.write(f'MANIFEST_ASSET_NAME={manifest_asset}\n')
-          print(f'Versão {version}; versionCode {version_code}; release imutável {release_tag}; asset {asset}')
+              handle.write(f'RELEASE_CHANNEL={channel}\n')
+              handle.write(f'ROLLOUT_PERCENTAGE={rollout}\n')
+              handle.write(f'RELEASE_MANDATORY={os.environ.get("INPUT_MANDATORY", "false").lower()}\n')
+              handle.write(f'RELEASE_PAUSED={os.environ.get("INPUT_PAUSED", "false").lower()}\n')
+              handle.write(f'ROLLBACK_FROM_VERSION={rollback_from}\n')
+              handle.write(f'ROLLBACK_REASON={rollback_reason}\n')
+              handle.write(f'SOURCE_SHA={source_sha}\n')
+              handle.write(f'CHANNEL_BRANCH={"buildmaster-update-beta" if channel == "beta" else "buildmaster-update"}\n')
+              promote_legacy = channel == 'stable' and rollout == 100 and os.environ.get('INPUT_PAUSED', 'false').lower() != 'true'
+              handle.write(f'PROMOTE_LEGACY={str(promote_legacy).lower()}\n')
+          print(f'Versão {version}; versionCode {version_code}; canal {channel}; rollout {rollout}%; release {release_tag}; asset {asset}')
           PY
 
       - name: Exibir versões do ambiente
@@ -151,6 +232,7 @@ jobs:
           NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_UPDATE_PRIMARY_URL: https://raw.githubusercontent.com/${{ github.repository }}/buildmaster-update/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL: https://github.com/${{ github.repository }}/releases/download/buildmaster-latest/update-manifest.json
+          NEXT_PUBLIC_BUILDMASTER_UPDATE_BETA_URL: https://raw.githubusercontent.com/${{ github.repository }}/buildmaster-update-beta/update-manifest.json
           NEXT_PUBLIC_BUILDMASTER_UPDATE_RELEASE_API_URL: https://api.github.com/repos/${{ github.repository }}/releases/latest
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -174,6 +256,7 @@ jobs:
           grep -RqsF 'update-manifest.json' out || { echo '::error::O canal de atualização não entrou no build.'; exit 1; }
           grep -RqsF "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/buildmaster-update/update-manifest.json" out || { echo '::error::O canal independente raw não entrou no build.'; exit 1; }
           grep -RqsF "https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json" out || { echo '::error::A ponte para versões antigas não entrou no build.'; exit 1; }
+          grep -RqsF "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/buildmaster-update-beta/update-manifest.json" out || { echo '::error::O canal beta não entrou no build.'; exit 1; }
           grep -RqsF "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" out || { echo '::error::A API latest não entrou no build.'; exit 1; }
           ! grep -RqsF 'NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_PASSWORD' out || { echo '::error::O build contém referência ao login local removido.'; exit 1; }
           ! grep -RqsF 'buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' out || { echo '::error::O build contém a nuvem antiga insegura.'; exit 1; }
@@ -334,32 +417,39 @@ jobs:
           )
 
           common = {
-            'schemaVersion': 2,
+            'schemaVersion': 3,
             'appId': 'com.buildmaster.elitetatico',
             'version': os.environ['BUILDMASTER_VERSION'],
             'versionCode': int(version_code),
             'buildId': f'{os.environ["GITHUB_SHA"]}-{os.environ["GITHUB_RUN_ATTEMPT"]}',
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            'channel': 'stable',
+            'channel': os.environ['RELEASE_CHANNEL'],
             'updateType': 'apk',
             'notes': [
               'O APK imutável é a rota principal e nunca é substituído depois da publicação.',
-              'O Android DownloadManager é o transporte principal da v27.40; HTTP direto é apenas reserva.',
-              'As rotas versionada e latest permanecem como espelhos para compatibilidade.',
+              'O Android DownloadManager é o transporte principal; HTTP direto é apenas reserva.',
+              'Canais estável e beta são independentes e usam rollout determinístico por aparelho.',
               'Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.',
-              'O Estúdio Tático Local cria artes SVG e PNG sem API paga.'
+              'Rollback recompila uma base conhecida como boa com versionCode maior.'
             ],
-            'mandatory': True,
-            'minNativeVersion': '27.0.0',
+            'mandatory': os.environ.get('RELEASE_MANDATORY', 'false').lower() == 'true',
+            'minNativeVersion': '29.00.0',
+            'rolloutPercentage': int(os.environ.get('ROLLOUT_PERCENTAGE', '100')),
+            'rolloutSalt': publication_id,
+            'paused': os.environ.get('RELEASE_PAUSED', 'false').lower() == 'true',
             'checksum': hashlib.sha256(apk.read_bytes()).hexdigest(),
             'sizeBytes': apk.stat().st_size,
           }
+          if os.environ.get('ROLLBACK_FROM_VERSION', '').strip():
+              common['rollbackFromVersion'] = os.environ['ROLLBACK_FROM_VERSION'].strip()
+              common['rollbackReason'] = (os.environ.get('ROLLBACK_REASON') or 'Rollback emergencial').strip()
 
           immutable = dict(common)
           immutable['releaseTag'] = release_tag
           immutable['assetName'] = asset_name
           immutable['apkUrl'] = immutable_url
-          immutable['mirrors'] = [versioned_bridge_url, legacy_url]
+          promote_legacy = os.environ.get('PROMOTE_LEGACY', 'false').lower() == 'true'
+          immutable['mirrors'] = ([versioned_bridge_url, legacy_url] if promote_legacy else [versioned_bridge_url]) if common['channel'] == 'stable' else []
           pathlib.Path('dist-apk', manifest_asset).write_text(
               json.dumps(immutable, ensure_ascii=False, indent=2), encoding='utf-8')
 
@@ -367,13 +457,16 @@ jobs:
           primary['releaseTag'] = release_tag
           primary['assetName'] = asset_name
           primary['apkUrl'] = immutable_url
-          primary['mirrors'] = [versioned_bridge_url, legacy_url]
+          primary['mirrors'] = ([versioned_bridge_url, legacy_url] if promote_legacy else [versioned_bridge_url]) if common['channel'] == 'stable' else []
           primary_dir = pathlib.Path('dist-apk', 'primary')
           primary_dir.mkdir(parents=True, exist_ok=True)
           (primary_dir / 'update-manifest.json').write_text(
               json.dumps(primary, ensure_ascii=False, indent=2), encoding='utf-8')
 
           legacy = dict(common)
+          legacy['schemaVersion'] = 2
+          for field in ('rolloutPercentage', 'rolloutSalt', 'paused', 'rollbackFromVersion', 'rollbackReason'):
+              legacy.pop(field, None)
           legacy['releaseTag'] = 'buildmaster-latest'
           legacy['assetName'] = 'BuildMaster-Elite-Tatico-latest.apk'
           legacy['apkUrl'] = legacy_url
@@ -382,16 +475,26 @@ jobs:
           legacy_dir.mkdir(parents=True, exist_ok=True)
           (legacy_dir / 'update-manifest.json').write_text(
               json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
+
+          status = 'paused' if common['paused'] else ('rolled_back' if common.get('rollbackFromVersion') else ('testing' if common['channel'] == 'beta' else 'published'))
+          history_entry = {
+            'version': common['version'], 'versionCode': common['versionCode'], 'buildId': common['buildId'],
+            'channel': common['channel'], 'rolloutPercentage': common['rolloutPercentage'], 'status': status,
+            'publishedAt': common['publishedAt'], 'releaseTag': release_tag, 'checksum': common['checksum'],
+            'notes': common['notes']
+          }
+          pathlib.Path('dist-apk', 'release-history.json').write_text(
+              json.dumps({'schemaVersion': 1, 'releases': [history_entry]}, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
 
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Atualizador do sistema + Estúdio Tático
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Administração segura e atualização definitiva
 
-          - Download principal feito pelo DownloadManager do Android.
-          - HTTP direto mantido como transporte reserva.
-          - Manifesto principal aponta para APK imutável e inclui dois espelhos oficiais.
-          - APK validado por tamanho, SHA-256, pacote, versão, versionCode e assinatura.
-          - Estúdio Tático Local exporta artes premium em SVG e PNG sem API paga.
+          - Painel administrativo protegido por MFA, rate limit, auditoria e controle individual de aparelhos.
+          - Canal $RELEASE_CHANNEL com rollout de $ROLLOUT_PERCENTAGE% e estado pausado=$RELEASE_PAUSED.
+          - APK imutável validado por tamanho, SHA-256, pacote, versão, versionCode e assinatura.
+          - Rollback recompila uma base conhecida como boa com versionCode maior; nunca instala APK antigo por cima.
+          - A ponte para APKs antigos só é promovida quando o canal estável chega a 100% e não está pausado.
           NOTES
 
       - name: Enviar pacote como artefato do workflow
@@ -405,6 +508,7 @@ jobs:
             dist-apk/BuildMaster-Elite-Tatico-latest.apk
             dist-apk/primary/update-manifest.json
             dist-apk/legacy/update-manifest.json
+            dist-apk/release-history.json
             dist-apk/signing-report.txt
           if-no-files-found: error
           retention-days: 14
@@ -414,7 +518,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$RELEASE_TAG" \
-            --target "$GITHUB_SHA" \
+            --target "$SOURCE_SHA" \
             --title "BuildMaster Elite Tático v$BUILDMASTER_VERSION — Pacote imutável" \
             --notes-file dist-apk/RELEASE_NOTES.md \
             --prerelease
@@ -439,7 +543,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             rm -f verify-release/immutable.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.40 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -458,6 +562,7 @@ jobs:
           test "$ready" = 1 || { echo '::error::A release imutável não entregou os bytes assinados.'; exit 1; }
 
       - name: Preparar release fixa buildmaster-latest
+        if: env.RELEASE_CHANNEL == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -467,12 +572,13 @@ jobs:
               --notes-file dist-apk/RELEASE_NOTES.md
           else
             gh release create buildmaster-latest \
-              --target "$GITHUB_SHA" \
+              --target "$SOURCE_SHA" \
               --title "BuildMaster Elite Tático — Ponte automática versionada" \
               --notes-file dist-apk/RELEASE_NOTES.md
           fi
 
       - name: Publicar APK versionado na ponte fixa
+        if: env.RELEASE_CHANNEL == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -480,6 +586,7 @@ jobs:
           gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME"
 
       - name: Validar APK versionado da rota principal
+        if: env.RELEASE_CHANNEL == 'stable'
         run: |
           set -euo pipefail
           PRIMARY_APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/$APK_ASSET_NAME?publication=$APK_PUBLICATION_ID&code=$ANDROID_VERSION_CODE"
@@ -487,7 +594,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-bridge.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.40 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -505,12 +612,12 @@ jobs:
           done
           test "$ready" = 1 || { echo '::error::O APK versionado em buildmaster-latest não propagou corretamente.'; exit 1; }
 
-      - name: Publicar canal principal somente após o APK versionado
+      - name: Publicar manifesto do canal após validar o APK imutável
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          CHANNEL_BRANCH=buildmaster-update
+          CHANNEL_BRANCH="$CHANNEL_BRANCH"
           if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$CHANNEL_BRANCH" >/dev/null 2>&1; then
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/heads/$CHANNEL_BRANCH" \
@@ -533,15 +640,47 @@ jobs:
             sleep $((attempt * 5))
           done
 
+      - name: Atualizar histórico imutável do canal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, json, os, pathlib, subprocess
+          branch = os.environ['CHANNEL_BRANCH']
+          current = json.loads(pathlib.Path('dist-apk/release-history.json').read_text(encoding='utf-8'))['releases'][0]
+          try:
+              encoded = subprocess.check_output([
+                  'gh', 'api', f'repos/{os.environ["GITHUB_REPOSITORY"]}/contents/release-history.json?ref={branch}', '--jq', '.content'
+              ], text=True).replace('\n', '')
+              existing = json.loads(base64.b64decode(encoded).decode('utf-8')).get('releases', [])
+          except Exception:
+              existing = []
+          rows = [current] + [row for row in existing if row.get('versionCode') != current['versionCode'] or row.get('channel') != current['channel']]
+          rows = sorted(rows, key=lambda row: int(row.get('versionCode', 0)), reverse=True)[:30]
+          pathlib.Path('dist-apk/release-history.json').write_text(json.dumps({'schemaVersion': 1, 'releases': rows}, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+          CONTENT=$(base64 -w0 dist-apk/release-history.json)
+          EXISTING_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/release-history.json?ref=$CHANNEL_BRANCH" --jq '.sha' 2>/dev/null || true)
+          if [ -n "$EXISTING_SHA" ]; then
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/release-history.json" \
+              -f message="Registrar v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE no canal $RELEASE_CHANNEL" \
+              -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" -f sha="$EXISTING_SHA" >/dev/null
+          else
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/release-history.json" \
+              -f message="Criar histórico do canal $RELEASE_CHANNEL" \
+              -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" >/dev/null
+          fi
+
       - name: Validar canal principal e o APK apontado
         run: |
           set -euo pipefail
-          RAW_MANIFEST_URL="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/buildmaster-update/update-manifest.json"
+          RAW_MANIFEST_URL="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$CHANNEL_BRANCH/update-manifest.json"
           ready=0
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.40 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
               -o verify-release/primary-manifest.json; then
@@ -557,8 +696,16 @@ jobs:
               assert manifest['sizeBytes'] == int(pathlib.Path('verify-release/expected-size.txt').read_text().strip())
               expected = f'/releases/download/{os.environ["RELEASE_TAG"]}/{os.environ["APK_ASSET_NAME"]}'
               assert expected in manifest['apkUrl']
-              assert len(manifest.get('mirrors', [])) >= 2
-              assert any('/releases/download/buildmaster-latest/' in item for item in manifest['mirrors'])
+              assert manifest['channel'] == os.environ['RELEASE_CHANNEL']
+              assert manifest['rolloutPercentage'] == int(os.environ['ROLLOUT_PERCENTAGE'])
+              assert manifest['paused'] == (os.environ['RELEASE_PAUSED'].lower() == 'true')
+              if os.environ['RELEASE_CHANNEL'] == 'stable':
+                  assert len(manifest.get('mirrors', [])) >= 1
+                  assert any('/releases/download/buildmaster-latest/' in item for item in manifest['mirrors'])
+                  if os.environ.get('PROMOTE_LEGACY', 'false').lower() == 'true':
+                      assert any('BuildMaster-Elite-Tatico-latest.apk' in item for item in manifest['mirrors'])
+              else:
+                  assert manifest.get('mirrors', []) == []
               pathlib.Path('verify-release/primary-apk-url.txt').write_text(manifest['apkUrl'], encoding='utf-8')
           except Exception as exc:
               print(f'Canal principal ainda não propagou: {exc}')
@@ -572,7 +719,7 @@ jobs:
 
           URL=$(cat verify-release/primary-apk-url.txt)
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/27.40 Android' \
+            --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
             --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
             "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk
@@ -580,6 +727,7 @@ jobs:
           test "$(stat -c%s verify-release/primary-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::O canal principal apontou para tamanho diferente.'; exit 1; }
 
       - name: Atualizar cópia latest para versões muito antigas
+        if: env.PROMOTE_LEGACY == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -595,6 +743,7 @@ jobs:
           test "$uploaded" = 1 || { echo '::error::Não foi possível atualizar BuildMaster-Elite-Tatico-latest.apk.'; exit 1; }
 
       - name: Validar cópia latest antes do manifesto legado
+        if: env.PROMOTE_LEGACY == 'true'
         run: |
           set -euo pipefail
           LEGACY_APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=$APK_PUBLICATION_ID&code=$ANDROID_VERSION_CODE"
@@ -602,7 +751,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             rm -f verify-release/legacy-latest.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.40 Legacy-Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/28.00 Legacy-Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$LEGACY_APK_URL&bmDownloadAttempt=$attempt-$(date +%s%N)" \
               -o verify-release/legacy-latest.apk; then
@@ -618,11 +767,13 @@ jobs:
           test "$ready" = 1 || { echo '::error::A cópia latest não propagou com os bytes esperados.'; exit 1; }
 
       - name: Ativar manifesto legado por último
+        if: env.PROMOTE_LEGACY == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload buildmaster-latest dist-apk/legacy/update-manifest.json --clobber
 
       - name: Validar ponte legacy completa
+        if: env.PROMOTE_LEGACY == 'true'
         run: |
           set -euo pipefail
           LEGACY_MANIFEST_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/buildmaster-latest/update-manifest.json?verify=$APK_PUBLICATION_ID"
@@ -630,7 +781,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/legacy-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/27.40 Legacy-Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/28.00 Legacy-Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$LEGACY_MANIFEST_URL&attempt=$attempt&ts=$(date +%s%N)" \
               -o verify-release/legacy-manifest.json; then
@@ -656,6 +807,7 @@ jobs:
           test "$ready" = 1 || { echo '::error::A ponte legacy não foi ativada corretamente.'; exit 1; }
 
       - name: Ativar release nova como Latest
+        if: env.RELEASE_CHANNEL == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$RELEASE_TAG" --prerelease=false --latest
@@ -664,7 +816,12 @@ jobs:
         run: |
           echo "Versão: $BUILDMASTER_VERSION"
           echo "versionCode: $ANDROID_VERSION_CODE"
-          echo "Rota principal: buildmaster-update -> $RELEASE_TAG/$APK_ASSET_NAME (imutável)"
-          echo "Espelhos: buildmaster-latest/$APK_ASSET_NAME e BuildMaster-Elite-Tatico-latest.apk"
-          echo "Rota antiga: buildmaster-latest/update-manifest.json -> BuildMaster-Elite-Tatico-latest.apk"
-          echo "Ordem: APK imutável -> espelho versionado -> manifesto principal -> espelho latest -> manifesto legado -> Latest."
+          echo "Canal: $RELEASE_CHANNEL • rollout: $ROLLOUT_PERCENTAGE% • pausado: $RELEASE_PAUSED"
+          echo "Rota principal: $CHANNEL_BRANCH -> $RELEASE_TAG/$APK_ASSET_NAME (imutável)"
+          echo "Ponte para APKs antigos promovida: $PROMOTE_LEGACY"
+          if [ "$PROMOTE_LEGACY" = "true" ]; then
+            echo "Rota antiga atualizada: buildmaster-latest/update-manifest.json -> BuildMaster-Elite-Tatico-latest.apk"
+          else
+            echo "Rota antiga preservada na última versão 100% estável para não furar o rollout."
+          fi
+          echo "Ordem: APK imutável -> espelho versionado -> manifesto do canal -> histórico -> promoção compatível."

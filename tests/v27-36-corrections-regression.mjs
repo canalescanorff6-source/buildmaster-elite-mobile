@@ -4,6 +4,7 @@ import fs from 'node:fs';
 const read = (path) => fs.readFileSync(path, 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const app = read('src/components/CardVisionApp.tsx');
+const teamMap = read('src/modules/squad/TeamFullMapPanel.tsx');
 const auth = read('src/components/AuthGate.tsx');
 const studio = read('src/components/TacticalPosterStudioPanel.tsx');
 const poster = read('src/lib/tacticalPoster.ts');
@@ -16,7 +17,7 @@ const backup = read('src/lib/dataSafety.ts');
 const workflow = read('.github/workflows/build-apk.yml');
 const oldStudioTest = read('tests/v27-32-tactical-studio-complete-regression.mjs');
 
-assert.equal(pkg.version, '27.40.0');
+assert.equal(pkg.version, '29.10.0');
 
 // 1. Cofre antigo removido.
 assert.equal(fs.existsSync('src/app/api/cloud/fichas/route.ts'), false);
@@ -52,14 +53,9 @@ assert.match(exportUtils, /canvas\.width = 1/);
 assert.match(app, /previewObjectUrlRef/);
 assert.doesNotMatch(app, /Tesseract\.recognize/);
 assert.doesNotMatch(auth, /setActiveAccountIdentity/);
-const teamMapStart = app.indexOf('function TeamFullMapPanel');
-const mainAppStart = app.indexOf('export function CardVisionApp');
-assert.ok(teamMapStart >= 0 && mainAppStart > teamMapStart);
-const teamMapSource = app.slice(teamMapStart, mainAppStart);
-const mainAppSource = app.slice(mainAppStart);
-assert.match(teamMapSource, /const opponentPrintObjectUrlRef = useRef/);
-assert.match(teamMapSource, /URL\.revokeObjectURL\(opponentPrintObjectUrlRef\.current\)/);
-assert.doesNotMatch(mainAppSource, /opponentPrintObjectUrlRef/);
+assert.match(teamMap, /const opponentPrintObjectUrlRef = useRef/);
+assert.match(teamMap, /URL\.revokeObjectURL\(opponentPrintObjectUrlRef\.current\)/);
+assert.doesNotMatch(app, /opponentPrintObjectUrlRef/);
 
 // 7 e 8. Formatos ampliados e galeria por conta.
 assert.match(studio, /image\/jpeg,image\/png,image\/webp,image\/gif,image\/bmp/);

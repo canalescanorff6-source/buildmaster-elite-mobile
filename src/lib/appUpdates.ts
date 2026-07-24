@@ -1,17 +1,21 @@
-export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '27.40.0';
-export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '27.40.0';
+export const APP_RELEASE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_VERSION || '29.10.0';
+export const APP_NATIVE_VERSION = process.env.NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION || '29.10.0';
 export const CURRENT_BUILD_ID = process.env.NEXT_PUBLIC_BUILDMASTER_BUILD_ID || 'local-build';
 
 const TRUSTED_OWNER = 'canalescanorff6-source';
 const TRUSTED_REPOSITORY = 'buildmaster-elite-mobile';
 const TRUSTED_REPOSITORY_PATH = `${TRUSTED_OWNER}/${TRUSTED_REPOSITORY}`;
 const TRUSTED_CHANNEL_BRANCH = 'buildmaster-update';
+const TRUSTED_BETA_CHANNEL_BRANCH = 'buildmaster-update-beta';
 
 export const DEFAULT_UPDATE_PRIMARY_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_PRIMARY_URL
   || `https://raw.githubusercontent.com/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_CHANNEL_BRANCH}/update-manifest.json`;
 
 export const DEFAULT_UPDATE_MANIFEST_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_MANIFEST_URL
   || `https://github.com/${TRUSTED_REPOSITORY_PATH}/releases/download/buildmaster-latest/update-manifest.json`;
+
+export const DEFAULT_UPDATE_BETA_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_BETA_URL
+  || `https://raw.githubusercontent.com/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_BETA_CHANNEL_BRANCH}/update-manifest.json`;
 
 export const DEFAULT_UPDATE_RELEASE_API_URL = process.env.NEXT_PUBLIC_BUILDMASTER_UPDATE_RELEASE_API_URL
   || `https://api.github.com/repos/${TRUSTED_REPOSITORY_PATH}/releases/latest`;
@@ -34,6 +38,16 @@ export type AppUpdateManifest = {
   releaseTag?: string;
   assetName?: string;
   mirrors?: string[];
+  rolloutPercentage?: number;
+  rolloutSalt?: string;
+  paused?: boolean;
+  rollbackFromVersion?: string;
+  rollbackReason?: string;
+};
+
+export type UpdateEvaluationOptions = {
+  preferredChannel?: 'stable' | 'beta';
+  audienceKey?: string;
 };
 
 export type InstalledAppInfo = {
@@ -91,9 +105,13 @@ function isTrustedReleaseTag(tag: string): boolean {
 function isTrustedRawManifestUrl(value: string): boolean {
   try {
     const url = new URL(value);
+    const path = url.pathname.toLowerCase();
     return url.protocol === 'https:'
       && url.hostname === 'raw.githubusercontent.com'
-      && url.pathname.toLowerCase() === `/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_CHANNEL_BRANCH}/update-manifest.json`;
+      && [
+        `/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_CHANNEL_BRANCH}/update-manifest.json`,
+        `/${TRUSTED_REPOSITORY_PATH}/${TRUSTED_BETA_CHANNEL_BRANCH}/update-manifest.json`
+      ].includes(path);
   } catch {
     return false;
   }
@@ -171,7 +189,9 @@ export function validateUpdateManifest(input: unknown): AppUpdateManifest | null
   if (raw.updateType !== 'apk') return null;
   if (!isTrustedApkUrl(raw.apkUrl) || !isSha256(raw.checksum)) return null;
   if (raw.sizeBytes !== undefined && (!isPositiveInteger(raw.sizeBytes) || raw.sizeBytes > 300 * 1024 * 1024)) return null;
-  if (raw.schemaVersion !== undefined && (!isPositiveInteger(raw.schemaVersion) || raw.schemaVersion > 2)) return null;
+  if (raw.schemaVersion !== undefined && (!isPositiveInteger(raw.schemaVersion) || raw.schemaVersion > 3)) return null;
+  if (raw.rolloutPercentage !== undefined && (!isPositiveInteger(raw.rolloutPercentage) || raw.rolloutPercentage > 100)) return null;
+  if (raw.rolloutSalt !== undefined && (typeof raw.rolloutSalt !== 'string' || raw.rolloutSalt.length < 4 || raw.rolloutSalt.length > 120)) return null;
 
   const parsedApk = parseReleaseDownloadPath(String(raw.apkUrl));
   if (!parsedApk) return null;
@@ -197,18 +217,47 @@ export function validateUpdateManifest(input: unknown): AppUpdateManifest | null
     assetName: raw.assetName ? String(raw.assetName) : parsedApk.fileName,
     mirrors: Array.isArray(raw.mirrors)
       ? raw.mirrors.map(String).filter((url, index, all) => isTrustedApkUrl(url) && url !== raw.apkUrl && all.indexOf(url) === index).slice(0, 4)
-      : []
+      : [],
+    rolloutPercentage: raw.rolloutPercentage === undefined ? 100 : Number(raw.rolloutPercentage),
+    rolloutSalt: raw.rolloutSalt ? String(raw.rolloutSalt) : String(raw.buildId),
+    paused: Boolean(raw.paused),
+    rollbackFromVersion: raw.rollbackFromVersion ? String(raw.rollbackFromVersion) : undefined,
+    rollbackReason: raw.rollbackReason ? String(raw.rollbackReason).slice(0, 500) : undefined
   };
+}
+
+export function updateAudienceBucket(audienceKey: string, salt: string): number {
+  const text = `${salt}:${audienceKey}`;
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % 100;
 }
 
 export function evaluateUpdateManifest(
   input: unknown,
   installed: Partial<InstalledAppInfo> = { versionName: APP_RELEASE_VERSION, versionCode: 0 },
   currentBuildId = CURRENT_BUILD_ID,
-  ignoredBuildId = ''
+  ignoredBuildId = '',
+  options: UpdateEvaluationOptions = {}
 ): UpdateCheckResult {
   const manifest = validateUpdateManifest(input);
   if (!manifest) return { valid: false, available: false, mandatory: false, reason: 'Manifesto inválido, origem não confiável ou dados de integridade ausentes.', manifest: null };
+  const preferredChannel = options.preferredChannel || 'stable';
+  if (preferredChannel === 'stable' && manifest.channel === 'beta') {
+    return { valid: true, available: false, mandatory: false, reason: 'Esta publicação pertence ao canal de testes.', manifest };
+  }
+  if (manifest.paused && !manifest.mandatory) {
+    return { valid: true, available: false, mandatory: false, reason: 'A distribuição desta versão foi pausada pelo administrador.', manifest };
+  }
+  const rolloutPercentage = manifest.rolloutPercentage ?? 100;
+  if (!manifest.mandatory && rolloutPercentage < 100) {
+    if (!options.audienceKey) return { valid: true, available: false, mandatory: false, reason: `Liberação gradual em ${rolloutPercentage}%; este aparelho ainda não possui identificação de audiência.`, manifest };
+    const bucket = updateAudienceBucket(options.audienceKey, manifest.rolloutSalt || manifest.buildId);
+    if (bucket >= rolloutPercentage) return { valid: true, available: false, mandatory: false, reason: `Liberação gradual em ${rolloutPercentage}%; este aparelho está fora da etapa atual.`, manifest };
+  }
   if (manifest.minNativeVersion && compareVersions(APP_NATIVE_VERSION, manifest.minNativeVersion) < 0) {
     return { valid: true, available: true, mandatory: true, reason: 'Esta atualização contém uma base Android obrigatória.', manifest };
   }

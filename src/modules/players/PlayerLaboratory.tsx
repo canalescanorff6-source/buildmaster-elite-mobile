@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, ChevronRight, FileText, Grid2X2, Layers, List, Merge, Search, ShieldCheck, Sparkles, Star, Target, Trophy } from 'lucide-react';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
+import { PremiumScreenHero } from '@/components/PremiumScreenPrimitives';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 
 type ViewMode = 'list' | 'grid';
@@ -71,16 +72,31 @@ export function PlayerLaboratory({
   }, [players, query, statusFilter]);
 
   const selected = players.find((player) => player.id === selectedId) ?? filtered[0] ?? players[0] ?? null;
+  const summary = useMemo(() => ({
+    complete: players.filter((player) => player.status === 'completo').length,
+    review: players.filter((player) => player.status === 'revisar').length,
+    favorites: players.filter((player) => player.favorite).length
+  }), [players]);
 
   function toggleSelection(id: string) {
     setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   }
 
-  return <section className="v27-module v27-player-lab refined-player-lab" aria-label="Central de Jogadores">
-    <header className="v27-module-hero luxury-panel">
-      <div><p className="kicker"><Sparkles size={15}/> Central de Jogadores</p><h2>Leitura, ficha, histórico e Cofre no mesmo fluxo</h2><p>Use uma única central para criar, localizar, comparar e continuar qualquer carta.</p></div>
-      <div className="v27-hero-actions"><button type="button" className="elite-button" onClick={onReadCard}><Camera size={17}/> Ler novo print</button><button type="button" onClick={onManualCard}><FileText size={17}/> Manual Pro</button></div>
-    </header>
+  return <section className="v27-module v27-player-lab refined-player-lab bm2820-screen bm2820-players-screen" aria-label="Central de Jogadores">
+    <PremiumScreenHero
+      icon={Trophy}
+      eyebrow="Central premium de jogadores"
+      title="Cada carta, ficha e validação em um único perfil."
+      description="Crie, encontre, compare e continue qualquer jogador sem perder o contexto entre leitura, ficha, Cofre e partidas reais."
+      badge="Banco unificado"
+      actions={<><button type="button" className="elite-button" onClick={onReadCard}><Camera size={17}/> Ler novo print</button><button type="button" onClick={onManualCard}><FileText size={17}/> Manual Pro</button></>}
+      metrics={[
+        { label: 'Jogadores', value: players.length, hint: 'perfis no Cofre', tone: 'accent' },
+        { label: 'Prontos', value: summary.complete, hint: 'fichas concluídas', tone: 'positive' },
+        { label: 'Revisar', value: summary.review, hint: 'pedem atenção', tone: summary.review ? 'warning' : 'neutral' },
+        { label: 'Favoritos', value: summary.favorites, hint: 'acesso rápido' }
+      ]}
+    />
 
     <div className="v27-flow-rail luxury-panel refined-player-flow" aria-label="Fluxo do jogador">
       {['Adicionar', 'Conferir', 'Gerar ficha', 'Salvar', 'Validar'].map((label, index) => <div key={label} className="v27-flow-step"><span>{index + 1}</span><strong>{label}</strong>{index < 4 && <ChevronRight size={15}/>}</div>)}

@@ -21,7 +21,7 @@ export type UtilityBandItem = {
 };
 
 export type PrecisionProposal = {
-  id: 'recommended' | 'aggressive' | 'safe';
+  id: 'recommended' | 'aggressive' | 'safe' | 'competitive' | 'offensive' | 'balanced';
   title: string;
   subtitle: string;
   training: TrainingPlan;

@@ -1,7 +1,7 @@
-export const CURRENT_DATA_SCHEMA = 2736;
-export const APP_DATA_VERSION = '27.40.0';
+export const CURRENT_DATA_SCHEMA = 2910;
+export const APP_DATA_VERSION = '29.10.0';
 
-export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery';
+export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery' | 'performance';
 
 export type BackupEnvelope = {
   app: 'BuildMaster Elite Tático';
@@ -26,7 +26,7 @@ export type IntegrityReport = {
   totals: { sections: number; records: number; malformed: number };
 };
 
-const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery']);
+const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery', 'performance']);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const MAX_BACKUP_DEPTH = 18;
 const MAX_BACKUP_NODES = 250_000;
@@ -195,6 +195,7 @@ export function migrateBackup(envelope: BackupEnvelope): { envelope: BackupEnvel
   if (!sections.tacticalStudio) { sections.tacticalStudio = []; steps.push('Biblioteca do Estúdio Tático inicializada.'); }
   if (!sections.customFormations) { sections.customFormations = []; steps.push('Formações personalizadas inicializadas.'); }
   if (!sections.imageGallery) { sections.imageGallery = []; steps.push('Galeria de imagens inicializada.'); }
+  if (!sections.performance) { sections.performance = {}; steps.push('Partidas competitivas, treinos e sincronização inicializados.'); }
   if (sections.evolution && typeof sections.evolution === 'object') {
     const evolution = { ...(sections.evolution as Record<string, unknown>) };
     if (!evolution.centralIntelligence) {

@@ -122,12 +122,13 @@ assert.equal(migration.schemaVersion, CENTRAL_SCHEMA_VERSION);
 assert.match(migration.note, /não destrutiva/i);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const lazyPanels = fs.readFileSync('src/components/lazy/AppLazyPanels.tsx', 'utf8');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
-assert.equal(pkg.version, '27.40.0');
+assert.equal(pkg.version, '28.80.0');
 assert.match(app, /IntegratedHomePanel/);
 assert.match(app, /PlayerLaboratory/);
-assert.match(app, /dynamic\(\(\) => import\('@\/modules\/players\/PlayerLaboratory'\)/);
+assert.match(lazyPanels, /dynamic\(\s*\(\) => import\('@\/modules\/players\/PlayerLaboratory'\)/);
 assert.match(app, /IntegratedTeamLab/);
 assert.match(app, /MatchLaboratory/);
 assert.match(app, /BuildMasterAssistant/);

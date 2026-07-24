@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const app = [
+  fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8'),
+  fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8'),
+  fs.readFileSync('src/components/lazy/AppLazyPanels.tsx', 'utf8')
+].join('\n');
 const panel = fs.readFileSync('src/components/CreatorBuildResearchPanel.tsx', 'utf8');
 const engine = fs.readFileSync('src/lib/creatorBuildResearch.ts', 'utf8');
 const styles = fs.readFileSync('src/app/creator-build-research-v2737.css', 'utf8');

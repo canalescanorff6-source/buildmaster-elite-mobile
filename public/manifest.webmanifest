@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "BuildMaster Elite Tático v27.40",
-  "short_name": "BuildMaster",
-  "description": "Fichas, Cofre, elenco, tática e administração de contas em uma central premium.",
+  "name": "BuildMaster Elite Tático v29.10",
+  "short_name": "BuildMaster v29.10",
+  "description": "Central premium com administração segura, controle de contas, desempenho, nuvem e atualização definitiva.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
@@ -11,8 +11,8 @@
     "window-controls-overlay",
     "standalone"
   ],
-  "background_color": "#e8edf7",
-  "theme_color": "#eef3fb",
+  "background_color": "#f5f1e9",
+  "theme_color": "#0b1931",
   "orientation": "portrait-primary",
   "categories": [
     "sports",

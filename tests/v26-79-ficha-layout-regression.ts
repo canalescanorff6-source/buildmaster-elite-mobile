@@ -16,7 +16,8 @@ assert.doesNotMatch(app, /label: 'Método'/);
 
 assert.match(panel, /type FichaWorkspaceView/);
 assert.match(panel, /Resumo/);
-assert.match(panel, /3 propostas/);
+assert.match(panel, /3 perfis/);
+assert.match(panel, /Inteligência/);
 assert.match(panel, /Ajustar/);
 assert.match(panel, /Pós-jogo/);
 assert.match(panel, /Auditoria/);

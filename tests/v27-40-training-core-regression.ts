@@ -31,4 +31,4 @@ assert.equal(parsed?.points, 44);
 
 assert.equal(parseTrainingAllocation('Finalização 91 Passe rasteiro 88 Controle de bola 90'), null);
 
-console.log('v27.40 training core regression: ok');
+console.log('v28.10 training core regression: ok');

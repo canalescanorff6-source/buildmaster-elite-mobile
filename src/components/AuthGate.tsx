@@ -17,7 +17,6 @@ import {
   Server,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   UserCheck,
   UserRound,
   WifiOff
@@ -34,6 +33,8 @@ import {
 import { clearActiveAccountIdentity } from '@/lib/accountStorage';
 import { safeStorageRemove } from '@/lib/safeLocalStorage';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import { PremiumBrand } from '@/components/PremiumBrand';
+import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 
 type RestoreStep = 'session' | 'license' | 'workspace';
 type LoginPhase = 'idle' | 'credentials' | 'license' | 'authorized';
@@ -164,8 +165,8 @@ function AccessMessage({ profile, type }: { profile: AccountProfile; type: 'bloc
       <section className="auth-orbit" aria-hidden="true" />
       <section className="access-state-card luxury-panel">
         <div className="access-state-brand">
-          <div className="auth-logo-mark">{blocked ? <AlertTriangle size={34} /> : <Clock3 size={34} />}</div>
-          <div><span>BuildMaster</span><strong>Elite Tático</strong></div>
+          <PremiumBrand variant="compact" />
+          <div className="access-state-symbol">{blocked ? <AlertTriangle size={24} /> : <Clock3 size={24} />}</div>
         </div>
 
         <span className="access-state-badge">{blocked ? 'Acesso suspenso' : 'Licença encerrada'}</span>
@@ -217,6 +218,18 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
     return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, []);
 
+  useEffect(() => {
+    const label = phase === 'credentials'
+      ? 'Conferindo credenciais'
+      : phase === 'license'
+        ? 'Validando licença e aparelho'
+        : phase === 'authorized'
+          ? 'Preparando seu ambiente'
+          : undefined;
+    setPremiumBusy({ active: phase !== 'idle', label, progress: phase === 'credentials' ? 34 : phase === 'license' ? 72 : phase === 'authorized' ? 100 : null });
+    return () => setPremiumBusy({ active: false, progress: null });
+  }, [phase]);
+
   const phaseLabel = phase === 'credentials'
     ? 'Conferindo credenciais...'
     : phase === 'license'
@@ -240,11 +253,15 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
       const validation = await signInWithUsername(cleanUser, cleanPassword);
       window.clearTimeout(phaseTimer);
       setPhase('authorized');
+      showPremiumToast({ title: 'Acesso autorizado', message: 'Licença e aparelho validados com segurança.', tone: 'success', duration: 3000 });
+      celebratePremiumAction('Bem-vindo ao BuildMaster');
       await wait(260);
       onSuccess(validation);
     } catch (cause) {
       if (phaseTimer) window.clearTimeout(phaseTimer);
-      setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.');
+      const message = cause instanceof Error ? cause.message : 'Não foi possível entrar.';
+      setError(message);
+      showPremiumToast({ title: 'Acesso não concluído', message: describeLoginError(message).message, tone: 'danger', duration: 6000 });
       setPhase('idle');
     }
   }
@@ -254,10 +271,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
       <section className="auth-orbit" aria-hidden="true" />
       <section className="auth-shell">
         <aside className="auth-showcase luxury-panel">
-          <div className="auth-showcase-brand">
-            <div className="auth-logo-mark"><Sparkles size={31} /></div>
-            <div><strong>BuildMaster</strong><span>Elite Tático</span></div>
-          </div>
+          <div className="auth-showcase-brand"><PremiumBrand variant="hero" showVersion /></div>
 
           <div className="auth-showcase-copy">
             <span className="auth-exclusive-badge"><Crown size={15} /> Acesso privado</span>
@@ -278,10 +292,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
         </aside>
 
         <section className="auth-card auth-login-card luxury-panel">
-          <div className="auth-mobile-brand">
-            <div className="auth-logo-mark"><Sparkles size={28} /></div>
-            <div><strong>BuildMaster</strong><span>Elite Tático</span></div>
-          </div>
+          <div className="auth-mobile-brand"><PremiumBrand variant="standard" /></div>
 
           <div className="auth-login-heading">
             <span className="auth-login-kicker"><LockKeyhole size={14} /> Área segura</span>
@@ -390,10 +401,7 @@ function SessionLoadingScreen({ step }: { step: RestoreStep }) {
     <main className="auth-screen premium-loading-screen" role="status" aria-busy="true" aria-live="polite">
       <section className="auth-orbit" aria-hidden="true" />
       <section className="session-loading-card luxury-panel">
-        <div className="session-loading-brand">
-          <div className="auth-logo-mark premium-loading-mark"><Sparkles size={30} /></div>
-          <div><span>BuildMaster</span><strong>Elite Tático</strong></div>
-        </div>
+        <div className="session-loading-brand"><PremiumBrand variant="standard" showVersion /></div>
 
         <span className="session-loading-badge"><ShieldCheck size={14} /> Entrada segura</span>
         <h1>Preparando seu ambiente</h1>

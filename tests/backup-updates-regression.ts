@@ -4,11 +4,11 @@ import path from 'node:path';
 import { APP_DATA_VERSION, createBackupEnvelope, validateBackupEnvelope } from '../src/lib/dataSafety';
 import { APP_RELEASE_VERSION, compareVersions, evaluateUpdateManifest, validateUpdateManifest } from '../src/lib/appUpdates';
 
-assert.equal(APP_DATA_VERSION, '27.40.0');
-assert.equal(APP_RELEASE_VERSION, '27.40.0');
-assert.equal(compareVersions('27.1.0', '27.40.0'), -1);
-assert.equal(compareVersions('27.40.0', '27.40.0'), 0);
-assert.equal(compareVersions('26.99.9', '27.40.0'), -1);
+assert.equal(APP_DATA_VERSION, '28.80.0');
+assert.equal(APP_RELEASE_VERSION, '28.80.0');
+assert.equal(compareVersions('27.1.0', '28.80.0'), -1);
+assert.equal(compareVersions('28.80.0', '28.80.0'), 0);
+assert.equal(compareVersions('26.99.9', '28.80.0'), -1);
 
 const backup = createBackupEnvelope({
   history: [{ id: 'player-1', result: { parsed: { playerName: 'Jogador Teste' } } }],
@@ -23,7 +23,7 @@ assert.ok(checked.migrated?.sections.evolution);
 
 const manifest = {
   appId: 'com.buildmaster.elitetatico',
-  version: '27.40.0',
+  version: '28.80.0',
   versionCode: 1352300020,
   buildId: 'new-build',
   publishedAt: '2026-07-14T00:00:00.000Z',
@@ -39,9 +39,9 @@ assert.equal(validateUpdateManifest({ ...manifest, apkUrl: 'javascript:alert(1)'
 assert.equal(validateUpdateManifest({ ...manifest, checksum: 'invalido' }), null);
 assert.equal(validateUpdateManifest({ ...manifest, versionCode: 0 }), null);
 assert.equal(validateUpdateManifest({ ...manifest, publishedAt: 'data-invalida' }), null);
-assert.equal(evaluateUpdateManifest(manifest, { versionName: '27.40.0', versionCode: 1350900010 }, 'old-build').available, true);
-assert.equal(evaluateUpdateManifest({ ...manifest, version: '27.40.0', versionCode: 1350900010, buildId: 'old-build' }, { versionName: '27.40.0', versionCode: 1350900010 }, 'old-build').available, false);
-assert.equal(evaluateUpdateManifest({ ...manifest, appId: 'outro.app' }, { versionName: '27.40.0', versionCode: 1350900010 }, 'old-build').valid, false);
+assert.equal(evaluateUpdateManifest(manifest, { versionName: '28.80.0', versionCode: 1350900010 }, 'old-build').available, true);
+assert.equal(evaluateUpdateManifest({ ...manifest, version: '28.80.0', versionCode: 1350900010, buildId: 'old-build' }, { versionName: '28.80.0', versionCode: 1350900010 }, 'old-build').available, false);
+assert.equal(evaluateUpdateManifest({ ...manifest, appId: 'outro.app' }, { versionName: '28.80.0', versionCode: 1350900010 }, 'old-build').valid, false);
 
 const appSource = fs.readFileSync(path.join(process.cwd(), 'src/components/CardVisionApp.tsx'), 'utf8');
 assert.match(appSource, /exportPlayersBackup/);

@@ -8,7 +8,7 @@ const library = fs.readFileSync('src/lib/tacticalPosterLibrary.ts', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const plugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 
-assert.equal(pkg.version, '27.40.0');
+assert.equal(pkg.version, '29.10.0');
 assert.match(panel, /Estúdio Tático Completo/);
 assert.match(panel, /Premium completo/);
 assert.match(panel, /Quadro do técnico/);
@@ -29,7 +29,7 @@ assert.match(library, /MAX_PROJECTS = 60/);
 assert.match(library, /saveTacticalPosterProject/);
 assert.match(library, /duplicateTacticalPosterProject/);
 assert.match(library, /schema: 2736/);
-assert.match(workflow, /^name: Gerar APK v27\.40/m);
+assert.match(workflow, /^name: Gerar APK v29\.10/m);
 assert.match(workflow, /permissions:\s*\n\s*contents: write/);
 assert.match(workflow, /DownloadManager/);
 assert.match(plugin, /DownloadManager/);

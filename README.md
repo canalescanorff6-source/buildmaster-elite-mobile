@@ -1,98 +1,219 @@
-# BuildMaster Elite Tático v27.40.0 — Evolução 360
+# BuildMaster Elite Tático v29.10.0 — Blocos 12 e 13
 
-Pacote-fonte limpo do BuildMaster Elite Tático. Esta versão continua o refinamento geral da v27.39 e acrescenta uma camada de evolução diária, personalização, rotinas guiadas, diagnóstico local e arquitetura mais segura.
+Este pacote usa a **v29.00 completa** como base e preserva todas as entregas dos Blocos 1 a 11. A v29.10 fecha dois blocos diretamente ligados à operação real do aplicativo:
 
-## Principais áreas preservadas
+- **Bloco 12 — Administração, Contas e Segurança**;
+- **Bloco 13 — Atualização Automática Definitiva**.
 
-- login Supabase, licença, MFA e controle de aparelhos;
-- leitor de print, OCR offline e Manual Pro;
-- geração de fichas, habilidades, ímpetos e comparação por carta;
-- Pesquisa de Fichas de Criadores por YouTube/TikTok usando prints conferidos;
-- Cofre, lixeira, backup criptografado e sincronização por conta;
-- Meu Time, formações, Estúdio Tático, treinos e partidas;
-- atualização automática com SHA-256, pacote, versão e assinatura Android.
+A administração agora possui visão geral, auditoria, aparelhos individuais, limites de ações e política mínima de segurança. O atualizador passa a trabalhar com canais estável e beta, distribuição gradual, pausa, histórico e rollback seguro sem violar a regra de `versionCode` do Android.
 
-## Novidades da v27.40
+## Bloco 12 — Administração, Contas e Segurança
 
-### Evolução 360
+### Administração completa
 
-A nova central reúne em um único lugar:
+- central administrativa integrada ao painel de contas existente;
+- visão geral de usuários, aparelhos, auditoria e limites;
+- criação, renovação, suspensão, reativação e exclusão de usuários preservadas;
+- redefinição de senha com revogação de sessões;
+- alteração do limite de aparelhos por conta;
+- listagem individual dos aparelhos autorizados;
+- revogação de um único aparelho sem desconectar todos os outros;
+- consulta do histórico administrativo por usuário;
+- estado atual do rate limit por tipo de ação;
+- política mínima de versão do aplicativo;
+- prazo offline configurável;
+- controle de clientes legados.
 
-- pontuação de saúde do uso do aplicativo;
-- pendências inteligentes;
-- metas pessoais;
-- sessões de foco;
-- manutenção preventiva;
-- perfil recomendado para o aparelho;
-- relatório 360 exportável;
-- notificações contextuais e atalhos rápidos.
+### Proteções obrigatórias
 
-### Rotinas guiadas
+- MFA administrativo AAL2 validado no servidor;
+- prova criptográfica do aparelho obrigatória;
+- MFA e prova do aparelho não podem ser desligados pela interface;
+- identificação do aplicativo e da versão em cada requisição administrativa;
+- bloqueio de APK administrativo abaixo da versão mínima;
+- rate limit diferente para consultas e ações sensíveis;
+- auditoria de ações aprovadas, negadas e com erro;
+- `request_id` único para evitar duplicidade de registros;
+- senhas nunca são gravadas nos detalhes da auditoria;
+- tabelas de governança protegidas por RLS e sem acesso direto de clientes comuns.
 
-Fluxos prontos ajudam o usuário a concluir tarefas sem esquecer etapas:
+### Migração Supabase
 
-- analisar uma carta nova;
-- revisar o time antes de jogar;
-- validar uma ficha em partidas;
-- atualizar o aplicativo com segurança.
+Aplicar a migração:
 
-O progresso fica salvo localmente e cada etapa abre diretamente a área correta.
+```text
+supabase/migrations/202607240001_blocks12_13_admin_update.sql
+```
 
-### Experiência adaptável
+Depois, publicar novamente a Edge Function:
 
-O usuário pode ajustar sem alterar as funções:
+```bash
+supabase db push
+supabase functions deploy admin-users
+```
 
-- densidade compacta, confortável ou espaçosa;
-- tamanho das letras de 90% a 120%;
-- contraste padrão ou reforçado;
-- intensidade das cores suave, equilibrada ou viva;
-- efeitos completos ou reduzidos;
-- ações importantes fixas;
-- guias informativas visíveis ou ocultas.
+A migração mantém inicialmente `min_app_version` em pelo menos **29.00.0**, para não bloquear a base instalada antes da publicação da v29.10. Após validar o novo APK, o administrador pode elevar a versão mínima pelo painel protegido por MFA.
 
-As preferências são aplicadas no início do aplicativo.
+## Bloco 13 — Atualização Automática Definitiva
 
-### Diagnóstico local
+### Governança de publicação
 
-A Central 360 verifica, sem enviar dados para servidores:
+- canal **stable** para produção;
+- canal **beta** para testes controlados;
+- preferência de canal salva por aparelho;
+- rollout gradual de 1% a 100%;
+- seleção determinística por aparelho;
+- pausa imediata de uma publicação;
+- atualização obrigatória respeitando canal, pausa e rollout;
+- histórico separado por canal;
+- diagnóstico de saúde das rotas;
+- exibição da participação do aparelho no rollout;
+- metadados de rollback no manifesto;
+- checklist de publicação e recuperação dentro do aplicativo.
 
-- gravação local;
-- IndexedDB;
-- Web Crypto;
-- Service Worker;
-- conectividade;
-- volume do armazenamento simples;
-- cota de armazenamento quando o Android/navegador informa.
+### Rollback seguro no Android
 
-O relatório não contém senha, token, imagens ou conteúdo das fichas.
+O Android não permite instalar uma versão com `versionCode` menor. Por isso, o rollback da v29.10 não tenta reinstalar diretamente um APK antigo. O workflow:
 
-### Arquitetura
+1. recebe o `source_ref` de uma versão conhecida como estável;
+2. exige uma **nova versão semântica**, superior à versão problemática;
+3. gera um novo `versionCode` monotônico;
+4. recompila o código estável com a nova identificação;
+5. publica o motivo e a versão substituída no manifesto e no histórico.
 
-A matemática de pontos de progressão foi extraída de `analyzer.ts` para `trainingPlanCore.ts`, permitindo testes isolados de custo, soma, parsing e ajuste de blocos. Essa divisão reduz o risco de uma alteração em pontos quebrar leitura, habilidades ou tática.
+Isso permite recuperar uma versão funcional sem o Android rejeitar a instalação.
 
-## Validar o projeto
+### Compatibilidade com APKs antigos
+
+APKs anteriores não entendem rollout gradual. Para impedir que eles ignorem a porcentagem de liberação:
+
+- o manifesto principal da v29.10 usa esquema 3;
+- a ponte legada usa esquema 2;
+- a ponte `buildmaster-latest` só avança quando o canal estável está em **100%** e não está pausado;
+- durante rollout parcial, APKs antigos permanecem na última versão totalmente aprovada;
+- o canal beta nunca altera a ponte dos APKs antigos.
+
+Essa regra evita que a compatibilidade antiga fure a distribuição gradual.
+
+## Como publicar
+
+No GitHub Actions, execute o workflow:
+
+```text
+Gerar APK v29.10 com canais, rollout e rollback seguro
+```
+
+Entradas disponíveis:
+
+```text
+channel: stable ou beta
+rollout_percentage: 1 a 100
+mandatory: true ou false
+paused: true ou false
+source_ref: branch, tag ou commit a compilar
+release_version: versão que será publicada
+rollback_from_version: versão problemática, quando houver rollback
+rollback_reason: motivo obrigatório do rollback
+```
+
+### Exemplos operacionais
+
+Publicação estável completa:
+
+```text
+channel=stable
+rollout_percentage=100
+paused=false
+```
+
+Teste beta:
+
+```text
+channel=beta
+rollout_percentage=100
+paused=false
+```
+
+Rollout estável gradual:
+
+```text
+channel=stable
+rollout_percentage=10
+paused=false
+```
+
+Pausa emergencial:
+
+```text
+paused=true
+```
+
+Rollback seguro:
+
+```text
+source_ref=<tag ou commit conhecido como estável>
+release_version=<nova versão superior>
+rollback_from_version=<versão problemática>
+rollback_reason=<motivo>
+```
+
+## Arquivos principais da v29.10
+
+```text
+src/modules/administration/AdministrationSecurityCenter.tsx
+src/modules/updates/DefinitiveUpdateCenter.tsx
+src/modules/updates/updateGovernance.ts
+src/lib/accountAuth.ts
+src/lib/appUpdates.ts
+src/lib/updateChannel.ts
+src/components/UpdateCenterPanel.tsx
+src/components/CardVisionApp.tsx
+src/app/design-system-v2910-admin-update.css
+supabase/functions/admin-users/index.ts
+supabase/migrations/202607240001_blocks12_13_admin_update.sql
+.github/workflows/build-apk.yml
+tests/v29-10-admin-security-regression.mjs
+tests/v29-10-update-governance-regression.cjs
+tests/v29-10-integrated-ui-regression.mjs
+tests/types-v2910/
+```
+
+## Versões
+
+```text
+Aplicativo: 29.10.0
+Dados e backup: 29.10.0
+Esquema de dados: 2910
+Cache PWA: buildmaster-v29-10
+Blocos 10 e 11 preservados: 29.00.0
+Treinos e evolução preservados: 28.80.0
+Meu Time profissional preservado: 28.70.0
+Fichas avançadas preservadas: 28.60.0
+Arquitetura modular preservada: 28.50.0
+```
+
+## Validação executada
+
+- regressões próprias dos Blocos 12 e 13 aprovadas;
+- **24 de 24 testes MJS** aprovados;
+- **3 de 3 regressões CJS** aprovadas;
+- helper CJS de carregamento executado sem erro;
+- duas checagens TypeScript estritas da v29.10 aprovadas;
+- **234 arquivos TypeScript/TSX** verificados sintaticamente;
+- workflow YAML validado;
+- auditoria obrigatória com **60 verificações aprovadas**;
+- nenhum APK, keystore, chave privada ou `node_modules` incluído;
+- preservação das regressões dos Blocos 1 a 11.
+
+O `npm ci` integral não pôde ser concluído neste ambiente devido à indisponibilidade do registro externo de pacotes. Por isso, o typecheck integral, o build de produção, a assinatura e a instalação do APK devem ser confirmados pelo GitHub Actions. Os módulos novos foram validados por checagens estritas isoladas, testes funcionais, auditoria e regressões históricas.
+
+## Compilação oficial
 
 ```bash
 npm ci
 npm run typecheck
-npm run quality:audit
 npm run test:all
 npm run build
 ```
 
-## Gerar o APK oficial
-
-1. Envie todo o conteúdo desta pasta para a branch `main`, incluindo `.github`.
-2. Mantenha as Variables `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-3. Mantenha o Secret `ANDROID_SIGNING_BUNDLE` com a mesma assinatura das versões instaladas.
-4. Execute `.github/workflows/build-apk.yml`.
-
-O workflow cria o Android do zero, incorpora o OCR local, testa, assina e valida o APK antes de publicar o manifesto de atualização.
-
-## Arquivos que não devem entrar no repositório
-
-Não envie `node_modules`, `.next`, `out`, `android`, APK, keystore, `.env`, logs, caches ou `public/update-manifest.json`. Esses itens são gerados ou protegidos fora do pacote-fonte.
-
-## Limite da validação local
-
-O pacote inclui testes e auditorias, mas a confirmação definitiva depende do GitHub Actions terminar totalmente em verde e do APK ser testado em Android real, principalmente login, OCR, backup/restauração e atualização sobre uma versão anterior.
+Depois, execute o workflow da v29.10 usando a mesma chave de assinatura das versões anteriores.

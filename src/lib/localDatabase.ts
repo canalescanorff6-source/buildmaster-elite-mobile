@@ -2,11 +2,11 @@ import { accountDatabaseName } from './accountStorage';
 import { safeStorageGet, safeStorageRemove } from './safeLocalStorage';
 
 const DB_BASE_NAME = 'buildmaster_runtime_v27_10';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
-export type RuntimeStoreName = 'ocr-cache' | 'ocr-corrections' | 'scan-history' | 'diagnostics' | 'image-thumbnails' | 'ocr-queue' | 'cards' | 'builds' | 'formations' | 'matches';
+export type RuntimeStoreName = 'ocr-cache' | 'ocr-corrections' | 'scan-history' | 'diagnostics' | 'image-thumbnails' | 'ocr-queue' | 'cards' | 'builds' | 'formations' | 'matches' | 'backup-snapshots';
 
-const STORE_NAMES: RuntimeStoreName[] = ['ocr-cache', 'ocr-corrections', 'scan-history', 'diagnostics', 'image-thumbnails', 'ocr-queue', 'cards', 'builds', 'formations', 'matches'];
+const STORE_NAMES: RuntimeStoreName[] = ['ocr-cache', 'ocr-corrections', 'scan-history', 'diagnostics', 'image-thumbnails', 'ocr-queue', 'cards', 'builds', 'formations', 'matches', 'backup-snapshots'];
 
 function openRuntimeDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

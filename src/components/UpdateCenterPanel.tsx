@@ -29,6 +29,8 @@ import {
   type InstalledAppInfo
 } from '@/lib/appUpdates';
 import { fetchUpdateManifest, type UpdateChannelSource } from '@/lib/updateChannel';
+import { DefinitiveUpdateCenter } from '@/modules/updates/DefinitiveUpdateCenter';
+import { getUpdateEvaluationOptions, readUpdateChannelPreference } from '@/modules/updates/updateGovernance';
 import {
   appendUpdateAudit,
   clearUpdateAudit,
@@ -152,6 +154,7 @@ type AutoCheckerProps = { onPrepareBackup?: () => Promise<void> | void };
 
 function channelLabel(source: UpdateChannelSource | null) {
   if (source === 'primary-channel') return 'Canal principal independente';
+  if (source === 'beta-channel') return 'Canal de testes independente';
   if (source === 'legacy-manifest') return 'Ponte para versões antigas';
   if (source === 'release-api') return 'Release mais nova de reserva';
   return 'Ainda não consultado';
@@ -309,8 +312,8 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
       try {
         const installed = await readInstalledInfo();
         const ignored = safeStorageGet(IGNORED_KEY) || '';
-        const fetched = await fetchUpdateManifest();
-        const result = evaluateUpdateManifest(fetched.payload, installed, CURRENT_BUILD_ID, ignored);
+        const fetched = await fetchUpdateManifest(readUpdateChannelPreference());
+        const result = evaluateUpdateManifest(fetched.payload, installed, CURRENT_BUILD_ID, ignored, getUpdateEvaluationOptions());
         const checkedAt = new Date().toISOString();
         safeStorageSet(LAST_CHECK_KEY, checkedAt);
         appendUpdateAudit({
@@ -407,7 +410,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         if (!pending) return;
         const parsed = safeStorageGetJson<AppUpdateManifest | null>(PENDING_KEY, null);
         if (!parsed) throw new Error('Manifesto pendente inválido.');
-        const result = evaluateUpdateManifest(parsed, current, CURRENT_BUILD_ID, safeStorageGet(IGNORED_KEY) || '');
+        const result = evaluateUpdateManifest(parsed, current, CURRENT_BUILD_ID, safeStorageGet(IGNORED_KEY) || '', getUpdateEvaluationOptions());
         setManifest(result.manifest);
         setAvailable(result.available);
         if (result.available) setMessage(`Atualização v${result.manifest?.version} já detectada. Pronta para validar e instalar.`);
@@ -482,9 +485,9 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
     try {
       const current = await refreshInstalledInfo();
       const ignored = safeStorageGet(IGNORED_KEY) || '';
-      const fetched = await fetchUpdateManifest();
+      const fetched = await fetchUpdateManifest(readUpdateChannelPreference());
       setChannelSource(fetched.source);
-      const result = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, ignored);
+      const result = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, ignored, getUpdateEvaluationOptions());
       setManifest(result.manifest);
       setAvailable(result.available);
       setMessage(result.reason);
@@ -557,9 +560,9 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         detail: `${current.packageName} • versão ${current.versionName} • versionCode ${current.versionCode || 'web'}`
       });
 
-      const fetched = await fetchUpdateManifest();
+      const fetched = await fetchUpdateManifest(readUpdateChannelPreference());
       setChannelSource(fetched.source);
-      const result = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, safeStorageGet(IGNORED_KEY) || '');
+      const result = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, safeStorageGet(IGNORED_KEY) || '', getUpdateEvaluationOptions());
       setManifest(result.manifest);
       setAvailable(result.available);
       items.push({
@@ -627,9 +630,9 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
       // Nunca instala usando apenas o manifesto guardado: o SHA-256 e o URL
       // são atualizados diretamente no canal oficial antes de cada download.
       setMessage('Atualizando os dados do pacote oficial...');
-      const fetched = await fetchUpdateManifest();
+      const fetched = await fetchUpdateManifest(readUpdateChannelPreference());
       setChannelSource(fetched.source);
-      const freshResult = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, '');
+      const freshResult = evaluateUpdateManifest(fetched.payload, current, CURRENT_BUILD_ID, '', getUpdateEvaluationOptions());
       if (!freshResult.valid || !freshResult.manifest) throw new Error(freshResult.reason);
       if (!freshResult.available) {
         setManifest(freshResult.manifest);
@@ -870,6 +873,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
 
       <div className="update-install-steps"><article><i>1</i><div><strong>Detectar</strong><span>Compara a versão e o versionCode reais.</span></div></article><article><i>2</i><div><strong>Validar</strong><span>Confere tamanho, SHA-256, pacote e assinatura.</span></div></article><article><i>3</i><div><strong>Atualizar</strong><span>O Android instala por cima e mantém seus dados.</span></div></article></div>
       <div className="settings-explanation-card"><ExternalLink size={19} /><div><strong>Fluxo automático do aplicativo</strong><span>O BuildMaster detecta, escolhe a rota mais nova, baixa e valida o APK sozinho. A permissão “Instalar apps desconhecidos” é liberada uma vez; depois, o Android ainda exige tocar em “Atualizar” na confirmação final.</span></div></div>
+      <DefinitiveUpdateCenter />
       {lastCheck && <p className="panel-note">Última consulta: {new Date(lastCheck).toLocaleString('pt-BR')}.</p>}
     </section>
   );

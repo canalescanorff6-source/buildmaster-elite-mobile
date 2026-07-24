@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { analyzeCard } from '../src/lib/analyzer';
-import { migrateAnalysisResult, normalizeSavedAnalysis } from '../src/components/CardVisionApp';
+import { migrateAnalysisResult, normalizeSavedAnalysis } from '../src/modules/vault/cardHistoryStore';
 
 const raw = `NOME DO JOGADOR: Jogador Antigo\nPOSIÇÃO PRINCIPAL: DMF\nESTILO DE JOGO: O Destruidor\nPONTOS TOTAIS: 60\nTALENTO DEFENSIVO: 82\nDESARME: 84\nVELOCIDADE: 76\nCONTATO FÍSICO: 81`;
 const current = analyzeCard(raw, 'COMPETITIVE', 'CB');

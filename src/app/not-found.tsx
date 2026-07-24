@@ -1,11 +1,14 @@
+import { ArrowLeft, Compass } from 'lucide-react';
+
 export default function NotFound() {
   return (
-    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <section className="luxury-panel" style={{ width: 'min(560px, 100%)', padding: 24 }}>
-        <p className="kicker">BuildMaster Elite Tático</p>
-        <h1>Área não encontrada</h1>
-        <p>Esta rota não existe no aplicativo. Volte para a tela inicial sem apagar seus dados.</p>
-        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', padding: '11px 16px', borderRadius: 12 }}>Voltar ao início</a>
+    <main className="bm-recovery-screen">
+      <section className="bm-recovery-card">
+        <div className="bm-recovery-symbol" style={{ background: 'linear-gradient(145deg,#356fd1,#173e7e)' }}><Compass size={26} /></div>
+        <p className="kicker">BuildMaster Pro</p>
+        <h1>Esta área não existe</h1>
+        <p>O endereço informado não faz parte do aplicativo. Seus dados não foram alterados.</p>
+        <div className="bm-recovery-actions"><a className="primary" href="/"><ArrowLeft size={17} /> Voltar ao início</a></div>
       </section>
     </main>
   );

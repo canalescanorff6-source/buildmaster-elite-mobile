@@ -56,7 +56,7 @@ const design = fs.readFileSync(path.join(root, 'src/app/design-system-v2720.css'
 const globals = fs.readFileSync(path.join(root, 'src/app/globals.css'), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string; scripts: Record<string, string> };
 
-assert.equal(pkg.version, '27.40.0');
+assert.equal(pkg.version, '28.80.0');
 assert.match(source, /buildBuildQualityGate\(result\)/);
 assert.match(source, /Ficha salva como/);
 assert.match(source, /performance-\$\{performanceMode\}/);

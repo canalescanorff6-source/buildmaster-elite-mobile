@@ -1,4 +1,14 @@
 export { PrecisionBuildPanel } from '@/components/PrecisionBuildPanel';
-export { DecisionWeightPanel } from '@/components/DecisionWeightPanel';
-export { VerifiedCardRegistryPanel } from '@/components/VerifiedCardRegistryPanel';
-export * from '@/lib/appEvolution';
+export {
+  ADVANCED_BUILD_INTELLIGENCE_VERSION,
+  buildAdvancedBuildIntelligence
+} from '@/modules/builds/advancedBuildIntelligence';
+export type {
+  AdvancedBuildIntelligenceInput,
+  AdvancedBuildIntelligenceReport,
+  CreatorConsensusSnapshot,
+  MatchLearningSnapshot,
+  PointInvestmentJustification,
+  TacticalRoleDefinition,
+  TacticalRoleEvaluation
+} from '@/modules/builds/advancedBuildIntelligence';

@@ -91,12 +91,14 @@ assert.ok(summary.repeatedProblems.some((item) => item.tag === 'Marcou bem' && i
 assert.ok(summary.strongestAreas.some((item) => item.startsWith('Defesa')));
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const lazyPanels = fs.readFileSync('src/components/lazy/AppLazyPanels.tsx', 'utf8');
+const resultWorkspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 assert.match(app, /FirstUseOnboarding/);
-assert.match(app, /DecisionWeightPanel/);
-assert.match(app, /VerifiedCardRegistryPanel/);
-assert.match(app, /MatchValidationCenter/);
-assert.match(app, /Validação real/);
+assert.match(lazyPanels, /DecisionWeightPanel/);
+assert.match(lazyPanels, /VerifiedCardRegistryPanel/);
+assert.match(lazyPanels, /MatchValidationCenter/);
+assert.match(resultWorkspace, /Validação real/);
 assert.match(css, /v26\.80 — Evolução total/);
 assert.match(css, /mode-basic \.result-advanced-bar/);
 

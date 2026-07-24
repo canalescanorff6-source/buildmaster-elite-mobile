@@ -8,12 +8,12 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json')) as { version: string; scripts: Record<string, string> };
 
-assert.equal(pkg.version, '27.40.0');
+assert.equal(pkg.version, '28.80.0');
 assert.equal(APP_RELEASE_VERSION, pkg.version);
 assert.equal(APP_NATIVE_VERSION, pkg.version);
 assert.equal(APP_DATA_VERSION, pkg.version);
 assert.equal(CURRENT_DATA_SCHEMA, 2736);
-assert.match(pkg.scripts['test:all'], /^npm run test:v2740 && npm run test:v2739 && npm run test:v2738 && npm run test:v2737 && npm run test:v2736 && npm run test:v2735 && npm run test:v2734 && npm run test:v2733 && npm run test:v2729/);
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739 && npm run test:v2738 && npm run test:v2737 && npm run test:v2736 && npm run test:v2735 && npm run test:v2734 && npm run test:v2733 && npm run test:v2729/);
 assert.equal(pkg.scripts['quality:audit'], 'node scripts/audit-project.mjs');
 
 const native = read('scripts/install-android-security-plugin.mjs');
@@ -32,8 +32,10 @@ assert.match(updateCenter, /recordUpdateRouteSuccess/);
 assert.match(updateCenter, /maxAttempts: 4/);
 
 const app = read('src/components/CardVisionApp.tsx');
+const lazyPanels = read('src/components/lazy/AppLazyPanels.tsx');
 assert.match(app, /SectionErrorBoundary/);
-assert.match(app, /PanelLoadingFallback/);
+assert.match(app, /components\/lazy\/AppLazyPanels/);
+assert.match(lazyPanels, /PanelLoadingFallback/);
 assert.match(app, /APP_RELEASE_VERSION/);
 assert.doesNotMatch(app, /localStorage\./);
 

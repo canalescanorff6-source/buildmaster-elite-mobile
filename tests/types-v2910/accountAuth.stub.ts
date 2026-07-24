@@ -1,0 +1,5 @@
+export type AdminDeviceRow = { id: string; userId: string; username: string; deviceId: string; deviceName: string; platform: string; firstSeenAt: string; lastSeenAt: string; revokedAt: string | null; securityVersion: number; protected: boolean };
+export type AdminSecuritySettings = { minAppVersion: string; allowLegacyClients: boolean; requireDeviceProof: boolean; adminMfaRequired: boolean; userOfflineGraceHours: number; adminOfflineGraceHours: number; updatedAt: string };
+export type AdminOverview = { users: Array<{ status: string }>; devices: AdminDeviceRow[]; audit: Array<{ id: string; action: string; outcome: 'success' | 'denied' | 'error'; adminUsername: string; targetUsername: string | null; appVersion: string | null; createdAt: string }>; settings: AdminSecuritySettings; rateLimits: Array<{ action: string; requestCount: number; windowStartedAt: string; updatedAt: string }>; generatedAt: string };
+export function isCloudAccountsConfigured(): boolean { return true; }
+export async function adminAccountRequest<T>(input: unknown): Promise<T> { void input; throw new Error('stub'); }

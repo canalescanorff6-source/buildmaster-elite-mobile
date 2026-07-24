@@ -1,0 +1,625 @@
+/* BuildMaster Elite Tático v29.10 — Blocos 12 e 13
+   Administração, segurança e governança definitiva de atualizações. */
+
+.bm-v2910-admin-update .bm2910-admin-stack,
+.bm-v2910-admin-update .bm2910-update-governance {
+  --bm2910-ink: #13233b;
+  --bm2910-muted: #5c6c80;
+  --bm2910-border: rgba(17, 55, 91, .14);
+  --bm2910-surface: rgba(255, 255, 255, .88);
+  --bm2910-soft: rgba(229, 239, 248, .76);
+  --bm2910-positive: #16705b;
+  --bm2910-warning: #9a5e08;
+  --bm2910-danger: #a43b45;
+  --bm2910-accent: #285b91;
+}
+
+.bm2910-admin-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-security-center,
+.bm2910-update-governance {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--bm2910-border);
+  background:
+    radial-gradient(circle at 95% 0%, rgba(83, 145, 198, .14), transparent 29%),
+    linear-gradient(145deg, rgba(255,255,255,.94), rgba(242,247,251,.9));
+  box-shadow: 0 20px 50px rgba(25, 48, 78, .11);
+}
+
+.admin-security-center::before,
+.bm2910-update-governance::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #2f7db5, #47a58c 58%, #d9a84d);
+  pointer-events: none;
+}
+
+.bm2910-refresh,
+.bm2910-update-actions button,
+.bm2910-device-security button {
+  min-height: 42px;
+  border: 1px solid rgba(38, 86, 128, .18);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .84);
+  color: var(--bm2910-ink);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.bm2910-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.bm2910-refresh:hover:not(:disabled),
+.bm2910-update-actions button:hover:not(:disabled),
+.bm2910-device-security button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(38, 86, 128, .36);
+  box-shadow: 0 10px 24px rgba(36, 75, 112, .12);
+}
+
+.bm2910-refresh:disabled,
+.bm2910-update-actions button:disabled,
+.bm2910-device-security button:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.bm2910-admin-score-grid,
+.bm2910-governance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 17px 0;
+}
+
+.bm2910-admin-score-grid > article,
+.bm2910-governance-grid > article {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--bm2910-border);
+  border-radius: 18px;
+  background: var(--bm2910-surface);
+  box-shadow: 0 8px 22px rgba(27, 56, 85, .06);
+}
+
+.bm2910-admin-score-grid > article > svg,
+.bm2910-governance-grid > article > svg {
+  flex: 0 0 auto;
+  padding: 8px;
+  width: 37px;
+  height: 37px;
+  border-radius: 12px;
+  color: #245f91;
+  background: rgba(55, 119, 171, .1);
+}
+
+.bm2910-admin-score-grid article div,
+.bm2910-governance-grid article div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bm2910-admin-score-grid strong,
+.bm2910-governance-grid strong {
+  color: var(--bm2910-ink);
+  font-size: clamp(1.04rem, 2vw, 1.35rem);
+  line-height: 1.15;
+}
+
+.bm2910-admin-score-grid span,
+.bm2910-governance-grid span {
+  color: var(--bm2910-muted);
+  font-size: .82rem;
+  font-weight: 760;
+}
+
+.bm2910-admin-score-grid small,
+.bm2910-governance-grid small {
+  overflow-wrap: anywhere;
+  color: var(--bm2910-muted);
+  font-size: .72rem;
+  line-height: 1.4;
+}
+
+.bm2910-admin-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.bm2910-security-policy,
+.bm2910-rate-panel,
+.bm2910-devices-section,
+.bm2910-audit-section,
+.bm2910-health-checks,
+.bm2910-release-history {
+  border: 1px solid var(--bm2910-border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.bm2910-security-policy,
+.bm2910-rate-panel,
+.bm2910-devices-section,
+.bm2910-audit-section {
+  padding: 16px;
+}
+
+.bm2910-subheading,
+.bm2910-section-toolbar,
+.bm2910-update-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bm2910-subheading {
+  justify-content: flex-start;
+  margin-bottom: 13px;
+}
+
+.bm2910-subheading > svg {
+  flex: 0 0 auto;
+  color: var(--bm2910-accent);
+}
+
+.bm2910-subheading div,
+.bm2910-update-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.bm2910-subheading strong,
+.bm2910-update-heading h3 {
+  color: var(--bm2910-ink);
+}
+
+.bm2910-subheading span,
+.bm2910-update-heading span {
+  color: var(--bm2910-muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.bm2910-security-policy > label:not(.update-toggle) {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0;
+  color: var(--bm2910-ink);
+  font-size: .82rem;
+  font-weight: 780;
+}
+
+.bm2910-security-policy input:not([type="checkbox"]),
+.bm2910-security-policy select {
+  width: 100%;
+  min-height: 45px;
+  padding: 0 12px;
+  border: 1px solid rgba(27, 70, 109, .19);
+  border-radius: 13px;
+  background: rgba(248, 251, 253, .96);
+  color: var(--bm2910-ink);
+  font: inherit;
+}
+
+.bm2910-security-policy input:focus,
+.bm2910-security-policy select:focus {
+  outline: 3px solid rgba(46, 115, 168, .14);
+  border-color: rgba(46, 115, 168, .55);
+}
+
+.bm2910-security-policy label small {
+  color: var(--bm2910-muted);
+  font-size: .72rem;
+  font-weight: 520;
+  line-height: 1.45;
+}
+
+.bm2910-inline-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bm2910-security-policy .update-toggle {
+  border-radius: 14px;
+  border: 1px solid rgba(32, 90, 127, .13);
+  background: rgba(235, 244, 249, .7);
+}
+
+.bm2910-security-policy .update-toggle input:disabled {
+  opacity: 1;
+  accent-color: var(--bm2910-positive);
+}
+
+.bm2910-danger-toggle {
+  border-color: rgba(164, 59, 69, .16) !important;
+  background: rgba(255, 242, 242, .72) !important;
+}
+
+.bm2910-rate-list,
+.bm2910-device-grid,
+.bm2910-audit-list {
+  display: grid;
+  gap: 9px;
+}
+
+.bm2910-rate-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: var(--bm2910-soft);
+}
+
+.bm2910-rate-list article div {
+  display: grid;
+  gap: 2px;
+}
+
+.bm2910-rate-list article strong,
+.bm2910-rate-list article b {
+  color: var(--bm2910-ink);
+  font-size: .82rem;
+}
+
+.bm2910-rate-list article span {
+  color: var(--bm2910-muted);
+  font-size: .69rem;
+}
+
+.bm2910-devices-section,
+.bm2910-audit-section {
+  margin-top: 14px;
+}
+
+.bm2910-device-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bm2910-device-grid > article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(30, 72, 108, .12);
+  border-radius: 16px;
+  background: rgba(247, 251, 253, .9);
+}
+
+.bm2910-device-grid > article.is-revoked {
+  opacity: .64;
+  background: rgba(242, 242, 242, .8);
+}
+
+.bm2910-device-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--bm2910-accent);
+  background: rgba(47, 125, 181, .1);
+}
+
+.bm2910-device-grid article > div:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bm2910-device-grid strong,
+.bm2910-audit-list strong {
+  overflow-wrap: anywhere;
+  color: var(--bm2910-ink);
+  font-size: .8rem;
+}
+
+.bm2910-device-grid span,
+.bm2910-device-grid small,
+.bm2910-audit-list span,
+.bm2910-audit-list small {
+  overflow-wrap: anywhere;
+  color: var(--bm2910-muted);
+  font-size: .69rem;
+  line-height: 1.4;
+}
+
+.bm2910-device-security {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.bm2910-device-security > span,
+.bm2910-device-security > em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: .66rem;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bm2910-device-security .is-protected {
+  color: #0f6652;
+  background: rgba(31, 151, 117, .1);
+}
+
+.bm2910-device-security .needs-protection {
+  color: #915b0c;
+  background: rgba(218, 155, 47, .14);
+}
+
+.bm2910-device-security button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--bm2910-danger);
+  font-size: .69rem;
+}
+
+.bm2910-audit-list > article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(29, 70, 105, .08);
+}
+
+.bm2910-audit-list > article:last-child {
+  border-bottom: 0;
+}
+
+.bm2910-audit-list > article > span {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 10px;
+}
+
+.bm2910-audit-list .outcome-success > span { color: var(--bm2910-positive); background: rgba(24, 132, 100, .1); }
+.bm2910-audit-list .outcome-denied > span,
+.bm2910-audit-list .outcome-error > span { color: var(--bm2910-danger); background: rgba(171, 61, 71, .1); }
+
+.bm2910-update-governance {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.bm2910-update-heading .kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.bm2910-health-pill {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: .72rem !important;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.bm2910-health-pill.health-saudável { color: #0d6751; background: rgba(25, 145, 108, .12); }
+.bm2910-health-pill.health-atenção { color: #86540b; background: rgba(213, 146, 31, .14); }
+.bm2910-health-pill.health-crítico { color: #98333e; background: rgba(188, 57, 68, .12); }
+
+.bm2910-channel-selector {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.bm2910-channel-selector button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.bm2910-health-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+}
+
+.bm2910-health-checks > article {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px 13px;
+  border-bottom: 1px solid rgba(29, 70, 105, .08);
+}
+
+.bm2910-health-checks > article:nth-child(odd) {
+  border-right: 1px solid rgba(29, 70, 105, .08);
+}
+
+.bm2910-health-checks article > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bm2910-health-checks strong {
+  color: var(--bm2910-ink);
+  font-size: .77rem;
+}
+
+.bm2910-health-checks span {
+  overflow-wrap: anywhere;
+  color: var(--bm2910-muted);
+  font-size: .69rem;
+  line-height: 1.4;
+}
+
+.bm2910-health-checks .check-ok > svg { color: var(--bm2910-positive); }
+.bm2910-health-checks .check-warning > svg { color: var(--bm2910-warning); }
+
+.bm2910-rollback-alert {
+  border-color: rgba(209, 142, 27, .24) !important;
+  background: rgba(255, 247, 229, .78) !important;
+}
+
+.bm2910-update-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bm2910-update-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.bm2910-update-actions button > div {
+  display: grid;
+  gap: 2px;
+}
+
+.bm2910-update-actions strong { color: var(--bm2910-ink); font-size: .78rem; }
+.bm2910-update-actions span { color: var(--bm2910-muted); font-size: .68rem; }
+
+.bm2910-release-history {
+  overflow: hidden;
+}
+
+.bm2910-release-history summary {
+  padding: 14px 15px;
+  color: var(--bm2910-ink);
+  font-size: .8rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.bm2910-release-history > div {
+  border-top: 1px solid rgba(29, 70, 105, .09);
+}
+
+.bm2910-release-history article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(29, 70, 105, .07);
+}
+
+.bm2910-release-history article:last-child { border-bottom: 0; }
+.bm2910-release-history article > span { color: var(--bm2910-accent); }
+.bm2910-release-history article > div { display: grid; gap: 3px; }
+.bm2910-release-history strong { color: var(--bm2910-ink); font-size: .76rem; }
+.bm2910-release-history small { color: var(--bm2910-muted); font-size: .66rem; }
+.bm2910-release-history code { color: var(--bm2910-muted); font-size: .63rem; }
+.bm2910-release-history .release-failed { background: rgba(180, 53, 65, .05); }
+.bm2910-release-history .release-rolled_back { background: rgba(212, 148, 37, .06); }
+
+@media (max-width: 980px) {
+  .bm2910-admin-score-grid,
+  .bm2910-governance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bm2910-admin-columns { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .admin-security-center,
+  .bm2910-update-governance { border-radius: 18px; }
+  .bm2910-device-grid { grid-template-columns: 1fr; }
+  .bm2910-section-toolbar,
+  .bm2910-update-heading { align-items: flex-start; flex-direction: column; }
+  .bm2910-health-checks { grid-template-columns: 1fr; }
+  .bm2910-health-checks > article:nth-child(odd) { border-right: 0; }
+  .bm2910-update-actions { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 500px) {
+  .bm2910-admin-score-grid,
+  .bm2910-governance-grid,
+  .bm2910-inline-fields { grid-template-columns: 1fr; }
+  .bm2910-device-grid > article { grid-template-columns: auto minmax(0, 1fr); }
+  .bm2910-device-security { grid-column: 1 / -1; grid-template-columns: 1fr auto; justify-items: start; align-items: center; }
+  .bm2910-audit-list > article,
+  .bm2910-release-history article { grid-template-columns: auto minmax(0, 1fr); }
+  .bm2910-audit-list > article > time,
+  .bm2910-release-history article > code { grid-column: 2; }
+  .bm2910-channel-selector { width: 100%; }
+  .bm2910-channel-selector button { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bm2910-refresh,
+  .bm2910-update-actions button,
+  .bm2910-device-security button { transition: none; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .bm-v2910-admin-update .bm2910-admin-stack,
+  .bm-v2910-admin-update .bm2910-update-governance {
+    --bm2910-ink: #e9f2fb;
+    --bm2910-muted: #aebed0;
+    --bm2910-border: rgba(161, 194, 222, .15);
+    --bm2910-surface: rgba(19, 34, 51, .88);
+    --bm2910-soft: rgba(34, 55, 75, .78);
+  }
+  .admin-security-center,
+  .bm2910-update-governance {
+    background: radial-gradient(circle at 95% 0%, rgba(54, 112, 158, .18), transparent 30%), linear-gradient(145deg, rgba(17,30,45,.96), rgba(11,24,38,.94));
+  }
+  .bm2910-security-policy,
+  .bm2910-rate-panel,
+  .bm2910-devices-section,
+  .bm2910-audit-section,
+  .bm2910-health-checks,
+  .bm2910-release-history,
+  .bm2910-admin-score-grid > article,
+  .bm2910-governance-grid > article,
+  .bm2910-device-grid > article,
+  .bm2910-refresh,
+  .bm2910-update-actions button,
+  .bm2910-device-security button {
+    background: rgba(20, 38, 57, .84);
+  }
+  .bm2910-security-policy input:not([type="checkbox"]),
+  .bm2910-security-policy select { background: rgba(12, 28, 43, .94); color: var(--bm2910-ink); }
+}

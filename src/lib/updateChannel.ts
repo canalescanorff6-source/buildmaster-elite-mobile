@@ -1,6 +1,7 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import {
   DEFAULT_UPDATE_PRIMARY_URL,
+  DEFAULT_UPDATE_BETA_URL,
   DEFAULT_UPDATE_MANIFEST_URL,
   DEFAULT_UPDATE_RELEASE_API_URL,
   compareVersions,
@@ -11,7 +12,7 @@ import {
   type AppUpdateManifest
 } from '@/lib/appUpdates';
 
-export type UpdateChannelSource = 'primary-channel' | 'legacy-manifest' | 'release-api';
+export type UpdateChannelSource = 'primary-channel' | 'beta-channel' | 'legacy-manifest' | 'release-api';
 
 export type UpdateManifestCandidate = {
   payload: unknown;
@@ -29,6 +30,7 @@ export type UpdateManifestFetchResult = UpdateManifestCandidate & {
     version: string;
     versionCode: number;
     apkUrl: string;
+    channel: 'stable' | 'beta';
   }>;
   alternatives: UpdateManifestCandidate[];
 };
@@ -88,6 +90,7 @@ async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): 
 }
 
 function sourcePriority(source: UpdateChannelSource): number {
+  if (source === 'beta-channel') return 4;
   if (source === 'primary-channel') return 3;
   if (source === 'release-api') return 2;
   return 1;
@@ -111,12 +114,14 @@ export function chooseBestUpdateCandidate(candidates: UpdateManifestCandidate[])
   })[0] ?? null;
 }
 
-async function loadDirectManifest(source: 'primary-channel' | 'legacy-manifest', endpoint: string): Promise<UpdateManifestCandidate> {
+async function loadDirectManifest(source: 'primary-channel' | 'beta-channel' | 'legacy-manifest', endpoint: string): Promise<UpdateManifestCandidate> {
   const payload = await fetchJsonUrl(endpoint);
   const manifest = validateUpdateManifest(payload);
   if (!manifest) throw new Error(source === 'primary-channel'
     ? 'O manifesto do canal principal é inválido.'
-    : 'O manifesto de compatibilidade é inválido.');
+    : source === 'beta-channel'
+      ? 'O manifesto do canal de testes é inválido.'
+      : 'O manifesto de compatibilidade é inválido.');
   return { payload, manifest, source, endpoint };
 }
 
@@ -141,13 +146,19 @@ async function loadLatestReleaseManifest(): Promise<UpdateManifestCandidate> {
  * versionCode. A rota principal usa raw.githubusercontent.com; a release fixa
  * mantém compatibilidade com APKs antigos; a API Latest é a terceira defesa.
  */
-export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> {
+export async function fetchUpdateManifest(preferredChannel: 'stable' | 'beta' = 'stable'): Promise<UpdateManifestFetchResult> {
   const jobs: Array<Promise<{ candidate?: UpdateManifestCandidate; error?: string }>> = [];
 
   if (isTrustedManifestUrl(DEFAULT_UPDATE_PRIMARY_URL)) {
     jobs.push(loadDirectManifest('primary-channel', DEFAULT_UPDATE_PRIMARY_URL)
       .then((candidate) => ({ candidate }))
       .catch((cause) => ({ error: `Canal principal: ${cause instanceof Error ? cause.message : String(cause)}` })));
+  }
+
+  if (preferredChannel === 'beta' && isTrustedManifestUrl(DEFAULT_UPDATE_BETA_URL)) {
+    jobs.push(loadDirectManifest('beta-channel', DEFAULT_UPDATE_BETA_URL)
+      .then((candidate) => ({ candidate }))
+      .catch((cause) => ({ error: `Canal de testes: ${cause instanceof Error ? cause.message : String(cause)}` })));
   }
 
   if (isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL)) {
@@ -165,7 +176,8 @@ export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> 
   if (!jobs.length) throw new Error('Nenhum canal oficial de atualização está configurado neste APK.');
 
   const settled = await Promise.all(jobs);
-  const candidates = settled.flatMap((item) => item.candidate ? [item.candidate] : []);
+  const allCandidates = settled.flatMap((item) => item.candidate ? [item.candidate] : []);
+  const candidates = allCandidates.filter((candidate) => preferredChannel === 'beta' || candidate.manifest.channel === 'stable');
   const errors = settled.flatMap((item) => item.error ? [item.error] : []);
   const selected = chooseBestUpdateCandidate(candidates);
   if (!selected) throw new Error(errors.filter(Boolean).join(' | ') || 'Nenhuma rota oficial retornou um manifesto válido.');
@@ -211,7 +223,8 @@ export async function fetchUpdateManifest(): Promise<UpdateManifestFetchResult> 
       endpoint: candidate.endpoint,
       version: candidate.manifest.version,
       versionCode: candidate.manifest.versionCode,
-      apkUrl: candidate.manifest.apkUrl
+      apkUrl: candidate.manifest.apkUrl,
+      channel: candidate.manifest.channel
     })),
     alternatives: uniqueAlternatives
   };

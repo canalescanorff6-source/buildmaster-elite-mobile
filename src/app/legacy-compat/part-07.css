@@ -1400,3 +1400,132 @@
   .settings-admin-account-shortcut { grid-template-columns: auto minmax(0, 1fr); }
   .settings-admin-account-shortcut em { display: none; }
 }
+
+/* v28.60 — Bloco 7: inteligência avançada das fichas */
+.advanced-build-intelligence { min-width: 0; }
+.advanced-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.advanced-role-grid > button {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px 10px;
+  min-width: 0;
+  min-height: 178px;
+  padding: 15px;
+  border: 1px solid var(--stroke);
+  border-radius: 17px;
+  color: var(--text);
+  background: var(--surface-soft);
+  text-align: left;
+}
+.advanced-role-grid > button:hover { border-color: color-mix(in srgb, var(--accent) 34%, var(--stroke)); }
+.advanced-role-grid > button.selected {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--stroke));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-soft));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.advanced-role-grid > button > span {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.advanced-role-grid > button > strong { min-width: 0; color: var(--text-strong); font-size: 14px; line-height: 1.3; }
+.advanced-role-grid > button > b { grid-row: 1 / 3; grid-column: 2; align-self: start; color: var(--accent); font-size: 13px; }
+.advanced-role-grid > button > small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.advanced-role-grid > button > em { grid-column: 1 / -1; align-self: end; color: var(--soft); font-size: 11px; font-style: normal; font-weight: 800; }
+
+.advanced-role-plan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 15px;
+  background: var(--surface-strong);
+}
+.advanced-role-plan > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.advanced-role-plan > div span {
+  padding: 6px 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 11px;
+}
+.advanced-role-plan > div b { color: var(--text-strong); }
+.advanced-role-plan > button { min-height: 42px; white-space: nowrap; }
+
+.advanced-point-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 13px; }
+.advanced-point-list > div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--stroke);
+  border-radius: 15px;
+  background: var(--surface-soft);
+}
+.advanced-point-list > div.risk-atenção { border-color: color-mix(in srgb, #ffbd55 42%, var(--stroke)); }
+.advanced-point-list > div.risk-alto { border-color: color-mix(in srgb, #ff6b7a 50%, var(--stroke)); }
+.advanced-point-list header { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.advanced-point-list header strong { color: var(--text-strong); font-size: 13px; }
+.advanced-point-list header span { color: var(--accent); font-size: 11px; font-weight: 850; }
+.advanced-point-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.advanced-point-list small { color: var(--soft); font-size: 11px; line-height: 1.45; }
+.advanced-point-list em { color: var(--muted-2); font-size: 11px; font-style: normal; line-height: 1.45; }
+
+.advanced-alert-list { display: grid; gap: 8px; margin-top: 12px; }
+.advanced-alert-list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, #ffbd55 36%, var(--stroke));
+  border-radius: 13px;
+  background: color-mix(in srgb, #ffbd55 5%, var(--surface-soft));
+}
+.advanced-alert-list svg { color: #ffbd55; }
+.advanced-alert-list span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+.advanced-intelligence-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.advanced-mini-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin: 12px 0; }
+.advanced-mini-metrics > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  text-align: center;
+}
+.advanced-mini-metrics span { color: var(--muted-2); font-size: 10px; font-weight: 850; text-transform: uppercase; }
+.advanced-mini-metrics strong { overflow: hidden; color: var(--text-strong); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.advanced-difference-row { display: grid; gap: 4px; padding: 9px 0; border-bottom: 1px solid var(--stroke); }
+.advanced-difference-row strong { color: var(--text-strong); font-size: 12px; }
+.advanced-difference-row span { color: var(--soft); font-size: 11px; }
+.advanced-difference-row small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+@media (max-width: 900px) {
+  .advanced-role-grid { grid-template-columns: 1fr; }
+  .advanced-role-grid > button { min-height: 0; }
+  .advanced-intelligence-columns { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .ficha-workspace-nav button { min-width: 102px; flex-basis: 102px; }
+  .advanced-role-plan { grid-template-columns: 1fr; }
+  .advanced-role-plan > button { width: 100%; }
+  .advanced-point-list { grid-template-columns: 1fr; }
+  .advanced-mini-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

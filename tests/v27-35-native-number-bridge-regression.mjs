@@ -8,9 +8,12 @@ const root = process.cwd();
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const installerPath = path.join(root, 'scripts/install-android-security-plugin.mjs');
 const installer = fs.readFileSync(installerPath, 'utf8');
-const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8');
+const app = [
+  fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8'),
+  fs.readFileSync(path.join(root, 'src/modules/vault/cardHistoryStore.ts'), 'utf8')
+].join('\n');
 
-assert.equal(pkg.version, '27.40.0');
+assert.equal(pkg.version, '29.10.0');
 
 // O diretório android é gerado pelo Capacitor no workflow e fica fora do Git.
 // Para testar o Java produzido sem depender de arquivos gerados no repositório,

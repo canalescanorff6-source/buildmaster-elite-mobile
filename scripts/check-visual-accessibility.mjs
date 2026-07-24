@@ -6,6 +6,9 @@ const rainbow = fs.readFileSync('src/app/design-system-v2738-rainbow.css', 'utf8
 const auth = fs.readFileSync('src/components/AuthGate.tsx', 'utf8');
 const navigation = fs.readFileSync('src/components/RefinedNavigation.tsx', 'utf8');
 const live = fs.readFileSync('src/components/LiveStatusRegion.tsx', 'utf8');
+const quality = fs.readFileSync('src/app/design-system-v2840-quality.css', 'utf8');
+const qualityCenter = fs.readFileSync('src/components/PremiumQualityCenter.tsx', 'utf8');
+const qualityLayer = fs.readFileSync('src/components/PremiumQualityLayer.tsx', 'utf8');
 
 function luminance(hex) {
   const value = hex.replace('#', '');
@@ -32,5 +35,13 @@ assert.match(navigation, /aria-label="Navegação principal"/);
 assert.match(navigation, /aria-label="Navegação inferior"/);
 assert.match(live, /aria-live=\{urgent \? 'assertive' : 'polite'\}/);
 assert.match(live, /aria-atomic="true"/);
+assert.match(quality, /min-block-size:\s*44px/);
+assert.match(quality, /forced-colors:\s*active/);
+assert.match(quality, /@media print/);
+assert.match(quality, /data-quality-profile="economy"/);
+assert.match(qualityCenter, /auditVisibleInterface/);
+assert.match(qualityCenter, /Perfil visual e de desempenho/);
+assert.match(qualityLayer, /unhandledrejection/);
+assert.match(qualityLayer, /buildmaster:screen-change/);
 
-console.log('Visual/A11y v27.40: contraste AA das ações, toque, foco, movimento reduzido e regiões ao vivo aprovados.');
+console.log('Visual/A11y v29.00: contraste AA das ações, toque, foco, movimento reduzido e regiões ao vivo aprovados.');

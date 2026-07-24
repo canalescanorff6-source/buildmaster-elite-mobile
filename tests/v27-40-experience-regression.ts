@@ -21,11 +21,11 @@ async function main() {
   const snapshot = await inspectAppHealth();
   assert.equal(snapshot.checks.length >= 6, true);
   assert.equal(snapshot.overall >= 0 && snapshot.overall <= 100, true);
-  const report = exportHealthSnapshot(snapshot, '27.40.0');
+  const report = exportHealthSnapshot(snapshot, '28.80.0');
   assert.match(report, /BuildMaster Elite Tático/);
-  assert.match(report, /Versão: 27\.40\.0/);
+  assert.match(report, /Versão: 28\.60\.0/);
   assert.doesNotMatch(report, /password|token|senha/i);
-  console.log('v27.40 experience regression: ok');
+  console.log('v28.10 experience regression: ok');
 }
 
 void main();

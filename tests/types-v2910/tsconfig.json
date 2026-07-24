@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@/components/AuthGate": [
+        "tests/types-v2910/authGate.stub.ts"
+      ],
+      "@/lib/accountAuth": [
+        "tests/types-v2910/accountAuth.stub.ts"
+      ],
+      "@/lib/updateChannel": [
+        "tests/types-v2910/updateChannel.stub.ts"
+      ],
+      "@/lib/safeLocalStorage": [
+        "tests/types-v2910/storage.stub.ts"
+      ],
+      "@/lib/stableId": [
+        "tests/types-v2910/stableId.stub.ts"
+      ],
+      "@/*": [
+        "src/*"
+      ]
+    },
+    "types": []
+  },
+  "files": [
+    "stubs.d.ts",
+    "accountAuth.stub.ts",
+    "authGate.stub.ts",
+    "updateChannel.stub.ts",
+    "storage.stub.ts",
+    "stableId.stub.ts",
+    "../../src/lib/appUpdates.ts",
+    "../../src/modules/administration/AdministrationSecurityCenter.tsx",
+    "../../src/modules/updates/updateGovernance.ts",
+    "../../src/modules/updates/DefinitiveUpdateCenter.tsx"
+  ]
+}

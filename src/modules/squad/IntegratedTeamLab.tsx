@@ -7,6 +7,7 @@ import type { TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import { SquadGapPanel } from '@/components/SquadGapPanel';
 import { upsertPersonalPreset } from '@/lib/appRefinement';
+import { PremiumScreenHero } from '@/components/PremiumScreenPrimitives';
 
 type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 
@@ -50,11 +51,21 @@ export function IntegratedTeamLab({ team, players, teamStyle, onOpenFormationLab
     }
   }
 
-  return <section className={`v27-module v27-team-lab refined-team-lab ${gameMode ? 'is-game-mode' : ''}`}>
-    <header className="v27-module-hero luxury-panel">
-      <div><p className="kicker"><Users size={15}/> Meu Time</p><h2>Elenco, escalação, tática e banco em guias claras</h2><p>O motor mostra encaixes sem alterar a posição escolhida pelo usuário.</p></div>
-      <div className="v27-hero-actions"><button type="button" className="elite-button" onClick={onOpenFormationLab}><Layers size={17}/> Editar formação</button><button type="button" onClick={onPrepareMatch}><Target size={17}/> Preparar partida</button><button type="button" aria-pressed={gameMode} onClick={() => setGameMode((value) => !value)}><Gamepad2 size={17}/>{gameMode ? 'Sair do modo jogo' : 'Modo jogo'}</button></div>
-    </header>
+  return <section className={`v27-module v27-team-lab refined-team-lab bm2820-screen bm2820-team-screen ${gameMode ? 'is-game-mode' : ''}`}>
+    <PremiumScreenHero
+      icon={Users}
+      eyebrow="Centro de comando do elenco"
+      title="Escalação, banco e tática com leitura imediata."
+      description="Veja o time como uma unidade: cobertura dos setores, encaixe do estilo, opções de banco e ajustes de formação sem trocar a posição escolhida de nenhum jogador."
+      badge={gameMode ? 'Modo jogo ativo' : team.formation}
+      actions={<><button type="button" className="elite-button" onClick={onOpenFormationLab}><Layers size={17}/> Editar formação</button><button type="button" onClick={onPrepareMatch}><Target size={17}/> Preparar partida</button><button type="button" aria-pressed={gameMode} onClick={() => setGameMode((value) => !value)}><Gamepad2 size={17}/>{gameMode ? 'Sair do modo jogo' : 'Modo jogo'}</button></>}
+      metrics={gameMode ? undefined : [
+        { label: 'Prontidão', value: team.globalScore, hint: 'de 100', tone: team.globalScore >= 80 ? 'positive' : 'warning' },
+        { label: 'Escalação', value: `${team.filledSlots}/${team.totalSlots}`, hint: 'espaços preenchidos', tone: 'accent' },
+        { label: 'Melhor setor', value: team.strongestLine, hint: 'maior segurança' },
+        { label: 'Prioridade', value: team.weakestLine, hint: 'corrigir primeiro', tone: 'warning' }
+      ]}
+    />
 
     <nav className="refined-team-tabs luxury-panel" aria-label="Guias do Meu Time">
       <button type="button" className={tab === 'escalacao' ? 'active' : ''} onClick={() => setTab('escalacao')}><Layers size={17}/> Escalação</button>
@@ -68,7 +79,6 @@ export function IntegratedTeamLab({ team, players, teamStyle, onOpenFormationLab
     </nav>
     {savedNotice && <div className="refined-inline-success" role="status"><CheckCircle2 size={16}/>{savedNotice}</div>}
 
-    {!gameMode && <div className="v27-metric-grid v27-team-metrics"><article><strong>{team.globalScore}</strong><span>Prontidão do time</span><small>de 100</small></article><article><strong>{team.filledSlots}/{team.totalSlots}</strong><span>Espaços preenchidos</span><small>encaixe seguro</small></article><article><strong>{team.strongestLine}</strong><span>Melhor setor</span><small>pela escalação atual</small></article><article><strong>{team.weakestLine}</strong><span>Setor prioritário</span><small>precisa de atenção</small></article></div>}
 
     {tab === 'escalacao' && <div className="v27-team-grid refined-lineup-grid">
       <article className="v27-lineup-board luxury-panel"><div className="v27-panel-heading"><div><p className="kicker"><Layers size={14}/> {team.formation}</p><h3>Escalação recomendada</h3></div><span>{team.styleFit}% estilo</span></div><div className="v27-pitch" role="img" aria-label={`Escalação ${team.formation} com ${team.filledSlots} de ${team.totalSlots} posições preenchidas`}>{team.lineup.map((fit) => <button type="button" className={`v27-pitch-slot line-${fit.slot.line} ${fit.player ? '' : 'empty'}`} key={fit.slot.id} style={{ left: `${fit.slot.x}%`, top: `${fit.slot.y}%` }} aria-label={`${fit.slot.label}: ${fit.player?.parsed.playerName ?? 'sem encaixe'}`}><strong>{fit.slot.label}</strong><span>{fit.player?.parsed.playerName ?? 'Sem encaixe'}</span><small>{fit.score ? `${fit.score}%` : fit.slot.primaryRoles[0]}</small></button>)}</div></article>

@@ -1,7 +1,8 @@
 import { safeStorageGetJson, safeStorageSetJson } from './safeLocalStorage';
 
-export const APP_REFINEMENT_VERSION = 39;
-export const NAVIGATION_STATE_KEY = 'buildmaster_navigation_state_v2739';
+export const APP_REFINEMENT_VERSION = 2810;
+export const NAVIGATION_STATE_KEY = 'buildmaster_navigation_state_v2810';
+const LEGACY_NAVIGATION_STATE_KEY = 'buildmaster_navigation_state_v2739';
 export const SHORTCUTS_KEY = 'buildmaster_home_shortcuts_v2739';
 export const FEATURE_FLAGS_KEY = 'buildmaster_feature_flags_v2739';
 export const DECISION_HISTORY_KEY = 'buildmaster_decision_history_v2739';
@@ -22,7 +23,7 @@ export type RefinementFeatureFlag =
   | 'contextHelp';
 
 export type NavigationSnapshot = {
-  version: 1;
+  version: 2;
   group: MainNavigationGroup;
   playerWorkspace?: PlayerWorkspace;
   scrollY: number;
@@ -78,11 +79,16 @@ export function setRefinementFlag(flag: RefinementFeatureFlag, enabled: boolean)
 
 export function readNavigationSnapshot(): NavigationSnapshot | null {
   const value = safeStorageGetJson<NavigationSnapshot | null>(NAVIGATION_STATE_KEY, null);
-  return value?.version === 1 ? value : null;
+  if (value?.version === 2) return value;
+  const legacy = safeStorageGetJson<(Omit<NavigationSnapshot, 'version'> & { version: 1 }) | null>(LEGACY_NAVIGATION_STATE_KEY, null);
+  if (!legacy || legacy.version !== 1) return null;
+  const migrated: NavigationSnapshot = { ...legacy, version: 2 };
+  safeStorageSetJson(NAVIGATION_STATE_KEY, migrated);
+  return migrated;
 }
 
 export function writeNavigationSnapshot(snapshot: Omit<NavigationSnapshot, 'version' | 'updatedAt'>) {
-  safeStorageSetJson(NAVIGATION_STATE_KEY, { version: 1, updatedAt: new Date().toISOString(), ...snapshot } satisfies NavigationSnapshot);
+  safeStorageSetJson(NAVIGATION_STATE_KEY, { version: 2, updatedAt: new Date().toISOString(), ...snapshot } satisfies NavigationSnapshot);
 }
 
 export function readHomeShortcuts(): HomeShortcutId[] {

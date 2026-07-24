@@ -23,17 +23,18 @@ const trash = read('src/lib/vaultTrash.ts');
 const updates = read('src/lib/appUpdates.ts');
 const dataSafety = read('src/lib/dataSafety.ts');
 
-assert.equal(pkg.version, '27.40.0');
-assert.equal(lock.version, '27.40.0');
-assert.equal(lock.packages[''].version, '27.40.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2740 && npm run test:v2739 && npm run test:v2738/);
+assert.equal(pkg.version, '29.10.0');
+assert.equal(lock.version, '29.10.0');
+assert.equal(lock.packages[''].version, '29.10.0');
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739 && npm run test:v2738/);
 assert.match(globals, /design-system-v2739-refinement\.css/);
 assert.match(refinementCss, /--bm-touch:\s*48px/);
 assert.match(refinementCss, /:focus-visible/);
 assert.match(refinementCss, /prefers-reduced-motion/);
 assert.match(refinementCss, /\.refined-primary-nav/);
 
-for (const label of ['Início', 'Jogadores', 'Meu Time', 'Partidas', 'Ajustes']) assert.match(nav, new RegExp(label));
+for (const label of ['Início', 'Jogadores', 'Meu Time', 'Partidas']) assert.match(nav, new RegExp(label));
+assert.match(nav, /Sistema|Ajustes/);
 assert.match(nav, /Áreas de Jogadores/);
 assert.match(app, /RefinedNavigation/);
 assert.match(app, /LiveStatusRegion/);
@@ -54,10 +55,10 @@ assert.match(players, /Mesclar/);
 assert.match(team, /Modo jogo/);
 assert.match(team, /Comparar formações/);
 assert.match(team, /Exportar/);
-assert.match(matches, /Planejar/);
-assert.match(matches, /Executar/);
-assert.match(matches, /Analisar/);
-assert.match(matches, /Meta semanal/);
+assert.match(matches, /Planejar partida/);
+assert.match(matches, /Treino guiado antigo/);
+assert.match(matches, /Histórico/);
+assert.match(matches, /Meta semanal antiga/);
 assert.match(matches, /Registrar repetição/);
 assert.match(matches, /Exportar semana/);
 assert.match(studio, /Desfazer/);
@@ -73,8 +74,8 @@ assert.match(refinement, /Importador inteligente de projetos antigos/);
 assert.match(dataTools, /buildMonthlyEvolutionReport/);
 assert.match(dataTools, /inspectLegacyProject/);
 assert.match(trash, /RETENTION_DAYS\s*=\s*30/);
-assert.match(updates, /27\.40\.0/);
-assert.match(dataSafety, /APP_DATA_VERSION\s*=\s*'27\.40\.0'/);
+assert.match(updates, /29\.10\.0/);
+assert.match(dataSafety, /APP_DATA_VERSION\s*=\s*'29\.10\.0'/);
 
 for (const file of [
   'src/lib/appRefinement.ts',
@@ -93,4 +94,4 @@ assert.equal(exists('public/update-manifest.json'), false);
 assert.doesNotMatch(app, /NEXT_PUBLIC_BUILDMASTER_LOCAL_ADMIN_PASSWORD/);
 assert.doesNotMatch(app, /api\/cloud\/fichas/);
 
-console.log('v27.40 total refinement regression: ok');
+console.log('v28.10 total refinement regression: ok');

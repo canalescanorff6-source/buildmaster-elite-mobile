@@ -2,7 +2,11 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { readLegacyCssBundle } from './helpers/readLegacyCssBundle';
 
-const component = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const component = [
+  fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8'),
+  fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8'),
+  fs.readFileSync('src/components/lazy/AppLazyPanels.tsx', 'utf8')
+].join('\n');
 const css = [readLegacyCssBundle(), fs.readFileSync('src/app/globals.css', 'utf8'), fs.readFileSync('src/app/design-system-v2710.css', 'utf8')].join('\n');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 const displayVersion = pkg.version.split('.').slice(0, 2).join('.');
@@ -40,7 +44,8 @@ assert.match(component, /label: 'Comunidade'/);
 assert.match(component, /CommunityIntelligencePanel/);
 
 assert.match(component, /className="app-topbar app-command-bar luxury-panel"/);
-assert.match(component, /className="desktop-primary-nav[^"]*"/);
+assert.match(component, /<RefinedNavigation/);
+assert.doesNotMatch(component, /className="desktop-primary-nav[^"]*"/);
 assert.doesNotMatch(component, /<nav className="main-section-tabs luxury-panel"/);
 assert.match(component, /className="premium-home-shell"/);
 assert.match(component, /Último jogador analisado/);
