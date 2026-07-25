@@ -759,7 +759,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
               {imageLibrary.map((item) => <div key={item.id} className={backgroundImageId === item.id ? 'active' : ''}>
                 {imageThumbnailUrls[item.id] ? <img src={imageThumbnailUrls[item.id]} alt={item.name}/> : <span>Prévia</span>}
                 <strong title={item.name}>{item.name}</strong><small>{item.width}×{item.height} • {Math.max(1, Math.round(item.size / 1024))} KB</small>
-                <div><button type="button" onClick={() => setBackgroundImageId(item.id)}>Usar</button><button type="button" className="danger" onClick={() => void removeGalleryImage(item.id)}><Trash2 size={14}/></button></div>
+                <div><button type="button" onClick={() => setBackgroundImageId(item.id)}>Usar</button><button type="button" className="danger" aria-label={`Apagar imagem ${item.name}`} onClick={() => void removeGalleryImage(item.id)}><Trash2 size={14}/></button></div>
               </div>)}
             </div>}
           </div></details>

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@/lib/safeLocalStorage": ["tests/types-v2920/storage.stub.ts"],
+      "@/lib/appQualityV2840": ["tests/types-v2920/quality.stub.ts"],
+      "@/modules/updates/updateGovernance": ["tests/types-v2920/update.stub.ts"],
+      "@/*": ["src/*"]
+    },
+    "types": []
+  },
+  "files": [
+    "stubs.d.ts",
+    "storage.stub.ts",
+    "quality.stub.ts",
+    "update.stub.ts",
+    "../../src/lib/productionReadiness.ts",
+    "../../src/modules/quality/ProductionReadinessCenter.tsx"
+  ]
+}

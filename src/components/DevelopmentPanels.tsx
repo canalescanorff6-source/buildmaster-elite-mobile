@@ -29,8 +29,8 @@ export function SkillAndTrainingPanel({result}:{result:AnalysisResult}){
     </article>
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker">Treinos repetíveis</p><h3>Defesa e ataque com erro, correção e meta</h3></div><span>{logs.length} registros</span></div>
-      <div className="segmented"><button className={area==='defesa'?'active':''} onClick={()=>setArea('defesa')}>Defesa</button><button className={area==='ataque'?'active':''} onClick={()=>setArea('ataque')}>Ataque</button></div>
-      <div className="skill-grid">{TRAINING_DRILLS.filter(d=>d.area===area).map(drill=><div className="skill-check-card" key={drill.id}><strong>{drill.title}</strong><span>{drill.duration} min • {drill.repetitions} repetições</span><small>{drill.objective}</small><em>Erro comum: {drill.commonError}</em><b>Correção: {drill.correction}</b><button onClick={()=>saveDrill(drill.id)}>Registrar treino • nota {score}/10</button></div>)}</div>
+      <div className="segmented"><button type="button" className={area==='defesa'?'active':''} onClick={()=>setArea('defesa')}>Defesa</button><button type="button" className={area==='ataque'?'active':''} onClick={()=>setArea('ataque')}>Ataque</button></div>
+      <div className="skill-grid">{TRAINING_DRILLS.filter(d=>d.area===area).map(drill=><div className="skill-check-card" key={drill.id}><strong>{drill.title}</strong><span>{drill.duration} min • {drill.repetitions} repetições</span><small>{drill.objective}</small><em>Erro comum: {drill.commonError}</em><b>Correção: {drill.correction}</b><button type="button" onClick={()=>saveDrill(drill.id)}>Registrar treino • nota {score}/10</button></div>)}</div>
       <label><span>Nota do bloco: {score}/10</span><input type="range" min="0" max="10" value={score} onChange={e=>setScore(Number(e.target.value))}/></label>
       <label><span>Observação</span><input value={note} onChange={e=>setNote(e.target.value)} placeholder="O que melhorou ou ainda errou?"/></label>
     </article>
@@ -66,6 +66,6 @@ export function DelayResponsePanel(){
     <div className="restore-check-grid">{symptoms.map(s=><label key={s}><input type="checkbox" checked={ctx.symptoms.includes(s)} onChange={()=>setCtx({...ctx,symptoms:ctx.symptoms.includes(s)?ctx.symptoms.filter(x=>x!==s):[...ctx.symptoms,s]})}/><span>{s}</span></label>)}</div>
     <div className="health-score-grid">{diagnosis.ranked.map(([key,value])=><article key={key}><strong>{value}</strong><span>{key}</span></article>)}</div>
     <div className="health-alert-list">{diagnosis.recommendations.map(r=><span key={r}>{r}</span>)}</div>
-    <div className="restore-select-panel"><strong>Teste local de consistência do toque</strong><p className="panel-note">Toque no botão 10 vezes no mesmo ritmo. Isto mede consistência do aparelho/navegador, não o ping do servidor.</p><button onClick={()=>setSamples(v=>v.length>=10?[performance.now()]:[...v,performance.now()])}>Toque aqui • {samples.length}/10</button><button onClick={()=>setSamples([])}>Reiniciar</button><p><b>{tap.label}</b> • intervalo médio {tap.average} ms • variação {tap.variation} ms</p><small>{tap.note}</small></div>
+    <div className="restore-select-panel"><strong>Teste local de consistência do toque</strong><p className="panel-note">Toque no botão 10 vezes no mesmo ritmo. Isto mede consistência do aparelho/navegador, não o ping do servidor.</p><button type="button" onClick={()=>setSamples(v=>v.length>=10?[performance.now()]:[...v,performance.now()])}>Toque aqui • {samples.length}/10</button><button type="button" onClick={()=>setSamples([])}>Reiniciar</button><p><b>{tap.label}</b> • intervalo médio {tap.average} ms • variação {tap.variation} ms</p><small>{tap.note}</small></div>
   </section>;
 }

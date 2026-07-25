@@ -1,4 +1,4 @@
-name: Gerar APK v29.10 com canais, rollout e rollback seguro
+name: Gerar APK v29.20 Final de Produção
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ on:
         type: string
         required: false
       release_version:
-        description: Versão nova opcional para rollback (ex. 29.11.0)
+        description: Versão nova opcional para rollback (ex. 29.21.0)
         type: string
         required: false
       rollback_from_version:
@@ -121,12 +121,12 @@ jobs:
           rollback_reason = os.environ.get('INPUT_ROLLBACK_REASON', '').strip()
           source_ref = os.environ.get('INPUT_SOURCE_REF', '').strip()
           if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', version):
-              raise SystemExit('release_version precisa usar o formato 29.10.0')
+              raise SystemExit('release_version precisa usar o formato 29.20.0')
           def version_tuple(value):
               return tuple(int(part) for part in value.split('.'))
           if rollback_from:
               if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', rollback_from):
-                  raise SystemExit('rollback_from_version precisa usar o formato 29.10.0')
+                  raise SystemExit('rollback_from_version precisa usar o formato 29.20.0')
               if not os.environ.get('INPUT_RELEASE_VERSION', '').strip() or not source_ref or not rollback_reason:
                   raise SystemExit('Rollback exige source_ref, release_version nova e rollback_reason.')
               if version_tuple(version) <= version_tuple(rollback_from):
@@ -208,6 +208,22 @@ jobs:
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
 
+      - name: Validar sintaxe e contratos interativos
+        timeout-minutes: 6
+        run: |
+          npm run quality:syntax
+          npm run quality:interactive
+
+      - name: Executar pré-voo da versão final
+        timeout-minutes: 5
+        run: npm run release:preflight
+
+      - name: Gerar e verificar manifesto do código-fonte
+        timeout-minutes: 4
+        run: |
+          npm run integrity:generate -- MANIFESTO_PRODUCAO_V29.20.sha256
+          npm run integrity:verify -- MANIFESTO_PRODUCAO_V29.20.sha256
+
       - name: Auditar estrutura, segurança e publicação
         timeout-minutes: 4
         run: npm run quality:audit
@@ -216,9 +232,11 @@ jobs:
         timeout-minutes: 6
         run: npm run typecheck
 
-      - name: Rodar testes do motor
-        timeout-minutes: 16
-        run: npm run test:all
+      - name: Rodar regressão final e testes do motor
+        timeout-minutes: 20
+        run: |
+          npm run test:v2920
+          npm run test:all
 
       - name: Preparar exportação estática para APK
         run: rm -rf out android .buildmaster-static-disabled dist-apk signing verify-release
@@ -488,9 +506,10 @@ jobs:
           PY
 
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
-          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Administração segura e atualização definitiva
+          ## BuildMaster Elite Tático v$BUILDMASTER_VERSION — Versão final de produção
 
-          - Painel administrativo protegido por MFA, rate limit, auditoria e controle individual de aparelhos.
+          - Blocos 14 e 15: testes finais, estabilidade e prontidão de produção.
+          - Contratos de interface, sintaxe, auditoria e pré-voo executados antes do build.
           - Canal $RELEASE_CHANNEL com rollout de $ROLLOUT_PERCENTAGE% e estado pausado=$RELEASE_PAUSED.
           - APK imutável validado por tamanho, SHA-256, pacote, versão, versionCode e assinatura.
           - Rollback recompila uma base conhecida como boa com versionCode maior; nunca instala APK antigo por cima.
@@ -510,8 +529,9 @@ jobs:
             dist-apk/legacy/update-manifest.json
             dist-apk/release-history.json
             dist-apk/signing-report.txt
+            MANIFESTO_PRODUCAO_V29.20.sha256
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
       - name: Criar release imutável em espera
         env:
@@ -543,7 +563,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             rm -f verify-release/immutable.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.20 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -594,7 +614,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-bridge.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.20 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -680,7 +700,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.20 Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
               -o verify-release/primary-manifest.json; then
@@ -719,7 +739,7 @@ jobs:
 
           URL=$(cat verify-release/primary-apk-url.txt)
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/29.10 Android' \
+            --user-agent 'BuildMaster-Elite-Tatico-Updater/29.20 Android' \
             --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
             "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk

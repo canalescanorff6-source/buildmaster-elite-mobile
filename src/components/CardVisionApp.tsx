@@ -103,6 +103,7 @@ import {
   IntegratedTeamLab,
   MatchLaboratory,
   PlayerLaboratory,
+  ProductionReadinessCenter,
   SmartQuickDock,
   StabilityDiagnosticsPanel,
   TotalCardReaderPanel,
@@ -3876,10 +3877,10 @@ export function CardVisionApp() {
                         <div className="settings-segmented-control" role="group" aria-label="Preferência de animações"><button type="button" className={motionPreference === 'system' ? 'selected' : ''} onClick={() => setMotionPreference('system')}>Sistema</button><button type="button" className={motionPreference === 'reduced' ? 'selected' : ''} onClick={() => setMotionPreference('reduced')}>Reduzidas</button><button type="button" className={motionPreference === 'full' ? 'selected' : ''} onClick={() => setMotionPreference('full')}>Completas</button></div>
                       </div>
                       <div className="settings-preference-card settings-toggle-card">
-                        <div><strong>Contraste reforçado</strong><span>Bordas e textos mais visíveis.</span></div><button type="button" className={highContrast ? 'is-on' : ''} role="switch" aria-checked={highContrast} onClick={() => setHighContrast((value) => !value)}><i /></button>
+                        <div><strong>Contraste reforçado</strong><span>Bordas e textos mais visíveis.</span></div><button type="button" className={highContrast ? 'is-on' : ''} role="switch" aria-label="Ativar ou desativar contraste reforçado" aria-checked={highContrast} onClick={() => setHighContrast((value) => !value)}><i /></button>
                       </div>
                       <div className="settings-preference-card settings-toggle-card">
-                        <div><strong>Ferramentas avançadas</strong><span>Libera auditorias e módulos técnicos.</span></div><button type="button" className={advancedMode ? 'is-on' : ''} role="switch" aria-checked={advancedMode} onClick={() => setAdvancedMode((value) => !value)}><i /></button>
+                        <div><strong>Ferramentas avançadas</strong><span>Libera auditorias e módulos técnicos.</span></div><button type="button" className={advancedMode ? 'is-on' : ''} role="switch" aria-label="Ativar ou desativar ferramentas avançadas" aria-checked={advancedMode} onClick={() => setAdvancedMode((value) => !value)}><i /></button>
                       </div>
                       <button type="button" className="settings-onboarding-reopen" onClick={() => setOnboardingOpen(true)}><Sparkles size={17} /><div><strong>Refazer configuração inicial</strong><span>Escolher novamente modo, formação, estilo e prioridade.</span></div></button>
                     </div>
@@ -3943,6 +3944,7 @@ export function CardVisionApp() {
                     {healthSummary.alerts.length > 0 && <div className="health-alert-list" role="status">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
                     <RefinementCenterPanel players={integratedPlayers} appVersion={APP_RELEASE_VERSION} healthScore={healthSummary.score} onOpenPlayer={(id) => openIntegratedPlayer(id, 'result')} />
                     <SectionErrorBoundary area="qualidade-final"><PremiumQualityCenter appVersion={APP_RELEASE_VERSION} /></SectionErrorBoundary>
+                    <SectionErrorBoundary area="producao-final"><ProductionReadinessCenter appVersion={APP_RELEASE_VERSION} dataIntegrityScore={localIntegrity.score} /></SectionErrorBoundary>
                   </section>
                 )}
 

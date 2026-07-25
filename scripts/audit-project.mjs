@@ -44,7 +44,7 @@ const layout = read('src/app/layout.tsx');
 const manifest = read('public/manifest.webmanifest');
 const sw = read('public/sw.js');
 
-check(/^29\.10\.\d+$/.test(expectedVersion), 'Versão de auditoria v29.10 configurada', `encontrada ${expectedVersion}`);
+check(/^29\.20\.\d+$/.test(expectedVersion), 'Versão de auditoria v29.20 configurada', `encontrada ${expectedVersion}`);
 check(appUpdates.includes(`'${expectedVersion}'`), 'Motor de atualização usa a versão do pacote');
 check(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface usam versão centralizada');
 check(manifest.includes(`v${expectedMinor}`), 'Manifesto PWA acompanha a versão atual');
@@ -62,7 +62,8 @@ check(read('src/modules/builds/advancedBuildIntelligence.ts').includes("ADVANCED
 check(read('src/components/PrecisionBuildPanel.tsx').includes('buildAdvancedBuildIntelligence'), 'Painel de fichas integrado ao motor avançado');
 check(read('src/app/legacy-compat/part-07.css').includes('v28.60 — Bloco 7'), 'Interface responsiva do Bloco 7 presente');
 check(exists('tests/v28-60-advanced-build-intelligence-regression.ts') && exists('tests/v28-60-advanced-build-ui-regression.mjs'), 'Regressões do Bloco 7 presentes');
-check(globals.trim().endsWith('@import "./design-system-v2910-admin-update.css";'), 'Camada dos Blocos 12 e 13 carregada por último');
+check(globals.includes('@import "./design-system-v2910-admin-update.css";'), 'Camada dos Blocos 12 e 13 preservada');
+check(globals.trim().endsWith('@import "./design-system-v2920-production.css";'), 'Camada final dos Blocos 14 e 15 carregada por último');
 check(exists('src/modules/training/trainingEvolutionEngine.ts') && read('src/modules/training/trainingEvolutionEngine.ts').includes("TRAINING_EVOLUTION_VERSION = '28.80.0'"), 'Motor de treinos e evolução v28.80 presente');
 check(exists('src/modules/training/TrainingEvolutionCenter.tsx'), 'Central de Treinos e Evolução presente');
 check(exists('tests/v28-80-training-evolution-engine-regression.ts') && exists('tests/v28-80-training-evolution-ui-regression.mjs'), 'Regressões do Bloco 9 presentes');
@@ -76,7 +77,12 @@ check(appUpdates.includes('rolloutPercentage') && appUpdates.includes('rollbackF
 check(read('src/lib/updateChannel.ts').includes("preferredChannel: 'stable' | 'beta'") && read('src/modules/updates/updateGovernance.ts').includes('release-history.json'), 'Canais e histórico de publicação estão integrados');
 check(workflow.includes('rollout_percentage:') && workflow.includes('rollback_from_version:') && workflow.includes('buildmaster-update-beta'), 'Workflow possui rollout, beta e rollback');
 check(exists('tests/v29-10-admin-security-regression.mjs') && exists('tests/v29-10-update-governance-regression.cjs') && exists('tests/v29-10-integrated-ui-regression.mjs'), 'Regressões próprias da v29.10 presentes');
-check(read('src/lib/dataSafety.ts').includes("APP_DATA_VERSION = '29.10.0'") && read('src/lib/dataSafety.ts').includes("'performance'"), 'Backup v29.10 preserva desempenho, treinos e partidas');
+check(exists('src/lib/productionReadiness.ts') && exists('src/modules/quality/ProductionReadinessCenter.tsx'), 'Central final de prontidão de produção presente');
+check(read('src/lib/productionReadiness.ts').includes("PRODUCTION_READINESS_VERSION = '29.20.0'"), 'Motor de prontidão identificado como v29.20');
+check(exists('tests/v29-20-production-readiness-engine-regression.cjs') && exists('tests/v29-20-ui-production-regression.mjs'), 'Regressões próprias da v29.20 presentes');
+check(exists('scripts/check-source-syntax.mjs') && exists('scripts/check-interactive-contracts.mjs') && exists('scripts/production-preflight.mjs'), 'Ferramentas finais de sintaxe, interface e pré-voo presentes');
+check(workflow.includes('npm run release:preflight') && workflow.includes('npm run quality:syntax') && workflow.includes('npm run quality:interactive'), 'Workflow executa o portão final de produção');
+check(read('src/lib/dataSafety.ts').includes("APP_DATA_VERSION = '29.20.0'") && read('src/lib/dataSafety.ts').includes('CURRENT_DATA_SCHEMA = 2920') && read('src/lib/dataSafety.ts').includes("'performance'"), 'Backup v29.20 preserva desempenho, treinos e partidas');
 check(exists('src/lib/professionalSquadEngine.ts') && read('src/lib/professionalSquadEngine.ts').includes("PROFESSIONAL_SQUAD_VERSION = '28.70.0'"), 'Motor profissional do elenco v28.70 presente');
 check(exists('src/modules/squad/ProfessionalSquadPanel.tsx') && read('src/modules/squad/TeamFullMapPanel.tsx').includes('ProfessionalSquadPanel'), 'Central profissional integrada ao Meu Time');
 check(exists('tests/v28-70-professional-squad-engine-regression.ts') && exists('tests/v28-70-professional-squad-ui-regression.mjs'), 'Regressões do Bloco 8 presentes');

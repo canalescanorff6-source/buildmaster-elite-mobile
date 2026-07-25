@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = (file) => fs.readFileSync(file, 'utf8');
+const pkg = JSON.parse(read('package.json'));
+const lock = JSON.parse(read('package-lock.json'));
+const globals = read('src/app/globals.css').trim();
+const layout = read('src/app/layout.tsx');
+const app = read('src/components/CardVisionApp.tsx');
+const lazy = read('src/components/lazy/AppLazyPanels.tsx');
+const center = read('src/modules/quality/ProductionReadinessCenter.tsx');
+const engine = read('src/lib/productionReadiness.ts');
+const css = read('src/app/design-system-v2920-production.css');
+const workflow = read('.github/workflows/build-apk.yml');
+
+assert.equal(pkg.version, '29.20.0');
+assert.equal(lock.version, '29.20.0');
+assert.equal(lock.packages[''].version, '29.20.0');
+assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v2920 && npm run test:v2910'));
+assert.ok(globals.endsWith('@import "./design-system-v2920-production.css";'));
+assert.match(layout, /bm-v2920-production/);
+assert.match(app, /ProductionReadinessCenter/);
+assert.match(app, /area="producao-final"/);
+assert.match(lazy, /modules\/quality\/ProductionReadinessCenter/);
+assert.match(center, /APK assinado instalado e atualização real em Android/);
+assert.match(center, /dataIntegrityScore/);
+assert.match(engine, /PRODUCTION_READINESS_VERSION = '29.20.0'/);
+assert.match(engine, /releaseRecommendation/);
+assert.match(css, /@media \(max-width: 640px\)/);
+assert.match(css, /prefers-reduced-motion: reduce/);
+assert.match(workflow, /Gerar APK v29\.20/);
+assert.match(workflow, /npm run release:preflight/);
+assert.match(workflow, /npm run quality:interactive/);
+assert.match(workflow, /npm run quality:syntax/);
+console.log('Blocos 14 e 15: integração visual e produção final aprovadas.');
