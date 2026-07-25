@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Cpu, Gauge, Image as ImageIcon, Layers3, ScanLine, ShieldCheck } from 'lucide-react';
+import { buildArchitectureHealth } from '@/modules/architecture/moduleRegistry';
 import {
   devicePerformanceTier,
   recommendedImageMegapixels,
@@ -34,6 +35,7 @@ const tierLabel: Record<RuntimeSnapshot['tier'], string> = {
 };
 
 export function ArchitectureHealthPanel() {
+  const architecture = useMemo(() => buildArchitectureHealth(), []);
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);
 
   useEffect(() => {
@@ -49,14 +51,15 @@ export function ArchitectureHealthPanel() {
     <section className="architecture-health-panel luxury-panel" aria-labelledby="architecture-health-title">
       <div className="architecture-health-heading">
         <div>
-          <p className="kicker"><Layers3 size={15} /> Arquitetura v28.50</p>
+          <p className="kicker"><Layers3 size={15} /> Arquitetura v29.30</p>
           <h3 id="architecture-health-title">Carregamento modular e resposta adaptativa</h3>
-          <span>As áreas pesadas são abertas sob demanda e o processamento respeita a capacidade deste aparelho.</span>
+          <span>O shell, o OCR, a análise e as regras possuem contratos separados; áreas pesadas continuam sob demanda.</span>
         </div>
         <strong className={`architecture-tier architecture-tier-${snapshot?.tier ?? 'balanced'}`}>{status}</strong>
       </div>
 
       <div className="architecture-health-grid">
+        <article><Layers3 size={19} /><strong>{architecture.isolatedDomains}</strong><span>Domínios isolados</span></article>
         <article><Cpu size={19} /><strong>{snapshot?.cores ?? '—'}</strong><span>Núcleos detectados</span></article>
         <article><Gauge size={19} /><strong>{snapshot?.memoryGb ? `${snapshot.memoryGb} GB` : 'Automático'}</strong><span>Memória informada</span></article>
         <article><ScanLine size={19} /><strong>{snapshot?.ocrConcurrency ?? '—'}</strong><span>OCR simultâneo</span></article>
@@ -64,9 +67,9 @@ export function ArchitectureHealthPanel() {
       </div>
 
       <div className="architecture-health-notes">
-        <span><ShieldCheck size={16} /> Cofre, Resultado e Meu Time foram separados do núcleo principal.</span>
-        <span><ShieldCheck size={16} /> Painéis avançados são pré-carregados apenas quando o aparelho está ocioso.</span>
-        <span><ShieldCheck size={16} /> O motor de pontos possui módulo próprio e testes independentes.</span>
+        <span><ShieldCheck size={16} /> Novas telas usam a fachada de análise em vez de depender diretamente do arquivo legado.</span>
+        <span><ShieldCheck size={16} /> OCR Vision e Base Oficial são módulos lazy com limites de falha próprios.</span>
+        <span><ShieldCheck size={16} /> {architecture.lazyModules} de {architecture.totalModules} módulos são carregados somente quando necessários.</span>
       </div>
     </section>
   );

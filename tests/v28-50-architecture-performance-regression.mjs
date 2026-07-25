@@ -11,10 +11,10 @@ const analyzer = read('src/lib/analyzer.ts');
 const globals = read('src/app/globals.css');
 const layout = read('src/app/layout.tsx');
 
-assert.equal(pkg.version, '29.20.0');
-assert.equal(lock.version, '29.20.0');
-assert.equal(lock.packages[''].version, '29.20.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840/);
+assert.equal(pkg.version, '30.00.0');
+assert.equal(lock.version, '30.00.0');
+assert.equal(lock.packages[''].version, '30.00.0');
+assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v3000 && npm run test:v2980 && npm run test:v2970 && npm run test:v2960 && npm run test:v2950 && npm run test:v2940 && npm run test:v2930') && pkg.scripts['test:all'].includes('npm run test:v2850'));
 assert.match(pkg.scripts['test:v2850'], /v28-50-architecture-performance-regression\.mjs/);
 
 for (const file of [
@@ -45,7 +45,7 @@ assert.match(cardVision, /from ['"]@\/modules\/squad\/TeamFullMapPanel['"]/);
 assert.match(cardVision, /from ['"]@\/modules\/vault\/cardHistoryStore['"]/);
 assert.match(cardVision, /scheduleIdleTask/);
 assert.match(analyzer, /from ['"]\.\.\/modules\/builds\/trainingOptimizer['"]/);
-assert.match(globals.trim(), /design-system-v2920-production\.css";$/);
+assert.match(globals.trim(), /design-system-v3000-play-publication\.css";$/);
 assert.match(layout, /bm-v2850-architecture/);
 
 console.log('v28.50 architecture and performance regression: ok');

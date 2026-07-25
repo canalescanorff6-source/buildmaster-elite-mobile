@@ -1,0 +1,254 @@
+name: Gerar AAB v30.00 Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Canal Google Play
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
+      publish_to_play:
+        description: Publicar no Play Console depois dos testes
+        type: boolean
+        default: false
+      rollout_percentage:
+        description: Percentual da produção (1 a 100)
+        type: string
+        default: '100'
+      release_status:
+        description: Estado da release
+        type: choice
+        options: [draft, completed, inProgress, halted]
+        default: draft
+      source_ref:
+        description: Commit ou tag a compilar
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: buildmaster-play-${{ github.event.inputs.track || 'internal' }}
+  cancel-in-progress: false
+
+jobs:
+  play-store:
+    name: Testes, AAB assinado e publicação opcional
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      PLAY_PACKAGE_NAME: com.buildmaster.elitetatico
+      PLAY_TRACK: ${{ github.event.inputs.track || 'internal' }}
+      BUNDLETOOL_VERSION: 1.18.3
+      NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION: play
+      NEXT_PUBLIC_BUILDMASTER_VERSION: 30.00.0
+      NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: 30.00.0
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_GOOGLE_PLAY_CLOUD_PROJECT_NUMBER: ${{ vars.GOOGLE_PLAY_CLOUD_PROJECT_NUMBER }}
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.source_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Android API 36
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Android SDK 36
+        run: yes | sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+
+      - name: Validar Secrets e Variables obrigatórios
+        env:
+          UPLOAD_KEY: ${{ secrets.GOOGLE_PLAY_UPLOAD_KEY_BUNDLE }}
+          SERVICE_ACCOUNT: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          test -n "$UPLOAD_KEY" || { echo '::error::GOOGLE_PLAY_UPLOAD_KEY_BUNDLE ausente.'; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo '::error::NEXT_PUBLIC_SUPABASE_URL ausente.'; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || { echo '::error::NEXT_PUBLIC_SUPABASE_ANON_KEY ausente.'; exit 1; }
+          test -n "$NEXT_PUBLIC_GOOGLE_PLAY_CLOUD_PROJECT_NUMBER" || { echo '::error::GOOGLE_PLAY_CLOUD_PROJECT_NUMBER ausente.'; exit 1; }
+          if [ "${{ github.event.inputs.publish_to_play }}" = 'true' ]; then
+            test -n "$SERVICE_ACCOUNT" || { echo '::error::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON ausente para publicação.'; exit 1; }
+          fi
+
+      - name: Instalar dependências travadas
+        run: npm ci --no-audit --no-fund
+
+      - name: Portões de qualidade e Google Play
+        run: |
+          npm run quality:syntax
+          npm run quality:interactive
+          npm run release:preflight
+          npm run release:play-preflight
+          npm run quality:audit
+          npm run typecheck
+          npm run test:all
+
+      - name: Gerar site estático para Capacitor
+        run: npm run apk:build-web
+
+      - name: Criar projeto Android
+        run: |
+          rm -rf android
+          npx cap add android
+          node scripts/install-android-security-plugin.mjs
+          node scripts/install-play-store-bridge.mjs
+          npx cap sync android
+
+      - name: Fixar compileSdk e targetSdk API 36
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('android/variables.gradle')
+          text=p.read_text()
+          import re
+          text=re.sub(r'compileSdkVersion\s*=\s*\d+', 'compileSdkVersion = 36', text)
+          text=re.sub(r'targetSdkVersion\s*=\s*\d+', 'targetSdkVersion = 36', text)
+          text=re.sub(r'minSdkVersion\s*=\s*\d+', 'minSdkVersion = 23', text)
+          p.write_text(text)
+          PY
+          grep -q 'targetSdkVersion = 36' android/variables.gradle
+          ! grep -R 'REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml
+
+      - name: Calcular versionCode monotônico
+        run: |
+          VERSION_CODE=$((30 * 60000000 + ${{ github.run_number }} * 10 + ${{ github.run_attempt }}))
+          echo "ANDROID_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "AAB_NAME=BuildMaster-Elite-Tatico-v30.00.0-${VERSION_CODE}.aab" >> "$GITHUB_ENV"
+
+      - name: Preparar chave de upload para Play App Signing
+        env:
+          UPLOAD_KEY: ${{ secrets.GOOGLE_PLAY_UPLOAD_KEY_BUNDLE }}
+        run: |
+          python - <<'PY'
+          import os, json, base64, pathlib, subprocess
+          data = json.loads(os.environ['UPLOAD_KEY'])
+          required = ['keystoreBase64', 'storePassword', 'keyAlias', 'keyPassword']
+          missing = [key for key in required if not str(data.get(key, '')).strip()]
+          if missing:
+              raise SystemExit('Campos ausentes no bundle da chave: ' + ', '.join(missing))
+          for key in ('storePassword', 'keyAlias', 'keyPassword'):
+              print(f"::add-mask::{data[key]}")
+          android = pathlib.Path('android')
+          android.joinpath('upload-key.jks').write_bytes(base64.b64decode(data['keystoreBase64'], validate=True))
+          def escape_property(value):
+              return str(value).replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
+          android.joinpath('keystore.properties').write_text(
+              '\n'.join([
+                  'storeFile=upload-key.jks',
+                  'storePassword=' + escape_property(data['storePassword']),
+                  'keyAlias=' + escape_property(data['keyAlias']),
+                  'keyPassword=' + escape_property(data['keyPassword'])
+              ]) + '\n', encoding='utf-8'
+          )
+          subprocess.run([
+              'keytool', '-list', '-keystore', str(android / 'upload-key.jks'),
+              '-storepass', str(data['storePassword']), '-alias', str(data['keyAlias'])
+          ], check=True, stdout=subprocess.DEVNULL)
+          PY
+          chmod 600 android/upload-key.jks android/keystore.properties
+
+      - name: Configurar assinatura e versão do bundle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, os
+          p = Path('android/app/build.gradle')
+          t = p.read_text()
+          preamble = '\n'.join([
+              "def buildMasterKeystoreProperties = new Properties()",
+              "def buildMasterKeystoreFile = rootProject.file('keystore.properties')",
+              "if (!buildMasterKeystoreFile.exists()) { throw new GradleException('keystore.properties ausente') }",
+              "buildMasterKeystoreProperties.load(new FileInputStream(buildMasterKeystoreFile))",
+              ""
+          ]) + '\n'
+          if 'buildMasterKeystoreProperties' not in t:
+              t = preamble + t
+          marker = 'android {'
+          signing = '\n'.join([
+              'android {',
+              '    signingConfigs {',
+              '        release {',
+              "            storeFile file(buildMasterKeystoreProperties['storeFile'])",
+              "            storePassword buildMasterKeystoreProperties['storePassword']",
+              "            keyAlias buildMasterKeystoreProperties['keyAlias']",
+              "            keyPassword buildMasterKeystoreProperties['keyPassword']",
+              '        }',
+              '    }'
+          ])
+          t = t.replace(marker, signing, 1)
+          t = re.sub(r'versionCode\s+\d+', f'versionCode {os.environ["ANDROID_VERSION_CODE"]}', t, count=1)
+          t = re.sub(r'versionName\s+"[^"]+"', 'versionName "30.00.0"', t, count=1)
+          t = re.sub(r'(buildTypes\s*\{\s*release\s*\{)', r'\1\n            signingConfig signingConfigs.release', t, count=1)
+          p.write_text(t)
+          PY
+
+      - name: Gerar Android App Bundle release
+        working-directory: android
+        run: ./gradlew --no-daemon clean bundleRelease
+
+      - name: Validar assinatura, bundletool e identidade do AAB
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          test -s "$AAB"
+          jarsigner -verify -strict -verbose -certs "$AAB" >/dev/null
+          curl --fail --location --retry 3 --output bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          java -jar bundletool.jar validate --bundle "$AAB"
+          VERSION_FROM_BUNDLE=$(java -jar bundletool.jar dump manifest --bundle "$AAB" --xpath /manifest/@android:versionCode)
+          NAME_FROM_BUNDLE=$(java -jar bundletool.jar dump manifest --bundle "$AAB" --xpath /manifest/@android:versionName)
+          test "$VERSION_FROM_BUNDLE" = "$ANDROID_VERSION_CODE"
+          test "$NAME_FROM_BUNDLE" = "30.00.0"
+          mv "$AAB" "$AAB_NAME"
+          sha256sum "$AAB_NAME" | tee "$AAB_NAME.sha256"
+          unzip -l "$AAB_NAME" | grep -q 'base/manifest/AndroidManifest.xml'
+          rm -f bundletool.jar android/keystore.properties android/upload-key.jks
+
+      - name: Publicar artefato para homologação
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildmaster-play-v30-${{ env.ANDROID_VERSION_CODE }}
+          path: |
+            ${{ env.AAB_NAME }}
+            ${{ env.AAB_NAME }}.sha256
+            play-store/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Autenticar na API Android Publisher
+        id: play-auth
+        if: ${{ github.event.inputs.publish_to_play == 'true' }}
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+
+      - name: Publicar no canal selecionado
+        if: ${{ github.event.inputs.publish_to_play == 'true' }}
+        env:
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          AAB_PATH: ${{ env.AAB_NAME }}
+          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/30.00.0.txt
+          PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status || 'draft' }}
+          ROLLOUT_PERCENTAGE: ${{ github.event.inputs.rollout_percentage || '100' }}
+        run: |
+          export PLAY_USER_FRACTION=$(python -c "import os; print(max(1,min(100,int(os.environ.get('ROLLOUT_PERCENTAGE','100'))))/100)")
+          node scripts/publish-play-store.mjs

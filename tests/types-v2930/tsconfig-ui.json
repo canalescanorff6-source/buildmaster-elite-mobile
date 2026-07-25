@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": []
+  },
+  "files": [
+    "ui-stubs.d.ts",
+    "../../src/lib/analyzerDomain.ts",
+    "../../src/lib/cardDatabase.ts",
+    "../../src/lib/safeLocalStorage.ts",
+    "../../src/lib/validation.ts",
+    "../../src/lib/ocr.ts",
+    "../../src/lib/premiumReading.ts",
+    "../../src/lib/performanceScheduler.ts",
+    "../../src/modules/card-reader/singlePrintPro.ts",
+    "../../src/modules/card-reader/ocrVisionEngine.ts",
+    "../../src/modules/card-reader/OcrVisionCenter.tsx",
+    "../../src/modules/rules/officialRuleRegistry.ts",
+    "../../src/modules/rules/OfficialRulesCenter.tsx",
+    "../../src/modules/architecture/moduleRegistry.ts",
+    "../../src/components/ArchitectureHealthPanel.tsx"
+  ]
+}

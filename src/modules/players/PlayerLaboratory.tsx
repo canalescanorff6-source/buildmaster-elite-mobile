@@ -5,6 +5,7 @@ import { Camera, CheckCircle2, ChevronRight, FileText, Grid2X2, Layers, List, Me
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 import { PremiumScreenHero } from '@/components/PremiumScreenPrimitives';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { AdvancedPlayerLab } from './AdvancedPlayerLab';
 
 type ViewMode = 'list' | 'grid';
 type StatusFilter = 'todos' | IntegratedPlayerRecord['status'] | 'favoritos';
@@ -139,5 +140,6 @@ export function PlayerLaboratory({
         </> : <div className="v27-empty large"><Sparkles size={30}/><strong>Comece adicionando uma carta</strong><span>O laboratório conectará todas as etapas automaticamente.</span><button type="button" className="elite-button" onClick={onReadCard}>Adicionar primeira carta</button></div>}
       </div>
     </div>
+    {selected && <AdvancedPlayerLab player={selected} />}
   </section>;
 }

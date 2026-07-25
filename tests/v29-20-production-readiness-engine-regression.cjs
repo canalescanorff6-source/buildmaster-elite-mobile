@@ -7,13 +7,13 @@ const {
 } = require('../src/lib/productionReadiness.ts');
 
 const healthy = {
-  appVersion: '29.20.0', expectedVersion: '29.20.0', secureContext: true, storageWritable: true,
+  appVersion: '30.00.0', expectedVersion: '30.00.0', secureContext: true, storageWritable: true,
   indexedDbAvailable: true, cryptoAvailable: true, serviceWorkerAvailable: true, nativeRuntime: true,
   online: true, dataIntegrityScore: 98, runtimeIssueCount: 0, longTaskCount: 0,
   viewportWidth: 360, viewportHeight: 800, updateChannel: 'stable'
 };
 const approved = buildProductionReadinessReport(healthy, new Date('2026-07-24T22:00:00.000Z'));
-assert.equal(PRODUCTION_READINESS_VERSION, '29.20.0');
+assert.equal(PRODUCTION_READINESS_VERSION, '30.00.0');
 assert.equal(approved.state, 'pass');
 assert.equal(approved.score, 100);
 assert.equal(approved.blockers.length, 0);

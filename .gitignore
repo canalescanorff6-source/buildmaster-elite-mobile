@@ -25,3 +25,7 @@ Thumbs.db
 
 # Manifesto oficial é gerado apenas pelo GitHub Actions
 /public/update-manifest.json
+keystore.properties
+*.aab
+*.apks
+bundletool.jar

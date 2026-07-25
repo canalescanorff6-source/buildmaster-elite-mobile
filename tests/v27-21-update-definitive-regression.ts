@@ -19,9 +19,9 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const staticBuilder = fs.readFileSync('scripts/build-static.mjs', 'utf8');
 
-assert.equal(pkg.version, '29.20.0');
-assert.equal(APP_RELEASE_VERSION, '29.20.0');
-assert.equal(APP_NATIVE_VERSION, '29.20.0');
+assert.equal(pkg.version, '30.00.0');
+assert.equal(APP_RELEASE_VERSION, '30.00.0');
+assert.equal(APP_NATIVE_VERSION, '30.00.0');
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 

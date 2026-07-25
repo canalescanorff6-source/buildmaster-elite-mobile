@@ -109,6 +109,14 @@ export const TotalCardReaderPanel = dynamic(
   () => import('@/components/TotalCardReaderPanel').then((module) => module.TotalCardReaderPanel),
   { ssr: false, loading: fallback }
 );
+export const OcrVisionCenter = dynamic(
+  () => import('@/modules/card-reader/OcrVisionCenter').then((module) => module.OcrVisionCenter),
+  { ssr: false, loading: fallback }
+);
+export const OfficialRulesCenter = dynamic(
+  () => import('@/modules/rules/OfficialRulesCenter').then((module) => module.OfficialRulesCenter),
+  { ssr: false, loading: fallback }
+);
 export const SinglePrintEvidencePanel = dynamic(
   () => import('@/components/SinglePrintEvidencePanel').then((module) => module.SinglePrintEvidencePanel),
   { ssr: false, loading: fallback }
@@ -117,6 +125,32 @@ export const CompactSharePanel = dynamic(
   () => import('@/components/CompactSharePanel').then((module) => module.CompactSharePanel),
   { ssr: false, loading: fallback }
 );
+
+
+export const PremiumExperience2Center = dynamic(
+  () => import('@/modules/experience/PremiumExperience2Center').then((module) => module.PremiumExperience2Center),
+  { ssr: false, loading: fallback }
+);
+export const ObservabilitySupportCenter = dynamic(
+  () => import('@/modules/observability/ObservabilitySupportCenter').then((module) => module.ObservabilitySupportCenter),
+  { ssr: false, loading: fallback }
+);
+
+
+export const CommunitySharingCenter = dynamic(
+  () => import('@/modules/community/CommunitySharingCenter').then((module) => module.CommunitySharingCenter),
+  { ssr: false, loading: fallback }
+);
+export const CommercializationCenter = dynamic(
+  () => import('@/modules/commercial/CommercializationCenter').then((module) => module.CommercializationCenter),
+  { ssr: false, loading: fallback }
+);
+
+export const PlayStorePublicationCenter = dynamic(
+  () => import('@/modules/publication/PlayStorePublicationCenter').then((module) => module.PlayStorePublicationCenter),
+  { ssr: false, loading: fallback }
+);
+
 
 export type LazyPanelGroup = 'inicio' | 'jogadores' | 'time' | 'partidas' | 'ajustes';
 
@@ -130,6 +164,7 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
     () => import('@/modules/players/PlayerLaboratory'),
     () => import('@/components/TotalCardReaderPanel'),
     () => import('@/components/SinglePrintEvidencePanel'),
+    () => import('@/modules/card-reader/OcrVisionCenter'),
     () => import('@/components/PrecisionBuildPanel'),
     () => import('@/components/CreatorBuildResearchPanel')
   ],
@@ -146,7 +181,13 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
     () => import('@/components/UpdateCenterPanel'),
     () => import('@/components/AccountAdminPanel'),
     () => import('@/components/EliteEvolutionPanels'),
-    () => import('@/modules/quality/ProductionReadinessCenter')
+    () => import('@/modules/quality/ProductionReadinessCenter'),
+    () => import('@/modules/rules/OfficialRulesCenter'),
+    () => import('@/modules/experience/PremiumExperience2Center'),
+    () => import('@/modules/observability/ObservabilitySupportCenter'),
+    () => import('@/modules/community/CommunitySharingCenter'),
+    () => import('@/modules/commercial/CommercializationCenter'),
+    () => import('@/modules/publication/PlayStorePublicationCenter')
   ]
 };
 

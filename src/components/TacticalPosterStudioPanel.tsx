@@ -57,6 +57,8 @@ import {
 } from '@/modules/images/accountImageLibrary';
 import { blobToDataUrl } from '@/modules/images/imageSafety';
 import { downloadBlob, escapeHtml, safeFileName, svgToPngBlob } from '@/modules/tactical-studio/exportUtils';
+import { TacticalStudio2SequencePanel } from '@/modules/tactical-studio/TacticalStudio2SequencePanel';
+import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 
 const DRAFT_KEY_PREFIX = 'buildmaster_tactical_poster_draft_v2736';
 
@@ -136,6 +138,7 @@ function createInitialState(formation: FormationBlueprint, style: TacticalStyle)
 }
 
 export function TacticalPosterStudioPanel({ formation, lineup, style }: TacticalPosterStudioPanelProps) {
+  const tacticalStudio2Enabled = useObservabilityFeatureFlag('tacticalStudio2');
   const initialState = useMemo(() => createInitialState(formation, style), [formation, style]);
   const [title, setTitle] = useState(initialState.title);
   const [subtitle, setSubtitle] = useState(initialState.subtitle);
@@ -685,6 +688,8 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
         </div>
         <span className="tactical-local-badge"><ImageIcon size={15}/> offline e gratuito</span>
       </div>
+
+      {tacticalStudio2Enabled ? <TacticalStudio2SequencePanel formation={formation} lineup={lineup} style={style} /> : <div className="settings-explanation-card"><div><strong>Sequências do Estúdio Tático 2.0 pausadas</strong><span>O editor clássico e as exportações continuam disponíveis. Reative o módulo em Observabilidade e suporte.</span></div></div>}
 
       <nav className="tactical-studio-tabs" aria-label="Etapas do Estúdio Tático">
         <button type="button" className={studioTab === 'editar' ? 'active' : ''} onClick={() => setStudioTab('editar')}><Palette size={16}/> Editar</button>

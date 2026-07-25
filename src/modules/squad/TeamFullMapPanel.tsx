@@ -43,6 +43,8 @@ import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { FormationRoleLabPanel } from '@/components/lazy/AppLazyPanels';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { ProfessionalSquadPanel } from '@/modules/squad/ProfessionalSquadPanel';
+import { OpponentMatchAssistantPanel } from '@/modules/opponents/OpponentMatchAssistantPanel';
+import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import type { SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 
 const tacticalStyleName: Record<TacticalStyle, string> = {
@@ -520,6 +522,7 @@ function VisualLineupPitch({ history, formation, teamStyle }: { history: SavedAn
 }
 
 export function TeamFullMapPanel({ history, formation, teamStyle, onFormationChange }: { history: SavedAnalysis[]; formation: TacticalFormation; teamStyle: TacticalStyle; onFormationChange?: (formation: TacticalFormation) => void }) {
+  const opponentAssistantEnabled = useObservabilityFeatureFlag('opponentAssistant');
   const [teamCenterView, setTeamCenterView] = useState<TeamCenterView>('profissional');
   const [opponentProfile, setOpponentProfile] = useState<OpponentProfile>('CONTRA_RAPIDO');
   const [opponentFormation, setOpponentFormation] = useState<TacticalFormation>('4-3-3');
@@ -815,6 +818,14 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
             <label><span>Maior força percebida</span><select value={opponentStrength} onChange={(event) => setOpponentStrength(event.target.value as OpponentStrength)}>{Object.entries(OPPONENT_STRENGTH_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           </div>
           <div className="opponent-score-strip"><span>Ameaça <b>{opponentReport.threatScore}/100</b></span><span>Seu encaixe <b>{opponentReport.matchupScore}/100</b></span><span>{opponentReport.verdict}</span></div>
+          {opponentAssistantEnabled ? <OpponentMatchAssistantPanel
+            results={history.map((item) => item.result)}
+            ownFormation={formation}
+            ownStyle={teamStyle}
+            opponentProfile={opponentProfile}
+            opponentFormation={opponentFormation}
+            opponentStrength={opponentStrength}
+          /> : <div className="settings-explanation-card"><div><strong>Assistente de adversário pausado localmente</strong><span>A análise básica permanece ativa. Reative Planos A/B/C em Observabilidade e suporte.</span></div></div>}
           <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Principais ameaças</strong>{opponentReport.mainThreats.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Onde explorar</strong>{opponentReport.exploitableWeaknesses.map((item) => <span key={item}>{item}</span>)}</div></div>
           <div className="opponent-adjustment-grid">{opponentReport.adjustments.slice(0, 6).map((item) => <article key={`${item.area}-${item.title}`} className={`opponent-adjustment-card priority-${item.priority}`}><div><span>{item.area}</span><b>{item.priority}</b></div><strong>{item.title}</strong><p>{item.action}</p><small>{item.reason}</small></article>)}</div>
           <div className="squad-suggestion-box"><strong>Resposta assistida</strong><span>{opponentReport.recommendedFormation} • {tacticalStyleName[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>

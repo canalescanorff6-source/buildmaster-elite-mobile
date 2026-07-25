@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": []
+  },
+  "files": [
+    "../../src/lib/analyzerDomain.ts",
+    "../../src/lib/cardDatabase.ts",
+    "../../src/lib/validation.ts",
+    "../../src/lib/ocr.ts",
+    "../../src/lib/premiumReading.ts",
+    "../../src/modules/card-reader/singlePrintPro.ts",
+    "../../src/modules/card-reader/ocrVisionEngine.ts",
+    "../../src/modules/rules/officialRuleRegistry.ts",
+    "../../src/modules/architecture/moduleRegistry.ts"
+  ]
+}

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const output = process.argv[2] || 'MANIFESTO_PRODUCAO_V29.20.sha256';
+const output = process.argv[2] || 'MANIFESTO_PRODUCAO_V30.00.sha256';
 const excludedDirectories = new Set(['node_modules', '.next', 'out', 'android', '.git']);
 const excludedNames = new Set([output, path.basename(output)]);
 

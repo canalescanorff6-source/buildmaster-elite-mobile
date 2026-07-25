@@ -30,6 +30,7 @@ import {
 } from '@/lib/appUpdates';
 import { fetchUpdateManifest, type UpdateChannelSource } from '@/lib/updateChannel';
 import { DefinitiveUpdateCenter } from '@/modules/updates/DefinitiveUpdateCenter';
+import { checkGooglePlayUpdate, IS_PLAY_DISTRIBUTION, startGooglePlayUpdate } from '@/modules/publication/playIntegrity';
 import { getUpdateEvaluationOptions, readUpdateChannelPreference } from '@/modules/updates/updateGovernance';
 import {
   appendUpdateAudit,
@@ -190,6 +191,11 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
 
     function emitStatus(message: string, outcome: 'info' | 'success' | 'warning' | 'error' = 'info') {
       window.dispatchEvent(new CustomEvent('buildmaster:auto-update-status', { detail: { message, outcome } }));
+    }
+
+    if (IS_PLAY_DISTRIBUTION) {
+      emitStatus('Atualizações automáticas gerenciadas pela Google Play.', 'info');
+      return () => { active = false; };
     }
 
     async function tryAutomaticInstall(manifests: AppUpdateManifest[], installed: InstalledAppInfo) {
@@ -797,6 +803,39 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
     setMessage('Estado do atualizador limpo. Toque em “Verificar agora” para consultar novamente.');
     recordAudit({ phase: 'cache', outcome: 'success', message: 'Cache do atualizador limpo sem apagar fichas ou configurações do app.' });
   }
+
+  async function checkPlayStoreUpdate(): Promise<void> {
+    setChecking(true);
+    setMessage('Consultando a Google Play...');
+    try {
+      const update = await checkGooglePlayUpdate();
+      if (!update) { setMessage('A consulta da loja está disponível apenas no AAB instalado pela Google Play.'); return; }
+      setAvailable(update.available);
+      setMessage(update.available ? `Atualização ${update.availableVersionCode} disponível pela Google Play.` : 'O aplicativo está atualizado na Google Play.');
+    } catch (cause) { setMessage(updateErrorMessage(cause)); }
+    finally { setChecking(false); }
+  }
+
+  async function installPlayStoreUpdate(): Promise<void> {
+    setInstalling(true);
+    try {
+      const started = await startGooglePlayUpdate('flexible');
+      setMessage(started ? 'Atualização iniciada pela Google Play.' : 'Nenhuma atualização flexível pôde ser iniciada.');
+    } catch (cause) { setMessage(updateErrorMessage(cause)); }
+    finally { setInstalling(false); }
+  }
+
+  if (IS_PLAY_DISTRIBUTION) return (
+    <section className="update-center-panel luxury-panel settings-view-panel settings-final-panel">
+      <div className="settings-panel-heading"><div><p className="kicker"><RefreshCw size={15} /> Google Play</p><h3>Atualizações gerenciadas pela loja</h3><span>Este AAB não baixa nem instala APKs externos. A verificação e a instalação usam o fluxo oficial da Google Play.</span></div><span className="settings-state-pill">v{APP_RELEASE_VERSION}</span></div>
+      <div className="cloud-status-card update-status-final" role="status" aria-live="polite">{checking || installing ? <Loader2 className="spin" size={17} /> : <ShieldCheck size={17} />}<div><strong>Canal Google Play</strong><span>{message}</span></div></div>
+      <div className="safety-actions-grid update-actions-grid update-final-actions">
+        <button type="button" onClick={() => void checkPlayStoreUpdate()} disabled={checking || installing}><RefreshCw size={18} /><strong>Verificar na Play</strong><span>Consulta a versão liberada para este aparelho.</span><small>Sem download externo</small></button>
+        <button type="button" onClick={() => void installPlayStoreUpdate()} disabled={checking || installing || !available}><Download size={18} /><strong>Atualizar pela Play</strong><span>Abre o fluxo de atualização dentro do aplicativo.</span><small>Protegido pela Google Play</small></button>
+      </div>
+      <div className="settings-explanation-card"><ShieldCheck size={19} /><div><strong>Distribuições separadas</strong><span>O APK direto mantém o atualizador GitHub. O AAB da loja remove a permissão de instalar pacotes desconhecidos e usa Play In-App Updates.</span></div></div>
+    </section>
+  );
 
   return (
     <section className="update-center-panel luxury-panel settings-view-panel settings-final-panel">

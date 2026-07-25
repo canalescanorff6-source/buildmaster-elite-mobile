@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": []
+  },
+  "files": [
+    "ui-stubs.d.ts",
+    "../../src/modules/players/advancedPlayerLaboratory.ts",
+    "../../src/modules/players/AdvancedPlayerLab.tsx",
+    "../../src/modules/rules/officialRuleRegistry.ts",
+    "../../src/modules/rules/OfficialRulesCenter.tsx"
+  ]
+}

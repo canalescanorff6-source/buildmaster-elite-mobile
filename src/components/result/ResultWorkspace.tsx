@@ -74,6 +74,7 @@ import type {
 } from '@/modules/card-reader/singlePrintPro';
 import type { TotalReadingSession } from '@/lib/totalCardReader';
 import { BuildQualityGatePanel } from '@/components/BuildQualityGatePanel';
+import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -310,6 +311,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
 export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, requestedTab, onRequestedTabHandled }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void }) {
+  const communityEnabled = useObservabilityFeatureFlag('community');
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -1036,7 +1038,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
 
-      {tab === 'comunidade' && <CommunityIntelligencePanel result={result} />}
+      {tab === 'comunidade' && (communityEnabled ? <CommunityIntelligencePanel result={result} /> : <div className="settings-explanation-card"><div><strong>Inteligência de criadores pausada localmente</strong><span>Reative o módulo em Ajustes › Observabilidade e suporte.</span></div></div>)}
 
       {tab === 'fontes' && <CreatorBuildResearchPanel result={result} />}
 

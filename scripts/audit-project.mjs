@@ -44,7 +44,7 @@ const layout = read('src/app/layout.tsx');
 const manifest = read('public/manifest.webmanifest');
 const sw = read('public/sw.js');
 
-check(/^29\.20\.\d+$/.test(expectedVersion), 'Versão de auditoria v29.20 configurada', `encontrada ${expectedVersion}`);
+check(/^30\.00\.\d+$/.test(expectedVersion), 'Versão de auditoria v30.00 configurada', `encontrada ${expectedVersion}`);
 check(appUpdates.includes(`'${expectedVersion}'`), 'Motor de atualização usa a versão do pacote');
 check(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface usam versão centralizada');
 check(manifest.includes(`v${expectedMinor}`), 'Manifesto PWA acompanha a versão atual');
@@ -63,7 +63,9 @@ check(read('src/components/PrecisionBuildPanel.tsx').includes('buildAdvancedBuil
 check(read('src/app/legacy-compat/part-07.css').includes('v28.60 — Bloco 7'), 'Interface responsiva do Bloco 7 presente');
 check(exists('tests/v28-60-advanced-build-intelligence-regression.ts') && exists('tests/v28-60-advanced-build-ui-regression.mjs'), 'Regressões do Bloco 7 presentes');
 check(globals.includes('@import "./design-system-v2910-admin-update.css";'), 'Camada dos Blocos 12 e 13 preservada');
-check(globals.trim().endsWith('@import "./design-system-v2920-production.css";'), 'Camada final dos Blocos 14 e 15 carregada por último');
+check(globals.includes('@import "./design-system-v2920-production.css";'), 'Camada de produção v29.20 preservada');
+check(globals.includes('@import "./design-system-v2930-intelligence-base.css";'), 'Camada inteligente v29.30 preservada');
+check(globals.trim().endsWith('@import "./design-system-v3000-play-publication.css";'), 'Camada final v30.00 de publicação Google Play carregada por último');
 check(exists('src/modules/training/trainingEvolutionEngine.ts') && read('src/modules/training/trainingEvolutionEngine.ts').includes("TRAINING_EVOLUTION_VERSION = '28.80.0'"), 'Motor de treinos e evolução v28.80 presente');
 check(exists('src/modules/training/TrainingEvolutionCenter.tsx'), 'Central de Treinos e Evolução presente');
 check(exists('tests/v28-80-training-evolution-engine-regression.ts') && exists('tests/v28-80-training-evolution-ui-regression.mjs'), 'Regressões do Bloco 9 presentes');
@@ -78,11 +80,55 @@ check(read('src/lib/updateChannel.ts').includes("preferredChannel: 'stable' | 'b
 check(workflow.includes('rollout_percentage:') && workflow.includes('rollback_from_version:') && workflow.includes('buildmaster-update-beta'), 'Workflow possui rollout, beta e rollback');
 check(exists('tests/v29-10-admin-security-regression.mjs') && exists('tests/v29-10-update-governance-regression.cjs') && exists('tests/v29-10-integrated-ui-regression.mjs'), 'Regressões próprias da v29.10 presentes');
 check(exists('src/lib/productionReadiness.ts') && exists('src/modules/quality/ProductionReadinessCenter.tsx'), 'Central final de prontidão de produção presente');
-check(read('src/lib/productionReadiness.ts').includes("PRODUCTION_READINESS_VERSION = '29.20.0'"), 'Motor de prontidão identificado como v29.20');
+check(read('src/lib/productionReadiness.ts').includes("PRODUCTION_READINESS_VERSION = '30.00.0'"), 'Motor de prontidão sincronizado com v30.00');
 check(exists('tests/v29-20-production-readiness-engine-regression.cjs') && exists('tests/v29-20-ui-production-regression.mjs'), 'Regressões próprias da v29.20 presentes');
+check(exists('src/modules/architecture/moduleRegistry.ts') && read('src/modules/architecture/moduleRegistry.ts').includes("ARCHITECTURE_VERSION = '29.30.0'"), 'Arquitetura 2.0 v29.30 presente');
+check(exists('src/modules/architecture/appOptions.ts') && read('src/components/CardVisionApp.tsx').includes("from '@/modules/architecture/appOptions'"), 'Opções centrais extraídas do componente principal');
+check(exists('src/modules/analysis/analyzerCatalog.ts') && read('src/lib/analyzer.ts').includes('modules/analysis/analyzerCatalog'), 'Catálogo do analisador extraído');
+check(read('src/components/CardVisionApp.tsx').split('\n').length < 4000 && read('src/lib/analyzer.ts').split('\n').length < 3500, 'Arquivos centrais reduzidos abaixo dos limites v29.30');
+check(exists('src/modules/card-reader/ocrVisionEngine.ts') && exists('src/modules/card-reader/OcrVisionCenter.tsx'), 'OCR Vision 2.0 presente');
+check(read('src/components/CardVisionApp.tsx').includes('buildOcrVisionAudit') && read('src/components/lazy/AppLazyPanels.tsx').includes('OcrVisionCenter'), 'OCR Vision integrado ao fluxo de um único print');
+check(exists('src/modules/rules/officialRuleRegistry.ts') && exists('src/modules/rules/OfficialRulesCenter.tsx'), 'Base oficial versionada presente');
+check(read('src/lib/analyzer.ts').includes('findOfficialCardRule') && read('src/lib/dataSafety.ts').includes('3000'), 'Regras oficiais integradas à análise e ao esquema atual');
+check(exists('tests/v29-30-architecture-ocr-rules-regression.ts') && exists('tests/v29-30-integrated-ui-regression.mjs'), 'Regressões próprias da v29.30 presentes');
+check(exists('src/modules/players/advancedPlayerLaboratory.ts') && read('src/modules/players/advancedPlayerLaboratory.ts').includes("ADVANCED_PLAYER_LAB_VERSION = '29.40.0'"), 'Motor do Laboratório avançado v29.40 presente');
+check(exists('src/modules/players/AdvancedPlayerLab.tsx') && read('src/modules/players/PlayerLaboratory.tsx').includes('AdvancedPlayerLab'), 'Laboratório avançado integrado à Central de Jogadores');
+check(read('src/modules/rules/officialRuleRegistry.ts').includes('OFFICIAL_RULE_SCHEMA = 2') && read('src/modules/rules/officialRuleRegistry.ts').includes('reviewOfficialRulePack'), 'Banco oficial reforçado com revisão e esquema 2');
+check(exists('tests/v29-40-rules-player-lab-regression.ts') && exists('tests/v29-40-integrated-ui-regression.mjs'), 'Regressões próprias da v29.40 presentes');
+check(exists('src/modules/tactical-studio/tacticalStudio2Engine.ts') && read('src/modules/tactical-studio/tacticalStudio2Engine.ts').includes("TACTICAL_STUDIO_2_VERSION = '29.50.0'"), 'Motor do Estúdio Tático 2.0 v29.50 presente');
+check(exists('src/modules/tactical-studio/TacticalStudio2SequencePanel.tsx') && read('src/components/TacticalPosterStudioPanel.tsx').includes('TacticalStudio2SequencePanel'), 'Sequências táticas integradas ao Estúdio');
+check(exists('src/modules/opponents/opponentMatchAssistant.ts') && read('src/modules/opponents/opponentMatchAssistant.ts').includes("OPPONENT_ASSISTANT_VERSION = '29.50.0'"), 'Motor do Assistente de adversário v29.50 presente');
+check(exists('src/modules/opponents/OpponentMatchAssistantPanel.tsx') && read('src/modules/squad/TeamFullMapPanel.tsx').includes('OpponentMatchAssistantPanel'), 'Assistente de adversário integrado ao Meu Time');
+check(exists('tests/v29-50-tactical-opponent-regression.ts') && exists('tests/v29-50-integrated-ui-regression.mjs'), 'Regressões próprias da v29.50 presentes');
+check(exists('src/modules/performance/antiDelayEngine.ts') && read('src/modules/performance/antiDelayEngine.ts').includes("ANTI_DELAY_VERSION = '29.60.0'"), 'Motor anti-delay v29.60 presente');
+check(exists('src/modules/performance/AntiDelayCenter.tsx') && read('src/modules/matches/MatchLaboratory.tsx').includes('AntiDelayCenter'), 'Central anti-delay integrada ao Centro de performance');
+check(exists('src/modules/coaching/smartCoachEngine.ts') && read('src/modules/coaching/smartCoachEngine.ts').includes("SMART_COACH_VERSION = '29.60.0'"), 'Motor do Treinador inteligente v29.60 presente');
+check(exists('src/modules/coaching/SmartCoachCenter.tsx') && read('src/modules/matches/MatchLaboratory.tsx').includes('SmartCoachCenter'), 'Treinador inteligente integrado ao Centro de performance');
+check(exists('tests/v29-60-anti-delay-smart-coach-regression.ts') && exists('tests/v29-60-integrated-ui-regression.mjs'), 'Regressões próprias da v29.60 presentes');
+check(exists('src/modules/experience/premiumExperience2.ts') && read('src/modules/experience/premiumExperience2.ts').includes("PREMIUM_EXPERIENCE_2_VERSION = '29.70.0'"), 'Motor da Experiência Premium 2.0 v29.70 presente');
+check(exists('src/modules/observability/observabilityEngine.ts') && read('src/modules/observability/observabilityEngine.ts').includes("OBSERVABILITY_VERSION = '29.70.0'"), 'Motor de observabilidade v29.70 presente');
+check(read('src/components/CardVisionApp.tsx').includes('PremiumExperience2Center') && read('src/components/CardVisionApp.tsx').includes('ObservabilitySupportCenter'), 'Painéis v29.70 integrados aos Ajustes');
+check(exists('tests/v29-70-premium-observability-regression.ts') && exists('tests/v29-70-integrated-ui-regression.mjs'), 'Regressões próprias da v29.70 presentes');
+check(exists('src/modules/community/communitySharing.ts') && read('src/modules/community/communitySharing.ts').includes("COMMUNITY_SHARING_VERSION = '29.80.0'"), 'Motor de compartilhamento seguro v29.80 presente');
+check(exists('src/modules/commercial/commercialization.ts') && read('src/modules/commercial/commercialization.ts').includes("COMMERCIALIZATION_VERSION = '29.80.0'"), 'Motor de comercialização e LGPD v29.80 presente');
+check(read('src/components/CardVisionApp.tsx').includes('CommunitySharingCenter') && read('src/components/CardVisionApp.tsx').includes('CommercializationCenter'), 'Painéis v29.80 integrados aos Ajustes');
+check(exists('supabase/migrations/202607250001_blocks25_27_community_commercial.sql'), 'Migração de comunidade e comercialização presente');
+check(exists('tests/v29-80-community-commercial-regression.ts') && exists('tests/v29-80-integrated-ui-regression.mjs'), 'Regressões próprias da v29.80 presentes');
+
+
+
+check(exists('src/modules/publication/playStorePublication.ts') && read('src/modules/publication/playStorePublication.ts').includes("PLAY_STORE_PUBLICATION_VERSION = '30.00.0'"), 'Motor de publicação Google Play v30.00 presente');
+check(exists('src/modules/publication/PlayStorePublicationCenter.tsx') && read('src/components/CardVisionApp.tsx').includes('PlayStorePublicationCenter'), 'Central de publicação integrada aos Ajustes');
+check(exists('.github/workflows/build-play-store.yml') && read('.github/workflows/build-play-store.yml').includes('bundleRelease'), 'Workflow profissional de AAB presente');
+check(exists('scripts/install-play-store-bridge.mjs') && exists('scripts/publish-play-store.mjs') && exists('scripts/validate-play-store-release.mjs'), 'Ferramentas Google Play presentes');
+check(exists('src/app/privacidade/page.tsx') && exists('src/app/excluir-conta/page.tsx'), 'Páginas públicas de privacidade e exclusão presentes');
+check(exists('supabase/functions/account-deletion-request/index.ts') && exists('supabase/functions/play-integrity-verify/index.ts'), 'Backend de exclusão e Play Integrity presente');
+check(exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs'), 'Regressões v30.00 presentes');
+
+check(pkg.scripts?.['test:all']?.startsWith('npm run test:v3000 && npm run test:v2980') && workflow.includes('npm run test:all') && workflow.includes('MANIFESTO_PRODUCAO_V30.00.sha256'), 'Workflow valida e protege a v30.00 sem duplicar a bateria');
 check(exists('scripts/check-source-syntax.mjs') && exists('scripts/check-interactive-contracts.mjs') && exists('scripts/production-preflight.mjs'), 'Ferramentas finais de sintaxe, interface e pré-voo presentes');
 check(workflow.includes('npm run release:preflight') && workflow.includes('npm run quality:syntax') && workflow.includes('npm run quality:interactive'), 'Workflow executa o portão final de produção');
-check(read('src/lib/dataSafety.ts').includes("APP_DATA_VERSION = '29.20.0'") && read('src/lib/dataSafety.ts').includes('CURRENT_DATA_SCHEMA = 2920') && read('src/lib/dataSafety.ts').includes("'performance'"), 'Backup v29.20 preserva desempenho, treinos e partidas');
+check(read('src/lib/dataSafety.ts').includes("APP_DATA_VERSION = '30.00.0'") && read('src/lib/dataSafety.ts').includes('CURRENT_DATA_SCHEMA = 3000') && read('src/lib/dataSafety.ts').includes("'performance'"), 'Backup v29.80 preserva comunidade, comercialização e todos os dados anteriores');
 check(exists('src/lib/professionalSquadEngine.ts') && read('src/lib/professionalSquadEngine.ts').includes("PROFESSIONAL_SQUAD_VERSION = '28.70.0'"), 'Motor profissional do elenco v28.70 presente');
 check(exists('src/modules/squad/ProfessionalSquadPanel.tsx') && read('src/modules/squad/TeamFullMapPanel.tsx').includes('ProfessionalSquadPanel'), 'Central profissional integrada ao Meu Time');
 check(exists('tests/v28-70-professional-squad-engine-regression.ts') && exists('tests/v28-70-professional-squad-ui-regression.mjs'), 'Regressões do Bloco 8 presentes');

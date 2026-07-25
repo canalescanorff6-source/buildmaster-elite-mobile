@@ -50,7 +50,7 @@ import {
   type TacticalFormation,
   type TacticalProfile,
   type TacticalStyle
-} from '@/lib/analyzer';
+} from '@/modules/analysis';
 import {
   DEFAULT_OCR_ZONES,
   createZoneOriginPreview,
@@ -85,6 +85,7 @@ import { PremiumBrand } from '@/components/PremiumBrand';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, formations, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
@@ -96,13 +97,20 @@ import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/co
 import {
   AccountAdminPanel,
   BuildMasterAssistant,
+  CommunitySharingCenter,
+  CommercializationCenter,
+  PlayStorePublicationCenter,
   DelayResponsePanel,
   EvolutionCommandCenter,
   EvolutionNotificationHub,
   FirstUseOnboarding,
   IntegratedTeamLab,
   MatchLaboratory,
+  ObservabilitySupportCenter,
+  OcrVisionCenter,
+  OfficialRulesCenter,
   PlayerLaboratory,
+  PremiumExperience2Center,
   ProductionReadinessCenter,
   SmartQuickDock,
   StabilityDiagnosticsPanel,
@@ -113,10 +121,17 @@ import {
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
+import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
+import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
 import { validateImageFile } from '@/modules/images/imageSafety';
 import { exportTacticalImageLibrary, importTacticalImageLibrary } from '@/modules/images/accountImageLibrary';
 import { exportTacticalPosterLibrary, replaceTacticalPosterLibrary } from '@/lib/tacticalPosterLibrary';
+import { readTacticalSequenceProjects, replaceTacticalSequenceProjects } from '@/modules/tactical-studio/tacticalStudio2Storage';
+import { readOpponentMatchPlans, replaceOpponentMatchPlans } from '@/modules/opponents/opponentPlanStorage';
+import { exportCommunityState, importCommunityState, type CommunityShareKind } from '@/modules/community/communitySharing';
+import { exportCommercialState, importCommercialState, resolveCommercialEntitlements } from '@/modules/commercial/commercialization';
+import { exportPlayStorePublicationState, importPlayStorePublicationState } from '@/modules/publication/playStorePublication';
 import { exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
@@ -181,6 +196,18 @@ import { cropImage, mergeOcrTexts, preprocessImage } from '@/modules/card-reader
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import { COMPETITIVE_MATCH_STORAGE_KEY } from '@/modules/matches/competitivePerformanceEngine';
 import { TRAINING_EVOLUTION_STORAGE_KEY, TRAINING_GOALS_STORAGE_KEY } from '@/modules/training/trainingEvolutionEngine';
+import { ANTI_DELAY_LINK_STORAGE_KEY, ANTI_DELAY_PROFILE_STORAGE_KEY, ANTI_DELAY_STORAGE_KEY } from '@/modules/performance/antiDelayEngine';
+import { SMART_COACH_PREFERENCES_KEY, SMART_COACH_REVIEW_STORAGE_KEY } from '@/modules/coaching/smartCoachEngine';
+import {
+  exportPremiumExperience2State,
+  importPremiumExperience2State,
+  readPremiumExperience2Preferences,
+  recordPremiumRecentActivity,
+  type Premium2Target
+} from '@/modules/experience/premiumExperience2';
+import { exportObservabilityState, importObservabilityState } from '@/modules/observability/observabilityEngine';
+import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
+import { premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiumTarget, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
 import { CloudSyncCenter } from '@/modules/backup/CloudSyncCenter';
 import { AdministrationSecurityCenter } from '@/modules/administration/AdministrationSecurityCenter';
 import { buildCloudVaultPayload, buildSyncHealth, compareBackupEnvelopes, createBackupSnapshot, mergeBackupEnvelopes, normalizeCloudVaultPayload, pruneSnapshots, LAST_FULL_SYNC_STORAGE_KEY, type BackupSnapshot, type SectionConflict } from '@/modules/backup/syncBackupEngine';
@@ -195,7 +222,6 @@ type MotionPreference = 'system' | 'reduced' | 'full';
 type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-
 
 type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
 
@@ -213,15 +239,9 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
   if (group !== 'jogadores') return group;
   return workspace === 'visao-geral' ? 'jogadores' : workspace;
 }
+
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
-type SettingsView = 'evolucao' | 'aparencia' | 'desempenho' | 'seguranca' | 'backup' | 'atualizacoes' | 'contas';
-
-
-
-
-
-
-
+type SettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
 
  type ActiveSessionSnapshot = {
   preview: string | null;
@@ -245,203 +265,6 @@ type SettingsView = 'evolucao' | 'aparencia' | 'desempenho' | 'seguranca' | 'bac
   savedAt: number;
 };
 
-
-
-
-const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
-
-const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_29_regras_atualizaveis';
-const VAULT_FOLDERS_KEY = 'buildmaster_vault_folders_v25_33';
-
-const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
-
-const objectives: Array<{ value: Objective; title: string; hint: string }> = [
-  { value: 'COMPETITIVE', title: 'Desempenho máximo', hint: 'rendimento real em campo, não GER alto' },
-  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.5.0, separada de dados oficiais' },
-  { value: 'FINISHER', title: 'Finalizador', hint: 'gols, área e chute' },
-  { value: 'CREATOR', title: 'Criador', hint: 'passe, controle e assistência' },
-  { value: 'DRIBBLER', title: 'Driblador', hint: 'giro curto e 1 contra 1' },
-  { value: 'QUICK_COUNTER', title: 'Contra-ataque rápido', hint: 'arranque e verticalidade' },
-  { value: 'POSSESSION', title: 'Posse de bola', hint: 'toque curto e paciência' },
-  { value: 'PRESSING', title: 'Pressão alta', hint: 'roubo, fôlego e agressividade' },
-  { value: 'DEFENSIVE', title: 'Defensivo', hint: 'marcação, bloqueio e cobertura' },
-  { value: 'AERIAL', title: 'Jogo aéreo', hint: 'cabeceio, salto e físico' },
-  { value: 'GOALKEEPER', title: 'Goleiro elite', hint: 'reflexo, alcance, firmeza e pênalti' }
-];
-
-const playstyleOptions = PLAYSTYLE_OPTIONS;
-
-
-
-
-
-
-
-
-
-const formations: Array<{ value: TacticalFormation; label: string }> = [
-  { value: 'AUTO', label: 'Automático inteligente' },
-  { value: '4-2-2-2', label: '4-2-2-2 — 2 meias + 2 atacantes' },
-  { value: '4-3-3', label: '4-3-3 — pontas abertos' },
-  { value: '4-1-2-3', label: '4-1-2-3 — VOL + 2 meias + trio' },
-  { value: '4-2-1-3', label: '4-2-1-3 — 2 volantes + MAT + trio' },
-  { value: '4-2-3-1', label: '4-2-3-1 — proteção + 3 meias' },
-  { value: '4-3-1-2', label: '4-3-1-2 — MAT + 2 atacantes' },
-  { value: '4-1-3-2', label: '4-1-3-2 — VOL único + pressão' },
-  { value: '4-4-2', label: '4-4-2 — equilíbrio clássico' },
-  { value: '4-1-4-1', label: '4-1-4-1 — posse segura' },
-  { value: '3-2-4-1', label: '3-2-4-1 — saída de três' },
-  { value: '3-4-3', label: '3-4-3 — alas + ataque aberto' },
-  { value: '3-5-2', label: '3-5-2 — meio dominante' },
-  { value: '5-3-2', label: '5-3-2 — bloco seguro' },
-  { value: '5-2-3', label: '5-2-3 — defesa + pontas' }
-];
-
-const tacticalStyles: Array<{ value: TacticalStyle; label: string }> = [
-  { value: 'AUTO', label: 'Automático inteligente' },
-  { value: 'POSSE_DE_BOLA', label: 'Posse de bola' },
-  { value: 'CONTRA_ATAQUE', label: 'Contra-ataque normal' },
-  { value: 'CONTRA_ATAQUE_RAPIDO', label: 'Contra-ataque rápido' },
-  { value: 'POR_FORA', label: 'Por fora' },
-  { value: 'PASSE_LONGO', label: 'Passe longo' }
-];
-
-const tacticalStyleName: Record<TacticalStyle, string> = {
-  AUTO: 'Automático inteligente',
-  POSSE_DE_BOLA: 'Posse de bola',
-  CONTRA_ATAQUE: 'Contra-ataque normal',
-  CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
-  POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo'
-};
-
-type FormationGuide = {
-  title: string;
-  bestStyle: TacticalStyle;
-  styleReason: string;
-  howToPlay: string;
-  roles: string[];
-};
-
-const formationGuides: Record<Exclude<TacticalFormation, 'AUTO'>, FormationGuide> = {
-  '4-2-2-2': {
-    title: '4-2-2-2 — Compacto e direto',
-    bestStyle: 'CONTRA_ATAQUE_RAPIDO',
-    styleReason: 'combina bem com dois meias por dentro e dupla de ataque para sair rápido após o roubo.',
-    howToPlay: 'Recupere com VOL/MLG, toque vertical no MAT/SA e finalize rápido antes da defesa adversária recompor.',
-    roles: ['VOL: marcação e primeiro passe', 'MLG: condução curta e cobertura', 'MAT/SA: giro e assistência', 'CA: ataque ao espaço e finalização']
-  },
-  '4-3-3': {
-    title: '4-3-3 — Amplitude e pressão pelos lados',
-    bestStyle: 'POR_FORA',
-    styleReason: 'usa pontas e laterais para abrir campo, cruzar, inverter jogadas e atacar o lado fraco.',
-    howToPlay: 'Abra com PE/PD, apoie com laterais, procure cruzamento rasteiro/alto e finalize com CA bem posicionado.',
-    roles: ['Pontas: velocidade, drible e diagonal', 'CA: presença de área', 'MLG: cobertura e passe', 'Laterais: apoio com recomposição']
-  },
-  '4-1-2-3': {
-    title: '4-1-2-3 — Triângulo central ofensivo',
-    bestStyle: 'POSSE_DE_BOLA',
-    styleReason: 'o VOL protege e os dois meias criam linhas de passe para manter controle sem perder verticalidade.',
-    howToPlay: 'Faça triangulações curtas, atraia a marcação no meio e solte nos pontas quando abrir espaço.',
-    roles: ['VOL: segurança e cobertura', 'MLG/MAT: passe curto e giro', 'Pontas: amplitude', 'CA: finalização e pivô curto']
-  },
-  '4-2-1-3': {
-    title: '4-2-1-3 — Proteção e trio ofensivo',
-    bestStyle: 'CONTRA_ATAQUE_RAPIDO',
-    styleReason: 'a dupla de volantes dá segurança para o MAT acelerar o trio de ataque.',
-    howToPlay: 'Roube por dentro, passe no MAT e ataque com os três da frente em velocidade.',
-    roles: ['2 VOL/MLG: roubo e cobertura', 'MAT: passe final', 'Pontas: profundidade', 'CA: finalizar no primeiro toque']
-  },
-  '4-2-3-1': {
-    title: '4-2-3-1 — Controle com proteção dupla',
-    bestStyle: 'POSSE_DE_BOLA',
-    styleReason: 'a base com dois volantes permite circular a bola e criar com três meias atrás do CA.',
-    howToPlay: 'Gire a bola entre laterais e meias, espere o espaço e use o CA como pivô ou finalizador.',
-    roles: ['Dupla central: proteção e passe', 'Meias abertos: infiltração', 'MAT: criação', 'CA: pivô e presença de área']
-  },
-  '4-3-1-2': {
-    title: '4-3-1-2 — Compacto pelo centro',
-    bestStyle: 'CONTRA_ATAQUE',
-    styleReason: 'protege o corredor central e usa MAT com dois atacantes para contra-atacar com segurança.',
-    howToPlay: 'Feche o meio, recupere, acione o MAT e ataque com tabelas curtas entre os dois atacantes.',
-    roles: ['MAT: último passe', '2 CA/SA: tabela e ataque ao espaço', 'MLG: pressão central', 'Laterais: única largura do time']
-  },
-  '4-1-3-2': {
-    title: '4-1-3-2 — Pressão e ataque em dupla',
-    bestStyle: 'CONTRA_ATAQUE_RAPIDO',
-    styleReason: 'muitos jogadores próximos para recuperar rápido e servir a dupla de ataque.',
-    howToPlay: 'Pressione após perder, recupere no meio e finalize rápido com a dupla da frente.',
-    roles: ['VOL: proteger contra bola nas costas', 'Linha de 3: pressão e passe', 'Dupla de ataque: movimentação e finalização']
-  },
-  '4-4-2': {
-    title: '4-4-2 — Equilíbrio clássico',
-    bestStyle: 'CONTRA_ATAQUE',
-    styleReason: 'mantém duas linhas fortes e dois atacantes prontos para sair quando a bola é recuperada.',
-    howToPlay: 'Defenda em bloco médio, force o adversário para o lado e ataque com cruzamentos ou passes diretos.',
-    roles: ['Meias laterais: recomposição e cruzamento', '2 atacantes: presença e tabela', 'Centrais: cobertura e segundo passe']
-  },
-  '4-1-4-1': {
-    title: '4-1-4-1 — Posse e controle territorial',
-    bestStyle: 'POSSE_DE_BOLA',
-    styleReason: 'tem muitas linhas de passe e um VOL fixo para segurar a transição defensiva.',
-    howToPlay: 'Circule a bola com paciência, avance em bloco e não force passe vertical sem apoio.',
-    roles: ['VOL: âncora defensiva', 'Meias: circulação e pressão pós-perda', 'CA: pivô e finalização', 'Laterais: apoio alternado']
-  },
-  '3-2-4-1': {
-    title: '3-2-4-1 — Superioridade no meio',
-    bestStyle: 'POSSE_DE_BOLA',
-    styleReason: 'a saída de três e os dois volantes sustentam posse com muitos jogadores entrelinhas.',
-    howToPlay: 'Saia com três, encontre os meias entre linhas e use os alas para prender a defesa adversária aberta.',
-    roles: ['3 ZAG: cobertura e saída', '2 VOL: proteção', 'Alas/meias: amplitude e criação', 'CA: finalizar e prender zagueiros']
-  },
-  '3-4-3': {
-    title: '3-4-3 — Ataque aberto e agressivo',
-    bestStyle: 'POR_FORA',
-    styleReason: 'favorece amplitude máxima com alas e pontas pressionando os lados.',
-    howToPlay: 'Ataque pelos corredores, use inversões rápidas e proteja contra contra-ataques com três zagueiros fortes.',
-    roles: ['Alas: fôlego e cruzamento', 'Pontas: 1 contra 1', 'Zagueiros: cobertura longa', 'CA: presença de área']
-  },
-  '3-5-2': {
-    title: '3-5-2 — Meio dominante e dupla de ataque',
-    bestStyle: 'CONTRA_ATAQUE',
-    styleReason: 'ganha o meio, rouba por dentro e acha dois atacantes em vantagem.',
-    howToPlay: 'Feche o centro, use alas para abrir e procure a dupla de ataque com passe rápido após recuperar.',
-    roles: ['3 ZAG: segurança', 'Alas: amplitude total', 'Meias: pressão e passe', '2 atacantes: tabela e profundidade']
-  },
-  '5-3-2': {
-    title: '5-3-2 — Segurança máxima',
-    bestStyle: 'CONTRA_ATAQUE',
-    styleReason: 'protege a área, baixa o risco e usa dois atacantes para aproveitar espaço nas costas.',
-    howToPlay: 'Defenda compacto, não quebre a linha de cinco sem necessidade e saia em passe direto para a dupla.',
-    roles: ['Laterais/alas: recomposição', '3 ZAG: cobertura aérea', 'Meio: roubo e passe direto', '2 atacantes: profundidade']
-  },
-  '5-2-3': {
-    title: '5-2-3 — Defesa forte e pontas velozes',
-    bestStyle: 'PASSE_LONGO',
-    styleReason: 'a defesa baixa encontra pontas e CA com lançamentos rápidos para atacar campo aberto.',
-    howToPlay: 'Recupere baixo, procure passe longo ou inversão rápida para os pontas e ataque com poucos toques.',
-    roles: ['5 defensores: bloco seguro', '2 meios: interceptação e lançamento', 'Pontas: velocidade', 'CA: pivô e finalização']
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 async function createPlayerCardPreview(file: File): Promise<string | null> {
   try {
     const geometry = await inspectSinglePrintGeometry(file);
@@ -451,20 +274,9 @@ async function createPlayerCardPreview(file: File): Promise<string | null> {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 export function CardVisionApp() {
   const account = useBuildMasterAccount();
+  const ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
   const [preview, setPreview] = useState<string | null>(null);
   const [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -512,7 +324,7 @@ export function CardVisionApp() {
   const [onlyPendingSkills, setOnlyPendingSkills] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [vaultView, setVaultView] = useState<VaultView>('jogadores');
-  const [settingsView, setSettingsView] = useState<SettingsView>('aparencia');
+  const [settingsView, setSettingsView] = useState<SettingsView>(() => settingsViewForPremiumTarget(readPremiumExperience2Preferences().startTarget) ?? 'aparencia');
   const [updateNotice, setUpdateNotice] = useState<string | null>(null);
   const [comparePlayerIds, setComparePlayerIds] = useState<string[]>([]);
   const [comparePosition, setComparePosition] = useState<PositionCode>('CF');
@@ -537,7 +349,9 @@ export function CardVisionApp() {
     const deepLink = parseInternalDeepLink(window.location.hash);
     if (deepLink) return sectionForNavigation(deepLink.group, deepLink.workspace);
     const snapshot = readNavigationSnapshot();
-    return snapshot ? sectionForNavigation(snapshot.group, snapshot.playerWorkspace) : 'inicio';
+    const premium = readPremiumExperience2Preferences();
+    if (premium.autoResume && snapshot) return sectionForNavigation(snapshot.group, snapshot.playerWorkspace);
+    return sectionForPremiumTarget(premium.startTarget);
   });
   const [playerWorkspace, setPlayerWorkspace] = useState<PlayerWorkspace>(() => {
     if (typeof window === 'undefined') return 'visao-geral';
@@ -560,7 +374,7 @@ export function CardVisionApp() {
   const backupInputRef = useRef<HTMLInputElement | null>(null);
   const fullBackupInputRef = useRef<HTMLInputElement | null>(null);
   const verifyBackupInputRef = useRef<HTMLInputElement | null>(null);
-  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true });
+  const [restoreSections, setRestoreSections] = useState<Record<BackupSection, boolean>>({ history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true, community: true, commercial: true, publication: true });
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [migrationLog, setMigrationLog] = useState<string[]>([]);
   const [backupPassword, setBackupPassword] = useState('');
@@ -846,6 +660,8 @@ export function CardVisionApp() {
     if (sessionSaveState === 'error') showPremiumToast({ title: 'Rascunho não salvo', message: 'Seus dados continuam na tela. Tente novamente antes de sair.', tone: 'danger', duration: 6000 });
   }, [sessionSaveState]);
 
+  usePremiumDraftAutosave({ section: mainSection, preview, rawText, playerName: manualFields.playerName, points: manualFields.trainingPointsTotal, targetPosition, playstyle: playstyleOverride });
+
   function openMainSection(section: MainSection, options: { track?: boolean } = {}) {
     setMobileLauncher(null);
     scrollPositionsRef.current[mainSection] = window.scrollY;
@@ -858,6 +674,8 @@ export function CardVisionApp() {
     writeNavigationSnapshot({ group, playerWorkspace: group === 'jogadores' ? workspace : playerWorkspace, scrollY: scrollPositionsRef.current[section] ?? 0 });
     window.history.replaceState(null, '', group === 'jogadores' ? `#/${group}/${workspace}` : `#/${group}`);
     setMainSection(section);
+    const recentNavigation = mainNavigation.find((item) => item.id === section);
+    recordPremiumRecentActivity({ target: premiumTargetForSection(section), label: recentNavigation?.label ?? section, detail: recentNavigation?.hint ?? 'Área do BuildMaster aberta.' });
     if (section === 'cofre') {
       setStatus(history.length ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
     }
@@ -1117,8 +935,6 @@ export function CardVisionApp() {
   // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
   // derrubem o resultado no mesmo instante da geração.
 
-
-
   function completeOnboarding(profile: OnboardingProfile) {
     setOnboardingProfile(profile);
     setAdvancedMode(profile.experienceMode === 'advanced');
@@ -1128,7 +944,6 @@ export function CardVisionApp() {
     try { writeAccountStorage(ONBOARDING_STORAGE_KEY, JSON.stringify(profile)); } catch {}
     setStatus(`Configuração inicial concluída: modo ${profile.experienceMode === 'advanced' ? 'avançado' : 'simples'}, formação ${profile.favoriteFormation}.`);
   }
-
 
   function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
     writeDynamicRulePack(pack);
@@ -1273,8 +1088,6 @@ export function CardVisionApp() {
     window.location.href = '/';
   }
 
-
-
   function createVaultFolder() {
     const name = newFolderName.trim();
     if (!name) return;
@@ -1416,6 +1229,14 @@ export function CardVisionApp() {
     }
   }
 
+  function prepareCommunitySharePayload(kind: CommunityShareKind): unknown {
+    if (kind === 'player_build') return result ?? history[0]?.result ?? { notice: 'Nenhuma ficha selecionada.' };
+    if (kind === 'formation') return { formation, teamStyle, managerId };
+    if (kind === 'training_plan') return { goals: readJsonStorage(TRAINING_GOALS_STORAGE_KEY, {}), reviews: readJsonStorage(SMART_COACH_REVIEW_STORAGE_KEY, []) };
+    if (kind === 'opponent_plan') return readOpponentMatchPlans()[0] ?? { formation, teamStyle };
+    return readTacticalSequenceProjects()[0] ?? { formation, teamStyle };
+  }
+
   async function collectFullBackupSections(): Promise<BackupEnvelope['sections']> {
     return {
       history,
@@ -1433,6 +1254,7 @@ export function CardVisionApp() {
       folders: readJsonStorage(VAULT_FOLDERS_KEY, []),
       rules: {
         pack: readJsonStorage(RULE_PACK_KEY, null),
+        officialPack: readOfficialRulePack(),
         url: readAccountStorage(RULE_PACK_URL_KEY) || ''
       },
       evolution: {
@@ -1444,7 +1266,7 @@ export function CardVisionApp() {
         creatorBuildResearch: exportCreatorBuildResearch()
       },
       session: readJsonStorage(ACTIVE_SESSION_KEY, null),
-      tacticalStudio: exportTacticalPosterLibrary(),
+      tacticalStudio: { schema: 2950, posterProjects: exportTacticalPosterLibrary(), sequences: readTacticalSequenceProjects(), opponentPlans: readOpponentMatchPlans() },
       customFormations: readJsonStorage('buildmaster_custom_formations_v26_77', []),
       imageGallery: await exportTacticalImageLibrary(),
       performance: {
@@ -1452,8 +1274,18 @@ export function CardVisionApp() {
         trainingSessions: readJsonStorage(TRAINING_EVOLUTION_STORAGE_KEY, []),
         trainingGoals: readJsonStorage(TRAINING_GOALS_STORAGE_KEY, {}),
         guidedTrainingLogs: readJsonStorage('buildmaster_guided_training_logs_v2739', []),
-        guidedWeeklyGoal: readJsonStorage('buildmaster_weekly_training_goal_v2739', 3)
-      }
+        guidedWeeklyGoal: readJsonStorage('buildmaster_weekly_training_goal_v2739', 3),
+        antiDelaySamples: readJsonStorage(ANTI_DELAY_STORAGE_KEY, []),
+        antiDelayLinks: readJsonStorage(ANTI_DELAY_LINK_STORAGE_KEY, []),
+        antiDelayProfile: readJsonStorage(ANTI_DELAY_PROFILE_STORAGE_KEY, null),
+        smartCoachReviews: readJsonStorage(SMART_COACH_REVIEW_STORAGE_KEY, []),
+        smartCoachPreferences: readJsonStorage(SMART_COACH_PREFERENCES_KEY, null),
+        premiumExperience2: exportPremiumExperience2State(),
+        observability: exportObservabilityState()
+      },
+      community: exportCommunityState(),
+      commercial: exportCommercialState(),
+      publication: exportPlayStorePublicationState()
     };
   }
 
@@ -1638,6 +1470,8 @@ export function CardVisionApp() {
     if (selected.rules && sections.rules && typeof sections.rules === 'object') {
       const rules = sections.rules as Record<string, unknown>;
       if (rules.pack) writeStorage(RULE_PACK_KEY, rules.pack);
+      const officialPack = sanitizeOfficialRulePack(rules.officialPack);
+      if (officialPack) activateOfficialRulePack(officialPack, { confirmed: true, reason: 'Restauração confirmada pelo usuário a partir do backup integral.' });
       if (typeof rules.url === 'string') writeAccountStorage(RULE_PACK_URL_KEY, rules.url);
     }
     if (selected.evolution && sections.evolution && typeof sections.evolution === 'object') {
@@ -1657,7 +1491,15 @@ export function CardVisionApp() {
         setTeamStyle(profile.teamStyle);
       }
     }
-    if (selected.tacticalStudio && sections.tacticalStudio) replaceTacticalPosterLibrary(sections.tacticalStudio);
+    if (selected.tacticalStudio && sections.tacticalStudio) {
+      if (Array.isArray(sections.tacticalStudio)) replaceTacticalPosterLibrary(sections.tacticalStudio);
+      else if (typeof sections.tacticalStudio === 'object') {
+        const tactical = sections.tacticalStudio as { posterProjects?: unknown; sequences?: unknown; opponentPlans?: unknown };
+        replaceTacticalPosterLibrary(tactical.posterProjects ?? []);
+        replaceTacticalSequenceProjects(tactical.sequences ?? []);
+        replaceOpponentMatchPlans(tactical.opponentPlans ?? []);
+      }
+    }
     if (selected.customFormations && Array.isArray(sections.customFormations)) writeStorage('buildmaster_custom_formations_v26_77', sections.customFormations);
     if (selected.imageGallery && sections.imageGallery) await importTacticalImageLibrary(sections.imageGallery);
     if (selected.performance && sections.performance && typeof sections.performance === 'object') {
@@ -1667,8 +1509,20 @@ export function CardVisionApp() {
       writeStorage(TRAINING_GOALS_STORAGE_KEY, performance.trainingGoals ?? {});
       writeStorage('buildmaster_guided_training_logs_v2739', performance.guidedTrainingLogs ?? []);
       writeStorage('buildmaster_weekly_training_goal_v2739', performance.guidedWeeklyGoal ?? 3);
+      writeStorage(ANTI_DELAY_STORAGE_KEY, performance.antiDelaySamples ?? []);
+      writeStorage(ANTI_DELAY_LINK_STORAGE_KEY, performance.antiDelayLinks ?? []);
+      writeStorage(ANTI_DELAY_PROFILE_STORAGE_KEY, performance.antiDelayProfile ?? null);
+      writeStorage(SMART_COACH_REVIEW_STORAGE_KEY, performance.smartCoachReviews ?? []);
+      writeStorage(SMART_COACH_PREFERENCES_KEY, performance.smartCoachPreferences ?? null);
+      importPremiumExperience2State(performance.premiumExperience2);
+      importObservabilityState(performance.observability);
       window.dispatchEvent(new CustomEvent('buildmaster:competitive-match-updated'));
+      window.dispatchEvent(new CustomEvent('buildmaster:anti-delay-updated'));
+      window.dispatchEvent(new CustomEvent('buildmaster:smart-coach-reviewed'));
     }
+    if (selected.community && sections.community) importCommunityState(sections.community);
+    if (selected.commercial && sections.commercial) importCommercialState(sections.commercial);
+    if (selected.publication && sections.publication) importPlayStorePublicationState(sections.publication);
     if (selected.session && sections.session) writeStorage(ACTIVE_SESSION_KEY, sections.session);
     setMigrationLog(migrated.steps);
     setSyncHealthEnvelope(migrated.envelope);
@@ -1715,7 +1569,7 @@ export function CardVisionApp() {
       } else {
         setSyncConflicts([]);
       }
-      await applyBackupEnvelope(merged, { history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true });
+      await applyBackupEnvelope(merged, { history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true, community: true, commercial: true, publication: true });
       const payload = buildCloudVaultPayload(merged, nextSnapshots, currentDeviceLabel());
       await syncAccountVault(payload);
       const syncedAt = new Date().toISOString();
@@ -1752,7 +1606,7 @@ export function CardVisionApp() {
       const merged = mergeBackupEnvelopes(localEnvelope, remotePayload.fullBackup);
       setRemoteFullBackup(remotePayload.fullBackup);
       setSyncConflicts(conflicts);
-      await applyBackupEnvelope(merged, { history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true });
+      await applyBackupEnvelope(merged, { history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true, community: true, commercial: true, publication: true });
       await syncAccountVault(buildCloudVaultPayload(merged, nextSnapshots, currentDeviceLabel()));
       const syncedAt = new Date().toISOString();
       writeAccountStorage(LAST_FULL_SYNC_STORAGE_KEY, syncedAt);
@@ -1777,7 +1631,7 @@ export function CardVisionApp() {
       const current = createBackupEnvelope(await collectFullBackupSections());
       const safety = createBackupSnapshot(current, 'Antes de restaurar uma versão anterior', currentDeviceLabel());
       await persistBackupSnapshots([safety, ...backupSnapshots]);
-      await applyBackupEnvelope(snapshot.envelope, { history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true });
+      await applyBackupEnvelope(snapshot.envelope, { history: true, settings: true, calibration: true, plans: true, folders: true, rules: true, session: false, evolution: true, tacticalStudio: true, customFormations: true, imageGallery: true, performance: true, community: true, commercial: true, publication: true });
       setStatus('Versão anterior restaurada. A versão que estava ativa foi preservada no histórico.');
       setCloudStatus('Restauração local concluída sem apagar o ponto de retorno anterior.');
     } catch (cause) {
@@ -2026,7 +1880,6 @@ export function CardVisionApp() {
     setStatus(`Variação criada para ${item.result.parsed.playerName}.`);
   }
 
-
   function updateHistoryStatus(id: string, statusTag: SavedAnalysis['statusTag']) {
     setHistory((current) => {
       const next = current.map((entry) => entry.id === id ? appendSavedEvent({ ...entry, statusTag }, 'status alterado', statusTag === 'completo' ? 'Marcado como completo.' : statusTag === 'pendente' ? 'Marcado como pendente.' : 'Marcado para revisar.') : entry);
@@ -2035,8 +1888,6 @@ export function CardVisionApp() {
       return next;
     });
   }
-
-
 
   function markAllHistorySkills(id: string, done: boolean) {
     setHistory((current) => {
@@ -2431,6 +2282,12 @@ export function CardVisionApp() {
 
       const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 120).catch(() => [])).map((entry) => entry.value);
       session = applyStoredOcrCorrections(session, corrections);
+      const visionAudit = buildOcrVisionAudit(session, fullPass.text);
+      session = {
+        ...session,
+        blockingFields: [...new Set([...session.blockingFields, ...visionAudit.blockingFields])],
+        warnings: [...new Set([...session.warnings, ...visionAudit.warnings])]
+      };
       if (exactDuplicate) {
         session = { ...session, warnings: [...new Set(['Este arquivo é idêntico a um print já analisado. O cache foi reutilizado quando disponível.', ...session.warnings])] };
       }
@@ -2465,10 +2322,12 @@ export function CardVisionApp() {
       await runtimePut('scan-history', `${Date.now()}:${imageHash}`, stored).catch(() => undefined);
       void runtimeTrimStore('scan-history', 120).catch(() => undefined);
 
-      if (session.blockingFields.length) {
-        setStatus(`Print lido. Confirme os campos críticos: ${session.blockingFields.join(', ')}.`);
+      if (visionAudit.state === 'blocked') {
+        setStatus(`OCR Vision bloqueou a finalização automática. Confirme: ${session.blockingFields.join(', ') || visionAudit.warnings[0] || 'campos críticos'}.`);
+      } else if (visionAudit.state === 'review') {
+        setStatus(`OCR Vision concluiu com ${visionAudit.score}/100. Revise os campos amarelos antes de finalizar.`);
       } else {
-        setStatus('Print Único Pro concluído. Nível, GER, posição e estilo foram separados por evidência visual; revise e finalize.');
+        setStatus(`OCR Vision concluído com ${visionAudit.score}/100. Posição, estilo, números e base oficial foram conferidos.`);
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -2484,7 +2343,6 @@ export function CardVisionApp() {
       setLoading(false);
     }
   }
-
 
   async function analyzeTotalCardCaptures(captures: TotalCardCaptureInput[]) {
     if (!captures.length) return;
@@ -2639,7 +2497,6 @@ export function CardVisionApp() {
     }
   }
 
-
   function resetCalibration() {
     setOcrZones(DEFAULT_OCR_ZONES);
     setStatus('Calibração restaurada para o padrão do print completo 1400x1600.');
@@ -2723,7 +2580,6 @@ export function CardVisionApp() {
       setStatus('Não foi possível finalizar a ficha. Os dados foram preservados; revise objetivo, posição e pontos e tente novamente.');
     }
   }
-
 
   function refreshResultWithCorrections(message: string) {
     setResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
@@ -2844,6 +2700,17 @@ export function CardVisionApp() {
     else if (target === 'performance') setSettingsView('desempenho');
   }
 
+  function openPremium2Target(target: Premium2Target) {
+    const view = settingsViewForPremiumTarget(target);
+    if (view) {
+      setMainSection('ajustes');
+      setSettingsView(view);
+      recordPremiumRecentActivity({ target, label: 'Ajustes', detail: `Área ${view} aberta pela Experiência Premium 2.0.` });
+      return;
+    }
+    openMainSection(sectionForPremiumTarget(target));
+  }
+
   function applyAdaptiveExperienceProfile(profile: AdaptiveExperienceProfile) {
     setDensityMode(profile.recommendedDensity);
     setPerformanceMode(profile.recommendedPerformance);
@@ -2864,9 +2731,11 @@ export function CardVisionApp() {
       ...(result ? [{ id: 'creator-builds', group: 'Ficha atual', label: 'Comparar fichas de criadores', description: `YouTube, TikTok e consenso por blocos para ${result.parsed.playerName}.`, keywords: ['youtube', 'tiktok', 'progressão', 'ficha', 'criadores'], run: () => { setResultTabRequest({ tab: 'fontes', token: Date.now() }); openMainSection('resultado'); } }] : [])
     ] : []),
     { id: 'evolution-360', group: 'Ajustes', label: 'Abrir Evolução 360', description: 'Pendências, metas, foco, rotinas guiadas, experiência adaptável, diagnóstico e manutenção.', keywords: ['evolução', 'metas', 'saúde', 'notificações', 'rotinas', 'diagnóstico', 'contraste', 'letras'], run: () => { setMainSection('ajustes'); setSettingsView('evolucao'); } },
+    { id: 'premium-experience', group: 'Ajustes', label: 'Experiência Premium 2.0', description: 'Atalhos, retomada, rascunhos, pesquisa e ajuda.', keywords: ['favoritos', 'continuar', 'rascunho', 'ajuda'], run: () => { setMainSection('ajustes'); setSettingsView('experiencia'); } },
     { id: 'appearance', group: 'Ajustes', label: 'Aparência e acessibilidade', description: 'Tema, textos, contraste, animações e densidade.', keywords: ['visual', 'design'], run: () => { setMainSection('ajustes'); setSettingsView('aparencia'); } },
     { id: 'performance', group: 'Ajustes', label: 'Desempenho do aplicativo', description: 'Ative o modo econômico e revise estabilidade.', keywords: ['rápido', 'leve', 'delay'], run: () => { setMainSection('ajustes'); setSettingsView('desempenho'); } },
     { id: 'security', group: 'Ajustes', label: 'Segurança e integridade', description: 'Saúde local, diagnóstico e compatibilidade.', keywords: ['proteção', 'erros'], run: () => { setMainSection('ajustes'); setSettingsView('seguranca'); } },
+    { id: 'support', group: 'Ajustes', label: 'Observabilidade e suporte', description: 'Saúde da versão, falhas, lentidão e pacote técnico.', keywords: ['diagnóstico', 'erro', 'suporte', 'feature flags'], run: () => { setMainSection('ajustes'); setSettingsView('suporte'); } },
     { id: 'backup', group: 'Ajustes', label: 'Backup e restauração', description: 'Proteja fichas e configurações antes de atualizar.', keywords: ['cofre', 'restaurar'], run: () => { setMainSection('ajustes'); setSettingsView('backup'); } },
     { id: 'updates', group: 'Ajustes', label: 'Atualizações do APK', description: 'Verifique versão, manifesto e instalação segura.', keywords: ['apk', 'versão'], run: () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); } },
     { id: 'accounts', group: 'Ajustes', label: account?.profile.role === 'admin' ? 'Criar e gerenciar contas' : 'Minha conta e licença', description: account?.profile.role === 'admin' ? 'Abra diretamente a criação de usuários, prazos e aparelhos.' : 'Consulte os dados e a validade da sua licença.', keywords: ['usuário', 'licença', 'criar conta', 'admin'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
@@ -2903,7 +2772,6 @@ export function CardVisionApp() {
         <button type="button" className="brand-lockup brand-home-button" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
           <PremiumBrand variant="compact" showVersion />
         </button>
-
 
         <div className="topbar-actions topbar-premium-actions">
 
@@ -3243,7 +3111,6 @@ export function CardVisionApp() {
             {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}
           </div>}
 
-
           {qualityReport && (
             <div className="quality-card">
               <strong>Diagnóstico do print</strong>
@@ -3256,6 +3123,7 @@ export function CardVisionApp() {
             </div>
           )}
 
+          {ocrVisionEnabled ? <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary> : <div className="settings-explanation-card"><div><strong>OCR Vision 2.0 pausado localmente</strong><span>O leitor principal continua disponível. Reative o módulo em Ajustes › Observabilidade e suporte.</span></div></div>}
 
           {preview && qualityReport && (
             <div className="premium-image-lab">
@@ -3576,7 +3444,6 @@ export function CardVisionApp() {
           )}
           </>)}
 
-
           {mainSection === 'cofre' && (
           <div className="cofre-section cofre-premium-layout bm2820-vault-screen">
             <section className="cofre-summary-card vault-catalog-hero luxury-panel">
@@ -3825,9 +3692,14 @@ export function CardVisionApp() {
 
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
                 <button type="button" className={settingsView === 'evolucao' ? 'active settings-evolution-navigation' : 'settings-evolution-navigation'} onClick={() => setSettingsView('evolucao')}><Sparkles size={18} /><div><strong>Evolução 360</strong><span>Metas e manutenção</span></div></button>
+                <button type="button" className={settingsView === 'experiencia' ? 'active settings-v2970-navigation' : 'settings-v2970-navigation'} onClick={() => setSettingsView('experiencia')}><Sparkles size={18} /><div><strong>Experiência 2.0</strong><span>Atalhos e retomada</span></div></button>
                 <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={18} /><div><strong>Aparência</strong><span>Tema e acessibilidade</span></div></button>
                 <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Resposta e estabilidade</span></div></button>
                 <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={18} /><div><strong>Segurança</strong><span>Integridade e saúde</span></div></button>
+                <button type="button" className={settingsView === 'suporte' ? 'active settings-v2970-navigation' : 'settings-v2970-navigation'} onClick={() => setSettingsView('suporte')}><Activity size={18} /><div><strong>Suporte</strong><span>Falhas e diagnóstico</span></div></button>
+                <button type="button" className={settingsView === 'comunidade' ? 'active settings-v2980-navigation' : 'settings-v2980-navigation'} onClick={() => setSettingsView('comunidade')}><Users size={18} /><div><strong>Comunidade</strong><span>Compartilhar e revisar</span></div></button>
+                <button type="button" className={settingsView === 'comercial' ? 'active settings-v2980-navigation' : 'settings-v2980-navigation'} onClick={() => setSettingsView('comercial')}><Trophy size={18} /><div><strong>Planos e LGPD</strong><span>Licença e privacidade</span></div></button>
+                <button type="button" className={settingsView === 'publicacao' ? 'active settings-v3000-navigation' : 'settings-v3000-navigation'} onClick={() => setSettingsView('publicacao')}><ShieldCheck size={18} /><div><strong>Publicação Play</strong><span>AAB, políticas e rollout</span></div></button>
                 <button type="button" className={settingsView === 'backup' ? 'active' : ''} onClick={() => setSettingsView('backup')}><Save size={18} /><div><strong>Backup</strong><span>Proteger e restaurar</span></div></button>
                 <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={18} /><div><strong>Atualizações</strong><span>Versão e novo APK</span></div></button>
                 <button type="button" className={settingsView === 'contas' ? 'active admin-account-navigation' : 'admin-account-navigation'} onClick={() => setSettingsView('contas')}>{account?.profile.role === 'admin' ? <UserPlus size={18} /> : <Users size={18} />}<div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><span>{account?.profile.role === 'admin' ? 'Usuários e licenças' : 'Licença e aparelhos'}</span></div></button>
@@ -3835,6 +3707,8 @@ export function CardVisionApp() {
 
               <div className="settings-final-content">
                 {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
+
+                {settingsView === 'experiencia' && <SectionErrorBoundary area="experiencia-premium-v2970"><PremiumExperience2Center onOpenTarget={openPremium2Target} /></SectionErrorBoundary>}
 
                 {settingsView === 'aparencia' && (
                   <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
@@ -3945,8 +3819,14 @@ export function CardVisionApp() {
                     <RefinementCenterPanel players={integratedPlayers} appVersion={APP_RELEASE_VERSION} healthScore={healthSummary.score} onOpenPlayer={(id) => openIntegratedPlayer(id, 'result')} />
                     <SectionErrorBoundary area="qualidade-final"><PremiumQualityCenter appVersion={APP_RELEASE_VERSION} /></SectionErrorBoundary>
                     <SectionErrorBoundary area="producao-final"><ProductionReadinessCenter appVersion={APP_RELEASE_VERSION} dataIntegrityScore={localIntegrity.score} /></SectionErrorBoundary>
+                    <SectionErrorBoundary area="regras-oficiais-v2930"><OfficialRulesCenter /></SectionErrorBoundary>
                   </section>
                 )}
+
+                {settingsView === 'suporte' && <SectionErrorBoundary area="observabilidade-suporte-v2970"><ObservabilitySupportCenter appVersion={APP_RELEASE_VERSION} health={healthSummary} integrity={localIntegrity} /></SectionErrorBoundary>}
+                {settingsView === 'comunidade' && <SectionErrorBoundary area="comunidade-v2980"><CommunitySharingCenter preparePayload={prepareCommunitySharePayload} canPublish={resolveCommercialEntitlements({ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }).features.community_publish} publicationLimit={resolveCommercialEntitlements({ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }).limits.communityPublications} /></SectionErrorBoundary>}
+                {settingsView === 'comercial' && <SectionErrorBoundary area="comercial-v2980"><CommercializationCenter profile={{ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }} /></SectionErrorBoundary>}
+                {settingsView === 'publicacao' && <SectionErrorBoundary area="publicacao-play-v3000"><PlayStorePublicationCenter /></SectionErrorBoundary>}
 
                 {settingsView === 'backup' && (
                   <section className="backup-settings-panel luxury-panel settings-view-panel settings-final-panel">
@@ -3999,7 +3879,7 @@ export function CardVisionApp() {
                       <summary>Escolher áreas da restauração</summary>
                       <div className="restore-select-panel">
                         <div className="restore-check-grid">
-                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['evolution', 'Cartas e validação real'], ['tacticalStudio', 'Projetos do Estúdio Tático'], ['customFormations', 'Formações personalizadas'], ['imageGallery', 'Galeria de imagens'], ['performance', 'Partidas, treinos e evolução'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
+                          {([['history', 'Cofre e fichas'], ['settings', 'Preferências'], ['calibration', 'Calibração'], ['plans', 'Planos A, B e C'], ['folders', 'Pastas'], ['rules', 'Regras'], ['evolution', 'Cartas e validação real'], ['tacticalStudio', 'Projetos do Estúdio Tático'], ['customFormations', 'Formações personalizadas'], ['imageGallery', 'Galeria de imagens'], ['performance', 'Partidas, treinos e evolução'], ['community', 'Compartilhamento e comunidade'], ['commercial', 'Planos, licenças e LGPD'], ['publication', 'Publicação Google Play'], ['session', 'Sessão em andamento']] as Array<[BackupSection, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={restoreSections[key]} onChange={(event) => setRestoreSections((current) => ({ ...current, [key]: event.target.checked }))} /><span>{label}</span></label>)}
                         </div>
                         <p className="panel-note">Somente as áreas marcadas são substituídas. Faça um backup atual antes de restaurar outro arquivo.</p>
                       </div>

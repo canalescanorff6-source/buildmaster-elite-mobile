@@ -18,7 +18,7 @@ function collectSignals(appVersion: string, dataIntegrityScore: number): Product
   const nav = typeof navigator !== 'undefined' ? navigator : null;
   return {
     appVersion,
-    expectedVersion: '29.20.0',
+    expectedVersion: '29.30.0',
     secureContext: browser ? window.isSecureContext || Capacitor.isNativePlatform() : true,
     storageWritable: browser ? canWriteLocalStorage() : true,
     indexedDbAvailable: browser ? typeof indexedDB !== 'undefined' : true,

@@ -1,4 +1,4 @@
-import type { PositionCode } from './analyzer';
+import type { PositionCode } from './analyzerDomain';
 
 export type LocalCardRule = {
   id: string;

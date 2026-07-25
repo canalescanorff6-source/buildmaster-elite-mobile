@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { buildPlayStorePublicationReport, createDefaultPlayStorePublicationProfile, normalizePlayStorePublicationProfile, PLAY_STORE_PACKAGE_NAME, PLAY_STORE_TARGET_API, PLAY_STORE_PUBLICATION_VERSION } from '../src/modules/publication/playStorePublication';
+assert.equal(PLAY_STORE_PUBLICATION_VERSION,'30.00.0');
+assert.equal(PLAY_STORE_TARGET_API,36);
+assert.equal(PLAY_STORE_PACKAGE_NAME,'com.buildmaster.elitetatico');
+const base=createDefaultPlayStorePublicationProfile();
+assert.equal(buildPlayStorePublicationReport(base).state,'blocked');
+const ready=normalizePlayStorePublicationProfile(Object.fromEntries(Object.keys(base).map((key)=>[key, typeof base[key as keyof typeof base] === 'boolean' ? true : base[key as keyof typeof base]])));
+const report=buildPlayStorePublicationReport({...ready,targetTrack:'internal'});
+assert.equal(report.blockers.length,0);
+assert.ok(report.score>=90);
+const clamped=normalizePlayStorePublicationProfile({...ready,rolloutPercentage:999,targetTrack:'invalid'});
+assert.equal(clamped.rolloutPercentage,100);
+assert.equal(clamped.targetTrack,'internal');
+console.log('v30.00 motor de publicação Play aprovado.');

@@ -13,7 +13,7 @@ const app = [
   fs.readFileSync(path.join(root, 'src/modules/vault/cardHistoryStore.ts'), 'utf8')
 ].join('\n');
 
-assert.equal(pkg.version, '29.20.0');
+assert.equal(pkg.version, '30.00.0');
 
 // O diretório android é gerado pelo Capacitor no workflow e fica fora do Git.
 // Para testar o Java produzido sem depender de arquivos gerados no repositório,

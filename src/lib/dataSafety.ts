@@ -1,7 +1,7 @@
-export const CURRENT_DATA_SCHEMA = 2920;
-export const APP_DATA_VERSION = '29.20.0';
+export const CURRENT_DATA_SCHEMA = 3000;
+export const APP_DATA_VERSION = '30.00.0';
 
-export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery' | 'performance';
+export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery' | 'performance' | 'community' | 'commercial' | 'publication';
 
 export type BackupEnvelope = {
   app: 'BuildMaster Elite Tático';
@@ -26,7 +26,7 @@ export type IntegrityReport = {
   totals: { sections: number; records: number; malformed: number };
 };
 
-const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery', 'performance']);
+const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery', 'performance', 'community', 'commercial', 'publication']);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const MAX_BACKUP_DEPTH = 18;
 const MAX_BACKUP_NODES = 250_000;
@@ -196,6 +196,7 @@ export function migrateBackup(envelope: BackupEnvelope): { envelope: BackupEnvel
   if (!sections.customFormations) { sections.customFormations = []; steps.push('Formações personalizadas inicializadas.'); }
   if (!sections.imageGallery) { sections.imageGallery = []; steps.push('Galeria de imagens inicializada.'); }
   if (!sections.performance) { sections.performance = {}; steps.push('Partidas competitivas, treinos e sincronização inicializados.'); }
+  if (!sections.publication) { sections.publication = {}; steps.push('Checklist de publicação Google Play inicializado.'); }
   if (sections.evolution && typeof sections.evolution === 'object') {
     const evolution = { ...(sections.evolution as Record<string, unknown>) };
     if (!evolution.centralIntelligence) {

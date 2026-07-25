@@ -16,13 +16,13 @@ const css = read('src/app/design-system-v2810-navigation.css');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-assert.equal(pkg.version, '29.20.0');
-assert.equal(lock.version, '29.20.0');
-assert.equal(lock.packages[''].version, '29.20.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800/);
+assert.equal(pkg.version, '30.00.0');
+assert.equal(lock.version, '30.00.0');
+assert.equal(lock.packages[''].version, '30.00.0');
+assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v3000 && npm run test:v2980 && npm run test:v2970 && npm run test:v2960 && npm run test:v2950 && npm run test:v2940 && npm run test:v2930') && pkg.scripts['test:all'].includes('npm run test:v2810'));
 assert.match(pkg.scripts['test:v2810'], /v28-10-navigation-architecture-regression\.mjs/);
 assert.match(globals, /design-system-v2810-navigation\.css";/);
-assert.match(globals.trim(), /design-system-v2920-production\.css";$/);
+assert.match(globals.trim(), /design-system-v3000-play-publication\.css";$/);
 assert.match(css, /Bloco 2: Estrutura e Navegação Premium/);
 
 assert.match(navigation, /bm28-navigation-rail/);
@@ -57,7 +57,7 @@ assert.match(refinement, /buildmaster_navigation_state_v2810/);
 assert.match(refinement, /version: 2/);
 assert.match(refinement, /LEGACY_NAVIGATION_STATE_KEY/);
 
-assert.equal(manifest.name, 'BuildMaster Elite Tático v29.20');
-assert.match(sw, /buildmaster-v29-20/);
+assert.equal(manifest.name, 'BuildMaster Elite Tático v30.00');
+assert.match(sw, /buildmaster-v30-00/);
 
 console.log('v28.10 navigation architecture regression: ok');

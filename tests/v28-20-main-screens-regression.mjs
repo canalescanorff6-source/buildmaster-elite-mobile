@@ -19,12 +19,12 @@ const matches = read('src/modules/matches/MatchLaboratory.tsx');
 const manifest = json('public/manifest.webmanifest');
 const sw = read('public/sw.js');
 
-assert.equal(pkg.version, '29.20.0');
-assert.equal(lock.version, '29.20.0');
-assert.equal(lock.packages[''].version, '29.20.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810/);
+assert.equal(pkg.version, '30.00.0');
+assert.equal(lock.version, '30.00.0');
+assert.equal(lock.packages[''].version, '30.00.0');
+assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v3000 && npm run test:v2980 && npm run test:v2970 && npm run test:v2960 && npm run test:v2950 && npm run test:v2940 && npm run test:v2930') && pkg.scripts['test:all'].includes('npm run test:v2820'));
 assert.match(pkg.scripts['test:v2820'], /v28-20-main-screens-regression\.mjs/);
-assert.match(globals.trim(), /design-system-v2920-production\.css";$/);
+assert.match(globals.trim(), /design-system-v3000-play-publication\.css";$/);
 assert.match(layout, /bm-v2820-screens/);
 assert.match(app, /bm2820-screen-system/);
 assert.match(app, /bm2820-creation-hero/);
@@ -56,7 +56,7 @@ for (const selector of [
 assert.match(screens, /@media \(max-width:800px\)/);
 assert.match(screens, /premium-app\.theme-dark/);
 assert.match(screens, /prefers-reduced-motion/);
-assert.equal(manifest.name, 'BuildMaster Elite Tático v29.20');
-assert.match(sw, /buildmaster-v29-20/);
+assert.equal(manifest.name, 'BuildMaster Elite Tático v30.00');
+assert.match(sw, /buildmaster-v30-00/);
 
 console.log('v28.30 main screens regression: ok');

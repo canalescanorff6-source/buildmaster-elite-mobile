@@ -75,8 +75,16 @@ for (const file of walk('src')) {
 }
 
 const globals = fs.readFileSync('src/app/globals.css', 'utf8').trim();
-const finalCss = fs.readFileSync('src/app/design-system-v2920-production.css', 'utf8');
-if (!globals.endsWith('@import "./design-system-v2920-production.css";')) failures.push('A camada visual v29.20 não é a última importação global.');
+const productionCss = fs.readFileSync('src/app/design-system-v2920-production.css', 'utf8');
+const intelligenceCss = fs.readFileSync('src/app/design-system-v2930-intelligence-base.css', 'utf8');
+const playerLabCss = fs.readFileSync('src/app/design-system-v2940-rules-player-lab.css', 'utf8');
+const tacticalOpponentCss = fs.readFileSync('src/app/design-system-v2950-tactical-opponent.css', 'utf8');
+const antiDelayCoachCss = fs.readFileSync('src/app/design-system-v2960-anti-delay-coach.css', 'utf8');
+const premiumObservabilityCss = fs.readFileSync('src/app/design-system-v2970-premium-observability.css', 'utf8');
+const communityCommercialCss = fs.readFileSync('src/app/design-system-v2980-community-commercial.css', 'utf8');
+const playPublicationCss = fs.readFileSync('src/app/design-system-v3000-play-publication.css', 'utf8');
+const finalCss = `${productionCss}\n${intelligenceCss}\n${playerLabCss}\n${tacticalOpponentCss}\n${antiDelayCoachCss}\n${premiumObservabilityCss}\n${communityCommercialCss}\n${playPublicationCss}`;
+if (!globals.endsWith('@import "./design-system-v3000-play-publication.css";')) failures.push('A camada visual v30.00 não é a última importação global.');
 for (const required of ['@media (max-width: 900px)', '@media (max-width: 640px)', '@media (max-width: 380px)', ':focus-visible', 'min-height: 44px', 'prefers-reduced-motion: reduce']) {
   if (!finalCss.includes(required)) failures.push(`Contrato responsivo ausente: ${required}`);
 }

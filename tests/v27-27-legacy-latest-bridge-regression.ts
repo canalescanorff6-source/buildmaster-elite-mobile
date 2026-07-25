@@ -10,9 +10,9 @@ import {
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string; scripts: Record<string, string> };
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 
-assert.equal(pkg.version, '29.20.0');
-assert.equal(APP_RELEASE_VERSION, '29.20.0');
-assert.match(pkg.scripts['test:all'], /^npm run test:v2920 && npm run test:v2910 && npm run test:v2900 && npm run test:v2880 && npm run test:v2870 && npm run test:v2860[\s\S]*npm run test:v2727 &&/);
+assert.equal(pkg.version, '30.00.0');
+assert.equal(APP_RELEASE_VERSION, '30.00.0');
+assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v3000 && npm run test:v2980 && npm run test:v2970 && npm run test:v2960 && npm run test:v2950 && npm run test:v2940 && npm run test:v2930') && pkg.scripts['test:all'].includes('npm run test:v2727'));
 assert.equal(
   DEFAULT_UPDATE_MANIFEST_URL,
   'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json'

@@ -1,0 +1,19 @@
+O BuildMaster Elite Tático reúne ferramentas para organizar cartas, criar fichas de progressão, montar o elenco, estudar formações e acompanhar a evolução competitiva no eFootball.
+
+PRINCIPAIS RECURSOS
+• Leitura assistida de prints com revisão dos campos reconhecidos.
+• Fichas competitiva, equilibrada, ofensiva e personalizada.
+• Laboratório de jogadores com comparação, radar e histórico.
+• Meu Time com titulares, reservas, setores e Planos A/B/C.
+• Estúdio Tático com etapas, linhas, movimentos e sequências.
+• Assistente de adversário com orientações por placar e minuto.
+• Treinos, partidas, relatórios e treinador inteligente.
+• Central anti-delay para registrar rede, aparelho e condições de jogo.
+• Backup, restauração, sincronização e histórico local.
+• Compartilhamento protegido com revisão antes da importação.
+
+CONTROLE DO USUÁRIO
+As recomendações não alteram fichas, posições, escalações ou dados sem confirmação. O usuário pode revisar o OCR, comparar propostas, exportar seus dados, criar backups e solicitar a exclusão da conta.
+
+TRANSPARÊNCIA
+A Central anti-delay faz estimativas com base nas medições disponíveis e não promete eliminar o atraso dos servidores. As informações táticas são ferramentas de apoio e não representam vínculo oficial com a Konami ou com a marca eFootball.

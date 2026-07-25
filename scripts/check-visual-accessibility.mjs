@@ -44,4 +44,4 @@ assert.match(qualityCenter, /Perfil visual e de desempenho/);
 assert.match(qualityLayer, /unhandledrejection/);
 assert.match(qualityLayer, /buildmaster:screen-change/);
 
-console.log('Visual/A11y v29.20: contraste AA das ações, toque, foco, movimento reduzido e regiões ao vivo aprovados.');
+console.log('Visual/A11y v29.30: contraste AA das ações, toque, foco, movimento reduzido e regiões ao vivo aprovados.');

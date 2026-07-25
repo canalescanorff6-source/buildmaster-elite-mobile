@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=(f)=>fs.readFileSync(f,'utf8');
+const workflow=read('.github/workflows/build-play-store.yml');
+for (const marker of ['bundleRelease','targetSdkVersion = 36','GOOGLE_PLAY_UPLOAD_KEY_BUNDLE','Play App Signing','install-play-store-bridge.mjs','publish-play-store.mjs','release:play-preflight','REQUEST_INSTALL_PACKAGES','bundletool.jar validate','keystore.properties','::add-mask::']) assert.ok(workflow.includes(marker),marker);
+const bridge=read('scripts/install-play-store-bridge.mjs');
+assert.ok(bridge.includes("com.google.android.play:integrity:1.6.0"));
+assert.ok(bridge.includes("com.google.android.play:app-update:2.1.0"));
+assert.ok(bridge.includes('BuildMasterPlayDeliveryPlugin'));
+assert.ok(bridge.includes('REQUEST_INSTALL_PACKAGES'));
+assert.ok(fs.existsSync('play-store/assets/feature-graphic-1024x500.png'));
+assert.ok(fs.existsSync('play-store/assets/icon-512.png'));
+console.log('v30.00 workflow Google Play aprovado.');

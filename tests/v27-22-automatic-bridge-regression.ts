@@ -11,7 +11,7 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: st
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const oldUpdater = fs.readFileSync('tests/fixtures/v27-00-updater-contract.txt', 'utf8');
 
-assert.equal(pkg.version, '29.20.0');
+assert.equal(pkg.version, '30.00.0');
 assert.equal(
   DEFAULT_UPDATE_MANIFEST_URL,
   'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/update-manifest.json'

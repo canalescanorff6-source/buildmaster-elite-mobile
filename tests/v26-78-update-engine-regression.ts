@@ -8,8 +8,8 @@ import {
   validateUpdateManifest
 } from '../src/lib/appUpdates';
 
-assert.equal(APP_RELEASE_VERSION, '29.20.0');
-assert.equal(APP_NATIVE_VERSION, '29.20.0');
+assert.equal(APP_RELEASE_VERSION, '30.00.0');
+assert.equal(APP_NATIVE_VERSION, '30.00.0');
 
 const apkUrl = 'https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v27.29.0-1352300042-abcdef12.apk';
 assert.equal(isTrustedApkUrl(apkUrl), true);

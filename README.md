@@ -1,94 +1,108 @@
-# BuildMaster Elite Tático v29.20
+# BuildMaster Elite Tático v30.00
 
-## Blocos 14 e 15 — Testes, estabilidade e produção final
+Versão final do ciclo de evolução, com:
 
-Este pacote usa a v29.10 como base e preserva as funções implementadas nos Blocos 1 a 13.
+- **Bloco 28 — Publicação profissional na Google Play**;
+- **revisão completa de produção**;
+- preservação das funções implementadas da v27 até a v29.80.
 
-A v29.20 fecha a preparação do código-fonte para produção com novos portões automáticos de qualidade, estabilidade, acessibilidade, integridade e publicação. O pacote não contém APK, chave de assinatura, `node_modules` nem dados privados.
+## Entregas principais
 
+A v30.00 adiciona uma Central de Publicação na área **Ajustes**, workflow próprio para Android App Bundle, integração nativa com Play Integrity e Play In-App Updates, páginas públicas de privacidade e exclusão, pacote de materiais da loja e portões automáticos para impedir uma publicação incompleta.
 
-## Hotfix do TypeScript para o GitHub Actions
+O projeto mantém dois canais separados:
 
-Após a primeira execução real do workflow, o `typecheck` revelou que os stubs de tipos usados somente nas checagens isoladas da v29.10 e v29.20 estavam sendo incluídos pelo `tsconfig.json` principal. Esses stubs declaravam versões reduzidas de `react`, JSX e `lucide-react`, provocando falsos erros em ícones e em campos `input type="file"`.
+- **distribuição direta**: APK assinado e atualizador próprio já existente;
+- **Google Play**: AAB assinado pela chave de upload, Play App Signing e atualização dentro da loja.
 
-A revisão corrige o problema ao:
+O build da Google Play remove do manifesto a permissão `REQUEST_INSTALL_PACKAGES`, o `FileProvider` do instalador direto e as consultas ligadas à instalação de APK. Dessa forma, o artefato Play não tenta instalar atualizações externas.
 
-- excluir `tests/types-v2910` e `tests/types-v2920` do typecheck principal;
-- manter os três typechecks isolados funcionando por seus próprios `tsconfig`;
-- normalizar `maxOverall` indefinido para `null` no teste do Bloco 7;
-- adicionar uma regressão que bloqueia nova contaminação dos tipos principais.
+## Comandos principais
 
-O workflow precisa ser executado novamente com este pacote corrigido para confirmar o `typecheck` integral com as dependências reais instaladas.
+```bash
+npm ci --no-audit --no-fund
+npm run test:v3000
+npm run release:play-preflight
+npm run quality:audit
+npm run typecheck
+npm run test:all
+```
 
-## O que entrou
+O workflow `.github/workflows/build-play-store.yml` executa essas etapas, gera o AAB, aplica API 36, assina com a chave de upload, valida a assinatura, executa `bundletool validate`, confirma `versionCode` e `versionName`, gera SHA-256 e pode publicar no canal selecionado.
 
-### Bloco 14 — Testes e estabilidade
+## Configuração obrigatória no GitHub
 
-- verificação sintática de todo o código TypeScript/TSX;
-- contratos automáticos para botões, imagens e camada visual final;
-- correção dos botões que poderiam enviar formulários acidentalmente;
-- nomes acessíveis nos controles de ícone e alternância revisados;
-- testes dos fluxos de login, licença, aparelhos, OCR, fichas, elenco, partidas, treinos, backup, sincronização e atualização;
-- regressões preservadas desde as versões anteriores;
-- pré-voo de produção com falhas bloqueantes e alertas não bloqueantes;
-- painel local de prontidão e diagnóstico na área Segurança e qualidade.
+### Variables
 
-### Bloco 15 — Versão final de produção
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `GOOGLE_PLAY_CLOUD_PROJECT_NUMBER`
 
-- identidade da versão elevada para 29.20.0;
-- esquema de dados elevado para 2920;
-- cache do PWA renovado;
-- camada visual final carregada por último;
-- workflow de APK com sintaxe, interface, pré-voo, testes, typecheck, build release, assinatura e verificação pública;
-- manifesto SHA-256 interno do código-fonte;
-- verificação de que APK, AAB, keystore, chaves privadas e `service_role` não entraram no pacote;
-- preparação de publicação estável/beta, rollout, pausa e rollback preservada da v29.10;
-- aprovação final condicionada ao APK assinado instalado e atualizado em Android real.
+### Secrets
 
-## Resultados da validação após o hotfix
+- `GOOGLE_PLAY_UPLOAD_KEY_BUNDLE`
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` — necessário somente quando `publish_to_play=true`.
 
-- 68/68 regressões TypeScript funcionais aprovadas em lotes controlados;
-- 26 regressões MJS aprovadas, incluindo o novo isolamento do typecheck;
-- 4 regressões CJS funcionais aprovadas;
-- 3 typechecks isolados aprovados;
-- 241 arquivos TypeScript/TSX com sintaxe aprovada;
-- 520 botões com tipo explícito;
-- 19 imagens com texto alternativo;
-- pré-voo ampliado para 29 verificações aprovadas;
-- auditoria com 66 verificações aprovadas;
-- typecheck integral do GitHub Actions pendente de nova execução com as dependências reais.
+Formato de `GOOGLE_PLAY_UPLOAD_KEY_BUNDLE`:
 
-## Alertas não bloqueantes
+```json
+{
+  "keystoreBase64": "BASE64_DO_ARQUIVO_JKS",
+  "storePassword": "SENHA_DO_KEYSTORE",
+  "keyAlias": "ALIAS_DA_CHAVE",
+  "keyPassword": "SENHA_DA_CHAVE"
+}
+```
 
-- `src/components/CardVisionApp.tsx` permanece grande, com 4.119 linhas;
-- `src/lib/analyzer.ts` permanece grande, com 3.677 linhas.
+As senhas são mascaradas durante o workflow e gravadas apenas em arquivos temporários removidos antes do upload do artefato.
 
-Os módulos adicionados nos Blocos 6 a 15 permanecem separados. Uma divisão adicional desses dois arquivos é recomendada apenas em uma futura versão maior, acompanhada de regressões próprias.
+## Configuração obrigatória no Supabase
 
-## Limite desta entrega
+1. Aplicar `supabase/migrations/202607250002_block28_play_publication.sql`.
+2. Publicar as Edge Functions:
+   - `account-deletion-request`;
+   - `play-integrity-verify`.
+3. Configurar no ambiente das funções:
+   - `SUPABASE_URL`;
+   - `SUPABASE_SERVICE_ROLE_KEY`;
+   - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`;
+   - `BUILDMASTER_PRIVACY_HASH_SALT`.
 
-Este pacote é o código-fonte final preparado para produção. O APK assinado não foi gerado localmente porque a assinatura permanente, os Secrets do GitHub e a instalação completa das dependências externas não estão disponíveis neste ambiente.
+A infraestrutura de Play Integrity foi criada, mas cada ação sensível que exigirá bloqueio por integridade deve ser ligada explicitamente ao backend conforme a política do produto.
 
-Antes do rollout total, o GitHub Actions deve obrigatoriamente:
+## Materiais da loja
 
-1. executar `npm ci`;
-2. executar typecheck e todos os testes;
-3. gerar o build web estático;
-4. sincronizar o Capacitor;
-5. gerar `assembleRelease`;
-6. assinar e verificar o APK com a chave permanente;
-7. publicar e validar o APK por SHA-256;
-8. instalar sobre uma versão antiga em Android real;
-9. confirmar login, dados, backup e atualização após a instalação.
+A pasta `play-store/` contém:
 
-Consulte `RELATORIO_BLOCOS14_15_V29.20.md` para a auditoria completa.
+- título, descrição curta e descrição completa em pt-BR;
+- notas da v30.00;
+- ícone 512 × 512;
+- imagem de destaque 1024 × 500;
+- documentos para privacidade, Segurança dos Dados, exclusão, acesso para revisão, classificação, anúncios, Play App Signing, Play Integrity e Android vitals;
+- pastas orientativas para capturas reais de celular e tablet.
 
-## Hotfix 2 do TypeScript para o GitHub Actions
+Capturas simuladas não foram incluídas. Elas precisam ser produzidas a partir do AAB final instalado pelo canal interno.
 
-A segunda execução real do workflow confirmou que o isolamento dos stubs funcionou e revelou quatro erros restantes do código principal. Este pacote corrige o retorno do ponto de restauração, remove um import não utilizado, estreita corretamente o evento opcional dos avisos e tipa a formação do diagnóstico como `TacticalFormation`.
+## Publicação segura
 
-A regressão `v29-20-github-actions-typecheck-hotfix2-regression.mjs` impede o retorno desses quatro problemas. Execute novamente o workflow com este pacote. A versão continua `29.20.0`, porque os builds anteriores falharam antes da geração e publicação do APK.
+Use inicialmente:
 
-### Validação do Hotfix 2
+- `track: internal`;
+- `publish_to_play: false` para a primeira geração;
+- depois `publish_to_play: true` com `release_status: draft`.
 
-Foram aprovadas 27 regressões MJS, 4 regressões CJS, 3 typechecks isolados, a sintaxe dos 241 arquivos TypeScript/TSX, os contratos de 520 botões e 19 imagens, 29 verificações de pré-voo e 66 verificações de auditoria. O typecheck integral continua dependente da próxima execução do GitHub Actions porque o registro local de pacotes respondeu HTTP 503.
+Somente avance para produção após instalar o AAB pelo canal interno, validar login, licença, OCR, fichas, backup, restauração, Estúdio Tático, treinos, atualização e exclusão da conta.
+
+## Limites desta entrega
+
+O pacote contém o código e a automação de produção. Ele **não contém**:
+
+- AAB ou APK assinado;
+- keystore ou credenciais;
+- acesso ao Play Console;
+- contato público definitivo;
+- URLs públicas já implantadas;
+- capturas reais da versão final;
+- formulários preenchidos no Play Console.
+
+Esses itens dependem da conta, dos Secrets, do domínio público e da execução do GitHub Actions.

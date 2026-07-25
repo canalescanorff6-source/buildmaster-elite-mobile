@@ -1,0 +1,1 @@
+Versão 30.00: preparação profissional para Google Play, geração de AAB, Play App Signing, Play Integrity, atualizações pela loja, páginas públicas de privacidade e exclusão de conta, checklist de publicação e revisão completa de produção. Também preserva fichas, elenco, OCR, Estúdio Tático, treinos, partidas, backup e recursos das versões anteriores.

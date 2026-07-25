@@ -1,4 +1,4 @@
-import { PLAYSTYLE_OPTIONS, type PositionCode } from '@/lib/analyzer';
+import { PLAYSTYLE_OPTIONS, type PositionCode } from '@/lib/analyzerDomain';
 import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 

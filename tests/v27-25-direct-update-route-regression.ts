@@ -14,10 +14,10 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 
-assert.equal(pkg.version, '29.20.0');
-assert.equal(APP_RELEASE_VERSION, '29.20.0');
-assert.equal(APP_NATIVE_VERSION, '29.20.0');
-assert.match(pkg.scripts['test:all'], /test:v2725/);
+assert.equal(pkg.version, '30.00.0');
+assert.equal(APP_RELEASE_VERSION, '30.00.0');
+assert.equal(APP_NATIVE_VERSION, '30.00.0');
+assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v3000 && npm run test:v2980 && npm run test:v2970 && npm run test:v2960 && npm run test:v2950 && npm run test:v2940 && npm run test:v2930') && pkg.scripts['test:all'].includes('npm run test:v2725'));
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
 
@@ -28,7 +28,7 @@ assert.match(channel, /chooseBestUpdateCandidate/);
 assert.match(panel, /Canal principal independente/);
 assert.match(panel, /Ponte para versões antigas/);
 
-assert.match(workflow, /Gerar APK v29\.20 Final de Produção/);
+assert.match(workflow, /Gerar APK v30\.00/);
 assert.match(workflow, /legacy\['releaseTag'\] = 'buildmaster-latest'/);
 assert.match(workflow, /legacy\['assetName'\] = 'BuildMaster-Elite-Tatico-latest\.apk'/);
 assert.match(workflow, /releases\/download\/buildmaster-latest\//);
