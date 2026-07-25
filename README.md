@@ -82,3 +82,13 @@ Antes do rollout total, o GitHub Actions deve obrigatoriamente:
 9. confirmar login, dados, backup e atualização após a instalação.
 
 Consulte `RELATORIO_BLOCOS14_15_V29.20.md` para a auditoria completa.
+
+## Hotfix 2 do TypeScript para o GitHub Actions
+
+A segunda execução real do workflow confirmou que o isolamento dos stubs funcionou e revelou quatro erros restantes do código principal. Este pacote corrige o retorno do ponto de restauração, remove um import não utilizado, estreita corretamente o evento opcional dos avisos e tipa a formação do diagnóstico como `TacticalFormation`.
+
+A regressão `v29-20-github-actions-typecheck-hotfix2-regression.mjs` impede o retorno desses quatro problemas. Execute novamente o workflow com este pacote. A versão continua `29.20.0`, porque os builds anteriores falharam antes da geração e publicação do APK.
+
+### Validação do Hotfix 2
+
+Foram aprovadas 27 regressões MJS, 4 regressões CJS, 3 typechecks isolados, a sintaxe dos 241 arquivos TypeScript/TSX, os contratos de 520 botões e 19 imagens, 29 verificações de pré-voo e 66 verificações de auditoria. O typecheck integral continua dependente da próxima execução do GitHub Actions porque o registro local de pacotes respondeu HTTP 503.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Check, CheckCircle2, Info, Loader2, Sparkles, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Loader2, Sparkles, WifiOff, X } from 'lucide-react';
 import type { PremiumBusyPayload, PremiumScreenChangePayload, PremiumToastPayload, PremiumToastTone } from '@/lib/premiumExperience';
 
 type ToastRecord = Required<Pick<PremiumToastPayload, 'title' | 'tone' | 'duration'>> & Omit<PremiumToastPayload, 'title' | 'tone' | 'duration'> & { id: string };
@@ -131,7 +131,7 @@ export function PremiumExperienceLayer() {
           <article key={toast.id} className={`bm-premium-toast tone-${toast.tone}`} role={toast.tone === 'danger' ? 'alert' : 'status'}>
             <span className="bm-toast-icon">{toneIcon(toast.tone)}</span>
             <div className="bm-toast-copy"><strong>{toast.title}</strong>{toast.message && <span>{toast.message}</span>}</div>
-            {toast.actionLabel && toast.actionEvent && <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent(toast.actionEvent)); dismiss(toast.id); }}>{toast.actionLabel}</button>}
+            {toast.actionLabel && toast.actionEvent && <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent(toast.actionEvent!)); dismiss(toast.id); }}>{toast.actionLabel}</button>}
             <button type="button" className="bm-toast-close" onClick={() => dismiss(toast.id)} aria-label="Fechar aviso"><X size={15} /></button>
             <i className="bm-toast-timer" style={{ animationDuration: `${toast.duration}ms` }} />
           </article>

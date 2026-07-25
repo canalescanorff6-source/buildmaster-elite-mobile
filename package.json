@@ -121,7 +121,8 @@
     "integrity:generate": "node scripts/generate-integrity-manifest.mjs",
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v2920": "tsc -p tests/types-v2920/tsconfig.json --pretty false",
-    "test:v2920": "npm run typecheck:v2920 && node tests/v29-20-production-readiness-engine-regression.cjs && node tests/v29-20-ui-production-regression.mjs && node tests/v29-20-typecheck-isolation-regression.mjs && npm run quality:syntax && npm run quality:interactive && npm run release:preflight"
+    "test:v2920": "npm run typecheck:v2920 && node tests/v29-20-production-readiness-engine-regression.cjs && node tests/v29-20-ui-production-regression.mjs && node tests/v29-20-typecheck-isolation-regression.mjs && node tests/v29-20-github-actions-typecheck-hotfix2-regression.mjs && npm run quality:syntax && npm run quality:interactive && npm run release:preflight",
+    "test:hotfix2-typecheck": "node tests/v29-20-github-actions-typecheck-hotfix2-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

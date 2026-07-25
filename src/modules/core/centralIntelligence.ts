@@ -48,7 +48,7 @@ export type CentralRecommendation = {
 };
 
 export type TeamDiagnosis = {
-  formation: string;
+  formation: TacticalFormation;
   styleFit: number;
   styleNote: string;
   globalScore: number;
@@ -199,7 +199,7 @@ export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation:
   if (styleFit.fit < 80) recommendations.push({ id: 'style-fit', priority: 'opportunity', title: 'Estilo coletivo adaptado', detail: styleFit.note, action: 'team' });
   if (!recommendations.length) recommendations.push({ id: 'balanced-team', priority: 'info', title: 'Estrutura equilibrada', detail: `A ${blueprint.name} possui bons encaixes. Revise banco e planos de substituição antes da partida.`, action: 'matches' });
   return {
-    formation: blueprint.name,
+    formation: blueprint.id as Exclude<TacticalFormation, 'AUTO'>,
     styleFit: styleFit.fit,
     styleNote: styleFit.note,
     globalScore,

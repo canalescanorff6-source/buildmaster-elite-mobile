@@ -241,3 +241,7 @@ Esses stubs foram criados para typechecks isolados e exportavam apenas uma lista
 - 66 verificações de auditoria aprovadas.
 
 O `typecheck` integral com os pacotes reais deve ser confirmado por uma nova execução do GitHub Actions. A instalação integral das dependências não estava disponível neste ambiente, portanto este relatório não declara a nova execução remota como concluída.
+
+## Hotfix 2 — erros restantes do typecheck real
+
+A segunda execução do GitHub Actions mostrou quatro erros localizados depois que os stubs isolados deixaram de contaminar o projeto. Foram corrigidos o contrato assíncrono do ponto de restauração, um import não utilizado, o estreitamento do evento opcional dos toasts e o tipo da formação do diagnóstico central. A regressão específica do hotfix 2 foi incluída no comando `test:v2920`.

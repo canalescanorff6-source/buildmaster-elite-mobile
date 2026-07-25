@@ -3988,7 +3988,7 @@ export function CardVisionApp() {
                       snapshots={backupSnapshots}
                       conflicts={syncConflicts.length ? syncConflicts : fullSyncHealth.conflicts}
                       lastSyncAt={lastFullSyncAt}
-                      onCreateSnapshot={() => createLocalRestorePoint()}
+                      onCreateSnapshot={async () => { await createLocalRestorePoint(); }}
                       onSyncFull={syncFullCloudBackup}
                       onPullMerge={pullAndMergeFullCloudBackup}
                       onRestoreSnapshot={restoreBackupSnapshot}
