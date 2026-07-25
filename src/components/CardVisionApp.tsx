@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import {
+  Activity,
   Camera,
   CheckCircle2,
   Copy,
@@ -41,7 +42,6 @@ import {
   normalizeObjective,
   ATTRIBUTE_INPUTS,
   OFFICIAL_ADDITIONAL_SKILL_NAMES,
-  PLAYSTYLE_OPTIONS,
   type AnalysisResult,
   type AttributeKey,
   type Objective,
