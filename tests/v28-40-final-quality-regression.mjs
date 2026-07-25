@@ -14,15 +14,15 @@ const app = read('src/components/CardVisionApp.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-assert.equal(pkg.version, '29.10.0');
-assert.equal(lock.version, '29.10.0');
-assert.equal(lock.packages[''].version, '29.10.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820/);
+assert.equal(pkg.version, '29.20.0');
+assert.equal(lock.version, '29.20.0');
+assert.equal(lock.packages[''].version, '29.20.0');
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820/);
 assert.match(pkg.scripts['test:v2840'], /v28-40-final-quality-regression\.mjs/);
-assert.equal(manifest.name, 'BuildMaster Elite Tático v29.10');
-assert.match(sw, /buildmaster-v29-10/);
+assert.equal(manifest.name, 'BuildMaster Elite Tático v29.20');
+assert.match(sw, /buildmaster-v29-20/);
 
-assert.match(globals.trim(), /design-system-v2910-admin-update\.css";$/);
+assert.match(globals.trim(), /design-system-v2920-production\.css";$/);
 assert.match(layout, /PremiumQualityLayer/);
 assert.match(layout, /bm-v2840-quality/);
 assert.match(app, /PremiumQualityCenter/);

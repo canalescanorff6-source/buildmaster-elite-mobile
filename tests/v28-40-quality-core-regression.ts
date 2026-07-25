@@ -29,7 +29,7 @@ const audit: InterfaceAuditSummary = {
 const score = qualityScore({ issues: 1, longTasks: 2, audit });
 assert.ok(score < 100 && score > 40);
 const report = createQualityReport({ appVersion: '28.80.0', profile, preference, issues: [], longTasks: [], audit });
-assert.match(report, /Versão: 28\.60\.0/);
+assert.match(report, /Versão: 28\.80\.0/);
 assert.match(report, /Botões sem nome acessível: 1/);
 assert.match(report, /não contém senha, token, imagem de jogador/i);
 

@@ -15,13 +15,13 @@ const app = read('src/components/CardVisionApp.tsx');
 const css = read('src/app/design-system-v2880-training.css');
 const workflow = read('.github/workflows/build-apk.yml');
 
-assert.equal(pkg.version, '29.10.0');
-assert.equal(lock.version, '29.10.0');
-assert.equal(lock.packages[''].version, '29.10.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?npm run test:v2900 && npm run test:v2880 && npm run test:v2870/);
+assert.equal(pkg.version, '29.20.0');
+assert.equal(lock.version, '29.20.0');
+assert.equal(lock.packages[''].version, '29.20.0');
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?npm run test:v2900 && npm run test:v2880 && npm run test:v2870/);
 assert.match(pkg.scripts['test:v2880'], /v28-80-training-evolution-engine-regression\.ts/);
 assert.match(pkg.scripts['test:v2880'], /v28-80-training-evolution-ui-regression\.mjs/);
-assert.match(workflow, /Gerar APK v29\.10/);
+assert.match(workflow, /Gerar APK v29\.20/);
 
 for (const file of [
   'src/modules/training/trainingEvolutionEngine.ts',
@@ -56,7 +56,7 @@ assert.match(matchLab, /type MatchTab = 'competitivo'/);
 assert.match(matchLab, /Treinos e evolução/);
 assert.match(app, /teamStyle=\{teamStyle\}/);
 assert.match(globals, /design-system-v2880-training\.css/);
-assert.match(globals.trim(), /design-system-v2910-admin-update\.css";$/);
+assert.match(globals.trim(), /design-system-v2920-production\.css";$/);
 assert.match(css, /\.training-evolution-v2880/);
 assert.match(css, /\.training-execution-layout/);
 assert.match(css, /\.ranked-readiness-card/);

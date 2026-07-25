@@ -7,6 +7,10 @@ catch { ts = require('/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescrip
 const root = path.resolve(__dirname, '..');
 const originalResolve = Module._resolveFilename;
 Module._resolveFilename = function(request, parent, isMain, options) {
+  if (request === '@capacitor/core') {
+    try { return originalResolve.call(this, request, parent, isMain, options); }
+    catch { return path.join(root, 'tests', 'capacitor-core.stub.cjs'); }
+  }
   if (request.startsWith('@/')) request = path.join(root, 'src', request.slice(2));
   return originalResolve.call(this, request, parent, isMain, options);
 };

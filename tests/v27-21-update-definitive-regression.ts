@@ -19,9 +19,9 @@ const channel = fs.readFileSync('src/lib/updateChannel.ts', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const staticBuilder = fs.readFileSync('scripts/build-static.mjs', 'utf8');
 
-assert.equal(pkg.version, '28.80.0');
-assert.equal(APP_RELEASE_VERSION, '28.80.0');
-assert.equal(APP_NATIVE_VERSION, '28.80.0');
+assert.equal(pkg.version, '29.20.0');
+assert.equal(APP_RELEASE_VERSION, '29.20.0');
+assert.equal(APP_NATIVE_VERSION, '29.20.0');
 assert.equal(isTrustedReleaseApiUrl(DEFAULT_UPDATE_RELEASE_API_URL), true);
 assert.equal(isTrustedManifestUrl(DEFAULT_UPDATE_MANIFEST_URL), true);
 
@@ -70,7 +70,7 @@ const manifest = {
 assert.ok(validateUpdateManifest(manifest));
 assert.equal(validateUpdateManifest({ ...manifest, releaseTag: 'buildmaster-latest' }), null);
 assert.equal(validateUpdateManifest({ ...manifest, assetName: 'outro.apk' }), null);
-assert.equal(validateUpdateManifest({ ...manifest, schemaVersion: 3 }), null);
+assert.equal(validateUpdateManifest({ ...manifest, schemaVersion: 4 }), null);
 
 assert.match(workflow, /RELEASE_TAG=/);
 assert.match(workflow, /MANIFEST_ASSET_NAME=/);

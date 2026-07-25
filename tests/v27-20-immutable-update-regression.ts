@@ -7,7 +7,7 @@ const panel = fs.readFileSync('src/components/UpdateCenterPanel.tsx', 'utf8');
 const nativePlugin = fs.readFileSync('scripts/install-android-security-plugin.mjs', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string };
 
-assert.equal(pkg.version, '28.80.0');
+assert.equal(pkg.version, '29.20.0');
 assert.match(workflow, /RUN_ATTEMPT: \$\{\{ github\.run_attempt \}\}/);
 assert.match(workflow, /asset_token = f'\{version_code\}\{attempt:02d\}'/);
 assert.match(workflow, /APK_PUBLICATION_ID=/);
@@ -24,7 +24,7 @@ assert.match(workflow, /cancel-in-progress: false/);
 
 assert.match(updates, /DEFAULT_UPDATE_RELEASE_API_URL/);
 assert.match(updates, /buildmaster-v\\d\+\\\.\\d\+\\\.\\d\+-\\d\+/i);
-assert.match(panel, /const fetched = await fetchUpdateManifest\(\)/);
+assert.match(panel, /const fetched = await fetchUpdateManifest\(readUpdateChannelPreference\(\)\)/);
 assert.match(panel, /evaluateUpdateManifest\(fetched\.payload, current, CURRENT_BUILD_ID/);
 assert.match(panel, /Nunca instala usando apenas o manifesto guardado/);
 assert.match(nativePlugin, /bmDownloadAttempt=/);

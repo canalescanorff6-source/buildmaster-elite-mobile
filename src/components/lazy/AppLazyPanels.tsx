@@ -73,6 +73,10 @@ export const SmartQuickDock = dynamic(
   () => import('@/components/SmartQuickDock').then((module) => module.SmartQuickDock),
   { ssr: false }
 );
+export const ProductionReadinessCenter = dynamic(
+  () => import('@/modules/quality/ProductionReadinessCenter').then((module) => module.ProductionReadinessCenter),
+  { ssr: false, loading: fallback }
+);
 export const PrecisionBuildPanel = dynamic(
   () => import('@/components/PrecisionBuildPanel').then((module) => module.PrecisionBuildPanel),
   { ssr: false, loading: fallback }
@@ -141,7 +145,8 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
   ajustes: [
     () => import('@/components/UpdateCenterPanel'),
     () => import('@/components/AccountAdminPanel'),
-    () => import('@/components/EliteEvolutionPanels')
+    () => import('@/components/EliteEvolutionPanels'),
+    () => import('@/modules/quality/ProductionReadinessCenter')
   ]
 };
 

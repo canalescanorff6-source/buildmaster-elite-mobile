@@ -32,7 +32,7 @@ assert.match(pkg.scripts['preapk:build-web'], /sanitize:update-source/);
 
 const workflow = readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const sanitizeIndex = workflow.indexOf('Remover manifesto local antigo antes dos testes');
-const testsIndex = workflow.indexOf('Rodar testes do motor');
+const testsIndex = workflow.indexOf('Rodar regressão final e testes do motor');
 assert.ok(sanitizeIndex >= 0, 'O workflow precisa limpar o manifesto antigo.');
 assert.ok(testsIndex > sanitizeIndex, 'A limpeza precisa acontecer antes dos testes.');
 assert.match(workflow, /node scripts\/sanitize-update-source\.mjs/);

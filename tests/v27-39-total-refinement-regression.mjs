@@ -23,10 +23,10 @@ const trash = read('src/lib/vaultTrash.ts');
 const updates = read('src/lib/appUpdates.ts');
 const dataSafety = read('src/lib/dataSafety.ts');
 
-assert.equal(pkg.version, '29.10.0');
-assert.equal(lock.version, '29.10.0');
-assert.equal(lock.packages[''].version, '29.10.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739 && npm run test:v2738/);
+assert.equal(pkg.version, '29.20.0');
+assert.equal(lock.version, '29.20.0');
+assert.equal(lock.packages[''].version, '29.20.0');
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739 && npm run test:v2738/);
 assert.match(globals, /design-system-v2739-refinement\.css/);
 assert.match(refinementCss, /--bm-touch:\s*48px/);
 assert.match(refinementCss, /:focus-visible/);
@@ -74,8 +74,8 @@ assert.match(refinement, /Importador inteligente de projetos antigos/);
 assert.match(dataTools, /buildMonthlyEvolutionReport/);
 assert.match(dataTools, /inspectLegacyProject/);
 assert.match(trash, /RETENTION_DAYS\s*=\s*30/);
-assert.match(updates, /29\.10\.0/);
-assert.match(dataSafety, /APP_DATA_VERSION\s*=\s*'29\.10\.0'/);
+assert.match(updates, /29\.20\.0/);
+assert.match(dataSafety, /APP_DATA_VERSION\s*=\s*'29\.20\.0'/);
 
 for (const file of [
   'src/lib/appRefinement.ts',

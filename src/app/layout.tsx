@@ -37,7 +37,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update"><ExperiencePreferenceBootstrap /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
+      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production"><ExperiencePreferenceBootstrap /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
     </html>
   );
 }

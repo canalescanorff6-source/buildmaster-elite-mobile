@@ -10,8 +10,8 @@ const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'),
 const auth = fs.readFileSync(path.join(root, 'src/components/AuthGate.tsx'), 'utf8');
 const updates = fs.readFileSync(path.join(root, 'src/lib/appUpdates.ts'), 'utf8');
 
-assert.equal(pkg.version, '29.10.0');
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739 && npm run test:v2738 && npm run test:v2737/);
+assert.equal(pkg.version, '29.20.0');
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850 && npm run test:v2840 && npm run test:v2830 && npm run test:v2820 && npm run test:v2810 && npm run test:v2800 && npm run test:v2740 && npm run test:v2739 && npm run test:v2738 && npm run test:v2737/);
 assert.match(globals, /design-system-v2738-rainbow\.css/);
 assert.match(visual, /\.auth-submit[\s\S]*background:\s*var\(--v2738-rainbow\)/);
 assert.match(visual, /\.app-side-rail/);
@@ -27,5 +27,5 @@ assert.doesNotMatch(app, /className="app-side-rail luxury-panel"/);
 assert.match(app, /className={`app-section-guide guide-\$\{mainSection\}`}/);
 assert.match(app, /Fichas atuais|Ficha atual/);
 assert.match(auth, /auth-visual-guide/);
-assert.match(updates, /29\.10\.0/);
+assert.match(updates, /29\.20\.0/);
 console.log('v28.10 visual redesign regression: ok');

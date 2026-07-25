@@ -11,12 +11,12 @@ const css = fs.readFileSync('src/app/legacy-compat/part-07.css', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('public/manifest.webmanifest', 'utf8'));
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 
-assert.equal(pkg.version, '29.10.0');
-assert.equal(lock.version, '29.10.0');
-assert.equal(lock.packages[''].version, '29.10.0');
+assert.equal(pkg.version, '29.20.0');
+assert.equal(lock.version, '29.20.0');
+assert.equal(lock.packages[''].version, '29.20.0');
 assert.match(pkg.scripts['test:v2860'], /v28-60-advanced-build-intelligence-regression\.ts/);
 assert.match(pkg.scripts['test:v2860'], /v28-60-advanced-build-ui-regression\.mjs/);
-assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850/);
+assert.match(pkg.scripts['test:all'], /^(?:npm run test:v2920 && )?(?:npm run test:v2910 && )?(?:npm run test:v2900 && )?(?:npm run test:v2880 && )?(?:npm run test:v2870 && )?npm run test:v2860 && npm run test:v2850/);
 
 assert.match(engine, /ADVANCED_BUILD_INTELLIGENCE_VERSION = '28\.60\.0'/);
 assert.match(engine, /Ficha competitiva/);
@@ -43,7 +43,7 @@ for (const className of ['advanced-role-grid', 'advanced-point-list', 'advanced-
   assert.ok(css.includes(`.${className}`), `CSS do Bloco 7 ausente: ${className}`);
 }
 assert.match(css, /@media \(max-width: 720px\)/);
-assert.equal(manifest.name, 'BuildMaster Elite Tático v29.10');
-assert.match(sw, /buildmaster-v29-10/);
+assert.equal(manifest.name, 'BuildMaster Elite Tático v29.20');
+assert.match(sw, /buildmaster-v29-20/);
 
 console.log('v28.60 advanced build UI regression: ok');
