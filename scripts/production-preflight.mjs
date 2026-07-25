@@ -37,6 +37,8 @@ const globals = read('src/app/globals.css').trim();
 const layout = read('src/app/layout.tsx');
 const workflow = read('.github/workflows/build-apk.yml');
 const capacitor = read('capacitor.config.ts');
+const tsconfig = JSON.parse(read('tsconfig.json'));
+const typecheckExcludes = new Set(tsconfig.exclude ?? []);
 
 check(/^29\.20\.\d+$/.test(version), 'Versão final v29.20 configurada', version);
 check(lock.version === version && lock.packages?.['']?.version === version, 'package-lock sincronizado com a versão');
@@ -52,6 +54,8 @@ for (const command of ['npm run release:preflight', 'npm run quality:syntax', 'n
 for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow contém etapa ${marker}`);
 check(exists('src/lib/productionReadiness.ts') && exists('src/modules/quality/ProductionReadinessCenter.tsx'), 'Central de prontidão de produção presente');
 check(exists('tests/v29-20-production-readiness-engine-regression.cjs') && exists('tests/v29-20-ui-production-regression.mjs'), 'Regressões finais presentes');
+check(typecheckExcludes.has('tests/types-v2910') && typecheckExcludes.has('tests/types-v2920'), 'Fixtures isoladas não contaminam o typecheck principal');
+check(exists('tests/v29-20-typecheck-isolation-regression.mjs'), 'Regressão de isolamento do TypeScript presente');
 check(!exists('public/update-manifest.json'), 'Manifesto remoto não foi empacotado no aplicativo');
 
 const allFiles = [...walk('src'), ...walk('scripts'), ...walk('public'), ...walk('supabase'), ...walk('.github')];

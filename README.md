@@ -6,6 +6,20 @@ Este pacote usa a v29.10 como base e preserva as funções implementadas nos Blo
 
 A v29.20 fecha a preparação do código-fonte para produção com novos portões automáticos de qualidade, estabilidade, acessibilidade, integridade e publicação. O pacote não contém APK, chave de assinatura, `node_modules` nem dados privados.
 
+
+## Hotfix do TypeScript para o GitHub Actions
+
+Após a primeira execução real do workflow, o `typecheck` revelou que os stubs de tipos usados somente nas checagens isoladas da v29.10 e v29.20 estavam sendo incluídos pelo `tsconfig.json` principal. Esses stubs declaravam versões reduzidas de `react`, JSX e `lucide-react`, provocando falsos erros em ícones e em campos `input type="file"`.
+
+A revisão corrige o problema ao:
+
+- excluir `tests/types-v2910` e `tests/types-v2920` do typecheck principal;
+- manter os três typechecks isolados funcionando por seus próprios `tsconfig`;
+- normalizar `maxOverall` indefinido para `null` no teste do Bloco 7;
+- adicionar uma regressão que bloqueia nova contaminação dos tipos principais.
+
+O workflow precisa ser executado novamente com este pacote corrigido para confirmar o `typecheck` integral com as dependências reais instaladas.
+
 ## O que entrou
 
 ### Bloco 14 — Testes e estabilidade
@@ -31,18 +45,18 @@ A v29.20 fecha a preparação do código-fonte para produção com novos portõe
 - preparação de publicação estável/beta, rollout, pausa e rollback preservada da v29.10;
 - aprovação final condicionada ao APK assinado instalado e atualizado em Android real.
 
-## Resultados da validação local
+## Resultados da validação após o hotfix
 
-- 68/68 testes TypeScript aprovados em lotes controlados;
-- 25/25 regressões MJS aprovadas;
-- 4/4 regressões CJS aprovadas;
+- 68/68 regressões TypeScript funcionais aprovadas em lotes controlados;
+- 26 regressões MJS aprovadas, incluindo o novo isolamento do typecheck;
+- 4 regressões CJS funcionais aprovadas;
+- 3 typechecks isolados aprovados;
 - 241 arquivos TypeScript/TSX com sintaxe aprovada;
 - 520 botões com tipo explícito;
 - 19 imagens com texto alternativo;
-- checagem TypeScript estrita dos módulos v29.20 aprovada;
-- pré-voo com 27 verificações aprovadas;
+- pré-voo ampliado para 29 verificações aprovadas;
 - auditoria com 66 verificações aprovadas;
-- nenhum bloqueio técnico encontrado no código-fonte validado.
+- typecheck integral do GitHub Actions pendente de nova execução com as dependências reais.
 
 ## Alertas não bloqueantes
 

@@ -145,17 +145,18 @@ A auditoria bloqueia ou acusa:
 
 ### 4.1 Testes executáveis
 
-- **68/68 testes TypeScript aprovados**, executados em lotes controlados para evitar que a duração total ultrapassasse o limite de uma única sessão;
-- **25/25 testes MJS aprovados**;
-- **4/4 testes CJS aprovados**;
-- checagem TypeScript estrita dos módulos v29.20 aprovada.
+- **68/68 regressões TypeScript funcionais aprovadas**, executadas em lotes controlados;
+- **26/26 testes MJS aprovados** após o hotfix;
+- **4/4 testes CJS funcionais aprovados**;
+- **3/3 typechecks isolados aprovados**;
+- o typecheck integral com dependências reais permanece pendente de nova execução no GitHub Actions.
 
 ### 4.2 Código e interface
 
 - **241 arquivos TypeScript/TSX** com sintaxe aprovada;
 - **520 botões** com tipo explícito;
 - **19 imagens** com texto alternativo;
-- **27 verificações de pré-voo aprovadas**;
+- **29 verificações de pré-voo aprovadas**;
 - **66 verificações de auditoria aprovadas**.
 
 ### 4.3 Alertas restantes
@@ -205,4 +206,38 @@ Portanto, “produção final” nesta entrega significa **código-fonte, testes
 
 ## 7. Conclusão
 
-Os Blocos 14 e 15 fecham a linha planejada de evolução do BuildMaster com uma camada verificável de estabilidade e produção. A base validada não apresentou falhas bloqueantes nos testes executados. A etapa restante é operacional e obrigatória: gerar, assinar, instalar e atualizar o APK real pelo ambiente oficial de publicação.
+Os Blocos 14 e 15 fecham a linha planejada de evolução do BuildMaster com uma camada verificável de estabilidade e produção. A falha encontrada pelo primeiro typecheck remoto foi corrigida no código-fonte, mas a confirmação integral ainda depende de uma nova execução do GitHub Actions. Depois disso, continuam obrigatórios o build, a assinatura, a instalação e o teste de atualização em Android real.
+
+
+---
+
+## Hotfix posterior — falha do TypeScript no GitHub Actions
+
+A primeira execução integral do workflow encontrou erros no passo **Validar TypeScript**. A análise do log mostrou que a maior parte não vinha dos componentes nem da versão instalada do `lucide-react`: os arquivos `tests/types-v2910/stubs.d.ts` e `tests/types-v2920/stubs.d.ts` estavam entrando no `tsconfig.json` principal por causa do padrão `**/*.ts`/`**/*.tsx`.
+
+Esses stubs foram criados para typechecks isolados e exportavam apenas uma lista reduzida de ícones, além de simplificarem o evento JSX para `{ value: string; checked: boolean }`. Isso explica simultaneamente:
+
+- os erros “module lucide-react has no exported member”;
+- os erros de `event.target.files`;
+- o erro de `event.currentTarget`;
+- a grande quantidade de mensagens concentradas nos painéis novos.
+
+### Correções aplicadas
+
+1. `tsconfig.json` agora exclui `tests/types-v2910` e `tests/types-v2920` do typecheck principal.
+2. Os typechecks isolados continuam usando seus próprios arquivos `tsconfig.json` e seus stubs locais.
+3. `tests/v28-60-advanced-build-intelligence-regression.ts` converte `undefined` para `null` em `maxOverall`.
+4. Foi criada `tests/v29-20-typecheck-isolation-regression.mjs`.
+5. O pré-voo de produção passou a verificar automaticamente o isolamento dos stubs.
+
+### Validação do hotfix neste ambiente
+
+- 26/26 regressões MJS aprovadas;
+- 4/4 regressões CJS funcionais aprovadas;
+- 3/3 typechecks isolados aprovados;
+- 241 arquivos TypeScript/TSX com sintaxe aprovada;
+- 520 botões e 19 imagens aprovados nos contratos de interface;
+- 29 verificações de pré-voo aprovadas;
+- 66 verificações de auditoria aprovadas.
+
+O `typecheck` integral com os pacotes reais deve ser confirmado por uma nova execução do GitHub Actions. A instalação integral das dependências não estava disponível neste ambiente, portanto este relatório não declara a nova execução remota como concluída.

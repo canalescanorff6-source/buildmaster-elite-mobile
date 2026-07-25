@@ -59,7 +59,7 @@ const creatorBase: CreatorBuildSource = {
     cardType: result.parsed.cardType,
     specialTag: result.parsed.specialTag ?? '',
     mainPosition: result.parsed.mainPosition,
-    maxOverall: result.parsed.maxOverall,
+    maxOverall: result.parsed.maxOverall ?? null,
     trainingPointsTotal: result.trainingPointsTotal
   },
   training: { ...result.training },
