@@ -18,7 +18,7 @@ assert.ok(workflow.includes('BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk'
 assert.ok(workflow.includes('BUILDMASTER_VERSION=') || workflow.includes('BUILDMASTER_VERSION'), 'Versão dinâmica não foi preparada.');
 assert.ok(layout.includes('APP_RELEASE_VERSION'), 'Metadados da interface precisam usar a versão centralizada.');
 assert.ok(manifest.includes('v30.00'), 'manifest.webmanifest não corresponde à v30.00.');
-assert.ok(sw.includes('29-80'), 'Cache do service worker não corresponde à v30.00.');
+assert.ok(sw.includes('30-00'), 'Cache do service worker não corresponde à v30.00.');
 
 assert.ok(workflow.includes('ANDROID_SIGNING_BUNDLE'), 'Workflow precisa usar o Secret de assinatura permanente.');
 assert.match(workflow, /ANDROID_SIGNING_BUNDLE é obrigatório/, 'Workflow oficial não pode publicar APK de teste.');
@@ -35,4 +35,4 @@ assert.doesNotMatch(workflow, /gh release delete buildmaster-latest/, 'Não apag
 
 assert.ok(fs.existsSync('src/app/error.tsx'));
 assert.ok(fs.existsSync('src/app/global-error.tsx'));
-console.log('release integrity v29.20: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');
+console.log('release integrity v30.00: assinatura, APK único, manifesto e verificação pós-publicação alinhados.');
