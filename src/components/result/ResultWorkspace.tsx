@@ -47,7 +47,6 @@ import {
 import { buildAdvancedCalibration, signatureForResult } from '@/lib/advancedCalibration';
 import {
   buildReliabilityCenter,
-  compareBuildVariants,
   detectInconsistencies
 } from '@/lib/confidenceComparison';
 import {
@@ -150,7 +149,7 @@ const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: s
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
   { label: 'Desenvolvimento', tabs: [{ value: 'partidas', label: 'Validação real' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
+  { label: 'Ferramentas técnicas', tabs: [{ value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Pro Players' }] }
 ];
 
 function skillReason(skill: string) {
@@ -325,7 +324,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   }, [requestedTab]);
   const reliabilityCenter = useMemo(() => buildReliabilityCenter(result), [result]);
   const inconsistencyReport = useMemo(() => detectInconsistencies(result), [result]);
-  const buildComparison = useMemo(() => compareBuildVariants(result), [result]);
+  const definitive = result.definitiveBuild;
   const card = result.parsed;
   const GER = card.maxOverall ?? card.overall ?? '--';
   const trainingItems = Object.entries(result.training).filter(([, value]) => Number(value) > 0);
@@ -383,9 +382,10 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   }
 
   function openQualityTarget(target: BuildQualityTarget) {
-    const isAdvanced = !['resumo', 'ficha', 'habilidades', 'treinador'].includes(target);
+    const resolvedTarget: ResultTab = target;
+    const isAdvanced = !['resumo', 'ficha', 'habilidades', 'treinador'].includes(resolvedTarget);
     setAdvancedOpen(isAdvanced);
-    setTab(target);
+    setTab(resolvedTarget);
   }
 
   async function shareCurrentResult() {
@@ -590,19 +590,10 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'comparar' && (
         <div className="result-section-grid">
-          <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker">Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
-            <p>{buildComparison.reason}</p>
-          </article>
-          <article className="luxury-panel wide-card comparison-table-card">
-            <div className="comparison-table">
-              <div className="comparison-row comparison-head"><strong>Critério</strong>{buildComparison.variants.map((v) => <b key={v.title}>{v.title}</b>)}</div>
-              {buildComparison.rows.map((row) => <div className="comparison-row" key={row.key}><strong>{row.label}</strong>{row.values.map((cell) => <span className={cell.best ? 'comparison-best' : ''} key={`${row.key}-${cell.title}`}>{cell.value}</span>)}</div>)}
-            </div>
-          </article>
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Riscos de cada opção</p>
-            <div className="position-list">{buildComparison.variants.map((v) => <div key={v.title}><strong>{v.title} • {v.points} pts</strong><span>Qualidade {v.score} • eficiência {v.efficiency} • equilíbrio {v.balance}</span><em>{v.risks.length ? v.risks.join(' • ') : 'Sem risco crítico identificado.'}</em></div>)}</div>
+          <article className="luxury-panel wide-card definitive-audit-card">
+            <div className="section-title-row"><div><p className="kicker">Auditoria interna</p><h3>Uma ficha, uma decisão final</h3></div><span>{definitive?.confidence ?? reliabilityCenter.score}/100</span></div>
+            <p className="panel-note">As alternativas continuam sendo simuladas internamente para testar risco, eficiência e consistência, mas o aplicativo entrega apenas a ficha vencedora.</p>
+            <ul className="clean-list">{(definitive?.reasons ?? result.recommendationExplanation).slice(0, 6).map((item) => <li key={item}>{item}</li>)}</ul>
           </article>
         </div>
       )}
@@ -612,27 +603,21 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'resumo' && (
         <div className="result-section-grid">
           <BuildQualityGatePanel report={buildQualityGate} onOpenTarget={openQualityTarget} />
-          <article className="luxury-panel elite-build-card">
-            <p className="kicker">Plano Elite recomendado</p>
+          <article className="luxury-panel elite-build-card definitive-build-hero">
+            <div className="definitive-build-badge"><ShieldCheck size={16} /><span>Ficha única aprovada</span></div>
             <div className="section-title-row">
-              <h3>{result.buildName}</h3>
-              <span>Elite</span>
+              <div><p className="kicker">{definitive?.title ?? 'Ficha Competitiva Definitiva'}</p><h3>{result.buildName}</h3></div>
+              <span>{definitive?.confidence ?? Math.round(result.bestPosition.score)}% confiança</span>
             </div>
-            <div className="stat-bars five-cols">
-              {[
-                ['Finalização', result.pri.finishing],
-                ['Drible', result.pri.dribbling],
-                ['Passe', result.pri.creation],
-                ['Força', result.pri.physical],
-                ['Velocidade', result.pri.mobility]
-              ].map(([label, value]) => (
-                <div key={String(label)}>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                  <i><b style={{ width: `${Math.min(100, Number(value))}%` }} /></i>
-                </div>
-              ))}
+            <p className="definitive-verdict">{definitive?.verdict ?? 'O motor selecionou a ficha de melhor rendimento real para esta carta.'}</p>
+            <div className="definitive-training-grid">
+              {trainingItems.map(([key, value]) => <div key={key}><span>{trainingLabels[key] ?? key}</span><strong>+{value}</strong><small>{result.trainingCost[key as keyof typeof result.trainingCost]} pts</small></div>)}
             </div>
+            <div className="definitive-source-line">
+              <span>{definitive?.sourceMode === 'MOTOR_E_CONSENSO_PRO' ? 'Motor + consenso Pro Player' : 'Motor competitivo local auditado'}</span>
+              <strong>{result.trainingPointsUsed}/{result.trainingPointsTotal} pontos</strong>
+            </div>
+            <div className="definitive-impact-list">{(definitive?.onlineImpact ?? result.usageTips).slice(0, 4).map((item) => <span key={item}>✓ {item}</span>)}</div>
           </article>
 
           <DecisionWeightPanel result={result} />
@@ -848,8 +833,9 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <div className="dna-goal-list">{result.maxPrecision.pointAudit.map((item)=><div key={item.training}><strong>{item.label} +{item.level}</strong><span>Custo real {item.realCost} • ganho útil {item.usefulGain} • retorno {item.marginalReturn}</span><em>{item.affectedAttributes.join(' • ')}</em><small>{item.verdict}</small></div>)}</div>
             </details>
             <details className="settings-details-card">
-              <summary>Cinco alternativas comparadas</summary>
-              <div className="variant-grid">{result.maxPrecision.alternatives.map((item)=><div key={item.title}><strong>{item.title}</strong><span>Nota {item.score}/100 • identidade {item.identityScore} • adaptação {item.adaptationScore}</span><em>Habilidade {item.skillScore} • Meta {item.metaScore} • desperdício {item.wasteScore}</em><p>{item.why}</p></div>)}</div>
+              <summary>Como a ficha vencedora foi escolhida</summary>
+              <p className="panel-note">O motor comparou alternativas internamente, descartou as que perderam identidade, eficiência ou consistência e publicou somente a vencedora.</p>
+              <ul className="clean-list">{(definitive?.reasons ?? result.maxPrecision.explanation).slice(0, 6).map((item)=><li key={item}>{item}</li>)}</ul>
             </details>
             <details className="settings-details-card">
               <summary>Meta atual do eFootball 2026 — v5.5.0</summary>
@@ -899,39 +885,18 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Três fichas DNA realmente personalizadas</p>
-            <div className="variant-grid">
-              {result.buildVariants.map((variant) => (
-                <div key={variant.kind}>
-                  <strong>{variant.title}</strong>
-                  <span>{variant.positionLabel} • {variant.pointsUsed} pts{variant.qualityScore ? ` • Qualidade ${variant.qualityScore}/100` : ''}</span>
-                  {variant.adaptationLabel && <b>{variant.adaptationLabel}</b>}
-                  <em>{trainingSummary(variant.training)}</em>
-                  <p>{variant.note}</p>
-                  {variant.verdict && <small><b>Veredito:</b> {variant.verdict}</small>}
-                  {(variant.efficiencyScore || variant.balanceScore) && (
-                    <div className="variant-metrics">
-                      <span>Eficiência <b>{variant.efficiencyScore}/100</b></span>
-                      <span>Equilíbrio <b>{variant.balanceScore}/100</b></span>
-                      <span>Simulações <b>{variant.simulationsTested}</b></span>
-                    </div>
-                  )}
-                  {variant.scenarioScores && (
-                    <div className="scenario-score-grid">
-                      <span>Posse <b>{variant.scenarioScores.possession}</b></span>
-                      <span>Contra-ataque <b>{variant.scenarioScores.counterAttack}</b></span>
-                      <span>Pressão <b>{variant.scenarioScores.pressing}</b></span>
-                      <span>Duelo físico <b>{variant.scenarioScores.physicalDuels}</b></span>
-                      <span>Consistência <b>{variant.scenarioScores.consistency}</b></span>
-                    </div>
-                  )}
-                  {variant.highlights?.map((item) => <small key={item}>✓ {item}</small>)}
-                  {variant.tradeOffs?.map((item) => <small key={item}>↔ {item}</small>)}
-                  {variant.risks?.map((item) => <small key={item}>⚠ {item}</small>)}
-                </div>
-              ))}
+          <article className="luxury-panel wide-card definitive-only-card">
+            <div className="section-title-row"><div><p className="kicker">Resultado final</p><h3>Somente a ficha que muda o jogador em campo</h3></div><span>{definitive?.selectedVariant ?? 'Vencedora'}</span></div>
+            <p className="panel-note">As demais simulações não são entregues como opções. Elas servem apenas para provar que esta distribuição teve o melhor conjunto de rendimento, adaptação e segurança.</p>
+            <div className="training-ribbon definitive-training-ribbon">{trainingItems.map(([key,value])=><div key={key}><span>{trainingLabels[key] ?? key}</span><strong>{value}</strong><i><b style={{width:`${Math.min(100,Number(value)*7)}%`}} /></i></div>)}</div>
+            <div className="definitive-proof-grid">
+              <div><span>Confiança</span><strong>{definitive?.confidence ?? result.advancedOptimizer.winnerScore}/100</strong></div>
+              <div><span>Fontes exatas</span><strong>{definitive?.exactCardCount ?? 0}</strong></div>
+              <div><span>Pro/ranking alto</span><strong>{definitive?.proSourceCount ?? 0}</strong></div>
+              <div><span>Pontos restantes</span><strong>{result.trainingPointsRemaining}</strong></div>
             </div>
+            <ul className="clean-list">{(definitive?.onlineImpact ?? []).map((item)=><li key={item}>{item}</li>)}</ul>
+            {(definitive?.warnings ?? []).slice(0,3).map((item)=><p className="panel-note definitive-warning" key={item}>⚠ {item}</p>)}
           </article>
 
           <article className="luxury-panel wide-card">

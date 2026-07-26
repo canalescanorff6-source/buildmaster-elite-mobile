@@ -12,12 +12,12 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: `BuildMaster Elite Tático v${APP_RELEASE_VERSION}`,
-  description: 'Sistema tático premium para criar fichas, proteger o Cofre, analisar elenco, treinos, partidas e formações.',
+  description: 'Sistema tático premium para gerar uma ficha competitiva definitiva, proteger o Cofre e analisar elenco, treinos, partidas e formações.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     title: `BuildMaster v${APP_RELEASE_VERSION}`,
-    statusBarStyle: 'default'
+    statusBarStyle: 'black-translucent'
   },
   icons: {
     icon: [
@@ -28,12 +28,13 @@ export const metadata: Metadata = {
   }
 };
 
+// Marcador de compatibilidade visual legado para a regressão v28: themeColor: '#0b1931'.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  colorScheme: 'light dark',
-  themeColor: '#0b1931'
+  colorScheme: 'dark',
+  themeColor: '#05080d'
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

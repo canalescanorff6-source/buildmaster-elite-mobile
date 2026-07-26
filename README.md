@@ -17,6 +17,25 @@ O projeto mantém dois canais separados:
 
 O build da Google Play remove do manifesto a permissão `REQUEST_INSTALL_PACKAGES`, o `FileProvider` do instalador direto e as consultas ligadas à instalação de APK. Dessa forma, o artefato Play não tenta instalar atualizações externas.
 
+
+## Premium Obsidian e ficha competitiva definitiva
+
+A experiência padrão foi reformulada para um visual **Obsidian** escuro, com grafite, azul profundo e detalhes dourados. O modo inicial usa densidade compacta, animações reduzidas e perfil de desempenho econômico para diminuir trabalho visual, observadores e gravações frequentes em segundo plano.
+
+Na geração de jogadores, o aplicativo entrega **uma única Ficha Competitiva Definitiva**. Alternativas continuam sendo avaliadas internamente pelo motor, mas não são apresentadas como várias respostas concorrentes. A decisão final considera posição escolhida, identidade da carta, custo real dos pontos, equilíbrio funcional e impacto esperado em partidas online.
+
+A área **Pro Players** inclui um radar de fontes públicas verificáveis e uma pesquisa preparada para a carta exata. Uma ficha externa só pode influenciar o resultado depois que carta, posição, orçamento e blocos de progressão forem conferidos. O aplicativo não inventa números nem realiza coleta automática de vídeos; o registro é auditável e conservador.
+
+Principais otimizações desta reformulação:
+
+- inicialização e splash reduzidos;
+- pré-carregamento pesado adiado ou desativado no modo econômico;
+- cache nativo e Service Worker higienizados apenas uma vez por versão;
+- gravação automática com debounce maior e sem duplicação durante o carregamento;
+- observação de rolagem consolidada e limitada por quadro;
+- efeitos de ponteiro, blur e animações desativados no perfil econômico;
+- painéis extensos com renderização progressiva por visibilidade.
+
 ## Comandos principais
 
 ```bash

@@ -434,6 +434,26 @@ export type CardDnaAnalysis = {
   note: string;
 };
 
+
+export type DefinitiveCompetitiveBuild = {
+  title: string;
+  training: TrainingPlan;
+  pointsUsed: number;
+  pointsTotal: number;
+  pointsRemaining: number;
+  confidence: number;
+  sourceMode: 'MOTOR_LOCAL' | 'MOTOR_E_CONSENSO_PRO';
+  sourceCount: number;
+  exactCardCount: number;
+  proSourceCount: number;
+  selectedVariant: string;
+  verdict: string;
+  reasons: string[];
+  onlineImpact: string[];
+  protectedTraits: string[];
+  warnings: string[];
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -479,6 +499,7 @@ export type AnalysisResult = {
   maxPrecision?: MaxPrecisionAnalysis;
   eliteEvolution?: EliteEvolutionAnalysis;
   metaBuildUniverse?: MetaBuildUniverse;
+  definitiveBuild?: DefinitiveCompetitiveBuild;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

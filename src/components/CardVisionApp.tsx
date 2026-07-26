@@ -85,7 +85,7 @@ import { PremiumBrand } from '@/components/PremiumBrand';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
-import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, formations, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, formations, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
@@ -331,14 +331,14 @@ export function CardVisionApp() {
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
   const [newFolderName, setNewFolderName] = useState('');
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
-  const [appTheme, setAppTheme] = useState<AppTheme>('light');
-  const [accentTheme, setAccentTheme] = useState<AccentTheme>('prism');
-  const [advancedMode, setAdvancedMode] = useState(true);
+  const [appTheme, setAppTheme] = useState<AppTheme>('dark');
+  const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
-  const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
-  const [motionPreference, setMotionPreference] = useState<MotionPreference>('system');
+  const [densityMode, setDensityMode] = useState<DensityMode>('compact');
+  const [motionPreference, setMotionPreference] = useState<MotionPreference>('reduced');
   const [highContrast, setHighContrast] = useState(false);
-  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('balanced');
+  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('economy');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -389,25 +389,24 @@ export function CardVisionApp() {
   const restoredSessionRef = useRef(false);
 
   useEffect(() => {
+    if (performanceMode !== 'balanced') return;
     const group = navigationGroupFor(mainSection);
-    const handle = scheduleIdleTask(() => preloadPanelGroup(group), 900);
+    const handle = scheduleIdleTask(() => preloadPanelGroup(group), 5000);
     return () => cancelIdleTask(handle);
-  }, [mainSection]);
+  }, [mainSection, performanceMode]);
 
   useEffect(() => {
-    const migrationKey = 'buildmaster_visual_refresh_v2738';
+    const migrationKey = 'buildmaster_premium_obsidian_v3000';
     if (readAccountStorage(migrationKey)) return;
+    const premiumDefaults = { appTheme: 'dark', accentTheme: 'gold', advancedMode: false, textScale: 'standard', densityMode: 'compact', motionPreference: 'reduced', highContrast: false, performanceMode: 'economy' };
     try {
       const previous = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as Record<string, unknown>;
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ ...previous, appTheme: 'light', accentTheme: 'prism', textScale: 'standard', densityMode: 'comfortable', highContrast: false }));
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ ...previous, ...premiumDefaults }));
     } catch {
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme: 'light', accentTheme: 'prism', textScale: 'standard', densityMode: 'comfortable', highContrast: false }));
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify(premiumDefaults));
     }
-    setAppTheme('light');
-    setAccentTheme('prism');
-    setTextScale('standard');
-    setDensityMode('comfortable');
-    setHighContrast(false);
+    setAppTheme('dark'); setAccentTheme('gold'); setAdvancedMode(false); setTextScale('standard');
+    setDensityMode('compact'); setMotionPreference('reduced'); setHighContrast(false); setPerformanceMode('economy'); setObjective('COMPETITIVE');
     writeAccountStorage(migrationKey, 'applied');
   }, []);
 
@@ -620,7 +619,7 @@ export function CardVisionApp() {
       partidas: { title: 'Validação em jogo', description: 'Registre desempenho real, erros e evolução depois das partidas.', steps: ['Preparar', 'Jogar', 'Avaliar'] },
       leitor: { title: 'Leitura por print', description: 'Importe uma imagem nítida, confira os dados e só depois gere a ficha.', steps: ['Importar print', 'Conferir leitura', 'Gerar ficha'] },
       manual: { title: 'Manual Pro', description: 'Preencha os dados da carta e controle cada ponto sem depender do OCR.', steps: ['Identidade', 'Atributos', 'Revisão'] },
-      resultado: { title: 'Ficha completa', description: 'Comece pelo resumo e navegue para ficha, habilidades, treino e fontes.', steps: ['Resumo', 'Ficha', 'Treino e fontes'] },
+      resultado: { title: 'Ficha competitiva definitiva', description: 'Veja uma única distribuição aprovada, o impacto online e a auditoria usada na decisão.', steps: ['Ficha final', 'Impacto em campo', 'Auditoria Pro'] },
       cofre: { title: 'Cofre de jogadores', description: 'Organize fichas, favoritos, revisões e backups da sua conta.', steps: ['Organizar', 'Comparar', 'Proteger'] },
       time: { title: 'Meu Time', description: 'Monte o elenco, escolha formações e prepare planos para cada partida.', steps: ['Elenco', 'Formação', 'Plano de jogo'] },
       ajustes: { title: 'Ajustes do aplicativo', description: 'Personalize aparência, desempenho, segurança, backup e atualização.', steps: ['Aparência', 'Segurança', 'Atualizações'] }
@@ -710,18 +709,19 @@ export function CardVisionApp() {
       main?.focus({ preventScroll: true });
       const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       const top = scrollPositionsRef.current[mainSection] ?? 0;
-      window.scrollTo({ top, left: 0, behavior: reduceMotion ? 'auto' : top ? 'auto' : 'smooth' });
+      window.scrollTo({ top, left: 0, behavior: reduceMotion || performanceMode === 'economy' ? 'auto' : top ? 'auto' : 'smooth' });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [mainSection]);
+  }, [mainSection, performanceMode]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setShowSplash(false), 1350);
+    const timer = window.setTimeout(() => setShowSplash(false), 420);
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    void refreshOcrQueue();
+    const handle = scheduleIdleTask(() => { void refreshOcrQueue(); }, 1800);
+    return () => cancelIdleTask(handle);
   }, []);
 
   useEffect(() => {
@@ -752,7 +752,6 @@ export function CardVisionApp() {
       .then((next) => {
         if (!mounted) return;
         setHistory(next);
-        if (next.length) void persistHistoryStore(next);
       })
       .catch(() => {
         if (mounted) setHistory([]);
@@ -822,7 +821,7 @@ export function CardVisionApp() {
           if (typeof snapshot.playerCardImage === 'string') setPlayerCardImage(snapshot.playerCardImage);
           if (typeof snapshot.fileName === 'string') setFileName(snapshot.fileName);
           if (typeof snapshot.ocrDone === 'boolean') setOcrDone(snapshot.ocrDone);
-          if (snapshot.objective) setObjective(normalizeObjective(snapshot.objective));
+          setObjective('COMPETITIVE');
           if (snapshot.targetPosition) setTargetPosition(snapshot.targetPosition);
           if (snapshot.cardPositionOverride) setCardPositionOverride(snapshot.cardPositionOverride);
           if (typeof snapshot.playstyleOverride === 'string') setPlaystyleOverride(snapshot.playstyleOverride);
@@ -887,6 +886,7 @@ export function CardVisionApp() {
   }, [vaultFolders]);
 
   useEffect(() => {
+    if (loading) return;
     const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
     if (!hasWork) {
       try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
@@ -925,10 +925,10 @@ export function CardVisionApp() {
       } catch {
         setSessionSaveState('error');
       }
-    }, 450);
+    }, 1400);
 
     return () => window.clearTimeout(timer);
-  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId, loading]);
 
   // v25.77: a ficha não é mais salva automaticamente ao finalizar.
   // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
@@ -2650,7 +2650,7 @@ export function CardVisionApp() {
   const homeSuggestedAction = homeAttentionTotal > 0 ? smartHome.nextAction : onboardingProfile?.goal === 'elenco' ? 'Abra Meu Time e revise setores sem cobertura.' : onboardingProfile?.goal === 'formacoes' ? `Analise a formação ${onboardingProfile.favoriteFormation}.` : onboardingProfile?.goal === 'treino' ? 'Abra uma ficha salva e registre uma partida real.' : 'Crie ou revise a próxima ficha do seu elenco.';
   const vaultReadiness = dashboardStats.total ? Math.round((dashboardStats.complete / dashboardStats.total) * 100) : 0;
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
-  const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
+  const creationObjectiveLabel = 'Competitivo online';
   const creationTargetLabel = targetPosition === 'AUTO'
     ? 'Definir na revisão'
     : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition;
@@ -3206,13 +3206,11 @@ export function CardVisionApp() {
               </div>
 
               <div className="creation-essential-grid">
-                <label className="creation-field-card">
-                  <span>Perfil de performance</span>
-                  <select value={objective} onChange={(event) => setObjective(event.target.value as Objective)}>
-                    {objectives.map((item) => <option key={item.value} value={item.value}>{item.title} — {item.hint}</option>)}
-                  </select>
-                  <small>{creationObjectiveLabel}</small>
-                </label>
+                <div className="creation-field-card creation-definitive-mode" role="status" aria-label="Modo competitivo online">
+                  <span>Objetivo fixo</span>
+                  <strong>Competitivo online</strong>
+                  <small>O motor entrega somente a ficha com maior impacto real em partidas, eventos e amistosos.</small>
+                </div>
 
                 <label className="creation-field-card creation-field-priority">
                   <span>Função alvo em campo</span>
