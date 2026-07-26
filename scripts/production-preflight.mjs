@@ -40,12 +40,12 @@ const playWorkflow = read('.github/workflows/build-play-store.yml');
 const capacitor = read('capacitor.config.ts');
 const tsconfig = JSON.parse(read('tsconfig.json'));
 
-check(version === '30.50.0', 'Versão v30.50 configurada', version);
+check(version === '31.00.0', 'Versão v31.00 configurada', version);
 check(lock.version === version && lock.packages?.['']?.version === version, 'package-lock sincronizado');
 check(appUpdates.includes(`'${version}'`), 'Motor de atualização sincronizado');
 check(dataSafety.includes(`APP_DATA_VERSION = '${version}'`) && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v30.50' && manifest.short_name === 'BuildMaster v30.50', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v30-50'), 'Cache PWA renovado');
+check(manifest.name === 'BuildMaster Elite Tático v31.00' && manifest.short_name === 'BuildMaster v31.00', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v31-00'), 'Cache PWA renovado');
 check(!/@import\s+['"]/i.test(css) && css.includes('.bm-v3000-play-publication'), 'Tema de produção consolidado');
 check(layout.includes('bm-v3000-play-publication'), 'Escopo visual v30 ativo');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp'), 'Rota inicial correta');
@@ -53,9 +53,9 @@ check(capacitor.includes("appId: 'com.buildmaster.elitetatico'") && capacitor.in
 for (const command of ['npm run release:preflight', 'npm run quality:syntax', 'npm run quality:interactive', 'npm run typecheck', 'npm run test:all']) check(workflow.includes(command), `Workflow APK executa ${command}`);
 for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
 for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
-check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run quality:audit', 'Bateria atual configurada');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run quality:audit', 'Bateria atual configurada');
 check(new Set(tsconfig.exclude ?? []).has('tests/types-v3000'), 'Fixtures isoladas fora do typecheck principal');
-check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts'), 'Regressões atuais presentes');
+check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-00-unified-intelligence-regression.ts'), 'Regressões atuais presentes');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 for (const file of [
   'src/lib/productionReadiness.ts',
@@ -83,8 +83,12 @@ for (const file of [
   'src/lib/competitiveBuildFusion.ts',
   'src/lib/localAiEngine.ts',
   'src/modules/card-reader/cardArtCrop.ts',
-  'src/modules/card-reader/highPrecisionOcr.ts'
-  ,'src/modules/card-reader/imageProcessing.ts'
+  'src/modules/card-reader/highPrecisionOcr.ts',
+  'src/modules/card-reader/imageProcessing.ts',
+  'src/lib/skillIntelligenceV31.ts',
+  'src/lib/unifiedCardIntelligence.ts',
+  'src/components/result/UnifiedIntelligenceCard.tsx',
+  'tests/types-v3100/tsconfig.json'
 ]) check(exists(file), `Componente de produção presente: ${file}`);
 check(read('src/components/CardVisionApp.tsx').split('\n').length < 4000, 'CardVisionApp abaixo de 4.000 linhas');
 check(read('src/lib/analyzer.ts').split('\n').length < 3500, 'Analyzer abaixo de 3.500 linhas');

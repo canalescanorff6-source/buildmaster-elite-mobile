@@ -1,43 +1,31 @@
-BUILDMASTER ELITE TÁTICO v30.50 — LEITURA ULTRAPRECISA + INTELIGÊNCIA PROFUNDA
+BUILDMASTER ELITE TÁTICO v31.00 — INTELIGÊNCIA TOTAL DA CARTA
 
-Padrão inicial:
-- tema escuro Obsidian
-- modo econômico
-- movimento reduzido
-- ferramentas avançadas desligadas
-- início sempre aberto na tela principal
-- leitor com um único print
+Incluído:
+- Leitura Ultraprecisa local e recorte somente da carta
+- DNA Competitivo 2.0
+- mais de 500 tentativas no Simulador Profundo
+- ficha, habilidades e Ímpeto calculados juntos
+- cinco habilidades oficiais e personalizadas por carta
+- bloqueio de habilidades nativas, especiais e já concluídas
+- aprendizado por partidas
+- teste A/B com Ficha A e Ficha B
+- planos testados reaproveitados pela análise seguinte
+- Motor Mundial com referências auditadas
+- cache limitado e painéis avançados carregados sob demanda
 - uma única Ficha Competitiva Definitiva
-- Motor Mundial com consenso auditado e partidas reais
-- índice Pro online com fallback offline
 
-Simplificado:
-- início
-- navegação
-- criação por imagem
-- criação manual
-- lista de jogadores
-- resultado da ficha
-- habilidades
-- instruções de uso
-- ajustes básicos
+Proteções:
+- posição escolhida pelo usuário preservada
+- orçamento real nunca ultrapassado
+- nomes oficiais mantidos
+- dados duvidosos enviados para confirmação
+- nenhuma API de IA paga
+- listas genéricas idênticas de habilidades evitadas
 
 Removido do pacote:
 - .git e histórico local
 - node_modules, .next, out e Android gerado
-- arquivos temporários e caches
-- módulo órfão sem uso
+- APK, AAB, keystore e credenciais
+- caches e arquivos temporários
 
-Não copie outra pasta .git. Preserve apenas a .git da clonagem atual do GitHub Desktop.
-
-Novidades v30.50:
-- consenso multietapas para o nome e os campos críticos
-- correções locais aprendidas e catálogo de nomes conhecidos
-- bloqueio seguro quando a leitura não atinge confiança suficiente
-- validação de faixas plausíveis para números e dados físicos
-- leitor adaptativo para prints de perfil completo
-- 26 atributos e 13 posições lidos separadamente
-- técnico, bônus, condições, Ímpetos, habilidades e modelo físico
-- simulador local de distribuições com uma única ficha vencedora
-- sinergias por posição e faixas competitivas
-- nenhum serviço de IA pago
+Ao colocar no GitHub, preserve somente a pasta .git da clonagem atual.

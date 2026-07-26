@@ -2,7 +2,7 @@ import type { PositionCode } from '@/lib/analyzerDomain';
 import type { SingleFieldEvidence, SinglePrintSession } from './singlePrintPro';
 import { officialPlaystyleForLabel, readOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 
-export const OCR_VISION_VERSION = '30.50.0';
+export const OCR_VISION_VERSION = '31.00.0';
 
 export type OcrVisionFieldStatus = 'trusted' | 'review' | 'blocked';
 

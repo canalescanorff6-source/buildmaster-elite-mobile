@@ -5,6 +5,16 @@ import { PanelLoadingFallback } from '@/components/PanelLoadingFallback';
 
 const fallback = () => <PanelLoadingFallback />;
 
+
+export const ResultCard = dynamic(
+  () => import('@/components/result/ResultWorkspace').then((module) => module.ResultCard),
+  { ssr: false, loading: fallback }
+);
+export const ReviewPanel = dynamic(
+  () => import('@/components/result/ResultWorkspace').then((module) => module.ReviewPanel),
+  { ssr: false, loading: fallback }
+);
+
 export const PlayerLaboratory = dynamic(
   () => import('@/modules/players/PlayerLaboratory').then((module) => module.PlayerLaboratory),
   { ssr: false, loading: fallback }

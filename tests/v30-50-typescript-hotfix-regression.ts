@@ -14,4 +14,4 @@ assert.match(precision, /readingMode: 'balanced' \| 'precision' \| 'fast'/);
 assert.match(precision, /if \(mode !== 'precision'\)/);
 assert.match(processing, /type PixelBuffer = Uint8ClampedArray<ArrayBufferLike>/);
 
-console.log('v30.50 hotfix TypeScript do OCR aprovado.');
+console.log('v31.00 hotfix TypeScript do OCR aprovado.');

@@ -74,6 +74,7 @@ import type {
 } from '@/modules/card-reader/singlePrintPro';
 import type { TotalReadingSession } from '@/lib/totalCardReader';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
+import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -239,6 +240,10 @@ function trainingSummary(plan: Record<string, number>) {
     .join(' • ');
 }
 
+function trainingSignature(plan: Record<string, number>) {
+  return Object.entries(plan).sort(([left], [right]) => left.localeCompare(right)).map(([key, value]) => `${key}:${value}`).join('|');
+}
+
 
 const FEEDBACK_LABELS: Array<{ key: MatchFeedbackKey; label: string }> = [
   { key: 'workedWell', label: 'Jogou bem' }, { key: 'feltSlow', label: 'Ficou lento' },
@@ -250,8 +255,9 @@ const FEEDBACK_LABELS: Array<{ key: MatchFeedbackKey; label: string }> = [
 
 function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
   const storageId = `${result.parsed.internalId}:${result.bestPosition.code}`;
+  const abTest = result.unifiedIntelligence?.simulation.abTest;
   const [feedbacks, setFeedbacks] = useState<MatchFeedback[]>([]);
-  const [draft, setDraft] = useState<MatchFeedback>({ rating: 7, minutes: 90 });
+  const [draft, setDraft] = useState<MatchFeedback>({ rating: 7, minutes: 90, abVariant: 'A' });
   useEffect(() => {
     try {
       const all = JSON.parse(readAccountStorage(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
@@ -260,9 +266,31 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
   }, [storageId]);
   const report = useMemo(() => buildCalibrationReport(result, feedbacks), [result, feedbacks]);
   const advanced = useMemo(() => buildAdvancedCalibration(result, feedbacks), [result, feedbacks]);
+  const abProgress = useMemo(() => {
+    const calculate = (variant: 'A' | 'B') => {
+      const items = feedbacks.filter((item) => item.abVariant === variant);
+      const ratings = items.map((item) => Number(item.rating)).filter(Number.isFinite);
+      return { count: items.length, average: ratings.length ? Number((ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1)) : null };
+    };
+    return { A: calculate('A'), B: calculate('B') };
+  }, [feedbacks]);
   function saveFeedback() {
-    const item: MatchFeedback = { ...draft, createdAt: new Date().toISOString(), buildSignature: signatureForResult(result), buildLabel: result.buildName, managerId: result.tacticalProfile.managerId, managerName: result.tacticalProfile.managerName, formation: result.tacticalProfile.formation, tacticalStyle: result.tacticalProfile.style, predictedScore: Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0) };
-    const next = [item, ...feedbacks].slice(0, 20);
+    const selectedVariant = draft.abVariant === 'B' && abTest?.available ? 'B' : 'A';
+    const selectedPlan = selectedVariant === 'B' && abTest?.available ? abTest.variantB : abTest?.variantA ?? result.training;
+    const item: MatchFeedback = {
+      ...draft,
+      abVariant: abTest?.available ? selectedVariant : undefined,
+      trainingPlan: selectedPlan,
+      createdAt: new Date().toISOString(),
+      buildSignature: trainingSignature(selectedPlan),
+      buildLabel: abTest?.available ? `Teste A/B • Ficha ${selectedVariant}` : result.buildName,
+      managerId: result.tacticalProfile.managerId,
+      managerName: result.tacticalProfile.managerName,
+      formation: result.tacticalProfile.formation,
+      tacticalStyle: result.tacticalProfile.style,
+      predictedScore: Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)
+    };
+    const next = [item, ...feedbacks].slice(0, 30);
     setFeedbacks(next);
     try {
       const all = JSON.parse(readAccountStorage(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
@@ -270,12 +298,21 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
       writeAccountStorage(CALIBRATION_STORAGE_KEY, JSON.stringify(all));
       window.dispatchEvent(new CustomEvent(COMPETITIVE_FUSION_EVENT));
     } catch {}
-    setDraft({ rating: 7, minutes: 90 });
+    setDraft({ rating: 7, minutes: 90, abVariant: selectedVariant });
   }
   return <div className="result-section-grid">
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker">Resultados reais</p><h3>Calibração pós-partida</h3></div><span>{report.sampleCount} jogo(s)</span></div>
       <p className="panel-note">Registre o que você realmente sentiu em campo. O app procura padrões repetidos, mas nunca altera sua ficha sem sua decisão.</p>
+      {abTest?.available && <div className="bm-ab-feedback-selector">
+        <strong>Qual ficha você usou nesta partida?</strong>
+        <div className="chip-cloud purple">
+          <button type="button" className={(draft.abVariant ?? 'A') === 'A' ? 'active' : ''} onClick={() => setDraft((current) => ({ ...current, abVariant: 'A' }))}>Ficha A • principal</button>
+          <button type="button" className={draft.abVariant === 'B' ? 'active' : ''} onClick={() => setDraft((current) => ({ ...current, abVariant: 'B' }))}>Ficha B • teste</button>
+        </div>
+        <small>{draft.abVariant === 'B' ? trainingSummary(abTest.variantB) : trainingSummary(abTest.variantA)}</small>
+        <div className="bm-ab-progress-row"><span>A: {abProgress.A.count}/5 • média {abProgress.A.average ?? '--'}</span><span>B: {abProgress.B.count}/5 • média {abProgress.B.average ?? '--'}</span></div>
+      </div>}
       <div className="chip-cloud purple">{FEEDBACK_LABELS.map(({key,label}) => <button type="button" key={key} className={draft[key] ? 'active' : ''} onClick={() => setDraft((current) => ({ ...current, [key]: !current[key] }))}>{draft[key] ? '✓ ' : ''}{label}</button>)}</div>
       <div className="data-grid">
         <label><span>Minutos jogados</span><input inputMode="numeric" value={draft.minutes ?? 90} onChange={(e) => setDraft((current) => ({...current, minutes: Number(e.target.value) || 0}))}/></label>
@@ -661,6 +698,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               </div>
             </details>
           </article>}
+
+          <UnifiedIntelligenceCard result={result} />
 
           {result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
             <div className="section-title-row">

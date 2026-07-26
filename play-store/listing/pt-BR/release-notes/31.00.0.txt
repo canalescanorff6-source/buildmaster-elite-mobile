@@ -1,0 +1,1 @@
+Versão 31.00: adiciona DNA Competitivo 2.0, mais de 500 simulações por carta, ficha/habilidades/Ímpeto calculados juntos, habilidades personalizadas sem repetir as já existentes, aprendizado por partidas e teste A/B. Também melhora desempenho com cache limitado e carregamento sob demanda, mantendo a leitura ultraprécisa e o recorte somente da carta.

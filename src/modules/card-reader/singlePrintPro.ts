@@ -534,7 +534,7 @@ export function buildSinglePrintSession(input: {
         confidence: Math.min(91, confidence),
         status: 'review' as const,
         reason: `${detailed.reason} O valor permanece em revisão porque as passagens locais não chegaram ao consenso exigido.`,
-        sourceLabel: 'Leitor detalhado v30.50',
+        sourceLabel: 'Leitor detalhado v31.00',
         sourceText: detailed.value
       };
     }
@@ -545,7 +545,7 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor detalhado v30.50',
+      sourceLabel: 'Leitor detalhado v31.00',
       sourceText: detailed.value
     };
   });

@@ -48,7 +48,7 @@ assert.ok(explicitImpeto.impetos.some((item) => item.name === 'Chute' && item.va
 const base = analyzeCard(cardText, 'COMPETITIVE', 'CF', 'atacante-teste.png');
 const result = applyLocalAiToResult(applyCompetitiveFusionToResult(base));
 assert.equal(result.localAi?.mode, 'IA local sem API paga');
-assert.match(result.localAi?.engineVersion ?? '', /^30\.50-local-ai-/);
+assert.match(result.localAi?.engineVersion ?? '', /^31\.00-local-ai-/);
 assert.equal(result.localAi?.models.length, 6);
 assert.deepEqual(result.localAi?.models.map((item) => item.id), ['leitura', 'dna', 'funcao', 'ficha', 'habilidades', 'impeto']);
 assert.ok((result.localAi?.confidence ?? 0) >= 1 && (result.localAi?.confidence ?? 0) <= 100);
@@ -81,7 +81,7 @@ assert.match(pipeline, /applyDeepCardIntelligenceToResult/);
 assert.match(pipeline, /applyCompetitiveFusionToResult/);
 
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
-assert.match(css, /BuildMaster v30\.50 — IA local/);
+assert.match(css, /BuildMaster v31\.00 — IA local/);
 assert.match(css, /\.bm-ai-impeto-winner/);
 
-console.log('v30.50 IA local e recomendação visível de Ímpetos aprovadas.');
+console.log('v31.00 IA local e recomendação visível de Ímpetos aprovadas.');

@@ -2,7 +2,7 @@ import type { AnalysisResult, AttributeKey, DeepCardIntelligenceAnalysis, Positi
 import { TRAINING_LABELS } from './trainingEngine';
 import { TRAINING_KEYS, normalizeTrainingPlan, trainingPlanCost, trainingPlanTotalCost } from './trainingPlanCore';
 
-const ENGINE_VERSION = '30.50-deep-card-1';
+const ENGINE_VERSION = '31.00-deep-card-1';
 
 type Candidate = { source: string; plan: TrainingPlan; baseScore: number };
 

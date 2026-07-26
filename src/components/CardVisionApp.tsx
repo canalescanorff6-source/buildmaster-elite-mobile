@@ -111,6 +111,8 @@ import {
   PlayerLaboratory,
   PremiumExperience2Center,
   ProductionReadinessCenter,
+  ResultCard,
+  ReviewPanel,
   SmartQuickDock,
   StabilityDiagnosticsPanel,
   TotalCardReaderPanel,
@@ -139,11 +141,7 @@ import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
-import {
-  ResultCard,
-  ReviewPanel,
-  type ResultTabRequest
-} from '@/components/result/ResultWorkspace';
+import type { ResultTabRequest } from '@/components/result/ResultWorkspace';
 import { getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { loadEasyUiPreferences } from '@/lib/easyExperience';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';

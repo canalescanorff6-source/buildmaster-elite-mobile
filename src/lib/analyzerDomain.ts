@@ -503,6 +503,72 @@ export type DeepCardIntelligenceAnalysis = {
   summary: string;
 };
 
+
+export type UnifiedSkillDecision = {
+  name: string;
+  score: number;
+  priority: 'essencial' | 'alta' | 'complementar';
+  category: 'finalização' | 'passe' | 'drible' | 'defesa' | 'aérea' | 'físico' | 'goleiro' | 'mental';
+  gameplayImpact: string;
+  reasons: string[];
+  supportedBy: string[];
+  identityBoost: number;
+};
+
+export type DeepSimulationSummary = {
+  generatedCandidates: number;
+  validCandidates: number;
+  finalists: number;
+  winnerScore: number;
+  runnerUpScore: number;
+  scoreGap: number;
+  exactBudget: boolean;
+  evaluationDimensions: string[];
+  abTest: {
+    available: boolean;
+    minimumMatchesPerVariant: number;
+    variantA: TrainingPlan;
+    variantB: TrainingPlan;
+    differences: Array<{ key: TrainingKey; label: string; a: number; b: number }>;
+    instruction: string;
+  };
+};
+
+export type MatchLearningV31 = {
+  samples: number;
+  confidence: 'sem dados' | 'inicial' | 'moderada' | 'alta';
+  patterns: Array<{ signal: string; rate: number; training: TrainingKey; impact: string }>;
+  learnedWeights: Partial<Record<TrainingKey, number>>;
+  appliedInfluence: number;
+  testedPlans: Array<{ signature: string; plan: TrainingPlan; samples: number; averageRating: number; issueRate: number; performanceScore: number }>;
+  abComparison: {
+    variantASamples: number;
+    variantBSamples: number;
+    averageA: number | null;
+    averageB: number | null;
+    provisionalWinner: 'A' | 'B' | null;
+    ready: boolean;
+    note: string;
+  };
+  recommendation: string;
+};
+
+export type UnifiedCardIntelligenceAnalysis = {
+  engineVersion: string;
+  stages: { dna: string; simulator: string; integration: string; learning: string; refinement: string };
+  confidence: number;
+  finalTraining: TrainingPlan;
+  skillPlan: UnifiedSkillDecision[];
+  impetoPlan: { name: string | null; score: number; confidence: number; reason: string };
+  simulation: DeepSimulationSummary;
+  learning: MatchLearningV31;
+  gameplayChanges: string[];
+  protectedTraits: string[];
+  safeguards: string[];
+  performance: { computeMs: number; cacheHit: boolean; modulesLoadedOnDemand: string[] };
+  summary: string;
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -551,6 +617,7 @@ export type AnalysisResult = {
   competitiveFusion?: CompetitiveFusionSummary;
   localAi?: LocalAiAnalysis;
   deepCardIntelligence?: DeepCardIntelligenceAnalysis;
+  unifiedIntelligence?: UnifiedCardIntelligenceAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

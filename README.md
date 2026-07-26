@@ -1,134 +1,131 @@
-# BuildMaster Elite Tático v30.50 — Leitura Ultraprecisa + Inteligência Profunda
+# BuildMaster Elite Tático v31.00 — Inteligência Total da Carta
 
-O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface foi mantida simples; a análise avançada acontece por trás da tela.
+O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
 ## Fluxo principal
 
-1. Escolha **Criar ficha por print** ou **Preencher manualmente**.
-2. Confirme a carta, a posição desejada, a posição original, o estilo e os pontos disponíveis.
-3. O motor próprio calcula a progressão com custo real dos níveis e preservação da identidade da carta.
-4. O Motor Mundial compara apenas referências auditadas da mesma carta e usa seus registros de partidas como desempate.
-5. O resultado mostra uma ficha final, as habilidades pendentes, como usar e o nível de confiança.
+1. Importe um único print ou informe os dados manualmente.
+2. Confirme somente os campos que o leitor não conseguiu validar com segurança.
+3. Escolha a posição em que pretende usar o jogador.
+4. O app analisa DNA, corpo, atributos, estilo, pontos, habilidades, Ímpeto, referências profissionais e partidas reais.
+5. O resultado mostra uma única ficha, cinco habilidades personalizadas, um Ímpeto principal e a explicação da decisão.
 
+## Leitura Ultraprecisa local
 
+O leitor utiliza várias passagens locais da mesma imagem: cor, contraste, nitidez, binarização, inversão e áreas ampliadas. Nome, GER, posição, nível, atributos, habilidades e Ímpetos só são aceitos quando as leituras concordam e os valores passam pelas validações de plausibilidade.
 
-## Leitura Ultraprecisa local — v30.50
+- correção do nome com histórico confirmado e catálogo local;
+- separação entre carta, atributos, técnico, posições, habilidades e modelo corporal;
+- bloqueio de campos críticos sem consenso;
+- confiança individual por campo;
+- recorte automático mostrando somente a carta no resultado;
+- print original preservado para o OCR;
+- ajuste manual simples do recorte quando necessário.
 
-O leitor padrão trabalha com múltiplas passagens locais do mesmo campo, sem API de IA paga. Nome, posição, GER, nível e pontos são comparados entre versões da imagem em cor, contraste, nitidez, binarização e inversão. O app aceita automaticamente um campo crítico somente quando duas ou mais passagens independentes concordam.
+A meta de precisão próxima de 100% é tratada como **leitura segura**. Prints originais, completos e nítidos podem alcançar confiança muito alta; imagens cortadas, borradas ou comprimidas são enviadas para confirmação, em vez de gerar dados inventados.
 
-- nome conciliado com cartas confirmadas no histórico e com o catálogo local de jogadores conhecidos;
-- correções manuais aprendidas para a mesma identidade e o mesmo formato de print;
-- rótulos de atributos corrigidos por similaridade antes de aceitar o número associado;
-- limites plausíveis para GER, nível, altura, peso, idade, atributos, posições e Ímpetos;
-- leitura ultraprécisa aplicada tanto ao Print Único Pro quanto ao leitor com várias telas;
-- auditoria mostrando quantidade de passagens, concordância, precisão estimada e campos bloqueados;
-- campos críticos sem consenso não são transformados em verdade: a ficha final aguarda confirmação humana.
+## v30.60 — DNA Competitivo 2.0
 
-A meta de “quase 100%” é tratada como **leitura segura**, não como promessa impossível para qualquer imagem. Em um print original, nítido e completo, o sistema pode liberar a leitura automática quando a precisão estimada chega a 96% ou mais. Em print comprimido, cortado ou com texto encoberto, ele prefere bloquear o dado duvidoso em vez de inventar um nome ou número.
+O motor identifica o que torna cada carta diferente:
 
-## Recorte inteligente da carta — v30.50
+- forças que devem ser preservadas;
+- fraquezas que realmente atrapalham a função escolhida;
+- sinergias entre velocidade, aceleração, equilíbrio, controle, passe, físico e consciência;
+- altura, pernas, alcance, salto e colisão corporal;
+- estilo oficial e comportamento provável em campo;
+- faixas funcional, competitiva, excelente e excesso com pouco retorno;
+- proteção contra fichas genéricas copiadas para cartas diferentes.
 
-Ao importar qualquer print, o aplicativo mantém a imagem completa somente para a leitura de nome, atributos, habilidades, Ímpetos e demais dados. Para a ficha e o Cofre, ele detecta e mostra **somente a carta do jogador**, em formato vertical, limpo e compacto.
+## v30.70 — Simulador Profundo
 
-- detecção local sem API paga;
-- enquadramento automático pela borda, contraste e proporção da carta;
-- recorte corrigido novamente quando o leitor reconhece o tipo exato da tela;
-- controles simples para mover, aproximar, afastar ou redetectar;
-- imagem original disponível apenas em “Ver print completo”;
-- resultado sem GER, posição ou estilo duplicados sobre a própria carta.
+A Inteligência Total executa **mais de 500 tentativas de distribuição** e compara as alternativas válidas por:
 
-A leitura sempre usa o arquivo original completo. Ajustar o recorte visual não remove informações do OCR.
+- orçamento real e custo progressivo dos níveis;
+- retorno marginal de cada ponto;
+- preservação da identidade;
+- sinergia dos atributos;
+- proximidade de referências profissionais da carta exata;
+- qualidade das habilidades adicionais;
+- compatibilidade do Ímpeto;
+- padrões aprendidos nas partidas.
 
-## Inteligência Profunda da Carta
+Somente uma distribuição é exibida como vencedora.
 
-A v30.50 acrescenta:
-- **leitura detalhada de perfis completos**: identifica nome, estilo, GER, posição, nível, altura, peso, idade, condição, técnico, bônus, Ímpetos, 13 posições, 26 atributos, sequência de progressão, modelo físico e habilidades;
-- **geometria adaptativa do print**: quando detecta uma tela detalhada, o leitor troca automaticamente as áreas de OCR para não misturar atributos, posições, habilidades e medidas físicas;
-- **simulador local de distribuições**: compara a ficha atual, variantes do motor, fusão profissional, cenários de tolerância e redistribuições controladas;
-- **sinergias por função**: avalia combinações como ataque ao espaço, giro e criação, defesa de cobertura, domínio aéreo e proteção do corredor;
-- **faixas competitivas**: separa atributo excelente, competitivo e que ainda precisa de correção;
-- **modelo físico integrado**: usa comprimento das pernas, raio de cobertura, altura de salto, colisão de tronco e atributos físicos como evidência, sem transformar valores duvidosos em fatos;
-- **IA local sem API paga**: os motores explicáveis rodam no aparelho e não dependem de ChatGPT, Gemini ou assinatura externa;
-- **Ímpeto integrado à ficha e às habilidades**: a recomendação cruza função, distribuição, atributos, habilidades existentes e Ímpetos já detectados;
-- **proteção contra OCR enganoso**: a ordem visual da progressão fica marcada para confirmação quando os ícones não permitem saber o nome exato de cada grupo.
+## v30.80 — Ficha, habilidades e Ímpeto integrados
 
-## Motor Mundial de Fichas
+A progressão, as habilidades e o Ímpeto são calculados no mesmo processo. Uma alteração na ficha muda a nota das habilidades e do Ímpeto, evitando recomendações desconectadas.
 
-- índice mundial de jogadores competitivos verificados, separado entre mobile e console;
-- base online atualizável no Supabase, com lista local segura para uso offline;
-- busca protegida de vídeos pela YouTube Data API, sem expor a chave no APK;
-- pesquisa montada com jogador, tipo/edição da carta, overall, posição e gamer tag;
-- OCR do print da progressão e confirmação manual antes de aceitar números;
-- auditoria de carta exata, orçamento de pontos, posição, plataforma e autoridade da fonte;
-- fusão entre motor próprio, consenso profissional e desempenho nas partidas registradas;
-- limites de influência para impedir cópia cega ou descaracterização da carta;
-- uma única **Ficha Competitiva Definitiva — Motor Mundial**.
+### Habilidades personalizadas
 
-O aplicativo não baixa vídeos, não raspa conteúdo protegido e não inventa progressões. Uma referência só entra no cálculo depois que os blocos são registrados e a identidade da carta é validada.
+- somente nomes oficiais cadastrados;
+- nenhuma habilidade nativa, especial ou já marcada como concluída é repetida;
+- a lista considera posição, estilo, corpo, atributos, ficha final e ações mais frequentes;
+- cartas da mesma posição recebem pacotes diferentes quando corpo, atributos ou estilo mudam;
+- habilidades de efeito ou pouco úteis recebem penalidade quando não melhoram a jogabilidade real;
+- o motor limita excesso de habilidades da mesma categoria;
+- cada indicação mostra impacto, evidências e prioridade.
 
-## Regras de segurança da ficha
+O sistema evita **listas genéricas idênticas**, mas não proíbe uma habilidade realmente essencial de aparecer em duas cartas diferentes quando ela for correta para ambas.
 
-- nenhuma fonte: o motor próprio decide;
-- uma fonte exata: serve como evidência, sem dominar o resultado;
-- duas ou mais fontes compatíveis: o consenso pode fazer pequenos ajustes;
-- consenso forte: alteração limitada e sempre dentro do orçamento real;
-- dados contraditórios: prevalece a solução mais segura;
-- histórico suficiente de partidas: o desempenho do usuário vira critério de desempate;
-- todas as diferenças e guardrails ficam explicados no resultado.
+### Ímpeto integrado
 
-## Experiência e desempenho
+O app compara os Ímpetos com a ficha vencedora, os atributos já altos, a função e os Ímpetos existentes. Ele escolhe um principal e explica por que alternativas teriam menor retorno.
 
-- tema Obsidian escuro, contraste reforçado e detalhes dourados;
-- início com ações diretas e navegação móvel reduzida;
-- leitor padrão com um único print;
-- ferramentas avançadas desligadas por padrão;
-- OCR, pesquisa mundial e módulos pesados carregados somente quando utilizados;
-- movimento reduzido e modo econômico como padrão;
-- habilidades já adicionadas podem ser marcadas, deixando visíveis apenas as pendentes;
-- Central de Atualizações destacada nos Ajustes.
+## v30.90 — Aprendizado pelas partidas e teste A/B
 
-## Configuração do Supabase
+Na ficha final, o usuário registra rapidamente o que sentiu:
 
-Aplique todas as migrações e publique as Edge Functions pelo workflow **Publicar contas e licenças no Supabase**.
+- giro;
+- passe;
+- finalização;
+- posicionamento;
+- físico;
+- cansaço;
+- nota e minutos jogados.
 
-Secrets do GitHub necessários para o workflow:
+Padrões só influenciam depois de se repetirem. O motor nunca ultrapassa o orçamento nem altera a posição escolhida.
+
+Quando existem duas distribuições próximas, o app cria um teste A/B:
+
+- Ficha A: principal;
+- Ficha B: variação controlada;
+- mínimo de cinco partidas comparáveis em cada uma;
+- notas, problemas e plano usado ficam salvos;
+- um vencedor provisório só é declarado quando há amostra suficiente;
+- planos testados com bom desempenho voltam como candidatos na análise seguinte.
+
+## v31.00 — Refinamento e desempenho
+
+- motor novo separado em módulos próprios;
+- resultado avançado carregado sob demanda;
+- cache limitado das últimas análises;
+- OCR, fontes profissionais, laboratório A/B e auditoria carregados apenas quando necessários;
+- uma única ficha na tela principal;
+- ferramentas técnicas mantidas fora do modo simples;
+- projeto limpo, sem `.git`, `node_modules`, builds antigos, APK, AAB ou credenciais.
+
+`CardVisionApp.tsx` e `analyzer.ts` ainda são arquivos grandes e permanecem monitorados pela auditoria. A lógica nova foi criada fora deles para evitar crescimento adicional e reduzir risco de regressão.
+
+## Motor Mundial
+
+O Motor Mundial usa somente referências verificadas da carta exata. Ele compara plataforma, edição, posição, pontos, data e autoridade da fonte. As referências profissionais entram como evidência controlada; não substituem cegamente o motor próprio nem o histórico do usuário.
+
+A busca automática de vídeos requer a YouTube Data API executada no Supabase. Sem a chave, o app continua funcionando e abre uma pesquisa pronta no YouTube.
+
+## Supabase
+
+Secrets usados pelo workflow de implantação:
 
 ```text
 SUPABASE_ACCESS_TOKEN
 SUPABASE_PROJECT_ID
 SUPABASE_DB_PASSWORD
+YOUTUBE_DATA_API_KEY   # opcional, somente para busca interna de vídeos
 ```
 
-Para ativar a busca automática protegida de vídeos, adicione também:
+Nunca exponha a chave do YouTube como variável `NEXT_PUBLIC`.
 
-```text
-YOUTUBE_DATA_API_KEY
-```
-
-Essa chave é enviada ao Supabase como Secret de servidor. Nunca use `NEXT_PUBLIC_YOUTUBE_DATA_API_KEY` e nunca coloque a chave dentro do APK.
-
-A nova infraestrutura está em:
-
-```text
-supabase/migrations/202607260001_v3010_world_pro_registry.sql
-supabase/functions/pro-build-search/index.ts
-```
-
-Sem a chave do YouTube, o aplicativo continua funcionando e abre uma pesquisa exata no YouTube como fallback.
-
-## Variáveis públicas do build
-
-Use `.env.example` como referência:
-
-```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION
-NEXT_PUBLIC_GOOGLE_PLAY_CLOUD_PROJECT_NUMBER
-NEXT_PUBLIC_BUILDMASTER_UPDATE_BETA_URL
-```
-
-## Comandos de validação
+## Validação
 
 ```bash
 npm ci --no-audit --no-fund
@@ -136,36 +133,16 @@ npm run typecheck
 npm run test:all
 npm run build
 npm run release:play-preflight
+npm run release:preflight
 ```
 
-## Estrutura do pacote
+Os testes isolados atuais também podem ser executados por versão:
 
-- `src/`: interface, OCR e motores de análise;
-- `public/`: PWA, ícones e Service Worker;
-- `scripts/`: auditoria, integridade, builds e pré-voos;
-- `tests/`: regressões de publicação e Motor Mundial;
-- `supabase/`: contas, licenças, índice Pro e Edge Functions;
-- `play-store/`: materiais e notas da Google Play;
-- `.github/workflows/`: APK direto, AAB e Supabase.
+```bash
+npm run test:v3050
+npm run test:v3100
+```
 
 ## Colocar no GitHub
 
-Preserve somente a pasta oculta `.git` da clonagem atual. Apague os outros arquivos antigos e copie o conteúdo deste pacote para a raiz do repositório.
-
-A raiz correta contém diretamente:
-
-```text
-src
-scripts
-tests
-public
-supabase
-play-store
-.github
-package.json
-package-lock.json
-```
-
-## Segurança do pacote
-
-O arquivo entregue não inclui `.git`, `node_modules`, `.next`, `out`, Android gerado, APK, AAB, keystore, senha, chave privada ou credencial.
+Preserve somente a pasta oculta `.git` da clonagem atual. Apague os demais arquivos antigos e copie o conteúdo deste pacote para a raiz do repositório. A raiz correta deve conter diretamente `src`, `tests`, `scripts`, `public`, `supabase`, `play-store`, `.github`, `package.json` e `package-lock.json`.
