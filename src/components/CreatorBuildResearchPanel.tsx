@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ClipboardCopy,
   ExternalLink,
+  Globe2,
   ImagePlus,
   Loader2,
   Plus,
@@ -13,7 +14,8 @@ import {
   Search,
   ShieldCheck,
   Trash2,
-  TriangleAlert
+  TriangleAlert,
+  Trophy
 } from 'lucide-react';
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from '@/lib/analyzerDomain';
 import { validateImageFile } from '@/modules/images/imageSafety';
@@ -37,6 +39,15 @@ import {
   type CreatorDevice,
   type CreatorPlatform
 } from '@/lib/creatorBuildResearch';
+import {
+  listWorldPros,
+  loadWorldProRegistry,
+  registryFreshnessLabel,
+  searchWorldProVideos,
+  worldProTierLabel,
+  type WorldProProfile,
+  type WorldProVideoCandidate
+} from '@/lib/worldProRegistry';
 
 const AUTHORITY_LABELS: Record<CreatorAuthority, string> = {
   PRO_PLAYER: 'Pro player confirmado',
@@ -82,6 +93,11 @@ export function CreatorBuildResearchPanel({ result }: { result: AnalysisResult }
   const [formOpen, setFormOpen] = useState(false);
   const [status, setStatus] = useState('');
   const [ocrBusy, setOcrBusy] = useState(false);
+  const [proSearchBusy, setProSearchBusy] = useState<string | null>(null);
+  const [proSearchStatus, setProSearchStatus] = useState('');
+  const [proVideos, setProVideos] = useState<WorldProVideoCandidate[]>([]);
+  const [worldPros, setWorldPros] = useState<WorldProProfile[]>(() => listWorldPros('TODOS'));
+  const [worldProSource, setWorldProSource] = useState<'ONLINE' | 'LOCAL'>('LOCAL');
   const screenshotInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -93,10 +109,52 @@ export function CreatorBuildResearchPanel({ result }: { result: AnalysisResult }
     return () => window.removeEventListener(CREATOR_BUILD_RESEARCH_EVENT, refresh);
   }, [result.parsed.internalId, result.parsed.playerName, result.parsed.cardType, result.trainingPointsTotal]);
 
+  useEffect(() => {
+    let active = true;
+    void loadWorldProRegistry('TODOS').then((registry) => {
+      if (!active) return;
+      setWorldPros(registry.profiles);
+      setWorldProSource(registry.source);
+    });
+    return () => { active = false; };
+  }, []);
+
   const searchUrls = useMemo(() => creatorSearchUrls(result), [result]);
   const searchQuery = useMemo(() => creatorSearchQuery(result), [result]);
   const consensus = useMemo(() => buildCreatorBuildConsensus(result, sources), [result, sources]);
   const draftCost = useMemo(() => creatorTrainingCost(draft.training), [draft.training]);
+
+  async function searchWithWorldPro(profile: WorldProProfile) {
+    setProSearchBusy(profile.id);
+    setProSearchStatus(`Pesquisando a carta exata com ${profile.gamerTag}…`);
+    setProVideos([]);
+    try {
+      const response = await searchWorldProVideos(result, profile);
+      setProSearchStatus(response.message);
+      if (response.videos.length) setProVideos(response.videos);
+      else window.open(response.fallbackUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setProSearchBusy(null);
+    }
+  }
+
+  function useProVideo(video: WorldProVideoCandidate, profile?: WorldProProfile) {
+    const device: CreatorDevice = profile?.platform === 'CONSOLE' ? 'CONSOLE' : profile?.platform === 'AMBOS' ? 'AMBOS' : 'MOBILE';
+    setDraft((current) => ({
+      ...current,
+      url: video.url,
+      platform: 'YOUTUBE',
+      authority: profile ? 'PRO_PLAYER' : 'TOP_RANK',
+      verifiedProId: profile?.id || '',
+      device,
+      channel: video.channel || profile?.gamerTag || '',
+      country: profile?.country || current.country,
+      title: video.title || current.title,
+      publishedAt: video.publishedAt ? video.publishedAt.slice(0, 10) : null
+    }));
+    setFormOpen(true);
+    setStatus('Vídeo selecionado. Agora leia o print da progressão e confirme a carta exata antes de salvar.');
+  }
 
   function updateDraft<K extends keyof CreatorBuildSource>(key: K, value: CreatorBuildSource[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -164,6 +222,10 @@ ${ocrNote}` : ocrNote };
       setStatus('Informe o canal ou criador para que a fonte possa ser auditada.');
       return;
     }
+    if (candidate.authority === 'PRO_PLAYER' && !candidate.verifiedProId) {
+      setStatus('Para usar peso de pro player, selecione o vídeo pelo Índice Mundial Verificado. Fontes manuais podem ser salvas como ranking alto ou criador.');
+      return;
+    }
     if (!Object.values(candidate.training).some((value) => value > 0)) {
       setStatus('Preencha pelo menos um bloco da ficha mostrada no vídeo.');
       return;
@@ -212,6 +274,24 @@ ${ocrNote}` : ocrNote };
 
     <p className="panel-note">O app não copia uma ficha apenas porque ela tem overall alto. Cada vídeo fica vinculado ao jogador, tipo da carta, edição, posição, orçamento de pontos e plataforma. Fontes de cartas diferentes são separadas automaticamente.</p>
 
+    <section className="world-pro-network">
+      <div className="section-title-row">
+        <div><p className="kicker"><Globe2 size={14} /> Índice mundial verificado</p><h4>Pesquisar a carta com jogadores de elite</h4></div>
+        <span>{registryFreshnessLabel(worldPros)} • {worldProSource === 'ONLINE' ? 'base online' : 'base offline'}</span>
+      </div>
+      <p className="panel-note">O índice confirma a autoridade competitiva. A progressão só influencia a ficha depois que vídeo, print e versão exata da carta passam pela auditoria.</p>
+      <div className="world-pro-grid">{worldPros.map((profile) => <article key={profile.id}>
+        <div className="world-pro-head"><Trophy size={16} /><span>{worldProTierLabel(profile.tier)}</span><em>{profile.platform}</em></div>
+        <strong>{profile.gamerTag}</strong><small>{profile.country} • autoridade {profile.authorityScore}/100</small><p>{profile.achievement}</p>
+        <div className="world-pro-actions"><button type="button" disabled={proSearchBusy === profile.id} onClick={() => void searchWithWorldPro(profile)}>{proSearchBusy === profile.id ? <Loader2 size={15} className="spin" /> : <Search size={15} />} Buscar ficha desta carta</button><a href={profile.officialSourceUrl} target="_blank" rel="noreferrer" aria-label={`Abrir fonte oficial de ${profile.gamerTag}`}><ShieldCheck size={15} /></a></div>
+      </article>)}</div>
+      {proSearchStatus && <p className="creator-status" role="status">{proSearchStatus}</p>}
+      {proVideos.length > 0 && <div className="world-pro-video-results">{proVideos.map((video) => {
+        const profile = worldPros.find((item) => video.gamerTag === item.gamerTag);
+        return <article key={video.id}><div><strong>{video.title}</strong><span>{video.channel}{video.publishedAt ? ` • ${video.publishedAt.slice(0, 10).split('-').reverse().join('/')}` : ''}</span></div><button type="button" onClick={() => useProVideo(video, profile)}>Usar como fonte</button><a href={video.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a></article>;
+      })}</div>}
+    </section>
+
     <section className="creator-search-strip">
       <div>
         <Search size={18} />
@@ -237,7 +317,7 @@ ${ocrNote}` : ocrNote };
         <label>Plataforma<select value={draft.platform} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft('platform', event.target.value as CreatorPlatform)}>{Object.entries(PLATFORM_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Canal ou criador<input value={draft.channel} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('channel', event.target.value)} placeholder="Nome do canal" /></label>
         <label className="span-2">Título do vídeo<input value={draft.title} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('title', event.target.value)} /></label>
-        <label>Autoridade<select value={draft.authority} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft('authority', event.target.value as CreatorAuthority)}>{Object.entries(AUTHORITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Autoridade<select value={draft.authority} onChange={(event: ChangeEvent<HTMLSelectElement>) => setDraft((current) => ({ ...current, authority: event.target.value as CreatorAuthority, verifiedProId: event.target.value === 'PRO_PLAYER' ? current.verifiedProId : '' }))}>{Object.entries(AUTHORITY_LABELS).map(([value, label]) => <option key={value} value={value} disabled={value === 'PRO_PLAYER' && !draft.verifiedProId}>{label}{value === 'PRO_PLAYER' && !draft.verifiedProId ? ' (use o índice)' : ''}</option>)}</select></label>
         <label>Plataforma de jogo<select value={draft.device} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft('device', event.target.value as CreatorDevice)}>{Object.entries(DEVICE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>País/região<input value={draft.country} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('country', event.target.value)} placeholder="Brasil, Japão..." /></label>
         <label>Data do vídeo<input type="date" value={draft.publishedAt || ''} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('publishedAt', event.target.value || null)} /></label>

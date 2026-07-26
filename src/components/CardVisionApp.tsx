@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import {
@@ -132,7 +131,8 @@ import { readOpponentMatchPlans, replaceOpponentMatchPlans } from '@/modules/opp
 import { exportCommunityState, importCommunityState, type CommunityShareKind } from '@/modules/community/communitySharing';
 import { exportCommercialState, importCommercialState, resolveCommercialEntitlements } from '@/modules/commercial/commercialization';
 import { exportPlayStorePublicationState, importPlayStorePublicationState } from '@/modules/publication/playStorePublication';
-import { exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
+import { CREATOR_BUILD_RESEARCH_EVENT, exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
+import { COMPETITIVE_FUSION_EVENT, applyCompetitiveFusionToResult } from '@/lib/competitiveBuildFusion';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
@@ -212,7 +212,6 @@ import { premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiu
 import { CloudSyncCenter } from '@/modules/backup/CloudSyncCenter';
 import { AdministrationSecurityCenter } from '@/modules/administration/AdministrationSecurityCenter';
 import { buildCloudVaultPayload, buildSyncHealth, compareBackupEnvelopes, createBackupSnapshot, mergeBackupEnvelopes, normalizeCloudVaultPayload, pruneSnapshots, LAST_FULL_SYNC_STORAGE_KEY, type BackupSnapshot, type SectionConflict } from '@/modules/backup/syncBackupEngine';
-
 type ReadingMode = 'precision' | 'fast';
 type ReaderCaptureMode = 'single' | 'complete';
 type AppTheme = 'dark' | 'light';
@@ -223,19 +222,15 @@ type MotionPreference = 'system' | 'reduced' | 'full';
 type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-
 type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
-
 function navigationGroupFor(section: MainSection): MainNavigationGroup {
   if (section === 'inicio' || section === 'time' || section === 'partidas' || section === 'ajustes') return section;
   return 'jogadores';
 }
-
 function playerWorkspaceFor(section: MainSection): PlayerWorkspace {
   if (section === 'leitor' || section === 'manual' || section === 'resultado' || section === 'cofre') return section;
   return 'visao-geral';
 }
-
 function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorkspace = 'visao-geral'): MainSection {
   if (group !== 'jogadores') return group;
   return workspace === 'visao-geral' ? 'jogadores' : workspace;
@@ -385,6 +380,13 @@ export function CardVisionApp() {
   const [lastFullSyncAt, setLastFullSyncAt] = useState<string | null>(null);
   const [syncHealthEnvelope, setSyncHealthEnvelope] = useState<BackupEnvelope | null>(null);
   const restoredSessionRef = useRef(false);
+
+  useEffect(() => {
+    const refresh = () => setResult((current) => current ? applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(current)) : current);
+    const events = [CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT];
+    events.forEach((eventName) => window.addEventListener(eventName, refresh));
+    return () => events.forEach((eventName) => window.removeEventListener(eventName, refresh));
+  }, []);
 
   useEffect(() => {
     if (performanceMode === 'economy' || mainSection === 'inicio') return;
@@ -951,7 +953,7 @@ export function CardVisionApp() {
     writeDynamicRulePack(pack);
     setRulePackInfo(pack);
     setRulesStatus(message);
-    setResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    setResult((current) => current ? applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(current)) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
   }
 
@@ -1127,7 +1129,7 @@ export function CardVisionApp() {
     setPlayerCardImage(item.playerImage);
     setPreview(item.fullPreview ?? item.playerImage);
     setDraftResult(null);
-    setResult(item.result);
+    setResult(applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(item.result)));
     setManualMode(true);
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
@@ -2139,7 +2141,7 @@ export function CardVisionApp() {
     setCardPositionOverride('CF');
     setPlaystyleOverride('AUTO');
     setManualFields(emptyManualFields());
-    const nextResult = applyLocalCorrectionsToResult(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile));
+    const nextResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile)));
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
@@ -2302,7 +2304,7 @@ export function CardVisionApp() {
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
+      const autoResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile)));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
@@ -2478,7 +2480,7 @@ export function CardVisionApp() {
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile));
+      const autoResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile)));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
@@ -2535,7 +2537,7 @@ export function CardVisionApp() {
       if (safeObjective !== objective) setObjective(safeObjective);
       const lockedText = textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
-      const nextResult = applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
+      const nextResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile)));
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
         if (singlePrintSession) {
@@ -2585,7 +2587,7 @@ export function CardVisionApp() {
   }
 
   function refreshResultWithCorrections(message: string) {
-    setResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    setResult((current) => current ? applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(current)) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
     setStatus(message);
   }

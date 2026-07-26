@@ -1,59 +1,131 @@
-# BuildMaster Elite Tático v30.00 — Experiência Essencial
+# BuildMaster Elite Tático v30.10 — Experiência Essencial + Motor Mundial
 
-Esta edição reconstrói a experiência principal do aplicativo para funcionar de maneira simples, escura e direta no celular.
+O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface foi mantida simples; a análise avançada acontece por trás da tela.
 
-## Como o aplicativo funciona
+## Fluxo principal
 
-1. Na tela inicial, escolha **Criar ficha por print** ou **Preencher manualmente**.
-2. Informe a carta e confirme somente posição, posição original e estilo.
-3. O BuildMaster gera uma única **Ficha Competitiva Definitiva**.
-4. Consulte apenas quatro áreas: ficha final, habilidades, como usar e exportar.
-5. Salve o jogador para encontrá-lo em **Meus jogadores**.
+1. Escolha **Criar ficha por print** ou **Preencher manualmente**.
+2. Confirme a carta, a posição desejada, a posição original, o estilo e os pontos disponíveis.
+3. O motor próprio calcula a progressão com custo real dos níveis e preservação da identidade da carta.
+4. O Motor Mundial compara apenas referências auditadas da mesma carta e usa seus registros de partidas como desempate.
+5. O resultado mostra uma ficha final, as habilidades pendentes, como usar e o nível de confiança.
 
-As ferramentas técnicas continuam no projeto, mas ficam ocultas no modo simples. Elas só aparecem quando **Ferramentas avançadas** é ativado em Ajustes.
+## Motor Mundial de Fichas
 
-## Melhorias desta reconstrução
+A v30.10 acrescenta:
 
-- tema escuro Obsidian com detalhes dourados e contraste maior;
-- tela inicial com três ações principais e linguagem direta;
-- navegação móvel reduzida a Início, Jogadores, Nova ficha, Meu Time e Menu;
+- índice mundial de jogadores competitivos verificados, separado entre mobile e console;
+- base online atualizável no Supabase, com lista local segura para uso offline;
+- busca protegida de vídeos pela YouTube Data API, sem expor a chave no APK;
+- pesquisa montada com jogador, tipo/edição da carta, overall, posição e gamer tag;
+- OCR do print da progressão e confirmação manual antes de aceitar números;
+- auditoria de carta exata, orçamento de pontos, posição, plataforma e autoridade da fonte;
+- fusão entre motor próprio, consenso profissional e desempenho nas partidas registradas;
+- limites de influência para impedir cópia cega ou descaracterização da carta;
+- uma única **Ficha Competitiva Definitiva — Motor Mundial**.
+
+O aplicativo não baixa vídeos, não raspa conteúdo protegido e não inventa progressões. Uma referência só entra no cálculo depois que os blocos são registrados e a identidade da carta é validada.
+
+## Regras de segurança da ficha
+
+- nenhuma fonte: o motor próprio decide;
+- uma fonte exata: serve como evidência, sem dominar o resultado;
+- duas ou mais fontes compatíveis: o consenso pode fazer pequenos ajustes;
+- consenso forte: alteração limitada e sempre dentro do orçamento real;
+- dados contraditórios: prevalece a solução mais segura;
+- histórico suficiente de partidas: o desempenho do usuário vira critério de desempate;
+- todas as diferenças e guardrails ficam explicados no resultado.
+
+## Experiência e desempenho
+
+- tema Obsidian escuro, contraste reforçado e detalhes dourados;
+- início com ações diretas e navegação móvel reduzida;
 - leitor padrão com um único print;
-- criação guiada em três passos;
-- página de jogadores sem filtros e controles duplicados;
-- datas inválidas corrigidas com retorno seguro;
-- resultado principal com uma única ficha, sem comparador ou variações visíveis;
-- Top 5 de habilidades sem mostrar alternativas no modo simples;
-- instruções de uso separadas em sem bola, saída, ataque e pressão;
-- tema claro antigo substituído automaticamente na primeira abertura desta edição;
-- modo econômico, movimento reduzido e ferramentas avançadas desativadas por padrão;
-- carregamentos de backup, partidas, índices e pré-carregamento adiados até serem necessários;
-- onboarding antigo não abre automaticamente.
+- ferramentas avançadas desligadas por padrão;
+- OCR, pesquisa mundial e módulos pesados carregados somente quando utilizados;
+- movimento reduzido e modo econômico como padrão;
+- habilidades já adicionadas podem ser marcadas, deixando visíveis apenas as pendentes;
+- Central de Atualizações destacada nos Ajustes.
 
-## Estrutura mantida
+## Configuração do Supabase
 
-- `src/`: aplicativo e motores necessários;
-- `public/`: PWA, ícones e recursos;
-- `scripts/`: auditoria, integridade e builds;
-- `tests/`: regressões atuais;
-- `supabase/`: contas, licenças e Edge Functions;
-- `play-store/`: materiais da Google Play;
-- `.github/workflows/`: APK direto, AAB e Supabase.
+Aplique todas as migrações e publique as Edge Functions pelo workflow **Publicar contas e licenças no Supabase**.
 
-## Comandos principais
+Secrets do GitHub necessários para o workflow:
+
+```text
+SUPABASE_ACCESS_TOKEN
+SUPABASE_PROJECT_ID
+SUPABASE_DB_PASSWORD
+```
+
+Para ativar a busca automática protegida de vídeos, adicione também:
+
+```text
+YOUTUBE_DATA_API_KEY
+```
+
+Essa chave é enviada ao Supabase como Secret de servidor. Nunca use `NEXT_PUBLIC_YOUTUBE_DATA_API_KEY` e nunca coloque a chave dentro do APK.
+
+A nova infraestrutura está em:
+
+```text
+supabase/migrations/202607260001_v3010_world_pro_registry.sql
+supabase/functions/pro-build-search/index.ts
+```
+
+Sem a chave do YouTube, o aplicativo continua funcionando e abre uma pesquisa exata no YouTube como fallback.
+
+## Variáveis públicas do build
+
+Use `.env.example` como referência:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION
+NEXT_PUBLIC_GOOGLE_PLAY_CLOUD_PROJECT_NUMBER
+NEXT_PUBLIC_BUILDMASTER_UPDATE_BETA_URL
+```
+
+## Comandos de validação
 
 ```bash
 npm ci --no-audit --no-fund
 npm run typecheck
 npm run test:all
 npm run build
+npm run release:play-preflight
 ```
+
+## Estrutura do pacote
+
+- `src/`: interface, OCR e motores de análise;
+- `public/`: PWA, ícones e Service Worker;
+- `scripts/`: auditoria, integridade, builds e pré-voos;
+- `tests/`: regressões de publicação e Motor Mundial;
+- `supabase/`: contas, licenças, índice Pro e Edge Functions;
+- `play-store/`: materiais e notas da Google Play;
+- `.github/workflows/`: APK direto, AAB e Supabase.
 
 ## Colocar no GitHub
 
 Preserve somente a pasta oculta `.git` da clonagem atual. Apague os outros arquivos antigos e copie o conteúdo deste pacote para a raiz do repositório.
 
-A raiz correta contém diretamente `src`, `scripts`, `tests`, `public`, `.github`, `package.json` e `package-lock.json`.
+A raiz correta contém diretamente:
 
-## Segurança
+```text
+src
+scripts
+tests
+public
+supabase
+play-store
+.github
+package.json
+package-lock.json
+```
 
-O pacote não inclui `.git`, `node_modules`, APK, AAB, keystore, senhas, chaves privadas ou credenciais.
+## Segurança do pacote
+
+O arquivo entregue não inclui `.git`, `node_modules`, `.next`, `out`, Android gerado, APK, AAB, keystore, senha, chave privada ou credencial.

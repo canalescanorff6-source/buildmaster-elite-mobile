@@ -58,6 +58,7 @@ import {
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
+import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
 import {
   getMergedCorrectionsForResult,
   type DynamicRulePack
@@ -266,6 +267,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
       const all = JSON.parse(readAccountStorage(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
       all[storageId] = next;
       writeAccountStorage(CALIBRATION_STORAGE_KEY, JSON.stringify(all));
+      window.dispatchEvent(new CustomEvent(COMPETITIVE_FUSION_EVENT));
     } catch {}
     setDraft({ rating: 7, minutes: 90 });
   }
@@ -630,6 +632,22 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <i><b style={{ width: `${pointPercent}%` }} /></i>
             </div>
           </article>
+
+          {result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
+            <div className="section-title-row">
+              <div><p className="kicker"><Trophy size={14} /> Motor Mundial de Fichas</p><h3>Evidência profissional + desempenho real</h3></div>
+              <span>{result.competitiveFusion.confidence}% • {result.competitiveFusion.confidenceLabel}</span>
+            </div>
+            <div className="bm-world-fusion-metrics">
+              <div><strong>{result.competitiveFusion.exactCardCount}</strong><span>fontes da carta exata</span></div>
+              <div><strong>{result.competitiveFusion.proSourceCount}</strong><span>pro players/ranking alto</span></div>
+              <div><strong>{result.competitiveFusion.professionalInfluence}%</strong><span>influência profissional</span></div>
+              <div><strong>{result.competitiveFusion.personalMatchSamples}</strong><span>partidas registradas</span></div>
+            </div>
+            <div className="bm-world-fusion-reasons">{result.competitiveFusion.reasons.slice(0, 3).map((reason) => <p key={reason}><ShieldCheck size={15} /> {reason}</p>)}</div>
+            {result.competitiveFusion.sourceNames.length > 0 && <p className="panel-note"><b>Fontes aceitas:</b> {result.competitiveFusion.sourceNames.join(', ')}.</p>}
+            <details className="bm-world-fusion-guardrails"><summary>Como o app evita copiar uma ficha errada</summary>{result.competitiveFusion.guardrails.map((item) => <p key={item}>• {item}</p>)}</details>
+          </article>}
 
           <article className="luxury-panel wide-card bm-simple-match-impact">
             <p className="kicker">O que deve mudar em campo</p>

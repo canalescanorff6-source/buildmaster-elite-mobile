@@ -15,6 +15,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
 
     steps:
       - name: Baixar código
@@ -36,6 +37,15 @@ jobs:
 
       - name: Aplicar migrações do banco
         run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Configurar busca protegida de fichas Pro
+        run: |
+          if [ -n "$YOUTUBE_DATA_API_KEY" ]; then
+            supabase secrets set YOUTUBE_DATA_API_KEY="$YOUTUBE_DATA_API_KEY" --project-ref "$SUPABASE_PROJECT_ID"
+            echo "YouTube Data API configurada no servidor."
+          else
+            echo "::warning::YOUTUBE_DATA_API_KEY não configurada. O app usará a pesquisa exata por link como fallback."
+          fi
 
       - name: Publicar Edge Functions
         run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"

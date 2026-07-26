@@ -434,6 +434,23 @@ export type CardDnaAnalysis = {
   note: string;
 };
 
+export type CompetitiveFusionSummary = {
+  engineVersion: string;
+  baseTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  professionalInfluence: number;
+  personalMatchSamples: number;
+  sourceCount: number;
+  exactCardCount: number;
+  proSourceCount: number;
+  confidence: number;
+  confidenceLabel: string;
+  reasons: string[];
+  guardrails: string[];
+  sourceNames: string[];
+  differences: Array<{ key: TrainingKey; from: number; to: number }>;
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -479,6 +496,7 @@ export type AnalysisResult = {
   maxPrecision?: MaxPrecisionAnalysis;
   eliteEvolution?: EliteEvolutionAnalysis;
   metaBuildUniverse?: MetaBuildUniverse;
+  competitiveFusion?: CompetitiveFusionSummary;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

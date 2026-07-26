@@ -1,0 +1,1 @@
+Versão 30.10: adiciona o Motor Mundial de Fichas, índice online atualizável de pro players, busca protegida no YouTube, auditoria por carta exata, fusão entre consenso competitivo e partidas reais, guardrails de orçamento e uma única Ficha Competitiva Definitiva. Também melhora desempenho, legibilidade, habilidades pendentes e acesso às atualizações.

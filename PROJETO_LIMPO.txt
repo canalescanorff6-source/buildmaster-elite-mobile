@@ -1,4 +1,4 @@
-BUILDMASTER ELITE TÁTICO v30.00 — EXPERIÊNCIA ESSENCIAL
+BUILDMASTER ELITE TÁTICO v30.10 — EXPERIÊNCIA ESSENCIAL
 
 Padrão inicial:
 - tema escuro Obsidian
@@ -8,6 +8,8 @@ Padrão inicial:
 - início sempre aberto na tela principal
 - leitor com um único print
 - uma única Ficha Competitiva Definitiva
+- Motor Mundial com consenso auditado e partidas reais
+- índice Pro online com fallback offline
 
 Simplificado:
 - início

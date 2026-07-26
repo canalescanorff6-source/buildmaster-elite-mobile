@@ -49,6 +49,7 @@ export type CreatorBuildSource = {
   id: string;
   platform: CreatorPlatform;
   authority: CreatorAuthority;
+  verifiedProId: string;
   device: CreatorDevice;
   url: string;
   title: string;
@@ -322,6 +323,7 @@ export function sanitizeCreatorSource(value: unknown, fallbackCard?: CreatorCard
     id: normalizeText(record.id, 120) || createStableId('creator-source'),
     platform,
     authority,
+    verifiedProId: normalizeText(record.verifiedProId, 80),
     device,
     url,
     title: normalizeText(record.title, 180) || `${card.playerName} • ficha de progressão`,
@@ -420,7 +422,9 @@ export function scoreCreatorSourceForResult(source: CreatorBuildSource, result: 
 
   const exactCard = score >= 82 && !warnings.some((warning) => warning === 'jogador diferente');
   const authorityWeight: Record<CreatorAuthority, number> = { PRO_PLAYER: 1.45, TOP_RANK: 1.30, CRIADOR: 1.0, COMUNIDADE: 0.72 };
-  let weight = authorityWeight[source.authority] * Math.max(0.35, score / 100);
+  const verifiedAuthority = source.authority === 'PRO_PLAYER' && !source.verifiedProId ? 'TOP_RANK' : source.authority;
+  if (source.authority === 'PRO_PLAYER' && !source.verifiedProId) warnings.push('pro player não vinculado ao índice verificado');
+  let weight = authorityWeight[verifiedAuthority] * Math.max(0.35, score / 100);
   if (source.testedInMatches) weight *= 1.14;
   if (source.device === 'MOBILE' || source.device === 'AMBOS') weight *= 1.08;
   return { source, score: Math.min(100, score), exactCard, reasons, warnings, weight };
@@ -479,7 +483,7 @@ export function buildCreatorBuildConsensus(result: AnalysisResult, sources = loa
 
   const { costByBlock, totalCost } = creatorTrainingCost(training);
   const exactCardCount = acceptedSources.filter((match) => match.exactCard).length;
-  const proSourceCount = acceptedSources.filter((match) => match.source.authority === 'PRO_PLAYER' || match.source.authority === 'TOP_RANK').length;
+  const proSourceCount = acceptedSources.filter((match) => (match.source.authority === 'PRO_PLAYER' && Boolean(match.source.verifiedProId)) || match.source.authority === 'TOP_RANK').length;
   const averageMatch = acceptedSources.length ? acceptedSources.reduce((sum, match) => sum + match.score, 0) / acceptedSources.length : 0;
   const averageAgreement = blocks.length ? blocks.reduce((sum, block) => sum + block.agreement, 0) / blocks.length : 0;
   const sampleScore = Math.min(100, acceptedSources.length * 18);
@@ -521,6 +525,7 @@ export function buildCreatorSourceDraft(result: AnalysisResult): CreatorBuildSou
     id: createStableId('creator-source'),
     platform: 'YOUTUBE',
     authority: 'CRIADOR',
+    verifiedProId: '',
     device: 'MOBILE',
     url: '',
     title: `${card.playerName} • ficha de progressão`,
