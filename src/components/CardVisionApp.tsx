@@ -22,6 +22,7 @@ import {
   Clock3,
   SlidersHorizontal,
   ImagePlus,
+  Keyboard,
   Loader2,
   LogOut,
   RotateCcw,
@@ -2633,12 +2634,6 @@ export function CardVisionApp() {
   const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
   const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
   const creationProgress = [20, 50, 75, 100][creationStage - 1];
-  const creationSteps = [
-    { number: 1, label: 'Entrada', detail: mainSection === 'leitor' ? (selectedFile?.name || 'Importar carta') : 'Dados manuais' },
-    { number: 2, label: 'Identidade', detail: 'Posição, estilo e pontos' },
-    { number: 3, label: 'Revisão', detail: 'Confirmar informações' },
-    { number: 4, label: 'Resultado', detail: 'Ficha final organizada' }
-  ];
   const recentVaultEntry = useMemo(() => {
     return [...history].sort((a, b) => {
       const aTime = Date.parse(String(a.updatedAt || a.savedAt)) || 0;
