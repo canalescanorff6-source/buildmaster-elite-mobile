@@ -29,7 +29,7 @@ on:
         type: string
         required: false
       release_version:
-        description: Versão nova opcional para rollback (ex. 29.21.0)
+        description: Versão nova opcional para rollback (ex. 30.01.0)
         type: string
         required: false
       rollback_from_version:
@@ -122,12 +122,12 @@ jobs:
           rollback_reason = os.environ.get('INPUT_ROLLBACK_REASON', '').strip()
           source_ref = os.environ.get('INPUT_SOURCE_REF', '').strip()
           if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', version):
-              raise SystemExit('release_version precisa usar o formato 29.70.0')
+              raise SystemExit('release_version precisa usar o formato 30.01.0')
           def version_tuple(value):
               return tuple(int(part) for part in value.split('.'))
           if rollback_from:
               if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', rollback_from):
-                  raise SystemExit('rollback_from_version precisa usar o formato 29.70.0')
+                  raise SystemExit('rollback_from_version precisa usar o formato 30.00.0')
               if not os.environ.get('INPUT_RELEASE_VERSION', '').strip() or not source_ref or not rollback_reason:
                   raise SystemExit('Rollback exige source_ref, release_version nova e rollback_reason.')
               if version_tuple(version) <= version_tuple(rollback_from):
@@ -137,7 +137,7 @@ jobs:
           if channel not in {'stable', 'beta'}:
               raise SystemExit('Canal inválido.')
           rollout = max(1, min(100, int(os.environ.get('INPUT_ROLLOUT', '100'))))
-          # A base de 60 milhões mantém a v29.x acima da série v28.x
+          # A base de 60 milhões mantém a sequência de versionCode monotônica entre versões principais.
           # sem ultrapassar o limite assinado do Android nas versões planejadas.
           run = max(1, int(os.environ['RUN_NUMBER'])) % 10000
           attempt = max(1, int(os.environ['RUN_ATTEMPT']))
@@ -563,7 +563,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             rm -f verify-release/immutable.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.70 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/30.00 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -614,7 +614,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-bridge.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.70 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/30.00 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -700,7 +700,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/29.70 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/30.00 Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
               -o verify-release/primary-manifest.json; then
@@ -739,7 +739,7 @@ jobs:
 
           URL=$(cat verify-release/primary-apk-url.txt)
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/29.70 Android' \
+            --user-agent 'BuildMaster-Elite-Tatico-Updater/30.00 Android' \
             --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
             "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk

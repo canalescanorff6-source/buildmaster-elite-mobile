@@ -30,8 +30,6 @@ function focusCurrentScreen() {
 export function PremiumQualityLayer() {
   const [showTop, setShowTop] = useState(false);
   const focusTimer = useRef<number | null>(null);
-  const scrollFrame = useRef<number | null>(null);
-  const showTopRef = useRef(false);
 
   useEffect(() => {
     let preference = readQualityPreference();
@@ -44,7 +42,6 @@ export function PremiumQualityLayer() {
     const onScreen = () => {
       if (!preference.restoreFocus) return;
       if (focusTimer.current) window.clearTimeout(focusTimer.current);
-      if (scrollFrame.current !== null) { window.cancelAnimationFrame(scrollFrame.current); scrollFrame.current = null; }
       focusTimer.current = window.setTimeout(focusCurrentScreen, 120);
     };
     const onError = (event: ErrorEvent) => {
@@ -60,16 +57,7 @@ export function PremiumQualityLayer() {
       const detail = (event as CustomEvent<StorageFailure>).detail;
       recordRuntimeQualityIssue({ source: 'storage', message: `${detail.operation} em ${detail.key}: ${detail.reason}` });
     };
-    const onScroll = () => {
-      if (scrollFrame.current !== null) return;
-      scrollFrame.current = window.requestAnimationFrame(() => {
-        scrollFrame.current = null;
-        const next = window.scrollY > 720;
-        if (next === showTopRef.current) return;
-        showTopRef.current = next;
-        setShowTop(next);
-      });
-    };
+    const onScroll = () => setShowTop(window.scrollY > 720);
 
     let observer: PerformanceObserver | null = null;
     if (typeof PerformanceObserver !== 'undefined') {
@@ -98,11 +86,10 @@ export function PremiumQualityLayer() {
       window.removeEventListener('scroll', onScroll);
       observer?.disconnect();
       if (focusTimer.current) window.clearTimeout(focusTimer.current);
-      if (scrollFrame.current !== null) window.cancelAnimationFrame(scrollFrame.current);
     };
   }, []);
 
   return <>
-    <button type="button" className={`bm-back-to-top ${showTop ? 'is-visible' : ''}`} onClick={() => window.scrollTo({ top: 0, behavior: document.querySelector('.performance-economy') ? 'auto' : 'smooth' })} aria-label="Voltar ao topo"><ArrowUp size={19} /></button>
+    <button type="button" className={`bm-back-to-top ${showTop ? 'is-visible' : ''}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Voltar ao topo"><ArrowUp size={19} /></button>
   </>;
 }

@@ -12,7 +12,6 @@ import {
   ScanText,
   Search,
   ShieldCheck,
-  Trophy,
   Trash2,
   TriangleAlert
 } from 'lucide-react';
@@ -38,7 +37,6 @@ import {
   type CreatorDevice,
   type CreatorPlatform
 } from '@/lib/creatorBuildResearch';
-import { preferredProSources, proSourceSearchUrl } from '@/lib/proPlayerSourceRegistry';
 
 const AUTHORITY_LABELS: Record<CreatorAuthority, string> = {
   PRO_PLAYER: 'Pro player confirmado',
@@ -99,7 +97,6 @@ export function CreatorBuildResearchPanel({ result }: { result: AnalysisResult }
   const searchQuery = useMemo(() => creatorSearchQuery(result), [result]);
   const consensus = useMemo(() => buildCreatorBuildConsensus(result, sources), [result, sources]);
   const draftCost = useMemo(() => creatorTrainingCost(draft.training), [draft.training]);
-  const proSources = useMemo(() => preferredProSources(result).slice(0, 5), [result]);
 
   function updateDraft<K extends keyof CreatorBuildSource>(key: K, value: CreatorBuildSource[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -179,7 +176,7 @@ ${ocrNote}` : ocrNote };
     setSources(next);
     setDraft(buildCreatorSourceDraft(result));
     setFormOpen(false);
-    setStatus('Fonte salva e incorporada à auditoria da ficha definitiva.');
+    setStatus('Fonte salva e incorporada à comparação desta carta.');
   }
 
   function removeSource(id: string) {
@@ -190,7 +187,7 @@ ${ocrNote}` : ocrNote };
 
   async function copyConsensus() {
     const text = [
-      `BuildMaster • referência Pro auditada • ${result.parsed.playerName}`,
+      `BuildMaster • consenso de criadores • ${result.parsed.playerName}`,
       `Carta: ${result.parsed.cardType || 'não informada'}${result.parsed.specialTag ? ` • ${result.parsed.specialTag}` : ''}`,
       planText(consensus.training),
       `Custo: ${consensus.totalCost}/${result.trainingPointsTotal} pontos`,
@@ -198,7 +195,7 @@ ${ocrNote}` : ocrNote };
     ].join('\n');
     try {
       await navigator.clipboard.writeText(text);
-      setStatus('Referência Pro copiada.');
+      setStatus('Ficha consenso copiada.');
     } catch {
       setStatus('Não foi possível copiar automaticamente neste aparelho.');
     }
@@ -207,13 +204,13 @@ ${ocrNote}` : ocrNote };
   return <article className="luxury-panel wide-card creator-build-research-card">
     <div className="section-title-row creator-research-heading">
       <div>
-        <p className="kicker">Radar Pro verificado • carta exata</p>
-        <h3>Referências que podem refinar a ficha definitiva</h3>
+        <p className="kicker">Pesquisa de fichas • YouTube, TikTok e criadores</p>
+        <h3>Comparador de progressão por carta exata</h3>
       </div>
       <span>{consensus.sourceCount} fonte(s) compatível(is)</span>
     </div>
 
-    <p className="panel-note">O BuildMaster entrega uma única ficha. Fontes externas só podem refiná-la quando o vídeo mostra a mesma carta, posição e orçamento de pontos. Nenhum número é inventado nem copiado apenas por ter overall alto.</p>
+    <p className="panel-note">O app não copia uma ficha apenas porque ela tem overall alto. Cada vídeo fica vinculado ao jogador, tipo da carta, edição, posição, orçamento de pontos e plataforma. Fontes de cartas diferentes são separadas automaticamente.</p>
 
     <section className="creator-search-strip">
       <div>
@@ -223,23 +220,6 @@ ${ocrNote}` : ocrNote };
       <a href={searchUrls.youtube} target="_blank" rel="noreferrer"><ExternalLink size={17} /> Pesquisar no YouTube</a>
       <a href={searchUrls.tiktok} target="_blank" rel="noreferrer"><ExternalLink size={17} /> Pesquisar no TikTok</a>
       <button type="button" onClick={() => setFormOpen((current) => !current)}><Plus size={17} /> Registrar vídeo</button>
-    </section>
-
-    <section className="pro-source-network" aria-label="Rede de pro players verificados">
-      <div className="section-title-row">
-        <div><p className="kicker"><Trophy size={14} /> Rede Pro verificada</p><h4>Campeões e competidores oficiais priorizados</h4></div>
-        <span>{proSources.length} referências</span>
-      </div>
-      <p className="panel-note">Os atalhos abrem uma busca específica pela carta. A ficha do pro player só entra no motor depois que os blocos da carta exata forem conferidos e registrados.</p>
-      <div className="pro-source-grid">{proSources.map((source) => <article className="pro-source-card" key={source.id}>
-        <div><span>{source.device === 'MOBILE' ? 'Mobile' : source.device === 'CONSOLE' ? 'Console' : 'Oficial'}</span><em>{source.country}</em></div>
-        <strong>{source.name}</strong>
-        <p>{source.achievement}</p>
-        <nav aria-label={`Fontes de ${source.name}`}>
-          <a href={proSourceSearchUrl(source, result)} target="_blank" rel="noreferrer"><Search size={14} /> Buscar esta carta</a>
-          <a href={source.proofUrl} target="_blank" rel="noreferrer"><ShieldCheck size={14} /> Verificar título</a>
-        </nav>
-      </article>)}</div>
     </section>
 
     {formOpen && <section className="creator-source-form">
@@ -285,7 +265,7 @@ ${ocrNote}` : ocrNote };
 
     <section className="creator-consensus-overview">
       <article className={`creator-confidence-card confidence-${consensus.confidenceLabel.replace(' ', '-')}`}>
-        <span>Confiança da referência</span><strong>{consensus.confidence}%</strong><small>{consensus.confidenceLabel}</small>
+        <span>Confiança do consenso</span><strong>{consensus.confidence}%</strong><small>{consensus.confidenceLabel}</small>
       </article>
       <article><span>Fontes aceitas</span><strong>{consensus.sourceCount}</strong><small>{consensus.exactCardCount} da carta exata</small></article>
       <article><span>Pro/ranking alto</span><strong>{consensus.proSourceCount}</strong><small>peso maior no consenso</small></article>
@@ -296,17 +276,17 @@ ${ocrNote}` : ocrNote };
     {consensus.warnings.map((warning) => <p key={warning} className="creator-warning"><TriangleAlert size={15} /> {warning}</p>)}
 
     <section className="creator-consensus-section">
-      <div className="section-title-row"><div><p className="kicker">Auditoria Pro</p><h4>Referência ponderada usada somente quando compatível</h4></div><button type="button" onClick={() => void copyConsensus()} disabled={!consensus.sourceCount}><ClipboardCopy size={16} /> Copiar</button></div>
+      <div className="section-title-row"><div><p className="kicker">Ficha mais repetida</p><h4>Consenso ponderado por bloco</h4></div><button type="button" onClick={() => void copyConsensus()} disabled={!consensus.sourceCount}><ClipboardCopy size={16} /> Copiar</button></div>
       <div className="creator-consensus-grid">{consensus.blocks.map((block) => <article key={block.key}>
         <span>{block.label}</span><strong>{block.value}</strong><small>{block.sampleCount ? `faixa ${block.min}–${block.max}` : 'sem dados'}</small><i><b style={{ width: `${block.agreement}%` }} /></i><em>{block.agreement}% de acordo</em>
       </article>)}</div>
     </section>
 
     {consensus.acceptedSources.length > 0 && <section className="creator-comparison-section">
-      <div className="section-title-row"><div><p className="kicker"><BarChart3 size={14} /> Auditoria técnica</p><h4>Comparador de progressão por carta exata</h4><small>Auditoria interna — apenas uma ficha é entregue</small></div><span>{consensus.acceptedSources.length} fonte(s)</span></div>
+      <div className="section-title-row"><div><p className="kicker"><BarChart3 size={14} /> Comparação completa</p><h4>Cada vídeo contra a ficha do BuildMaster</h4></div><span>{consensus.acceptedSources.length} fonte(s)</span></div>
       <div className="creator-comparison-scroll">
         <table className="creator-comparison-table"><thead><tr><th>Fonte</th>{CREATOR_TRAINING_KEYS.map((key) => <th key={key}>{CREATOR_TRAINING_LABELS[key]}</th>)}<th>Custo</th><th></th></tr></thead><tbody>
-          <tr className="creator-app-row"><td><strong>Ficha definitiva</strong><small>Resultado entregue ao usuário</small></td>{CREATOR_TRAINING_KEYS.map((key) => <td key={key}><b>{result.training[key]}</b></td>)}<td>{result.trainingPointsUsed}</td><td></td></tr>
+          <tr className="creator-app-row"><td><strong>BuildMaster atual</strong><small>Referência local</small></td>{CREATOR_TRAINING_KEYS.map((key) => <td key={key}><b>{result.training[key]}</b></td>)}<td>{result.trainingPointsUsed}</td><td></td></tr>
           {consensus.acceptedSources.map((match) => {
             const cost = creatorTrainingCost(match.source.training).totalCost;
             return <tr key={match.source.id}><td><a href={match.source.url} target="_blank" rel="noreferrer"><strong>{match.source.channel}</strong><small>{PLATFORM_LABELS[match.source.platform]} • compatibilidade {match.score}%</small></a></td>{CREATOR_TRAINING_KEYS.map((key) => <td key={key}><b>{match.source.training[key]}</b><small>{blockDifference(match.source.training[key], result.training[key])}</small></td>)}<td>{cost}</td><td><button type="button" onClick={() => removeSource(match.source.id)} aria-label={`Remover fonte ${match.source.channel}`}><Trash2 size={15} /></button></td></tr>;
@@ -327,6 +307,6 @@ ${ocrNote}` : ocrNote };
     </section>
 
     {status && <p className="creator-status" role="status">{status}</p>}
-    <details className="settings-details-card"><summary>Como a Rede Pro evita fichas erradas</summary><p className="panel-note">Ele compara nome, tipo da carta, edição especial, posição original, overall máximo e quantidade de pontos. Fontes abaixo de 62% não entram no consenso. Pro players e ranking alto recebem peso maior, mas não anulam divergências entre os blocos.</p></details>
+    <details className="settings-details-card"><summary>Como o módulo evita fichas erradas</summary><p className="panel-note">Ele compara nome, tipo da carta, edição especial, posição original, overall máximo e quantidade de pontos. Fontes abaixo de 62% não entram no consenso. Pro players e ranking alto recebem peso maior, mas não anulam divergências entre os blocos.</p></details>
   </article>;
 }

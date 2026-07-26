@@ -38,14 +38,6 @@
   "exclude": [
     "node_modules",
     "supabase/functions",
-    "tests/types-v2910",
-    "tests/types-v2920",
-    "tests/types-v2930",
-    "tests/types-v2940",
-    "tests/types-v2950",
-    "tests/types-v2960",
-    "tests/types-v2970",
-    "tests/types-v2980",
     "tests/types-v3000"
   ]
 }

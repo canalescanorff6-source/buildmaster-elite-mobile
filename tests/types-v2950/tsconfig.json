@@ -1,1 +1,0 @@
-{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"noEmit":true,"skipLibCheck":true,"baseUrl":"../..","paths":{"@/*":["src/*"]},"types":[]},"files":["../../src/modules/tactical-studio/tacticalStudio2Engine.ts","../../src/modules/opponents/opponentMatchAssistant.ts"]}

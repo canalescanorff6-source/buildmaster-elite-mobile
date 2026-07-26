@@ -25,6 +25,20 @@ export function ObservabilityBootstrap() {
       recordObservabilityEvent({ kind: 'storage', level: 'warning', area: 'storage', code: detail.operation, message: `${detail.operation} bloqueado para uma chave local.` });
     };
 
+    let observer: PerformanceObserver | null = null;
+    try {
+      if ('PerformanceObserver' in window) {
+        observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.duration < 120) continue;
+            recordObservabilityEvent({ kind: 'performance', level: entry.duration >= 500 ? 'warning' : 'info', area: 'main-thread', code: 'long-task', message: 'Tarefa longa detectada na interface.', durationMs: entry.duration });
+          }
+        });
+        observer.observe({ entryTypes: ['longtask'] });
+      }
+    } catch {
+      observer = null;
+    }
 
     window.addEventListener('buildmaster:screen-change', onScreen);
     window.addEventListener('error', onError);
@@ -35,6 +49,7 @@ export function ObservabilityBootstrap() {
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
       window.removeEventListener(STORAGE_FAILURE_EVENT, onStorage);
+      observer?.disconnect();
     };
   }, []);
 

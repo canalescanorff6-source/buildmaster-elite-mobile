@@ -1,22 +1,35 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const read=(f)=>fs.readFileSync(f,'utf8');
-const pkg=JSON.parse(read('package.json')); const lock=JSON.parse(read('package-lock.json'));
-assert.equal(pkg.version,'30.00.0'); assert.equal(lock.version,'30.00.0'); assert.equal(lock.packages[''].version,'30.00.0');
-assert.ok(pkg.scripts['test:all'].startsWith('npm run test:v3000 && npm run test:v2980'));
-assert.match(read('src/lib/dataSafety.ts'),/CURRENT_DATA_SCHEMA = 3000/);
-assert.match(read('src/lib/dataSafety.ts'),/APP_DATA_VERSION = '30\.00\.0'/);
-assert.ok(read('src/app/globals.css').trim().endsWith('@import "./design-system-v3000-play-publication.css";'));
+
+const read = (file) => fs.readFileSync(file, 'utf8');
+const pkg = JSON.parse(read('package.json'));
+const lock = JSON.parse(read('package-lock.json'));
+
+assert.equal(pkg.version, '30.00.0');
+assert.equal(lock.version, '30.00.0');
+assert.equal(lock.packages[''].version, '30.00.0');
+assert.equal(pkg.scripts['test:all'], 'npm run test:v3000 && npm run quality:audit');
+assert.match(read('src/lib/dataSafety.ts'), /CURRENT_DATA_SCHEMA = 3000/);
+assert.match(read('src/lib/dataSafety.ts'), /APP_DATA_VERSION = '30\.00\.0'/);
+
+const css = read('src/app/globals.css');
+assert.doesNotMatch(css, /@import\s+['"]/i, 'O tema precisa estar consolidado em um único arquivo.');
+assert.match(css, /bm-v3000-play-publication/);
+assert.match(css, /prefers-reduced-motion:\s*reduce/);
+
 assert.ok(read('src/app/layout.tsx').includes('bm-v3000-play-publication'));
 assert.ok(read('src/components/CardVisionApp.tsx').includes('PlayStorePublicationCenter'));
 assert.ok(read('src/components/CardVisionApp.tsx').includes('exportPlayStorePublicationState'));
-assert.ok(fs.existsSync('src/app/privacidade/page.tsx') && fs.existsSync('src/app/excluir-conta/page.tsx'));
-const rootPage=read('src/app/page.tsx');
-assert.match(rootPage,/AuthGate/,'A rota inicial precisa abrir a autenticação do aplicativo.');
-assert.match(rootPage,/CardVisionApp/,'A rota inicial precisa montar o BuildMaster após o login.');
-assert.doesNotMatch(rootPage,/Política de privacidade/,'A política de privacidade não pode substituir a tela inicial do APK.');
-assert.match(read('src/app/privacidade/page.tsx'),/Política de privacidade/);
+assert.ok(fs.existsSync('src/app/privacidade/page.tsx'));
+assert.ok(fs.existsSync('src/app/excluir-conta/page.tsx'));
+
+const rootPage = read('src/app/page.tsx');
+assert.match(rootPage, /AuthGate/, 'A rota inicial precisa abrir a autenticação do aplicativo.');
+assert.match(rootPage, /CardVisionApp/, 'A rota inicial precisa montar o BuildMaster após o login.');
+assert.doesNotMatch(rootPage, /Política de privacidade/, 'A política de privacidade não pode substituir a tela inicial do APK.');
+assert.match(read('src/app/privacidade/page.tsx'), /Política de privacidade/);
 assert.ok(fs.existsSync('supabase/functions/account-deletion-request/index.ts'));
 assert.ok(fs.existsSync('supabase/functions/play-integrity-verify/index.ts'));
-assert.equal(JSON.parse(read('public/manifest.webmanifest')).name,'BuildMaster Elite Tático v30.00');
-console.log('v30.00 integração de produção aprovada.');
+assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v30.00');
+
+console.log('v30.00 integração de produção limpa aprovada.');

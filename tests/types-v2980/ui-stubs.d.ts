@@ -1,9 +1,0 @@
-declare namespace JSX { type Element = unknown; interface IntrinsicElements { [elementName: string]: Record<string, unknown>; } }
-declare module 'react' {
-  export type SetStateAction<S> = S | ((previous: S) => S); export type Dispatch<A> = (value: A) => void;
-  export function useState<S>(initial: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
-  export function useMemo<T>(factory: () => T, dependencies: readonly unknown[]): T;
-  export function useRef<T>(initial: T): { current: T };
-}
-declare module 'react/jsx-runtime' { export const Fragment: unique symbol; export function jsx(type: unknown, props: unknown, key?: unknown): JSX.Element; export function jsxs(type: unknown, props: unknown, key?: unknown): JSX.Element; }
-declare module 'lucide-react' { type Icon = (props: Record<string, unknown>) => JSX.Element; export const BadgeCheck:Icon; export const CheckCircle2:Icon; export const Copy:Icon; export const Download:Icon; export const FileText:Icon; export const FileUp:Icon; export const Gift:Icon; export const KeyRound:Icon; export const Library:Icon; export const MessageSquare:Icon; export const PackagePlus:Icon; export const Scale:Icon; export const ShieldCheck:Icon; export const Star:Icon; export const UserRound:Icon; }

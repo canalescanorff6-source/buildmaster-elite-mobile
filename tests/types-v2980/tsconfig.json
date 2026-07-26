@@ -1,1 +1,0 @@
-{"compilerOptions":{"target":"ES2022","lib":["ES2022","DOM"],"module":"ESNext","moduleResolution":"Bundler","strict":true,"noEmit":true,"skipLibCheck":true,"baseUrl":"../..","paths":{"@/*":["src/*"]},"types":[],"noUnusedLocals":true,"noUnusedParameters":true},"files":["../../src/modules/community/communitySharing.ts","../../src/modules/commercial/commercialization.ts"]}

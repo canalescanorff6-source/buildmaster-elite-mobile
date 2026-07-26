@@ -78,7 +78,6 @@ export function PremiumExperienceLayer() {
     };
 
     const onPointerDown = (event: PointerEvent) => {
-      if (document.querySelector('.performance-economy')) return;
       if (!(event.target instanceof Element)) return;
       const target = event.target.closest<HTMLElement>('button, a, [role="button"], [data-premium-feedback]');
       if (!target || target.matches(':disabled,[aria-disabled="true"]')) return;

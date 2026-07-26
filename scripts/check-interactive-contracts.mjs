@@ -26,9 +26,7 @@ function walk(directory) {
 function attr(opening, name) {
   return opening.attributes.properties.find((property) => ts.isJsxAttribute(property) && property.name.text === name);
 }
-function tagName(opening) {
-  return opening.tagName.getText();
-}
+function tagName(opening) { return opening.tagName.getText(); }
 function hasText(node) {
   if (!ts.isJsxElement(node)) return false;
   return node.children.some((child) => {
@@ -74,23 +72,14 @@ for (const file of walk('src')) {
   visit(source);
 }
 
-const globals = fs.readFileSync('src/app/globals.css', 'utf8').trim();
-const productionCss = fs.readFileSync('src/app/design-system-v2920-production.css', 'utf8');
-const intelligenceCss = fs.readFileSync('src/app/design-system-v2930-intelligence-base.css', 'utf8');
-const playerLabCss = fs.readFileSync('src/app/design-system-v2940-rules-player-lab.css', 'utf8');
-const tacticalOpponentCss = fs.readFileSync('src/app/design-system-v2950-tactical-opponent.css', 'utf8');
-const antiDelayCoachCss = fs.readFileSync('src/app/design-system-v2960-anti-delay-coach.css', 'utf8');
-const premiumObservabilityCss = fs.readFileSync('src/app/design-system-v2970-premium-observability.css', 'utf8');
-const communityCommercialCss = fs.readFileSync('src/app/design-system-v2980-community-commercial.css', 'utf8');
-const playPublicationCss = fs.readFileSync('src/app/design-system-v3000-play-publication.css', 'utf8');
-const finalCss = `${productionCss}\n${intelligenceCss}\n${playerLabCss}\n${tacticalOpponentCss}\n${antiDelayCoachCss}\n${premiumObservabilityCss}\n${communityCommercialCss}\n${playPublicationCss}`;
-if (!globals.endsWith('@import "./design-system-v3000-play-publication.css";')) failures.push('A camada visual v30.00 não é a última importação global.');
-for (const required of ['@media (max-width: 900px)', '@media (max-width: 640px)', '@media (max-width: 380px)', ':focus-visible', 'min-height: 44px', 'prefers-reduced-motion: reduce']) {
-  if (!finalCss.includes(required)) failures.push(`Contrato responsivo ausente: ${required}`);
+const css = fs.readFileSync('src/app/globals.css', 'utf8');
+if (/@import\s+['"]/i.test(css)) failures.push('O tema ainda possui imports em cascata; o CSS precisa permanecer consolidado.');
+for (const required of ['@media (max-width: 900px)', '@media (max-width: 640px)', '@media (max-width: 380px)', ':focus-visible', 'min-height: 44px', 'prefers-reduced-motion: reduce', '.bm-v3000-play-publication']) {
+  if (!css.includes(required)) failures.push(`Contrato visual ausente: ${required}`);
 }
 if (buttons < 100) warnings.push(`Apenas ${buttons} botões foram encontrados; revisar se a varredura alcançou toda a interface.`);
 
-if (warnings.length) for (const warning of warnings) console.warn(`⚠ ${warning}`);
+for (const warning of warnings) console.warn(`⚠ ${warning}`);
 if (failures.length) {
   console.error(`Contratos interativos falharam em ${failures.length} ocorrência(s):`);
   for (const failure of failures.slice(0, 100)) console.error(`✗ ${failure}`);
