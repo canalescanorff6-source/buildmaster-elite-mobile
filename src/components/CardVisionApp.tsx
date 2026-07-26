@@ -1208,18 +1208,19 @@ export function CardVisionApp() {
 
   function toggleSavedSkill(skill: string) {
     if (!result) return;
-    const key = resultHistoryKey(result);
+    const key = resultHistoryKey(result), now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
-      const next = current.map((entry) => {
-        if (entry.id !== activeHistoryId && entry.saveKey !== key) return entry;
-        const skillProgress = ensureSkillProgress(entry.skillProgress, result.recommendedSkills);
-        skillProgress[skill] = !skillProgress[skill];
-        return appendSavedEvent({ ...entry, skillProgress }, skillProgress[skill] ? 'habilidade concluída' : 'habilidade pendente', skill);
-      });
-      void persistHistoryStore(next);
-      void pushCloudHistory(next, true);
+      const existing = current.find((entry) => entry.id === activeHistoryId || entry.saveKey === key);
+      const progress = ensureSkillProgress(existing?.skillProgress, result.recommendedSkills);
+      progress[skill] = !progress[skill];
+      const base: SavedAnalysis = existing ?? { id: createStableId('ficha'), saveKey: key, savedAt: now, updatedAt: now, rawText, playerImage: playerCardImage, fullPreview: preview?.startsWith('data:') ? preview : null, result, skillProgress: progress, notes: '', favorite: false, personalTags: [], tacticalRoleNote: '', changeLog: [] };
+      const item = appendSavedEvent({ ...base, updatedAt: now, skillProgress: progress }, progress[skill] ? 'habilidade concluída' : 'habilidade pendente', skill);
+      setActiveHistoryId(item.id);
+      const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
+      void persistHistoryStore(next); void pushCloudHistory(next, true);
       return next;
     });
+    setStatus(`Habilidade ${skill} marcada como ${activeSavedAnalysis?.skillProgress?.[skill] ? 'pendente' : 'já adicionada'}.`);
   }
 
   function readJsonStorage(key: string, fallback: unknown = null) {

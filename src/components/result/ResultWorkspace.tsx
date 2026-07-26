@@ -343,6 +343,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
     { label: 'Conferência/OCR', ok: result.validation?.level !== 'blocked', note: result.validation?.level === 'blocked' ? 'precisa revisar dados antes de usar' : 'análise liberada' }
   ];
   const skillInfo = skillProgressInfo(recommendedSkills, skillProgress);
+  const completedRecommendedSkills = recommendedSkills.filter((skill) => Boolean(skillProgress?.[skill]));
+  const pendingRecommendedSkills = recommendedSkills.filter((skill) => !skillProgress?.[skill]);
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
   const attributes = Object.entries(card.attributes).filter(([, value]) => Number.isFinite(value));
@@ -648,12 +650,29 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          <article className="luxury-panel compact-card">
-            <p className="kicker">Habilidades adicionais</p>
-            <div className="chip-cloud purple">
-              {recommendedSkills.length ? recommendedSkills.slice(0, 5).map((skill) => <span key={skill}>{skill}</span>) : <span>Nenhuma recomendação segura</span>}
+          <article className="luxury-panel wide-card bm-summary-skill-card">
+            <div className="section-title-row">
+              <div><p className="kicker">Habilidades adicionais</p><h3>Marque as que você já colocou</h3></div>
+              <span>{pendingRecommendedSkills.length} pendente(s)</span>
             </div>
-            <p className="panel-note">Somente habilidades que combinam com a função e não repetem as que a carta já possui.</p>
+            <p className="panel-note">Ao marcar uma habilidade, ela sai da lista pendente e fica guardada nesta carta. Toque novamente para desfazer.</p>
+            <div className="bm-skill-progress-columns">
+              <section>
+                <div className="bm-skill-progress-heading"><strong>Ainda faltam adicionar</strong><span>{pendingRecommendedSkills.length}</span></div>
+                <div className="bm-simple-skill-list">
+                  {pendingRecommendedSkills.length ? pendingRecommendedSkills.map((skill) => {
+                    const detail = skillRecommendations.find((item) => item.name === skill);
+                    return <button type="button" key={skill} onClick={() => onSkillToggle?.(skill)}><span aria-hidden="true">□</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>;
+                  }) : <div className="bm-skills-complete-message"><strong>✓ Todas foram adicionadas</strong><span>Esta carta não possui habilidade pendente.</span></div>}
+                </div>
+              </section>
+              <section>
+                <div className="bm-skill-progress-heading completed"><strong>Já adicionadas</strong><span>{completedRecommendedSkills.length}</span></div>
+                <div className="bm-simple-skill-list completed-list">
+                  {completedRecommendedSkills.length ? completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => onSkillToggle?.(skill)}><span aria-hidden="true">✓</span><div><strong>{skill}</strong><small>Já está aplicada nesta carta.</small></div><em>Desmarcar</em></button>) : <p className="panel-note">Nenhuma marcada ainda.</p>}
+                </div>
+              </section>
+            </div>
           </article>
 
           <article className="luxury-panel compact-card">
@@ -1029,15 +1048,15 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'habilidades' && !advancedMode && (
         <div className="result-section-grid bm-simple-skill-result">
           <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker">Habilidades adicionais</p><h3>As cinco que mais ajudam esta ficha</h3></div><span>{recommendedSkills.length}/5</span></div>
-            <p className="panel-note">A lista abaixo evita repetições e prioriza somente habilidades oficiais compatíveis com a posição escolhida.</p>
+            <div className="section-title-row"><div><p className="kicker">Habilidades adicionais</p><h3>Somente o que ainda falta</h3></div><span>{pendingRecommendedSkills.length}/{recommendedSkills.length}</span></div>
+            <p className="panel-note">Marque as já aplicadas. A lista principal passa a mostrar somente as habilidades pendentes.</p>
             <div className="bm-simple-skill-list">
-              {recommendedSkills.length ? recommendedSkills.map((skill, index) => {
-                const completed = Boolean(skillProgress?.[skill]);
+              {pendingRecommendedSkills.length ? pendingRecommendedSkills.map((skill, index) => {
                 const detail = skillRecommendations.find((item) => item.name === skill);
-                return <button type="button" key={skill} className={completed ? 'completed' : ''} onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>{completed ? 'Concluída' : 'Marcar'}</em></button>;
-              }) : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada para esta carta.</p>}
+                return <button type="button" key={skill} onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>;
+              }) : recommendedSkills.length ? <div className="bm-skills-complete-message"><strong>✓ Lista concluída</strong><span>Todas as habilidades recomendadas já foram adicionadas.</span></div> : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada para esta carta.</p>}
             </div>
+            {completedRecommendedSkills.length > 0 && <details className="bm-completed-skills-details"><summary>Ver {completedRecommendedSkills.length} já adicionada(s)</summary><div className="bm-simple-skill-list completed-list">{completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => onSkillToggle?.(skill)}><span>✓</span><div><strong>{skill}</strong><small>Toque para voltar à lista pendente.</small></div><em>Desmarcar</em></button>)}</div></details>}
           </article>
           <article className="luxury-panel wide-card">
             <p className="kicker">Habilidades que a carta já possui</p>

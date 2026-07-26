@@ -16,6 +16,12 @@ const css = read('src/app/globals.css');
 assert.doesNotMatch(css, /@import\s+['"]/i, 'O tema precisa estar consolidado em um único arquivo.');
 assert.match(css, /bm-v3000-play-publication/);
 assert.match(css, /prefers-reduced-motion:\s*reduce/);
+assert.match(css, /Correção de legibilidade observada no vídeo/, 'O tema escuro precisa manter a correção de contraste validada em aparelho.');
+const resultWorkspace = read('src/components/result/ResultWorkspace.tsx');
+assert.match(resultWorkspace, /Ainda faltam adicionar/, 'A ficha deve separar habilidades pendentes.');
+assert.match(resultWorkspace, /Já adicionadas/, 'A ficha deve manter visíveis as habilidades concluídas.');
+assert.match(resultWorkspace, /Marcar como feita/, 'A marcação de habilidades adicionais precisa continuar disponível.');
+assert.match(read('src/components/CardVisionApp.tsx'), /habilidade concluída/, 'A marcação de habilidade deve ser persistida no Cofre.');
 
 assert.ok(read('src/app/layout.tsx').includes('bm-v3000-play-publication'));
 assert.ok(read('src/components/CardVisionApp.tsx').includes('PlayStorePublicationCenter'));
