@@ -48,7 +48,7 @@ assert.ok(explicitImpeto.impetos.some((item) => item.name === 'Chute' && item.va
 const base = analyzeCard(cardText, 'COMPETITIVE', 'CF', 'atacante-teste.png');
 const result = applyLocalAiToResult(applyCompetitiveFusionToResult(base));
 assert.equal(result.localAi?.mode, 'IA local sem API paga');
-assert.match(result.localAi?.engineVersion ?? '', /^30\.20-local-ai-/);
+assert.match(result.localAi?.engineVersion ?? '', /^30\.30-local-ai-/);
 assert.equal(result.localAi?.models.length, 6);
 assert.deepEqual(result.localAi?.models.map((item) => item.id), ['leitura', 'dna', 'funcao', 'ficha', 'habilidades', 'impeto']);
 assert.ok((result.localAi?.confidence ?? 0) >= 1 && (result.localAi?.confidence ?? 0) <= 100);
@@ -74,11 +74,14 @@ assert.match(workspace, /Ver por que este ímpeto venceu/);
 assert.match(workspace, /Sem serviço de IA pago/);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-assert.match(app, /applyLocalAiToResult/);
-assert.match(app, /applyLocalCorrectionsToResult\(applyLocalAiToResult\(applyCompetitiveFusionToResult/);
+assert.match(app, /applyCompleteCardIntelligence/);
+const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
+assert.match(pipeline, /applyLocalAiToResult/);
+assert.match(pipeline, /applyDeepCardIntelligenceToResult/);
+assert.match(pipeline, /applyCompetitiveFusionToResult/);
 
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
-assert.match(css, /BuildMaster v30\.20 — IA local/);
+assert.match(css, /BuildMaster v30\.30 — IA local/);
 assert.match(css, /\.bm-ai-impeto-winner/);
 
-console.log('v30.20 IA local e recomendação visível de Ímpetos aprovadas.');
+console.log('v30.30 IA local e recomendação visível de Ímpetos aprovadas.');

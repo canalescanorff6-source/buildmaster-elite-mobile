@@ -635,6 +635,33 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
+          {result.deepCardIntelligence && <article className="luxury-panel wide-card bm-deep-card-intelligence">
+            <div className="section-title-row">
+              <div><p className="kicker"><BrainCircuit size={14} /> Inteligência Profunda da Carta</p><h3>Uma ficha escolhida após simulações locais</h3></div>
+              <span>{result.deepCardIntelligence.confidence}% • confiança {result.deepCardIntelligence.confidenceLabel}</span>
+            </div>
+            <p className="bm-local-ai-summary">{result.deepCardIntelligence.summary}</p>
+            <div className="bm-deep-card-metrics">
+              <div><strong>{result.deepCardIntelligence.validCandidates}</strong><span>fichas válidas comparadas</span></div>
+              <div><strong>{result.deepCardIntelligence.identityScore}</strong><span>identidade preservada</span></div>
+              <div><strong>{result.deepCardIntelligence.dataQuality}</strong><span>qualidade dos dados</span></div>
+              <div><strong>{result.deepCardIntelligence.winnerScore}</strong><span>nota da vencedora</span></div>
+            </div>
+            <div className="bm-deep-card-synergies">
+              {result.deepCardIntelligence.synergies.slice(0, 3).map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.score}/100</strong><small>{item.status}</small></div>)}
+            </div>
+            <details>
+              <summary>Entender por que esta ficha venceu</summary>
+              <div className="bm-deep-card-details">
+                <section><h4>Decisões principais</h4>{result.deepCardIntelligence.reasons.slice(0, 5).map((item) => <p key={item}>• {item}</p>)}</section>
+                <section><h4>Faixas competitivas</h4>{result.deepCardIntelligence.functionalRanges.slice(0, 6).map((item) => <p key={item.label}><b>{item.label}</b>: {item.current} → ideal {item.ideal} ({item.status})</p>)}</section>
+                {result.deepCardIntelligence.physicalInsights.length > 0 && <section><h4>Modelo físico</h4>{result.deepCardIntelligence.physicalInsights.map((item) => <p key={item}>• {item}</p>)}</section>}
+                <section><h4>Aprendizado pelas partidas</h4><p>{result.deepCardIntelligence.learning.samples} partida(s) • estado {result.deepCardIntelligence.learning.state}. {result.deepCardIntelligence.learning.recommendation}</p></section>
+                {result.deepCardIntelligence.warnings.length > 0 && <section className="alert-strip"><h4>Confirmar antes de aplicar</h4>{result.deepCardIntelligence.warnings.map((item) => <p key={item}>• {item}</p>)}</section>}
+              </div>
+            </details>
+          </article>}
+
           {result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
             <div className="section-title-row">
               <div><p className="kicker"><BrainCircuit size={14} /> IA local do BuildMaster</p><h3>Raciocínio no aparelho, sem API paga</h3></div>

@@ -1,6 +1,6 @@
 import type { PrintQualityIssue, PrintQualityReport } from './validation';
 
-export type OcrZoneKey = 'name' | 'overall' | 'mainPosition' | 'playstyle' | 'level' | 'points' | 'cardType' | 'attributes' | 'progression' | 'autoTraining' | 'positionGrid' | 'skills' | 'specialSkill';
+export type OcrZoneKey = 'name' | 'overall' | 'mainPosition' | 'playstyle' | 'level' | 'points' | 'cardType' | 'attributes' | 'progression' | 'autoTraining' | 'positionGrid' | 'skills' | 'specialSkill' | 'identityMeta' | 'condition' | 'manager' | 'impetos' | 'physicalModel';
 
 export type OcrZone = {
   key: OcrZoneKey;

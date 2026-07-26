@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v30.20 — IA Local + Ímpetos + Motor Mundial
+# BuildMaster Elite Tático v30.30 — Inteligência Profunda + Leitura Detalhada
 
 O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface foi mantida simples; a análise avançada acontece por trás da tela.
 
@@ -10,13 +10,20 @@ O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma 
 4. O Motor Mundial compara apenas referências auditadas da mesma carta e usa seus registros de partidas como desempate.
 5. O resultado mostra uma ficha final, as habilidades pendentes, como usar e o nível de confiança.
 
+## Inteligência Profunda da Carta
+
+A v30.30 acrescenta:
+- **leitura detalhada de perfis completos**: identifica nome, estilo, GER, posição, nível, altura, peso, idade, condição, técnico, bônus, Ímpetos, 13 posições, 26 atributos, sequência de progressão, modelo físico e habilidades;
+- **geometria adaptativa do print**: quando detecta uma tela detalhada, o leitor troca automaticamente as áreas de OCR para não misturar atributos, posições, habilidades e medidas físicas;
+- **simulador local de distribuições**: compara a ficha atual, variantes do motor, fusão profissional, cenários de tolerância e redistribuições controladas;
+- **sinergias por função**: avalia combinações como ataque ao espaço, giro e criação, defesa de cobertura, domínio aéreo e proteção do corredor;
+- **faixas competitivas**: separa atributo excelente, competitivo e que ainda precisa de correção;
+- **modelo físico integrado**: usa comprimento das pernas, raio de cobertura, altura de salto, colisão de tronco e atributos físicos como evidência, sem transformar valores duvidosos em fatos;
+- **IA local sem API paga**: os motores explicáveis rodam no aparelho e não dependem de ChatGPT, Gemini ou assinatura externa;
+- **Ímpeto integrado à ficha e às habilidades**: a recomendação cruza função, distribuição, atributos, habilidades existentes e Ímpetos já detectados;
+- **proteção contra OCR enganoso**: a ordem visual da progressão fica marcada para confirmação quando os ícones não permitem saber o nome exato de cada grupo.
+
 ## Motor Mundial de Fichas
-
-A v30.20 acrescenta:
-- **IA local sem API paga**: seis submotores explicáveis analisam leitura, DNA, função, ficha, habilidades e Ímpeto diretamente no aparelho.
-- **Ímpeto visível no modo simples**: a escolha principal agora possui aba própria, nota, confiança, atributos afetados, evidências e itens a evitar.
-- **Leitura anti-falso-positivo de Ímpeto**: nomes de habilidades como “Chute de primeira” não são mais confundidos com o Ímpeto “Chute”.
-
 
 - índice mundial de jogadores competitivos verificados, separado entre mobile e console;
 - base online atualizável no Supabase, com lista local segura para uso offline;

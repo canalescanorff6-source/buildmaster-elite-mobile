@@ -5,7 +5,7 @@ export default function PrivacyPolicyPage() {
     <article>
       <p className="kicker">BuildMaster Elite Tático</p>
       <h1>Política de privacidade</h1>
-      <p>Versão 2026.07 · atualizada para o BuildMaster v30.20.</p>
+      <p>Versão 2026.07 · atualizada para o BuildMaster v30.30.</p>
       <h2>Dados utilizados</h2>
       <p>O aplicativo utiliza dados da conta, licença e aparelhos vinculados para autenticação e controle de acesso. Fichas, imagens, formações, treinos, partidas, diagnósticos e preferências podem permanecer no aparelho e, quando o usuário aciona recursos de nuvem, ser enviados ao Supabase.</p>
       <h2>Finalidades</h2>

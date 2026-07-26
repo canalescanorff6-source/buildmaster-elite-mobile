@@ -1,8 +1,8 @@
 {
   "name": "buildmaster-elite-tatico-v30-play-production",
-  "version": "30.20.0",
+  "version": "30.30.0",
   "private": true,
-  "description": "BuildMaster v30.20 com Experiência Essencial, Motor Mundial, IA local sem API paga, recomendação inteligente de Ímpetos, AAB e publicação profissional.",
+  "description": "BuildMaster v30.30 com Inteligência Profunda da Carta, leitura detalhada de perfil completo, IA local sem API paga, Ímpetos, Motor Mundial e publicação profissional.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -27,7 +27,7 @@
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v3000": "tsc -p tests/types-v3000/tsconfig.json --pretty false && tsc -p tests/types-v3000/tsconfig-ui.json --pretty false",
     "test:v3000": "npm run typecheck:v3000 && node -r ./tests/_ts-require.cjs tests/v30-00-play-publication-regression.ts && node tests/v30-00-integrated-production-regression.mjs && node tests/v30-00-play-workflow-regression.mjs && npm run release:play-preflight && npm run quality:syntax && npm run quality:interactive && npm run release:preflight",
-    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run quality:audit",
+    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run quality:audit",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -36,7 +36,9 @@
     "vendor:ocr": "node scripts/vendor-tesseract-assets.mjs",
     "test:v3010": "node -r ./tests/_ts-require.cjs tests/v30-10-world-fusion-regression.ts",
     "test:v3020": "npm run typecheck:v3020 && node -r ./tests/_ts-require.cjs tests/v30-20-local-ai-impeto-regression.ts",
-    "typecheck:v3020": "tsc -p tests/types-v3020/tsconfig.json --pretty false"
+    "typecheck:v3020": "tsc -p tests/types-v3020/tsconfig.json --pretty false",
+    "typecheck:v3030": "tsc -p tests/types-v3030/tsconfig.json --pretty false",
+    "test:v3030": "npm run typecheck:v3030 && node -r ./tests/_ts-require.cjs tests/v30-30-detailed-print-intelligence-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

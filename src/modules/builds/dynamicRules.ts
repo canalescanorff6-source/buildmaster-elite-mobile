@@ -61,9 +61,9 @@ export const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
       title: 'CA finalizador não vira marcador',
       match: { position: 'CF', playstyleIncludes: ['artilheiro', 'homem de área'] },
       blockSkills: ['Volta para marcar', 'Interceptação', 'Marcação individual', 'Carrinho', 'Bloqueador'],
-      promoteSkills: ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Efeito de longe', 'Controle da cavadinha'],
-      promoteImpetos: ['Chute', 'Instinto artilheiro', 'Movimento sem a bola'],
-      note: 'Regra atualizável: CA finalizador mantém foco em gol e não em recomposição pesada.'
+      promoteSkills: ['Toque de calcanhar', 'Passe de primeira', 'Controle com a sola', 'Passe em profundidade', 'Super substituto'],
+      promoteImpetos: ['Movimento sem a bola'],
+      note: 'Regra atualizável: CA finalizador preserva o pacote de finalização nativo e prioriza habilidades que melhoram tabelas, domínio e movimentação.'
     },
     {
       id: 'goleiro-oficial',
@@ -278,7 +278,8 @@ export function applyLocalCorrectionsToResult(result: AnalysisResult): AnalysisR
   const blockedSkills = new Set(corrections.blockedSkills.map((item) => item.toLowerCase()));
   const promotedSkills = corrections.promotedSkills.filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]));
   const blockedImpetos = new Set(corrections.blockedImpetos.map((item) => item.toLowerCase()));
-  const promotedImpetos = corrections.promotedImpetos;
+  const ownedImpetos = new Set(result.parsed.impetos.filter((item) => item.active !== false).map((item) => item.name.toLowerCase()));
+  const promotedImpetos = corrections.promotedImpetos.filter((name) => !ownedImpetos.has(name.toLowerCase()));
   const ownedSkills = new Set(result.parsed.nativeSkills.map((item) => item.toLowerCase()));
   const isAllowedSkill = (skill: string) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]) && !ownedSkills.has(skill.toLowerCase()) && !blockedSkills.has(skill.toLowerCase());
 
@@ -298,7 +299,10 @@ export function applyLocalCorrectionsToResult(result: AnalysisResult): AnalysisR
     .filter((item, index, array) => array.findIndex((other) => other.name.toLowerCase() === item.name.toLowerCase() && other.tier === item.tier) === index);
 
   const recommendedImpetos = [
-    ...promotedImpetos.map((name) => ({ name, tier: 'ideal' as const, attributes: ['Correção local'], reason: 'Priorizado por correção inteligente local.' })),
+    ...promotedImpetos.map((name) => {
+      const existing = result.recommendedImpetos.find((item) => item.name.toLowerCase() === name.toLowerCase());
+      return existing ? { ...existing, tier: 'ideal' as const } : { name, tier: 'ideal' as const, attributes: ['Correção local'], reason: 'Priorizado por correção inteligente local.' };
+    }),
     ...result.recommendedImpetos.filter((item) => !blockedImpetos.has(item.name.toLowerCase()))
   ].filter((item, index, array) => array.findIndex((other) => other.name.toLowerCase() === item.name.toLowerCase()) === index);
 

@@ -1,0 +1,1 @@
+Versão 30.30: adiciona Inteligência Profunda da Carta, simulação local de distribuições, leitura detalhada de perfis completos, integração de atributos, posições, modelo físico, habilidades, Ímpetos, técnico e condições. Mantém a ficha única, o Motor Mundial, a IA local sem API paga, as habilidades concluídas e a Central de Atualizações.

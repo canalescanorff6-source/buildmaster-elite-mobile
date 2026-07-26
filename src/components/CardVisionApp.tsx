@@ -119,7 +119,7 @@ import {
 } from '@/components/lazy/AppLazyPanels';
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
-import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
+import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, refineSinglePrintGeometryFromText, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
 import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
@@ -132,8 +132,8 @@ import { exportCommunityState, importCommunityState, type CommunityShareKind } f
 import { exportCommercialState, importCommercialState, resolveCommercialEntitlements } from '@/modules/commercial/commercialization';
 import { exportPlayStorePublicationState, importPlayStorePublicationState } from '@/modules/publication/playStorePublication';
 import { CREATOR_BUILD_RESEARCH_EVENT, exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
-import { COMPETITIVE_FUSION_EVENT, applyCompetitiveFusionToResult } from '@/lib/competitiveBuildFusion';
-import { applyLocalAiToResult } from '@/lib/localAiEngine';
+import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
+import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
@@ -236,10 +236,8 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
   if (group !== 'jogadores') return group;
   return workspace === 'visao-geral' ? 'jogadores' : workspace;
 }
-
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
-
  type ActiveSessionSnapshot = {
   preview: string | null;
   playerCardImage: string | null;
@@ -261,7 +259,6 @@ type SettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 's
   activeHistoryId: string | null;
   savedAt: number;
 };
-
 async function createPlayerCardPreview(file: File): Promise<string | null> {
   try {
     const geometry = await inspectSinglePrintGeometry(file);
@@ -270,7 +267,6 @@ async function createPlayerCardPreview(file: File): Promise<string | null> {
     return null;
   }
 }
-
 export function CardVisionApp() {
   const account = useBuildMasterAccount();
   const ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
@@ -381,22 +377,18 @@ export function CardVisionApp() {
   const [lastFullSyncAt, setLastFullSyncAt] = useState<string | null>(null);
   const [syncHealthEnvelope, setSyncHealthEnvelope] = useState<BackupEnvelope | null>(null);
   const restoredSessionRef = useRef(false);
-
   useEffect(() => {
-    const refresh = () => setResult((current) => current ? applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(current))) : current);
+    const refresh = () => setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     const events = [CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT];
     events.forEach((eventName) => window.addEventListener(eventName, refresh));
     return () => events.forEach((eventName) => window.removeEventListener(eventName, refresh));
   }, []);
-
   useEffect(() => {
     if (performanceMode === 'economy' || mainSection === 'inicio') return;
     const group = navigationGroupFor(mainSection);
     const handle = scheduleIdleTask(() => preloadPanelGroup(group), 1800);
     return () => cancelIdleTask(handle);
   }, [mainSection, performanceMode]);
-
-
   useEffect(() => {
     if (mainSection !== 'ajustes' || advancedMode) return;
     const simpleViews: SettingsView[] = ['aparencia', 'desempenho', 'backup', 'atualizacoes', 'contas'];
@@ -413,7 +405,6 @@ export function CardVisionApp() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, [mainSection, settingsView]);
-
   useEffect(() => {
     if (mainSection !== 'ajustes' || settingsView !== 'backup') return;
     let active = true;
@@ -425,7 +416,6 @@ export function CardVisionApp() {
     if (lastSync) setLastFullSyncAt(lastSync);
     return () => { active = false; };
   }, [mainSection, settingsView]);
-
   useEffect(() => {
     const reloadMatches = () => {
       try {
@@ -442,7 +432,6 @@ export function CardVisionApp() {
       window.removeEventListener('buildmaster:match-validation-updated', reloadMatches);
     };
   }, [performanceMode]);
-
   useEffect(() => {
     const handle = scheduleIdleTask(() => {
       try {
@@ -462,7 +451,6 @@ export function CardVisionApp() {
     }, performanceMode === 'economy' ? 1800 : 700);
     return () => cancelIdleTask(handle);
   }, [performanceMode]);
-
   useEffect(() => {
     if (!mobileLauncher) return;
     const previousOverflow = document.body.style.overflow;
@@ -480,7 +468,6 @@ export function CardVisionApp() {
       previousFocus?.focus();
     };
   }, [mobileLauncher]);
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -954,7 +941,7 @@ export function CardVisionApp() {
     writeDynamicRulePack(pack);
     setRulePackInfo(pack);
     setRulesStatus(message);
-    setResult((current) => current ? applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(current))) : current);
+    setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
   }
 
@@ -1130,7 +1117,7 @@ export function CardVisionApp() {
     setPlayerCardImage(item.playerImage);
     setPreview(item.fullPreview ?? item.playerImage);
     setDraftResult(null);
-    setResult(applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(item.result))));
+    setResult(applyCompleteCardIntelligence(item.result));
     setManualMode(true);
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
@@ -2142,7 +2129,7 @@ export function CardVisionApp() {
     setCardPositionOverride('CF');
     setPlaystyleOverride('AUTO');
     setManualFields(emptyManualFields());
-    const nextResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile))));
+    const nextResult = applyCompleteCardIntelligence(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile));
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
@@ -2173,7 +2160,7 @@ export function CardVisionApp() {
     });
 
     try {
-      const geometry = await inspectSinglePrintGeometry(selectedFile);
+      let geometry = await inspectSinglePrintGeometry(selectedFile);
       const imageHash = await fileDigest(selectedFile);
       const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', 120).catch(() => []);
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
@@ -2193,13 +2180,22 @@ export function CardVisionApp() {
         cacheKey: `${imageHash}:full:contrast`
       });
 
+      const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
+      if (refinedGeometry.template !== geometry.template) {
+        geometry = refinedGeometry;
+        setOcrZones(geometry.zones);
+        const detailedArt = await createZoneOriginPreview(selectedFile, geometry.cardArtZone).catch(() => null);
+        if (detailedArt) setPlayerCardImage(detailedArt);
+        setStatus('Perfil detalhado detectado: ajustando áreas para atributos, posições, modelo físico, habilidades e Ímpetos...');
+      }
+
       const zoneResults: PremiumZoneReading[] = [];
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
       for (let index = 0; index < enabledZones.length; index += 1) {
         const zone = enabledZones[index];
         setStatus(`Print Único Pro: ${zone.label} (${index + 1}/${enabledZones.length})...`);
         const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
-        const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid';
+        const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
         const target = numeric ? 1180 : wide ? 1850 : 1500;
         const contrastImage = await cropImage(selectedFile, zone, target, 'contrast');
         const contrastPass = await recognizeWithOcrWorker(contrastImage, {
@@ -2305,7 +2301,7 @@ export function CardVisionApp() {
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile))));
+      const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
@@ -2481,7 +2477,7 @@ export function CardVisionApp() {
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile))));
+      const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
@@ -2538,7 +2534,7 @@ export function CardVisionApp() {
       if (safeObjective !== objective) setObjective(safeObjective);
       const lockedText = textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
-      const nextResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile))));
+      const nextResult = applyCompleteCardIntelligence(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
         if (singlePrintSession) {
@@ -2588,7 +2584,7 @@ export function CardVisionApp() {
   }
 
   function refreshResultWithCorrections(message: string) {
-    setResult((current) => current ? applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(current))) : current);
+    setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
     setStatus(message);
   }

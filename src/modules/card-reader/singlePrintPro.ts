@@ -1,8 +1,9 @@
 import { PLAYSTYLE_OPTIONS, type PositionCode } from '@/lib/analyzerDomain';
 import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 import type { PremiumZoneReading } from '@/lib/premiumReading';
+import { looksLikeCompleteProfile, readDetailedPrint, type DetailedPrintReading } from './detailedPrintReader';
 
-export type SinglePrintTemplate = 'classic' | 'tall' | 'landscape';
+export type SinglePrintTemplate = 'classic' | 'tall' | 'landscape' | 'detailed-profile';
 export type SinglePrintContentBounds = { x: number; y: number; w: number; h: number };
 export type LayoutAnchorReport = { bounds: SinglePrintContentBounds; confidence: number; topInset: number; bottomInset: number; leftInset: number; rightInset: number };
 export type EvidenceStatus = 'confirmed' | 'review' | 'missing';
@@ -57,6 +58,7 @@ export type SinglePrintSession = {
   warnings: string[];
   canonicalText: string;
   comparison: PreviousScanComparison | null;
+  detailedReading: DetailedPrintReading;
   createdAt: string;
 };
 
@@ -133,6 +135,23 @@ const LANDSCAPE_ZONES: OcrZone[] = [
   zone('skills', 'Habilidades visíveis', 0.02, 0.76, 0.32, 0.20)
 ];
 
+
+const DETAILED_PROFILE_ZONES: OcrZone[] = [
+  zone('name', 'Nome do jogador', 0.012, 0.004, 0.36, 0.045),
+  zone('playstyle', 'Estilo de jogo', 0.012, 0.038, 0.31, 0.045),
+  zone('overall', 'GER da carta', 0.055, 0.068, 0.16, 0.16),
+  zone('mainPosition', 'Posição da carta', 0.055, 0.145, 0.18, 0.105),
+  zone('cardType', 'Arte e tipo da carta', 0.018, 0.065, 0.23, 0.22),
+  zone('identityMeta', 'Altura, peso, idade e nível', 0.235, 0.066, 0.12, 0.22),
+  zone('condition', 'Condição e pior pé', 0.36, 0.065, 0.31, 0.17),
+  zone('manager', 'Técnico e bônus', 0.36, 0.225, 0.31, 0.07),
+  zone('positionGrid', 'Mapa completo de posições', 0.675, 0.065, 0.31, 0.225),
+  zone('impetos', 'Ímpetos e progressão visual', 0.012, 0.294, 0.976, 0.064),
+  zone('attributes', 'Tabela completa de atributos', 0.012, 0.352, 0.976, 0.315),
+  zone('physicalModel', 'Modelo físico e alcance corporal', 0.012, 0.67, 0.976, 0.245),
+  zone('skills', 'Habilidades exibidas', 0.012, 0.918, 0.976, 0.073)
+];
+
 export function detectSinglePrintTemplate(width: number, height: number): SinglePrintTemplate {
   if (width > height) return 'landscape';
   const ratio = width / Math.max(1, height);
@@ -141,11 +160,26 @@ export function detectSinglePrintTemplate(width: number, height: number): Single
 
 export function getAdaptiveSinglePrintZones(width: number, height: number): { template: SinglePrintTemplate; zones: OcrZone[] } {
   const template = detectSinglePrintTemplate(width, height);
-  const zones = template === 'tall' ? TALL_ZONES : template === 'landscape' ? LANDSCAPE_ZONES : CLASSIC_ZONES;
+  const zones = template === 'tall' ? TALL_ZONES : template === 'landscape' ? LANDSCAPE_ZONES : template === 'detailed-profile' ? DETAILED_PROFILE_ZONES : CLASSIC_ZONES;
   return { template, zones: zones.map((item) => ({ ...item })) };
 }
 
+export function refineSinglePrintGeometryFromText(
+  input: { width: number; height: number; template: SinglePrintTemplate; zones: OcrZone[]; cardArtZone: OcrZone; anchorReport: LayoutAnchorReport },
+  text: string
+) {
+  if (!looksLikeCompleteProfile(text)) return input;
+  const zones = DETAILED_PROFILE_ZONES.map((item) => transformZoneToBounds(item, input.anchorReport.bounds));
+  return {
+    ...input,
+    template: 'detailed-profile' as const,
+    zones,
+    cardArtZone: transformZoneToBounds(getCardArtZone('detailed-profile'), input.anchorReport.bounds)
+  };
+}
+
 export function getCardArtZone(template: SinglePrintTemplate): OcrZone {
+  if (template === 'detailed-profile') return zone('cardType', 'Arte da carta', 0.055, 0.072, 0.18, 0.205);
   if (template === 'landscape') return zone('cardType', 'Arte da carta', 0.015, 0.16, 0.32, 0.58);
   if (template === 'tall') return zone('cardType', 'Arte da carta', 0.02, 0.10, 0.58, 0.27);
   return zone('cardType', 'Arte da carta', 0.015, 0.065, 0.57, 0.27);
@@ -154,9 +188,10 @@ export function getCardArtZone(template: SinglePrintTemplate): OcrZone {
 export function ocrKindForZone(key: OcrZoneKey): 'general' | 'name' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills' {
   if (key === 'level' || key === 'overall' || key === 'points') return 'numeric';
   if (key === 'name') return 'name';
+  if (key === 'identityMeta') return 'general';
   if (key === 'mainPosition') return 'position';
-  if (key === 'playstyle' || key === 'cardType' || key === 'specialSkill') return 'style';
-  if (key === 'attributes' || key === 'progression' || key === 'autoTraining') return 'attributes';
+  if (key === 'playstyle' || key === 'cardType' || key === 'specialSkill' || key === 'condition' || key === 'manager' || key === 'impetos') return 'style';
+  if (key === 'attributes' || key === 'progression' || key === 'autoTraining' || key === 'physicalModel') return 'attributes';
   if (key === 'skills') return 'skills';
   return 'general';
 }
@@ -392,9 +427,10 @@ export function buildSinglePrintSession(input: {
   layoutConfidence?: number;
   zones?: OcrZone[];
 }): SinglePrintSession {
+  const detailedReading = readDetailedPrint(input.fullText, input.readings);
   const overall = extractOverall(input.readings, input.fullText);
   const points = extractPoints(input.readings, input.fullText);
-  const fields: SingleFieldEvidence[] = [
+  let fields: SingleFieldEvidence[] = [
     extractPlayerName(input.readings),
     extractPosition(input.readings),
     extractPlaystyle(input.readings),
@@ -406,6 +442,30 @@ export function buildSinglePrintSession(input: {
     extractLongText('attributes', 'Atributos', input.readings, 'attributes'),
     extractLongText('skills', 'Habilidades', input.readings, 'skills')
   ];
+  const detailedMap: Partial<Record<SingleFieldEvidence['key'], { value: string; numericValue?: number; confidence: number; reason: string }>> = {
+    playerName: detailedReading.identity.playerName ? { value: detailedReading.identity.playerName.value, confidence: detailedReading.identity.playerName.confidence, reason: 'Nome confirmado pelo leitor detalhado do perfil completo.' } : undefined,
+    position: detailedReading.identity.mainPosition ? { value: detailedReading.identity.mainPosition.value, confidence: detailedReading.identity.mainPosition.confidence, reason: 'Posição cruzada entre selo e grade completa.' } : undefined,
+    playstyle: detailedReading.identity.playstyle ? { value: detailedReading.identity.playstyle.value, confidence: detailedReading.identity.playstyle.confidence, reason: 'Estilo reconhecido no cabeçalho do perfil.' } : undefined,
+    overall: detailedReading.identity.overall ? { value: detailedReading.identity.overall.value, numericValue: detailedReading.identity.overall.numericValue, confidence: detailedReading.identity.overall.confidence, reason: 'GER cruzado entre selo e posição principal.' } : undefined,
+    level: detailedReading.identity.level ? { value: String(detailedReading.identity.level.numericValue ?? detailedReading.identity.level.value), numericValue: detailedReading.identity.level.numericValue, confidence: detailedReading.identity.level.confidence, reason: 'Nível reconhecido no bloco de identidade física.' } : undefined,
+    attributes: detailedReading.attributes.length >= 4 ? { value: detailedReading.attributes.map((item) => `${item.label}: ${item.value}`).join('\n'), confidence: Math.min(98, 64 + detailedReading.attributes.length), reason: `${detailedReading.attributes.length} atributos estruturados pelo leitor detalhado.` } : undefined,
+    skills: detailedReading.skills.length >= 2 ? { value: detailedReading.skills.map((item) => item.value).join(', '), confidence: Math.min(96, 68 + detailedReading.skills.length * 2), reason: `${detailedReading.skills.length} habilidades reconhecidas na faixa inferior.` } : undefined
+  };
+  fields = fields.map((field) => {
+    const detailed = detailedMap[field.key];
+    if (!detailed || (field.value && field.confidence > detailed.confidence + 4)) return field;
+    const confidence = Math.max(field.confidence, detailed.confidence);
+    return {
+      ...field,
+      value: detailed.value,
+      numericValue: detailed.numericValue ?? field.numericValue,
+      confidence,
+      status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
+      reason: detailed.reason,
+      sourceLabel: 'Leitor detalhado v30.30',
+      sourceText: detailed.value
+    };
+  });
   const required: SingleFieldEvidence['key'][] = ['playerName', 'position', 'playstyle', 'level'];
   const blockingFields = fields.filter((field) => required.includes(field.key) && field.status !== 'confirmed').map((field) => field.label);
   const confidenceValues = fields.filter((field) => field.value).map((field) => field.confidence);
@@ -415,9 +475,12 @@ export function buildSinglePrintSession(input: {
   if (level?.numericValue && level.numericValue >= 80) warnings.push('Nível muito alto detectado. Confirme: pode ser o GER da carta.');
   if (level?.alternatives.some((item) => item.numericValue === overall.numericValue)) warnings.push('O GER também apareceu entre os candidatos de nível e foi descartado como evidência principal.');
   if (blockingFields.length) warnings.push(`Confirme antes de finalizar: ${blockingFields.join(', ')}.`);
+  warnings.push(...detailedReading.warnings);
+  if (detailedReading.format === 'complete-profile') warnings.push(`Perfil completo detectado: ${detailedReading.coverage.attributeCount} atributos, ${detailedReading.coverage.positionCount} posições, ${detailedReading.coverage.skillCount} habilidades e ${detailedReading.coverage.physicalCount} medidas físicas.`);
 
   const fieldValue = (key: SingleFieldEvidence['key']) => fields.find((field) => field.key === key)?.value;
   const canonicalLines = [
+    detailedReading.canonicalText,
     fieldValue('playerName') ? `NOME DO JOGADOR: ${fieldValue('playerName')}` : '',
     fieldValue('position') ? `POSIÇÃO PRINCIPAL: ${fieldValue('position')}` : '',
     fieldValue('playstyle') ? `ESTILO DE JOGO: ${fieldValue('playstyle')}` : '',
@@ -434,7 +497,8 @@ export function buildSinglePrintSession(input: {
     const map: Partial<Record<OcrZoneKey, SingleFieldEvidence['key']>> = {
       name: 'playerName', mainPosition: 'position', positionGrid: 'position', playstyle: 'playstyle',
       overall: 'overall', level: 'level', points: 'points', cardType: 'cardType', specialSkill: 'specialSkill',
-      attributes: 'attributes', progression: 'attributes', autoTraining: 'attributes', skills: 'skills'
+      attributes: 'attributes', progression: 'attributes', autoTraining: 'attributes', physicalModel: 'attributes', skills: 'skills',
+      identityMeta: 'level', condition: 'specialSkill', manager: 'specialSkill', impetos: 'specialSkill'
     };
     const fieldKey = map[key];
     return fieldKey ? fields.find((field) => field.key === fieldKey) : undefined;
@@ -478,6 +542,7 @@ export function buildSinglePrintSession(input: {
     warnings,
     canonicalText: `[LEITURA PRINT ÚNICO PRO]\n${canonicalLines.join('\n')}\n[FIM LEITURA PRINT ÚNICO PRO]`,
     comparison,
+    detailedReading,
     createdAt: new Date().toISOString()
   };
 }

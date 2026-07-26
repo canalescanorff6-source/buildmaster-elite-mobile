@@ -478,6 +478,31 @@ export type CompetitiveFusionSummary = {
   differences: Array<{ key: TrainingKey; from: number; to: number }>;
 };
 
+
+export type DeepCardIntelligenceAnalysis = {
+  engineVersion: string;
+  mode: 'Motor especialista local';
+  confidence: number;
+  confidenceLabel: 'alta' | 'média' | 'baixa';
+  identityScore: number;
+  dataQuality: number;
+  candidatesEvaluated: number;
+  validCandidates: number;
+  winnerScore: number;
+  winnerSource: string;
+  finalTraining: TrainingPlan;
+  changes: Array<{ key: TrainingKey; label: string; from: number; to: number; reason: string }>;
+  synergies: Array<{ label: string; score: number; status: 'forte' | 'funcional' | 'fraca'; explanation: string }>;
+  functionalRanges: Array<{ label: string; current: number; ideal: number; status: 'excelente' | 'competitivo' | 'corrigir'; reason: string }>;
+  skillPlan: Array<{ name: string; priority: 'máxima' | 'alta' | 'útil'; reason: string }>;
+  impetoPlan: { name: string | null; score: number; reason: string };
+  physicalInsights: string[];
+  learning: { samples: number; state: 'sem dados' | 'aprendendo' | 'confiável'; recommendation: string };
+  reasons: string[];
+  warnings: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -525,6 +550,7 @@ export type AnalysisResult = {
   metaBuildUniverse?: MetaBuildUniverse;
   competitiveFusion?: CompetitiveFusionSummary;
   localAi?: LocalAiAnalysis;
+  deepCardIntelligence?: DeepCardIntelligenceAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

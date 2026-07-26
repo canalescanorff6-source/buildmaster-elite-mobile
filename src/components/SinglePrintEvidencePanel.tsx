@@ -52,6 +52,53 @@ export function SinglePrintEvidencePanel({
         </div>
       )}
 
+      <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
+        <header>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v30.30</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <span>{session.detailedReading.coverage.score}/100</span>
+        </header>
+        <div className="detailed-reading-metrics">
+          <article><strong>{session.detailedReading.coverage.attributeCount}</strong><span>Atributos</span></article>
+          <article><strong>{session.detailedReading.coverage.positionCount}</strong><span>Posições</span></article>
+          <article><strong>{session.detailedReading.coverage.skillCount}</strong><span>Habilidades</span></article>
+          <article><strong>{session.detailedReading.impetos.length}</strong><span>Ímpetos</span></article>
+          <article><strong>{session.detailedReading.coverage.physicalCount}</strong><span>Medidas físicas</span></article>
+        </div>
+        <div className="detailed-reading-groups">
+          <details open>
+            <summary>Identidade e condição</summary>
+            <div className="detailed-chip-list">
+              {Object.values(session.detailedReading.identity).filter((item): item is NonNullable<typeof item> => Boolean(item)).map((item) => <span key={item.label}><b>{item.label}</b>{item.value}<em>{item.confidence}%</em></span>)}
+              {session.detailedReading.condition.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}<em>{item.confidence}%</em></span>)}
+            </div>
+          </details>
+          <details>
+            <summary>Ímpetos, técnico e progressão</summary>
+            <div className="detailed-chip-list">
+              {session.detailedReading.manager.name && <span><b>Técnico</b>{session.detailedReading.manager.name}<em>{session.detailedReading.manager.confidence}%</em></span>}
+              {session.detailedReading.manager.boosts.map((item) => <span key={item.value}><b>{item.label}</b>{item.value}<em>{item.confidence}%</em></span>)}
+              {session.detailedReading.impetos.map((item) => <span key={item.value}><b>Ímpeto</b>{item.value}<em>{item.confidence}%</em></span>)}
+              {session.detailedReading.progressionSequence.map((item) => <span key={`${item.label}-${item.value}`} className={item.status === 'review' ? 'needs-review' : ''}><b>{item.label}</b>{item.value}<em>{item.status === 'review' ? 'confirmar' : `${item.confidence}%`}</em></span>)}
+            </div>
+          </details>
+          <details>
+            <summary>Atributos e posições reconhecidos</summary>
+            <div className="detailed-chip-list compact">
+              {session.detailedReading.attributes.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
+              {session.detailedReading.positionRatings.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
+            </div>
+          </details>
+          <details>
+            <summary>Modelo físico e habilidades</summary>
+            <div className="detailed-chip-list compact">
+              {session.detailedReading.physicalModel.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
+              {session.detailedReading.skills.map((item) => <span key={item.value}><b>Habilidade</b>{item.value}</span>)}
+            </div>
+          </details>
+        </div>
+        {session.detailedReading.coverage.missing.length > 0 && <p className="detailed-reading-missing"><AlertTriangle size={15}/> Para precisão máxima, confirme: {session.detailedReading.coverage.missing.join(', ')}.</p>}
+      </section>
+
       {session.comparison?.found && (
         <div className={`single-print-comparison ${session.comparison.sameIdentity ? 'same' : 'different'}`}>
           <History size={17}/>

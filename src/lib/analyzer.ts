@@ -658,10 +658,10 @@ function parseImpetos(text: string): Impetus[] {
 
 function parseCondition(text: string): PlayerCondition {
   const compact = normalize(text).replace(/\r?\n/g, ' ');
-  const weakFreq = compact.match(/pior\s+p[eé]\s*\(?frequ[eê]ncia\)?\s*(raramente|ocasionalmente|frequentemente|muito\s+frequentemente|baixo|m[eé]dio|alto|alta)/i)?.[1] ?? null;
-  const weakAcc = compact.match(/pior\s+p[eé]\s*\(?precis[aã]o\)?\s*(baixa|m[eé]dia|alta|muito\s+alta)/i)?.[1] ?? null;
-  const form = compact.match(/condi[cç][aã]o\s+f[ií]sica\s*(est[aá]vel|inconsistente|normal|alta|baixo|m[eé]dio)/i)?.[1] ?? null;
-  const injury = compact.match(/resist[eê]ncia\s+a\s+les[aã]o\s*(baixo|baixa|m[eé]dio|m[eé]dia|alto|alta)/i)?.[1] ?? null;
+  const weakFreq = compact.match(/pior\s+p[eé]\s*\(?frequ[eê]ncia\)?\s*[:=-]?\s*(raramente|ocasionalmente|frequentemente|muito\s+frequentemente|baixo|m[eé]dio|alto|alta)/i)?.[1] ?? null;
+  const weakAcc = compact.match(/pior\s+p[eé]\s*\(?precis[aã]o\)?\s*[:=-]?\s*(baixa|m[eé]dia|alta|muito\s+alta)/i)?.[1] ?? null;
+  const form = compact.match(/condi[cç][aã]o\s+f[ií]sica\s*[:=-]?\s*(est[aá]vel|inconsistente|normal|alta|baixo|m[eé]dio)/i)?.[1] ?? null;
+  const injury = compact.match(/resist[eê]ncia\s+(?:a|à)\s+les[aã]o\s*[:=-]?\s*(baixo|baixa|m[eé]dio|m[eé]dia|alto|alta)/i)?.[1] ?? null;
   return {
     weakFootFrequency: weakFreq ? cleanLine(weakFreq) : null,
     weakFootAccuracy: weakAcc ? cleanLine(weakAcc) : null,
@@ -673,22 +673,22 @@ function parseCondition(text: string): PlayerCondition {
 function parsePhysicalProfile(text: string): PhysicalProfile {
   const compact = normalize(text).replace(/\r?\n/g, ' ');
   return {
-    armLength: readNumber(compact, [/comprimento\s+do\s+bra[cç]o\s*(\d+(?:[,.]\d+)?)/i]),
-    shoulderWidth: readNumber(compact, [/largura\s+dos\s+ombros\s*(\d+(?:[,.]\d+)?)/i]),
-    neckLength: readNumber(compact, [/comprimento\s+do\s+pesco[cç]o\s*(\d+(?:[,.]\d+)?)/i]),
-    chest: readNumber(compact, [/chest\s*(\d+(?:[,.]\d+)?)/i, /peito\s*(\d+(?:[,.]\d+)?)/i]),
-    neckSize: readNumber(compact, [/tamanho\s+do\s+pesco[cç]o\s*(\d+(?:[,.]\d+)?)/i]),
-    shoulderHeight: readNumber(compact, [/altura\s+do\s+ombro\s*(\d+(?:[,.]\d+)?)/i]),
-    legLength: readNumber(compact, [/comprimento\s+da\s+perna\s*(\d+(?:[,.]\d+)?)/i]),
-    thighSize: readNumber(compact, [/tamanho\s+da\s+coxa\s*(\d+(?:[,.]\d+)?)/i]),
-    waistSize: readNumber(compact, [/tamanho\s+da\s+cintura\s*(\d+(?:[,.]\d+)?)/i]),
-    armSize: readNumber(compact, [/tamanho\s+do\s+bra[cç]o\s*(\d+(?:[,.]\d+)?)/i]),
-    calfSize: readNumber(compact, [/tamanho\s+da\s+panturrilha\s*(\d+(?:[,.]\d+)?)/i]),
-    legCoverageRadius: readNumber(compact, [/raio\s+de\s+cobertura\s+das\s+pernas\s*(\d+(?:[,.]\d+)?)/i]),
-    armCoverageRadius: readNumber(compact, [/raio\s+de\s+cobertura\s+dos\s+bra[cç]os\s*(\d+(?:[,.]\d+)?)/i]),
-    jumpHeight: readNumber(compact, [/altura\s+de\s+salto\s*(\d+(?:[,.]\d+)?)/i]),
-    trunkCollision: readNumber(compact, [/colis[aã]o\s+do\s+tronco\s*(\d+(?:[,.]\d+)?)/i]),
-    baseHeight: readNumber(compact, [/altura\s+com\s+base\s+no\s+comprimento\S*\s*(\d+(?:[,.]\d+)?)/i])
+    armLength: readNumber(compact, [/comprimento\s+do\s+bra[cç]o\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    shoulderWidth: readNumber(compact, [/largura\s+dos\s+ombros\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    neckLength: readNumber(compact, [/comprimento\s+do\s+pesco[cç]o\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    chest: readNumber(compact, [/chest\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i, /peito\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    neckSize: readNumber(compact, [/tamanho\s+do\s+pesco[cç]o\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    shoulderHeight: readNumber(compact, [/altura\s+do\s+ombro\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    legLength: readNumber(compact, [/comprimento\s+da\s+perna\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    thighSize: readNumber(compact, [/tamanho\s+da\s+coxa\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    waistSize: readNumber(compact, [/tamanho\s+da\s+cintura\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    armSize: readNumber(compact, [/tamanho\s+do\s+bra[cç]o\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    calfSize: readNumber(compact, [/tamanho\s+da\s+panturrilha\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    legCoverageRadius: readNumber(compact, [/raio\s+de\s+cobertura\s+das\s+pernas\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    armCoverageRadius: readNumber(compact, [/raio\s+de\s+cobertura\s+dos\s+bra[cç]os\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    jumpHeight: readNumber(compact, [/altura\s+de\s+salto\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    trunkCollision: readNumber(compact, [/colis[aã]o\s+do\s+tronco\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i]),
+    baseHeight: readNumber(compact, [/altura\s+com\s+base\s+no\s+comprimento\S*\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i])
   };
 }
 
@@ -1950,9 +1950,9 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const detectedPositions = Array.from(new Set([mainPosition, ...positions]));
   const nativeSkills = detectSkills(text);
   const specialSkills = nativeSkills.filter((skill) => SPECIAL_SKILL_NAMES.includes(skill));
-  const height = readNumber(text, [/altura\s*(\d{3})\s*cm/i, /height\s*(\d{3})\s*cm/i]);
-  const weight = readNumber(text, [/peso\s*(\d{2,3})\s*kg/i, /weight\s*(\d{2,3})\s*kg/i]);
-  const age = readNumber(text, [/idade\s*(\d{1,2})/i, /age\s*(\d{1,2})/i]);
+  const height = readNumber(text, [/altura\s*[:=-]?\s*(\d{3})\s*cm/i, /height\s*[:=-]?\s*(\d{3})\s*cm/i]);
+  const weight = readNumber(text, [/peso\s*[:=-]?\s*(\d{2,3})\s*kg/i, /weight\s*[:=-]?\s*(\d{2,3})\s*kg/i]);
+  const age = readNumber(text, [/idade\s*[:=-]?\s*(\d{1,2})/i, /age\s*[:=-]?\s*(\d{1,2})/i]);
   const level = parseLevel(text);
   const autoTraining = parseTrainingAllocation(text);
   const inferredPoints = inferTrainingPointsFromLevel(level);
