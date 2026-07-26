@@ -462,7 +462,7 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor detalhado v30.30',
+      sourceLabel: 'Leitor detalhado v30.40',
       sourceText: detailed.value
     };
   });

@@ -84,6 +84,7 @@ import { PremiumContextBar } from '@/components/PremiumContextBar';
 import { PremiumBrand } from '@/components/PremiumBrand';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
+import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
 import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, formations, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
@@ -120,6 +121,7 @@ import {
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, refineSinglePrintGeometryFromText, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
+import { adjustCardCropBox, createSmartCardPreview, renderCardCropPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
 import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
@@ -259,21 +261,19 @@ type SettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 's
   activeHistoryId: string | null;
   savedAt: number;
 };
-async function createPlayerCardPreview(file: File): Promise<string | null> {
+async function createPlayerCardPreview(file: File): Promise<CardCropResult | null> {
   try {
     const geometry = await inspectSinglePrintGeometry(file);
-    return await createZoneOriginPreview(file, geometry.cardArtZone);
+    return await createSmartCardPreview(file, geometry.cardArtZone);
   } catch {
     return null;
   }
 }
 export function CardVisionApp() {
-  const account = useBuildMasterAccount();
-  const ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
-  const [preview, setPreview] = useState<string | null>(null);
-  const [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const account = useBuildMasterAccount(), ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
+  const [preview, setPreview] = useState<string | null>(null), [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
+  const [cardCropResult, setCardCropResult] = useState<CardCropResult | null>(null), [cardCropAdjustOpen, setCardCropAdjustOpen] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null), [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [ocrDone, setOcrDone] = useState(false);
   const [rawText, setRawText] = useState('');
   const [objective, setObjective] = useState<Objective>('COMPETITIVE');
@@ -1972,11 +1972,22 @@ export function CardVisionApp() {
   }
 
   async function cancelCurrentOcr() {
-    setStatus('Cancelando leitura...');
-    await cancelOcrProcessing();
-    setOcrCancelable(false);
-    setLoading(false);
-    setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
+    setStatus('Cancelando leitura...'); await cancelOcrProcessing();
+    setOcrCancelable(false); setLoading(false); setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
+  }
+  async function adjustDetectedCard(action: 'left' | 'right' | 'up' | 'down' | 'zoom-in' | 'zoom-out') {
+    if (!selectedFile || !cardCropResult) return;
+    const box = adjustCardCropBox(cardCropResult.box, action), adjustedPreview = await renderCardCropPreview(selectedFile, box).catch(() => null);
+    if (!adjustedPreview) { setStatus('Não foi possível aplicar este ajuste. O recorte anterior foi mantido.'); return; }
+    setPlayerCardImage(adjustedPreview); setCardCropResult({ ...cardCropResult, preview: adjustedPreview, box, method: 'manual-adjustment', confidence: Math.max(60, cardCropResult.confidence - 2) });
+    setStatus('Recorte da carta ajustado. A leitura continua usando o print original completo.');
+  }
+  async function redetectPlayerCard() {
+    if (!selectedFile) return; setStatus('Redetectando somente a carta do jogador...');
+    const detected = await createPlayerCardPreview(selectedFile).catch(() => null);
+    if (!detected) { setStatus('A carta não foi detectada com segurança. Use os controles de ajuste no recorte atual.'); return; }
+    setPlayerCardImage(detected.preview); setCardCropResult(detected);
+    setStatus(`Carta detectada com ${detected.confidence}% de confiança. Confira o enquadramento antes de gerar a ficha.`);
   }
 
   async function handleFile(file: File) {
@@ -1986,29 +1997,17 @@ export function CardVisionApp() {
       setStatus(error instanceof Error ? error.message : 'Imagem inválida.');
       return;
     }
-    setFileName(file.name);
-    setSelectedFile(file);
+    setFileName(file.name); setSelectedFile(file);
     if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
-    previewObjectUrlRef.current = URL.createObjectURL(file);
-    setPreview(previewObjectUrlRef.current);
-    setPlayerCardImage(null);
-    setResult(null);
-    setDraftResult(null);
-    setManualFields(emptyManualFields());
-    setManualMode(false);
-    setRawText('');
-    setOcrDone(false);
-    setLoading(false);
-    setPremiumReadings([]);
-    setTotalReadingSession(null);
-    setSinglePrintSession(null);
-    setReadingConfirmations({});
-    if (enhancedObjectUrlRef.current) { URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = null; }
-    setEnhancedPreview(null);
+    previewObjectUrlRef.current = URL.createObjectURL(file); setPreview(previewObjectUrlRef.current);
+    setPlayerCardImage(null); setCardCropResult(null); setCardCropAdjustOpen(false); setResult(null); setDraftResult(null);
+    setManualFields(emptyManualFields()); setManualMode(false); setRawText(''); setOcrDone(false); setLoading(false);
+    setPremiumReadings([]); setTotalReadingSession(null); setSinglePrintSession(null); setReadingConfirmations({});
+    if (enhancedObjectUrlRef.current) { URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = null; } setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
 
     const croppedPreview = await createPlayerCardPreview(file).catch(() => null);
-    if (croppedPreview) setPlayerCardImage(croppedPreview);
+    if (croppedPreview) { setPlayerCardImage(croppedPreview.preview); setCardCropResult(croppedPreview); }
 
     const quality = await inspectPrintQuality(file).catch(() => null);
     setQualityReport(quality);
@@ -2122,6 +2121,8 @@ export function CardVisionApp() {
     setSelectedFile(null);
     setPreview(null);
     setPlayerCardImage(null);
+    setCardCropResult(null);
+    setCardCropAdjustOpen(false);
     setFileName('entrada-manual-precisao');
     setRawText(template);
     setOcrDone(true);
@@ -2167,9 +2168,11 @@ export function CardVisionApp() {
       setOcrZones(geometry.zones);
 
       const cachedArt = await runtimeGet<string>('image-thumbnails', imageHash).catch(() => null);
-      const artPreview = cachedArt || await createZoneOriginPreview(selectedFile, geometry.cardArtZone).catch(() => null);
+      const detectedCrop = await createSmartCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
+      const artPreview = cachedArt || detectedCrop?.preview || null;
       if (artPreview) {
         setPlayerCardImage(artPreview);
+        if (detectedCrop) setCardCropResult(detectedCrop);
         if (!cachedArt) void runtimePut('image-thumbnails', imageHash, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
       }
 
@@ -2184,8 +2187,8 @@ export function CardVisionApp() {
       if (refinedGeometry.template !== geometry.template) {
         geometry = refinedGeometry;
         setOcrZones(geometry.zones);
-        const detailedArt = await createZoneOriginPreview(selectedFile, geometry.cardArtZone).catch(() => null);
-        if (detailedArt) setPlayerCardImage(detailedArt);
+        const detailedCrop = await createSmartCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
+        if (detailedCrop) { setPlayerCardImage(detailedCrop.preview); setCardCropResult(detailedCrop); }
         setStatus('Perfil detalhado detectado: ajustando áreas para atributos, posições, modelo físico, habilidades e Ímpetos...');
       }
 
@@ -2376,7 +2379,7 @@ export function CardVisionApp() {
       setSelectedFile(overview.file);
       setPreview(overview.preview);
       const croppedPreview = await createPlayerCardPreview(overview.file).catch(() => null);
-      if (croppedPreview) setPlayerCardImage(croppedPreview);
+      if (croppedPreview) { setPlayerCardImage(croppedPreview.preview); setCardCropResult(croppedPreview); }
 
       const recognize = async (image: File | Blob, label: string) => {
         const pass = await recognizeWithOcrWorker(image, { label, kind: 'general' });
@@ -3048,7 +3051,10 @@ export function CardVisionApp() {
             </div>
             <div className="upload-box premium-upload-box creation-upload-box">
               {preview ? (
-                <figure><img src={preview} alt="Print selecionado da carta" /><figcaption><span>Imagem selecionada</span><strong>{qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'}</strong></figcaption></figure>
+                <SmartCardCropPanel fullPreview={preview} playerCardImage={playerCardImage}
+                  qualityText={qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'} cropResult={cardCropResult}
+                  adjustOpen={cardCropAdjustOpen} onToggleAdjust={() => setCardCropAdjustOpen((current) => !current)}
+                  onAdjust={(action) => void adjustDetectedCard(action)} onRedetect={() => void redetectPlayerCard()} />
               ) : (
                 <div className="creation-upload-empty">
                   <span className="upload-orbit"><UploadCloud size={34} /></span>

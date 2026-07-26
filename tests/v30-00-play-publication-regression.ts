@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildPlayStorePublicationReport, createDefaultPlayStorePublicationProfile, normalizePlayStorePublicationProfile, PLAY_STORE_PACKAGE_NAME, PLAY_STORE_TARGET_API, PLAY_STORE_PUBLICATION_VERSION } from '../src/modules/publication/playStorePublication';
-assert.equal(PLAY_STORE_PUBLICATION_VERSION,'30.30.0');
+assert.equal(PLAY_STORE_PUBLICATION_VERSION,'30.40.0');
 assert.equal(PLAY_STORE_TARGET_API,36);
 assert.equal(PLAY_STORE_PACKAGE_NAME,'com.buildmaster.elitetatico');
 const base=createDefaultPlayStorePublicationProfile();
@@ -12,4 +12,4 @@ assert.ok(report.score>=90);
 const clamped=normalizePlayStorePublicationProfile({...ready,rolloutPercentage:999,targetTrack:'invalid'});
 assert.equal(clamped.rolloutPercentage,100);
 assert.equal(clamped.targetTrack,'internal');
-console.log('v30.30 motor de publicação Play aprovado.');
+console.log('v30.40 motor de publicação Play aprovado.');

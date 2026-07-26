@@ -46,7 +46,7 @@ export type DetailedPrintReading = {
   canonicalText: string;
 };
 
-const VERSION = '30.30-detailed-print-1';
+const VERSION = '30.40-detailed-print-1';
 
 function normalized(value: string) {
   return value
@@ -366,7 +366,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     + Object.values(identity).filter(Boolean).length * 2.1
   )));
 
-  const canonical: string[] = ['[LEITURA DETALHADA V30.30]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V30.40]'];
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
   if (identity.playstyle) canonical.push(`ESTILO DE JOGO: ${identity.playstyle.value}`);
@@ -383,7 +383,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of attributes) canonical.push(`${value.label}: ${value.value}`);
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V30.30]');
+  canonical.push('[FIM LEITURA DETALHADA V30.40]');
 
   const warnings: string[] = [];
   if (progressionSequence.some((item) => item.status === 'review')) warnings.push('A sequência de progressão foi lida pela ordem visual dos ícones e precisa de confirmação antes de virar orçamento da ficha.');

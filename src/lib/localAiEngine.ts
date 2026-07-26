@@ -11,7 +11,7 @@ type ImpetoProfile = {
   attributes: string[];
 };
 
-const LOCAL_AI_VERSION = '30.30-local-ai-2';
+const LOCAL_AI_VERSION = '30.40-local-ai-2';
 
 const IMPETO_PROFILES: ImpetoProfile[] = [
   { name: 'Chute', domains: ['finalizacao', 'fisico'], positions: ['CF', 'SS', 'LWF', 'RWF', 'AMF'], training: ['shooting', 'lowerBodyStrength'], keywords: ['artilheiro', 'finalizador', 'chute', 'atacante'], attributes: ['Controle de bola', 'Finalização', 'Força do chute', 'Contato físico'] },

@@ -10,4 +10,4 @@ assert.ok(bridge.includes('BuildMasterPlayDeliveryPlugin'));
 assert.ok(bridge.includes('REQUEST_INSTALL_PACKAGES'));
 assert.ok(fs.existsSync('play-store/assets/feature-graphic-1024x500.png'));
 assert.ok(fs.existsSync('play-store/assets/icon-512.png'));
-console.log('v30.30 workflow Google Play aprovado.');
+console.log('v30.40 workflow Google Play aprovado.');

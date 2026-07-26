@@ -412,12 +412,12 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
   return (
     <section className="result-panel bm2820-result-screen">
-      <section className={`result-player-hero luxury-panel ${heroExpanded ? 'is-expanded' : ''}`}>
-        <figure className="result-player-art">
-          {playerImage ? <img src={playerImage} alt={`Imagem de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
-          <div className="result-player-art-overlay" />
-          <div className="result-player-rating"><strong>{GER}</strong><span>{card.mainPositionPt}</span></div>
-          <figcaption>{card.playstyle ?? 'BuildMaster Elite'}</figcaption>
+      <section className={`result-player-hero luxury-panel ${heroExpanded ? 'is-expanded' : ''} ${playerImage ? 'has-card-image' : ''}`}>
+        <figure className={`result-player-art ${playerImage ? 'has-card-image' : 'is-empty'}`}>
+          {playerImage ? <img src={playerImage} alt={`Carta recortada de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
+          {!playerImage && <div className="result-player-art-overlay" />}
+          {!playerImage && <div className="result-player-rating"><strong>{GER}</strong><span>{card.mainPositionPt}</span></div>}
+          {!playerImage && <figcaption>{card.playstyle ?? 'BuildMaster Elite'}</figcaption>}
         </figure>
 
         <div className="result-player-summary">

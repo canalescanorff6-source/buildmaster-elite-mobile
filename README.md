@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v30.30 — Inteligência Profunda + Leitura Detalhada
+# BuildMaster Elite Tático v30.40 — Inteligência Profunda + Leitura Detalhada
 
 O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface foi mantida simples; a análise avançada acontece por trás da tela.
 
@@ -10,9 +10,23 @@ O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma 
 4. O Motor Mundial compara apenas referências auditadas da mesma carta e usa seus registros de partidas como desempate.
 5. O resultado mostra uma ficha final, as habilidades pendentes, como usar e o nível de confiança.
 
+
+## Recorte inteligente da carta — v30.40
+
+Ao importar qualquer print, o aplicativo mantém a imagem completa somente para a leitura de nome, atributos, habilidades, Ímpetos e demais dados. Para a ficha e o Cofre, ele detecta e mostra **somente a carta do jogador**, em formato vertical, limpo e compacto.
+
+- detecção local sem API paga;
+- enquadramento automático pela borda, contraste e proporção da carta;
+- recorte corrigido novamente quando o leitor reconhece o tipo exato da tela;
+- controles simples para mover, aproximar, afastar ou redetectar;
+- imagem original disponível apenas em “Ver print completo”;
+- resultado sem GER, posição ou estilo duplicados sobre a própria carta.
+
+A leitura sempre usa o arquivo original completo. Ajustar o recorte visual não remove informações do OCR.
+
 ## Inteligência Profunda da Carta
 
-A v30.30 acrescenta:
+A v30.40 acrescenta:
 - **leitura detalhada de perfis completos**: identifica nome, estilo, GER, posição, nível, altura, peso, idade, condição, técnico, bônus, Ímpetos, 13 posições, 26 atributos, sequência de progressão, modelo físico e habilidades;
 - **geometria adaptativa do print**: quando detecta uma tela detalhada, o leitor troca automaticamente as áreas de OCR para não misturar atributos, posições, habilidades e medidas físicas;
 - **simulador local de distribuições**: compara a ficha atual, variantes do motor, fusão profissional, cenários de tolerância e redistribuições controladas;

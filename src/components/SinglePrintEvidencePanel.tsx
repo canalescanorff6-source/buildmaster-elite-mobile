@@ -54,7 +54,7 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v30.30</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v30.40</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">
