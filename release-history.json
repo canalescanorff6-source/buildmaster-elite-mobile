@@ -2,6 +2,24 @@
   "schemaVersion": 1,
   "releases": [
     {
+      "version": "30.10.0",
+      "versionCode": 1805000871,
+      "buildId": "a4d2254fd2945780060500b7cea562060daceba1-1",
+      "channel": "stable",
+      "rolloutPercentage": 100,
+      "status": "published",
+      "publishedAt": "2026-07-26T17:03:12.642781+00:00",
+      "releaseTag": "buildmaster-v30.10.0-1805000871-01",
+      "checksum": "d23e7d181804ea06e0c8b87ffaefb7c9c045d932a36aad588047e66e445d63ee",
+      "notes": [
+        "O APK imutável é a rota principal e nunca é substituído depois da publicação.",
+        "O Android DownloadManager é o transporte principal; HTTP direto é apenas reserva.",
+        "Canais estável e beta são independentes e usam rollout determinístico por aparelho.",
+        "Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.",
+        "Rollback recompila uma base conhecida como boa com versionCode maior."
+      ]
+    },
+    {
       "version": "30.00.0",
       "versionCode": 1800000861,
       "buildId": "7063b9d9c85ea5bcc585e3c5e665c1f26c736c63-1",
