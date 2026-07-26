@@ -32,8 +32,6 @@ export * from './analyzerDomain';
 
 const ALL_POSITIONS = Object.keys(POSITION_PT) as PositionCode[];
 
-
-
 function findLocalCardRule(playerName: string, text: string): LocalCardRule | null {
   return findOfficialCardRule(playerName, text);
 }
@@ -598,7 +596,7 @@ function detectName(rawText: string, fileName?: string | null) {
     .filter((line) => !ignored.test(line));
   const strongName = lines.find((line) => /^[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+(?:\s+[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+){1,3}$/.test(line));
   if (strongName) return strongName;
-  const explicit = rawText.match(/(?:jogador|player|nome)\s*[:\-]\s*([A-Za-zÀ-ÿ.'\-\s]{3,50})/i)?.[1]?.trim();
+  const explicit = rawText.match(/(?:jogador|player|nome)\s*[:\-]\s*([^\r\n]{3,50})/i)?.[1]?.trim();
   if (explicit) return explicit;
   if (lines[0]) return lines[0];
   if (fileName) return cleanLine(fileName.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '));
@@ -627,17 +625,32 @@ function detectSkills(text: string) {
 function parseImpetos(text: string): Impetus[] {
   const impetos: Impetus[] = [];
   const normalized = normalize(text);
-  const patterns = [
-    /(duelo|instinto\s+artilheiro|velocidade|finaliza[cç][aã]o|passe|drible|defesa|f[ií]sico|agilidade|for[cç]a|chute)\s*\+\s*(\d+)/i
-  ];
-  for (const pattern of patterns) {
-    const match = normalized.match(pattern);
-    if (match?.[1]) impetos.push({ name: cleanLine(match[1]), value: match[2] ? Number(match[2]) : null, active: true });
-  }
-  if (/sem\s+impulso|sem\s+impeto|sem\s+ímpeto/i.test(normalized)) impetos.push({ name: 'Sem Impulso', value: null, active: false });
+  const lines = text.split(/\r?\n/).map((line) => cleanLine(line)).filter(Boolean);
+  const impetoHeader = /^(?:ímpeto|impeto|booster|reforço)(?:\s+(?:adicional|selecionado|ativo|principal|do jogador|slot))?\s*:?$/i;
+  const explicitPrefix = /(?:ímpeto|impeto|booster|reforço)(?:\s+(?:adicional|selecionado|ativo|principal|do jogador|slot))?\s*[:\-]?\s*/i;
+
+  const explicitValue = normalized.match(/(?:ímpeto|impeto|booster|reforço)\s*[:\-]?\s*([a-zà-ÿ\s\-]+?)\s*\+\s*(\d+)/i);
+  if (explicitValue?.[1]) impetos.push({ name: cleanLine(explicitValue[1]), value: explicitValue[2] ? Number(explicitValue[2]) : null, active: true });
+  if (/sem\s+(?:ímpeto|impeto|booster|reforço)/i.test(normalized)) impetos.push({ name: 'Sem Ímpeto', value: null, active: false });
 
   for (const name of IMPETO_NAMES) {
-    if (textHas(text, name)) impetos.push({ name, value: null, active: true });
+    const escaped = escapeRegex(name);
+    const explicitPattern = new RegExp(`${explicitPrefix.source}${escaped}(?:\\s*\\+\\s*(\\d+))?(?:\\b|$)`, 'i');
+    const explicitMatch = text.match(explicitPattern);
+    if (explicitMatch) {
+      impetos.push({ name, value: explicitMatch[1] ? Number(explicitMatch[1]) : null, active: true });
+      continue;
+    }
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const previous = lines[index - 1] ?? '';
+      if (impetoHeader.test(previous) && new RegExp(`^${escaped}(?:\\s*\\+\\s*(\\d+))?$`, 'i').test(line)) {
+        const value = line.match(/\+\s*(\d+)/)?.[1];
+        impetos.push({ name, value: value ? Number(value) : null, active: true });
+        break;
+      }
+    }
   }
 
   return Array.from(new Map(impetos.map((item) => [`${skillKey(item.name)}-${item.value ?? ''}`, item])).values());

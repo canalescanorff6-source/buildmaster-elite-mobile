@@ -134,12 +134,13 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
 
 export type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 
-export type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'tatica' | 'exportar';
+export type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
   { id: 'resumo', label: 'Ficha final', hint: 'Recomendação única' },
   { id: 'ficha', label: 'Ficha', hint: 'Distribuição de pontos' },
   { id: 'habilidades', label: 'Habilidades', hint: 'Top 5 oficial' },
+  { id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' },
   { id: 'tatica', label: 'Tática', hint: 'Função e uso' },
   { id: 'exportar', label: 'Exportar', hint: 'Imagem e relatório' }
 ];
@@ -348,6 +349,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const completedRecommendedSkills = recommendedSkills.filter((skill) => Boolean(skillProgress?.[skill]));
   const pendingRecommendedSkills = recommendedSkills.filter((skill) => !skillProgress?.[skill]);
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
+  const bestImpeto = recommendedImpetos.find((item) => item.tier === 'ideal') ?? recommendedImpetos.find((item) => item.tier !== 'evitar');
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
   const attributes = Object.entries(card.attributes).filter(([, value]) => Number.isFinite(value));
   const sourceLabel = card.trainingPointSource === 'MANUAL'
@@ -486,7 +488,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
         <nav className="result-primary-tabs" aria-label="Áreas principais do resultado">
           {visiblePrimaryTabs.map((item) => {
-            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'tatica' ? Target : Download;
+            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'impetos' ? BrainCircuit : item.id === 'tatica' ? Target : Download;
             return (
               <button key={item.id} className={primaryIsActive(item.id) ? 'active' : ''} type="button" onClick={() => openPrimaryResult(item.id)}>
                 <Icon size={18} /><span><strong>{item.label}</strong><small>{item.hint}</small></span>
@@ -633,6 +635,19 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
+          {result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
+            <div className="section-title-row">
+              <div><p className="kicker"><BrainCircuit size={14} /> IA local do BuildMaster</p><h3>Raciocínio no aparelho, sem API paga</h3></div>
+              <span>{result.localAi.confidence}% • confiança {result.localAi.confidenceLabel}</span>
+            </div>
+            <p className="bm-local-ai-summary">{result.localAi.summary}</p>
+            <div className="bm-local-ai-models">
+              {result.localAi.models.map((model) => <div key={model.id}><span>{model.label}</span><strong>{model.score}</strong><i><b style={{ width: `${model.score}%` }} /></i><small>{model.note}</small></div>)}
+            </div>
+            <div className="bm-local-ai-footer"><ShieldCheck size={15} /><span>{result.localAi.privacyNote}</span></div>
+            {result.localAi.uncertainties.length > 0 && <details><summary>O que ainda precisa ser confirmado</summary><p>{result.localAi.uncertainties.join(' • ')}</p><b>{result.localAi.nextAction}</b></details>}
+          </article>}
+
           {result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
             <div className="section-title-row">
               <div><p className="kicker"><Trophy size={14} /> Motor Mundial de Fichas</p><h3>Evidência profissional + desempenho real</h3></div>
@@ -693,12 +708,11 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          <article className="luxury-panel compact-card">
-            <p className="kicker">Ímpeto recomendado</p>
-            <div className="chip-cloud purple">
-              {recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 3).map((item) => <span key={item.name}>{item.name}</span>)}
-            </div>
-            <p className="panel-note">Escolhido para a posição e a função desta carta.</p>
+          <article className="luxury-panel compact-card bm-summary-impeto-card">
+            <div className="section-title-row"><div><p className="kicker">Ímpeto ideal</p><h3>{bestImpeto?.name ?? 'Revisar dados'}</h3></div><span>{bestImpeto?.score ?? 0}/100</span></div>
+            <p className="panel-note">{bestImpeto?.reason ?? 'O print ainda não trouxe evidência suficiente para escolher com segurança.'}</p>
+            {bestImpeto && <div className="chip-cloud purple">{bestImpeto.attributes.map((attribute) => <span key={attribute}>{attribute}</span>)}</div>}
+            <button type="button" className="bm-open-impeto-button" onClick={() => openPrimaryResult('impetos')}><BrainCircuit size={16} /> Ver por que este ímpeto venceu</button>
           </article>
 
           <article className="luxury-panel wide-card">
@@ -1168,52 +1182,52 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
 
       {tab === 'impetos' && (
-        <div className="result-section-grid impeto-focus-grid">
-          <article className="luxury-panel wide-card impeto-master-card">
+        <div className="result-section-grid impeto-focus-grid bm-ai-impeto-workspace">
+          <article className="luxury-panel wide-card bm-ai-impeto-winner">
             <div className="section-title-row">
-              <div>
-                <p className="kicker">Ímpetos principais</p>
-                <h3>Prioridade para máximo desempenho</h3>
-              </div>
-              <span>{recommendedImpetos.filter((item) => item.tier !== 'evitar').length} opções</span>
+              <div><p className="kicker"><BrainCircuit size={14} /> Escolha final da IA local</p><h3>{bestImpeto?.name ?? 'Ímpeto ainda não definido'}</h3></div>
+              <span>{bestImpeto?.score ?? 0}/100 • {bestImpeto?.confidence ?? result.localAi?.confidence ?? 0}% confiança</span>
             </div>
+            <p className="bm-local-ai-summary">{bestImpeto?.reason ?? 'Confirme o print antes de gastar um Token de Ímpeto Selec.'}</p>
+            {bestImpeto && <>
+              <div className="bm-impeto-attribute-grid">{bestImpeto.attributes.map((attribute) => <div key={attribute}><ShieldCheck size={15} /><span>{attribute}</span></div>)}</div>
+              <div className="bm-impeto-evidence">{(bestImpeto.evidence ?? []).map((line) => <p key={line}><CheckCircle2 size={15} /> {line}</p>)}</div>
+              {(bestImpeto.warnings ?? []).length > 0 && <div className="alert-strip">{bestImpeto.warnings?.map((warning) => <span key={warning}>{warning}</span>)}</div>}
+              <div className="correction-actions">
+                <button type="button" onClick={() => onPromoteImpeto?.(bestImpeto.name)}><ThumbsUp size={14} /> Confirmar que combina</button>
+                <button type="button" onClick={() => onRejectImpeto?.(bestImpeto.name)}><Ban size={14} /> Não combina nesta carta</button>
+              </div>
+            </>}
+            <p className="panel-note">A escolha cruza a carta exata, posição, função, atributos, distribuição final da ficha, habilidades e correções que você já ensinou ao aplicativo.</p>
+          </article>
+
+          <article className="luxury-panel wide-card impeto-master-card">
+            <div className="section-title-row"><div><p className="kicker">Alternativas seguras</p><h3>Use apenas quando quiser mudar a função</h3></div><span>{recommendedImpetos.filter((item) => item.tier === 'alternativo').length}</span></div>
             <div className="impeto-rank-list">
-              {recommendedImpetos.filter((item) => item.tier !== 'evitar').slice(0, 6).map((item, index) => (
-                <div key={`${item.name}-${index}`} className={item.tier === 'ideal' ? 'impeto-row ideal' : 'impeto-row'}>
-                  <strong>{String(index + 1).padStart(2, '0')} • {item.name}</strong>
+              {recommendedImpetos.filter((item) => item.tier === 'alternativo').map((item, index) => (
+                <div key={`${item.name}-${index}`} className="impeto-row">
+                  <strong>{String(index + 2).padStart(2, '0')} • {item.name} <small>{item.score ?? 0}/100</small></strong>
                   <span>{item.attributes.join(' • ')}</span>
                   <em>{item.reason}</em>
-                  <div className="correction-actions">
-                    <button type="button" onClick={() => onPromoteImpeto?.(item.name)}><ThumbsUp size={14} /> Priorizar</button>
-                    <button type="button" onClick={() => onRejectImpeto?.(item.name)}><Ban size={14} /> Não combina</button>
-                  </div>
+                  <div className="correction-actions"><button type="button" onClick={() => onPromoteImpeto?.(item.name)}><ThumbsUp size={14} /> Priorizar</button><button type="button" onClick={() => onRejectImpeto?.(item.name)}><Ban size={14} /> Não combina</button></div>
                 </div>
               ))}
             </div>
-            <p className="panel-note">Os ímpetos são calculados separados das habilidades adicionais, usando posição, estilo de jogo, função real, formação e modelo de jogo.</p>
           </article>
 
           <article className="luxury-panel wide-card">
-            <p className="kicker">Ímpetos a evitar</p>
+            <p className="kicker">Ímpetos a evitar nesta carta</p>
             <div className="skill-grid">
-              {recommendedImpetos.filter((item) => item.tier === 'evitar').length ? recommendedImpetos.filter((item) => item.tier === 'evitar').slice(0, 6).map((item) => (
-                <div key={item.name} className="skill-check-card muted">
-                  <strong>{item.name}</strong>
-                  <span>{item.reason}</span>
-                  <em>{item.attributes.join(' • ')}</em>
-                </div>
+              {recommendedImpetos.filter((item) => item.tier === 'evitar').length ? recommendedImpetos.filter((item) => item.tier === 'evitar').map((item) => (
+                <div key={item.name} className="skill-check-card muted"><strong>{item.name} • {item.score ?? 0}/100</strong><span>{item.reason}</span><em>{item.attributes.join(' • ')}</em></div>
               )) : <p className="panel-note">Nenhum ímpeto crítico para evitar nesta função.</p>}
             </div>
           </article>
 
           <article className="luxury-panel wide-card">
-            <p className="kicker">Resumo de encaixe</p>
-            <div className="data-grid">
-              <div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div>
-              <div><span>Formação</span><strong>{result.tacticalProfile.formation}</strong></div>
-              <div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div>
-              <div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div>
-            </div>
+            <div className="section-title-row"><div><p className="kicker">Como a IA decidiu</p><h3>Sem serviço de IA pago</h3></div><span>{result.localAi?.engineVersion ?? 'motor local'}</span></div>
+            <div className="data-grid"><div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div><div><span>Formação</span><strong>{result.tacticalProfile.formation}</strong></div><div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div><div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div></div>
+            {result.localAi && <><ul className="clean-list">{result.localAi.evidence.map((line) => <li key={line}>{line}</li>)}</ul><p className="panel-note">{result.localAi.privacyNote}</p></>}
           </article>
         </div>
       )}

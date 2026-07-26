@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v30.10 — Experiência Essencial + Motor Mundial
+# BuildMaster Elite Tático v30.20 — IA Local + Ímpetos + Motor Mundial
 
 O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface foi mantida simples; a análise avançada acontece por trás da tela.
 
@@ -12,7 +12,11 @@ O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma 
 
 ## Motor Mundial de Fichas
 
-A v30.10 acrescenta:
+A v30.20 acrescenta:
+- **IA local sem API paga**: seis submotores explicáveis analisam leitura, DNA, função, ficha, habilidades e Ímpeto diretamente no aparelho.
+- **Ímpeto visível no modo simples**: a escolha principal agora possui aba própria, nota, confiança, atributos afetados, evidências e itens a evitar.
+- **Leitura anti-falso-positivo de Ímpeto**: nomes de habilidades como “Chute de primeira” não são mais confundidos com o Ímpeto “Chute”.
+
 
 - índice mundial de jogadores competitivos verificados, separado entre mobile e console;
 - base online atualizável no Supabase, com lista local segura para uso offline;

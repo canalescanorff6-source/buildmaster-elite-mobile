@@ -115,6 +115,33 @@ export type ImpetoRecommendation = {
   tier: 'ideal' | 'alternativo' | 'evitar';
   attributes: string[];
   reason: string;
+  score?: number;
+  confidence?: number;
+  official?: boolean;
+  evidence?: string[];
+  warnings?: string[];
+};
+
+export type LocalAiModelScore = {
+  id: 'leitura' | 'dna' | 'funcao' | 'ficha' | 'habilidades' | 'impeto';
+  label: string;
+  score: number;
+  note: string;
+};
+
+export type LocalAiAnalysis = {
+  engineVersion: string;
+  mode: 'IA local sem API paga';
+  confidence: number;
+  confidenceLabel: 'alta' | 'media' | 'baixa';
+  decisionState: 'confiante' | 'revisar' | 'bloqueado';
+  dataQuality: number;
+  summary: string;
+  models: LocalAiModelScore[];
+  evidence: string[];
+  uncertainties: string[];
+  nextAction: string;
+  privacyNote: string;
 };
 
 export type SkillRecommendation = {
@@ -497,6 +524,7 @@ export type AnalysisResult = {
   eliteEvolution?: EliteEvolutionAnalysis;
   metaBuildUniverse?: MetaBuildUniverse;
   competitiveFusion?: CompetitiveFusionSummary;
+  localAi?: LocalAiAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

@@ -133,6 +133,7 @@ import { exportCommercialState, importCommercialState, resolveCommercialEntitlem
 import { exportPlayStorePublicationState, importPlayStorePublicationState } from '@/modules/publication/playStorePublication';
 import { CREATOR_BUILD_RESEARCH_EVENT, exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
 import { COMPETITIVE_FUSION_EVENT, applyCompetitiveFusionToResult } from '@/lib/competitiveBuildFusion';
+import { applyLocalAiToResult } from '@/lib/localAiEngine';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
@@ -382,7 +383,7 @@ export function CardVisionApp() {
   const restoredSessionRef = useRef(false);
 
   useEffect(() => {
-    const refresh = () => setResult((current) => current ? applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(current)) : current);
+    const refresh = () => setResult((current) => current ? applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(current))) : current);
     const events = [CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT];
     events.forEach((eventName) => window.addEventListener(eventName, refresh));
     return () => events.forEach((eventName) => window.removeEventListener(eventName, refresh));
@@ -953,7 +954,7 @@ export function CardVisionApp() {
     writeDynamicRulePack(pack);
     setRulePackInfo(pack);
     setRulesStatus(message);
-    setResult((current) => current ? applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(current)) : current);
+    setResult((current) => current ? applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(current))) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
   }
 
@@ -1129,7 +1130,7 @@ export function CardVisionApp() {
     setPlayerCardImage(item.playerImage);
     setPreview(item.fullPreview ?? item.playerImage);
     setDraftResult(null);
-    setResult(applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(item.result)));
+    setResult(applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(item.result))));
     setManualMode(true);
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
@@ -2141,7 +2142,7 @@ export function CardVisionApp() {
     setCardPositionOverride('CF');
     setPlaystyleOverride('AUTO');
     setManualFields(emptyManualFields());
-    const nextResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile)));
+    const nextResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile))));
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
@@ -2304,7 +2305,7 @@ export function CardVisionApp() {
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile)));
+      const autoResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile))));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
@@ -2480,7 +2481,7 @@ export function CardVisionApp() {
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile)));
+      const autoResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile))));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
@@ -2537,7 +2538,7 @@ export function CardVisionApp() {
       if (safeObjective !== objective) setObjective(safeObjective);
       const lockedText = textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
-      const nextResult = applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile)));
+      const nextResult = applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile))));
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
         if (singlePrintSession) {
@@ -2587,7 +2588,7 @@ export function CardVisionApp() {
   }
 
   function refreshResultWithCorrections(message: string) {
-    setResult((current) => current ? applyCompetitiveFusionToResult(applyLocalCorrectionsToResult(current)) : current);
+    setResult((current) => current ? applyLocalCorrectionsToResult(applyLocalAiToResult(applyCompetitiveFusionToResult(current))) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
     setStatus(message);
   }
