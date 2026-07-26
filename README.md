@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v30.40 — Inteligência Profunda + Leitura Detalhada
+# BuildMaster Elite Tático v30.50 — Leitura Ultraprecisa + Inteligência Profunda
 
 O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface foi mantida simples; a análise avançada acontece por trás da tela.
 
@@ -11,7 +11,22 @@ O BuildMaster transforma o print ou os dados de uma carta do eFootball em **uma 
 5. O resultado mostra uma ficha final, as habilidades pendentes, como usar e o nível de confiança.
 
 
-## Recorte inteligente da carta — v30.40
+
+## Leitura Ultraprecisa local — v30.50
+
+O leitor padrão trabalha com múltiplas passagens locais do mesmo campo, sem API de IA paga. Nome, posição, GER, nível e pontos são comparados entre versões da imagem em cor, contraste, nitidez, binarização e inversão. O app aceita automaticamente um campo crítico somente quando duas ou mais passagens independentes concordam.
+
+- nome conciliado com cartas confirmadas no histórico e com o catálogo local de jogadores conhecidos;
+- correções manuais aprendidas para a mesma identidade e o mesmo formato de print;
+- rótulos de atributos corrigidos por similaridade antes de aceitar o número associado;
+- limites plausíveis para GER, nível, altura, peso, idade, atributos, posições e Ímpetos;
+- leitura ultraprécisa aplicada tanto ao Print Único Pro quanto ao leitor com várias telas;
+- auditoria mostrando quantidade de passagens, concordância, precisão estimada e campos bloqueados;
+- campos críticos sem consenso não são transformados em verdade: a ficha final aguarda confirmação humana.
+
+A meta de “quase 100%” é tratada como **leitura segura**, não como promessa impossível para qualquer imagem. Em um print original, nítido e completo, o sistema pode liberar a leitura automática quando a precisão estimada chega a 96% ou mais. Em print comprimido, cortado ou com texto encoberto, ele prefere bloquear o dado duvidoso em vez de inventar um nome ou número.
+
+## Recorte inteligente da carta — v30.50
 
 Ao importar qualquer print, o aplicativo mantém a imagem completa somente para a leitura de nome, atributos, habilidades, Ímpetos e demais dados. Para a ficha e o Cofre, ele detecta e mostra **somente a carta do jogador**, em formato vertical, limpo e compacto.
 
@@ -26,7 +41,7 @@ A leitura sempre usa o arquivo original completo. Ajustar o recorte visual não 
 
 ## Inteligência Profunda da Carta
 
-A v30.40 acrescenta:
+A v30.50 acrescenta:
 - **leitura detalhada de perfis completos**: identifica nome, estilo, GER, posição, nível, altura, peso, idade, condição, técnico, bônus, Ímpetos, 13 posições, 26 atributos, sequência de progressão, modelo físico e habilidades;
 - **geometria adaptativa do print**: quando detecta uma tela detalhada, o leitor troca automaticamente as áreas de OCR para não misturar atributos, posições, habilidades e medidas físicas;
 - **simulador local de distribuições**: compara a ficha atual, variantes do motor, fusão profissional, cenários de tolerância e redistribuições controladas;

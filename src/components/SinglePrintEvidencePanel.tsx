@@ -20,7 +20,7 @@ export function SinglePrintEvidencePanel({
         <div>
           <p className="kicker"><ScanLine size={15}/> Print Único Pro</p>
           <h3>Auditoria visual campo por campo</h3>
-          <p>O resultado usa áreas separadas. Nível e GER não competem pelo mesmo número.</p>
+          <p>O resultado cruza várias passagens locais por campo. Nome, Nível e GER só são liberados quando existe consenso.</p>
         </div>
         <div className="single-print-score">
           <strong>{session.mergedConfidence}%</strong>
@@ -28,6 +28,23 @@ export function SinglePrintEvidencePanel({
           <small>{session.template} • {session.width}×{session.height}{typeof session.layoutConfidence === 'number' ? ` • alinhamento ${session.layoutConfidence}%` : ''}</small>
         </div>
       </header>
+
+
+      <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
+        <div>
+          <p className="kicker"><ShieldCheck size={14}/> Leitura Ultraprecisa v30.50</p>
+          <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
+          <span>precisão estimada</span>
+        </div>
+        <div className="precision-audit-stats">
+          <span><b>{session.precisionAudit.totalPasses}</b> passagens locais</span>
+          <span><b>{session.precisionAudit.confirmedFields}</b> campos confirmados</span>
+          <span><b>{session.precisionAudit.reviewFields}</b> para revisar</span>
+        </div>
+        <p>{session.precisionAudit.nearPerfectReady
+          ? 'Os campos críticos atingiram consenso alto. A ficha pode usar a leitura automática.'
+          : 'O app não força uma resposta errada. Os campos sem consenso ficam bloqueados até a confirmação.'}</p>
+      </section>
 
       {originalPreview && session.zoneBoxes?.length ? (
         <figure className="single-print-map">
@@ -54,7 +71,7 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v30.40</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v30.50</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">
@@ -111,7 +128,7 @@ export function SinglePrintEvidencePanel({
 
       <div className="single-print-field-grid">
         {session.fields.map((field) => (
-          <details key={field.key} className={`single-evidence-card status-${field.status}`} open={field.key === 'level' || field.key === 'overall'}>
+          <details key={field.key} className={`single-evidence-card status-${field.status}`} open={field.key === 'playerName' || field.key === 'level' || field.key === 'overall'}>
             <summary>
               <span className="evidence-status-icon">
                 {field.status === 'confirmed' ? <CheckCircle2 size={18}/> : field.status === 'review' ? <AlertTriangle size={18}/> : <Eye size={18}/>} 

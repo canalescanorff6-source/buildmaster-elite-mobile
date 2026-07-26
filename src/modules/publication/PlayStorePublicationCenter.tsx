@@ -43,7 +43,7 @@ const EDITABLE_LABELS: Partial<Record<keyof PlayStorePublicationProfile, string>
   testersConfigured: 'Grupo de testadores configurado',
   crashMonitoringReady: 'Rotina de Android vitals definida',
   supportContactPublished: 'Contato de suporte publicado',
-  releaseNotesReady: 'Notas da v30.40 revisadas'
+  releaseNotesReady: 'Notas da v30.50 revisadas'
 };
 
 function downloadText(filename: string, content: string): void {
@@ -110,7 +110,7 @@ export function PlayStorePublicationCenter() {
     <div className="bm3000-publication-controls">
       <label><span>Canal de destino</span><select value={profile.targetTrack} onChange={(event) => persist({ ...profile, targetTrack: event.target.value as PlayStoreTrack })}>{(Object.keys(TRACK_LABELS) as PlayStoreTrack[]).map((track) => <option key={track} value={track}>{TRACK_LABELS[track]}</option>)}</select></label>
       <label><span>Rollout inicial</span><input type="number" min={1} max={100} value={profile.rolloutPercentage} onChange={(event) => persist({ ...profile, rolloutPercentage: Number(event.target.value) })} /><small>Use 100% nos canais de teste. Em produção, comece de forma gradual.</small></label>
-      <article><ShieldCheck size={20} /><div><strong>API 36 + AAB + Play App Signing</strong><span>O workflow da v30.40 gera o bundle Play separado do APK direto.</span></div></article>
+      <article><ShieldCheck size={20} /><div><strong>API 36 + AAB + Play App Signing</strong><span>O workflow da v30.50 gera o bundle Play separado do APK direto.</span></div></article>
     </div>
 
     <div className="bm3000-publication-metrics">

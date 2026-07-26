@@ -29,9 +29,9 @@ assert.match(result, /Carta recortada de/);
 assert.match(result, /playerImage \? 'has-card-image'/);
 assert.match(result, /!playerImage && <div className="result-player-rating"/);
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
-assert.match(css, /BuildMaster v30\.40 — recorte inteligente/);
+assert.match(css, /BuildMaster v30\.50 — recorte inteligente/);
 assert.match(css, /result-player-art\.has-card-image/);
 assert.match(css, /object-fit: contain !important/);
 assert.match(css, /grid-template-columns: 108px minmax\(0, 1fr\)/);
 
-console.log('v30.40 recorte inteligente e carta compacta aprovados.');
+console.log('v30.50 recorte inteligente e carta compacta aprovados.');

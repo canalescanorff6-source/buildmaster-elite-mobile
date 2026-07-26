@@ -1,4 +1,5 @@
 import type { PremiumZoneReading } from '@/lib/premiumReading';
+import { textSimilarity } from './highPrecisionOcr';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -46,7 +47,7 @@ export type DetailedPrintReading = {
   canonicalText: string;
 };
 
-const VERSION = '30.40-detailed-print-1';
+const VERSION = '30.50-detailed-print-2';
 
 function normalized(value: string) {
   return value
@@ -66,6 +67,16 @@ function numberValue(raw: string | undefined): number | null {
   if (!raw) return null;
   const value = Number(raw.replace(',', '.'));
   return Number.isFinite(value) ? value : null;
+}
+
+function rawNumberInRange(raw: string | null, min: number, max: number): string | null {
+  const numeric = numberValue(raw ?? undefined);
+  return numeric !== null && numeric >= min && numeric <= max ? raw : null;
+}
+
+function numericFromDecoratedValue(raw: string): number | null {
+  const match = raw.match(/-?\d+(?:[,.]\d+)?/);
+  return numberValue(match?.[0]);
 }
 
 function sourceText(readings: PremiumZoneReading[], keys: Array<PremiumZoneReading['key']>) {
@@ -104,6 +115,73 @@ function firstMatch(text: string, patterns: RegExp[]): string | null {
     if (match?.[1]) return clean(match[1]);
   }
   return null;
+}
+
+const OCR_LABEL_VARIANTS: Record<string, string[]> = {
+  'Talento ofensivo': ['Consciência ofensiva', 'Talento ofenslvo', 'Talento ofensivo'],
+  'Controle de bola': ['Controle da bola', 'Controle de boIa'],
+  'Condução firme': ['Posse de bola curta', 'Condução flrme'],
+  'Passe rasteiro': ['Passe baixo', 'Passe rasteíro'],
+  'Finalização': ['Finalizacao', 'Finalizaçao', 'Finalizaçâo'],
+  'Cabeçada': ['Cabeceio', 'Cabecada'],
+  'Talento defensivo': ['Consciência defensiva', 'Talento defenslvo'],
+  'Dedicação defensiva': ['Engajamento defensivo', 'Dedicaçao defensiva'],
+  'Talento de GO': ['Consciência do goleiro', 'Talento de GK'],
+  'Firmeza de GO': ['Agarrar', 'Firmeza do goleiro'],
+  'Defesa de GO': ['Espalmar', 'Defesa do goleiro'],
+  'Reflexos de GO': ['Reflexos do goleiro'],
+  'Alcance de GO': ['Alcance do goleiro'],
+  'Força do chute': ['Potência do chute', 'Forca do chute'],
+  'Contato físico': ['Contato fisico', 'Força física'],
+  'Equilíbrio': ['Equilibrio'],
+  'Resistência': ['Resistencia'],
+  'Comprimento do braço': ['Comprimento do braco'],
+  'Largura dos ombros': ['Largura dos ombro'],
+  'Comprimento do pescoço': ['Comprimento do pescoco'],
+  'Tamanho do pescoço': ['Tamanho do pescoco'],
+  'Altura do ombro': ['Altura dos ombros'],
+  'Comprimento da perna': ['Comprimento das pernas'],
+  'Tamanho da coxa': ['Tamanho da coxa'],
+  'Tamanho da cintura': ['Tamanho da cintura'],
+  'Tamanho do braço': ['Tamanho do braco'],
+  'Tamanho da panturrilha': ['Tamanho da panturrilha'],
+  'Raio de cobertura das pernas': ['Raio cobertura pernas'],
+  'Raio de cobertura dos braços': ['Raio cobertura braços', 'Raio cobertura bracos'],
+  'Altura de salto': ['Altura do salto'],
+  'Colisão do tronco': ['Colisao do tronco'],
+  'Altura com base no comprimento': ['Altura com base no comprimen']
+};
+
+function normalizeNumericGlyphs(value: string) {
+  return value
+    .replace(/[Oo](?=\d|\b)/g, '0')
+    .replace(/(?<=\d)[Il](?=\d|\b)/g, '1')
+    .replace(/(?<=\d)[Ss](?=\d|\b)/g, '5')
+    .replace(/(?<=\d)[Bb](?=\d|\b)/g, '8');
+}
+
+function fuzzyNumericValue(text: string, label: string, min: number, max: number): number | null {
+  const aliases = [label, ...(OCR_LABEL_VARIANTS[label] ?? [])];
+  const lines = text.split(/\r?\n/).map((line) => clean(normalizeNumericGlyphs(line))).filter(Boolean);
+  let best: { value: number; score: number } | null = null;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const next = lines[index + 1] ?? '';
+    const numericMatches = Array.from(line.matchAll(/\b(\d{1,3}(?:[,.]\d+)?)\b/g));
+    const candidates = numericMatches.length
+      ? numericMatches.map((match) => ({ value: numberValue(match[1]), labelPart: clean(line.replace(match[0], ' ')) }))
+      : /^\d{1,3}(?:[,.]\d+)?$/.test(next)
+        ? [{ value: numberValue(next), labelPart: line }]
+        : [];
+    for (const candidate of candidates) {
+      if (candidate.value === null || candidate.value < min || candidate.value > max) continue;
+      const labelScore = Math.max(...aliases.map((alias) => textSimilarity(candidate.labelPart, alias)));
+      if (labelScore < 0.67) continue;
+      const score = labelScore + (numericMatches.length ? 0.05 : 0);
+      if (!best || score > best.score) best = { value: candidate.value, score };
+    }
+  }
+  return best?.value ?? null;
 }
 
 const ATTRIBUTE_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
@@ -179,45 +257,97 @@ function parseNumericCatalog(text: string, catalog: Array<{ label: string; patte
   const values: DetailedValue[] = [];
   for (const item of catalog) {
     const raw = firstMatch(text, item.patterns);
-    const numeric = numberValue(raw ?? undefined);
+    const exact = numberValue(raw ?? undefined);
+    const numeric = exact !== null && exact >= min && exact <= max
+      ? exact
+      : fuzzyNumericValue(text, item.label, min, max);
     if (numeric === null || numeric < min || numeric > max) continue;
-    values.push(makeValue(item.label, String(numeric), confidence, source, numeric));
+    const adjustedConfidence = exact !== null ? confidence : Math.max(58, confidence - 5);
+    values.push(makeValue(item.label, String(numeric), adjustedConfidence, exact !== null ? source : `${source} • rótulo corrigido por similaridade`, numeric));
   }
   return values;
 }
 
+const POSITION_OCR_ALIASES: Record<string, (typeof POSITION_CODES)[number]> = {
+  LWF: 'LWF', LWE: 'LWF', LVE: 'LWF',
+  CF: 'CF', CE: 'CF',
+  RWF: 'RWF', RWE: 'RWF',
+  SS: 'SS',
+  AMF: 'AMF', AME: 'AMF', ANF: 'AMF',
+  LMF: 'LMF', LME: 'LMF',
+  CMF: 'CMF', CME: 'CMF',
+  RMF: 'RMF', RME: 'RMF',
+  DMF: 'DMF', DME: 'DMF',
+  LB: 'LB', L8: 'LB',
+  CB: 'CB', C8: 'CB',
+  RB: 'RB', R8: 'RB',
+  GK: 'GK', CK: 'GK'
+};
+
 function parsePositionRatings(text: string, confidence: number, source: string) {
-  const values: DetailedValue[] = [];
-  const upper = text.toUpperCase();
-  for (const code of POSITION_CODES) {
-    const match = upper.match(new RegExp(`\\b${code}\\s*[:=-]?\\s*(\\d{2,3})\\b`, 'i'));
+  const found = new Map<(typeof POSITION_CODES)[number], { value: number; confidence: number }>();
+  const upper = normalizeNumericGlyphs(text.toUpperCase());
+  for (const [rawCode, code] of Object.entries(POSITION_OCR_ALIASES)) {
+    const match = upper.match(new RegExp(`\\b${rawCode}\\s*[:=-]?\\s*(\\d{2,3})\\b`, 'i'));
     const numeric = numberValue(match?.[1]);
     if (numeric === null || numeric < 40 || numeric > 110) continue;
-    values.push(makeValue(code, String(numeric), confidence, source, numeric));
+    const current = found.get(code);
+    const nextConfidence = rawCode === code ? confidence : Math.max(58, confidence - 7);
+    if (!current || nextConfidence > current.confidence) found.set(code, { value: numeric, confidence: nextConfidence });
   }
-  return values;
+  const lines = upper.split(/\r?\n/).map(clean).filter(Boolean);
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const code = POSITION_OCR_ALIASES[lines[index].replace(/[^A-Z0-9]/g, '')];
+    const numeric = /^\d{2,3}$/.test(lines[index + 1]) ? Number(lines[index + 1]) : null;
+    if (!code || numeric === null || numeric < 40 || numeric > 110 || found.has(code)) continue;
+    found.set(code, { value: numeric, confidence: Math.max(56, confidence - 9) });
+  }
+  return Array.from(found.entries()).map(([code, item]) => makeValue(code, String(item.value), item.confidence, source, item.value));
+}
+
+function fuzzyContainsCatalogItem(text: string, item: string, aliases: string[]) {
+  const norm = normalized(text);
+  if ([item, ...aliases].some((candidate) => norm.includes(normalized(candidate)))) return true;
+  const lines = text.split(/\r?\n/).map(clean).filter(Boolean);
+  return lines.some((line) => [item, ...aliases].some((candidate) => textSimilarity(line, candidate) >= 0.82));
 }
 
 function parseSkills(text: string, confidence: number, source: string) {
-  const norm = normalized(text);
   const aliases: Partial<Record<(typeof SKILLS)[number], string[]>> = {
-    'Cabeçada': ['Cabeceio'],
+    'Cabeçada': ['Cabeceio', 'Cabecada'],
     'Espírito guerreiro': ['Espirito guerreiro'],
-    'Especialista em pênalti': ['Especialista em penalti']
+    'Especialista em pênalti': ['Especialista em penalti'],
+    'Passe de primeira': ['Passe primeira'],
+    'Chute de primeira': ['Chute primeira'],
+    'Precisão à distância': ['Precisao a distancia'],
+    'Finalização acrobática': ['Finalizacao acrobatica'],
+    'Controle com a sola': ['Controle sola']
   };
   return SKILLS
-    .filter((skill) => [skill, ...(aliases[skill] ?? [])].some((candidate) => norm.includes(normalized(candidate))))
+    .filter((skill) => fuzzyContainsCatalogItem(text, skill, aliases[skill] ?? []))
     .map((skill) => makeValue('Habilidade', skill, confidence, source));
 }
 
 function parseImpetos(text: string, confidence: number, source: string) {
   const values: DetailedValue[] = [];
+  const lines = normalizeNumericGlyphs(text).split(/\r?\n|[|•]/).map(clean).filter(Boolean);
   for (const name of IMPETO_NAMES) {
-    const match = text.match(new RegExp(`(?:^|[\\n|•])\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\+\\s*(\\d+)`, 'i'))
-      ?? text.match(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\+\\s*(\\d+)`, 'i'));
-    const numeric = numberValue(match?.[1]);
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = text.match(new RegExp(`(?:^|[\\n|•])\\s*${escaped}\\s*\\+\\s*(\\d+)`, 'i'))
+      ?? text.match(new RegExp(`\\b${escaped}\\s*\\+\\s*(\\d+)`, 'i'));
+    let numeric = numberValue(match?.[1]);
+    let fuzzy = false;
+    if (numeric === null) {
+      for (const line of lines) {
+        const lineMatch = line.match(/(.+?)\s*\+\s*(\d{1,2})/);
+        if (!lineMatch || textSimilarity(lineMatch[1], name) < 0.76) continue;
+        numeric = Number(lineMatch[2]);
+        fuzzy = true;
+        break;
+      }
+    }
     if (numeric === null || numeric < 1 || numeric > 5) continue;
-    values.push(makeValue('Ímpeto', `${name} +${numeric}`, confidence, source, numeric));
+    values.push(makeValue('Ímpeto', `${name} +${numeric}`, fuzzy ? Math.max(58, confidence - 6) : confidence, fuzzy ? `${source} • nome corrigido por similaridade` : source, numeric));
   }
   return values;
 }
@@ -249,14 +379,46 @@ function parseProgressionSequence(text: string, confidence: number, source: stri
 
 function identityValue(label: string, value: string | null, confidence: number, source: string, numeric = false) {
   if (!value) return null;
-  return makeValue(label, value, confidence, source, numeric ? numberValue(value) : null);
+  return makeValue(label, value, confidence, source, numeric ? numericFromDecoratedValue(value) : null);
 }
 
-function detectName(text: string) {
-  const explicit = firstMatch(text, [/(?:nome\s+do\s+jogador|nome|jogador)\s*[:=-]\s*([^\n]{2,48})/i]);
-  if (explicit) return explicit;
-  const lines = text.split(/\r?\n/).map(clean).filter(Boolean);
-  return lines.find((line) => /^[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+(?:\s+[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+){1,4}$/.test(line) && line.length <= 48) ?? null;
+const NAME_REJECT_TOKENS = [
+  'detalhes do jogador', 'modelo de jogador', 'atributos', 'habilidades', 'nivel', 'overall', 'ger',
+  'estilo de jogo', 'posicao', 'talento ofensivo', 'talento defensivo', 'condicao fisica',
+  'resistencia a lesao', 'pior pe', 'altura', 'peso', 'idade', 'tecnico', 'manager'
+];
+
+function titleCaseName(value: string) {
+  const particles = new Set(['da', 'de', 'do', 'das', 'dos', 'del', 'della', 'di', 'van', 'von', 'le', 'la']);
+  return clean(value).toLowerCase().split(/\s+/).map((word, index) => index > 0 && particles.has(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+function detectName(text: string, knownPlayerNames: string[] = []) {
+  const explicit = firstMatch(text, [/(?:nome\s+do\s+jogador|nome|jogador)\s*[:=-]\s*([^\n]{2,52})/i]);
+  const rawLines = [explicit ?? '', ...text.split(/\r?\n/)].map((line) => clean(line)).filter(Boolean);
+  const candidates: Array<{ value: string; score: number }> = [];
+  rawLines.forEach((rawLine, index) => {
+    const line = rawLine
+      .replace(/^(?:nome(?:\s+do\s+jogador)?|jogador)\s*[:=.-]?\s*/i, '')
+      .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ.' -]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const norm = normalized(line);
+    const words = line.split(/\s+/).filter(Boolean);
+    const letters = (line.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+    if (line.length < 3 || line.length > 52 || words.length > 6 || /\d/.test(line) || letters / Math.max(1, line.length) < 0.67) return;
+    if (NAME_REJECT_TOKENS.some((token) => norm.includes(token))) return;
+    let score = 62 + Math.max(0, 14 - index * 2) + (words.length >= 2 && words.length <= 4 ? 12 : 4);
+    const nearest = knownPlayerNames.map((name) => ({ name, similarity: textSimilarity(line, name) })).sort((a, b) => b.similarity - a.similarity)[0];
+    if (nearest?.similarity >= 0.88) {
+      candidates.push({ value: nearest.name, score: score + 18 });
+      return;
+    }
+    if (/^[A-ZÀ-Ÿ]/.test(line)) score += 4;
+    candidates.push({ value: titleCaseName(line), score });
+  });
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.value ?? null;
 }
 
 function detectPlaystyle(text: string) {
@@ -274,7 +436,7 @@ export function looksLikeCompleteProfile(text: string) {
   return markers.filter((marker) => norm.includes(marker)).length >= 3;
 }
 
-export function readDetailedPrint(fullText: string, readings: PremiumZoneReading[]): DetailedPrintReading {
+export function readDetailedPrint(fullText: string, readings: PremiumZoneReading[], knownPlayerNames: string[] = []): DetailedPrintReading {
   const allText = [fullText, ...readings.map((reading) => reading.text)].filter(Boolean).join('\n');
   const identitySource = [sourceText(readings, ['name', 'playstyle', 'overall', 'mainPosition', 'identityMeta']), fullText].filter(Boolean).join('\n');
   const attributeSource = [sourceText(readings, ['attributes']), fullText].filter(Boolean).join('\n');
@@ -293,13 +455,18 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const conditionConfidence = confidenceFromSource(readings, ['condition', 'manager'], 68);
   const impetoConfidence = confidenceFromSource(readings, ['impetos', 'autoTraining'], 68);
 
-  const overallRaw = firstMatch(identitySource, [/(?:ger|overall)\s*[:=-]?\s*(\d{2,3})/i, /\b(10[0-9]|9[0-9]|8[0-9])\s*(?:cf|ca|ss|sa|amf|mat|lwf|pe|rwf|pd)\b/i]);
+  const overallCandidate = firstMatch(identitySource, [/(?:ger|overall)\s*[:=-]?\s*(\d{2,3})/i, /\b(10[0-9]|9[0-9]|8[0-9])\s*(?:cf|ca|ss|sa|amf|mat|lwf|pe|rwf|pd)\b/i]);
+  const overallRaw = rawNumberInRange(overallCandidate, 40, 120);
   const positionRaw = firstMatch(identitySource, [/(?:posi[cç][aã]o\s+principal|posi[cç][aã]o)\s*[:=-]?\s*(GK|CB|LB|RB|DMF|CMF|LMF|RMF|AMF|LWF|RWF|SS|CF|GOL|ZAG|LE|LD|VOL|MLG|MAT|PE|PD|SA|CA)/i, /\b(GK|CB|LB|RB|DMF|CMF|LMF|RMF|AMF|LWF|RWF|SS|CF)\b/i]);
-  const heightRaw = firstMatch(allText, [/altura\s*[:=-]?\s*(\d{3})\s*cm/i, /\b(1\d{2})\s*cm\b/i]);
-  const weightRaw = firstMatch(allText, [/peso\s*[:=-]?\s*(\d{2,3})\s*kg/i]);
-  const ageRaw = firstMatch(allText, [/idade\s*[:=-]?\s*(\d{1,2})/i]);
-  const levelRaw = firstMatch(allText, [/(?:n[ií]vel|nivel|level)\s*[:=-]?\s*(\d{1,2})/i]);
-  const name = detectName(identitySource);
+  const heightCandidate = firstMatch(allText, [/altura\s*[:=-]?\s*(\d{3})\s*cm/i, /\b(1\d{2})\s*cm\b/i]);
+  const weightCandidate = firstMatch(allText, [/peso\s*[:=-]?\s*(\d{2,3})\s*kg/i]);
+  const ageCandidate = firstMatch(allText, [/idade\s*[:=-]?\s*(\d{1,2})/i]);
+  const levelCandidate = firstMatch(allText, [/(?:n[ií]vel|nivel|level)\s*[:=-]?\s*(\d{1,2})/i]);
+  const heightRaw = rawNumberInRange(heightCandidate, 145, 225);
+  const weightRaw = rawNumberInRange(weightCandidate, 40, 160);
+  const ageRaw = rawNumberInRange(ageCandidate, 15, 65);
+  const levelRaw = rawNumberInRange(levelCandidate, 1, 99);
+  const name = detectName(identitySource, knownPlayerNames);
   const playstyle = detectPlaystyle(identitySource);
 
   const attributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
@@ -366,7 +533,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     + Object.values(identity).filter(Boolean).length * 2.1
   )));
 
-  const canonical: string[] = ['[LEITURA DETALHADA V30.40]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V30.50]'];
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
   if (identity.playstyle) canonical.push(`ESTILO DE JOGO: ${identity.playstyle.value}`);
@@ -383,9 +550,19 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of attributes) canonical.push(`${value.label}: ${value.value}`);
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V30.40]');
+  canonical.push('[FIM LEITURA DETALHADA V30.50]');
 
   const warnings: string[] = [];
+  if (overallCandidate && !overallRaw) warnings.push(`GER descartado por estar fora da faixa plausível: ${overallCandidate}.`);
+  if (heightCandidate && !heightRaw) warnings.push(`Altura descartada por estar fora da faixa plausível: ${heightCandidate} cm.`);
+  if (weightCandidate && !weightRaw) warnings.push(`Peso descartado por estar fora da faixa plausível: ${weightCandidate} kg.`);
+  if (ageCandidate && !ageRaw) warnings.push(`Idade descartada por estar fora da faixa plausível: ${ageCandidate}.`);
+  if (levelCandidate && !levelRaw) warnings.push(`Nível descartado por estar fora da faixa plausível: ${levelCandidate}.`);
+  const highestPosition = Math.max(0, ...positionRatings.map((item) => item.numericValue ?? 0));
+  if (identity.overall?.numericValue && highestPosition && Math.abs(identity.overall.numericValue - highestPosition) > 12) {
+    identity.overall.status = 'review';
+    warnings.push('O GER divergiu muito da melhor classificação por posição e precisa de confirmação visual.');
+  }
   if (progressionSequence.some((item) => item.status === 'review')) warnings.push('A sequência de progressão foi lida pela ordem visual dos ícones e precisa de confirmação antes de virar orçamento da ficha.');
   if (attributes.length >= 20) warnings.push('Tabela de atributos com cobertura alta: o motor pode reduzir o uso de estimativas por posição.');
   if (physicalModel.length >= 8) warnings.push('Modelo físico detectado e incorporado à leitura de alcance, salto e contato.');

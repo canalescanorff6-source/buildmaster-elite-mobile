@@ -2,7 +2,7 @@ import type { PositionCode } from '@/lib/analyzerDomain';
 import type { SingleFieldEvidence, SinglePrintSession } from './singlePrintPro';
 import { officialPlaystyleForLabel, readOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 
-export const OCR_VISION_VERSION = '29.30.0';
+export const OCR_VISION_VERSION = '30.50.0';
 
 export type OcrVisionFieldStatus = 'trusted' | 'review' | 'blocked';
 
@@ -114,7 +114,10 @@ function goalkeeperGuard(fields: OcrVisionFieldAudit[], rawText: string): OcrVis
 export function buildOcrVisionAudit(session: SinglePrintSession, rawText = session.canonicalText): OcrVisionAudit {
   const pack = readOfficialRulePack();
   const fields = session.fields.map(auditField);
-  const blockingFields = fields.filter((field) => field.status === 'blocked').map((field) => field.label);
+  const blockingFields = [...new Set([
+    ...fields.filter((field) => field.status === 'blocked').map((field) => field.label),
+    ...session.blockingFields
+  ])];
   const warnings = [...session.warnings];
   const corrections: string[] = [];
   const resolution = resolutionClass(session.width, session.height);
@@ -142,15 +145,16 @@ export function buildOcrVisionAudit(session: SinglePrintSession, rawText = sessi
 
   const scoredFields = fields.filter((field) => field.value !== null);
   const baseScore = scoredFields.length ? scoredFields.reduce((sum, field) => sum + field.confidence, 0) / scoredFields.length : 0;
-  const officialBonus = fields.filter((field) => field.officialMatch).length * 1.4;
-  const penalty = blockingFields.length * 8 + warnings.length * 2 + (gkGuard === 'review' ? 12 : 0);
-  const score = Math.max(0, Math.min(100, Math.round(baseScore + officialBonus - penalty)));
+  const precisionScore = session.precisionAudit.estimatedAccuracy;
+  const officialBonus = fields.filter((field) => field.officialMatch).length * 1.1;
+  const penalty = blockingFields.length * 8 + warnings.length * 1.5 + (gkGuard === 'review' ? 12 : 0);
+  const score = Math.max(0, Math.min(100, Math.round(baseScore * 0.62 + precisionScore * 0.38 + officialBonus - penalty)));
   const state: OcrVisionAudit['state'] = blockingFields.length > 0 || gkGuard === 'review' ? 'blocked' : score >= 82 ? 'ready' : 'review';
 
   const passes: OcrVisionPass[] = [
     { id: 'geometry', label: 'Geometria automática', required: true, reason: `Template ${session.template}, ${session.width}×${session.height}.` },
-    { id: 'contrast', label: 'Primeira passagem com contraste', required: true, reason: 'Identidade, posição, estilo e números principais.' },
-    { id: 'sharp', label: 'Segunda passagem seletiva', required: state !== 'ready', reason: state === 'ready' ? 'Dispensada nos campos já confiáveis.' : 'Executar somente nos campos em revisão para economizar memória.' },
+    { id: 'contrast', label: 'Consenso multietapas local', required: true, reason: `${session.precisionAudit.totalPasses} passagens distribuídas entre tratamentos de cor, contraste, nitidez e binarização.` },
+    { id: 'sharp', label: 'Releitura seletiva dos campos críticos', required: state !== 'ready', reason: state === 'ready' ? 'O consenso alto dispensou novas passagens.' : 'Nome, posição e números sem acordo permanecem bloqueados para confirmação.' },
     { id: 'official-validation', label: 'Validação pela base oficial', required: true, reason: `Pacote ${pack.version} • ${pack.season}.` }
   ];
 

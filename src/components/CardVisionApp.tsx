@@ -53,7 +53,6 @@ import {
 } from '@/modules/analysis';
 import {
   DEFAULT_OCR_ZONES,
-  createZoneOriginPreview,
   enhanceImageLocally,
   inspectPrintQuality,
   type OcrZone
@@ -62,7 +61,6 @@ import {
   ensureZoneCoverage,
   qualityLabel,
   qualityScore,
-  readingStatus,
   suggestedEnhancement,
   type PremiumEnhancementMode,
   type PremiumZoneReading
@@ -73,6 +71,7 @@ import { comparePlayers } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import { LOCAL_CARD_RULES } from '@/lib/cardDatabase';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import { createStableId } from '@/lib/stableId';
 import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
@@ -119,10 +118,11 @@ import {
   preloadPanelGroup
 } from '@/components/lazy/AppLazyPanels';
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
-import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, chooseBestZoneReading, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
+import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, ocrKindForZone, refineSinglePrintGeometryFromText, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
 import { adjustCardCropBox, createSmartCardPreview, renderCardCropPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
 import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
+import { recognizeZoneWithHighPrecision } from '@/modules/card-reader/highPrecisionOcr';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
 import { validateImageFile } from '@/modules/images/imageSafety';
@@ -196,7 +196,7 @@ import {
 } from '@/modules/vault/cardHistoryStore';
 export { migrateAnalysisResult, normalizeSavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import { enqueueOcrFile, listOcrQueue, queueJobAsFile, removeOcrQueueJob, updateOcrQueueJob, type OcrQueueJob } from '@/modules/card-reader/ocrQueue';
-import { cropImage, mergeOcrTexts, preprocessImage } from '@/modules/card-reader/imageProcessing';
+import { mergeOcrTexts, preprocessImage } from '@/modules/card-reader/imageProcessing';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import { COMPETITIVE_MATCH_STORAGE_KEY } from '@/modules/matches/competitivePerformanceEngine';
 import { TRAINING_EVOLUTION_STORAGE_KEY, TRAINING_GOALS_STORAGE_KEY } from '@/modules/training/trainingEvolutionEngine';
@@ -2164,6 +2164,15 @@ export function CardVisionApp() {
       let geometry = await inspectSinglePrintGeometry(selectedFile);
       const imageHash = await fileDigest(selectedFile);
       const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', 120).catch(() => []);
+      const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 160).catch(() => [])).map((entry) => entry.value);
+      const localCanonicalNames = LOCAL_CARD_RULES.map((rule) =>
+        [...rule.match].sort((left, right) => right.length - left.length)[0] ?? ''
+      );
+      const knownPlayerNames = Array.from(new Set([
+        ...localCanonicalNames,
+        ...storedScanEntries.flatMap((entry) => entry.value.fields.filter((field) => field.key === 'playerName').map((field) => field.value ?? '')),
+        ...corrections.flatMap((correction) => correction.field === 'playerName' ? [correction.correctedValue, correction.playerName] : [correction.playerName])
+      ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
       setOcrZones(geometry.zones);
 
@@ -2196,63 +2205,18 @@ export function CardVisionApp() {
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
       for (let index = 0; index < enabledZones.length; index += 1) {
         const zone = enabledZones[index];
-        setStatus(`Print Único Pro: ${zone.label} (${index + 1}/${enabledZones.length})...`);
+        setStatus(`Leitura Ultraprecisa: ${zone.label} (${index + 1}/${enabledZones.length})...`);
         const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
         const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
-        const target = numeric ? 1180 : wide ? 1850 : 1500;
-        const contrastImage = await cropImage(selectedFile, zone, target, 'contrast');
-        const contrastPass = await recognizeWithOcrWorker(contrastImage, {
-          label: zone.label,
-          kind: ocrKindForZone(zone.key),
-          cacheKey: `${imageHash}:${geometry.template}:${zone.key}:contrast`
+        const target = zone.key === 'name' ? 2600 : numeric ? 2100 : wide ? 2800 : 2350;
+        const best = await recognizeZoneWithHighPrecision(selectedFile, zone, {
+          imageHash,
+          template: geometry.template,
+          targetWidth: target,
+          readingMode,
+          knownPlayerNames,
+          labelPrefix: 'Print único'
         });
-        const originPreview = await createZoneOriginPreview(selectedFile, zone).catch(() => null);
-        const candidates: PremiumZoneReading[] = [{
-          id: `${imageHash}-${zone.key}-contrast`,
-          sourceId: imageHash,
-          sourceLabel: 'Print único',
-          screenType: geometry.template,
-          key: zone.key,
-          label: zone.label,
-          text: contrastPass.text,
-          confidence: contrastPass.confidence,
-          status: readingStatus(contrastPass.confidence, contrastPass.text),
-          originPreview,
-          enhancement: 'contrast',
-          passCount: 1,
-          alternatives: []
-        }];
-
-        const needsSecondPass = readingMode === 'precision'
-          && (contrastPass.confidence < (numeric ? 88 : 80) || contrastPass.text.trim().length < (numeric ? 1 : 4));
-        if (needsSecondPass) {
-          const sharpImage = await cropImage(selectedFile, zone, target, 'sharp');
-          const sharpPass = await recognizeWithOcrWorker(sharpImage, {
-            label: `${zone.label} • segunda passagem`,
-            kind: ocrKindForZone(zone.key),
-            cacheKey: `${imageHash}:${geometry.template}:${zone.key}:sharp`
-          });
-          candidates.push({
-            id: `${imageHash}-${zone.key}-sharp`,
-            sourceId: imageHash,
-            sourceLabel: 'Print único',
-            screenType: geometry.template,
-            key: zone.key,
-            label: zone.label,
-            text: sharpPass.text,
-            confidence: sharpPass.confidence,
-            status: readingStatus(sharpPass.confidence, sharpPass.text),
-            originPreview,
-            enhancement: 'sharp',
-            passCount: 2,
-            alternatives: []
-          });
-        }
-
-        const best = chooseBestZoneReading(candidates);
-        best.id = `${imageHash}-${zone.key}`;
-        best.passCount = candidates.length;
-        best.alternatives = candidates.filter((candidate) => candidate !== best).map((candidate) => ({ text: candidate.text, confidence: candidate.confidence, enhancement: candidate.enhancement }));
         zoneResults.push(best);
       }
 
@@ -2265,7 +2229,8 @@ export function CardVisionApp() {
         fullText: fullPass.text,
         layoutBounds: geometry.anchorReport.bounds,
         layoutConfidence: geometry.anchorReport.confidence,
-        zones: geometry.zones
+        zones: geometry.zones,
+        knownPlayerNames
       });
 
       const storedPreview = toStoredSinglePrintScan(session);
@@ -2281,11 +2246,11 @@ export function CardVisionApp() {
           previous,
           layoutBounds: geometry.anchorReport.bounds,
           layoutConfidence: geometry.anchorReport.confidence,
-          zones: geometry.zones
+          zones: geometry.zones,
+          knownPlayerNames
         });
       }
 
-      const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 120).catch(() => [])).map((entry) => entry.value);
       session = applyStoredOcrCorrections(session, corrections);
       const visionAudit = buildOcrVisionAudit(session, fullPass.text);
       session = {
@@ -2401,47 +2366,25 @@ export function CardVisionApp() {
         if (capture.quality?.issues.length) warnings.push(...capture.quality.issues.map((issue) => issue.message));
 
         const template = SCREEN_ZONE_TEMPLATES[effectiveType];
+        const captureHash = await fileDigest(capture.file);
+        const localKnownNames = LOCAL_CARD_RULES.map((rule) =>
+          [...rule.match].sort((left, right) => right.length - left.length)[0] ?? ''
+        ).filter(Boolean);
         const captureReadings: PremiumZoneReading[] = [];
         for (let zoneIndex = 0; zoneIndex < template.length; zoneIndex += 1) {
           const zone = template[zoneIndex];
-          setStatus(`${capture.label}: lendo ${zone.label} (${zoneIndex + 1}/${template.length})...`);
-          const contrastImage = await cropImage(capture.file, zone, zoneWidthTarget(zone.key), 'contrast');
-          const contrastPass = await recognize(contrastImage, `${capture.label} • ${zone.label}`);
-          const originPreview = await createZoneOriginPreview(capture.file, zone).catch(() => null);
-          const candidates: PremiumZoneReading[] = [{
-            id: `${capture.id}-${zone.key}-${zoneIndex}-contrast`,
-            sourceId: capture.id,
-            sourceLabel: capture.label,
-            screenType: effectiveType,
-            key: zone.key,
-            label: zone.label,
-            text: contrastPass.text,
-            confidence: contrastPass.confidence,
-            status: readingStatus(contrastPass.confidence, contrastPass.text),
-            originPreview,
-            enhancement: 'contrast'
-          }];
-
-          if (readingMode === 'precision' && (contrastPass.confidence < 82 || contrastPass.text.trim().length < 5)) {
-            const sharpImage = await cropImage(capture.file, zone, zoneWidthTarget(zone.key), 'sharp');
-            const sharpPass = await recognize(sharpImage, `${capture.label} • ${zone.label} • segunda passagem`);
-            candidates.push({
-              id: `${capture.id}-${zone.key}-${zoneIndex}-sharp`,
-              sourceId: capture.id,
-              sourceLabel: capture.label,
-              screenType: effectiveType,
-              key: zone.key,
-              label: zone.label,
-              text: sharpPass.text,
-              confidence: sharpPass.confidence,
-              status: readingStatus(sharpPass.confidence, sharpPass.text),
-              originPreview,
-              enhancement: 'sharp'
-            });
-          }
-
-          const best = chooseBestZoneReading(candidates);
+          setStatus(`${capture.label}: Leitura Ultraprecisa em ${zone.label} (${zoneIndex + 1}/${template.length})...`);
+          const best = await recognizeZoneWithHighPrecision(capture.file, zone, {
+            imageHash: captureHash,
+            template: effectiveType,
+            targetWidth: Math.max(zoneWidthTarget(zone.key), zone.key === 'name' ? 2600 : 2200),
+            readingMode,
+            knownPlayerNames: localKnownNames,
+            labelPrefix: capture.label
+          });
           best.id = `${capture.id}-${zone.key}-${zoneIndex}`;
+          best.sourceId = capture.id;
+          best.sourceLabel = capture.label;
           captureReadings.push(best);
           allReadings.push(best);
         }

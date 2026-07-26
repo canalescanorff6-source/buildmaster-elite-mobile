@@ -22,8 +22,9 @@
   },
   "files": [
     "tesseract-stub.d.ts",
+    "../../src/modules/card-reader/highPrecisionOcr.ts",
     "../../src/modules/card-reader/detailedPrintReader.ts",
     "../../src/modules/card-reader/singlePrintPro.ts",
-    "../../src/lib/deepCardIntelligence.ts"
+    "../../src/modules/card-reader/imageProcessing.ts"
   ]
 }

@@ -2,6 +2,7 @@ import { PLAYSTYLE_OPTIONS, type PositionCode } from '@/lib/analyzerDomain';
 import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { looksLikeCompleteProfile, readDetailedPrint, type DetailedPrintReading } from './detailedPrintReader';
+import { HIGH_PRECISION_OCR_VERSION, precisionAccuracyEstimate, precisionBlockingReasons, textSimilarity } from './highPrecisionOcr';
 
 export type SinglePrintTemplate = 'classic' | 'tall' | 'landscape' | 'detailed-profile';
 export type SinglePrintContentBounds = { x: number; y: number; w: number; h: number };
@@ -59,6 +60,15 @@ export type SinglePrintSession = {
   canonicalText: string;
   comparison: PreviousScanComparison | null;
   detailedReading: DetailedPrintReading;
+  precisionAudit: {
+    version: string;
+    estimatedAccuracy: number;
+    nearPerfectReady: boolean;
+    totalPasses: number;
+    confirmedFields: number;
+    reviewFields: number;
+    blockingReasons: string[];
+  };
   createdAt: string;
 };
 
@@ -377,19 +387,73 @@ function extractPlaystyle(readings: PremiumZoneReading[]): SingleFieldEvidence {
 
 const FORBIDDEN_NAME_LINES = ['detalhes do jogador', 'nivel maximo', 'estilo de jogo', 'pontos', 'atributos', 'habilidades', 'overall', 'ger'];
 
-function extractPlayerName(readings: PremiumZoneReading[]): SingleFieldEvidence {
-  const candidates: FieldCandidate[] = [];
+function cleanNameCandidate(value: string) {
+  return value
+    .replace(/^(?:nome(?:\s+do\s+jogador)?|jogador)\s*[:=.-]?\s*/i, '')
+    .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ.' -]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractPlayerName(readings: PremiumZoneReading[], knownPlayerNames: string[] = []): SingleFieldEvidence {
+  const rawCandidates: Array<{ reading: PremiumZoneReading; value: string; confidence: number; reason: string }> = [];
   for (const reading of readingFor(readings, 'name')) {
-    const lines = reading.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    for (const line of lines) {
-      const clean = line.replace(/^(?:nome(?: do jogador)?|jogador)\s*[:=.-]?\s*/i, '').replace(/\s+/g, ' ').trim();
-      const norm = normalized(clean);
-      if (clean.length < 2 || clean.length > 48 || /\d/.test(clean) || FORBIDDEN_NAME_LINES.some((item) => norm.includes(item))) continue;
-      const wordBonus = clean.split(/\s+/).length <= 5 ? 12 : 0;
-      candidates.push(makeCandidate(reading, clean, reading.confidence * 0.76 + wordBonus, 'Nome lido na área exclusiva do cabeçalho.'));
+    const passTexts = [
+      { text: reading.text, confidence: reading.confidence, reason: 'Leitura principal do cabeçalho.' },
+      ...(reading.alternatives ?? []).map((item) => ({ text: item.text, confidence: item.confidence, reason: `Passagem alternativa ${item.enhancement}.` }))
+    ];
+    for (const pass of passTexts) {
+      const lines = pass.text.split(/\r?\n/).map(cleanNameCandidate).filter(Boolean);
+      for (const clean of lines) {
+        const norm = normalized(clean);
+        const letters = (clean.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+        if (clean.length < 3 || clean.length > 52 || /\d/.test(clean) || letters / Math.max(1, clean.length) < 0.67) continue;
+        if (FORBIDDEN_NAME_LINES.some((item) => norm.includes(item))) continue;
+        const words = clean.split(/\s+/).length;
+        if (words > 6) continue;
+        let value = clean;
+        let reason = pass.reason;
+        const lexicon = knownPlayerNames
+          .map((name) => ({ name, similarity: textSimilarity(clean, name) }))
+          .sort((left, right) => right.similarity - left.similarity)[0];
+        if (lexicon?.similarity >= 0.88) {
+          value = lexicon.name;
+          reason = `Nome conciliado com uma identidade já confirmada (${Math.round(lexicon.similarity * 100)}% de similaridade).`;
+        }
+        rawCandidates.push({ reading, value, confidence: pass.confidence, reason });
+      }
     }
   }
-  return chooseEvidence('playerName', 'Nome do jogador', candidates, { missingReason: 'Nome não reconhecido no cabeçalho.', reviewBelow: 76 });
+
+  const clusters: Array<Array<typeof rawCandidates[number]>> = [];
+  for (const candidate of rawCandidates) {
+    let cluster = clusters.find((items) => textSimilarity(items[0].value, candidate.value) >= 0.82);
+    if (!cluster) {
+      cluster = [];
+      clusters.push(cluster);
+    }
+    cluster.push(candidate);
+  }
+
+  const candidates: FieldCandidate[] = clusters.map((cluster) => {
+    const representative = [...cluster].sort((left, right) => right.confidence - left.confidence)[0];
+    const agreement = new Set(cluster.map((item) => `${item.reading.enhancement}:${normalized(item.value)}`)).size;
+    const averageConfidence = cluster.reduce((sum, item) => sum + item.confidence, 0) / cluster.length;
+    const wordBonus = representative.value.split(/\s+/).length <= 5 ? 10 : 0;
+    const agreementBonus = Math.min(24, Math.max(0, (agreement - 1) * 8));
+    const lexiconBonus = knownPlayerNames.some((name) => normalized(name) === normalized(representative.value)) ? 7 : 0;
+    const score = averageConfidence * 0.72 + wordBonus + agreementBonus + lexiconBonus;
+    return makeCandidate(
+      representative.reading,
+      representative.value,
+      score,
+      agreement >= 2
+        ? `${representative.reason} ${agreement} passagens concordaram com este nome.`
+        : `${representative.reason} Somente uma passagem sustentou este nome; confirme antes de finalizar.`
+    );
+  });
+
+  return chooseEvidence('playerName', 'Nome do jogador', candidates, { missingReason: 'Nome não reconhecido no cabeçalho.', reviewBelow: 92 });
 }
 
 function extractFreeText(key: 'cardType' | 'specialSkill', label: string, readings: PremiumZoneReading[], zoneKey: OcrZoneKey): SingleFieldEvidence {
@@ -426,12 +490,14 @@ export function buildSinglePrintSession(input: {
   layoutBounds?: SinglePrintContentBounds;
   layoutConfidence?: number;
   zones?: OcrZone[];
+  knownPlayerNames?: string[];
 }): SinglePrintSession {
-  const detailedReading = readDetailedPrint(input.fullText, input.readings);
+  const knownPlayerNames = input.knownPlayerNames ?? [];
+  const detailedReading = readDetailedPrint(input.fullText, input.readings, knownPlayerNames);
   const overall = extractOverall(input.readings, input.fullText);
   const points = extractPoints(input.readings, input.fullText);
   let fields: SingleFieldEvidence[] = [
-    extractPlayerName(input.readings),
+    extractPlayerName(input.readings, knownPlayerNames),
     extractPosition(input.readings),
     extractPlaystyle(input.readings),
     overall,
@@ -451,10 +517,27 @@ export function buildSinglePrintSession(input: {
     attributes: detailedReading.attributes.length >= 4 ? { value: detailedReading.attributes.map((item) => `${item.label}: ${item.value}`).join('\n'), confidence: Math.min(98, 64 + detailedReading.attributes.length), reason: `${detailedReading.attributes.length} atributos estruturados pelo leitor detalhado.` } : undefined,
     skills: detailedReading.skills.length >= 2 ? { value: detailedReading.skills.map((item) => item.value).join(', '), confidence: Math.min(96, 68 + detailedReading.skills.length * 2), reason: `${detailedReading.skills.length} habilidades reconhecidas na faixa inferior.` } : undefined
   };
+  const criticalZoneByField: Partial<Record<SingleFieldEvidence['key'], OcrZoneKey>> = {
+    playerName: 'name', position: 'mainPosition', playstyle: 'playstyle', overall: 'overall', level: 'level', points: 'points'
+  };
   fields = fields.map((field) => {
     const detailed = detailedMap[field.key];
     if (!detailed || (field.value && field.confidence > detailed.confidence + 4)) return field;
+    const criticalZone = criticalZoneByField[field.key];
+    const precisionConfirmed = !criticalZone || input.readings.some((reading) => reading.key === criticalZone && reading.status === 'confirmed');
     const confidence = Math.max(field.confidence, detailed.confidence);
+    if (!precisionConfirmed) {
+      return {
+        ...field,
+        value: detailed.value,
+        numericValue: detailed.numericValue ?? field.numericValue,
+        confidence: Math.min(91, confidence),
+        status: 'review' as const,
+        reason: `${detailed.reason} O valor permanece em revisão porque as passagens locais não chegaram ao consenso exigido.`,
+        sourceLabel: 'Leitor detalhado v30.50',
+        sourceText: detailed.value
+      };
+    }
     return {
       ...field,
       value: detailed.value,
@@ -462,15 +545,31 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor detalhado v30.40',
+      sourceLabel: 'Leitor detalhado v30.50',
       sourceText: detailed.value
     };
   });
   const required: SingleFieldEvidence['key'][] = ['playerName', 'position', 'playstyle', 'level'];
-  const blockingFields = fields.filter((field) => required.includes(field.key) && field.status !== 'confirmed').map((field) => field.label);
+  const precisionReasons = precisionBlockingReasons(input.readings);
+  const blockingFields = Array.from(new Set([
+    ...fields.filter((field) => required.includes(field.key) && field.status !== 'confirmed').map((field) => field.label),
+    ...precisionReasons
+  ]));
   const confidenceValues = fields.filter((field) => field.value).map((field) => field.confidence);
   const mergedConfidence = confidenceValues.length ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length) : 0;
+  const estimatedAccuracy = precisionAccuracyEstimate(input.readings);
+  const precisionAudit = {
+    version: HIGH_PRECISION_OCR_VERSION,
+    estimatedAccuracy,
+    nearPerfectReady: estimatedAccuracy >= 96 && precisionReasons.length === 0,
+    totalPasses: input.readings.reduce((sum, reading) => sum + (reading.passCount ?? 1), 0),
+    confirmedFields: fields.filter((field) => field.status === 'confirmed').length,
+    reviewFields: fields.filter((field) => field.status !== 'confirmed').length,
+    blockingReasons: precisionReasons
+  };
   const warnings: string[] = [];
+  if (!precisionAudit.nearPerfectReady) warnings.push(`Precisão estimada em ${precisionAudit.estimatedAccuracy}%. O app bloqueia dados críticos sem consenso em vez de inventar valores.`);
+  else warnings.push(`Leitura ultraprécisa liberada: ${precisionAudit.estimatedAccuracy}% de precisão estimada com consenso multietapas.`);
   const level = fields.find((field) => field.key === 'level');
   if (level?.numericValue && level.numericValue >= 80) warnings.push('Nível muito alto detectado. Confirme: pode ser o GER da carta.');
   if (level?.alternatives.some((item) => item.numericValue === overall.numericValue)) warnings.push('O GER também apareceu entre os candidatos de nível e foi descartado como evidência principal.');
@@ -543,6 +642,7 @@ export function buildSinglePrintSession(input: {
     canonicalText: `[LEITURA PRINT ÚNICO PRO]\n${canonicalLines.join('\n')}\n[FIM LEITURA PRINT ÚNICO PRO]`,
     comparison,
     detailedReading,
+    precisionAudit,
     createdAt: new Date().toISOString()
   };
 }

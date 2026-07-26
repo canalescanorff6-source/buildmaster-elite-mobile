@@ -1,7 +1,7 @@
 import type TesseractNamespace from 'tesseract.js';
 import { runtimeGet, runtimePut, runtimeTrimStore } from './localDatabase';
 
-export type OcrFieldKind = 'general' | 'name' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills';
+export type OcrFieldKind = 'general' | 'name' | 'nameSparse' | 'singleWord' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills' | 'table';
 
 export type OcrProgress = {
   label: string;
@@ -16,7 +16,7 @@ export type OcrRecognition = {
   durationMs: number;
 };
 
-type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; version: 1 };
+type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; version: 2 };
 
 type WorkerLike = TesseractNamespace.Worker;
 
@@ -79,24 +79,31 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
   const PSM = {
     general: '3',
     name: '7',
+    nameSparse: '11',
+    singleWord: '8',
     numeric: '7',
     position: '7',
     style: '7',
     attributes: '6',
-    skills: '6'
+    skills: '6',
+    table: '6'
   } as const;
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.";
   const whitelist: Partial<Record<OcrFieldKind, string>> = {
     numeric: '0123456789/:.-',
-    position: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç',
-    name: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.",
-    style: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç -",
+    position: letters,
+    name: letters,
+    nameSparse: letters,
+    singleWord: letters,
+    style: letters,
   };
   return {
     tessedit_pageseg_mode: PSM[kind] as TesseractNamespace.PSM,
     tessedit_char_whitelist: whitelist[kind] ?? '',
     preserve_interword_spaces: '1',
-    user_defined_dpi: '300'
-  };
+    user_defined_dpi: kind === 'name' || kind === 'nameSparse' || kind === 'singleWord' ? '450' : '300',
+    ...(kind === 'numeric' ? { classify_bln_numeric_mode: '1' } : {})
+  } as Partial<TesseractNamespace.WorkerParams>;
 }
 
 export async function recognizeWithOcrWorker(
@@ -110,7 +117,7 @@ export async function recognizeWithOcrWorker(
 ): Promise<OcrRecognition> {
   const started = performance.now();
   const kind = options.kind ?? 'general';
-  const cacheKey = options.cacheKey ? `v1:${options.cacheKey}:${kind}` : null;
+  const cacheKey = options.cacheKey ? `v2:${options.cacheKey}:${kind}` : null;
   if (cacheKey && !options.bypassCache) {
     const cached = await runtimeGet<CachedRecognition>('ocr-cache', cacheKey).catch(() => null);
     if (cached) return { text: cached.text, confidence: cached.confidence, durationMs: 0, cached: true };
@@ -130,7 +137,7 @@ export async function recognizeWithOcrWorker(
     durationMs: Math.round(performance.now() - started)
   };
   if (cacheKey) {
-    const cached: CachedRecognition = { ...recognition, createdAt: new Date().toISOString(), version: 1 };
+    const cached: CachedRecognition = { ...recognition, createdAt: new Date().toISOString(), version: 2 };
     delete (cached as Partial<OcrRecognition>).cached;
     void runtimePut('ocr-cache', cacheKey, cached).then(() => runtimeTrimStore('ocr-cache', 180)).catch(() => undefined);
   }

@@ -2,7 +2,7 @@ import type { OcrZone, OcrZoneKey } from './ocr';
 import type { PrintQualityReport } from './validation';
 
 export type PremiumReadingStatus = 'confirmed' | 'review' | 'unread';
-export type PremiumEnhancementMode = 'original' | 'adaptive' | 'contrast' | 'sharp';
+export type PremiumEnhancementMode = 'original' | 'adaptive' | 'color' | 'contrast' | 'sharp' | 'binary' | 'inverted';
 
 export type PremiumZoneReading = {
   id?: string;
@@ -19,6 +19,10 @@ export type PremiumZoneReading = {
   passCount?: number;
   consistency?: number;
   alternatives?: Array<{ text: string; confidence: number; enhancement: PremiumEnhancementMode }>;
+  precisionVersion?: string;
+  agreement?: number;
+  validationNotes?: string[];
+  rawPasses?: Array<{ text: string; confidence: number; enhancement: PremiumEnhancementMode; kind: string }>;
 };
 
 export type ReadingConfirmationStage = {

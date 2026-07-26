@@ -1,4 +1,4 @@
-BUILDMASTER ELITE TÁTICO v30.40 — INTELIGÊNCIA PROFUNDA + LEITURA DETALHADA
+BUILDMASTER ELITE TÁTICO v30.50 — LEITURA ULTRAPRECISA + INTELIGÊNCIA PROFUNDA
 
 Padrão inicial:
 - tema escuro Obsidian
@@ -30,7 +30,11 @@ Removido do pacote:
 
 Não copie outra pasta .git. Preserve apenas a .git da clonagem atual do GitHub Desktop.
 
-Novidades v30.40:
+Novidades v30.50:
+- consenso multietapas para o nome e os campos críticos
+- correções locais aprendidas e catálogo de nomes conhecidos
+- bloqueio seguro quando a leitura não atinge confiança suficiente
+- validação de faixas plausíveis para números e dados físicos
 - leitor adaptativo para prints de perfil completo
 - 26 atributos e 13 posições lidos separadamente
 - técnico, bônus, condições, Ímpetos, habilidades e modelo físico
