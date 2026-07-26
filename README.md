@@ -1,25 +1,43 @@
-# BuildMaster Elite Tático v30.00 — projeto limpo
+# BuildMaster Elite Tático v30.00 — Experiência Essencial
 
-Este pacote contém somente a base atual necessária para desenvolver, testar e publicar o BuildMaster Elite Tático.
+Esta edição reconstrói a experiência principal do aplicativo para funcionar de maneira simples, escura e direta no celular.
+
+## Como o aplicativo funciona
+
+1. Na tela inicial, escolha **Criar ficha por print** ou **Preencher manualmente**.
+2. Informe a carta e confirme somente posição, posição original e estilo.
+3. O BuildMaster gera uma única **Ficha Competitiva Definitiva**.
+4. Consulte apenas quatro áreas: ficha final, habilidades, como usar e exportar.
+5. Salve o jogador para encontrá-lo em **Meus jogadores**.
+
+As ferramentas técnicas continuam no projeto, mas ficam ocultas no modo simples. Elas só aparecem quando **Ferramentas avançadas** é ativado em Ajustes.
+
+## Melhorias desta reconstrução
+
+- tema escuro Obsidian com detalhes dourados e contraste maior;
+- tela inicial com três ações principais e linguagem direta;
+- navegação móvel reduzida a Início, Jogadores, Nova ficha, Meu Time e Menu;
+- leitor padrão com um único print;
+- criação guiada em três passos;
+- página de jogadores sem filtros e controles duplicados;
+- datas inválidas corrigidas com retorno seguro;
+- resultado principal com uma única ficha, sem comparador ou variações visíveis;
+- Top 5 de habilidades sem mostrar alternativas no modo simples;
+- instruções de uso separadas em sem bola, saída, ataque e pressão;
+- tema claro antigo substituído automaticamente na primeira abertura desta edição;
+- modo econômico, movimento reduzido e ferramentas avançadas desativadas por padrão;
+- carregamentos de backup, partidas, índices e pré-carregamento adiados até serem necessários;
+- onboarding antigo não abre automaticamente.
 
 ## Estrutura mantida
 
-- `src/`: aplicativo, motores de fichas, OCR, contas, backup, táticas, desempenho e publicação;
-- `public/`: PWA, ícones e recursos usados no aplicativo;
-- `scripts/`: build, auditoria, integridade, APK, AAB e publicação;
-- `tests/`: regressões atuais da v30.00 e fixtures isoladas de TypeScript;
-- `supabase/`: migrações e Edge Functions necessárias para contas, licenças e serviços;
-- `play-store/`: materiais e documentos da Google Play;
-- `.github/workflows/`: APK direto, AAB Google Play e implantação do Supabase.
-
-## Limpeza aplicada
-
-- histórico local `.git` removido do pacote;
-- manifestos antigos removidos;
-- caches, builds, `node_modules`, Android gerado e arquivos temporários removidos;
-- arquivos TypeScript órfãos removidos;
-- testes históricos substituídos pela bateria atual da v30.00;
-- 35 arquivos de estilos antigos consolidados em `src/app/globals.css`.
+- `src/`: aplicativo e motores necessários;
+- `public/`: PWA, ícones e recursos;
+- `scripts/`: auditoria, integridade e builds;
+- `tests/`: regressões atuais;
+- `supabase/`: contas, licenças e Edge Functions;
+- `play-store/`: materiais da Google Play;
+- `.github/workflows/`: APK direto, AAB e Supabase.
 
 ## Comandos principais
 
@@ -30,18 +48,12 @@ npm run test:all
 npm run build
 ```
 
-Para gerar o site estático usado pelo Capacitor:
-
-```bash
-npm run apk:build-web
-```
-
 ## Colocar no GitHub
 
-Use uma pasta clonada pelo GitHub Desktop. Preserve a pasta oculta `.git` dessa clonagem, apague os demais arquivos antigos e copie o conteúdo deste projeto limpo para a raiz do repositório.
+Preserve somente a pasta oculta `.git` da clonagem atual. Apague os outros arquivos antigos e copie o conteúdo deste pacote para a raiz do repositório.
 
-A raiz correta deve conter diretamente `src`, `scripts`, `tests`, `public`, `.github`, `package.json` e `package-lock.json`.
+A raiz correta contém diretamente `src`, `scripts`, `tests`, `public`, `.github`, `package.json` e `package-lock.json`.
 
 ## Segurança
 
-O projeto não inclui APK, AAB, keystore, senhas, chaves privadas ou credenciais. Os Secrets e Variables continuam sendo configurados no GitHub e no Supabase.
+O pacote não inclui `.git`, `node_modules`, APK, AAB, keystore, senhas, chaves privadas ou credenciais.

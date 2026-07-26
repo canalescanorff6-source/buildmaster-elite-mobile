@@ -102,7 +102,6 @@ import {
   PlayStorePublicationCenter,
   DelayResponsePanel,
   EvolutionCommandCenter,
-  EvolutionNotificationHub,
   FirstUseOnboarding,
   IntegratedTeamLab,
   MatchLaboratory,
@@ -142,6 +141,7 @@ import {
   type ResultTabRequest
 } from '@/components/result/ResultWorkspace';
 import { getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { loadEasyUiPreferences } from '@/lib/easyExperience';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
@@ -288,7 +288,7 @@ export function CardVisionApp() {
   const [cardPositionOverride, setCardPositionOverride] = useState<PositionCode | 'AUTO'>('AUTO');
   const [playstyleOverride, setPlaystyleOverride] = useState<string>('AUTO');
   const [readingMode, setReadingMode] = useState<ReadingMode>('precision');
-  const [readerCaptureMode, setReaderCaptureMode] = useState<ReaderCaptureMode>('complete');
+  const [readerCaptureMode, setReaderCaptureMode] = useState<ReaderCaptureMode>('single');
   const [ocrZones, setOcrZones] = useState<OcrZone[]>(DEFAULT_OCR_ZONES);
   const [calibratorOpen, setCalibratorOpen] = useState(false);
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
@@ -309,7 +309,7 @@ export function CardVisionApp() {
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
   const [managerId, setManagerId] = useState<string>('AUTO');
-  const [status, setStatus] = useState('Escolha o Leitor Elite de Carta ou a Central de Precisão Manual. O Cofre é separado por usuário e pode sincronizar com a conta.');
+  const [status, setStatus] = useState('Escolha como deseja criar a ficha. O aplicativo mostrará uma etapa por vez.');
   const lastPremiumStatusRef = useRef('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -331,14 +331,14 @@ export function CardVisionApp() {
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
   const [newFolderName, setNewFolderName] = useState('');
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
-  const [appTheme, setAppTheme] = useState<AppTheme>('light');
-  const [accentTheme, setAccentTheme] = useState<AccentTheme>('prism');
-  const [advancedMode, setAdvancedMode] = useState(true);
+  const [appTheme, setAppTheme] = useState<AppTheme>('dark');
+  const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
-  const [motionPreference, setMotionPreference] = useState<MotionPreference>('system');
+  const [motionPreference, setMotionPreference] = useState<MotionPreference>('reduced');
   const [highContrast, setHighContrast] = useState(false);
-  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('balanced');
+  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('economy');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -348,10 +348,7 @@ export function CardVisionApp() {
     if (typeof window === 'undefined') return 'inicio';
     const deepLink = parseInternalDeepLink(window.location.hash);
     if (deepLink) return sectionForNavigation(deepLink.group, deepLink.workspace);
-    const snapshot = readNavigationSnapshot();
-    const premium = readPremiumExperience2Preferences();
-    if (premium.autoResume && snapshot) return sectionForNavigation(snapshot.group, snapshot.playerWorkspace);
-    return sectionForPremiumTarget(premium.startTarget);
+    return 'inicio';
   });
   const [playerWorkspace, setPlayerWorkspace] = useState<PlayerWorkspace>(() => {
     if (typeof window === 'undefined') return 'visao-geral';
@@ -389,29 +386,20 @@ export function CardVisionApp() {
   const restoredSessionRef = useRef(false);
 
   useEffect(() => {
+    if (performanceMode === 'economy' || mainSection === 'inicio') return;
     const group = navigationGroupFor(mainSection);
-    const handle = scheduleIdleTask(() => preloadPanelGroup(group), 900);
+    const handle = scheduleIdleTask(() => preloadPanelGroup(group), 1800);
     return () => cancelIdleTask(handle);
-  }, [mainSection]);
+  }, [mainSection, performanceMode]);
+
 
   useEffect(() => {
-    const migrationKey = 'buildmaster_visual_refresh_v2738';
-    if (readAccountStorage(migrationKey)) return;
-    try {
-      const previous = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as Record<string, unknown>;
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ ...previous, appTheme: 'light', accentTheme: 'prism', textScale: 'standard', densityMode: 'comfortable', highContrast: false }));
-    } catch {
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme: 'light', accentTheme: 'prism', textScale: 'standard', densityMode: 'comfortable', highContrast: false }));
-    }
-    setAppTheme('light');
-    setAccentTheme('prism');
-    setTextScale('standard');
-    setDensityMode('comfortable');
-    setHighContrast(false);
-    writeAccountStorage(migrationKey, 'applied');
-  }, []);
-
+    if (mainSection !== 'ajustes' || advancedMode) return;
+    const simpleViews: SettingsView[] = ['aparencia', 'desempenho', 'backup', 'atualizacoes', 'contas'];
+    if (!simpleViews.includes(settingsView)) setSettingsView('aparencia');
+  }, [advancedMode, mainSection, settingsView]);
   useEffect(() => {
+    if (mainSection !== 'ajustes' || settingsView !== 'backup') return;
     let active = true;
     void secureGet('buildmaster_backup_password_v2675').then((saved) => {
       if (!active || !saved) return;
@@ -420,9 +408,10 @@ export function CardVisionApp() {
       setBackupPasswordReady(true);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, []);
+  }, [mainSection, settingsView]);
 
   useEffect(() => {
+    if (mainSection !== 'ajustes' || settingsView !== 'backup') return;
     let active = true;
     void runtimeGet<BackupSnapshot[]>('backup-snapshots', 'versions').then((stored) => {
       if (!active) return;
@@ -431,7 +420,7 @@ export function CardVisionApp() {
     const lastSync = readAccountStorage(LAST_FULL_SYNC_STORAGE_KEY);
     if (lastSync) setLastFullSyncAt(lastSync);
     return () => { active = false; };
-  }, []);
+  }, [mainSection, settingsView]);
 
   useEffect(() => {
     const reloadMatches = () => {
@@ -442,27 +431,33 @@ export function CardVisionApp() {
         setCentralMatchRecords([]);
       }
     };
-    reloadMatches();
+    const handle = scheduleIdleTask(reloadMatches, performanceMode === 'economy' ? 1200 : 450);
     window.addEventListener('buildmaster:match-validation-updated', reloadMatches);
-    return () => window.removeEventListener('buildmaster:match-validation-updated', reloadMatches);
-  }, []);
+    return () => {
+      cancelIdleTask(handle);
+      window.removeEventListener('buildmaster:match-validation-updated', reloadMatches);
+    };
+  }, [performanceMode]);
 
   useEffect(() => {
-    try {
-      const existing = readAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY);
-      if (existing) {
-        const parsed = JSON.parse(existing) as { note?: string };
-        setCentralMigrationNote(parsed.note || 'Dados anteriores integrados à Central Inteligente.');
-        return;
+    const handle = scheduleIdleTask(() => {
+      try {
+        const existing = readAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY);
+        if (existing) {
+          const parsed = JSON.parse(existing) as { note?: string };
+          setCentralMigrationNote(parsed.note || 'Dados anteriores integrados à Central Inteligente.');
+          return;
+        }
+        const preservedKeys = [HISTORY_KEY, ACTIVE_SESSION_KEY, ONBOARDING_STORAGE_KEY, CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, VAULT_FOLDERS_KEY];
+        const report = createCentralMigrationReport(preservedKeys.filter((key) => Boolean(readAccountStorage(key))));
+        writeAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY, JSON.stringify(report));
+        setCentralMigrationNote(report.note);
+      } catch {
+        setCentralMigrationNote('A Central Inteligente usa migração não destrutiva e mantém os dados nas chaves originais.');
       }
-      const preservedKeys = [HISTORY_KEY, ACTIVE_SESSION_KEY, ONBOARDING_STORAGE_KEY, CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, VAULT_FOLDERS_KEY];
-      const report = createCentralMigrationReport(preservedKeys.filter((key) => Boolean(readAccountStorage(key))));
-      writeAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY, JSON.stringify(report));
-      setCentralMigrationNote(report.note);
-    } catch {
-      setCentralMigrationNote('A Central Inteligente usa migração não destrutiva e mantém os dados nas chaves originais.');
-    }
-  }, []);
+    }, performanceMode === 'economy' ? 1800 : 700);
+    return () => cancelIdleTask(handle);
+  }, [performanceMode]);
 
   useEffect(() => {
     if (!mobileLauncher) return;
@@ -546,21 +541,27 @@ export function CardVisionApp() {
   const centralMatchPlans = useMemo(() => buildMatchScenarioPlans(integratedTeam), [integratedTeam]);
   const centralEntityIndex = useMemo(() => buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords), [integratedPlayers, integratedTeam, centralMatchRecords]);
   useEffect(() => {
-    try {
-      writeAccountStorage(CENTRAL_INDEX_STORAGE_KEY, JSON.stringify(centralEntityIndex));
-    } catch {
-      // O índice é derivável; falhar ao persistir não apaga nem bloqueia os dados originais.
-    }
-  }, [centralEntityIndex]);
+    const handle = scheduleIdleTask(() => {
+      try {
+        writeAccountStorage(CENTRAL_INDEX_STORAGE_KEY, JSON.stringify(centralEntityIndex));
+      } catch {
+        // O índice é derivável; falhar ao persistir não apaga nem bloqueia os dados originais.
+      }
+    }, performanceMode === 'economy' ? 2400 : 900);
+    return () => cancelIdleTask(handle);
+  }, [centralEntityIndex, performanceMode]);
   useEffect(() => {
-    const cards = readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []) as unknown[];
-    void syncStructuredRepository({
-      cards: Array.isArray(cards) ? cards : [],
-      builds: history,
-      formations: [centralEntityIndex.team],
-      matches: centralMatchRecords
-    }).catch((cause) => recordSafeRuntimeError({ area: 'structured-repository', code: 'sync_failed', message: cause instanceof Error ? cause.message : 'Falha ao sincronizar banco estruturado' }));
-  }, [history, centralMatchRecords, centralEntityIndex]);
+    const handle = scheduleIdleTask(() => {
+      const cards = readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []) as unknown[];
+      void syncStructuredRepository({
+        cards: Array.isArray(cards) ? cards : [],
+        builds: history,
+        formations: [centralEntityIndex.team],
+        matches: centralMatchRecords
+      }).catch((cause) => recordSafeRuntimeError({ area: 'structured-repository', code: 'sync_failed', message: cause instanceof Error ? cause.message : 'Falha ao sincronizar banco estruturado' }));
+    }, performanceMode === 'economy' ? 3200 : 1200);
+    return () => cancelIdleTask(handle);
+  }, [history, centralMatchRecords, centralEntityIndex, performanceMode]);
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
     settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
@@ -716,7 +717,7 @@ export function CardVisionApp() {
   }, [mainSection]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setShowSplash(false), 1350);
+    const timer = window.setTimeout(() => setShowSplash(false), 420);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -759,15 +760,15 @@ export function CardVisionApp() {
       });
 
     try {
-      const ui = JSON.parse(readAccountStorage('buildmaster_ui_prefs_v24_24') || '{}') as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode };
-      if (ui.appTheme === 'light' || ui.appTheme === 'dark') setAppTheme(ui.appTheme);
-      if (['prism', 'emerald', 'gold', 'blue', 'red', 'purple'].includes(String(ui.accentTheme))) setAccentTheme(ui.accentTheme as AccentTheme);
-      if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
-      if (['compact', 'standard', 'large'].includes(String(ui.textScale))) setTextScale(ui.textScale as TextScale);
-      if (['compact', 'comfortable'].includes(String(ui.densityMode))) setDensityMode(ui.densityMode as DensityMode);
-      if (['system', 'reduced', 'full'].includes(String(ui.motionPreference))) setMotionPreference(ui.motionPreference as MotionPreference);
-      if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
-      if (ui.performanceMode === 'balanced' || ui.performanceMode === 'economy') setPerformanceMode(ui.performanceMode);
+      const ui = loadEasyUiPreferences();
+      setAppTheme(ui.appTheme);
+      setAccentTheme(ui.accentTheme);
+      setAdvancedMode(ui.advancedMode);
+      setTextScale(ui.textScale);
+      setDensityMode(ui.densityMode);
+      setMotionPreference(ui.motionPreference);
+      setHighContrast(ui.highContrast);
+      setPerformanceMode(ui.performanceMode);
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -778,10 +779,10 @@ export function CardVisionApp() {
         const profile = JSON.parse(storedOnboarding) as OnboardingProfile;
         setOnboardingProfile(profile);
       } else {
-        setOnboardingOpen(true);
+        setOnboardingOpen(false);
       }
     } catch {
-      setOnboardingOpen(true);
+      setOnboardingOpen(false);
     }
 
     try {
@@ -2745,7 +2746,7 @@ export function CardVisionApp() {
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
-      <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />
+      {!showSplash && <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />}
       {showSplash && (
         <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
           <div className="splash-premium-shell">
@@ -2768,20 +2769,16 @@ export function CardVisionApp() {
         onCreateManual={() => openMainSection('manual')}
       /></SectionErrorBoundary>
 
-      <header className="app-topbar app-command-bar luxury-panel">
-        <button type="button" className="brand-lockup brand-home-button" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
-          <PremiumBrand variant="compact" showVersion />
+      <header className="bm-simple-topbar">
+        <button type="button" className="bm-simple-brand" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
+          <span>BM</span><div><strong>BuildMaster</strong><small>Elite Tático</small></div>
         </button>
-
-        <div className="topbar-actions topbar-premium-actions">
-
-          <EvolutionNotificationHub input={evolutionInput} onOpenTarget={openEvolutionTarget} onOpenCenter={() => { setMainSection('ajustes'); setSettingsView('evolucao'); }} />
-          <span className={`session-save-indicator save-${sessionSaveState}`} role="status" aria-live="polite">{sessionSaveState === 'saving' ? 'Salvando…' : sessionSaveState === 'saved' ? 'Rascunho salvo' : sessionSaveState === 'error' ? 'Falha no rascunho' : 'Pronto'}</span>
-
-          {account?.profile.role === 'admin' && <button type="button" className="topbar-admin-account-action" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Criar e gerenciar contas"><UserPlus size={16} /><span>Criar conta</span></button>}
-          <button type="button" className="topbar-account-avatar" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
-            <b>{accountInitial}</b>
-            <span><strong>{account?.profile.username || 'Conta'}</strong><small>{account?.profile.role === 'admin' ? 'Administrador' : 'Licença ativa'}</small></span>
+        <div className="bm-simple-topbar-actions">
+          <span className={`bm-simple-save-state save-${sessionSaveState}`} role="status" aria-live="polite">
+            {sessionSaveState === 'saving' ? 'Salvando' : sessionSaveState === 'error' ? 'Falha ao salvar' : 'Salvo'}
+          </span>
+          <button type="button" className="bm-simple-account" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
+            <b>{accountInitial}</b><span>{account?.profile.username || 'Conta'}</span>
           </button>
         </div>
       </header>
@@ -2812,7 +2809,7 @@ export function CardVisionApp() {
         </button>
       )}
 
-      {mainSection !== 'inicio' && (
+      {false && mainSection !== 'inicio' && (
         <section className={`app-section-guide guide-${mainSection}`} aria-label={`Guia da área ${sectionGuide.title}`}>
           <div><span><Sparkles size={17} /></span><div><strong>{sectionGuide.title}</strong><small>{sectionGuide.description}</small></div></div>
           <ol>{sectionGuide.steps.map((step, index) => <li key={step}><b>{index + 1}</b><span>{step}</span></li>)}</ol>
@@ -2835,10 +2832,10 @@ export function CardVisionApp() {
             {mobileLauncher === 'create' ? (
               <div className="launcher-action-grid launcher-create-grid">
                 <button type="button" className="launcher-featured-action" onClick={() => openMainSection('leitor')}>
-                  <span><ScanText size={25} /></span><div><strong>Leitor por print</strong><small>Importe a carta, confira a leitura e gere a ficha.</small></div><em>Recomendado</em>
+                  <span><ScanText size={25} /></span><div><strong>Usar uma imagem</strong><small>Escolha o print da carta e confirme os dados encontrados.</small></div><em>Recomendado</em>
                 </button>
                 <button type="button" onClick={() => openMainSection('manual')}>
-                  <span><ShieldCheck size={25} /></span><div><strong>Manual Pro</strong><small>Preenchimento controlado para máxima precisão.</small></div>
+                  <span><ShieldCheck size={25} /></span><div><strong>Digitar os dados</strong><small>Preencha manualmente quando não quiser usar um print.</small></div>
                 </button>
                 {currentPanelResult && (
                   <button type="button" onClick={() => openMainSection('resultado')}>
@@ -2994,45 +2991,30 @@ export function CardVisionApp() {
           <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
         )}
         {isCreationSection && (
-          <section className="creation-hub creation-studio-hero luxury-panel bm2820-creation-hero">
-            <div className="creation-studio-topline">
-              <div className="creation-studio-brand">
-                <span className="creation-studio-mark"><Sparkles size={22} /></span>
-                <div>
-                  <p className="kicker">Build Studio • Ficha Flow</p>
-                  <h1>Crie a ficha em blocos simples.</h1>
-                  <p>Primeiro a carta, depois a identidade e por último a revisão. Os ajustes avançados só aparecem quando você abrir.</p>
-                </div>
-              </div>
-              <div className="creation-live-summary" aria-label="Resumo atual da ficha">
-                <article><span>Modo</span><strong>{mainSection === 'leitor' ? 'Leitor' : 'Manual Pro'}</strong></article>
-                <article><span>Destino</span><strong>{creationTargetLabel}</strong></article>
-                <article><span>Pontos</span><strong>{creationPointsValue || '—'}</strong></article>
-                <article className={creationReadinessCount >= 3 ? 'is-ready' : ''}><span>Prontidão</span><strong>{creationReadinessPercent}%</strong></article>
+          <section className="bm-creation-guide luxury-panel" aria-label="Como criar a ficha">
+            <div className="bm-creation-guide-title">
+              <span><Sparkles size={22} /></span>
+              <div>
+                <p className="kicker">Nova ficha</p>
+                <h1>{mainSection === 'leitor' ? 'Criar ficha usando uma imagem' : 'Criar ficha digitando os dados'}</h1>
+                <p>{mainSection === 'leitor' ? 'Escolha um print da carta. Depois confirme os dados e gere uma única ficha final.' : 'Digite somente os dados principais. Depois revise e gere uma única ficha final.'}</p>
               </div>
             </div>
 
-            <div className="creation-studio-controls">
-              <div className="creation-mode-selector" role="tablist" aria-label="Método de criação da ficha">
-                <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
-                  <span><ScanText size={22} /></span><div><strong>Leitor por print</strong><small>Importe a carta e revise cada dado.</small></div>{mainSection === 'leitor' && <CheckCircle2 size={18} />}
-                </button>
-                <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
-                  <span><ShieldCheck size={22} /></span><div><strong>Manual Pro</strong><small>Preenchimento controlado e pontos exatos.</small></div>{mainSection === 'manual' && <CheckCircle2 size={18} />}
-                </button>
-              </div>
-
-              <div className="creation-progress-shell" aria-label={`Progresso da criação: ${creationProgress}%`}>
-                <div className="creation-progress-head"><span>Fluxo da ficha</span><strong>{creationProgress}%</strong></div>
-                <i className="creation-progress-track"><b style={{ width: `${creationProgress}%` }} /></i>
-                <div className="creation-stepper">
-                  {creationSteps.map((step) => {
-                    const state = step.number < creationStage ? 'done' : step.number === creationStage ? 'active' : 'pending';
-                    return <div key={step.number} className={`creation-step ${state}`}><span>{state === 'done' ? <CheckCircle2 size={16} /> : step.number}</span><div><strong>{step.label}</strong><small>{step.detail}</small></div></div>;
-                  })}
-                </div>
-              </div>
+            <div className="bm-creation-methods" role="tablist" aria-label="Escolher forma de criar a ficha">
+              <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
+                <Camera size={19} /><span><strong>Usar uma imagem</strong><small>Mais rápido e recomendado</small></span>
+              </button>
+              <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
+                <Keyboard size={19} /><span><strong>Digitar os dados</strong><small>Quando o print não estiver bom</small></span>
+              </button>
             </div>
+
+            <ol className="bm-creation-steps" aria-label="Etapas da criação">
+              <li className="active"><span>1</span><div><strong>{mainSection === 'leitor' ? 'Escolher imagem' : 'Informar dados'}</strong><small>Forneça a carta</small></div></li>
+              <li><span>2</span><div><strong>Confirmar</strong><small>Confira posição, estilo e pontos</small></div></li>
+              <li><span>3</span><div><strong>Ficha final</strong><small>Receba uma recomendação única</small></div></li>
+            </ol>
           </section>
         )}
 
@@ -3049,22 +3031,24 @@ export function CardVisionApp() {
           )}
 
           {mainSection === 'leitor' && (<>
-          <div className="reader-capture-mode" role="tablist" aria-label="Modo de leitura do print">
-            <button type="button" role="tab" aria-selected={readerCaptureMode === 'complete'} className={readerCaptureMode === 'complete' ? 'active' : ''} onClick={() => { setReaderCaptureMode('complete'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
-              <span><Layers size={19} /></span><div><strong>Leitura completa</strong><small>Vários prints da mesma carta</small></div><em>Mais preciso</em>
-            </button>
-            <button type="button" role="tab" aria-selected={readerCaptureMode === 'single'} className={readerCaptureMode === 'single' ? 'active' : ''} onClick={() => { setReaderCaptureMode('single'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
-              <span><ScanText size={19} /></span><div><strong>Print Único Pro</strong><small>Nível, GER e dados separados</small></div><em>Adaptativo</em>
-            </button>
-          </div>
+          {advancedMode && (
+            <div className="reader-capture-mode" role="tablist" aria-label="Modo avançado de leitura do print">
+              <button type="button" role="tab" aria-selected={readerCaptureMode === 'complete'} className={readerCaptureMode === 'complete' ? 'active' : ''} onClick={() => { setReaderCaptureMode('complete'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
+                <span><Layers size={19} /></span><div><strong>Vários prints</strong><small>Leitura avançada da mesma carta</small></div>
+              </button>
+              <button type="button" role="tab" aria-selected={readerCaptureMode === 'single'} className={readerCaptureMode === 'single' ? 'active' : ''} onClick={() => { setReaderCaptureMode('single'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]); setReadingConfirmations({}); }}>
+                <span><ScanText size={19} /></span><div><strong>Um print</strong><small>Fluxo padrão e mais simples</small></div>
+              </button>
+            </div>
+          )}
 
-          {readerCaptureMode === 'complete' ? (
+          {advancedMode && readerCaptureMode === 'complete' ? (
             <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} /></SectionErrorBoundary>
           ) : (<>
           <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
             <div className="creation-source-heading">
               <span className="creation-stage-number">1</span>
-              <div><p className="kicker">Entrada da carta</p><h3>{preview ? 'Print pronto para leitura' : 'Importe um print completo'}</h3><small>{preview ? selectedFile?.name || fileName || 'Imagem selecionada' : 'A imagem fica no aparelho e será revisada antes da ficha final.'}</small></div>
+              <div><p className="kicker">Passo 1</p><h3>{preview ? 'Imagem pronta' : 'Escolha uma imagem da carta'}</h3><small>{preview ? selectedFile?.name || fileName || 'Imagem selecionada' : 'Use um print em que o nome, a posição e os atributos estejam visíveis.'}</small></div>
               {preview && <span className="creation-ready-badge"><CheckCircle2 size={15} /> Pronto</span>}
             </div>
             <div className="upload-box premium-upload-box creation-upload-box">
@@ -3073,9 +3057,9 @@ export function CardVisionApp() {
               ) : (
                 <div className="creation-upload-empty">
                   <span className="upload-orbit"><UploadCloud size={34} /></span>
-                  <strong>Escolha a carta abaixo</strong>
-                  <span>Use um print sem cortes, com nome, posição, estilo, nível e atributos visíveis.</span>
-                  <div className="upload-requirements"><em>Print completo</em><em>Boa nitidez</em><em>Sem zoom excessivo</em></div>
+                  <strong>Toque abaixo para escolher a imagem</strong>
+                  <span>O aplicativo fará a leitura e pedirá apenas as confirmações necessárias.</span>
+                  <div className="upload-requirements"><em>Imagem completa</em><em>Texto legível</em></div>
                 </div>
               )}
             </div>
@@ -3095,37 +3079,41 @@ export function CardVisionApp() {
           <div className="vision-toolbar creation-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={analyzeSelectedImage} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
-              {loading ? 'Lendo por campos...' : 'Executar Print Único Pro'}
+              {loading ? 'Lendo a imagem...' : 'Ler imagem e continuar'}
             </button>
-            {ocrCancelable && <button className="manual-mode-button cancel-ocr-action" type="button" onClick={() => void cancelCurrentOcr()}><Ban size={17} /> Cancelar leitura</button>}
-            <button className="manual-mode-button calibrator-action" type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
-              <Wand2 size={17} /> Ajustar zonas
-            </button>
-            <button className="manual-mode-button" type="button" onClick={() => void queueSelectedPrint()} disabled={!selectedFile || loading}>
-              <Save size={17} /> Guardar na fila
-            </button>
+            {ocrCancelable && <button className="manual-mode-button cancel-ocr-action" type="button" onClick={() => void cancelCurrentOcr()}><Ban size={17} /> Cancelar</button>}
+            {advancedMode && (<>
+              <button className="manual-mode-button calibrator-action" type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
+                <Wand2 size={17} /> Ajustar leitura
+              </button>
+              <button className="manual-mode-button" type="button" onClick={() => void queueSelectedPrint()} disabled={!selectedFile || loading}>
+                <Save size={17} /> Guardar na fila
+              </button>
+            </>)}
           </div>
 
-          {ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
+          {advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
             {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}
           </div>}
 
-          {qualityReport && (
-            <div className="quality-card">
-              <strong>Diagnóstico do print</strong>
-              <span>{qualityReport.width}x{qualityReport.height}px • nitidez {qualityReport.sharpness} • contraste {qualityReport.contrast}</span>
-              {qualityReport.issues.length ? (
-                <em>{qualityReport.issues.map((issue) => issue.message).join(' ')}</em>
-              ) : (
-                <em>Print em condição boa para leitura local.</em>
-              )}
+          {qualityReport && qualityReport.issues.length > 0 && (
+            <div className="bm-simple-image-warning" role="status">
+              <strong>A imagem pode ficar mais nítida</strong>
+              <span>{qualityReport.issues.slice(0, 2).map((issue) => issue.message).join(' ')}</span>
             </div>
           )}
 
-          {ocrVisionEnabled ? <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary> : <div className="settings-explanation-card"><div><strong>OCR Vision 2.0 pausado localmente</strong><span>O leitor principal continua disponível. Reative o módulo em Ajustes › Observabilidade e suporte.</span></div></div>}
+          {advancedMode && qualityReport && (
+            <div className="quality-card">
+              <strong>Detalhes da imagem</strong>
+              <span>{qualityReport.width}x{qualityReport.height}px • nitidez {qualityReport.sharpness} • contraste {qualityReport.contrast}</span>
+            </div>
+          )}
 
-          {preview && qualityReport && (
+          {advancedMode && ocrVisionEnabled && <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary>}
+
+          {advancedMode && preview && qualityReport && (
             <div className="premium-image-lab">
               <div className="premium-image-lab-head">
                 <div><strong>Laboratório local da imagem</strong><span>Qualidade {qualityScore(qualityReport)}/100 • {qualityLabel(qualityScore(qualityReport))}</span></div>
@@ -3150,7 +3138,7 @@ export function CardVisionApp() {
             </div>
           )}
 
-          {calibratorOpen && preview && (
+          {advancedMode && calibratorOpen && preview && (
             <details className="calibrator-panel" open>
               <summary>Calibrador Elite de áreas</summary>
               <p className="panel-note">Ajuste somente quando o print vier de resolução, zoom ou corte diferente. A posição original deve sair da área da carta, não da grade de GERs.</p>
@@ -3187,10 +3175,9 @@ export function CardVisionApp() {
           </>)}
 
           {mainSection === 'manual' && (
-            <section className="manual-pro-welcome">
-              <div className="manual-pro-welcome-icon"><ShieldCheck size={26} /></div>
-              <div><p className="kicker">Entrada controlada</p><h3>Manual Pro ativado</h3><p>Preencha somente os dados que você conhece. A posição escolhida continua soberana e os pontos informados serão respeitados pelo motor.</p></div>
-              <div className="manual-pro-checklist"><span><CheckCircle2 size={15} /> Sem OCR</span><span><CheckCircle2 size={15} /> Sem alterar posição</span><span><CheckCircle2 size={15} /> Pontos exatos</span></div>
+            <section className="bm-simple-manual-note">
+              <Keyboard size={22} />
+              <div><strong>Digite somente o que você souber</strong><span>O aplicativo não mudará a posição escolhida e respeitará a quantidade informada de pontos.</span></div>
             </section>
           )}
 
@@ -3199,31 +3186,33 @@ export function CardVisionApp() {
               <div className="creation-config-heading">
                 <span className="creation-stage-number">2</span>
                 <div>
-                  <p className="kicker">Identidade da ficha</p>
-                  <h3>Confirme somente o que define esta carta.</h3>
-                  <small>Posição escolhida, posição original, estilo e objetivo ficam juntos. Formação e técnico continuam opcionais.</small>
+                  <p className="kicker">Passo 2</p>
+                  <h3>Confirme os dados principais</h3>
+                  <small>Escolha onde o jogador vai atuar. Os outros campos podem ficar no automático.</small>
                 </div>
               </div>
 
               <div className="creation-essential-grid">
-                <label className="creation-field-card">
-                  <span>Perfil de performance</span>
-                  <select value={objective} onChange={(event) => setObjective(event.target.value as Objective)}>
-                    {objectives.map((item) => <option key={item.value} value={item.value}>{item.title} — {item.hint}</option>)}
-                  </select>
-                  <small>{creationObjectiveLabel}</small>
-                </label>
+                {advancedMode && (
+                  <label className="creation-field-card">
+                    <span>Objetivo avançado</span>
+                    <select value={objective} onChange={(event) => setObjective(event.target.value as Objective)}>
+                      {objectives.map((item) => <option key={item.value} value={item.value}>{item.title} — {item.hint}</option>)}
+                    </select>
+                    <small>{creationObjectiveLabel}</small>
+                  </label>
+                )}
 
                 <label className="creation-field-card creation-field-priority">
-                  <span>Função alvo em campo</span>
+                  <span>Onde o jogador vai jogar?</span>
                   <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
                     {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
                   </select>
-                  <small>A posição escolhida continua soberana.</small>
+                  <small>Esta é a escolha mais importante da ficha.</small>
                 </label>
 
                 <label className="creation-field-card">
-                  <span>Posição original da carta</span>
+                  <span>Posição escrita na carta</span>
                   <select value={cardPositionOverride} onChange={(event) => setCardPositionOverride(event.target.value as PositionCode | 'AUTO')}>
                     {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
                   </select>
@@ -3231,15 +3220,16 @@ export function CardVisionApp() {
                 </label>
 
                 <label className="creation-field-card">
-                  <span>Estilo real da carta</span>
+                  <span>Estilo do jogador</span>
                   <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
-                    <option value="AUTO">Confirmar na revisão</option>
+                    <option value="AUTO">Deixar o aplicativo identificar</option>
                     {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
                   </select>
                   <small>{creationStyleLabel}</small>
                 </label>
               </div>
 
+              {advancedMode && (
               <details className="creation-advanced-details">
                 <summary>
                   <span><SlidersHorizontal size={18} /></span>
@@ -3329,6 +3319,7 @@ export function CardVisionApp() {
                   )}
                 </article>
               </details>
+              )}
             </div>
           )}
 
@@ -3904,7 +3895,7 @@ export function CardVisionApp() {
                 <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando a carta por áreas</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
               </div>
-            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
+            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
               originalPreview={preview}

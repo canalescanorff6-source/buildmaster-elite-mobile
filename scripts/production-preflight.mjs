@@ -62,7 +62,6 @@ for (const file of [
   'src/modules/quality/ProductionReadinessCenter.tsx',
   'src/modules/card-reader/ocrVisionEngine.ts',
   'src/modules/rules/officialRuleRegistry.ts',
-  'src/modules/players/advancedPlayerLaboratory.ts',
   'src/modules/tactical-studio/tacticalStudio2Engine.ts',
   'src/modules/opponents/opponentMatchAssistant.ts',
   'src/modules/performance/antiDelayEngine.ts',

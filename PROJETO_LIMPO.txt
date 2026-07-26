@@ -1,19 +1,29 @@
-BUILDMASTER ELITE TÁTICO v30.00 — PACOTE LIMPO
+BUILDMASTER ELITE TÁTICO v30.00 — EXPERIÊNCIA ESSENCIAL
 
-Removido:
+Padrão inicial:
+- tema escuro Obsidian
+- modo econômico
+- movimento reduzido
+- ferramentas avançadas desligadas
+- início sempre aberto na tela principal
+- leitor com um único print
+- uma única Ficha Competitiva Definitiva
+
+Simplificado:
+- início
+- navegação
+- criação por imagem
+- criação manual
+- lista de jogadores
+- resultado da ficha
+- habilidades
+- instruções de uso
+- ajustes básicos
+
+Removido do pacote:
 - .git e histórico local
-- manifestos de versões anteriores
-- testes históricos não usados pela bateria atual
-- arquivos TypeScript órfãos
-- arquivos de CSS separados e antigos
-- caches, builds e temporários
+- node_modules, .next, out e Android gerado
+- arquivos temporários e caches
+- módulo órfão sem uso
 
-Mantido:
-- todo o código funcional do aplicativo
-- funções de fichas, OCR, contas, backup, táticas e desempenho
-- workflows de APK, Google Play e Supabase
-- banco e Edge Functions do Supabase
-- materiais da Google Play
-- testes e portões de qualidade atuais da v30.00
-
-Não copie outra pasta .git para o projeto. Preserve apenas a .git da sua clonagem atual.
+Não copie outra pasta .git. Preserve apenas a .git da clonagem atual do GitHub Desktop.
