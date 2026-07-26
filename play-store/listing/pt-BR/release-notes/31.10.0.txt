@@ -1,0 +1,9 @@
+Técnicos e Formações 2.0
+
+• Escolha formação, estilo do técnico e técnico específico.
+• Suporte a técnicos com duas proficiências.
+• Nova 4-3-3 com 2 SA, 1 CA, 2 MLG, 1 VOL e linha de quatro.
+• Novos presets meta e editor de formações personalizadas.
+• Guia visual com passe, retorno, ataque, defesa e erros a evitar.
+• Montagem inteligente usando as cartas salvas no Cofre.
+• Arte tática exportável com o nome do técnico escolhido.

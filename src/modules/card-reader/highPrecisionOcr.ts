@@ -3,7 +3,7 @@ import type { PremiumEnhancementMode, PremiumZoneReading } from '@/lib/premiumRe
 import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManager';
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
 
-export const HIGH_PRECISION_OCR_VERSION = '31.00-ultra-precision-1';
+export const HIGH_PRECISION_OCR_VERSION = '31.10-ultra-precision-1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;

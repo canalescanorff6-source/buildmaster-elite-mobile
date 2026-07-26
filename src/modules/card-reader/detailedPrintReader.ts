@@ -47,7 +47,7 @@ export type DetailedPrintReading = {
   canonicalText: string;
 };
 
-const VERSION = '31.00-detailed-print-2';
+const VERSION = '31.10-detailed-print-2';
 
 function normalized(value: string) {
   return value
@@ -533,7 +533,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     + Object.values(identity).filter(Boolean).length * 2.1
   )));
 
-  const canonical: string[] = ['[LEITURA DETALHADA V31.00]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.10]'];
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
   if (identity.playstyle) canonical.push(`ESTILO DE JOGO: ${identity.playstyle.value}`);
@@ -550,7 +550,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of attributes) canonical.push(`${value.label}: ${value.value}`);
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V31.00]');
+  canonical.push('[FIM LEITURA DETALHADA V31.10]');
 
   const warnings: string[] = [];
   if (overallCandidate && !overallRaw) warnings.push(`GER descartado por estar fora da faixa plausível: ${overallCandidate}.`);

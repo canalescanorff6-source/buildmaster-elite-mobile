@@ -40,11 +40,11 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '31.00.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'31.00.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '31.00.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v31.00', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v31-00'), 'Cache PWA sincronizado');
+check(pkg.version === '31.10.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'31.10.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '31.10.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
+check(manifest.name === 'BuildMaster Elite Tático v31.10', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v31-10'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(cssFiles.length === 1 && path.basename(cssFiles[0]) === 'globals.css', 'Tema consolidado em um único CSS', cssFiles.map((file) => path.relative(root, file)).join(', '));
 check(!/@import\s+['"]/i.test(globals), 'CSS sem cadeia antiga de imports');
@@ -76,12 +76,15 @@ for (const file of [
   'src/lib/skillIntelligenceV31.ts',
   'src/lib/unifiedCardIntelligence.ts',
   'src/components/result/UnifiedIntelligenceCard.tsx',
-  'tests/types-v3100/tsconfig.json'
+  'tests/types-v3100/tsconfig.json',
+  'tests/types-v3110/tsconfig.json',
+  'tests/types-v3110-ui/tsconfig.json',
+  'src/lib/tacticalPlanningEngine.ts'
 ]) check(exists(file), `Arquivo essencial presente: ${file}`);
 
-check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run quality:audit', 'Bateria de testes limpa e atual');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run quality:audit', 'Bateria de testes limpa e atual');
 check(workflowApk.includes('npm run test:all') && workflowPlay.includes('npm run test:all'), 'Workflows usam a bateria atual');
-check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-00-unified-intelligence-regression.ts'), 'Regressões atuais presentes');
+check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts'), 'Regressões atuais presentes');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 
 // Confere imports internos e alcançabilidade do código da aplicação.

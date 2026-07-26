@@ -322,6 +322,101 @@ export const FORMATION_BLUEPRINTS: FormationBlueprint[] = [
   }
 ];
 
+// v31.10 — Formações 2.0: presets meta e personalizáveis.
+FORMATION_BLUEPRINTS.push(
+  {
+    id:'4-3-3-2ss', name:'4-3-3 • 2 SA + 1 CA', family:'extra', idealStyles:['POSSE_DE_BOLA','CONTRA_ATAQUE_RAPIDO'],
+    description:'Tridente central com dois segundos atacantes, dois MLG e um primeiro volante.',
+    risk:'Os corredores ficam dependentes dos laterais; não avance os dois ao mesmo tempo.',
+    behavior:'Atrair por dentro, aproximar os SA e atacar a última linha com o CA.',
+    slots:[
+      slot('ss1','SA E','SS',['AMF','LWF'],25,20,'ataque',['infiltracao','armador-criativo'],['artilheiro','atacante-pivo'],'Receber entre lateral e zagueiro e atacar o espaço.',['Aceleração','Controle','Finalização']),
+      slot('cf','CA','CF',['SS'],50,10,'ataque',['artilheiro'],['atacante-pivo'],'Fixar a zaga e concluir com poucos toques.',['Finalização','Talento ofensivo','Aceleração']),
+      slot('ss2','SA D','SS',['AMF','RWF'],75,20,'ataque',['armador-criativo','infiltracao'],['artilheiro','atacante-pivo'],'Aproximar para a tabela e atacar a área.',['Passe','Controle','Aceleração']),
+      slot('cm1','MLG E','CMF',['AMF'],32,48,'meio',['meia-versatil','infiltracao'],['armador-criativo'],'Dar mobilidade e chegar na área.',['Resistência','Passe','Aceleração']),
+      slot('dm','VOL','DMF',['CMF'],50,60,'meio',['primeiro-volante'],['meia-versatil'],'Proteger o corredor central e reciclar a posse.',['Defesa','Posicionamento','Passe']),
+      slot('cm2','MLG D','CMF',['DMF'],68,48,'meio',['meia-versatil','armador-criativo'],['infiltracao'],'Organizar e cobrir o lado da bola.',['Passe','Resistência','Controle']),
+      ...BACK_FOUR
+    ]
+  },
+  {
+    id:'4-2-2-2-prisma', name:'4-2-2-2 Prisma', family:'extra', idealStyles:['POSSE_DE_BOLA','CONTRA_ATAQUE'],
+    description:'Dois MAT entre linhas, dupla de meio complementar e dois atacantes.',
+    risk:'Perde amplitude se os laterais não escolherem bem o momento de apoiar.',
+    behavior:'Construir com segurança, ligar setores pelo meio e finalizar com dois atacantes.',
+    slots:[
+      slot('cf1','CA E','CF',['SS'],38,12,'ataque',['atacante-pivo','artilheiro'],['puxa-marcacao'],'Apoiar, prender e abrir espaço.',['Controle','Físico','Passe']),
+      slot('cf2','CA D','CF',['SS'],62,12,'ataque',['artilheiro'],['homem-area'],'Atacar a última linha e finalizar.',['Finalização','Aceleração','Movimentação']),
+      slot('am1','MAT E','AMF',['SS'],31,35,'meio',['armador-criativo'],['infiltracao'],'Criar o último passe e aproximar.',['Passe','Controle','Drible']),
+      slot('am2','MAT D','AMF',['SS'],69,35,'meio',['infiltracao'],['armador-criativo'],'Atacar o espaço e chegar para finalizar.',['Aceleração','Finalização','Talento ofensivo']),
+      slot('dm1','VOL E','DMF',['CMF'],40,58,'meio',['primeiro-volante'],['meia-versatil'],'Proteger a entrada da área.',['Defesa','Posicionamento','Desarme']),
+      slot('cm2','MLG D','CMF',['DMF'],60,58,'meio',['meia-versatil'],['armador-criativo'],'Cobrir, conduzir e dar continuidade.',['Resistência','Passe','Controle']),
+      ...BACK_FOUR
+    ]
+  },
+  {
+    id:'4-1-1-1-3-punhal', name:'4-1-1-1-3 Punhal Rápido', family:'extra', idealStyles:['CONTRA_ATAQUE_RAPIDO'],
+    description:'Três atacantes, MAT, MLG e VOL em corredor vertical.',
+    risk:'Se o MLG for ultrapassado, o VOL fica exposto.',
+    behavior:'Recuperar, achar o MAT e acelerar com três atacantes.',
+    slots:[
+      slot('lw','PE','LWF',['SS'],14,18,'ataque',['ala-produtivo','infiltracao'],['armador-criativo'],'Atacar por dentro após a recuperação.',['Velocidade','Drible','Finalização']),
+      slot('cf','CA','CF',['SS'],50,10,'ataque',['artilheiro'],['atacante-pivo'],'Fixar e finalizar.',['Finalização','Aceleração','Talento ofensivo']),
+      slot('rw','PD','RWF',['SS'],86,18,'ataque',['ala-produtivo','infiltracao'],['armador-criativo'],'Atacar por dentro e finalizar rápido.',['Velocidade','Drible','Finalização']),
+      slot('am','MAT','AMF',['SS'],50,35,'meio',['infiltracao','armador-criativo'],['meia-versatil'],'Receber entre linhas e dar o passe vertical.',['Passe','Aceleração','Controle']),
+      slot('cm','MLG','CMF',['AMF'],50,50,'meio',['meia-versatil'],['armador-criativo'],'Conectar a recuperação ao ataque.',['Resistência','Passe','Aceleração']),
+      slot('dm','VOL','DMF',['CMF'],50,63,'meio',['primeiro-volante'],['meia-versatil'],'Proteger o centro e interceptar.',['Defesa','Posicionamento','Desarme']),
+      ...BACK_FOUR
+    ]
+  },
+  {
+    id:'3-2-1-2-2-teia', name:'3-2-1-2-2 Teia Central', family:'extra', idealStyles:['POSSE_DE_BOLA','CONTRA_ATAQUE'],
+    description:'Três zagueiros, dupla de sustentação, três meias e dupla de ataque.',
+    risk:'Sem alas naturais, a largura depende da circulação e dos zagueiros laterais.',
+    behavior:'Criar superioridade por dentro, rodar o lado e atacar com aproximação.',
+    slots:[
+      slot('cf','CA','CF',['SS'],40,12,'ataque',['artilheiro'],['atacante-pivo'],'Atacar a profundidade e finalizar.',['Finalização','Aceleração','Movimentação']),
+      slot('ss','SA','SS',['CF'],60,14,'ataque',['armador-criativo','infiltracao'],['atacante-pivo'],'Aproximar, atrair e liberar o CA.',['Passe','Controle','Aceleração']),
+      slot('am1','MAT E','AMF',['CMF'],24,39,'meio',['infiltracao'],['armador-criativo'],'Atacar o meio-espaço esquerdo.',['Aceleração','Finalização','Controle']),
+      slot('am2','MAT C','AMF',['SS'],50,34,'meio',['armador-criativo'],['infiltracao'],'Organizar a circulação central.',['Passe','Controle','Drible']),
+      slot('am3','MAT D','AMF',['CMF'],76,39,'meio',['armador-criativo'],['infiltracao'],'Criar pelo meio-espaço direito.',['Passe','Controle','Aceleração']),
+      slot('dm1','VOL E','DMF',['CMF'],39,58,'meio',['primeiro-volante'],['meia-versatil'],'Fechar o centro e dar apoio curto.',['Defesa','Passe','Posicionamento']),
+      slot('cm2','MLG D','CMF',['DMF'],61,58,'meio',['meia-versatil'],['armador-criativo'],'Circular e cobrir a segunda bola.',['Passe','Resistência','Controle']),
+      ...BACK_THREE
+    ]
+  },
+  {
+    id:'4-1-2-2-1', name:'4-1-2-2-1', family:'extra', idealStyles:['POSSE_DE_BOLA','CONTRA_ATAQUE_RAPIDO'],
+    description:'Um VOL, dois MLG, dois SA e um CA em estrutura equilibrada.',
+    risk:'Pode ficar estreita sem apoio coordenado dos laterais.',
+    behavior:'Formar losangos curtos e atacar com os SA próximos do CA.',
+    slots:[
+      slot('ss1','SA E','SS',['AMF'],28,24,'ataque',['infiltracao'],['armador-criativo'],'Atacar a área pelo lado esquerdo.',['Aceleração','Finalização','Movimentação']),
+      slot('cf','CA','CF',['SS'],50,11,'ataque',['artilheiro'],['atacante-pivo'],'Fixar a última linha.',['Finalização','Talento ofensivo','Aceleração']),
+      slot('ss2','SA D','SS',['AMF'],72,24,'ataque',['armador-criativo'],['infiltracao'],'Apoiar e criar o passe final.',['Passe','Controle','Drible']),
+      slot('cm1','MLG E','CMF',['AMF'],34,47,'meio',['meia-versatil'],['infiltracao'],'Dar intensidade e chegar.',['Resistência','Passe','Aceleração']),
+      slot('cm2','MLG D','CMF',['DMF'],66,47,'meio',['meia-versatil','armador-criativo'],['infiltracao'],'Organizar e cobrir.',['Passe','Controle','Resistência']),
+      slot('dm','VOL','DMF',['CMF'],50,61,'meio',['primeiro-volante'],['meia-versatil'],'Proteger o centro.',['Defesa','Posicionamento','Desarme']),
+      ...BACK_FOUR
+    ]
+  },
+  {
+    id:'4-3-2-1-arvore', name:'4-3-2-1 Árvore', family:'extra', idealStyles:['POSSE_DE_BOLA','CONTRA_ATAQUE'],
+    description:'Dois MAT atrás do CA, com trio de meio e linha de quatro.',
+    risk:'Os MAT precisam ajudar a fechar os corredores.',
+    behavior:'Circular no meio, achar os MAT entre linhas e atacar a área com o CA.',
+    slots:[
+      slot('cf','CA','CF',['SS'],50,10,'ataque',['artilheiro'],['atacante-pivo'],'Finalizar e atacar a última linha.',['Finalização','Aceleração','Talento ofensivo']),
+      slot('am1','MAT E','AMF',['SS'],34,31,'meio',['infiltracao'],['armador-criativo'],'Chegar na área e atacar espaço.',['Aceleração','Finalização','Controle']),
+      slot('am2','MAT D','AMF',['SS'],66,31,'meio',['armador-criativo'],['infiltracao'],'Criar e aproximar.',['Passe','Controle','Drible']),
+      slot('cm1','MLG E','CMF',['DMF'],28,52,'meio',['meia-versatil'],['armador-criativo'],'Cobrir e transportar.',['Resistência','Passe','Aceleração']),
+      slot('dm','VOL','DMF',['CMF'],50,61,'meio',['primeiro-volante'],['meia-versatil'],'Fixar e proteger o centro.',['Defesa','Posicionamento','Passe']),
+      slot('cm2','MLG D','CMF',['AMF'],72,52,'meio',['meia-versatil','armador-criativo'],['infiltracao'],'Dar continuidade e cobrir.',['Passe','Resistência','Controle']),
+      ...BACK_FOUR
+    ]
+  }
+);
+
 function uniqueRoleIds(items: FormationRoleId[]): FormationRoleId[] {
   return Array.from(new Set(items));
 }

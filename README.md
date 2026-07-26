@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v31.00 — Inteligência Total da Carta
+# BuildMaster Elite Tático v31.10 — Inteligência Total da Carta
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
@@ -94,7 +94,7 @@ Quando existem duas distribuições próximas, o app cria um teste A/B:
 - um vencedor provisório só é declarado quando há amostra suficiente;
 - planos testados com bom desempenho voltam como candidatos na análise seguinte.
 
-## v31.00 — Refinamento e desempenho
+## v31.10 — Refinamento e desempenho
 
 - motor novo separado em módulos próprios;
 - resultado avançado carregado sob demanda;
@@ -105,6 +105,48 @@ Quando existem duas distribuições próximas, o app cria um teste A/B:
 - projeto limpo, sem `.git`, `node_modules`, builds antigos, APK, AAB ou credenciais.
 
 `CardVisionApp.tsx` e `analyzer.ts` ainda são arquivos grandes e permanecem monitorados pela auditoria. A lógica nova foi criada fora deles para evitar crescimento adicional e reduzir risco de regressão.
+
+## v31.10 — Técnicos e Formações 2.0
+
+A Central Tática foi reorganizada em quatro blocos simples:
+
+### Técnicos 2.0
+
+- escolha do técnico pelo nome;
+- leitura da proficiência principal e da segunda proficiência;
+- ranking de compatibilidade com a formação e o estilo escolhido;
+- indicação clara quando o técnico é híbrido;
+- aviso quando o estilo exige adaptação ou a proficiência está abaixo da faixa premium.
+
+### Formações 2.0
+
+- catálogo base do app;
+- presets meta personalizáveis;
+- editor para mudar posição, estilo e localização de cada espaço;
+- nova formação 4-3-3 com 2 SA, 1 CA, 2 MLG, 1 VOL, 2 ZAG e 2 laterais;
+- novos presets 4-2-2-2 Prisma, 4-1-1-1-3 Punhal Rápido, 3-2-1-2-2 Teia Central, 4-1-2-2-1 e 4-3-2-1 Árvore.
+
+### Guia Tático Visual
+
+Para cada combinação de formação, técnico e estilo, o app gera:
+
+- passe certo;
+- quando voltar;
+- quando atacar;
+- como defender;
+- princípios ofensivos e defensivos;
+- erros a evitar;
+- explicação de por que o plano rende;
+- arte tática exportável com o nome do técnico.
+
+### Montagem Inteligente do Time
+
+- preenche cada espaço usando as cartas salvas no Cofre;
+- não repete a mesma carta;
+- evita dois zagueiros Destruidores;
+- limita o uso simultâneo de laterais muito ofensivos;
+- mostra a função ideal de cada jogador e a nota de encaixe;
+- salva a combinação de formação, estilo e técnico por conta.
 
 ## Motor Mundial
 
@@ -141,6 +183,7 @@ Os testes isolados atuais também podem ser executados por versão:
 ```bash
 npm run test:v3050
 npm run test:v3100
+npm run test:v3110
 ```
 
 ## Colocar no GitHub

@@ -66,6 +66,7 @@ type TacticalPosterStudioPanelProps = {
   formation: FormationBlueprint;
   lineup: FormationSlotFit[];
   style: TacticalStyle;
+  managerName?: string;
 };
 
 type PosterTemplate = {
@@ -111,11 +112,11 @@ function textToLines(value: string): string[] {
   return value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 8);
 }
 
-function createInitialState(formation: FormationBlueprint, style: TacticalStyle): TacticalPosterEditableState {
+function createInitialState(formation: FormationBlueprint, style: TacticalStyle, managerName?: string): TacticalPosterEditableState {
   const instructions = defaultTacticalPosterInstructions(formation, style);
   return {
     title: 'BuildMaster Elite Tático 2026',
-    subtitle: `${formation.name} • estilos oficiais`,
+    subtitle: `${formation.name} • ${managerName ? `Técnico: ${managerName}` : 'estilos oficiais'}`,
     focus: 'Segurança, construção curta e finalização inteligente.',
     palette: 'ouro',
     orientation: 'vertical',
@@ -137,9 +138,9 @@ function createInitialState(formation: FormationBlueprint, style: TacticalStyle)
   };
 }
 
-export function TacticalPosterStudioPanel({ formation, lineup, style }: TacticalPosterStudioPanelProps) {
+export function TacticalPosterStudioPanel({ formation, lineup, style, managerName }: TacticalPosterStudioPanelProps) {
   const tacticalStudio2Enabled = useObservabilityFeatureFlag('tacticalStudio2');
-  const initialState = useMemo(() => createInitialState(formation, style), [formation, style]);
+  const initialState = useMemo(() => createInitialState(formation, style, managerName), [formation, style, managerName]);
   const [title, setTitle] = useState(initialState.title);
   const [subtitle, setSubtitle] = useState(initialState.subtitle);
   const [focus, setFocus] = useState(initialState.focus);
@@ -299,7 +300,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
   }
 
   function resetAutomatic(): void {
-    applyEditableState(createInitialState(formation, style));
+    applyEditableState(createInitialState(formation, style, managerName));
     setSelectedProjectId('');
     setProjectName(`${formation.name} • arte tática`);
     setMessage('Conteúdo, tema e linhas reconstruídos automaticamente pela formação e pelo estilo selecionados.');
@@ -366,13 +367,13 @@ export function TacticalPosterStudioPanel({ formation, lineup, style }: Tactical
 
   useEffect(() => {
     if (!initialLoadRef.current) return;
-    applyEditableState(createInitialState(formation, style));
+    applyEditableState(createInitialState(formation, style, managerName));
     setProjectName(`${formation.name} • arte tática`);
     setSelectedProjectId('');
     setDraftStatus('rascunho novo');
   // O estado inicial já contém todas as dependências táticas necessárias.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formation.id, style]);
+  }, [formation.id, style, managerName]);
 
   useEffect(() => {
     if (!initialLoadRef.current) return;

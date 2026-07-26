@@ -20,7 +20,7 @@ import {
 } from './trainingPlanCore';
 import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
 
-const ENGINE_VERSION = '31.00-unified-intelligence-1';
+const ENGINE_VERSION = '31.10-unified-intelligence-1';
 const SIMULATION_COUNT = 520;
 const CACHE_LIMIT = 24;
 
@@ -362,7 +362,7 @@ function buildAnalysis(result: AnalysisResult): { result: AnalysisResult; analys
   );
   const analysis: UnifiedCardIntelligenceAnalysis = {
     engineVersion: ENGINE_VERSION,
-    stages: { dna: '30.60 DNA Competitivo 2.0', simulator: '30.70 Simulador Profundo', integration: '30.80 Ficha + habilidades + Ímpeto', learning: '30.90 Aprendizado por partidas', refinement: '31.00 Refinamento final' },
+    stages: { dna: '30.60 DNA Competitivo 2.0', simulator: '30.70 Simulador Profundo', integration: '30.80 Ficha + habilidades + Ímpeto', learning: '30.90 Aprendizado por partidas', refinement: '31.10 Refinamento final' },
     confidence,
     finalTraining: winner.plan,
     skillPlan,
@@ -403,7 +403,7 @@ function buildAnalysis(result: AnalysisResult): { result: AnalysisResult; analys
       'O Ímpeto é recalculado junto com a ficha e as habilidades.'
     ],
     performance: { computeMs: Math.max(1, Date.now() - started), cacheHit: false, modulesLoadedOnDemand: ['OCR avançado', 'fontes de criadores', 'laboratório A/B', 'auditoria técnica'] },
-    summary: `A inteligência v31.00 avaliou ${scored.length} distribuições válidas, escolheu uma ficha única com ${winner.jointScore}/100 e calculou habilidades e Ímpeto no mesmo processo.`
+    summary: `A inteligência v31.10 avaliou ${scored.length} distribuições válidas, escolheu uma ficha única com ${winner.jointScore}/100 e calculou habilidades e Ímpeto no mesmo processo.`
   };
   const recommendedSkills = skillPlan.map((item) => item.name);
   const skillRecommendations = [
@@ -440,7 +440,7 @@ function buildAnalysis(result: AnalysisResult): { result: AnalysisResult; analys
     recommendationExplanation: [analysis.summary, ...analysis.gameplayChanges, ...result.recommendationExplanation].filter((item, index, all) => all.indexOf(item) === index).slice(0, 10),
     deepCardIntelligence: result.deepCardIntelligence ? {
       ...result.deepCardIntelligence,
-      engineVersion: '31.00-deep-card-2',
+      engineVersion: '31.10-deep-card-2',
       candidatesEvaluated: generated.length,
       validCandidates: scored.length,
       winnerScore: winner.jointScore,

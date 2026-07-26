@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const manifest = process.argv[2] || 'MANIFESTO_PRODUCAO_V31.00.sha256';
+const manifest = process.argv[2] || 'MANIFESTO_PRODUCAO_V31.10.sha256';
 if (!fs.existsSync(manifest)) throw new Error(`Manifesto ausente: ${manifest}`);
 const failures = [];
 let checked = 0;
