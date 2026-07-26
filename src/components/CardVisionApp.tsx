@@ -3677,6 +3677,14 @@ export function CardVisionApp() {
 
               {account?.profile.role === 'admin' && <button type="button" className="settings-admin-account-shortcut luxury-panel" onClick={() => setSettingsView('contas')}><span><UserPlus size={22} /></span><div><strong>Criar e gerenciar contas</strong><small>Acesso direto para cadastrar clientes, definir prazo, senha e limite de aparelhos.</small></div><em>Abrir</em></button>}
 
+              {!advancedMode && (
+                <button type="button" className="settings-update-quick-access luxury-panel" onClick={() => setSettingsView('atualizacoes')} aria-label="Abrir atualizações do aplicativo">
+                  <span><RotateCcw size={22} /></span>
+                  <div><small>Atualizações do aplicativo</small><strong>Versão instalada: v{APP_RELEASE_VERSION}</strong><p>Verifique se existe um APK novo, confira a segurança do arquivo e atualize sem perder os dados.</p></div>
+                  <em>Abrir atualizações</em>
+                </button>
+              )}
+
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
                 <button type="button" className={settingsView === 'evolucao' ? 'active settings-evolution-navigation' : 'settings-evolution-navigation'} onClick={() => setSettingsView('evolucao')}><Sparkles size={18} /><div><strong>Evolução 360</strong><span>Metas e manutenção</span></div></button>
                 <button type="button" className={settingsView === 'experiencia' ? 'active settings-v2970-navigation' : 'settings-v2970-navigation'} onClick={() => setSettingsView('experiencia')}><Sparkles size={18} /><div><strong>Experiência 2.0</strong><span>Atalhos e retomada</span></div></button>
