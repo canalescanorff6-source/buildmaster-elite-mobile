@@ -105,7 +105,9 @@ export async function createZoneOriginPreview(file: File | Blob, zone: OcrZone):
   }
 }
 
-export async function enhanceImageLocally(file: File | Blob, mode: 'adaptive' | 'contrast' | 'sharp' = 'adaptive'): Promise<Blob | File> {
+export type LocalEnhancementMode = 'adaptive' | 'contrast' | 'sharp' | 'color' | 'binary' | 'inverted';
+
+export async function enhanceImageLocally(file: File | Blob, mode: LocalEnhancementMode = 'adaptive'): Promise<Blob | File> {
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return file;
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file;
@@ -123,14 +125,37 @@ export async function enhanceImageLocally(file: File | Blob, mode: 'adaptive' | 
     let sum = 0;
     for (let i = 0; i < data.length; i += 4) sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
     const mean = sum / Math.max(1, data.length / 4);
-    const contrast = mode === 'contrast' ? 1.7 : mode === 'sharp' ? 1.45 : 1.35;
+    const contrast = mode === 'contrast' ? 1.7 : mode === 'sharp' ? 1.45 : mode === 'color' ? 1.22 : 1.35;
     const brightnessLift = Math.max(-22, Math.min(28, 132 - mean));
-    for (let i = 0; i < data.length; i += 4) {
-      for (let channel = 0; channel < 3; channel += 1) {
-        const value = (data[i + channel] - 128) * contrast + 128 + brightnessLift;
-        data[i + channel] = Math.max(0, Math.min(255, value));
+
+    if (mode === 'binary' || mode === 'inverted') {
+      const grayValues = new Uint8Array(data.length / 4);
+      let graySum = 0;
+      for (let i = 0, pixel = 0; i < data.length; i += 4, pixel += 1) {
+        const gray = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+        grayValues[pixel] = gray;
+        graySum += gray;
+      }
+      const threshold = Math.max(72, Math.min(190, Math.round(graySum / Math.max(1, grayValues.length))));
+      for (let i = 0, pixel = 0; i < data.length; i += 4, pixel += 1) {
+        const dark = grayValues[pixel] <= threshold;
+        const value = mode === 'inverted' ? (dark ? 255 : 0) : (dark ? 0 : 255);
+        data[i] = value;
+        data[i + 1] = value;
+        data[i + 2] = value;
+      }
+    } else {
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const saturation = mode === 'color' ? 1.18 : 1;
+          const saturated = gray + (data[i + channel] - gray) * saturation;
+          const value = (saturated - 128) * contrast + 128 + brightnessLift;
+          data[i + channel] = Math.max(0, Math.min(255, value));
+        }
       }
     }
+
     ctx.putImageData(image, 0, 0);
     if (mode === 'sharp' || mode === 'adaptive') {
       ctx.globalAlpha = mode === 'sharp' ? 0.42 : 0.22;

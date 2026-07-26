@@ -15,7 +15,7 @@ export type PrecisionZoneOptions = {
   imageHash: string;
   template: string;
   targetWidth: number;
-  readingMode: 'balanced' | 'precision';
+  readingMode: 'balanced' | 'precision' | 'fast';
   knownPlayerNames?: string[];
   labelPrefix?: string;
 };
@@ -229,8 +229,8 @@ function structureScore(key: OcrZoneKey, text: string) {
   return Math.min(14, clean.length / 25);
 }
 
-function passPlan(key: OcrZoneKey, mode: 'balanced' | 'precision'): PrecisionPass[] {
-  if (mode === 'balanced') {
+function passPlan(key: OcrZoneKey, mode: 'balanced' | 'precision' | 'fast'): PrecisionPass[] {
+  if (mode !== 'precision') {
     if (key === 'name') return [
       { enhancement: 'contrast', kind: 'name' },
       { enhancement: 'sharp', kind: 'name' }

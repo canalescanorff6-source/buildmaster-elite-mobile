@@ -42,7 +42,7 @@
     "typecheck:v3040": "tsc -p tests/types-v3040/tsconfig.json --pretty false",
     "test:v3040": "npm run typecheck:v3040 && node -r ./tests/_ts-require.cjs tests/v30-40-smart-card-crop-regression.ts",
     "typecheck:v3050": "tsc -p tests/types-v3050/tsconfig.json --pretty false",
-    "test:v3050": "npm run typecheck:v3050 && node -r ./tests/_ts-require.cjs tests/v30-50-ultra-precision-ocr-regression.ts"
+    "test:v3050": "npm run typecheck:v3050 && node -r ./tests/_ts-require.cjs tests/v30-50-ultra-precision-ocr-regression.ts && node -r ./tests/_ts-require.cjs tests/v30-50-typescript-hotfix-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

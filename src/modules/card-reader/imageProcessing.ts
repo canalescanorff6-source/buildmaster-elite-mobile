@@ -1,5 +1,7 @@
 export type ImageEnhancement = 'original' | 'color' | 'contrast' | 'sharp' | 'binary' | 'inverted';
 
+type PixelBuffer = Uint8ClampedArray<ArrayBufferLike>;
+
 function normalizeLine(line: string) {
   return line.replace(/\s+/g, ' ').trim();
 }
@@ -42,7 +44,7 @@ function luminance(red: number, green: number, blue: number) {
   return red * 0.299 + green * 0.587 + blue * 0.114;
 }
 
-function grayscale(data: Uint8ClampedArray) {
+function grayscale(data: PixelBuffer): PixelBuffer {
   const result = new Uint8ClampedArray(data.length);
   for (let index = 0; index < data.length; index += 4) {
     const gray = clampByte(luminance(data[index], data[index + 1], data[index + 2]));
@@ -54,7 +56,7 @@ function grayscale(data: Uint8ClampedArray) {
   return result;
 }
 
-function otsuThreshold(data: Uint8ClampedArray) {
+function otsuThreshold(data: PixelBuffer) {
   const histogram = new Uint32Array(256);
   let pixels = 0;
   for (let index = 0; index < data.length; index += 4) {
@@ -85,7 +87,7 @@ function otsuThreshold(data: Uint8ClampedArray) {
   return bestThreshold;
 }
 
-function applyContrast(data: Uint8ClampedArray, factor: number, lift: number) {
+function applyContrast(data: PixelBuffer, factor: number, lift: number) {
   for (let index = 0; index < data.length; index += 4) {
     const value = clampByte((data[index] - 128) * factor + 128 + lift);
     data[index] = value;
@@ -94,7 +96,7 @@ function applyContrast(data: Uint8ClampedArray, factor: number, lift: number) {
   }
 }
 
-function sharpenGrayscale(data: Uint8ClampedArray, width: number, height: number) {
+function sharpenGrayscale(data: PixelBuffer, width: number, height: number): PixelBuffer {
   if (width < 3 || height < 3) return data;
   const source = new Uint8ClampedArray(data);
   const output = new Uint8ClampedArray(data);
@@ -135,7 +137,7 @@ function enhancePixels(imageData: ImageData, mode: ImageEnhancement) {
     return;
   }
 
-  let processed = grayscale(imageData.data);
+  let processed: PixelBuffer = grayscale(imageData.data);
   if (mode === 'contrast' || mode === 'sharp') {
     applyContrast(processed, mode === 'sharp' ? 2.08 : 1.72, mode === 'sharp' ? 20 : 15);
     if (mode === 'sharp') processed = sharpenGrayscale(processed, width, height);
