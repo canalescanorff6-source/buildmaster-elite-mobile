@@ -38,6 +38,13 @@
   "exclude": [
     "node_modules",
     "supabase/functions",
-    "tests/types-v3000"
+    "tests/types-v3000",
+    "tests/types-v3020",
+    "tests/types-v3030",
+    "tests/types-v3040",
+    "tests/types-v3050",
+    "tests/types-v3100",
+    "tests/types-v3110",
+    "tests/types-v3110-ui"
   ]
 }
