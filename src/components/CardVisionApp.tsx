@@ -143,7 +143,7 @@ import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
 import type { ResultTabRequest } from '@/components/result/ResultWorkspace';
 import { getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
-import { loadEasyUiPreferences } from '@/lib/easyExperience';
+import { loadEasyUiPreferences, type PremiumVisualPreset } from '@/lib/easyExperience';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
@@ -324,6 +324,7 @@ export function CardVisionApp() {
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
+  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
   const [advancedMode, setAdvancedMode] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
@@ -553,11 +554,11 @@ export function CardVisionApp() {
   }, [history, centralMatchRecords, centralEntityIndex, performanceMode]);
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
-    settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
+    settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
     calibration: { ocrZones },
     folders: vaultFolders,
     plans: {},
-  }), [history, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders]);
+  }), [history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders]);
   const healthSummary = useMemo(() => {
     const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
     return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
@@ -565,13 +566,13 @@ export function CardVisionApp() {
   const fullSyncHealth = useMemo(() => {
     const local = syncHealthEnvelope ?? createBackupEnvelope({
       history,
-      settings: { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
+      settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
       calibration: { ocrZones },
       folders: vaultFolders,
       evolution: { matchValidation: centralMatchRecords }
     });
     return buildSyncHealth({ local, remote: remoteFullBackup, snapshots: backupSnapshots, lastSyncAt: lastFullSyncAt });
-  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders, centralMatchRecords]);
+  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders, centralMatchRecords]);
   const availablePlaystyles = useMemo(() => Array.from(new Set(history.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const availableSkills = useMemo(() => Array.from(new Set(history.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const playerComparison = useMemo(() => comparePlayers(history.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), [history, comparePlayerIds, comparePosition]);
@@ -750,6 +751,7 @@ export function CardVisionApp() {
 
     try {
       const ui = loadEasyUiPreferences();
+      setVisualPreset(ui.visualPreset);
       setAppTheme(ui.appTheme);
       setAccentTheme(ui.accentTheme);
       setAdvancedMode(ui.advancedMode);
@@ -853,11 +855,11 @@ export function CardVisionApp() {
 
   useEffect(() => {
     try {
-      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
+      writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
     } catch {
       // Preferências visuais são opcionais.
     }
-  }, [appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode]);
+  }, [visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode]);
 
   useEffect(() => {
     try {
@@ -1433,8 +1435,9 @@ export function CardVisionApp() {
       await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
     }
     if (selected.settings && sections.settings && typeof sections.settings === 'object') {
-      const ui = sections.settings as { appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; autoUpdateCheck?: boolean };
+      const ui = sections.settings as { visualPreset?: PremiumVisualPreset; appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; autoUpdateCheck?: boolean };
       writeStorage('buildmaster_ui_prefs_v24_24', ui);
+      if (ui.visualPreset && ['obsidian-gold', 'elite-blue', 'future-purple'].includes(ui.visualPreset)) setVisualPreset(ui.visualPreset);
       if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
       if (ui.accentTheme && ['prism', 'emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
@@ -2658,6 +2661,15 @@ export function CardVisionApp() {
     setStatus(`Perfil adaptativo aplicado: densidade ${profile.recommendedDensity === 'compact' ? 'compacta' : 'confortável'} e desempenho ${profile.recommendedPerformance === 'economy' ? 'econômico' : 'equilibrado'}.`);
   }
 
+  function applyPremiumVisualPreset(preset: PremiumVisualPreset) {
+    setVisualPreset(preset);
+    setAppTheme('dark');
+    if (preset === 'obsidian-gold') setAccentTheme('gold');
+    if (preset === 'elite-blue') setAccentTheme('blue');
+    if (preset === 'future-purple') setAccentTheme('purple');
+    setStatus(`Interface ${preset === 'obsidian-gold' ? 'Preto & Dourado' : preset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'} aplicada.`);
+  }
+
   const appCommands: AppCommand[] = [
     { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
     { id: 'new-print', group: 'Criar ficha', label: 'Nova ficha por print', description: 'Abre o Print Único Pro para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
@@ -2683,7 +2695,7 @@ export function CardVisionApp() {
   ];
 
   return (
-    <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+    <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       {!showSplash && <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />}
       {showSplash && (
@@ -3655,7 +3667,7 @@ export function CardVisionApp() {
                   <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
                     <div className="settings-panel-heading">
                       <div><p className="kicker"><Palette size={15} /> Aparência e acessibilidade</p><h3>Conforto visual em qualquer celular</h3><span>As preferências ficam salvas somente na sua conta neste aparelho e também entram no backup completo.</span></div>
-                      <span className="settings-state-pill">{appTheme === 'dark' ? 'Tema escuro' : 'Tema claro'}</span>
+                      <span className="settings-state-pill">{visualPreset === 'obsidian-gold' ? 'Preto & Dourado' : visualPreset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'}</span>
                     </div>
 
                     <div className="appearance-live-preview" aria-label="Prévia da aparência selecionada">
@@ -3663,20 +3675,22 @@ export function CardVisionApp() {
                       <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Visual limpo, contraste equilibrado e ações fáceis de identificar.</span><button type="button" tabIndex={-1}>Ação principal</button></div>
                     </div>
 
-                    <div className="settings-control-section">
-                      <div className="settings-control-heading"><strong>Tema do aplicativo</strong><span>Escolha a base visual mais confortável.</span></div>
-                      <div className="theme-choice-grid">
-                        <button type="button" className={appTheme === 'dark' ? 'selected' : ''} aria-pressed={appTheme === 'dark'} onClick={() => setAppTheme('dark')}><i className="theme-preview-dark" /><strong>Escuro premium</strong><span>Mais confortável à noite e em telas AMOLED.</span></button>
-                        <button type="button" className={appTheme === 'light' ? 'selected' : ''} aria-pressed={appTheme === 'light'} onClick={() => setAppTheme('light')}><i className="theme-preview-light" /><strong>Claro elegante</strong><span>Leitura forte em ambientes iluminados.</span></button>
+                    <div className="settings-control-section premium-preset-section">
+                      <div className="settings-control-heading"><strong>Interface premium</strong><span>Escolha um dos três modelos aprovados. Todas as funções permanecem no mesmo lugar.</span></div>
+                      <div className="premium-preset-grid">
+                        <button type="button" className={visualPreset === 'obsidian-gold' ? 'selected preset-gold' : 'preset-gold'} aria-pressed={visualPreset === 'obsidian-gold'} onClick={() => applyPremiumVisualPreset('obsidian-gold')}>
+                          <i><b>BM</b><span /><span /><span /></i><strong>Preto & Dourado</strong><small>Elegante, profissional e com foco total.</small><em>Modelo 1</em>
+                        </button>
+                        <button type="button" className={visualPreset === 'elite-blue' ? 'selected preset-blue' : 'preset-blue'} aria-pressed={visualPreset === 'elite-blue'} onClick={() => applyPremiumVisualPreset('elite-blue')}>
+                          <i><b>BM</b><span /><span /><span /></i><strong>Azul Elite</strong><small>Tecnológico, limpo e fluido.</small><em>Modelo 2</em>
+                        </button>
+                        <button type="button" className={visualPreset === 'future-purple' ? 'selected preset-purple' : 'preset-purple'} aria-pressed={visualPreset === 'future-purple'} onClick={() => applyPremiumVisualPreset('future-purple')}>
+                          <i><b>BM</b><span /><span /><span /></i><strong>Roxo Futuro</strong><small>Futurista, marcante e sofisticado.</small><em>Modelo 5</em>
+                        </button>
                       </div>
                     </div>
 
-                    <div className="settings-control-section">
-                      <div className="settings-control-heading"><strong>Cor de destaque</strong><span>Use o Prisma para combinar cores por módulo ou escolha uma cor principal.</span></div>
-                      <div className="accent-choice-row">
-                        {(['prism', 'emerald', 'gold', 'blue', 'red', 'purple'] as AccentTheme[]).map((accent) => <button key={accent} type="button" data-accent={accent} className={accentTheme === accent ? 'selected' : ''} aria-pressed={accentTheme === accent} onClick={() => setAccentTheme(accent)}><i /><span>{accent === 'prism' ? 'Prisma dinâmico' : accent === 'emerald' ? 'Verde elite' : accent === 'gold' ? 'Dourado' : accent === 'blue' ? 'Azul' : accent === 'red' ? 'Vermelho' : 'Roxo'}</span></button>)}
-                      </div>
-                    </div>
+                    <div className="premium-preset-note"><ShieldCheck size={17} /><div><strong>Três modelos escuros e otimizados</strong><span>O modelo escolhido controla cores, brilho, cartões, navegação e destaques. Texto, contraste, espaçamento e animações continuam ajustáveis abaixo.</span></div></div>
 
                     <div className="settings-preference-grid">
                       <div className="settings-preference-card">

@@ -2,15 +2,20 @@
 
 import {
   ArrowRight,
+  BrainCircuit,
   Camera,
   CheckCircle2,
   Clock3,
+  Gamepad2,
+  Gauge,
   Keyboard,
   Settings2,
   ShieldCheck,
+  Sparkles,
   Target,
   Trophy,
-  Users
+  Users,
+  Wand2
 } from 'lucide-react';
 import type { CentralDashboard, CentralRecommendation, TeamDiagnosis } from '@/modules/core/centralIntelligence';
 
@@ -18,9 +23,19 @@ function recommendation(
   id: string,
   title: string,
   action: CentralRecommendation['action'],
-  detail = ''
+  detail = '',
+  playerId?: string
 ): CentralRecommendation {
-  return { id, title, detail, action, priority: 'info' };
+  return { id, title, detail, action, playerId, priority: 'info' };
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'BM';
 }
 
 export function IntegratedHomePanel({
@@ -40,113 +55,122 @@ export function IntegratedHomePanel({
   const backupLabel = lastBackupAt
     ? new Date(lastBackupAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
     : 'Não feito';
+  const latest = dashboard.latestPlayer;
 
-  function open(action: CentralRecommendation['action'], id: string, title: string, detail = '') {
-    onAction(recommendation(id, title, action, detail));
+  function open(action: CentralRecommendation['action'], id: string, title: string, detail = '', playerId?: string) {
+    onAction(recommendation(id, title, action, detail, playerId));
+  }
+
+  function openLatestResult(id: string, title: string) {
+    if (latest) {
+      open('result', id, title, latest.name, latest.id);
+      return;
+    }
+    open('reader', `${id}-reader`, 'Ler primeira carta', 'Adicione uma carta para liberar esta análise.');
   }
 
   return (
-    <section className="bm-simple-home" aria-label="Início do BuildMaster">
-      <header className="bm-simple-welcome">
-        <span className="bm-simple-eyebrow">BuildMaster Elite Tático</span>
-        <h1>O que você quer fazer agora?</h1>
-        <p>Escolha uma opção. O aplicativo mostra somente o necessário em cada etapa.</p>
+    <section className="bm-premium-dashboard" aria-label="Início premium do BuildMaster">
+      <header className="bm-premium-dashboard-heading">
+        <div>
+          <span><Sparkles size={14} /> Central Elite</span>
+          <h1>Seu time, suas fichas e sua estratégia em um só lugar.</h1>
+          <p>Interface direta, recursos organizados e inteligência tática sem esconder as funções importantes.</p>
+        </div>
+        <div className="bm-premium-health-pill">
+          <ShieldCheck size={17} />
+          <div><strong>{healthScore}/100</strong><small>saúde do app</small></div>
+        </div>
       </header>
 
-      <section className="bm-simple-primary-actions" aria-label="Ações principais">
-        <button
-          type="button"
-          className="bm-simple-action bm-simple-action-primary"
-          onClick={() => open('reader', 'home-reader', 'Criar ficha por print')}
-        >
-          <span className="bm-simple-action-icon"><Camera size={28} /></span>
-          <span className="bm-simple-action-copy">
-            <strong>Criar ficha por print</strong>
-            <small>Importe uma imagem, confirme os dados e receba uma ficha final.</small>
-          </span>
-          <em>Recomendado</em>
-          <ArrowRight size={20} />
-        </button>
-
-        <button
-          type="button"
-          className="bm-simple-action"
-          onClick={() => open('manual', 'home-manual', 'Criar ficha manualmente')}
-        >
-          <span className="bm-simple-action-icon"><Keyboard size={27} /></span>
-          <span className="bm-simple-action-copy">
-            <strong>Preencher manualmente</strong>
-            <small>Use quando o print não estiver nítido ou quando preferir digitar.</small>
-          </span>
-          <ArrowRight size={20} />
-        </button>
-
-        <button
-          type="button"
-          className="bm-simple-action"
-          onClick={() => {
-            if (dashboard.latestPlayer) {
-              onAction({
-                id: 'home-continue',
-                title: 'Continuar ficha',
-                detail: dashboard.latestPlayer.name,
-                action: 'result',
-                playerId: dashboard.latestPlayer.id,
-                priority: 'info'
-              });
-              return;
-            }
-            open('players', 'home-players', 'Abrir jogadores');
-          }}
-        >
-          <span className="bm-simple-action-icon"><Trophy size={27} /></span>
-          <span className="bm-simple-action-copy">
-            <strong>{dashboard.latestPlayer ? `Continuar ${dashboard.latestPlayer.name}` : 'Ver meus jogadores'}</strong>
-            <small>{dashboard.latestPlayer ? 'Retome a última ficha que estava usando.' : 'Abra o banco de jogadores salvos.'}</small>
-          </span>
-          <ArrowRight size={20} />
-        </button>
-      </section>
-
-      {nextStep && (
-        <section className="bm-simple-next-step" aria-label="Próximo passo sugerido">
-          <span className="bm-simple-next-icon"><Target size={21} /></span>
-          <div>
-            <small>Próximo passo sugerido</small>
-            <strong>{nextStep.title}</strong>
-            <p>{nextStep.detail}</p>
+      <section className="bm-premium-reader-hero" aria-label="Leitor inteligente de cartas">
+        <div className="bm-premium-reader-copy">
+          <span className="bm-premium-kicker"><Camera size={15} /> Leitor inteligente</span>
+          <h2>Transforme um print em uma ficha competitiva completa.</h2>
+          <p>O app lê a carta, recorta a imagem, confirma os dados e calcula ficha, habilidades e Ímpeto no mesmo fluxo.</p>
+          <div className="bm-premium-reader-actions">
+            <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Criar ficha por print')}>
+              <Camera size={19} /><span><strong>Iniciar leitura</strong><small>Mais rápido e recomendado</small></span><ArrowRight size={18} />
+            </button>
+            <button type="button" onClick={() => open('manual', 'home-manual', 'Criar ficha manualmente')}>
+              <Keyboard size={18} /><span><strong>Modo manual</strong><small>Digite somente o necessário</small></span>
+            </button>
           </div>
-          <button type="button" onClick={() => onAction(nextStep)}>Abrir</button>
-        </section>
-      )}
-
-      <section className="bm-simple-status" aria-label="Resumo rápido">
-        <article><Users size={19} /><div><strong>{dashboard.players}</strong><span>jogadores</span></div></article>
-        <article><CheckCircle2 size={19} /><div><strong>{dashboard.confirmed}</strong><span>fichas prontas</span></div></article>
-        <article><Clock3 size={19} /><div><strong>{backupLabel}</strong><span>último backup</span></div></article>
-      </section>
-
-      <section className="bm-simple-shortcuts" aria-label="Outras áreas">
-        <div className="bm-simple-section-title">
-          <div><span>Outras áreas</span><h2>Acesse somente quando precisar</h2></div>
-          <small>{healthScore >= 85 ? <><ShieldCheck size={14} /> Aplicativo protegido</> : 'Manutenção recomendada'}</small>
         </div>
-        <div className="bm-simple-shortcut-grid">
-          <button type="button" onClick={() => open('team', 'home-team', 'Meu Time')}>
-            <Target size={22} /><span><strong>Meu Time</strong><small>Escalação e formação</small></span><ArrowRight size={17} />
-          </button>
-          <button type="button" onClick={() => open('matches', 'home-matches', 'Partidas')}>
-            <Trophy size={22} /><span><strong>Partidas</strong><small>Treinos e avaliação real</small></span><ArrowRight size={17} />
-          </button>
-          <button type="button" onClick={() => open('settings', 'home-settings', 'Ajustes')}>
-            <Settings2 size={22} /><span><strong>Ajustes</strong><small>Conta, backup e atualização</small></span><ArrowRight size={17} />
-          </button>
+
+        <div className="bm-premium-player-card" aria-label={latest ? `Última carta: ${latest.name}` : 'Prévia do leitor'}>
+          <div className="bm-premium-card-glow" />
+          <span className="bm-premium-card-rating">{dashboard.squadReadiness || 99}</span>
+          <span className="bm-premium-card-position">{latest?.targetPosition || 'CA'}</span>
+          <div className="bm-premium-card-avatar">{latest ? initials(latest.name) : <Trophy size={38} />}</div>
+          <div className="bm-premium-card-name"><strong>{latest?.name || 'Sua próxima carta'}</strong><small>Ficha competitiva definitiva</small></div>
+          <div className="bm-premium-card-stars">★★★★★</div>
         </div>
       </section>
 
-      <footer className="bm-simple-team-note">
-        <span>Formação atual</span><strong>{team.formation}</strong><small>Você pode alterar isso em Meu Time.</small>
-      </footer>
+      <section className="bm-premium-feature-section" aria-label="Funções principais">
+        <div className="bm-premium-section-heading">
+          <div><span>Funções principais</span><h2>Tudo fácil de encontrar</h2></div>
+          <small>{dashboard.players} jogador(es) no Cofre</small>
+        </div>
+        <div className="bm-premium-feature-grid">
+          <button type="button" onClick={() => open('players', 'home-builds', 'Fichas')}><Trophy size={23}/><span><strong>Fichas</strong><small>Progressão ideal</small></span></button>
+          <button type="button" onClick={() => openLatestResult('home-skills', 'Habilidades adicionais')}><Wand2 size={23}/><span><strong>Habilidades</strong><small>5 escolhas personalizadas</small></span></button>
+          <button type="button" onClick={() => openLatestResult('home-boosters', 'Ímpeto ideal')}><Sparkles size={23}/><span><strong>Ímpetos</strong><small>Melhor escolha por carta</small></span></button>
+          <button type="button" onClick={() => open('team', 'home-formations', 'Formações')}><Target size={23}/><span><strong>Formações</strong><small>Técnicos, estilos e guias</small></span></button>
+          <button type="button" onClick={() => open('matches', 'home-opponent', 'Analisar adversário')}><Gamepad2 size={23}/><span><strong>Adversário</strong><small>Partidas e leitura tática</small></span></button>
+          <button type="button" onClick={() => open('matches', 'home-training', 'Treinos')}><Gauge size={23}/><span><strong>Treinos</strong><small>Evolução e teste A/B</small></span></button>
+          <button type="button" onClick={() => open('team', 'home-team', 'Meu Time')}><Users size={23}/><span><strong>Meu Time</strong><small>Escalação inteligente</small></span></button>
+          <button type="button" onClick={() => open('settings', 'home-settings', 'Ajustes')}><Settings2 size={23}/><span><strong>Ajustes</strong><small>Conta, backup e atualização</small></span></button>
+        </div>
+      </section>
+
+      <section className="bm-premium-dashboard-grid">
+        <article className="bm-premium-formation-card">
+          <div className="bm-premium-card-heading">
+            <div><span>Formação ativa</span><h2>{team.formation}</h2><small>{team.styleNote}</small></div>
+            <strong>{team.globalScore}</strong>
+          </div>
+          <div className="bm-premium-mini-pitch" aria-label={`Escalação ${team.formation}`}>
+            <i className="half-line"/><i className="center-circle"/><i className="box box-top"/><i className="box box-bottom"/>
+            {team.lineup.map((item) => (
+              <button
+                key={item.slot.id}
+                type="button"
+                className={item.player ? 'filled' : 'empty'}
+                style={{ left: `${item.slot.x}%`, top: `${item.slot.y}%` }}
+                title={item.player ? `${item.player.parsed.playerName} — ${item.slot.label}` : `${item.slot.label} sem jogador`}
+                onClick={() => open('team', `lineup-${item.slot.id}`, item.player ? `Revisar ${item.slot.label}` : `Preencher ${item.slot.label}`)}
+              >
+                <b>{item.slot.label.replace(/\s.*/, '')}</b><span>{item.player ? initials(item.player.parsed.playerName) : '+'}</span>
+              </button>
+            ))}
+          </div>
+          <footer><span>{team.filledSlots}/{team.totalSlots} posições preenchidas</span><button type="button" onClick={() => open('team', 'home-open-team', 'Abrir Meu Time')}>Editar time <ArrowRight size={15}/></button></footer>
+        </article>
+
+        <article className="bm-premium-activity-card">
+          <div className="bm-premium-card-heading"><div><span>Resumo inteligente</span><h2>Seu progresso</h2></div><BrainCircuit size={24}/></div>
+          <div className="bm-premium-metric-grid">
+            <div><Users size={18}/><strong>{dashboard.players}</strong><span>jogadores</span></div>
+            <div><CheckCircle2 size={18}/><strong>{dashboard.confirmed}</strong><span>fichas prontas</span></div>
+            <div><Trophy size={18}/><strong>{dashboard.matchRecords}</strong><span>partidas</span></div>
+            <div><Clock3 size={18}/><strong>{backupLabel}</strong><span>último backup</span></div>
+          </div>
+          {latest ? (
+            <button type="button" className="bm-premium-latest-player" onClick={() => openLatestResult('home-continue', `Continuar ${latest.name}`)}>
+              <span>{initials(latest.name)}</span><div><small>Última análise</small><strong>{latest.name}</strong><em>{latest.targetPosition}</em></div><ArrowRight size={18}/>
+            </button>
+          ) : (
+            <button type="button" className="bm-premium-latest-player empty" onClick={() => open('reader', 'home-first-card', 'Adicionar primeira carta')}>
+              <span>+</span><div><small>Comece agora</small><strong>Adicione sua primeira carta</strong><em>Leitura por print</em></div><ArrowRight size={18}/>
+            </button>
+          )}
+          {nextStep && (
+            <div className="bm-premium-next-step"><Target size={18}/><div><small>Próximo passo sugerido</small><strong>{nextStep.title}</strong><span>{nextStep.detail}</span></div><button type="button" onClick={() => onAction(nextStep)}>Abrir</button></div>
+          )}
+        </article>
+      </section>
     </section>
   );
 }

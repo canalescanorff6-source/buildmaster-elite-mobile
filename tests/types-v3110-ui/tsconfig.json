@@ -20,6 +20,7 @@
   "files": [
     "stubs.d.ts",
     "posterStub.tsx",
-    "../../src/components/FormationRoleLabPanel.tsx"
+    "../../src/components/FormationRoleLabPanel.tsx",
+    "../../src/modules/core/IntegratedHomePanel.tsx"
   ]
 }

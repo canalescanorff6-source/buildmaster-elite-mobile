@@ -1,6 +1,9 @@
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 
+export type PremiumVisualPreset = 'obsidian-gold' | 'elite-blue' | 'future-purple';
+
 export type EasyUiPreferences = {
+  visualPreset: PremiumVisualPreset;
   appTheme: 'dark' | 'light';
   accentTheme: 'prism' | 'emerald' | 'gold' | 'blue' | 'red' | 'purple';
   advancedMode: boolean;
@@ -15,6 +18,7 @@ const UI_KEY = 'buildmaster_ui_prefs_v24_24';
 const EASY_MIGRATION_KEY = 'buildmaster_easy_ui_v2';
 
 export const EASY_UI_DEFAULTS: EasyUiPreferences = {
+  visualPreset: 'obsidian-gold',
   appTheme: 'dark',
   accentTheme: 'gold',
   advancedMode: false,
@@ -43,6 +47,7 @@ export function loadEasyUiPreferences(): EasyUiPreferences {
   try {
     const stored = JSON.parse(readAccountStorage(UI_KEY) || '{}') as Partial<EasyUiPreferences>;
     return {
+      visualPreset: oneOf(stored.visualPreset, ['obsidian-gold', 'elite-blue', 'future-purple'] as const) ? stored.visualPreset : EASY_UI_DEFAULTS.visualPreset,
       appTheme: isTheme(stored.appTheme) ? stored.appTheme : EASY_UI_DEFAULTS.appTheme,
       accentTheme: oneOf(stored.accentTheme, ['prism', 'emerald', 'gold', 'blue', 'red', 'purple'] as const) ? stored.accentTheme : EASY_UI_DEFAULTS.accentTheme,
       advancedMode: typeof stored.advancedMode === 'boolean' ? stored.advancedMode : EASY_UI_DEFAULTS.advancedMode,

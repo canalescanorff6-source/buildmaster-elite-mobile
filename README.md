@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v31.10 — Inteligência Total da Carta
+# BuildMaster Elite Tático v31.20 — Inteligência Total da Carta
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
@@ -105,6 +105,14 @@ Quando existem duas distribuições próximas, o app cria um teste A/B:
 - projeto limpo, sem `.git`, `node_modules`, builds antigos, APK, AAB ou credenciais.
 
 `CardVisionApp.tsx` e `analyzer.ts` ainda são arquivos grandes e permanecem monitorados pela auditoria. A lógica nova foi criada fora deles para evitar crescimento adicional e reduzir risco de regressão.
+
+## v31.20 — Interface Premium 3 em 1
+
+- Preto & Dourado: elegante e profissional.
+- Azul Elite: tecnológico, limpo e fluido.
+- Roxo Futuro: futurista e marcante.
+- Dashboard reorganizado com leitor, funções principais, formação ativa e resumo inteligente.
+- O modelo visual fica salvo na conta local e no backup completo.
 
 ## v31.10 — Técnicos e Formações 2.0
 

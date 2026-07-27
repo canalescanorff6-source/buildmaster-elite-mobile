@@ -1,26 +1,22 @@
-BUILDMASTER ELITE TÁTICO v31.10 — INTELIGÊNCIA TOTAL DA CARTA
+BUILDMASTER ELITE TÁTICO v31.20 — INTERFACE PREMIUM 3 EM 1
 
 Incluído:
-- Leitura Ultraprecisa local e recorte somente da carta
-- DNA Competitivo 2.0
-- mais de 500 tentativas no Simulador Profundo
-- ficha, habilidades e Ímpeto calculados juntos
-- cinco habilidades oficiais e personalizadas por carta
-- bloqueio de habilidades nativas, especiais e já concluídas
-- aprendizado por partidas
-- teste A/B com Ficha A e Ficha B
-- planos testados reaproveitados pela análise seguinte
-- Motor Mundial com referências auditadas
-- cache limitado e painéis avançados carregados sob demanda
-- uma única Ficha Competitiva Definitiva
+- três modelos visuais selecionáveis: Preto & Dourado, Azul Elite e Roxo Futuro
+- nova tela inicial com leitor em destaque, atalhos completos e formação ativa
+- cartões, navegação, botões e estados ajustados ao modelo escolhido
+- preferência visual salva por conta e incluída no backup completo
+- Técnicos 2.0, Formações 2.0, Guia Tático Visual e Montagem Inteligente
+- Leitura Ultraprecisa, recorte somente da carta e Inteligência Total v31
+- ficha, habilidades e Ímpeto calculados no mesmo processo
+- aprendizado por partidas e teste A/B local
+- atualização, backup, contas e publicação preservados
 
 Proteções:
+- nenhuma função foi removida para aplicar o novo design
 - posição escolhida pelo usuário preservada
 - orçamento real nunca ultrapassado
 - nomes oficiais mantidos
-- dados duvidosos enviados para confirmação
 - nenhuma API de IA paga
-- listas genéricas idênticas de habilidades evitadas
 
 Removido do pacote:
 - .git e histórico local

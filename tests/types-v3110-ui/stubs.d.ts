@@ -21,6 +21,14 @@ declare module 'react/jsx-runtime' {
 declare module 'lucide-react' {
   type Icon = (props: Record<string, unknown>) => JSX.Element;
   export const AlertTriangle: Icon;
+  export const ArrowRight: Icon;
+  export const Camera: Icon;
+  export const Clock3: Icon;
+  export const Gamepad2: Icon;
+  export const Gauge: Icon;
+  export const Keyboard: Icon;
+  export const Settings2: Icon;
+  export const Wand2: Icon;
   export const ArrowLeftRight: Icon;
   export const BadgeCheck: Icon;
   export const BrainCircuit: Icon;
