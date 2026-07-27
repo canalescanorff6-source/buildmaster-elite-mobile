@@ -481,15 +481,12 @@ export function CardVisionApp() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
-
   useEffect(() => () => {
     if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
   }, [preview]);
-
   useEffect(() => () => {
     if (enhancedPreview?.startsWith('blob:')) URL.revokeObjectURL(enhancedPreview);
   }, [enhancedPreview]);
-
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null }), [formation, teamStyle, selectedManager]);
@@ -513,7 +510,6 @@ export function CardVisionApp() {
       if (historyFilter !== 'ALL') return savedPositionGroup(item) === historyFilter;
       return true;
     });
-
     items = [...items].sort((a, b) => {
       if (historySort === 'NAME') return a.result.parsed.playerName.localeCompare(b.result.parsed.playerName, 'pt-BR');
       if (historySort === 'POSITION') return a.result.bestPosition.label.localeCompare(b.result.bestPosition.label, 'pt-BR');
@@ -524,7 +520,6 @@ export function CardVisionApp() {
       }
       return String(b.updatedAt || b.savedAt).localeCompare(String(a.updatedAt || a.savedAt), 'pt-BR');
     });
-
     return items;
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
@@ -626,16 +621,13 @@ export function CardVisionApp() {
     };
     return guides[mainSection];
   }, [mainSection]);
-
   useEffect(() => {
     announcePremiumScreen({ section: mainSection, label: currentNavigation.label });
   }, [mainSection, currentNavigation.label]);
-
   useEffect(() => {
     setPremiumBusy({ active: loading, label: loading ? (mainSection === 'leitor' ? 'Lendo e conferindo a carta' : 'Processando dados com segurança') : undefined, progress: null });
     return () => setPremiumBusy({ active: false, progress: null });
   }, [loading, mainSection]);
-
   useEffect(() => {
     const message = status.trim();
     if (!message || message === lastPremiumStatusRef.current) return;
@@ -654,13 +646,10 @@ export function CardVisionApp() {
       if (/conclu|finalizad|restaurad|importad/.test(normalized)) celebratePremiumAction('Etapa concluída');
     }
   }, [status]);
-
   useEffect(() => {
     if (sessionSaveState === 'error') showPremiumToast({ title: 'Rascunho não salvo', message: 'Seus dados continuam na tela. Tente novamente antes de sair.', tone: 'danger', duration: 6000 });
   }, [sessionSaveState]);
-
   usePremiumDraftAutosave({ section: mainSection, preview, rawText, playerName: manualFields.playerName, points: manualFields.trainingPointsTotal, targetPosition, playstyle: playstyleOverride });
-
   function openMainSection(section: MainSection, options: { track?: boolean } = {}) {
     setMobileLauncher(null);
     scrollPositionsRef.current[mainSection] = window.scrollY;
@@ -686,24 +675,20 @@ export function CardVisionApp() {
       setStatus('Resultado em auditoria. Confirme os dados para finalizar o plano Elite.');
     }
   }
-
   function openNavigationGroup(group: MainNavigationGroup) {
     if (group === 'ajustes') setSettingsView('visao-geral');
     openMainSection(sectionForNavigation(group, group === 'jogadores' ? playerWorkspace : 'visao-geral'));
   }
-
   function openPlayerWorkspace(workspace: PlayerWorkspace) {
     setPlayerWorkspace(workspace);
     openMainSection(sectionForNavigation('jogadores', workspace));
   }
-
   function goBackInsideApp() {
     const previous = navigationTrail[navigationTrail.length - 1];
     if (!previous) return;
     setNavigationTrail((current) => current.slice(0, -1));
     openMainSection(previous, { track: false });
   }
-
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const main = document.getElementById('buildmaster-main-content');
@@ -714,16 +699,13 @@ export function CardVisionApp() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [mainSection]);
-
   useEffect(() => {
     const timer = window.setTimeout(() => setShowSplash(false), 420);
     return () => window.clearTimeout(timer);
   }, []);
-
   useEffect(() => {
     void refreshOcrQueue();
   }, []);
-
   useEffect(() => {
     const onUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ version?: string; reason?: string }>).detail;
@@ -736,18 +718,14 @@ export function CardVisionApp() {
     window.addEventListener('buildmaster:update-available', onUpdate);
     return () => window.removeEventListener('buildmaster:update-available', onUpdate);
   }, []);
-
   useEffect(() => {
     const openUpdates = () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); };
     window.addEventListener('buildmaster:open-updates', openUpdates);
     return () => window.removeEventListener('buildmaster:open-updates', openUpdates);
   }, []);
-
   useEffect(() => {
     let mounted = true;
-
     void migrateLegacyRuntimeData().catch(() => ({ migrated: 0, skipped: 0 }));
-
     void loadHistoryStore()
       .then((next) => {
         if (!mounted) return;
@@ -757,7 +735,6 @@ export function CardVisionApp() {
       .catch(() => {
         if (mounted) setHistory([]);
       });
-
     try {
       const ui = loadEasyUiPreferences();
       setVisualPreset(ui.visualPreset);
@@ -772,7 +749,6 @@ export function CardVisionApp() {
     } catch {
       // Preferências visuais são opcionais.
     }
-
     try {
       const storedOnboarding = readAccountStorage(ONBOARDING_STORAGE_KEY);
       if (storedOnboarding) {
@@ -784,14 +760,12 @@ export function CardVisionApp() {
     } catch {
       setOnboardingOpen(false);
     }
-
     try {
       const lastBackup = readAccountStorage('buildmaster_last_full_backup_v25_49');
       if (lastBackup) setLastBackupAt(lastBackup);
     } catch {
       setLastBackupAt(null);
     }
-
     try {
       const storedRulesUrl = readAccountStorage(RULE_PACK_URL_KEY) || '';
       setRulesUrl(storedRulesUrl);
@@ -801,7 +775,6 @@ export function CardVisionApp() {
     } catch {
       setRulePackInfo(DEFAULT_DYNAMIC_RULE_PACK);
     }
-
     try {
       const storedZones = readAccountStorage(CALIBRATION_KEY);
       if (storedZones) {
@@ -811,7 +784,6 @@ export function CardVisionApp() {
     } catch {
       setOcrZones(DEFAULT_OCR_ZONES);
     }
-
     try {
       const storedSession = readAccountStorage(ACTIVE_SESSION_KEY);
       if (storedSession) {
@@ -848,12 +820,10 @@ export function CardVisionApp() {
       setDraftResult(null);
       setStatus('Uma sessão incompatível foi descartada com segurança. O Cofre foi preservado.');
     }
-
     return () => {
       mounted = false;
     };
   }, []);
-
   useEffect(() => {
     try {
       writeAccountStorage(CALIBRATION_KEY, JSON.stringify(ocrZones));
@@ -861,7 +831,6 @@ export function CardVisionApp() {
       // Calibração é local e opcional.
     }
   }, [ocrZones]);
-
   useEffect(() => {
     try {
       writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
@@ -869,7 +838,6 @@ export function CardVisionApp() {
       // Preferências visuais são opcionais.
     }
   }, [visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode]);
-
   useEffect(() => {
     try {
       const stored = JSON.parse(readAccountStorage(VAULT_FOLDERS_KEY) || '[]') as VaultFolder[];
@@ -878,7 +846,6 @@ export function CardVisionApp() {
       setVaultFolders(DEFAULT_VAULT_FOLDERS);
     }
   }, []);
-
   useEffect(() => {
     try {
       writeAccountStorage(VAULT_FOLDERS_KEY, JSON.stringify(vaultFolders.filter((folder) => folder.kind === 'custom')));
@@ -886,7 +853,6 @@ export function CardVisionApp() {
       // Pastas personalizadas continuam opcionais.
     }
   }, [vaultFolders]);
-
   useEffect(() => {
     const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
     if (!hasWork) {
@@ -894,7 +860,6 @@ export function CardVisionApp() {
       setSessionSaveState('idle');
       return;
     }
-
     setSessionSaveState('saving');
     const timer = window.setTimeout(() => {
       try {
@@ -927,15 +892,12 @@ export function CardVisionApp() {
         setSessionSaveState('error');
       }
     }, 450);
-
     return () => window.clearTimeout(timer);
   }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
-
   // v25.77: a ficha não é mais salva automaticamente ao finalizar.
   // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
   // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
   // derrubem o resultado no mesmo instante da geração.
-
   function completeOnboarding(profile: OnboardingProfile) {
     setOnboardingProfile(profile);
     setAdvancedMode(profile.experienceMode === 'advanced');
@@ -945,7 +907,6 @@ export function CardVisionApp() {
     try { writeAccountStorage(ONBOARDING_STORAGE_KEY, JSON.stringify(profile)); } catch {}
     setStatus(`Configuração inicial concluída: modo ${profile.experienceMode === 'advanced' ? 'avançado' : 'simples'}, formação ${profile.favoriteFormation}.`);
   }
-
   function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
     writeDynamicRulePack(pack);
     setRulePackInfo(pack);
@@ -953,7 +914,6 @@ export function CardVisionApp() {
     setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
   }
-
   async function loadRulesFromUrl() {
     const url = rulesUrl.trim();
     if (!url) {
@@ -974,7 +934,6 @@ export function CardVisionApp() {
       setRulesStatus(`${message} O pacote local continua ativo.`);
     }
   }
-
   function resetRulesToDefault() {
     try {
       removeAccountStorage(RULE_PACK_KEY);
@@ -983,18 +942,15 @@ export function CardVisionApp() {
     setRulesUrl('');
     applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base.`);
   }
-
   function exportRulePack() {
     const pack = readDynamicRulePack();
     const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json;charset=utf-8' });
     downloadBlobFile(`buildmaster-regras-${pack.version || 'local'}.json`, blob);
     setRulesStatus('Pacote de regras exportado. Você pode hospedar esse JSON e atualizar o APK por URL depois.');
   }
-
   function requireSecureAccountCloud(): void {
     if (!account?.cloudEnabled) throw new Error('A nuvem segura desta conta não está disponível. O Cofre antigo e compartilhado foi removido.');
   }
-
   async function pushCloudHistory(items: SavedAnalysis[] = history, silent = false) {
     if (!items.length) {
       if (!silent) setCloudStatus('Nenhuma ficha local para enviar à nuvem.');
@@ -1018,7 +974,6 @@ export function CardVisionApp() {
       setCloudLoading(false);
     }
   }
-
   async function pullCloudHistory() {
     setCloudLoading(true);
     try {
@@ -1046,7 +1001,6 @@ export function CardVisionApp() {
       setCloudLoading(false);
     }
   }
-
   async function syncCloudHistory() {
     setCloudLoading(true);
     try {
@@ -1069,7 +1023,6 @@ export function CardVisionApp() {
       setCloudLoading(false);
     }
   }
-
   async function deleteCloudHistoryItem(item: SavedAnalysis) {
     try {
       if (!account?.cloudEnabled) return;
@@ -1082,13 +1035,11 @@ export function CardVisionApp() {
       // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
   }
-
   function logout() {
     clearBuildMasterSession();
     void account?.logout();
     window.location.href = '/';
   }
-
   function createVaultFolder() {
     const name = newFolderName.trim();
     if (!name) return;
@@ -1098,16 +1049,13 @@ export function CardVisionApp() {
     setNewFolderName('');
     setStatus(`Pasta “${name}” criada no Cofre.`);
   }
-
   function moveHistoryToFolder(id: string, folderId: string) {
     setHistory((current) => current.map((item) => item.id === id ? appendSavedEvent({ ...item, folderId, updatedAt: new Date().toISOString() }, 'organizado', `Movido para a pasta ${vaultFolders.find((folder) => folder.id === folderId)?.name ?? folderId}.`) : item));
   }
-
   function resetVaultFilters() {
     setVaultFilters({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
     setHistorySearch(''); setHistoryFilter('ALL'); setOnlyPendingSkills(false);
   }
-
   function openCofreDeJogadores() {
     setMainSection('cofre');
     setLibraryOpen(true);
@@ -1115,7 +1063,6 @@ export function CardVisionApp() {
       ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).`
       : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui automaticamente.');
   }
-
   function restoreHistory(item: SavedAnalysis) {
     setMainSection('resultado');
     lastSavedKey.current = `${item.saveKey}-${item.result.trainingPointsUsed}-${item.result.trainingPointsTotal}`;
@@ -1136,7 +1083,6 @@ export function CardVisionApp() {
     });
     setStatus(`Análise restaurada: ${item.result.parsed.playerName}.`);
   }
-
   function openIntegratedPlayer(id: string, destination: 'vault' | 'result' | 'matches' = 'result') {
     const item = history.find((entry) => entry.id === id);
     if (!item) {
@@ -1154,7 +1100,6 @@ export function CardVisionApp() {
       setStatus(`Ficha de ${item.result.parsed.playerName} aberta. Entre em Validação real para registrar a partida.`);
     }
   }
-
   function handleCentralRecommendation(item: CentralRecommendation) {
     if (item.playerId) {
       openIntegratedPlayer(item.playerId, item.action === 'vault' ? 'vault' : 'result');
@@ -1169,7 +1114,6 @@ export function CardVisionApp() {
     else if (item.action === 'settings') setMainSection('ajustes');
     else if (item.action === 'result' && (result || draftResult)) setMainSection('resultado');
   }
-
   function saveCurrentFicha() {
     if (!result) return;
     const quality = buildBuildQualityGate(result);
@@ -1204,7 +1148,6 @@ export function CardVisionApp() {
     });
     setStatus(saveAsReview ? `Ficha salva como “Revisar”: ${quality.blockers[0]?.detail ?? 'confira os avisos do controle final.'}` : `Ficha salva no Cofre de Fichas: ${result.parsed.playerName}.`);
   }
-
   function toggleSavedSkill(skill: string) {
     if (!result) return;
     const key = resultHistoryKey(result), now = new Date().toLocaleString('pt-BR');
@@ -1221,7 +1164,6 @@ export function CardVisionApp() {
     });
     setStatus(`Habilidade ${skill} marcada como ${activeSavedAnalysis?.skillProgress?.[skill] ? 'pendente' : 'já adicionada'}.`);
   }
-
   function readJsonStorage(key: string, fallback: unknown = null) {
     try {
       const raw = readAccountStorage(key);
@@ -1230,7 +1172,6 @@ export function CardVisionApp() {
       return fallback;
     }
   }
-
   function prepareCommunitySharePayload(kind: CommunityShareKind): unknown {
     if (kind === 'player_build') return result ?? history[0]?.result ?? { notice: 'Nenhuma ficha selecionada.' };
     if (kind === 'formation') return { formation, teamStyle, managerId };
@@ -1238,7 +1179,6 @@ export function CardVisionApp() {
     if (kind === 'opponent_plan') return readOpponentMatchPlans()[0] ?? { formation, teamStyle };
     return readTacticalSequenceProjects()[0] ?? { formation, teamStyle };
   }
-
   async function collectFullBackupSections(): Promise<BackupEnvelope['sections']> {
     return {
       history,
@@ -1290,7 +1230,6 @@ export function CardVisionApp() {
       publication: exportPlayStorePublicationState()
     };
   }
-
   function downloadTextFile(payload: string, fileName: string, contentType = 'application/octet-stream') {
     const blob = new Blob([payload], { type: contentType });
     const url = URL.createObjectURL(blob);
@@ -1302,7 +1241,6 @@ export function CardVisionApp() {
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-
   async function resolveBackupPassword() {
     const clean = backupPassword;
     const issue = validateBackupPassword(clean);
@@ -1312,13 +1250,11 @@ export function CardVisionApp() {
     setBackupPasswordReady(true);
     return clean;
   }
-
   async function downloadEncryptedBackup(envelope: BackupEnvelope, fileName: string) {
     const password = await resolveBackupPassword();
     const encrypted = await encryptBackupPayload(envelope, password);
     downloadTextFile(JSON.stringify(encrypted, null, 2), fileName, 'application/vnd.buildmaster.backup+json');
   }
-
   async function exportFullBackup() {
     try {
       const envelope = createBackupEnvelope(await collectFullBackupSections());
@@ -1331,7 +1267,6 @@ export function CardVisionApp() {
       throw cause;
     }
   }
-
   async function exportIncrementalBackup() {
     try {
       const cutoff = lastBackupAt ? Date.parse(lastBackupAt) : 0;
@@ -1359,7 +1294,6 @@ export function CardVisionApp() {
       setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup incremental.');
     }
   }
-
   async function verifyBackupFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -1379,7 +1313,6 @@ export function CardVisionApp() {
       setStatus(cause instanceof Error ? cause.message : 'Não foi possível verificar o backup. Nenhum dado foi alterado.');
     }
   }
-
   async function exportPlayersBackup(reason: 'manual' | 'update' = 'manual') {
     try {
       const envelope = createBackupEnvelope({
@@ -1408,7 +1341,6 @@ export function CardVisionApp() {
       throw cause;
     }
   }
-
   async function prepareBackupForUpdate() {
     await persistHistoryStore(history);
     const envelope = createBackupEnvelope(await collectFullBackupSections());
@@ -1421,7 +1353,6 @@ export function CardVisionApp() {
     writeAccountStorage('buildmaster_last_update_recovery', envelope.exportedAt);
     setStatus('Cópia local de recuperação atualizada antes da instalação.');
   }
-
   async function readBackupFile(file: File): Promise<unknown> {
     if (file.size > 240 * 1024 * 1024) throw new Error('O backup ultrapassa o limite seguro de 240 MB.');
     const parsed = JSON.parse(await file.text()) as unknown;
@@ -1429,12 +1360,10 @@ export function CardVisionApp() {
     const password = await resolveBackupPassword();
     return decryptBackupPayload(parsed, password);
   }
-
   function writeStorage(key: string, value: unknown) {
     if (value == null) return;
     writeAccountStorage(key, typeof value === 'string' ? value : JSON.stringify(value));
   }
-
   async function applyBackupEnvelope(envelope: BackupEnvelope, selected: Record<BackupSection, boolean> = restoreSections) {
     const migrated = migrateBackup(envelope);
     const sections = migrated.envelope.sections;
@@ -1531,21 +1460,18 @@ export function CardVisionApp() {
     setSyncHealthEnvelope(migrated.envelope);
     return migrated;
   }
-
   function currentDeviceLabel() {
     if (typeof navigator === 'undefined') return 'Aparelho atual';
     const platform = navigator.platform || 'Android';
     const android = navigator.userAgent.match(/Android[^;)]*/i)?.[0] || '';
     return `${platform}${android ? ` • ${android}` : ''}`.slice(0, 120);
   }
-
   async function persistBackupSnapshots(next: BackupSnapshot[]) {
     const clean = pruneSnapshots(next);
     setBackupSnapshots(clean);
     await runtimePut('backup-snapshots', 'versions', clean);
     return clean;
   }
-
   async function createLocalRestorePoint(label = 'Ponto de restauração manual') {
     const envelope = createBackupEnvelope(await collectFullBackupSections());
     const snapshot = createBackupSnapshot(envelope, label, currentDeviceLabel());
@@ -1555,7 +1481,6 @@ export function CardVisionApp() {
     setStatus('Ponto de restauração local criado com sucesso.');
     return { snapshot, snapshots: next, envelope };
   }
-
   async function syncFullCloudBackup() {
     setCloudLoading(true);
     try {
@@ -1590,7 +1515,6 @@ export function CardVisionApp() {
       setCloudLoading(false);
     }
   }
-
   async function pullAndMergeFullCloudBackup() {
     setCloudLoading(true);
     try {
@@ -1625,7 +1549,6 @@ export function CardVisionApp() {
       setCloudLoading(false);
     }
   }
-
   async function restoreBackupSnapshot(id: string) {
     const snapshot = backupSnapshots.find((item) => item.id === id);
     if (!snapshot) return;
@@ -1641,13 +1564,11 @@ export function CardVisionApp() {
       setStatus(cause instanceof Error ? cause.message : 'Não foi possível restaurar esta versão.');
     }
   }
-
   async function deleteBackupSnapshot(id: string) {
     const next = backupSnapshots.filter((item) => item.id !== id);
     await persistBackupSnapshots(next);
     setStatus('Ponto de restauração removido do histórico local.');
   }
-
   async function importFullBackup(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -1667,7 +1588,6 @@ export function CardVisionApp() {
       setStatus(message || 'Não consegui restaurar este arquivo. Use um backup completo exportado pelo BuildMaster.');
     }
   }
-
   async function exportIntegrityDiagnostic() {
     try {
       const payload = await createSafeDiagnosticReport({
@@ -1689,7 +1609,6 @@ export function CardVisionApp() {
       setStatus('Não foi possível gerar o diagnóstico agora. Nenhum dado foi alterado.');
     }
   }
-
   async function exportHistoryBackup() {
     if (!history.length) return;
     try {
@@ -1700,17 +1619,14 @@ export function CardVisionApp() {
       setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup do Cofre.');
     }
   }
-
   async function importHistoryBackup(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-
     try {
       const parsed = await readBackupFile(file);
       let entries: unknown[] = [];
       let restoredExtras = false;
-
       if (Array.isArray(parsed)) {
         entries = parsed;
       } else if (parsed && typeof parsed === 'object') {
@@ -1741,13 +1657,11 @@ export function CardVisionApp() {
           entries = record.items;
         }
       }
-
       const imported = normalizeHistoryList(entries);
       if (!imported.length) {
         setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
         return;
       }
-
       setHistory((current) => {
         const next = [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT);
         void persistHistoryStore(next);
@@ -1761,7 +1675,6 @@ export function CardVisionApp() {
       setStatus(message || 'Não consegui importar esse backup. Use um arquivo .bmbak ou JSON exportado pelo próprio BuildMaster.');
     }
   }
-
   function deleteHistoryItem(id: string) {
     const item = history.find((entry) => entry.id === id);
     if (!item) return;
@@ -1776,7 +1689,6 @@ export function CardVisionApp() {
     if (activeHistoryId === id) setActiveHistoryId(null);
     setStatus(`${item.result.parsed.playerName} foi movido para a Lixeira por 30 dias.`);
   }
-
   function restoreTrashItem(id: string) {
     const item = restoreFromVaultTrash<SavedAnalysis>(id);
     if (!item) return;
@@ -1789,19 +1701,16 @@ export function CardVisionApp() {
     });
     setStatus(`${item.result.parsed.playerName} foi restaurado para o Cofre.`);
   }
-
   function permanentlyDeleteTrashItem(id: string) {
     removeFromVaultTrash(id);
     setVaultTrash(readVaultTrash<SavedAnalysis>());
     setStatus('Item apagado definitivamente da Lixeira local.');
   }
-
   function emptyVaultTrash() {
     clearVaultTrash();
     setVaultTrash([]);
     setStatus('Lixeira local esvaziada.');
   }
-
   function batchFavoriteHistory(ids: string[], favorite: boolean) {
     const selected = new Set(ids);
     setHistory((current) => {
@@ -1812,7 +1721,6 @@ export function CardVisionApp() {
     });
     setStatus(`${ids.length} jogador(es) ${favorite ? 'adicionado(s) aos favoritos' : 'removido(s) dos favoritos'}.`);
   }
-
   function batchStatusHistory(ids: string[], statusTag: SavedAnalysis['statusTag']) {
     const selected = new Set(ids);
     setHistory((current) => {
@@ -1823,7 +1731,6 @@ export function CardVisionApp() {
     });
     setStatus(`${ids.length} jogador(es) marcado(s) como ${statusTag || 'pendente'}.`);
   }
-
   function mergeSelectedHistory(ids: string[]) {
     const selected = history.filter((entry) => ids.includes(entry.id)).sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0));
     if (selected.length < 2) return;
@@ -1852,7 +1759,6 @@ export function CardVisionApp() {
     });
     setStatus(`${selected.length} registros foram mesclados. As duplicatas permanecerão na Lixeira por 30 dias.`);
   }
-
   function toggleFavoriteHistory(id: string) {
     setHistory((current) => {
       const next = current.map((entry) => entry.id === id ? appendSavedEvent({ ...entry, favorite: !entry.favorite }, !entry.favorite ? 'favoritado' : 'removido dos favoritos', entry.result.parsed.playerName) : entry);
@@ -1861,7 +1767,6 @@ export function CardVisionApp() {
       return next;
     });
   }
-
   function duplicateHistoryItem(id: string) {
     const item = history.find((entry) => entry.id === id);
     if (!item) return;
@@ -1882,7 +1787,6 @@ export function CardVisionApp() {
     setLibraryOpen(true);
     setStatus(`Variação criada para ${item.result.parsed.playerName}.`);
   }
-
   function updateHistoryStatus(id: string, statusTag: SavedAnalysis['statusTag']) {
     setHistory((current) => {
       const next = current.map((entry) => entry.id === id ? appendSavedEvent({ ...entry, statusTag }, 'status alterado', statusTag === 'completo' ? 'Marcado como completo.' : statusTag === 'pendente' ? 'Marcado como pendente.' : 'Marcado para revisar.') : entry);
@@ -1891,7 +1795,6 @@ export function CardVisionApp() {
       return next;
     });
   }
-
   function markAllHistorySkills(id: string, done: boolean) {
     setHistory((current) => {
       const next = current.map((entry) => {
@@ -1905,13 +1808,11 @@ export function CardVisionApp() {
       return next;
     });
   }
-
   function exportSingleHistoryItem(item: SavedAnalysis) {
     const content = buildProfessionalReportHtml(item.result, item.notes ?? '');
     downloadTextFile(`buildmaster-${memoryKey(item.result.parsed.playerName || 'jogador')}.html`, content, 'text/html;charset=utf-8');
     setStatus(`Relatório profissional individual exportado: ${item.result.parsed.playerName}.`);
   }
-
   function updateHistoryNotes(id: string, notes: string) {
     setHistory((current) => {
       const next = current.map((entry) => entry.id === id ? { ...entry, notes, updatedAt: new Date().toLocaleString('pt-BR') } : entry);
@@ -1919,7 +1820,6 @@ export function CardVisionApp() {
       return next;
     });
   }
-
   function exportCurrentReport() {
     if (!result) return;
     const active = activeSavedAnalysis;
@@ -1928,7 +1828,6 @@ export function CardVisionApp() {
     downloadTextFile(filename, html, 'text/html;charset=utf-8');
     setStatus('Relatório profissional em HTML exportado. Abra o arquivo para imprimir ou guardar junto com a ficha.');
   }
-
   function exportCurrentMarkdownReport() {
     if (!result) return;
     const active = activeSavedAnalysis;
@@ -1936,7 +1835,6 @@ export function CardVisionApp() {
     downloadTextFile(filename, formatReportMarkdown(result, active?.notes ?? ''));
     setStatus('Relatório técnico em texto exportado.');
   }
-
   function exportCurrentVisualCard() {
     if (!result) return;
     const svg = buildProfessionalCardSvg(result);
@@ -1944,7 +1842,6 @@ export function CardVisionApp() {
     downloadBlobFile(filename, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
     setStatus('Imagem profissional da ficha exportada em SVG.');
   }
-
   function printCurrentReport() {
     if (!result) return;
     try {
@@ -1970,7 +1867,6 @@ export function CardVisionApp() {
       exportCurrentReport();
     }
   }
-
   function applySinglePrintCandidate(field: SingleFieldEvidence['key'], value: string) {
     if (!value) return;
     if (field === 'playerName') setManualFields((current) => ({ ...current, playerName: value }));
@@ -1980,7 +1876,6 @@ export function CardVisionApp() {
     if (field === 'playstyle') setPlaystyleOverride(value);
     setStatus(`${value} aplicado como correção de ${field}. Recalcule a prévia e confirme antes de finalizar.`);
   }
-
   async function cancelCurrentOcr() {
     setStatus('Cancelando leitura...'); await cancelOcrProcessing();
     setOcrCancelable(false); setLoading(false); setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
@@ -1999,7 +1894,6 @@ export function CardVisionApp() {
     setPlayerCardImage(detected.preview); setCardCropResult(detected);
     setStatus(`Carta detectada com ${detected.confidence}% de confiança. Confira o enquadramento antes de gerar a ficha.`);
   }
-
   async function handleFile(file: File) {
     try {
       await validateImageFile(file);
@@ -2015,10 +1909,8 @@ export function CardVisionApp() {
     setPremiumReadings([]); setTotalReadingSession(null); setSinglePrintSession(null); setReadingConfirmations({});
     if (enhancedObjectUrlRef.current) { URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = null; } setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
-
     const croppedPreview = await createPlayerCardPreview(file).catch(() => null);
     if (croppedPreview) { setPlayerCardImage(croppedPreview.preview); setCardCropResult(croppedPreview); }
-
     const quality = await inspectPrintQuality(file).catch(() => null);
     setQualityReport(quality);
     const nextMode = suggestedEnhancement(quality);
@@ -2033,11 +1925,9 @@ export function CardVisionApp() {
       setStatus(`Imagem selecionada, mas revise o print: ${quality.issues[0].message}`);
     }
   }
-
   function stripManualBlock(text: string) {
     return text.replace(/\[AJUSTES MANUAIS\][\s\S]*?\[FIM AJUSTES\]\s*/gi, '').trimStart();
   }
-
   function textWithManualLocks(text: string, confirmed = false) {
     const learned = findLearnedCard(text, fileName);
     const cleaned = stripManualBlock(text)
@@ -2063,7 +1953,6 @@ export function CardVisionApp() {
     locks.push('[FIM AJUSTES]');
     return `${locks.join('\n')}\n${cleaned}`.trim();
   }
-
   function hydrateReviewFields(nextResult: AnalysisResult) {
     const nextAttributes: Partial<Record<AttributeKey, string>> = {};
     for (const [key, value] of Object.entries(nextResult.parsed.attributes)) {
@@ -2079,11 +1968,9 @@ export function CardVisionApp() {
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
   }
-
   async function refreshOcrQueue() {
     setOcrQueue(await listOcrQueue());
   }
-
   async function queueSelectedPrint() {
     if (!selectedFile) return;
     try {
@@ -2095,7 +1982,6 @@ export function CardVisionApp() {
       setStatus('Não foi possível guardar o print na fila local. A imagem atual continua selecionada.');
     }
   }
-
   async function openQueuedPrint(job: OcrQueueJob) {
     try {
       await updateOcrQueueJob(job.id, { status: 'processing', attempts: job.attempts + 1, error: undefined });
@@ -2110,12 +1996,10 @@ export function CardVisionApp() {
       setStatus('Não foi possível abrir este item da fila. Os demais continuam protegidos.');
     }
   }
-
   async function discardQueuedPrint(id: string) {
     await removeOcrQueueJob(id).catch(() => undefined);
     await refreshOcrQueue();
   }
-
   function startManualPreciseMode() {
     setMainSection('manual');
     const template = [
@@ -2144,14 +2028,12 @@ export function CardVisionApp() {
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
-
   async function analyzeSelectedImage() {
     setMainSection('resultado');
     if (!selectedFile) {
       if (rawText.trim().length > 2) runAnalysis();
       return;
     }
-
     setLoading(true);
     setOcrCancelable(true);
     setResult(null);
@@ -2165,11 +2047,9 @@ export function CardVisionApp() {
     setSinglePrintSession(null);
     setReadingConfirmations({});
     setStatus('Print Único Pro: identificando resolução, barras da tela, orientação e áreas da interface...');
-
     const unsubscribe = subscribeOcrProgress((progress) => {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
-
     try {
       let geometry = await inspectSinglePrintGeometry(selectedFile);
       const imageHash = await fileDigest(selectedFile);
@@ -2185,7 +2065,6 @@ export function CardVisionApp() {
       ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
       setOcrZones(geometry.zones);
-
       const cachedArt = await runtimeGet<string>('image-thumbnails', imageHash).catch(() => null);
       const detectedCrop = await createSmartCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
       const artPreview = cachedArt || detectedCrop?.preview || null;
@@ -2194,14 +2073,12 @@ export function CardVisionApp() {
         if (detectedCrop) setCardCropResult(detectedCrop);
         if (!cachedArt) void runtimePut('image-thumbnails', imageHash, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
       }
-
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
         cacheKey: `${imageHash}:full:contrast`
       });
-
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       if (refinedGeometry.template !== geometry.template) {
         geometry = refinedGeometry;
@@ -2210,7 +2087,6 @@ export function CardVisionApp() {
         if (detailedCrop) { setPlayerCardImage(detailedCrop.preview); setCardCropResult(detailedCrop); }
         setStatus('Perfil detalhado detectado: ajustando áreas para atributos, posições, modelo físico, habilidades e Ímpetos...');
       }
-
       const zoneResults: PremiumZoneReading[] = [];
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
       for (let index = 0; index < enabledZones.length; index += 1) {
@@ -2229,7 +2105,6 @@ export function CardVisionApp() {
         });
         zoneResults.push(best);
       }
-
       let session = buildSinglePrintSession({
         imageHash,
         template: geometry.template,
@@ -2242,7 +2117,6 @@ export function CardVisionApp() {
         zones: geometry.zones,
         knownPlayerNames
       });
-
       const storedPreview = toStoredSinglePrintScan(session);
       const previous = storedScanEntries.map((entry) => entry.value).find((entry) => entry.identityKey && entry.identityKey === storedPreview.identityKey && entry.imageHash !== imageHash) ?? null;
       if (previous) {
@@ -2260,7 +2134,6 @@ export function CardVisionApp() {
           knownPlayerNames
         });
       }
-
       session = applyStoredOcrCorrections(session, corrections);
       const visionAudit = buildOcrVisionAudit(session, fullPass.text);
       session = {
@@ -2274,7 +2147,6 @@ export function CardVisionApp() {
       setSinglePrintSession(session);
       setPremiumReadings(ensureZoneCoverage(geometry.zones, zoneResults));
       setOcrDone(true);
-
       const mergedText = mergeOcrTexts(session.canonicalText, fullPass.text, ...zoneResults.map((reading) => `### ${reading.label}\n${reading.text}`));
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
@@ -2283,7 +2155,6 @@ export function CardVisionApp() {
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
-
       const name = fieldByKey(session, 'playerName');
       const position = fieldByKey(session, 'position');
       const style = fieldByKey(session, 'playstyle');
@@ -2297,11 +2168,9 @@ export function CardVisionApp() {
         progression: Boolean(level?.status === 'confirmed' && points?.status !== 'missing'),
         skills: fieldByKey(session, 'skills')?.status === 'confirmed'
       });
-
       const stored = toStoredSinglePrintScan(session);
       await runtimePut('scan-history', `${Date.now()}:${imageHash}`, stored).catch(() => undefined);
       void runtimeTrimStore('scan-history', 120).catch(() => undefined);
-
       if (visionAudit.state === 'blocked') {
         setStatus(`OCR Vision bloqueou a finalização automática. Confirme: ${session.blockingFields.join(', ') || visionAudit.warnings[0] || 'campos críticos'}.`);
       } else if (visionAudit.state === 'review') {
@@ -2323,7 +2192,6 @@ export function CardVisionApp() {
       setLoading(false);
     }
   }
-
   async function analyzeTotalCardCaptures(captures: TotalCardCaptureInput[]) {
     if (!captures.length) return;
     setMainSection('resultado');
@@ -2340,11 +2208,9 @@ export function CardVisionApp() {
     setSinglePrintSession(null);
     setReadingConfirmations({});
     setStatus(`Leitor Total iniciado: preparando ${captures.length} tela(s) da carta...`);
-
     const unsubscribe = subscribeOcrProgress((progress) => {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
-
     try {
       const allTexts: string[] = [];
       const allReadings: PremiumZoneReading[] = [];
@@ -2355,12 +2221,10 @@ export function CardVisionApp() {
       setPreview(overview.preview);
       const croppedPreview = await createPlayerCardPreview(overview.file).catch(() => null);
       if (croppedPreview) { setPlayerCardImage(croppedPreview.preview); setCardCropResult(croppedPreview); }
-
       const recognize = async (image: File | Blob, label: string) => {
         const pass = await recognizeWithOcrWorker(image, { label, kind: 'general' });
         return { text: pass.text, confidence: pass.confidence };
       };
-
       for (let captureIndex = 0; captureIndex < captures.length; captureIndex += 1) {
         const capture = captures[captureIndex];
         setStatus(`Tela ${captureIndex + 1}/${captures.length}: identificando ${capture.label}...`);
@@ -2374,7 +2238,6 @@ export function CardVisionApp() {
           warnings.push(`Esta imagem foi enviada como ${capture.label}, mas parece ser uma tela de ${detectedType}. O leitor adaptou as áreas automaticamente.`);
         }
         if (capture.quality?.issues.length) warnings.push(...capture.quality.issues.map((issue) => issue.message));
-
         const template = SCREEN_ZONE_TEMPLATES[effectiveType];
         const captureHash = await fileDigest(capture.file);
         const localKnownNames = LOCAL_CARD_RULES.map((rule) =>
@@ -2398,7 +2261,6 @@ export function CardVisionApp() {
           captureReadings.push(best);
           allReadings.push(best);
         }
-
         const captureText = mergeOcrTexts(fullPass.text, ...captureReadings.map((reading) => reading.text));
         const identity = extractCaptureIdentity(captureText);
         const confidenceValues = [fullPass.confidence, ...captureReadings.map((reading) => reading.confidence)].filter(Number.isFinite);
@@ -2417,19 +2279,16 @@ export function CardVisionApp() {
           readings: captureReadings
         });
       }
-
       const mergedText = mergeOcrTexts(...allTexts);
       const session = buildTotalReadingSession(audits, mergedText);
       setTotalReadingSession(session);
       setPremiumReadings(allReadings);
       setReadingConfirmations({ sameCard: session.mismatchRisk === 'none' });
       setOcrDone(true);
-
       if (mergedText.trim().length <= 2) {
         setStatus('A leitura completa não encontrou texto suficiente. Confira se os prints são capturas diretas das telas do jogador.');
         return;
       }
-
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
@@ -2437,7 +2296,6 @@ export function CardVisionApp() {
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
       setResult(null);
-
       if (session.mismatchRisk === 'block') {
         setStatus('Leitura concluída, mas há divergência entre os prints. Confirme que todas as telas pertencem à mesma versão da carta antes da ficha final.');
       } else if (session.missingCriticalScreens.length) {
@@ -2454,21 +2312,17 @@ export function CardVisionApp() {
       setLoading(false);
     }
   }
-
   function resetCalibration() {
     setOcrZones(DEFAULT_OCR_ZONES);
     setStatus('Calibração restaurada para o padrão do print completo 1400x1600.');
   }
-
   function updateZone(key: OcrZone['key'], field: keyof Pick<OcrZone, 'x' | 'y' | 'w' | 'h'>, value: string) {
     const nextValue = Math.max(0, Math.min(1, Number(value) / 100));
     setOcrZones((current) => current.map((zone) => zone.key === key ? { ...zone, [field]: nextValue } : zone));
   }
-
   function toggleZone(key: OcrZone['key']) {
     setOcrZones((current) => current.map((zone) => zone.key === key ? { ...zone, enabled: !zone.enabled } : zone));
   }
-
   function applyLearningToText(text: string) {
     const learned = findLearnedCard(text, fileName);
     if (!learned) return text;
@@ -2482,7 +2336,6 @@ export function CardVisionApp() {
     ].filter(Boolean);
     return `${lines.join('\n')}\n${text}`;
   }
-
   function runAnalysis(confirmed = false) {
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
     try {
@@ -2514,7 +2367,6 @@ export function CardVisionApp() {
           trainingPointsTotal: String(nextResult.trainingPointsTotal),
           updatedAt: new Date().toISOString()
         });
-
         // Finalização segura para Android/WebView: libera recortes e imagens temporárias
         // antes de montar o painel completo. Isso evita estouro de memória após OCR.
         setPremiumReadings([]);
@@ -2538,13 +2390,11 @@ export function CardVisionApp() {
       setStatus('Não foi possível finalizar a ficha. Os dados foram preservados; revise objetivo, posição e pontos e tente novamente.');
     }
   }
-
   function refreshResultWithCorrections(message: string) {
     setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
     setStatus(message);
   }
-
   function rejectSkillLocally(skill: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -2552,7 +2402,6 @@ export function CardVisionApp() {
     upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Evitar habilidade: ${skill}`] }, 'player');
     refreshResultWithCorrections(`Correção salva: ${skill} não combina com esta função. O app vai evitar essa habilidade.`);
   }
-
   function promoteSkillLocally(skill: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -2560,7 +2409,6 @@ export function CardVisionApp() {
     upsertCorrectionForResult(base, { promotedSkills: [skill], notes: [`Priorizar habilidade: ${skill}`] }, 'player');
     refreshResultWithCorrections(`Correção salva: ${skill} ganhou prioridade para esta função/jogador.`);
   }
-
   function rejectImpetoLocally(impeto: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -2568,7 +2416,6 @@ export function CardVisionApp() {
     upsertCorrectionForResult(base, { blockedImpetos: [impeto], notes: [`Evitar ímpeto: ${impeto}`] }, 'player');
     refreshResultWithCorrections(`Correção salva: ${impeto} será evitado nesta função.`);
   }
-
   function promoteImpetoLocally(impeto: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -2576,14 +2423,12 @@ export function CardVisionApp() {
     upsertCorrectionForResult(base, { promotedImpetos: [impeto], notes: [`Priorizar ímpeto: ${impeto}`] }, 'player');
     refreshResultWithCorrections(`Correção salva: ${impeto} ganhou prioridade nesta função.`);
   }
-
   function resetLocalCorrectionsForCurrent() {
     const base = result ?? draftResult;
     if (!base) return;
     clearCorrectionsForResult(base);
     refreshResultWithCorrections('Correções locais deste jogador/função foram apagadas. Recalcule a ficha para voltar ao padrão do motor.');
   }
-
   const currentPanelResult = result ?? draftResult;
   const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
   const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile) : manualMode;
@@ -2638,7 +2483,6 @@ export function CardVisionApp() {
     hasCurrentResult: Boolean(result || draftResult),
     updateNotice
   };
-
   function openEvolutionTarget(target: EvolutionTarget) {
     if (target === 'reader') return openMainSection('leitor');
     if (target === 'manual') return openMainSection('manual');
@@ -2651,7 +2495,6 @@ export function CardVisionApp() {
     else if (target === 'appearance') setSettingsView('aparencia');
     else if (target === 'performance') setSettingsView('desempenho');
   }
-
   function openPremium2Target(target: Premium2Target) {
     const view = settingsViewForPremiumTarget(target);
     if (view) {
@@ -2662,14 +2505,12 @@ export function CardVisionApp() {
     }
     openMainSection(sectionForPremiumTarget(target));
   }
-
   function applyAdaptiveExperienceProfile(profile: AdaptiveExperienceProfile) {
     setDensityMode(profile.recommendedDensity);
     setPerformanceMode(profile.recommendedPerformance);
     if (profile.reducedMotion) setMotionPreference('reduced');
     setStatus(`Perfil adaptativo aplicado: densidade ${profile.recommendedDensity === 'compact' ? 'compacta' : 'confortável'} e desempenho ${profile.recommendedPerformance === 'economy' ? 'econômico' : 'equilibrado'}.`);
   }
-
   function applyPremiumVisualPreset(preset: PremiumVisualPreset) {
     setVisualPreset(preset);
     setAppTheme('dark');
@@ -2678,7 +2519,6 @@ export function CardVisionApp() {
     if (preset === 'future-purple') setAccentTheme('purple');
     setStatus(`Interface ${preset === 'obsidian-gold' ? 'Preto & Dourado' : preset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'} aplicada.`);
   }
-
   const appCommands: AppCommand[] = [
     { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
     { id: 'new-print', group: 'Criar ficha', label: 'Nova ficha por print', description: 'Abre o Print Único Pro para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
@@ -2702,7 +2542,6 @@ export function CardVisionApp() {
     { id: 'accounts', group: 'Ajustes', label: account?.profile.role === 'admin' ? 'Criar e gerenciar contas' : 'Minha conta e licença', description: account?.profile.role === 'admin' ? 'Abra diretamente a criação de usuários, prazos e aparelhos.' : 'Consulte os dados e a validade da sua licença.', keywords: ['usuário', 'licença', 'criar conta', 'admin'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
     { id: 'assistant', group: 'Assistente', label: 'Abrir Assistente BuildMaster', description: 'Use os dados integrados de jogadores, time e partidas.', keywords: ['ajuda', 'recomendação'], run: () => setAssistantOpen(true) }
   ];
-
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
@@ -2720,7 +2559,6 @@ export function CardVisionApp() {
           </div>
         </div>
       )}
-
       <SectionErrorBoundary area="primeiro-uso"><FirstUseOnboarding
         open={onboardingOpen && !showSplash}
         onClose={() => setOnboardingOpen(false)}
@@ -2728,7 +2566,6 @@ export function CardVisionApp() {
         onCreatePrint={() => openMainSection('leitor')}
         onCreateManual={() => openMainSection('manual')}
       /></SectionErrorBoundary>
-
       <header className="bm-simple-topbar">
         <button type="button" className="bm-simple-brand" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
           <span>BM</span><div><strong>BuildMaster</strong><small>Elite Tático</small></div>
@@ -2742,7 +2579,6 @@ export function CardVisionApp() {
           </button>
         </div>
       </header>
-
       <LiveStatusRegion message={status} urgent={sessionSaveState === 'error'} />
       {!['menu', 'buscar'].includes(mainSection) && <PremiumContextBar
         group={currentNavigationGroup}
@@ -2765,20 +2601,17 @@ export function CardVisionApp() {
         menuActive={mainSection === 'menu'}
         searchActive={mainSection === 'buscar'}
       />
-
       {updateNotice && (
         <button type="button" className="global-update-notice" onClick={() => { setMainSection('ajustes'); setSettingsView('atualizacoes'); setUpdateNotice(null); }}>
           <RotateCcw size={16} /><strong>{updateNotice}</strong><span>Toque para revisar, criar backup e atualizar.</span>
         </button>
       )}
-
       {false && mainSection !== 'inicio' && (
         <section className={`app-section-guide guide-${mainSection}`} aria-label={`Guia da área ${sectionGuide.title}`}>
           <div><span><Sparkles size={17} /></span><div><strong>{sectionGuide.title}</strong><small>{sectionGuide.description}</small></div></div>
           <ol>{sectionGuide.steps.map((step, index) => <li key={step}><b>{index + 1}</b><span>{step}</span></li>)}</ol>
         </section>
       )}
-
       {mobileLauncher && (
         <div className="mobile-action-sheet-backdrop" role="presentation" onClick={() => setMobileLauncher(null)}>
           <section className={`mobile-action-sheet premium-launcher-sheet luxury-panel launcher-${mobileLauncher}`} role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
@@ -2791,7 +2624,6 @@ export function CardVisionApp() {
               </div>
               <button type="button" className="launcher-close-button" onClick={() => setMobileLauncher(null)}>Fechar</button>
             </div>
-
             {mobileLauncher === 'create' ? (
               <div className="launcher-action-grid launcher-create-grid">
                 <button type="button" className="launcher-featured-action" onClick={() => openMainSection('leitor')}>
@@ -2819,7 +2651,6 @@ export function CardVisionApp() {
           </section>
         </div>
       )}
-
       {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','partidas','menu','buscar'].includes(mainSection) && (
         <section className="page-context-card luxury-panel">
           <div>
@@ -2835,7 +2666,6 @@ export function CardVisionApp() {
           )}
         </section>
       )}
-
       {mainSection === 'menu' && (
         <PremiumMenuScreen
           username={account?.profile.username || 'Usuário Elite'}
@@ -2861,15 +2691,12 @@ export function CardVisionApp() {
           }}
         />
       )}
-
       {mainSection === 'buscar' && (
         <PremiumSearchScreen commands={appCommands} playerCount={history.length} />
       )}
-
       {mainSection === 'inicio' && (
         <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} healthScore={healthSummary.score} lastBackupAt={lastBackupAt} onAction={handleCentralRecommendation} />
       )}
-
       {mainSection === 'inicio' && false && (
       <div className="premium-home-shell">
         <section className="home-command-center luxury-panel">
@@ -2888,7 +2715,6 @@ export function CardVisionApp() {
               <span><Target size={14} /> {dashboardStats.positions} posição(ões) coberta(s)</span>
             </div>
           </div>
-
           <aside className="home-next-step-card">
             <div className="home-next-step-icon"><BrainCircuit size={24} /></div>
             <span>Próxima ação sugerida</span>
@@ -2897,7 +2723,6 @@ export function CardVisionApp() {
             <div className="home-next-step-footer"><b>{homeAttentionTotal}</b><small>ponto(s) de atenção no Cofre</small></div>
           </aside>
         </section>
-
         <section className="home-quick-section">
           <div className="home-section-heading"><div><p className="kicker">Acesso rápido</p><h2>Continue de onde precisa</h2></div><span>Fluxo simplificado</span></div>
           <div className="home-quick-grid">
@@ -2909,7 +2734,6 @@ export function CardVisionApp() {
             <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Mais</strong><small>Ajustes e conta</small></div></button>
           </div>
         </section>
-
         <section className="home-overview-grid">
           <article className="home-vault-summary luxury-panel">
             <div className="home-card-heading"><div><p className="kicker"><History size={14} /> Resumo do Cofre</p><h2>Seu acervo de jogadores</h2></div><button type="button" onClick={openCofreDeJogadores}>Ver tudo</button></div>
@@ -2921,7 +2745,6 @@ export function CardVisionApp() {
             </div>
             <div className="home-vault-progress"><div><span>Prontidão do Cofre</span><strong>{vaultReadiness}%</strong></div><i><b style={{ width: `${vaultReadiness}%` }} /></i><small>{dashboardStats.complete} de {dashboardStats.total || 0} fichas marcadas como completas.</small></div>
           </article>
-
           <article className="home-recent-player luxury-panel">
             <div className="home-card-heading"><div><p className="kicker"><Clock3 size={14} /> Último jogador analisado</p><h2>{recentVaultEntry ? 'Continue a análise mais recente' : 'Nenhuma ficha salva'}</h2></div></div>
             {recentVaultEntry ? (
@@ -2935,7 +2758,6 @@ export function CardVisionApp() {
             )}
           </article>
         </section>
-
         <section className="home-alert-center luxury-panel">
           <div className="home-card-heading"><div><p className="kicker"><ShieldCheck size={14} /> Alertas importantes</p><h2>{homeAttentionTotal ? 'O que merece sua atenção' : 'Tudo organizado por enquanto'}</h2></div><span className={homeAttentionTotal ? 'attention' : 'clear'}>{homeAttentionTotal ? `${homeAttentionTotal} alerta(s)` : 'Sem alertas'}</span></div>
           {homeAttentionTotal ? (
@@ -2951,7 +2773,6 @@ export function CardVisionApp() {
         </section>
       </div>
       )}
-
       {mainSection === 'jogadores' && (
         <SectionErrorBoundary area="jogadores"><PlayerLaboratory
           players={integratedPlayers}
@@ -2965,7 +2786,6 @@ export function CardVisionApp() {
           onMergeSelected={mergeSelectedHistory}
         /></SectionErrorBoundary>
       )}
-
       {mainSection === 'partidas' && (
         <SectionErrorBoundary area="partidas"><MatchLaboratory
           team={integratedTeam}
@@ -2977,7 +2797,6 @@ export function CardVisionApp() {
           onOpenTeam={() => openMainSection('time')}
         /></SectionErrorBoundary>
       )}
-
       {!['inicio', 'jogadores', 'partidas', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
         {mainSection === 'time' && (
@@ -2993,7 +2812,6 @@ export function CardVisionApp() {
                 <p>{mainSection === 'leitor' ? 'Escolha um print da carta. Depois confirme os dados e gere uma única ficha final.' : 'Digite somente os dados principais. Depois revise e gere uma única ficha final.'}</p>
               </div>
             </div>
-
             <div className="bm-creation-methods" role="tablist" aria-label="Escolher forma de criar a ficha">
               <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
                 <Camera size={19} /><span><strong>Usar uma imagem</strong><small>Mais rápido e recomendado</small></span>
@@ -3002,7 +2820,6 @@ export function CardVisionApp() {
                 <Keyboard size={19} /><span><strong>Digitar os dados</strong><small>Quando o print não estiver bom</small></span>
               </button>
             </div>
-
             <ol className="bm-creation-steps" aria-label="Etapas da criação">
               <li className="active"><span>1</span><div><strong>{mainSection === 'leitor' ? 'Escolher imagem' : 'Informar dados'}</strong><small>Forneça a carta</small></div></li>
               <li><span>2</span><div><strong>Confirmar</strong><small>Confira posição, estilo e pontos</small></div></li>
@@ -3010,7 +2827,6 @@ export function CardVisionApp() {
             </ol>
           </section>
         )}
-
         {mainSection !== 'resultado' && (
         <aside className={`control-panel luxury-panel bm2820-control-panel panel-${mainSection}`}>
           {!isCreationSection && (
@@ -3022,7 +2838,6 @@ export function CardVisionApp() {
               <ShieldCheck size={24} />
             </div>
           )}
-
           {mainSection === 'leitor' && (<>
           {advancedMode && (
             <div className="reader-capture-mode" role="tablist" aria-label="Modo avançado de leitura do print">
@@ -3034,7 +2849,6 @@ export function CardVisionApp() {
               </button>
             </div>
           )}
-
           {advancedMode && readerCaptureMode === 'complete' ? (
             <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} /></SectionErrorBoundary>
           ) : (<>
@@ -3059,7 +2873,6 @@ export function CardVisionApp() {
                 </div>
               )}
             </div>
-
             <div className="upload-buttons premium-upload-actions creation-upload-actions">
               <label className="primary-upload-action">
                 <ImagePlus size={18} /><span><strong>{preview ? 'Trocar imagem' : 'Escolher da galeria'}</strong><small>PNG, JPG ou captura de tela</small></span>
@@ -3075,7 +2888,6 @@ export function CardVisionApp() {
               </label>
             </div>
           </section>
-
           <div className="vision-toolbar creation-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={analyzeSelectedImage} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
@@ -3091,28 +2903,23 @@ export function CardVisionApp() {
               </button>
             </>)}
           </div>
-
           {advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
             {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}
           </div>}
-
           {qualityReport && qualityReport.issues.length > 0 && (
             <div className="bm-simple-image-warning" role="status">
               <strong>A imagem pode ficar mais nítida</strong>
               <span>{qualityReport.issues.slice(0, 2).map((issue) => issue.message).join(' ')}</span>
             </div>
           )}
-
           {advancedMode && qualityReport && (
             <div className="quality-card">
               <strong>Detalhes da imagem</strong>
               <span>{qualityReport.width}x{qualityReport.height}px • nitidez {qualityReport.sharpness} • contraste {qualityReport.contrast}</span>
             </div>
           )}
-
           {advancedMode && ocrVisionEnabled && <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary>}
-
           {advancedMode && preview && qualityReport && (
             <div className="premium-image-lab">
               <div className="premium-image-lab-head">
@@ -3137,7 +2944,6 @@ export function CardVisionApp() {
               <p>O tratamento ocorre somente no aparelho e não modifica o arquivo original. Ele melhora contraste, brilho e nitidez usados pela leitura.</p>
             </div>
           )}
-
           {advancedMode && calibratorOpen && preview && (
             <details className="calibrator-panel" open>
               <summary>Calibrador Elite de áreas</summary>
@@ -3173,7 +2979,6 @@ export function CardVisionApp() {
           )}
           </>)}
           </>)}
-
           {mainSection === 'manual' && (
             <section className="bm32-manual-builder" aria-label="Nova Ficha">
               <header className="bm32-screen-heading bm32-manual-heading">
@@ -3181,7 +2986,6 @@ export function CardVisionApp() {
                 <div><h1>Nova Ficha</h1><p>Monte uma ficha completa, inteligente e totalmente controlada por você.</p></div>
                 <span className="bm32-elite-badge"><Sparkles size={17}/> ELITE</span>
               </header>
-
               <section className="bm32-manual-identity">
                 <div className="bm32-manual-card-art"><span>??</span><strong>{targetPosition === 'AUTO' ? 'POS' : targetPosition}</strong><i>★★★★★</i></div>
                 <div className="bm32-manual-identity-fields">
@@ -3189,17 +2993,14 @@ export function CardVisionApp() {
                   <div><label><span>Nível</span><input inputMode="numeric" value={manualFields.level} onChange={(event) => setManualFields((current) => ({ ...current, level: event.target.value.replace(/\D/g, '') }))} placeholder="--" /></label><label><span>Pontos disponíveis</span><input inputMode="numeric" value={manualFields.trainingPointsTotal} onChange={(event) => setManualFields((current) => ({ ...current, trainingPointsTotal: event.target.value.replace(/\D/g, '') }))} placeholder="Ex.: 62" /></label></div>
                 </div>
               </section>
-
               <section className="bm32-manual-choice-card">
                 <header><div><strong>Posição escolhida</strong><small>A posição final sempre será definida por você.</small></div><Target size={18}/></header>
                 <div className="bm32-choice-chips">{POSITION_LABELS.filter((item) => ['CF','SS','AMF','CMF','DMF','CB','LB','RB','GK'].includes(item.code)).map((item) => <button type="button" key={item.code} className={targetPosition === item.code ? 'active' : ''} onClick={() => setTargetPosition(item.code)}>{item.label}</button>)}</div>
               </section>
-
               <section className="bm32-manual-choice-card">
                 <header><div><strong>Estilo de jogo</strong><small>Escolha o comportamento que deve ficar ativo nessa posição.</small></div><Sparkles size={18}/></header>
                 <div className="bm32-choice-chips bm32-style-chips">{playstyleOptions.slice(0, 18).map((style) => <button type="button" key={style} className={playstyleOverride === style ? 'active' : ''} onClick={() => setPlaystyleOverride(style)}>{style}</button>)}</div>
               </section>
-
               <section className="bm32-manual-attributes">
                 <header><div><strong>Atributos da carta</strong><small>Preencha somente os valores visíveis. O restante pode ficar vazio.</small></div><span>{Object.keys(manualFields.attributes).length}/{ATTRIBUTE_INPUTS.length}</span></header>
                 <div className="bm32-attribute-grid">{ATTRIBUTE_INPUTS.map((item) => {
@@ -3208,14 +3009,12 @@ export function CardVisionApp() {
                   return <label key={item.key}><span>{item.label}</span><input type="range" min="0" max="99" value={numericValue} onChange={(event) => setManualFields((current) => ({ ...current, attributes: { ...current.attributes, [item.key]: event.target.value } }))}/><input className="bm32-attribute-number" inputMode="numeric" value={currentValue} onChange={(event) => setManualFields((current) => ({ ...current, attributes: { ...current.attributes, [item.key]: event.target.value.replace(/\D/g, '').slice(0, 2) } }))} placeholder="--" /></label>;
                 })}</div>
               </section>
-
               <section className="bm-simple-manual-note bm32-manual-note">
                 <Keyboard size={22} />
                 <div><strong>Digite somente o que você souber</strong><span>O aplicativo respeita a posição escolhida, o estilo informado e a quantidade exata de pontos.</span></div>
               </section>
             </section>
           )}
-
           {isCreationSection && (
             <div className="select-stack creation-config-stack">
               <div className="creation-config-heading">
@@ -3226,7 +3025,6 @@ export function CardVisionApp() {
                   <small>Escolha onde o jogador vai atuar. Os outros campos podem ficar no automático.</small>
                 </div>
               </div>
-
               <div className="creation-essential-grid">
                 {advancedMode && (
                   <label className="creation-field-card">
@@ -3237,7 +3035,6 @@ export function CardVisionApp() {
                     <small>{creationObjectiveLabel}</small>
                   </label>
                 )}
-
                 <label className="creation-field-card creation-field-priority">
                   <span>Onde o jogador vai jogar?</span>
                   <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
@@ -3245,7 +3042,6 @@ export function CardVisionApp() {
                   </select>
                   <small>Esta é a escolha mais importante da ficha.</small>
                 </label>
-
                 <label className="creation-field-card">
                   <span>Posição escrita na carta</span>
                   <select value={cardPositionOverride} onChange={(event) => setCardPositionOverride(event.target.value as PositionCode | 'AUTO')}>
@@ -3253,7 +3049,6 @@ export function CardVisionApp() {
                   </select>
                   <small>{creationOriginalLabel}</small>
                 </label>
-
                 <label className="creation-field-card">
                   <span>Estilo do jogador</span>
                   <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
@@ -3263,7 +3058,6 @@ export function CardVisionApp() {
                   <small>{creationStyleLabel}</small>
                 </label>
               </div>
-
               {advancedMode && (
               <details className="creation-advanced-details">
                 <summary>
@@ -3271,7 +3065,6 @@ export function CardVisionApp() {
                   <div><strong>Contexto tático opcional</strong><small>Formação, modelo de jogo e técnico refinam a recomendação, mas não substituem a posição escolhida.</small></div>
                   <em>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</em>
                 </summary>
-
                 <div className="creation-tactical-grid">
                   <label>
                     <span>Sistema tático</span>
@@ -3279,14 +3072,12 @@ export function CardVisionApp() {
                       {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>
                   </label>
-
                   <label>
                     <span>Modelo de jogo</span>
                     <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
                       {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>
                   </label>
-
                   <label className="creation-manager-field">
                     <span>Técnico e versão</span>
                     <select value={managerId} onChange={(event) => {
@@ -3308,7 +3099,6 @@ export function CardVisionApp() {
                     </select>
                   </label>
                 </div>
-
                 {selectedManager && (
                   <article className="manager-context-card creation-manager-context">
                     <div>
@@ -3324,7 +3114,6 @@ export function CardVisionApp() {
                     <small>O técnico refina prioridades e simulação. A posição escolhida nunca é trocada automaticamente.</small>
                   </article>
                 )}
-
                 <article className="tactical-guide-card creation-tactical-guide">
                   <div className="tactical-guide-head">
                     <div>
@@ -3357,7 +3146,6 @@ export function CardVisionApp() {
               )}
             </div>
           )}
-
           {mainSection === 'time' && (
             <>
               <div className="select-stack">
@@ -3367,14 +3155,12 @@ export function CardVisionApp() {
                     {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
                 </label>
-
                 <label>
                   <span>Modelo de jogo</span>
                   <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
                     {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
                 </label>
-
                 <label>
                   <span>Técnico e versão</span>
                   <select value={managerId} onChange={(event) => {
@@ -3396,7 +3182,6 @@ export function CardVisionApp() {
                   </select>
                 </label>
               </div>
-
               <article className="tactical-guide-card">
                 <div className="tactical-guide-head">
                   <div>
@@ -3428,9 +3213,7 @@ export function CardVisionApp() {
               </article>
             </>
           )}
-
           {mainSection === 'time' && <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional. A posição escolhida de cada jogador foi preservada.`); }} />}
-
           {(mainSection === 'leitor' || mainSection === 'manual') && (<>
           <section className="creation-action-dock">
             <div className="creation-action-copy">
@@ -3446,7 +3229,6 @@ export function CardVisionApp() {
                 ))}
               </div>
             </div>
-
             <button className="elite-button generate-button creation-primary-cta" type="button" onClick={() => runAnalysis(false)} disabled={!canProceed}>
               {loading ? <Loader2 className="spin" size={19} /> : <Zap size={19} />}
               <span>
@@ -3455,13 +3237,11 @@ export function CardVisionApp() {
               </span>
             </button>
           </section>
-
           <div className="status-card creation-status-card creation-status-quiet" role="status" aria-live="polite">
             <ShieldCheck size={18} />
             <p>{status}</p>
             <span>{creationProgress}%</span>
           </div>
-
           {rawText && (
             <details className="raw-details creation-technical-log">
               <summary>Registro técnico da leitura</summary>
@@ -3469,7 +3249,6 @@ export function CardVisionApp() {
             </details>
           )}
           </>)}
-
           {mainSection === 'cofre' && (
           <div className="cofre-section cofre-premium-layout bm2820-vault-screen">
             <section className="cofre-summary-card vault-catalog-hero luxury-panel">
@@ -3489,14 +3268,12 @@ export function CardVisionApp() {
                 <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); }}><strong>{smartHome.lowConfidence}</strong><span>Baixa confiança</span><small>revisar leitura</small></button>
               </div>
             </section>
-
             <nav className="section-segmented-tabs vault-main-tabs luxury-panel" aria-label="Áreas do Cofre">
               <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Catálogo</span></button>
               <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Pastas</span></button>
               <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
               <button type="button" className={vaultView === 'backup' ? 'active' : ''} onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
             </nav>
-
             {vaultView === 'jogadores' && (
               <section className="vault-view-panel vault-catalog-panel luxury-panel">
                 <div className="vault-catalog-heading">
@@ -3507,13 +3284,11 @@ export function CardVisionApp() {
                   </div>
                   <div className="vault-filter-counter"><strong>{activeVaultFilterCount}</strong><span>filtro(s) ativo(s)</span></div>
                 </div>
-
                 <div className="vault-search-premium">
                   <Search size={20} />
                   <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo, habilidade ou anotação" aria-label="Buscar no Cofre" />
                   {historySearch && <button type="button" onClick={() => setHistorySearch('')}><RotateCcw size={15} /> Limpar</button>}
                 </div>
-
                 <div className="vault-quick-filter-strip" aria-label="Filtros rápidos do Cofre">
                   <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 100 && !vaultFilters.favoritesOnly && !vaultFilters.pendingOnly && !vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, minConfidence: 0, maxConfidence: 100 })); }}>Todos <b>{history.length}</b></button>
                   <button type="button" className={historyFilter === 'FAVORITES' ? 'selected' : ''} onClick={() => { setHistoryFilter('FAVORITES'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, maxConfidence: 100 })); }}><Star size={14} /> Favoritos <b>{dashboardStats.favorites}</b></button>
@@ -3522,13 +3297,11 @@ export function CardVisionApp() {
                   <button type="button" className={historyFilter === 'REVIEW' ? 'selected' : ''} onClick={() => { setHistoryFilter('REVIEW'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><ShieldCheck size={14} /> Revisar <b>{dashboardStats.review}</b></button>
                   <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 69 ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, minConfidence: 0, maxConfidence: 69, favoritesOnly: false, pendingOnly: false, reviewOnly: false })); }}><Filter size={14} /> Confiança baixa <b>{smartHome.lowConfidence}</b></button>
                 </div>
-
                 <div className="vault-catalog-toolbar">
                   <label><Clock3 size={15} /><span>Ordenar</span><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}><option value="UPDATED">Mais recentes</option><option value="NAME">Nome</option><option value="POSITION">Posição</option><option value="PENDING">Mais pendentes</option><option value="STATUS">Status</option></select></label>
                   <button type="button" className={libraryOpen ? 'active-filter' : ''} onClick={() => setLibraryOpen((value) => !value)}><SlidersHorizontal size={16} /> {libraryOpen ? 'Finalizar organização' : 'Organizar fichas'}</button>
                   {(activeVaultFilterCount > 0) && <button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar tudo</button>}
                 </div>
-
                 <details className="cofre-filter-drawer vault-filter-drawer-premium">
                   <summary><SlidersHorizontal size={16} /> Filtros avançados <span>{filteredHistory.length} resultado(s)</span></summary>
                   <div className="advanced-filter-grid">
@@ -3547,7 +3320,6 @@ export function CardVisionApp() {
                     <button type="button" onClick={resetVaultFilters}>Restaurar filtros</button>
                   </div>
                 </details>
-
                 {history.length ? (
                   <div className="vault-player-list vault-player-catalog-grid">
                     {filteredHistory.map((item) => {
@@ -3566,34 +3338,28 @@ export function CardVisionApp() {
                             </button>
                             <button type="button" className={item.favorite ? 'vault-favorite-button selected' : 'vault-favorite-button'} title={item.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={() => toggleFavoriteHistory(item.id)}><Star size={18} fill={item.favorite ? 'currentColor' : 'none'} /></button>
                           </div>
-
                           <div className="vault-card-badges">
                             <span className="position-badge">{item.result.bestPosition.label}</span>
                             <span className={`status-badge status-${status}`}>{status === 'completo' ? 'Pronto' : status === 'revisar' ? 'Revisar' : 'Pendente'}</span>
                             <span className={confidence < 70 ? 'confidence-badge low' : 'confidence-badge'}>Confiança {confidence}%</span>
                           </div>
-
                           <div className="vault-card-metrics">
                             <div><span>Pontos</span><strong>{item.result.trainingPointsUsed}/{item.result.trainingPointsTotal}</strong></div>
                             <div><span>Eficiência</span><strong>{efficiency}%</strong></div>
                             <div><span>Pasta</span><strong>{folderName}</strong></div>
                           </div>
-
                           <div className="vault-skill-progress">
                             <div><span>Habilidades concluídas</span><strong>{info.done}/{info.total}</strong></div>
                             <i><b style={{ width: `${info.percent}%` }} /></i>
                             <small>{statusText}</small>
                           </div>
-
                           {item.notes && <p className="vault-card-note">{item.notes}</p>}
-
                           <div className="vault-card-actions">
                             <button type="button" className="vault-open-player" onClick={() => restoreHistory(item)}><Trophy size={16} /> Abrir ficha</button>
                             <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={16} /></button>
                             <button type="button" title="Exportar relatório" onClick={() => exportSingleHistoryItem(item)}><FileText size={16} /></button>
                             <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}><Trash2 size={16} /></button>
                           </div>
-
                           {libraryOpen && (
                             <div className="saved-advanced-editor vault-card-editor">
                               <label className="saved-status-select"><span>Pasta</span><select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>{vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
@@ -3610,14 +3376,12 @@ export function CardVisionApp() {
                 ) : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><History size={30} /></div><strong>Seu Cofre ainda está vazio</strong><span>Crie a primeira ficha para começar seu catálogo de jogadores.</span><div><button type="button" onClick={() => openMainSection('leitor')}><ScanText size={16} /> Ler uma carta</button><button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={16} /> Manual Pro</button></div></div>}
               </section>
             )}
-
             {vaultView === 'organizar' && (
               <section className="vault-view-panel vault-organization-panel luxury-panel">
                 <div className="vault-catalog-heading">
                   <div><p className="kicker"><Layers size={14} /> Organização do elenco</p><h3>Pastas, situação e progresso do Cofre</h3><span>Separe titulares, reservas, testes e grupos personalizados sem duplicar fichas.</span></div>
                   <div className="vault-filter-counter"><strong>{vaultFolders.length - 1}</strong><span>pastas disponíveis</span></div>
                 </div>
-
                 <div className="vault-folder-catalog">
                   {vaultFolders.map((folder) => {
                     const count = folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length;
@@ -3625,52 +3389,43 @@ export function CardVisionApp() {
                     return <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'vault-folder-card selected' : 'vault-folder-card'} onClick={() => { setVaultFilters((current) => ({ ...current, folderId: folder.id })); setVaultView('jogadores'); }}><div><Layers size={18} /><span>{folder.kind === 'custom' ? 'Pasta personalizada' : 'Pasta do sistema'}</span></div><strong>{folder.name}</strong><small>{count} jogador(es)</small><i><b style={{ width: `${percent}%` }} /></i></button>;
                   })}
                 </div>
-
                 <div className="create-folder-premium">
                   <div><p className="kicker">Nova pasta</p><strong>Crie um grupo para seu jeito de jogar</strong><span>Ex.: Time principal, Divisão, Eventos ou Jogadores em teste.</span></div>
                   <div className="create-folder-row"><input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Nome da nova pasta" /><button type="button" onClick={createVaultFolder}><Layers size={16} /> Criar pasta</button></div>
                 </div>
-
                 <div className="vault-status-dashboard">
                   <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('COMPLETE'); }}><CheckCircle2 size={19} /><div><span>Prontos</span><strong>{dashboardStats.complete}</strong><small>fichas concluídas</small></div></button>
                   <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><Clock3 size={19} /><div><span>Pendentes</span><strong>{dashboardStats.pending}</strong><small>habilidades faltando</small></div></button>
                   <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('REVIEW'); }}><ShieldCheck size={19} /><div><span>Revisar</span><strong>{dashboardStats.review}</strong><small>dados para conferir</small></div></button>
                   <button type="button" onClick={() => setVaultView('jogadores')}><Trophy size={19} /><div><span>Progresso</span><strong>{dashboardStats.completion}%</strong><small>do Cofre organizado</small></div></button>
                 </div>
-
                 <div className="settings-explanation-card"><SlidersHorizontal size={19} /><div><strong>Edição em lote visual</strong><span>Abra o Catálogo e toque em “Organizar fichas” para alterar pasta, status, habilidades e anotações dentro de cada card.</span></div></div>
               </section>
             )}
-
             {vaultView === 'comparar' && (
               <section className="player-comparison-hub vault-view-panel vault-comparison-panel luxury-panel">
                 <div className="vault-catalog-heading">
                   <div><p className="kicker"><Trophy size={14} /> Comparador de jogadores</p><h3>Escolha a função e encontre o melhor encaixe</h3><span>Selecione de 2 a 6 jogadores. A comparação não modifica nenhuma ficha.</span></div>
                   <div className="vault-filter-counter"><strong>{comparePlayerIds.length}</strong><span>selecionado(s)</span></div>
                 </div>
-
                 <div className="comparison-control-bar">
                   <label><Target size={16} /><span>Posição comparada</span><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
                   <button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button>
                   <button type="button" onClick={() => setComparePlayerIds([])}>Limpar seleção</button>
                 </div>
-
                 {history.length ? <div className="compare-player-catalog">{history.map((item) => {
                   const selected = comparePlayerIds.includes(item.id);
                   return <button type="button" className={selected ? 'compare-player-card selected' : 'compare-player-card'} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}><div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt="" /> : <span>{item.result.bestPosition.label.slice(0,3)}</span>}</div><div><strong>{item.result.parsed.playerName}</strong><span>{item.result.bestPosition.label}</span><small>Confiança {item.result.parsed.confidence ?? 0}%</small></div><i>{selected ? '✓' : '+'}</i></button>;
                 })}</div> : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}
-
                 {playerComparison.ranking.length > 0 ? <div className="player-ranking premium-player-ranking"><div className="comparison-winner-card"><Trophy size={22} /><div><span>Melhor encaixe para {POSITION_LABELS.find((item) => item.code === comparePosition)?.label ?? comparePosition}</span><strong>{playerComparison.winner}</strong><small>{playerComparison.reason}</small></div></div>{playerComparison.ranking.map((item, index) => <article key={item.id} className={index === 0 ? 'ranking-player-card winner' : 'ranking-player-card'}><div className="ranking-place">#{index + 1}</div><div className="ranking-main"><strong>{item.name}</strong><span>{item.score}/100 • adaptação {item.adaptation}</span><i><b style={{ width: `${item.score}%` }} /></i></div><div className="ranking-metrics"><span>Físico <b>{item.physical}</b></span><span>Habilidades <b>{item.skills}</b></span><span>Eficiência <b>{item.efficiency}</b></span><span>DNA <b>{item.dna}</b></span></div><small>{item.behavior}</small>{item.risks.length > 0 && <em>Riscos: {item.risks.join(' • ')}</em>}</article>)}</div> : comparePlayerIds.length > 0 ? <div className="empty-cofre-card compact-empty-state"><strong>Selecione pelo menos dois jogadores</strong><span>Você escolheu {comparePlayerIds.length}. Adicione mais um para gerar o ranking.</span></div> : null}
               </section>
             )}
-
             {vaultView === 'backup' && (
               <section className="vault-view-panel vault-backup-panel luxury-panel">
                 <div className="vault-catalog-heading">
                   <div><p className="kicker"><ShieldCheck size={14} /> Proteção do Cofre</p><h3>Backup local e sincronização da conta</h3><span>Escolha o tipo de proteção sem misturar essas ações com o catálogo de jogadores.</span></div>
                   <div className="vault-backup-health"><ShieldCheck size={18} /><div><strong>{history.length} ficha(s)</strong><span>{lastBackupAt ? `Último backup: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Backup manual ainda não registrado'}</span></div></div>
                 </div>
-
                 <div className="vault-backup-actions-grid">
                   <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
                   <button type="button" onClick={() => void exportHistoryBackup()} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo criptografado</small></button>
@@ -3683,20 +3438,16 @@ export function CardVisionApp() {
                   <input ref={backupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={importHistoryBackup} />
                   <input ref={verifyBackupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={(event) => void verifyBackupFile(event)} />
                 </div>
-
                 <div className="cloud-status-card vault-cloud-status"><ShieldCheck size={16} /><div><strong>Status da proteção</strong><span>{cloudStatus}</span></div></div>
-
                 <section className="vault-trash-panel" aria-label="Lixeira do Cofre">
                   <div className="vault-trash-heading"><div><p className="kicker"><Trash2 size={14} /> Lixeira de segurança</p><strong>{vaultTrash.length} item(ns) recuperável(is)</strong><span>Exclusões ficam somente nesta conta por até 30 dias antes de expirar.</span></div>{vaultTrash.length > 0 && <button type="button" onClick={emptyVaultTrash}><Trash2 size={16} /> Esvaziar</button>}</div>
                   <div className="vault-trash-list">{vaultTrash.map((trashItem) => <article key={trashItem.id}><div><strong>{trashItem.label}</strong><span>Excluído em {new Date(trashItem.deletedAt).toLocaleString('pt-BR')}</span><small>Expira em {new Date(trashItem.expiresAt).toLocaleDateString('pt-BR')}</small></div><div><button type="button" onClick={() => restoreTrashItem(trashItem.id)}><RotateCcw size={16} /> Restaurar</button><button type="button" className="danger" aria-label={`Apagar ${trashItem.label} definitivamente`} onClick={() => permanentlyDeleteTrashItem(trashItem.id)}><Trash2 size={16} /> Apagar</button></div></article>)}{!vaultTrash.length && <div className="v27-empty"><CheckCircle2 size={24} /><strong>Lixeira vazia</strong><span>Jogadores apagados poderão ser restaurados aqui.</span></div>}</div>
                 </section>
-
                 <div className="settings-explanation-card"><Save size={18} /><div><strong>Seus jogadores continuam separados por conta</strong><span>O backup do Cofre preserva fichas, posição escolhida, distribuição, habilidades concluídas, pastas e calibração. O backup completo permanece em Ajustes › Backup.</span></div></div>
               </section>
             )}
           </div>
           )}
-
           {mainSection === 'ajustes' && (
             <div className="settings-premium-layout settings-final-layout bm2820-settings-screen">
               {settingsView === 'visao-geral' ? (
@@ -3722,11 +3473,8 @@ export function CardVisionApp() {
                   <article><span>Cofre</span><strong>{history.length}</strong><small>ficha(s) protegida(s)</small></article>
                 </div>
               </section>
-
               <section className="v27-migration-status luxury-panel"><ShieldCheck size={18}/><div><strong>Migração v27 concluída sem apagar dados</strong><span>{centralMigrationNote || 'Fichas, Cofre, formações, partidas, preferências, login e atualizações foram preservados.'}</span></div></section>
-
               {account?.profile.role === 'admin' && <button type="button" className="settings-admin-account-shortcut luxury-panel" onClick={() => setSettingsView('contas')}><span><UserPlus size={22} /></span><div><strong>Criar e gerenciar contas</strong><small>Acesso direto para cadastrar clientes, definir prazo, senha e limite de aparelhos.</small></div><em>Abrir</em></button>}
-
               {!advancedMode && (
                 <button type="button" className="settings-update-quick-access luxury-panel" onClick={() => setSettingsView('atualizacoes')} aria-label="Abrir atualizações do aplicativo">
                   <span><RotateCcw size={22} /></span>
@@ -3734,7 +3482,6 @@ export function CardVisionApp() {
                   <em>Abrir atualizações</em>
                 </button>
               )}
-
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
                 <button type="button" className={settingsView === 'evolucao' ? 'active settings-evolution-navigation' : 'settings-evolution-navigation'} onClick={() => setSettingsView('evolucao')}><Sparkles size={18} /><div><strong>Evolução 360</strong><span>Metas e manutenção</span></div></button>
                 <button type="button" className={settingsView === 'experiencia' ? 'active settings-v2970-navigation' : 'settings-v2970-navigation'} onClick={() => setSettingsView('experiencia')}><Sparkles size={18} /><div><strong>Experiência 2.0</strong><span>Atalhos e retomada</span></div></button>
@@ -3749,24 +3496,19 @@ export function CardVisionApp() {
                 <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={18} /><div><strong>Atualizações</strong><span>Versão e novo APK</span></div></button>
                 <button type="button" className={settingsView === 'contas' ? 'active admin-account-navigation' : 'admin-account-navigation'} onClick={() => setSettingsView('contas')}>{account?.profile.role === 'admin' ? <UserPlus size={18} /> : <Users size={18} />}<div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><span>{account?.profile.role === 'admin' ? 'Usuários e licenças' : 'Licença e aparelhos'}</span></div></button>
               </nav>
-
               <div className="settings-final-content">
                 {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
-
                 {settingsView === 'experiencia' && <SectionErrorBoundary area="experiencia-premium-v2970"><PremiumExperience2Center onOpenTarget={openPremium2Target} /></SectionErrorBoundary>}
-
                 {settingsView === 'aparencia' && (
                   <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
                     <div className="settings-panel-heading">
                       <div><p className="kicker"><Palette size={15} /> Aparência e acessibilidade</p><h3>Conforto visual em qualquer celular</h3><span>As preferências ficam salvas somente na sua conta neste aparelho e também entram no backup completo.</span></div>
                       <span className="settings-state-pill">{visualPreset === 'obsidian-gold' ? 'Preto & Dourado' : visualPreset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'}</span>
                     </div>
-
                     <div className="appearance-live-preview" aria-label="Prévia da aparência selecionada">
                       <div className="appearance-preview-top"><span><Sparkles size={15} /> BuildMaster</span><i /></div>
                       <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Visual limpo, contraste equilibrado e ações fáceis de identificar.</span><button type="button" tabIndex={-1}>Ação principal</button></div>
                     </div>
-
                     <div className="settings-control-section premium-preset-section">
                       <div className="settings-control-heading"><strong>Interface premium</strong><span>Escolha um dos três modelos aprovados. Todas as funções permanecem no mesmo lugar.</span></div>
                       <div className="premium-preset-grid">
@@ -3781,9 +3523,7 @@ export function CardVisionApp() {
                         </button>
                       </div>
                     </div>
-
                     <div className="premium-preset-note"><ShieldCheck size={17} /><div><strong>Três modelos escuros e otimizados</strong><span>O modelo escolhido controla cores, brilho, cartões, navegação e destaques. Texto, contraste, espaçamento e animações continuam ajustáveis abaixo.</span></div></div>
-
                     <div className="settings-preference-grid">
                       <div className="settings-preference-card">
                         <strong>Tamanho dos textos</strong><span>Amplia a interface sem alterar os cálculos.</span>
@@ -3807,7 +3547,6 @@ export function CardVisionApp() {
                     </div>
                   </section>
                 )}
-
                 {settingsView === 'desempenho' && (
                   <section className="settings-view-panel settings-delay-wrapper settings-final-panel-stack">
                     <div className="performance-settings-hero luxury-panel">
@@ -3827,41 +3566,34 @@ export function CardVisionApp() {
                     <StabilityDiagnosticsPanel result={result ?? undefined} />
                   </section>
                 )}
-
                 {settingsView === 'seguranca' && (
                   <section className="safety-quality-panel luxury-panel settings-view-panel settings-final-panel">
                     <div className="settings-panel-heading">
                       <div><p className="kicker"><ShieldCheck size={15} /> Segurança e qualidade</p><h3>Integridade dos dados e saúde do aplicativo</h3><span>Esta área verifica os dados sem modificar fichas, contas ou configurações.</span></div>
                       <span className="settings-state-pill">{healthSummary.score}/100 • {healthSummary.status}</span>
                     </div>
-
                     <div className="health-score-grid security-health-grid">
                       <article><strong>{localIntegrity.score}</strong><span>Integridade local</span><small>estrutura das fichas</small></article>
                       <article><strong>{Math.max(0, localIntegrity.totals.records - localIntegrity.totals.malformed)}</strong><span>Itens válidos</span><small>dados reconhecidos</small></article>
                       <article><strong>{localIntegrity.totals.malformed}</strong><span>Problemas</span><small>itens para revisar</small></article>
                       <article><strong>{account?.cloudEnabled ? 'Online' : 'Local'}</strong><span>Licença</span><small>{account?.offline ? 'graça offline ativa' : 'validada no servidor'}</small></article>
                     </div>
-
                     <div className="security-boundary-grid">
                       <article><ShieldCheck size={20} /><div><strong>Dados separados por conta</strong><span>O Cofre e as preferências usam uma identidade própria para cada usuário.</span></div></article>
                       <article><CheckCircle2 size={20} /><div><strong>Restauração validada</strong><span>Arquivos antigos são conferidos e migrados antes de substituir dados.</span></div></article>
                       <article><FileText size={20} /><div><strong>Diagnóstico sem alterações</strong><span>O relatório técnico apenas lê o estado atual do aplicativo.</span></div></article>
                     </div>
-
                     <button type="button" className="settings-diagnostic-button" onClick={() => void exportIntegrityDiagnostic()}><FileText size={17} /><div><strong>Exportar diagnóstico técnico</strong><span>Gera um relatório para conferir integridade sem incluir senhas.</span></div></button>
-
                     <details className="settings-details-card" open={localIntegrity.issues.length > 0}>
                       <summary>Verificação de integridade</summary>
                       <div className="integrity-report-panel">
                         {localIntegrity.issues.length ? localIntegrity.issues.slice(0, 10).map((issue) => <span key={`${issue.code}-${issue.message}`} className={`integrity-${issue.level}`}><b>{issue.level === 'critical' ? 'Crítico' : issue.level === 'warning' ? 'Revisar' : 'Informação'}</b>{issue.message}</span>) : <span className="integrity-ok"><CheckCircle2 size={15} /> Dados locais sem incoerências detectadas.</span>}
                       </div>
                     </details>
-
                     <details className="settings-details-card">
                       <summary>Migração e compatibilidade</summary>
                       <div className="migration-health-panel"><span>Esquema atual: {APP_DATA_VERSION}</span><span>Backups antigos são convertidos antes da restauração.</span><span>Campos novos recebem valores seguros sem apagar informações antigas.</span>{migrationLog.length > 0 && migrationLog.map((item) => <em key={item}>{item}</em>)}</div>
                     </details>
-
                     {healthSummary.alerts.length > 0 && <div className="health-alert-list" role="status">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
                     <RefinementCenterPanel players={integratedPlayers} appVersion={APP_RELEASE_VERSION} healthScore={healthSummary.score} onOpenPlayer={(id) => openIntegratedPlayer(id, 'result')} />
                     <SectionErrorBoundary area="qualidade-final"><PremiumQualityCenter appVersion={APP_RELEASE_VERSION} /></SectionErrorBoundary>
@@ -3869,21 +3601,17 @@ export function CardVisionApp() {
                     <SectionErrorBoundary area="regras-oficiais-v2930"><OfficialRulesCenter /></SectionErrorBoundary>
                   </section>
                 )}
-
                 {settingsView === 'suporte' && <SectionErrorBoundary area="observabilidade-suporte-v2970"><ObservabilitySupportCenter appVersion={APP_RELEASE_VERSION} health={healthSummary} integrity={localIntegrity} /></SectionErrorBoundary>}
                 {settingsView === 'comunidade' && <SectionErrorBoundary area="comunidade-v2980"><CommunitySharingCenter preparePayload={prepareCommunitySharePayload} canPublish={resolveCommercialEntitlements({ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }).features.community_publish} publicationLimit={resolveCommercialEntitlements({ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }).limits.communityPublications} /></SectionErrorBoundary>}
                 {settingsView === 'comercial' && <SectionErrorBoundary area="comercial-v2980"><CommercializationCenter profile={{ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }} /></SectionErrorBoundary>}
                 {settingsView === 'publicacao' && <SectionErrorBoundary area="publicacao-play-v3000"><PlayStorePublicationCenter /></SectionErrorBoundary>}
-
                 {settingsView === 'backup' && (
                   <section className="backup-settings-panel luxury-panel settings-view-panel settings-final-panel">
                     <div className="settings-panel-heading">
                       <div><p className="kicker"><Save size={15} /> Backup e restauração</p><h3>Proteja tudo antes de trocar ou atualizar</h3><span>Escolha um backup rápido do Cofre ou uma cópia completa do aplicativo.</span></div>
                       <span className="settings-state-pill">{lastBackupAt ? `Último: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Ainda não realizado'}</span>
                     </div>
-
                     <div className="backup-readiness-banner"><ShieldCheck size={20} /><div><strong>{history.length} ficha(s) prontas para proteção</strong><span>O backup completo inclui preferências visuais, calibração, planos, pastas, regras e dados do Cofre.</span></div></div>
-
                     <div className="backup-password-panel">
                       <div><ShieldCheck size={19} /><div><strong>Senha de criptografia</strong><span>Obrigatória para criar e restaurar arquivos .bmbak. Não existe recuperação sem essa senha.</span></div></div>
                       <div className="backup-password-grid">
@@ -3893,7 +3621,6 @@ export function CardVisionApp() {
                       <label className="update-toggle"><input type="checkbox" checked={rememberBackupPassword} onChange={(event) => setRememberBackupPassword(event.target.checked)} /><span>Guardar no cofre seguro do Android neste aparelho</span></label>
                       <small>{backupPasswordReady ? 'Senha disponível no armazenamento seguro.' : 'Defina a senha antes de exportar ou restaurar.'}</small>
                     </div>
-
                     <div className="safety-actions-grid backup-final-actions">
                       <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
                       <button type="button" onClick={() => void exportFullBackup()}><Download size={18} /><strong>Backup completo</strong><span>Cofre, Estúdio Tático, imagens, formações, preferências, planos e regras.</span><small>Proteção máxima</small></button>
@@ -3902,9 +3629,7 @@ export function CardVisionApp() {
                       <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading || !account?.cloudEnabled}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <Download size={18} />}<strong>Baixar Cofre da conta</strong><span>Recupera a versão salva e mescla com segurança.</span><small>Dados separados por usuário</small></button>
                       <input ref={fullBackupInputRef} type="file" accept=".bmbak,application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
                     </div>
-
                     <div className="cloud-status-card backup-cloud-status" role="status"><ShieldCheck size={16} /><div><strong>Status da sincronização</strong><span>{cloudStatus}</span></div></div>
-
                     <CloudSyncCenter
                       cloudEnabled={Boolean(account?.cloudEnabled)}
                       loading={cloudLoading}
@@ -3921,7 +3646,6 @@ export function CardVisionApp() {
                       onRestoreSnapshot={restoreBackupSnapshot}
                       onDeleteSnapshot={deleteBackupSnapshot}
                     />
-
                     <details className="settings-details-card">
                       <summary>Escolher áreas da restauração</summary>
                       <div className="restore-select-panel">
@@ -3933,7 +3657,6 @@ export function CardVisionApp() {
                     </details>
                   </section>
                 )}
-
                 {settingsView === 'contas' && <SectionErrorBoundary area="contas"><div className="bm2910-admin-stack"><AccountAdminPanel /><AdministrationSecurityCenter /></div></SectionErrorBoundary>}
                 {settingsView === 'atualizacoes' && <SectionErrorBoundary area="atualizacoes"><UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} /></SectionErrorBoundary>}
               </div>
@@ -3942,7 +3665,6 @@ export function CardVisionApp() {
           )}
         </aside>
         )}
-
         {(mainSection === 'resultado' || mainSection === 'leitor' || mainSection === 'manual') && (
         <section className="preview-panel bm2820-preview-panel">
           {mainSection === 'resultado' ? (
@@ -4009,12 +3731,10 @@ export function CardVisionApp() {
                 </div>
                 <div className="creation-blueprint-orbit" aria-hidden="true"><i /><i /><i /></div>
               </div>
-
               <div className="creation-blueprint-copy">
                 <p className="kicker"><Wand2 size={14} /> Prévia da construção</p>
                 <h2>{mainSection === 'leitor' ? (preview ? 'Carta pronta para entrar no motor' : 'Seu build começa com um bom print') : 'Entrada manual sob seu controle'}</h2>
                 <p>{mainSection === 'leitor' ? 'Acompanhe aqui o destino da ficha antes da auditoria. O resultado final só aparece depois da confirmação.' : 'Os dados informados serão reunidos aqui antes da ficha final.'}</p>
-
                 <div className="creation-blueprint-grid">
                   <article><span>Objetivo</span><strong>{creationObjectiveLabel}</strong></article>
                   <article><span>Posição-alvo</span><strong>{creationTargetLabel}</strong></article>
@@ -4023,7 +3743,6 @@ export function CardVisionApp() {
                   <article><span>Pontos</span><strong>{creationPointsValue || 'Na revisão'}</strong></article>
                   <article><span>Contexto</span><strong>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</strong></article>
                 </div>
-
                 <div className="creation-blueprint-readiness">
                   <div><span>Prontidão para auditoria</span><strong>{creationReadinessPercent}%</strong></div>
                   <i><b style={{ width: `${creationReadinessPercent}%` }} /></i>
@@ -4034,10 +3753,8 @@ export function CardVisionApp() {
           )}
         </section>
         )}
-
       </section>
       )}
-
       <SmartQuickDock hasResult={Boolean(result || draftResult)} pendingReviewCount={smartHome.needsReview} mainArea={mainSection} onOpenTarget={openEvolutionTarget} onOpenCurrentResult={() => openMainSection('resultado')} />
             <AppCommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} commands={appCommands} />
       <SectionErrorBoundary area="assistente"><BuildMasterAssistant open={assistantOpen} onOpenChange={setAssistantOpen} players={integratedPlayers} team={integratedTeam} /></SectionErrorBoundary>
