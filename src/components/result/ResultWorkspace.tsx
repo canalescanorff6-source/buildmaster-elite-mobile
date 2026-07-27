@@ -44,7 +44,7 @@ import {
   type MatchFeedback,
   type MatchFeedbackKey
 } from '@/lib/realMatchCalibration';
-import { buildAdvancedCalibration, signatureForResult } from '@/lib/advancedCalibration';
+import { buildAdvancedCalibration } from '@/lib/advancedCalibration';
 import {
   buildReliabilityCenter,
   compareBuildVariants,
