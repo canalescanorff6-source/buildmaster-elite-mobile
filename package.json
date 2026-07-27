@@ -47,7 +47,8 @@
     "test:v3100": "npm run typecheck:v3100 && node -r ./tests/_ts-require.cjs tests/v31-10-unified-intelligence-regression.ts",
     "typecheck:v3110": "tsc -p tests/types-v3110/tsconfig.json --pretty false && tsc -p tests/types-v3110-ui/tsconfig.json --pretty false",
     "test:v3110": "npm run typecheck:v3110 && node -r ./tests/_ts-require.cjs tests/v31-10-tactical-planning-regression.ts && node tests/v31-10-root-typecheck-isolation-regression.mjs && node tests/v31-10-result-workspace-typecheck-regression.mjs",
-    "test:v3120": "npm run typecheck:v3110 && node tests/v31-20-premium-interface-regression.mjs"
+    "test:v3120": "npm run typecheck:v3110 && node tests/v31-20-premium-interface-regression.mjs",
+    "test:premium-complete": "node tests/v31-20-premium-complete-screens-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

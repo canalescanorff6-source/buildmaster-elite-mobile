@@ -83,6 +83,9 @@ import { PremiumContextBar } from '@/components/PremiumContextBar';
 import { PremiumBrand } from '@/components/PremiumBrand';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
+import { PremiumMenuScreen } from '@/components/PremiumMenuScreen';
+import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
+import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
 import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
 import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, formations, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
@@ -223,9 +226,10 @@ type MotionPreference = 'system' | 'reduced' | 'full';
 type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
+type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
 function navigationGroupFor(section: MainSection): MainNavigationGroup {
   if (section === 'inicio' || section === 'time' || section === 'partidas' || section === 'ajustes') return section;
+  if (section === 'menu') return 'ajustes';
   return 'jogadores';
 }
 function playerWorkspaceFor(section: MainSection): PlayerWorkspace {
@@ -237,7 +241,7 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
   return workspace === 'visao-geral' ? 'jogadores' : workspace;
 }
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
-type SettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
+type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
  type ActiveSessionSnapshot = {
   preview: string | null;
   playerCardImage: string | null;
@@ -315,7 +319,7 @@ export function CardVisionApp() {
   const [onlyPendingSkills, setOnlyPendingSkills] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [vaultView, setVaultView] = useState<VaultView>('jogadores');
-  const [settingsView, setSettingsView] = useState<SettingsView>(() => settingsViewForPremiumTarget(readPremiumExperience2Preferences().startTarget) ?? 'aparencia');
+  const [settingsView, setSettingsView] = useState<SettingsView>(() => settingsViewForPremiumTarget(readPremiumExperience2Preferences().startTarget) ?? 'visao-geral');
   const [updateNotice, setUpdateNotice] = useState<string | null>(null);
   const [comparePlayerIds, setComparePlayerIds] = useState<string[]>([]);
   const [comparePosition, setComparePosition] = useState<PositionCode>('CF');
@@ -390,7 +394,7 @@ export function CardVisionApp() {
   }, [mainSection, performanceMode]);
   useEffect(() => {
     if (mainSection !== 'ajustes' || advancedMode) return;
-    const simpleViews: SettingsView[] = ['aparencia', 'desempenho', 'backup', 'atualizacoes', 'contas'];
+    const simpleViews: SettingsView[] = ['visao-geral', 'aparencia', 'desempenho', 'backup', 'atualizacoes', 'contas'];
     if (!simpleViews.includes(settingsView)) setSettingsView('aparencia');
   }, [advancedMode, mainSection, settingsView]);
   useEffect(() => {
@@ -525,7 +529,7 @@ export function CardVisionApp() {
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
   const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
-  const integratedPlayers = useMemo(() => buildIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
+  const integratedPlayers = useMemo(() => buildIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
   const integratedTeam = useMemo(() => buildTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
   const centralDashboard = useMemo(() => buildCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
   const centralMatchPlans = useMemo(() => buildMatchScenarioPlans(integratedTeam), [integratedTeam]);
@@ -595,8 +599,10 @@ export function CardVisionApp() {
     { id: 'jogadores', label: 'Jogadores', hint: `${history.length} no banco`, icon: 'vault' },
     { id: 'time', label: 'Meu Time', hint: 'Escalação integrada', icon: 'team' },
     { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} registros`, icon: 'result' },
-    { id: 'ajustes', label: 'Ajustes', hint: 'Conta e sistema', icon: 'settings' },
-    { id: 'leitor', label: 'Leitor Total', hint: 'Fluxo do jogador', icon: 'scan' },
+    { id: 'ajustes', label: 'Configurações', hint: 'Conta e sistema', icon: 'settings' },
+    { id: 'menu', label: 'Menu', hint: 'Todos os módulos', icon: 'settings' },
+    { id: 'buscar', label: 'Buscar', hint: 'Busca inteligente', icon: 'vault' },
+    { id: 'leitor', label: 'Usar Imagem', hint: 'Fluxo do jogador', icon: 'scan' },
     { id: 'manual', label: 'Manual Pro', hint: 'Fluxo do jogador', icon: 'manual' },
     { id: 'resultado', label: 'Ficha do jogador', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
     { id: 'cofre', label: 'Registro do jogador', hint: `${history.length} salvos`, icon: 'vault' }
@@ -614,7 +620,9 @@ export function CardVisionApp() {
       resultado: { title: 'Ficha completa', description: 'Comece pelo resumo e navegue para ficha, habilidades, treino e fontes.', steps: ['Resumo', 'Ficha', 'Treino e fontes'] },
       cofre: { title: 'Cofre de jogadores', description: 'Organize fichas, favoritos, revisões e backups da sua conta.', steps: ['Organizar', 'Comparar', 'Proteger'] },
       time: { title: 'Meu Time', description: 'Monte o elenco, escolha formações e prepare planos para cada partida.', steps: ['Elenco', 'Formação', 'Plano de jogo'] },
-      ajustes: { title: 'Ajustes do aplicativo', description: 'Personalize aparência, desempenho, segurança, backup e atualização.', steps: ['Aparência', 'Segurança', 'Atualizações'] }
+      ajustes: { title: 'Configurações do aplicativo', description: 'Personalize aparência, desempenho, segurança, backup e atualização.', steps: ['Visão geral', 'Segurança', 'Atualizações'] },
+      menu: { title: 'Menu premium', description: 'Acesse todos os módulos, ferramentas e atalhos em um só lugar.', steps: ['Módulos', 'Ferramentas', 'Atalhos'] },
+      buscar: { title: 'Busca inteligente', description: 'Encontre jogadores, formações, técnicos, habilidades e funções.', steps: ['Digite', 'Filtre', 'Abra'] }
     };
     return guides[mainSection];
   }, [mainSection]);
@@ -680,6 +688,7 @@ export function CardVisionApp() {
   }
 
   function openNavigationGroup(group: MainNavigationGroup) {
+    if (group === 'ajustes') setSettingsView('visao-geral');
     openMainSection(sectionForNavigation(group, group === 'jogadores' ? playerWorkspace : 'visao-geral'));
   }
 
@@ -2735,23 +2744,26 @@ export function CardVisionApp() {
       </header>
 
       <LiveStatusRegion message={status} urgent={sessionSaveState === 'error'} />
-      <PremiumContextBar
+      {!['menu', 'buscar'].includes(mainSection) && <PremiumContextBar
         group={currentNavigationGroup}
         workspace={currentPlayerWorkspace}
         canGoBack={navigationTrail.length > 0 && mainSection !== 'inicio'}
         currentPlayer={currentPanelResult ? { name: currentPanelResult.parsed.playerName || 'Carta em análise', points: `${currentPanelResult.trainingPointsUsed}/${currentPanelResult.trainingPointsTotal} pts` } : null}
         onBack={goBackInsideApp}
-        onSearch={() => setCommandPaletteOpen(true)}
+        onSearch={() => openMainSection('buscar')}
         onOpenCurrentPlayer={() => openMainSection('resultado')}
-      />
+      />}
       <RefinedNavigation
         group={currentNavigationGroup}
         workspace={currentPlayerWorkspace}
         hasResult={Boolean(currentPanelResult)}
         onGroupChange={openNavigationGroup}
         onWorkspaceChange={openPlayerWorkspace}
-        onSearch={() => setCommandPaletteOpen(true)}
+        onSearch={() => openMainSection('buscar')}
         onCreate={() => setMobileLauncher('create')}
+        onMenu={() => openMainSection('menu')}
+        menuActive={mainSection === 'menu'}
+        searchActive={mainSection === 'buscar'}
       />
 
       {updateNotice && (
@@ -2808,7 +2820,7 @@ export function CardVisionApp() {
         </div>
       )}
 
-      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','partidas'].includes(mainSection) && (
+      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','partidas','menu','buscar'].includes(mainSection) && (
         <section className="page-context-card luxury-panel">
           <div>
             <p className="kicker">Área atual</p>
@@ -2822,6 +2834,36 @@ export function CardVisionApp() {
             </button>
           )}
         </section>
+      )}
+
+      {mainSection === 'menu' && (
+        <PremiumMenuScreen
+          username={account?.profile.username || 'Usuário Elite'}
+          role={account?.profile.role || 'user'}
+          playerCount={history.length}
+          favoriteCount={history.filter((item) => item.favorite).length}
+          onLogout={logout}
+          onNavigate={(target) => {
+            if (target === 'players') openMainSection('jogadores');
+            else if (target === 'manual') openMainSection('manual');
+            else if (target === 'reader') openMainSection('leitor');
+            else if (target === 'team') openMainSection('time');
+            else if (target === 'matches') openMainSection('partidas');
+            else if (target === 'search') openMainSection('buscar');
+            else {
+              openMainSection('ajustes');
+              if (target === 'accounts') setSettingsView('contas');
+              else if (target === 'backup') setSettingsView('backup');
+              else if (target === 'updates') setSettingsView('atualizacoes');
+              else if (target === 'support') setSettingsView('suporte');
+              else setSettingsView('visao-geral');
+            }
+          }}
+        />
+      )}
+
+      {mainSection === 'buscar' && (
+        <PremiumSearchScreen commands={appCommands} playerCount={history.length} />
       )}
 
       {mainSection === 'inicio' && (
@@ -2936,7 +2978,7 @@ export function CardVisionApp() {
         /></SectionErrorBoundary>
       )}
 
-      {mainSection !== 'inicio' && mainSection !== 'jogadores' && mainSection !== 'partidas' && (
+      {!['inicio', 'jogadores', 'partidas', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
         {mainSection === 'time' && (
           <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
@@ -3026,6 +3068,10 @@ export function CardVisionApp() {
               <label>
                 <Camera size={18} /><span><strong>Usar câmera</strong><small>Fotografar agora</small></span>
                 <input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
+              </label>
+              <label>
+                <UploadCloud size={18} /><span><strong>Importar arquivo</strong><small>JPEG, PNG, WEBP ou BMP</small></span>
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/bmp,.jpg,.jpeg,.png,.webp,.bmp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
               </label>
             </div>
           </section>
@@ -3129,9 +3175,44 @@ export function CardVisionApp() {
           </>)}
 
           {mainSection === 'manual' && (
-            <section className="bm-simple-manual-note">
-              <Keyboard size={22} />
-              <div><strong>Digite somente o que você souber</strong><span>O aplicativo não mudará a posição escolhida e respeitará a quantidade informada de pontos.</span></div>
+            <section className="bm32-manual-builder" aria-label="Nova Ficha">
+              <header className="bm32-screen-heading bm32-manual-heading">
+                <div className="bm32-heading-icon"><FileText size={27}/></div>
+                <div><h1>Nova Ficha</h1><p>Monte uma ficha completa, inteligente e totalmente controlada por você.</p></div>
+                <span className="bm32-elite-badge"><Sparkles size={17}/> ELITE</span>
+              </header>
+
+              <section className="bm32-manual-identity">
+                <div className="bm32-manual-card-art"><span>??</span><strong>{targetPosition === 'AUTO' ? 'POS' : targetPosition}</strong><i>★★★★★</i></div>
+                <div className="bm32-manual-identity-fields">
+                  <label><span>Nome do jogador</span><input value={manualFields.playerName} onChange={(event) => setManualFields((current) => ({ ...current, playerName: event.target.value }))} placeholder="Digite o nome do jogador..." /></label>
+                  <div><label><span>Nível</span><input inputMode="numeric" value={manualFields.level} onChange={(event) => setManualFields((current) => ({ ...current, level: event.target.value.replace(/\D/g, '') }))} placeholder="--" /></label><label><span>Pontos disponíveis</span><input inputMode="numeric" value={manualFields.trainingPointsTotal} onChange={(event) => setManualFields((current) => ({ ...current, trainingPointsTotal: event.target.value.replace(/\D/g, '') }))} placeholder="Ex.: 62" /></label></div>
+                </div>
+              </section>
+
+              <section className="bm32-manual-choice-card">
+                <header><div><strong>Posição escolhida</strong><small>A posição final sempre será definida por você.</small></div><Target size={18}/></header>
+                <div className="bm32-choice-chips">{POSITION_LABELS.filter((item) => ['CF','SS','AMF','CMF','DMF','CB','LB','RB','GK'].includes(item.code)).map((item) => <button type="button" key={item.code} className={targetPosition === item.code ? 'active' : ''} onClick={() => setTargetPosition(item.code)}>{item.label}</button>)}</div>
+              </section>
+
+              <section className="bm32-manual-choice-card">
+                <header><div><strong>Estilo de jogo</strong><small>Escolha o comportamento que deve ficar ativo nessa posição.</small></div><Sparkles size={18}/></header>
+                <div className="bm32-choice-chips bm32-style-chips">{playstyleOptions.slice(0, 18).map((style) => <button type="button" key={style} className={playstyleOverride === style ? 'active' : ''} onClick={() => setPlaystyleOverride(style)}>{style}</button>)}</div>
+              </section>
+
+              <section className="bm32-manual-attributes">
+                <header><div><strong>Atributos da carta</strong><small>Preencha somente os valores visíveis. O restante pode ficar vazio.</small></div><span>{Object.keys(manualFields.attributes).length}/{ATTRIBUTE_INPUTS.length}</span></header>
+                <div className="bm32-attribute-grid">{ATTRIBUTE_INPUTS.map((item) => {
+                  const currentValue = manualFields.attributes[item.key] ?? '';
+                  const numericValue = Math.max(0, Math.min(99, Number(currentValue || 0)));
+                  return <label key={item.key}><span>{item.label}</span><input type="range" min="0" max="99" value={numericValue} onChange={(event) => setManualFields((current) => ({ ...current, attributes: { ...current.attributes, [item.key]: event.target.value } }))}/><input className="bm32-attribute-number" inputMode="numeric" value={currentValue} onChange={(event) => setManualFields((current) => ({ ...current, attributes: { ...current.attributes, [item.key]: event.target.value.replace(/\D/g, '').slice(0, 2) } }))} placeholder="--" /></label>;
+                })}</div>
+              </section>
+
+              <section className="bm-simple-manual-note bm32-manual-note">
+                <Keyboard size={22} />
+                <div><strong>Digite somente o que você souber</strong><span>O aplicativo respeita a posição escolhida, o estilo informado e a quantidade exata de pontos.</span></div>
+              </section>
             </section>
           )}
 
@@ -3618,6 +3699,17 @@ export function CardVisionApp() {
 
           {mainSection === 'ajustes' && (
             <div className="settings-premium-layout settings-final-layout bm2820-settings-screen">
+              {settingsView === 'visao-geral' ? (
+                <PremiumSettingsOverview
+                  username={account?.profile.username || 'Usuário'}
+                  version={APP_RELEASE_VERSION}
+                  playerCount={history.length}
+                  healthScore={healthSummary.score}
+                  cloudEnabled={Boolean(account?.cloudEnabled)}
+                  onOpen={(target) => setSettingsView(target)}
+                />
+              ) : <>
+              <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar para Configurações</button>
               <section className="settings-command-hero luxury-panel">
                 <div className="settings-command-copy">
                   <p className="kicker"><SlidersHorizontal size={15} /> Central de preferências</p>
@@ -3845,6 +3937,7 @@ export function CardVisionApp() {
                 {settingsView === 'contas' && <SectionErrorBoundary area="contas"><div className="bm2910-admin-stack"><AccountAdminPanel /><AdministrationSecurityCenter /></div></SectionErrorBoundary>}
                 {settingsView === 'atualizacoes' && <SectionErrorBoundary area="atualizacoes"><UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} /></SectionErrorBoundary>}
               </div>
+              </>}
             </div>
           )}
         </aside>

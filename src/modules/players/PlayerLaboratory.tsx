@@ -1,9 +1,24 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Camera, CheckCircle2, FileText, Search, ShieldCheck, Star, Trophy, Users } from 'lucide-react';
+import {
+  Crown,
+  Filter,
+  Goal,
+  Heart,
+  MoreVertical,
+  Plus,
+  Search,
+  Shield,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  Trophy,
+  Users
+} from 'lucide-react';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 
+type CategoryFilter = 'todos' | 'atacantes' | 'meias' | 'defesa' | 'goleiros';
 type StatusFilter = 'todos' | 'completo' | 'revisar' | 'favoritos';
 
 type Props = {
@@ -18,16 +33,17 @@ type Props = {
   onMergeSelected: (ids: string[]) => void;
 };
 
+const categoryPositions: Record<Exclude<CategoryFilter, 'todos'>, string[]> = {
+  atacantes: ['CA', 'SA', 'PTD', 'PTE', 'ATA'],
+  meias: ['MAT', 'MLG', 'MLD', 'MC', 'VOL'],
+  defesa: ['ZAG', 'LE', 'LD', 'ALA'],
+  goleiros: ['GOL']
+};
+
 function sourceLabel(player: IntegratedPlayerRecord) {
   if (player.result.parsed.manualConfirmed || player.result.parsed.trainingPointSource === 'MANUAL') return 'Manual';
-  if (player.result.parsed.trainingPointSource === 'OCR' || player.result.parsed.evidence.attributeCount > 0) return 'Print';
+  if (player.result.parsed.trainingPointSource === 'OCR' || player.result.parsed.evidence.attributeCount > 0) return 'Imagem';
   return 'Importada';
-}
-
-function formatDate(value: string | null | undefined) {
-  const timestamp = Date.parse(String(value || ''));
-  if (!Number.isFinite(timestamp)) return 'data não informada';
-  return new Date(timestamp).toLocaleDateString('pt-BR');
 }
 
 function statusLabel(status: IntegratedPlayerRecord['status']) {
@@ -36,88 +52,126 @@ function statusLabel(status: IntegratedPlayerRecord['status']) {
   return 'Pendente';
 }
 
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
+}
+
+function positionGroup(player: IntegratedPlayerRecord) {
+  const position = String(player.targetPositionCode || player.targetPosition || '').toLocaleUpperCase('pt-BR');
+  if (categoryPositions.atacantes.some((item) => position.includes(item))) return 'atacantes';
+  if (categoryPositions.meias.some((item) => position.includes(item))) return 'meias';
+  if (categoryPositions.defesa.some((item) => position.includes(item))) return 'defesa';
+  if (categoryPositions.goleiros.some((item) => position.includes(item))) return 'goleiros';
+  return 'meias';
+}
+
 export function PlayerLaboratory(props: Props) {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<StatusFilter>('todos');
+  const [category, setCategory] = useState<CategoryFilter>('todos');
+  const [status, setStatus] = useState<StatusFilter>('todos');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const summary = useMemo(() => ({
+    styles: new Set(props.players.map((player) => player.playstyle).filter(Boolean)).size,
+    favorites: props.players.filter((player) => player.favorite).length,
     complete: props.players.filter((player) => player.status === 'completo').length,
-    review: props.players.filter((player) => player.status === 'revisar').length,
-    favorites: props.players.filter((player) => player.favorite).length
+    review: props.players.filter((player) => player.status === 'revisar').length
   }), [props.players]);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('pt-BR');
     return props.players.filter((player) => {
-      if (filter === 'favoritos' && !player.favorite) return false;
-      if (filter === 'completo' && player.status !== 'completo') return false;
-      if (filter === 'revisar' && player.status !== 'revisar') return false;
+      if (category !== 'todos' && positionGroup(player) !== category) return false;
+      if (status === 'favoritos' && !player.favorite) return false;
+      if (status === 'completo' && player.status !== 'completo') return false;
+      if (status === 'revisar' && player.status !== 'revisar') return false;
       if (!normalized) return true;
-      return `${player.name} ${player.targetPosition} ${player.playstyle}`.toLocaleLowerCase('pt-BR').includes(normalized);
+      return `${player.name} ${player.targetPosition} ${player.playstyle} ${player.functionLabel}`.toLocaleLowerCase('pt-BR').includes(normalized);
     });
-  }, [filter, props.players, query]);
+  }, [category, props.players, query, status]);
 
   return (
-    <section className="bm-simple-players" aria-label="Meus jogadores">
-      <header className="bm-simple-players-header">
-        <div>
-          <span className="bm-simple-eyebrow">Jogadores</span>
-          <h1>Meus jogadores</h1>
-          <p>Abra uma ficha ou crie uma nova. As ferramentas técnicas ficam fora desta tela.</p>
-        </div>
-        <div className="bm-simple-players-actions">
-          <button type="button" className="primary" onClick={props.onReadCard}><Camera size={18}/> Nova ficha por print</button>
-          <button type="button" onClick={props.onManualCard}><FileText size={18}/> Preencher manualmente</button>
+    <section className="bm32-players" aria-label="Jogadores">
+      <header className="bm32-screen-heading">
+        <div className="bm32-heading-icon"><Users size={27}/></div>
+        <div><h1>Jogadores</h1><p>Gerencie, analise e organize suas cartas com precisão.</p></div>
+        <div className="bm32-heading-actions">
+          <button type="button" aria-label="Buscar jogador" onClick={() => document.getElementById('bm32-player-search')?.focus()}><Search size={21}/></button>
+          <button type="button" aria-label="Filtros" aria-pressed={advancedOpen} onClick={() => setAdvancedOpen((current) => !current)}><Filter size={21}/></button>
+          <span className="bm32-elite-badge"><Crown size={17}/> ELITE</span>
         </div>
       </header>
 
-      <section className="bm-simple-player-summary" aria-label="Resumo dos jogadores">
-        <article><Users size={18}/><div><strong>{props.players.length}</strong><span>Total</span></div></article>
-        <article><CheckCircle2 size={18}/><div><strong>{summary.complete}</strong><span>Prontas</span></div></article>
-        <article><ShieldCheck size={18}/><div><strong>{summary.review}</strong><span>Revisar</span></div></article>
+      <nav className="bm32-category-tabs" aria-label="Categorias de jogadores">
+        <button type="button" className={category === 'todos' ? 'active' : ''} onClick={() => setCategory('todos')}><Users size={17}/> Todos</button>
+        <button type="button" className={category === 'atacantes' ? 'active' : ''} onClick={() => setCategory('atacantes')}><Goal size={17}/> Atacantes</button>
+        <button type="button" className={category === 'meias' ? 'active' : ''} onClick={() => setCategory('meias')}><Sparkles size={17}/> Meias</button>
+        <button type="button" className={category === 'defesa' ? 'active' : ''} onClick={() => setCategory('defesa')}><Shield size={17}/> Defesa</button>
+        <button type="button" className={category === 'goleiros' ? 'active' : ''} onClick={() => setCategory('goleiros')}><Goal size={17}/> Goleiros</button>
+      </nav>
+
+      <div className="bm32-player-searchbar">
+        <Search size={22}/>
+        <label className="sr-only" htmlFor="bm32-player-search">Buscar jogador</label>
+        <input id="bm32-player-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar jogador, posição ou estilo..."/>
+        <button type="button" onClick={() => setAdvancedOpen((current) => !current)}><SlidersHorizontal size={18}/><span>Filtros avançados</span></button>
+      </div>
+
+      {advancedOpen && (
+        <section className="bm32-filter-drawer" aria-label="Filtros avançados">
+          <div><strong>Status da ficha</strong><span>Mostre somente o que precisa agora.</span></div>
+          <div role="group" aria-label="Status">
+            <button type="button" className={status === 'todos' ? 'active' : ''} onClick={() => setStatus('todos')}>Todos</button>
+            <button type="button" className={status === 'completo' ? 'active' : ''} onClick={() => setStatus('completo')}>Prontas</button>
+            <button type="button" className={status === 'revisar' ? 'active' : ''} onClick={() => setStatus('revisar')}>Revisar</button>
+            <button type="button" className={status === 'favoritos' ? 'active' : ''} onClick={() => setStatus('favoritos')}><Star size={14}/> Favoritos</button>
+          </div>
+        </section>
+      )}
+
+      <section className="bm32-player-stats" aria-label="Resumo">
+        <article><span><Users size={21}/></span><div><strong>{props.players.length}</strong><small>Total de jogadores</small></div></article>
+        <article><span><Star size={21}/></span><div><strong>{summary.styles}</strong><small>Estilos ativos</small></div></article>
+        <article><span><Heart size={21}/></span><div><strong>{summary.favorites}</strong><small>Favoritos</small></div></article>
       </section>
 
-      <section className="bm-simple-player-tools">
-        <label><Search size={18}/><span className="sr-only">Buscar jogador</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar jogador" /></label>
-        <div role="group" aria-label="Filtros">
-          <button type="button" className={filter === 'todos' ? 'active' : ''} onClick={() => setFilter('todos')}>Todos</button>
-          <button type="button" className={filter === 'completo' ? 'active' : ''} onClick={() => setFilter('completo')}>Prontas</button>
-          <button type="button" className={filter === 'revisar' ? 'active' : ''} onClick={() => setFilter('revisar')}>Revisar</button>
-          <button type="button" className={filter === 'favoritos' ? 'active' : ''} onClick={() => setFilter('favoritos')}><Star size={15}/> Favoritos</button>
-        </div>
-      </section>
-
-      <section className="bm-simple-player-list" aria-label={`${filtered.length} jogadores encontrados`}>
+      <section className="bm32-player-list" aria-label={`${filtered.length} jogadores encontrados`}>
         {filtered.map((player) => (
-          <article key={player.id}>
-            <button type="button" className="bm-simple-player-main" onClick={() => props.onOpenResult(player.id)}>
-              <span className="bm-simple-player-avatar">{player.name.trim().charAt(0).toLocaleUpperCase('pt-BR') || '?'}</span>
-              <span className="bm-simple-player-copy">
-                <strong>{player.name}</strong>
-                <small>{player.targetPosition} • {player.playstyle}</small>
-                <em>{sourceLabel(player)} • {formatDate(player.updatedAt)}</em>
+          <article className="bm32-player-card" key={player.id}>
+            <button type="button" className="bm32-player-card-main" onClick={() => props.onOpenResult(player.id)}>
+              <span className="bm32-player-art">
+                {player.playerImage ? <img src={player.playerImage} alt={`Carta de ${player.name}`}/> : <b>{initials(player.name)}</b>}
+                <em>{player.overall || player.efficiency}</em><small>{player.targetPositionCode || player.targetPosition}</small>
               </span>
-              <span className={`bm-simple-player-status status-${player.status}`}>{statusLabel(player.status)}</span>
-              <b>{player.efficiency}/100</b>
+              <span className="bm32-player-info">
+                <strong>{player.name}</strong>
+                <span><b>{player.targetPositionCode || player.targetPosition}</b><i>•</i><em>{player.playstyle || player.functionLabel}</em></span>
+                <small>
+                  <mark className={`status-${player.status}`}>{statusLabel(player.status)}</mark>
+                  {player.favorite && <mark className="favorite"><Heart size={12}/> Favorito</mark>}
+                  <mark>{sourceLabel(player)}</mark>
+                </small>
+              </span>
+              <span className="bm32-player-overall"><small>GERAL</small><strong>{player.overall || player.efficiency}</strong></span>
             </button>
-            <div className="bm-simple-player-secondary">
-              <button type="button" onClick={() => props.onOpenResult(player.id)}><Trophy size={16}/> Abrir ficha</button>
-              <button type="button" onClick={() => props.onOpenPlayer(player.id)}><ShieldCheck size={16}/> Organizar</button>
-            </div>
+            <button type="button" className="bm32-player-more" aria-label={`Organizar ${player.name}`} onClick={() => props.onOpenPlayer(player.id)}><MoreVertical size={21}/></button>
           </article>
         ))}
 
         {!filtered.length && (
-          <div className="bm-simple-empty">
-            <Users size={30}/>
-            <strong>{props.players.length ? 'Nenhum jogador encontrado' : 'Você ainda não criou nenhuma ficha'}</strong>
-            <span>{props.players.length ? 'Tente outro nome ou remova o filtro.' : 'Comece usando um print da carta.'}</span>
-            {!props.players.length && <button type="button" onClick={props.onReadCard}>Criar primeira ficha</button>}
+          <div className="bm32-empty-state">
+            <Users size={34}/>
+            <strong>{props.players.length ? 'Nenhum jogador encontrado' : 'Seu catálogo ainda está vazio'}</strong>
+            <span>{props.players.length ? 'Tente outro nome ou remova algum filtro.' : 'Crie a primeira ficha por imagem ou preencha os dados manualmente.'}</span>
+            <div><button type="button" onClick={props.onReadCard}>Usar uma imagem</button><button type="button" onClick={props.onManualCard}>Nova ficha manual</button></div>
           </div>
         )}
       </section>
 
-      <button type="button" className="bm-simple-vault-link" onClick={props.onOpenVault}><ShieldCheck size={17}/> Abrir organização e backup dos jogadores</button>
+      <div className="bm32-player-footer-actions">
+        <button type="button" onClick={props.onOpenVault}><Trophy size={17}/> Cofre, comparação e backup</button>
+        <button type="button" className="primary" onClick={props.onManualCard}><Plus size={21}/> Novo jogador</button>
+      </div>
     </section>
   );
 }

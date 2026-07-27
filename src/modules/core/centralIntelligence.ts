@@ -12,6 +12,7 @@ export type CentralPlayerInput = {
   updatedAt: string;
   favorite?: boolean;
   status?: 'completo' | 'pendente' | 'revisar';
+  playerImage?: string | null;
   result: AnalysisResult;
 };
 
@@ -30,6 +31,8 @@ export type IntegratedPlayerRecord = {
   favorite: boolean;
   status: 'completo' | 'pendente' | 'revisar';
   updatedAt: string;
+  playerImage: string | null;
+  overall: number;
   matchCount: number;
   matchAverage: number;
   bestFormations: Array<{ id: string; name: string; slot: string; score: number }>;
@@ -134,6 +137,8 @@ export function buildIntegratedPlayers(inputs: CentralPlayerInput[], matches: Ma
       favorite: Boolean(entry.favorite),
       status: entry.status ?? (result.validation?.level === 'blocked' ? 'revisar' : result.trainingPointsRemaining === 0 ? 'completo' : 'pendente'),
       updatedAt: entry.updatedAt,
+      playerImage: entry.playerImage ?? null,
+      overall: Math.max(0, Math.round(Number(result.parsed.maxOverall || result.parsed.overall || result.bestPosition?.score || 0))),
       matchCount: match.count,
       matchAverage: match.average,
       bestFormations: formationFits,
