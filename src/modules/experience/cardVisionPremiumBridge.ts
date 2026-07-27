@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { readPremiumExperience2Preferences, savePremiumDraft, type Premium2Target } from './premiumExperience2';
 
-export type PremiumMainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes';
+export type PremiumMainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
 export type PremiumSettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'backup' | 'atualizacoes' | 'contas';
 
 export function premiumTargetForSection(section: PremiumMainSection): Premium2Target {
@@ -13,6 +13,8 @@ export function premiumTargetForSection(section: PremiumMainSection): Premium2Ta
   if (section === 'cofre' || section === 'jogadores' || section === 'resultado') return 'vault';
   if (section === 'time') return 'team';
   if (section === 'partidas') return 'matches';
+  if (section === 'menu') return 'home';
+  if (section === 'buscar') return 'vault';
   return 'appearance';
 }
 

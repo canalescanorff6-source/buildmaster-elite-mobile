@@ -1,1 +1,1 @@
-Implementa telas premium completas de Jogadores, Nova Ficha, Usar Imagem, Meu Time, Menu, Configurações e Buscar
+Corrige tipagem de navegação premium para aceitar as telas Menu e Buscar.
