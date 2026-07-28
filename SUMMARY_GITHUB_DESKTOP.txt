@@ -1,1 +1,1 @@
-Implementa Treinador de Partidas v31.70 com gravação Android, revisão e análise local
+Corrige rota inicial, reforça os testes de CI e atualiza GitHub Actions para Node 24

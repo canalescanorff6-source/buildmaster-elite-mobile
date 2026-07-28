@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v31.70 — Treinador de Partidas
+# BuildMaster Elite Tático v31.60 — OCR Rígido Adaptativo
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
@@ -105,30 +105,6 @@ Quando existem duas distribuições próximas, o app cria um teste A/B:
 - projeto limpo, sem `.git`, `node_modules`, builds antigos, APK, AAB ou credenciais.
 
 `CardVisionApp.tsx` e `analyzer.ts` ainda são arquivos grandes e permanecem monitorados pela auditoria. A lógica nova foi criada fora deles para evitar crescimento adicional e reduzir risco de regressão.
-
-
-## v31.70 — Treinador de Partidas
-
-A área **Partidas → Gravar e analisar** adiciona:
-
-- captura oficial Android via `MediaProjection`, sempre com autorização do usuário;
-- serviço em primeiro plano com notificação e botão para parar;
-- perfis Econômico, Equilibrado e Detalhado;
-- armazenamento privado em `Movies/BuildMasterMatches`;
-- importação de vídeo como alternativa no navegador;
-- análise local de quadros, movimento e possíveis congelamentos;
-- revisão manual de passe, perda perigosa, marcação, cursor, finalização, delay e gols;
-- relatório exportável com prioridades e regras para a próxima partida.
-
-A análise não controla o eFootball, não injeta comandos, não exibe assistência sobre a partida e não altera fichas automaticamente.
-
-No workflow Android, depois de `npx cap add android`, execute:
-
-```bash
-node scripts/install-android-security-plugin.mjs
-node scripts/install-match-recorder-plugin.mjs
-npx cap sync android
-```
 
 ## v31.60 — OCR Rígido Adaptativo
 

@@ -46,6 +46,11 @@ check(dataSafety.includes("APP_DATA_VERSION = '31.70.0'") && dataSafety.includes
 check(manifest.name === 'BuildMaster Elite Tático v31.70', 'Manifesto PWA sincronizado');
 check(sw.includes('buildmaster-v31-70'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
+check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
+for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
+for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowPlay.includes(marker), `Workflow Play usa ${marker}`);
+for (const marker of ['gradle/actions/setup-gradle@v6', 'actions/upload-artifact@v6']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
+for (const marker of ['android-actions/setup-android@v4', 'actions/upload-artifact@v6']) check(workflowPlay.includes(marker), `Workflow Play usa ${marker}`);
 check(cssFiles.length === 1 && path.basename(cssFiles[0]) === 'globals.css', 'Tema consolidado em um único CSS', cssFiles.map((file) => path.relative(root, file)).join(', '));
 check(!/@import\s+['"]/i.test(globals), 'CSS sem cadeia antiga de imports');
 for (const marker of ['.bm-v3000-play-publication', 'prefers-reduced-motion: reduce', ':focus-visible', '@media (max-width: 640px)']) {

@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Baixar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.source_ref || github.ref }}
           fetch-depth: 0
@@ -69,14 +69,14 @@ jobs:
           test ! -e public/update-manifest.json || { echo '::error::O manifesto local antigo não foi removido.'; exit 1; }
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: package-lock.json
 
       - name: Configurar Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -209,9 +209,10 @@ jobs:
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
 
-      - name: Validar sintaxe e contratos interativos
+      - name: Validar rotas, sintaxe e contratos interativos
         timeout-minutes: 6
         run: |
+          npm run quality:routes
           npm run quality:syntax
           npm run quality:interactive
 
@@ -313,7 +314,7 @@ jobs:
           PY
 
       - name: Configurar cache do Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
 
@@ -519,7 +520,7 @@ jobs:
           NOTES
 
       - name: Enviar pacote como artefato do workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: BuildMaster-Elite-Tatico-v${{ env.BUILDMASTER_VERSION }}-APK-e-Manifestos
           path: |

@@ -35,6 +35,8 @@ const sw = read('public/sw.js');
 const css = read('src/app/globals.css');
 const layout = read('src/app/layout.tsx');
 const rootPage = read('src/app/page.tsx');
+const privacyPage = read('src/app/privacidade/page.tsx');
+const deletionPage = read('src/app/excluir-conta/page.tsx');
 const workflow = read('.github/workflows/build-apk.yml');
 const playWorkflow = read('.github/workflows/build-play-store.yml');
 const capacitor = read('capacitor.config.ts');
@@ -48,14 +50,20 @@ check(manifest.name === 'BuildMaster Elite Tático v31.70' && manifest.short_nam
 check(sw.includes('buildmaster-v31-70'), 'Cache PWA renovado');
 check(!/@import\s+['"]/i.test(css) && css.includes('.bm-v3000-play-publication'), 'Tema de produção consolidado');
 check(layout.includes('bm-v3000-play-publication'), 'Escopo visual v30 ativo');
-check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp'), 'Rota inicial correta');
+check(rootPage.includes("@/components/AuthGate") && rootPage.includes("@/components/CardVisionApp") && rootPage.includes('<AuthGate>') && rootPage.includes('<CardVisionApp') && !/PrivacyPolicyPage|Política de privacidade|public-policy-page/.test(rootPage), 'Rota inicial correta', 'src/app/page.tsx deve abrir AuthGate + CardVisionApp e não pode conter a política de privacidade');
+check(/PrivacyPolicyPage|Política de privacidade/.test(privacyPage), 'Rota de privacidade separada');
+check(/AccountDeletionPage|Solicitar exclusão da conta/.test(deletionPage), 'Rota de exclusão separada');
 check(capacitor.includes("appId: 'com.buildmaster.elitetatico'") && capacitor.includes("webDir: 'out'") && capacitor.includes('webContentsDebuggingEnabled: false'), 'Capacitor configurado para produção');
-for (const command of ['npm run release:preflight', 'npm run quality:syntax', 'npm run quality:interactive', 'npm run typecheck', 'npm run test:all']) check(workflow.includes(command), `Workflow APK executa ${command}`);
+for (const command of ['npm run release:preflight', 'npm run quality:routes', 'npm run quality:syntax', 'npm run quality:interactive', 'npm run typecheck', 'npm run test:all']) check(workflow.includes(command), `Workflow APK executa ${command}`);
 for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
 for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
 check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run quality:audit', 'Bateria atual configurada');
 check(new Set(tsconfig.exclude ?? []).has('tests/types-v3000'), 'Fixtures isoladas fora do typecheck principal');
-check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-20-premium-interface-regression.mjs') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs'), 'Regressões atuais presentes');
+check(exists('scripts/check-app-routes.mjs') && exists('tests/v31-70-root-route-regression.mjs') && exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-20-premium-interface-regression.mjs') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs'), 'Regressões atuais presentes');
+for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflow.includes(marker), `Workflow APK atualizado para ${marker}`);
+for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(playWorkflow.includes(marker), `Workflow Play atualizado para ${marker}`);
+for (const marker of ['gradle/actions/setup-gradle@v6', 'actions/upload-artifact@v6']) check(workflow.includes(marker), `Workflow APK atualizado para ${marker}`);
+for (const marker of ['android-actions/setup-android@v4', 'actions/upload-artifact@v6']) check(playWorkflow.includes(marker), `Workflow Play atualizado para ${marker}`);
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 for (const file of [
   'src/lib/productionReadiness.ts',

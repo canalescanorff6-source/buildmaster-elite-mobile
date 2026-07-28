@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Baixar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar Supabase CLI
         uses: supabase/setup-cli@v1
