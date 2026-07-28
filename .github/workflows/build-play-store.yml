@@ -96,6 +96,7 @@ jobs:
           npm run quality:routes
           npm run quality:syntax
           npm run quality:interactive
+          npm run quality:typecheck-isolation
           npm run release:preflight
           npm run release:play-preflight
           npm run quality:audit

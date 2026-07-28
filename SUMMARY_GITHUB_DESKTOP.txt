@@ -1,1 +1,1 @@
-Corrige rota inicial, reforça os testes de CI e atualiza GitHub Actions para Node 24
+Corrige contaminação do TypeScript por stubs de testes e estabiliza o build v31.70
