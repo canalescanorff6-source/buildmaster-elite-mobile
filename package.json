@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v31-75-dynamic-efhub",
-  "version": "31.75.0",
+  "name": "buildmaster-elite-tatico-v31-76-video-gallery",
+  "version": "31.76.0",
   "private": true,
-  "description": "BuildMaster v31.75 com leitor eFHUB reconstruído, resolução dinâmica, oito áreas exatas e bloqueio seguro de prints cortados.",
+  "description": "BuildMaster v31.76 com gravação Android exportável para a Galeria, compartilhamento seguro e leitor eFHUB dinâmico preservado.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -27,7 +27,7 @@
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v3000": "tsc -p tests/types-v3000/tsconfig.json --pretty false && tsc -p tests/types-v3000/tsconfig-ui.json --pretty false",
     "test:v3000": "npm run typecheck:v3000 && node -r ./tests/_ts-require.cjs tests/v30-00-play-publication-regression.ts && node tests/v30-00-integrated-production-regression.mjs && node tests/v30-00-play-workflow-regression.mjs && npm run release:play-preflight && npm run quality:syntax && npm run quality:interactive && npm run release:preflight",
-    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run quality:audit",
+    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run quality:audit",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -74,7 +74,8 @@
     "typecheck:v3173": "tsc -p tests/types-v3173-ui/tsconfig.json --pretty false && tsc -p tests/types-v3173-edge/tsconfig.json --pretty false",
     "test:v3174": "npm run typecheck:v3173 && node tests/v31-74-account-create-regression.mjs",
     "typecheck:v3175": "tsc -p tests/types-v3160/tsconfig.json --pretty false && tsc -p tests/types-v3160-ui/tsconfig.json --pretty false",
-    "test:v3175": "npm run typecheck:v3175 && node -r ./tests/_ts-require.cjs tests/v31-75-dynamic-efhub-layout-regression.ts"
+    "test:v3175": "npm run typecheck:v3175 && node -r ./tests/_ts-require.cjs tests/v31-75-dynamic-efhub-layout-regression.ts",
+    "test:v3176": "tsc -p tests/types-v3170-ui/tsconfig.json --pretty false && npm run quality:native-java && node tests/v31-76-recording-export-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

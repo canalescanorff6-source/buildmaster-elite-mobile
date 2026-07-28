@@ -28,6 +28,13 @@ assert.match(service, /projection\.registerCallback/);
 assert.match(service, /createVirtualDisplay/);
 assert.match(service, /MediaRecorder\.VideoEncoder\.H264/);
 assert.match(service, /BuildMasterMatches/);
+assert.match(plugin, /public void exportRecording\(PluginCall call\)/);
+assert.match(plugin, /public void shareRecording\(PluginCall call\)/);
+assert.match(plugin, /Intent\.ACTION_SEND/);
+assert.match(plugin, /FLAG_GRANT_READ_URI_PERMISSION/);
+assert.match(service, /MediaStore\.Video\.Media\.RELATIVE_PATH/);
+assert.match(service, /BuildMaster\/Partidas/);
+assert.match(service, /MediaStore\.Video\.Media\.IS_PENDING/);
 assert.ok(service.includes('replaceFirst("\\\\.mp4$", "")'), 'O Java gerado deve escapar o ponto da extensão com duas barras.');
 assert.ok(service.includes('name.matches("match-[0-9]{10,20}\\\\.mp4")'), 'O filtro de gravações deve gerar uma expressão Java válida.');
 assert.ok(!service.includes('replaceFirst("\\.mp4$", "")'), 'O Java gerado não pode conter escape ilegal \\.');
@@ -44,4 +51,4 @@ assert.equal((mainAgain.match(/registerPlugin\(BuildMasterMatchRecorderPlugin\.c
 assert.equal((manifestAgain.match(/BuildMasterScreenRecordService/g) || []).length, 1);
 
 fs.rmSync(temp, { recursive: true, force: true });
-console.log('v31.72 instalador nativo MediaProjection idempotente aprovado.');
+console.log('v31.76 instalador nativo: MediaProjection, MediaStore e compartilhamento seguro aprovados.');

@@ -5,12 +5,12 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
 
-assert.equal(pkg.version, '31.75.0');
-assert.equal(lock.version, '31.75.0');
-assert.equal(lock.packages[''].version, '31.75.0');
-assert.equal(pkg.scripts['test:all'], 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run quality:audit');
+assert.equal(pkg.version, '31.76.0');
+assert.equal(lock.version, '31.76.0');
+assert.equal(lock.packages[''].version, '31.76.0');
+assert.equal(pkg.scripts['test:all'], 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run quality:audit');
 assert.match(read('src/lib/dataSafety.ts'), /CURRENT_DATA_SCHEMA = 3000/);
-assert.match(read('src/lib/dataSafety.ts'), /APP_DATA_VERSION = '31\.75\.0'/);
+assert.match(read('src/lib/dataSafety.ts'), /APP_DATA_VERSION = '31\.76\.0'/);
 
 const css = read('src/app/globals.css');
 assert.doesNotMatch(css, /@import\s+['"]/i, 'O tema precisa estar consolidado em um único arquivo.');
@@ -39,6 +39,6 @@ assert.doesNotMatch(rootPage, /Política de privacidade/, 'A política de privac
 assert.match(read('src/app/privacidade/page.tsx'), /Política de privacidade/);
 assert.ok(fs.existsSync('supabase/functions/account-deletion-request/index.ts'));
 assert.ok(fs.existsSync('supabase/functions/play-integrity-verify/index.ts'));
-assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v31.75');
+assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v31.76');
 
-console.log('v31.75 integração de produção limpa aprovada.');
+console.log('v31.76 integração de produção limpa aprovada.');

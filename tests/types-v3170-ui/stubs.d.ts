@@ -23,7 +23,7 @@ declare module 'lucide-react' {
   type Icon = (props: Record<string, unknown>) => JSX.Element;
   export const AlertTriangle: Icon; export const CheckCircle2: Icon; export const CircleStop: Icon;
   export const Clock3: Icon; export const Download: Icon; export const Film: Icon; export const Gauge: Icon;
-  export const Import: Icon; export const LoaderCircle: Icon; export const Play: Icon; export const RotateCcw: Icon;
+  export const Import: Icon; export const LoaderCircle: Icon; export const Play: Icon; export const RotateCcw: Icon; export const Share2: Icon;
   export const ShieldCheck: Icon; export const Smartphone: Icon; export const Trash2: Icon; export const Video: Icon; export const Wifi: Icon;
 }
 
@@ -38,7 +38,7 @@ declare module '@/modules/core/centralIntelligence' { export type TeamDiagnosis 
 
 declare module '@/modules/matches/matchRecorderBridge' {
   export type MatchRecordingQuality = 'economy' | 'balanced' | 'detailed';
-  export type MatchRecordingDescriptor = { id:string; path:string; fileName:string; sizeBytes:number; quality:MatchRecordingQuality; state:string };
+  export type MatchRecordingDescriptor = { id:string; path:string; uri?:string; publicFileName?:string; relativePath?:string; fileName:string; sizeBytes:number; quality:MatchRecordingQuality; state:string };
   export type MatchRecorderStatus = { state:string; active:boolean; startedAt:number|null; elapsedMs:number; last?:MatchRecordingDescriptor|null };
   export type MatchRecorderCapabilities = { supported:boolean; profiles:MatchRecordingQuality[]; maxRecommendedProfile:MatchRecordingQuality; reason?:string };
   export function deleteMatchRecording(id:string):Promise<boolean>;
@@ -47,6 +47,8 @@ declare module '@/modules/matches/matchRecorderBridge' {
   export function listMatchRecordings():Promise<MatchRecordingDescriptor[]>;
   export function listenToMatchRecorder(cb:(status:MatchRecorderStatus)=>void):Promise<{remove():Promise<void>}|null>;
   export function restoreMatchRecorderOrientation():Promise<boolean>;
+  export function saveMatchRecordingToGallery(id:string):Promise<{saved:boolean;reused:boolean;id:string;uri:string;fileName:string;relativePath:string}>;
+  export function shareMatchRecording(id:string):Promise<{saved:boolean;reused:boolean;shared:boolean;id:string;uri:string;fileName:string;relativePath:string}>;
   export function startMatchRecording(options:{quality:MatchRecordingQuality;landscape:boolean;includeMicrophone:boolean;title:string}):Promise<MatchRecorderStatus>;
   export function stopMatchRecording():Promise<MatchRecorderStatus>;
 }

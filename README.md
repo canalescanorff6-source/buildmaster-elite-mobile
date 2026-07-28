@@ -1,7 +1,17 @@
-# BuildMaster Elite Tático v31.75 — Leitor eFHUB dinâmico
+# BuildMaster Elite Tático v31.76 — Exportação de gravações e Galeria
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
+
+
+## v31.76 — Vídeo salvo fora do app
+
+- gravações continuam protegidas no espaço privado para análise;
+- ao finalizar, o app salva automaticamente uma cópia em `Filmes/BuildMaster/Partidas`;
+- botão **Salvar vídeo** permite repetir a exportação quando necessário;
+- botão **Compartilhar vídeo** abre o seletor oficial do Android;
+- exportação usa `MediaStore` e URI `content://`, sem caminhos `file://`;
+- excluir a sessão do BuildMaster preserva a cópia que já estiver na Galeria.
 
 ## v31.75 — Encaixe dinâmico do perfil eFHUB
 
