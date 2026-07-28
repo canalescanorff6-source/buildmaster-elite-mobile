@@ -1,0 +1,8 @@
+Motor Supremo de Fichas
+
+• 960 variações avaliadas para cada carta.
+• Posição, Estilo de Jogo, formação, técnico e proficiência combinados.
+• Pontos distribuídos pelo retorno real, sem buscar apenas overall.
+• Habilidades adicionais personalizadas e teste A/B.
+• Correção do reconhecimento de Primeiro Volante.
+• Interface premium e funções anteriores preservadas.

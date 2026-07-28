@@ -2,8 +2,9 @@ import { createZoneOriginPreview, type OcrZone, type OcrZoneKey } from '@/lib/oc
 import type { PremiumEnhancementMode, PremiumZoneReading } from '@/lib/premiumReading';
 import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManager';
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
+import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 
-export const HIGH_PRECISION_OCR_VERSION = '31.10-ultra-precision-1';
+export const HIGH_PRECISION_OCR_VERSION = '31.60-forensic-vision-2';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;
@@ -29,6 +30,9 @@ type ScoredPass = {
   normalized: string;
   structureScore: number;
   lexiconMatch?: string;
+  regionId: string;
+  regionLabel: string;
+  regionPriority: number;
 };
 
 const NAME_BLOCKLIST = [
@@ -161,7 +165,9 @@ function nearestKnownName(value: string, knownNames: string[]) {
     const similarity = textSimilarity(value, name);
     if (!best || similarity > best.similarity) best = { name, similarity };
   }
-  return best && best.similarity >= 0.88 ? best : null;
+  if (!best) return null;
+  const threshold = Math.min(compact(value).length, compact(best.name).length) <= 8 ? 0.94 : 0.90;
+  return best.similarity >= threshold ? best : null;
 }
 
 function repairNumericText(text: string) {
@@ -267,13 +273,15 @@ function passPlan(key: OcrZoneKey, mode: 'balanced' | 'precision' | 'fast'): Pre
     { enhancement: 'color', kind: 'table' },
     { enhancement: 'contrast', kind: 'table' },
     { enhancement: 'sharp', kind: 'table' },
-    { enhancement: 'binary', kind: 'table' }
+    { enhancement: 'binary', kind: 'table' },
+    { enhancement: 'contrast', kind: 'tableSparse', expanded: true }
   ];
   if (key === 'skills' || key === 'impetos') return [
     { enhancement: 'color', kind: key === 'skills' ? 'skills' : 'style' },
     { enhancement: 'contrast', kind: key === 'skills' ? 'skills' : 'style' },
     { enhancement: 'sharp', kind: key === 'skills' ? 'skills' : 'style' },
-    { enhancement: 'binary', kind: key === 'skills' ? 'skills' : 'style' }
+    { enhancement: 'binary', kind: key === 'skills' ? 'skills' : 'style' },
+    ...(key === 'skills' ? [{ enhancement: 'contrast' as const, kind: 'skillsSparse' as const, expanded: true }] : [])
   ];
   return [
     { enhancement: 'color', kind: key === 'playstyle' ? 'style' : 'general' },
@@ -305,11 +313,13 @@ function selectBestPass(key: OcrZoneKey, passes: ScoredPass[]) {
     const averageConfidence = cluster.reduce((sum, pass) => sum + pass.confidence, 0) / cluster.length;
     const averageStructure = cluster.reduce((sum, pass) => sum + pass.structureScore, 0) / cluster.length;
     const uniqueModes = new Set(cluster.map((pass) => pass.enhancement)).size;
-    const agreementBonus = Math.min(24, Math.max(0, (uniqueModes - 1) * 8));
+    const uniqueRegions = new Set(cluster.map((pass) => pass.regionId)).size;
+    const agreementBonus = Math.min(27, Math.max(0, (uniqueModes - 1) * 6 + (uniqueRegions - 1) * 5));
     const lexiconBonus = cluster.some((pass) => pass.lexiconMatch) ? 8 : 0;
-    const score = clamp(averageConfidence * 0.76 + averageStructure + agreementBonus + lexiconBonus);
-    const representative = [...cluster].sort((left, right) => (right.confidence + right.structureScore) - (left.confidence + left.structureScore))[0];
-    return { cluster, representative, score, uniqueModes };
+    const regionBonus = Math.max(0, Math.min(5, (cluster.reduce((sum, pass) => sum + pass.regionPriority, 0) / cluster.length - 88) / 2));
+    const score = clamp(averageConfidence * 0.73 + averageStructure + agreementBonus + lexiconBonus + regionBonus);
+    const representative = [...cluster].sort((left, right) => (right.confidence + right.structureScore + right.regionPriority / 10) - (left.confidence + left.structureScore + left.regionPriority / 10))[0];
+    return { cluster, representative, score, uniqueModes, uniqueRegions };
   }).sort((left, right) => right.score - left.score);
   return ranked[0] ?? null;
 }
@@ -327,17 +337,26 @@ export async function recognizeZoneWithHighPrecision(
 ): Promise<PremiumZoneReading> {
   const knownNames = Array.from(new Set((options.knownPlayerNames ?? []).map((name) => name.trim()).filter(Boolean)));
   const plans = passPlan(zone.key, options.readingMode);
+  const variants = adaptiveZoneVariants(zone, options.readingMode);
   const originPreview = await createZoneOriginPreview(file, zone).catch(() => null);
   const scoredPasses: ScoredPass[] = [];
+  const tasks = variants.flatMap((variant, variantIndex) => {
+    const selectedPlans = variantIndex === 0
+      ? plans
+      : variantIndex === 1
+        ? plans.slice(0, Math.min(2, plans.length))
+        : plans.slice(0, 1);
+    return selectedPlans.map((plan) => ({ variant, plan }));
+  });
 
-  for (let index = 0; index < plans.length; index += 1) {
-    const plan = plans[index];
-    const region = plan.expanded ? expandOcrRegion(zone, zone.key === 'name' ? 0.08 : 0.035, zone.key === 'name' ? 0.035 : 0.02) : zone;
-    const image = await cropImage(file, region, options.targetWidth, plan.enhancement);
+  for (let index = 0; index < tasks.length; index += 1) {
+    const { variant, plan } = tasks[index];
+    const baseRegion = plan.expanded ? expandOcrRegion(variant.zone, zone.key === 'name' ? 0.06 : 0.025, zone.key === 'name' ? 0.025 : 0.015) : variant.zone;
+    const image = await cropImage(file, baseRegion, options.targetWidth, plan.enhancement);
     const recognition = await recognizeWithOcrWorker(image, {
-      label: `${options.labelPrefix ? `${options.labelPrefix} • ` : ''}${zone.label} • ${plan.enhancement} ${index + 1}/${plans.length}`,
+      label: `${options.labelPrefix ? `${options.labelPrefix} • ` : ''}${zone.label} • ${variant.label} • ${plan.enhancement} ${index + 1}/${tasks.length}`,
       kind: plan.kind,
-      cacheKey: `${options.imageHash}:${options.template}:${zone.key}:${plan.enhancement}:${plan.kind}:${plan.expanded ? 'expanded' : 'exact'}`
+      cacheKey: `${options.imageHash}:${options.template}:${zone.key}:${variant.id}:${plan.enhancement}:${plan.kind}:${plan.expanded ? 'expanded' : 'exact'}`
     });
     const repaired = repairByZone(recognition.text, zone.key, knownNames);
     const nameCandidate = zone.key === 'name' ? nameLineCandidates(repaired)[0] : undefined;
@@ -351,37 +370,45 @@ export async function recognizeZoneWithHighPrecision(
       kind: plan.kind,
       normalized: comparable(text),
       structureScore: structureScore(zone.key, text),
+      regionId: variant.id,
+      regionLabel: variant.label,
+      regionPriority: variant.priority,
       ...(lexicon ? { lexiconMatch: lexicon.name } : {})
     });
 
-    if (scoredPasses.length >= 2) {
+    if (scoredPasses.length >= 3) {
       const interim = selectBestPass(zone.key, scoredPasses);
-      const critical = zone.key === 'name' || zone.key === 'overall' || zone.key === 'level' || zone.key === 'points' || zone.key === 'mainPosition';
-      const enoughPasses = zone.key === 'name' ? scoredPasses.length >= 3 : true;
-      const targetScore = zone.key === 'name' ? 94 : critical ? 92 : 88;
-      if (interim && enoughPasses && interim.uniqueModes >= 2 && interim.cluster.length >= 2 && interim.score >= targetScore) break;
+      const critical = zone.key === 'name' || zone.key === 'overall' || zone.key === 'level' || zone.key === 'points' || zone.key === 'mainPosition' || zone.key === 'playstyle';
+      const enoughPasses = zone.key === 'name' ? scoredPasses.length >= 5 : true;
+      const targetScore = zone.key === 'name' ? 95 : critical ? 93 : 89;
+      const regionAgreement = interim?.uniqueRegions ?? 0;
+      if (interim && enoughPasses && interim.uniqueModes >= 2 && regionAgreement >= (zone.key === 'name' ? 2 : 1) && interim.cluster.length >= 2 && interim.score >= targetScore) break;
     }
   }
 
   const selection = selectBestPass(zone.key, scoredPasses);
   const representative = selection?.representative ?? scoredPasses[0];
-  const text = representative?.text ?? '';
+  let text = representative?.text ?? '';
   const uniqueAgreement = selection?.uniqueModes ?? 0;
+  const regionAgreement = selection?.uniqueRegions ?? 0;
   const required = requiredAgreement(zone.key);
   const finalConfidence = selection ? Math.round(selection.score) : 0;
   const disagreement = selection && scoredPasses.length > selection.cluster.length;
   const strictConfirmed = Boolean(text.trim())
     && finalConfidence >= (zone.key === 'name' ? 92 : zone.key === 'overall' || zone.key === 'level' || zone.key === 'points' ? 90 : 86)
     && uniqueAgreement >= required
+    && regionAgreement >= (zone.key === 'name' ? 2 : 1)
     && !(zone.key === 'name' && disagreement && selection.cluster.length === 1);
+  const conflictingName = zone.key === 'name' && Boolean(selection) && (selection?.cluster.length ?? 0) < 2 && scoredPasses.filter((pass) => pass.text.trim()).length >= 2;
+  if (conflictingName && !representative?.lexiconMatch) text = '';
   const status = strictConfirmed ? 'confirmed' as const : text.trim() ? 'review' as const : 'unread' as const;
   const consistency = scoredPasses.length
     ? Math.round(((selection?.cluster.length ?? 0) / scoredPasses.length) * 100)
     : 0;
   const notes: string[] = [];
-  notes.push(`${scoredPasses.length} passagem(ns) local(is) comparadas; ${uniqueAgreement} modo(s) concordaram.`);
+  notes.push(`${scoredPasses.length} passagem(ns) local(is) comparadas; ${uniqueAgreement} tratamento(s) e ${regionAgreement} enquadramento(s) concordaram.`);
   if (representative?.lexiconMatch) notes.push(`Nome conciliado com histórico confirmado: ${representative.lexiconMatch}.`);
-  if (!strictConfirmed && zone.key === 'name') notes.push('Nome mantido para revisão porque a meta de consenso quase total não foi atingida.');
+  if (!strictConfirmed && zone.key === 'name') notes.push(text ? 'Nome mantido para revisão porque a meta de consenso quase total não foi atingida.' : 'Nome não foi preenchido automaticamente: os recortes divergiram e o app preferiu bloquear a inventar outro jogador.');
   if (disagreement) notes.push('Foram detectadas leituras divergentes; o app escolheu o grupo com maior consenso e preservou as alternativas.');
 
   return {
@@ -406,7 +433,7 @@ export async function recognizeZoneWithHighPrecision(
       .sort((left, right) => (right.confidence + right.structureScore) - (left.confidence + left.structureScore))
       .slice(0, 5)
       .map((pass) => ({ text: pass.text, confidence: clamp(Math.round(pass.confidence + pass.structureScore / 3)), enhancement: pass.enhancement })),
-    rawPasses: scoredPasses.map((pass) => ({ text: pass.rawText, confidence: pass.confidence, enhancement: pass.enhancement, kind: pass.kind }))
+    rawPasses: scoredPasses.map((pass) => ({ text: pass.rawText, confidence: pass.confidence, enhancement: pass.enhancement, kind: `${pass.kind}:${pass.regionId}` }))
   };
 }
 

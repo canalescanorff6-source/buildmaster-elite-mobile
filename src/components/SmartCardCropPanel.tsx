@@ -28,19 +28,19 @@ export function SmartCardCropPanel({
     <div className="smart-card-crop-shell">
       <figure className="smart-card-crop-preview">
         {playerCardImage ? (
-          <img src={playerCardImage} alt="Carta do jogador detectada e recortada" />
+          <img src={playerCardImage} alt="Foto quadrada do jogador detectada dentro da carta" />
         ) : (
           <div className="smart-card-crop-loading"><Loader2 className="spin" size={24} /><span>Detectando somente a carta...</span></div>
         )}
         <figcaption>
-          <span><Crop size={14} /> Carta detectada</span>
+          <span><Crop size={14} /> Foto do jogador detectada</span>
           <strong>{cropResult ? `${cropResult.confidence}% de confiança` : 'Preparando recorte'}</strong>
         </figcaption>
       </figure>
 
       <div className="smart-card-crop-copy">
-        <strong>Somente a carta aparecerá na ficha</strong>
-        <span>O print completo continua sendo usado por trás para ler nome, atributos, habilidades e Ímpetos.</span>
+        <strong>Recorte quadrado da foto, sem bordas do menu</strong>
+        <span>O app detecta primeiro a carta inteira, refina as bordas e recorta a área interna do jogador. O print completo continua sendo usado para nome, atributos, habilidades e Ímpetos.</span>
         <button type="button" onClick={onToggleAdjust} disabled={!cropResult}>
           <Crop size={15} /> {adjustOpen ? 'Fechar ajuste' : 'Ajustar recorte'}
         </button>
@@ -60,6 +60,8 @@ export function SmartCardCropPanel({
 
       <details className="smart-card-original-print">
         <summary>Ver print completo usado na leitura</summary>
+        {cropResult?.preview && <><small>Carta inteira detectada antes do recorte interno</small><img src={cropResult.preview} alt="Carta inteira detectada para orientar o recorte da foto" /></>}
+        <small>Print original</small>
         <img src={fullPreview} alt="Print completo selecionado para leitura" />
         <small>{qualityText}</small>
       </details>

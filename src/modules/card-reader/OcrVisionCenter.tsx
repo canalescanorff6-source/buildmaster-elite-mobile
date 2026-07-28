@@ -23,7 +23,7 @@ export function OcrVisionCenter({ session, rawText }: OcrVisionCenterProps) {
     return (
       <section className="bm2930-ocr-center luxury-panel" aria-labelledby="bm2930-ocr-title">
         <div className="bm2930-panel-heading">
-          <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">OCR Vision 2.0</h3><span>Importe e analise um print para abrir a auditoria de duas passagens.</span></div>
+          <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">Leitor eFHUB Forense 4.0</h3><span>Importe um print para validar qualidade, enquadramento, campos e consenso por linha.</span></div>
           <strong className="state-idle">Aguardando print</strong>
         </div>
       </section>
@@ -33,12 +33,13 @@ export function OcrVisionCenter({ session, rawText }: OcrVisionCenterProps) {
   return (
     <section className="bm2930-ocr-center luxury-panel" aria-labelledby="bm2930-ocr-title">
       <div className="bm2930-panel-heading">
-        <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">OCR Vision 2.0</h3><span>Geometria, duas passagens seletivas e validação pela base oficial.</span></div>
+        <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">Leitor eFHUB Forense 4.0</h3><span>Perfil eFHUB dedicado, portões 26/13/16, memória de enquadramento e validação oficial.</span></div>
         <strong className={`state-${audit.state}`}>{audit.score}/100 • {stateLabel[audit.state]}</strong>
       </div>
 
       <div className="bm2930-ocr-metrics">
-        <article><Eye size={18} /><div><span>Layout</span><strong>{audit.template}</strong><small>{session.width}×{session.height} • {audit.resolutionClass}</small></div></article>
+        <article><Eye size={18} /><div><span>Layout</span><strong>{session.detailedReading.profileAudit.detected ? 'eFHUB completo' : audit.template}</strong><small>{session.width}×{session.height} • {audit.resolutionClass}</small></div></article>
+        <article><ScanLine size={18} /><div><span>Qualidade do print</span><strong>{session.scanQuality ? `${session.scanQuality.score}/100` : '—'}</strong><small>{session.scanQuality?.state ?? 'sem diagnóstico'}</small></div></article>
         <article><ShieldCheck size={18} /><div><span>Base ativa</span><strong>{audit.rulePackVersion}</strong><small>posições, estilos e habilidades</small></div></article>
         <article><Sparkles size={18} /><div><span>Campos confiáveis</span><strong>{audit.fields.filter((field) => field.status === 'trusted').length}/{audit.fields.length}</strong><small>sem inventar dados ausentes</small></div></article>
         <article><AlertTriangle size={18} /><div><span>Bloqueios</span><strong>{audit.blockingFields.length}</strong><small>{audit.goalkeeperGuard === 'review' ? 'trava específica de goleiro' : 'campos obrigatórios'}</small></div></article>

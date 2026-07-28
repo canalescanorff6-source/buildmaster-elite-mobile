@@ -40,11 +40,11 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '31.20.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'31.20.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '31.20.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v31.20', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v31-20'), 'Cache PWA sincronizado');
+check(pkg.version === '31.60.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'31.60.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '31.60.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
+check(manifest.name === 'BuildMaster Elite Tático v31.60', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v31-60'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(cssFiles.length === 1 && path.basename(cssFiles[0]) === 'globals.css', 'Tema consolidado em um único CSS', cssFiles.map((file) => path.relative(root, file)).join(', '));
 check(!/@import\s+['"]/i.test(globals), 'CSS sem cadeia antiga de imports');
@@ -58,6 +58,8 @@ for (const file of [
   'src/components/PrecisionBuildPanel.tsx',
   'src/modules/builds/advancedBuildIntelligence.ts',
   'src/modules/card-reader/ocrVisionEngine.ts',
+  'src/modules/card-reader/forensicConsensus.ts',
+  'src/modules/card-reader/templateCalibration.ts',
   'src/modules/administration/AdministrationSecurityCenter.tsx',
   'src/modules/backup/CloudSyncCenter.tsx',
   'src/modules/publication/PlayStorePublicationCenter.tsx',
@@ -79,12 +81,22 @@ for (const file of [
   'tests/types-v3100/tsconfig.json',
   'tests/types-v3110/tsconfig.json',
   'tests/types-v3110-ui/tsconfig.json',
-  'src/lib/tacticalPlanningEngine.ts'
+  'src/lib/tacticalPlanningEngine.ts',
+  'src/lib/supremeGameplayEngine.ts',
+  'src/components/result/SupremeGameplayCard.tsx',
+  'tests/types-v3130/tsconfig.json',
+  'tests/types-v3130-ui/tsconfig.json',
+  'src/modules/card-reader/adaptiveZoneSearch.ts',
+  'src/modules/card-reader/learnedOcrLexicon.ts',
+  'tests/types-v3140/tsconfig.json',
+  'tests/types-v3140-ui/tsconfig.json',
+  'tests/types-v3150/tsconfig.json',
+  'tests/types-v3150-ui/tsconfig.json'
 ]) check(exists(file), `Arquivo essencial presente: ${file}`);
 
-check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run quality:audit', 'Bateria de testes limpa e atual');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run quality:audit', 'Bateria de testes limpa e atual');
 check(workflowApk.includes('npm run test:all') && workflowPlay.includes('npm run test:all'), 'Workflows usam a bateria atual');
-check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts'), 'Regressões atuais presentes');
+check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts'), 'Regressões atuais presentes');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 
 // Confere imports internos e alcançabilidade do código da aplicação.

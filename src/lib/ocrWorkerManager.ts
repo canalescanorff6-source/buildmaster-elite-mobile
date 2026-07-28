@@ -1,7 +1,7 @@
 import type TesseractNamespace from 'tesseract.js';
 import { runtimeGet, runtimePut, runtimeTrimStore } from './localDatabase';
 
-export type OcrFieldKind = 'general' | 'name' | 'nameSparse' | 'singleWord' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills' | 'table';
+export type OcrFieldKind = 'general' | 'name' | 'nameSparse' | 'singleWord' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills' | 'skillsSparse' | 'table' | 'tableSparse';
 
 export type OcrProgress = {
   label: string;
@@ -86,7 +86,9 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
     style: '7',
     attributes: '6',
     skills: '6',
-    table: '6'
+    skillsSparse: '11',
+    table: '6',
+    tableSparse: '11'
   } as const;
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.";
   const whitelist: Partial<Record<OcrFieldKind, string>> = {

@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v31.20 — Inteligência Total da Carta
+# BuildMaster Elite Tático v31.60 — OCR Rígido Adaptativo
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
@@ -105,6 +105,25 @@ Quando existem duas distribuições próximas, o app cria um teste A/B:
 - projeto limpo, sem `.git`, `node_modules`, builds antigos, APK, AAB ou credenciais.
 
 `CardVisionApp.tsx` e `analyzer.ts` ainda são arquivos grandes e permanecem monitorados pela auditoria. A lógica nova foi criada fora deles para evitar crescimento adicional e reduzir risco de regressão.
+
+## v31.60 — OCR Rígido Adaptativo
+
+- Recorte automático refinado da carta e recorte interno quadrado da foto do jogador.
+- Nome aceito somente com consenso entre recortes ou correspondência forte no catálogo confirmado.
+- Leitura independente para atributos, posições, Ímpetos e habilidades.
+- Habilidades desconhecidas são preservadas para confirmação, nunca descartadas silenciosamente.
+- Catálogo local por conta aprende nomes e habilidades confirmados e participa das leituras futuras.
+- Backup integral inclui o catálogo aprendido.
+- Motor Supremo v31.30 e contexto tático permanecem ativos.
+
+## v31.30 — Motor Supremo de Fichas
+
+- Otimização determinística de 960 variações por carta.
+- Orçamento exato, retorno marginal e limites úteis de atributos.
+- Posição escolhida, Estilo de Jogo, formação, estilo coletivo, técnico e proficiência aplicados juntos.
+- Cinco habilidades adicionais personalizadas e robustez online.
+- Comparação auditável com ficha anterior, treino automático e referências profissionais da carta exata.
+- Teste A/B e aprendizado a partir das partidas registradas.
 
 ## v31.20 — Interface Premium 3 em 1
 

@@ -1,0 +1,8 @@
+OCR Rígido Adaptativo
+
+• Recorte mais preciso da carta e foto quadrada do jogador.
+• Nome bloqueado quando não existe consenso suficiente, evitando nomes aleatórios.
+• Leitura multirrecorte de atributos, posição, nível, pontos, Ímpetos e habilidades.
+• Habilidades novas ficam disponíveis para confirmação e entram no catálogo local da conta.
+• Catálogo aprendido incluído no backup e restauração.
+• Motor Supremo e interfaces premium preservados.

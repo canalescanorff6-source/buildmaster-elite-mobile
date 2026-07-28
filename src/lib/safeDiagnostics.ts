@@ -98,7 +98,7 @@ export async function createSafeDiagnosticReport(input: {
   integrity: unknown;
   migrationLog: string[];
 }): Promise<SafeDiagnosticReport> {
-  const stores = ['ocr-cache', 'ocr-corrections', 'scan-history', 'diagnostics', 'image-thumbnails', 'ocr-queue', 'cards', 'builds', 'formations', 'matches'] as const;
+  const stores = ['ocr-cache', 'ocr-corrections', 'ocr-lexicon', 'scan-history', 'diagnostics', 'image-thumbnails', 'ocr-queue', 'cards', 'builds', 'formations', 'matches'] as const;
   const counts: Record<string, number> = {};
   for (const store of stores) {
     counts[store] = (await runtimeList(store, 1000).catch(() => [])).length;

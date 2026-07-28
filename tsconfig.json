@@ -45,6 +45,12 @@
     "tests/types-v3050",
     "tests/types-v3100",
     "tests/types-v3110",
-    "tests/types-v3110-ui"
+    "tests/types-v3110-ui",
+    "tests/types-v3130",
+    "tests/types-v3130-ui",
+    "tests/types-v3140",
+    "tests/types-v3140-ui",
+    "tests/types-v3150",
+    "tests/types-v3150-ui"
   ]
 }

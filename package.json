@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v31-20-production",
-  "version": "31.20.0",
+  "name": "buildmaster-elite-tatico-v31-60-production",
+  "version": "31.60.0",
   "private": true,
-  "description": "BuildMaster v31.20 com três interfaces premium selecionáveis, dashboard refinado, Técnicos 2.0, Formações 2.0 e Inteligência Total.",
+  "description": "BuildMaster v31.60 com leitor eFHUB dedicado, portões rígidos 26/13/16, recorte quadrado da foto e catálogo evolutivo de habilidades.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -27,7 +27,7 @@
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v3000": "tsc -p tests/types-v3000/tsconfig.json --pretty false && tsc -p tests/types-v3000/tsconfig-ui.json --pretty false",
     "test:v3000": "npm run typecheck:v3000 && node -r ./tests/_ts-require.cjs tests/v30-00-play-publication-regression.ts && node tests/v30-00-integrated-production-regression.mjs && node tests/v30-00-play-workflow-regression.mjs && npm run release:play-preflight && npm run quality:syntax && npm run quality:interactive && npm run release:preflight",
-    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run quality:audit",
+    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run quality:audit",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -47,8 +47,16 @@
     "test:v3100": "npm run typecheck:v3100 && node -r ./tests/_ts-require.cjs tests/v31-10-unified-intelligence-regression.ts",
     "typecheck:v3110": "tsc -p tests/types-v3110/tsconfig.json --pretty false && tsc -p tests/types-v3110-ui/tsconfig.json --pretty false",
     "test:v3110": "npm run typecheck:v3110 && node -r ./tests/_ts-require.cjs tests/v31-10-tactical-planning-regression.ts && node tests/v31-10-root-typecheck-isolation-regression.mjs && node tests/v31-10-result-workspace-typecheck-regression.mjs",
-    "test:v3120": "npm run typecheck:v3110 && node tests/v31-20-premium-interface-regression.mjs",
-    "test:premium-complete": "node tests/v31-20-premium-complete-screens-regression.mjs"
+    "test:v3120": "npm run typecheck:v3110 && node tests/v31-20-premium-interface-regression.mjs && node tests/v31-20-tactical-context-restored-regression.mjs",
+    "test:premium-complete": "node tests/v31-20-premium-complete-screens-regression.mjs",
+    "typecheck:v3130": "tsc -p tests/types-v3130/tsconfig.json --pretty false && tsc -p tests/types-v3130-ui/tsconfig.json --pretty false",
+    "test:v3130": "npm run typecheck:v3130 && node -r ./tests/_ts-require.cjs tests/v31-30-supreme-gameplay-regression.ts",
+    "typecheck:v3140": "tsc -p tests/types-v3140/tsconfig.json --pretty false && tsc -p tests/types-v3140-ui/tsconfig.json --pretty false",
+    "test:v3140": "npm run typecheck:v3140 && node -r ./tests/_ts-require.cjs tests/v31-40-rigid-adaptive-ocr-regression.ts",
+    "typecheck:v3150": "tsc -p tests/types-v3150/tsconfig.json --pretty false && tsc -p tests/types-v3150-ui/tsconfig.json --pretty false",
+    "test:v3150": "npm run typecheck:v3150 && node -r ./tests/_ts-require.cjs tests/v31-50-forensic-scanner-regression.ts",
+    "typecheck:v3160": "tsc -p tests/types-v3160/tsconfig.json --pretty false && tsc -p tests/types-v3160-ui/tsconfig.json --pretty false",
+    "test:v3160": "npm run typecheck:v3160 && node -r ./tests/_ts-require.cjs tests/v31-60-efhub-profile-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

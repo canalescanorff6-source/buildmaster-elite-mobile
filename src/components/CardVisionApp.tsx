@@ -66,6 +66,7 @@ import {
   type PremiumZoneReading
 } from '@/lib/premiumReading';
 import { MANAGERS, getManager } from '@/lib/managers';
+import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import type { PrintQualityReport } from '@/lib/validation';
 import { comparePlayers } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
@@ -88,7 +89,7 @@ import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
 import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
 import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
-import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, formations, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
@@ -125,9 +126,12 @@ import {
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, refineSinglePrintGeometryFromText, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
-import { adjustCardCropBox, createSmartCardPreview, renderCardCropPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
+import { adjustCardCropBox, createEfhubCardPreview, createSmartCardPreview, renderCardCropPreview, renderPlayerPortraitPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
 import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { recognizeZoneWithHighPrecision } from '@/modules/card-reader/highPrecisionOcr';
+import { learnedCanonicalValues, learnConfirmedOcrBatch, loadLearnedOcrTerms } from '@/modules/card-reader/learnedOcrLexicon';
+import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsensus';
+import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
 import { validateImageFile } from '@/modules/images/imageSafety';
@@ -266,7 +270,9 @@ type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | '
 async function createPlayerCardPreview(file: File): Promise<CardCropResult | null> {
   try {
     const geometry = await inspectSinglePrintGeometry(file);
-    return await createSmartCardPreview(file, geometry.cardArtZone);
+    const calibration = await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
+    const remembered = applyRememberedCardBox(geometry.cardArtZone, calibration);
+    return await createSmartCardPreview(file, remembered);
   } catch {
     return null;
   }
@@ -489,8 +495,16 @@ export function CardVisionApp() {
   }, [enhancedPreview]);
   const canProceed = useMemo(() => !loading && rawText.trim().length > 2, [rawText, loading]);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
+  const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
+  const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? null, [formation]);
   const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null }), [formation, teamStyle, selectedManager]);
-  const selectedFormationGuide = formation === 'AUTO' ? null : formationGuides[formation];
+  const selectedFormationGuide = useMemo(() => {
+    if (formation === 'AUTO') return null;
+    const savedGuide = formationGuides[formation];
+    if (savedGuide) return savedGuide;
+    if (!selectedFormationBlueprint) return null;
+    return { title: `${selectedFormationBlueprint.name} — leitura por funções`, bestStyle: selectedFormationBlueprint.idealStyles[0] ?? 'POSSE_DE_BOLA', styleReason: `${selectedFormationBlueprint.description} Risco principal: ${selectedFormationBlueprint.risk}`, howToPlay: selectedFormationBlueprint.behavior, roles: selectedFormationBlueprint.slots.filter((slot) => slot.line !== 'goleiro').slice(0, 6).map((slot) => `${slot.label}: ${slot.duty}`) };
+  }, [formation, selectedFormationBlueprint]);
   const activeSavedAnalysis = useMemo(() => {
     if (!result) return null;
     const key = resultHistoryKey(result);
@@ -1190,7 +1204,8 @@ export function CardVisionApp() {
         matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
         ocrZones: readJsonStorage(CALIBRATION_KEY, ocrZones),
         learning: readJsonStorage(LEARNING_KEY, {}),
-        corrections: readJsonStorage(CORRECTION_KEY, {})
+        corrections: readJsonStorage(CORRECTION_KEY, {}),
+        ocrLexicon: (await runtimeList('ocr-lexicon', 500).catch(() => [])).map((entry) => entry.value)
       },
       plans: readJsonStorage('buildmaster_team_plans_v25_19', {}),
       folders: readJsonStorage(VAULT_FOLDERS_KEY, []),
@@ -1393,6 +1408,14 @@ export function CardVisionApp() {
       writeStorage(LEARNING_KEY, calibration.learning ?? {});
       writeStorage(CORRECTION_KEY, calibration.corrections ?? {});
       if (Array.isArray(calibration.ocrZones)) setOcrZones(calibration.ocrZones as OcrZone[]);
+      if (Array.isArray(calibration.ocrLexicon)) {
+        for (const rawTerm of calibration.ocrLexicon) {
+          if (!rawTerm || typeof rawTerm !== 'object') continue;
+          const term = rawTerm as { id?: string };
+          if (term.id) await runtimePut('ocr-lexicon', term.id, rawTerm);
+        }
+        void runtimeTrimStore('ocr-lexicon', 420).catch(() => undefined);
+      }
     }
     if (selected.plans) writeStorage('buildmaster_team_plans_v25_19', sections.plans ?? {});
     if (selected.folders && Array.isArray(sections.folders)) {
@@ -1884,14 +1907,15 @@ export function CardVisionApp() {
     if (!selectedFile || !cardCropResult) return;
     const box = adjustCardCropBox(cardCropResult.box, action), adjustedPreview = await renderCardCropPreview(selectedFile, box).catch(() => null);
     if (!adjustedPreview) { setStatus('Não foi possível aplicar este ajuste. O recorte anterior foi mantido.'); return; }
-    setPlayerCardImage(adjustedPreview); setCardCropResult({ ...cardCropResult, preview: adjustedPreview, box, method: 'manual-adjustment', confidence: Math.max(60, cardCropResult.confidence - 2) });
+    const portrait = await renderPlayerPortraitPreview(selectedFile, box).catch(() => null);
+    setPlayerCardImage(portrait?.preview ?? adjustedPreview); setCardCropResult({ ...cardCropResult, preview: adjustedPreview, portraitPreview: portrait?.preview ?? null, portraitBox: portrait?.box, box, method: 'manual-adjustment', confidence: Math.max(60, cardCropResult.confidence - 2) });
     setStatus('Recorte da carta ajustado. A leitura continua usando o print original completo.');
   }
   async function redetectPlayerCard() {
     if (!selectedFile) return; setStatus('Redetectando somente a carta do jogador...');
     const detected = await createPlayerCardPreview(selectedFile).catch(() => null);
     if (!detected) { setStatus('A carta não foi detectada com segurança. Use os controles de ajuste no recorte atual.'); return; }
-    setPlayerCardImage(detected.preview); setCardCropResult(detected);
+    setPlayerCardImage(detected.portraitPreview ?? detected.preview); setCardCropResult(detected);
     setStatus(`Carta detectada com ${detected.confidence}% de confiança. Confira o enquadramento antes de gerar a ficha.`);
   }
   async function handleFile(file: File) {
@@ -1910,7 +1934,7 @@ export function CardVisionApp() {
     if (enhancedObjectUrlRef.current) { URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = null; } setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
     const croppedPreview = await createPlayerCardPreview(file).catch(() => null);
-    if (croppedPreview) { setPlayerCardImage(croppedPreview.preview); setCardCropResult(croppedPreview); }
+    if (croppedPreview) { setPlayerCardImage(croppedPreview.portraitPreview ?? croppedPreview.preview); setCardCropResult(croppedPreview); }
     const quality = await inspectPrintQuality(file).catch(() => null);
     setQualityReport(quality);
     const nextMode = suggestedEnhancement(quality);
@@ -1944,7 +1968,10 @@ export function CardVisionApp() {
     if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
     if (manualFields.level.trim()) locks.push(`NÍVEL MÁXIMO: ${manualFields.level.trim()}`);
     if (manualFields.trainingPointsTotal.trim() || learnedPoints) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim() || learnedPoints}`);
-    const selectedNativeSkills = Array.from(new Set(manualFields.nativeSkills)).filter(Boolean);
+    const confirmedNewSkills = confirmed && readingConfirmations.skills
+      ? (singlePrintSession?.detailedReading.skillCandidates ?? []).map((item) => item.value)
+      : [];
+    const selectedNativeSkills = Array.from(new Set([...manualFields.nativeSkills, ...confirmedNewSkills])).filter(Boolean);
     if (selectedNativeSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedNativeSkills.join(', ')}`);
     for (const item of ATTRIBUTE_INPUTS) {
       const value = manualFields.attributes[item.key]?.trim();
@@ -1963,7 +1990,9 @@ export function CardVisionApp() {
       level: nextResult.parsed.level ? String(nextResult.parsed.level) : '',
       trainingPointsTotal: nextResult.trainingPointsTotal ? String(nextResult.trainingPointsTotal) : '',
       attributes: nextAttributes,
-      nativeSkills: nextResult.parsed.nativeSkills.filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]))
+      // Preserve também habilidades aprendidas pelo catálogo local. Filtrar apenas pelo
+      // catálogo oficial faria uma habilidade nova desaparecer na próxima leitura.
+      nativeSkills: Array.from(new Set(nextResult.parsed.nativeSkills.map((skill) => skill.trim()).filter(Boolean)))
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
@@ -2051,23 +2080,36 @@ export function CardVisionApp() {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
     try {
+      const scanQuality = qualityReport ?? await inspectPrintQuality(selectedFile).catch(() => null);
+      if (scanQuality !== qualityReport) setQualityReport(scanQuality);
       let geometry = await inspectSinglePrintGeometry(selectedFile);
       const imageHash = await fileDigest(selectedFile);
+      const rememberedCalibration = await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
+      if (rememberedCalibration) {
+        geometry = { ...geometry, zones: applyOcrTemplateCalibration(geometry.zones, rememberedCalibration), cardArtZone: applyRememberedCardBox(geometry.cardArtZone, rememberedCalibration) };
+      }
       const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', 120).catch(() => []);
       const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 160).catch(() => [])).map((entry) => entry.value);
+      const [learnedNameTerms, learnedSkillTerms] = await Promise.all([
+        loadLearnedOcrTerms('playerName'),
+        loadLearnedOcrTerms('skill')
+      ]);
+      const learnedPlayerNames = learnedCanonicalValues(learnedNameTerms);
+      const learnedSkillNames = learnedCanonicalValues(learnedSkillTerms);
       const localCanonicalNames = LOCAL_CARD_RULES.map((rule) =>
         [...rule.match].sort((left, right) => right.length - left.length)[0] ?? ''
       );
       const knownPlayerNames = Array.from(new Set([
         ...localCanonicalNames,
+        ...learnedPlayerNames,
         ...storedScanEntries.flatMap((entry) => entry.value.fields.filter((field) => field.key === 'playerName').map((field) => field.value ?? '')),
         ...corrections.flatMap((correction) => correction.field === 'playerName' ? [correction.correctedValue, correction.playerName] : [correction.playerName])
       ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
       setOcrZones(geometry.zones);
       const cachedArt = await runtimeGet<string>('image-thumbnails', imageHash).catch(() => null);
-      const detectedCrop = await createSmartCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
-      const artPreview = cachedArt || detectedCrop?.preview || null;
+      const detectedCrop = await (geometry.template === 'detailed-profile' ? createEfhubCardPreview(selectedFile, geometry.cardArtZone) : createSmartCardPreview(selectedFile, geometry.cardArtZone)).catch(() => null);
+      const artPreview = cachedArt || detectedCrop?.portraitPreview || detectedCrop?.preview || null;
       if (artPreview) {
         setPlayerCardImage(artPreview);
         if (detectedCrop) setCardCropResult(detectedCrop);
@@ -2083,11 +2125,11 @@ export function CardVisionApp() {
       if (refinedGeometry.template !== geometry.template) {
         geometry = refinedGeometry;
         setOcrZones(geometry.zones);
-        const detailedCrop = await createSmartCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
-        if (detailedCrop) { setPlayerCardImage(detailedCrop.preview); setCardCropResult(detailedCrop); }
+        const detailedCrop = await createEfhubCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
+        if (detailedCrop) { setPlayerCardImage(detailedCrop.portraitPreview ?? detailedCrop.preview); setCardCropResult(detailedCrop); }
         setStatus('Perfil detalhado detectado: ajustando áreas para atributos, posições, modelo físico, habilidades e Ímpetos...');
       }
-      const zoneResults: PremiumZoneReading[] = [];
+      let zoneResults: PremiumZoneReading[] = [];
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
       for (let index = 0; index < enabledZones.length; index += 1) {
         const zone = enabledZones[index];
@@ -2105,6 +2147,8 @@ export function CardVisionApp() {
         });
         zoneResults.push(best);
       }
+      const forensicConsensus = stabilizeForensicReadings(zoneResults);
+      zoneResults = forensicConsensus.readings;
       let session = buildSinglePrintSession({
         imageHash,
         template: geometry.template,
@@ -2115,7 +2159,9 @@ export function CardVisionApp() {
         layoutBounds: geometry.anchorReport.bounds,
         layoutConfidence: geometry.anchorReport.confidence,
         zones: geometry.zones,
-        knownPlayerNames
+        knownPlayerNames,
+        learnedSkillNames,
+        qualityReport: scanQuality
       });
       const storedPreview = toStoredSinglePrintScan(session);
       const previous = storedScanEntries.map((entry) => entry.value).find((entry) => entry.identityKey && entry.identityKey === storedPreview.identityKey && entry.imageHash !== imageHash) ?? null;
@@ -2131,7 +2177,9 @@ export function CardVisionApp() {
           layoutBounds: geometry.anchorReport.bounds,
           layoutConfidence: geometry.anchorReport.confidence,
           zones: geometry.zones,
-          knownPlayerNames
+          knownPlayerNames,
+          learnedSkillNames,
+          qualityReport: scanQuality
         });
       }
       session = applyStoredOcrCorrections(session, corrections);
@@ -2145,9 +2193,13 @@ export function CardVisionApp() {
         session = { ...session, warnings: [...new Set(['Este arquivo é idêntico a um print já analisado. O cache foi reutilizado quando disponível.', ...session.warnings])] };
       }
       setSinglePrintSession(session);
+      if (forensicConsensus.audit.mergedFields.length) setStatus(`Scanner Forense: ${forensicConsensus.audit.attributeRows} atributos e ${forensicConsensus.audit.skillRows} habilidades estabilizados por consenso.`);
       setPremiumReadings(ensureZoneCoverage(geometry.zones, zoneResults));
       setOcrDone(true);
-      const mergedText = mergeOcrTexts(session.canonicalText, fullPass.text, ...zoneResults.map((reading) => `### ${reading.label}\n${reading.text}`));
+      const trustedZoneText = zoneResults
+        .filter((reading) => reading.status !== 'unread' && (reading.key !== 'name' || reading.status === 'confirmed'))
+        .map((reading) => `### ${reading.label}\n${reading.text}`);
+      const mergedText = mergeOcrTexts(session.canonicalText, ...trustedZoneText);
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
@@ -2166,7 +2218,7 @@ export function CardVisionApp() {
         card: Boolean(position?.status === 'confirmed' && style?.status === 'confirmed'),
         attributes: Boolean(attributes?.status === 'confirmed'),
         progression: Boolean(level?.status === 'confirmed' && points?.status !== 'missing'),
-        skills: fieldByKey(session, 'skills')?.status === 'confirmed'
+        skills: fieldByKey(session, 'skills')?.status === 'confirmed' && session.detailedReading.skillCandidates.length === 0
       });
       const stored = toStoredSinglePrintScan(session);
       await runtimePut('scan-history', `${Date.now()}:${imageHash}`, stored).catch(() => undefined);
@@ -2220,7 +2272,7 @@ export function CardVisionApp() {
       setSelectedFile(overview.file);
       setPreview(overview.preview);
       const croppedPreview = await createPlayerCardPreview(overview.file).catch(() => null);
-      if (croppedPreview) { setPlayerCardImage(croppedPreview.preview); setCardCropResult(croppedPreview); }
+      if (croppedPreview) { setPlayerCardImage(croppedPreview.portraitPreview ?? croppedPreview.preview); setCardCropResult(croppedPreview); }
       const recognize = async (image: File | Blob, label: string) => {
         const pass = await recognizeWithOcrWorker(image, { label, kind: 'general' });
         return { text: pass.text, confidence: pass.confidence };
@@ -2367,6 +2419,27 @@ export function CardVisionApp() {
           trainingPointsTotal: String(nextResult.trainingPointsTotal),
           updatedAt: new Date().toISOString()
         });
+        if (singlePrintSession) {
+          const confirmedSkills = readingConfirmations.skills
+            ? singlePrintSession.detailedReading.skillCandidates.map((item) => item.value)
+            : [];
+          void learnConfirmedOcrBatch({
+            imageHash: singlePrintSession.imageHash,
+            playerName: nextResult.parsed.playerName,
+            skills: confirmedSkills,
+            manuallyConfirmed: true
+          }).catch(() => undefined);
+          void learnOcrTemplateCalibration({
+            template: singlePrintSession.template,
+            width: singlePrintSession.width,
+            height: singlePrintSession.height,
+            layoutBounds: singlePrintSession.layoutBounds,
+            zones: singlePrintSession.zoneBoxes,
+            cardBox: cardCropResult?.box,
+            qualityScore: singlePrintSession.scanQuality?.score,
+            manualCrop: cardCropResult?.method === 'manual-adjustment'
+          }).catch(() => undefined);
+        }
         // Finalização segura para Android/WebView: libera recortes e imagens temporárias
         // antes de montar o painel completo. Isso evita estouro de memória após OCR.
         setPremiumReadings([]);
@@ -3058,18 +3131,17 @@ export function CardVisionApp() {
                   <small>{creationStyleLabel}</small>
                 </label>
               </div>
-              {advancedMode && (
-              <details className="creation-advanced-details">
+              <details className="creation-advanced-details creation-tactical-details" open>
                 <summary>
                   <span><SlidersHorizontal size={18} /></span>
-                  <div><strong>Contexto tático opcional</strong><small>Formação, modelo de jogo e técnico refinam a recomendação, mas não substituem a posição escolhida.</small></div>
+                  <div><strong>Formação, estilo do técnico e técnico</strong><small>Escolha o contexto real em que o jogador será usado. A ficha será equilibrada para esse plano sem trocar a posição escolhida por você.</small></div>
                   <em>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</em>
                 </summary>
                 <div className="creation-tactical-grid">
                   <label>
                     <span>Sistema tático</span>
                     <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
-                      {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                      {formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>
                   </label>
                   <label>
@@ -3142,8 +3214,20 @@ export function CardVisionApp() {
                     <p>Selecione uma formação para ver a orientação tática.</p>
                   )}
                 </article>
+                <article className="manager-context-card creation-manager-context creation-tactical-selection-summary">
+                  <div>
+                    <span>Contexto aplicado à ficha</span>
+                    <strong>{formation === 'AUTO' ? 'Formação automática' : formation} • {teamStyle === 'AUTO' ? 'Estilo automático' : tacticalStyleName[teamStyle]}</strong>
+                    <em>{selectedManager ? `${selectedManager.name} • ${selectedManager.version}` : 'Sem técnico específico definido'}</em>
+                  </div>
+                  <div>
+                    <span>Função preservada</span>
+                    <strong>{targetPosition === 'AUTO' ? 'Posição ainda não escolhida' : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition}</strong>
+                    <em>{playstyleOverride === 'AUTO' ? 'Estilo do jogador identificado pelo app' : playstyleOverride}</em>
+                  </div>
+                  <small>Este contexto fica salvo na ficha e ajusta as prioridades de passe, velocidade, pressão, cobertura e distribuição de pontos. A posição escolhida continua soberana e nunca é trocada automaticamente.</small>
+                </article>
               </details>
-              )}
             </div>
           )}
           {mainSection === 'time' && (
@@ -3152,7 +3236,7 @@ export function CardVisionApp() {
                 <label>
                   <span>Sistema tático</span>
                   <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
-                    {formations.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    {formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
                 </label>
                 <label>

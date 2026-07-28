@@ -1,5 +1,6 @@
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
+import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAudit } from './efhubProfile';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -33,6 +34,7 @@ export type DetailedPrintReading = {
   progressionSequence: DetailedValue[];
   physicalModel: DetailedValue[];
   skills: DetailedValue[];
+  skillCandidates: DetailedValue[];
   coverage: {
     recognized: number;
     totalExpected: number;
@@ -45,9 +47,10 @@ export type DetailedPrintReading = {
   };
   warnings: string[];
   canonicalText: string;
+  profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '31.10-detailed-print-2';
+const VERSION = '31.60-efhub-rigid-detailed-1';
 
 function normalized(value: string) {
   return value
@@ -234,7 +237,7 @@ const PHYSICAL_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'Altura com base no comprimento', patterns: [/altura\s+com\s+base\s+no\s+comprimento\S*\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i] }
 ];
 
-const SKILLS = [
+export const OFFICIAL_OCR_SKILLS = [
   'Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada',
   'Puxada de letra', 'Finta de letra', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
   'Controle da cavadinha', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente',
@@ -244,8 +247,10 @@ const SKILLS = [
   'Especialista em pênalti', 'Malícia', 'Marcação individual', 'Volta para marcar', 'Interceptação',
   'Bloqueador', 'Superioridade aérea', 'Carrinho', 'Afastamento acrobático', 'Liderança',
   'Super substituto', 'Espírito guerreiro', 'Pegador de pênalti', 'Arremesso longo do goleiro',
-  'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Garra'
+  'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Garra', 'Esticada de Perna', 'Sombra veloz'
 ] as const;
+
+const SKILLS = OFFICIAL_OCR_SKILLS;
 
 const IMPETO_NAMES = [
   'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa',
@@ -312,7 +317,63 @@ function fuzzyContainsCatalogItem(text: string, item: string, aliases: string[])
   return lines.some((line) => [item, ...aliases].some((candidate) => textSimilarity(line, candidate) >= 0.82));
 }
 
-function parseSkills(text: string, confidence: number, source: string) {
+const SKILL_LINE_BLOCKLIST = [
+  'habilidades', 'skills', 'detalhes do jogador', 'atributos', 'posicoes', 'posições', 'modelo de jogador',
+  'talento ofensivo', 'talento defensivo', 'velocidade', 'aceleracao', 'aceleração', 'finalizacao', 'finalização',
+  'passe rasteiro', 'passe alto', 'controle de bola', 'nivel', 'nível', 'overall', 'ger', 'tecnico', 'técnico',
+  'condicao fisica', 'condição física', 'resistencia', 'resistência', 'altura', 'peso', 'idade'
+];
+
+function cleanSkillLineCandidate(value: string) {
+  return clean(value)
+    .replace(/^(?:habilidade|skill)\s*[:=.-]?\s*/i, '')
+    .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9°º.' -]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isolateSkillListText(text: string) {
+  const lines = text.split(/\r?\n/);
+  const markerIndex = lines.findIndex((line) => /^(?:habilidades(?:\s+do\s+jogador)?|skills)\s*[:=-]?\s*$/i.test(clean(line)));
+  if (markerIndex < 0) return text;
+  const sectionStops = /^(?:atributos|posi[cç][oõ]es|modelo\s+de\s+jogador|progress[aã]o|t[eé]cnico|manager|condi[cç][aã]o|detalhes\s+do\s+jogador|dados\s+da\s+carta)\b/i;
+  const selected: string[] = [];
+  for (let index = markerIndex + 1; index < lines.length; index += 1) {
+    const line = clean(lines[index]);
+    if (!line) continue;
+    if (sectionStops.test(line)) break;
+    selected.push(line);
+  }
+  return selected.join('\n');
+}
+
+function extractUnknownSkillCandidates(text: string, knownCatalog: string[], confidence: number, source: string) {
+  const known = knownCatalog.map((item) => normalized(item));
+  const rawItems = text
+    .split(/\r?\n|[•|;,]/)
+    .map(cleanSkillLineCandidate)
+    .filter(Boolean);
+  const candidates: DetailedValue[] = [];
+  for (const line of rawItems) {
+    const norm = normalized(line);
+    const words = line.split(/\s+/).filter(Boolean);
+    const letters = (line.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+    if (line.length < 3 || line.length > 46 || words.length > 7 || /\d{2,}/.test(line)) continue;
+    if (letters / Math.max(1, line.length) < 0.66) continue;
+    if (SKILL_LINE_BLOCKLIST.some((blocked) => norm === normalized(blocked) || norm.startsWith(`${normalized(blocked)} `))) continue;
+    if (/^(?:CF|SS|LWF|RWF|AMF|CMF|DMF|CB|LB|RB|GK|CA|SA|PE|PD|MAT|MLG|VOL|ZAG|LE|LD|GOL)$/i.test(line)) continue;
+    const nearest = knownCatalog.map((item) => ({ item, similarity: textSimilarity(line, item) })).sort((a, b) => b.similarity - a.similarity)[0];
+    if (nearest && nearest.similarity >= 0.79) continue;
+    if (known.includes(norm)) continue;
+    const value = line.charAt(0).toUpperCase() + line.slice(1);
+    if (candidates.some((item) => textSimilarity(item.value, value) >= 0.90)) continue;
+    candidates.push({ ...makeValue('Habilidade nova para confirmar', value, Math.max(52, confidence - 12), `${source} • fora do catálogo local`), status: 'review' as const });
+  }
+  return candidates.slice(0, 12);
+}
+
+function parseSkills(text: string, confidence: number, source: string, learnedSkillNames: string[] = []) {
+  const skillListText = isolateSkillListText(text);
   const aliases: Partial<Record<(typeof SKILLS)[number], string[]>> = {
     'Cabeçada': ['Cabeceio', 'Cabecada'],
     'Espírito guerreiro': ['Espirito guerreiro'],
@@ -321,11 +382,25 @@ function parseSkills(text: string, confidence: number, source: string) {
     'Chute de primeira': ['Chute primeira'],
     'Precisão à distância': ['Precisao a distancia'],
     'Finalização acrobática': ['Finalizacao acrobatica'],
-    'Controle com a sola': ['Controle sola']
+    'Controle com a sola': ['Controle sola'],
+    'Marcação individual': ['Marcação ind.', 'Marcacao ind', 'Marcação indiv.'],
+    'Volta para marcar': ['Volta p/ marcar'],
+    'Esticada de Perna': ['Esticada de perna', 'Esticada da perna'],
+    'Sombra veloz': ['Sombra Veloz']
   };
-  return SKILLS
-    .filter((skill) => fuzzyContainsCatalogItem(text, skill, aliases[skill] ?? []))
+  const official = SKILLS
+    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, aliases[skill] ?? []))
     .map((skill) => makeValue('Habilidade', skill, confidence, source));
+  const learned = learnedSkillNames
+    .filter((skill) => !official.some((item) => textSimilarity(item.value, skill) >= 0.90))
+    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, []))
+    .map((skill) => makeValue('Habilidade aprendida', skill, Math.max(65, confidence - 3), `${source} • catálogo aprendido`));
+  const aliasCatalog = Object.values(aliases).flatMap((items) => items ?? []);
+  const catalog = [...SKILLS, ...aliasCatalog, ...learnedSkillNames];
+  return {
+    skills: [...official, ...learned],
+    candidates: extractUnknownSkillCandidates(skillListText, catalog, confidence, source)
+  };
 }
 
 function parseImpetos(text: string, confidence: number, source: string) {
@@ -410,7 +485,8 @@ function detectName(text: string, knownPlayerNames: string[] = []) {
     if (NAME_REJECT_TOKENS.some((token) => norm.includes(token))) return;
     let score = 62 + Math.max(0, 14 - index * 2) + (words.length >= 2 && words.length <= 4 ? 12 : 4);
     const nearest = knownPlayerNames.map((name) => ({ name, similarity: textSimilarity(line, name) })).sort((a, b) => b.similarity - a.similarity)[0];
-    if (nearest?.similarity >= 0.88) {
+    const threshold = Math.min(normalized(line).replace(/\s+/g, '').length, normalized(nearest?.name ?? '').replace(/\s+/g, '').length) <= 8 ? 0.94 : 0.90;
+    if (nearest?.similarity >= threshold) {
       candidates.push({ value: nearest.name, score: score + 18 });
       return;
     }
@@ -427,6 +503,15 @@ function detectPlaystyle(text: string) {
   return styles.find((style) => norm.includes(normalized(style))) ?? null;
 }
 
+function independentNameAgreement(reading: PremiumZoneReading | null, detectedName: string | null) {
+  if (!reading || !detectedName) return 0;
+  const texts = [reading.text, ...(reading.rawPasses ?? []).map((pass) => pass.text)].filter(Boolean);
+  return texts.filter((text) => {
+    const candidate = detectName(text, []);
+    return Boolean(candidate && textSimilarity(candidate, detectedName) >= 0.94);
+  }).length;
+}
+
 export function looksLikeCompleteProfile(text: string) {
   const norm = normalized(text);
   const markers = [
@@ -436,13 +521,16 @@ export function looksLikeCompleteProfile(text: string) {
   return markers.filter((marker) => norm.includes(marker)).length >= 3;
 }
 
-export function readDetailedPrint(fullText: string, readings: PremiumZoneReading[], knownPlayerNames: string[] = []): DetailedPrintReading {
+export function readDetailedPrint(fullText: string, readings: PremiumZoneReading[], knownPlayerNames: string[] = [], learnedSkillNames: string[] = [], efhubProfileHint = false): DetailedPrintReading {
   const allText = [fullText, ...readings.map((reading) => reading.text)].filter(Boolean).join('\n');
-  const identitySource = [sourceText(readings, ['name', 'playstyle', 'overall', 'mainPosition', 'identityMeta']), fullText].filter(Boolean).join('\n');
+  const efhubDetected = efhubProfileHint || looksLikeEfhubProfileText(allText);
+  const nameSource = sourceText(readings, ['name']);
+  const identitySource = [sourceText(readings, ['playstyle', 'overall', 'mainPosition', 'identityMeta']), fullText].filter(Boolean).join('\n');
   const attributeSource = [sourceText(readings, ['attributes']), fullText].filter(Boolean).join('\n');
   const positionSource = [sourceText(readings, ['positionGrid']), fullText].filter(Boolean).join('\n');
   const physicalSource = [sourceText(readings, ['physicalModel', 'progression']), fullText].filter(Boolean).join('\n');
-  const skillSource = [sourceText(readings, ['skills']), fullText].filter(Boolean).join('\n');
+  const skillZoneText = sourceText(readings, ['skills']);
+  const skillSource = skillZoneText || fullText;
   const conditionSource = [sourceText(readings, ['condition', 'manager']), fullText].filter(Boolean).join('\n');
   const impetoSource = [sourceText(readings, ['impetos', 'autoTraining']), fullText].filter(Boolean).join('\n');
   const progressionSource = [sourceText(readings, ['progression', 'autoTraining']), fullText].filter(Boolean).join('\n');
@@ -466,13 +554,33 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const weightRaw = rawNumberInRange(weightCandidate, 40, 160);
   const ageRaw = rawNumberInRange(ageCandidate, 15, 65);
   const levelRaw = rawNumberInRange(levelCandidate, 1, 99);
-  const name = detectName(identitySource, knownPlayerNames);
+  const nameReading = readings.filter((reading) => reading.key === 'name').sort((left, right) => right.confidence - left.confidence)[0] ?? null;
+  const detectedName = detectName(nameSource, knownPlayerNames);
+  const knownNameMatch = detectedName
+    ? knownPlayerNames.map((candidate) => ({ candidate, similarity: textSimilarity(detectedName, candidate) })).sort((left, right) => right.similarity - left.similarity)[0]
+    : null;
+  const nameAgreement = independentNameAgreement(nameReading, detectedName);
+  // Um nome novo pode ser aceito sem já existir no banco, mas somente quando duas
+  // passagens independentes da área exclusiva do nome concordam. Isso evita tanto
+  // o preenchimento aleatório quanto o bloqueio permanente de jogadores inéditos.
+  const independentPassesAvailable = (nameReading?.rawPasses?.length ?? 0) >= 2;
+  const strictNameConsensus = Boolean(detectedName && nameReading && nameReading.confidence >= 82
+    && (independentPassesAvailable ? nameAgreement >= 2 : nameReading.status === 'confirmed' && nameReading.confidence >= 88));
+  const name = nameReading?.status === 'confirmed' && strictNameConsensus
+    ? detectedName
+    : knownNameMatch && knownNameMatch.similarity >= (detectedName && normalized(detectedName).replace(/\s+/g, '').length <= 8 ? 0.94 : 0.90)
+      ? knownNameMatch.candidate
+      : strictNameConsensus
+        ? detectedName
+        : null;
   const playstyle = detectPlaystyle(identitySource);
 
   const attributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
   const positionRatings = parsePositionRatings(positionSource, positionConfidence, 'Grade de posições');
   const physicalModel = parseNumericCatalog(physicalSource, PHYSICAL_ALIASES, physicalConfidence, 'Modelo físico', 0, 400);
-  const skills = parseSkills(skillSource, skillConfidence, 'Lista de habilidades');
+  const parsedSkills = parseSkills(skillSource, skillConfidence, 'Lista de habilidades', learnedSkillNames);
+  const skills = parsedSkills.skills;
+  const skillCandidates = parsedSkills.candidates;
   const impetos = parseImpetos(impetoSource, impetoConfidence, 'Faixa de Ímpetos');
   const progressionSequence = parseProgressionSequence(progressionSource, confidenceFromSource(readings, ['progression', 'autoTraining'], 62), 'Faixa de progressão');
 
@@ -509,21 +617,34 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     age: identityValue('Idade', ageRaw, identityConfidence, 'Dados físicos', true),
     level: identityValue('Nível', levelRaw, identityConfidence, 'Dados da carta', true)
   };
+  const profileAudit = buildEfhubProfileAudit({
+    detected: efhubDetected,
+    identityCount: Object.values(identity).filter(Boolean).length,
+    positionCount: positionRatings.length,
+    attributeCount: attributes.length,
+    physicalCount: physicalModel.length,
+    skillCount: skills.length,
+    unknownSkillCount: skillCandidates.length
+  });
 
   const missing: string[] = [];
   if (!identity.playerName) missing.push('nome');
   if (!identity.playstyle) missing.push('estilo');
   if (!identity.mainPosition) missing.push('posição');
   if (!identity.level) missing.push('nível');
-  if (attributes.length < 12) missing.push('mais atributos');
-  if (skills.length < 3) missing.push('habilidades completas');
+  if (efhubDetected && attributes.length !== 26) missing.push(`atributos ${attributes.length}/26`);
+  else if (attributes.length < 12) missing.push('mais atributos');
+  if (efhubDetected && positionRatings.length !== 13) missing.push(`posições ${positionRatings.length}/13`);
+  if (efhubDetected && physicalModel.length !== 16) missing.push(`modelo físico ${physicalModel.length}/16`);
+  if (skills.length < 1) missing.push('habilidades completas');
+  if (skillCandidates.length) missing.push('confirmar habilidades novas');
   if (!impetos.length) missing.push('Ímpetos');
   const recognized = [
     ...Object.values(identity).filter(Boolean), ...condition, ...managerBoosts, ...impetos,
-    ...positionRatings, ...attributes, ...progressionSequence, ...physicalModel, ...skills
+    ...positionRatings, ...attributes, ...progressionSequence, ...physicalModel, ...skills, ...skillCandidates
   ].length;
   const totalExpected = 8 + 4 + 2 + 2 + 13 + 26 + 5 + 16 + 10;
-  const score = Math.max(0, Math.min(100, Math.round(
+  const baseScore = Math.max(0, Math.min(100, Math.round(
     Math.min(28, attributes.length * 1.08)
     + Math.min(15, positionRatings.length * 1.15)
     + Math.min(14, skills.length * 1.4)
@@ -532,8 +653,10 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     + Math.min(8, impetos.length * 4)
     + Object.values(identity).filter(Boolean).length * 2.1
   )));
+  const score = efhubDetected ? Math.round(baseScore * 0.55 + profileAudit.score * 0.45) : baseScore;
 
-  const canonical: string[] = ['[LEITURA DETALHADA V31.10]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.60]'];
+  if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
   if (identity.playstyle) canonical.push(`ESTILO DE JOGO: ${identity.playstyle.value}`);
@@ -550,14 +673,18 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of attributes) canonical.push(`${value.label}: ${value.value}`);
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V31.10]');
+  if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
+  canonical.push('[FIM LEITURA DETALHADA V31.60]');
 
   const warnings: string[] = [];
+  if (detectedName && !name) warnings.push(`O OCR encontrou um possível nome, mas somente ${nameAgreement} passagem(ns) independente(s) concordaram. O valor foi bloqueado para evitar identificar o jogador errado.`);
+  if (efhubDetected && !profileAudit.ready) warnings.push(`Perfil eFHUB reconhecido, porém os portões rígidos ainda não fecharam: ${profileAudit.missing.join(', ')}.`);
   if (overallCandidate && !overallRaw) warnings.push(`GER descartado por estar fora da faixa plausível: ${overallCandidate}.`);
   if (heightCandidate && !heightRaw) warnings.push(`Altura descartada por estar fora da faixa plausível: ${heightCandidate} cm.`);
   if (weightCandidate && !weightRaw) warnings.push(`Peso descartado por estar fora da faixa plausível: ${weightCandidate} kg.`);
   if (ageCandidate && !ageRaw) warnings.push(`Idade descartada por estar fora da faixa plausível: ${ageCandidate}.`);
   if (levelCandidate && !levelRaw) warnings.push(`Nível descartado por estar fora da faixa plausível: ${levelCandidate}.`);
+  if (skillCandidates.length) warnings.push(`${skillCandidates.length} habilidade(s) fora do catálogo local foram preservadas para confirmação; nenhuma foi descartada silenciosamente.`);
   const highestPosition = Math.max(0, ...positionRatings.map((item) => item.numericValue ?? 0));
   if (identity.overall?.numericValue && highestPosition && Math.abs(identity.overall.numericValue - highestPosition) > 12) {
     identity.overall.status = 'review';
@@ -570,7 +697,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
 
   return {
     version: VERSION,
-    format: looksLikeCompleteProfile(allText) ? 'complete-profile' : 'standard-card',
+    format: efhubDetected || looksLikeCompleteProfile(allText) ? 'complete-profile' : 'standard-card',
     identity,
     condition,
     manager: { name: managerName, boosts: managerBoosts, confidence: managerName || managerBoosts.length ? conditionConfidence : 0 },
@@ -580,6 +707,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     progressionSequence,
     physicalModel,
     skills,
+    skillCandidates,
     coverage: {
       recognized,
       totalExpected,
@@ -591,6 +719,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
       missing
     },
     warnings,
-    canonicalText: canonical.join('\n')
+    canonicalText: canonical.join('\n'),
+    profileAudit
   };
 }

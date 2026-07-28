@@ -1,7 +1,9 @@
 import { PLAYSTYLE_OPTIONS, type PositionCode } from '@/lib/analyzerDomain';
 import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 import type { PremiumZoneReading } from '@/lib/premiumReading';
+import type { PrintQualityReport } from '@/lib/validation';
 import { looksLikeCompleteProfile, readDetailedPrint, type DetailedPrintReading } from './detailedPrintReader';
+import { EFHUB_CARD_ART_ZONE, EFHUB_PROFILE_ZONES, isLikelyEfhubProfileGeometry, looksLikeEfhubProfileText } from './efhubProfile';
 import { HIGH_PRECISION_OCR_VERSION, precisionAccuracyEstimate, precisionBlockingReasons, textSimilarity } from './highPrecisionOcr';
 
 export type SinglePrintTemplate = 'classic' | 'tall' | 'landscape' | 'detailed-profile';
@@ -60,6 +62,7 @@ export type SinglePrintSession = {
   canonicalText: string;
   comparison: PreviousScanComparison | null;
   detailedReading: DetailedPrintReading;
+  scanQuality?: PrintQualityReport | null;
   precisionAudit: {
     version: string;
     estimatedAccuracy: number;
@@ -146,23 +149,10 @@ const LANDSCAPE_ZONES: OcrZone[] = [
 ];
 
 
-const DETAILED_PROFILE_ZONES: OcrZone[] = [
-  zone('name', 'Nome do jogador', 0.012, 0.004, 0.36, 0.045),
-  zone('playstyle', 'Estilo de jogo', 0.012, 0.038, 0.31, 0.045),
-  zone('overall', 'GER da carta', 0.055, 0.068, 0.16, 0.16),
-  zone('mainPosition', 'Posição da carta', 0.055, 0.145, 0.18, 0.105),
-  zone('cardType', 'Arte e tipo da carta', 0.018, 0.065, 0.23, 0.22),
-  zone('identityMeta', 'Altura, peso, idade e nível', 0.235, 0.066, 0.12, 0.22),
-  zone('condition', 'Condição e pior pé', 0.36, 0.065, 0.31, 0.17),
-  zone('manager', 'Técnico e bônus', 0.36, 0.225, 0.31, 0.07),
-  zone('positionGrid', 'Mapa completo de posições', 0.675, 0.065, 0.31, 0.225),
-  zone('impetos', 'Ímpetos e progressão visual', 0.012, 0.294, 0.976, 0.064),
-  zone('attributes', 'Tabela completa de atributos', 0.012, 0.352, 0.976, 0.315),
-  zone('physicalModel', 'Modelo físico e alcance corporal', 0.012, 0.67, 0.976, 0.245),
-  zone('skills', 'Habilidades exibidas', 0.012, 0.918, 0.976, 0.073)
-];
+const DETAILED_PROFILE_ZONES: OcrZone[] = EFHUB_PROFILE_ZONES;
 
 export function detectSinglePrintTemplate(width: number, height: number): SinglePrintTemplate {
+  if (isLikelyEfhubProfileGeometry(width, height)) return 'detailed-profile';
   if (width > height) return 'landscape';
   const ratio = width / Math.max(1, height);
   return ratio < 0.62 ? 'tall' : 'classic';
@@ -178,7 +168,7 @@ export function refineSinglePrintGeometryFromText(
   input: { width: number; height: number; template: SinglePrintTemplate; zones: OcrZone[]; cardArtZone: OcrZone; anchorReport: LayoutAnchorReport },
   text: string
 ) {
-  if (!looksLikeCompleteProfile(text)) return input;
+  if (!looksLikeEfhubProfileText(text) && !looksLikeCompleteProfile(text)) return input;
   const zones = DETAILED_PROFILE_ZONES.map((item) => transformZoneToBounds(item, input.anchorReport.bounds));
   return {
     ...input,
@@ -189,7 +179,7 @@ export function refineSinglePrintGeometryFromText(
 }
 
 export function getCardArtZone(template: SinglePrintTemplate): OcrZone {
-  if (template === 'detailed-profile') return zone('cardType', 'Arte da carta', 0.055, 0.072, 0.18, 0.205);
+  if (template === 'detailed-profile') return { ...EFHUB_CARD_ART_ZONE };
   if (template === 'landscape') return zone('cardType', 'Arte da carta', 0.015, 0.16, 0.32, 0.58);
   if (template === 'tall') return zone('cardType', 'Arte da carta', 0.02, 0.10, 0.58, 0.27);
   return zone('cardType', 'Arte da carta', 0.015, 0.065, 0.57, 0.27);
@@ -416,7 +406,8 @@ function extractPlayerName(readings: PremiumZoneReading[], knownPlayerNames: str
         const lexicon = knownPlayerNames
           .map((name) => ({ name, similarity: textSimilarity(clean, name) }))
           .sort((left, right) => right.similarity - left.similarity)[0];
-        if (lexicon?.similarity >= 0.88) {
+        const lexiconThreshold = Math.min(compact(clean).length, compact(lexicon?.name ?? '').length) <= 8 ? 0.94 : 0.90;
+        if (lexicon?.similarity >= lexiconThreshold) {
           value = lexicon.name;
           reason = `Nome conciliado com uma identidade já confirmada (${Math.round(lexicon.similarity * 100)}% de similaridade).`;
         }
@@ -435,22 +426,25 @@ function extractPlayerName(readings: PremiumZoneReading[], knownPlayerNames: str
     cluster.push(candidate);
   }
 
-  const candidates: FieldCandidate[] = clusters.map((cluster) => {
+  const candidates: FieldCandidate[] = clusters.flatMap((cluster) => {
     const representative = [...cluster].sort((left, right) => right.confidence - left.confidence)[0];
     const agreement = new Set(cluster.map((item) => `${item.reading.enhancement}:${normalized(item.value)}`)).size;
     const averageConfidence = cluster.reduce((sum, item) => sum + item.confidence, 0) / cluster.length;
+    const exactLexicon = knownPlayerNames.some((name) => normalized(name) === normalized(representative.value));
+    // Um único palpite sem histórico confirmado não vira nome automático.
+    if (agreement < 2 && !exactLexicon) return [];
     const wordBonus = representative.value.split(/\s+/).length <= 5 ? 10 : 0;
     const agreementBonus = Math.min(24, Math.max(0, (agreement - 1) * 8));
-    const lexiconBonus = knownPlayerNames.some((name) => normalized(name) === normalized(representative.value)) ? 7 : 0;
+    const lexiconBonus = exactLexicon ? 9 : 0;
     const score = averageConfidence * 0.72 + wordBonus + agreementBonus + lexiconBonus;
-    return makeCandidate(
+    return [makeCandidate(
       representative.reading,
       representative.value,
       score,
-      agreement >= 2
-        ? `${representative.reason} ${agreement} passagens concordaram com este nome.`
-        : `${representative.reason} Somente uma passagem sustentou este nome; confirme antes de finalizar.`
-    );
+      exactLexicon
+        ? `${representative.reason} A identidade pertence ao histórico confirmado do usuário.`
+        : `${representative.reason} ${agreement} passagens independentes concordaram com este nome.`
+    )];
   });
 
   return chooseEvidence('playerName', 'Nome do jogador', candidates, { missingReason: 'Nome não reconhecido no cabeçalho.', reviewBelow: 92 });
@@ -491,9 +485,12 @@ export function buildSinglePrintSession(input: {
   layoutConfidence?: number;
   zones?: OcrZone[];
   knownPlayerNames?: string[];
+  learnedSkillNames?: string[];
+  qualityReport?: PrintQualityReport | null;
 }): SinglePrintSession {
   const knownPlayerNames = input.knownPlayerNames ?? [];
-  const detailedReading = readDetailedPrint(input.fullText, input.readings, knownPlayerNames);
+  const learnedSkillNames = input.learnedSkillNames ?? [];
+  const detailedReading = readDetailedPrint(input.fullText, input.readings, knownPlayerNames, learnedSkillNames, input.template === 'detailed-profile');
   const overall = extractOverall(input.readings, input.fullText);
   const points = extractPoints(input.readings, input.fullText);
   let fields: SingleFieldEvidence[] = [
@@ -534,7 +531,7 @@ export function buildSinglePrintSession(input: {
         confidence: Math.min(91, confidence),
         status: 'review' as const,
         reason: `${detailed.reason} O valor permanece em revisão porque as passagens locais não chegaram ao consenso exigido.`,
-        sourceLabel: 'Leitor detalhado v31.10',
+        sourceLabel: 'Leitor EFHUB rígido v31.60',
         sourceText: detailed.value
       };
     }
@@ -545,15 +542,20 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor detalhado v31.10',
+      sourceLabel: 'Leitor EFHUB rígido v31.60',
       sourceText: detailed.value
     };
   });
   const required: SingleFieldEvidence['key'][] = ['playerName', 'position', 'playstyle', 'level'];
   const precisionReasons = precisionBlockingReasons(input.readings);
+  const efhubGateBlocks = detailedReading.profileAudit.detected
+    ? detailedReading.profileAudit.gates.filter((gate) => gate.status !== 'complete').map((gate) => `${gate.label} ${gate.expected === null ? '' : `${gate.recognized}/${gate.expected}`}`.trim())
+    : [];
   const blockingFields = Array.from(new Set([
     ...fields.filter((field) => required.includes(field.key) && field.status !== 'confirmed').map((field) => field.label),
-    ...precisionReasons
+    ...precisionReasons,
+    ...efhubGateBlocks,
+    ...(input.qualityReport?.state === 'blocked' ? ['Qualidade do print'] : [])
   ]));
   const confidenceValues = fields.filter((field) => field.value).map((field) => field.confidence);
   const mergedConfidence = confidenceValues.length ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length) : 0;
@@ -561,13 +563,17 @@ export function buildSinglePrintSession(input: {
   const precisionAudit = {
     version: HIGH_PRECISION_OCR_VERSION,
     estimatedAccuracy,
-    nearPerfectReady: estimatedAccuracy >= 96 && precisionReasons.length === 0,
+    nearPerfectReady: estimatedAccuracy >= 96 && precisionReasons.length === 0 && (!detailedReading.profileAudit.detected || detailedReading.profileAudit.ready),
     totalPasses: input.readings.reduce((sum, reading) => sum + (reading.passCount ?? 1), 0),
     confirmedFields: fields.filter((field) => field.status === 'confirmed').length,
     reviewFields: fields.filter((field) => field.status !== 'confirmed').length,
     blockingReasons: precisionReasons
   };
   const warnings: string[] = [];
+  if (input.qualityReport) {
+    warnings.push(`Qualidade forense do print: ${input.qualityReport.score}/100 (${input.qualityReport.state}).`);
+    warnings.push(...input.qualityReport.issues.map((issue) => issue.message));
+  }
   if (!precisionAudit.nearPerfectReady) warnings.push(`Precisão estimada em ${precisionAudit.estimatedAccuracy}%. O app bloqueia dados críticos sem consenso em vez de inventar valores.`);
   else warnings.push(`Leitura ultraprécisa liberada: ${precisionAudit.estimatedAccuracy}% de precisão estimada com consenso multietapas.`);
   const level = fields.find((field) => field.key === 'level');
@@ -575,7 +581,9 @@ export function buildSinglePrintSession(input: {
   if (level?.alternatives.some((item) => item.numericValue === overall.numericValue)) warnings.push('O GER também apareceu entre os candidatos de nível e foi descartado como evidência principal.');
   if (blockingFields.length) warnings.push(`Confirme antes de finalizar: ${blockingFields.join(', ')}.`);
   warnings.push(...detailedReading.warnings);
-  if (detailedReading.format === 'complete-profile') warnings.push(`Perfil completo detectado: ${detailedReading.coverage.attributeCount} atributos, ${detailedReading.coverage.positionCount} posições, ${detailedReading.coverage.skillCount} habilidades e ${detailedReading.coverage.physicalCount} medidas físicas.`);
+  if (detailedReading.skillCandidates.length) warnings.push(`Habilidades novas aguardando confirmação: ${detailedReading.skillCandidates.map((item) => item.value).join(', ')}.`);
+  if (detailedReading.format === 'complete-profile') warnings.push(`Perfil completo detectado: ${detailedReading.coverage.attributeCount}/26 atributos, ${detailedReading.coverage.positionCount}/13 posições, ${detailedReading.coverage.skillCount} habilidades e ${detailedReading.coverage.physicalCount}/16 medidas físicas.`);
+  if (detailedReading.profileAudit.detected) warnings.push(`Leitor eFHUB rígido: ${detailedReading.profileAudit.score}/100 • ${detailedReading.profileAudit.ready ? 'todos os portões completos' : `faltam ${detailedReading.profileAudit.missing.join(', ')}`}.`);
 
   const fieldValue = (key: SingleFieldEvidence['key']) => fields.find((field) => field.key === key)?.value;
   const canonicalLines = [
@@ -642,6 +650,7 @@ export function buildSinglePrintSession(input: {
     canonicalText: `[LEITURA PRINT ÚNICO PRO]\n${canonicalLines.join('\n')}\n[FIM LEITURA PRINT ÚNICO PRO]`,
     comparison,
     detailedReading,
+    scanQuality: input.qualityReport ?? null,
     precisionAudit,
     createdAt: new Date().toISOString()
   };

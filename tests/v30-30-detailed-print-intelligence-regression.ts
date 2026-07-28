@@ -144,7 +144,7 @@ const session = buildSinglePrintSession({
 });
 assert.equal(session.detailedReading.coverage.attributeCount, 26);
 assert.equal(session.fields.find((field) => field.key === 'attributes')?.status, 'confirmed');
-assert.match(session.canonicalText, /LEITURA DETALHADA V31\.10/);
+assert.match(session.canonicalText, /LEITURA DETALHADA V31\.60/);
 
 const parsed = parseCard(session.canonicalText, 'cristiano-ronaldo.png');
 assert.equal(parsed.playerName, 'Cristiano Ronaldo');
@@ -172,7 +172,7 @@ assert.ok((analyzed.deepCardIntelligence?.physicalInsights.length ?? 0) >= 2);
 assert.ok(analyzed.trainingPointsUsed <= analyzed.trainingPointsTotal);
 
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /Leitura detalhada v31\.10/);
+assert.match(panel, /Leitura detalhada v31\.60/);
 assert.match(panel, /Modelo físico e habilidades/);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /refineSinglePrintGeometryFromText/);

@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "tesseract-stub.d.ts",
+    "../../src/lib/validation.ts",
+    "../../src/lib/ocr.ts",
+    "../../src/lib/premiumReading.ts",
+    "../../src/lib/localDatabase.ts",
+    "../../src/lib/ocrWorkerManager.ts",
+    "../../src/modules/card-reader/adaptiveZoneSearch.ts",
+    "../../src/modules/card-reader/highPrecisionOcr.ts",
+    "../../src/modules/card-reader/efhubProfile.ts",
+    "../../src/modules/card-reader/detailedPrintReader.ts",
+    "../../src/modules/card-reader/singlePrintPro.ts",
+    "../../src/modules/card-reader/cardArtCrop.ts",
+    "../../src/modules/card-reader/learnedOcrLexicon.ts",
+    "../../src/modules/card-reader/forensicConsensus.ts",
+    "../../src/modules/card-reader/templateCalibration.ts",
+    "../../src/modules/card-reader/ocrVisionEngine.ts"
+  ]
+}

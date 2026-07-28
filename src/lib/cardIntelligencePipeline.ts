@@ -4,11 +4,13 @@ import { applyDeepCardIntelligenceToResult } from './deepCardIntelligence';
 import { applyLocalAiToResult } from './localAiEngine';
 import { applyLocalCorrectionsToResult } from '../modules/builds/dynamicRules';
 import { applyUnifiedCardIntelligence } from './unifiedCardIntelligence';
+import { applySupremeGameplayEngine } from './supremeGameplayEngine';
 
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   const fused = applyCompetitiveFusionToResult(result);
   const optimized = applyDeepCardIntelligenceToResult(fused);
   const withLocalAi = applyLocalAiToResult(optimized);
   const corrected = applyLocalCorrectionsToResult(withLocalAi);
-  return applyUnifiedCardIntelligence(corrected);
+  const unified = applyUnifiedCardIntelligence(corrected);
+  return applySupremeGameplayEngine(unified);
 }

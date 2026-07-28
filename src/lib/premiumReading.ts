@@ -79,6 +79,7 @@ export function readingStatus(confidence: number, text: string): PremiumReadingS
 
 export function qualityScore(report: PrintQualityReport | null): number {
   if (!report) return 0;
+  if (Number.isFinite(report.score)) return report.score;
   const resolution = Math.min(100, Math.round(((report.width / 1080) * 50) + ((report.height / 1400) * 50)));
   const sharpness = Math.min(100, Math.round(report.sharpness * 5.2));
   const contrast = Math.min(100, Math.round(report.contrast * 2.5));

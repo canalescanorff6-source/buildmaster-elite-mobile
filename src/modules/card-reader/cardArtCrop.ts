@@ -5,6 +5,8 @@ export type CardCropMethod = 'smart-detection' | 'template-fallback' | 'manual-a
 
 export type CardCropResult = {
   preview: string;
+  portraitPreview?: string | null;
+  portraitBox?: CardCropBox;
   box: CardCropBox;
   confidence: number;
   method: CardCropMethod;
@@ -203,6 +205,43 @@ function generateCandidates(imageWidth: number, imageHeight: number, seed: CardC
   return candidates;
 }
 
+
+function generateLocalRefinementCandidates(base: CardCropBox, imageWidth: number, imageHeight: number) {
+  const candidates: CardCropBox[] = [base];
+  const pxX = 1 / Math.max(1, imageWidth);
+  const pxY = 1 / Math.max(1, imageHeight);
+  const stepsX = [pxX * 2, pxX * 5, base.w * 0.006, base.w * 0.012];
+  const stepsY = [pxY * 2, pxY * 5, base.h * 0.005, base.h * 0.010];
+  for (const dx of stepsX) {
+    candidates.push(clampCardCropBox({ ...base, x: base.x - dx }));
+    candidates.push(clampCardCropBox({ ...base, x: base.x + dx }));
+    candidates.push(clampCardCropBox({ ...base, x: base.x - dx, w: base.w + dx }));
+    candidates.push(clampCardCropBox({ ...base, w: base.w + dx }));
+    candidates.push(clampCardCropBox({ ...base, x: base.x + dx, w: Math.max(MIN_SIZE, base.w - dx) }));
+    candidates.push(clampCardCropBox({ ...base, w: Math.max(MIN_SIZE, base.w - dx) }));
+  }
+  for (const dy of stepsY) {
+    candidates.push(clampCardCropBox({ ...base, y: base.y - dy }));
+    candidates.push(clampCardCropBox({ ...base, y: base.y + dy }));
+    candidates.push(clampCardCropBox({ ...base, y: base.y - dy, h: base.h + dy }));
+    candidates.push(clampCardCropBox({ ...base, h: base.h + dy }));
+    candidates.push(clampCardCropBox({ ...base, y: base.y + dy, h: Math.max(MIN_SIZE, base.h - dy) }));
+    candidates.push(clampCardCropBox({ ...base, h: Math.max(MIN_SIZE, base.h - dy) }));
+  }
+  for (const scale of [0.974, 0.986, 0.994, 1.006, 1.014, 1.026]) {
+    const w = base.w * scale;
+    const h = base.h * scale;
+    candidates.push(clampCardCropBox({ x: base.x + (base.w - w) / 2, y: base.y + (base.h - h) / 2, w, h }));
+  }
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = [candidate.x, candidate.y, candidate.w, candidate.h].map((value) => value.toFixed(5)).join(':');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function expandCardBox(box: CardCropBox, imageWidth: number, imageHeight: number) {
   const marginX = Math.max(2 / imageWidth, box.w * 0.012);
   const marginY = Math.max(2 / imageHeight, box.h * 0.009);
@@ -214,32 +253,65 @@ function expandCardBox(box: CardCropBox, imageWidth: number, imageHeight: number
   });
 }
 
-export async function renderCardCropPreview(file: File | Blob, box: CardCropBox): Promise<string | null> {
+export function derivePlayerPortraitBox(cardBox: CardCropBox, imageWidth: number, imageHeight: number): CardCropBox {
+  const card = clampCardCropBox(cardBox);
+  let width = card.w * 0.78;
+  let height = (width * imageWidth) / Math.max(1, imageHeight);
+  const maxHeight = card.h * 0.58;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = (height * imageHeight) / Math.max(1, imageWidth);
+  }
+  return clampCardCropBox({
+    x: card.x + (card.w - width) / 2,
+    y: card.y + card.h * 0.105,
+    w: width,
+    h: height
+  });
+}
+
+type RenderCropOptions = { expandBorder: boolean; squareOutput: boolean };
+
+async function renderCropPreview(file: File | Blob, box: CardCropBox, options: RenderCropOptions): Promise<string | null> {
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return null;
   const canvas = document.createElement('canvas');
   try {
-    const safe = expandCardBox(clampCardCropBox(box), bitmap.width, bitmap.height);
+    const normalizedBox = clampCardCropBox(box);
+    const safe = options.expandBorder ? expandCardBox(normalizedBox, bitmap.width, bitmap.height) : normalizedBox;
     const cropX = Math.round(safe.x * bitmap.width);
     const cropY = Math.round(safe.y * bitmap.height);
     const cropW = Math.max(1, Math.min(bitmap.width - cropX, Math.round(safe.w * bitmap.width)));
     const cropH = Math.max(1, Math.min(bitmap.height - cropY, Math.round(safe.h * bitmap.height)));
     const targetWidth = Math.max(240, Math.min(560, cropW * 2));
-    const scale = targetWidth / cropW;
-    canvas.width = Math.round(cropW * scale);
-    canvas.height = Math.round(cropH * scale);
+    canvas.width = targetWidth;
+    canvas.height = options.squareOutput ? targetWidth : Math.max(1, Math.round(cropH * (targetWidth / cropW)));
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.94);
+    return canvas.toDataURL('image/jpeg', 0.95);
   } finally {
     bitmap.close?.();
     canvas.width = 1;
     canvas.height = 1;
   }
+}
+
+export async function renderPlayerPortraitPreview(file: File | Blob, cardBox: CardCropBox): Promise<{ preview: string; box: CardCropBox } | null> {
+  if (typeof createImageBitmap === 'undefined') return null;
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return null;
+  const portraitBox = derivePlayerPortraitBox(cardBox, bitmap.width, bitmap.height);
+  bitmap.close?.();
+  const preview = await renderCropPreview(file, portraitBox, { expandBorder: false, squareOutput: true }).catch(() => null);
+  return preview ? { preview, box: portraitBox } : null;
+}
+
+export async function renderCardCropPreview(file: File | Blob, box: CardCropBox): Promise<string | null> {
+  return renderCropPreview(file, box, { expandBorder: true, squareOutput: false });
 }
 
 export async function createSmartCardPreview(file: File | Blob, preferredZone?: OcrZone | CardCropBox): Promise<CardCropResult | null> {
@@ -299,15 +371,28 @@ export async function createSmartCardPreview(file: File | Blob, preferredZone?: 
         bestScore = score;
       }
     }
+    // Segunda etapa: ajuste fino de bordas em passos equivalentes a poucos pixels.
+    // Isso evita que o recorte preserve pedaços do menu ao redor ou corte a moldura da carta.
+    for (const candidate of generateLocalRefinementCandidates(best, imageWidth, imageHeight)) {
+      const score = candidateScore(candidate, sampleWidth, sampleHeight, saturation, edge, brightness, seed);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    }
+    best = fitPortraitCardInsideZone(best, imageWidth, imageHeight);
     const preview = await renderCardCropPreview(file, best);
     if (!preview) return null;
+    const portrait = await renderPlayerPortraitPreview(file, best).catch(() => null);
     const seedOverlap = intersectionOverUnion(best, fitPortraitCardInsideZone(seed, imageWidth, imageHeight));
     const confidence = clamp(Math.round(52 + Math.min(30, Math.max(0, bestScore - 105) * 0.18) + seedOverlap * 18), 55, 97);
     return {
       preview,
+      portraitPreview: portrait?.preview ?? null,
+      portraitBox: portrait?.box,
       box: best,
       confidence,
-      method: bestScore > 125 ? 'smart-detection' : 'template-fallback',
+      method: bestScore > 121 ? 'smart-detection' : 'template-fallback',
       aspectRatio: Number(cardCropAspect(best, imageWidth, imageHeight).toFixed(3))
     };
   } finally {
@@ -315,4 +400,42 @@ export async function createSmartCardPreview(file: File | Blob, preferredZone?: 
     canvas.width = 1;
     canvas.height = 1;
   }
+}
+
+export function deriveEfhubPlayerPortraitBox(cardBox: CardCropBox, imageWidth: number, imageHeight: number): CardCropBox {
+  const card = clampCardCropBox(cardBox);
+  let width = card.w * 0.84;
+  let height = (width * imageWidth) / Math.max(1, imageHeight);
+  const maxHeight = card.h * 0.60;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = (height * imageHeight) / Math.max(1, imageWidth);
+  }
+  return clampCardCropBox({
+    x: card.x + (card.w - width) / 2,
+    y: card.y + card.h * 0.075,
+    w: width,
+    h: height
+  });
+}
+
+export async function renderEfhubPlayerPortraitPreview(file: File | Blob, cardBox: CardCropBox): Promise<{ preview: string; box: CardCropBox } | null> {
+  if (typeof createImageBitmap === 'undefined') return null;
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return null;
+  const portraitBox = deriveEfhubPlayerPortraitBox(cardBox, bitmap.width, bitmap.height);
+  bitmap.close?.();
+  const preview = await renderCropPreview(file, portraitBox, { expandBorder: false, squareOutput: true }).catch(() => null);
+  return preview ? { preview, box: portraitBox } : null;
+}
+
+export async function createEfhubCardPreview(file: File | Blob, preferredZone?: OcrZone | CardCropBox): Promise<CardCropResult | null> {
+  const result = await createSmartCardPreview(file, preferredZone);
+  if (!result) return null;
+  const portrait = await renderEfhubPlayerPortraitPreview(file, result.box).catch(() => null);
+  return {
+    ...result,
+    portraitPreview: portrait?.preview ?? result.portraitPreview ?? null,
+    portraitBox: portrait?.box ?? result.portraitBox
+  };
 }

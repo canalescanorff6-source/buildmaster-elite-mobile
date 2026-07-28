@@ -1,4 +1,4 @@
-import type { PrintQualityIssue, PrintQualityReport } from './validation';
+import { buildPrintQualityReport, type PrintQualityReport } from './validation';
 
 export type OcrZoneKey = 'name' | 'overall' | 'mainPosition' | 'playstyle' | 'level' | 'points' | 'cardType' | 'attributes' | 'progression' | 'autoTraining' | 'positionGrid' | 'skills' | 'specialSkill' | 'identityMeta' | 'condition' | 'manager' | 'impetos' | 'physicalModel';
 
@@ -36,7 +36,7 @@ export async function inspectPrintQuality(file: File | Blob): Promise<PrintQuali
   const height = bitmap.height;
   const canvas = document.createElement('canvas');
   try {
-    const sampleWidth = 360;
+    const sampleWidth = Math.min(420, Math.max(240, width));
     const scale = sampleWidth / Math.max(1, width);
     canvas.width = sampleWidth;
     canvas.height = Math.max(1, Math.round(height * scale));
@@ -45,34 +45,83 @@ export async function inspectPrintQuality(file: File | Blob): Promise<PrintQuali
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = image.data;
+    const total = Math.max(1, canvas.width * canvas.height);
+    const gray = new Float32Array(total);
     let sum = 0;
     let sumSq = 0;
-    let edgeSum = 0;
-    let edgeCount = 0;
-    const gray = new Float32Array(canvas.width * canvas.height);
-    for (let i = 0, p = 0; i < data.length; i += 4, p += 1) {
-      const value = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-      gray[p] = value;
+    let darkPixels = 0;
+    let lightPixels = 0;
+    let glarePixels = 0;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel += 1) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const value = r * 0.299 + g * 0.587 + b * 0.114;
+      const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+      gray[pixel] = value;
       sum += value;
       sumSq += value * value;
+      if (value <= 10) darkPixels += 1;
+      if (value >= 245) lightPixels += 1;
+      if (value >= 238 && saturation <= 18) glarePixels += 1;
     }
+
+    let edgeSum = 0;
+    let edgeCount = 0;
+    let lapSum = 0;
+    let lapSumSq = 0;
+    let fineEdges = 0;
+    let horizontalBoundary = 0;
+    let horizontalInterior = 0;
+    let horizontalBoundaryCount = 0;
+    let horizontalInteriorCount = 0;
+    let verticalBoundary = 0;
+    let verticalInterior = 0;
+    let verticalBoundaryCount = 0;
+    let verticalInteriorCount = 0;
     for (let y = 1; y < canvas.height - 1; y += 1) {
       for (let x = 1; x < canvas.width - 1; x += 1) {
-        const p = y * canvas.width + x;
-        edgeSum += Math.abs(gray[p + 1] - gray[p - 1]) + Math.abs(gray[p + canvas.width] - gray[p - canvas.width]);
+        const pixel = y * canvas.width + x;
+        const gx = Math.abs(gray[pixel + 1] - gray[pixel - 1]);
+        const gy = Math.abs(gray[pixel + canvas.width] - gray[pixel - canvas.width]);
+        const edge = gx + gy;
+        edgeSum += edge;
         edgeCount += 1;
+        if (edge > 28) fineEdges += 1;
+        const laplacian = gray[pixel - 1] + gray[pixel + 1] + gray[pixel - canvas.width] + gray[pixel + canvas.width] - gray[pixel] * 4;
+        lapSum += laplacian;
+        lapSumSq += laplacian * laplacian;
+
+        const dx = Math.abs(gray[pixel] - gray[pixel - 1]);
+        if (x % 8 === 0) { verticalBoundary += dx; verticalBoundaryCount += 1; }
+        else { verticalInterior += dx; verticalInteriorCount += 1; }
+        const dy = Math.abs(gray[pixel] - gray[pixel - canvas.width]);
+        if (y % 8 === 0) { horizontalBoundary += dy; horizontalBoundaryCount += 1; }
+        else { horizontalInterior += dy; horizontalInteriorCount += 1; }
       }
     }
-    const total = Math.max(1, canvas.width * canvas.height);
     const brightness = sum / total;
     const contrast = Math.sqrt(Math.max(0, sumSq / total - brightness * brightness));
     const sharpness = edgeSum / Math.max(1, edgeCount);
-    const issues: PrintQualityIssue[] = [];
-    if (width < 900 || height < 1100) issues.push({ code: 'LOW_RESOLUTION', severity: 'review' as const, message: 'Resolução baixa: envie print direto da tela, sem compressão.' });
-    if (sharpness < 10) issues.push({ code: 'LOW_SHARPNESS', severity: 'review' as const, message: 'Print pouco nítido: o OCR pode confundir posição, estilo e números.' });
-    if (brightness < 45 || brightness > 215) issues.push({ code: 'BAD_BRIGHTNESS', severity: 'review' as const, message: 'Brilho fora do ideal: use print normal, sem filtro e sem tela escura demais.' });
-    if (contrast < 25) issues.push({ code: 'LOW_CONTRAST', severity: 'review' as const, message: 'Contraste baixo: texto pequeno pode ser lido errado.' });
-    return { width, height, sharpness: Number(sharpness.toFixed(1)), brightness: Number(brightness.toFixed(1)), contrast: Number(contrast.toFixed(1)), issues };
+    const lapMean = lapSum / Math.max(1, edgeCount);
+    const laplacianVariance = Math.max(0, lapSumSq / Math.max(1, edgeCount) - lapMean * lapMean);
+    const verticalBlock = verticalBoundary / Math.max(1, verticalBoundaryCount) - verticalInterior / Math.max(1, verticalInteriorCount);
+    const horizontalBlock = horizontalBoundary / Math.max(1, horizontalBoundaryCount) - horizontalInterior / Math.max(1, horizontalInteriorCount);
+    const blockiness = Math.max(0, (verticalBlock + horizontalBlock) / 2);
+
+    return buildPrintQualityReport({
+      width,
+      height,
+      sharpness: Number(sharpness.toFixed(1)),
+      brightness: Number(brightness.toFixed(1)),
+      contrast: Number(contrast.toFixed(1)),
+      laplacianVariance: Number(laplacianVariance.toFixed(1)),
+      darkClipRatio: Number((darkPixels / total).toFixed(4)),
+      lightClipRatio: Number((lightPixels / total).toFixed(4)),
+      glareRatio: Number((glarePixels / total).toFixed(4)),
+      blockiness: Number(blockiness.toFixed(1)),
+      textEdgeDensity: Number((fineEdges / Math.max(1, edgeCount)).toFixed(4))
+    });
   } finally {
     bitmap.close?.();
     canvas.width = 1;

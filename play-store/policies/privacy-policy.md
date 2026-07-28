@@ -1,4 +1,4 @@
-# Política de privacidade — preparação v31.20
+# Política de privacidade — preparação v31.60
 
 A versão publicada deve disponibilizar a rota pública `/privacidade/` em domínio HTTPS acessível sem login. O texto final precisa identificar o responsável pelo aplicativo e um contato de suporte real antes da produção.
 

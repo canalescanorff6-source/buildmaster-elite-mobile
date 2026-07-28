@@ -1,1 +1,1 @@
-Corrige tipagem de navegação premium para aceitar as telas Menu e Buscar.
+Implementa leitor eFHUB rígido v31.60 com portões 26/13/16 e aprendizagem segura de habilidades

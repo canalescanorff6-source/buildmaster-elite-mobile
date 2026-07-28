@@ -75,6 +75,7 @@ import type {
 import type { TotalReadingSession } from '@/lib/totalCardReader';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
+import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -698,6 +699,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               </div>
             </details>
           </article>}
+
+          <SupremeGameplayCard result={result} />
 
           <UnifiedIntelligenceCard result={result} />
 

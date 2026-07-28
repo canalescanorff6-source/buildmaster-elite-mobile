@@ -2,7 +2,7 @@ import type { PositionCode } from '@/lib/analyzerDomain';
 import type { SingleFieldEvidence, SinglePrintSession } from './singlePrintPro';
 import { officialPlaystyleForLabel, readOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 
-export const OCR_VISION_VERSION = '31.10.0';
+export const OCR_VISION_VERSION = '31.60.0';
 
 export type OcrVisionFieldStatus = 'trusted' | 'review' | 'blocked';
 
@@ -17,7 +17,7 @@ export type OcrVisionFieldAudit = {
 };
 
 export type OcrVisionPass = {
-  id: 'geometry' | 'contrast' | 'sharp' | 'official-validation';
+  id: 'quality-gate' | 'geometry' | 'template-memory' | 'efhub-profile' | 'adaptive-crops' | 'contrast' | 'sharp' | 'official-validation' | 'local-learning';
   label: string;
   required: boolean;
   reason: string;
@@ -126,6 +126,12 @@ export function buildOcrVisionAudit(session: SinglePrintSession, rawText = sessi
   const officialStyle = officialPlaystyleForLabel(playstyle);
 
   if (resolution === 'low') warnings.push('Resolução baixa: prefira o print original sem recorte de aplicativo de mensagens.');
+  if (session.scanQuality?.state === 'blocked') {
+    warnings.push('A qualidade forense do print ficou bloqueada; campos críticos não devem ser aceitos sem confirmação manual.');
+    corrections.push(...session.scanQuality.recommendations);
+  } else if (session.scanQuality?.state === 'review') {
+    warnings.push('A qualidade do print exige revisão adicional antes de finalizar a ficha.');
+  }
   if ((session.layoutConfidence ?? 100) < 65) warnings.push('Os limites da carta não foram encontrados com confiança suficiente.');
   if (position && officialStyle && !officialStyle.compatiblePositions.includes(position)) {
     warnings.push(`${officialStyle.label} não é compatível com ${position} na base oficial ativa.`);
@@ -147,13 +153,19 @@ export function buildOcrVisionAudit(session: SinglePrintSession, rawText = sessi
   const baseScore = scoredFields.length ? scoredFields.reduce((sum, field) => sum + field.confidence, 0) / scoredFields.length : 0;
   const precisionScore = session.precisionAudit.estimatedAccuracy;
   const officialBonus = fields.filter((field) => field.officialMatch).length * 1.1;
-  const penalty = blockingFields.length * 8 + warnings.length * 1.5 + (gkGuard === 'review' ? 12 : 0);
-  const score = Math.max(0, Math.min(100, Math.round(baseScore * 0.62 + precisionScore * 0.38 + officialBonus - penalty)));
-  const state: OcrVisionAudit['state'] = blockingFields.length > 0 || gkGuard === 'review' ? 'blocked' : score >= 82 ? 'ready' : 'review';
+  const qualityPenalty = session.scanQuality?.state === 'blocked' ? 14 : session.scanQuality?.state === 'review' ? 5 : 0;
+  const qualityBonus = session.scanQuality ? Math.max(-4, Math.min(6, (session.scanQuality.score - 70) / 5)) : 0;
+  const penalty = blockingFields.length * 8 + warnings.length * 1.5 + (gkGuard === 'review' ? 12 : 0) + qualityPenalty;
+  const score = Math.max(0, Math.min(100, Math.round(baseScore * 0.62 + precisionScore * 0.38 + officialBonus + qualityBonus - penalty)));
+  const state: OcrVisionAudit['state'] = blockingFields.length > 0 || gkGuard === 'review' || session.scanQuality?.state === 'blocked' ? 'blocked' : score >= 82 ? 'ready' : 'review';
 
   const passes: OcrVisionPass[] = [
+    { id: 'quality-gate', label: 'Portão de qualidade forense', required: true, reason: session.scanQuality ? `${session.scanQuality.score}/100 • ${session.scanQuality.state} • nitidez ${session.scanQuality.sharpness} • brilho ${session.scanQuality.brightness}.` : 'Diagnóstico indisponível; manter confirmação manual dos campos críticos.' },
     { id: 'geometry', label: 'Geometria automática', required: true, reason: `Template ${session.template}, ${session.width}×${session.height}.` },
-    { id: 'contrast', label: 'Consenso multietapas local', required: true, reason: `${session.precisionAudit.totalPasses} passagens distribuídas entre tratamentos de cor, contraste, nitidez e binarização.` },
+    { id: 'template-memory', label: 'Memória do enquadramento', required: true, reason: 'O scanner reaproveita apenas calibrações confirmadas para a mesma orientação e faixa de resolução.' },
+    { id: 'efhub-profile', label: 'Perfil eFHUB dedicado', required: session.detailedReading.profileAudit.detected, reason: session.detailedReading.profileAudit.detected ? `${session.detailedReading.profileAudit.score}/100 • ${session.detailedReading.profileAudit.ready ? '26 atributos, 13 posições e 16 medidas completas' : `revisar ${session.detailedReading.profileAudit.missing.join(', ')}`}.` : 'Layout eFHUB não detectado; o scanner mantém o perfil adaptativo genérico.' },
+    { id: 'adaptive-crops', label: 'Recortes adaptativos por campo', required: true, reason: 'Cada campo crítico é relido em áreas exata, concentrada, deslocada e ampliada antes de aceitar o resultado.' },
+    { id: 'contrast', label: 'Consenso multietapas local', required: true, reason: `${session.precisionAudit.totalPasses} passagens distribuídas entre tratamentos de cor, contraste, nitidez, binarização e texto esparso.` },
     { id: 'sharp', label: 'Releitura seletiva dos campos críticos', required: state !== 'ready', reason: state === 'ready' ? 'O consenso alto dispensou novas passagens.' : 'Nome, posição e números sem acordo permanecem bloqueados para confirmação.' },
     { id: 'official-validation', label: 'Validação pela base oficial', required: true, reason: `Pacote ${pack.version} • ${pack.season}.` }
   ];

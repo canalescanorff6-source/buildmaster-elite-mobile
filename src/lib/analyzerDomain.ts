@@ -569,6 +569,39 @@ export type UnifiedCardIntelligenceAnalysis = {
   summary: string;
 };
 
+
+export type SupremeGameplayAnalysis = {
+  engineVersion: string;
+  mode: 'Otimização competitiva personalizada';
+  candidatesEvaluated: number;
+  validCandidates: number;
+  finalists: number;
+  finalTraining: TrainingPlan;
+  winnerScore: number;
+  currentScore: number;
+  autoScore: number | null;
+  professionalReferenceScore: number | null;
+  potentialEdgeVsCurrent: number;
+  potentialEdgeVsAuto: number | null;
+  potentialEdgeVsProfessional: number | null;
+  dimensions: {
+    roleFit: number;
+    tacticalFit: number;
+    managerFit: number;
+    thresholdFit: number;
+    pointEfficiency: number;
+    skillSynergy: number;
+    identityPreservation: number;
+    onlineRobustness: number;
+  };
+  roleLabel: string;
+  tacticalContext: string;
+  reasons: string[];
+  warnings: string[];
+  guardrails: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
@@ -618,6 +651,7 @@ export type AnalysisResult = {
   localAi?: LocalAiAnalysis;
   deepCardIntelligence?: DeepCardIntelligenceAnalysis;
   unifiedIntelligence?: UnifiedCardIntelligenceAnalysis;
+  supremeGameplay?: SupremeGameplayAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

@@ -21,7 +21,7 @@ assert.deepEqual(clampCardCropBox({ x: -1, y: 2, w: 4, h: 0.01 }), { x: 0, y: 0.
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /createSmartCardPreview/);
 const cropPanel = fs.readFileSync('src/components/SmartCardCropPanel.tsx', 'utf8');
-assert.match(cropPanel, /Somente a carta aparecerá na ficha/);
+assert.match(cropPanel, /Recorte quadrado da foto, sem bordas do menu/);
 assert.match(cropPanel, /Ajustar recorte/);
 assert.match(cropPanel, /Redetectar/);
 const result = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
