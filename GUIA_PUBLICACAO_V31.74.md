@@ -34,3 +34,7 @@ Envie o projeto completo. Os arquivos essenciais desta correção são:
 ## Observação importante
 
 Somente gerar o APK não basta. A função `admin-users` corrigida também precisa ser publicada no Supabase. O workflow incluído faz isso automaticamente quando os Secrets e Variables do projeto já estão configurados.
+
+## Correção do workflow
+
+Use o pacote com **Publicacao-Corrigida**. Ele sincroniza o pré-voo com a v31.74, inclui a regressão nova no diagnóstico consolidado e traz o manifesto SHA-256 regenerado.

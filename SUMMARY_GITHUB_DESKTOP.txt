@@ -1,1 +1,1 @@
-Corrige definitivamente o botão Criar usuário e evita solicitações duplicadas no Android na v31.74
+Corrige workflow da v31.74, sincroniza pré-voo, cache PWA, testes e manifesto de integridade

@@ -44,7 +44,7 @@ check(pkg.version === '31.74.0', 'Versão atual configurada', pkg.version);
 check(appUpdates.includes("'31.74.0'"), 'Motor de atualização sincronizado');
 check(dataSafety.includes("APP_DATA_VERSION = '31.74.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
 check(manifest.name === 'BuildMaster Elite Tático v31.74', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v31-73'), 'Cache PWA sincronizado');
+check(sw.includes('buildmaster-v31-74'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
