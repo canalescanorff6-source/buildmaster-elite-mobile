@@ -1,1 +1,1 @@
-Restaura criação de contas, prazos de ativação e MFA opcional na v31.73
+Corrige regressões antigas que bloqueavam a publicação e ativa a atualização v31.73
