@@ -112,6 +112,8 @@ const pipelineSource = read('src/lib/cardIntelligencePipeline.ts');
 check(skillIdentitySource.includes('filterComplementaryAdditionalSkills') && skillIdentitySource.includes('canonicalSkillName'), 'Filtro canônico de habilidades presente');
 check(skillIntegritySource.includes('enforceComplementarySkillIntegrity') && pipelineSource.includes('enforceComplementarySkillIntegrity(supreme)'), 'Integridade antirrepetição aplicada ao resultado final');
 check(String(pkg.scripts?.['test:v3172'] ?? '').includes('typecheck:v3172'), 'Teste e typecheck v31.72 configurados');
+check(exists('scripts/repair-critical-routes.mjs') && exists('scripts/templates/critical-routes/root-page.tsx.txt') && exists('tests/v31-72-critical-route-self-healing-regression.mjs'), 'Autorreparo permanente da rota inicial presente');
+check(String(pkg.scripts?.['quality:routes'] ?? '').includes('routes:repair') && String(pkg.scripts?.['test:v3172'] ?? '').includes('critical-route-self-healing'), 'Autorreparo de rotas integrado ao CI e à regressão v31.72');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 
 // Confere imports internos e alcançabilidade do código da aplicação.

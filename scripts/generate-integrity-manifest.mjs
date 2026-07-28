@@ -15,7 +15,7 @@ function walk(directory) {
       if (excludedDirectories.has(entry.name)) continue;
       const target = path.join(current, entry.name);
       if (entry.isDirectory()) stack.push(target);
-      else if (!excludedNames.has(target) && !excludedNames.has(entry.name) && !target.endsWith('.zip') && !target.endsWith('.zip.sha256')) result.push(target);
+      else if (!excludedNames.has(target) && !excludedNames.has(entry.name) && !target.endsWith('.zip') && !target.endsWith('.zip.sha256') && !target.endsWith('.tsbuildinfo')) result.push(target);
     }
   }
   return result.sort();

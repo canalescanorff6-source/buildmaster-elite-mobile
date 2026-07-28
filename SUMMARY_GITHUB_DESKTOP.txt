@@ -1,1 +1,1 @@
-Corrige fichas e garante habilidades complementares sem repetição na v31.72
+Corrige rota inicial e adiciona autorreparo permanente contra troca por páginas públicas

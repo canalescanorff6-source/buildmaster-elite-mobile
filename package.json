@@ -10,10 +10,10 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit --noUnusedLocals --noUnusedParameters",
     "vercel-build": "next build --webpack",
     "sanitize:update-source": "node scripts/sanitize-update-source.mjs",
-    "pretypecheck": "npm run sanitize:update-source",
-    "pretest:all": "npm run sanitize:update-source",
-    "pretest:v3000": "npm run sanitize:update-source",
-    "preapk:build-web": "npm run sanitize:update-source",
+    "pretypecheck": "npm run sanitize:update-source && npm run routes:repair",
+    "pretest:all": "npm run sanitize:update-source && npm run routes:repair",
+    "pretest:v3000": "npm run sanitize:update-source && npm run routes:repair",
+    "preapk:build-web": "npm run sanitize:update-source && npm run routes:repair",
     "test:npm-registry": "node scripts/verify-public-npm-registry.mjs",
     "quality:syntax": "node scripts/check-source-syntax.mjs",
     "quality:interactive": "node scripts/check-interactive-contracts.mjs",
@@ -60,7 +60,7 @@
     "apk:install-match-recorder": "node scripts/install-match-recorder-plugin.mjs",
     "typecheck:v3170": "tsc -p tests/types-v3170/tsconfig.json --pretty false && tsc -p tests/types-v3170-ui/tsconfig.json --pretty false",
     "test:v3170": "npm run typecheck:v3170 && npm run quality:typecheck-isolation && npm run quality:card-crop-types && npm run quality:native-java && npm run quality:routes && node -r ./tests/_ts-require.cjs tests/v31-70-match-trainer-regression.ts && node tests/v31-70-native-recorder-installer-regression.mjs && node tests/v31-70-root-route-regression.mjs && node tests/v31-70-typecheck-isolation-regression.mjs",
-    "quality:routes": "node scripts/check-app-routes.mjs",
+    "quality:routes": "npm run routes:repair && node scripts/check-app-routes.mjs",
     "quality:typecheck-isolation": "node scripts/check-typecheck-isolation.mjs",
     "quality:card-crop-types": "node scripts/check-card-crop-type-safety.mjs",
     "quality:native-java": "node scripts/check-generated-native-java.mjs",
@@ -68,7 +68,8 @@
     "ci:verify": "node scripts/ci-doctor.mjs --full",
     "test:v3171": "node tests/v31-71-account-recovery-regression.mjs",
     "typecheck:v3172": "tsc -p tests/types-v3172/tsconfig.json --pretty false",
-    "test:v3172": "npm run typecheck:v3172 && node -r ./tests/_ts-require.cjs tests/v31-72-complementary-skills-regression.ts"
+    "test:v3172": "npm run typecheck:v3172 && node -r ./tests/_ts-require.cjs tests/v31-72-complementary-skills-regression.ts && node tests/v31-72-critical-route-self-healing-regression.mjs",
+    "routes:repair": "node scripts/repair-critical-routes.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

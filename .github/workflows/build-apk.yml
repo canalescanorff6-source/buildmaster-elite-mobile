@@ -209,6 +209,9 @@ jobs:
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
 
+      - name: Recuperar e validar rota inicial
+        run: npm run quality:routes
+
       - name: Diagnóstico consolidado do código-fonte
         timeout-minutes: 35
         run: npm run ci:verify
