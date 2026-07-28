@@ -63,7 +63,9 @@
     "quality:routes": "node scripts/check-app-routes.mjs",
     "quality:typecheck-isolation": "node scripts/check-typecheck-isolation.mjs",
     "quality:card-crop-types": "node scripts/check-card-crop-type-safety.mjs",
-    "quality:native-java": "node scripts/check-generated-native-java.mjs"
+    "quality:native-java": "node scripts/check-generated-native-java.mjs",
+    "ci:preflight": "node scripts/ci-doctor.mjs --quick",
+    "ci:verify": "node scripts/ci-doctor.mjs --full"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
