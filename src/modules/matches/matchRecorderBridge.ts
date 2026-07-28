@@ -18,6 +18,9 @@ export type MatchRecordingDescriptor = {
   id: string;
   path: string;
   uri?: string;
+  publicFileName?: string;
+  relativePath?: string;
+  exportedAt?: string;
   fileName: string;
   createdAt: string;
   durationMs: number;
@@ -29,6 +32,20 @@ export type MatchRecordingDescriptor = {
   quality: MatchRecordingQuality;
   state: MatchRecordingState;
   error?: string;
+};
+
+
+export type MatchRecordingExportResult = {
+  saved: boolean;
+  reused: boolean;
+  id: string;
+  uri: string;
+  fileName: string;
+  relativePath: string;
+};
+
+export type MatchRecordingShareResult = MatchRecordingExportResult & {
+  shared: boolean;
 };
 
 export type MatchRecorderStatus = {
@@ -55,6 +72,8 @@ type MatchRecorderPlugin = {
   stopRecording(): Promise<MatchRecorderStatus>;
   listRecordings(): Promise<{ recordings: MatchRecordingDescriptor[] }>;
   deleteRecording(options: { id: string }): Promise<{ deleted: boolean }>;
+  exportRecording(options: { id: string }): Promise<MatchRecordingExportResult>;
+  shareRecording(options: { id: string }): Promise<MatchRecordingShareResult>;
   restoreOrientation(): Promise<{ restored: boolean }>;
   addListener(eventName: 'recordingStateChanged', listener: (status: MatchRecorderStatus) => void): Promise<PluginListenerHandle>;
 };
@@ -113,6 +132,16 @@ export async function listMatchRecordings() {
   if (!Capacitor.isNativePlatform()) return [] as MatchRecordingDescriptor[];
   const result = await NativeMatchRecorder.listRecordings();
   return Array.isArray(result.recordings) ? result.recordings : [];
+}
+
+export async function saveMatchRecordingToGallery(id: string) {
+  if (!Capacitor.isNativePlatform()) throw new Error('Salvar a gravação na Galeria está disponível somente no APK Android.');
+  return NativeMatchRecorder.exportRecording({ id });
+}
+
+export async function shareMatchRecording(id: string) {
+  if (!Capacitor.isNativePlatform()) throw new Error('Compartilhar a gravação está disponível somente no APK Android.');
+  return NativeMatchRecorder.shareRecording({ id });
 }
 
 export async function deleteMatchRecording(id: string) {

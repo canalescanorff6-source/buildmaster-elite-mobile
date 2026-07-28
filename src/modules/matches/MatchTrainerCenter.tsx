@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, CircleStop, Clock3, Download, Film, Gauge, Import, LoaderCircle, Play, RotateCcw, ShieldCheck, Smartphone, Trash2, Video, Wifi } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleStop, Clock3, Download, Film, Gauge, Import, LoaderCircle, Play, RotateCcw, Share2, ShieldCheck, Smartphone, Trash2, Video, Wifi } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import type { TacticalStyle } from '@/lib/analyzer';
 import type { TeamDiagnosis } from '@/modules/core/centralIntelligence';
@@ -12,6 +12,8 @@ import {
   listMatchRecordings,
   listenToMatchRecorder,
   restoreMatchRecorderOrientation,
+  saveMatchRecordingToGallery,
+  shareMatchRecording,
   startMatchRecording,
   stopMatchRecording,
   type MatchRecorderCapabilities,
@@ -77,10 +79,12 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [markerNote, setMarkerNote] = useState('');
+  const [videoAction, setVideoAction] = useState<'saving' | 'sharing' | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastHandledRecordingRef = useRef('');
+  const exportAttemptsRef = useRef(new Set<string>());
 
   const active = useMemo(() => sessions.find((session) => session.id === activeId) || null, [activeId, sessions]);
   const summary = useMemo(() => active ? summarizeMatchTrainerSession(active) : null, [active]);
@@ -98,9 +102,17 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     const stored = readMatchTrainerSessions();
     const existing = stored.find((session) => session.recording?.id === recording.id);
     if (existing) {
-      setSessions(stored);
-      if (options.focus !== false) setActiveId(existing.id);
-      return existing;
+      const refreshed: MatchTrainerSession = {
+        ...existing,
+        fileName: recording.fileName,
+        fileSizeBytes: recording.sizeBytes,
+        videoPath: recording.path,
+        recording
+      };
+      const next = upsertMatchTrainerSession(refreshed);
+      setSessions(next);
+      if (options.focus !== false) setActiveId(refreshed.id);
+      return refreshed;
     }
     if (lastHandledRecordingRef.current === recording.id) return null;
     lastHandledRecordingRef.current = recording.id;
@@ -120,8 +132,63 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     const next = upsertMatchTrainerSession(session);
     setSessions(next);
     if (options.focus !== false) setActiveId(session.id);
-    if (!options.quiet) setMessage('Gravação salva no aparelho. Revise o vídeo, marque os lances e execute a análise local.');
+    if (!options.quiet) setMessage(recording.uri ? 'Gravação salva na Galeria e pronta para compartilhar. Revise o vídeo e execute a análise.' : 'Gravação concluída no espaço do app. Salvando uma cópia na Galeria...');
     return session;
+  }
+
+  async function refreshNativeRecording(id: string, options: { focus?: boolean; quiet?: boolean } = {}) {
+    const saved = await listMatchRecordings();
+    setRecordings(saved);
+    const refreshed = saved.find((item) => item.id === id) || null;
+    if (refreshed) createFromRecording(refreshed, options);
+    return refreshed;
+  }
+
+  async function autoSaveRecording(recording: MatchRecordingDescriptor) {
+    if (recording.uri || exportAttemptsRef.current.has(recording.id)) return recording;
+    exportAttemptsRef.current.add(recording.id);
+    setVideoAction('saving');
+    try {
+      const result = await saveMatchRecordingToGallery(recording.id);
+      const refreshed = await refreshNativeRecording(recording.id, { quiet: true });
+      setMessage(`Vídeo salvo na Galeria em ${result.relativePath}. Agora você pode compartilhar ou enviar o arquivo.`);
+      return refreshed || { ...recording, uri: result.uri, publicFileName: result.fileName, relativePath: result.relativePath };
+    } catch (error) {
+      setMessage(`${error instanceof Error ? error.message : 'Não foi possível salvar o vídeo na Galeria.'} A gravação continua segura dentro do BuildMaster; use “Salvar vídeo” para tentar novamente.`);
+      return recording;
+    } finally {
+      setVideoAction(null);
+    }
+  }
+
+  async function saveActiveRecording() {
+    if (!active?.recording?.id) return;
+    setVideoAction('saving');
+    setMessage('Copiando o vídeo para a Galeria do aparelho...');
+    try {
+      const result = await saveMatchRecordingToGallery(active.recording.id);
+      await refreshNativeRecording(active.recording.id, { quiet: true });
+      setMessage(result.reused ? `O vídeo já está salvo em ${result.relativePath}.` : `Vídeo salvo com sucesso em ${result.relativePath}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível salvar o vídeo na Galeria.');
+    } finally {
+      setVideoAction(null);
+    }
+  }
+
+  async function shareActiveRecording() {
+    if (!active?.recording?.id) return;
+    setVideoAction('sharing');
+    setMessage('Preparando o vídeo para compartilhamento...');
+    try {
+      const result = await shareMatchRecording(active.recording.id);
+      await refreshNativeRecording(active.recording.id, { quiet: true });
+      setMessage(`Vídeo preparado e salvo em ${result.relativePath}. Escolha o aplicativo para compartilhar.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível compartilhar o vídeo.');
+    } finally {
+      setVideoAction(null);
+    }
   }
 
   async function waitForRecordingCompletion(timeoutMs = 20_000) {
@@ -153,14 +220,14 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
         const restoredSessions = readMatchTrainerSessions();
         setSessions(restoredSessions);
         if (!activeId && restoredSessions[0]) setActiveId(restoredSessions[0].id);
-        if (status.last?.state === 'completed') createFromRecording(status.last, { quiet: true });
+        if (status.last?.state === 'completed') { createFromRecording(status.last, { quiet: true }); void autoSaveRecording(status.last); }
       } catch {
         // O modo importar vídeo continua funcional mesmo sem ponte nativa.
       }
       listener = await listenToMatchRecorder((status) => {
         if (!activeEffect) return;
         setRecorderStatus(status);
-        if (status.last?.state === 'completed') createFromRecording(status.last);
+        if (status.last?.state === 'completed') { createFromRecording(status.last); void autoSaveRecording(status.last); }
       });
     })();
     return () => {
@@ -174,7 +241,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     const timer = window.setInterval(() => {
       void getMatchRecorderStatus().then((status) => {
         setRecorderStatus(status);
-        if (status.last?.state === 'completed') createFromRecording(status.last);
+        if (status.last?.state === 'completed') { createFromRecording(status.last); void autoSaveRecording(status.last); }
       }).catch(() => undefined);
     }, 1000);
     return () => window.clearInterval(timer);
@@ -212,8 +279,10 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
       for (const recording of [...saved].reverse()) createFromRecording(recording, { focus: false, quiet: true });
       const completed = status.last || saved[0];
       if (status.state === 'error') throw new Error(status.message || 'O Android não conseguiu gerar um vídeo válido.');
-      if (completed?.state === 'completed') createFromRecording(completed);
-      else setMessage('Gravação finalizada. O arquivo aparecerá assim que o Android concluir a validação.');
+      if (completed?.state === 'completed') {
+        createFromRecording(completed);
+        await autoSaveRecording(completed);
+      } else setMessage('Gravação finalizada. O arquivo aparecerá assim que o Android concluir a validação.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível encerrar a gravação corretamente.');
     } finally {
@@ -301,6 +370,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   }
 
   async function removeSession(session: MatchTrainerSession) {
+    const hadGalleryCopy = Boolean(session.recording?.uri);
     if (session.recording?.id) {
       try {
         await deleteMatchRecording(session.recording.id);
@@ -312,13 +382,14 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     const next = deleteMatchTrainerSession(session.id);
     setSessions(next);
     setActiveId(next[0]?.id || null);
+    if (hadGalleryCopy) setMessage('Sessão removida do BuildMaster. A cópia salva na Galeria foi preservada.');
   }
 
   const allMarkers = active ? [...(active.analysis?.automaticMarkers || []), ...active.markers].sort((a, b) => a.atMs - b.atMs) : [];
 
   return <section className="match-trainer-v3170">
     <div className="match-trainer-intro luxury-panel">
-      <div><p className="kicker"><Video size={15}/> v31.72 • Treinador de Partidas</p><h3>Grave, revise e entenda sua gameplay sem interferir no eFootball.</h3><span>O Android grava passivamente. A análise ocorre depois da partida, no aparelho, e nunca controla o jogo nem altera sua ficha automaticamente.</span></div>
+      <div><p className="kicker"><Video size={15}/> v31.76 • Treinador de Partidas</p><h3>Grave, revise e entenda sua gameplay sem interferir no eFootball.</h3><span>O Android grava passivamente. A análise ocorre depois da partida, no aparelho, e nunca controla o jogo nem altera sua ficha automaticamente.</span></div>
       <div className={`match-recorder-state state-${recorderStatus.state}`}><i>{recorderStatus.active ? <LoaderCircle size={22}/> : <ShieldCheck size={22}/>}</i><div><strong>{recorderStatus.active ? 'Gravação ativa' : capabilities?.supported ? 'Android preparado' : 'Modo de importação'}</strong><span>{recorderStatus.active ? formatDuration(recorderStatus.elapsedMs) : capabilities?.reason || 'Pronto para analisar vídeos.'}</span></div></div>
     </div>
 
@@ -343,7 +414,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
       <aside className="luxury-panel match-session-list">
         <div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Arquivo local</p><h3>Partidas gravadas</h3></div><span>{sessions.length}</span></div>
         <div>{sessions.map((session) => <button type="button" key={session.id} className={activeId === session.id ? 'active' : ''} onClick={() => setActiveId(session.id)}><span><strong>{session.title}</strong><small>{session.fileName}</small></span><em>{session.analysis ? `${session.analysis.qualityScore}%` : session.status}</em></button>)}{!sessions.length && <div className="v27-empty"><Film size={25}/><strong>Nenhuma partida</strong><span>Inicie uma gravação ou importe um vídeo.</span></div>}</div>
-        {recordings.length > 0 && <small className="match-native-count">{recordings.length} vídeo(s) confirmados no armazenamento privado do Android.</small>}
+        {recordings.length > 0 && <small className="match-native-count">{recordings.length} vídeo(s) no BuildMaster • {recordings.filter((item) => Boolean(item.uri)).length} salvo(s) na Galeria.</small>}
       </aside>
 
       <section className="luxury-panel match-video-review">
@@ -351,7 +422,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
           <div className="v27-panel-heading"><div><p className="kicker"><Play size={14}/> Revisão pós-partida</p><h3>{active.title}</h3></div><button type="button" className="icon-danger-button" onClick={() => void removeSession(active)} aria-label="Excluir partida"><Trash2 size={18}/></button></div>
           {videoUrl ? <video ref={videoRef} className="match-review-video" src={videoUrl} controls playsInline preload="metadata"/> : <div className="match-video-missing"><AlertTriangle size={23}/><div><strong>Vídeo indisponível nesta sessão</strong><span>{active.source === 'imported-video' ? 'Importe novamente o mesmo arquivo para continuar.' : 'O Android não localizou o arquivo gravado.'}</span></div></div>}
           <div className="match-context-fields"><label>Título<input value={active.title} maxLength={80} onChange={(event: { target: HTMLInputElement }) => updateActive({ title: event.target.value })}/></label><label>Formação<input value={active.formation} maxLength={40} onChange={(event: { target: HTMLInputElement }) => updateActive({ formation: event.target.value })}/></label><label>Estilo coletivo<input value={active.teamStyle} maxLength={50} onChange={(event: { target: HTMLInputElement }) => updateActive({ teamStyle: event.target.value })}/></label><label>Técnico<input value={active.manager} maxLength={60} onChange={(event: { target: HTMLInputElement }) => updateActive({ manager: event.target.value })}/></label><label>Conexão<select value={active.connectionRating} onChange={(event: { target: HTMLSelectElement }) => updateActive({ connectionRating: Number(event.target.value) as 1|2|3|4|5 })}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>{value}/5</option>)}</select></label></div>
-          <div className="match-analysis-actions"><button type="button" className="elite-button" disabled={busy || !videoUrl} onClick={runAnalysis}><Gauge size={18}/>{active.analysis ? 'Analisar novamente' : 'Analisar vídeo'}</button>{busy && <button type="button" onClick={() => abortRef.current?.abort()}><CircleStop size={17}/> Cancelar</button>}<button type="button" disabled={!active.analysis && !active.markers.length} onClick={exportReport}><Download size={17}/> Exportar relatório</button></div>
+          <div className="match-analysis-actions"><button type="button" className="elite-button" disabled={busy || !videoUrl || Boolean(videoAction)} onClick={runAnalysis}><Gauge size={18}/>{active.analysis ? 'Analisar novamente' : 'Analisar vídeo'}</button>{busy && <button type="button" onClick={() => abortRef.current?.abort()}><CircleStop size={17}/> Cancelar</button>}{active.recording?.id && <><button type="button" disabled={busy || Boolean(videoAction)} onClick={saveActiveRecording}><Download size={17}/>{videoAction === 'saving' ? 'Salvando...' : active.recording.uri ? 'Salvo na Galeria' : 'Salvar vídeo'}</button><button type="button" disabled={busy || Boolean(videoAction)} onClick={shareActiveRecording}><Share2 size={17}/>{videoAction === 'sharing' ? 'Preparando...' : 'Compartilhar vídeo'}</button></>}<button type="button" disabled={!active.analysis && !active.markers.length} onClick={exportReport}><Download size={17}/> Exportar relatório</button></div>
           {busy && <div className="match-analysis-progress"><div><span>{analysisMessage}</span><strong>{analysisProgress}%</strong></div><i><b style={{ width: `${analysisProgress}%` }}/></i></div>}
           <label className="match-marker-note">Observação do próximo marcador<input value={markerNote} maxLength={180} placeholder="Ex.: forcei o passe porque o comando atrasou" onChange={(event: { target: HTMLInputElement }) => setMarkerNote(event.target.value)}/></label>
           <div className="match-marker-pad">{MARKER_ACTIONS.map((action) => <button type="button" key={action.kind} onClick={() => addMarker(action.kind)} disabled={!videoUrl}>{action.label}</button>)}</div>
@@ -372,6 +443,6 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
       </article>
     </div>}
 
-    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que o v31.72 consegue afirmar</strong><span>Ele mede mudanças visuais, organiza lances confirmados e encontra padrões entre partidas. Ele não sabe com certeza qual botão foi pressionado, não mede o ping interno do servidor e não chama automaticamente toda pausa de “lag”.</span></div><button type="button" onClick={() => { setMessage('Dica: grave em 720p/30 FPS, marque os eventos durante a revisão e compare pelo menos três partidas com a mesma formação.'); }}><RotateCcw size={16}/> Ver regra de uso</button></div>
+    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que o v31.76 consegue afirmar</strong><span>Ele mede mudanças visuais, organiza lances confirmados e encontra padrões entre partidas. Ele não sabe com certeza qual botão foi pressionado, não mede o ping interno do servidor e não chama automaticamente toda pausa de “lag”.</span></div><button type="button" onClick={() => { setMessage('Dica: grave em 720p/30 FPS, marque os eventos durante a revisão e compare pelo menos três partidas com a mesma formação.'); }}><RotateCcw size={16}/> Ver regra de uso</button></div>
   </section>;
 }
