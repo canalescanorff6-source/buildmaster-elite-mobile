@@ -1,4 +1,4 @@
-/* BuildMaster Elite Tático v31.71 — tema consolidado de produção.
+/* BuildMaster Elite Tático v31.72 — tema consolidado de produção.
    Todos os estilos ativos foram reunidos neste arquivo para eliminar
    camadas antigas separadas e reduzir a quantidade de arquivos carregados. */
 
@@ -20626,3 +20626,6 @@ body::after { display: none !important; }
 /* v31.71 — recuperação de contas e validade flexível */
 .account-expiry-note { display:flex; align-items:center; gap:10px; min-height:48px; padding:11px 13px; border:1px solid rgba(77,211,156,.28); border-radius:14px; background:rgba(77,211,156,.07); color:var(--muted); line-height:1.4; }
 .account-expiry-note svg { color:#59dfa8; flex:0 0 auto; }
+
+
+/* v31.72 — fichas complementares e filtro antirrepetição */

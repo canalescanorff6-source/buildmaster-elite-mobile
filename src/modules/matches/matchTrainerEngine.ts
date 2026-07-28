@@ -2,7 +2,7 @@ import { createStableId } from '@/lib/stableId';
 import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 import type { MatchRecordingDescriptor, MatchRecordingQuality } from './matchRecorderBridge';
 
-export const MATCH_TRAINER_VERSION = '31.71.0';
+export const MATCH_TRAINER_VERSION = '31.72.0';
 export const MATCH_TRAINER_STORAGE_KEY = 'buildmaster_match_trainer_sessions_v3170';
 
 export type MatchEventKind = 'pass-error' | 'dangerous-turnover' | 'marking-error' | 'cursor-error' | 'forced-shot' | 'good-play' | 'possible-delay' | 'goal-for' | 'goal-against' | 'note';
@@ -356,7 +356,7 @@ export function exportMatchTrainerReport(session: MatchTrainerSession) {
   const markers = [...(session.analysis?.automaticMarkers || []), ...session.markers].sort((a, b) => a.atMs - b.atMs);
   const formatTime = (ms: number) => `${String(Math.floor(ms / 60000)).padStart(2, '0')}:${String(Math.floor(ms % 60000 / 1000)).padStart(2, '0')}`;
   return [
-    'BUILDMASTER ELITE TÁTICO — TREINADOR DE PARTIDAS v31.71',
+    'BUILDMASTER ELITE TÁTICO — TREINADOR DE PARTIDAS v31.72',
     `Partida: ${session.title}`,
     `Arquivo: ${session.fileName}`,
     `Formação: ${session.formation}`,

@@ -1,6 +1,11 @@
-BUILDMASTER ELITE TÁTICO v31.71 — TREINADOR DE PARTIDAS
+BUILDMASTER ELITE TÁTICO v31.72 — FICHAS COMPLEMENTARES E ÍMPETOS
 
 Projeto limpo de produção com:
+- fichas de desempenho por posição, Estilo de Jogo e orçamento real;
+- filtro antirrepetição por nome oficial, alias, tradução e variação de OCR;
+- habilidades adicionais complementares para todas as posições;
+- Ímpetos analisados em trilha separada;
+- auditoria visível antes de aplicar o Top 5;
 - gravação oficial Android por MediaProjection;
 - serviço em primeiro plano e notificação permanente;
 - vídeos privados locais sem envio automático;

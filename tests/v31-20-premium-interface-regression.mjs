@@ -7,7 +7,7 @@ const css = readFileSync('src/app/globals.css', 'utf8');
 const prefs = readFileSync('src/lib/easyExperience.ts', 'utf8');
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
-assert.equal(pkg.version, '31.71.0');
+assert.equal(pkg.version, '31.72.0');
 for (const preset of ['obsidian-gold', 'elite-blue', 'future-purple']) {
   assert.ok(app.includes(preset), `O seletor deve incluir ${preset}.`);
   assert.ok(css.includes(`visual-${preset}`), `O CSS deve incluir ${preset}.`);
@@ -19,4 +19,4 @@ assert.ok(home.includes('bm-premium-reader-hero'), 'A home deve destacar o leito
 assert.ok(home.includes('bm-premium-feature-grid'), 'A home deve mostrar as funções principais.');
 assert.ok(home.includes('bm-premium-mini-pitch'), 'A home deve mostrar a formação ativa.');
 assert.ok(home.includes('Habilidades') && home.includes('Ímpetos') && home.includes('Formações'), 'As funções essenciais devem estar visíveis.');
-console.log('v31.71 premium interface regression: ok');
+console.log('v31.72 premium interface regression: ok');

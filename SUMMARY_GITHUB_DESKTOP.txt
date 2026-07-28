@@ -1,1 +1,1 @@
-Restaura criação de contas, validade flexível e diagnóstico do Supabase na v31.71
+Corrige fichas e garante habilidades complementares sem repetição na v31.72

@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v31.60 — OCR Rígido Adaptativo
+# BuildMaster Elite Tático v31.72 — Fichas Complementares
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
@@ -106,6 +106,16 @@ Quando existem duas distribuições próximas, o app cria um teste A/B:
 
 `CardVisionApp.tsx` e `analyzer.ts` ainda são arquivos grandes e permanecem monitorados pela auditoria. A lógica nova foi criada fora deles para evitar crescimento adicional e reduzir risco de regressão.
 
+## v31.72 — Fichas Complementares e Ímpetos separados
+
+- A ficha de desempenho continua sendo calculada por posição escolhida, Estilo de Jogo, atributos, corpo, contexto tático e orçamento real de pontos.
+- Habilidades que a carta já possui são removidas antes e depois de todos os motores de recomendação.
+- Traduções, aliases e pequenas variações de OCR passam a representar a mesma habilidade oficial.
+- O Top 5 nunca repete internamente e não é completado com opção fraca apenas para preencher espaço.
+- Goleiros, zagueiros, laterais, volantes, meias, pontas, segundos atacantes e centroavantes passam pelo mesmo portão final de integridade.
+- Ímpetos são calculados em trilha separada e não entram por engano na lista de habilidades já possuídas.
+- O resultado mostra uma auditoria visível informando quais habilidades foram usadas no filtro e se a lista está pronta ou exige revisão.
+
 ## v31.60 — OCR Rígido Adaptativo
 
 - Recorte automático refinado da carta e recorte interno quadrado da foto do jogador.
@@ -211,6 +221,7 @@ Os testes isolados atuais também podem ser executados por versão:
 npm run test:v3050
 npm run test:v3100
 npm run test:v3110
+npm run test:v3172
 ```
 
 ## Colocar no GitHub

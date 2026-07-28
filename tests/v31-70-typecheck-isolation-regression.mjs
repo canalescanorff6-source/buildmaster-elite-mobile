@@ -16,4 +16,4 @@ assert.match(lucideStub, /export const Video/);
 const analyzerStub = lucideStub;
 assert.match(analyzerStub, /declare module '@\/lib\/analyzer'/);
 
-console.log('Regressão v31.71 aprovada: stubs parciais não podem substituir os tipos reais no build principal.');
+console.log('Regressão v31.72 aprovada: stubs parciais não podem substituir os tipos reais no build principal.');

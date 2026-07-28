@@ -1,9 +1,10 @@
+import type { AnalysisResult, Objective, PositionCode } from '@/lib/analyzer';
+import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import {
-  OFFICIAL_ADDITIONAL_SKILL_NAMES,
-  type AnalysisResult,
-  type Objective,
-  type PositionCode
-} from '@/lib/analyzer';
+  canonicalSkillName,
+  filterComplementaryAdditionalSkills,
+  skillIdentityKey
+} from '@/lib/officialSkillIdentity';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { memoryKey } from '@/modules/vault/cardHistoryStore';
 
@@ -275,28 +276,36 @@ export function clearCorrectionsForResult(result: AnalysisResult) {
 
 export function applyLocalCorrectionsToResult(result: AnalysisResult): AnalysisResult {
   const corrections = getMergedCorrectionsForResult(result);
-  const blockedSkills = new Set(corrections.blockedSkills.map((item) => item.toLowerCase()));
-  const promotedSkills = corrections.promotedSkills.filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]));
+  const blockedSkills = new Set(corrections.blockedSkills.map(skillIdentityKey));
+  const promotedSkills = corrections.promotedSkills
+    .map((skill) => canonicalSkillName(skill))
+    .filter((skill): skill is (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number] => Boolean(skill && OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number])));
   const blockedImpetos = new Set(corrections.blockedImpetos.map((item) => item.toLowerCase()));
   const ownedImpetos = new Set(result.parsed.impetos.filter((item) => item.active !== false).map((item) => item.name.toLowerCase()));
   const promotedImpetos = corrections.promotedImpetos.filter((name) => !ownedImpetos.has(name.toLowerCase()));
-  const ownedSkills = new Set(result.parsed.nativeSkills.map((item) => item.toLowerCase()));
-  const isAllowedSkill = (skill: string) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number]) && !ownedSkills.has(skill.toLowerCase()) && !blockedSkills.has(skill.toLowerCase());
+  const ownedSkills = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
+  const isAllowedSkill = (skill: string) => {
+    const canonical = canonicalSkillName(skill);
+    if (!canonical || !OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(canonical as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number])) return false;
+    const key = skillIdentityKey(canonical);
+    return !ownedSkills.has(key) && !blockedSkills.has(key);
+  };
 
   const candidates: string[] = [];
   const pushSkill = (skill: string) => {
-    if (isAllowedSkill(skill) && !candidates.some((item) => item.toLowerCase() === skill.toLowerCase())) candidates.push(skill);
+    const canonical = canonicalSkillName(skill);
+    if (canonical && isAllowedSkill(canonical) && !candidates.some((item) => skillIdentityKey(item) === skillIdentityKey(canonical))) candidates.push(canonical);
   };
   promotedSkills.forEach(pushSkill);
   result.recommendedSkills.forEach(pushSkill);
   result.skillRecommendations.filter((item) => item.tier !== 'evitar').forEach((item) => pushSkill(item.name));
 
-  const recommendedSkills = candidates.slice(0, 5);
-  const existingRecommendations = result.skillRecommendations.filter((item) => !blockedSkills.has(item.name.toLowerCase()));
+  const recommendedSkills = filterComplementaryAdditionalSkills(candidates, result.parsed.nativeSkills, result.parsed.specialSkills, 5);
+  const existingRecommendations = result.skillRecommendations.filter((item) => !blockedSkills.has(skillIdentityKey(item.name)) && !ownedSkills.has(skillIdentityKey(item.name)));
   const promotedRecommendations = promotedSkills.map((name) => ({ name, tier: 'essencial' as const, reason: 'Priorizada por correção inteligente local nesta função/jogador.' }));
   const blockedRecommendations = corrections.blockedSkills.map((name) => ({ name, tier: 'evitar' as const, reason: 'Você marcou como não combina; o app passa a evitar automaticamente.' }));
   const skillRecommendations = [...promotedRecommendations, ...existingRecommendations, ...blockedRecommendations]
-    .filter((item, index, array) => array.findIndex((other) => other.name.toLowerCase() === item.name.toLowerCase() && other.tier === item.tier) === index);
+    .filter((item, index, array) => array.findIndex((other) => skillIdentityKey(other.name) === skillIdentityKey(item.name) && other.tier === item.tier) === index);
 
   const recommendedImpetos = [
     ...promotedImpetos.map((name) => {

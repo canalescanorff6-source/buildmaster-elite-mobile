@@ -1,6 +1,13 @@
 import { findOfficialCardRule, type LocalCardRule } from '../modules/rules/officialRuleRegistry';
 import { ATTRIBUTE_LABELS, BASE_BY_POSITION, OFFICIAL_ADDITIONAL_SKILL_NAMES, POSITION_ALIAS_ENTRIES, SKILL_PROFILES, SPECIAL_SKILL_NAMES, escapeRegex, isOfficialAdditionalSkill, positionAliasPattern, shortPositionPattern } from '../modules/analysis/analyzerCatalog';
 import { isImpossibleByCoreStyle } from './positionRules';
+import {
+  buildOwnedSkillKeys,
+  canonicalSkillName,
+  canonicalizeSkillList,
+  filterComplementaryAdditionalSkills,
+  skillIdentityKey
+} from './officialSkillIdentity';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
 import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
@@ -104,15 +111,11 @@ function textHas(text: string, candidate: string): boolean {
 }
 
 function skillKey(skill: string): string {
-  return slug(skill).replace(/-/g, '');
+  return skillIdentityKey(skill);
 }
 
 function uniqueSkillList(skills: string[]) {
-  const map = new Map<string, string>();
-  for (const skill of skills) {
-    if (SKILL_PROFILES[skill]) map.set(skillKey(skill), skill);
-  }
-  return Array.from(map.values());
+  return canonicalizeSkillList(skills).filter((skill) => Boolean(SKILL_PROFILES[skill]));
 }
 
 function detectPositions(text: string): PositionCode[] {
@@ -609,24 +612,36 @@ function parseAttributes(text: string): Attributes {
 
 function detectSkills(text: string) {
   const found: string[] = [];
-  for (const [skill, profile] of Object.entries(SKILL_PROFILES)) {
-    const candidates = [skill, ...(profile.aliases ?? [])];
-    if (candidates.some((candidate) => textHas(text, candidate))) found.push(skill);
-  }
-  // Preserva habilidades novas confirmadas pelo usuário mesmo antes de existir
-  // uma regra específica de gameplay para elas. Isso evita recomendar duplicatas
-  // e permite que o catálogo local evolua sem inventar nomes automaticamente.
   const explicitBlocks = Array.from(text.matchAll(/HABILIDADES (?:JÁ POSSUI|JA POSSUI|DO JOGADOR|NATIVAS|CONFIRMADAS)\s*[:=]\s*([^\n\r]+)/gi));
+
+  // A lista confirmada pelo usuário tem prioridade absoluta. Todos os aliases
+  // (português, inglês e pequenas variações de OCR) são convertidos para o nome
+  // oficial antes de alimentar o motor de recomendações.
   for (const block of explicitBlocks) {
     for (const raw of String(block[1] ?? '').split(/[,;•|]/)) {
       const skill = cleanLine(raw).replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '');
       const letters = (skill.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
       if (skill.length < 3 || skill.length > 54 || letters / Math.max(1, skill.length) < 0.62) continue;
-      const official = Object.keys(SKILL_PROFILES).find((name) => skillKey(name) === skillKey(skill));
-      found.push(official ?? skill);
+      found.push(canonicalSkillName(skill) ?? skill);
     }
   }
-  return Array.from(new Set(found));
+  if (explicitBlocks.length) return canonicalizeSkillList(found);
+
+  const visibleBlock = text.match(/HABILIDADES VIS[IÍ]VEIS\s*:\s*([\s\S]*?)(?=\n(?:\[|NOME|POSI[CÇ][AÃ]O|ESTILO|GER|N[IÍ]VEL|PONTOS|ATRIBUTOS|[IÍ]MPETO|IMPETO|T[EÉ]CNICO)|$)/i)?.[1] ?? '';
+  const safeLines = text.split(/\r?\n/)
+    .map(cleanLine)
+    .filter(Boolean)
+    .filter((line) => !/\b\d{2,3}\b/.test(line))
+    .filter((line) => !/^(?:nome(?: do jogador)?|posi[cç][aã]o(?: principal)?|estilo de jogo|tipo da carta|pa[ií]s|altura|peso|idade|n[ií]vel|ger|overall|t[eé]cnico|manager)\s*[:=-]/i.test(line))
+    .filter((line) => !/^(?:talento|controle de bola|drible|condu[cç][aã]o firme|passe rasteiro|passe alto|finaliza[cç][aã]o|cabe[cç](?:ada|eio)|velocidade|acelera[cç][aã]o|for[cç]a do chute|salto|contato f[ií]sico|equil[ií]brio|resist[eê]ncia)\s*[:=-]/i.test(line))
+    .join('\n');
+  const detectionScope = [visibleBlock, safeLines].filter(Boolean).join('\n');
+
+  for (const [skill, profile] of Object.entries(SKILL_PROFILES)) {
+    const candidates = [skill, ...(profile.aliases ?? [])];
+    if (candidates.some((candidate) => textHas(detectionScope, candidate))) found.push(skill);
+  }
+  return canonicalizeSkillList(found);
 }
 
 function parseImpetos(text: string): Impetus[] {
@@ -1490,11 +1505,7 @@ function topRatedPositions(positionRatings: PositionRatings): PositionCode[] {
 
 function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>): string[] {
   const candidateScores = new Map<string, number>();
-  const ownedSkillKeys = new Set([
-    ...parsed.nativeSkills.map(skillKey),
-    ...parsed.specialSkills.map(skillKey),
-    ...parsed.impetos.map((item) => skillKey(item.name))
-  ]);
+  const ownedSkillKeys = buildOwnedSkillKeys(parsed.nativeSkills, parsed.specialSkills);
   const bannedAdditional = new Set(SPECIAL_SKILL_NAMES.map(skillKey));
   const contextualBans = contextualSkillBans(parsed, selectedPosition, objective, attributes);
   const blueprint = skillBlueprint(parsed, selectedPosition, objective, attributes);
@@ -1514,10 +1525,12 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
   if (selectedPosition === 'GK' || parsed.mainPosition === 'GK' || isGoalkeeperStyle(parsed.playstyle)) {
     blueprint.essentials.forEach((skill, index) => add(skill, 130 - index * 8));
     blueprint.alternatives.forEach((skill, index) => add(skill, 82 - index * 5));
-    return Array.from(candidateScores.entries())
-      .sort((left, right) => right[1] - left[1])
-      .map(([skill]) => skill)
-      .slice(0, 5);
+    return filterComplementaryAdditionalSkills(
+      Array.from(candidateScores.entries()).sort((left, right) => right[1] - left[1]).map(([skill]) => skill),
+      parsed.nativeSkills,
+      parsed.specialSkills,
+      5
+    );
   }
 
   // 1) Função principal escolhida pelo motor local: a lista é separada em essenciais e alternativas.
@@ -1616,10 +1629,12 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     add('Afastamento acrobático', 80);
     add('Carrinho', 76);
   }
-  return Array.from(candidateScores.entries())
-    .sort((left, right) => right[1] - left[1])
-    .map(([skill]) => skill)
-    .slice(0, 5);
+  return filterComplementaryAdditionalSkills(
+    Array.from(candidateScores.entries()).sort((left, right) => right[1] - left[1]).map(([skill]) => skill),
+    parsed.nativeSkills,
+    parsed.specialSkills,
+    5
+  );
 }
 
 function strengthsWeaknesses(a: Required<Attributes>, pri: Record<string, number>, position: PositionCode = 'CF') {

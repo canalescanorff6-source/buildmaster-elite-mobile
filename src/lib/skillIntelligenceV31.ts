@@ -1,6 +1,7 @@
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan, UnifiedSkillDecision } from './analyzerDomain';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import { TRAINING_LABELS } from './trainingEngine';
+import { buildOwnedSkillKeys, filterComplementaryAdditionalSkills, skillIdentityKey } from './officialSkillIdentity';
 
 type SkillCategory = UnifiedSkillDecision['category'];
 type Candidate = UnifiedSkillDecision & { rawScore: number };
@@ -190,8 +191,8 @@ function specificScore(result: AnalysisResult, skill: string): { score: number; 
 }
 
 function buildCandidate(result: AnalysisResult, plan: TrainingPlan, skill: string): Candidate | null {
-  const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(norm));
-  if (owned.has(norm(skill))) return null;
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
+  if (owned.has(skillIdentityKey(skill))) return null;
   const category = CATEGORY_BY_SKILL[skill] ?? 'mental';
   const base = POSITION_CATEGORY_WEIGHTS[result.bestPosition.code][category];
   if (base <= -80) return null;
@@ -256,16 +257,25 @@ export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: Trainin
     selected.push(next);
     categoryCounts.set(next.category, (categoryCounts.get(next.category) ?? 0) + 1);
   }
-  return selected.map((item, index) => ({
-    name: item.name,
-    score: item.score,
-    priority: index === 0 || item.score >= 88 ? 'essencial' : index < 3 ? 'alta' : 'complementar',
-    category: item.category,
-    gameplayImpact: item.gameplayImpact,
-    reasons: item.reasons,
-    supportedBy: item.supportedBy,
-    identityBoost: item.identityBoost
-  }));
+  const finalNames = filterComplementaryAdditionalSkills(
+    selected.map((item) => item.name),
+    result.parsed.nativeSkills,
+    result.parsed.specialSkills,
+    5
+  );
+  return finalNames.map((name, index) => {
+    const item = selected.find((candidate) => candidate.name === name)!;
+    return {
+      name: item.name,
+      score: item.score,
+      priority: index === 0 || item.score >= 88 ? 'essencial' : index < 3 ? 'alta' : 'complementar',
+      category: item.category,
+      gameplayImpact: item.gameplayImpact,
+      reasons: item.reasons,
+      supportedBy: item.supportedBy,
+      identityBoost: item.identityBoost
+    };
+  });
 }
 
 export function skillPlanScore(plan: UnifiedSkillDecision[]) {

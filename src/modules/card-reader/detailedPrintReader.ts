@@ -1,6 +1,7 @@
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
 import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAudit } from './efhubProfile';
+import { canonicalSkillName, skillAliasesFor, skillIdentityKey } from '@/lib/officialSkillIdentity';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -374,31 +375,20 @@ function extractUnknownSkillCandidates(text: string, knownCatalog: string[], con
 
 function parseSkills(text: string, confidence: number, source: string, learnedSkillNames: string[] = []) {
   const skillListText = isolateSkillListText(text);
-  const aliases: Partial<Record<(typeof SKILLS)[number], string[]>> = {
-    'Cabeçada': ['Cabeceio', 'Cabecada'],
-    'Espírito guerreiro': ['Espirito guerreiro'],
-    'Especialista em pênalti': ['Especialista em penalti'],
-    'Passe de primeira': ['Passe primeira'],
-    'Chute de primeira': ['Chute primeira'],
-    'Precisão à distância': ['Precisao a distancia'],
-    'Finalização acrobática': ['Finalizacao acrobatica'],
-    'Controle com a sola': ['Controle sola'],
-    'Marcação individual': ['Marcação ind.', 'Marcacao ind', 'Marcação indiv.'],
-    'Volta para marcar': ['Volta p/ marcar'],
-    'Esticada de Perna': ['Esticada de perna', 'Esticada da perna'],
-    'Sombra veloz': ['Sombra Veloz']
-  };
   const official = SKILLS
-    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, aliases[skill] ?? []))
-    .map((skill) => makeValue('Habilidade', skill, confidence, source));
+    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, skillAliasesFor(skill)))
+    .map((skill) => makeValue('Habilidade', canonicalSkillName(skill) ?? skill, confidence, source));
+  const officialKeys = new Set(official.map((item) => skillIdentityKey(item.value)));
   const learned = learnedSkillNames
-    .filter((skill) => !official.some((item) => textSimilarity(item.value, skill) >= 0.90))
-    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, []))
+    .map((skill) => canonicalSkillName(skill) ?? skill)
+    .filter((skill) => !officialKeys.has(skillIdentityKey(skill)))
+    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, skillAliasesFor(skill)))
+    .filter((skill, index, array) => array.findIndex((item) => skillIdentityKey(item) === skillIdentityKey(skill)) === index)
     .map((skill) => makeValue('Habilidade aprendida', skill, Math.max(65, confidence - 3), `${source} • catálogo aprendido`));
-  const aliasCatalog = Object.values(aliases).flatMap((items) => items ?? []);
+  const aliasCatalog = SKILLS.flatMap((skill) => skillAliasesFor(skill));
   const catalog = [...SKILLS, ...aliasCatalog, ...learnedSkillNames];
   return {
-    skills: [...official, ...learned],
+    skills: [...official, ...learned].filter((item, index, array) => array.findIndex((other) => skillIdentityKey(other.value) === skillIdentityKey(item.value)) === index),
     candidates: extractUnknownSkillCandidates(skillListText, catalog, confidence, source)
   };
 }

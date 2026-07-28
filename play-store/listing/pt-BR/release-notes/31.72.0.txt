@@ -1,0 +1,6 @@
+Fichas Complementares v31.72:
+- impede habilidades adicionais iguais às que a carta já possui;
+- reconhece nomes oficiais, traduções e pequenas variações do OCR;
+- analisa posição, Estilo de Jogo, atributos e ficha final;
+- mantém os Ímpetos em uma análise separada;
+- inclui auditoria visível antes de aplicar o Top 5.

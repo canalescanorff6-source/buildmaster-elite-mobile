@@ -5,6 +5,7 @@ import { applyLocalAiToResult } from './localAiEngine';
 import { applyLocalCorrectionsToResult } from '../modules/builds/dynamicRules';
 import { applyUnifiedCardIntelligence } from './unifiedCardIntelligence';
 import { applySupremeGameplayEngine } from './supremeGameplayEngine';
+import { enforceComplementarySkillIntegrity } from './skillIntegrity';
 
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   const fused = applyCompetitiveFusionToResult(result);
@@ -12,5 +13,6 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   const withLocalAi = applyLocalAiToResult(optimized);
   const corrected = applyLocalCorrectionsToResult(withLocalAi);
   const unified = applyUnifiedCardIntelligence(corrected);
-  return applySupremeGameplayEngine(unified);
+  const supreme = applySupremeGameplayEngine(unified);
+  return enforceComplementarySkillIntegrity(supreme);
 }

@@ -122,6 +122,17 @@ export type ImpetoRecommendation = {
   warnings?: string[];
 };
 
+
+export type SkillIntegrityAudit = {
+  version: string;
+  status: 'approved' | 'review';
+  ownedSkills: string[];
+  recommendedSkills: string[];
+  removedDuplicates: string[];
+  missingSlots: number;
+  checks: string[];
+};
+
 export type LocalAiModelScore = {
   id: 'leitura' | 'dna' | 'funcao' | 'ficha' | 'habilidades' | 'impeto';
   label: string;
@@ -627,6 +638,7 @@ export type AnalysisResult = {
   skillRecommendations: SkillRecommendation[];
   avoidSkills: string[];
   recommendedImpetos: ImpetoRecommendation[];
+  skillIntegrity?: SkillIntegrityAudit;
   buildName: string;
   strengths: string[];
   weaknesses: string[];

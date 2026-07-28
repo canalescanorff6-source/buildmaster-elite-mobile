@@ -56,6 +56,7 @@ import {
   getOneHundredUpgradeChecklist
 } from '@/lib/ultimateCoach';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
@@ -369,15 +370,15 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const pointPercent = Math.min(100, Math.round((result.trainingPointsUsed / Math.max(1, result.trainingPointsTotal)) * 100));
   const positionItems = result.positionScores.slice(0, 8);
   const cardPositions = Array.from(new Set([card.mainPosition, ...card.positions])).slice(0, 10);
-  const nativeSkills = card.nativeSkills.slice(0, 8);
+  const nativeSkills = canonicalizeSkillList([...card.nativeSkills, ...card.specialSkills]).slice(0, 12);
   const skillRecommendations = result.skillRecommendations ?? result.recommendedSkills.map((skill) => ({ name: skill, tier: 'alternativa' as const, reason: skillReason(skill) }));
   const recommendedSkills = result.recommendedSkills.slice(0, 5);
   const avoidSkillItems = skillRecommendations.filter((item) => item.tier === 'evitar').slice(0, 5);
   const alternativeSkillItems = skillRecommendations.filter((item) => item.tier === 'alternativa' && !recommendedSkills.includes(item.name)).slice(0, 6);
-  const duplicateRecommendedSkills = recommendedSkills.filter((skill) => card.nativeSkills.some((owned) => owned.toLowerCase() === skill.toLowerCase()));
+  const duplicateRecommendedSkills = recommendedSkills.filter((skill) => nativeSkills.some((owned) => skillIdentityKey(owned) === skillIdentityKey(skill)));
   const finalValidatorItems = [
     { label: 'Pontos dentro do limite', ok: result.trainingPointsUsed <= result.trainingPointsTotal, note: `${result.trainingPointsUsed}/${result.trainingPointsTotal} pontos` },
-    { label: 'Top 5 sem repetição', ok: duplicateRecommendedSkills.length === 0, note: duplicateRecommendedSkills.length ? `Revisar: ${duplicateRecommendedSkills.join(', ')}` : 'habilidades já existentes foram filtradas' },
+    { label: 'Top 5 sem repetição', ok: duplicateRecommendedSkills.length === 0 && result.skillIntegrity?.status !== 'review', note: duplicateRecommendedSkills.length ? `Revisar: ${duplicateRecommendedSkills.join(', ')}` : result.skillIntegrity?.checks[1] ?? 'habilidades já existentes foram filtradas' },
     { label: 'Lista oficial de habilidades', ok: recommendedSkills.length > 0, note: recommendedSkills.length ? 'recomendações travadas na lista local oficial' : 'nenhuma habilidade segura encontrada' },
     { label: 'Ímpetos separados das habilidades', ok: result.recommendedImpetos.length > 0, note: 'ímpeto não é tratado como habilidade adicional' },
     { label: 'Função real detectada', ok: Boolean(result.teamMap?.functionLabel), note: result.teamMap?.functionLabel ?? result.buildName },
@@ -1145,6 +1146,17 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
 
       {tab === 'treino' && <div className="result-section-grid"><SkillAndTrainingPanel result={result} /><VideoReviewPanel result={result} /></div>}
+
+      {tab === 'habilidades' && result.skillIntegrity && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card">
+            <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Filtro antirrepetição v31.72</p><h3>{result.skillIntegrity.status === 'approved' ? 'Lista complementar aprovada' : 'Confirme as habilidades lidas antes de aplicar'}</h3></div><span>{result.skillIntegrity.recommendedSkills.length}/5 seguras</span></div>
+            <div className="chip-cloud">{result.skillIntegrity.checks.map((check) => <span key={check}>{check}</span>)}</div>
+            {result.skillIntegrity.removedDuplicates.length > 0 && <p className="panel-note">Removidas automaticamente por repetição ou conflito: {result.skillIntegrity.removedDuplicates.join(', ')}.</p>}
+            {result.skillIntegrity.missingSlots > 0 && <p className="panel-note">{result.skillIntegrity.missingSlots} espaço(s) ficaram vazio(s) porque o motor não encontrou outra habilidade segura. O app não completa a lista com opção fraca apenas para chegar a cinco.</p>}
+          </article>
+        </div>
+      )}
 
       {tab === 'habilidades' && !advancedMode && (
         <div className="result-section-grid bm-simple-skill-result">

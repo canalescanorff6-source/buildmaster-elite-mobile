@@ -13,4 +13,4 @@ assert.match(privacyPage, /PrivacyPolicyPage|Política de privacidade/);
 assert.match(deletionPage, /AccountDeletionPage|Solicitar exclusão da conta/);
 assert.notEqual(rootPage.trim(), privacyPage.trim(), 'A rota raiz e a política não podem ser arquivos duplicados.');
 
-console.log('v31.71 separação das rotas raiz, privacidade e exclusão aprovada.');
+console.log('v31.72 separação das rotas raiz, privacidade e exclusão aprovada.');

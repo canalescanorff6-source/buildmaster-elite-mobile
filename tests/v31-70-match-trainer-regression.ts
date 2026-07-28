@@ -7,7 +7,7 @@ import {
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
 
-assert.equal(MATCH_TRAINER_VERSION, '31.71.0');
+assert.equal(MATCH_TRAINER_VERSION, '31.72.0');
 
 const session = createMatchTrainerSession({
   source: 'native-recording',
@@ -56,9 +56,9 @@ assert.ok(summary.priorities.some((item) => item.includes('passe seguro')));
 assert.ok(summary.matchRules.some((item) => item.includes('VOL')));
 
 const report = exportMatchTrainerReport(session);
-assert.match(report, /TREINADOR DE PARTIDAS v31\.71/);
+assert.match(report, /TREINADOR DE PARTIDAS v31\.72/);
 assert.match(report, /00:42 — Perda perigosa/);
 assert.match(report, /Sinais automáticos precisam de revisão/);
 assert.match(report, /4-1-2-2-1/);
 
-console.log('v31.71 motor de sessões, marcadores, resumo e relatório aprovado.');
+console.log('v31.72 motor de sessões, marcadores, resumo e relatório aprovado.');

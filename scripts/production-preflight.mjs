@@ -45,12 +45,12 @@ const appTsconfig = JSON.parse(read('tsconfig.app.json'));
 const cardVisionSource = read('src/components/CardVisionApp.tsx');
 const cropCalibrationSource = read('src/modules/card-reader/templateCalibration.ts');
 
-check(version === '31.71.0', 'Versão v31.71 configurada', version);
+check(version === '31.72.0', 'Versão v31.72 configurada', version);
 check(lock.version === version && lock.packages?.['']?.version === version, 'package-lock sincronizado');
 check(appUpdates.includes(`'${version}'`), 'Motor de atualização sincronizado');
 check(dataSafety.includes(`APP_DATA_VERSION = '${version}'`) && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v31.71' && manifest.short_name === 'BuildMaster v31.71', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v31-71'), 'Cache PWA renovado');
+check(manifest.name === 'BuildMaster Elite Tático v31.72' && manifest.short_name === 'BuildMaster v31.72', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v31-72'), 'Cache PWA renovado');
 check(!/@import\s+['"]/i.test(css) && css.includes('.bm-v3000-play-publication'), 'Tema de produção consolidado');
 check(layout.includes('bm-v3000-play-publication'), 'Escopo visual v30 ativo');
 check(rootPage.includes("@/components/AuthGate") && rootPage.includes("@/components/CardVisionApp") && rootPage.includes('<AuthGate>') && rootPage.includes('<CardVisionApp') && !/PrivacyPolicyPage|Política de privacidade|public-policy-page/.test(rootPage), 'Rota inicial correta', 'src/app/page.tsx deve abrir AuthGate + CardVisionApp e não pode conter a política de privacidade');
@@ -61,7 +61,7 @@ const apkUsesConsolidatedDoctor = workflow.includes('npm run ci:verify');
 for (const command of ['npm run release:preflight', 'npm run quality:routes', 'npm run quality:syntax', 'npm run quality:interactive', 'npm run typecheck', 'npm run test:all']) check(apkUsesConsolidatedDoctor || workflow.includes(command), `Workflow APK executa ${command} diretamente ou pelo diagnóstico consolidado`);
 for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
 for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
-check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run quality:audit', 'Bateria atual configurada');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run quality:audit', 'Bateria atual configurada');
 check(new Set(tsconfig.exclude ?? []).has('tests') && new Set(appTsconfig.exclude ?? []).has('tests'), 'Fixtures isoladas fora do typecheck principal');
 check(String(pkg.scripts?.typecheck ?? '').includes('-p tsconfig.app.json') && !(appTsconfig.include ?? []).some((item) => item.includes('tests') || item === '**/*.ts' || item === '**/*.tsx'), 'Typecheck principal restrito ao aplicativo');
 check(exists('scripts/check-typecheck-isolation.mjs') && exists('tests/v31-70-typecheck-isolation-regression.mjs'), 'Portão permanente de isolamento TypeScript presente');
@@ -69,7 +69,16 @@ check(exists('scripts/check-card-crop-type-safety.mjs') && String(pkg.scripts?.[
 check(exists('scripts/check-generated-native-java.mjs') && String(pkg.scripts?.['quality:native-java'] ?? '').includes('check-generated-native-java.mjs') && String(pkg.scripts?.['test:v3170'] ?? '').includes('quality:native-java'), 'Portão de Java nativo gerado presente');
 check(!/OFFICIAL_ADDITIONAL_SKILL_NAMES[\s\S]*?from ['"]@\/modules\/analysis['"]/.test(cardVisionSource), 'CardVisionApp sem importação ociosa de habilidades');
 check(/applyRememberedCardBox<T extends CardCropBox>\(cardBox: T, calibration: OcrTemplateCalibration \| null\): T/.test(cropCalibrationSource) && /return\s*\{\s*\.\.\.cardBox,/.test(cropCalibrationSource), 'Calibração do recorte preserva OcrZone completo');
-check(exists('scripts/check-app-routes.mjs') && exists('tests/v31-70-root-route-regression.mjs') && exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-20-premium-interface-regression.mjs') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs') && exists('tests/v31-70-typecheck-isolation-regression.mjs'), 'Regressões atuais presentes');
+const skillIdentitySource = read('src/lib/officialSkillIdentity.ts');
+const skillIntegritySource = read('src/lib/skillIntegrity.ts');
+const pipelineSource = read('src/lib/cardIntelligencePipeline.ts');
+const resultWorkspaceSource = read('src/components/result/ResultWorkspace.tsx');
+check(skillIdentitySource.includes('filterComplementaryAdditionalSkills') && skillIdentitySource.includes('buildOwnedSkillKeys'), 'Identidade canônica de habilidades presente');
+check(skillIntegritySource.includes('enforceComplementarySkillIntegrity') && skillIntegritySource.includes('Habilidades adicionais e Ímpetos foram avaliados em trilhas separadas.'), 'Auditoria final antirrepetição presente');
+check(pipelineSource.includes('enforceComplementarySkillIntegrity(supreme)'), 'Filtro antirrepetição executado depois de todos os motores');
+check(resultWorkspaceSource.includes('Filtro antirrepetição v31.72'), 'Auditoria de habilidades visível no resultado');
+check(String(pkg.scripts?.['test:v3172'] ?? '').includes('v31-72-complementary-skills-regression.ts'), 'Regressão v31.72 integrada à bateria');
+check(exists('scripts/check-app-routes.mjs') && exists('tests/v31-70-root-route-regression.mjs') && exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-20-premium-interface-regression.mjs') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs') && exists('tests/v31-70-typecheck-isolation-regression.mjs') && exists('tests/v31-71-account-recovery-regression.mjs') && exists('tests/v31-72-complementary-skills-regression.ts') && exists('tests/types-v3172/tsconfig.json'), 'Regressões atuais presentes');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflow.includes(marker), `Workflow APK atualizado para ${marker}`);
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(playWorkflow.includes(marker), `Workflow Play atualizado para ${marker}`);
 for (const marker of ['gradle/actions/setup-gradle@v6', 'actions/upload-artifact@v6']) check(workflow.includes(marker), `Workflow APK atualizado para ${marker}`);
@@ -128,7 +137,11 @@ for (const file of [
   'src/modules/matches/MatchTrainerCenter.tsx',
   'scripts/install-match-recorder-plugin.mjs',
   'tests/types-v3170/tsconfig.json',
-  'tests/types-v3170-ui/tsconfig.json'
+  'tests/types-v3170-ui/tsconfig.json',
+  'src/lib/officialSkillIdentity.ts',
+  'src/lib/skillIntegrity.ts',
+  'tests/v31-72-complementary-skills-regression.ts',
+  'tests/types-v3172/tsconfig.json'
 ]) check(exists(file), `Componente de produção presente: ${file}`);
 check(read('src/components/CardVisionApp.tsx').split('\n').length < 4000, 'CardVisionApp abaixo de 4.000 linhas');
 check(read('src/lib/analyzer.ts').split('\n').length < 3500, 'Analyzer abaixo de 3.500 linhas');

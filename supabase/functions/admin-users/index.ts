@@ -147,7 +147,7 @@ Deno.serve(async (request) => {
       if (profileCountError || userCountError) throw new HttpError(500, 'ACCOUNT_SCHEMA_MISSING', profileCountError?.message || userCountError?.message || 'As tabelas de contas ainda não foram aplicadas.');
       const currentLevel = jwtClaims(token).aal === 'aal2' ? 'aal2' : 'aal1';
       const mfaRequired = Boolean(settings.admin_mfa_required);
-      return respond({ ready: !mfaRequired || currentLevel === 'aal2', databaseReady: true, functionReady: true, adminRoleReady: true, mfaRequired, currentLevel, profileCount: Number(profileCount || 0), userCount: Number(userCount || 0), minAppVersion: String(settings.min_app_version || '31.71.0'), message: mfaRequired && currentLevel !== 'aal2' ? 'Servidor pronto. Confirme o MFA para criar contas.' : 'Servidor de contas pronto para criar e gerenciar acessos.' });
+      return respond({ ready: !mfaRequired || currentLevel === 'aal2', databaseReady: true, functionReady: true, adminRoleReady: true, mfaRequired, currentLevel, profileCount: Number(profileCount || 0), userCount: Number(userCount || 0), minAppVersion: String(settings.min_app_version || '31.72.0'), message: mfaRequired && currentLevel !== 'aal2' ? 'Servidor pronto. Confirme o MFA para criar contas.' : 'Servidor de contas pronto para criar e gerenciar acessos.' });
     }
 
     if (settings.admin_mfa_required && jwtClaims(token).aal !== 'aal2' && action !== 'get_security_settings') {
