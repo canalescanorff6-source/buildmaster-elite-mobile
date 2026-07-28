@@ -1,8 +1,8 @@
 {
-  "name": "buildmaster-elite-tatico-v31-72-production",
-  "version": "31.72.0",
+  "name": "buildmaster-elite-tatico-v31-73-production",
+  "version": "31.73.0",
   "private": true,
-  "description": "BuildMaster v31.72 com fichas de desempenho, habilidades adicionais complementares sem repetição e Ímpetos analisados separadamente por posição e Estilo de Jogo.",
+  "description": "BuildMaster v31.73 com criação e gerenciamento de contas restaurados, prazos de ativação, renovação e MFA opcional.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -27,7 +27,7 @@
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v3000": "tsc -p tests/types-v3000/tsconfig.json --pretty false && tsc -p tests/types-v3000/tsconfig-ui.json --pretty false",
     "test:v3000": "npm run typecheck:v3000 && node -r ./tests/_ts-require.cjs tests/v30-00-play-publication-regression.ts && node tests/v30-00-integrated-production-regression.mjs && node tests/v30-00-play-workflow-regression.mjs && npm run release:play-preflight && npm run quality:syntax && npm run quality:interactive && npm run release:preflight",
-    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run quality:audit",
+    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run quality:audit",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -69,7 +69,9 @@
     "test:v3171": "node tests/v31-71-account-recovery-regression.mjs",
     "typecheck:v3172": "tsc -p tests/types-v3172/tsconfig.json --pretty false",
     "test:v3172": "npm run typecheck:v3172 && node -r ./tests/_ts-require.cjs tests/v31-72-complementary-skills-regression.ts && node tests/v31-72-critical-route-self-healing-regression.mjs",
-    "routes:repair": "node scripts/repair-critical-routes.mjs"
+    "routes:repair": "node scripts/repair-critical-routes.mjs",
+    "test:v3173": "npm run typecheck:v3173 && node tests/v31-73-account-panel-restoration-regression.mjs",
+    "typecheck:v3173": "tsc -p tests/types-v3173-ui/tsconfig.json --pretty false && tsc -p tests/types-v3173-edge/tsconfig.json --pretty false"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

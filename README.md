@@ -1,6 +1,18 @@
-# BuildMaster Elite Tático v31.72 — Fichas Complementares
+# BuildMaster Elite Tático v31.73 — Contas e licenças restauradas
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
+
+
+## v31.73 — Criação de contas restaurada
+
+- o painel administrativo volta a abrir diretamente para o administrador;
+- criação por nome de usuário e senha, sem e-mail visível para o cliente;
+- validade de 1, 7, 15, 30, 60, 90, 180 ou 365 dias;
+- data específica ou conta sem vencimento;
+- renovação, suspensão, bloqueio, reativação, troca de senha e exclusão;
+- limite e desconexão de aparelhos;
+- MFA opcional, sem bloquear o formulário de contas;
+- recuperação automática da política antiga do Supabase por migração e Edge Function.
 
 ## Fluxo principal
 

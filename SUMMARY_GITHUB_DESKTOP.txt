@@ -1,1 +1,1 @@
-Corrige rota inicial e adiciona autorreparo permanente contra troca por páginas públicas
+Restaura criação de contas, prazos de ativação e MFA opcional na v31.73

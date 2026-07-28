@@ -129,6 +129,7 @@ export type AccountExpiryMode = 'days' | 'date' | 'never';
 
 export type AdminUserAction =
   | { action: 'health' }
+  | { action: 'restore_account_creation' }
   | { action: 'list' }
   | { action: 'overview'; auditLimit?: number }
   | { action: 'list_devices'; userId?: string; includeRevoked?: boolean }

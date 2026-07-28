@@ -60,12 +60,13 @@ function safeAuditDetails(action: string, body: Record<string, unknown>) {
   if (action === 'revoke_devices') return { devicesRevoked: true };
   if (action === 'revoke_device') return { deviceId: String(body.deviceId || '').slice(0, 80) };
   if (action === 'update_security_settings') return { settings: body.settings || {} };
+  if (action === 'restore_account_creation') return { adminMfaRequired: false, restored: true };
   return {};
 }
 
 function ratePolicy(action: string) {
   if (['health', 'list', 'overview', 'list_devices', 'list_audit', 'get_security_settings', 'rate_limit_status'].includes(action)) return { limit: 40, window: 60 };
-  if (['create', 'reset_password', 'delete', 'update_security_settings'].includes(action)) return { limit: 6, window: 300 };
+  if (['create', 'reset_password', 'delete', 'update_security_settings', 'restore_account_creation'].includes(action)) return { limit: 6, window: 300 };
   return { limit: 15, window: 60 };
 }
 
@@ -134,7 +135,7 @@ Deno.serve(async (request) => {
     const appId = String(body.appId || '');
     appVersion = String(body.appVersion || request.headers.get('X-BuildMaster-Version') || '').trim();
     const { data: settingsRow } = await service.from('buildmaster_security_settings').select('*').eq('id', 1).maybeSingle();
-    const settings = settingsRow || { min_app_version: '29.10.0', allow_legacy_clients: false, admin_mfa_required: true, user_offline_grace_hours: 4, admin_offline_grace_hours: 12, require_device_proof: true, updated_at: new Date().toISOString() };
+    const settings = settingsRow || { min_app_version: '29.10.0', allow_legacy_clients: false, admin_mfa_required: false, user_offline_grace_hours: 4, admin_offline_grace_hours: 12, require_device_proof: true, updated_at: new Date().toISOString() };
 
     if (appId !== APP_ID) throw new HttpError(403, 'APP_ID_INVALID', 'Aplicativo administrativo não reconhecido.');
     if ((!appVersion && !settings.allow_legacy_clients) || (appVersion && compareVersions(appVersion, String(settings.min_app_version)) < 0)) {
@@ -147,15 +148,11 @@ Deno.serve(async (request) => {
       if (profileCountError || userCountError) throw new HttpError(500, 'ACCOUNT_SCHEMA_MISSING', profileCountError?.message || userCountError?.message || 'As tabelas de contas ainda não foram aplicadas.');
       const currentLevel = jwtClaims(token).aal === 'aal2' ? 'aal2' : 'aal1';
       const mfaRequired = Boolean(settings.admin_mfa_required);
-      return respond({ ready: !mfaRequired || currentLevel === 'aal2', databaseReady: true, functionReady: true, adminRoleReady: true, mfaRequired, currentLevel, profileCount: Number(profileCount || 0), userCount: Number(userCount || 0), minAppVersion: String(settings.min_app_version || '31.72.0'), message: mfaRequired && currentLevel !== 'aal2' ? 'Servidor pronto. Confirme o MFA para criar contas.' : 'Servidor de contas pronto para criar e gerenciar acessos.' });
-    }
-
-    if (settings.admin_mfa_required && jwtClaims(token).aal !== 'aal2' && action !== 'get_security_settings') {
-      throw new HttpError(428, 'MFA_REQUIRED', 'Confirme o código do aplicativo autenticador para usar o painel administrativo.');
+      return respond({ ready: !mfaRequired || currentLevel === 'aal2', databaseReady: true, functionReady: true, adminRoleReady: true, mfaRequired, currentLevel, profileCount: Number(profileCount || 0), userCount: Number(userCount || 0), minAppVersion: String(settings.min_app_version || '31.73.0'), message: mfaRequired && currentLevel !== 'aal2' ? 'Servidor pronto. Confirme o MFA para criar contas.' : 'Servidor de contas pronto para criar e gerenciar acessos.' });
     }
 
     const allowedActions = [
-      'health', 'list', 'overview', 'list_devices', 'revoke_device', 'list_audit', 'get_security_settings',
+      'health', 'restore_account_creation', 'list', 'overview', 'list_devices', 'revoke_device', 'list_audit', 'get_security_settings',
       'update_security_settings', 'rate_limit_status', 'create', 'renew', 'set_status',
       'reset_password', 'set_devices', 'revoke_devices', 'delete'
     ];
@@ -170,6 +167,33 @@ Deno.serve(async (request) => {
     });
     if (rateError) throw new HttpError(500, 'RATE_LIMIT_FAILURE', rateError.message);
     if (!allowed) throw new HttpError(429, 'RATE_LIMITED', 'Limite de ações administrativas atingido. Aguarde antes de tentar novamente.');
+
+    if (action === 'restore_account_creation') {
+      const { data, error } = await service.from('buildmaster_security_settings')
+        .update({ admin_mfa_required: false, updated_at: new Date().toISOString() })
+        .eq('id', 1)
+        .select('*')
+        .single();
+      if (error || !data) throw new HttpError(500, 'ACCOUNT_PANEL_RESTORE_FAILED', error?.message || 'Não foi possível restaurar o painel de contas.');
+      await service.from('buildmaster_admin_audit').insert({
+        admin_id: adminId,
+        action: 'restore_account_creation',
+        outcome: 'success',
+        app_version: appVersion,
+        request_id: requestId,
+        details: safeAuditDetails(action, body)
+      });
+      return respond({
+        success: true,
+        restored: true,
+        mfaRequired: false,
+        message: 'Criação e gerenciamento de contas restaurados.'
+      });
+    }
+
+    if (settings.admin_mfa_required && jwtClaims(token).aal !== 'aal2' && action !== 'get_security_settings') {
+      throw new HttpError(428, 'MFA_REQUIRED', 'Confirme o código do aplicativo autenticador ou restaure o modo normal de criação de contas.');
+    }
 
     const loadProfiles = async () => {
       const { data: profiles, error } = await service!.from('buildmaster_profiles').select('*').order('created_at', { ascending: false });

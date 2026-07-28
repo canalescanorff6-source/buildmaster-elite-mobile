@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo.
-echo BuildMaster v31.72 - recuperar rota inicial
+echo BuildMaster v31.73 - recuperar rota inicial
 echo.
 where node >nul 2>nul
 if errorlevel 1 (

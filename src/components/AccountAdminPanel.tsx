@@ -119,6 +119,7 @@ export function AccountAdminPanel() {
   const [mfaEnrollment, setMfaEnrollment] = useState<AdminMfaEnrollment | null>(null);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [restoringAccountPanel, setRestoringAccountPanel] = useState(false);
 
   const mfaRequired = backendHealth?.mfaRequired ?? true;
   const adminUnlocked = Boolean(backendHealth?.functionReady && backendHealth?.databaseReady && (!mfaRequired || mfaStatus?.protected));
@@ -217,6 +218,29 @@ export function AccountAdminPanel() {
       setError(cause instanceof Error ? cause.message : 'Código MFA inválido.');
     } finally {
       setMfaLoading(false);
+    }
+  }
+
+  async function restoreAccountCreation() {
+    setRestoringAccountPanel(true);
+    setError('');
+    setMessage('');
+    try {
+      await adminAccountRequest({ action: 'restore_account_creation' });
+      setBackendHealth((current) => current ? {
+        ...current,
+        ready: true,
+        mfaRequired: false,
+        message: 'Servidor de contas pronto para criar e gerenciar acessos.'
+      } : current);
+      setMfaEnrollment(null);
+      setMfaCode('');
+      setMessage('Criação de contas restaurada. Usuário, senha, prazo e aparelhos estão liberados novamente.');
+      await refreshBackendHealth();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível restaurar a criação de contas.');
+    } finally {
+      setRestoringAccountPanel(false);
     }
   }
 
@@ -401,23 +425,33 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
     return (
       <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel admin-mfa-gate">
         <div className="settings-panel-heading">
-          <div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Criar e gerenciar acessos</h3><span>Confirmação em duas etapas obrigatória. A função continua disponível: confirme o código do administrador antes de cadastrar ou alterar usuários.</span></div>
-          <span className="settings-state-pill">{mfaLoading ? 'Verificando' : hasVerifiedFactor ? 'Desbloqueio necessário' : 'Proteção inicial'}</span>
+          <div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Restaurar criação de contas</h3><span>O servidor antigo deixou o MFA como obrigatório e bloqueou o formulário. Restaure o modo administrativo normal usado nas versões anteriores.</span></div>
+          <span className="settings-state-pill">Recuperação disponível</span>
         </div>
-        <div className="account-create-locked-preview" aria-label="Prévia da criação de contas bloqueada">
-          <div><UserPlus size={24} /><div><strong>Nova conta de cliente</strong><span>Usuário, senha temporária, prazo e limite de aparelhos.</span></div></div>
-          <span><KeyRound size={15} /> Protegido pelo código do administrador</span>
+        <div className="account-create-locked-preview" aria-label="Recursos que serão restaurados">
+          <div><UserPlus size={24} /><div><strong>Nova conta de cliente</strong><span>Usuário, senha temporária, prazo de 1 a 365 dias, data específica ou sem vencimento.</span></div></div>
+          <span><Clock3 size={15} /> Renovação e aparelhos incluídos</span>
         </div>
         <div className="admin-mfa-security-card">
           <ShieldCheck size={28} />
-          <div><strong>{hasVerifiedFactor ? 'Confirme o código para abrir Criar contas' : 'Ative a proteção da conta administradora'}</strong><span>{hasVerifiedFactor ? 'Abra Google Authenticator, Microsoft Authenticator ou outro aplicativo TOTP.' : 'Escaneie o QR Code uma única vez. Depois, use o código de 6 números para entrar no painel administrativo.'}</span></div>
+          <div><strong>O MFA será opcional, não obrigatório</strong><span>Seu login administrativo, a prova do aparelho, a auditoria e os limites de tentativa continuam ativos. Você poderá ativar o autenticador depois sem perder o painel.</span></div>
         </div>
-        {!hasVerifiedFactor && !mfaEnrollment && <button className="elite-button admin-mfa-primary" type="button" onClick={() => void startMfaEnrollment()} disabled={mfaLoading}>{mfaLoading ? <Loader2 className="spin" size={17} /> : <KeyRound size={17} />} Ativar proteção e abrir Criar contas</button>}
-        {mfaEnrollment && <div className="admin-mfa-enrollment"><img src={mfaEnrollment.qrCode} alt="QR Code para ativar o MFA" /><div><strong>Chave manual</strong><code>{mfaEnrollment.secret}</code><span>Não compartilhe essa chave. Guarde um segundo autenticador como recuperação.</span></div></div>}
-        {(hasVerifiedFactor || mfaEnrollment) && <div className="admin-mfa-code-row"><label><span>Código de 6 números</span><input inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" maxLength={6} /></label><button className="elite-button" type="button" onClick={() => void confirmMfa()} disabled={mfaLoading || mfaCode.length !== 6}>{mfaLoading ? <Loader2 className="spin" size={17} /> : <UserPlus size={17} />} Confirmar e abrir Criar contas</button></div>}
+        <button className="elite-button admin-mfa-primary" type="button" onClick={() => void restoreAccountCreation()} disabled={restoringAccountPanel || mfaLoading}>
+          {restoringAccountPanel ? <Loader2 className="spin" size={17} /> : <UserPlus size={17} />} {restoringAccountPanel ? 'Restaurando painel...' : 'Restaurar criação de contas agora'}
+        </button>
+        <details className="account-user-more-actions">
+          <summary>Prefiro continuar com MFA</summary>
+          <div className="admin-mfa-security-card">
+            <KeyRound size={24} />
+            <div><strong>{hasVerifiedFactor ? 'Confirme o código do autenticador' : 'Ative o autenticador'}</strong><span>{hasVerifiedFactor ? 'Abra seu aplicativo TOTP e informe o código de 6 números.' : 'Escaneie o QR Code uma única vez e confirme o código.'}</span></div>
+          </div>
+          {!hasVerifiedFactor && !mfaEnrollment && <button className="elite-button" type="button" onClick={() => void startMfaEnrollment()} disabled={mfaLoading}>{mfaLoading ? <Loader2 className="spin" size={17} /> : <KeyRound size={17} />} Ativar MFA</button>}
+          {mfaEnrollment && <div className="admin-mfa-enrollment"><img src={mfaEnrollment.qrCode} alt="QR Code para ativar o MFA" /><div><strong>Chave manual</strong><code>{mfaEnrollment.secret}</code><span>Não compartilhe essa chave.</span></div></div>}
+          {(hasVerifiedFactor || mfaEnrollment) && <div className="admin-mfa-code-row"><label><span>Código de 6 números</span><input inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" maxLength={6} /></label><button className="elite-button" type="button" onClick={() => void confirmMfa()} disabled={mfaLoading || mfaCode.length !== 6}>{mfaLoading ? <Loader2 className="spin" size={17} /> : <ShieldCheck size={17} />} Confirmar MFA</button></div>}
+        </details>
         {message && <p className="account-success" role="status"><CheckCircle2 size={15} /> {message}</p>}
         {error && <p className="auth-error" role="alert"><AlertTriangle size={15} /> {error}</p>}
-        <button className="settings-diagnostic-button" type="button" onClick={() => { void refreshBackendHealth(); void refreshMfa(); }} disabled={mfaLoading}><RefreshCw size={16} /><div><strong>Verificar acesso administrativo novamente</strong><span>A opção permanece visível mesmo quando a verificação falha.</span></div></button>
+        <button className="settings-diagnostic-button" type="button" onClick={() => { void refreshBackendHealth(); void refreshMfa(); }} disabled={mfaLoading || restoringAccountPanel}><RefreshCw size={16} /><div><strong>Verificar servidor novamente</strong><span>Confirma banco, função administrativa e perfil de administrador.</span></div></button>
       </section>
     );
   }

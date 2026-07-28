@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": "../..",
+    "paths": {
+      "@/components/AuthGate": ["tests/types-v3173-ui/authgate-stub.ts"],
+      "@/lib/accountAuth": ["tests/types-v3173-ui/accountauth-stub.ts"],
+      "@/*": ["src/*"]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "stubs.d.ts",
+    "authgate-stub.ts",
+    "accountauth-stub.ts",
+    "../../src/components/AccountAdminPanel.tsx",
+    "../../src/modules/administration/AdministrationSecurityCenter.tsx"
+  ]
+}

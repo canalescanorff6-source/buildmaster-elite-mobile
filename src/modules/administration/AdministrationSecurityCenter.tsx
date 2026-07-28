@@ -34,7 +34,7 @@ const EMPTY_SETTINGS: AdminSecuritySettings = {
   minAppVersion: '29.00.0',
   allowLegacyClients: false,
   requireDeviceProof: true,
-  adminMfaRequired: true,
+  adminMfaRequired: false,
   userOfflineGraceHours: 4,
   adminOfflineGraceHours: 12,
   updatedAt: new Date(0).toISOString()
@@ -50,7 +50,8 @@ function actionLabel(action: string) {
     revoke_devices: 'Todos os aparelhos desconectados',
     revoke_device: 'Aparelho desconectado',
     delete: 'Conta excluída',
-    update_security_settings: 'Política de segurança alterada'
+    update_security_settings: 'Política de segurança alterada',
+    restore_account_creation: 'Criação de contas restaurada'
   };
   return labels[action] || action.replaceAll('_', ' ');
 }
@@ -115,7 +116,7 @@ export function AdministrationSecurityCenter() {
           minAppVersion: settings.minAppVersion,
           allowLegacyClients: settings.allowLegacyClients,
           requireDeviceProof: true,
-          adminMfaRequired: true,
+          adminMfaRequired: settings.adminMfaRequired,
           userOfflineGraceHours: settings.userOfflineGraceHours,
           adminOfflineGraceHours: settings.adminOfflineGraceHours
         }
@@ -167,13 +168,13 @@ export function AdministrationSecurityCenter() {
 
       <div className="bm2910-admin-columns">
         <section className="bm2910-security-policy">
-          <div className="bm2910-subheading"><LockKeyhole size={19} /><div><strong>Política de acesso</strong><span>Alterações exigem sessão administrativa com MFA.</span></div></div>
+          <div className="bm2910-subheading"><LockKeyhole size={19} /><div><strong>Política de acesso</strong><span>O MFA é opcional. Ative somente depois de configurar o autenticador.</span></div></div>
           <label><span>Versão mínima permitida</span><input value={settings.minAppVersion} onChange={(event) => setSettings((current) => ({ ...current, minAppVersion: event.target.value.replace(/^v/i, '') }))} inputMode="decimal" placeholder="29.40.0" /><small>Elevar esta versão bloqueia APKs antigos na validação de licença.</small></label>
           <div className="bm2910-inline-fields">
             <label><span>Offline do usuário</span><select value={settings.userOfflineGraceHours} onChange={(event) => setSettings((current) => ({ ...current, userOfflineGraceHours: Number(event.target.value) }))}><option value={0}>Sempre online</option><option value={2}>2 horas</option><option value={4}>4 horas</option><option value={8}>8 horas</option><option value={12}>12 horas</option><option value={24}>24 horas</option></select></label>
             <label><span>Offline do admin</span><select value={settings.adminOfflineGraceHours} onChange={(event) => setSettings((current) => ({ ...current, adminOfflineGraceHours: Number(event.target.value) }))}><option value={0}>Sempre online</option><option value={4}>4 horas</option><option value={8}>8 horas</option><option value={12}>12 horas</option><option value={24}>24 horas</option></select></label>
           </div>
-          <label className="update-toggle"><input type="checkbox" checked readOnly disabled aria-label="MFA obrigatório e bloqueado" /><span><b>MFA obrigatório para administração</b><small>Proteção obrigatória: não pode ser desligada pelo painel.</small></span></label>
+          <label className="update-toggle"><input type="checkbox" checked={settings.adminMfaRequired} onChange={(event) => setSettings((current) => ({ ...current, adminMfaRequired: event.target.checked }))} aria-label="Exigir MFA para administração" /><span><b>Exigir MFA para administração</b><small>{settings.adminMfaRequired ? 'Ligado: o painel exigirá código de 6 números.' : 'Desligado: criação de contas funciona com login administrativo normal.'}</small></span></label>
           <label className="update-toggle"><input type="checkbox" checked readOnly disabled aria-label="Prova criptográfica obrigatória e bloqueada" /><span><b>Prova criptográfica do aparelho</b><small>Proteção obrigatória: cada aparelho precisa provar sua identidade.</small></span></label>
           <label className="update-toggle bm2910-danger-toggle"><input type="checkbox" checked={settings.allowLegacyClients} onChange={(event) => setSettings((current) => ({ ...current, allowLegacyClients: event.target.checked }))} /><span><b>Permitir clientes sem versão</b><small>Deixe desligado em produção.</small></span></label>
           <button type="button" className="elite-button" onClick={() => void saveSecurityPolicy()} disabled={saving}>{saving ? <Loader2 className="spin" size={17} /> : <Save size={17} />} Salvar política de segurança</button>

@@ -1,0 +1,1 @@
+Criação e gerenciamento de contas restaurados, com usuário e senha, validade por dias ou data, renovação, bloqueio e limite de aparelhos. MFA passa a ser opcional e não bloqueia mais o painel administrativo.
