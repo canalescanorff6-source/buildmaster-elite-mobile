@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Eye, History, ScanLine, ShieldCheck } from 'lucide-react';
 import type { SingleFieldEvidence, SinglePrintSession } from '@/modules/card-reader/singlePrintPro';
 import { OcrConfidenceHistoryPanel } from '@/components/OcrConfidenceHistoryPanel';
+import { isSpecialSkillIdentity } from '@/lib/officialSkillIdentity';
 
 function layoutModeLabel(mode: NonNullable<SinglePrintSession['layoutAudit']>['mode']) {
   const labels: Record<NonNullable<SinglePrintSession['layoutAudit']>['mode'], string> = {
@@ -49,7 +50,7 @@ export function SinglePrintEvidencePanel({
       {session.layoutAudit && (
         <section className={`precision-audit-card ${session.layoutAudit.complete ? 'ready' : 'review'}`} aria-label="Auditoria do encaixe dinâmico eFHUB">
           <div>
-            <p className="kicker"><ScanLine size={14}/> Encaixe de resolução v31.75</p>
+            <p className="kicker"><ScanLine size={14}/> Encaixe de resolução v31.78</p>
             <strong>{session.layoutAudit.confidence}%</strong>
             <span>{layoutModeLabel(session.layoutAudit.mode)}</span>
           </div>
@@ -66,7 +67,7 @@ export function SinglePrintEvidencePanel({
 
       <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
         <div>
-          <p className="kicker"><ShieldCheck size={14}/> Leitura Dinâmica v31.75</p>
+          <p className="kicker"><ShieldCheck size={14}/> Leitura Dinâmica v31.78</p>
           <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
           <span>precisão estimada</span>
         </div>
@@ -117,6 +118,29 @@ export function SinglePrintEvidencePanel({
         </figure>
       ) : null}
 
+      {(session.detailedReading.skills.length > 0 || session.detailedReading.skillCandidates.length > 0) && (
+        <section className="recognized-skill-strip" aria-label="Habilidades reconhecidas no jogador">
+          <header>
+            <div>
+              <p className="kicker"><ShieldCheck size={14}/> Habilidades do jogador</p>
+              <strong>{session.detailedReading.skills.length} reconhecida(s)</strong>
+            </div>
+            <span>{session.detailedReading.skillCandidates.length > 0 ? `${session.detailedReading.skillCandidates.length} para confirmar` : 'catálogo validado'}</span>
+          </header>
+          <div>
+            {session.detailedReading.skills.map((item) => (
+              <span key={`recognized-${item.value}`} className={isSpecialSkillIdentity(item.value) ? 'skill-native-special' : 'skill-native-standard'}>
+                <b>{item.value}</b><small>{isSpecialSkillIdentity(item.value) ? 'especial nativa' : 'já vem no jogador'}</small>
+              </span>
+            ))}
+            {session.detailedReading.skillCandidates.map((item) => (
+              <span key={`pending-${item.value}`} className="skill-native-review"><b>{item.value}</b><small>confirmar leitura</small></span>
+            ))}
+          </div>
+          <p>Estas habilidades são tratadas como já pertencentes à carta e ficam bloqueadas para não serem sugeridas novamente entre as cinco adicionais.</p>
+        </section>
+      )}
+
       {session.warnings.length > 0 && (
         <div className="single-print-warning-list">
           {session.warnings.map((warning) => <span key={warning}><AlertTriangle size={15}/>{warning}</span>)}
@@ -125,7 +149,7 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.75</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.78</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">

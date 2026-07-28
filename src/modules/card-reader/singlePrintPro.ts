@@ -524,7 +524,7 @@ export function buildSinglePrintSession(input: {
     overall: detailedReading.identity.overall ? { value: detailedReading.identity.overall.value, numericValue: detailedReading.identity.overall.numericValue, confidence: detailedReading.identity.overall.confidence, reason: 'GER cruzado entre selo e posição principal.' } : undefined,
     level: detailedReading.identity.level ? { value: String(detailedReading.identity.level.numericValue ?? detailedReading.identity.level.value), numericValue: detailedReading.identity.level.numericValue, confidence: detailedReading.identity.level.confidence, reason: 'Nível reconhecido no bloco de identidade física.' } : undefined,
     attributes: detailedReading.attributes.length >= 4 ? { value: detailedReading.attributes.map((item) => `${item.label}: ${item.value}`).join('\n'), confidence: Math.min(98, 64 + detailedReading.attributes.length), reason: `${detailedReading.attributes.length} atributos estruturados pelo leitor detalhado.` } : undefined,
-    skills: detailedReading.skills.length >= 2 ? { value: detailedReading.skills.map((item) => item.value).join(', '), confidence: Math.min(96, 68 + detailedReading.skills.length * 2), reason: `${detailedReading.skills.length} habilidades reconhecidas na faixa inferior.` } : undefined
+    skills: detailedReading.skills.length >= 1 ? { value: detailedReading.skills.map((item) => item.value).join(', '), confidence: Math.min(96, 68 + detailedReading.skills.length * 2), reason: `${detailedReading.skills.length} habilidades reconhecidas na faixa inferior.` } : undefined
   };
   const criticalZoneByField: Partial<Record<SingleFieldEvidence['key'], OcrZoneKey>> = {
     playerName: 'name', position: 'mainPosition', playstyle: 'playstyle', overall: 'overall', level: 'level', points: 'points'
@@ -543,7 +543,7 @@ export function buildSinglePrintSession(input: {
         confidence: Math.min(91, confidence),
         status: 'review' as const,
         reason: `${detailed.reason} O valor permanece em revisão porque as passagens locais não chegaram ao consenso exigido.`,
-        sourceLabel: 'Leitor EFHUB dinâmico v31.75',
+        sourceLabel: 'Leitor EFHUB dinâmico v31.78',
         sourceText: detailed.value
       };
     }
@@ -554,7 +554,7 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor EFHUB dinâmico v31.75',
+      sourceLabel: 'Leitor EFHUB dinâmico v31.78',
       sourceText: detailed.value
     };
   });
@@ -646,6 +646,10 @@ export function buildSinglePrintSession(input: {
     if (item.key === 'identityMeta') return detailedReading.profileAudit.gates.find((gate) => gate.key === 'identity')?.status === 'complete' ? 'confirmed' : 'review';
     if (item.key === 'positionGrid') return detailedReading.coverage.positionCount === 13 ? 'confirmed' : detailedReading.coverage.positionCount >= 10 ? 'review' : 'missing';
     if (item.key === 'physicalModel') return detailedReading.coverage.physicalCount === 16 ? 'confirmed' : detailedReading.coverage.physicalCount >= 12 ? 'review' : 'missing';
+    if (item.key === 'skills') {
+      if (detailedReading.skillCandidates.length > 0) return 'review';
+      return detailedReading.coverage.skillCount >= 1 ? 'confirmed' : 'missing';
+    }
     return fieldForZone(item.key)?.status ?? 'missing';
   };
   const zoneBoxes = (input.displayZones ?? input.zones)?.map((item) => ({

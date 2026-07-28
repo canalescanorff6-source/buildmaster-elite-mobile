@@ -4,7 +4,7 @@ import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManage
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 
-export const HIGH_PRECISION_OCR_VERSION = '31.75-dynamic-efhub-1';
+export const HIGH_PRECISION_OCR_VERSION = '31.78-dynamic-skill-capsules-2';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;
@@ -338,6 +338,7 @@ export async function recognizeZoneWithHighPrecision(
   const knownNames = Array.from(new Set((options.knownPlayerNames ?? []).map((name) => name.trim()).filter(Boolean)));
   const plans = passPlan(zone.key, options.readingMode);
   const variants = adaptiveZoneVariants(zone, options.readingMode);
+  const zoneSignature = `${zone.key}:${zone.label}:${zone.x.toFixed(5)}:${zone.y.toFixed(5)}:${zone.w.toFixed(5)}:${zone.h.toFixed(5)}`;
   const originPreview = await createZoneOriginPreview(file, zone).catch(() => null);
   const scoredPasses: ScoredPass[] = [];
   const tasks = variants.flatMap((variant, variantIndex) => {
@@ -352,11 +353,12 @@ export async function recognizeZoneWithHighPrecision(
   for (let index = 0; index < tasks.length; index += 1) {
     const { variant, plan } = tasks[index];
     const baseRegion = plan.expanded ? expandOcrRegion(variant.zone, zone.key === 'name' ? 0.06 : 0.025, zone.key === 'name' ? 0.025 : 0.015) : variant.zone;
-    const image = await cropImage(file, baseRegion, options.targetWidth, plan.enhancement);
+    const effectiveTargetWidth = zone.key === 'skills' ? Math.max(options.targetWidth, 3600) : options.targetWidth;
+    const image = await cropImage(file, baseRegion, effectiveTargetWidth, plan.enhancement);
     const recognition = await recognizeWithOcrWorker(image, {
       label: `${options.labelPrefix ? `${options.labelPrefix} • ` : ''}${zone.label} • ${variant.label} • ${plan.enhancement} ${index + 1}/${tasks.length}`,
       kind: plan.kind,
-      cacheKey: `${options.imageHash}:${options.template}:${zone.key}:${variant.id}:${plan.enhancement}:${plan.kind}:${plan.expanded ? 'expanded' : 'exact'}`
+      cacheKey: `${HIGH_PRECISION_OCR_VERSION}:${options.imageHash}:${options.template}:${zoneSignature}:${variant.id}:${plan.enhancement}:${plan.kind}:${plan.expanded ? 'expanded' : 'exact'}`
     });
     const repaired = repairByZone(recognition.text, zone.key, knownNames);
     const nameCandidate = zone.key === 'name' ? nameLineCandidates(repaired)[0] : undefined;
@@ -412,7 +414,7 @@ export async function recognizeZoneWithHighPrecision(
   if (disagreement) notes.push('Foram detectadas leituras divergentes; o app escolheu o grupo com maior consenso e preservou as alternativas.');
 
   return {
-    id: `${options.imageHash}-${zone.key}-precision`,
+    id: `${options.imageHash}-${zoneSignature.replace(/[^a-z0-9]+/gi, '-')}-precision`,
     sourceId: options.imageHash,
     sourceLabel: options.labelPrefix || 'Print único',
     screenType: options.template,

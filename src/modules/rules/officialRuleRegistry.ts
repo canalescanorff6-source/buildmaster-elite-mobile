@@ -2,10 +2,10 @@ import type { PositionCode } from '@/lib/analyzerDomain';
 import { LOCAL_CARD_RULES, type LocalCardRule } from '@/lib/cardDatabase';
 import { safeStorageGet, safeStorageRemove, safeStorageSet } from '@/lib/safeLocalStorage';
 import { CANONICAL_PLAYER_PLAYSTYLES, canonicalizePlayerPlaystyle } from '@/lib/efootball2026Playstyles';
-import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
+import { OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 export type { LocalCardRule } from '@/lib/cardDatabase';
 
-export const OFFICIAL_RULE_PACK_VERSION = '2026.07.2';
+export const OFFICIAL_RULE_PACK_VERSION = '2026.07.4';
 export const OFFICIAL_RULE_SCHEMA = 2;
 export const OFFICIAL_RULE_STORAGE_KEY = 'buildmaster_official_rule_pack_v2930';
 export const OFFICIAL_RULE_HISTORY_KEY = 'buildmaster_official_rule_history_v2930';
@@ -130,10 +130,7 @@ const PLAYSTYLE_DEFINITIONS: OfficialPlaystyleDefinition[] = [
 ];
 
 const ADDITIONAL_SKILLS = [...OFFICIAL_ADDITIONAL_SKILL_NAMES];
-const SPECIAL_SKILLS = [
-  'Blitz Curler', 'Esticada de Pernas', 'Phenomenal Finishing', 'Game-changing Pass', 'Fortress',
-  'Visionary Pass', 'Momentum Dribbling', 'Bullet Header', 'Edged Crossing', 'Aerial Fort'
-];
+const SPECIAL_SKILLS = [...SPECIAL_SKILL_NAMES];
 
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
@@ -171,7 +168,8 @@ const EMBEDDED_BASE: Omit<OfficialRulePack, 'checksum'> = {
   changelog: [
     'Validação semântica de posições, estilos, habilidades e regras de cartas.',
     'Pré-visualização obrigatória antes de ativar pacotes importados.',
-    'Histórico, auditoria e bloqueio de downgrade acidental.'
+    'Histórico, auditoria e bloqueio de downgrade acidental.',
+    'Catálogo de habilidades nativas e especiais do eFootball 2026 ampliado para o leitor eFHUB v31.78.'
   ],
   positions: POSITION_DEFINITIONS,
   playstyles: PLAYSTYLE_DEFINITIONS,

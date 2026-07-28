@@ -22,4 +22,4 @@ export {
   type TacticalStyle
 } from '@/lib/analyzerDomain';
 
-export { OFFICIAL_ADDITIONAL_SKILL_NAMES } from './analyzerCatalog';
+export { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES, OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from './analyzerCatalog';

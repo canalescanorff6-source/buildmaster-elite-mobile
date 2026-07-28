@@ -12,6 +12,7 @@ import type {
 } from './analyzer';
 import type { BuildVariant } from './trainingEngine';
 import type { MaxPrecisionAnalysis } from './maxPrecision';
+import { canonicalSkillName } from './officialSkillIdentity';
 
 export type MetaBuildCategory =
   | 'Meta total'
@@ -157,11 +158,26 @@ const ATTR_GROUPS: Record<TrainingKey, AttributeKey[]> = {
 };
 
 const SPECIAL_SKILL_WEIGHTS: Record<string, Partial<Record<TrainingKey, number>>> = {
-  'Blitz Curler':{shooting:.58,dribbling:.25,dexterity:.22}, 'Esticada de Perna':{defending:.62,lowerBodyStrength:.28},
-  'Momentum Dribbling':{dribbling:.62,dexterity:.42}, 'Phenomenal Finishing':{shooting:.62,dexterity:.35},
-  'Phenomenal Pass':{passing:.62,dribbling:.3}, 'Game-changing Pass':{passing:.58,lowerBodyStrength:.2},
-  'Fortress':{defending:.64,aerialStrength:.35}, 'Edged Crossing':{passing:.55,lowerBodyStrength:.25},
-  'Bullet Header':{aerialStrength:.62,shooting:.32}, 'Sombra veloz':{dexterity:.5,lowerBodyStrength:.48}
+  'Fortaleza aérea':{aerialStrength:.66,defending:.26},
+  'Drible explosivo':{dribbling:.46,dexterity:.6,lowerBodyStrength:.24},
+  'Desencadeador de ataques':{passing:.54,dribbling:.24,lowerBodyStrength:.18},
+  'Curva Blitz':{shooting:.58,dribbling:.25,dexterity:.22},
+  'Cabeçada fulminante':{aerialStrength:.62,shooting:.32},
+  'Cruzamento cortante':{passing:.55,lowerBodyStrength:.25},
+  'Fortaleza':{defending:.64,aerialStrength:.35},
+  'Passe decisivo':{passing:.58,lowerBodyStrength:.2},
+  'Comandante da defesa (GO)':{gk1:.5,gk2:.42,gk3:.4,defending:.2},
+  'Rugido do goleiro':{gk1:.42,gk2:.5,gk3:.46,aerialStrength:.18},
+  'Esticada de Perna':{defending:.62,lowerBodyStrength:.28},
+  'Chute rasteiro fulminante':{shooting:.62,dexterity:.28},
+  'Pés magnéticos':{dribbling:.64,dexterity:.28},
+  'Drible de impulso':{dribbling:.62,dexterity:.42},
+  'Finalização fenomenal':{shooting:.62,dexterity:.35},
+  'Passe fenomenal':{passing:.62,dribbling:.3},
+  'Garra':{lowerBodyStrength:.42,defending:.28,dexterity:.22},
+  'Passe visionário':{passing:.66,dribbling:.22},
+  'Impulso ofensivo':{dexterity:.52,lowerBodyStrength:.5},
+  'Sombra veloz':{dexterity:.46,lowerBodyStrength:.5,defending:.3}
 };
 
 function emptyPlan(): TrainingPlan {
@@ -272,7 +288,7 @@ export function buildMetaBuildUniverse(input:{
   while(safeBases.length<6)safeBases.push({...safeBases[safeBases.length%safeBases.length]});
   const identity=groupIdentity(baseAttributes,keys);
   const skillWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,0])) as Record<TrainingKey,number>;
-  for(const skill of [...parsed.nativeSkills,...parsed.specialSkills])addWeights(skillWeights,SPECIAL_SKILL_WEIGHTS[skill]??{},1);
+  for(const skill of [...parsed.nativeSkills,...parsed.specialSkills])addWeights(skillWeights,SPECIAL_SKILL_WEIGHTS[canonicalSkillName(skill) ?? skill]??{},1);
   const candidates:MetaBuildEntry[]=[]; const genericWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,.1])) as Record<TrainingKey,number>;
   addWeights(genericWeights,POSITION_WEIGHTS[position],1);
   const genericPlan=generatePlan(genericWeights,safeBases[0],keys,trainingPointsTotal,17);

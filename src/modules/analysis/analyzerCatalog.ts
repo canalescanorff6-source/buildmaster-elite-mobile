@@ -133,7 +133,8 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Chapéu': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Sombrero', 'Chaleira'] },
   'Corte com virada': { category: 'DRIBLE', boosts: { dribbling: 3, mobility: 1 }, aliases: ['Cut Behind & Turn', 'Corte com virada'] },
   'Puxada de letra': { category: 'DRIBLE', boosts: { dribbling: 2, creation: 1 }, aliases: ['Scotch Move'] },
-  'Finta de letra': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Step On Skill Control'] },
+  'Finta de letra': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Step On Skill Control', 'Inside Bounce', 'Finta interna'] },
+  'Corte rápido': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Chop Turn', 'Corte seco', 'Corte chop', 'Corte rápido'] },
   'Controle com a sola': { category: 'DRIBLE', boosts: { dribbling: 4, creation: 1 }, aliases: ['Sole Control', 'Controle com sola', 'Controle de sola'] },
   'Cabeçada': { category: 'FINALIZAÇÃO', boosts: { finishing: 2, aerial: 2 }, aliases: ['Heading'] },
   'Efeito de longe': { category: 'FINALIZAÇÃO', boosts: { finishing: 3, creation: 1 }, aliases: ['Long-Range Curler'] },
@@ -170,13 +171,34 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Arremesso longo do goleiro': { category: 'GOLEIRO', boosts: { goalkeeper: 2, creation: 2 }, aliases: ['GK Long Throw', 'Arremesso longo de goleiro'] },
   'Reposição alta do goleiro': { category: 'GOLEIRO', boosts: { goalkeeper: 3, creation: 2 }, aliases: ['GK High Punt', 'Reposicao alta do goleiro', 'Reposição alta de goleiro'] },
   'Reposição baixa do goleiro': { category: 'GOLEIRO', boosts: { goalkeeper: 3, creation: 2 }, aliases: ['GK Low Punt', 'Reposicao baixa do goleiro', 'Reposição baixa de goleiro'] },
-  'Esticada de Perna': { category: 'ÍMPETO', boosts: { defense: 2, physical: 1 }, aliases: ['Long Legs', 'Esticada da Perna', 'Esticada de perna'] },
-  'Sombra veloz': { category: 'ÍMPETO', boosts: { mobility: 2, pressure: 1 }, aliases: ['Speeding Bullet', 'Sombra Veloz'] },
+  // Habilidades especiais/nativas de cartas. Elas entram no catálogo de reconhecimento,
+  // mas não no catálogo de habilidades adicionais treináveis.
+  'Fortaleza aérea': { category: 'ESPECIAL', boosts: { aerial: 5, physical: 2 }, aliases: ['Aerial Fort', 'Forte aéreo', 'Fortaleza aerea'] },
+  'Drible explosivo': { category: 'ESPECIAL', boosts: { mobility: 5, dribbling: 3 }, aliases: ['Acceleration Burst', 'Explosive Dribbling', 'Explosive Dribble', 'Drible explosivos', 'Arranque explosivo', 'Explosão de aceleração'] },
+  'Impulso ofensivo': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 1 }, aliases: ['Attacking Surge', 'Surto ofensivo', 'Arrancada ofensiva', 'Impulso de ataque'] },
+  'Desencadeador de ataques': { category: 'ESPECIAL', boosts: { creation: 3, pressure: 1 }, aliases: ['Attack Trigger', 'Gatilho de ataque', 'Desencadeador de ataque'] },
+  'Curva Blitz': { category: 'ESPECIAL', boosts: { finishing: 5, creation: 2 }, aliases: ['Blitz Curler', 'Curva blitz', 'Chute curvado blitz', 'Finalização curva blitz'] },
+  'Cabeçada fulminante': { category: 'ESPECIAL', boosts: { aerial: 5, finishing: 3 }, aliases: ['Bullet Header', 'Cabeçada bala', 'Cabecada fulminante'] },
+  'Cruzamento cortante': { category: 'ESPECIAL', boosts: { creation: 5 }, aliases: ['Edged Crossing', 'Cruzamento afiado', 'Cruzamento com efeito cortante'] },
+  'Fortaleza': { category: 'ESPECIAL', boosts: { defense: 4, physical: 4 }, aliases: ['Fortress'] },
+  'Passe decisivo': { category: 'ESPECIAL', boosts: { creation: 5, pressure: 2 }, aliases: ['Game-changing Pass', 'Game Changing Pass', 'Passe que muda o jogo', 'Passe decisivo'] },
+  'Comandante da defesa (GO)': { category: 'ESPECIAL', boosts: { goalkeeper: 5, defense: 3 }, aliases: ['GK Directing Defence', 'GK Directing Defense', 'Comandante da defesa GO', 'Comandante da defesa do goleiro'] },
+  'Rugido do goleiro': { category: 'ESPECIAL', boosts: { goalkeeper: 4, physical: 3 }, aliases: ['GK Spirit Roar', 'Rugido do espírito do GO', 'Rugido do espirito do goleiro'] },
+  'Esticada de Perna': { category: 'ESPECIAL', boosts: { defense: 5, physical: 2 }, aliases: ['Long Reach Tackle', 'Long Legs', 'Esticada da Perna', 'Esticada de perna', 'Esticada de Pernas'] },
+  'Chute rasteiro fulminante': { category: 'ESPECIAL', boosts: { finishing: 5 }, aliases: ['Low Screamer', 'Chute rasteiro potente', 'Chute baixo fulminante'] },
+  'Pés magnéticos': { category: 'ESPECIAL', boosts: { dribbling: 5, physical: 1 }, aliases: ['Magnetic Feet', 'Pes magneticos'] },
+  'Drible de impulso': { category: 'ESPECIAL', boosts: { dribbling: 5, mobility: 3 }, aliases: ['Momentum Dribbling', 'Drible com impulso', 'Drible de momento'] },
+  'Finalização fenomenal': { category: 'ESPECIAL', boosts: { finishing: 6 }, aliases: ['Phenomenal Finishing', 'Finalizacao fenomenal'] },
+  'Passe fenomenal': { category: 'ESPECIAL', boosts: { creation: 6 }, aliases: ['Phenomenal Pass'] },
+  'Garra': { category: 'ESPECIAL', boosts: { finishing: 3, pressure: 4 }, aliases: ['Willpower', 'Força de vontade', 'Forca de vontade'] },
+  'Passe visionário': { category: 'ESPECIAL', boosts: { creation: 6 }, aliases: ['Visionary Pass', 'Passe visionario'] },
+
+  'Sombra veloz': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 3 }, aliases: ['Shadow Hunt', 'Caça-sombras', 'Caca-sombras', 'Sombra Veloz', 'Speeding Bullet'] },
 };
 
 export const OFFICIAL_ADDITIONAL_SKILL_NAMES = [
   'Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada',
-  'Puxada de letra', 'Finta de letra', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
+  'Puxada de letra', 'Finta de letra', 'Corte rápido', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
   'Controle da cavadinha', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente',
   'Precisão à distância', 'Finalização acrobática', 'Toque de calcanhar', 'Chute de primeira',
   'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Cruzamento preciso',
@@ -193,4 +215,15 @@ export function isOfficialAdditionalSkill(skill: string) {
   return OFFICIAL_ADDITIONAL_SKILLS.has(skill);
 }
 
-export const SPECIAL_SKILL_NAMES = ['Esticada de Perna', 'Sombra veloz'];
+export const SPECIAL_SKILL_NAMES = [
+  'Fortaleza aérea', 'Drible explosivo', 'Impulso ofensivo', 'Desencadeador de ataques', 'Curva Blitz',
+  'Cabeçada fulminante', 'Cruzamento cortante', 'Fortaleza', 'Passe decisivo',
+  'Comandante da defesa (GO)', 'Rugido do goleiro', 'Esticada de Perna',
+  'Chute rasteiro fulminante', 'Pés magnéticos', 'Drible de impulso',
+  'Finalização fenomenal', 'Passe fenomenal', 'Garra', 'Passe visionário', 'Sombra veloz'
+];
+
+/** Todos os nomes que o leitor pode reconhecer, incluindo habilidades nativas,
+ * adicionais treináveis, especiais e aliases legados do eFHUB. */
+export const ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES = Object.freeze(Object.keys(SKILL_PROFILES));
+

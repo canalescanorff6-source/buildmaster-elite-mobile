@@ -27,6 +27,7 @@ import {
   ATTRIBUTE_INPUTS,
   ATTRIBUTE_PT,
   OFFICIAL_ADDITIONAL_SKILL_NAMES,
+  SPECIAL_SKILL_NAMES,
   PLAYSTYLE_OPTIONS,
   POSITION_LABELS,
   type AnalysisResult,
@@ -2011,17 +2012,35 @@ export function ReviewPanel({
         <article className="luxury-panel wide-card review-optional-card">
           <p className="kicker">Habilidades que o jogador já possui</p>
           <p className="panel-note no-top">Opcional: marque somente as habilidades que já aparecem na carta. Isso serve para o app não recomendar habilidade repetida e escolher as 5 melhores habilidades que ainda faltam. Se não souber, pode finalizar sem marcar nada.</p>
-          <div className="skill-picker-grid">
-            {OFFICIAL_ADDITIONAL_SKILL_NAMES.map((skill) => (
-              <button
-                key={skill}
-                type="button"
-                className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected' : 'skill-picker-chip'}
-                onClick={() => toggleNativeSkill(skill)}
-              >
-                {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
-              </button>
-            ))}
+          <div className="native-skill-catalog-group">
+            <div><strong>Habilidades regulares já presentes na carta</strong><small>Também podem existir como adicionais em outras cartas, mas aqui ficam marcadas como já pertencentes a este jogador.</small></div>
+            <div className="skill-picker-grid">
+              {OFFICIAL_ADDITIONAL_SKILL_NAMES.map((skill) => (
+                <button
+                  key={skill}
+                  type="button"
+                  className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected' : 'skill-picker-chip'}
+                  onClick={() => toggleNativeSkill(skill)}
+                >
+                  {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="native-skill-catalog-group special-native">
+            <div><strong>Habilidades especiais nativas — não treináveis</strong><small>Inclui Drible explosivo, Curva Blitz, Passe visionário, Esticada de Perna e as demais habilidades especiais reconhecidas pelo eFootball 2026/eFHUB.</small></div>
+            <div className="skill-picker-grid">
+              {SPECIAL_SKILL_NAMES.map((skill) => (
+                <button
+                  key={skill}
+                  type="button"
+                  className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected special-native' : 'skill-picker-chip special-native'}
+                  onClick={() => toggleNativeSkill(skill)}
+                >
+                  {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
+                </button>
+              ))}
+            </div>
           </div>
         </article>
 

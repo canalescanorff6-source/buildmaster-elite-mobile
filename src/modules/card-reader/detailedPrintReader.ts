@@ -2,6 +2,7 @@ import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
 import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAudit } from './efhubProfile';
 import { canonicalSkillName, skillAliasesFor, skillIdentityKey } from '@/lib/officialSkillIdentity';
+import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -51,7 +52,7 @@ export type DetailedPrintReading = {
   profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '31.75-efhub-dynamic-detailed-1';
+const VERSION = '31.78-efhub-skill-capsules-2';
 
 function normalized(value: string) {
   return value
@@ -238,25 +239,15 @@ const PHYSICAL_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'Altura com base no comprimento', patterns: [/altura\s+com\s+base\s+no\s+comprimento\S*\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i] }
 ];
 
-export const OFFICIAL_OCR_SKILLS = [
-  'Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada',
-  'Puxada de letra', 'Finta de letra', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
-  'Controle da cavadinha', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente',
-  'Precisão à distância', 'Finalização acrobática', 'Toque de calcanhar', 'Chute de primeira',
-  'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Cruzamento preciso',
-  'Curva para fora', 'De letra', 'Passe sem olhar', 'Passe aéreo baixo', 'Arremesso lateral longo',
-  'Especialista em pênalti', 'Malícia', 'Marcação individual', 'Volta para marcar', 'Interceptação',
-  'Bloqueador', 'Superioridade aérea', 'Carrinho', 'Afastamento acrobático', 'Liderança',
-  'Super substituto', 'Espírito guerreiro', 'Pegador de pênalti', 'Arremesso longo do goleiro',
-  'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Garra', 'Esticada de Perna', 'Sombra veloz'
-] as const;
+export const OFFICIAL_OCR_SKILLS = [...ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES]
+  .sort((left, right) => normalized(right).length - normalized(left).length);
 
 const SKILLS = OFFICIAL_OCR_SKILLS;
 
 const IMPETO_NAMES = [
   'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa',
   'Duelo', 'Agilidade', 'Fisicalidade', 'Goleiro', 'Instinto artilheiro', 'Precisão', 'Força',
-  'Movimento sem a bola', 'Esticada de Perna', 'Sombra veloz'
+  'Movimento sem a bola', 'Esticada de Perna', 'Sombra veloz', 'Impulso ofensivo'
 ] as const;
 
 function parseNumericCatalog(text: string, catalog: Array<{ label: string; patterns: RegExp[] }>, confidence: number, source: string, min: number, max: number) {
@@ -311,11 +302,48 @@ function parsePositionRatings(text: string, confidence: number, source: string) 
   return Array.from(found.entries()).map(([code, item]) => makeValue(code, String(item.value), item.confidence, source, item.value));
 }
 
-function fuzzyContainsCatalogItem(text: string, item: string, aliases: string[]) {
-  const norm = normalized(text);
-  if ([item, ...aliases].some((candidate) => norm.includes(normalized(candidate)))) return true;
-  const lines = text.split(/\r?\n/).map(clean).filter(Boolean);
-  return lines.some((line) => [item, ...aliases].some((candidate) => textSimilarity(line, candidate) >= 0.82));
+function compactCatalogText(value: string) {
+  return normalized(value).replace(/[^a-z0-9]+/g, '');
+}
+
+function tokenWindows(value: string, minimum: number, maximum: number) {
+  const tokens = normalized(value).replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
+  const windows: string[] = [];
+  for (let size = Math.max(1, minimum); size <= Math.min(maximum, tokens.length); size += 1) {
+    for (let index = 0; index + size <= tokens.length; index += 1) {
+      windows.push(tokens.slice(index, index + size).join(' '));
+    }
+  }
+  return windows;
+}
+
+/**
+ * Reconhece uma habilidade mesmo quando o Tesseract junta várias cápsulas na
+ * mesma linha. Primeiro tenta inclusão exata/compacta; depois compara janelas
+ * locais com tamanho semelhante ao nome esperado.
+ */
+export function fuzzyContainsCatalogItem(text: string, item: string, aliases: string[]) {
+  const sourceNormalized = normalized(text);
+  const sourceCompact = compactCatalogText(text);
+  const candidates = Array.from(new Set([item, ...aliases].map(clean).filter(Boolean)));
+  for (const candidate of candidates) {
+    const candidateNormalized = normalized(candidate);
+    const candidateCompact = compactCatalogText(candidate);
+    if (!candidateNormalized || candidateCompact.length < 3) continue;
+    if (sourceNormalized.includes(candidateNormalized) || sourceCompact.includes(candidateCompact)) return true;
+  }
+
+  const lines = text.split(/\r?\n|[|•;]+/).map(clean).filter(Boolean);
+  for (const candidate of candidates) {
+    const words = normalized(candidate).split(/\s+/).filter(Boolean).length;
+    const threshold = compactCatalogText(candidate).length >= 18 ? 0.77 : 0.82;
+    for (const line of lines) {
+      if (textSimilarity(line, candidate) >= threshold) return true;
+      const windows = tokenWindows(line, Math.max(1, words - 1), words + 1);
+      if (windows.some((window) => textSimilarity(window, candidate) >= threshold)) return true;
+    }
+  }
+  return false;
 }
 
 const SKILL_LINE_BLOCKLIST = [
@@ -645,7 +673,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   )));
   const score = efhubDetected ? Math.round(baseScore * 0.55 + profileAudit.score * 0.45) : baseScore;
 
-  const canonical: string[] = ['[LEITURA DETALHADA V31.75]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.78]'];
   if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
@@ -664,7 +692,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
   if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V31.75]');
+  canonical.push('[FIM LEITURA DETALHADA V31.78]');
 
   const warnings: string[] = [];
   if (detectedName && !name) warnings.push(`O OCR encontrou um possível nome, mas somente ${nameAgreement} passagem(ns) independente(s) concordaram. O valor foi bloqueado para evitar identificar o jogador errado.`);
@@ -683,7 +711,6 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (progressionSequence.some((item) => item.status === 'review')) warnings.push('A sequência de progressão foi lida pela ordem visual dos ícones e precisa de confirmação antes de virar orçamento da ficha.');
   if (attributes.length >= 20) warnings.push('Tabela de atributos com cobertura alta: o motor pode reduzir o uso de estimativas por posição.');
   if (physicalModel.length >= 8) warnings.push('Modelo físico detectado e incorporado à leitura de alcance, salto e contato.');
-  if (skills.some((item) => item.value === 'Garra')) warnings.push('“Garra” foi lida como texto exibido no print; confirme se pertence à lista oficial da versão atual do jogo.');
 
   return {
     version: VERSION,

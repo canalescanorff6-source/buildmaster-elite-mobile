@@ -9,6 +9,7 @@ import type {
   TrainingPlan
 } from './analyzer';
 import type { BuildVariant } from './trainingEngine';
+import { canonicalSkillName } from './officialSkillIdentity';
 
 export type CardVersionIdentity = {
   signature: string;
@@ -179,16 +180,31 @@ const POSITION_BANDS: Record<PositionCode, Partial<Record<AttributeKey, [number,
 };
 
 const SPECIAL_RULES: Record<string, { attrs: AttributeKey[]; groups: TrainingKey[]; positions: PositionCode[]; use: string }> = {
-  'Blitz Curler': { attrs:['finishing','curl','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], positions:['LWF','RWF','SS','AMF','CF'], use:'finalização com curva após preparar o corpo' },
+  'Fortaleza aérea': { attrs:['heading','jump','physicalContact','defensiveAwareness'], groups:['aerialStrength','defending'], positions:['CB','DMF','LB','RB','CF','GK'], use:'dominar duelos aéreos e proteger a zona de queda' },
+  'Drible explosivo': { attrs:['acceleration','dribbling','tightPossession','balance'], groups:['dribbling','dexterity','lowerBodyStrength'], positions:['LWF','RWF','SS','AMF','CF','LMF','RMF'], use:'romper o primeiro marcador com aceleração curta' },
+  'Impulso ofensivo': { attrs:['speed','acceleration','offensiveAwareness','stamina'], groups:['dexterity','lowerBodyStrength'], positions:['LWF','RWF','SS','AMF','CF','LMF','RMF'], use:'acelerar a movimentação sem bola no campo adversário' },
+  'Desencadeador de ataques': { attrs:['lowPass','ballControl','offensiveAwareness','stamina'], groups:['passing','dribbling','lowerBodyStrength'], positions:['AMF','CMF','DMF','SS'], use:'controlar a bola em zona central para melhorar a movimentação ofensiva dos companheiros' },
+  'Curva Blitz': { attrs:['finishing','curl','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], positions:['LWF','RWF','SS','AMF','CF'], use:'finalização com curva após preparar o corpo' },
+  'Cabeçada fulminante': { attrs:['heading','jump','physicalContact','offensiveAwareness'], groups:['aerialStrength','shooting'], positions:['CF','SS','CB'], use:'atacar cruzamentos com potência' },
+  'Cruzamento cortante': { attrs:['loftedPass','curl','kickingPower','stamina'], groups:['passing','lowerBodyStrength'], positions:['LWF','RWF','LMF','RMF','LB','RB'], use:'cruzar com trajetória agressiva' },
+  'Fortaleza': { attrs:['defensiveAwareness','tackling','physicalContact','defensiveEngagement'], groups:['defending','aerialStrength'], positions:['CB','DMF','LB','RB','GK'], use:'proteger a área e vencer confrontos defensivos' },
+  'Passe decisivo': { attrs:['lowPass','loftedPass','ballControl','stamina'], groups:['passing','dribbling','lowerBodyStrength'], positions:['AMF','CMF','DMF','SS'], use:'criar a jogada decisiva em momentos de pressão' },
+  'Comandante da defesa (GO)': { attrs:['goalkeeperAwareness','goalkeeperParrying','goalkeeperReflexes','goalkeeperReach'], groups:['gk1','gk2','gk3'], positions:['GK'], use:'organizar a defesa a partir do gol' },
+  'Rugido do goleiro': { attrs:['goalkeeperAwareness','goalkeeperReflexes','goalkeeperReach','jump'], groups:['gk1','gk2','gk3','aerialStrength'], positions:['GK'], use:'sustentar presença e reação do goleiro em alta pressão' },
   'Esticada de Perna': { attrs:['tackling','defensiveEngagement','aggression','physicalContact'], groups:['defending','lowerBodyStrength'], positions:['CB','DMF','CMF','LB','RB'], use:'interceptar e alcançar a bola sem desmontar a linha' },
-  'Momentum Dribbling': { attrs:['dribbling','tightPossession','balance','acceleration'], groups:['dribbling','dexterity'], positions:['LWF','RWF','SS','AMF'], use:'ganhar duelos curtos com mudança de direção' },
-  'Phenomenal Finishing': { attrs:['finishing','offensiveAwareness','kickingPower','balance'], groups:['shooting','dexterity'], positions:['CF','SS','LWF','RWF','AMF'], use:'finalizar em posições corporais difíceis' },
-  'Phenomenal Pass': { attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], positions:['AMF','CMF','DMF','SS','LMF','RMF'], use:'soltar passes de alta dificuldade sob pressão' },
-  'Game-changing Pass': { attrs:['lowPass','loftedPass','ballControl','stamina'], groups:['passing','lowerBodyStrength'], positions:['AMF','CMF','DMF','SS'], use:'criar a jogada decisiva em momentos de pressão' },
-  'Fortress': { attrs:['defensiveAwareness','tackling','physicalContact','defensiveEngagement'], groups:['defending','aerialStrength'], positions:['CB','DMF','LB','RB'], use:'proteger a área e vencer confrontos defensivos' },
-  'Bullet Header': { attrs:['heading','jump','physicalContact','offensiveAwareness'], groups:['aerialStrength','shooting'], positions:['CF','SS','CB'], use:'atacar cruzamentos com potência' },
-  'Edged Crossing': { attrs:['loftedPass','curl','kickingPower','stamina'], groups:['passing','lowerBodyStrength'], positions:['LWF','RWF','LMF','RMF','LB','RB'], use:'cruzar com trajetória agressiva' }
+  'Chute rasteiro fulminante': { attrs:['finishing','kickingPower','balance','offensiveAwareness'], groups:['shooting','dexterity'], positions:['CF','SS','LWF','RWF','AMF'], use:'finalizar rasteiro com potência em corredor aberto' },
+  'Pés magnéticos': { attrs:['ballControl','dribbling','tightPossession','balance'], groups:['dribbling','dexterity'], positions:['LWF','RWF','SS','AMF','CMF'], use:'reter a bola próxima do corpo sob pressão' },
+  'Drible de impulso': { attrs:['dribbling','tightPossession','balance','acceleration'], groups:['dribbling','dexterity'], positions:['LWF','RWF','SS','AMF'], use:'ganhar duelos curtos com mudança de direção' },
+  'Finalização fenomenal': { attrs:['finishing','offensiveAwareness','kickingPower','balance'], groups:['shooting','dexterity'], positions:['CF','SS','LWF','RWF','AMF'], use:'finalizar em posições corporais difíceis' },
+  'Passe fenomenal': { attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], positions:['AMF','CMF','DMF','SS','LMF','RMF'], use:'soltar passes de alta dificuldade sob pressão' },
+  'Garra': { attrs:['stamina','balance','aggression','physicalContact'], groups:['lowerBodyStrength','defending','dexterity'], positions:['CF','SS','AMF','CMF','DMF','CB','GK'], use:'manter desempenho e disputa em momentos críticos' },
+  'Passe visionário': { attrs:['lowPass','loftedPass','ballControl','offensiveAwareness'], groups:['passing','dribbling'], positions:['AMF','CMF','DMF','SS','LMF','RMF'], use:'encontrar linhas de passe difíceis e acelerar a criação' },
+  'Sombra veloz': { attrs:['speed','acceleration','defensiveAwareness','stamina'], groups:['dexterity','lowerBodyStrength','defending'], positions:['DMF','CB','LB','RB'], use:'recuperar em velocidade quando um passe rompe a linha defensiva' }
 };
+
+function specialRule(name: string) {
+  return SPECIAL_RULES[canonicalSkillName(name) ?? name];
+}
 
 function clamp(value: number, min = 1, max = 99) { return Math.max(min, Math.min(max, Math.round(value))); }
 function avg(...values: number[]) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0; }
@@ -259,7 +275,7 @@ function variantScore(variant: BuildVariant, final: Required<Attributes>, positi
   const core = avg(...POSITION_CORE[position].map((key)=>final[key]));
   const identityBase = avg(...POSITION_CORE[position].map((key)=>Math.min(100, final[key])));
   const skills = [...(parsed.specialSkills??[]),...(parsed.nativeSkills??[])];
-  const skillScore = skills.length ? clamp(60 + skills.length * 4 + avg(...skills.map((name)=>SPECIAL_RULES[name]?.positions.includes(position)?18:5))) : 55;
+  const skillScore = skills.length ? clamp(60 + skills.length * 4 + avg(...skills.map((name)=>specialRule(name)?.positions.includes(position)?18:5))) : 55;
   const waste = clamp(100-(variant.efficiencyScore??75));
   const identity = clamp((variant.title.toLowerCase().includes('identidade')?94:82)+(identityBase-core)*.2);
   const adaptation = clamp((variant.qualityScore??80)+(variant.title.toLowerCase().includes('adaptação')?8:0));
@@ -326,7 +342,7 @@ export function buildMaxPrecisionAnalysis(args: {
 
   const skills = Array.from(new Set([parsed.specialTag ?? '', ...(parsed.specialSkills??[]), ...(parsed.nativeSkills??[]), ...(parsed.impetos??[]).map((item)=>item.name)])).filter(Boolean);
   const deepSkills:DeepSkillPrecision[]=skills.map((name)=>{
-    const rule=SPECIAL_RULES[name]; const attrs=rule?.attrs??important.slice(0,4); const before=clamp(avg(...attrs.map(k=>baseAttributes[k]))); const after=clamp(avg(...attrs.map(k=>final[k]))); const positionFit=rule?rule.positions.includes(position):true;
+    const rule=specialRule(name); const attrs=rule?.attrs??important.slice(0,4); const before=clamp(avg(...attrs.map(k=>baseAttributes[k]))); const after=clamp(avg(...attrs.map(k=>final[k]))); const positionFit=rule?rule.positions.includes(position):true;
     const expectedUse:DeepSkillPrecision['expectedUse']=positionFit?(after>=84?'alta':'média'):'baixa';
     const gain=after-before; const costBenefit:DeepSkillPrecision['costBenefit']=positionFit&&gain>=3?'alto':positionFit?'médio':'baixo';
     return {name,expectedUse,supportBefore:before,supportAfter:after,gain,costBenefit,positionImpact:positionFit?`A posição escolhida cria situações para ${rule?.use??'usar a habilidade'}.`:`A habilidade existe, mas ${position} oferece poucas situações naturais de uso.`,recommendation:positionFit?`A ficha sustenta ${name} sem concentrar todo o orçamento nela.`:`Preservar a habilidade, mas não construir a ficha inteira ao redor dela.`};
@@ -364,7 +380,7 @@ export function buildMaxPrecisionAnalysis(args: {
     disclaimer:'A versão atual considerada é a v5.5.0; as mudanças de gameplay mais recentes usadas no motor vêm principalmente da v5.4.0. Meta não é regra oficial nem garantia de vitória: é uma tendência competitiva datada e editável.'
   };
 
-  const skillGroups=Array.from(new Set(deepSkills.flatMap(item=>SPECIAL_RULES[item.name]?.groups??[])));
+  const skillGroups=Array.from(new Set(deepSkills.flatMap(item=>specialRule(item.name)?.groups??[])));
   const metaGroups:TrainingKey[]=position==='CB'||position==='DMF'?['defending','lowerBodyStrength']:position==='LWF'||position==='RWF'||position==='SS'||position==='AMF'?['dribbling','dexterity','shooting']:position==='CF'?['shooting','dexterity','lowerBodyStrength']:['passing','dribbling','lowerBodyStrength'];
   const avoid=(Object.keys(winner.training) as TrainingKey[]).sort((a,b)=>(winner.training[b]??0)-(winner.training[a]??0));
   const specialPlan=shiftedPlan(winner.training,skillGroups,avoid,trainingPointsTotal);
