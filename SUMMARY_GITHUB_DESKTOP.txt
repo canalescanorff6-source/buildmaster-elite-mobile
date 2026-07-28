@@ -1,1 +1,1 @@
-Implementa leitor eFHUB rígido v31.60 com portões 26/13/16 e aprendizagem segura de habilidades
+Implementa Treinador de Partidas v31.70 com gravação Android, revisão e análise local

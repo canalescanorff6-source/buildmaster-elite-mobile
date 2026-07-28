@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "capacitor-stub.d.ts",
+    "../../src/lib/stableId.ts",
+    "../../src/lib/safeLocalStorage.ts",
+    "../../src/modules/matches/matchRecorderBridge.ts",
+    "../../src/modules/matches/matchTrainerEngine.ts"
+  ]
+}

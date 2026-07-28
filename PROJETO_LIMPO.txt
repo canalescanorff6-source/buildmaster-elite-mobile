@@ -1,1 +1,12 @@
-BUILDMASTER ELITE TÁTICO v31.60 — LEITOR eFHUB RÍGIDO E MOTOR SUPREMO
+BUILDMASTER ELITE TÁTICO v31.70 — TREINADOR DE PARTIDAS
+
+Projeto limpo de produção com:
+- gravação oficial Android por MediaProjection;
+- serviço em primeiro plano e notificação permanente;
+- vídeos privados locais sem envio automático;
+- importação de vídeos;
+- análise local por amostragem de quadros;
+- linha do tempo e marcações confirmadas pelo usuário;
+- integração com Partidas, Meu Time, formação e estilo coletivo;
+- OCR eFHUB rígido v31.60 preservado;
+- Motor Supremo de Fichas preservado.

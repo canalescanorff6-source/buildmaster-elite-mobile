@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Brain, CheckCircle2, Clock3, Download, History, Pause, Play, Plus, RotateCcw, ShieldCheck, Target, Trophy, Users, Wifi } from 'lucide-react';
+import { BarChart3, Brain, CheckCircle2, Clock3, Download, History, Pause, Play, Plus, RotateCcw, ShieldCheck, Target, Trophy, Users, Video, Wifi } from 'lucide-react';
 import type { IntegratedPlayerRecord, MatchScenarioPlan, TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import type { TacticalStyle } from '@/lib/analyzer';
 import { TrainingEvolutionCenter } from '@/modules/training/TrainingEvolutionCenter';
 import { CompetitivePerformanceCenter } from './CompetitivePerformanceCenter';
+import { MatchTrainerCenter } from './MatchTrainerCenter';
 import { AntiDelayCenter } from '@/modules/performance/AntiDelayCenter';
 import { SmartCoachCenter } from '@/modules/coaching/SmartCoachCenter';
 import type { MatchValidationRecord } from '@/lib/appEvolution';
@@ -13,7 +14,7 @@ import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 import { PremiumScreenHero } from '@/components/PremiumScreenPrimitives';
 import { OBSERVABILITY_EVENT, readFeatureFlags, type FeatureFlagState } from '@/modules/observability/observabilityEngine';
 
-type MatchTab = 'competitivo' | 'anti-delay' | 'treinador' | 'treinar' | 'planejar' | 'executar' | 'analisar';
+type MatchTab = 'gravar' | 'competitivo' | 'anti-delay' | 'treinador' | 'treinar' | 'planejar' | 'executar' | 'analisar';
 type TrainingLog = { id: string; at: string; error: string; repetitions: number; seconds: number };
 const TRAINING_LOG_KEY = 'buildmaster_guided_training_logs_v2739';
 const WEEKLY_GOAL_KEY = 'buildmaster_weekly_training_goal_v2739';
@@ -115,7 +116,9 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
       ]}
     />
 
-    <nav className="refined-match-tabs luxury-panel" aria-label="Etapas de treino e partida"><button type="button" className={tab === 'competitivo' ? 'active' : ''} onClick={() => setTab('competitivo')}><BarChart3 size={17}/> Desempenho competitivo</button>{featureFlags.antiDelay && <button type="button" className={tab === 'anti-delay' ? 'active' : ''} onClick={() => setTab('anti-delay')}><Wifi size={17}/> Central anti-delay</button>}{featureFlags.smartCoach && <button type="button" className={tab === 'treinador' ? 'active' : ''} onClick={() => setTab('treinador')}><Brain size={17}/> Treinador inteligente</button>}<button type="button" className={tab === 'treinar' ? 'active' : ''} onClick={() => setTab('treinar')}><Trophy size={17}/> Treinos e evolução</button><button type="button" className={tab === 'planejar' ? 'active' : ''} onClick={() => setTab('planejar')}><Target size={17}/> Planejar partida</button><button type="button" className={tab === 'executar' ? 'active' : ''} onClick={() => setTab('executar')}><Play size={17}/> Treino guiado antigo</button><button type="button" className={tab === 'analisar' ? 'active' : ''} onClick={() => setTab('analisar')}><History size={17}/> Histórico</button>{tab !== 'treinar' && <div className="refined-week-goal"><span>Meta semanal antiga</span><select value={weeklyGoal} onChange={(event) => changeGoal(Number(event.target.value))}>{[2,3,4,5,6,7].map((value) => <option key={value} value={value}>{value} sessões</option>)}</select><strong>{weeklySessions}/{weeklyGoal}</strong></div>}</nav>
+    <nav className="refined-match-tabs luxury-panel" aria-label="Etapas de treino e partida"><button type="button" className={tab === 'gravar' ? 'active' : ''} onClick={() => setTab('gravar')}><Video size={17}/> Gravar e analisar</button><button type="button" className={tab === 'competitivo' ? 'active' : ''} onClick={() => setTab('competitivo')}><BarChart3 size={17}/> Desempenho competitivo</button>{featureFlags.antiDelay && <button type="button" className={tab === 'anti-delay' ? 'active' : ''} onClick={() => setTab('anti-delay')}><Wifi size={17}/> Central anti-delay</button>}{featureFlags.smartCoach && <button type="button" className={tab === 'treinador' ? 'active' : ''} onClick={() => setTab('treinador')}><Brain size={17}/> Treinador inteligente</button>}<button type="button" className={tab === 'treinar' ? 'active' : ''} onClick={() => setTab('treinar')}><Trophy size={17}/> Treinos e evolução</button><button type="button" className={tab === 'planejar' ? 'active' : ''} onClick={() => setTab('planejar')}><Target size={17}/> Planejar partida</button><button type="button" className={tab === 'executar' ? 'active' : ''} onClick={() => setTab('executar')}><Play size={17}/> Treino guiado antigo</button><button type="button" className={tab === 'analisar' ? 'active' : ''} onClick={() => setTab('analisar')}><History size={17}/> Histórico</button>{tab !== 'treinar' && <div className="refined-week-goal"><span>Meta semanal antiga</span><select value={weeklyGoal} onChange={(event) => changeGoal(Number(event.target.value))}>{[2,3,4,5,6,7].map((value) => <option key={value} value={value}>{value} sessões</option>)}</select><strong>{weeklySessions}/{weeklyGoal}</strong></div>}</nav>
+
+    {tab === 'gravar' && <MatchTrainerCenter team={team} teamStyle={teamStyle} />}
 
     {tab === 'competitivo' && <CompetitivePerformanceCenter formation={team.formation} teamStyle={teamStyle} />}
 

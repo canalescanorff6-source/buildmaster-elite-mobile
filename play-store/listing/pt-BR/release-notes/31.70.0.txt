@@ -1,0 +1,8 @@
+Treinador de Partidas v31.70:
+• gravação oficial da tela no Android com autorização a cada sessão;
+• perfis 540p, 720p e 1080p sem microfone por padrão;
+• vídeo salvo somente no armazenamento privado do app;
+• importação de gravações existentes;
+• revisão com linha do tempo e marcação de passes, defesa, cursor, finalização e possível delay;
+• análise local de movimento com sinais revisáveis, sem controlar o eFootball;
+• relatórios e prioridades para a próxima partida.
