@@ -216,6 +216,7 @@ jobs:
           npm run quality:syntax
           npm run quality:interactive
           npm run quality:card-crop-types
+          npm run quality:native-java
 
       - name: Executar pré-voo da versão final
         timeout-minutes: 5

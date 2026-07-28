@@ -59,10 +59,11 @@
     "test:v3160": "npm run typecheck:v3160 && node -r ./tests/_ts-require.cjs tests/v31-60-efhub-profile-regression.ts",
     "apk:install-match-recorder": "node scripts/install-match-recorder-plugin.mjs",
     "typecheck:v3170": "tsc -p tests/types-v3170/tsconfig.json --pretty false && tsc -p tests/types-v3170-ui/tsconfig.json --pretty false",
-    "test:v3170": "npm run typecheck:v3170 && npm run quality:typecheck-isolation && npm run quality:card-crop-types && npm run quality:routes && node -r ./tests/_ts-require.cjs tests/v31-70-match-trainer-regression.ts && node tests/v31-70-native-recorder-installer-regression.mjs && node tests/v31-70-root-route-regression.mjs && node tests/v31-70-typecheck-isolation-regression.mjs",
+    "test:v3170": "npm run typecheck:v3170 && npm run quality:typecheck-isolation && npm run quality:card-crop-types && npm run quality:native-java && npm run quality:routes && node -r ./tests/_ts-require.cjs tests/v31-70-match-trainer-regression.ts && node tests/v31-70-native-recorder-installer-regression.mjs && node tests/v31-70-root-route-regression.mjs && node tests/v31-70-typecheck-isolation-regression.mjs",
     "quality:routes": "node scripts/check-app-routes.mjs",
     "quality:typecheck-isolation": "node scripts/check-typecheck-isolation.mjs",
-    "quality:card-crop-types": "node scripts/check-card-crop-type-safety.mjs"
+    "quality:card-crop-types": "node scripts/check-card-crop-type-safety.mjs",
+    "quality:native-java": "node scripts/check-generated-native-java.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

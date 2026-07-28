@@ -390,7 +390,7 @@ public class BuildMasterScreenRecordService extends Service {
     }
 
     private static JSObject descriptorFromFile(File video) {
-        String id = video.getName().replaceFirst("\\.mp4$", "");
+        String id = video.getName().replaceFirst("\\\\.mp4$", "");
         File meta = new File(video.getParentFile(), id + ".json");
         try {
             if (meta.exists()) return new JSObject(readUtf8(meta));
@@ -405,7 +405,7 @@ public class BuildMasterScreenRecordService extends Service {
 
     public static List<JSObject> listRecordings(Context context) {
         File directory = recordingsDirectory(context);
-        File[] videos = directory.listFiles((dir, name) -> name.matches("match-[0-9]{10,20}\\.mp4"));
+        File[] videos = directory.listFiles((dir, name) -> name.matches("match-[0-9]{10,20}\\\\.mp4"));
         if (videos == null) return Collections.emptyList();
         Arrays.sort(videos, Comparator.comparingLong(File::lastModified).reversed());
         List<JSObject> items = new ArrayList<>();
