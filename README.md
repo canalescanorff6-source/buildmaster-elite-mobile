@@ -1,10 +1,20 @@
-# BuildMaster Elite Tático v31.76 — Exportação de gravações e Galeria
+# BuildMaster Elite Tático v31.77 — Análise de Vídeo Inteligente 2.0
 
-O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
+O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.77 acrescenta uma análise baseada em evidências confirmadas, sem transformar sinais automáticos em erros inventados.
 
+## v31.77 — Diagnóstico por lance, treino e evolução
 
+- abas **Resumo, Momentos, Ataque, Defesa, Tática, Treino e Evolução**;
+- clipes por lance em velocidade normal ou 0,5x;
+- registro de tempo, fase, jogador/setor, gravidade e confiança;
+- explicação de **o que aconteceu, por que, consequência, melhor decisão e correção**;
+- três problemas de maior impacto e jogadas-modelo;
+- notas por área e diagnóstico de formação, estilo e gestão de vantagem;
+- treino personalizado criado a partir dos erros confirmados;
+- comparação entre partidas e identificação de problemas recorrentes;
+- candidatos automáticos não entram na nota antes da revisão humana.
 
-## v31.76 — Vídeo salvo fora do app
+## v31.77 — Vídeo salvo fora do app
 
 - gravações continuam protegidas no espaço privado para análise;
 - ao finalizar, o app salva automaticamente uma cópia em `Filmes/BuildMaster/Partidas`;

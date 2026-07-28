@@ -54,14 +54,23 @@ declare module '@/modules/matches/matchRecorderBridge' {
 }
 
 declare module '@/modules/matches/matchTrainerEngine' {
-  export type MatchEventKind = 'pass-error'|'dangerous-turnover'|'marking-error'|'cursor-error'|'forced-shot'|'good-play'|'possible-delay'|'goal-for'|'goal-against'|'note';
-  export type MatchTrainerSession = { id:string; createdAt:string; updatedAt:string; title:string; source:'native-recording'|'imported-video'; videoPath?:string; fileName:string; fileSizeBytes:number; recording?:import('@/modules/matches/matchRecorderBridge').MatchRecordingDescriptor|null; quality:import('@/modules/matches/matchRecorderBridge').MatchRecordingQuality|'imported'; formation:string; teamStyle:string; manager:string; connectionRating:1|2|3|4|5; notes:string; analysis?:{qualityScore:number;automaticMarkers:Array<{id:string;atMs:number;kind:MatchEventKind;source:'manual'|'automatic';confidence:number;title:string;detail:string}>}|null; markers:Array<{id:string;atMs:number;kind:MatchEventKind;source:'manual'|'automatic';confidence:number;title:string;detail:string}>; status:'recorded'|'analyzing'|'review'|'completed'|'failed' };
+  export type MatchPhase = 'build-up'|'attack'|'defensive-transition'|'defense'|'set-piece'|'game-management'|'unknown';
+  export type MatchSeverity = 'positive'|'low'|'medium'|'high'|'critical';
+  export type MatchEventKind = 'pass-error'|'dangerous-turnover'|'marking-error'|'cursor-error'|'forced-shot'|'defender-out-of-line'|'late-recomposition'|'pressing-error'|'game-management'|'good-transition'|'good-build-up'|'good-play'|'possible-delay'|'critical-moment'|'goal-for'|'goal-against'|'note';
+  export type MatchEventMarker = { id:string; atMs:number; kind:MatchEventKind; source:'manual'|'automatic'; confidence:number; title:string; detail:string; playerId?:string|null; phase?:MatchPhase; severity?:MatchSeverity; reviewStatus?:'suggested'|'confirmed'|'rejected'; observed?:string; why?:string; consequence?:string; betterDecision?:string; correction?:string; clipStartMs?:number; clipEndMs?:number; relatedMarkerId?:string|null };
+  export type MatchTrainerSession = { id:string; createdAt:string; updatedAt:string; title:string; source:'native-recording'|'imported-video'; videoPath?:string; fileName:string; fileSizeBytes:number; recording?:import('@/modules/matches/matchRecorderBridge').MatchRecordingDescriptor|null; quality:import('@/modules/matches/matchRecorderBridge').MatchRecordingQuality|'imported'; formation:string; teamStyle:string; manager:string; connectionRating:1|2|3|4|5; notes:string; analysis?:{qualityScore:number;confidence?:'low'|'medium'|'high';automaticMarkers:MatchEventMarker[]}|null; markers:MatchEventMarker[]; dismissedAutomaticMarkerIds?:string[]; status:'recorded'|'analyzing'|'review'|'completed'|'failed' };
+  export const MATCH_EVENT_CATALOG: Array<{kind:MatchEventKind;label:string;shortLabel:string;group:string;phase:MatchPhase;severity:MatchSeverity}>;
   export function analyzeMatchVideo(source:Blob|string,options:Record<string,unknown>):Promise<any>;
-  export function createMatchMarker(kind:MatchEventKind,atMs:number,detail?:string):any;
+  export function createMatchMarker(kind:MatchEventKind,atMs:number,detail?:string,source?:'manual'|'automatic',confidence?:number,overrides?:Partial<MatchEventMarker>):MatchEventMarker;
   export function createMatchTrainerSession(input:Record<string,unknown>):MatchTrainerSession;
   export function deleteMatchTrainerSession(id:string):MatchTrainerSession[];
   export function exportMatchTrainerReport(session:MatchTrainerSession):string;
   export function readMatchTrainerSessions():MatchTrainerSession[];
-  export function summarizeMatchTrainerSession(session:MatchTrainerSession):{verdict:string;passErrors:number;dangerousTurnovers:number;markingErrors:number;cursorErrors:number;forcedShots:number;possibleDelay:number;priorities:string[];matchRules:string[]};
+  export function getVisibleMatchMarkers(session:MatchTrainerSession):MatchEventMarker[];
+  export function getConfirmedMatchMarkers(session:MatchTrainerSession):MatchEventMarker[];
+  export function isAttackEvent(kind:MatchEventKind):boolean;
+  export function isDefenseEvent(kind:MatchEventKind):boolean;
+  export function summarizeMatchTrainerSession(session:MatchTrainerSession):any;
+  export function buildMatchTrainerEvolution(sessions:MatchTrainerSession[],activeId?:string|null):any;
   export function upsertMatchTrainerSession(session:MatchTrainerSession):MatchTrainerSession[];
 }

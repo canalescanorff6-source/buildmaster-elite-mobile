@@ -7,7 +7,7 @@ import {
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
 
-assert.equal(MATCH_TRAINER_VERSION, '31.72.0');
+assert.equal(MATCH_TRAINER_VERSION, '31.77.0');
 
 const session = createMatchTrainerSession({
   source: 'native-recording',
@@ -50,15 +50,15 @@ const summary = summarizeMatchTrainerSession(session);
 assert.equal(summary.passErrors, 2);
 assert.equal(summary.dangerousTurnovers, 1);
 assert.equal(summary.markingErrors, 1);
-assert.equal(summary.possibleDelay, 2);
+assert.equal(summary.possibleDelay, 1);
 assert.equal(summary.primaryProblem, 'pass-error');
-assert.ok(summary.priorities.some((item) => item.includes('passe seguro')));
-assert.ok(summary.matchRules.some((item) => item.includes('VOL')));
+assert.ok(summary.priorities.some((item) => item.includes('passes verticais')));
+assert.ok(summary.matchRules.some((item) => item.includes('volante')));
 
 const report = exportMatchTrainerReport(session);
-assert.match(report, /TREINADOR DE PARTIDAS v31\.72/);
-assert.match(report, /00:42 — Perda perigosa/);
+assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v31\.77/);
+assert.match(report, /00:42 — Perda de bola perigosa/);
 assert.match(report, /Sinais automáticos precisam de revisão/);
 assert.match(report, /4-1-2-2-1/);
 
-console.log('v31.72 motor de sessões, marcadores, resumo e relatório aprovado.');
+console.log('v31.77 preserva sessões, marcadores, resumo e relatório com evidência confirmada.');

@@ -1,0 +1,6 @@
+• nova Análise de Vídeo Inteligente 2.0 com abas Resumo, Momentos, Ataque, Defesa, Tática, Treino e Evolução;
+• cada lance mostra tempo, consequência, melhor decisão, correção e clipe em velocidade normal ou 0,5x;
+• candidatos automáticos não contam como erro antes da confirmação;
+• notas por área, três prioridades, jogadas-modelo e diagnóstico tático;
+• plano de treino personalizado e comparação entre partidas;
+• gravações continuam disponíveis na Galeria e no compartilhamento seguro.

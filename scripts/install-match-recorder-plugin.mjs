@@ -654,4 +654,4 @@ for (const permission of permissions) {
 const serviceDeclaration = `        <service\n            android:name=".BuildMasterScreenRecordService"\n            android:exported="false"\n            android:stopWithTask="false"\n            android:foregroundServiceType="mediaProjection" />\n`;
 if (!manifest.includes('android:name=".BuildMasterScreenRecordService"')) manifest = manifest.replace(/<\/application>/, `${serviceDeclaration}    </application>`);
 fs.writeFileSync(manifestPath, manifest);
-console.log('Treinador de Partidas v31.76 instalado: MediaProjection, gravação privada, exportação MediaStore e compartilhamento seguro.');
+console.log('Treinador de Partidas v31.77 instalado: MediaProjection, gravação privada, exportação MediaStore e compartilhamento seguro.');

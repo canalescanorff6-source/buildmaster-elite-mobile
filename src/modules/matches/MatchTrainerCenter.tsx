@@ -30,7 +30,15 @@ import {
   readMatchTrainerSessions,
   summarizeMatchTrainerSession,
   upsertMatchTrainerSession,
+  MATCH_EVENT_CATALOG,
+  buildMatchTrainerEvolution,
+  getVisibleMatchMarkers,
+  getConfirmedMatchMarkers,
+  isAttackEvent,
+  isDefenseEvent,
   type MatchEventKind,
+  type MatchEventMarker,
+  type MatchPhase,
   type MatchTrainerSession
 } from './matchTrainerEngine';
 
@@ -41,15 +49,33 @@ const QUALITY_LABELS: Record<MatchRecordingQuality, { title: string; detail: str
 };
 
 const MARKER_ACTIONS: Array<{ kind: MatchEventKind; label: string }> = [
-  { kind: 'pass-error', label: 'Erro de passe' },
+  { kind: 'pass-error', label: 'Passe forçado' },
   { kind: 'dangerous-turnover', label: 'Perda perigosa' },
+  { kind: 'forced-shot', label: 'Chute precipitado' },
   { kind: 'marking-error', label: 'Erro de marcação' },
-  { kind: 'cursor-error', label: 'Troca de cursor' },
-  { kind: 'forced-shot', label: 'Chute forçado' },
-  { kind: 'possible-delay', label: 'Possível delay' },
-  { kind: 'good-play', label: 'Boa jogada' },
+  { kind: 'cursor-error', label: 'Troca atrasada' },
+  { kind: 'defender-out-of-line', label: 'Zagueiro fora da linha' },
+  { kind: 'late-recomposition', label: 'Recomposição atrasada' },
+  { kind: 'pressing-error', label: 'Pressão errada' },
+  { kind: 'game-management', label: 'Gestão da vantagem' },
+  { kind: 'good-transition', label: 'Boa transição' },
+  { kind: 'good-build-up', label: 'Boa construção' },
   { kind: 'goal-for', label: 'Gol marcado' },
-  { kind: 'goal-against', label: 'Gol sofrido' }
+  { kind: 'goal-against', label: 'Gol sofrido' },
+  { kind: 'possible-delay', label: 'Possível atraso' },
+  { kind: 'note', label: 'Observação' }
+];
+
+type AnalysisTab = 'resumo' | 'momentos' | 'ataque' | 'defesa' | 'tatica' | 'treino' | 'evolucao';
+
+const PHASE_OPTIONS: Array<{ value: MatchPhase; label: string }> = [
+  { value: 'unknown', label: 'Fase automática' },
+  { value: 'build-up', label: 'Saída/construção' },
+  { value: 'attack', label: 'Ataque/finalização' },
+  { value: 'defensive-transition', label: 'Transição defensiva' },
+  { value: 'defense', label: 'Defesa organizada' },
+  { value: 'set-piece', label: 'Bola parada' },
+  { value: 'game-management', label: 'Gestão da partida' }
 ];
 
 const emptyStatus: MatchRecorderStatus = { state: 'idle', active: false, startedAt: null, elapsedMs: 0 };
@@ -79,15 +105,26 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [markerNote, setMarkerNote] = useState('');
+  const [markerPhase, setMarkerPhase] = useState<MatchPhase>('unknown');
+  const [markerPlayer, setMarkerPlayer] = useState('');
+  const [analysisTab, setAnalysisTab] = useState<AnalysisTab>('resumo');
+  const [candidateKinds, setCandidateKinds] = useState<Record<string, MatchEventKind>>({});
   const [videoAction, setVideoAction] = useState<'saving' | 'sharing' | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastHandledRecordingRef = useRef('');
   const exportAttemptsRef = useRef(new Set<string>());
+  const clipTimerRef = useRef<number | null>(null);
 
   const active = useMemo(() => sessions.find((session) => session.id === activeId) || null, [activeId, sessions]);
   const summary = useMemo(() => active ? summarizeMatchTrainerSession(active) : null, [active]);
+  const evolution = useMemo(() => buildMatchTrainerEvolution(sessions, activeId), [sessions, activeId]);
+  const visibleMarkers = useMemo(() => active ? getVisibleMatchMarkers(active) : [], [active]);
+  const confirmedMarkers = useMemo(() => active ? getConfirmedMatchMarkers(active) : [], [active]);
+  const candidateMarkers = useMemo(() => visibleMarkers.filter((marker) => marker.reviewStatus === 'suggested'), [visibleMarkers]);
+  const attackMarkers = useMemo(() => confirmedMarkers.filter((marker) => isAttackEvent(marker.kind)), [confirmedMarkers]);
+  const defenseMarkers = useMemo(() => confirmedMarkers.filter((marker) => isDefenseEvent(marker.kind)), [confirmedMarkers]);
   const nativeVideoUrl = active?.videoPath ? Capacitor.convertFileSrc(active.videoPath) : null;
   const videoUrl = active?.source === 'imported-video' && importedFile?.name === active.fileName ? importedUrl : nativeVideoUrl;
 
@@ -250,6 +287,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   useEffect(() => () => {
     if (importedUrl) URL.revokeObjectURL(importedUrl);
     abortRef.current?.abort();
+    if (clipTimerRef.current !== null) window.clearInterval(clipTimerRef.current);
   }, [importedUrl]);
 
   async function beginRecording() {
@@ -348,15 +386,68 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   function addMarker(kind: MatchEventKind) {
     if (!active) return;
     const atMs = Math.round((videoRef.current?.currentTime || 0) * 1000);
-    const marker = createMatchMarker(kind, atMs, markerNote);
+    const marker = createMatchMarker(kind, atMs, markerNote, 'manual', 100, {
+      phase: markerPhase === 'unknown' ? undefined : markerPhase,
+      playerId: markerPlayer.trim() || null
+    });
     commitSession({ ...active, markers: [...active.markers, marker].sort((a, b) => a.atMs - b.atMs), status: 'review' });
     setMarkerNote('');
-    setMessage(`${marker.title} registrado em ${formatDuration(atMs)}.`);
+    setMarkerPlayer('');
+    setMessage(`${marker.title} confirmado em ${formatDuration(atMs)}. O diagnóstico, a consequência e o treino foram atualizados.`);
   }
 
   function removeMarker(id: string) {
     if (!active) return;
     commitSession({ ...active, markers: active.markers.filter((marker) => marker.id !== id) });
+  }
+
+  function confirmCandidate(marker: MatchEventMarker) {
+    if (!active) return;
+    const kind = candidateKinds[marker.id] || (marker.kind === 'possible-delay' ? 'possible-delay' : 'note');
+    const confirmed = createMatchMarker(kind, marker.atMs, markerNote || marker.detail, 'manual', 92, {
+      phase: markerPhase === 'unknown' ? marker.phase : markerPhase,
+      playerId: markerPlayer.trim() || null,
+      relatedMarkerId: marker.id,
+      clipStartMs: marker.clipStartMs,
+      clipEndMs: marker.clipEndMs
+    });
+    commitSession({
+      ...active,
+      markers: [...active.markers, confirmed].sort((a, b) => a.atMs - b.atMs),
+      dismissedAutomaticMarkerIds: [...new Set([...(active.dismissedAutomaticMarkerIds || []), marker.id])],
+      status: 'review'
+    });
+    setMarkerNote('');
+    setMarkerPlayer('');
+    setMessage(`${confirmed.title} confirmado em ${formatDuration(marker.atMs)}. O candidato automático não será contado duas vezes.`);
+  }
+
+  function dismissCandidate(marker: MatchEventMarker) {
+    if (!active) return;
+    commitSession({
+      ...active,
+      dismissedAutomaticMarkerIds: [...new Set([...(active.dismissedAutomaticMarkerIds || []), marker.id])]
+    });
+    setMessage(`Momento de ${formatDuration(marker.atMs)} descartado. Ele não entra nas notas nem nas conclusões.`);
+  }
+
+  function playMarkerClip(marker: MatchEventMarker, slow = false) {
+    const video = videoRef.current;
+    if (!video) return;
+    if (clipTimerRef.current !== null) window.clearInterval(clipTimerRef.current);
+    const startMs = Math.max(0, marker.clipStartMs ?? marker.atMs - 6000);
+    const endMs = Math.max(startMs + 1500, marker.clipEndMs ?? marker.atMs + 6000);
+    video.currentTime = startMs / 1000;
+    video.playbackRate = slow ? .5 : 1;
+    void video.play().catch(() => undefined);
+    clipTimerRef.current = window.setInterval(() => {
+      if (!video || video.currentTime * 1000 >= endMs || video.ended) {
+        video.pause();
+        video.playbackRate = 1;
+        if (clipTimerRef.current !== null) window.clearInterval(clipTimerRef.current);
+        clipTimerRef.current = null;
+      }
+    }, 180);
   }
 
   function updateActive(patch: Partial<MatchTrainerSession>) {
@@ -385,26 +476,67 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     if (hadGalleryCopy) setMessage('Sessão removida do BuildMaster. A cópia salva na Galeria foi preservada.');
   }
 
-  const allMarkers = active ? [...(active.analysis?.automaticMarkers || []), ...active.markers].sort((a, b) => a.atMs - b.atMs) : [];
+  const markerOptions = MATCH_EVENT_CATALOG.filter((item) => item.kind !== 'critical-moment');
 
-  return <section className="match-trainer-v3170">
+  function renderMarkerCard(marker: MatchEventMarker, allowRemove = false) {
+    const phase = PHASE_OPTIONS.find((item) => item.value === marker.phase)?.label || 'Fase não confirmada';
+    return <article className={`match-insight-card severity-${marker.severity || 'medium'}`} key={marker.id}>
+      <div className="match-insight-head">
+        <div><span>{formatDuration(marker.atMs)} • {phase}</span><strong>{marker.title}</strong></div>
+        <em>{marker.source === 'automatic' ? `${marker.confidence}% candidato` : `${marker.confidence}% confirmado`}</em>
+      </div>
+      {marker.playerId && <small className="match-player-chip">Jogador/setor: {marker.playerId}</small>}
+      {marker.detail && <p className="match-user-note"><b>Sua observação:</b> {marker.detail}</p>}
+      <div className="match-insight-body">
+        <p><b>O que aconteceu</b><span>{marker.observed}</span></p>
+        <p><b>Por que aconteceu</b><span>{marker.why}</span></p>
+        <p><b>Consequência</b><span>{marker.consequence}</span></p>
+        <p className="positive"><b>Melhor decisão</b><span>{marker.betterDecision}</span></p>
+        <p className="positive"><b>Como corrigir</b><span>{marker.correction}</span></p>
+      </div>
+      <div className="match-insight-actions">
+        <button type="button" onClick={() => playMarkerClip(marker)} disabled={!videoUrl}><Play size={15}/> Ver clipe</button>
+        <button type="button" onClick={() => playMarkerClip(marker, true)} disabled={!videoUrl}><Play size={15}/> Rever em 0,5x</button>
+        {allowRemove && <button type="button" className="danger-button" onClick={() => removeMarker(marker.id)}><Trash2 size={15}/> Remover</button>}
+      </div>
+    </article>;
+  }
+
+  return <section className="match-trainer-v3170 match-trainer-v3177">
     <div className="match-trainer-intro luxury-panel">
-      <div><p className="kicker"><Video size={15}/> v31.76 • Treinador de Partidas</p><h3>Grave, revise e entenda sua gameplay sem interferir no eFootball.</h3><span>O Android grava passivamente. A análise ocorre depois da partida, no aparelho, e nunca controla o jogo nem altera sua ficha automaticamente.</span></div>
-      <div className={`match-recorder-state state-${recorderStatus.state}`}><i>{recorderStatus.active ? <LoaderCircle size={22}/> : <ShieldCheck size={22}/>}</i><div><strong>{recorderStatus.active ? 'Gravação ativa' : capabilities?.supported ? 'Android preparado' : 'Modo de importação'}</strong><span>{recorderStatus.active ? formatDuration(recorderStatus.elapsedMs) : capabilities?.reason || 'Pronto para analisar vídeos.'}</span></div></div>
+      <div>
+        <p className="kicker"><Video size={15}/> v31.77 • Análise de Vídeo Inteligente 2.0</p>
+        <h3>Da gravação ao diagnóstico: lance, causa, consequência, correção e treino.</h3>
+        <span>O vídeo continua local. O motor encontra momentos para revisão, você confirma o contexto e o BuildMaster transforma as evidências em análise tática organizada.</span>
+      </div>
+      <div className={`match-recorder-state state-${recorderStatus.state}`}>
+        <i>{recorderStatus.active ? <LoaderCircle size={22}/> : <ShieldCheck size={22}/>}</i>
+        <div><strong>{recorderStatus.active ? 'Gravação ativa' : capabilities?.supported ? 'Android preparado' : 'Modo de importação'}</strong><span>{recorderStatus.active ? formatDuration(recorderStatus.elapsedMs) : capabilities?.reason || 'Pronto para analisar vídeos.'}</span></div>
+      </div>
     </div>
 
     <div className="match-trainer-capture-grid">
       <article className="luxury-panel match-capture-card">
         <div className="v27-panel-heading"><div><p className="kicker"><Smartphone size={14}/> Captura oficial Android</p><h3>Gravar uma partida completa</h3></div><span>{capabilities?.supported ? 'Disponível' : 'APK necessário'}</span></div>
-        <div className="match-quality-options" role="radiogroup" aria-label="Qualidade da gravação">{(Object.keys(QUALITY_LABELS) as MatchRecordingQuality[]).map((item) => <label key={item} className={quality === item ? 'active' : ''}><input type="radio" name="recording-quality" value={item} checked={quality === item} disabled={recorderStatus.active || !capabilities?.profiles.includes(item)} onChange={() => setQuality(item)}/><span><strong>{QUALITY_LABELS[item].title}</strong><small>{QUALITY_LABELS[item].detail}</small></span></label>)}</div>
-        <div className="match-capture-actions">{recorderStatus.active ? <button type="button" className="danger-button" disabled={busy} onClick={finishRecording}><CircleStop size={18}/> Parar e salvar</button> : <button type="button" className="elite-button" disabled={busy || !capabilities?.supported} onClick={beginRecording}><Video size={18}/> Iniciar gravação</button>}<small>Sem microfone e sem envio automático. O Android pede autorização em toda nova sessão.</small></div>
+        <div className="match-quality-options" role="radiogroup" aria-label="Qualidade da gravação">
+          {(Object.keys(QUALITY_LABELS) as MatchRecordingQuality[]).map((item) => <label key={item} className={quality === item ? 'active' : ''}>
+            <input type="radio" name="recording-quality" value={item} checked={quality === item} disabled={recorderStatus.active || !capabilities?.profiles.includes(item)} onChange={() => setQuality(item)}/>
+            <span><strong>{QUALITY_LABELS[item].title}</strong><small>{QUALITY_LABELS[item].detail}</small></span>
+          </label>)}
+        </div>
+        <div className="match-capture-actions">
+          {recorderStatus.active
+            ? <button type="button" className="danger-button" disabled={busy} onClick={finishRecording}><CircleStop size={18}/> Parar e salvar</button>
+            : <button type="button" className="elite-button" disabled={busy || !capabilities?.supported} onClick={beginRecording}><Video size={18}/> Iniciar gravação</button>}
+          <small>Sem microfone e sem envio automático. O Android pede autorização em toda nova sessão.</small>
+        </div>
       </article>
 
       <article className="luxury-panel match-import-card">
         <div className="v27-panel-heading"><div><p className="kicker"><Import size={14}/> Compatibilidade</p><h3>Importar gravação existente</h3></div><span>Android e navegador</span></div>
         <input ref={fileInputRef} className="sr-only" type="file" accept="video/mp4,video/webm,video/quicktime,video/*" onChange={(event: { target: HTMLInputElement }) => importVideo(event.target.files?.[0] || null)}/>
         <button type="button" className="match-import-drop" onClick={() => fileInputRef.current?.click()}><Film size={30}/><strong>Escolher vídeo da partida</strong><span>MP4 recomendado • limite de 1,5 GB</span></button>
-        <div className="match-privacy-note"><ShieldCheck size={18}/><span>O vídeo permanece local. Apenas relatórios e marcações leves entram no histórico do app.</span></div>
+        <div className="match-privacy-note"><ShieldCheck size={18}/><span>O vídeo permanece local. O histórico salva apenas dados leves, tempos e diagnósticos.</span></div>
       </article>
     </div>
 
@@ -413,36 +545,161 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     <div className="match-trainer-workspace">
       <aside className="luxury-panel match-session-list">
         <div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Arquivo local</p><h3>Partidas gravadas</h3></div><span>{sessions.length}</span></div>
-        <div>{sessions.map((session) => <button type="button" key={session.id} className={activeId === session.id ? 'active' : ''} onClick={() => setActiveId(session.id)}><span><strong>{session.title}</strong><small>{session.fileName}</small></span><em>{session.analysis ? `${session.analysis.qualityScore}%` : session.status}</em></button>)}{!sessions.length && <div className="v27-empty"><Film size={25}/><strong>Nenhuma partida</strong><span>Inicie uma gravação ou importe um vídeo.</span></div>}</div>
+        <div>
+          {sessions.map((session) => {
+            const sessionSummary = summarizeMatchTrainerSession(session);
+            return <button type="button" key={session.id} className={activeId === session.id ? 'active' : ''} onClick={() => { setActiveId(session.id); setAnalysisTab('resumo'); }}>
+              <span><strong>{session.title}</strong><small>{session.fileName}</small></span>
+              <em>{sessionSummary.overallScore === null ? session.analysis ? `${sessionSummary.candidateMoments} revisar` : session.status : `${sessionSummary.overallScore}/10`}</em>
+            </button>;
+          })}
+          {!sessions.length && <div className="v27-empty"><Film size={25}/><strong>Nenhuma partida</strong><span>Inicie uma gravação ou importe um vídeo.</span></div>}
+        </div>
         {recordings.length > 0 && <small className="match-native-count">{recordings.length} vídeo(s) no BuildMaster • {recordings.filter((item) => Boolean(item.uri)).length} salvo(s) na Galeria.</small>}
       </aside>
 
       <section className="luxury-panel match-video-review">
         {!active ? <div className="v27-empty"><Video size={32}/><strong>Escolha uma partida</strong><span>O revisor aparecerá aqui.</span></div> : <>
           <div className="v27-panel-heading"><div><p className="kicker"><Play size={14}/> Revisão pós-partida</p><h3>{active.title}</h3></div><button type="button" className="icon-danger-button" onClick={() => void removeSession(active)} aria-label="Excluir partida"><Trash2 size={18}/></button></div>
-          {videoUrl ? <video ref={videoRef} className="match-review-video" src={videoUrl} controls playsInline preload="metadata"/> : <div className="match-video-missing"><AlertTriangle size={23}/><div><strong>Vídeo indisponível nesta sessão</strong><span>{active.source === 'imported-video' ? 'Importe novamente o mesmo arquivo para continuar.' : 'O Android não localizou o arquivo gravado.'}</span></div></div>}
-          <div className="match-context-fields"><label>Título<input value={active.title} maxLength={80} onChange={(event: { target: HTMLInputElement }) => updateActive({ title: event.target.value })}/></label><label>Formação<input value={active.formation} maxLength={40} onChange={(event: { target: HTMLInputElement }) => updateActive({ formation: event.target.value })}/></label><label>Estilo coletivo<input value={active.teamStyle} maxLength={50} onChange={(event: { target: HTMLInputElement }) => updateActive({ teamStyle: event.target.value })}/></label><label>Técnico<input value={active.manager} maxLength={60} onChange={(event: { target: HTMLInputElement }) => updateActive({ manager: event.target.value })}/></label><label>Conexão<select value={active.connectionRating} onChange={(event: { target: HTMLSelectElement }) => updateActive({ connectionRating: Number(event.target.value) as 1|2|3|4|5 })}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>{value}/5</option>)}</select></label></div>
-          <div className="match-analysis-actions"><button type="button" className="elite-button" disabled={busy || !videoUrl || Boolean(videoAction)} onClick={runAnalysis}><Gauge size={18}/>{active.analysis ? 'Analisar novamente' : 'Analisar vídeo'}</button>{busy && <button type="button" onClick={() => abortRef.current?.abort()}><CircleStop size={17}/> Cancelar</button>}{active.recording?.id && <><button type="button" disabled={busy || Boolean(videoAction)} onClick={saveActiveRecording}><Download size={17}/>{videoAction === 'saving' ? 'Salvando...' : active.recording.uri ? 'Salvo na Galeria' : 'Salvar vídeo'}</button><button type="button" disabled={busy || Boolean(videoAction)} onClick={shareActiveRecording}><Share2 size={17}/>{videoAction === 'sharing' ? 'Preparando...' : 'Compartilhar vídeo'}</button></>}<button type="button" disabled={!active.analysis && !active.markers.length} onClick={exportReport}><Download size={17}/> Exportar relatório</button></div>
+          {videoUrl
+            ? <video ref={videoRef} className="match-review-video" src={videoUrl} controls playsInline preload="metadata"/>
+            : <div className="match-video-missing"><AlertTriangle size={23}/><div><strong>Vídeo indisponível nesta sessão</strong><span>{active.source === 'imported-video' ? 'Importe novamente o mesmo arquivo para continuar.' : 'O Android não localizou o arquivo gravado.'}</span></div></div>}
+
+          <div className="match-context-fields">
+            <label>Título<input value={active.title} maxLength={80} onChange={(event: { target: HTMLInputElement }) => updateActive({ title: event.target.value })}/></label>
+            <label>Formação<input value={active.formation} maxLength={40} onChange={(event: { target: HTMLInputElement }) => updateActive({ formation: event.target.value })}/></label>
+            <label>Estilo coletivo<input value={active.teamStyle} maxLength={50} onChange={(event: { target: HTMLInputElement }) => updateActive({ teamStyle: event.target.value })}/></label>
+            <label>Técnico<input value={active.manager} maxLength={60} onChange={(event: { target: HTMLInputElement }) => updateActive({ manager: event.target.value })}/></label>
+            <label>Conexão<select value={active.connectionRating} onChange={(event: { target: HTMLSelectElement }) => updateActive({ connectionRating: Number(event.target.value) as 1|2|3|4|5 })}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>{value}/5</option>)}</select></label>
+          </div>
+
+          <div className="match-analysis-actions">
+            <button type="button" className="elite-button" disabled={busy || !videoUrl || Boolean(videoAction)} onClick={runAnalysis}><Gauge size={18}/>{active.analysis ? 'Refazer varredura' : 'Analisar vídeo'}</button>
+            {busy && <button type="button" onClick={() => abortRef.current?.abort()}><CircleStop size={17}/> Cancelar</button>}
+            {active.recording?.id && <>
+              <button type="button" disabled={busy || Boolean(videoAction)} onClick={saveActiveRecording}><Download size={17}/>{videoAction === 'saving' ? 'Salvando...' : active.recording.uri ? 'Salvo na Galeria' : 'Salvar vídeo'}</button>
+              <button type="button" disabled={busy || Boolean(videoAction)} onClick={shareActiveRecording}><Share2 size={17}/>{videoAction === 'sharing' ? 'Preparando...' : 'Compartilhar vídeo'}</button>
+            </>}
+            <button type="button" disabled={!active.analysis && !active.markers.length} onClick={exportReport}><Download size={17}/> Exportar análise completa</button>
+          </div>
           {busy && <div className="match-analysis-progress"><div><span>{analysisMessage}</span><strong>{analysisProgress}%</strong></div><i><b style={{ width: `${analysisProgress}%` }}/></i></div>}
-          <label className="match-marker-note">Observação do próximo marcador<input value={markerNote} maxLength={180} placeholder="Ex.: forcei o passe porque o comando atrasou" onChange={(event: { target: HTMLInputElement }) => setMarkerNote(event.target.value)}/></label>
-          <div className="match-marker-pad">{MARKER_ACTIONS.map((action) => <button type="button" key={action.kind} onClick={() => addMarker(action.kind)} disabled={!videoUrl}>{action.label}</button>)}</div>
+
+          <div className="match-guided-marker">
+            <div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Confirmar lance atual</p><h3>Marcação rápida com contexto</h3></div><span>{formatDuration(Math.round((videoRef.current?.currentTime || 0) * 1000))}</span></div>
+            <div className="match-marker-context-grid">
+              <label>Fase da jogada<select value={markerPhase} onChange={(event: { target: HTMLSelectElement }) => setMarkerPhase(event.target.value as MatchPhase)}>{PHASE_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+              <label>Jogador ou setor<input value={markerPlayer} maxLength={60} placeholder="Ex.: Maldini, Rodri, lado esquerdo" onChange={(event: { target: HTMLInputElement }) => setMarkerPlayer(event.target.value)}/></label>
+              <label className="wide">Sua observação<input value={markerNote} maxLength={240} placeholder="Ex.: tirei o zagueiro da linha e abri o corredor central" onChange={(event: { target: HTMLInputElement }) => setMarkerNote(event.target.value)}/></label>
+            </div>
+            <div className="match-marker-pad">{MARKER_ACTIONS.map((action) => <button type="button" key={action.kind} onClick={() => addMarker(action.kind)} disabled={!videoUrl}>{action.label}</button>)}</div>
+            <small className="match-marker-help">Ao confirmar, o app preenche automaticamente o que aconteceu, por que foi perigoso, a consequência, a melhor decisão e um treino relacionado.</small>
+          </div>
         </>}
       </section>
     </div>
 
-    {active && <div className="match-analysis-dashboard">
-      <article className="luxury-panel match-analysis-summary">
-        <div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Diagnóstico responsável</p><h3>{summary?.verdict}</h3></div><span>{active.analysis ? `${active.analysis.qualityScore}%` : 'Sem análise'}</span></div>
-        <div className="match-summary-metrics"><div><strong>{summary?.passErrors || 0}</strong><span>Passes</span></div><div><strong>{summary?.dangerousTurnovers || 0}</strong><span>Perdas perigosas</span></div><div><strong>{summary?.markingErrors || 0}</strong><span>Marcação</span></div><div><strong>{summary?.cursorErrors || 0}</strong><span>Cursor</span></div><div><strong>{summary?.forcedShots || 0}</strong><span>Finalizações</span></div><div><strong>{summary?.possibleDelay || 0}</strong><span>Sinais de atraso</span></div></div>
-        <div className="match-priority-grid"><div><strong>Prioridades</strong>{summary?.priorities.map((item) => <span key={item}><CheckCircle2 size={14}/>{item}</span>)}</div><div><strong>Regras para testar</strong>{summary?.matchRules.length ? summary.matchRules.map((item) => <span key={item}><ShieldCheck size={14}/>{item}</span>) : <span><ShieldCheck size={14}/>Marque eventos em mais partidas antes de alterar sua forma de jogar.</span>}</div></div>
-      </article>
+    {active && <>
+      <nav className="match-analysis-tabs luxury-panel" aria-label="Áreas da análise de vídeo">
+        {([
+          ['resumo', 'Resumo'], ['momentos', `Momentos (${visibleMarkers.length})`], ['ataque', `Ataque (${attackMarkers.length})`], ['defesa', `Defesa (${defenseMarkers.length})`], ['tatica', 'Tática'], ['treino', `Treino (${summary?.trainingPlan.length || 0})`], ['evolucao', 'Evolução']
+        ] as Array<[AnalysisTab, string]>).map(([id, label]) => <button type="button" key={id} className={analysisTab === id ? 'active' : ''} onClick={() => setAnalysisTab(id)}>{label}</button>)}
+      </nav>
 
-      <article className="luxury-panel match-timeline">
-        <div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Evidências</p><h3>Linha do tempo revisável</h3></div><span>{allMarkers.length}</span></div>
-        <div>{allMarkers.map((marker) => <div className="match-timeline-row" key={marker.id}><button type="button" className="match-timeline-jump" onClick={() => { if (videoRef.current) videoRef.current.currentTime = marker.atMs / 1000; }}><time>{formatDuration(marker.atMs)}</time><span><strong>{marker.title}</strong><small>{marker.detail || (marker.source === 'automatic' ? 'Sinal automático pendente de revisão.' : 'Marcado pelo usuário.')}</small></span><em>{marker.source === 'automatic' ? `${marker.confidence}%` : 'confirmado'}</em></button>{marker.source === 'manual' && <button type="button" className="match-timeline-remove" aria-label={`Remover marcador ${marker.title}`} onClick={() => removeMarker(marker.id)}><Trash2 size={14}/></button>}</div>)}{!allMarkers.length && <div className="v27-empty"><Clock3 size={24}/><strong>Nenhum lance marcado</strong><span>Reproduza o vídeo e toque no tipo de evento quando ele acontecer.</span></div>}</div>
-      </article>
-    </div>}
+      {analysisTab === 'resumo' && summary && <div className="match-v3177-summary">
+        <article className="luxury-panel match-analysis-summary match-score-overview">
+          <div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Diagnóstico da partida</p><h3>{summary.verdict}</h3></div><span>{summary.overallScore === null ? 'Aguardando revisão' : `${summary.overallScore}/10`}</span></div>
+          <div className="match-summary-hero">
+            <div><strong>{summary.overallScore === null ? '—' : summary.overallScore}</strong><span>nota estimada</span></div>
+            <div><strong>{summary.confidenceScore}%</strong><span>confiança do diagnóstico</span></div>
+            <div><strong>{summary.confirmedMarkers}</strong><span>lances confirmados</span></div>
+            <div><strong>{summary.candidateMoments}</strong><span>candidatos pendentes</span></div>
+          </div>
+          <p className="match-trust-note"><ShieldCheck size={16}/> A nota só usa lances confirmados. Momentos automáticos pendentes não contam como erro.</p>
+        </article>
 
-    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que o v31.76 consegue afirmar</strong><span>Ele mede mudanças visuais, organiza lances confirmados e encontra padrões entre partidas. Ele não sabe com certeza qual botão foi pressionado, não mede o ping interno do servidor e não chama automaticamente toda pausa de “lag”.</span></div><button type="button" onClick={() => { setMessage('Dica: grave em 720p/30 FPS, marque os eventos durante a revisão e compare pelo menos três partidas com a mesma formação.'); }}><RotateCcw size={16}/> Ver regra de uso</button></div>
+        <article className="luxury-panel match-area-panel">
+          <div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Notas explicadas</p><h3>Desempenho por área</h3></div><span>{summary.areas.filter((area) => area.score !== null).length}/5 avaliadas</span></div>
+          <div className="match-area-grid">{summary.areas.map((area) => <div className={`tone-${area.tone}`} key={area.id}><strong>{area.score === null ? '—' : area.score}</strong><span>{area.label}</span><small>{area.diagnosis}</small><em>{area.evidenceCount} evidência(s)</em></div>)}</div>
+        </article>
+
+        <article className="luxury-panel match-top-errors">
+          <div className="v27-panel-heading"><div><p className="kicker"><AlertTriangle size={14}/> Prioridades reais</p><h3>Os três erros que mais prejudicaram</h3></div><span>{summary.topProblems.length}</span></div>
+          <div className="match-top-error-grid">
+            {summary.topProblems.slice(0, 3).map((problem, index) => <article className={`severity-${problem.severity}`} key={problem.kind}>
+              <div><b>#{index + 1}</b><span>{problem.occurrences} ocorrência(s) • impacto {problem.impact}</span></div>
+              <h4>{problem.title}</h4>
+              <p><b>O que aconteceu</b>{problem.observed}</p>
+              <p><b>Por que</b>{problem.why}</p>
+              <p><b>Consequência</b>{problem.consequence}</p>
+              <p className="positive"><b>Melhor decisão</b>{problem.betterDecision}</p>
+              <p className="positive"><b>Correção</b>{problem.correction}</p>
+              <small>Momentos: {problem.moments.map(formatDuration).join(' • ')}</small>
+            </article>)}
+            {!summary.topProblems.length && <div className="v27-empty"><CheckCircle2 size={25}/><strong>Nenhum erro confirmado</strong><span>Abra a aba Momentos, assista aos candidatos e classifique os lances importantes.</span></div>}
+          </div>
+        </article>
+
+        <article className="luxury-panel match-strengths-panel">
+          <div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Jogadas-modelo</p><h3>O que você deve repetir</h3></div><span>{summary.goodPlays}</span></div>
+          <div>{summary.strengths.map((item) => <p key={item}><CheckCircle2 size={16}/><span>{item}</span></p>)}</div>
+        </article>
+      </div>}
+
+      {analysisTab === 'momentos' && <div className="match-v3177-moments">
+        <article className="luxury-panel match-candidate-panel">
+          <div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Varredura visual</p><h3>Momentos sugeridos para revisar</h3></div><span>{candidateMarkers.length}</span></div>
+          <p className="panel-note">O motor local encontra trechos intensos ou com pouca mudança visual. Ele não chama esses trechos de erro até você assistir e confirmar.</p>
+          <div className="match-candidate-list">
+            {candidateMarkers.map((marker) => <article key={marker.id}>
+              <div><time>{formatDuration(marker.atMs)}</time><span><strong>{marker.title}</strong><small>{marker.detail}</small></span><em>{marker.confidence}%</em></div>
+              <div className="match-candidate-actions">
+                <button type="button" onClick={() => playMarkerClip(marker)} disabled={!videoUrl}><Play size={15}/> Ver clipe</button>
+                <button type="button" onClick={() => playMarkerClip(marker, true)} disabled={!videoUrl}><Play size={15}/> 0,5x</button>
+                <select value={candidateKinds[marker.id] || (marker.kind === 'possible-delay' ? 'possible-delay' : 'note')} onChange={(event: { target: HTMLSelectElement }) => setCandidateKinds((current) => ({ ...current, [marker.id]: event.target.value as MatchEventKind }))}>{markerOptions.map((item) => <option key={item.kind} value={item.kind}>{item.shortLabel}</option>)}</select>
+                <button type="button" className="elite-button" onClick={() => confirmCandidate(marker)}><CheckCircle2 size={15}/> Confirmar</button>
+                <button type="button" className="danger-button" onClick={() => dismissCandidate(marker)}><Trash2 size={15}/> Descartar</button>
+              </div>
+            </article>)}
+            {!candidateMarkers.length && <div className="v27-empty"><CheckCircle2 size={25}/><strong>Nenhum candidato pendente</strong><span>Todos os momentos sugeridos foram confirmados ou descartados.</span></div>}
+          </div>
+        </article>
+
+        <article className="luxury-panel match-confirmed-timeline">
+          <div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Linha do tempo</p><h3>Lances confirmados e explicados</h3></div><span>{confirmedMarkers.length}</span></div>
+          <div className="match-insight-list">{confirmedMarkers.map((marker) => renderMarkerCard(marker, marker.source === 'manual'))}{!confirmedMarkers.length && <div className="v27-empty"><Clock3 size={25}/><strong>Nenhum lance confirmado</strong><span>Use a marcação rápida ou confirme os candidatos acima.</span></div>}</div>
+        </article>
+      </div>}
+
+      {analysisTab === 'ataque' && <article className="luxury-panel match-sector-panel">
+        <div className="v27-panel-heading"><div><p className="kicker"><Play size={14}/> Ataque e criação</p><h3>Passes, transições, construção e finalização</h3></div><span>{attackMarkers.length}</span></div>
+        <div className="match-insight-list">{attackMarkers.map((marker) => renderMarkerCard(marker, marker.source === 'manual'))}{!attackMarkers.length && <div className="v27-empty"><Play size={25}/><strong>Sem lances ofensivos confirmados</strong><span>Marque passes forçados, chutes, boas construções e gols.</span></div>}</div>
+      </article>}
+
+      {analysisTab === 'defesa' && <article className="luxury-panel match-sector-panel">
+        <div className="v27-panel-heading"><div><p className="kicker"><ShieldCheck size={14}/> Defesa e recomposição</p><h3>Marcação, cursor, pressão e última linha</h3></div><span>{defenseMarkers.length}</span></div>
+        <div className="match-insight-list">{defenseMarkers.map((marker) => renderMarkerCard(marker, marker.source === 'manual'))}{!defenseMarkers.length && <div className="v27-empty"><ShieldCheck size={25}/><strong>Sem lances defensivos confirmados</strong><span>Marque rupturas da linha, pressão errada, recomposição e gols sofridos.</span></div>}</div>
+      </article>}
+
+      {analysisTab === 'tatica' && summary && <div className="match-tactical-grid">
+        <article className="luxury-panel match-tactical-card"><div className="v27-panel-heading"><div><p className="kicker"><ShieldCheck size={14}/> Estrutura</p><h3>{summary.tacticalDiagnosis.configuredShape}</h3></div><span>{summary.tacticalDiagnosis.configuredStyle}</span></div><p>{summary.tacticalDiagnosis.structure}</p></article>
+        <article className="luxury-panel match-tactical-card"><div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Estilo real x configurado</p><h3>Compatibilidade observada</h3></div></div><p>{summary.tacticalDiagnosis.styleFit}</p></article>
+        <article className="luxury-panel match-tactical-card"><div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Contexto do placar</p><h3>Gestão da partida</h3></div></div><p>{summary.tacticalDiagnosis.gameManagement}</p></article>
+        <article className="luxury-panel match-tactical-card"><div className="v27-panel-heading"><div><p className="kicker"><Wifi size={14}/> Separar tática de delay</p><h3>Proteção contra diagnóstico falso</h3></div></div><p>{summary.tacticalDiagnosis.connectionGuardrail}</p></article>
+        <article className="luxury-panel match-tactical-recommendations"><div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Ajustes recomendados</p><h3>O que testar sem destruir sua formação</h3></div><span>{summary.tacticalDiagnosis.recommendations.length}</span></div><div>{summary.tacticalDiagnosis.recommendations.map((item) => <p key={item}><CheckCircle2 size={16}/><span>{item}</span></p>)}</div></article>
+      </div>}
+
+      {analysisTab === 'treino' && summary && <article className="luxury-panel match-training-plan">
+        <div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Treino criado pelo vídeo</p><h3>Plano personalizado para não repetir os erros</h3></div><span>{summary.trainingPlan.reduce((sum, drill) => sum + drill.estimatedMinutes, 0)} min</span></div>
+        <div className="match-drill-grid">{summary.trainingPlan.map((drill, index) => <article className={`severity-${drill.priority}`} key={drill.id}><div><b>Treino {index + 1}</b><span>{drill.estimatedMinutes} min</span></div><h4>{drill.title}</h4><p><b>Objetivo</b>{drill.objective}</p><p><b>Regra</b>{drill.rule}</p><p><b>Repetições</b>{drill.repetitions}</p><p className="positive"><b>Critério de aprovação</b>{drill.successCriteria}</p></article>)}{!summary.trainingPlan.length && <div className="v27-empty"><CheckCircle2 size={25}/><strong>Plano ainda não liberado</strong><span>Confirme pelo menos um erro real para o app criar o primeiro treino.</span></div>}</div>
+      </article>}
+
+      {analysisTab === 'evolucao' && <div className="match-evolution-grid">
+        <article className="luxury-panel match-evolution-overview"><div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Comparação entre partidas</p><h3>{evolution.trend}</h3></div><span>{evolution.sessionsAnalyzed} analisada(s)</span></div><div className="match-evolution-metrics">{evolution.metrics.map((metric) => <div className={`direction-${metric.direction}`} key={metric.id}><span>{metric.label}</span><strong>{metric.current === null ? '—' : `${metric.current}${metric.unit}`}</strong><small>{metric.previous === null ? 'Sem comparação anterior' : `Anterior: ${metric.previous}${metric.unit} • ${metric.delta !== null && metric.delta > 0 ? '+' : ''}${metric.delta ?? '—'}`}</small></div>)}</div></article>
+        <article className="luxury-panel match-evolution-details"><div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Progresso</p><h3>Melhorias confirmadas</h3></div></div>{evolution.improvements.map((item) => <p key={item}><CheckCircle2 size={16}/><span>{item}</span></p>)}</article>
+        <article className="luxury-panel match-evolution-details"><div className="v27-panel-heading"><div><p className="kicker"><AlertTriangle size={14}/> Padrão recorrente</p><h3>{evolution.recurringProblem}</h3></div></div>{evolution.warnings.length ? evolution.warnings.map((item) => <p key={item}><AlertTriangle size={16}/><span>{item}</span></p>) : <p><CheckCircle2 size={16}/><span>Nenhum alerta recorrente confirmado.</span></p>}</article>
+      </div>}
+    </>}
+
+    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que a v31.77 afirma com responsabilidade</strong><span>Ela encontra momentos visuais, reproduz clipes, organiza evidências confirmadas, explica causa e consequência, gera treino e compara partidas. Ainda não lê com certeza o botão pressionado, não identifica todos os jogadores automaticamente e não chama pausa visual de lag sem confirmação.</span></div><button type="button" onClick={() => setMessage('Regra de ouro: assista ao clipe, confirme o tipo do lance e só depois use a recomendação. Três partidas comparáveis valem mais do que uma conclusão apressada.')}><RotateCcw size={16}/> Ver regra de uso</button></div>
   </section>;
 }

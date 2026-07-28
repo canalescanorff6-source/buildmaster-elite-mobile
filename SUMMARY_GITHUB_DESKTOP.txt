@@ -1,1 +1,1 @@
-Reconstrói o leitor eFHUB com resolução dinâmica, oito áreas exatas e bloqueio seguro de prints cortados
+Implementa Análise de Vídeo Inteligente 2.0 com diagnóstico por lance, treino e evolução na v31.77

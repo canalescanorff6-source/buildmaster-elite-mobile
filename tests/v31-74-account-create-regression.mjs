@@ -14,14 +14,14 @@ const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const serviceWorker = read('public/sw.js');
 const playPreflight = read('scripts/validate-play-store-release.mjs');
 
-expect(pkg.version === '31.76.0', 'Versão 31.76.0 não registrada no pacote.');
-expect(preflight.includes("version === '31.76.0'"), 'Pré-voo de produção ainda valida uma versão antiga.');
-expect(preflight.includes('BuildMaster Elite Tático v31.76'), 'Pré-voo não valida o manifesto PWA da v31.76.');
-expect(preflight.includes('npm run test:v3176'), 'Pré-voo não valida a bateria atual da v31.76.');
-expect(ciDoctor.includes("['Regressões v31.76', ['run', 'test:v3176']]"), 'Diagnóstico consolidado não executa a regressão v31.76.');
-expect(manifest.name === 'BuildMaster Elite Tático v31.76' && manifest.short_name === 'BuildMaster v31.76', 'Manifesto PWA não está na v31.76.');
-expect(serviceWorker.includes('buildmaster-v31-76'), 'Cache PWA não foi renovado para v31.76.');
-expect(playPreflight.includes('release-notes/31.76.0.txt'), 'Pré-voo Play ainda usa notas de uma versão anterior.');
+expect(pkg.version === '31.77.0', 'Versão 31.77.0 não registrada no pacote.');
+expect(preflight.includes("version === '31.77.0'"), 'Pré-voo de produção ainda valida uma versão antiga.');
+expect(preflight.includes('BuildMaster Elite Tático v31.77'), 'Pré-voo não valida o manifesto PWA da v31.77.');
+expect(preflight.includes('npm run test:v3177'), 'Pré-voo não valida a bateria atual da v31.77.');
+expect(ciDoctor.includes("['Regressões v31.77', ['run', 'test:v3177']]"), 'Diagnóstico consolidado não executa a regressão v31.77.');
+expect(manifest.name === 'BuildMaster Elite Tático v31.77' && manifest.short_name === 'BuildMaster v31.77', 'Manifesto PWA não está na v31.77.');
+expect(serviceWorker.includes('buildmaster-v31-77'), 'Cache PWA não foi renovado para v31.77.');
+expect(playPreflight.includes('release-notes/31.77.0.txt'), 'Pré-voo Play ainda usa notas de uma versão anterior.');
 expect(panel.includes('noValidate'), 'Formulário ainda depende de validação nativa silenciosa.');
 expect(panel.includes('account-create-feedback'), 'Retorno local abaixo do botão não foi implementado.');
 expect(panel.includes('Deixe vazio para gerar automaticamente'), 'Senha automática não está indicada no formulário.');
@@ -36,4 +36,4 @@ expect(edge.includes("return respond({ success: true, userId: created.user.id, u
 expect(edge.includes("return { limit: 12, window: 300 }"), 'Limite de tentativas ainda é baixo demais para recuperação administrativa.');
 expect(edge.includes(".select('id, username, status').single()"), 'Servidor não confirma persistência do perfil criado.');
 
-console.log('v31.74 preservada na v31.76: criação de usuários corrigida com retorno local, confirmação do servidor e transporte Android sem duplicidade.');
+console.log('v31.74 preservada na v31.77: criação de usuários corrigida com retorno local, confirmação do servidor e transporte Android sem duplicidade.');

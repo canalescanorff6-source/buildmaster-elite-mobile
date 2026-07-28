@@ -1,17 +1,13 @@
-BUILDMASTER ELITE TÁTICO v31.76 — FICHAS COMPLEMENTARES E ÍMPETOS
+BUILDMASTER ELITE TÁTICO v31.77 — ANÁLISE DE VÍDEO INTELIGENTE 2.0
 
 Projeto limpo de produção com:
-- fichas de desempenho por posição, Estilo de Jogo e orçamento real;
-- filtro antirrepetição por nome oficial, alias, tradução e variação de OCR;
-- habilidades adicionais complementares para todas as posições;
-- Ímpetos analisados em trilha separada;
-- auditoria visível antes de aplicar o Top 5;
-- gravação oficial Android por MediaProjection;
-- serviço em primeiro plano e notificação permanente;
-- vídeos privados locais sem envio automático;
-- importação de vídeos;
-- análise local por amostragem de quadros;
-- linha do tempo e marcações confirmadas pelo usuário;
-- integração com Partidas, Meu Time, formação e estilo coletivo;
-- OCR eFHUB rígido v31.60 preservado;
-- Motor Supremo de Fichas preservado.
+- análise de partidas organizada por Resumo, Momentos, Ataque, Defesa, Tática, Treino e Evolução;
+- candidatos automáticos separados de evidências confirmadas;
+- linha do tempo com clipes, velocidade normal e revisão em 0,5x;
+- diagnóstico por lance: ocorrido, causa, consequência, melhor decisão e correção;
+- notas por área, três prioridades e jogadas-modelo;
+- diagnóstico de formação, estilo coletivo e gestão da vantagem;
+- plano de treino personalizado e comparação entre partidas;
+- gravação oficial Android, exportação MediaStore e compartilhamento seguro;
+- criação de contas v31.74 e leitor eFHUB dinâmico v31.75 preservados;
+- fichas, habilidades complementares e Ímpetos preservados.

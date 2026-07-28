@@ -51,4 +51,4 @@ assert.equal((mainAgain.match(/registerPlugin\(BuildMasterMatchRecorderPlugin\.c
 assert.equal((manifestAgain.match(/BuildMasterScreenRecordService/g) || []).length, 1);
 
 fs.rmSync(temp, { recursive: true, force: true });
-console.log('v31.76 instalador nativo: MediaProjection, MediaStore e compartilhamento seguro aprovados.');
+console.log('v31.77 instalador nativo: MediaProjection, MediaStore e compartilhamento seguro aprovados.');
