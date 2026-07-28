@@ -209,37 +209,15 @@ jobs:
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
 
-      - name: Validar rotas, sintaxe e contratos interativos
-        timeout-minutes: 6
-        run: |
-          npm run quality:routes
-          npm run quality:syntax
-          npm run quality:interactive
-          npm run quality:card-crop-types
-          npm run quality:native-java
-
-      - name: Executar pré-voo da versão final
-        timeout-minutes: 5
-        run: npm run release:preflight
+      - name: Diagnóstico consolidado do código-fonte
+        timeout-minutes: 35
+        run: npm run ci:verify
 
       - name: Gerar e verificar manifesto do código-fonte
         timeout-minutes: 4
         run: |
           npm run integrity:generate -- MANIFESTO_PRODUCAO_V31.70.sha256
           npm run integrity:verify -- MANIFESTO_PRODUCAO_V31.70.sha256
-
-      - name: Auditar estrutura, segurança e publicação
-        timeout-minutes: 4
-        run: npm run quality:audit
-
-      - name: Validar TypeScript
-        timeout-minutes: 6
-        run: npm run typecheck
-
-      - name: Rodar regressão final e testes do motor
-        timeout-minutes: 20
-        run: |
-          npm run test:all
 
       - name: Preparar exportação estática para APK
         run: rm -rf out android .buildmaster-static-disabled dist-apk signing verify-release

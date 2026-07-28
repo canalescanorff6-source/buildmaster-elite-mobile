@@ -91,19 +91,11 @@ jobs:
       - name: Instalar dependências travadas
         run: npm ci --no-audit --no-fund
 
-      - name: Portões de qualidade e Google Play
+      - name: Diagnóstico consolidado de qualidade e Google Play
+        timeout-minutes: 35
         run: |
-          npm run quality:routes
-          npm run quality:syntax
-          npm run quality:interactive
-          npm run quality:typecheck-isolation
-          npm run quality:card-crop-types
-          npm run quality:native-java
-          npm run release:preflight
+          npm run ci:verify
           npm run release:play-preflight
-          npm run quality:audit
-          npm run typecheck
-          npm run test:all
 
       - name: Gerar site estático para Capacitor
         run: npm run apk:build-web

@@ -30,7 +30,8 @@ for (const file of ['privacy-policy.md','data-safety.md','account-deletion.md','
   check(read(`play-store/policies/${file}`).length > 100, `Documento ${file} presente`);
 }
 const workflow = read('.github/workflows/build-play-store.yml');
-for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'install-play-store-bridge.mjs', 'publish-play-store.mjs', 'release:play-preflight', 'bundletool.jar validate', 'jarsigner -verify -strict']) check(workflow.includes(marker), `Workflow Play contém ${marker}`);
+const playUsesConsolidatedDoctor = workflow.includes('npm run ci:verify');
+for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'install-play-store-bridge.mjs', 'publish-play-store.mjs', 'release:play-preflight', 'bundletool.jar validate', 'jarsigner -verify -strict']) check(workflow.includes(marker) || (marker === 'release:play-preflight' && playUsesConsolidatedDoctor), `Workflow Play contém ${marker} diretamente ou pelo diagnóstico consolidado`);
 check(read('src/app/privacidade/page.tsx').length > 100, 'Rota pública de privacidade presente');
 check(read('src/app/excluir-conta/page.tsx').length > 100, 'Rota pública de exclusão presente');
 if (failures.length) { console.error(`Pré-voo Play falhou (${failures.length}):\n- ${failures.join('\n- ')}`); process.exit(1); }

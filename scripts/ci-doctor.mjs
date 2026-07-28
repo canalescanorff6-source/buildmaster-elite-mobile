@@ -1,0 +1,73 @@
+import { spawnSync } from 'node:child_process';
+
+const full = process.argv.includes('--full');
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
+const quickChecks = [
+  ['Rotas críticas', ['run', 'quality:routes']],
+  ['Sintaxe TypeScript/TSX', ['run', 'quality:syntax']],
+  ['Contratos interativos', ['run', 'quality:interactive']],
+  ['Visual e acessibilidade', ['run', 'quality:visual']],
+  ['Isolamento do TypeScript', ['run', 'quality:typecheck-isolation']],
+  ['Tipos do recorte OCR', ['run', 'quality:card-crop-types']],
+  ['Java nativo gerado', ['run', 'quality:native-java']],
+  ['Pré-voo de produção', ['run', 'release:preflight']],
+  ['Pré-voo Google Play', ['run', 'release:play-preflight']],
+  ['Auditoria estrutural', ['run', 'quality:audit']],
+  ['Manifesto de integridade', ['run', 'integrity:verify']],
+];
+
+const fullChecks = [
+  ['TypeScript completo', ['run', 'typecheck']],
+  ['Regressões v30.00', ['run', 'test:v3000']],
+  ['Regressões v30.10', ['run', 'test:v3010']],
+  ['Regressões v30.20', ['run', 'test:v3020']],
+  ['Regressões v30.30', ['run', 'test:v3030']],
+  ['Regressões v30.40', ['run', 'test:v3040']],
+  ['Regressões v30.50', ['run', 'test:v3050']],
+  ['Regressões v31.00', ['run', 'test:v3100']],
+  ['Regressões v31.10', ['run', 'test:v3110']],
+  ['Regressões v31.20', ['run', 'test:v3120']],
+  ['Regressões v31.30', ['run', 'test:v3130']],
+  ['Regressões v31.40', ['run', 'test:v3140']],
+  ['Regressões v31.50', ['run', 'test:v3150']],
+  ['Regressões v31.60', ['run', 'test:v3160']],
+  ['Regressões v31.70', ['run', 'test:v3170']],
+];
+
+const checks = full ? [...quickChecks, ...fullChecks] : quickChecks;
+const failures = [];
+const startedAt = Date.now();
+
+console.log(`\nDIAGNÓSTICO CONSOLIDADO BUILMASTER ${full ? 'COMPLETO' : 'RÁPIDO'}`);
+console.log(`Executando ${checks.length} grupos sem parar na primeira falha.\n`);
+
+for (const [label, args] of checks) {
+  console.log(`\n========== ${label} ==========`);
+  const result = spawnSync(npmCommand, args, {
+    stdio: 'inherit',
+    env: process.env,
+    shell: false,
+  });
+  if (result.error || result.status !== 0) {
+    failures.push({ label, status: result.status ?? 'erro de execução', error: result.error?.message });
+    console.error(`✗ ${label} falhou, mas o diagnóstico continuará para revelar os demais problemas.`);
+  } else {
+    console.log(`✓ ${label} aprovado.`);
+  }
+}
+
+const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
+console.log('\n========== RESUMO CONSOLIDADO ==========');
+console.log(`Grupos executados: ${checks.length}`);
+console.log(`Tempo aproximado: ${elapsedSeconds}s`);
+
+if (failures.length > 0) {
+  console.error(`Falhas encontradas: ${failures.length}`);
+  for (const failure of failures) {
+    console.error(`- ${failure.label} (código ${failure.status})${failure.error ? `: ${failure.error}` : ''}`);
+  }
+  process.exit(1);
+}
+
+console.log('Nenhuma falha encontrada nos grupos executados.');
