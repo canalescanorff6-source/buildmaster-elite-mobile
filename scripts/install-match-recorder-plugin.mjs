@@ -12,7 +12,9 @@ fs.mkdirSync(javaDir, { recursive: true });
 const plugin = `package com.buildmaster.elitetatico;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
+import android.net.Uri;
 import android.content.pm.ActivityInfo;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
@@ -120,6 +122,58 @@ public class BuildMasterMatchRecorderPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void exportRecording(PluginCall call) {
+        String id = call.getString("id");
+        if (id == null || !id.matches("match-[0-9]{10,20}")) { call.reject("Identificador de gravação inválido."); return; }
+        Activity activity = getActivity();
+        if (activity == null) { call.reject("Activity Android indisponível para salvar o vídeo."); return; }
+        new Thread(() -> {
+            try {
+                JSObject out = BuildMasterScreenRecordService.exportRecordingToGallery(getContext(), id);
+                activity.runOnUiThread(() -> call.resolve(out));
+            } catch (Exception error) {
+                activity.runOnUiThread(() -> call.reject("Não foi possível salvar o vídeo na Galeria: " + safeMessage(error), error));
+            }
+        }, "BuildMasterVideoExport").start();
+    }
+
+    @PluginMethod
+    public void shareRecording(PluginCall call) {
+        String id = call.getString("id");
+        if (id == null || !id.matches("match-[0-9]{10,20}")) { call.reject("Identificador de gravação inválido."); return; }
+        Activity activity = getActivity();
+        if (activity == null) { call.reject("Activity Android indisponível para compartilhar o vídeo."); return; }
+        new Thread(() -> {
+            try {
+                JSObject exported = BuildMasterScreenRecordService.exportRecordingToGallery(getContext(), id);
+                Uri uri = Uri.parse(exported.getString("uri"));
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("video/mp4");
+                share.putExtra(Intent.EXTRA_STREAM, uri);
+                share.setClipData(ClipData.newRawUri("BuildMaster • Partida", uri));
+                share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                JSObject out = new JSObject(exported.toString());
+                out.put("shared", true);
+                activity.runOnUiThread(() -> {
+                    try {
+                        activity.startActivity(Intent.createChooser(share, "Compartilhar gravação da partida"));
+                        call.resolve(out);
+                    } catch (Exception error) {
+                        call.reject("Nenhum aplicativo disponível para compartilhar o vídeo: " + safeMessage(error), error);
+                    }
+                });
+            } catch (Exception error) {
+                activity.runOnUiThread(() -> call.reject("Não foi possível preparar o vídeo para compartilhamento: " + safeMessage(error), error));
+            }
+        }, "BuildMasterVideoShare").start();
+    }
+
+    private String safeMessage(Exception error) {
+        String message = error.getMessage();
+        return message == null || message.trim().isEmpty() ? error.getClass().getSimpleName() : message;
+    }
+
+    @PluginMethod
     public void restoreOrientation(PluginCall call) {
         Activity activity = getActivity();
         if (activity != null) activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
@@ -136,6 +190,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -149,6 +205,8 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
@@ -162,6 +220,8 @@ import java.io.File;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -393,7 +453,12 @@ public class BuildMasterScreenRecordService extends Service {
         String id = video.getName().replaceFirst("\\\\.mp4$", "");
         File meta = new File(video.getParentFile(), id + ".json");
         try {
-            if (meta.exists()) return new JSObject(readUtf8(meta));
+            if (meta.exists()) {
+                JSObject out = new JSObject(readUtf8(meta));
+                out.put("path", video.getAbsolutePath());
+                out.put("sizeBytes", video.length());
+                return out;
+            }
         } catch (Exception ignored) {}
         JSObject out = new JSObject();
         out.put("id", id); out.put("path", video.getAbsolutePath()); out.put("fileName", video.getName());
@@ -401,6 +466,124 @@ public class BuildMasterScreenRecordService extends Service {
         out.put("sizeBytes", video.length()); out.put("width", 0); out.put("height", 0); out.put("fps", 0); out.put("bitrate", 0);
         out.put("quality", "balanced"); out.put("state", "completed");
         return out;
+    }
+
+    private static File recordingFile(Context context, String id) {
+        return new File(recordingsDirectory(context), id + ".mp4");
+    }
+
+    private static File metadataFile(File video) {
+        String id = video.getName().replaceFirst("\\\\.mp4$", "");
+        return new File(video.getParentFile(), id + ".json");
+    }
+
+    private static JSONObject readMetadataObject(File video) {
+        File metadata = metadataFile(video);
+        try {
+            if (metadata.exists()) return new JSONObject(readUtf8(metadata));
+        } catch (Exception ignored) {}
+        JSONObject json = new JSONObject();
+        try {
+            json.put("id", video.getName().replaceFirst("\\\\.mp4$", ""));
+            json.put("fileName", video.getName());
+            json.put("path", video.getAbsolutePath());
+            json.put("createdAt", isoTimestamp(video.lastModified()));
+            json.put("durationMs", 0); json.put("sizeBytes", video.length());
+            json.put("width", 0); json.put("height", 0); json.put("fps", 0); json.put("bitrate", 0);
+            json.put("quality", "balanced"); json.put("state", "completed");
+        } catch (Exception ignored) {}
+        return json;
+    }
+
+    private static void writeMetadataObject(File video, JSONObject json) throws Exception {
+        json.put("path", video.getAbsolutePath());
+        json.put("sizeBytes", video.length());
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(metadataFile(video)), StandardCharsets.UTF_8)) {
+            writer.write(json.toString());
+        }
+    }
+
+    private static boolean contentUriReadable(Context context, String value) {
+        if (value == null || value.trim().isEmpty()) return false;
+        try (android.os.ParcelFileDescriptor descriptor = context.getContentResolver().openFileDescriptor(Uri.parse(value), "r")) {
+            return descriptor != null && descriptor.getStatSize() != 0;
+        } catch (Exception ignored) { return false; }
+    }
+
+    private static String publicVideoName(JSONObject metadata, String id) {
+        long created = System.currentTimeMillis();
+        try {
+            String value = metadata.optString("createdAt", "");
+            if (!value.isEmpty()) {
+                SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                parser.setTimeZone(TimeZone.getTimeZone("UTC"));
+                java.util.Date parsed = parser.parse(value);
+                if (parsed != null) created = parsed.getTime();
+            }
+        } catch (Throwable ignored) {}
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+        formatter.setTimeZone(TimeZone.getDefault());
+        String suffix = id.length() > 6 ? id.substring(id.length() - 6) : id;
+        return "BuildMaster_Partida_" + formatter.format(new java.util.Date(created)) + "_" + suffix + ".mp4";
+    }
+
+    private static JSObject exportResult(String id, String uri, String fileName, String relativePath, boolean reused) {
+        JSObject out = new JSObject();
+        out.put("saved", true); out.put("reused", reused); out.put("id", id);
+        out.put("uri", uri); out.put("fileName", fileName); out.put("relativePath", relativePath);
+        return out;
+    }
+
+    public static JSObject exportRecordingToGallery(Context context, String id) throws Exception {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            throw new IllegalStateException("Salvar na Galeria exige Android 10 ou superior nesta versão do BuildMaster.");
+        }
+        File video = recordingFile(context, id);
+        if (!video.exists() || video.length() < 4096) throw new IllegalStateException("O arquivo privado da gravação não foi encontrado ou está incompleto.");
+        JSONObject metadata = readMetadataObject(video);
+        String existingUri = metadata.optString("uri", "");
+        String existingName = metadata.optString("publicFileName", "");
+        String relativePath = metadata.optString("relativePath", Environment.DIRECTORY_MOVIES + "/BuildMaster/Partidas");
+        if (contentUriReadable(context, existingUri)) {
+            return exportResult(id, existingUri, existingName.isEmpty() ? video.getName() : existingName, relativePath, true);
+        }
+
+        ContentResolver resolver = context.getContentResolver();
+        String publicName = publicVideoName(metadata, id);
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Video.Media.DISPLAY_NAME, publicName);
+        values.put(MediaStore.Video.Media.TITLE, "BuildMaster • Partida eFootball");
+        values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
+        values.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/BuildMaster/Partidas");
+        values.put(MediaStore.Video.Media.IS_PENDING, 1);
+        Uri collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        Uri destination = resolver.insert(collection, values);
+        if (destination == null) throw new IllegalStateException("O Android não criou o arquivo público na Galeria.");
+        boolean completed = false;
+        try {
+            try (InputStream input = new FileInputStream(video); OutputStream output = resolver.openOutputStream(destination, "w")) {
+                if (output == null) throw new IllegalStateException("O Android não abriu o destino público do vídeo.");
+                byte[] buffer = new byte[1024 * 1024];
+                int read;
+                while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+                output.flush();
+            }
+            ContentValues ready = new ContentValues();
+            ready.put(MediaStore.Video.Media.IS_PENDING, 0);
+            resolver.update(destination, ready, null, null);
+            String uri = destination.toString();
+            metadata.put("uri", uri);
+            metadata.put("publicFileName", publicName);
+            metadata.put("relativePath", Environment.DIRECTORY_MOVIES + "/BuildMaster/Partidas");
+            metadata.put("exportedAt", isoTimestamp(System.currentTimeMillis()));
+            writeMetadataObject(video, metadata);
+            completed = true;
+            return exportResult(id, uri, publicName, Environment.DIRECTORY_MOVIES + "/BuildMaster/Partidas", false);
+        } finally {
+            if (!completed) {
+                try { resolver.delete(destination, null, null); } catch (Exception ignored) {}
+            }
+        }
     }
 
     public static List<JSObject> listRecordings(Context context) {
@@ -471,4 +654,4 @@ for (const permission of permissions) {
 const serviceDeclaration = `        <service\n            android:name=".BuildMasterScreenRecordService"\n            android:exported="false"\n            android:stopWithTask="false"\n            android:foregroundServiceType="mediaProjection" />\n`;
 if (!manifest.includes('android:name=".BuildMasterScreenRecordService"')) manifest = manifest.replace(/<\/application>/, `${serviceDeclaration}    </application>`);
 fs.writeFileSync(manifestPath, manifest);
-console.log('Treinador de Partidas v31.72 instalado: MediaProjection, serviço em primeiro plano e gravação privada local.');
+console.log('Treinador de Partidas v31.76 instalado: MediaProjection, gravação privada, exportação MediaStore e compartilhamento seguro.');

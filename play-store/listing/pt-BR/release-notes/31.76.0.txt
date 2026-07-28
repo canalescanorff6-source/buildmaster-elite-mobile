@@ -1,0 +1,5 @@
+• gravações agora são copiadas automaticamente para Filmes/BuildMaster/Partidas;
+• novo botão Salvar vídeo para exportar novamente para a Galeria;
+• novo botão Compartilhar vídeo usando o seletor seguro do Android;
+• vídeos compartilhados usam URI content:// e permanecem disponíveis fora do app;
+• a cópia da Galeria é preservada ao excluir apenas a sessão do BuildMaster.
