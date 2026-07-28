@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo.
-echo BuildMaster v31.73 - verificacao rapida
+echo BuildMaster v31.74 - verificacao rapida
 call npm run ci:preflight
 if errorlevel 1 (
   echo.

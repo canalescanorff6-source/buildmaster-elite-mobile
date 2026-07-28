@@ -10422,8 +10422,29 @@ input[type="radio"] {
 .account-password-field > div { display: grid; grid-template-columns: minmax(0,1fr) 40px; }
 .account-password-field > div input { border-radius: 13px 0 0 13px; }
 .account-password-field > div button { border: 1px solid var(--stroke); border-left: 0; border-radius: 0 13px 13px 0; color: var(--muted); background: rgba(126,151,181,.06); }
+.account-password-rule { margin-top: 6px; color: var(--muted); font-size: 8px; font-weight: 750; line-height: 1.45; }
 .account-generate-password { width: max-content; min-height: 28px; margin-top: 6px; padding: 0 9px; color: var(--accent); border: 0; background: transparent; font-size: 8px; font-weight: 900; }
 .account-create-submit { align-self: end; }
+.account-create-feedback {
+  grid-column: 1 / -1;
+  min-height: 48px;
+  margin: 0;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: rgba(126,151,181,.06);
+  color: var(--soft);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.account-create-feedback svg { flex: 0 0 auto; }
+.account-create-feedback.is-working { border-color: color-mix(in srgb, var(--accent) 36%, transparent); color: var(--accent); }
+.account-create-feedback.is-success { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); color: #34d399; }
+.account-create-feedback.is-error { border-color: rgba(248,113,113,.38); background: rgba(248,113,113,.08); color: #f87171; }
 .created-credentials-card { margin-top: 14px; padding: 16px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 17px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .created-credentials-card > div:first-child { display: flex; gap: 10px; align-items: center; }
 .created-credentials-card > div:first-child svg { color: var(--accent); }

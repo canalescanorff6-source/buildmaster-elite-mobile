@@ -40,10 +40,10 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '31.73.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'31.73.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '31.73.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v31.73', 'Manifesto PWA sincronizado');
+check(pkg.version === '31.74.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'31.74.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '31.74.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
+check(manifest.name === 'BuildMaster Elite Tático v31.74', 'Manifesto PWA sincronizado');
 check(sw.includes('buildmaster-v31-73'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
@@ -103,7 +103,7 @@ for (const file of [
   'tests/types-v3172/tsconfig.json'
 ]) check(exists(file), `Arquivo essencial presente: ${file}`);
 
-check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run quality:audit', 'Bateria de testes limpa e atual');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run quality:audit', 'Bateria de testes limpa e atual');
 check((workflowApk.includes('npm run test:all') || workflowApk.includes('npm run ci:verify')) && (workflowPlay.includes('npm run test:all') || workflowPlay.includes('npm run ci:verify')), 'Workflows usam a bateria atual diretamente ou pelo diagnóstico consolidado');
 check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs') && exists('tests/v31-71-account-recovery-regression.mjs') && exists('tests/v31-72-complementary-skills-regression.ts') && exists('tests/v31-73-account-panel-restoration-regression.mjs') && exists('tests/types-v3173-ui/tsconfig.json') && exists('tests/types-v3173-edge/tsconfig.json') && exists('supabase/migrations/202607280002_restore_account_creation_v3173.sql'), 'Regressões atuais presentes');
 const skillIdentitySource = read('src/lib/officialSkillIdentity.ts');
@@ -111,9 +111,9 @@ const skillIntegritySource = read('src/lib/skillIntegrity.ts');
 const pipelineSource = read('src/lib/cardIntelligencePipeline.ts');
 check(skillIdentitySource.includes('filterComplementaryAdditionalSkills') && skillIdentitySource.includes('canonicalSkillName'), 'Filtro canônico de habilidades presente');
 check(skillIntegritySource.includes('enforceComplementarySkillIntegrity') && pipelineSource.includes('enforceComplementarySkillIntegrity(supreme)'), 'Integridade antirrepetição aplicada ao resultado final');
-check(String(pkg.scripts?.['test:v3172'] ?? '').includes('typecheck:v3172'), 'Teste e typecheck v31.73 configurados');
+check(String(pkg.scripts?.['test:v3172'] ?? '').includes('typecheck:v3172'), 'Teste e typecheck v31.72 configurados');
 check(exists('scripts/repair-critical-routes.mjs') && exists('scripts/templates/critical-routes/root-page.tsx.txt') && exists('tests/v31-72-critical-route-self-healing-regression.mjs'), 'Autorreparo permanente da rota inicial presente');
-check(String(pkg.scripts?.['quality:routes'] ?? '').includes('routes:repair') && String(pkg.scripts?.['test:v3172'] ?? '').includes('critical-route-self-healing'), 'Autorreparo de rotas integrado ao CI e à regressão v31.73');
+check(String(pkg.scripts?.['quality:routes'] ?? '').includes('routes:repair') && String(pkg.scripts?.['test:v3172'] ?? '').includes('critical-route-self-healing'), 'Autorreparo de rotas integrado ao CI e à regressão v31.72');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 
 // Confere imports internos e alcançabilidade do código da aplicação.

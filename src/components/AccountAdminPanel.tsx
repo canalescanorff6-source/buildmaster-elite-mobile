@@ -86,6 +86,11 @@ type CreatedCredentials = {
   maxDevices: number;
 };
 
+type CreateFeedback = {
+  kind: 'idle' | 'working' | 'success' | 'error';
+  text: string;
+};
+
 type AdminDialog =
   | { kind: 'password'; user: AdminUserRow; password: string; showPassword: boolean }
   | { kind: 'devices'; user: AdminUserRow; maxDevices: number }
@@ -120,6 +125,8 @@ export function AccountAdminPanel() {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
   const [restoringAccountPanel, setRestoringAccountPanel] = useState(false);
+  const [createFeedback, setCreateFeedback] = useState<CreateFeedback>({ kind: 'idle', text: '' });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const mfaRequired = backendHealth?.mfaRequired ?? true;
   const adminUnlocked = Boolean(backendHealth?.functionReady && backendHealth?.databaseReady && (!mfaRequired || mfaStatus?.protected));
@@ -267,31 +274,59 @@ export function AccountAdminPanel() {
     event.preventDefault();
     setError('');
     setMessage('');
+    setCreatedCredentials(null);
     const cleanUsername = username.trim().toLowerCase();
     const usernameError = validateUsername(cleanUsername);
-    if (usernameError) { setError(usernameError); return; }
-    if (password.length < 10 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) { setError('Use 10 caracteres com letra maiúscula, minúscula e número.'); return; }
+    if (usernameError) {
+      setCreateFeedback({ kind: 'error', text: usernameError });
+      window.requestAnimationFrame(() => document.querySelector<HTMLInputElement>('#buildmaster-create-username')?.focus());
+      return;
+    }
 
-    setLoading(true);
+    const accountPassword = password || generateTemporaryPassword();
+    if (!password) {
+      setPassword(accountPassword);
+      setShowPassword(true);
+    }
+    if (accountPassword.length < 10 || !/[A-Z]/.test(accountPassword) || !/[a-z]/.test(accountPassword) || !/\d/.test(accountPassword)) {
+      setCreateFeedback({ kind: 'error', text: 'A senha precisa ter pelo menos 10 caracteres, uma letra maiúscula, uma minúscula e um número. Use “Gerar senha segura” para preencher automaticamente.' });
+      window.requestAnimationFrame(() => document.querySelector<HTMLInputElement>('#buildmaster-create-password')?.focus());
+      return;
+    }
+    if (!adminUnlocked) {
+      setCreateFeedback({ kind: 'error', text: 'O servidor administrativo ainda não está liberado. Toque em “Testar Supabase” e tente novamente.' });
+      return;
+    }
+
+    setCreatingUser(true);
+    setCreateFeedback({ kind: 'working', text: `Criando a conta @${cleanUsername} no Supabase…` });
     try {
       let expiresAt: string | null = null;
       if (expiryMode === 'date') {
         const parsedExpiry = new Date(`${customExpiryDate}T23:59:59`);
-        if (!customExpiryDate || Number.isNaN(parsedExpiry.getTime()) || parsedExpiry.getTime() <= Date.now()) { setError('Escolha uma data de vencimento futura.'); setLoading(false); return; }
+        if (!customExpiryDate || Number.isNaN(parsedExpiry.getTime()) || parsedExpiry.getTime() <= Date.now()) {
+          setCreateFeedback({ kind: 'error', text: 'Escolha uma data de vencimento futura.' });
+          window.requestAnimationFrame(() => document.querySelector<HTMLInputElement>('#buildmaster-create-expiry')?.focus());
+          return;
+        }
         expiresAt = parsedExpiry.toISOString();
       }
-      await adminAccountRequest({ action: 'create', username: cleanUsername, password, displayName: displayName.trim(), expiryMode, durationDays: expiryMode === 'days' ? durationDays : undefined, expiresAt, maxDevices, plan: 'premium' });
+      const result = await adminAccountRequest<{ success?: boolean; userId?: string; username?: string; requestId?: string }>({ action: 'create', username: cleanUsername, password: accountPassword, displayName: displayName.trim(), expiryMode, durationDays: expiryMode === 'days' ? durationDays : undefined, expiresAt, maxDevices, plan: 'premium' });
+      if (!result?.success || !result.userId) throw new Error('O servidor não confirmou a criação da conta. Tente novamente sem trocar o nome do usuário.');
       const expiryLabel = expiryMode === 'never' ? 'Sem vencimento' : expiryMode === 'date' ? new Date(expiresAt as string).toLocaleDateString('pt-BR') : `${durationDays} dias`;
-      setCreatedCredentials({ username: cleanUsername, password, expiryLabel, maxDevices });
+      setCreatedCredentials({ username: cleanUsername, password: accountPassword, expiryLabel, maxDevices });
+      setCreateFeedback({ kind: 'success', text: `Conta @${cleanUsername} criada com sucesso e confirmada pelo Supabase.` });
       setMessage(`Conta ${cleanUsername} criada e pronta para uso.`);
       setUsername('');
       setDisplayName('');
       setPassword('');
       await loadUsers();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível criar a conta.');
+      const detail = cause instanceof Error ? cause.message : 'Não foi possível criar a conta.';
+      setCreateFeedback({ kind: 'error', text: detail });
+      setError(detail);
     } finally {
-      setLoading(false);
+      setCreatingUser(false);
     }
   }
 
@@ -477,16 +512,17 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
 
       <section className="account-create-panel luxury-panel settings-view-panel settings-final-panel">
         <div className="settings-panel-heading"><div><p className="kicker"><UserPlus size={15} /> Nova conta</p><h3>Criar acesso para um cliente</h3><span>O e-mail técnico fica oculto. O cliente recebe somente usuário e senha.</span></div><span className="settings-state-pill">Plano premium</span></div>
-        <form className="account-create-grid account-create-final-grid" onSubmit={createUser} aria-busy={loading}>
-          <label><span>Nome de usuário</span><input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/\s+/g, ''))} placeholder="ex.: joao10" autoCapitalize="none" autoCorrect="off" required minLength={3} /></label>
+        <form className="account-create-grid account-create-final-grid" onSubmit={createUser} aria-busy={creatingUser} noValidate>
+          <label><span>Nome de usuário</span><input id="buildmaster-create-username" value={username} onChange={(event) => { setUsername(event.target.value.toLowerCase().replace(/\s+/g, '')); if (createFeedback.kind === 'error') setCreateFeedback({ kind: 'idle', text: '' }); }} placeholder="ex.: joao10" autoCapitalize="none" autoCorrect="off" required minLength={3} /></label>
           <label><span>Nome de exibição</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="João" /></label>
-          <label className="account-password-field"><span>Senha temporária</span><div><input value={password} onChange={(event) => setPassword(event.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Mínimo 10 caracteres" required minLength={10} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div><button type="button" className="account-generate-password" onClick={() => { setPassword(generateTemporaryPassword()); setShowPassword(true); }}>Gerar senha segura</button></label>
+          <label className="account-password-field"><span>Senha temporária</span><div><input id="buildmaster-create-password" value={password} onChange={(event) => { setPassword(event.target.value); if (createFeedback.kind === 'error') setCreateFeedback({ kind: 'idle', text: '' }); }} type={showPassword ? 'text' : 'password'} placeholder="Deixe vazio para gerar automaticamente" minLength={10} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div><small className="account-password-rule">10+ caracteres, maiúscula, minúscula e número.</small><button type="button" className="account-generate-password" onClick={() => { setPassword(generateTemporaryPassword()); setShowPassword(true); setCreateFeedback({ kind: 'idle', text: '' }); }}>Gerar senha segura</button></label>
           <label><span>Tipo de validade</span><select value={expiryMode} onChange={(event) => setExpiryMode(event.target.value as AccountExpiryMode)}><option value="days">Quantidade de dias</option><option value="date">Data específica</option><option value="never">Sem vencimento</option></select></label>
           {expiryMode === 'days' && <label><span>Prazo inicial</span><select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))}><option value={1}>1 dia</option><option value={7}>7 dias</option><option value={15}>15 dias</option><option value={30}>30 dias</option><option value={60}>60 dias</option><option value={90}>90 dias</option><option value={180}>6 meses</option><option value={365}>1 ano</option></select></label>}
-          {expiryMode === 'date' && <label><span>Vencimento</span><input type="date" value={customExpiryDate} min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} onChange={(event) => setCustomExpiryDate(event.target.value)} required /></label>}
+          {expiryMode === 'date' && <label><span>Vencimento</span><input id="buildmaster-create-expiry" type="date" value={customExpiryDate} min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} onChange={(event) => setCustomExpiryDate(event.target.value)} required /></label>}
           {expiryMode === 'never' && <div className="account-expiry-note"><Clock3 size={16} /><span>A conta ficará ativa sem data de vencimento, mas poderá ser suspensa ou bloqueada pelo administrador.</span></div>}
           <label><span>Limite de aparelhos</span><select value={maxDevices} onChange={(event) => setMaxDevices(Number(event.target.value))}><option value={1}>1 aparelho</option><option value={2}>2 aparelhos</option><option value={3}>3 aparelhos</option></select></label>
-          <button className="elite-button account-create-submit" type="submit" disabled={loading || !adminUnlocked || (expiryMode === 'date' && !customExpiryDate)}><UserPlus size={17} /> {loading ? 'Criando conta...' : 'Criar usuário'}</button>
+          <button className="elite-button account-create-submit" type="submit" disabled={creatingUser || !adminUnlocked || (expiryMode === 'date' && !customExpiryDate)}><UserPlus size={17} /> {creatingUser ? 'Criando e confirmando...' : 'Criar usuário'}</button>
+          {createFeedback.text && <p className={`account-create-feedback is-${createFeedback.kind}`} role={createFeedback.kind === 'error' ? 'alert' : 'status'}>{createFeedback.kind === 'working' ? <Loader2 className="spin" size={16} /> : createFeedback.kind === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}<span>{createFeedback.text}</span></p>}
         </form>
 
         {createdCredentials && <div className="created-credentials-card" role="status"><div><CheckCircle2 size={19} /><div><strong>Conta criada com sucesso</strong><span>Copie os dados antes de fechar esta mensagem.</span></div></div><dl><div><dt>Usuário</dt><dd>{createdCredentials.username}</dd></div><div><dt>Senha</dt><dd>{createdCredentials.password}</dd></div><div><dt>Prazo</dt><dd>{createdCredentials.expiryLabel}</dd></div><div><dt>Aparelhos</dt><dd>{createdCredentials.maxDevices}</dd></div></dl><div><button type="button" onClick={() => void copyCreatedCredentials()}><Copy size={15} /> Copiar</button><button type="button" onClick={() => void shareCreatedCredentials()}><Share2 size={15} /> Compartilhar</button><button type="button" onClick={() => setCreatedCredentials(null)}>Fechar</button></div></div>}

@@ -66,7 +66,7 @@ function safeAuditDetails(action: string, body: Record<string, unknown>) {
 
 function ratePolicy(action: string) {
   if (['health', 'list', 'overview', 'list_devices', 'list_audit', 'get_security_settings', 'rate_limit_status'].includes(action)) return { limit: 40, window: 60 };
-  if (['create', 'reset_password', 'delete', 'update_security_settings', 'restore_account_creation'].includes(action)) return { limit: 6, window: 300 };
+  if (['create', 'reset_password', 'delete', 'update_security_settings', 'restore_account_creation'].includes(action)) return { limit: 12, window: 300 };
   return { limit: 15, window: 60 };
 }
 
@@ -348,17 +348,27 @@ Deno.serve(async (request) => {
         app_metadata: { buildmaster_managed: true },
         user_metadata: { username, display_name: displayName, plan, expires_at: expiresAt, max_devices: maxDevices, offline_grace_hours: offlineGrace }
       });
-      if (error || !created.user) throw new HttpError(400, 'CREATE_FAILED', error?.message || 'Não foi possível criar o usuário.');
-      const { error: profileError } = await service.from('buildmaster_profiles').upsert({
+      if (error || !created.user) {
+        const rawMessage = String(error?.message || 'Não foi possível criar o usuário.');
+        if (/already registered|already exists|duplicate|unique/i.test(rawMessage)) {
+          throw new HttpError(409, 'USERNAME_EXISTS', 'Esse nome de usuário já está cadastrado. Escolha outro nome.');
+        }
+        if (/password/i.test(rawMessage)) {
+          throw new HttpError(400, 'PASSWORD_REJECTED', 'A senha foi recusada pelo servidor. Use “Gerar senha segura” no aplicativo.');
+        }
+        throw new HttpError(400, 'CREATE_FAILED', rawMessage);
+      }
+      const { data: persistedProfile, error: profileError } = await service.from('buildmaster_profiles').upsert({
         id: created.user.id, username, display_name: displayName, role: 'user', status: 'active', plan,
         expires_at: expiresAt, max_devices: maxDevices, offline_grace_hours: offlineGrace, created_by: adminId
-      });
-      if (profileError) {
-        await service.auth.admin.deleteUser(created.user.id, false);
-        throw new HttpError(500, 'PROFILE_CREATE_FAILED', profileError.message);
+      }).select('id, username, status').single();
+      if (profileError || !persistedProfile?.id) {
+        const cleanup = await service.auth.admin.deleteUser(created.user.id, false);
+        const cleanupDetail = cleanup.error ? ' A limpeza automática também falhou; consulte a referência desta operação.' : '';
+        throw new HttpError(500, 'PROFILE_CREATE_FAILED', `${profileError?.message || 'O perfil do usuário não foi confirmado no banco.'}${cleanupDetail}`);
       }
       await service.from('buildmaster_admin_audit').insert({ admin_id: adminId, target_user_id: created.user.id, action: 'create_user', outcome: 'success', app_version: appVersion, request_id: requestId, details: { username, expiryMode, durationDays: expiryMode === 'days' ? durationDays : null, expiresAt, maxDevices, plan } });
-      return respond({ success: true, userId: created.user.id });
+      return respond({ success: true, userId: created.user.id, username, requestId });
     }
 
     const userId = String(body.userId || '');

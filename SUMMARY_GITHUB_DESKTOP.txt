@@ -1,1 +1,1 @@
-Corrige regressões antigas que bloqueavam a publicação e ativa a atualização v31.73
+Corrige definitivamente o botão Criar usuário e evita solicitações duplicadas no Android na v31.74

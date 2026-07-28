@@ -1,0 +1,5 @@
+• Corrige o botão Criar usuário, que podia voltar ao estado inicial sem explicar a falha.
+• Mostra validações e erros do Supabase diretamente abaixo do formulário.
+• Gera senha temporária segura automaticamente quando o campo é deixado vazio.
+• Evita o reenvio duplicado da criação de conta no Android.
+• Confirma no servidor que o usuário e o perfil foram realmente gravados.

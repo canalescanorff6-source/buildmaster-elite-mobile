@@ -1,7 +1,17 @@
-# BuildMaster Elite Tático v31.73 — Contas e licenças restauradas
+# BuildMaster Elite Tático v31.74 — Criar usuário corrigido
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
 
+
+## v31.74 — Correção definitiva de Criar usuário
+
+- o resultado da criação aparece diretamente abaixo do botão;
+- senha segura é gerada automaticamente quando o campo fica vazio;
+- validações não falham mais silenciosamente no Android;
+- o aplicativo confirma `success` e `userId` antes de informar que a conta foi criada;
+- a comunicação Android usa uma única rota HTTP nativa, sem reenviar o mesmo cadastro;
+- erros de usuário duplicado, senha recusada e falha de perfil aparecem de forma clara;
+- a Edge Function confirma que o perfil foi realmente persistido antes de concluir.
 
 ## v31.73 — Criação de contas restaurada
 

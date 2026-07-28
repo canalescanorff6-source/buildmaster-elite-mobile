@@ -294,15 +294,13 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
   const url = `${SUPABASE_URL}${path}`;
-  const timeoutController = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeout = timeoutController ? globalThis.setTimeout(() => timeoutController.abort(), 18_000) : null;
-  try {
-    return await fetch(url, { ...init, headers, cache: 'no-store', signal: init.signal || timeoutController?.signal });
-  } catch (webError) {
-    if (!Capacitor.isNativePlatform()) {
-      if (webError instanceof DOMException && webError.name === 'AbortError') throw new Error('Tempo limite ao conectar ao servidor de contas.');
-      throw webError;
-    }
+
+  // No Android, use a ponte HTTP nativa como rota principal. A implementação
+  // anterior tentava fetch() primeiro e repetia o mesmo POST pela ponte nativa
+  // quando havia timeout. Em ações não idempotentes, como criar usuário, isso
+  // podia enviar a solicitação duas vezes e devolver uma falsa falha de conta
+  // já existente mesmo após a primeira tentativa ter chegado ao Supabase.
+  if (Capacitor.isNativePlatform()) {
     try {
       const nativeResponse = await CapacitorHttp.request({
         url,
@@ -310,16 +308,25 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
         headers: Object.fromEntries(headers.entries()),
         data: typeof init.body === 'string' ? init.body : undefined,
         connectTimeout: 18_000,
-        readTimeout: 28_000,
+        readTimeout: 35_000,
         responseType: 'text'
       });
       const responseBody = typeof nativeResponse.data === 'string' ? nativeResponse.data : JSON.stringify(nativeResponse.data ?? null);
       return new Response(responseBody, { status: nativeResponse.status, headers: nativeResponse.headers });
     } catch (nativeError) {
       const message = String(nativeError instanceof Error ? nativeError.message : nativeError);
-      if (/timeout|timed out|abort/i.test(message)) throw new Error('Tempo limite ao conectar ao servidor de contas.');
+      if (/timeout|timed out|abort/i.test(message)) throw new Error('Tempo limite ao conectar ao servidor de contas. A operação não foi reenviada automaticamente.');
       throw nativeError;
     }
+  }
+
+  const timeoutController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeout = timeoutController ? globalThis.setTimeout(() => timeoutController.abort(), 18_000) : null;
+  try {
+    return await fetch(url, { ...init, headers, cache: 'no-store', signal: init.signal || timeoutController?.signal });
+  } catch (webError) {
+    if (webError instanceof DOMException && webError.name === 'AbortError') throw new Error('Tempo limite ao conectar ao servidor de contas.');
+    throw webError;
   } finally {
     if (timeout !== null) globalThis.clearTimeout(timeout);
   }
@@ -421,20 +428,22 @@ async function invokeFunction<T>(name: string, body: unknown, accessToken: strin
   let response: Response;
   try {
     response = await supabaseFetch(`/functions/v1/${name}`, { method: 'POST', body: JSON.stringify(body) }, accessToken);
-  } catch {
+  } catch (cause) {
+    if (cause instanceof Error && cause.message) throw cause;
     throw new Error(`Não consegui conectar ao serviço ${name}. Confira a internet e tente novamente.`);
   }
-  const payload = await response.json().catch(() => null) as T & { error?: string; message?: string; code?: string; minimumVersion?: string } | null;
+  const payload = await response.json().catch(() => null) as T & { error?: string; message?: string; code?: string; minimumVersion?: string; requestId?: string } | null;
   if (!response.ok) {
     const serverMessage = payload?.error || payload?.message;
+    const requestReference = payload?.requestId ? ` · referência ${payload.requestId.slice(0, 8)}` : '';
     if (response.status === 404) throw new Error(`O serviço de licença ${name} não foi encontrado no Supabase.`);
     if (response.status === 401) throw new Error('Sua sessão não é mais válida. Entre novamente.');
     if (response.status === 426) throw new Error(serverMessage || `Este APK foi bloqueado. Instale a versão ${payload?.minimumVersion || 'mais recente'}.`);
     if (response.status === 428 || payload?.code === 'MFA_REQUIRED') throw new Error('MFA_REQUIRED: confirme o código do aplicativo autenticador para usar o painel administrativo.');
-    if (response.status === 403) throw new Error(serverMessage || 'Esta conta não tem permissão para concluir essa operação.');
-    if (response.status === 429) throw new Error(serverMessage || 'Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.');
-    if (response.status >= 500) throw new Error(serverMessage ? `Falha no servidor (${payload?.code || name}): ${serverMessage}` : 'O servidor de licenças está temporariamente indisponível. Tente novamente em instantes.');
-    throw new Error(serverMessage || `Não foi possível concluir a validação no serviço ${name}.`);
+    if (response.status === 403) throw new Error(`${serverMessage || 'Esta conta não tem permissão para concluir essa operação.'}${requestReference}`);
+    if (response.status === 429) throw new Error(`${serverMessage || 'Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.'}${requestReference}`);
+    if (response.status >= 500) throw new Error(serverMessage ? `Falha no servidor (${payload?.code || name}): ${serverMessage}${requestReference}` : `O servidor de licenças está temporariamente indisponível. Tente novamente em instantes.${requestReference}`);
+    throw new Error(`${serverMessage || `Não foi possível concluir a validação no serviço ${name}.`}${requestReference}`);
   }
   return payload as T;
 }
