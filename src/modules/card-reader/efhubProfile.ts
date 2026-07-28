@@ -1,6 +1,7 @@
-import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
+import type { OcrZone } from '@/lib/ocr';
+import { canonicalEfhubOcrZones } from './efhubLayoutGeometry';
 
-export const EFHUB_PROFILE_VERSION = '31.60-efhub-profile-1';
+export const EFHUB_PROFILE_VERSION = '31.75-efhub-profile-2';
 export const EFHUB_PROFILE_ID = 'efhub-complete-profile-v1';
 
 export const EFHUB_EXPECTED_COUNTS = {
@@ -28,39 +29,18 @@ export type EfhubProfileAudit = {
   missing: string[];
 };
 
-function zone(key: OcrZoneKey, label: string, x: number, y: number, w: number, h: number): OcrZone {
-  return { key, label, x, y, w, h, enabled: true };
-}
-
 /**
- * Perfil de recortes baseado no layout padronizado do painel completo do eFHUB.
- * As coordenadas são normalizadas, portanto continuam válidas em outras resoluções
- * desde que o print contenha a tela inteira e não esteja recortado.
+ * As coordenadas partem do mapa oficial 1400 × 1600 enviado pelo usuário.
+ * O módulo efhubLayoutGeometry converte essas áreas para a resolução real,
+ * compensa barras e impede leitura de regiões cortadas.
  */
-export const EFHUB_PROFILE_ZONES: OcrZone[] = [
-  zone('name', 'Nome do jogador', 0.012, 0.004, 0.355, 0.047),
-  zone('playstyle', 'Estilo de jogo', 0.012, 0.037, 0.335, 0.047),
-  zone('overall', 'GER da carta', 0.064, 0.071, 0.095, 0.064),
-  zone('mainPosition', 'Posição principal da carta', 0.062, 0.118, 0.118, 0.065),
-  zone('cardType', 'Carta completa e arte do jogador', 0.053, 0.062, 0.188, 0.235),
-  zone('identityMeta', 'Altura, peso, idade e nível', 0.242, 0.061, 0.118, 0.235),
-  zone('condition', 'Pior pé, condição e lesão', 0.355, 0.061, 0.315, 0.157),
-  zone('manager', 'Técnico e bônus', 0.355, 0.214, 0.315, 0.080),
-  zone('positionGrid', 'Mapa completo de posições', 0.688, 0.057, 0.302, 0.240),
-  zone('impetos', 'Booster e Ímpeto', 0.012, 0.296, 0.978, 0.055),
-  zone('attributes', 'Tabela completa de 26 atributos', 0.012, 0.347, 0.978, 0.322),
-  zone('physicalModel', 'Modelo físico e alcance corporal', 0.012, 0.675, 0.978, 0.220),
-  zone('skills', 'Lista completa de habilidades', 0.012, 0.897, 0.978, 0.100)
-];
+export const EFHUB_PROFILE_ZONES: OcrZone[] = canonicalEfhubOcrZones();
 
-export const EFHUB_CARD_ART_ZONE: OcrZone = zone(
-  'cardType',
-  'Carta completa e arte do jogador',
-  0.053,
-  0.062,
-  0.188,
-  0.235
-);
+export const EFHUB_CARD_ART_ZONE: OcrZone =
+  EFHUB_PROFILE_ZONES.find((item) => item.key === 'cardType') ?? {
+    key: 'cardType', label: 'Carta completa e arte do jogador',
+    x: 75 / 1400, y: 115 / 1600, w: 260 / 1400, h: 355 / 1600, enabled: true
+  };
 
 function normalized(value: string) {
   return value

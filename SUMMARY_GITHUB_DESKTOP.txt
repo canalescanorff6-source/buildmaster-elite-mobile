@@ -1,1 +1,1 @@
-Corrige workflow da v31.74, sincroniza pré-voo, cache PWA, testes e manifesto de integridade
+Reconstrói o leitor eFHUB com resolução dinâmica, oito áreas exatas e bloqueio seguro de prints cortados

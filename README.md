@@ -1,6 +1,18 @@
-# BuildMaster Elite Tático v31.74 — Criar usuário corrigido
+# BuildMaster Elite Tático v31.75 — Leitor eFHUB dinâmico
 
 O BuildMaster transforma um print ou preenchimento manual de uma carta do eFootball em **uma única Ficha Competitiva Definitiva**. A interface continua simples; a análise pesada ocorre por trás da tela e funciona sem API de IA paga.
+
+
+## v31.75 — Encaixe dinâmico do perfil eFHUB
+
+- usa como referência o mapa oficial de 1400×1600 com oito áreas exatas;
+- detecta a resolução original e aplica uma única escala, sem deformar largura e altura;
+- corrige orientação EXIF e compensa margens laterais ou verticais;
+- reconhece prints completos em resoluções como 3283×3751;
+- identifica cortes inferiores, superiores ou laterais e desativa somente as áreas ausentes;
+- bloqueia layouts reorganizados em vez de posicionar caixas erradas;
+- mostra resolução, modo de encaixe, porcentagem visível e áreas ausentes na auditoria;
+- invalida calibrações antigas que poderiam deslocar o novo mapa.
 
 
 ## v31.74 — Correção definitiva de Criar usuário

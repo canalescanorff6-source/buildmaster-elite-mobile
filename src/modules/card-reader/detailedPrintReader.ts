@@ -51,7 +51,7 @@ export type DetailedPrintReading = {
   profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '31.60-efhub-rigid-detailed-1';
+const VERSION = '31.75-efhub-dynamic-detailed-1';
 
 function normalized(value: string) {
   return value
@@ -645,7 +645,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   )));
   const score = efhubDetected ? Math.round(baseScore * 0.55 + profileAudit.score * 0.45) : baseScore;
 
-  const canonical: string[] = ['[LEITURA DETALHADA V31.60]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.75]'];
   if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
@@ -664,7 +664,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
   if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V31.60]');
+  canonical.push('[FIM LEITURA DETALHADA V31.75]');
 
   const warnings: string[] = [];
   if (detectedName && !name) warnings.push(`O OCR encontrou um possível nome, mas somente ${nameAgreement} passagem(ns) independente(s) concordaram. O valor foi bloqueado para evitar identificar o jogador errado.`);

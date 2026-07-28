@@ -4,11 +4,12 @@ import type { PremiumZoneReading } from '@/lib/premiumReading';
 import type { PrintQualityReport } from '@/lib/validation';
 import { looksLikeCompleteProfile, readDetailedPrint, type DetailedPrintReading } from './detailedPrintReader';
 import { EFHUB_CARD_ART_ZONE, EFHUB_PROFILE_ZONES, isLikelyEfhubProfileGeometry, looksLikeEfhubProfileText } from './efhubProfile';
+import { buildEfhubLayoutPlan, mapEfhubMacroZones, mapEfhubOcrZones, type EfhubLayoutAudit } from './efhubLayoutGeometry';
 import { HIGH_PRECISION_OCR_VERSION, precisionAccuracyEstimate, precisionBlockingReasons, textSimilarity } from './highPrecisionOcr';
 
 export type SinglePrintTemplate = 'classic' | 'tall' | 'landscape' | 'detailed-profile';
 export type SinglePrintContentBounds = { x: number; y: number; w: number; h: number };
-export type LayoutAnchorReport = { bounds: SinglePrintContentBounds; confidence: number; topInset: number; bottomInset: number; leftInset: number; rightInset: number };
+export type LayoutAnchorReport = { bounds: SinglePrintContentBounds; confidence: number; topInset: number; bottomInset: number; leftInset: number; rightInset: number; efhubLayout?: EfhubLayoutAudit; displayZones?: OcrZone[] };
 export type EvidenceStatus = 'confirmed' | 'review' | 'missing';
 
 export type FieldCandidate = {
@@ -54,6 +55,7 @@ export type SinglePrintSession = {
   orientation: 'portrait' | 'landscape';
   layoutBounds?: SinglePrintContentBounds;
   layoutConfidence?: number;
+  layoutAudit?: EfhubLayoutAudit;
   zoneBoxes?: SinglePrintZoneBox[];
   fields: SingleFieldEvidence[];
   mergedConfidence: number;
@@ -169,12 +171,20 @@ export function refineSinglePrintGeometryFromText(
   text: string
 ) {
   if (!looksLikeEfhubProfileText(text) && !looksLikeCompleteProfile(text)) return input;
-  const zones = DETAILED_PROFILE_ZONES.map((item) => transformZoneToBounds(item, input.anchorReport.bounds));
+  const plan = buildEfhubLayoutPlan(input.width, input.height, input.anchorReport.bounds, text);
+  const zones = mapEfhubOcrZones(plan);
+  const cardArtZone = zones.find((item) => item.key === 'cardType') ?? mapEfhubOcrZones(plan)[0] ?? input.cardArtZone;
   return {
     ...input,
     template: 'detailed-profile' as const,
     zones,
-    cardArtZone: transformZoneToBounds(getCardArtZone('detailed-profile'), input.anchorReport.bounds)
+    cardArtZone,
+    anchorReport: {
+      ...input.anchorReport,
+      confidence: Math.max(input.anchorReport.confidence, plan.audit.confidence),
+      efhubLayout: plan.audit,
+      displayZones: mapEfhubMacroZones(plan)
+    }
   };
 }
 
@@ -483,7 +493,9 @@ export function buildSinglePrintSession(input: {
   previous?: StoredSinglePrintScan | null;
   layoutBounds?: SinglePrintContentBounds;
   layoutConfidence?: number;
+  layoutAudit?: EfhubLayoutAudit;
   zones?: OcrZone[];
+  displayZones?: OcrZone[];
   knownPlayerNames?: string[];
   learnedSkillNames?: string[];
   qualityReport?: PrintQualityReport | null;
@@ -531,7 +543,7 @@ export function buildSinglePrintSession(input: {
         confidence: Math.min(91, confidence),
         status: 'review' as const,
         reason: `${detailed.reason} O valor permanece em revisão porque as passagens locais não chegaram ao consenso exigido.`,
-        sourceLabel: 'Leitor EFHUB rígido v31.60',
+        sourceLabel: 'Leitor EFHUB dinâmico v31.75',
         sourceText: detailed.value
       };
     }
@@ -542,7 +554,7 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor EFHUB rígido v31.60',
+      sourceLabel: 'Leitor EFHUB dinâmico v31.75',
       sourceText: detailed.value
     };
   });
@@ -551,10 +563,16 @@ export function buildSinglePrintSession(input: {
   const efhubGateBlocks = detailedReading.profileAudit.detected
     ? detailedReading.profileAudit.gates.filter((gate) => gate.status !== 'complete').map((gate) => `${gate.label} ${gate.expected === null ? '' : `${gate.recognized}/${gate.expected}`}`.trim())
     : [];
+  const layoutBlocks = input.layoutAudit && !input.layoutAudit.complete
+    ? input.layoutAudit.missingZones.length
+      ? input.layoutAudit.missingZones.map((label) => `Área ausente: ${label}`)
+      : ['Enquadramento eFHUB incompatível']
+    : [];
   const blockingFields = Array.from(new Set([
     ...fields.filter((field) => required.includes(field.key) && field.status !== 'confirmed').map((field) => field.label),
     ...precisionReasons,
     ...efhubGateBlocks,
+    ...layoutBlocks,
     ...(input.qualityReport?.state === 'blocked' ? ['Qualidade do print'] : [])
   ]));
   const confidenceValues = fields.filter((field) => field.value).map((field) => field.confidence);
@@ -563,7 +581,10 @@ export function buildSinglePrintSession(input: {
   const precisionAudit = {
     version: HIGH_PRECISION_OCR_VERSION,
     estimatedAccuracy,
-    nearPerfectReady: estimatedAccuracy >= 96 && precisionReasons.length === 0 && (!detailedReading.profileAudit.detected || detailedReading.profileAudit.ready),
+    nearPerfectReady: estimatedAccuracy >= 96
+      && precisionReasons.length === 0
+      && (!detailedReading.profileAudit.detected || detailedReading.profileAudit.ready)
+      && (!input.layoutAudit || input.layoutAudit.complete),
     totalPasses: input.readings.reduce((sum, reading) => sum + (reading.passCount ?? 1), 0),
     confirmedFields: fields.filter((field) => field.status === 'confirmed').length,
     reviewFields: fields.filter((field) => field.status !== 'confirmed').length,
@@ -574,6 +595,11 @@ export function buildSinglePrintSession(input: {
     warnings.push(`Qualidade forense do print: ${input.qualityReport.score}/100 (${input.qualityReport.state}).`);
     warnings.push(...input.qualityReport.issues.map((issue) => issue.message));
   }
+  if (input.layoutAudit) {
+    warnings.push(`Encaixe dinâmico ${input.layoutAudit.mode}: ${input.layoutAudit.confidence}% de confiança • ${(input.layoutAudit.visibleFraction * 100).toFixed(1)}% do painel visível.`);
+    warnings.push(input.layoutAudit.reason);
+    if (input.layoutAudit.missingZones.length) warnings.push(`Áreas fora do print: ${input.layoutAudit.missingZones.join(', ')}.`);
+  }
   if (!precisionAudit.nearPerfectReady) warnings.push(`Precisão estimada em ${precisionAudit.estimatedAccuracy}%. O app bloqueia dados críticos sem consenso em vez de inventar valores.`);
   else warnings.push(`Leitura ultraprécisa liberada: ${precisionAudit.estimatedAccuracy}% de precisão estimada com consenso multietapas.`);
   const level = fields.find((field) => field.key === 'level');
@@ -583,7 +609,7 @@ export function buildSinglePrintSession(input: {
   warnings.push(...detailedReading.warnings);
   if (detailedReading.skillCandidates.length) warnings.push(`Habilidades novas aguardando confirmação: ${detailedReading.skillCandidates.map((item) => item.value).join(', ')}.`);
   if (detailedReading.format === 'complete-profile') warnings.push(`Perfil completo detectado: ${detailedReading.coverage.attributeCount}/26 atributos, ${detailedReading.coverage.positionCount}/13 posições, ${detailedReading.coverage.skillCount} habilidades e ${detailedReading.coverage.physicalCount}/16 medidas físicas.`);
-  if (detailedReading.profileAudit.detected) warnings.push(`Leitor eFHUB rígido: ${detailedReading.profileAudit.score}/100 • ${detailedReading.profileAudit.ready ? 'todos os portões completos' : `faltam ${detailedReading.profileAudit.missing.join(', ')}`}.`);
+  if (detailedReading.profileAudit.detected) warnings.push(`Leitor eFHUB dinâmico: ${detailedReading.profileAudit.score}/100 • ${detailedReading.profileAudit.ready ? 'todos os portões completos' : `faltam ${detailedReading.profileAudit.missing.join(', ')}`}.`);
 
   const fieldValue = (key: SingleFieldEvidence['key']) => fields.find((field) => field.key === key)?.value;
   const canonicalLines = [
@@ -610,9 +636,21 @@ export function buildSinglePrintSession(input: {
     const fieldKey = map[key];
     return fieldKey ? fields.find((field) => field.key === fieldKey) : undefined;
   };
-  const zoneBoxes = input.zones?.map((item) => ({
+  const statusRank: Record<EvidenceStatus, number> = { confirmed: 0, review: 1, missing: 2 };
+  const combineStatus = (...statuses: Array<EvidenceStatus | undefined>): EvidenceStatus =>
+    statuses.filter((item): item is EvidenceStatus => Boolean(item)).sort((left, right) => statusRank[right] - statusRank[left])[0] ?? 'missing';
+  const statusForDisplayZone = (item: OcrZone): EvidenceStatus => {
+    if (!item.enabled) return 'missing';
+    if (item.key === 'name') return combineStatus(fieldForZone('name')?.status, fieldForZone('playstyle')?.status);
+    if (item.key === 'cardType') return combineStatus(fieldForZone('cardType')?.status, fieldForZone('mainPosition')?.status, fieldForZone('overall')?.status);
+    if (item.key === 'identityMeta') return detailedReading.profileAudit.gates.find((gate) => gate.key === 'identity')?.status === 'complete' ? 'confirmed' : 'review';
+    if (item.key === 'positionGrid') return detailedReading.coverage.positionCount === 13 ? 'confirmed' : detailedReading.coverage.positionCount >= 10 ? 'review' : 'missing';
+    if (item.key === 'physicalModel') return detailedReading.coverage.physicalCount === 16 ? 'confirmed' : detailedReading.coverage.physicalCount >= 12 ? 'review' : 'missing';
+    return fieldForZone(item.key)?.status ?? 'missing';
+  };
+  const zoneBoxes = (input.displayZones ?? input.zones)?.map((item) => ({
     key: item.key, label: item.label, x: item.x, y: item.y, w: item.w, h: item.h,
-    status: fieldForZone(item.key)?.status ?? 'missing' as EvidenceStatus
+    status: statusForDisplayZone(item)
   }));
 
   let comparison: PreviousScanComparison | null = null;
@@ -642,6 +680,7 @@ export function buildSinglePrintSession(input: {
     orientation: input.width > input.height ? 'landscape' : 'portrait',
     layoutBounds: input.layoutBounds,
     layoutConfidence: input.layoutConfidence,
+    layoutAudit: input.layoutAudit,
     zoneBoxes,
     fields,
     mergedConfidence,
@@ -752,22 +791,48 @@ async function detectContentBounds(bitmap: ImageBitmap): Promise<LayoutAnchorRep
 export async function inspectSinglePrintGeometry(file: File | Blob): Promise<{ width: number; height: number; template: SinglePrintTemplate; zones: OcrZone[]; cardArtZone: OcrZone; anchorReport: LayoutAnchorReport }> {
   if (typeof createImageBitmap === 'undefined') {
     const adaptive = getAdaptiveSinglePrintZones(1400, 1600);
-    const anchorReport = { bounds: fullBounds(), confidence: 0, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0 };
-    return { width: 1400, height: 1600, template: adaptive.template, zones: adaptive.zones, cardArtZone: getCardArtZone(adaptive.template), anchorReport };
+    const baseAnchor = { bounds: fullBounds(), confidence: 0, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0 };
+    if (adaptive.template === 'detailed-profile') {
+      const plan = buildEfhubLayoutPlan(1400, 1600, baseAnchor.bounds);
+      const zones = mapEfhubOcrZones(plan);
+      return {
+        width: 1400, height: 1600, template: adaptive.template, zones,
+        cardArtZone: zones.find((item) => item.key === 'cardType') ?? getCardArtZone(adaptive.template),
+        anchorReport: { ...baseAnchor, confidence: plan.audit.confidence, efhubLayout: plan.audit, displayZones: mapEfhubMacroZones(plan) }
+      };
+    }
+    return { width: 1400, height: 1600, template: adaptive.template, zones: adaptive.zones, cardArtZone: getCardArtZone(adaptive.template), anchorReport: baseAnchor };
   }
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const width = bitmap.width;
   const height = bitmap.height;
   const adaptive = getAdaptiveSinglePrintZones(width, height);
-  const anchorReport = await detectContentBounds(bitmap).catch(() => ({ bounds: fullBounds(), confidence: 0, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0 }));
+  const detectedBounds = await detectContentBounds(bitmap).catch(() => ({ bounds: fullBounds(), confidence: 0, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0 }));
   bitmap.close?.();
+  if (adaptive.template === 'detailed-profile') {
+    const plan = buildEfhubLayoutPlan(width, height, detectedBounds.bounds);
+    const zones = mapEfhubOcrZones(plan);
+    return {
+      width,
+      height,
+      template: adaptive.template,
+      zones,
+      cardArtZone: zones.find((item) => item.key === 'cardType') ?? getCardArtZone(adaptive.template),
+      anchorReport: {
+        ...detectedBounds,
+        confidence: Math.max(detectedBounds.confidence, plan.audit.confidence),
+        efhubLayout: plan.audit,
+        displayZones: mapEfhubMacroZones(plan)
+      }
+    };
+  }
   return {
     width,
     height,
     template: adaptive.template,
-    zones: adaptive.zones.map((item) => transformZoneToBounds(item, anchorReport.bounds)),
-    cardArtZone: transformZoneToBounds(getCardArtZone(adaptive.template), anchorReport.bounds),
-    anchorReport
+    zones: adaptive.zones.map((item) => transformZoneToBounds(item, detectedBounds.bounds)),
+    cardArtZone: transformZoneToBounds(getCardArtZone(adaptive.template), detectedBounds.bounds),
+    anchorReport: detectedBounds
   };
 }
 

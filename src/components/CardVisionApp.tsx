@@ -271,7 +271,9 @@ async function createPlayerCardPreview(file: File): Promise<CardCropResult | nul
     const geometry = await inspectSinglePrintGeometry(file);
     const calibration = await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
     const remembered = applyRememberedCardBox(geometry.cardArtZone, calibration);
-    return await createSmartCardPreview(file, remembered);
+    return geometry.template === 'detailed-profile'
+      ? await createEfhubCardPreview(file, remembered)
+      : await createSmartCardPreview(file, remembered);
   } catch {
     return null;
   }
@@ -2085,7 +2087,16 @@ export function CardVisionApp() {
       const imageHash = await fileDigest(selectedFile);
       const rememberedCalibration = await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
       if (rememberedCalibration) {
-        geometry = { ...geometry, zones: applyOcrTemplateCalibration(geometry.zones, rememberedCalibration), cardArtZone: applyRememberedCardBox(geometry.cardArtZone, rememberedCalibration) };
+        geometry = {
+          ...geometry,
+          // O perfil eFHUB usa o mapa geométrico oficial. Memórias antigas nunca
+          // podem deslocar as oito áreas padronizadas; apenas o recorte da carta
+          // pode reaproveitar um ajuste confirmado pelo usuário.
+          zones: geometry.template === 'detailed-profile'
+            ? geometry.zones
+            : applyOcrTemplateCalibration(geometry.zones, rememberedCalibration),
+          cardArtZone: applyRememberedCardBox(geometry.cardArtZone, rememberedCalibration)
+        };
       }
       const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', 120).catch(() => []);
       const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 160).catch(() => [])).map((entry) => entry.value);
@@ -2106,14 +2117,11 @@ export function CardVisionApp() {
       ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
       setOcrZones(geometry.zones);
-      const cachedArt = await runtimeGet<string>('image-thumbnails', imageHash).catch(() => null);
-      const detectedCrop = await (geometry.template === 'detailed-profile' ? createEfhubCardPreview(selectedFile, geometry.cardArtZone) : createSmartCardPreview(selectedFile, geometry.cardArtZone)).catch(() => null);
-      const artPreview = cachedArt || detectedCrop?.portraitPreview || detectedCrop?.preview || null;
-      if (artPreview) {
-        setPlayerCardImage(artPreview);
-        if (detectedCrop) setCardCropResult(detectedCrop);
-        if (!cachedArt) void runtimePut('image-thumbnails', imageHash, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
-      }
+      // A chave recebe a versão da geometria para não reutilizar miniaturas
+      // produzidas pelo leitor antigo com recortes desalinhados.
+      const thumbnailKey = `${imageHash}:efhub-layout-v31.75`;
+      const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
+      if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
@@ -2121,12 +2129,33 @@ export function CardVisionApp() {
         cacheKey: `${imageHash}:full:contrast`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
-      if (refinedGeometry.template !== geometry.template) {
-        geometry = refinedGeometry;
-        setOcrZones(geometry.zones);
-        const detailedCrop = await createEfhubCardPreview(selectedFile, geometry.cardArtZone).catch(() => null);
-        if (detailedCrop) { setPlayerCardImage(detailedCrop.portraitPreview ?? detailedCrop.preview); setCardCropResult(detailedCrop); }
-        setStatus('Perfil detalhado detectado: ajustando áreas para atributos, posições, modelo físico, habilidades e Ímpetos...');
+      geometry = refinedGeometry;
+      setOcrZones(geometry.zones);
+
+      // O recorte é feito somente depois da identificação completa do layout.
+      // Assim, uma imagem 3283×3013 que inicialmente parece paisagem não usa
+      // o recorte de um template errado antes de o OCR reconhecer o perfil.
+      const finalCrop = geometry.cardArtZone.enabled
+        ? await (geometry.template === 'detailed-profile'
+          ? createEfhubCardPreview(selectedFile, geometry.cardArtZone)
+          : createSmartCardPreview(selectedFile, geometry.cardArtZone)).catch(() => null)
+        : null;
+      const artPreview = finalCrop?.portraitPreview ?? finalCrop?.preview ?? cachedArt ?? null;
+      if (artPreview) {
+        setPlayerCardImage(artPreview);
+        if (finalCrop) setCardCropResult(finalCrop);
+        if (finalCrop) void runtimePut('image-thumbnails', thumbnailKey, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
+      }
+
+      const layoutAudit = geometry.anchorReport.efhubLayout;
+      if (geometry.template === 'detailed-profile' && layoutAudit) {
+        if (layoutAudit.complete) {
+          setStatus(`Perfil eFHUB encaixado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, oito áreas posicionadas pelo mapa oficial.`);
+        } else if (layoutAudit.mode === 'reflowed-unknown' || layoutAudit.mode === 'incompatible') {
+          setStatus('Layout eFHUB incompatível ou reorganizado: a leitura automática foi bloqueada para não posicionar quadrados errados.');
+        } else {
+          setStatus(`Print eFHUB incompleto: ${layoutAudit.missingZones.join(', ') || 'uma parte do painel'} ficou fora da imagem. As áreas ausentes não serão inventadas.`);
+        }
       }
       let zoneResults: PremiumZoneReading[] = [];
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
@@ -2160,7 +2189,9 @@ export function CardVisionApp() {
         zones: geometry.zones,
         knownPlayerNames,
         learnedSkillNames,
-        qualityReport: scanQuality
+        qualityReport: scanQuality,
+        layoutAudit: geometry.anchorReport.efhubLayout,
+        displayZones: geometry.anchorReport.displayZones
       });
       const storedPreview = toStoredSinglePrintScan(session);
       const previous = storedScanEntries.map((entry) => entry.value).find((entry) => entry.identityKey && entry.identityKey === storedPreview.identityKey && entry.imageHash !== imageHash) ?? null;
@@ -2178,7 +2209,9 @@ export function CardVisionApp() {
           zones: geometry.zones,
           knownPlayerNames,
           learnedSkillNames,
-          qualityReport: scanQuality
+          qualityReport: scanQuality,
+          layoutAudit: geometry.anchorReport.efhubLayout,
+          displayZones: geometry.anchorReport.displayZones
         });
       }
       session = applyStoredOcrCorrections(session, corrections);
@@ -2433,7 +2466,7 @@ export function CardVisionApp() {
             width: singlePrintSession.width,
             height: singlePrintSession.height,
             layoutBounds: singlePrintSession.layoutBounds,
-            zones: singlePrintSession.zoneBoxes,
+            zones: singlePrintSession.template === 'detailed-profile' ? undefined : singlePrintSession.zoneBoxes,
             cardBox: cardCropResult?.box,
             qualityScore: singlePrintSession.scanQuality?.score,
             manualCrop: cardCropResult?.method === 'manual-adjustment'

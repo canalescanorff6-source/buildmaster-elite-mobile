@@ -3,7 +3,7 @@ import { runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import type { CardCropBox } from './cardArtCrop';
 import type { SinglePrintContentBounds, SinglePrintTemplate, SinglePrintZoneBox } from './singlePrintPro';
 
-export const OCR_TEMPLATE_CALIBRATION_VERSION = '31.60-template-memory-1';
+export const OCR_TEMPLATE_CALIBRATION_VERSION = '31.75-template-memory-2';
 
 export type OcrTemplateCalibration = {
   id: string;
@@ -62,7 +62,7 @@ function calibrationId(template: SinglePrintTemplate, width: number, height: num
 }
 
 export function applyOcrTemplateCalibration<T extends OcrZone>(zones: T[], calibration: OcrTemplateCalibration | null): T[] {
-  if (!calibration) return zones.map((zone) => ({ ...zone }));
+  if (!calibration || calibration.version !== OCR_TEMPLATE_CALIBRATION_VERSION) return zones.map((zone) => ({ ...zone }));
   const learned = new Map<OcrZoneKey, OcrTemplateCalibration['zones'][number]>(calibration.zones.map((zone) => [zone.key, zone]));
   const strength = Math.min(0.82, 0.34 + calibration.confirmations * 0.08 + calibration.manualCropConfirmations * 0.05);
   return zones.map((zone) => {
@@ -80,7 +80,7 @@ export function applyOcrTemplateCalibration<T extends OcrZone>(zones: T[], calib
 }
 
 export function applyRememberedCardBox<T extends CardCropBox>(cardBox: T, calibration: OcrTemplateCalibration | null): T {
-  if (!calibration?.cardBox) return { ...cardBox };
+  if (!calibration?.cardBox || calibration.version !== OCR_TEMPLATE_CALIBRATION_VERSION) return { ...cardBox };
   const strength = Math.min(0.88, 0.46 + calibration.manualCropConfirmations * 0.12 + calibration.confirmations * 0.04);
   return {
     ...cardBox,
@@ -96,7 +96,7 @@ export async function findBestOcrTemplateCalibration(template: SinglePrintTempla
   const orientation = width > height ? 'landscape' : 'portrait';
   const candidates = entries
     .map((entry) => entry.value)
-    .filter((item) => item.template === template && item.orientation === orientation)
+    .filter((item) => item.version === OCR_TEMPLATE_CALIBRATION_VERSION && item.template === template && item.orientation === orientation)
     .map((item) => ({
       item,
       distance: Math.abs(item.widthBucket - bucket(width)) + Math.abs(item.heightBucket - bucket(height))
@@ -122,7 +122,7 @@ export async function learnOcrTemplateCalibration(input: {
   if (!validZones.length && !input.cardBox) return null;
   const id = calibrationId(input.template, input.width, input.height);
   const previous = await runtimeList<OcrTemplateCalibration>('ocr-calibrations', 120)
-    .then((entries) => entries.map((entry) => entry.value).find((item) => item.id === id) ?? null)
+    .then((entries) => entries.map((entry) => entry.value).find((item) => item.id === id && item.version === OCR_TEMPLATE_CALIBRATION_VERSION) ?? null)
     .catch(() => null);
   const weight = input.manualCrop ? 3 : 1;
   const previousZones = new Map<OcrZoneKey, OcrTemplateCalibration['zones'][number]>((previous?.zones ?? []).map((zone) => [zone.key, zone]));

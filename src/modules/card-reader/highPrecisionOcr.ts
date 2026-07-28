@@ -4,7 +4,7 @@ import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManage
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 
-export const HIGH_PRECISION_OCR_VERSION = '31.60-forensic-vision-2';
+export const HIGH_PRECISION_OCR_VERSION = '31.75-dynamic-efhub-1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;

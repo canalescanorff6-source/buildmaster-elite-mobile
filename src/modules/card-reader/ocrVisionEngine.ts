@@ -2,7 +2,7 @@ import type { PositionCode } from '@/lib/analyzerDomain';
 import type { SingleFieldEvidence, SinglePrintSession } from './singlePrintPro';
 import { officialPlaystyleForLabel, readOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 
-export const OCR_VISION_VERSION = '31.60.0';
+export const OCR_VISION_VERSION = '31.75.0';
 
 export type OcrVisionFieldStatus = 'trusted' | 'review' | 'blocked';
 
@@ -133,6 +133,18 @@ export function buildOcrVisionAudit(session: SinglePrintSession, rawText = sessi
     warnings.push('A qualidade do print exige revisão adicional antes de finalizar a ficha.');
   }
   if ((session.layoutConfidence ?? 100) < 65) warnings.push('Os limites da carta não foram encontrados com confiança suficiente.');
+  if (session.layoutAudit) {
+    if (!session.layoutAudit.complete) {
+      warnings.push(`O painel eFHUB está incompleto ou incompatível (${session.layoutAudit.mode}).`);
+      if (session.layoutAudit.missingZones.length) {
+        corrections.push(`Faça uma nova captura contendo também: ${session.layoutAudit.missingZones.join(', ')}.`);
+      } else {
+        corrections.push('Use o perfil eFHUB completo, sem reorganizar, comprimir ou cortar a tela.');
+      }
+    } else if (session.layoutAudit.ratioError > 1.5) {
+      warnings.push('A resolução exigiu compensação de margens; confira o mapa visual antes de finalizar.');
+    }
+  }
   if (position && officialStyle && !officialStyle.compatiblePositions.includes(position)) {
     warnings.push(`${officialStyle.label} não é compatível com ${position} na base oficial ativa.`);
     corrections.push('Revise separadamente posição e estilo; um campo pode ter sido trocado pelo OCR.');
@@ -161,9 +173,13 @@ export function buildOcrVisionAudit(session: SinglePrintSession, rawText = sessi
 
   const passes: OcrVisionPass[] = [
     { id: 'quality-gate', label: 'Portão de qualidade forense', required: true, reason: session.scanQuality ? `${session.scanQuality.score}/100 • ${session.scanQuality.state} • nitidez ${session.scanQuality.sharpness} • brilho ${session.scanQuality.brightness}.` : 'Diagnóstico indisponível; manter confirmação manual dos campos críticos.' },
-    { id: 'geometry', label: 'Geometria automática', required: true, reason: `Template ${session.template}, ${session.width}×${session.height}.` },
+    { id: 'geometry', label: 'Geometria automática', required: true, reason: session.layoutAudit
+      ? `${session.layoutAudit.mode} • ${session.width}×${session.height} • ${Math.round(session.layoutAudit.visibleFraction * 100)}% do painel visível • confiança ${session.layoutAudit.confidence}%.`
+      : `Template ${session.template}, ${session.width}×${session.height}.` },
     { id: 'template-memory', label: 'Memória do enquadramento', required: true, reason: 'O scanner reaproveita apenas calibrações confirmadas para a mesma orientação e faixa de resolução.' },
-    { id: 'efhub-profile', label: 'Perfil eFHUB dedicado', required: session.detailedReading.profileAudit.detected, reason: session.detailedReading.profileAudit.detected ? `${session.detailedReading.profileAudit.score}/100 • ${session.detailedReading.profileAudit.ready ? '26 atributos, 13 posições e 16 medidas completas' : `revisar ${session.detailedReading.profileAudit.missing.join(', ')}`}.` : 'Layout eFHUB não detectado; o scanner mantém o perfil adaptativo genérico.' },
+    { id: 'efhub-profile', label: 'Perfil eFHUB dedicado', required: session.detailedReading.profileAudit.detected, reason: session.detailedReading.profileAudit.detected
+      ? `${session.detailedReading.profileAudit.score}/100 • ${session.layoutAudit?.complete === false ? `enquadramento incompleto (${session.layoutAudit.missingZones.join(', ') || session.layoutAudit.mode})` : session.detailedReading.profileAudit.ready ? '26 atributos, 13 posições e 16 medidas completas' : `revisar ${session.detailedReading.profileAudit.missing.join(', ')}`}.`
+      : 'Layout eFHUB não detectado; o scanner mantém o perfil adaptativo genérico.' },
     { id: 'adaptive-crops', label: 'Recortes adaptativos por campo', required: true, reason: 'Cada campo crítico é relido em áreas exata, concentrada, deslocada e ampliada antes de aceitar o resultado.' },
     { id: 'contrast', label: 'Consenso multietapas local', required: true, reason: `${session.precisionAudit.totalPasses} passagens distribuídas entre tratamentos de cor, contraste, nitidez, binarização e texto esparso.` },
     { id: 'sharp', label: 'Releitura seletiva dos campos críticos', required: state !== 'ready', reason: state === 'ready' ? 'O consenso alto dispensou novas passagens.' : 'Nome, posição e números sem acordo permanecem bloqueados para confirmação.' },

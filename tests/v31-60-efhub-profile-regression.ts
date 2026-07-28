@@ -25,7 +25,7 @@ function reading(key: PremiumZoneReading['key'], text: string, confidence = 93):
   };
 }
 
-assert.equal(EFHUB_PROFILE_VERSION, '31.60-efhub-profile-1');
+assert.equal(EFHUB_PROFILE_VERSION, '31.75-efhub-profile-2');
 assert.deepEqual(EFHUB_EXPECTED_COUNTS, { attributes: 26, positions: 13, physicalModel: 16 });
 
 const geometry = getAdaptiveSinglePrintZones(1400, 1600);
@@ -87,4 +87,4 @@ assert.ok(result.skills.some((skill) => skill.value === 'Sombra veloz'));
 assert.ok(result.skills.some((skill) => skill.value === 'Marcação individual'));
 assert.equal(result.skillCandidates.length, 0);
 
-console.log('v31.60 leitor eFHUB dedicado, portões 26/13/16 e habilidades completas aprovados.');
+console.log('v31.75 leitor eFHUB dinâmico, portões 26/13/16 e habilidades completas aprovados.');

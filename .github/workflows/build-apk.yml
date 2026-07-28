@@ -1,4 +1,4 @@
-name: Gerar APK v31.74 Canal Direto
+name: Gerar APK v31.75 Canal Direto
 
 on:
   workflow_dispatch:
@@ -122,12 +122,12 @@ jobs:
           rollback_reason = os.environ.get('INPUT_ROLLBACK_REASON', '').strip()
           source_ref = os.environ.get('INPUT_SOURCE_REF', '').strip()
           if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', version):
-              raise SystemExit('release_version precisa usar o formato 31.74.0')
+              raise SystemExit('release_version precisa usar o formato 31.75.0')
           def version_tuple(value):
               return tuple(int(part) for part in value.split('.'))
           if rollback_from:
               if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', rollback_from):
-                  raise SystemExit('rollback_from_version precisa usar o formato 31.74.0')
+                  raise SystemExit('rollback_from_version precisa usar o formato 31.75.0')
               if not os.environ.get('INPUT_RELEASE_VERSION', '').strip() or not source_ref or not rollback_reason:
                   raise SystemExit('Rollback exige source_ref, release_version nova e rollback_reason.')
               if version_tuple(version) <= version_tuple(rollback_from):
@@ -219,8 +219,8 @@ jobs:
       - name: Gerar e verificar manifesto do código-fonte
         timeout-minutes: 4
         run: |
-          npm run integrity:generate -- MANIFESTO_PRODUCAO_V31.74.sha256
-          npm run integrity:verify -- MANIFESTO_PRODUCAO_V31.74.sha256
+          npm run integrity:generate -- MANIFESTO_PRODUCAO_V31.75.sha256
+          npm run integrity:verify -- MANIFESTO_PRODUCAO_V31.75.sha256
 
       - name: Preparar exportação estática para APK
         run: rm -rf out android .buildmaster-static-disabled dist-apk signing verify-release
@@ -515,7 +515,7 @@ jobs:
             dist-apk/legacy/update-manifest.json
             dist-apk/release-history.json
             dist-apk/signing-report.txt
-            MANIFESTO_PRODUCAO_V31.74.sha256
+            MANIFESTO_PRODUCAO_V31.75.sha256
           if-no-files-found: error
           retention-days: 30
 

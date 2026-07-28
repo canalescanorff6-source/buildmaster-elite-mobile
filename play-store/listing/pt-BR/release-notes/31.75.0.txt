@@ -1,0 +1,6 @@
+• Reconstrói o leitor do perfil eFHUB com mapa exato de oito áreas.
+• Detecta automaticamente a resolução e preserva a proporção original da tela.
+• Encaixa corretamente prints completos, incluindo imagens 3283×3751.
+• Identifica prints cortados e bloqueia somente as áreas que não aparecem.
+• Impede que layouts incompatíveis gerem quadrados ou informações incorretas.
+• Mostra na auditoria a resolução, o modo de encaixe e as áreas ausentes.

@@ -87,7 +87,7 @@ const uncertainSession = buildSinglePrintSession({
 assert.equal(uncertainSession.fields.find((field) => field.key === 'playerName')?.status, 'review');
 assert.ok(uncertainSession.blockingFields.some((field) => field.includes('Nome')));
 const uncertainAudit = buildOcrVisionAudit(uncertainSession, noisyText);
-assert.equal(uncertainAudit.version, '31.60.0');
+assert.equal(uncertainAudit.version, '31.75.0');
 assert.equal(uncertainAudit.state, 'blocked');
 assert.ok(uncertainAudit.blockingFields.some((field) => field.includes('Nome')));
 
@@ -116,7 +116,7 @@ assert.match(engine, /inverted/);
 assert.match(engine, /nameSparse/);
 assert.match(engine, /O app não força uma resposta errada|Nome mantido para revisão/);
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /Leitura Rígida v31\.60/);
+assert.match(panel, /Leitura Dinâmica v31\.75/);
 assert.match(panel, /precisão estimada/);
 
 console.log('v31.10 leitura ultraprécisa, consenso de nome e bloqueio seguro aprovados.');

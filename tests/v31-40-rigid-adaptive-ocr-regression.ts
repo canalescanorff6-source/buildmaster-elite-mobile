@@ -9,8 +9,8 @@ import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
 
-assert.equal(HIGH_PRECISION_OCR_VERSION, '31.60-forensic-vision-2');
-assert.equal(OCR_VISION_VERSION, '31.60.0');
+assert.equal(HIGH_PRECISION_OCR_VERSION, '31.75-dynamic-efhub-1');
+assert.equal(OCR_VISION_VERSION, '31.75.0');
 
 const nameZone: OcrZone = { key: 'name', label: 'Nome', x: 0.05, y: 0.03, w: 0.32, h: 0.06, enabled: true };
 const nameVariants = adaptiveZoneVariants(nameZone, 'precision');

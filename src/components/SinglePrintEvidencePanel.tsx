@@ -4,6 +4,22 @@ import { AlertTriangle, CheckCircle2, Eye, History, ScanLine, ShieldCheck } from
 import type { SingleFieldEvidence, SinglePrintSession } from '@/modules/card-reader/singlePrintPro';
 import { OcrConfidenceHistoryPanel } from '@/components/OcrConfidenceHistoryPanel';
 
+function layoutModeLabel(mode: NonNullable<SinglePrintSession['layoutAudit']>['mode']) {
+  const labels: Record<NonNullable<SinglePrintSession['layoutAudit']>['mode'], string> = {
+    canonical: 'proporção oficial',
+    proportional: 'escala proporcional',
+    'letterbox-horizontal': 'margens laterais compensadas',
+    'letterbox-vertical': 'margens verticais compensadas',
+    'cropped-bottom': 'corte inferior detectado',
+    'cropped-top': 'corte superior detectado',
+    'cropped-right': 'corte lateral direito detectado',
+    'cropped-left': 'corte lateral esquerdo detectado',
+    'reflowed-unknown': 'layout reorganizado',
+    incompatible: 'layout incompatível'
+  };
+  return labels[mode];
+}
+
 export function SinglePrintEvidencePanel({
   session,
   onUseCandidate,
@@ -30,9 +46,27 @@ export function SinglePrintEvidencePanel({
       </header>
 
 
+      {session.layoutAudit && (
+        <section className={`precision-audit-card ${session.layoutAudit.complete ? 'ready' : 'review'}`} aria-label="Auditoria do encaixe dinâmico eFHUB">
+          <div>
+            <p className="kicker"><ScanLine size={14}/> Encaixe de resolução v31.75</p>
+            <strong>{session.layoutAudit.confidence}%</strong>
+            <span>{layoutModeLabel(session.layoutAudit.mode)}</span>
+          </div>
+          <div className="precision-audit-stats">
+            <span><b>{session.layoutAudit.width}×{session.layoutAudit.height}</b> resolução original</span>
+            <span><b>{Math.round(session.layoutAudit.visibleFraction * 100)}%</b> do painel visível</span>
+            <span><b>{session.layoutAudit.missingZones.length}</b> áreas ausentes</span>
+          </div>
+          <p>{session.layoutAudit.complete
+            ? 'As oito áreas foram projetadas a partir do mapa oficial 1400×1600, preservando proporção, margens e posição exata.'
+            : `${session.layoutAudit.reason}${session.layoutAudit.missingZones.length ? ` Áreas não lidas: ${session.layoutAudit.missingZones.join(', ')}.` : ''}`}</p>
+        </section>
+      )}
+
       <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
         <div>
-          <p className="kicker"><ShieldCheck size={14}/> Leitura Rígida v31.60</p>
+          <p className="kicker"><ShieldCheck size={14}/> Leitura Dinâmica v31.75</p>
           <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
           <span>precisão estimada</span>
         </div>
@@ -91,7 +125,7 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.60</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.75</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">
