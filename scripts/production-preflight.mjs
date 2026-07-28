@@ -42,6 +42,8 @@ const playWorkflow = read('.github/workflows/build-play-store.yml');
 const capacitor = read('capacitor.config.ts');
 const tsconfig = JSON.parse(read('tsconfig.json'));
 const appTsconfig = JSON.parse(read('tsconfig.app.json'));
+const cardVisionSource = read('src/components/CardVisionApp.tsx');
+const cropCalibrationSource = read('src/modules/card-reader/templateCalibration.ts');
 
 check(version === '31.70.0', 'Versão v31.70 configurada', version);
 check(lock.version === version && lock.packages?.['']?.version === version, 'package-lock sincronizado');
@@ -62,6 +64,9 @@ check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 &&
 check(new Set(tsconfig.exclude ?? []).has('tests') && new Set(appTsconfig.exclude ?? []).has('tests'), 'Fixtures isoladas fora do typecheck principal');
 check(String(pkg.scripts?.typecheck ?? '').includes('-p tsconfig.app.json') && !(appTsconfig.include ?? []).some((item) => item.includes('tests') || item === '**/*.ts' || item === '**/*.tsx'), 'Typecheck principal restrito ao aplicativo');
 check(exists('scripts/check-typecheck-isolation.mjs') && exists('tests/v31-70-typecheck-isolation-regression.mjs'), 'Portão permanente de isolamento TypeScript presente');
+check(exists('scripts/check-card-crop-type-safety.mjs') && String(pkg.scripts?.['quality:card-crop-types'] ?? '').includes('check-card-crop-type-safety.mjs'), 'Portão de segurança do recorte presente');
+check(!/OFFICIAL_ADDITIONAL_SKILL_NAMES[\s\S]*?from ['"]@\/modules\/analysis['"]/.test(cardVisionSource), 'CardVisionApp sem importação ociosa de habilidades');
+check(/applyRememberedCardBox<T extends CardCropBox>\(cardBox: T, calibration: OcrTemplateCalibration \| null\): T/.test(cropCalibrationSource) && /return\s*\{\s*\.\.\.cardBox,/.test(cropCalibrationSource), 'Calibração do recorte preserva OcrZone completo');
 check(exists('scripts/check-app-routes.mjs') && exists('tests/v31-70-root-route-regression.mjs') && exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-20-premium-interface-regression.mjs') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs') && exists('tests/v31-70-typecheck-isolation-regression.mjs'), 'Regressões atuais presentes');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflow.includes(marker), `Workflow APK atualizado para ${marker}`);
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(playWorkflow.includes(marker), `Workflow Play atualizado para ${marker}`);

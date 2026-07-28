@@ -1,1 +1,1 @@
-Corrige contaminação do TypeScript por stubs de testes e estabiliza o build v31.70
+Corrige TypeScript do recorte OCR e adiciona portões contra regressão na v31.70

@@ -41,7 +41,6 @@ import {
   analyzeCard,
   normalizeObjective,
   ATTRIBUTE_INPUTS,
-  OFFICIAL_ADDITIONAL_SKILL_NAMES,
   type AnalysisResult,
   type AttributeKey,
   type Objective,

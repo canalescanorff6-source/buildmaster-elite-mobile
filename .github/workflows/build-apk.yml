@@ -215,6 +215,7 @@ jobs:
           npm run quality:routes
           npm run quality:syntax
           npm run quality:interactive
+          npm run quality:card-crop-types
 
       - name: Executar pré-voo da versão final
         timeout-minutes: 5

@@ -79,10 +79,11 @@ export function applyOcrTemplateCalibration<T extends OcrZone>(zones: T[], calib
   });
 }
 
-export function applyRememberedCardBox(cardBox: CardCropBox, calibration: OcrTemplateCalibration | null): CardCropBox {
+export function applyRememberedCardBox<T extends CardCropBox>(cardBox: T, calibration: OcrTemplateCalibration | null): T {
   if (!calibration?.cardBox) return { ...cardBox };
   const strength = Math.min(0.88, 0.46 + calibration.manualCropConfirmations * 0.12 + calibration.confirmations * 0.04);
   return {
+    ...cardBox,
     x: cardBox.x * (1 - strength) + calibration.cardBox.x * strength,
     y: cardBox.y * (1 - strength) + calibration.cardBox.y * strength,
     w: cardBox.w * (1 - strength) + calibration.cardBox.w * strength,
