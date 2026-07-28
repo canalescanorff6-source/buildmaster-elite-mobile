@@ -44,4 +44,4 @@ assert.equal((mainAgain.match(/registerPlugin\(BuildMasterMatchRecorderPlugin\.c
 assert.equal((manifestAgain.match(/BuildMasterScreenRecordService/g) || []).length, 1);
 
 fs.rmSync(temp, { recursive: true, force: true });
-console.log('v31.70 instalador nativo MediaProjection idempotente aprovado.');
+console.log('v31.71 instalador nativo MediaProjection idempotente aprovado.');

@@ -52,6 +52,7 @@ function jwtClaims(token: string): Record<string, unknown> {
 }
 
 function safeAuditDetails(action: string, body: Record<string, unknown>) {
+  if (action === 'create') return { username: normalizeUsername(body.username), expiryMode: String(body.expiryMode || 'days'), durationDays: Number(body.durationDays || 0), expiresAt: body.expiresAt || null, maxDevices: Number(body.maxDevices || 1) };
   if (action === 'renew') return { durationDays: Number(body.durationDays || 30) };
   if (action === 'set_status') return { status: String(body.status || '') };
   if (action === 'reset_password') return { passwordChanged: true, sessionsRevoked: true };
@@ -63,7 +64,7 @@ function safeAuditDetails(action: string, body: Record<string, unknown>) {
 }
 
 function ratePolicy(action: string) {
-  if (['list', 'overview', 'list_devices', 'list_audit', 'get_security_settings', 'rate_limit_status'].includes(action)) return { limit: 40, window: 60 };
+  if (['health', 'list', 'overview', 'list_devices', 'list_audit', 'get_security_settings', 'rate_limit_status'].includes(action)) return { limit: 40, window: 60 };
   if (['create', 'reset_password', 'delete', 'update_security_settings'].includes(action)) return { limit: 6, window: 300 };
   return { limit: 15, window: 60 };
 }
@@ -139,12 +140,22 @@ Deno.serve(async (request) => {
     if ((!appVersion && !settings.allow_legacy_clients) || (appVersion && compareVersions(appVersion, String(settings.min_app_version)) < 0)) {
       throw new HttpError(426, 'UPDATE_REQUIRED', `O painel deste APK foi desativado. Instale a versão ${settings.min_app_version} ou superior.`);
     }
-    if (settings.admin_mfa_required && jwtClaims(token).aal !== 'aal2') {
+
+    if (action === 'health') {
+      const { count: profileCount, error: profileCountError } = await service.from('buildmaster_profiles').select('id', { count: 'exact', head: true });
+      const { count: userCount, error: userCountError } = await service.from('buildmaster_profiles').select('id', { count: 'exact', head: true }).eq('role', 'user');
+      if (profileCountError || userCountError) throw new HttpError(500, 'ACCOUNT_SCHEMA_MISSING', profileCountError?.message || userCountError?.message || 'As tabelas de contas ainda não foram aplicadas.');
+      const currentLevel = jwtClaims(token).aal === 'aal2' ? 'aal2' : 'aal1';
+      const mfaRequired = Boolean(settings.admin_mfa_required);
+      return respond({ ready: !mfaRequired || currentLevel === 'aal2', databaseReady: true, functionReady: true, adminRoleReady: true, mfaRequired, currentLevel, profileCount: Number(profileCount || 0), userCount: Number(userCount || 0), minAppVersion: String(settings.min_app_version || '31.71.0'), message: mfaRequired && currentLevel !== 'aal2' ? 'Servidor pronto. Confirme o MFA para criar contas.' : 'Servidor de contas pronto para criar e gerenciar acessos.' });
+    }
+
+    if (settings.admin_mfa_required && jwtClaims(token).aal !== 'aal2' && action !== 'get_security_settings') {
       throw new HttpError(428, 'MFA_REQUIRED', 'Confirme o código do aplicativo autenticador para usar o painel administrativo.');
     }
 
     const allowedActions = [
-      'list', 'overview', 'list_devices', 'revoke_device', 'list_audit', 'get_security_settings',
+      'health', 'list', 'overview', 'list_devices', 'revoke_device', 'list_audit', 'get_security_settings',
       'update_security_settings', 'rate_limit_status', 'create', 'renew', 'set_status',
       'reset_password', 'set_devices', 'revoke_devices', 'delete'
     ];
@@ -255,7 +266,7 @@ Deno.serve(async (request) => {
         min_app_version: minAppVersion,
         allow_legacy_clients: Boolean(proposed.allowLegacyClients),
         require_device_proof: true,
-        admin_mfa_required: true,
+        admin_mfa_required: proposed.adminMfaRequired === undefined ? Boolean(settings.admin_mfa_required) : Boolean(proposed.adminMfaRequired),
         user_offline_grace_hours: Math.max(0, Math.min(24, Number(proposed.userOfflineGraceHours ?? settings.user_offline_grace_hours ?? 4))),
         admin_offline_grace_hours: Math.max(0, Math.min(24, Number(proposed.adminOfflineGraceHours ?? settings.admin_offline_grace_hours ?? 12))),
         updated_at: new Date().toISOString()
@@ -287,14 +298,25 @@ Deno.serve(async (request) => {
     if (action === 'create') {
       const username = normalizeUsername(body.username);
       const password = String(body.password || '');
+      const expiryMode = ['days', 'date', 'never'].includes(String(body.expiryMode)) ? String(body.expiryMode) : 'days';
       const durationDays = Math.max(1, Math.min(3650, Number(body.durationDays || 30)));
       const maxDevices = Math.max(1, Math.min(10, Number(body.maxDevices || 1)));
       if (username.length < 3 || !/^[a-z0-9][a-z0-9._-]*[a-z0-9]$/.test(username)) throw new HttpError(400, 'USERNAME_INVALID', 'Nome de usuário inválido.');
       if (password.length < 10 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) throw new HttpError(400, 'PASSWORD_WEAK', 'A senha temporária precisa ter 10 caracteres, letra maiúscula, minúscula e número.');
-      const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString();
+      let expiresAt: string | null = null;
+      if (expiryMode === 'days') expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString();
+      if (expiryMode === 'date') {
+        const requestedExpiry = Date.parse(String(body.expiresAt || ''));
+        const maximumExpiry = Date.now() + 3650 * 86400000;
+        if (!Number.isFinite(requestedExpiry) || requestedExpiry <= Date.now() + 60_000) throw new HttpError(400, 'EXPIRY_INVALID', 'Escolha uma data de vencimento futura.');
+        if (requestedExpiry > maximumExpiry) throw new HttpError(400, 'EXPIRY_TOO_FAR', 'O vencimento não pode ultrapassar 10 anos.');
+        expiresAt = new Date(requestedExpiry).toISOString();
+      }
       const displayName = String(body.displayName || username).trim().slice(0, 80) || username;
       const plan = String(body.plan || 'premium').trim().slice(0, 40) || 'premium';
       const offlineGrace = Number(settings.user_offline_grace_hours || 4);
+      const { data: existingProfile } = await service.from('buildmaster_profiles').select('id').eq('username', username).maybeSingle();
+      if (existingProfile?.id) throw new HttpError(409, 'USERNAME_EXISTS', 'Esse nome de usuário já está cadastrado.');
       const { data: created, error } = await service.auth.admin.createUser({
         email: `${username}@${USERNAME_DOMAIN}`,
         password,
@@ -311,7 +333,7 @@ Deno.serve(async (request) => {
         await service.auth.admin.deleteUser(created.user.id, false);
         throw new HttpError(500, 'PROFILE_CREATE_FAILED', profileError.message);
       }
-      await service.from('buildmaster_admin_audit').insert({ admin_id: adminId, target_user_id: created.user.id, action: 'create_user', outcome: 'success', app_version: appVersion, request_id: requestId, details: { username, durationDays, maxDevices, plan } });
+      await service.from('buildmaster_admin_audit').insert({ admin_id: adminId, target_user_id: created.user.id, action: 'create_user', outcome: 'success', app_version: appVersion, request_id: requestId, details: { username, expiryMode, durationDays: expiryMode === 'days' ? durationDays : null, expiresAt, maxDevices, plan } });
       return respond({ success: true, userId: created.user.id });
     }
 

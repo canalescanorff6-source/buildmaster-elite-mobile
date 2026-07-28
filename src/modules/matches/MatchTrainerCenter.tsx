@@ -318,7 +318,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
 
   return <section className="match-trainer-v3170">
     <div className="match-trainer-intro luxury-panel">
-      <div><p className="kicker"><Video size={15}/> v31.70 • Treinador de Partidas</p><h3>Grave, revise e entenda sua gameplay sem interferir no eFootball.</h3><span>O Android grava passivamente. A análise ocorre depois da partida, no aparelho, e nunca controla o jogo nem altera sua ficha automaticamente.</span></div>
+      <div><p className="kicker"><Video size={15}/> v31.71 • Treinador de Partidas</p><h3>Grave, revise e entenda sua gameplay sem interferir no eFootball.</h3><span>O Android grava passivamente. A análise ocorre depois da partida, no aparelho, e nunca controla o jogo nem altera sua ficha automaticamente.</span></div>
       <div className={`match-recorder-state state-${recorderStatus.state}`}><i>{recorderStatus.active ? <LoaderCircle size={22}/> : <ShieldCheck size={22}/>}</i><div><strong>{recorderStatus.active ? 'Gravação ativa' : capabilities?.supported ? 'Android preparado' : 'Modo de importação'}</strong><span>{recorderStatus.active ? formatDuration(recorderStatus.elapsedMs) : capabilities?.reason || 'Pronto para analisar vídeos.'}</span></div></div>
     </div>
 
@@ -372,6 +372,6 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
       </article>
     </div>}
 
-    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que o v31.70 consegue afirmar</strong><span>Ele mede mudanças visuais, organiza lances confirmados e encontra padrões entre partidas. Ele não sabe com certeza qual botão foi pressionado, não mede o ping interno do servidor e não chama automaticamente toda pausa de “lag”.</span></div><button type="button" onClick={() => { setMessage('Dica: grave em 720p/30 FPS, marque os eventos durante a revisão e compare pelo menos três partidas com a mesma formação.'); }}><RotateCcw size={16}/> Ver regra de uso</button></div>
+    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que o v31.71 consegue afirmar</strong><span>Ele mede mudanças visuais, organiza lances confirmados e encontra padrões entre partidas. Ele não sabe com certeza qual botão foi pressionado, não mede o ping interno do servidor e não chama automaticamente toda pausa de “lag”.</span></div><button type="button" onClick={() => { setMessage('Dica: grave em 720p/30 FPS, marque os eventos durante a revisão e compare pelo menos três partidas com a mesma formação.'); }}><RotateCcw size={16}/> Ver regra de uso</button></div>
   </section>;
 }

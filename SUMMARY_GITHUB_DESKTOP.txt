@@ -1,1 +1,1 @@
-Corrige TypeScript do recorte OCR e adiciona portões contra regressão na v31.70
+Restaura criação de contas, validade flexível e diagnóstico do Supabase na v31.71

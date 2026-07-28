@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 echo.
 echo ================================================
-echo BuildMaster v31.70 - verificacao completa
+echo BuildMaster v31.71 - verificacao completa
 ECHO ================================================
 echo.
 call npm ci --no-audit --no-fund

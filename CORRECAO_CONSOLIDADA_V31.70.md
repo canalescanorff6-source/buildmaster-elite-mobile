@@ -1,4 +1,4 @@
-# BuildMaster v31.70 — Correção consolidada de CI e publicação
+# BuildMaster v31.71 — Correção consolidada de CI e publicação
 
 Este pacote reúne em uma única base limpa todas as correções aplicadas durante a implementação do Treinador de Partidas:
 

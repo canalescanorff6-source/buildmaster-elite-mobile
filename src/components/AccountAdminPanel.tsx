@@ -27,12 +27,15 @@ import {
   adminAccountRequest,
   beginAdminMfaEnrollment,
   getAdminMfaStatus,
+  getAdminBackendHealth,
   isCloudAccountsConfigured,
   validateOnlineLicense,
   verifyAdminMfa,
   type AccountStatus,
+  type AdminBackendHealth,
   type AdminMfaEnrollment,
   type AdminMfaStatus,
+  type AccountExpiryMode,
   type AdminUserAction,
   type AdminUserRow,
   validateUsername
@@ -79,7 +82,7 @@ function generateTemporaryPassword() {
 type CreatedCredentials = {
   username: string;
   password: string;
-  durationDays: number;
+  expiryLabel: string;
   maxDevices: number;
 };
 
@@ -102,20 +105,38 @@ export function AccountAdminPanel() {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [expiryMode, setExpiryMode] = useState<AccountExpiryMode>('days');
   const [durationDays, setDurationDays] = useState(30);
+  const [customExpiryDate, setCustomExpiryDate] = useState(() => { const date = new Date(Date.now() + 30 * 86400000); return date.toISOString().slice(0, 10); });
   const [maxDevices, setMaxDevices] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all');
   const [createdCredentials, setCreatedCredentials] = useState<CreatedCredentials | null>(null);
   const [dialog, setDialog] = useState<AdminDialog>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [backendHealth, setBackendHealth] = useState<AdminBackendHealth | null>(null);
   const [mfaStatus, setMfaStatus] = useState<AdminMfaStatus | null>(null);
   const [mfaEnrollment, setMfaEnrollment] = useState<AdminMfaEnrollment | null>(null);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
 
+  const mfaRequired = backendHealth?.mfaRequired ?? true;
+  const adminUnlocked = Boolean(backendHealth?.functionReady && backendHealth?.databaseReady && (!mfaRequired || mfaStatus?.protected));
+
+  const refreshBackendHealth = useCallback(async () => {
+    if (!configured || account?.profile.role !== 'admin') return;
+    setError('');
+    try {
+      const next = await getAdminBackendHealth();
+      setBackendHealth(next);
+    } catch (cause) {
+      setBackendHealth(null);
+      setError(cause instanceof Error ? cause.message : 'Não foi possível verificar o servidor de contas.');
+    }
+  }, [account?.profile.role, configured]);
+
   const loadUsers = useCallback(async () => {
-    if (!configured || account?.profile.role !== 'admin' || !mfaStatus?.protected) return;
+    if (!configured || account?.profile.role !== 'admin' || !adminUnlocked) return;
     setLoading(true);
     setError('');
     try {
@@ -126,7 +147,7 @@ export function AccountAdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [account?.profile.role, configured, mfaStatus?.protected]);
+  }, [account?.profile.role, adminUnlocked, configured]);
 
   const refreshMfa = useCallback(async () => {
     if (!configured || account?.profile.role !== 'admin') return;
@@ -142,8 +163,9 @@ export function AccountAdminPanel() {
     }
   }, [account?.profile.role, configured]);
 
+  useEffect(() => { void refreshBackendHealth(); }, [refreshBackendHealth]);
   useEffect(() => { void refreshMfa(); }, [refreshMfa]);
-  useEffect(() => { if (mfaStatus?.protected) void loadUsers(); }, [mfaStatus?.protected, loadUsers]);
+  useEffect(() => { if (adminUnlocked) void loadUsers(); }, [adminUnlocked, loadUsers]);
 
   useEffect(() => {
     if (!message) return;
@@ -228,8 +250,15 @@ export function AccountAdminPanel() {
 
     setLoading(true);
     try {
-      await adminAccountRequest({ action: 'create', username: cleanUsername, password, displayName: displayName.trim(), durationDays, maxDevices, plan: 'premium' });
-      setCreatedCredentials({ username: cleanUsername, password, durationDays, maxDevices });
+      let expiresAt: string | null = null;
+      if (expiryMode === 'date') {
+        const parsedExpiry = new Date(`${customExpiryDate}T23:59:59`);
+        if (!customExpiryDate || Number.isNaN(parsedExpiry.getTime()) || parsedExpiry.getTime() <= Date.now()) { setError('Escolha uma data de vencimento futura.'); setLoading(false); return; }
+        expiresAt = parsedExpiry.toISOString();
+      }
+      await adminAccountRequest({ action: 'create', username: cleanUsername, password, displayName: displayName.trim(), expiryMode, durationDays: expiryMode === 'days' ? durationDays : undefined, expiresAt, maxDevices, plan: 'premium' });
+      const expiryLabel = expiryMode === 'never' ? 'Sem vencimento' : expiryMode === 'date' ? new Date(expiresAt as string).toLocaleDateString('pt-BR') : `${durationDays} dias`;
+      setCreatedCredentials({ username: cleanUsername, password, expiryLabel, maxDevices });
       setMessage(`Conta ${cleanUsername} criada e pronta para uso.`);
       setUsername('');
       setDisplayName('');
@@ -249,8 +278,10 @@ export function AccountAdminPanel() {
     try {
       const validation = await validateOnlineLicense();
       if (account?.profile.role === 'admin') {
-        const response = await adminAccountRequest<{ users: AdminUserRow[] }>({ action: 'list' });
-        setDiagnostic(`Supabase conectado. Licença ativa para @${validation.profile.username} e painel administrativo respondeu com ${response.users?.length ?? 0} conta(s).`);
+        const health = await getAdminBackendHealth();
+        setBackendHealth(health);
+        const response = (!health.mfaRequired || health.currentLevel === 'aal2') ? await adminAccountRequest<{ users: AdminUserRow[] }>({ action: 'list' }) : { users: [] as AdminUserRow[] };
+        setDiagnostic(`Supabase conectado. Licença ativa para @${validation.profile.username}. Banco ${health.databaseReady ? 'pronto' : 'pendente'}, função administrativa ${health.functionReady ? 'ativa' : 'ausente'} e ${response.users?.length ?? 0} conta(s) carregada(s).`);
       } else {
         setDiagnostic(`Supabase conectado. Licença de @${validation.profile.username} validada no servidor.`);
       }
@@ -267,7 +298,7 @@ export function AccountAdminPanel() {
     return `BuildMaster Elite Tático
 Usuário: ${createdCredentials.username}
 Senha temporária: ${createdCredentials.password}
-Validade inicial: ${createdCredentials.durationDays} dias
+Validade inicial: ${createdCredentials.expiryLabel}
 Aparelhos permitidos: ${createdCredentials.maxDevices}`;
   }
 
@@ -355,7 +386,17 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
     );
   }
 
-  if (mfaStatus === null || !mfaStatus.protected) {
+  if (!backendHealth) {
+    return (
+      <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel">
+        <div className="settings-panel-heading"><div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Verificando servidor de contas</h3><span>O aplicativo está conferindo banco, função administrativa, perfil admin e política de segurança.</span></div><span className="settings-state-pill">Diagnóstico</span></div>
+        {error && <p className="auth-error" role="alert"><AlertTriangle size={15} /> {error}</p>}
+        <button className="settings-diagnostic-button" type="button" onClick={() => void refreshBackendHealth()}><RefreshCw size={16} /><div><strong>Verificar novamente</strong><span>Se continuar falhando, publique as migrações e a função admin-users.</span></div></button>
+      </section>
+    );
+  }
+
+  if (mfaRequired && (mfaStatus === null || !mfaStatus.protected)) {
     const hasVerifiedFactor = Boolean(mfaStatus?.verifiedFactor);
     return (
       <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel admin-mfa-gate">
@@ -376,7 +417,7 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
         {(hasVerifiedFactor || mfaEnrollment) && <div className="admin-mfa-code-row"><label><span>Código de 6 números</span><input inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" maxLength={6} /></label><button className="elite-button" type="button" onClick={() => void confirmMfa()} disabled={mfaLoading || mfaCode.length !== 6}>{mfaLoading ? <Loader2 className="spin" size={17} /> : <UserPlus size={17} />} Confirmar e abrir Criar contas</button></div>}
         {message && <p className="account-success" role="status"><CheckCircle2 size={15} /> {message}</p>}
         {error && <p className="auth-error" role="alert"><AlertTriangle size={15} /> {error}</p>}
-        <button className="settings-diagnostic-button" type="button" onClick={() => void refreshMfa()} disabled={mfaLoading}><RefreshCw size={16} /><div><strong>Verificar acesso administrativo novamente</strong><span>A opção permanece visível mesmo quando a verificação falha.</span></div></button>
+        <button className="settings-diagnostic-button" type="button" onClick={() => { void refreshBackendHealth(); void refreshMfa(); }} disabled={mfaLoading}><RefreshCw size={16} /><div><strong>Verificar acesso administrativo novamente</strong><span>A opção permanece visível mesmo quando a verificação falha.</span></div></button>
       </section>
     );
   }
@@ -388,6 +429,7 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
           <div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Contas, prazos e aparelhos</h3><span>Crie, renove, suspenda e desconecte usuários sem entrar no painel do Supabase.</span></div>
           <div className="account-admin-header-actions"><button type="button" onClick={() => void testConnection()} disabled={testingConnection || loading}>{testingConnection ? <Loader2 className="spin" size={16} /> : <Zap size={16} />} Testar Supabase</button><button type="button" onClick={() => void loadUsers()} disabled={loading}>{loading ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />} Atualizar</button></div>
         </div>
+        <div className="account-setup-warning"><CheckCircle2 size={20} /><div><strong>{backendHealth.message}</strong><span>Perfis: {backendHealth.profileCount} • Clientes: {backendHealth.userCount} • MFA: {backendHealth.mfaRequired ? 'obrigatório' : 'opcional até a ativação'}.</span></div></div>
         <div className="account-license-grid account-license-premium-grid">
           <article><strong>{users.length}</strong><span>Contas</span><small>total cadastrado</small></article>
           <article><strong>{activeCount}</strong><span>Ativas</span><small>com prazo válido</small></article>
@@ -405,12 +447,15 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
           <label><span>Nome de usuário</span><input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/\s+/g, ''))} placeholder="ex.: joao10" autoCapitalize="none" autoCorrect="off" required minLength={3} /></label>
           <label><span>Nome de exibição</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="João" /></label>
           <label className="account-password-field"><span>Senha temporária</span><div><input value={password} onChange={(event) => setPassword(event.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Mínimo 10 caracteres" required minLength={10} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div><button type="button" className="account-generate-password" onClick={() => { setPassword(generateTemporaryPassword()); setShowPassword(true); }}>Gerar senha segura</button></label>
-          <label><span>Prazo inicial</span><select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))}><option value={7}>7 dias</option><option value={15}>15 dias</option><option value={30}>30 dias</option><option value={60}>60 dias</option><option value={90}>90 dias</option><option value={180}>6 meses</option><option value={365}>1 ano</option></select></label>
+          <label><span>Tipo de validade</span><select value={expiryMode} onChange={(event) => setExpiryMode(event.target.value as AccountExpiryMode)}><option value="days">Quantidade de dias</option><option value="date">Data específica</option><option value="never">Sem vencimento</option></select></label>
+          {expiryMode === 'days' && <label><span>Prazo inicial</span><select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))}><option value={1}>1 dia</option><option value={7}>7 dias</option><option value={15}>15 dias</option><option value={30}>30 dias</option><option value={60}>60 dias</option><option value={90}>90 dias</option><option value={180}>6 meses</option><option value={365}>1 ano</option></select></label>}
+          {expiryMode === 'date' && <label><span>Vencimento</span><input type="date" value={customExpiryDate} min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} onChange={(event) => setCustomExpiryDate(event.target.value)} required /></label>}
+          {expiryMode === 'never' && <div className="account-expiry-note"><Clock3 size={16} /><span>A conta ficará ativa sem data de vencimento, mas poderá ser suspensa ou bloqueada pelo administrador.</span></div>}
           <label><span>Limite de aparelhos</span><select value={maxDevices} onChange={(event) => setMaxDevices(Number(event.target.value))}><option value={1}>1 aparelho</option><option value={2}>2 aparelhos</option><option value={3}>3 aparelhos</option></select></label>
-          <button className="elite-button account-create-submit" type="submit" disabled={loading}><UserPlus size={17} /> {loading ? 'Criando conta...' : 'Criar usuário'}</button>
+          <button className="elite-button account-create-submit" type="submit" disabled={loading || !adminUnlocked || (expiryMode === 'date' && !customExpiryDate)}><UserPlus size={17} /> {loading ? 'Criando conta...' : 'Criar usuário'}</button>
         </form>
 
-        {createdCredentials && <div className="created-credentials-card" role="status"><div><CheckCircle2 size={19} /><div><strong>Conta criada com sucesso</strong><span>Copie os dados antes de fechar esta mensagem.</span></div></div><dl><div><dt>Usuário</dt><dd>{createdCredentials.username}</dd></div><div><dt>Senha</dt><dd>{createdCredentials.password}</dd></div><div><dt>Prazo</dt><dd>{createdCredentials.durationDays} dias</dd></div><div><dt>Aparelhos</dt><dd>{createdCredentials.maxDevices}</dd></div></dl><div><button type="button" onClick={() => void copyCreatedCredentials()}><Copy size={15} /> Copiar</button><button type="button" onClick={() => void shareCreatedCredentials()}><Share2 size={15} /> Compartilhar</button><button type="button" onClick={() => setCreatedCredentials(null)}>Fechar</button></div></div>}
+        {createdCredentials && <div className="created-credentials-card" role="status"><div><CheckCircle2 size={19} /><div><strong>Conta criada com sucesso</strong><span>Copie os dados antes de fechar esta mensagem.</span></div></div><dl><div><dt>Usuário</dt><dd>{createdCredentials.username}</dd></div><div><dt>Senha</dt><dd>{createdCredentials.password}</dd></div><div><dt>Prazo</dt><dd>{createdCredentials.expiryLabel}</dd></div><div><dt>Aparelhos</dt><dd>{createdCredentials.maxDevices}</dd></div></dl><div><button type="button" onClick={() => void copyCreatedCredentials()}><Copy size={15} /> Copiar</button><button type="button" onClick={() => void shareCreatedCredentials()}><Share2 size={15} /> Compartilhar</button><button type="button" onClick={() => setCreatedCredentials(null)}>Fechar</button></div></div>}
       </section>
 
       <section className="account-users-panel luxury-panel settings-view-panel settings-final-panel">

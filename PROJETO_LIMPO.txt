@@ -1,4 +1,4 @@
-BUILDMASTER ELITE TÁTICO v31.70 — TREINADOR DE PARTIDAS
+BUILDMASTER ELITE TÁTICO v31.71 — TREINADOR DE PARTIDAS
 
 Projeto limpo de produção com:
 - gravação oficial Android por MediaProjection;

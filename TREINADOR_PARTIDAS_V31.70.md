@@ -1,4 +1,4 @@
-# BuildMaster Elite Tático v31.70 — Treinador de Partidas
+# BuildMaster Elite Tático v31.71 — Treinador de Partidas
 
 ## Objetivo
 
@@ -55,13 +55,13 @@ O usuário confirma eventos como:
 
 ## Summary para GitHub Desktop
 
-`Implementa Treinador de Partidas v31.70 com gravação Android e análise local de gameplay`
+`Implementa Treinador de Partidas v31.71 com gravação Android e análise local de gameplay`
 
 ## Confiabilidade e validação
 
 Validações executadas no pacote-fonte final:
 
-- typecheck direcionado do motor e da interface v31.70;
+- typecheck direcionado do motor e da interface v31.71;
 - teste do motor de sessões, marcadores, resumos e relatórios;
 - teste idempotente do instalador Android;
 - compatibilidade do código Java com `minSdk 23`, sem depender de `java.nio.file`, `Date.toInstant()` ou construtores recentes de `FileWriter`;
@@ -75,4 +75,4 @@ Validações executadas no pacote-fonte final:
 - 27 verificações no pré-voo Google Play;
 - 380 arquivos conferidos pelo manifesto SHA-256.
 
-O build completo do Next.js e a compilação Gradle do APK/AAB são executados pelo GitHub Actions após `npm ci`. O ambiente local desta entrega não concluiu a instalação integral das dependências, portanto a aprovação definitiva do binário continua sendo o workflow de publicação atualizado da v31.70.
+O build completo do Next.js e a compilação Gradle do APK/AAB são executados pelo GitHub Actions após `npm ci`. O ambiente local desta entrega não concluiu a instalação integral das dependências, portanto a aprovação definitiva do binário continua sendo o workflow de publicação atualizado da v31.71.

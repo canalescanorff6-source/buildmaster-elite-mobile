@@ -1,4 +1,4 @@
-# Correção TypeScript e segurança do recorte — v31.70
+# Correção TypeScript e segurança do recorte — v31.71
 
 ## Erros corrigidos
 
@@ -16,7 +16,7 @@
 - novo portão `quality:card-crop-types`;
 - verificação no pré-voo de produção;
 - execução automática nos workflows de APK e Google Play;
-- inclusão na regressão v31.70;
+- inclusão na regressão v31.71;
 - bloqueio contra retorno da importação ociosa;
 - bloqueio contra perda dos metadados da zona OCR.
 
@@ -30,6 +30,6 @@
 - pré-voo: 104 verificações aprovadas;
 - auditoria: 71 verificações aprovadas;
 - Google Play: 27 verificações aprovadas;
-- regressões v31.40, v31.50, v31.60 e v31.70: aprovadas.
+- regressões v31.40, v31.50, v31.60 e v31.71: aprovadas.
 
 O typecheck global com dependências reais continua sendo executado no GitHub depois de `npm ci`. Os dois erros mostrados no log foram corrigidos diretamente na origem e agora possuem portões permanentes contra regressão.

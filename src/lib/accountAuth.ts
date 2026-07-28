@@ -103,6 +103,19 @@ export type AdminRateLimitRow = {
   updatedAt: string;
 };
 
+export type AdminBackendHealth = {
+  ready: boolean;
+  databaseReady: boolean;
+  functionReady: boolean;
+  adminRoleReady: boolean;
+  mfaRequired: boolean;
+  currentLevel: 'aal1' | 'aal2';
+  profileCount: number;
+  userCount: number;
+  minAppVersion: string;
+  message: string;
+};
+
 export type AdminOverview = {
   users: AdminUserRow[];
   devices: AdminDeviceRow[];
@@ -112,7 +125,10 @@ export type AdminOverview = {
   generatedAt: string;
 };
 
+export type AccountExpiryMode = 'days' | 'date' | 'never';
+
 export type AdminUserAction =
+  | { action: 'health' }
   | { action: 'list' }
   | { action: 'overview'; auditLimit?: number }
   | { action: 'list_devices'; userId?: string; includeRevoked?: boolean }
@@ -121,7 +137,7 @@ export type AdminUserAction =
   | { action: 'get_security_settings' }
   | { action: 'update_security_settings'; settings: Partial<Omit<AdminSecuritySettings, 'updatedAt'>> }
   | { action: 'rate_limit_status' }
-  | { action: 'create'; username: string; password: string; displayName?: string; durationDays: number; maxDevices: number; plan?: string }
+  | { action: 'create'; username: string; password: string; displayName?: string; expiryMode: AccountExpiryMode; durationDays?: number; expiresAt?: string | null; maxDevices: number; plan?: string }
   | { action: 'renew'; userId: string; durationDays: number }
   | { action: 'set_status'; userId: string; status: Exclude<AccountStatus, 'expired'> }
   | { action: 'reset_password'; userId: string; password: string }
@@ -416,7 +432,7 @@ async function invokeFunction<T>(name: string, body: unknown, accessToken: strin
     if (response.status === 428 || payload?.code === 'MFA_REQUIRED') throw new Error('MFA_REQUIRED: confirme o código do aplicativo autenticador para usar o painel administrativo.');
     if (response.status === 403) throw new Error(serverMessage || 'Esta conta não tem permissão para concluir essa operação.');
     if (response.status === 429) throw new Error(serverMessage || 'Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.');
-    if (response.status >= 500) throw new Error('O servidor de licenças está temporariamente indisponível. Tente novamente em instantes.');
+    if (response.status >= 500) throw new Error(serverMessage ? `Falha no servidor (${payload?.code || name}): ${serverMessage}` : 'O servidor de licenças está temporariamente indisponível. Tente novamente em instantes.');
     throw new Error(serverMessage || `Não foi possível concluir a validação no serviço ${name}.`);
   }
   return payload as T;
@@ -555,6 +571,10 @@ export async function adminAccountRequest<T = { users?: AdminUserRow[]; success?
   const session = await getValidAccountSession();
   if (!session) throw new Error('Sessão administrativa ausente.');
   return invokeFunction<T>('admin-users', { ...action, appId: APP_ID, appVersion: APP_RELEASE_VERSION }, session.accessToken);
+}
+
+export async function getAdminBackendHealth(): Promise<AdminBackendHealth> {
+  return adminAccountRequest<AdminBackendHealth>({ action: 'health' });
 }
 
 async function authUser(accessToken: string): Promise<Record<string, unknown>> {

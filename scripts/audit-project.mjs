@@ -40,11 +40,11 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '31.70.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'31.70.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '31.70.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v31.70', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v31-70'), 'Cache PWA sincronizado');
+check(pkg.version === '31.71.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'31.71.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '31.71.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
+check(manifest.name === 'BuildMaster Elite Tático v31.71', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v31-71'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
@@ -99,7 +99,7 @@ for (const file of [
   'tests/types-v3150-ui/tsconfig.json'
 ]) check(exists(file), `Arquivo essencial presente: ${file}`);
 
-check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run quality:audit', 'Bateria de testes limpa e atual');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run quality:audit', 'Bateria de testes limpa e atual');
 check((workflowApk.includes('npm run test:all') || workflowApk.includes('npm run ci:verify')) && (workflowPlay.includes('npm run test:all') || workflowPlay.includes('npm run ci:verify')), 'Workflows usam a bateria atual diretamente ou pelo diagnóstico consolidado');
 check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs'), 'Regressões atuais presentes');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');

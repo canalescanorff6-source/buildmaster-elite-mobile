@@ -2,6 +2,11 @@ name: Publicar contas e licenças no Supabase
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/deploy-supabase.yml'
 
 permissions:
   contents: read
@@ -49,3 +54,9 @@ jobs:
 
       - name: Publicar Edge Functions
         run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Confirmar funções publicadas
+        run: |
+          supabase functions list --project-ref "$SUPABASE_PROJECT_ID" | tee functions-list.txt
+          grep -q 'license-session' functions-list.txt
+          grep -q 'admin-users' functions-list.txt

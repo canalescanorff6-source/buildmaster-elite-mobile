@@ -1,9 +1,9 @@
-# Guia de publicação Google Play — BuildMaster v31.70
+# Guia de publicação Google Play — BuildMaster v31.71
 
 ## Versão
 
-- Nome: BuildMaster Elite Tático v31.70
-- Versão do aplicativo: `31.70.0`
+- Nome: BuildMaster Elite Tático v31.71
+- Versão do aplicativo: `31.71.0`
 - Pacote Android: `com.buildmaster.elitetatico`
 - Recurso principal: Treinador de Partidas com captura autorizada pelo Android e análise local pós-partida.
 
@@ -17,11 +17,11 @@ Cadastre no GitHub as mesmas Variables e Secrets já usados nas versões anterio
 - `GOOGLE_PLAY_UPLOAD_KEY_BUNDLE`
 - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, quando a publicação automática estiver ativada
 
-O workflow **Gerar AAB v31.70 Google Play** executa os testes, gera o site estático, cria o projeto Android limpo, instala o gravador nativo, sincroniza o Capacitor, assina o AAB e valida o pacote com Bundletool.
+O workflow **Gerar AAB v31.71 Google Play** executa os testes, gera o site estático, cria o projeto Android limpo, instala o gravador nativo, sincroniza o Capacitor, assina o AAB e valida o pacote com Bundletool.
 
 ## Permissões e declaração de privacidade
 
-A v31.70 acrescenta:
+A v31.71 acrescenta:
 
 - `FOREGROUND_SERVICE`
 - `FOREGROUND_SERVICE_MEDIA_PROJECTION`
@@ -55,8 +55,8 @@ Antes de promover para produção, valide no canal interno:
 
 Use o arquivo:
 
-`play-store/listing/pt-BR/release-notes/31.70.0.txt`
+`play-store/listing/pt-BR/release-notes/31.71.0.txt`
 
 ## Summary para GitHub Desktop
 
-`Implementa Treinador de Partidas v31.70 com gravação Android e análise local de gameplay`
+`Implementa Treinador de Partidas v31.71 com gravação Android e análise local de gameplay`

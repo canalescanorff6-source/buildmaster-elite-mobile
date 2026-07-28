@@ -1,0 +1,6 @@
+Contas administrativas recuperadas e mais confiáveis.
+• diagnóstico automático do servidor de contas
+• criação por dias, data específica ou sem vencimento
+• recuperação segura do primeiro administrador
+• desbloqueio inicial quando o MFA ainda não foi configurado
+• publicação automática das migrações e Edge Functions

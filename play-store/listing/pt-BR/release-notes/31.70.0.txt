@@ -1,4 +1,4 @@
-Treinador de Partidas v31.70:
+Treinador de Partidas v31.71:
 • gravação oficial da tela no Android com autorização a cada sessão;
 • perfis 540p, 720p e 1080p sem microfone por padrão;
 • vídeo salvo somente no armazenamento privado do app;

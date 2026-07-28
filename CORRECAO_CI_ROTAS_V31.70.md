@@ -1,4 +1,4 @@
-# BuildMaster v31.70 — Hotfix de CI e rotas
+# BuildMaster v31.71 — Hotfix de CI e rotas
 
 ## Causa do erro
 

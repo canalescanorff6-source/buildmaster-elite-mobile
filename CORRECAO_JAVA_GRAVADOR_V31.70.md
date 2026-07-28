@@ -1,4 +1,4 @@
-# Correção Java do Gravador — BuildMaster v31.70
+# Correção Java do Gravador — BuildMaster v31.71
 
 ## Falha corrigida
 
@@ -20,7 +20,7 @@ A origem estava no gerador `scripts/install-match-recorder-plugin.mjs`: express�
 
 - Java nativo gerado: aprovado, sem escapes ilegais.
 - Instalador MediaProjection idempotente: aprovado.
-- Testes v31.70: aprovados.
+- Testes v31.71: aprovados.
 - Sintaxe TypeScript/TSX: aprovada em 251 arquivos.
 - Contratos interativos: 684 botões e 24 imagens aprovados.
 - Rotas críticas, isolamento TypeScript e segurança de recorte: aprovados.
