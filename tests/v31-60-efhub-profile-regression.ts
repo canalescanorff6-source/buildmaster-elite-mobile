@@ -25,12 +25,12 @@ function reading(key: PremiumZoneReading['key'], text: string, confidence = 93):
   };
 }
 
-assert.equal(EFHUB_PROFILE_VERSION, '31.75-efhub-profile-2');
+assert.equal(EFHUB_PROFILE_VERSION, '31.78-efhub-profile-skills-2');
 assert.deepEqual(EFHUB_EXPECTED_COUNTS, { attributes: 26, positions: 13, physicalModel: 16 });
 
 const geometry = getAdaptiveSinglePrintZones(1400, 1600);
 assert.equal(geometry.template, 'detailed-profile');
-assert.equal(geometry.zones.length, 13);
+assert.equal(geometry.zones.length, 16);
 assert.equal(geometry.zones.find((zone) => zone.key === 'attributes')?.label, 'Tabela completa de 26 atributos');
 
 const attributes = [

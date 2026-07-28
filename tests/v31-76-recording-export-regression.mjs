@@ -11,7 +11,7 @@ const pkg = JSON.parse(read('package.json'));
 const bridge = read('src/modules/matches/matchRecorderBridge.ts');
 const ui = read('src/modules/matches/MatchTrainerCenter.tsx');
 
-assert.equal(pkg.version, '31.77.0');
+assert.equal(pkg.version, '31.78.0');
 assert.match(bridge, /saveMatchRecordingToGallery/);
 assert.match(bridge, /shareMatchRecording/);
 assert.match(bridge, /exportRecording\(options: \{ id: string \}\)/);
@@ -50,4 +50,4 @@ assert.match(service, /exportedAt/);
 assert.match(service, /resolver\.delete\(destination/);
 
 fs.rmSync(temp, { recursive: true, force: true });
-console.log('v31.76 preservada na v31.77: Galeria e compartilhamento seguro aprovados.');
+console.log('v31.76 preservada na v31.78: Galeria e compartilhamento seguro aprovados.');

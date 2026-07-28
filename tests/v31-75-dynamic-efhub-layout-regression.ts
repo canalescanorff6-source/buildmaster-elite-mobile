@@ -16,8 +16,8 @@ function close(actual: number, expected: number, tolerance = 0.00001) {
 
 assert.equal(EFHUB_CANONICAL_WIDTH, 1400);
 assert.equal(EFHUB_CANONICAL_HEIGHT, 1600);
-assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.75-resolution-layout-1');
-assert.equal(OCR_TEMPLATE_CALIBRATION_VERSION, '31.75-template-memory-2');
+assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.78-resolution-layout-skills-2');
+assert.equal(OCR_TEMPLATE_CALIBRATION_VERSION, '31.78-template-memory-skills-2');
 
 const canonical = buildEfhubLayoutPlan(1400, 1600);
 assert.equal(canonical.audit.mode, 'canonical');

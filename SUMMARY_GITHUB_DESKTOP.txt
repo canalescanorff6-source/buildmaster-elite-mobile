@@ -1,1 +1,1 @@
-Implementa Análise de Vídeo Inteligente 2.0 com diagnóstico por lance, treino e evolução na v31.77
+v31.78 — Corrige o OCR de habilidades eFHUB e completa o catálogo nativo eFootball 2026 sobre a base v31.77

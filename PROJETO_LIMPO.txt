@@ -1,13 +1,15 @@
-BUILDMASTER ELITE TÁTICO v31.77 — ANÁLISE DE VÍDEO INTELIGENTE 2.0
+BUILDMASTER ELITE TÁTICO v31.78 — LEITOR EFHUB E HABILIDADES EFOOTBALL 2026
+
+Base utilizada: buildmaster-elite-mobile(23).7z — v31.77.
 
 Projeto limpo de produção com:
-- análise de partidas organizada por Resumo, Momentos, Ataque, Defesa, Tática, Treino e Evolução;
-- candidatos automáticos separados de evidências confirmadas;
-- linha do tempo com clipes, velocidade normal e revisão em 0,5x;
-- diagnóstico por lance: ocorrido, causa, consequência, melhor decisão e correção;
-- notas por área, três prioridades e jogadas-modelo;
-- diagnóstico de formação, estilo coletivo e gestão da vantagem;
-- plano de treino personalizado e comparação entre partidas;
-- gravação oficial Android, exportação MediaStore e compartilhamento seguro;
-- criação de contas v31.74 e leitor eFHUB dinâmico v31.75 preservados;
-- fichas, habilidades complementares e Ímpetos preservados.
+- leitor eFHUB dinâmico por resolução e proporção;
+- mapa canônico de 1400 × 1600 com oito áreas visuais;
+- bloco completo e três faixas OCR para cápsulas de habilidades;
+- cache renovado do leitor v31.78;
+- 45 habilidades regulares e 20 habilidades especiais/nativas;
+- aliases eFHUB em português e inglês;
+- separação entre habilidades que já pertencem à carta e as cinco adicionais treináveis;
+- bloqueio de leitura incompleta e de prints cortados;
+- Análise de Vídeo Inteligente 2.0 da v31.77 preservada;
+- exportação de gravações, contas, Supabase, histórico, fichas e Ímpetos preservados.

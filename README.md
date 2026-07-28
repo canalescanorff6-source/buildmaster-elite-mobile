@@ -1,6 +1,18 @@
-# BuildMaster Elite Tático v31.77 — Análise de Vídeo Inteligente 2.0
+# BuildMaster Elite Tático v31.78 — Análise de Vídeo Inteligente 2.0
 
-O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.77 acrescenta uma análise baseada em evidências confirmadas, sem transformar sinais automáticos em erros inventados.
+O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.78 reforça o leitor eFHUB e completa o catálogo de habilidades nativas, preservando a Análise de Vídeo Inteligente 2.0 da v31.77.
+
+## v31.78 — Leitor eFHUB e habilidades nativas completas
+
+- reconstrução aplicada diretamente sobre a base v31.77 enviada pelo usuário;
+- leitura por resolução real, escala uniforme e bloqueio de prints cortados;
+- área de habilidades lida em bloco completo e três faixas sobrepostas;
+- ampliação mínima de 3600 px para as cápsulas antes do OCR;
+- cache do leitor renovado para não reutilizar análises incorretas antigas;
+- 45 habilidades regulares e 20 habilidades especiais/nativas no catálogo local;
+- aliases em português e inglês, incluindo Drible explosivo/Acceleration Burst, Impulso ofensivo/Attacking Surge e Sombra veloz/Shadow Hunt;
+- habilidades especiais ficam separadas das cinco habilidades adicionais treináveis;
+- Análise de Vídeo Inteligente 2.0 da v31.77 preservada.
 
 ## v31.77 — Diagnóstico por lance, treino e evolução
 

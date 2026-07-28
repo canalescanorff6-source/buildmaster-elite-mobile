@@ -8,10 +8,10 @@ import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
 
-assert.equal(HIGH_PRECISION_OCR_VERSION, '31.75-dynamic-efhub-1');
-assert.equal(OCR_VISION_VERSION, '31.75.0');
+assert.equal(HIGH_PRECISION_OCR_VERSION, '31.78-dynamic-skill-capsules-2');
+assert.equal(OCR_VISION_VERSION, '31.78.0');
 assert.equal(FORENSIC_CONSENSUS_VERSION, '31.60-field-consensus-2');
-assert.equal(OCR_TEMPLATE_CALIBRATION_VERSION, '31.75-template-memory-2');
+assert.equal(OCR_TEMPLATE_CALIBRATION_VERSION, '31.78-template-memory-skills-2');
 
 const goodQuality = buildPrintQualityReport({
   width: 2400, height: 1080, sharpness: 18, brightness: 126, contrast: 47,
