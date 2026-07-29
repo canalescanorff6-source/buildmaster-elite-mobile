@@ -92,5 +92,5 @@ assert.ok(centreBack.recommendedSkills.every((skill) => ![
   'Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Controle da cavadinha', 'Toque duplo'
 ].includes(skill)), 'Zagueiro não pode receber finalizações ou dribles de atacante.');
 
-assert.equal(ADDITIONAL_SKILL_ENGINE_VERSION, '31.80-position-style-exact-five-1');
+assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1)$/);
 console.log('v31.80: OCR estrito sem nomes estranhos e Top 5 exato por posição/estilo aprovados.');

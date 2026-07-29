@@ -16,8 +16,9 @@ import {
   trainingTotalCost
 } from './trainingPlanCore';
 import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
+import { cardAnalysisInputFingerprint } from './cardAnalysisFingerprint';
 
-const ENGINE_VERSION = '31.30-supreme-gameplay-1';
+const ENGINE_VERSION = '31.82-supreme-gameplay-full-audit-1';
 const SEARCH_VARIANTS = 960;
 const FINALISTS = 64;
 
@@ -83,6 +84,51 @@ const FORMATION_WEIGHTS: Record<string, Partial<Record<TrainingKey, number>>> = 
   AUTO: {}
 };
 
+
+function formationRoleWeights(result: AnalysisResult) {
+  const formation = String(result.tacticalProfile.formation);
+  const position = result.bestPosition.code;
+  const base = FORMATION_WEIGHTS[formation] ?? {};
+  const duty: Partial<Record<TrainingKey, number>> = {};
+  const add = (values: Partial<Record<TrainingKey, number>>) => {
+    for (const [key, value] of Object.entries(values) as Array<[TrainingKey, number]>) duty[key] = (duty[key] ?? 0) + value;
+  };
+
+  const narrowTwoStrikers = ['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation);
+  const backFive = ['5-3-2', '5-2-3'].includes(formation);
+  const wingBackSystem = ['3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation);
+  const wideFrontThree = ['4-3-3', '4-1-2-3', '4-2-1-3', '3-4-3', '5-2-3'].includes(formation);
+
+  if (position === 'CF' || position === 'SS') {
+    if (narrowTwoStrikers) add({ shooting: 9.2, dexterity: 8.4, passing: 7.4, lowerBodyStrength: 6.2 });
+    if (formation === '5-3-2' || formation === '3-5-2') add({ aerialStrength: 9, lowerBodyStrength: 8.2, shooting: 8.5, passing: 5.8 });
+    if (wideFrontThree) add({ shooting: 8.8, dexterity: 8.5, dribbling: 5.8, lowerBodyStrength: 6.8 });
+    if (formation === '4-2-3-1' || formation === '4-1-4-1') add({ shooting: 8.6, lowerBodyStrength: 8, aerialStrength: 6.8, passing: 5.5 });
+  } else if (position === 'LWF' || position === 'RWF') {
+    if (wideFrontThree) add({ dribbling: 9.5, dexterity: 9, lowerBodyStrength: 7.5, passing: 6.5, shooting: 6.8 });
+    if (formation === '5-2-3' || formation === '3-4-3') add({ lowerBodyStrength: 8.3, passing: 7.2, dribbling: 8.4, dexterity: 7.8 });
+  } else if (position === 'AMF') {
+    if (['4-2-3-1', '4-3-1-2', '4-2-2-2'].includes(formation)) add({ passing: 9.5, dribbling: 8.2, dexterity: 8.2, shooting: 6.6 });
+    if (formation === '3-2-4-1') add({ passing: 9.2, dribbling: 8.5, lowerBodyStrength: 6.2, dexterity: 7.2 });
+  } else if (position === 'CMF') {
+    if (['4-3-3', '4-1-2-3', '4-1-4-1', '3-5-2'].includes(formation)) add({ passing: 9.2, lowerBodyStrength: 8, defending: 7, dexterity: 6.3 });
+    if (['4-2-2-2', '4-2-3-1'].includes(formation)) add({ passing: 8.8, defending: 8, lowerBodyStrength: 7.5, dexterity: 6.4 });
+  } else if (position === 'DMF') {
+    if (['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation)) add({ defending: 10, passing: 8.2, lowerBodyStrength: 8, aerialStrength: 6.3 });
+    if (['4-2-2-2', '4-2-1-3', '4-2-3-1'].includes(formation)) add({ defending: 9.3, passing: 8.5, lowerBodyStrength: 7.7, dexterity: 5.4 });
+  } else if (position === 'LMF' || position === 'RMF' || position === 'LB' || position === 'RB') {
+    if (wingBackSystem) add({ lowerBodyStrength: 9.4, passing: 8.8, defending: 8.3, dexterity: 6.7, dribbling: 5.4 });
+    else add({ defending: 8.5, lowerBodyStrength: 8.4, passing: 7.5, dexterity: 5.8 });
+  } else if (position === 'CB') {
+    if (backFive || ['3-2-4-1', '3-4-3', '3-5-2'].includes(formation)) add({ defending: 10, aerialStrength: 9, passing: 6.4, lowerBodyStrength: 7.5 });
+    else add({ defending: 10, aerialStrength: 8, lowerBodyStrength: 7.2, passing: 5.7 });
+  } else if (position === 'GK') {
+    add({ gk1: 8.8, gk2: 10, gk3: 9.3, aerialStrength: backFive ? 6.5 : 5.4, lowerBodyStrength: 4.5 });
+  }
+
+  return mergeWeights({ values: base, factor: 0.35 }, { values: duty, factor: 1 });
+}
+
 type Dimensions = SupremeGameplayAnalysis['dimensions'];
 type QuickCandidate = { plan: TrainingPlan; source: string; quickScore: number };
 type FullCandidate = QuickCandidate & { score: number; dimensions: Dimensions; skillScore: number };
@@ -123,6 +169,17 @@ function managerFit(result: AnalysisResult) {
   return clamp(proficiencyScore + (booster === 'duplo' ? 3 : booster === 'especial' ? 2 : booster === 'padrao' ? 1 : 0));
 }
 
+
+function managerTacticalTrust(result: AnalysisResult) {
+  const hasManager = Boolean(result.tacticalProfile.managerId || result.tacticalProfile.managerName);
+  const proficiency = Number(result.tacticalProfile.managerProficiency ?? 0);
+  let trust = !hasManager ? 0.56 : proficiency >= 90 ? 1 : proficiency >= 89 ? 0.96 : proficiency >= 88 ? 0.91 : proficiency >= 85 ? 0.82 : proficiency > 0 ? 0.70 : 0.62;
+  if (result.tacticalProfile.managerBooster === 'duplo') trust += 0.04;
+  else if (result.tacticalProfile.managerBooster === 'especial') trust += 0.025;
+  else if (result.tacticalProfile.managerBooster === 'padrao') trust += 0.012;
+  return Math.max(0.48, Math.min(1, trust));
+}
+
 function capFor(result: AnalysisResult, key: TrainingKey) {
   return result.correctionLimit.correctionCaps.find((item) => item.training === key)?.recommendedMax ?? 12;
 }
@@ -135,6 +192,44 @@ function marginalValue(result: AnalysisResult, key: TrainingKey) {
   const item = result.marginalReturn.find((entry) => entry.training === key);
   if (!item) return 0;
   return item.returnLabel === 'alto' ? 2.8 : item.returnLabel === 'médio' ? 1.2 : -2.4;
+}
+
+function currentGameplayAdjustment(result: AnalysisResult, key: TrainingKey, currentLevel: number) {
+  const position = result.bestPosition.code;
+  const attributes = result.parsed.attributes;
+  const attacking = ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(position);
+  const defensive = ['CB', 'LB', 'RB', 'DMF'].includes(position);
+
+  // Ajuste para a jogabilidade atual: jogadores ofensivos tecnicamente fortes devem
+  // conservar resposta no domínio/condução, e finalizadores com potência precisam
+  // aproveitar melhor conclusões de média e longa distância sem inflar o overall.
+  if (attacking && key === 'dribbling') {
+    const technique = (
+      Number(attributes.ballControl ?? 0)
+      + Number(attributes.dribbling ?? 0)
+      + Number(attributes.tightPossession ?? 0)
+    ) / 3;
+    if (technique >= 86) return currentLevel <= 9 ? 1.45 : currentLevel <= 11 ? 0.45 : -0.55;
+    if (technique >= 80) return currentLevel <= 8 ? 1.05 : currentLevel <= 10 ? 0.25 : -0.75;
+  }
+  if (attacking && key === 'shooting') {
+    const finishing = Number(attributes.finishing ?? 0);
+    const kickingPower = Number(attributes.kickingPower ?? 0);
+    const curl = Number(attributes.curl ?? 0);
+    if (kickingPower >= 88 && Math.max(finishing, curl) >= 82) return currentLevel <= 9 ? 1.15 : currentLevel <= 11 ? 0.3 : -0.65;
+    if (kickingPower >= 84 && finishing >= 80) return currentLevel <= 8 ? 0.75 : currentLevel <= 10 ? 0.15 : -0.7;
+  }
+
+  if (!defensive) return 0;
+  const awareness = Number(attributes.defensiveAwareness ?? 0);
+  const stamina = Number(attributes.stamina ?? 0);
+  if (key === 'defending') {
+    const awarenessNeed = awareness < 78 ? 3.8 : awareness < 85 ? 3 : awareness < 90 ? 2.1 : 1.2;
+    return currentLevel <= 10 ? awarenessNeed : awarenessNeed * 0.45;
+  }
+  if (key === 'dexterity' && awareness >= 87 && currentLevel >= 8) return -1.5;
+  if (key === 'lowerBodyStrength' && stamina >= 90 && currentLevel >= 10) return -0.9;
+  return 0;
 }
 
 function utilityForLevel(result: AnalysisResult, key: TrainingKey, level: number, weights: Record<TrainingKey, number>, noise: number) {
@@ -150,7 +245,7 @@ function utilityForLevel(result: AnalysisResult, key: TrainingKey, level: number
     const needBoost = estimated < ideal ? 2.4 : estimated <= ceiling ? 0.8 : -3.4 * (estimated - ceiling + 1);
     const saturation = currentLevel <= 4 ? 1.7 : currentLevel <= 8 ? 0.8 : currentLevel <= 11 ? -0.8 : currentLevel <= 13 ? -2.5 : -5.5;
     const capPenalty = currentLevel > cap ? -5.5 * (currentLevel - cap) : 0;
-    total += weights[key] + needBoost + saturation + capPenalty + marginalValue(result, key) + noise;
+    total += weights[key] + needBoost + saturation + capPenalty + marginalValue(result, key) + currentGameplayAdjustment(result, key, currentLevel) + noise;
   }
   return total;
 }
@@ -240,9 +335,11 @@ function identityScore(result: AnalysisResult, plan: TrainingPlan, reference: Tr
 
 function onlineRobustness(result: AnalysisResult, plan: TrainingPlan) {
   const defensive = ['CB', 'LB', 'RB', 'DMF', 'GK'].includes(result.bestPosition.code);
-  const weights: Partial<Record<TrainingKey, number>> = defensive
-    ? { passing: 7.5, dexterity: 6.4, lowerBodyStrength: 7.2, defending: 9, aerialStrength: 5.5, gk1: 8, gk2: 9, gk3: 8 }
-    : { passing: 8.2, dexterity: 8.5, lowerBodyStrength: 7.2, dribbling: 5.4, shooting: 5.5 };
+  const weights: Partial<Record<TrainingKey, number>> = result.bestPosition.code === 'GK'
+    ? { gk1: 8.7, gk2: 10, gk3: 9.2, aerialStrength: 5.7, lowerBodyStrength: 4.5 }
+    : defensive
+      ? { passing: 7.4, dexterity: 5.2, lowerBodyStrength: 6.8, defending: 10.5, aerialStrength: 5.8 }
+      : { passing: 8.2, dexterity: 8.5, lowerBodyStrength: 7.2, dribbling: 5.4, shooting: 5.5 };
   const base = weightedPlanScore(plan, weights, activeKeys(result.bestPosition.code));
   const extremeDribblePenalty = !defensive && plan.dribbling >= 13 && plan.passing <= 4 ? 7 : 0;
   return clamp(base - extremeDribblePenalty);
@@ -271,7 +368,7 @@ function scoreQuick(result: AnalysisResult, plan: TrainingPlan, roleWeights: Par
   const manager = managerFit(result);
   const pro = professionalCloseness(result, plan);
   return clamp(
-    roleFit * 0.24 + tacticalFit * 0.14 + threshold * 0.18 + efficiency * 0.16 + identity * 0.10 + robustness * 0.10 + manager * 0.04 + (pro ?? 75) * 0.04 + learningBonus(result, plan)
+    roleFit * 0.19 + tacticalFit * (0.12 + managerTacticalTrust(result) * 0.10) + threshold * 0.18 + efficiency * 0.16 + identity * 0.09 + robustness * 0.09 + manager * 0.01 + (pro ?? 75) * 0.04 + learningBonus(result, plan)
   );
 }
 
@@ -288,7 +385,7 @@ function scoreFull(result: AnalysisResult, candidate: QuickCandidate, roleWeight
   const skillSynergy = skillPlanScore(skills);
   const pro = professionalCloseness(result, candidate.plan);
   const score = clamp(
-    roleFit * 0.22 + tacticalFit * 0.13 + manager * 0.04 + threshold * 0.16 + pointEfficiency * 0.15 + skillSynergy * 0.12 + identityPreservation * 0.08 + online * 0.07 + (pro ?? 75) * 0.03 + learningBonus(result, candidate.plan)
+    roleFit * 0.18 + tacticalFit * (0.11 + managerTacticalTrust(result) * 0.11) + manager * 0.01 + threshold * 0.15 + pointEfficiency * 0.15 + skillSynergy * 0.12 + identityPreservation * 0.07 + online * 0.08 + (pro ?? 75) * 0.03 + learningBonus(result, candidate.plan)
   );
   return {
     ...candidate,
@@ -319,7 +416,7 @@ function candidateMap(result: AnalysisResult, roleWeights: Partial<Record<Traini
   const merged = mergeWeights(
     { values: POSITION_WEIGHTS[result.bestPosition.code], factor: 0.42 },
     { values: roleWeights, factor: 0.92 },
-    { values: tacticalWeights, factor: 0.48 },
+    { values: tacticalWeights, factor: 1.15 },
     { values: learnedWeights(result), factor: 0.55 }
   );
   const seed = hash(`${result.parsed.internalId}|${result.bestPosition.code}|${result.tacticalProfile.formation}|${result.tacticalProfile.style}|${result.parsed.playstyle ?? ''}`);
@@ -364,20 +461,29 @@ function buildWarnings(result: AnalysisResult) {
 }
 
 export function applySupremeGameplayEngine(result: AnalysisResult): AnalysisResult {
-  const cacheKey = [result.parsed.internalId, result.bestPosition.code, result.trainingPointsTotal, result.tacticalProfile.formation, result.tacticalProfile.style, result.tacticalProfile.managerId ?? '', result.tacticalProfile.managerProficiency ?? '', result.parsed.playstyle ?? '', result.unifiedIntelligence?.learning.samples ?? 0, signature(result.training)].join('|');
+  const cacheKey = cardAnalysisInputFingerprint(result, `supreme:${signature(result.training)}`);
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
   const role = roleProfile(result);
   const styleWeights = STYLE_WEIGHTS[result.tacticalProfile.style] ?? {};
-  const formationWeights = FORMATION_WEIGHTS[String(result.tacticalProfile.formation)] ?? {};
-  const tacticalWeights = mergeWeights({ values: styleWeights, factor: 0.72 }, { values: formationWeights, factor: 0.28 });
+  const formationWeights = formationRoleWeights(result);
+  const tacticalTrust = managerTacticalTrust(result);
+  const tacticalWeights = mergeWeights(
+    { values: POSITION_WEIGHTS[result.bestPosition.code], factor: 1 - tacticalTrust },
+    { values: styleWeights, factor: 0.60 * tacticalTrust },
+    { values: formationWeights, factor: 0.40 * tacticalTrust }
+  );
   const reference = result.unifiedIntelligence?.finalTraining ?? result.training;
   const candidates = candidateMap(result, role.weights, tacticalWeights, reference);
   const finalists = candidates.sort((left, right) => right.quickScore - left.quickScore).slice(0, FINALISTS)
     .map((candidate) => scoreFull(result, candidate, role.weights, tacticalWeights, reference))
     .sort((left, right) => right.score - left.score || right.dimensions.pointEfficiency - left.dimensions.pointEfficiency);
-  const winner = finalists[0] ?? scoreFull(result, { plan: reference, source: 'Ficha atual', quickScore: 0 }, role.weights, tacticalWeights, reference);
+  // A ficha final precisa consumir exatamente o orçamento informado. Planos
+  // incompletos continuam disponíveis para comparação, mas nunca vencem uma
+  // alternativa válida que use todos os pontos sem ultrapassar o limite.
+  const exactBudgetFinalists = finalists.filter((item) => trainingPlanTotalCost(item.plan) === result.trainingPointsTotal);
+  const winner = exactBudgetFinalists[0] ?? finalists[0] ?? scoreFull(result, { plan: reference, source: 'Ficha atual', quickScore: 0 }, role.weights, tacticalWeights, reference);
   const runnerUp = finalists.find((item) => signature(item.plan) !== signature(winner.plan) && planDistance(item.plan, winner.plan) <= 8) ?? finalists[1] ?? winner;
   const currentScore = compareScore(result, reference, role.weights, tacticalWeights, reference) ?? winner.score;
   const autoScore = compareScore(result, result.parsed.autoTrainingPlan, role.weights, tacticalWeights, reference);
@@ -412,20 +518,20 @@ export function applySupremeGameplayEngine(result: AnalysisResult): AnalysisResu
     guardrails: [
       'A posição escolhida pelo usuário permanece soberana.',
       'O Estilo de Jogo oficial da carta é tratado como comportamento, não apenas como nome.',
-      'Formação, estilo coletivo, técnico e proficiência entram na avaliação quando confirmados.',
+      'Formação, função do setor, estilo coletivo, técnico e proficiência alteram os pesos da ficha quando confirmados.',
       'Nenhum plano pode ultrapassar o orçamento real ou usar grupos de goleiro em jogador de linha.',
       'O motor penaliza excesso acima da faixa útil e evita gastar pontos apenas para aumentar overall.',
       'Referências de pro players têm peso limitado e só entram quando a carta exata é auditada.',
       'A vantagem mostrada é uma estimativa do motor; resultado em campo depende de comando, conexão, carta e execução do usuário.'
     ],
-    summary: `O Motor Supremo v31.30 comparou ${candidates.length} distribuições únicas, refinou ${finalists.length} finalistas e escolheu a ficha de maior encaixe para ${role.label}, ${result.bestPosition.label} e o contexto tático confirmado.`
+    summary: `O Motor Supremo v31.82 comparou ${candidates.length} distribuições únicas, refinou ${finalists.length} finalistas e escolheu a ficha de maior encaixe para ${role.label}, ${result.bestPosition.label} e o contexto tático confirmado.`
   };
 
   const differences = TRAINING_KEYS.filter((key) => winner.plan[key] !== runnerUp.plan[key]).map((key) => ({ key, label: TRAINING_LABELS[key], a: winner.plan[key], b: runnerUp.plan[key] }));
   const recommendedSkills = skills.map((item) => item.name);
   const updatedUnified = result.unifiedIntelligence ? {
     ...result.unifiedIntelligence,
-    engineVersion: '31.30-unified-intelligence-3',
+    engineVersion: '31.82-unified-intelligence-full-audit-1',
     finalTraining: winner.plan,
     skillPlan: skills,
     simulation: {

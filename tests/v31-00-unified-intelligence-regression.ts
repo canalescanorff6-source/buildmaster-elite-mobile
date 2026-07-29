@@ -91,7 +91,7 @@ const agileCf = applyCompleteCardIntelligence(analyzeCard(agileCfText, 'COMPETIT
 
 for (const result of [cf, amf, tallCf, agileCf]) {
   assert.ok(result.unifiedIntelligence, 'A inteligência integrada v31 deve existir.');
-  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^31\.00-unified-intelligence-/);
+  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:31\.00|31\.82)-unified-intelligence-/);
   assert.ok((result.unifiedIntelligence?.simulation.generatedCandidates ?? 0) >= 500);
   assert.ok((result.unifiedIntelligence?.simulation.validCandidates ?? 0) >= 10);
   assert.equal(result.recommendedSkills.length, 5);

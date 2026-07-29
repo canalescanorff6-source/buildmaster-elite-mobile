@@ -3,6 +3,7 @@ import { textSimilarity } from './highPrecisionOcr';
 import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAudit } from './efhubProfile';
 import { canonicalSkillName, extractCanonicalSkillsFromText, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
+import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -52,7 +53,7 @@ export type DetailedPrintReading = {
   profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '31.82-manual-map-deterministic-profile-strict-skills-1';
+const VERSION = '31.82-full-audit-profile-skills-impetos-1';
 
 function normalized(value: string) {
   return value
@@ -262,11 +263,7 @@ export const OFFICIAL_OCR_SKILLS = [...ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES]
   .sort((left, right) => normalized(right).length - normalized(left).length);
 
 
-const IMPETO_NAMES = [
-  'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa',
-  'Duelo', 'Agilidade', 'Fisicalidade', 'Goleiro', 'Instinto artilheiro', 'Precisão', 'Força',
-  'Movimento sem a bola', 'Esticada de Perna', 'Sombra veloz', 'Impulso ofensivo'
-] as const;
+const IMPETO_NAMES = RECOGNIZABLE_IMPETO_NAMES;
 
 function parseNumericCatalog(text: string, catalog: Array<{ label: string; patterns: RegExp[] }>, confidence: number, source: string, min: number, max: number) {
   const values: DetailedValue[] = [];

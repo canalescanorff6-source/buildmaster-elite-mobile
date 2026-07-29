@@ -1092,9 +1092,9 @@ export function CardVisionApp() {
       // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
   }
-  function logout() {
-    clearBuildMasterSession();
-    void account?.logout();
+  async function logout() {
+    if (account) await account.logout();
+    else await clearBuildMasterSession();
     window.location.href = '/';
   }
   function createVaultFolder() {
@@ -2531,10 +2531,11 @@ export function CardVisionApp() {
   }
   function saveEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
     try { writeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY, JSON.stringify(createEfhubCalibrationMap(normalized))); }
-    catch { setStatus('Não foi possível salvar o mapa no armazenamento local. Você ainda pode usá-lo nesta leitura.'); return; }
+    catch { setStatus('Não foi possível salvar o mapa no armazenamento local. Você ainda pode usá-lo nesta leitura.'); return false; }
     efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
     setEfhubCalibrationZones(normalized); setEfhubCalibrationSaved(true); setEfhubCalibrationActive(true);
     setStatus('Mapa visual salvo. Os oito quadrados serão reaplicados proporcionalmente nos próximos prints com a mesma organização.');
+    return true;
   }
   function resetEfhubCalibration() { const defaults = createDefaultEfhubCalibrationZones();
     try { removeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY); } catch {}

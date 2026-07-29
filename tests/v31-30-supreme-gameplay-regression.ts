@@ -55,7 +55,7 @@ const dmf = applyCompleteCardIntelligence(analyzeCard(anchor, 'COMPETITIVE', 'DM
 
 for (const result of [cf, dmf]) {
   assert.ok(result.supremeGameplay, 'O Motor Supremo precisa estar presente.');
-  assert.match(result.supremeGameplay?.engineVersion ?? '', /^31\.30-supreme-gameplay-/);
+  assert.match(result.supremeGameplay?.engineVersion ?? '', /^(?:31\.30|31\.82)-supreme-gameplay-/);
   assert.ok((result.supremeGameplay?.validCandidates ?? 0) >= 20);
   assert.ok((result.supremeGameplay?.finalists ?? 0) >= 2);
   assert.equal(result.trainingPointsUsed, result.trainingPointsTotal);
@@ -69,7 +69,7 @@ for (const result of [cf, dmf]) {
   assert.ok((result.supremeGameplay?.dimensions.pointEfficiency ?? 0) >= 70);
   assert.ok((result.supremeGameplay?.dimensions.roleFit ?? 0) >= 60);
   assert.ok((result.unifiedIntelligence?.simulation.generatedCandidates ?? 0) >= 1400);
-  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^31\.30-unified-intelligence-/);
+  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:31\.30|31\.82)-unified-intelligence-/);
 }
 
 assert.equal(cf.supremeGameplay?.roleLabel, 'Homem de Área');

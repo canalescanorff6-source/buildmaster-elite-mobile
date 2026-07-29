@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, FormEvent, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, FormEvent, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   BadgeCheck,
@@ -60,7 +60,7 @@ export function useBuildMasterAccount() {
   return useContext(AccountContext);
 }
 
-export function clearBuildMasterSession() {
+export async function clearBuildMasterSession() {
   try {
     safeStorageRemove('buildmaster_local_auth_v15_premium');
     safeStorageRemove('buildmaster_local_auth_v6_1');
@@ -68,7 +68,7 @@ export function clearBuildMasterSession() {
   } catch {
     // Alguns navegadores bloqueiam localStorage em modo privado.
   }
-  void signOutAccount();
+  await signOutAccount();
 }
 
 function wait(milliseconds: number) {
@@ -191,7 +191,7 @@ function AccessMessage({ profile, type }: { profile: AccountProfile; type: 'bloc
           </div>
         </div>
 
-        <button className="elite-button auth-submit" type="button" onClick={() => { clearBuildMasterSession(); window.location.reload(); }}>
+        <button className="elite-button auth-submit" type="button" onClick={() => { void clearBuildMasterSession().finally(() => window.location.reload()); }}>
           <KeyRound size={18} /> Entrar com outra conta
         </button>
       </section>
@@ -434,6 +434,8 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   const [restoreStep, setRestoreStep] = useState<RestoreStep>('session');
   const [recheckNonce, setRecheckNonce] = useState(0);
   const [rechecking, setRechecking] = useState(false);
+  const lastSuccessfulValidationRef = useRef(Date.now());
+  const terminalFailureCountRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
@@ -446,6 +448,8 @@ export function AuthGate({ children }: { children?: ReactNode }) {
           const cloud = await restoreAccountAccess();
           if (mounted && cloud) {
             setRestoreStep('workspace');
+            lastSuccessfulValidationRef.current = Date.now();
+            terminalFailureCountRef.current = 0;
             setValidation({ profile: cloud.profile, offline: cloud.offline });
           }
         }
@@ -493,22 +497,35 @@ export function AuthGate({ children }: { children?: ReactNode }) {
           return;
         }
         reconnectAttempt = 0;
+        terminalFailureCountRef.current = 0;
+        lastSuccessfulValidationRef.current = Date.now();
         setValidation({ profile: cloud.profile, offline: cloud.offline });
         setRestoreError('');
       } catch (cause) {
         if (!mounted) return;
 
-        // Ao voltar do WhatsApp, navegador ou tela bloqueada, a rede do Android pode
-        // demorar alguns instantes para responder. Uma falha temporária não encerra
-        // a sessão nem devolve o usuário para a tela de login.
-        if (isTransientAccountError(cause)) {
+        const message = cause instanceof Error ? cause.message : 'Não foi possível validar sua licença.';
+        const normalized = message.toLowerCase();
+        const definitiveBlock = /conta (bloqueada|suspensa|expired)|prazo de acesso terminou|apk foi bloqueado|licença encerrada/.test(normalized);
+
+        // Trocar de aba, abrir o seletor de imagens ou voltar de outro aplicativo
+        // não pode apagar uma sessão válida. Falhas de rede e a primeira falha de
+        // renovação mantêm o workspace aberto e tentam novamente em segundo plano.
+        if (isTransientAccountError(cause) || !definitiveBlock) {
+          terminalFailureCountRef.current += 1;
+          const confirmedSessionEnd = /sess[aã]o expirou|sess[aã]o n[aã]o (?:é|e) mais v[aá]lida|entre novamente/.test(normalized);
+          if (confirmedSessionEnd && terminalFailureCountRef.current >= 3) {
+            setRestoreError(message);
+            setValidation(null);
+            return;
+          }
           setRestoreError('');
           setValidation((current) => current ? { ...current, offline: true } : current);
           scheduleReconnect();
           return;
         }
 
-        setRestoreError(cause instanceof Error ? cause.message : 'Não foi possível validar sua licença.');
+        setRestoreError(message);
         setValidation(null);
       } finally {
         validating = false;
@@ -519,9 +536,11 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     const timer = window.setInterval(() => void revalidate(), 5 * 60 * 1000);
     const onVisibility = () => {
       if (document.visibilityState !== 'visible') return;
+      // Não valide novamente em toda troca curta de tela. Isso evita concorrência
+      // de refresh token quando o seletor de arquivos, câmera ou outra aba abre.
+      if (Date.now() - lastSuccessfulValidationRef.current < 2 * 60 * 1000) return;
       if (resumeTimer !== null) window.clearTimeout(resumeTimer);
-      // Pequeno atraso para o WebView recuperar Wi‑Fi/dados móveis antes da validação.
-      resumeTimer = window.setTimeout(() => void revalidate(), 1800);
+      resumeTimer = window.setTimeout(() => void revalidate(), 2200);
     };
     const onOnline = () => void revalidate();
     document.addEventListener('visibilitychange', onVisibility);
@@ -542,7 +561,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     offline: validation.offline,
     cloudEnabled: isCloudAccountsConfigured(),
     logout: async () => {
-      clearBuildMasterSession();
+      await clearBuildMasterSession();
       setValidation(null);
     }
   } : null, [validation]);
@@ -550,7 +569,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   if (!ready) return <SessionLoadingScreen step={restoreStep} />;
 
   if (!validation) {
-    return <LoginScreen initialError={restoreError} onSuccess={(next) => { setRestoreError(''); setValidation({ profile: next.profile, offline: next.offline }); }} />;
+    return <LoginScreen initialError={restoreError} onSuccess={(next) => { terminalFailureCountRef.current = 0; lastSuccessfulValidationRef.current = Date.now(); setRestoreError(''); setValidation({ profile: next.profile, offline: next.offline }); }} />;
   }
 
   if (validation.profile.status === 'blocked' || validation.profile.status === 'suspended') {

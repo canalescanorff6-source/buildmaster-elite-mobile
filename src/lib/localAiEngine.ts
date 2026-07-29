@@ -1,9 +1,10 @@
 import type { AnalysisResult, ImpetoRecommendation, LocalAiAnalysis, PositionCode, TrainingKey } from './analyzer';
+import type { RecognizableImpetoName } from './officialImpetoCatalog';
 
 type ImpetoDomain = 'finalizacao' | 'passe' | 'drible' | 'mobilidade' | 'defesa' | 'fisico' | 'aereo' | 'goleiro' | 'equilibrio';
 
 type ImpetoProfile = {
-  name: string;
+  name: RecognizableImpetoName;
   domains: ImpetoDomain[];
   positions: PositionCode[];
   training: TrainingKey[];
@@ -11,7 +12,7 @@ type ImpetoProfile = {
   attributes: string[];
 };
 
-const LOCAL_AI_VERSION = '31.10-local-ai-2';
+const LOCAL_AI_VERSION = '31.82-local-ai-formation-final-build-1';
 
 const IMPETO_PROFILES: ImpetoProfile[] = [
   { name: 'Chute', domains: ['finalizacao', 'fisico'], positions: ['CF', 'SS', 'LWF', 'RWF', 'AMF'], training: ['shooting', 'lowerBodyStrength'], keywords: ['artilheiro', 'finalizador', 'chute', 'atacante'], attributes: ['Controle de bola', 'Finalização', 'Força do chute', 'Contato físico'] },
@@ -125,6 +126,28 @@ function skillSynergy(result: AnalysisResult, profile: ImpetoProfile) {
   return Math.min(10, matches * 3);
 }
 
+
+function tacticalImpetoSynergy(result: AnalysisResult, profile: ImpetoProfile) {
+  const formation = String(result.tacticalProfile.formation);
+  const style = result.tacticalProfile.style;
+  const position = result.bestPosition.code;
+  let score = 0;
+  const has = (...domains: ImpetoDomain[]) => domains.some((domain) => profile.domains.includes(domain));
+
+  if (style === 'POSSE_DE_BOLA' && has('passe', 'drible', 'equilibrio')) score += 7;
+  if (style === 'CONTRA_ATAQUE_RAPIDO' && has('mobilidade', 'finalizacao', 'passe')) score += 7;
+  if (style === 'CONTRA_ATAQUE' && has('defesa', 'fisico', 'aereo', 'passe')) score += 6;
+
+  if ((position === 'CF' || position === 'SS') && ['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation) && has('finalizacao', 'passe', 'mobilidade')) score += 7;
+  if ((position === 'CF' || position === 'SS') && ['5-3-2', '3-5-2'].includes(formation) && has('aereo', 'fisico', 'finalizacao')) score += 8;
+  if (['LWF', 'RWF'].includes(position) && ['4-3-3', '4-1-2-3', '4-2-1-3', '5-2-3'].includes(formation) && has('drible', 'mobilidade', 'passe')) score += 8;
+  if (['LB', 'RB', 'LMF', 'RMF'].includes(position) && ['3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation) && has('passe', 'mobilidade', 'defesa', 'fisico')) score += 8;
+  if (position === 'DMF' && ['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation) && has('defesa', 'passe', 'fisico')) score += 8;
+  if (position === 'CB' && ['3-2-4-1', '3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation) && has('defesa', 'aereo', 'fisico')) score += 8;
+
+  return Math.min(12, score);
+}
+
 function attributeNeed(result: AnalysisResult, profile: ImpetoProfile) {
   const averages = profile.domains.map((domain) => attributeAverage(result, domain)).filter((value): value is number => value !== null);
   if (!averages.length) return 5;
@@ -148,7 +171,7 @@ function priorScore(result: AnalysisResult, name: string) {
   const index = result.recommendedImpetos.findIndex((item) => item.name.toLowerCase() === name.toLowerCase());
   if (index < 0) return 0;
   const tier = result.recommendedImpetos[index]?.tier;
-  return tier === 'ideal' ? 14 : tier === 'alternativo' ? Math.max(3, 10 - index * 2) : -10;
+  return tier === 'ideal' ? 8 : tier === 'alternativo' ? Math.max(2, 6 - index) : -8;
 }
 
 function ownedPenalty(result: AnalysisResult, name: string) {
@@ -166,10 +189,11 @@ function confidenceForImpeto(result: AnalysisResult, score: number) {
 function buildEvidence(result: AnalysisResult, profile: ImpetoProfile, score: number) {
   const evidence: string[] = [];
   evidence.push(`Compatibilidade com ${result.bestPosition.label} e ${result.teamMap?.functionLabel ?? result.positionScores.find((item) => item.code === result.bestPosition.code)?.role ?? result.buildName}.`);
+  if (tacticalImpetoSynergy(result, profile) >= 7) evidence.push(`Encaixe confirmado com ${result.tacticalProfile.formation} e ${String(result.tacticalProfile.style).replaceAll('_', ' ').toLowerCase()}.`);
   const strongestTraining = profile.training
     .map((key) => ({ key, value: Number(result.training[key] ?? 0) }))
     .sort((a, b) => b.value - a.value)[0];
-  if (strongestTraining?.value > 0) evidence.push(`Conversa com o investimento principal da ficha (${strongestTraining.value} nível(is) no bloco relacionado).`);
+  if (strongestTraining?.value > 0) evidence.push(`Conversa com o investimento da ficha final (${strongestTraining.value} nível(is) no bloco relacionado).`);
   const domainWithGap = profile.domains
     .map((domain) => ({ domain, average: attributeAverage(result, domain) }))
     .filter((item): item is { domain: ImpetoDomain; average: number } => item.average !== null)
@@ -188,6 +212,7 @@ function refineImpetos(result: AnalysisResult): ImpetoRecommendation[] {
       + trainingSynergy(result, profile)
       + keywordSynergy(text, profile)
       + skillSynergy(result, profile)
+      + tacticalImpetoSynergy(result, profile)
       + attributeNeed(result, profile)
       + priorScore(result, profile.name)
       - incompatibilityPenalty(profile, result.bestPosition.code)
@@ -207,7 +232,10 @@ function refineImpetos(result: AnalysisResult): ImpetoRecommendation[] {
     };
   }).sort((left, right) => right.score - left.score || right.confidence - left.confidence);
 
-  const usable = scored.filter((item) => item.score >= 48 && !item.warnings.some((warning) => warning.includes('Incompatível')));
+  const ownedNames = new Set(result.parsed.impetos.filter((item) => item.active !== false).map((item) => item.name.toLowerCase()));
+  const usable = scored.filter((item) => item.score >= 48
+    && !ownedNames.has(item.profile.name.toLowerCase())
+    && !item.warnings.some((warning) => warning.includes('Incompatível')));
   const top = usable.slice(0, 4).map((item, index): ImpetoRecommendation => ({
     name: item.profile.name,
     tier: index === 0 ? 'ideal' : 'alternativo',
@@ -223,6 +251,7 @@ function refineImpetos(result: AnalysisResult): ImpetoRecommendation[] {
   }));
 
   const avoid = scored
+    .filter((item) => !ownedNames.has(item.profile.name.toLowerCase()))
     .filter((item) => !top.some((chosen) => chosen.name === item.profile.name))
     .sort((left, right) => left.score - right.score)
     .slice(0, 3)

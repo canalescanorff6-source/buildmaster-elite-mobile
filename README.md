@@ -1,6 +1,37 @@
-# BuildMaster Elite Tático v31.80 — Leitor eFHUB Final + Top 5 por Função
+# BuildMaster Elite Tático v31.82 — Sessão Persistente, Calibrador Nítido e Fichas Integradas
 
-O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.80 substitui o overlay desalinhado pelo perfil interno padronizado em 1400×1600 e fortalece o motor das cinco habilidades adicionais, preservando os módulos existentes da v31.77/v31.78.
+O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.82 preserva o calibrador em tela cheia e acrescenta proteção de sessão, orçamento exato da ficha, Top 5 complementar e recalibração final dos Ímpetos.
+
+## v31.82 — auditoria completa de gameplay
+
+- corrige leitura de habilidades vazias que podia capturar o atributo seguinte;
+- invalida o cache sempre que atributos, habilidades, Ímpetos ou contexto tático mudarem;
+- formação e proficiência do técnico passam a influenciar cada candidata de ficha;
+- adapta defesa, drible e finalização ao balanceamento atual do eFootball;
+- unifica o catálogo de Ímpetos entre OCR, analisador e IA local;
+- impede habilidades especiais de serem classificadas como Ímpetos;
+- adiciona matriz de testes para LWF, AMF, DMF, CB, LB e GK.
+
+Consulte `AUDITORIA_COMPLETA_GAMEPLAY_V31.82.md`.
+
+## v31.82 — sessão persistente ao trocar de tela
+
+- leitura do armazenamento seguro com novas tentativas quando o WebView está voltando;
+- cache de sessão em memória para remontagens rápidas;
+- apenas uma renovação de refresh token pode acontecer por vez;
+- troca de aba, seletor de imagem e retorno de outro aplicativo não encerram a conta;
+- falha temporária mantém o workspace em modo offline e tenta novamente;
+- bloqueio, suspensão, vencimento e encerramento confirmado continuam protegidos.
+
+## v31.82 — ficha, habilidades adicionais e Ímpetos revisados
+
+- a ficha vencedora prioriza distribuições que usam exatamente todos os pontos informados;
+- as cinco habilidades são recalculadas depois da distribuição final;
+- nomes oficiais, posição escolhida, estilo, função, atributos e habilidades existentes permanecem obrigatórios;
+- nenhuma habilidade nativa ou especial pode reaparecer no Top 5;
+- Ímpetos são recalculados depois da ficha definitiva e do Top 5;
+- Ímpeto já existente na carta é excluído das opções úteis;
+- habilidades adicionais e Ímpetos continuam em trilhas separadas.
 
 
 ## v31.80 — correção definitiva do scanner e habilidades

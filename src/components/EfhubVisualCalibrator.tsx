@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type SyntheticEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Lock, Maximize2, RotateCcw, Save, ScanText, Unlock, ZoomIn } from 'lucide-react';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import {
@@ -35,8 +36,10 @@ function ZoomOutIcon({ size = 17 }: { size?: number }) {
 type DragMode = 'move' | 'nw' | 'ne' | 'sw' | 'se';
 type OverlayMode = 'all' | 'active' | 'hidden';
 type LensPosition = { x: number; y: number; canvasWidth: number; canvasHeight: number; visible: boolean };
+type TouchPoint = { x: number; y: number };
+type PinchState = { distance: number; zoom: number };
 
-const ZOOM_STORAGE_KEY = 'buildmaster:efhub-calibrator:last-zoom';
+const ZOOM_STORAGE_KEY = 'buildmaster:efhub-calibrator:last-zoom-v2';
 const QUICK_ZOOMS = [100, 200, 300, 400, 500] as const;
 const MAGNIFIER_SIZE = 156;
 const MAGNIFIER_SCALE = 3;
@@ -77,7 +80,7 @@ export function EfhubVisualCalibrator({
   zones: EfhubCalibrationZone[];
   saved: boolean;
   onChange: (zones: EfhubCalibrationZone[]) => void;
-  onSave: () => void;
+  onSave: () => boolean;
   onReset: () => void;
   onRead: () => void;
 }) {
@@ -87,6 +90,14 @@ export function EfhubVisualCalibrator({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const autoZoomAppliedRef = useRef(false);
+  const touchPointsRef = useRef(new Map<number, TouchPoint>());
+  const pinchRef = useRef<PinchState | null>(null);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [devicePixelRatio, setDevicePixelRatio] = useState(1);
   const [zoom, setZoom] = useState(100);
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
   const [overlayMode, setOverlayMode] = useState<OverlayMode>('all');
@@ -94,6 +105,31 @@ export function EfhubVisualCalibrator({
   const [lens, setLens] = useState<LensPosition>({ x: 0, y: 0, canvasWidth: 0, canvasHeight: 0, visible: false });
   const active = safeZones.find((zone) => zone.id === activeId) ?? safeZones[0];
   const complete = isEfhubCalibrationComplete(safeZones);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      setDevicePixelRatio(Math.max(1, window.devicePixelRatio || 1));
+      if (window.innerWidth <= 760) setFullscreen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.classList.toggle('efhub-calibrator-body-lock', fullscreen);
+    return () => document.body.classList.remove('efhub-calibrator-body-lock');
+  }, [fullscreen]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const measure = () => setViewportWidth(Math.max(1, Math.round(viewport.getBoundingClientRect().width)));
+    measure();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    observer?.observe(viewport);
+    if (typeof window !== 'undefined') window.addEventListener('resize', measure);
+    return () => { observer?.disconnect(); if (typeof window !== 'undefined') window.removeEventListener('resize', measure); };
+  }, [fullscreen, imageSrc]);
 
   useEffect(() => {
     autoZoomAppliedRef.current = false;
@@ -112,11 +148,13 @@ export function EfhubVisualCalibrator({
   }
 
   function nativeResolutionZoom(naturalWidth = sourceSize.width) {
-    const measuredWidth = viewportRef.current?.getBoundingClientRect().width ?? 0;
-    const fallbackWidth = typeof window !== 'undefined' ? Math.min(760, Math.max(280, window.innerWidth - 32)) : 0;
-    const viewportWidth = measuredWidth > 0 ? measuredWidth : fallbackWidth;
-    if (!naturalWidth || !viewportWidth) return 100;
-    return clamp(Math.round(((naturalWidth / viewportWidth) * 100) / 25) * 25, 100, 500);
+    const measuredWidth = viewportWidth || viewportRef.current?.getBoundingClientRect().width || 0;
+    const fallbackWidth = typeof window !== 'undefined' ? Math.max(280, window.innerWidth - (fullscreen ? 0 : 32)) : 0;
+    const availableWidth = measuredWidth > 0 ? measuredWidth : fallbackWidth;
+    const dpr = Math.max(1, typeof window !== 'undefined' ? window.devicePixelRatio || devicePixelRatio : devicePixelRatio);
+    if (!naturalWidth || !availableWidth) return 100;
+    const oneSourcePixelPerScreenPixel = (naturalWidth / dpr / availableWidth) * 100;
+    return clamp(Math.round(oneSourcePixelPerScreenPixel / 25) * 25, 100, 500);
   }
 
   function applyZoom(nextZoom: number, preserveCenter = true) {
@@ -148,7 +186,10 @@ export function EfhubVisualCalibrator({
     const applyInitialZoom = () => {
       const stored = readStoredZoom();
       const mobile = typeof window !== 'undefined' && window.innerWidth <= 760;
-      const recommended = stored ?? (mobile ? 300 : Math.min(nativeResolutionZoom(naturalWidth), 250));
+      const nativeZoom = nativeResolutionZoom(naturalWidth);
+      const minimumReadableZoom = mobile ? nativeZoom : Math.min(nativeZoom, 250);
+      const storedIsReadable = stored !== null && stored >= Math.min(nativeZoom, 200);
+      const recommended = storedIsReadable ? stored : minimumReadableZoom;
       applyZoom(recommended, false);
       const viewport = viewportRef.current;
       if (viewport) { viewport.scrollLeft = 0; viewport.scrollTop = 0; }
@@ -162,6 +203,67 @@ export function EfhubVisualCalibrator({
 
   function changeZoom(delta: number) {
     applyZoom(zoom + delta);
+  }
+
+  function toggleFullscreen() {
+    setFullscreen((current) => !current);
+    setToolsOpen(false);
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        const nativeZoom = nativeResolutionZoom();
+        if (nativeZoom > zoom) applyZoom(nativeZoom, false);
+        focusActiveZone();
+      }));
+    }
+  }
+
+  function pointerDistance(points: TouchPoint[]) {
+    if (points.length < 2) return 0;
+    return Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+  }
+
+  function handleViewportPointerDownCapture(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== 'touch') return;
+    touchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...touchPointsRef.current.values()];
+    if (points.length === 2) {
+      dragRef.current = null;
+      pinchRef.current = { distance: Math.max(1, pointerDistance(points)), zoom };
+    }
+  }
+
+  function handleViewportPointerMoveCapture(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== 'touch' || !touchPointsRef.current.has(event.pointerId)) return;
+    touchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const pinch = pinchRef.current;
+    const points = [...touchPointsRef.current.values()];
+    if (!pinch || points.length < 2) return;
+    event.preventDefault();
+    const ratio = pointerDistance(points) / Math.max(1, pinch.distance);
+    setZoom(clamp(Math.round(pinch.zoom * ratio), 100, 500));
+  }
+
+  function handleViewportPointerEndCapture(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== 'touch') return;
+    const wasPinching = pinchRef.current !== null;
+    touchPointsRef.current.delete(event.pointerId);
+    if (wasPinching && touchPointsRef.current.size < 2) {
+      pinchRef.current = null;
+      safeStorageSet(ZOOM_STORAGE_KEY, String(clamp(Math.round(zoom / 25) * 25, 100, 500)));
+      return;
+    }
+    if (touchPointsRef.current.size > 0) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('.efhub-draggable-zone')) return;
+    const now = Date.now();
+    const previous = lastTapRef.current;
+    if (previous && now - previous.time < 320 && Math.hypot(previous.x - event.clientX, previous.y - event.clientY) < 34) {
+      const nativeZoom = nativeResolutionZoom();
+      applyZoom(zoom < nativeZoom ? nativeZoom : Math.min(500, nativeZoom + 100));
+      lastTapRef.current = null;
+    } else {
+      lastTapRef.current = { time: now, x: event.clientX, y: event.clientY };
+    }
   }
 
   function updateLens(event: PointerEvent<HTMLDivElement>) {
@@ -202,6 +304,7 @@ export function EfhubVisualCalibrator({
   }
 
   function continueDrag(event: PointerEvent<HTMLElement>) {
+    if (pinchRef.current) return;
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     event.preventDefault();
@@ -285,8 +388,34 @@ export function EfhubVisualCalibrator({
     onChange(updateOne(safeZones, active.id, () => fallback));
   }
 
+  function closeFullscreen() {
+    setFullscreen(false);
+    setToolsOpen(false);
+    setOverlayMode('all');
+    hideLens();
+  }
+
+  function saveAndExitFullscreen() {
+    if (!complete) return;
+    const savedSuccessfully = onSave();
+    if (!savedSuccessfully) return;
+    closeFullscreen();
+  }
+
+  function exitFullscreenWithoutSaving() {
+    if (!saved && typeof window !== 'undefined') {
+      const confirmed = window.confirm('Existem ajustes ainda não salvos. Sair da tela cheia sem salvar?');
+      if (!confirmed) return;
+    }
+    closeFullscreen();
+  }
+
   const lensLeft = clamp(lens.x - MAGNIFIER_SIZE / 2, 0, Math.max(0, lens.canvasWidth - MAGNIFIER_SIZE));
   const lensTop = clamp(lens.y - MAGNIFIER_SIZE - 24, 0, Math.max(0, lens.canvasHeight - MAGNIFIER_SIZE));
+  const nativeZoom = nativeResolutionZoom();
+  const displayQuality = zoom <= nativeZoom + 12 ? 'Nitidez nativa' : 'Ampliação digital';
+  const renderedCanvasWidth = viewportWidth > 0 ? Math.max(viewportWidth, Math.round(viewportWidth * zoom / 100)) : null;
+
   const lensStyle = {
     left: lensLeft,
     top: lensTop,
@@ -297,15 +426,25 @@ export function EfhubVisualCalibrator({
     backgroundPosition: `${MAGNIFIER_SIZE / 2 - lens.x * MAGNIFIER_SCALE}px ${MAGNIFIER_SIZE / 2 - lens.y * MAGNIFIER_SCALE}px`
   } as CSSProperties;
 
-  return (
-    <section className="efhub-visual-calibrator" aria-label="Calibrador visual das áreas do perfil eFHUB">
+  const calibratorContent = (
+    <section className={`efhub-visual-calibrator ${fullscreen ? 'is-fullscreen' : ''}`} aria-label="Calibrador visual das áreas do perfil eFHUB">
+      {fullscreen && (
+        <div className="efhub-fullscreen-bar">
+          <button type="button" onClick={exitFullscreenWithoutSaving} aria-label="Sair da tela cheia"><ArrowLeft size={19}/> {saved ? 'Sair' : 'Sair sem salvar'}</button>
+          <div><strong>Print original — ajuste preciso</strong><small>{sourceSize.width ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando...'} • {zoom}% • {displayQuality}</small></div>
+          <button type="button" onClick={() => setOverlayMode((current) => current === 'hidden' ? 'all' : 'hidden')}>{overlayMode === 'hidden' ? 'Mostrar áreas' : 'Imagem limpa'}</button>
+        </div>
+      )}
       <header className="efhub-calibrator-head">
         <div>
           <p className="kicker"><Maximize2 size={15}/> Ajustar mapa do print</p>
           <h3>Arraste os 8 quadrados até cada informação</h3>
           <p>Toque em uma área, arraste pelo centro e use os pontos dos cantos para aumentar ou diminuir. Você não precisa digitar nada.</p>
         </div>
-        <span className={saved ? 'saved' : ''}>{saved ? <CheckCircle2 size={15}/> : <ScanText size={15}/>} {saved ? 'Mapa salvo' : 'Ajuste pendente'}</span>
+        <div className="efhub-calibrator-head-actions">
+          <span className={saved ? 'saved' : ''}>{saved ? <CheckCircle2 size={15}/> : <ScanText size={15}/>} {saved ? 'Mapa salvo' : 'Ajuste pendente'}</span>
+          {!fullscreen && <button type="button" onClick={toggleFullscreen}><Maximize2 size={16}/> Abrir em tela cheia</button>}
+        </div>
       </header>
 
       <div className="efhub-zone-tabs" role="tablist" aria-label="Escolher área para ajustar">
@@ -326,15 +465,15 @@ export function EfhubVisualCalibrator({
 
       <div className="efhub-image-clarity-toolbar" aria-label="Controles de nitidez e ampliação do print">
         <div>
-          <strong><ScanText size={16}/> Imagem original em nitidez máxima</strong>
-          <small>{sourceSize.width > 0 ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando resolução original...'} • no celular abre ampliada e mantém o último zoom usado.</small>
+          <strong><ScanText size={16}/> Arquivo original, sem miniatura e sem filtros</strong>
+          <small>{sourceSize.width > 0 ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando resolução original...'} • exibição direta do arquivo importado • {displayQuality}.</small>
         </div>
         <div className="efhub-zoom-controls" role="group" aria-label="Ampliar ou reduzir o print">
           <button type="button" onClick={() => changeZoom(-25)} disabled={zoom <= 100} aria-label="Reduzir ampliação"><ZoomOutIcon size={17}/></button>
           <output aria-live="polite">{zoom}%</output>
           <button type="button" onClick={() => changeZoom(25)} disabled={zoom >= 500} aria-label="Aumentar ampliação"><ZoomIn size={17}/></button>
           <button type="button" className="text-button" onClick={() => applyZoom(100)}>Ajustar à tela</button>
-          <button type="button" className="text-button" onClick={() => applyZoom(nativeResolutionZoom())} disabled={!sourceSize.width}>Tamanho real</button>
+          <button type="button" className="text-button" onClick={() => applyZoom(nativeResolutionZoom())} disabled={!sourceSize.width}>Nitidez real</button>
         </div>
         <div className="efhub-quick-zoom-row" role="group" aria-label="Atalhos de zoom">
           <span>Zoom rápido</span>
@@ -351,17 +490,24 @@ export function EfhubVisualCalibrator({
         </div>
       </div>
 
-      <div className="efhub-calibration-viewport" ref={viewportRef}>
+      <div
+        className="efhub-calibration-viewport"
+        ref={viewportRef}
+        onPointerDownCapture={handleViewportPointerDownCapture}
+        onPointerMoveCapture={handleViewportPointerMoveCapture}
+        onPointerUpCapture={handleViewportPointerEndCapture}
+        onPointerCancelCapture={handleViewportPointerEndCapture}
+      >
         <div
           className={`efhub-calibration-canvas ${magnifierEnabled ? 'magnifier-on' : ''}`}
           ref={canvasRef}
-          style={{ width: `${zoom}%` }}
+          style={{ width: renderedCanvasWidth ? `${renderedCanvasWidth}px` : `${zoom}%` }}
           onPointerMove={updateLens}
           onPointerDown={updateLens}
           onPointerLeave={hideLens}
         >
-        <img key={imageSrc} src={imageSrc} alt="Print original do perfil eFHUB, sem desfoque, para posicionar as áreas de leitura" draggable={false} loading="eager" decoding="sync" fetchPriority="high" onLoad={handleImageLoad}/>
-        <div className={`efhub-calibration-overlay mode-${overlayMode}`} aria-label="Áreas móveis de leitura" aria-hidden={overlayMode === 'hidden'}>
+        <img key={imageSrc} data-original-source="true" src={imageSrc} alt="Print original do perfil eFHUB, sem desfoque, para posicionar as áreas de leitura" draggable={false} loading="eager" decoding="sync" fetchPriority="high" onLoad={handleImageLoad}/>
+        <div className={`efhub-calibration-zones-layer mode-${overlayMode}`} aria-label="Áreas móveis de leitura" aria-hidden={overlayMode === 'hidden'}>
           {(overlayMode === 'hidden' ? [] : overlayMode === 'active' ? safeZones.filter((zone) => zone.id === activeId) : safeZones).map((zone) => {
             const index = safeZones.findIndex((item) => item.id === zone.id);
             const selected = zone.id === activeId;
@@ -408,7 +554,16 @@ export function EfhubVisualCalibrator({
         </div>
       </div>
 
-      <div className="efhub-calibration-tools">
+      {fullscreen && (
+        <div className="efhub-fullscreen-dock">
+          <button type="button" onClick={() => setToolsOpen((current) => !current)}>{toolsOpen ? 'Fechar controles' : `Ajustar: ${active?.shortLabel ?? 'área'}`}</button>
+          <button type="button" onClick={() => setOverlayMode((current) => current === 'active' ? 'all' : 'active')}>{overlayMode === 'active' ? 'Todas as áreas' : 'Só esta área'}</button>
+          <button type="button" className="primary" onClick={saveAndExitFullscreen} disabled={!complete}><Save size={16}/> Salvar e sair</button>
+          <button type="button" onClick={onRead} disabled={!complete}><ScanText size={17}/> Ler print</button>
+        </div>
+      )}
+
+      <div className={`efhub-calibration-tools ${fullscreen && !toolsOpen ? 'fullscreen-collapsed' : ''}`}>
         <div className="efhub-active-zone-card" style={{ '--zone-color': active?.color } as CSSProperties}>
           <span>Área selecionada</span>
           <strong>{active?.shortLabel}</strong>
@@ -437,7 +592,11 @@ export function EfhubVisualCalibrator({
         <button type="button" onClick={onSave} disabled={!complete}><Save size={17}/> Salvar este mapa</button>
         <button type="button" className="primary" onClick={onRead} disabled={!complete}><ScanText size={18}/> Ler com os quadrados ajustados</button>
       </footer>
-      <p className="efhub-calibrator-help">A imagem exibida é o arquivo original, sem blur ou escurecimento. Use 300% a 500%, a lupa 3× e o modo Imagem limpa para posicionar cada quadrado com máxima precisão. O mapa continua proporcional e compatível com outras resoluções.</p>
+      <p className="efhub-calibrator-help">A imagem exibida vem diretamente do arquivo original, sem preview intermediária, blur, escurecimento ou filtro. O modo Nitidez real usa a proporção de pixels da tela; use a pinça, o duplo toque, a lupa e a tela cheia para ajustar com precisão. O mapa continua proporcional e compatível com outras resoluções.</p>
     </section>
   );
+
+  return fullscreen && mounted && typeof document !== 'undefined'
+    ? createPortal(calibratorContent, document.body)
+    : calibratorContent;
 }

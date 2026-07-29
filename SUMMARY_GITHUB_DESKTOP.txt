@@ -1,1 +1,1 @@
-v31.82 — ajusta orçamento TypeScript para 3,25 MiB e libera validação do bundle no CI
+v31.82 — auditoria completa corrige cache, leitura de habilidades e calibra ficha por formação e técnico

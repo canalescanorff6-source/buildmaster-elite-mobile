@@ -11,6 +11,8 @@ declare module 'react' {
   export type SyntheticEvent<T = Element> = { currentTarget: T };
   export type PointerEvent<T = HTMLElement> = {
     pointerId: number;
+    pointerType: string;
+    target: EventTarget | null;
     clientX: number;
     clientY: number;
     currentTarget: T & { setPointerCapture(pointerId: number): void; releasePointerCapture(pointerId: number): void };
@@ -22,6 +24,11 @@ declare module 'react' {
   export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
   export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
   export function useRef<T>(initialValue: T): { current: T };
+}
+
+
+declare module 'react-dom' {
+  export function createPortal(children: JSX.Element, container: Element | DocumentFragment): JSX.Element;
 }
 
 declare module 'react/jsx-runtime' {
