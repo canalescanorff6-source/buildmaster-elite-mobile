@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Lock, Maximize2, RotateCcw, Save, ScanText, Unlock } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type SyntheticEvent } from 'react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Lock, Maximize2, RotateCcw, Save, ScanText, Unlock, ZoomIn, ZoomOut } from 'lucide-react';
 import {
   createDefaultEfhubCalibrationZones,
   isEfhubCalibrationComplete,
@@ -55,9 +55,38 @@ export function EfhubVisualCalibrator({
   const safeZones = useMemo(() => normalizeEfhubCalibrationZones(zones), [zones]);
   const [activeId, setActiveId] = useState<EfhubCalibrationZoneId>('identity');
   const dragRef = useRef<DragState | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const autoZoomAppliedRef = useRef(false);
+  const [zoom, setZoom] = useState(100);
+  const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
   const active = safeZones.find((zone) => zone.id === activeId) ?? safeZones[0];
   const complete = isEfhubCalibrationComplete(safeZones);
+
+  useEffect(() => {
+    autoZoomAppliedRef.current = false;
+    setZoom(100);
+    setSourceSize({ width: 0, height: 0 });
+  }, [imageSrc]);
+
+  function nativeResolutionZoom(naturalWidth = sourceSize.width) {
+    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    if (!naturalWidth || !viewportWidth) return 100;
+    return clamp(Math.round((naturalWidth / viewportWidth) * 4) * 25, 100, 500);
+  }
+
+  function handleImageLoad(event: SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    setSourceSize({ width: naturalWidth, height: naturalHeight });
+    if (!autoZoomAppliedRef.current) {
+      autoZoomAppliedRef.current = true;
+      setZoom(nativeResolutionZoom(naturalWidth));
+    }
+  }
+
+  function changeZoom(delta: number) {
+    setZoom((current) => clamp(current + delta, 100, 500));
+  }
 
   function startDrag(event: PointerEvent<HTMLElement>, zone: EfhubCalibrationZone, mode: DragMode) {
     if (zone.locked) return;
@@ -176,8 +205,23 @@ export function EfhubVisualCalibrator({
         ))}
       </div>
 
-      <div className="efhub-calibration-canvas" ref={canvasRef}>
-        <img src={imageSrc} alt="Print do perfil eFHUB para posicionar as áreas de leitura" draggable={false}/>
+      <div className="efhub-image-clarity-toolbar" aria-label="Controles de nitidez e ampliação do print">
+        <div>
+          <strong><ScanText size={16}/> Imagem original sem desfoque</strong>
+          <small>{sourceSize.width > 0 ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando resolução original...'} • amplie para enxergar textos pequenos.</small>
+        </div>
+        <div className="efhub-zoom-controls" role="group" aria-label="Ampliar ou reduzir o print">
+          <button type="button" onClick={() => changeZoom(-25)} disabled={zoom <= 100} aria-label="Reduzir ampliação"><ZoomOut size={17}/></button>
+          <output aria-live="polite">{zoom}%</output>
+          <button type="button" onClick={() => changeZoom(25)} disabled={zoom >= 500} aria-label="Aumentar ampliação"><ZoomIn size={17}/></button>
+          <button type="button" className="text-button" onClick={() => setZoom(100)}>Ajustar à tela</button>
+          <button type="button" className="text-button" onClick={() => setZoom(nativeResolutionZoom())} disabled={!sourceSize.width}>Tamanho real</button>
+        </div>
+      </div>
+
+      <div className="efhub-calibration-viewport" ref={viewportRef}>
+        <div className="efhub-calibration-canvas" ref={canvasRef} style={{ width: `${zoom}%` }}>
+        <img src={imageSrc} alt="Print original do perfil eFHUB, sem desfoque, para posicionar as áreas de leitura" draggable={false} onLoad={handleImageLoad}/>
         <div className="efhub-calibration-overlay" aria-label="Áreas móveis de leitura">
           {safeZones.map((zone, index) => {
             const selected = zone.id === activeId;
@@ -218,6 +262,7 @@ export function EfhubVisualCalibrator({
             );
           })}
         </div>
+        </div>
       </div>
 
       <div className="efhub-calibration-tools">
@@ -249,7 +294,7 @@ export function EfhubVisualCalibrator({
         <button type="button" onClick={onSave} disabled={!complete}><Save size={17}/> Salvar este mapa</button>
         <button type="button" className="primary" onClick={onRead} disabled={!complete}><ScanText size={18}/> Ler com os quadrados ajustados</button>
       </footer>
-      <p className="efhub-calibrator-help">O mapa é salvo em proporção. Quando outro print tiver a mesma organização, o app reaplica os quadrados mesmo que a resolução seja diferente.</p>
+      <p className="efhub-calibrator-help">A imagem exibida é o arquivo original, sem blur, escurecimento ou camada colorida. O mapa continua salvo em proporção e funciona em outras resoluções.</p>
     </section>
   );
 }

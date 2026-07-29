@@ -1,0 +1,1 @@
+Calibrador eFHUB mais nítido: o print agora aparece sem blur, escurecimento ou camada colorida. Use zoom de 100% a 500%, ajuste à tela ou abra no tamanho real para posicionar os oito quadrados com precisão. Os mapas salvos e o OCR permanecem compatíveis.

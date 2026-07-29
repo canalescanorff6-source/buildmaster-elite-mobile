@@ -1,4 +1,4 @@
-name: Gerar AAB v31.81 Google Play
+name: Gerar AAB v31.82 Google Play
 
 on:
   workflow_dispatch:
@@ -44,8 +44,8 @@ jobs:
       PLAY_TRACK: ${{ github.event.inputs.track || 'internal' }}
       BUNDLETOOL_VERSION: 1.18.3
       NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION: play
-      NEXT_PUBLIC_BUILDMASTER_VERSION: 31.81.0
-      NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: 31.81.0
+      NEXT_PUBLIC_BUILDMASTER_VERSION: 31.82.0
+      NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: 31.82.0
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       NEXT_PUBLIC_GOOGLE_PLAY_CLOUD_PROJECT_NUMBER: ${{ vars.GOOGLE_PLAY_CLOUD_PROJECT_NUMBER }}
@@ -131,7 +131,7 @@ jobs:
         run: |
           VERSION_CODE=$((31 * 60000000 + ${{ github.run_number }} * 10 + ${{ github.run_attempt }}))
           echo "ANDROID_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "AAB_NAME=BuildMaster-Elite-Tatico-v31.81.0-${VERSION_CODE}.aab" >> "$GITHUB_ENV"
+          echo "AAB_NAME=BuildMaster-Elite-Tatico-v31.82.0-${VERSION_CODE}.aab" >> "$GITHUB_ENV"
 
       - name: Preparar chave de upload para Play App Signing
         env:
@@ -195,7 +195,7 @@ jobs:
           ])
           t = t.replace(marker, signing, 1)
           t = re.sub(r'versionCode\s+\d+', f'versionCode {os.environ["ANDROID_VERSION_CODE"]}', t, count=1)
-          t = re.sub(r'versionName\s+"[^"]+"', 'versionName "31.81.0"', t, count=1)
+          t = re.sub(r'versionName\s+"[^"]+"', 'versionName "31.82.0"', t, count=1)
           t = re.sub(r'(buildTypes\s*\{\s*release\s*\{)', r'\1\n            signingConfig signingConfigs.release', t, count=1)
           p.write_text(t)
           PY
@@ -215,7 +215,7 @@ jobs:
           VERSION_FROM_BUNDLE=$(java -jar bundletool.jar dump manifest --bundle "$AAB" --xpath /manifest/@android:versionCode)
           NAME_FROM_BUNDLE=$(java -jar bundletool.jar dump manifest --bundle "$AAB" --xpath /manifest/@android:versionName)
           test "$VERSION_FROM_BUNDLE" = "$ANDROID_VERSION_CODE"
-          test "$NAME_FROM_BUNDLE" = "31.81.0"
+          test "$NAME_FROM_BUNDLE" = "31.82.0"
           mv "$AAB" "$AAB_NAME"
           sha256sum "$AAB_NAME" | tee "$AAB_NAME.sha256"
           unzip -l "$AAB_NAME" | grep -q 'base/manifest/AndroidManifest.xml'
@@ -246,7 +246,7 @@ jobs:
         env:
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           AAB_PATH: ${{ env.AAB_NAME }}
-          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/31.81.0.txt
+          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/31.82.0.txt
           PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status || 'draft' }}
           ROLLOUT_PERCENTAGE: ${{ github.event.inputs.rollout_percentage || '100' }}
         run: |

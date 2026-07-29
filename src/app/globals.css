@@ -20693,15 +20693,20 @@ body::after { display: none !important; }
 .efhub-zone-tabs button>span{width:22px;height:22px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;color:#08111b;background:var(--zone-color);font-size:.68rem;font-weight:950}
 .efhub-zone-tabs button.active{border-color:var(--zone-color);background:color-mix(in srgb,var(--zone-color) 12%,rgba(4,12,22,.94));color:#fff;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--zone-color) 24%,transparent)}
 .efhub-zone-tabs button svg{margin-left:auto;flex:0 0 auto;color:var(--zone-color)}
-.efhub-calibration-canvas{position:relative;justify-self:center;width:min(100%,760px);overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:#02060b;box-shadow:0 16px 38px rgba(0,0,0,.28);user-select:none;-webkit-user-select:none}
-.efhub-calibration-canvas>img{display:block;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none}
-.efhub-calibration-overlay{position:absolute;inset:0}
-.efhub-draggable-zone{position:absolute;z-index:2;min-width:18px;min-height:16px;border:2px solid var(--zone-color);border-radius:8px;background:color-mix(in srgb,var(--zone-color) 8%,transparent);box-shadow:0 0 0 1px rgba(0,0,0,.3),0 0 16px color-mix(in srgb,var(--zone-color) 14%,transparent);cursor:grab;touch-action:none}
+.efhub-image-clarity-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid rgba(57,255,149,.22);border-radius:14px;background:rgba(57,255,149,.045)}
+.efhub-image-clarity-toolbar>div:first-child{display:grid;gap:3px;min-width:0}.efhub-image-clarity-toolbar strong{display:flex;align-items:center;gap:7px;color:#b9ffd5;font-size:.8rem}.efhub-image-clarity-toolbar small{color:var(--muted);font-size:.69rem;line-height:1.35}
+.efhub-zoom-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}.efhub-zoom-controls button{min-width:38px;height:36px;display:grid;place-items:center;padding:0 9px;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:var(--soft);background:rgba(255,255,255,.045);font-size:.68rem;font-weight:850}.efhub-zoom-controls button.text-button{display:flex;min-width:auto;white-space:nowrap}.efhub-zoom-controls output{min-width:54px;text-align:center;color:#fff;font-size:.76rem;font-weight:950}
+.efhub-calibration-viewport{position:relative;justify-self:center;width:min(100%,760px);max-height:min(78vh,900px);overflow:auto;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:#02060b;box-shadow:0 16px 38px rgba(0,0,0,.28);overscroll-behavior:contain;scrollbar-gutter:stable;touch-action:pan-x pan-y}
+.efhub-calibration-canvas{position:relative;min-width:100%;max-width:none;overflow:hidden;background:#02060b;user-select:none;-webkit-user-select:none;isolation:isolate}
+.efhub-calibration-canvas>img{display:block;width:100%;height:auto;max-width:none;opacity:1!important;filter:none!important;transform:none!important;mix-blend-mode:normal!important;image-rendering:auto;pointer-events:none;-webkit-user-drag:none}
+.efhub-calibration-overlay{position:absolute;inset:0;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.efhub-draggable-zone{position:absolute;z-index:2;min-width:18px;min-height:16px;border:2px solid var(--zone-color);border-radius:8px;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 10px color-mix(in srgb,var(--zone-color) 18%,transparent);cursor:grab;touch-action:none}
 .efhub-draggable-zone:active{cursor:grabbing}
-.efhub-draggable-zone:not(.active){opacity:.58}
-.efhub-draggable-zone.active{z-index:5;border-width:3px;background:color-mix(in srgb,var(--zone-color) 14%,transparent);box-shadow:0 0 0 2px rgba(255,255,255,.22),0 0 24px color-mix(in srgb,var(--zone-color) 28%,transparent)}
-.efhub-draggable-zone.locked{cursor:pointer;background:color-mix(in srgb,var(--zone-color) 5%,transparent)}
-.efhub-draggable-zone>b{position:absolute;left:3px;top:3px;max-width:calc(100% - 6px);display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:6px;color:#fff;background:rgba(0,0,0,.82);font-size:clamp(8px,1.4vw,11px);line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.efhub-draggable-zone:not(.active){opacity:.82}
+.efhub-draggable-zone.active{z-index:5;border-width:3px;background:transparent!important;box-shadow:0 0 0 2px rgba(255,255,255,.38),0 0 18px color-mix(in srgb,var(--zone-color) 30%,transparent)}
+.efhub-draggable-zone.locked{cursor:pointer;background:transparent!important}
+.efhub-draggable-zone>b{position:absolute;left:3px;top:3px;max-width:calc(100% - 6px);display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:6px;color:#fff;background:rgba(0,0,0,.74);backdrop-filter:none!important;font-size:clamp(8px,1.4vw,11px);line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.efhub-draggable-zone:not(.active)>b{width:22px;height:22px;padding:2px;overflow:visible;font-size:0;background:rgba(0,0,0,.68)}
 .efhub-draggable-zone>b>span{width:17px;height:17px;display:grid;place-items:center;flex:0 0 auto;border-radius:5px;color:#071019;background:var(--zone-color);font-size:9px;font-weight:950}
 .resize-handle{position:absolute;width:18px;height:18px;border:3px solid #071019;border-radius:50%;background:var(--zone-color);box-shadow:0 0 0 2px #fff;touch-action:none}
 .handle-nw{left:-9px;top:-9px;cursor:nwse-resize}.handle-ne{right:-9px;top:-9px;cursor:nesw-resize}.handle-sw{left:-9px;bottom:-9px;cursor:nesw-resize}.handle-se{right:-9px;bottom:-9px;cursor:nwse-resize}
@@ -20722,6 +20727,7 @@ body::after { display: none !important; }
 @media(max-width:760px){
   .efhub-calibrator-head{flex-direction:column}.efhub-calibrator-head>span{align-self:flex-start}
   .efhub-zone-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .efhub-image-clarity-toolbar{align-items:stretch;flex-direction:column}.efhub-zoom-controls{justify-content:flex-start}
   .efhub-calibration-tools{grid-template-columns:1fr auto}
   .efhub-size-controls{grid-column:1/-1}
   .efhub-calibrator-actions{grid-template-columns:1fr}
@@ -20729,6 +20735,7 @@ body::after { display: none !important; }
 @media(max-width:440px){
   .efhub-visual-calibrator{padding:10px;border-radius:17px}
   .efhub-zone-tabs button{font-size:.64rem;padding:6px}.efhub-zone-tabs button>span{width:20px;height:20px}
+  .efhub-zoom-controls{display:grid;grid-template-columns:auto auto auto 1fr 1fr}.efhub-zoom-controls button.text-button{justify-content:center}
+  .efhub-calibration-viewport{max-height:72vh}
   .efhub-calibration-tools{grid-template-columns:1fr}.efhub-nudge-pad{grid-template-columns:repeat(4,1fr)}.efhub-nudge-pad button{width:100%}
-  .efhub-draggable-zone:not(.active)>b{display:none}
 }
