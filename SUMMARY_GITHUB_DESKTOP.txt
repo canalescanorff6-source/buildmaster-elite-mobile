@@ -1,1 +1,1 @@
-v31.80 — Reconstrói o leitor eFHUB e entrega Top 5 exato por posição e estilo
+v31.81 — Adiciona calibrador visual com 8 quadrados móveis e leitura eFHUB pelo mapa ajustado

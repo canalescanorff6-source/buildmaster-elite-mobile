@@ -1,6 +1,7 @@
 import { PLAYSTYLE_OPTIONS, type Objective, type TacticalFormation, type TacticalStyle } from '@/lib/analyzerDomain';
 
 export const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
+export const EFHUB_MANUAL_CALIBRATION_KEY = 'buildmaster_efhub_visual_calibration_v31_81';
 
 export const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_29_regras_atualizaveis';
 export const VAULT_FOLDERS_KEY = 'buildmaster_vault_folders_v25_33';

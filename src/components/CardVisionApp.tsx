@@ -87,8 +87,9 @@ import { PremiumMenuScreen } from '@/components/PremiumMenuScreen';
 import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
 import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
 import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
+import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
-import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
@@ -133,6 +134,16 @@ import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsens
 import { buildEfhubLayoutPlan } from '@/modules/card-reader/efhubLayoutGeometry';
 import { EFHUB_CANONICAL_NORMALIZER_VERSION, normalizeEfhubProfileImage } from '@/modules/card-reader/efhubCanonicalNormalizer';
 import { buildDeterministicEfhubOcrZones, EFHUB_DETERMINISTIC_ZONES_VERSION } from '@/modules/card-reader/efhubDeterministicZones';
+import {
+  buildPreciseOcrZonesFromEfhubCalibration,
+  createDefaultEfhubCalibrationZones,
+  createEfhubCalibrationMap,
+  efhubCalibrationCardArtZone,
+  EFHUB_MANUAL_CALIBRATION_VERSION,
+  normalizeEfhubCalibrationZones,
+  readEfhubCalibrationMap,
+  type EfhubCalibrationZone
+} from '@/modules/card-reader/efhubManualCalibration';
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
@@ -296,6 +307,11 @@ export function CardVisionApp() {
   const [readerCaptureMode, setReaderCaptureMode] = useState<ReaderCaptureMode>('single');
   const [ocrZones, setOcrZones] = useState<OcrZone[]>(DEFAULT_OCR_ZONES);
   const [calibratorOpen, setCalibratorOpen] = useState(false);
+  const [efhubCalibrationZones, setEfhubCalibrationZones] = useState<EfhubCalibrationZone[]>(() => createDefaultEfhubCalibrationZones());
+  const [efhubCalibrationSaved, setEfhubCalibrationSaved] = useState(false);
+  const [efhubCalibrationActive, setEfhubCalibrationActive] = useState(false);
+  const efhubCalibrationZonesRef = useRef<EfhubCalibrationZone[]>(createDefaultEfhubCalibrationZones());
+  const efhubCalibrationActiveRef = useRef(false);
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
   const [premiumReadings, setPremiumReadings] = useState<PremiumZoneReading[]>([]);
   const [totalReadingSession, setTotalReadingSession] = useState<TotalReadingSession | null>(null);
@@ -572,10 +588,10 @@ export function CardVisionApp() {
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
     settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
-    calibration: { ocrZones },
+    calibration: { ocrZones, efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones) },
     folders: vaultFolders,
     plans: {},
-  }), [history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders]);
+  }), [history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders]);
   const healthSummary = useMemo(() => {
     const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
     return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
@@ -584,12 +600,12 @@ export function CardVisionApp() {
     const local = syncHealthEnvelope ?? createBackupEnvelope({
       history,
       settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
-      calibration: { ocrZones },
+      calibration: { ocrZones, efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones) },
       folders: vaultFolders,
       evolution: { matchValidation: centralMatchRecords }
     });
     return buildSyncHealth({ local, remote: remoteFullBackup, snapshots: backupSnapshots, lastSyncAt: lastFullSyncAt });
-  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders, centralMatchRecords]);
+  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders, centralMatchRecords]);
   const availablePlaystyles = useMemo(() => Array.from(new Set(history.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const availableSkills = useMemo(() => Array.from(new Set(history.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const playerComparison = useMemo(() => comparePlayers(history.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), [history, comparePlayerIds, comparePosition]);
@@ -803,6 +819,23 @@ export function CardVisionApp() {
       setOcrZones(DEFAULT_OCR_ZONES);
     }
     try {
+      const storedEfhubMap = readEfhubCalibrationMap(readAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY));
+      if (storedEfhubMap) {
+        setEfhubCalibrationZones(storedEfhubMap.zones);
+        efhubCalibrationZonesRef.current = storedEfhubMap.zones;
+        setEfhubCalibrationSaved(true);
+        setEfhubCalibrationActive(true);
+        efhubCalibrationActiveRef.current = true;
+      }
+    } catch {
+      const defaults = createDefaultEfhubCalibrationZones();
+      setEfhubCalibrationZones(defaults);
+      efhubCalibrationZonesRef.current = defaults;
+      setEfhubCalibrationSaved(false);
+      setEfhubCalibrationActive(false);
+      efhubCalibrationActiveRef.current = false;
+    }
+    try {
       const storedSession = readAccountStorage(ACTIVE_SESSION_KEY);
       if (storedSession) {
         const snapshot = JSON.parse(storedSession) as Partial<ActiveSessionSnapshot>;
@@ -849,6 +882,12 @@ export function CardVisionApp() {
       // Calibração é local e opcional.
     }
   }, [ocrZones]);
+  useEffect(() => {
+    efhubCalibrationZonesRef.current = efhubCalibrationZones;
+  }, [efhubCalibrationZones]);
+  useEffect(() => {
+    efhubCalibrationActiveRef.current = efhubCalibrationActive;
+  }, [efhubCalibrationActive]);
   useEffect(() => {
     try {
       writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
@@ -1207,6 +1246,7 @@ export function CardVisionApp() {
       calibration: {
         matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
         ocrZones: readJsonStorage(CALIBRATION_KEY, ocrZones),
+        efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones),
         learning: readJsonStorage(LEARNING_KEY, {}),
         corrections: readJsonStorage(CORRECTION_KEY, {}),
         ocrLexicon: (await runtimeList('ocr-lexicon', 500).catch(() => [])).map((entry) => entry.value)
@@ -1340,7 +1380,8 @@ export function CardVisionApp() {
         calibration: {
           matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
           learning: readJsonStorage(LEARNING_KEY, {}),
-          corrections: readJsonStorage(CORRECTION_KEY, {})
+          corrections: readJsonStorage(CORRECTION_KEY, {}),
+          efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones)
         },
         evolution: {
           onboarding: readJsonStorage(ONBOARDING_STORAGE_KEY, null),
@@ -1412,6 +1453,17 @@ export function CardVisionApp() {
       writeStorage(LEARNING_KEY, calibration.learning ?? {});
       writeStorage(CORRECTION_KEY, calibration.corrections ?? {});
       if (Array.isArray(calibration.ocrZones)) setOcrZones(calibration.ocrZones as OcrZone[]);
+      const restoredEfhubMap = calibration.efhubVisualMap && typeof calibration.efhubVisualMap === 'object'
+        ? readEfhubCalibrationMap(JSON.stringify(calibration.efhubVisualMap))
+        : null;
+      if (restoredEfhubMap) {
+        writeStorage(EFHUB_MANUAL_CALIBRATION_KEY, restoredEfhubMap);
+        efhubCalibrationZonesRef.current = restoredEfhubMap.zones;
+        efhubCalibrationActiveRef.current = true;
+        setEfhubCalibrationZones(restoredEfhubMap.zones);
+        setEfhubCalibrationSaved(true);
+        setEfhubCalibrationActive(true);
+      }
       if (Array.isArray(calibration.ocrLexicon)) {
         for (const rawTerm of calibration.ocrLexicon) {
           if (!rawTerm || typeof rawTerm !== 'object') continue;
@@ -2084,6 +2136,9 @@ export function CardVisionApp() {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
     try {
+      const manualEfhubCalibration = efhubCalibrationActiveRef.current
+        ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current)
+        : null;
       const scanQuality = qualityReport ?? await inspectPrintQuality(selectedFile).catch(() => null);
       if (scanQuality !== qualityReport) setQualityReport(scanQuality);
       let geometry = await inspectSinglePrintGeometry(selectedFile);
@@ -2122,14 +2177,14 @@ export function CardVisionApp() {
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
       // A chave recebe a versão da geometria para não reutilizar miniaturas
       // produzidas pelo leitor antigo com recortes desalinhados.
-      const thumbnailKey = `${imageHash}:efhub-canonical-v31.80`;
+      const thumbnailKey = `${imageHash}:efhub-canonical-v31.81`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v31.80-final`
+        cacheKey: `${imageHash}:full:contrast:v31.81-visual-map`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;
@@ -2137,8 +2192,41 @@ export function CardVisionApp() {
       let canonicalPreview: string | null = null;
       let canonicalized = false;
       let precisionImageHash = imageHash;
-
-      if (geometry.template === 'detailed-profile' && geometry.anchorReport.efhubLayout) {
+      if (manualEfhubCalibration) {
+        const manualZones = await buildPreciseOcrZonesFromEfhubCalibration(selectedFile, manualEfhubCalibration);
+        const signature = manualEfhubCalibration
+          .map((zone) => `${zone.id}:${zone.x.toFixed(4)},${zone.y.toFixed(4)},${zone.w.toFixed(4)},${zone.h.toFixed(4)}`)
+          .join('|');
+        const sourceRatio = geometry.width / Math.max(1, geometry.height);
+        precisionImageHash = `${imageHash}:${EFHUB_MANUAL_CALIBRATION_VERSION}:${signature}`;
+        geometry = {
+          ...geometry,
+          template: 'detailed-profile',
+          zones: manualZones,
+          cardArtZone: efhubCalibrationCardArtZone(manualEfhubCalibration),
+          anchorReport: {
+            ...geometry.anchorReport,
+            efhubLayout: {
+              version: EFHUB_MANUAL_CALIBRATION_VERSION,
+              mode: 'proportional',
+              width: geometry.width,
+              height: geometry.height,
+              contentBounds: { x: 0, y: 0, w: 1, h: 1 },
+              canonicalFrame: { x: 0, y: 0, w: 1, h: 1 },
+              sourceRatio,
+              canonicalRatio: 1400 / 1600,
+              ratioError: 0,
+              confidence: 100,
+              complete: true,
+              visibleFraction: 1,
+              croppedEdges: [],
+              missingZones: [],
+              reason: 'As oito áreas foram posicionadas manualmente pelo usuário sobre o print original. O OCR usa exatamente esse mapa proporcional.'
+            },
+            displayZones: []
+          }
+        };
+      } else if (geometry.template === 'detailed-profile' && geometry.anchorReport.efhubLayout) {
         const canonicalPlan = buildEfhubLayoutPlan(geometry.width, geometry.height, geometry.anchorReport.bounds, fullPass.text);
         if (!['reflowed-unknown', 'incompatible'].includes(canonicalPlan.audit.mode)) {
           const canonical = await normalizeEfhubProfileImage(selectedFile, canonicalPlan).catch(() => null);
@@ -2165,7 +2253,6 @@ export function CardVisionApp() {
       // No perfil completo as áreas são exclusivamente internas. O usuário vê
       // a cópia normalizada inteira, sem caixas de calibração sobre a imagem.
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
-
       // O recorte é feito somente depois da identificação completa do layout.
       // Assim, uma imagem 3283×3013 que inicialmente parece paisagem não usa
       // o recorte de um template errado antes de o OCR reconhecer o perfil.
@@ -2180,11 +2267,12 @@ export function CardVisionApp() {
         if (finalCrop) setCardCropResult(finalCrop);
         if (finalCrop) void runtimePut('image-thumbnails', thumbnailKey, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
       }
-
       const layoutAudit = geometry.anchorReport.efhubLayout;
       if (geometry.template === 'detailed-profile' && layoutAudit) {
         if (layoutAudit.complete) {
-          setStatus(`Perfil eFHUB padronizado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, cópia interna 1400×1600 pronta para leitura completa.`);
+          setStatus(manualEfhubCalibration
+            ? `Mapa visual ativo: os 8 quadrados ajustados serão usados sobre o print ${layoutAudit.width}×${layoutAudit.height}.`
+            : `Perfil eFHUB padronizado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, cópia interna 1400×1600 pronta para leitura completa.`);
         } else if (layoutAudit.mode === 'reflowed-unknown' || layoutAudit.mode === 'incompatible') {
           setStatus('Layout eFHUB incompatível ou reorganizado: a leitura automática foi bloqueada para não posicionar quadrados errados.');
         } else {
@@ -2438,16 +2526,26 @@ export function CardVisionApp() {
       setLoading(false);
     }
   }
-  function resetCalibration() {
-    setOcrZones(DEFAULT_OCR_ZONES);
-    setStatus('Calibração restaurada para o padrão do print completo 1400x1600.');
+  function updateEfhubCalibration(nextZones: EfhubCalibrationZone[]) { const normalized = normalizeEfhubCalibrationZones(nextZones);
+    efhubCalibrationZonesRef.current = normalized; setEfhubCalibrationZones(normalized); setEfhubCalibrationSaved(false);
   }
-  function updateZone(key: OcrZone['key'], field: keyof Pick<OcrZone, 'x' | 'y' | 'w' | 'h'>, value: string) {
-    const nextValue = Math.max(0, Math.min(1, Number(value) / 100));
-    setOcrZones((current) => current.map((zone) => zone.key === key ? { ...zone, [field]: nextValue } : zone));
+  function saveEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
+    try { writeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY, JSON.stringify(createEfhubCalibrationMap(normalized))); }
+    catch { setStatus('Não foi possível salvar o mapa no armazenamento local. Você ainda pode usá-lo nesta leitura.'); return; }
+    efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
+    setEfhubCalibrationZones(normalized); setEfhubCalibrationSaved(true); setEfhubCalibrationActive(true);
+    setStatus('Mapa visual salvo. Os oito quadrados serão reaplicados proporcionalmente nos próximos prints com a mesma organização.');
   }
-  function toggleZone(key: OcrZone['key']) {
-    setOcrZones((current) => current.map((zone) => zone.key === key ? { ...zone, enabled: !zone.enabled } : zone));
+  function resetEfhubCalibration() { const defaults = createDefaultEfhubCalibrationZones();
+    try { removeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY); } catch {}
+    efhubCalibrationZonesRef.current = defaults; efhubCalibrationActiveRef.current = false;
+    setEfhubCalibrationZones(defaults); setEfhubCalibrationSaved(false); setEfhubCalibrationActive(false);
+    setStatus('Os oito quadrados voltaram ao mapa padrão. Ajuste-os sobre o print e salve quando estiverem corretos.');
+  }
+  function readWithEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
+    efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
+    setEfhubCalibrationActive(true); setCalibratorOpen(false);
+    setStatus('Mapa visual confirmado. A leitura usará exatamente os quadrados posicionados por você.'); void analyzeSelectedImage();
   }
   function applyLearningToText(text: string) {
     const learned = findLearnedCard(text, fileName);
@@ -3041,14 +3139,14 @@ export function CardVisionApp() {
               {loading ? 'Lendo a imagem...' : 'Ler imagem e continuar'}
             </button>
             {ocrCancelable && <button className="manual-mode-button cancel-ocr-action" type="button" onClick={() => void cancelCurrentOcr()}><Ban size={17} /> Cancelar</button>}
-            {advancedMode && (<>
-              <button className="manual-mode-button calibrator-action" type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
-                <Wand2 size={17} /> Ajustar leitura
-              </button>
+            <button className={`manual-mode-button calibrator-action ${efhubCalibrationActive ? 'map-active' : ''}`} type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
+              <Wand2 size={17} /> {efhubCalibrationActive ? 'Ajustar quadrados' : 'Posicionar quadrados'}
+            </button>
+            {advancedMode && (
               <button className="manual-mode-button" type="button" onClick={() => void queueSelectedPrint()} disabled={!selectedFile || loading}>
                 <Save size={17} /> Guardar na fila
               </button>
-            </>)}
+            )}
           </div>
           {advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
@@ -3091,38 +3189,16 @@ export function CardVisionApp() {
               <p>O tratamento ocorre somente no aparelho e não modifica o arquivo original. Ele melhora contraste, brilho e nitidez usados pela leitura.</p>
             </div>
           )}
-          {advancedMode && calibratorOpen && preview && (
-            <details className="calibrator-panel" open>
-              <summary>Calibrador Elite de áreas</summary>
-              <p className="panel-note">Ajuste somente quando o print vier de resolução, zoom ou corte diferente. A posição original deve sair da área da carta, não da grade de GERs.</p>
-              <div className="calibration-preview">
-                <img src={preview} alt="Prévia para calibrar leitura" />
-                {ocrZones.filter((zone) => zone.enabled).map((zone) => (
-                  <div
-                    key={zone.key}
-                    className={`zone-box zone-${zone.key}`}
-                    style={{ left: `${zone.x * 100}%`, top: `${zone.y * 100}%`, width: `${zone.w * 100}%`, height: `${zone.h * 100}%` }}
-                  >
-                    <span>{zone.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="zone-editor-list">
-                {ocrZones.map((zone) => (
-                  <div className="zone-editor" key={zone.key}>
-                    <label className="zone-toggle">
-                      <input type="checkbox" checked={zone.enabled} onChange={() => toggleZone(zone.key)} />
-                      <strong>{zone.label}</strong>
-                    </label>
-                    <label><span>X</span><input type="range" min="0" max="100" value={Math.round(zone.x * 100)} onChange={(event) => updateZone(zone.key, 'x', event.target.value)} /></label>
-                    <label><span>Y</span><input type="range" min="0" max="100" value={Math.round(zone.y * 100)} onChange={(event) => updateZone(zone.key, 'y', event.target.value)} /></label>
-                    <label><span>Largura</span><input type="range" min="1" max="100" value={Math.round(zone.w * 100)} onChange={(event) => updateZone(zone.key, 'w', event.target.value)} /></label>
-                    <label><span>Altura</span><input type="range" min="1" max="100" value={Math.round(zone.h * 100)} onChange={(event) => updateZone(zone.key, 'h', event.target.value)} /></label>
-                  </div>
-                ))}
-              </div>
-              <button className="manual-mode-button calibrator-action full-width" type="button" onClick={resetCalibration}>Restaurar calibração padrão</button>
-            </details>
+          {calibratorOpen && preview && (
+            <EfhubVisualCalibrator
+              imageSrc={preview}
+              zones={efhubCalibrationZones}
+              saved={efhubCalibrationSaved}
+              onChange={updateEfhubCalibration}
+              onSave={saveEfhubCalibration}
+              onReset={resetEfhubCalibration}
+              onRead={readWithEfhubCalibration}
+            />
           )}
           </>)}
           </>)}
