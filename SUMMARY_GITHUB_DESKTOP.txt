@@ -1,1 +1,1 @@
-v31.82 — adiciona tela cheia com salvar e sair no calibrador eFHUB
+v32.00 — mega calibração por modo, conexão, controle, formação, habilidades e Ímpetos

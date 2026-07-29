@@ -10,7 +10,7 @@ export const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
 
 export const objectives: Array<{ value: Objective; title: string; hint: string }> = [
   { value: 'COMPETITIVE', title: 'Desempenho máximo', hint: 'rendimento real em campo, não GER alto' },
-  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.5.0, separada de dados oficiais' },
+  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.4.0, separada de dados oficiais' },
   { value: 'FINISHER', title: 'Finalizador', hint: 'gols, área e chute' },
   { value: 'CREATOR', title: 'Criador', hint: 'passe, controle e assistência' },
   { value: 'DRIBBLER', title: 'Driblador', hint: 'giro curto e 1 contra 1' },

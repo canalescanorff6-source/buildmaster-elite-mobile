@@ -46,6 +46,20 @@ export type AccountSession = {
   userId: string;
 };
 
+// A sessão precisa sobreviver a trocas de tela, retorno do segundo plano e
+// remontagens rápidas do React/WebView. O cache em memória evita leituras
+// concorrentes do armazenamento nativo, enquanto as Promises single-flight
+// impedem duas renovações do mesmo refresh token ao mesmo tempo.
+let memorySession: AccountSession | null | undefined;
+let sessionReadInFlight: Promise<AccountSession | null> | null = null;
+let refreshSessionInFlight: Promise<AccountSession> | null = null;
+let licenseValidationInFlight: { key: string; promise: Promise<LicenseValidation> } | null = null;
+let restoreAccessInFlight: Promise<LicenseValidation | null> | null = null;
+
+function waitForStorage(milliseconds: number) {
+  return new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds));
+}
+
 export type LicenseValidation = {
   profile: AccountProfile;
   deviceId: string;
@@ -209,16 +223,12 @@ function decodeJwtClaims(token: string): Record<string, unknown> {
 
 async function saveSession(session: AccountSession) {
   await secureSet(SESSION_KEY, JSON.stringify(session));
+  memorySession = session;
   await secureRemove(LEGACY_SESSION_KEY).catch(() => undefined);
 }
 
-async function readSession(): Promise<AccountSession | null> {
+function parseStoredSession(raw: string | null): AccountSession | null {
   try {
-    let raw = await secureGet(SESSION_KEY);
-    if (!raw) {
-      raw = await migrateLegacyValueToSecureStorage(LEGACY_SESSION_KEY);
-      if (raw) await secureSet(SESSION_KEY, raw);
-    }
     const value = JSON.parse(raw || 'null') as Partial<AccountSession> | null;
     if (!value?.accessToken || !value.refreshToken || !value.userId || !Number.isFinite(value.expiresAt)) return null;
     return value as AccountSession;
@@ -227,7 +237,48 @@ async function readSession(): Promise<AccountSession | null> {
   }
 }
 
+async function readSessionFromStorage(): Promise<AccountSession | null> {
+  let lastError: unknown = null;
+  for (const delay of [0, 90, 220]) {
+    if (delay) await waitForStorage(delay);
+    try {
+      let raw = await secureGet(SESSION_KEY);
+      if (!raw) {
+        raw = await migrateLegacyValueToSecureStorage(LEGACY_SESSION_KEY);
+        if (raw) await secureSet(SESSION_KEY, raw);
+      }
+      if (raw) return parseStoredSession(raw);
+      // O plugin do Android pode responder vazio durante os primeiros
+      // milissegundos depois que o WebView volta ou remonta. Tente novamente
+      // antes de concluir que não existe sessão.
+      continue;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  // Uma indisponibilidade momentânea do plugin nativo não deve expulsar o
+  // usuário. Quando existe sessão em memória, ela continua sendo a fonte mais
+  // recente até o armazenamento responder novamente.
+  if (memorySession !== undefined) return memorySession;
+  if (lastError) console.warn('BuildMaster: armazenamento seguro temporariamente indisponível.', lastError);
+  return null;
+}
+
+async function readSession(): Promise<AccountSession | null> {
+  if (memorySession !== undefined) return memorySession;
+  if (sessionReadInFlight) return sessionReadInFlight;
+  sessionReadInFlight = readSessionFromStorage()
+    .then((session) => {
+      memorySession = session;
+      return session;
+    })
+    .finally(() => { sessionReadInFlight = null; });
+  return sessionReadInFlight;
+}
+
 async function clearSessionStorage() {
+  memorySession = null;
+  sessionReadInFlight = null;
   await Promise.allSettled([
     secureRemove(SESSION_KEY),
     secureRemove(LICENSE_CACHE_KEY),
@@ -332,7 +383,7 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
   }
 }
 
-async function refreshSession(current: AccountSession): Promise<AccountSession> {
+async function performSessionRefresh(current: AccountSession): Promise<AccountSession> {
   const response = await supabaseFetch('/auth/v1/token?grant_type=refresh_token', {
     method: 'POST',
     body: JSON.stringify({ refresh_token: current.refreshToken })
@@ -340,6 +391,10 @@ async function refreshSession(current: AccountSession): Promise<AccountSession> 
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
   if (!response.ok) {
     if (response.status === 400 || response.status === 401) {
+      // Antes de apagar a sessão, confirme se outra chamada concorrente já
+      // rotacionou o refresh token. Isso elimina o logout ao trocar de tela.
+      const latest = memorySession ?? await readSessionFromStorage();
+      if (latest && latest.refreshToken !== current.refreshToken && latest.expiresAt > Date.now()) return latest;
       await clearSessionStorage();
       throw new Error('Sua sessão expirou. Entre novamente.');
     }
@@ -358,10 +413,19 @@ async function refreshSession(current: AccountSession): Promise<AccountSession> 
   return next;
 }
 
+async function refreshSession(current: AccountSession): Promise<AccountSession> {
+  if (refreshSessionInFlight) return refreshSessionInFlight;
+  refreshSessionInFlight = performSessionRefresh(current)
+    .finally(() => { refreshSessionInFlight = null; });
+  return refreshSessionInFlight;
+}
+
 export async function getValidAccountSession(): Promise<AccountSession | null> {
   const session = await readSession();
   if (!session) return null;
-  if (session.expiresAt - Date.now() > 60_000) return session;
+  // Uma margem de dois minutos evita trocar o token durante navegação comum,
+  // mas ainda o renova com antecedência antes de chamadas protegidas.
+  if (session.expiresAt - Date.now() > 120_000) return session;
   return refreshSession(session);
 }
 
@@ -448,9 +512,7 @@ async function invokeFunction<T>(name: string, body: unknown, accessToken: strin
   return payload as T;
 }
 
-export async function validateOnlineLicense(session?: AccountSession): Promise<LicenseValidation> {
-  const active = session || await getValidAccountSession();
-  if (!active) throw new Error('Entre com seu usuário e senha.');
+async function performOnlineLicenseValidation(active: AccountSession): Promise<LicenseValidation> {
   const device = await buildDeviceProof(active.userId);
   const payload = await invokeFunction<{ profile: Record<string, unknown>; validatedAt?: string; minimumVersion?: string }>('license-session', {
     action: 'validate',
@@ -474,6 +536,19 @@ export async function validateOnlineLicense(session?: AccountSession): Promise<L
   };
   await cacheLicense(validation);
   return validation;
+}
+
+export async function validateOnlineLicense(session?: AccountSession): Promise<LicenseValidation> {
+  const active = session || await getValidAccountSession();
+  if (!active) throw new Error('Entre com seu usuário e senha.');
+  const key = `${active.userId}:${active.accessToken.slice(-18)}`;
+  if (licenseValidationInFlight?.key === key) return licenseValidationInFlight.promise;
+  const promise = performOnlineLicenseValidation(active)
+    .finally(() => {
+      if (licenseValidationInFlight?.key === key) licenseValidationInFlight = null;
+    });
+  licenseValidationInFlight = { key, promise };
+  return promise;
 }
 
 function explainAuthFailure(payload: Record<string, unknown> | null, status: number): string {
@@ -555,11 +630,19 @@ async function restoreCachedLicenseOrThrow(error: unknown): Promise<LicenseValid
   throw error;
 }
 
-export async function restoreAccountAccess(): Promise<LicenseValidation | null> {
+async function performRestoreAccountAccess(): Promise<LicenseValidation | null> {
   if (!isCloudAccountsConfigured()) return null;
   try {
     const session = await getValidAccountSession();
-    if (!session) return null;
+    if (!session) {
+      // Em uma remontagem rápida do WebView, o plugin seguro pode levar alguns
+      // milissegundos para responder. A licença em cache mantém o acesso dentro
+      // do prazo offline em vez de exibir a tela de login indevidamente.
+      const cached = await readCachedLicense();
+      if (!cached) return null;
+      const status = evaluateCachedLicense(cached);
+      return status.valid ? { ...cached, offline: true } : null;
+    }
     return await validateOnlineLicense(session);
   } catch (error) {
     if (isTransientAccountError(error)) return restoreCachedLicenseOrThrow(error);
@@ -567,8 +650,18 @@ export async function restoreAccountAccess(): Promise<LicenseValidation | null> 
   }
 }
 
+export async function restoreAccountAccess(): Promise<LicenseValidation | null> {
+  if (restoreAccessInFlight) return restoreAccessInFlight;
+  restoreAccessInFlight = performRestoreAccountAccess()
+    .finally(() => { restoreAccessInFlight = null; });
+  return restoreAccessInFlight;
+}
+
 export async function signOutAccount() {
   const session = await readSession();
+  refreshSessionInFlight = null;
+  licenseValidationInFlight = null;
+  restoreAccessInFlight = null;
   try {
     if (session && isCloudAccountsConfigured()) await supabaseFetch('/auth/v1/logout', { method: 'POST' }, session.accessToken);
   } catch {

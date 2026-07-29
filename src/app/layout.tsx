@@ -9,6 +9,7 @@ import { ObservabilityBootstrap } from '@/modules/observability/ObservabilityBoo
 import { PremiumQualityLayer } from '@/components/PremiumQualityLayer';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import './globals.css';
+import './v33-executive.css';
 
 export const metadata: Metadata = {
   title: `BuildMaster Elite Tático v${APP_RELEASE_VERSION}`,
@@ -39,7 +40,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production bm-v2930-intelligence bm-v2940-player-lab bm-v2950-tactical-opponent bm-v2960-anti-delay-coach bm-v2970-premium-observability bm-v2980-community-commercial bm-v3000-play-publication"><ExperiencePreferenceBootstrap /><PremiumExperience2Bootstrap /><ObservabilityBootstrap /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
+      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production bm-v2930-intelligence bm-v2940-player-lab bm-v2950-tactical-opponent bm-v2960-anti-delay-coach bm-v2970-premium-observability bm-v2980-community-commercial bm-v3000-play-publication bm-v3300-executive"><ExperiencePreferenceBootstrap /><PremiumExperience2Bootstrap /><ObservabilityBootstrap /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
     </html>
   );
 }

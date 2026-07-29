@@ -6,6 +6,9 @@ import { analyzeCard, parseCard } from '../src/lib/analyzer';
 import { applyDeepCardIntelligenceToResult } from '../src/lib/deepCardIntelligence';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
 
+const currentRelease = JSON.parse(fs.readFileSync('package.json', 'utf8')).version.split('.').slice(0, 2).join('.');
+const detailedVersionPattern = new RegExp(`LEITURA DETALHADA V${currentRelease.replace('.', '\\.')}\\b`);
+
 const text = `Cristiano Ronaldo
 Artilheiro
 GER 105
@@ -144,7 +147,7 @@ const session = buildSinglePrintSession({
 });
 assert.equal(session.detailedReading.coverage.attributeCount, 26);
 assert.equal(session.fields.find((field) => field.key === 'attributes')?.status, 'confirmed');
-assert.match(session.canonicalText, /LEITURA DETALHADA V31\.\d+/);
+assert.match(session.canonicalText, detailedVersionPattern);
 
 const parsed = parseCard(session.canonicalText, 'cristiano-ronaldo.png');
 assert.equal(parsed.playerName, 'Cristiano Ronaldo');
@@ -172,7 +175,7 @@ assert.ok((analyzed.deepCardIntelligence?.physicalInsights.length ?? 0) >= 2);
 assert.ok(analyzed.trainingPointsUsed <= analyzed.trainingPointsTotal);
 
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /Leitura detalhada v31\.\d+/);
+assert.match(panel, /Leitura detalhada v(?:31\.\d+|32\.\d+)/);
 assert.match(panel, /Modelo físico e habilidades/);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /refineSinglePrintGeometryFromText/);

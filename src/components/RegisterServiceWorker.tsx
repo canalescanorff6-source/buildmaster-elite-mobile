@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
+import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 
 type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean } };
+
+const NATIVE_CACHE_SCHEMA = '33.00.0-executive-ui-1';
+const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
 
 async function clearNativeWebCaches() {
   try {
@@ -29,7 +33,14 @@ export function RegisterServiceWorker() {
       || window.location.protocol === 'file:';
 
     if (isNative) {
-      void clearNativeWebCaches();
+      // Limpa resíduos somente na primeira abertura de uma nova estrutura web.
+      // Antes, isso acontecia em todo início e deixava o APK pesado após atualizar.
+      const currentSchema = safeStorageGet(NATIVE_CACHE_SCHEMA_KEY) || '';
+      if (currentSchema !== NATIVE_CACHE_SCHEMA) {
+        void clearNativeWebCaches().finally(() => {
+          safeStorageSet(NATIVE_CACHE_SCHEMA_KEY, NATIVE_CACHE_SCHEMA);
+        });
+      }
       return;
     }
 

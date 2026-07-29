@@ -62,10 +62,10 @@ export type MetaBuildEntry = {
 };
 
 export type MetaBuildUniverse = {
-  version: 'v26.50';
-  patchReference: 'v5.5.0';
+  version: 'v32.00';
+  patchReference: 'v5.4.0';
   gameplayBalanceReference: 'v5.4.0 + v5.2.0';
-  updatedAt: '2026-07-13';
+  updatedAt: '2026-07-29';
   candidatesAnalyzed: number;
   uniqueDistributions: number;
   topBuilds: MetaBuildEntry[];
@@ -341,13 +341,13 @@ export function buildMetaBuildUniverse(input:{
   const bestByScenario=chooseUniqueBest(ranked,entry=>entry.scenario,SCENARIOS.length);
   const best=ranked[0];
   return {
-    version:'v26.50',patchReference:'v5.5.0',gameplayBalanceReference:'v5.4.0 + v5.2.0',updatedAt:'2026-07-13',
+    version:'v32.00',patchReference:'v5.4.0',gameplayBalanceReference:'v5.4.0 + v5.2.0',updatedAt:'2026-07-29',
     candidatesAnalyzed:evaluated,uniqueDistributions:ranked.length,topBuilds,bestByCategory,bestByStyle,bestByFormation,bestByScenario,
     officialMechanics:[
       'v5.4.0: mudanças de direção mais rápidas no Dash Dribble e Sharp Touch, com resposta mais consistente.',
       'v5.4.0: Match-up pode recuar de frente para o driblador e defensores ajustam melhor o corpo para correr para trás.',
       'v5.2.0: Consciência Defensiva passou a influenciar a reação/aceleração durante a marcação.',
-      'v5.5.0: atualização atual de referência; não introduziu um novo rebalanceamento geral de gameplay documentado.'
+      'v5.4.0: atualização oficial de referência para drible, defesa, finalização e duelos 1 contra 1.'
     ],
     communityTrends:[
       '4-2-1-3 aparece como opção comunitária equilibrada e flexível.',

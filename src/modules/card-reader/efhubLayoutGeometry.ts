@@ -3,7 +3,7 @@ import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 export const EFHUB_CANONICAL_WIDTH = 1400;
 export const EFHUB_CANONICAL_HEIGHT = 1600;
 export const EFHUB_CANONICAL_RATIO = EFHUB_CANONICAL_WIDTH / EFHUB_CANONICAL_HEIGHT;
-export const EFHUB_LAYOUT_GEOMETRY_VERSION = '31.82-visual-calibration-layout-1';
+export const EFHUB_LAYOUT_GEOMETRY_VERSION = '32.00-visual-calibration-layout-1';
 
 export type NormalizedBounds = { x: number; y: number; w: number; h: number };
 export type EfhubLayoutMode =

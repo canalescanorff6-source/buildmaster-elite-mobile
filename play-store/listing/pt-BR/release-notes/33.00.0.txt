@@ -1,0 +1,1 @@
+Nova interface Executive com menu lateral pela esquerda, telas mais claras e organizadas, correção dos acessos Jogadores e Meu Time e inicialização mais leve após atualizações. Motores de ficha, OCR, habilidades, Ímpetos e calibração foram preservados.

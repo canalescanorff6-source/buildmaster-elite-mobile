@@ -9,6 +9,8 @@ import {
   skillIdentityKey
 } from './officialSkillIdentity';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
+import { detectCardSkills as detectSkills } from './cardSkillParser';
+import { RECOGNIZABLE_IMPETO_NAMES } from './officialImpetoCatalog';
 import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
 import { buildMetaBuildUniverse } from './metaBuildUniverse';
@@ -599,40 +601,6 @@ function parseAttributes(text: string): Attributes {
     if (value !== null && value >= 1 && value <= 110) attributes[key] = value;
   }
   return attributes;
-}
-
-function detectSkills(text: string) {
-  const found: string[] = [];
-  const explicitBlocks = Array.from(text.matchAll(/HABILIDADES (?:JÁ POSSUI|JA POSSUI|DO JOGADOR|NATIVAS|CONFIRMADAS)\s*[:=]\s*([^\n\r]+)/gi));
-
-  // A lista confirmada pelo usuário tem prioridade absoluta. Todos os aliases
-  // (português, inglês e pequenas variações de OCR) são convertidos para o nome
-  // oficial antes de alimentar o motor de recomendações.
-  for (const block of explicitBlocks) {
-    for (const raw of String(block[1] ?? '').split(/[,;•|]/)) {
-      const skill = cleanLine(raw).replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '');
-      const letters = (skill.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-      if (skill.length < 3 || skill.length > 54 || letters / Math.max(1, skill.length) < 0.62) continue;
-      found.push(canonicalSkillName(skill) ?? skill);
-    }
-  }
-  if (explicitBlocks.length) return canonicalizeSkillList(found);
-
-  const visibleBlock = text.match(/HABILIDADES VIS[IÍ]VEIS\s*:\s*([\s\S]*?)(?=\n(?:\[|NOME|POSI[CÇ][AÃ]O|ESTILO|GER|N[IÍ]VEL|PONTOS|ATRIBUTOS|[IÍ]MPETO|IMPETO|T[EÉ]CNICO)|$)/i)?.[1] ?? '';
-  const safeLines = text.split(/\r?\n/)
-    .map(cleanLine)
-    .filter(Boolean)
-    .filter((line) => !/\b\d{2,3}\b/.test(line))
-    .filter((line) => !/^(?:nome(?: do jogador)?|posi[cç][aã]o(?: principal)?|estilo de jogo|tipo da carta|pa[ií]s|altura|peso|idade|n[ií]vel|ger|overall|t[eé]cnico|manager)\s*[:=-]/i.test(line))
-    .filter((line) => !/^(?:talento|controle de bola|drible|condu[cç][aã]o firme|passe rasteiro|passe alto|finaliza[cç][aã]o|cabe[cç](?:ada|eio)|velocidade|acelera[cç][aã]o|for[cç]a do chute|salto|contato f[ií]sico|equil[ií]brio|resist[eê]ncia)\s*[:=-]/i.test(line))
-    .join('\n');
-  const detectionScope = [visibleBlock, safeLines].filter(Boolean).join('\n');
-
-  for (const [skill, profile] of Object.entries(SKILL_PROFILES)) {
-    const candidates = [skill, ...(profile.aliases ?? [])];
-    if (candidates.some((candidate) => textHas(detectionScope, candidate))) found.push(skill);
-  }
-  return canonicalizeSkillList(found);
 }
 
 function parseImpetos(text: string): Impetus[] {
@@ -1373,13 +1341,7 @@ function finalSkillScoreAdjustments(skill: string, parsed: ParsedCard, selectedP
   return bonus;
 }
 
-const IMPETO_NAMES = [
-  'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa', 'Duelo',
-  'Agilidade', 'Fisicalidade', 'Goleiro', 'Instinto artilheiro', 'Guardião', 'Motor do time', 'Defesaça',
-  'Cruzamento', 'Fantasista', 'Volante criativo', 'Reconstrução', 'Precisão', 'Criador ofensivo',
-  'Proteção de Posse', 'Equilibrado', 'Transição ofensiva', 'Bloqueio Aéreo', 'Rompe-barreira', 'Força',
-  'Movimento sem a bola', 'Roubo de bola'
-];
+const IMPETO_NAMES = [...RECOGNIZABLE_IMPETO_NAMES];
 
 const IMPETO_DB: Record<string, { attributes: string[]; groups: string[] }> = {
   'Chute': { attributes: ['Controle de bola', 'Finalização', 'Força do chute', 'Contato físico'], groups: ['finalizador', 'segundo-atacante'] },
@@ -3489,7 +3451,7 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
     ],
     pointRationale: explanation.slice(0, 5)
   };
-  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse };
+  return { objective, parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse };
 }
 
 // Compatibilidade com integrações e regressões anteriores; novas telas devem importar pela fachada modules/analysis.

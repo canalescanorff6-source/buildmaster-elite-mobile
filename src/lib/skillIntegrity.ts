@@ -21,15 +21,16 @@ function uniqueBySkill<T extends { name: string }>(items: T[]) {
   });
 }
 
-function removedFromCurrent(result: AnalysisResult, finalSkills: string[]) {
-  const finalKeys = new Set(finalSkills.map(skillIdentityKey));
+function removedFromCurrent(result: AnalysisResult) {
   const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
   const removed: string[] = [];
   const seen = new Set<string>();
   for (const raw of result.recommendedSkills) {
     const key = skillIdentityKey(raw);
     if (!key) continue;
-    if (owned.has(key) || seen.has(key) || !isOfficialAdditionalSkillIdentity(raw) || !finalKeys.has(key)) removed.push(raw);
+    // Registre somente violações reais de integridade. Uma habilidade válida
+    // que apenas perdeu posição no novo ranking não é uma "duplicata removida".
+    if (owned.has(key) || seen.has(key) || !isOfficialAdditionalSkillIdentity(raw)) removed.push(raw);
     seen.add(key);
   }
   return canonicalizeSkillList(removed);
@@ -72,7 +73,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
   );
   const ownedKeys = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
   const recommendedKeys = new Set(recommendedSkills.map(skillIdentityKey));
-  const removedDuplicates = removedFromCurrent(result, recommendedSkills);
+  const removedDuplicates = removedFromCurrent(result);
   const recommendedItems = recommendedSkills.map((skill) => recommendationFor(skill, rebuilt, result.skillRecommendations));
   const avoidItems = uniqueBySkill(result.skillRecommendations.filter((item) => item.tier === 'evitar'))
     .filter((item) => !ownedKeys.has(skillIdentityKey(item.name)) && !recommendedKeys.has(skillIdentityKey(item.name)));

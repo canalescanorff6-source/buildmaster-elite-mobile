@@ -7,8 +7,8 @@ const css = fs.readFileSync('src/app/globals.css', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const manifest = JSON.parse(fs.readFileSync('public/manifest.webmanifest', 'utf8'));
 
-assert.equal(pkg.version, '31.82.0');
-assert.equal(manifest.name, 'BuildMaster Elite Tático v31.82');
+assert.ok(Number(pkg.version.split('.')[0]) > 31 || (Number(pkg.version.split('.')[0]) === 31 && Number(pkg.version.split('.')[1]) >= 82), 'A versão deve ser v31.82 ou superior.');
+assert.match(manifest.name, /^BuildMaster Elite Tático v(?:31\.82|3[2-9]\.|[4-9]\d\.)/);
 assert.match(component, /const \[zoom, setZoom\] = useState\(100\)/);
 assert.match(component, /applyZoom\(zoom \+ delta\)/);
 assert.match(component, /Nitidez real/);

@@ -28,8 +28,9 @@ for (const marker of ['--bm-touch:', ':focus-visible', 'prefers-reduced-motion: 
 assert.match(auth, /CapsLock/);
 assert.match(auth, /aria-busy=\{loading\}/);
 assert.match(auth, /aria-live="polite"/);
-assert.match(navigation, /aria-label="Navegação principal"/);
-assert.match(navigation, /aria-label="Navegação inferior"/);
+assert.match(navigation, /aria-label="Navegação lateral principal"/);
+assert.match(navigation, /aria-label="Abrir menu lateral"/);
+assert.match(navigation, /aria-modal="true"/);
 assert.match(live, /aria-live=\{urgent \? 'assertive' : 'polite'\}/);
 assert.match(live, /aria-atomic="true"/);
 assert.match(qualityCenter, /auditVisibleInterface/);

@@ -6,7 +6,7 @@ import { buildOwnedSkillKeys, filterComplementaryAdditionalSkills, skillIdentity
 type SkillCategory = UnifiedSkillDecision['category'];
 type Candidate = UnifiedSkillDecision & { rawScore: number; rolePosition: PositionCode };
 
-export const ADDITIONAL_SKILL_ENGINE_VERSION = '31.80-position-style-exact-five-1';
+export const ADDITIONAL_SKILL_ENGINE_VERSION = '32.00-position-style-formation-exact-five-1';
 
 const CATEGORY_BY_SKILL: Record<string, SkillCategory> = {
   'Pedalada simples': 'drible', 'Toque duplo': 'drible', 'Elástico': 'drible', 'Giro 360°': 'drible', 'Chapéu': 'drible',
@@ -152,9 +152,13 @@ const POSITION_SLOT_BLUEPRINTS: Record<PositionCode, readonly SkillCategory[]> =
 
 function slotBlueprintFor(result: AnalysisResult, position: PositionCode): readonly SkillCategory[] {
   const style = norm(result.parsed.playstyle);
+  const formation = String(result.tacticalProfile.formation);
   if (position === 'GK') {
     if (/ofensivo|offensive/.test(style)) return ['goleiro', 'goleiro', 'passe', 'passe', 'mental'];
     return ['goleiro', 'goleiro', 'goleiro', 'mental', 'físico'];
+  }
+  if (['LB', 'RB', 'LMF', 'RMF'].includes(position) && ['3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation)) {
+    return ['passe', 'defesa', 'passe', 'físico', 'drible'];
   }
   if (position === 'CB') {
     if (/defensor criativo|build up/.test(style)) return ['defesa', 'passe', 'passe', 'aérea', 'mental'];
@@ -163,6 +167,7 @@ function slotBlueprintFor(result: AnalysisResult, position: PositionCode): reado
   if (position === 'DMF') {
     if (/orquestrador|orchestrator/.test(style)) return ['passe', 'passe', 'defesa', 'defesa', 'físico'];
     if (/primeiro volante|anchor man/.test(style)) return ['defesa', 'defesa', 'passe', 'físico', 'aérea'];
+    if (['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation)) return ['defesa', 'defesa', 'passe', 'físico', 'aérea'];
   }
   if (position === 'AMF' || position === 'CMF') {
     if (/infiltra|hole player/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
@@ -175,6 +180,8 @@ function slotBlueprintFor(result: AnalysisResult, position: PositionCode): reado
     if (/piv[oô]|target man/.test(style)) return ['aérea', 'aérea', 'finalização', 'passe', 'físico'];
     if (/recuado|deep.lying forward/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
     if (/homem de area|fox in the box/.test(style)) return ['finalização', 'finalização', 'aérea', 'aérea', 'físico'];
+    if (['5-3-2', '3-5-2'].includes(formation)) return ['finalização', 'finalização', 'aérea', 'passe', 'físico'];
+    if (['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation)) return ['finalização', 'finalização', 'passe', 'drible', 'físico'];
     return ['finalização', 'finalização', 'finalização', 'drible', 'físico'];
   }
   return POSITION_SLOT_BLUEPRINTS[position];
@@ -330,6 +337,34 @@ function styleScore(result: AnalysisResult, position: PositionCode, skill: strin
   return { score, reasons };
 }
 
+function tacticalSkillScore(result: AnalysisResult, position: PositionCode, skill: string) {
+  const formation = String(result.tacticalProfile.formation);
+  const collectiveStyle = result.tacticalProfile.style;
+  let score = 0;
+  const reasons: string[] = [];
+  const add = (condition: boolean, skills: string[], points: number, reason: string) => {
+    if (condition && skills.includes(skill)) { score += points; reasons.push(reason); }
+  };
+
+  add(collectiveStyle === 'POSSE_DE_BOLA', ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Toque de calcanhar'], 9, 'Combina com a circulação curta e o apoio exigidos pela Posse de Bola.');
+  add(collectiveStyle === 'CONTRA_ATAQUE_RAPIDO', ['Passe de primeira', 'Passe em profundidade', 'Chute de primeira', 'Controle com a sola', 'Volta para marcar'], 9, 'Acelera a ação decisiva no Contra-Ataque Rápido.');
+  add(collectiveStyle === 'CONTRA_ATAQUE', ['Passe em profundidade', 'Passe na medida', 'Superioridade aérea', 'Espírito guerreiro', 'Interceptação'], 8, 'Reforça transição, duelo e ataque direto no Contra-Ataque.');
+
+  const narrowAttack = ['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation);
+  const wideFront = ['4-3-3', '4-1-2-3', '4-2-1-3', '3-4-3', '5-2-3'].includes(formation);
+  const backThreeOrFive = ['3-2-4-1', '3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation);
+
+  add((position === 'CF' || position === 'SS') && narrowAttack, ['Chute de primeira', 'Passe de primeira', 'Passe em profundidade', 'Toque de calcanhar'], 11, 'A formação estreita exige tabelas rápidas e conclusão com pouco espaço.');
+  add((position === 'CF' || position === 'SS') && ['5-3-2', '3-5-2'].includes(formation), ['Cabeçada', 'Superioridade aérea', 'Espírito guerreiro', 'Finalização acrobática'], 12, 'No ataque de dois homens, apoio físico e jogo aéreo ganham valor.');
+  add(['LWF', 'RWF'].includes(position) && wideFront, ['Toque duplo', 'Controle com a sola', 'Corte rápido', 'Cruzamento preciso', 'Passe de primeira'], 11, 'O corredor aberto da formação aumenta o uso de condução, corte e cruzamento.');
+  add(['LB', 'RB', 'LMF', 'RMF'].includes(position) && backThreeOrFive, ['Cruzamento preciso', 'Passe de primeira', 'Volta para marcar', 'Interceptação', 'Espírito guerreiro'], 12, 'A função de ala exige ida e volta, passe e recomposição na linha de três/cinco.');
+  add(position === 'DMF' && ['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation), ['Interceptação', 'Bloqueador', 'Marcação individual', 'Passe de primeira', 'Passe na medida'], 12, 'Como volante único, precisa proteger o centro e iniciar a saída sem perder tempo.');
+  add(position === 'CB' && backThreeOrFive, ['Bloqueador', 'Interceptação', 'Superioridade aérea', 'Afastamento acrobático', 'Passe na medida'], 11, 'A linha de três/cinco aumenta coberturas, bloqueios e responsabilidade aérea.');
+  add(position === 'AMF' && ['4-2-3-1', '4-3-1-2', '4-2-2-2'].includes(formation), ['Passe de primeira', 'Passe em profundidade', 'Controle com a sola', 'Toque de calcanhar', 'Chute de primeira'], 10, 'O meia entrelinhas precisa conectar e decidir antes do fechamento da defesa.');
+
+  return { score, reasons };
+}
+
 function specificScore(result: AnalysisResult, position: PositionCode, skill: string): { score: number; reasons: string[]; supportedBy: string[] } {
   const a = result.parsed.attributes;
   const reasons: string[] = [];
@@ -353,14 +388,14 @@ function specificScore(result: AnalysisResult, position: PositionCode, skill: st
   if (['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro'].includes(skill)) { addAttribute('Força do chute', a.kickingPower, 70, 7); addAttribute('Talento de GO', a.goalkeeperAwareness, 78, 5); }
 
   const style = styleScore(result, position, skill);
-  score += style.score;
-  reasons.push(...style.reasons);
+  const tactical = tacticalSkillScore(result, position, skill);
+  score += style.score + tactical.score;
+  reasons.push(...style.reasons, ...tactical.reasons);
   return { score, reasons, supportedBy };
 }
 
-function buildCandidate(result: AnalysisResult, plan: TrainingPlan, position: PositionCode, skill: string): Candidate | null {
+function buildCandidate(result: AnalysisResult, plan: TrainingPlan, position: PositionCode, skill: string, owned: Set<string>): Candidate | null {
   if (!isRoleCompatibleAdditionalSkill(skill, position)) return null;
-  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
   if (owned.has(skillIdentityKey(skill))) return null;
   const category = CATEGORY_BY_SKILL[skill] ?? 'mental';
   const base = POSITION_CATEGORY_WEIGHTS[position][category];
@@ -412,9 +447,10 @@ function categoryDiversityAdjustment(position: PositionCode, selected: Candidate
 /** Sempre produz cinco opções treináveis quando existem cinco habilidades não possuídas no pool seguro da função. */
 export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: TrainingPlan): UnifiedSkillDecision[] {
   const position = resolveAdditionalSkillPosition(result);
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
   const orderedPool = POSITION_SKILL_POOLS[position].filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
   const candidates = orderedPool
-    .map((skill) => buildCandidate(result, plan, position, skill))
+    .map((skill) => buildCandidate(result, plan, position, skill, owned))
     .filter((item): item is Candidate => item !== null)
     .sort((a, b) => b.score - a.score || b.rawScore - a.rawScore || a.name.localeCompare(b.name, 'pt-BR'));
 

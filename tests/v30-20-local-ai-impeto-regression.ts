@@ -48,7 +48,7 @@ assert.ok(explicitImpeto.impetos.some((item) => item.name === 'Chute' && item.va
 const base = analyzeCard(cardText, 'COMPETITIVE', 'CF', 'atacante-teste.png');
 const result = applyLocalAiToResult(applyCompetitiveFusionToResult(base));
 assert.equal(result.localAi?.mode, 'IA local sem API paga');
-assert.match(result.localAi?.engineVersion ?? '', /^31\.10-local-ai-/);
+assert.match(result.localAi?.engineVersion ?? '', /^(?:31\.10|31\.82)-local-ai-/);
 assert.equal(result.localAi?.models.length, 6);
 assert.deepEqual(result.localAi?.models.map((item) => item.id), ['leitura', 'dna', 'funcao', 'ficha', 'habilidades', 'impeto']);
 assert.ok((result.localAi?.confidence ?? 0) >= 1 && (result.localAi?.confidence ?? 0) <= 100);

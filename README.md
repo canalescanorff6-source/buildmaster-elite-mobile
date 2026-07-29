@@ -1,6 +1,65 @@
-# BuildMaster Elite Tático v31.80 — Leitor eFHUB Final + Top 5 por Função
+# BuildMaster Elite Tático v33.00 — Interface Executive
 
-O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.80 substitui o overlay desalinhado pelo perfil interno padronizado em 1400×1600 e fortalece o motor das cinco habilidades adicionais, preservando os módulos existentes da v31.77/v31.78.
+O BuildMaster preserva a Mega Calibração v32.00 e recebe uma reconstrução completa da camada visual. A v33.00 troca a navegação inferior por um menu lateral à esquerda, corrige os acessos Jogadores e Meu Time e reduz o trabalho pesado executado depois de atualizações.
+
+## v33.00 — nova interface e navegação
+
+- menu lateral permanente em telas grandes e gaveta pela esquerda no celular;
+- remoção da barra inferior de navegação;
+- tema Executive claro, com superfícies pérola, tipografia azul-marinho e detalhes champanhe;
+- entrada **Jogadores** sempre abre o banco, sem reutilizar uma subaba antiga;
+- **Meu Time** compatível com WebViews Android que não possuem `Array.prototype.at`;
+- limpeza de cache nativo somente uma vez por versão, não em toda abertura;
+- telas, botões, campos e cartões reorganizados sem alterar OCR, fichas, habilidades, Ímpetos ou login;
+- regressão própria da interface v33.00.
+
+Consulte `INTERFACE_EXECUTIVE_V33.00.md`.
+
+## v32.00 — mega calibração
+
+- compara fichas para **Ranqueado**, **Universal** e **Offline**;
+- adapta a distribuição para conexão estável, variável ou com delay alto;
+- considera se o usuário joga por passe, drible, equilíbrio ou jogo direto;
+- mede dez dimensões de encaixe e mostra prontidão, confiança e avisos;
+- usa exatamente os pontos disponíveis quando há candidata válida;
+- penaliza gasto de baixo retorno e grupos incompatíveis com a posição;
+- recalcula ficha, Top 5 e Ímpetos no mesmo contexto final;
+- preserva a posição escolhida pelo usuário e não persegue GER/overall;
+- separa seletores e painéis em componentes menores para melhorar manutenção;
+- inclui regressão e typecheck próprios da v32.00.
+
+Consulte `MEGA_CALIBRACAO_V32.00.md`.
+
+## v31.82 — auditoria completa de gameplay
+
+- corrige leitura de habilidades vazias que podia capturar o atributo seguinte;
+- invalida o cache sempre que atributos, habilidades, Ímpetos ou contexto tático mudarem;
+- formação e proficiência do técnico passam a influenciar cada candidata de ficha;
+- adapta defesa, drible e finalização ao balanceamento atual do eFootball;
+- unifica o catálogo de Ímpetos entre OCR, analisador e IA local;
+- impede habilidades especiais de serem classificadas como Ímpetos;
+- adiciona matriz de testes para LWF, AMF, DMF, CB, LB e GK.
+
+Consulte `AUDITORIA_COMPLETA_GAMEPLAY_V31.82.md`.
+
+## v31.82 — sessão persistente ao trocar de tela
+
+- leitura do armazenamento seguro com novas tentativas quando o WebView está voltando;
+- cache de sessão em memória para remontagens rápidas;
+- apenas uma renovação de refresh token pode acontecer por vez;
+- troca de aba, seletor de imagem e retorno de outro aplicativo não encerram a conta;
+- falha temporária mantém o workspace em modo offline e tenta novamente;
+- bloqueio, suspensão, vencimento e encerramento confirmado continuam protegidos.
+
+## v31.82 — ficha, habilidades adicionais e Ímpetos revisados
+
+- a ficha vencedora prioriza distribuições que usam exatamente todos os pontos informados;
+- as cinco habilidades são recalculadas depois da distribuição final;
+- nomes oficiais, posição escolhida, estilo, função, atributos e habilidades existentes permanecem obrigatórios;
+- nenhuma habilidade nativa ou especial pode reaparecer no Top 5;
+- Ímpetos são recalculados depois da ficha definitiva e do Top 5;
+- Ímpeto já existente na carta é excluído das opções úteis;
+- habilidades adicionais e Ímpetos continuam em trilhas separadas.
 
 
 ## v31.80 — correção definitiva do scanner e habilidades
@@ -317,6 +376,7 @@ npm run test:v3050
 npm run test:v3100
 npm run test:v3110
 npm run test:v3172
+npm run test:v3200
 ```
 
 ## Colocar no GitHub

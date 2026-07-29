@@ -2,7 +2,7 @@ import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
 import { extractCanonicalSkillsFromText, skillIdentityKey } from '@/lib/officialSkillIdentity';
 
-export const FORENSIC_CONSENSUS_VERSION = '31.82-official-skill-consensus-1';
+export const FORENSIC_CONSENSUS_VERSION = '32.00-official-skill-consensus-1';
 
 export type ForensicConsensusAudit = {
   version: string;

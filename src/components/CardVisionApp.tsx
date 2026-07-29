@@ -37,6 +37,8 @@ import {
   UserPlus
 } from 'lucide-react';
 import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
+import { CalibrationProfileFields } from '@/components/CalibrationProfileFields';
+import { ManagerSelectionField } from '@/components/ManagerSelectionField';
 import {
   analyzeCard,
   normalizeObjective,
@@ -48,7 +50,10 @@ import {
   POSITION_LABELS,
   type TacticalFormation,
   type TacticalProfile,
-  type TacticalStyle
+  type TacticalStyle,
+  type GameplayMode,
+  type ConnectionProfile,
+  type ControlProfile
 } from '@/modules/analysis';
 import {
   DEFAULT_OCR_ZONES,
@@ -64,7 +69,7 @@ import {
   type PremiumEnhancementMode,
   type PremiumZoneReading
 } from '@/lib/premiumReading';
-import { MANAGERS, getManager } from '@/lib/managers';
+import { getManager } from '@/lib/managers';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import type { PrintQualityReport } from '@/lib/validation';
 import { comparePlayers } from '@/lib/confidenceComparison';
@@ -259,6 +264,7 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
 }
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
+const EXECUTIVE_THEME_MIGRATION_KEY = 'buildmaster_v33_executive_theme_migrated';
  type ActiveSessionSnapshot = {
   preview: string | null;
   playerCardImage: string | null;
@@ -273,6 +279,9 @@ type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | '
   formation: TacticalFormation;
   teamStyle: TacticalStyle;
   managerId: string;
+  gameplayMode: GameplayMode;
+  connectionProfile: ConnectionProfile;
+  controlProfile: ControlProfile;
   result: AnalysisResult | null;
   draftResult: AnalysisResult | null;
   manualFields: ManualFields;
@@ -330,6 +339,9 @@ export function CardVisionApp() {
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
   const [managerId, setManagerId] = useState<string>('AUTO');
+  const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
+  const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');
+  const [controlProfile, setControlProfile] = useState<ControlProfile>('BALANCED');
   const [status, setStatus] = useState('Escolha como deseja criar a ficha. O aplicativo mostrará uma etapa por vez.');
   const lastPremiumStatusRef = useRef('');
   const [loading, setLoading] = useState(false);
@@ -352,7 +364,7 @@ export function CardVisionApp() {
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
   const [newFolderName, setNewFolderName] = useState('');
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
-  const [appTheme, setAppTheme] = useState<AppTheme>('dark');
+  const [appTheme, setAppTheme] = useState<AppTheme>('light');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
   const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
   const [advancedMode, setAdvancedMode] = useState(false);
@@ -517,7 +529,7 @@ export function CardVisionApp() {
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
   const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? null, [formation]);
-  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null }), [formation, teamStyle, selectedManager]);
+  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null, gameplayMode, connectionProfile, controlProfile }), [formation, teamStyle, selectedManager, gameplayMode, connectionProfile, controlProfile]);
   const selectedFormationGuide = useMemo(() => {
     if (formation === 'AUTO') return null;
     const savedGuide = formationGuides[formation];
@@ -711,7 +723,9 @@ export function CardVisionApp() {
   }
   function openNavigationGroup(group: MainNavigationGroup) {
     if (group === 'ajustes') setSettingsView('visao-geral');
-    openMainSection(sectionForNavigation(group, group === 'jogadores' ? playerWorkspace : 'visao-geral'));
+    // A entrada principal de Jogadores sempre abre o banco. O fluxo interno
+    // continua preservado apenas quando o usuário escolhe uma etapa específica.
+    openMainSection(sectionForNavigation(group, 'visao-geral'));
   }
   function openPlayerWorkspace(workspace: PlayerWorkspace) {
     setPlayerWorkspace(workspace);
@@ -771,15 +785,17 @@ export function CardVisionApp() {
       });
     try {
       const ui = loadEasyUiPreferences();
-      setVisualPreset(ui.visualPreset);
-      setAppTheme(ui.appTheme);
-      setAccentTheme(ui.accentTheme);
+      const executiveMigrated = readAccountStorage(EXECUTIVE_THEME_MIGRATION_KEY) === '1';
+      setVisualPreset(executiveMigrated ? ui.visualPreset : 'elite-blue');
+      setAppTheme(executiveMigrated ? ui.appTheme : 'light');
+      setAccentTheme(executiveMigrated ? ui.accentTheme : 'gold');
       setAdvancedMode(ui.advancedMode);
       setTextScale(ui.textScale);
       setDensityMode(ui.densityMode);
       setMotionPreference(ui.motionPreference);
       setHighContrast(ui.highContrast);
       setPerformanceMode(ui.performanceMode);
+      if (!executiveMigrated) writeAccountStorage(EXECUTIVE_THEME_MIGRATION_KEY, '1');
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -854,6 +870,9 @@ export function CardVisionApp() {
           if (snapshot.formation) setFormation(snapshot.formation);
           if (snapshot.teamStyle) setTeamStyle(snapshot.teamStyle);
           if (typeof snapshot.managerId === 'string') setManagerId(snapshot.managerId);
+          if (snapshot.gameplayMode) setGameplayMode(snapshot.gameplayMode);
+          if (snapshot.connectionProfile) setConnectionProfile(snapshot.connectionProfile);
+          if (snapshot.controlProfile) setControlProfile(snapshot.controlProfile);
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
@@ -936,6 +955,9 @@ export function CardVisionApp() {
           formation,
           teamStyle,
           managerId,
+          gameplayMode,
+          connectionProfile,
+          controlProfile,
           result: null,
           draftResult: null,
           manualFields,
@@ -950,7 +972,7 @@ export function CardVisionApp() {
       }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId]);
   // v25.77: a ficha não é mais salva automaticamente ao finalizar.
   // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
   // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
@@ -1092,9 +1114,9 @@ export function CardVisionApp() {
       // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
   }
-  function logout() {
-    clearBuildMasterSession();
-    void account?.logout();
+  async function logout() {
+    if (account) await account.logout();
+    else await clearBuildMasterSession();
     window.location.href = '/';
   }
   function createVaultFolder() {
@@ -2177,14 +2199,14 @@ export function CardVisionApp() {
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
       // A chave recebe a versão da geometria para não reutilizar miniaturas
       // produzidas pelo leitor antigo com recortes desalinhados.
-      const thumbnailKey = `${imageHash}:efhub-canonical-v31.82`;
+      const thumbnailKey = `${imageHash}:efhub-canonical-v32.00`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v31.82-visual-map`
+        cacheKey: `${imageHash}:full:contrast:v32.00-visual-map`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;
@@ -3301,42 +3323,21 @@ export function CardVisionApp() {
                       {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>
                   </label>
-                  <label className="creation-manager-field">
-                    <span>Técnico e versão</span>
-                    <select value={managerId} onChange={(event) => {
-                      const nextId = event.target.value;
-                      setManagerId(nextId);
-                      const manager = getManager(nextId);
-                      if (manager) setTeamStyle(manager.primaryStyle);
-                    }}>
-                      <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
-                      <optgroup label="Lendários e Épicos — Booster Duplo">
-                        {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                      </optgroup>
-                      <optgroup label="Pacotes especiais e seleções">
-                        {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                      </optgroup>
-                      <optgroup label="Catálogo padrão (GP)">
-                        {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                      </optgroup>
-                    </select>
-                  </label>
+                  <ManagerSelectionField className="creation-manager-field" value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
+                  <CalibrationProfileFields
+                    gameplayMode={gameplayMode}
+                    connectionProfile={connectionProfile}
+                    controlProfile={controlProfile}
+                    onGameplayModeChange={setGameplayMode}
+                    onConnectionProfileChange={setConnectionProfile}
+                    onControlProfileChange={setControlProfile}
+                  />
                 </div>
-                {selectedManager && (
-                  <article className="manager-context-card creation-manager-context">
-                    <div>
-                      <span>Técnico ativo</span>
-                      <strong>{selectedManager.name}</strong>
-                      <em>{selectedManager.version} • booster {selectedManager.booster}</em>
-                    </div>
-                    <div>
-                      <span>Estilo principal</span>
-                      <strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>
-                      {selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}
-                    </div>
-                    <small>O técnico refina prioridades e simulação. A posição escolhida nunca é trocada automaticamente.</small>
-                  </article>
-                )}
+                {selectedManager && <article className="manager-context-card creation-manager-context">
+                  <div><span>Técnico ativo</span><strong>{selectedManager.name}</strong><em>{selectedManager.version} • booster {selectedManager.booster}</em></div>
+                  <div><span>Estilo principal</span><strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>{selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}</div>
+                  <small>O técnico refina prioridades e simulação. A posição escolhida nunca é trocada automaticamente.</small>
+                </article>}
                 <article className="tactical-guide-card creation-tactical-guide">
                   <div className="tactical-guide-head">
                     <div>
@@ -3376,6 +3377,11 @@ export function CardVisionApp() {
                     <strong>{targetPosition === 'AUTO' ? 'Posição ainda não escolhida' : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition}</strong>
                     <em>{playstyleOverride === 'AUTO' ? 'Estilo do jogador identificado pelo app' : playstyleOverride}</em>
                   </div>
+                  <div>
+                    <span>Calibração v32</span>
+                    <strong>{gameplayMode === 'RANKED' ? 'Ranqueado robusto' : gameplayMode === 'OFFLINE' ? 'Offline expressivo' : 'Universal equilibrado'}</strong>
+                    <em>{connectionProfile === 'HIGH_DELAY' ? 'Delay alto' : connectionProfile === 'STABLE' ? 'Conexão estável' : 'Conexão variável'} • {controlProfile === 'PASSING' ? 'Passe' : controlProfile === 'DRIBBLE' ? 'Drible' : controlProfile === 'DIRECT' ? 'Direto' : 'Equilibrado'}</em>
+                  </div>
                   <small>Este contexto fica salvo na ficha e ajusta as prioridades de passe, velocidade, pressão, cobertura e distribuição de pontos. A posição escolhida continua soberana e nunca é trocada automaticamente.</small>
                 </article>
               </details>
@@ -3396,26 +3402,7 @@ export function CardVisionApp() {
                     {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
                 </label>
-                <label>
-                  <span>Técnico e versão</span>
-                  <select value={managerId} onChange={(event) => {
-                    const nextId = event.target.value;
-                    setManagerId(nextId);
-                    const manager = getManager(nextId);
-                    if (manager) setTeamStyle(manager.primaryStyle);
-                  }}>
-                    <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
-                    <optgroup label="Lendários e Épicos — Booster Duplo">
-                      {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                    </optgroup>
-                    <optgroup label="Pacotes especiais e seleções">
-                      {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                    </optgroup>
-                    <optgroup label="Catálogo padrão (GP)">
-                      {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
-                    </optgroup>
-                  </select>
-                </label>
+                <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
               </div>
               <article className="tactical-guide-card">
                 <div className="tactical-guide-head">
