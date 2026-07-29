@@ -1,6 +1,20 @@
-# BuildMaster Elite Tático v31.79 — Perfil eFHUB Padronizado + Top 5 por Função
+# BuildMaster Elite Tático v31.80 — Leitor eFHUB Final + Top 5 por Função
 
-O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.79 substitui o overlay desalinhado pelo perfil interno padronizado em 1400×1600 e fortalece o motor das cinco habilidades adicionais, preservando os módulos existentes da v31.77/v31.78.
+O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.80 substitui o overlay desalinhado pelo perfil interno padronizado em 1400×1600 e fortalece o motor das cinco habilidades adicionais, preservando os módulos existentes da v31.77/v31.78.
+
+
+## v31.80 — correção definitiva do scanner e habilidades
+
+- perfil completo exibido sem quadrados coloridos;
+- normalização interna em 1400×1600;
+- 26 atributos e modelo físico lidos por colunas;
+- habilidades lidas por linhas completas e cápsulas individuais;
+- nomes unidos são separados e lixo do OCR, como `Ply` e `O IN A`, é descartado;
+- exatamente cinco habilidades adicionais quando há cinco opções compatíveis;
+- posição escolhida, estilo oficial, atributos, físico e habilidades já possuídas formam a decisão;
+- recomendações antigas não podem colocar habilidades de atacante em GOL/ZAG.
+
+Consulte `LEITOR_EFHUB_FINAL_V31.80.md`.
 
 ## v31.79 — Perfil completo antes do OCR
 

@@ -1,1 +1,1 @@
-v31.79 hotfix — Corrige regressões do CI e impede atributos de contaminarem a leitura das habilidades
+v31.80 — Reconstrói o leitor eFHUB e entrega Top 5 exato por posição e estilo

@@ -12,7 +12,7 @@ const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).versi
 const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
 assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith(`${currentRelease}-`));
 assert.equal(OCR_VISION_VERSION, currentVersion);
-assert.equal(FORENSIC_CONSENSUS_VERSION, '31.60-field-consensus-2');
+assert.equal(FORENSIC_CONSENSUS_VERSION, '31.80-official-skill-consensus-1');
 assert.ok(OCR_TEMPLATE_CALIBRATION_VERSION.startsWith(`${currentRelease}-`));
 
 const goodQuality = buildPrintQualityReport({
@@ -52,7 +52,8 @@ const stabilized = stabilizeForensicReadings([
   ])
 ]);
 assert.ok(stabilized.readings.find((item) => item.key === 'attributes')?.text.includes('Passe rasteiro: 88'));
-assert.ok(stabilized.readings.find((item) => item.key === 'skills')?.text.includes('Leitura Relâmpago'));
+assert.ok(stabilized.readings.find((item) => item.key === 'skills')?.text.includes('Passe de primeira'));
+assert.ok(!stabilized.readings.find((item) => item.key === 'skills')?.text.includes('Leitura Relâmpago'), 'Nome fora do catálogo oficial deve ser descartado.');
 assert.ok(stabilized.audit.rejectedNoiseRows >= 1);
 assert.deepEqual(stabilized.audit.mergedFields.sort(), ['attributes', 'skills']);
 
@@ -82,4 +83,4 @@ const center = fs.readFileSync('src/modules/card-reader/OcrVisionCenter.tsx', 'u
 assert.match(center, /(?:Leitor eFHUB Forense 4\.0|Perfil eFHUB Padronizado 5\.0)/);
 assert.match(center, /Qualidade do print/);
 
-console.log('v31.60 scanner forense, consenso por linha e memória de enquadramento aprovados.');
+console.log('v31.80 scanner forense estrito, consenso oficial e memória de enquadramento aprovados.');

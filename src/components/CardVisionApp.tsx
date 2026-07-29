@@ -132,6 +132,7 @@ import { learnedCanonicalValues, learnConfirmedOcrBatch, loadLearnedOcrTerms } f
 import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsensus';
 import { buildEfhubLayoutPlan } from '@/modules/card-reader/efhubLayoutGeometry';
 import { EFHUB_CANONICAL_NORMALIZER_VERSION, normalizeEfhubProfileImage } from '@/modules/card-reader/efhubCanonicalNormalizer';
+import { buildDeterministicEfhubOcrZones, EFHUB_DETERMINISTIC_ZONES_VERSION } from '@/modules/card-reader/efhubDeterministicZones';
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
@@ -2118,17 +2119,17 @@ export function CardVisionApp() {
         ...corrections.flatMap((correction) => correction.field === 'playerName' ? [correction.correctedValue, correction.playerName] : [correction.playerName])
       ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
-      setOcrZones(geometry.zones);
+      setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
       // A chave recebe a versão da geometria para não reutilizar miniaturas
       // produzidas pelo leitor antigo com recortes desalinhados.
-      const thumbnailKey = `${imageHash}:efhub-canonical-v31.79`;
+      const thumbnailKey = `${imageHash}:efhub-canonical-v31.80`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v31.79-canonical`
+        cacheKey: `${imageHash}:full:contrast:v31.80-final`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;
@@ -2145,11 +2146,12 @@ export function CardVisionApp() {
             ocrSource = canonical.blob;
             canonicalPreview = canonical.preview;
             canonicalized = true;
-            precisionImageHash = `${imageHash}:${EFHUB_CANONICAL_NORMALIZER_VERSION}`;
+            const deterministic = await buildDeterministicEfhubOcrZones(canonical.blob);
+            precisionImageHash = `${imageHash}:${EFHUB_CANONICAL_NORMALIZER_VERSION}:${EFHUB_DETERMINISTIC_ZONES_VERSION}`;
             geometry = {
               ...geometry,
-              zones: canonical.ocrZones,
-              cardArtZone: canonical.ocrZones.find((item) => item.key === 'cardType') ?? geometry.cardArtZone,
+              zones: deterministic.zones,
+              cardArtZone: deterministic.zones.find((item) => item.key === 'cardType') ?? geometry.cardArtZone,
               anchorReport: {
                 ...geometry.anchorReport,
                 efhubLayout: canonicalPlan.audit,
@@ -2160,7 +2162,9 @@ export function CardVisionApp() {
           }
         }
       }
-      setOcrZones(geometry.zones);
+      // No perfil completo as áreas são exclusivamente internas. O usuário vê
+      // a cópia normalizada inteira, sem caixas de calibração sobre a imagem.
+      setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
 
       // O recorte é feito somente depois da identificação completa do layout.
       // Assim, uma imagem 3283×3013 que inicialmente parece paisagem não usa
@@ -2194,7 +2198,7 @@ export function CardVisionApp() {
         setStatus(`Leitura Ultraprecisa: ${zone.label} (${index + 1}/${enabledZones.length})...`);
         const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
         const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
-        const target = zone.key === 'name' ? 2600 : numeric ? 2100 : wide ? 2800 : 2350;
+        const target = zone.key === 'name' ? 2600 : zone.key === 'skills' ? 2200 : numeric ? 2100 : wide ? 2800 : 2350;
         const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
           imageHash: precisionImageHash,
           template: geometry.template,

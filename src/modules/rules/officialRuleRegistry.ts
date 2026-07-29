@@ -169,7 +169,7 @@ const EMBEDDED_BASE: Omit<OfficialRulePack, 'checksum'> = {
     'Validação semântica de posições, estilos, habilidades e regras de cartas.',
     'Pré-visualização obrigatória antes de ativar pacotes importados.',
     'Histórico, auditoria e bloqueio de downgrade acidental.',
-    'Catálogo de habilidades nativas e especiais do eFootball 2026 ampliado para o leitor eFHUB v31.79.'
+    'Catálogo de habilidades nativas e especiais do eFootball 2026 ampliado para o leitor eFHUB v31.80.'
   ],
   positions: POSITION_DEFINITIONS,
   playstyles: PLAYSTYLE_DEFINITIONS,

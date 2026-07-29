@@ -132,8 +132,8 @@ assert.deepEqual(skillZones.map((zone) => zone.label), [
 ]);
 assert.ok(skillZones[0].y1 <= skillZones[1].y1 && skillZones[1].y1 < skillZones[2].y1 && skillZones[2].y1 < skillZones[3].y1);
 assert.ok(skillZones.slice(4).every((zone) => zone.y1 === 1427 && zone.y2 === 1595));
-assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.79-canonical-profile-skills-1');
-assert.equal(HIGH_PRECISION_OCR_VERSION, '31.79-canonical-profile-skills-1');
+assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.80-canonical-profile-final-1');
+assert.equal(HIGH_PRECISION_OCR_VERSION, '31.80-strict-capsule-skills-1');
 assert.equal(OFFICIAL_RULE_PACK_VERSION, '2026.07.4');
 
-console.log('v31.79: catálogo preservado, sete recortes de habilidades e bloqueio das especiais nas recomendações aprovados.');
+console.log('v31.80: catálogo preservado, OCR estrito de habilidades e bloqueio das especiais aprovados.');

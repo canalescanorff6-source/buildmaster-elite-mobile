@@ -1,4 +1,4 @@
-BUILDMASTER ELITE TÁTICO v31.79 — PERFIL EFHUB PADRONIZADO E TOP 5 POR FUNÇÃO
+BUILDMASTER ELITE TÁTICO v31.80 — PERFIL EFHUB PADRONIZADO E TOP 5 POR FUNÇÃO
 
 Base utilizada: projeto v31.78 derivado da base v31.77 mais recente enviada pelo usuário.
 
@@ -8,7 +8,7 @@ Projeto de produção com:
 - oito regiões canônicas mantidas somente para recortes internos;
 - sete recortes complementares para reconhecer as cápsulas de habilidades;
 - detecção de resolução, proporção, margens, orientação e prints cortados;
-- cache renovado do leitor v31.79;
+- cache renovado do leitor v31.80;
 - 45 habilidades regulares e 20 habilidades especiais/nativas reconhecíveis;
 - aliases eFHUB em português e inglês;
 - separação entre habilidades que já pertencem à carta e habilidades adicionais treináveis;

@@ -1,7 +1,7 @@
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
 import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAudit } from './efhubProfile';
-import { canonicalSkillName, skillAliasesFor, skillIdentityKey } from '@/lib/officialSkillIdentity';
+import { canonicalSkillName, extractCanonicalSkillsFromText, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
@@ -52,7 +52,7 @@ export type DetailedPrintReading = {
   profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '31.79-canonical-skill-capsules-1';
+const VERSION = '31.80-deterministic-profile-strict-skills-1';
 
 function normalized(value: string) {
   return value
@@ -261,7 +261,6 @@ const PHYSICAL_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
 export const OFFICIAL_OCR_SKILLS = [...ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES]
   .sort((left, right) => normalized(right).length - normalized(left).length);
 
-const SKILLS = OFFICIAL_OCR_SKILLS;
 
 const IMPETO_NAMES = [
   'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa',
@@ -365,21 +364,6 @@ export function fuzzyContainsCatalogItem(text: string, item: string, aliases: st
   return false;
 }
 
-const SKILL_LINE_BLOCKLIST = [
-  'habilidades', 'skills', 'detalhes do jogador', 'atributos', 'posicoes', 'posições', 'modelo de jogador',
-  'talento ofensivo', 'talento defensivo', 'velocidade', 'aceleracao', 'aceleração', 'finalizacao', 'finalização',
-  'passe rasteiro', 'passe alto', 'controle de bola', 'nivel', 'nível', 'overall', 'ger', 'tecnico', 'técnico',
-  'condicao fisica', 'condição física', 'resistencia', 'resistência', 'altura', 'peso', 'idade'
-];
-
-function cleanSkillLineCandidate(value: string) {
-  return clean(value)
-    .replace(/^(?:habilidade|skill)\s*[:=.-]?\s*/i, '')
-    .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9°º.' -]+$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function isolateSkillListText(text: string) {
   const lines = text.split(/\r?\n/);
   const markerIndex = lines.findIndex((line) => /^(?:habilidades(?:\s+do\s+jogador)?|skills)\s*[:=-]?\s*$/i.test(clean(line)));
@@ -395,48 +379,23 @@ function isolateSkillListText(text: string) {
   return selected.join('\n');
 }
 
-function extractUnknownSkillCandidates(text: string, knownCatalog: string[], confidence: number, source: string) {
-  const known = knownCatalog.map((item) => normalized(item));
-  const rawItems = text
-    .split(/\r?\n|[•|;,]/)
-    .map(cleanSkillLineCandidate)
-    .filter(Boolean);
-  const candidates: DetailedValue[] = [];
-  for (const line of rawItems) {
-    const norm = normalized(line);
-    const words = line.split(/\s+/).filter(Boolean);
-    const letters = (line.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-    if (line.length < 3 || line.length > 46 || words.length > 7 || /\d{2,}/.test(line)) continue;
-    if (letters / Math.max(1, line.length) < 0.66) continue;
-    if (SKILL_LINE_BLOCKLIST.some((blocked) => norm === normalized(blocked) || norm.startsWith(`${normalized(blocked)} `))) continue;
-    if (/^(?:CF|SS|LWF|RWF|AMF|CMF|DMF|CB|LB|RB|GK|CA|SA|PE|PD|MAT|MLG|VOL|ZAG|LE|LD|GOL)$/i.test(line)) continue;
-    const nearest = knownCatalog.map((item) => ({ item, similarity: textSimilarity(line, item) })).sort((a, b) => b.similarity - a.similarity)[0];
-    if (nearest && nearest.similarity >= 0.79) continue;
-    if (known.includes(norm)) continue;
-    const value = line.charAt(0).toUpperCase() + line.slice(1);
-    if (candidates.some((item) => textSimilarity(item.value, value) >= 0.90)) continue;
-    candidates.push({ ...makeValue('Habilidade nova para confirmar', value, Math.max(52, confidence - 12), `${source} • fora do catálogo local`), status: 'review' as const });
-  }
-  return candidates.slice(0, 12);
-}
-
 function parseSkills(text: string, confidence: number, source: string, learnedSkillNames: string[] = []) {
   const skillListText = isolateSkillListText(text);
-  const official = SKILLS
-    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, skillAliasesFor(skill)))
-    .map((skill) => makeValue('Habilidade', canonicalSkillName(skill) ?? skill, confidence, source));
-  const officialKeys = new Set(official.map((item) => skillIdentityKey(item.value)));
+  const strict = extractCanonicalSkillsFromText(skillListText);
+  const strictKeys = new Set(strict.map(skillIdentityKey));
   const learned = learnedSkillNames
-    .map((skill) => canonicalSkillName(skill) ?? skill)
-    .filter((skill) => !officialKeys.has(skillIdentityKey(skill)))
-    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, skillAliasesFor(skill)))
-    .filter((skill, index, array) => array.findIndex((item) => skillIdentityKey(item) === skillIdentityKey(skill)) === index)
-    .map((skill) => makeValue('Habilidade aprendida', skill, Math.max(65, confidence - 3), `${source} • catálogo aprendido`));
-  const aliasCatalog = SKILLS.flatMap((skill) => skillAliasesFor(skill));
-  const catalog = [...SKILLS, ...aliasCatalog, ...learnedSkillNames];
+    .map((skill) => canonicalSkillName(skill))
+    .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill))
+    .filter((skill) => strictKeys.has(skillIdentityKey(skill)));
+  const canonical = [...strict, ...learned].filter((skill, index, array) =>
+    array.findIndex((item) => skillIdentityKey(item) === skillIdentityKey(skill)) === index
+  );
   return {
-    skills: [...official, ...learned].filter((item, index, array) => array.findIndex((other) => skillIdentityKey(other.value) === skillIdentityKey(item.value)) === index),
-    candidates: extractUnknownSkillCandidates(skillListText, catalog, confidence, source)
+    skills: canonical.map((skill) => makeValue('Habilidade', skill, confidence, `${source} • catálogo oficial estrito`)),
+    // A v31.80 nunca transforma lixo bruto do OCR em habilidade. Caso o texto
+    // não corresponda ao catálogo, ele fica apenas nos diagnósticos internos e
+    // a etapa Habilidades permanece incompleta para revisão visual.
+    candidates: [] as DetailedValue[]
   };
 }
 
@@ -692,7 +651,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   )));
   const score = efhubDetected ? Math.round(baseScore * 0.55 + profileAudit.score * 0.45) : baseScore;
 
-  const canonical: string[] = ['[LEITURA DETALHADA V31.79]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.80]'];
   if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
@@ -711,7 +670,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
   if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V31.79]');
+  canonical.push('[FIM LEITURA DETALHADA V31.80]');
 
   const warnings: string[] = [];
   if (detectedName && !name) warnings.push(`O OCR encontrou um possível nome, mas somente ${nameAgreement} passagem(ns) independente(s) concordaram. O valor foi bloqueado para evitar identificar o jogador errado.`);
@@ -721,7 +680,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (weightCandidate && !weightRaw) warnings.push(`Peso descartado por estar fora da faixa plausível: ${weightCandidate} kg.`);
   if (ageCandidate && !ageRaw) warnings.push(`Idade descartada por estar fora da faixa plausível: ${ageCandidate}.`);
   if (levelCandidate && !levelRaw) warnings.push(`Nível descartado por estar fora da faixa plausível: ${levelCandidate}.`);
-  if (skillCandidates.length) warnings.push(`${skillCandidates.length} habilidade(s) fora do catálogo local foram preservadas para confirmação; nenhuma foi descartada silenciosamente.`);
+  if (!skills.length && skillSource.trim()) warnings.push('O OCR encontrou texto na área de habilidades, mas nenhum nome oficial pôde ser confirmado. O texto bruto foi descartado para não criar habilidades falsas.');
   const highestPosition = Math.max(0, ...positionRatings.map((item) => item.numericValue ?? 0));
   if (identity.overall?.numericValue && highestPosition && Math.abs(identity.overall.numericValue - highestPosition) > 12) {
     identity.overall.status = 'review';

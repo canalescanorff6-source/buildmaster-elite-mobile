@@ -38,7 +38,7 @@ function runCard(target: 'GK' | 'CB' | 'CF', playstyle: string, owned: string, a
 const goalkeeper = runCard(
   'GK',
   'Goleiro Ofensivo',
-  'GK Low Punt, GK High Punt, GK Long Throw, Penalty Saver, Fighting Spirit, Captaincy, One-touch Pass, Weighted Pass, Low Lofted Pass, Through Passing',
+  'GK Low Punt, GK High Punt, Penalty Saver, Fighting Spirit',
   'Talento de GO: 93\nFirmeza de GO: 91\nDefesa de GO: 92\nReflexos de GO: 95\nAlcance de GO: 94\nPasse rasteiro: 72\nPasse alto: 78\nForça do chute: 88\nSalto: 85\nContato físico: 86\nResistência: 82'
 );
 const centreBack = runCard(
@@ -100,8 +100,8 @@ const skillIsolationReading: PremiumZoneReading = {
 const isolatedSkills = readDetailedPrint('', [skillIsolationReading]);
 assert.deepEqual(isolatedSkills.skills.map((item) => item.value).sort(), ['Chute de primeira', 'Passe de primeira'].sort(), 'Atributos acima do marcador HABILIDADES não podem contaminar a lista nativa.');
 
-assert.equal(ADDITIONAL_SKILL_ENGINE_VERSION, '31.79-role-lock-exact-five-1');
-assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.79-canonical-profile-skills-1');
-assert.equal(EFHUB_CANONICAL_NORMALIZER_VERSION, '31.79-canonical-profile-1');
+assert.equal(ADDITIONAL_SKILL_ENGINE_VERSION, '31.80-position-style-exact-five-1');
+assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.80-canonical-profile-final-1');
+assert.equal(EFHUB_CANONICAL_NORMALIZER_VERSION, '31.80-canonical-profile-final-1');
 
-console.log('v31.79: perfil canônico 1400×1600 e Top 5 estritamente compatível com GK, CB e CF aprovados.');
+console.log('v31.79/v31.80: perfil canônico e Top 5 estritamente compatível com GK, CB e CF aprovados.');

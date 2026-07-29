@@ -1151,7 +1151,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'habilidades' && result.skillIntegrity && (
         <div className="result-section-grid">
           <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Top 5 por função v31.79</p><h3>{result.skillIntegrity.status === 'approved' ? 'Lista complementar aprovada' : 'Confirme as habilidades lidas antes de aplicar'}</h3></div><span>{result.skillIntegrity.recommendedSkills.length}/5 seguras</span></div>
+            <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Top 5 por função v31.80</p><h3>{result.skillIntegrity.status === 'approved' ? 'Lista complementar aprovada' : 'Confirme as habilidades lidas antes de aplicar'}</h3></div><span>{result.skillIntegrity.recommendedSkills.length}/5 seguras</span></div>
             <div className="chip-cloud">{result.skillIntegrity.checks.map((check) => <span key={check}>{check}</span>)}</div>
             {result.skillIntegrity.removedDuplicates.length > 0 && <p className="panel-note">Removidas automaticamente por repetição ou conflito: {result.skillIntegrity.removedDuplicates.join(', ')}.</p>}
             {result.skillIntegrity.missingSlots > 0 && <p className="panel-note">{result.skillIntegrity.missingSlots} espaço(s) ficaram vazio(s) porque o motor não encontrou outra habilidade segura. Isso só acontece quando a carta já possui quase todo o pool seguro da função; o app não usa habilidades incompatíveis para preencher a vaga.</p>}

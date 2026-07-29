@@ -9,7 +9,7 @@ import {
   skillIdentityKey
 } from './officialSkillIdentity';
 
-const VERSION = '31.79-skill-integrity-exact-five-1';
+const VERSION = '31.80-authoritative-plan-exact-five-1';
 
 function uniqueBySkill<T extends { name: string }>(items: T[]) {
   const seen = new Set<string>();
@@ -60,12 +60,10 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
   // posição, estilo da carta, atributos, ficha e habilidades possuídas.
   // Recomendações antigas não podem reintroduzir habilidade de atacante em
   // goleiro ou habilidade ofensiva inadequada em zagueiro.
-  const candidates = [
-    ...rebuilt.map((item) => item.name),
-    ...result.recommendedSkills.filter((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition)),
-    ...result.skillPriority.ordered.map((item) => item.name).filter((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition)),
-    ...result.skillRecommendations.filter((item) => item.tier !== 'evitar').map((item) => item.name).filter((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition))
-  ];
+  // Somente o plano v31.80 é autoritativo. Listas de versões anteriores
+  // não podem completar vagas porque eram justamente a origem de habilidades
+  // ofensivas em goleiros/zagueiros e de entregas com menos de cinco opções.
+  const candidates = rebuilt.map((item) => item.name);
   const recommendedSkills = filterComplementaryAdditionalSkills(
     candidates,
     result.parsed.nativeSkills,
@@ -143,7 +141,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
     officialOnly,
     context: [
       ...result.skillPriority.context.filter((item) => !/habilidades j[aá] existentes foram removidas/i.test(item)),
-      'Filtro v31.79: aliases, traduções e variações de OCR também contam como habilidade já existente.'
+      'Filtro v31.80: apenas habilidades oficiais confirmadas contam como existentes; textos estranhos do OCR são rejeitados.'
     ]
   };
 
@@ -159,7 +157,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       ...result.unifiedIntelligence,
       skillPlan: finalUnifiedPlan,
       safeguards: [
-        'Filtro v31.79 antirrepetição e trava por função aplicados depois de todos os motores e correções locais.',
+        'Filtro v31.80 antirrepetição, posição escolhida e estilo oficial aplicados depois de todos os motores.',
         ...result.unifiedIntelligence.safeguards
       ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 10)
     } : result.unifiedIntelligence,

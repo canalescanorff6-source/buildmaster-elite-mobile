@@ -59,6 +59,7 @@ const EXTRA_ALIASES: Record<string, CanonicalSkillName> = {
   'drible explosivos': 'Drible explosivo',
   'explosao de aceleracao': 'Drible explosivo',
   'attacking surge': 'Impulso ofensivo',
+  'attack surge': 'Impulso ofensivo',
   'surto ofensivo': 'Impulso ofensivo',
   'arrancada ofensiva': 'Impulso ofensivo',
   'impulso de ataque': 'Impulso ofensivo',
@@ -182,6 +183,98 @@ export function skillAliasesFor(canonical: string) {
     if (target === resolved) aliases.push(alias);
   }
   return Array.from(new Set(aliases));
+}
+
+
+
+type SkillTextMatch = { canonical: CanonicalSkillName; start: number; end: number; confidence: number };
+
+function officialAliasEntries() {
+  const entries: Array<{ canonical: CanonicalSkillName; alias: string; normalized: string; tokens: number }> = [];
+  for (const canonical of canonicalNames) {
+    for (const alias of skillAliasesFor(canonical)) {
+      const normalized = normalizeSkillIdentity(alias);
+      if (!normalized || normalized.length < 4) continue;
+      entries.push({ canonical, alias, normalized, tokens: normalized.split(/\s+/).length });
+    }
+  }
+  return entries.sort((left, right) => right.normalized.length - left.normalized.length || right.tokens - left.tokens);
+}
+
+/**
+ * Extrai somente nomes oficiais do texto OCR. Uma linha que contenha duas
+ * cápsulas coladas (por exemplo, "Passe de primeira Passe em profundidade")
+ * produz duas habilidades separadas. Fragmentos como "Ply" e "O IN A" nunca
+ * são devolvidos como habilidades.
+ */
+export function extractCanonicalSkillsFromText(value: string | null | undefined) {
+  const normalizedText = normalizeSkillIdentity(value);
+  if (!normalizedText) return [] as CanonicalSkillName[];
+  const padded = ` ${normalizedText} `;
+  const matches: SkillTextMatch[] = [];
+  const seenSpans = new Set<string>();
+
+  for (const entry of officialAliasEntries()) {
+    const needle = ` ${entry.normalized} `;
+    let cursor = 0;
+    while (cursor < padded.length) {
+      const index = padded.indexOf(needle, cursor);
+      if (index < 0) break;
+      const start = index + 1;
+      const end = start + entry.normalized.length;
+      const spanKey = `${start}:${end}:${entry.canonical}`;
+      if (!seenSpans.has(spanKey)) {
+        matches.push({ canonical: entry.canonical, start, end, confidence: 1 });
+        seenSpans.add(spanKey);
+      }
+      cursor = index + Math.max(1, needle.length - 1);
+    }
+  }
+
+  // Segunda passagem conservadora para erros pequenos do OCR. Só aceita
+  // aliases longos e janelas com número de palavras semelhante.
+  const tokens = normalizedText.split(/\s+/).filter(Boolean);
+  const offsets: number[] = [];
+  let running = 0;
+  for (const token of tokens) { offsets.push(running); running += token.length + 1; }
+  for (const entry of officialAliasEntries()) {
+    if (entry.normalized.length < 9) continue;
+    for (let size = Math.max(1, entry.tokens - 1); size <= entry.tokens + 1; size += 1) {
+      for (let index = 0; index + size <= tokens.length; index += 1) {
+        const window = tokens.slice(index, index + size).join(' ');
+        if (Math.abs(window.length - entry.normalized.length) > 4) continue;
+        const compactWindow = window.replace(/\s+/g, '');
+        const compactAlias = entry.normalized.replace(/\s+/g, '');
+        const distance = levenshtein(compactWindow, compactAlias);
+        const ratio = 1 - distance / Math.max(compactWindow.length, compactAlias.length);
+        const allowed = compactAlias.length >= 18 ? 3 : compactAlias.length >= 12 ? 2 : 1;
+        if (distance > allowed || ratio < 0.88) continue;
+        const start = offsets[index];
+        const end = start + window.length;
+        if (matches.some((item) => item.canonical === entry.canonical && Math.abs(item.start - start) <= 2)) continue;
+        matches.push({ canonical: entry.canonical, start, end, confidence: ratio });
+      }
+    }
+  }
+
+  const selected: SkillTextMatch[] = [];
+  for (const match of matches.sort((left, right) => left.start - right.start || right.confidence - left.confidence || (right.end - right.start) - (left.end - left.start))) {
+    const duplicate = selected.some((item) => item.canonical === match.canonical);
+    if (duplicate) continue;
+    selected.push(match);
+  }
+  return selected.sort((left, right) => left.start - right.start).map((item) => item.canonical);
+}
+
+export function isLikelySkillOcrNoise(value: string | null | undefined) {
+  const raw = String(value ?? '').trim();
+  const normalized = normalizeSkillIdentity(raw);
+  if (!normalized) return true;
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const letters = (raw.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+  if (normalized.length < 5 || words.length > 8 || letters / Math.max(1, raw.length) < 0.68) return true;
+  if (/^(?:ply|o in a|in a|ina|go|gk|cf|ss|cb|dmf|cmf|amf|lwf|rwf|lb|rb)$/i.test(normalized)) return true;
+  return extractCanonicalSkillsFromText(raw).length === 0;
 }
 
 export function skillIdentityKey(value: string | null | undefined) {

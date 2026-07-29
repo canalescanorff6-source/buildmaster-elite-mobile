@@ -50,7 +50,7 @@ export function SinglePrintEvidencePanel({
       {session.layoutAudit && (
         <section className={`precision-audit-card ${session.layoutAudit.complete ? 'ready' : 'review'}`} aria-label="Auditoria do encaixe dinâmico eFHUB">
           <div>
-            <p className="kicker"><ScanLine size={14}/> Perfil padronizado v31.79</p>
+            <p className="kicker"><ScanLine size={14}/> Perfil padronizado v31.80</p>
             <strong>{session.layoutAudit.confidence}%</strong>
             <span>{layoutModeLabel(session.layoutAudit.mode)}</span>
           </div>
@@ -67,7 +67,7 @@ export function SinglePrintEvidencePanel({
 
       <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
         <div>
-          <p className="kicker"><ShieldCheck size={14}/> Perfil Padronizado v31.79</p>
+          <p className="kicker"><ShieldCheck size={14}/> Perfil Padronizado v31.80</p>
           <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
           <span>precisão estimada</span>
         </div>
@@ -97,7 +97,7 @@ export function SinglePrintEvidencePanel({
           </div>
           <p>{session.detailedReading.profileAudit.ready
             ? 'Nome, grade de posições, 26 atributos, 16 medidas físicas e habilidades passaram pelos portões rígidos.'
-            : 'A ficha permanece bloqueada enquanto qualquer área padronizada estiver incompleta ou uma habilidade nova não for confirmada.'}</p>
+            : 'A ficha permanece bloqueada enquanto qualquer área padronizada estiver incompleta; textos não oficiais do OCR são descartados.'}</p>
         </section>
       )}
 
@@ -110,23 +110,20 @@ export function SinglePrintEvidencePanel({
         </figure>
       ) : null}
 
-      {(session.detailedReading.skills.length > 0 || session.detailedReading.skillCandidates.length > 0) && (
+      {session.detailedReading.skills.length > 0 && (
         <section className="recognized-skill-strip" aria-label="Habilidades reconhecidas no jogador">
           <header>
             <div>
               <p className="kicker"><ShieldCheck size={14}/> Habilidades do jogador</p>
               <strong>{session.detailedReading.skills.length} reconhecida(s)</strong>
             </div>
-            <span>{session.detailedReading.skillCandidates.length > 0 ? `${session.detailedReading.skillCandidates.length} para confirmar` : 'catálogo validado'}</span>
+            <span>catálogo oficial validado</span>
           </header>
           <div>
             {session.detailedReading.skills.map((item) => (
               <span key={`recognized-${item.value}`} className={isSpecialSkillIdentity(item.value) ? 'skill-native-special' : 'skill-native-standard'}>
                 <b>{item.value}</b><small>{isSpecialSkillIdentity(item.value) ? 'especial nativa' : 'já vem no jogador'}</small>
               </span>
-            ))}
-            {session.detailedReading.skillCandidates.map((item) => (
-              <span key={`pending-${item.value}`} className="skill-native-review"><b>{item.value}</b><small>confirmar leitura</small></span>
             ))}
           </div>
           <p>Estas habilidades são tratadas como já pertencentes à carta e ficam bloqueadas para não serem sugeridas novamente entre as cinco adicionais.</p>
@@ -141,14 +138,13 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.79</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.80</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">
           <article><strong>{session.detailedReading.profileAudit.detected ? `${session.detailedReading.coverage.attributeCount}/26` : session.detailedReading.coverage.attributeCount}</strong><span>Atributos</span></article>
           <article><strong>{session.detailedReading.profileAudit.detected ? `${session.detailedReading.coverage.positionCount}/13` : session.detailedReading.coverage.positionCount}</strong><span>Posições</span></article>
           <article><strong>{session.detailedReading.coverage.skillCount}</strong><span>Habilidades</span></article>
-          <article><strong>{session.detailedReading.skillCandidates.length}</strong><span>Novas para confirmar</span></article>
           <article><strong>{session.detailedReading.impetos.length}</strong><span>Ímpetos</span></article>
           <article><strong>{session.detailedReading.profileAudit.detected ? `${session.detailedReading.coverage.physicalCount}/16` : session.detailedReading.coverage.physicalCount}</strong><span>Medidas físicas</span></article>
         </div>
@@ -181,12 +177,10 @@ export function SinglePrintEvidencePanel({
             <div className="detailed-chip-list compact">
               {session.detailedReading.physicalModel.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
               {session.detailedReading.skills.map((item) => <span key={item.value}><b>{item.label}</b>{item.value}</span>)}
-              {session.detailedReading.skillCandidates.map((item) => <span key={`candidate-${item.value}`} className="needs-review"><b>Nova habilidade</b>{item.value}<em>confirmar</em></span>)}
             </div>
           </details>
         </div>
         {session.detailedReading.coverage.missing.length > 0 && <p className="detailed-reading-missing"><AlertTriangle size={15}/> Para precisão máxima, confirme: {session.detailedReading.coverage.missing.join(', ')}.</p>}
-        {session.detailedReading.skillCandidates.length > 0 && <p className="detailed-reading-missing"><ShieldCheck size={15}/> Ao confirmar a etapa Habilidades e finalizar a ficha, os nomes novos entram no catálogo local desta conta e serão reconhecidos nos próximos jogadores.</p>}
       </section>
 
       {session.comparison?.found && (

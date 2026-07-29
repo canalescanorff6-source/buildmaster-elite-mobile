@@ -175,7 +175,7 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   // mas não no catálogo de habilidades adicionais treináveis.
   'Fortaleza aérea': { category: 'ESPECIAL', boosts: { aerial: 5, physical: 2 }, aliases: ['Aerial Fort', 'Forte aéreo', 'Fortaleza aerea'] },
   'Drible explosivo': { category: 'ESPECIAL', boosts: { mobility: 5, dribbling: 3 }, aliases: ['Acceleration Burst', 'Explosive Dribbling', 'Explosive Dribble', 'Drible explosivos', 'Arranque explosivo', 'Explosão de aceleração'] },
-  'Impulso ofensivo': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 1 }, aliases: ['Attacking Surge', 'Surto ofensivo', 'Arrancada ofensiva', 'Impulso de ataque'] },
+  'Impulso ofensivo': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 1 }, aliases: ['Attacking Surge', 'Attack Surge', 'Surto ofensivo', 'Arrancada ofensiva', 'Impulso de ataque'] },
   'Desencadeador de ataques': { category: 'ESPECIAL', boosts: { creation: 3, pressure: 1 }, aliases: ['Attack Trigger', 'Gatilho de ataque', 'Desencadeador de ataque'] },
   'Curva Blitz': { category: 'ESPECIAL', boosts: { finishing: 5, creation: 2 }, aliases: ['Blitz Curler', 'Curva blitz', 'Chute curvado blitz', 'Finalização curva blitz'] },
   'Cabeçada fulminante': { category: 'ESPECIAL', boosts: { aerial: 5, finishing: 3 }, aliases: ['Bullet Header', 'Cabeçada bala', 'Cabecada fulminante'] },

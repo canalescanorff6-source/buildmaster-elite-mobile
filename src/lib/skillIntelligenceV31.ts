@@ -6,7 +6,7 @@ import { buildOwnedSkillKeys, filterComplementaryAdditionalSkills, skillIdentity
 type SkillCategory = UnifiedSkillDecision['category'];
 type Candidate = UnifiedSkillDecision & { rawScore: number; rolePosition: PositionCode };
 
-export const ADDITIONAL_SKILL_ENGINE_VERSION = '31.79-role-lock-exact-five-1';
+export const ADDITIONAL_SKILL_ENGINE_VERSION = '31.80-position-style-exact-five-1';
 
 const CATEGORY_BY_SKILL: Record<string, SkillCategory> = {
   'Pedalada simples': 'drible', 'Toque duplo': 'drible', 'Elástico': 'drible', 'Giro 360°': 'drible', 'Chapéu': 'drible',
@@ -28,9 +28,10 @@ const POSITION_SKILL_POOLS: Record<PositionCode, readonly string[]> = {
   // carta já possui várias habilidades, o motor ainda consegue entregar cinco
   // opções adicionais úteis sem recorrer a habilidades de outra função.
   GK: [
+    // Somente habilidades de goleiro, distribuição e liderança. Nenhuma
+    // habilidade de finalização, drible ou defesa de jogador de linha entra.
     'Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Pegador de pênalti',
-    'Espírito guerreiro', 'Liderança', 'Passe de primeira', 'Passe em profundidade', 'Passe na medida',
-    'Passe aéreo baixo', 'Toque de calcanhar', 'Passe sem olhar', 'De letra', 'Afastamento acrobático', 'Superioridade aérea', 'Bloqueador'
+    'Espírito guerreiro', 'Liderança', 'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe aéreo baixo'
   ],
   CB: [
     'Interceptação', 'Bloqueador', 'Marcação individual', 'Superioridade aérea', 'Afastamento acrobático', 'Carrinho',
@@ -133,6 +134,54 @@ const CATEGORY_SOFT_CAPS: Record<PositionCode, Partial<Record<SkillCategory, num
   CF: { finalização: 3, aérea: 2, passe: 1, físico: 1, drible: 1 }
 };
 
+const POSITION_SLOT_BLUEPRINTS: Record<PositionCode, readonly SkillCategory[]> = {
+  GK: ['goleiro', 'goleiro', 'goleiro', 'passe', 'mental'],
+  CB: ['defesa', 'defesa', 'aérea', 'passe', 'mental'],
+  DMF: ['defesa', 'defesa', 'passe', 'passe', 'físico'],
+  LB: ['defesa', 'defesa', 'passe', 'passe', 'físico'],
+  RB: ['defesa', 'defesa', 'passe', 'passe', 'físico'],
+  CMF: ['passe', 'passe', 'defesa', 'físico', 'drible'],
+  LMF: ['passe', 'passe', 'defesa', 'drible', 'físico'],
+  RMF: ['passe', 'passe', 'defesa', 'drible', 'físico'],
+  AMF: ['passe', 'passe', 'drible', 'drible', 'finalização'],
+  SS: ['finalização', 'passe', 'passe', 'drible', 'físico'],
+  LWF: ['drible', 'drible', 'passe', 'finalização', 'físico'],
+  RWF: ['drible', 'drible', 'passe', 'finalização', 'físico'],
+  CF: ['finalização', 'finalização', 'finalização', 'aérea', 'físico']
+};
+
+function slotBlueprintFor(result: AnalysisResult, position: PositionCode): readonly SkillCategory[] {
+  const style = norm(result.parsed.playstyle);
+  if (position === 'GK') {
+    if (/ofensivo|offensive/.test(style)) return ['goleiro', 'goleiro', 'passe', 'passe', 'mental'];
+    return ['goleiro', 'goleiro', 'goleiro', 'mental', 'físico'];
+  }
+  if (position === 'CB') {
+    if (/defensor criativo|build up/.test(style)) return ['defesa', 'passe', 'passe', 'aérea', 'mental'];
+    if (/destruidor|destroyer|atacante surpresa|extra frontman/.test(style)) return ['defesa', 'defesa', 'defesa', 'aérea', 'físico'];
+  }
+  if (position === 'DMF') {
+    if (/orquestrador|orchestrator/.test(style)) return ['passe', 'passe', 'defesa', 'defesa', 'físico'];
+    if (/primeiro volante|anchor man/.test(style)) return ['defesa', 'defesa', 'passe', 'físico', 'aérea'];
+  }
+  if (position === 'AMF' || position === 'CMF') {
+    if (/infiltra|hole player/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
+    if (/armador|creative|orquestrador|classic|cl[aá]ssico/.test(style)) return ['passe', 'passe', 'passe', 'drible', 'mental'];
+  }
+  if (['LB', 'RB', 'LMF', 'RMF', 'LWF', 'RWF'].includes(position) && /perito em cruzamento|cross specialist/.test(style)) {
+    return ['passe', 'passe', 'passe', 'drible', 'físico'];
+  }
+  if (position === 'CF') {
+    if (/piv[oô]|target man/.test(style)) return ['aérea', 'aérea', 'finalização', 'passe', 'físico'];
+    if (/recuado|deep.lying forward/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
+    if (/homem de area|fox in the box/.test(style)) return ['finalização', 'finalização', 'aérea', 'aérea', 'físico'];
+    return ['finalização', 'finalização', 'finalização', 'drible', 'físico'];
+  }
+  return POSITION_SLOT_BLUEPRINTS[position];
+}
+
+
+
 const SKILL_IMPACT: Record<string, string> = {
   'Chute de primeira': 'Finaliza sem precisar dominar, reduzindo o tempo de resposta dentro da área.',
   'Precisão à distância': 'Aumenta a ameaça em chutes fortes de média e longa distância.',
@@ -174,10 +223,9 @@ function hash(value: string) { let output = 2166136261; for (let index = 0; inde
 function average(...values: Array<number | null | undefined>) { const valid = values.map((value) => Number(value ?? 0)).filter((value) => value > 0); return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : 0; }
 
 export function resolveAdditionalSkillPosition(result: AnalysisResult): PositionCode {
-  const a = result.parsed.attributes;
-  const goalkeeperAverage = average(a.goalkeeperAwareness, a.goalkeeperCatching, a.goalkeeperParrying, a.goalkeeperReflexes, a.goalkeeperReach);
-  const goalkeeperLocked = result.parsed.mainPosition === 'GK' || result.bestPosition.code === 'GK' || goalkeeperAverage >= 72;
-  if (goalkeeperLocked) return 'GK';
+  // A posição escolhida pelo usuário é autoritativa no resultado final. Nem a
+  // posição original da carta nem uma leitura isolada de atributos pode trocar
+  // GOL por ZAG/CA ou o contrário durante a recomendação das cinco habilidades.
   return result.bestPosition.code;
 }
 
@@ -267,13 +315,16 @@ function styleScore(result: AnalysisResult, position: PositionCode, skill: strin
 
   add(/goleiro ofensivo|offensive goalkeeper/, ['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Passe de primeira', 'Passe na medida', 'Passe aéreo baixo'], 18, 'A habilidade reforça a saída rápida do Goleiro Ofensivo.');
   add(/goleiro defensivo|defensive goalkeeper/, ['Pegador de pênalti', 'Reposição alta do goleiro', 'Espírito guerreiro', 'Liderança'], 15, 'A habilidade reforça segurança e resposta do Goleiro Defensivo.');
-  add(/destruidor|destroyer|primeiro volante|anchor man|lateral defensivo/, ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Superioridade aérea', 'Espírito guerreiro'], 16, 'Reforça o comportamento defensivo do estilo oficial.');
+  add(/destruidor|destroyer|primeiro volante|anchor man|lateral defensivo|atacante surpresa|extra frontman/, ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Superioridade aérea', 'Espírito guerreiro'], 16, 'Reforça o comportamento defensivo do estilo oficial.');
   add(/defensor criativo|build up/, ['Passe de primeira', 'Passe na medida', 'Passe aéreo baixo', 'Interceptação', 'Bloqueador'], 15, 'Melhora a saída de bola sem enfraquecer a defesa.');
   add(/perito em cruzamento|cross specialist/, ['Cruzamento preciso', 'Passe na medida', 'Curva para fora', 'Passe aéreo baixo'], 17, 'Amplifica a função de cruzamento do estilo oficial.');
-  add(/armador criativo|creative playmaker|orquestrador|orchestrator/, ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Toque de calcanhar', 'Passe sem olhar'], 16, 'Aumenta a influência criativa do estilo oficial.');
+  add(/armador criativo|creative playmaker|orquestrador|orchestrator|cl[aá]ssico 10|classic no.? 10|meia vers[aá]til|box.to.box/, ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Toque de calcanhar', 'Passe sem olhar'], 16, 'Aumenta a influência criativa do estilo oficial.');
   add(/infiltra|hole player/, ['Chute de primeira', 'Passe de primeira', 'Controle com a sola', 'Toque duplo', 'Precisão à distância'], 14, 'A habilidade combina com entradas entre linhas e na área.');
-  add(/artilheiro|goal poacher|homem de area|fox in the box|pivo|target man/, ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Cabeçada', 'Superioridade aérea', 'Toque de calcanhar'], 16, 'A habilidade melhora ações recorrentes do atacante.');
-  add(/ponta prol[ií]fico|prolific winger|flanco movel|roaming flank/, ['Toque duplo', 'Controle com a sola', 'Corte rápido', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância'], 15, 'A habilidade combina com condução, aceleração e decisão pelo corredor.');
+  add(/artilheiro|goal poacher/, ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Chute com o peito do pé', 'Controle da cavadinha'], 18, 'A habilidade reduz o tempo de finalização do Artilheiro.');
+  add(/homem de area|fox in the box/, ['Chute de primeira', 'Finalização acrobática', 'Cabeçada', 'Superioridade aérea'], 18, 'A habilidade reforça a decisão curta e o jogo aéreo do Homem de Área.');
+  add(/piv[oô]|target man/, ['Cabeçada', 'Superioridade aérea', 'Toque de calcanhar', 'Passe de primeira', 'Espírito guerreiro'], 20, 'A habilidade reforça proteção, apoio e conclusão do Pivô.');
+  add(/recuado|deep.lying forward/, ['Passe de primeira', 'Passe em profundidade', 'Controle com a sola', 'Toque de calcanhar', 'Passe na medida'], 19, 'A habilidade reforça conexão e criação do atacante recuado.');
+  add(/ponta prol[ií]fico|prolific winger|flanco movel|roaming flank|lateral finalizador|full.back finisher/, ['Toque duplo', 'Controle com a sola', 'Corte rápido', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância'], 15, 'A habilidade combina com condução, aceleração e decisão pelo corredor.');
 
   if (position === 'GK' && !POSITION_SKILL_POOLS.GK.includes(skill)) score -= 200;
   return { score, reasons };
@@ -319,9 +370,9 @@ function buildCandidate(result: AnalysisResult, plan: TrainingPlan, position: Po
   const supports = trainingSupport(skill);
   const planScore = supports.reduce((sum, item) => sum + Number(plan[item.key] ?? 0) * item.weight, 0);
   const identityBoost = hash(`${result.parsed.internalId}|${result.parsed.playerName}|${result.parsed.cardType}|${result.parsed.playstyle}|${skill}`) % 3;
-  const prior = result.skillPriority.ordered.find((item) => norm(item.name) === norm(skill));
-  const priorBoost = prior ? Math.max(2, (prior.score - 70) * 0.12) : 0;
-  const rawScore = base + specific.score + profile.score + planScore + identityBoost + priorBoost;
+  // Recomendações antigas não participam da nota: elas poderiam trazer de
+  // volta uma habilidade incompatível gerada por versões anteriores.
+  const rawScore = base + specific.score + profile.score + planScore + identityBoost;
   const score = clamp(42 + rawScore * 0.72);
   const reasons = [
     ...specific.reasons.slice(0, 1),
@@ -368,14 +419,25 @@ export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: Trainin
     .sort((a, b) => b.score - a.score || b.rawScore - a.rawScore || a.name.localeCompare(b.name, 'pt-BR'));
 
   const selected: Candidate[] = [];
+  const rankedFor = (pool: Candidate[]) => pool
+    .filter((candidate) => !selected.some((item) => item.name === candidate.name))
+    .map((candidate) => ({
+      candidate,
+      combined: candidate.score + complementBonus(selected, candidate) + categoryDiversityAdjustment(position, selected, candidate)
+    }))
+    .sort((a, b) => b.combined - a.combined || b.candidate.score - a.candidate.score || a.candidate.name.localeCompare(b.candidate.name, 'pt-BR'));
+
+  // Primeiro preenche os cinco papéis funcionais da posição. Isso impede que
+  // uma nota alta concentre 5 passes em um zagueiro ou 5 finalizações em um SA.
+  for (const category of slotBlueprintFor(result, position)) {
+    const next = rankedFor(candidates.filter((candidate) => candidate.category === category))[0]?.candidate;
+    if (next) selected.push(next);
+  }
+
+  // Se a carta já possuir todas as opções de uma categoria, completa apenas
+  // com habilidades do pool seguro da mesma posição.
   while (selected.length < 5) {
-    const next = candidates
-      .filter((candidate) => !selected.some((item) => item.name === candidate.name))
-      .map((candidate) => ({
-        candidate,
-        combined: candidate.score + complementBonus(selected, candidate) + categoryDiversityAdjustment(position, selected, candidate)
-      }))
-      .sort((a, b) => b.combined - a.combined || b.candidate.score - a.candidate.score || a.candidate.name.localeCompare(b.candidate.name, 'pt-BR'))[0]?.candidate;
+    const next = rankedFor(candidates)[0]?.candidate;
     if (!next) break;
     selected.push(next);
   }
