@@ -93,12 +93,20 @@ function sourceText(readings: PremiumZoneReading[], keys: Array<PremiumZoneReadi
     .join('\n');
 }
 
+function cleanMultiline(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[\t ]+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
 function sourceTextWithRawPasses(readings: PremiumZoneReading[], keys: Array<PremiumZoneReading['key']>) {
   return readings
     .filter((reading) => keys.includes(reading.key))
     .sort((left, right) => right.confidence - left.confidence)
     .flatMap((reading) => [reading.text, ...(reading.rawPasses ?? []).map((pass) => pass.text)])
-    .map(clean)
+    .map(cleanMultiline)
     .filter(Boolean)
     .filter((value, index, all) => all.indexOf(value) === index)
     .join('\n');

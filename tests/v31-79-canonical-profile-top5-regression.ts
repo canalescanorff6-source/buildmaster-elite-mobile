@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { analyzeCard } from '../src/lib/analyzer';
+import { readDetailedPrint } from '../src/modules/card-reader/detailedPrintReader';
+import type { PremiumZoneReading } from '../src/lib/premiumReading';
 import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeline';
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
 import {
@@ -85,6 +87,18 @@ const evidencePanel = fs.readFileSync(path.resolve(__dirname, '../src/components
 assert.match(evidencePanel, /canonicalPreview/);
 assert.match(evidencePanel, /Perfil completo padronizado em 1400×1600/);
 assert.doesNotMatch(evidencePanel, /zoneBoxes\.map\(/, 'A tela não deve voltar a desenhar os quadrados desalinhados sobre o print.');
+
+const skillIsolationReading: PremiumZoneReading = {
+  key: 'skills',
+  label: 'Habilidades',
+  text: 'Controle de bola 87\nFinalização 95\nHABILIDADES\nChute de primeira\nPasse de primeira',
+  confidence: 93,
+  status: 'confirmed',
+  originPreview: null,
+  enhancement: 'contrast'
+};
+const isolatedSkills = readDetailedPrint('', [skillIsolationReading]);
+assert.deepEqual(isolatedSkills.skills.map((item) => item.value).sort(), ['Chute de primeira', 'Passe de primeira'].sort(), 'Atributos acima do marcador HABILIDADES não podem contaminar a lista nativa.');
 
 assert.equal(ADDITIONAL_SKILL_ENGINE_VERSION, '31.79-role-lock-exact-five-1');
 assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.79-canonical-profile-skills-1');

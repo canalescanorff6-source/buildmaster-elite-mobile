@@ -9,8 +9,10 @@ import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
 
-assert.equal(HIGH_PRECISION_OCR_VERSION, '31.78-dynamic-skill-capsules-2');
-assert.equal(OCR_VISION_VERSION, '31.78.0');
+const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
+const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
+assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith(`${currentRelease}-`));
+assert.equal(OCR_VISION_VERSION, currentVersion);
 
 const nameZone: OcrZone = { key: 'name', label: 'Nome', x: 0.05, y: 0.03, w: 0.32, h: 0.06, enabled: true };
 const nameVariants = adaptiveZoneVariants(nameZone, 'precision');

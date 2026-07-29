@@ -1,1 +1,1 @@
-v31.79 — Padroniza o perfil eFHUB em 1400×1600 e entrega Top 5 adicional seguro por função
+v31.79 hotfix — Corrige regressões do CI e impede atributos de contaminarem a leitura das habilidades

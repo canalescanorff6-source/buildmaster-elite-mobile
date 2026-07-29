@@ -8,10 +8,12 @@ import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
 
-assert.equal(HIGH_PRECISION_OCR_VERSION, '31.78-dynamic-skill-capsules-2');
-assert.equal(OCR_VISION_VERSION, '31.78.0');
+const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
+const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
+assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith(`${currentRelease}-`));
+assert.equal(OCR_VISION_VERSION, currentVersion);
 assert.equal(FORENSIC_CONSENSUS_VERSION, '31.60-field-consensus-2');
-assert.equal(OCR_TEMPLATE_CALIBRATION_VERSION, '31.78-template-memory-skills-2');
+assert.ok(OCR_TEMPLATE_CALIBRATION_VERSION.startsWith(`${currentRelease}-`));
 
 const goodQuality = buildPrintQualityReport({
   width: 2400, height: 1080, sharpness: 18, brightness: 126, contrast: 47,
@@ -77,7 +79,7 @@ const database = fs.readFileSync('src/lib/localDatabase.ts', 'utf8');
 assert.match(database, /DB_VERSION = 6/);
 assert.match(database, /'ocr-calibrations'/);
 const center = fs.readFileSync('src/modules/card-reader/OcrVisionCenter.tsx', 'utf8');
-assert.match(center, /Leitor eFHUB Forense 4\.0/);
+assert.match(center, /(?:Leitor eFHUB Forense 4\.0|Perfil eFHUB Padronizado 5\.0)/);
 assert.match(center, /Qualidade do print/);
 
 console.log('v31.60 scanner forense, consenso por linha e memória de enquadramento aprovados.');

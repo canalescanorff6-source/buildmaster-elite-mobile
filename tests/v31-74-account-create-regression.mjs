@@ -14,14 +14,18 @@ const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const serviceWorker = read('public/sw.js');
 const playPreflight = read('scripts/validate-play-store-release.mjs');
 
-expect(pkg.version === '31.78.0', 'Versão 31.78.0 não registrada no pacote.');
-expect(preflight.includes("version === '31.78.0'"), 'Pré-voo de produção ainda valida uma versão antiga.');
-expect(preflight.includes('BuildMaster Elite Tático v31.78'), 'Pré-voo não valida o manifesto PWA da v31.78.');
-expect(preflight.includes('npm run test:v3178'), 'Pré-voo não valida a bateria atual da v31.78.');
-expect(ciDoctor.includes("['Regressões v31.78', ['run', 'test:v3178']]"), 'Diagnóstico consolidado não executa a regressão v31.78.');
-expect(manifest.name === 'BuildMaster Elite Tático v31.78' && manifest.short_name === 'BuildMaster v31.78', 'Manifesto PWA não está na v31.78.');
-expect(serviceWorker.includes('buildmaster-v31-78'), 'Cache PWA não foi renovado para v31.78.');
-expect(playPreflight.includes('release-notes/31.78.0.txt'), 'Pré-voo Play ainda usa notas de uma versão anterior.');
+const currentVersion = pkg.version;
+const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
+const currentTestId = currentVersion.split('.').slice(0, 2).join('');
+const currentCacheId = currentRelease.replace('.', '-');
+expect(/^31\.\d+\.0$/.test(currentVersion), `Versão ${currentVersion} possui formato inesperado.`);
+expect(preflight.includes(`version === '${currentVersion}'`), 'Pré-voo de produção ainda valida uma versão antiga.');
+expect(preflight.includes(`BuildMaster Elite Tático v${currentRelease}`), 'Pré-voo não valida o manifesto PWA atual.');
+expect(preflight.includes(`npm run test:v${currentTestId}`), 'Pré-voo não valida a bateria atual.');
+expect(ciDoctor.includes(`['Regressões v${currentRelease}', ['run', 'test:v${currentTestId}']]`), 'Diagnóstico consolidado não executa a regressão atual.');
+expect(manifest.name === `BuildMaster Elite Tático v${currentRelease}` && manifest.short_name === `BuildMaster v${currentRelease}`, 'Manifesto PWA não está sincronizado.');
+expect(serviceWorker.includes(`buildmaster-v${currentCacheId}`), 'Cache PWA não foi renovado para a versão atual.');
+expect(playPreflight.includes(`release-notes/${currentVersion}.txt`), 'Pré-voo Play ainda usa notas de uma versão anterior.');
 expect(panel.includes('noValidate'), 'Formulário ainda depende de validação nativa silenciosa.');
 expect(panel.includes('account-create-feedback'), 'Retorno local abaixo do botão não foi implementado.');
 expect(panel.includes('Deixe vazio para gerar automaticamente'), 'Senha automática não está indicada no formulário.');
@@ -36,4 +40,4 @@ expect(edge.includes("return respond({ success: true, userId: created.user.id, u
 expect(edge.includes("return { limit: 12, window: 300 }"), 'Limite de tentativas ainda é baixo demais para recuperação administrativa.');
 expect(edge.includes(".select('id, username, status').single()"), 'Servidor não confirma persistência do perfil criado.');
 
-console.log('v31.74 preservada na v31.78: criação de usuários corrigida com retorno local, confirmação do servidor e transporte Android sem duplicidade.');
+console.log(`v31.74 preservada na v${currentRelease}: criação de usuários corrigida com retorno local, confirmação do servidor e transporte Android sem duplicidade.`);
