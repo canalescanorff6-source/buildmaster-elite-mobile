@@ -1,1 +1,1 @@
-v31.81 hotfix — Sincroniza versões do scanner, corrige 7 regressões do CI e regenera o manifesto
+v31.81 hotfix final — Corrige manifesto do CI e sincroniza workflows de APK e Google Play

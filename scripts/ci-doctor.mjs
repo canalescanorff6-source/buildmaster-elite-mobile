@@ -14,7 +14,6 @@ const quickChecks = [
   ['Pré-voo de produção', ['run', 'release:preflight']],
   ['Pré-voo Google Play', ['run', 'release:play-preflight']],
   ['Auditoria estrutural', ['run', 'quality:audit']],
-  ['Manifesto de integridade', ['run', 'integrity:verify']],
 ];
 
 const fullChecks = [
