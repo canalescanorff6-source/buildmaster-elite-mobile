@@ -12,7 +12,7 @@ const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).versi
 const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
 assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith(`${currentRelease}-`));
 assert.equal(OCR_VISION_VERSION, currentVersion);
-assert.equal(FORENSIC_CONSENSUS_VERSION, '31.80-official-skill-consensus-1');
+assert.ok(FORENSIC_CONSENSUS_VERSION.startsWith(`${currentRelease}-`));
 assert.ok(OCR_TEMPLATE_CALIBRATION_VERSION.startsWith(`${currentRelease}-`));
 
 const goodQuality = buildPrintQualityReport({

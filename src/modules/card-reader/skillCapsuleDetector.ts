@@ -1,7 +1,7 @@
 import type { OcrZone } from '@/lib/ocr';
 import { EFHUB_CANONICAL_HEIGHT, EFHUB_CANONICAL_WIDTH } from './efhubLayoutGeometry';
 
-export const SKILL_CAPSULE_DETECTOR_VERSION = '31.80-skill-capsules-strict-1';
+export const SKILL_CAPSULE_DETECTOR_VERSION = '31.81-skill-capsules-strict-1';
 
 export type SkillCapsuleDetection = {
   zones: OcrZone[];

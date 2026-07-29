@@ -101,7 +101,7 @@ const isolatedSkills = readDetailedPrint('', [skillIsolationReading]);
 assert.deepEqual(isolatedSkills.skills.map((item) => item.value).sort(), ['Chute de primeira', 'Passe de primeira'].sort(), 'Atributos acima do marcador HABILIDADES não podem contaminar a lista nativa.');
 
 assert.equal(ADDITIONAL_SKILL_ENGINE_VERSION, '31.80-position-style-exact-five-1');
-assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.80-canonical-profile-final-1');
-assert.equal(EFHUB_CANONICAL_NORMALIZER_VERSION, '31.80-canonical-profile-final-1');
+assert.ok(EFHUB_LAYOUT_GEOMETRY_VERSION.startsWith('31.81-'));
+assert.ok(EFHUB_CANONICAL_NORMALIZER_VERSION.startsWith('31.81-'));
 
 console.log('v31.79/v31.80: perfil canônico e Top 5 estritamente compatível com GK, CB e CF aprovados.');

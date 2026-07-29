@@ -1,1 +1,1 @@
-v31.81 — Adiciona calibrador visual com 8 quadrados móveis e leitura eFHUB pelo mapa ajustado
+v31.81 hotfix — Sincroniza versões do scanner, corrige 7 regressões do CI e regenera o manifesto

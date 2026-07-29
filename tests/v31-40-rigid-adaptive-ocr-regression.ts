@@ -46,19 +46,19 @@ const trustedByCatalog = readDetailedPrint('', reviewNameReadings.map((item) => 
 assert.equal(trustedByCatalog.identity.playerName?.value, 'Kylian Mbappé');
 
 const newSkillReading = readDetailedPrint('', reviewNameReadings, [], []);
-assert.ok(newSkillReading.skillCandidates.some((item) => item.value === 'Leitura Relâmpago'));
-assert.match(newSkillReading.canonicalText, /HABILIDADES NOVAS PARA CONFIRMAÇÃO: Leitura Relâmpago/);
+assert.equal(newSkillReading.skillCandidates.length, 0);
+assert.ok(!newSkillReading.canonicalText.includes('Leitura Relâmpago'));
 
 const learnedSkillReading = readDetailedPrint('', reviewNameReadings, [], ['Leitura Relâmpago']);
-assert.ok(learnedSkillReading.skills.some((item) => item.value === 'Leitura Relâmpago'));
-assert.ok(!learnedSkillReading.skillCandidates.some((item) => item.value === 'Leitura Relâmpago'));
+assert.ok(!learnedSkillReading.skills.some((item) => item.value === 'Leitura Relâmpago'));
+assert.equal(learnedSkillReading.skillCandidates.length, 0);
 
 const session = buildSinglePrintSession({
   imageHash: 'v3140-test', template: 'detailed-profile', width: 1600, height: 900,
   readings: reviewNameReadings, fullText: '', learnedSkillNames: []
 });
 assert.ok(session.blockingFields.some((field) => field.includes('Nome')));
-assert.ok(session.detailedReading.skillCandidates.some((item) => item.value === 'Leitura Relâmpago'));
+assert.equal(session.detailedReading.skillCandidates.length, 0);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /loadLearnedOcrTerms\('playerName'/);
@@ -75,7 +75,7 @@ const crop = fs.readFileSync('src/modules/card-reader/cardArtCrop.ts', 'utf8');
 assert.match(crop, /squareOutput: true/);
 assert.match(crop, /expandBorder: false/);
 const evidence = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(evidence, /Novas para confirmar/);
-assert.match(evidence, /entram no catálogo local desta conta/);
+assert.match(evidence, /Habilidades do jogador/);
+assert.match(evidence, /catálogo oficial validado/);
 
-console.log('v31.60 OCR rígido adaptativo, recorte quadrado e catálogo evolutivo aprovados.');
+console.log('v31.81 OCR rígido adaptativo, recorte quadrado e catálogo oficial estrito aprovados.');

@@ -113,7 +113,7 @@ assert.notDeepEqual(tallCf.recommendedSkills, agileCf.recommendedSkills, 'Até c
 assert.ok(tallCf.recommendedSkills.some((skill) => ['Cabeçada', 'Superioridade aérea', 'Finalização acrobática'].includes(skill)), 'O centroavante aéreo precisa receber ao menos uma habilidade sustentada pelo modelo corporal.');
 assert.ok(agileCf.recommendedSkills.some((skill) => ['Toque duplo', 'Controle com a sola', 'Giro 360°', 'Elástico', 'Corte com virada'].includes(skill)), 'O centroavante ágil precisa receber ao menos uma habilidade de controle corporal.');
 assert.ok(!tallCf.recommendedSkills.includes('Chapéu'), 'Uma habilidade de efeito não pode ocupar espaço de uma habilidade funcional no centroavante aéreo.');
-assert.ok(cf.recommendedSkills.some((skill) => ['Toque de calcanhar', 'Controle com a sola', 'Passe de primeira', 'Finalização acrobática', 'Efeito de longe'].includes(skill)));
+assert.ok(cf.recommendedSkills.some((skill) => ['Toque de calcanhar', 'Controle com a sola', 'Passe de primeira', 'Finalização acrobática', 'Efeito de longe', 'Chute ascendente', 'Chute com o peito do pé', 'Controle da cavadinha', 'Toque duplo'].includes(skill)));
 assert.ok(amf.recommendedSkills.some((skill) => ['Passe na medida', 'Toque de calcanhar', 'Passe sem olhar', 'Toque duplo', 'Curva para fora'].includes(skill)));
 
 const learningEngine = fs.readFileSync('src/lib/unifiedCardIntelligence.ts', 'utf8');

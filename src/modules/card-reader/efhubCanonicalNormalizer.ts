@@ -7,7 +7,7 @@ import {
   type EfhubLayoutPlan
 } from './efhubLayoutGeometry';
 
-export const EFHUB_CANONICAL_NORMALIZER_VERSION = '31.80-canonical-profile-final-1';
+export const EFHUB_CANONICAL_NORMALIZER_VERSION = '31.81-visual-calibration-normalizer-1';
 
 export type CanonicalEfhubImage = {
   blob: Blob;
