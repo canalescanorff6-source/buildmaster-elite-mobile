@@ -2177,14 +2177,14 @@ export function CardVisionApp() {
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
       // A chave recebe a versão da geometria para não reutilizar miniaturas
       // produzidas pelo leitor antigo com recortes desalinhados.
-      const thumbnailKey = `${imageHash}:efhub-canonical-v31.81`;
+      const thumbnailKey = `${imageHash}:efhub-canonical-v31.82`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v31.81-visual-map`
+        cacheKey: `${imageHash}:full:contrast:v31.82-visual-map`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;

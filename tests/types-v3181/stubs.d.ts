@@ -8,6 +8,7 @@ declare module 'react' {
   export type Dispatch<A> = (value: A) => void;
   export type CSSProperties = Record<string, string | number | undefined>;
   export type MouseEvent<T = HTMLElement> = { currentTarget: T; stopPropagation(): void };
+  export type SyntheticEvent<T = Element> = { currentTarget: T };
   export type PointerEvent<T = HTMLElement> = {
     pointerId: number;
     clientX: number;
@@ -18,6 +19,7 @@ declare module 'react' {
   };
   export type RefObject<T> = { current: T | null };
   export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
+  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
   export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
   export function useRef<T>(initialValue: T): { current: T };
 }
@@ -41,4 +43,5 @@ declare module 'lucide-react' {
   export const Save: Icon;
   export const ScanText: Icon;
   export const Unlock: Icon;
+  export const ZoomIn: Icon;
 }

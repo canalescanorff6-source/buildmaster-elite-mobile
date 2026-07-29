@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type SyntheticEvent } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Lock, Maximize2, RotateCcw, Save, ScanText, Unlock, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Lock, Maximize2, RotateCcw, Save, ScanText, Unlock, ZoomIn } from 'lucide-react';
 import {
   createDefaultEfhubCalibrationZones,
   isEfhubCalibrationComplete,
@@ -9,6 +9,27 @@ import {
   type EfhubCalibrationZone,
   type EfhubCalibrationZoneId
 } from '@/modules/card-reader/efhubManualCalibration';
+
+
+function ZoomOutIcon({ size = 17 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.6-3.6" />
+      <path d="M8 11h6" />
+    </svg>
+  );
+}
 
 type DragMode = 'move' | 'nw' | 'ne' | 'sw' | 'se';
 
@@ -211,7 +232,7 @@ export function EfhubVisualCalibrator({
           <small>{sourceSize.width > 0 ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando resolução original...'} • amplie para enxergar textos pequenos.</small>
         </div>
         <div className="efhub-zoom-controls" role="group" aria-label="Ampliar ou reduzir o print">
-          <button type="button" onClick={() => changeZoom(-25)} disabled={zoom <= 100} aria-label="Reduzir ampliação"><ZoomOut size={17}/></button>
+          <button type="button" onClick={() => changeZoom(-25)} disabled={zoom <= 100} aria-label="Reduzir ampliação"><ZoomOutIcon size={17}/></button>
           <output aria-live="polite">{zoom}%</output>
           <button type="button" onClick={() => changeZoom(25)} disabled={zoom >= 500} aria-label="Aumentar ampliação"><ZoomIn size={17}/></button>
           <button type="button" className="text-button" onClick={() => setZoom(100)}>Ajustar à tela</button>

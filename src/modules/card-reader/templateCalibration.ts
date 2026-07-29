@@ -3,7 +3,7 @@ import { runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import type { CardCropBox } from './cardArtCrop';
 import type { SinglePrintContentBounds, SinglePrintTemplate, SinglePrintZoneBox } from './singlePrintPro';
 
-export const OCR_TEMPLATE_CALIBRATION_VERSION = '31.81-visual-manual-zones-1';
+export const OCR_TEMPLATE_CALIBRATION_VERSION = '31.82-visual-manual-zones-1';
 
 export type OcrTemplateCalibration = {
   id: string;

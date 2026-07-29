@@ -7,7 +7,7 @@ import {
   EFHUB_CANONICAL_WIDTH
 } from '@/modules/card-reader/efhubLayoutGeometry';
 
-export const EFHUB_MANUAL_CALIBRATION_VERSION = 'v31.81-manual-map-1';
+export const EFHUB_MANUAL_CALIBRATION_VERSION = 'v31.82-manual-map-1';
 
 export type EfhubCalibrationZoneId =
   | 'identity'
