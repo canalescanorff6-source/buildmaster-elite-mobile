@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "../types-v3160/tesseract-stub.d.ts",
+    "../../src/lib/analyzer.ts",
+    "../../src/lib/officialSkillIdentity.ts",
+    "../../src/lib/skillIntelligenceV31.ts",
+    "../../src/lib/skillIntegrity.ts",
+    "../../src/modules/card-reader/efhubLayoutGeometry.ts",
+    "../../src/modules/card-reader/efhubCanonicalNormalizer.ts",
+    "../../src/modules/card-reader/highPrecisionOcr.ts",
+    "../../src/modules/card-reader/detailedPrintReader.ts",
+    "../../src/modules/card-reader/singlePrintPro.ts"
+  ]
+}

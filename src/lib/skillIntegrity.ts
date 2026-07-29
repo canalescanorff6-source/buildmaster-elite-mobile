@@ -1,6 +1,6 @@
 import type { AnalysisResult, SkillRecommendation, UnifiedSkillDecision } from './analyzerDomain';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
-import { buildPersonalizedSkillPlan } from './skillIntelligenceV31';
+import { buildPersonalizedSkillPlan, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from './skillIntelligenceV31';
 import {
   buildOwnedSkillKeys,
   canonicalizeSkillList,
@@ -9,7 +9,7 @@ import {
   skillIdentityKey
 } from './officialSkillIdentity';
 
-const VERSION = '31.72-skill-integrity-1';
+const VERSION = '31.79-skill-integrity-exact-five-1';
 
 function uniqueBySkill<T extends { name: string }>(items: T[]) {
   const seen = new Set<string>();
@@ -55,11 +55,16 @@ function recommendationFor(skill: string, rebuilt: UnifiedSkillDecision[], curre
 
 export function enforceComplementarySkillIntegrity(result: AnalysisResult): AnalysisResult {
   const rebuilt = buildPersonalizedSkillPlan(result, result.training);
+  const rolePosition = resolveAdditionalSkillPosition(result);
+  // O plano reconstruído é a fonte autoritativa: ele já aplica trava por
+  // posição, estilo da carta, atributos, ficha e habilidades possuídas.
+  // Recomendações antigas não podem reintroduzir habilidade de atacante em
+  // goleiro ou habilidade ofensiva inadequada em zagueiro.
   const candidates = [
-    ...result.recommendedSkills,
     ...rebuilt.map((item) => item.name),
-    ...result.skillPriority.ordered.map((item) => item.name),
-    ...result.skillRecommendations.filter((item) => item.tier !== 'evitar').map((item) => item.name)
+    ...result.recommendedSkills.filter((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition)),
+    ...result.skillPriority.ordered.map((item) => item.name).filter((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition)),
+    ...result.skillRecommendations.filter((item) => item.tier !== 'evitar').map((item) => item.name).filter((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition))
   ];
   const recommendedSkills = filterComplementaryAdditionalSkills(
     candidates,
@@ -82,8 +87,10 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
   const officialOnly = recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
   const noOwnedDuplicates = recommendedSkills.every((skill) => !ownedKeys.has(skillIdentityKey(skill)));
   const unique = new Set(recommendedSkills.map(skillIdentityKey)).size === recommendedSkills.length;
+  const exactFive = recommendedSkills.length === 5;
+  const roleCompatible = recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition));
   const sourceConfirmed = ownedSkills.length > 0;
-  const status = officialOnly && noOwnedDuplicates && unique && sourceConfirmed && result.validation.level !== 'blocked' ? 'approved' as const : 'review' as const;
+  const status = officialOnly && noOwnedDuplicates && unique && exactFive && roleCompatible && sourceConfirmed && result.validation.level !== 'blocked' ? 'approved' as const : 'review' as const;
   const skillIntegrity = {
     version: VERSION,
     status,
@@ -95,6 +102,8 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       officialOnly ? 'Somente nomes oficiais entraram no Top 5.' : 'Existe nome fora do catálogo oficial e a ficha precisa de revisão.',
       noOwnedDuplicates ? 'Nenhuma recomendação repete habilidade já detectada na carta.' : 'Foi encontrada sobreposição com habilidade existente.',
       unique ? 'O Top 5 não possui repetições internas.' : 'O Top 5 possui repetição interna.',
+      exactFive ? 'Exatamente cinco habilidades adicionais foram entregues.' : `Foram entregues ${recommendedSkills.length}/5 habilidades; revise a lista de habilidades já possuídas.`,
+      roleCompatible ? `Todas as habilidades são compatíveis com a função travada ${rolePosition}.` : 'Existe habilidade incompatível com a função do jogador.',
       sourceConfirmed ? `${ownedSkills.length} habilidade(s) existente(s) foram usadas no filtro antirrepetição.` : 'A lista de habilidades existentes não foi confirmada; revise o print antes de aplicar.',
       'Habilidades adicionais e Ímpetos foram avaliados em trilhas separadas.'
     ]
@@ -134,7 +143,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
     officialOnly,
     context: [
       ...result.skillPriority.context.filter((item) => !/habilidades j[aá] existentes foram removidas/i.test(item)),
-      'Filtro v31.73: aliases, traduções e variações de OCR também contam como habilidade já existente.'
+      'Filtro v31.79: aliases, traduções e variações de OCR também contam como habilidade já existente.'
     ]
   };
 
@@ -150,7 +159,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       ...result.unifiedIntelligence,
       skillPlan: finalUnifiedPlan,
       safeguards: [
-        'Filtro antirrepetição canônico aplicado depois de todos os motores e correções locais.',
+        'Filtro v31.79 antirrepetição e trava por função aplicados depois de todos os motores e correções locais.',
         ...result.unifiedIntelligence.safeguards
       ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 10)
     } : result.unifiedIntelligence,
@@ -166,7 +175,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       })
     } : result.deepCardIntelligence,
     recommendationExplanation: [
-      `Integridade das habilidades: ${recommendedSkills.length} opção(ões) complementar(es), sem repetir as ${ownedSkills.length} habilidade(s) confirmada(s).`,
+      `Integridade das habilidades: ${recommendedSkills.length}/5 opções compatíveis com ${rolePosition}, sem repetir as ${ownedSkills.length} habilidade(s) confirmada(s).`,
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 12)
   };

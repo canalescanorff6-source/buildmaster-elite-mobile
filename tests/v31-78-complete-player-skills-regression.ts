@@ -120,16 +120,20 @@ for (const expected of [
 assert.equal(result.skillCandidates.length, 0, 'Aliases oficiais não podem aparecer como habilidades desconhecidas.');
 
 const skillZones = EFHUB_CANONICAL_OCR_BOXES.filter((zone) => zone.key === 'skills');
-assert.equal(skillZones.length, 4);
+assert.equal(skillZones.length, 7);
 assert.deepEqual(skillZones.map((zone) => zone.label), [
   'Habilidades • bloco completo',
-  'Habilidades • linha superior',
-  'Habilidades • linha central',
-  'Habilidades • linha inferior'
+  'Habilidades • linha 1',
+  'Habilidades • linha 2',
+  'Habilidades • linha 3',
+  'Habilidades • janela esquerda',
+  'Habilidades • janela central',
+  'Habilidades • janela direita'
 ]);
 assert.ok(skillZones[0].y1 <= skillZones[1].y1 && skillZones[1].y1 < skillZones[2].y1 && skillZones[2].y1 < skillZones[3].y1);
-assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.78-resolution-layout-skills-2');
-assert.equal(HIGH_PRECISION_OCR_VERSION, '31.78-dynamic-skill-capsules-2');
+assert.ok(skillZones.slice(4).every((zone) => zone.y1 === 1427 && zone.y2 === 1595));
+assert.equal(EFHUB_LAYOUT_GEOMETRY_VERSION, '31.79-canonical-profile-skills-1');
+assert.equal(HIGH_PRECISION_OCR_VERSION, '31.79-canonical-profile-skills-1');
 assert.equal(OFFICIAL_RULE_PACK_VERSION, '2026.07.4');
 
-console.log('v31.78: catálogo completo, aliases eFHUB, bloco completo mais três faixas OCR e bloqueio de habilidades especiais nas recomendações aprovados.');
+console.log('v31.79: catálogo preservado, sete recortes de habilidades e bloqueio das especiais nas recomendações aprovados.');

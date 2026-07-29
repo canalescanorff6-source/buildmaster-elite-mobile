@@ -52,7 +52,7 @@ export type DetailedPrintReading = {
   profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '31.78-efhub-skill-capsules-2';
+const VERSION = '31.79-canonical-skill-capsules-1';
 
 function normalized(value: string) {
   return value
@@ -90,6 +90,17 @@ function sourceText(readings: PremiumZoneReading[], keys: Array<PremiumZoneReadi
     .sort((left, right) => right.confidence - left.confidence)
     .map((reading) => reading.text)
     .filter(Boolean)
+    .join('\n');
+}
+
+function sourceTextWithRawPasses(readings: PremiumZoneReading[], keys: Array<PremiumZoneReading['key']>) {
+  return readings
+    .filter((reading) => keys.includes(reading.key))
+    .sort((left, right) => right.confidence - left.confidence)
+    .flatMap((reading) => [reading.text, ...(reading.rawPasses ?? []).map((pass) => pass.text)])
+    .map(clean)
+    .filter(Boolean)
+    .filter((value, index, all) => all.indexOf(value) === index)
     .join('\n');
 }
 
@@ -336,7 +347,7 @@ export function fuzzyContainsCatalogItem(text: string, item: string, aliases: st
   const lines = text.split(/\r?\n|[|•;]+/).map(clean).filter(Boolean);
   for (const candidate of candidates) {
     const words = normalized(candidate).split(/\s+/).filter(Boolean).length;
-    const threshold = compactCatalogText(candidate).length >= 18 ? 0.77 : 0.82;
+    const threshold = compactCatalogText(candidate).length >= 18 ? 0.73 : compactCatalogText(candidate).length >= 10 ? 0.77 : 0.81;
     for (const line of lines) {
       if (textSimilarity(line, candidate) >= threshold) return true;
       const windows = tokenWindows(line, Math.max(1, words - 1), words + 1);
@@ -547,7 +558,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const attributeSource = [sourceText(readings, ['attributes']), fullText].filter(Boolean).join('\n');
   const positionSource = [sourceText(readings, ['positionGrid']), fullText].filter(Boolean).join('\n');
   const physicalSource = [sourceText(readings, ['physicalModel', 'progression']), fullText].filter(Boolean).join('\n');
-  const skillZoneText = sourceText(readings, ['skills']);
+  const skillZoneText = sourceTextWithRawPasses(readings, ['skills']);
   const skillSource = skillZoneText || fullText;
   const conditionSource = [sourceText(readings, ['condition', 'manager']), fullText].filter(Boolean).join('\n');
   const impetoSource = [sourceText(readings, ['impetos', 'autoTraining']), fullText].filter(Boolean).join('\n');
@@ -673,7 +684,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   )));
   const score = efhubDetected ? Math.round(baseScore * 0.55 + profileAudit.score * 0.45) : baseScore;
 
-  const canonical: string[] = ['[LEITURA DETALHADA V31.78]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.79]'];
   if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
@@ -692,7 +703,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
   if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V31.78]');
+  canonical.push('[FIM LEITURA DETALHADA V31.79]');
 
   const warnings: string[] = [];
   if (detectedName && !name) warnings.push(`O OCR encontrou um possível nome, mas somente ${nameAgreement} passagem(ns) independente(s) concordaram. O valor foi bloqueado para evitar identificar o jogador errado.`);

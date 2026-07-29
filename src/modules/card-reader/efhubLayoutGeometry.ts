@@ -3,7 +3,7 @@ import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 export const EFHUB_CANONICAL_WIDTH = 1400;
 export const EFHUB_CANONICAL_HEIGHT = 1600;
 export const EFHUB_CANONICAL_RATIO = EFHUB_CANONICAL_WIDTH / EFHUB_CANONICAL_HEIGHT;
-export const EFHUB_LAYOUT_GEOMETRY_VERSION = '31.78-resolution-layout-skills-2';
+export const EFHUB_LAYOUT_GEOMETRY_VERSION = '31.79-canonical-profile-skills-1';
 
 export type NormalizedBounds = { x: number; y: number; w: number; h: number };
 export type EfhubLayoutMode =
@@ -87,13 +87,17 @@ export const EFHUB_CANONICAL_OCR_BOXES: EfhubPixelBox[] = [
   box('impetos', 'Booster e Ímpeto', 15, 472, 1385, 555),
   box('attributes', 'Tabela completa de 26 atributos', 15, 555, 1385, 1085),
   box('physicalModel', 'Modelo físico e alcance corporal', 15, 1085, 1385, 1425),
-  // A lista de habilidades é formada por cápsulas pequenas. Primeiro lemos
-  // o bloco inteiro e depois três faixas sobrepostas. A combinação recupera
-  // habilidades longas, quebras de linha e cápsulas parcialmente encostadas.
-  box('skills', 'Habilidades • bloco completo', 20, 1428, 1380, 1593),
-  box('skills', 'Habilidades • linha superior', 20, 1440, 1380, 1508),
-  box('skills', 'Habilidades • linha central', 20, 1492, 1380, 1558),
-  box('skills', 'Habilidades • linha inferior', 20, 1538, 1380, 1595)
+  // As cápsulas de habilidades mudam de largura e podem ocupar até três
+  // linhas. O leitor canônico combina o bloco completo, três linhas e três
+  // janelas horizontais sobrepostas. Isso reduz texto colado e recupera nomes
+  // longos sem depender da posição exata de cada cápsula.
+  box('skills', 'Habilidades • bloco completo', 18, 1427, 1382, 1595),
+  box('skills', 'Habilidades • linha 1', 18, 1436, 1382, 1498),
+  box('skills', 'Habilidades • linha 2', 18, 1484, 1382, 1550),
+  box('skills', 'Habilidades • linha 3', 18, 1532, 1382, 1595),
+  box('skills', 'Habilidades • janela esquerda', 18, 1427, 560, 1595),
+  box('skills', 'Habilidades • janela central', 430, 1427, 1010, 1595),
+  box('skills', 'Habilidades • janela direita', 880, 1427, 1382, 1595)
 ];
 
 function clamp(value: number, min = 0, max = 1) {

@@ -1,18 +1,33 @@
-# BuildMaster Elite Tático v31.78 — Análise de Vídeo Inteligente 2.0
+# BuildMaster Elite Tático v31.79 — Perfil eFHUB Padronizado + Top 5 por Função
 
-O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.78 reforça o leitor eFHUB e completa o catálogo de habilidades nativas, preservando a Análise de Vídeo Inteligente 2.0 da v31.77.
+O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.79 substitui o overlay desalinhado pelo perfil interno padronizado em 1400×1600 e fortalece o motor das cinco habilidades adicionais, preservando os módulos existentes da v31.77/v31.78.
 
-## v31.78 — Leitor eFHUB e habilidades nativas completas
+## v31.79 — Perfil completo antes do OCR
 
-- reconstrução aplicada diretamente sobre a base v31.77 enviada pelo usuário;
-- leitura por resolução real, escala uniforme e bloqueio de prints cortados;
-- área de habilidades lida em bloco completo e três faixas sobrepostas;
-- ampliação mínima de 3600 px para as cápsulas antes do OCR;
-- cache do leitor renovado para não reutilizar análises incorretas antigas;
-- 45 habilidades regulares e 20 habilidades especiais/nativas no catálogo local;
-- aliases em português e inglês, incluindo Drible explosivo/Acceleration Burst, Impulso ofensivo/Attacking Surge e Sombra veloz/Shadow Hunt;
-- habilidades especiais ficam separadas das cinco habilidades adicionais treináveis;
-- Análise de Vídeo Inteligente 2.0 da v31.77 preservada.
+- o print original é detectado, corrigido e convertido internamente para 1400×1600;
+- a tela mostra o perfil completo padronizado, sem desenhar quadrados sobre uma prévia redimensionada;
+- as oito regiões permanecem apenas como recortes internos do OCR;
+- resolução, proporção, margens, orientação e cortes são auditados antes da leitura;
+- prints incompletos continuam bloqueados para impedir dados inventados;
+- habilidades usam sete leituras complementares: bloco, três linhas e três janelas horizontais;
+- cache de geometria e OCR recebe nova versão para não reaproveitar resultados antigos.
+
+## v31.79 — Exatamente cinco habilidades adicionais
+
+- o motor entrega cinco opções quando existem cinco habilidades treináveis ainda não possuídas;
+- trava rígida por posição impede habilidades de atacante em GK/CB e habilidades de goleiro em jogadores de linha;
+- a ordem considera posição escolhida, estilo oficial da carta, atributos, corpo, ficha de progressão e uso em campo;
+- cartas de Goleiro Ofensivo e Goleiro Defensivo recebem prioridades diferentes;
+- Defensor Criativo, Destruidor, Primeiro Volante, Perito em Cruzamento, Armador e atacantes usam regras próprias;
+- habilidades nativas, especiais, aliases do eFHUB e habilidades já existentes são removidas antes do Top 5;
+- nenhuma vaga é preenchida por uma habilidade incompatível apenas para completar quantidade.
+
+## v31.78 — Catálogo eFHUB preservado
+
+- 45 habilidades regulares treináveis;
+- 20 habilidades especiais/nativas reconhecíveis;
+- aliases em português e inglês, incluindo Drible explosivo/Acceleration Burst, Impulso ofensivo/Attacking Surge, Desencadeador de ataques/Attack Trigger e Sombra veloz/Shadow Hunt;
+- habilidades especiais separadas das cinco adicionais treináveis.
 
 ## v31.77 — Diagnóstico por lance, treino e evolução
 

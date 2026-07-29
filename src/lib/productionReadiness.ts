@@ -1,4 +1,4 @@
-export const PRODUCTION_READINESS_VERSION = '31.78.0';
+export const PRODUCTION_READINESS_VERSION = '31.79.0';
 
 export type ReadinessSeverity = 'critical' | 'warning' | 'info';
 export type ReadinessState = 'pass' | 'attention' | 'blocked';

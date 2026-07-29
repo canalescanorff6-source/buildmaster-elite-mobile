@@ -37,7 +37,7 @@ export function SinglePrintEvidencePanel({
         <div>
           <p className="kicker"><ScanLine size={15}/> Print Único Pro</p>
           <h3>Auditoria visual campo por campo</h3>
-          <p>O resultado cruza várias passagens locais por campo. Nome, Nível e GER só são liberados quando existe consenso.</p>
+          <p>O perfil inteiro é primeiro padronizado em 1400×1600. Depois o app confirma identidade, posições, atributos, modelo físico e habilidades sem exibir caixas desalinhadas.</p>
         </div>
         <div className="single-print-score">
           <strong>{session.mergedConfidence}%</strong>
@@ -50,7 +50,7 @@ export function SinglePrintEvidencePanel({
       {session.layoutAudit && (
         <section className={`precision-audit-card ${session.layoutAudit.complete ? 'ready' : 'review'}`} aria-label="Auditoria do encaixe dinâmico eFHUB">
           <div>
-            <p className="kicker"><ScanLine size={14}/> Encaixe de resolução v31.78</p>
+            <p className="kicker"><ScanLine size={14}/> Perfil padronizado v31.79</p>
             <strong>{session.layoutAudit.confidence}%</strong>
             <span>{layoutModeLabel(session.layoutAudit.mode)}</span>
           </div>
@@ -60,14 +60,14 @@ export function SinglePrintEvidencePanel({
             <span><b>{session.layoutAudit.missingZones.length}</b> áreas ausentes</span>
           </div>
           <p>{session.layoutAudit.complete
-            ? 'As oito áreas foram projetadas a partir do mapa oficial 1400×1600, preservando proporção, margens e posição exata.'
+            ? 'O painel foi convertido para o modelo interno 1400×1600. A leitura usa essa cópia padronizada e preserva o arquivo original.'
             : `${session.layoutAudit.reason}${session.layoutAudit.missingZones.length ? ` Áreas não lidas: ${session.layoutAudit.missingZones.join(', ')}.` : ''}`}</p>
         </section>
       )}
 
       <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
         <div>
-          <p className="kicker"><ShieldCheck size={14}/> Leitura Dinâmica v31.78</p>
+          <p className="kicker"><ShieldCheck size={14}/> Perfil Padronizado v31.79</p>
           <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
           <span>precisão estimada</span>
         </div>
@@ -101,20 +101,12 @@ export function SinglePrintEvidencePanel({
         </section>
       )}
 
-      {originalPreview && session.zoneBoxes?.length ? (
-        <figure className="single-print-map">
+      {(session.canonicalPreview || originalPreview) ? (
+        <figure className="single-print-map canonical-profile-preview">
           <div className="single-print-map-canvas">
-            <img src={originalPreview} alt="Print original com mapa das áreas analisadas" loading="lazy" decoding="async"/>
-            {session.zoneBoxes.map((box) => (
-              <span
-                key={`${box.key}-${box.x}-${box.y}`}
-                className={`single-print-zone-box status-${box.status}`}
-                style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }}
-                title={`${box.label}: ${box.status === 'confirmed' ? 'confirmado' : box.status === 'review' ? 'revisar' : 'não reconhecido'}`}
-              ><b>{box.label}</b></span>
-            ))}
+            <img src={session.canonicalPreview || originalPreview || ''} alt={session.canonicalized ? 'Perfil EFHub completo padronizado em 1400 por 1600' : 'Print original do jogador'} loading="lazy" decoding="async"/>
           </div>
-          <figcaption><Eye size={15}/> Verde: confirmado • amarelo: revisar • vermelho: não reconhecido. Toque nos cartões abaixo para ver o recorte.</figcaption>
+          <figcaption><Eye size={15}/> {session.canonicalized ? 'Perfil completo padronizado em 1400×1600. Nenhum quadrado precisa ser ajustado pelo usuário.' : 'Imagem original preservada. O app usa leitura completa e mantém campos incertos para revisão.'}</figcaption>
         </figure>
       ) : null}
 
@@ -149,7 +141,7 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.78</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.79</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">

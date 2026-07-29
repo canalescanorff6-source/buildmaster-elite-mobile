@@ -57,6 +57,10 @@ export type SinglePrintSession = {
   layoutConfidence?: number;
   layoutAudit?: EfhubLayoutAudit;
   zoneBoxes?: SinglePrintZoneBox[];
+  canonicalized?: boolean;
+  canonicalWidth?: number;
+  canonicalHeight?: number;
+  canonicalPreview?: string | null;
   fields: SingleFieldEvidence[];
   mergedConfidence: number;
   blockingFields: string[];
@@ -499,6 +503,10 @@ export function buildSinglePrintSession(input: {
   knownPlayerNames?: string[];
   learnedSkillNames?: string[];
   qualityReport?: PrintQualityReport | null;
+  canonicalized?: boolean;
+  canonicalWidth?: number;
+  canonicalHeight?: number;
+  canonicalPreview?: string | null;
 }): SinglePrintSession {
   const knownPlayerNames = input.knownPlayerNames ?? [];
   const learnedSkillNames = input.learnedSkillNames ?? [];
@@ -543,7 +551,7 @@ export function buildSinglePrintSession(input: {
         confidence: Math.min(91, confidence),
         status: 'review' as const,
         reason: `${detailed.reason} O valor permanece em revisão porque as passagens locais não chegaram ao consenso exigido.`,
-        sourceLabel: 'Leitor EFHUB dinâmico v31.78',
+        sourceLabel: 'Perfil EFHub padronizado v31.79',
         sourceText: detailed.value
       };
     }
@@ -554,7 +562,7 @@ export function buildSinglePrintSession(input: {
       confidence,
       status: confidence >= 82 ? 'confirmed' as const : 'review' as const,
       reason: detailed.reason,
-      sourceLabel: 'Leitor EFHUB dinâmico v31.78',
+      sourceLabel: 'Perfil EFHub padronizado v31.79',
       sourceText: detailed.value
     };
   });
@@ -686,6 +694,10 @@ export function buildSinglePrintSession(input: {
     layoutConfidence: input.layoutConfidence,
     layoutAudit: input.layoutAudit,
     zoneBoxes,
+    canonicalized: Boolean(input.canonicalized),
+    canonicalWidth: input.canonicalWidth,
+    canonicalHeight: input.canonicalHeight,
+    canonicalPreview: input.canonicalPreview ?? null,
     fields,
     mergedConfidence,
     blockingFields,

@@ -1,1 +1,1 @@
-v31.78 — Corrige o OCR de habilidades eFHUB e completa o catálogo nativo eFootball 2026 sobre a base v31.77
+v31.79 — Padroniza o perfil eFHUB em 1400×1600 e entrega Top 5 adicional seguro por função

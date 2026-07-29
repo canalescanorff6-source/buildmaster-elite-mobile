@@ -130,6 +130,8 @@ import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { recognizeZoneWithHighPrecision } from '@/modules/card-reader/highPrecisionOcr';
 import { learnedCanonicalValues, learnConfirmedOcrBatch, loadLearnedOcrTerms } from '@/modules/card-reader/learnedOcrLexicon';
 import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsensus';
+import { buildEfhubLayoutPlan } from '@/modules/card-reader/efhubLayoutGeometry';
+import { EFHUB_CANONICAL_NORMALIZER_VERSION, normalizeEfhubProfileImage } from '@/modules/card-reader/efhubCanonicalNormalizer';
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
@@ -2076,7 +2078,7 @@ export function CardVisionApp() {
     setTotalReadingSession(null);
     setSinglePrintSession(null);
     setReadingConfirmations({});
-    setStatus('Print Único Pro: identificando resolução, barras da tela, orientação e áreas da interface...');
+    setStatus('Perfil EFHub Padronizado: identificando o painel completo, corrigindo orientação e preparando a cópia 1400×1600...');
     const unsubscribe = subscribeOcrProgress((progress) => {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
@@ -2119,17 +2121,45 @@ export function CardVisionApp() {
       setOcrZones(geometry.zones);
       // A chave recebe a versão da geometria para não reutilizar miniaturas
       // produzidas pelo leitor antigo com recortes desalinhados.
-      const thumbnailKey = `${imageHash}:efhub-layout-v31.78-skills`;
+      const thumbnailKey = `${imageHash}:efhub-canonical-v31.79`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v31.78-skills`
+        cacheKey: `${imageHash}:full:contrast:v31.79-canonical`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;
+      let ocrSource: File | Blob = selectedFile;
+      let canonicalPreview: string | null = null;
+      let canonicalized = false;
+      let precisionImageHash = imageHash;
+
+      if (geometry.template === 'detailed-profile' && geometry.anchorReport.efhubLayout) {
+        const canonicalPlan = buildEfhubLayoutPlan(geometry.width, geometry.height, geometry.anchorReport.bounds, fullPass.text);
+        if (!['reflowed-unknown', 'incompatible'].includes(canonicalPlan.audit.mode)) {
+          const canonical = await normalizeEfhubProfileImage(selectedFile, canonicalPlan).catch(() => null);
+          if (canonical) {
+            ocrSource = canonical.blob;
+            canonicalPreview = canonical.preview;
+            canonicalized = true;
+            precisionImageHash = `${imageHash}:${EFHUB_CANONICAL_NORMALIZER_VERSION}`;
+            geometry = {
+              ...geometry,
+              zones: canonical.ocrZones,
+              cardArtZone: canonical.ocrZones.find((item) => item.key === 'cardType') ?? geometry.cardArtZone,
+              anchorReport: {
+                ...geometry.anchorReport,
+                efhubLayout: canonicalPlan.audit,
+                // O usuário vê o perfil completo padronizado, sem caixas coloridas.
+                displayZones: []
+              }
+            };
+          }
+        }
+      }
       setOcrZones(geometry.zones);
 
       // O recorte é feito somente depois da identificação completa do layout.
@@ -2137,8 +2167,8 @@ export function CardVisionApp() {
       // o recorte de um template errado antes de o OCR reconhecer o perfil.
       const finalCrop = geometry.cardArtZone.enabled
         ? await (geometry.template === 'detailed-profile'
-          ? createEfhubCardPreview(selectedFile, geometry.cardArtZone)
-          : createSmartCardPreview(selectedFile, geometry.cardArtZone)).catch(() => null)
+          ? createEfhubCardPreview(ocrSource, geometry.cardArtZone)
+          : createSmartCardPreview(ocrSource, geometry.cardArtZone)).catch(() => null)
         : null;
       const artPreview = finalCrop?.portraitPreview ?? finalCrop?.preview ?? cachedArt ?? null;
       if (artPreview) {
@@ -2150,7 +2180,7 @@ export function CardVisionApp() {
       const layoutAudit = geometry.anchorReport.efhubLayout;
       if (geometry.template === 'detailed-profile' && layoutAudit) {
         if (layoutAudit.complete) {
-          setStatus(`Perfil eFHUB encaixado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, oito áreas posicionadas pelo mapa oficial.`);
+          setStatus(`Perfil eFHUB padronizado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, cópia interna 1400×1600 pronta para leitura completa.`);
         } else if (layoutAudit.mode === 'reflowed-unknown' || layoutAudit.mode === 'incompatible') {
           setStatus('Layout eFHUB incompatível ou reorganizado: a leitura automática foi bloqueada para não posicionar quadrados errados.');
         } else {
@@ -2165,8 +2195,8 @@ export function CardVisionApp() {
         const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
         const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
         const target = zone.key === 'name' ? 2600 : numeric ? 2100 : wide ? 2800 : 2350;
-        const best = await recognizeZoneWithHighPrecision(selectedFile, zone, {
-          imageHash,
+        const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
+          imageHash: precisionImageHash,
           template: geometry.template,
           targetWidth: target,
           readingMode,
@@ -2191,7 +2221,11 @@ export function CardVisionApp() {
         learnedSkillNames,
         qualityReport: scanQuality,
         layoutAudit: geometry.anchorReport.efhubLayout,
-        displayZones: geometry.anchorReport.displayZones
+        displayZones: geometry.anchorReport.displayZones,
+        canonicalized,
+        canonicalWidth: canonicalized ? 1400 : undefined,
+        canonicalHeight: canonicalized ? 1600 : undefined,
+        canonicalPreview
       });
       const storedPreview = toStoredSinglePrintScan(session);
       const previous = storedScanEntries.map((entry) => entry.value).find((entry) => entry.identityKey && entry.identityKey === storedPreview.identityKey && entry.imageHash !== imageHash) ?? null;
@@ -2211,7 +2245,11 @@ export function CardVisionApp() {
           learnedSkillNames,
           qualityReport: scanQuality,
           layoutAudit: geometry.anchorReport.efhubLayout,
-          displayZones: geometry.anchorReport.displayZones
+          displayZones: geometry.anchorReport.displayZones,
+          canonicalized,
+          canonicalWidth: canonicalized ? 1400 : undefined,
+          canonicalHeight: canonicalized ? 1600 : undefined,
+          canonicalPreview
         });
       }
       session = applyStoredOcrCorrections(session, corrections);

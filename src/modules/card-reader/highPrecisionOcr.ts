@@ -4,7 +4,7 @@ import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManage
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 
-export const HIGH_PRECISION_OCR_VERSION = '31.78-dynamic-skill-capsules-2';
+export const HIGH_PRECISION_OCR_VERSION = '31.79-canonical-profile-skills-1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;
@@ -353,7 +353,7 @@ export async function recognizeZoneWithHighPrecision(
   for (let index = 0; index < tasks.length; index += 1) {
     const { variant, plan } = tasks[index];
     const baseRegion = plan.expanded ? expandOcrRegion(variant.zone, zone.key === 'name' ? 0.06 : 0.025, zone.key === 'name' ? 0.025 : 0.015) : variant.zone;
-    const effectiveTargetWidth = zone.key === 'skills' ? Math.max(options.targetWidth, 3600) : options.targetWidth;
+    const effectiveTargetWidth = zone.key === 'skills' ? Math.max(options.targetWidth, 4000) : options.targetWidth;
     const image = await cropImage(file, baseRegion, effectiveTargetWidth, plan.enhancement);
     const recognition = await recognizeWithOcrWorker(image, {
       label: `${options.labelPrefix ? `${options.labelPrefix} • ` : ''}${zone.label} • ${variant.label} • ${plan.enhancement} ${index + 1}/${tasks.length}`,
