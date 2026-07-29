@@ -103,6 +103,10 @@ jobs:
       - name: Gerar site estático para Capacitor
         run: npm run apk:build-web
 
+      - name: Validar orçamento do bundle compilado
+        timeout-minutes: 3
+        run: npm run quality:bundle-built
+
       - name: Criar projeto Android
         run: |
           rm -rf android

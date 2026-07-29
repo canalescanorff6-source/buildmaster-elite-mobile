@@ -4,6 +4,10 @@ const full = process.argv.includes('--full');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 const quickChecks = [
+  ['Compatibilidade das dependências', ['run', 'quality:dependencies']],
+  ['Orçamento do código-fonte', ['run', 'quality:bundle']],
+  ['Guardas de versão das regressões', ['run', 'quality:version-guards']],
+  ['Contrato preventivo do CI', ['run', 'quality:ci-contract']],
   ['Rotas críticas', ['run', 'quality:routes']],
   ['Sintaxe TypeScript/TSX', ['run', 'quality:syntax']],
   ['Contratos interativos', ['run', 'quality:interactive']],

@@ -20696,10 +20696,21 @@ body::after { display: none !important; }
 .efhub-image-clarity-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid rgba(57,255,149,.22);border-radius:14px;background:rgba(57,255,149,.045)}
 .efhub-image-clarity-toolbar>div:first-child{display:grid;gap:3px;min-width:0}.efhub-image-clarity-toolbar strong{display:flex;align-items:center;gap:7px;color:#b9ffd5;font-size:.8rem}.efhub-image-clarity-toolbar small{color:var(--muted);font-size:.69rem;line-height:1.35}
 .efhub-zoom-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}.efhub-zoom-controls button{min-width:38px;height:36px;display:grid;place-items:center;padding:0 9px;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:var(--soft);background:rgba(255,255,255,.045);font-size:.68rem;font-weight:850}.efhub-zoom-controls button.text-button{display:flex;min-width:auto;white-space:nowrap}.efhub-zoom-controls output{min-width:54px;text-align:center;color:#fff;font-size:.76rem;font-weight:950}
+.efhub-quick-zoom-row,.efhub-view-controls{grid-column:1/-1;flex:1 0 100%;width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.efhub-quick-zoom-row>span{margin-right:2px;color:var(--muted);font-size:.67rem;font-weight:850}
+.efhub-quick-zoom-row button,.efhub-view-controls button{min-height:34px;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:var(--soft);background:rgba(255,255,255,.035);font-size:.66rem;font-weight:850}
+.efhub-quick-zoom-row button.active,.efhub-view-controls button.active{border-color:rgba(57,255,149,.52);color:#c7ffdc;background:rgba(57,255,149,.11);box-shadow:inset 0 0 0 1px rgba(57,255,149,.1)}
+.efhub-view-controls button{display:inline-flex;align-items:center;justify-content:center;gap:5px}
 .efhub-calibration-viewport{position:relative;justify-self:center;width:min(100%,760px);max-height:min(78vh,900px);overflow:auto;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:#02060b;box-shadow:0 16px 38px rgba(0,0,0,.28);overscroll-behavior:contain;scrollbar-gutter:stable;touch-action:pan-x pan-y}
-.efhub-calibration-canvas{position:relative;min-width:100%;max-width:none;overflow:hidden;background:#02060b;user-select:none;-webkit-user-select:none;isolation:isolate}
-.efhub-calibration-canvas>img{display:block;width:100%;height:auto;max-width:none;opacity:1!important;filter:none!important;transform:none!important;mix-blend-mode:normal!important;image-rendering:auto;pointer-events:none;-webkit-user-drag:none}
+.efhub-calibration-canvas{position:relative;min-width:100%;max-width:none;overflow:hidden;background:#02060b;user-select:none;-webkit-user-select:none;isolation:isolate;contain:paint}
+.efhub-calibration-canvas.magnifier-on{cursor:crosshair}
+.efhub-calibration-canvas>img{display:block;width:100%;height:auto;max-width:none;opacity:1!important;filter:none!important;-webkit-filter:none!important;transform:none!important;mix-blend-mode:normal!important;image-rendering:auto;pointer-events:none;-webkit-user-drag:none;backface-visibility:hidden}
 .efhub-calibration-overlay{position:absolute;inset:0;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.efhub-calibration-overlay.mode-hidden{display:none}
+.efhub-magnifier-lens{position:absolute;z-index:30;overflow:hidden;border:3px solid #fff;border-radius:50%;background-repeat:no-repeat;background-color:#02060b;box-shadow:0 0 0 4px rgba(57,255,149,.48),0 18px 42px rgba(0,0,0,.5);pointer-events:none;transform:translateZ(0)}
+.efhub-magnifier-lens::before,.efhub-magnifier-lens::after{content:"";position:absolute;z-index:2;background:rgba(255,255,255,.92);box-shadow:0 0 3px rgba(0,0,0,.85)}
+.efhub-magnifier-lens::before{left:50%;top:24%;bottom:24%;width:1px}.efhub-magnifier-lens::after{top:50%;left:24%;right:24%;height:1px}
+.efhub-magnifier-lens>span{position:absolute;right:8px;bottom:8px;z-index:3;padding:3px 6px;border-radius:999px;color:#06121d;background:#39ff95;font-size:.62rem;font-weight:950}
 .efhub-draggable-zone{position:absolute;z-index:2;min-width:18px;min-height:16px;border:2px solid var(--zone-color);border-radius:8px;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 10px color-mix(in srgb,var(--zone-color) 18%,transparent);cursor:grab;touch-action:none}
 .efhub-draggable-zone:active{cursor:grabbing}
 .efhub-draggable-zone:not(.active){opacity:.82}
@@ -20727,7 +20738,7 @@ body::after { display: none !important; }
 @media(max-width:760px){
   .efhub-calibrator-head{flex-direction:column}.efhub-calibrator-head>span{align-self:flex-start}
   .efhub-zone-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .efhub-image-clarity-toolbar{align-items:stretch;flex-direction:column}.efhub-zoom-controls{justify-content:flex-start}
+  .efhub-image-clarity-toolbar{align-items:stretch;flex-direction:column}.efhub-zoom-controls{justify-content:flex-start}.efhub-quick-zoom-row,.efhub-view-controls{width:100%}
   .efhub-calibration-tools{grid-template-columns:1fr auto}
   .efhub-size-controls{grid-column:1/-1}
   .efhub-calibrator-actions{grid-template-columns:1fr}
@@ -20735,7 +20746,7 @@ body::after { display: none !important; }
 @media(max-width:440px){
   .efhub-visual-calibrator{padding:10px;border-radius:17px}
   .efhub-zone-tabs button{font-size:.64rem;padding:6px}.efhub-zone-tabs button>span{width:20px;height:20px}
-  .efhub-zoom-controls{display:grid;grid-template-columns:auto auto auto 1fr 1fr}.efhub-zoom-controls button.text-button{justify-content:center}
+  .efhub-zoom-controls{display:grid;grid-template-columns:auto auto auto 1fr 1fr}.efhub-zoom-controls button.text-button{justify-content:center}.efhub-quick-zoom-row{display:grid;grid-template-columns:repeat(5,minmax(42px,1fr))}.efhub-quick-zoom-row>span{grid-column:1/-1}.efhub-view-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.efhub-view-controls button:last-child{grid-column:1/-1}
   .efhub-calibration-viewport{max-height:72vh}
   .efhub-calibration-tools{grid-template-columns:1fr}.efhub-nudge-pad{grid-template-columns:repeat(4,1fr)}.efhub-nudge-pad button{width:100%}
 }
