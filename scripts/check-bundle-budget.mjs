@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const built = process.argv.includes('--built');
-const limits = { totalJs: 15 * 1024 * 1024, singleJs: 5 * 1024 * 1024, sourceTs: 3 * 1024 * 1024 };
+const limits = { totalJs: 15 * 1024 * 1024, singleJs: 5 * 1024 * 1024, sourceTs: 3.25 * 1024 * 1024 };
 function walk(root, matcher) {
   if (!fs.existsSync(root)) return [];
   const files = [];

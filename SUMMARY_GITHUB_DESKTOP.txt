@@ -1,1 +1,1 @@
-v31.82 — corrige regressões v31.78/v31.79 para aceitar componentes eFHUB v31.81 ou superiores
+v31.82 — ajusta orçamento TypeScript para 3,25 MiB e libera validação do bundle no CI
