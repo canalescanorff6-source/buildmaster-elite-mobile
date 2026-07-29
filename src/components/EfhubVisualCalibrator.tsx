@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type SyntheticEvent } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CheckCircle2, Lock, Maximize2, RotateCcw, Save, ScanText, Unlock, ZoomIn } from 'lucide-react';
+import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import {
   createDefaultEfhubCalibrationZones,
   isEfhubCalibrationComplete,
@@ -32,6 +33,13 @@ function ZoomOutIcon({ size = 17 }: { size?: number }) {
 }
 
 type DragMode = 'move' | 'nw' | 'ne' | 'sw' | 'se';
+type OverlayMode = 'all' | 'active' | 'hidden';
+type LensPosition = { x: number; y: number; canvasWidth: number; canvasHeight: number; visible: boolean };
+
+const ZOOM_STORAGE_KEY = 'buildmaster:efhub-calibrator:last-zoom';
+const QUICK_ZOOMS = [100, 200, 300, 400, 500] as const;
+const MAGNIFIER_SIZE = 156;
+const MAGNIFIER_SCALE = 3;
 
 type DragState = {
   pointerId: number;
@@ -81,32 +89,96 @@ export function EfhubVisualCalibrator({
   const autoZoomAppliedRef = useRef(false);
   const [zoom, setZoom] = useState(100);
   const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>('all');
+  const [magnifierEnabled, setMagnifierEnabled] = useState(false);
+  const [lens, setLens] = useState<LensPosition>({ x: 0, y: 0, canvasWidth: 0, canvasHeight: 0, visible: false });
   const active = safeZones.find((zone) => zone.id === activeId) ?? safeZones[0];
   const complete = isEfhubCalibrationComplete(safeZones);
 
   useEffect(() => {
     autoZoomAppliedRef.current = false;
-    setZoom(100);
     setSourceSize({ width: 0, height: 0 });
+    setLens((current) => ({ ...current, visible: false }));
   }, [imageSrc]);
 
+  function readStoredZoom() {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = Number(safeStorageGet(ZOOM_STORAGE_KEY));
+      return Number.isFinite(stored) && stored >= 100 && stored <= 500 ? stored : null;
+    } catch {
+      return null;
+    }
+  }
+
   function nativeResolutionZoom(naturalWidth = sourceSize.width) {
-    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    const measuredWidth = viewportRef.current?.getBoundingClientRect().width ?? 0;
+    const fallbackWidth = typeof window !== 'undefined' ? Math.min(760, Math.max(280, window.innerWidth - 32)) : 0;
+    const viewportWidth = measuredWidth > 0 ? measuredWidth : fallbackWidth;
     if (!naturalWidth || !viewportWidth) return 100;
-    return clamp(Math.round((naturalWidth / viewportWidth) * 4) * 25, 100, 500);
+    return clamp(Math.round(((naturalWidth / viewportWidth) * 100) / 25) * 25, 100, 500);
+  }
+
+  function applyZoom(nextZoom: number, preserveCenter = true) {
+    const viewport = viewportRef.current;
+    const centerRatioX = viewport && viewport.scrollWidth > 0
+      ? (viewport.scrollLeft + viewport.clientWidth / 2) / viewport.scrollWidth
+      : 0;
+    const centerRatioY = viewport && viewport.scrollHeight > 0
+      ? (viewport.scrollTop + viewport.clientHeight / 2) / viewport.scrollHeight
+      : 0;
+    const normalized = clamp(Math.round(nextZoom / 25) * 25, 100, 500);
+    setZoom(normalized);
+    if (typeof window !== 'undefined') {
+      safeStorageSet(ZOOM_STORAGE_KEY, String(normalized));
+      if (preserveCenter && viewport) {
+        window.requestAnimationFrame(() => {
+          viewport.scrollLeft = Math.max(0, centerRatioX * viewport.scrollWidth - viewport.clientWidth / 2);
+          viewport.scrollTop = Math.max(0, centerRatioY * viewport.scrollHeight - viewport.clientHeight / 2);
+        });
+      }
+    }
   }
 
   function handleImageLoad(event: SyntheticEvent<HTMLImageElement>) {
     const { naturalWidth, naturalHeight } = event.currentTarget;
     setSourceSize({ width: naturalWidth, height: naturalHeight });
-    if (!autoZoomAppliedRef.current) {
-      autoZoomAppliedRef.current = true;
-      setZoom(nativeResolutionZoom(naturalWidth));
+    if (autoZoomAppliedRef.current) return;
+    autoZoomAppliedRef.current = true;
+    const applyInitialZoom = () => {
+      const stored = readStoredZoom();
+      const mobile = typeof window !== 'undefined' && window.innerWidth <= 760;
+      const recommended = stored ?? (mobile ? 300 : Math.min(nativeResolutionZoom(naturalWidth), 250));
+      applyZoom(recommended, false);
+      const viewport = viewportRef.current;
+      if (viewport) { viewport.scrollLeft = 0; viewport.scrollTop = 0; }
+    };
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(applyInitialZoom));
+    } else {
+      applyInitialZoom();
     }
   }
 
   function changeZoom(delta: number) {
-    setZoom((current) => clamp(current + delta, 100, 500));
+    applyZoom(zoom + delta);
+  }
+
+  function updateLens(event: PointerEvent<HTMLDivElement>) {
+    if (!magnifierEnabled) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+    setLens({
+      x: clamp(event.clientX - rect.left, 0, rect.width),
+      y: clamp(event.clientY - rect.top, 0, rect.height),
+      canvasWidth: rect.width,
+      canvasHeight: rect.height,
+      visible: true
+    });
+  }
+
+  function hideLens() {
+    setLens((current) => ({ ...current, visible: false }));
   }
 
   function startDrag(event: PointerEvent<HTMLElement>, zone: EfhubCalibrationZone, mode: DragMode) {
@@ -187,6 +259,20 @@ export function EfhubVisualCalibrator({
     })));
   }
 
+  function focusActiveZone() {
+    if (!active) return;
+    const viewport = viewportRef.current;
+    const canvas = canvasRef.current;
+    if (!viewport || !canvas) return;
+    const targetX = (active.x + active.w / 2) * canvas.scrollWidth;
+    const targetY = (active.y + active.h / 2) * canvas.scrollHeight;
+    viewport.scrollTo({
+      left: Math.max(0, targetX - viewport.clientWidth / 2),
+      top: Math.max(0, targetY - viewport.clientHeight / 2),
+      behavior: 'smooth'
+    });
+  }
+
   function toggleLock() {
     if (!active) return;
     onChange(updateOne(safeZones, active.id, (zone) => ({ ...zone, locked: !zone.locked })));
@@ -198,6 +284,18 @@ export function EfhubVisualCalibrator({
     if (!fallback) return;
     onChange(updateOne(safeZones, active.id, () => fallback));
   }
+
+  const lensLeft = clamp(lens.x - MAGNIFIER_SIZE / 2, 0, Math.max(0, lens.canvasWidth - MAGNIFIER_SIZE));
+  const lensTop = clamp(lens.y - MAGNIFIER_SIZE - 24, 0, Math.max(0, lens.canvasHeight - MAGNIFIER_SIZE));
+  const lensStyle = {
+    left: lensLeft,
+    top: lensTop,
+    width: MAGNIFIER_SIZE,
+    height: MAGNIFIER_SIZE,
+    backgroundImage: `url(${imageSrc})`,
+    backgroundSize: `${lens.canvasWidth * MAGNIFIER_SCALE}px ${lens.canvasHeight * MAGNIFIER_SCALE}px`,
+    backgroundPosition: `${MAGNIFIER_SIZE / 2 - lens.x * MAGNIFIER_SCALE}px ${MAGNIFIER_SIZE / 2 - lens.y * MAGNIFIER_SCALE}px`
+  } as CSSProperties;
 
   return (
     <section className="efhub-visual-calibrator" aria-label="Calibrador visual das áreas do perfil eFHUB">
@@ -228,23 +326,44 @@ export function EfhubVisualCalibrator({
 
       <div className="efhub-image-clarity-toolbar" aria-label="Controles de nitidez e ampliação do print">
         <div>
-          <strong><ScanText size={16}/> Imagem original sem desfoque</strong>
-          <small>{sourceSize.width > 0 ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando resolução original...'} • amplie para enxergar textos pequenos.</small>
+          <strong><ScanText size={16}/> Imagem original em nitidez máxima</strong>
+          <small>{sourceSize.width > 0 ? `${sourceSize.width} × ${sourceSize.height}px` : 'Carregando resolução original...'} • no celular abre ampliada e mantém o último zoom usado.</small>
         </div>
         <div className="efhub-zoom-controls" role="group" aria-label="Ampliar ou reduzir o print">
           <button type="button" onClick={() => changeZoom(-25)} disabled={zoom <= 100} aria-label="Reduzir ampliação"><ZoomOutIcon size={17}/></button>
           <output aria-live="polite">{zoom}%</output>
           <button type="button" onClick={() => changeZoom(25)} disabled={zoom >= 500} aria-label="Aumentar ampliação"><ZoomIn size={17}/></button>
-          <button type="button" className="text-button" onClick={() => setZoom(100)}>Ajustar à tela</button>
-          <button type="button" className="text-button" onClick={() => setZoom(nativeResolutionZoom())} disabled={!sourceSize.width}>Tamanho real</button>
+          <button type="button" className="text-button" onClick={() => applyZoom(100)}>Ajustar à tela</button>
+          <button type="button" className="text-button" onClick={() => applyZoom(nativeResolutionZoom())} disabled={!sourceSize.width}>Tamanho real</button>
+        </div>
+        <div className="efhub-quick-zoom-row" role="group" aria-label="Atalhos de zoom">
+          <span>Zoom rápido</span>
+          {QUICK_ZOOMS.map((value) => (
+            <button key={value} type="button" className={zoom === value ? 'active' : ''} aria-pressed={zoom === value} onClick={() => applyZoom(value)}>{value}%</button>
+          ))}
+        </div>
+        <div className="efhub-view-controls" role="group" aria-label="Modos de visualização do calibrador">
+          <button type="button" className={magnifierEnabled ? 'active' : ''} aria-pressed={magnifierEnabled} onClick={() => { setMagnifierEnabled((current) => !current); hideLens(); }}><ZoomIn size={15}/> Lupa 3×</button>
+          <button type="button" className={overlayMode === 'all' ? 'active' : ''} aria-pressed={overlayMode === 'all'} onClick={() => setOverlayMode('all')}>Todos os quadrados</button>
+          <button type="button" className={overlayMode === 'active' ? 'active' : ''} aria-pressed={overlayMode === 'active'} onClick={() => setOverlayMode('active')}>Só o selecionado</button>
+          <button type="button" className={overlayMode === 'hidden' ? 'active' : ''} aria-pressed={overlayMode === 'hidden'} onClick={() => setOverlayMode('hidden')}>Imagem limpa</button>
+          <button type="button" onClick={focusActiveZone}>Centralizar área</button>
         </div>
       </div>
 
       <div className="efhub-calibration-viewport" ref={viewportRef}>
-        <div className="efhub-calibration-canvas" ref={canvasRef} style={{ width: `${zoom}%` }}>
-        <img src={imageSrc} alt="Print original do perfil eFHUB, sem desfoque, para posicionar as áreas de leitura" draggable={false} onLoad={handleImageLoad}/>
-        <div className="efhub-calibration-overlay" aria-label="Áreas móveis de leitura">
-          {safeZones.map((zone, index) => {
+        <div
+          className={`efhub-calibration-canvas ${magnifierEnabled ? 'magnifier-on' : ''}`}
+          ref={canvasRef}
+          style={{ width: `${zoom}%` }}
+          onPointerMove={updateLens}
+          onPointerDown={updateLens}
+          onPointerLeave={hideLens}
+        >
+        <img key={imageSrc} src={imageSrc} alt="Print original do perfil eFHUB, sem desfoque, para posicionar as áreas de leitura" draggable={false} loading="eager" decoding="sync" fetchPriority="high" onLoad={handleImageLoad}/>
+        <div className={`efhub-calibration-overlay mode-${overlayMode}`} aria-label="Áreas móveis de leitura" aria-hidden={overlayMode === 'hidden'}>
+          {(overlayMode === 'hidden' ? [] : overlayMode === 'active' ? safeZones.filter((zone) => zone.id === activeId) : safeZones).map((zone) => {
+            const index = safeZones.findIndex((item) => item.id === zone.id);
             const selected = zone.id === activeId;
             return (
               <div
@@ -283,6 +402,9 @@ export function EfhubVisualCalibrator({
             );
           })}
         </div>
+        {magnifierEnabled && lens.visible && (
+          <div className="efhub-magnifier-lens" style={lensStyle} aria-hidden="true"><span>3×</span></div>
+        )}
         </div>
       </div>
 
@@ -315,7 +437,7 @@ export function EfhubVisualCalibrator({
         <button type="button" onClick={onSave} disabled={!complete}><Save size={17}/> Salvar este mapa</button>
         <button type="button" className="primary" onClick={onRead} disabled={!complete}><ScanText size={18}/> Ler com os quadrados ajustados</button>
       </footer>
-      <p className="efhub-calibrator-help">A imagem exibida é o arquivo original, sem blur, escurecimento ou camada colorida. O mapa continua salvo em proporção e funciona em outras resoluções.</p>
+      <p className="efhub-calibrator-help">A imagem exibida é o arquivo original, sem blur ou escurecimento. Use 300% a 500%, a lupa 3× e o modo Imagem limpa para posicionar cada quadrado com máxima precisão. O mapa continua proporcional e compatível com outras resoluções.</p>
     </section>
   );
 }

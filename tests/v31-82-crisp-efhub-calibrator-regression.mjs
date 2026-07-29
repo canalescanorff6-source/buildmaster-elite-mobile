@@ -10,10 +10,22 @@ const manifest = JSON.parse(fs.readFileSync('public/manifest.webmanifest', 'utf8
 assert.equal(pkg.version, '31.82.0');
 assert.equal(manifest.name, 'BuildMaster Elite Tático v31.82');
 assert.match(component, /const \[zoom, setZoom\] = useState\(100\)/);
-assert.match(component, /clamp\(current \+ delta, 100, 500\)/);
+assert.match(component, /applyZoom\(zoom \+ delta\)/);
 assert.match(component, /Tamanho real/);
 assert.match(component, /Ajustar à tela/);
 assert.match(component, /naturalWidth/);
+assert.match(component, /const QUICK_ZOOMS = \[100, 200, 300, 400, 500\] as const/);
+assert.match(component, /mobile \? 300/);
+assert.match(component, /ZOOM_STORAGE_KEY/);
+assert.match(component, /safeStorageGet\(ZOOM_STORAGE_KEY\)/);
+assert.match(component, /safeStorageSet\(ZOOM_STORAGE_KEY, String\(normalized\)\)/);
+assert.match(component, /Lupa 3×/);
+assert.match(component, /Imagem limpa/);
+assert.match(component, /Só o selecionado/);
+assert.match(component, /Centralizar área/);
+assert.match(component, /MAGNIFIER_SCALE = 3/);
+assert.match(component, /requestAnimationFrame\(\(\) => window\.requestAnimationFrame\(applyInitialZoom\)\)/);
+assert.match(component, /loading="eager" decoding="sync" fetchPriority="high"/);
 assert.doesNotMatch(component, /import\s*\{[^}]*\bZoomOut\b[^}]*\}\s*from\s*['"]lucide-react['"]/s);
 assert.doesNotMatch(cropPanel, /import\s*\{[^}]*\bZoomOut\b[^}]*\}\s*from\s*['"]lucide-react['"]/s);
 assert.match(component, /function ZoomOutIcon/);
@@ -25,4 +37,4 @@ assert.match(css, /\.efhub-draggable-zone\{[^}]*background:transparent!important
 assert.match(css, /\.efhub-calibration-viewport\{[^}]*overflow:auto;/);
 assert.doesNotMatch(css, /\.efhub-calibration-canvas>img\{[^}]*blur\(/);
 
-console.log('v31.82: calibrador eFHUB sem blur, com zoom até 500% e quadrados transparentes aprovado.');
+console.log('v31.82: calibrador eFHUB nítido com zoom móvel automático, memória, lupa 3× e modos de visualização aprovado.');
