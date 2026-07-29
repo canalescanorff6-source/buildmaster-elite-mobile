@@ -21,6 +21,14 @@ import {
 } from '../src/modules/card-reader/efhubLayoutGeometry';
 import { EFHUB_CANONICAL_NORMALIZER_VERSION } from '../src/modules/card-reader/efhubCanonicalNormalizer';
 
+function internalVersionAtLeast(value: string, minimumMajor: number, minimumMinor: number) {
+  const match = value.match(/^(\d+)\.(\d+)-/);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return major > minimumMajor || (major === minimumMajor && minor >= minimumMinor);
+}
+
 const tacticalProfile = {
   formation: '4-2-2-2' as const,
   style: 'POSSE_DE_BOLA' as const,
@@ -101,7 +109,7 @@ const isolatedSkills = readDetailedPrint('', [skillIsolationReading]);
 assert.deepEqual(isolatedSkills.skills.map((item) => item.value).sort(), ['Chute de primeira', 'Passe de primeira'].sort(), 'Atributos acima do marcador HABILIDADES não podem contaminar a lista nativa.');
 
 assert.equal(ADDITIONAL_SKILL_ENGINE_VERSION, '31.80-position-style-exact-five-1');
-assert.ok(EFHUB_LAYOUT_GEOMETRY_VERSION.startsWith('31.81-'));
-assert.ok(EFHUB_CANONICAL_NORMALIZER_VERSION.startsWith('31.81-'));
+assert.ok(internalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 31, 81), `Geometria eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_LAYOUT_GEOMETRY_VERSION}`);
+assert.ok(internalVersionAtLeast(EFHUB_CANONICAL_NORMALIZER_VERSION, 31, 81), `Normalizador eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_CANONICAL_NORMALIZER_VERSION}`);
 
 console.log('v31.79/v31.80: perfil canônico e Top 5 estritamente compatível com GK, CB e CF aprovados.');

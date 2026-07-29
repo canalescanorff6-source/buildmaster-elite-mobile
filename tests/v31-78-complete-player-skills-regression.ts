@@ -23,6 +23,14 @@ import {
 import { HIGH_PRECISION_OCR_VERSION } from '../src/modules/card-reader/highPrecisionOcr';
 import { EMBEDDED_OFFICIAL_RULE_PACK, OFFICIAL_RULE_PACK_VERSION } from '../src/modules/rules/officialRuleRegistry';
 
+function internalVersionAtLeast(value: string, minimumMajor: number, minimumMinor: number) {
+  const match = value.match(/^(\d+)\.(\d+)-/);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return major > minimumMajor || (major === minimumMajor && minor >= minimumMinor);
+}
+
 function reading(label: string, text: string, confidence = 94): PremiumZoneReading {
   return {
     key: 'skills',
@@ -132,8 +140,8 @@ assert.deepEqual(skillZones.map((zone) => zone.label), [
 ]);
 assert.ok(skillZones[0].y1 <= skillZones[1].y1 && skillZones[1].y1 < skillZones[2].y1 && skillZones[2].y1 < skillZones[3].y1);
 assert.ok(skillZones.slice(4).every((zone) => zone.y1 === 1427 && zone.y2 === 1595));
-assert.ok(EFHUB_LAYOUT_GEOMETRY_VERSION.startsWith('31.81-'));
-assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith('31.81-'));
+assert.ok(internalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 31, 81), `Geometria eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_LAYOUT_GEOMETRY_VERSION}`);
+assert.ok(internalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 31, 81), `OCR de alta precisão deve permanecer na v31.81 ou posterior: ${HIGH_PRECISION_OCR_VERSION}`);
 assert.equal(OFFICIAL_RULE_PACK_VERSION, '2026.07.4');
 
 console.log('v31.80: catálogo preservado, OCR estrito de habilidades e bloqueio das especiais aprovados.');
