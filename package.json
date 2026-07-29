@@ -2,7 +2,7 @@
   "name": "buildmaster-elite-tatico-v31-82-calibrador-nitido-efhub",
   "version": "31.82.0",
   "private": true,
-  "description": "BuildMaster v31.82 com calibrador eFHUB em nitidez máxima e proteção preventiva do CI para dependências, regressões, orçamento e geração do APK.",
+  "description": "BuildMaster v31.82 com calibrador eFHUB em tela cheia, arquivo original direto, nitidez nativa por densidade de tela, pinça, lupa e CI protegido.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -85,8 +85,8 @@
     "test:v3180": "npm run typecheck:v3180 && node -r ./tests/_ts-require.cjs tests/v31-80-final-scanner-skills-regression.ts",
     "typecheck:v3181": "tsc -p tests/types-v3181/tsconfig.json --pretty false",
     "test:v3181": "npm run typecheck:v3181 && node -r ./tests/_ts-require.cjs tests/v31-81-visual-efhub-calibration-regression.ts",
-    "test:v3182": "node tests/v31-82-crisp-efhub-calibrator-regression.mjs && node tests/v31-82-ci-protection-regression.mjs",
-    "quality:dependencies": "npm ls --depth=0 --omit=optional && node scripts/check-runtime-exports.mjs",
+    "test:v3182": "node tests/v31-82-crisp-efhub-calibrator-regression.mjs && node tests/v31-82-ci-protection-regression.mjs && node tests/v31-82-dependency-compatibility-regression.mjs",
+    "quality:dependencies": "node scripts/check-installed-dependencies.mjs && node scripts/check-runtime-exports.mjs",
     "quality:version-guards": "node scripts/check-regression-version-guards.mjs",
     "quality:ci-contract": "node scripts/check-ci-contract.mjs"
   },
