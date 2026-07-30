@@ -17,6 +17,12 @@ check(packageJson.scripts?.['quality:bundle'], 'Script quality:bundle ausente.')
 check(doctor.includes("['Compatibilidade das dependências'"), 'ci-doctor não valida exports das dependências.');
 check(doctor.includes("['Orçamento do código-fonte'"), 'ci-doctor não valida o orçamento TypeScript antes do build.');
 check(doctor.includes("['Guardas de versão das regressões'"), 'ci-doctor não protege regressões contra versões antigas.');
+check(packageJson.scripts?.['test:v3000'] === 'npm run test:v3000:core', 'test:v3000 não está isolado no núcleo legado.');
+check(String(packageJson.scripts?.['test:v3000:core'] ?? '').includes('v30-00-play-publication-regression.ts'), 'Núcleo v30.00 perdeu a regressão de publicação.');
+for (const duplicated of ['release:play-preflight', 'quality:syntax', 'quality:interactive', 'release:preflight']) {
+  check(!String(packageJson.scripts?.['test:v3000:core'] ?? '').includes(duplicated), `Núcleo v30.00 repete validação global: ${duplicated}.`);
+}
+check(doctor.includes("['Regressões v30.00', ['run', 'test:v3000:core']]"), 'ci-doctor não executa o núcleo isolado da v30.00.');
 check(doctor.includes("['Regressões v32.00'"), 'ci-doctor completo não executa a mega calibração v32.00.');
 check(apkWorkflow.includes('npm run ci:verify'), 'Workflow APK não executa ci:verify.');
 check(playWorkflow.includes('npm run ci:verify'), 'Workflow Play não executa ci:verify.');

@@ -22,7 +22,7 @@ const quickChecks = [
 
 const fullChecks = [
   ['TypeScript completo', ['run', 'typecheck']],
-  ['Regressões v30.00', ['run', 'test:v3000']],
+  ['Regressões v30.00', ['run', 'test:v3000:core']],
   ['Regressões v30.10', ['run', 'test:v3010']],
   ['Regressões v30.20', ['run', 'test:v3020']],
   ['Regressões v30.30', ['run', 'test:v3030']],

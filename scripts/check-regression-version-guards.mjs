@@ -30,6 +30,14 @@ for (const file of testFiles) {
   }
 }
 
+for (const [file, forbidden, message] of [
+  ['tests/v30-30-detailed-print-intelligence-regression.ts', /LEITURA DETALHADA V31\\\.\\d/, 'marcador da leitura detalhada está preso à v31'],
+]) {
+  if (fs.existsSync(file) && forbidden.test(fs.readFileSync(file, 'utf8'))) {
+    failures.push(`${file}: ${message}; derive a versão atual do package.json.`);
+  }
+}
+
 for (const required of [
   ['tests/v31-78-complete-player-skills-regression.ts', 'internalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 31, 81)'],
   ['tests/v31-78-complete-player-skills-regression.ts', 'internalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 31, 81)'],
