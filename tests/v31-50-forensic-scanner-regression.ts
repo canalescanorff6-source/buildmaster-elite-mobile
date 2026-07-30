@@ -7,13 +7,12 @@ import { HIGH_PRECISION_OCR_VERSION } from '../src/modules/card-reader/highPreci
 import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
+import { assertInternalVersionAtLeast } from './_internal-version';
 
-const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
-const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
-assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith(`${currentRelease}-`));
-assert.equal(OCR_VISION_VERSION, currentVersion);
-assert.ok(FORENSIC_CONSENSUS_VERSION.startsWith(`${currentRelease}-`));
-assert.ok(OCR_TEMPLATE_CALIBRATION_VERSION.startsWith(`${currentRelease}-`));
+assertInternalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 32, 0, 'OCR de alta precisão');
+assertInternalVersionAtLeast(OCR_VISION_VERSION, 32, 0, 'OCR Vision');
+assertInternalVersionAtLeast(FORENSIC_CONSENSUS_VERSION, 32, 0, 'Consenso forense');
+assertInternalVersionAtLeast(OCR_TEMPLATE_CALIBRATION_VERSION, 32, 0, 'Calibração de template');
 
 const goodQuality = buildPrintQualityReport({
   width: 2400, height: 1080, sharpness: 18, brightness: 126, contrast: 47,

@@ -5,6 +5,7 @@ import { readDetailedPrint } from '../src/modules/card-reader/detailedPrintReade
 import { buildSinglePrintSession } from '../src/modules/card-reader/singlePrintPro';
 import { buildOcrVisionAudit } from '../src/modules/card-reader/ocrVisionEngine';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
+import { assertInternalVersionAtLeast } from './_internal-version';
 
 assert.ok(textSimilarity('Cristiano RonaIdo', 'Cristiano Ronaldo') >= 0.88);
 assert.equal(normalizeOcrText('  Cristiano   Ronaldo \n  CF  '), 'Cristiano Ronaldo\nCF');
@@ -87,8 +88,7 @@ const uncertainSession = buildSinglePrintSession({
 assert.equal(uncertainSession.fields.find((field) => field.key === 'playerName')?.status, 'review');
 assert.ok(uncertainSession.blockingFields.some((field) => field.includes('Nome')));
 const uncertainAudit = buildOcrVisionAudit(uncertainSession, noisyText);
-const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
-assert.equal(uncertainAudit.version, currentVersion);
+assertInternalVersionAtLeast(uncertainAudit.version, 32, 0, 'Auditoria OCR');
 assert.equal(uncertainAudit.state, 'blocked');
 assert.ok(uncertainAudit.blockingFields.some((field) => field.includes('Nome')));
 

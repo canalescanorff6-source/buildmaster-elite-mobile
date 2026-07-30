@@ -38,6 +38,33 @@ for (const [file, forbidden, message] of [
   }
 }
 
+
+const releaseCouplingPatterns = [
+  new RegExp('const\\s+currentRelease\\s*=\\s*currentVersion\\.split\\([^\\n]+\\)[\\s\\S]{0,500}(?:HIGH_PRECISION_OCR_VERSION|OCR_VISION_VERSION|FORENSIC_CONSENSUS_VERSION|OCR_TEMPLATE_CALIBRATION_VERSION|EFHUB_PROFILE_VERSION|EFHUB_LAYOUT_GEOMETRY_VERSION)[\\s\\S]{0,180}(?:startsWith|assert\\.equal)', 'm'),
+  /assert\.(?:equal|strictEqual)\s*\(\s*OCR_VISION_VERSION\s*,\s*currentVersion\s*\)/m,
+  /LEITURA DETALHADA V\$\{currentRelease/m,
+]
+
+for (const file of testFiles) {
+  const content = fs.readFileSync(file, 'utf8');
+  if (releaseCouplingPatterns.some((pattern) => pattern.test(content))) {
+    failures.push(`${file}: regressão legada acoplada à versão visual atual do aplicativo; valide a versão mínima do motor interno.`);
+  }
+}
+
+const semanticGuardRequirements = [
+  ['tests/v30-50-ultra-precision-ocr-regression.ts', "assertInternalVersionAtLeast(uncertainAudit.version, 32, 0"],
+  ['tests/v31-40-rigid-adaptive-ocr-regression.ts', "assertInternalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 32, 0"],
+  ['tests/v31-50-forensic-scanner-regression.ts', "assertInternalVersionAtLeast(FORENSIC_CONSENSUS_VERSION, 32, 0"],
+  ['tests/v31-60-efhub-profile-regression.ts', "assertInternalVersionAtLeast(EFHUB_PROFILE_VERSION, 32, 0"],
+  ['tests/v31-75-dynamic-efhub-layout-regression.ts', "assertInternalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 32, 0"],
+];
+for (const [file, fragment] of semanticGuardRequirements) {
+  if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').includes(fragment)) {
+    failures.push(`${file}: guarda semântica mínima ausente (${fragment}).`);
+  }
+}
+
 for (const required of [
   ['tests/v31-78-complete-player-skills-regression.ts', 'internalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 31, 81)'],
   ['tests/v31-78-complete-player-skills-regression.ts', 'internalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 31, 81)'],

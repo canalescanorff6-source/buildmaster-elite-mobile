@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { parseInternalVersion } from './_internal-version';
 import { readDetailedPrint, looksLikeCompleteProfile } from '../src/modules/card-reader/detailedPrintReader';
 import { buildSinglePrintSession, getAdaptiveSinglePrintZones, refineSinglePrintGeometryFromText } from '../src/modules/card-reader/singlePrintPro';
 import { analyzeCard, parseCard } from '../src/lib/analyzer';
 import { applyDeepCardIntelligenceToResult } from '../src/lib/deepCardIntelligence';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
 
-const currentRelease = JSON.parse(fs.readFileSync('package.json', 'utf8')).version.split('.').slice(0, 2).join('.');
-const detailedVersionPattern = new RegExp(`LEITURA DETALHADA V${currentRelease.replace('.', '\\.')}\\b`);
 
 const text = `Cristiano Ronaldo
 Artilheiro
@@ -147,7 +146,10 @@ const session = buildSinglePrintSession({
 });
 assert.equal(session.detailedReading.coverage.attributeCount, 26);
 assert.equal(session.fields.find((field) => field.key === 'attributes')?.status, 'confirmed');
+const detailedRelease = parseInternalVersion(session.detailedReading.version).release;
+const detailedVersionPattern = new RegExp(`LEITURA DETALHADA V${detailedRelease.replace('.', '\\.')}\\b`);
 assert.match(session.canonicalText, detailedVersionPattern);
+assert.match(session.canonicalText, new RegExp(`FIM LEITURA DETALHADA V${detailedRelease.replace('.', '\\.')}\\b`));
 
 const parsed = parseCard(session.canonicalText, 'cristiano-ronaldo.png');
 assert.equal(parsed.playerName, 'Cristiano Ronaldo');
@@ -175,7 +177,7 @@ assert.ok((analyzed.deepCardIntelligence?.physicalInsights.length ?? 0) >= 2);
 assert.ok(analyzed.trainingPointsUsed <= analyzed.trainingPointsTotal);
 
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /Leitura detalhada v(?:31\.\d+|32\.\d+)/);
+assert.match(panel, /Leitura detalhada v\d+\.\d+/);
 assert.match(panel, /Modelo físico e habilidades/);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /refineSinglePrintGeometryFromText/);

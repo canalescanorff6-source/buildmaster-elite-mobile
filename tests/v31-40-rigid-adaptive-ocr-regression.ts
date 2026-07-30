@@ -8,11 +8,10 @@ import { buildSinglePrintSession } from '../src/modules/card-reader/singlePrintP
 import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
+import { assertInternalVersionAtLeast } from './_internal-version';
 
-const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
-const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
-assert.ok(HIGH_PRECISION_OCR_VERSION.startsWith(`${currentRelease}-`));
-assert.equal(OCR_VISION_VERSION, currentVersion);
+assertInternalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 32, 0, 'OCR de alta precisão');
+assertInternalVersionAtLeast(OCR_VISION_VERSION, 32, 0, 'OCR Vision');
 
 const nameZone: OcrZone = { key: 'name', label: 'Nome', x: 0.05, y: 0.03, w: 0.32, h: 0.06, enabled: true };
 const nameVariants = adaptiveZoneVariants(nameZone, 'precision');

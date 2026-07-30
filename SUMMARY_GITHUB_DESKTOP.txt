@@ -1,1 +1,1 @@
-v32.00 — mega calibração por modo, conexão, controle, formação, habilidades e Ímpetos
+v33.00 — corrige seis regressões legadas do CI sem resetar motores OCR e calibrações válidas

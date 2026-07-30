@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import {
   EFHUB_CANONICAL_HEIGHT,
   EFHUB_CANONICAL_WIDTH,
@@ -10,6 +9,7 @@ import {
   mapEfhubOcrZones
 } from '../src/modules/card-reader/efhubLayoutGeometry';
 import { OCR_TEMPLATE_CALIBRATION_VERSION } from '../src/modules/card-reader/templateCalibration';
+import { assertInternalVersionAtLeast } from './_internal-version';
 
 function close(actual: number, expected: number, tolerance = 0.00001) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} deveria estar próximo de ${expected}`);
@@ -17,10 +17,8 @@ function close(actual: number, expected: number, tolerance = 0.00001) {
 
 assert.equal(EFHUB_CANONICAL_WIDTH, 1400);
 assert.equal(EFHUB_CANONICAL_HEIGHT, 1600);
-const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
-const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
-assert.ok(EFHUB_LAYOUT_GEOMETRY_VERSION.startsWith(`${currentRelease}-`));
-assert.ok(OCR_TEMPLATE_CALIBRATION_VERSION.startsWith(`${currentRelease}-`));
+assertInternalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 32, 0, 'Geometria eFHUB');
+assertInternalVersionAtLeast(OCR_TEMPLATE_CALIBRATION_VERSION, 32, 0, 'Calibração de template');
 
 const canonical = buildEfhubLayoutPlan(1400, 1600);
 assert.equal(canonical.audit.mode, 'canonical');
