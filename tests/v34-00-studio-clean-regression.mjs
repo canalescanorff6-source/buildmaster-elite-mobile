@@ -1,0 +1,74 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = (file) => fs.readFileSync(file, 'utf8');
+const pkg = JSON.parse(read('package.json'));
+const manifest = JSON.parse(read('public/manifest.webmanifest'));
+const layout = read('src/app/layout.tsx');
+const css = read('src/app/v34-studio.css');
+const navigation = read('src/components/RefinedNavigation.tsx');
+const app = read('src/components/CardVisionApp.tsx');
+const auth = read('src/components/AuthGate.tsx');
+const cache = read('src/components/RegisterServiceWorker.tsx');
+const team = read('src/modules/squad/IntegratedTeamLab.tsx');
+const matches = read('src/modules/matches/MatchLaboratory.tsx');
+const formations = read('src/components/FormationRoleLabPanel.tsx');
+const players = read('src/modules/players/PlayerLaboratory.tsx');
+
+assert.equal(pkg.version, '34.00.0');
+assert.equal(manifest.name, 'BuildMaster Elite Tático v34.00');
+assert.equal(manifest.theme_color, '#07111f');
+assert.match(layout, /v34-studio\.css/);
+assert.match(layout, /bm-v3400-studio/);
+
+for (const marker of [
+  '--v34-bg: #07111f',
+  '--v34-surface: #0f1d2e',
+  '--v34-text: #f5f7fb',
+  '.bm-v3400-studio .bm-v33-sidebar',
+  '.bm-v3400-studio .bm-v34-team-workspace',
+  '.bm-v3400-studio .global-update-notice',
+  '.bm-v3400-studio .efhub-calibration-canvas>img',
+  '.offline-license-banner.is-compact',
+  '@media (max-width: 520px)'
+]) assert.ok(css.includes(marker), `Camada Studio Premium incompleta: ${marker}`);
+assert.doesNotMatch(css, /--v34-bg:\s*#eef2f7/);
+assert.doesNotMatch(css, /background:\s*#fff\s*!important/);
+
+assert.doesNotMatch(navigation, /bm-v33-player-workflow/);
+assert.doesNotMatch(navigation, /FLUXO DE FICHAS/);
+assert.match(navigation, /Abrir ficha atual/);
+assert.match(navigation, /onWorkspaceChange\('visao-geral'\)/);
+assert.match(navigation, /aria-current=\{item\.active \? 'page'/);
+assert.match(navigation, /Studio Premium · v34\.00/);
+
+for (const source of [team, matches, formations]) {
+  assert.match(source, /function selectTab/);
+  assert.match(source, /scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\)/);
+  assert.match(source, /className="bm34-tab-panel"/);
+  assert.match(source, /role="tabpanel"/);
+}
+assert.match(team, /role="tablist"/);
+assert.match(matches, /role="tablist"/);
+assert.match(formations, /role="tablist"/);
+assert.match(players, /role="tablist"/);
+assert.match(players, /aria-selected=\{category === 'todos'\}/);
+
+assert.match(app, /safeIntegratedPlayers/);
+assert.match(app, /safeTeamDiagnosis/);
+assert.match(app, /safeCentralDashboard/);
+assert.match(app, /central-player-normalization/);
+assert.match(app, /team-diagnosis/);
+assert.match(app, /mainSection === 'time'/);
+assert.match(app, /bm-v34-team-advanced/);
+assert.match(app, /advanced\.open = true/);
+assert.match(app, /!\['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'\]\.includes\(mainSection\)/);
+
+assert.match(auth, /offlineBannerExpanded/);
+assert.match(auth, /useState\(false\)/);
+assert.match(auth, /estado offline aparece como um selo compacto/);
+assert.match(auth, /offline-license-toggle/);
+assert.match(auth, /offline-license-retry/);
+assert.match(cache, /34\.00\.0-studio-premium-1/);
+
+console.log('v34.00 Studio Premium aprovado: tema unificado, menu lateral, guias com painel visível, avisos compactos e módulos protegidos.');

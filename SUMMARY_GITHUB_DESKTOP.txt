@@ -1,1 +1,1 @@
-v33.00 — corrige seis regressões legadas do CI sem resetar motores OCR e calibrações válidas
+v34.00 — reconstrói a interface Studio Premium, corrige guias e otimiza o desempenho móvel

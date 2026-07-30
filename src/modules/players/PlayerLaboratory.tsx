@@ -94,7 +94,7 @@ export function PlayerLaboratory(props: Props) {
     <section className="bm32-players" aria-label="Jogadores">
       <header className="bm32-screen-heading">
         <div className="bm32-heading-icon"><Users size={27}/></div>
-        <div><h1>Jogadores</h1><p>Gerencie, analise e organize suas cartas com precisão.</p></div>
+        <div><h1>Jogadores</h1><p>Encontre, filtre e abra suas fichas.</p></div>
         <div className="bm32-heading-actions">
           <button type="button" aria-label="Buscar jogador" onClick={() => document.getElementById('bm32-player-search')?.focus()}><Search size={21}/></button>
           <button type="button" aria-label="Filtros" aria-pressed={advancedOpen} onClick={() => setAdvancedOpen((current) => !current)}><Filter size={21}/></button>
@@ -102,12 +102,12 @@ export function PlayerLaboratory(props: Props) {
         </div>
       </header>
 
-      <nav className="bm32-category-tabs" aria-label="Categorias de jogadores">
-        <button type="button" className={category === 'todos' ? 'active' : ''} onClick={() => setCategory('todos')}><Users size={17}/> Todos</button>
-        <button type="button" className={category === 'atacantes' ? 'active' : ''} onClick={() => setCategory('atacantes')}><Goal size={17}/> Atacantes</button>
-        <button type="button" className={category === 'meias' ? 'active' : ''} onClick={() => setCategory('meias')}><Sparkles size={17}/> Meias</button>
-        <button type="button" className={category === 'defesa' ? 'active' : ''} onClick={() => setCategory('defesa')}><Shield size={17}/> Defesa</button>
-        <button type="button" className={category === 'goleiros' ? 'active' : ''} onClick={() => setCategory('goleiros')}><Goal size={17}/> Goleiros</button>
+      <nav className="bm32-category-tabs" role="tablist" aria-label="Categorias de jogadores">
+        <button type="button" role="tab" aria-selected={category === 'todos'} className={category === 'todos' ? 'active' : ''} onClick={() => setCategory('todos')}><Users size={17}/> Todos</button>
+        <button type="button" role="tab" aria-selected={category === 'atacantes'} className={category === 'atacantes' ? 'active' : ''} onClick={() => setCategory('atacantes')}><Goal size={17}/> Atacantes</button>
+        <button type="button" role="tab" aria-selected={category === 'meias'} className={category === 'meias' ? 'active' : ''} onClick={() => setCategory('meias')}><Sparkles size={17}/> Meias</button>
+        <button type="button" role="tab" aria-selected={category === 'defesa'} className={category === 'defesa' ? 'active' : ''} onClick={() => setCategory('defesa')}><Shield size={17}/> Defesa</button>
+        <button type="button" role="tab" aria-selected={category === 'goleiros'} className={category === 'goleiros' ? 'active' : ''} onClick={() => setCategory('goleiros')}><Goal size={17}/> Goleiros</button>
       </nav>
 
       <div className="bm32-player-searchbar">

@@ -434,6 +434,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   const [restoreStep, setRestoreStep] = useState<RestoreStep>('session');
   const [recheckNonce, setRecheckNonce] = useState(0);
   const [rechecking, setRechecking] = useState(false);
+  const [offlineBannerExpanded, setOfflineBannerExpanded] = useState(false);
   const lastSuccessfulValidationRef = useRef(Date.now());
   const terminalFailureCountRef = useRef(0);
 
@@ -556,6 +557,12 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     };
   }, [validation?.profile.id, recheckNonce]);
 
+  useEffect(() => {
+    // No celular, o estado offline aparece como um selo compacto e não cobre a tela.
+    // O usuário pode abrir os detalhes manualmente quando precisar.
+    setOfflineBannerExpanded(false);
+  }, [validation?.offline]);
+
   const context = useMemo<BuildMasterAccountContextValue | null>(() => validation ? {
     profile: validation.profile,
     offline: validation.offline,
@@ -582,12 +589,15 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   return (
     <AccountContext.Provider value={context}>
       {validation.offline && (
-        <div className="offline-license-banner" role="status" aria-live="polite">
-          <span><WifiOff size={15} /><strong>Conexão temporária</strong><small>Sua sessão foi mantida. O app tentará validar novamente sem pedir a senha.</small></span>
-          <button type="button" onClick={() => setRecheckNonce((value) => value + 1)} disabled={rechecking}>
+        <div className={`offline-license-banner ${offlineBannerExpanded ? 'is-expanded' : 'is-compact'}`} role="status" aria-live="polite">
+          <button type="button" className="offline-license-toggle" onClick={() => setOfflineBannerExpanded((value) => !value)} aria-label={offlineBannerExpanded ? 'Recolher aviso de conexão' : 'Abrir aviso de conexão'}>
+            <WifiOff size={15} /><strong>{offlineBannerExpanded ? 'Conexão temporária' : 'Offline'}</strong>
+          </button>
+          {offlineBannerExpanded && <small>Sua sessão foi mantida. A validação continuará em segundo plano.</small>}
+          {offlineBannerExpanded && <button type="button" className="offline-license-retry" onClick={() => setRecheckNonce((value) => value + 1)} disabled={rechecking}>
             {rechecking ? <Loader2 className="spin" size={14} /> : <RefreshCw size={14} />}
             {rechecking ? 'Verificando' : 'Tentar agora'}
-          </button>
+          </button>}
         </div>
       )}
       {children}

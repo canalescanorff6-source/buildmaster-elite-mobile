@@ -25,6 +25,7 @@ for (const duplicated of ['release:play-preflight', 'quality:syntax', 'quality:i
 check(doctor.includes("['Regressões v30.00', ['run', 'test:v3000:core']]"), 'ci-doctor não executa o núcleo isolado da v30.00.');
 check(doctor.includes("['Regressões v32.00'"), 'ci-doctor completo não executa a mega calibração v32.00.');
 check(doctor.includes("['Regressões v33.00'"), 'ci-doctor completo não executa a interface Executive v33.00.');
+check(doctor.includes("['Regressões v34.00'"), 'ci-doctor completo não executa a reconstrução visual v34.00.');
 check(apkWorkflow.includes('npm run ci:verify'), 'Workflow APK não executa ci:verify.');
 check(playWorkflow.includes('npm run ci:verify'), 'Workflow Play não executa ci:verify.');
 check(apkWorkflow.includes('npm run quality:bundle-built'), 'Workflow APK não valida o bundle compilado.');

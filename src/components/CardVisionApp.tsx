@@ -101,7 +101,7 @@ import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot,
 import type { AdaptiveExperienceProfile, EvolutionInput, EvolutionTarget } from '@/lib/appEvolutionV2740';
 import { buildBuildQualityGate } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
-import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
+import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralDashboard, type CentralPlayerInput, type CentralRecommendation, type IntegratedPlayerRecord, type TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
 import {
   AccountAdminPanel,
@@ -264,7 +264,7 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
 }
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
-const EXECUTIVE_THEME_MIGRATION_KEY = 'buildmaster_v33_executive_theme_migrated';
+const STUDIO_THEME_MIGRATION_KEY = 'buildmaster_v34_studio_theme_migrated';
  type ActiveSessionSnapshot = {
   preview: string | null;
   playerCardImage: string | null;
@@ -299,6 +299,45 @@ async function createPlayerCardPreview(file: File): Promise<CardCropResult | nul
       : await createSmartCardPreview(file, remembered);
   } catch {
     return null;
+  }
+}
+
+function safeIntegratedPlayers(inputs: CentralPlayerInput[], matches: MatchValidationRecord[]): IntegratedPlayerRecord[] {
+  const records: IntegratedPlayerRecord[] = [];
+  for (const input of inputs) {
+    try {
+      const [record] = buildIntegratedPlayers([input], matches);
+      if (record) records.push(record);
+    } catch (cause) {
+      recordSafeRuntimeError('central-player-normalization', cause);
+    }
+  }
+  return records.sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.updatedAt.localeCompare(a.updatedAt));
+}
+
+function safeTeamDiagnosis(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle): TeamDiagnosis {
+  try {
+    return buildTeamDiagnosis(players, formation, style);
+  } catch (cause) {
+    recordSafeRuntimeError('team-diagnosis', cause);
+    return buildTeamDiagnosis([], formation, style);
+  }
+}
+
+function safeCentralDashboard(players: IntegratedPlayerRecord[], matches: MatchValidationRecord[], team: TeamDiagnosis): CentralDashboard {
+  try {
+    return buildCentralDashboard(players, matches, team);
+  } catch (cause) {
+    recordSafeRuntimeError('central-dashboard', cause);
+    return {
+      players: players.length,
+      confirmed: players.filter((player) => player.status === 'completo').length,
+      needsReview: players.filter((player) => player.status !== 'completo').length,
+      matchRecords: matches.length,
+      squadReadiness: team.globalScore,
+      latestPlayer: players[0] ? { id: players[0].id, name: players[0].name, targetPosition: players[0].targetPosition } : null,
+      recommendations: team.recommendations.slice(0, 8)
+    };
   }
 }
 export function CardVisionApp() {
@@ -364,7 +403,7 @@ export function CardVisionApp() {
   const [vaultFolders, setVaultFolders] = useState<VaultFolder[]>(DEFAULT_VAULT_FOLDERS);
   const [newFolderName, setNewFolderName] = useState('');
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
-  const [appTheme, setAppTheme] = useState<AppTheme>('light');
+  const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
   const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
   const [advancedMode, setAdvancedMode] = useState(false);
@@ -570,11 +609,20 @@ export function CardVisionApp() {
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
   const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
-  const integratedPlayers = useMemo(() => buildIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
-  const integratedTeam = useMemo(() => buildTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
-  const centralDashboard = useMemo(() => buildCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
-  const centralMatchPlans = useMemo(() => buildMatchScenarioPlans(integratedTeam), [integratedTeam]);
-  const centralEntityIndex = useMemo(() => buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords), [integratedPlayers, integratedTeam, centralMatchRecords]);
+  const integratedPlayers = useMemo(() => safeIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
+  const integratedTeam = useMemo(() => safeTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
+  const centralDashboard = useMemo(() => safeCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
+  const centralMatchPlans = useMemo(() => {
+    try { return buildMatchScenarioPlans(integratedTeam); }
+    catch (cause) { recordSafeRuntimeError('match-scenario-plans', cause); return []; }
+  }, [integratedTeam]);
+  const centralEntityIndex = useMemo(() => {
+    try { return buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords); }
+    catch (cause) {
+      recordSafeRuntimeError('central-entity-index', cause);
+      return buildCentralEntityIndex([], safeTeamDiagnosis([], formation, teamStyle), []);
+    }
+  }, [integratedPlayers, integratedTeam, centralMatchRecords, formation, teamStyle]);
   useEffect(() => {
     const handle = scheduleIdleTask(() => {
       try {
@@ -651,22 +699,6 @@ export function CardVisionApp() {
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
   const currentNavigationGroup = navigationGroupFor(mainSection);
   const currentPlayerWorkspace = playerWorkspaceFor(mainSection);
-  const sectionGuide = useMemo(() => {
-    const guides: Record<MainSection, { title: string; description: string; steps: string[] }> = {
-      inicio: { title: 'Central inteligente', description: 'Veja prioridades, jogadores e próximos passos em um único painel.', steps: ['Resumo', 'Atalhos', 'Recomendações'] },
-      jogadores: { title: 'Banco de jogadores', description: 'Encontre cartas, abra fichas e continue análises salvas.', steps: ['Buscar', 'Filtrar', 'Abrir ficha'] },
-      partidas: { title: 'Validação em jogo', description: 'Registre desempenho real, erros e evolução depois das partidas.', steps: ['Preparar', 'Jogar', 'Avaliar'] },
-      leitor: { title: 'Leitura por print', description: 'Importe uma imagem nítida, confira os dados e só depois gere a ficha.', steps: ['Importar print', 'Conferir leitura', 'Gerar ficha'] },
-      manual: { title: 'Manual Pro', description: 'Preencha os dados da carta e controle cada ponto sem depender do OCR.', steps: ['Identidade', 'Atributos', 'Revisão'] },
-      resultado: { title: 'Ficha completa', description: 'Comece pelo resumo e navegue para ficha, habilidades, treino e fontes.', steps: ['Resumo', 'Ficha', 'Treino e fontes'] },
-      cofre: { title: 'Cofre de jogadores', description: 'Organize fichas, favoritos, revisões e backups da sua conta.', steps: ['Organizar', 'Comparar', 'Proteger'] },
-      time: { title: 'Meu Time', description: 'Monte o elenco, escolha formações e prepare planos para cada partida.', steps: ['Elenco', 'Formação', 'Plano de jogo'] },
-      ajustes: { title: 'Configurações do aplicativo', description: 'Personalize aparência, desempenho, segurança, backup e atualização.', steps: ['Visão geral', 'Segurança', 'Atualizações'] },
-      menu: { title: 'Menu premium', description: 'Acesse todos os módulos, ferramentas e atalhos em um só lugar.', steps: ['Módulos', 'Ferramentas', 'Atalhos'] },
-      buscar: { title: 'Busca inteligente', description: 'Encontre jogadores, formações, técnicos, habilidades e funções.', steps: ['Digite', 'Filtre', 'Abra'] }
-    };
-    return guides[mainSection];
-  }, [mainSection]);
   useEffect(() => {
     announcePremiumScreen({ section: mainSection, label: currentNavigation.label });
   }, [mainSection, currentNavigation.label]);
@@ -767,6 +799,11 @@ export function CardVisionApp() {
     return () => window.removeEventListener('buildmaster:update-available', onUpdate);
   }, []);
   useEffect(() => {
+    if (!updateNotice) return;
+    const timer = window.setTimeout(() => setUpdateNotice(null), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [updateNotice]);
+  useEffect(() => {
     const openUpdates = () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); };
     window.addEventListener('buildmaster:open-updates', openUpdates);
     return () => window.removeEventListener('buildmaster:open-updates', openUpdates);
@@ -785,17 +822,17 @@ export function CardVisionApp() {
       });
     try {
       const ui = loadEasyUiPreferences();
-      const executiveMigrated = readAccountStorage(EXECUTIVE_THEME_MIGRATION_KEY) === '1';
-      setVisualPreset(executiveMigrated ? ui.visualPreset : 'elite-blue');
-      setAppTheme(executiveMigrated ? ui.appTheme : 'light');
-      setAccentTheme(executiveMigrated ? ui.accentTheme : 'gold');
+      const studioMigrated = readAccountStorage(STUDIO_THEME_MIGRATION_KEY) === '1';
+      setVisualPreset(studioMigrated ? ui.visualPreset : 'elite-blue');
+      setAppTheme(studioMigrated ? ui.appTheme : 'dark');
+      setAccentTheme(studioMigrated ? ui.accentTheme : 'gold');
       setAdvancedMode(ui.advancedMode);
       setTextScale(ui.textScale);
       setDensityMode(ui.densityMode);
       setMotionPreference(ui.motionPreference);
       setHighContrast(ui.highContrast);
       setPerformanceMode(ui.performanceMode);
-      if (!executiveMigrated) writeAccountStorage(EXECUTIVE_THEME_MIGRATION_KEY, '1');
+      if (!studioMigrated) writeAccountStorage(STUDIO_THEME_MIGRATION_KEY, '1');
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -2874,12 +2911,6 @@ export function CardVisionApp() {
           <RotateCcw size={16} /><strong>{updateNotice}</strong><span>Toque para revisar, criar backup e atualizar.</span>
         </button>
       )}
-      {false && mainSection !== 'inicio' && (
-        <section className={`app-section-guide guide-${mainSection}`} aria-label={`Guia da área ${sectionGuide.title}`}>
-          <div><span><Sparkles size={17} /></span><div><strong>{sectionGuide.title}</strong><small>{sectionGuide.description}</small></div></div>
-          <ol>{sectionGuide.steps.map((step, index) => <li key={step}><b>{index + 1}</b><span>{step}</span></li>)}</ol>
-        </section>
-      )}
       {mobileLauncher && (
         <div className="mobile-action-sheet-backdrop" role="presentation" onClick={() => setMobileLauncher(null)}>
           <section className={`mobile-action-sheet premium-launcher-sheet luxury-panel launcher-${mobileLauncher}`} role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
@@ -3065,11 +3096,28 @@ export function CardVisionApp() {
           onOpenTeam={() => openMainSection('time')}
         /></SectionErrorBoundary>
       )}
-      {!['inicio', 'jogadores', 'partidas', 'menu', 'buscar'].includes(mainSection) && (
+      {mainSection === 'time' && (
+        <section className="bm-v34-team-workspace" aria-label="Meu Time">
+          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { const advanced = document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced'); if (advanced) { advanced.open = true; advanced.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
+          <details className="bm-v34-team-advanced luxury-panel">
+            <summary><span><SlidersHorizontal size={18}/><strong>Configuração avançada do time</strong></span><small>Formação, técnico e mapa completo</small></summary>
+            <div className="bm-v34-team-advanced-body">
+              <div className="select-stack">
+                <label><span>Sistema tático</span><select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>{formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                <label><span>Modelo de jogo</span><select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>{tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
+              </div>
+              <article className="tactical-guide-card">
+                <div className="tactical-guide-head"><div><p className="kicker">Guia tático</p><h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3></div>{selectedFormationGuide && <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>Aplicar estilo sugerido</button>}</div>
+                {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
+              </article>
+              <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
+            </div>
+          </details>
+        </section>
+      )}
+      {!['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
-        {mainSection === 'time' && (
-          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
-        )}
         {isCreationSection && (
           <section className="bm-creation-guide luxury-panel" aria-label="Como criar a ficha">
             <div className="bm-creation-guide-title">
@@ -3387,55 +3435,6 @@ export function CardVisionApp() {
               </details>
             </div>
           )}
-          {mainSection === 'time' && (
-            <>
-              <div className="select-stack">
-                <label>
-                  <span>Sistema tático</span>
-                  <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
-                    {formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span>Modelo de jogo</span>
-                  <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
-                    {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                  </select>
-                </label>
-                <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
-              </div>
-              <article className="tactical-guide-card">
-                <div className="tactical-guide-head">
-                  <div>
-                    <p className="kicker">Guia tático premium</p>
-                    <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
-                  </div>
-                  {selectedFormationGuide && (
-                    <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
-                      Aplicar estilo sugerido
-                    </button>
-                  )}
-                </div>
-                {selectedFormationGuide ? (
-                  <>
-                    <div className="guide-highlight">
-                      <span>Melhor estilo do técnico</span>
-                      <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
-                      <em>{selectedFormationGuide.styleReason}</em>
-                    </div>
-                    <p>{selectedFormationGuide.howToPlay}</p>
-                    <div className="role-chip-grid">
-                      {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
-                    </div>
-                    <small>Selecionado agora: {teamStyle === 'AUTO' ? 'automático premium' : tacticalStyleName[teamStyle]}.</small>
-                  </>
-                ) : (
-                  <p>Selecione uma formação para ver o estilo de técnico recomendado, como jogar nela e a função principal de cada setor.</p>
-                )}
-              </article>
-            </>
-          )}
-          {mainSection === 'time' && <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional. A posição escolhida de cada jogador foi preservada.`); }} />}
           {(mainSection === 'leitor' || mainSection === 'manual') && (<>
           <section className="creation-action-dock">
             <div className="creation-action-copy">

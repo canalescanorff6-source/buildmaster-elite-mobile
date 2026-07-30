@@ -12,8 +12,8 @@ const css = read('src/app/v33-executive.css');
 const pkg = JSON.parse(read('package.json'));
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 
-assert.equal(pkg.version, '33.00.0');
-assert.equal(manifest.name, 'BuildMaster Elite Tático v33.00');
+assert.ok(Number(pkg.version.split('.')[0]) >= 33, `Versão visual precisa ser v33 ou superior: ${pkg.version}`);
+assert.match(manifest.name, /BuildMaster Elite Tático v(?:33|3[4-9]|[4-9]\d)\./);
 assert.match(layout, /v33-executive\.css/);
 assert.match(layout, /bm-v3300-executive/);
 
@@ -26,12 +26,12 @@ assert.match(navigation, /Meu Time/);
 assert.match(navigation, /aria-expanded=\{drawerOpen\}/);
 
 assert.match(app, /openMainSection\(sectionForNavigation\(group, 'visao-geral'\)\)/, 'A entrada principal não pode reutilizar uma subaba antiga.');
-assert.match(app, /EXECUTIVE_THEME_MIGRATION_KEY/);
-assert.match(app, /setAppTheme\(executiveMigrated \? ui\.appTheme : 'light'\)/);
+assert.match(app, /(?:EXECUTIVE_THEME_MIGRATION_KEY|STUDIO_THEME_MIGRATION_KEY)/);
+assert.match(app, /setAppTheme\((?:executiveMigrated|studioMigrated) \? ui\.appTheme : '(?:light|dark)'\)/);
 assert.doesNotMatch(team, /lineScores\.at\(/, 'Meu Time precisa ser compatível com WebViews Android sem Array.at.');
 assert.doesNotMatch(squad, /lineScores\.at\(/, 'O diagnóstico profissional precisa ser compatível com WebViews Android antigos.');
 
-assert.match(cache, /NATIVE_CACHE_SCHEMA = '33\.00\.0-executive-ui-1'/);
+assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:33\.00\.0-studio-clean-2|34\.00\.0-studio-premium-1)'/);
 assert.match(cache, /currentSchema !== NATIVE_CACHE_SCHEMA/);
 assert.match(cache, /safeStorageSet\(NATIVE_CACHE_SCHEMA_KEY/);
 
