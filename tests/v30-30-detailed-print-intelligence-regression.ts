@@ -172,7 +172,7 @@ assert.ok((analyzed.deepCardIntelligence?.physicalInsights.length ?? 0) >= 2);
 assert.ok(analyzed.trainingPointsUsed <= analyzed.trainingPointsTotal);
 
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /Leitura detalhada v31\.\d+/);
+assert.match(panel, /Leitura detalhada v(?:31\.\d+|32\.\d+)/);
 assert.match(panel, /Modelo físico e habilidades/);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /refineSinglePrintGeometryFromText/);

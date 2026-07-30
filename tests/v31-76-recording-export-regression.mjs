@@ -11,7 +11,7 @@ const pkg = JSON.parse(read('package.json'));
 const bridge = read('src/modules/matches/matchRecorderBridge.ts');
 const ui = read('src/modules/matches/MatchTrainerCenter.tsx');
 
-assert.match(pkg.version, /^31\.\d+\.0$/);
+assert.match(pkg.version, /^(?:3[1-9]|[4-9]\d)\.\d+\.0$/);
 assert.match(bridge, /saveMatchRecordingToGallery/);
 assert.match(bridge, /shareMatchRecording/);
 assert.match(bridge, /exportRecording\(options: \{ id: string \}\)/);

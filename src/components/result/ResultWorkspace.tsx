@@ -78,6 +78,7 @@ import type { TotalReadingSession } from '@/lib/totalCardReader';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
+import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -866,6 +867,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'ficha' && (
         <div className="result-section-grid">
+          <CalibrationV32Card result={result} />
           <PrecisionBuildPanel result={result} />
           {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
             <div className="section-title-row">
@@ -954,7 +956,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <div className="variant-grid">{result.maxPrecision.alternatives.map((item)=><div key={item.title}><strong>{item.title}</strong><span>Nota {item.score}/100 • identidade {item.identityScore} • adaptação {item.adaptationScore}</span><em>Habilidade {item.skillScore} • Meta {item.metaScore} • desperdício {item.wasteScore}</em><p>{item.why}</p></div>)}</div>
             </details>
             <details className="settings-details-card">
-              <summary>Meta atual do eFootball 2026 — v5.5.0</summary>
+              <summary>Meta atual do eFootball 2026 — {result.maxPrecision.meta2026.patchReference}</summary>
               <p className="panel-note"><b>{result.maxPrecision.meta2026.classification}</b> • atualização {result.maxPrecision.meta2026.updatedAt} • encaixe {result.maxPrecision.meta2026.fitLabel}</p>
               <div className="skill-grid"><div className="skill-check-card"><strong>Mecânicas oficiais consideradas</strong>{result.maxPrecision.meta2026.officialMechanics.map((item)=><span key={item}>✓ {item}</span>)}</div><div className="skill-check-card"><strong>Tendências competitivas</strong>{result.maxPrecision.meta2026.competitiveTrends.map((item)=><span key={item.name}>{item.name} • confiança {item.confidence}: {item.note}</span>)}</div></div>
               <div className="skill-grid"><div className="skill-check-card"><strong>Pontos fortes no meta</strong>{result.maxPrecision.meta2026.strongestMetaTraits.map((item)=><span key={item}>↑ {item}</span>)}</div><div className="skill-check-card muted"><strong>O que ainda falta</strong>{result.maxPrecision.meta2026.missingMetaTraits.map((item)=><span key={item}>⚠ {item}</span>)}</div></div>

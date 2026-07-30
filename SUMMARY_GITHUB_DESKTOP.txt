@@ -1,1 +1,1 @@
-v31.82 — auditoria completa corrige cache, leitura de habilidades e calibra ficha por formação e técnico
+v32.00 — mega calibração por modo, conexão, controle, formação, habilidades e Ímpetos

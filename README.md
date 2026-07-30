@@ -1,6 +1,21 @@
-# BuildMaster Elite Tático v31.82 — Sessão Persistente, Calibrador Nítido e Fichas Integradas
+# BuildMaster Elite Tático v32.00 — Mega Calibração de Gameplay
 
-O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v31.82 preserva o calibrador em tela cheia e acrescenta proteção de sessão, orçamento exato da ficha, Top 5 complementar e recalibração final dos Ímpetos.
+O BuildMaster transforma prints, dados do eFootball e gravações de partidas em recomendações técnicas organizadas. A v32.00 preserva todas as correções da v31.82 e acrescenta uma matriz final que calibra a ficha por modo de jogo, conexão, controle, formação, técnico, habilidades e Ímpetos, sem usar overall como objetivo.
+
+## v32.00 — mega calibração
+
+- compara fichas para **Ranqueado**, **Universal** e **Offline**;
+- adapta a distribuição para conexão estável, variável ou com delay alto;
+- considera se o usuário joga por passe, drible, equilíbrio ou jogo direto;
+- mede dez dimensões de encaixe e mostra prontidão, confiança e avisos;
+- usa exatamente os pontos disponíveis quando há candidata válida;
+- penaliza gasto de baixo retorno e grupos incompatíveis com a posição;
+- recalcula ficha, Top 5 e Ímpetos no mesmo contexto final;
+- preserva a posição escolhida pelo usuário e não persegue GER/overall;
+- separa seletores e painéis em componentes menores para melhorar manutenção;
+- inclui regressão e typecheck próprios da v32.00.
+
+Consulte `MEGA_CALIBRACAO_V32.00.md`.
 
 ## v31.82 — auditoria completa de gameplay
 
@@ -348,6 +363,7 @@ npm run test:v3050
 npm run test:v3100
 npm run test:v3110
 npm run test:v3172
+npm run test:v3200
 ```
 
 ## Colocar no GitHub

@@ -117,7 +117,7 @@ assert.match(engine, /inverted/);
 assert.match(engine, /nameSparse/);
 assert.match(engine, /O app não força uma resposta errada|Nome mantido para revisão/);
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /(?:Leitura Dinâmica|Perfil padronizado|Leitura detalhada) v31\.\d+/i);
+assert.match(panel, /(?:Leitura Dinâmica|Perfil padronizado|Leitura detalhada) v(?:31\.\d+|32\.\d+)/i);
 assert.match(panel, /precisão estimada/);
 
 console.log('v31.10 leitura ultraprécisa, consenso de nome e bloqueio seguro aprovados.');

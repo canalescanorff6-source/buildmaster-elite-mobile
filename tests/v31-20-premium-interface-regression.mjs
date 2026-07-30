@@ -7,7 +7,7 @@ const css = readFileSync('src/app/globals.css', 'utf8');
 const prefs = readFileSync('src/lib/easyExperience.ts', 'utf8');
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
-assert.match(pkg.version, /^31\.\d+\.0$/);
+assert.match(pkg.version, /^(?:3[1-9]|[4-9]\d)\.\d+\.0$/);
 for (const preset of ['obsidian-gold', 'elite-blue', 'future-purple']) {
   assert.ok(app.includes(preset), `O seletor deve incluir ${preset}.`);
   assert.ok(css.includes(`visual-${preset}`), `O CSS deve incluir ${preset}.`);

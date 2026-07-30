@@ -2,7 +2,7 @@ import type { OcrZone } from '@/lib/ocr';
 import { canonicalEfhubOcrZones, EFHUB_CANONICAL_HEIGHT, EFHUB_CANONICAL_WIDTH } from './efhubLayoutGeometry';
 import { detectEfhubSkillCapsuleZones, type SkillCapsuleDetection } from './skillCapsuleDetector';
 
-export const EFHUB_DETERMINISTIC_ZONES_VERSION = '31.82-manual-map-deterministic-fields-1';
+export const EFHUB_DETERMINISTIC_ZONES_VERSION = '32.00-manual-map-deterministic-fields-1';
 
 function zone(key: OcrZone['key'], label: string, x1: number, y1: number, x2: number, y2: number): OcrZone {
   return {

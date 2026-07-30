@@ -5,7 +5,7 @@ import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProces
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 import { extractCanonicalSkillsFromText } from '@/lib/officialSkillIdentity';
 
-export const HIGH_PRECISION_OCR_VERSION = '31.82-visual-calibration-strict-skills-1';
+export const HIGH_PRECISION_OCR_VERSION = '32.00-visual-calibration-strict-skills-1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;

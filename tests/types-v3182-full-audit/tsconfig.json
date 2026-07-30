@@ -28,6 +28,7 @@
     "../../src/lib/supremeGameplayEngine.ts",
     "../../src/lib/skillIntelligenceV31.ts",
     "../../src/lib/localAiEngine.ts",
-    "../../src/lib/cardIntelligencePipeline.ts"
+    "../../src/lib/cardIntelligencePipeline.ts",
+    "../../src/lib/calibrationV32.ts"
   ]
 }

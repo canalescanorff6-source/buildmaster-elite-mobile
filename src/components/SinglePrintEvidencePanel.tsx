@@ -50,7 +50,7 @@ export function SinglePrintEvidencePanel({
       {session.layoutAudit && (
         <section className={`precision-audit-card ${session.layoutAudit.complete ? 'ready' : 'review'}`} aria-label="Auditoria do encaixe dinâmico eFHUB">
           <div>
-            <p className="kicker"><ScanLine size={14}/> Perfil padronizado v31.82</p>
+            <p className="kicker"><ScanLine size={14}/> Perfil padronizado v32.00</p>
             <strong>{session.layoutAudit.confidence}%</strong>
             <span>{layoutModeLabel(session.layoutAudit.mode)}</span>
           </div>
@@ -67,7 +67,7 @@ export function SinglePrintEvidencePanel({
 
       <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
         <div>
-          <p className="kicker"><ShieldCheck size={14}/> Perfil Padronizado v31.82</p>
+          <p className="kicker"><ShieldCheck size={14}/> Perfil Padronizado v32.00</p>
           <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
           <span>precisão estimada</span>
         </div>
@@ -138,7 +138,7 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.82</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v32.00</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">

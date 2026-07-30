@@ -18,7 +18,7 @@ const currentVersion = pkg.version;
 const currentRelease = currentVersion.split('.').slice(0, 2).join('.');
 const currentTestId = currentVersion.split('.').slice(0, 2).join('');
 const currentCacheId = currentRelease.replace('.', '-');
-expect(/^31\.\d+\.0$/.test(currentVersion), `Versão ${currentVersion} possui formato inesperado.`);
+expect(/^(?:3[1-9]|[4-9]\d)\.\d+\.0$/.test(currentVersion), `Versão ${currentVersion} possui formato inesperado.`);
 expect(preflight.includes(`version === '${currentVersion}'`), 'Pré-voo de produção ainda valida uma versão antiga.');
 expect(preflight.includes(`BuildMaster Elite Tático v${currentRelease}`), 'Pré-voo não valida o manifesto PWA atual.');
 expect(preflight.includes(`npm run test:v${currentTestId}`), 'Pré-voo não valida a bateria atual.');

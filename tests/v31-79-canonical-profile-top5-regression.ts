@@ -108,7 +108,7 @@ const skillIsolationReading: PremiumZoneReading = {
 const isolatedSkills = readDetailedPrint('', [skillIsolationReading]);
 assert.deepEqual(isolatedSkills.skills.map((item) => item.value).sort(), ['Chute de primeira', 'Passe de primeira'].sort(), 'Atributos acima do marcador HABILIDADES não podem contaminar a lista nativa.');
 
-assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1)$/);
+assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1|32\.00-position-style-formation-exact-five-1)$/);
 assert.ok(internalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 31, 81), `Geometria eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_LAYOUT_GEOMETRY_VERSION}`);
 assert.ok(internalVersionAtLeast(EFHUB_CANONICAL_NORMALIZER_VERSION, 31, 81), `Normalizador eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_CANONICAL_NORMALIZER_VERSION}`);
 
