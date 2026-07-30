@@ -93,7 +93,7 @@ export type PrecisionAlternative = {
 };
 
 export type Meta2026Analysis = {
-  patchReference: 'v5.5.0';
+  patchReference: 'v5.4.0';
   updatedAt: string;
   classification: 'tendência competitiva editável';
   officialMechanics: string[];
@@ -358,7 +358,7 @@ export function buildMaxPrecisionAnalysis(args: {
 
   const meta = metaFit(position,final);
   const meta2026:Meta2026Analysis={
-    patchReference:'v5.5.0',updatedAt:'2026-07-13',classification:'tendência competitiva editável',
+    patchReference:'v5.4.0',updatedAt:'2026-07-29',classification:'tendência competitiva editável',
     officialMechanics:[
       'Drible em velocidade e Sharp Touch ficaram mais responsivos; Drible, Aceleração e Equilíbrio ganharam valor prático no 1 contra 1.',
       'Dar bote agressivo tem punição maior quando o atacante gira; leitura, Match-up e momento do desarme são mais importantes que correr no portador.',
@@ -377,7 +377,7 @@ export function buildMaxPrecisionAnalysis(args: {
     strongestMetaTraits:meta.strengths.length?meta.strengths:['Nenhum diferencial meta confirmado acima da faixa alta.'],
     missingMetaTraits:meta.missing.length?meta.missing:['A carta já cobre as exigências principais do recorte atual.'],
     recommendedMetaUse:position==='CB'||position==='DMF'?'Priorize leitura defensiva, cobertura e desarme; não gaste todo o orçamento apenas em velocidade.':position==='LWF'||position==='RWF'||position==='SS'||position==='AMF'?'Explore mudança de direção, aceleração curta e uma ação decisiva de passe ou chute.':position==='CF'?'Crie duas rotas de gol: movimentação na área e finalização de média distância quando o bloco fechar.':'Mantenha controle, passe e resistência suficientes para não quebrar o ritmo do time.',
-    disclaimer:'A versão atual considerada é a v5.5.0; as mudanças de gameplay mais recentes usadas no motor vêm principalmente da v5.4.0. Meta não é regra oficial nem garantia de vitória: é uma tendência competitiva datada e editável.'
+    disclaimer:'A versão atual considerada é a v5.4.0; as mudanças de gameplay mais recentes usadas no motor vêm principalmente da v5.4.0. Meta não é regra oficial nem garantia de vitória: é uma tendência competitiva datada e editável.'
   };
 
   const skillGroups=Array.from(new Set(deepSkills.flatMap(item=>specialRule(item.name)?.groups??[])));

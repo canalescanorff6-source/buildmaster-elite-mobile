@@ -1,0 +1,1 @@
+Mega calibração de fichas por modo de jogo, condição da conexão, estilo de controle, formação e técnico. Revisão das habilidades adicionais e dos Ímpetos, proteção contra foco artificial em overall e melhorias de estabilidade da sessão e do calibrador.

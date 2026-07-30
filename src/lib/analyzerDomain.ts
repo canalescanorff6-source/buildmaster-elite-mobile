@@ -42,7 +42,20 @@ export function normalizeObjective(value: unknown): Objective {
 
 export type TacticalFormation = '4-2-2-2' | '4-3-3' | '4-1-2-3' | '4-2-1-3' | '4-2-3-1' | '4-3-1-2' | '4-1-3-2' | '4-4-2' | '4-1-4-1' | '3-2-4-1' | '3-4-3' | '3-5-2' | '5-3-2' | '5-2-3' | 'AUTO';
 export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'AUTO';
-export type TacticalProfile = { formation: TacticalFormation; style: TacticalStyle; managerId?: string | null; managerName?: string | null; managerProficiency?: number | null; managerBooster?: 'duplo' | 'especial' | 'padrao' | null };
+export type GameplayMode = 'RANKED' | 'UNIVERSAL' | 'OFFLINE';
+export type ConnectionProfile = 'STABLE' | 'VARIABLE' | 'HIGH_DELAY';
+export type ControlProfile = 'BALANCED' | 'PASSING' | 'DRIBBLE' | 'DIRECT';
+export type TacticalProfile = {
+  formation: TacticalFormation;
+  style: TacticalStyle;
+  managerId?: string | null;
+  managerName?: string | null;
+  managerProficiency?: number | null;
+  managerBooster?: 'duplo' | 'especial' | 'padrao' | null;
+  gameplayMode?: GameplayMode;
+  connectionProfile?: ConnectionProfile;
+  controlProfile?: ControlProfile;
+};
 
 export type PositionCode = 'CF' | 'SS' | 'LWF' | 'RWF' | 'LMF' | 'RMF' | 'AMF' | 'CMF' | 'DMF' | 'CB' | 'LB' | 'RB' | 'GK';
 
@@ -581,6 +594,51 @@ export type UnifiedCardIntelligenceAnalysis = {
 };
 
 
+
+export type CalibrationV32Profile = {
+  mode: GameplayMode;
+  label: string;
+  score: number;
+  training: TrainingPlan;
+  exactBudget: boolean;
+  strengths: string[];
+  tradeOffs: string[];
+};
+
+export type CalibrationV32Analysis = {
+  engineVersion: string;
+  patchReference: 'eFootball v5.4.0';
+  selectedMode: GameplayMode;
+  connectionProfile: ConnectionProfile;
+  controlProfile: ControlProfile;
+  readiness: 'pronta' | 'quase pronta' | 'revisar';
+  readinessScore: number;
+  confidence: number;
+  calibrationScore: number;
+  finalTraining: TrainingPlan;
+  candidatesEvaluated: number;
+  exactBudgetCandidates: number;
+  recalibrated: boolean;
+  dimensions: {
+    roleFit: number;
+    formationFit: number;
+    playstyleFit: number;
+    controlFit: number;
+    connectionRobustness: number;
+    pointEfficiency: number;
+    skillSynergy: number;
+    impetoSynergy: number;
+    antiOverallWaste: number;
+    crossModeStability: number;
+  };
+  profiles: CalibrationV32Profile[];
+  blockers: string[];
+  warnings: string[];
+  safeguards: string[];
+  reasons: string[];
+  summary: string;
+};
+
 export type SupremeGameplayAnalysis = {
   engineVersion: string;
   mode: 'Otimização competitiva personalizada';
@@ -614,6 +672,7 @@ export type SupremeGameplayAnalysis = {
 };
 
 export type AnalysisResult = {
+  objective?: Objective;
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
   positionScores: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>;
@@ -664,6 +723,7 @@ export type AnalysisResult = {
   deepCardIntelligence?: DeepCardIntelligenceAnalysis;
   unifiedIntelligence?: UnifiedCardIntelligenceAnalysis;
   supremeGameplay?: SupremeGameplayAnalysis;
+  calibrationV32?: CalibrationV32Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

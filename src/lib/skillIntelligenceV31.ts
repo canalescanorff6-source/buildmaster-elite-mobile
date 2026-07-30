@@ -6,7 +6,7 @@ import { buildOwnedSkillKeys, filterComplementaryAdditionalSkills, skillIdentity
 type SkillCategory = UnifiedSkillDecision['category'];
 type Candidate = UnifiedSkillDecision & { rawScore: number; rolePosition: PositionCode };
 
-export const ADDITIONAL_SKILL_ENGINE_VERSION = '31.82-position-style-formation-exact-five-1';
+export const ADDITIONAL_SKILL_ENGINE_VERSION = '32.00-position-style-formation-exact-five-1';
 
 const CATEGORY_BY_SKILL: Record<string, SkillCategory> = {
   'Pedalada simples': 'drible', 'Toque duplo': 'drible', 'Elástico': 'drible', 'Giro 360°': 'drible', 'Chapéu': 'drible',

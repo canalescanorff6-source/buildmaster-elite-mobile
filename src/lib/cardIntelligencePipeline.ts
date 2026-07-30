@@ -6,6 +6,7 @@ import { applyLocalCorrectionsToResult } from '../modules/builds/dynamicRules';
 import { applyUnifiedCardIntelligence } from './unifiedCardIntelligence';
 import { applySupremeGameplayEngine } from './supremeGameplayEngine';
 import { enforceComplementarySkillIntegrity } from './skillIntegrity';
+import { applyCalibrationV32 } from './calibrationV32';
 
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   const fused = applyCompetitiveFusionToResult(result);
@@ -20,5 +21,11 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   const withFinalSkills = enforceComplementarySkillIntegrity(supreme);
   const withFinalImpetos = applyLocalAiToResult(withFinalSkills);
   const correctedFinal = applyLocalCorrectionsToResult(withFinalImpetos);
-  return enforceComplementarySkillIntegrity(correctedFinal);
+  const integrityBeforeCalibration = enforceComplementarySkillIntegrity(correctedFinal);
+  const calibrated = applyCalibrationV32(integrityBeforeCalibration);
+  const calibratedSkills = enforceComplementarySkillIntegrity(calibrated);
+  const calibratedImpetos = applyLocalAiToResult(calibratedSkills);
+  // A segunda passagem usa o Top 5 e o ranking de Ímpetos já reconciliados.
+  // Assim a ficha final, as habilidades e o Ímpeto terminam no mesmo contexto.
+  return enforceComplementarySkillIntegrity(applyCalibrationV32(calibratedImpetos));
 }
