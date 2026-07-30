@@ -1,1 +1,1 @@
-v34.00 — reconstrói a interface Studio Premium, corrige guias e otimiza o desempenho móvel
+v34.00 — corrige TypeScript e regressões v31.10/v31.20 sem alterar a interface Studio Premium

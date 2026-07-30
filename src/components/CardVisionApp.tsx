@@ -309,7 +309,7 @@ function safeIntegratedPlayers(inputs: CentralPlayerInput[], matches: MatchValid
       const [record] = buildIntegratedPlayers([input], matches);
       if (record) records.push(record);
     } catch (cause) {
-      recordSafeRuntimeError('central-player-normalization', cause);
+      void recordSafeRuntimeError({ area: 'central-player-normalization', code: 'normalize_failed', message: cause instanceof Error ? cause.message : 'Falha ao normalizar jogador na Central' });
     }
   }
   return records.sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.updatedAt.localeCompare(a.updatedAt));
@@ -319,7 +319,7 @@ function safeTeamDiagnosis(players: IntegratedPlayerRecord[], formation: Tactica
   try {
     return buildTeamDiagnosis(players, formation, style);
   } catch (cause) {
-    recordSafeRuntimeError('team-diagnosis', cause);
+    void recordSafeRuntimeError({ area: 'team-diagnosis', code: 'diagnosis_failed', message: cause instanceof Error ? cause.message : 'Falha ao calcular diagnóstico do time' });
     return buildTeamDiagnosis([], formation, style);
   }
 }
@@ -328,7 +328,7 @@ function safeCentralDashboard(players: IntegratedPlayerRecord[], matches: MatchV
   try {
     return buildCentralDashboard(players, matches, team);
   } catch (cause) {
-    recordSafeRuntimeError('central-dashboard', cause);
+    void recordSafeRuntimeError({ area: 'central-dashboard', code: 'dashboard_failed', message: cause instanceof Error ? cause.message : 'Falha ao montar painel central' });
     return {
       players: players.length,
       confirmed: players.filter((player) => player.status === 'completo').length,
@@ -614,12 +614,12 @@ export function CardVisionApp() {
   const centralDashboard = useMemo(() => safeCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
   const centralMatchPlans = useMemo(() => {
     try { return buildMatchScenarioPlans(integratedTeam); }
-    catch (cause) { recordSafeRuntimeError('match-scenario-plans', cause); return []; }
+    catch (cause) { void recordSafeRuntimeError({ area: 'match-scenario-plans', code: 'plans_failed', message: cause instanceof Error ? cause.message : 'Falha ao gerar planos de partida' }); return []; }
   }, [integratedTeam]);
   const centralEntityIndex = useMemo(() => {
     try { return buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords); }
     catch (cause) {
-      recordSafeRuntimeError('central-entity-index', cause);
+      void recordSafeRuntimeError({ area: 'central-entity-index', code: 'index_failed', message: cause instanceof Error ? cause.message : 'Falha ao montar índice central' });
       return buildCentralEntityIndex([], safeTeamDiagnosis([], formation, teamStyle), []);
     }
   }, [integratedPlayers, integratedTeam, centralMatchRecords, formation, teamStyle]);
