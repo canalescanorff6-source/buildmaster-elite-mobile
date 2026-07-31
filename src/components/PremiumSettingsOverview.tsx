@@ -23,10 +23,11 @@ type Props = {
   playerCount: number;
   healthScore: number;
   cloudEnabled: boolean;
+  themeLabel: string;
   onOpen: (target: SettingsTarget) => void;
 };
 
-export function PremiumSettingsOverview({ username, version, playerCount, healthScore, cloudEnabled, onOpen }: Props) {
+export function PremiumSettingsOverview({ username, version, playerCount, healthScore, cloudEnabled, themeLabel, onOpen }: Props) {
   return (
     <section className="bm32-settings-overview" aria-label="Configurações">
       <header className="bm32-screen-heading">
@@ -38,7 +39,7 @@ export function PremiumSettingsOverview({ username, version, playerCount, health
 
       <div className="bm32-settings-grid">
         <button type="button" onClick={() => onOpen('contas')}><span><UserRound size={25}/></span><div><strong>Conta e licença</strong><p>{username} • gerencie licença e dispositivos.</p></div><ChevronRight size={20}/></button>
-        <button type="button" onClick={() => onOpen('aparencia')}><span><Palette size={25}/></span><div><strong>Tema visual</strong><p>Ajuste cores, contraste, densidade e animações.</p><em>Obsidian Gold</em></div><ChevronRight size={20}/></button>
+        <button type="button" onClick={() => onOpen('aparencia')}><span><Palette size={25}/></span><div><strong>Tema visual</strong><p>Ajuste cores, contraste, densidade e animações.</p><em>{themeLabel}</em></div><ChevronRight size={20}/></button>
         <button type="button" onClick={() => onOpen('experiencia')}><span><Eye size={25}/></span><div><strong>Leitura de imagem/OCR</strong><p>Configure precisão, recorte e confirmação de dados.</p><em>Alta precisão</em></div><ChevronRight size={20}/></button>
         <button type="button" onClick={() => onOpen('backup')}><span><Cloud size={25}/></span><div><strong>Backup e sincronização</strong><p>{playerCount} ficha(s) disponíveis para proteção.</p><em>{cloudEnabled ? 'Nuvem conectada' : 'Modo local'}</em></div><ChevronRight size={20}/></button>
         <button type="button" onClick={() => onOpen('atualizacoes')}><span><Download size={25}/></span><div><strong>Atualizações</strong><p>Mantenha o aplicativo sempre atualizado.</p><em>Versão atual {version}</em></div><ChevronRight size={20}/></button>

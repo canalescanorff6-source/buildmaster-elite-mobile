@@ -1,1 +1,1 @@
-v34.00 — deixa todas as telas responsivas, reduz textos e mantém tela cheia opcional
+v34.00 — corrige menu móvel e contrastes, adiciona nova logo, sete temas e foto de perfil persistente

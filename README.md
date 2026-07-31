@@ -1,26 +1,32 @@
-# BuildMaster Elite Tático v34.00 — Studio Premium Clean
+# BuildMaster Elite Tático v34.00 — Studio Premium
 
-A v34.00 reorganiza a interface para caber corretamente em celulares de diferentes tamanhos, sem alterar os motores de fichas, OCR, habilidades adicionais, Ímpetos e Mega Calibração v32.
+Projeto móvel para leitura de cartas, geração de fichas orientadas à gameplay, habilidades adicionais, Ímpetos, formações e gestão do time.
 
-## Principais mudanças
+## Interface atual
 
-- todas as telas limitadas à largura real do aparelho, sem conteúdo cortado;
-- grades, formulários, botões e guias reorganizados automaticamente;
-- menu lateral à esquerda preservado;
-- títulos menores, textos curtos e informações secundárias recolhidas;
-- guias sem rolagem horizontal obrigatória;
-- tabelas grandes com rolagem interna, sem alargar a página;
-- calibrador abre enquadrado e usa tela cheia somente quando solicitado;
-- Jogadores, Meu Time e Partidas protegidos contra dados incompletos;
-- alertas compactos, sem cobrir a navegação;
-- menos blur, animações e alturas fixas para melhorar o desempenho móvel;
-- cache renovado somente quando a estrutura da versão muda.
+- menu lateral pela esquerda, corrigido para celulares;
+- sete temas coordenados, sem efeito arco-íris;
+- nova marca inspirada em ficha, habilidades e evolução;
+- foto de perfil escolhida da galeria e persistente por conta;
+- contraste protegido em textos, cartões, campos e botões;
+- rolagem móvel, telas responsivas e tela cheia opcional no calibrador.
+
+## Motores preservados
+
+- Mega Calibração v32.00;
+- fichas sem foco artificial em overall;
+- OCR e calibrador eFHUB;
+- cinco habilidades adicionais complementares;
+- Ímpetos;
+- técnicos, formações, Meu Time, Cofre e partidas;
+- sessão persistente e atualização verificada.
 
 ## Verificação antes da publicação
 
 ```bash
 npm run test:v3400
+npm run typecheck:v3200
 npm run release:preflight
+npm run release:play-preflight
 npm run quality:audit
-npm run integrity:verify
 ```

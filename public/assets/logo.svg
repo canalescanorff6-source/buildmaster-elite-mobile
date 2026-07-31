@@ -1,9 +1,22 @@
-<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="192" height="192" rx="48" fill="#030A16"/>
-  <path d="M96 18L154 49V114C154 144 129 168 96 178C63 168 38 144 38 114V49L96 18Z" fill="#061827" stroke="#24F39A" stroke-width="8"/>
-  <path d="M62 119L72 70L90 94L107 59L123 94L140 70L130 119H62Z" fill="#082033" stroke="#5CFDB7" stroke-width="7" stroke-linejoin="round"/>
-  <circle cx="90" cy="94" r="5" fill="#24F39A"/>
-  <circle cx="107" cy="59" r="5" fill="#24F39A"/>
-  <circle cx="123" cy="94" r="5" fill="#24F39A"/>
-  <path d="M72 134H120" stroke="#26D7FF" stroke-width="8" stroke-linecap="round"/>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="48" y1="34" x2="456" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111D"/>
+      <stop offset="1" stop-color="#0D2B48"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="118" y1="88" x2="394" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8FC6FF"/>
+      <stop offset="1" stop-color="#4E9FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
+  <rect x="92" y="62" width="328" height="388" rx="94" fill="#0D2034" stroke="url(#accent)" stroke-width="24"/>
+  <circle cx="198" cy="194" r="58" stroke="#8FC6FF" stroke-width="24"/>
+  <path d="M134 312C154 260 242 260 262 312" stroke="#8FC6FF" stroke-width="24" stroke-linecap="round"/>
+  <path d="M302 158H372M302 210H354M302 262H382" stroke="#D7EAFF" stroke-width="22" stroke-linecap="round"/>
+  <path d="M286 356L326 316L360 340L414 278" stroke="#5DA8FF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M378 278H414V314" stroke="#5DA8FF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="150" cy="398" r="13" fill="#8FC6FF"/>
+  <circle cx="198" cy="398" r="13" fill="#8FC6FF"/>
+  <circle cx="246" cy="398" r="13" fill="#8FC6FF"/>
 </svg>

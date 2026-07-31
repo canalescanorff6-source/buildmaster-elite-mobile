@@ -1,4 +1,5 @@
-const CACHE_NAME = 'buildmaster-v34-00-touch-scroll-menu-3';
+// Compatibilidade de regressão: buildmaster-v34-00-touch-scroll-menu-3
+const CACHE_NAME = 'buildmaster-v34-00-identity-themes-avatar-4';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

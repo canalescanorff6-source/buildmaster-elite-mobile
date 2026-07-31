@@ -15,11 +15,14 @@ import {
   X
 } from 'lucide-react';
 import type { MainNavigationGroup, PlayerWorkspace } from '@/lib/appRefinement';
+import { BuildMasterMark } from '@/components/BuildMasterMark';
 
 type Props = {
   group: MainNavigationGroup;
   workspace: PlayerWorkspace;
   hasResult: boolean;
+  username: string;
+  profileAvatar?: string | null;
   onGroupChange: (group: MainNavigationGroup) => void;
   onWorkspaceChange: (workspace: PlayerWorkspace) => void;
   onSearch: () => void;
@@ -31,12 +34,12 @@ type Props = {
 
 type NavigationAction = () => void;
 
-
-
 export function RefinedNavigation({
   group,
   workspace,
   hasResult,
+  username,
+  profileAvatar = null,
   onGroupChange,
   onWorkspaceChange,
   onSearch,
@@ -46,6 +49,7 @@ export function RefinedNavigation({
   searchActive = false
 }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const accountInitial = username.trim().slice(0, 1).toUpperCase() || 'B';
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -66,7 +70,7 @@ export function RefinedNavigation({
   }
 
   const mainItems = [
-    { id: 'inicio', label: 'Início', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
+    { id: 'inicio', label: 'Início', description: 'Resumo', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
     { id: 'jogadores', label: 'Jogadores', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
     { id: 'time', label: 'Meu Time', description: 'Elenco e tática', icon: Target, active: group === 'time', action: () => onGroupChange('time') },
     { id: 'partidas', label: 'Partidas', description: 'Treino e análise', icon: Trophy, active: group === 'partidas', action: () => onGroupChange('partidas') },
@@ -76,8 +80,8 @@ export function RefinedNavigation({
   const navigationContent = (mobile: boolean) => (
     <>
       <header className="bm-v33-nav-brand">
-        <span>BM</span>
-        <div><strong>BuildMaster</strong><small>Elite Tático · v34</small></div>
+        <span className="bm-v35-nav-mark"><BuildMasterMark size={43} /></span>
+        <div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div>
         {mobile && <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu lateral"><X size={21}/></button>}
       </header>
 
@@ -102,6 +106,10 @@ export function RefinedNavigation({
         {hasResult && <button type="button" onClick={() => run(() => onWorkspaceChange('resultado'))}><FileText size={18}/><span>Abrir ficha atual</span></button>}
         <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Buscar no aplicativo</span></button>
         <button type="button" className={menuActive ? 'active' : ''} onClick={() => run(onMenu)}><Menu size={18}/><span>Todos os módulos</span></button>
+        <div className="bm-v35-nav-account" aria-label={`Conta ${username}`}>
+          <span>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</span>
+          <div><strong>{username || 'Conta'}</strong><small>Perfil salvo</small></div>
+        </div>
         <small>Studio Premium · v34.00</small>
       </footer>
     </>
@@ -113,15 +121,17 @@ export function RefinedNavigation({
         {navigationContent(false)}
       </aside>
 
-      <button
-        type="button"
-        className="bm-v33-drawer-trigger"
-        aria-label="Abrir menu lateral"
-        aria-expanded={drawerOpen}
-        onClick={() => setDrawerOpen(true)}
-      >
-        <Menu size={23}/><span>Menu</span>
-      </button>
+      {!drawerOpen && (
+        <button
+          type="button"
+          className="bm-v33-drawer-trigger"
+          aria-label="Abrir menu lateral"
+          aria-expanded={drawerOpen}
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Menu size={23}/><span>Menu</span>
+        </button>
+      )}
 
       {drawerOpen && (
         <div className="bm-v33-drawer-backdrop" role="presentation" onClick={() => setDrawerOpen(false)}>

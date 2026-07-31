@@ -26,8 +26,8 @@ assert.match(navigation, /Meu Time/);
 assert.match(navigation, /aria-expanded=\{drawerOpen\}/);
 
 assert.match(app, /openMainSection\(sectionForNavigation\(group, 'visao-geral'\)\)/, 'A entrada principal não pode reutilizar uma subaba antiga.');
-assert.match(app, /(?:EXECUTIVE_THEME_MIGRATION_KEY|STUDIO_THEME_MIGRATION_KEY)/);
-assert.match(app, /setAppTheme\((?:executiveMigrated|studioMigrated) \? ui\.appTheme : '(?:light|dark)'\)/);
+assert.match(app, /(?:EXECUTIVE_THEME_MIGRATION_KEY|STUDIO_THEME_MIGRATION_KEY|IDENTITY_THEME_MIGRATION_KEY)/);
+assert.ok(/setAppTheme\((?:executiveMigrated|studioMigrated) \? ui\.appTheme : '(?:light|dark)'\)/.test(app) || /setAppTheme\(selectedPreset === 'pearl-executive' \? 'light' : 'dark'\)/.test(app), 'A migração visual precisa escolher um tema com contraste definido.');
 assert.doesNotMatch(team, /lineScores\.at\(/, 'Meu Time precisa ser compatível com WebViews Android sem Array.at.');
 assert.doesNotMatch(squad, /lineScores\.at\(/, 'O diagnóstico profissional precisa ser compatível com WebViews Android antigos.');
 

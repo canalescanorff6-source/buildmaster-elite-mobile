@@ -87,6 +87,8 @@ import { RefinedNavigation } from '@/components/RefinedNavigation';
 import { PremiumContextBar } from '@/components/PremiumContextBar';
 import { MobileScrollRecovery } from '@/components/MobileScrollRecovery';
 import { PremiumBrand } from '@/components/PremiumBrand';
+import { BuildMasterMark } from '@/components/BuildMasterMark';
+import { IdentityAppearancePanel } from '@/components/IdentityAppearancePanel';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
 import { PremiumMenuScreen } from '@/components/PremiumMenuScreen';
@@ -169,7 +171,8 @@ import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
 import type { ResultTabRequest } from '@/components/result/ResultWorkspace';
 import { getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
-import { loadEasyUiPreferences, type PremiumVisualPreset } from '@/lib/easyExperience';
+import { loadEasyUiPreferences, PREMIUM_VISUAL_PRESETS, type PremiumVisualPreset } from '@/lib/easyExperience';
+import { readProfileAvatar, removeProfileAvatar, saveProfileAvatar } from '@/lib/profileAvatar';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
@@ -266,6 +269,7 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
 const STUDIO_THEME_MIGRATION_KEY = 'buildmaster_v34_studio_theme_migrated';
+const IDENTITY_THEME_MIGRATION_KEY = 'buildmaster_v35_identity_theme_migrated';
  type ActiveSessionSnapshot = {
   preview: string | null;
   playerCardImage: string | null;
@@ -302,7 +306,6 @@ async function createPlayerCardPreview(file: File): Promise<CardCropResult | nul
     return null;
   }
 }
-
 function safeIntegratedPlayers(inputs: CentralPlayerInput[], matches: MatchValidationRecord[]): IntegratedPlayerRecord[] {
   const records: IntegratedPlayerRecord[] = [];
   for (const input of inputs) {
@@ -315,7 +318,6 @@ function safeIntegratedPlayers(inputs: CentralPlayerInput[], matches: MatchValid
   }
   return records.sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.updatedAt.localeCompare(a.updatedAt));
 }
-
 function safeTeamDiagnosis(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle): TeamDiagnosis {
   try {
     return buildTeamDiagnosis(players, formation, style);
@@ -324,7 +326,6 @@ function safeTeamDiagnosis(players: IntegratedPlayerRecord[], formation: Tactica
     return buildTeamDiagnosis([], formation, style);
   }
 }
-
 function safeCentralDashboard(players: IntegratedPlayerRecord[], matches: MatchValidationRecord[], team: TeamDiagnosis): CentralDashboard {
   try {
     return buildCentralDashboard(players, matches, team);
@@ -406,7 +407,8 @@ export function CardVisionApp() {
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
-  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
+  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('midnight-navy');
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(() => readProfileAvatar());
   const [advancedMode, setAdvancedMode] = useState(false);
   const [teamAdvancedOpen, setTeamAdvancedOpen] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
@@ -825,9 +827,11 @@ export function CardVisionApp() {
     try {
       const ui = loadEasyUiPreferences();
       const studioMigrated = readAccountStorage(STUDIO_THEME_MIGRATION_KEY) === '1';
-      setVisualPreset(studioMigrated ? ui.visualPreset : 'elite-blue');
-      setAppTheme(studioMigrated ? ui.appTheme : 'dark');
-      setAccentTheme(studioMigrated ? ui.accentTheme : 'gold');
+      const identityMigrated = readAccountStorage(IDENTITY_THEME_MIGRATION_KEY) === '1';
+      const selectedPreset = identityMigrated ? ui.visualPreset : 'midnight-navy';
+      setVisualPreset(studioMigrated ? selectedPreset : 'midnight-navy');
+      setAppTheme(selectedPreset === 'pearl-executive' ? 'light' : 'dark');
+      setAccentTheme(ui.accentTheme === 'prism' ? 'blue' : ui.accentTheme);
       setAdvancedMode(ui.advancedMode);
       setTextScale(ui.textScale);
       setDensityMode(ui.densityMode);
@@ -835,6 +839,7 @@ export function CardVisionApp() {
       setHighContrast(ui.highContrast);
       setPerformanceMode(ui.performanceMode);
       if (!studioMigrated) writeAccountStorage(STUDIO_THEME_MIGRATION_KEY, '1');
+      if (!identityMigrated) writeAccountStorage(IDENTITY_THEME_MIGRATION_KEY, '1');
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -946,6 +951,9 @@ export function CardVisionApp() {
   useEffect(() => {
     efhubCalibrationActiveRef.current = efhubCalibrationActive;
   }, [efhubCalibrationActive]);
+  useEffect(() => {
+    setProfileAvatar(readProfileAvatar());
+  }, [account?.profile.id, account?.profile.username]);
   useEffect(() => {
     try {
       writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
@@ -1302,6 +1310,7 @@ export function CardVisionApp() {
       history,
       settings: {
         ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }) || {}) as Record<string, unknown>),
+        profileAvatar,
         autoUpdateCheck: (safeStorageGet('buildmaster_auto_update_check') ?? safeStorageGet('buildmaster_auto_update_check_v26_70')) !== '0'
       },
       calibration: {
@@ -1494,17 +1503,18 @@ export function CardVisionApp() {
       await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
     }
     if (selected.settings && sections.settings && typeof sections.settings === 'object') {
-      const ui = sections.settings as { visualPreset?: PremiumVisualPreset; appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; autoUpdateCheck?: boolean };
+      const ui = sections.settings as { visualPreset?: PremiumVisualPreset; appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; profileAvatar?: string; autoUpdateCheck?: boolean };
       writeStorage('buildmaster_ui_prefs_v24_24', ui);
-      if (ui.visualPreset && ['obsidian-gold', 'elite-blue', 'future-purple'].includes(ui.visualPreset)) setVisualPreset(ui.visualPreset);
+      if (ui.visualPreset && PREMIUM_VISUAL_PRESETS.includes(ui.visualPreset)) setVisualPreset(ui.visualPreset);
       if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
-      if (ui.accentTheme && ['prism', 'emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
+      if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
       if (ui.textScale && ['compact', 'standard', 'large'].includes(ui.textScale)) setTextScale(ui.textScale);
       if (ui.densityMode && ['compact', 'comfortable'].includes(ui.densityMode)) setDensityMode(ui.densityMode);
       if (ui.motionPreference && ['system', 'reduced', 'full'].includes(ui.motionPreference)) setMotionPreference(ui.motionPreference);
       if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
       if (ui.performanceMode === 'balanced' || ui.performanceMode === 'economy') setPerformanceMode(ui.performanceMode);
+      if (typeof ui.profileAvatar === 'string' && ui.profileAvatar.startsWith('data:image/')) { saveProfileAvatar(ui.profileAvatar); setProfileAvatar(ui.profileAvatar); }
       if (typeof ui.autoUpdateCheck === 'boolean') safeStorageSet('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
     }
     if (selected.calibration && sections.calibration && typeof sections.calibration === 'object') {
@@ -2818,13 +2828,45 @@ export function CardVisionApp() {
     if (profile.reducedMotion) setMotionPreference('reduced');
     setStatus(`Perfil adaptativo aplicado: densidade ${profile.recommendedDensity === 'compact' ? 'compacta' : 'confortável'} e desempenho ${profile.recommendedPerformance === 'economy' ? 'econômico' : 'equilibrado'}.`);
   }
+  function themeLabel(preset: PremiumVisualPreset): string {
+    const labels: Record<PremiumVisualPreset, string> = {
+      'midnight-navy': 'Marinho Premium',
+      'obsidian-gold': 'Obsidiana Dourada',
+      'elite-blue': 'Azul Elite',
+      'future-purple': 'Roxo Profundo',
+      'emerald-tactical': 'Verde Tático',
+      'graphite-silver': 'Grafite Titanium',
+      'pearl-executive': 'Pérola Executive'
+    };
+    return labels[preset];
+  }
   function applyPremiumVisualPreset(preset: PremiumVisualPreset) {
     setVisualPreset(preset);
-    setAppTheme('dark');
-    if (preset === 'obsidian-gold') setAccentTheme('gold');
-    if (preset === 'elite-blue') setAccentTheme('blue');
-    if (preset === 'future-purple') setAccentTheme('purple');
-    setStatus(`Interface ${preset === 'obsidian-gold' ? 'Preto & Dourado' : preset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'} aplicada.`);
+    setAppTheme(preset === 'pearl-executive' ? 'light' : 'dark');
+    const accents: Record<PremiumVisualPreset, AccentTheme> = {
+      'midnight-navy': 'blue',
+      'obsidian-gold': 'gold',
+      'elite-blue': 'blue',
+      'future-purple': 'purple',
+      'emerald-tactical': 'emerald',
+      'graphite-silver': 'blue',
+      'pearl-executive': 'gold'
+    };
+    setAccentTheme(accents[preset]);
+    setStatus(`Tema ${themeLabel(preset)} aplicado.`);
+  }
+  function updateProfileAvatar(next: string) {
+    if (!saveProfileAvatar(next)) {
+      setStatus('Não foi possível salvar a foto neste aparelho.');
+      return;
+    }
+    setProfileAvatar(next);
+    setStatus('Foto de perfil salva para esta conta.');
+  }
+  function clearProfileAvatar() {
+    removeProfileAvatar();
+    setProfileAvatar(null);
+    setStatus('Foto de perfil removida.');
   }
   const appCommands: AppCommand[] = [
     { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
@@ -2876,14 +2918,14 @@ export function CardVisionApp() {
       /></SectionErrorBoundary>
       <header className="bm-simple-topbar">
         <button type="button" className="bm-simple-brand" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
-          <span>BM</span><div><strong>BuildMaster</strong><small>Elite Tático</small></div>
+          <span><BuildMasterMark size={35} /></span><div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div>
         </button>
         <div className="bm-simple-topbar-actions">
           <span className={`bm-simple-save-state save-${sessionSaveState}`} role="status" aria-live="polite">
             {sessionSaveState === 'saving' ? 'Salvando' : sessionSaveState === 'error' ? 'Falha ao salvar' : 'Salvo'}
           </span>
           <button type="button" className="bm-simple-account" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
-            <b>{accountInitial}</b><span>{account?.profile.username || 'Conta'}</span>
+            <b>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</b><span>{account?.profile.username || 'Conta'}</span>
           </button>
         </div>
       </header>
@@ -2900,6 +2942,8 @@ export function CardVisionApp() {
         group={currentNavigationGroup}
         workspace={currentPlayerWorkspace}
         hasResult={Boolean(currentPanelResult)}
+        username={account?.profile.username || 'Conta'}
+        profileAvatar={profileAvatar}
         onGroupChange={openNavigationGroup}
         onWorkspaceChange={openPlayerWorkspace}
         onSearch={() => openMainSection('buscar')}
@@ -3689,6 +3733,7 @@ export function CardVisionApp() {
                   playerCount={history.length}
                   healthScore={healthSummary.score}
                   cloudEnabled={Boolean(account?.cloudEnabled)}
+                  themeLabel={themeLabel(visualPreset)}
                   onOpen={(target) => setSettingsView(target)}
                 />
               ) : <>
@@ -3731,54 +3776,10 @@ export function CardVisionApp() {
               <div className="settings-final-content">
                 {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
                 {settingsView === 'experiencia' && <SectionErrorBoundary area="experiencia-premium-v2970"><PremiumExperience2Center onOpenTarget={openPremium2Target} /></SectionErrorBoundary>}
-                {settingsView === 'aparencia' && (
-                  <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
-                    <div className="settings-panel-heading">
-                      <div><p className="kicker"><Palette size={15} /> Aparência e acessibilidade</p><h3>Conforto visual em qualquer celular</h3><span>As preferências ficam salvas somente na sua conta neste aparelho e também entram no backup completo.</span></div>
-                      <span className="settings-state-pill">{visualPreset === 'obsidian-gold' ? 'Preto & Dourado' : visualPreset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'}</span>
-                    </div>
-                    <div className="appearance-live-preview" aria-label="Prévia da aparência selecionada">
-                      <div className="appearance-preview-top"><span><Sparkles size={15} /> BuildMaster</span><i /></div>
-                      <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Visual limpo, contraste equilibrado e ações fáceis de identificar.</span><button type="button" tabIndex={-1}>Ação principal</button></div>
-                    </div>
-                    <div className="settings-control-section premium-preset-section">
-                      <div className="settings-control-heading"><strong>Interface premium</strong><span>Escolha um dos três modelos aprovados. Todas as funções permanecem no mesmo lugar.</span></div>
-                      <div className="premium-preset-grid">
-                        <button type="button" className={visualPreset === 'obsidian-gold' ? 'selected preset-gold' : 'preset-gold'} aria-pressed={visualPreset === 'obsidian-gold'} onClick={() => applyPremiumVisualPreset('obsidian-gold')}>
-                          <i><b>BM</b><span /><span /><span /></i><strong>Preto & Dourado</strong><small>Elegante, profissional e com foco total.</small><em>Modelo 1</em>
-                        </button>
-                        <button type="button" className={visualPreset === 'elite-blue' ? 'selected preset-blue' : 'preset-blue'} aria-pressed={visualPreset === 'elite-blue'} onClick={() => applyPremiumVisualPreset('elite-blue')}>
-                          <i><b>BM</b><span /><span /><span /></i><strong>Azul Elite</strong><small>Tecnológico, limpo e fluido.</small><em>Modelo 2</em>
-                        </button>
-                        <button type="button" className={visualPreset === 'future-purple' ? 'selected preset-purple' : 'preset-purple'} aria-pressed={visualPreset === 'future-purple'} onClick={() => applyPremiumVisualPreset('future-purple')}>
-                          <i><b>BM</b><span /><span /><span /></i><strong>Roxo Futuro</strong><small>Futurista, marcante e sofisticado.</small><em>Modelo 5</em>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="premium-preset-note"><ShieldCheck size={17} /><div><strong>Três modelos escuros e otimizados</strong><span>O modelo escolhido controla cores, brilho, cartões, navegação e destaques. Texto, contraste, espaçamento e animações continuam ajustáveis abaixo.</span></div></div>
-                    <div className="settings-preference-grid">
-                      <div className="settings-preference-card">
-                        <strong>Tamanho dos textos</strong><span>Amplia a interface sem alterar os cálculos.</span>
-                        <div className="settings-segmented-control" role="group" aria-label="Tamanho dos textos"><button type="button" className={textScale === 'compact' ? 'selected' : ''} onClick={() => setTextScale('compact')}>Compacto</button><button type="button" className={textScale === 'standard' ? 'selected' : ''} onClick={() => setTextScale('standard')}>Padrão</button><button type="button" className={textScale === 'large' ? 'selected' : ''} onClick={() => setTextScale('large')}>Grande</button></div>
-                      </div>
-                      <div className="settings-preference-card">
-                        <strong>Espaçamento</strong><span>Define quantas informações aparecem por tela.</span>
-                        <div className="settings-segmented-control" role="group" aria-label="Espaçamento da interface"><button type="button" className={densityMode === 'compact' ? 'selected' : ''} onClick={() => setDensityMode('compact')}>Compacto</button><button type="button" className={densityMode === 'comfortable' ? 'selected' : ''} onClick={() => setDensityMode('comfortable')}>Confortável</button></div>
-                      </div>
-                      <div className="settings-preference-card">
-                        <strong>Animações</strong><span>Reduza movimentos para conforto e economia.</span>
-                        <div className="settings-segmented-control" role="group" aria-label="Preferência de animações"><button type="button" className={motionPreference === 'system' ? 'selected' : ''} onClick={() => setMotionPreference('system')}>Sistema</button><button type="button" className={motionPreference === 'reduced' ? 'selected' : ''} onClick={() => setMotionPreference('reduced')}>Reduzidas</button><button type="button" className={motionPreference === 'full' ? 'selected' : ''} onClick={() => setMotionPreference('full')}>Completas</button></div>
-                      </div>
-                      <div className="settings-preference-card settings-toggle-card">
-                        <div><strong>Contraste reforçado</strong><span>Bordas e textos mais visíveis.</span></div><button type="button" className={highContrast ? 'is-on' : ''} role="switch" aria-label="Ativar ou desativar contraste reforçado" aria-checked={highContrast} onClick={() => setHighContrast((value) => !value)}><i /></button>
-                      </div>
-                      <div className="settings-preference-card settings-toggle-card">
-                        <div><strong>Ferramentas avançadas</strong><span>Libera auditorias e módulos técnicos.</span></div><button type="button" className={advancedMode ? 'is-on' : ''} role="switch" aria-label="Ativar ou desativar ferramentas avançadas" aria-checked={advancedMode} onClick={() => setAdvancedMode((value) => !value)}><i /></button>
-                      </div>
-                      <button type="button" className="settings-onboarding-reopen" onClick={() => setOnboardingOpen(true)}><Sparkles size={17} /><div><strong>Refazer configuração inicial</strong><span>Escolher novamente modo, formação, estilo e prioridade.</span></div></button>
-                    </div>
-                  </section>
-                )}
+                {settingsView === 'aparencia' && <IdentityAppearancePanel
+                  visualPreset={visualPreset} themeLabel={themeLabel(visualPreset)} profileAvatar={profileAvatar} username={account?.profile.username || 'Conta'} textScale={textScale} densityMode={densityMode} motionPreference={motionPreference}
+                  highContrast={highContrast} advancedMode={advancedMode} onPresetChange={applyPremiumVisualPreset} onAvatarChange={updateProfileAvatar} onAvatarRemove={clearProfileAvatar}
+                  onTextScaleChange={setTextScale} onDensityModeChange={setDensityMode} onMotionPreferenceChange={setMotionPreference} onHighContrastChange={setHighContrast} onAdvancedModeChange={setAdvancedMode} onRestartOnboarding={() => setOnboardingOpen(true)} />}
                 {settingsView === 'desempenho' && (
                   <section className="settings-view-panel settings-delay-wrapper settings-final-panel-stack">
                     <div className="performance-settings-hero luxury-panel">
