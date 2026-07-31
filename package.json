@@ -96,7 +96,7 @@
     "test:v3200": "npm run typecheck:v3200 && node -r ./tests/_ts-require.cjs tests/v32-00-mega-calibration-regression.ts && node tests/v32-00-v3000-ci-isolation-regression.mjs",
     "test:v3000:core": "npm run typecheck:v3000 && node -r ./tests/_ts-require.cjs tests/v30-00-play-publication-regression.ts && node tests/v30-00-integrated-production-regression.mjs && node tests/v30-00-play-workflow-regression.mjs",
     "test:v3300": "node tests/v33-00-executive-redesign-regression.mjs",
-    "test:v3400": "node tests/v34-00-studio-clean-regression.mjs && node tests/v34-00-ci-typescript-hotfix-regression.mjs && node tests/v34-00-offline-panel-regression.mjs && node tests/v34-00-my-team-runtime-recovery-regression.mjs && node tests/v34-00-responsive-clean-regression.mjs && node tests/v34-00-touch-scroll-menu-regression.mjs"
+    "test:v3400": "node tests/v34-00-studio-clean-regression.mjs && node tests/v34-00-ci-typescript-hotfix-regression.mjs && node tests/v34-00-offline-panel-regression.mjs && node tests/v34-00-my-team-runtime-recovery-regression.mjs && node tests/v34-00-responsive-clean-regression.mjs && node tests/v34-00-touch-scroll-menu-regression.mjs && node tests/v34-00-full-typescript-navigation-props-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

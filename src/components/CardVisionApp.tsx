@@ -2902,6 +2902,7 @@ export function CardVisionApp() {
         hasResult={Boolean(currentPanelResult)}
         onGroupChange={openNavigationGroup}
         onWorkspaceChange={openPlayerWorkspace}
+        onSearch={() => openMainSection('buscar')}
         onCreate={() => setMobileLauncher('create')}
         onMenu={() => openMainSection('menu')}
         menuActive={mainSection === 'menu'}
