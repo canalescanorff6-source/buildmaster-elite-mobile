@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Info, Loader2, Sparkles, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Loader2, Sparkles, X } from 'lucide-react';
 import type { PremiumBusyPayload, PremiumScreenChangePayload, PremiumToastPayload, PremiumToastTone } from '@/lib/premiumExperience';
 
 type ToastRecord = Required<Pick<PremiumToastPayload, 'title' | 'tone' | 'duration'>> & Omit<PremiumToastPayload, 'title' | 'tone' | 'duration'> & { id: string };
@@ -22,7 +22,7 @@ function createId() {
 export function PremiumExperienceLayer() {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
   const [busy, setBusy] = useState<PremiumBusyPayload>({ active: false, progress: null });
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
+  const onlineRef = useRef(typeof navigator === 'undefined' ? true : navigator.onLine);
   const [screenLabel, setScreenLabel] = useState('');
   const [celebration, setCelebration] = useState('');
   const timers = useRef(new Map<string, number>());
@@ -71,10 +71,11 @@ export function PremiumExperienceLayer() {
     };
     const updateNetwork = () => {
       const next = navigator.onLine;
-      setOnline(next);
+      if (onlineRef.current === next) return;
+      onlineRef.current = next;
       pushToast(next
         ? { title: 'Conexão restabelecida', message: 'Os recursos online voltaram a ficar disponíveis.', tone: 'success', duration: 3200 }
-        : { title: 'Você está sem internet', message: 'Fichas e recursos locais continuam disponíveis.', tone: 'warning', duration: 6000 });
+        : { title: 'Conexão indisponível', message: 'A sessão continua aberta e os recursos locais permanecem disponíveis.', tone: 'warning', duration: 4200 });
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -124,7 +125,6 @@ export function PremiumExperienceLayer() {
         {busy.active && busy.label && <span><Loader2 size={13} className="spin" />{busy.label}</span>}
       </div>
 
-      {!online && <div className="bm-offline-banner" role="status"><WifiOff size={15} /><span>Modo offline: seus dados locais continuam seguros.</span></div>}
 
       <div className="bm-toast-viewport" aria-live="polite" aria-relevant="additions removals">
         {toasts.map((toast) => (

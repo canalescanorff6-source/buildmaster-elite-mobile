@@ -432,9 +432,6 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   const [validation, setValidation] = useState<{ profile: AccountProfile; offline: boolean } | null>(null);
   const [restoreError, setRestoreError] = useState('');
   const [restoreStep, setRestoreStep] = useState<RestoreStep>('session');
-  const [recheckNonce, setRecheckNonce] = useState(0);
-  const [rechecking, setRechecking] = useState(false);
-  const [offlineBannerExpanded, setOfflineBannerExpanded] = useState(false);
   const lastSuccessfulValidationRef = useRef(Date.now());
   const terminalFailureCountRef = useRef(0);
 
@@ -488,7 +485,6 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     async function revalidate() {
       if (validating) return;
       validating = true;
-      if (mounted) setRechecking(true);
       try {
         const cloud = await restoreAccountAccess();
         if (!mounted) return;
@@ -530,7 +526,6 @@ export function AuthGate({ children }: { children?: ReactNode }) {
         setValidation(null);
       } finally {
         validating = false;
-        if (mounted) setRechecking(false);
       }
     }
 
@@ -546,7 +541,6 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     const onOnline = () => void revalidate();
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('online', onOnline);
-    if (recheckNonce > 0) void revalidate();
     return () => {
       mounted = false;
       window.clearInterval(timer);
@@ -555,13 +549,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('online', onOnline);
     };
-  }, [validation?.profile.id, recheckNonce]);
-
-  useEffect(() => {
-    // No celular, o estado offline aparece como um selo compacto e não cobre a tela.
-    // O usuário pode abrir os detalhes manualmente quando precisar.
-    setOfflineBannerExpanded(false);
-  }, [validation?.offline]);
+  }, [validation?.profile.id]);
 
   const context = useMemo<BuildMasterAccountContextValue | null>(() => validation ? {
     profile: validation.profile,
@@ -588,18 +576,6 @@ export function AuthGate({ children }: { children?: ReactNode }) {
 
   return (
     <AccountContext.Provider value={context}>
-      {validation.offline && (
-        <div className={`offline-license-banner ${offlineBannerExpanded ? 'is-expanded' : 'is-compact'}`} role="status" aria-live="polite">
-          <button type="button" className="offline-license-toggle" onClick={() => setOfflineBannerExpanded((value) => !value)} aria-label={offlineBannerExpanded ? 'Recolher aviso de conexão' : 'Abrir aviso de conexão'}>
-            <WifiOff size={15} /><strong>{offlineBannerExpanded ? 'Conexão temporária' : 'Offline'}</strong>
-          </button>
-          {offlineBannerExpanded && <small>Sua sessão foi mantida. A validação continuará em segundo plano.</small>}
-          {offlineBannerExpanded && <button type="button" className="offline-license-retry" onClick={() => setRecheckNonce((value) => value + 1)} disabled={rechecking}>
-            {rechecking ? <Loader2 className="spin" size={14} /> : <RefreshCw size={14} />}
-            {rechecking ? 'Verificando' : 'Tentar agora'}
-          </button>}
-        </div>
-      )}
       {children}
     </AccountContext.Provider>
   );

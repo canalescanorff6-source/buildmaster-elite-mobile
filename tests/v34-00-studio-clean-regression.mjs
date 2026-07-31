@@ -29,7 +29,7 @@ for (const marker of [
   '.bm-v3400-studio .bm-v34-team-workspace',
   '.bm-v3400-studio .global-update-notice',
   '.bm-v3400-studio .efhub-calibration-canvas>img',
-  '.offline-license-banner.is-compact',
+  '.app-runtime-status.runtime-offline',
   '@media (max-width: 520px)'
 ]) assert.ok(css.includes(marker), `Camada Studio Premium incompleta: ${marker}`);
 assert.doesNotMatch(css, /--v34-bg:\s*#eef2f7/);
@@ -64,11 +64,10 @@ assert.match(app, /bm-v34-team-advanced/);
 assert.match(app, /advanced\.open = true/);
 assert.match(app, /!\['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'\]\.includes\(mainSection\)/);
 
-assert.match(auth, /offlineBannerExpanded/);
-assert.match(auth, /useState\(false\)/);
-assert.match(auth, /estado offline aparece como um selo compacto/);
-assert.match(auth, /offline-license-toggle/);
-assert.match(auth, /offline-license-retry/);
-assert.match(cache, /34\.00\.0-studio-premium-1/);
+assert.doesNotMatch(auth, /offlineBannerExpanded/);
+assert.doesNotMatch(auth, /offline-license-banner/);
+assert.doesNotMatch(auth, /offline-license-toggle/);
+assert.doesNotMatch(auth, /offline-license-retry/);
+assert.match(cache, /34\.00\.0-studio-premium-2-offline-ui/);
 
 console.log('v34.00 Studio Premium aprovado: tema unificado, menu lateral, guias com painel visível, avisos compactos e módulos protegidos.');

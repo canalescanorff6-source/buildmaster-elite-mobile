@@ -31,7 +31,7 @@ assert.match(app, /setAppTheme\((?:executiveMigrated|studioMigrated) \? ui\.appT
 assert.doesNotMatch(team, /lineScores\.at\(/, 'Meu Time precisa ser compatível com WebViews Android sem Array.at.');
 assert.doesNotMatch(squad, /lineScores\.at\(/, 'O diagnóstico profissional precisa ser compatível com WebViews Android antigos.');
 
-assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:33\.00\.0-studio-clean-2|34\.00\.0-studio-premium-1)'/);
+assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:33\.00\.0-studio-clean-2|34\.00\.0-studio-premium-[^']+)'/);
 assert.match(cache, /currentSchema !== NATIVE_CACHE_SCHEMA/);
 assert.match(cache, /safeStorageSet\(NATIVE_CACHE_SCHEMA_KEY/);
 
