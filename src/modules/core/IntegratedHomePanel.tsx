@@ -73,9 +73,9 @@ export function IntegratedHomePanel({
     <section className="bm-premium-dashboard" aria-label="Início premium do BuildMaster">
       <header className="bm-premium-dashboard-heading">
         <div>
-          <span><Sparkles size={14} /> Central Elite</span>
-          <h1>Seu time, suas fichas e sua estratégia em um só lugar.</h1>
-          <p>Interface direta, recursos organizados e inteligência tática sem esconder as funções importantes.</p>
+          <span><Sparkles size={14} /> Início</span>
+          <h1>Seu time em um só lugar.</h1>
+          <p>Fichas, elenco e partidas.</p>
         </div>
         <div className="bm-premium-health-pill">
           <ShieldCheck size={17} />
@@ -85,15 +85,15 @@ export function IntegratedHomePanel({
 
       <section className="bm-premium-reader-hero" aria-label="Leitor inteligente de cartas">
         <div className="bm-premium-reader-copy">
-          <span className="bm-premium-kicker"><Camera size={15} /> Leitor inteligente</span>
-          <h2>Transforme um print em uma ficha competitiva completa.</h2>
-          <p>O app lê a carta, recorta a imagem, confirma os dados e calcula ficha, habilidades e Ímpeto no mesmo fluxo.</p>
+          <span className="bm-premium-kicker"><Camera size={15} /> Nova ficha</span>
+          <h2>Crie uma ficha pelo print.</h2>
+          <p>Leitura, ficha, habilidades e Ímpeto.</p>
           <div className="bm-premium-reader-actions">
             <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Criar ficha por print')}>
-              <Camera size={19} /><span><strong>Iniciar leitura</strong><small>Mais rápido e recomendado</small></span><ArrowRight size={18} />
+              <Camera size={19} /><span><strong>Usar imagem</strong><small>Recomendado</small></span><ArrowRight size={18} />
             </button>
             <button type="button" onClick={() => open('manual', 'home-manual', 'Criar ficha manualmente')}>
-              <Keyboard size={18} /><span><strong>Modo manual</strong><small>Digite somente o necessário</small></span>
+              <Keyboard size={18} /><span><strong>Manual</strong><small>Digitar dados</small></span>
             </button>
           </div>
         </div>
@@ -103,14 +103,14 @@ export function IntegratedHomePanel({
           <span className="bm-premium-card-rating">{dashboard.squadReadiness || 99}</span>
           <span className="bm-premium-card-position">{latest?.targetPosition || 'CA'}</span>
           <div className="bm-premium-card-avatar">{latest ? initials(latest.name) : <Trophy size={38} />}</div>
-          <div className="bm-premium-card-name"><strong>{latest?.name || 'Sua próxima carta'}</strong><small>Ficha competitiva definitiva</small></div>
+          <div className="bm-premium-card-name"><strong>{latest?.name || 'Nova carta'}</strong><small>Ficha pronta</small></div>
           <div className="bm-premium-card-stars">★★★★★</div>
         </div>
       </section>
 
       <section className="bm-premium-feature-section" aria-label="Funções principais">
         <div className="bm-premium-section-heading">
-          <div><span>Funções principais</span><h2>Tudo fácil de encontrar</h2></div>
+          <div><span>Acesso rápido</span><h2>Atalhos</h2></div>
           <small>{dashboard.players} jogador(es) no Cofre</small>
         </div>
         <div className="bm-premium-feature-grid">
@@ -128,7 +128,7 @@ export function IntegratedHomePanel({
       <section className="bm-premium-dashboard-grid">
         <article className="bm-premium-formation-card">
           <div className="bm-premium-card-heading">
-            <div><span>Formação ativa</span><h2>{team.formation}</h2><small>{team.styleNote}</small></div>
+            <div><span>Formação</span><h2>{team.formation}</h2><small>{team.styleNote}</small></div>
             <strong>{team.globalScore}</strong>
           </div>
           <div className="bm-premium-mini-pitch" aria-label={`Escalação ${team.formation}`}>
@@ -150,7 +150,7 @@ export function IntegratedHomePanel({
         </article>
 
         <article className="bm-premium-activity-card">
-          <div className="bm-premium-card-heading"><div><span>Resumo inteligente</span><h2>Seu progresso</h2></div><BrainCircuit size={24}/></div>
+          <div className="bm-premium-card-heading"><div><span>Resumo</span><h2>Progresso</h2></div><BrainCircuit size={24}/></div>
           <div className="bm-premium-metric-grid">
             <div><Users size={18}/><strong>{dashboard.players}</strong><span>jogadores</span></div>
             <div><CheckCircle2 size={18}/><strong>{dashboard.confirmed}</strong><span>fichas prontas</span></div>
@@ -159,15 +159,15 @@ export function IntegratedHomePanel({
           </div>
           {latest ? (
             <button type="button" className="bm-premium-latest-player" onClick={() => openLatestResult('home-continue', `Continuar ${latest.name}`)}>
-              <span>{initials(latest.name)}</span><div><small>Última análise</small><strong>{latest.name}</strong><em>{latest.targetPosition}</em></div><ArrowRight size={18}/>
+              <span>{initials(latest.name)}</span><div><small>Última ficha</small><strong>{latest.name}</strong><em>{latest.targetPosition}</em></div><ArrowRight size={18}/>
             </button>
           ) : (
             <button type="button" className="bm-premium-latest-player empty" onClick={() => open('reader', 'home-first-card', 'Adicionar primeira carta')}>
-              <span>+</span><div><small>Comece agora</small><strong>Adicione sua primeira carta</strong><em>Leitura por print</em></div><ArrowRight size={18}/>
+              <span>+</span><div><small>Começar</small><strong>Adicionar carta</strong><em>Usar print</em></div><ArrowRight size={18}/>
             </button>
           )}
           {nextStep && (
-            <div className="bm-premium-next-step"><Target size={18}/><div><small>Próximo passo sugerido</small><strong>{nextStep.title}</strong><span>{nextStep.detail}</span></div><button type="button" onClick={() => onAction(nextStep)}>Abrir</button></div>
+            <div className="bm-premium-next-step"><Target size={18}/><div><small>Sugestão</small><strong>{nextStep.title}</strong><span>{nextStep.detail}</span></div><button type="button" onClick={() => onAction(nextStep)}>Abrir</button></div>
           )}
         </article>
       </section>

@@ -110,7 +110,6 @@ export function EfhubVisualCalibrator({
     setMounted(true);
     if (typeof window !== 'undefined') {
       setDevicePixelRatio(Math.max(1, window.devicePixelRatio || 1));
-      if (window.innerWidth <= 760) setFullscreen(true);
     }
   }, []);
 

@@ -1,1 +1,1 @@
-v34.00 — corrige TypeScript e regressões v31.10/v31.20 sem alterar a interface Studio Premium
+v34.00 — deixa todas as telas responsivas, reduz textos e mantém tela cheia opcional

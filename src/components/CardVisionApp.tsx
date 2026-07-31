@@ -407,6 +407,7 @@ export function CardVisionApp() {
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
   const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
   const [advancedMode, setAdvancedMode] = useState(false);
+  const [teamAdvancedOpen, setTeamAdvancedOpen] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
   const [motionPreference, setMotionPreference] = useState<MotionPreference>('reduced');
@@ -2856,11 +2857,11 @@ export function CardVisionApp() {
           <div className="splash-premium-shell">
             <div className="splash-brand-row"><PremiumBrand variant="hero" showVersion /></div>
             <div className="splash-secure-badge"><ShieldCheck size={15} /> Ambiente protegido</div>
-            <h2>Preparando sua central tática</h2>
-            <p>Carregando fichas, Cofre e preferências da sua conta.</p>
+            <h2>Carregando</h2>
+            <p>Preparando seus dados.</p>
             <div className="splash-module-row" aria-hidden="true"><span>Conta</span><span>Fichas</span><span>Cofre</span><span>Elenco</span></div>
             <i className="splash-progress"><b /></i>
-            <small>Precisão em campo. Organização fora dele.</small>
+            <small>BuildMaster</small>
           </div>
         </div>
       )}
@@ -2918,18 +2919,18 @@ export function CardVisionApp() {
             <div className="launcher-sheet-heading">
               <div>
                 <p className="kicker">{mobileLauncher === 'create' ? 'Nova análise' : 'Central do aplicativo'}</p>
-                <h3>{mobileLauncher === 'create' ? 'Como deseja criar a ficha?' : 'Mais áreas e configurações'}</h3>
-                <span>{mobileLauncher === 'create' ? 'Escolha o fluxo ideal para a carta que será analisada.' : `Conta conectada: ${account?.profile.username || 'usuário'}`}</span>
+                <h3>{mobileLauncher === 'create' ? 'Criar ficha' : 'Menu'}</h3>
+                <span>{mobileLauncher === 'create' ? 'Escolha uma opção.' : account?.profile.username || 'Conta'}</span>
               </div>
               <button type="button" className="launcher-close-button" onClick={() => setMobileLauncher(null)}>Fechar</button>
             </div>
             {mobileLauncher === 'create' ? (
               <div className="launcher-action-grid launcher-create-grid">
                 <button type="button" className="launcher-featured-action" onClick={() => openMainSection('leitor')}>
-                  <span><ScanText size={25} /></span><div><strong>Usar uma imagem</strong><small>Escolha o print da carta e confirme os dados encontrados.</small></div><em>Recomendado</em>
+                  <span><ScanText size={25} /></span><div><strong>Usar imagem</strong><small>Selecionar print</small></div><em>Recomendado</em>
                 </button>
                 <button type="button" onClick={() => openMainSection('manual')}>
-                  <span><ShieldCheck size={25} /></span><div><strong>Digitar os dados</strong><small>Preencha manualmente quando não quiser usar um print.</small></div>
+                  <span><ShieldCheck size={25} /></span><div><strong>Digitar dados</strong><small>Modo manual</small></div>
                 </button>
                 {currentPanelResult && (
                   <button type="button" onClick={() => openMainSection('resultado')}>
@@ -3097,24 +3098,33 @@ export function CardVisionApp() {
         /></SectionErrorBoundary>
       )}
       {mainSection === 'time' && (
-        <section className="bm-v34-team-workspace" aria-label="Meu Time">
-          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { const advanced = document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced'); if (advanced) { advanced.open = true; advanced.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
-          <details className="bm-v34-team-advanced luxury-panel">
-            <summary><span><SlidersHorizontal size={18}/><strong>Configuração avançada do time</strong></span><small>Formação, técnico e mapa completo</small></summary>
-            <div className="bm-v34-team-advanced-body">
-              <div className="select-stack">
-                <label><span>Sistema tático</span><select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>{formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                <label><span>Modelo de jogo</span><select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>{tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
-              </div>
-              <article className="tactical-guide-card">
-                <div className="tactical-guide-head"><div><p className="kicker">Guia tático</p><h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3></div>{selectedFormationGuide && <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>Aplicar estilo sugerido</button>}</div>
-                {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
-              </article>
-              <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
-            </div>
-          </details>
-        </section>
+        <SectionErrorBoundary area="meu-time-completo">
+          <section className="bm-v34-team-workspace" aria-label="Meu Time">
+            <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle}
+              onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
+              onPrepareMatch={() => openMainSection('partidas')}
+              onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} />
+            <details className="bm-v34-team-advanced luxury-panel" open={teamAdvancedOpen} onToggle={(event) => setTeamAdvancedOpen(event.currentTarget.open)}>
+              <summary><span><SlidersHorizontal size={18}/><strong>Opções do time</strong></span><small>Formação e técnico</small></summary>
+              {teamAdvancedOpen && (
+                <div className="bm-v34-team-advanced-body">
+                  <div className="select-stack">
+                    <label><span>Sistema tático</span><select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>{formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                    <label><span>Modelo de jogo</span><select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>{tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                    <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
+                  </div>
+                  <article className="tactical-guide-card">
+                    <div className="tactical-guide-head"><div><p className="kicker">Guia tático</p><h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3></div>{selectedFormationGuide && <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>Aplicar estilo sugerido</button>}</div>
+                    {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
+                  </article>
+                  <SectionErrorBoundary area="meu-time-avancado">
+                    <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
+                  </SectionErrorBoundary>
+                </div>
+              )}
+            </details>
+          </section>
+        </SectionErrorBoundary>
       )}
       {!['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
@@ -3124,16 +3134,16 @@ export function CardVisionApp() {
               <span><Sparkles size={22} /></span>
               <div>
                 <p className="kicker">Nova ficha</p>
-                <h1>{mainSection === 'leitor' ? 'Criar ficha usando uma imagem' : 'Criar ficha digitando os dados'}</h1>
-                <p>{mainSection === 'leitor' ? 'Escolha um print da carta. Depois confirme os dados e gere uma única ficha final.' : 'Digite somente os dados principais. Depois revise e gere uma única ficha final.'}</p>
+                <h1>{mainSection === 'leitor' ? 'Ficha por imagem' : 'Ficha manual'}</h1>
+                <p>{mainSection === 'leitor' ? 'Selecione o print e confirme os dados.' : 'Digite os dados principais.'}</p>
               </div>
             </div>
             <div className="bm-creation-methods" role="tablist" aria-label="Escolher forma de criar a ficha">
               <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
-                <Camera size={19} /><span><strong>Usar uma imagem</strong><small>Mais rápido e recomendado</small></span>
+                <Camera size={19} /><span><strong>Imagem</strong><small>Recomendado</small></span>
               </button>
               <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
-                <Keyboard size={19} /><span><strong>Digitar os dados</strong><small>Quando o print não estiver bom</small></span>
+                <Keyboard size={19} /><span><strong>Manual</strong><small>Digitar dados</small></span>
               </button>
             </div>
             <ol className="bm-creation-steps" aria-label="Etapas da criação">
@@ -3277,7 +3287,7 @@ export function CardVisionApp() {
             <section className="bm32-manual-builder" aria-label="Nova Ficha">
               <header className="bm32-screen-heading bm32-manual-heading">
                 <div className="bm32-heading-icon"><FileText size={27}/></div>
-                <div><h1>Nova Ficha</h1><p>Monte uma ficha completa, inteligente e totalmente controlada por você.</p></div>
+                <div><h1>Ficha manual</h1><p>Preencha os dados principais.</p></div>
                 <span className="bm32-elite-badge"><Sparkles size={17}/> ELITE</span>
               </header>
               <section className="bm32-manual-identity">
@@ -3315,7 +3325,7 @@ export function CardVisionApp() {
                 <span className="creation-stage-number">2</span>
                 <div>
                   <p className="kicker">Passo 2</p>
-                  <h3>Confirme os dados principais</h3>
+                  <h3>Confirmar dados</h3>
                   <small>Escolha onde o jogador vai atuar. Os outros campos podem ficar no automático.</small>
                 </div>
               </div>
@@ -3681,12 +3691,12 @@ export function CardVisionApp() {
                   onOpen={(target) => setSettingsView(target)}
                 />
               ) : <>
-              <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar para Configurações</button>
+              <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar</button>
               <section className="settings-command-hero luxury-panel">
                 <div className="settings-command-copy">
-                  <p className="kicker"><SlidersHorizontal size={15} /> Central de preferências</p>
-                  <h2>Seu BuildMaster, do seu jeito.</h2>
-                  <p>Aparência, desempenho, proteção, backup, atualizações e contas em áreas separadas e fáceis de usar.</p>
+                  <p className="kicker"><SlidersHorizontal size={15} /> Ajustes</p>
+                  <h2>Configurações</h2>
+                  <p>Conta, aparência e segurança.</p>
                 </div>
                 <div className="settings-command-status">
                   <article><span>Conta</span><strong>{account?.profile.username || 'Usuário'}</strong><small>{account?.cloudEnabled ? 'Licença online' : 'Modo local'}</small></article>
@@ -3892,7 +3902,7 @@ export function CardVisionApp() {
             loading && !result && !draftResult ? (
               <div className="creation-processing-card luxury-panel" role="status" aria-live="polite">
                 <div className="creation-processing-visual"><span><ScanText size={30} /></span><i /><i /><i /></div>
-                <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando a carta por áreas</h2><p>{status}</p></div>
+                <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
               </div>
             ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
@@ -3916,7 +3926,7 @@ export function CardVisionApp() {
               onRefresh={() => runAnalysis(false)}
               onConfirm={() => runAnalysis(true)}
             />) : (
-              <div className="empty-state luxury-panel"><div className="empty-icon"><Trophy size={34} /></div><h2>Nenhum resultado aberto</h2><p>Crie uma ficha pelo Leitor ou pelo Manual Pro.</p></div>
+              <div className="empty-state luxury-panel"><div className="empty-icon"><Trophy size={34} /></div><h2>Sem resultado</h2><p>Crie uma ficha por imagem ou manualmente.</p></div>
             )
           ) : draftResult ? (            <ReviewPanel
               draft={draftResult}
@@ -3941,7 +3951,7 @@ export function CardVisionApp() {
             />) : result ? (
             <div className="result-ready-card luxury-panel">
               <div className="empty-icon"><CheckCircle2 size={30} /></div>
-              <div><p className="kicker">Ficha pronta</p><h2>{result.parsed.playerName}</h2><p>O resultado foi separado da criação para manter esta tela limpa.</p></div>
+              <div><p className="kicker">Ficha pronta</p><h2>{result.parsed.playerName}</h2><p>Ficha pronta para revisar.</p></div>
               <button type="button" className="elite-button" onClick={() => openMainSection('resultado')}>Abrir resultado</button>
             </div>
           ) : (

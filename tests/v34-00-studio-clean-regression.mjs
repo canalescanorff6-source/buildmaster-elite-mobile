@@ -61,13 +61,13 @@ assert.match(app, /central-player-normalization/);
 assert.match(app, /team-diagnosis/);
 assert.match(app, /mainSection === 'time'/);
 assert.match(app, /bm-v34-team-advanced/);
-assert.match(app, /advanced\.open = true/);
+assert.match(app, /setTeamAdvancedOpen\(true\)/);
 assert.match(app, /!\['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'\]\.includes\(mainSection\)/);
 
 assert.doesNotMatch(auth, /offlineBannerExpanded/);
 assert.doesNotMatch(auth, /offline-license-banner/);
 assert.doesNotMatch(auth, /offline-license-toggle/);
 assert.doesNotMatch(auth, /offline-license-retry/);
-assert.match(cache, /34\.00\.0-studio-premium-2-offline-ui/);
+assert.match(cache, /34\.00\.0-clean-responsive-4/);
 
 console.log('v34.00 Studio Premium aprovado: tema unificado, menu lateral, guias com painel visível, avisos compactos e módulos protegidos.');

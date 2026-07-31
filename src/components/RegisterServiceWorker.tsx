@@ -5,7 +5,7 @@ import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 
 type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean } };
 
-const NATIVE_CACHE_SCHEMA = '34.00.0-studio-premium-2-offline-ui';
+const NATIVE_CACHE_SCHEMA = '34.00.0-clean-responsive-4';
 const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
 
 async function clearNativeWebCaches() {

@@ -94,7 +94,7 @@ export function PlayerLaboratory(props: Props) {
     <section className="bm32-players" aria-label="Jogadores">
       <header className="bm32-screen-heading">
         <div className="bm32-heading-icon"><Users size={27}/></div>
-        <div><h1>Jogadores</h1><p>Encontre, filtre e abra suas fichas.</p></div>
+        <div><h1>Jogadores</h1><p>Busque e abra suas fichas.</p></div>
         <div className="bm32-heading-actions">
           <button type="button" aria-label="Buscar jogador" onClick={() => document.getElementById('bm32-player-search')?.focus()}><Search size={21}/></button>
           <button type="button" aria-label="Filtros" aria-pressed={advancedOpen} onClick={() => setAdvancedOpen((current) => !current)}><Filter size={21}/></button>
@@ -113,13 +113,13 @@ export function PlayerLaboratory(props: Props) {
       <div className="bm32-player-searchbar">
         <Search size={22}/>
         <label className="sr-only" htmlFor="bm32-player-search">Buscar jogador</label>
-        <input id="bm32-player-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar jogador, posição ou estilo..."/>
-        <button type="button" onClick={() => setAdvancedOpen((current) => !current)}><SlidersHorizontal size={18}/><span>Filtros avançados</span></button>
+        <input id="bm32-player-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar..."/>
+        <button type="button" onClick={() => setAdvancedOpen((current) => !current)}><SlidersHorizontal size={18}/><span>Filtros</span></button>
       </div>
 
       {advancedOpen && (
         <section className="bm32-filter-drawer" aria-label="Filtros avançados">
-          <div><strong>Status da ficha</strong><span>Mostre somente o que precisa agora.</span></div>
+          <div><strong>Status</strong><span>Filtrar fichas.</span></div>
           <div role="group" aria-label="Status">
             <button type="button" className={status === 'todos' ? 'active' : ''} onClick={() => setStatus('todos')}>Todos</button>
             <button type="button" className={status === 'completo' ? 'active' : ''} onClick={() => setStatus('completo')}>Prontas</button>
@@ -130,8 +130,8 @@ export function PlayerLaboratory(props: Props) {
       )}
 
       <section className="bm32-player-stats" aria-label="Resumo">
-        <article><span><Users size={21}/></span><div><strong>{props.players.length}</strong><small>Total de jogadores</small></div></article>
-        <article><span><Star size={21}/></span><div><strong>{summary.styles}</strong><small>Estilos ativos</small></div></article>
+        <article><span><Users size={21}/></span><div><strong>{props.players.length}</strong><small>Jogadores</small></div></article>
+        <article><span><Star size={21}/></span><div><strong>{summary.styles}</strong><small>Estilos</small></div></article>
         <article><span><Heart size={21}/></span><div><strong>{summary.favorites}</strong><small>Favoritos</small></div></article>
       </section>
 
@@ -169,8 +169,8 @@ export function PlayerLaboratory(props: Props) {
       </section>
 
       <div className="bm32-player-footer-actions">
-        <button type="button" onClick={props.onOpenVault}><Trophy size={17}/> Cofre, comparação e backup</button>
-        <button type="button" className="primary" onClick={props.onManualCard}><Plus size={21}/> Novo jogador</button>
+        <button type="button" onClick={props.onOpenVault}><Trophy size={17}/> Cofre</button>
+        <button type="button" className="primary" onClick={props.onManualCard}><Plus size={21}/> Novo</button>
       </div>
     </section>
   );
