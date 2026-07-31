@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildmaster-v34-00-clean-responsive-2';
+const CACHE_NAME = 'buildmaster-v34-00-touch-scroll-menu-3';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

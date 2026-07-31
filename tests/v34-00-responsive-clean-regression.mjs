@@ -30,8 +30,8 @@ for (const marker of [
 
 assert.doesNotMatch(calibrator, /window\.innerWidth <= 760\) setFullscreen\(true\)/);
 assert.match(calibrator, /Abrir em tela cheia/);
-assert.match(cache, /34\.00\.0-clean-responsive-4/);
-assert.match(sw, /buildmaster-v34-00-clean-responsive-2/);
+assert.match(cache, /34\.00\.0-touch-scroll-menu-5/);
+assert.match(sw, /buildmaster-v34-00-touch-scroll-menu-3/);
 
 assert.match(home, /Seu time em um só lugar\./);
 assert.match(home, /Crie uma ficha pelo print\./);

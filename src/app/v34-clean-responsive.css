@@ -829,3 +829,71 @@ body.bm-v3400-clean-responsive {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Hotfix móvel: rolagem por toque, topo sem lupa e menu mais alto.            */
+/* -------------------------------------------------------------------------- */
+html {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.bm-v3400-clean-responsive {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bm-v3400-clean-responsive .premium-app {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: visible !important;
+  touch-action: pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bm-v3400-clean-responsive .premium-app > main,
+.bm-v3400-clean-responsive .premium-app > section,
+.bm-v3400-clean-responsive .bm-simple-context,
+.bm-v3400-clean-responsive .page-context-card {
+  touch-action: pan-y pinch-zoom;
+}
+
+/* A pesquisa continua disponível no menu lateral, mas a lupa do topo foi removida. */
+.bm-v3400-clean-responsive .bm-simple-search {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-simple-context > div:last-child:empty {
+  display: none !important;
+}
+
+@media (max-width: 920px) {
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+    top: max(2px, env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    z-index: 260 !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    padding-left: 66px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+    top: max(1px, env(safe-area-inset-top)) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    padding-left: 48px !important;
+  }
+}

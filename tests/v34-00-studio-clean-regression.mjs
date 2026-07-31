@@ -68,6 +68,6 @@ assert.doesNotMatch(auth, /offlineBannerExpanded/);
 assert.doesNotMatch(auth, /offline-license-banner/);
 assert.doesNotMatch(auth, /offline-license-toggle/);
 assert.doesNotMatch(auth, /offline-license-retry/);
-assert.match(cache, /34\.00\.0-clean-responsive-4/);
+assert.match(cache, /34\.00\.0-touch-scroll-menu-5/);
 
 console.log('v34.00 Studio Premium aprovado: tema unificado, menu lateral, guias com painel visível, avisos compactos e módulos protegidos.');

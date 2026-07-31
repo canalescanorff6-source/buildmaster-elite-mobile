@@ -85,6 +85,7 @@ import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
 import { RefinedNavigation } from '@/components/RefinedNavigation';
 import { PremiumContextBar } from '@/components/PremiumContextBar';
+import { MobileScrollRecovery } from '@/components/MobileScrollRecovery';
 import { PremiumBrand } from '@/components/PremiumBrand';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
@@ -2850,6 +2851,7 @@ export function CardVisionApp() {
   ];
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+      <MobileScrollRecovery />
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       {!showSplash && <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />}
       {showSplash && (
@@ -2892,7 +2894,6 @@ export function CardVisionApp() {
         canGoBack={navigationTrail.length > 0 && mainSection !== 'inicio'}
         currentPlayer={currentPanelResult ? { name: currentPanelResult.parsed.playerName || 'Carta em análise', points: `${currentPanelResult.trainingPointsUsed}/${currentPanelResult.trainingPointsTotal} pts` } : null}
         onBack={goBackInsideApp}
-        onSearch={() => openMainSection('buscar')}
         onOpenCurrentPlayer={() => openMainSection('resultado')}
       />}
       <RefinedNavigation
@@ -2901,7 +2902,6 @@ export function CardVisionApp() {
         hasResult={Boolean(currentPanelResult)}
         onGroupChange={openNavigationGroup}
         onWorkspaceChange={openPlayerWorkspace}
-        onSearch={() => openMainSection('buscar')}
         onCreate={() => setMobileLauncher('create')}
         onMenu={() => openMainSection('menu')}
         menuActive={mainSection === 'menu'}

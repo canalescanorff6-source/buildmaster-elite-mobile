@@ -31,6 +31,6 @@ assert.doesNotMatch(premium, /className="bm-offline-banner"/);
 // Proteção para marcação antiga que possa permanecer no cache do WebView.
 assert.match(css, /\.offline-license-banner,[\s\S]*\.bm-offline-banner,[\s\S]*\.app-runtime-status\.runtime-offline[\s\S]*display: none !important/);
 assert.match(css, /\.bm-toast-viewport/);
-assert.match(cache, /34\.00\.0-clean-responsive-4/);
+assert.match(cache, /34\.00\.0-touch-scroll-menu-5/);
 
 console.log('v34.00 offline UI aprovado: sem painel lateral persistente, sem avisos duplicados e com toast temporário de conexão.');
