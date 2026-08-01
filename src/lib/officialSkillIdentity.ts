@@ -3,6 +3,12 @@ import {
   SKILL_PROFILES,
   SPECIAL_SKILL_NAMES
 } from '@/modules/analysis/analyzerCatalog';
+import {
+  isRemoteAdditionalSkillActiveV3770,
+  isRemoteSpecialSkillActiveV3770,
+  remoteSkillIdentityKeyV3770,
+  resolveRemoteSkillNameV3770
+} from '@/lib/remoteCatalogV3770';
 
 export type CanonicalSkillName = keyof typeof SKILL_PROFILES;
 
@@ -278,6 +284,8 @@ export function isLikelySkillOcrNoise(value: string | null | undefined) {
 }
 
 export function skillIdentityKey(value: string | null | undefined) {
+  const remoteKey = remoteSkillIdentityKeyV3770(value);
+  if (remoteKey) return remoteKey;
   const canonical = canonicalSkillName(value);
   return compactSkillIdentity(canonical ?? value);
 }
@@ -288,7 +296,7 @@ export function canonicalizeSkillList(skills: Array<string | null | undefined>) 
   for (const raw of skills) {
     const cleaned = String(raw ?? '').replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '').trim();
     if (!cleaned) continue;
-    const canonical = canonicalSkillName(cleaned) ?? cleaned;
+    const canonical = resolveRemoteSkillNameV3770(cleaned) ?? canonicalSkillName(cleaned) ?? cleaned;
     const key = skillIdentityKey(canonical);
     if (!key || seen.has(key)) continue;
     seen.add(key);
@@ -297,27 +305,28 @@ export function canonicalizeSkillList(skills: Array<string | null | undefined>) 
   return result;
 }
 
-export function buildOwnedSkillKeys(nativeSkills: string[] = [], specialSkills: string[] = []) {
-  return new Set(canonicalizeSkillList([...nativeSkills, ...specialSkills]).map(skillIdentityKey));
+export function buildOwnedSkillKeys(nativeSkills: string[] = [], specialSkills: string[] = [], additionalSkills: string[] = []) {
+  return new Set(canonicalizeSkillList([...nativeSkills, ...specialSkills, ...additionalSkills]).map(skillIdentityKey));
 }
 
-export function isSkillAlreadyOwned(skill: string, nativeSkills: string[] = [], specialSkills: string[] = []) {
-  return buildOwnedSkillKeys(nativeSkills, specialSkills).has(skillIdentityKey(skill));
+export function isSkillAlreadyOwned(skill: string, nativeSkills: string[] = [], specialSkills: string[] = [], additionalSkills: string[] = []) {
+  return buildOwnedSkillKeys(nativeSkills, specialSkills, additionalSkills).has(skillIdentityKey(skill));
 }
 
 export function filterComplementaryAdditionalSkills(
   candidates: string[],
   nativeSkills: string[] = [],
   specialSkills: string[] = [],
-  limit = 5
+  limit = 5,
+  additionalSkills: string[] = []
 ) {
   const official = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
-  const owned = buildOwnedSkillKeys(nativeSkills, specialSkills);
+  const owned = buildOwnedSkillKeys(nativeSkills, specialSkills, additionalSkills);
   const result: string[] = [];
   const seen = new Set<string>();
   for (const raw of candidates) {
-    const canonical = canonicalSkillName(raw);
-    if (!canonical || !official.has(canonical)) continue;
+    const canonical = resolveRemoteSkillNameV3770(raw) ?? canonicalSkillName(raw);
+    if (!canonical || !(official.has(canonical) || isRemoteAdditionalSkillActiveV3770(canonical))) continue;
     const key = skillIdentityKey(canonical);
     if (owned.has(key) || seen.has(key)) continue;
     seen.add(key);
@@ -328,11 +337,15 @@ export function filterComplementaryAdditionalSkills(
 }
 
 export function isOfficialAdditionalSkillIdentity(skill: string) {
+  const remote = resolveRemoteSkillNameV3770(skill);
+  if (remote && isRemoteAdditionalSkillActiveV3770(remote)) return true;
   const canonical = canonicalSkillName(skill);
   return Boolean(canonical && OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(canonical as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
 }
 
 export function isSpecialSkillIdentity(skill: string) {
+  const remote = resolveRemoteSkillNameV3770(skill);
+  if (remote && isRemoteSpecialSkillActiveV3770(remote)) return true;
   const canonical = canonicalSkillName(skill);
   return Boolean(canonical && SPECIAL_SKILL_NAMES.includes(canonical));
 }

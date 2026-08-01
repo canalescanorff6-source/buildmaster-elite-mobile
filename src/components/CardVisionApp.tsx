@@ -192,11 +192,11 @@ import {
   applyLocalCorrectionsToResult,
   clearCorrectionsForResult,
   readDynamicRulePack,
-  sanitizeRulePack,
   upsertCorrectionForResult,
-  writeDynamicRulePack,
   type DynamicRulePack
 } from '@/modules/builds/dynamicRules';
+import { activateContinuousRulePackV3770, computeRulePackChecksumV3770, createRulePackTemplateV3770, restoreRulePackVersionV3770, sanitizeContinuousRulePackV3770, RULE_PACK_HISTORY_V3770_KEY } from '@/lib/continuousRulesV3770';
+import { REMOTE_CATALOG_V3770_STORAGE_KEY } from '@/lib/remoteCatalogV3770';
 import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
 import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
 import {
@@ -1036,11 +1036,17 @@ export function CardVisionApp() {
     setStatus(`Configuração inicial concluída: modo ${profile.experienceMode === 'advanced' ? 'avançado' : 'simples'}, formação ${profile.favoriteFormation}.`);
   }
   function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
-    writeDynamicRulePack(pack);
-    setRulePackInfo(pack);
-    setRulesStatus(message);
+    const activation = activateContinuousRulePackV3770(pack);
+    if (!activation.activated) {
+      const reason = activation.analysis.alerts.find((item) => item.level === 'critical')?.detail ?? 'O pacote não passou na auditoria v37.70.';
+      setRulesStatus(`${reason} A base segura anterior continua ativa.`);
+      return false;
+    }
+    setRulePackInfo(activation.pack);
+    setRulesStatus(`${message} • confiança ${activation.analysis.confidence}% • ${activation.analysis.gameVersion}`);
     setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    return true;
   }
   async function loadRulesFromUrl() {
     const url = rulesUrl.trim();
@@ -1054,9 +1060,10 @@ export function CardVisionApp() {
       const response = await fetch(url, { cache: 'no-store' });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload) throw new Error('Não consegui ler o JSON desta URL.');
-      const pack = sanitizeRulePack(payload);
+      const pack = sanitizeContinuousRulePackV3770(payload);
       if (!pack.rules.length) throw new Error('O pacote não tem regras válidas.');
-      applyRulePackAndRefresh(pack, `Regras atualizadas sem refazer APK: ${pack.source} • ${pack.rules.length} regra(s) • versão ${pack.version}.`);
+      const applied = applyRulePackAndRefresh(pack, `Pacote v37.70 ativado sem refazer APK: ${pack.source} • ${pack.rules.length} regra(s) • versão ${pack.version}`);
+      if (!applied) return;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao atualizar regras.';
       setRulesStatus(`${message} O pacote local continua ativo.`);
@@ -1068,13 +1075,26 @@ export function CardVisionApp() {
       removeAccountStorage(RULE_PACK_URL_KEY);
     } catch {}
     setRulesUrl('');
-    applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base.`);
+    applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base`);
   }
   function exportRulePack() {
-    const pack = readDynamicRulePack();
+    const current = sanitizeContinuousRulePackV3770(readDynamicRulePack());
+    const base = current.schemaVersion === 3770 ? current : createRulePackTemplateV3770();
+    const pack = { ...base, checksum: computeRulePackChecksumV3770(base) };
     const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json;charset=utf-8' });
-    downloadBlobFile(`buildmaster-regras-${pack.version || 'local'}.json`, blob);
-    setRulesStatus('Pacote de regras exportado. Você pode hospedar esse JSON e atualizar o APK por URL depois.');
+    downloadBlobFile(`buildmaster-regras-${pack.version || 'v37-70'}.json`, blob);
+    setRulesStatus('Pacote v37.70 exportado com catálogo, versão do eFootball, validade e checksum. Hospede esse JSON para atualizar o app por URL.');
+  }
+  function restoreRulePackVersion(version: string) {
+    const restored = restoreRulePackVersionV3770(version);
+    if (!restored?.activated) {
+      setRulesStatus('Não foi possível restaurar essa versão. A base atual continua ativa.');
+      return;
+    }
+    setRulePackInfo(restored.pack);
+    setRulesStatus(`Versão ${restored.pack.version} restaurada do histórico • confiança ${restored.analysis.confidence}%.`);
+    setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
+    setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
   }
   function requireSecureAccountCloud(): void {
     if (!account?.cloudEnabled) throw new Error('A nuvem segura desta conta não está disponível. O Cofre antigo e compartilhado foi removido.');
@@ -1327,6 +1347,8 @@ export function CardVisionApp() {
       folders: readJsonStorage(VAULT_FOLDERS_KEY, []),
       rules: {
         pack: readJsonStorage(RULE_PACK_KEY, null),
+        historyV3770: readJsonStorage(RULE_PACK_HISTORY_V3770_KEY, []),
+        remoteCatalogV3770: readJsonStorage(REMOTE_CATALOG_V3770_STORAGE_KEY, null),
         officialPack: readOfficialRulePack(),
         url: readAccountStorage(RULE_PACK_URL_KEY) || ''
       },
@@ -1554,6 +1576,8 @@ export function CardVisionApp() {
     if (selected.rules && sections.rules && typeof sections.rules === 'object') {
       const rules = sections.rules as Record<string, unknown>;
       if (rules.pack) writeStorage(RULE_PACK_KEY, rules.pack);
+      if (Array.isArray(rules.historyV3770)) writeStorage(RULE_PACK_HISTORY_V3770_KEY, rules.historyV3770);
+      if (rules.remoteCatalogV3770) writeStorage(REMOTE_CATALOG_V3770_STORAGE_KEY, rules.remoteCatalogV3770);
       const officialPack = sanitizeOfficialRulePack(rules.officialPack);
       if (officialPack) activateOfficialRulePack(officialPack, { confirmed: true, reason: 'Restauração confirmada pelo usuário a partir do backup integral.' });
       if (typeof rules.url === 'string') writeAccountStorage(RULE_PACK_URL_KEY, rules.url);
@@ -3880,7 +3904,7 @@ export function CardVisionApp() {
                 <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
               </div>
-            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
+            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} onRestoreRulePackVersion={restoreRulePackVersion} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
               originalPreview={preview}

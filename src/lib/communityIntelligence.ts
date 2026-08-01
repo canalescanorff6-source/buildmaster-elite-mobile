@@ -274,7 +274,7 @@ function tipScore(tip: CommunityTip, result: AnalysisResult) {
   const style = result.tacticalProfile.style;
   const formation = result.tacticalProfile.formation;
   const playstyle = normalized(result.parsed.playstyle);
-  const skillText = normalized([...result.parsed.nativeSkills, ...result.parsed.specialSkills].join(' '));
+  const skillText = normalized([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills].join(' '));
   const contextText = normalized([
     result.buildName,
     result.note,

@@ -254,7 +254,7 @@ export function officialAdditionalSkillPoolForPosition(position: PositionCode) {
 /** Quantidade máxima de habilidades oficiais ainda disponíveis sem repetir a carta. */
 export function availableOfficialAdditionalSkillCount(result: AnalysisResult) {
   const position = resolveAdditionalSkillPosition(result);
-  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
   return officialAdditionalSkillPoolForPosition(position)
     .filter((skill) => !owned.has(skillIdentityKey(skill)))
     .length;
@@ -469,7 +469,7 @@ function categoryDiversityAdjustment(position: PositionCode, selected: Candidate
 /** Sempre produz cinco opções treináveis quando existem cinco habilidades não possuídas no pool seguro da função. */
 export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: TrainingPlan, options: AdditionalSkillProfileOptions = {}): UnifiedSkillDecision[] {
   const position = resolveAdditionalSkillPosition(result);
-  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
   const orderedPool = officialAdditionalSkillPoolForPosition(position);
   const preferredCategories = options.preferredCategories?.length ? options.preferredCategories.slice(0, 5) : slotBlueprintFor(result, position);
   const preferredCount = preferredCategories.reduce((counts, category) => {
@@ -512,7 +512,8 @@ export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: Trainin
     selected.map((item) => item.name),
     result.parsed.nativeSkills,
     result.parsed.specialSkills,
-    5
+    5,
+    result.parsed.additionalSkills ?? []
   );
 
   return finalNames.map((name, index) => {

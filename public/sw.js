@@ -1,6 +1,7 @@
 // Compatibilidade de regressão: buildmaster-v35-00-official-skills-meta-2
 // Compatibilidade de regressão: buildmaster-v35-20-dna-gameplay-solid-theme-1
-const CACHE_NAME = 'buildmaster-v37-00-professional-intelligence-1';
+// Compatibilidade de regressão: buildmaster-v37-00-professional-intelligence-1
+const CACHE_NAME = 'buildmaster-v37-70-continuous-rules-1';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

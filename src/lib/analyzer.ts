@@ -9,12 +9,13 @@ import {
   skillIdentityKey
 } from './officialSkillIdentity';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
-import { detectCardSkills as detectSkills } from './cardSkillParser';
+import { parseCardSkillInventory } from './cardSkillParser';
 import { RECOGNIZABLE_IMPETO_NAMES } from './officialImpetoCatalog';
 import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
 import { buildMetaBuildUniverse } from './metaBuildUniverse';
 import { inferPointsFromCardLevel, parseCardLevelFromText } from '../modules/builds/pointBudget';
+import { buildStructuralPrecisionAnalysis, mergeStructuralValidation } from './structuralPrecisionV3740';
 import {
   emptyTraining,
   normalizeTrainingPlan,
@@ -27,6 +28,7 @@ import {
   MIN_AUTO_TRAINING_BUDGET,
   SAFE_DEFAULT_TRAINING_BUDGET,
   fitTrainingToBudget,
+  fitTrainingToExactBudget,
   isGoalkeeperStyle,
   normalizeTrainingBudget,
   trainingBudgetFromCard,
@@ -1458,7 +1460,7 @@ function topRatedPositions(positionRatings: PositionRatings): PositionCode[] {
 
 function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>): string[] {
   const candidateScores = new Map<string, number>();
-  const ownedSkillKeys = buildOwnedSkillKeys(parsed.nativeSkills, parsed.specialSkills);
+  const ownedSkillKeys = buildOwnedSkillKeys(parsed.nativeSkills, parsed.specialSkills, parsed.additionalSkills ?? []);
   const bannedAdditional = new Set(SPECIAL_SKILL_NAMES.map(skillKey));
   const contextualBans = contextualSkillBans(parsed, selectedPosition, objective, attributes);
   const blueprint = skillBlueprint(parsed, selectedPosition, objective, attributes);
@@ -1482,7 +1484,8 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
       Array.from(candidateScores.entries()).sort((left, right) => right[1] - left[1]).map(([skill]) => skill),
       parsed.nativeSkills,
       parsed.specialSkills,
-      5
+      5,
+      parsed.additionalSkills ?? []
     );
   }
 
@@ -1586,7 +1589,8 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     Array.from(candidateScores.entries()).sort((left, right) => right[1] - left[1]).map(([skill]) => skill),
     parsed.nativeSkills,
     parsed.specialSkills,
-    5
+    5,
+    parsed.additionalSkills ?? []
   );
 }
 
@@ -1894,8 +1898,10 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const mainPosition = mainCandidate;
   const playstyle = resolvePlaystyleForCard(rawPlaystyle, mainPosition, headerOnlyText + '\n' + topSection + '\n' + identityText) ?? (!manualPlaystyleLocked && localRule?.playstyle && playstyleFitsPosition(localRule.playstyle, mainPosition) ? localRule.playstyle : null);
   const detectedPositions = Array.from(new Set([mainPosition, ...positions]));
-  const nativeSkills = detectSkills(text);
-  const specialSkills = nativeSkills.filter((skill) => SPECIAL_SKILL_NAMES.includes(skill));
+  const parsedSkillInventory = parseCardSkillInventory(text);
+  const nativeSkills = parsedSkillInventory.native;
+  const additionalSkills = parsedSkillInventory.additional;
+  const specialSkills = parsedSkillInventory.special;
   const height = readNumber(text, [/altura\s*[:=-]?\s*(\d{3})\s*cm/i, /height\s*[:=-]?\s*(\d{3})\s*cm/i]);
   const weight = readNumber(text, [/peso\s*[:=-]?\s*(\d{2,3})\s*kg/i, /weight\s*[:=-]?\s*(\d{2,3})\s*kg/i]);
   const age = readNumber(text, [/idade\s*[:=-]?\s*(\d{1,2})/i, /age\s*[:=-]?\s*(\d{1,2})/i]);
@@ -1987,6 +1993,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
     condition,
     impetos,
     nativeSkills,
+    additionalSkills,
     specialSkills,
     attributes,
     physicalProfile,
@@ -1996,7 +2003,11 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
       playstyleLocked: manualPlaystyleLocked,
       attributeCount,
       positionRatingsCount: Object.keys(positionRatings).length,
-      localRuleMatched: localRule?.id ?? null
+      localRuleMatched: localRule?.id ?? null,
+      skillSource: parsedSkillInventory.source,
+      skillConfidence: parsedSkillInventory.confidence,
+      additionalSkillCount: additionalSkills.length,
+      specialSkillCount: specialSkills.length
     },
     internalId: id,
     confidence: Math.max(1, Math.min(100, Math.round(confidence))),
@@ -2250,7 +2261,7 @@ function emptyTrainingWeights(): Record<TrainingKey, number> {
 }
 
 function addSkillIdentityWeights(weights: Record<TrainingKey, number>, parsed: ParsedCard) {
-  const names = Array.from(new Set([...(parsed.nativeSkills ?? []), ...(parsed.specialSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
+  const names = Array.from(new Set([...(parsed.nativeSkills ?? []), ...(parsed.additionalSkills ?? []), ...(parsed.specialSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
   const add = (key: TrainingKey, amount: number) => { weights[key] += amount; };
   const special: Record<string, Partial<Record<TrainingKey, number>>> = {
     'Curva Blitz': { shooting:1.8, dribbling:.8, dexterity:.55 },
@@ -2571,7 +2582,7 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
     evidence: { ...parsed.evidence, localRuleMatched: null }
   };
   const genericPlan = trainingFor(selected, objective, BASE_BY_POSITION[selected], genericParsed, individualTrainingAdjustments);
-  const evidenceStrength = parsed.evidence.attributeCount * 2 + (parsed.playstyle ? 10 : 0) + Math.min(16, (parsed.nativeSkills.length + parsed.specialSkills.length) * 2) + (parsed.height ? 4 : 0) + (parsed.weight ? 3 : 0);
+  const evidenceStrength = parsed.evidence.attributeCount * 2 + (parsed.playstyle ? 10 : 0) + Math.min(16, (parsed.nativeSkills.length + (parsed.additionalSkills?.length ?? 0) + parsed.specialSkills.length) * 2) + (parsed.height ? 4 : 0) + (parsed.weight ? 3 : 0);
   let hybrid = hybridRanked[0]?.plan ?? training;
   let antiCloneAdjusted = false;
   if (evidenceStrength >= 34 && planDistance(hybrid, genericPlan, keys) < 3) {
@@ -2786,7 +2797,7 @@ function buildBehaviorSimulation(position: PositionCode, a: Required<Attributes>
 
 function buildAntiCloneAnalysis(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard, variants: BuildVariant[]): AntiCloneAnalysis {
   const keys = dnaGroupKeys(position);
-  const genericParsed: ParsedCard = { ...parsed, playerName:'Modelo genérico da posição', playstyle:null, nativeSkills:[], specialSkills:[], impetos:[], specialTag:null, height:null, weight:null, evidence:{...parsed.evidence, localRuleMatched:null} };
+  const genericParsed: ParsedCard = { ...parsed, playerName:'Modelo genérico da posição', playstyle:null, nativeSkills:[], additionalSkills:[], specialSkills:[], impetos:[], specialTag:null, height:null, weight:null, evidence:{...parsed.evidence, localRuleMatched:null} };
   const genericPlan = trainingFor(position, objective, BASE_BY_POSITION[position], genericParsed, individualTrainingAdjustments);
   const mainPlan = variants[0]?.training ?? emptyTraining();
   const distanceFromGenericTemplate = planDistance(mainPlan, genericPlan, keys);
@@ -2799,7 +2810,7 @@ function buildAntiCloneAnalysis(position: PositionCode, objective: Objective, a:
   const pairDistances:number[]=[];
   for(let i=0;i<variants.length;i++) for(let j=i+1;j<variants.length;j++) pairDistances.push(planDistance(variants[i].training,variants[j].training,keys));
   const distributionDiversity = Math.round(clampDecimal((pairDistances.length?avg(...pairDistances):0)*8,1,99));
-  const evidence = parsed.evidence.attributeCount*2 + (parsed.playstyle?10:0) + Math.min(18,(parsed.nativeSkills.length+parsed.specialSkills.length)*2) + (parsed.height?4:0) + (parsed.weight?3:0);
+  const evidence = parsed.evidence.attributeCount*2 + (parsed.playstyle?10:0) + Math.min(18,(parsed.nativeSkills.length+(parsed.additionalSkills?.length??0)+parsed.specialSkills.length)*2) + (parsed.height?4:0) + (parsed.weight?3:0);
   const individualityScore = Math.round(clampDecimal(identityContribution*.48 + Math.min(100,evidence)*.27 + Math.min(100,distanceFromGenericTemplate*12)*.25, 20,99));
   const cloneRisk: AntiCloneAnalysis['cloneRisk'] = individualityScore>=76 && distanceFromGenericTemplate>=3 ? 'baixo' : individualityScore>=55 ? 'médio' : 'alto';
   const recalculationTriggered = evidence>=34 && distanceFromGenericTemplate>=3;
@@ -3138,7 +3149,7 @@ function skillImpactText(skill: string, position: PositionCode): string {
 
 function buildSpecialSkillsAnalysis(parsed: ParsedCard, selected: PositionCode, recommended: string[], avoid: string[]): SpecialSkillsAnalysis {
   const officialSet = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
-  const ownedOfficial = uniqueSkillList(parsed.nativeSkills).filter((skill) => officialSet.has(skill));
+  const ownedOfficial = uniqueSkillList([...(parsed.nativeSkills ?? []), ...(parsed.additionalSkills ?? []), ...(parsed.specialSkills ?? [])]).filter((skill) => officialSet.has(skill));
   const usefulOwned = ownedOfficial.map((name) => ({ name, impact: skillImpactText(name, selected), score: 70 + Math.min(25, Object.values(SKILL_PROFILES[name]?.boosts ?? {}).reduce<number>((sum, value) => sum + (value ?? 0), 0) * 2) })).sort((a,b)=>b.score-a.score);
   const missingRecommended = recommended.filter((name) => officialSet.has(name) && !ownedOfficial.includes(name)).slice(0,8).map((name,index) => ({ name, impact: skillImpactText(name, selected), score: Math.max(70, 96-index*4) }));
   const redundant = ownedOfficial.filter((name) => avoid.includes(name)).map((name) => ({ name, reason: `É oficial, mas tem retorno baixo para ${POSITION_PT[selected]} nesta ficha.` }));
@@ -3309,10 +3320,12 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const trainingPointsTotal = trainingBudgetFromCard(parsed);
   const baseTraining = trainingFor(selected.code, objective, attributes, parsed, individualTrainingAdjustments);
   const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], baseTraining, positionScores.slice(0, 10), trainingPointsTotal, objective, parsed);
-  const training = buildVariants[0]?.training ?? baseTraining;
+  const initialTraining = buildVariants[0]?.training ?? baseTraining;
+  const exactPriority = trainingTemplate(selected.code, objective, attributes, parsed).priority;
+  const training = fitTrainingToExactBudget(initialTraining, exactPriority, trainingPointsTotal, selected.code);
   const trainingCost = trainingPlanCost(training);
-  const trainingPointsUsed = Math.min(trainingPlanTotalCost(training), trainingPointsTotal);
-  const trainingPointsRemaining = Math.max(0, trainingPointsTotal - trainingPointsUsed);
+  const trainingPointsUsed = trainingPlanTotalCost(training);
+  const trainingPointsRemaining = trainingPointsTotal - trainingPointsUsed;
   const recommendedSkills = recommendAdditionalSkills(parsed, selected.code, objective, attributes);
   const skillRecommendations = buildSkillRecommendations(parsed, selected.code, objective, attributes, recommendedSkills);
   const avoidSkills = skillRecommendations.filter((item) => item.tier === 'evitar').map((item) => item.name);
@@ -3324,7 +3337,9 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const visiblePositionScores = positionScores.slice(0, 10);
   const permittedPositions = buildPermittedPositions(parsed, visiblePositionScores);
   const avoidPositions = buildAvoidPositions(parsed, attributes);
-  const validation = validateAnalysis(parsed, selected, visiblePositionScores, attributes, avoidPositions, explicitTarget);
+  const baseValidation = validateAnalysis(parsed, selected, visiblePositionScores, attributes, avoidPositions, explicitTarget);
+  const structuralPrecision = buildStructuralPrecisionAnalysis(parsed, training, trainingPointsTotal, selected.code);
+  const validation = mergeStructuralValidation(baseValidation, structuralPrecision);
   const trainingComparison = compareTraining(parsed.autoTrainingPlan, training);
   const advancedTacticalFunction = buildAdvancedTacticalFunction(parsed, selected.code, selected.score);
   const specialSkillsAnalysis = buildSpecialSkillsAnalysis(parsed, selected.code, recommendedSkills, avoidSkills);
@@ -3376,7 +3391,7 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
     ],
     pointRationale: explanation.slice(0, 5)
   };
-  return { objective, parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse };
+  return { objective, parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse, structuralPrecision };
 }
 
 // Compatibilidade com integrações e regressões anteriores; novas telas devem importar pela fachada modules/analysis.

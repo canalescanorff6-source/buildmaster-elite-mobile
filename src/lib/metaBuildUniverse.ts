@@ -279,7 +279,7 @@ export function buildMetaBuildUniverse(input:{
   while(safeBases.length<6)safeBases.push({...safeBases[safeBases.length%safeBases.length]});
   const identity=groupIdentity(baseAttributes,keys);
   const skillWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,0])) as Record<TrainingKey,number>;
-  for(const skill of [...parsed.nativeSkills,...parsed.specialSkills])addWeights(skillWeights,SPECIAL_SKILL_WEIGHTS[canonicalSkillName(skill) ?? skill]??{},1);
+  for(const skill of [...parsed.nativeSkills,...(parsed.additionalSkills??[]),...parsed.specialSkills])addWeights(skillWeights,SPECIAL_SKILL_WEIGHTS[canonicalSkillName(skill) ?? skill]??{},1);
   const candidates:MetaBuildEntry[]=[]; const genericWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,.1])) as Record<TrainingKey,number>;
   addWeights(genericWeights,POSITION_WEIGHTS[position],1);
   const genericPlan=generatePlan(genericWeights,safeBases[0],keys,trainingPointsTotal,17);

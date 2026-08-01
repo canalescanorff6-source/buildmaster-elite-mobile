@@ -37,7 +37,7 @@ function fnv1a(value: string) {
  */
 export function cardAnalysisInputFingerprint(result: AnalysisResult, extra = '') {
   const parsed = result.parsed;
-  const skills = [...parsed.nativeSkills, ...parsed.specialSkills]
+  const skills = [...parsed.nativeSkills, ...(parsed.additionalSkills ?? []), ...parsed.specialSkills]
     .map(normalizeText)
     .filter(Boolean)
     .sort((left, right) => left.localeCompare(right, 'pt-BR'));

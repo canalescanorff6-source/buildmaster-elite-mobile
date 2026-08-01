@@ -450,7 +450,7 @@ function buildProof(variants: BuildVariant[], maxPrecision: MaxPrecisionAnalysis
 
 function buildConfidence(parsed: ParsedCard, maxPrecision: MaxPrecisionAnalysis, proof: MotorProof): RecommendationConfidence {
   const physicalEvidence=(parsed.height?1:0)+(parsed.weight?1:0)+(parsed.dominantFoot?1:0);
-  const skillEvidence=new Set([...(parsed.nativeSkills??[]),...(parsed.specialSkills??[])]).size;
+  const skillEvidence=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])]).size;
   const score=clamp(parsed.confidence*.47 + Math.min(25,parsed.evidence.attributeCount*1.8) + Math.min(12,skillEvidence*2) + physicalEvidence*3 + Math.min(8,proof.winnerMargin));
   const evidence=[
     `${parsed.evidence.attributeCount} atributos identificados`,

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Activity, CheckCircle2, History, Save, Target, Trash2 } from 'lucide-react';
+import { RealValidationV3760Panel } from '@/components/RealValidationV3760Panel';
 import type { AnalysisResult } from '@/lib/analyzer';
 import {
   MATCH_PROBLEM_TAGS,
@@ -17,6 +18,7 @@ import {
 } from '@/lib/appEvolution';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { buildMatchEvidenceLoop } from '@/lib/professionalIntelligenceV37';
+import { buildRealValidationV3760, REAL_VALIDATION_PROFILE_STORAGE_KEY, type ControlStyleV3760 } from '@/lib/realValidationV3760';
 
 const RATING_OPTIONS: MatchValidationRating[] = [1, 2, 3, 4, 5];
 
@@ -45,7 +47,19 @@ const EMPTY_METRICS: MatchPerformanceMetrics = {
   interceptions: 0,
   ballLosses: 0,
   dribblesCompleted: 0,
-  shots: 0
+  shots: 0,
+  saves: 0,
+  goalsConceded: 0,
+  clearances: 0,
+  blocks: 0,
+  aerialDuelsWon: 0,
+  duelsWon: 0,
+  recoveries: 0,
+  progressivePasses: 0,
+  keyPasses: 0,
+  shotsOnTarget: 0,
+  runsBehind: 0,
+  successfulPressures: 0
 };
 
 export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
@@ -66,21 +80,37 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   const [gameplayProfileId, setGameplayProfileId] = useState(result.gameplayDna?.primaryProfileId ?? 'MAIN');
   const [secondHalfDrop, setSecondHalfDrop] = useState(false);
   const [metrics, setMetrics] = useState<MatchPerformanceMetrics>(EMPTY_METRICS);
+  const [testedOptionKey, setTestedOptionKey] = useState('');
+  const [controlStyle, setControlStyle] = useState<ControlStyleV3760>('mixed');
+  const [inputDelayRating, setInputDelayRating] = useState<MatchValidationRating>(3);
 
   useEffect(() => setRecords(loadRecords()), []);
   const fingerprint = cardFingerprint(result);
   const currentRecords = useMemo(() => records.filter((record) => record.cardFingerprint === fingerprint), [records, fingerprint]);
   const summary = useMemo(() => summarizeMatchValidation(currentRecords), [currentRecords]);
   const evidenceLoop = useMemo(() => buildMatchEvidenceLoop(result, records), [result, records]);
+  const realValidation = useMemo(() => buildRealValidationV3760(result, records), [result, records]);
+  const testedOptions = useMemo(() => realValidation.experiment.arms.map((arm) => ({ key: `${arm.buildId}::${arm.boosterName}`, arm: arm.arm, buildId: arm.buildId, buildTitle: arm.buildTitle, boosterName: arm.boosterName })), [realValidation.experiment.arms]);
+  const effectiveTestedOptionKey = testedOptionKey || testedOptions[0]?.key || '';
+  const positionMetricFields = useMemo<Array<{ key: keyof MatchPerformanceMetrics; label: string }>>(() => {
+    const position = result.bestPosition.code;
+    if (position === 'GK') return [{ key: 'saves', label: 'Defesas' }, { key: 'goalsConceded', label: 'Gols sofridos' }, { key: 'progressivePasses', label: 'Saídas progressivas' }, { key: 'aerialDuelsWon', label: 'Bolas aéreas dominadas' }];
+    if (['CB', 'LB', 'RB'].includes(position)) return [{ key: 'clearances', label: 'Cortes' }, { key: 'blocks', label: 'Bloqueios' }, { key: 'aerialDuelsWon', label: 'Duelos aéreos ganhos' }, { key: 'duelsWon', label: 'Duelos vencidos' }];
+    if (['DMF', 'CMF', 'LMF', 'RMF', 'AMF'].includes(position)) return [{ key: 'progressivePasses', label: 'Passes progressivos' }, { key: 'keyPasses', label: 'Passes-chave' }, { key: 'recoveries', label: 'Recuperações' }, { key: 'successfulPressures', label: 'Pressões bem-sucedidas' }];
+    return [{ key: 'shotsOnTarget', label: 'Chutes no alvo' }, { key: 'runsBehind', label: 'Desmarques em profundidade' }, { key: 'keyPasses', label: 'Passes-chave' }, { key: 'successfulPressures', label: 'Pressões bem-sucedidas' }];
+  }, [result.bestPosition.code]);
 
   const persist = (next: MatchValidationRecord[]) => {
     const safe = next.slice(0, 1000);
     setRecords(safe);
     writeAccountStorage(MATCH_VALIDATION_STORAGE_KEY, JSON.stringify(safe));
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated', { detail: { total: safe.length } }));
+    const profile = buildRealValidationV3760(result, safe).userLearning;
+    writeAccountStorage(REAL_VALIDATION_PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated', { detail: { total: safe.length, engineVersion: '37.60.0' } }));
   };
 
   const save = () => {
+    const testedOption = testedOptions.find((option) => option.key === effectiveTestedOptionKey) ?? testedOptions[0];
     const record = createMatchValidationRecord(result, {
       minutes: Math.max(1, Math.min(130, minutes)),
       overallRating,
@@ -96,7 +126,13 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
       connection,
       gameplayProfileId,
       secondHalfDrop,
-      metrics
+      metrics,
+      testedBuildId: testedOption?.buildId,
+      testedBuildTitle: testedOption?.buildTitle,
+      testedBoosterName: testedOption?.boosterName,
+      experimentArm: testedOption?.arm ?? 'NONE',
+      controlStyle,
+      inputDelayRating
     });
     persist([record, ...records]);
     setTags([]);
@@ -112,6 +148,7 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   };
 
   return <div className="result-section-grid match-validation-center">
+    <RealValidationV3760Panel analysis={realValidation} />
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker"><Target size={14}/> Validação em partidas</p><h3>Teste a ficha sem alterar a recomendação original</h3></div><span>{summary.totalMatches} partida(s)</span></div>
       <div className="health-score-grid match-summary-grid">
@@ -134,6 +171,9 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
         <label><span>Conexão</span><select value={connection} onChange={(event: ChangeEvent<HTMLSelectElement>) => setConnection(event.target.value as MatchConnectionState)}><option value="stable">Estável</option><option value="variable">Variável</option><option value="high_delay">Delay alto</option></select></label>
         <label><span>Perfil usado</span><select value={gameplayProfileId} onChange={(event: ChangeEvent<HTMLSelectElement>) => setGameplayProfileId(event.target.value)}>{(result.gameplayDna?.profiles ?? []).map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}{!result.gameplayDna?.profiles.length && <option value="MAIN">Ficha principal</option>}</select></label>
         <label className="match-minutes-field"><span>Minutos usados</span><input type="number" min={1} max={130} value={minutes} onChange={(event: ChangeEvent<HTMLInputElement>) => setMinutes(Number(event.target.value) || 1)}/></label>
+        <label><span>Opção do laboratório A/B</span><select value={effectiveTestedOptionKey} onChange={(event: ChangeEvent<HTMLSelectElement>) => setTestedOptionKey(event.target.value)}>{testedOptions.map((option) => <option key={option.key} value={option.key}>Opção {option.arm} • {option.buildTitle} • {option.boosterName}</option>)}</select></label>
+        <label><span>Estilo de controle</span><select value={controlStyle} onChange={(event: ChangeEvent<HTMLSelectElement>) => setControlStyle(event.target.value as ControlStyleV3760)}><option value="quick-pass">Toques e passes rápidos</option><option value="carry-dribble">Condução e drible</option><option value="mixed">Misto e adaptável</option><option value="manual-defense">Defesa e marcação manual</option></select></label>
+        <label><span>Delay percebido</span><select value={inputDelayRating} onChange={(event: ChangeEvent<HTMLSelectElement>) => setInputDelayRating(Number(event.target.value) as MatchValidationRating)}>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating} — {rating <= 2 ? 'baixo' : rating === 3 ? 'médio' : 'alto'}</option>)}</select></label>
       </div>
       <div className="match-rating-grid">
         <RatingField label="Avaliação geral" value={overallRating} onChange={setOverallRating}/>
@@ -154,6 +194,7 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
         <MetricField label="Perdas de bola" value={metrics.ballLosses} onChange={(value) => setMetrics((current) => ({ ...current, ballLosses: value }))}/>
         <MetricField label="Dribles concluídos" value={metrics.dribblesCompleted} onChange={(value) => setMetrics((current) => ({ ...current, dribblesCompleted: value }))}/>
         <MetricField label="Finalizações" value={metrics.shots} onChange={(value) => setMetrics((current) => ({ ...current, shots: value }))}/>
+        {positionMetricFields.map((field) => <MetricField key={field.key} label={field.label} value={Number(metrics[field.key] || 0)} onChange={(value) => setMetrics((current) => ({ ...current, [field.key]: value }))}/>)}
       </div>
       <label className="professional-second-half-toggle"><input type="checkbox" checked={secondHalfDrop} onChange={(event: ChangeEvent<HTMLInputElement>) => setSecondHalfDrop(event.target.checked)}/><span>O desempenho caiu claramente no segundo tempo</span></label>
       <div className="match-tag-picker"><span>O que aconteceu?</span><div>{MATCH_PROBLEM_TAGS.map((tag) => <button type="button" key={tag} className={tags.includes(tag) ? 'selected' : ''} onClick={() => setTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag])}>{tag}</button>)}</div></div>
@@ -162,6 +203,6 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
       {message && <p className="inline-status-message" role="status">{message}</p>}
     </article>
 
-    {currentRecords.length > 0 && <article className="luxury-panel wide-card"><div className="section-title-row"><div><p className="kicker"><History size={14}/> Histórico recente</p><h3>Últimas avaliações desta carta</h3></div><span>{currentRecords.length}</span></div><div className="match-history-list">{currentRecords.slice(0, 8).map((record) => <div key={record.id}><strong>{new Date(record.playedAt).toLocaleDateString('pt-BR')} • nota {record.overallRating}/5</strong><span>{record.minutes} min • {record.buildName}</span><small>{record.tags.join(' • ') || 'Sem ocorrência marcada'}</small>{record.note && <em>{record.note}</em>}</div>)}</div></article>}
+    {currentRecords.length > 0 && <article className="luxury-panel wide-card"><div className="section-title-row"><div><p className="kicker"><History size={14}/> Histórico recente</p><h3>Últimas avaliações desta carta</h3></div><span>{currentRecords.length}</span></div><div className="match-history-list">{currentRecords.slice(0, 8).map((record) => <div key={record.id}><strong>{new Date(record.playedAt).toLocaleDateString('pt-BR')} • nota {record.overallRating}/5</strong><span>{record.minutes} min • {record.testedBuildTitle || record.buildName}{record.experimentArm && record.experimentArm !== 'NONE' ? ` • Opção ${record.experimentArm}` : ''}</span><small>{record.testedBoosterName ? `${record.testedBoosterName} • ` : ''}{record.tags.join(' • ') || 'Sem ocorrência marcada'}</small>{record.note && <em>{record.note}</em>}</div>)}</div></article>}
   </div>;
 }

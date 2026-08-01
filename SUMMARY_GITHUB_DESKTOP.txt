@@ -1,1 +1,1 @@
-v37.32 — corrige partes brancas e melhora o contraste global do app no tema escuro
+v37.70 — adiciona atualização contínua com pacote remoto, histórico, catálogo dinâmico, alertas e auditoria de confiança

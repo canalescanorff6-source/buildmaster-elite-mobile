@@ -22,7 +22,7 @@ function uniqueBySkill<T extends { name: string }>(items: T[]) {
 }
 
 function removedFromCurrent(result: AnalysisResult) {
-  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
   const removed: string[] = [];
   const seen = new Set<string>();
   for (const raw of result.recommendedSkills) {
@@ -69,9 +69,10 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
     candidates,
     result.parsed.nativeSkills,
     result.parsed.specialSkills,
-    5
+    5,
+    result.parsed.additionalSkills ?? []
   );
-  const ownedKeys = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
+  const ownedKeys = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
   const recommendedKeys = new Set(recommendedSkills.map(skillIdentityKey));
   const removedDuplicates = removedFromCurrent(result);
   const recommendedItems = recommendedSkills.map((skill) => recommendationFor(skill, rebuilt, result.skillRecommendations));
@@ -82,7 +83,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
   const finalUnifiedPlan = recommendedSkills
     .map((skill) => rebuiltMap.get(skillIdentityKey(skill)))
     .filter((item): item is UnifiedSkillDecision => Boolean(item));
-  const ownedSkills = canonicalizeSkillList([...result.parsed.nativeSkills, ...result.parsed.specialSkills]);
+  const ownedSkills = canonicalizeSkillList([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills]);
   const officialOnly = recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
   const noOwnedDuplicates = recommendedSkills.every((skill) => !ownedKeys.has(skillIdentityKey(skill)));
   const unique = new Set(recommendedSkills.map(skillIdentityKey)).size === recommendedSkills.length;

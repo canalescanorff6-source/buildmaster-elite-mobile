@@ -226,6 +226,7 @@ export type ParsedCard = {
   condition: PlayerCondition;
   impetos: Impetus[];
   nativeSkills: string[];
+  additionalSkills?: string[];
   specialSkills: string[];
   attributes: Attributes;
   physicalProfile: PhysicalProfile;
@@ -236,6 +237,10 @@ export type ParsedCard = {
     attributeCount: number;
     positionRatingsCount: number;
     localRuleMatched?: string | null;
+    skillSource?: 'explicit' | 'visible_block' | 'scan' | 'none';
+    skillConfidence?: number;
+    additionalSkillCount?: number;
+    specialSkillCount?: number;
   };
   internalId: string;
   confidence: number;
@@ -748,6 +753,168 @@ export type SupremeGameplayAnalysis = {
   summary: string;
 };
 
+
+export type StructuralFieldKey =
+  | 'playerName'
+  | 'cardType'
+  | 'mainPosition'
+  | 'playstyle'
+  | 'level'
+  | 'trainingPoints'
+  | 'attributes'
+  | 'nativeSkills'
+  | 'additionalSkills'
+  | 'specialSkills'
+  | 'impetos';
+
+export type StructuralFieldConfidence = {
+  key: StructuralFieldKey;
+  label: string;
+  value: string;
+  confidence: number;
+  status: 'confirmed' | 'review' | 'blocked';
+  source: 'manual' | 'ocr' | 'canonical' | 'inferred' | 'fallback';
+  critical: boolean;
+  reason: string;
+};
+
+export type StructuralSkillInventory = {
+  native: string[];
+  additional: string[];
+  special: string[];
+  duplicatesRemoved: string[];
+  slotsUsed: number;
+  slotsRemaining: number;
+  source: 'explicit' | 'visible_block' | 'scan' | 'none';
+  confidence: number;
+};
+
+export type StructuralPointAudit = {
+  budget: number;
+  actualCost: number;
+  remaining: number;
+  exact: boolean;
+  source: ParsedCard['trainingPointSource'];
+  sourceConfidence: number;
+  costByGroup: TrainingPlan;
+  invalidGroups: string[];
+  signature: string;
+};
+
+export type CanonicalCardIdentity = {
+  canonicalId: string;
+  fingerprint: string;
+  versionKey: string;
+  matchStatus: 'confirmed' | 'probable' | 'uncertain';
+  confidence: number;
+  evidence: string[];
+};
+
+export type StructuralPrecisionAnalysis = {
+  engineVersion: '37.40.0';
+  canonical: CanonicalCardIdentity;
+  fields: StructuralFieldConfidence[];
+  overallConfidence: number;
+  criticalConfidence: number;
+  decision: 'approved' | 'review' | 'blocked';
+  blocked: boolean;
+  blockReasons: string[];
+  skillInventory: StructuralSkillInventory;
+  pointAudit: StructuralPointAudit;
+  regressionKey: string;
+  safeguards: string[];
+};
+
+
+
+export type AdvancedRoleOptimization = {
+  roleId: string;
+  roleLabel: string;
+  position: PositionCode;
+  functionScore: number;
+  weights: Partial<Record<TrainingKey, number>>;
+  primaryGroups: TrainingKey[];
+  protectedGroups: TrainingKey[];
+  correctionGroups: TrainingKey[];
+  reasons: string[];
+};
+
+export type AdvancedBuildAlternative = {
+  id: string;
+  title: string;
+  strategy: 'recomendada' | 'função' | 'identidade' | 'equilíbrio' | 'robustez';
+  training: TrainingPlan;
+  pointsUsed: number;
+  exactBudget: boolean;
+  roleFit: number;
+  efficiency: number;
+  balance: number;
+  overallScore: number;
+  strengths: string[];
+  tradeOffs: string[];
+};
+
+export type SkillGraphNode = {
+  id: string;
+  name: string;
+  category: UnifiedSkillDecision['category'];
+  score: number;
+  appearsInSets: number;
+  essentialForRole: boolean;
+};
+
+export type SkillGraphEdge = {
+  from: string;
+  to: string;
+  relation: 'complemento' | 'redundância' | 'conflito';
+  weight: number;
+  reason: string;
+};
+
+export type SkillSetComparison = {
+  id: string;
+  title: string;
+  linkedBuildId: string;
+  skills: string[];
+  decisions: UnifiedSkillDecision[];
+  coverageScore: number;
+  synergyScore: number;
+  roleFit: number;
+  redundancyPenalty: number;
+  overallScore: number;
+  reasons: string[];
+  warnings: string[];
+};
+
+export type JointBuildBoosterOption = {
+  rank: number;
+  buildId: string;
+  buildTitle: string;
+  boosterName: string;
+  boosterTier: ImpetoRecommendation['tier'];
+  training: TrainingPlan;
+  skills: string[];
+  buildScore: number;
+  skillSetScore: number;
+  boosterScore: number;
+  boosterSynergy: number;
+  saturationPenalty: number;
+  overallScore: number;
+  reason: string;
+};
+
+export type AdvancedMotorV3750Analysis = {
+  engineVersion: '37.50.0';
+  role: AdvancedRoleOptimization;
+  alternatives: AdvancedBuildAlternative[];
+  skillGraph: { nodes: SkillGraphNode[]; edges: SkillGraphEdge[] };
+  skillSets: SkillSetComparison[];
+  jointOptions: JointBuildBoosterOption[];
+  winner: JointBuildBoosterOption;
+  confidence: number;
+  safeguards: string[];
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -803,6 +970,8 @@ export type AnalysisResult = {
   calibrationV32?: CalibrationV32Analysis;
   positionBuildComparison?: PositionBuildComparison;
   gameplayDna?: GameplayDnaAnalysis;
+  structuralPrecision?: StructuralPrecisionAnalysis;
+  advancedMotorV3750?: AdvancedMotorV3750Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

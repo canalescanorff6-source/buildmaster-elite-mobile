@@ -80,6 +80,9 @@ import { useObservabilityFeatureFlag } from '@/modules/observability/useObservab
 import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
 import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';
+import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
+import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
+import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
 import {
   CommunityIntelligencePanel,
@@ -140,7 +143,7 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
   PASSE_LONGO: 'Passe longo'
 };
 
-export type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
+export type ResultTab = 'motor' | 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 
 export type ResultPrimaryView = 'resumo' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
 
@@ -156,8 +159,8 @@ const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: s
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
-  { label: 'Desenvolvimento', tabs: [{ value: 'partidas', label: 'Validação real' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
+  { label: 'Desenvolvimento', tabs: [{ value: 'motor', label: 'Motor v37.50' }, { value: 'partidas', label: 'Validação v37.60' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
+  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Atualização v37.70' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
 ];
 
 function skillReason(skill: string) {
@@ -354,7 +357,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const communityEnabled = useObservabilityFeatureFlag('community');
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -376,7 +379,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const pointPercent = Math.min(100, Math.round((result.trainingPointsUsed / Math.max(1, result.trainingPointsTotal)) * 100));
   const positionItems = result.positionScores.slice(0, 8);
   const cardPositions = Array.from(new Set([card.mainPosition, ...card.positions])).slice(0, 10);
-  const nativeSkills = canonicalizeSkillList([...card.nativeSkills, ...card.specialSkills]).slice(0, 12);
+  const nativeSkills = canonicalizeSkillList([...card.nativeSkills, ...(card.additionalSkills ?? []), ...card.specialSkills]).slice(0, 12);
   const skillRecommendations = result.skillRecommendations ?? result.recommendedSkills.map((skill) => ({ name: skill, tier: 'alternativa' as const, reason: skillReason(skill) }));
   const recommendedSkills = result.recommendedSkills.slice(0, 5);
   const avoidSkillItems = skillRecommendations.filter((item) => item.tier === 'evitar').slice(0, 5);
@@ -494,7 +497,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           </div>
 
           <div className="result-hero-actions">
-            <button className="result-action-primary" type="button" onClick={onSaveFicha}><Save size={17} /> Salvar ficha</button>
+            <button className="result-action-primary" type="button" onClick={onSaveFicha} disabled={!result.validation.canGenerate} title={!result.validation.canGenerate ? 'Confirme os campos estruturais bloqueados antes de salvar.' : undefined}><Save size={17} /> {result.validation.canGenerate ? 'Salvar ficha' : 'Ficha bloqueada'}</button>
             <button type="button" onClick={onRecalculate}><RotateCcw size={17} /> Recalcular</button>
             <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
           </div>
@@ -604,6 +607,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="kicker">Por que os pontos foram usados assim</p>
             <ul className="clean-list">{result.deepAnalysis.pointRationale.map((item) => <li key={item}>{item}</li>)}</ul>
           </article>
+          <StructuralPrecisionPanel result={result} />
           <VerifiedCardRegistryPanel result={result} />
         </div>
       )}
@@ -868,6 +872,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           </article>
         </div>
       )}
+
+      {tab === 'motor' && <AdvancedMotorV3750Panel result={result} />}
 
       {tab === 'ficha' && (
         <div className="result-section-grid">
@@ -1484,76 +1490,17 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
 
-      {tab === 'regras' && (
-        <div className="result-section-grid">
-          <article className="luxury-panel wide-card correction-hero-card">
-            <div className="section-title-row">
-              <div>
-                <p className="kicker"><BrainCircuit size={14} /> Regras atualizáveis sem refazer APK</p>
-                <h3>Atualize habilidade, ímpeto e bloqueios por função usando um JSON online.</h3>
-              </div>
-              <span>Ficha técnica</span>
-            </div>
-            <p className="panel-note">Essa área permite ajustar recomendações depois que o APK já estiver instalado. Você hospeda um arquivo JSON público, cola a URL e toca em atualizar. O app salva o pacote no aparelho e aplica nas próximas fichas.</p>
-            <div className="input-row">
-              <label>
-                URL do pacote de regras
-                <input value={rulesUrl} onChange={(event) => setRulesUrl(event.target.value)} placeholder="https://seusite.com/buildmaster-regras.json" />
-              </label>
-            </div>
-            <div className="export-pro-actions">
-              <button type="button" onClick={onLoadRulesFromUrl}><UploadCloud size={18} /> Atualizar regras</button>
-              <button type="button" onClick={onResetRules}><RotateCcw size={18} /> Restaurar pacote local</button>
-              <button type="button" onClick={onExportRulePack}><Download size={18} /> Exportar modelo JSON</button>
-            </div>
-            <p className="panel-note">{rulesStatus}</p>
-          </article>
-
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Pacote ativo</p>
-            <div className="correction-summary-grid">
-              <div><span>Versão</span><strong>{rulePackInfo.version}</strong></div>
-              <div><span>Regras</span><strong>{rulePackInfo.rules.length}</strong></div>
-              <div><span>Fonte</span><strong>{rulePackInfo.source}</strong></div>
-              <div><span>Atualizado</span><strong>{new Date(rulePackInfo.updatedAt).toLocaleDateString('pt-BR')}</strong></div>
-            </div>
-          </article>
-
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Regras ativas principais</p>
-            <div className="upgrade-checklist-grid">
-              {rulePackInfo.rules.slice(0, 12).map((rule) => (
-                <div key={rule.id} className="upgrade-chip status-ativo">
-                  <span>{rule.id}</span>
-                  <strong>{rule.title}</strong>
-                  <em>{rule.note ?? 'Regra dinâmica aplicada quando posição/estilo/função combinarem.'}</em>
-                </div>
-              ))}
-            </div>
-            <p className="panel-note">Use isso para corrigir rapidamente casos como CA recebendo habilidade defensiva, goleiro recebendo habilidade de linha, VOL orquestrador recebendo ficha de destruidor puro ou lateral ofensivo sem prioridade de corredor.</p>
-          </article>
-
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Formato do JSON</p>
-            <pre className="raw-text-box">{`{
-  "version": "minhas-regras-1",
-  "updatedAt": "2026-07-12T00:00:00.000Z",
-  "source": "Meu pacote online",
-  "rules": [
-    {
-      "id": "ca-finalizador",
-      "title": "CA finalizador",
-      "match": { "position": "CF", "playstyleIncludes": ["artilheiro"] },
-      "promoteSkills": ["Chute de primeira", "Precisão à distância"],
-      "blockSkills": ["Volta para marcar", "Interceptação"],
-      "promoteImpetos": ["Chute", "Instinto artilheiro"],
-      "note": "Foco total em finalização."
-    }
-  ]
-}`}</pre>
-          </article>
-        </div>
-      )}
+      {tab === 'regras' && <ContinuousUpdateV3770Panel
+        result={result}
+        rulesUrl={rulesUrl}
+        setRulesUrl={setRulesUrl}
+        rulesStatus={rulesStatus}
+        rulePackInfo={rulePackInfo}
+        onLoadRulesFromUrl={onLoadRulesFromUrl}
+        onResetRules={onResetRules}
+        onExportRulePack={onExportRulePack}
+        onRestoreRulePackVersion={onRestoreRulePackVersion}
+      />}
 
       {tab === 'validacao' && (
         <div className="result-section-grid">
@@ -1751,7 +1698,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
       <div className="result-floating-actions result-clean-actions">
-        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar</button>
+        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha} disabled={!result.validation.canGenerate} title={!result.validation.canGenerate ? 'Confirme os campos estruturais bloqueados antes de salvar.' : undefined}><Save size={16} /> {result.validation.canGenerate ? 'Salvar' : 'Bloqueada'}</button>
         <button className="copy-floating" type="button" onClick={onRecalculate}><RotateCcw size={16} /> Recalcular</button>
         <button className="copy-floating" type="button" onClick={() => void shareCurrentResult()}><Share2 size={16} /> Compartilhar</button>
       </div>

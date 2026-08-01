@@ -366,7 +366,7 @@ function targetWeights(result: AnalysisResult, mode: GameplayMode) {
   addWeights(style, attributeDnaWeights(result), 1.15);
   addWeights(control, CONTROL_WEIGHTS[result.tacticalProfile.controlProfile ?? 'BALANCED']);
   addWeights(connection, CONNECTION_WEIGHTS[result.tacticalProfile.connectionProfile ?? 'VARIABLE']);
-  addWeights(skill, keywordWeights([...result.parsed.nativeSkills, ...result.parsed.specialSkills, ...result.recommendedSkills]));
+  addWeights(skill, keywordWeights([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills, ...result.recommendedSkills]));
   addWeights(impeto, keywordWeights(result.recommendedImpetos.slice(0, 3).flatMap((item) => [item.name, ...item.attributes, item.reason])));
 
   addWeights(target, role, 1);
@@ -472,7 +472,7 @@ function scorePlan(result: AnalysisResult, plan: TrainingPlan, maps: Calibration
   const controlFit = distributionFit(plan, maps.control, keys);
   const connectionRobustness = distributionFit(plan, maps.connection, keys);
   const efficiency = pointEfficiency(result, plan, maps.target);
-  const skillSynergy = [...result.parsed.nativeSkills, ...result.parsed.specialSkills, ...result.recommendedSkills].length ? distributionFit(plan, maps.skill, keys) : 70;
+  const skillSynergy = [...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills, ...result.recommendedSkills].length ? distributionFit(plan, maps.skill, keys) : 70;
   const impetoSynergy = result.recommendedImpetos.length ? distributionFit(plan, maps.impeto, keys) : 68;
   const waste = antiOverallWaste(result, plan, maps.target);
   const crossModeStability = crossModePlanScore(result, plan, allMaps);
@@ -795,7 +795,7 @@ function profileAttributeScore(result: AnalysisResult, id: GameplayDnaProfileId)
 }
 
 function profileSkillAffinity(result: AnalysisResult, definition: DnaProfileDefinition) {
-  const owned = normalizeText([...result.parsed.nativeSkills, ...result.parsed.specialSkills].join(' '));
+  const owned = normalizeText([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills].join(' '));
   const signals: Partial<Record<GameplayDnaProfileId, RegExp>> = {
     DRIBBLER: /toque duplo|controle com a sola|giro 360|elastico|finta|pedalada|chapeu/,
     CREATOR: /passe de primeira|passe em profundidade|passe na medida|passe sem olhar|calcanhar/,

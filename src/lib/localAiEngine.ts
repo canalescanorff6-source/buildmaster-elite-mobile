@@ -117,7 +117,7 @@ function keywordSynergy(text: string, profile: ImpetoProfile) {
 }
 
 function skillSynergy(result: AnalysisResult, profile: ImpetoProfile) {
-  const skillText = [...result.parsed.nativeSkills, ...result.parsed.specialSkills, ...result.recommendedSkills].join(' ').toLowerCase();
+  const skillText = [...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills, ...result.recommendedSkills].join(' ').toLowerCase();
   let matches = 0;
   for (const domain of profile.domains) {
     if (DOMAIN_SKILL_WORDS[domain].some((word) => skillText.includes(word))) matches += 1;

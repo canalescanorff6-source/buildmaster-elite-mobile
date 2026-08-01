@@ -47,6 +47,12 @@ export type CardRegistryEntry = {
   confirmedAt: string;
   updatedAt: string;
   note: string;
+  canonicalId?: string;
+  canonicalVersionKey?: string;
+  structuralConfidence?: number;
+  fieldConfidence?: Array<{ key: string; confidence: number; status: string }>;
+  additionalSkills?: string[];
+  specialSkills?: string[];
 };
 
 export type MatchValidationRating = 1 | 2 | 3 | 4 | 5;
@@ -62,6 +68,18 @@ export type MatchPerformanceMetrics = {
   ballLosses: number;
   dribblesCompleted: number;
   shots: number;
+  saves?: number;
+  goalsConceded?: number;
+  clearances?: number;
+  blocks?: number;
+  aerialDuelsWon?: number;
+  duelsWon?: number;
+  recoveries?: number;
+  progressivePasses?: number;
+  keyPasses?: number;
+  shotsOnTarget?: number;
+  runsBehind?: number;
+  successfulPressures?: number;
 };
 
 export type MatchValidationRecord = {
@@ -89,6 +107,12 @@ export type MatchValidationRecord = {
   gameplayProfileId?: string;
   secondHalfDrop?: boolean;
   metrics?: MatchPerformanceMetrics;
+  testedBuildId?: string;
+  testedBuildTitle?: string;
+  testedBoosterName?: string;
+  experimentArm?: 'A' | 'B' | 'NONE';
+  controlStyle?: 'quick-pass' | 'carry-dribble' | 'mixed' | 'manual-defense';
+  inputDelayRating?: 1 | 2 | 3 | 4 | 5;
 };
 
 export type MatchValidationSummary = {
@@ -147,7 +171,9 @@ export function cardFingerprint(result: AnalysisResult) {
     result.parsed.level ?? 0,
     result.trainingPointsTotal,
     roundedAttributes(result),
-    [...result.parsed.nativeSkills].map(normalize).sort().join(',')
+    [...result.parsed.nativeSkills].map(normalize).sort().join(','),
+    [...(result.parsed.additionalSkills ?? [])].map(normalize).sort().join(','),
+    [...result.parsed.specialSkills].map(normalize).sort().join(',')
   ].join('::');
   return `card-${stableHash(payload)}`;
 }
@@ -163,8 +189,9 @@ export function buildSignature(result: AnalysisResult) {
 export function createCardRegistryEntry(result: AnalysisResult, source: CardRegistrySource, note = '', metadata: { sourceLabel?: string; sourceUrl?: string; cardVersion?: string; observedAt?: string } = {}): CardRegistryEntry {
   const now = new Date().toISOString();
   const fingerprint = cardFingerprint(result);
+  const registryId = result.structuralPrecision?.canonical.canonicalId ?? fingerprint;
   return {
-    id: fingerprint,
+    id: registryId,
     fingerprint,
     playerName: result.parsed.playerName,
     mainPosition: result.parsed.mainPositionPt,
@@ -173,6 +200,8 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
     level: Number.isFinite(result.parsed.level) ? Number(result.parsed.level) : null,
     points: result.trainingPointsTotal,
     nativeSkills: [...result.parsed.nativeSkills],
+    additionalSkills: [...(result.parsed.additionalSkills ?? [])],
+    specialSkills: [...result.parsed.specialSkills],
     attributeSignature: roundedAttributes(result),
     source,
     sourceLabel: metadata.sourceLabel?.trim() || (source === 'official_source' ? 'Fonte oficial informada pelo usuário' : source === 'print' ? 'Print revisado' : source === 'manual' ? 'Preenchimento manual' : 'Registro importado'),
@@ -182,13 +211,19 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
     status: result.parsed.confidence >= 85 && result.validation.level !== 'blocked' ? 'confirmed' : 'review',
     confirmedAt: now,
     updatedAt: now,
-    note: note.trim()
+    note: note.trim(),
+    canonicalId: result.structuralPrecision?.canonical.canonicalId,
+    canonicalVersionKey: result.structuralPrecision?.canonical.versionKey,
+    structuralConfidence: result.structuralPrecision?.criticalConfidence,
+    fieldConfidence: result.structuralPrecision?.fields.map((item) => ({ key: item.key, confidence: item.confidence, status: item.status }))
   };
 }
 
 export function compareRegistryEntry(entry: CardRegistryEntry, result: AnalysisResult) {
   const differences: string[] = [];
-  if (entry.fingerprint !== cardFingerprint(result)) differences.push('Os atributos, nível, pontos ou habilidades mudaram em relação ao registro salvo.');
+  if (entry.canonicalId && result.structuralPrecision?.canonical.canonicalId) {
+    if (entry.canonicalId !== result.structuralPrecision.canonical.canonicalId) differences.push('A identidade canônica desta versão não coincide com o registro salvo.');
+  } else if (entry.fingerprint !== cardFingerprint(result)) differences.push('Os atributos, nível, pontos ou habilidades mudaram em relação ao registro salvo.');
   if (normalize(entry.playstyle) !== normalize(result.parsed.playstyle || 'Não informado')) differences.push('O estilo de jogo atual difere do registro salvo.');
   if (entry.mainPosition !== result.parsed.mainPositionPt) differences.push('A posição original atual difere do registro salvo.');
   return {
