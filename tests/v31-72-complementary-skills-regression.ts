@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { analyzeCard } from '../src/lib/analyzer';
 import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeline';
 import { canonicalSkillName, skillIdentityKey } from '../src/lib/officialSkillIdentity';
-import { isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from '../src/lib/skillIntelligenceV31';
+import { availableOfficialAdditionalSkillCount, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from '../src/lib/skillIntelligenceV31';
 
 const tacticalProfile = {
   formation: '4-3-1-2' as const,
@@ -38,7 +38,8 @@ for (const card of cards) {
   for (const expected of card.expectedOwned) {
     assert.ok(ownedKeys.has(skillIdentityKey(expected)), `${card.target}: alias deveria virar ${expected}.`);
   }
-  assert.equal(result.recommendedSkills.length, 5, `${card.target}: deve entregar exatamente cinco habilidades adicionais.`);
+  const expectedCount = Math.min(5, availableOfficialAdditionalSkillCount(result));
+  assert.equal(result.recommendedSkills.length, expectedCount, `${card.target}: deve entregar todas as habilidades oficiais restantes, até o limite de cinco.`);
   assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, result.recommendedSkills.length, `${card.target}: Top 5 não pode repetir internamente.`);
   assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, resolveAdditionalSkillPosition(result))), `${card.target}: todas as cinco habilidades devem ser compatíveis com a função.`);
   assert.ok(result.recommendedSkills.every((skill) => !ownedKeys.has(skillIdentityKey(skill))), `${card.target}: recomendação não pode repetir habilidade existente.`);
@@ -71,7 +72,8 @@ for (const [target, playstyle, ownedAlias] of everyPosition) {
   const text = `[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: Teste ${target}\nPOSIÇÃO PRINCIPAL: ${target}\nESTILO DE JOGO: ${playstyle}\nPONTOS TOTAIS: 64\nHABILIDADES JÁ POSSUI: ${ownedAlias}\nTalento ofensivo: 84\nControle de bola: 84\nDrible: 82\nCondução firme: 82\nPasse rasteiro: 84\nPasse alto: 84\nFinalização: 84\nCabeçada: 82\nVelocidade: 84\nAceleração: 84\nForça do chute: 84\nSalto: 82\nContato físico: 84\nEquilíbrio: 83\nResistência: 86\nTalento defensivo: 84\nDedicação defensiva: 84\nDesarme: 84\nAgressividade: 84\nTalento de GO: 88\nFirmeza de GO: 86\nDefesa de GO: 87\nReflexos de GO: 89\nAlcance de GO: 88\n[FIM AJUSTES]`;
   const result = applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE', target, `${target}-all.png`, tacticalProfile));
   const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
-  assert.equal(result.recommendedSkills.length, 5, `${target}: toda posição precisa receber exatamente cinco habilidades adicionais.`);
+  const expectedCount = Math.min(5, availableOfficialAdditionalSkillCount(result));
+  assert.equal(result.recommendedSkills.length, expectedCount, `${target}: deve receber todas as opções oficiais restantes, até cinco.`);
   assert.ok(result.recommendedSkills.every((skill) => !owned.has(skillIdentityKey(skill))), `${target}: nenhuma posição pode repetir habilidade existente.`);
   assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, resolveAdditionalSkillPosition(result))), `${target}: nenhuma habilidade pode sair do pool seguro da posição.`);
   assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, result.recommendedSkills.length, `${target}: nenhuma posição pode repetir dentro do Top 5.`);

@@ -1,6 +1,6 @@
 import type { AnalysisResult, SkillRecommendation, UnifiedSkillDecision } from './analyzerDomain';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
-import { buildPersonalizedSkillPlan, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from './skillIntelligenceV31';
+import { availableOfficialAdditionalSkillCount, buildPersonalizedSkillPlan, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from './skillIntelligenceV31';
 import {
   buildOwnedSkillKeys,
   canonicalizeSkillList,
@@ -9,7 +9,7 @@ import {
   skillIdentityKey
 } from './officialSkillIdentity';
 
-const VERSION = '31.80-authoritative-plan-exact-five-1';
+const VERSION = '35.00-official-photo-catalog-exact-five-1';
 
 function uniqueBySkill<T extends { name: string }>(items: T[]) {
   const seen = new Set<string>();
@@ -61,7 +61,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
   // posição, estilo da carta, atributos, ficha e habilidades possuídas.
   // Recomendações antigas não podem reintroduzir habilidade de atacante em
   // goleiro ou habilidade ofensiva inadequada em zagueiro.
-  // Somente o plano v31.80 é autoritativo. Listas de versões anteriores
+  // Somente o plano oficial v35.00 é autoritativo. Listas de versões anteriores
   // não podem completar vagas porque eram justamente a origem de habilidades
   // ofensivas em goleiros/zagueiros e de entregas com menos de cinco opções.
   const candidates = rebuilt.map((item) => item.name);
@@ -87,21 +87,27 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
   const noOwnedDuplicates = recommendedSkills.every((skill) => !ownedKeys.has(skillIdentityKey(skill)));
   const unique = new Set(recommendedSkills.map(skillIdentityKey)).size === recommendedSkills.length;
   const exactFive = recommendedSkills.length === 5;
+  const availableOfficialCount = availableOfficialAdditionalSkillCount(result);
+  const expectedSlots = Math.min(5, availableOfficialCount);
+  // Para jogadores de linha o catálogo possui folga e o resultado normal é 5/5.
+  // Se um goleiro já possuir quase todo o catálogo próprio, o app entrega todas
+  // as opções oficiais restantes em vez de inventar ou repetir uma quinta habilidade.
+  const completeSelection = exactFive || recommendedSkills.length === expectedSlots;
   const roleCompatible = recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition));
   const sourceConfirmed = ownedSkills.length > 0;
-  const status = officialOnly && noOwnedDuplicates && unique && exactFive && roleCompatible && sourceConfirmed && result.validation.level !== 'blocked' ? 'approved' as const : 'review' as const;
+  const status = officialOnly && noOwnedDuplicates && unique && completeSelection && roleCompatible && sourceConfirmed && result.validation.level !== 'blocked' ? 'approved' as const : 'review' as const;
   const skillIntegrity = {
     version: VERSION,
     status,
     ownedSkills,
     recommendedSkills,
     removedDuplicates,
-    missingSlots: Math.max(0, 5 - recommendedSkills.length),
+    missingSlots: Math.max(0, expectedSlots - recommendedSkills.length),
     checks: [
       officialOnly ? 'Somente nomes oficiais entraram no Top 5.' : 'Existe nome fora do catálogo oficial e a ficha precisa de revisão.',
       noOwnedDuplicates ? 'Nenhuma recomendação repete habilidade já detectada na carta.' : 'Foi encontrada sobreposição com habilidade existente.',
       unique ? 'O Top 5 não possui repetições internas.' : 'O Top 5 possui repetição interna.',
-      exactFive ? 'Exatamente cinco habilidades adicionais foram entregues.' : `Foram entregues ${recommendedSkills.length}/5 habilidades; revise a lista de habilidades já possuídas.`,
+      exactFive ? 'Exatamente cinco habilidades adicionais foram entregues.' : completeSelection ? `Foram entregues todas as ${expectedSlots} habilidades oficiais restantes compatíveis; nenhuma opção foi inventada ou repetida.` : `Foram entregues ${recommendedSkills.length}/${expectedSlots} habilidades oficiais disponíveis; revise a lista de habilidades já possuídas.`,
       roleCompatible ? `Todas as habilidades são compatíveis com a função travada ${rolePosition}.` : 'Existe habilidade incompatível com a função do jogador.',
       sourceConfirmed ? `${ownedSkills.length} habilidade(s) existente(s) foram usadas no filtro antirrepetição.` : 'A lista de habilidades existentes não foi confirmada; revise o print antes de aplicar.',
       'Habilidades adicionais e Ímpetos foram avaliados em trilhas separadas.'
@@ -142,7 +148,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
     officialOnly,
     context: [
       ...result.skillPriority.context.filter((item) => !/habilidades j[aá] existentes foram removidas/i.test(item)),
-      'Filtro v31.80: apenas habilidades oficiais confirmadas contam como existentes; textos estranhos do OCR são rejeitados.'
+      'Filtro v35.00: apenas habilidades oficiais confirmadas contam como existentes; textos estranhos do OCR são rejeitados.'
     ]
   };
 
@@ -158,7 +164,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       ...result.unifiedIntelligence,
       skillPlan: finalUnifiedPlan,
       safeguards: [
-        'Filtro v31.80 antirrepetição, posição escolhida e estilo oficial aplicados depois de todos os motores.',
+        'Filtro v35.00 antirrepetição, posição escolhida e estilo oficial aplicados depois de todos os motores.',
         ...result.unifiedIntelligence.safeguards
       ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 10)
     } : result.unifiedIntelligence,
@@ -174,7 +180,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       })
     } : result.deepCardIntelligence,
     recommendationExplanation: [
-      `Integridade das habilidades: ${recommendedSkills.length}/5 opções compatíveis com ${rolePosition}, sem repetir as ${ownedSkills.length} habilidade(s) confirmada(s).`,
+      `Integridade das habilidades: ${recommendedSkills.length}/${expectedSlots} opção(ões) oficiais disponível(is) para ${rolePosition}, sem repetir as ${ownedSkills.length} habilidade(s) confirmada(s).`,
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 12)
   };

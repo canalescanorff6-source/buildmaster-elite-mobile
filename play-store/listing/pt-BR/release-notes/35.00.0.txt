@@ -1,0 +1,8 @@
+Habilidades adicionais oficiais e ficha universal
+
+• remove nomes inexistentes das habilidades adicionais
+• salva no APK o catálogo oficial enviado pelo usuário
+• escolhe cinco habilidades por posição, estilo da carta e estilo do técnico
+• impede repetição de habilidades nativas ou especiais
+• melhora a ficha pelo DNA real da carta, sem perseguir overall
+• torna a ficha independente da formação escolhida

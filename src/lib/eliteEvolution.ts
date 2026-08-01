@@ -511,12 +511,12 @@ export function buildEliteEvolutionAnalysis(args:{
     matchesPerBuild:3,
     metrics:['nota pessoal','passes errados','cansaço','duelos vencidos','ações decisivas','aproveitamento da habilidade especial'],
     successRule:'A ficha vence quando supera a outra em pelo menos 3 métricas e não cria uma fraqueza crítica repetida.',
-    safeguards:['usar a mesma posição','manter técnico e formação','jogar contra nível semelhante','não concluir com apenas uma partida']
+    safeguards:['usar a mesma posição','manter o mesmo estilo coletivo do técnico','jogar contra nível semelhante','não concluir com apenas uma partida']
   };
   const learning:CardLearningIdentity={
-    key:`${parsed.playerName}|${versionSignature}|${position}|${tacticalProfile.managerId??'sem-tecnico'}|${tacticalProfile.formation}`,
+    key:`${parsed.playerName}|${versionSignature}|${position}|${tacticalProfile.managerId??'sem-tecnico'}|${tacticalProfile.style}`,
     versionSignature,
-    separatedBy:['jogador','versão da carta','posição escolhida','técnico','formação','ficha usada'],
+    separatedBy:['jogador','versão da carta','posição escolhida','técnico','estilo coletivo','ficha usada'],
     correctionProposal:pointSensitivity[0]?.expectedDelta>0?pointSensitivity[0].verdict:'Nenhuma troca de ponto mostrou ganho seguro nesta análise.',
     confirmationRequired:true
   };

@@ -1,1 +1,1 @@
-v34.00 — corrige menu móvel e contrastes, adiciona nova logo, sete temas e foto de perfil persistente
+v35.20 — adiciona três Perfis de Gameplay por carta e substitui transparências por tema sólido

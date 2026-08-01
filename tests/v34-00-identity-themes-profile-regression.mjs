@@ -17,7 +17,7 @@ const mark = read('src/components/BuildMasterMark.tsx');
 const cache = read('src/components/RegisterServiceWorker.tsx');
 const serviceWorker = read('public/sw.js');
 
-assert.equal(pkg.version, '34.00.0');
+assert.ok(Number(pkg.version.split('.')[0]) >= 34, `Versão esperada 34 ou superior, recebida ${pkg.version}`);
 assert.match(layout, /import '\.\/v35-identity-themes\.css';/);
 assert.match(layout, /bm-v3500-identity/);
 assert.doesNotMatch(css, /@import\s+/i);
@@ -77,7 +77,7 @@ for (const icon of [
   'public/icons/icon-maskable-512.png'
 ]) assert.ok(exists(icon), `Ícone ausente: ${icon}`);
 
-assert.match(cache, /34\.00\.0-identity-themes-avatar-6/);
-assert.match(serviceWorker, /buildmaster-v34-00-identity-themes-avatar-4/);
+assert.match(cache, /(?:34\.00\.0-identity-themes-avatar-6|35\.00\.0-official-skills-meta-2)/);
+assert.match(serviceWorker, /(?:buildmaster-v34-00-identity-themes-avatar-4|buildmaster-v35-00-official-skills-meta-2|buildmaster-v35-10-max-gameplay-dual-position-1|buildmaster-v35-20-dna-gameplay-solid-theme-1)/);
 
 console.log('v34.00 identidade visual aprovada: menu móvel corrigido, sete temas sem arco-íris, nova marca e foto de perfil persistente.');

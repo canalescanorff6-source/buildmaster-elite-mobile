@@ -51,9 +51,9 @@ function reading(label: string, text: string, confidence = 94): PremiumZoneReadi
   };
 }
 
-assert.equal(OFFICIAL_ADDITIONAL_SKILL_NAMES.length, 45, 'O catálogo treinável deve preservar as 45 habilidades regulares.');
+assert.equal(OFFICIAL_ADDITIONAL_SKILL_NAMES.length, 44, 'O catálogo treinável deve preservar as 44 habilidades adicionais oficiais (40 de linha + 4 de goleiro).');
 assert.equal(SPECIAL_SKILL_NAMES.length, 20, 'O catálogo especial/nativo deve trazer as 20 habilidades especiais atuais.');
-assert.equal(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length, 65, 'O leitor deve reconhecer 65 nomes canônicos no total.');
+assert.equal(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length, 64, 'O leitor deve reconhecer 64 nomes canônicos no total.');
 assert.equal(new Set(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES).size, ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length);
 
 const requiredSpecials = [
@@ -76,7 +76,7 @@ assert.equal(canonicalSkillName('Shadow Hunt'), 'Sombra veloz');
 assert.equal(canonicalSkillName('Visionary Pass'), 'Passe visionário');
 assert.equal(canonicalSkillName('Comandante da defesa GO'), 'Comandante da defesa (GO)');
 assert.equal(canonicalSkillName('Reposição baixa do GO'), 'Reposição baixa do goleiro');
-assert.equal(canonicalSkillName('Chop Turn'), 'Corte rápido');
+assert.equal(canonicalSkillName('Chop Turn'), 'Corte com virada');
 
 assert.equal(isOfficialAdditionalSkillIdentity('Drible explosivo'), false, 'Habilidade especial não pode ser sugerida como ficha adicional.');
 assert.equal(isOfficialAdditionalSkillIdentity('Passe de primeira'), true);

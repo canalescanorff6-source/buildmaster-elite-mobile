@@ -76,6 +76,8 @@ import { comparePlayers } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import type { GameplayDnaProfileId } from '@/lib/analyzerDomain';
+import { applyGameplayDnaProfileSelection } from '@/lib/gameplayDnaSelection';
 import { LOCAL_CARD_RULES } from '@/lib/cardDatabase';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import { createStableId } from '@/lib/stableId';
@@ -572,7 +574,7 @@ export function CardVisionApp() {
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
   const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? null, [formation]);
-  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null, gameplayMode, connectionProfile, controlProfile }), [formation, teamStyle, selectedManager, gameplayMode, connectionProfile, controlProfile]);
+  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation: 'AUTO', style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null, gameplayMode, connectionProfile, controlProfile }), [teamStyle, selectedManager, gameplayMode, connectionProfile, controlProfile]);
   const selectedFormationGuide = useMemo(() => {
     if (formation === 'AUTO') return null;
     const savedGuide = formationGuides[formation];
@@ -2712,6 +2714,11 @@ export function CardVisionApp() {
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
     setStatus(message);
   }
+  function applyGameplayProfile(profileId: GameplayDnaProfileId) {
+    setResult((current) => current ? applyGameplayDnaProfileSelection(current, profileId) : current);
+    setStatus('Perfil de Gameplay aplicado. A ficha, os pontos e as cinco habilidades adicionais foram atualizados.');
+  }
+
   function rejectSkillLocally(skill: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -3410,16 +3417,10 @@ export function CardVisionApp() {
               <details className="creation-advanced-details creation-tactical-details" open>
                 <summary>
                   <span><SlidersHorizontal size={18} /></span>
-                  <div><strong>Formação, estilo do técnico e técnico</strong><small>Escolha o contexto real em que o jogador será usado. A ficha será equilibrada para esse plano sem trocar a posição escolhida por você.</small></div>
+                  <div><strong>Estilo do técnico e calibração</strong><small>A formação fica automática. A ficha é universal para a posição escolhida e funciona em qualquer esquema.</small></div>
                   <em>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</em>
                 </summary>
                 <div className="creation-tactical-grid">
-                  <label>
-                    <span>Sistema tático</span>
-                    <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
-                      {formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-                  </label>
                   <label>
                     <span>Modelo de jogo</span>
                     <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
@@ -3439,53 +3440,25 @@ export function CardVisionApp() {
                 {selectedManager && <article className="manager-context-card creation-manager-context">
                   <div><span>Técnico ativo</span><strong>{selectedManager.name}</strong><em>{selectedManager.version} • booster {selectedManager.booster}</em></div>
                   <div><span>Estilo principal</span><strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>{selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}</div>
-                  <small>O técnico refina prioridades e simulação. A posição escolhida nunca é trocada automaticamente.</small>
+                  <small>O técnico refina passe, pressão, velocidade e cobertura. A posição escolhida nunca é trocada.</small>
                 </article>}
-                <article className="tactical-guide-card creation-tactical-guide">
-                  <div className="tactical-guide-head">
-                    <div>
-                      <p className="kicker">Leitura tática</p>
-                      <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
-                    </div>
-                    {selectedFormationGuide && (
-                      <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
-                        Aplicar estilo sugerido
-                      </button>
-                    )}
-                  </div>
-                  {selectedFormationGuide ? (
-                    <>
-                      <div className="guide-highlight">
-                        <span>Melhor encaixe</span>
-                        <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
-                        <em>{selectedFormationGuide.styleReason}</em>
-                      </div>
-                      <p>{selectedFormationGuide.howToPlay}</p>
-                      <div className="role-chip-grid">
-                        {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
-                      </div>
-                    </>
-                  ) : (
-                    <p>Selecione uma formação para ver a orientação tática.</p>
-                  )}
-                </article>
                 <article className="manager-context-card creation-manager-context creation-tactical-selection-summary">
                   <div>
-                    <span>Contexto aplicado à ficha</span>
-                    <strong>{formation === 'AUTO' ? 'Formação automática' : formation} • {teamStyle === 'AUTO' ? 'Estilo automático' : tacticalStyleName[teamStyle]}</strong>
+                    <span>Ficha universal</span>
+                    <strong>Formação automática • {teamStyle === 'AUTO' ? 'Estilo automático' : tacticalStyleName[teamStyle]}</strong>
                     <em>{selectedManager ? `${selectedManager.name} • ${selectedManager.version}` : 'Sem técnico específico definido'}</em>
                   </div>
                   <div>
-                    <span>Função preservada</span>
-                    <strong>{targetPosition === 'AUTO' ? 'Posição ainda não escolhida' : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition}</strong>
+                    <span>Posição soberana</span>
+                    <strong>{targetPosition === 'AUTO' ? 'Escolha onde ele vai jogar' : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition}</strong>
                     <em>{playstyleOverride === 'AUTO' ? 'Estilo do jogador identificado pelo app' : playstyleOverride}</em>
                   </div>
                   <div>
-                    <span>Calibração v32</span>
+                    <span>Calibração v35</span>
                     <strong>{gameplayMode === 'RANKED' ? 'Ranqueado robusto' : gameplayMode === 'OFFLINE' ? 'Offline expressivo' : 'Universal equilibrado'}</strong>
                     <em>{connectionProfile === 'HIGH_DELAY' ? 'Delay alto' : connectionProfile === 'STABLE' ? 'Conexão estável' : 'Conexão variável'} • {controlProfile === 'PASSING' ? 'Passe' : controlProfile === 'DRIBBLE' ? 'Drible' : controlProfile === 'DIRECT' ? 'Direto' : 'Equilibrado'}</em>
                   </div>
-                  <small>Este contexto fica salvo na ficha e ajusta as prioridades de passe, velocidade, pressão, cobertura e distribuição de pontos. A posição escolhida continua soberana e nunca é trocada automaticamente.</small>
+                  <small>A formação não muda pontos nem habilidades. A ficha reage à posição, ao DNA da carta, ao Estilo de Jogo e ao estilo coletivo do técnico.</small>
                 </article>
               </details>
             </div>
@@ -3907,7 +3880,7 @@ export function CardVisionApp() {
                 <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
               </div>
-            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
+            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
               originalPreview={preview}

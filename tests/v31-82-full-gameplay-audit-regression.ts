@@ -58,9 +58,10 @@ assert.equal(new Set(withOwnedSkill.recommendedSkills.map(skillIdentityKey)).siz
 
 const narrow = run(card, '4-2-2-2', 90);
 const backFive = run(card, '5-3-2', 90);
-assert.notEqual(narrow.supremeGameplay?.dimensions.tacticalFit, backFive.supremeGameplay?.dimensions.tacticalFit, 'A formação deve alterar a avaliação tática da ficha.');
-assert.ok(backFive.recommendedSkills.includes('Cabeçada') || backFive.recommendedSkills.includes('Superioridade aérea'), 'No 5-3-2, o atacante com capacidade aérea deve receber uma habilidade coerente com apoio e jogo aéreo.');
-assert.ok(narrow.recommendedSkills.includes('Passe de primeira') || narrow.recommendedSkills.includes('Passe em profundidade'), 'No ataque estreito, tabelas e conexão precisam influenciar o Top 5.');
+assert.deepEqual(narrow.training, backFive.training, 'Na v35, a formação não pode alterar a ficha universal da posição escolhida.');
+assert.deepEqual(narrow.recommendedSkills, backFive.recommendedSkills, 'Na v35, a formação não pode alterar o Top 5 de habilidades adicionais.');
+assert.equal(narrow.supremeGameplay?.dimensions.tacticalFit, backFive.supremeGameplay?.dimensions.tacticalFit, 'O encaixe tático deve permanecer universal quando apenas a formação muda.');
+assert.ok(narrow.recommendedSkills.some((skill) => ['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Cabeçada', 'Superioridade aérea', 'Chute com o peito do pé'].includes(skill)), 'O atacante deve receber complemento oficial coerente com seu DNA e sua posição, sem depender da formação.');
 
 const lowerManager = run(card, '5-3-2', 70);
 const eliteManager = run(card, '5-3-2', 90);
@@ -78,9 +79,9 @@ assert.deepEqual(new Set(getLocalImpetoCatalog()), new Set(RECOGNIZABLE_IMPETO_N
 const fingerprint = fs.readFileSync('src/lib/cardAnalysisFingerprint.ts', 'utf8');
 assert.match(fingerprint, /parsed\.attributes/);
 assert.match(fingerprint, /parsed\.nativeSkills/);
-assert.match(fingerprint, /tacticalProfile\.formation/);
+assert.doesNotMatch(fingerprint, /tacticalProfile\.formation/, 'A formação não deve invalidar o cache da ficha universal.');
 const supreme = fs.readFileSync('src/lib/supremeGameplayEngine.ts', 'utf8');
-assert.match(supreme, /formationRoleWeights/);
+assert.doesNotMatch(supreme, /formationRoleWeights/, 'A ficha universal v35 não deve depender de peso da formação.');
 assert.match(supreme, /managerTacticalTrust/);
 assert.match(supreme, /currentGameplayAdjustment/);
 assert.match(supreme, /defensiveAwareness/);
@@ -91,4 +92,4 @@ assert.match(skills, /tacticalSkillScore/);
 const impetos = fs.readFileSync('src/lib/localAiEngine.ts', 'utf8');
 assert.match(impetos, /tacticalImpetoSynergy/);
 
-console.log('v31.82 auditoria completa de cache, ficha, formação, habilidades e Ímpetos aprovada.');
+console.log('v31.82/v35 auditoria de cache, ficha universal, habilidades oficiais e Ímpetos aprovada.');

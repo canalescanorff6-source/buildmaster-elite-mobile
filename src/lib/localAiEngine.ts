@@ -12,7 +12,7 @@ type ImpetoProfile = {
   attributes: string[];
 };
 
-const LOCAL_AI_VERSION = '31.82-local-ai-formation-final-build-1';
+const LOCAL_AI_VERSION = '35.00-local-ai-position-style-final-build-1';
 
 const IMPETO_PROFILES: ImpetoProfile[] = [
   { name: 'Chute', domains: ['finalizacao', 'fisico'], positions: ['CF', 'SS', 'LWF', 'RWF', 'AMF'], training: ['shooting', 'lowerBodyStrength'], keywords: ['artilheiro', 'finalizador', 'chute', 'atacante'], attributes: ['Controle de bola', 'Finalização', 'Força do chute', 'Contato físico'] },
@@ -81,7 +81,6 @@ function normalizedText(result: AnalysisResult) {
     result.positionScores.find((item) => item.code === result.bestPosition.code)?.role,
     result.buildName,
     result.tacticalProfile.style,
-    result.tacticalProfile.formation,
     ...(result.recommendationExplanation ?? [])
   ].filter(Boolean).join(' ').toLowerCase();
 }
@@ -128,22 +127,22 @@ function skillSynergy(result: AnalysisResult, profile: ImpetoProfile) {
 
 
 function tacticalImpetoSynergy(result: AnalysisResult, profile: ImpetoProfile) {
-  const formation = String(result.tacticalProfile.formation);
   const style = result.tacticalProfile.style;
   const position = result.bestPosition.code;
   let score = 0;
   const has = (...domains: ImpetoDomain[]) => domains.some((domain) => profile.domains.includes(domain));
 
-  if (style === 'POSSE_DE_BOLA' && has('passe', 'drible', 'equilibrio')) score += 7;
-  if (style === 'CONTRA_ATAQUE_RAPIDO' && has('mobilidade', 'finalizacao', 'passe')) score += 7;
-  if (style === 'CONTRA_ATAQUE' && has('defesa', 'fisico', 'aereo', 'passe')) score += 6;
+  if (style === 'POSSE_DE_BOLA' && has('passe', 'drible', 'equilibrio')) score += 8;
+  if (style === 'CONTRA_ATAQUE_RAPIDO' && has('mobilidade', 'finalizacao', 'passe')) score += 8;
+  if (style === 'CONTRA_ATAQUE' && has('defesa', 'fisico', 'aereo', 'passe')) score += 7;
+  if (style === 'POR_FORA' && has('passe', 'mobilidade', 'aereo')) score += 7;
+  if (style === 'PASSE_LONGO' && has('passe', 'aereo', 'fisico')) score += 7;
 
-  if ((position === 'CF' || position === 'SS') && ['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation) && has('finalizacao', 'passe', 'mobilidade')) score += 7;
-  if ((position === 'CF' || position === 'SS') && ['5-3-2', '3-5-2'].includes(formation) && has('aereo', 'fisico', 'finalizacao')) score += 8;
-  if (['LWF', 'RWF'].includes(position) && ['4-3-3', '4-1-2-3', '4-2-1-3', '5-2-3'].includes(formation) && has('drible', 'mobilidade', 'passe')) score += 8;
-  if (['LB', 'RB', 'LMF', 'RMF'].includes(position) && ['3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation) && has('passe', 'mobilidade', 'defesa', 'fisico')) score += 8;
-  if (position === 'DMF' && ['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation) && has('defesa', 'passe', 'fisico')) score += 8;
-  if (position === 'CB' && ['3-2-4-1', '3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation) && has('defesa', 'aereo', 'fisico')) score += 8;
+  if ((position === 'CF' || position === 'SS') && has('finalizacao', 'mobilidade', 'fisico', 'aereo')) score += 4;
+  if (['LWF', 'RWF', 'AMF'].includes(position) && has('drible', 'mobilidade', 'passe', 'finalizacao')) score += 4;
+  if (['DMF', 'CMF'].includes(position) && has('defesa', 'passe', 'fisico')) score += 4;
+  if (['CB', 'LB', 'RB'].includes(position) && has('defesa', 'fisico', 'aereo')) score += 4;
+  if (position === 'GK' && has('goleiro')) score += 5;
 
   return Math.min(12, score);
 }
@@ -189,7 +188,7 @@ function confidenceForImpeto(result: AnalysisResult, score: number) {
 function buildEvidence(result: AnalysisResult, profile: ImpetoProfile, score: number) {
   const evidence: string[] = [];
   evidence.push(`Compatibilidade com ${result.bestPosition.label} e ${result.teamMap?.functionLabel ?? result.positionScores.find((item) => item.code === result.bestPosition.code)?.role ?? result.buildName}.`);
-  if (tacticalImpetoSynergy(result, profile) >= 7) evidence.push(`Encaixe confirmado com ${result.tacticalProfile.formation} e ${String(result.tacticalProfile.style).replaceAll('_', ' ').toLowerCase()}.`);
+  if (tacticalImpetoSynergy(result, profile) >= 7) evidence.push(`Encaixe confirmado com ${result.bestPosition.label} e ${String(result.tacticalProfile.style).replaceAll('_', ' ').toLowerCase()}.`);
   const strongestTraining = profile.training
     .map((key) => ({ key, value: Number(result.training[key] ?? 0) }))
     .sort((a, b) => b.value - a.value)[0];

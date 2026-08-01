@@ -55,13 +55,13 @@ const dmf = applyCompleteCardIntelligence(analyzeCard(anchor, 'COMPETITIVE', 'DM
 
 for (const result of [cf, dmf]) {
   assert.ok(result.supremeGameplay, 'O Motor Supremo precisa estar presente.');
-  assert.match(result.supremeGameplay?.engineVersion ?? '', /^(?:(?:31\.30|31\.82)-supreme-gameplay-|32\.00-supreme-reconciled-)/);
+  assert.match(result.supremeGameplay?.engineVersion ?? '', /^(?:(?:31\.30|31\.82)-supreme-gameplay-|(?:32\.00-supreme-reconciled-|35\.00-supreme-universal-reconciled-|35\.10-supreme-max-gameplay-reconciled-|35\.20-supreme-dna-gameplay-))/);
   assert.ok((result.supremeGameplay?.validCandidates ?? 0) >= 20);
   assert.ok((result.supremeGameplay?.finalists ?? 0) >= 2);
   assert.equal(result.trainingPointsUsed, result.trainingPointsTotal);
   assert.equal(result.trainingPointsRemaining, 0);
   assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3);
-  assert.match(result.buildName, /(?:Ficha Elite Suprema|Ficha v32)/);
+  assert.match(result.buildName, /(?:Ficha Elite Suprema|Ficha v32|Ficha v35)/);
   assert.equal(result.recommendedSkills.length, 5);
   assert.equal(new Set(result.recommendedSkills).size, 5);
   assert.ok(result.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number])));
@@ -69,7 +69,7 @@ for (const result of [cf, dmf]) {
   assert.ok((result.supremeGameplay?.dimensions.pointEfficiency ?? 0) >= 70);
   assert.ok((result.supremeGameplay?.dimensions.roleFit ?? 0) >= 60);
   assert.ok((result.unifiedIntelligence?.simulation.generatedCandidates ?? 0) >= 1400);
-  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:(?:31\.30|31\.82)-unified-intelligence-|32\.00-unified-calibrated-)/);
+  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:(?:31\.30|31\.82)-unified-intelligence-|(?:(?:32\.00|35\.00)-unified-calibrated-|35\.10-unified-max-gameplay-|35\.20-unified-dna-gameplay-))/);
 }
 
 assert.equal(cf.supremeGameplay?.roleLabel, 'Homem de Área');

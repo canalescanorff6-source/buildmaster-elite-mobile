@@ -4,7 +4,7 @@ import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeli
 import { extractCanonicalSkillsFromText, isLikelySkillOcrNoise, skillIdentityKey } from '../src/lib/officialSkillIdentity';
 import { readDetailedPrint } from '../src/modules/card-reader/detailedPrintReader';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
-import { ADDITIONAL_SKILL_ENGINE_VERSION, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from '../src/lib/skillIntelligenceV31';
+import { ADDITIONAL_SKILL_ENGINE_VERSION, availableOfficialAdditionalSkillCount, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from '../src/lib/skillIntelligenceV31';
 
 const tacticalProfile = {
   formation: '4-2-2-2' as const,
@@ -60,8 +60,9 @@ for (const result of cases) {
   const position = resolveAdditionalSkillPosition(result);
   const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
   assert.equal(position, result.bestPosition.code, 'A posição escolhida deve permanecer autoritativa.');
-  assert.equal(result.recommendedSkills.length, 5, `${position} deve receber exatamente 5 habilidades adicionais.`);
-  assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, 5, `${position} deve receber 5 nomes únicos.`);
+  const expectedCount = Math.min(5, availableOfficialAdditionalSkillCount(result));
+  assert.equal(result.recommendedSkills.length, expectedCount, `${position} deve receber todas as habilidades oficiais restantes, até cinco.`);
+  assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, expectedCount, `${position} deve receber nomes únicos.`);
   assert.ok(result.recommendedSkills.every((skill) => !owned.has(skillIdentityKey(skill))), `${position} não pode repetir habilidade possuída.`);
   assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, position)), `${position} não pode receber habilidade de outra função.`);
 }
@@ -92,5 +93,5 @@ assert.ok(centreBack.recommendedSkills.every((skill) => ![
   'Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Controle da cavadinha', 'Toque duplo'
 ].includes(skill)), 'Zagueiro não pode receber finalizações ou dribles de atacante.');
 
-assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1|32\.00-position-style-formation-exact-five-1)$/);
+assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1|32\.00-position-style-formation-exact-five-1|35\.00-official-photo-catalog-position-style-manager-universal-1)$/);
 console.log('v31.80: OCR estrito sem nomes estranhos e Top 5 exato por posição/estilo aprovados.');

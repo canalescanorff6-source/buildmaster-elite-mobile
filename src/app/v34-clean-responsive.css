@@ -897,3 +897,13 @@ body.bm-v3400-clean-responsive {
     padding-left: 48px !important;
   }
 }
+
+/* v35.10 — comparação limpa entre posição natural e posição escolhida */
+.position-build-comparison { display:grid; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid var(--stroke, rgba(148,163,184,.2)); }
+.position-build-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.position-build-card { display:grid; gap:7px; min-width:0; padding:14px; border:1px solid var(--stroke, rgba(148,163,184,.22)); border-radius:16px; background:var(--surface-2, rgba(15,23,42,.7)); }
+.position-build-card.selected { border-color:color-mix(in srgb,var(--accent,#d7ae56) 58%,transparent); box-shadow:0 10px 28px rgba(0,0,0,.14); }
+.position-build-card strong { color:var(--text,#f8fafc); }
+.position-build-card span,.position-build-card p,.position-build-card small { margin:0; color:var(--muted,#aab4c4); line-height:1.45; }
+.position-build-card em { color:var(--accent,#d7ae56); font-style:normal; font-weight:700; line-height:1.5; overflow-wrap:anywhere; }
+@media (max-width:720px){ .position-build-grid { grid-template-columns:1fr; } }

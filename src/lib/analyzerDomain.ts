@@ -630,6 +630,9 @@ export type CalibrationV32Analysis = {
     impetoSynergy: number;
     antiOverallWaste: number;
     crossModeStability: number;
+    gameplayResponse: number;
+    functionalFloor: number;
+    identityPreservation: number;
   };
   profiles: CalibrationV32Profile[];
   blockers: string[];
@@ -637,6 +640,80 @@ export type CalibrationV32Analysis = {
   safeguards: string[];
   reasons: string[];
   summary: string;
+};
+
+export type PositionGameplayBuild = {
+  position: PositionCode;
+  label: string;
+  role: 'posição natural' | 'posição escolhida';
+  training: TrainingPlan;
+  score: number;
+  gameplayResponse: number;
+  functionalFloor: number;
+  antiOverallWaste: number;
+  crossModeStability: number;
+  exactBudget: boolean;
+  strengths: string[];
+  note: string;
+};
+
+export type PositionBuildComparison = {
+  engineVersion: string;
+  natural: PositionGameplayBuild;
+  selected: PositionGameplayBuild;
+  samePosition: boolean;
+  recommendation: string;
+  safeguards: string[];
+};
+
+export type GameplayDnaProfileId =
+  | 'DRIBBLER'
+  | 'CREATOR'
+  | 'FINISHER'
+  | 'SECOND_STRIKER'
+  | 'DIRECT_RUNNER'
+  | 'AERIAL_TARGET'
+  | 'WIDE_CREATOR'
+  | 'BOX_TO_BOX'
+  | 'DEEP_PLAYMAKER'
+  | 'BALL_WINNER'
+  | 'DEFENSIVE_ANCHOR'
+  | 'PROGRESSIVE_DEFENDER'
+  | 'DEFENSIVE_FULLBACK'
+  | 'OFFENSIVE_FULLBACK'
+  | 'GK_SHOT_STOPPER'
+  | 'GK_DISTRIBUTOR'
+  | 'GK_BALANCED';
+
+export type GameplayDnaProfile = {
+  id: GameplayDnaProfileId;
+  rank: number;
+  label: string;
+  functionalStyle: string;
+  description: string;
+  position: PositionCode;
+  compatibility: number;
+  score: number;
+  recommended: boolean;
+  exactBudget: boolean;
+  training: TrainingPlan;
+  additionalSkills: string[];
+  focus: string[];
+  strengths: string[];
+  limitations: string[];
+  evidence: string[];
+};
+
+export type GameplayDnaAnalysis = {
+  engineVersion: string;
+  playerName: string;
+  officialPlaystyle: string | null;
+  selectedPosition: PositionCode;
+  detectedDna: string[];
+  primaryProfileId: GameplayDnaProfileId;
+  profiles: GameplayDnaProfile[];
+  summary: string;
+  safeguards: string[];
 };
 
 export type SupremeGameplayAnalysis = {
@@ -724,6 +801,8 @@ export type AnalysisResult = {
   unifiedIntelligence?: UnifiedCardIntelligenceAnalysis;
   supremeGameplay?: SupremeGameplayAnalysis;
   calibrationV32?: CalibrationV32Analysis;
+  positionBuildComparison?: PositionBuildComparison;
+  gameplayDna?: GameplayDnaAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

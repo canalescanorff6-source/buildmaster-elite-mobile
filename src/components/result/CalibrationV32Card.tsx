@@ -3,7 +3,7 @@ import { TRAINING_LABELS } from '@/lib/trainingEngine';
 
 const DIMENSIONS: Array<{ key: keyof NonNullable<AnalysisResult['calibrationV32']>['dimensions']; label: string }> = [
   { key: 'roleFit', label: 'Função' },
-  { key: 'formationFit', label: 'Formação' },
+  { key: 'formationFit', label: 'Estilo técnico' },
   { key: 'playstyleFit', label: 'Estilo' },
   { key: 'controlFit', label: 'Seu controle' },
   { key: 'connectionRobustness', label: 'Conexão' },
@@ -11,7 +11,10 @@ const DIMENSIONS: Array<{ key: keyof NonNullable<AnalysisResult['calibrationV32'
   { key: 'skillSynergy', label: 'Habilidades' },
   { key: 'impetoSynergy', label: 'Ímpeto' },
   { key: 'antiOverallWaste', label: 'Anti-overall' },
-  { key: 'crossModeStability', label: 'Estabilidade' }
+  { key: 'crossModeStability', label: 'Estabilidade' },
+  { key: 'gameplayResponse', label: 'Resposta' },
+  { key: 'functionalFloor', label: 'Piso funcional' },
+  { key: 'identityPreservation', label: 'DNA' }
 ];
 
 function planSummary(plan: TrainingPlan) {
@@ -32,8 +35,8 @@ export function CalibrationV32Card({ result }: { result: AnalysisResult }) {
     <article className="luxury-panel wide-card calibration-v32-card">
       <div className="section-title-row">
         <div>
-          <p className="kicker">Matriz de Calibração v32.00</p>
-          <h3>Ficha calibrada para a partida real</h3>
+          <p className="kicker">Calibração Máxima v35.20</p>
+          <h3>Gameplay máxima, sem caçar overall</h3>
         </div>
         <span>{calibration.calibrationScore}/100</span>
       </div>
@@ -64,6 +67,29 @@ export function CalibrationV32Card({ result }: { result: AnalysisResult }) {
           </div>
         ))}
       </div>
+      {result.positionBuildComparison && (
+        <section className="position-build-comparison">
+          <div className="section-title-row compact-title-row">
+            <div>
+              <p className="kicker">Duas fichas prontas</p>
+              <h4>Posição natural e posição escolhida</h4>
+            </div>
+            <span>{result.positionBuildComparison.samePosition ? 'MESMA POSIÇÃO' : 'COMPARAR'}</span>
+          </div>
+          <div className="variant-grid position-build-grid">
+            {[result.positionBuildComparison.natural, result.positionBuildComparison.selected].map((build) => (
+              <div key={`${build.role}-${build.position}`} className={build.role === 'posição escolhida' ? 'position-build-card selected' : 'position-build-card'}>
+                <strong>{build.label} • {build.role}</strong>
+                <span>Nota {build.score}/100 • {build.exactBudget ? 'pontos exatos' : 'revisar pontos'}</span>
+                <em>{planSummary(build.training)}</em>
+                <p>Resposta {Math.round(build.gameplayResponse)} • piso {Math.round(build.functionalFloor)} • anti-overall {Math.round(build.antiOverallWaste)} • modos {Math.round(build.crossModeStability)}</p>
+                <small>{build.note}</small>
+              </div>
+            ))}
+          </div>
+          <p className="panel-note"><b>{result.positionBuildComparison.recommendation}</b></p>
+        </section>
+      )}
       {(calibration.blockers.length > 0 || calibration.warnings.length > 0) && (
         <div className="skill-grid calibration-alert-grid">
           <div className="skill-check-card muted">

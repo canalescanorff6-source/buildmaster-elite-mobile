@@ -32,6 +32,7 @@ import {
   POSITION_LABELS,
   type AnalysisResult,
   type AttributeKey,
+  type GameplayDnaProfileId,
   type PositionCode,
   type TacticalStyle
 } from '@/lib/analyzer';
@@ -79,6 +80,7 @@ import { useObservabilityFeatureFlag } from '@/modules/observability/useObservab
 import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
 import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';
+import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -350,7 +352,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const communityEnabled = useObservabilityFeatureFlag('community');
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -867,6 +869,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'ficha' && (
         <div className="result-section-grid">
+          <GameplayDnaProfilesCard result={result} onApplyProfile={onApplyGameplayProfile} />
           <CalibrationV32Card result={result} />
           <PrecisionBuildPanel result={result} />
           {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
@@ -1310,7 +1313,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row"><div><p className="kicker">Como a IA decidiu</p><h3>Sem serviço de IA pago</h3></div><span>{result.localAi?.engineVersion ?? 'motor local'}</span></div>
-            <div className="data-grid"><div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div><div><span>Formação</span><strong>{result.tacticalProfile.formation}</strong></div><div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div><div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div></div>
+            <div className="data-grid"><div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div><div><span>Formação</span><strong>Automática • não altera a ficha</strong></div><div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div><div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div></div>
             {result.localAi && <><ul className="clean-list">{result.localAi.evidence.map((line) => <li key={line}>{line}</li>)}</ul><p className="panel-note">{result.localAi.privacyNote}</p></>}
           </article>
         </div>

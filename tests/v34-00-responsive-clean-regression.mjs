@@ -30,8 +30,8 @@ for (const marker of [
 
 assert.doesNotMatch(calibrator, /window\.innerWidth <= 760\) setFullscreen\(true\)/);
 assert.match(calibrator, /Abrir em tela cheia/);
-assert.match(cache, /34\.00\.0-touch-scroll-menu-5/);
-assert.match(sw, /buildmaster-v34-00-touch-scroll-menu-3/);
+assert.match(cache, /(?:34\.00\.0-touch-scroll-menu-5|35\.00\.0-official-skills-meta-2)/);
+assert.match(sw, /(?:buildmaster-v34-00-touch-scroll-menu-3|buildmaster-v35-00-official-skills-meta-2|buildmaster-v35-10-max-gameplay-dual-position-1|buildmaster-v35-20-dna-gameplay-solid-theme-1)/);
 
 assert.match(home, /Seu time em um só lugar\./);
 assert.match(home, /Crie uma ficha pelo print\./);

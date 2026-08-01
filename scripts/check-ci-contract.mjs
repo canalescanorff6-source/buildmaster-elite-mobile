@@ -26,6 +26,9 @@ check(doctor.includes("['Regressões v30.00', ['run', 'test:v3000:core']]"), 'ci
 check(doctor.includes("['Regressões v32.00'"), 'ci-doctor completo não executa a mega calibração v32.00.');
 check(doctor.includes("['Regressões v33.00'"), 'ci-doctor completo não executa a interface Executive v33.00.');
 check(doctor.includes("['Regressões v34.00'"), 'ci-doctor completo não executa a reconstrução visual v34.00.');
+check(doctor.includes("['Regressões v35.00'"), 'ci-doctor completo não executa o catálogo oficial e a ficha universal v35.00.');
+check(doctor.includes("['Regressões v35.10'"), 'ci-doctor completo não executa a ficha máxima anti-overall v35.10.');
+check(doctor.includes("['Regressões v35.20'"), 'ci-doctor completo não executa Perfis de Gameplay e tema sólido v35.20.');
 check(apkWorkflow.includes('npm run ci:verify'), 'Workflow APK não executa ci:verify.');
 check(playWorkflow.includes('npm run ci:verify'), 'Workflow Play não executa ci:verify.');
 check(apkWorkflow.includes('npm run quality:bundle-built'), 'Workflow APK não valida o bundle compilado.');

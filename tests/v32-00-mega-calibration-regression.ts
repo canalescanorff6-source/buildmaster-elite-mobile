@@ -53,7 +53,7 @@ const offline = run('OFFLINE', 'STABLE', 'DRIBBLE');
 for (const result of [ranked, universal, offline]) {
   const calibration = result.calibrationV32;
   assert.ok(calibration, 'A Matriz de Calibração v32 precisa fazer parte do resultado final.');
-  assert.match(calibration.engineVersion, /^32\.00-/);
+  assert.match(calibration.engineVersion, /^(?:3[2-9]|[4-9]\d)\.\d{2}-/);
   assert.equal(calibration.patchReference, 'eFootball v5.4.0');
   assert.equal(calibration.selectedMode, result.tacticalProfile.gameplayMode);
   assert.equal(calibration.profiles.length, 3, 'Os perfis ranqueado, universal e offline devem ser comparados.');
@@ -89,4 +89,4 @@ assert.match(engine, /trainingPlanTotalCost\(winner\.plan\) === result\.training
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
 assert.match(pipeline, /applyCalibrationV32/);
 
-console.log('v32.00 mega calibração por modo, conexão, controle, formação, habilidades e Ímpetos aprovada.');
+console.log('v32.00+ mega calibração por modo, conexão, controle, estilo coletivo, habilidades e Ímpetos aprovada.');

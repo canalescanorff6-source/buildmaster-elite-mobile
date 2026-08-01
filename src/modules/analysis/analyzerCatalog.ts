@@ -131,10 +131,9 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Elástico': { category: 'DRIBLE', boosts: { dribbling: 3, mobility: 1 }, aliases: ['Flip Flap', 'Elastico'] },
   'Giro 360°': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Marseille Turn', 'Giro 360'] },
   'Chapéu': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Sombrero', 'Chaleira'] },
-  'Corte com virada': { category: 'DRIBLE', boosts: { dribbling: 3, mobility: 1 }, aliases: ['Cut Behind & Turn', 'Corte com virada'] },
+  'Corte com virada': { category: 'DRIBLE', boosts: { dribbling: 3, mobility: 1 }, aliases: ['Cut Behind & Turn', 'Chop Turn', 'Corte seco', 'Corte chop', 'Corte com virada'] },
   'Puxada de letra': { category: 'DRIBLE', boosts: { dribbling: 2, creation: 1 }, aliases: ['Scotch Move'] },
   'Finta de letra': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Step On Skill Control', 'Inside Bounce', 'Finta interna'] },
-  'Corte rápido': { category: 'DRIBLE', boosts: { dribbling: 2, mobility: 1 }, aliases: ['Chop Turn', 'Corte seco', 'Corte chop', 'Corte rápido'] },
   'Controle com a sola': { category: 'DRIBLE', boosts: { dribbling: 4, creation: 1 }, aliases: ['Sole Control', 'Controle com sola', 'Controle de sola'] },
   'Cabeçada': { category: 'FINALIZAÇÃO', boosts: { finishing: 2, aerial: 2 }, aliases: ['Heading'] },
   'Efeito de longe': { category: 'FINALIZAÇÃO', boosts: { finishing: 3, creation: 1 }, aliases: ['Long-Range Curler'] },
@@ -196,9 +195,11 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Sombra veloz': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 3 }, aliases: ['Shadow Hunt', 'Caça-sombras', 'Caca-sombras', 'Sombra Veloz', 'Speeding Bullet'] },
 };
 
+export const OFFICIAL_ADDITIONAL_SKILL_CATALOG_VERSION = '35.00-user-photo-catalog-2026-07-31';
+
 export const OFFICIAL_ADDITIONAL_SKILL_NAMES = [
   'Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada',
-  'Puxada de letra', 'Finta de letra', 'Corte rápido', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
+  'Puxada de letra', 'Finta de letra', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
   'Controle da cavadinha', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente',
   'Precisão à distância', 'Finalização acrobática', 'Toque de calcanhar', 'Chute de primeira',
   'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Cruzamento preciso',
@@ -208,6 +209,54 @@ export const OFFICIAL_ADDITIONAL_SKILL_NAMES = [
   'Super substituto', 'Espírito guerreiro', 'Pegador de pênalti', 'Arremesso longo do goleiro',
   'Reposição alta do goleiro', 'Reposição baixa do goleiro'
 ] as const;
+
+
+export const OFFICIAL_ADDITIONAL_SKILL_DESCRIPTIONS: Record<(typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number], string> = {
+  'Pedalada simples': 'Executa uma Pedalada simples mais rápido do que o normal.',
+  'Toque duplo': 'Executa um Toque duplo mais rápido do que o normal.',
+  'Elástico': 'Executa uma finta de Elástico ao pressionar o comando de Elástico.',
+  'Giro 360°': 'Executa um Giro 360° mais rápido do que o normal.',
+  'Chapéu': 'Aumenta a precisão de Chapéu e Chaleira e também executa um Chapéu ao receber um Passe rasteiro.',
+  'Corte com virada': 'Executa um Corte com virada mais rápido do que o normal.',
+  'Puxada de letra': 'Executa uma puxada de letra com movimento especial de controle de bola.',
+  'Finta de letra': 'Executa uma finta de letra ao pressionar o comando correspondente.',
+  'Controle com a sola': 'Permite controlar a bola mais com a sola dos pés ao fazer fintas e viradas.',
+  'Cabeçada': 'Melhora a precisão das cabeçadas e aumenta a frequência de cabeçadas para baixo.',
+  'Efeito de longe': 'Executa um chute controlado preciso com muita curva mesmo de longa distância.',
+  'Controle da cavadinha': 'Executa cavadinhas com precisão, inclusive em alta velocidade.',
+  'Chute com o peito do pé': 'Executa um chute potente com o peito do pé em situações compatíveis.',
+  'Folha seca': 'Executa uma Folha seca em cobranças ou chutes de força intermediária.',
+  'Chute ascendente': 'Executa um Chute ascendente em cobranças ou chutes fortes.',
+  'Precisão à distância': 'Executa um chute de fora da área com maior precisão.',
+  'Finalização acrobática': 'Permite finalizar mesmo em posições estranhas ou desequilibradas.',
+  'Toque de calcanhar': 'Permite passes e chutes usando o calcanhar em situações difíceis.',
+  'Chute de primeira': 'Melhora a técnica e a precisão em chutes de primeira.',
+  'Passe de primeira': 'Melhora a técnica e a precisão em passes de primeira.',
+  'Passe em profundidade': 'Melhora a trajetória e a precisão de passes em profundidade.',
+  'Passe na medida': 'Executa passes altos e aéreos em profundidade com trajetória precisa.',
+  'Cruzamento preciso': 'Executa cruzamentos precisos com muita curva.',
+  'Curva para fora': 'Executa chutes ou passes de trivela com maior precisão.',
+  'De letra': 'Executa chutes e passes de letra em situações compatíveis.',
+  'Passe sem olhar': 'Permite passes inesperados para confundir o adversário.',
+  'Passe aéreo baixo': 'Executa passes altos longos e precisos com trajetória mais baixa.',
+  'Arremesso lateral longo': 'Aumenta a distância dos arremessos laterais.',
+  'Especialista em pênalti': 'Aumenta a precisão nas cobranças de pênalti.',
+  'Malícia': 'Facilita cavar faltas quando o jogador está com a bola.',
+  'Marcação individual': 'Aumenta a reação e a aderência na marcação individual.',
+  'Volta para marcar': 'Faz o jogador pressionar agressivamente desde o campo de ataque.',
+  'Interceptação': 'Aumenta a frequência e a rapidez das interceptações de passe.',
+  'Bloqueador': 'Melhora a reação a chutes e bloqueios, inclusive de rebotes.',
+  'Superioridade aérea': 'Aumenta a vantagem nas disputas aéreas.',
+  'Carrinho': 'Executa carrinhos com mais precisão e velocidade.',
+  'Afastamento acrobático': 'Permite afastar bolas difíceis com os pés em posições estranhas.',
+  'Liderança': 'Reduz os efeitos do cansaço nos companheiros em campo.',
+  'Super substituto': 'Aumenta o desempenho quando o jogador entra no segundo tempo.',
+  'Espírito guerreiro': 'Reduz a perda de precisão sob pressão e os efeitos do cansaço.',
+  'Pegador de pênalti': 'Melhora a resposta do goleiro em cobranças de pênalti.',
+  'Arremesso longo do goleiro': 'Aumenta o alcance dos arremessos do goleiro.',
+  'Reposição alta do goleiro': 'Melhora a reposição alta e longa do goleiro.',
+  'Reposição baixa do goleiro': 'Melhora a reposição baixa, rápida e precisa do goleiro.'
+};
 
 export const OFFICIAL_ADDITIONAL_SKILLS = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
 

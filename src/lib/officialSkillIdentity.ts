@@ -90,8 +90,8 @@ const EXTRA_ALIASES: Record<string, CanonicalSkillName> = {
   'sombra veloz': 'Sombra veloz',
 
   // Habilidade regular ausente no catálogo antigo.
-  'chop turn': 'Corte rápido',
-  'corte seco': 'Corte rápido',
+  'chop turn': 'Corte com virada',
+  'corte seco': 'Corte com virada',
   'inside bounce': 'Finta de letra'
 };
 

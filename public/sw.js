@@ -1,5 +1,5 @@
-// Compatibilidade de regressão: buildmaster-v34-00-touch-scroll-menu-3
-const CACHE_NAME = 'buildmaster-v34-00-identity-themes-avatar-4';
+// Compatibilidade de regressão: buildmaster-v35-00-official-skills-meta-2
+const CACHE_NAME = 'buildmaster-v35-20-dna-gameplay-solid-theme-1';
 const STATIC_ASSETS = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

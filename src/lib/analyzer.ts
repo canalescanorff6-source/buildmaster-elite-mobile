@@ -2108,83 +2108,21 @@ function chooseGameplaySelectedPosition(parsed: ParsedCard, scored: Array<{ code
 function tacticalScoreBonus(position: PositionCode, profile: TacticalProfile, a: Required<Attributes>) {
   let bonus = 0;
   const managerFactor = profile.managerProficiency ? Math.max(0.92, Math.min(1.12, 1 + (profile.managerProficiency - 85) * 0.018)) : 1;
-  if (profile.formation === '4-2-2-2') {
-    if (position === 'DMF') bonus += 6;
-    if (position === 'CMF') bonus += 4;
-    if (position === 'AMF' || position === 'SS') bonus += 3;
-    if (position === 'LWF' || position === 'RWF') bonus -= 4;
+  if (profile.style === 'POSSE_DE_BOLA') {
+    bonus += Math.max(0, Math.max(a.lowPass, a.ballControl, a.tightPossession) - 74) * 0.07;
+    if (['AMF', 'CMF', 'DMF', 'SS'].includes(position)) bonus += 2;
   }
-  if (profile.formation === '4-3-3') {
-    if (position === 'LWF' || position === 'RWF') bonus += 5;
-    if (position === 'CF') bonus += 3;
-    if (position === 'CMF' || position === 'DMF') bonus += 3;
+  if (profile.style === 'CONTRA_ATAQUE') {
+    bonus += Math.max(0, Math.max(a.loftedPass, a.physicalContact, a.stamina) - 74) * 0.055;
+    if (['CB', 'DMF', 'CF', 'SS'].includes(position)) bonus += 1.5;
   }
-  if (profile.formation === '4-1-2-3') {
-    if (position === 'DMF') bonus += 5;
-    if (position === 'AMF' || position === 'CMF') bonus += 4;
-    if (position === 'LWF' || position === 'RWF') bonus += 3;
+  if (profile.style === 'CONTRA_ATAQUE_RAPIDO') {
+    bonus += Math.max(0, Math.max(a.speed, a.acceleration, a.offensiveAwareness) - 75) * 0.075;
+    bonus += Math.max(0, a.lowPass - 74) * 0.03;
+    if (['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(position)) bonus += 2;
   }
-  if (profile.formation === '4-2-1-3') {
-    if (position === 'DMF' || position === 'CMF') bonus += 5;
-    if (position === 'AMF') bonus += 4;
-    if (position === 'LWF' || position === 'RWF' || position === 'CF') bonus += 3;
-  }
-  if (profile.formation === '4-2-3-1') {
-    if (position === 'DMF' || position === 'CMF') bonus += 5;
-    if (position === 'AMF' || position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF') bonus += 3;
-  }
-  if (profile.formation === '4-3-1-2') {
-    if (position === 'AMF') bonus += 5;
-    if (position === 'CMF' || position === 'DMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-    if (position === 'LWF' || position === 'RWF') bonus -= 3;
-  }
-  if (profile.formation === '4-1-3-2') {
-    if (position === 'DMF') bonus += 5;
-    if (position === 'AMF' || position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-  }
-  if (profile.formation === '4-4-2') {
-    if (position === 'CMF' || position === 'DMF') bonus += 4;
-    if (position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-  }
-  if (profile.formation === '4-1-4-1') {
-    if (position === 'DMF') bonus += 6;
-    if (position === 'CMF' || position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF') bonus += 2;
-  }
-  if (profile.formation === '3-2-4-1') {
-    if (position === 'CB' || position === 'DMF') bonus += 5;
-    if (position === 'LMF' || position === 'RMF' || position === 'AMF') bonus += 4;
-  }
-  if (profile.formation === '3-4-3') {
-    if (position === 'CB') bonus += 5;
-    if (position === 'LMF' || position === 'RMF') bonus += 5;
-    if (position === 'LWF' || position === 'RWF' || position === 'CF') bonus += 3;
-  }
-  if (profile.formation === '3-5-2') {
-    if (position === 'CB' || position === 'DMF' || position === 'CMF') bonus += 5;
-    if (position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-  }
-  if (profile.formation === '5-3-2') {
-    if (position === 'CB' || position === 'LB' || position === 'RB') bonus += 5;
-    if (position === 'DMF' || position === 'CMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 2;
-  }
-  if (profile.formation === '5-2-3') {
-    if (position === 'LB' || position === 'RB' || position === 'CB') bonus += 5;
-    if (position === 'DMF' || position === 'CMF') bonus += 3;
-    if (position === 'LWF' || position === 'RWF' || position === 'CF') bonus += 4;
-  }
-
-  if (profile.style === 'POSSE_DE_BOLA') bonus += Math.max(0, Math.max(a.lowPass, a.ballControl) - 75) * 0.06;
-  if (profile.style === 'CONTRA_ATAQUE') bonus += Math.max(0, Math.max(a.loftedPass, a.physicalContact) - 74) * 0.05 + Math.max(0, a.stamina - 74) * 0.03;
-  if (profile.style === 'CONTRA_ATAQUE_RAPIDO') bonus += Math.max(0, Math.max(a.speed, a.acceleration) - 76) * 0.07 + Math.max(0, a.lowPass - 74) * 0.03;
-  if (profile.style === 'POR_FORA') bonus += Math.max(0, Math.max(a.loftedPass, a.speed) - 74) * 0.06 + Math.max(0, a.stamina - 74) * 0.03;
-  if (profile.style === 'PASSE_LONGO') bonus += Math.max(0, a.loftedPass - 74) * 0.07 + Math.max(0, Math.max(a.heading, a.physicalContact) - 74) * 0.04;
+  if (profile.style === 'POR_FORA') bonus += Math.max(0, Math.max(a.loftedPass, a.speed, a.stamina) - 74) * 0.06;
+  if (profile.style === 'PASSE_LONGO') bonus += Math.max(0, Math.max(a.loftedPass, a.heading, a.physicalContact) - 74) * 0.06;
   if (profile.managerProficiency) bonus *= managerFactor;
   return bonus;
 }
@@ -2192,20 +2130,7 @@ function tacticalScoreBonus(position: PositionCode, profile: TacticalProfile, a:
 function tacticalProfileTips(profile: TacticalProfile, selected: PositionCode) {
   const tips: string[] = [];
   if (profile.managerName && profile.managerProficiency) tips.push(`Técnico selecionado: ${profile.managerName} (${profile.managerProficiency}). A proficiência refina a ficha, mas nunca substitui a posição escolhida por você.`);
-  if (profile.formation === '4-2-2-2') tips.push('Formação 4-2-2-2: dois meias por dentro e dupla de ataque; valoriza VOL/MLG fortes para roubar, tocar rápido e proteger a defesa.');
-  if (profile.formation === '4-3-3') tips.push('Formação 4-3-3: usa pontas abertos, centroavante de referência e meio com boa cobertura para acelerar pelos lados.');
-  if (profile.formation === '4-1-2-3') tips.push('Formação 4-1-2-3: exige um VOL confiável e dois meias com passe/giro para ligar defesa e ataque.');
-  if (profile.formation === '4-2-1-3') tips.push('Formação 4-2-1-3: dois volantes protegem, o MAT acelera a transição e os três atacantes atacam espaço.');
-  if (profile.formation === '4-2-3-1') tips.push('Formação 4-2-3-1: segura por dentro, cria com três meias e precisa de CA forte para prender zagueiros.');
-  if (profile.formation === '4-3-1-2') tips.push('Formação 4-3-1-2: compacta por dentro, com MAT servindo dois atacantes; laterais precisam dar amplitude.');
-  if (profile.formation === '4-1-3-2') tips.push('Formação 4-1-3-2: boa para pressionar e atacar em dupla; o VOL precisa cobrir as costas dos meias.');
-  if (profile.formation === '4-4-2') tips.push('Formação 4-4-2: equilibrada, boa para bloco médio, cruzamentos e ataque com dois homens na área.');
-  if (profile.formation === '4-1-4-1') tips.push('Formação 4-1-4-1: forte para posse segura e pressão organizada; o CA precisa finalizar poucas chances.');
-  if (profile.formation === '3-2-4-1') tips.push('Formação 3-2-4-1: pede cobertura forte por dentro e alas/meias que voltem para marcar.');
-  if (profile.formation === '3-4-3') tips.push('Formação 3-4-3: agressiva pelos lados; alas precisam de fôlego e os três zagueiros precisam cobrir profundidade.');
-  if (profile.formation === '3-5-2') tips.push('Formação 3-5-2: domina o meio e joga com dois atacantes; alas são essenciais para abrir campo.');
-  if (profile.formation === '5-3-2') tips.push('Formação 5-3-2: segura defensivamente, boa para contra-atacar e proteger vantagem.');
-  if (profile.formation === '5-2-3') tips.push('Formação 5-2-3: defesa de cinco com saída rápida para três atacantes; exige pontas velozes e laterais resistentes.');
+  tips.push('Ficha universal: a formação não altera a distribuição; a posição escolhida, o estilo da carta e o estilo do técnico comandam a calibração.');
   if (profile.style === 'POSSE_DE_BOLA') tips.push('Estilo do técnico — Posse de bola: prioriza passe curto, controle, paciência e triangulações; evite forçar bola longa sem necessidade.');
   if (profile.style === 'CONTRA_ATAQUE') tips.push('Estilo do técnico — Contra-ataque: prioriza bloco organizado, roubo e passe direto com segurança; bom para atacar quando o rival se expõe.');
   if (profile.style === 'CONTRA_ATAQUE_RAPIDO') tips.push('Estilo do técnico — Contra-ataque rápido: aceleração, velocidade e passe vertical pesam mais na recomendação; ataque o espaço logo após recuperar.');
@@ -3156,7 +3081,7 @@ function recommendationExplanation(parsed: ParsedCard, selected: PositionCode, a
   if (selected === 'LWF' || selected === 'RWF') lines.push(`Como ponta, pesaram drible ${attributes.dribbling}, aceleração ${attributes.acceleration}, equilíbrio ${attributes.balance} e finalização ${attributes.finishing}.`);
   if (pri.defense >= 78) lines.push('A defesa teve peso alto no PRI, por isso posições ofensivas são tratadas com cuidado mesmo quando aparecem com GER alto.');
   if (avoidPositions.length) lines.push(`Evitei ${avoidPositions.slice(0, 3).map((item) => item.label).join(', ')} por regra anti-posição impossível ou baixa aderência ao estilo.`);
-  if (profile.formation !== 'AUTO' || profile.style !== 'AUTO') lines.push('A formação/tática escolhida também ajustou o peso de passe, pressão, velocidade ou cobertura conforme seu modo de jogo.');
+  if (profile.style !== 'AUTO') lines.push('O estilo coletivo do técnico ajustou passe, pressão, velocidade ou cobertura sem prender a ficha a uma formação.');
   return lines;
 }
 

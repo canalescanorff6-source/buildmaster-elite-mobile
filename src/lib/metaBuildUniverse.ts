@@ -141,15 +141,6 @@ const SCENARIO_WEIGHTS: Record<MetaScenario, Partial<Record<TrainingKey, number>
   'Conexão instável':{passing:.32,lowerBodyStrength:.24,defending:.2,dexterity:.14,dribbling:-.08}
 };
 
-const FORMATION_WEIGHTS: Record<typeof FORMATIONS[number], Partial<Record<TrainingKey, number>>> = {
-  '4-2-1-3':{defending:.22,passing:.22,dexterity:.2,dribbling:.15,lowerBodyStrength:.15},
-  '4-2-2-2':{passing:.2,dexterity:.24,shooting:.22,lowerBodyStrength:.18,defending:.16},
-  '4-3-3':{passing:.26,dribbling:.22,lowerBodyStrength:.18,dexterity:.16,defending:.12},
-  '4-2-3-1':{passing:.26,dribbling:.18,defending:.18,dexterity:.16,lowerBodyStrength:.14},
-  '4-3-1-2':{passing:.24,dexterity:.2,defending:.18,shooting:.16,dribbling:.12},
-  '4-4-2':{defending:.22,lowerBodyStrength:.22,aerialStrength:.18,passing:.16,shooting:.14}
-};
-
 const ATTR_GROUPS: Record<TrainingKey, AttributeKey[]> = {
   shooting:['finishing','placeKicking','curl'], passing:['lowPass','loftedPass'], dribbling:['ballControl','dribbling','tightPossession'],
   dexterity:['offensiveAwareness','acceleration','balance'], lowerBodyStrength:['speed','kickingPower','stamina'], aerialStrength:['heading','jump','physicalContact'],
@@ -300,19 +291,17 @@ export function buildMetaBuildUniverse(input:{
     addWeights(weights,CATEGORY_WEIGHTS[category],1);
     addWeights(weights,STYLE_WEIGHTS[style],1);
     addWeights(weights,SCENARIO_WEIGHTS[scenario],1);
-    addWeights(weights,FORMATION_WEIGHTS[formation],1);
     addWeights(weights,objectiveWeights(objective),.55);
     addWeights(weights,identity,category==='Identidade competitiva'?1.05:.46);
     addWeights(weights,skillWeights,category==='Meta total'?.62:.42);
     if(tacticalProfile.style!=='AUTO'&&style===tacticalProfile.style)addWeights(weights,STYLE_WEIGHTS[style],.25);
-    if(tacticalProfile.formation!=='AUTO'&&formation===tacticalProfile.formation)addWeights(weights,FORMATION_WEIGHTS[formation],.2);
-    const seed=parseInt(hash(`${parsed.playerName}|${parsed.cardType}|${position}|${category}|${formation}|${scenario}|${style}`).slice(0,6),36)||17;
+    const seed=parseInt(hash(`${parsed.playerName}|${parsed.cardType}|${position}|${category}|${scenario}|${style}`).slice(0,6),36)||17;
     const baseIndex=seed%safeBases.length;
     const plan=generatePlan(weights,safeBases[baseIndex]??safeBases[0],keys,trainingPointsTotal,seed);
     const metaScore=weightedScore(plan,weights,keys);
     const identityScore=clamp(Math.round(similarity(plan,safeBases[0],keys)*.55+weightedScore(plan,{...identity} as Record<TrainingKey,number>,keys)*.45),1,99);
     const skillScore=Object.values(skillWeights).some(value=>value>0)?weightedScore(plan,skillWeights,keys):72;
-    const tacticalScore=clamp(Math.round(weightedScore(plan,{...Object.fromEntries(ALL_KEYS.map(key=>[key,.05])),...STYLE_WEIGHTS[style],...FORMATION_WEIGHTS[formation]} as Record<TrainingKey,number>,keys)),1,99);
+    const tacticalScore=clamp(Math.round(weightedScore(plan,{...Object.fromEntries(ALL_KEYS.map(key=>[key,.05])),...STYLE_WEIGHTS[style]} as Record<TrainingKey,number>,keys)),1,99);
     const efficiencyScore=clamp(Math.round(80+(planCost(plan)/Math.max(1,trainingPointsTotal))*18-(keys.filter(key=>(plan[key]??0)>=13).length*3)),1,99);
     const stabilityWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,.08])) as Record<TrainingKey,number>;
     addWeights(stabilityWeights,{passing:.25,lowerBodyStrength:.35,defending:.28,dexterity:.2,gk1:.3,gk2:.3,gk3:.25},1);

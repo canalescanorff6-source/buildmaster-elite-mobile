@@ -32,7 +32,7 @@ assert.match(navigation, /Buscar no aplicativo/);
 assert.match(css, /\.bm-v3400-clean-responsive \.bm-v33-drawer-trigger \{[\s\S]*top:\s*max\(2px, env\(safe-area-inset-top\)\) !important/);
 
 // Força descarte único do cache antigo no APK instalado.
-assert.match(cache, /34\.00\.0-touch-scroll-menu-5/);
-assert.match(sw, /buildmaster-v34-00-touch-scroll-menu-3/);
+assert.match(cache, /(?:34\.00\.0-touch-scroll-menu-5|35\.00\.0-official-skills-meta-2)/);
+assert.match(sw, /(?:buildmaster-v34-00-touch-scroll-menu-3|buildmaster-v35-00-official-skills-meta-2|buildmaster-v35-10-max-gameplay-dual-position-1|buildmaster-v35-20-dna-gameplay-solid-theme-1)/);
 
 console.log('v34.00 toque móvel aprovado: rolagem vertical restaurada, lupa superior removida e Menu reposicionado.');

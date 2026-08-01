@@ -3,14 +3,19 @@ import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCata
 import { TRAINING_LABELS } from './trainingEngine';
 import { buildOwnedSkillKeys, filterComplementaryAdditionalSkills, skillIdentityKey } from './officialSkillIdentity';
 
+export type AdditionalSkillProfileOptions = {
+  label?: string;
+  preferredCategories?: UnifiedSkillDecision['category'][];
+};
+
 type SkillCategory = UnifiedSkillDecision['category'];
 type Candidate = UnifiedSkillDecision & { rawScore: number; rolePosition: PositionCode };
 
-export const ADDITIONAL_SKILL_ENGINE_VERSION = '32.00-position-style-formation-exact-five-1';
+export const ADDITIONAL_SKILL_ENGINE_VERSION = '35.00-official-photo-catalog-position-style-manager-universal-1';
 
 const CATEGORY_BY_SKILL: Record<string, SkillCategory> = {
   'Pedalada simples': 'drible', 'Toque duplo': 'drible', 'Elástico': 'drible', 'Giro 360°': 'drible', 'Chapéu': 'drible',
-  'Corte com virada': 'drible', 'Puxada de letra': 'drible', 'Finta de letra': 'drible', 'Corte rápido': 'drible', 'Controle com a sola': 'drible',
+  'Corte com virada': 'drible', 'Puxada de letra': 'drible', 'Finta de letra': 'drible', 'Controle com a sola': 'drible',
   'Cabeçada': 'aérea', 'Efeito de longe': 'finalização', 'Controle da cavadinha': 'finalização', 'Chute com o peito do pé': 'finalização',
   'Folha seca': 'finalização', 'Chute ascendente': 'finalização', 'Precisão à distância': 'finalização',
   'Finalização acrobática': 'finalização', 'Chute de primeira': 'finalização', 'Especialista em pênalti': 'finalização',
@@ -28,10 +33,8 @@ const POSITION_SKILL_POOLS: Record<PositionCode, readonly string[]> = {
   // carta já possui várias habilidades, o motor ainda consegue entregar cinco
   // opções adicionais úteis sem recorrer a habilidades de outra função.
   GK: [
-    // Somente habilidades de goleiro, distribuição e liderança. Nenhuma
-    // habilidade de finalização, drible ou defesa de jogador de linha entra.
     'Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Pegador de pênalti',
-    'Espírito guerreiro', 'Liderança', 'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe aéreo baixo'
+    'Espírito guerreiro', 'Liderança'
   ],
   CB: [
     'Interceptação', 'Bloqueador', 'Marcação individual', 'Superioridade aérea', 'Afastamento acrobático', 'Carrinho',
@@ -63,33 +66,33 @@ const POSITION_SKILL_POOLS: Record<PositionCode, readonly string[]> = {
   LMF: [
     'Cruzamento preciso', 'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe aéreo baixo',
     'Curva para fora', 'Volta para marcar', 'Espírito guerreiro', 'Controle com a sola', 'Toque duplo',
-    'Interceptação', 'Arremesso lateral longo', 'Toque de calcanhar', 'Passe sem olhar', 'Corte rápido', 'Bloqueador'
+    'Interceptação', 'Arremesso lateral longo', 'Toque de calcanhar', 'Passe sem olhar', 'Corte com virada', 'Bloqueador'
   ],
   RMF: [
     'Cruzamento preciso', 'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe aéreo baixo',
     'Curva para fora', 'Volta para marcar', 'Espírito guerreiro', 'Controle com a sola', 'Toque duplo',
-    'Interceptação', 'Arremesso lateral longo', 'Toque de calcanhar', 'Passe sem olhar', 'Corte rápido', 'Bloqueador'
+    'Interceptação', 'Arremesso lateral longo', 'Toque de calcanhar', 'Passe sem olhar', 'Corte com virada', 'Bloqueador'
   ],
   AMF: [
     'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe aéreo baixo', 'Controle com a sola',
     'Toque duplo', 'Toque de calcanhar', 'Passe sem olhar', 'Curva para fora', 'Precisão à distância',
-    'Efeito de longe', 'Chute de primeira', 'Corte rápido', 'Espírito guerreiro', 'Cruzamento preciso',
+    'Efeito de longe', 'Chute de primeira', 'Corte com virada', 'Espírito guerreiro', 'Cruzamento preciso',
     'Chute com o peito do pé', 'Giro 360°'
   ],
   SS: [
     'Chute de primeira', 'Passe de primeira', 'Passe em profundidade', 'Controle com a sola', 'Toque duplo',
-    'Toque de calcanhar', 'Precisão à distância', 'Efeito de longe', 'Finalização acrobática', 'Corte rápido',
+    'Toque de calcanhar', 'Precisão à distância', 'Efeito de longe', 'Finalização acrobática', 'Corte com virada',
     'Espírito guerreiro', 'Passe na medida', 'Super substituto', 'Chute com o peito do pé',
     'Controle da cavadinha', 'Giro 360°', 'Passe sem olhar'
   ],
   LWF: [
-    'Toque duplo', 'Controle com a sola', 'Corte rápido', 'Passe de primeira', 'Cruzamento preciso', 'Curva para fora',
+    'Toque duplo', 'Controle com a sola', 'Corte com virada', 'Passe de primeira', 'Cruzamento preciso', 'Curva para fora',
     'Precisão à distância', 'Efeito de longe', 'Chute de primeira', 'Passe em profundidade', 'Passe na medida',
     'Passe aéreo baixo', 'Espírito guerreiro', 'Super substituto', 'Giro 360°', 'Chute com o peito do pé',
     'Toque de calcanhar', 'Finalização acrobática'
   ],
   RWF: [
-    'Toque duplo', 'Controle com a sola', 'Corte rápido', 'Passe de primeira', 'Cruzamento preciso', 'Curva para fora',
+    'Toque duplo', 'Controle com a sola', 'Corte com virada', 'Passe de primeira', 'Cruzamento preciso', 'Curva para fora',
     'Precisão à distância', 'Efeito de longe', 'Chute de primeira', 'Passe em profundidade', 'Passe na medida',
     'Passe aéreo baixo', 'Espírito guerreiro', 'Super substituto', 'Giro 360°', 'Chute com o peito do pé',
     'Toque de calcanhar', 'Finalização acrobática'
@@ -135,7 +138,7 @@ const CATEGORY_SOFT_CAPS: Record<PositionCode, Partial<Record<SkillCategory, num
 };
 
 const POSITION_SLOT_BLUEPRINTS: Record<PositionCode, readonly SkillCategory[]> = {
-  GK: ['goleiro', 'goleiro', 'goleiro', 'passe', 'mental'],
+  GK: ['goleiro', 'goleiro', 'goleiro', 'goleiro', 'mental'],
   CB: ['defesa', 'defesa', 'aérea', 'passe', 'mental'],
   DMF: ['defesa', 'defesa', 'passe', 'passe', 'físico'],
   LB: ['defesa', 'defesa', 'passe', 'passe', 'físico'],
@@ -152,42 +155,44 @@ const POSITION_SLOT_BLUEPRINTS: Record<PositionCode, readonly SkillCategory[]> =
 
 function slotBlueprintFor(result: AnalysisResult, position: PositionCode): readonly SkillCategory[] {
   const style = norm(result.parsed.playstyle);
-  const formation = String(result.tacticalProfile.formation);
+  const attributes = result.parsed.attributes;
+  const dribbleDna = average(attributes.ballControl, attributes.dribbling, attributes.tightPossession, attributes.balance, attributes.acceleration);
+  const creationDna = average(attributes.lowPass, attributes.loftedPass, attributes.ballControl);
+  const finishingDna = average(attributes.finishing, attributes.offensiveAwareness, attributes.kickingPower);
+  // Quando a carta é claramente especialista em condução, dois dos cinco
+  // espaços oficiais ficam reservados ao DNA de drible. Isso impede que uma
+  // carta técnica receba um Top 5 genérico apenas por atuar como SA/MAT/ponta.
+  if (['SS', 'AMF', 'LWF', 'RWF', 'LMF', 'RMF'].includes(position)
+    && dribbleDna >= 86 && dribbleDna >= creationDna + 5 && dribbleDna >= finishingDna + 5) {
+    return ['drible', 'drible', 'passe', 'finalização', 'físico'];
+  }
   if (position === 'GK') {
-    if (/ofensivo|offensive/.test(style)) return ['goleiro', 'goleiro', 'passe', 'passe', 'mental'];
+    if (/ofensivo|offensive/.test(style)) return ['goleiro', 'goleiro', 'goleiro', 'goleiro', 'mental'];
     return ['goleiro', 'goleiro', 'goleiro', 'mental', 'físico'];
   }
-  if (['LB', 'RB', 'LMF', 'RMF'].includes(position) && ['3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation)) {
-    return ['passe', 'defesa', 'passe', 'físico', 'drible'];
-  }
   if (position === 'CB') {
-    if (/defensor criativo|build up/.test(style)) return ['defesa', 'passe', 'passe', 'aérea', 'mental'];
+    if (/defensor criativo|build up/.test(style)) return ['defesa', 'defesa', 'passe', 'aérea', 'mental'];
     if (/destruidor|destroyer|atacante surpresa|extra frontman/.test(style)) return ['defesa', 'defesa', 'defesa', 'aérea', 'físico'];
   }
   if (position === 'DMF') {
     if (/orquestrador|orchestrator/.test(style)) return ['passe', 'passe', 'defesa', 'defesa', 'físico'];
-    if (/primeiro volante|anchor man/.test(style)) return ['defesa', 'defesa', 'passe', 'físico', 'aérea'];
-    if (['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation)) return ['defesa', 'defesa', 'passe', 'físico', 'aérea'];
+    if (/primeiro volante|anchor man|destruidor|destroyer/.test(style)) return ['defesa', 'defesa', 'passe', 'físico', 'aérea'];
   }
   if (position === 'AMF' || position === 'CMF') {
-    if (/infiltra|hole player/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
+    if (/infiltra|hole player/.test(style)) return ['passe', 'finalização', 'drible', 'passe', 'físico'];
     if (/armador|creative|orquestrador|classic|cl[aá]ssico/.test(style)) return ['passe', 'passe', 'passe', 'drible', 'mental'];
   }
   if (['LB', 'RB', 'LMF', 'RMF', 'LWF', 'RWF'].includes(position) && /perito em cruzamento|cross specialist/.test(style)) {
     return ['passe', 'passe', 'passe', 'drible', 'físico'];
   }
   if (position === 'CF') {
-    if (/piv[oô]|target man/.test(style)) return ['aérea', 'aérea', 'finalização', 'passe', 'físico'];
-    if (/recuado|deep.lying forward/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
-    if (/homem de area|fox in the box/.test(style)) return ['finalização', 'finalização', 'aérea', 'aérea', 'físico'];
-    if (['5-3-2', '3-5-2'].includes(formation)) return ['finalização', 'finalização', 'aérea', 'passe', 'físico'];
-    if (['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation)) return ['finalização', 'finalização', 'passe', 'drible', 'físico'];
+    if (/piv[oô]|target man/.test(style)) return ['aérea', 'finalização', 'passe', 'físico', 'mental'];
+    if (/puxa marcacao|puxa marcação|deep.lying forward/.test(style)) return ['passe', 'passe', 'finalização', 'drible', 'físico'];
+    if (/homem de area|homem de área|fox in the box/.test(style)) return ['finalização', 'finalização', 'aérea', 'aérea', 'físico'];
     return ['finalização', 'finalização', 'finalização', 'drible', 'físico'];
   }
   return POSITION_SLOT_BLUEPRINTS[position];
 }
-
-
 
 const SKILL_IMPACT: Record<string, string> = {
   'Chute de primeira': 'Finaliza sem precisar dominar, reduzindo o tempo de resposta dentro da área.',
@@ -240,6 +245,21 @@ export function isRoleCompatibleAdditionalSkill(skill: string, position: Positio
   return POSITION_SKILL_POOLS[position].includes(skill);
 }
 
+/** Catálogo oficial compatível com a posição escolhida, em ordem de prioridade-base. */
+export function officialAdditionalSkillPoolForPosition(position: PositionCode) {
+  return POSITION_SKILL_POOLS[position]
+    .filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
+}
+
+/** Quantidade máxima de habilidades oficiais ainda disponíveis sem repetir a carta. */
+export function availableOfficialAdditionalSkillCount(result: AnalysisResult) {
+  const position = resolveAdditionalSkillPosition(result);
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
+  return officialAdditionalSkillPoolForPosition(position)
+    .filter((skill) => !owned.has(skillIdentityKey(skill)))
+    .length;
+}
+
 type CardSkillProfile = {
   aerialTarget: boolean;
   agileCarrier: boolean;
@@ -279,14 +299,19 @@ function profileAdjustment(result: AnalysisResult, position: PositionCode, skill
   const penalize = (condition: boolean, points: number) => { if (condition) score -= points; };
 
   boost(profile.aerialTarget && ['Cabeçada', 'Superioridade aérea', 'Finalização acrobática'].includes(skill), 14, 'O modelo corporal e os atributos aéreos tornam esta habilidade recorrente.');
-  boost(profile.agileCarrier && ['Toque duplo', 'Controle com a sola', 'Giro 360°', 'Elástico', 'Corte com virada', 'Corte rápido'].includes(skill), 12, 'A carta possui controle corporal para transformar o drible em vantagem real.');
+  const dribbleDna = average(a.ballControl, a.dribbling, a.tightPossession, a.balance, a.acceleration);
+  const creationDna = average(a.lowPass, a.loftedPass, a.ballControl);
+  const finishingDna = average(a.finishing, a.offensiveAwareness, a.kickingPower);
+  const officialDribbleSkills = ['Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada', 'Puxada de letra', 'Finta de letra', 'Controle com a sola'];
+  boost(profile.agileCarrier && officialDribbleSkills.includes(skill), 12, 'A carta possui controle corporal para transformar o drible em vantagem real.');
+  boost(profile.agileCarrier && dribbleDna >= 86 && dribbleDna >= creationDna + 5 && dribbleDna >= finishingDna + 5 && officialDribbleSkills.includes(skill), 16, 'O drible é o DNA dominante da carta e merece prioridade no Top 5 oficial.');
   boost(profile.creativeHub && ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Passe sem olhar', 'Toque de calcanhar', 'Passe aéreo baixo'].includes(skill), 13, 'O DNA criativo da carta sustenta passes rápidos e progressivos.');
   boost(profile.distanceThreat && ['Precisão à distância', 'Efeito de longe', 'Chute com o peito do pé', 'Chute ascendente', 'Folha seca'].includes(skill), 12, 'Finalização, força e curva sustentam ameaça real fora da área.');
   boost(profile.defensiveAnchor && ['Interceptação', 'Bloqueador', 'Marcação individual', 'Afastamento acrobático', 'Carrinho'].includes(skill), 15, 'O perfil defensivo ativa esta habilidade com frequência na zona de atuação.');
   boost(profile.progressiveDefender && ['Passe de primeira', 'Passe em profundidade', 'Passe aéreo baixo', 'Passe na medida'].includes(skill), 10, 'A carta recupera e acelera a saída de bola sem abandonar a função defensiva.');
   boost(profile.wideProvider && ['Cruzamento preciso', 'Passe na medida', 'Curva para fora', 'Passe aéreo baixo'].includes(skill), 13, 'A atuação pelo corredor e o passe alto tornam a habilidade diretamente útil.');
   boost(profile.pressingRunner && ['Volta para marcar', 'Espírito guerreiro'].includes(skill), 9, 'Velocidade e resistência permitem repetir ações de pressão e recomposição.');
-  boost(profile.goalkeeperDistributor && ['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Passe de primeira', 'Passe na medida', 'Passe aéreo baixo'].includes(skill), 15, 'O goleiro possui recursos para acelerar a primeira fase da construção.');
+  boost(profile.goalkeeperDistributor && ['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Espírito guerreiro', 'Liderança'].includes(skill), 15, 'O goleiro possui recursos para acelerar a primeira fase da construção.');
 
   const fancyDribble = ['Chapéu', 'Elástico', 'Puxada de letra', 'Finta de letra', 'Pedalada simples', 'Giro 360°', 'Corte com virada'].includes(skill);
   penalize(fancyDribble && !profile.agileCarrier, 28);
@@ -320,8 +345,13 @@ function styleScore(result: AnalysisResult, position: PositionCode, skill: strin
     if (patterns.test(style) && skills.includes(skill)) { score += points; reasons.push(reason); }
   };
 
-  add(/goleiro ofensivo|offensive goalkeeper/, ['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro', 'Passe de primeira', 'Passe na medida', 'Passe aéreo baixo'], 18, 'A habilidade reforça a saída rápida do Goleiro Ofensivo.');
-  add(/goleiro defensivo|defensive goalkeeper/, ['Pegador de pênalti', 'Reposição alta do goleiro', 'Espírito guerreiro', 'Liderança'], 15, 'A habilidade reforça segurança e resposta do Goleiro Defensivo.');
+  add(/goleiro ofensivo|offensive goalkeeper/, ['Reposição baixa do goleiro', 'Reposição alta do goleiro', 'Arremesso longo do goleiro'], 34, 'A habilidade reforça a saída rápida do Goleiro Ofensivo.');
+  add(/goleiro ofensivo|offensive goalkeeper/, ['Espírito guerreiro', 'Liderança'], 12, 'Mantém segurança mental sem ocupar a prioridade das reposições do Goleiro Ofensivo.');
+  if (/goleiro ofensivo|offensive goalkeeper/.test(style) && skill === 'Pegador de pênalti') score -= 55;
+  add(/goleiro defensivo|defensive goalkeeper/, ['Pegador de pênalti'], 96, 'A habilidade prioriza segurança de meta no Goleiro Defensivo.');
+  add(/goleiro defensivo|defensive goalkeeper/, ['Espírito guerreiro', 'Liderança'], 25, 'A habilidade reforça estabilidade e resposta do Goleiro Defensivo.');
+  add(/goleiro defensivo|defensive goalkeeper/, ['Reposição alta do goleiro'], 8, 'Mantém uma opção segura de reposição sem transformar o goleiro em distribuidor ofensivo.');
+  if (/goleiro defensivo|defensive goalkeeper/.test(style) && ['Reposição baixa do goleiro', 'Arremesso longo do goleiro'].includes(skill)) score -= 55;
   add(/destruidor|destroyer|primeiro volante|anchor man|lateral defensivo|atacante surpresa|extra frontman/, ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Superioridade aérea', 'Espírito guerreiro'], 16, 'Reforça o comportamento defensivo do estilo oficial.');
   add(/defensor criativo|build up/, ['Passe de primeira', 'Passe na medida', 'Passe aéreo baixo', 'Interceptação', 'Bloqueador'], 15, 'Melhora a saída de bola sem enfraquecer a defesa.');
   add(/perito em cruzamento|cross specialist/, ['Cruzamento preciso', 'Passe na medida', 'Curva para fora', 'Passe aéreo baixo'], 17, 'Amplifica a função de cruzamento do estilo oficial.');
@@ -331,14 +361,13 @@ function styleScore(result: AnalysisResult, position: PositionCode, skill: strin
   add(/homem de area|fox in the box/, ['Chute de primeira', 'Finalização acrobática', 'Cabeçada', 'Superioridade aérea'], 18, 'A habilidade reforça a decisão curta e o jogo aéreo do Homem de Área.');
   add(/piv[oô]|target man/, ['Cabeçada', 'Superioridade aérea', 'Toque de calcanhar', 'Passe de primeira', 'Espírito guerreiro'], 20, 'A habilidade reforça proteção, apoio e conclusão do Pivô.');
   add(/recuado|deep.lying forward/, ['Passe de primeira', 'Passe em profundidade', 'Controle com a sola', 'Toque de calcanhar', 'Passe na medida'], 19, 'A habilidade reforça conexão e criação do atacante recuado.');
-  add(/ponta prol[ií]fico|prolific winger|flanco movel|roaming flank|lateral finalizador|full.back finisher/, ['Toque duplo', 'Controle com a sola', 'Corte rápido', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância'], 15, 'A habilidade combina com condução, aceleração e decisão pelo corredor.');
+  add(/ponta prol[ií]fico|prolific winger|flanco movel|roaming flank|lateral finalizador|full.back finisher/, ['Toque duplo', 'Controle com a sola', 'Corte com virada', 'Cruzamento preciso', 'Curva para fora', 'Precisão à distância'], 15, 'A habilidade combina com condução, aceleração e decisão pelo corredor.');
 
   if (position === 'GK' && !POSITION_SKILL_POOLS.GK.includes(skill)) score -= 200;
   return { score, reasons };
 }
 
 function tacticalSkillScore(result: AnalysisResult, position: PositionCode, skill: string) {
-  const formation = String(result.tacticalProfile.formation);
   const collectiveStyle = result.tacticalProfile.style;
   let score = 0;
   const reasons: string[] = [];
@@ -346,22 +375,13 @@ function tacticalSkillScore(result: AnalysisResult, position: PositionCode, skil
     if (condition && skills.includes(skill)) { score += points; reasons.push(reason); }
   };
 
-  add(collectiveStyle === 'POSSE_DE_BOLA', ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Toque de calcanhar'], 9, 'Combina com a circulação curta e o apoio exigidos pela Posse de Bola.');
-  add(collectiveStyle === 'CONTRA_ATAQUE_RAPIDO', ['Passe de primeira', 'Passe em profundidade', 'Chute de primeira', 'Controle com a sola', 'Volta para marcar'], 9, 'Acelera a ação decisiva no Contra-Ataque Rápido.');
-  add(collectiveStyle === 'CONTRA_ATAQUE', ['Passe em profundidade', 'Passe na medida', 'Superioridade aérea', 'Espírito guerreiro', 'Interceptação'], 8, 'Reforça transição, duelo e ataque direto no Contra-Ataque.');
+  add(collectiveStyle === 'POSSE_DE_BOLA', ['Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Controle com a sola', 'Toque de calcanhar', 'Passe sem olhar'], 10, 'Combina com apoio curto, domínio e circulação da Posse de Bola.');
+  add(collectiveStyle === 'CONTRA_ATAQUE_RAPIDO', ['Passe de primeira', 'Passe em profundidade', 'Chute de primeira', 'Toque duplo', 'Controle com a sola', 'Espírito guerreiro'], 10, 'Acelera a ação decisiva no Contra-Ataque Rápido.');
+  add(collectiveStyle === 'CONTRA_ATAQUE', ['Passe em profundidade', 'Passe na medida', 'Superioridade aérea', 'Espírito guerreiro', 'Interceptação', 'Chute de primeira'], 9, 'Reforça transição, duelo e ataque direto no Contra-Ataque.');
+  add(collectiveStyle === 'POR_FORA', ['Cruzamento preciso', 'Passe na medida', 'Curva para fora', 'Passe aéreo baixo', 'Controle com a sola'], 9, 'Aumenta a qualidade das ações pelo corredor.');
+  add(collectiveStyle === 'PASSE_LONGO', ['Passe na medida', 'Passe aéreo baixo', 'Superioridade aérea', 'Cabeçada', 'Espírito guerreiro'], 9, 'Aumenta a eficiência de lançamento, disputa e segunda bola.');
 
-  const narrowAttack = ['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation);
-  const wideFront = ['4-3-3', '4-1-2-3', '4-2-1-3', '3-4-3', '5-2-3'].includes(formation);
-  const backThreeOrFive = ['3-2-4-1', '3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation);
-
-  add((position === 'CF' || position === 'SS') && narrowAttack, ['Chute de primeira', 'Passe de primeira', 'Passe em profundidade', 'Toque de calcanhar'], 11, 'A formação estreita exige tabelas rápidas e conclusão com pouco espaço.');
-  add((position === 'CF' || position === 'SS') && ['5-3-2', '3-5-2'].includes(formation), ['Cabeçada', 'Superioridade aérea', 'Espírito guerreiro', 'Finalização acrobática'], 12, 'No ataque de dois homens, apoio físico e jogo aéreo ganham valor.');
-  add(['LWF', 'RWF'].includes(position) && wideFront, ['Toque duplo', 'Controle com a sola', 'Corte rápido', 'Cruzamento preciso', 'Passe de primeira'], 11, 'O corredor aberto da formação aumenta o uso de condução, corte e cruzamento.');
-  add(['LB', 'RB', 'LMF', 'RMF'].includes(position) && backThreeOrFive, ['Cruzamento preciso', 'Passe de primeira', 'Volta para marcar', 'Interceptação', 'Espírito guerreiro'], 12, 'A função de ala exige ida e volta, passe e recomposição na linha de três/cinco.');
-  add(position === 'DMF' && ['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation), ['Interceptação', 'Bloqueador', 'Marcação individual', 'Passe de primeira', 'Passe na medida'], 12, 'Como volante único, precisa proteger o centro e iniciar a saída sem perder tempo.');
-  add(position === 'CB' && backThreeOrFive, ['Bloqueador', 'Interceptação', 'Superioridade aérea', 'Afastamento acrobático', 'Passe na medida'], 11, 'A linha de três/cinco aumenta coberturas, bloqueios e responsabilidade aérea.');
-  add(position === 'AMF' && ['4-2-3-1', '4-3-1-2', '4-2-2-2'].includes(formation), ['Passe de primeira', 'Passe em profundidade', 'Controle com a sola', 'Toque de calcanhar', 'Chute de primeira'], 10, 'O meia entrelinhas precisa conectar e decidir antes do fechamento da defesa.');
-
+  if (position === 'GK' && !POSITION_SKILL_POOLS.GK.includes(skill)) score -= 200;
   return { score, reasons };
 }
 
@@ -380,7 +400,7 @@ function specificScore(result: AnalysisResult, position: PositionCode, skill: st
   if (skill === 'Finalização acrobática') { addAttribute('Finalização', a.finishing, 76, 8); addAttribute('Salto', a.jump, 76, 7); }
   if (skill === 'Cabeçada' || skill === 'Superioridade aérea') { addAttribute('Cabeçada', a.heading, 74, 10); addAttribute('Salto', a.jump, 76, 9); addAttribute('Contato físico', a.physicalContact, 76, 7); }
   if (skill.includes('Passe') || skill === 'Toque de calcanhar' || skill === 'Cruzamento preciso' || skill === 'Curva para fora') { addAttribute('Passe rasteiro', a.lowPass, position === 'GK' ? 60 : 70, 8); addAttribute('Passe alto', a.loftedPass, position === 'GK' ? 62 : 72, 7); }
-  if (['Controle com a sola', 'Toque duplo', 'Giro 360°', 'Corte rápido'].includes(skill)) { addAttribute('Controle de bola', a.ballControl, 74, 7); addAttribute('Drible', a.dribbling, 74, 8); addAttribute('Equilíbrio', a.balance, 74, 6); }
+  if (['Controle com a sola', 'Toque duplo', 'Giro 360°', 'Corte com virada'].includes(skill)) { addAttribute('Controle de bola', a.ballControl, 74, 7); addAttribute('Drible', a.dribbling, 74, 8); addAttribute('Equilíbrio', a.balance, 74, 6); }
   if (['Interceptação', 'Bloqueador', 'Marcação individual'].includes(skill)) { addAttribute('Talento defensivo', a.defensiveAwareness, 74, 10); addAttribute('Desarme', a.tackling, 74, 8); addAttribute('Dedicação defensiva', a.defensiveEngagement, 74, 7); }
   if (skill === 'Volta para marcar') { addAttribute('Resistência', a.stamina, 76, 10); }
   if (skill === 'Espírito guerreiro') { addAttribute('Resistência', a.stamina, 76, 8); addAttribute('Contato físico', a.physicalContact, 74, 6); }
@@ -404,7 +424,9 @@ function buildCandidate(result: AnalysisResult, plan: TrainingPlan, position: Po
   const profile = profileAdjustment(result, position, skill);
   const supports = trainingSupport(skill);
   const planScore = supports.reduce((sum, item) => sum + Number(plan[item.key] ?? 0) * item.weight, 0);
-  const identityBoost = hash(`${result.parsed.internalId}|${result.parsed.playerName}|${result.parsed.cardType}|${result.parsed.playstyle}|${skill}`) % 3;
+  const identityBoost = hash(`${result.parsed.playerName}|${position}|${result.parsed.playstyle}|${skill}`) % 3;
+  // O desempate usa identidade estável e ignora internalId/overall do print,
+  // para a mesma carta não trocar habilidades apenas pelo GER exibido.
   // Recomendações antigas não participam da nota: elas poderiam trazer de
   // volta uma habilidade incompatível gerada por versões anteriores.
   const rawScore = base + specific.score + profile.score + planScore + identityBoost;
@@ -445,10 +467,15 @@ function categoryDiversityAdjustment(position: PositionCode, selected: Candidate
 }
 
 /** Sempre produz cinco opções treináveis quando existem cinco habilidades não possuídas no pool seguro da função. */
-export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: TrainingPlan): UnifiedSkillDecision[] {
+export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: TrainingPlan, options: AdditionalSkillProfileOptions = {}): UnifiedSkillDecision[] {
   const position = resolveAdditionalSkillPosition(result);
   const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills);
-  const orderedPool = POSITION_SKILL_POOLS[position].filter((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
+  const orderedPool = officialAdditionalSkillPoolForPosition(position);
+  const preferredCategories = options.preferredCategories?.length ? options.preferredCategories.slice(0, 5) : slotBlueprintFor(result, position);
+  const preferredCount = preferredCategories.reduce((counts, category) => {
+    counts[category] = (counts[category] ?? 0) + 1;
+    return counts;
+  }, {} as Partial<Record<SkillCategory, number>>);
   const candidates = orderedPool
     .map((skill) => buildCandidate(result, plan, position, skill, owned))
     .filter((item): item is Candidate => item !== null)
@@ -459,13 +486,16 @@ export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: Trainin
     .filter((candidate) => !selected.some((item) => item.name === candidate.name))
     .map((candidate) => ({
       candidate,
-      combined: candidate.score + complementBonus(selected, candidate) + categoryDiversityAdjustment(position, selected, candidate)
+      combined: candidate.score
+        + complementBonus(selected, candidate)
+        + categoryDiversityAdjustment(position, selected, candidate)
+        + Number(preferredCount[candidate.category] ?? 0) * 4
     }))
     .sort((a, b) => b.combined - a.combined || b.candidate.score - a.candidate.score || a.candidate.name.localeCompare(b.candidate.name, 'pt-BR'));
 
   // Primeiro preenche os cinco papéis funcionais da posição. Isso impede que
   // uma nota alta concentre 5 passes em um zagueiro ou 5 finalizações em um SA.
-  for (const category of slotBlueprintFor(result, position)) {
+  for (const category of preferredCategories) {
     const next = rankedFor(candidates.filter((candidate) => candidate.category === category))[0]?.candidate;
     if (next) selected.push(next);
   }
@@ -493,7 +523,7 @@ export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: Trainin
       priority: index === 0 || item.score >= 88 ? 'essencial' : index < 3 ? 'alta' : 'complementar',
       category: item.category,
       gameplayImpact: item.gameplayImpact,
-      reasons: [`Função travada para ${position}; habilidades incompatíveis foram excluídas.`, ...item.reasons].slice(0, 4),
+      reasons: [`${options.label ? `Perfil ${options.label}; ` : ''}posição travada em ${position}; somente habilidades oficiais e compatíveis foram consideradas.`, ...item.reasons].slice(0, 4),
       supportedBy: item.supportedBy,
       identityBoost: item.identityBoost
     };

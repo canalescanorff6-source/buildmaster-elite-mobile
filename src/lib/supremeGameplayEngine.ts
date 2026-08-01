@@ -18,7 +18,7 @@ import {
 import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
 import { cardAnalysisInputFingerprint } from './cardAnalysisFingerprint';
 
-const ENGINE_VERSION = '31.82-supreme-gameplay-full-audit-1';
+const ENGINE_VERSION = '35.00-universal-position-dna-manager-style-1';
 const SEARCH_VARIANTS = 960;
 const FINALISTS = 64;
 
@@ -65,69 +65,6 @@ const STYLE_WEIGHTS: Record<TacticalStyle, Partial<Record<TrainingKey, number>>>
   POR_FORA: { passing: 8.3, lowerBodyStrength: 7.7, dribbling: 7.2, aerialStrength: 6.2, dexterity: 5.5 },
   PASSE_LONGO: { passing: 8.7, aerialStrength: 8.2, lowerBodyStrength: 7.4, shooting: 5.4, defending: 5.2 }
 };
-
-const FORMATION_WEIGHTS: Record<string, Partial<Record<TrainingKey, number>>> = {
-  '4-3-3': { passing: 7.8, dribbling: 6.5, dexterity: 5.8, lowerBodyStrength: 5.4 },
-  '4-1-2-3': { passing: 7.6, dexterity: 6.4, dribbling: 6, defending: 5.4 },
-  '4-2-1-3': { dexterity: 7.1, lowerBodyStrength: 6.7, passing: 6.2, defending: 5.7 },
-  '4-2-2-2': { passing: 7.3, dexterity: 7.2, shooting: 6.6, lowerBodyStrength: 6.1 },
-  '4-3-1-2': { passing: 7.5, dexterity: 6.8, shooting: 6.2, defending: 5.8 },
-  '4-2-3-1': { passing: 7.6, defending: 6.2, dribbling: 5.8, dexterity: 5.7 },
-  '4-1-3-2': { defending: 6.8, passing: 6.7, lowerBodyStrength: 6.5, shooting: 5.8 },
-  '4-4-2': { lowerBodyStrength: 7, aerialStrength: 6.6, defending: 6.3, passing: 5.8 },
-  '4-1-4-1': { passing: 7.2, defending: 6.8, lowerBodyStrength: 5.8, dexterity: 5.2 },
-  '3-2-4-1': { passing: 7.8, dribbling: 6.6, dexterity: 6.1, defending: 5.5 },
-  '3-4-3': { lowerBodyStrength: 7.2, passing: 6.5, dribbling: 6.4, defending: 5.8 },
-  '3-5-2': { passing: 7, defending: 6.8, lowerBodyStrength: 6.6, aerialStrength: 5.7 },
-  '5-3-2': { defending: 8.2, aerialStrength: 7.2, lowerBodyStrength: 7, passing: 5.8 },
-  '5-2-3': { defending: 7.4, lowerBodyStrength: 7.2, aerialStrength: 6.5, dexterity: 5.7 },
-  AUTO: {}
-};
-
-
-function formationRoleWeights(result: AnalysisResult) {
-  const formation = String(result.tacticalProfile.formation);
-  const position = result.bestPosition.code;
-  const base = FORMATION_WEIGHTS[formation] ?? {};
-  const duty: Partial<Record<TrainingKey, number>> = {};
-  const add = (values: Partial<Record<TrainingKey, number>>) => {
-    for (const [key, value] of Object.entries(values) as Array<[TrainingKey, number]>) duty[key] = (duty[key] ?? 0) + value;
-  };
-
-  const narrowTwoStrikers = ['4-2-2-2', '4-3-1-2', '4-1-3-2', '4-4-2'].includes(formation);
-  const backFive = ['5-3-2', '5-2-3'].includes(formation);
-  const wingBackSystem = ['3-4-3', '3-5-2', '5-3-2', '5-2-3'].includes(formation);
-  const wideFrontThree = ['4-3-3', '4-1-2-3', '4-2-1-3', '3-4-3', '5-2-3'].includes(formation);
-
-  if (position === 'CF' || position === 'SS') {
-    if (narrowTwoStrikers) add({ shooting: 9.2, dexterity: 8.4, passing: 7.4, lowerBodyStrength: 6.2 });
-    if (formation === '5-3-2' || formation === '3-5-2') add({ aerialStrength: 9, lowerBodyStrength: 8.2, shooting: 8.5, passing: 5.8 });
-    if (wideFrontThree) add({ shooting: 8.8, dexterity: 8.5, dribbling: 5.8, lowerBodyStrength: 6.8 });
-    if (formation === '4-2-3-1' || formation === '4-1-4-1') add({ shooting: 8.6, lowerBodyStrength: 8, aerialStrength: 6.8, passing: 5.5 });
-  } else if (position === 'LWF' || position === 'RWF') {
-    if (wideFrontThree) add({ dribbling: 9.5, dexterity: 9, lowerBodyStrength: 7.5, passing: 6.5, shooting: 6.8 });
-    if (formation === '5-2-3' || formation === '3-4-3') add({ lowerBodyStrength: 8.3, passing: 7.2, dribbling: 8.4, dexterity: 7.8 });
-  } else if (position === 'AMF') {
-    if (['4-2-3-1', '4-3-1-2', '4-2-2-2'].includes(formation)) add({ passing: 9.5, dribbling: 8.2, dexterity: 8.2, shooting: 6.6 });
-    if (formation === '3-2-4-1') add({ passing: 9.2, dribbling: 8.5, lowerBodyStrength: 6.2, dexterity: 7.2 });
-  } else if (position === 'CMF') {
-    if (['4-3-3', '4-1-2-3', '4-1-4-1', '3-5-2'].includes(formation)) add({ passing: 9.2, lowerBodyStrength: 8, defending: 7, dexterity: 6.3 });
-    if (['4-2-2-2', '4-2-3-1'].includes(formation)) add({ passing: 8.8, defending: 8, lowerBodyStrength: 7.5, dexterity: 6.4 });
-  } else if (position === 'DMF') {
-    if (['4-1-2-3', '4-1-3-2', '4-1-4-1'].includes(formation)) add({ defending: 10, passing: 8.2, lowerBodyStrength: 8, aerialStrength: 6.3 });
-    if (['4-2-2-2', '4-2-1-3', '4-2-3-1'].includes(formation)) add({ defending: 9.3, passing: 8.5, lowerBodyStrength: 7.7, dexterity: 5.4 });
-  } else if (position === 'LMF' || position === 'RMF' || position === 'LB' || position === 'RB') {
-    if (wingBackSystem) add({ lowerBodyStrength: 9.4, passing: 8.8, defending: 8.3, dexterity: 6.7, dribbling: 5.4 });
-    else add({ defending: 8.5, lowerBodyStrength: 8.4, passing: 7.5, dexterity: 5.8 });
-  } else if (position === 'CB') {
-    if (backFive || ['3-2-4-1', '3-4-3', '3-5-2'].includes(formation)) add({ defending: 10, aerialStrength: 9, passing: 6.4, lowerBodyStrength: 7.5 });
-    else add({ defending: 10, aerialStrength: 8, lowerBodyStrength: 7.2, passing: 5.7 });
-  } else if (position === 'GK') {
-    add({ gk1: 8.8, gk2: 10, gk3: 9.3, aerialStrength: backFive ? 6.5 : 5.4, lowerBodyStrength: 4.5 });
-  }
-
-  return mergeWeights({ values: base, factor: 0.35 }, { values: duty, factor: 1 });
-}
 
 type Dimensions = SupremeGameplayAnalysis['dimensions'];
 type QuickCandidate = { plan: TrainingPlan; source: string; quickScore: number };
@@ -419,14 +356,15 @@ function candidateMap(result: AnalysisResult, roleWeights: Partial<Record<Traini
     { values: tacticalWeights, factor: 1.15 },
     { values: learnedWeights(result), factor: 0.55 }
   );
-  const seed = hash(`${result.parsed.internalId}|${result.bestPosition.code}|${result.tacticalProfile.formation}|${result.tacticalProfile.style}|${result.parsed.playstyle ?? ''}`);
+  const seed = hash(`${result.parsed.internalId}|${result.bestPosition.code}|${result.tacticalProfile.style}|${result.parsed.playstyle ?? ''}`);
   for (let index = 0; index < SEARCH_VARIANTS; index += 1) add(allocateExact(result, merged, index, seed), `Busca competitiva ${index + 1}`);
   return Array.from(map.values());
 }
 
 function tacticalContext(result: AnalysisResult) {
   const manager = result.tacticalProfile.managerName ? ` • técnico ${result.tacticalProfile.managerName}` : '';
-  return `${result.tacticalProfile.formation === 'AUTO' ? 'formação automática' : result.tacticalProfile.formation} • ${result.tacticalProfile.style === 'AUTO' ? 'estilo automático' : result.tacticalProfile.style.replaceAll('_', ' ').toLowerCase()}${manager}`;
+  const collective = result.tacticalProfile.style === 'AUTO' ? 'estilo coletivo automático' : result.tacticalProfile.style.replaceAll('_', ' ').toLowerCase();
+  return `posição universal • ${collective}${manager}`;
 }
 
 function gameplayChanges(winner: TrainingPlan, reference: TrainingPlan) {
@@ -451,7 +389,6 @@ function compareScore(result: AnalysisResult, plan: TrainingPlan | null | undefi
 function buildWarnings(result: AnalysisResult) {
   const warnings: string[] = [];
   if (!result.parsed.playstyle) warnings.push('Confirme o Estilo de Jogo oficial; sem ele o motor usa posição, atributos e habilidades, mas perde precisão comportamental.');
-  if (result.tacticalProfile.formation === 'AUTO') warnings.push('Escolha a formação para calibrar o espaço e a função exata do jogador.');
   if (result.tacticalProfile.style === 'AUTO') warnings.push('Escolha o estilo coletivo do técnico para concluir a calibração tática.');
   if (!result.tacticalProfile.managerName && !result.tacticalProfile.managerId) warnings.push('Selecione o técnico e a proficiência para medir o encaixe completo.');
   if ((result.competitiveFusion?.exactCardCount ?? 0) === 0) warnings.push('Nenhuma ficha profissional auditável da carta exata foi registrada; o motor próprio permanece como fonte principal.');
@@ -467,12 +404,10 @@ export function applySupremeGameplayEngine(result: AnalysisResult): AnalysisResu
 
   const role = roleProfile(result);
   const styleWeights = STYLE_WEIGHTS[result.tacticalProfile.style] ?? {};
-  const formationWeights = formationRoleWeights(result);
   const tacticalTrust = managerTacticalTrust(result);
   const tacticalWeights = mergeWeights(
-    { values: POSITION_WEIGHTS[result.bestPosition.code], factor: 1 - tacticalTrust },
-    { values: styleWeights, factor: 0.60 * tacticalTrust },
-    { values: formationWeights, factor: 0.40 * tacticalTrust }
+    { values: POSITION_WEIGHTS[result.bestPosition.code], factor: 1 - 0.55 * tacticalTrust },
+    { values: styleWeights, factor: 0.55 * tacticalTrust }
   );
   const reference = result.unifiedIntelligence?.finalTraining ?? result.training;
   const candidates = candidateMap(result, role.weights, tacticalWeights, reference);
@@ -518,13 +453,13 @@ export function applySupremeGameplayEngine(result: AnalysisResult): AnalysisResu
     guardrails: [
       'A posição escolhida pelo usuário permanece soberana.',
       'O Estilo de Jogo oficial da carta é tratado como comportamento, não apenas como nome.',
-      'Formação, função do setor, estilo coletivo, técnico e proficiência alteram os pesos da ficha quando confirmados.',
+      'A posição escolhida, o Estilo de Jogo da carta, o estilo coletivo, o técnico e a proficiência alteram os pesos; a formação não limita a ficha.',
       'Nenhum plano pode ultrapassar o orçamento real ou usar grupos de goleiro em jogador de linha.',
       'O motor penaliza excesso acima da faixa útil e evita gastar pontos apenas para aumentar overall.',
       'Referências de pro players têm peso limitado e só entram quando a carta exata é auditada.',
       'A vantagem mostrada é uma estimativa do motor; resultado em campo depende de comando, conexão, carta e execução do usuário.'
     ],
-    summary: `O Motor Supremo v31.82 comparou ${candidates.length} distribuições únicas, refinou ${finalists.length} finalistas e escolheu a ficha de maior encaixe para ${role.label}, ${result.bestPosition.label} e o contexto tático confirmado.`
+    summary: `O Motor Supremo v31.82 comparou ${candidates.length} distribuições únicas, refinou ${finalists.length} finalistas e escolheu a ficha de maior encaixe para ${role.label} e ${result.bestPosition.label}, com rendimento universal entre formações.`
   };
 
   const differences = TRAINING_KEYS.filter((key) => winner.plan[key] !== runnerUp.plan[key]).map((key) => ({ key, label: TRAINING_LABELS[key], a: winner.plan[key], b: runnerUp.plan[key] }));
@@ -543,14 +478,14 @@ export function applySupremeGameplayEngine(result: AnalysisResult): AnalysisResu
       runnerUpScore: runnerUp.score,
       scoreGap: clamp(winner.score - runnerUp.score, 0, 100),
       exactBudget: used === result.trainingPointsTotal,
-      evaluationDimensions: ['posição escolhida', 'Estilo de Jogo oficial', 'formação e estilo do técnico', 'proficiência do técnico', 'faixas úteis de atributos', 'retorno por ponto', 'habilidades', 'robustez online', 'partidas reais'],
+      evaluationDimensions: ['posição escolhida', 'Estilo de Jogo oficial', 'versatilidade entre formações e estilo do técnico', 'proficiência do técnico', 'faixas úteis de atributos', 'retorno por ponto', 'habilidades', 'robustez online', 'partidas reais'],
       abTest: {
         available: differences.length > 0 && signature(winner.plan) !== signature(runnerUp.plan),
         minimumMatchesPerVariant: 5,
         variantA: winner.plan,
         variantB: runnerUp.plan,
         differences,
-        instruction: 'Teste as duas fichas com a mesma posição, técnico, formação e estilo coletivo. Registre passe, giro, finalização, físico e posicionamento por pelo menos 5 partidas em cada variante.'
+        instruction: 'Teste as duas fichas com a mesma posição, técnico e estilo coletivo. Registre passe, giro, finalização, físico e posicionamento por pelo menos 5 partidas em cada variante.'
       }
     },
     gameplayChanges: gameplayChanges(winner.plan, reference),

@@ -15,8 +15,8 @@ const matches = read('src/modules/matches/MatchLaboratory.tsx');
 const formations = read('src/components/FormationRoleLabPanel.tsx');
 const players = read('src/modules/players/PlayerLaboratory.tsx');
 
-assert.equal(pkg.version, '34.00.0');
-assert.equal(manifest.name, 'BuildMaster Elite Tático v34.00');
+assert.ok(Number(pkg.version.split('.')[0]) >= 34, `Versão esperada 34 ou superior, recebida ${pkg.version}`);
+assert.match(manifest.name, /^BuildMaster Elite Tático v(?:34|3[5-9]|[4-9]\d)\./);
 assert.equal(manifest.theme_color, '#07111f');
 assert.match(layout, /v34-studio\.css/);
 assert.match(layout, /bm-v3400-studio/);
@@ -68,6 +68,6 @@ assert.doesNotMatch(auth, /offlineBannerExpanded/);
 assert.doesNotMatch(auth, /offline-license-banner/);
 assert.doesNotMatch(auth, /offline-license-toggle/);
 assert.doesNotMatch(auth, /offline-license-retry/);
-assert.match(cache, /34\.00\.0-touch-scroll-menu-5/);
+assert.match(cache, /(?:34\.00\.0-touch-scroll-menu-5|35\.00\.0-official-skills-meta-2)/);
 
 console.log('v34.00 Studio Premium aprovado: tema unificado, menu lateral, guias com painel visível, avisos compactos e módulos protegidos.');

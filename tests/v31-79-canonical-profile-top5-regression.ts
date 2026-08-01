@@ -8,6 +8,7 @@ import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeli
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
 import {
   ADDITIONAL_SKILL_ENGINE_VERSION,
+  availableOfficialAdditionalSkillCount,
   isRoleCompatibleAdditionalSkill,
   resolveAdditionalSkillPosition
 } from '../src/lib/skillIntelligenceV31';
@@ -65,8 +66,9 @@ const striker = runCard(
 for (const result of [goalkeeper, centreBack, striker]) {
   const position = resolveAdditionalSkillPosition(result);
   const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
-  assert.equal(result.recommendedSkills.length, 5, `${position}: o motor deve entregar exatamente cinco adicionais.`);
-  assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, 5, `${position}: as cinco habilidades devem ser únicas.`);
+  const expectedCount = Math.min(5, availableOfficialAdditionalSkillCount(result));
+  assert.equal(result.recommendedSkills.length, expectedCount, `${position}: o motor deve entregar todas as opções oficiais restantes, até cinco.`);
+  assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, expectedCount, `${position}: as habilidades entregues devem ser únicas.`);
   assert.ok(result.recommendedSkills.every((skill) => !owned.has(skillIdentityKey(skill))), `${position}: não pode repetir habilidade já presente.`);
   assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, position)), `${position}: todas as habilidades devem respeitar a trava da função.`);
   assert.equal(result.skillIntegrity?.missingSlots, 0, `${position}: não pode restar vaga adicional vazia.`);
@@ -74,7 +76,7 @@ for (const result of [goalkeeper, centreBack, striker]) {
 
 const forbiddenForGoalkeeper = new Set([
   'Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Cabeçada', 'Controle da cavadinha',
-  'Efeito de longe', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente', 'Toque duplo', 'Corte rápido'
+  'Efeito de longe', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente', 'Toque duplo', 'Corte com virada'
 ]);
 assert.ok(goalkeeper.recommendedSkills.every((skill) => !forbiddenForGoalkeeper.has(skill)), 'GK não pode receber habilidade de atacante ou driblador como preenchimento do Top 5.');
 assert.ok(centreBack.recommendedSkills.every((skill) => !['Chute de primeira', 'Precisão à distância', 'Finalização acrobática', 'Controle da cavadinha'].includes(skill)), 'CB não pode receber finalizações de atacante.');
@@ -108,7 +110,7 @@ const skillIsolationReading: PremiumZoneReading = {
 const isolatedSkills = readDetailedPrint('', [skillIsolationReading]);
 assert.deepEqual(isolatedSkills.skills.map((item) => item.value).sort(), ['Chute de primeira', 'Passe de primeira'].sort(), 'Atributos acima do marcador HABILIDADES não podem contaminar a lista nativa.');
 
-assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1|32\.00-position-style-formation-exact-five-1)$/);
+assert.match(ADDITIONAL_SKILL_ENGINE_VERSION, /^(?:31\.80-position-style-exact-five-1|31\.82-position-style-formation-exact-five-1|32\.00-position-style-formation-exact-five-1|35\.00-official-photo-catalog-position-style-manager-universal-1)$/);
 assert.ok(internalVersionAtLeast(EFHUB_LAYOUT_GEOMETRY_VERSION, 31, 81), `Geometria eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_LAYOUT_GEOMETRY_VERSION}`);
 assert.ok(internalVersionAtLeast(EFHUB_CANONICAL_NORMALIZER_VERSION, 31, 81), `Normalizador eFHUB deve permanecer na v31.81 ou posterior: ${EFHUB_CANONICAL_NORMALIZER_VERSION}`);
 

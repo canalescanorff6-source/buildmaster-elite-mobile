@@ -13,7 +13,7 @@ assert.match(pipeline, /const integrityBeforeCalibration = enforceComplementaryS
 assert.match(pipeline, /return enforceComplementarySkillIntegrity\(applyCalibrationV32\(calibratedImpetos\)\)/);
 assert.match(supreme, /exactBudgetFinalists = finalists\.filter\(\(item\) => trainingPlanTotalCost\(item\.plan\) === result\.trainingPointsTotal\)/);
 assert.match(impeto, /!ownedNames\.has\(item\.profile\.name\.toLowerCase\(\)\)/);
-assert.match(impeto, /(?:31\.10-local-ai-final-build-3|31\.82-local-ai-formation-final-build-1)/);
+assert.match(impeto, /(?:31\.10-local-ai-final-build-3|31\.82-local-ai-formation-final-build-1|35\.00-local-ai-position-style-final-build-1)/);
 assert.match(skills, /filterComplementaryAdditionalSkills\(/);
 assert.match(skills, /const exactFive = recommendedSkills\.length === 5/);
 assert.match(skills, /const roleCompatible = recommendedSkills\.every/);

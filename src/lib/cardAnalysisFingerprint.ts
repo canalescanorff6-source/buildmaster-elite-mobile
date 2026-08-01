@@ -71,7 +71,6 @@ export function cardAnalysisInputFingerprint(result: AnalysisResult, extra = '')
     impetos.join(','),
     result.trainingPointsTotal,
     trainingSignature(result.training),
-    result.tacticalProfile.formation,
     result.tacticalProfile.style,
     normalizeText(result.tacticalProfile.managerId),
     normalizeText(result.tacticalProfile.managerName),

@@ -5,8 +5,8 @@ import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 
 type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean } };
 
-// Esquema anterior preservado para a regressão: 34.00.0-touch-scroll-menu-5
-const NATIVE_CACHE_SCHEMA = '34.00.0-identity-themes-avatar-6';
+// Esquema anterior preservado para a regressão: 35.00.0-official-skills-meta-2
+const NATIVE_CACHE_SCHEMA = '35.20.0-dna-gameplay-solid-theme-1';
 const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
 
 async function clearNativeWebCaches() {

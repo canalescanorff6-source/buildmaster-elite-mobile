@@ -1,0 +1,347 @@
+/* -------------------------------------------------------------------------- */
+/* BuildMaster v35.20 — superfícies sólidas, contraste integral e DNA da carta */
+/* Esta camada é carregada por último e substitui o excesso de transparências. */
+/* -------------------------------------------------------------------------- */
+
+body.bm-v3520-solid {
+  background: #07111d;
+  color: #eef4fb;
+}
+
+.bm-v3520-solid .premium-app {
+  --v3520-page: var(--v35-bg);
+  --v3520-page-2: var(--v35-bg-2);
+  --v3520-surface: var(--v35-surface);
+  --v3520-elevated: var(--v35-surface-2);
+  --v3520-inset: var(--v35-field);
+  --v3520-text: var(--v35-text);
+  --v3520-muted: var(--v35-muted);
+  --v3520-border: color-mix(in srgb, var(--v35-accent) 24%, var(--v35-surface-2));
+  --v3520-border-soft: color-mix(in srgb, var(--v35-text) 12%, var(--v35-surface));
+  --v3520-accent-soft: color-mix(in srgb, var(--v35-accent) 18%, var(--v35-surface-2));
+  --v3520-danger-soft: color-mix(in srgb, var(--v35-danger) 16%, var(--v35-surface));
+  --v3520-success-soft: color-mix(in srgb, var(--v35-success) 16%, var(--v35-surface));
+  --v3520-warning-soft: color-mix(in srgb, var(--v35-warning) 17%, var(--v35-surface));
+
+  background: linear-gradient(180deg, var(--v3520-page), var(--v3520-page-2)) !important;
+  color: var(--v3520-text) !important;
+}
+
+/* Superfícies principais: nenhum vidro, blur ou fundo translúcido. */
+.bm-v3520-solid .premium-app :where(
+  .luxury-panel,
+  .premium-card,
+  .wide-card,
+  .control-panel,
+  .settings-card,
+  .quality-card,
+  .settings-view-panel,
+  .appearance-settings-panel,
+  .creation-source-card,
+  .creation-processing-card,
+  .result-workspace,
+  .page-context-card,
+  .premium-screen-hero,
+  .bm32-screen-heading,
+  .bm32-settings-overview,
+  .bm32-team-panel,
+  .bm32-team-tab-panel,
+  .match-area-panel,
+  .architecture-health-panel,
+  .player-lab-panel,
+  .team-lab-panel,
+  .menu-screen-panel,
+  .search-screen-panel
+) {
+  background: var(--v3520-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--v3520-border-soft) !important;
+  color: var(--v3520-text) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, #000 28%, transparent) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Cartões internos: contraste em dois níveis, sem “quadrados fantasmas”. */
+.bm-v3520-solid .premium-app :where(
+  .skill-check-card,
+  .settings-explanation-card,
+  .settings-option-row,
+  .settings-state-card,
+  .calibration-profile,
+  .position-build-card,
+  .creation-option-card,
+  .menu-action-card,
+  .player-result-card,
+  .history-card,
+  .vault-card,
+  .team-player-card,
+  .match-card,
+  .diagnostic-card,
+  .update-route-card,
+  .appearance-theme-card,
+  .profile-avatar-card,
+  .bm-local-ai-models > div,
+  .bm-deep-card-metrics > div,
+  .bm-deep-card-synergies > div,
+  .bm-unified-metrics > div,
+  .bm-unified-detail-grid > section,
+  .health-score-grid > article,
+  .data-grid > div,
+  .data-grid > label,
+  .variant-grid > div,
+  .stat-bars > div,
+  .result-metric-grid > article,
+  .settings-metric-grid > article,
+  .update-health-grid > article,
+  .bm32-account-card,
+  .auth-card,
+  .bm-definitive-build-card,
+  .bm-local-ai-card,
+  .bm-premium-activity-card,
+  .bm-premium-formation-card,
+  .bm-premium-player-card,
+  .bm-recovery-card,
+  .bm-summary-impeto-card,
+  .bm-summary-skill-card,
+  .bm-supreme-gameplay-card,
+  .bm-unified-intelligence-card,
+  .bm-world-fusion-card,
+  .bm32-ai-search-card,
+  .bm32-manual-choice-card,
+  .bm32-player-card,
+  .build-variant-card,
+  .chemistry-pair-card,
+  .chemistry-sector-card,
+  .cloud-status-card,
+  .cofre-summary-card,
+  .community-intelligence-card,
+  .community-source-card,
+  .comparison-table-card,
+  .comparison-winner-card,
+  .correction-hero-card,
+  .created-credentials-card,
+  .creation-field-card,
+  .creation-status-card,
+  .dna-card,
+  .evolution-executive-card,
+  .evolution-priority-card,
+  .evolution-strength-card,
+  .export-hero-card,
+  .ficha-fit-card,
+  .ficha-health-card,
+  .ficha-recommended-card,
+  .ficha-section-card,
+  .first-use-card,
+  .formation-avoid-card,
+  .formation-why-card,
+  .game-phase-card,
+  .home-next-step-card,
+  .identity-card,
+  .impeto-master-card,
+  .manager-context-card,
+  .match-capture-card,
+  .match-import-card,
+  .match-tactical-card,
+  .meta-champion-card,
+  .meta-universe-card,
+  .precision-custom-card,
+  .precision-feedback-card,
+  .precision-max-card,
+  .precision-position-card,
+  .precision-skill-card,
+  .precision-utility-card,
+  .precision-validation-card,
+  .premium-confirmation-card,
+  .ranked-readiness-card,
+  .result-ready-card,
+  .review-optional-card,
+  .rotation-card,
+  .safety-quality-panel,
+  .save-progress-card,
+  .sector-intelligence-card,
+  .settings-details-card,
+  .settings-preference-card,
+  .settings-toggle-card,
+  .squad-map-card,
+  .status-card,
+  .tactical-guide-card,
+  .team-layer-card,
+  .team-plans-card,
+  .training-drill-card,
+  .training-goals-card,
+  .training-summary-card,
+  .training-today-card,
+  .update-audit-card,
+  .update-release-card,
+  .update-release-final-card,
+  .v27-scenario-card,
+  .video-review-card,
+  details
+) {
+  background: var(--v3520-elevated) !important;
+  background-image: none !important;
+  border-color: var(--v3520-border-soft) !important;
+  color: var(--v3520-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+.bm-v3520-solid .premium-app :where(
+  .skill-check-card.muted,
+  .muted-card,
+  .panel-note,
+  .identity-note,
+  .alert-strip,
+  .review-alert-card
+) {
+  background: var(--v3520-inset) !important;
+  border-color: var(--v3520-border-soft) !important;
+}
+
+/* Campos e áreas editáveis. */
+.bm-v3520-solid .premium-app :where(input, textarea, select, .editable-field, .search-field, .filter-field) {
+  background: var(--v3520-inset) !important;
+  background-image: none !important;
+  color: var(--v3520-text) !important;
+  -webkit-text-fill-color: var(--v3520-text) !important;
+  border: 1px solid var(--v3520-border) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+.bm-v3520-solid .premium-app :where(input, textarea, select):focus {
+  outline: 2px solid color-mix(in srgb, var(--v35-accent) 58%, transparent) !important;
+  outline-offset: 1px;
+  border-color: var(--v35-accent) !important;
+}
+.bm-v3520-solid .premium-app :where(input, textarea)::placeholder {
+  color: var(--v3520-muted) !important;
+  opacity: .86 !important;
+}
+
+/* Texto legível em todos os níveis. Elementos sem classe de cor herdam a
+   superfície atual, evitando textos brancos presos em temas claros. */
+.bm-v3520-solid .premium-app :where(span,li,dt,dd,td,th) {
+  color: inherit !important;
+  text-shadow: none !important;
+}
+.bm-v3520-solid .premium-app a { color: var(--v35-accent-2) !important; }
+.bm-v3520-solid .premium-app :where(h1,h2,h3,h4,h5,h6,strong,b,label,legend,summary) {
+  color: var(--v3520-text) !important;
+  text-shadow: none !important;
+}
+.bm-v3520-solid .premium-app :where(p,small,em,.muted,.helper-text,.panel-note,.identity-note) {
+  color: var(--v3520-muted) !important;
+  text-shadow: none !important;
+}
+.bm-v3520-solid .premium-app :where(.kicker,.accent-text,.section-eyebrow) {
+  color: var(--v35-accent-2) !important;
+}
+
+/* Botões secundários agora são sólidos e distinguíveis do fundo. */
+.bm-v3520-solid .premium-app :where(
+  button:not(.primary):not(.elite-button):not(.bm32-primary-action):not(.bm-v33-primary-action),
+  .secondary-button,
+  .ghost-button,
+  .chip-cloud button,
+  .chip-cloud span
+) {
+  background: var(--v3520-elevated) !important;
+  background-image: none !important;
+  border: 1px solid var(--v3520-border) !important;
+  color: var(--v3520-text) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+.bm-v3520-solid .premium-app :where(button:hover,button:focus-visible) {
+  border-color: var(--v35-accent) !important;
+}
+.bm-v3520-solid .premium-app :where(.primary,.elite-button,.bm32-primary-action,.bm-v33-primary-action,.active-action) {
+  background: var(--v35-accent) !important;
+  background-image: none !important;
+  color: var(--v35-on-accent) !important;
+  border-color: var(--v35-accent) !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--v35-accent) 24%, transparent) !important;
+}
+.bm-v3520-solid .premium-app :where(.primary,.elite-button,.bm32-primary-action,.bm-v33-primary-action,.active-action) :where(span,strong,small,svg) {
+  color: var(--v35-on-accent) !important;
+}
+
+/* Estados sem depender de transparência. */
+.bm-v3520-solid .premium-app :where(.is-ready,.success-card,.status-success) {
+  background: var(--v3520-success-soft) !important;
+  border-color: var(--v35-success) !important;
+}
+.bm-v3520-solid .premium-app :where(.is-warning,.warning-card,.review-alert-card,.alert-strip) {
+  background: var(--v3520-warning-soft) !important;
+  border-color: var(--v35-warning) !important;
+}
+.bm-v3520-solid .premium-app :where(.is-danger,.danger-card,.error-card) {
+  background: var(--v3520-danger-soft) !important;
+  border-color: var(--v35-danger) !important;
+}
+
+/* Topo e menu lateral completamente sólidos. */
+.bm-v3520-solid .bm-simple-topbar,
+.bm-v3520-solid .bm-v33-sidebar,
+.bm-v3520-solid .bm-v33-drawer,
+.bm-v3520-solid .bm-v33-nav-item,
+.bm-v3520-solid .bm-v33-nav-footer {
+  background: var(--v3520-surface) !important;
+  background-image: none !important;
+  color: var(--v3520-text) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.bm-v3520-solid .bm-v33-nav-item.active,
+.bm-v3520-solid .bm-v33-nav-item[aria-current='page'] {
+  background: var(--v3520-accent-soft) !important;
+  border-color: var(--v35-accent) !important;
+}
+
+/* Perfis de Gameplay / DNA da carta. */
+.bm-dna-profiles-card { overflow: hidden; }
+.bm-dna-detected { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px; }
+.bm-dna-detected span { display:inline-flex; align-items:center; gap:6px; padding:8px 10px; border:1px solid var(--v3520-border); border-radius:999px; background:var(--v3520-inset); color:var(--v3520-text); font-size:.78rem; font-weight:800; }
+.bm-dna-profile-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.bm-dna-profile { min-width:0; display:flex; flex-direction:column; gap:10px; padding:15px; border:1px solid var(--v3520-border-soft); border-radius:18px; background:var(--v3520-elevated); color:var(--v3520-text); }
+.bm-dna-profile.is-active { border-color:var(--v35-accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--v35-accent) 22%,transparent); }
+.bm-dna-profile header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.bm-dna-profile header div { display:grid; gap:3px; }
+.bm-dna-profile header small { color:var(--v35-accent-2)!important; font-size:.68rem; font-weight:900; letter-spacing:.08em; }
+.bm-dna-profile header strong { font-size:1rem; }
+.bm-dna-profile header>b { min-width:58px; padding:7px 8px; border-radius:10px; background:var(--v3520-inset); color:var(--v35-accent-2)!important; text-align:center; }
+.bm-dna-profile>p { min-height:38px; margin:0; color:var(--v3520-muted)!important; font-size:.82rem; }
+.bm-dna-score-line { display:grid; grid-template-columns:1fr auto; gap:5px 8px; align-items:center; }
+.bm-dna-score-line>span { color:var(--v3520-muted); font-size:.72rem; font-weight:800; }
+.bm-dna-score-line>strong { font-size:.78rem; }
+.bm-dna-score-line>i { grid-column:1/-1; display:block; height:6px; overflow:hidden; border-radius:999px; background:var(--v3520-inset); }
+.bm-dna-score-line>i>b { display:block; height:100%; border-radius:inherit; background:var(--v35-accent); }
+.bm-dna-focus,.bm-dna-skills { display:flex; flex-wrap:wrap; gap:6px; }
+.bm-dna-focus span { padding:5px 7px; border-radius:8px; background:var(--v3520-accent-soft); color:var(--v3520-text); font-size:.68rem; font-weight:800; }
+.bm-dna-skills span { padding:5px 7px; border:1px solid var(--v3520-border-soft); border-radius:8px; background:var(--v3520-inset); color:var(--v3520-text); font-size:.67rem; }
+.bm-dna-profile>em { min-height:46px; padding:9px; border-radius:10px; background:var(--v3520-inset); color:var(--v3520-text)!important; font-size:.73rem; font-style:normal; line-height:1.45; }
+.bm-dna-profile>small { min-height:52px; line-height:1.45; }
+.bm-dna-apply { width:100%; min-height:44px; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:auto; border-radius:12px; font-weight:900; }
+.bm-dna-apply.is-active { background:var(--v35-accent)!important; color:var(--v35-on-accent)!important; }
+.bm-dna-apply.is-active svg { color:var(--v35-on-accent)!important; }
+.bm-dna-guard { display:flex; align-items:flex-start; gap:9px; margin-top:14px; padding:12px; border:1px solid var(--v3520-border); border-radius:14px; background:var(--v3520-inset); color:var(--v3520-muted); font-size:.78rem; line-height:1.5; }
+.bm-dna-guard svg { flex:0 0 auto; color:var(--v35-accent); }
+
+/* Não altera a transparência funcional usada no recorte/calibrador da imagem. */
+.bm-v3520-solid :where(.efhub-calibrator,.efhub-calibrator-stage,.crop-stage,.image-crop-stage,.formation-pitch,.pitch-canvas) {
+  isolation:isolate;
+}
+
+@media (max-width: 900px) {
+  .bm-dna-profile-grid { grid-template-columns:1fr; }
+  .bm-dna-profile>p,.bm-dna-profile>small,.bm-dna-profile>em { min-height:0; }
+}
+
+@media (max-width: 620px) {
+  .bm-v3520-solid .premium-app :where(.luxury-panel,.premium-card,.wide-card,.control-panel,.settings-card) { border-radius:16px !important; }
+  .bm-dna-profile { padding:13px; border-radius:15px; }
+}
