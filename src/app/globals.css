@@ -21286,3 +21286,195 @@ body::after { display: none !important; }
 .premium-app.visual-obsidian-gold.theme-dark .first-use-progress i b {
   background: linear-gradient(90deg, #d4a24a, #f0d18f) !important;
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* v37.32 — correção global de contraste em superfícies claras no tema escuro  */
+/* -------------------------------------------------------------------------- */
+.premium-app.theme-dark {
+  --app-fix-surface: color-mix(in srgb, var(--surface, #171b23) 88%, #0b0d12);
+  --app-fix-surface-2: color-mix(in srgb, var(--surface-2, #202733) 82%, #0f1218);
+  --app-fix-field: color-mix(in srgb, var(--field, #121720) 88%, #0a0d12);
+  --app-fix-text: var(--text, #f5f7fb);
+  --app-fix-soft: color-mix(in srgb, var(--soft, #ebe4d8) 84%, white);
+  --app-fix-muted: var(--muted, #b8ad97);
+  --app-fix-border: color-mix(in srgb, var(--border, rgba(226,191,120,.14)) 100%, transparent);
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-topbar,
+  .bm-simple-context,
+  .premium-context-bar,
+  .bm-premium-context-bar,
+  .bm-simple-player-tabs,
+  .player-card,
+  .bm32-player-card,
+  .bm-simple-player-list > article,
+  .bm32-screen-heading,
+  .bm32-team-metrics > article,
+  .bm32-team-bench-strip,
+  .bm32-team-insights > article,
+  .bm32-team-tabs,
+  .bm32-team-actions,
+  .result-navigation-shell,
+  .result-primary-tabs,
+  .result-advanced-bar,
+  .settings-navigation-rail,
+  .smart-quick-dock,
+  .calibration-v32-card,
+  .home-quick-grid button,
+  .home-vault-metrics button,
+  .bm-simple-shortcut-grid button,
+  .bm-simple-player-secondary button,
+  .v27-search-field,
+  .v27-profile-sections article,
+  .v27-player-list > button,
+  .v27-style-note,
+  .v27-warning-box,
+  .v27-team-metrics article,
+  .v27-profile-actions button,
+  .v27-metric-grid article,
+  .v27-panel-heading button
+) {
+  background: linear-gradient(180deg, var(--app-fix-surface), var(--app-fix-surface-2)) !important;
+  color: var(--app-fix-text) !important;
+  border-color: var(--app-fix-border) !important;
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-brand,
+  .bm-simple-account,
+  .bm-simple-context h1,
+  .premium-context-bar h1,
+  .bm-premium-context-bar h1,
+  .player-card,
+  .bm32-player-card,
+  .bm32-screen-heading,
+  .bm32-team-screen,
+  .result-navigation-shell,
+  .result-primary-tabs,
+  .result-advanced-bar,
+  .settings-navigation-rail,
+  .smart-quick-dock,
+  .calibration-v32-card,
+  .home-quick-grid button,
+  .home-vault-metrics button,
+  .bm-simple-shortcut-grid button,
+  .bm-simple-player-list > article,
+  .bm-simple-player-secondary button,
+  .v27-profile-sections article,
+  .v27-player-list > button,
+  .v27-style-note,
+  .v27-warning-box,
+  .v27-team-metrics article,
+  .v27-metric-grid article
+) :where(h1,h2,h3,h4,strong,b,label,span,p,small,em,i) {
+  color: inherit;
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-context,
+  .premium-context-bar,
+  .bm-premium-context-bar,
+  .bm32-screen-heading,
+  .bm32-team-actions,
+  .bm32-team-tabs,
+  .result-navigation-shell,
+  .result-primary-tabs,
+  .result-advanced-bar,
+  .settings-navigation-rail,
+  .home-quick-grid button,
+  .home-vault-metrics button,
+  .bm-simple-shortcut-grid button,
+  .bm-simple-player-list > article,
+  .bm-simple-player-secondary button,
+  .v27-profile-sections article,
+  .v27-player-list > button
+) :where(p,small,em,span:not(.bm-v33-nav-icon):not(.bm-v35-nav-mark)) {
+  color: var(--app-fix-muted) !important;
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-player-tabs button,
+  .bm32-team-actions button,
+  .bm32-team-tabs button,
+  .result-primary-tabs button,
+  .settings-navigation-rail button,
+  .bm-simple-player-secondary button,
+  .home-quick-grid button,
+  .home-vault-metrics button,
+  .bm-simple-shortcut-grid button,
+  .v27-profile-actions button,
+  .v27-panel-heading button
+) {
+  background: color-mix(in srgb, var(--app-fix-surface-2) 88%, #0a0c10) !important;
+  color: var(--app-fix-soft) !important;
+  border-color: color-mix(in srgb, var(--app-fix-border) 100%, transparent) !important;
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-player-tabs button.active,
+  .bm32-team-tabs button.active,
+  .result-primary-tabs button.active,
+  .settings-navigation-rail button.active,
+  .bm-v33-main-navigation > button.active,
+  .main-section-tabs button.active-section,
+  .desktop-primary-nav button.active-section,
+  .bm-v36-mobile-dock > button.active
+) {
+  background: linear-gradient(135deg, var(--accent, #d4a24a), var(--accent-2, #f0d18f)) !important;
+  color: #1a1207 !important;
+  border-color: transparent !important;
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-player-tabs button.active,
+  .bm32-team-tabs button.active,
+  .result-primary-tabs button.active,
+  .settings-navigation-rail button.active
+) :where(span,strong,small,svg) {
+  color: inherit !important;
+}
+
+.premium-app.theme-dark :where(
+  .bm-simple-brand,
+  .bm-simple-account,
+  .bm-simple-context,
+  .premium-context-bar,
+  .bm-premium-context-bar,
+  .bm32-screen-heading,
+  .result-navigation-shell,
+  .result-primary-tabs,
+  .result-advanced-bar,
+  .settings-navigation-rail,
+  .smart-quick-dock
+) {
+  box-shadow: 0 16px 34px rgba(0,0,0,.18) !important;
+}
+
+.premium-app.theme-dark :where(
+  input,
+  textarea,
+  select,
+  .bm-v3300-executive .premium-app :where(input,textarea,select)
+) {
+  background: var(--app-fix-field) !important;
+  color: var(--app-fix-text) !important;
+  border-color: var(--app-fix-border) !important;
+}
+
+.premium-app.theme-dark :where(input,textarea,select)::placeholder {
+  color: color-mix(in srgb, var(--app-fix-muted) 82%, transparent) !important;
+}
+
+.premium-app.theme-dark .smart-quick-dock,
+.premium-app.theme-dark .settings-navigation-rail,
+.premium-app.theme-dark .result-navigation-shell,
+.premium-app.theme-dark .result-primary-tabs,
+.premium-app.theme-dark .result-advanced-bar {
+  backdrop-filter: none !important;
+}
+
+.premium-app.theme-dark .calibration-v32-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-fix-surface) 92%, #14100a), color-mix(in srgb, var(--app-fix-surface-2) 88%, #100d08)) !important;
+}

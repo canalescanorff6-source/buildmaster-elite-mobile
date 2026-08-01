@@ -1,1 +1,1 @@
-v37.31 — corrige regressões v34/v36 do workflow mantendo a reformulação premium
+v37.32 — corrige partes brancas e melhora o contraste global do app no tema escuro
