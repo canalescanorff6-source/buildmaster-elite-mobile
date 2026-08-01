@@ -79,7 +79,7 @@ export function FirstUseOnboarding({ open, onClose, onComplete, onCreatePrint, o
           <div className="first-use-step-copy"><span><CheckCircle2 size={24}/></span><div><h3>Configuração pronta</h3><p>Modo {mode === 'simple' ? 'simples' : 'avançado'}, formação {formation} e estilo {STYLES.find((item) => item.value === teamStyle)?.label}.</p></div></div>
           <div className="first-use-start-grid">
             <button type="button" onClick={() => { finish(); onCreatePrint(); }}><ScanText size={23}/><strong>Criar pelo print</strong><span>Importe a carta e confirme a leitura.</span></button>
-            <button type="button" onClick={() => { finish(); onCreateManual(); }}><ShieldCheck size={23}/><strong>Usar Manual Pro</strong><span>Preencha os dados com controle total.</span></button>
+            <button type="button" onClick={() => { finish(); onCreateManual(); }}><ShieldCheck size={23}/><strong>Criar manualmente</strong><span>Preencha os dados com controle total.</span></button>
           </div>
         </div>}
 

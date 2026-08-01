@@ -1,1 +1,1 @@
-v37.00 — corrige overflow do versionCode Android e restaura a geração assinada do APK no GitHub Actions
+v37.30 — aplica grande reformulação visual premium com mudanças amplas em cores, navegação, home, ajustes e textos do app

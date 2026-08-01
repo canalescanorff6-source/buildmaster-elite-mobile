@@ -13,19 +13,19 @@ import type { MainNavigationGroup, PlayerWorkspace } from '@/lib/appRefinement';
 };
 
 const groupTitles: Record<MainNavigationGroup, string> = {
-  inicio: 'Início',
+  inicio: 'Central',
   jogadores: 'Jogadores',
   time: 'Meu Time',
   partidas: 'Partidas e treinos',
-  ajustes: 'Ajustes'
+  ajustes: 'Configurações'
 };
 
 const workspaceTitles: Record<PlayerWorkspace, string> = {
-  'visao-geral': 'Meus jogadores',
-  leitor: 'Criar ficha por print',
-  manual: 'Criar ficha manualmente',
-  resultado: 'Ficha recomendada',
-  cofre: 'Jogadores salvos'
+  'visao-geral': 'Elenco e fichas',
+  leitor: 'Ler print',
+  manual: 'Criar manualmente',
+  resultado: 'Resultado da ficha',
+  cofre: 'Cofre de jogadores'
 };
 
 export function PremiumContextBar({

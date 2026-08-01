@@ -13,21 +13,21 @@ body.bm-v3500-identity {
 
 .bm-v3500-identity .premium-app {
   --v35-bg: #07111d;
-  --v35-bg-2: #0a1726;
-  --v35-surface: #0f2033;
-  --v35-surface-2: #142940;
-  --v35-field: #0b1a2a;
-  --v35-text: #f4f7fb;
-  --v35-muted: #a2b0c1;
-  --v35-line: rgba(183, 203, 226, .16);
-  --v35-line-strong: rgba(183, 203, 226, .28);
-  --v35-accent: #5da8ff;
-  --v35-accent-2: #8fc6ff;
+  --v35-bg-2: #0b1524;
+  --v35-surface: #101c2f;
+  --v35-surface-2: #17263c;
+  --v35-field: #0c1828;
+  --v35-text: #f5f8fd;
+  --v35-muted: #afbed0;
+  --v35-line: rgba(151, 182, 219, .15);
+  --v35-line-strong: rgba(151, 182, 219, .24);
+  --v35-accent: #5c9dff;
+  --v35-accent-2: #7fd0ff;
   --v35-on-accent: #07111d;
-  --v35-success: #54d39b;
-  --v35-danger: #ff7285;
-  --v35-warning: #f2bd63;
-  --v35-shadow: 0 14px 34px rgba(0,0,0,.24);
+  --v35-success: #4fcf9a;
+  --v35-danger: #ff748d;
+  --v35-warning: #f1c36e;
+  --v35-shadow: 0 18px 40px rgba(0,0,0,.26);
 
   /* substitui o antigo arco-íris por uma faixa bicolor do tema */
   --v2738-rainbow: linear-gradient(90deg, var(--v35-accent), var(--v35-accent-2));
@@ -48,24 +48,26 @@ body.bm-v3500-identity {
   color: var(--v35-text) !important;
   background:
     radial-gradient(circle at 84% -10%, color-mix(in srgb,var(--v35-accent) 11%,transparent), transparent 27rem),
+    radial-gradient(circle at 10% 0%, color-mix(in srgb,var(--v35-accent-2) 8%,transparent), transparent 24rem),
     linear-gradient(180deg,var(--v35-bg),var(--v35-bg-2)) !important;
 }
 
 /* Temas selecionáveis */
 .bm-v3500-identity .premium-app.visual-midnight-navy {
-  --v35-bg:#06101c; --v35-bg-2:#091827; --v35-surface:#0d2034; --v35-surface-2:#132b45;
-  --v35-field:#091929; --v35-text:#f3f7fc; --v35-muted:#9eafc3; --v35-line:rgba(135,174,218,.18);
-  --v35-accent:#55a7ff; --v35-accent-2:#96caff; --v35-on-accent:#06101c;
+  --v35-bg:#07111d; --v35-bg-2:#0b1728; --v35-surface:#111f34; --v35-surface-2:#182a42;
+  --v35-field:#0c1829; --v35-text:#f5f8fd; --v35-muted:#acbdd1; --v35-line:rgba(139,178,221,.16);
+  --v35-accent:#5a9fff; --v35-accent-2:#88cdff; --v35-on-accent:#07111d;
 }
 .bm-v3500-identity .premium-app.visual-obsidian-gold {
-  --v35-bg:#07090d; --v35-bg-2:#0e1117; --v35-surface:#151922; --v35-surface-2:#1d222d;
-  --v35-field:#10141c; --v35-text:#f8f5ec; --v35-muted:#b6ad9a; --v35-line:rgba(229,196,126,.18);
-  --v35-accent:#d7ae59; --v35-accent-2:#f1d58f; --v35-on-accent:#181207;
+  --v35-bg:#0a0c11; --v35-bg-2:#12151c; --v35-surface:#171b23; --v35-surface-2:#202733;
+  --v35-field:#121720; --v35-text:#fbf7ef; --v35-muted:#c8bba0; --v35-line:rgba(226,191,120,.16);
+  --v35-line-strong:rgba(226,191,120,.24); --v35-accent:#d4a24a; --v35-accent-2:#f0d18f; --v35-on-accent:#1a1207;
+  --v35-shadow:0 18px 44px rgba(0,0,0,.30);
 }
 .bm-v3500-identity .premium-app.visual-elite-blue {
-  --v35-bg:#030b18; --v35-bg-2:#06152a; --v35-surface:#0b2340; --v35-surface-2:#103157;
-  --v35-field:#071b31; --v35-text:#f2f7ff; --v35-muted:#9db4d2; --v35-line:rgba(90,164,255,.20);
-  --v35-accent:#2e8fff; --v35-accent-2:#75bcff; --v35-on-accent:#03101e;
+  --v35-bg:#06101f; --v35-bg-2:#0a1830; --v35-surface:#102645; --v35-surface-2:#173257;
+  --v35-field:#0b1e36; --v35-text:#f4f8ff; --v35-muted:#afc2dc; --v35-line:rgba(96,162,240,.18);
+  --v35-accent:#4e8ff0; --v35-accent-2:#7cc8ff; --v35-on-accent:#06101f;
 }
 .bm-v3500-identity .premium-app.visual-future-purple {
   --v35-bg:#0d0714; --v35-bg-2:#180c24; --v35-surface:#241334; --v35-surface-2:#311944;
@@ -122,7 +124,7 @@ body.bm-v3500-identity {
 .bm-v3500-identity .premium-app :where(.primary,.elite-button,.bm32-primary-action,.settings-segmented-control .selected,.active-action) {
   color: var(--v35-on-accent) !important;
   border-color: transparent !important;
-  background: var(--v35-accent) !important;
+  background: linear-gradient(135deg, var(--v35-accent), var(--v35-accent-2)) !important;
 }
 .bm-v3500-identity .premium-app :where(.primary,.elite-button,.bm32-primary-action,.settings-segmented-control .selected) :where(strong,span,small,svg) {
   color: var(--v35-on-accent) !important;

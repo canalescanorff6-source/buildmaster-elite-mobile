@@ -20769,3 +20769,520 @@ body::after { display: none !important; }
 .calibration-alert-grid{margin-top:15px}
 .creation-tactical-selection-summary>div:nth-of-type(3){border-color:color-mix(in srgb,var(--accent) 32%,var(--stroke));background:color-mix(in srgb,var(--accent) 7%,transparent)}
 @media(max-width:880px){.calibration-dimension-bars{grid-template-columns:repeat(2,minmax(0,1fr))}.calibration-profile-grid{grid-template-columns:1fr}.calibration-profile.selected::before{position:static;display:inline-flex;margin-bottom:8px}}
+
+
+/* -------------------------------------------------------------------------- */
+/* v37.10 — Reformulação visual premium focada em legibilidade e unidade       */
+/* -------------------------------------------------------------------------- */
+.premium-app {
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+}
+
+.premium-app.theme-dark {
+  --text: #f5f8fd;
+  --soft: #e4ebf5;
+  --muted: #afbed0;
+  --muted-2: #8b9bb0;
+}
+
+.premium-app.theme-dark .luxury-panel,
+.premium-app.theme-dark .settings-view-panel,
+.premium-app.theme-dark .page-context-card,
+.premium-app.theme-dark .premium-screen-hero,
+.premium-app.theme-dark .bm32-menu-screen > section,
+.premium-app.theme-dark .bm32-screen-heading,
+.premium-app.theme-dark .bm32-profile-banner {
+  background: linear-gradient(180deg, rgba(18, 33, 55, .96), rgba(11, 22, 38, .98)) !important;
+  border: 1px solid rgba(137, 171, 216, .14) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .22) !important;
+}
+
+.premium-app.theme-dark .elite-button,
+.premium-app.theme-dark .auth-submit,
+.premium-app.theme-dark .result-action-primary,
+.premium-app.theme-dark .bm32-menu-section button,
+.premium-app.theme-dark .bm32-shortcut-grid button {
+  border-radius: 16px !important;
+}
+
+.premium-app.theme-dark .elite-button,
+.premium-app.theme-dark .auth-submit,
+.premium-app.theme-dark .result-action-primary {
+  color: #06101f !important;
+  background: linear-gradient(135deg, #5a96f5, #7dd0ff) !important;
+  box-shadow: 0 14px 32px rgba(65, 120, 210, .24) !important;
+}
+
+.premium-app.theme-dark .topbar-actions button,
+.premium-app.theme-dark .main-section-tabs button,
+.premium-app.theme-dark .history-strip button,
+.premium-app.theme-dark .bm32-module-grid button,
+.premium-app.theme-dark .bm32-tool-grid button,
+.premium-app.theme-dark .bm32-shortcut-grid button,
+.premium-app.theme-dark .select-stack label,
+.premium-app.theme-dark .status-card,
+.premium-app.theme-dark .upload-buttons label,
+.premium-app.theme-dark .raw-details textarea,
+.premium-app.theme-dark .auth-field > div,
+.premium-app.theme-dark .upload-box,
+.premium-app.theme-dark .feature-row span {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(141, 173, 214, .14) !important;
+}
+
+.premium-app.theme-dark .hero-redesign {
+  border-color: rgba(102, 156, 235, .18) !important;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(125, 208, 255, .18), transparent 18rem),
+    radial-gradient(circle at 12% 15%, rgba(90, 150, 245, .16), transparent 20rem),
+    linear-gradient(135deg, rgba(17, 39, 71, .96), rgba(10, 24, 44, .96)) !important;
+}
+
+.premium-app.theme-dark .hero-redesign h1,
+.premium-app.theme-dark .result-intro h2,
+.premium-app.theme-dark .section-title-row h3,
+.premium-app.theme-dark .panel-heading h2,
+.premium-app.theme-dark .bm32-screen-heading h1,
+.premium-app.theme-dark .bm32-menu-section h2 {
+  letter-spacing: -.04em !important;
+}
+
+.premium-app.theme-dark :where(p, small, span, em, .panel-note, .helper-text) {
+  color: var(--muted) !important;
+}
+
+.premium-app.theme-dark :where(input, select, textarea)::placeholder {
+  color: rgba(175, 190, 208, .72) !important;
+}
+
+.premium-app.theme-dark .main-section-tabs button.active-section,
+.premium-app.theme-dark .main-section-tabs button:hover:not(:disabled),
+.premium-app.theme-dark .topbar-actions button:hover,
+.premium-app.theme-dark .history-strip button:hover,
+.premium-app.theme-dark .bm32-module-grid button:hover,
+.premium-app.theme-dark .bm32-tool-grid button:hover,
+.premium-app.theme-dark .bm32-shortcut-grid button:hover {
+  border-color: rgba(92, 157, 255, .34) !important;
+  background: rgba(92, 157, 255, .10) !important;
+}
+
+.premium-app.theme-dark .session-badge,
+.premium-app.theme-dark .playstyle-pill,
+.premium-app.theme-dark .style-pill,
+.premium-app.theme-dark .kicker {
+  color: #dbe9ff !important;
+}
+
+.premium-app.theme-dark .app-topbar {
+  background: linear-gradient(180deg, rgba(12, 24, 40, .94), rgba(9, 19, 33, .96)) !important;
+  border: 1px solid rgba(131, 163, 204, .12) !important;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* v37.20 — premium paid overhaul: visual system completo                      */
+/* -------------------------------------------------------------------------- */
+.premium-app.visual-obsidian-gold.theme-dark {
+  --bg: #0a0c11;
+  --bg-deep: #07080b;
+  --panel: #171b23;
+  --panel-2: #1e2530;
+  --panel-3: #151922;
+  --surface: #171b23;
+  --surface-2: #202733;
+  --field: #121720;
+  --text: #fbf7ef;
+  --soft: #efe7d8;
+  --muted: #c8bba0;
+  --muted-2: #9d927d;
+  --stroke: rgba(226,191,120,.14);
+  --stroke-strong: rgba(226,191,120,.28);
+  --border: rgba(226,191,120,.14);
+  --accent: #d4a24a;
+  --accent-2: #f0d18f;
+  --accent-soft: rgba(212,162,74,.10);
+  --success: #53c994;
+  --warning: #f1c36d;
+  --danger: #ff7f90;
+  --shadow: 0 22px 58px rgba(0,0,0,.30);
+}
+
+.premium-app.visual-obsidian-gold.theme-dark {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(240,209,143,.06), transparent 24rem),
+    radial-gradient(circle at 86% 6%, rgba(212,162,74,.08), transparent 21rem),
+    linear-gradient(180deg, #0a0c11 0%, #10141b 100%) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .luxury-panel,
+.premium-app.visual-obsidian-gold.theme-dark .settings-view-panel,
+.premium-app.visual-obsidian-gold.theme-dark .page-context-card,
+.premium-app.visual-obsidian-gold.theme-dark .control-panel,
+.premium-app.visual-obsidian-gold.theme-dark .preview-panel > .luxury-panel,
+.premium-app.visual-obsidian-gold.theme-dark .premium-screen-hero,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-screen-heading,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-profile-banner,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-menu-screen > section,
+.premium-app.visual-obsidian-gold.theme-dark .history-strip button,
+.premium-app.visual-obsidian-gold.theme-dark .main-section-tabs button,
+.premium-app.visual-obsidian-gold.theme-dark .topbar-actions button,
+.premium-app.visual-obsidian-gold.theme-dark .feature-row span,
+.premium-app.visual-obsidian-gold.theme-dark .status-card,
+.premium-app.visual-obsidian-gold.theme-dark .select-stack label,
+.premium-app.visual-obsidian-gold.theme-dark .raw-details textarea,
+.premium-app.visual-obsidian-gold.theme-dark .upload-box,
+.premium-app.visual-obsidian-gold.theme-dark .auth-field > div,
+.premium-app.visual-obsidian-gold.theme-dark .upload-buttons label,
+.premium-app.visual-obsidian-gold.theme-dark .metric-grid > div,
+.premium-app.visual-obsidian-gold.theme-dark .data-grid > div,
+.premium-app.visual-obsidian-gold.theme-dark .skill-grid > div,
+.premium-app.visual-obsidian-gold.theme-dark .result-section-grid > article,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-module-grid button,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-tool-grid button,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-shortcut-grid button,
+.premium-app.visual-obsidian-gold.theme-dark .visual-pitch-card,
+.premium-app.visual-obsidian-gold.theme-dark .visual-pitch-legend span,
+.premium-app.visual-obsidian-gold.theme-dark .app-section-guide,
+.premium-app.visual-obsidian-gold.theme-dark .live-status-region > div,
+.premium-app.visual-obsidian-gold.theme-dark .refined-primary-nav,
+.premium-app.visual-obsidian-gold.theme-dark .desktop-primary-nav button {
+  background: linear-gradient(180deg, rgba(28, 33, 43, .98), rgba(20, 24, 32, .98)) !important;
+  border-color: rgba(226,191,120,.14) !important;
+  box-shadow: 0 18px 40px rgba(0,0,0,.20) !important;
+  color: var(--text) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .hero-redesign {
+  border: 1px solid rgba(226,191,120,.16) !important;
+  background:
+    radial-gradient(circle at 84% 22%, rgba(240,209,143,.12), transparent 18rem),
+    radial-gradient(circle at 18% 20%, rgba(212,162,74,.10), transparent 20rem),
+    linear-gradient(135deg, rgba(35, 31, 26, .98), rgba(20, 24, 31, .98)) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .app-topbar {
+  background: linear-gradient(180deg, rgba(19,22,29,.96), rgba(13,16,21,.98)) !important;
+  border: 1px solid rgba(226,191,120,.12) !important;
+  box-shadow: 0 16px 34px rgba(0,0,0,.18) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark :where(h1,h2,h3,h4,h5,h6,strong,label,legend) {
+  color: #fbf7ef !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark :where(p,span,small,em,.muted,.helper-text,.panel-note) {
+  color: #c8bba0 !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .brand-lockup span,
+.premium-app.visual-obsidian-gold.theme-dark .kicker,
+.premium-app.visual-obsidian-gold.theme-dark .section-eyebrow,
+.premium-app.visual-obsidian-gold.theme-dark .accent-text,
+.premium-app.visual-obsidian-gold.theme-dark .playstyle-pill,
+.premium-app.visual-obsidian-gold.theme-dark .style-pill,
+.premium-app.visual-obsidian-gold.theme-dark .session-badge {
+  color: #f4deb2 !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .brand-icon,
+.premium-app.visual-obsidian-gold.theme-dark .empty-icon,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-heading-icon,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-profile-shield,
+.premium-app.visual-obsidian-gold.theme-dark .app-section-guide > div > span,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v35-nav-mark,
+.premium-app.visual-obsidian-gold.theme-dark .desktop-primary-nav button.active-section svg,
+.premium-app.visual-obsidian-gold.theme-dark .main-section-tabs button svg {
+  color: #1a1207 !important;
+  background: linear-gradient(135deg, #d4a24a, #f0d18f) !important;
+  border-color: transparent !important;
+  box-shadow: 0 10px 24px rgba(212,162,74,.22) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .elite-button,
+.premium-app.visual-obsidian-gold.theme-dark .auth-submit,
+.premium-app.visual-obsidian-gold.theme-dark .result-action-primary,
+.premium-app.visual-obsidian-gold.theme-dark .primary,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-primary-action,
+.premium-app.visual-obsidian-gold.theme-dark .settings-segmented-control .selected,
+.premium-app.visual-obsidian-gold.theme-dark .active-action {
+  color: #1a1207 !important;
+  background: linear-gradient(135deg, #d4a24a, #f0d18f) !important;
+  border: 0 !important;
+  box-shadow: 0 14px 32px rgba(212,162,74,.24) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .elite-button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .auth-submit:hover,
+.premium-app.visual-obsidian-gold.theme-dark .result-action-primary:hover,
+.premium-app.visual-obsidian-gold.theme-dark .main-section-tabs button.active-section,
+.premium-app.visual-obsidian-gold.theme-dark .main-section-tabs button:hover:not(:disabled),
+.premium-app.visual-obsidian-gold.theme-dark .topbar-actions button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .history-strip button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-module-grid button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-tool-grid button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-shortcut-grid button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .desktop-primary-nav button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .desktop-primary-nav button.active-section {
+  border-color: rgba(226,191,120,.28) !important;
+  background: rgba(212,162,74,.08) !important;
+  color: #fbf7ef !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark :where(input,select,textarea) {
+  color: #fbf7ef !important;
+  background: rgba(14,18,24,.94) !important;
+  border: 1px solid rgba(226,191,120,.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark :where(input,select,textarea)::placeholder {
+  color: rgba(200,187,160,.70) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .upload-buttons label,
+.premium-app.visual-obsidian-gold.theme-dark .status-card,
+.premium-app.visual-obsidian-gold.theme-dark .feature-row span,
+.premium-app.visual-obsidian-gold.theme-dark .playstyle-pill,
+.premium-app.visual-obsidian-gold.theme-dark .style-pill,
+.premium-app.visual-obsidian-gold.theme-dark .session-badge,
+.premium-app.visual-obsidian-gold.theme-dark .auth-security-note svg,
+.premium-app.visual-obsidian-gold.theme-dark .app-section-guide li b {
+  background: rgba(212,162,74,.10) !important;
+  border-color: rgba(226,191,120,.18) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .premium-card-art,
+.premium-app.visual-obsidian-gold.theme-dark .empty-card-preview {
+  border-color: rgba(226,191,120,.56) !important;
+  background: linear-gradient(145deg, #2a2118, #151922) !important;
+  box-shadow: 0 0 40px rgba(212,162,74,.12) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .orb-ball {
+  border-color: rgba(226,191,120,.18) !important;
+  background:
+    linear-gradient(70deg, transparent 43%, rgba(240,209,143,.18) 44%, transparent 46%),
+    linear-gradient(145deg, rgba(212,162,74,.10), rgba(240,209,143,.10)),
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,.05), transparent 20%),
+    rgba(17,22,29,.50) !important;
+  box-shadow: 0 0 60px rgba(212,162,74,.10) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .main-section-tabs button strong,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-module-grid button strong,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-tool-grid button strong,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-shortcut-grid button strong,
+.premium-app.visual-obsidian-gold.theme-dark .section-title-row h3,
+.premium-app.visual-obsidian-gold.theme-dark .panel-heading h2,
+.premium-app.visual-obsidian-gold.theme-dark .result-intro h2,
+.premium-app.visual-obsidian-gold.theme-dark .hero-redesign h1 {
+  letter-spacing: -.03em !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .mobile-action-sheet,
+.premium-app.visual-obsidian-gold.theme-dark .mobile-action-sheet-inner,
+.premium-app.visual-obsidian-gold.theme-dark .page-context-card::after,
+.premium-app.visual-obsidian-gold.theme-dark .app-section-guide::after {
+  background-image: linear-gradient(90deg, #d4a24a, #f0d18f) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm32-plan-callout,
+.premium-app.visual-obsidian-gold.theme-dark .settings-command-hero,
+.premium-app.visual-obsidian-gold.theme-dark .performance-settings-hero,
+.premium-app.visual-obsidian-gold.theme-dark .creation-studio-hero,
+.premium-app.visual-obsidian-gold.theme-dark .result-player-hero {
+  background:
+    radial-gradient(circle at 85% 18%, rgba(240,209,143,.12), transparent 16rem),
+    linear-gradient(135deg, rgba(33, 28, 21, .98), rgba(21, 24, 31, .98)) !important;
+  border-color: rgba(226,191,120,.18) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm32-plan-badge,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-elite-badge,
+.premium-app.visual-obsidian-gold.theme-dark .bm-brand-title-row em,
+.premium-app.visual-obsidian-gold.theme-dark .bm-brand-version {
+  color: #f4deb2 !important;
+  background: rgba(212,162,74,.10) !important;
+  border-color: rgba(226,191,120,.20) !important;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* v37.30 — overhaul visual maior: navegação, home, ajustes e onboarding      */
+/* -------------------------------------------------------------------------- */
+.premium-app.visual-obsidian-gold.theme-dark {
+  font-family: Inter, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-sidebar,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-drawer {
+  background: linear-gradient(180deg, rgba(18,21,28,.98), rgba(12,14,19,.98)) !important;
+  border-right: 1px solid rgba(226,191,120,.12) !important;
+  box-shadow: 18px 0 50px rgba(0,0,0,.20) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-brand,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-footer,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-main-navigation button,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-primary-action,
+.premium-app.visual-obsidian-gold.theme-dark .bm-simple-context,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-settings-overview,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-card {
+  border-color: rgba(226,191,120,.12) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-brand strong,
+.premium-app.visual-obsidian-gold.theme-dark .bm-simple-context h1,
+.premium-app.visual-obsidian-gold.theme-dark .home-section-heading h2,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-settings-overview h1,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-card h2,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-step-copy h3 {
+  font-weight: 900 !important;
+  letter-spacing: -.035em !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-main-navigation button,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-footer > button,
+.premium-app.visual-obsidian-gold.theme-dark .home-quick-actions button,
+.premium-app.visual-obsidian-gold.theme-dark .home-feature-grid button,
+.premium-app.visual-obsidian-gold.theme-dark .home-create-primary,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-settings-grid > button,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-tool-grid > button,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-shortcut-grid > button,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-module-grid > button,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-choice-grid button,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-start-grid button {
+  border-radius: 20px !important;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-main-navigation button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-main-navigation button.active,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-footer > button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .home-quick-actions button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .home-feature-grid button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-settings-grid > button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-tool-grid > button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-shortcut-grid > button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-module-grid > button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-choice-grid button:hover,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-choice-grid button.selected,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-start-grid button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 16px 34px rgba(0,0,0,.18) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-main-navigation button.active,
+.premium-app.visual-obsidian-gold.theme-dark .desktop-primary-nav button.active-section,
+.premium-app.visual-obsidian-gold.theme-dark .main-section-tabs button.active-section {
+  background: linear-gradient(180deg, rgba(212,162,74,.11), rgba(212,162,74,.05)) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-icon,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-settings-grid > button > span,
+.premium-app.visual-obsidian-gold.theme-dark .home-feature-grid button > span,
+.premium-app.visual-obsidian-gold.theme-dark .home-quick-actions button > span,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-step-copy > span {
+  border-radius: 18px !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v36-mobile-dock {
+  left: 10px !important;
+  right: 10px !important;
+  bottom: calc(10px + var(--safe-bottom)) !important;
+  padding: 8px 10px !important;
+  border: 1px solid rgba(226,191,120,.14) !important;
+  border-radius: 24px !important;
+  background: linear-gradient(180deg, rgba(22,25,33,.96), rgba(13,15,20,.98)) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,.30) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v36-mobile-dock > button {
+  min-height: 58px !important;
+  border-radius: 18px !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v36-mobile-dock > button.active,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v36-mobile-dock > button:hover {
+  background: rgba(212,162,74,.08) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm-v36-mobile-dock > button.create {
+  background: linear-gradient(135deg, #d4a24a, #f0d18f) !important;
+  box-shadow: 0 14px 28px rgba(212,162,74,.24) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .home-create-primary,
+.premium-app.visual-obsidian-gold.theme-dark .launcher-featured-action,
+.premium-app.visual-obsidian-gold.theme-dark .topbar-create-action,
+.premium-app.visual-obsidian-gold.theme-dark .primary-upload-action,
+.premium-app.visual-obsidian-gold.theme-dark .scanner-action {
+  color: #1a1207 !important;
+  background: linear-gradient(135deg, #d4a24a, #f0d18f) !important;
+  box-shadow: 0 18px 36px rgba(212,162,74,.20) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .home-create-primary > svg,
+.premium-app.visual-obsidian-gold.theme-dark .launcher-featured-action > svg {
+  background: rgba(26,18,7,.08) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .home-create-primary small {
+  color: rgba(26,18,7,.70) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .home-section-heading > span,
+.premium-app.visual-obsidian-gold.theme-dark .bm-v33-nav-copy small,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-settings-grid p,
+.premium-app.visual-obsidian-gold.theme-dark .bm32-premium-banner p,
+.premium-app.visual-obsidian-gold.theme-dark .recent-player-empty span,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-choice-grid button span,
+.premium-app.visual-obsidian-gold.theme-dark .first-use-step-copy p {
+  color: #b7aa91 !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .recent-player-empty,
+.premium-app.visual-obsidian-gold.theme-dark .home-alert-clear,
+.premium-app.visual-obsidian-gold.theme-dark .vault-empty-state {
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, rgba(25,29,38,.98), rgba(19,22,28,.98)) !important;
+  border: 1px dashed rgba(226,191,120,.18) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm32-premium-banner,
+.premium-app.visual-obsidian-gold.theme-dark .bm-premium-reader-hero,
+.premium-app.visual-obsidian-gold.theme-dark .bm-premium-focus-card,
+.premium-app.visual-obsidian-gold.theme-dark .bm-premium-summary-card,
+.premium-app.visual-obsidian-gold.theme-dark .bm-premium-activity-card {
+  border-radius: 24px !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm32-premium-banner {
+  background: linear-gradient(135deg, rgba(46,37,23,.98), rgba(19,22,28,.98)) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .bm32-premium-banner button {
+  color: #1a1207 !important;
+  background: linear-gradient(135deg, #d4a24a, #f0d18f) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .first-use-overlay {
+  background: rgba(4,5,8,.82) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .first-use-card {
+  background: linear-gradient(180deg, rgba(24,28,36,.99), rgba(16,19,25,.99)) !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.42) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .first-use-progress i {
+  background: rgba(255,255,255,.06) !important;
+}
+
+.premium-app.visual-obsidian-gold.theme-dark .first-use-progress i b {
+  background: linear-gradient(90deg, #d4a24a, #f0d18f) !important;
+}

@@ -92,13 +92,13 @@ export function IntegratedHomePanel({
           <h2>A ficha mais forte para a carta e para a posição que você escolher.</h2>
           <p>O motor cruza DNA técnico, posição, estilo, pontos e habilidades oficiais para priorizar jogabilidade dentro da partida.</p>
           <div className="bm-premium-reader-actions bm-v36-command-actions">
-            <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Criar ficha por print')}>
+            <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Ler print')}>
               <span className="bm-v36-action-icon"><Camera size={21} /></span>
               <span><strong>Analisar uma carta</strong><small>Importar print completo</small></span>
               <ArrowRight size={18} />
             </button>
             <button type="button" onClick={() => open('manual', 'home-manual', 'Criar ficha manualmente')}>
-              <Keyboard size={19} /><span><strong>Manual Pro</strong><small>Preencher os dados</small></span>
+              <Keyboard size={19} /><span><strong>Criar manual</strong><small>Preencher todos os dados</small></span>
             </button>
           </div>
           <div className="bm-v36-trust-row" aria-label="Recursos da análise">
@@ -144,7 +144,7 @@ export function IntegratedHomePanel({
           <button type="button" onClick={() => open('team', 'home-team', 'Meu Time')}><span><Users size={23}/></span><div><strong>Meu Time</strong><small>Elenco, setores e escalação</small></div><ArrowRight size={17}/></button>
           <button type="button" onClick={() => open('matches', 'home-training', 'Treinos')}><span><Gauge size={23}/></span><div><strong>Partidas</strong><small>Testes e evolução real</small></div><ArrowRight size={17}/></button>
           <button type="button" onClick={() => open('team', 'home-formations', 'Formações')}><span><Target size={23}/></span><div><strong>Tática</strong><small>Técnicos, estilos e funções</small></div><ArrowRight size={17}/></button>
-          <button type="button" onClick={() => open('settings', 'home-settings', 'Ajustes')}><span><Settings2 size={23}/></span><div><strong>Configurações</strong><small>Conta, aparência e backup</small></div><ArrowRight size={17}/></button>
+          <button type="button" onClick={() => open('settings', 'home-settings', 'Configurações')}><span><Settings2 size={23}/></span><div><strong>Configurações</strong><small>Visual, conta, backup e sistema</small></div><ArrowRight size={17}/></button>
         </div>
       </section>
 

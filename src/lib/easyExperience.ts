@@ -22,7 +22,7 @@ export type EasyUiPreferences = {
 };
 
 const UI_KEY = 'buildmaster_ui_prefs_v24_24';
-const EASY_MIGRATION_KEY = 'buildmaster_easy_ui_v3';
+const EASY_MIGRATION_KEY = 'buildmaster_easy_ui_v5';
 
 export const PREMIUM_VISUAL_PRESETS = [
   'midnight-navy',
@@ -35,9 +35,9 @@ export const PREMIUM_VISUAL_PRESETS = [
 ] as const satisfies readonly PremiumVisualPreset[];
 
 export const EASY_UI_DEFAULTS: EasyUiPreferences = {
-  visualPreset: 'midnight-navy',
+  visualPreset: 'obsidian-gold',
   appTheme: 'dark',
-  accentTheme: 'blue',
+  accentTheme: 'gold',
   advancedMode: false,
   textScale: 'standard',
   densityMode: 'comfortable',
@@ -62,6 +62,8 @@ export function loadEasyUiPreferences(): EasyUiPreferences {
       const stored = JSON.parse(previous || '{}') as Partial<EasyUiPreferences>;
       migrated = {
         ...EASY_UI_DEFAULTS,
+        // A v5 aplica a nova linguagem visual premium por padrão,
+        // mantendo preferências funcionais importantes do usuário.
         advancedMode: typeof stored.advancedMode === 'boolean' ? stored.advancedMode : EASY_UI_DEFAULTS.advancedMode,
         textScale: oneOf(stored.textScale, ['compact', 'standard', 'large'] as const) ? stored.textScale : EASY_UI_DEFAULTS.textScale,
         densityMode: oneOf(stored.densityMode, ['compact', 'comfortable'] as const) ? stored.densityMode : EASY_UI_DEFAULTS.densityMode,

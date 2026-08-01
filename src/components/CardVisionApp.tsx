@@ -690,17 +690,17 @@ export function CardVisionApp() {
     vaultFilters.reviewOnly
   ].filter(Boolean).length, [historySearch, historyFilter, vaultFilters]);
   const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
-    { id: 'inicio', label: 'Início', hint: 'Central inteligente', icon: 'dashboard' },
-    { id: 'jogadores', label: 'Jogadores', hint: `${history.length} no banco`, icon: 'vault' },
-    { id: 'time', label: 'Meu Time', hint: 'Escalação integrada', icon: 'team' },
-    { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} registros`, icon: 'result' },
-    { id: 'ajustes', label: 'Configurações', hint: 'Conta e sistema', icon: 'settings' },
-    { id: 'menu', label: 'Menu', hint: 'Todos os módulos', icon: 'settings' },
-    { id: 'buscar', label: 'Buscar', hint: 'Busca inteligente', icon: 'vault' },
-    { id: 'leitor', label: 'Usar Imagem', hint: 'Fluxo do jogador', icon: 'scan' },
-    { id: 'manual', label: 'Manual Pro', hint: 'Fluxo do jogador', icon: 'manual' },
-    { id: 'resultado', label: 'Ficha do jogador', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
-    { id: 'cofre', label: 'Registro do jogador', hint: `${history.length} salvos`, icon: 'vault' }
+    { id: 'inicio', label: 'Central', hint: 'Resumo do app', icon: 'dashboard' },
+    { id: 'jogadores', label: 'Jogadores', hint: `${history.length} salvos`, icon: 'vault' },
+    { id: 'time', label: 'Meu Time', hint: 'Formação e elenco', icon: 'team' },
+    { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} análises`, icon: 'result' },
+    { id: 'ajustes', label: 'Configurações', hint: 'Visual, conta e sistema', icon: 'settings' },
+    { id: 'menu', label: 'Menu', hint: 'Atalhos e módulos', icon: 'settings' },
+    { id: 'buscar', label: 'Buscar', hint: 'Pesquisa global', icon: 'vault' },
+    { id: 'leitor', label: 'Ler print', hint: 'Importar e analisar', icon: 'scan' },
+    { id: 'manual', label: 'Criar manual', hint: 'Preencher sem print', icon: 'manual' },
+    { id: 'resultado', label: 'Resultado', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
+    { id: 'cofre', label: 'Cofre', hint: `${history.length} fichas salvas`, icon: 'vault' }
   ], [history.length, result, draftResult, centralMatchRecords.length]);
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
   const currentNavigationGroup = navigationGroupFor(mainSection);
@@ -2876,9 +2876,9 @@ export function CardVisionApp() {
     setStatus('Foto de perfil removida.');
   }
   const appCommands: AppCommand[] = [
-    { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
-    { id: 'new-print', group: 'Criar ficha', label: 'Nova ficha por print', description: 'Abre o Print Único Pro para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
-    { id: 'new-manual', group: 'Criar ficha', label: 'Nova ficha Manual Pro', description: 'Preencha posição, estilo, pontos e atributos manualmente.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
+    { id: 'home', group: 'Navegação', label: 'Abrir Central', description: 'Resumo premium e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
+    { id: 'new-print', group: 'Criar ficha', label: 'Ler print', description: 'Abre o leitor premium para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
+    { id: 'new-manual', group: 'Criar ficha', label: 'Criar manualmente', description: 'Preencha posição, estilo, pontos e atributos sem usar print.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
     { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${history.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
     { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
     { id: 'team', group: 'Time', label: 'Abrir Meu Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
@@ -2971,7 +2971,7 @@ export function CardVisionApp() {
             <div className="launcher-sheet-heading">
               <div>
                 <p className="kicker">{mobileLauncher === 'create' ? 'Nova análise' : 'Central do aplicativo'}</p>
-                <h3>{mobileLauncher === 'create' ? 'Criar ficha' : 'Menu'}</h3>
+                <h3>{mobileLauncher === 'create' ? 'Criar ficha' : 'Acesso rápido'}</h3>
                 <span>{mobileLauncher === 'create' ? 'Escolha uma opção.' : account?.profile.username || 'Conta'}</span>
               </div>
               <button type="button" className="launcher-close-button" onClick={() => setMobileLauncher(null)}>Fechar</button>
@@ -3058,7 +3058,7 @@ export function CardVisionApp() {
             <h1>Seu elenco começa com uma ficha bem construída.</h1>
             <p>Crie, revise e organize jogadores com um fluxo direto. As ferramentas avançadas ficam disponíveis sem poluir o que é essencial.</p>
             <div className="home-primary-actions">
-              <button type="button" className="home-create-primary" onClick={() => setMobileLauncher('create')}><Sparkles size={19} /><span><strong>Criar nova ficha</strong><small>Print ou Manual Pro</small></span></button>
+              <button type="button" className="home-create-primary" onClick={() => setMobileLauncher('create')}><Sparkles size={19} /><span><strong>Criar nova ficha</strong><small>Ler print ou criar manualmente</small></span></button>
               <button type="button" className="home-open-vault" onClick={openCofreDeJogadores}><History size={19} /><span><strong>Abrir Cofre</strong><small>{dashboardStats.total} jogador(es)</small></span></button>
             </div>
             <div className="home-account-meta">
@@ -3076,14 +3076,14 @@ export function CardVisionApp() {
           </aside>
         </section>
         <section className="home-quick-section">
-          <div className="home-section-heading"><div><p className="kicker">Acesso rápido</p><h2>Continue de onde precisa</h2></div><span>Fluxo simplificado</span></div>
+          <div className="home-section-heading"><div><p className="kicker">Acesso rápido</p><h2>Continue no ponto certo</h2></div><span>Fluxo premium</span></div>
           <div className="home-quick-grid">
             <button type="button" className="quick-action-create" onClick={() => setMobileLauncher('create')}><span><Sparkles size={22} /></span><div><strong>Nova ficha</strong><small>Começar análise</small></div></button>
             <button type="button" disabled={!currentPanelResult} onClick={() => openMainSection('resultado')}><span><Trophy size={22} /></span><div><strong>Ficha atual</strong><small>{currentPanelResult?.parsed.playerName || 'Nenhuma aberta'}</small></div></button>
-            <button type="button" onClick={openCofreDeJogadores}><span><History size={22} /></span><div><strong>Cofre</strong><small>Buscar e organizar</small></div></button>
-            <button type="button" onClick={() => openMainSection('time')}><span><Target size={22} /></span><div><strong>Meu Time</strong><small>Elenco e tática</small></div></button>
+            <button type="button" onClick={openCofreDeJogadores}><span><History size={22} /></span><div><strong>Cofre</strong><small>Buscar, revisar e organizar</small></div></button>
+            <button type="button" onClick={() => openMainSection('time')}><span><Target size={22} /></span><div><strong>Meu Time</strong><small>Elenco, setores e tática</small></div></button>
             <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><span><ShieldCheck size={22} /></span><div><strong>Backup</strong><small>Proteger dados</small></div></button>
-            <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Mais</strong><small>Ajustes e conta</small></div></button>
+            <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Menu</strong><small>Atalhos, conta e sistema</small></div></button>
           </div>
         </section>
         <section className="home-overview-grid">
@@ -3106,7 +3106,7 @@ export function CardVisionApp() {
                 <em>Abrir</em>
               </button>
             ) : (
-              <div className="recent-player-empty"><Trophy size={25} /><span>Crie sua primeira ficha para acompanhar o último jogador aqui.</span><button type="button" onClick={() => setMobileLauncher('create')}>Criar ficha</button></div>
+              <div className="recent-player-empty"><Trophy size={25} /><span>Crie a primeira ficha para começar seu histórico premium de jogadores.</span><button type="button" onClick={() => setMobileLauncher('create')}>Criar ficha</button></div>
             )}
           </article>
         </section>
@@ -3504,7 +3504,7 @@ export function CardVisionApp() {
               <div className="vault-hero-copy">
                 <p className="kicker"><History size={14} /> Cofre de Jogadores</p>
                 <h2>{history.length ? 'Seu elenco, organizado como catálogo' : 'Seu catálogo começa com a primeira ficha'}</h2>
-                <span>{history.length ? 'Encontre qualquer jogador, acompanhe pendências, compare opções e proteja tudo em um só lugar.' : 'Crie uma ficha pelo Leitor ou Manual Pro e ela aparecerá aqui automaticamente.'}</span>
+                <span>{history.length ? 'Encontre qualquer jogador, acompanhe pendências, compare opções e proteja tudo em um único lugar.' : 'Crie uma ficha pelo leitor ou no modo manual e ela aparecerá aqui automaticamente.'}</span>
                 <div className="vault-readiness-line">
                   <div><strong>{vaultReadiness}%</strong><span>prontidão do Cofre</span></div>
                   <i><b style={{ width: `${vaultReadiness}%` }} /></i>
@@ -3535,7 +3535,7 @@ export function CardVisionApp() {
                 </div>
                 <div className="vault-search-premium">
                   <Search size={20} />
-                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo, habilidade ou anotação" aria-label="Buscar no Cofre" />
+                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo, habilidade ou observação" aria-label="Buscar no Cofre" />
                   {historySearch && <button type="button" onClick={() => setHistorySearch('')}><RotateCcw size={15} /> Limpar</button>}
                 </div>
                 <div className="vault-quick-filter-strip" aria-label="Filtros rápidos do Cofre">
@@ -3622,7 +3622,7 @@ export function CardVisionApp() {
                     })}
                     {!filteredHistory.length && <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Search size={28} /></div><strong>Nenhum jogador corresponde aos filtros</strong><span>Altere a busca ou limpe os filtros para voltar a exibir o catálogo.</span><button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar filtros</button></div>}
                   </div>
-                ) : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><History size={30} /></div><strong>Seu Cofre ainda está vazio</strong><span>Crie a primeira ficha para começar seu catálogo de jogadores.</span><div><button type="button" onClick={() => openMainSection('leitor')}><ScanText size={16} /> Ler uma carta</button><button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={16} /> Manual Pro</button></div></div>}
+                ) : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><History size={30} /></div><strong>Seu Cofre ainda está vazio</strong><span>Crie a primeira ficha para iniciar seu catálogo premium de jogadores.</span><div><button type="button" onClick={() => openMainSection('leitor')}><ScanText size={16} /> Ler uma carta</button><button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={16} /> Criar manual</button></div></div>}
               </section>
             )}
             {vaultView === 'organizar' && (
@@ -3713,7 +3713,7 @@ export function CardVisionApp() {
               <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar</button>
               <section className="settings-command-hero luxury-panel">
                 <div className="settings-command-copy">
-                  <p className="kicker"><SlidersHorizontal size={15} /> Ajustes</p>
+                  <p className="kicker"><SlidersHorizontal size={15} /> Configuração premium</p>
                   <h2>Configurações</h2>
                   <p>Conta, aparência e segurança.</p>
                 </div>

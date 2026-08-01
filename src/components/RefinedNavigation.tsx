@@ -70,23 +70,23 @@ export function RefinedNavigation({
   }
 
   const mainItems = [
-    { id: 'inicio', label: 'Início', description: 'Resumo', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
-    { id: 'jogadores', label: 'Jogadores', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
+    { id: 'inicio', label: 'Central', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
+    { id: 'jogadores', label: 'Elenco', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
     { id: 'time', label: 'Meu Time', description: 'Elenco e tática', icon: Target, active: group === 'time', action: () => onGroupChange('time') },
     { id: 'partidas', label: 'Partidas', description: 'Treino e análise', icon: Trophy, active: group === 'partidas', action: () => onGroupChange('partidas') },
-    { id: 'ajustes', label: 'Configurações', description: 'Conta e sistema', icon: Settings2, active: group === 'ajustes', action: () => onGroupChange('ajustes') }
+    { id: 'ajustes', label: 'Configurações', description: 'Conta, visual e sistema', icon: Settings2, active: group === 'ajustes', action: () => onGroupChange('ajustes') }
   ] as const;
 
   const navigationContent = (mobile: boolean) => (
     <>
       <header className="bm-v33-nav-brand">
         <span className="bm-v35-nav-mark"><BuildMasterMark size={43} /></span>
-        <div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div>
+        <div><strong>BuildMaster</strong><small>Premium Suite · Elite Tático</small></div>
         {mobile && <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu lateral"><X size={21}/></button>}
       </header>
 
       <button type="button" className="bm-v33-primary-action" onClick={() => run(onCreate)}>
-        <Plus size={20}/><span><strong>Nova ficha</strong><small>Imagem ou manual</small></span><ChevronRight size={18}/>
+        <Plus size={20}/><span><strong>Criar ficha</strong><small>Print ou preenchimento manual</small></span><ChevronRight size={18}/>
       </button>
 
       <nav className="bm-v33-main-navigation" aria-label="Áreas principais">
@@ -104,13 +104,13 @@ export function RefinedNavigation({
 
       <footer className="bm-v33-nav-footer">
         {hasResult && <button type="button" onClick={() => run(() => onWorkspaceChange('resultado'))}><FileText size={18}/><span>Abrir ficha atual</span></button>}
-        <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Buscar no aplicativo</span></button>
-        <button type="button" className={menuActive ? 'active' : ''} onClick={() => run(onMenu)}><Menu size={18}/><span>Todos os módulos</span></button>
+        <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Busca premium</span></button>
+        <button type="button" className={menuActive ? 'active' : ''} onClick={() => run(onMenu)}><Menu size={18}/><span>Módulos e atalhos</span></button>
         <div className="bm-v35-nav-account" aria-label={`Conta ${username}`}>
           <span>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</span>
           <div><strong>{username || 'Conta'}</strong><small>Perfil salvo</small></div>
         </div>
-        <small>Professional Suite · v37.00</small>
+        <small>Professional Suite · v37.30</small>
       </footer>
     </>
   );
@@ -143,19 +143,19 @@ export function RefinedNavigation({
 
       <nav className="bm-v36-mobile-dock" aria-label="Navegação móvel rápida">
         <button type="button" className={group === 'inicio' ? 'active' : ''} aria-current={group === 'inicio' ? 'page' : undefined} onClick={() => run(() => onGroupChange('inicio'))}>
-          <Home size={20}/><span>Início</span>
+          <Home size={20}/><span>Central</span>
         </button>
         <button type="button" className={group === 'jogadores' ? 'active' : ''} aria-current={group === 'jogadores' ? 'page' : undefined} onClick={() => run(() => onWorkspaceChange('visao-geral'))}>
-          <Users size={20}/><span>Jogadores</span>
+          <Users size={20}/><span>Elenco</span>
         </button>
         <button type="button" className="create" onClick={() => run(onCreate)} aria-label="Criar nova ficha">
-          <span><Plus size={24}/></span><strong>Criar</strong>
+          <span><Plus size={24}/></span><strong>Novo</strong>
         </button>
         <button type="button" className={group === 'time' ? 'active' : ''} aria-current={group === 'time' ? 'page' : undefined} onClick={() => run(() => onGroupChange('time'))}>
           <Target size={20}/><span>Meu Time</span>
         </button>
         <button type="button" className={menuActive ? 'active' : ''} aria-current={menuActive ? 'page' : undefined} onClick={() => run(onMenu)}>
-          <Menu size={20}/><span>Mais</span>
+          <Menu size={20}/><span>Menu</span>
         </button>
       </nav>
     </>
