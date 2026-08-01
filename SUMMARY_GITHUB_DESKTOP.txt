@@ -1,1 +1,1 @@
-v37.00 — adiciona Central Profissional com validação real, perfis profundos, matriz de posições e aprendizado pessoal
+v37.00 — corrige overflow do versionCode Android e restaura a geração assinada do APK no GitHub Actions

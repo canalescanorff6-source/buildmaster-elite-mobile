@@ -102,7 +102,7 @@
     "test:v3520": "npm run typecheck:v3520 && node -r ./tests/_ts-require.cjs tests/v35-20-gameplay-dna-solid-theme-regression.ts",
     "typecheck:v3520": "tsc -p tests/types-v3520/tsconfig.json --pretty false && tsc -p tests/types-v3520-ui/tsconfig.json --pretty false",
     "test:v3600": "node tests/v36-00-premium-revolution-regression.mjs",
-    "test:v3700": "npm run typecheck:v3700 && node -r ./tests/_ts-require.cjs tests/v37-00-professional-intelligence-regression.ts",
+    "test:v3700": "npm run typecheck:v3700 && node -r ./tests/_ts-require.cjs tests/v37-00-professional-intelligence-regression.ts && node tests/v37-00-version-code-overflow-regression.mjs",
     "typecheck:v3700": "tsc -p tests/types-v3700/tsconfig.json --pretty false && tsc -p tests/types-v3700-ui/tsconfig.json --pretty false"
   },
   "dependencies": {
