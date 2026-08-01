@@ -1,6 +1,6 @@
 import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 
-export const PLAY_STORE_PUBLICATION_VERSION = '35.20.0';
+export const PLAY_STORE_PUBLICATION_VERSION = '37.00.0';
 export const PLAY_STORE_TARGET_API = 36;
 export const PLAY_STORE_PACKAGE_NAME = 'com.buildmaster.elitetatico';
 

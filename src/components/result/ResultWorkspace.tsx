@@ -89,6 +89,7 @@ import {
   MatchValidationCenter,
   MetaBuildLabPanel,
   PrecisionBuildPanel,
+  ProfessionalIntelligenceCenter,
   SinglePrintEvidencePanel,
   SkillAndTrainingPanel,
   VerifiedCardRegistryPanel,
@@ -139,12 +140,13 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
   PASSE_LONGO: 'Passe longo'
 };
 
-export type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
+export type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 
-export type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
+export type ResultPrimaryView = 'resumo' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
   { id: 'resumo', label: 'Ficha final', hint: 'Recomendação única' },
+  { id: 'profissional', label: 'Análise Pro', hint: 'Partidas, perfis e posições' },
   { id: 'ficha', label: 'Ficha', hint: 'Distribuição de pontos' },
   { id: 'habilidades', label: 'Habilidades', hint: 'Top 5 oficial' },
   { id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' },
@@ -531,7 +533,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
         <nav className="result-primary-tabs" aria-label="Áreas principais do resultado">
           {visiblePrimaryTabs.map((item) => {
-            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'impetos' ? BrainCircuit : item.id === 'tatica' ? Target : Download;
+            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'profissional' ? BrainCircuit : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'impetos' ? BrainCircuit : item.id === 'tatica' ? Target : Download;
             return (
               <button key={item.id} className={primaryIsActive(item.id) ? 'active' : ''} type="button" onClick={() => openPrimaryResult(item.id)}>
                 <Icon size={18} /><span><strong>{item.label}</strong><small>{item.hint}</small></span>
@@ -1150,6 +1152,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'fontes' && <CreatorBuildResearchPanel result={result} />}
 
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
+
+      {tab === 'profissional' && <ProfessionalIntelligenceCenter result={result} />}
 
       {tab === 'treino' && <div className="result-section-grid"><SkillAndTrainingPanel result={result} /><VideoReviewPanel result={result} /></div>}
 

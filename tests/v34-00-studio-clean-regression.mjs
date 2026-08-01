@@ -17,7 +17,7 @@ const players = read('src/modules/players/PlayerLaboratory.tsx');
 
 assert.ok(Number(pkg.version.split('.')[0]) >= 34, `Versão esperada 34 ou superior, recebida ${pkg.version}`);
 assert.match(manifest.name, /^BuildMaster Elite Tático v(?:34|3[5-9]|[4-9]\d)\./);
-assert.equal(manifest.theme_color, '#07111f');
+assert.ok(['#07111f', '#050a12'].includes(manifest.theme_color));
 assert.match(layout, /v34-studio\.css/);
 assert.match(layout, /bm-v3400-studio/);
 
@@ -40,7 +40,7 @@ assert.doesNotMatch(navigation, /FLUXO DE FICHAS/);
 assert.match(navigation, /Abrir ficha atual/);
 assert.match(navigation, /onWorkspaceChange\('visao-geral'\)/);
 assert.match(navigation, /aria-current=\{item\.active \? 'page'/);
-assert.match(navigation, /Studio Premium · v34\.00/);
+assert.match(navigation, /(?:Studio Premium · v34\.00|Performance Suite · v36\.00|Professional Suite · v37\.00)/);
 
 for (const source of [team, matches, formations]) {
   assert.match(source, /function selectTab/);

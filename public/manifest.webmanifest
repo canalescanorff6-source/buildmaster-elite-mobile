@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "BuildMaster Elite Tático v35.20",
-  "short_name": "BuildMaster v35.20",
-  "description": "BuildMaster v35.20 com três Perfis de Gameplay por carta, DNA técnico reconhecido, ficha anti-overall e tema sólido de alto contraste.",
+  "name": "BuildMaster Elite Tático v37.00",
+  "short_name": "BuildMaster v37.00",
+  "description": "BuildMaster v37.00 com Central Profissional, validação real, perfis de gameplay, posições e habilidades oficiais.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
@@ -11,8 +11,8 @@
     "window-controls-overlay",
     "standalone"
   ],
-  "background_color": "#07111f",
-  "theme_color": "#07111f",
+  "background_color": "#050a12",
+  "theme_color": "#050a12",
   "orientation": "portrait-primary",
   "categories": [
     "sports",

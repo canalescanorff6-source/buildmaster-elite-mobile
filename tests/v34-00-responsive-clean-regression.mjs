@@ -30,12 +30,12 @@ for (const marker of [
 
 assert.doesNotMatch(calibrator, /window\.innerWidth <= 760\) setFullscreen\(true\)/);
 assert.match(calibrator, /Abrir em tela cheia/);
-assert.match(cache, /(?:34\.00\.0-touch-scroll-menu-5|35\.00\.0-official-skills-meta-2)/);
-assert.match(sw, /(?:buildmaster-v34-00-touch-scroll-menu-3|buildmaster-v35-00-official-skills-meta-2|buildmaster-v35-10-max-gameplay-dual-position-1|buildmaster-v35-20-dna-gameplay-solid-theme-1)/);
+assert.match(cache, /(?:34\.00\.0-touch-scroll-menu-5|35\.00\.0-official-skills-meta-2|36\.00\.0-premium-revolution-1|37\.00\.0-professional-intelligence-1)/);
+assert.match(sw, /(?:buildmaster-v34-00-touch-scroll-menu-3|buildmaster-v35-00-official-skills-meta-2|buildmaster-v35-10-max-gameplay-dual-position-1|buildmaster-v35-20-dna-gameplay-solid-theme-1|buildmaster-v36-00-premium-revolution-1|buildmaster-v37-00-professional-intelligence-1)/);
 
-assert.match(home, /Seu time em um só lugar\./);
-assert.match(home, /Crie uma ficha pelo print\./);
-assert.match(home, /Acesso rápido/);
+assert.match(home, /(?:Seu time em um só lugar\.|Desempenho real\. Sem perseguir overall\.)/);
+assert.match(home, /(?:Crie uma ficha pelo print\.|A ficha mais forte para a carta e para a posição que você escolher\.)/);
+assert.match(home, /(?:Acesso rápido|Workspace)/);
 assert.doesNotMatch(home, /Seu time, suas fichas e sua estratégia em um só lugar/);
 assert.doesNotMatch(home, /Transforme um print em uma ficha competitiva completa/);
 

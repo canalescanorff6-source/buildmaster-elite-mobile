@@ -50,6 +50,19 @@ export type CardRegistryEntry = {
 };
 
 export type MatchValidationRating = 1 | 2 | 3 | 4 | 5;
+export type MatchValidationMode = 'ranked' | 'events' | 'friendly' | 'offline';
+export type MatchConnectionState = 'stable' | 'variable' | 'high_delay';
+
+export type MatchPerformanceMetrics = {
+  goals: number;
+  assists: number;
+  passErrors: number;
+  tackles: number;
+  interceptions: number;
+  ballLosses: number;
+  dribblesCompleted: number;
+  shots: number;
+};
 
 export type MatchValidationRecord = {
   id: string;
@@ -71,6 +84,11 @@ export type MatchValidationRecord = {
   stamina: MatchValidationRating;
   tags: string[];
   note: string;
+  mode?: MatchValidationMode;
+  connection?: MatchConnectionState;
+  gameplayProfileId?: string;
+  secondHalfDrop?: boolean;
+  metrics?: MatchPerformanceMetrics;
 };
 
 export type MatchValidationSummary = {
@@ -82,6 +100,19 @@ export type MatchValidationSummary = {
   repeatedProblems: Array<{ tag: string; count: number }>;
   recommendation: string;
   confidence: 'baixa' | 'média' | 'alta';
+  evidence?: {
+    goals: number;
+    assists: number;
+    passErrors: number;
+    tackles: number;
+    interceptions: number;
+    ballLosses: number;
+    dribblesCompleted: number;
+    shots: number;
+    rankedMatches: number;
+    delayedMatches: number;
+    secondHalfDrops: number;
+  };
 };
 
 const normalize = (value: unknown) => String(value ?? '')
@@ -247,7 +278,20 @@ export function summarizeMatchValidation(records: MatchValidationRecord[]): Matc
       weakestAreas: [],
       repeatedProblems: [],
       recommendation: 'Registre pelo menos três partidas com a mesma ficha para gerar uma recomendação confiável.',
-      confidence: 'baixa'
+      confidence: 'baixa',
+      evidence: {
+        goals: 0,
+        assists: 0,
+        passErrors: 0,
+        tackles: 0,
+        interceptions: 0,
+        ballLosses: 0,
+        dribblesCompleted: 0,
+        shots: 0,
+        rankedMatches: 0,
+        delayedMatches: 0,
+        secondHalfDrops: 0
+      }
     };
   }
 
@@ -266,6 +310,33 @@ export function summarizeMatchValidation(records: MatchValidationRecord[]): Matc
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'pt-BR'));
   const weakest = areaAverages.slice(-2).reverse();
   const confidence: MatchValidationSummary['confidence'] = records.length >= 8 ? 'alta' : records.length >= 3 ? 'média' : 'baixa';
+  const evidence = records.reduce((acc, record) => {
+    const metrics = record.metrics;
+    acc.goals += Number(metrics?.goals || 0);
+    acc.assists += Number(metrics?.assists || 0);
+    acc.passErrors += Number(metrics?.passErrors || 0);
+    acc.tackles += Number(metrics?.tackles || 0);
+    acc.interceptions += Number(metrics?.interceptions || 0);
+    acc.ballLosses += Number(metrics?.ballLosses || 0);
+    acc.dribblesCompleted += Number(metrics?.dribblesCompleted || 0);
+    acc.shots += Number(metrics?.shots || 0);
+    if (record.mode === 'ranked') acc.rankedMatches += 1;
+    if (record.connection === 'high_delay') acc.delayedMatches += 1;
+    if (record.secondHalfDrop) acc.secondHalfDrops += 1;
+    return acc;
+  }, {
+    goals: 0,
+    assists: 0,
+    passErrors: 0,
+    tackles: 0,
+    interceptions: 0,
+    ballLosses: 0,
+    dribblesCompleted: 0,
+    shots: 0,
+    rankedMatches: 0,
+    delayedMatches: 0,
+    secondHalfDrops: 0
+  });
   const recommendation = repeatedProblems[0]
     ? `O problema “${repeatedProblems[0].tag}” apareceu em ${repeatedProblems[0].count} partidas. Compare a ficha segura antes de alterar a recomendada.`
     : weakest[0].average < 3.2
@@ -280,7 +351,8 @@ export function summarizeMatchValidation(records: MatchValidationRecord[]): Matc
     weakestAreas: weakest.map((item) => `${item.label} ${item.average.toFixed(1)}/5`),
     repeatedProblems,
     recommendation,
-    confidence
+    confidence,
+    evidence
   };
 }
 

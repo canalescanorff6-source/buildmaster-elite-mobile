@@ -110,7 +110,7 @@ export function RefinedNavigation({
           <span>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</span>
           <div><strong>{username || 'Conta'}</strong><small>Perfil salvo</small></div>
         </div>
-        <small>Studio Premium · v34.00</small>
+        <small>Professional Suite · v37.00</small>
       </footer>
     </>
   );
@@ -129,7 +129,7 @@ export function RefinedNavigation({
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen(true)}
         >
-          <Menu size={23}/><span>Menu</span>
+          <Menu size={22}/><span className="bm-v36-trigger-label">Menu</span>
         </button>
       )}
 
@@ -140,6 +140,24 @@ export function RefinedNavigation({
           </aside>
         </div>
       )}
+
+      <nav className="bm-v36-mobile-dock" aria-label="Navegação móvel rápida">
+        <button type="button" className={group === 'inicio' ? 'active' : ''} aria-current={group === 'inicio' ? 'page' : undefined} onClick={() => run(() => onGroupChange('inicio'))}>
+          <Home size={20}/><span>Início</span>
+        </button>
+        <button type="button" className={group === 'jogadores' ? 'active' : ''} aria-current={group === 'jogadores' ? 'page' : undefined} onClick={() => run(() => onWorkspaceChange('visao-geral'))}>
+          <Users size={20}/><span>Jogadores</span>
+        </button>
+        <button type="button" className="create" onClick={() => run(onCreate)} aria-label="Criar nova ficha">
+          <span><Plus size={24}/></span><strong>Criar</strong>
+        </button>
+        <button type="button" className={group === 'time' ? 'active' : ''} aria-current={group === 'time' ? 'page' : undefined} onClick={() => run(() => onGroupChange('time'))}>
+          <Target size={20}/><span>Meu Time</span>
+        </button>
+        <button type="button" className={menuActive ? 'active' : ''} aria-current={menuActive ? 'page' : undefined} onClick={() => run(onMenu)}>
+          <Menu size={20}/><span>Mais</span>
+        </button>
+      </nav>
     </>
   );
 }

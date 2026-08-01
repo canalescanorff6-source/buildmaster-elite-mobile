@@ -1,1 +1,1 @@
-v35.20 — adiciona três Perfis de Gameplay por carta e substitui transparências por tema sólido
+v37.00 — adiciona Central Profissional com validação real, perfis profundos, matriz de posições e aprendizado pessoal

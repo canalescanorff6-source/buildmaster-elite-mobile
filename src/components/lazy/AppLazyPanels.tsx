@@ -115,6 +115,10 @@ export const MatchValidationCenter = dynamic(
   () => import('@/components/MatchValidationCenter').then((module) => module.MatchValidationCenter),
   { ssr: false, loading: fallback }
 );
+export const ProfessionalIntelligenceCenter = dynamic(
+  () => import('@/components/result/ProfessionalIntelligenceCenter').then((module) => module.ProfessionalIntelligenceCenter),
+  { ssr: false, loading: fallback }
+);
 export const TotalCardReaderPanel = dynamic(
   () => import('@/components/TotalCardReaderPanel').then((module) => module.TotalCardReaderPanel),
   { ssr: false, loading: fallback }

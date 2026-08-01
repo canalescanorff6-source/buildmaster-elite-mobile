@@ -12,7 +12,7 @@ assert.equal(lock.version, currentVersion);
 assert.equal(lock.packages[''].version, currentVersion);
 assert.ok(pkg.scripts['test:all'].includes(`npm run test:v${currentTestId}`));
 assert.ok(pkg.scripts['test:all'].endsWith('npm run quality:audit'));
-assert.match(read('src/lib/dataSafety.ts'), /CURRENT_DATA_SCHEMA = 3000/);
+assert.match(read('src/lib/dataSafety.ts'), /CURRENT_DATA_SCHEMA = 3100/);
 assert.ok(read('src/lib/dataSafety.ts').includes(`APP_DATA_VERSION = '${currentVersion}'`));
 
 const css = read('src/app/globals.css');
