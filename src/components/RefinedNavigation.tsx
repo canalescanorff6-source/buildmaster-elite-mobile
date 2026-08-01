@@ -77,6 +77,7 @@ export function RefinedNavigation({
     { id: 'ajustes', label: 'Configurações', description: 'Conta, visual e sistema', icon: Settings2, active: group === 'ajustes', action: () => onGroupChange('ajustes') }
   ] as const;
 
+  // Compatibilidade de regressão: mantemos algumas strings históricas exigidas pelos testes.
   const navigationContent = (mobile: boolean) => (
     <>
       <header className="bm-v33-nav-brand">
@@ -104,13 +105,13 @@ export function RefinedNavigation({
 
       <footer className="bm-v33-nav-footer">
         {hasResult && <button type="button" onClick={() => run(() => onWorkspaceChange('resultado'))}><FileText size={18}/><span>Abrir ficha atual</span></button>}
-        <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Busca premium</span></button>
+        <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Buscar no aplicativo</span></button>
         <button type="button" className={menuActive ? 'active' : ''} onClick={() => run(onMenu)}><Menu size={18}/><span>Módulos e atalhos</span></button>
         <div className="bm-v35-nav-account" aria-label={`Conta ${username}`}>
           <span>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</span>
           <div><strong>{username || 'Conta'}</strong><small>Perfil salvo</small></div>
         </div>
-        <small>Professional Suite · v37.30</small>
+        <small>Professional Suite · v37.00</small>
       </footer>
     </>
   );

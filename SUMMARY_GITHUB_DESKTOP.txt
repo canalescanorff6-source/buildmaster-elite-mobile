@@ -1,1 +1,1 @@
-v37.30 — aplica grande reformulação visual premium com mudanças amplas em cores, navegação, home, ajustes e textos do app
+v37.31 — corrige regressões v34/v36 do workflow mantendo a reformulação premium
