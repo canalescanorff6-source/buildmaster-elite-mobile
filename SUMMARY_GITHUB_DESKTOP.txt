@@ -1,1 +1,1 @@
-v38.30 — corrige nome manual, impede habilidades repetidas e gera substituta inteligente
+v38.31 — corrige regressões v31.40/v37.71 e preserva nome e habilidades inteligentes

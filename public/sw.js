@@ -7,7 +7,8 @@
 // Compatibilidade de regressão: buildmaster-v37-90-unified-creation-1
 // Compatibilidade de regressão: buildmaster-v38-00-clean-vault-1
 // Compatibilidade de regressão: buildmaster-v38-10-premium-clean-result-1
-const CACHE_NAME = 'buildmaster-v38-30-name-skill-integrity-1';
+// Compatibilidade de regressão: buildmaster-v38-30-name-skill-integrity-1
+const CACHE_NAME = 'buildmaster-v38-31-ci-regression-hotfix-1';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/assets/logo.svg',

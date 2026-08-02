@@ -2231,11 +2231,11 @@ export function CardVisionApp() {
       // Preserve todas as categorias já possuídas. A interface continua compacta,
       // mas habilidades nativas, adicionais instaladas e especiais precisam participar
       // do mesmo filtro antirrepetição na geração das cinco vagas seguintes.
-      nativeSkills: canonicalizeSkillList([
+      nativeSkills: Array.from(new Set(canonicalizeSkillList([
         ...nextResult.parsed.nativeSkills,
         ...(nextResult.parsed.additionalSkills ?? []),
         ...nextResult.parsed.specialSkills
-      ])
+      ])))
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
