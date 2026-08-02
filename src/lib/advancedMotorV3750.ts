@@ -24,7 +24,7 @@ import {
   trainingTotalCost
 } from './trainingPlanCore';
 import { TRAINING_LABELS } from './trainingEngine';
-import { skillIdentityKey } from './officialSkillIdentity';
+import { filterComplementaryAdditionalSkills, skillIdentityKey } from './officialSkillIdentity';
 
 export const ADVANCED_MOTOR_V3750_VERSION = '37.50.0' as const;
 
@@ -617,7 +617,17 @@ export function applyAdvancedMotorV3750(result: AnalysisResult): AnalysisResult 
   const training = normalizeTrainingPlan(winner.training);
   const trainingCost = trainingPlanCost(training);
   const trainingPointsUsed = trainingPlanTotalCost(training);
-  const recommendedSkills = (winnerSet?.skills ?? winner.skills).slice(0, 5);
+  const recommendedSkills = filterComplementaryAdditionalSkills(
+    [
+      ...(winnerSet?.skills ?? winner.skills),
+      ...result.recommendedSkills,
+      ...result.skillRecommendations.filter((item) => item.tier !== 'evitar').map((item) => item.name)
+    ],
+    result.parsed.nativeSkills,
+    result.parsed.specialSkills,
+    5,
+    result.parsed.additionalSkills ?? []
+  );
   const decisionMap = new Map((winnerSet?.decisions ?? []).map((item) => [skillIdentityKey(item.name), item]));
   const skillRecommendations = [
     ...recommendedSkills.map((name) => {

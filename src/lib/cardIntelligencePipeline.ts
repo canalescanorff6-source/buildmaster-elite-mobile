@@ -34,5 +34,10 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // cinco habilidades e Ímpetos no mesmo cálculo. Uma segunda passagem garante
   // que o conjunto final permaneça íntegro depois da escolha conjunta.
   const advanced = applyAdvancedMotorV3750(reconciled);
-  return applyAdvancedMotorV3750(enforceComplementarySkillIntegrity(advanced));
+  const advancedReconciled = enforceComplementarySkillIntegrity(advanced);
+  const finalAdvanced = applyAdvancedMotorV3750(advancedReconciled);
+  // A última passagem do Motor Avançado também precisa ser reconciliada.
+  // Sem esta trava, o conjunto vencedor poderia divergir do inventário da
+  // carta depois da auditoria e reintroduzir uma habilidade já possuída.
+  return enforceComplementarySkillIntegrity(finalAdvanced);
 }

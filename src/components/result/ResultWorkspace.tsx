@@ -359,7 +359,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onReplaceOwnedSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onReplaceOwnedSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const communityEnabled = useObservabilityFeatureFlag('community');
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -1194,11 +1194,14 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
         <div className="result-section-grid bm-simple-skill-result">
           <article className="luxury-panel wide-card">
             <div className="section-title-row"><div><p className="kicker">Habilidades adicionais</p><h3>Somente o que ainda falta</h3></div><span>{pendingRecommendedSkills.length}/{recommendedSkills.length}</span></div>
-            <p className="panel-note">Marque as já aplicadas. A lista principal passa a mostrar somente as habilidades pendentes.</p>
+            <p className="panel-note">Marque as que você adicionou. Se a carta já veio com uma delas, use “Já possui? Gerar outra” para recalcular uma substituta compatível.</p>
             <div className="bm-simple-skill-list">
               {pendingRecommendedSkills.length ? pendingRecommendedSkills.map((skill, index) => {
                 const detail = skillRecommendations.find((item) => item.name === skill);
-                return <button type="button" key={skill} onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>;
+                return <div className="bm-simple-skill-item" key={skill}>
+                  <button type="button" className="bm-simple-skill-main" onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>
+                  <button type="button" className="bm-simple-skill-replace" onClick={() => onReplaceOwnedSkill?.(skill)} title="Confirmar que a carta já possui esta habilidade e recalcular uma substituta"><RotateCcw size={14} /> Já possui? Gerar outra</button>
+                </div>;
               }) : recommendedSkills.length ? <div className="bm-skills-complete-message"><strong>✓ Lista concluída</strong><span>Todas as habilidades recomendadas já foram adicionadas.</span></div> : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada para esta carta.</p>}
             </div>
             {completedRecommendedSkills.length > 0 && <details className="bm-completed-skills-details"><summary>Ver {completedRecommendedSkills.length} já adicionada(s)</summary><div className="bm-simple-skill-list completed-list">{completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => onSkillToggle?.(skill)}><span>✓</span><div><strong>{skill}</strong><small>Toque para voltar à lista pendente.</small></div><em>Desmarcar</em></button>)}</div></details>}
@@ -1250,6 +1253,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
                     </button>
                     <div className="correction-actions">
                       <button type="button" onClick={() => onPromoteSkill?.(skill)}><ThumbsUp size={14} /> Priorizar</button>
+                      <button type="button" onClick={() => onReplaceOwnedSkill?.(skill)}><RotateCcw size={14} /> Já possui — gerar outra</button>
                       <button type="button" onClick={() => onRejectSkill?.(skill)}><Ban size={14} /> Não combina</button>
                     </div>
                   </div>
@@ -1771,6 +1775,7 @@ export function ReviewPanel({
   onConfirm: () => void;
 }) {
   const card = draft.parsed;
+  const displayPlayerName = manualFields.playerName.trim() || card.playerName;
   const criticalIssues = draft.validation.issues.filter((issue) => issue.severity === 'block');
   const reviewIssues = draft.validation.issues.filter((issue) => issue.severity === 'review');
   const updateAttribute = (key: AttributeKey, value: string) => {
@@ -1819,13 +1824,13 @@ export function ReviewPanel({
 
       <div className="result-head luxury-panel">
         <div className="premium-card-art compact-art">
-          {playerImage && <img src={playerImage} alt={`Imagem de ${card.playerName}`} />}
+          {playerImage && <img src={playerImage} alt={`Imagem de ${displayPlayerName}`} />}
           <div className="card-shine" />
           <div className="card-number">
             <strong>{card.maxOverall ?? card.overall ?? '--'}</strong>
             <span>{card.mainPositionPt}</span>
           </div>
-          <em>{card.playerName}</em>
+          <em>{displayPlayerName}</em>
         </div>
         <div className="result-intro">
           <p className="kicker"><ShieldCheck size={16} /> Auditoria Elite</p>

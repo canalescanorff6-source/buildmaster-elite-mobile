@@ -576,7 +576,41 @@ function detectPlaystyle(text: string) {
   return null;
 }
 
+function normalizeExplicitPlayerName(value: string | null | undefined) {
+  const cleaned = cleanLine(String(value ?? ''))
+    .replace(/^(?:nome(?:\s+do\s+jogador)?|jogador|player)\s*[:=\-]\s*/i, '')
+    .replace(/\s+(?:posi[cç][aã]o|estilo|n[ií]vel|pontos|habilidades?)\s*[:=\-].*$/i, '')
+    .trim();
+  if (cleaned.length < 2 || cleaned.length > 50) return null;
+  if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) return null;
+  if (/^(?:jogador|player|nome|n[aã]o\s+identificado)$/i.test(cleaned)) return null;
+  return cleaned;
+}
+
+function explicitPlayerName(rawText: string) {
+  const manualScope = rawText.match(/\[AJUSTES MANUAIS\]([\s\S]*?)\[FIM AJUSTES\]/i)?.[1] ?? '';
+  const scopes = [manualScope, rawText];
+  const patterns = [
+    /(?:^|\n)\s*NOME\s+DO\s+JOGADOR\s*[:=\-]\s*([^\r\n]{2,50})/i,
+    /(?:^|\n)\s*(?:NOME|JOGADOR|PLAYER)\s*[:=\-]\s*([^\r\n]{2,50})/i
+  ];
+  for (const scope of scopes) {
+    if (!scope) continue;
+    for (const pattern of patterns) {
+      const match = scope.match(pattern);
+      const normalized = normalizeExplicitPlayerName(match?.[1]);
+      if (normalized) return normalized;
+    }
+  }
+  return null;
+}
+
 function detectName(rawText: string, fileName?: string | null) {
+  // A identidade digitada pelo usuário é autoritativa. Ela precisa ser lida
+  // antes de qualquer nome completo encontrado pelo OCR no restante do print.
+  const explicit = explicitPlayerName(rawText);
+  if (explicit) return explicit;
+
   const ignored = /^(show time|big time|epic|potw|featured|legend|standard|arilheiro|artilheiro|destruidor|criador|altura|peso|idade|nivel|nível|talento|controle|drible|passe|finaliza|cabe[cç]ada|velocidade|acelera|for[cç]a|salto|contato|equil[ií]brio|resist[eê]ncia|habilidades|skills|modelo|jogador|ca|cf|sa|ss|pd|pe|mat|amf|cmf|dmf|cb|gk|gol)$/i;
   const lines = rawText
     .split(/\r?\n/)
@@ -588,8 +622,6 @@ function detectName(rawText: string, fileName?: string | null) {
     .filter((line) => !ignored.test(line));
   const strongName = lines.find((line) => /^[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+(?:\s+[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+){1,3}$/.test(line));
   if (strongName) return strongName;
-  const explicit = rawText.match(/(?:jogador|player|nome)\s*[:\-]\s*([^\r\n]{3,50})/i)?.[1]?.trim();
-  if (explicit) return explicit;
   if (lines[0]) return lines[0];
   if (fileName) return cleanLine(fileName.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '));
   return 'Jogador não identificado';

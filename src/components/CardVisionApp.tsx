@@ -167,6 +167,8 @@ import { exportPlayStorePublicationState, importPlayStorePublicationState } from
 import { CREATOR_BUILD_RESEARCH_EVENT, exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
 import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
 import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
+import { canonicalizeSkillList, isSpecialSkillIdentity } from '@/lib/officialSkillIdentity';
+import { regenerateSkillAfterOwnedConfirmation } from '@/lib/intelligentSkillReplacementV3830';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
@@ -2204,8 +2206,11 @@ export function CardVisionApp() {
     const confirmedNewSkills = confirmed && readingConfirmations.skills
       ? (singlePrintSession?.detailedReading.skillCandidates ?? []).map((item) => item.value)
       : [];
-    const selectedNativeSkills = Array.from(new Set([...manualFields.nativeSkills, ...confirmedNewSkills])).filter(Boolean);
-    if (selectedNativeSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedNativeSkills.join(', ')}`);
+    const selectedOwnedSkills = canonicalizeSkillList([...manualFields.nativeSkills, ...confirmedNewSkills]);
+    const selectedSpecialSkills = selectedOwnedSkills.filter((skill) => isSpecialSkillIdentity(skill));
+    const selectedRegularSkills = selectedOwnedSkills.filter((skill) => !isSpecialSkillIdentity(skill));
+    if (selectedRegularSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedRegularSkills.join(', ')}`);
+    if (selectedSpecialSkills.length) locks.push(`HABILIDADES ESPECIAIS: ${selectedSpecialSkills.join(', ')}`);
     for (const item of ATTRIBUTE_INPUTS) {
       const value = manualFields.attributes[item.key]?.trim();
       if (value) locks.push(`${item.label}: ${value}`);
@@ -2223,9 +2228,14 @@ export function CardVisionApp() {
       level: nextResult.parsed.level ? String(nextResult.parsed.level) : '',
       trainingPointsTotal: nextResult.trainingPointsTotal ? String(nextResult.trainingPointsTotal) : '',
       attributes: nextAttributes,
-      // Preserve também habilidades aprendidas pelo catálogo local. Filtrar apenas pelo
-      // catálogo oficial faria uma habilidade nova desaparecer na próxima leitura.
-      nativeSkills: Array.from(new Set(nextResult.parsed.nativeSkills.map((skill) => skill.trim()).filter(Boolean)))
+      // Preserve todas as categorias já possuídas. A interface continua compacta,
+      // mas habilidades nativas, adicionais instaladas e especiais precisam participar
+      // do mesmo filtro antirrepetição na geração das cinco vagas seguintes.
+      nativeSkills: canonicalizeSkillList([
+        ...nextResult.parsed.nativeSkills,
+        ...(nextResult.parsed.additionalSkills ?? []),
+        ...nextResult.parsed.specialSkills
+      ])
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
@@ -2821,6 +2831,24 @@ export function CardVisionApp() {
   function applyGameplayProfile(profileId: GameplayDnaProfileId) {
     setResult((current) => current ? applyGameplayDnaProfileSelection(current, profileId) : current);
     setStatus('Perfil de Gameplay aplicado. A ficha, os pontos e as cinco habilidades adicionais foram atualizados.');
+  }
+
+  function replaceOwnedSkillIntelligently(skill: string) {
+    const base = result ?? draftResult;
+    if (!base) return;
+    upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Habilidade já possuída: ${skill}`] }, 'role');
+    upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Habilidade já possuída: ${skill}`] }, 'player');
+    const replacement = regenerateSkillAfterOwnedConfirmation(base, skill);
+    setManualFields((current) => ({
+      ...current,
+      nativeSkills: canonicalizeSkillList([...current.nativeSkills, replacement.removedSkill])
+    }));
+    if (result) setResult(replacement.result);
+    else setDraftResult(replacement.result);
+    const replacementText = replacement.replacementSkill
+      ? `${replacement.removedSkill} foi retirada e ${replacement.replacementSkill} entrou após nova análise completa da carta.`
+      : `${replacement.removedSkill} foi retirada. O app não encontrou outra opção oficial segura para preencher a vaga sem repetir ou fugir da função.`;
+    setStatus(replacementText);
   }
 
   function rejectSkillLocally(skill: string) {
@@ -3842,7 +3870,7 @@ export function CardVisionApp() {
                 <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
               </div>
-            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} onRestoreRulePackVersion={restoreRulePackVersion} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
+            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onReplaceOwnedSkill={replaceOwnedSkillIntelligently} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} onRestoreRulePackVersion={restoreRulePackVersion} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
               originalPreview={preview}

@@ -1,3 +1,4 @@
+// Cache anterior preservado para regressão: buildmaster-v38-20-invisible-optimization-1
 // Compatibilidade de regressão: buildmaster-v35-00-official-skills-meta-2
 // Compatibilidade de regressão: buildmaster-v35-20-dna-gameplay-solid-theme-1
 // Compatibilidade de regressão: buildmaster-v37-00-professional-intelligence-1
@@ -6,7 +7,7 @@
 // Compatibilidade de regressão: buildmaster-v37-90-unified-creation-1
 // Compatibilidade de regressão: buildmaster-v38-00-clean-vault-1
 // Compatibilidade de regressão: buildmaster-v38-10-premium-clean-result-1
-const CACHE_NAME = 'buildmaster-v38-20-invisible-optimization-1';
+const CACHE_NAME = 'buildmaster-v38-30-name-skill-integrity-1';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/assets/logo.svg',

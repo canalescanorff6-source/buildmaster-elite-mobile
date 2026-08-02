@@ -21743,3 +21743,66 @@ body::after { display: none !important; }
   .continuous-audit-grid > div { grid-template-columns: 24px minmax(0,1fr); }
   .continuous-audit-grid > div > b { grid-column: 2; justify-self: start; }
 }
+
+/* v38.30 — troca inteligente de habilidade sem poluir a lista principal */
+.bm-simple-skill-item {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--bm-easy-border);
+  border-radius: 14px;
+  background: #0d131d;
+}
+.bm-simple-skill-main {
+  min-height: 58px !important;
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 2px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #dce2eb !important;
+  text-align: left;
+  box-shadow: none !important;
+}
+.bm-simple-skill-main > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #17120b !important;
+  background: var(--bm-easy-gold);
+  font-weight: 950;
+}
+.bm-simple-skill-main > div { display: grid; gap: 2px; }
+.bm-simple-skill-main strong { color: #eef2f7 !important; font-size: .77rem; }
+.bm-simple-skill-main small { color: var(--bm-easy-muted) !important; font-size: .68rem; line-height: 1.35; }
+.bm-simple-skill-main em { color: var(--bm-easy-gold-soft) !important; font-size: .64rem; font-style: normal; font-weight: 850; }
+.bm-simple-skill-replace {
+  min-height: 34px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  justify-self: end;
+  padding: 6px 10px !important;
+  border: 1px solid rgba(238, 199, 107, .22) !important;
+  border-radius: 10px !important;
+  background: rgba(238, 199, 107, .06) !important;
+  color: var(--bm-easy-gold-soft) !important;
+  font-size: .65rem !important;
+  font-weight: 850 !important;
+  box-shadow: none !important;
+}
+.bm-simple-skill-main:focus-visible,
+.bm-simple-skill-replace:focus-visible {
+  outline: 2px solid var(--bm-easy-gold);
+  outline-offset: 2px;
+}
+@media (max-width: 620px) {
+  .bm-simple-skill-main { grid-template-columns: 30px minmax(0, 1fr); }
+  .bm-simple-skill-main em { grid-column: 2; }
+  .bm-simple-skill-replace { justify-self: stretch; }
+}
