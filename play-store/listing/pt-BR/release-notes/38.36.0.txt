@@ -1,0 +1,1 @@
+Auditoria estrutural determinística: valida apenas os módulos ativos do aplicativo, mantém bloqueios críticos e impede resíduos antigos de interromper a geração do APK. Todas as funções da v38.35 foram preservadas.

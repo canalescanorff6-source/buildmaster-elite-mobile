@@ -698,4 +698,4 @@ for (const permission of permissions) {
 const serviceDeclaration = `        <service\n            android:name=".BuildMasterScreenRecordService"\n            android:exported="false"\n            android:stopWithTask="false"\n            android:foregroundServiceType="mediaProjection" />\n`;
 if (!manifest.includes('android:name=".BuildMasterScreenRecordService"')) manifest = manifest.replace(/<\/application>/, `${serviceDeclaration}    </application>`);
 fs.writeFileSync(manifestPath, manifest);
-console.log('BuildMaster v38.35: gravador instalado com MediaProjection, MediaStore, content URI, renomeação e validação segura.');
+console.log('BuildMaster v38.36: gravador instalado com MediaProjection, MediaStore, content URI, renomeação e validação segura.');

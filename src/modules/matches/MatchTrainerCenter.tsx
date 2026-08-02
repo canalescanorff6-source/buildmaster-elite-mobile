@@ -581,7 +581,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   return <section className="match-trainer-v3170 match-trainer-v3177">
     <div className="match-trainer-intro luxury-panel">
       <div>
-        <p className="kicker"><Video size={15}/> v38.35 • Análise de Vídeo Inteligente 2.0</p>
+        <p className="kicker"><Video size={15}/> v38.36 • Análise de Vídeo Inteligente 2.0</p>
         <h3>Da gravação ao diagnóstico: lance, causa, consequência, correção e treino.</h3>
         <span>O vídeo continua local. O motor encontra momentos para revisão, você confirma o contexto e o BuildMaster transforma as evidências em análise tática organizada.</span>
       </div>
@@ -785,6 +785,6 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
       </div>}
     </>}
 
-    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que a v38.35 afirma com responsabilidade</strong><span>Ela encontra momentos visuais, reproduz clipes, organiza evidências confirmadas, explica causa e consequência, gera treino e compara partidas. Ainda não lê com certeza o botão pressionado, não identifica todos os jogadores automaticamente e não chama pausa visual de lag sem confirmação.</span></div><button type="button" onClick={() => setMessage('Regra de ouro: assista ao clipe, confirme o tipo do lance e só depois use a recomendação. Três partidas comparáveis valem mais do que uma conclusão apressada.')}><RotateCcw size={16}/> Ver regra de uso</button></div>
+    <div className="match-trainer-safeguards luxury-panel"><Wifi size={20}/><div><strong>O que a v38.36 afirma com responsabilidade</strong><span>Ela encontra momentos visuais, reproduz clipes, organiza evidências confirmadas, explica causa e consequência, gera treino e compara partidas. Ainda não lê com certeza o botão pressionado, não identifica todos os jogadores automaticamente e não chama pausa visual de lag sem confirmação.</span></div><button type="button" onClick={() => setMessage('Regra de ouro: assista ao clipe, confirme o tipo do lance e só depois use a recomendação. Três partidas comparáveis valem mais do que uma conclusão apressada.')}><RotateCcw size={16}/> Ver regra de uso</button></div>
   </section>;
 }

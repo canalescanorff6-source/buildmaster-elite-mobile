@@ -1,1 +1,1 @@
-v38.35 — corrige regressões v31.82/v34/v36 e preserva auditoria e Gerador Tático
+v38.36 — torna a auditoria estrutural determinística e impede resíduos inativos de bloquear o APK

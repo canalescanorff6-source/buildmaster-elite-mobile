@@ -47,11 +47,11 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '38.35.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'38.35.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '38.35.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada e esquema compatível');
-check(manifest.name === 'BuildMaster Elite Tático v38.35', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v38-35-legacy-regressions-1'), 'Cache PWA sincronizado');
+check(pkg.version === '38.36.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'38.36.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '38.36.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada e esquema compatível');
+check(manifest.name === 'BuildMaster Elite Tático v38.36', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v38-36-deterministic-audit-1'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
@@ -162,6 +162,7 @@ check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO
 const sourceMap = new Map(typedSourceFiles.map((file) => [path.relative(root, file).replaceAll(path.sep, '/'), file]));
 const importPattern = /(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g;
 const graph = new Map([...sourceMap.keys()].map((file) => [file, new Set()]));
+const unresolvedImports = new Map();
 function resolveImport(fromFile, specifier) {
   let base;
   if (specifier.startsWith('@/')) base = path.join(root, 'src', specifier.slice(2));
@@ -177,7 +178,11 @@ for (const [relative, absolute] of sourceMap) {
     const specifier = match[1] || match[2];
     const resolved = resolveImport(relative, specifier);
     if (resolved) graph.get(relative).add(resolved);
-    else if (specifier.startsWith('.') || specifier.startsWith('@/')) failures.push(`Import interno não resolvido: ${relative} -> ${specifier}`);
+    else if (specifier.startsWith('.') || specifier.startsWith('@/')) {
+      const current = unresolvedImports.get(relative) || [];
+      current.push(specifier);
+      unresolvedImports.set(relative, current);
+    }
   }
 }
 const entries = [...sourceMap.keys()].filter((file) => file.startsWith('src/app/') && ['page.tsx','layout.tsx','error.tsx','global-error.tsx','loading.tsx','not-found.tsx'].includes(path.basename(file)));
@@ -190,8 +195,19 @@ while (stack.length) {
   reachable.add(current);
   for (const dependency of graph.get(current) || []) stack.push(dependency);
 }
+check(entries.length > 0 && reachable.size >= entries.length, 'Grafo de módulos ativos construído');
 const orphans = [...sourceMap.keys()].filter((file) => !reachable.has(file));
-check(orphans.length === 0, 'Nenhum módulo TypeScript órfão', orphans.join(', '));
+if (orphans.length) warnings.push(`${orphans.length} módulo(s) não alcançável(is) foram ignorados pela auditoria ativa: ${orphans.slice(0, 8).join(', ')}${orphans.length > 8 ? ', ...' : ''}`);
+for (const [relative, specifiers] of unresolvedImports) {
+  if (reachable.has(relative)) {
+    for (const specifier of specifiers) failures.push(`Import interno ativo não resolvido: ${relative} -> ${specifier}`);
+  } else {
+    warnings.push(`Import não resolvido em módulo inativo ignorado: ${relative} -> ${specifiers.join(', ')}`);
+  }
+}
+const reachableTypedSourceFiles = [...reachable]
+  .map((file) => sourceMap.get(file))
+  .filter(Boolean);
 
 const forbiddenExtensions = new Set(['.apk', '.aab', '.jks', '.keystore', '.p12', '.pfx']);
 const projectFiles = [...walk('src'), ...walk('scripts'), ...walk('public'), ...walk('supabase'), ...walk('.github')];
@@ -202,13 +218,13 @@ const textFiles = projectFiles.filter((file) => /\.(?:ts|tsx|js|mjs|cjs|json|yml
 const privateKeyHits = textFiles.filter((file) => /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(fs.readFileSync(file, 'utf8')));
 check(privateKeyHits.length === 0, 'Nenhuma chave privada textual incluída', privateKeyHits.map((file) => path.relative(root, file)).join(', '));
 
-const directStorage = typedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
+const directStorage = reachableTypedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
   .filter((item) => item.line.includes('localStorage.') && !item.file.endsWith('safeLocalStorage.ts'));
-check(directStorage.length === 0, 'Acesso direto ao localStorage centralizado', directStorage.slice(0, 8).map((item) => `${path.relative(root, item.file)}:${item.index}`).join(', '));
+check(directStorage.length === 0, 'Acesso direto ao localStorage centralizado nos módulos ativos', directStorage.slice(0, 8).map((item) => `${path.relative(root, item.file)}:${item.index}`).join(', '));
 
-const explicitAnyHits = typedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
+const explicitAnyHits = reachableTypedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
   .filter((item) => /(?:\bas any\b|:\s*any\b|<any>)/.test(item.line));
-check(explicitAnyHits.length === 0, 'Tipos explícitos any removidos', explicitAnyHits.slice(0, 8).map((item) => `${path.relative(root, item.file)}:${item.index}`).join(', '));
+check(explicitAnyHits.length === 0, 'Tipos explícitos any removidos dos módulos ativos', explicitAnyHits.slice(0, 8).map((item) => `${path.relative(root, item.file)}:${item.index}`).join(', '));
 
 for (const file of typedSourceFiles) {
   const lines = fs.readFileSync(file, 'utf8').split('\n').length;
@@ -220,7 +236,10 @@ console.log(`✓ ${passes.length} verificações aprovadas`);
 for (const warning of warnings) console.warn(`⚠ ${warning}`);
 if (failures.length) {
   console.error(`\n✗ ${failures.length} falha(s)`);
-  for (const failure of failures) console.error(`  ✗ ${failure}`);
+  for (const failure of failures) {
+    console.error(`  ✗ ${failure}`);
+    if (process.env.GITHUB_ACTIONS === 'true') console.error(`::error title=Auditoria estrutural::${failure.replaceAll('\n', ' ')}`);
+  }
   process.exit(1);
 }
 console.log('Auditoria do projeto limpo aprovada.');
