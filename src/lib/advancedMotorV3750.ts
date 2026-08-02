@@ -25,6 +25,7 @@ import {
 } from './trainingPlanCore';
 import { TRAINING_LABELS } from './trainingEngine';
 import { filterComplementaryAdditionalSkills, skillIdentityKey } from './officialSkillIdentity';
+import { inferAutomaticCardGameplayProfile } from './automaticCardGameplayProfile';
 
 export const ADVANCED_MOTOR_V3750_VERSION = '37.50.0' as const;
 
@@ -129,7 +130,7 @@ function playstyleAdjustedRole(result: AnalysisResult): RoleTemplate {
   // alto e em partida offline estável, apagando a adaptação feita antes.
   const mode = result.tacticalProfile.gameplayMode ?? 'UNIVERSAL';
   const connection = result.tacticalProfile.connectionProfile ?? 'VARIABLE';
-  const control = result.tacticalProfile.controlProfile ?? 'BALANCED';
+  const control = result.tacticalProfile.controlProfile ?? 'AUTO';
 
   if (mode === 'RANKED') {
     increase('passing', .18);
@@ -153,7 +154,15 @@ function playstyleAdjustedRole(result: AnalysisResult): RoleTemplate {
     increase('shooting', .06);
   }
 
-  if (control === 'PASSING') {
+  if (control === 'AUTO') {
+    const automatic = result.calibrationV32?.automaticCardProfile ?? inferAutomaticCardGameplayProfile(result);
+    for (const [key, value] of Object.entries(automatic.trainingWeights) as Array<[TrainingKey, number]>) {
+      if (Number(value) <= 0) continue;
+      increase(key, Math.min(.42, Number(value) * .24));
+    }
+    id = `${id}_AUTO_DNA`;
+    label = `${label} • ${automatic.label}`;
+  } else if (control === 'PASSING') {
     increase('passing', .38);
     increase('dexterity', .1);
     id = `${id}_PASSING`;
@@ -500,10 +509,17 @@ function contextCriticalGroups(result: AnalysisResult): TrainingKey[] {
   const groups = new Set<TrainingKey>();
   const mode = result.tacticalProfile.gameplayMode ?? 'UNIVERSAL';
   const connection = result.tacticalProfile.connectionProfile ?? 'VARIABLE';
-  const control = result.tacticalProfile.controlProfile ?? 'BALANCED';
+  const control = result.tacticalProfile.controlProfile ?? 'AUTO';
   if (mode === 'RANKED') { groups.add('dexterity'); groups.add('lowerBodyStrength'); }
   if (mode === 'OFFLINE') { groups.add('dribbling'); groups.add('shooting'); }
   if (connection === 'HIGH_DELAY') { groups.add('passing'); groups.add('dexterity'); groups.add('lowerBodyStrength'); }
+  if (control === 'AUTO') {
+    const automatic = result.calibrationV32?.automaticCardProfile ?? inferAutomaticCardGameplayProfile(result);
+    Object.entries(automatic.trainingWeights)
+      .sort((left, right) => Number(right[1] ?? 0) - Number(left[1] ?? 0))
+      .slice(0, 3)
+      .forEach(([key]) => groups.add(key as TrainingKey));
+  }
   if (connection === 'STABLE' && control === 'DRIBBLE') groups.add('dribbling');
   if (control === 'PASSING') { groups.add('passing'); groups.add('dexterity'); }
   if (control === 'DRIBBLE') { groups.add('dribbling'); groups.add('dexterity'); }

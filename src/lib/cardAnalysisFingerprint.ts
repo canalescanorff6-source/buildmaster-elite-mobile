@@ -78,7 +78,7 @@ export function cardAnalysisInputFingerprint(result: AnalysisResult, extra = '')
     result.tacticalProfile.managerBooster ?? '',
     result.tacticalProfile.gameplayMode ?? 'UNIVERSAL',
     result.tacticalProfile.connectionProfile ?? 'VARIABLE',
-    result.tacticalProfile.controlProfile ?? 'BALANCED',
+    result.tacticalProfile.controlProfile ?? 'AUTO',
     result.validation.level,
     parsed.manualConfirmed ? 1 : 0,
     result.validation.confirmed ? 1 : 0,

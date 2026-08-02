@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 const tactical = require('../src/modules/tactical-studio/metaFormationStudioV3832.ts');
 const read = (file) => fs.readFileSync(file, 'utf8');
 
-assert.equal(tactical.META_FORMATION_STUDIO_VERSION, '38.36.0');
+assert.equal(tactical.META_FORMATION_STUDIO_VERSION, '38.37.0');
 assert.deepEqual([...tactical.META_COACH_STYLES], ['Posse de bola', 'Contra-ataque normal', 'Contra-ataque rápido']);
 assert.equal(tactical.META_OBJECTIVES.length, 16);
 assert.equal(tactical.META_FORMATION_CATALOG.length, 30);
@@ -63,7 +63,7 @@ assert.ok(!recorderInstaller.includes('file://'));
 
 const videoEngine = read('src/modules/matches/matchTrainerEngine.ts');
 const videoUi = read('src/modules/matches/MatchTrainerCenter.tsx');
-for (const marker of ['38.36.0', 'commandEvidence', 'candidate', 'confirmed', 'repeated', 'annotations', 'offensive-transition', 'defensive-transition', 'replaceMatchTrainerSessions']) assert.ok(videoEngine.includes(marker), `motor de vídeo sem ${marker}`);
+for (const marker of ['38.37.0', 'commandEvidence', 'candidate', 'confirmed', 'repeated', 'annotations', 'offensive-transition', 'defensive-transition', 'replaceMatchTrainerSessions']) assert.ok(videoEngine.includes(marker), `motor de vídeo sem ${marker}`);
 for (const tab of ['Resumo','Momentos','Ataque','Defesa','Comandos','Tática','Treino','Evolução']) assert.ok(videoUi.includes(tab), `aba ${tab} ausente`);
 for (const marker of ['Inferência tática — comando não confirmado diretamente.', 'Minhas gravações', 'Salvar automaticamente em Filmes/BuildMaster/Partidas', 'Quadro-chave', 'Renomear', 'Compartilhar vídeo']) assert.ok(videoUi.includes(marker), `UI de vídeo sem ${marker}`);
 
@@ -73,12 +73,12 @@ assert.ok(app.includes('schema: 3832'));
 
 const pkg = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
-assert.equal(pkg.version, '38.36.0');
-assert.equal(lock.version, '38.36.0');
-assert.equal(lock.packages[''].version, '38.36.0');
-assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v38.36');
-assert.ok(read('public/sw.js').includes('buildmaster-v38-36-deterministic-audit-1'));
-assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('38.36.0-deterministic-audit-1'));
+assert.equal(pkg.version, '38.37.0');
+assert.equal(lock.version, '38.37.0');
+assert.equal(lock.packages[''].version, '38.37.0');
+assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v38.37');
+assert.ok(read('public/sw.js').includes('buildmaster-v38-37-automatic-card-gameplay-1'));
+assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('38.37.0-automatic-card-gameplay-1'));
 assert.ok(read('.github/workflows/build-apk.yml').includes('package_version'));
 assert.ok(read('.github/workflows/build-play-store.yml').includes('BUILDMASTER_VERSION'));
 assert.ok(read('.github/workflows/build-play-store.yml').includes('versionName "{os.environ["BUILDMASTER_VERSION"]}"'));

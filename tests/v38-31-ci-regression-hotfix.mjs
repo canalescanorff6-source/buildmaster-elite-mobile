@@ -12,10 +12,10 @@ const pkg = JSON.parse(read('package.json'));
 
 assert.match(app, /nativeSkills: Array\.from\(new Set\(canonicalizeSkillList\(\[/,
   'O inventário completo precisa manter deduplicação explícita e normalização canônica.');
-assert.match(nativeCache, /NATIVE_CACHE_SCHEMA = '38\.(?:31\.0-ci-regression-hotfix|32\.0-complete-integration|33\.0-professional-template|34\.0-ci-stability|35\.0-legacy-regressions|36\.0-deterministic-audit)-1'/);
-assert.match(serviceWorker, /CACHE_NAME = 'buildmaster-v38-(?:31-ci-regression-hotfix|32-complete-integration|33-professional-template|34-ci-stability|35-legacy-regressions|36-deterministic-audit)-1'/);
-assert.ok(v33.includes('38\\.(?:00|10|20|30|31|32|33|34|35|36)'), 'A regressão v33 precisa aceitar os caches atuais.');
-assert.ok(v3771.includes('36\\.0-deterministic-audit'), 'A regressão v37.71 precisa aceitar o cache v38.36.');
+assert.match(nativeCache, /NATIVE_CACHE_SCHEMA = '38\.(?:31\.0-ci-regression-hotfix|32\.0-complete-integration|33\.0-professional-template|34\.0-ci-stability|35\.0-legacy-regressions|36\.0-deterministic-audit|37\.0-automatic-card-gameplay)-1'/);
+assert.match(serviceWorker, /CACHE_NAME = 'buildmaster-v38-(?:31-ci-regression-hotfix|32-complete-integration|33-professional-template|34-ci-stability|35-legacy-regressions|36-deterministic-audit|37-automatic-card-gameplay)-1'/);
+assert.ok(v33.includes('38\\.(?:00|10|20|30|31|32|33|34|35|36|37)'), 'A regressão v33 precisa aceitar os caches atuais.');
+assert.ok(v3771.includes('37\\.0-automatic-card-gameplay'), 'A regressão v37.71 precisa aceitar o cache v38.37.');
 assert.ok(doctor.includes('Regressões v38.31'), 'O diagnóstico consolidado precisa executar a v38.31.');
 assert.equal(pkg.scripts['test:v3831'], 'node tests/v38-31-ci-regression-hotfix.mjs');
 

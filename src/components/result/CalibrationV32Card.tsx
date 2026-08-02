@@ -5,7 +5,7 @@ const DIMENSIONS: Array<{ key: keyof NonNullable<AnalysisResult['calibrationV32'
   { key: 'roleFit', label: 'Função' },
   { key: 'formationFit', label: 'Estilo técnico' },
   { key: 'playstyleFit', label: 'Estilo' },
-  { key: 'controlFit', label: 'Seu controle' },
+  { key: 'controlFit', label: 'Perfil da carta' },
   { key: 'connectionRobustness', label: 'Conexão' },
   { key: 'pointEfficiency', label: 'Pontos' },
   { key: 'skillSynergy', label: 'Habilidades' },
@@ -35,12 +35,20 @@ export function CalibrationV32Card({ result }: { result: AnalysisResult }) {
     <article className="luxury-panel wide-card calibration-v32-card">
       <div className="section-title-row">
         <div>
-          <p className="kicker">Calibração Máxima v35.20</p>
+          <p className="kicker">Calibração Automática v38.37</p>
           <h3>Gameplay máxima, sem caçar overall</h3>
         </div>
         <span>{calibration.calibrationScore}/100</span>
       </div>
       <p className="panel-note"><b>{calibration.patchReference}</b> • prontidão {calibration.readiness} ({calibration.readinessScore}/100) • confiança {calibration.confidence}/100</p>
+      {calibration.automaticCardProfile && (
+        <div className="skill-check-card calibration-auto-profile">
+          <strong>Jeito de jogar reconhecido automaticamente</strong>
+          <span>{calibration.automaticCardProfile.label}</span>
+          <small>Confiança {calibration.automaticCardProfile.confidence}% • leitura específica desta versão da carta</small>
+          {calibration.automaticCardProfile.evidence.slice(0, 2).map((item) => <em key={item}>• {item}</em>)}
+        </div>
+      )}
       <div className="health-score-grid calibration-score-grid">
         <article><strong>{calibration.calibrationScore}</strong><span>Calibração final</span></article>
         <article><strong>{calibration.exactBudgetCandidates}</strong><span>Candidatas exatas</span></article>

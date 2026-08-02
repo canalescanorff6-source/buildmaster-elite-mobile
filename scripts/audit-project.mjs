@@ -47,11 +47,11 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '38.36.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'38.36.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '38.36.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada e esquema compatível');
-check(manifest.name === 'BuildMaster Elite Tático v38.36', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v38-36-deterministic-audit-1'), 'Cache PWA sincronizado');
+check(pkg.version === '38.37.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'38.37.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '38.37.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada e esquema compatível');
+check(manifest.name === 'BuildMaster Elite Tático v38.37', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v38-37-automatic-card-gameplay-1'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);

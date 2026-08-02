@@ -391,7 +391,7 @@ export function CardVisionApp() {
   const [managerId, setManagerId] = useState<string>('AUTO');
   const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
   const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');
-  const [controlProfile, setControlProfile] = useState<ControlProfile>('BALANCED');
+  const controlProfile: ControlProfile = 'AUTO';
   const [status, setStatus] = useState('Escolha como deseja criar a ficha. O aplicativo mostrará uma etapa por vez.');
   const lastPremiumStatusRef = useRef('');
   const [loading, setLoading] = useState(false);
@@ -964,7 +964,7 @@ export function CardVisionApp() {
           if (typeof snapshot.managerId === 'string') setManagerId(snapshot.managerId);
           if (snapshot.gameplayMode) setGameplayMode(snapshot.gameplayMode);
           if (snapshot.connectionProfile) setConnectionProfile(snapshot.connectionProfile);
-          if (snapshot.controlProfile) setControlProfile(snapshot.controlProfile);
+          // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
@@ -3504,10 +3504,8 @@ export function CardVisionApp() {
                   <CalibrationProfileFields
                     gameplayMode={gameplayMode}
                     connectionProfile={connectionProfile}
-                    controlProfile={controlProfile}
                     onGameplayModeChange={setGameplayMode}
                     onConnectionProfileChange={setConnectionProfile}
-                    onControlProfileChange={setControlProfile}
                   />
                 </div>
                 {selectedManager && <article className="manager-context-card creation-manager-context">
@@ -3527,9 +3525,9 @@ export function CardVisionApp() {
                     <em>{playstyleOverride === 'AUTO' ? 'Estilo do jogador identificado pelo app' : playstyleOverride}</em>
                   </div>
                   <div>
-                    <span>Calibração v35</span>
+                    <span>Perfil automático da carta</span>
                     <strong>{gameplayMode === 'RANKED' ? 'Ranqueado robusto' : gameplayMode === 'OFFLINE' ? 'Offline expressivo' : 'Universal equilibrado'}</strong>
-                    <em>{connectionProfile === 'HIGH_DELAY' ? 'Delay alto' : connectionProfile === 'STABLE' ? 'Conexão estável' : 'Conexão variável'} • {controlProfile === 'PASSING' ? 'Passe' : controlProfile === 'DRIBBLE' ? 'Drible' : controlProfile === 'DIRECT' ? 'Direto' : 'Equilibrado'}</em>
+                    <em>{connectionProfile === 'HIGH_DELAY' ? 'Delay alto' : connectionProfile === 'STABLE' ? 'Conexão estável' : 'Conexão variável'} • {(draftResult ?? result)?.calibrationV32?.automaticCardProfile?.label ?? 'Automático pela carta'}</em>
                   </div>
                   <small>A formação não muda pontos nem habilidades. A ficha reage à posição, ao DNA da carta, ao Estilo de Jogo e ao estilo coletivo do técnico.</small>
                 </article>

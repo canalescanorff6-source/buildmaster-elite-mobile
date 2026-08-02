@@ -31,8 +31,9 @@ import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
 import { buildMetaBuildUniverse } from './metaBuildUniverse';
 import { buildPersonalizedSkillPlan } from './skillIntelligenceV31';
+import { inferAutomaticCardGameplayProfile } from './automaticCardGameplayProfile';
 
-const ENGINE_VERSION = '35.20-dna-gameplay-profiles-solid-theme-1';
+const ENGINE_VERSION = '38.37-automatic-card-gameplay-1';
 const PATCH_REFERENCE = 'eFootball v5.4.0' as const;
 const CACHE_LIMIT = 24;
 
@@ -68,6 +69,7 @@ const CONNECTION_WEIGHTS: Record<ConnectionProfile, Partial<Record<TrainingKey, 
 };
 
 const CONTROL_WEIGHTS: Record<ControlProfile, Partial<Record<TrainingKey, number>>> = {
+  AUTO: {},
   BALANCED: { passing: .35, dribbling: .3, dexterity: .35, lowerBodyStrength: .3, defending: .2 },
   PASSING: { passing: 1.45, dexterity: .7, dribbling: .35, lowerBodyStrength: .35 },
   DRIBBLE: { dribbling: 1.5, dexterity: 1.15, lowerBodyStrength: .45, passing: .2 },
@@ -364,7 +366,9 @@ function targetWeights(result: AnalysisResult, mode: GameplayMode) {
   addWeights(tactical, teamStyleWeights(result), tacticalTrust);
   addWeights(style, playstyleWeights(result));
   addWeights(style, attributeDnaWeights(result), 1.15);
-  addWeights(control, CONTROL_WEIGHTS[result.tacticalProfile.controlProfile ?? 'BALANCED']);
+  const selectedControlProfile = result.tacticalProfile.controlProfile ?? 'AUTO';
+  if (selectedControlProfile === 'AUTO') addWeights(control, inferAutomaticCardGameplayProfile(result).trainingWeights);
+  else addWeights(control, CONTROL_WEIGHTS[selectedControlProfile]);
   addWeights(connection, CONNECTION_WEIGHTS[result.tacticalProfile.connectionProfile ?? 'VARIABLE']);
   addWeights(skill, keywordWeights([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills, ...result.recommendedSkills]));
   addWeights(impeto, keywordWeights(result.recommendedImpetos.slice(0, 3).flatMap((item) => [item.name, ...item.attributes, item.reason])));
@@ -1179,7 +1183,8 @@ function updateDerivedPrecision(result: AnalysisResult, profiles: CalibrationV32
 export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
   const selectedMode = result.tacticalProfile.gameplayMode ?? 'UNIVERSAL';
   const connectionProfile = result.tacticalProfile.connectionProfile ?? 'VARIABLE';
-  const controlProfile = result.tacticalProfile.controlProfile ?? 'BALANCED';
+  const controlProfile = result.tacticalProfile.controlProfile ?? 'AUTO';
+  const automaticCardProfile = controlProfile === 'AUTO' ? inferAutomaticCardGameplayProfile(result) : undefined;
   const cacheKey = cardAnalysisInputFingerprint(result, `calibration-v35-20:${selectedMode}:${connectionProfile}:${controlProfile}`);
   const cached = cache.get(cacheKey);
   if (cached) return cached;
@@ -1222,7 +1227,7 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
   const gameplayDna = buildGameplayDnaAnalysis(result, selectedMode);
   const reasons = [
     `Modo principal: ${profileLabel(selectedMode)} com campeão robusto entre ranqueado, universal e offline.`,
-    `Conexão: ${connectionProfile === 'HIGH_DELAY' ? 'atraso alto' : connectionProfile === 'VARIABLE' ? 'variável' : 'estável'}; controle: ${controlProfile === 'PASSING' ? 'passe' : controlProfile === 'DRIBBLE' ? 'drible' : controlProfile === 'DIRECT' ? 'jogo direto' : 'equilibrado'}.`,
+    `Conexão: ${connectionProfile === 'HIGH_DELAY' ? 'atraso alto' : connectionProfile === 'VARIABLE' ? 'variável' : 'estável'}; perfil: ${automaticCardProfile ? `automático pela carta — ${automaticCardProfile.label}` : controlProfile === 'PASSING' ? 'passe' : controlProfile === 'DRIBBLE' ? 'drible' : controlProfile === 'DIRECT' ? 'jogo direto' : 'equilibrado'}.`,
     `A distribuição foi comparada em ranqueado, universal e offline, sem usar overall como objetivo.`,
     `Resposta prática ${Math.round(champion.dimensions.gameplayResponse)}/100, piso funcional ${Math.round(champion.dimensions.functionalFloor)}/100 e proteção anti-overall ${Math.round(champion.dimensions.antiOverallWaste)}/100.`,
     `Orçamento real auditado: ${used}/${result.trainingPointsTotal} pontos.`,
@@ -1236,7 +1241,8 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
     'A formação não limita a ficha; posição, DNA da carta, estilo coletivo e técnico comandam a calibração.',
     'Habilidades nativas são removidas do Top 5 adicional antes da calibração final.',
     'Ímpetos já existentes não são recomendados novamente.',
-    'O perfil ranqueado favorece consistência e resposta; o offline aceita mais especialização criativa.'
+    'O perfil ranqueado favorece consistência e resposta; o offline aceita mais especialização criativa.',
+    'No modo automático, o jeito de jogar é inferido pelos atributos, Estilo de Jogo, habilidades e posição desta carta específica.'
   ];
   const analysis: CalibrationV32Analysis = {
     engineVersion: ENGINE_VERSION,
@@ -1244,6 +1250,7 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
     selectedMode,
     connectionProfile,
     controlProfile,
+    automaticCardProfile,
     readiness: ready.state,
     readinessScore: ready.score,
     confidence,
@@ -1258,7 +1265,7 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
     warnings: [...ready.warnings, ...activeProfile.tradeOffs.filter((item) => !item.startsWith('Nenhum'))].slice(0, 8),
     safeguards,
     reasons,
-    summary: `A Calibração Máxima v35.20 avaliou ${built.reduce((sum, item) => sum + item.candidates, 0) + robust.candidates} candidatas e escolheu um campeão robusto para ${profileLabel(selectedMode).toLowerCase()} com ${champion.score}/100, sem perseguir overall.`
+    summary: `A Calibração Automática v38.37 avaliou ${built.reduce((sum, item) => sum + item.candidates, 0) + robust.candidates} candidatas e escolheu um campeão robusto para ${profileLabel(selectedMode).toLowerCase()} com ${champion.score}/100, sem perseguir overall.`
   };
 
   const derived = updateDerivedPrecision(result, profiles);
@@ -1270,7 +1277,7 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
     trainingPointsUsed: used,
     trainingPointsRemaining: Math.max(0, result.trainingPointsTotal - used),
     trainingComparison: result.trainingComparison.map((item) => ({ ...item, recommended: finalPlan[item.key], difference: finalPlan[item.key] - item.auto })),
-    buildName: `Ficha v35 Máxima v35.20 — ${profileLabel(selectedMode)}`,
+    buildName: `Ficha Automática v38.37 — ${profileLabel(selectedMode)}`,
     buildVariants: derived.variants,
     recommendationExplanation: [analysis.summary, ...reasons, ...result.recommendationExplanation].filter((item, index, all) => all.indexOf(item) === index).slice(0, 14),
     maxPrecision: derived.maxPrecision,

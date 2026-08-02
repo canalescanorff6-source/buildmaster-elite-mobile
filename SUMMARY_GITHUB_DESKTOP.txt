@@ -1,1 +1,1 @@
-v38.36 — torna a auditoria estrutural determinística e impede resíduos inativos de bloquear o APK
+v38.37 — remove perfis manuais e reconhece automaticamente o jeito de jogar pela carta

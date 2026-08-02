@@ -1,22 +1,18 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
-import type { ConnectionProfile, ControlProfile, GameplayMode } from '@/modules/analysis';
+import type { ConnectionProfile, GameplayMode } from '@/modules/analysis';
 
 export function CalibrationProfileFields({
   gameplayMode,
   connectionProfile,
-  controlProfile,
   onGameplayModeChange,
-  onConnectionProfileChange,
-  onControlProfileChange
+  onConnectionProfileChange
 }: {
   gameplayMode: GameplayMode;
   connectionProfile: ConnectionProfile;
-  controlProfile: ControlProfile;
   onGameplayModeChange: (value: GameplayMode) => void;
   onConnectionProfileChange: (value: ConnectionProfile) => void;
-  onControlProfileChange: (value: ControlProfile) => void;
 }) {
   return (
     <>
@@ -37,13 +33,11 @@ export function CalibrationProfileFields({
         </select>
       </label>
       <label>
-        <span>Seu jeito de jogar</span>
-        <select value={controlProfile} onChange={(event: ChangeEvent<HTMLSelectElement>) => onControlProfileChange(event.target.value as ControlProfile)}>
-          <option value="BALANCED">Equilibrado</option>
-          <option value="PASSING">Passe e tabelas</option>
-          <option value="DRIBBLE">Drible e condução</option>
-          <option value="DIRECT">Vertical e direto</option>
-        </select>
+        <span>Jeito de jogar</span>
+        <output className="automatic-card-gameplay-field" aria-label="Jeito de jogar definido automaticamente pela carta">
+          <strong>Automático pela carta</strong>
+          <small>O app combina atributos, posição, Estilo de Jogo e habilidades desta versão da carta.</small>
+        </output>
       </label>
     </>
   );

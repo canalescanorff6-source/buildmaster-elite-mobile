@@ -25,8 +25,8 @@ function run(position: PositionCode, formation: TacticalFormation, overall = 99)
 const natural = run('SS', '4-3-3');
 const selected = run('CF', '4-3-3');
 
-assert.match(natural.buildName, /^Ficha v35 Máxima/);
-assert.match(selected.buildName, /^Ficha v35 Máxima/);
+assert.match(natural.buildName, /^(?:Ficha v35 Máxima|Ficha Automática v38\.37)/);
+assert.match(selected.buildName, /^(?:Ficha v35 Máxima|Ficha Automática v38\.37)/);
 assert.equal(natural.trainingPointsUsed, 64);
 assert.equal(selected.trainingPointsUsed, 64);
 assert.equal(trainingPlanTotalCost(natural.training), 64);

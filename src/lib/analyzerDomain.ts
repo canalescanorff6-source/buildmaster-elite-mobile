@@ -44,7 +44,8 @@ export type TacticalFormation = '4-2-2-2' | '4-3-3' | '4-1-2-3' | '4-2-1-3' | '4
 export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'AUTO';
 export type GameplayMode = 'RANKED' | 'UNIVERSAL' | 'OFFLINE';
 export type ConnectionProfile = 'STABLE' | 'VARIABLE' | 'HIGH_DELAY';
-export type ControlProfile = 'BALANCED' | 'PASSING' | 'DRIBBLE' | 'DIRECT';
+export type ControlProfile = 'AUTO' | 'BALANCED' | 'PASSING' | 'DRIBBLE' | 'DIRECT';
+export type EffectiveControlProfile = Exclude<ControlProfile, 'AUTO'>;
 export type TacticalProfile = {
   formation: TacticalFormation;
   style: TacticalStyle;
@@ -600,6 +601,29 @@ export type UnifiedCardIntelligenceAnalysis = {
 
 
 
+export type AutomaticCardGameplayProfile = {
+  engineVersion: string;
+  mode: 'AUTO';
+  label: string;
+  primaryInternalProfile: EffectiveControlProfile;
+  confidence: number;
+  dimensions: {
+    creation: number;
+    dribbling: number;
+    finishing: number;
+    setPieces: number;
+    movement: number;
+    defensive: number;
+    physical: number;
+    aerial: number;
+    goalkeeping: number;
+  };
+  trainingWeights: Partial<Record<TrainingKey, number>>;
+  evidence: string[];
+  safeguards: string[];
+  signature: string;
+};
+
 export type CalibrationV32Profile = {
   mode: GameplayMode;
   label: string;
@@ -616,6 +640,7 @@ export type CalibrationV32Analysis = {
   selectedMode: GameplayMode;
   connectionProfile: ConnectionProfile;
   controlProfile: ControlProfile;
+  automaticCardProfile?: AutomaticCardGameplayProfile;
   readiness: 'pronta' | 'quase pronta' | 'revisar';
   readinessScore: number;
   confidence: number;
