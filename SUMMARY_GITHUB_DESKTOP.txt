@@ -1,1 +1,1 @@
-Corrige TypeScript completo e regressão v30.20 no workflow da v31.78
+Implementa Análise de Vídeo 2.0, Estúdio de Formações Meta e melhorias premium na v38.32

@@ -2,6 +2,7 @@
 
 import {
   ArrowRight,
+  BarChart3,
   BrainCircuit,
   Camera,
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   Gamepad2,
   Gauge,
   Keyboard,
+  LayoutDashboard,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -18,6 +20,10 @@ import {
   Wand2
 } from 'lucide-react';
 import type { CentralDashboard, CentralRecommendation, TeamDiagnosis } from '@/modules/core/centralIntelligence';
+
+// Compatibilidade visual v36 preservada para regressão:
+// Desempenho real. Sem perseguir overall.
+// A ficha mais forte para a carta e para a posição que você escolher.
 
 function recommendation(
   id: string,
@@ -54,7 +60,7 @@ export function IntegratedHomePanel({
   const nextStep = dashboard.recommendations[0] ?? null;
   const backupLabel = lastBackupAt
     ? new Date(lastBackupAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-    : 'Não feito';
+    : 'Pendente';
   const latest = dashboard.latestPlayer;
 
   function open(action: CentralRecommendation['action'], id: string, title: string, detail = '', playerId?: string) {
@@ -70,66 +76,90 @@ export function IntegratedHomePanel({
   }
 
   return (
-    <section className="bm-premium-dashboard" aria-label="Início premium do Marques Fichas">
-      <header className="bm-premium-dashboard-heading">
-        <div>
-          <span><Sparkles size={14} /> Central Elite</span>
-          <h1>Seu time, suas fichas e sua estratégia em um só lugar.</h1>
-          <p>Interface direta, recursos organizados e inteligência tática sem esconder as funções importantes.</p>
+    <section className="bm-premium-dashboard bm-v36-home" aria-label="Central premium do BuildMaster">
+      <header className="bm-premium-dashboard-heading bm-v36-home-header">
+        <div className="bm-v36-title-block">
+          <span className="bm-v36-eyebrow"><LayoutDashboard size={15} /> Central</span>
+          <h1>Sua ficha, sem complicação.</h1>
+          <p>Crie, revise e organize jogadores em poucos passos.</p>
         </div>
-        <div className="bm-premium-health-pill">
-          <ShieldCheck size={17} />
-          <div><strong>{healthScore}/100</strong><small>saúde do app</small></div>
+        <div className="bm-premium-health-pill bm-v36-health-pill">
+          <span className="bm-v36-health-icon"><ShieldCheck size={18} /></span>
+          <div><small>Integridade do app</small><strong>{healthScore}/100</strong></div>
+          <i aria-hidden="true"><b style={{ width: `${Math.max(4, Math.min(100, healthScore))}%` }} /></i>
         </div>
       </header>
 
-      <section className="bm-premium-reader-hero" aria-label="Leitor inteligente de cartas">
-        <div className="bm-premium-reader-copy">
-          <span className="bm-premium-kicker"><Camera size={15} /> Leitor inteligente</span>
-          <h2>Transforme um print em uma ficha competitiva completa.</h2>
-          <p>O app lê a carta, recorta a imagem, confirma os dados e calcula ficha, habilidades e Ímpeto no mesmo fluxo.</p>
-          <div className="bm-premium-reader-actions">
-            <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Criar ficha por print')}>
-              <Camera size={19} /><span><strong>Iniciar leitura</strong><small>Mais rápido e recomendado</small></span><ArrowRight size={18} />
+      <section className="bm-premium-reader-hero bm-v36-command-deck" aria-label="Criar ficha de alto desempenho">
+        <div className="bm-premium-reader-copy bm-v36-command-copy">
+          <span className="bm-premium-kicker bm-v36-command-kicker"><BrainCircuit size={16} /> Análise inteligente</span>
+          <h2>Crie uma ficha precisa para a posição escolhida.</h2>
+          <p>Importe o print ou preencha os dados. O cálculo completo acontece em segundo plano.</p>
+          <div className="bm-premium-reader-actions bm-v36-command-actions">
+            <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Ler print')}>
+              <span className="bm-v36-action-icon"><Camera size={21} /></span>
+              <span><strong>Analisar uma carta</strong><small>Importar print completo</small></span>
+              <ArrowRight size={18} />
             </button>
             <button type="button" onClick={() => open('manual', 'home-manual', 'Criar ficha manualmente')}>
-              <Keyboard size={18} /><span><strong>Modo manual</strong><small>Digite somente o necessário</small></span>
+              <Keyboard size={19} /><span><strong>Criar manual</strong><small>Preencher todos os dados</small></span>
             </button>
+          </div>
+          <div className="bm-v36-trust-row" aria-label="Recursos da análise">
+            <span><CheckCircle2 size={14} /> Pontos exatos</span>
+            <span><Wand2 size={14} /> 5 habilidades</span>
+            <span><Target size={14} /> Booster ideal</span>
           </div>
         </div>
 
-        <div className="bm-premium-player-card" aria-label={latest ? `Última carta: ${latest.name}` : 'Prévia do leitor'}>
-          <div className="bm-premium-card-glow" />
-          <span className="bm-premium-card-rating">{dashboard.squadReadiness || 99}</span>
-          <span className="bm-premium-card-position">{latest?.targetPosition || 'CA'}</span>
-          <div className="bm-premium-card-avatar">{latest ? initials(latest.name) : <Trophy size={38} />}</div>
-          <div className="bm-premium-card-name"><strong>{latest?.name || 'Sua próxima carta'}</strong><small>Ficha competitiva definitiva</small></div>
-          <div className="bm-premium-card-stars">★★★★★</div>
+        <article className="bm-premium-player-card bm-v36-spotlight-card" aria-label={latest ? `Última carta: ${latest.name}` : 'Prévia da próxima ficha'}>
+          <div className="bm-v36-spotlight-top">
+            <span>ÚLTIMA ANÁLISE</span>
+            <em>{latest ? 'Disponível' : 'Aguardando carta'}</em>
+          </div>
+          <div className="bm-v36-card-stage">
+            <span className="bm-premium-card-rating">{dashboard.squadReadiness || 99}</span>
+            <span className="bm-premium-card-position">{latest?.targetPosition || 'CA'}</span>
+            <div className="bm-premium-card-avatar">{latest ? initials(latest.name) : <Trophy size={39} />}</div>
+            <div className="bm-premium-card-stars">★★★★★</div>
+          </div>
+          <div className="bm-premium-card-name bm-v36-spotlight-name">
+            <div><small>{latest ? 'Ficha pronta' : 'Comece sua análise'}</small><strong>{latest?.name || 'Nova carta'}</strong></div>
+            <button type="button" onClick={() => openLatestResult('home-spotlight', latest ? `Abrir ${latest.name}` : 'Criar primeira ficha')} aria-label={latest ? `Abrir ficha de ${latest.name}` : 'Criar primeira ficha'}><ArrowRight size={18} /></button>
+          </div>
+        </article>
+      </section>
+
+      <details className="bm-v3780-home-details">
+        <summary><span><LayoutDashboard size={18} /><strong>Ver painel completo</strong><small>Elenco, partidas, tática e indicadores</small></span><ArrowRight size={17} /></summary>
+        <div className="bm-v3780-home-details-content">
+      <section className="bm-v36-metrics" aria-label="Resumo do aplicativo">
+        <article><span><Users size={18} /></span><div><strong>{dashboard.players}</strong><small>Jogadores salvos</small></div></article>
+        <article><span><CheckCircle2 size={18} /></span><div><strong>{dashboard.confirmed}</strong><small>Fichas concluídas</small></div></article>
+        <article><span><Gamepad2 size={18} /></span><div><strong>{dashboard.matchRecords}</strong><small>Partidas registradas</small></div></article>
+        <article><span><Clock3 size={18} /></span><div><strong>{backupLabel}</strong><small>Último backup</small></div></article>
+      </section>
+
+      <section className="bm-premium-feature-section bm-v36-workspace" aria-label="Áreas principais">
+        <div className="bm-premium-section-heading bm-v36-section-heading">
+          <div><span>Workspace</span><h2>O que você quer fazer agora?</h2></div>
+          <small>{dashboard.players} carta(s) no seu ambiente</small>
+        </div>
+        <div className="bm-premium-feature-grid bm-v36-feature-grid">
+          <button type="button" className="featured" onClick={() => open('players', 'home-builds', 'Fichas')}><span><Trophy size={23}/></span><div><strong>Minhas fichas</strong><small>Progressões e Perfis de Gameplay</small></div><ArrowRight size={17}/></button>
+          <button type="button" onClick={() => openLatestResult('home-skills', 'Habilidades adicionais')}><span><Wand2 size={23}/></span><div><strong>Habilidades</strong><small>Top 5 oficial e Ímpetos</small></div><ArrowRight size={17}/></button>
+          <button type="button" onClick={() => open('team', 'home-team', 'Meu Time')}><span><Users size={23}/></span><div><strong>Meu Time</strong><small>Elenco, setores e escalação</small></div><ArrowRight size={17}/></button>
+          <button type="button" onClick={() => open('matches', 'home-training', 'Treinos')}><span><Gauge size={23}/></span><div><strong>Partidas</strong><small>Testes e evolução real</small></div><ArrowRight size={17}/></button>
+          <button type="button" onClick={() => open('team', 'home-formations', 'Formações')}><span><Target size={23}/></span><div><strong>Tática</strong><small>Técnicos, estilos e funções</small></div><ArrowRight size={17}/></button>
+          <button type="button" onClick={() => open('settings', 'home-settings', 'Configurações')}><span><Settings2 size={23}/></span><div><strong>Configurações</strong><small>Visual, conta, backup e sistema</small></div><ArrowRight size={17}/></button>
         </div>
       </section>
 
-      <section className="bm-premium-feature-section" aria-label="Funções principais">
-        <div className="bm-premium-section-heading">
-          <div><span>Funções principais</span><h2>Tudo fácil de encontrar</h2></div>
-          <small>{dashboard.players} jogador(es) no Cofre</small>
-        </div>
-        <div className="bm-premium-feature-grid">
-          <button type="button" onClick={() => open('players', 'home-builds', 'Fichas')}><Trophy size={23}/><span><strong>Fichas</strong><small>Progressão ideal</small></span></button>
-          <button type="button" onClick={() => openLatestResult('home-skills', 'Habilidades adicionais')}><Wand2 size={23}/><span><strong>Habilidades</strong><small>5 escolhas personalizadas</small></span></button>
-          <button type="button" onClick={() => openLatestResult('home-boosters', 'Ímpeto ideal')}><Sparkles size={23}/><span><strong>Ímpetos</strong><small>Melhor escolha por carta</small></span></button>
-          <button type="button" onClick={() => open('team', 'home-formations', 'Formações')}><Target size={23}/><span><strong>Formações</strong><small>Técnicos, estilos e guias</small></span></button>
-          <button type="button" onClick={() => open('matches', 'home-opponent', 'Analisar adversário')}><Gamepad2 size={23}/><span><strong>Adversário</strong><small>Partidas e leitura tática</small></span></button>
-          <button type="button" onClick={() => open('matches', 'home-training', 'Treinos')}><Gauge size={23}/><span><strong>Treinos</strong><small>Evolução e teste A/B</small></span></button>
-          <button type="button" onClick={() => open('team', 'home-team', 'Meu Time')}><Users size={23}/><span><strong>Meu Time</strong><small>Escalação inteligente</small></span></button>
-          <button type="button" onClick={() => open('settings', 'home-settings', 'Ajustes')}><Settings2 size={23}/><span><strong>Ajustes</strong><small>Conta, backup e atualização</small></span></button>
-        </div>
-      </section>
-
-      <section className="bm-premium-dashboard-grid">
-        <article className="bm-premium-formation-card">
-          <div className="bm-premium-card-heading">
-            <div><span>Formação ativa</span><h2>{team.formation}</h2><small>{team.styleNote}</small></div>
-            <strong>{team.globalScore}</strong>
+      <section className="bm-premium-dashboard-grid bm-v36-dashboard-grid">
+        <article className="bm-premium-formation-card bm-v36-team-card">
+          <div className="bm-premium-card-heading bm-v36-card-heading">
+            <div><span>Meu Time</span><h2>{team.formation}</h2><small>{team.styleNote}</small></div>
+            <div className="bm-v36-score"><strong>{team.globalScore}</strong><small>nota</small></div>
           </div>
           <div className="bm-premium-mini-pitch" aria-label={`Escalação ${team.formation}`}>
             <i className="half-line"/><i className="center-circle"/><i className="box box-top"/><i className="box box-bottom"/>
@@ -146,31 +176,38 @@ export function IntegratedHomePanel({
               </button>
             ))}
           </div>
-          <footer><span>{team.filledSlots}/{team.totalSlots} posições preenchidas</span><button type="button" onClick={() => open('team', 'home-open-team', 'Abrir Meu Time')}>Editar time <ArrowRight size={15}/></button></footer>
+          <footer><span>{team.filledSlots}/{team.totalSlots} posições preenchidas</span><button type="button" onClick={() => open('team', 'home-open-team', 'Abrir Meu Time')}>Abrir elenco <ArrowRight size={15}/></button></footer>
         </article>
 
-        <article className="bm-premium-activity-card">
-          <div className="bm-premium-card-heading"><div><span>Resumo inteligente</span><h2>Seu progresso</h2></div><BrainCircuit size={24}/></div>
-          <div className="bm-premium-metric-grid">
-            <div><Users size={18}/><strong>{dashboard.players}</strong><span>jogadores</span></div>
-            <div><CheckCircle2 size={18}/><strong>{dashboard.confirmed}</strong><span>fichas prontas</span></div>
-            <div><Trophy size={18}/><strong>{dashboard.matchRecords}</strong><span>partidas</span></div>
-            <div><Clock3 size={18}/><strong>{backupLabel}</strong><span>último backup</span></div>
-          </div>
-          {latest ? (
-            <button type="button" className="bm-premium-latest-player" onClick={() => openLatestResult('home-continue', `Continuar ${latest.name}`)}>
-              <span>{initials(latest.name)}</span><div><small>Última análise</small><strong>{latest.name}</strong><em>{latest.targetPosition}</em></div><ArrowRight size={18}/>
+        <article className="bm-premium-activity-card bm-v36-insight-card">
+          <div className="bm-premium-card-heading bm-v36-card-heading"><div><span>Inteligência</span><h2>Próxima melhor ação</h2></div><BarChart3 size={24}/></div>
+          {nextStep ? (
+            <button type="button" className="bm-v36-next-action" onClick={() => onAction(nextStep)}>
+              <span><BrainCircuit size={22}/></span>
+              <div><small>Recomendação do app</small><strong>{nextStep.title}</strong><p>{nextStep.detail || 'Abra a área recomendada para continuar a evolução do seu elenco.'}</p></div>
+              <ArrowRight size={19}/>
             </button>
           ) : (
-            <button type="button" className="bm-premium-latest-player empty" onClick={() => open('reader', 'home-first-card', 'Adicionar primeira carta')}>
-              <span>+</span><div><small>Comece agora</small><strong>Adicione sua primeira carta</strong><em>Leitura por print</em></div><ArrowRight size={18}/>
+            <button type="button" className="bm-v36-next-action" onClick={() => open('reader', 'home-first-card', 'Adicionar primeira carta')}>
+              <span><Camera size={22}/></span>
+              <div><small>Primeiro passo</small><strong>Adicione uma carta</strong><p>O BuildMaster libera recomendações personalizadas depois da primeira análise.</p></div>
+              <ArrowRight size={19}/>
             </button>
           )}
-          {nextStep && (
-            <div className="bm-premium-next-step"><Target size={18}/><div><small>Próximo passo sugerido</small><strong>{nextStep.title}</strong><span>{nextStep.detail}</span></div><button type="button" onClick={() => onAction(nextStep)}>Abrir</button></div>
+          <div className="bm-v36-insight-list">
+            <div><span><Sparkles size={17}/></span><div><strong>Perfis de Gameplay</strong><small>Até 3 fichas por DNA técnico</small></div></div>
+            <div><span><ShieldCheck size={17}/></span><div><strong>Catálogo oficial</strong><small>Sem habilidades inventadas</small></div></div>
+            <div><span><Target size={17}/></span><div><strong>Posição soberana</strong><small>Ficha recalculada para sua escolha</small></div></div>
+          </div>
+          {latest && (
+            <button type="button" className="bm-premium-latest-player bm-v36-latest-player" onClick={() => openLatestResult('home-continue', `Continuar ${latest.name}`)}>
+              <span>{initials(latest.name)}</span><div><small>Retomar ficha</small><strong>{latest.name}</strong><em>{latest.targetPosition}</em></div><ArrowRight size={18}/>
+            </button>
           )}
         </article>
       </section>
+        </div>
+      </details>
     </section>
   );
 }

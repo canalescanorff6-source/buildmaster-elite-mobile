@@ -48,7 +48,7 @@ assert.ok(explicitImpeto.impetos.some((item) => item.name === 'Chute' && item.va
 const base = analyzeCard(cardText, 'COMPETITIVE', 'CF', 'atacante-teste.png');
 const result = applyLocalAiToResult(applyCompetitiveFusionToResult(base));
 assert.equal(result.localAi?.mode, 'IA local sem API paga');
-assert.match(result.localAi?.engineVersion ?? '', /^31\.10-local-ai-/);
+assert.match(result.localAi?.engineVersion ?? '', /^(?:31\.10|31\.82|35\.00)-local-ai-/);
 assert.equal(result.localAi?.models.length, 6);
 assert.deepEqual(result.localAi?.models.map((item) => item.id), ['leitura', 'dna', 'funcao', 'ficha', 'habilidades', 'impeto']);
 assert.ok((result.localAi?.confidence ?? 0) >= 1 && (result.localAi?.confidence ?? 0) <= 100);
@@ -69,7 +69,7 @@ assert.equal(catalog.length, new Set(catalog).size, 'O catálogo de Ímpetos nã
 
 const workspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 assert.match(workspace, /id:\s*'impetos',\s*label:\s*'Ímpeto',\s*hint:\s*'Escolha ideal da IA'/);
-assert.match(workspace, /IA local do (?:BuildMaster|Marques Fichas)/);
+assert.match(workspace, /IA local do BuildMaster/);
 assert.match(workspace, /Ver por que este ímpeto venceu/);
 assert.match(workspace, /Sem serviço de IA pago/);
 

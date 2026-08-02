@@ -1,4 +1,17 @@
-MARQUES FICHAS v31.78 — ESTÚDIO DE FORMAÇÕES PREMIUM
+BUILDMASTER ELITE TÁTICO v31.80 — PERFIL EFHUB PADRONIZADO E TOP 5 POR FUNÇÃO
 
-Projeto limpo para GitHub e geração do APK.
-Inclui fichas, habilidades adicionais, Ímpetos, análise de vídeo, gravação, contas, Cofre e Estúdio de Formações.
+Base utilizada: projeto v31.78 derivado da base v31.77 mais recente enviada pelo usuário.
+
+Projeto de produção com:
+- normalização interna do perfil eFHUB para 1400 × 1600 antes do OCR;
+- prévia do perfil completo sem quadrados coloridos desalinhados;
+- oito regiões canônicas mantidas somente para recortes internos;
+- sete recortes complementares para reconhecer as cápsulas de habilidades;
+- detecção de resolução, proporção, margens, orientação e prints cortados;
+- cache renovado do leitor v31.80;
+- 45 habilidades regulares e 20 habilidades especiais/nativas reconhecíveis;
+- aliases eFHUB em português e inglês;
+- separação entre habilidades que já pertencem à carta e habilidades adicionais treináveis;
+- motor que entrega exatamente cinco opções únicas quando existem cinco opções compatíveis não possuídas;
+- trava por posição, estilo, atributos, corpo e ficha para impedir habilidades de atacante em GK/CB;
+- Análise de Vídeo Inteligente 2.0, exportação de gravações, contas, Supabase, histórico, fichas e Ímpetos preservados.

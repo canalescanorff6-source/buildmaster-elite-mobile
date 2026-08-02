@@ -1,5 +1,6 @@
 import type TesseractNamespace from 'tesseract.js';
-import { runtimeGet, runtimePut, runtimeTrimStore } from './localDatabase';
+import { runtimeDelete, runtimeGet, runtimePut, runtimeTrimStore } from './localDatabase';
+import { getRuntimeOptimizationProfile } from './invisibleOptimizationV3820';
 
 export type OcrFieldKind = 'general' | 'name' | 'nameSparse' | 'singleWord' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills' | 'skillsSparse' | 'table' | 'tableSparse';
 
@@ -20,10 +21,17 @@ type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; v
 
 type WorkerLike = TesseractNamespace.Worker;
 
+const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
 let currentLabel = 'OCR';
 let generation = 0;
+let pendingRecognitions = 0;
+let lastUsedAt = 0;
+let releaseTimer: number | null = null;
+let operationQueue: Promise<void> = Promise.resolve();
+const inFlightRecognitions = new Map<string, Promise<OcrRecognition>>();
 const progressListeners = new Set<(progress: OcrProgress) => void>();
 
 function emit(status: string, progress = 0) {
@@ -34,6 +42,36 @@ function emit(status: string, progress = 0) {
 export function subscribeOcrProgress(listener: (progress: OcrProgress) => void) {
   progressListeners.add(listener);
   return () => progressListeners.delete(listener);
+}
+
+function clearReleaseTimer() {
+  if (typeof window !== 'undefined' && releaseTimer !== null) window.clearTimeout(releaseTimer);
+  releaseTimer = null;
+}
+
+async function terminateIdleWorker(): Promise<void> {
+  if (pendingRecognitions > 0) return;
+  clearReleaseTimer();
+  const worker = workerInstance;
+  workerInstance = null;
+  workerPromise = null;
+  if (worker) await worker.terminate().catch(() => undefined);
+}
+
+function armIdleWorkerRelease(delayMs = getRuntimeOptimizationProfile().ocrWorkerIdleMs) {
+  if (typeof window === 'undefined' || !workerPromise) return;
+  clearReleaseTimer();
+  releaseTimer = window.setTimeout(() => {
+    if (pendingRecognitions > 0) {
+      armIdleWorkerRelease(Math.min(15_000, Math.max(3_000, Math.round(delayMs / 4))));
+      return;
+    }
+    void terminateIdleWorker();
+  }, Math.max(0, delayMs));
+}
+
+export function requestOcrWorkerReleaseWhenIdle(delayMs = 0): void {
+  armIdleWorkerRelease(delayMs);
 }
 
 async function createReusableWorker(): Promise<WorkerLike> {
@@ -58,6 +96,12 @@ async function getWorker(): Promise<WorkerLike> {
     });
   }
   return workerPromise;
+}
+
+function enqueueWorkerOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const queued = operationQueue.then(operation, operation);
+  operationQueue = queued.then(() => undefined, () => undefined);
+  return queued;
 }
 
 export async function fileDigest(file: File | Blob): Promise<string> {
@@ -97,7 +141,7 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
     name: letters,
     nameSparse: letters,
     singleWord: letters,
-    style: letters,
+    style: letters
   };
   return {
     tessedit_pageseg_mode: PSM[kind] as TesseractNamespace.PSM,
@@ -106,6 +150,50 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
     user_defined_dpi: kind === 'name' || kind === 'nameSparse' || kind === 'singleWord' ? '450' : '300',
     ...(kind === 'numeric' ? { classify_bln_numeric_mode: '1' } : {})
   } as Partial<TesseractNamespace.WorkerParams>;
+}
+
+function cacheIsFresh(cached: CachedRecognition) {
+  const createdAt = Date.parse(cached.createdAt);
+  return Number.isFinite(createdAt) && Date.now() - createdAt <= OCR_CACHE_MAX_AGE_MS;
+}
+
+async function executeRecognition(
+  image: File | Blob,
+  options: { label: string; kind: OcrFieldKind; cacheKey: string | null }
+): Promise<OcrRecognition> {
+  const started = performance.now();
+  const operationGeneration = generation;
+  currentLabel = options.label;
+  clearReleaseTimer();
+  pendingRecognitions += 1;
+
+  try {
+    return await enqueueWorkerOperation(async () => {
+      const worker = await getWorker();
+      if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
+      await worker.setParameters(paramsForKind(options.kind));
+      const result = await worker.recognize(image);
+      if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
+      const recognition: OcrRecognition = {
+        text: String(result.data.text ?? '').trim(),
+        confidence: Math.max(0, Math.min(100, Math.round(Number(result.data.confidence) || 0))),
+        cached: false,
+        durationMs: Math.round(performance.now() - started)
+      };
+      if (options.cacheKey) {
+        const cached: CachedRecognition = { ...recognition, createdAt: new Date().toISOString(), version: 2 };
+        delete (cached as Partial<OcrRecognition>).cached;
+        void runtimePut('ocr-cache', options.cacheKey, cached)
+          .then(() => runtimeTrimStore('ocr-cache', 180))
+          .catch(() => undefined);
+      }
+      return recognition;
+    });
+  } finally {
+    pendingRecognitions = Math.max(0, pendingRecognitions - 1);
+    lastUsedAt = Date.now();
+    if (pendingRecognitions === 0) armIdleWorkerRelease();
+  }
 }
 
 export async function recognizeWithOcrWorker(
@@ -117,37 +205,30 @@ export async function recognizeWithOcrWorker(
     bypassCache?: boolean;
   }
 ): Promise<OcrRecognition> {
-  const started = performance.now();
   const kind = options.kind ?? 'general';
   const cacheKey = options.cacheKey ? `v2:${options.cacheKey}:${kind}` : null;
   if (cacheKey && !options.bypassCache) {
     const cached = await runtimeGet<CachedRecognition>('ocr-cache', cacheKey).catch(() => null);
-    if (cached) return { text: cached.text, confidence: cached.confidence, durationMs: 0, cached: true };
+    if (cached && cacheIsFresh(cached)) {
+      return { text: cached.text, confidence: cached.confidence, durationMs: 0, cached: true };
+    }
+    if (cached) void runtimeDelete('ocr-cache', cacheKey).catch(() => undefined);
+    const inFlight = inFlightRecognitions.get(cacheKey);
+    if (inFlight) return inFlight;
   }
 
-  const operationGeneration = generation;
-  currentLabel = options.label;
-  const worker = await getWorker();
-  if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
-  await worker.setParameters(paramsForKind(kind));
-  const result = await worker.recognize(image);
-  if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
-  const recognition: OcrRecognition = {
-    text: String(result.data.text ?? '').trim(),
-    confidence: Math.max(0, Math.min(100, Math.round(Number(result.data.confidence) || 0))),
-    cached: false,
-    durationMs: Math.round(performance.now() - started)
-  };
-  if (cacheKey) {
-    const cached: CachedRecognition = { ...recognition, createdAt: new Date().toISOString(), version: 2 };
-    delete (cached as Partial<OcrRecognition>).cached;
-    void runtimePut('ocr-cache', cacheKey, cached).then(() => runtimeTrimStore('ocr-cache', 180)).catch(() => undefined);
-  }
-  return recognition;
+  const recognition = executeRecognition(image, { label: options.label, kind, cacheKey });
+  if (!cacheKey) return recognition;
+  inFlightRecognitions.set(cacheKey, recognition);
+  return recognition.finally(() => {
+    if (inFlightRecognitions.get(cacheKey) === recognition) inFlightRecognitions.delete(cacheKey);
+  });
 }
 
 export async function cancelOcrProcessing(): Promise<void> {
   generation += 1;
+  clearReleaseTimer();
+  inFlightRecognitions.clear();
   const worker = workerInstance;
   workerInstance = null;
   workerPromise = null;
@@ -155,9 +236,16 @@ export async function cancelOcrProcessing(): Promise<void> {
 }
 
 export async function releaseOcrWorker(): Promise<void> {
-  await cancelOcrProcessing();
+  await operationQueue.catch(() => undefined);
+  await terminateIdleWorker();
 }
 
 export function getOcrRuntimeState() {
-  return { ready: Boolean(workerInstance), loading: Boolean(workerPromise && !workerInstance), generation };
+  return {
+    ready: Boolean(workerInstance),
+    loading: Boolean(workerPromise && !workerInstance),
+    generation,
+    pendingRecognitions,
+    lastUsedAt
+  };
 }

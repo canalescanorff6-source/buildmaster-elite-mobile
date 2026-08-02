@@ -12,6 +12,7 @@ import type {
 } from './analyzer';
 import type { BuildVariant } from './trainingEngine';
 import type { MaxPrecisionAnalysis } from './maxPrecision';
+import { canonicalSkillName } from './officialSkillIdentity';
 
 export type MetaBuildCategory =
   | 'Meta total'
@@ -61,10 +62,10 @@ export type MetaBuildEntry = {
 };
 
 export type MetaBuildUniverse = {
-  version: 'v26.50';
-  patchReference: 'v5.5.0';
+  version: 'v32.00';
+  patchReference: 'v5.4.0';
   gameplayBalanceReference: 'v5.4.0 + v5.2.0';
-  updatedAt: '2026-07-13';
+  updatedAt: '2026-07-29';
   candidatesAnalyzed: number;
   uniqueDistributions: number;
   topBuilds: MetaBuildEntry[];
@@ -140,15 +141,6 @@ const SCENARIO_WEIGHTS: Record<MetaScenario, Partial<Record<TrainingKey, number>
   'Conexão instável':{passing:.32,lowerBodyStrength:.24,defending:.2,dexterity:.14,dribbling:-.08}
 };
 
-const FORMATION_WEIGHTS: Record<typeof FORMATIONS[number], Partial<Record<TrainingKey, number>>> = {
-  '4-2-1-3':{defending:.22,passing:.22,dexterity:.2,dribbling:.15,lowerBodyStrength:.15},
-  '4-2-2-2':{passing:.2,dexterity:.24,shooting:.22,lowerBodyStrength:.18,defending:.16},
-  '4-3-3':{passing:.26,dribbling:.22,lowerBodyStrength:.18,dexterity:.16,defending:.12},
-  '4-2-3-1':{passing:.26,dribbling:.18,defending:.18,dexterity:.16,lowerBodyStrength:.14},
-  '4-3-1-2':{passing:.24,dexterity:.2,defending:.18,shooting:.16,dribbling:.12},
-  '4-4-2':{defending:.22,lowerBodyStrength:.22,aerialStrength:.18,passing:.16,shooting:.14}
-};
-
 const ATTR_GROUPS: Record<TrainingKey, AttributeKey[]> = {
   shooting:['finishing','placeKicking','curl'], passing:['lowPass','loftedPass'], dribbling:['ballControl','dribbling','tightPossession'],
   dexterity:['offensiveAwareness','acceleration','balance'], lowerBodyStrength:['speed','kickingPower','stamina'], aerialStrength:['heading','jump','physicalContact'],
@@ -157,11 +149,26 @@ const ATTR_GROUPS: Record<TrainingKey, AttributeKey[]> = {
 };
 
 const SPECIAL_SKILL_WEIGHTS: Record<string, Partial<Record<TrainingKey, number>>> = {
-  'Blitz Curler':{shooting:.58,dribbling:.25,dexterity:.22}, 'Esticada de Perna':{defending:.62,lowerBodyStrength:.28},
-  'Momentum Dribbling':{dribbling:.62,dexterity:.42}, 'Phenomenal Finishing':{shooting:.62,dexterity:.35},
-  'Phenomenal Pass':{passing:.62,dribbling:.3}, 'Game-changing Pass':{passing:.58,lowerBodyStrength:.2},
-  'Fortress':{defending:.64,aerialStrength:.35}, 'Edged Crossing':{passing:.55,lowerBodyStrength:.25},
-  'Bullet Header':{aerialStrength:.62,shooting:.32}, 'Sombra veloz':{dexterity:.5,lowerBodyStrength:.48}
+  'Fortaleza aérea':{aerialStrength:.66,defending:.26},
+  'Drible explosivo':{dribbling:.46,dexterity:.6,lowerBodyStrength:.24},
+  'Desencadeador de ataques':{passing:.54,dribbling:.24,lowerBodyStrength:.18},
+  'Curva Blitz':{shooting:.58,dribbling:.25,dexterity:.22},
+  'Cabeçada fulminante':{aerialStrength:.62,shooting:.32},
+  'Cruzamento cortante':{passing:.55,lowerBodyStrength:.25},
+  'Fortaleza':{defending:.64,aerialStrength:.35},
+  'Passe decisivo':{passing:.58,lowerBodyStrength:.2},
+  'Comandante da defesa (GO)':{gk1:.5,gk2:.42,gk3:.4,defending:.2},
+  'Rugido do goleiro':{gk1:.42,gk2:.5,gk3:.46,aerialStrength:.18},
+  'Esticada de Perna':{defending:.62,lowerBodyStrength:.28},
+  'Chute rasteiro fulminante':{shooting:.62,dexterity:.28},
+  'Pés magnéticos':{dribbling:.64,dexterity:.28},
+  'Drible de impulso':{dribbling:.62,dexterity:.42},
+  'Finalização fenomenal':{shooting:.62,dexterity:.35},
+  'Passe fenomenal':{passing:.62,dribbling:.3},
+  'Garra':{lowerBodyStrength:.42,defending:.28,dexterity:.22},
+  'Passe visionário':{passing:.66,dribbling:.22},
+  'Impulso ofensivo':{dexterity:.52,lowerBodyStrength:.5},
+  'Sombra veloz':{dexterity:.46,lowerBodyStrength:.5,defending:.3}
 };
 
 function emptyPlan(): TrainingPlan {
@@ -272,7 +279,7 @@ export function buildMetaBuildUniverse(input:{
   while(safeBases.length<6)safeBases.push({...safeBases[safeBases.length%safeBases.length]});
   const identity=groupIdentity(baseAttributes,keys);
   const skillWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,0])) as Record<TrainingKey,number>;
-  for(const skill of [...parsed.nativeSkills,...parsed.specialSkills])addWeights(skillWeights,SPECIAL_SKILL_WEIGHTS[skill]??{},1);
+  for(const skill of [...parsed.nativeSkills,...(parsed.additionalSkills??[]),...parsed.specialSkills])addWeights(skillWeights,SPECIAL_SKILL_WEIGHTS[canonicalSkillName(skill) ?? skill]??{},1);
   const candidates:MetaBuildEntry[]=[]; const genericWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,.1])) as Record<TrainingKey,number>;
   addWeights(genericWeights,POSITION_WEIGHTS[position],1);
   const genericPlan=generatePlan(genericWeights,safeBases[0],keys,trainingPointsTotal,17);
@@ -284,19 +291,17 @@ export function buildMetaBuildUniverse(input:{
     addWeights(weights,CATEGORY_WEIGHTS[category],1);
     addWeights(weights,STYLE_WEIGHTS[style],1);
     addWeights(weights,SCENARIO_WEIGHTS[scenario],1);
-    addWeights(weights,FORMATION_WEIGHTS[formation],1);
     addWeights(weights,objectiveWeights(objective),.55);
     addWeights(weights,identity,category==='Identidade competitiva'?1.05:.46);
     addWeights(weights,skillWeights,category==='Meta total'?.62:.42);
     if(tacticalProfile.style!=='AUTO'&&style===tacticalProfile.style)addWeights(weights,STYLE_WEIGHTS[style],.25);
-    if(tacticalProfile.formation!=='AUTO'&&formation===tacticalProfile.formation)addWeights(weights,FORMATION_WEIGHTS[formation],.2);
-    const seed=parseInt(hash(`${parsed.playerName}|${parsed.cardType}|${position}|${category}|${formation}|${scenario}|${style}`).slice(0,6),36)||17;
+    const seed=parseInt(hash(`${parsed.playerName}|${parsed.cardType}|${position}|${category}|${scenario}|${style}`).slice(0,6),36)||17;
     const baseIndex=seed%safeBases.length;
     const plan=generatePlan(weights,safeBases[baseIndex]??safeBases[0],keys,trainingPointsTotal,seed);
     const metaScore=weightedScore(plan,weights,keys);
     const identityScore=clamp(Math.round(similarity(plan,safeBases[0],keys)*.55+weightedScore(plan,{...identity} as Record<TrainingKey,number>,keys)*.45),1,99);
     const skillScore=Object.values(skillWeights).some(value=>value>0)?weightedScore(plan,skillWeights,keys):72;
-    const tacticalScore=clamp(Math.round(weightedScore(plan,{...Object.fromEntries(ALL_KEYS.map(key=>[key,.05])),...STYLE_WEIGHTS[style],...FORMATION_WEIGHTS[formation]} as Record<TrainingKey,number>,keys)),1,99);
+    const tacticalScore=clamp(Math.round(weightedScore(plan,{...Object.fromEntries(ALL_KEYS.map(key=>[key,.05])),...STYLE_WEIGHTS[style]} as Record<TrainingKey,number>,keys)),1,99);
     const efficiencyScore=clamp(Math.round(80+(planCost(plan)/Math.max(1,trainingPointsTotal))*18-(keys.filter(key=>(plan[key]??0)>=13).length*3)),1,99);
     const stabilityWeights=Object.fromEntries(ALL_KEYS.map(key=>[key,.08])) as Record<TrainingKey,number>;
     addWeights(stabilityWeights,{passing:.25,lowerBodyStrength:.35,defending:.28,dexterity:.2,gk1:.3,gk2:.3,gk3:.25},1);
@@ -325,13 +330,13 @@ export function buildMetaBuildUniverse(input:{
   const bestByScenario=chooseUniqueBest(ranked,entry=>entry.scenario,SCENARIOS.length);
   const best=ranked[0];
   return {
-    version:'v26.50',patchReference:'v5.5.0',gameplayBalanceReference:'v5.4.0 + v5.2.0',updatedAt:'2026-07-13',
+    version:'v32.00',patchReference:'v5.4.0',gameplayBalanceReference:'v5.4.0 + v5.2.0',updatedAt:'2026-07-29',
     candidatesAnalyzed:evaluated,uniqueDistributions:ranked.length,topBuilds,bestByCategory,bestByStyle,bestByFormation,bestByScenario,
     officialMechanics:[
       'v5.4.0: mudanças de direção mais rápidas no Dash Dribble e Sharp Touch, com resposta mais consistente.',
       'v5.4.0: Match-up pode recuar de frente para o driblador e defensores ajustam melhor o corpo para correr para trás.',
       'v5.2.0: Consciência Defensiva passou a influenciar a reação/aceleração durante a marcação.',
-      'v5.5.0: atualização atual de referência; não introduziu um novo rebalanceamento geral de gameplay documentado.'
+      'v5.4.0: atualização oficial de referência para drible, defesa, finalização e duelos 1 contra 1.'
     ],
     communityTrends:[
       '4-2-1-3 aparece como opção comunitária equilibrada e flexível.',

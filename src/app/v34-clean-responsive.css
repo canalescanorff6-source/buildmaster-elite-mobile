@@ -1,0 +1,909 @@
+/* ========================================================================== */
+/* BuildMaster v34.00 — Clean Responsive                                      */
+/* Enquadramento universal para celulares, textos diretos e interface leve.   */
+/* ========================================================================== */
+
+:root {
+  --bm-clean-page-gap: clamp(6px, 2vw, 14px);
+  --bm-clean-card-gap: clamp(8px, 2.2vw, 14px);
+  --bm-clean-radius: clamp(12px, 3vw, 18px);
+  --bm-clean-title: clamp(1.12rem, 5vw, 1.55rem);
+  --bm-clean-subtitle: clamp(.72rem, 2.7vw, .86rem);
+}
+
+html,
+body.bm-v3400-clean-responsive {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body.bm-v3400-clean-responsive {
+  min-height: 100%;
+  overscroll-behavior-x: none;
+}
+
+.bm-v3400-clean-responsive .premium-app {
+  width: 100% !important;
+  max-width: min(100%, 1680px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: var(--bm-clean-page-gap) var(--bm-clean-page-gap) calc(20px + env(safe-area-inset-bottom)) !important;
+  overflow-x: clip;
+}
+
+.bm-v3400-clean-responsive .premium-app,
+.bm-v3400-clean-responsive .premium-app *,
+.bm-v3400-clean-responsive .premium-app *::before,
+.bm-v3400-clean-responsive .premium-app *::after {
+  box-sizing: border-box;
+}
+
+.bm-v3400-clean-responsive .premium-app :where(
+  section, article, aside, header, footer, nav, form, fieldset,
+  .workspace-grid, .bm2820-workspace, .control-panel, .result-workspace,
+  .luxury-panel, .premium-card, .wide-card, .settings-final-content,
+  .bm-premium-dashboard, .bm32-players, .bm32-team-screen,
+  .bm-v34-team-workspace, .bm-v34-team-advanced-body
+) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.bm-v3400-clean-responsive .premium-app :where(img, video, canvas, iframe) {
+  max-width: 100% !important;
+}
+
+.bm-v3400-clean-responsive .premium-app :where(img, video) {
+  height: auto;
+  object-fit: contain;
+}
+
+.bm-v3400-clean-responsive .premium-app :where(h1, h2, h3, h4, strong, b, p, span, small, label, em, button) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.bm-v3400-clean-responsive .premium-app h1 {
+  margin-block: 0;
+  font-size: var(--bm-clean-title) !important;
+  line-height: 1.16 !important;
+  letter-spacing: -.025em !important;
+}
+
+.bm-v3400-clean-responsive .premium-app h2 {
+  margin-block: 0;
+  font-size: clamp(1rem, 4.2vw, 1.28rem) !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.018em !important;
+}
+
+.bm-v3400-clean-responsive .premium-app h3 {
+  margin-block: 0;
+  font-size: clamp(.94rem, 3.8vw, 1.12rem) !important;
+  line-height: 1.24 !important;
+}
+
+.bm-v3400-clean-responsive .premium-app :where(p, small, figcaption) {
+  line-height: 1.42 !important;
+}
+
+.bm-v3400-clean-responsive .premium-app :where(button, input, textarea, select) {
+  max-width: 100%;
+  font: inherit;
+}
+
+.bm-v3400-clean-responsive .premium-app button {
+  min-width: 0;
+  white-space: normal;
+}
+
+/* Topo compacto e sempre enquadrado. */
+.bm-v3400-clean-responsive .bm-simple-topbar {
+  width: 100%;
+  min-height: 50px !important;
+  padding-block: 6px !important;
+  padding-right: 8px !important;
+  border-radius: 13px !important;
+}
+
+.bm-v3400-clean-responsive .bm-simple-topbar-actions {
+  min-width: 0;
+  gap: 5px !important;
+}
+
+.bm-v3400-clean-responsive .bm-simple-save-state {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-simple-account {
+  min-width: 42px !important;
+  max-width: 132px;
+  min-height: 38px !important;
+  padding: 3px 7px !important;
+}
+
+.bm-v3400-clean-responsive .bm-simple-account > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .66rem !important;
+}
+
+.bm-v3400-clean-responsive :where(.premium-context-bar, .bm-premium-context-bar, .bm-simple-context) {
+  width: 100%;
+  min-height: 42px !important;
+  padding: 6px 9px !important;
+  gap: 6px !important;
+}
+
+.bm-v3400-clean-responsive :where(.premium-context-bar, .bm-premium-context-bar, .bm-simple-context) small,
+.bm-v3400-clean-responsive .page-context-card .kicker,
+.bm-v3400-clean-responsive .page-context-card > div > span,
+.bm-v3400-clean-responsive .panel-heading .kicker {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .page-context-card {
+  min-height: 0 !important;
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+}
+
+/* Menu lateral mantido, com textos curtos. */
+.bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+  max-width: calc(100vw - 22px);
+  min-height: 38px !important;
+  padding: 0 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm-v33-drawer {
+  max-width: min(86vw, 300px) !important;
+  padding-inline: 11px !important;
+}
+
+.bm-v3400-clean-responsive .bm-v33-nav-copy small,
+.bm-v3400-clean-responsive .bm-v33-primary-action small,
+.bm-v3400-clean-responsive .bm-v33-nav-footer > small {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-v33-main-navigation > button {
+  min-height: 48px !important;
+  grid-template-columns: 34px minmax(0, 1fr) 15px !important;
+  gap: 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm-v33-nav-icon {
+  width: 34px;
+  height: 34px;
+}
+
+/* Interface clean: títulos úteis, descrições secundárias recolhidas. */
+.bm-v3400-clean-responsive :where(
+  .bm-premium-dashboard-heading p,
+  .bm-premium-reader-copy > p,
+  .bm32-screen-heading p,
+  .bm-creation-guide-title > div > p:last-child,
+  .creation-source-card p,
+  .settings-command-copy > p:not(.kicker),
+  .settings-panel-heading > div > span,
+  .premium-screen-hero p,
+  .launcher-sheet-heading span,
+  .bm-v34-team-advanced > summary small,
+  .settings-update-quick-access p,
+  .settings-explanation-card span
+) {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive :where(.kicker, .bm-premium-kicker) {
+  font-size: .61rem !important;
+  letter-spacing: .06em !important;
+}
+
+.bm-v3400-clean-responsive :where(
+  .bm32-screen-heading, .premium-screen-hero, .bm-creation-guide,
+  .settings-command-hero, .bm-premium-dashboard-heading
+) {
+  min-height: 0 !important;
+  padding: 10px 12px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-screen-heading {
+  grid-template-columns: 38px minmax(0, 1fr) auto !important;
+  gap: 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-heading-icon {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-elite-badge,
+.bm-v3400-clean-responsive .settings-state-pill,
+.bm-v3400-clean-responsive .bm-premium-health-pill small {
+  display: none !important;
+}
+
+/* Início simplificado. */
+.bm-v3400-clean-responsive .bm-premium-dashboard {
+  width: 100% !important;
+  gap: var(--bm-clean-card-gap) !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-dashboard-heading {
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-dashboard-heading > div:first-child > span {
+  font-size: .61rem !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-health-pill {
+  flex: 0 0 auto;
+  padding: 6px 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-reader-hero {
+  width: 100%;
+  min-height: 0 !important;
+  grid-template-columns: minmax(0, 1fr) minmax(76px, 112px) !important;
+  gap: 10px !important;
+  padding: 14px !important;
+  border-radius: var(--bm-clean-radius) !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-reader-copy h2 {
+  max-width: 19ch;
+}
+
+.bm-v3400-clean-responsive .bm-premium-reader-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-reader-actions button {
+  min-height: 44px !important;
+  padding: 7px 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-reader-actions button small,
+.bm-v3400-clean-responsive .bm-premium-feature-grid button small,
+.bm-v3400-clean-responsive .bm-premium-card-name small {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-player-card {
+  min-width: 0;
+  min-height: 148px !important;
+  padding: 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-feature-section {
+  padding: 12px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-section-heading h2,
+.bm-v3400-clean-responsive .bm-premium-section-heading small {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-feature-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr)) !important;
+  gap: 7px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-feature-grid button {
+  min-height: 66px !important;
+  padding: 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-dashboard-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)) !important;
+  gap: var(--bm-clean-card-gap) !important;
+}
+
+.bm-v3400-clean-responsive .bm-premium-formation-card,
+.bm-v3400-clean-responsive .bm-premium-activity-card {
+  min-width: 0;
+  padding: 12px !important;
+}
+
+/* Guias sem rolagem lateral obrigatória. */
+.bm-v3400-clean-responsive :where(
+  .bm32-category-tabs, .bm32-team-tabs, .refined-match-tabs,
+  .formation-v3110-tabs, .settings-navigation-rail,
+  .result-tab-navigation, .result-primary-tabs,
+  .v27-scenario-tabs, .section-segmented-tabs
+) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  overflow: visible !important;
+  padding: 4px !important;
+}
+
+.bm-v3400-clean-responsive :where(
+  .bm32-category-tabs button, .bm32-team-tabs button, .refined-match-tabs button,
+  .formation-v3110-tabs button, .settings-navigation-rail button,
+  .result-tab-navigation button, .result-primary-tabs button,
+  .v27-scenario-tabs button, .section-segmented-tabs button
+) {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  padding: 6px 8px !important;
+  font-size: .72rem !important;
+}
+
+.bm-v3400-clean-responsive .settings-navigation-rail button span,
+.bm-v3400-clean-responsive .settings-navigation-rail button small {
+  display: none !important;
+}
+
+/* Formulários e ações sempre dentro da tela. */
+.bm-v3400-clean-responsive :where(
+  .select-stack, .field-grid, .form-grid, .input-grid, .settings-grid,
+  .manager-context-grid, .opponent-input-grid, .meta-filter-bar,
+  .match-marker-context-grid, .appearance-control-grid
+) {
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)) !important;
+  gap: 8px !important;
+}
+
+.bm-v3400-clean-responsive :where(
+  .bm32-team-actions, .review-actions, .creation-actions,
+  .result-actions, .vault-backup-actions-grid, .launcher-action-grid,
+  .settings-backup-actions, .efhub-calibrator-actions,
+  .efhub-zone-actions, .efhub-size-controls
+) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)) !important;
+  gap: 7px !important;
+  width: 100% !important;
+}
+
+.bm-v3400-clean-responsive :where(
+  .bm32-team-actions, .review-actions, .creation-actions,
+  .result-actions, .vault-backup-actions-grid, .launcher-action-grid,
+  .settings-backup-actions, .efhub-calibrator-actions,
+  .efhub-zone-actions, .efhub-size-controls
+) > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-searchbar {
+  width: 100%;
+  min-height: 48px !important;
+  margin-bottom: 9px !important;
+  padding: 6px 10px !important;
+  gap: 7px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-searchbar > button span {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  margin-bottom: 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-stats article {
+  min-height: 64px !important;
+  padding: 8px !important;
+  gap: 5px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-stats article > span {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-stats strong {
+  font-size: 1.12rem !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-stats small {
+  font-size: .58rem !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-footer-actions {
+  position: static !important;
+  width: 100%;
+  margin-top: 9px !important;
+  padding: 7px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-player-footer-actions button {
+  min-height: 42px !important;
+}
+
+/* Meu Time e campo tático responsivos. */
+.bm-v3400-clean-responsive .bm32-team-screen,
+.bm-v3400-clean-responsive .bm-v34-team-workspace {
+  width: 100% !important;
+  gap: 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm32-team-pitch-panel {
+  width: 100%;
+  min-width: 0;
+  padding: 8px !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.bm-v3400-clean-responsive .bm32-team-pitch {
+  width: 100% !important;
+  max-width: 100%;
+  min-height: clamp(430px, 132vw, 610px) !important;
+}
+
+.bm-v3400-clean-responsive .bm32-team-metrics,
+.bm-v3400-clean-responsive .bm32-team-insights,
+.bm-v3400-clean-responsive .bm32-team-detail-grid,
+.bm-v3400-clean-responsive .bm32-team-roster,
+.bm-v3400-clean-responsive .bm32-team-tactics,
+.bm-v3400-clean-responsive .match-summary-hero,
+.bm-v3400-clean-responsive .match-area-grid,
+.bm-v3400-clean-responsive .match-top-error-grid,
+.bm-v3400-clean-responsive .match-tactical-grid,
+.bm-v3400-clean-responsive .match-drill-grid,
+.bm-v3400-clean-responsive .match-evolution-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)) !important;
+  gap: 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm-v34-team-advanced > summary {
+  min-height: 48px !important;
+  padding: 9px 11px !important;
+}
+
+/* Criação de ficha e resultado mais diretos. */
+.bm-v3400-clean-responsive .workspace-grid,
+.bm-v3400-clean-responsive .bm2820-workspace,
+.bm-v3400-clean-responsive .creation-workspace-grid {
+  width: 100%;
+  grid-template-columns: 1fr !important;
+  gap: 9px !important;
+}
+
+.bm-v3400-clean-responsive .bm-creation-guide {
+  padding: 10px !important;
+}
+
+.bm-v3400-clean-responsive .bm-creation-guide-title {
+  grid-template-columns: 34px minmax(0, 1fr) !important;
+  gap: 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm-creation-steps {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-creation-methods {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+}
+
+.bm-v3400-clean-responsive .bm-creation-methods button {
+  min-width: 0 !important;
+  min-height: 44px !important;
+  padding: 6px 8px !important;
+}
+
+.bm-v3400-clean-responsive .bm-creation-methods button small,
+.bm-v3400-clean-responsive .reader-capture-mode button small {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .control-panel {
+  padding: 10px !important;
+  border-radius: var(--bm-clean-radius) !important;
+}
+
+.bm-v3400-clean-responsive .creation-upload-box,
+.bm-v3400-clean-responsive .creation-upload-box figure,
+.bm-v3400-clean-responsive .creation-upload-box figure img,
+.bm-v3400-clean-responsive .premium-upload-box,
+.bm-v3400-clean-responsive .upload-box {
+  min-height: clamp(170px, 50vw, 260px) !important;
+  max-height: none !important;
+}
+
+.bm-v3400-clean-responsive .review-finalize-shell .review-actions {
+  min-width: 0 !important;
+}
+
+.bm-v3400-clean-responsive :where(.result-workspace, .result-card, .result-main-panel) {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.bm-v3400-clean-responsive .result-fixed-tabs,
+.bm-v3400-clean-responsive .result-navigation-shell,
+.bm-v3400-clean-responsive .result-primary-tabs {
+  position: static !important;
+  width: 100% !important;
+}
+
+/* Tabelas, comparações e listas técnicas nunca ficam cortadas. */
+.bm-v3400-clean-responsive :where(
+  .comparison-table, .table-scroll, .data-table-wrap,
+  .result-comparison-table, .precision-comparison-table,
+  .compare-table, .vault-comparison-table
+) {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bm-v3400-clean-responsive table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+/* Calibrador enquadrado por padrão; tela cheia continua opcional. */
+.bm-v3400-clean-responsive .efhub-visual-calibrator:not(.is-fullscreen) {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px !important;
+}
+
+.bm-v3400-clean-responsive .efhub-image-clarity-toolbar,
+.bm-v3400-clean-responsive .efhub-calibration-tools {
+  width: 100%;
+  padding: 8px !important;
+}
+
+.bm-v3400-clean-responsive .efhub-calibration-viewport {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: min(64dvh, 720px) !important;
+}
+
+.bm-v3400-clean-responsive .efhub-zone-tabs,
+.bm-v3400-clean-responsive .efhub-quick-zoom {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(76px, 100%), 1fr)) !important;
+  gap: 5px !important;
+  overflow: visible !important;
+}
+
+.bm-v3400-clean-responsive .efhub-zone-tabs button,
+.bm-v3400-clean-responsive .efhub-quick-zoom button {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+/* Evita blocos antigos com alturas exageradas. */
+.bm-v3400-clean-responsive :where(
+  .empty-state, .team-center-empty, .creation-processing-card,
+  .premium-card-art, .compact-art, .auth-card,
+  .meta-build-grid > div, .home-next-step-card
+) {
+  min-height: 0 !important;
+}
+
+.bm-v3400-clean-responsive .auth-card {
+  width: min(100%, 460px) !important;
+  padding: clamp(18px, 5vw, 34px) !important;
+}
+
+/* Mobile amplo: 320px até tablets pequenos. */
+@media (max-width: 920px) {
+  .bm-v3400-clean-responsive .premium-app {
+    margin: 0 !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    padding-left: 68px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    top: max(9px, env(safe-area-inset-top)) !important;
+  }
+
+  .bm-v3400-clean-responsive :where(
+    .settings-command-status, .home-overview-grid, .bm32-team-metrics,
+    .bm32-team-insights, .match-v3177-summary, .match-v3177-moments,
+    .match-evolution-grid, .match-tactical-grid
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .bm-v3400-clean-responsive .settings-command-hero {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .settings-admin-account-shortcut,
+  .bm-v3400-clean-responsive .settings-update-quick-access {
+    min-height: 0 !important;
+    padding: 10px !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .bm-v3400-clean-responsive .premium-app {
+    padding-inline: 5px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    min-height: 48px !important;
+    padding-left: 64px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-account > span {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-dashboard-heading > div:first-child > span,
+  .bm-v3400-clean-responsive .bm-premium-kicker,
+  .bm-v3400-clean-responsive .kicker {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-reader-hero {
+    grid-template-columns: 1fr 82px !important;
+    padding: 11px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-reader-copy h2 {
+    font-size: 1.02rem !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-reader-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-reader-actions button:nth-child(2) {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-feature-grid button {
+    min-height: 58px !important;
+  }
+
+  .bm-v3400-clean-responsive :where(
+    .bm32-category-tabs, .bm32-team-tabs, .refined-match-tabs,
+    .formation-v3110-tabs, .settings-navigation-rail,
+    .result-tab-navigation, .result-primary-tabs,
+    .v27-scenario-tabs, .section-segmented-tabs
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-searchbar {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-searchbar > button {
+    grid-column: auto !important;
+    min-height: 38px !important;
+    padding: 0 6px !important;
+    border-top: 0 !important;
+    border-left: 1px solid var(--v34-line) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-card-main {
+    grid-template-columns: 62px minmax(0, 1fr) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-overall {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-info mark:nth-child(n+3) {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-team-pitch {
+    min-height: clamp(410px, 138vw, 560px) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-creation-methods {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .bm-v3400-clean-responsive .global-update-notice {
+    right: 7px !important;
+    left: 7px !important;
+    width: auto !important;
+    padding: 8px 10px !important;
+  }
+
+  .bm-v3400-clean-responsive .global-update-notice span {
+    display: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .bm-v3400-clean-responsive .premium-app {
+    padding-inline: 3px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger span,
+  .bm-v3400-clean-responsive .bm32-heading-actions .bm32-elite-badge {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+    width: 39px !important;
+    padding: 0 !important;
+    justify-content: center;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    padding-left: 50px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-reader-hero {
+    grid-template-columns: 1fr 70px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-feature-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-screen-heading {
+    grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-heading-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-stats small {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-card-main {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    padding: 7px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-player-art {
+    height: 70px !important;
+  }
+
+  .bm-v3400-clean-responsive .bm32-team-pitch {
+    min-height: 390px !important;
+  }
+
+  .bm-v3400-clean-responsive :where(
+    .bm32-team-actions, .review-actions, .creation-actions,
+    .result-actions, .vault-backup-actions-grid, .launcher-action-grid,
+    .settings-backup-actions, .efhub-calibrator-actions,
+    .efhub-zone-actions, .efhub-size-controls
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-height: 620px) and (orientation: landscape) {
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    position: static !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-player-card,
+  .bm-v3400-clean-responsive .bm-premium-health-pill {
+    display: none !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-premium-reader-hero {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bm-v3400-clean-responsive *,
+  .bm-v3400-clean-responsive *::before,
+  .bm-v3400-clean-responsive *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Hotfix móvel: rolagem por toque, topo sem lupa e menu mais alto.            */
+/* -------------------------------------------------------------------------- */
+html {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.bm-v3400-clean-responsive {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bm-v3400-clean-responsive .premium-app {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: visible !important;
+  touch-action: pan-y pinch-zoom !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bm-v3400-clean-responsive .premium-app > main,
+.bm-v3400-clean-responsive .premium-app > section,
+.bm-v3400-clean-responsive .bm-simple-context,
+.bm-v3400-clean-responsive .page-context-card {
+  touch-action: pan-y pinch-zoom;
+}
+
+/* A pesquisa continua disponível no menu lateral, mas a lupa do topo foi removida. */
+.bm-v3400-clean-responsive .bm-simple-search {
+  display: none !important;
+}
+
+.bm-v3400-clean-responsive .bm-simple-context > div:last-child:empty {
+  display: none !important;
+}
+
+@media (max-width: 920px) {
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+    top: max(2px, env(safe-area-inset-top)) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    z-index: 260 !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    padding-left: 66px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .bm-v3400-clean-responsive .bm-v33-drawer-trigger {
+    top: max(1px, env(safe-area-inset-top)) !important;
+  }
+
+  .bm-v3400-clean-responsive .bm-simple-topbar {
+    padding-left: 48px !important;
+  }
+}
+
+/* v35.10 — comparação limpa entre posição natural e posição escolhida */
+.position-build-comparison { display:grid; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid var(--stroke, rgba(148,163,184,.2)); }
+.position-build-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.position-build-card { display:grid; gap:7px; min-width:0; padding:14px; border:1px solid var(--stroke, rgba(148,163,184,.22)); border-radius:16px; background:var(--surface-2, rgba(15,23,42,.7)); }
+.position-build-card.selected { border-color:color-mix(in srgb,var(--accent,#d7ae56) 58%,transparent); box-shadow:0 10px 28px rgba(0,0,0,.14); }
+.position-build-card strong { color:var(--text,#f8fafc); }
+.position-build-card span,.position-build-card p,.position-build-card small { margin:0; color:var(--muted,#aab4c4); line-height:1.45; }
+.position-build-card em { color:var(--accent,#d7ae56); font-style:normal; font-weight:700; line-height:1.5; overflow-wrap:anywhere; }
+@media (max-width:720px){ .position-build-grid { grid-template-columns:1fr; } }

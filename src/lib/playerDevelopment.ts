@@ -1,4 +1,5 @@
 import type { AnalysisResult, PositionCode, TrainingKey } from './analyzer';
+import { canonicalSkillName } from './officialSkillIdentity';
 
 export type SpecialSkillUse = {
   name: string;
@@ -12,28 +13,39 @@ export type SpecialSkillUse = {
 };
 
 const SPECIAL_RULES: Record<string, { positions: PositionCode[]; attrs: string[]; groups: TrainingKey[]; use: string }> = {
-  'Blitz Curler': { positions: ['LWF','RWF','SS','AMF','CF'], attrs: ['Curva','Finalização','Força do chute','Controle de bola'], groups: ['shooting','dribbling','dexterity'], use: 'receber de frente ou cortar para o pé dominante antes da finalização colocada' },
+  'Fortaleza aérea': { positions: ['CB','DMF','LB','RB','CF','GK'], attrs: ['Cabeceio','Impulsão','Contato físico','Consciência defensiva'], groups: ['aerialStrength','defending'], use: 'dominar duelos aéreos e proteger a zona de queda' },
+  'Impulso ofensivo': { positions: ['LWF','RWF','SS','AMF','CF','LMF','RMF'], attrs: ['Velocidade','Aceleração','Consciência ofensiva','Resistência'], groups: ['dexterity','lowerBodyStrength'], use: 'acelerar a movimentação sem bola no campo adversário' },
+  'Drible explosivo': { positions: ['LWF','RWF','SS','AMF','CF','LMF','RMF'], attrs: ['Aceleração','Drible','Condução precisa','Equilíbrio'], groups: ['dribbling','dexterity','lowerBodyStrength'], use: 'romper o primeiro marcador com aceleração curta após o controle da bola' },
+  'Desencadeador de ataques': { positions: ['AMF','CMF','DMF','SS'], attrs: ['Passe rasteiro','Controle de bola','Consciência ofensiva','Resistência'], groups: ['passing','dribbling','lowerBodyStrength'], use: 'receber e conduzir em zonas centrais para ativar o apoio ofensivo dos companheiros' },
+  'Curva Blitz': { positions: ['LWF','RWF','SS','AMF','CF'], attrs: ['Curva','Finalização','Força do chute','Controle de bola'], groups: ['shooting','dribbling','dexterity'], use: 'receber de frente ou cortar para o pé dominante antes da finalização colocada' },
+  'Cabeçada fulminante': { positions: ['CF','SS','CB'], attrs: ['Cabeceio','Impulsão','Contato físico','Consciência ofensiva'], groups: ['aerialStrength','shooting'], use: 'atacar cruzamentos e bolas paradas com impulsão e presença de área' },
+  'Cruzamento cortante': { positions: ['LWF','RWF','LMF','RMF','LB','RB'], attrs: ['Passe alto','Curva','Força do chute','Resistência'], groups: ['passing','lowerBodyStrength'], use: 'cruzar com trajetória rápida e agressiva a partir do corredor' },
+  'Fortaleza': { positions: ['CB','DMF','LB','RB','GK'], attrs: ['Consciência defensiva','Desarme','Contato físico','Engajamento defensivo'], groups: ['defending','aerialStrength'], use: 'proteger a área e sustentar vantagem com posicionamento e contato' },
+  'Passe decisivo': { positions: ['AMF','CMF','DMF','SS'], attrs: ['Passe rasteiro','Passe alto','Controle de bola','Resistência'], groups: ['passing','dribbling','lowerBodyStrength'], use: 'aumentar a criação em momentos decisivos' },
+  'Comandante da defesa (GO)': { positions: ['GK'], attrs: ['Talento de GO','Defesa do GO','Reflexos do GO','Alcance do GO'], groups: ['gk1','gk2','gk3'], use: 'organizar a última linha e manter o goleiro em posição de orientar a defesa' },
+  'Rugido do goleiro': { positions: ['GK'], attrs: ['Talento de GO','Reflexos do GO','Alcance do GO','Impulsão'], groups: ['gk1','gk2','gk3','aerialStrength'], use: 'sustentar a presença do goleiro em defesas de alta pressão' },
   'Esticada de Perna': { positions: ['CB','DMF','LB','RB','CMF'], attrs: ['Desarme','Engajamento defensivo','Agressividade','Contato físico'], groups: ['defending','lowerBodyStrength'], use: 'fechar linha de passe e disputar sem quebrar a estrutura defensiva' },
-  'Sombra veloz': { positions: ['LWF','RWF','SS','CF','LMF','RMF'], attrs: ['Velocidade','Aceleração','Resistência'], groups: ['dexterity','lowerBodyStrength'], use: 'atacar espaço com mudança rápida de direção' },
-  'Momentum Dribbling': { positions: ['LWF','RWF','SS','AMF'], attrs: ['Drible','Condução precisa','Equilíbrio','Aceleração'], groups: ['dribbling','dexterity'], use: 'duelo curto e condução em velocidade' },
-  'Phenomenal Finishing': { positions: ['CF','SS','LWF','RWF','AMF'], attrs: ['Finalização','Força do chute','Equilíbrio'], groups: ['shooting','dexterity'], use: 'finalizar mesmo em postura corporal desfavorável' },
-  'Phenomenal Pass': { positions: ['AMF','CMF','DMF','SS'], attrs: ['Passe rasteiro','Passe alto','Controle de bola'], groups: ['passing','dribbling'], use: 'executar passes difíceis sob pressão' },
-  'Game-changing Pass': { positions: ['AMF','CMF','DMF','SS'], attrs: ['Passe rasteiro','Passe alto','Resistência'], groups: ['passing','lowerBodyStrength'], use: 'aumentar criação em momentos decisivos' },
-  'Fortress': { positions: ['CB','DMF','LB','RB','GK'], attrs: ['Consciência defensiva','Desarme','Contato físico'], groups: ['defending','aerialStrength'], use: 'proteger a área e sustentar vantagem' },
-  'Edged Crossing': { positions: ['LWF','RWF','LMF','RMF','LB','RB'], attrs: ['Passe alto','Curva','Força do chute'], groups: ['passing','lowerBodyStrength'], use: 'cruzar com trajetória rápida e agressiva' },
-  'Bullet Header': { positions: ['CF','SS','CB'], attrs: ['Cabeceio','Impulsão','Contato físico'], groups: ['aerialStrength','shooting'], use: 'atacar cruzamentos e bolas paradas' }
+  'Chute rasteiro fulminante': { positions: ['CF','SS','LWF','RWF','AMF'], attrs: ['Finalização','Força do chute','Equilíbrio','Consciência ofensiva'], groups: ['shooting','dexterity'], use: 'finalizar rasteiro com potência quando houver corredor para o gol' },
+  'Pés magnéticos': { positions: ['LWF','RWF','SS','AMF','CMF'], attrs: ['Controle de bola','Drible','Condução precisa','Equilíbrio'], groups: ['dribbling','dexterity'], use: 'manter a bola próxima sob pressão e preparar a próxima ação sem perder o controle' },
+  'Drible de impulso': { positions: ['LWF','RWF','SS','AMF'], attrs: ['Drible','Condução precisa','Equilíbrio','Aceleração'], groups: ['dribbling','dexterity'], use: 'vencer o duelo curto e conduzir em velocidade' },
+  'Finalização fenomenal': { positions: ['CF','SS','LWF','RWF','AMF'], attrs: ['Finalização','Força do chute','Equilíbrio','Consciência ofensiva'], groups: ['shooting','dexterity'], use: 'finalizar mesmo em postura corporal desfavorável' },
+  'Passe fenomenal': { positions: ['AMF','CMF','DMF','SS','LMF','RMF'], attrs: ['Passe rasteiro','Passe alto','Controle de bola','Condução precisa'], groups: ['passing','dribbling'], use: 'executar passes difíceis sob pressão' },
+  'Garra': { positions: ['CF','SS','AMF','CMF','DMF','CB','GK'], attrs: ['Resistência','Equilíbrio','Agressividade','Contato físico'], groups: ['lowerBodyStrength','defending','dexterity'], use: 'manter a capacidade de decisão e disputa em momentos de pressão' },
+  'Passe visionário': { positions: ['AMF','CMF','DMF','SS','LMF','RMF'], attrs: ['Passe rasteiro','Passe alto','Controle de bola','Consciência ofensiva'], groups: ['passing','dribbling'], use: 'encontrar linhas de passe difíceis e acelerar a criação' },
+  'Sombra veloz': { positions: ['DMF','CB','LB','RB'], attrs: ['Velocidade','Aceleração','Consciência defensiva','Resistência'], groups: ['dexterity','lowerBodyStrength','defending'], use: 'recuperar em velocidade quando um passe rompe a linha defensiva' }
 };
 
 export function buildSpecialSkillUsage(result: AnalysisResult): { items: SpecialSkillUse[]; overall: number; summary: string[] } {
   const names = Array.from(new Set([...(result.parsed.specialSkills ?? []), ...(result.parsed.nativeSkills ?? []), ...(result.parsed.impetos ?? []).map((item) => item.name).filter(Boolean), result.parsed.specialTag ?? ''].filter(Boolean)));
   const items = names.map((name) => {
-    const rule = SPECIAL_RULES[name];
+    const canonicalName = canonicalSkillName(name) ?? name;
+    const rule = SPECIAL_RULES[canonicalName];
     const owned = result.specialSkillsAnalysis.usefulOwned.find((item) => item.name === name);
     const fits = rule ? rule.positions.includes(result.bestPosition.code) : Boolean(owned);
     const score = Math.max(30, Math.min(100, (rule ? (fits ? 88 : 58) : (owned?.score ?? 66)) + Math.round((result.advancedTacticalFunction.compatibilityScore - 70) * .18)));
     const activation: SpecialSkillUse['activation'] = score >= 88 ? 'muito aproveitada' : score >= 74 ? 'bem aproveitada' : score >= 58 ? 'aproveitamento parcial' : 'pouco aproveitada';
     return {
-      name,
+      name: canonicalName,
       source: (result.parsed.specialSkills?.includes(name) || name === result.parsed.specialTag ? 'habilidade especial' : result.parsed.nativeSkills.includes(name) ? 'habilidade oficial' : 'ímpeto') as SpecialSkillUse['source'],
       activation,
       score,

@@ -211,7 +211,7 @@ export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation:
     filledSlots,
     totalSlots: blueprint.slots.length,
     strongestLine: lineScores[0]?.label ?? '—',
-    weakestLine: lineScores.at(-1)?.label ?? '—',
+    weakestLine: lineScores[lineScores.length - 1]?.label ?? '—',
     missingRoles,
     repeatedFunctions,
     lineup,

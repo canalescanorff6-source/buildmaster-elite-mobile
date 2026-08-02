@@ -110,7 +110,7 @@ function fieldConfidence(result: AnalysisResult): DataConfidenceItem[] {
   const lockedStyle = card.evidence?.playstyleLocked || card.manualConfirmed;
   const hasLevel = Number.isFinite(Number(card.level)) && Number(card.level) > 0;
   const pointsConfirmed = card.trainingPointSource !== 'FALLBACK' && result.trainingPointsTotal > 0;
-  const skillCount = card.nativeSkills.length + card.specialSkills.length;
+  const skillCount = card.nativeSkills.length + (card.additionalSkills?.length ?? 0) + card.specialSkills.length;
   const data: Array<Omit<DataConfidenceItem, 'status'>> = [
     {
       key: 'identity', label: 'Identidade da carta',

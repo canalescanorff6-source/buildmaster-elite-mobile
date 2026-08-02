@@ -1,0 +1,71 @@
+/* BuildMaster v38.10 — Resultado Premium Clean */
+.bm-v3810-clean-result {
+  width:100%;
+  display:grid;
+  gap:16px;
+  padding:18px;
+  border:1px solid color-mix(in srgb,var(--border) 88%,transparent);
+  border-radius:22px;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--surface) 96%,#0a111d),color-mix(in srgb,var(--surface-2) 88%,#05080f));
+  box-shadow:0 18px 54px rgba(0,0,0,.18);
+}
+.bm-v3810-result-head,.bm-v3810-build-title,.bm-v3810-result-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.bm-v3810-player { min-width:0; display:flex; align-items:center; gap:12px; }
+.bm-v3810-player figure { width:62px; height:72px; flex:none; display:grid; place-items:center; overflow:hidden; margin:0; border:1px solid var(--border); border-radius:14px; background:var(--surface-2); color:var(--accent); font-weight:900; }
+.bm-v3810-player figure img { width:100%; height:100%; object-fit:cover; }
+.bm-v3810-player > div { min-width:0; display:grid; gap:3px; }
+.bm-v3810-player small { display:flex; align-items:center; gap:5px; color:var(--accent); font-size:.7rem; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+.bm-v3810-player h3 { overflow:hidden; margin:0; color:var(--text); font-size:1.2rem; text-overflow:ellipsis; white-space:nowrap; }
+.bm-v3810-player p { margin:0; color:var(--text-muted); font-size:.82rem; }
+.bm-v3810-result-head > span { flex:none; display:flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid var(--border); border-radius:999px; font-size:.72rem; font-weight:850; }
+.bm-v3810-result-head > span.approved { color:#73d7a2; border-color:color-mix(in srgb,#73d7a2 40%,var(--border)); background:color-mix(in srgb,#73d7a2 8%,transparent); }
+.bm-v3810-result-head > span.review { color:#f2ad45; border-color:color-mix(in srgb,#f2ad45 40%,var(--border)); background:color-mix(in srgb,#f2ad45 8%,transparent); }
+.bm-v3810-build-block { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:17px; background:color-mix(in srgb,var(--surface-2) 74%,transparent); }
+.bm-v3810-build-title > div { min-width:0; display:grid; gap:3px; }
+.bm-v3810-build-title small,.bm-v3810-skills > small,.bm-v3810-booster > small { color:var(--text-muted); font-size:.7rem; font-weight:850; text-transform:uppercase; letter-spacing:.06em; }
+.bm-v3810-build-title strong { overflow:hidden; color:var(--text); font-size:.98rem; text-overflow:ellipsis; white-space:nowrap; }
+.bm-v3810-build-title > b { flex:none; color:var(--accent); font-size:.8rem; }
+.bm-v3810-training-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.bm-v3810-training-grid > div { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:6px; min-height:43px; padding:0 10px; border:1px solid color-mix(in srgb,var(--border) 78%,transparent); border-radius:11px; background:var(--surface); }
+.bm-v3810-training-grid span { overflow:hidden; color:var(--text-muted); font-size:.72rem; text-overflow:ellipsis; white-space:nowrap; }
+.bm-v3810-training-grid strong { flex:none; color:var(--text); font-size:.88rem; }
+.bm-v3810-result-pair { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(210px,.75fr); gap:10px; }
+.bm-v3810-skills,.bm-v3810-booster { min-width:0; padding:14px; border:1px solid var(--border); border-radius:17px; background:color-mix(in srgb,var(--surface-2) 64%,transparent); }
+.bm-v3810-skills ol { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 18px; margin:10px 0 0; padding-left:22px; color:var(--text); }
+.bm-v3810-skills li { padding-left:2px; font-size:.82rem; font-weight:750; }
+.bm-v3810-skills li::marker { color:var(--accent); font-weight:900; }
+.bm-v3810-booster { display:grid; align-content:start; gap:6px; }
+.bm-v3810-booster strong { color:var(--text); font-size:1rem; }
+.bm-v3810-booster p { margin:0; color:var(--text-muted); font-size:.75rem; line-height:1.4; }
+.bm-v3810-usage { margin:0; padding:12px 14px; border-left:3px solid var(--accent); border-radius:4px 12px 12px 4px; background:color-mix(in srgb,var(--accent) 7%,var(--surface-2)); color:var(--text-muted); font-size:.8rem; line-height:1.5; }
+.bm-v3810-usage b { color:var(--text); }
+.bm-v3810-result-actions { justify-content:flex-start; flex-wrap:wrap; }
+.bm-v3810-result-actions button { min-height:42px; display:flex; align-items:center; justify-content:center; gap:7px; padding:0 13px; border:1px solid var(--border); border-radius:12px; background:var(--surface-2); color:var(--text); font-weight:800; }
+.bm-v3810-result-actions button.primary { border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); background:color-mix(in srgb,var(--accent) 15%,var(--surface-2)); }
+.bm-v3810-result-actions button:disabled { opacity:.5; cursor:not-allowed; }
+.bm-v3810-export { min-height:420px; align-content:start; }
+
+.mode-basic .bm-simple-result-summary > :not(.bm-v3810-clean-result):not(.bm-v3780-analysis-entry) { display:none !important; }
+.mode-advanced .bm-v3810-result { display:none; }
+.mode-basic .export-pro-grid > :not(.bm-v3810-export) { display:none !important; }
+.mode-advanced .bm-v3810-export { display:none; }
+
+@media (max-width:760px) {
+  .bm-v3810-clean-result { padding:14px; border-radius:18px; }
+  .bm-v3810-result-head { align-items:flex-start; }
+  .bm-v3810-result-head > span { display:none; }
+  .bm-v3810-training-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bm-v3810-result-pair { grid-template-columns:1fr; }
+  .bm-v3810-skills ol { grid-template-columns:1fr; }
+  .bm-v3810-result-actions { display:grid; grid-template-columns:1fr 1fr; }
+  .bm-v3810-result-actions button.primary { grid-column:1/-1; }
+}
+@media (max-width:420px) {
+  .bm-v3810-player figure { width:54px; height:64px; }
+  .bm-v3810-player h3 { font-size:1.05rem; }
+  .bm-v3810-result-actions { grid-template-columns:1fr; }
+  .bm-v3810-result-actions button.primary { grid-column:auto; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .bm-v3810-clean-result * { scroll-behavior:auto !important; transition:none !important; }
+}

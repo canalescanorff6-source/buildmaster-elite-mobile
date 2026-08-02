@@ -1,3 +1,5 @@
+import { detectRuntimePerformanceTier } from './invisibleOptimizationV3820';
+
 export type IdleTaskHandle = number;
 
 type IdleDeadlineLike = {
@@ -58,12 +60,7 @@ export async function mapInChunks<T, R>(
 }
 
 export function devicePerformanceTier(): 'economy' | 'balanced' | 'high' {
-  if (typeof navigator === 'undefined') return 'balanced';
-  const memory = Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4);
-  const cores = Number(navigator.hardwareConcurrency || 4);
-  if (memory <= 3 || cores <= 4) return 'economy';
-  if (memory >= 8 && cores >= 8) return 'high';
-  return 'balanced';
+  return detectRuntimePerformanceTier();
 }
 
 export function recommendedOcrConcurrency(): number {

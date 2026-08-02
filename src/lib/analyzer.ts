@@ -9,10 +9,13 @@ import {
   skillIdentityKey
 } from './officialSkillIdentity';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
+import { parseCardSkillInventory } from './cardSkillParser';
+import { RECOGNIZABLE_IMPETO_NAMES } from './officialImpetoCatalog';
 import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
 import { buildMetaBuildUniverse } from './metaBuildUniverse';
 import { inferPointsFromCardLevel, parseCardLevelFromText } from '../modules/builds/pointBudget';
+import { buildStructuralPrecisionAnalysis, mergeStructuralValidation } from './structuralPrecisionV3740';
 import {
   emptyTraining,
   normalizeTrainingPlan,
@@ -25,6 +28,7 @@ import {
   MIN_AUTO_TRAINING_BUDGET,
   SAFE_DEFAULT_TRAINING_BUDGET,
   fitTrainingToBudget,
+  fitTrainingToExactBudget,
   isGoalkeeperStyle,
   normalizeTrainingBudget,
   trainingBudgetFromCard,
@@ -33,32 +37,24 @@ import {
   trainingRoleProfile,
   trainingTemplate
 } from '../modules/builds/trainingOptimizer';
-
 import { Objective, TacticalStyle, TacticalProfile, PositionCode, AttributeKey, Attributes, PositionRatings, PrecisionIssue, PrecisionValidation, TrainingKey, TrainingPlan, Impetus, ImpetoRecommendation, SkillRecommendation, PhysicalProfile, PlayerCondition, ParsedCard, TeamMapPhaseScores, TeamMapAnalysis, DeepReadingItem, DeepAnalysis, AdvancedTacticalFunction, SpecialSkillsAnalysis, PhysicalEngineAnalysis, AttributeGoalItem, AttributeGoalsAnalysis, AdvancedOptimizerAnalysis, CorrectionLimitAnalysis, MarginalReturnItem, ErrorToleranceAnalysis, SkillPriorityAnalysis, PlayerIdentityAnalysis, IndividualAttributeGoal, SelectiveWeaknessStrategy, SpecialSkillSynergyItem, OnFieldBehaviorSimulation, AntiCloneAnalysis, CardDnaAnalysis, AnalysisResult, normalizeObjective, POSITION_PT, ATTRIBUTE_PT, PLAYSTYLE_OPTIONS,  } from './analyzerDomain';
 export * from './analyzerDomain';
-
 const ALL_POSITIONS = Object.keys(POSITION_PT) as PositionCode[];
-
 function findLocalCardRule(playerName: string, text: string): LocalCardRule | null {
   return findOfficialCardRule(playerName, text);
 }
-
 function hasManualConfirmation(text: string) {
   return /CONFIRMA(?:CAO|ÇÃO)\s+MANUAL\s*[:=\-]?\s*SIM/i.test(normalize(text));
 }
-
 function hasPositionLock(text: string) {
   return /POSI(?:CAO|ÇÃO)\s+PRINCIPAL\s*[:=\-]/i.test(normalize(text));
 }
-
 function hasPlaystyleLock(text: string) {
   return /ESTILO\s+DE\s+JOGO\s*[:=\-]/i.test(normalize(text));
 }
-
 function listLabels(codes: PositionCode[]) {
   return codes.map((code) => POSITION_PT[code]).join(', ');
 }
-
 function normalize(value: string): string {
   return value
     .normalize('NFD')
@@ -69,14 +65,12 @@ function normalize(value: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
-
 function slug(value: string): string {
   return normalize(value)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 }
-
 function cleanLine(line: string) {
   return line.replace(/[|•·]/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -475,8 +469,9 @@ function detectCardType(text: string) {
 }
 
 function detectSpecialTag(text: string) {
-  const tags = ['Blitz Curler', 'Momentum Dribbling', 'Phenomenal Finishing', 'Phenomenal Pass', 'Game-changing Pass', 'Fortress', 'Edged Crossing', 'Bullet Header', 'Duelo', 'Sem Impulso'];
-  return tags.find((tag) => textHas(text, tag)) ?? null;
+  const tags = [...SPECIAL_SKILL_NAMES, 'Duelo', 'Sem Impulso'];
+  const matched = tags.find((tag) => textHas(text, tag) || (SKILL_PROFILES[tag]?.aliases ?? []).some((alias) => textHas(text, alias)));
+  return matched ? canonicalSkillName(matched) : null;
 }
 
 const PLAYSTYLE_PATTERNS: Array<[RegExp, string]> = [
@@ -581,7 +576,41 @@ function detectPlaystyle(text: string) {
   return null;
 }
 
+function normalizeExplicitPlayerName(value: string | null | undefined) {
+  const cleaned = cleanLine(String(value ?? ''))
+    .replace(/^(?:nome(?:\s+do\s+jogador)?|jogador|player)\s*[:=\-]\s*/i, '')
+    .replace(/\s+(?:posi[cç][aã]o|estilo|n[ií]vel|pontos|habilidades?)\s*[:=\-].*$/i, '')
+    .trim();
+  if (cleaned.length < 2 || cleaned.length > 50) return null;
+  if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) return null;
+  if (/^(?:jogador|player|nome|n[aã]o\s+identificado)$/i.test(cleaned)) return null;
+  return cleaned;
+}
+
+function explicitPlayerName(rawText: string) {
+  const manualScope = rawText.match(/\[AJUSTES MANUAIS\]([\s\S]*?)\[FIM AJUSTES\]/i)?.[1] ?? '';
+  const scopes = [manualScope, rawText];
+  const patterns = [
+    /(?:^|\n)\s*NOME\s+DO\s+JOGADOR\s*[:=\-]\s*([^\r\n]{2,50})/i,
+    /(?:^|\n)\s*(?:NOME|JOGADOR|PLAYER)\s*[:=\-]\s*([^\r\n]{2,50})/i
+  ];
+  for (const scope of scopes) {
+    if (!scope) continue;
+    for (const pattern of patterns) {
+      const match = scope.match(pattern);
+      const normalized = normalizeExplicitPlayerName(match?.[1]);
+      if (normalized) return normalized;
+    }
+  }
+  return null;
+}
+
 function detectName(rawText: string, fileName?: string | null) {
+  // A identidade digitada pelo usuário é autoritativa. Ela precisa ser lida
+  // antes de qualquer nome completo encontrado pelo OCR no restante do print.
+  const explicit = explicitPlayerName(rawText);
+  if (explicit) return explicit;
+
   const ignored = /^(show time|big time|epic|potw|featured|legend|standard|arilheiro|artilheiro|destruidor|criador|altura|peso|idade|nivel|nível|talento|controle|drible|passe|finaliza|cabe[cç]ada|velocidade|acelera|for[cç]a|salto|contato|equil[ií]brio|resist[eê]ncia|habilidades|skills|modelo|jogador|ca|cf|sa|ss|pd|pe|mat|amf|cmf|dmf|cb|gk|gol)$/i;
   const lines = rawText
     .split(/\r?\n/)
@@ -593,8 +622,6 @@ function detectName(rawText: string, fileName?: string | null) {
     .filter((line) => !ignored.test(line));
   const strongName = lines.find((line) => /^[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+(?:\s+[A-ZÀ-Ÿ][A-Za-zÀ-ÿ.'-]+){1,3}$/.test(line));
   if (strongName) return strongName;
-  const explicit = rawText.match(/(?:jogador|player|nome)\s*[:\-]\s*([^\r\n]{3,50})/i)?.[1]?.trim();
-  if (explicit) return explicit;
   if (lines[0]) return lines[0];
   if (fileName) return cleanLine(fileName.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '));
   return 'Jogador não identificado';
@@ -608,40 +635,6 @@ function parseAttributes(text: string): Attributes {
     if (value !== null && value >= 1 && value <= 110) attributes[key] = value;
   }
   return attributes;
-}
-
-function detectSkills(text: string) {
-  const found: string[] = [];
-  const explicitBlocks = Array.from(text.matchAll(/HABILIDADES (?:JÁ POSSUI|JA POSSUI|DO JOGADOR|NATIVAS|CONFIRMADAS)\s*[:=]\s*([^\n\r]+)/gi));
-
-  // A lista confirmada pelo usuário tem prioridade absoluta. Todos os aliases
-  // (português, inglês e pequenas variações de OCR) são convertidos para o nome
-  // oficial antes de alimentar o motor de recomendações.
-  for (const block of explicitBlocks) {
-    for (const raw of String(block[1] ?? '').split(/[,;•|]/)) {
-      const skill = cleanLine(raw).replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '');
-      const letters = (skill.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-      if (skill.length < 3 || skill.length > 54 || letters / Math.max(1, skill.length) < 0.62) continue;
-      found.push(canonicalSkillName(skill) ?? skill);
-    }
-  }
-  if (explicitBlocks.length) return canonicalizeSkillList(found);
-
-  const visibleBlock = text.match(/HABILIDADES VIS[IÍ]VEIS\s*:\s*([\s\S]*?)(?=\n(?:\[|NOME|POSI[CÇ][AÃ]O|ESTILO|GER|N[IÍ]VEL|PONTOS|ATRIBUTOS|[IÍ]MPETO|IMPETO|T[EÉ]CNICO)|$)/i)?.[1] ?? '';
-  const safeLines = text.split(/\r?\n/)
-    .map(cleanLine)
-    .filter(Boolean)
-    .filter((line) => !/\b\d{2,3}\b/.test(line))
-    .filter((line) => !/^(?:nome(?: do jogador)?|posi[cç][aã]o(?: principal)?|estilo de jogo|tipo da carta|pa[ií]s|altura|peso|idade|n[ií]vel|ger|overall|t[eé]cnico|manager)\s*[:=-]/i.test(line))
-    .filter((line) => !/^(?:talento|controle de bola|drible|condu[cç][aã]o firme|passe rasteiro|passe alto|finaliza[cç][aã]o|cabe[cç](?:ada|eio)|velocidade|acelera[cç][aã]o|for[cç]a do chute|salto|contato f[ií]sico|equil[ií]brio|resist[eê]ncia)\s*[:=-]/i.test(line))
-    .join('\n');
-  const detectionScope = [visibleBlock, safeLines].filter(Boolean).join('\n');
-
-  for (const [skill, profile] of Object.entries(SKILL_PROFILES)) {
-    const candidates = [skill, ...(profile.aliases ?? [])];
-    if (candidates.some((candidate) => textHas(detectionScope, candidate))) found.push(skill);
-  }
-  return canonicalizeSkillList(found);
 }
 
 function parseImpetos(text: string): Impetus[] {
@@ -1382,13 +1375,7 @@ function finalSkillScoreAdjustments(skill: string, parsed: ParsedCard, selectedP
   return bonus;
 }
 
-const IMPETO_NAMES = [
-  'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa', 'Duelo',
-  'Agilidade', 'Fisicalidade', 'Goleiro', 'Instinto artilheiro', 'Guardião', 'Motor do time', 'Defesaça',
-  'Cruzamento', 'Fantasista', 'Volante criativo', 'Reconstrução', 'Precisão', 'Criador ofensivo',
-  'Proteção de Posse', 'Equilibrado', 'Transição ofensiva', 'Bloqueio Aéreo', 'Rompe-barreira', 'Força',
-  'Movimento sem a bola', 'Roubo de bola'
-];
+const IMPETO_NAMES = [...RECOGNIZABLE_IMPETO_NAMES];
 
 const IMPETO_DB: Record<string, { attributes: string[]; groups: string[] }> = {
   'Chute': { attributes: ['Controle de bola', 'Finalização', 'Força do chute', 'Contato físico'], groups: ['finalizador', 'segundo-atacante'] },
@@ -1505,7 +1492,7 @@ function topRatedPositions(positionRatings: PositionRatings): PositionCode[] {
 
 function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective, attributes: Required<Attributes>): string[] {
   const candidateScores = new Map<string, number>();
-  const ownedSkillKeys = buildOwnedSkillKeys(parsed.nativeSkills, parsed.specialSkills);
+  const ownedSkillKeys = buildOwnedSkillKeys(parsed.nativeSkills, parsed.specialSkills, parsed.additionalSkills ?? []);
   const bannedAdditional = new Set(SPECIAL_SKILL_NAMES.map(skillKey));
   const contextualBans = contextualSkillBans(parsed, selectedPosition, objective, attributes);
   const blueprint = skillBlueprint(parsed, selectedPosition, objective, attributes);
@@ -1529,7 +1516,8 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
       Array.from(candidateScores.entries()).sort((left, right) => right[1] - left[1]).map(([skill]) => skill),
       parsed.nativeSkills,
       parsed.specialSkills,
-      5
+      5,
+      parsed.additionalSkills ?? []
     );
   }
 
@@ -1633,7 +1621,8 @@ function recommendAdditionalSkills(parsed: ParsedCard, selectedPosition: Positio
     Array.from(candidateScores.entries()).sort((left, right) => right[1] - left[1]).map(([skill]) => skill),
     parsed.nativeSkills,
     parsed.specialSkills,
-    5
+    5,
+    parsed.additionalSkills ?? []
   );
 }
 
@@ -1941,8 +1930,10 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const mainPosition = mainCandidate;
   const playstyle = resolvePlaystyleForCard(rawPlaystyle, mainPosition, headerOnlyText + '\n' + topSection + '\n' + identityText) ?? (!manualPlaystyleLocked && localRule?.playstyle && playstyleFitsPosition(localRule.playstyle, mainPosition) ? localRule.playstyle : null);
   const detectedPositions = Array.from(new Set([mainPosition, ...positions]));
-  const nativeSkills = detectSkills(text);
-  const specialSkills = nativeSkills.filter((skill) => SPECIAL_SKILL_NAMES.includes(skill));
+  const parsedSkillInventory = parseCardSkillInventory(text);
+  const nativeSkills = parsedSkillInventory.native;
+  const additionalSkills = parsedSkillInventory.additional;
+  const specialSkills = parsedSkillInventory.special;
   const height = readNumber(text, [/altura\s*[:=-]?\s*(\d{3})\s*cm/i, /height\s*[:=-]?\s*(\d{3})\s*cm/i]);
   const weight = readNumber(text, [/peso\s*[:=-]?\s*(\d{2,3})\s*kg/i, /weight\s*[:=-]?\s*(\d{2,3})\s*kg/i]);
   const age = readNumber(text, [/idade\s*[:=-]?\s*(\d{1,2})/i, /age\s*[:=-]?\s*(\d{1,2})/i]);
@@ -2034,6 +2025,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
     condition,
     impetos,
     nativeSkills,
+    additionalSkills,
     specialSkills,
     attributes,
     physicalProfile,
@@ -2043,7 +2035,11 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
       playstyleLocked: manualPlaystyleLocked,
       attributeCount,
       positionRatingsCount: Object.keys(positionRatings).length,
-      localRuleMatched: localRule?.id ?? null
+      localRuleMatched: localRule?.id ?? null,
+      skillSource: parsedSkillInventory.source,
+      skillConfidence: parsedSkillInventory.confidence,
+      additionalSkillCount: additionalSkills.length,
+      specialSkillCount: specialSkills.length
     },
     internalId: id,
     confidence: Math.max(1, Math.min(100, Math.round(confidence))),
@@ -2155,83 +2151,21 @@ function chooseGameplaySelectedPosition(parsed: ParsedCard, scored: Array<{ code
 function tacticalScoreBonus(position: PositionCode, profile: TacticalProfile, a: Required<Attributes>) {
   let bonus = 0;
   const managerFactor = profile.managerProficiency ? Math.max(0.92, Math.min(1.12, 1 + (profile.managerProficiency - 85) * 0.018)) : 1;
-  if (profile.formation === '4-2-2-2') {
-    if (position === 'DMF') bonus += 6;
-    if (position === 'CMF') bonus += 4;
-    if (position === 'AMF' || position === 'SS') bonus += 3;
-    if (position === 'LWF' || position === 'RWF') bonus -= 4;
+  if (profile.style === 'POSSE_DE_BOLA') {
+    bonus += Math.max(0, Math.max(a.lowPass, a.ballControl, a.tightPossession) - 74) * 0.07;
+    if (['AMF', 'CMF', 'DMF', 'SS'].includes(position)) bonus += 2;
   }
-  if (profile.formation === '4-3-3') {
-    if (position === 'LWF' || position === 'RWF') bonus += 5;
-    if (position === 'CF') bonus += 3;
-    if (position === 'CMF' || position === 'DMF') bonus += 3;
+  if (profile.style === 'CONTRA_ATAQUE') {
+    bonus += Math.max(0, Math.max(a.loftedPass, a.physicalContact, a.stamina) - 74) * 0.055;
+    if (['CB', 'DMF', 'CF', 'SS'].includes(position)) bonus += 1.5;
   }
-  if (profile.formation === '4-1-2-3') {
-    if (position === 'DMF') bonus += 5;
-    if (position === 'AMF' || position === 'CMF') bonus += 4;
-    if (position === 'LWF' || position === 'RWF') bonus += 3;
+  if (profile.style === 'CONTRA_ATAQUE_RAPIDO') {
+    bonus += Math.max(0, Math.max(a.speed, a.acceleration, a.offensiveAwareness) - 75) * 0.075;
+    bonus += Math.max(0, a.lowPass - 74) * 0.03;
+    if (['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(position)) bonus += 2;
   }
-  if (profile.formation === '4-2-1-3') {
-    if (position === 'DMF' || position === 'CMF') bonus += 5;
-    if (position === 'AMF') bonus += 4;
-    if (position === 'LWF' || position === 'RWF' || position === 'CF') bonus += 3;
-  }
-  if (profile.formation === '4-2-3-1') {
-    if (position === 'DMF' || position === 'CMF') bonus += 5;
-    if (position === 'AMF' || position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF') bonus += 3;
-  }
-  if (profile.formation === '4-3-1-2') {
-    if (position === 'AMF') bonus += 5;
-    if (position === 'CMF' || position === 'DMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-    if (position === 'LWF' || position === 'RWF') bonus -= 3;
-  }
-  if (profile.formation === '4-1-3-2') {
-    if (position === 'DMF') bonus += 5;
-    if (position === 'AMF' || position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-  }
-  if (profile.formation === '4-4-2') {
-    if (position === 'CMF' || position === 'DMF') bonus += 4;
-    if (position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-  }
-  if (profile.formation === '4-1-4-1') {
-    if (position === 'DMF') bonus += 6;
-    if (position === 'CMF' || position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF') bonus += 2;
-  }
-  if (profile.formation === '3-2-4-1') {
-    if (position === 'CB' || position === 'DMF') bonus += 5;
-    if (position === 'LMF' || position === 'RMF' || position === 'AMF') bonus += 4;
-  }
-  if (profile.formation === '3-4-3') {
-    if (position === 'CB') bonus += 5;
-    if (position === 'LMF' || position === 'RMF') bonus += 5;
-    if (position === 'LWF' || position === 'RWF' || position === 'CF') bonus += 3;
-  }
-  if (profile.formation === '3-5-2') {
-    if (position === 'CB' || position === 'DMF' || position === 'CMF') bonus += 5;
-    if (position === 'LMF' || position === 'RMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 3;
-  }
-  if (profile.formation === '5-3-2') {
-    if (position === 'CB' || position === 'LB' || position === 'RB') bonus += 5;
-    if (position === 'DMF' || position === 'CMF') bonus += 4;
-    if (position === 'CF' || position === 'SS') bonus += 2;
-  }
-  if (profile.formation === '5-2-3') {
-    if (position === 'LB' || position === 'RB' || position === 'CB') bonus += 5;
-    if (position === 'DMF' || position === 'CMF') bonus += 3;
-    if (position === 'LWF' || position === 'RWF' || position === 'CF') bonus += 4;
-  }
-
-  if (profile.style === 'POSSE_DE_BOLA') bonus += Math.max(0, Math.max(a.lowPass, a.ballControl) - 75) * 0.06;
-  if (profile.style === 'CONTRA_ATAQUE') bonus += Math.max(0, Math.max(a.loftedPass, a.physicalContact) - 74) * 0.05 + Math.max(0, a.stamina - 74) * 0.03;
-  if (profile.style === 'CONTRA_ATAQUE_RAPIDO') bonus += Math.max(0, Math.max(a.speed, a.acceleration) - 76) * 0.07 + Math.max(0, a.lowPass - 74) * 0.03;
-  if (profile.style === 'POR_FORA') bonus += Math.max(0, Math.max(a.loftedPass, a.speed) - 74) * 0.06 + Math.max(0, a.stamina - 74) * 0.03;
-  if (profile.style === 'PASSE_LONGO') bonus += Math.max(0, a.loftedPass - 74) * 0.07 + Math.max(0, Math.max(a.heading, a.physicalContact) - 74) * 0.04;
+  if (profile.style === 'POR_FORA') bonus += Math.max(0, Math.max(a.loftedPass, a.speed, a.stamina) - 74) * 0.06;
+  if (profile.style === 'PASSE_LONGO') bonus += Math.max(0, Math.max(a.loftedPass, a.heading, a.physicalContact) - 74) * 0.06;
   if (profile.managerProficiency) bonus *= managerFactor;
   return bonus;
 }
@@ -2239,20 +2173,7 @@ function tacticalScoreBonus(position: PositionCode, profile: TacticalProfile, a:
 function tacticalProfileTips(profile: TacticalProfile, selected: PositionCode) {
   const tips: string[] = [];
   if (profile.managerName && profile.managerProficiency) tips.push(`Técnico selecionado: ${profile.managerName} (${profile.managerProficiency}). A proficiência refina a ficha, mas nunca substitui a posição escolhida por você.`);
-  if (profile.formation === '4-2-2-2') tips.push('Formação 4-2-2-2: dois meias por dentro e dupla de ataque; valoriza VOL/MLG fortes para roubar, tocar rápido e proteger a defesa.');
-  if (profile.formation === '4-3-3') tips.push('Formação 4-3-3: usa pontas abertos, centroavante de referência e meio com boa cobertura para acelerar pelos lados.');
-  if (profile.formation === '4-1-2-3') tips.push('Formação 4-1-2-3: exige um VOL confiável e dois meias com passe/giro para ligar defesa e ataque.');
-  if (profile.formation === '4-2-1-3') tips.push('Formação 4-2-1-3: dois volantes protegem, o MAT acelera a transição e os três atacantes atacam espaço.');
-  if (profile.formation === '4-2-3-1') tips.push('Formação 4-2-3-1: segura por dentro, cria com três meias e precisa de CA forte para prender zagueiros.');
-  if (profile.formation === '4-3-1-2') tips.push('Formação 4-3-1-2: compacta por dentro, com MAT servindo dois atacantes; laterais precisam dar amplitude.');
-  if (profile.formation === '4-1-3-2') tips.push('Formação 4-1-3-2: boa para pressionar e atacar em dupla; o VOL precisa cobrir as costas dos meias.');
-  if (profile.formation === '4-4-2') tips.push('Formação 4-4-2: equilibrada, boa para bloco médio, cruzamentos e ataque com dois homens na área.');
-  if (profile.formation === '4-1-4-1') tips.push('Formação 4-1-4-1: forte para posse segura e pressão organizada; o CA precisa finalizar poucas chances.');
-  if (profile.formation === '3-2-4-1') tips.push('Formação 3-2-4-1: pede cobertura forte por dentro e alas/meias que voltem para marcar.');
-  if (profile.formation === '3-4-3') tips.push('Formação 3-4-3: agressiva pelos lados; alas precisam de fôlego e os três zagueiros precisam cobrir profundidade.');
-  if (profile.formation === '3-5-2') tips.push('Formação 3-5-2: domina o meio e joga com dois atacantes; alas são essenciais para abrir campo.');
-  if (profile.formation === '5-3-2') tips.push('Formação 5-3-2: segura defensivamente, boa para contra-atacar e proteger vantagem.');
-  if (profile.formation === '5-2-3') tips.push('Formação 5-2-3: defesa de cinco com saída rápida para três atacantes; exige pontas velozes e laterais resistentes.');
+  tips.push('Ficha universal: a formação não altera a distribuição; a posição escolhida, o estilo da carta e o estilo do técnico comandam a calibração.');
   if (profile.style === 'POSSE_DE_BOLA') tips.push('Estilo do técnico — Posse de bola: prioriza passe curto, controle, paciência e triangulações; evite forçar bola longa sem necessidade.');
   if (profile.style === 'CONTRA_ATAQUE') tips.push('Estilo do técnico — Contra-ataque: prioriza bloco organizado, roubo e passe direto com segurança; bom para atacar quando o rival se expõe.');
   if (profile.style === 'CONTRA_ATAQUE_RAPIDO') tips.push('Estilo do técnico — Contra-ataque rápido: aceleração, velocidade e passe vertical pesam mais na recomendação; ataque o espaço logo após recuperar.');
@@ -2372,23 +2293,34 @@ function emptyTrainingWeights(): Record<TrainingKey, number> {
 }
 
 function addSkillIdentityWeights(weights: Record<TrainingKey, number>, parsed: ParsedCard) {
-  const names = Array.from(new Set([...(parsed.nativeSkills ?? []), ...(parsed.specialSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
+  const names = Array.from(new Set([...(parsed.nativeSkills ?? []), ...(parsed.additionalSkills ?? []), ...(parsed.specialSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
   const add = (key: TrainingKey, amount: number) => { weights[key] += amount; };
   const special: Record<string, Partial<Record<TrainingKey, number>>> = {
-    'Blitz Curler': { shooting:1.8, dribbling:.8, dexterity:.55 },
-    'Momentum Dribbling': { dribbling:1.65, dexterity:.85 },
-    'Phenomenal Finishing': { shooting:1.85, dexterity:.55 },
-    'Phenomenal Pass': { passing:1.9, dribbling:.45 },
-    'Game-changing Pass': { passing:1.65, lowerBodyStrength:.35 },
-    'Fortress': { defending:1.65, aerialStrength:.55 },
-    'Edged Crossing': { passing:1.55, lowerBodyStrength:.55 },
-    'Bullet Header': { aerialStrength:1.75, shooting:.65 },
+    'Curva Blitz': { shooting:1.8, dribbling:.8, dexterity:.55 },
+    'Drible de impulso': { dribbling:1.65, dexterity:.85 },
+    'Finalização fenomenal': { shooting:1.85, dexterity:.55 },
+    'Passe fenomenal': { passing:1.9, dribbling:.45 },
+    'Passe decisivo': { passing:1.65, lowerBodyStrength:.35 },
+    'Fortaleza': { defending:1.65, aerialStrength:.55 },
+    'Cruzamento cortante': { passing:1.55, lowerBodyStrength:.55 },
+    'Cabeçada fulminante': { aerialStrength:1.75, shooting:.65 },
     'Esticada de Perna': { defending:1.55, lowerBodyStrength:.7 },
-    'Sombra veloz': { dexterity:1.05, lowerBodyStrength:1.15 }
+    'Impulso ofensivo': { dexterity:1.25, lowerBodyStrength:1.15 },
+    'Sombra veloz': { dexterity:1.0, lowerBodyStrength:1.15, defending:.75 },
+    'Fortaleza aérea': { aerialStrength:1.8, defending:.55 },
+    'Drible explosivo': { dribbling:1.1, dexterity:1.55, lowerBodyStrength:.5 },
+    'Desencadeador de ataques': { passing:1.5, dribbling:.45, lowerBodyStrength:.35 },
+    'Comandante da defesa (GO)': { gk1:1.35, gk2:1.2, gk3:1.15, defending:.4 },
+    'Rugido do goleiro': { gk1:1.1, gk2:1.35, gk3:1.25, aerialStrength:.35 },
+    'Chute rasteiro fulminante': { shooting:1.85, dexterity:.45 },
+    'Pés magnéticos': { dribbling:1.8, dexterity:.55 },
+    'Garra': { lowerBodyStrength:1.15, defending:.7, dexterity:.5 },
+    'Passe visionário': { passing:1.9, dribbling:.4 }
   };
   for (const name of names) {
-    for (const [key, value] of Object.entries(special[name] ?? {}) as Array<[TrainingKey, number]>) add(key, value);
-    const boosts = SKILL_PROFILES[name]?.boosts ?? {};
+    const canonicalName = canonicalSkillName(name) ?? name;
+    for (const [key, value] of Object.entries(special[canonicalName] ?? {}) as Array<[TrainingKey, number]>) add(key, value);
+    const boosts = SKILL_PROFILES[canonicalName]?.boosts ?? {};
     for (const [boost, amountRaw] of Object.entries(boosts)) {
       const amount = Number(amountRaw) * .12;
       if (boost === 'finishing') add('shooting', amount);
@@ -2682,7 +2614,7 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
     evidence: { ...parsed.evidence, localRuleMatched: null }
   };
   const genericPlan = trainingFor(selected, objective, BASE_BY_POSITION[selected], genericParsed, individualTrainingAdjustments);
-  const evidenceStrength = parsed.evidence.attributeCount * 2 + (parsed.playstyle ? 10 : 0) + Math.min(16, (parsed.nativeSkills.length + parsed.specialSkills.length) * 2) + (parsed.height ? 4 : 0) + (parsed.weight ? 3 : 0);
+  const evidenceStrength = parsed.evidence.attributeCount * 2 + (parsed.playstyle ? 10 : 0) + Math.min(16, (parsed.nativeSkills.length + (parsed.additionalSkills?.length ?? 0) + parsed.specialSkills.length) * 2) + (parsed.height ? 4 : 0) + (parsed.weight ? 3 : 0);
   let hybrid = hybridRanked[0]?.plan ?? training;
   let antiCloneAdjusted = false;
   if (evidenceStrength >= 34 && planDistance(hybrid, genericPlan, keys) < 3) {
@@ -2738,16 +2670,26 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
 }
 
 const DNA_SPECIAL_SKILL_RULES: Record<string, { positions: PositionCode[]; attrs: AttributeKey[]; groups: TrainingKey[]; use: string }> = {
-  'Blitz Curler': { positions:['LWF','RWF','SS','AMF','CF'], attrs:['curl','finishing','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], use:'cortar para o pé dominante e finalizar com curva sem perder a preparação corporal' },
+  'Curva Blitz': { positions:['LWF','RWF','SS','AMF','CF'], attrs:['curl','finishing','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], use:'cortar para o pé dominante e finalizar com curva sem perder a preparação corporal' },
   'Esticada de Perna': { positions:['CB','DMF','LB','RB','CMF'], attrs:['tackling','defensiveEngagement','aggression','physicalContact'], groups:['defending','lowerBodyStrength'], use:'fechar linhas de passe e recuperar a bola sem desmontar o bloco' },
-  'Sombra veloz': { positions:['LWF','RWF','SS','CF','LMF','RMF'], attrs:['speed','acceleration','stamina'], groups:['dexterity','lowerBodyStrength'], use:'atacar espaço com aceleração e mudança curta de direção' },
-  'Momentum Dribbling': { positions:['LWF','RWF','SS','AMF'], attrs:['dribbling','tightPossession','balance','acceleration'], groups:['dribbling','dexterity'], use:'vencer o duelo curto e conduzir em velocidade' },
-  'Phenomenal Finishing': { positions:['CF','SS','LWF','RWF','AMF'], attrs:['finishing','kickingPower','balance','offensiveAwareness'], groups:['shooting','dexterity'], use:'finalizar mesmo sob contato ou postura corporal desfavorável' },
-  'Phenomenal Pass': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], use:'executar passes difíceis sob pressão e em pouco espaço' },
-  'Game-changing Pass': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','stamina'], groups:['passing','lowerBodyStrength'], use:'aumentar a criação quando a partida exige uma jogada decisiva' },
-  'Fortress': { positions:['CB','DMF','LB','RB','GK'], attrs:['defensiveAwareness','tackling','physicalContact','defensiveEngagement'], groups:['defending','aerialStrength'], use:'proteger a área e sustentar a vantagem com posicionamento e contato' },
-  'Edged Crossing': { positions:['LWF','RWF','LMF','RMF','LB','RB'], attrs:['loftedPass','curl','kickingPower'], groups:['passing','lowerBodyStrength'], use:'cruzar com trajetória rápida a partir do corredor' },
-  'Bullet Header': { positions:['CF','SS','CB'], attrs:['heading','jump','physicalContact','offensiveAwareness'], groups:['aerialStrength','shooting'], use:'atacar cruzamentos e bolas paradas com impulsão e presença de área' }
+  'Impulso ofensivo': { positions:['LWF','RWF','SS','AMF','CF','LMF','RMF'], attrs:['speed','acceleration','offensiveAwareness','stamina'], groups:['dexterity','lowerBodyStrength'], use:'acelerar a movimentação sem bola no campo adversário' },
+  'Sombra veloz': { positions:['DMF','CB','LB','RB'], attrs:['speed','acceleration','defensiveAwareness','stamina'], groups:['dexterity','lowerBodyStrength','defending'], use:'recuperar em velocidade quando um passe rompe a linha defensiva' },
+  'Drible de impulso': { positions:['LWF','RWF','SS','AMF'], attrs:['dribbling','tightPossession','balance','acceleration'], groups:['dribbling','dexterity'], use:'vencer o duelo curto e conduzir em velocidade' },
+  'Finalização fenomenal': { positions:['CF','SS','LWF','RWF','AMF'], attrs:['finishing','kickingPower','balance','offensiveAwareness'], groups:['shooting','dexterity'], use:'finalizar mesmo sob contato ou postura corporal desfavorável' },
+  'Passe fenomenal': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], use:'executar passes difíceis sob pressão e em pouco espaço' },
+  'Passe decisivo': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','stamina'], groups:['passing','lowerBodyStrength'], use:'aumentar a criação quando a partida exige uma jogada decisiva' },
+  'Fortaleza': { positions:['CB','DMF','LB','RB','GK'], attrs:['defensiveAwareness','tackling','physicalContact','defensiveEngagement'], groups:['defending','aerialStrength'], use:'proteger a área e sustentar a vantagem com posicionamento e contato' },
+  'Cruzamento cortante': { positions:['LWF','RWF','LMF','RMF','LB','RB'], attrs:['loftedPass','curl','kickingPower'], groups:['passing','lowerBodyStrength'], use:'cruzar com trajetória rápida a partir do corredor' },
+  'Cabeçada fulminante': { positions:['CF','SS','CB'], attrs:['heading','jump','physicalContact','offensiveAwareness'], groups:['aerialStrength','shooting'], use:'atacar cruzamentos e bolas paradas com impulsão e presença de área' },
+  'Fortaleza aérea': { positions:['CB','DMF','LB','RB','CF','GK'], attrs:['heading','jump','physicalContact','defensiveAwareness'], groups:['aerialStrength','defending'], use:'dominar duelos aéreos e proteger a zona de queda' },
+  'Drible explosivo': { positions:['LWF','RWF','SS','AMF','CF','LMF','RMF'], attrs:['acceleration','dribbling','tightPossession','balance'], groups:['dribbling','dexterity','lowerBodyStrength'], use:'romper o primeiro marcador com aceleração curta' },
+  'Desencadeador de ataques': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','ballControl','offensiveAwareness','stamina'], groups:['passing','dribbling','lowerBodyStrength'], use:'controlar a bola em zona central para melhorar a movimentação ofensiva dos companheiros' },
+  'Comandante da defesa (GO)': { positions:['GK'], attrs:['goalkeeperAwareness','goalkeeperParrying','goalkeeperReflexes','goalkeeperReach'], groups:['gk1','gk2','gk3'], use:'organizar a última linha a partir do gol' },
+  'Rugido do goleiro': { positions:['GK'], attrs:['goalkeeperAwareness','goalkeeperReflexes','goalkeeperReach','jump'], groups:['gk1','gk2','gk3','aerialStrength'], use:'sustentar presença e reação do goleiro em alta pressão' },
+  'Chute rasteiro fulminante': { positions:['CF','SS','LWF','RWF','AMF'], attrs:['finishing','kickingPower','balance','offensiveAwareness'], groups:['shooting','dexterity'], use:'finalizar rasteiro com potência em corredor aberto' },
+  'Pés magnéticos': { positions:['LWF','RWF','SS','AMF','CMF'], attrs:['ballControl','dribbling','tightPossession','balance'], groups:['dribbling','dexterity'], use:'reter a bola próxima do corpo sob pressão' },
+  'Garra': { positions:['CF','SS','AMF','CMF','DMF','CB','GK'], attrs:['stamina','balance','aggression','physicalContact'], groups:['lowerBodyStrength','defending','dexterity'], use:'manter a capacidade de decisão e disputa em momentos críticos' },
+  'Passe visionário': { positions:['AMF','CMF','DMF','SS','LMF','RMF'], attrs:['lowPass','loftedPass','ballControl','offensiveAwareness'], groups:['passing','dribbling'], use:'encontrar linhas de passe difíceis e acelerar a criação' }
 };
 
 function dnaGroupKeys(position: PositionCode): TrainingKey[] {
@@ -2834,8 +2776,9 @@ function inferSkillTrainingGroups(name: string): TrainingKey[] {
 function buildSkillSynergies(parsed: ParsedCard, position: PositionCode, a: Required<Attributes>, plan: TrainingPlan): SpecialSkillSynergyItem[] {
   const names = Array.from(new Set([...(parsed.specialSkills ?? []), ...(parsed.nativeSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
   return names.map((name) => {
-    const rule = DNA_SPECIAL_SKILL_RULES[name];
-    const groups = rule?.groups ?? inferSkillTrainingGroups(name);
+    const canonicalName = canonicalSkillName(name) ?? name;
+    const rule = DNA_SPECIAL_SKILL_RULES[canonicalName];
+    const groups = rule?.groups ?? inferSkillTrainingGroups(canonicalName);
     const attrs = rule?.attrs ?? groups.flatMap((group) => TRAINING_GROUP_ATTRIBUTES[group] ?? []).slice(0,4);
     const attributeSupport = attrs.length ? Math.round(avg(...attrs.map((key) => a[key]))) : Math.round(avg(...IDENTITY_CORE_GROUPS[position].map((key) => trainingGroupAverage(key, a))));
     const positionFit = rule ? (rule.positions.includes(position) ? 96 : 48) : 72;
@@ -2886,7 +2829,7 @@ function buildBehaviorSimulation(position: PositionCode, a: Required<Attributes>
 
 function buildAntiCloneAnalysis(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard, variants: BuildVariant[]): AntiCloneAnalysis {
   const keys = dnaGroupKeys(position);
-  const genericParsed: ParsedCard = { ...parsed, playerName:'Modelo genérico da posição', playstyle:null, nativeSkills:[], specialSkills:[], impetos:[], specialTag:null, height:null, weight:null, evidence:{...parsed.evidence, localRuleMatched:null} };
+  const genericParsed: ParsedCard = { ...parsed, playerName:'Modelo genérico da posição', playstyle:null, nativeSkills:[], additionalSkills:[], specialSkills:[], impetos:[], specialTag:null, height:null, weight:null, evidence:{...parsed.evidence, localRuleMatched:null} };
   const genericPlan = trainingFor(position, objective, BASE_BY_POSITION[position], genericParsed, individualTrainingAdjustments);
   const mainPlan = variants[0]?.training ?? emptyTraining();
   const distanceFromGenericTemplate = planDistance(mainPlan, genericPlan, keys);
@@ -2899,7 +2842,7 @@ function buildAntiCloneAnalysis(position: PositionCode, objective: Objective, a:
   const pairDistances:number[]=[];
   for(let i=0;i<variants.length;i++) for(let j=i+1;j<variants.length;j++) pairDistances.push(planDistance(variants[i].training,variants[j].training,keys));
   const distributionDiversity = Math.round(clampDecimal((pairDistances.length?avg(...pairDistances):0)*8,1,99));
-  const evidence = parsed.evidence.attributeCount*2 + (parsed.playstyle?10:0) + Math.min(18,(parsed.nativeSkills.length+parsed.specialSkills.length)*2) + (parsed.height?4:0) + (parsed.weight?3:0);
+  const evidence = parsed.evidence.attributeCount*2 + (parsed.playstyle?10:0) + Math.min(18,(parsed.nativeSkills.length+(parsed.additionalSkills?.length??0)+parsed.specialSkills.length)*2) + (parsed.height?4:0) + (parsed.weight?3:0);
   const individualityScore = Math.round(clampDecimal(identityContribution*.48 + Math.min(100,evidence)*.27 + Math.min(100,distanceFromGenericTemplate*12)*.25, 20,99));
   const cloneRisk: AntiCloneAnalysis['cloneRisk'] = individualityScore>=76 && distanceFromGenericTemplate>=3 ? 'baixo' : individualityScore>=55 ? 'médio' : 'alto';
   const recalculationTriggered = evidence>=34 && distanceFromGenericTemplate>=3;
@@ -3181,7 +3124,7 @@ function recommendationExplanation(parsed: ParsedCard, selected: PositionCode, a
   if (selected === 'LWF' || selected === 'RWF') lines.push(`Como ponta, pesaram drible ${attributes.dribbling}, aceleração ${attributes.acceleration}, equilíbrio ${attributes.balance} e finalização ${attributes.finishing}.`);
   if (pri.defense >= 78) lines.push('A defesa teve peso alto no PRI, por isso posições ofensivas são tratadas com cuidado mesmo quando aparecem com GER alto.');
   if (avoidPositions.length) lines.push(`Evitei ${avoidPositions.slice(0, 3).map((item) => item.label).join(', ')} por regra anti-posição impossível ou baixa aderência ao estilo.`);
-  if (profile.formation !== 'AUTO' || profile.style !== 'AUTO') lines.push('A formação/tática escolhida também ajustou o peso de passe, pressão, velocidade ou cobertura conforme seu modo de jogo.');
+  if (profile.style !== 'AUTO') lines.push('O estilo coletivo do técnico ajustou passe, pressão, velocidade ou cobertura sem prender a ficha a uma formação.');
   return lines;
 }
 
@@ -3238,7 +3181,7 @@ function skillImpactText(skill: string, position: PositionCode): string {
 
 function buildSpecialSkillsAnalysis(parsed: ParsedCard, selected: PositionCode, recommended: string[], avoid: string[]): SpecialSkillsAnalysis {
   const officialSet = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
-  const ownedOfficial = uniqueSkillList(parsed.nativeSkills).filter((skill) => officialSet.has(skill));
+  const ownedOfficial = uniqueSkillList([...(parsed.nativeSkills ?? []), ...(parsed.additionalSkills ?? []), ...(parsed.specialSkills ?? [])]).filter((skill) => officialSet.has(skill));
   const usefulOwned = ownedOfficial.map((name) => ({ name, impact: skillImpactText(name, selected), score: 70 + Math.min(25, Object.values(SKILL_PROFILES[name]?.boosts ?? {}).reduce<number>((sum, value) => sum + (value ?? 0), 0) * 2) })).sort((a,b)=>b.score-a.score);
   const missingRecommended = recommended.filter((name) => officialSet.has(name) && !ownedOfficial.includes(name)).slice(0,8).map((name,index) => ({ name, impact: skillImpactText(name, selected), score: Math.max(70, 96-index*4) }));
   const redundant = ownedOfficial.filter((name) => avoid.includes(name)).map((name) => ({ name, reason: `É oficial, mas tem retorno baixo para ${POSITION_PT[selected]} nesta ficha.` }));
@@ -3409,10 +3352,12 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const trainingPointsTotal = trainingBudgetFromCard(parsed);
   const baseTraining = trainingFor(selected.code, objective, attributes, parsed, individualTrainingAdjustments);
   const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], baseTraining, positionScores.slice(0, 10), trainingPointsTotal, objective, parsed);
-  const training = buildVariants[0]?.training ?? baseTraining;
+  const initialTraining = buildVariants[0]?.training ?? baseTraining;
+  const exactPriority = trainingTemplate(selected.code, objective, attributes, parsed).priority;
+  const training = fitTrainingToExactBudget(initialTraining, exactPriority, trainingPointsTotal, selected.code);
   const trainingCost = trainingPlanCost(training);
-  const trainingPointsUsed = Math.min(trainingPlanTotalCost(training), trainingPointsTotal);
-  const trainingPointsRemaining = Math.max(0, trainingPointsTotal - trainingPointsUsed);
+  const trainingPointsUsed = trainingPlanTotalCost(training);
+  const trainingPointsRemaining = trainingPointsTotal - trainingPointsUsed;
   const recommendedSkills = recommendAdditionalSkills(parsed, selected.code, objective, attributes);
   const skillRecommendations = buildSkillRecommendations(parsed, selected.code, objective, attributes, recommendedSkills);
   const avoidSkills = skillRecommendations.filter((item) => item.tier === 'evitar').map((item) => item.name);
@@ -3424,7 +3369,9 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const visiblePositionScores = positionScores.slice(0, 10);
   const permittedPositions = buildPermittedPositions(parsed, visiblePositionScores);
   const avoidPositions = buildAvoidPositions(parsed, attributes);
-  const validation = validateAnalysis(parsed, selected, visiblePositionScores, attributes, avoidPositions, explicitTarget);
+  const baseValidation = validateAnalysis(parsed, selected, visiblePositionScores, attributes, avoidPositions, explicitTarget);
+  const structuralPrecision = buildStructuralPrecisionAnalysis(parsed, training, trainingPointsTotal, selected.code);
+  const validation = mergeStructuralValidation(baseValidation, structuralPrecision);
   const trainingComparison = compareTraining(parsed.autoTrainingPlan, training);
   const advancedTacticalFunction = buildAdvancedTacticalFunction(parsed, selected.code, selected.score);
   const specialSkillsAnalysis = buildSpecialSkillsAnalysis(parsed, selected.code, recommendedSkills, avoidSkills);
@@ -3476,8 +3423,8 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
     ],
     pointRationale: explanation.slice(0, 5)
   };
-  return { parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse };
+  return { objective, parsed, bestPosition: selected, positionScores: visiblePositionScores, pri, tacticalFit, training, trainingCost, trainingPointsUsed, trainingPointsTotal, trainingPointsRemaining, trainingCostRule: trainingCostRuleText(), trainingComparison, buildVariants, recommendationExplanation: explanation, tacticalProfile, teamMap, profileTips, validation, permittedPositions, avoidPositions, recommendedSkills, skillRecommendations, avoidSkills, recommendedImpetos, buildName, strengths, weaknesses, usageTips: [...tips, ...profileTips, ...teamMap.matchPlan.slice(0, 2)], note, deepAnalysis, advancedTacticalFunction, specialSkillsAnalysis, physicalEngine, attributeGoals, advancedOptimizer, correctionLimit, marginalReturn, errorTolerance, skillPriority, playerIdentity, cardDna, maxPrecision, eliteEvolution, metaBuildUniverse, structuralPrecision };
 }
 
 // Compatibilidade com integrações e regressões anteriores; novas telas devem importar pela fachada modules/analysis.
-export { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '../modules/analysis/analyzerCatalog';
+export { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES, OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from '../modules/analysis/analyzerCatalog';

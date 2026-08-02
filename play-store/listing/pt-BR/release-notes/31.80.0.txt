@@ -1,0 +1,1 @@
+Leitor eFHUB reconstruído com normalização 1400×1600 e recortes internos invisíveis. Habilidades unidas são separadas e textos estranhos do OCR são descartados. O Top 5 adicional agora entrega exatamente cinco opções compatíveis com a posição escolhida, o estilo oficial, os atributos e as habilidades já presentes na carta.

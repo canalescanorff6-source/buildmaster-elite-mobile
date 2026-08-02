@@ -14,7 +14,8 @@ function pngDimensions(file) {
 const title = read('play-store/listing/pt-BR/title.txt');
 const short = read('play-store/listing/pt-BR/short-description.txt');
 const full = read('play-store/listing/pt-BR/full-description.txt');
-const notes = read('play-store/listing/pt-BR/release-notes/31.78.0.txt');
+const packageVersion = JSON.parse(read('package.json')).version;
+const notes = read(`play-store/listing/pt-BR/release-notes/${packageVersion}.txt`);
 check(title.length > 0 && title.length <= 30, 'Título possui 1–30 caracteres');
 check(short.length > 0 && short.length <= 80, 'Descrição curta possui 1–80 caracteres');
 check(full.length > 0 && full.length <= 4000, 'Descrição completa possui 1–4000 caracteres');

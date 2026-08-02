@@ -3,20 +3,22 @@ import { readFileSync } from 'node:fs';
 
 const app = readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const home = readFileSync('src/modules/core/IntegratedHomePanel.tsx', 'utf8');
+const appearance = readFileSync('src/components/IdentityAppearancePanel.tsx', 'utf8');
 const css = readFileSync('src/app/globals.css', 'utf8');
+const identityCss = readFileSync('src/app/v35-identity-themes.css', 'utf8');
 const prefs = readFileSync('src/lib/easyExperience.ts', 'utf8');
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
-assert.equal(pkg.version, '31.78.0');
+assert.match(pkg.version, /^(?:3[1-9]|[4-9]\d)\.\d+\.0$/);
 for (const preset of ['obsidian-gold', 'elite-blue', 'future-purple']) {
-  assert.ok(app.includes(preset), `O seletor deve incluir ${preset}.`);
-  assert.ok(css.includes(`visual-${preset}`), `O CSS deve incluir ${preset}.`);
+  assert.ok(app.includes(preset) || appearance.includes(preset), `O seletor deve incluir ${preset}.`);
+  assert.ok(css.includes(`visual-${preset}`) || identityCss.includes(`visual-${preset}`), `O CSS deve incluir ${preset}.`);
   assert.ok(prefs.includes(preset), `As preferências devem persistir ${preset}.`);
 }
 assert.ok(app.includes('visual-${visualPreset}'), 'A classe do modelo precisa ser aplicada ao shell principal.');
-assert.ok(app.includes('Interface premium'), 'Aparência deve exibir o seletor premium.');
+assert.ok(appearance.includes('Temas') && appearance.includes('premium-preset-grid'), 'Aparência deve exibir o seletor premium.');
 assert.ok(home.includes('bm-premium-reader-hero'), 'A home deve destacar o leitor de cartas.');
 assert.ok(home.includes('bm-premium-feature-grid'), 'A home deve mostrar as funções principais.');
 assert.ok(home.includes('bm-premium-mini-pitch'), 'A home deve mostrar a formação ativa.');
 assert.ok(home.includes('Habilidades') && home.includes('Ímpetos') && home.includes('Formações'), 'As funções essenciais devem estar visíveis.');
-console.log('v31.78 premium interface regression: ok');
+console.log(`v${pkg.version.split('.').slice(0, 2).join('.')} premium interface regression: ok`);

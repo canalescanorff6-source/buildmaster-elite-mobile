@@ -10,6 +10,7 @@ export type AdminDeviceRow = { id:string; userId:string; username:string; device
 export type AdminAuditRow = { id:string; adminId:string|null; adminUsername:string; targetUserId:string|null; targetUsername:string|null; action:string; outcome:'success'|'denied'|'error'; appVersion:string|null; details:Record<string,unknown>; createdAt:string };
 export type AdminRateLimitRow = { action:string; requestCount:number; windowStartedAt:string; updatedAt:string };
 export type AdminOverview = { users:AdminUserRow[]; devices:AdminDeviceRow[]; audit:AdminAuditRow[]; settings:AdminSecuritySettings; rateLimits:AdminRateLimitRow[]; generatedAt:string };
+export type AdminCreateUserResult = { success:boolean; userId:string; username:string; requestId:string; authConfirmed:boolean; profileConfirmed:boolean; expiryConfirmed:boolean; duplicateBlocked:boolean };
 export type AdminUserAction =
   | { action:'health' }
   | { action:'restore_account_creation' }
@@ -21,7 +22,7 @@ export type AdminUserAction =
   | { action:'get_security_settings' }
   | { action:'update_security_settings'; settings:Partial<Omit<AdminSecuritySettings,'updatedAt'>> }
   | { action:'rate_limit_status' }
-  | { action:'create'; username:string; password:string; displayName?:string; expiryMode:AccountExpiryMode; durationDays?:number; expiresAt?:string|null; maxDevices:number; plan?:string }
+  | { action:'create'; username:string; password:string; displayName?:string; expiryMode:AccountExpiryMode; durationDays?:number; expiresAt?:string|null; maxDevices:number; plan?:string; clientRequestId:string }
   | { action:'renew'; userId:string; durationDays:number }
   | { action:'set_status'; userId:string; status:Exclude<AccountStatus,'expired'> }
   | { action:'reset_password'; userId:string; password:string }

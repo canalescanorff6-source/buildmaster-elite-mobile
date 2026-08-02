@@ -1,7 +1,28 @@
 'use client';
 
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crop, Loader2, ScanText, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crop, Loader2, ScanText, ZoomIn } from 'lucide-react';
 import type { CardCropResult } from '@/modules/card-reader/cardArtCrop';
+
+
+function ZoomOutIcon({ size = 17 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.6-3.6" />
+      <path d="M8 11h6" />
+    </svg>
+  );
+}
 
 type CropAction = 'left' | 'right' | 'up' | 'down' | 'zoom-in' | 'zoom-out';
 
@@ -53,7 +74,7 @@ export function SmartCardCropPanel({
           <button type="button" onClick={() => onAdjust('down')} aria-label="Mover recorte para baixo"><ArrowDown size={17} /></button>
           <button type="button" onClick={() => onAdjust('right')} aria-label="Mover recorte para a direita"><ArrowRight size={17} /></button>
           <button type="button" onClick={() => onAdjust('zoom-in')} aria-label="Aproximar recorte"><ZoomIn size={17} /></button>
-          <button type="button" onClick={() => onAdjust('zoom-out')} aria-label="Afastar recorte"><ZoomOut size={17} /></button>
+          <button type="button" onClick={() => onAdjust('zoom-out')} aria-label="Afastar recorte"><ZoomOutIcon size={17} /></button>
           <button type="button" className="smart-card-redetect" onClick={onRedetect}><ScanText size={16} /> Redetectar</button>
         </div>
       )}

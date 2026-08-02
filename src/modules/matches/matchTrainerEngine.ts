@@ -2,7 +2,7 @@ import { createStableId } from '@/lib/stableId';
 import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 import type { MatchRecordingDescriptor, MatchRecordingQuality } from './matchRecorderBridge';
 
-export const MATCH_TRAINER_VERSION = '31.77.0';
+export const MATCH_TRAINER_VERSION = '38.32.0';
 export const MATCH_TRAINER_STORAGE_KEY = 'buildmaster_match_trainer_sessions_v3170';
 
 export type MatchPhase = 'build-up' | 'attack' | 'defensive-transition' | 'defense' | 'set-piece' | 'game-management' | 'unknown';
@@ -10,7 +10,7 @@ export type MatchSeverity = 'positive' | 'low' | 'medium' | 'high' | 'critical';
 export type MatchEvidenceKind = 'observed' | 'inferred' | 'user-confirmed' | 'automatic-candidate';
 export type MatchEventReviewStatus = 'suggested' | 'confirmed' | 'rejected';
 export type MatchEventSource = 'manual' | 'automatic';
-export type MatchEventGroup = 'attack' | 'defense' | 'transition' | 'management' | 'positive' | 'evidence';
+export type MatchEventGroup = 'attack' | 'defense' | 'transition' | 'management' | 'commands' | 'positive' | 'evidence';
 
 export type MatchEventKind =
   | 'pass-error'
@@ -29,6 +29,23 @@ export type MatchEventKind =
   | 'critical-moment'
   | 'goal-for'
   | 'goal-against'
+  | 'delayed-pass'
+  | 'pressured-receiver'
+  | 'late-release'
+  | 'dangerous-dribble'
+  | 'unbalanced-shot'
+  | 'predictable-attack'
+  | 'no-triangulation'
+  | 'lost-counterattack'
+  | 'wrong-double-mark'
+  | 'premature-tackle'
+  | 'fullback-corridor-open'
+  | 'double-defender'
+  | 'central-corridor-open'
+  | 'second-ball-failure'
+  | 'command-pass-early'
+  | 'command-sprint-excess'
+  | 'command-double-tap'
   | 'note';
 
 export type MatchEventMarker = {
@@ -52,6 +69,9 @@ export type MatchEventMarker = {
   clipStartMs?: number;
   clipEndMs?: number;
   relatedMarkerId?: string | null;
+  repeated?: boolean;
+  commandEvidence?: { command: 'passe' | 'lançamento' | 'chute' | 'corrida' | 'pressão' | 'marcação dupla' | 'troca de jogador' | 'direção' | 'outro'; status: 'observed' | 'inferred' | 'unconfirmed'; durationMs?: number; repeatedTouch?: boolean; note?: string };
+  annotations?: Array<{ kind: 'circle' | 'wrong-arrow' | 'correct-arrow' | 'blocked-line' | 'recommended-line' | 'open-space' | 'danger-zone' | 'hold-position'; x1: number; y1: number; x2?: number; y2?: number; label?: string }>;
 };
 
 export type MatchVideoSample = {
@@ -104,7 +124,7 @@ export type MatchTrainerSession = {
 };
 
 export type MatchAreaScore = {
-  id: 'attack' | 'defense' | 'transition' | 'decision' | 'management';
+  id: 'construction' | 'attack' | 'defense' | 'offensive-transition' | 'defensive-transition' | 'decision' | 'commands' | 'discipline' | 'management';
   label: string;
   score: number | null;
   evidenceCount: number;
@@ -354,6 +374,91 @@ const EVENT_TEMPLATES: Record<MatchEventKind, EventTemplate> = {
     correction: 'Relacionar o gol ao erro de origem, não apenas ao último defensor.',
     drill: { title: 'Voltar à origem do gol', objective: 'Encontrar a primeira decisão que desorganizou a defesa.', rule: 'Rever o lance do início e separar causa, consequência e último duelo.', repetitions: '3 revisões do lance', successCriteria: 'Identificar uma correção concreta anterior à finalização.', estimatedMinutes: 6 }
   },
+  'delayed-pass': {
+    label: 'Passe atrasado', shortLabel: 'Passe atrasado', group: 'attack', phase: 'build-up', severity: 'medium',
+    observed: 'O passe saiu depois que a linha de progressão já havia começado a fechar.', why: 'A leitura demorou e o receptor perdeu a vantagem de receber orientado.', consequence: 'A jogada ficou previsível ou exigiu uma disputa desnecessária.', betterDecision: 'Soltar a bola no primeiro tempo em que o receptor estiver livre e orientado.', correction: 'Treinar leitura antes do domínio e passe em até dois toques.',
+    drill: { title: 'Passe no tempo certo', objective: 'Reduzir o atraso entre reconhecer e executar o passe.', rule: 'Decidir antes do primeiro toque e executar em até dois contatos.', repetitions: '20 sequências curtas', successCriteria: '15 passes liberados antes do fechamento da linha.', estimatedMinutes: 10 }
+  },
+  'pressured-receiver': {
+    label: 'Passe para jogador pressionado', shortLabel: 'Receptor pressionado', group: 'attack', phase: 'build-up', severity: 'high',
+    observed: 'O receptor recebeu cercado e sem direção segura para continuar.', why: 'A posição do marcador mais próximo não foi considerada antes do passe.', consequence: 'A posse terminou ou voltou em condição pior.', betterDecision: 'Usar apoio livre, inverter ou esperar o receptor se afastar da pressão.', correction: 'Confirmar espaço e orientação corporal antes de acionar o receptor.',
+    drill: { title: 'Receptor livre', objective: 'Escolher apenas jogadores com condição de dar sequência.', rule: 'Não passar quando o receptor estiver cercado por dois marcadores.', repetitions: '3 séries de 10 passes', successCriteria: '8 de 10 receptores conseguem girar ou devolver com segurança.', estimatedMinutes: 12 }
+  },
+  'late-release': {
+    label: 'Demora para soltar a bola', shortLabel: 'Soltou tarde', group: 'attack', phase: 'attack', severity: 'medium',
+    observed: 'A condução continuou após surgir uma opção clara de passe.', why: 'A busca por uma ação individual fechou uma vantagem coletiva.', consequence: 'O espaço desapareceu e a equipe precisou reiniciar ou perdeu a posse.', betterDecision: 'Soltar a bola quando o companheiro entra livre na linha de progressão.', correction: 'Limitar a condução a três toques quando houver apoio próximo.',
+    drill: { title: 'Conduzir e soltar', objective: 'Usar a condução para atrair, não para prender a jogada.', rule: 'Máximo de três toques antes do passe em zona pressionada.', repetitions: '20 ataques', successCriteria: 'Criar 12 progressões sem perder a vantagem inicial.', estimatedMinutes: 12 }
+  },
+  'dangerous-dribble': {
+    label: 'Drible em zona perigosa', shortLabel: 'Drible perigoso', group: 'attack', phase: 'build-up', severity: 'high',
+    observed: 'Houve tentativa de drible perto do próprio corredor central ou sem cobertura.', why: 'O risco técnico foi maior que o ganho territorial disponível.', consequence: 'Uma perda deixaria a defesa exposta e de frente para o próprio gol.', betterDecision: 'Usar passe de segurança e reservar o drible para setores com cobertura.', correction: 'Evitar drible de costas ou no centro defensivo.',
+    drill: { title: 'Zona segura para driblar', objective: 'Distinguir onde o drible é produtivo e onde é risco.', rule: 'No campo defensivo, usar no máximo uma mudança de direção antes do passe.', repetitions: '15 saídas', successCriteria: 'Nenhuma perda central em 12 de 15 saídas.', estimatedMinutes: 11 }
+  },
+  'unbalanced-shot': {
+    label: 'Finalização desequilibrada', shortLabel: 'Chute desequilibrado', group: 'attack', phase: 'attack', severity: 'medium',
+    observed: 'A finalização ocorreu durante corrida, giro ou contato sem ajuste corporal.', why: 'O comando foi executado antes de estabilizar direção e apoio.', consequence: 'A chance perdeu precisão e força útil.', betterDecision: 'Soltar a corrida, ajustar o corpo e finalizar no toque seguinte.', correction: 'Criar um toque de preparação antes do chute.',
+    drill: { title: 'Finalização com equilíbrio', objective: 'Finalizar depois de controlar o corpo.', rule: 'Soltar corrida e realizar um toque de ajuste.', repetitions: '15 finalizações', successCriteria: '10 chutes no alvo ou bloqueados dentro da área.', estimatedMinutes: 10 }
+  },
+  'predictable-attack': {
+    label: 'Ataque previsível', shortLabel: 'Ataque previsível', group: 'attack', phase: 'attack', severity: 'medium',
+    observed: 'A equipe repetiu a mesma direção ou sequência sem alternar altura e lado.', why: 'As opções de apoio e inversão foram pouco utilizadas.', consequence: 'A defesa antecipou passes e fechou o corredor preferido.', betterDecision: 'Reciclar, inverter e alternar tabela curta com ataque em profundidade.', correction: 'Criar ao menos duas rotas antes do último passe.',
+    drill: { title: 'Duas rotas de ataque', objective: 'Variar o caminho até a área.', rule: 'Alternar lado ou altura antes de repetir o mesmo corredor.', repetitions: '12 ataques', successCriteria: 'Criar chances por pelo menos três rotas diferentes.', estimatedMinutes: 14 }
+  },
+  'no-triangulation': {
+    label: 'Falta de triangulação', shortLabel: 'Sem triangulação', group: 'attack', phase: 'build-up', severity: 'medium',
+    observed: 'O portador ficou com apenas uma linha de passe próxima.', why: 'Os apoios ocuparam a mesma linha ou ficaram longe da jogada.', consequence: 'A progressão dependeu de passe forçado ou condução longa.', betterDecision: 'Aproximar terceiro homem e formar ângulo de apoio antes de acelerar.', correction: 'Buscar sempre duas opções próximas em alturas diferentes.',
+    drill: { title: 'Triângulos de apoio', objective: 'Criar duas linhas de passe ao portador.', rule: 'Não acelerar enquanto não houver apoio lateral e apoio frontal.', repetitions: '15 construções', successCriteria: 'Formar triângulo em 12 sequências.', estimatedMinutes: 13 }
+  },
+  'lost-counterattack': {
+    label: 'Contra-ataque desperdiçado', shortLabel: 'Perdeu contra-ataque', group: 'transition', phase: 'attack', severity: 'high',
+    observed: 'Uma recuperação com espaço não foi convertida em progressão útil.', why: 'O primeiro passe ou condução não aproveitou a desorganização adversária.', consequence: 'A defesa rival se recompôs antes do último passe.', betterDecision: 'Garantir primeiro passe limpo e atacar o espaço em poucas ações.', correction: 'Decidir em até três segundos se acelera ou controla.',
+    drill: { title: 'Transição em quatro ações', objective: 'Aproveitar recuperações com vantagem.', rule: 'Recuperar, conectar, conduzir e finalizar ou entrar na área.', repetitions: '12 transições', successCriteria: 'Criar 8 entradas na área.', estimatedMinutes: 12 }
+  },
+  'wrong-double-mark': {
+    label: 'Marcação dupla perigosa', shortLabel: 'Marcação dupla', group: 'commands', phase: 'defense', severity: 'critical',
+    observed: 'Dois jogadores foram atraídos para a bola e outra zona ficou aberta.', why: 'A marcação dupla foi acionada sem cobertura do passe seguinte.', consequence: 'O adversário encontrou homem livre ou corredor central exposto.', betterDecision: 'Temporizar com o jogador controlado e usar ajuda apenas com cobertura atrás.', correction: 'Evitar marcação dupla quando o adversário tiver passe central livre.',
+    drill: { title: 'Ajuda com cobertura', objective: 'Usar marcação dupla sem desmontar o bloco.', rule: 'Só acionar ajuda quando volante e zagueiros mantiverem o centro protegido.', repetitions: '20 decisões', successCriteria: 'Preservar a linha em 16 decisões.', estimatedMinutes: 13 }
+  },
+  'premature-tackle': {
+    label: 'Bote precipitado', shortLabel: 'Bote precipitado', group: 'defense', phase: 'defense', severity: 'high',
+    observed: 'O defensor atacou a bola sem controlar direção e cobertura.', why: 'A tentativa de recuperar imediatamente ignorou o risco de ser superado.', consequence: 'A linha foi quebrada e exigiu correção de outro defensor.', betterDecision: 'Temporizar, fechar o lado forte e dar bote apenas no toque longo.', correction: 'Defender em distância segura até surgir erro do adversário.',
+    drill: { title: 'Temporizar antes do bote', objective: 'Reduzir saídas precipitadas.', rule: 'Dar bote somente após toque longo ou domínio ruim.', repetitions: '20 duelos', successCriteria: 'Vencer ou atrasar 16 duelos sem romper a linha.', estimatedMinutes: 12 }
+  },
+  'fullback-corridor-open': {
+    label: 'Corredor lateral desprotegido', shortLabel: 'Corredor aberto', group: 'defense', phase: 'defensive-transition', severity: 'high',
+    observed: 'O lateral avançou ou fechou por dentro sem cobertura no corredor.', why: 'A movimentação não foi compensada pelo volante ou zagueiro do lado.', consequence: 'O adversário progrediu com campo livre pela lateral.', betterDecision: 'Recompor com volante e limitar o avanço simultâneo dos dois laterais.', correction: 'Manter ao menos três jogadores protegendo a transição.',
+    drill: { title: 'Cobertura do corredor', objective: 'Proteger o lado quando o lateral avança.', rule: 'Volante desloca para o lado da bola antes do passe ofensivo arriscado.', repetitions: '15 transições', successCriteria: 'Fechar 12 ataques laterais sem abrir o centro.', estimatedMinutes: 14 }
+  },
+  'double-defender': {
+    label: 'Dois defensores na mesma bola', shortLabel: 'Dois na bola', group: 'defense', phase: 'defense', severity: 'high',
+    observed: 'Dois defensores atacaram o mesmo portador e abandonaram referências diferentes.', why: 'Faltou divisão entre pressão e cobertura.', consequence: 'Um passe simples eliminou dois jogadores da defesa.', betterDecision: 'Um pressiona e o outro protege linha, passe ou profundidade.', correction: 'Nunca repetir a mesma função defensiva com dois jogadores próximos.',
+    drill: { title: 'Pressão e cobertura', objective: 'Separar quem ataca a bola de quem protege.', rule: 'Segundo defensor não ultrapassa a linha do primeiro.', repetitions: '20 situações', successCriteria: 'Manter cobertura em 17 situações.', estimatedMinutes: 13 }
+  },
+  'central-corridor-open': {
+    label: 'Corredor central desprotegido', shortLabel: 'Centro aberto', group: 'defense', phase: 'defensive-transition', severity: 'critical',
+    observed: 'O espaço entre volantes e zagueiros ficou livre para receber ou conduzir.', why: 'A pressão lateral ou perseguição individual retirou a proteção central.', consequence: 'O adversário avançou de frente para a última linha.', betterDecision: 'Recuar o volante, fechar o passe por dentro e orientar para fora.', correction: 'Proteger o centro antes de pressionar a bola.',
+    drill: { title: 'Escudo central', objective: 'Manter volante entre bola e zagueiros.', rule: 'Primeiro movimento após perda é fechar o corredor central.', repetitions: '15 transições', successCriteria: 'Impedir 12 entradas centrais.', estimatedMinutes: 15 }
+  },
+  'second-ball-failure': {
+    label: 'Falha na segunda bola', shortLabel: 'Segunda bola', group: 'defense', phase: 'set-piece', severity: 'medium',
+    observed: 'Após corte ou disputa aérea, a sobra ficou sem jogador preparado.', why: 'Todos atacaram a primeira bola ou ficaram alinhados demais.', consequence: 'O adversário recuperou perto da área e reiniciou o ataque.', betterDecision: 'Manter volante ou meia na zona provável da sobra.', correction: 'Dividir funções entre primeira disputa, cobertura e segunda bola.',
+    drill: { title: 'Dominar a segunda bola', objective: 'Recuperar sobras após cruzamentos e cortes.', rule: 'Um jogador disputa, um cobre e um protege a sobra frontal.', repetitions: '20 bolas aéreas', successCriteria: 'Recuperar 14 segundas bolas.', estimatedMinutes: 12 }
+  },
+  'command-pass-early': {
+    label: 'Passe acionado cedo demais', shortLabel: 'Passe cedo', group: 'commands', phase: 'build-up', severity: 'medium',
+    observed: 'A execução do passe parece ter começado antes de a linha ficar segura.', why: 'Inferência tática: o comando não foi confirmado diretamente no vídeo.', consequence: 'A bola seguiu para uma opção ainda pressionada ou mal orientada.', betterDecision: 'Esperar o apoio se abrir ou escolher passe de segurança.', correction: 'Relacionar o momento visual à percepção do comando antes de confirmar.',
+    drill: { title: 'Tempo do comando de passe', objective: 'Executar o passe após confirmar a linha.', rule: 'Olhar receptor e marcador antes de tocar.', repetitions: '20 passes sob pressão', successCriteria: '15 passes sem interceptação ou recepção travada.', estimatedMinutes: 10 }
+  },
+  'command-sprint-excess': {
+    label: 'Corrida mantida por tempo excessivo', shortLabel: 'Corrida excessiva', group: 'commands', phase: 'attack', severity: 'medium',
+    observed: 'A condução perdeu controle enquanto a corrida parecia permanecer ativa.', why: 'Inferência tática: o vídeo não confirma diretamente a duração do botão.', consequence: 'Mudanças de direção e passes ficaram menos precisos.', betterDecision: 'Soltar corrida antes de dominar, girar ou passar.', correction: 'Confirmar manualmente o comando e treinar alternância entre corrida e controle.',
+    drill: { title: 'Soltar para controlar', objective: 'Melhorar controle e precisão após aceleração.', rule: 'Soltar corrida um toque antes do passe ou mudança de direção.', repetitions: '20 conduções', successCriteria: '16 ações sem perda de controle.', estimatedMinutes: 10 }
+  },
+  'command-double-tap': {
+    label: 'Repetição de toque por ansiedade', shortLabel: 'Toque repetido', group: 'commands', phase: 'unknown', severity: 'medium',
+    observed: 'A ação visual é compatível com entrada repetida, mas o comando não foi confirmado diretamente.', why: 'Inferência tática: pode existir repetição de toque, delay ou animação do jogo.', consequence: 'O jogador pode executar ação posterior sem nova leitura do lance.', betterDecision: 'Registrar a sensação e confirmar em clipe antes de classificar.', correction: 'Usar um toque por decisão e aguardar resposta visual.',
+    drill: { title: 'Um comando por decisão', objective: 'Reduzir comandos repetidos.', rule: 'Executar uma entrada e aguardar a resposta visual.', repetitions: '3 blocos de 5 minutos', successCriteria: 'Nenhuma ação indesejada por repetição confirmada.', estimatedMinutes: 15 }
+  },
   note: {
     label: 'Observação confirmada', shortLabel: 'Observação', group: 'evidence', phase: 'unknown', severity: 'low',
     observed: 'O usuário registrou um contexto que o vídeo automático não consegue inferir.',
@@ -374,10 +479,10 @@ export const MATCH_EVENT_CATALOG = (Object.entries(EVENT_TEMPLATES) as Array<[Ma
   severity: template.severity
 }));
 
-const PROBLEM_KINDS = new Set<MatchEventKind>(['pass-error', 'dangerous-turnover', 'marking-error', 'cursor-error', 'forced-shot', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'game-management', 'goal-against']);
+const PROBLEM_KINDS = new Set<MatchEventKind>(['pass-error', 'dangerous-turnover', 'marking-error', 'cursor-error', 'forced-shot', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'game-management', 'goal-against', 'delayed-pass', 'pressured-receiver', 'late-release', 'dangerous-dribble', 'unbalanced-shot', 'predictable-attack', 'no-triangulation', 'lost-counterattack', 'wrong-double-mark', 'premature-tackle', 'fullback-corridor-open', 'double-defender', 'central-corridor-open', 'second-ball-failure', 'command-pass-early', 'command-sprint-excess', 'command-double-tap']);
 const POSITIVE_KINDS = new Set<MatchEventKind>(['good-transition', 'good-build-up', 'good-play', 'goal-for']);
-const ATTACK_KINDS = new Set<MatchEventKind>(['pass-error', 'dangerous-turnover', 'forced-shot', 'good-transition', 'good-build-up', 'good-play', 'goal-for']);
-const DEFENSE_KINDS = new Set<MatchEventKind>(['marking-error', 'cursor-error', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'goal-against']);
+const ATTACK_KINDS = new Set<MatchEventKind>(['pass-error', 'dangerous-turnover', 'forced-shot', 'good-transition', 'good-build-up', 'good-play', 'goal-for', 'delayed-pass', 'pressured-receiver', 'late-release', 'dangerous-dribble', 'unbalanced-shot', 'predictable-attack', 'no-triangulation', 'lost-counterattack']);
+const DEFENSE_KINDS = new Set<MatchEventKind>(['marking-error', 'cursor-error', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'goal-against', 'wrong-double-mark', 'premature-tackle', 'fullback-corridor-open', 'double-defender', 'central-corridor-open', 'second-ball-failure']);
 
 const SEVERITY_WEIGHT: Record<MatchSeverity, number> = { positive: -1, low: .5, medium: 1, high: 1.7, critical: 2.5 };
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
@@ -434,6 +539,14 @@ export function readMatchTrainerSessions(): MatchTrainerSession[] {
 
 export function saveMatchTrainerSessions(sessions: MatchTrainerSession[]) {
   safeStorageSetJson(MATCH_TRAINER_STORAGE_KEY, sessions.map(normalizeSession).slice(0, 80));
+}
+
+export function replaceMatchTrainerSessions(value: unknown): MatchTrainerSession[] {
+  const sessions = Array.isArray(value)
+    ? value.filter((item): item is MatchTrainerSession => Boolean(item && typeof item === 'object' && typeof (item as MatchTrainerSession).id === 'string')).map(normalizeSession).slice(0, 80)
+    : [];
+  saveMatchTrainerSessions(sessions);
+  return sessions;
 }
 
 export function upsertMatchTrainerSession(session: MatchTrainerSession) {
@@ -513,6 +626,9 @@ export function createMatchMarker(
     correction: overrides.correction || template.correction,
     playerId: overrides.playerId || null,
     relatedMarkerId: overrides.relatedMarkerId || null,
+    repeated: overrides.repeated || false,
+    commandEvidence: overrides.commandEvidence,
+    annotations: overrides.annotations,
     clipStartMs: overrides.clipStartMs ?? Math.max(0, roundedAt - 6000),
     clipEndMs: overrides.clipEndMs ?? roundedAt + 6000
   });
@@ -696,11 +812,15 @@ export function getConfirmedMatchMarkers(session: MatchTrainerSession) {
 
 function areaScore(id: MatchAreaScore['id'], markers: MatchEventMarker[]): MatchAreaScore {
   const definitions: Record<MatchAreaScore['id'], { label: string; kinds: Set<MatchEventKind> }> = {
-    attack: { label: 'Ataque e último passe', kinds: new Set(['pass-error', 'forced-shot', 'good-transition', 'good-build-up', 'good-play', 'goal-for']) },
-    defense: { label: 'Defesa posicional', kinds: new Set(['marking-error', 'cursor-error', 'defender-out-of-line', 'pressing-error', 'goal-against']) },
-    transition: { label: 'Transições', kinds: new Set(['dangerous-turnover', 'late-recomposition', 'good-transition']) },
-    decision: { label: 'Tomada de decisão', kinds: new Set(['pass-error', 'forced-shot', 'cursor-error', 'game-management', 'good-build-up', 'good-play']) },
-    management: { label: 'Gestão da partida', kinds: new Set(['game-management', 'goal-for', 'goal-against']) }
+    construction: { label: 'Construção', kinds: new Set(['pass-error', 'delayed-pass', 'pressured-receiver', 'dangerous-dribble', 'no-triangulation', 'good-build-up']) },
+    attack: { label: 'Ataque e último passe', kinds: new Set(['forced-shot', 'unbalanced-shot', 'late-release', 'predictable-attack', 'goal-for', 'good-play']) },
+    defense: { label: 'Defesa posicional', kinds: new Set(['marking-error', 'cursor-error', 'defender-out-of-line', 'premature-tackle', 'double-defender', 'goal-against']) },
+    'offensive-transition': { label: 'Transição ofensiva', kinds: new Set(['lost-counterattack', 'good-transition', 'dangerous-turnover']) },
+    'defensive-transition': { label: 'Transição defensiva', kinds: new Set(['dangerous-turnover', 'late-recomposition', 'fullback-corridor-open', 'central-corridor-open']) },
+    decision: { label: 'Tomada de decisão', kinds: new Set(['pass-error', 'delayed-pass', 'late-release', 'forced-shot', 'cursor-error', 'game-management', 'good-play']) },
+    commands: { label: 'Uso dos comandos', kinds: new Set(['command-pass-early', 'command-sprint-excess', 'command-double-tap', 'wrong-double-mark', 'cursor-error']) },
+    discipline: { label: 'Disciplina tática', kinds: new Set(['defender-out-of-line', 'pressing-error', 'premature-tackle', 'double-defender', 'central-corridor-open', 'good-build-up']) },
+    management: { label: 'Gestão do resultado', kinds: new Set(['game-management', 'goal-for', 'goal-against']) }
   };
   const definition = definitions[id];
   const evidence = markers.filter((marker) => definition.kinds.has(marker.kind));
@@ -788,7 +908,7 @@ export function summarizeMatchTrainerSession(sessionInput: MatchTrainerSession):
   const counts = (kind: MatchEventKind) => markers.filter((marker) => marker.kind === kind).length;
   const topProblems = buildTopProblems(markers);
   const primaryProblem = topProblems[0]?.kind || null;
-  const areas = (['attack', 'defense', 'transition', 'decision', 'management'] as const).map((id) => areaScore(id, markers));
+  const areas = (['construction', 'attack', 'defense', 'offensive-transition', 'defensive-transition', 'decision', 'commands', 'discipline', 'management'] as const).map((id) => areaScore(id, markers));
   const scoredAreas = areas.filter((area) => area.score !== null);
   const overallScore = scoredAreas.length ? Number((scoredAreas.reduce((sum, area) => sum + (area.score || 0), 0) / scoredAreas.length).toFixed(1)) : null;
   const qualityContribution = (session.analysis?.qualityScore || 0) * .28;
@@ -898,7 +1018,7 @@ export function exportMatchTrainerReport(sessionInput: MatchTrainerSession) {
     marker.detail ? `  Nota: ${marker.detail}` : ''
   ].filter(Boolean).join('\n'));
   return [
-    'BUILDMASTER ELITE TÁTICO — ANÁLISE DE VÍDEO INTELIGENTE 2.0 v31.77',
+    'BUILDMASTER ELITE TÁTICO — ANÁLISE DE VÍDEO INTELIGENTE 2.0 v38.32',
     `Partida: ${session.title}`,
     `Arquivo: ${session.fileName}`,
     `Formação: ${session.formation}`,

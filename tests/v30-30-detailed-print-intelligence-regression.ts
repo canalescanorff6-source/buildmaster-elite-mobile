@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { parseInternalVersion } from './_internal-version';
 import { readDetailedPrint, looksLikeCompleteProfile } from '../src/modules/card-reader/detailedPrintReader';
 import { buildSinglePrintSession, getAdaptiveSinglePrintZones, refineSinglePrintGeometryFromText } from '../src/modules/card-reader/singlePrintPro';
 import { analyzeCard, parseCard } from '../src/lib/analyzer';
 import { applyDeepCardIntelligenceToResult } from '../src/lib/deepCardIntelligence';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
+
 
 const text = `Cristiano Ronaldo
 Artilheiro
@@ -110,7 +112,7 @@ assert.equal(detailed.identity.level?.numericValue, 31);
 assert.equal(detailed.attributes.length, 26);
 assert.equal(detailed.positionRatings.length, 13);
 assert.equal(detailed.physicalModel.length, 16);
-assert.equal(detailed.skills.length, 10);
+assert.equal(detailed.skills.length, 10, 'Atributos fora da seção HABILIDADES não podem virar habilidades por similaridade.');
 assert.ok(detailed.skills.some((item) => item.value === 'Cabeçada'));
 assert.ok(detailed.skills.some((item) => item.value === 'Garra'));
 assert.deepEqual(detailed.impetos.map((item) => item.value), ['Chute +3', 'Instinto artilheiro +1']);
@@ -144,7 +146,10 @@ const session = buildSinglePrintSession({
 });
 assert.equal(session.detailedReading.coverage.attributeCount, 26);
 assert.equal(session.fields.find((field) => field.key === 'attributes')?.status, 'confirmed');
-assert.match(session.canonicalText, /LEITURA DETALHADA V31\.75/);
+const detailedRelease = parseInternalVersion(session.detailedReading.version).release;
+const detailedVersionPattern = new RegExp(`LEITURA DETALHADA V${detailedRelease.replace('.', '\\.')}\\b`);
+assert.match(session.canonicalText, detailedVersionPattern);
+assert.match(session.canonicalText, new RegExp(`FIM LEITURA DETALHADA V${detailedRelease.replace('.', '\\.')}\\b`));
 
 const parsed = parseCard(session.canonicalText, 'cristiano-ronaldo.png');
 assert.equal(parsed.playerName, 'Cristiano Ronaldo');
@@ -172,11 +177,11 @@ assert.ok((analyzed.deepCardIntelligence?.physicalInsights.length ?? 0) >= 2);
 assert.ok(analyzed.trainingPointsUsed <= analyzed.trainingPointsTotal);
 
 const panel = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(panel, /Leitura detalhada v31\.75/);
+assert.match(panel, /Leitura detalhada v\d+\.\d+/);
 assert.match(panel, /Modelo físico e habilidades/);
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /refineSinglePrintGeometryFromText/);
-assert.match(app, /Perfil eFHUB encaixado/);
+assert.match(app, /Perfil eFHUB (?:encaixado|padronizado)/);
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 assert.match(css, /BuildMaster v31\.10 — leitura detalhada/);
 assert.match(css, /BuildMaster v31\.10 — inteligência profunda/);

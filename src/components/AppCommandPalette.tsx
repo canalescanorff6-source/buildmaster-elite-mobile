@@ -73,7 +73,7 @@ export function AppCommandPalette({ open, onOpenChange, commands }: Props) {
         <header className="command-palette-search">
           <Search size={19} />
           <div>
-            <label id="command-palette-title" htmlFor="command-palette-input">Buscar no Marques Fichas</label>
+            <label id="command-palette-title" htmlFor="command-palette-input">Buscar no BuildMaster</label>
             <input ref={inputRef} id="command-palette-input" value={query} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }} placeholder="Ex.: nova ficha, backup, meu time..." autoComplete="off" />
           </div>
           <button type="button" onClick={() => onOpenChange(false)} aria-label="Fechar busca"><X size={18} /></button>

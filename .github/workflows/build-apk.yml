@@ -1,4 +1,4 @@
-name: Gerar APK v31.78 Canal Direto
+name: Gerar APK Canal Direto
 
 on:
   workflow_dispatch:
@@ -122,12 +122,12 @@ jobs:
           rollback_reason = os.environ.get('INPUT_ROLLBACK_REASON', '').strip()
           source_ref = os.environ.get('INPUT_SOURCE_REF', '').strip()
           if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', version):
-              raise SystemExit('release_version precisa usar o formato 31.78.0')
+              raise SystemExit('release_version precisa usar o formato 34.00.0')
           def version_tuple(value):
               return tuple(int(part) for part in value.split('.'))
           if rollback_from:
               if not __import__('re').fullmatch(r'\d+\.\d+\.\d+', rollback_from):
-                  raise SystemExit('rollback_from_version precisa usar o formato 31.78.0')
+                  raise SystemExit('rollback_from_version precisa usar o formato 34.00.0')
               if not os.environ.get('INPUT_RELEASE_VERSION', '').strip() or not source_ref or not rollback_reason:
                   raise SystemExit('Rollback exige source_ref, release_version nova e rollback_reason.')
               if version_tuple(version) <= version_tuple(rollback_from):
@@ -137,11 +137,35 @@ jobs:
           if channel not in {'stable', 'beta'}:
               raise SystemExit('Canal inválido.')
           rollout = max(1, min(100, int(os.environ.get('INPUT_ROLLOUT', '100'))))
-          # A base de 60 milhões mantém a sequência de versionCode monotônica entre versões principais.
-          # sem ultrapassar o limite assinado do Android nas versões planejadas.
-          run = max(1, int(os.environ['RUN_NUMBER'])) % 10000
-          attempt = max(1, int(os.environ['RUN_ATTEMPT']))
-          version_code = major * 60_000_000 + minor * 500_000 + patch * 5_000 + (run % 500) * 10 + min(attempt, 9)
+
+          # Até a v35.20, o versionCode codificava major/minor e chegou a 2.110.001.431.
+          # Na v37.00 a fórmula antiga ultrapassaria Integer.MAX_VALUE (2.147.483.647),
+          # fazendo o Gradle falhar ao avaliar android/app/build.gradle na linha versionCode.
+          # A partir daqui, o canal direto usa uma época monotônica baseada no número da execução.
+          run = max(1, int(os.environ['RUN_NUMBER']))
+          attempt = min(max(1, int(os.environ['RUN_ATTEMPT'])), 9)
+          direct_epoch = 2_110_100_000
+          android_version_code_max = 2_147_483_647
+
+          published_codes = []
+          tags = subprocess.check_output(['git', 'tag', '--list', 'buildmaster-v*'], text=True)
+          for tag in tags.splitlines():
+              match = __import__('re').search(r'-(\d+)-\d{2}$', tag)
+              if match:
+                  published_codes.append(int(match.group(1)))
+          max_published_code = max(published_codes, default=0)
+
+          version_code = max(direct_epoch + run * 10 + attempt, max_published_code + 1)
+          if version_code > android_version_code_max:
+              raise SystemExit(
+                  f'versionCode {version_code} ultrapassa o limite Android '
+                  f'{android_version_code_max}. Ajuste a época monotônica antes de publicar.'
+              )
+          if version_code <= max_published_code:
+              raise SystemExit(
+                  f'versionCode {version_code} não é superior ao último publicado '
+                  f'({max_published_code}).'
+              )
           # O token do nome inclui a tentativa. Assim, "Re-run jobs" nunca sobrescreve
           # um APK que já pode estar em cache no GitHub ou no aparelho.
           asset_token = f'{version_code}{attempt:02d}'
@@ -219,8 +243,8 @@ jobs:
       - name: Gerar e verificar manifesto do código-fonte
         timeout-minutes: 4
         run: |
-          npm run integrity:generate -- MANIFESTO_PRODUCAO_V31.78.sha256
-          npm run integrity:verify -- MANIFESTO_PRODUCAO_V31.78.sha256
+          npm run integrity:generate
+          npm run integrity:verify
 
       - name: Preparar exportação estática para APK
         run: rm -rf out android .buildmaster-static-disabled dist-apk signing verify-release
@@ -288,12 +312,17 @@ jobs:
           text = target.read_text(encoding='utf-8')
           code = int(os.environ['ANDROID_VERSION_CODE'])
           version = os.environ['BUILDMASTER_VERSION']
+          if not 1 <= code <= 2_147_483_647:
+              raise SystemExit(f'versionCode {code} fora do intervalo aceito pelo Android.')
           text, count_code = re.subn(r'versionCode\s*[= ]\s*\d+', f'versionCode {code}', text, count=1)
           text, count_name = re.subn(r'versionName\s*[= ]\s*["\'][^"\']+["\']', f'versionName "{version}"', text, count=1)
           if not count_code or not count_name:
               raise SystemExit('versionCode/versionName não encontrados no Gradle.')
           target.write_text(text, encoding='utf-8')
-          print(f'Android versionCode={code}; versionName={version}')
+          confirmed = re.search(r'versionCode\s*[= ]\s*(\d+)', text)
+          if confirmed is None or int(confirmed.group(1)) != code:
+              raise SystemExit('O versionCode gravado no Gradle não corresponde ao calculado.')
+          print(f'Android versionCode={code}; versionName={version}; limite verificado=2147483647')
           PY
 
       - name: Configurar cache do Gradle
@@ -515,7 +544,7 @@ jobs:
             dist-apk/legacy/update-manifest.json
             dist-apk/release-history.json
             dist-apk/signing-report.txt
-            MANIFESTO_PRODUCAO_V31.78.sha256
+            MANIFESTO_PRODUCAO_V34.00.sha256
           if-no-files-found: error
           retention-days: 30
 

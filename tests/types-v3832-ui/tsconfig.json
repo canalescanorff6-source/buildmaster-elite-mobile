@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": "../..",
+    "paths": {
+      "@/modules/core/centralIntelligence": ["tests/types-v3832-ui/central-stub.ts"],
+      "@/modules/tactical-studio/exportUtils": ["tests/types-v3832-ui/export-stub.ts"],
+      "./exportUtils": ["tests/types-v3832-ui/export-stub.ts"],
+      "./metaFormationStudioV3832": ["tests/types-v3832-ui/engine-stub.ts"],
+      "@/*": ["src/*"]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "stubs.d.ts",
+    "central-stub.ts",
+    "export-stub.ts",
+    "engine-stub.ts",
+    "../../src/modules/tactical-studio/MetaFormationStudioV3832.tsx"
+  ]
+}

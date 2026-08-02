@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { buildPlayStorePublicationReport, createDefaultPlayStorePublicationProfile, normalizePlayStorePublicationProfile, PLAY_STORE_PACKAGE_NAME, PLAY_STORE_TARGET_API, PLAY_STORE_PUBLICATION_VERSION } from '../src/modules/publication/playStorePublication';
-assert.equal(PLAY_STORE_PUBLICATION_VERSION,'31.78.0');
+const currentVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
+assert.equal(PLAY_STORE_PUBLICATION_VERSION, currentVersion);
 assert.equal(PLAY_STORE_TARGET_API,36);
 assert.equal(PLAY_STORE_PACKAGE_NAME,'com.buildmaster.elitetatico');
 const base=createDefaultPlayStorePublicationProfile();
@@ -12,4 +14,4 @@ assert.ok(report.score>=90);
 const clamped=normalizePlayStorePublicationProfile({...ready,rolloutPercentage:999,targetTrack:'invalid'});
 assert.equal(clamped.rolloutPercentage,100);
 assert.equal(clamped.targetTrack,'internal');
-console.log('v31.78 motor de publicação Play aprovado.');
+console.log(`${currentVersion} motor de publicação Play aprovado.`);

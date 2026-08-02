@@ -10,6 +10,8 @@ declare module 'react' {
   export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
   export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
   export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
+  export type MutableRefObject<T> = { current: T };
+  export function useRef<T>(initialValue: T): MutableRefObject<T>;
 }
 
 declare module 'react/jsx-runtime' {
@@ -27,10 +29,12 @@ declare module 'lucide-react' {
   export const Gamepad2: Icon;
   export const Gauge: Icon;
   export const Keyboard: Icon;
+  export const LayoutDashboard: Icon;
   export const Settings2: Icon;
   export const Wand2: Icon;
   export const ArrowLeftRight: Icon;
   export const BadgeCheck: Icon;
+  export const BarChart3: Icon;
   export const BrainCircuit: Icon;
   export const CheckCircle2: Icon;
   export const ClipboardList: Icon;

@@ -14,7 +14,7 @@ function compactText(result: AnalysisResult) {
     `${result.buildName} • ${result.parsed.playstyle || 'estilo não confirmado'}`,
     `Pontos: ${result.trainingPointsTotal - result.trainingPointsRemaining}/${result.trainingPointsTotal}`,
     distribution,
-    `Marques Fichas`
+    `BuildMaster Elite Tático`
   ].filter(Boolean).join('\n');
 }
 

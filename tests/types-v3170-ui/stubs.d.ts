@@ -22,7 +22,7 @@ declare module 'react/jsx-runtime' {
 declare module 'lucide-react' {
   type Icon = (props: Record<string, unknown>) => JSX.Element;
   export const AlertTriangle: Icon; export const CheckCircle2: Icon; export const CircleStop: Icon;
-  export const Clock3: Icon; export const Download: Icon; export const Film: Icon; export const Gauge: Icon;
+  export const Clock3: Icon; export const Download: Icon; export const Film: Icon; export const Gauge: Icon; export const HardDrive: Icon; export const Pause: Icon; export const Pencil: Icon;
   export const Import: Icon; export const LoaderCircle: Icon; export const Play: Icon; export const RotateCcw: Icon; export const Share2: Icon;
   export const ShieldCheck: Icon; export const Smartphone: Icon; export const Trash2: Icon; export const Video: Icon; export const Wifi: Icon;
 }
@@ -74,3 +74,5 @@ declare module '@/modules/matches/matchTrainerEngine' {
   export function buildMatchTrainerEvolution(sessions:MatchTrainerSession[],activeId?:string|null):any;
   export function upsertMatchTrainerSession(session:MatchTrainerSession):MatchTrainerSession[];
 }
+
+declare module '@/lib/safeLocalStorage' { export function safeStorageGet(key:string):string|null; export function safeStorageSet(key:string,value:string):boolean; export function safeStorageGetJson<T>(key:string,fallback:T):T; export function safeStorageSetJson(key:string,value:unknown):boolean; }

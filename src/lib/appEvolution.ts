@@ -47,9 +47,40 @@ export type CardRegistryEntry = {
   confirmedAt: string;
   updatedAt: string;
   note: string;
+  canonicalId?: string;
+  canonicalVersionKey?: string;
+  structuralConfidence?: number;
+  fieldConfidence?: Array<{ key: string; confidence: number; status: string }>;
+  additionalSkills?: string[];
+  specialSkills?: string[];
 };
 
 export type MatchValidationRating = 1 | 2 | 3 | 4 | 5;
+export type MatchValidationMode = 'ranked' | 'events' | 'friendly' | 'offline';
+export type MatchConnectionState = 'stable' | 'variable' | 'high_delay';
+
+export type MatchPerformanceMetrics = {
+  goals: number;
+  assists: number;
+  passErrors: number;
+  tackles: number;
+  interceptions: number;
+  ballLosses: number;
+  dribblesCompleted: number;
+  shots: number;
+  saves?: number;
+  goalsConceded?: number;
+  clearances?: number;
+  blocks?: number;
+  aerialDuelsWon?: number;
+  duelsWon?: number;
+  recoveries?: number;
+  progressivePasses?: number;
+  keyPasses?: number;
+  shotsOnTarget?: number;
+  runsBehind?: number;
+  successfulPressures?: number;
+};
 
 export type MatchValidationRecord = {
   id: string;
@@ -71,6 +102,17 @@ export type MatchValidationRecord = {
   stamina: MatchValidationRating;
   tags: string[];
   note: string;
+  mode?: MatchValidationMode;
+  connection?: MatchConnectionState;
+  gameplayProfileId?: string;
+  secondHalfDrop?: boolean;
+  metrics?: MatchPerformanceMetrics;
+  testedBuildId?: string;
+  testedBuildTitle?: string;
+  testedBoosterName?: string;
+  experimentArm?: 'A' | 'B' | 'NONE';
+  controlStyle?: 'quick-pass' | 'carry-dribble' | 'mixed' | 'manual-defense';
+  inputDelayRating?: 1 | 2 | 3 | 4 | 5;
 };
 
 export type MatchValidationSummary = {
@@ -82,6 +124,19 @@ export type MatchValidationSummary = {
   repeatedProblems: Array<{ tag: string; count: number }>;
   recommendation: string;
   confidence: 'baixa' | 'média' | 'alta';
+  evidence?: {
+    goals: number;
+    assists: number;
+    passErrors: number;
+    tackles: number;
+    interceptions: number;
+    ballLosses: number;
+    dribblesCompleted: number;
+    shots: number;
+    rankedMatches: number;
+    delayedMatches: number;
+    secondHalfDrops: number;
+  };
 };
 
 const normalize = (value: unknown) => String(value ?? '')
@@ -116,7 +171,9 @@ export function cardFingerprint(result: AnalysisResult) {
     result.parsed.level ?? 0,
     result.trainingPointsTotal,
     roundedAttributes(result),
-    [...result.parsed.nativeSkills].map(normalize).sort().join(',')
+    [...result.parsed.nativeSkills].map(normalize).sort().join(','),
+    [...(result.parsed.additionalSkills ?? [])].map(normalize).sort().join(','),
+    [...result.parsed.specialSkills].map(normalize).sort().join(',')
   ].join('::');
   return `card-${stableHash(payload)}`;
 }
@@ -132,8 +189,9 @@ export function buildSignature(result: AnalysisResult) {
 export function createCardRegistryEntry(result: AnalysisResult, source: CardRegistrySource, note = '', metadata: { sourceLabel?: string; sourceUrl?: string; cardVersion?: string; observedAt?: string } = {}): CardRegistryEntry {
   const now = new Date().toISOString();
   const fingerprint = cardFingerprint(result);
+  const registryId = result.structuralPrecision?.canonical.canonicalId ?? fingerprint;
   return {
-    id: fingerprint,
+    id: registryId,
     fingerprint,
     playerName: result.parsed.playerName,
     mainPosition: result.parsed.mainPositionPt,
@@ -142,6 +200,8 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
     level: Number.isFinite(result.parsed.level) ? Number(result.parsed.level) : null,
     points: result.trainingPointsTotal,
     nativeSkills: [...result.parsed.nativeSkills],
+    additionalSkills: [...(result.parsed.additionalSkills ?? [])],
+    specialSkills: [...result.parsed.specialSkills],
     attributeSignature: roundedAttributes(result),
     source,
     sourceLabel: metadata.sourceLabel?.trim() || (source === 'official_source' ? 'Fonte oficial informada pelo usuário' : source === 'print' ? 'Print revisado' : source === 'manual' ? 'Preenchimento manual' : 'Registro importado'),
@@ -151,13 +211,19 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
     status: result.parsed.confidence >= 85 && result.validation.level !== 'blocked' ? 'confirmed' : 'review',
     confirmedAt: now,
     updatedAt: now,
-    note: note.trim()
+    note: note.trim(),
+    canonicalId: result.structuralPrecision?.canonical.canonicalId,
+    canonicalVersionKey: result.structuralPrecision?.canonical.versionKey,
+    structuralConfidence: result.structuralPrecision?.criticalConfidence,
+    fieldConfidence: result.structuralPrecision?.fields.map((item) => ({ key: item.key, confidence: item.confidence, status: item.status }))
   };
 }
 
 export function compareRegistryEntry(entry: CardRegistryEntry, result: AnalysisResult) {
   const differences: string[] = [];
-  if (entry.fingerprint !== cardFingerprint(result)) differences.push('Os atributos, nível, pontos ou habilidades mudaram em relação ao registro salvo.');
+  if (entry.canonicalId && result.structuralPrecision?.canonical.canonicalId) {
+    if (entry.canonicalId !== result.structuralPrecision.canonical.canonicalId) differences.push('A identidade canônica desta versão não coincide com o registro salvo.');
+  } else if (entry.fingerprint !== cardFingerprint(result)) differences.push('Os atributos, nível, pontos ou habilidades mudaram em relação ao registro salvo.');
   if (normalize(entry.playstyle) !== normalize(result.parsed.playstyle || 'Não informado')) differences.push('O estilo de jogo atual difere do registro salvo.');
   if (entry.mainPosition !== result.parsed.mainPositionPt) differences.push('A posição original atual difere do registro salvo.');
   return {
@@ -247,7 +313,20 @@ export function summarizeMatchValidation(records: MatchValidationRecord[]): Matc
       weakestAreas: [],
       repeatedProblems: [],
       recommendation: 'Registre pelo menos três partidas com a mesma ficha para gerar uma recomendação confiável.',
-      confidence: 'baixa'
+      confidence: 'baixa',
+      evidence: {
+        goals: 0,
+        assists: 0,
+        passErrors: 0,
+        tackles: 0,
+        interceptions: 0,
+        ballLosses: 0,
+        dribblesCompleted: 0,
+        shots: 0,
+        rankedMatches: 0,
+        delayedMatches: 0,
+        secondHalfDrops: 0
+      }
     };
   }
 
@@ -266,6 +345,33 @@ export function summarizeMatchValidation(records: MatchValidationRecord[]): Matc
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'pt-BR'));
   const weakest = areaAverages.slice(-2).reverse();
   const confidence: MatchValidationSummary['confidence'] = records.length >= 8 ? 'alta' : records.length >= 3 ? 'média' : 'baixa';
+  const evidence = records.reduce((acc, record) => {
+    const metrics = record.metrics;
+    acc.goals += Number(metrics?.goals || 0);
+    acc.assists += Number(metrics?.assists || 0);
+    acc.passErrors += Number(metrics?.passErrors || 0);
+    acc.tackles += Number(metrics?.tackles || 0);
+    acc.interceptions += Number(metrics?.interceptions || 0);
+    acc.ballLosses += Number(metrics?.ballLosses || 0);
+    acc.dribblesCompleted += Number(metrics?.dribblesCompleted || 0);
+    acc.shots += Number(metrics?.shots || 0);
+    if (record.mode === 'ranked') acc.rankedMatches += 1;
+    if (record.connection === 'high_delay') acc.delayedMatches += 1;
+    if (record.secondHalfDrop) acc.secondHalfDrops += 1;
+    return acc;
+  }, {
+    goals: 0,
+    assists: 0,
+    passErrors: 0,
+    tackles: 0,
+    interceptions: 0,
+    ballLosses: 0,
+    dribblesCompleted: 0,
+    shots: 0,
+    rankedMatches: 0,
+    delayedMatches: 0,
+    secondHalfDrops: 0
+  });
   const recommendation = repeatedProblems[0]
     ? `O problema “${repeatedProblems[0].tag}” apareceu em ${repeatedProblems[0].count} partidas. Compare a ficha segura antes de alterar a recomendada.`
     : weakest[0].average < 3.2
@@ -280,7 +386,8 @@ export function summarizeMatchValidation(records: MatchValidationRecord[]): Matc
     weakestAreas: weakest.map((item) => `${item.label} ${item.average.toFixed(1)}/5`),
     repeatedProblems,
     recommendation,
-    confidence
+    confidence,
+    evidence
   };
 }
 

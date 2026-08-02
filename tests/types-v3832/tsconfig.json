@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@/lib/accountStorage": ["tests/types-v3832/account-storage-stub.ts"],
+      "@/modules/core/centralIntelligence": ["tests/types-v3832/central-stub.ts"],
+      "@/*": ["src/*"]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "account-storage-stub.ts",
+    "central-stub.ts",
+    "../../src/modules/tactical-studio/metaFormationStudioV3832.ts"
+  ]
+}

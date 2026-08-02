@@ -111,7 +111,7 @@ Deno.serve(async (request) => {
   let action = '';
   let appVersion = '';
   let targetUserId: string | null = null;
-  const requestId = crypto.randomUUID();
+  let requestId: string = crypto.randomUUID();
   try {
     if (request.method !== 'POST') throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Método não permitido.');
     const authorization = request.headers.get('Authorization');
@@ -130,6 +130,8 @@ Deno.serve(async (request) => {
     }
 
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+    const clientRequestId = String(body.clientRequestId || '').trim();
+    if (clientRequestId && /^[a-zA-Z0-9._:-]{12,120}$/.test(clientRequestId)) requestId = clientRequestId;
     action = String(body.action || '');
     targetUserId = body.userId ? String(body.userId) : null;
     const appId = String(body.appId || '');
@@ -321,6 +323,21 @@ Deno.serve(async (request) => {
 
     if (action === 'create') {
       const username = normalizeUsername(body.username);
+      const { data: previousAudit } = await service.from('buildmaster_admin_audit')
+        .select('target_user_id, details')
+        .eq('admin_id', adminId)
+        .eq('action', 'create_user')
+        .eq('outcome', 'success')
+        .eq('request_id', requestId)
+        .maybeSingle();
+      if (previousAudit?.target_user_id) {
+        const reusedUserId = String(previousAudit.target_user_id);
+        const { data: reusedAuth } = await service.auth.admin.getUserById(reusedUserId);
+        const { data: reusedProfile } = await service.from('buildmaster_profiles').select('id, username, status, expires_at').eq('id', reusedUserId).maybeSingle();
+        if (reusedAuth?.user?.id && reusedProfile?.id) {
+          return respond({ success: true, userId: reusedUserId, username: String(reusedProfile.username || username), requestId, authConfirmed: true, profileConfirmed: true, expiryConfirmed: reusedProfile.expires_at === null || Number.isFinite(Date.parse(String(reusedProfile.expires_at))), duplicateBlocked: true });
+        }
+      }
       const password = String(body.password || '');
       const expiryMode = ['days', 'date', 'never'].includes(String(body.expiryMode)) ? String(body.expiryMode) : 'days';
       const durationDays = Math.max(1, Math.min(3650, Number(body.durationDays || 30)));
@@ -367,8 +384,29 @@ Deno.serve(async (request) => {
         const cleanupDetail = cleanup.error ? ' A limpeza automática também falhou; consulte a referência desta operação.' : '';
         throw new HttpError(500, 'PROFILE_CREATE_FAILED', `${profileError?.message || 'O perfil do usuário não foi confirmado no banco.'}${cleanupDetail}`);
       }
-      await service.from('buildmaster_admin_audit').insert({ admin_id: adminId, target_user_id: created.user.id, action: 'create_user', outcome: 'success', app_version: appVersion, request_id: requestId, details: { username, expiryMode, durationDays: expiryMode === 'days' ? durationDays : null, expiresAt, maxDevices, plan } });
-      return respond({ success: true, userId: created.user.id, username, requestId });
+      const { data: confirmedAuth, error: confirmedAuthError } = await service.auth.admin.getUserById(created.user.id);
+      if (confirmedAuthError || !confirmedAuth?.user?.id) {
+        await service.auth.admin.deleteUser(created.user.id, false).catch(() => undefined);
+        throw new HttpError(500, 'AUTH_CONFIRMATION_FAILED', 'O usuário não foi confirmado no Auth do Supabase.');
+      }
+      const { data: confirmedProfile, error: confirmedProfileError } = await service.from('buildmaster_profiles')
+        .select('id, username, status, expires_at, max_devices')
+        .eq('id', created.user.id)
+        .single();
+      if (confirmedProfileError || !confirmedProfile?.id || confirmedProfile.username !== username || confirmedProfile.status !== 'active') {
+        await service.auth.admin.deleteUser(created.user.id, false).catch(() => undefined);
+        throw new HttpError(500, 'PROFILE_CONFIRMATION_FAILED', 'Perfil não gravado ou não confirmado no banco.');
+      }
+      const expiryConfirmed = expiryMode === 'never'
+        ? confirmedProfile.expires_at === null
+        : Boolean(confirmedProfile.expires_at && Math.abs(Date.parse(String(confirmedProfile.expires_at)) - Date.parse(String(expiresAt))) < 90_000);
+      if (!expiryConfirmed) {
+        await service.auth.admin.deleteUser(created.user.id, false).catch(() => undefined);
+        throw new HttpError(500, 'EXPIRY_CONFIRMATION_FAILED', 'O prazo de ativação não foi confirmado.');
+      }
+      const { error: createAuditError } = await service.from('buildmaster_admin_audit').insert({ admin_id: adminId, target_user_id: created.user.id, action: 'create_user', outcome: 'success', app_version: appVersion, request_id: requestId, details: { username, expiryMode, durationDays: expiryMode === 'days' ? durationDays : null, expiresAt, maxDevices, plan, authConfirmed: true, profileConfirmed: true, expiryConfirmed: true } });
+      if (createAuditError) throw new HttpError(500, 'AUDIT_FAILED', createAuditError.message);
+      return respond({ success: true, userId: created.user.id, username, requestId, authConfirmed: true, profileConfirmed: true, expiryConfirmed: true, duplicateBlocked: false });
     }
 
     const userId = String(body.userId || '');

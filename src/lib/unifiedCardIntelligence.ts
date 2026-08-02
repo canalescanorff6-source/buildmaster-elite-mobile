@@ -19,6 +19,7 @@ import {
   trainingPlanTotalCost
 } from './trainingPlanCore';
 import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
+import { cardAnalysisInputFingerprint, feedbackFingerprint } from './cardAnalysisFingerprint';
 
 const ENGINE_VERSION = '31.10-unified-intelligence-1';
 const SIMULATION_COUNT = 520;
@@ -72,7 +73,8 @@ function hash(value: string) { let output = 2166136261; for (let index = 0; inde
 function createRng(seed: number) { let state = seed || 1; return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; }; }
 
 function cacheKey(result: AnalysisResult) {
-  return [result.parsed.internalId, result.bestPosition.code, result.trainingPointsTotal, result.parsed.playstyle ?? '', result.parsed.confidence, signature(result.training), result.competitiveFusion?.personalMatchSamples ?? 0].join('|');
+  const feedbacks = loadFeedbacks(result);
+  return cardAnalysisInputFingerprint(result, feedbackFingerprint(feedbacks as unknown as Array<Record<string, unknown>>));
 }
 
 function loadFeedbacks(result: AnalysisResult): MatchFeedback[] {

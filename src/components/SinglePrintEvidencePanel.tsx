@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Eye, History, ScanLine, ShieldCheck } from 'lucide-react';
 import type { SingleFieldEvidence, SinglePrintSession } from '@/modules/card-reader/singlePrintPro';
 import { OcrConfidenceHistoryPanel } from '@/components/OcrConfidenceHistoryPanel';
+import { isSpecialSkillIdentity } from '@/lib/officialSkillIdentity';
 
 function layoutModeLabel(mode: NonNullable<SinglePrintSession['layoutAudit']>['mode']) {
   const labels: Record<NonNullable<SinglePrintSession['layoutAudit']>['mode'], string> = {
@@ -36,7 +37,7 @@ export function SinglePrintEvidencePanel({
         <div>
           <p className="kicker"><ScanLine size={15}/> Print Único Pro</p>
           <h3>Auditoria visual campo por campo</h3>
-          <p>O resultado cruza várias passagens locais por campo. Nome, Nível e GER só são liberados quando existe consenso.</p>
+          <p>O perfil inteiro é primeiro padronizado em 1400×1600. Depois o app confirma identidade, posições, atributos, modelo físico e habilidades sem exibir caixas desalinhadas.</p>
         </div>
         <div className="single-print-score">
           <strong>{session.mergedConfidence}%</strong>
@@ -49,7 +50,7 @@ export function SinglePrintEvidencePanel({
       {session.layoutAudit && (
         <section className={`precision-audit-card ${session.layoutAudit.complete ? 'ready' : 'review'}`} aria-label="Auditoria do encaixe dinâmico eFHUB">
           <div>
-            <p className="kicker"><ScanLine size={14}/> Encaixe de resolução v31.75</p>
+            <p className="kicker"><ScanLine size={14}/> Perfil padronizado v32.00</p>
             <strong>{session.layoutAudit.confidence}%</strong>
             <span>{layoutModeLabel(session.layoutAudit.mode)}</span>
           </div>
@@ -59,14 +60,14 @@ export function SinglePrintEvidencePanel({
             <span><b>{session.layoutAudit.missingZones.length}</b> áreas ausentes</span>
           </div>
           <p>{session.layoutAudit.complete
-            ? 'As oito áreas foram projetadas a partir do mapa oficial 1400×1600, preservando proporção, margens e posição exata.'
+            ? 'O painel foi convertido para o modelo interno 1400×1600. A leitura usa essa cópia padronizada e preserva o arquivo original.'
             : `${session.layoutAudit.reason}${session.layoutAudit.missingZones.length ? ` Áreas não lidas: ${session.layoutAudit.missingZones.join(', ')}.` : ''}`}</p>
         </section>
       )}
 
       <section className={`precision-audit-card ${session.precisionAudit.nearPerfectReady ? 'ready' : 'review'}`} aria-label="Auditoria da leitura ultraprécisa">
         <div>
-          <p className="kicker"><ShieldCheck size={14}/> Leitura Dinâmica v31.75</p>
+          <p className="kicker"><ShieldCheck size={14}/> Perfil Padronizado v32.00</p>
           <strong>{session.precisionAudit.estimatedAccuracy}%</strong>
           <span>precisão estimada</span>
         </div>
@@ -96,26 +97,38 @@ export function SinglePrintEvidencePanel({
           </div>
           <p>{session.detailedReading.profileAudit.ready
             ? 'Nome, grade de posições, 26 atributos, 16 medidas físicas e habilidades passaram pelos portões rígidos.'
-            : 'A ficha permanece bloqueada enquanto qualquer área padronizada estiver incompleta ou uma habilidade nova não for confirmada.'}</p>
+            : 'A ficha permanece bloqueada enquanto qualquer área padronizada estiver incompleta; textos não oficiais do OCR são descartados.'}</p>
         </section>
       )}
 
-      {originalPreview && session.zoneBoxes?.length ? (
-        <figure className="single-print-map">
+      {(session.canonicalPreview || originalPreview) ? (
+        <figure className="single-print-map canonical-profile-preview">
           <div className="single-print-map-canvas">
-            <img src={originalPreview} alt="Print original com mapa das áreas analisadas" loading="lazy" decoding="async"/>
-            {session.zoneBoxes.map((box) => (
-              <span
-                key={`${box.key}-${box.x}-${box.y}`}
-                className={`single-print-zone-box status-${box.status}`}
-                style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }}
-                title={`${box.label}: ${box.status === 'confirmed' ? 'confirmado' : box.status === 'review' ? 'revisar' : 'não reconhecido'}`}
-              ><b>{box.label}</b></span>
-            ))}
+            <img src={session.canonicalPreview || originalPreview || ''} alt={session.canonicalized ? 'Perfil EFHub completo padronizado em 1400 por 1600' : 'Print original do jogador'} loading="lazy" decoding="async"/>
           </div>
-          <figcaption><Eye size={15}/> Verde: confirmado • amarelo: revisar • vermelho: não reconhecido. Toque nos cartões abaixo para ver o recorte.</figcaption>
+          <figcaption><Eye size={15}/> {session.canonicalized ? 'Perfil completo padronizado em 1400×1600. Nenhum quadrado precisa ser ajustado pelo usuário.' : 'Imagem original preservada. O app usa leitura completa e mantém campos incertos para revisão.'}</figcaption>
         </figure>
       ) : null}
+
+      {session.detailedReading.skills.length > 0 && (
+        <section className="recognized-skill-strip" aria-label="Habilidades reconhecidas no jogador">
+          <header>
+            <div>
+              <p className="kicker"><ShieldCheck size={14}/> Habilidades do jogador</p>
+              <strong>{session.detailedReading.skills.length} reconhecida(s)</strong>
+            </div>
+            <span>catálogo oficial validado</span>
+          </header>
+          <div>
+            {session.detailedReading.skills.map((item) => (
+              <span key={`recognized-${item.value}`} className={isSpecialSkillIdentity(item.value) ? 'skill-native-special' : 'skill-native-standard'}>
+                <b>{item.value}</b><small>{isSpecialSkillIdentity(item.value) ? 'especial nativa' : 'já vem no jogador'}</small>
+              </span>
+            ))}
+          </div>
+          <p>Estas habilidades são tratadas como já pertencentes à carta e ficam bloqueadas para não serem sugeridas novamente entre as cinco adicionais.</p>
+        </section>
+      )}
 
       {session.warnings.length > 0 && (
         <div className="single-print-warning-list">
@@ -125,14 +138,13 @@ export function SinglePrintEvidencePanel({
 
       <section className="detailed-print-reading" aria-label="Leitura detalhada do print">
         <header>
-          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v31.75</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
+          <div><p className="kicker"><ScanLine size={14}/> Leitura detalhada v32.00</p><h4>{session.detailedReading.format === 'complete-profile' ? 'Perfil completo reconhecido' : 'Dados estruturados do print'}</h4></div>
           <span>{session.detailedReading.coverage.score}/100</span>
         </header>
         <div className="detailed-reading-metrics">
           <article><strong>{session.detailedReading.profileAudit.detected ? `${session.detailedReading.coverage.attributeCount}/26` : session.detailedReading.coverage.attributeCount}</strong><span>Atributos</span></article>
           <article><strong>{session.detailedReading.profileAudit.detected ? `${session.detailedReading.coverage.positionCount}/13` : session.detailedReading.coverage.positionCount}</strong><span>Posições</span></article>
           <article><strong>{session.detailedReading.coverage.skillCount}</strong><span>Habilidades</span></article>
-          <article><strong>{session.detailedReading.skillCandidates.length}</strong><span>Novas para confirmar</span></article>
           <article><strong>{session.detailedReading.impetos.length}</strong><span>Ímpetos</span></article>
           <article><strong>{session.detailedReading.profileAudit.detected ? `${session.detailedReading.coverage.physicalCount}/16` : session.detailedReading.coverage.physicalCount}</strong><span>Medidas físicas</span></article>
         </div>
@@ -165,12 +177,10 @@ export function SinglePrintEvidencePanel({
             <div className="detailed-chip-list compact">
               {session.detailedReading.physicalModel.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
               {session.detailedReading.skills.map((item) => <span key={item.value}><b>{item.label}</b>{item.value}</span>)}
-              {session.detailedReading.skillCandidates.map((item) => <span key={`candidate-${item.value}`} className="needs-review"><b>Nova habilidade</b>{item.value}<em>confirmar</em></span>)}
             </div>
           </details>
         </div>
         {session.detailedReading.coverage.missing.length > 0 && <p className="detailed-reading-missing"><AlertTriangle size={15}/> Para precisão máxima, confirme: {session.detailedReading.coverage.missing.join(', ')}.</p>}
-        {session.detailedReading.skillCandidates.length > 0 && <p className="detailed-reading-missing"><ShieldCheck size={15}/> Ao confirmar a etapa Habilidades e finalizar a ficha, os nomes novos entram no catálogo local desta conta e serão reconhecidos nos próximos jogadores.</p>}
       </section>
 
       {session.comparison?.found && (

@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const manifest = process.argv[2] || 'MANIFESTO_PRODUCAO_V31.78.sha256';
+const packageVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+const releaseLine = packageVersion.split('.').slice(0, 2).join('.');
+const manifest = process.argv[2] || `MANIFESTO_PRODUCAO_V${releaseLine}.sha256`;
 if (!fs.existsSync(manifest)) throw new Error(`Manifesto ausente: ${manifest}`);
 const failures = [];
 let checked = 0;

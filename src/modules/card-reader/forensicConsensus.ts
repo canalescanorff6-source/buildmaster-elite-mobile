@@ -1,7 +1,8 @@
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
+import { extractCanonicalSkillsFromText, skillIdentityKey } from '@/lib/officialSkillIdentity';
 
-export const FORENSIC_CONSENSUS_VERSION = '31.60-field-consensus-2';
+export const FORENSIC_CONSENSUS_VERSION = '32.00-official-skill-consensus-1';
 
 export type ForensicConsensusAudit = {
   version: string;
@@ -40,11 +41,7 @@ const ATTRIBUTE_ALIASES: Array<{ label: string; aliases: string[] }> = [
   { label: 'Resistência', aliases: ['resistencia', 'resistência'] }
 ];
 
-const SKILL_BLOCKLIST = [
-  'habilidades', 'skills', 'atributos', 'posições', 'posicoes', 'posição', 'posicao',
-  'detalhes do jogador', 'modelo de jogador', 'progressão', 'progressao', 'nível', 'nivel',
-  'técnico', 'tecnico', 'manager', 'condição física', 'condicao fisica'
-];
+
 
 function normalize(value: string) {
   return value
@@ -157,54 +154,59 @@ function mergeAttributes(reading: PremiumZoneReading) {
   };
 }
 
-function validSkillLine(line: string) {
-  const clean = cleanLine(line);
-  const normalized = normalize(clean);
-  const words = clean.split(/\s+/).filter(Boolean);
-  const letters = (clean.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-  if (clean.length < 3 || clean.length > 52 || words.length > 8 || /\d{2,}/.test(clean)) return false;
-  if (letters / Math.max(1, clean.length) < 0.66) return false;
-  if (SKILL_BLOCKLIST.some((blocked) => normalized === normalize(blocked) || normalized.startsWith(`${normalize(blocked)} `))) return false;
-  if (/^(?:CF|SS|LWF|RWF|AMF|CMF|DMF|CB|LB|RB|GK|CA|SA|PE|PD|MAT|MLG|VOL|ZAG|LE|LD|GOL)$/i.test(clean)) return false;
-  return true;
-}
-
 function mergeSkills(reading: PremiumZoneReading) {
   const candidates = candidateTexts(reading);
   const votes = new Map<string, { canonical: string; count: number; confidence: number; selected: boolean }>();
+  let extractedMentions = 0;
+  let rawLineCount = 0;
+
   for (const candidate of candidates) {
-    const lines = candidate.text.split(/\r?\n|[•|;,]/).map(cleanLine).filter(validSkillLine);
-    const unique = new Map<string, string>();
-    for (const line of lines) unique.set(normalize(line), line);
-    for (const [key, line] of unique) {
-      const near = Array.from(votes.entries()).find(([existing]) => textSimilarity(existing, key) >= 0.91);
-      const targetKey = near?.[0] ?? key;
-      const current = votes.get(targetKey) ?? { canonical: line, count: 0, confidence: 0, selected: false };
-      const betterCanonical = line.length > current.canonical.length && line.length <= 46 ? line : current.canonical;
-      votes.set(targetKey, {
-        canonical: betterCanonical,
+    rawLineCount += candidate.text.split(/\r?\n|[•|;,]/).map(cleanLine).filter(Boolean).length;
+    const canonicalSkills = extractCanonicalSkillsFromText(candidate.text);
+    const unique = new Map(canonicalSkills.map((skill) => [skillIdentityKey(skill), skill]));
+    extractedMentions += unique.size;
+    for (const [key, canonical] of unique) {
+      const current = votes.get(key) ?? { canonical, count: 0, confidence: 0, selected: false };
+      votes.set(key, {
+        canonical,
         count: current.count + 1,
         confidence: current.confidence + candidate.confidence,
         selected: current.selected || candidate.source === 'selected'
       });
     }
   }
+
   const rows = Array.from(votes.values()).map((item) => ({
     ...item,
     averageConfidence: item.confidence / item.count
-  })).filter((item) => item.count >= 2 || (item.selected && item.averageConfidence >= 86))
+  })).filter((item) => item.count >= 2 || (item.selected && item.averageConfidence >= 72))
     .sort((left, right) => right.count - left.count || right.averageConfidence - left.averageConfidence || left.canonical.localeCompare(right.canonical, 'pt-BR'));
-  if (!rows.length) return { reading, rowCount: 0, rejected: 0, merged: false };
-  const confidence = Math.min(97, Math.round(reading.confidence * 0.68 + Math.min(100, rows.length * 8) * 0.14 + Math.min(100, rows.reduce((sum, row) => sum + row.count, 0) / rows.length * 34) * 0.18));
-  const rejected = Math.max(0, votes.size - rows.length);
+
+  if (!rows.length) {
+    return {
+      reading: {
+        ...reading,
+        text: '',
+        status: 'unread' as const,
+        precisionVersion: FORENSIC_CONSENSUS_VERSION,
+        validationNotes: [...(reading.validationNotes ?? []), 'Nenhuma habilidade oficial foi confirmada; fragmentos brutos do OCR foram descartados.']
+      },
+      rowCount: 0,
+      rejected: Math.max(rawLineCount, extractedMentions),
+      merged: true
+    };
+  }
+
+  const confidence = Math.min(98, Math.round(reading.confidence * 0.62 + Math.min(100, rows.length * 10) * 0.18 + Math.min(100, rows.reduce((sum, row) => sum + row.count, 0) / rows.length * 36) * 0.20));
+  const rejected = Math.max(0, rawLineCount - rows.length);
   return {
     reading: {
       ...reading,
-      text: rows.map((row) => row.canonical.charAt(0).toUpperCase() + row.canonical.slice(1)).join('\n'),
+      text: rows.map((row) => row.canonical).join('\n'),
       confidence,
-      status: rows.every((row) => row.count >= 2) && rows.length >= 3 ? 'confirmed' as const : reading.status,
+      status: rows.length >= 1 ? 'confirmed' as const : 'unread' as const,
       precisionVersion: FORENSIC_CONSENSUS_VERSION,
-      validationNotes: [...(reading.validationNotes ?? []), `${rows.length} habilidade(s) preservada(s) após consenso por linha; ${rejected} ruído(s) descartado(s).`]
+      validationNotes: [...(reading.validationNotes ?? []), `${rows.length} habilidade(s) oficial(is) confirmada(s); textos unidos foram separados e ${rejected} ruído(s) descartado(s).`]
     },
     rowCount: rows.length,
     rejected,

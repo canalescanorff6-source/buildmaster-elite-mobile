@@ -65,7 +65,7 @@ export function PremiumExperience2Center({ onOpenTarget }: { onOpenTarget: (targ
 
   return <section className="bm2970-premium-center luxury-panel" aria-labelledby="bm2970-premium-title">
     <header className="bm2970-heading">
-      <div><p className="kicker"><Sparkles size={15}/> Experiência Premium 2.0</p><h3 id="bm2970-premium-title">Seu Marques Fichas do seu jeito</h3><span>Personalize atalhos, tela inicial, retomada, rascunhos e ajuda sem alterar fichas ou dados técnicos.</span></div>
+      <div><p className="kicker"><Sparkles size={15}/> Experiência Premium 2.0</p><h3 id="bm2970-premium-title">Seu BuildMaster do seu jeito</h3><span>Personalize atalhos, tela inicial, retomada, rascunhos e ajuda sem alterar fichas ou dados técnicos.</span></div>
       <div className="bm2970-score"><strong>{score}</strong><span>/100</span><small>experiência configurada</small></div>
     </header>
 

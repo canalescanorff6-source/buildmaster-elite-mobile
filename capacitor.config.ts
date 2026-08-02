@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.buildmaster.elitetatico',
-  appName: 'Marques Fichas',
+  appName: 'BuildMaster Elite Tático',
   webDir: 'out',
   backgroundColor: '#06090d',
   android: {

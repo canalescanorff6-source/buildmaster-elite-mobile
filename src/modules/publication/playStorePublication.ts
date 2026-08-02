@@ -1,6 +1,6 @@
 import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 
-export const PLAY_STORE_PUBLICATION_VERSION = '31.78.0';
+export const PLAY_STORE_PUBLICATION_VERSION = '38.32.0';
 export const PLAY_STORE_TARGET_API = 36;
 export const PLAY_STORE_PACKAGE_NAME = 'com.buildmaster.elitetatico';
 
@@ -172,7 +172,7 @@ export function buildPlayStorePublicationReport(profileInput: unknown, now = new
     check('testersConfigured', 'testes', 'Grupo de testadores', 'Configure o grupo correspondente ao canal escolhido.', profile.testersConfigured, 'critical', true),
     check('crashMonitoringReady', 'testes', 'Falhas e ANRs acompanhados', 'Defina a rotina de revisão do Android vitals antes de ampliar o rollout.', profile.crashMonitoringReady, 'warning', true),
     check('supportContactPublished', 'loja', 'Contato de suporte', 'Informe e-mail ou site real controlado pelo responsável pelo aplicativo.', profile.supportContactPublished, 'critical', true),
-    check('releaseNotesReady', 'distribuição', 'Notas da versão', 'Notas pt-BR da v31.77 incluídas no pacote da loja.', profile.releaseNotesReady),
+    check('releaseNotesReady', 'distribuição', 'Notas da versão', 'Notas pt-BR da v38.32 incluídas no pacote da loja.', profile.releaseNotesReady),
     check('play-update-channel', 'distribuição', 'Atualização pela Play Store', 'O build Play remove REQUEST_INSTALL_PACKAGES e usa Play In-App Updates.', true)
   ];
 

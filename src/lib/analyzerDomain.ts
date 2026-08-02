@@ -42,7 +42,20 @@ export function normalizeObjective(value: unknown): Objective {
 
 export type TacticalFormation = '4-2-2-2' | '4-3-3' | '4-1-2-3' | '4-2-1-3' | '4-2-3-1' | '4-3-1-2' | '4-1-3-2' | '4-4-2' | '4-1-4-1' | '3-2-4-1' | '3-4-3' | '3-5-2' | '5-3-2' | '5-2-3' | 'AUTO';
 export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'AUTO';
-export type TacticalProfile = { formation: TacticalFormation; style: TacticalStyle; managerId?: string | null; managerName?: string | null; managerProficiency?: number | null; managerBooster?: 'duplo' | 'especial' | 'padrao' | null };
+export type GameplayMode = 'RANKED' | 'UNIVERSAL' | 'OFFLINE';
+export type ConnectionProfile = 'STABLE' | 'VARIABLE' | 'HIGH_DELAY';
+export type ControlProfile = 'BALANCED' | 'PASSING' | 'DRIBBLE' | 'DIRECT';
+export type TacticalProfile = {
+  formation: TacticalFormation;
+  style: TacticalStyle;
+  managerId?: string | null;
+  managerName?: string | null;
+  managerProficiency?: number | null;
+  managerBooster?: 'duplo' | 'especial' | 'padrao' | null;
+  gameplayMode?: GameplayMode;
+  connectionProfile?: ConnectionProfile;
+  controlProfile?: ControlProfile;
+};
 
 export type PositionCode = 'CF' | 'SS' | 'LWF' | 'RWF' | 'LMF' | 'RMF' | 'AMF' | 'CMF' | 'DMF' | 'CB' | 'LB' | 'RB' | 'GK';
 
@@ -213,6 +226,7 @@ export type ParsedCard = {
   condition: PlayerCondition;
   impetos: Impetus[];
   nativeSkills: string[];
+  additionalSkills?: string[];
   specialSkills: string[];
   attributes: Attributes;
   physicalProfile: PhysicalProfile;
@@ -223,6 +237,10 @@ export type ParsedCard = {
     attributeCount: number;
     positionRatingsCount: number;
     localRuleMatched?: string | null;
+    skillSource?: 'explicit' | 'visible_block' | 'scan' | 'none';
+    skillConfidence?: number;
+    additionalSkillCount?: number;
+    specialSkillCount?: number;
   };
   internalId: string;
   confidence: number;
@@ -581,6 +599,128 @@ export type UnifiedCardIntelligenceAnalysis = {
 };
 
 
+
+export type CalibrationV32Profile = {
+  mode: GameplayMode;
+  label: string;
+  score: number;
+  training: TrainingPlan;
+  exactBudget: boolean;
+  strengths: string[];
+  tradeOffs: string[];
+};
+
+export type CalibrationV32Analysis = {
+  engineVersion: string;
+  patchReference: 'eFootball v5.4.0';
+  selectedMode: GameplayMode;
+  connectionProfile: ConnectionProfile;
+  controlProfile: ControlProfile;
+  readiness: 'pronta' | 'quase pronta' | 'revisar';
+  readinessScore: number;
+  confidence: number;
+  calibrationScore: number;
+  finalTraining: TrainingPlan;
+  candidatesEvaluated: number;
+  exactBudgetCandidates: number;
+  recalibrated: boolean;
+  dimensions: {
+    roleFit: number;
+    formationFit: number;
+    playstyleFit: number;
+    controlFit: number;
+    connectionRobustness: number;
+    pointEfficiency: number;
+    skillSynergy: number;
+    impetoSynergy: number;
+    antiOverallWaste: number;
+    crossModeStability: number;
+    gameplayResponse: number;
+    functionalFloor: number;
+    identityPreservation: number;
+  };
+  profiles: CalibrationV32Profile[];
+  blockers: string[];
+  warnings: string[];
+  safeguards: string[];
+  reasons: string[];
+  summary: string;
+};
+
+export type PositionGameplayBuild = {
+  position: PositionCode;
+  label: string;
+  role: 'posição natural' | 'posição escolhida';
+  training: TrainingPlan;
+  score: number;
+  gameplayResponse: number;
+  functionalFloor: number;
+  antiOverallWaste: number;
+  crossModeStability: number;
+  exactBudget: boolean;
+  strengths: string[];
+  note: string;
+};
+
+export type PositionBuildComparison = {
+  engineVersion: string;
+  natural: PositionGameplayBuild;
+  selected: PositionGameplayBuild;
+  samePosition: boolean;
+  recommendation: string;
+  safeguards: string[];
+};
+
+export type GameplayDnaProfileId =
+  | 'DRIBBLER'
+  | 'CREATOR'
+  | 'FINISHER'
+  | 'SECOND_STRIKER'
+  | 'DIRECT_RUNNER'
+  | 'AERIAL_TARGET'
+  | 'WIDE_CREATOR'
+  | 'BOX_TO_BOX'
+  | 'DEEP_PLAYMAKER'
+  | 'BALL_WINNER'
+  | 'DEFENSIVE_ANCHOR'
+  | 'PROGRESSIVE_DEFENDER'
+  | 'DEFENSIVE_FULLBACK'
+  | 'OFFENSIVE_FULLBACK'
+  | 'GK_SHOT_STOPPER'
+  | 'GK_DISTRIBUTOR'
+  | 'GK_BALANCED';
+
+export type GameplayDnaProfile = {
+  id: GameplayDnaProfileId;
+  rank: number;
+  label: string;
+  functionalStyle: string;
+  description: string;
+  position: PositionCode;
+  compatibility: number;
+  score: number;
+  recommended: boolean;
+  exactBudget: boolean;
+  training: TrainingPlan;
+  additionalSkills: string[];
+  focus: string[];
+  strengths: string[];
+  limitations: string[];
+  evidence: string[];
+};
+
+export type GameplayDnaAnalysis = {
+  engineVersion: string;
+  playerName: string;
+  officialPlaystyle: string | null;
+  selectedPosition: PositionCode;
+  detectedDna: string[];
+  primaryProfileId: GameplayDnaProfileId;
+  profiles: GameplayDnaProfile[];
+  summary: string;
+  safeguards: string[];
+};
+
 export type SupremeGameplayAnalysis = {
   engineVersion: string;
   mode: 'Otimização competitiva personalizada';
@@ -613,7 +753,170 @@ export type SupremeGameplayAnalysis = {
   summary: string;
 };
 
+
+export type StructuralFieldKey =
+  | 'playerName'
+  | 'cardType'
+  | 'mainPosition'
+  | 'playstyle'
+  | 'level'
+  | 'trainingPoints'
+  | 'attributes'
+  | 'nativeSkills'
+  | 'additionalSkills'
+  | 'specialSkills'
+  | 'impetos';
+
+export type StructuralFieldConfidence = {
+  key: StructuralFieldKey;
+  label: string;
+  value: string;
+  confidence: number;
+  status: 'confirmed' | 'review' | 'blocked';
+  source: 'manual' | 'ocr' | 'canonical' | 'inferred' | 'fallback';
+  critical: boolean;
+  reason: string;
+};
+
+export type StructuralSkillInventory = {
+  native: string[];
+  additional: string[];
+  special: string[];
+  duplicatesRemoved: string[];
+  slotsUsed: number;
+  slotsRemaining: number;
+  source: 'explicit' | 'visible_block' | 'scan' | 'none';
+  confidence: number;
+};
+
+export type StructuralPointAudit = {
+  budget: number;
+  actualCost: number;
+  remaining: number;
+  exact: boolean;
+  source: ParsedCard['trainingPointSource'];
+  sourceConfidence: number;
+  costByGroup: TrainingPlan;
+  invalidGroups: string[];
+  signature: string;
+};
+
+export type CanonicalCardIdentity = {
+  canonicalId: string;
+  fingerprint: string;
+  versionKey: string;
+  matchStatus: 'confirmed' | 'probable' | 'uncertain';
+  confidence: number;
+  evidence: string[];
+};
+
+export type StructuralPrecisionAnalysis = {
+  engineVersion: '37.40.0';
+  canonical: CanonicalCardIdentity;
+  fields: StructuralFieldConfidence[];
+  overallConfidence: number;
+  criticalConfidence: number;
+  decision: 'approved' | 'review' | 'blocked';
+  blocked: boolean;
+  blockReasons: string[];
+  skillInventory: StructuralSkillInventory;
+  pointAudit: StructuralPointAudit;
+  regressionKey: string;
+  safeguards: string[];
+};
+
+
+
+export type AdvancedRoleOptimization = {
+  roleId: string;
+  roleLabel: string;
+  position: PositionCode;
+  functionScore: number;
+  weights: Partial<Record<TrainingKey, number>>;
+  primaryGroups: TrainingKey[];
+  protectedGroups: TrainingKey[];
+  correctionGroups: TrainingKey[];
+  reasons: string[];
+};
+
+export type AdvancedBuildAlternative = {
+  id: string;
+  title: string;
+  strategy: 'recomendada' | 'função' | 'identidade' | 'equilíbrio' | 'robustez';
+  training: TrainingPlan;
+  pointsUsed: number;
+  exactBudget: boolean;
+  roleFit: number;
+  efficiency: number;
+  balance: number;
+  overallScore: number;
+  strengths: string[];
+  tradeOffs: string[];
+};
+
+export type SkillGraphNode = {
+  id: string;
+  name: string;
+  category: UnifiedSkillDecision['category'];
+  score: number;
+  appearsInSets: number;
+  essentialForRole: boolean;
+};
+
+export type SkillGraphEdge = {
+  from: string;
+  to: string;
+  relation: 'complemento' | 'redundância' | 'conflito';
+  weight: number;
+  reason: string;
+};
+
+export type SkillSetComparison = {
+  id: string;
+  title: string;
+  linkedBuildId: string;
+  skills: string[];
+  decisions: UnifiedSkillDecision[];
+  coverageScore: number;
+  synergyScore: number;
+  roleFit: number;
+  redundancyPenalty: number;
+  overallScore: number;
+  reasons: string[];
+  warnings: string[];
+};
+
+export type JointBuildBoosterOption = {
+  rank: number;
+  buildId: string;
+  buildTitle: string;
+  boosterName: string;
+  boosterTier: ImpetoRecommendation['tier'];
+  training: TrainingPlan;
+  skills: string[];
+  buildScore: number;
+  skillSetScore: number;
+  boosterScore: number;
+  boosterSynergy: number;
+  saturationPenalty: number;
+  overallScore: number;
+  reason: string;
+};
+
+export type AdvancedMotorV3750Analysis = {
+  engineVersion: '37.50.0';
+  role: AdvancedRoleOptimization;
+  alternatives: AdvancedBuildAlternative[];
+  skillGraph: { nodes: SkillGraphNode[]; edges: SkillGraphEdge[] };
+  skillSets: SkillSetComparison[];
+  jointOptions: JointBuildBoosterOption[];
+  winner: JointBuildBoosterOption;
+  confidence: number;
+  safeguards: string[];
+};
+
 export type AnalysisResult = {
+  objective?: Objective;
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
   positionScores: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>;
@@ -664,6 +967,11 @@ export type AnalysisResult = {
   deepCardIntelligence?: DeepCardIntelligenceAnalysis;
   unifiedIntelligence?: UnifiedCardIntelligenceAnalysis;
   supremeGameplay?: SupremeGameplayAnalysis;
+  calibrationV32?: CalibrationV32Analysis;
+  positionBuildComparison?: PositionBuildComparison;
+  gameplayDna?: GameplayDnaAnalysis;
+  structuralPrecision?: StructuralPrecisionAnalysis;
+  advancedMotorV3750?: AdvancedMotorV3750Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

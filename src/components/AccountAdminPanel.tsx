@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -37,6 +37,7 @@ import {
   type AdminMfaStatus,
   type AccountExpiryMode,
   type AdminUserAction,
+  type AdminCreateUserResult,
   type AdminUserRow,
   validateUsername
 } from '@/lib/accountAuth';
@@ -127,6 +128,8 @@ export function AccountAdminPanel() {
   const [restoringAccountPanel, setRestoringAccountPanel] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<CreateFeedback>({ kind: 'idle', text: '' });
   const [creatingUser, setCreatingUser] = useState(false);
+  const createInFlightRef = useRef(false);
+  const createRequestIdRef = useRef('');
 
   const mfaRequired = backendHealth?.mfaRequired ?? true;
   const adminUnlocked = Boolean(backendHealth?.functionReady && backendHealth?.databaseReady && (!mfaRequired || mfaStatus?.protected));
@@ -272,6 +275,10 @@ export function AccountAdminPanel() {
 
   async function createUser(event: FormEvent) {
     event.preventDefault();
+    if (createInFlightRef.current) {
+      setCreateFeedback({ kind: 'error', text: 'Operação duplicada bloqueada. Aguarde a confirmação da criação atual.' });
+      return;
+    }
     setError('');
     setMessage('');
     setCreatedCredentials(null);
@@ -294,12 +301,22 @@ export function AccountAdminPanel() {
       return;
     }
     if (!adminUnlocked) {
-      setCreateFeedback({ kind: 'error', text: 'O servidor administrativo ainda não está liberado. Toque em “Testar Supabase” e tente novamente.' });
+      setCreateFeedback({ kind: 'error', text: 'Erro de permissão ou sessão administrativa expirada. Toque em “Testar Supabase” e entre novamente se necessário.' });
+      return;
+    }
+    if (expiryMode === 'days' && (!Number.isFinite(durationDays) || durationDays < 1 || durationDays > 3650)) {
+      setCreateFeedback({ kind: 'error', text: 'Prazo inválido. Informe de 1 a 3650 dias.' });
+      return;
+    }
+    if (!Number.isFinite(maxDevices) || maxDevices < 1 || maxDevices > 10) {
+      setCreateFeedback({ kind: 'error', text: 'O limite de aparelhos deve ficar entre 1 e 10.' });
       return;
     }
 
+    createInFlightRef.current = true;
+    createRequestIdRef.current = globalThis.crypto?.randomUUID?.() || `create-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     setCreatingUser(true);
-    setCreateFeedback({ kind: 'working', text: `Criando a conta @${cleanUsername} no Supabase…` });
+    setCreateFeedback({ kind: 'working', text: `Criando usuário @${cleanUsername}...` });
     try {
       let expiresAt: string | null = null;
       if (expiryMode === 'date') {
@@ -311,8 +328,10 @@ export function AccountAdminPanel() {
         }
         expiresAt = parsedExpiry.toISOString();
       }
-      const result = await adminAccountRequest<{ success?: boolean; userId?: string; username?: string; requestId?: string }>({ action: 'create', username: cleanUsername, password: accountPassword, displayName: displayName.trim(), expiryMode, durationDays: expiryMode === 'days' ? durationDays : undefined, expiresAt, maxDevices, plan: 'premium' });
-      if (!result?.success || !result.userId) throw new Error('O servidor não confirmou a criação da conta. Tente novamente sem trocar o nome do usuário.');
+      const result = await adminAccountRequest<AdminCreateUserResult>({ action: 'create', username: cleanUsername, password: accountPassword, displayName: displayName.trim(), expiryMode, durationDays: expiryMode === 'days' ? durationDays : undefined, expiresAt, maxDevices, plan: 'premium', clientRequestId: createRequestIdRef.current });
+      if (!result?.success || !result.userId || !result.authConfirmed) throw new Error('O usuário não foi confirmado no Auth do Supabase.');
+      if (!result.profileConfirmed) throw new Error('Perfil não gravado no banco.');
+      if (!result.expiryConfirmed) throw new Error('Prazo de ativação não confirmado.');
       const expiryLabel = expiryMode === 'never' ? 'Sem vencimento' : expiryMode === 'date' ? new Date(expiresAt as string).toLocaleDateString('pt-BR') : `${durationDays} dias`;
       setCreatedCredentials({ username: cleanUsername, password: accountPassword, expiryLabel, maxDevices });
       setCreateFeedback({ kind: 'success', text: `Conta @${cleanUsername} criada com sucesso e confirmada pelo Supabase.` });
@@ -322,10 +341,22 @@ export function AccountAdminPanel() {
       setPassword('');
       await loadUsers();
     } catch (cause) {
-      const detail = cause instanceof Error ? cause.message : 'Não foi possível criar a conta.';
+      const raw = cause instanceof Error ? cause.message : 'Não foi possível criar a conta.';
+      const lower = raw.toLowerCase();
+      const detail = lower.includes('já está cadastrado') || lower.includes('already') ? 'Usuário já existe. Escolha outro nome.'
+        : lower.includes('nome de usuário inválido') || lower.includes('use pelo menos') ? 'Nome inválido. Use de 3 a 20 caracteres com letras, números, ponto, traço ou sublinhado.'
+        : lower.includes('senha') || lower.includes('password') ? 'Senha inválida. Use pelo menos 10 caracteres com maiúscula, minúscula e número.'
+        : lower.includes('vencimento') || lower.includes('prazo') || lower.includes('expiry') ? 'Prazo inválido. Escolha uma data futura ou uma quantidade válida de dias.'
+        : lower.includes('mfa') || lower.includes('permissão') || lower.includes('admin_only') ? 'Erro de permissão. Confirme o MFA e a conta de administrador.'
+        : lower.includes('sessão') ? 'Sessão administrativa expirada. Entre novamente.'
+        : lower.includes('não foi encontrado') || lower.includes('404') ? 'Edge Function não encontrada. Publique a função admin-users no Supabase.'
+        : lower.includes('perfil') ? 'Perfil não gravado no banco. A criação foi interrompida com segurança.'
+        : lower.includes('tempo limite') || lower.includes('conectar') || lower.includes('comunicação') || lower.includes('network') ? 'Falha de comunicação. A solicitação não será reenviada automaticamente; tente novamente após verificar a conexão.'
+        : raw;
       setCreateFeedback({ kind: 'error', text: detail });
       setError(detail);
     } finally {
+      createInFlightRef.current = false;
       setCreatingUser(false);
     }
   }

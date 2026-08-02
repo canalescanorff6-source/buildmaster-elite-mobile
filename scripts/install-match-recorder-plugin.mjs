@@ -122,6 +122,25 @@ public class BuildMasterMatchRecorderPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void renameRecording(PluginCall call) {
+        String id = call.getString("id");
+        String title = call.getString("title", "").trim();
+        if (id == null || !id.matches("match-[0-9]{10,20}")) { call.reject("Identificador de gravação inválido."); return; }
+        if (title.length() < 2 || title.length() > 80) { call.reject("Use um nome entre 2 e 80 caracteres."); return; }
+        try {
+            JSObject recording = BuildMasterScreenRecordService.renameRecording(getContext(), id, title);
+            JSObject out = new JSObject(); out.put("renamed", true); out.put("recording", recording); call.resolve(out);
+        } catch (Exception error) {
+            call.reject("Não foi possível renomear a gravação: " + safeMessage(error), error);
+        }
+    }
+
+    @PluginMethod
+    public void getStorageInfo(PluginCall call) {
+        call.resolve(BuildMasterScreenRecordService.storageInfo(getContext()));
+    }
+
+    @PluginMethod
     public void exportRecording(PluginCall call) {
         String id = call.getString("id");
         if (id == null || !id.matches("match-[0-9]{10,20}")) { call.reject("Identificador de gravação inválido."); return; }
@@ -205,6 +224,7 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.StatFs;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
@@ -457,6 +477,9 @@ public class BuildMasterScreenRecordService extends Service {
                 JSObject out = new JSObject(readUtf8(meta));
                 out.put("path", video.getAbsolutePath());
                 out.put("sizeBytes", video.length());
+                String uri = out.getString("uri");
+                out.put("gallerySaved", uri != null && !uri.isEmpty());
+                out.put("analysisReady", video.length() >= 4096);
                 return out;
             }
         } catch (Exception ignored) {}
@@ -464,7 +487,7 @@ public class BuildMasterScreenRecordService extends Service {
         out.put("id", id); out.put("path", video.getAbsolutePath()); out.put("fileName", video.getName());
         out.put("createdAt", isoTimestamp(video.lastModified())); out.put("durationMs", 0);
         out.put("sizeBytes", video.length()); out.put("width", 0); out.put("height", 0); out.put("fps", 0); out.put("bitrate", 0);
-        out.put("quality", "balanced"); out.put("state", "completed");
+        out.put("quality", "balanced"); out.put("state", "completed"); out.put("gallerySaved", false); out.put("analysisReady", video.length() >= 4096);
         return out;
     }
 
@@ -523,8 +546,7 @@ public class BuildMasterScreenRecordService extends Service {
         } catch (Throwable ignored) {}
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
         formatter.setTimeZone(TimeZone.getDefault());
-        String suffix = id.length() > 6 ? id.substring(id.length() - 6) : id;
-        return "BuildMaster_Partida_" + formatter.format(new java.util.Date(created)) + "_" + suffix + ".mp4";
+        return "BuildMaster_Partida_" + formatter.format(new java.util.Date(created)) + ".mp4";
     }
 
     private static JSObject exportResult(String id, String uri, String fileName, String relativePath, boolean reused) {
@@ -584,6 +606,28 @@ public class BuildMasterScreenRecordService extends Service {
                 try { resolver.delete(destination, null, null); } catch (Exception ignored) {}
             }
         }
+    }
+
+    public static JSObject renameRecording(Context context, String id, String title) throws Exception {
+        File video = recordingFile(context, id);
+        if (!video.exists() || video.length() < 4096) throw new IllegalStateException("A gravação interna não foi encontrada ou está corrompida.");
+        JSONObject metadata = readMetadataObject(video);
+        metadata.put("title", title.trim());
+        metadata.put("renamedAt", isoTimestamp(System.currentTimeMillis()));
+        writeMetadataObject(video, metadata);
+        return descriptorFromFile(video);
+    }
+
+    public static JSObject storageInfo(Context context) {
+        File directory = recordingsDirectory(context);
+        if (!directory.exists()) directory.mkdirs();
+        StatFs stats = new StatFs(directory.getAbsolutePath());
+        long available = stats.getAvailableBytes();
+        long total = stats.getTotalBytes();
+        JSObject out = new JSObject();
+        out.put("availableBytes", available); out.put("totalBytes", total);
+        out.put("lowStorage", available < 786432000L);
+        return out;
     }
 
     public static List<JSObject> listRecordings(Context context) {
@@ -654,4 +698,4 @@ for (const permission of permissions) {
 const serviceDeclaration = `        <service\n            android:name=".BuildMasterScreenRecordService"\n            android:exported="false"\n            android:stopWithTask="false"\n            android:foregroundServiceType="mediaProjection" />\n`;
 if (!manifest.includes('android:name=".BuildMasterScreenRecordService"')) manifest = manifest.replace(/<\/application>/, `${serviceDeclaration}    </application>`);
 fs.writeFileSync(manifestPath, manifest);
-console.log('Treinador de Partidas v31.78 instalado: MediaProjection, gravação privada, exportação MediaStore e compartilhamento seguro.');
+console.log('BuildMaster v38.32: gravador instalado com MediaProjection, MediaStore, content URI, renomeação e validação segura.');

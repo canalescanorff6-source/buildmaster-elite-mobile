@@ -285,7 +285,7 @@ export function buildDeepCardIntelligence(result: AnalysisResult): DeepCardIntel
   if (!result.parsed.impetos.length) warnings.push('O Ímpeto já presente na carta não foi confirmado.');
   if (matchSamples < 3) warnings.push('Ainda faltam partidas comparáveis para personalizar a ficha ao seu estilo de jogo.');
   const learningState: DeepCardIntelligenceAnalysis['learning']['state'] = matchSamples >= 8 ? 'confiável' : matchSamples >= 3 ? 'aprendendo' : 'sem dados';
-  const ownedSkills = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map((item) => item.toLowerCase()));
+  const ownedSkills = new Set([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills].map((item) => item.toLowerCase()));
   const roleOrder = POSITION_SKILL_PRIORITIES[result.bestPosition.code];
   const candidatesForSkills = [...roleOrder, ...result.skillPriority.ordered.map((item) => item.name), ...result.recommendedSkills]
     .filter((name, index, all) => all.indexOf(name) === index)

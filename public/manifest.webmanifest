@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Marques Fichas v31.78",
-  "short_name": "Marques Fichas",
-  "description": "Marques Fichas v31.78 com fichas personalizadas, Estúdio de Formações, análise de partidas e imagens táticas premium.",
+  "name": "BuildMaster Elite Tático v38.32",
+  "short_name": "BuildMaster v38.32",
+  "description": "BuildMaster v38.32 com fichas precisas, gravações, Análise de Vídeo Inteligente 2.0 e Estúdio de Formações Meta Premium.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
@@ -11,8 +11,8 @@
     "window-controls-overlay",
     "standalone"
   ],
-  "background_color": "#07111f",
-  "theme_color": "#07111f",
+  "background_color": "#050a12",
+  "theme_color": "#050a12",
   "orientation": "portrait-primary",
   "categories": [
     "sports",

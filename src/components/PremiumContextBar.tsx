@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, FileText, Search } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import type { MainNavigationGroup, PlayerWorkspace } from '@/lib/appRefinement';
 
  type Props = {
@@ -9,25 +9,23 @@ import type { MainNavigationGroup, PlayerWorkspace } from '@/lib/appRefinement';
   canGoBack: boolean;
   currentPlayer?: { name: string; points: string } | null;
   onBack: () => void;
-  onSearch: () => void;
   onOpenCurrentPlayer: () => void;
 };
 
 const groupTitles: Record<MainNavigationGroup, string> = {
-  inicio: 'Início',
+  inicio: 'Central',
   jogadores: 'Jogadores',
   time: 'Meu Time',
-  formacoes: 'Formações',
   partidas: 'Partidas e treinos',
-  ajustes: 'Ajustes'
+  ajustes: 'Configurações'
 };
 
 const workspaceTitles: Record<PlayerWorkspace, string> = {
-  'visao-geral': 'Meus jogadores',
-  leitor: 'Criar ficha por print',
-  manual: 'Criar ficha manualmente',
-  resultado: 'Ficha recomendada',
-  cofre: 'Jogadores salvos'
+  'visao-geral': 'Elenco e fichas',
+  leitor: 'Ler print',
+  manual: 'Criar manualmente',
+  resultado: 'Resultado da ficha',
+  cofre: 'Cofre de jogadores'
 };
 
 export function PremiumContextBar({
@@ -36,7 +34,6 @@ export function PremiumContextBar({
   canGoBack,
   currentPlayer,
   onBack,
-  onSearch,
   onOpenCurrentPlayer
 }: Props) {
   const title = group === 'jogadores' ? workspaceTitles[workspace] : groupTitles[group];
@@ -53,7 +50,6 @@ export function PremiumContextBar({
             <FileText size={16}/><span>{currentPlayer.name}</span><b>{currentPlayer.points}</b>
           </button>
         )}
-        <button type="button" className="bm-simple-search" onClick={onSearch} aria-label="Buscar"><Search size={20}/></button>
       </div>
     </section>
   );

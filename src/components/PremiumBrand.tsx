@@ -1,4 +1,5 @@
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import { BuildMasterMark } from '@/components/BuildMasterMark';
 
 type PremiumBrandProps = {
   variant?: 'compact' | 'standard' | 'hero';
@@ -7,16 +8,13 @@ type PremiumBrandProps = {
 };
 
 export function PremiumBrand({ variant = 'standard', showVersion = false, className = '' }: PremiumBrandProps) {
+  const markSize = variant === 'hero' ? 64 : variant === 'compact' ? 36 : 46;
   return (
     <span className={`bm-premium-brand bm-premium-brand-${variant} ${className}`.trim()}>
-      <span className="bm-brand-emblem" aria-hidden="true">
-        <span className="bm-brand-emblem-ring" />
-        <strong>M</strong>
-        <i />
-      </span>
+      <span className="bm-brand-emblem" aria-hidden="true"><BuildMasterMark size={markSize} /></span>
       <span className="bm-brand-wordmark">
-        <span className="bm-brand-title-row"><strong>Marques Fichas</strong><em>PRO</em></span>
-        <span className="bm-brand-subtitle">Inteligência para eFootball</span>
+        <span className="bm-brand-title-row"><strong>BuildMaster</strong><em>FICHAS</em></span>
+        <span className="bm-brand-subtitle">Elite Performance</span>
       </span>
       {showVersion && <small className="bm-brand-version">v{APP_RELEASE_VERSION}</small>}
     </span>
