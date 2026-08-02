@@ -1,5 +1,10 @@
 # BuildMaster Elite Tático v38.20 — Otimização Invisível
 
+## Correção v38.21
+
+A v38.21 corrige a falha do grupo **TypeScript completo** da v38.20, removendo símbolos antigos sem uso da interface clean e adicionando uma regressão preventiva específica. Nenhuma função visual ou motor da v38.20 foi removido.
+
+
 A v38.20 preserva integralmente a interface clean da v38.10 e melhora o desempenho por trás das telas: processamento adaptativo de imagens, OCR serializado, liberação automática do worker, pré-carregamento inteligente e manutenção segura dos caches temporários.
 
 Consulte `OTIMIZACAO_INVISIVEL_V38.20.md` para o escopo completo.

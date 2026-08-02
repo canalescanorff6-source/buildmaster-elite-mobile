@@ -8,7 +8,6 @@ import {
   History,
   Download,
   Save,
-  Search,
   Trash2,
   FileText,
   Palette,
@@ -222,7 +221,6 @@ import {
   isRenderableAnalysisResult,
   savedPositionGroup,
   savedStatusLabel,
-  savedStatusText,
   skillProgressInfo,
   type ManualFields,
   type SavedAnalysis
@@ -426,7 +424,7 @@ export function CardVisionApp() {
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
+  const [, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [mainSection, setMainSection] = useState<MainSection>(() => {
     if (typeof window === 'undefined') return 'inicio';
@@ -2865,16 +2863,6 @@ export function CardVisionApp() {
   const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
   const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
   const creationProgress = [20, 50, 75, 100][creationStage - 1];
-  const recentVaultEntry = useMemo(() => {
-    return [...history].sort((a, b) => {
-      const aTime = Date.parse(String(a.updatedAt || a.savedAt)) || 0;
-      const bTime = Date.parse(String(b.updatedAt || b.savedAt)) || 0;
-      return bTime - aTime;
-    })[0] ?? null;
-  }, [history]);
-  const homeAttentionTotal = smartHome.needsReview + smartHome.lowConfidence + smartHome.incomplete;
-  const homePriorityLabel = onboardingProfile?.goal === 'elenco' ? 'Organizar o elenco' : onboardingProfile?.goal === 'formacoes' ? 'Formações e encaixes' : onboardingProfile?.goal === 'treino' ? 'Treinos e pós-jogo' : 'Fichas precisas';
-  const homeSuggestedAction = homeAttentionTotal > 0 ? smartHome.nextAction : onboardingProfile?.goal === 'elenco' ? 'Abra Meu Time e revise setores sem cobertura.' : onboardingProfile?.goal === 'formacoes' ? `Analise a formação ${onboardingProfile.favoriteFormation}.` : onboardingProfile?.goal === 'treino' ? 'Abra uma ficha salva e registre uma partida real.' : 'Crie ou revise a próxima ficha do seu elenco.';
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
   const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
   const creationTargetLabel = targetPosition === 'AUTO'

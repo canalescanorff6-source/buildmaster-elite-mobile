@@ -1,1 +1,1 @@
-v38.20 — otimiza memória, OCR, carregamento e cache sem adicionar poluição visual
+v38.21 — corrige o TypeScript completo removendo imports, estados e cálculos antigos sem uso
