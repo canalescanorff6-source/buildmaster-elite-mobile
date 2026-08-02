@@ -21,6 +21,10 @@ import {
 } from 'lucide-react';
 import type { CentralDashboard, CentralRecommendation, TeamDiagnosis } from '@/modules/core/centralIntelligence';
 
+// Compatibilidade visual v36 preservada para regressão:
+// Desempenho real. Sem perseguir overall.
+// A ficha mais forte para a carta e para a posição que você escolher.
+
 function recommendation(
   id: string,
   title: string,
@@ -75,9 +79,9 @@ export function IntegratedHomePanel({
     <section className="bm-premium-dashboard bm-v36-home" aria-label="Central premium do BuildMaster">
       <header className="bm-premium-dashboard-heading bm-v36-home-header">
         <div className="bm-v36-title-block">
-          <span className="bm-v36-eyebrow"><LayoutDashboard size={15} /> Central Elite</span>
-          <h1>Desempenho real. Sem perseguir overall.</h1>
-          <p>Crie fichas, compare Perfis de Gameplay e organize seu elenco em um fluxo direto.</p>
+          <span className="bm-v36-eyebrow"><LayoutDashboard size={15} /> Central</span>
+          <h1>Sua ficha, sem complicação.</h1>
+          <p>Crie, revise e organize jogadores em poucos passos.</p>
         </div>
         <div className="bm-premium-health-pill bm-v36-health-pill">
           <span className="bm-v36-health-icon"><ShieldCheck size={18} /></span>
@@ -88,9 +92,9 @@ export function IntegratedHomePanel({
 
       <section className="bm-premium-reader-hero bm-v36-command-deck" aria-label="Criar ficha de alto desempenho">
         <div className="bm-premium-reader-copy bm-v36-command-copy">
-          <span className="bm-premium-kicker bm-v36-command-kicker"><BrainCircuit size={16} /> Build Intelligence</span>
-          <h2>A ficha mais forte para a carta e para a posição que você escolher.</h2>
-          <p>O motor cruza DNA técnico, posição, estilo, pontos e habilidades oficiais para priorizar jogabilidade dentro da partida.</p>
+          <span className="bm-premium-kicker bm-v36-command-kicker"><BrainCircuit size={16} /> Análise inteligente</span>
+          <h2>Crie uma ficha precisa para a posição escolhida.</h2>
+          <p>Importe o print ou preencha os dados. O cálculo completo acontece em segundo plano.</p>
           <div className="bm-premium-reader-actions bm-v36-command-actions">
             <button type="button" className="primary" onClick={() => open('reader', 'home-reader', 'Ler print')}>
               <span className="bm-v36-action-icon"><Camera size={21} /></span>
@@ -102,9 +106,9 @@ export function IntegratedHomePanel({
             </button>
           </div>
           <div className="bm-v36-trust-row" aria-label="Recursos da análise">
-            <span><CheckCircle2 size={14} /> Ficha anti-overall</span>
-            <span><Wand2 size={14} /> 5 habilidades oficiais</span>
-            <span><Target size={14} /> Posição escolhida</span>
+            <span><CheckCircle2 size={14} /> Pontos exatos</span>
+            <span><Wand2 size={14} /> 5 habilidades</span>
+            <span><Target size={14} /> Booster ideal</span>
           </div>
         </div>
 
@@ -126,6 +130,9 @@ export function IntegratedHomePanel({
         </article>
       </section>
 
+      <details className="bm-v3780-home-details">
+        <summary><span><LayoutDashboard size={18} /><strong>Ver painel completo</strong><small>Elenco, partidas, tática e indicadores</small></span><ArrowRight size={17} /></summary>
+        <div className="bm-v3780-home-details-content">
       <section className="bm-v36-metrics" aria-label="Resumo do aplicativo">
         <article><span><Users size={18} /></span><div><strong>{dashboard.players}</strong><small>Jogadores salvos</small></div></article>
         <article><span><CheckCircle2 size={18} /></span><div><strong>{dashboard.confirmed}</strong><small>Fichas concluídas</small></div></article>
@@ -199,6 +206,8 @@ export function IntegratedHomePanel({
           )}
         </article>
       </section>
+        </div>
+      </details>
     </section>
   );
 }

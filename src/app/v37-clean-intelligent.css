@@ -1,0 +1,133 @@
+/* -------------------------------------------------------------------------- */
+/* BuildMaster v37.80 — Experiência Clean Inteligente                         */
+/* Mais inteligência por trás, menos elementos disputando atenção na tela.    */
+/* -------------------------------------------------------------------------- */
+
+.bm-v3780-clean .premium-app {
+  --v3780-gap: clamp(12px, 1.8vw, 18px);
+  --v3780-radius: 20px;
+}
+
+.bm-v3780-clean .bm-v36-home,
+.bm-v3780-clean .result-panel {
+  gap: var(--v3780-gap) !important;
+}
+
+/* Home: somente criação e retomada ficam abertas; o painel completo recolhe. */
+.bm-v3780-clean .bm-v36-home-header {
+  margin-bottom: 0 !important;
+}
+
+.bm-v3780-clean .bm-v36-title-block p {
+  max-width: 620px;
+}
+
+.bm-v3780-clean .bm-v36-command-deck {
+  min-height: 220px !important;
+  border-radius: 24px !important;
+}
+
+.bm-v3780-clean .bm-v36-command-copy > p {
+  max-width: 680px;
+}
+
+.bm-v3780-clean .bm-v36-trust-row {
+  opacity: .82;
+}
+
+.bm-v3780-clean .bm-v3780-home-details {
+  border: 1px solid var(--v35-line, rgba(151,182,219,.15));
+  border-radius: var(--v3780-radius);
+  background: color-mix(in srgb, var(--v35-surface, #101c2f) 92%, transparent);
+  overflow: clip;
+}
+
+.bm-v3780-clean .bm-v3780-home-details > summary {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.bm-v3780-clean .bm-v3780-home-details > summary::-webkit-details-marker { display: none; }
+.bm-v3780-clean .bm-v3780-home-details > summary > span { display: grid; grid-template-columns: 34px 1fr; align-items: center; column-gap: 11px; }
+.bm-v3780-clean .bm-v3780-home-details > summary > span > svg { grid-row: 1 / 3; color: var(--accent); }
+.bm-v3780-clean .bm-v3780-home-details > summary strong { color: var(--text) !important; }
+.bm-v3780-clean .bm-v3780-home-details > summary small { color: var(--muted) !important; }
+.bm-v3780-clean .bm-v3780-home-details[open] > summary { border-bottom: 1px solid var(--v35-line, rgba(151,182,219,.15)); }
+.bm-v3780-clean .bm-v3780-home-details[open] > summary > svg { transform: rotate(90deg); }
+.bm-v3780-clean .bm-v3780-home-details-content { display: grid; gap: var(--v3780-gap); padding: var(--v3780-gap); }
+
+/* Resultado básico: cinco destinos claros e só o essencial aberto. */
+.bm-v3780-clean .mode-basic .result-navigation-head { display: none !important; }
+.bm-v3780-clean .mode-basic .result-navigation-shell { padding: 9px !important; }
+.bm-v3780-clean .mode-basic .result-primary-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 7px !important; }
+.bm-v3780-clean .mode-basic .result-primary-tabs button { min-height: 58px !important; padding: 9px 10px !important; border-radius: 15px !important; }
+.bm-v3780-clean .mode-basic .result-primary-tabs button small { display: none !important; }
+.bm-v3780-clean .mode-basic .result-primary-tabs button span { display: block !important; }
+
+.bm-v3780-clean .mode-basic .result-key-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.bm-v3780-clean .mode-basic .result-player-hero { min-height: 0 !important; }
+.bm-v3780-clean .mode-basic .result-player-summary { gap: 13px !important; }
+.bm-v3780-clean .mode-basic .result-budget-line { margin-top: 0 !important; }
+.bm-v3780-clean .mode-basic .result-section-grid.bm-simple-result-summary { grid-template-columns: 1fr !important; }
+.bm-v3780-clean .mode-basic .bm-definitive-build-card,
+.bm-v3780-clean .mode-basic .bm-summary-skill-card,
+.bm-v3780-clean .mode-basic .bm-summary-impeto-card,
+.bm-v3780-clean .mode-basic .bm-v3780-analysis-entry,
+.bm-v3780-clean .mode-basic .bm-simple-result-summary > article { border-radius: var(--v3780-radius) !important; }
+
+.bm-v3780-clean .mode-basic .bm-v3780-advanced-summary,
+.bm-v3780-clean .mode-basic .bm-v3780-why-card { display: none !important; }
+
+.bm-v3780-clean .mode-basic .bm-summary-skill-card .panel-note { display: none !important; }
+.bm-v3780-clean .mode-basic .bm-skill-progress-columns { grid-template-columns: 1fr !important; gap: 10px !important; }
+.bm-v3780-clean .mode-basic .bm-simple-skill-list { gap: 7px !important; }
+.bm-v3780-clean .mode-basic .bm-simple-skill-list button { min-height: 48px !important; padding: 9px 11px !important; border-radius: 14px !important; }
+.bm-v3780-clean .mode-basic .bm-simple-skill-list button small,
+.bm-v3780-clean .mode-basic .bm-simple-skill-list button em { display: none !important; }
+.bm-v3780-clean .mode-basic .bm-skill-progress-heading { margin-bottom: 6px !important; }
+
+.bm-v3780-clean .bm-v3780-analysis-entry { padding: 0 !important; overflow: hidden; }
+.bm-v3780-clean .bm-v3780-analysis-entry > summary {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.bm-v3780-clean .bm-v3780-analysis-entry > summary::-webkit-details-marker { display: none; }
+.bm-v3780-clean .bm-v3780-analysis-entry > summary span { display: grid; gap: 2px; }
+.bm-v3780-clean .bm-v3780-analysis-entry > summary small { color: var(--muted) !important; }
+.bm-v3780-clean .bm-v3780-analysis-entry > p { margin: 0; padding: 0 16px 16px; color: var(--muted) !important; }
+
+/* Menu e configurações: elimina elementos promocionais no modo básico. */
+.bm-v3780-clean .mode-basic .bm32-profile-banner .bm32-level-badge,
+.bm-v3780-clean .mode-basic .bm32-plan-callout,
+.bm-v3780-clean .mode-basic .bm32-premium-banner { display: none !important; }
+
+.bm-v3780-clean .mode-basic .bm32-menu-section,
+.bm-v3780-clean .mode-basic .bm32-settings-overview { gap: 12px !important; }
+.bm-v3780-clean .mode-basic .bm32-module-grid,
+.bm-v3780-clean .mode-basic .bm32-settings-grid { gap: 9px !important; }
+
+@media (max-width: 720px) {
+  .bm-v3780-clean .bm-v36-home-header { align-items: flex-start !important; }
+  .bm-v3780-clean .bm-v36-health-pill { display: none !important; }
+  .bm-v3780-clean .bm-v36-command-deck { grid-template-columns: 1fr !important; padding: 17px !important; }
+  .bm-v3780-clean .bm-v36-spotlight-card { display: none !important; }
+  .bm-v3780-clean .bm-v36-command-actions { display: grid !important; grid-template-columns: 1fr !important; }
+  .bm-v3780-clean .bm-v36-trust-row { display: none !important; }
+  .bm-v3780-clean .mode-basic .result-primary-tabs { display: flex !important; overflow-x: auto; scrollbar-width: none; }
+  .bm-v3780-clean .mode-basic .result-primary-tabs::-webkit-scrollbar { display: none; }
+  .bm-v3780-clean .mode-basic .result-primary-tabs button { min-width: 106px !important; }
+  .bm-v3780-clean .mode-basic .result-player-art { width: 88px !important; min-width: 88px !important; }
+  .bm-v3780-clean .mode-basic .result-player-heading h2 { font-size: 1.25rem !important; }
+}

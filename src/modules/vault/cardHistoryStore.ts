@@ -155,7 +155,8 @@ export function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIn
     personalTags: Array.isArray(entry.personalTags) ? entry.personalTags : [],
     tacticalRoleNote: entry.tacticalRoleNote || '',
     changeLog,
-    lastOpenedAt: entry.lastOpenedAt
+    lastOpenedAt: entry.lastOpenedAt,
+    folderId: entry.folderId
   };
 }
 

@@ -1,3 +1,19 @@
+# BuildMaster Elite Tático v38.20 — Otimização Invisível
+
+A v38.20 preserva integralmente a interface clean da v38.10 e melhora o desempenho por trás das telas: processamento adaptativo de imagens, OCR serializado, liberação automática do worker, pré-carregamento inteligente e manutenção segura dos caches temporários.
+
+Consulte `OTIMIZACAO_INVISIVEL_V38.20.md` para o escopo completo.
+
+---
+
+# BuildMaster Elite Tático v38.10 — Resultado Premium Clean
+
+A versão v38.10 mantém todos os motores de precisão, habilidades, Booster, validação e atualização contínua, mas apresenta o resultado básico em um único card clean. A ficha pode ser exportada em PNG vertical ou quadrado, pronta para compartilhamento.
+
+Consulte `RESULTADO_PREMIUM_CLEAN_V38.10.md` para o escopo completo.
+
+---
+
 # BuildMaster Elite Tático v37.00 — Inteligência Profissional
 
 Aplicativo para criar, testar e recalibrar fichas de gameplay no eFootball com foco em desempenho real, posição escolhida, habilidades adicionais oficiais e evidência de partidas.

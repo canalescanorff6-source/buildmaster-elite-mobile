@@ -5,14 +5,11 @@ import {
   Activity,
   Camera,
   CheckCircle2,
-  Copy,
   History,
   Download,
   Save,
   Search,
   Trash2,
-  Star,
-  Filter,
   FileText,
   Palette,
   Layers,
@@ -32,7 +29,6 @@ import {
   Wand2,
   Zap,
   Ban,
-  BrainCircuit,
   Users,
   UserPlus
 } from 'lucide-react';
@@ -81,6 +77,7 @@ import { applyGameplayDnaProfileSelection } from '@/lib/gameplayDnaSelection';
 import { LOCAL_CARD_RULES } from '@/lib/cardDatabase';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import { createStableId } from '@/lib/stableId';
+import { buildCleanVaultSummaryV3800, findExactVaultDuplicateByResult } from '@/lib/cleanVaultV3800';
 import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
@@ -97,6 +94,9 @@ import { PremiumMenuScreen } from '@/components/PremiumMenuScreen';
 import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
 import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
 import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
+import { UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/UnifiedCreationFlowV3790';
+import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
+import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
 import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
@@ -180,11 +180,15 @@ import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, vali
 import { secureGet, secureSet } from '@/lib/secureStorage';
 import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
 import {
-  buildProfessionalCardSvg,
   buildProfessionalReportHtml,
   downloadBlobFile,
   formatReportMarkdown
 } from '@/modules/builds/buildReportExport';
+import {
+  buildPremiumCleanCardSvg,
+  premiumCleanSvgToPngBlob,
+  type PremiumCleanExportFormat
+} from '@/lib/premiumCleanResultV3810';
 import {
   CORRECTION_KEY,
   DEFAULT_DYNAMIC_RULE_PACK,
@@ -240,7 +244,7 @@ import {
 } from '@/modules/experience/premiumExperience2';
 import { exportObservabilityState, importObservabilityState } from '@/modules/observability/observabilityEngine';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
-import { premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiumTarget, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
+import { clearPremiumCreationDraft, premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiumTarget, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
 import { CloudSyncCenter } from '@/modules/backup/CloudSyncCenter';
 import { AdministrationSecurityCenter } from '@/modules/administration/AdministrationSecurityCenter';
 import { buildCloudVaultPayload, buildSyncHealth, compareBackupEnvelopes, createBackupSnapshot, mergeBackupEnvelopes, normalizeCloudVaultPayload, pruneSnapshots, LAST_FULL_SYNC_STORAGE_KEY, type BackupSnapshot, type SectionConflict } from '@/modules/backup/syncBackupEngine';
@@ -420,6 +424,7 @@ export function CardVisionApp() {
   const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('economy');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [sessionHydrated, setSessionHydrated] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
@@ -593,6 +598,7 @@ export function CardVisionApp() {
       const searchable = `${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''} ${(item.result.parsed.nativeSkills ?? []).join(' ')} ${(item.result.recommendedSkills ?? []).join(' ')} ${(item.personalTags ?? []).join(' ')} ${item.notes ?? ''} ${item.tacticalRoleNote ?? ''}`;
       const matchesQuery = !query || memoryKey(searchable).includes(query);
       if (!matchesQuery || !entryMatchesAdvancedFilters(item, vaultFilters)) return false;
+      if (vaultFilters.folderId === 'all' && folderForEntry(item) === 'arquivados') return false;
       if (onlyPendingSkills && savedStatusLabel(item) !== 'pendente') return false;
       if (historyFilter === 'FAVORITES') return Boolean(item.favorite);
       if (historyFilter === 'PENDING') return savedStatusLabel(item) === 'pendente';
@@ -614,6 +620,7 @@ export function CardVisionApp() {
     return items;
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
+  const cleanVaultSummary = useMemo(() => buildCleanVaultSummaryV3800(history), [history]);
   const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
   const integratedPlayers = useMemo(() => safeIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
   const integratedTeam = useMemo(() => safeTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
@@ -734,7 +741,43 @@ export function CardVisionApp() {
     if (sessionSaveState === 'error') showPremiumToast({ title: 'Rascunho não salvo', message: 'Seus dados continuam na tela. Tente novamente antes de sair.', tone: 'danger', duration: 6000 });
   }, [sessionSaveState]);
   usePremiumDraftAutosave({ section: mainSection, preview, rawText, playerName: manualFields.playerName, points: manualFields.trainingPointsTotal, targetPosition, playstyle: playstyleOverride });
-  function openMainSection(section: MainSection, options: { track?: boolean } = {}) {
+  const unifiedCreation = useUnifiedCreationControllerV3790({
+    sessionHydrated,
+    method: manualMode ? 'manual' : 'reader',
+    playerName: manualFields.playerName || draftResult?.parsed.playerName || result?.parsed.playerName || '',
+    points: manualFields.trainingPointsTotal || String(draftResult?.trainingPointsTotal || result?.trainingPointsTotal || ''),
+    targetPosition,
+    cardPosition: cardPositionOverride,
+    playstyle: playstyleOverride,
+    hasImage: Boolean(preview || playerCardImage),
+    hasRawText: Boolean(rawText.trim()),
+    manualAttributeCount: Object.keys(manualFields.attributes).length,
+    hasDraftResult: Boolean(draftResult),
+    hasResult: Boolean(result),
+    hasSelectedFile: Boolean(selectedFile)
+  }, {
+    openMethod: (method) => openMainSection(method === 'manual' ? 'manual' : 'leitor', { skipManualBootstrap: true }),
+    setManualMode,
+    initializeManualInput: () => {
+      setRawText(['NOME DO JOGADOR: ', 'POSIÇÃO PRINCIPAL: AUTO', 'ESTILO DE JOGO: AUTO', 'NÍVEL MÁXIMO: ', 'PONTOS TOTAIS: '].join('\n'));
+      setFileName('entrada-manual-v37-90');
+      setOcrDone(true);
+    },
+    resetAll: () => {
+      if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
+      if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current);
+      previewObjectUrlRef.current = null; enhancedObjectUrlRef.current = null;
+      setPreview(null); setPlayerCardImage(null); setCardCropResult(null); setCardCropAdjustOpen(false); setFileName(null); setSelectedFile(null);
+      setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setManualFields(emptyManualFields()); setManualMode(false);
+      setTargetPosition('AUTO'); setCardPositionOverride('AUTO'); setPlaystyleOverride('AUTO'); setQualityReport(null); setPremiumReadings([]);
+      setTotalReadingSession(null); setSinglePrintSession(null); setReadingConfirmations({}); setEnhancedPreview(null); setActiveHistoryId(null);
+      try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
+      clearPremiumCreationDraft();
+      setSessionSaveState('idle');
+    },
+    setStatus
+  });
+  function openMainSection(section: MainSection, options: { track?: boolean; skipManualBootstrap?: boolean } = {}) {
     setMobileLauncher(null);
     scrollPositionsRef.current[mainSection] = window.scrollY;
     if (options.track !== false && section !== mainSection) {
@@ -751,7 +794,7 @@ export function CardVisionApp() {
     if (section === 'cofre') {
       setStatus(history.length ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
     }
-    if (section === 'manual' && !manualMode && !draftResult && !result) {
+    if (section === 'manual' && !options.skipManualBootstrap && !manualMode && !draftResult && !result && !preview && !rawText.trim() && !manualFields.playerName.trim() && !manualFields.trainingPointsTotal.trim()) {
       startManualPreciseMode();
       return;
     }
@@ -936,6 +979,7 @@ export function CardVisionApp() {
       setDraftResult(null);
       setStatus('Uma sessão incompatível foi descartada com segurança. O Cofre foi preservado.');
     }
+    setSessionHydrated(true);
     return () => {
       mounted = false;
     };
@@ -982,6 +1026,7 @@ export function CardVisionApp() {
     const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
     if (!hasWork) {
       try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
+      clearPremiumCreationDraft();
       setSessionSaveState('idle');
       return;
     }
@@ -1198,7 +1243,26 @@ export function CardVisionApp() {
     setStatus(`Pasta “${name}” criada no Cofre.`);
   }
   function moveHistoryToFolder(id: string, folderId: string) {
-    setHistory((current) => current.map((item) => item.id === id ? appendSavedEvent({ ...item, folderId, updatedAt: new Date().toISOString() }, 'organizado', `Movido para a pasta ${vaultFolders.find((folder) => folder.id === folderId)?.name ?? folderId}.`) : item));
+    setHistory((current) => {
+      const next = current.map((item) => item.id === id
+        ? appendSavedEvent({ ...item, folderId, updatedAt: new Date().toISOString() }, 'organizado', `Movido para a pasta ${vaultFolders.find((folder) => folder.id === folderId)?.name ?? folderId}.`)
+        : item);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+  }
+  function archiveHistoryItem(id: string, archived: boolean) {
+    const targetFolder = archived ? 'arquivados' : 'all';
+    setHistory((current) => {
+      const next = current.map((item) => item.id === id
+        ? appendSavedEvent({ ...item, folderId: targetFolder }, archived ? 'arquivado' : 'restaurado', archived ? 'Ficha removida da visão principal sem ser apagada.' : 'Ficha restaurada para o catálogo principal.')
+        : item);
+      void persistHistoryStore(next);
+      void pushCloudHistory(next, true);
+      return next;
+    });
+    setStatus(archived ? 'Ficha arquivada. Ela continua protegida no Cofre.' : 'Ficha restaurada para o catálogo principal.');
   }
   function resetVaultFilters() {
     setVaultFilters({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
@@ -1269,7 +1333,8 @@ export function CardVisionApp() {
     const key = resultHistoryKey(result);
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
-      const existing = current.find((entry) => entry.saveKey === key);
+      const existingByKey = current.find((entry) => entry.saveKey === key);
+      const existing = existingByKey ?? findExactVaultDuplicateByResult(current, result);
       const base: SavedAnalysis = {
         id: existing?.id ?? createStableId('ficha'),
         saveKey: key,
@@ -1287,13 +1352,20 @@ export function CardVisionApp() {
         tacticalRoleNote: existing?.tacticalRoleNote ?? '',
         changeLog: existing?.changeLog ?? []
       };
-      const item = appendSavedEvent(base, existing ? 'atualizado' : 'criado', existing ? 'Ficha atualizada por cima da versão salva.' : 'Ficha salva no Cofre avançado.');
+      const duplicateDetected = Boolean(existing && !existingByKey);
+      const item = appendSavedEvent(
+        base,
+        existing ? (duplicateDetected ? 'duplicata evitada' : 'atualizado') : 'criado',
+        existing ? (duplicateDetected ? 'A mesma carta, ficha, habilidades e Booster já existiam; o registro anterior foi atualizado sem criar uma cópia.' : 'Ficha atualizada por cima da versão salva.') : 'Ficha salva no Cofre Clean.'
+      );
       setActiveHistoryId(item.id);
       const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
       void persistHistoryStore(next);
       void pushCloudHistory(next, true);
       return next;
     });
+    unifiedCreation.markSaved();
+    clearPremiumCreationDraft();
     setStatus(saveAsReview ? `Ficha salva como “Revisar”: ${quality.blockers[0]?.detail ?? 'confira os avisos do controle final.'}` : `Ficha salva no Cofre de Fichas: ${result.parsed.playerName}.`);
   }
   function toggleSavedSkill(skill: string) {
@@ -1953,7 +2025,8 @@ export function CardVisionApp() {
       savedAt: new Date().toLocaleString('pt-BR'),
       updatedAt: new Date().toLocaleString('pt-BR'),
       notes: `${item.notes ?? ''}${item.notes ? '\n' : ''}Variação criada para testar outra função/ficha.`,
-      changeLog: [{ at: new Date().toLocaleString('pt-BR'), action: 'variação criada', note: 'Cópia da ficha original para testar outra função/ficha.' }, ...(item.changeLog ?? [])]
+      personalTags: Array.from(new Set([...(item.personalTags ?? []), 'variante'])),
+      changeLog: [{ at: new Date().toLocaleString('pt-BR'), action: 'variação criada', note: 'Cópia intencional para testar outra função/ficha; não é tratada como duplicidade automática.' }, ...(item.changeLog ?? [])]
     };
     setHistory((current) => {
       const next = [copy, ...current].slice(0, HISTORY_LIMIT);
@@ -2011,12 +2084,21 @@ export function CardVisionApp() {
     downloadTextFile(filename, formatReportMarkdown(result, active?.notes ?? ''));
     setStatus('Relatório técnico em texto exportado.');
   }
-  function exportCurrentVisualCard() {
+  async function exportCurrentVisualCard(format: PremiumCleanExportFormat = 'portrait') {
     if (!result) return;
-    const svg = buildProfessionalCardSvg(result);
-    const filename = `buildmaster-card-${memoryKey(result.parsed.playerName)}-${new Date().toISOString().slice(0, 10)}.svg`;
-    downloadBlobFile(filename, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-    setStatus('Imagem profissional da ficha exportada em SVG.');
+    const image = playerCardImage ?? preview;
+    const svg = buildPremiumCleanCardSvg(result, { format, playerImage: image });
+    const date = new Date().toISOString().slice(0, 10);
+    const baseName = `buildmaster-${format === 'square' ? 'quadrada' : 'vertical'}-${memoryKey(result.parsed.playerName)}-${date}`;
+    const dimensions = format === 'square' ? { width: 1080, height: 1080 } : { width: 1080, height: 1350 };
+    try {
+      const png = await premiumCleanSvgToPngBlob(svg, dimensions.width, dimensions.height);
+      downloadBlobFile(`${baseName}.png`, png);
+      setStatus(`Imagem ${format === 'square' ? 'quadrada' : 'vertical'} pronta para compartilhar.`);
+    } catch {
+      downloadBlobFile(`${baseName}.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+      setStatus('O aparelho não converteu para PNG; a ficha foi salva em SVG com a mesma qualidade.');
+    }
   }
   function printCurrentReport() {
     if (!result) return;
@@ -2779,7 +2861,7 @@ export function CardVisionApp() {
   }
   const currentPanelResult = result ?? draftResult;
   const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
-  const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile) : manualMode;
+  const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile || preview) : manualMode;
   const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
   const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
   const creationProgress = [20, 50, 75, 100][creationStage - 1];
@@ -2793,7 +2875,6 @@ export function CardVisionApp() {
   const homeAttentionTotal = smartHome.needsReview + smartHome.lowConfidence + smartHome.incomplete;
   const homePriorityLabel = onboardingProfile?.goal === 'elenco' ? 'Organizar o elenco' : onboardingProfile?.goal === 'formacoes' ? 'Formações e encaixes' : onboardingProfile?.goal === 'treino' ? 'Treinos e pós-jogo' : 'Fichas precisas';
   const homeSuggestedAction = homeAttentionTotal > 0 ? smartHome.nextAction : onboardingProfile?.goal === 'elenco' ? 'Abra Meu Time e revise setores sem cobertura.' : onboardingProfile?.goal === 'formacoes' ? `Analise a formação ${onboardingProfile.favoriteFormation}.` : onboardingProfile?.goal === 'treino' ? 'Abra uma ficha salva e registre uma partida real.' : 'Crie ou revise a próxima ficha do seu elenco.';
-  const vaultReadiness = dashboardStats.total ? Math.round((dashboardStats.complete / dashboardStats.total) * 100) : 0;
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
   const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
   const creationTargetLabel = targetPosition === 'AUTO'
@@ -3071,83 +3152,12 @@ export function CardVisionApp() {
         <PremiumSearchScreen commands={appCommands} playerCount={history.length} />
       )}
       {mainSection === 'inicio' && (
-        <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} healthScore={healthSummary.score} lastBackupAt={lastBackupAt} onAction={handleCentralRecommendation} />
-      )}
-      {mainSection === 'inicio' && false && (
-      <div className="premium-home-shell">
-        <section className="home-command-center luxury-panel">
-          <div className="home-command-copy">
-            <div className="home-account-status"><span className={account?.offline ? 'offline' : 'online'} /><strong>{account?.offline ? 'Modo offline temporário' : 'Conta e licença verificadas'}</strong></div>
-            <p className="kicker"><Sparkles size={15} /> Central BuildMaster</p>
-            <h1>Seu elenco começa com uma ficha bem construída.</h1>
-            <p>Crie, revise e organize jogadores com um fluxo direto. As ferramentas avançadas ficam disponíveis sem poluir o que é essencial.</p>
-            <div className="home-primary-actions">
-              <button type="button" className="home-create-primary" onClick={() => setMobileLauncher('create')}><Sparkles size={19} /><span><strong>Criar nova ficha</strong><small>Ler print ou criar manualmente</small></span></button>
-              <button type="button" className="home-open-vault" onClick={openCofreDeJogadores}><History size={19} /><span><strong>Abrir Cofre</strong><small>{dashboardStats.total} jogador(es)</small></span></button>
-            </div>
-            <div className="home-account-meta">
-              <span><ShieldCheck size={14} /> {account?.profile.role === 'admin' ? 'Acesso administrador' : 'Acesso licenciado'}</span>
-              <span><CheckCircle2 size={14} /> {dashboardStats.complete} ficha(s) concluída(s)</span>
-              <span><Target size={14} /> {dashboardStats.positions} posição(ões) coberta(s)</span>
-            </div>
-          </div>
-          <aside className="home-next-step-card">
-            <div className="home-next-step-icon"><BrainCircuit size={24} /></div>
-            <span>Próxima ação sugerida</span>
-            <strong>{homeSuggestedAction}</strong>
-            <small className="home-priority-label">Foco atual: {homePriorityLabel}</small>
-            <div className="home-next-step-footer"><b>{homeAttentionTotal}</b><small>ponto(s) de atenção no Cofre</small></div>
-          </aside>
-        </section>
-        <section className="home-quick-section">
-          <div className="home-section-heading"><div><p className="kicker">Acesso rápido</p><h2>Continue no ponto certo</h2></div><span>Fluxo premium</span></div>
-          <div className="home-quick-grid">
-            <button type="button" className="quick-action-create" onClick={() => setMobileLauncher('create')}><span><Sparkles size={22} /></span><div><strong>Nova ficha</strong><small>Começar análise</small></div></button>
-            <button type="button" disabled={!currentPanelResult} onClick={() => openMainSection('resultado')}><span><Trophy size={22} /></span><div><strong>Ficha atual</strong><small>{currentPanelResult?.parsed.playerName || 'Nenhuma aberta'}</small></div></button>
-            <button type="button" onClick={openCofreDeJogadores}><span><History size={22} /></span><div><strong>Cofre</strong><small>Buscar, revisar e organizar</small></div></button>
-            <button type="button" onClick={() => openMainSection('time')}><span><Target size={22} /></span><div><strong>Meu Time</strong><small>Elenco, setores e tática</small></div></button>
-            <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><span><ShieldCheck size={22} /></span><div><strong>Backup</strong><small>Proteger dados</small></div></button>
-            <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Menu</strong><small>Atalhos, conta e sistema</small></div></button>
-          </div>
-        </section>
-        <section className="home-overview-grid">
-          <article className="home-vault-summary luxury-panel">
-            <div className="home-card-heading"><div><p className="kicker"><History size={14} /> Resumo do Cofre</p><h2>Seu acervo de jogadores</h2></div><button type="button" onClick={openCofreDeJogadores}>Ver tudo</button></div>
-            <div className="home-vault-metrics">
-              <button type="button" onClick={openCofreDeJogadores}><strong>{dashboardStats.total}</strong><span>Salvos</span></button>
-              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('COMPLETE'); setLibraryOpen(true); }}><strong>{dashboardStats.complete}</strong><span>Completos</span></button>
-              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span></button>
-              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('FAVORITES'); setLibraryOpen(true); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
-            </div>
-            <div className="home-vault-progress"><div><span>Prontidão do Cofre</span><strong>{vaultReadiness}%</strong></div><i><b style={{ width: `${vaultReadiness}%` }} /></i><small>{dashboardStats.complete} de {dashboardStats.total || 0} fichas marcadas como completas.</small></div>
-          </article>
-          <article className="home-recent-player luxury-panel">
-            <div className="home-card-heading"><div><p className="kicker"><Clock3 size={14} /> Último jogador analisado</p><h2>{recentVaultEntry ? 'Continue a análise mais recente' : 'Nenhuma ficha salva'}</h2></div></div>
-            {recentVaultEntry ? (
-              <button type="button" className="recent-player-content" onClick={() => restoreHistory(recentVaultEntry)}>
-                <div className="recent-player-image">{recentVaultEntry.playerImage || recentVaultEntry.fullPreview ? <img src={recentVaultEntry.playerImage || recentVaultEntry.fullPreview || ''} alt={`Carta de ${recentVaultEntry.result.parsed.playerName}`} /> : <Trophy size={27} />}</div>
-                <div><strong>{recentVaultEntry.result.parsed.playerName}</strong><span>{recentVaultEntry.result.bestPosition.label} • {recentVaultEntry.result.parsed.playstyle || 'Estilo não informado'}</span><small>Confiança {recentVaultEntry.result.parsed.confidence ?? 0}% • {recentVaultEntry.result.trainingPointsUsed}/{recentVaultEntry.result.trainingPointsTotal} pts</small></div>
-                <em>Abrir</em>
-              </button>
-            ) : (
-              <div className="recent-player-empty"><Trophy size={25} /><span>Crie a primeira ficha para começar seu histórico premium de jogadores.</span><button type="button" onClick={() => setMobileLauncher('create')}>Criar ficha</button></div>
-            )}
-          </article>
-        </section>
-        <section className="home-alert-center luxury-panel">
-          <div className="home-card-heading"><div><p className="kicker"><ShieldCheck size={14} /> Alertas importantes</p><h2>{homeAttentionTotal ? 'O que merece sua atenção' : 'Tudo organizado por enquanto'}</h2></div><span className={homeAttentionTotal ? 'attention' : 'clear'}>{homeAttentionTotal ? `${homeAttentionTotal} alerta(s)` : 'Sem alertas'}</span></div>
-          {homeAttentionTotal ? (
-            <div className="home-alert-grid">
-              <button type="button" className={smartHome.needsReview ? 'has-alert' : ''} onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, reviewOnly: true })); setLibraryOpen(true); }}><span><ShieldCheck size={19} /></span><div><strong>{smartHome.needsReview}</strong><small>Para revisar</small></div></button>
-              <button type="button" className={smartHome.lowConfidence ? 'has-warning' : ''} onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); setLibraryOpen(true); }}><span><BrainCircuit size={19} /></span><div><strong>{smartHome.lowConfidence}</strong><small>Confiança baixa</small></div></button>
-              <button type="button" className={smartHome.incomplete ? 'has-pending' : ''} onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><span><Clock3 size={19} /></span><div><strong>{smartHome.incomplete}</strong><small>Pendências</small></div></button>
-            </div>
-          ) : (
-            <div className="home-alert-clear"><CheckCircle2 size={22} /><div><strong>Cofre em ordem</strong><span>Não há fichas marcadas para revisão, com baixa confiança ou pendências.</span></div></div>
+        <section className="bm-v3790-home-stack">
+          {unifiedCreation.activeDraft && (
+            <UnifiedCreationResumeCardV3790 draft={unifiedCreation.activeDraft} onResume={unifiedCreation.resume} onDiscard={unifiedCreation.discard} />
           )}
-          {smartHome.alerts.length > 0 && <div className="home-alert-notes">{smartHome.alerts.slice(0, 3).map((alert) => <span key={alert}>{alert}</span>)}</div>}
+          <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} healthScore={healthSummary.score} lastBackupAt={lastBackupAt} onAction={handleCentralRecommendation} />
         </section>
-      </div>
       )}
       {mainSection === 'jogadores' && (
         <SectionErrorBoundary area="jogadores"><PlayerLaboratory
@@ -3204,6 +3214,17 @@ export function CardVisionApp() {
       )}
       {!['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
+        {isCreationSection && (
+          <UnifiedCreationFlowV3790
+            method={unifiedCreation.method}
+            step={unifiedCreation.step}
+            progress={unifiedCreation.progress}
+            saveState={sessionSaveState}
+            playerName={manualFields.playerName || currentPanelResult?.parsed.playerName || ''}
+            onMethodChange={unifiedCreation.switchMethod}
+            onReset={() => unifiedCreation.reset(true)}
+          />
+        )}
         {isCreationSection && (
           <section className="bm-creation-guide luxury-panel" aria-label="Como criar a ficha">
             <div className="bm-creation-guide-title">
@@ -3523,131 +3544,60 @@ export function CardVisionApp() {
           )}
           </>)}
           {mainSection === 'cofre' && (
-          <div className="cofre-section cofre-premium-layout bm2820-vault-screen">
-            <section className="cofre-summary-card vault-catalog-hero luxury-panel">
-              <div className="vault-hero-copy">
-                <p className="kicker"><History size={14} /> Cofre de Jogadores</p>
-                <h2>{history.length ? 'Seu elenco, organizado como catálogo' : 'Seu catálogo começa com a primeira ficha'}</h2>
-                <span>{history.length ? 'Encontre qualquer jogador, acompanhe pendências, compare opções e proteja tudo em um único lugar.' : 'Crie uma ficha pelo leitor ou no modo manual e ela aparecerá aqui automaticamente.'}</span>
-                <div className="vault-readiness-line">
-                  <div><strong>{vaultReadiness}%</strong><span>prontidão do Cofre</span></div>
-                  <i><b style={{ width: `${vaultReadiness}%` }} /></i>
-                </div>
+          <div className="cofre-section cofre-premium-layout bm2820-vault-screen bm-v3800-vault">
+            <section className="bm-v3800-vault-hero">
+              <div>
+                <p className="kicker"><History size={14} /> Cofre Clean</p>
+                <h2>{cleanVaultSummary.players ? `${cleanVaultSummary.players} jogador(es) organizado(s)` : 'Seu Cofre começa com a primeira ficha'}</h2>
+                <span>{cleanVaultSummary.fichas} ficha(s) ativa(s){cleanVaultSummary.archived ? ` · ${cleanVaultSummary.archived} arquivada(s)` : ''}</span>
               </div>
-              <div className="cofre-summary-metrics vault-hero-metrics">
-                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); resetVaultFilters(); }}><strong>{dashboardStats.total}</strong><span>Jogadores</span><small>catálogo completo</small></button>
-                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('COMPLETE'); }}><strong>{dashboardStats.complete}</strong><span>Prontos</span><small>sem pendências</small></button>
-                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span><small>pedem atenção</small></button>
-                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); }}><strong>{smartHome.lowConfidence}</strong><span>Baixa confiança</span><small>revisar leitura</small></button>
-              </div>
+              <button type="button" onClick={() => openMainSection('leitor')}><ImagePlus size={17} /> Nova ficha</button>
             </section>
             <nav className="section-segmented-tabs vault-main-tabs luxury-panel" aria-label="Áreas do Cofre">
-              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Catálogo</span></button>
-              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Pastas</span></button>
-              <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
-              <button type="button" className={vaultView === 'backup' ? 'active' : ''} onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
+              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Jogadores</span></button>
+              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Organizar</span></button>
+              <details className={`bm-v3800-vault-more${vaultView === 'comparar' || vaultView === 'backup' ? ' active' : ''}`}>
+                <summary><SlidersHorizontal size={17} /><span>{vaultView === 'comparar' ? 'Comparar' : vaultView === 'backup' ? 'Backup' : 'Mais'}</span></summary>
+                <div>
+                  <button type="button" onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
+                  <button type="button" onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
+                </div>
+              </details>
             </nav>
             {vaultView === 'jogadores' && (
-              <section className="vault-view-panel vault-catalog-panel luxury-panel">
-                <div className="vault-catalog-heading">
-                  <div>
-                    <p className="kicker"><Users size={14} /> Catálogo premium</p>
-                    <h3>{filteredHistory.length === history.length ? `${history.length} jogador(es) no Cofre` : `${filteredHistory.length} de ${history.length} jogador(es)`}</h3>
-                    <span>Abra uma ficha, favorite, mova para pastas ou filtre por confiança e situação.</span>
-                  </div>
-                  <div className="vault-filter-counter"><strong>{activeVaultFilterCount}</strong><span>filtro(s) ativo(s)</span></div>
-                </div>
-                <div className="vault-search-premium">
-                  <Search size={20} />
-                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo, habilidade ou observação" aria-label="Buscar no Cofre" />
-                  {historySearch && <button type="button" onClick={() => setHistorySearch('')}><RotateCcw size={15} /> Limpar</button>}
-                </div>
-                <div className="vault-quick-filter-strip" aria-label="Filtros rápidos do Cofre">
-                  <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 100 && !vaultFilters.favoritesOnly && !vaultFilters.pendingOnly && !vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, minConfidence: 0, maxConfidence: 100 })); }}>Todos <b>{history.length}</b></button>
-                  <button type="button" className={historyFilter === 'FAVORITES' ? 'selected' : ''} onClick={() => { setHistoryFilter('FAVORITES'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, maxConfidence: 100 })); }}><Star size={14} /> Favoritos <b>{dashboardStats.favorites}</b></button>
-                  <button type="button" className={historyFilter === 'COMPLETE' ? 'selected' : ''} onClick={() => { setHistoryFilter('COMPLETE'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><CheckCircle2 size={14} /> Prontos <b>{dashboardStats.complete}</b></button>
-                  <button type="button" className={historyFilter === 'PENDING' ? 'selected' : ''} onClick={() => { setHistoryFilter('PENDING'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><Clock3 size={14} /> Pendentes <b>{dashboardStats.pending}</b></button>
-                  <button type="button" className={historyFilter === 'REVIEW' ? 'selected' : ''} onClick={() => { setHistoryFilter('REVIEW'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><ShieldCheck size={14} /> Revisar <b>{dashboardStats.review}</b></button>
-                  <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 69 ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, minConfidence: 0, maxConfidence: 69, favoritesOnly: false, pendingOnly: false, reviewOnly: false })); }}><Filter size={14} /> Confiança baixa <b>{smartHome.lowConfidence}</b></button>
-                </div>
-                <div className="vault-catalog-toolbar">
-                  <label><Clock3 size={15} /><span>Ordenar</span><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}><option value="UPDATED">Mais recentes</option><option value="NAME">Nome</option><option value="POSITION">Posição</option><option value="PENDING">Mais pendentes</option><option value="STATUS">Status</option></select></label>
-                  <button type="button" className={libraryOpen ? 'active-filter' : ''} onClick={() => setLibraryOpen((value) => !value)}><SlidersHorizontal size={16} /> {libraryOpen ? 'Finalizar organização' : 'Organizar fichas'}</button>
-                  {(activeVaultFilterCount > 0) && <button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar tudo</button>}
-                </div>
-                <details className="cofre-filter-drawer vault-filter-drawer-premium">
-                  <summary><SlidersHorizontal size={16} /> Filtros avançados <span>{filteredHistory.length} resultado(s)</span></summary>
-                  <div className="advanced-filter-grid">
-                    <label><span>Pasta</span><select value={vaultFilters.folderId} onChange={(event) => setVaultFilters((current) => ({ ...current, folderId: event.target.value }))}>{vaultFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
-                    <label><span>Posição escolhida</span><select value={vaultFilters.position} onChange={(event) => setVaultFilters((current) => ({ ...current, position: event.target.value as VaultFilterState['position'] }))}><option value="ALL">Todas</option>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
-                    <label><span>Estilo oficial</span><select value={vaultFilters.playstyle} onChange={(event) => setVaultFilters((current) => ({ ...current, playstyle: event.target.value }))}><option value="">Todos</option>{availablePlaystyles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-                    <label><span>Habilidade</span><select value={vaultFilters.skill} onChange={(event) => setVaultFilters((current) => ({ ...current, skill: event.target.value }))}><option value="">Todas</option>{availableSkills.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-                    <label><span>Confiança mínima: {vaultFilters.minConfidence}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, minConfidence: Number(event.target.value) }))} /></label>
-                    <label><span>Confiança máxima: {vaultFilters.maxConfidence}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.maxConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, maxConfidence: Number(event.target.value) }))} /></label>
-                    <label><span>Eficiência mínima: {vaultFilters.minEfficiency}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minEfficiency} onChange={(event) => setVaultFilters((current) => ({ ...current, minEfficiency: Number(event.target.value) }))} /></label>
-                  </div>
-                  <div className="combined-filter-chips">
-                    <button type="button" className={vaultFilters.favoritesOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, favoritesOnly: !current.favoritesOnly }))}>Somente favoritos</button>
-                    <button type="button" className={vaultFilters.pendingOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, pendingOnly: !current.pendingOnly }))}>Somente pendentes</button>
-                    <button type="button" className={vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}>Somente revisão</button>
-                    <button type="button" onClick={resetVaultFilters}>Restaurar filtros</button>
-                  </div>
-                </details>
-                {history.length ? (
-                  <div className="vault-player-list vault-player-catalog-grid">
-                    {filteredHistory.map((item) => {
-                      const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
-                      const status = savedStatusLabel(item);
-                      const statusText = savedStatusText(item);
-                      const confidence = item.result.parsed.confidence ?? 0;
-                      const efficiency = item.result.advancedOptimizer?.efficiencyScore ?? 0;
-                      const folderName = vaultFolders.find((folder) => folder.id === folderForEntry(item))?.name ?? 'Sem pasta';
-                      return (
-                        <article className={`vault-player-card status-${status}${item.favorite ? ' favorite-row' : ''}`} key={item.id}>
-                          <div className="vault-player-card-head">
-                            <button className="vault-player-identity" type="button" onClick={() => restoreHistory(item)}>
-                              <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt={`Carta de ${item.result.parsed.playerName}`} loading="lazy" decoding="async" /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
-                              <div><strong>{item.result.parsed.playerName}</strong><span>{item.result.parsed.playstyle || 'Estilo não informado'}</span><small>{item.result.buildName}</small></div>
-                            </button>
-                            <button type="button" className={item.favorite ? 'vault-favorite-button selected' : 'vault-favorite-button'} title={item.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={() => toggleFavoriteHistory(item.id)}><Star size={18} fill={item.favorite ? 'currentColor' : 'none'} /></button>
-                          </div>
-                          <div className="vault-card-badges">
-                            <span className="position-badge">{item.result.bestPosition.label}</span>
-                            <span className={`status-badge status-${status}`}>{status === 'completo' ? 'Pronto' : status === 'revisar' ? 'Revisar' : 'Pendente'}</span>
-                            <span className={confidence < 70 ? 'confidence-badge low' : 'confidence-badge'}>Confiança {confidence}%</span>
-                          </div>
-                          <div className="vault-card-metrics">
-                            <div><span>Pontos</span><strong>{item.result.trainingPointsUsed}/{item.result.trainingPointsTotal}</strong></div>
-                            <div><span>Eficiência</span><strong>{efficiency}%</strong></div>
-                            <div><span>Pasta</span><strong>{folderName}</strong></div>
-                          </div>
-                          <div className="vault-skill-progress">
-                            <div><span>Habilidades concluídas</span><strong>{info.done}/{info.total}</strong></div>
-                            <i><b style={{ width: `${info.percent}%` }} /></i>
-                            <small>{statusText}</small>
-                          </div>
-                          {item.notes && <p className="vault-card-note">{item.notes}</p>}
-                          <div className="vault-card-actions">
-                            <button type="button" className="vault-open-player" onClick={() => restoreHistory(item)}><Trophy size={16} /> Abrir ficha</button>
-                            <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={16} /></button>
-                            <button type="button" title="Exportar relatório" onClick={() => exportSingleHistoryItem(item)}><FileText size={16} /></button>
-                            <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}><Trash2 size={16} /></button>
-                          </div>
-                          {libraryOpen && (
-                            <div className="saved-advanced-editor vault-card-editor">
-                              <label className="saved-status-select"><span>Pasta</span><select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>{vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
-                              <label className="saved-status-select"><span>Status</span><select value={status} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}><option value="pendente">Pendente</option><option value="completo">Completo</option><option value="revisar">Revisar</option></select></label>
-                              <div className="saved-skill-bulk"><button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Concluir habilidades</button><button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir</button></div>
-                              <label className="saved-notes"><span>Notas pessoais</span><textarea value={item.notes ?? ''} onChange={(event) => updateHistoryNotes(item.id, event.target.value)} placeholder="Como pretende usar este jogador?" /></label>
-                            </div>
-                          )}
-                        </article>
-                      );
-                    })}
-                    {!filteredHistory.length && <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Search size={28} /></div><strong>Nenhum jogador corresponde aos filtros</strong><span>Altere a busca ou limpe os filtros para voltar a exibir o catálogo.</span><button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar filtros</button></div>}
-                  </div>
-                ) : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><History size={30} /></div><strong>Seu Cofre ainda está vazio</strong><span>Crie a primeira ficha para iniciar seu catálogo premium de jogadores.</span><div><button type="button" onClick={() => openMainSection('leitor')}><ScanText size={16} /> Ler uma carta</button><button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={16} /> Criar manual</button></div></div>}
-              </section>
+              <CleanVaultV3800
+                entries={history}
+                visibleEntries={filteredHistory}
+                query={historySearch}
+                onQueryChange={setHistorySearch}
+                historyFilter={historyFilter}
+                onHistoryFilterChange={(value) => setHistoryFilter(value as HistoryFilter)}
+                sort={historySort}
+                onSortChange={(value) => setHistorySort(value as HistorySort)}
+                advancedFilters={vaultFilters}
+                onAdvancedFiltersChange={(updater) => setVaultFilters((current) => updater(current) as VaultFilterState)}
+                folders={vaultFolders}
+                positions={POSITION_LABELS.filter((item) => item.code !== 'AUTO')}
+                playstyles={availablePlaystyles}
+                skills={availableSkills}
+                activeFilterCount={activeVaultFilterCount}
+                organizing={libraryOpen}
+                onToggleOrganizing={() => setLibraryOpen((value) => !value)}
+                onResetFilters={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}
+                onOpen={restoreHistory}
+                onToggleFavorite={toggleFavoriteHistory}
+                onArchive={archiveHistoryItem}
+                onDuplicate={duplicateHistoryItem}
+                onExport={exportSingleHistoryItem}
+                onDelete={deleteHistoryItem}
+                onMoveFolder={moveHistoryToFolder}
+                onChangeStatus={updateHistoryStatus}
+                onMarkSkills={markAllHistorySkills}
+                onNotesChange={updateHistoryNotes}
+                onMergeDuplicates={mergeSelectedHistory}
+                onCreateByImage={() => openMainSection('leitor')}
+                onCreateManual={() => openMainSection('manual')}
+              />
             )}
             {vaultView === 'organizar' && (
               <section className="vault-view-panel vault-organization-panel luxury-panel">

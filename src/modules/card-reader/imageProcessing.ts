@@ -1,3 +1,5 @@
+import { planAdaptiveImageSize } from '@/lib/invisibleOptimizationV3820';
+
 export type ImageEnhancement = 'original' | 'color' | 'contrast' | 'sharp' | 'binary' | 'inverted';
 
 type PixelBuffer = Uint8ClampedArray<ArrayBufferLike>;
@@ -21,19 +23,9 @@ export function mergeOcrTexts(...texts: string[]) {
   return Array.from(lines.values()).join('\n');
 }
 
-async function imageToCanvas(file: File | Blob) {
+async function imageToBitmap(file: File | Blob) {
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-  const bitmap = await createImageBitmap(file);
-  const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) {
-    bitmap.close?.();
-    return null;
-  }
-  ctx.drawImage(bitmap, 0, 0);
-  return { bitmap, canvas, ctx };
+  return createImageBitmap(file).catch(() => null);
 }
 
 function clampByte(value: number) {
@@ -173,13 +165,17 @@ export function expandOcrRegion(
 }
 
 export async function preprocessImage(file: File | Blob, mode: ImageEnhancement = 'contrast'): Promise<Blob | File> {
-  const setup = await imageToCanvas(file).catch(() => null);
-  if (!setup) return file;
-  const { bitmap, canvas } = setup;
-  const longestSide = Math.max(bitmap.width, bitmap.height);
-  const scale = Math.max(0.7, Math.min(2.5, 2800 / Math.max(1, longestSide)));
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const bitmap = await imageToBitmap(file);
+  if (!bitmap) return file;
+  const plan = planAdaptiveImageSize(bitmap.width, bitmap.height, {
+    workload: 'ocr-full',
+    preferredLongestSide: 2800,
+    minScale: 0.7,
+    maxScale: 2.5
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = plan.width;
+  canvas.height = plan.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
     bitmap.close?.();
@@ -202,17 +198,22 @@ export async function cropImage(
   mode: ImageEnhancement = 'contrast'
 ): Promise<Blob | File> {
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return file;
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  const bitmap = await imageToBitmap(file);
   if (!bitmap) return file;
   const cropX = Math.max(0, Math.round(bitmap.width * region.x));
   const cropY = Math.max(0, Math.round(bitmap.height * region.y));
   const cropW = Math.max(1, Math.min(bitmap.width - cropX, Math.round(bitmap.width * region.w)));
   const cropH = Math.max(1, Math.min(bitmap.height - cropY, Math.round(bitmap.height * region.h)));
   const safeTarget = Math.min(Math.max(720, widthTarget), 3200);
-  const scale = Math.max(1, Math.min(4.2, safeTarget / cropW));
+  const plan = planAdaptiveImageSize(cropW, cropH, {
+    workload: 'ocr-crop',
+    preferredLongestSide: safeTarget,
+    minScale: 1,
+    maxScale: 4.2
+  });
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(cropW * scale));
-  canvas.height = Math.max(1, Math.round(cropH * scale));
+  canvas.width = plan.width;
+  canvas.height = plan.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
     bitmap.close?.();

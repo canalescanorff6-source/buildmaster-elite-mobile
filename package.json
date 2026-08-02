@@ -2,7 +2,7 @@
   "name": "buildmaster-elite-tatico-v37-00-inteligencia-profissional",
   "version": "37.00.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v37.00 — Central Profissional com validação por partidas, perfis profundos, matriz de posições, habilidades e aprendizado pessoal.",
+  "description": "BuildMaster Elite T\u00e1tico v37.00 \u2014 Central Profissional com valida\u00e7\u00e3o por partidas, perfis profundos, matriz de posi\u00e7\u00f5es, habilidades e aprendizado pessoal.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -27,7 +27,7 @@
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v3000": "tsc -p tests/types-v3000/tsconfig.json --pretty false && tsc -p tests/types-v3000/tsconfig-ui.json --pretty false",
     "test:v3000": "npm run test:v3000:core",
-    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run test:v3177 && npm run test:v3178 && npm run test:v3179 && npm run test:v3180 && npm run test:v3181 && npm run test:v3182 && npm run test:v3200 && npm run test:v3300 && npm run test:v3400 && npm run test:v3500 && npm run test:v3510 && npm run test:v3520 && npm run test:v3600 && npm run test:v3700 && npm run test:v3740 && npm run test:v3750 && npm run test:v3760 && npm run test:v3770 && npm run test:v3771 && npm run quality:audit",
+    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run test:v3177 && npm run test:v3178 && npm run test:v3179 && npm run test:v3180 && npm run test:v3181 && npm run test:v3182 && npm run test:v3200 && npm run test:v3300 && npm run test:v3400 && npm run test:v3500 && npm run test:v3510 && npm run test:v3520 && npm run test:v3600 && npm run test:v3700 && npm run test:v3740 && npm run test:v3750 && npm run test:v3760 && npm run test:v3770 && npm run test:v3771 && npm run test:v3780 && npm run test:v3790 && npm run test:v3800 && npm run test:v3810 && npm run test:v3820 && npm run quality:audit",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -112,7 +112,17 @@
     "test:v3760": "npm run typecheck:v3760 && node -r ./tests/_ts-require.cjs tests/v37-60-real-validation-regression.ts",
     "typecheck:v3770": "tsc -p tests/types-v3770/tsconfig.json --pretty false && tsc -p tests/types-v3770-ui/tsconfig.json --pretty false",
     "test:v3770": "npm run typecheck:v3770 && node -r ./tests/_ts-require.cjs tests/v37-70-continuous-rules-regression.ts",
-    "test:v3771": "node tests/v37-71-ci-hotfix-regression.mjs"
+    "test:v3771": "node tests/v37-71-ci-hotfix-regression.mjs",
+    "test:v3780": "npm run typecheck:v3780 && node tests/v37-80-clean-intelligent-regression.mjs",
+    "typecheck:v3780": "tsc -p tests/types-v3780/tsconfig.json --pretty false && tsc -p tests/types-v3780-ui/tsconfig.json --pretty false",
+    "typecheck:v3790": "tsc -p tests/types-v3790/tsconfig.json --pretty false && tsc -p tests/types-v3790-ui/tsconfig.json --pretty false",
+    "test:v3790": "npm run typecheck:v3790 && node -r ./tests/_ts-require.cjs tests/v37-90-unified-creation-regression.ts && node tests/v37-90-unified-creation-integration-regression.mjs",
+    "typecheck:v3800": "tsc -p tests/types-v3800/tsconfig.json --pretty false && tsc -p tests/types-v3800-ui/tsconfig.json --pretty false",
+    "test:v3800": "npm run typecheck:v3800 && node -r ./tests/_ts-require.cjs tests/v38-00-clean-vault-regression.ts && node tests/v38-00-clean-vault-integration-regression.mjs",
+    "typecheck:v3810": "tsc -p tests/types-v3810/tsconfig.json --pretty false && tsc -p tests/types-v3810-ui/tsconfig.json --pretty false",
+    "test:v3810": "npm run typecheck:v3810 && node -r ./tests/_ts-require.cjs tests/v38-10-premium-clean-result-regression.ts && node tests/v38-10-premium-clean-result-integration-regression.mjs",
+    "typecheck:v3820": "tsc -p tests/types-v3820/tsconfig.json --pretty false && tsc -p tests/types-v3140/tsconfig.json --pretty false && tsc -p tests/types-v3820-ui/tsconfig.json --pretty false",
+    "test:v3820": "npm run typecheck:v3820 && node -r ./tests/_ts-require.cjs tests/v38-20-invisible-optimization-regression.ts && node tests/v38-20-invisible-optimization-integration-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

@@ -9,12 +9,13 @@ const cache = read('src/components/RegisterServiceWorker.tsx');
 const doctor = read('scripts/ci-doctor.mjs');
 
 assert.doesNotMatch(workspace, /\bUploadCloud\b/, 'Import não utilizado não pode voltar ao ResultWorkspace.');
-assert.match(cache, /NATIVE_CACHE_SCHEMA = '37\.70\.0-continuous-rules-1'/);
-assert.match(v33, /37\\\.\(\?:00\|40\|50\|60\|70\)/, 'A regressão v33 precisa aceitar o esquema v37.70.');
+assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:37\.(?:70\.0-continuous-rules|80\.0-clean-intelligent|90\.0-unified-creation)|38\.(?:00\.0-clean-vault|10\.0-premium-clean-result|20\.0-invisible-optimization))-1'/);
+assert.ok(v33.includes("37\\.(?:00|40|50|60|70|80|90)"), 'A regressão v33 precisa continuar aceitando os esquemas v37.');
+assert.ok(v33.includes("38\\.(?:00|10|20)"), 'A regressão v33 precisa aceitar os esquemas v38.00, v38.10 e v38.20.');
 assert.match(advanced, /const contextualTraining = result\.calibrationV32\?\.finalTraining \?\? result\.training/);
 assert.match(advanced, /function contextCriticalGroups/);
 assert.match(advanced, /function contextMismatchPenalty/);
-for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71']) {
+for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71', 'v37.80', 'v37.90', 'v38.00', 'v38.10', 'v38.20']) {
   assert.ok(doctor.includes(`Regressões ${version}`), `O diagnóstico consolidado precisa executar ${version}.`);
 }
 

@@ -57,6 +57,7 @@ import {
   getOneHundredUpgradeChecklist
 } from '@/lib/ultimateCoach';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
+import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
@@ -80,6 +81,8 @@ import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligence
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
 import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';
 import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
+import { PremiumCleanResultV3810 } from '@/components/PremiumCleanResultV3810';
+import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
@@ -356,7 +359,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const communityEnabled = useObservabilityFeatureFlag('community');
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -418,7 +421,9 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const pointsAvailable = Math.max(0, result.trainingPointsTotal - result.trainingPointsUsed);
   const advancedTabs = RESULT_ADVANCED_GROUPS.flatMap((group) => group.tabs.map((item) => item.value));
   const advancedSelected = advancedTabs.includes(tab);
-  const visiblePrimaryTabs = advancedMode ? RESULT_PRIMARY_TABS : RESULT_PRIMARY_TABS.filter((item) => item.id !== 'ficha');
+  const visiblePrimaryTabs = advancedMode
+    ? RESULT_PRIMARY_TABS
+    : RESULT_PRIMARY_TABS.filter((item) => CLEAN_RESULT_PRIMARY_VIEWS.includes(item.id as typeof CLEAN_RESULT_PRIMARY_VIEWS[number]));
 
   function openPrimaryResult(view: ResultPrimaryView) {
     setAdvancedOpen(false);
@@ -486,8 +491,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           <div className="result-key-metrics">
             <article><span>Pontos usados</span><strong>{result.trainingPointsUsed}</strong><small>de {result.trainingPointsTotal}</small></article>
             <article><span>Disponíveis</span><strong>{pointsAvailable}</strong><small>pontos restantes</small></article>
-            <article><span>Confiança</span><strong>{card.confidence}%</strong><small>{result.validation?.level === 'blocked' ? 'revisão necessária' : 'análise liberada'}</small></article>
-            <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>
+            {advancedMode && <article><span>Confiança</span><strong>{card.confidence}%</strong><small>{result.validation?.level === 'blocked' ? 'revisão necessária' : 'análise liberada'}</small></article>}
+            {advancedMode && <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>}
           </div>
 
           <div className="result-budget-line">
@@ -657,6 +662,13 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'resumo' && (
         <div className="result-section-grid bm-simple-result-summary">
+          <PremiumCleanResultV3810
+            result={result}
+            playerImage={playerImage}
+            onSave={onSaveFicha}
+            onShare={() => void shareCurrentResult()}
+            onExportImage={onExportImage}
+          />
           <article className="luxury-panel wide-card bm-definitive-build-card">
             <div className="section-title-row">
               <div>
@@ -683,7 +695,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          {result.deepCardIntelligence && <article className="luxury-panel wide-card bm-deep-card-intelligence">
+          {advancedMode && result.deepCardIntelligence && <article className="luxury-panel wide-card bm-deep-card-intelligence">
             <div className="section-title-row">
               <div><p className="kicker"><BrainCircuit size={14} /> Inteligência Profunda da Carta</p><h3>Uma ficha escolhida após simulações locais</h3></div>
               <span>{result.deepCardIntelligence.confidence}% • confiança {result.deepCardIntelligence.confidenceLabel}</span>
@@ -710,11 +722,11 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </details>
           </article>}
 
-          <SupremeGameplayCard result={result} />
+          {advancedMode && <SupremeGameplayCard result={result} />}
 
-          <UnifiedIntelligenceCard result={result} />
+          {advancedMode && <UnifiedIntelligenceCard result={result} />}
 
-          {result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
+          {advancedMode && result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
             <div className="section-title-row">
               <div><p className="kicker"><BrainCircuit size={14} /> IA local do BuildMaster</p><h3>Raciocínio no aparelho, sem API paga</h3></div>
               <span>{result.localAi.confidence}% • confiança {result.localAi.confidenceLabel}</span>
@@ -727,7 +739,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             {result.localAi.uncertainties.length > 0 && <details><summary>O que ainda precisa ser confirmado</summary><p>{result.localAi.uncertainties.join(' • ')}</p><b>{result.localAi.nextAction}</b></details>}
           </article>}
 
-          {result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
+          {advancedMode && result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
             <div className="section-title-row">
               <div><p className="kicker"><Trophy size={14} /> Motor Mundial de Fichas</p><h3>Evidência profissional + desempenho real</h3></div>
               <span>{result.competitiveFusion.confidence}% • {result.competitiveFusion.confidenceLabel}</span>
@@ -743,7 +755,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <details className="bm-world-fusion-guardrails"><summary>Como o app evita copiar uma ficha errada</summary>{result.competitiveFusion.guardrails.map((item) => <p key={item}>• {item}</p>)}</details>
           </article>}
 
-          <article className="luxury-panel wide-card bm-simple-match-impact">
+          <article className="luxury-panel wide-card bm-simple-match-impact bm-v3780-advanced-summary">
             <p className="kicker">O que deve mudar em campo</p>
             <div className="stat-bars five-cols">
               {[
@@ -797,16 +809,21 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           <article className="luxury-panel wide-card">
             <p className="kicker">Como usar nas partidas</p>
             <ul className="clean-list">
-              {result.usageTips.slice(0, 4).map((tip) => <li key={tip}>{tip}</li>)}
+              {result.usageTips.slice(0, advancedMode ? 4 : 3).map((tip) => <li key={tip}>{tip}</li>)}
             </ul>
           </article>
 
-          <article className="luxury-panel wide-card">
+          <article className="luxury-panel wide-card bm-v3780-why-card">
             <p className="kicker">Por que esta ficha foi escolhida</p>
             <ul className="clean-list">
               {result.recommendationExplanation.slice(0, 3).map((line) => <li key={line}>{line}</li>)}
             </ul>
           </article>
+
+          {!advancedMode && <details className="luxury-panel wide-card bm-v3780-analysis-entry">
+            <summary><BrainCircuit size={17} /><span><strong>Ver análise completa</strong><small>Confiança, alternativas, partidas e auditoria</small></span><ChevronDown size={17} /></summary>
+            <p>Ative o modo avançado em Configurações › Aparência para abrir os motores técnicos sem poluir o resultado principal.</p>
+          </details>}
         </div>
       )}
 
@@ -1549,6 +1566,13 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'exportar' && (
         <div className="result-section-grid export-pro-grid">
+          <PremiumCleanResultV3810
+            variant="export"
+            result={result}
+            playerImage={playerImage}
+            onShare={() => void shareCurrentResult()}
+            onExportImage={onExportImage}
+          />
           <CompactSharePanel result={result} playerImage={playerImage} onExportImage={() => onExportImage?.()} />
           <article className="luxury-panel wide-card export-hero-card">
             <div className="section-title-row">

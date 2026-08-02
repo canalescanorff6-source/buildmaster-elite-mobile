@@ -2,6 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { PanelLoadingFallback } from '@/components/PanelLoadingFallback';
+import { getRuntimeOptimizationProfile, shouldPreloadInBackground } from '@/lib/invisibleOptimizationV3820';
+import { scheduleIdleTask } from '@/lib/performanceScheduler';
 
 const fallback = () => <PanelLoadingFallback />;
 
@@ -206,13 +208,32 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
 };
 
 const preloadedGroups = new Set<LazyPanelGroup>();
+const preloadingGroups = new Set<LazyPanelGroup>();
+
+function waitForIdle(timeout: number): Promise<void> {
+  return new Promise((resolve) => {
+    scheduleIdleTask(resolve, timeout);
+  });
+}
 
 export function preloadPanelGroup(group: LazyPanelGroup): void {
-  if (typeof window === 'undefined' || preloadedGroups.has(group)) return;
-  preloadedGroups.add(group);
-  for (const loader of PANEL_PRELOADERS[group]) {
-    void loader().catch(() => {
-      // O carregamento normal continua disponível mesmo se o prefetch falhar.
-    });
-  }
+  if (typeof window === 'undefined' || preloadedGroups.has(group) || preloadingGroups.has(group)) return;
+  if (!shouldPreloadInBackground()) return;
+
+  const profile = getRuntimeOptimizationProfile();
+  const limit = Math.min(PANEL_PRELOADERS[group].length, profile.preloadModuleLimit);
+  if (limit <= 0) return;
+
+  preloadingGroups.add(group);
+  void (async () => {
+    const loaders = PANEL_PRELOADERS[group].slice(0, limit);
+    for (let index = 0; index < loaders.length; index += 1) {
+      if (!shouldPreloadInBackground()) break;
+      await loaders[index]().catch(() => undefined);
+      if (index + 1 < loaders.length) await waitForIdle(profile.tier === 'high' ? 500 : 950);
+    }
+    preloadedGroups.add(group);
+  })().finally(() => {
+    preloadingGroups.delete(group);
+  });
 }
