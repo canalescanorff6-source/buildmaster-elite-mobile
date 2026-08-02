@@ -111,7 +111,7 @@ export function RefinedNavigation({
           <span>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</span>
           <div><strong>{username || 'Conta'}</strong><small>Perfil salvo</small></div>
         </div>
-        <small>Professional Suite · v38.33</small>
+        <small>Professional Suite · v38.34</small>
       </footer>
     </>
   );

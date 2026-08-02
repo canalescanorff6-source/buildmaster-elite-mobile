@@ -67,6 +67,11 @@ type TacticalPosterStudioPanelProps = {
   lineup: FormationSlotFit[];
   style: TacticalStyle;
   managerName?: string;
+  /** Compatibilidade com o Estúdio Marques e personalização do cabeçalho. */
+  brandTitle?: string;
+  brandSubtitle?: string;
+  defaultPalette?: TacticalPosterPalette;
+  defaultFocus?: string;
 };
 
 type PosterTemplate = {
@@ -112,13 +117,18 @@ function textToLines(value: string): string[] {
   return value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 8);
 }
 
-function createInitialState(formation: FormationBlueprint, style: TacticalStyle, managerName?: string): TacticalPosterEditableState {
+function createInitialState(
+  formation: FormationBlueprint,
+  style: TacticalStyle,
+  managerName?: string,
+  defaults: Pick<TacticalPosterStudioPanelProps, 'brandTitle' | 'brandSubtitle' | 'defaultPalette' | 'defaultFocus'> = {}
+): TacticalPosterEditableState {
   const instructions = defaultTacticalPosterInstructions(formation, style);
   return {
-    title: 'BuildMaster Elite Tático 2026',
-    subtitle: `${formation.name} • ${managerName ? `Técnico: ${managerName}` : 'estilos oficiais'}`,
-    focus: 'Segurança, construção curta e finalização inteligente.',
-    palette: 'ouro',
+    title: defaults.brandTitle?.trim() || 'BuildMaster Elite Tático 2026',
+    subtitle: defaults.brandSubtitle?.trim() || `${formation.name} • ${managerName ? `Técnico: ${managerName}` : 'estilos oficiais'}`,
+    focus: defaults.defaultFocus?.trim() || 'Segurança, construção curta e finalização inteligente.',
+    palette: defaults.defaultPalette ?? 'ouro',
     orientation: 'vertical',
     options: { ...DEFAULT_TACTICAL_POSTER_OPTIONS },
     playerOverrides: {},
@@ -138,9 +148,21 @@ function createInitialState(formation: FormationBlueprint, style: TacticalStyle,
   };
 }
 
-export function TacticalPosterStudioPanel({ formation, lineup, style, managerName }: TacticalPosterStudioPanelProps) {
+export function TacticalPosterStudioPanel({
+  formation,
+  lineup,
+  style,
+  managerName,
+  brandTitle,
+  brandSubtitle,
+  defaultPalette,
+  defaultFocus
+}: TacticalPosterStudioPanelProps) {
   const tacticalStudio2Enabled = useObservabilityFeatureFlag('tacticalStudio2');
-  const initialState = useMemo(() => createInitialState(formation, style, managerName), [formation, style, managerName]);
+  const initialState = useMemo(
+    () => createInitialState(formation, style, managerName, { brandTitle, brandSubtitle, defaultPalette, defaultFocus }),
+    [brandSubtitle, brandTitle, defaultFocus, defaultPalette, formation, managerName, style]
+  );
   const [title, setTitle] = useState(initialState.title);
   const [subtitle, setSubtitle] = useState(initialState.subtitle);
   const [focus, setFocus] = useState(initialState.focus);

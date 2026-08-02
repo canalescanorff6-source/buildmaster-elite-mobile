@@ -1,0 +1,1 @@
+Corrige o CI, a rota inicial e a compatibilidade do Estúdio Marques, mantendo o Gerador Tático Profissional sem IA paga.

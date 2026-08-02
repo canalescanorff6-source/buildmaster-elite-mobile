@@ -151,7 +151,7 @@ export function sanitizeContinuousRulePackV3770(input: unknown): ContinuousDynam
     gameVersion: cleanText(raw.gameVersion, 'eFootball 2026') || 'eFootball 2026',
     publishedAt: cleanText(raw.publishedAt, updatedAt) || updatedAt,
     expiresAt: cleanText(raw.expiresAt) || undefined,
-    minimumAppVersion: cleanText(raw.minimumAppVersion, '38.33.0') || '38.33.0',
+    minimumAppVersion: cleanText(raw.minimumAppVersion, '38.34.0') || '38.34.0',
     checksum: cleanText(raw.checksum) || undefined,
     releaseNotes: cleanTextList(raw.releaseNotes),
     catalog

@@ -52,12 +52,12 @@ const appTsconfig = JSON.parse(read('tsconfig.app.json'));
 const cardVisionSource = read('src/components/CardVisionApp.tsx');
 const cropCalibrationSource = read('src/modules/card-reader/templateCalibration.ts');
 
-check(version === '38.33.0', 'Versão v38.33 configurada', version);
+check(version === '38.34.0', 'Versão v38.34 configurada', version);
 check(lock.version === version && lock.packages?.['']?.version === version, 'package-lock sincronizado');
 check(appUpdates.includes(`'${version}'`), 'Motor de atualização sincronizado');
 check(dataSafety.includes(`APP_DATA_VERSION = '${version}'`) && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada sem quebrar o esquema compatível');
-check(manifest.name === 'BuildMaster Elite Tático v38.33' && manifest.short_name === 'BuildMaster v38.33', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v38-33-professional-template-1'), 'Cache PWA v38.33 renovado');
+check(manifest.name === 'BuildMaster Elite Tático v38.34' && manifest.short_name === 'BuildMaster v38.34', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v38-34-ci-stability-1'), 'Cache PWA v38.34 renovado');
 check(!/@import\s+['"]/i.test(css) && !/@import\s+['"]/i.test(executiveCss) && !/@import\s+['"]/i.test(studioCss) && !/@import\s+['"]/i.test(cleanResponsiveCss) && !/@import\s+['"]/i.test(identityCss) && !/@import\s+['"]/i.test(solidCss) && !/@import\s+['"]/i.test(revolutionCss) && !/@import\s+['"]/i.test(professionalCss) && css.includes('.bm-v3000-play-publication') && executiveCss.includes('.bm-v33-sidebar') && studioCss.includes('.bm-v3400-studio') && cleanResponsiveCss.includes('.bm-v3400-clean-responsive') && identityCss.includes('.bm-v3500-identity') && identityCss.includes('visual-midnight-navy') && solidCss.includes('.bm-v3520-solid') && solidCss.includes('.bm-dna-profile-grid') && revolutionCss.includes('.bm-v3600-revolution') && revolutionCss.includes('.bm-v36-mobile-dock') && professionalCss.includes('.bm-v3700-professional') && professionalCss.includes('.professional-scenario-grid'), 'Tema de produção, identidade e temas consolidados');
 check(layout.includes('bm-v3000-play-publication') && layout.includes('bm-v3300-executive') && layout.includes('v33-executive.css') && layout.includes('bm-v3400-studio') && layout.includes('v34-studio.css') && layout.includes('bm-v3400-clean-responsive') && layout.includes('v34-clean-responsive.css') && layout.includes('bm-v3500-identity') && layout.includes('v35-identity-themes.css') && layout.includes('bm-v3600-revolution') && layout.includes('v36-premium-revolution.css') && layout.includes('bm-v3700-professional') && layout.includes('v37-professional-intelligence.css'), 'Escopo visual e identidade ativos');
 check(rootPage.includes("@/components/AuthGate") && rootPage.includes("@/components/CardVisionApp") && rootPage.includes('<AuthGate>') && rootPage.includes('<CardVisionApp') && !/PrivacyPolicyPage|Política de privacidade|public-policy-page/.test(rootPage), 'Rota inicial correta', 'src/app/page.tsx deve abrir AuthGate + CardVisionApp e não pode conter a política de privacidade');
@@ -69,8 +69,8 @@ for (const command of ['npm run release:preflight', 'npm run quality:routes', 'n
 for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
 for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
 
-check(exists('src/modules/tactical-studio/metaFormationStudioV3832.ts') && exists('src/modules/tactical-studio/MetaFormationStudioV3832.tsx') && exists('src/modules/tactical-studio/professionalTacticalTemplateV3833.ts') && exists('tests/v38-33-professional-template-regression.mjs'), 'Gerador Tático Profissional v38.33 integrado');
-check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3833'), 'Bateria de produção inclui v38.33');
+check(exists('src/modules/tactical-studio/metaFormationStudioV3832.ts') && exists('src/modules/tactical-studio/MetaFormationStudioV3832.tsx') && exists('src/modules/tactical-studio/professionalTacticalTemplateV3833.ts') && exists('tests/v38-33-professional-template-regression.mjs') && exists('tests/v38-34-ci-complete-hotfix-regression.mjs'), 'Gerador Tático Profissional v38.34 integrado');
+check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3833') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3834'), 'Bateria de produção inclui v38.34');
 check(exists('src/lib/structuralPrecisionV3740.ts') && exists('src/components/StructuralPrecisionPanel.tsx') && exists('tests/v37-40-structural-precision-regression.ts'), 'Precisão estrutural v37.40 integrada');
 check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3740'), 'Bateria de produção inclui v37.40');
 
