@@ -1584,7 +1584,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
             <p className="panel-note">Todos os formatos usam a ficha validada, os pontos exatos, as 5 habilidades oficiais, os ímpetos e o plano de uso em campo.</p>
             <div className="export-pro-actions">
-              <button type="button" onClick={onExportImage}><ImagePlus size={18} /> Exportar imagem da ficha</button>
+              <button type="button" onClick={() => onExportImage?.()}><ImagePlus size={18} /> Exportar imagem da ficha</button>
               <button type="button" onClick={onPrintReport}><Download size={18} /> Gerar PDF profissional</button>
               <button type="button" onClick={onExportReport}><FileText size={18} /> Relatório HTML</button>
               <button type="button" onClick={onExportText}><Copy size={18} /> Relatório técnico</button>

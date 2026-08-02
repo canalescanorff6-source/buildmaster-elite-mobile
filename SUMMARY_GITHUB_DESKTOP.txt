@@ -1,1 +1,1 @@
-v38.21 — corrige o TypeScript completo removendo imports, estados e cálculos antigos sem uso
+v38.22 — corrige o TS2322 do botão de exportação adaptando o onClick ao formato esperado
