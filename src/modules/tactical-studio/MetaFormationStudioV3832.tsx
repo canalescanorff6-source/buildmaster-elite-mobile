@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 import { downloadBlob, safeFileName, svgToPngBlob } from './exportUtils';
+import { professionalMetaFormationOutputSize, renderProfessionalMetaFormationSvg } from './professionalTacticalTemplateV3833';
 import {
   META_COACH_STYLES,
   META_FORMATION_CATALOG,
@@ -29,10 +30,8 @@ import {
   createMetaFormationProject,
   deleteMetaFormationProject,
   getMetaFormation,
-  metaFormationOutputSize,
   readMetaFormationProjects,
   recommendMetaFormations,
-  renderMetaFormationSvg,
   saveMetaFormationProject,
   scorePlayerForMetaSlot,
   validateMetaFormation,
@@ -121,7 +120,7 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
   );
   const formation = useMemo(() => getMetaFormation(project.formationId), [project.formationId]);
   const validation = useMemo(() => validateMetaFormation(formation, project.assignments, project.objective), [formation, project.assignments, project.objective]);
-  const preview = useMemo(() => renderMetaFormationSvg(project, exportFormat), [exportFormat, project]);
+  const preview = useMemo(() => renderProfessionalMetaFormationSvg(project, exportFormat), [exportFormat, project]);
   const selectedSlot = formation.slots.find((item) => item.id === selectedSlotId) || formation.slots[0];
   const selectedAssignment = selectedSlot ? project.assignments[selectedSlot.id] : undefined;
   const compatiblePlayers = useMemo(() => {
@@ -171,13 +170,13 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
     setBusy(true);
     setMessage('Gerando imagem tática em alta resolução...');
     try {
-      const svg = renderMetaFormationSvg(project, format);
-      const size = metaFormationOutputSize(format);
+      const svg = renderProfessionalMetaFormationSvg(project, format);
+      const size = professionalMetaFormationOutputSize(format);
       const png = await svgToPngBlob(svg, size.width, size.height, 2);
       downloadBlob(png, `${safeFileName(project.name)}-${format}.png`);
       setMessage('Imagem PNG gerada com sucesso.');
     } catch (cause) {
-      const svg = renderMetaFormationSvg(project, format);
+      const svg = renderProfessionalMetaFormationSvg(project, format);
       downloadBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), `${safeFileName(project.name)}-${format}.svg`);
       setMessage(cause instanceof Error ? `${cause.message} A arte foi salva em SVG nítido.` : 'A arte foi salva em SVG nítido.');
     } finally {
@@ -188,8 +187,8 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
   async function shareImage() {
     setBusy(true);
     try {
-      const svg = renderMetaFormationSvg(project, exportFormat);
-      const size = metaFormationOutputSize(exportFormat);
+      const svg = renderProfessionalMetaFormationSvg(project, exportFormat);
+      const size = professionalMetaFormationOutputSize(exportFormat);
       const png = await svgToPngBlob(svg, size.width, size.height, 2);
       const file = new File([png], `${safeFileName(project.name)}.png`, { type: 'image/png' });
       if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
@@ -213,7 +212,7 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
       setMessage('Permita pop-ups para gerar o PDF.');
       return;
     }
-    const svg = renderMetaFormationSvg(project, 'complete');
+    const svg = renderProfessionalMetaFormationSvg(project, 'complete');
     windowRef.document.write(`<!doctype html><html><head><title>${project.name}</title><style>html,body{margin:0;background:#02070d}svg{display:block;width:100%;height:auto}@page{size:A4 portrait;margin:0} @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${svg}<script>addEventListener('load',()=>setTimeout(()=>print(),300))<\/script></body></html>`);
     windowRef.document.close();
     setMessage('Prévia de impressão aberta. Escolha “Salvar como PDF”.');
@@ -232,8 +231,8 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
   return (
     <section className="meta-formation-studio-v3832">
       <header className="meta-studio-header">
-        <div><p className="kicker"><Layers3 size={15}/> Estúdio de Formações Meta</p><h2>Formações profissionais sem poluir o Meu Time</h2><span>Escolha o objetivo, valide os riscos e gere a arte pronta com identidade Marques Fichas.</span></div>
-        <span className="meta-version-pill">v38.32</span>
+        <div><p className="kicker"><Layers3 size={15}/> Estúdio de Formações Meta</p><h2>Gerador Tático Profissional por Template</h2><span>Gere artes detalhadas no padrão azul-marinho e dourado, sem IA paga e com todos os dados táticos do projeto.</span></div>
+        <span className="meta-version-pill">v38.33</span>
       </header>
 
       <nav className="meta-mode-tabs" aria-label="Modo de criação">

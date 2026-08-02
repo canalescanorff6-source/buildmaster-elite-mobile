@@ -12,10 +12,10 @@ const pkg = JSON.parse(read('package.json'));
 
 assert.match(app, /nativeSkills: Array\.from\(new Set\(canonicalizeSkillList\(\[/,
   'O inventário completo precisa manter deduplicação explícita e normalização canônica.');
-assert.match(nativeCache, /NATIVE_CACHE_SCHEMA = '38\.(?:31\.0-ci-regression-hotfix|32\.0-complete-integration)-1'/);
-assert.match(serviceWorker, /CACHE_NAME = 'buildmaster-v38-(?:31-ci-regression-hotfix|32-complete-integration)-1'/);
-assert.ok(v33.includes('38\\.(?:00|10|20|30|31|32)'), 'A regressão v33 precisa aceitar o cache v38.31.');
-assert.ok(v3771.includes('32\\.0-complete-integration'), 'A regressão v37.71 precisa aceitar o cache v38.31.');
+assert.match(nativeCache, /NATIVE_CACHE_SCHEMA = '38\.(?:31\.0-ci-regression-hotfix|32\.0-complete-integration|33\.0-professional-template)-1'/);
+assert.match(serviceWorker, /CACHE_NAME = 'buildmaster-v38-(?:31-ci-regression-hotfix|32-complete-integration|33-professional-template)-1'/);
+assert.ok(v33.includes('38\\.(?:00|10|20|30|31|32|33)'), 'A regressão v33 precisa aceitar os caches atuais.');
+assert.ok(v3771.includes('33\\.0-professional-template'), 'A regressão v37.71 precisa aceitar o cache v38.33.');
 assert.ok(doctor.includes('Regressões v38.31'), 'O diagnóstico consolidado precisa executar a v38.31.');
 assert.equal(pkg.scripts['test:v3831'], 'node tests/v38-31-ci-regression-hotfix.mjs');
 

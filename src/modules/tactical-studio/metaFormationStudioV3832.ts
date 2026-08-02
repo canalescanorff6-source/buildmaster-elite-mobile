@@ -1,7 +1,7 @@
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 
-export const META_FORMATION_STUDIO_VERSION = '38.32.0';
+export const META_FORMATION_STUDIO_VERSION = '38.33.0';
 export const META_FORMATION_STORAGE_KEY = 'buildmaster_meta_formation_projects_v3832';
 
 export const META_COACH_STYLES = ['Posse de bola', 'Contra-ataque normal', 'Contra-ataque rápido'] as const;

@@ -71,6 +71,7 @@ const fullChecks = [
   ['Regressões v38.30', ['run', 'test:v3830']],
   ['Regressões v38.31', ['run', 'test:v3831']],
   ['Regressões v38.32', ['run', 'test:v3832']],
+  ['Regressões v38.33', ['run', 'test:v3833']],
 ];
 
 const checks = full ? [...quickChecks, ...fullChecks] : quickChecks;
