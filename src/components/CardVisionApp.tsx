@@ -16,7 +16,6 @@ import {
   FileText,
   Palette,
   Layers,
-  LayoutTemplate,
   Trophy,
   Target,
   Clock3,

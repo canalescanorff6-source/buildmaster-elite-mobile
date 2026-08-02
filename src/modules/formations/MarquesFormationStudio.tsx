@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { CheckCircle2, ChevronRight, Crown, Download, LayoutTemplate, ShieldCheck, Sparkles, Target, TriangleAlert, WandSparkles } from 'lucide-react';
 import type { AnalysisResult } from '@/lib/analyzer';
 import { FORMATION_ROLE_CATALOG, type FormationRoleId } from '@/lib/formationRoleEngine';
@@ -139,7 +140,7 @@ export function MarquesFormationStudio({ results }: Props) {
           <div className="marques-role-list">
             {baseFormation.slots.map((slot) => {
               const options = roleOptionsForSlot(baseFormation, slot.id);
-              return <label key={slot.id}><span><b>{slot.label}</b><small>{slot.duty}</small></span><select value={roleOverrides[slot.id] ?? options[0]} onChange={(event) => updateRole(slot.id, event.target.value as FormationRoleId)}>{options.map((roleId) => <option key={roleId} value={roleId}>{FORMATION_ROLE_CATALOG[roleId].officialName}</option>)}</select></label>;
+              return <label key={slot.id}><span><b>{slot.label}</b><small>{slot.duty}</small></span><select value={roleOverrides[slot.id] ?? options[0]} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateRole(slot.id, event.target.value as FormationRoleId)}>{options.map((roleId) => <option key={roleId} value={roleId}>{FORMATION_ROLE_CATALOG[roleId].officialName}</option>)}</select></label>;
             })}
           </div>
         </section>

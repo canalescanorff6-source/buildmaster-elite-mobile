@@ -1,1 +1,1 @@
-Implementa Estúdio de Formações premium e identidade Marques Fichas na v31.78
+Corrige TypeScript completo e regressão v30.20 no workflow da v31.78

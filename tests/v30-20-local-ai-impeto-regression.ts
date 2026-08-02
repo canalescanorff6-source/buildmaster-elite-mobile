@@ -69,7 +69,7 @@ assert.equal(catalog.length, new Set(catalog).size, 'O catálogo de Ímpetos nã
 
 const workspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 assert.match(workspace, /id:\s*'impetos',\s*label:\s*'Ímpeto',\s*hint:\s*'Escolha ideal da IA'/);
-assert.match(workspace, /IA local do BuildMaster/);
+assert.match(workspace, /IA local do (?:BuildMaster|Marques Fichas)/);
 assert.match(workspace, /Ver por que este ímpeto venceu/);
 assert.match(workspace, /Sem serviço de IA pago/);
 
