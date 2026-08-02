@@ -1,1 +1,1 @@
-v38.34 — corrige orçamento, rota inicial, auditoria e TypeScript do gerador tático
+v38.35 — corrige regressões v31.82/v34/v36 e preserva auditoria e Gerador Tático

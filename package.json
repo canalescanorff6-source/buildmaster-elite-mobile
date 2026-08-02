@@ -1,8 +1,8 @@
 {
   "name": "buildmaster-elite-tatico-v37-00-inteligencia-profissional",
-  "version": "38.34.0",
+  "version": "38.35.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v38.34 — correção integral do CI, rota inicial, orçamento e compatibilidade do gerador tático.",
+  "description": "BuildMaster Elite Tático v38.35 — correção das regressões legadas v31.82, v34.00 e v36.00 com auditoria preservada.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -27,7 +27,7 @@
     "integrity:verify": "node scripts/verify-integrity-manifest.mjs",
     "typecheck:v3000": "tsc -p tests/types-v3000/tsconfig.json --pretty false && tsc -p tests/types-v3000/tsconfig-ui.json --pretty false",
     "test:v3000": "npm run test:v3000:core",
-    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run test:v3177 && npm run test:v3178 && npm run test:v3179 && npm run test:v3180 && npm run test:v3181 && npm run test:v3182 && npm run test:v3200 && npm run test:v3300 && npm run test:v3400 && npm run test:v3500 && npm run test:v3510 && npm run test:v3520 && npm run test:v3600 && npm run test:v3700 && npm run test:v3740 && npm run test:v3750 && npm run test:v3760 && npm run test:v3770 && npm run test:v3771 && npm run test:v3780 && npm run test:v3790 && npm run test:v3800 && npm run test:v3810 && npm run test:v3820 && npm run test:v3821 && npm run test:v3822 && npm run test:v3830 && npm run test:v3831 && npm run test:v3832 && npm run test:v3833 && npm run test:v3834 && npm run quality:audit",
+    "test:all": "npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run test:v3177 && npm run test:v3178 && npm run test:v3179 && npm run test:v3180 && npm run test:v3181 && npm run test:v3182 && npm run test:v3200 && npm run test:v3300 && npm run test:v3400 && npm run test:v3500 && npm run test:v3510 && npm run test:v3520 && npm run test:v3600 && npm run test:v3700 && npm run test:v3740 && npm run test:v3750 && npm run test:v3760 && npm run test:v3770 && npm run test:v3771 && npm run test:v3780 && npm run test:v3790 && npm run test:v3800 && npm run test:v3810 && npm run test:v3820 && npm run test:v3821 && npm run test:v3822 && npm run test:v3830 && npm run test:v3831 && npm run test:v3832 && npm run test:v3833 && npm run test:v3834 && npm run test:v3835 && npm run quality:audit",
     "apk:doctor": "npx cap doctor",
     "apk:add-android": "npx cap add android",
     "apk:sync": "npx cap sync android",
@@ -131,7 +131,8 @@
     "test:v3832": "npm run typecheck:v3832 && node -r ./tests/_ts-require.cjs tests/v38-32-complete-integration-regression.mjs",
     "typecheck:v3833": "tsc -p tests/types-v3832/tsconfig.json --pretty false && tsc -p tests/types-v3832-ui/tsconfig.json --pretty false",
     "test:v3833": "npm run typecheck:v3833 && node -r ./tests/_ts-require.cjs tests/v38-33-professional-template-regression.mjs",
-    "test:v3834": "node tests/v38-34-ci-complete-hotfix-regression.mjs"
+    "test:v3834": "node tests/v38-34-ci-complete-hotfix-regression.mjs",
+    "test:v3835": "node tests/v38-35-legacy-regressions-hotfix.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

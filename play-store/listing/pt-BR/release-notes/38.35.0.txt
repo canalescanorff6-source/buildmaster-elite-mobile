@@ -1,0 +1,1 @@
+Corrige regressões legadas do diagnóstico consolidado sem remover funções. Atualiza as validações v31.82, v34.00 e v36.00 para reconhecer o orçamento protegido e a linha v38.3x. Preserva o Gerador Tático Profissional, fichas, habilidades, OCR, gravações, vídeo, contas, Meu Time, Cofre e atualização do APK.
