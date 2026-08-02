@@ -1,1 +1,1 @@
-v37.70 — adiciona atualização contínua com pacote remoto, histórico, catálogo dinâmico, alertas e auditoria de confiança
+v37.71 — corrige TypeScript e regressões v32/v33, preservando delay e controle no motor final

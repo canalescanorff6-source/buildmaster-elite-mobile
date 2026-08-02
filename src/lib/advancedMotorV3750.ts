@@ -121,6 +121,52 @@ function playstyleAdjustedRole(result: AnalysisResult): RoleTemplate {
     increase('gk2', .12); increase('gk3', .12);
     id = 'GK_SHOT_STOPPER'; label = 'Goleiro defensivo de proteção';
   }
+
+  // A v37.50 é a autoridade final da ficha. Portanto, os pesos usados para
+  // escolher a combinação vencedora também precisam preservar o contexto que
+  // já foi calibrado na v32: modo, conexão e estilo de controle. Sem este bloco,
+  // a última passagem podia convergir para a mesma ficha em ranqueado com delay
+  // alto e em partida offline estável, apagando a adaptação feita antes.
+  const mode = result.tacticalProfile.gameplayMode ?? 'UNIVERSAL';
+  const connection = result.tacticalProfile.connectionProfile ?? 'VARIABLE';
+  const control = result.tacticalProfile.controlProfile ?? 'BALANCED';
+
+  if (mode === 'RANKED') {
+    increase('passing', .18);
+    increase('dexterity', .16);
+    increase('lowerBodyStrength', .1);
+    id = `${id}_RANKED`;
+  } else if (mode === 'OFFLINE') {
+    increase('dribbling', .2);
+    increase('shooting', .08);
+    id = `${id}_OFFLINE`;
+  }
+
+  if (connection === 'HIGH_DELAY') {
+    increase('passing', .42);
+    increase('dexterity', .34);
+    increase('lowerBodyStrength', .2);
+    id = `${id}_DELAY`;
+    label = `${label} adaptado ao delay`;
+  } else if (connection === 'STABLE') {
+    increase('dribbling', .14);
+    increase('shooting', .06);
+  }
+
+  if (control === 'PASSING') {
+    increase('passing', .38);
+    increase('dexterity', .1);
+    id = `${id}_PASSING`;
+  } else if (control === 'DRIBBLE') {
+    increase('dribbling', .38);
+    increase('dexterity', .12);
+    id = `${id}_DRIBBLE`;
+  } else if (control === 'DIRECT') {
+    increase('shooting', .18);
+    increase('lowerBodyStrength', .14);
+    id = `${id}_DIRECT`;
+  }
+
   return { ...base, id, label, weights };
 }
 
@@ -255,15 +301,20 @@ function planEfficiency(plan: TrainingPlan, role: AdvancedRoleOptimization, budg
 
 function buildAlternatives(result: AnalysisResult, role: AdvancedRoleOptimization): AdvancedBuildAlternative[] {
   const budget = result.trainingPointsTotal;
+  // A calibração v32 já incorpora modo, conexão e controle. Como o Motor v37.50
+  // roda duas vezes para reconciliar habilidades, a segunda passagem não pode
+  // usar como semente apenas o vencedor genérico da primeira. O plano calibrado
+  // permanece a referência contextual e mantém a operação idempotente.
+  const contextualTraining = result.calibrationV32?.finalTraining ?? result.training;
   const rolePlan = buildGreedyRolePlan(budget, role);
-  const robustPlan = fitPlanExactly(result.training, budget, role.position, robustWeights(role));
-  const identitySeed = result.buildVariants.find((item) => /identidade/i.test(item.title))?.training ?? result.errorTolerance?.conservative ?? result.training;
+  const robustPlan = fitPlanExactly(contextualTraining, budget, role.position, robustWeights(role));
+  const identitySeed = result.buildVariants.find((item) => /identidade/i.test(item.title))?.training ?? result.errorTolerance?.conservative ?? contextualTraining;
   const adaptationSeed = result.buildVariants.find((item) => /adapta/i.test(item.title))?.training ?? result.errorTolerance?.optimistic ?? rolePlan;
   const seeds: Array<{ title: string; strategy: AdvancedBuildAlternative['strategy']; plan: TrainingPlan; strengths: string[]; tradeOffs: string[] }> = [
-    { title: 'Ficha recomendada v37.50', strategy: 'recomendada', plan: result.training, strengths: ['Mantém a ficha final já calibrada.', 'Serve como referência para as demais simulações.'], tradeOffs: ['Pode não maximizar uma função isolada.'] },
+    { title: 'Ficha recomendada v37.50', strategy: 'recomendada', plan: contextualTraining, strengths: ['Mantém a ficha final já calibrada por modo, conexão e controle.', 'Serve como referência para as demais simulações.'], tradeOffs: ['Pode não maximizar uma função isolada.'] },
     { title: `Especialista — ${role.roleLabel}`, strategy: 'função', plan: rolePlan, strengths: [`Maximiza as exigências de ${role.roleLabel}.`, `Prioriza ${role.primaryGroups.map((key) => TRAINING_LABELS[key]).join(', ')}.`], tradeOffs: ['Aceita menor equilíbrio para aumentar especialização.'] },
     { title: 'Ficha identidade da carta', strategy: 'identidade', plan: identitySeed, strengths: ['Protege os diferenciais naturais da versão da carta.', 'Evita transformar o jogador em um molde genérico da posição.'], tradeOffs: ['Pode preservar uma limitação difícil de corrigir.'] },
-    { title: 'Ficha equilíbrio competitivo', strategy: 'equilíbrio', plan: blendPlans(result.training, adaptationSeed), strengths: ['Distribui risco entre técnica, físico e função.', 'Boa opção para diferentes ritmos de partida.'], tradeOffs: ['Não entrega o pico máximo de uma única característica.'] },
+    { title: 'Ficha equilíbrio competitivo', strategy: 'equilíbrio', plan: blendPlans(contextualTraining, adaptationSeed), strengths: ['Distribui risco entre técnica, físico e função.', 'Boa opção para diferentes ritmos de partida.'], tradeOffs: ['Não entrega o pico máximo de uma única característica.'] },
     { title: 'Ficha robusta para partida real', strategy: 'robustez', plan: robustPlan, strengths: ['Valoriza resposta, resistência e estabilidade.', 'Reduz dependência de uma única ação de jogo.'], tradeOffs: ['Pode ceder alguns pontos de especialização técnica.'] }
   ];
 
@@ -445,6 +496,30 @@ function boosterCandidates(result: AnalysisResult): ImpetoRecommendation[] {
     .slice(0, 7);
 }
 
+function contextCriticalGroups(result: AnalysisResult): TrainingKey[] {
+  const groups = new Set<TrainingKey>();
+  const mode = result.tacticalProfile.gameplayMode ?? 'UNIVERSAL';
+  const connection = result.tacticalProfile.connectionProfile ?? 'VARIABLE';
+  const control = result.tacticalProfile.controlProfile ?? 'BALANCED';
+  if (mode === 'RANKED') { groups.add('dexterity'); groups.add('lowerBodyStrength'); }
+  if (mode === 'OFFLINE') { groups.add('dribbling'); groups.add('shooting'); }
+  if (connection === 'HIGH_DELAY') { groups.add('passing'); groups.add('dexterity'); groups.add('lowerBodyStrength'); }
+  if (connection === 'STABLE' && control === 'DRIBBLE') groups.add('dribbling');
+  if (control === 'PASSING') { groups.add('passing'); groups.add('dexterity'); }
+  if (control === 'DRIBBLE') { groups.add('dribbling'); groups.add('dexterity'); }
+  if (control === 'DIRECT') { groups.add('shooting'); groups.add('lowerBodyStrength'); }
+  return [...groups].filter((key) => allowedTrainingKeys(result.bestPosition.code).includes(key));
+}
+
+function contextMismatchPenalty(result: AnalysisResult, plan: TrainingPlan) {
+  const reference = result.calibrationV32?.finalTraining;
+  if (!reference) return 0;
+  return contextCriticalGroups(result).reduce((sum, key) => {
+    const deficit = Math.max(0, Number(reference[key] ?? 0) - Number(plan[key] ?? 0));
+    return sum + deficit * 2;
+  }, 0);
+}
+
 function jointOptions(result: AnalysisResult, alternatives: AdvancedBuildAlternative[], skillSets: SkillSetComparison[], role: AdvancedRoleOptimization): JointBuildBoosterOption[] {
   const boosters = boosterCandidates(result);
   const options: JointBuildBoosterOption[] = [];
@@ -458,7 +533,8 @@ function jointOptions(result: AnalysisResult, alternatives: AdvancedBuildAlterna
       const boosterSynergy = groups.length ? clamp(58 + (weightedSupport / possibleSupport) * 38) : 58;
       const saturationPenalty = groups.reduce((sum, key) => sum + Math.max(0, Number(alternative.training[key] ?? 0) - 11) * 3, 0);
       const boosterScore = clamp(Number(booster.score ?? (booster.tier === 'ideal' ? 86 : booster.tier === 'alternativo' ? 72 : 48)));
-      const overallScore = clamp(alternative.overallScore * .38 + set.overallScore * .3 + boosterScore * .2 + boosterSynergy * .12 - saturationPenalty);
+      const contextPenalty = contextMismatchPenalty(result, alternative.training);
+      const overallScore = clamp(alternative.overallScore * .38 + set.overallScore * .3 + boosterScore * .2 + boosterSynergy * .12 - saturationPenalty - contextPenalty);
       options.push({
         rank: 0,
         buildId: alternative.id,
@@ -473,9 +549,9 @@ function jointOptions(result: AnalysisResult, alternatives: AdvancedBuildAlterna
         boosterSynergy,
         saturationPenalty,
         overallScore,
-        reason: groups.length
+        reason: `${groups.length
           ? `${booster.name} reforça ${groups.map((key) => TRAINING_LABELS[key]).join(', ')} dentro da ficha ${alternative.title}.`
-          : `${booster.name} foi mantido como alternativa, mas a sinergia estrutural precisa de validação em partida.`
+          : `${booster.name} foi mantido como alternativa, mas a sinergia estrutural precisa de validação em partida.`}${contextPenalty ? ` Penalidade contextual de ${contextPenalty} ponto(s) por ficar abaixo da referência de modo, conexão ou controle.` : ''}`
       });
     }
   }

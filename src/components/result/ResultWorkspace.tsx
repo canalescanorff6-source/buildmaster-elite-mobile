@@ -20,8 +20,7 @@ import {
   Sparkles,
   Target,
   ThumbsUp,
-  Trophy,
-  UploadCloud
+  Trophy
 } from 'lucide-react';
 import {
   ATTRIBUTE_INPUTS,
