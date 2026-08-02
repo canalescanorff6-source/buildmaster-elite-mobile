@@ -167,7 +167,7 @@ function analyzeFormation(results: AnalysisResult[], formation: TacticalFormatio
     naturalFits,
     improvisedFits,
     strongestLine: lineLabel(lineScores[0]?.line ?? 'meio'),
-    weakestLine: lineLabel(lineScores[lineScores.length - 1]?.line ?? 'meio'),
+    weakestLine: lineLabel(lineScores.at(-1)?.line ?? 'meio'),
     repeatedFunctions,
     reason: `${blueprint.name}: ${filled.length}/11 preenchidos, ${naturalFits} encaixes naturais, entrosamento ${chemistry}/100 e estilo ${styleFit}/100.`
   };

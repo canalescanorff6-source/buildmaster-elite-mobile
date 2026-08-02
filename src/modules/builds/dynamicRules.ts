@@ -7,13 +7,6 @@ import {
 } from '@/lib/officialSkillIdentity';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { memoryKey } from '@/modules/vault/cardHistoryStore';
-import {
-  EMPTY_REMOTE_CATALOG_V3770,
-  resolveRemoteSkillNameV3770,
-  isRemoteAdditionalSkillActiveV3770,
-  sanitizeRemoteCatalogV3770,
-  type RemoteCatalogPatchV3770
-} from '@/lib/remoteCatalogV3770';
 
 export const CORRECTION_KEY = 'buildmaster_local_corrections_v24_29';
 
@@ -55,26 +48,12 @@ export type DynamicRulePack = {
   rules: DynamicRule[];
   globalBlockedSkills?: string[];
   globalBlockedImpetos?: string[];
-  schemaVersion?: number;
-  gameVersion?: string;
-  publishedAt?: string;
-  expiresAt?: string;
-  minimumAppVersion?: string;
-  checksum?: string;
-  releaseNotes?: string[];
-  catalog?: RemoteCatalogPatchV3770;
 };
 
 export const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
-  version: '37.70.0-local',
-  updatedAt: '2026-08-01T00:00:00.000Z',
-  publishedAt: '2026-08-01T00:00:00.000Z',
-  gameVersion: 'eFootball 2026',
-  minimumAppVersion: '37.00.0',
-  schemaVersion: 3770,
+  version: '24.29.0-local',
+  updatedAt: new Date().toISOString(),
   source: 'Pacote local embutido',
-  releaseNotes: ['Base local compatível com histórico, catálogo remoto e auditoria v37.70.'],
-  catalog: EMPTY_REMOTE_CATALOG_V3770,
   globalBlockedSkills: [],
   globalBlockedImpetos: [],
   rules: [
@@ -143,22 +122,13 @@ export function sanitizeRulePack(input: unknown): DynamicRulePack {
   if (!input || typeof input !== 'object') return fallback;
   const raw = input as Partial<DynamicRulePack>;
   const rules = Array.isArray(raw.rules) ? raw.rules.filter((rule): rule is DynamicRule => Boolean(rule && typeof rule === 'object' && typeof (rule as DynamicRule).id === 'string')) : [];
-  const updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString();
   return {
     version: typeof raw.version === 'string' ? raw.version : fallback.version,
-    updatedAt,
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
     source: typeof raw.source === 'string' ? raw.source : 'Pacote importado',
     rules,
     globalBlockedSkills: Array.isArray(raw.globalBlockedSkills) ? raw.globalBlockedSkills.filter((item): item is string => typeof item === 'string') : [],
-    globalBlockedImpetos: Array.isArray(raw.globalBlockedImpetos) ? raw.globalBlockedImpetos.filter((item): item is string => typeof item === 'string') : [],
-    schemaVersion: typeof raw.schemaVersion === 'number' ? raw.schemaVersion : undefined,
-    gameVersion: typeof raw.gameVersion === 'string' ? raw.gameVersion : undefined,
-    publishedAt: typeof raw.publishedAt === 'string' ? raw.publishedAt : undefined,
-    expiresAt: typeof raw.expiresAt === 'string' ? raw.expiresAt : undefined,
-    minimumAppVersion: typeof raw.minimumAppVersion === 'string' ? raw.minimumAppVersion : undefined,
-    checksum: typeof raw.checksum === 'string' ? raw.checksum : undefined,
-    releaseNotes: Array.isArray(raw.releaseNotes) ? raw.releaseNotes.filter((item): item is string => typeof item === 'string').slice(0, 40) : [],
-    catalog: sanitizeRemoteCatalogV3770(raw.catalog, typeof raw.version === 'string' ? raw.version : fallback.version, updatedAt)
+    globalBlockedImpetos: Array.isArray(raw.globalBlockedImpetos) ? raw.globalBlockedImpetos.filter((item): item is string => typeof item === 'string') : []
   };
 }
 
@@ -204,9 +174,6 @@ export function dynamicRulesForResult(result: AnalysisResult): LocalCorrectionPr
   };
   add(profile.blockedSkills, pack.globalBlockedSkills);
   add(profile.blockedImpetos, pack.globalBlockedImpetos);
-  add(profile.blockedSkills, pack.catalog?.additionalSkills.filter((item) => item.status === 'deprecated').map((item) => item.name));
-  add(profile.blockedSkills, pack.catalog?.specialSkills.filter((item) => item.status === 'deprecated').map((item) => item.name));
-  add(profile.blockedImpetos, pack.catalog?.boosters.filter((item) => item.status === 'deprecated').map((item) => item.name));
   for (const rule of pack.rules) {
     if (!ruleMatchesResult(rule, result)) continue;
     add(profile.blockedSkills, rule.blockSkills);
@@ -311,29 +278,29 @@ export function applyLocalCorrectionsToResult(result: AnalysisResult): AnalysisR
   const corrections = getMergedCorrectionsForResult(result);
   const blockedSkills = new Set(corrections.blockedSkills.map(skillIdentityKey));
   const promotedSkills = corrections.promotedSkills
-    .map((skill) => resolveRemoteSkillNameV3770(skill) ?? canonicalSkillName(skill))
-    .filter((skill): skill is string => Boolean(skill && (OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]) || isRemoteAdditionalSkillActiveV3770(skill))));
+    .map((skill) => canonicalSkillName(skill))
+    .filter((skill): skill is (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number] => Boolean(skill && OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number])));
   const blockedImpetos = new Set(corrections.blockedImpetos.map((item) => item.toLowerCase()));
   const ownedImpetos = new Set(result.parsed.impetos.filter((item) => item.active !== false).map((item) => item.name.toLowerCase()));
   const promotedImpetos = corrections.promotedImpetos.filter((name) => !ownedImpetos.has(name.toLowerCase()));
-  const ownedSkills = new Set([...result.parsed.nativeSkills, ...(result.parsed.additionalSkills ?? []), ...result.parsed.specialSkills].map(skillIdentityKey));
+  const ownedSkills = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
   const isAllowedSkill = (skill: string) => {
-    const canonical = resolveRemoteSkillNameV3770(skill) ?? canonicalSkillName(skill);
-    if (!canonical || !(OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(canonical as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]) || isRemoteAdditionalSkillActiveV3770(canonical))) return false;
+    const canonical = canonicalSkillName(skill);
+    if (!canonical || !OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(canonical as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number])) return false;
     const key = skillIdentityKey(canonical);
     return !ownedSkills.has(key) && !blockedSkills.has(key);
   };
 
   const candidates: string[] = [];
   const pushSkill = (skill: string) => {
-    const canonical = resolveRemoteSkillNameV3770(skill) ?? canonicalSkillName(skill);
+    const canonical = canonicalSkillName(skill);
     if (canonical && isAllowedSkill(canonical) && !candidates.some((item) => skillIdentityKey(item) === skillIdentityKey(canonical))) candidates.push(canonical);
   };
   promotedSkills.forEach(pushSkill);
   result.recommendedSkills.forEach(pushSkill);
   result.skillRecommendations.filter((item) => item.tier !== 'evitar').forEach((item) => pushSkill(item.name));
 
-  const recommendedSkills = filterComplementaryAdditionalSkills(candidates, result.parsed.nativeSkills, result.parsed.specialSkills, 5, result.parsed.additionalSkills ?? []);
+  const recommendedSkills = filterComplementaryAdditionalSkills(candidates, result.parsed.nativeSkills, result.parsed.specialSkills, 5);
   const existingRecommendations = result.skillRecommendations.filter((item) => !blockedSkills.has(skillIdentityKey(item.name)) && !ownedSkills.has(skillIdentityKey(item.name)));
   const promotedRecommendations = promotedSkills.map((name) => ({ name, tier: 'essencial' as const, reason: 'Priorizada por correção inteligente local nesta função/jogador.' }));
   const blockedRecommendations = corrections.blockedSkills.map((name) => ({ name, tier: 'evitar' as const, reason: 'Você marcou como não combina; o app passa a evitar automaticamente.' }));

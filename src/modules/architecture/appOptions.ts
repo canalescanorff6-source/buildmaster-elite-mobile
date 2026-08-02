@@ -1,7 +1,6 @@
 import { PLAYSTYLE_OPTIONS, type Objective, type TacticalFormation, type TacticalStyle } from '@/lib/analyzerDomain';
 
 export const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
-export const EFHUB_MANUAL_CALIBRATION_KEY = 'buildmaster_efhub_visual_calibration_v31_81';
 
 export const ACTIVE_SESSION_KEY = 'buildmaster_active_session_v24_29_regras_atualizaveis';
 export const VAULT_FOLDERS_KEY = 'buildmaster_vault_folders_v25_33';
@@ -10,7 +9,7 @@ export const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
 
 export const objectives: Array<{ value: Objective; title: string; hint: string }> = [
   { value: 'COMPETITIVE', title: 'Desempenho máximo', hint: 'rendimento real em campo, não GER alto' },
-  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.4.0, separada de dados oficiais' },
+  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.5.0, separada de dados oficiais' },
   { value: 'FINISHER', title: 'Finalizador', hint: 'gols, área e chute' },
   { value: 'CREATOR', title: 'Criador', hint: 'passe, controle e assistência' },
   { value: 'DRIBBLER', title: 'Driblador', hint: 'giro curto e 1 contra 1' },

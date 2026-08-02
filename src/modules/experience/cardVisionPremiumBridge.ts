@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { readPremiumExperience2Preferences, removePremiumDraft, savePremiumDraft, type Premium2Target } from './premiumExperience2';
+import { readPremiumExperience2Preferences, savePremiumDraft, type Premium2Target } from './premiumExperience2';
 
-export type PremiumMainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
+export type PremiumMainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'formacoes' | 'ajustes' | 'menu' | 'buscar';
 export type PremiumSettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'backup' | 'atualizacoes' | 'contas';
 
 export function premiumTargetForSection(section: PremiumMainSection): Premium2Target {
@@ -11,7 +11,7 @@ export function premiumTargetForSection(section: PremiumMainSection): Premium2Ta
   if (section === 'leitor') return 'reader';
   if (section === 'manual') return 'manual';
   if (section === 'cofre' || section === 'jogadores' || section === 'resultado') return 'vault';
-  if (section === 'time') return 'team';
+  if (section === 'time' || section === 'formacoes') return 'team';
   if (section === 'partidas') return 'matches';
   if (section === 'menu') return 'home';
   if (section === 'buscar') return 'vault';
@@ -55,19 +55,13 @@ export function usePremiumDraftAutosave(input: {
     const timer = window.setTimeout(() => {
       const signals = [Boolean(input.preview || input.rawText.trim()), Boolean(input.playerName.trim()), input.targetPosition !== 'AUTO', input.playstyle !== 'AUTO', Number(input.points || 0) > 0];
       savePremiumDraft({
-        id: 'current-creation',
+        id: input.section === 'leitor' ? 'current-reader' : 'current-manual',
         target: input.section === 'leitor' ? 'reader' : 'manual',
-        label: input.playerName.trim() ? `Ficha de ${input.playerName.trim()}` : 'Nova ficha em andamento',
+        label: input.playerName.trim() ? `Ficha de ${input.playerName.trim()}` : input.section === 'leitor' ? 'Leitura de carta em andamento' : 'Ficha manual em andamento',
         completion: Math.round((signals.filter(Boolean).length / signals.length) * 100),
         payload: { playerName: input.playerName, points: input.points, targetPosition: input.targetPosition, playstyle: input.playstyle, hasPrint: Boolean(input.preview) }
       });
     }, 500);
     return () => window.clearTimeout(timer);
   }, [input.section, input.preview, input.rawText, input.playerName, input.points, input.targetPosition, input.playstyle]);
-}
-
-export function clearPremiumCreationDraft(): void {
-  removePremiumDraft('current-creation');
-  removePremiumDraft('current-reader');
-  removePremiumDraft('current-manual');
 }

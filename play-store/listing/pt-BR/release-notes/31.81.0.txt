@@ -1,1 +1,0 @@
-Novo calibrador visual: posicione e redimensione oito quadrados diretamente sobre o print eFHUB, salve o mapa proporcional e faça a leitura usando exatamente as áreas ajustadas. Atributos, modelo físico e habilidades mantêm recortes internos especializados.

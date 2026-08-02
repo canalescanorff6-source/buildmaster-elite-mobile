@@ -91,7 +91,7 @@ const agileCf = applyCompleteCardIntelligence(analyzeCard(agileCfText, 'COMPETIT
 
 for (const result of [cf, amf, tallCf, agileCf]) {
   assert.ok(result.unifiedIntelligence, 'A inteligência integrada v31 deve existir.');
-  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:(?:31\.00|31\.82)-unified-intelligence-|(?:(?:32\.00|35\.00)-unified-calibrated-|35\.10-unified-max-gameplay-|35\.20-unified-dna-gameplay-))/);
+  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^31\.00-unified-intelligence-/);
   assert.ok((result.unifiedIntelligence?.simulation.generatedCandidates ?? 0) >= 500);
   assert.ok((result.unifiedIntelligence?.simulation.validCandidates ?? 0) >= 10);
   assert.equal(result.recommendedSkills.length, 5);
@@ -104,8 +104,8 @@ for (const result of [cf, amf, tallCf, agileCf]) {
   assert.ok(result.unifiedIntelligence?.learning.abComparison);
   assert.ok(Array.isArray(result.unifiedIntelligence?.learning.testedPlans));
   assert.ok(result.trainingPointsUsed <= result.trainingPointsTotal);
-  assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3);
-  assert.match(result.buildName, /(?:Inteligência v31|Ficha v32|Ficha v35)/);
+  assert.equal(result.buildVariants.length, 1);
+  assert.match(result.buildName, /Inteligência v31/);
 }
 
 assert.notDeepEqual(cf.recommendedSkills, amf.recommendedSkills, 'Cartas de estilos e funções diferentes não podem receber a mesma lista genérica.');

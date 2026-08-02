@@ -10,7 +10,7 @@ export const PRESETS_KEY = 'buildmaster_personal_presets_v2739';
 export const DEMO_MODE_KEY = 'buildmaster_demo_mode_v2739';
 export const PERFORMANCE_LOG_KEY = 'buildmaster_performance_log_v2739';
 
-export type MainNavigationGroup = 'inicio' | 'jogadores' | 'time' | 'partidas' | 'ajustes';
+export type MainNavigationGroup = 'inicio' | 'jogadores' | 'time' | 'formacoes' | 'partidas' | 'ajustes';
 export type PlayerWorkspace = 'visao-geral' | 'leitor' | 'manual' | 'resultado' | 'cofre';
 export type RefinementFeatureFlag =
   | 'guidedReader'
@@ -175,7 +175,7 @@ export function parseInternalDeepLink(hash: string): { group: MainNavigationGrou
   const clean = hash.replace(/^#\/?/, '').trim().toLowerCase();
   if (!clean) return null;
   const [group, workspace] = clean.split('/');
-  if (!['inicio', 'jogadores', 'time', 'partidas', 'ajustes'].includes(group)) return null;
+  if (!['inicio', 'jogadores', 'time', 'formacoes', 'partidas', 'ajustes'].includes(group)) return null;
   if (group !== 'jogadores') return { group: group as MainNavigationGroup };
   const validWorkspace = ['visao-geral', 'leitor', 'manual', 'resultado', 'cofre'].includes(workspace || '') ? workspace as PlayerWorkspace : 'visao-geral';
   return { group: 'jogadores', workspace: validWorkspace };

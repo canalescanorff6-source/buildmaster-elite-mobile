@@ -2,8 +2,6 @@
 
 import dynamic from 'next/dynamic';
 import { PanelLoadingFallback } from '@/components/PanelLoadingFallback';
-import { getRuntimeOptimizationProfile, shouldPreloadInBackground } from '@/lib/invisibleOptimizationV3820';
-import { scheduleIdleTask } from '@/lib/performanceScheduler';
 
 const fallback = () => <PanelLoadingFallback />;
 
@@ -27,6 +25,11 @@ export const IntegratedTeamLab = dynamic(
 );
 export const MatchLaboratory = dynamic(
   () => import('@/modules/matches/MatchLaboratory').then((module) => module.MatchLaboratory),
+  { ssr: false, loading: fallback }
+);
+
+export const MarquesFormationStudio = dynamic(
+  () => import('@/modules/formations/MarquesFormationStudio').then((module) => module.MarquesFormationStudio),
   { ssr: false, loading: fallback }
 );
 export const BuildMasterAssistant = dynamic(
@@ -117,10 +120,6 @@ export const MatchValidationCenter = dynamic(
   () => import('@/components/MatchValidationCenter').then((module) => module.MatchValidationCenter),
   { ssr: false, loading: fallback }
 );
-export const ProfessionalIntelligenceCenter = dynamic(
-  () => import('@/components/result/ProfessionalIntelligenceCenter').then((module) => module.ProfessionalIntelligenceCenter),
-  { ssr: false, loading: fallback }
-);
 export const TotalCardReaderPanel = dynamic(
   () => import('@/components/TotalCardReaderPanel').then((module) => module.TotalCardReaderPanel),
   { ssr: false, loading: fallback }
@@ -168,7 +167,7 @@ export const PlayStorePublicationCenter = dynamic(
 );
 
 
-export type LazyPanelGroup = 'inicio' | 'jogadores' | 'time' | 'partidas' | 'ajustes';
+export type LazyPanelGroup = 'inicio' | 'jogadores' | 'time' | 'formacoes' | 'partidas' | 'ajustes';
 
 const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = {
   inicio: [
@@ -187,6 +186,10 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
   time: [
     () => import('@/modules/squad/IntegratedTeamLab'),
     () => import('@/components/FormationRoleLabPanel')
+  ],
+  formacoes: [
+    () => import('@/modules/formations/MarquesFormationStudio'),
+    () => import('@/components/TacticalPosterStudioPanel')
   ],
   partidas: [
     () => import('@/modules/matches/MatchLaboratory'),
@@ -208,32 +211,13 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
 };
 
 const preloadedGroups = new Set<LazyPanelGroup>();
-const preloadingGroups = new Set<LazyPanelGroup>();
-
-function waitForIdle(timeout: number): Promise<void> {
-  return new Promise((resolve) => {
-    scheduleIdleTask(resolve, timeout);
-  });
-}
 
 export function preloadPanelGroup(group: LazyPanelGroup): void {
-  if (typeof window === 'undefined' || preloadedGroups.has(group) || preloadingGroups.has(group)) return;
-  if (!shouldPreloadInBackground()) return;
-
-  const profile = getRuntimeOptimizationProfile();
-  const limit = Math.min(PANEL_PRELOADERS[group].length, profile.preloadModuleLimit);
-  if (limit <= 0) return;
-
-  preloadingGroups.add(group);
-  void (async () => {
-    const loaders = PANEL_PRELOADERS[group].slice(0, limit);
-    for (let index = 0; index < loaders.length; index += 1) {
-      if (!shouldPreloadInBackground()) break;
-      await loaders[index]().catch(() => undefined);
-      if (index + 1 < loaders.length) await waitForIdle(profile.tier === 'high' ? 500 : 950);
-    }
-    preloadedGroups.add(group);
-  })().finally(() => {
-    preloadingGroups.delete(group);
-  });
+  if (typeof window === 'undefined' || preloadedGroups.has(group)) return;
+  preloadedGroups.add(group);
+  for (const loader of PANEL_PRELOADERS[group]) {
+    void loader().catch(() => {
+      // O carregamento normal continua disponível mesmo se o prefetch falhar.
+    });
+  }
 }

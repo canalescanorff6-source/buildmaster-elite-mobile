@@ -37,10 +37,10 @@ export function FirstUseOnboarding({ open, onClose, onComplete, onCreatePrint, o
   };
 
   return (
-    <div className="first-use-overlay" role="dialog" aria-modal="true" aria-label="Configuração inicial do BuildMaster">
+    <div className="first-use-overlay" role="dialog" aria-modal="true" aria-label="Configuração inicial do Marques Fichas">
       <section className="first-use-card luxury-panel">
         <header>
-          <div><p className="kicker"><Sparkles size={15}/> Primeiro uso</p><h2>Prepare o BuildMaster do seu jeito</h2><span>São cinco passos curtos. Nada será alterado sem sua confirmação.</span></div>
+          <div><p className="kicker"><Sparkles size={15}/> Primeiro uso</p><h2>Prepare o Marques Fichas do seu jeito</h2><span>São cinco passos curtos. Nada será alterado sem sua confirmação.</span></div>
           <button type="button" onClick={onClose} aria-label="Fechar configuração inicial"><X size={19}/></button>
         </header>
         <div className="first-use-progress"><div><span>Etapa {step + 1} de 5</span><strong>{progress}%</strong></div><i><b style={{ width: `${progress}%` }}/></i></div>
@@ -79,7 +79,7 @@ export function FirstUseOnboarding({ open, onClose, onComplete, onCreatePrint, o
           <div className="first-use-step-copy"><span><CheckCircle2 size={24}/></span><div><h3>Configuração pronta</h3><p>Modo {mode === 'simple' ? 'simples' : 'avançado'}, formação {formation} e estilo {STYLES.find((item) => item.value === teamStyle)?.label}.</p></div></div>
           <div className="first-use-start-grid">
             <button type="button" onClick={() => { finish(); onCreatePrint(); }}><ScanText size={23}/><strong>Criar pelo print</strong><span>Importe a carta e confirme a leitura.</span></button>
-            <button type="button" onClick={() => { finish(); onCreateManual(); }}><ShieldCheck size={23}/><strong>Criar manualmente</strong><span>Preencha os dados com controle total.</span></button>
+            <button type="button" onClick={() => { finish(); onCreateManual(); }}><ShieldCheck size={23}/><strong>Usar Manual Pro</strong><span>Preencha os dados com controle total.</span></button>
           </div>
         </div>}
 

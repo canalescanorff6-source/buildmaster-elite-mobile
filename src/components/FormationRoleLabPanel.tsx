@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import {
   AlertTriangle,
@@ -133,7 +133,6 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
   const [managerDraft, setManagerDraft] = useState<ManagerDraft>({ name:'', primaryStyle:'POSSE_DE_BOLA', primaryProficiency:88, useSecondary:false, secondaryStyle:'CONTRA_ATAQUE_RAPIDO', secondaryProficiency:88 });
   const [editing, setEditing] = useState<SavedCustomFormation | null>(null);
   const [message, setMessage] = useState('');
-  const tabPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { setCustomFormations(readCustomFormations()); setCustomManagers(readCustomManagers()); }, []);
 
@@ -156,11 +155,6 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
     if (!managerRanking.length) return;
     if (!managerId || !managerRanking.some((item) => item.manager.id === managerId)) setManagerId(managerRanking[0].manager.id);
   }, [managerId, managerRanking]);
-
-  function selectTab(next: LabTab) {
-    setTab(next);
-    window.requestAnimationFrame(() => tabPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  }
 
   function persist(next: SavedCustomFormation[]) {
     setCustomFormations(next);
@@ -258,11 +252,11 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
         <div className="formation-lab-score"><span>Qualidade do plano</span><strong>{planScore}/100</strong><small>{filled}/11 jogadores encaixados</small></div>
       </article>
 
-      <nav className="formation-v3110-tabs luxury-panel" role="tablist" aria-label="Etapas do plano tático">
-        <button type="button" role="tab" aria-selected={tab === 'tecnicos'} className={tab === 'tecnicos' ? 'active' : ''} onClick={() => selectTab('tecnicos')}><UserRoundCog size={17}/><span>Técnicos</span><small>proficiências</small></button>
-        <button type="button" role="tab" aria-selected={tab === 'formacoes'} className={tab === 'formacoes' ? 'active' : ''} onClick={() => selectTab('formacoes')}><Layers size={17}/><span>Formações</span><small>oficiais e meta</small></button>
-        <button type="button" role="tab" aria-selected={tab === 'guia'} className={tab === 'guia' ? 'active' : ''} onClick={() => selectTab('guia')}><Route size={17}/><span>Guia visual</span><small>ataque e defesa</small></button>
-        <button type="button" role="tab" aria-selected={tab === 'montagem'} className={tab === 'montagem' ? 'active' : ''} onClick={() => selectTab('montagem')}><BrainCircuit size={17}/><span>Montagem</span><small>encaixe do elenco</small></button>
+      <nav className="formation-v3110-tabs luxury-panel" aria-label="Etapas do plano tático">
+        <button type="button" className={tab === 'tecnicos' ? 'active' : ''} onClick={() => setTab('tecnicos')}><UserRoundCog size={17}/><span>Técnicos</span><small>proficiências</small></button>
+        <button type="button" className={tab === 'formacoes' ? 'active' : ''} onClick={() => setTab('formacoes')}><Layers size={17}/><span>Formações</span><small>oficiais e meta</small></button>
+        <button type="button" className={tab === 'guia' ? 'active' : ''} onClick={() => setTab('guia')}><Route size={17}/><span>Guia visual</span><small>ataque e defesa</small></button>
+        <button type="button" className={tab === 'montagem' ? 'active' : ''} onClick={() => setTab('montagem')}><BrainCircuit size={17}/><span>Montagem</span><small>encaixe do elenco</small></button>
       </nav>
 
       <article className="formation-lab-controls luxury-panel">
@@ -276,7 +270,6 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
         <button type="button" className="formation-save-plan" onClick={savePlan}><Save size={16}/> Salvar plano</button>
       </article>
 
-      <div ref={tabPanelRef} className="bm34-tab-panel" role="tabpanel" aria-live="polite">
       {tab === 'tecnicos' && (
         <section className="formation-v3110-section">
           <article className="formation-lab-summary luxury-panel">
@@ -425,7 +418,6 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
         <div className="formation-meta-grid">{CANONICAL_PLAYER_PLAYSTYLES.map((name) => { const meta=getPlayerStyleMeta2026(name); return meta ? <details key={name} className={`meta-card meta-${meta.tier}`}><summary><strong>{name}</strong><span>{playerStyleTierLabel(meta.tier)}</span></summary><p>{meta.advice}</p>{meta.restrictions?.map((rule)=><small key={rule}>⚠ {rule}</small>)}</details> : null; })}</div>
       </details>
 
-      </div>
       {message && <p className="formation-lab-message"><CheckCircle2 size={16}/> {message}</p>}
     </section>
   );

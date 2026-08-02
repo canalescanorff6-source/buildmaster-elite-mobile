@@ -5,13 +5,18 @@ import {
   Activity,
   Camera,
   CheckCircle2,
+  Copy,
   History,
   Download,
   Save,
+  Search,
   Trash2,
+  Star,
+  Filter,
   FileText,
   Palette,
   Layers,
+  LayoutTemplate,
   Trophy,
   Target,
   Clock3,
@@ -28,12 +33,11 @@ import {
   Wand2,
   Zap,
   Ban,
+  BrainCircuit,
   Users,
   UserPlus
 } from 'lucide-react';
 import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
-import { CalibrationProfileFields } from '@/components/CalibrationProfileFields';
-import { ManagerSelectionField } from '@/components/ManagerSelectionField';
 import {
   analyzeCard,
   normalizeObjective,
@@ -45,10 +49,7 @@ import {
   POSITION_LABELS,
   type TacticalFormation,
   type TacticalProfile,
-  type TacticalStyle,
-  type GameplayMode,
-  type ConnectionProfile,
-  type ControlProfile
+  type TacticalStyle
 } from '@/modules/analysis';
 import {
   DEFAULT_OCR_ZONES,
@@ -64,48 +65,38 @@ import {
   type PremiumEnhancementMode,
   type PremiumZoneReading
 } from '@/lib/premiumReading';
-import { getManager } from '@/lib/managers';
+import { MANAGERS, getManager } from '@/lib/managers';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import type { PrintQualityReport } from '@/lib/validation';
 import { comparePlayers } from '@/lib/confidenceComparison';
 import { DEFAULT_VAULT_FOLDERS, buildSmartHomeSummary, entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import { APP_DATA_VERSION, buildHealthSummary, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
-import type { GameplayDnaProfileId } from '@/lib/analyzerDomain';
-import { applyGameplayDnaProfileSelection } from '@/lib/gameplayDnaSelection';
 import { LOCAL_CARD_RULES } from '@/lib/cardDatabase';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import { createStableId } from '@/lib/stableId';
-import { buildCleanVaultSummaryV3800, findExactVaultDuplicateByResult } from '@/lib/cleanVaultV3800';
 import { UpdateAutoChecker } from '@/components/UpdateCenterPanel';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
 import { RefinedNavigation } from '@/components/RefinedNavigation';
 import { PremiumContextBar } from '@/components/PremiumContextBar';
-import { MobileScrollRecovery } from '@/components/MobileScrollRecovery';
 import { PremiumBrand } from '@/components/PremiumBrand';
-import { BuildMasterMark } from '@/components/BuildMasterMark';
-import { IdentityAppearancePanel } from '@/components/IdentityAppearancePanel';
 import { RefinementCenterPanel } from '@/components/RefinementCenterPanel';
 import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
 import { PremiumMenuScreen } from '@/components/PremiumMenuScreen';
 import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
 import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
 import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
-import { UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/UnifiedCreationFlowV3790';
-import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
-import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
-import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
-import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
 import type { AdaptiveExperienceProfile, EvolutionInput, EvolutionTarget } from '@/lib/appEvolutionV2740';
 import { buildBuildQualityGate } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
-import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralDashboard, type CentralPlayerInput, type CentralRecommendation, type IntegratedPlayerRecord, type TeamDiagnosis } from '@/modules/core/centralIntelligence';
+import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
 import {
   AccountAdminPanel,
@@ -118,6 +109,7 @@ import {
   FirstUseOnboarding,
   IntegratedTeamLab,
   MatchLaboratory,
+  MarquesFormationStudio,
   ObservabilitySupportCenter,
   OcrVisionCenter,
   OfficialRulesCenter,
@@ -140,19 +132,6 @@ import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { recognizeZoneWithHighPrecision } from '@/modules/card-reader/highPrecisionOcr';
 import { learnedCanonicalValues, learnConfirmedOcrBatch, loadLearnedOcrTerms } from '@/modules/card-reader/learnedOcrLexicon';
 import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsensus';
-import { buildEfhubLayoutPlan } from '@/modules/card-reader/efhubLayoutGeometry';
-import { EFHUB_CANONICAL_NORMALIZER_VERSION, normalizeEfhubProfileImage } from '@/modules/card-reader/efhubCanonicalNormalizer';
-import { buildDeterministicEfhubOcrZones, EFHUB_DETERMINISTIC_ZONES_VERSION } from '@/modules/card-reader/efhubDeterministicZones';
-import {
-  buildPreciseOcrZonesFromEfhubCalibration,
-  createDefaultEfhubCalibrationZones,
-  createEfhubCalibrationMap,
-  efhubCalibrationCardArtZone,
-  EFHUB_MANUAL_CALIBRATION_VERSION,
-  normalizeEfhubCalibrationZones,
-  readEfhubCalibrationMap,
-  type EfhubCalibrationZone
-} from '@/modules/card-reader/efhubManualCalibration';
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
@@ -167,29 +146,22 @@ import { exportPlayStorePublicationState, importPlayStorePublicationState } from
 import { CREATOR_BUILD_RESEARCH_EVENT, exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
 import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
 import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
-import { canonicalizeSkillList, isSpecialSkillIdentity } from '@/lib/officialSkillIdentity';
-import { regenerateSkillAfterOwnedConfirmation } from '@/lib/intelligentSkillReplacementV3830';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
 import type { ResultTabRequest } from '@/components/result/ResultWorkspace';
 import { getActiveAccountIdentity, readAccountStorage, removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
-import { loadEasyUiPreferences, PREMIUM_VISUAL_PRESETS, type PremiumVisualPreset } from '@/lib/easyExperience';
-import { readProfileAvatar, removeProfileAvatar, saveProfileAvatar } from '@/lib/profileAvatar';
+import { loadEasyUiPreferences, type PremiumVisualPreset } from '@/lib/easyExperience';
 import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
 import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
 import {
+  buildProfessionalCardSvg,
   buildProfessionalReportHtml,
   downloadBlobFile,
   formatReportMarkdown
 } from '@/modules/builds/buildReportExport';
-import {
-  buildPremiumCleanCardSvg,
-  premiumCleanSvgToPngBlob,
-  type PremiumCleanExportFormat
-} from '@/lib/premiumCleanResultV3810';
 import {
   CORRECTION_KEY,
   DEFAULT_DYNAMIC_RULE_PACK,
@@ -197,11 +169,11 @@ import {
   applyLocalCorrectionsToResult,
   clearCorrectionsForResult,
   readDynamicRulePack,
+  sanitizeRulePack,
   upsertCorrectionForResult,
+  writeDynamicRulePack,
   type DynamicRulePack
 } from '@/modules/builds/dynamicRules';
-import { activateContinuousRulePackV3770, computeRulePackChecksumV3770, createRulePackTemplateV3770, restoreRulePackVersionV3770, sanitizeContinuousRulePackV3770, RULE_PACK_HISTORY_V3770_KEY } from '@/lib/continuousRulesV3770';
-import { REMOTE_CATALOG_V3770_STORAGE_KEY } from '@/lib/remoteCatalogV3770';
 import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
 import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
 import {
@@ -223,6 +195,7 @@ import {
   isRenderableAnalysisResult,
   savedPositionGroup,
   savedStatusLabel,
+  savedStatusText,
   skillProgressInfo,
   type ManualFields,
   type SavedAnalysis
@@ -244,7 +217,7 @@ import {
 } from '@/modules/experience/premiumExperience2';
 import { exportObservabilityState, importObservabilityState } from '@/modules/observability/observabilityEngine';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
-import { clearPremiumCreationDraft, premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiumTarget, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
+import { premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiumTarget, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
 import { CloudSyncCenter } from '@/modules/backup/CloudSyncCenter';
 import { AdministrationSecurityCenter } from '@/modules/administration/AdministrationSecurityCenter';
 import { buildCloudVaultPayload, buildSyncHealth, compareBackupEnvelopes, createBackupSnapshot, mergeBackupEnvelopes, normalizeCloudVaultPayload, pruneSnapshots, LAST_FULL_SYNC_STORAGE_KEY, type BackupSnapshot, type SectionConflict } from '@/modules/backup/syncBackupEngine';
@@ -258,9 +231,9 @@ type MotionPreference = 'system' | 'reduced' | 'full';
 type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
+type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'formacoes' | 'ajustes' | 'menu' | 'buscar';
 function navigationGroupFor(section: MainSection): MainNavigationGroup {
-  if (section === 'inicio' || section === 'time' || section === 'partidas' || section === 'ajustes') return section;
+  if (section === 'inicio' || section === 'time' || section === 'formacoes' || section === 'partidas' || section === 'ajustes') return section;
   if (section === 'menu') return 'ajustes';
   return 'jogadores';
 }
@@ -274,8 +247,6 @@ function sectionForNavigation(group: MainNavigationGroup, workspace: PlayerWorks
 }
 type VaultView = 'jogadores' | 'organizar' | 'comparar' | 'backup';
 type SettingsView = 'visao-geral' | 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'comunidade' | 'comercial' | 'publicacao' | 'backup' | 'atualizacoes' | 'contas';
-const STUDIO_THEME_MIGRATION_KEY = 'buildmaster_v34_studio_theme_migrated';
-const IDENTITY_THEME_MIGRATION_KEY = 'buildmaster_v35_identity_theme_migrated';
  type ActiveSessionSnapshot = {
   preview: string | null;
   playerCardImage: string | null;
@@ -290,9 +261,6 @@ const IDENTITY_THEME_MIGRATION_KEY = 'buildmaster_v35_identity_theme_migrated';
   formation: TacticalFormation;
   teamStyle: TacticalStyle;
   managerId: string;
-  gameplayMode: GameplayMode;
-  connectionProfile: ConnectionProfile;
-  controlProfile: ControlProfile;
   result: AnalysisResult | null;
   draftResult: AnalysisResult | null;
   manualFields: ManualFields;
@@ -312,42 +280,6 @@ async function createPlayerCardPreview(file: File): Promise<CardCropResult | nul
     return null;
   }
 }
-function safeIntegratedPlayers(inputs: CentralPlayerInput[], matches: MatchValidationRecord[]): IntegratedPlayerRecord[] {
-  const records: IntegratedPlayerRecord[] = [];
-  for (const input of inputs) {
-    try {
-      const [record] = buildIntegratedPlayers([input], matches);
-      if (record) records.push(record);
-    } catch (cause) {
-      void recordSafeRuntimeError({ area: 'central-player-normalization', code: 'normalize_failed', message: cause instanceof Error ? cause.message : 'Falha ao normalizar jogador na Central' });
-    }
-  }
-  return records.sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.updatedAt.localeCompare(a.updatedAt));
-}
-function safeTeamDiagnosis(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle): TeamDiagnosis {
-  try {
-    return buildTeamDiagnosis(players, formation, style);
-  } catch (cause) {
-    void recordSafeRuntimeError({ area: 'team-diagnosis', code: 'diagnosis_failed', message: cause instanceof Error ? cause.message : 'Falha ao calcular diagnóstico do time' });
-    return buildTeamDiagnosis([], formation, style);
-  }
-}
-function safeCentralDashboard(players: IntegratedPlayerRecord[], matches: MatchValidationRecord[], team: TeamDiagnosis): CentralDashboard {
-  try {
-    return buildCentralDashboard(players, matches, team);
-  } catch (cause) {
-    void recordSafeRuntimeError({ area: 'central-dashboard', code: 'dashboard_failed', message: cause instanceof Error ? cause.message : 'Falha ao montar painel central' });
-    return {
-      players: players.length,
-      confirmed: players.filter((player) => player.status === 'completo').length,
-      needsReview: players.filter((player) => player.status !== 'completo').length,
-      matchRecords: matches.length,
-      squadReadiness: team.globalScore,
-      latestPlayer: players[0] ? { id: players[0].id, name: players[0].name, targetPosition: players[0].targetPosition } : null,
-      recommendations: team.recommendations.slice(0, 8)
-    };
-  }
-}
 export function CardVisionApp() {
   const account = useBuildMasterAccount(), ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
   const [preview, setPreview] = useState<string | null>(null), [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
@@ -363,11 +295,6 @@ export function CardVisionApp() {
   const [readerCaptureMode, setReaderCaptureMode] = useState<ReaderCaptureMode>('single');
   const [ocrZones, setOcrZones] = useState<OcrZone[]>(DEFAULT_OCR_ZONES);
   const [calibratorOpen, setCalibratorOpen] = useState(false);
-  const [efhubCalibrationZones, setEfhubCalibrationZones] = useState<EfhubCalibrationZone[]>(() => createDefaultEfhubCalibrationZones());
-  const [efhubCalibrationSaved, setEfhubCalibrationSaved] = useState(false);
-  const [efhubCalibrationActive, setEfhubCalibrationActive] = useState(false);
-  const efhubCalibrationZonesRef = useRef<EfhubCalibrationZone[]>(createDefaultEfhubCalibrationZones());
-  const efhubCalibrationActiveRef = useRef(false);
   const [qualityReport, setQualityReport] = useState<PrintQualityReport | null>(null);
   const [premiumReadings, setPremiumReadings] = useState<PremiumZoneReading[]>([]);
   const [totalReadingSession, setTotalReadingSession] = useState<TotalReadingSession | null>(null);
@@ -386,9 +313,6 @@ export function CardVisionApp() {
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
   const [managerId, setManagerId] = useState<string>('AUTO');
-  const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
-  const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');
-  const [controlProfile, setControlProfile] = useState<ControlProfile>('BALANCED');
   const [status, setStatus] = useState('Escolha como deseja criar a ficha. O aplicativo mostrará uma etapa por vez.');
   const lastPremiumStatusRef = useRef('');
   const [loading, setLoading] = useState(false);
@@ -413,10 +337,8 @@ export function CardVisionApp() {
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
-  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('midnight-navy');
-  const [profileAvatar, setProfileAvatar] = useState<string | null>(() => readProfileAvatar());
+  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
   const [advancedMode, setAdvancedMode] = useState(false);
-  const [teamAdvancedOpen, setTeamAdvancedOpen] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
   const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
   const [motionPreference, setMotionPreference] = useState<MotionPreference>('reduced');
@@ -424,9 +346,8 @@ export function CardVisionApp() {
   const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('economy');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [sessionHydrated, setSessionHydrated] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [mainSection, setMainSection] = useState<MainSection>(() => {
     if (typeof window === 'undefined') return 'inicio';
@@ -579,7 +500,7 @@ export function CardVisionApp() {
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
   const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? null, [formation]);
-  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation: 'AUTO', style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null, gameplayMode, connectionProfile, controlProfile }), [teamStyle, selectedManager, gameplayMode, connectionProfile, controlProfile]);
+  const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation, style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null }), [formation, teamStyle, selectedManager]);
   const selectedFormationGuide = useMemo(() => {
     if (formation === 'AUTO') return null;
     const savedGuide = formationGuides[formation];
@@ -598,7 +519,6 @@ export function CardVisionApp() {
       const searchable = `${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''} ${(item.result.parsed.nativeSkills ?? []).join(' ')} ${(item.result.recommendedSkills ?? []).join(' ')} ${(item.personalTags ?? []).join(' ')} ${item.notes ?? ''} ${item.tacticalRoleNote ?? ''}`;
       const matchesQuery = !query || memoryKey(searchable).includes(query);
       if (!matchesQuery || !entryMatchesAdvancedFilters(item, vaultFilters)) return false;
-      if (vaultFilters.folderId === 'all' && folderForEntry(item) === 'arquivados') return false;
       if (onlyPendingSkills && savedStatusLabel(item) !== 'pendente') return false;
       if (historyFilter === 'FAVORITES') return Boolean(item.favorite);
       if (historyFilter === 'PENDING') return savedStatusLabel(item) === 'pendente';
@@ -620,22 +540,12 @@ export function CardVisionApp() {
     return items;
   }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
   const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
-  const cleanVaultSummary = useMemo(() => buildCleanVaultSummaryV3800(history), [history]);
   const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
-  const integratedPlayers = useMemo(() => safeIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
-  const integratedTeam = useMemo(() => safeTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
-  const centralDashboard = useMemo(() => safeCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
-  const centralMatchPlans = useMemo(() => {
-    try { return buildMatchScenarioPlans(integratedTeam); }
-    catch (cause) { void recordSafeRuntimeError({ area: 'match-scenario-plans', code: 'plans_failed', message: cause instanceof Error ? cause.message : 'Falha ao gerar planos de partida' }); return []; }
-  }, [integratedTeam]);
-  const centralEntityIndex = useMemo(() => {
-    try { return buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords); }
-    catch (cause) {
-      void recordSafeRuntimeError({ area: 'central-entity-index', code: 'index_failed', message: cause instanceof Error ? cause.message : 'Falha ao montar índice central' });
-      return buildCentralEntityIndex([], safeTeamDiagnosis([], formation, teamStyle), []);
-    }
-  }, [integratedPlayers, integratedTeam, centralMatchRecords, formation, teamStyle]);
+  const integratedPlayers = useMemo(() => buildIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
+  const integratedTeam = useMemo(() => buildTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
+  const centralDashboard = useMemo(() => buildCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
+  const centralMatchPlans = useMemo(() => buildMatchScenarioPlans(integratedTeam), [integratedTeam]);
+  const centralEntityIndex = useMemo(() => buildCentralEntityIndex(integratedPlayers, integratedTeam, centralMatchRecords), [integratedPlayers, integratedTeam, centralMatchRecords]);
   useEffect(() => {
     const handle = scheduleIdleTask(() => {
       try {
@@ -661,10 +571,10 @@ export function CardVisionApp() {
   const localIntegrity = useMemo(() => inspectDataIntegrity({
     history,
     settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
-    calibration: { ocrZones, efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones) },
+    calibration: { ocrZones },
     folders: vaultFolders,
     plans: {},
-  }), [history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders]);
+  }), [history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders]);
   const healthSummary = useMemo(() => {
     const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
     return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
@@ -673,12 +583,12 @@ export function CardVisionApp() {
     const local = syncHealthEnvelope ?? createBackupEnvelope({
       history,
       settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
-      calibration: { ocrZones, efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones) },
+      calibration: { ocrZones },
       folders: vaultFolders,
       evolution: { matchValidation: centralMatchRecords }
     });
     return buildSyncHealth({ local, remote: remoteFullBackup, snapshots: backupSnapshots, lastSyncAt: lastFullSyncAt });
-  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders, centralMatchRecords]);
+  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, vaultFolders, centralMatchRecords]);
   const availablePlaystyles = useMemo(() => Array.from(new Set(history.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const availableSkills = useMemo(() => Array.from(new Set(history.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
   const playerComparison = useMemo(() => comparePlayers(history.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), [history, comparePlayerIds, comparePosition]);
@@ -696,22 +606,40 @@ export function CardVisionApp() {
     vaultFilters.pendingOnly,
     vaultFilters.reviewOnly
   ].filter(Boolean).length, [historySearch, historyFilter, vaultFilters]);
-  const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
-    { id: 'inicio', label: 'Central', hint: 'Resumo do app', icon: 'dashboard' },
-    { id: 'jogadores', label: 'Jogadores', hint: `${history.length} salvos`, icon: 'vault' },
-    { id: 'time', label: 'Meu Time', hint: 'Formação e elenco', icon: 'team' },
-    { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} análises`, icon: 'result' },
-    { id: 'ajustes', label: 'Configurações', hint: 'Visual, conta e sistema', icon: 'settings' },
-    { id: 'menu', label: 'Menu', hint: 'Atalhos e módulos', icon: 'settings' },
-    { id: 'buscar', label: 'Buscar', hint: 'Pesquisa global', icon: 'vault' },
-    { id: 'leitor', label: 'Ler print', hint: 'Importar e analisar', icon: 'scan' },
-    { id: 'manual', label: 'Criar manual', hint: 'Preencher sem print', icon: 'manual' },
-    { id: 'resultado', label: 'Resultado', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
-    { id: 'cofre', label: 'Cofre', hint: `${history.length} fichas salvas`, icon: 'vault' }
+  const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'formation' | 'settings'; disabled?: boolean }>>(() => [
+    { id: 'inicio', label: 'Início', hint: 'Central inteligente', icon: 'dashboard' },
+    { id: 'jogadores', label: 'Jogadores', hint: `${history.length} no banco`, icon: 'vault' },
+    { id: 'time', label: 'Meu Time', hint: 'Escalação integrada', icon: 'team' },
+    { id: 'formacoes', label: 'Formações', hint: 'Estúdio de imagens', icon: 'formation' },
+    { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} registros`, icon: 'result' },
+    { id: 'ajustes', label: 'Configurações', hint: 'Conta e sistema', icon: 'settings' },
+    { id: 'menu', label: 'Menu', hint: 'Todos os módulos', icon: 'settings' },
+    { id: 'buscar', label: 'Buscar', hint: 'Busca inteligente', icon: 'vault' },
+    { id: 'leitor', label: 'Usar Imagem', hint: 'Fluxo do jogador', icon: 'scan' },
+    { id: 'manual', label: 'Manual Pro', hint: 'Fluxo do jogador', icon: 'manual' },
+    { id: 'resultado', label: 'Ficha do jogador', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
+    { id: 'cofre', label: 'Registro do jogador', hint: `${history.length} salvos`, icon: 'vault' }
   ], [history.length, result, draftResult, centralMatchRecords.length]);
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
   const currentNavigationGroup = navigationGroupFor(mainSection);
   const currentPlayerWorkspace = playerWorkspaceFor(mainSection);
+  const sectionGuide = useMemo(() => {
+    const guides: Record<MainSection, { title: string; description: string; steps: string[] }> = {
+      inicio: { title: 'Central inteligente', description: 'Veja prioridades, jogadores e próximos passos em um único painel.', steps: ['Resumo', 'Atalhos', 'Recomendações'] },
+      jogadores: { title: 'Banco de jogadores', description: 'Encontre cartas, abra fichas e continue análises salvas.', steps: ['Buscar', 'Filtrar', 'Abrir ficha'] },
+      partidas: { title: 'Validação em jogo', description: 'Registre desempenho real, erros e evolução depois das partidas.', steps: ['Preparar', 'Jogar', 'Avaliar'] },
+      leitor: { title: 'Leitura por print', description: 'Importe uma imagem nítida, confira os dados e só depois gere a ficha.', steps: ['Importar print', 'Conferir leitura', 'Gerar ficha'] },
+      manual: { title: 'Manual Pro', description: 'Preencha os dados da carta e controle cada ponto sem depender do OCR.', steps: ['Identidade', 'Atributos', 'Revisão'] },
+      resultado: { title: 'Ficha completa', description: 'Comece pelo resumo e navegue para ficha, habilidades, treino e fontes.', steps: ['Resumo', 'Ficha', 'Treino e fontes'] },
+      cofre: { title: 'Cofre de jogadores', description: 'Organize fichas, favoritos, revisões e backups da sua conta.', steps: ['Organizar', 'Comparar', 'Proteger'] },
+      time: { title: 'Meu Time', description: 'Monte o elenco, escolha formações e prepare planos para cada partida.', steps: ['Elenco', 'Formação', 'Plano de jogo'] },
+      formacoes: { title: 'Estúdio de Formações', description: 'Escolha o modelo de jogo, valide funções e gere imagens táticas premium.', steps: ['Estilo', 'Formação', 'Imagem premium'] },
+      ajustes: { title: 'Configurações do aplicativo', description: 'Personalize aparência, desempenho, segurança, backup e atualização.', steps: ['Visão geral', 'Segurança', 'Atualizações'] },
+      menu: { title: 'Menu premium', description: 'Acesse todos os módulos, ferramentas e atalhos em um só lugar.', steps: ['Módulos', 'Ferramentas', 'Atalhos'] },
+      buscar: { title: 'Busca inteligente', description: 'Encontre jogadores, formações, técnicos, habilidades e funções.', steps: ['Digite', 'Filtre', 'Abra'] }
+    };
+    return guides[mainSection];
+  }, [mainSection]);
   useEffect(() => {
     announcePremiumScreen({ section: mainSection, label: currentNavigation.label });
   }, [mainSection, currentNavigation.label]);
@@ -741,43 +669,7 @@ export function CardVisionApp() {
     if (sessionSaveState === 'error') showPremiumToast({ title: 'Rascunho não salvo', message: 'Seus dados continuam na tela. Tente novamente antes de sair.', tone: 'danger', duration: 6000 });
   }, [sessionSaveState]);
   usePremiumDraftAutosave({ section: mainSection, preview, rawText, playerName: manualFields.playerName, points: manualFields.trainingPointsTotal, targetPosition, playstyle: playstyleOverride });
-  const unifiedCreation = useUnifiedCreationControllerV3790({
-    sessionHydrated,
-    method: manualMode ? 'manual' : 'reader',
-    playerName: manualFields.playerName || draftResult?.parsed.playerName || result?.parsed.playerName || '',
-    points: manualFields.trainingPointsTotal || String(draftResult?.trainingPointsTotal || result?.trainingPointsTotal || ''),
-    targetPosition,
-    cardPosition: cardPositionOverride,
-    playstyle: playstyleOverride,
-    hasImage: Boolean(preview || playerCardImage),
-    hasRawText: Boolean(rawText.trim()),
-    manualAttributeCount: Object.keys(manualFields.attributes).length,
-    hasDraftResult: Boolean(draftResult),
-    hasResult: Boolean(result),
-    hasSelectedFile: Boolean(selectedFile)
-  }, {
-    openMethod: (method) => openMainSection(method === 'manual' ? 'manual' : 'leitor', { skipManualBootstrap: true }),
-    setManualMode,
-    initializeManualInput: () => {
-      setRawText(['NOME DO JOGADOR: ', 'POSIÇÃO PRINCIPAL: AUTO', 'ESTILO DE JOGO: AUTO', 'NÍVEL MÁXIMO: ', 'PONTOS TOTAIS: '].join('\n'));
-      setFileName('entrada-manual-v37-90');
-      setOcrDone(true);
-    },
-    resetAll: () => {
-      if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
-      if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current);
-      previewObjectUrlRef.current = null; enhancedObjectUrlRef.current = null;
-      setPreview(null); setPlayerCardImage(null); setCardCropResult(null); setCardCropAdjustOpen(false); setFileName(null); setSelectedFile(null);
-      setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setManualFields(emptyManualFields()); setManualMode(false);
-      setTargetPosition('AUTO'); setCardPositionOverride('AUTO'); setPlaystyleOverride('AUTO'); setQualityReport(null); setPremiumReadings([]);
-      setTotalReadingSession(null); setSinglePrintSession(null); setReadingConfirmations({}); setEnhancedPreview(null); setActiveHistoryId(null);
-      try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
-      clearPremiumCreationDraft();
-      setSessionSaveState('idle');
-    },
-    setStatus
-  });
-  function openMainSection(section: MainSection, options: { track?: boolean; skipManualBootstrap?: boolean } = {}) {
+  function openMainSection(section: MainSection, options: { track?: boolean } = {}) {
     setMobileLauncher(null);
     scrollPositionsRef.current[mainSection] = window.scrollY;
     if (options.track !== false && section !== mainSection) {
@@ -790,11 +682,11 @@ export function CardVisionApp() {
     window.history.replaceState(null, '', group === 'jogadores' ? `#/${group}/${workspace}` : `#/${group}`);
     setMainSection(section);
     const recentNavigation = mainNavigation.find((item) => item.id === section);
-    recordPremiumRecentActivity({ target: premiumTargetForSection(section), label: recentNavigation?.label ?? section, detail: recentNavigation?.hint ?? 'Área do BuildMaster aberta.' });
+    recordPremiumRecentActivity({ target: premiumTargetForSection(section), label: recentNavigation?.label ?? section, detail: recentNavigation?.hint ?? 'Área do Marques Fichas aberta.' });
     if (section === 'cofre') {
       setStatus(history.length ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
     }
-    if (section === 'manual' && !options.skipManualBootstrap && !manualMode && !draftResult && !result && !preview && !rawText.trim() && !manualFields.playerName.trim() && !manualFields.trainingPointsTotal.trim()) {
+    if (section === 'manual' && !manualMode && !draftResult && !result) {
       startManualPreciseMode();
       return;
     }
@@ -804,9 +696,7 @@ export function CardVisionApp() {
   }
   function openNavigationGroup(group: MainNavigationGroup) {
     if (group === 'ajustes') setSettingsView('visao-geral');
-    // A entrada principal de Jogadores sempre abre o banco. O fluxo interno
-    // continua preservado apenas quando o usuário escolhe uma etapa específica.
-    openMainSection(sectionForNavigation(group, 'visao-geral'));
+    openMainSection(sectionForNavigation(group, group === 'jogadores' ? playerWorkspace : 'visao-geral'));
   }
   function openPlayerWorkspace(workspace: PlayerWorkspace) {
     setPlayerWorkspace(workspace);
@@ -848,11 +738,6 @@ export function CardVisionApp() {
     return () => window.removeEventListener('buildmaster:update-available', onUpdate);
   }, []);
   useEffect(() => {
-    if (!updateNotice) return;
-    const timer = window.setTimeout(() => setUpdateNotice(null), 12_000);
-    return () => window.clearTimeout(timer);
-  }, [updateNotice]);
-  useEffect(() => {
     const openUpdates = () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); };
     window.addEventListener('buildmaster:open-updates', openUpdates);
     return () => window.removeEventListener('buildmaster:open-updates', openUpdates);
@@ -871,20 +756,15 @@ export function CardVisionApp() {
       });
     try {
       const ui = loadEasyUiPreferences();
-      const studioMigrated = readAccountStorage(STUDIO_THEME_MIGRATION_KEY) === '1';
-      const identityMigrated = readAccountStorage(IDENTITY_THEME_MIGRATION_KEY) === '1';
-      const selectedPreset = identityMigrated ? ui.visualPreset : 'midnight-navy';
-      setVisualPreset(studioMigrated ? selectedPreset : 'midnight-navy');
-      setAppTheme(selectedPreset === 'pearl-executive' ? 'light' : 'dark');
-      setAccentTheme(ui.accentTheme === 'prism' ? 'blue' : ui.accentTheme);
+      setVisualPreset(ui.visualPreset);
+      setAppTheme(ui.appTheme);
+      setAccentTheme(ui.accentTheme);
       setAdvancedMode(ui.advancedMode);
       setTextScale(ui.textScale);
       setDensityMode(ui.densityMode);
       setMotionPreference(ui.motionPreference);
       setHighContrast(ui.highContrast);
       setPerformanceMode(ui.performanceMode);
-      if (!studioMigrated) writeAccountStorage(STUDIO_THEME_MIGRATION_KEY, '1');
-      if (!identityMigrated) writeAccountStorage(IDENTITY_THEME_MIGRATION_KEY, '1');
     } catch {
       // Preferências visuais são opcionais.
     }
@@ -924,23 +804,6 @@ export function CardVisionApp() {
       setOcrZones(DEFAULT_OCR_ZONES);
     }
     try {
-      const storedEfhubMap = readEfhubCalibrationMap(readAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY));
-      if (storedEfhubMap) {
-        setEfhubCalibrationZones(storedEfhubMap.zones);
-        efhubCalibrationZonesRef.current = storedEfhubMap.zones;
-        setEfhubCalibrationSaved(true);
-        setEfhubCalibrationActive(true);
-        efhubCalibrationActiveRef.current = true;
-      }
-    } catch {
-      const defaults = createDefaultEfhubCalibrationZones();
-      setEfhubCalibrationZones(defaults);
-      efhubCalibrationZonesRef.current = defaults;
-      setEfhubCalibrationSaved(false);
-      setEfhubCalibrationActive(false);
-      efhubCalibrationActiveRef.current = false;
-    }
-    try {
       const storedSession = readAccountStorage(ACTIVE_SESSION_KEY);
       if (storedSession) {
         const snapshot = JSON.parse(storedSession) as Partial<ActiveSessionSnapshot>;
@@ -959,9 +822,6 @@ export function CardVisionApp() {
           if (snapshot.formation) setFormation(snapshot.formation);
           if (snapshot.teamStyle) setTeamStyle(snapshot.teamStyle);
           if (typeof snapshot.managerId === 'string') setManagerId(snapshot.managerId);
-          if (snapshot.gameplayMode) setGameplayMode(snapshot.gameplayMode);
-          if (snapshot.connectionProfile) setConnectionProfile(snapshot.connectionProfile);
-          if (snapshot.controlProfile) setControlProfile(snapshot.controlProfile);
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
@@ -979,7 +839,6 @@ export function CardVisionApp() {
       setDraftResult(null);
       setStatus('Uma sessão incompatível foi descartada com segurança. O Cofre foi preservado.');
     }
-    setSessionHydrated(true);
     return () => {
       mounted = false;
     };
@@ -991,15 +850,6 @@ export function CardVisionApp() {
       // Calibração é local e opcional.
     }
   }, [ocrZones]);
-  useEffect(() => {
-    efhubCalibrationZonesRef.current = efhubCalibrationZones;
-  }, [efhubCalibrationZones]);
-  useEffect(() => {
-    efhubCalibrationActiveRef.current = efhubCalibrationActive;
-  }, [efhubCalibrationActive]);
-  useEffect(() => {
-    setProfileAvatar(readProfileAvatar());
-  }, [account?.profile.id, account?.profile.username]);
   useEffect(() => {
     try {
       writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
@@ -1026,7 +876,6 @@ export function CardVisionApp() {
     const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
     if (!hasWork) {
       try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
-      clearPremiumCreationDraft();
       setSessionSaveState('idle');
       return;
     }
@@ -1049,9 +898,6 @@ export function CardVisionApp() {
           formation,
           teamStyle,
           managerId,
-          gameplayMode,
-          connectionProfile,
-          controlProfile,
           result: null,
           draftResult: null,
           manualFields,
@@ -1066,7 +912,7 @@ export function CardVisionApp() {
       }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId]);
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, result, draftResult, manualFields, manualMode, activeHistoryId]);
   // v25.77: a ficha não é mais salva automaticamente ao finalizar.
   // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
   // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
@@ -1081,17 +927,11 @@ export function CardVisionApp() {
     setStatus(`Configuração inicial concluída: modo ${profile.experienceMode === 'advanced' ? 'avançado' : 'simples'}, formação ${profile.favoriteFormation}.`);
   }
   function applyRulePackAndRefresh(pack: DynamicRulePack, message: string) {
-    const activation = activateContinuousRulePackV3770(pack);
-    if (!activation.activated) {
-      const reason = activation.analysis.alerts.find((item) => item.level === 'critical')?.detail ?? 'O pacote não passou na auditoria v37.70.';
-      setRulesStatus(`${reason} A base segura anterior continua ativa.`);
-      return false;
-    }
-    setRulePackInfo(activation.pack);
-    setRulesStatus(`${message} • confiança ${activation.analysis.confidence}% • ${activation.analysis.gameVersion}`);
+    writeDynamicRulePack(pack);
+    setRulePackInfo(pack);
+    setRulesStatus(message);
     setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
-    return true;
   }
   async function loadRulesFromUrl() {
     const url = rulesUrl.trim();
@@ -1105,10 +945,9 @@ export function CardVisionApp() {
       const response = await fetch(url, { cache: 'no-store' });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload) throw new Error('Não consegui ler o JSON desta URL.');
-      const pack = sanitizeContinuousRulePackV3770(payload);
+      const pack = sanitizeRulePack(payload);
       if (!pack.rules.length) throw new Error('O pacote não tem regras válidas.');
-      const applied = applyRulePackAndRefresh(pack, `Pacote v37.70 ativado sem refazer APK: ${pack.source} • ${pack.rules.length} regra(s) • versão ${pack.version}`);
-      if (!applied) return;
+      applyRulePackAndRefresh(pack, `Regras atualizadas sem refazer APK: ${pack.source} • ${pack.rules.length} regra(s) • versão ${pack.version}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha ao atualizar regras.';
       setRulesStatus(`${message} O pacote local continua ativo.`);
@@ -1120,26 +959,13 @@ export function CardVisionApp() {
       removeAccountStorage(RULE_PACK_URL_KEY);
     } catch {}
     setRulesUrl('');
-    applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base`);
+    applyRulePackAndRefresh(DEFAULT_DYNAMIC_RULE_PACK, `Pacote local restaurado: ${DEFAULT_DYNAMIC_RULE_PACK.rules.length} regra(s) base.`);
   }
   function exportRulePack() {
-    const current = sanitizeContinuousRulePackV3770(readDynamicRulePack());
-    const base = current.schemaVersion === 3770 ? current : createRulePackTemplateV3770();
-    const pack = { ...base, checksum: computeRulePackChecksumV3770(base) };
+    const pack = readDynamicRulePack();
     const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json;charset=utf-8' });
-    downloadBlobFile(`buildmaster-regras-${pack.version || 'v37-70'}.json`, blob);
-    setRulesStatus('Pacote v37.70 exportado com catálogo, versão do eFootball, validade e checksum. Hospede esse JSON para atualizar o app por URL.');
-  }
-  function restoreRulePackVersion(version: string) {
-    const restored = restoreRulePackVersionV3770(version);
-    if (!restored?.activated) {
-      setRulesStatus('Não foi possível restaurar essa versão. A base atual continua ativa.');
-      return;
-    }
-    setRulePackInfo(restored.pack);
-    setRulesStatus(`Versão ${restored.pack.version} restaurada do histórico • confiança ${restored.analysis.confidence}%.`);
-    setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
-    setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
+    downloadBlobFile(`buildmaster-regras-${pack.version || 'local'}.json`, blob);
+    setRulesStatus('Pacote de regras exportado. Você pode hospedar esse JSON e atualizar o APK por URL depois.');
   }
   function requireSecureAccountCloud(): void {
     if (!account?.cloudEnabled) throw new Error('A nuvem segura desta conta não está disponível. O Cofre antigo e compartilhado foi removido.');
@@ -1228,9 +1054,9 @@ export function CardVisionApp() {
       // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
   }
-  async function logout() {
-    if (account) await account.logout();
-    else await clearBuildMasterSession();
+  function logout() {
+    clearBuildMasterSession();
+    void account?.logout();
     window.location.href = '/';
   }
   function createVaultFolder() {
@@ -1243,26 +1069,7 @@ export function CardVisionApp() {
     setStatus(`Pasta “${name}” criada no Cofre.`);
   }
   function moveHistoryToFolder(id: string, folderId: string) {
-    setHistory((current) => {
-      const next = current.map((item) => item.id === id
-        ? appendSavedEvent({ ...item, folderId, updatedAt: new Date().toISOString() }, 'organizado', `Movido para a pasta ${vaultFolders.find((folder) => folder.id === folderId)?.name ?? folderId}.`)
-        : item);
-      void persistHistoryStore(next);
-      void pushCloudHistory(next, true);
-      return next;
-    });
-  }
-  function archiveHistoryItem(id: string, archived: boolean) {
-    const targetFolder = archived ? 'arquivados' : 'all';
-    setHistory((current) => {
-      const next = current.map((item) => item.id === id
-        ? appendSavedEvent({ ...item, folderId: targetFolder }, archived ? 'arquivado' : 'restaurado', archived ? 'Ficha removida da visão principal sem ser apagada.' : 'Ficha restaurada para o catálogo principal.')
-        : item);
-      void persistHistoryStore(next);
-      void pushCloudHistory(next, true);
-      return next;
-    });
-    setStatus(archived ? 'Ficha arquivada. Ela continua protegida no Cofre.' : 'Ficha restaurada para o catálogo principal.');
+    setHistory((current) => current.map((item) => item.id === id ? appendSavedEvent({ ...item, folderId, updatedAt: new Date().toISOString() }, 'organizado', `Movido para a pasta ${vaultFolders.find((folder) => folder.id === folderId)?.name ?? folderId}.`) : item));
   }
   function resetVaultFilters() {
     setVaultFilters({ folderId: 'all', position: 'ALL', playstyle: '', skill: '', minConfidence: 0, maxConfidence: 100, minEfficiency: 0, favoritesOnly: false, pendingOnly: false, reviewOnly: false });
@@ -1333,8 +1140,7 @@ export function CardVisionApp() {
     const key = resultHistoryKey(result);
     const now = new Date().toLocaleString('pt-BR');
     setHistory((current) => {
-      const existingByKey = current.find((entry) => entry.saveKey === key);
-      const existing = existingByKey ?? findExactVaultDuplicateByResult(current, result);
+      const existing = current.find((entry) => entry.saveKey === key);
       const base: SavedAnalysis = {
         id: existing?.id ?? createStableId('ficha'),
         saveKey: key,
@@ -1352,20 +1158,13 @@ export function CardVisionApp() {
         tacticalRoleNote: existing?.tacticalRoleNote ?? '',
         changeLog: existing?.changeLog ?? []
       };
-      const duplicateDetected = Boolean(existing && !existingByKey);
-      const item = appendSavedEvent(
-        base,
-        existing ? (duplicateDetected ? 'duplicata evitada' : 'atualizado') : 'criado',
-        existing ? (duplicateDetected ? 'A mesma carta, ficha, habilidades e Booster já existiam; o registro anterior foi atualizado sem criar uma cópia.' : 'Ficha atualizada por cima da versão salva.') : 'Ficha salva no Cofre Clean.'
-      );
+      const item = appendSavedEvent(base, existing ? 'atualizado' : 'criado', existing ? 'Ficha atualizada por cima da versão salva.' : 'Ficha salva no Cofre avançado.');
       setActiveHistoryId(item.id);
       const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
       void persistHistoryStore(next);
       void pushCloudHistory(next, true);
       return next;
     });
-    unifiedCreation.markSaved();
-    clearPremiumCreationDraft();
     setStatus(saveAsReview ? `Ficha salva como “Revisar”: ${quality.blockers[0]?.detail ?? 'confira os avisos do controle final.'}` : `Ficha salva no Cofre de Fichas: ${result.parsed.playerName}.`);
   }
   function toggleSavedSkill(skill: string) {
@@ -1404,13 +1203,11 @@ export function CardVisionApp() {
       history,
       settings: {
         ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }) || {}) as Record<string, unknown>),
-        profileAvatar,
         autoUpdateCheck: (safeStorageGet('buildmaster_auto_update_check') ?? safeStorageGet('buildmaster_auto_update_check_v26_70')) !== '0'
       },
       calibration: {
         matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
         ocrZones: readJsonStorage(CALIBRATION_KEY, ocrZones),
-        efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones),
         learning: readJsonStorage(LEARNING_KEY, {}),
         corrections: readJsonStorage(CORRECTION_KEY, {}),
         ocrLexicon: (await runtimeList('ocr-lexicon', 500).catch(() => [])).map((entry) => entry.value)
@@ -1419,8 +1216,6 @@ export function CardVisionApp() {
       folders: readJsonStorage(VAULT_FOLDERS_KEY, []),
       rules: {
         pack: readJsonStorage(RULE_PACK_KEY, null),
-        historyV3770: readJsonStorage(RULE_PACK_HISTORY_V3770_KEY, []),
-        remoteCatalogV3770: readJsonStorage(REMOTE_CATALOG_V3770_STORAGE_KEY, null),
         officialPack: readOfficialRulePack(),
         url: readAccountStorage(RULE_PACK_URL_KEY) || ''
       },
@@ -1546,8 +1341,7 @@ export function CardVisionApp() {
         calibration: {
           matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
           learning: readJsonStorage(LEARNING_KEY, {}),
-          corrections: readJsonStorage(CORRECTION_KEY, {}),
-          efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones)
+          corrections: readJsonStorage(CORRECTION_KEY, {})
         },
         evolution: {
           onboarding: readJsonStorage(ONBOARDING_STORAGE_KEY, null),
@@ -1599,18 +1393,17 @@ export function CardVisionApp() {
       await persistHistoryStore(imported.slice(0, HISTORY_LIMIT));
     }
     if (selected.settings && sections.settings && typeof sections.settings === 'object') {
-      const ui = sections.settings as { visualPreset?: PremiumVisualPreset; appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; profileAvatar?: string; autoUpdateCheck?: boolean };
+      const ui = sections.settings as { visualPreset?: PremiumVisualPreset; appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; autoUpdateCheck?: boolean };
       writeStorage('buildmaster_ui_prefs_v24_24', ui);
-      if (ui.visualPreset && PREMIUM_VISUAL_PRESETS.includes(ui.visualPreset)) setVisualPreset(ui.visualPreset);
+      if (ui.visualPreset && ['obsidian-gold', 'elite-blue', 'future-purple'].includes(ui.visualPreset)) setVisualPreset(ui.visualPreset);
       if (ui.appTheme === 'dark' || ui.appTheme === 'light') setAppTheme(ui.appTheme);
-      if (ui.accentTheme && ['emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
+      if (ui.accentTheme && ['prism', 'emerald', 'gold', 'blue', 'red', 'purple'].includes(ui.accentTheme)) setAccentTheme(ui.accentTheme);
       if (typeof ui.advancedMode === 'boolean') setAdvancedMode(ui.advancedMode);
       if (ui.textScale && ['compact', 'standard', 'large'].includes(ui.textScale)) setTextScale(ui.textScale);
       if (ui.densityMode && ['compact', 'comfortable'].includes(ui.densityMode)) setDensityMode(ui.densityMode);
       if (ui.motionPreference && ['system', 'reduced', 'full'].includes(ui.motionPreference)) setMotionPreference(ui.motionPreference);
       if (typeof ui.highContrast === 'boolean') setHighContrast(ui.highContrast);
       if (ui.performanceMode === 'balanced' || ui.performanceMode === 'economy') setPerformanceMode(ui.performanceMode);
-      if (typeof ui.profileAvatar === 'string' && ui.profileAvatar.startsWith('data:image/')) { saveProfileAvatar(ui.profileAvatar); setProfileAvatar(ui.profileAvatar); }
       if (typeof ui.autoUpdateCheck === 'boolean') safeStorageSet('buildmaster_auto_update_check', ui.autoUpdateCheck ? '1' : '0');
     }
     if (selected.calibration && sections.calibration && typeof sections.calibration === 'object') {
@@ -1620,17 +1413,6 @@ export function CardVisionApp() {
       writeStorage(LEARNING_KEY, calibration.learning ?? {});
       writeStorage(CORRECTION_KEY, calibration.corrections ?? {});
       if (Array.isArray(calibration.ocrZones)) setOcrZones(calibration.ocrZones as OcrZone[]);
-      const restoredEfhubMap = calibration.efhubVisualMap && typeof calibration.efhubVisualMap === 'object'
-        ? readEfhubCalibrationMap(JSON.stringify(calibration.efhubVisualMap))
-        : null;
-      if (restoredEfhubMap) {
-        writeStorage(EFHUB_MANUAL_CALIBRATION_KEY, restoredEfhubMap);
-        efhubCalibrationZonesRef.current = restoredEfhubMap.zones;
-        efhubCalibrationActiveRef.current = true;
-        setEfhubCalibrationZones(restoredEfhubMap.zones);
-        setEfhubCalibrationSaved(true);
-        setEfhubCalibrationActive(true);
-      }
       if (Array.isArray(calibration.ocrLexicon)) {
         for (const rawTerm of calibration.ocrLexicon) {
           if (!rawTerm || typeof rawTerm !== 'object') continue;
@@ -1648,8 +1430,6 @@ export function CardVisionApp() {
     if (selected.rules && sections.rules && typeof sections.rules === 'object') {
       const rules = sections.rules as Record<string, unknown>;
       if (rules.pack) writeStorage(RULE_PACK_KEY, rules.pack);
-      if (Array.isArray(rules.historyV3770)) writeStorage(RULE_PACK_HISTORY_V3770_KEY, rules.historyV3770);
-      if (rules.remoteCatalogV3770) writeStorage(REMOTE_CATALOG_V3770_STORAGE_KEY, rules.remoteCatalogV3770);
       const officialPack = sanitizeOfficialRulePack(rules.officialPack);
       if (officialPack) activateOfficialRulePack(officialPack, { confirmed: true, reason: 'Restauração confirmada pelo usuário a partir do backup integral.' });
       if (typeof rules.url === 'string') writeAccountStorage(RULE_PACK_URL_KEY, rules.url);
@@ -1833,7 +1613,7 @@ export function CardVisionApp() {
       setStatus(`Restauração concluída. ${migrated.steps.length ? 'Dados antigos foram migrados com segurança.' : 'O backup já estava no formato atual.'}`);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : '';
-      setStatus(message || 'Não consegui restaurar este arquivo. Use um backup completo exportado pelo BuildMaster.');
+      setStatus(message || 'Não consegui restaurar este arquivo. Use um backup completo exportado pelo Marques Fichas.');
     }
   }
   async function exportIntegrityDiagnostic() {
@@ -1920,7 +1700,7 @@ export function CardVisionApp() {
       setStatus(`Backup importado com ${imported.length} ficha(s)${restoredExtras ? ', pastas e calibração' : ''}. Elas ficam no Cofre até você apagar.`);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : '';
-      setStatus(message || 'Não consegui importar esse backup. Use um arquivo .bmbak ou JSON exportado pelo próprio BuildMaster.');
+      setStatus(message || 'Não consegui importar esse backup. Use um arquivo .bmbak ou JSON exportado pelo próprio Marques Fichas.');
     }
   }
   function deleteHistoryItem(id: string) {
@@ -2025,8 +1805,7 @@ export function CardVisionApp() {
       savedAt: new Date().toLocaleString('pt-BR'),
       updatedAt: new Date().toLocaleString('pt-BR'),
       notes: `${item.notes ?? ''}${item.notes ? '\n' : ''}Variação criada para testar outra função/ficha.`,
-      personalTags: Array.from(new Set([...(item.personalTags ?? []), 'variante'])),
-      changeLog: [{ at: new Date().toLocaleString('pt-BR'), action: 'variação criada', note: 'Cópia intencional para testar outra função/ficha; não é tratada como duplicidade automática.' }, ...(item.changeLog ?? [])]
+      changeLog: [{ at: new Date().toLocaleString('pt-BR'), action: 'variação criada', note: 'Cópia da ficha original para testar outra função/ficha.' }, ...(item.changeLog ?? [])]
     };
     setHistory((current) => {
       const next = [copy, ...current].slice(0, HISTORY_LIMIT);
@@ -2084,21 +1863,12 @@ export function CardVisionApp() {
     downloadTextFile(filename, formatReportMarkdown(result, active?.notes ?? ''));
     setStatus('Relatório técnico em texto exportado.');
   }
-  async function exportCurrentVisualCard(format: PremiumCleanExportFormat = 'portrait') {
+  function exportCurrentVisualCard() {
     if (!result) return;
-    const image = playerCardImage ?? preview;
-    const svg = buildPremiumCleanCardSvg(result, { format, playerImage: image });
-    const date = new Date().toISOString().slice(0, 10);
-    const baseName = `buildmaster-${format === 'square' ? 'quadrada' : 'vertical'}-${memoryKey(result.parsed.playerName)}-${date}`;
-    const dimensions = format === 'square' ? { width: 1080, height: 1080 } : { width: 1080, height: 1350 };
-    try {
-      const png = await premiumCleanSvgToPngBlob(svg, dimensions.width, dimensions.height);
-      downloadBlobFile(`${baseName}.png`, png);
-      setStatus(`Imagem ${format === 'square' ? 'quadrada' : 'vertical'} pronta para compartilhar.`);
-    } catch {
-      downloadBlobFile(`${baseName}.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-      setStatus('O aparelho não converteu para PNG; a ficha foi salva em SVG com a mesma qualidade.');
-    }
+    const svg = buildProfessionalCardSvg(result);
+    const filename = `buildmaster-card-${memoryKey(result.parsed.playerName)}-${new Date().toISOString().slice(0, 10)}.svg`;
+    downloadBlobFile(filename, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    setStatus('Imagem profissional da ficha exportada em SVG.');
   }
   function printCurrentReport() {
     if (!result) return;
@@ -2206,11 +1976,8 @@ export function CardVisionApp() {
     const confirmedNewSkills = confirmed && readingConfirmations.skills
       ? (singlePrintSession?.detailedReading.skillCandidates ?? []).map((item) => item.value)
       : [];
-    const selectedOwnedSkills = canonicalizeSkillList([...manualFields.nativeSkills, ...confirmedNewSkills]);
-    const selectedSpecialSkills = selectedOwnedSkills.filter((skill) => isSpecialSkillIdentity(skill));
-    const selectedRegularSkills = selectedOwnedSkills.filter((skill) => !isSpecialSkillIdentity(skill));
-    if (selectedRegularSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedRegularSkills.join(', ')}`);
-    if (selectedSpecialSkills.length) locks.push(`HABILIDADES ESPECIAIS: ${selectedSpecialSkills.join(', ')}`);
+    const selectedNativeSkills = Array.from(new Set([...manualFields.nativeSkills, ...confirmedNewSkills])).filter(Boolean);
+    if (selectedNativeSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedNativeSkills.join(', ')}`);
     for (const item of ATTRIBUTE_INPUTS) {
       const value = manualFields.attributes[item.key]?.trim();
       if (value) locks.push(`${item.label}: ${value}`);
@@ -2228,14 +1995,9 @@ export function CardVisionApp() {
       level: nextResult.parsed.level ? String(nextResult.parsed.level) : '',
       trainingPointsTotal: nextResult.trainingPointsTotal ? String(nextResult.trainingPointsTotal) : '',
       attributes: nextAttributes,
-      // Preserve todas as categorias já possuídas. A interface continua compacta,
-      // mas habilidades nativas, adicionais instaladas e especiais precisam participar
-      // do mesmo filtro antirrepetição na geração das cinco vagas seguintes.
-      nativeSkills: Array.from(new Set(canonicalizeSkillList([
-        ...nextResult.parsed.nativeSkills,
-        ...(nextResult.parsed.additionalSkills ?? []),
-        ...nextResult.parsed.specialSkills
-      ])))
+      // Preserve também habilidades aprendidas pelo catálogo local. Filtrar apenas pelo
+      // catálogo oficial faria uma habilidade nova desaparecer na próxima leitura.
+      nativeSkills: Array.from(new Set(nextResult.parsed.nativeSkills.map((skill) => skill.trim()).filter(Boolean)))
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
     if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
@@ -2318,14 +2080,11 @@ export function CardVisionApp() {
     setTotalReadingSession(null);
     setSinglePrintSession(null);
     setReadingConfirmations({});
-    setStatus('Perfil EFHub Padronizado: identificando o painel completo, corrigindo orientação e preparando a cópia 1400×1600...');
+    setStatus('Print Único Pro: identificando resolução, barras da tela, orientação e áreas da interface...');
     const unsubscribe = subscribeOcrProgress((progress) => {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
     try {
-      const manualEfhubCalibration = efhubCalibrationActiveRef.current
-        ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current)
-        : null;
       const scanQuality = qualityReport ?? await inspectPrintQuality(selectedFile).catch(() => null);
       if (scanQuality !== qualityReport) setQualityReport(scanQuality);
       let geometry = await inspectSinglePrintGeometry(selectedFile);
@@ -2361,92 +2120,29 @@ export function CardVisionApp() {
         ...corrections.flatMap((correction) => correction.field === 'playerName' ? [correction.correctedValue, correction.playerName] : [correction.playerName])
       ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
-      setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
+      setOcrZones(geometry.zones);
       // A chave recebe a versão da geometria para não reutilizar miniaturas
       // produzidas pelo leitor antigo com recortes desalinhados.
-      const thumbnailKey = `${imageHash}:efhub-canonical-v32.00`;
+      const thumbnailKey = `${imageHash}:efhub-layout-v31.75`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
       const fullOptimized = await preprocessImage(selectedFile, 'contrast');
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v32.00-visual-map`
+        cacheKey: `${imageHash}:full:contrast`
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;
-      let ocrSource: File | Blob = selectedFile;
-      let canonicalPreview: string | null = null;
-      let canonicalized = false;
-      let precisionImageHash = imageHash;
-      if (manualEfhubCalibration) {
-        const manualZones = await buildPreciseOcrZonesFromEfhubCalibration(selectedFile, manualEfhubCalibration);
-        const signature = manualEfhubCalibration
-          .map((zone) => `${zone.id}:${zone.x.toFixed(4)},${zone.y.toFixed(4)},${zone.w.toFixed(4)},${zone.h.toFixed(4)}`)
-          .join('|');
-        const sourceRatio = geometry.width / Math.max(1, geometry.height);
-        precisionImageHash = `${imageHash}:${EFHUB_MANUAL_CALIBRATION_VERSION}:${signature}`;
-        geometry = {
-          ...geometry,
-          template: 'detailed-profile',
-          zones: manualZones,
-          cardArtZone: efhubCalibrationCardArtZone(manualEfhubCalibration),
-          anchorReport: {
-            ...geometry.anchorReport,
-            efhubLayout: {
-              version: EFHUB_MANUAL_CALIBRATION_VERSION,
-              mode: 'proportional',
-              width: geometry.width,
-              height: geometry.height,
-              contentBounds: { x: 0, y: 0, w: 1, h: 1 },
-              canonicalFrame: { x: 0, y: 0, w: 1, h: 1 },
-              sourceRatio,
-              canonicalRatio: 1400 / 1600,
-              ratioError: 0,
-              confidence: 100,
-              complete: true,
-              visibleFraction: 1,
-              croppedEdges: [],
-              missingZones: [],
-              reason: 'As oito áreas foram posicionadas manualmente pelo usuário sobre o print original. O OCR usa exatamente esse mapa proporcional.'
-            },
-            displayZones: []
-          }
-        };
-      } else if (geometry.template === 'detailed-profile' && geometry.anchorReport.efhubLayout) {
-        const canonicalPlan = buildEfhubLayoutPlan(geometry.width, geometry.height, geometry.anchorReport.bounds, fullPass.text);
-        if (!['reflowed-unknown', 'incompatible'].includes(canonicalPlan.audit.mode)) {
-          const canonical = await normalizeEfhubProfileImage(selectedFile, canonicalPlan).catch(() => null);
-          if (canonical) {
-            ocrSource = canonical.blob;
-            canonicalPreview = canonical.preview;
-            canonicalized = true;
-            const deterministic = await buildDeterministicEfhubOcrZones(canonical.blob);
-            precisionImageHash = `${imageHash}:${EFHUB_CANONICAL_NORMALIZER_VERSION}:${EFHUB_DETERMINISTIC_ZONES_VERSION}`;
-            geometry = {
-              ...geometry,
-              zones: deterministic.zones,
-              cardArtZone: deterministic.zones.find((item) => item.key === 'cardType') ?? geometry.cardArtZone,
-              anchorReport: {
-                ...geometry.anchorReport,
-                efhubLayout: canonicalPlan.audit,
-                // O usuário vê o perfil completo padronizado, sem caixas coloridas.
-                displayZones: []
-              }
-            };
-          }
-        }
-      }
-      // No perfil completo as áreas são exclusivamente internas. O usuário vê
-      // a cópia normalizada inteira, sem caixas de calibração sobre a imagem.
-      setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
+      setOcrZones(geometry.zones);
+
       // O recorte é feito somente depois da identificação completa do layout.
       // Assim, uma imagem 3283×3013 que inicialmente parece paisagem não usa
       // o recorte de um template errado antes de o OCR reconhecer o perfil.
       const finalCrop = geometry.cardArtZone.enabled
         ? await (geometry.template === 'detailed-profile'
-          ? createEfhubCardPreview(ocrSource, geometry.cardArtZone)
-          : createSmartCardPreview(ocrSource, geometry.cardArtZone)).catch(() => null)
+          ? createEfhubCardPreview(selectedFile, geometry.cardArtZone)
+          : createSmartCardPreview(selectedFile, geometry.cardArtZone)).catch(() => null)
         : null;
       const artPreview = finalCrop?.portraitPreview ?? finalCrop?.preview ?? cachedArt ?? null;
       if (artPreview) {
@@ -2454,12 +2150,11 @@ export function CardVisionApp() {
         if (finalCrop) setCardCropResult(finalCrop);
         if (finalCrop) void runtimePut('image-thumbnails', thumbnailKey, artPreview).then(() => runtimeTrimStore('image-thumbnails', 120)).catch(() => undefined);
       }
+
       const layoutAudit = geometry.anchorReport.efhubLayout;
       if (geometry.template === 'detailed-profile' && layoutAudit) {
         if (layoutAudit.complete) {
-          setStatus(manualEfhubCalibration
-            ? `Mapa visual ativo: os 8 quadrados ajustados serão usados sobre o print ${layoutAudit.width}×${layoutAudit.height}.`
-            : `Perfil eFHUB padronizado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, cópia interna 1400×1600 pronta para leitura completa.`);
+          setStatus(`Perfil eFHUB encaixado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, oito áreas posicionadas pelo mapa oficial.`);
         } else if (layoutAudit.mode === 'reflowed-unknown' || layoutAudit.mode === 'incompatible') {
           setStatus('Layout eFHUB incompatível ou reorganizado: a leitura automática foi bloqueada para não posicionar quadrados errados.');
         } else {
@@ -2473,9 +2168,9 @@ export function CardVisionApp() {
         setStatus(`Leitura Ultraprecisa: ${zone.label} (${index + 1}/${enabledZones.length})...`);
         const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
         const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
-        const target = zone.key === 'name' ? 2600 : zone.key === 'skills' ? 2200 : numeric ? 2100 : wide ? 2800 : 2350;
-        const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
-          imageHash: precisionImageHash,
+        const target = zone.key === 'name' ? 2600 : numeric ? 2100 : wide ? 2800 : 2350;
+        const best = await recognizeZoneWithHighPrecision(selectedFile, zone, {
+          imageHash,
           template: geometry.template,
           targetWidth: target,
           readingMode,
@@ -2500,11 +2195,7 @@ export function CardVisionApp() {
         learnedSkillNames,
         qualityReport: scanQuality,
         layoutAudit: geometry.anchorReport.efhubLayout,
-        displayZones: geometry.anchorReport.displayZones,
-        canonicalized,
-        canonicalWidth: canonicalized ? 1400 : undefined,
-        canonicalHeight: canonicalized ? 1600 : undefined,
-        canonicalPreview
+        displayZones: geometry.anchorReport.displayZones
       });
       const storedPreview = toStoredSinglePrintScan(session);
       const previous = storedScanEntries.map((entry) => entry.value).find((entry) => entry.identityKey && entry.identityKey === storedPreview.identityKey && entry.imageHash !== imageHash) ?? null;
@@ -2524,11 +2215,7 @@ export function CardVisionApp() {
           learnedSkillNames,
           qualityReport: scanQuality,
           layoutAudit: geometry.anchorReport.efhubLayout,
-          displayZones: geometry.anchorReport.displayZones,
-          canonicalized,
-          canonicalWidth: canonicalized ? 1400 : undefined,
-          canonicalHeight: canonicalized ? 1600 : undefined,
-          canonicalPreview
+          displayZones: geometry.anchorReport.displayZones
         });
       }
       session = applyStoredOcrCorrections(session, corrections);
@@ -2713,27 +2400,16 @@ export function CardVisionApp() {
       setLoading(false);
     }
   }
-  function updateEfhubCalibration(nextZones: EfhubCalibrationZone[]) { const normalized = normalizeEfhubCalibrationZones(nextZones);
-    efhubCalibrationZonesRef.current = normalized; setEfhubCalibrationZones(normalized); setEfhubCalibrationSaved(false);
+  function resetCalibration() {
+    setOcrZones(DEFAULT_OCR_ZONES);
+    setStatus('Calibração restaurada para o padrão do print completo 1400x1600.');
   }
-  function saveEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
-    try { writeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY, JSON.stringify(createEfhubCalibrationMap(normalized))); }
-    catch { setStatus('Não foi possível salvar o mapa no armazenamento local. Você ainda pode usá-lo nesta leitura.'); return false; }
-    efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
-    setEfhubCalibrationZones(normalized); setEfhubCalibrationSaved(true); setEfhubCalibrationActive(true);
-    setStatus('Mapa visual salvo. Os oito quadrados serão reaplicados proporcionalmente nos próximos prints com a mesma organização.');
-    return true;
+  function updateZone(key: OcrZone['key'], field: keyof Pick<OcrZone, 'x' | 'y' | 'w' | 'h'>, value: string) {
+    const nextValue = Math.max(0, Math.min(1, Number(value) / 100));
+    setOcrZones((current) => current.map((zone) => zone.key === key ? { ...zone, [field]: nextValue } : zone));
   }
-  function resetEfhubCalibration() { const defaults = createDefaultEfhubCalibrationZones();
-    try { removeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY); } catch {}
-    efhubCalibrationZonesRef.current = defaults; efhubCalibrationActiveRef.current = false;
-    setEfhubCalibrationZones(defaults); setEfhubCalibrationSaved(false); setEfhubCalibrationActive(false);
-    setStatus('Os oito quadrados voltaram ao mapa padrão. Ajuste-os sobre o print e salve quando estiverem corretos.');
-  }
-  function readWithEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
-    efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
-    setEfhubCalibrationActive(true); setCalibratorOpen(false);
-    setStatus('Mapa visual confirmado. A leitura usará exatamente os quadrados posicionados por você.'); void analyzeSelectedImage();
+  function toggleZone(key: OcrZone['key']) {
+    setOcrZones((current) => current.map((zone) => zone.key === key ? { ...zone, enabled: !zone.enabled } : zone));
   }
   function applyLearningToText(text: string) {
     const learned = findLearnedCard(text, fileName);
@@ -2828,29 +2504,6 @@ export function CardVisionApp() {
     setDraftResult((current) => current ? applyLocalCorrectionsToResult(current) : current);
     setStatus(message);
   }
-  function applyGameplayProfile(profileId: GameplayDnaProfileId) {
-    setResult((current) => current ? applyGameplayDnaProfileSelection(current, profileId) : current);
-    setStatus('Perfil de Gameplay aplicado. A ficha, os pontos e as cinco habilidades adicionais foram atualizados.');
-  }
-
-  function replaceOwnedSkillIntelligently(skill: string) {
-    const base = result ?? draftResult;
-    if (!base) return;
-    upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Habilidade já possuída: ${skill}`] }, 'role');
-    upsertCorrectionForResult(base, { blockedSkills: [skill], notes: [`Habilidade já possuída: ${skill}`] }, 'player');
-    const replacement = regenerateSkillAfterOwnedConfirmation(base, skill);
-    setManualFields((current) => ({
-      ...current,
-      nativeSkills: canonicalizeSkillList([...current.nativeSkills, replacement.removedSkill])
-    }));
-    if (result) setResult(replacement.result);
-    else setDraftResult(replacement.result);
-    const replacementText = replacement.replacementSkill
-      ? `${replacement.removedSkill} foi retirada e ${replacement.replacementSkill} entrou após nova análise completa da carta.`
-      : `${replacement.removedSkill} foi retirada. O app não encontrou outra opção oficial segura para preencher a vaga sem repetir ou fugir da função.`;
-    setStatus(replacementText);
-  }
-
   function rejectSkillLocally(skill: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -2887,10 +2540,21 @@ export function CardVisionApp() {
   }
   const currentPanelResult = result ?? draftResult;
   const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
-  const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile || preview) : manualMode;
+  const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile) : manualMode;
   const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
   const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
   const creationProgress = [20, 50, 75, 100][creationStage - 1];
+  const recentVaultEntry = useMemo(() => {
+    return [...history].sort((a, b) => {
+      const aTime = Date.parse(String(a.updatedAt || a.savedAt)) || 0;
+      const bTime = Date.parse(String(b.updatedAt || b.savedAt)) || 0;
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [history]);
+  const homeAttentionTotal = smartHome.needsReview + smartHome.lowConfidence + smartHome.incomplete;
+  const homePriorityLabel = onboardingProfile?.goal === 'elenco' ? 'Organizar o elenco' : onboardingProfile?.goal === 'formacoes' ? 'Formações e encaixes' : onboardingProfile?.goal === 'treino' ? 'Treinos e pós-jogo' : 'Fichas precisas';
+  const homeSuggestedAction = homeAttentionTotal > 0 ? smartHome.nextAction : onboardingProfile?.goal === 'elenco' ? 'Abra Meu Time e revise setores sem cobertura.' : onboardingProfile?.goal === 'formacoes' ? `Analise a formação ${onboardingProfile.favoriteFormation}.` : onboardingProfile?.goal === 'treino' ? 'Abra uma ficha salva e registre uma partida real.' : 'Crie ou revise a próxima ficha do seu elenco.';
+  const vaultReadiness = dashboardStats.total ? Math.round((dashboardStats.complete / dashboardStats.total) * 100) : 0;
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
   const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
   const creationTargetLabel = targetPosition === 'AUTO'
@@ -2956,53 +2620,22 @@ export function CardVisionApp() {
     if (profile.reducedMotion) setMotionPreference('reduced');
     setStatus(`Perfil adaptativo aplicado: densidade ${profile.recommendedDensity === 'compact' ? 'compacta' : 'confortável'} e desempenho ${profile.recommendedPerformance === 'economy' ? 'econômico' : 'equilibrado'}.`);
   }
-  function themeLabel(preset: PremiumVisualPreset): string {
-    const labels: Record<PremiumVisualPreset, string> = {
-      'midnight-navy': 'Marinho Premium',
-      'obsidian-gold': 'Obsidiana Dourada',
-      'elite-blue': 'Azul Elite',
-      'future-purple': 'Roxo Profundo',
-      'emerald-tactical': 'Verde Tático',
-      'graphite-silver': 'Grafite Titanium',
-      'pearl-executive': 'Pérola Executive'
-    };
-    return labels[preset];
-  }
   function applyPremiumVisualPreset(preset: PremiumVisualPreset) {
     setVisualPreset(preset);
-    setAppTheme(preset === 'pearl-executive' ? 'light' : 'dark');
-    const accents: Record<PremiumVisualPreset, AccentTheme> = {
-      'midnight-navy': 'blue',
-      'obsidian-gold': 'gold',
-      'elite-blue': 'blue',
-      'future-purple': 'purple',
-      'emerald-tactical': 'emerald',
-      'graphite-silver': 'blue',
-      'pearl-executive': 'gold'
-    };
-    setAccentTheme(accents[preset]);
-    setStatus(`Tema ${themeLabel(preset)} aplicado.`);
-  }
-  function updateProfileAvatar(next: string) {
-    if (!saveProfileAvatar(next)) {
-      setStatus('Não foi possível salvar a foto neste aparelho.');
-      return;
-    }
-    setProfileAvatar(next);
-    setStatus('Foto de perfil salva para esta conta.');
-  }
-  function clearProfileAvatar() {
-    removeProfileAvatar();
-    setProfileAvatar(null);
-    setStatus('Foto de perfil removida.');
+    setAppTheme('dark');
+    if (preset === 'obsidian-gold') setAccentTheme('gold');
+    if (preset === 'elite-blue') setAccentTheme('blue');
+    if (preset === 'future-purple') setAccentTheme('purple');
+    setStatus(`Interface ${preset === 'obsidian-gold' ? 'Preto & Dourado' : preset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'} aplicada.`);
   }
   const appCommands: AppCommand[] = [
-    { id: 'home', group: 'Navegação', label: 'Abrir Central', description: 'Resumo premium e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
-    { id: 'new-print', group: 'Criar ficha', label: 'Ler print', description: 'Abre o leitor premium para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
-    { id: 'new-manual', group: 'Criar ficha', label: 'Criar manualmente', description: 'Preencha posição, estilo, pontos e atributos sem usar print.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
+    { id: 'home', group: 'Navegação', label: 'Abrir Início', description: 'Central inteligente e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
+    { id: 'new-print', group: 'Criar ficha', label: 'Nova ficha por print', description: 'Abre o Print Único Pro para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
+    { id: 'new-manual', group: 'Criar ficha', label: 'Nova ficha Manual Pro', description: 'Preencha posição, estilo, pontos e atributos manualmente.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
     { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${history.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
     { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
     { id: 'team', group: 'Time', label: 'Abrir Meu Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
+    { id: 'formation-studio', group: 'Formações', label: 'Abrir Estúdio de Formações', description: 'Formações competitivas, estilos oficiais e imagens premium.', keywords: ['formação', 'meta', 'imagem', 'tática'], run: () => openMainSection('formacoes') },
     { id: 'matches', group: 'Partidas', label: 'Abrir Partidas', description: `${centralMatchRecords.length} registro(s) de validação real.`, keywords: ['treino', 'pós-jogo'], run: () => openMainSection('partidas') },
     ...(result || draftResult ? [
       { id: 'current-result', group: 'Ficha atual', label: 'Abrir resultado atual', description: result ? `Ficha de ${result.parsed.playerName}.` : 'Revisão da ficha em andamento.', keywords: ['resultado', 'auditoria'], run: () => openMainSection('resultado') },
@@ -3017,23 +2650,22 @@ export function CardVisionApp() {
     { id: 'backup', group: 'Ajustes', label: 'Backup e restauração', description: 'Proteja fichas e configurações antes de atualizar.', keywords: ['cofre', 'restaurar'], run: () => { setMainSection('ajustes'); setSettingsView('backup'); } },
     { id: 'updates', group: 'Ajustes', label: 'Atualizações do APK', description: 'Verifique versão, manifesto e instalação segura.', keywords: ['apk', 'versão'], run: () => { setMainSection('ajustes'); setSettingsView('atualizacoes'); } },
     { id: 'accounts', group: 'Ajustes', label: account?.profile.role === 'admin' ? 'Criar e gerenciar contas' : 'Minha conta e licença', description: account?.profile.role === 'admin' ? 'Abra diretamente a criação de usuários, prazos e aparelhos.' : 'Consulte os dados e a validade da sua licença.', keywords: ['usuário', 'licença', 'criar conta', 'admin'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
-    { id: 'assistant', group: 'Assistente', label: 'Abrir Assistente BuildMaster', description: 'Use os dados integrados de jogadores, time e partidas.', keywords: ['ajuda', 'recomendação'], run: () => setAssistantOpen(true) }
+    { id: 'assistant', group: 'Assistente', label: 'Abrir Assistente Marques', description: 'Use os dados integrados de jogadores, time e partidas.', keywords: ['ajuda', 'recomendação'], run: () => setAssistantOpen(true) }
   ];
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
-      <MobileScrollRecovery />
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       {!showSplash && <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />}
       {showSplash && (
-        <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
+        <div className="app-splash-screen" role="status" aria-label="Carregando Marques Fichas">
           <div className="splash-premium-shell">
             <div className="splash-brand-row"><PremiumBrand variant="hero" showVersion /></div>
             <div className="splash-secure-badge"><ShieldCheck size={15} /> Ambiente protegido</div>
-            <h2>Carregando</h2>
-            <p>Preparando seus dados.</p>
+            <h2>Preparando sua central tática</h2>
+            <p>Carregando fichas, Cofre e preferências da sua conta.</p>
             <div className="splash-module-row" aria-hidden="true"><span>Conta</span><span>Fichas</span><span>Cofre</span><span>Elenco</span></div>
             <i className="splash-progress"><b /></i>
-            <small>BuildMaster</small>
+            <small>Precisão em campo. Organização fora dele.</small>
           </div>
         </div>
       )}
@@ -3046,14 +2678,14 @@ export function CardVisionApp() {
       /></SectionErrorBoundary>
       <header className="bm-simple-topbar">
         <button type="button" className="bm-simple-brand" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
-          <span><BuildMasterMark size={35} /></span><div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div>
+          <span>M</span><div><strong>Marques Fichas</strong><small>Inteligência tática</small></div>
         </button>
         <div className="bm-simple-topbar-actions">
           <span className={`bm-simple-save-state save-${sessionSaveState}`} role="status" aria-live="polite">
             {sessionSaveState === 'saving' ? 'Salvando' : sessionSaveState === 'error' ? 'Falha ao salvar' : 'Salvo'}
           </span>
           <button type="button" className="bm-simple-account" onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); }} aria-label="Abrir conta">
-            <b>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</b><span>{account?.profile.username || 'Conta'}</span>
+            <b>{accountInitial}</b><span>{account?.profile.username || 'Conta'}</span>
           </button>
         </div>
       </header>
@@ -3064,14 +2696,13 @@ export function CardVisionApp() {
         canGoBack={navigationTrail.length > 0 && mainSection !== 'inicio'}
         currentPlayer={currentPanelResult ? { name: currentPanelResult.parsed.playerName || 'Carta em análise', points: `${currentPanelResult.trainingPointsUsed}/${currentPanelResult.trainingPointsTotal} pts` } : null}
         onBack={goBackInsideApp}
+        onSearch={() => openMainSection('buscar')}
         onOpenCurrentPlayer={() => openMainSection('resultado')}
       />}
       <RefinedNavigation
         group={currentNavigationGroup}
         workspace={currentPlayerWorkspace}
         hasResult={Boolean(currentPanelResult)}
-        username={account?.profile.username || 'Conta'}
-        profileAvatar={profileAvatar}
         onGroupChange={openNavigationGroup}
         onWorkspaceChange={openPlayerWorkspace}
         onSearch={() => openMainSection('buscar')}
@@ -3085,6 +2716,12 @@ export function CardVisionApp() {
           <RotateCcw size={16} /><strong>{updateNotice}</strong><span>Toque para revisar, criar backup e atualizar.</span>
         </button>
       )}
+      {false && mainSection !== 'inicio' && (
+        <section className={`app-section-guide guide-${mainSection}`} aria-label={`Guia da área ${sectionGuide.title}`}>
+          <div><span><Sparkles size={17} /></span><div><strong>{sectionGuide.title}</strong><small>{sectionGuide.description}</small></div></div>
+          <ol>{sectionGuide.steps.map((step, index) => <li key={step}><b>{index + 1}</b><span>{step}</span></li>)}</ol>
+        </section>
+      )}
       {mobileLauncher && (
         <div className="mobile-action-sheet-backdrop" role="presentation" onClick={() => setMobileLauncher(null)}>
           <section className={`mobile-action-sheet premium-launcher-sheet luxury-panel launcher-${mobileLauncher}`} role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
@@ -3092,18 +2729,18 @@ export function CardVisionApp() {
             <div className="launcher-sheet-heading">
               <div>
                 <p className="kicker">{mobileLauncher === 'create' ? 'Nova análise' : 'Central do aplicativo'}</p>
-                <h3>{mobileLauncher === 'create' ? 'Criar ficha' : 'Acesso rápido'}</h3>
-                <span>{mobileLauncher === 'create' ? 'Escolha uma opção.' : account?.profile.username || 'Conta'}</span>
+                <h3>{mobileLauncher === 'create' ? 'Como deseja criar a ficha?' : 'Mais áreas e configurações'}</h3>
+                <span>{mobileLauncher === 'create' ? 'Escolha o fluxo ideal para a carta que será analisada.' : `Conta conectada: ${account?.profile.username || 'usuário'}`}</span>
               </div>
               <button type="button" className="launcher-close-button" onClick={() => setMobileLauncher(null)}>Fechar</button>
             </div>
             {mobileLauncher === 'create' ? (
               <div className="launcher-action-grid launcher-create-grid">
                 <button type="button" className="launcher-featured-action" onClick={() => openMainSection('leitor')}>
-                  <span><ScanText size={25} /></span><div><strong>Usar imagem</strong><small>Selecionar print</small></div><em>Recomendado</em>
+                  <span><ScanText size={25} /></span><div><strong>Usar uma imagem</strong><small>Escolha o print da carta e confirme os dados encontrados.</small></div><em>Recomendado</em>
                 </button>
                 <button type="button" onClick={() => openMainSection('manual')}>
-                  <span><ShieldCheck size={25} /></span><div><strong>Digitar dados</strong><small>Modo manual</small></div>
+                  <span><ShieldCheck size={25} /></span><div><strong>Digitar os dados</strong><small>Preencha manualmente quando não quiser usar um print.</small></div>
                 </button>
                 {currentPanelResult && (
                   <button type="button" onClick={() => openMainSection('resultado')}>
@@ -3124,7 +2761,7 @@ export function CardVisionApp() {
           </section>
         </div>
       )}
-      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','partidas','menu','buscar'].includes(mainSection) && (
+      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','formacoes','partidas','menu','buscar'].includes(mainSection) && (
         <section className="page-context-card luxury-panel">
           <div>
             <p className="kicker">Área atual</p>
@@ -3168,12 +2805,83 @@ export function CardVisionApp() {
         <PremiumSearchScreen commands={appCommands} playerCount={history.length} />
       )}
       {mainSection === 'inicio' && (
-        <section className="bm-v3790-home-stack">
-          {unifiedCreation.activeDraft && (
-            <UnifiedCreationResumeCardV3790 draft={unifiedCreation.activeDraft} onResume={unifiedCreation.resume} onDiscard={unifiedCreation.discard} />
-          )}
-          <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} healthScore={healthSummary.score} lastBackupAt={lastBackupAt} onAction={handleCentralRecommendation} />
+        <IntegratedHomePanel dashboard={centralDashboard} team={integratedTeam} healthScore={healthSummary.score} lastBackupAt={lastBackupAt} onAction={handleCentralRecommendation} />
+      )}
+      {mainSection === 'inicio' && false && (
+      <div className="premium-home-shell">
+        <section className="home-command-center luxury-panel">
+          <div className="home-command-copy">
+            <div className="home-account-status"><span className={account?.offline ? 'offline' : 'online'} /><strong>{account?.offline ? 'Modo offline temporário' : 'Conta e licença verificadas'}</strong></div>
+            <p className="kicker"><Sparkles size={15} /> Central Marques Fichas</p>
+            <h1>Seu elenco começa com uma ficha bem construída.</h1>
+            <p>Crie, revise e organize jogadores com um fluxo direto. As ferramentas avançadas ficam disponíveis sem poluir o que é essencial.</p>
+            <div className="home-primary-actions">
+              <button type="button" className="home-create-primary" onClick={() => setMobileLauncher('create')}><Sparkles size={19} /><span><strong>Criar nova ficha</strong><small>Print ou Manual Pro</small></span></button>
+              <button type="button" className="home-open-vault" onClick={openCofreDeJogadores}><History size={19} /><span><strong>Abrir Cofre</strong><small>{dashboardStats.total} jogador(es)</small></span></button>
+            </div>
+            <div className="home-account-meta">
+              <span><ShieldCheck size={14} /> {account?.profile.role === 'admin' ? 'Acesso administrador' : 'Acesso licenciado'}</span>
+              <span><CheckCircle2 size={14} /> {dashboardStats.complete} ficha(s) concluída(s)</span>
+              <span><Target size={14} /> {dashboardStats.positions} posição(ões) coberta(s)</span>
+            </div>
+          </div>
+          <aside className="home-next-step-card">
+            <div className="home-next-step-icon"><BrainCircuit size={24} /></div>
+            <span>Próxima ação sugerida</span>
+            <strong>{homeSuggestedAction}</strong>
+            <small className="home-priority-label">Foco atual: {homePriorityLabel}</small>
+            <div className="home-next-step-footer"><b>{homeAttentionTotal}</b><small>ponto(s) de atenção no Cofre</small></div>
+          </aside>
         </section>
+        <section className="home-quick-section">
+          <div className="home-section-heading"><div><p className="kicker">Acesso rápido</p><h2>Continue de onde precisa</h2></div><span>Fluxo simplificado</span></div>
+          <div className="home-quick-grid">
+            <button type="button" className="quick-action-create" onClick={() => setMobileLauncher('create')}><span><Sparkles size={22} /></span><div><strong>Nova ficha</strong><small>Começar análise</small></div></button>
+            <button type="button" disabled={!currentPanelResult} onClick={() => openMainSection('resultado')}><span><Trophy size={22} /></span><div><strong>Ficha atual</strong><small>{currentPanelResult?.parsed.playerName || 'Nenhuma aberta'}</small></div></button>
+            <button type="button" onClick={openCofreDeJogadores}><span><History size={22} /></span><div><strong>Cofre</strong><small>Buscar e organizar</small></div></button>
+            <button type="button" onClick={() => openMainSection('time')}><span><Target size={22} /></span><div><strong>Meu Time</strong><small>Elenco e tática</small></div></button>
+            <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><span><ShieldCheck size={22} /></span><div><strong>Backup</strong><small>Proteger dados</small></div></button>
+            <button type="button" onClick={() => setMobileLauncher('more')}><span><SlidersHorizontal size={22} /></span><div><strong>Mais</strong><small>Ajustes e conta</small></div></button>
+          </div>
+        </section>
+        <section className="home-overview-grid">
+          <article className="home-vault-summary luxury-panel">
+            <div className="home-card-heading"><div><p className="kicker"><History size={14} /> Resumo do Cofre</p><h2>Seu acervo de jogadores</h2></div><button type="button" onClick={openCofreDeJogadores}>Ver tudo</button></div>
+            <div className="home-vault-metrics">
+              <button type="button" onClick={openCofreDeJogadores}><strong>{dashboardStats.total}</strong><span>Salvos</span></button>
+              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('COMPLETE'); setLibraryOpen(true); }}><strong>{dashboardStats.complete}</strong><span>Completos</span></button>
+              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span></button>
+              <button type="button" onClick={() => { setMainSection('cofre'); setHistoryFilter('FAVORITES'); setLibraryOpen(true); }}><strong>{dashboardStats.favorites}</strong><span>Favoritos</span></button>
+            </div>
+            <div className="home-vault-progress"><div><span>Prontidão do Cofre</span><strong>{vaultReadiness}%</strong></div><i><b style={{ width: `${vaultReadiness}%` }} /></i><small>{dashboardStats.complete} de {dashboardStats.total || 0} fichas marcadas como completas.</small></div>
+          </article>
+          <article className="home-recent-player luxury-panel">
+            <div className="home-card-heading"><div><p className="kicker"><Clock3 size={14} /> Último jogador analisado</p><h2>{recentVaultEntry ? 'Continue a análise mais recente' : 'Nenhuma ficha salva'}</h2></div></div>
+            {recentVaultEntry ? (
+              <button type="button" className="recent-player-content" onClick={() => restoreHistory(recentVaultEntry)}>
+                <div className="recent-player-image">{recentVaultEntry.playerImage || recentVaultEntry.fullPreview ? <img src={recentVaultEntry.playerImage || recentVaultEntry.fullPreview || ''} alt={`Carta de ${recentVaultEntry.result.parsed.playerName}`} /> : <Trophy size={27} />}</div>
+                <div><strong>{recentVaultEntry.result.parsed.playerName}</strong><span>{recentVaultEntry.result.bestPosition.label} • {recentVaultEntry.result.parsed.playstyle || 'Estilo não informado'}</span><small>Confiança {recentVaultEntry.result.parsed.confidence ?? 0}% • {recentVaultEntry.result.trainingPointsUsed}/{recentVaultEntry.result.trainingPointsTotal} pts</small></div>
+                <em>Abrir</em>
+              </button>
+            ) : (
+              <div className="recent-player-empty"><Trophy size={25} /><span>Crie sua primeira ficha para acompanhar o último jogador aqui.</span><button type="button" onClick={() => setMobileLauncher('create')}>Criar ficha</button></div>
+            )}
+          </article>
+        </section>
+        <section className="home-alert-center luxury-panel">
+          <div className="home-card-heading"><div><p className="kicker"><ShieldCheck size={14} /> Alertas importantes</p><h2>{homeAttentionTotal ? 'O que merece sua atenção' : 'Tudo organizado por enquanto'}</h2></div><span className={homeAttentionTotal ? 'attention' : 'clear'}>{homeAttentionTotal ? `${homeAttentionTotal} alerta(s)` : 'Sem alertas'}</span></div>
+          {homeAttentionTotal ? (
+            <div className="home-alert-grid">
+              <button type="button" className={smartHome.needsReview ? 'has-alert' : ''} onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, reviewOnly: true })); setLibraryOpen(true); }}><span><ShieldCheck size={19} /></span><div><strong>{smartHome.needsReview}</strong><small>Para revisar</small></div></button>
+              <button type="button" className={smartHome.lowConfidence ? 'has-warning' : ''} onClick={() => { setMainSection('cofre'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); setLibraryOpen(true); }}><span><BrainCircuit size={19} /></span><div><strong>{smartHome.lowConfidence}</strong><small>Confiança baixa</small></div></button>
+              <button type="button" className={smartHome.incomplete ? 'has-pending' : ''} onClick={() => { setMainSection('cofre'); setHistoryFilter('PENDING'); setLibraryOpen(true); }}><span><Clock3 size={19} /></span><div><strong>{smartHome.incomplete}</strong><small>Pendências</small></div></button>
+            </div>
+          ) : (
+            <div className="home-alert-clear"><CheckCircle2 size={22} /><div><strong>Cofre em ordem</strong><span>Não há fichas marcadas para revisão, com baixa confiança ou pendências.</span></div></div>
+          )}
+          {smartHome.alerts.length > 0 && <div className="home-alert-notes">{smartHome.alerts.slice(0, 3).map((alert) => <span key={alert}>{alert}</span>)}</div>}
+        </section>
+      </div>
       )}
       {mainSection === 'jogadores' && (
         <SectionErrorBoundary area="jogadores"><PlayerLaboratory
@@ -3199,47 +2907,13 @@ export function CardVisionApp() {
           onOpenTeam={() => openMainSection('time')}
         /></SectionErrorBoundary>
       )}
-      {mainSection === 'time' && (
-        <SectionErrorBoundary area="meu-time-completo">
-          <section className="bm-v34-team-workspace" aria-label="Meu Time">
-            <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle}
-              onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
-              onPrepareMatch={() => openMainSection('partidas')}
-              onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} />
-            <details className="bm-v34-team-advanced luxury-panel" open={teamAdvancedOpen} onToggle={(event) => setTeamAdvancedOpen(event.currentTarget.open)}>
-              <summary><span><SlidersHorizontal size={18}/><strong>Opções do time</strong></span><small>Formação e técnico</small></summary>
-              {teamAdvancedOpen && (
-                <div className="bm-v34-team-advanced-body">
-                  <div className="select-stack">
-                    <label><span>Sistema tático</span><select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>{formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                    <label><span>Modelo de jogo</span><select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>{tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                    <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
-                  </div>
-                  <article className="tactical-guide-card">
-                    <div className="tactical-guide-head"><div><p className="kicker">Guia tático</p><h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3></div>{selectedFormationGuide && <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>Aplicar estilo sugerido</button>}</div>
-                    {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
-                  </article>
-                  <SectionErrorBoundary area="meu-time-avancado">
-                    <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
-                  </SectionErrorBoundary>
-                </div>
-              )}
-            </details>
-          </section>
-        </SectionErrorBoundary>
+      {mainSection === 'formacoes' && (
+        <SectionErrorBoundary area="estudio-formacoes"><MarquesFormationStudio results={history.map((item) => item.result)} /></SectionErrorBoundary>
       )}
-      {!['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'].includes(mainSection) && (
+      {!['inicio', 'jogadores', 'formacoes', 'partidas', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
-        {isCreationSection && (
-          <UnifiedCreationFlowV3790
-            method={unifiedCreation.method}
-            step={unifiedCreation.step}
-            progress={unifiedCreation.progress}
-            saveState={sessionSaveState}
-            playerName={manualFields.playerName || currentPanelResult?.parsed.playerName || ''}
-            onMethodChange={unifiedCreation.switchMethod}
-            onReset={() => unifiedCreation.reset(true)}
-          />
+        {mainSection === 'time' && (
+          <SectionErrorBoundary area="meu-time"><IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle} onOpenFormationLab={() => { setStatus('Abra a aba Formações na Central Tática logo abaixo.'); window.setTimeout(() => document.querySelector('.team-center-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} onPrepareMatch={() => openMainSection('partidas')} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada. A posição escolhida de cada jogador foi preservada.`); }} /></SectionErrorBoundary>
         )}
         {isCreationSection && (
           <section className="bm-creation-guide luxury-panel" aria-label="Como criar a ficha">
@@ -3247,16 +2921,16 @@ export function CardVisionApp() {
               <span><Sparkles size={22} /></span>
               <div>
                 <p className="kicker">Nova ficha</p>
-                <h1>{mainSection === 'leitor' ? 'Ficha por imagem' : 'Ficha manual'}</h1>
-                <p>{mainSection === 'leitor' ? 'Selecione o print e confirme os dados.' : 'Digite os dados principais.'}</p>
+                <h1>{mainSection === 'leitor' ? 'Criar ficha usando uma imagem' : 'Criar ficha digitando os dados'}</h1>
+                <p>{mainSection === 'leitor' ? 'Escolha um print da carta. Depois confirme os dados e gere uma única ficha final.' : 'Digite somente os dados principais. Depois revise e gere uma única ficha final.'}</p>
               </div>
             </div>
             <div className="bm-creation-methods" role="tablist" aria-label="Escolher forma de criar a ficha">
               <button type="button" role="tab" aria-selected={mainSection === 'leitor'} className={mainSection === 'leitor' ? 'active' : ''} onClick={() => openMainSection('leitor')}>
-                <Camera size={19} /><span><strong>Imagem</strong><small>Recomendado</small></span>
+                <Camera size={19} /><span><strong>Usar uma imagem</strong><small>Mais rápido e recomendado</small></span>
               </button>
               <button type="button" role="tab" aria-selected={mainSection === 'manual'} className={mainSection === 'manual' ? 'active' : ''} onClick={() => openMainSection('manual')}>
-                <Keyboard size={19} /><span><strong>Manual</strong><small>Digitar dados</small></span>
+                <Keyboard size={19} /><span><strong>Digitar os dados</strong><small>Quando o print não estiver bom</small></span>
               </button>
             </div>
             <ol className="bm-creation-steps" aria-label="Etapas da criação">
@@ -3333,14 +3007,14 @@ export function CardVisionApp() {
               {loading ? 'Lendo a imagem...' : 'Ler imagem e continuar'}
             </button>
             {ocrCancelable && <button className="manual-mode-button cancel-ocr-action" type="button" onClick={() => void cancelCurrentOcr()}><Ban size={17} /> Cancelar</button>}
-            <button className={`manual-mode-button calibrator-action ${efhubCalibrationActive ? 'map-active' : ''}`} type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
-              <Wand2 size={17} /> {efhubCalibrationActive ? 'Ajustar quadrados' : 'Posicionar quadrados'}
-            </button>
-            {advancedMode && (
+            {advancedMode && (<>
+              <button className="manual-mode-button calibrator-action" type="button" onClick={() => setCalibratorOpen((current) => !current)} disabled={!preview || loading}>
+                <Wand2 size={17} /> Ajustar leitura
+              </button>
               <button className="manual-mode-button" type="button" onClick={() => void queueSelectedPrint()} disabled={!selectedFile || loading}>
                 <Save size={17} /> Guardar na fila
               </button>
-            )}
+            </>)}
           </div>
           {advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
@@ -3383,16 +3057,38 @@ export function CardVisionApp() {
               <p>O tratamento ocorre somente no aparelho e não modifica o arquivo original. Ele melhora contraste, brilho e nitidez usados pela leitura.</p>
             </div>
           )}
-          {calibratorOpen && preview && (
-            <EfhubVisualCalibrator
-              imageSrc={preview}
-              zones={efhubCalibrationZones}
-              saved={efhubCalibrationSaved}
-              onChange={updateEfhubCalibration}
-              onSave={saveEfhubCalibration}
-              onReset={resetEfhubCalibration}
-              onRead={readWithEfhubCalibration}
-            />
+          {advancedMode && calibratorOpen && preview && (
+            <details className="calibrator-panel" open>
+              <summary>Calibrador Elite de áreas</summary>
+              <p className="panel-note">Ajuste somente quando o print vier de resolução, zoom ou corte diferente. A posição original deve sair da área da carta, não da grade de GERs.</p>
+              <div className="calibration-preview">
+                <img src={preview} alt="Prévia para calibrar leitura" />
+                {ocrZones.filter((zone) => zone.enabled).map((zone) => (
+                  <div
+                    key={zone.key}
+                    className={`zone-box zone-${zone.key}`}
+                    style={{ left: `${zone.x * 100}%`, top: `${zone.y * 100}%`, width: `${zone.w * 100}%`, height: `${zone.h * 100}%` }}
+                  >
+                    <span>{zone.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="zone-editor-list">
+                {ocrZones.map((zone) => (
+                  <div className="zone-editor" key={zone.key}>
+                    <label className="zone-toggle">
+                      <input type="checkbox" checked={zone.enabled} onChange={() => toggleZone(zone.key)} />
+                      <strong>{zone.label}</strong>
+                    </label>
+                    <label><span>X</span><input type="range" min="0" max="100" value={Math.round(zone.x * 100)} onChange={(event) => updateZone(zone.key, 'x', event.target.value)} /></label>
+                    <label><span>Y</span><input type="range" min="0" max="100" value={Math.round(zone.y * 100)} onChange={(event) => updateZone(zone.key, 'y', event.target.value)} /></label>
+                    <label><span>Largura</span><input type="range" min="1" max="100" value={Math.round(zone.w * 100)} onChange={(event) => updateZone(zone.key, 'w', event.target.value)} /></label>
+                    <label><span>Altura</span><input type="range" min="1" max="100" value={Math.round(zone.h * 100)} onChange={(event) => updateZone(zone.key, 'h', event.target.value)} /></label>
+                  </div>
+                ))}
+              </div>
+              <button className="manual-mode-button calibrator-action full-width" type="button" onClick={resetCalibration}>Restaurar calibração padrão</button>
+            </details>
           )}
           </>)}
           </>)}
@@ -3400,7 +3096,7 @@ export function CardVisionApp() {
             <section className="bm32-manual-builder" aria-label="Nova Ficha">
               <header className="bm32-screen-heading bm32-manual-heading">
                 <div className="bm32-heading-icon"><FileText size={27}/></div>
-                <div><h1>Ficha manual</h1><p>Preencha os dados principais.</p></div>
+                <div><h1>Nova Ficha</h1><p>Monte uma ficha completa, inteligente e totalmente controlada por você.</p></div>
                 <span className="bm32-elite-badge"><Sparkles size={17}/> ELITE</span>
               </header>
               <section className="bm32-manual-identity">
@@ -3438,7 +3134,7 @@ export function CardVisionApp() {
                 <span className="creation-stage-number">2</span>
                 <div>
                   <p className="kicker">Passo 2</p>
-                  <h3>Confirmar dados</h3>
+                  <h3>Confirme os dados principais</h3>
                   <small>Escolha onde o jogador vai atuar. Os outros campos podem ficar no automático.</small>
                 </div>
               </div>
@@ -3478,52 +3174,170 @@ export function CardVisionApp() {
               <details className="creation-advanced-details creation-tactical-details" open>
                 <summary>
                   <span><SlidersHorizontal size={18} /></span>
-                  <div><strong>Estilo do técnico e calibração</strong><small>A formação fica automática. A ficha é universal para a posição escolhida e funciona em qualquer esquema.</small></div>
+                  <div><strong>Formação, estilo do técnico e técnico</strong><small>Escolha o contexto real em que o jogador será usado. A ficha será equilibrada para esse plano sem trocar a posição escolhida por você.</small></div>
                   <em>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</em>
                 </summary>
                 <div className="creation-tactical-grid">
+                  <label>
+                    <span>Sistema tático</span>
+                    <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
+                      {formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </label>
                   <label>
                     <span>Modelo de jogo</span>
                     <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
                       {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>
                   </label>
-                  <ManagerSelectionField className="creation-manager-field" value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
-                  <CalibrationProfileFields
-                    gameplayMode={gameplayMode}
-                    connectionProfile={connectionProfile}
-                    controlProfile={controlProfile}
-                    onGameplayModeChange={setGameplayMode}
-                    onConnectionProfileChange={setConnectionProfile}
-                    onControlProfileChange={setControlProfile}
-                  />
+                  <label className="creation-manager-field">
+                    <span>Técnico e versão</span>
+                    <select value={managerId} onChange={(event) => {
+                      const nextId = event.target.value;
+                      setManagerId(nextId);
+                      const manager = getManager(nextId);
+                      if (manager) setTeamStyle(manager.primaryStyle);
+                    }}>
+                      <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
+                      <optgroup label="Lendários e Épicos — Booster Duplo">
+                        {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                      </optgroup>
+                      <optgroup label="Pacotes especiais e seleções">
+                        {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                      </optgroup>
+                      <optgroup label="Catálogo padrão (GP)">
+                        {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                      </optgroup>
+                    </select>
+                  </label>
                 </div>
-                {selectedManager && <article className="manager-context-card creation-manager-context">
-                  <div><span>Técnico ativo</span><strong>{selectedManager.name}</strong><em>{selectedManager.version} • booster {selectedManager.booster}</em></div>
-                  <div><span>Estilo principal</span><strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>{selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}</div>
-                  <small>O técnico refina passe, pressão, velocidade e cobertura. A posição escolhida nunca é trocada.</small>
-                </article>}
+                {selectedManager && (
+                  <article className="manager-context-card creation-manager-context">
+                    <div>
+                      <span>Técnico ativo</span>
+                      <strong>{selectedManager.name}</strong>
+                      <em>{selectedManager.version} • booster {selectedManager.booster}</em>
+                    </div>
+                    <div>
+                      <span>Estilo principal</span>
+                      <strong>{tacticalStyleName[selectedManager.primaryStyle]} {selectedManager.primaryProficiency}</strong>
+                      {selectedManager.secondaryStyle && <em>Alternativo: {tacticalStyleName[selectedManager.secondaryStyle]} {selectedManager.secondaryProficiency}</em>}
+                    </div>
+                    <small>O técnico refina prioridades e simulação. A posição escolhida nunca é trocada automaticamente.</small>
+                  </article>
+                )}
+                <article className="tactical-guide-card creation-tactical-guide">
+                  <div className="tactical-guide-head">
+                    <div>
+                      <p className="kicker">Leitura tática</p>
+                      <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
+                    </div>
+                    {selectedFormationGuide && (
+                      <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
+                        Aplicar estilo sugerido
+                      </button>
+                    )}
+                  </div>
+                  {selectedFormationGuide ? (
+                    <>
+                      <div className="guide-highlight">
+                        <span>Melhor encaixe</span>
+                        <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
+                        <em>{selectedFormationGuide.styleReason}</em>
+                      </div>
+                      <p>{selectedFormationGuide.howToPlay}</p>
+                      <div className="role-chip-grid">
+                        {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
+                      </div>
+                    </>
+                  ) : (
+                    <p>Selecione uma formação para ver a orientação tática.</p>
+                  )}
+                </article>
                 <article className="manager-context-card creation-manager-context creation-tactical-selection-summary">
                   <div>
-                    <span>Ficha universal</span>
-                    <strong>Formação automática • {teamStyle === 'AUTO' ? 'Estilo automático' : tacticalStyleName[teamStyle]}</strong>
+                    <span>Contexto aplicado à ficha</span>
+                    <strong>{formation === 'AUTO' ? 'Formação automática' : formation} • {teamStyle === 'AUTO' ? 'Estilo automático' : tacticalStyleName[teamStyle]}</strong>
                     <em>{selectedManager ? `${selectedManager.name} • ${selectedManager.version}` : 'Sem técnico específico definido'}</em>
                   </div>
                   <div>
-                    <span>Posição soberana</span>
-                    <strong>{targetPosition === 'AUTO' ? 'Escolha onde ele vai jogar' : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition}</strong>
+                    <span>Função preservada</span>
+                    <strong>{targetPosition === 'AUTO' ? 'Posição ainda não escolhida' : POSITION_LABELS.find((item) => item.code === targetPosition)?.label ?? targetPosition}</strong>
                     <em>{playstyleOverride === 'AUTO' ? 'Estilo do jogador identificado pelo app' : playstyleOverride}</em>
                   </div>
-                  <div>
-                    <span>Calibração v35</span>
-                    <strong>{gameplayMode === 'RANKED' ? 'Ranqueado robusto' : gameplayMode === 'OFFLINE' ? 'Offline expressivo' : 'Universal equilibrado'}</strong>
-                    <em>{connectionProfile === 'HIGH_DELAY' ? 'Delay alto' : connectionProfile === 'STABLE' ? 'Conexão estável' : 'Conexão variável'} • {controlProfile === 'PASSING' ? 'Passe' : controlProfile === 'DRIBBLE' ? 'Drible' : controlProfile === 'DIRECT' ? 'Direto' : 'Equilibrado'}</em>
-                  </div>
-                  <small>A formação não muda pontos nem habilidades. A ficha reage à posição, ao DNA da carta, ao Estilo de Jogo e ao estilo coletivo do técnico.</small>
+                  <small>Este contexto fica salvo na ficha e ajusta as prioridades de passe, velocidade, pressão, cobertura e distribuição de pontos. A posição escolhida continua soberana e nunca é trocada automaticamente.</small>
                 </article>
               </details>
             </div>
           )}
+          {mainSection === 'time' && (
+            <>
+              <div className="select-stack">
+                <label>
+                  <span>Sistema tático</span>
+                  <select value={formation} onChange={(event) => setFormation(event.target.value as TacticalFormation)}>
+                    {formationSelectionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Modelo de jogo</span>
+                  <select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>
+                    {tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Técnico e versão</span>
+                  <select value={managerId} onChange={(event) => {
+                    const nextId = event.target.value;
+                    setManagerId(nextId);
+                    const manager = getManager(nextId);
+                    if (manager) setTeamStyle(manager.primaryStyle);
+                  }}>
+                    <option value="AUTO">Sem técnico definido — usar somente o estilo</option>
+                    <optgroup label="Lendários e Épicos — Booster Duplo">
+                      {MANAGERS.filter((item) => item.tier === 'LENDARIO_EPICO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                    </optgroup>
+                    <optgroup label="Pacotes especiais e seleções">
+                      {MANAGERS.filter((item) => item.tier === 'PACOTE_SELECAO').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                    </optgroup>
+                    <optgroup label="Catálogo padrão (GP)">
+                      {MANAGERS.filter((item) => item.tier === 'GP').map((item) => <option key={item.id} value={item.id}>{item.name} • {item.primaryProficiency} • {tacticalStyleName[item.primaryStyle]}</option>)}
+                    </optgroup>
+                  </select>
+                </label>
+              </div>
+              <article className="tactical-guide-card">
+                <div className="tactical-guide-head">
+                  <div>
+                    <p className="kicker">Guia tático premium</p>
+                    <h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3>
+                  </div>
+                  {selectedFormationGuide && (
+                    <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>
+                      Aplicar estilo sugerido
+                    </button>
+                  )}
+                </div>
+                {selectedFormationGuide ? (
+                  <>
+                    <div className="guide-highlight">
+                      <span>Melhor estilo do técnico</span>
+                      <strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong>
+                      <em>{selectedFormationGuide.styleReason}</em>
+                    </div>
+                    <p>{selectedFormationGuide.howToPlay}</p>
+                    <div className="role-chip-grid">
+                      {selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}
+                    </div>
+                    <small>Selecionado agora: {teamStyle === 'AUTO' ? 'automático premium' : tacticalStyleName[teamStyle]}.</small>
+                  </>
+                ) : (
+                  <p>Selecione uma formação para ver o estilo de técnico recomendado, como jogar nela e a função principal de cada setor.</p>
+                )}
+              </article>
+            </>
+          )}
+          {mainSection === 'time' && <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional. A posição escolhida de cada jogador foi preservada.`); }} />}
           {(mainSection === 'leitor' || mainSection === 'manual') && (<>
           <section className="creation-action-dock">
             <div className="creation-action-copy">
@@ -3560,60 +3374,131 @@ export function CardVisionApp() {
           )}
           </>)}
           {mainSection === 'cofre' && (
-          <div className="cofre-section cofre-premium-layout bm2820-vault-screen bm-v3800-vault">
-            <section className="bm-v3800-vault-hero">
-              <div>
-                <p className="kicker"><History size={14} /> Cofre Clean</p>
-                <h2>{cleanVaultSummary.players ? `${cleanVaultSummary.players} jogador(es) organizado(s)` : 'Seu Cofre começa com a primeira ficha'}</h2>
-                <span>{cleanVaultSummary.fichas} ficha(s) ativa(s){cleanVaultSummary.archived ? ` · ${cleanVaultSummary.archived} arquivada(s)` : ''}</span>
+          <div className="cofre-section cofre-premium-layout bm2820-vault-screen">
+            <section className="cofre-summary-card vault-catalog-hero luxury-panel">
+              <div className="vault-hero-copy">
+                <p className="kicker"><History size={14} /> Cofre de Jogadores</p>
+                <h2>{history.length ? 'Seu elenco, organizado como catálogo' : 'Seu catálogo começa com a primeira ficha'}</h2>
+                <span>{history.length ? 'Encontre qualquer jogador, acompanhe pendências, compare opções e proteja tudo em um só lugar.' : 'Crie uma ficha pelo Leitor ou Manual Pro e ela aparecerá aqui automaticamente.'}</span>
+                <div className="vault-readiness-line">
+                  <div><strong>{vaultReadiness}%</strong><span>prontidão do Cofre</span></div>
+                  <i><b style={{ width: `${vaultReadiness}%` }} /></i>
+                </div>
               </div>
-              <button type="button" onClick={() => openMainSection('leitor')}><ImagePlus size={17} /> Nova ficha</button>
+              <div className="cofre-summary-metrics vault-hero-metrics">
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); resetVaultFilters(); }}><strong>{dashboardStats.total}</strong><span>Jogadores</span><small>catálogo completo</small></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('COMPLETE'); }}><strong>{dashboardStats.complete}</strong><span>Prontos</span><small>sem pendências</small></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('PENDING'); }}><strong>{dashboardStats.pending}</strong><span>Pendentes</span><small>pedem atenção</small></button>
+                <button type="button" onClick={() => { setVaultView('jogadores'); setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, maxConfidence: 69 })); }}><strong>{smartHome.lowConfidence}</strong><span>Baixa confiança</span><small>revisar leitura</small></button>
+              </div>
             </section>
             <nav className="section-segmented-tabs vault-main-tabs luxury-panel" aria-label="Áreas do Cofre">
-              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Jogadores</span></button>
-              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Organizar</span></button>
-              <details className={`bm-v3800-vault-more${vaultView === 'comparar' || vaultView === 'backup' ? ' active' : ''}`}>
-                <summary><SlidersHorizontal size={17} /><span>{vaultView === 'comparar' ? 'Comparar' : vaultView === 'backup' ? 'Backup' : 'Mais'}</span></summary>
-                <div>
-                  <button type="button" onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
-                  <button type="button" onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
-                </div>
-              </details>
+              <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Catálogo</span></button>
+              <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Pastas</span></button>
+              <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
+              <button type="button" className={vaultView === 'backup' ? 'active' : ''} onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
             </nav>
             {vaultView === 'jogadores' && (
-              <CleanVaultV3800
-                entries={history}
-                visibleEntries={filteredHistory}
-                query={historySearch}
-                onQueryChange={setHistorySearch}
-                historyFilter={historyFilter}
-                onHistoryFilterChange={(value) => setHistoryFilter(value as HistoryFilter)}
-                sort={historySort}
-                onSortChange={(value) => setHistorySort(value as HistorySort)}
-                advancedFilters={vaultFilters}
-                onAdvancedFiltersChange={(updater) => setVaultFilters((current) => updater(current) as VaultFilterState)}
-                folders={vaultFolders}
-                positions={POSITION_LABELS.filter((item) => item.code !== 'AUTO')}
-                playstyles={availablePlaystyles}
-                skills={availableSkills}
-                activeFilterCount={activeVaultFilterCount}
-                organizing={libraryOpen}
-                onToggleOrganizing={() => setLibraryOpen((value) => !value)}
-                onResetFilters={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}
-                onOpen={restoreHistory}
-                onToggleFavorite={toggleFavoriteHistory}
-                onArchive={archiveHistoryItem}
-                onDuplicate={duplicateHistoryItem}
-                onExport={exportSingleHistoryItem}
-                onDelete={deleteHistoryItem}
-                onMoveFolder={moveHistoryToFolder}
-                onChangeStatus={updateHistoryStatus}
-                onMarkSkills={markAllHistorySkills}
-                onNotesChange={updateHistoryNotes}
-                onMergeDuplicates={mergeSelectedHistory}
-                onCreateByImage={() => openMainSection('leitor')}
-                onCreateManual={() => openMainSection('manual')}
-              />
+              <section className="vault-view-panel vault-catalog-panel luxury-panel">
+                <div className="vault-catalog-heading">
+                  <div>
+                    <p className="kicker"><Users size={14} /> Catálogo premium</p>
+                    <h3>{filteredHistory.length === history.length ? `${history.length} jogador(es) no Cofre` : `${filteredHistory.length} de ${history.length} jogador(es)`}</h3>
+                    <span>Abra uma ficha, favorite, mova para pastas ou filtre por confiança e situação.</span>
+                  </div>
+                  <div className="vault-filter-counter"><strong>{activeVaultFilterCount}</strong><span>filtro(s) ativo(s)</span></div>
+                </div>
+                <div className="vault-search-premium">
+                  <Search size={20} />
+                  <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Buscar jogador, posição, estilo, habilidade ou anotação" aria-label="Buscar no Cofre" />
+                  {historySearch && <button type="button" onClick={() => setHistorySearch('')}><RotateCcw size={15} /> Limpar</button>}
+                </div>
+                <div className="vault-quick-filter-strip" aria-label="Filtros rápidos do Cofre">
+                  <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 100 && !vaultFilters.favoritesOnly && !vaultFilters.pendingOnly && !vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, minConfidence: 0, maxConfidence: 100 })); }}>Todos <b>{history.length}</b></button>
+                  <button type="button" className={historyFilter === 'FAVORITES' ? 'selected' : ''} onClick={() => { setHistoryFilter('FAVORITES'); setVaultFilters((current) => ({ ...current, favoritesOnly: false, pendingOnly: false, reviewOnly: false, maxConfidence: 100 })); }}><Star size={14} /> Favoritos <b>{dashboardStats.favorites}</b></button>
+                  <button type="button" className={historyFilter === 'COMPLETE' ? 'selected' : ''} onClick={() => { setHistoryFilter('COMPLETE'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><CheckCircle2 size={14} /> Prontos <b>{dashboardStats.complete}</b></button>
+                  <button type="button" className={historyFilter === 'PENDING' ? 'selected' : ''} onClick={() => { setHistoryFilter('PENDING'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><Clock3 size={14} /> Pendentes <b>{dashboardStats.pending}</b></button>
+                  <button type="button" className={historyFilter === 'REVIEW' ? 'selected' : ''} onClick={() => { setHistoryFilter('REVIEW'); setVaultFilters((current) => ({ ...current, maxConfidence: 100 })); }}><ShieldCheck size={14} /> Revisar <b>{dashboardStats.review}</b></button>
+                  <button type="button" className={historyFilter === 'ALL' && vaultFilters.maxConfidence === 69 ? 'selected' : ''} onClick={() => { setHistoryFilter('ALL'); setVaultFilters((current) => ({ ...current, minConfidence: 0, maxConfidence: 69, favoritesOnly: false, pendingOnly: false, reviewOnly: false })); }}><Filter size={14} /> Confiança baixa <b>{smartHome.lowConfidence}</b></button>
+                </div>
+                <div className="vault-catalog-toolbar">
+                  <label><Clock3 size={15} /><span>Ordenar</span><select value={historySort} onChange={(event) => setHistorySort(event.target.value as HistorySort)}><option value="UPDATED">Mais recentes</option><option value="NAME">Nome</option><option value="POSITION">Posição</option><option value="PENDING">Mais pendentes</option><option value="STATUS">Status</option></select></label>
+                  <button type="button" className={libraryOpen ? 'active-filter' : ''} onClick={() => setLibraryOpen((value) => !value)}><SlidersHorizontal size={16} /> {libraryOpen ? 'Finalizar organização' : 'Organizar fichas'}</button>
+                  {(activeVaultFilterCount > 0) && <button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar tudo</button>}
+                </div>
+                <details className="cofre-filter-drawer vault-filter-drawer-premium">
+                  <summary><SlidersHorizontal size={16} /> Filtros avançados <span>{filteredHistory.length} resultado(s)</span></summary>
+                  <div className="advanced-filter-grid">
+                    <label><span>Pasta</span><select value={vaultFilters.folderId} onChange={(event) => setVaultFilters((current) => ({ ...current, folderId: event.target.value }))}>{vaultFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+                    <label><span>Posição escolhida</span><select value={vaultFilters.position} onChange={(event) => setVaultFilters((current) => ({ ...current, position: event.target.value as VaultFilterState['position'] }))}><option value="ALL">Todas</option>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
+                    <label><span>Estilo oficial</span><select value={vaultFilters.playstyle} onChange={(event) => setVaultFilters((current) => ({ ...current, playstyle: event.target.value }))}><option value="">Todos</option>{availablePlaystyles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                    <label><span>Habilidade</span><select value={vaultFilters.skill} onChange={(event) => setVaultFilters((current) => ({ ...current, skill: event.target.value }))}><option value="">Todas</option>{availableSkills.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                    <label><span>Confiança mínima: {vaultFilters.minConfidence}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, minConfidence: Number(event.target.value) }))} /></label>
+                    <label><span>Confiança máxima: {vaultFilters.maxConfidence}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.maxConfidence} onChange={(event) => setVaultFilters((current) => ({ ...current, maxConfidence: Number(event.target.value) }))} /></label>
+                    <label><span>Eficiência mínima: {vaultFilters.minEfficiency}%</span><input type="range" min="0" max="100" step="5" value={vaultFilters.minEfficiency} onChange={(event) => setVaultFilters((current) => ({ ...current, minEfficiency: Number(event.target.value) }))} /></label>
+                  </div>
+                  <div className="combined-filter-chips">
+                    <button type="button" className={vaultFilters.favoritesOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, favoritesOnly: !current.favoritesOnly }))}>Somente favoritos</button>
+                    <button type="button" className={vaultFilters.pendingOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, pendingOnly: !current.pendingOnly }))}>Somente pendentes</button>
+                    <button type="button" className={vaultFilters.reviewOnly ? 'selected' : ''} onClick={() => setVaultFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}>Somente revisão</button>
+                    <button type="button" onClick={resetVaultFilters}>Restaurar filtros</button>
+                  </div>
+                </details>
+                {history.length ? (
+                  <div className="vault-player-list vault-player-catalog-grid">
+                    {filteredHistory.map((item) => {
+                      const info = skillProgressInfo(item.result.recommendedSkills, item.skillProgress);
+                      const status = savedStatusLabel(item);
+                      const statusText = savedStatusText(item);
+                      const confidence = item.result.parsed.confidence ?? 0;
+                      const efficiency = item.result.advancedOptimizer?.efficiencyScore ?? 0;
+                      const folderName = vaultFolders.find((folder) => folder.id === folderForEntry(item))?.name ?? 'Sem pasta';
+                      return (
+                        <article className={`vault-player-card status-${status}${item.favorite ? ' favorite-row' : ''}`} key={item.id}>
+                          <div className="vault-player-card-head">
+                            <button className="vault-player-identity" type="button" onClick={() => restoreHistory(item)}>
+                              <div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt={`Carta de ${item.result.parsed.playerName}`} loading="lazy" decoding="async" /> : <span>{item.result.bestPosition.label.slice(0, 3)}</span>}</div>
+                              <div><strong>{item.result.parsed.playerName}</strong><span>{item.result.parsed.playstyle || 'Estilo não informado'}</span><small>{item.result.buildName}</small></div>
+                            </button>
+                            <button type="button" className={item.favorite ? 'vault-favorite-button selected' : 'vault-favorite-button'} title={item.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={() => toggleFavoriteHistory(item.id)}><Star size={18} fill={item.favorite ? 'currentColor' : 'none'} /></button>
+                          </div>
+                          <div className="vault-card-badges">
+                            <span className="position-badge">{item.result.bestPosition.label}</span>
+                            <span className={`status-badge status-${status}`}>{status === 'completo' ? 'Pronto' : status === 'revisar' ? 'Revisar' : 'Pendente'}</span>
+                            <span className={confidence < 70 ? 'confidence-badge low' : 'confidence-badge'}>Confiança {confidence}%</span>
+                          </div>
+                          <div className="vault-card-metrics">
+                            <div><span>Pontos</span><strong>{item.result.trainingPointsUsed}/{item.result.trainingPointsTotal}</strong></div>
+                            <div><span>Eficiência</span><strong>{efficiency}%</strong></div>
+                            <div><span>Pasta</span><strong>{folderName}</strong></div>
+                          </div>
+                          <div className="vault-skill-progress">
+                            <div><span>Habilidades concluídas</span><strong>{info.done}/{info.total}</strong></div>
+                            <i><b style={{ width: `${info.percent}%` }} /></i>
+                            <small>{statusText}</small>
+                          </div>
+                          {item.notes && <p className="vault-card-note">{item.notes}</p>}
+                          <div className="vault-card-actions">
+                            <button type="button" className="vault-open-player" onClick={() => restoreHistory(item)}><Trophy size={16} /> Abrir ficha</button>
+                            <button type="button" title="Duplicar ficha" onClick={() => duplicateHistoryItem(item.id)}><Copy size={16} /></button>
+                            <button type="button" title="Exportar relatório" onClick={() => exportSingleHistoryItem(item)}><FileText size={16} /></button>
+                            <button className="delete-history-button" type="button" aria-label={`Apagar ${item.result.parsed.playerName}`} onClick={() => deleteHistoryItem(item.id)}><Trash2 size={16} /></button>
+                          </div>
+                          {libraryOpen && (
+                            <div className="saved-advanced-editor vault-card-editor">
+                              <label className="saved-status-select"><span>Pasta</span><select value={folderForEntry(item)} onChange={(event) => moveHistoryToFolder(item.id, event.target.value)}>{vaultFolders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+                              <label className="saved-status-select"><span>Status</span><select value={status} onChange={(event) => updateHistoryStatus(item.id, event.target.value as SavedAnalysis['statusTag'])}><option value="pendente">Pendente</option><option value="completo">Completo</option><option value="revisar">Revisar</option></select></label>
+                              <div className="saved-skill-bulk"><button type="button" onClick={() => markAllHistorySkills(item.id, true)}>Concluir habilidades</button><button type="button" onClick={() => markAllHistorySkills(item.id, false)}>Reabrir</button></div>
+                              <label className="saved-notes"><span>Notas pessoais</span><textarea value={item.notes ?? ''} onChange={(event) => updateHistoryNotes(item.id, event.target.value)} placeholder="Como pretende usar este jogador?" /></label>
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                    {!filteredHistory.length && <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Search size={28} /></div><strong>Nenhum jogador corresponde aos filtros</strong><span>Altere a busca ou limpe os filtros para voltar a exibir o catálogo.</span><button type="button" onClick={() => { setHistorySearch(''); setHistoryFilter('ALL'); resetVaultFilters(); }}><RotateCcw size={16} /> Limpar filtros</button></div>}
+                  </div>
+                ) : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><History size={30} /></div><strong>Seu Cofre ainda está vazio</strong><span>Crie a primeira ficha para começar seu catálogo de jogadores.</span><div><button type="button" onClick={() => openMainSection('leitor')}><ScanText size={16} /> Ler uma carta</button><button type="button" onClick={() => openMainSection('manual')}><ShieldCheck size={16} /> Manual Pro</button></div></div>}
+              </section>
             )}
             {vaultView === 'organizar' && (
               <section className="vault-view-panel vault-organization-panel luxury-panel">
@@ -3696,16 +3581,15 @@ export function CardVisionApp() {
                   playerCount={history.length}
                   healthScore={healthSummary.score}
                   cloudEnabled={Boolean(account?.cloudEnabled)}
-                  themeLabel={themeLabel(visualPreset)}
                   onOpen={(target) => setSettingsView(target)}
                 />
               ) : <>
-              <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar</button>
+              <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar para Configurações</button>
               <section className="settings-command-hero luxury-panel">
                 <div className="settings-command-copy">
-                  <p className="kicker"><SlidersHorizontal size={15} /> Configuração premium</p>
-                  <h2>Configurações</h2>
-                  <p>Conta, aparência e segurança.</p>
+                  <p className="kicker"><SlidersHorizontal size={15} /> Central de preferências</p>
+                  <h2>Seu Marques Fichas, do seu jeito.</h2>
+                  <p>Aparência, desempenho, proteção, backup, atualizações e contas em áreas separadas e fáceis de usar.</p>
                 </div>
                 <div className="settings-command-status">
                   <article><span>Conta</span><strong>{account?.profile.username || 'Usuário'}</strong><small>{account?.cloudEnabled ? 'Licença online' : 'Modo local'}</small></article>
@@ -3739,10 +3623,54 @@ export function CardVisionApp() {
               <div className="settings-final-content">
                 {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
                 {settingsView === 'experiencia' && <SectionErrorBoundary area="experiencia-premium-v2970"><PremiumExperience2Center onOpenTarget={openPremium2Target} /></SectionErrorBoundary>}
-                {settingsView === 'aparencia' && <IdentityAppearancePanel
-                  visualPreset={visualPreset} themeLabel={themeLabel(visualPreset)} profileAvatar={profileAvatar} username={account?.profile.username || 'Conta'} textScale={textScale} densityMode={densityMode} motionPreference={motionPreference}
-                  highContrast={highContrast} advancedMode={advancedMode} onPresetChange={applyPremiumVisualPreset} onAvatarChange={updateProfileAvatar} onAvatarRemove={clearProfileAvatar}
-                  onTextScaleChange={setTextScale} onDensityModeChange={setDensityMode} onMotionPreferenceChange={setMotionPreference} onHighContrastChange={setHighContrast} onAdvancedModeChange={setAdvancedMode} onRestartOnboarding={() => setOnboardingOpen(true)} />}
+                {settingsView === 'aparencia' && (
+                  <section className="appearance-settings-panel luxury-panel settings-view-panel settings-final-panel">
+                    <div className="settings-panel-heading">
+                      <div><p className="kicker"><Palette size={15} /> Aparência e acessibilidade</p><h3>Conforto visual em qualquer celular</h3><span>As preferências ficam salvas somente na sua conta neste aparelho e também entram no backup completo.</span></div>
+                      <span className="settings-state-pill">{visualPreset === 'obsidian-gold' ? 'Preto & Dourado' : visualPreset === 'elite-blue' ? 'Azul Elite' : 'Roxo Futuro'}</span>
+                    </div>
+                    <div className="appearance-live-preview" aria-label="Prévia da aparência selecionada">
+                      <div className="appearance-preview-top"><span><Sparkles size={15} /> Marques Fichas</span><i /></div>
+                      <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Visual limpo, contraste equilibrado e ações fáceis de identificar.</span><button type="button" tabIndex={-1}>Ação principal</button></div>
+                    </div>
+                    <div className="settings-control-section premium-preset-section">
+                      <div className="settings-control-heading"><strong>Interface premium</strong><span>Escolha um dos três modelos aprovados. Todas as funções permanecem no mesmo lugar.</span></div>
+                      <div className="premium-preset-grid">
+                        <button type="button" className={visualPreset === 'obsidian-gold' ? 'selected preset-gold' : 'preset-gold'} aria-pressed={visualPreset === 'obsidian-gold'} onClick={() => applyPremiumVisualPreset('obsidian-gold')}>
+                          <i><b>BM</b><span /><span /><span /></i><strong>Preto & Dourado</strong><small>Elegante, profissional e com foco total.</small><em>Modelo 1</em>
+                        </button>
+                        <button type="button" className={visualPreset === 'elite-blue' ? 'selected preset-blue' : 'preset-blue'} aria-pressed={visualPreset === 'elite-blue'} onClick={() => applyPremiumVisualPreset('elite-blue')}>
+                          <i><b>BM</b><span /><span /><span /></i><strong>Azul Elite</strong><small>Tecnológico, limpo e fluido.</small><em>Modelo 2</em>
+                        </button>
+                        <button type="button" className={visualPreset === 'future-purple' ? 'selected preset-purple' : 'preset-purple'} aria-pressed={visualPreset === 'future-purple'} onClick={() => applyPremiumVisualPreset('future-purple')}>
+                          <i><b>BM</b><span /><span /><span /></i><strong>Roxo Futuro</strong><small>Futurista, marcante e sofisticado.</small><em>Modelo 5</em>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="premium-preset-note"><ShieldCheck size={17} /><div><strong>Três modelos escuros e otimizados</strong><span>O modelo escolhido controla cores, brilho, cartões, navegação e destaques. Texto, contraste, espaçamento e animações continuam ajustáveis abaixo.</span></div></div>
+                    <div className="settings-preference-grid">
+                      <div className="settings-preference-card">
+                        <strong>Tamanho dos textos</strong><span>Amplia a interface sem alterar os cálculos.</span>
+                        <div className="settings-segmented-control" role="group" aria-label="Tamanho dos textos"><button type="button" className={textScale === 'compact' ? 'selected' : ''} onClick={() => setTextScale('compact')}>Compacto</button><button type="button" className={textScale === 'standard' ? 'selected' : ''} onClick={() => setTextScale('standard')}>Padrão</button><button type="button" className={textScale === 'large' ? 'selected' : ''} onClick={() => setTextScale('large')}>Grande</button></div>
+                      </div>
+                      <div className="settings-preference-card">
+                        <strong>Espaçamento</strong><span>Define quantas informações aparecem por tela.</span>
+                        <div className="settings-segmented-control" role="group" aria-label="Espaçamento da interface"><button type="button" className={densityMode === 'compact' ? 'selected' : ''} onClick={() => setDensityMode('compact')}>Compacto</button><button type="button" className={densityMode === 'comfortable' ? 'selected' : ''} onClick={() => setDensityMode('comfortable')}>Confortável</button></div>
+                      </div>
+                      <div className="settings-preference-card">
+                        <strong>Animações</strong><span>Reduza movimentos para conforto e economia.</span>
+                        <div className="settings-segmented-control" role="group" aria-label="Preferência de animações"><button type="button" className={motionPreference === 'system' ? 'selected' : ''} onClick={() => setMotionPreference('system')}>Sistema</button><button type="button" className={motionPreference === 'reduced' ? 'selected' : ''} onClick={() => setMotionPreference('reduced')}>Reduzidas</button><button type="button" className={motionPreference === 'full' ? 'selected' : ''} onClick={() => setMotionPreference('full')}>Completas</button></div>
+                      </div>
+                      <div className="settings-preference-card settings-toggle-card">
+                        <div><strong>Contraste reforçado</strong><span>Bordas e textos mais visíveis.</span></div><button type="button" className={highContrast ? 'is-on' : ''} role="switch" aria-label="Ativar ou desativar contraste reforçado" aria-checked={highContrast} onClick={() => setHighContrast((value) => !value)}><i /></button>
+                      </div>
+                      <div className="settings-preference-card settings-toggle-card">
+                        <div><strong>Ferramentas avançadas</strong><span>Libera auditorias e módulos técnicos.</span></div><button type="button" className={advancedMode ? 'is-on' : ''} role="switch" aria-label="Ativar ou desativar ferramentas avançadas" aria-checked={advancedMode} onClick={() => setAdvancedMode((value) => !value)}><i /></button>
+                      </div>
+                      <button type="button" className="settings-onboarding-reopen" onClick={() => setOnboardingOpen(true)}><Sparkles size={17} /><div><strong>Refazer configuração inicial</strong><span>Escolher novamente modo, formação, estilo e prioridade.</span></div></button>
+                    </div>
+                  </section>
+                )}
                 {settingsView === 'desempenho' && (
                   <section className="settings-view-panel settings-delay-wrapper settings-final-panel-stack">
                     <div className="performance-settings-hero luxury-panel">
@@ -3750,7 +3678,7 @@ export function CardVisionApp() {
                       <div className="performance-mode-chips"><span>Android otimizado</span><span>Rede e dispositivo</span><span>Sem alterar fichas</span></div>
                     </div>
                     <div className="app-performance-mode luxury-panel">
-                      <div><Zap size={20} /><div><strong>Modo de renderização do BuildMaster</strong><span>O modo econômico reduz transparências, sombras e animações pesadas sem mudar cálculos, OCR ou fichas.</span></div></div>
+                      <div><Zap size={20} /><div><strong>Modo de renderização do Marques Fichas</strong><span>O modo econômico reduz transparências, sombras e animações pesadas sem mudar cálculos, OCR ou fichas.</span></div></div>
                       <div className="settings-segmented-control" role="group" aria-label="Modo de desempenho do aplicativo">
                         <button type="button" className={performanceMode === 'balanced' ? 'selected' : ''} onClick={() => setPerformanceMode('balanced')}>Equilibrado</button>
                         <button type="button" className={performanceMode === 'economy' ? 'selected' : ''} onClick={() => setPerformanceMode('economy')}>Econômico</button>
@@ -3867,10 +3795,10 @@ export function CardVisionApp() {
             loading && !result && !draftResult ? (
               <div className="creation-processing-card luxury-panel" role="status" aria-live="polite">
                 <div className="creation-processing-visual"><span><ScanText size={30} /></span><i /><i /><i /></div>
-                <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
+                <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando a carta por áreas</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Revisão manual</span><span>Ficha final</span></div>
               </div>
-            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onReplaceOwnedSkill={replaceOwnedSkillIntelligently} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} onRestoreRulePackVersion={restoreRulePackVersion} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
+            ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
               originalPreview={preview}
@@ -3891,7 +3819,7 @@ export function CardVisionApp() {
               onRefresh={() => runAnalysis(false)}
               onConfirm={() => runAnalysis(true)}
             />) : (
-              <div className="empty-state luxury-panel"><div className="empty-icon"><Trophy size={34} /></div><h2>Sem resultado</h2><p>Crie uma ficha por imagem ou manualmente.</p></div>
+              <div className="empty-state luxury-panel"><div className="empty-icon"><Trophy size={34} /></div><h2>Nenhum resultado aberto</h2><p>Crie uma ficha pelo Leitor ou pelo Manual Pro.</p></div>
             )
           ) : draftResult ? (            <ReviewPanel
               draft={draftResult}
@@ -3916,7 +3844,7 @@ export function CardVisionApp() {
             />) : result ? (
             <div className="result-ready-card luxury-panel">
               <div className="empty-icon"><CheckCircle2 size={30} /></div>
-              <div><p className="kicker">Ficha pronta</p><h2>{result.parsed.playerName}</h2><p>Ficha pronta para revisar.</p></div>
+              <div><p className="kicker">Ficha pronta</p><h2>{result.parsed.playerName}</h2><p>O resultado foi separado da criação para manter esta tela limpa.</p></div>
               <button type="button" className="elite-button" onClick={() => openMainSection('resultado')}>Abrir resultado</button>
             </div>
           ) : (

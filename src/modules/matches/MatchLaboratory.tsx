@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Brain, CheckCircle2, Clock3, Download, History, Pause, Play, Plus, RotateCcw, ShieldCheck, Target, Trophy, Users, Video, Wifi } from 'lucide-react';
 import type { IntegratedPlayerRecord, MatchScenarioPlan, TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import type { TacticalStyle } from '@/lib/analyzer';
@@ -40,7 +40,6 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
   const [logs, setLogs] = useState<TrainingLog[]>(() => safeStorageGetJson<TrainingLog[]>(TRAINING_LOG_KEY, []));
   const [weeklyGoal, setWeeklyGoal] = useState(() => safeStorageGetJson<number>(WEEKLY_GOAL_KEY, 3));
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState>(() => readFeatureFlags());
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const current = plans.find((plan) => plan.id === activePlan) ?? plans[0];
   const validationQueue = useMemo(() => players.filter((player) => player.status === 'completo').sort((a, b) => a.matchCount - b.matchCount || b.efficiency - a.efficiency).slice(0, 6), [players]);
   const recent = useMemo(() => [...records].sort((a, b) => b.playedAt.localeCompare(a.playedAt)).slice(0, 8), [records]);
@@ -64,11 +63,6 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
     if (tab === 'treinador' && !featureFlags.smartCoach) setTab('competitivo');
   }, [featureFlags.antiDelay, featureFlags.smartCoach, tab]);
 
-  function selectTab(next: MatchTab) {
-    setTab(next);
-    window.requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  }
-
   function toggleError(error: string) {
     setSelectedErrors((current) => current.includes(error) ? current.filter((item) => item !== error) : [...current, error]);
   }
@@ -83,7 +77,7 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
     setSeconds(0);
     setRepetitions(0);
     setSelectedErrors([]);
-    selectTab('analisar');
+    setTab('analisar');
   }
 
   function changeGoal(value: number) {
@@ -110,8 +104,8 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
     <PremiumScreenHero
       icon={Target}
       eyebrow="Centro de performance"
-      title="Treino, partida e evolução em um só lugar."
-      description="Escolha uma guia e o app leva você direto ao painel correspondente."
+      title="Treine com método, prepare a partida e valide o que funciona em campo."
+      description="Use planos diários e semanais, registre repetições e erros, acompanhe a evolução por período e entre nas ranqueadas com uma preparação objetiva."
       badge={`${weeklySessions}/${weeklyGoal} sessões na semana`}
       actions={<><button type="button" className="elite-button" onClick={onOpenTeam}><Users size={17}/> Rever meu time</button><button type="button" onClick={exportWeeklyPlan}><Download size={17}/> Exportar semana</button></>}
       metrics={[
@@ -122,9 +116,8 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
       ]}
     />
 
-    <nav className="refined-match-tabs luxury-panel" role="tablist" aria-label="Etapas de treino e partida"><button type="button" role="tab" aria-selected={tab === 'gravar'} className={tab === 'gravar' ? 'active' : ''} onClick={() => selectTab('gravar')}><Video size={17}/> Gravar e analisar</button><button type="button" role="tab" aria-selected={tab === 'competitivo'} className={tab === 'competitivo' ? 'active' : ''} onClick={() => selectTab('competitivo')}><BarChart3 size={17}/> Desempenho competitivo</button>{featureFlags.antiDelay && <button type="button" role="tab" aria-selected={tab === 'anti-delay'} className={tab === 'anti-delay' ? 'active' : ''} onClick={() => selectTab('anti-delay')}><Wifi size={17}/> Central anti-delay</button>}{featureFlags.smartCoach && <button type="button" role="tab" aria-selected={tab === 'treinador'} className={tab === 'treinador' ? 'active' : ''} onClick={() => selectTab('treinador')}><Brain size={17}/> Treinador inteligente</button>}<button type="button" role="tab" aria-selected={tab === 'treinar'} className={tab === 'treinar' ? 'active' : ''} onClick={() => selectTab('treinar')}><Trophy size={17}/> Treinos e evolução</button><button type="button" role="tab" aria-selected={tab === 'planejar'} className={tab === 'planejar' ? 'active' : ''} onClick={() => selectTab('planejar')}><Target size={17}/> Planejar partida</button><button type="button" role="tab" aria-selected={tab === 'executar'} className={tab === 'executar' ? 'active' : ''} onClick={() => selectTab('executar')}><Play size={17}/> Treino guiado</button><button type="button" role="tab" aria-selected={tab === 'analisar'} className={tab === 'analisar' ? 'active' : ''} onClick={() => selectTab('analisar')}><History size={17}/> Histórico</button>{tab !== 'treinar' && <div className="refined-week-goal"><span>Meta semanal</span><select value={weeklyGoal} onChange={(event) => changeGoal(Number(event.target.value))}>{[2,3,4,5,6,7].map((value) => <option key={value} value={value}>{value} sessões</option>)}</select><strong>{weeklySessions}/{weeklyGoal}</strong></div>}</nav>
+    <nav className="refined-match-tabs luxury-panel" aria-label="Etapas de treino e partida"><button type="button" className={tab === 'gravar' ? 'active' : ''} onClick={() => setTab('gravar')}><Video size={17}/> Gravar e analisar</button><button type="button" className={tab === 'competitivo' ? 'active' : ''} onClick={() => setTab('competitivo')}><BarChart3 size={17}/> Desempenho competitivo</button>{featureFlags.antiDelay && <button type="button" className={tab === 'anti-delay' ? 'active' : ''} onClick={() => setTab('anti-delay')}><Wifi size={17}/> Central anti-delay</button>}{featureFlags.smartCoach && <button type="button" className={tab === 'treinador' ? 'active' : ''} onClick={() => setTab('treinador')}><Brain size={17}/> Treinador inteligente</button>}<button type="button" className={tab === 'treinar' ? 'active' : ''} onClick={() => setTab('treinar')}><Trophy size={17}/> Treinos e evolução</button><button type="button" className={tab === 'planejar' ? 'active' : ''} onClick={() => setTab('planejar')}><Target size={17}/> Planejar partida</button><button type="button" className={tab === 'executar' ? 'active' : ''} onClick={() => setTab('executar')}><Play size={17}/> Treino guiado antigo</button><button type="button" className={tab === 'analisar' ? 'active' : ''} onClick={() => setTab('analisar')}><History size={17}/> Histórico</button>{tab !== 'treinar' && <div className="refined-week-goal"><span>Meta semanal antiga</span><select value={weeklyGoal} onChange={(event) => changeGoal(Number(event.target.value))}>{[2,3,4,5,6,7].map((value) => <option key={value} value={value}>{value} sessões</option>)}</select><strong>{weeklySessions}/{weeklyGoal}</strong></div>}</nav>
 
-    <div ref={panelRef} className="bm34-tab-panel" role="tabpanel" aria-live="polite">
     {tab === 'gravar' && <MatchTrainerCenter team={team} teamStyle={teamStyle} />}
 
     {tab === 'competitivo' && <CompetitivePerformanceCenter formation={team.formation} teamStyle={teamStyle} />}
@@ -137,7 +130,7 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
 
     {tab === 'planejar' && <>
       <nav className="v27-scenario-tabs luxury-panel" aria-label="Cenários de partida">{plans.map((plan) => <button type="button" key={plan.id} className={activePlan === plan.id ? 'active' : ''} onClick={() => setActivePlan(plan.id)}>{plan.label}</button>)}</nav>
-      <div className="v27-match-grid"><article className="v27-scenario-card luxury-panel"><div className="v27-panel-heading"><div><p className="kicker"><ShieldCheck size={14}/> Plano de jogo</p><h3>{current.label}</h3></div><span>{team.formation}</span></div><div className="v27-scenario-focus"><strong>Objetivo</strong><span>{current.objective}</span></div><div className="v27-scenario-sections"><div><strong>Ajuste da formação</strong><span>{current.formationAdvice}</span></div><div><strong>Perfil de jogador</strong><span>{current.playerProfile}</span></div><div><strong>Substituições</strong>{current.substitutions.map((item) => <span key={item}><CheckCircle2 size={14}/>{item}</span>)}</div><div><strong>Riscos</strong>{current.risks.map((item) => <span key={item}><Clock3 size={14}/>{item}</span>)}</div></div><button type="button" className="elite-button" onClick={() => selectTab('executar')}><Play size={17}/> Iniciar treino guiado</button></article><aside className="v27-validation-queue luxury-panel"><div className="v27-panel-heading"><div><p className="kicker"><Trophy size={14}/> Próximos testes</p><h3>Fichas que precisam de partidas</h3></div><span>{validationQueue.length}</span></div><div className="v27-player-list validation-list">{validationQueue.map((player) => <button type="button" key={player.id} onClick={() => onValidatePlayer(player.id)}><div><strong>{player.name}</strong><span>{player.targetPosition} • {player.buildName}</span></div><small>{player.matchCount} jogo(s)</small></button>)}{!validationQueue.length && <div className="v27-empty"><CheckCircle2 size={25}/><strong>Nenhuma ficha aguardando teste</strong><span>Adicione novas cartas ou revise o histórico.</span></div>}</div></aside></div>
+      <div className="v27-match-grid"><article className="v27-scenario-card luxury-panel"><div className="v27-panel-heading"><div><p className="kicker"><ShieldCheck size={14}/> Plano de jogo</p><h3>{current.label}</h3></div><span>{team.formation}</span></div><div className="v27-scenario-focus"><strong>Objetivo</strong><span>{current.objective}</span></div><div className="v27-scenario-sections"><div><strong>Ajuste da formação</strong><span>{current.formationAdvice}</span></div><div><strong>Perfil de jogador</strong><span>{current.playerProfile}</span></div><div><strong>Substituições</strong>{current.substitutions.map((item) => <span key={item}><CheckCircle2 size={14}/>{item}</span>)}</div><div><strong>Riscos</strong>{current.risks.map((item) => <span key={item}><Clock3 size={14}/>{item}</span>)}</div></div><button type="button" className="elite-button" onClick={() => setTab('executar')}><Play size={17}/> Iniciar treino guiado</button></article><aside className="v27-validation-queue luxury-panel"><div className="v27-panel-heading"><div><p className="kicker"><Trophy size={14}/> Próximos testes</p><h3>Fichas que precisam de partidas</h3></div><span>{validationQueue.length}</span></div><div className="v27-player-list validation-list">{validationQueue.map((player) => <button type="button" key={player.id} onClick={() => onValidatePlayer(player.id)}><div><strong>{player.name}</strong><span>{player.targetPosition} • {player.buildName}</span></div><small>{player.matchCount} jogo(s)</small></button>)}{!validationQueue.length && <div className="v27-empty"><CheckCircle2 size={25}/><strong>Nenhuma ficha aguardando teste</strong><span>Adicione novas cartas ou revise o histórico.</span></div>}</div></aside></div>
     </>}
 
     {tab === 'executar' && <section className="refined-training-execution luxury-panel">
@@ -148,6 +141,5 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
     </section>}
 
     {tab === 'analisar' && <div className="refined-analysis-grid"><article className="v27-match-history luxury-panel"><div className="v27-panel-heading"><div><p className="kicker"><History size={14}/> Pós-jogo integrado</p><h3>Partidas recentes</h3></div><span>{records.length} total</span></div><div className="v27-history-table">{recent.map((record) => <div key={record.id}><strong>{record.playerName}</strong><span>{new Date(record.playedAt).toLocaleDateString('pt-BR')} • {record.minutes} min</span><span>Nota {record.overallRating}/5</span><small>{record.tags.join(' • ') || 'Sem problema marcado'}</small></div>)}{!recent.length && <div className="v27-empty"><History size={25}/><strong>Sem partidas registradas</strong><span>Abra uma ficha na fila e registre o primeiro teste.</span></div>}</div></article><article className="luxury-panel refined-training-log"><div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Sessões locais</p><h3>Evolução por repetição</h3></div><span>{logs.length}</span></div>{logs.slice(0,12).map((item) => <div key={item.id}><strong>{new Date(item.at).toLocaleDateString('pt-BR')}</strong><span>{item.repetitions} repetições • {Math.round(item.seconds / 60)} min</span><small>{item.error}</small></div>)}{!logs.length && <div className="v27-empty"><Clock3 size={25}/><strong>Nenhuma sessão concluída</strong><span>Use a guia Executar para registrar o primeiro treino.</span></div>}</article></div>}
-    </div>
   </section>;
 }

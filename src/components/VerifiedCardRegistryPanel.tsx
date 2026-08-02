@@ -27,15 +27,7 @@ export function VerifiedCardRegistryPanel({ result }: { result: AnalysisResult }
   const [message, setMessage] = useState('');
 
   useEffect(() => setEntries(loadEntries()), []);
-  const current = useMemo(() => {
-    const canonicalId = result.structuralPrecision?.canonical.canonicalId;
-    if (canonicalId) {
-      const exact = entries.find((entry) => entry.canonicalId === canonicalId);
-      if (exact) return exact;
-      return entries.find((entry) => !entry.canonicalId && entry.playerName.toLowerCase() === result.parsed.playerName.toLowerCase() && entry.mainPosition === result.parsed.mainPositionPt);
-    }
-    return entries.find((entry) => entry.playerName.toLowerCase() === result.parsed.playerName.toLowerCase() && entry.mainPosition === result.parsed.mainPositionPt);
-  }, [entries, result]);
+  const current = useMemo(() => entries.find((entry) => entry.playerName.toLowerCase() === result.parsed.playerName.toLowerCase() && entry.mainPosition === result.parsed.mainPositionPt), [entries, result]);
   const comparison = current ? compareRegistryEntry(current, result) : null;
 
   const persist = (next: CardRegistryEntry[]) => {
@@ -69,7 +61,7 @@ export function VerifiedCardRegistryPanel({ result }: { result: AnalysisResult }
 
   return <article className="luxury-panel wide-card verified-card-panel">
     <div className="section-title-row"><div><p className="kicker"><Database size={14}/> Registro de cartas</p><h3>Identidade separada por versão</h3></div><span>{entries.length} registro(s)</span></div>
-    <p className="panel-note">Este registro confirma os dados conferidos por você. O app não chama um dado de “oficial” sem uma fonte oficial conectada.</p>{result.structuralPrecision && <p className="panel-note">ID canônico: <strong>{result.structuralPrecision.canonical.canonicalId}</strong> • confiança estrutural {result.structuralPrecision.criticalConfidence}%.</p>}
+    <p className="panel-note">Este registro confirma os dados conferidos por você. O app não chama um dado de “oficial” sem uma fonte oficial conectada.</p>
     {current ? <div className={`verified-card-status ${comparison?.matches ? 'confirmed' : 'review'}`}>
       {comparison?.matches ? <CheckCircle2 size={21}/> : <ShieldAlert size={21}/>}<div><strong>{comparison?.matches ? 'Esta versão coincide com o registro salvo' : 'Diferenças detectadas nesta versão'}</strong><span>{current.playstyle} • {current.points} pontos • {current.cardVersion || 'versão sem nome'} • confirmado em {new Date(current.confirmedAt).toLocaleDateString('pt-BR')}</span><small>Origem: {current.sourceLabel || 'não informada'}{current.observedAt ? ` • observada em ${new Date(current.observedAt).toLocaleDateString('pt-BR')}` : ''}</small>{comparison?.differences.map((item) => <small key={item}>{item}</small>)}</div>
     </div> : <div className="verified-card-status empty"><Database size={21}/><div><strong>Esta carta ainda não foi registrada</strong><span>Confirme depois de revisar nome, posição, estilo, nível, pontos, atributos e habilidades.</span></div></div>}

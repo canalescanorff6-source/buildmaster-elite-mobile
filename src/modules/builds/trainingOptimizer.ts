@@ -518,50 +518,6 @@ export function fitTrainingToBudget(target: TrainingPlan, priority: TrainingKey[
   return plan;
 }
 
-
-/**
- * Fecha o orçamento exatamente. Primeiro preserva a distribuição recebida;
- * se a progressão de custos deixar um resto impossível de preencher de forma
- * gulosa, executa uma busca dinâmica que minimiza a distância da ficha-alvo.
- */
-export function fitTrainingToExactBudget(target: TrainingPlan, priority: TrainingKey[], budget: number, position: PositionCode): TrainingPlan {
-  const normalizedBudget = normalizeTrainingBudget(budget);
-  const fitted = fitTrainingToBudget(target, priority, normalizedBudget);
-  if (trainingPlanTotalCost(fitted) === normalizedBudget) return fitted;
-
-  const allowedKeys: TrainingKey[] = position === 'GK'
-    ? ['gk1', 'gk2', 'gk3', 'aerialStrength', 'lowerBodyStrength']
-    : ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending'];
-  const priorityIndex = new Map(priority.map((key, index) => [key, index]));
-  type ExactState = { penalty: number; plan: TrainingPlan };
-  let states: Array<ExactState | null> = Array.from({ length: normalizedBudget + 1 }, () => null);
-  states[0] = { penalty: 0, plan: emptyTraining() };
-
-  for (const key of allowedKeys) {
-    const next: Array<ExactState | null> = Array.from({ length: normalizedBudget + 1 }, () => null);
-    const targetLevel = Math.max(0, Math.min(16, Math.round(Number(target[key] ?? 0))));
-    const priorityWeight = Math.max(1, allowedKeys.length - (priorityIndex.get(key) ?? allowedKeys.length));
-    for (let currentCost = 0; currentCost <= normalizedBudget; currentCost += 1) {
-      const state = states[currentCost];
-      if (!state) continue;
-      for (let level = 0; level <= 16; level += 1) {
-        const totalCost = currentCost + trainingTotalCost(level);
-        if (totalCost > normalizedBudget) break;
-        const distance = Math.abs(level - targetLevel);
-        const underTargetPenalty = level < targetLevel ? distance * (18 + priorityWeight * 2) : distance * (11 + priorityWeight);
-        const candidatePenalty = state.penalty + underTargetPenalty;
-        const previous = next[totalCost];
-        if (!previous || candidatePenalty < previous.penalty) {
-          next[totalCost] = { penalty: candidatePenalty, plan: { ...state.plan, [key]: level } as TrainingPlan };
-        }
-      }
-    }
-    states = next;
-  }
-
-  return states[normalizedBudget]?.plan ?? fitted;
-}
-
 function trainingCaps(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): TrainingPlan {
   const playstyle = normalize(parsed.playstyle ?? '').toLowerCase();
   const role = trainingRoleProfile(position, objective, a, parsed);

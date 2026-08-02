@@ -45,7 +45,7 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { ProfessionalSquadPanel } from '@/modules/squad/ProfessionalSquadPanel';
 import { OpponentMatchAssistantPanel } from '@/modules/opponents/OpponentMatchAssistantPanel';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
-import { isRenderableAnalysisResult, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
+import type { SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 
 const tacticalStyleName: Record<TacticalStyle, string> = {
   AUTO: 'Automático inteligente',
@@ -97,26 +97,10 @@ function clampTeamScore(value: number) {
   return Math.max(1, Math.min(100, Math.round(value)));
 }
 
-function safeSavedHistory(history: SavedAnalysis[]) {
-  return history.filter((item): item is SavedAnalysis => Boolean(item && isRenderableAnalysisResult(item.result)));
-}
-
-function safeTeamReport<T>(factory: () => T | null): T | null {
-  try {
-    return factory();
-  } catch (error) {
-    console.error('Falha isolada ao montar relatório do Meu Time:', error);
-    return null;
-  }
-}
-
 function uniqueSavedResults(history: SavedAnalysis[]) {
   const map = new Map<string, AnalysisResult>();
-  for (const item of safeSavedHistory(history)) {
-    const playerName = String(item.result.parsed.playerName || '').trim();
-    const position = item.result.bestPosition?.code;
-    if (!playerName || !position) continue;
-    const key = `${playerName.toLowerCase()}-${position}-${item.result.parsed.playstyle ?? ''}`;
+  for (const item of history) {
+    const key = `${item.result.parsed.playerName.toLowerCase()}-${item.result.bestPosition.code}-${item.result.parsed.playstyle ?? ''}`;
     if (!map.has(key)) map.set(key, item.result);
   }
   return Array.from(map.values()).slice(0, 30);
@@ -600,18 +584,16 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
     if (opponentPrintReport.strength.value && opponentPrintReport.strength.confidence !== 'baixa') setOpponentStrength(opponentPrintReport.strength.value);
   }
 
-  const validHistory = useMemo(() => safeSavedHistory(history), [history]);
-  const validResults = useMemo(() => validHistory.map((item) => item.result), [validHistory]);
-  const report = useMemo(() => safeTeamReport(() => buildSquadReport(validHistory, formation, teamStyle)), [validHistory, formation, teamStyle]);
-  const eliteReport = useMemo(() => report ? safeTeamReport(() => buildEliteTeamReport(validResults, formation, teamStyle)) : null, [report, validResults, formation, teamStyle]);
-  const chemistryReport = useMemo(() => report ? safeTeamReport(() => buildSquadChemistryReport(validResults, formation, teamStyle)) : null, [report, validResults, formation, teamStyle]);
-  const assistedLineup = useMemo(() => report ? safeTeamReport(() => buildAssistedLineupReport(validResults, formation, teamStyle)) : null, [report, validResults, formation, teamStyle]);
-  const opponentReport = useMemo(() => report ? safeTeamReport(() => buildOpponentAnalysisReport(validResults, formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength })) : null, [report, validResults, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
-  const advancedOpponentReport = useMemo(() => report ? safeTeamReport(() => buildAdvancedOpponentReport(validResults, formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength })) : null, [report, validResults, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
-  const gamePlan = useMemo(() => opponentReport ? safeTeamReport(() => buildGamePlanReport({ matchState, energy: teamEnergy, opponentProfile, ownFormation: formation, ownStyle: teamStyle }, opponentReport)) : null, [opponentReport, matchState, teamEnergy, opponentProfile, formation, teamStyle]);
-  const rotationReport = useMemo(() => report ? safeTeamReport(() => buildSquadRotationReport(validResults, formation, teamStyle, matchState, teamEnergy)) : null, [report, validResults, formation, teamStyle, matchState, teamEnergy]);
-  const visualLineup = useMemo(() => report ? buildVisualLineup(validHistory, formation) : [], [report, validHistory, formation]);
-  const professionalSquad = useMemo(() => report ? safeTeamReport(() => buildProfessionalSquadReport(validResults, formation, teamStyle)) : null, [report, validResults, formation, teamStyle]);
+  const report = useMemo(() => buildSquadReport(history, formation, teamStyle), [history, formation, teamStyle]);
+  const eliteReport = useMemo(() => buildEliteTeamReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
+  const chemistryReport = useMemo(() => buildSquadChemistryReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
+  const assistedLineup = useMemo(() => buildAssistedLineupReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
+  const opponentReport = useMemo(() => buildOpponentAnalysisReport(history.map((item) => item.result), formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength }), [history, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
+  const advancedOpponentReport = useMemo(() => buildAdvancedOpponentReport(history.map((item) => item.result), formation, teamStyle, { profile: opponentProfile, formation: opponentFormation, strength: opponentStrength }), [history, formation, teamStyle, opponentProfile, opponentFormation, opponentStrength]);
+  const gamePlan = useMemo(() => opponentReport ? buildGamePlanReport({ matchState, energy: teamEnergy, opponentProfile, ownFormation: formation, ownStyle: teamStyle }, opponentReport) : null, [opponentReport, matchState, teamEnergy, opponentProfile, formation, teamStyle]);
+  const rotationReport = useMemo(() => buildSquadRotationReport(history.map((item) => item.result), formation, teamStyle, matchState, teamEnergy), [history, formation, teamStyle, matchState, teamEnergy]);
+  const visualLineup = useMemo(() => buildVisualLineup(history, formation), [history, formation]);
+  const professionalSquad = useMemo(() => buildProfessionalSquadReport(history.map((item) => item.result), formation, teamStyle), [history, formation, teamStyle]);
 
   const starterCount = visualLineup.filter((pick) => pick.player).length;
   const averageStarterFit = starterCount
@@ -690,7 +672,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
       )}
 
       {teamCenterView === 'formacoes' && (
-        <SectionErrorBoundary area="laboratorio-formacoes"><FormationRoleLabPanel results={validResults} activeFormation={formation} activeStyle={teamStyle} /></SectionErrorBoundary>
+        <SectionErrorBoundary area="laboratorio-formacoes"><FormationRoleLabPanel results={history.map((item) => item.result)} activeFormation={formation} activeStyle={teamStyle} /></SectionErrorBoundary>
       )}
 
       {teamCenterView === 'visao' && (
@@ -727,8 +709,8 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
       {teamCenterView === 'escalacao' && (
         <section className="team-layer-section">
           <div className="team-layer-heading"><div><p className="kicker">Titulares e escalação</p><h3>Mapa dos 11 e alternativas assistidas</h3></div><span>{starterCount}/11 preenchidos</span></div>
-          <FormationMiniBoard history={validHistory} formation={formation} />
-          <VisualLineupPitch history={validHistory} formation={formation} teamStyle={teamStyle} />
+          <FormationMiniBoard history={history} formation={formation} />
+          <VisualLineupPitch history={history} formation={formation} teamStyle={teamStyle} />
 
           {assistedLineup && (
             <details className="team-layer-details" open={starterCount < 11}>
@@ -837,7 +819,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
           </div>
           <div className="opponent-score-strip"><span>Ameaça <b>{opponentReport.threatScore}/100</b></span><span>Seu encaixe <b>{opponentReport.matchupScore}/100</b></span><span>{opponentReport.verdict}</span></div>
           {opponentAssistantEnabled ? <OpponentMatchAssistantPanel
-            results={validResults}
+            results={history.map((item) => item.result)}
             ownFormation={formation}
             ownStyle={teamStyle}
             opponentProfile={opponentProfile}

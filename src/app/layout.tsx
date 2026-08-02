@@ -7,28 +7,16 @@ import { PremiumExperienceLayer } from '@/components/PremiumExperienceLayer';
 import { PremiumExperience2Bootstrap } from '@/modules/experience/PremiumExperience2Bootstrap';
 import { ObservabilityBootstrap } from '@/modules/observability/ObservabilityBootstrap';
 import { PremiumQualityLayer } from '@/components/PremiumQualityLayer';
-import { RuntimeOptimizationBootstrapV3820 } from '@/components/RuntimeOptimizationBootstrapV3820';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import './globals.css';
-import './v33-executive.css';
-import './v34-studio.css';
-import './v34-clean-responsive.css';
-import './v35-identity-themes.css';
-import './v35-solid-premium.css';
-import './v36-premium-revolution.css';
-import './v37-professional-intelligence.css';
-import './v37-clean-intelligent.css';
-import './v37-unified-creation.css';
-import './v38-clean-vault.css';
-import './v38-premium-clean-result.css';
 
 export const metadata: Metadata = {
-  title: `BuildMaster Elite Tático v${APP_RELEASE_VERSION}`,
+  title: `Marques Fichas v${APP_RELEASE_VERSION}`,
   description: 'Sistema tático premium para criar fichas, proteger o Cofre, analisar elenco, treinos, partidas e formações.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: `BuildMaster v${APP_RELEASE_VERSION}`,
+    title: `Marques Fichas v${APP_RELEASE_VERSION}`,
     statusBarStyle: 'default'
   },
   icons: {
@@ -45,13 +33,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   colorScheme: 'light dark',
-  themeColor: '#050a12'
+  themeColor: '#0b1931'
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production bm-v2930-intelligence bm-v2940-player-lab bm-v2950-tactical-opponent bm-v2960-anti-delay-coach bm-v2970-premium-observability bm-v2980-community-commercial bm-v3000-play-publication bm-v3300-executive bm-v3400-studio bm-v3400-clean-responsive bm-v3500-identity bm-v3520-solid bm-v3600-revolution bm-v3700-professional bm-v3780-clean bm-v3790-unified bm-v3800-vault bm-v3810-result bm-v3820-runtime-shell"><ExperiencePreferenceBootstrap /><PremiumExperience2Bootstrap /><ObservabilityBootstrap /><RuntimeOptimizationBootstrapV3820 /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
+      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production bm-v2930-intelligence bm-v2940-player-lab bm-v2950-tactical-opponent bm-v2960-anti-delay-coach bm-v2970-premium-observability bm-v2980-community-commercial bm-v3000-play-publication"><ExperiencePreferenceBootstrap /><PremiumExperience2Bootstrap /><ObservabilityBootstrap /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
     </html>
   );
 }

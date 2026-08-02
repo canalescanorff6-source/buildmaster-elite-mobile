@@ -67,6 +67,10 @@ type TacticalPosterStudioPanelProps = {
   lineup: FormationSlotFit[];
   style: TacticalStyle;
   managerName?: string;
+  brandTitle?: string;
+  brandSubtitle?: string;
+  defaultPalette?: TacticalPosterPalette;
+  defaultFocus?: string;
 };
 
 type PosterTemplate = {
@@ -112,13 +116,13 @@ function textToLines(value: string): string[] {
   return value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 8);
 }
 
-function createInitialState(formation: FormationBlueprint, style: TacticalStyle, managerName?: string): TacticalPosterEditableState {
+function createInitialState(formation: FormationBlueprint, style: TacticalStyle, managerName?: string, brandTitle = 'Marques Fichas', brandSubtitle?: string, defaultPalette: TacticalPosterPalette = 'ouro', defaultFocus = 'Segurança, construção curta e finalização inteligente.'): TacticalPosterEditableState {
   const instructions = defaultTacticalPosterInstructions(formation, style);
   return {
-    title: 'BuildMaster Elite Tático 2026',
-    subtitle: `${formation.name} • ${managerName ? `Técnico: ${managerName}` : 'estilos oficiais'}`,
-    focus: 'Segurança, construção curta e finalização inteligente.',
-    palette: 'ouro',
+    title: brandTitle,
+    subtitle: brandSubtitle ?? `${formation.name} • ${managerName ? `Técnico: ${managerName}` : 'estilos oficiais'}`,
+    focus: defaultFocus,
+    palette: defaultPalette,
     orientation: 'vertical',
     options: { ...DEFAULT_TACTICAL_POSTER_OPTIONS },
     playerOverrides: {},
@@ -138,9 +142,9 @@ function createInitialState(formation: FormationBlueprint, style: TacticalStyle,
   };
 }
 
-export function TacticalPosterStudioPanel({ formation, lineup, style, managerName }: TacticalPosterStudioPanelProps) {
+export function TacticalPosterStudioPanel({ formation, lineup, style, managerName, brandTitle, brandSubtitle, defaultPalette, defaultFocus }: TacticalPosterStudioPanelProps) {
   const tacticalStudio2Enabled = useObservabilityFeatureFlag('tacticalStudio2');
-  const initialState = useMemo(() => createInitialState(formation, style, managerName), [formation, style, managerName]);
+  const initialState = useMemo(() => createInitialState(formation, style, managerName, brandTitle, brandSubtitle, defaultPalette, defaultFocus), [brandSubtitle, brandTitle, defaultFocus, defaultPalette, formation, managerName, style]);
   const [title, setTitle] = useState(initialState.title);
   const [subtitle, setSubtitle] = useState(initialState.subtitle);
   const [focus, setFocus] = useState(initialState.focus);
@@ -300,7 +304,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style, managerNam
   }
 
   function resetAutomatic(): void {
-    applyEditableState(createInitialState(formation, style, managerName));
+    applyEditableState(createInitialState(formation, style, managerName, brandTitle, brandSubtitle, defaultPalette, defaultFocus));
     setSelectedProjectId('');
     setProjectName(`${formation.name} • arte tática`);
     setMessage('Conteúdo, tema e linhas reconstruídos automaticamente pela formação e pelo estilo selecionados.');
@@ -367,7 +371,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style, managerNam
 
   useEffect(() => {
     if (!initialLoadRef.current) return;
-    applyEditableState(createInitialState(formation, style, managerName));
+    applyEditableState(createInitialState(formation, style, managerName, brandTitle, brandSubtitle, defaultPalette, defaultFocus));
     setProjectName(`${formation.name} • arte tática`);
     setSelectedProjectId('');
     setDraftStatus('rascunho novo');
@@ -548,7 +552,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style, managerNam
 
   function exportProjectJson(): void {
     const payload = {
-      app: 'BuildMaster Elite Tático',
+      app: 'Marques Fichas',
       schema: 2736,
       exportedAt: new Date().toISOString(),
       formationId: formation.id,
@@ -743,7 +747,7 @@ export function TacticalPosterStudioPanel({ formation, lineup, style, managerNam
               ['showPrinciples', 'Princípios e resumo'],
               ['showPlayerNames', 'Nomes dos jogadores'],
               ['showScores', 'Pontuação de encaixe'],
-              ['showFooter', 'Rodapé BuildMaster']
+              ['showFooter', 'Rodapé Marques Fichas']
             ] as Array<[keyof TacticalPosterDisplayOptions, string]>).map(([key, label]) => <label key={key}><input type="checkbox" checked={options[key]} onChange={(event) => updateOption(key, event.target.checked)}/><span>{label}</span></label>)}
           </div></details>
 

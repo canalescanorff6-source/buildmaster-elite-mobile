@@ -91,7 +91,7 @@ const agileCf = applyCompleteCardIntelligence(analyzeCard(agileCfText, 'COMPETIT
 
 for (const result of [cf, amf, tallCf, agileCf]) {
   assert.ok(result.unifiedIntelligence, 'A inteligência integrada v31 deve existir.');
-  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:(?:31\.10|31\.30|31\.82)-unified-intelligence-|(?:(?:32\.00|35\.00)-unified-calibrated-|35\.10-unified-max-gameplay-|35\.20-unified-dna-gameplay-))/);
+  assert.match(result.unifiedIntelligence?.engineVersion ?? '', /^(?:31\.10|31\.30)-unified-intelligence-/);
   assert.ok((result.unifiedIntelligence?.simulation.generatedCandidates ?? 0) >= 500);
   assert.ok((result.unifiedIntelligence?.simulation.validCandidates ?? 0) >= 10);
   assert.equal(result.recommendedSkills.length, 5);
@@ -104,8 +104,8 @@ for (const result of [cf, amf, tallCf, agileCf]) {
   assert.ok(result.unifiedIntelligence?.learning.abComparison);
   assert.ok(Array.isArray(result.unifiedIntelligence?.learning.testedPlans));
   assert.ok(result.trainingPointsUsed <= result.trainingPointsTotal);
-  assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3);
-  assert.match(result.buildName, /(?:Inteligência v31|Ficha Elite Suprema|Ficha v32|Ficha v35)/);
+  assert.equal(result.buildVariants.length, 1);
+  assert.match(result.buildName, /(?:Inteligência v31|Ficha Elite Suprema)/);
 }
 
 assert.notDeepEqual(cf.recommendedSkills, amf.recommendedSkills, 'Cartas de estilos e funções diferentes não podem receber a mesma lista genérica.');
@@ -113,7 +113,7 @@ assert.notDeepEqual(tallCf.recommendedSkills, agileCf.recommendedSkills, 'Até c
 assert.ok(tallCf.recommendedSkills.some((skill) => ['Cabeçada', 'Superioridade aérea', 'Finalização acrobática'].includes(skill)), 'O centroavante aéreo precisa receber ao menos uma habilidade sustentada pelo modelo corporal.');
 assert.ok(agileCf.recommendedSkills.some((skill) => ['Toque duplo', 'Controle com a sola', 'Giro 360°', 'Elástico', 'Corte com virada'].includes(skill)), 'O centroavante ágil precisa receber ao menos uma habilidade de controle corporal.');
 assert.ok(!tallCf.recommendedSkills.includes('Chapéu'), 'Uma habilidade de efeito não pode ocupar espaço de uma habilidade funcional no centroavante aéreo.');
-assert.ok(cf.recommendedSkills.some((skill) => ['Toque de calcanhar', 'Controle com a sola', 'Passe de primeira', 'Finalização acrobática', 'Efeito de longe', 'Chute ascendente', 'Chute com o peito do pé', 'Controle da cavadinha', 'Toque duplo'].includes(skill)));
+assert.ok(cf.recommendedSkills.some((skill) => ['Toque de calcanhar', 'Controle com a sola', 'Passe de primeira', 'Finalização acrobática', 'Efeito de longe'].includes(skill)));
 assert.ok(amf.recommendedSkills.some((skill) => ['Passe na medida', 'Toque de calcanhar', 'Passe sem olhar', 'Toque duplo', 'Curva para fora'].includes(skill)));
 
 const learningEngine = fs.readFileSync('src/lib/unifiedCardIntelligence.ts', 'utf8');

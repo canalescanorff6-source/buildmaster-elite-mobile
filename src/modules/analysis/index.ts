@@ -19,10 +19,7 @@ export {
   type PositionCode,
   type TacticalFormation,
   type TacticalProfile,
-  type TacticalStyle,
-  type GameplayMode,
-  type ConnectionProfile,
-  type ControlProfile
+  type TacticalStyle
 } from '@/lib/analyzerDomain';
 
-export { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES, OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from './analyzerCatalog';
+export { OFFICIAL_ADDITIONAL_SKILL_NAMES } from './analyzerCatalog';

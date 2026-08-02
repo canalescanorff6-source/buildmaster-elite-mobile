@@ -1,7 +1,7 @@
 import type { OcrZone } from '@/lib/ocr';
 import { canonicalEfhubOcrZones } from './efhubLayoutGeometry';
 
-export const EFHUB_PROFILE_VERSION = '32.00-visual-calibration-profile-1';
+export const EFHUB_PROFILE_VERSION = '31.75-efhub-profile-2';
 export const EFHUB_PROFILE_ID = 'efhub-complete-profile-v1';
 
 export const EFHUB_EXPECTED_COUNTS = {

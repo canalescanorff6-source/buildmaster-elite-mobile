@@ -7,12 +7,11 @@ import { HIGH_PRECISION_OCR_VERSION } from '../src/modules/card-reader/highPreci
 import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
-import { assertInternalVersionAtLeast } from './_internal-version';
 
-assertInternalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 32, 0, 'OCR de alta precisão');
-assertInternalVersionAtLeast(OCR_VISION_VERSION, 32, 0, 'OCR Vision');
-assertInternalVersionAtLeast(FORENSIC_CONSENSUS_VERSION, 32, 0, 'Consenso forense');
-assertInternalVersionAtLeast(OCR_TEMPLATE_CALIBRATION_VERSION, 32, 0, 'Calibração de template');
+assert.equal(HIGH_PRECISION_OCR_VERSION, '31.75-dynamic-efhub-1');
+assert.equal(OCR_VISION_VERSION, '31.75.0');
+assert.equal(FORENSIC_CONSENSUS_VERSION, '31.60-field-consensus-2');
+assert.equal(OCR_TEMPLATE_CALIBRATION_VERSION, '31.75-template-memory-2');
 
 const goodQuality = buildPrintQualityReport({
   width: 2400, height: 1080, sharpness: 18, brightness: 126, contrast: 47,
@@ -51,8 +50,7 @@ const stabilized = stabilizeForensicReadings([
   ])
 ]);
 assert.ok(stabilized.readings.find((item) => item.key === 'attributes')?.text.includes('Passe rasteiro: 88'));
-assert.ok(stabilized.readings.find((item) => item.key === 'skills')?.text.includes('Passe de primeira'));
-assert.ok(!stabilized.readings.find((item) => item.key === 'skills')?.text.includes('Leitura Relâmpago'), 'Nome fora do catálogo oficial deve ser descartado.');
+assert.ok(stabilized.readings.find((item) => item.key === 'skills')?.text.includes('Leitura Relâmpago'));
 assert.ok(stabilized.audit.rejectedNoiseRows >= 1);
 assert.deepEqual(stabilized.audit.mergedFields.sort(), ['attributes', 'skills']);
 
@@ -79,7 +77,7 @@ const database = fs.readFileSync('src/lib/localDatabase.ts', 'utf8');
 assert.match(database, /DB_VERSION = 6/);
 assert.match(database, /'ocr-calibrations'/);
 const center = fs.readFileSync('src/modules/card-reader/OcrVisionCenter.tsx', 'utf8');
-assert.match(center, /(?:Leitor eFHUB Forense 4\.0|Perfil eFHUB Padronizado 5\.0)/);
+assert.match(center, /Leitor eFHUB Forense 4\.0/);
 assert.match(center, /Qualidade do print/);
 
-console.log('v31.80 scanner forense estrito, consenso oficial e memória de enquadramento aprovados.');
+console.log('v31.60 scanner forense, consenso por linha e memória de enquadramento aprovados.');

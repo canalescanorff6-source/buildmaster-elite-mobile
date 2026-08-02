@@ -450,7 +450,7 @@ function buildProof(variants: BuildVariant[], maxPrecision: MaxPrecisionAnalysis
 
 function buildConfidence(parsed: ParsedCard, maxPrecision: MaxPrecisionAnalysis, proof: MotorProof): RecommendationConfidence {
   const physicalEvidence=(parsed.height?1:0)+(parsed.weight?1:0)+(parsed.dominantFoot?1:0);
-  const skillEvidence=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])]).size;
+  const skillEvidence=new Set([...(parsed.nativeSkills??[]),...(parsed.specialSkills??[])]).size;
   const score=clamp(parsed.confidence*.47 + Math.min(25,parsed.evidence.attributeCount*1.8) + Math.min(12,skillEvidence*2) + physicalEvidence*3 + Math.min(8,proof.winnerMargin));
   const evidence=[
     `${parsed.evidence.attributeCount} atributos identificados`,
@@ -511,12 +511,12 @@ export function buildEliteEvolutionAnalysis(args:{
     matchesPerBuild:3,
     metrics:['nota pessoal','passes errados','cansaço','duelos vencidos','ações decisivas','aproveitamento da habilidade especial'],
     successRule:'A ficha vence quando supera a outra em pelo menos 3 métricas e não cria uma fraqueza crítica repetida.',
-    safeguards:['usar a mesma posição','manter o mesmo estilo coletivo do técnico','jogar contra nível semelhante','não concluir com apenas uma partida']
+    safeguards:['usar a mesma posição','manter técnico e formação','jogar contra nível semelhante','não concluir com apenas uma partida']
   };
   const learning:CardLearningIdentity={
-    key:`${parsed.playerName}|${versionSignature}|${position}|${tacticalProfile.managerId??'sem-tecnico'}|${tacticalProfile.style}`,
+    key:`${parsed.playerName}|${versionSignature}|${position}|${tacticalProfile.managerId??'sem-tecnico'}|${tacticalProfile.formation}`,
     versionSignature,
-    separatedBy:['jogador','versão da carta','posição escolhida','técnico','estilo coletivo','ficha usada'],
+    separatedBy:['jogador','versão da carta','posição escolhida','técnico','formação','ficha usada'],
     correctionProposal:pointSensitivity[0]?.expectedDelta>0?pointSensitivity[0].verdict:'Nenhuma troca de ponto mostrou ganho seguro nesta análise.',
     confirmationRequired:true
   };

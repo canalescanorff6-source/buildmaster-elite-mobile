@@ -3,12 +3,6 @@ import {
   SKILL_PROFILES,
   SPECIAL_SKILL_NAMES
 } from '@/modules/analysis/analyzerCatalog';
-import {
-  isRemoteAdditionalSkillActiveV3770,
-  isRemoteSpecialSkillActiveV3770,
-  remoteSkillIdentityKeyV3770,
-  resolveRemoteSkillNameV3770
-} from '@/lib/remoteCatalogV3770';
 
 export type CanonicalSkillName = keyof typeof SKILL_PROFILES;
 
@@ -48,57 +42,7 @@ const EXTRA_ALIASES: Record<string, CanonicalSkillName> = {
   'penalty saver': 'Pegador de pênalti',
   'gk long throw': 'Arremesso longo do goleiro',
   'gk high punt': 'Reposição alta do goleiro',
-  'gk low punt': 'Reposição baixa do goleiro',
-  'reposicao baixa do go': 'Reposição baixa do goleiro',
-  'reposição baixa do go': 'Reposição baixa do goleiro',
-  'reposicao alta do go': 'Reposição alta do goleiro',
-  'reposição alta do go': 'Reposição alta do goleiro',
-  'arremesso longo do go': 'Arremesso longo do goleiro',
-  'pegador de penalti': 'Pegador de pênalti',
-  'gk penalty saver': 'Pegador de pênalti',
-
-  // Habilidades especiais/nativas atuais e variações usadas pelo eFHUB.
-  'aerial fort': 'Fortaleza aérea',
-  'forte aereo': 'Fortaleza aérea',
-  'acceleration burst': 'Drible explosivo',
-  'explosive dribbling': 'Drible explosivo',
-  'drible explosivos': 'Drible explosivo',
-  'explosao de aceleracao': 'Drible explosivo',
-  'attacking surge': 'Impulso ofensivo',
-  'attack surge': 'Impulso ofensivo',
-  'surto ofensivo': 'Impulso ofensivo',
-  'arrancada ofensiva': 'Impulso ofensivo',
-  'impulso de ataque': 'Impulso ofensivo',
-  'attack trigger': 'Desencadeador de ataques',
-  'gatilho de ataque': 'Desencadeador de ataques',
-  'blitz curler': 'Curva Blitz',
-  'bullet header': 'Cabeçada fulminante',
-  'edged crossing': 'Cruzamento cortante',
-  'fortress': 'Fortaleza',
-  'game changing pass': 'Passe decisivo',
-  'game-changing pass': 'Passe decisivo',
-  'gk directing defence': 'Comandante da defesa (GO)',
-  'gk directing defense': 'Comandante da defesa (GO)',
-  'comandante da defesa go': 'Comandante da defesa (GO)',
-  'gk spirit roar': 'Rugido do goleiro',
-  'long reach tackle': 'Esticada de Perna',
-  'esticada de pernas': 'Esticada de Perna',
-  'low screamer': 'Chute rasteiro fulminante',
-  'magnetic feet': 'Pés magnéticos',
-  'momentum dribbling': 'Drible de impulso',
-  'phenomenal finishing': 'Finalização fenomenal',
-  'phenomenal pass': 'Passe fenomenal',
-  'willpower': 'Garra',
-  'visionary pass': 'Passe visionário',
-  'shadow hunt': 'Sombra veloz',
-  'caca sombras': 'Sombra veloz',
-  'caça sombras': 'Sombra veloz',
-  'sombra veloz': 'Sombra veloz',
-
-  // Habilidade regular ausente no catálogo antigo.
-  'chop turn': 'Corte com virada',
-  'corte seco': 'Corte com virada',
-  'inside bounce': 'Finta de letra'
+  'gk low punt': 'Reposição baixa do goleiro'
 };
 
 export function normalizeSkillIdentity(value: string | null | undefined) {
@@ -191,101 +135,7 @@ export function skillAliasesFor(canonical: string) {
   return Array.from(new Set(aliases));
 }
 
-
-
-type SkillTextMatch = { canonical: CanonicalSkillName; start: number; end: number; confidence: number };
-
-function officialAliasEntries() {
-  const entries: Array<{ canonical: CanonicalSkillName; alias: string; normalized: string; tokens: number }> = [];
-  for (const canonical of canonicalNames) {
-    for (const alias of skillAliasesFor(canonical)) {
-      const normalized = normalizeSkillIdentity(alias);
-      if (!normalized || normalized.length < 4) continue;
-      entries.push({ canonical, alias, normalized, tokens: normalized.split(/\s+/).length });
-    }
-  }
-  return entries.sort((left, right) => right.normalized.length - left.normalized.length || right.tokens - left.tokens);
-}
-
-/**
- * Extrai somente nomes oficiais do texto OCR. Uma linha que contenha duas
- * cápsulas coladas (por exemplo, "Passe de primeira Passe em profundidade")
- * produz duas habilidades separadas. Fragmentos como "Ply" e "O IN A" nunca
- * são devolvidos como habilidades.
- */
-export function extractCanonicalSkillsFromText(value: string | null | undefined) {
-  const normalizedText = normalizeSkillIdentity(value);
-  if (!normalizedText) return [] as CanonicalSkillName[];
-  const padded = ` ${normalizedText} `;
-  const matches: SkillTextMatch[] = [];
-  const seenSpans = new Set<string>();
-
-  for (const entry of officialAliasEntries()) {
-    const needle = ` ${entry.normalized} `;
-    let cursor = 0;
-    while (cursor < padded.length) {
-      const index = padded.indexOf(needle, cursor);
-      if (index < 0) break;
-      const start = index + 1;
-      const end = start + entry.normalized.length;
-      const spanKey = `${start}:${end}:${entry.canonical}`;
-      if (!seenSpans.has(spanKey)) {
-        matches.push({ canonical: entry.canonical, start, end, confidence: 1 });
-        seenSpans.add(spanKey);
-      }
-      cursor = index + Math.max(1, needle.length - 1);
-    }
-  }
-
-  // Segunda passagem conservadora para erros pequenos do OCR. Só aceita
-  // aliases longos e janelas com número de palavras semelhante.
-  const tokens = normalizedText.split(/\s+/).filter(Boolean);
-  const offsets: number[] = [];
-  let running = 0;
-  for (const token of tokens) { offsets.push(running); running += token.length + 1; }
-  for (const entry of officialAliasEntries()) {
-    if (entry.normalized.length < 9) continue;
-    for (let size = Math.max(1, entry.tokens - 1); size <= entry.tokens + 1; size += 1) {
-      for (let index = 0; index + size <= tokens.length; index += 1) {
-        const window = tokens.slice(index, index + size).join(' ');
-        if (Math.abs(window.length - entry.normalized.length) > 4) continue;
-        const compactWindow = window.replace(/\s+/g, '');
-        const compactAlias = entry.normalized.replace(/\s+/g, '');
-        const distance = levenshtein(compactWindow, compactAlias);
-        const ratio = 1 - distance / Math.max(compactWindow.length, compactAlias.length);
-        const allowed = compactAlias.length >= 18 ? 3 : compactAlias.length >= 12 ? 2 : 1;
-        if (distance > allowed || ratio < 0.88) continue;
-        const start = offsets[index];
-        const end = start + window.length;
-        if (matches.some((item) => item.canonical === entry.canonical && Math.abs(item.start - start) <= 2)) continue;
-        matches.push({ canonical: entry.canonical, start, end, confidence: ratio });
-      }
-    }
-  }
-
-  const selected: SkillTextMatch[] = [];
-  for (const match of matches.sort((left, right) => left.start - right.start || right.confidence - left.confidence || (right.end - right.start) - (left.end - left.start))) {
-    const duplicate = selected.some((item) => item.canonical === match.canonical);
-    if (duplicate) continue;
-    selected.push(match);
-  }
-  return selected.sort((left, right) => left.start - right.start).map((item) => item.canonical);
-}
-
-export function isLikelySkillOcrNoise(value: string | null | undefined) {
-  const raw = String(value ?? '').trim();
-  const normalized = normalizeSkillIdentity(raw);
-  if (!normalized) return true;
-  const words = normalized.split(/\s+/).filter(Boolean);
-  const letters = (raw.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-  if (normalized.length < 5 || words.length > 8 || letters / Math.max(1, raw.length) < 0.68) return true;
-  if (/^(?:ply|o in a|in a|ina|go|gk|cf|ss|cb|dmf|cmf|amf|lwf|rwf|lb|rb)$/i.test(normalized)) return true;
-  return extractCanonicalSkillsFromText(raw).length === 0;
-}
-
 export function skillIdentityKey(value: string | null | undefined) {
-  const remoteKey = remoteSkillIdentityKeyV3770(value);
-  if (remoteKey) return remoteKey;
   const canonical = canonicalSkillName(value);
   return compactSkillIdentity(canonical ?? value);
 }
@@ -296,7 +146,7 @@ export function canonicalizeSkillList(skills: Array<string | null | undefined>) 
   for (const raw of skills) {
     const cleaned = String(raw ?? '').replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '').trim();
     if (!cleaned) continue;
-    const canonical = resolveRemoteSkillNameV3770(cleaned) ?? canonicalSkillName(cleaned) ?? cleaned;
+    const canonical = canonicalSkillName(cleaned) ?? cleaned;
     const key = skillIdentityKey(canonical);
     if (!key || seen.has(key)) continue;
     seen.add(key);
@@ -305,28 +155,27 @@ export function canonicalizeSkillList(skills: Array<string | null | undefined>) 
   return result;
 }
 
-export function buildOwnedSkillKeys(nativeSkills: string[] = [], specialSkills: string[] = [], additionalSkills: string[] = []) {
-  return new Set(canonicalizeSkillList([...nativeSkills, ...specialSkills, ...additionalSkills]).map(skillIdentityKey));
+export function buildOwnedSkillKeys(nativeSkills: string[] = [], specialSkills: string[] = []) {
+  return new Set(canonicalizeSkillList([...nativeSkills, ...specialSkills]).map(skillIdentityKey));
 }
 
-export function isSkillAlreadyOwned(skill: string, nativeSkills: string[] = [], specialSkills: string[] = [], additionalSkills: string[] = []) {
-  return buildOwnedSkillKeys(nativeSkills, specialSkills, additionalSkills).has(skillIdentityKey(skill));
+export function isSkillAlreadyOwned(skill: string, nativeSkills: string[] = [], specialSkills: string[] = []) {
+  return buildOwnedSkillKeys(nativeSkills, specialSkills).has(skillIdentityKey(skill));
 }
 
 export function filterComplementaryAdditionalSkills(
   candidates: string[],
   nativeSkills: string[] = [],
   specialSkills: string[] = [],
-  limit = 5,
-  additionalSkills: string[] = []
+  limit = 5
 ) {
   const official = new Set<string>(OFFICIAL_ADDITIONAL_SKILL_NAMES);
-  const owned = buildOwnedSkillKeys(nativeSkills, specialSkills, additionalSkills);
+  const owned = buildOwnedSkillKeys(nativeSkills, specialSkills);
   const result: string[] = [];
   const seen = new Set<string>();
   for (const raw of candidates) {
-    const canonical = resolveRemoteSkillNameV3770(raw) ?? canonicalSkillName(raw);
-    if (!canonical || !(official.has(canonical) || isRemoteAdditionalSkillActiveV3770(canonical))) continue;
+    const canonical = canonicalSkillName(raw);
+    if (!canonical || !official.has(canonical)) continue;
     const key = skillIdentityKey(canonical);
     if (owned.has(key) || seen.has(key)) continue;
     seen.add(key);
@@ -337,15 +186,11 @@ export function filterComplementaryAdditionalSkills(
 }
 
 export function isOfficialAdditionalSkillIdentity(skill: string) {
-  const remote = resolveRemoteSkillNameV3770(skill);
-  if (remote && isRemoteAdditionalSkillActiveV3770(remote)) return true;
   const canonical = canonicalSkillName(skill);
   return Boolean(canonical && OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(canonical as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]));
 }
 
 export function isSpecialSkillIdentity(skill: string) {
-  const remote = resolveRemoteSkillNameV3770(skill);
-  if (remote && isRemoteSpecialSkillActiveV3770(remote)) return true;
   const canonical = canonicalSkillName(skill);
   return Boolean(canonical && SPECIAL_SKILL_NAMES.includes(canonical));
 }

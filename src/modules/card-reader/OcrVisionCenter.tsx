@@ -23,7 +23,7 @@ export function OcrVisionCenter({ session, rawText }: OcrVisionCenterProps) {
     return (
       <section className="bm2930-ocr-center luxury-panel" aria-labelledby="bm2930-ocr-title">
         <div className="bm2930-panel-heading">
-          <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">Perfil eFHUB Padronizado 5.0</h3><span>Importe o perfil completo para normalizar a imagem e validar os dados sem caixas desalinhadas.</span></div>
+          <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">Leitor eFHUB Forense 4.0</h3><span>Importe um print para validar qualidade, enquadramento, campos e consenso por linha.</span></div>
           <strong className="state-idle">Aguardando print</strong>
         </div>
       </section>
@@ -33,7 +33,7 @@ export function OcrVisionCenter({ session, rawText }: OcrVisionCenterProps) {
   return (
     <section className="bm2930-ocr-center luxury-panel" aria-labelledby="bm2930-ocr-title">
       <div className="bm2930-panel-heading">
-        <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">Perfil eFHUB Padronizado 5.0</h3><span>Cópia interna 1400×1600, leitura das cápsulas e validação oficial antes da ficha.</span></div>
+        <div><p className="kicker"><ScanLine size={15} /> Bloco 17</p><h3 id="bm2930-ocr-title">Leitor eFHUB Forense 4.0</h3><span>Perfil eFHUB dedicado, portões 26/13/16, memória de enquadramento e validação oficial.</span></div>
         <strong className={`state-${audit.state}`}>{audit.score}/100 • {stateLabel[audit.state]}</strong>
       </div>
 

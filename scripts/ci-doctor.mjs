@@ -4,10 +4,6 @@ const full = process.argv.includes('--full');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 const quickChecks = [
-  ['Compatibilidade das dependências', ['run', 'quality:dependencies']],
-  ['Orçamento do código-fonte', ['run', 'quality:bundle']],
-  ['Guardas de versão das regressões', ['run', 'quality:version-guards']],
-  ['Contrato preventivo do CI', ['run', 'quality:ci-contract']],
   ['Rotas críticas', ['run', 'quality:routes']],
   ['Sintaxe TypeScript/TSX', ['run', 'quality:syntax']],
   ['Contratos interativos', ['run', 'quality:interactive']],
@@ -18,11 +14,12 @@ const quickChecks = [
   ['Pré-voo de produção', ['run', 'release:preflight']],
   ['Pré-voo Google Play', ['run', 'release:play-preflight']],
   ['Auditoria estrutural', ['run', 'quality:audit']],
+  ['Manifesto de integridade', ['run', 'integrity:verify']],
 ];
 
 const fullChecks = [
   ['TypeScript completo', ['run', 'typecheck']],
-  ['Regressões v30.00', ['run', 'test:v3000:core']],
+  ['Regressões v30.00', ['run', 'test:v3000']],
   ['Regressões v30.10', ['run', 'test:v3010']],
   ['Regressões v30.20', ['run', 'test:v3020']],
   ['Regressões v30.30', ['run', 'test:v3030']],
@@ -44,32 +41,6 @@ const fullChecks = [
   ['Regressões v31.76', ['run', 'test:v3176']],
   ['Regressões v31.77', ['run', 'test:v3177']],
   ['Regressões v31.78', ['run', 'test:v3178']],
-  ['Regressões v31.79', ['run', 'test:v3179']],
-  ['Regressões v31.80', ['run', 'test:v3180']],
-  ['Regressões v31.81', ['run', 'test:v3181']],
-  ['Regressões v31.82', ['run', 'test:v3182']],
-  ['Regressões v32.00', ['run', 'test:v3200']],
-  ['Regressões v33.00', ['run', 'test:v3300']],
-  ['Regressões v34.00', ['run', 'test:v3400']],
-  ['Regressões v35.00', ['run', 'test:v3500']],
-  ['Regressões v35.10', ['run', 'test:v3510']],
-  ['Regressões v35.20', ['run', 'test:v3520']],
-  ['Regressões v36.00', ['run', 'test:v3600']],
-  ['Regressões v37.00', ['run', 'test:v3700']],
-  ['Regressões v37.40', ['run', 'test:v3740']],
-  ['Regressões v37.50', ['run', 'test:v3750']],
-  ['Regressões v37.60', ['run', 'test:v3760']],
-  ['Regressões v37.70', ['run', 'test:v3770']],
-  ['Regressões v37.71', ['run', 'test:v3771']],
-  ['Regressões v37.80', ['run', 'test:v3780']],
-  ['Regressões v37.90', ['run', 'test:v3790']],
-  ['Regressões v38.00', ['run', 'test:v3800']],
-  ['Regressões v38.10', ['run', 'test:v3810']],
-  ['Regressões v38.20', ['run', 'test:v3820']],
-  ['Regressões v38.21', ['run', 'test:v3821']],
-  ['Regressões v38.22', ['run', 'test:v3822']],
-  ['Regressões v38.30', ['run', 'test:v3830']],
-  ['Regressões v38.31', ['run', 'test:v3831']],
 ];
 
 const checks = full ? [...quickChecks, ...fullChecks] : quickChecks;

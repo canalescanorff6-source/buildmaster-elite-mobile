@@ -1,1 +1,1 @@
-v38.31 — corrige regressões v31.40/v37.71 e preserva nome e habilidades inteligentes
+Implementa Estúdio de Formações premium e identidade Marques Fichas na v31.78

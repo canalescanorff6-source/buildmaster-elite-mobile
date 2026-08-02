@@ -20,8 +20,8 @@ export function BuildMasterAssistant({ open, onOpenChange, players, team }: { op
 
   return <>
     <button type="button" className={`v27-assistant-trigger ${open ? 'active' : ''}`} onClick={() => onOpenChange(!open)} aria-expanded={open}><Bot size={21}/><span>Assistente</span><ChevronDown size={16}/></button>
-    {open && <aside className="v27-assistant-panel luxury-panel" role="dialog" aria-label="Assistente BuildMaster">
-      <header><div><span><Sparkles size={17}/></span><div><strong>Assistente BuildMaster</strong><small>Respostas com os dados do seu app</small></div></div><button type="button" onClick={() => onOpenChange(false)} aria-label="Fechar assistente"><X size={18}/></button></header>
+    {open && <aside className="v27-assistant-panel luxury-panel" role="dialog" aria-label="Assistente Marques">
+      <header><div><span><Sparkles size={17}/></span><div><strong>Assistente Marques</strong><small>Análises com os dados do seu app</small></div></div><button type="button" onClick={() => onOpenChange(false)} aria-label="Fechar assistente"><X size={18}/></button></header>
       <div className="v27-assistant-feed">
         {!history.length && <div className="v27-assistant-message assistant"><Bot size={17}/><p>{suggestion}</p></div>}
         {history.map((item, index) => <div key={`${item.question}-${index}`} className="v27-assistant-exchange"><div className="v27-assistant-message user"><p>{item.question}</p></div><div className="v27-assistant-message assistant"><Bot size={17}/><p>{item.answer}</p></div></div>)}

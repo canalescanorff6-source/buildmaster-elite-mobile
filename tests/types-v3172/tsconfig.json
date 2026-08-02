@@ -1,21 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
+    "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "baseUrl": "../..",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ]
-    },
+    "paths": { "@/*": ["src/*"] },
     "types": [],
     "noUnusedLocals": true,
     "noUnusedParameters": true
@@ -26,6 +19,7 @@
     "../../src/lib/officialSkillIdentity.ts",
     "../../src/lib/skillIntelligenceV31.ts",
     "../../src/lib/skillIntegrity.ts",
+    "../../src/lib/cardIntelligencePipeline.ts",
     "../../src/modules/builds/dynamicRules.ts",
     "../../src/modules/card-reader/detailedPrintReader.ts"
   ]

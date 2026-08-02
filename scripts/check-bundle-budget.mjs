@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const built = process.argv.includes('--built');
-const limits = { totalJs: 15 * 1024 * 1024, singleJs: 5 * 1024 * 1024, sourceTs: 3.5 * 1024 * 1024 };
+const limits = { totalJs: 15 * 1024 * 1024, singleJs: 5 * 1024 * 1024, sourceTs: 3 * 1024 * 1024 };
 function walk(root, matcher) {
   if (!fs.existsSync(root)) return [];
   const files = [];
@@ -21,8 +21,6 @@ function bytes(files) { return files.reduce((sum, file) => sum + fs.statSync(fil
 
 const source = walk('src', (file) => /\.(?:ts|tsx)$/.test(file));
 const sourceBytes = bytes(source);
-const sourceUsage = sourceBytes / limits.sourceTs;
-if (sourceUsage >= 0.9 && sourceBytes <= limits.sourceTs) console.warn(`⚠ Código TypeScript usa ${(sourceUsage * 100).toFixed(1)}% do orçamento; planeje modularização antes de 100%.`);
 if (sourceBytes > limits.sourceTs) throw new Error(`Código TypeScript excedeu o orçamento de ${limits.sourceTs} bytes: ${sourceBytes}.`);
 
 if (built) {
@@ -35,5 +33,5 @@ if (built) {
   if (largest > limits.singleJs) throw new Error(`Um chunk JS excedeu ${limits.singleJs} bytes: ${largest}.`);
   console.log(`Bundle aprovado: ${scripts.length} chunks, ${total} bytes no total, maior chunk ${largest} bytes.`);
 } else {
-  console.log(`Orçamento de fonte aprovado: ${source.length} arquivos, ${sourceBytes} de ${limits.sourceTs} bytes (${(sourceUsage * 100).toFixed(1)}%).`);
+  console.log(`Orçamento de fonte aprovado: ${source.length} arquivos, ${sourceBytes} bytes TypeScript/TSX.`);
 }

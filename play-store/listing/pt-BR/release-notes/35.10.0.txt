@@ -1,1 +1,0 @@
-Ficha Máxima v35.10: compara a posição natural e a posição escolhida, distribui todos os pontos para resposta prática, protege contra overall artificial e mantém estabilidade entre partidas ranqueadas e outros modos. As habilidades adicionais oficiais e a ficha universal sem influência da formação foram preservadas.

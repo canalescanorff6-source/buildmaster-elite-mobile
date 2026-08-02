@@ -1,9 +1,7 @@
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { textSimilarity } from './highPrecisionOcr';
 import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAudit } from './efhubProfile';
-import { canonicalSkillName, extractCanonicalSkillsFromText, skillIdentityKey } from '@/lib/officialSkillIdentity';
-import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
-import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
+import { canonicalSkillName, skillAliasesFor, skillIdentityKey } from '@/lib/officialSkillIdentity';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -53,7 +51,7 @@ export type DetailedPrintReading = {
   profileAudit: EfhubProfileAudit;
 };
 
-const VERSION = '32.00-mega-calibration-profile-skills-impetos-1';
+const VERSION = '31.75-efhub-dynamic-detailed-1';
 
 function normalized(value: string) {
   return value
@@ -91,25 +89,6 @@ function sourceText(readings: PremiumZoneReading[], keys: Array<PremiumZoneReadi
     .sort((left, right) => right.confidence - left.confidence)
     .map((reading) => reading.text)
     .filter(Boolean)
-    .join('\n');
-}
-
-function cleanMultiline(value: string) {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.replace(/[\t ]+/g, ' ').trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
-function sourceTextWithRawPasses(readings: PremiumZoneReading[], keys: Array<PremiumZoneReading['key']>) {
-  return readings
-    .filter((reading) => keys.includes(reading.key))
-    .sort((left, right) => right.confidence - left.confidence)
-    .flatMap((reading) => [reading.text, ...(reading.rawPasses ?? []).map((pass) => pass.text)])
-    .map(cleanMultiline)
-    .filter(Boolean)
-    .filter((value, index, all) => all.indexOf(value) === index)
     .join('\n');
 }
 
@@ -259,11 +238,26 @@ const PHYSICAL_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'Altura com base no comprimento', patterns: [/altura\s+com\s+base\s+no\s+comprimento\S*\s*[:=-]?\s*(\d+(?:[,.]\d+)?)/i] }
 ];
 
-export const OFFICIAL_OCR_SKILLS = [...ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES]
-  .sort((left, right) => normalized(right).length - normalized(left).length);
+export const OFFICIAL_OCR_SKILLS = [
+  'Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada',
+  'Puxada de letra', 'Finta de letra', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
+  'Controle da cavadinha', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente',
+  'Precisão à distância', 'Finalização acrobática', 'Toque de calcanhar', 'Chute de primeira',
+  'Passe de primeira', 'Passe em profundidade', 'Passe na medida', 'Cruzamento preciso',
+  'Curva para fora', 'De letra', 'Passe sem olhar', 'Passe aéreo baixo', 'Arremesso lateral longo',
+  'Especialista em pênalti', 'Malícia', 'Marcação individual', 'Volta para marcar', 'Interceptação',
+  'Bloqueador', 'Superioridade aérea', 'Carrinho', 'Afastamento acrobático', 'Liderança',
+  'Super substituto', 'Espírito guerreiro', 'Pegador de pênalti', 'Arremesso longo do goleiro',
+  'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Garra', 'Esticada de Perna', 'Sombra veloz'
+] as const;
 
+const SKILLS = OFFICIAL_OCR_SKILLS;
 
-const IMPETO_NAMES = RECOGNIZABLE_IMPETO_NAMES;
+const IMPETO_NAMES = [
+  'Chute', 'Cobrança de falta', 'Disputa aérea', 'Passe', 'Condução de bola', 'Técnica', 'Defesa',
+  'Duelo', 'Agilidade', 'Fisicalidade', 'Goleiro', 'Instinto artilheiro', 'Precisão', 'Força',
+  'Movimento sem a bola', 'Esticada de Perna', 'Sombra veloz'
+] as const;
 
 function parseNumericCatalog(text: string, catalog: Array<{ label: string; patterns: RegExp[] }>, confidence: number, source: string, min: number, max: number) {
   const values: DetailedValue[] = [];
@@ -317,48 +311,26 @@ function parsePositionRatings(text: string, confidence: number, source: string) 
   return Array.from(found.entries()).map(([code, item]) => makeValue(code, String(item.value), item.confidence, source, item.value));
 }
 
-function compactCatalogText(value: string) {
-  return normalized(value).replace(/[^a-z0-9]+/g, '');
+function fuzzyContainsCatalogItem(text: string, item: string, aliases: string[]) {
+  const norm = normalized(text);
+  if ([item, ...aliases].some((candidate) => norm.includes(normalized(candidate)))) return true;
+  const lines = text.split(/\r?\n/).map(clean).filter(Boolean);
+  return lines.some((line) => [item, ...aliases].some((candidate) => textSimilarity(line, candidate) >= 0.82));
 }
 
-function tokenWindows(value: string, minimum: number, maximum: number) {
-  const tokens = normalized(value).replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
-  const windows: string[] = [];
-  for (let size = Math.max(1, minimum); size <= Math.min(maximum, tokens.length); size += 1) {
-    for (let index = 0; index + size <= tokens.length; index += 1) {
-      windows.push(tokens.slice(index, index + size).join(' '));
-    }
-  }
-  return windows;
-}
+const SKILL_LINE_BLOCKLIST = [
+  'habilidades', 'skills', 'detalhes do jogador', 'atributos', 'posicoes', 'posições', 'modelo de jogador',
+  'talento ofensivo', 'talento defensivo', 'velocidade', 'aceleracao', 'aceleração', 'finalizacao', 'finalização',
+  'passe rasteiro', 'passe alto', 'controle de bola', 'nivel', 'nível', 'overall', 'ger', 'tecnico', 'técnico',
+  'condicao fisica', 'condição física', 'resistencia', 'resistência', 'altura', 'peso', 'idade'
+];
 
-/**
- * Reconhece uma habilidade mesmo quando o Tesseract junta várias cápsulas na
- * mesma linha. Primeiro tenta inclusão exata/compacta; depois compara janelas
- * locais com tamanho semelhante ao nome esperado.
- */
-export function fuzzyContainsCatalogItem(text: string, item: string, aliases: string[]) {
-  const sourceNormalized = normalized(text);
-  const sourceCompact = compactCatalogText(text);
-  const candidates = Array.from(new Set([item, ...aliases].map(clean).filter(Boolean)));
-  for (const candidate of candidates) {
-    const candidateNormalized = normalized(candidate);
-    const candidateCompact = compactCatalogText(candidate);
-    if (!candidateNormalized || candidateCompact.length < 3) continue;
-    if (sourceNormalized.includes(candidateNormalized) || sourceCompact.includes(candidateCompact)) return true;
-  }
-
-  const lines = text.split(/\r?\n|[|•;]+/).map(clean).filter(Boolean);
-  for (const candidate of candidates) {
-    const words = normalized(candidate).split(/\s+/).filter(Boolean).length;
-    const threshold = compactCatalogText(candidate).length >= 18 ? 0.73 : compactCatalogText(candidate).length >= 10 ? 0.77 : 0.81;
-    for (const line of lines) {
-      if (textSimilarity(line, candidate) >= threshold) return true;
-      const windows = tokenWindows(line, Math.max(1, words - 1), words + 1);
-      if (windows.some((window) => textSimilarity(window, candidate) >= threshold)) return true;
-    }
-  }
-  return false;
+function cleanSkillLineCandidate(value: string) {
+  return clean(value)
+    .replace(/^(?:habilidade|skill)\s*[:=.-]?\s*/i, '')
+    .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9°º.' -]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function isolateSkillListText(text: string) {
@@ -376,23 +348,48 @@ function isolateSkillListText(text: string) {
   return selected.join('\n');
 }
 
+function extractUnknownSkillCandidates(text: string, knownCatalog: string[], confidence: number, source: string) {
+  const known = knownCatalog.map((item) => normalized(item));
+  const rawItems = text
+    .split(/\r?\n|[•|;,]/)
+    .map(cleanSkillLineCandidate)
+    .filter(Boolean);
+  const candidates: DetailedValue[] = [];
+  for (const line of rawItems) {
+    const norm = normalized(line);
+    const words = line.split(/\s+/).filter(Boolean);
+    const letters = (line.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+    if (line.length < 3 || line.length > 46 || words.length > 7 || /\d{2,}/.test(line)) continue;
+    if (letters / Math.max(1, line.length) < 0.66) continue;
+    if (SKILL_LINE_BLOCKLIST.some((blocked) => norm === normalized(blocked) || norm.startsWith(`${normalized(blocked)} `))) continue;
+    if (/^(?:CF|SS|LWF|RWF|AMF|CMF|DMF|CB|LB|RB|GK|CA|SA|PE|PD|MAT|MLG|VOL|ZAG|LE|LD|GOL)$/i.test(line)) continue;
+    const nearest = knownCatalog.map((item) => ({ item, similarity: textSimilarity(line, item) })).sort((a, b) => b.similarity - a.similarity)[0];
+    if (nearest && nearest.similarity >= 0.79) continue;
+    if (known.includes(norm)) continue;
+    const value = line.charAt(0).toUpperCase() + line.slice(1);
+    if (candidates.some((item) => textSimilarity(item.value, value) >= 0.90)) continue;
+    candidates.push({ ...makeValue('Habilidade nova para confirmar', value, Math.max(52, confidence - 12), `${source} • fora do catálogo local`), status: 'review' as const });
+  }
+  return candidates.slice(0, 12);
+}
+
 function parseSkills(text: string, confidence: number, source: string, learnedSkillNames: string[] = []) {
   const skillListText = isolateSkillListText(text);
-  const strict = extractCanonicalSkillsFromText(skillListText);
-  const strictKeys = new Set(strict.map(skillIdentityKey));
+  const official = SKILLS
+    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, skillAliasesFor(skill)))
+    .map((skill) => makeValue('Habilidade', canonicalSkillName(skill) ?? skill, confidence, source));
+  const officialKeys = new Set(official.map((item) => skillIdentityKey(item.value)));
   const learned = learnedSkillNames
-    .map((skill) => canonicalSkillName(skill))
-    .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill))
-    .filter((skill) => strictKeys.has(skillIdentityKey(skill)));
-  const canonical = [...strict, ...learned].filter((skill, index, array) =>
-    array.findIndex((item) => skillIdentityKey(item) === skillIdentityKey(skill)) === index
-  );
+    .map((skill) => canonicalSkillName(skill) ?? skill)
+    .filter((skill) => !officialKeys.has(skillIdentityKey(skill)))
+    .filter((skill) => fuzzyContainsCatalogItem(skillListText, skill, skillAliasesFor(skill)))
+    .filter((skill, index, array) => array.findIndex((item) => skillIdentityKey(item) === skillIdentityKey(skill)) === index)
+    .map((skill) => makeValue('Habilidade aprendida', skill, Math.max(65, confidence - 3), `${source} • catálogo aprendido`));
+  const aliasCatalog = SKILLS.flatMap((skill) => skillAliasesFor(skill));
+  const catalog = [...SKILLS, ...aliasCatalog, ...learnedSkillNames];
   return {
-    skills: canonical.map((skill) => makeValue('Habilidade', skill, confidence, `${source} • catálogo oficial estrito`)),
-    // A v31.80 nunca transforma lixo bruto do OCR em habilidade. Caso o texto
-    // não corresponda ao catálogo, ele fica apenas nos diagnósticos internos e
-    // a etapa Habilidades permanece incompleta para revisão visual.
-    candidates: [] as DetailedValue[]
+    skills: [...official, ...learned].filter((item, index, array) => array.findIndex((other) => skillIdentityKey(other.value) === skillIdentityKey(item.value)) === index),
+    candidates: extractUnknownSkillCandidates(skillListText, catalog, confidence, source)
   };
 }
 
@@ -522,7 +519,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const attributeSource = [sourceText(readings, ['attributes']), fullText].filter(Boolean).join('\n');
   const positionSource = [sourceText(readings, ['positionGrid']), fullText].filter(Boolean).join('\n');
   const physicalSource = [sourceText(readings, ['physicalModel', 'progression']), fullText].filter(Boolean).join('\n');
-  const skillZoneText = sourceTextWithRawPasses(readings, ['skills']);
+  const skillZoneText = sourceText(readings, ['skills']);
   const skillSource = skillZoneText || fullText;
   const conditionSource = [sourceText(readings, ['condition', 'manager']), fullText].filter(Boolean).join('\n');
   const impetoSource = [sourceText(readings, ['impetos', 'autoTraining']), fullText].filter(Boolean).join('\n');
@@ -648,7 +645,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   )));
   const score = efhubDetected ? Math.round(baseScore * 0.55 + profileAudit.score * 0.45) : baseScore;
 
-  const canonical: string[] = ['[LEITURA DETALHADA V32.00]'];
+  const canonical: string[] = ['[LEITURA DETALHADA V31.75]'];
   if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
@@ -667,7 +664,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
   if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
-  canonical.push('[FIM LEITURA DETALHADA V32.00]');
+  canonical.push('[FIM LEITURA DETALHADA V31.75]');
 
   const warnings: string[] = [];
   if (detectedName && !name) warnings.push(`O OCR encontrou um possível nome, mas somente ${nameAgreement} passagem(ns) independente(s) concordaram. O valor foi bloqueado para evitar identificar o jogador errado.`);
@@ -677,7 +674,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (weightCandidate && !weightRaw) warnings.push(`Peso descartado por estar fora da faixa plausível: ${weightCandidate} kg.`);
   if (ageCandidate && !ageRaw) warnings.push(`Idade descartada por estar fora da faixa plausível: ${ageCandidate}.`);
   if (levelCandidate && !levelRaw) warnings.push(`Nível descartado por estar fora da faixa plausível: ${levelCandidate}.`);
-  if (!skills.length && skillSource.trim()) warnings.push('O OCR encontrou texto na área de habilidades, mas nenhum nome oficial pôde ser confirmado. O texto bruto foi descartado para não criar habilidades falsas.');
+  if (skillCandidates.length) warnings.push(`${skillCandidates.length} habilidade(s) fora do catálogo local foram preservadas para confirmação; nenhuma foi descartada silenciosamente.`);
   const highestPosition = Math.max(0, ...positionRatings.map((item) => item.numericValue ?? 0));
   if (identity.overall?.numericValue && highestPosition && Math.abs(identity.overall.numericValue - highestPosition) > 12) {
     identity.overall.status = 'review';
@@ -686,6 +683,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (progressionSequence.some((item) => item.status === 'review')) warnings.push('A sequência de progressão foi lida pela ordem visual dos ícones e precisa de confirmação antes de virar orçamento da ficha.');
   if (attributes.length >= 20) warnings.push('Tabela de atributos com cobertura alta: o motor pode reduzir o uso de estimativas por posição.');
   if (physicalModel.length >= 8) warnings.push('Modelo físico detectado e incorporado à leitura de alcance, salto e contato.');
+  if (skills.some((item) => item.value === 'Garra')) warnings.push('“Garra” foi lida como texto exibido no print; confirme se pertence à lista oficial da versão atual do jogo.');
 
   return {
     version: VERSION,

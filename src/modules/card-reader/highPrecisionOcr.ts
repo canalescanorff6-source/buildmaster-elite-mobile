@@ -3,9 +3,8 @@ import type { PremiumEnhancementMode, PremiumZoneReading } from '@/lib/premiumRe
 import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManager';
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
-import { extractCanonicalSkillsFromText } from '@/lib/officialSkillIdentity';
 
-export const HIGH_PRECISION_OCR_VERSION = '32.00-visual-calibration-strict-skills-1';
+export const HIGH_PRECISION_OCR_VERSION = '31.75-dynamic-efhub-1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;
@@ -190,11 +189,6 @@ function repairByZone(text: string, key: OcrZoneKey, knownNames: string[]) {
     const lexicon = nearestKnownName(best, knownNames);
     return lexicon ? lexicon.name : best;
   }
-  if (key === 'skills') {
-    // O texto bruto nunca chega ao resultado como nome de habilidade. A
-    // extração separa duas cápsulas coladas e devolve somente nomes oficiais.
-    return extractCanonicalSkillsFromText(normalized).join('\n');
-  }
   return normalized
     .replace(/Talen[tl]o\s+ofens[ií]vo/gi, 'Talento ofensivo')
     .replace(/Talen[tl]o\s+defens[ií]vo/gi, 'Talento defensivo')
@@ -235,8 +229,8 @@ function structureScore(key: OcrZoneKey, text: string) {
     return Math.min(24, numericRows * 2.2);
   }
   if (key === 'skills') {
-    const official = extractCanonicalSkillsFromText(clean);
-    return official.length ? Math.min(28, 10 + official.length * 6) : -26;
+    const lines = clean.split(/\r?\n/).filter(Boolean).length;
+    return Math.min(18, lines * 1.8 + clean.length / 70);
   }
   return Math.min(14, clean.length / 25);
 }
@@ -282,15 +276,12 @@ function passPlan(key: OcrZoneKey, mode: 'balanced' | 'precision' | 'fast'): Pre
     { enhancement: 'binary', kind: 'table' },
     { enhancement: 'contrast', kind: 'tableSparse', expanded: true }
   ];
-  if (key === 'skills') return [
-    { enhancement: 'color', kind: 'skills' },
-    { enhancement: 'contrast', kind: 'skills' },
-    { enhancement: 'sharp', kind: 'skills' }
-  ];
-  if (key === 'impetos') return [
-    { enhancement: 'color', kind: 'style' },
-    { enhancement: 'contrast', kind: 'style' },
-    { enhancement: 'sharp', kind: 'style' }
+  if (key === 'skills' || key === 'impetos') return [
+    { enhancement: 'color', kind: key === 'skills' ? 'skills' : 'style' },
+    { enhancement: 'contrast', kind: key === 'skills' ? 'skills' : 'style' },
+    { enhancement: 'sharp', kind: key === 'skills' ? 'skills' : 'style' },
+    { enhancement: 'binary', kind: key === 'skills' ? 'skills' : 'style' },
+    ...(key === 'skills' ? [{ enhancement: 'contrast' as const, kind: 'skillsSparse' as const, expanded: true }] : [])
   ];
   return [
     { enhancement: 'color', kind: key === 'playstyle' ? 'style' : 'general' },
@@ -347,7 +338,6 @@ export async function recognizeZoneWithHighPrecision(
   const knownNames = Array.from(new Set((options.knownPlayerNames ?? []).map((name) => name.trim()).filter(Boolean)));
   const plans = passPlan(zone.key, options.readingMode);
   const variants = adaptiveZoneVariants(zone, options.readingMode);
-  const zoneSignature = `${zone.key}:${zone.label}:${zone.x.toFixed(5)}:${zone.y.toFixed(5)}:${zone.w.toFixed(5)}:${zone.h.toFixed(5)}`;
   const originPreview = await createZoneOriginPreview(file, zone).catch(() => null);
   const scoredPasses: ScoredPass[] = [];
   const tasks = variants.flatMap((variant, variantIndex) => {
@@ -362,12 +352,11 @@ export async function recognizeZoneWithHighPrecision(
   for (let index = 0; index < tasks.length; index += 1) {
     const { variant, plan } = tasks[index];
     const baseRegion = plan.expanded ? expandOcrRegion(variant.zone, zone.key === 'name' ? 0.06 : 0.025, zone.key === 'name' ? 0.025 : 0.015) : variant.zone;
-    const effectiveTargetWidth = zone.key === 'skills' ? Math.max(options.targetWidth, 2200) : options.targetWidth;
-    const image = await cropImage(file, baseRegion, effectiveTargetWidth, plan.enhancement);
+    const image = await cropImage(file, baseRegion, options.targetWidth, plan.enhancement);
     const recognition = await recognizeWithOcrWorker(image, {
       label: `${options.labelPrefix ? `${options.labelPrefix} • ` : ''}${zone.label} • ${variant.label} • ${plan.enhancement} ${index + 1}/${tasks.length}`,
       kind: plan.kind,
-      cacheKey: `${HIGH_PRECISION_OCR_VERSION}:${options.imageHash}:${options.template}:${zoneSignature}:${variant.id}:${plan.enhancement}:${plan.kind}:${plan.expanded ? 'expanded' : 'exact'}`
+      cacheKey: `${options.imageHash}:${options.template}:${zone.key}:${variant.id}:${plan.enhancement}:${plan.kind}:${plan.expanded ? 'expanded' : 'exact'}`
     });
     const repaired = repairByZone(recognition.text, zone.key, knownNames);
     const nameCandidate = zone.key === 'name' ? nameLineCandidates(repaired)[0] : undefined;
@@ -423,7 +412,7 @@ export async function recognizeZoneWithHighPrecision(
   if (disagreement) notes.push('Foram detectadas leituras divergentes; o app escolheu o grupo com maior consenso e preservou as alternativas.');
 
   return {
-    id: `${options.imageHash}-${zoneSignature.replace(/[^a-z0-9]+/gi, '-')}-precision`,
+    id: `${options.imageHash}-${zone.key}-precision`,
     sourceId: options.imageHash,
     sourceLabel: options.labelPrefix || 'Print único',
     screenType: options.template,

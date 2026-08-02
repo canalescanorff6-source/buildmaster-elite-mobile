@@ -8,10 +8,9 @@ import { buildSinglePrintSession } from '../src/modules/card-reader/singlePrintP
 import { OCR_VISION_VERSION } from '../src/modules/card-reader/ocrVisionEngine';
 import type { OcrZone } from '../src/lib/ocr';
 import type { PremiumZoneReading } from '../src/lib/premiumReading';
-import { assertInternalVersionAtLeast } from './_internal-version';
 
-assertInternalVersionAtLeast(HIGH_PRECISION_OCR_VERSION, 32, 0, 'OCR de alta precisão');
-assertInternalVersionAtLeast(OCR_VISION_VERSION, 32, 0, 'OCR Vision');
+assert.equal(HIGH_PRECISION_OCR_VERSION, '31.75-dynamic-efhub-1');
+assert.equal(OCR_VISION_VERSION, '31.75.0');
 
 const nameZone: OcrZone = { key: 'name', label: 'Nome', x: 0.05, y: 0.03, w: 0.32, h: 0.06, enabled: true };
 const nameVariants = adaptiveZoneVariants(nameZone, 'precision');
@@ -45,19 +44,19 @@ const trustedByCatalog = readDetailedPrint('', reviewNameReadings.map((item) => 
 assert.equal(trustedByCatalog.identity.playerName?.value, 'Kylian Mbappé');
 
 const newSkillReading = readDetailedPrint('', reviewNameReadings, [], []);
-assert.equal(newSkillReading.skillCandidates.length, 0);
-assert.ok(!newSkillReading.canonicalText.includes('Leitura Relâmpago'));
+assert.ok(newSkillReading.skillCandidates.some((item) => item.value === 'Leitura Relâmpago'));
+assert.match(newSkillReading.canonicalText, /HABILIDADES NOVAS PARA CONFIRMAÇÃO: Leitura Relâmpago/);
 
 const learnedSkillReading = readDetailedPrint('', reviewNameReadings, [], ['Leitura Relâmpago']);
-assert.ok(!learnedSkillReading.skills.some((item) => item.value === 'Leitura Relâmpago'));
-assert.equal(learnedSkillReading.skillCandidates.length, 0);
+assert.ok(learnedSkillReading.skills.some((item) => item.value === 'Leitura Relâmpago'));
+assert.ok(!learnedSkillReading.skillCandidates.some((item) => item.value === 'Leitura Relâmpago'));
 
 const session = buildSinglePrintSession({
   imageHash: 'v3140-test', template: 'detailed-profile', width: 1600, height: 900,
   readings: reviewNameReadings, fullText: '', learnedSkillNames: []
 });
 assert.ok(session.blockingFields.some((field) => field.includes('Nome')));
-assert.equal(session.detailedReading.skillCandidates.length, 0);
+assert.ok(session.detailedReading.skillCandidates.some((item) => item.value === 'Leitura Relâmpago'));
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.match(app, /loadLearnedOcrTerms\('playerName'/);
@@ -74,7 +73,7 @@ const crop = fs.readFileSync('src/modules/card-reader/cardArtCrop.ts', 'utf8');
 assert.match(crop, /squareOutput: true/);
 assert.match(crop, /expandBorder: false/);
 const evidence = fs.readFileSync('src/components/SinglePrintEvidencePanel.tsx', 'utf8');
-assert.match(evidence, /Habilidades do jogador/);
-assert.match(evidence, /catálogo oficial validado/);
+assert.match(evidence, /Novas para confirmar/);
+assert.match(evidence, /entram no catálogo local desta conta/);
 
-console.log('v31.81 OCR rígido adaptativo, recorte quadrado e catálogo oficial estrito aprovados.');
+console.log('v31.60 OCR rígido adaptativo, recorte quadrado e catálogo evolutivo aprovados.');

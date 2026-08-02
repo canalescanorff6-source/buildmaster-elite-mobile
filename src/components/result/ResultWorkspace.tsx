@@ -20,18 +20,17 @@ import {
   Sparkles,
   Target,
   ThumbsUp,
-  Trophy
+  Trophy,
+  UploadCloud
 } from 'lucide-react';
 import {
   ATTRIBUTE_INPUTS,
   ATTRIBUTE_PT,
   OFFICIAL_ADDITIONAL_SKILL_NAMES,
-  SPECIAL_SKILL_NAMES,
   PLAYSTYLE_OPTIONS,
   POSITION_LABELS,
   type AnalysisResult,
   type AttributeKey,
-  type GameplayDnaProfileId,
   type PositionCode,
   type TacticalStyle
 } from '@/lib/analyzer';
@@ -57,7 +56,6 @@ import {
   getOneHundredUpgradeChecklist
 } from '@/lib/ultimateCoach';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
-import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
@@ -79,13 +77,6 @@ import type { TotalReadingSession } from '@/lib/totalCardReader';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
-import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';
-import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
-import { PremiumCleanResultV3810 } from '@/components/PremiumCleanResultV3810';
-import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
-import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
-import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
-import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -94,7 +85,6 @@ import {
   MatchValidationCenter,
   MetaBuildLabPanel,
   PrecisionBuildPanel,
-  ProfessionalIntelligenceCenter,
   SinglePrintEvidencePanel,
   SkillAndTrainingPanel,
   VerifiedCardRegistryPanel,
@@ -145,13 +135,12 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
   PASSE_LONGO: 'Passe longo'
 };
 
-export type ResultTab = 'motor' | 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
+export type ResultTab = 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 
-export type ResultPrimaryView = 'resumo' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
+export type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
   { id: 'resumo', label: 'Ficha final', hint: 'Recomendação única' },
-  { id: 'profissional', label: 'Análise Pro', hint: 'Partidas, perfis e posições' },
   { id: 'ficha', label: 'Ficha', hint: 'Distribuição de pontos' },
   { id: 'habilidades', label: 'Habilidades', hint: 'Top 5 oficial' },
   { id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' },
@@ -161,8 +150,8 @@ const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: s
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
-  { label: 'Desenvolvimento', tabs: [{ value: 'motor', label: 'Motor v37.50' }, { value: 'partidas', label: 'Validação v37.60' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Atualização v37.70' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
+  { label: 'Desenvolvimento', tabs: [{ value: 'partidas', label: 'Validação real' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
+  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
 ];
 
 function skillReason(skill: string) {
@@ -205,7 +194,7 @@ function copyBuildText(result: AnalysisResult) {
     .join('\n');
 
   const text = [
-    `BuildMaster Elite Tático v${APP_RELEASE_VERSION} — ${result.parsed.playerName}`,
+    `Marques Fichas v${APP_RELEASE_VERSION} — ${result.parsed.playerName}`,
     `Função: ${result.buildName}`,
     `Posição escolhida: ${result.bestPosition.label}`,
     `PRI: ${result.pri.GER}`,
@@ -359,7 +348,7 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onReplaceOwnedSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onReplaceOwnedSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: () => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const communityEnabled = useObservabilityFeatureFlag('community');
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -381,7 +370,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const pointPercent = Math.min(100, Math.round((result.trainingPointsUsed / Math.max(1, result.trainingPointsTotal)) * 100));
   const positionItems = result.positionScores.slice(0, 8);
   const cardPositions = Array.from(new Set([card.mainPosition, ...card.positions])).slice(0, 10);
-  const nativeSkills = canonicalizeSkillList([...card.nativeSkills, ...(card.additionalSkills ?? []), ...card.specialSkills]).slice(0, 12);
+  const nativeSkills = canonicalizeSkillList([...card.nativeSkills, ...card.specialSkills]).slice(0, 12);
   const skillRecommendations = result.skillRecommendations ?? result.recommendedSkills.map((skill) => ({ name: skill, tier: 'alternativa' as const, reason: skillReason(skill) }));
   const recommendedSkills = result.recommendedSkills.slice(0, 5);
   const avoidSkillItems = skillRecommendations.filter((item) => item.tier === 'evitar').slice(0, 5);
@@ -421,9 +410,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const pointsAvailable = Math.max(0, result.trainingPointsTotal - result.trainingPointsUsed);
   const advancedTabs = RESULT_ADVANCED_GROUPS.flatMap((group) => group.tabs.map((item) => item.value));
   const advancedSelected = advancedTabs.includes(tab);
-  const visiblePrimaryTabs = advancedMode
-    ? RESULT_PRIMARY_TABS
-    : RESULT_PRIMARY_TABS.filter((item) => CLEAN_RESULT_PRIMARY_VIEWS.includes(item.id as typeof CLEAN_RESULT_PRIMARY_VIEWS[number]));
+  const visiblePrimaryTabs = advancedMode ? RESULT_PRIMARY_TABS : RESULT_PRIMARY_TABS.filter((item) => item.id !== 'ficha');
 
   function openPrimaryResult(view: ResultPrimaryView) {
     setAdvancedOpen(false);
@@ -445,7 +432,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
     ].join('\n');
     try {
       if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-        await navigator.share({ title: `Ficha BuildMaster • ${card.playerName}`, text });
+        await navigator.share({ title: `Ficha Marques • ${card.playerName}`, text });
         setShareMessage('Ficha enviada para o compartilhamento do aparelho.');
       } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
@@ -469,7 +456,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           {playerImage ? <img src={playerImage} alt={`Carta recortada de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
           {!playerImage && <div className="result-player-art-overlay" />}
           {!playerImage && <div className="result-player-rating"><strong>{GER}</strong><span>{card.mainPositionPt}</span></div>}
-          {!playerImage && <figcaption>{card.playstyle ?? 'BuildMaster Elite'}</figcaption>}
+          {!playerImage && <figcaption>{card.playstyle ?? 'Marques Fichas Pro'}</figcaption>}
         </figure>
 
         <div className="result-player-summary">
@@ -491,8 +478,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           <div className="result-key-metrics">
             <article><span>Pontos usados</span><strong>{result.trainingPointsUsed}</strong><small>de {result.trainingPointsTotal}</small></article>
             <article><span>Disponíveis</span><strong>{pointsAvailable}</strong><small>pontos restantes</small></article>
-            {advancedMode && <article><span>Confiança</span><strong>{card.confidence}%</strong><small>{result.validation?.level === 'blocked' ? 'revisão necessária' : 'análise liberada'}</small></article>}
-            {advancedMode && <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>}
+            <article><span>Confiança</span><strong>{card.confidence}%</strong><small>{result.validation?.level === 'blocked' ? 'revisão necessária' : 'análise liberada'}</small></article>
+            <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>
           </div>
 
           <div className="result-budget-line">
@@ -501,7 +488,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           </div>
 
           <div className="result-hero-actions">
-            <button className="result-action-primary" type="button" onClick={onSaveFicha} disabled={!result.validation.canGenerate} title={!result.validation.canGenerate ? 'Confirme os campos estruturais bloqueados antes de salvar.' : undefined}><Save size={17} /> {result.validation.canGenerate ? 'Salvar ficha' : 'Ficha bloqueada'}</button>
+            <button className="result-action-primary" type="button" onClick={onSaveFicha}><Save size={17} /> Salvar ficha</button>
             <button type="button" onClick={onRecalculate}><RotateCcw size={17} /> Recalcular</button>
             <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
           </div>
@@ -520,7 +507,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
                 <div><span>Origem dos pontos</span><strong>{sourceLabel}</strong></div>
                 <div><span>Habilidades oficiais</span><strong>{recommendedSkills.length}/5</strong></div>
               </div>
-              <p className="identity-note">A posição escolhida continua soberana. O BuildMaster preserva a identidade original da carta e apenas explica o melhor aproveitamento.</p>
+              <p className="identity-note">A posição escolhida continua soberana. O Marques Fichas preserva a identidade original da carta e apenas explica o melhor aproveitamento.</p>
             </div>
           )}
         </div>
@@ -540,7 +527,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
         <nav className="result-primary-tabs" aria-label="Áreas principais do resultado">
           {visiblePrimaryTabs.map((item) => {
-            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'profissional' ? BrainCircuit : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'impetos' ? BrainCircuit : item.id === 'tatica' ? Target : Download;
+            const Icon = item.id === 'resumo' ? LayoutDashboard : item.id === 'ficha' ? Trophy : item.id === 'habilidades' ? Sparkles : item.id === 'impetos' ? BrainCircuit : item.id === 'tatica' ? Target : Download;
             return (
               <button key={item.id} className={primaryIsActive(item.id) ? 'active' : ''} type="button" onClick={() => openPrimaryResult(item.id)}>
                 <Icon size={18} /><span><strong>{item.label}</strong><small>{item.hint}</small></span>
@@ -611,7 +598,6 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="kicker">Por que os pontos foram usados assim</p>
             <ul className="clean-list">{result.deepAnalysis.pointRationale.map((item) => <li key={item}>{item}</li>)}</ul>
           </article>
-          <StructuralPrecisionPanel result={result} />
           <VerifiedCardRegistryPanel result={result} />
         </div>
       )}
@@ -662,13 +648,6 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'resumo' && (
         <div className="result-section-grid bm-simple-result-summary">
-          <PremiumCleanResultV3810
-            result={result}
-            playerImage={playerImage}
-            onSave={onSaveFicha}
-            onShare={() => void shareCurrentResult()}
-            onExportImage={onExportImage}
-          />
           <article className="luxury-panel wide-card bm-definitive-build-card">
             <div className="section-title-row">
               <div>
@@ -695,7 +674,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          {advancedMode && result.deepCardIntelligence && <article className="luxury-panel wide-card bm-deep-card-intelligence">
+          {result.deepCardIntelligence && <article className="luxury-panel wide-card bm-deep-card-intelligence">
             <div className="section-title-row">
               <div><p className="kicker"><BrainCircuit size={14} /> Inteligência Profunda da Carta</p><h3>Uma ficha escolhida após simulações locais</h3></div>
               <span>{result.deepCardIntelligence.confidence}% • confiança {result.deepCardIntelligence.confidenceLabel}</span>
@@ -722,13 +701,13 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </details>
           </article>}
 
-          {advancedMode && <SupremeGameplayCard result={result} />}
+          <SupremeGameplayCard result={result} />
 
-          {advancedMode && <UnifiedIntelligenceCard result={result} />}
+          <UnifiedIntelligenceCard result={result} />
 
-          {advancedMode && result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
+          {result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
             <div className="section-title-row">
-              <div><p className="kicker"><BrainCircuit size={14} /> IA local do BuildMaster</p><h3>Raciocínio no aparelho, sem API paga</h3></div>
+              <div><p className="kicker"><BrainCircuit size={14} /> IA local do Marques Fichas</p><h3>Raciocínio no aparelho, sem API paga</h3></div>
               <span>{result.localAi.confidence}% • confiança {result.localAi.confidenceLabel}</span>
             </div>
             <p className="bm-local-ai-summary">{result.localAi.summary}</p>
@@ -739,7 +718,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             {result.localAi.uncertainties.length > 0 && <details><summary>O que ainda precisa ser confirmado</summary><p>{result.localAi.uncertainties.join(' • ')}</p><b>{result.localAi.nextAction}</b></details>}
           </article>}
 
-          {advancedMode && result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
+          {result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
             <div className="section-title-row">
               <div><p className="kicker"><Trophy size={14} /> Motor Mundial de Fichas</p><h3>Evidência profissional + desempenho real</h3></div>
               <span>{result.competitiveFusion.confidence}% • {result.competitiveFusion.confidenceLabel}</span>
@@ -755,7 +734,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <details className="bm-world-fusion-guardrails"><summary>Como o app evita copiar uma ficha errada</summary>{result.competitiveFusion.guardrails.map((item) => <p key={item}>• {item}</p>)}</details>
           </article>}
 
-          <article className="luxury-panel wide-card bm-simple-match-impact bm-v3780-advanced-summary">
+          <article className="luxury-panel wide-card bm-simple-match-impact">
             <p className="kicker">O que deve mudar em campo</p>
             <div className="stat-bars five-cols">
               {[
@@ -809,21 +788,16 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           <article className="luxury-panel wide-card">
             <p className="kicker">Como usar nas partidas</p>
             <ul className="clean-list">
-              {result.usageTips.slice(0, advancedMode ? 4 : 3).map((tip) => <li key={tip}>{tip}</li>)}
+              {result.usageTips.slice(0, 4).map((tip) => <li key={tip}>{tip}</li>)}
             </ul>
           </article>
 
-          <article className="luxury-panel wide-card bm-v3780-why-card">
+          <article className="luxury-panel wide-card">
             <p className="kicker">Por que esta ficha foi escolhida</p>
             <ul className="clean-list">
               {result.recommendationExplanation.slice(0, 3).map((line) => <li key={line}>{line}</li>)}
             </ul>
           </article>
-
-          {!advancedMode && <details className="luxury-panel wide-card bm-v3780-analysis-entry">
-            <summary><BrainCircuit size={17} /><span><strong>Ver análise completa</strong><small>Confiança, alternativas, partidas e auditoria</small></span><ChevronDown size={17} /></summary>
-            <p>Ative o modo avançado em Configurações › Aparência para abrir os motores técnicos sem poluir o resultado principal.</p>
-          </details>}
         </div>
       )}
 
@@ -889,12 +863,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
         </div>
       )}
 
-      {tab === 'motor' && <AdvancedMotorV3750Panel result={result} />}
-
       {tab === 'ficha' && (
         <div className="result-section-grid">
-          <GameplayDnaProfilesCard result={result} onApplyProfile={onApplyGameplayProfile} />
-          <CalibrationV32Card result={result} />
           <PrecisionBuildPanel result={result} />
           {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
             <div className="section-title-row">
@@ -983,7 +953,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <div className="variant-grid">{result.maxPrecision.alternatives.map((item)=><div key={item.title}><strong>{item.title}</strong><span>Nota {item.score}/100 • identidade {item.identityScore} • adaptação {item.adaptationScore}</span><em>Habilidade {item.skillScore} • Meta {item.metaScore} • desperdício {item.wasteScore}</em><p>{item.why}</p></div>)}</div>
             </details>
             <details className="settings-details-card">
-              <summary>Meta atual do eFootball 2026 — {result.maxPrecision.meta2026.patchReference}</summary>
+              <summary>Meta atual do eFootball 2026 — v5.5.0</summary>
               <p className="panel-note"><b>{result.maxPrecision.meta2026.classification}</b> • atualização {result.maxPrecision.meta2026.updatedAt} • encaixe {result.maxPrecision.meta2026.fitLabel}</p>
               <div className="skill-grid"><div className="skill-check-card"><strong>Mecânicas oficiais consideradas</strong>{result.maxPrecision.meta2026.officialMechanics.map((item)=><span key={item}>✓ {item}</span>)}</div><div className="skill-check-card"><strong>Tendências competitivas</strong>{result.maxPrecision.meta2026.competitiveTrends.map((item)=><span key={item.name}>{item.name} • confiança {item.confidence}: {item.note}</span>)}</div></div>
               <div className="skill-grid"><div className="skill-check-card"><strong>Pontos fortes no meta</strong>{result.maxPrecision.meta2026.strongestMetaTraits.map((item)=><span key={item}>↑ {item}</span>)}</div><div className="skill-check-card muted"><strong>O que ainda falta</strong>{result.maxPrecision.meta2026.missingMetaTraits.map((item)=><span key={item}>⚠ {item}</span>)}</div></div>
@@ -1175,17 +1145,15 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'calibracao' && <RealMatchCalibrationPanel result={result} />}
 
-      {tab === 'profissional' && <ProfessionalIntelligenceCenter result={result} />}
-
       {tab === 'treino' && <div className="result-section-grid"><SkillAndTrainingPanel result={result} /><VideoReviewPanel result={result} /></div>}
 
       {tab === 'habilidades' && result.skillIntegrity && (
         <div className="result-section-grid">
           <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Top 5 por função v31.80</p><h3>{result.skillIntegrity.status === 'approved' ? 'Lista complementar aprovada' : 'Confirme as habilidades lidas antes de aplicar'}</h3></div><span>{result.skillIntegrity.recommendedSkills.length}/5 seguras</span></div>
+            <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Filtro antirrepetição v31.72</p><h3>{result.skillIntegrity.status === 'approved' ? 'Lista complementar aprovada' : 'Confirme as habilidades lidas antes de aplicar'}</h3></div><span>{result.skillIntegrity.recommendedSkills.length}/5 seguras</span></div>
             <div className="chip-cloud">{result.skillIntegrity.checks.map((check) => <span key={check}>{check}</span>)}</div>
             {result.skillIntegrity.removedDuplicates.length > 0 && <p className="panel-note">Removidas automaticamente por repetição ou conflito: {result.skillIntegrity.removedDuplicates.join(', ')}.</p>}
-            {result.skillIntegrity.missingSlots > 0 && <p className="panel-note">{result.skillIntegrity.missingSlots} espaço(s) ficaram vazio(s) porque o motor não encontrou outra habilidade segura. Isso só acontece quando a carta já possui quase todo o pool seguro da função; o app não usa habilidades incompatíveis para preencher a vaga.</p>}
+            {result.skillIntegrity.missingSlots > 0 && <p className="panel-note">{result.skillIntegrity.missingSlots} espaço(s) ficaram vazio(s) porque o motor não encontrou outra habilidade segura. O app não completa a lista com opção fraca apenas para chegar a cinco.</p>}
           </article>
         </div>
       )}
@@ -1194,14 +1162,11 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
         <div className="result-section-grid bm-simple-skill-result">
           <article className="luxury-panel wide-card">
             <div className="section-title-row"><div><p className="kicker">Habilidades adicionais</p><h3>Somente o que ainda falta</h3></div><span>{pendingRecommendedSkills.length}/{recommendedSkills.length}</span></div>
-            <p className="panel-note">Marque as que você adicionou. Se a carta já veio com uma delas, use “Já possui? Gerar outra” para recalcular uma substituta compatível.</p>
+            <p className="panel-note">Marque as já aplicadas. A lista principal passa a mostrar somente as habilidades pendentes.</p>
             <div className="bm-simple-skill-list">
               {pendingRecommendedSkills.length ? pendingRecommendedSkills.map((skill, index) => {
                 const detail = skillRecommendations.find((item) => item.name === skill);
-                return <div className="bm-simple-skill-item" key={skill}>
-                  <button type="button" className="bm-simple-skill-main" onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>
-                  <button type="button" className="bm-simple-skill-replace" onClick={() => onReplaceOwnedSkill?.(skill)} title="Confirmar que a carta já possui esta habilidade e recalcular uma substituta"><RotateCcw size={14} /> Já possui? Gerar outra</button>
-                </div>;
+                return <button type="button" key={skill} onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>;
               }) : recommendedSkills.length ? <div className="bm-skills-complete-message"><strong>✓ Lista concluída</strong><span>Todas as habilidades recomendadas já foram adicionadas.</span></div> : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada para esta carta.</p>}
             </div>
             {completedRecommendedSkills.length > 0 && <details className="bm-completed-skills-details"><summary>Ver {completedRecommendedSkills.length} já adicionada(s)</summary><div className="bm-simple-skill-list completed-list">{completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => onSkillToggle?.(skill)}><span>✓</span><div><strong>{skill}</strong><small>Toque para voltar à lista pendente.</small></div><em>Desmarcar</em></button>)}</div></details>}
@@ -1253,7 +1218,6 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
                     </button>
                     <div className="correction-actions">
                       <button type="button" onClick={() => onPromoteSkill?.(skill)}><ThumbsUp size={14} /> Priorizar</button>
-                      <button type="button" onClick={() => onReplaceOwnedSkill?.(skill)}><RotateCcw size={14} /> Já possui — gerar outra</button>
                       <button type="button" onClick={() => onRejectSkill?.(skill)}><Ban size={14} /> Não combina</button>
                     </div>
                   </div>
@@ -1343,7 +1307,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
           <article className="luxury-panel wide-card">
             <div className="section-title-row"><div><p className="kicker">Como a IA decidiu</p><h3>Sem serviço de IA pago</h3></div><span>{result.localAi?.engineVersion ?? 'motor local'}</span></div>
-            <div className="data-grid"><div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div><div><span>Formação</span><strong>Automática • não altera a ficha</strong></div><div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div><div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div></div>
+            <div className="data-grid"><div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div><div><span>Formação</span><strong>{result.tacticalProfile.formation}</strong></div><div><span>Modelo de jogo</span><strong>{tacticalStyleName[result.tacticalProfile.style]}</strong></div><div><span>Posição escolhida</span><strong>{result.bestPosition.label}</strong></div></div>
             {result.localAi && <><ul className="clean-list">{result.localAi.evidence.map((line) => <li key={line}>{line}</li>)}</ul><p className="panel-note">{result.localAi.privacyNote}</p></>}
           </article>
         </div>
@@ -1477,7 +1441,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               </div>
               <span>{hasLocalCorrections ? 'Ativo' : 'Sem correções'}</span>
             </div>
-            <p className="panel-note">As correções ficam salvas somente neste aparelho/navegador. Quando você marcar “Não combina” ou “Priorizar”, o BuildMaster evita repetir o erro para este jogador e para a função real parecida.</p>
+            <p className="panel-note">As correções ficam salvas somente neste aparelho/navegador. Quando você marcar “Não combina” ou “Priorizar”, o Marques Fichas evita repetir o erro para este jogador e para a função real parecida.</p>
             <div className="correction-summary-grid">
               <div><span>Habilidades bloqueadas</span><strong>{localCorrections.blockedSkills.length}</strong></div>
               <div><span>Habilidades priorizadas</span><strong>{localCorrections.promotedSkills.length}</strong></div>
@@ -1510,17 +1474,76 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
 
-      {tab === 'regras' && <ContinuousUpdateV3770Panel
-        result={result}
-        rulesUrl={rulesUrl}
-        setRulesUrl={setRulesUrl}
-        rulesStatus={rulesStatus}
-        rulePackInfo={rulePackInfo}
-        onLoadRulesFromUrl={onLoadRulesFromUrl}
-        onResetRules={onResetRules}
-        onExportRulePack={onExportRulePack}
-        onRestoreRulePackVersion={onRestoreRulePackVersion}
-      />}
+      {tab === 'regras' && (
+        <div className="result-section-grid">
+          <article className="luxury-panel wide-card correction-hero-card">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker"><BrainCircuit size={14} /> Regras atualizáveis sem refazer APK</p>
+                <h3>Atualize habilidade, ímpeto e bloqueios por função usando um JSON online.</h3>
+              </div>
+              <span>Ficha técnica</span>
+            </div>
+            <p className="panel-note">Essa área permite ajustar recomendações depois que o APK já estiver instalado. Você hospeda um arquivo JSON público, cola a URL e toca em atualizar. O app salva o pacote no aparelho e aplica nas próximas fichas.</p>
+            <div className="input-row">
+              <label>
+                URL do pacote de regras
+                <input value={rulesUrl} onChange={(event) => setRulesUrl(event.target.value)} placeholder="https://seusite.com/buildmaster-regras.json" />
+              </label>
+            </div>
+            <div className="export-pro-actions">
+              <button type="button" onClick={onLoadRulesFromUrl}><UploadCloud size={18} /> Atualizar regras</button>
+              <button type="button" onClick={onResetRules}><RotateCcw size={18} /> Restaurar pacote local</button>
+              <button type="button" onClick={onExportRulePack}><Download size={18} /> Exportar modelo JSON</button>
+            </div>
+            <p className="panel-note">{rulesStatus}</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Pacote ativo</p>
+            <div className="correction-summary-grid">
+              <div><span>Versão</span><strong>{rulePackInfo.version}</strong></div>
+              <div><span>Regras</span><strong>{rulePackInfo.rules.length}</strong></div>
+              <div><span>Fonte</span><strong>{rulePackInfo.source}</strong></div>
+              <div><span>Atualizado</span><strong>{new Date(rulePackInfo.updatedAt).toLocaleDateString('pt-BR')}</strong></div>
+            </div>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Regras ativas principais</p>
+            <div className="upgrade-checklist-grid">
+              {rulePackInfo.rules.slice(0, 12).map((rule) => (
+                <div key={rule.id} className="upgrade-chip status-ativo">
+                  <span>{rule.id}</span>
+                  <strong>{rule.title}</strong>
+                  <em>{rule.note ?? 'Regra dinâmica aplicada quando posição/estilo/função combinarem.'}</em>
+                </div>
+              ))}
+            </div>
+            <p className="panel-note">Use isso para corrigir rapidamente casos como CA recebendo habilidade defensiva, goleiro recebendo habilidade de linha, VOL orquestrador recebendo ficha de destruidor puro ou lateral ofensivo sem prioridade de corredor.</p>
+          </article>
+
+          <article className="luxury-panel wide-card">
+            <p className="kicker">Formato do JSON</p>
+            <pre className="raw-text-box">{`{
+  "version": "minhas-regras-1",
+  "updatedAt": "2026-07-12T00:00:00.000Z",
+  "source": "Meu pacote online",
+  "rules": [
+    {
+      "id": "ca-finalizador",
+      "title": "CA finalizador",
+      "match": { "position": "CF", "playstyleIncludes": ["artilheiro"] },
+      "promoteSkills": ["Chute de primeira", "Precisão à distância"],
+      "blockSkills": ["Volta para marcar", "Interceptação"],
+      "promoteImpetos": ["Chute", "Instinto artilheiro"],
+      "note": "Foco total em finalização."
+    }
+  ]
+}`}</pre>
+          </article>
+        </div>
+      )}
 
       {tab === 'validacao' && (
         <div className="result-section-grid">
@@ -1570,13 +1593,6 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       {tab === 'exportar' && (
         <div className="result-section-grid export-pro-grid">
-          <PremiumCleanResultV3810
-            variant="export"
-            result={result}
-            playerImage={playerImage}
-            onShare={() => void shareCurrentResult()}
-            onExportImage={onExportImage}
-          />
           <CompactSharePanel result={result} playerImage={playerImage} onExportImage={() => onExportImage?.()} />
           <article className="luxury-panel wide-card export-hero-card">
             <div className="section-title-row">
@@ -1588,7 +1604,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
             <p className="panel-note">Todos os formatos usam a ficha validada, os pontos exatos, as 5 habilidades oficiais, os ímpetos e o plano de uso em campo.</p>
             <div className="export-pro-actions">
-              <button type="button" onClick={() => onExportImage?.()}><ImagePlus size={18} /> Exportar imagem da ficha</button>
+              <button type="button" onClick={onExportImage}><ImagePlus size={18} /> Exportar imagem da ficha</button>
               <button type="button" onClick={onPrintReport}><Download size={18} /> Gerar PDF profissional</button>
               <button type="button" onClick={onExportReport}><FileText size={18} /> Relatório HTML</button>
               <button type="button" onClick={onExportText}><Copy size={18} /> Relatório técnico</button>
@@ -1725,7 +1741,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
       <div className="result-floating-actions result-clean-actions">
-        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha} disabled={!result.validation.canGenerate} title={!result.validation.canGenerate ? 'Confirme os campos estruturais bloqueados antes de salvar.' : undefined}><Save size={16} /> {result.validation.canGenerate ? 'Salvar' : 'Bloqueada'}</button>
+        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha}><Save size={16} /> Salvar</button>
         <button className="copy-floating" type="button" onClick={onRecalculate}><RotateCcw size={16} /> Recalcular</button>
         <button className="copy-floating" type="button" onClick={() => void shareCurrentResult()}><Share2 size={16} /> Compartilhar</button>
       </div>
@@ -1775,7 +1791,6 @@ export function ReviewPanel({
   onConfirm: () => void;
 }) {
   const card = draft.parsed;
-  const displayPlayerName = manualFields.playerName.trim() || card.playerName;
   const criticalIssues = draft.validation.issues.filter((issue) => issue.severity === 'block');
   const reviewIssues = draft.validation.issues.filter((issue) => issue.severity === 'review');
   const updateAttribute = (key: AttributeKey, value: string) => {
@@ -1824,13 +1839,13 @@ export function ReviewPanel({
 
       <div className="result-head luxury-panel">
         <div className="premium-card-art compact-art">
-          {playerImage && <img src={playerImage} alt={`Imagem de ${displayPlayerName}`} />}
+          {playerImage && <img src={playerImage} alt={`Imagem de ${card.playerName}`} />}
           <div className="card-shine" />
           <div className="card-number">
             <strong>{card.maxOverall ?? card.overall ?? '--'}</strong>
             <span>{card.mainPositionPt}</span>
           </div>
-          <em>{displayPlayerName}</em>
+          <em>{card.playerName}</em>
         </div>
         <div className="result-intro">
           <p className="kicker"><ShieldCheck size={16} /> Auditoria Elite</p>
@@ -1996,35 +2011,17 @@ export function ReviewPanel({
         <article className="luxury-panel wide-card review-optional-card">
           <p className="kicker">Habilidades que o jogador já possui</p>
           <p className="panel-note no-top">Opcional: marque somente as habilidades que já aparecem na carta. Isso serve para o app não recomendar habilidade repetida e escolher as 5 melhores habilidades que ainda faltam. Se não souber, pode finalizar sem marcar nada.</p>
-          <div className="native-skill-catalog-group">
-            <div><strong>Habilidades regulares já presentes na carta</strong><small>Também podem existir como adicionais em outras cartas, mas aqui ficam marcadas como já pertencentes a este jogador.</small></div>
-            <div className="skill-picker-grid">
-              {OFFICIAL_ADDITIONAL_SKILL_NAMES.map((skill) => (
-                <button
-                  key={skill}
-                  type="button"
-                  className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected' : 'skill-picker-chip'}
-                  onClick={() => toggleNativeSkill(skill)}
-                >
-                  {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="native-skill-catalog-group special-native">
-            <div><strong>Habilidades especiais nativas — não treináveis</strong><small>Inclui Drible explosivo, Curva Blitz, Passe visionário, Esticada de Perna e as demais habilidades especiais reconhecidas pelo eFootball 2026/eFHUB.</small></div>
-            <div className="skill-picker-grid">
-              {SPECIAL_SKILL_NAMES.map((skill) => (
-                <button
-                  key={skill}
-                  type="button"
-                  className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected special-native' : 'skill-picker-chip special-native'}
-                  onClick={() => toggleNativeSkill(skill)}
-                >
-                  {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
-                </button>
-              ))}
-            </div>
+          <div className="skill-picker-grid">
+            {OFFICIAL_ADDITIONAL_SKILL_NAMES.map((skill) => (
+              <button
+                key={skill}
+                type="button"
+                className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected' : 'skill-picker-chip'}
+                onClick={() => toggleNativeSkill(skill)}
+              >
+                {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
+              </button>
+            ))}
           </div>
         </article>
 

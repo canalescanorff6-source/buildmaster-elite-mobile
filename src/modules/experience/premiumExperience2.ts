@@ -48,9 +48,9 @@ export type PremiumHelpArticle = {
 };
 
 export const PREMIUM_TARGET_CATALOG: Array<{ id: Premium2Target; label: string; description: string }> = [
-  { id: 'home', label: 'Central', description: 'Prioridades e continuidade rápida.' },
-  { id: 'reader', label: 'Ler print', description: 'Importar e revisar uma carta.' },
-  { id: 'manual', label: 'Criar manual', description: 'Criar ficha com controle total.' },
+  { id: 'home', label: 'Início', description: 'Prioridades e continuação rápida.' },
+  { id: 'reader', label: 'Leitor por print', description: 'Importar e revisar uma carta.' },
+  { id: 'manual', label: 'Manual Pro', description: 'Criar ficha com controle total.' },
   { id: 'vault', label: 'Cofre', description: 'Abrir jogadores e versões salvas.' },
   { id: 'team', label: 'Meu Time', description: 'Revisar elenco e formações.' },
   { id: 'matches', label: 'Performance', description: 'Partidas, treinos e evolução.' },
@@ -59,7 +59,7 @@ export const PREMIUM_TARGET_CATALOG: Array<{ id: Premium2Target; label: string; 
   { id: 'security', label: 'Segurança', description: 'Integridade e diagnóstico local.' },
   { id: 'backup', label: 'Backup', description: 'Proteger e restaurar dados.' },
   { id: 'updates', label: 'Atualizações', description: 'Canal, versão e instalação.' },
-  { id: 'support', label: 'Suporte', description: 'Diagnóstico e suporte técnico.' }
+  { id: 'support', label: 'Suporte', description: 'Diagnóstico e atendimento técnico.' }
 ];
 
 export const PREMIUM_HELP_ARTICLES: PremiumHelpArticle[] = [

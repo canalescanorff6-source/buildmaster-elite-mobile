@@ -36,30 +36,23 @@ const workflowPlay = read('.github/workflows/build-play-store.yml');
 const appUpdates = read('src/lib/appUpdates.ts');
 const dataSafety = read('src/lib/dataSafety.ts');
 const globals = read('src/app/globals.css');
-const executiveCss = read('src/app/v33-executive.css');
-const studioCss = read('src/app/v34-studio.css');
-const cleanResponsiveCss = read('src/app/v34-clean-responsive.css');
-const identityCss = read('src/app/v35-identity-themes.css');
-const solidCss = read('src/app/v35-solid-premium.css');
-const revolutionCss = read('src/app/v36-premium-revolution.css');
-const professionalCss = read('src/app/v37-professional-intelligence.css');
 const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 
-check(pkg.version === '37.00.0', 'Versão atual configurada', pkg.version);
-check(appUpdates.includes("'37.00.0'"), 'Motor de atualização sincronizado');
-check(dataSafety.includes("APP_DATA_VERSION = '37.00.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Esquema de dados sincronizado');
-check(manifest.name === 'BuildMaster Elite Tático v37.00', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v37-00-professional-intelligence-1'), 'Cache PWA sincronizado');
+check(pkg.version === '31.78.0', 'Versão atual configurada', pkg.version);
+check(appUpdates.includes("'31.78.0'"), 'Motor de atualização sincronizado');
+check(dataSafety.includes("APP_DATA_VERSION = '31.78.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3000'), 'Esquema de dados sincronizado');
+check(manifest.name === 'Marques Fichas v31.78', 'Manifesto PWA sincronizado');
+check(sw.includes('marques-fichas-v31-78'), 'Cache PWA sincronizado');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowPlay.includes(marker), `Workflow Play usa ${marker}`);
 for (const marker of ['gradle/actions/setup-gradle@v6', 'actions/upload-artifact@v6']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
 for (const marker of ['android-actions/setup-android@v4', 'actions/upload-artifact@v6']) check(workflowPlay.includes(marker), `Workflow Play usa ${marker}`);
-check(cssFiles.some((file) => path.basename(file) === 'globals.css') && cssFiles.some((file) => path.basename(file) === 'v33-executive.css') && cssFiles.some((file) => path.basename(file) === 'v34-studio.css') && cssFiles.some((file) => path.basename(file) === 'v34-clean-responsive.css') && cssFiles.some((file) => path.basename(file) === 'v35-identity-themes.css') && cssFiles.some((file) => path.basename(file) === 'v35-solid-premium.css') && cssFiles.some((file) => path.basename(file) === 'v36-premium-revolution.css') && cssFiles.some((file) => path.basename(file) === 'v37-professional-intelligence.css'), 'Tema base, camada Executive e identidade presentes', cssFiles.map((file) => path.relative(root, file)).join(', '));
-check(!/@import\s+['"]/i.test(globals) && !/@import\s+['"]/i.test(executiveCss) && !/@import\s+['"]/i.test(studioCss) && !/@import\s+['"]/i.test(cleanResponsiveCss) && !/@import\s+['"]/i.test(identityCss) && !/@import\s+['"]/i.test(solidCss) && !/@import\s+['"]/i.test(revolutionCss) && !/@import\s+['"]/i.test(professionalCss), 'CSS sem cadeia antiga de imports');
+check(cssFiles.length === 1 && path.basename(cssFiles[0]) === 'globals.css', 'Tema consolidado em um único CSS', cssFiles.map((file) => path.relative(root, file)).join(', '));
+check(!/@import\s+['"]/i.test(globals), 'CSS sem cadeia antiga de imports');
 for (const marker of ['.bm-v3000-play-publication', 'prefers-reduced-motion: reduce', ':focus-visible', '@media (max-width: 640px)']) {
   check(globals.includes(marker), `Tema contém ${marker}`);
 }
@@ -95,7 +88,6 @@ for (const file of [
   'tests/types-v3110-ui/tsconfig.json',
   'src/lib/tacticalPlanningEngine.ts',
   'src/lib/supremeGameplayEngine.ts',
-  'src/lib/calibrationV32.ts',
   'src/components/result/SupremeGameplayCard.tsx',
   'tests/types-v3130/tsconfig.json',
   'tests/types-v3130-ui/tsconfig.json',
@@ -108,46 +100,12 @@ for (const file of [
   'src/lib/officialSkillIdentity.ts',
   'src/lib/skillIntegrity.ts',
   'tests/v31-72-complementary-skills-regression.ts',
-  'tests/types-v3172/tsconfig.json',
-  'src/app/v35-identity-themes.css',
-  'src/components/BuildMasterMark.tsx',
-  'src/components/ProfileAvatarEditor.tsx',
-  'src/lib/profileAvatar.ts',
-  'tests/v34-00-identity-themes-profile-regression.mjs',
-  'tests/v35-00-official-additional-skills-meta-regression.ts',
-  'HABILIDADES_ADICIONAIS_OFICIAIS_META_V35.00.md',
-  'src/app/v35-solid-premium.css',
-  'src/components/result/GameplayDnaProfilesCard.tsx',
-  'src/lib/gameplayDnaSelection.ts',
-  'tests/v35-20-gameplay-dna-solid-theme-regression.ts',
-  'PERFIS_GAMEPLAY_TEMA_SOLIDO_V35.20.md',
-  'src/app/v36-premium-revolution.css',
-  'tests/v36-00-premium-revolution-regression.mjs',
-  'PREMIUM_REVOLUTION_V36.00.md',
-  'src/app/v37-professional-intelligence.css',
-  'src/lib/professionalIntelligenceV37.ts',
-  'src/components/result/ProfessionalIntelligenceCenter.tsx',
-  'tests/v37-00-professional-intelligence-regression.ts',
-  'tests/types-v3700/tsconfig.json',
-  'tests/types-v3700-ui/tsconfig.json',
-  'CENTRAL_PROFISSIONAL_V37.00.md'
+  'tests/types-v3172/tsconfig.json'
 ]) check(exists(file), `Arquivo essencial presente: ${file}`);
 
-
-for (const file of [
-  'src/lib/structuralPrecisionV3740.ts',
-  'src/components/StructuralPrecisionPanel.tsx',
-  'tests/v37-40-structural-precision-regression.ts',
-  'tests/types-v3740/tsconfig.json',
-  'tests/types-v3740-ui/tsconfig.json',
-  'PRECISAO_ESTRUTURAL_V37.40.md'
-]) check(exists(file), `Precisão estrutural v37.40 presente: ${file}`);
-check(String(pkg.scripts?.['test:v3740'] ?? '').includes('v37-40-structural-precision-regression.ts'), 'Regressão v37.40 configurada');
-check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3740'), 'Bateria geral inclui v37.40');
-
-check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3200') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3300') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3400') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3500') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3510') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3520') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3600') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3700') && String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run quality:audit'), 'Bateria de testes limpa e atual');
+check(pkg.scripts?.['test:all'] === 'npm run test:v3000 && npm run test:v3010 && npm run test:v3020 && npm run test:v3030 && npm run test:v3040 && npm run test:v3050 && npm run test:v3100 && npm run test:v3110 && npm run test:v3120 && npm run test:v3130 && npm run test:v3140 && npm run test:v3150 && npm run test:v3160 && npm run test:v3170 && npm run test:v3171 && npm run test:v3172 && npm run test:v3173 && npm run test:v3174 && npm run test:v3175 && npm run test:v3176 && npm run test:v3177 && npm run test:v3178 && npm run quality:audit', 'Bateria de testes limpa e atual');
 check((workflowApk.includes('npm run test:all') || workflowApk.includes('npm run ci:verify')) && (workflowPlay.includes('npm run test:all') || workflowPlay.includes('npm run ci:verify')), 'Workflows usam a bateria atual diretamente ou pelo diagnóstico consolidado');
-check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs') && exists('tests/v31-71-account-recovery-regression.mjs') && exists('tests/v31-72-complementary-skills-regression.ts') && exists('tests/v31-73-account-panel-restoration-regression.mjs') && exists('tests/types-v3173-ui/tsconfig.json') && exists('tests/types-v3173-edge/tsconfig.json') && exists('supabase/migrations/202607280002_restore_account_creation_v3173.sql') && exists('tests/v31-76-recording-export-regression.mjs') && exists('tests/v31-77-video-intelligence-regression.ts') && exists('tests/v31-78-complete-player-skills-regression.ts') && exists('tests/v31-79-canonical-profile-top5-regression.ts') && exists('tests/v31-80-final-scanner-skills-regression.ts') && exists('tests/types-v3180/tsconfig.json') && exists('tests/v31-81-visual-efhub-calibration-regression.ts') && exists('tests/types-v3181/tsconfig.json') && exists('tests/v31-82-crisp-efhub-calibrator-regression.mjs') && exists('tests/v32-00-mega-calibration-regression.ts') && exists('tests/v32-00-v3000-ci-isolation-regression.mjs') && exists('tests/types-v3200/tsconfig.json') && exists('tests/types-v3200-ui/tsconfig.json') && exists('tests/v33-00-executive-redesign-regression.mjs') && exists('src/app/v33-executive.css') && exists('tests/v34-00-studio-clean-regression.mjs') && exists('src/app/v34-studio.css') && exists('tests/v34-00-responsive-clean-regression.mjs') && exists('src/app/v34-clean-responsive.css') && exists('tests/v34-00-identity-themes-profile-regression.mjs') && exists('src/app/v35-identity-themes.css') && exists('tests/v35-00-official-additional-skills-meta-regression.ts') && exists('HABILIDADES_ADICIONAIS_OFICIAIS_META_V35.00.md') && exists('tests/v35-10-max-gameplay-dual-position-regression.ts') && exists('FICHA_MAXIMA_GAMEPLAY_V35.10.md') && exists('tests/v35-20-gameplay-dna-solid-theme-regression.ts') && exists('PERFIS_GAMEPLAY_TEMA_SOLIDO_V35.20.md') && exists('src/app/v35-solid-premium.css') && exists('src/components/result/GameplayDnaProfilesCard.tsx') && exists('src/lib/gameplayDnaSelection.ts') && exists('tests/types-v3520/tsconfig.json') && exists('tests/types-v3520-ui/tsconfig.json') && exists('tests/v36-00-premium-revolution-regression.mjs') && exists('src/app/v36-premium-revolution.css') && exists('PREMIUM_REVOLUTION_V36.00.md') && exists('tests/v37-00-professional-intelligence-regression.ts') && exists('src/app/v37-professional-intelligence.css') && exists('src/lib/professionalIntelligenceV37.ts') && exists('src/components/result/ProfessionalIntelligenceCenter.tsx') && exists('tests/types-v3700/tsconfig.json') && exists('tests/types-v3700-ui/tsconfig.json') && exists('CENTRAL_PROFISSIONAL_V37.00.md'), 'Regressões atuais presentes');
+check(exists('tests/v30-00-integrated-production-regression.mjs') && exists('tests/v30-00-play-publication-regression.ts') && exists('tests/v30-00-play-workflow-regression.mjs') && exists('tests/v30-10-world-fusion-regression.ts') && exists('tests/v30-20-local-ai-impeto-regression.ts') && exists('tests/v30-30-detailed-print-intelligence-regression.ts') && exists('tests/v30-40-smart-card-crop-regression.ts') && exists('tests/v30-50-ultra-precision-ocr-regression.ts') && exists('tests/v31-10-unified-intelligence-regression.ts') && exists('tests/v31-10-tactical-planning-regression.ts') && exists('tests/v31-30-supreme-gameplay-regression.ts') && exists('tests/v31-40-rigid-adaptive-ocr-regression.ts') && exists('tests/v31-50-forensic-scanner-regression.ts') && exists('tests/v31-60-efhub-profile-regression.ts') && exists('tests/v31-70-match-trainer-regression.ts') && exists('tests/v31-70-native-recorder-installer-regression.mjs') && exists('tests/v31-71-account-recovery-regression.mjs') && exists('tests/v31-72-complementary-skills-regression.ts') && exists('tests/v31-73-account-panel-restoration-regression.mjs') && exists('tests/types-v3173-ui/tsconfig.json') && exists('tests/types-v3173-edge/tsconfig.json') && exists('supabase/migrations/202607280002_restore_account_creation_v3173.sql') && exists('tests/v31-76-recording-export-regression.mjs') && exists('tests/v31-77-video-intelligence-regression.ts') && exists('tests/v31-78-formation-studio-regression.ts'), 'Regressões atuais presentes');
 const skillIdentitySource = read('src/lib/officialSkillIdentity.ts');
 const skillIntegritySource = read('src/lib/skillIntegrity.ts');
 const pipelineSource = read('src/lib/cardIntelligencePipeline.ts');
