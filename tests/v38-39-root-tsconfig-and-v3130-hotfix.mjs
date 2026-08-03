@@ -12,6 +12,7 @@ const tsconfig = readJson('tsconfig.json');
 const appTsconfig = readJson('tsconfig.app.json');
 const packageJson = readJson('package.json');
 const v3130 = read('tests/v31-30-supreme-gameplay-regression.ts');
+const repair = read('scripts/repair-root-tsconfig.mjs');
 
 assert.ok(Array.isArray(tsconfig.include), 'O tsconfig raiz precisa declarar include do aplicativo.');
 assert.ok(tsconfig.include.includes('src/**/*.ts'));
@@ -26,5 +27,13 @@ assert.ok(Array.isArray(appTsconfig.exclude) && appTsconfig.exclude.includes('te
 assert.match(String(packageJson.scripts?.typecheck ?? ''), /-p tsconfig\.app\.json/);
 assert.match(v3130, /Ficha Automática v38\\\.\\d\+/);
 assert.doesNotMatch(v3130, /Ficha Automática v38\\\.\(\?:37\|38\)/);
+
+
+assert.match(String(packageJson.scripts?.['preci:verify'] ?? ''), /types:repair/);
+assert.match(String(packageJson.scripts?.pretypecheck ?? ''), /types:repair/);
+assert.match(String(packageJson.scripts?.['quality:root-tsconfig'] ?? ''), /--check/);
+assert.match(String(packageJson.scripts?.['test:v3839'] ?? ''), /root-tsconfig-self-healing-regression/);
+assert.match(repair, /BUILDMASTER_PROJECT_ROOT/);
+assert.match(repair, /restaurada automaticamente/);
 
 console.log('v38.39 hotfix raiz aprovado: tsconfig principal restaurado e contrato v31.30 compatível com versões atuais.');

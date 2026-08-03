@@ -7,9 +7,14 @@ const budget = fs.readFileSync('scripts/check-bundle-budget.mjs', 'utf8');
 const apk = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 const play = fs.readFileSync('.github/workflows/build-play-store.yml', 'utf8');
 
+assert.ok(pkg.scripts['types:repair']);
+assert.ok(pkg.scripts['quality:root-tsconfig']);
 assert.ok(pkg.scripts['quality:dependencies']);
 assert.ok(pkg.scripts['quality:version-guards']);
 assert.ok(pkg.scripts['quality:ci-contract']);
+assert.match(doctor, /Configuração TypeScript raiz/);
+assert.match(apk, /npm run types:repair && npm run quality:root-tsconfig/);
+assert.match(play, /npm run types:repair && npm run quality:root-tsconfig/);
 assert.match(doctor, /Compatibilidade das dependências/);
 assert.match(doctor, /Orçamento do código-fonte/);
 assert.match(doctor, /Guardas de versão das regressões/);

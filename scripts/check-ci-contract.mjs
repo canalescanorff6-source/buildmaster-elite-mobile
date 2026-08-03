@@ -10,6 +10,12 @@ function check(condition, message) {
   if (!condition) checks.push(message);
 }
 
+
+check(packageJson.scripts?.['types:repair'], 'Script types:repair ausente.');
+check(packageJson.scripts?.['quality:root-tsconfig'], 'Script quality:root-tsconfig ausente.');
+check(doctor.includes("['Configuração TypeScript raiz'"), 'ci-doctor não valida a configuração TypeScript raiz.');
+check(apkWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow APK não restaura e valida o tsconfig raiz.');
+check(playWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow Play não restaura e valida o tsconfig raiz.');
 check(packageJson.scripts?.['quality:dependencies'], 'Script quality:dependencies ausente.');
 check(packageJson.scripts?.['quality:version-guards'], 'Script quality:version-guards ausente.');
 check(packageJson.scripts?.['quality:ci-contract'], 'Script quality:ci-contract ausente.');

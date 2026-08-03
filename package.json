@@ -10,10 +10,10 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit --noUnusedLocals --noUnusedParameters",
     "vercel-build": "next build --webpack",
     "sanitize:update-source": "node scripts/sanitize-update-source.mjs",
-    "pretypecheck": "npm run sanitize:update-source && npm run routes:repair",
-    "pretest:all": "npm run sanitize:update-source && npm run routes:repair",
-    "pretest:v3000": "npm run sanitize:update-source && npm run routes:repair",
-    "preapk:build-web": "npm run sanitize:update-source && npm run routes:repair",
+    "pretypecheck": "npm run types:repair && npm run sanitize:update-source && npm run routes:repair",
+    "pretest:all": "npm run types:repair && npm run sanitize:update-source && npm run routes:repair",
+    "pretest:v3000": "npm run types:repair && npm run sanitize:update-source && npm run routes:repair",
+    "preapk:build-web": "npm run types:repair && npm run sanitize:update-source && npm run routes:repair",
     "test:npm-registry": "node scripts/verify-public-npm-registry.mjs",
     "quality:syntax": "node scripts/check-source-syntax.mjs",
     "quality:interactive": "node scripts/check-interactive-contracts.mjs",
@@ -136,7 +136,11 @@
     "test:v3836": "node tests/v38-36-deterministic-audit-hotfix.mjs",
     "test:v3837": "npm run typecheck:v3200 && npm run typecheck:v3750 && node -r ./tests/_ts-require.cjs tests/v38-37-automatic-card-gameplay-regression.ts",
     "test:v3838": "npm run test:v3500 && npm run test:v3520 && node tests/v38-38-legacy-profile-regressions-hotfix.mjs",
-    "test:v3839": "node tests/v38-39-legacy-contract-final-hotfix.mjs && node tests/v38-39-v3120-deterministic-contract-hotfix.mjs && node tests/v38-39-v3100-github-deterministic-hotfix.mjs && node tests/v38-39-root-tsconfig-and-v3130-hotfix.mjs"
+    "test:v3839": "node tests/v38-39-legacy-contract-final-hotfix.mjs && node tests/v38-39-v3120-deterministic-contract-hotfix.mjs && node tests/v38-39-v3100-github-deterministic-hotfix.mjs && node tests/v38-39-root-tsconfig-and-v3130-hotfix.mjs && node tests/v38-39-root-tsconfig-self-healing-regression.mjs",
+    "types:repair": "node scripts/repair-root-tsconfig.mjs",
+    "quality:root-tsconfig": "node scripts/repair-root-tsconfig.mjs --check",
+    "preci:verify": "npm run types:repair",
+    "preci:preflight": "npm run types:repair"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

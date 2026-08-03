@@ -97,6 +97,9 @@ jobs:
       - name: Instalar dependências travadas
         run: npm ci --no-audit --no-fund
 
+      - name: Restaurar e validar configuração TypeScript raiz
+        run: npm run types:repair && npm run quality:root-tsconfig
+
       - name: Recuperar e validar rota inicial
         run: npm run quality:routes
 

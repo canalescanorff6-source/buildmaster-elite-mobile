@@ -4,6 +4,7 @@ const full = process.argv.includes('--full');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 const quickChecks = [
+  ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
   ['Compatibilidade das dependências', ['run', 'quality:dependencies']],
   ['Orçamento do código-fonte', ['run', 'quality:bundle']],
   ['Guardas de versão das regressões', ['run', 'quality:version-guards']],
