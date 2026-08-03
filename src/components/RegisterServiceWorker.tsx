@@ -16,7 +16,7 @@ type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean
 // Esquema anterior preservado para a regressão: 38.20.0-invisible-optimization-1
 // Esquema anterior preservado para a regressão: 38.30.0-name-skill-integrity-1
 // Esquema anterior preservado para atualização por cima: 38.31.0-ci-regression-hotfix-1
-const NATIVE_CACHE_SCHEMA = '38.38.0-legacy-profile-regressions-1';
+const NATIVE_CACHE_SCHEMA = '38.39.0-legacy-contract-final-1';
 const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
 
 async function clearNativeWebCaches() {

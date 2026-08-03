@@ -1,0 +1,1 @@
+Corrige definitivamente a regressão legada v38.35, mantém o perfil automático pela carta e preserva todas as funções do Gerador Tático, fichas, habilidades, vídeo e contas.

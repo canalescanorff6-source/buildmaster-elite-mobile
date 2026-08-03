@@ -12,7 +12,7 @@ import {
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
 
-assert.equal(MATCH_TRAINER_VERSION, '38.38.0');
+assert.equal(MATCH_TRAINER_VERSION, '38.39.0');
 for (const kind of ['defender-out-of-line', 'cursor-error', 'game-management', 'good-transition', 'critical-moment']) {
   assert.ok(MATCH_EVENT_CATALOG.some((item) => item.kind === kind), `Evento ${kind} não está no catálogo.`);
 }
@@ -81,7 +81,7 @@ assert.match(summary.tacticalDiagnosis.styleFit, /transição rápida|evidência
 assert.match(summary.tacticalDiagnosis.gameManagement, /vantagem|controle/i);
 
 const report = exportMatchTrainerReport(session);
-assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v38\.38/);
+assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v38\.39/);
 assert.match(report, /04:52 — Zagueiro retirado da linha/);
 assert.match(report, /Melhor decisão:/);
 assert.match(report, /PLANO DE TREINO/);

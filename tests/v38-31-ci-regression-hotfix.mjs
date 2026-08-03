@@ -14,7 +14,7 @@ assert.match(app, /nativeSkills: Array\.from\(new Set\(canonicalizeSkillList\(\[
   'O inventário completo precisa manter deduplicação explícita e normalização canônica.');
 
 // O teste antigo mantinha uma expressão fixa e chegou a montar o sufixo
-// 38.38 como "38-38", rejeitando o esquema real 38.38.0. O contrato agora é
+// 38.39 como "38-39", rejeitando o esquema real 38.39.0. O contrato agora é
 // derivado da versão do pacote, evitando que um novo hotfix quebre a CI.
 const [major, minor] = pkg.version.split('.');
 const escapedVersion = `${major}\\.${minor}\\.0`;
