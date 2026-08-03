@@ -1,1 +1,1 @@
-v38.39 — corrige definitivamente a regressão v31.00 no GitHub Actions
+v38.39 — restaura o tsconfig raiz e corrige as falhas em cadeia do TypeScript e regressões
