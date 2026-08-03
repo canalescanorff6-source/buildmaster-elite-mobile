@@ -1,1 +1,1 @@
-v38.38 — corrige regressões v35 sem restaurar perfis manuais; mantém perfil automático pela carta
+v38.38 — corrige contratos legados v37.71/v38.31 sem alterar o perfil automático pela carta
