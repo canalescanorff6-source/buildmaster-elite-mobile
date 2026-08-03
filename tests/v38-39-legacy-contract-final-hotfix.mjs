@@ -12,7 +12,9 @@ const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
 assert.equal(pkg.version, '38.39.0');
-assert.match(pkg.scripts['test:v3839'], /^node tests\/v38-39-legacy-contract-final-hotfix\.mjs && node tests\/v38-39-v3120-deterministic-contract-hotfix\.mjs$/);
+assert.match(pkg.scripts['test:v3839'], /v38-39-legacy-contract-final-hotfix\.mjs/);
+assert.match(pkg.scripts['test:v3839'], /v38-39-v3120-deterministic-contract-hotfix\.mjs/);
+assert.match(pkg.scripts['test:v3839'], /v38-39-v3100-github-deterministic-hotfix\.mjs/);
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3839'));
 assert.ok(doctor.includes("['Regressões v38.39', ['run', 'test:v3839']]"));
 assert.ok(v33.includes('|38|39)'), 'A regressão v33 deve reconhecer o cache atual sem apagar versões anteriores.');

@@ -1,1 +1,1 @@
-v38.39 — corrige definitivamente a regressão v31.20 sem alterar funções do app
+v38.39 — corrige definitivamente a regressão v31.00 no GitHub Actions
