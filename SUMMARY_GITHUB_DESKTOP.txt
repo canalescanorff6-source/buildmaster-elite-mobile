@@ -1,1 +1,1 @@
-v38.39 — corrige definitivamente a regressão v38.35 e elimina contratos de cache presos a versões antigas
+v38.39 — corrige definitivamente a regressão v31.20 sem alterar funções do app

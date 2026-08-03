@@ -2,7 +2,7 @@
   "name": "buildmaster-elite-tatico-v37-00-inteligencia-profissional",
   "version": "38.39.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v38.39 — corrige definitivamente o contrato legado v38.35 sem alterar o perfil automático pela carta.",
+  "description": "BuildMaster Elite Tático v38.39 — hotfix definitivo da regressão v31.20 sem alterar o perfil automático pela carta.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -47,7 +47,7 @@
     "test:v3100": "npm run typecheck:v3100 && node -r ./tests/_ts-require.cjs tests/v31-10-unified-intelligence-regression.ts",
     "typecheck:v3110": "tsc -p tests/types-v3110/tsconfig.json --pretty false && tsc -p tests/types-v3110-ui/tsconfig.json --pretty false",
     "test:v3110": "npm run typecheck:v3110 && node -r ./tests/_ts-require.cjs tests/v31-10-tactical-planning-regression.ts && node tests/v31-10-root-typecheck-isolation-regression.mjs && node tests/v31-10-result-workspace-typecheck-regression.mjs",
-    "test:v3120": "npm run typecheck:v3110 && node tests/v31-20-premium-interface-regression.mjs && node tests/v31-20-tactical-context-restored-regression.mjs",
+    "test:v3120": "node tests/v31-20-premium-interface-regression.mjs && node tests/v31-20-tactical-context-restored-regression.mjs",
     "test:premium-complete": "node tests/v31-20-premium-complete-screens-regression.mjs",
     "typecheck:v3130": "tsc -p tests/types-v3130/tsconfig.json --pretty false && tsc -p tests/types-v3130-ui/tsconfig.json --pretty false",
     "test:v3130": "npm run typecheck:v3130 && node -r ./tests/_ts-require.cjs tests/v31-30-supreme-gameplay-regression.ts",
@@ -136,7 +136,7 @@
     "test:v3836": "node tests/v38-36-deterministic-audit-hotfix.mjs",
     "test:v3837": "npm run typecheck:v3200 && npm run typecheck:v3750 && node -r ./tests/_ts-require.cjs tests/v38-37-automatic-card-gameplay-regression.ts",
     "test:v3838": "npm run test:v3500 && npm run test:v3520 && node tests/v38-38-legacy-profile-regressions-hotfix.mjs",
-    "test:v3839": "node tests/v38-39-legacy-contract-final-hotfix.mjs"
+    "test:v3839": "node tests/v38-39-legacy-contract-final-hotfix.mjs && node tests/v38-39-v3120-deterministic-contract-hotfix.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

@@ -1,24 +1,46 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-const app = readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-const home = readFileSync('src/modules/core/IntegratedHomePanel.tsx', 'utf8');
-const appearance = readFileSync('src/components/IdentityAppearancePanel.tsx', 'utf8');
-const css = readFileSync('src/app/globals.css', 'utf8');
-const identityCss = readFileSync('src/app/v35-identity-themes.css', 'utf8');
-const prefs = readFileSync('src/lib/easyExperience.ts', 'utf8');
-const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relativePath) => readFileSync(path.join(projectRoot, relativePath), 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
 
-assert.match(pkg.version, /^(?:3[1-9]|[4-9]\d)\.\d+\.0$/);
-for (const preset of ['obsidian-gold', 'elite-blue', 'future-purple']) {
-  assert.ok(app.includes(preset) || appearance.includes(preset), `O seletor deve incluir ${preset}.`);
-  assert.ok(css.includes(`visual-${preset}`) || identityCss.includes(`visual-${preset}`), `O CSS deve incluir ${preset}.`);
-  assert.ok(prefs.includes(preset), `As preferências devem persistir ${preset}.`);
+const app = read('src/components/CardVisionApp.tsx');
+const home = read('src/modules/core/IntegratedHomePanel.tsx');
+const appearance = read('src/components/IdentityAppearancePanel.tsx');
+const css = read('src/app/globals.css');
+const identityCss = read('src/app/v35-identity-themes.css');
+const prefs = read('src/lib/easyExperience.ts');
+const pkg = JSON.parse(read('package.json'));
+
+assert.match(pkg.version, /^(?:3[1-9]|[4-9]\d)\.\d+\.0$/, `Versão incompatível com a linha evolutiva: ${pkg.version}`);
+
+const requiredPresets = ['obsidian-gold', 'elite-blue', 'future-purple'];
+for (const preset of requiredPresets) {
+  assert.ok(
+    appearance.includes(`id: '${preset}'`) || app.includes(preset),
+    `O seletor premium não declara o preset ${preset}.`
+  );
+  assert.ok(
+    css.includes(`visual-${preset}`) || identityCss.includes(`visual-${preset}`),
+    `O CSS não contém a superfície visual do preset ${preset}.`
+  );
+  assert.ok(
+    prefs.includes(`'${preset}'`),
+    `As preferências não persistem o preset ${preset}.`
+  );
 }
-assert.ok(app.includes('visual-${visualPreset}'), 'A classe do modelo precisa ser aplicada ao shell principal.');
-assert.ok(appearance.includes('Temas') && appearance.includes('premium-preset-grid'), 'Aparência deve exibir o seletor premium.');
-assert.ok(home.includes('bm-premium-reader-hero'), 'A home deve destacar o leitor de cartas.');
-assert.ok(home.includes('bm-premium-feature-grid'), 'A home deve mostrar as funções principais.');
-assert.ok(home.includes('bm-premium-mini-pitch'), 'A home deve mostrar a formação ativa.');
-assert.ok(home.includes('Habilidades') && home.includes('Ímpetos') && home.includes('Formações'), 'As funções essenciais devem estar visíveis.');
-console.log(`v${pkg.version.split('.').slice(0, 2).join('.')} premium interface regression: ok`);
+
+assert.match(app, /visual-\$\{visualPreset\}/, 'A classe do modelo precisa ser aplicada ao shell principal.');
+assert.match(appearance, />Temas</, 'Aparência deve exibir a seção Temas.');
+assert.match(appearance, /premium-preset-grid/, 'Aparência deve manter a grade de temas premium.');
+
+for (const marker of ['bm-premium-reader-hero', 'bm-premium-feature-grid', 'bm-premium-mini-pitch']) {
+  assert.ok(home.includes(marker), `A home premium perdeu o marcador estrutural ${marker}.`);
+}
+for (const label of ['Habilidades', 'Ímpetos', 'Formações']) {
+  assert.ok(home.includes(label), `A home premium não apresenta a função essencial ${label}.`);
+}
+
+console.log(`v${pkg.version.split('.').slice(0, 2).join('.')} interface premium validada por contrato determinístico.`);
