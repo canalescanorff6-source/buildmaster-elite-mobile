@@ -1,0 +1,1 @@
+Corrige as regressões históricas v35.00 e v35.20 sem restaurar opções manuais. O perfil de gameplay continua automático pela carta, preservando pontos exatos, cinco habilidades e foco em desempenho.

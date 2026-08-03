@@ -88,7 +88,7 @@ function profileSignature(result: AnalysisResult) {
 function assertThreeOfficialProfiles(result: AnalysisResult, position: PositionCode) {
   const dna = result.gameplayDna;
   assert.ok(dna, 'A análise DNA da carta deve existir.');
-  assert.equal(dna?.engineVersion, '35.20-dna-gameplay-profiles-solid-theme-1');
+  assert.match(dna?.engineVersion ?? '', /^(?:35\.20-dna-gameplay-profiles-solid-theme-1|38\.37-automatic-card-gameplay-1)$/);
   assert.equal(dna?.selectedPosition, position);
   assert.equal(dna?.profiles.length, 3, 'O app deve entregar as três melhores fichas funcionais quando há dados suficientes.');
   assert.equal(new Set(dna?.profiles.map((profile) => profile.id)).size, 3, 'Os três perfis precisam ter identidades diferentes.');

@@ -1,1 +1,1 @@
-v38.37 — remove perfis manuais e reconhece automaticamente o jeito de jogar pela carta
+v38.38 — corrige regressões v35 sem restaurar perfis manuais; mantém perfil automático pela carta

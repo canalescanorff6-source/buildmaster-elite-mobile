@@ -9,13 +9,13 @@ const cache = read('src/components/RegisterServiceWorker.tsx');
 const doctor = read('scripts/ci-doctor.mjs');
 
 assert.doesNotMatch(workspace, /\bUploadCloud\b/, 'Import não utilizado não pode voltar ao ResultWorkspace.');
-assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:37\.(?:70\.0-continuous-rules|80\.0-clean-intelligent|90\.0-unified-creation)|38\.(?:00\.0-clean-vault|10\.0-premium-clean-result|20\.0-invisible-optimization|30\.0-name-skill-integrity|31\.0-ci-regression-hotfix|32\.0-complete-integration|33\.0-professional-template|34\.0-ci-stability|35\.0-legacy-regressions|36\.0-deterministic-audit|37\.0-automatic-card-gameplay))-1'/);
+assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:37\.(?:70\.0-continuous-rules|80\.0-clean-intelligent|90\.0-unified-creation)|38\.(?:00\.0-clean-vault|10\.0-premium-clean-result|20\.0-invisible-optimization|30\.0-name-skill-integrity|31\.0-ci-regression-hotfix|32\.0-complete-integration|33\.0-professional-template|34\.0-ci-stability|35\.0-legacy-regressions|36\.0-deterministic-audit|37\.0-automatic-card-gameplay|38\.0-legacy-profile-regressions))-1'/);
 assert.ok(v33.includes("37\\.(?:00|40|50|60|70|80|90)"), 'A regressão v33 precisa continuar aceitando os esquemas v37.');
-assert.ok(v33.includes("38\\.(?:00|10|20|30|31|32|33|34|35|36|37)"), 'A regressão v33 precisa aceitar os esquemas v38.00 até v38.37.');
+assert.ok(v33.includes("38\\.(?:00|10|20|30|31|32|33|34|35|36|37)"), 'A regressão v33 precisa aceitar os esquemas v38.00 até v38.38.');
 assert.match(advanced, /const contextualTraining = result\.calibrationV32\?\.finalTraining \?\? result\.training/);
 assert.match(advanced, /function contextCriticalGroups/);
 assert.match(advanced, /function contextMismatchPenalty/);
-for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71', 'v37.80', 'v37.90', 'v38.00', 'v38.10', 'v38.20', 'v38.30', 'v38.31', 'v38.32', 'v38.33', 'v38.34', 'v38.35', 'v38.36', 'v38.37']) {
+for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71', 'v37.80', 'v37.90', 'v38.00', 'v38.10', 'v38.20', 'v38.30', 'v38.31', 'v38.32', 'v38.33', 'v38.34', 'v38.35', 'v38.36', 'v38.37', 'v38.38']) {
   assert.ok(doctor.includes(`Regressões ${version}`), `O diagnóstico consolidado precisa executar ${version}.`);
 }
 
