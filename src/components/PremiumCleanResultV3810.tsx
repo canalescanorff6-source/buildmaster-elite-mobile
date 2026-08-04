@@ -23,7 +23,8 @@ export function PremiumCleanResultV3810({
   variant?: 'result' | 'export';
 }) {
   const model = buildPremiumCleanResultModel(result);
-  const canSave = Boolean(result.validation?.canGenerate);
+  const requiresReview = !Boolean(result.validation?.canGenerate);
+  const hasSaveHandler = typeof onSave === 'function';
 
   return (
     <article className={`bm-v3810-clean-result bm-v3810-${variant}`}>
@@ -40,7 +41,7 @@ export function PremiumCleanResultV3810({
             <p>{model.position} • {model.playstyle}</p>
           </div>
         </div>
-        <span className={canSave ? 'approved' : 'review'}><CheckCircle2 size={15} /> {model.statusLabel}</span>
+        <span className={requiresReview ? 'review' : 'approved'}><CheckCircle2 size={15} /> {model.statusLabel}</span>
       </header>
 
       <section className="bm-v3810-build-block">
@@ -70,7 +71,7 @@ export function PremiumCleanResultV3810({
       <p className="bm-v3810-usage"><b>Como usar:</b> {model.usageTip}</p>
 
       <footer className="bm-v3810-result-actions">
-        {variant === 'result' && <button type="button" className="primary" onClick={onSave} disabled={!canSave}><Save size={17} /> {canSave ? 'Salvar ficha' : 'Revisar ficha'}</button>}
+        {variant === 'result' && <button type="button" className="primary" onClick={onSave} disabled={!hasSaveHandler} title={requiresReview ? 'Salvar no Cofre como ficha para revisar, sem perder o resultado.' : undefined}><Save size={17} /> {requiresReview ? 'Salvar para revisar' : 'Salvar ficha'}</button>}
         <button type="button" onClick={() => onExportImage?.('portrait')}><Download size={17} /> Imagem vertical</button>
         <button type="button" onClick={() => onExportImage?.('square')}><Image size={17} /> Imagem quadrada</button>
         <button type="button" onClick={onShare}><Share2 size={17} /> Compartilhar</button>

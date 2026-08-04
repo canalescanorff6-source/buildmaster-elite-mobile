@@ -165,10 +165,15 @@ assert.ok(uncertain.structuralPrecision?.blockReasons.some((reason) => /estilo|p
 
 
 const workspaceSource = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
+const cleanResultSource = fs.readFileSync('src/components/PremiumCleanResultV3810.tsx', 'utf8');
 const panelSource = fs.readFileSync('src/components/StructuralPrecisionPanel.tsx', 'utf8');
 const structuralSource = fs.readFileSync('src/lib/structuralPrecisionV3740.ts', 'utf8');
 assert.match(workspaceSource, /<StructuralPrecisionPanel result=\{result\}/);
-assert.match(workspaceSource, /disabled=\{!result\.validation\.canGenerate\}/);
+assert.match(workspaceSource, /Salvar para revisar/);
+assert.doesNotMatch(workspaceSource, /disabled=\{!result\.validation\.canGenerate\}/, 'A trava estrutural deve marcar Revisar, sem impedir o salvamento no Cofre.');
+assert.match(cleanResultSource, /requiresReview = !Boolean\(result\.validation\?\.canGenerate\)/);
+assert.match(cleanResultSource, /Salvar para revisar/);
+assert.doesNotMatch(cleanResultSource, /const canSave = Boolean\(result\.validation\?\.canGenerate\)/, 'A tela clean não pode usar a validação como bloqueio de salvamento.');
 assert.match(panelSource, /Identidade canônica e travas da carta/);
 assert.match(panelSource, /Nativas, adicionais e especiais sem mistura/);
 assert.match(structuralSource, /Campos críticos abaixo de 70% bloqueiam a ficha final/);

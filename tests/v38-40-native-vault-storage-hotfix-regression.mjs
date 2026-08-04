@@ -11,6 +11,7 @@ const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
 const bridge = read('src/lib/nativeVaultStorage.ts');
 const history = read('src/modules/vault/cardHistoryStore.ts');
 const resultUi = read('src/components/result/ResultWorkspace.tsx');
+const cleanResultUi = read('src/components/PremiumCleanResultV3810.tsx');
 const runtime = read('src/components/AppRuntimeStatus.tsx');
 const installer = read('scripts/install-native-vault-storage-plugin.mjs');
 const directWorkflow = read('.github/workflows/build-apk.yml');
@@ -31,6 +32,9 @@ assert.ok(history.includes('fullPreview: null'));
 assert.ok(history.indexOf('nativeVaultWrite') < history.indexOf('writeIndexedHistory(compactHistoryForNativeStorage(next))'), 'Cofre nativo deve ser a rota principal no APK');
 assert.ok(resultUi.includes('Salvar para revisar'));
 assert.ok(!resultUi.includes("disabled={!result.validation.canGenerate}"), 'alertas de OCR não podem impedir o salvamento para revisão');
+assert.ok(cleanResultUi.includes('Salvar para revisar'));
+assert.ok(cleanResultUi.includes("const requiresReview = !Boolean(result.validation?.canGenerate)"));
+assert.ok(!cleanResultUi.includes("const canSave = Boolean(result.validation?.canGenerate)"), 'a tela clean também não pode bloquear fichas em revisão');
 assert.ok(runtime.includes("detail.operation !== 'write'"));
 assert.ok(!runtime.includes('O aparelho bloqueou ou ficou sem espaço para salvar uma preferência.'));
 
