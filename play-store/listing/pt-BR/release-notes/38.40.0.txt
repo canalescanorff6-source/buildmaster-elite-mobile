@@ -1,0 +1,1 @@
+Leitura de cartas mais rápida com modo adaptativo, checkpoints automáticos e retomada segura. A sessão permanece ativa ao alternar entre WhatsApp, navegador e outros aplicativos. Também foram corrigidos os contratos de testes, cache PWA, rota inicial e validações de publicação.

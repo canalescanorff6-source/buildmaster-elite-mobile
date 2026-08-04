@@ -54,11 +54,11 @@ assert.ok(ui.includes('sem IA paga'));
 const css = read('src/app/globals.css');
 assert.ok(css.includes('aspect-ratio:9/16'));
 const sw = read('public/sw.js');
-assert.ok(sw.includes('buildmaster-v38-39-legacy-contract-final-1'));
+assert.ok(sw.includes('buildmaster-v38-40-background-ocr-resume-1'));
 const pkg = JSON.parse(read('package.json'));
 assert.equal(pkg.version, '38.40.0');
 assert.ok(String(pkg.scripts?.['test:all']).includes('npm run test:v3833'));
 assert.equal(read('capacitor.config.ts').includes("appId: 'com.buildmaster.elitetatico'"), true);
 assert.equal(tactical.META_FORMATION_STORAGE_KEY, 'buildmaster_meta_formation_projects_v3832', 'A chave anterior deve ser preservada para não perder projetos salvos.');
 
-console.log('v38.39 Gerador Tático Profissional aprovado: template determinístico, 11 jogadores, setas controladas, painéis completos, PNG/PDF e compatibilidade sem IA paga.');
+console.log('v38.40 Gerador Tático Profissional aprovado: template determinístico, 11 jogadores, setas controladas, painéis completos, PNG/PDF e compatibilidade sem IA paga.');

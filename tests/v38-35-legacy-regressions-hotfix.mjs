@@ -19,8 +19,8 @@ assert.equal(pkg.scripts['test:v3835'], 'node tests/v38-35-legacy-regressions-ho
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3835'));
 assert.match(budgetRegression, /\(\?:3\\\.5\|4\)/);
 assert.match(budgetRegression, /não pode ultrapassar 4 MiB/);
-assert.match(studioRegression, /38\\\.3\[2-9\]/);
-assert.match(revolutionRegression, /38\\\.3\[2-9\]/);
+assert.match(studioRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
+assert.match(revolutionRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 
 // O contrato legado não pode depender de um sufixo de cache de uma versão
 // anterior. A v37.71 valida o formato e a v38.31 deriva a versão do pacote.
@@ -32,12 +32,12 @@ assert.match(cacheHotfixRegression, /escapedCacheVersion/);
 assert.doesNotMatch(cacheHotfixRegression, /36-deterministic-audit/);
 
 assert.ok(audit.includes("pkg.version === '38.40.0'"));
-assert.ok(audit.includes('buildmaster-v38-39-legacy-contract-final-1'));
+assert.ok(audit.includes('buildmaster-v38-40-background-ocr-resume-1'));
 assert.ok(doctor.includes('Regressões v38.39'));
 assert.equal(manifest.name, 'BuildMaster Elite Tático v38.40');
-assert.ok(sw.includes('buildmaster-v38-39-legacy-contract-final-1'));
-assert.ok(nativeCache.includes('38.40.0-legacy-contract-final-1'));
+assert.ok(sw.includes('buildmaster-v38-40-background-ocr-resume-1'));
+assert.ok(nativeCache.includes('38.40.0-background-ocr-resume-1'));
 const playNotes = read('play-store/listing/pt-BR/release-notes/38.40.0.txt').trim();
 assert.ok(playNotes.length > 0 && playNotes.length <= 500);
 
-console.log('v38.35 preservada na v38.39: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');
+console.log('v38.35 preservada na v38.40: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');

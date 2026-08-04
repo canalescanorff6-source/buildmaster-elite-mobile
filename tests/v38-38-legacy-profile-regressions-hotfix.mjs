@@ -9,8 +9,8 @@ assert.equal(pkg.version, '38.40.0');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3838'));
 assert.ok(read('scripts/ci-doctor.mjs').includes('Regressões v38.39'));
 assert.equal(manifest.name, 'BuildMaster Elite Tático v38.40');
-assert.ok(read('public/sw.js').includes('buildmaster-v38-39-legacy-contract-final-1'));
-assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('38.40.0-legacy-contract-final-1'));
+assert.ok(read('public/sw.js').includes('buildmaster-v38-40-background-ocr-resume-1'));
+assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('38.40.0-background-ocr-resume-1'));
 
 const v3500 = read('tests/v35-00-official-additional-skills-meta-regression.ts');
 assert.ok(v3500.includes('Automática v38\\.(?:37|38|39|40)'), 'A regressão v35.00 precisa aceitar a calibração automática atual.');
@@ -32,4 +32,4 @@ for (const removed of ['Equilibrado', 'Passe e tabelas', 'Drible e condução', 
   assert.ok(!fields.includes(`>${removed}</option>`), `Opção manual restaurada por engano: ${removed}`);
 }
 
-console.log('v38.39 aprovada: regressões v35.00/v35.20 atualizadas sem restaurar perfis manuais e mantendo o perfil automático pela carta.');
+console.log('v38.40 aprovada: regressões v35.00/v35.20 atualizadas sem restaurar perfis manuais e mantendo o perfil automático pela carta.');

@@ -13,7 +13,8 @@ assert.match(auth, /for \(const delay of \[0, 90, 220\]\)/);
 assert.match(auth, /if \(raw\) return parseStoredSession\(raw\)/);
 assert.match(auth, /const cached = await readCachedLicense\(\)/);
 assert.match(gate, /Date\.now\(\) - lastSuccessfulValidationRef\.current < 2 \* 60 \* 1000/);
-assert.match(gate, /terminalFailureCountRef\.current >= 3/);
+assert.match(gate, /terminalFailureCountRef\.current >= 5/);
+assert.match(gate, /15 \* 60 \* 1000/);
 assert.match(gate, /setValidation\(\(current\) => current \? \{ \.\.\.current, offline: true \} : current\)/);
 assert.doesNotMatch(app, /clearBuildMasterSession\(\);\s*void account\?\.logout\(\)/);
 

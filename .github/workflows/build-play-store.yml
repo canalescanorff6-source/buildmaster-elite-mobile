@@ -1,4 +1,4 @@
-name: Gerar AAB v38.39 Google Play
+name: Gerar AAB v38.40 Google Play
 
 on:
   workflow_dispatch:
@@ -55,10 +55,10 @@ jobs:
           ref: ${{ github.event.inputs.source_ref || github.ref }}
           fetch-depth: 0
 
-      - name: Carregar versão v38.39 do pacote
+      - name: Carregar versão v38.40 do pacote
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          test "$VERSION" = "38.39.0" || { echo "::error::package.json precisa estar em 38.39.0"; exit 1; }
+          test "$VERSION" = "38.40.0" || { echo "::error::package.json precisa estar em 38.40.0"; exit 1; }
           echo "BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION=$VERSION" >> "$GITHUB_ENV"
@@ -238,7 +238,7 @@ jobs:
       - name: Publicar artefato para homologação
         uses: actions/upload-artifact@v6
         with:
-          name: buildmaster-play-v31-${{ env.ANDROID_VERSION_CODE }}
+          name: buildmaster-play-v38-40-${{ env.ANDROID_VERSION_CODE }}
           path: |
             ${{ env.AAB_NAME }}
             ${{ env.AAB_NAME }}.sha256
