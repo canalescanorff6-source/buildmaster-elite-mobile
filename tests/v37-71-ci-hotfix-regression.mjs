@@ -18,7 +18,7 @@ assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:37|38)\.\d+\.0-[^']+-1'/,
   'O esquema nativo atual precisa manter o formato versionado reconhecido pelo atualizador.');
 assert.match(v33, /assert\.match\(cache, \/NATIVE_CACHE_SCHEMA/,
   'A regressão v33 precisa continuar validando o esquema nativo atual.');
-assert.ok(v33.includes('38\\.(?:00|10|20|30|31|32|33|34|35|36|37|38|39)'),
+assert.ok(v33.includes('38\\.(?:00|10|20|30|31|32|33|34|35|36|37|38|39|40)'),
   'A regressão v33 precisa aceitar o esquema ativo da v38.39.');
 
 assert.match(advanced, /const contextualTraining = result\.calibrationV32\?\.finalTraining \?\? result\.training/);
@@ -29,5 +29,5 @@ for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71', 'v37.80', 'v37.90
   assert.ok(doctor.includes(`Regressões ${version}`), `O diagnóstico consolidado precisa executar ${version}.`);
 }
 
-assert.equal(pkg.version, '38.39.0');
+assert.equal(pkg.version, '38.40.0');
 console.log('v37.71 hotfix aprovado: TypeScript limpo, contrato de cache atual validado sem lista legada frágil e contexto de delay/controle preservado.');

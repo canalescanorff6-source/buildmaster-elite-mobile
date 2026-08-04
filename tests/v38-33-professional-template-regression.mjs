@@ -7,8 +7,8 @@ const tactical = require('../src/modules/tactical-studio/metaFormationStudioV383
 const poster = require('../src/modules/tactical-studio/professionalTacticalTemplateV3833.ts');
 const read = (file) => fs.readFileSync(file, 'utf8');
 
-assert.equal(poster.PROFESSIONAL_TACTICAL_TEMPLATE_VERSION, '38.39.0');
-assert.equal(tactical.META_FORMATION_STUDIO_VERSION, '38.39.0');
+assert.equal(poster.PROFESSIONAL_TACTICAL_TEMPLATE_VERSION, '38.40.0');
+assert.equal(tactical.META_FORMATION_STUDIO_VERSION, '38.40.0');
 assert.deepEqual(poster.professionalMetaFormationOutputSize('complete'), { width: 1080, height: 1920 });
 assert.deepEqual(poster.professionalMetaFormationOutputSize('story'), { width: 1080, height: 1920 });
 assert.deepEqual(poster.professionalMetaFormationOutputSize('square'), { width: 1080, height: 1080 });
@@ -20,7 +20,7 @@ project.name = '4-1-2-1-2 Vácuo Fatal';
 const svg = poster.renderProfessionalMetaFormationSvg(project, 'complete');
 
 for (const marker of [
-  'data-template-version="38.39.0"',
+  'data-template-version="38.40.0"',
   'MODELO GERADO PELO APP',
   'eFOOTBALL 2026',
   'GUIA TÁTICO INTELIGENTE',
@@ -48,7 +48,7 @@ assert.ok(fieldOnly.includes('GERADO AUTOMATICAMENTE PELO APP'));
 const ui = read('src/modules/tactical-studio/MetaFormationStudioV3832.tsx');
 assert.ok(ui.includes('renderProfessionalMetaFormationSvg'));
 assert.ok(ui.includes('professionalMetaFormationOutputSize'));
-assert.ok(ui.includes('v38.39'));
+assert.ok(ui.includes('v38.40'));
 assert.ok(ui.includes('sem IA paga'));
 
 const css = read('src/app/globals.css');
@@ -56,7 +56,7 @@ assert.ok(css.includes('aspect-ratio:9/16'));
 const sw = read('public/sw.js');
 assert.ok(sw.includes('buildmaster-v38-39-legacy-contract-final-1'));
 const pkg = JSON.parse(read('package.json'));
-assert.equal(pkg.version, '38.39.0');
+assert.equal(pkg.version, '38.40.0');
 assert.ok(String(pkg.scripts?.['test:all']).includes('npm run test:v3833'));
 assert.equal(read('capacitor.config.ts').includes("appId: 'com.buildmaster.elitetatico'"), true);
 assert.equal(tactical.META_FORMATION_STORAGE_KEY, 'buildmaster_meta_formation_projects_v3832', 'A chave anterior deve ser preservada para não perder projetos salvos.');

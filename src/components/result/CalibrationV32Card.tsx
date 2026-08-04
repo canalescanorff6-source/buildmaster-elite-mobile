@@ -35,7 +35,7 @@ export function CalibrationV32Card({ result }: { result: AnalysisResult }) {
     <article className="luxury-panel wide-card calibration-v32-card">
       <div className="section-title-row">
         <div>
-          <p className="kicker">Calibração Automática v38.39</p>
+          <p className="kicker">Calibração Automática v38.40</p>
           <h3>Gameplay máxima, sem caçar overall</h3>
         </div>
         <span>{calibration.calibrationScore}/100</span>

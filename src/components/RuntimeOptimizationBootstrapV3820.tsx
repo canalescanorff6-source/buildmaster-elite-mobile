@@ -54,11 +54,16 @@ export function RuntimeOptimizationBootstrapV3820() {
     const handleVisibility = () => {
       clearHiddenTimer();
       if (document.visibilityState !== 'hidden') return;
+      // v38.40: não descarrega o worker durante uma leitura ativa. O processo
+      // nativo mantém o aplicativo vivo e o checkpoint permite retomada segura.
       hiddenReleaseTimer = window.setTimeout(() => {
-        requestOcrWorkerReleaseWhenIdle(0);
-      }, Math.min(20_000, Math.round(profile.ocrWorkerIdleMs / 3)));
+        const readingActive = document.body.dataset.ocrReading === 'active';
+        if (!readingActive) requestOcrWorkerReleaseWhenIdle(0);
+      }, Math.min(45_000, Math.round(profile.ocrWorkerIdleMs / 2)));
     };
-    const handlePageHide = () => requestOcrWorkerReleaseWhenIdle(0);
+    const handlePageHide = () => {
+      if (document.body.dataset.ocrReading !== 'active') requestOcrWorkerReleaseWhenIdle(0);
+    };
 
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('pagehide', handlePageHide);

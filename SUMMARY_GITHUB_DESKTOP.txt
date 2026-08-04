@@ -1,1 +1,1 @@
-v38.39 — corrige definitivamente o tsconfig raiz e adiciona autorreparo antes do CI e do APK
+v38.40 — acelera a leitura, preserva o progresso em segundo plano e mantém a sessão ao alternar de aplicativo

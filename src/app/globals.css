@@ -21850,3 +21850,13 @@ body::after { display: none !important; }
   font-style: normal;
   color: var(--app-fix-muted, rgba(225, 231, 239, 0.72));
 }
+
+/* v38.40 — retomada silenciosa sem repetir a tela de verificação */
+.quiet-resume-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--app-bg, #07101d);
+}
+.quiet-resume-brand { opacity: .82; animation: bmQuietResume 1.1s ease-in-out infinite alternate; }
+@keyframes bmQuietResume { from { transform: scale(.985); opacity: .68; } to { transform: scale(1); opacity: .92; } }

@@ -31,7 +31,7 @@ import {
   type LicenseValidation
 } from '@/lib/accountAuth';
 import { clearActiveAccountIdentity } from '@/lib/accountStorage';
-import { safeStorageRemove } from '@/lib/safeLocalStorage';
+import { safeStorageGet, safeStorageRemove, safeStorageSet } from '@/lib/safeLocalStorage';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { PremiumBrand } from '@/components/PremiumBrand';
 import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
@@ -55,6 +55,8 @@ export type BuildMasterAccountContextValue = {
 };
 
 const AccountContext = createContext<BuildMasterAccountContextValue | null>(null);
+const FIRST_SECURE_BOOT_KEY = 'buildmaster:first-secure-boot-complete:v38.40';
+const SESSION_SNAPSHOT_KEY = 'buildmaster:session-snapshot:v38.40';
 
 export function useBuildMasterAccount() {
   return useContext(AccountContext);
@@ -65,6 +67,7 @@ export async function clearBuildMasterSession() {
     safeStorageRemove('buildmaster_local_auth_v15_premium');
     safeStorageRemove('buildmaster_local_auth_v6_1');
     clearActiveAccountIdentity();
+    safeStorageRemove(SESSION_SNAPSHOT_KEY);
   } catch {
     // Alguns navegadores bloqueiam localStorage em modo privado.
   }
@@ -389,6 +392,15 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
   );
 }
 
+function QuietResumeScreen() {
+  return (
+    <main className="auth-screen quiet-resume-screen" role="status" aria-busy="true" aria-label="Abrindo BuildMaster">
+      <section className="auth-orbit" aria-hidden="true" />
+      <section className="quiet-resume-brand"><PremiumBrand variant="compact" /></section>
+    </main>
+  );
+}
+
 function SessionLoadingScreen({ step }: { step: RestoreStep }) {
   const steps: Array<{ id: RestoreStep; title: string; description: string }> = [
     { id: 'session', title: 'Sessão protegida', description: 'Lendo o acesso salvo neste aparelho.' },
@@ -428,8 +440,18 @@ function SessionLoadingScreen({ step }: { step: RestoreStep }) {
 }
 
 export function AuthGate({ children }: { children?: ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [validation, setValidation] = useState<{ profile: AccountProfile; offline: boolean } | null>(null);
+  const firstSecureBoot = useRef(safeStorageGet(FIRST_SECURE_BOOT_KEY) !== '1');
+  const cachedSnapshot = useMemo(() => {
+    try {
+      const raw = safeStorageGet(SESSION_SNAPSHOT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { profile: AccountProfile; offline: boolean; savedAt: string };
+      if (!parsed?.profile?.id || Date.now() - Date.parse(parsed.savedAt) > 7 * 24 * 60 * 60 * 1000) return null;
+      return { profile: parsed.profile, offline: true };
+    } catch { return null; }
+  }, []);
+  const [ready, setReady] = useState(Boolean(cachedSnapshot));
+  const [validation, setValidation] = useState<{ profile: AccountProfile; offline: boolean } | null>(cachedSnapshot);
   const [restoreError, setRestoreError] = useState('');
   const [restoreStep, setRestoreStep] = useState<RestoreStep>('session');
   const lastSuccessfulValidationRef = useRef(Date.now());
@@ -449,14 +471,19 @@ export function AuthGate({ children }: { children?: ReactNode }) {
             lastSuccessfulValidationRef.current = Date.now();
             terminalFailureCountRef.current = 0;
             setValidation({ profile: cloud.profile, offline: cloud.offline });
+            safeStorageSet(SESSION_SNAPSHOT_KEY, JSON.stringify({ profile: cloud.profile, offline: cloud.offline, savedAt: new Date().toISOString() }));
           }
         }
       } catch (cause) {
         if (mounted) setRestoreError(cause instanceof Error ? cause.message : 'Não foi possível validar sua licença.');
       } finally {
-        const remaining = Math.max(0, 480 - (Date.now() - startedAt));
+        const minimumVisibleMs = firstSecureBoot.current ? 480 : 0;
+        const remaining = Math.max(0, minimumVisibleMs - (Date.now() - startedAt));
         if (remaining) await new Promise<void>((resolve) => window.setTimeout(resolve, remaining));
-        if (mounted) setReady(true);
+        if (mounted) {
+          setReady(true);
+          safeStorageSet(FIRST_SECURE_BOOT_KEY, '1');
+        }
       }
     }
     void restore();
@@ -511,7 +538,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
         if (isTransientAccountError(cause) || !definitiveBlock) {
           terminalFailureCountRef.current += 1;
           const confirmedSessionEnd = /sess[aã]o expirou|sess[aã]o n[aã]o (?:é|e) mais v[aá]lida|entre novamente/.test(normalized);
-          if (confirmedSessionEnd && terminalFailureCountRef.current >= 3) {
+          if (confirmedSessionEnd && terminalFailureCountRef.current >= 5 && Date.now() - lastSuccessfulValidationRef.current > 15 * 60 * 1000) {
             setRestoreError(message);
             setValidation(null);
             return;
@@ -561,10 +588,10 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     }
   } : null, [validation]);
 
-  if (!ready) return <SessionLoadingScreen step={restoreStep} />;
+  if (!ready) return firstSecureBoot.current ? <SessionLoadingScreen step={restoreStep} /> : <QuietResumeScreen />;
 
   if (!validation) {
-    return <LoginScreen initialError={restoreError} onSuccess={(next) => { terminalFailureCountRef.current = 0; lastSuccessfulValidationRef.current = Date.now(); setRestoreError(''); setValidation({ profile: next.profile, offline: next.offline }); }} />;
+    return <LoginScreen initialError={restoreError} onSuccess={(next) => { terminalFailureCountRef.current = 0; lastSuccessfulValidationRef.current = Date.now(); setRestoreError(''); setValidation({ profile: next.profile, offline: next.offline }); safeStorageSet(SESSION_SNAPSHOT_KEY, JSON.stringify({ profile: next.profile, offline: next.offline, savedAt: new Date().toISOString() })); }} />;
   }
 
   if (validation.profile.status === 'blocked' || validation.profile.status === 'suspended') {

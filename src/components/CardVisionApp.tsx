@@ -156,6 +156,16 @@ import {
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
+import {
+  checkpointFile,
+  clearBackgroundOcrCheckpoint,
+  readBackgroundOcrCheckpoint,
+  saveBackgroundOcrCheckpoint,
+  startBackgroundOcrProtection,
+  stopBackgroundOcrProtection,
+  updateBackgroundOcrCheckpoint,
+  updateBackgroundOcrProtection
+} from '@/lib/backgroundOcrV3840';
 import { validateImageFile } from '@/modules/images/imageSafety';
 import { exportTacticalImageLibrary, importTacticalImageLibrary } from '@/modules/images/accountImageLibrary';
 import { exportTacticalPosterLibrary, replaceTacticalPosterLibrary } from '@/lib/tacticalPosterLibrary';
@@ -428,6 +438,23 @@ export function CardVisionApp() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sessionHydrated, setSessionHydrated] = useState(false);
+  const backgroundResumeStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (backgroundResumeStartedRef.current) return;
+    backgroundResumeStartedRef.current = true;
+    let active = true;
+    void readBackgroundOcrCheckpoint().then((checkpoint) => {
+      if (!active || !checkpoint || !checkpoint.shouldResume || checkpoint.stage === 'completed') return;
+      const restored = checkpointFile(checkpoint);
+      setSelectedFile(restored);
+      setFileName(checkpoint.fileName);
+      setPreview((current) => current ?? URL.createObjectURL(restored));
+      setStatus(`Retomando leitura salva: ${checkpoint.status}`);
+      window.setTimeout(() => { if (active) void analyzeSelectedImage(restored, true); }, 80);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
@@ -2306,9 +2333,10 @@ export function CardVisionApp() {
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
-  async function analyzeSelectedImage() {
+  async function analyzeSelectedImage(fileOverride?: File, resumed = false) {
+    const activeFile = fileOverride ?? selectedFile;
     setMainSection('resultado');
-    if (!selectedFile) {
+    if (!activeFile) {
       if (rawText.trim().length > 2) runAnalysis();
       return;
     }
@@ -2325,6 +2353,21 @@ export function CardVisionApp() {
     setSinglePrintSession(null);
     setReadingConfirmations({});
     setStatus('Perfil EFHub Padronizado: identificando o painel completo, corrigindo orientação e preparando a cópia 1400×1600...');
+    document.body.dataset.ocrReading = 'active';
+    const backgroundJobId = `${Date.now()}-${activeFile.name}`;
+    await saveBackgroundOcrCheckpoint({
+      id: backgroundJobId,
+      file: activeFile,
+      fileName: activeFile.name,
+      fileType: activeFile.type,
+      stage: 'preparing',
+      completedZones: 0,
+      totalZones: 0,
+      status: resumed ? 'Retomando o processamento salvo.' : 'Preparando o print para leitura.',
+      startedAt: new Date().toISOString(),
+      shouldResume: true
+    }).catch(() => undefined);
+    void startBackgroundOcrProtection('Preparando o print. Você pode usar outros aplicativos.');
     const unsubscribe = subscribeOcrProgress((progress) => {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
@@ -2332,10 +2375,11 @@ export function CardVisionApp() {
       const manualEfhubCalibration = efhubCalibrationActiveRef.current
         ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current)
         : null;
-      const scanQuality = qualityReport ?? await inspectPrintQuality(selectedFile).catch(() => null);
+      const scanQuality = qualityReport ?? await inspectPrintQuality(activeFile).catch(() => null);
       if (scanQuality !== qualityReport) setQualityReport(scanQuality);
-      let geometry = await inspectSinglePrintGeometry(selectedFile);
-      const imageHash = await fileDigest(selectedFile);
+      let geometry = await inspectSinglePrintGeometry(activeFile);
+      void updateBackgroundOcrCheckpoint({ stage: 'layout', status: 'Layout identificado; preparando as áreas da carta.' });
+      const imageHash = await fileDigest(activeFile);
       const rememberedCalibration = await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
       if (rememberedCalibration) {
         geometry = {
@@ -2373,7 +2417,8 @@ export function CardVisionApp() {
       const thumbnailKey = `${imageHash}:efhub-canonical-v32.00`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
-      const fullOptimized = await preprocessImage(selectedFile, 'contrast');
+      const fullOptimized = await preprocessImage(activeFile, 'contrast');
+      void updateBackgroundOcrCheckpoint({ stage: 'full-pass', status: 'Identificando a tela completa.' });
       const fullPass = await recognizeWithOcrWorker(fullOptimized, {
         label: 'Print completo • identificação da tela',
         kind: 'general',
@@ -2381,12 +2426,12 @@ export function CardVisionApp() {
       });
       const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
       geometry = refinedGeometry;
-      let ocrSource: File | Blob = selectedFile;
+      let ocrSource: File | Blob = activeFile;
       let canonicalPreview: string | null = null;
       let canonicalized = false;
       let precisionImageHash = imageHash;
       if (manualEfhubCalibration) {
-        const manualZones = await buildPreciseOcrZonesFromEfhubCalibration(selectedFile, manualEfhubCalibration);
+        const manualZones = await buildPreciseOcrZonesFromEfhubCalibration(activeFile, manualEfhubCalibration);
         const signature = manualEfhubCalibration
           .map((zone) => `${zone.id}:${zone.x.toFixed(4)},${zone.y.toFixed(4)},${zone.w.toFixed(4)},${zone.h.toFixed(4)}`)
           .join('|');
@@ -2422,7 +2467,7 @@ export function CardVisionApp() {
       } else if (geometry.template === 'detailed-profile' && geometry.anchorReport.efhubLayout) {
         const canonicalPlan = buildEfhubLayoutPlan(geometry.width, geometry.height, geometry.anchorReport.bounds, fullPass.text);
         if (!['reflowed-unknown', 'incompatible'].includes(canonicalPlan.audit.mode)) {
-          const canonical = await normalizeEfhubProfileImage(selectedFile, canonicalPlan).catch(() => null);
+          const canonical = await normalizeEfhubProfileImage(activeFile, canonicalPlan).catch(() => null);
           if (canonical) {
             ocrSource = canonical.blob;
             canonicalPreview = canonical.preview;
@@ -2480,16 +2525,25 @@ export function CardVisionApp() {
         const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
         const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
         const target = zone.key === 'name' ? 2600 : zone.key === 'skills' ? 2200 : numeric ? 2100 : wide ? 2800 : 2350;
+        const criticalZone = zone.key === 'name' || zone.key === 'skills' || zone.key === 'attributes' || zone.key === 'mainPosition' || zone.key === 'playstyle';
+        const adaptiveMode: ReadingMode = criticalZone ? 'balanced' : 'fast';
         const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
           imageHash: precisionImageHash,
           template: geometry.template,
-          targetWidth: target,
-          readingMode,
+          targetWidth: Math.round(target * (criticalZone ? 0.94 : 0.84)),
+          readingMode: readingMode === 'fast' ? 'fast' : adaptiveMode,
           knownPlayerNames,
           labelPrefix: 'Print único'
         });
         zoneResults.push(best);
+        const completedZones = index + 1;
+        const progress = enabledZones.length ? Math.round((completedZones / enabledZones.length) * 100) : 0;
+        const progressStatus = `${zone.label} concluído (${completedZones}/${enabledZones.length}).`;
+        void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones, totalZones: enabledZones.length, status: progressStatus });
+        void updateBackgroundOcrProtection(progressStatus, progress);
       }
+      void updateBackgroundOcrCheckpoint({ stage: 'finalizing', status: 'Conferindo nome, atributos, habilidades e pontos.' });
+      void updateBackgroundOcrProtection('Conferindo e finalizando a carta.', 96);
       const forensicConsensus = stabilizeForensicReadings(zoneResults);
       zoneResults = forensicConsensus.readings;
       let session = buildSinglePrintSession({
@@ -2585,16 +2639,23 @@ export function CardVisionApp() {
       } else {
         setStatus(`OCR Vision concluído com ${visionAudit.score}/100. Posição, estilo, números e base oficial foram conferidos.`);
       }
+      await updateBackgroundOcrCheckpoint({ stage: 'completed', status: 'Leitura concluída.', shouldResume: false }).catch(() => undefined);
+      await clearBackgroundOcrCheckpoint().catch(() => undefined);
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         setStatus('Leitura cancelada. O arquivo não foi alterado.');
+        await clearBackgroundOcrCheckpoint().catch(() => undefined);
       } else {
+        const errorMessage = error instanceof Error ? error.message : 'Falha na leitura';
+        void updateBackgroundOcrCheckpoint({ stage: 'failed', status: 'Leitura pausada; será retomada ao voltar.', shouldResume: true, lastError: errorMessage });
         console.error('Falha no Print Único Pro:', error);
         void recordSafeRuntimeError({ area: 'print-unico-pro', code: 'ocr_failed', message: error instanceof Error ? error.message : 'Falha na leitura' });
-        setStatus('Não foi possível concluir a leitura. Tente um print direto da tela, sem corte e sem compressão.');
+        setStatus('A leitura foi preservada. Toque em continuar ou reabra o app para retomar do ponto seguro.');
       }
     } finally {
       unsubscribe();
+      delete document.body.dataset.ocrReading;
+      void stopBackgroundOcrProtection();
       setOcrCancelable(false);
       setLoading(false);
     }

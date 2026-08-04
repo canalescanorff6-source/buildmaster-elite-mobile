@@ -11,19 +11,19 @@ const v3831 = read('tests/v38-31-ci-regression-hotfix.mjs');
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '38.39.0');
+assert.match(pkg.version, /^38\.(?:39|40)\.0$/);
 assert.match(pkg.scripts['test:v3839'], /v38-39-legacy-contract-final-hotfix\.mjs/);
 assert.match(pkg.scripts['test:v3839'], /v38-39-v3120-deterministic-contract-hotfix\.mjs/);
 assert.match(pkg.scripts['test:v3839'], /v38-39-v3100-github-deterministic-hotfix\.mjs/);
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3839'));
 assert.ok(doctor.includes("['Regressões v38.39', ['run', 'test:v3839']]"));
-assert.ok(v33.includes('|38|39)'), 'A regressão v33 deve reconhecer o cache atual sem apagar versões anteriores.');
+assert.ok(v33.includes('|38|39|40)'), 'A regressão v33 deve reconhecer o cache atual sem apagar versões anteriores.');
 assert.ok(v35.includes('assert.doesNotMatch(cacheRegression'), 'A v38.35 deve rejeitar sufixos estáticos no contrato v37.71.');
 assert.ok(v35.includes('assert.doesNotMatch(cacheHotfixRegression'), 'A v38.35 deve rejeitar sufixos estáticos no contrato v38.31.');
 assert.ok(v3771.includes('formato versionado'));
 assert.ok(v3831.includes("const [major, minor] = pkg.version.split('.')"));
-assert.ok(sw.includes('buildmaster-v38-39-legacy-contract-final-1'));
-assert.ok(nativeCache.includes('38.39.0-legacy-contract-final-1'));
+assert.match(sw, /buildmaster-v38-(?:39-legacy-contract-final|40-background-ocr-resume)-1/);
+assert.match(nativeCache, /38\.(?:39\.0-legacy-contract-final|40\.0-background-ocr-resume)-1/);
 assert.ok(fs.existsSync('tests/v38-39-v3120-deterministic-contract-hotfix.mjs'));
 assert.doesNotMatch(pkg.scripts['test:v3120'], /typecheck:v3110/);
 

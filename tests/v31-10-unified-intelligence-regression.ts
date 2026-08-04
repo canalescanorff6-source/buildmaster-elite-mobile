@@ -106,7 +106,7 @@ for (const scenario of results) {
     assert.ok(result.unifiedIntelligence, 'A inteligência integrada precisa existir.');
     assert.match(
       result.unifiedIntelligence?.engineVersion ?? '',
-      /^(?:(?:31\.10|31\.30|31\.82)-unified-intelligence-|(?:(?:32\.00|35\.00)-unified-calibrated-|35\.10-unified-max-gameplay-|35\.20-unified-dna-gameplay-|38\.(?:37|38|39)-automatic-card-gameplay-))/,
+      /^(?:(?:31\.10|31\.30|31\.82)-unified-intelligence-|(?:(?:32\.00|35\.00)-unified-calibrated-|35\.10-unified-max-gameplay-|35\.20-unified-dna-gameplay-|38\.(?:37|38|39|40)-automatic-card-gameplay-))/,
       'O motor deve pertencer a uma versão reconhecida da inteligência integrada ou do perfil automático.',
     );
     assert.ok((result.unifiedIntelligence?.simulation.generatedCandidates ?? 0) >= 500, 'A simulação precisa gerar ao menos 500 candidatas.');
@@ -128,7 +128,7 @@ for (const scenario of results) {
     assert.ok(Array.isArray(result.unifiedIntelligence?.learning.testedPlans), 'Os planos testados precisam permanecer registrados.');
     assert.ok(result.trainingPointsUsed <= result.trainingPointsTotal, 'A ficha não pode ultrapassar o orçamento de pontos.');
     assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 5, 'O motor pode produzir de uma a cinco fichas alternativas.');
-    assert.match(result.buildName, /(?:Inteligência v31|Ficha Elite Suprema|Ficha v32|Ficha v35|Ficha Automática v38\.(?:37|38|39))/);
+    assert.match(result.buildName, /(?:Inteligência v31|Ficha Elite Suprema|Ficha v32|Ficha v35|Ficha Automática v38\.(?:37|38|39|40))/);
   } catch (error) {
     console.error(`\n[v31.00] Cenário que falhou: ${scenario.id}`);
     console.error(`[v31.00] engineVersion: ${result.unifiedIntelligence?.engineVersion ?? 'ausente'}`);

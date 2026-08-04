@@ -7,7 +7,7 @@ import {
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
 
-assert.equal(MATCH_TRAINER_VERSION, '38.39.0');
+assert.equal(MATCH_TRAINER_VERSION, '38.40.0');
 
 const session = createMatchTrainerSession({
   source: 'native-recording',
@@ -56,7 +56,7 @@ assert.ok(summary.priorities.some((item) => item.includes('passes verticais')));
 assert.ok(summary.matchRules.some((item) => item.includes('volante')));
 
 const report = exportMatchTrainerReport(session);
-assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v38\.39/);
+assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v38\.(?:39|40)/);
 assert.match(report, /00:42 — Perda de bola perigosa/);
 assert.match(report, /Sinais automáticos precisam de revisão/);
 assert.match(report, /4-1-2-2-1/);

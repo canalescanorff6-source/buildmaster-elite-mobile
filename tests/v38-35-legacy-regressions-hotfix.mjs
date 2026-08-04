@@ -14,7 +14,7 @@ const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '38.39.0');
+assert.equal(pkg.version, '38.40.0');
 assert.equal(pkg.scripts['test:v3835'], 'node tests/v38-35-legacy-regressions-hotfix.mjs');
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3835'));
 assert.match(budgetRegression, /\(\?:3\\\.5\|4\)/);
@@ -31,13 +31,13 @@ assert.match(cacheHotfixRegression, /const \[major, minor\] = pkg\.version\.spli
 assert.match(cacheHotfixRegression, /escapedCacheVersion/);
 assert.doesNotMatch(cacheHotfixRegression, /36-deterministic-audit/);
 
-assert.ok(audit.includes("pkg.version === '38.39.0'"));
+assert.ok(audit.includes("pkg.version === '38.40.0'"));
 assert.ok(audit.includes('buildmaster-v38-39-legacy-contract-final-1'));
 assert.ok(doctor.includes('Regressões v38.39'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v38.39');
+assert.equal(manifest.name, 'BuildMaster Elite Tático v38.40');
 assert.ok(sw.includes('buildmaster-v38-39-legacy-contract-final-1'));
-assert.ok(nativeCache.includes('38.39.0-legacy-contract-final-1'));
-const playNotes = read('play-store/listing/pt-BR/release-notes/38.39.0.txt').trim();
+assert.ok(nativeCache.includes('38.40.0-legacy-contract-final-1'));
+const playNotes = read('play-store/listing/pt-BR/release-notes/38.40.0.txt').trim();
 assert.ok(playNotes.length > 0 && playNotes.length <= 500);
 
 console.log('v38.35 preservada na v38.39: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');
