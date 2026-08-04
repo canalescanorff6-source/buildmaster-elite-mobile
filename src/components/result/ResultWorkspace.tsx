@@ -501,7 +501,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           </div>
 
           <div className="result-hero-actions">
-            <button className="result-action-primary" type="button" onClick={onSaveFicha} disabled={!result.validation.canGenerate} title={!result.validation.canGenerate ? 'Confirme os campos estruturais bloqueados antes de salvar.' : undefined}><Save size={17} /> {result.validation.canGenerate ? 'Salvar ficha' : 'Ficha bloqueada'}</button>
+            <button className="result-action-primary" type="button" onClick={onSaveFicha} disabled={!onSaveFicha} title={!result.validation.canGenerate ? 'A ficha será salva no Cofre como “Revisar”, sem perder o resultado.' : undefined}><Save size={17} /> {result.validation.canGenerate ? 'Salvar ficha' : 'Salvar para revisar'}</button>
             <button type="button" onClick={onRecalculate}><RotateCcw size={17} /> Recalcular</button>
             <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
           </div>
@@ -1725,7 +1725,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
       <div className="result-floating-actions result-clean-actions">
-        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha} disabled={!result.validation.canGenerate} title={!result.validation.canGenerate ? 'Confirme os campos estruturais bloqueados antes de salvar.' : undefined}><Save size={16} /> {result.validation.canGenerate ? 'Salvar' : 'Bloqueada'}</button>
+        <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha} disabled={!onSaveFicha} title={!result.validation.canGenerate ? 'Salvar no Cofre como ficha para revisar.' : undefined}><Save size={16} /> {result.validation.canGenerate ? 'Salvar' : 'Salvar para revisar'}</button>
         <button className="copy-floating" type="button" onClick={onRecalculate}><RotateCcw size={16} /> Recalcular</button>
         <button className="copy-floating" type="button" onClick={() => void shareCurrentResult()}><Share2 size={16} /> Compartilhar</button>
       </div>

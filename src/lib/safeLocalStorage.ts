@@ -7,8 +7,13 @@ export type StorageFailure = {
 
 const STORAGE_EVENT = 'buildmaster:storage-failure';
 
-function storageAvailable(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function reportFailure(operation: StorageFailure['operation'], key: string, cause: unknown) {
@@ -22,10 +27,37 @@ function reportFailure(operation: StorageFailure['operation'], key: string, caus
   window.dispatchEvent(new CustomEvent(STORAGE_EVENT, { detail }));
 }
 
+function isQuotaFailure(cause: unknown): boolean {
+  const details = cause && typeof cause === 'object' ? cause as { name?: unknown; message?: unknown } : {};
+  const name = String(details.name ?? '').toLowerCase();
+  const message = String(details.message ?? cause ?? '').toLowerCase();
+  return name.includes('quota') || message.includes('quota') || (message.includes('storage') && message.includes('full'));
+}
+
+function releaseLegacyStorage(storage: Storage, protectedKey: string): number {
+  const removableMarkers = [
+    'buildmaster_history_v24_',
+    'buildmaster_ocr_scan_history_v27',
+    'buildmaster_diagnostics_v27',
+    'buildmaster_update_audit_v1',
+    'buildmaster_update_audit_v2',
+    'buildmaster_ocr_cache',
+    'buildmaster_image_thumbnail'
+  ];
+  const keys: string[] = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (key && key !== protectedKey && removableMarkers.some((marker) => key.includes(marker))) keys.push(key);
+  }
+  for (const key of keys) storage.removeItem(key);
+  return keys.length;
+}
+
 export function safeStorageGet(key: string): string | null {
-  if (!storageAvailable()) return null;
+  const storage = getStorage();
+  if (!storage) return null;
   try {
-    return window.localStorage.getItem(key);
+    return storage.getItem(key);
   } catch (cause) {
     reportFailure('read', key, cause);
     return null;
@@ -33,20 +65,32 @@ export function safeStorageGet(key: string): string | null {
 }
 
 export function safeStorageSet(key: string, value: string): boolean {
-  if (!storageAvailable()) return false;
+  const storage = getStorage();
+  if (!storage) return false;
   try {
-    window.localStorage.setItem(key, value);
+    storage.setItem(key, value);
     return true;
   } catch (cause) {
+    if (isQuotaFailure(cause)) {
+      try {
+        releaseLegacyStorage(storage, key);
+        storage.setItem(key, value);
+        return true;
+      } catch (retryCause) {
+        reportFailure('write', key, retryCause);
+        return false;
+      }
+    }
     reportFailure('write', key, cause);
     return false;
   }
 }
 
 export function safeStorageRemove(key: string): boolean {
-  if (!storageAvailable()) return false;
+  const storage = getStorage();
+  if (!storage) return false;
   try {
-    window.localStorage.removeItem(key);
+    storage.removeItem(key);
     return true;
   } catch (cause) {
     reportFailure('remove', key, cause);
@@ -54,15 +98,15 @@ export function safeStorageRemove(key: string): boolean {
   }
 }
 
-
 export function safeStorageEntries(): Array<[string, string]> {
-  if (!storageAvailable()) return [];
+  const storage = getStorage();
+  if (!storage) return [];
   try {
     const entries: Array<[string, string]> = [];
-    for (let index = 0; index < window.localStorage.length; index += 1) {
-      const key = window.localStorage.key(index);
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
       if (!key) continue;
-      entries.push([key, window.localStorage.getItem(key) ?? '']);
+      entries.push([key, storage.getItem(key) ?? '']);
     }
     return entries;
   } catch (cause) {
@@ -92,11 +136,12 @@ export function safeStorageSetJson(key: string, value: unknown): boolean {
 }
 
 export function canWriteLocalStorage(): boolean {
-  if (!storageAvailable()) return false;
+  const storage = getStorage();
+  if (!storage) return false;
   const key = `buildmaster-storage-test-${Date.now()}`;
   try {
-    window.localStorage.setItem(key, '1');
-    window.localStorage.removeItem(key);
+    storage.setItem(key, '1');
+    storage.removeItem(key);
     return true;
   } catch {
     return false;

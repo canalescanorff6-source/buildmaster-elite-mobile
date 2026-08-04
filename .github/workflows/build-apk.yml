@@ -303,6 +303,7 @@ jobs:
         run: |
           node scripts/install-android-security-plugin.mjs
           node scripts/install-match-recorder-plugin.mjs
+          node scripts/install-native-vault-storage-plugin.mjs
 
       - name: Atualizar versão interna do Android
         run: |
@@ -348,6 +349,10 @@ jobs:
           grep -qF 'DownloadManager' "$PLUGIN" || { echo '::error::DownloadManager do Android ausente.'; exit 1; }
           grep -qF 'downloadWithSystemManager' "$PLUGIN" || { echo '::error::Transporte principal do sistema ausente.'; exit 1; }
           grep -qF 'downloadWithHttpStream' "$PLUGIN" || { echo '::error::Transporte HTTP de reserva ausente.'; exit 1; }
+          VAULT_PLUGIN=android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterVaultStoragePlugin.java
+          test -f "$VAULT_PLUGIN" || { echo '::error::Cofre nativo da memória interna ausente.'; exit 1; }
+          grep -qF 'getContext().getFilesDir()' "$VAULT_PLUGIN" || { echo '::error::Cofre não está usando a memória interna privada do APK.'; exit 1; }
+          grep -qF 'BuildMasterVaultStorage' android/app/src/main/java/com/buildmaster/elitetatico/MainActivity.java || { echo '::error::Plugin do Cofre nativo não foi registrado.'; exit 1; }
           grep -qF 'hasSigningCertificate' "$PLUGIN" || { echo '::error::Validação da assinatura do APK ausente.'; exit 1; }
           grep -qF 'getPackageArchiveInfo' "$PLUGIN" || { echo '::error::Validação do pacote baixado ausente.'; exit 1; }
           grep -qF 'SHA-256 do APK não confere' "$PLUGIN" || { echo '::error::Validação SHA-256 ausente.'; exit 1; }

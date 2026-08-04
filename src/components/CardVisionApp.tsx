@@ -1356,47 +1356,59 @@ export function CardVisionApp() {
     else if (item.action === 'settings') setMainSection('ajustes');
     else if (item.action === 'result' && (result || draftResult)) setMainSection('resultado');
   }
-  function saveCurrentFicha() {
+  async function saveCurrentFicha() {
     if (!result) return;
     const quality = buildBuildQualityGate(result);
     const saveAsReview = !quality.readyToSave;
     const key = resultHistoryKey(result);
     const now = new Date().toLocaleString('pt-BR');
-    setHistory((current) => {
-      const existingByKey = current.find((entry) => entry.saveKey === key);
-      const existing = existingByKey ?? findExactVaultDuplicateByResult(current, result);
-      const base: SavedAnalysis = {
-        id: existing?.id ?? createStableId('ficha'),
-        saveKey: key,
-        savedAt: existing?.savedAt ?? now,
-        updatedAt: now,
-        rawText,
-        playerImage: playerCardImage,
-        fullPreview: preview?.startsWith('data:') ? preview : null,
-        result,
-        skillProgress: ensureSkillProgress(existing?.skillProgress, result.recommendedSkills),
-        notes: existing?.notes ?? '',
-        favorite: existing?.favorite ?? false,
-        statusTag: saveAsReview ? 'revisar' : existing?.statusTag,
-        personalTags: existing?.personalTags ?? [],
-        tacticalRoleNote: existing?.tacticalRoleNote ?? '',
-        changeLog: existing?.changeLog ?? []
-      };
-      const duplicateDetected = Boolean(existing && !existingByKey);
-      const item = appendSavedEvent(
-        base,
-        existing ? (duplicateDetected ? 'duplicata evitada' : 'atualizado') : 'criado',
-        existing ? (duplicateDetected ? 'A mesma carta, ficha, habilidades e Booster já existiam; o registro anterior foi atualizado sem criar uma cópia.' : 'Ficha atualizada por cima da versão salva.') : 'Ficha salva no Cofre Clean.'
-      );
-      setActiveHistoryId(item.id);
-      const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
-      void persistHistoryStore(next);
-      void pushCloudHistory(next, true);
-      return next;
-    });
+    const existingByKey = history.find((entry) => entry.saveKey === key);
+    const existing = existingByKey ?? findExactVaultDuplicateByResult(history, result);
+    const base: SavedAnalysis = {
+      id: existing?.id ?? createStableId('ficha'),
+      saveKey: key,
+      savedAt: existing?.savedAt ?? now,
+      updatedAt: now,
+      rawText,
+      playerImage: playerCardImage,
+      fullPreview: preview?.startsWith('data:') ? preview : null,
+      result,
+      skillProgress: ensureSkillProgress(existing?.skillProgress, result.recommendedSkills),
+      notes: existing?.notes ?? '',
+      favorite: existing?.favorite ?? false,
+      statusTag: saveAsReview ? 'revisar' : existing?.statusTag,
+      personalTags: existing?.personalTags ?? [],
+      tacticalRoleNote: existing?.tacticalRoleNote ?? '',
+      changeLog: existing?.changeLog ?? []
+    };
+    const duplicateDetected = Boolean(existing && !existingByKey);
+    const item = appendSavedEvent(
+      base,
+      existing ? (duplicateDetected ? 'duplicata evitada' : 'atualizado') : 'criado',
+      existing ? (duplicateDetected ? 'A mesma carta, ficha, habilidades e Booster já existiam; o registro anterior foi atualizado sem criar uma cópia.' : 'Ficha atualizada por cima da versão salva.') : 'Ficha salva no Cofre Clean.'
+    );
+    const next = [item, ...history.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
+    setActiveHistoryId(item.id);
+    setHistory(next);
+    setStatus('Salvando a ficha na memória interna do aparelho...');
+
+    const persistence = await persistHistoryStore(next);
+    if (!persistence.saved) {
+      setStatus(`${persistence.error} A ficha continua aberta nesta sessão para você tentar novamente.`);
+      return;
+    }
+
+    void pushCloudHistory(next, true);
     unifiedCreation.markSaved();
     clearPremiumCreationDraft();
-    setStatus(saveAsReview ? `Ficha salva como “Revisar”: ${quality.blockers[0]?.detail ?? 'confira os avisos do controle final.'}` : `Ficha salva no Cofre de Fichas: ${result.parsed.playerName}.`);
+    const storageLabel = persistence.backend === 'native-internal'
+      ? 'memória interna protegida do app'
+      : persistence.backend === 'indexeddb'
+        ? 'banco local do aparelho'
+        : 'armazenamento local de emergência';
+    setStatus(saveAsReview
+      ? `Ficha salva em ${storageLabel} como “Revisar”: ${quality.blockers[0]?.detail ?? 'confira os avisos do controle final.'}`
+      : `Ficha salva em ${storageLabel}: ${result.parsed.playerName}.`);
   }
   function toggleSavedSkill(skill: string) {
     if (!result) return;

@@ -11,13 +11,19 @@ export function AppRuntimeStatus() {
   const [storageAlert, setStorageAlert] = useState<RuntimeAlert | null>(null);
 
   useEffect(() => {
+    let dismissTimer = 0;
     const onStorageFailure = (event: Event) => {
       const detail = (event as CustomEvent<StorageFailure>).detail;
+      // Leituras e limpezas antigas não significam perda de ficha. O Cofre do APK
+      // usa um arquivo nativo próprio e não depende da pequena cota das preferências web.
+      if (!detail || detail.operation !== 'write') return;
       setStorageAlert({
         kind: 'storage',
-        message: 'O aparelho bloqueou ou ficou sem espaço para salvar uma preferência.',
-        detail: `${detail.operation} • ${detail.key}`
+        message: 'Uma preferência secundária não pôde ser gravada. As fichas continuam protegidas na memória interna do app.',
+        detail: detail.reason || detail.key
       });
+      window.clearTimeout(dismissTimer);
+      dismissTimer = window.setTimeout(() => setStorageAlert(null), 8000);
     };
     const onWindowError = (event: ErrorEvent) => {
       void recordSafeRuntimeError({ area: 'window', code: 'unhandled-error', message: event.message || 'Erro global sem mensagem.' });
@@ -31,6 +37,7 @@ export function AppRuntimeStatus() {
     window.addEventListener('error', onWindowError);
     window.addEventListener('unhandledrejection', onUnhandledRejection);
     return () => {
+      window.clearTimeout(dismissTimer);
       window.removeEventListener(STORAGE_FAILURE_EVENT, onStorageFailure);
       window.removeEventListener('error', onWindowError);
       window.removeEventListener('unhandledrejection', onUnhandledRejection);
@@ -42,7 +49,7 @@ export function AppRuntimeStatus() {
     <aside className="app-runtime-status runtime-storage" role="status" aria-live="polite">
       <Database size={18} />
       <div>
-        <strong>Armazenamento com atenção</strong>
+        <strong>Preferência não gravada</strong>
         <span>{storageAlert.message}</span>
         <small>{storageAlert.detail}</small>
       </div>

@@ -12,6 +12,11 @@ import {
   removeAccountStorage,
   writeAccountStorage
 } from '@/lib/accountStorage';
+import {
+  isNativeVaultStorageAvailable,
+  nativeVaultRead,
+  nativeVaultWrite
+} from '@/lib/nativeVaultStorage';
 
 export type ManualFields = {
   playerName: string;
@@ -60,6 +65,8 @@ export const HISTORY_STORE_NAME = 'fichas';
 export const LEARNING_KEY = 'buildmaster_local_learning_v24_3';
 
 export const HISTORY_LIMIT = 200;
+
+const NATIVE_HISTORY_STORAGE_KEY = () => accountDatabaseName(`${HISTORY_DB_NAME}_internal_file_v1`);
 
 export type LearnedCardMemory = {
   playerName: string;
@@ -310,8 +317,22 @@ export function mergeHistoryLists(primary: SavedAnalysis[], secondary: SavedAnal
 export async function loadHistoryStore(): Promise<SavedAnalysis[]> {
   const loaded: SavedAnalysis[] = [];
 
+  if (isNativeVaultStorageAvailable()) {
+    try {
+      const raw = await nativeVaultRead(NATIVE_HISTORY_STORAGE_KEY());
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        for (const item of normalizeHistoryList(parsed)) {
+          if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
+        }
+      }
+    } catch {
+      // Uma instalação antiga pode ainda não possuir o plugin. As rotas web abaixo recuperam o Cofre.
+    }
+  }
+
   try {
-    for (const item of normalizeHistoryList(await readIndexedHistory())) {
+    for (const item of normalizeHistoryList(await readIndexedHistory(), loaded.length)) {
       if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
     }
     if (!loaded.length) {
@@ -341,40 +362,79 @@ export async function loadHistoryStore(): Promise<SavedAnalysis[]> {
   return loaded.slice(0, HISTORY_LIMIT);
 }
 
-export function compactHistoryForLocalFallback(items: SavedAnalysis[]): SavedAnalysis[] {
-  // O localStorage é apenas a rota de emergência. Imagens base64 e prévias completas
-  // podem ultrapassar a cota do WebView; o conteúdo integral permanece no IndexedDB.
-  return items.slice(0, 40).map((item) => ({
+export function compactHistoryForNativeStorage(items: SavedAnalysis[]): SavedAnalysis[] {
+  // O print inteiro não é duplicado no Cofre: ele costuma ser a maior parte do tamanho.
+  // A ficha calculada, habilidades, Booster, observações e a imagem recortada continuam salvos.
+  const maxPlayerImageChars = 900_000;
+  const maxEntriesWithImage = 60;
+  return items.slice(0, HISTORY_LIMIT).map((item, index) => ({
     ...item,
-    playerImage: null,
+    playerImage: index < maxEntriesWithImage && item.playerImage && item.playerImage.length <= maxPlayerImageChars ? item.playerImage : null,
     fullPreview: null,
-    rawText: String(item.rawText || '').slice(0, 12_000),
-    changeLog: item.changeLog?.slice(-20)
+    rawText: String(item.rawText || '').slice(0, 50_000),
+    changeLog: item.changeLog?.slice(0, 20)
   }));
 }
 
-export async function persistHistoryStore(items: SavedAnalysis[]) {
+export function compactHistoryForLocalFallback(items: SavedAnalysis[]): SavedAnalysis[] {
+  // O localStorage é somente a última rota de emergência no navegador.
+  return compactHistoryForNativeStorage(items).slice(0, 40).map((item) => ({
+    ...item,
+    playerImage: null,
+    rawText: String(item.rawText || '').slice(0, 12_000)
+  }));
+}
+
+export type HistoryPersistenceResult =
+  | { saved: true; backend: 'native-internal' | 'indexeddb' | 'local-fallback'; items: number }
+  | { saved: false; backend: 'none'; items: 0; error: string };
+
+let historyPersistenceQueue: Promise<HistoryPersistenceResult> = Promise.resolve({ saved: true, backend: 'indexeddb', items: 0 });
+
+async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
   const next = items.slice(0, HISTORY_LIMIT);
-  let indexedSaved = false;
-  try {
-    await writeIndexedHistory(next);
-    indexedSaved = true;
-  } catch {
-    // IndexedDB pode ser bloqueado em modo privado. Nesse caso usamos fallback compacto.
+  let nativeError: unknown = null;
+  let indexedError: unknown = null;
+
+  if (isNativeVaultStorageAvailable()) {
+    try {
+      const payload = JSON.stringify(compactHistoryForNativeStorage(next));
+      await nativeVaultWrite(NATIVE_HISTORY_STORAGE_KEY(), payload);
+      // Elimina apenas a cópia web antiga. O arquivo principal fica em
+      // getFilesDir(), memória privada do APK, e permanece após atualizações.
+      removeAccountStorage(HISTORY_KEY);
+      for (const key of OLD_HISTORY_KEYS) removeAccountStorage(key);
+      return { saved: true, backend: 'native-internal', items: next.length };
+    } catch (cause) {
+      nativeError = cause;
+    }
   }
 
-  if (indexedSaved) {
-    // Remove a cópia antiga e pesada que causava o aviso “Armazenamento com atenção”.
-    // O cofre integral já foi confirmado no IndexedDB da conta.
+  try {
+    await writeIndexedHistory(compactHistoryForNativeStorage(next));
     removeAccountStorage(HISTORY_KEY);
-    return;
+    return { saved: true, backend: 'indexeddb', items: next.length };
+  } catch (cause) {
+    indexedError = cause;
   }
 
-  try {
-    writeAccountStorage(HISTORY_KEY, JSON.stringify(compactHistoryForLocalFallback(next)));
-  } catch {
-    // A falha do fallback não apaga o estado mantido em memória durante a sessão.
-  }
+  const fallbackSaved = writeAccountStorage(HISTORY_KEY, JSON.stringify(compactHistoryForLocalFallback(next)));
+  if (fallbackSaved) return { saved: true, backend: 'local-fallback', items: Math.min(next.length, 40) };
+
+  const detail = nativeError instanceof Error
+    ? nativeError.message
+    : indexedError instanceof Error
+      ? indexedError.message
+      : 'O aparelho recusou todas as rotas locais.';
+  return { saved: false, backend: 'none', items: 0, error: `Não foi possível salvar o Cofre na memória do aparelho. ${detail}` };
+}
+
+export function persistHistoryStore(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
+  const snapshot = items.slice(0, HISTORY_LIMIT);
+  historyPersistenceQueue = historyPersistenceQueue
+    .catch(() => ({ saved: false, backend: 'none', items: 0, error: 'Falha anterior de salvamento ignorada.' } as HistoryPersistenceResult))
+    .then(() => persistHistoryStoreImmediate(snapshot));
+  return historyPersistenceQueue;
 }
 
 export function readLearningStore(): Record<string, LearnedCardMemory> {

@@ -122,6 +122,7 @@ jobs:
           npx cap add android
           node scripts/install-android-security-plugin.mjs
           node scripts/install-match-recorder-plugin.mjs
+          node scripts/install-native-vault-storage-plugin.mjs
           node scripts/install-play-store-bridge.mjs
           npx cap sync android
 
