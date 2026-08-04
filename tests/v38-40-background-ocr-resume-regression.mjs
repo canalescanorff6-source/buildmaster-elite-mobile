@@ -17,6 +17,8 @@ assert.match(background, /checkpointFile/);
 assert.match(background, /BuildMasterBackgroundOcr/);
 assert.match(app, /readBackgroundOcrCheckpoint/);
 assert.match(app, /analyzeSelectedImage\(restored, true\)/);
+assert.match(app, /onClick=\{\(\) => void analyzeSelectedImage\(\)\}/);
+assert.doesNotMatch(app, /onClick=\{analyzeSelectedImage\}/);
 assert.match(app, /updateBackgroundOcrCheckpoint\(\{ stage: 'zones'/);
 assert.match(app, /adaptiveMode: 'balanced' \| 'fast' = criticalZone \? 'balanced' : 'fast'/);
 assert.match(runtime, /document\.body\.dataset\.ocrReading/);

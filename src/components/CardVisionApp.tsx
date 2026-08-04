@@ -3401,7 +3401,7 @@ export function CardVisionApp() {
             </div>
           </section>
           <div className="vision-toolbar creation-reader-actions">
-            <button className="manual-mode-button scanner-action" type="button" onClick={analyzeSelectedImage} disabled={!selectedFile || loading}>
+            <button className="manual-mode-button scanner-action" type="button" onClick={() => void analyzeSelectedImage()} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
               {loading ? 'Lendo a imagem...' : 'Ler imagem e continuar'}
             </button>
