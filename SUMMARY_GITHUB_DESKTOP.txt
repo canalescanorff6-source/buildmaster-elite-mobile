@@ -1,1 +1,1 @@
-v38.40 — acelera a leitura, preserva o progresso em segundo plano e mantém a sessão ao alternar de aplicativo
+v38.40 — corrige TypeScript completo do OCR adaptativo e estabiliza o CI

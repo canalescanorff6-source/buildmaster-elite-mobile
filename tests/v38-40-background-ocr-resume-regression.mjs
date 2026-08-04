@@ -18,7 +18,7 @@ assert.match(background, /BuildMasterBackgroundOcr/);
 assert.match(app, /readBackgroundOcrCheckpoint/);
 assert.match(app, /analyzeSelectedImage\(restored, true\)/);
 assert.match(app, /updateBackgroundOcrCheckpoint\(\{ stage: 'zones'/);
-assert.match(app, /adaptiveMode: ReadingMode = criticalZone \? 'balanced' : 'fast'/);
+assert.match(app, /adaptiveMode: 'balanced' \| 'fast' = criticalZone \? 'balanced' : 'fast'/);
 assert.match(runtime, /document\.body\.dataset\.ocrReading/);
 assert.match(installer, /BuildMasterBackgroundOcrService/);
 assert.match(installer, /START_STICKY/);

@@ -2526,7 +2526,7 @@ export function CardVisionApp() {
         const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
         const target = zone.key === 'name' ? 2600 : zone.key === 'skills' ? 2200 : numeric ? 2100 : wide ? 2800 : 2350;
         const criticalZone = zone.key === 'name' || zone.key === 'skills' || zone.key === 'attributes' || zone.key === 'mainPosition' || zone.key === 'playstyle';
-        const adaptiveMode: ReadingMode = criticalZone ? 'balanced' : 'fast';
+        const adaptiveMode: 'balanced' | 'fast' = criticalZone ? 'balanced' : 'fast';
         const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
           imageHash: precisionImageHash,
           template: geometry.template,
