@@ -5,7 +5,7 @@ import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProces
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 import { extractCanonicalSkillsFromText } from '@/lib/officialSkillIdentity';
 
-export const HIGH_PRECISION_OCR_VERSION = '32.00-visual-calibration-strict-skills-1';
+export const HIGH_PRECISION_OCR_VERSION = '38.40-fast-first-precision-fallback-1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;
@@ -242,6 +242,11 @@ function structureScore(key: OcrZoneKey, text: string) {
 }
 
 function passPlan(key: OcrZoneKey, mode: 'balanced' | 'precision' | 'fast'): PrecisionPass[] {
+  if (mode === 'fast') {
+    if (key === 'name') return [{ enhancement: 'contrast', kind: 'name' }];
+    if (key === 'overall' || key === 'level' || key === 'points') return [{ enhancement: 'contrast', kind: 'numeric' }];
+    return [{ enhancement: 'contrast', kind: key === 'attributes' ? 'table' : key === 'skills' ? 'skills' : 'general' }];
+  }
   if (mode !== 'precision') {
     if (key === 'name') return [
       { enhancement: 'contrast', kind: 'name' },
@@ -386,6 +391,12 @@ export async function recognizeZoneWithHighPrecision(
       regionPriority: variant.priority,
       ...(lexicon ? { lexiconMatch: lexicon.name } : {})
     });
+
+    if (options.readingMode === 'fast' && scoredPasses.length >= 1) {
+      const quick = selectBestPass(zone.key, scoredPasses);
+      const quickThreshold = zone.key === 'name' ? 88 : zone.key === 'skills' ? 84 : 82;
+      if (quick && quick.score >= quickThreshold && quick.representative.text.trim()) break;
+    }
 
     if (scoredPasses.length >= 3) {
       const interim = selectBestPass(zone.key, scoredPasses);

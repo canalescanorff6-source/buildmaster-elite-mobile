@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = (file) => fs.readFileSync(file, 'utf8');
+const pkg = JSON.parse(read('package.json'));
+const app = read('src/components/CardVisionApp.tsx');
+const auth = read('src/components/AuthGate.tsx');
+const worker = read('src/lib/ocrWorkerManager.ts');
+const runtime = read('src/components/RuntimeOptimizationBootstrapV3820.tsx');
+const background = read('src/lib/backgroundOcrV3840.ts');
+const installer = read('scripts/install-background-ocr-plugin.mjs');
+const precision = read('src/modules/card-reader/highPrecisionOcr.ts');
+
+assert.equal(pkg.version, '38.40.0');
+assert.match(background, /saveBackgroundOcrCheckpoint/);
+assert.match(background, /checkpointFile/);
+assert.match(background, /BuildMasterBackgroundOcr/);
+assert.match(app, /readBackgroundOcrCheckpoint/);
+assert.match(app, /analyzeSelectedImage\(restored, true\)/);
+assert.match(app, /updateBackgroundOcrCheckpoint\(\{ stage: 'zones'/);
+assert.match(app, /adaptiveMode: ReadingMode = criticalZone \? 'balanced' : 'fast'/);
+assert.match(runtime, /document\.body\.dataset\.ocrReading/);
+assert.match(installer, /BuildMasterBackgroundOcrService/);
+assert.match(installer, /START_STICKY/);
+assert.match(installer, /FOREGROUND_SERVICE_DATA_SYNC/);
+assert.match(auth, /FIRST_SECURE_BOOT_KEY/);
+assert.match(auth, /SESSION_SNAPSHOT_KEY/);
+assert.match(auth, /QuietResumeScreen/);
+assert.match(auth, /terminalFailureCountRef\.current >= 5/);
+assert.match(precision, /mode === 'fast'/);
+assert.match(precision, /quickThreshold/);
+assert.doesNotMatch(worker, /visibilitychange/);
+console.log('v38.40 aprovada: OCR acelerado, checkpoint, retomada, proteção nativa e sessão persistente.');
