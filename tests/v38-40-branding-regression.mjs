@@ -45,6 +45,13 @@ assert.match(read('src/components/RegisterServiceWorker.tsx'), /background-ocr-r
 assert.match(read('.github/workflows/build-apk.yml'), /install-android-branding\.mjs/);
 assert.match(read('.github/workflows/build-play-store.yml'), /install-android-branding\.mjs/);
 
+const brandingValues = read('resources/android-branding/res/values/buildmaster_branding.xml');
+assert.doesNotMatch(
+  brandingValues,
+  /name=["']ic_launcher_background["']/,
+  'A identidade não pode redeclarar ic_launcher_background, já criado pelo template Android.'
+);
+
 // Simula o projeto Android limpo criado pelo Capacitor para validar a instalação real.
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'buildmaster-branding-'));
 fs.mkdirSync(path.join(temp, 'scripts'), { recursive: true });
@@ -54,6 +61,7 @@ fs.cpSync('resources/android-branding/res', path.join(temp, 'resources', 'androi
 const fakeRes = path.join(temp, 'android', 'app', 'src', 'main', 'res');
 fs.mkdirSync(path.join(fakeRes, 'values'), { recursive: true });
 fs.writeFileSync(path.join(fakeRes, 'values', 'styles.xml'), '<?xml version="1.0" encoding="utf-8"?><resources><style name="AppTheme.NoActionBarLaunch"><item name="android:background">@drawable/splash</item></style></resources>');
+fs.writeFileSync(path.join(fakeRes, 'values', 'launch_background.xml'), '<?xml version="1.0" encoding="utf-8"?><resources><color name="ic_launcher_background">#FFFFFF</color></resources>');
 const fakeManifest = path.join(temp, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
 fs.mkdirSync(path.dirname(fakeManifest), { recursive: true });
 fs.writeFileSync(fakeManifest, '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:icon="@mipmap/old_icon"></application></manifest>');
@@ -64,6 +72,8 @@ assert.match(fs.readFileSync(fakeManifest, 'utf8'), /android:roundIcon="@mipmap\
 assert.match(fs.readFileSync(path.join(fakeRes, 'values', 'styles.xml'), 'utf8'), /@drawable\/buildmaster_native_splash/);
 assert.ok(exists(path.join(fakeRes, 'mipmap-xxxhdpi', 'ic_launcher.png')));
 assert.ok(exists(path.join(fakeRes, 'mipmap-anydpi-v33', 'ic_launcher.xml')));
+const installedValueXml = fs.readdirSync(path.join(fakeRes, 'values')).filter((name) => name.endsWith('.xml')).map((name) => fs.readFileSync(path.join(fakeRes, 'values', name), 'utf8')).join('\n');
+assert.equal((installedValueXml.match(/name=["']ic_launcher_background["']/g) || []).length, 1, 'ic_launcher_background deve existir uma única vez após instalar a identidade.');
 fs.rmSync(temp, { recursive: true, force: true });
 
 console.log('v38.40 identidade premium aprovada: ícone BM, adaptive icon, modo monocromático, splash e instalação Android verificadas.');

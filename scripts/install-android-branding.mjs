@@ -18,6 +18,23 @@ if (!fs.existsSync(targetRes)) fail('a pasta de recursos do aplicativo Android n
 
 fs.cpSync(sourceRes, targetRes, { recursive: true, force: true });
 
+// O template Android/Capacitor já cria @color/ic_launcher_background em
+// values/launch_background.xml. Versões anteriores da identidade também
+// declaravam esse nome e o mergeResources do Gradle falhava por duplicidade.
+// Mantemos somente a cor própria do BuildMaster e removemos qualquer resíduo
+// legado do arquivo copiado antes da compilação.
+const brandingValuesPath = path.join(targetRes, 'values', 'buildmaster_branding.xml');
+if (fs.existsSync(brandingValuesPath)) {
+  const originalBrandingValues = fs.readFileSync(brandingValuesPath, 'utf8');
+  const sanitizedBrandingValues = originalBrandingValues.replace(
+    /\s*<color\s+name=["']ic_launcher_background["'][^>]*>[^<]*<\/color>\s*/g,
+    '\n'
+  );
+  if (sanitizedBrandingValues !== originalBrandingValues) {
+    fs.writeFileSync(brandingValuesPath, sanitizedBrandingValues, 'utf8');
+  }
+}
+
 function walk(directory) {
   const files = [];
   if (!fs.existsSync(directory)) return files;
