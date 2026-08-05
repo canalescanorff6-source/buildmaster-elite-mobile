@@ -16,6 +16,7 @@ const experience = read('src/modules/experience/premiumExperience2.ts');
 const bridge = read('src/modules/experience/cardVisionPremiumBridge.ts');
 const layout = read('src/app/layout.tsx');
 const css = read('src/app/v38-squad-mapping.css');
+const legacyStudioTest = read('tests/v34-00-studio-clean-regression.mjs');
 
 for (const marker of [
   'avoidWingers',
@@ -84,5 +85,6 @@ assert.match(layout, /v38-squad-mapping\.css/);
 assert.match(css, /\.mapping-pitch/);
 assert.match(css, /\.mapping-player-grid/);
 assert.match(css, /@media \(max-width: 640px\)/);
+assert.match(legacyStudioTest, /'inicio', 'jogadores', 'mapeamento', 'partidas', 'time', 'menu', 'buscar'/);
 
 console.log('v38.40 aprovada: Mapeamento lê vários jogadores, avalia todas as formações, monta 11+11, testa por semanas e salva backup na memória privada.');

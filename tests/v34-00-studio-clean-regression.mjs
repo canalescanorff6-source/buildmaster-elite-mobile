@@ -62,7 +62,7 @@ assert.match(app, /team-diagnosis/);
 assert.match(app, /mainSection === 'time'/);
 assert.match(app, /bm-v34-team-advanced/);
 assert.match(app, /setTeamAdvancedOpen\(true\)/);
-assert.match(app, /!\['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'\]\.includes\(mainSection\)/);
+assert.match(app, /!\['inicio', 'jogadores', 'mapeamento', 'partidas', 'time', 'menu', 'buscar'\]\.includes\(mainSection\)/);
 
 assert.doesNotMatch(auth, /offlineBannerExpanded/);
 assert.doesNotMatch(auth, /offline-license-banner/);
