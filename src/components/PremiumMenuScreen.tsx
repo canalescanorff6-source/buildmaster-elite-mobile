@@ -26,6 +26,7 @@ type MenuTarget =
   | 'players'
   | 'manual'
   | 'reader'
+  | 'mapping'
   | 'team'
   | 'matches'
   | 'settings'
@@ -49,6 +50,7 @@ const modules = [
   { target: 'players', icon: Users, title: 'Jogadores', detail: 'Banco, análise e comparação' },
   { target: 'manual', icon: FilePlus2, title: 'Criar manual', detail: 'Monte fichas sem usar print' },
   { target: 'reader', icon: ImagePlus, title: 'Ler print', detail: 'Importe, recorte e leia a carta' },
+  { target: 'mapping', icon: Target, title: 'Mapeamento de Elenco', detail: 'Titulares, reservas e formações ideais' },
   { target: 'team', icon: Target, title: 'Meu Time', detail: 'Formação, elenco e funções' },
   { target: 'team', icon: Sparkles, title: 'Formações', detail: 'Táticas meta e funções' },
   { target: 'matches', icon: Trophy, title: 'Partidas e treinos', detail: 'Validação real de desempenho' },

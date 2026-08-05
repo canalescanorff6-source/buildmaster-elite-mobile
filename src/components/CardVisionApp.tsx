@@ -182,6 +182,7 @@ import { regenerateSkillAfterOwnedConfirmation } from '@/lib/intelligentSkillRep
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
 import { TeamFullMapPanel } from '@/modules/squad/TeamFullMapPanel';
+import { SquadMappingCenter } from '@/modules/squad-mapping/SquadMappingCenter';
 import { MetaFormationStudioV3832 } from '@/modules/tactical-studio/MetaFormationStudioV3832';
 import { readMetaFormationProjects, replaceMetaFormationProjects } from '@/modules/tactical-studio/metaFormationStudioV3832';
 import { readMatchTrainerSessions, replaceMatchTrainerSessions } from '@/modules/matches/matchTrainerEngine';
@@ -271,9 +272,9 @@ type MotionPreference = 'system' | 'reduced' | 'full';
 type PerformanceMode = 'balanced' | 'economy';
 type HistoryFilter = 'ALL' | PositionCode | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 type HistorySort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
-type MainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
+type MainSection = 'inicio' | 'jogadores' | 'mapeamento' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
 function navigationGroupFor(section: MainSection): MainNavigationGroup {
-  if (section === 'inicio' || section === 'time' || section === 'partidas' || section === 'ajustes') return section;
+  if (section === 'inicio' || section === 'mapeamento' || section === 'time' || section === 'partidas' || section === 'ajustes') return section;
   if (section === 'menu') return 'ajustes';
   return 'jogadores';
 }
@@ -507,7 +508,7 @@ export function CardVisionApp() {
   useEffect(() => {
     if (performanceMode === 'economy' || mainSection === 'inicio') return;
     const group = navigationGroupFor(mainSection);
-    const handle = scheduleIdleTask(() => preloadPanelGroup(group), 1800);
+    const handle = scheduleIdleTask(() => preloadPanelGroup(group === 'mapeamento' ? 'time' : group), 1800);
     return () => cancelIdleTask(handle);
   }, [mainSection, performanceMode]);
   useEffect(() => {
@@ -729,6 +730,7 @@ export function CardVisionApp() {
   const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
     { id: 'inicio', label: 'Central', hint: 'Resumo do app', icon: 'dashboard' },
     { id: 'jogadores', label: 'Jogadores', hint: `${history.length} salvos`, icon: 'vault' },
+    { id: 'mapeamento', label: 'Mapeamento', hint: 'Melhor time e reservas', icon: 'team' },
     { id: 'time', label: 'Meu Time', hint: 'Formação e elenco', icon: 'team' },
     { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} análises`, icon: 'result' },
     { id: 'ajustes', label: 'Configurações', hint: 'Visual, conta e sistema', icon: 'settings' },
@@ -3081,6 +3083,7 @@ export function CardVisionApp() {
     { id: 'new-manual', group: 'Criar ficha', label: 'Criar manualmente', description: 'Preencha posição, estilo, pontos e atributos sem usar print.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
     { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${history.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
     { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
+    { id: 'squad-mapping', group: 'Mapeamento', label: 'Mapear elenco completo', description: 'Leia vários prints e escolha titulares, reservas e a melhor formação pelo desempenho.', keywords: ['elenco', 'formação', 'titulares', 'reservas', 'prints'], run: () => openMainSection('mapeamento') },
     { id: 'team', group: 'Time', label: 'Abrir Meu Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
     { id: 'matches', group: 'Partidas', label: 'Abrir Partidas', description: `${centralMatchRecords.length} registro(s) de validação real.`, keywords: ['treino', 'pós-jogo'], run: () => openMainSection('partidas') },
     ...(result || draftResult ? [
@@ -3192,6 +3195,7 @@ export function CardVisionApp() {
               </div>
             ) : (
               <div className="launcher-action-grid launcher-more-grid">
+                <button type="button" onClick={() => openMainSection('mapeamento')}><span><ScanText size={23} /></span><div><strong>Mapeamento</strong><small>Melhor time, reservas e testes de formação.</small></div></button>
                 <button type="button" onClick={() => openMainSection('time')}><span><Target size={23} /></span><div><strong>Meu Time</strong><small>Elenco, setores, banco e planos.</small></div></button>
                 <button type="button" onClick={() => openMainSection('ajustes')}><span><SlidersHorizontal size={23} /></span><div><strong>Ajustes</strong><small>Aparência, desempenho e segurança.</small></div></button>
                 <button type="button" aria-label="Conta e usuários" className={account?.profile.role === 'admin' ? 'launcher-admin-account-action' : ''} onClick={() => { setMainSection('ajustes'); setSettingsView('contas'); setMobileLauncher(null); }}><span>{account?.profile.role === 'admin' ? <UserPlus size={23} /> : <Users size={23} />}</span><div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><small>{account?.profile.role === 'admin' ? 'Criar usuários, renovar prazos e controlar aparelhos.' : 'Licença, validade e aparelhos autorizados.'}</small></div></button>
@@ -3203,7 +3207,7 @@ export function CardVisionApp() {
           </section>
         </div>
       )}
-      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','time','partidas','menu','buscar'].includes(mainSection) && (
+      {mainSection !== 'inicio' && !isCreationSection && !['jogadores','mapeamento','time','partidas','menu','buscar'].includes(mainSection) && (
         <section className="page-context-card luxury-panel">
           <div>
             <p className="kicker">Área atual</p>
@@ -3229,6 +3233,7 @@ export function CardVisionApp() {
             if (target === 'players') openMainSection('jogadores');
             else if (target === 'manual') openMainSection('manual');
             else if (target === 'reader') openMainSection('leitor');
+            else if (target === 'mapping') openMainSection('mapeamento');
             else if (target === 'team') openMainSection('time');
             else if (target === 'matches') openMainSection('partidas');
             else if (target === 'search') openMainSection('buscar');
@@ -3266,6 +3271,14 @@ export function CardVisionApp() {
           onBatchStatus={batchStatusHistory}
           onMergeSelected={mergeSelectedHistory}
         /></SectionErrorBoundary>
+      )}
+      {mainSection === 'mapeamento' && (
+        <SectionErrorBoundary area="mapeamento-inteligente-elenco">
+          <SquadMappingCenter
+            history={history}
+            onOpenFicha={(historyId) => openIntegratedPlayer(historyId, 'result')}
+          />
+        </SectionErrorBoundary>
       )}
       {mainSection === 'partidas' && (
         <SectionErrorBoundary area="partidas"><MatchLaboratory
@@ -3313,7 +3326,7 @@ export function CardVisionApp() {
           </section>
         </SectionErrorBoundary>
       )}
-      {!['inicio', 'jogadores', 'partidas', 'time', 'menu', 'buscar'].includes(mainSection) && (
+      {!['inicio', 'jogadores', 'mapeamento', 'partidas', 'time', 'menu', 'buscar'].includes(mainSection) && (
       <section className={`workspace-grid bm2820-workspace ${isCreationSection ? 'creation-workspace-grid' : ''}`}>
         {isCreationSection && (
           <UnifiedCreationFlowV3790

@@ -15,6 +15,7 @@ import type { MainNavigationGroup, PlayerWorkspace } from '@/lib/appRefinement';
 const groupTitles: Record<MainNavigationGroup, string> = {
   inicio: 'Central',
   jogadores: 'Jogadores',
+  mapeamento: 'Mapeamento de Elenco',
   time: 'Meu Time',
   partidas: 'Partidas e treinos',
   ajustes: 'Configurações'

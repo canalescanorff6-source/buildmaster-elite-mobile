@@ -72,6 +72,7 @@ export function RefinedNavigation({
   const mainItems = [
     { id: 'inicio', label: 'Central', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
     { id: 'jogadores', label: 'Elenco', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
+    { id: 'mapeamento', label: 'Mapeamento', description: 'Melhor time e reservas', icon: Target, active: group === 'mapeamento', action: () => onGroupChange('mapeamento') },
     { id: 'time', label: 'Meu Time', description: 'Elenco e tática', icon: Target, active: group === 'time', action: () => onGroupChange('time') },
     { id: 'partidas', label: 'Partidas', description: 'Treino e análise', icon: Trophy, active: group === 'partidas', action: () => onGroupChange('partidas') },
     { id: 'ajustes', label: 'Configurações', description: 'Conta, visual e sistema', icon: Settings2, active: group === 'ajustes', action: () => onGroupChange('ajustes') }

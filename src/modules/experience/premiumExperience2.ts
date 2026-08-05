@@ -6,7 +6,7 @@ export const PREMIUM_EXPERIENCE_2_RECENT_KEY = 'buildmaster_premium_recent_v2970
 export const PREMIUM_EXPERIENCE_2_DRAFTS_KEY = 'buildmaster_premium_drafts_v2970';
 export const PREMIUM_EXPERIENCE_2_EVENT = 'buildmaster:premium2-changed';
 
-export type Premium2Target = 'home' | 'reader' | 'manual' | 'vault' | 'team' | 'matches' | 'appearance' | 'performance' | 'security' | 'backup' | 'updates' | 'support';
+export type Premium2Target = 'home' | 'reader' | 'manual' | 'vault' | 'mapping' | 'team' | 'matches' | 'appearance' | 'performance' | 'security' | 'backup' | 'updates' | 'support';
 export type PremiumHomeLayout = 'focus' | 'balanced' | 'dense';
 
 export type PremiumExperience2Preferences = {
@@ -52,6 +52,7 @@ export const PREMIUM_TARGET_CATALOG: Array<{ id: Premium2Target; label: string; 
   { id: 'reader', label: 'Ler print', description: 'Importar e revisar uma carta.' },
   { id: 'manual', label: 'Criar manual', description: 'Criar ficha com controle total.' },
   { id: 'vault', label: 'Cofre', description: 'Abrir jogadores e versões salvas.' },
+  { id: 'mapping', label: 'Mapeamento', description: 'Escolher titulares, reservas e formação.' },
   { id: 'team', label: 'Meu Time', description: 'Revisar elenco e formações.' },
   { id: 'matches', label: 'Performance', description: 'Partidas, treinos e evolução.' },
   { id: 'appearance', label: 'Aparência', description: 'Tema, contraste e acessibilidade.' },
@@ -67,6 +68,7 @@ export const PREMIUM_HELP_ARTICLES: PremiumHelpArticle[] = [
   { id: 'exact-points', title: 'Como conferir se a ficha fechou os pontos', category: 'Fichas', summary: 'Revise o orçamento, a posição escolhida e os alertas de investimento antes de salvar.', keywords: ['pontos', 'ficha', 'orçamento'], target: 'manual' },
   { id: 'safe-backup', title: 'Como fazer uma restauração segura', category: 'Dados', summary: 'Crie um ponto de restauração, valide o arquivo e escolha as áreas antes de substituir dados.', keywords: ['backup', 'restaurar', 'segurança'], target: 'backup' },
   { id: 'update-apk', title: 'Como atualizar o APK sem perder dados', category: 'Atualização', summary: 'Faça backup, confira o manifesto oficial e instale a nova versão sobre o app existente.', keywords: ['apk', 'atualizar', 'manifesto'], target: 'updates' },
+  { id: 'squad-mapping', title: 'Como mapear o elenco completo', category: 'Elenco', summary: 'Leia os jogadores, revise posições e estilos e compare todas as formações antes de iniciar um teste.', keywords: ['mapeamento', 'elenco', 'formação', 'reservas'], target: 'mapping' },
   { id: 'anti-delay', title: 'Como interpretar a Central anti-delay', category: 'Performance', summary: 'Compare ping, jitter, aquecimento e erros de partida; o diagnóstico não elimina atraso do servidor.', keywords: ['delay', 'ping', 'jitter', 'rede'], target: 'matches' },
   { id: 'support-bundle', title: 'Como gerar um diagnóstico para suporte', category: 'Suporte', summary: 'O pacote técnico remove senhas, tokens, imagens e conteúdo integral das fichas.', keywords: ['erro', 'diagnóstico', 'suporte'], target: 'support' }
 ];
@@ -74,7 +76,7 @@ export const PREMIUM_HELP_ARTICLES: PremiumHelpArticle[] = [
 const DEFAULT_PREFERENCES: PremiumExperience2Preferences = {
   homeLayout: 'balanced',
   startTarget: 'home',
-  pinnedTargets: ['reader', 'vault', 'team', 'matches', 'backup'],
+  pinnedTargets: ['reader', 'vault', 'mapping', 'team', 'matches', 'backup'],
   showRecent: true,
   autoResume: true,
   autosaveDrafts: true,

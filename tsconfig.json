@@ -8,27 +8,18 @@
     "noEmit": true,
     "skipLibCheck": true,
     "baseUrl": "../..",
-    "paths": { "@/*": ["src/*"] },
+    "paths": {
+      "@/lib/accountStorage": ["tests/types-v3832/account-storage-stub.ts"],
+      "@/modules/core/centralIntelligence": ["tests/types-v3832/central-stub.ts"],
+      "@/*": ["src/*"]
+    },
     "types": [],
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
   "files": [
-    "tesseract-stub.d.ts",
-    "../../src/lib/validation.ts",
-    "../../src/lib/ocr.ts",
-    "../../src/lib/premiumReading.ts",
-    "../../src/lib/localDatabase.ts",
-    "../../src/lib/ocrWorkerManager.ts",
-    "../../src/modules/card-reader/adaptiveZoneSearch.ts",
-    "../../src/modules/card-reader/highPrecisionOcr.ts",
-    "../../src/modules/card-reader/efhubProfile.ts",
-    "../../src/modules/card-reader/detailedPrintReader.ts",
-    "../../src/modules/card-reader/singlePrintPro.ts",
-    "../../src/modules/card-reader/cardArtCrop.ts",
-    "../../src/modules/card-reader/learnedOcrLexicon.ts",
-    "../../src/modules/card-reader/forensicConsensus.ts",
-    "../../src/modules/card-reader/templateCalibration.ts",
-    "../../src/modules/card-reader/ocrVisionEngine.ts"
+    "account-storage-stub.ts",
+    "central-stub.ts",
+    "../../src/modules/tactical-studio/metaFormationStudioV3832.ts"
   ]
 }

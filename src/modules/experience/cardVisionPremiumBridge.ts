@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { readPremiumExperience2Preferences, removePremiumDraft, savePremiumDraft, type Premium2Target } from './premiumExperience2';
 
-export type PremiumMainSection = 'inicio' | 'jogadores' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
+export type PremiumMainSection = 'inicio' | 'jogadores' | 'mapeamento' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
 export type PremiumSettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'backup' | 'atualizacoes' | 'contas';
 
 export function premiumTargetForSection(section: PremiumMainSection): Premium2Target {
@@ -11,6 +11,7 @@ export function premiumTargetForSection(section: PremiumMainSection): Premium2Ta
   if (section === 'leitor') return 'reader';
   if (section === 'manual') return 'manual';
   if (section === 'cofre' || section === 'jogadores' || section === 'resultado') return 'vault';
+  if (section === 'mapeamento') return 'mapping';
   if (section === 'time') return 'team';
   if (section === 'partidas') return 'matches';
   if (section === 'menu') return 'home';
@@ -23,6 +24,7 @@ export function sectionForPremiumTarget(target: Premium2Target): PremiumMainSect
   if (target === 'reader') return 'leitor';
   if (target === 'manual') return 'manual';
   if (target === 'vault') return 'cofre';
+  if (target === 'mapping') return 'mapeamento';
   if (target === 'team') return 'time';
   if (target === 'matches') return 'partidas';
   return 'ajustes';
