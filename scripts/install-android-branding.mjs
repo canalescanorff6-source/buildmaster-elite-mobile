@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const root = process.cwd();
 const androidRoot = path.join(root, 'android');
@@ -12,9 +13,60 @@ function fail(message) {
   process.exit(1);
 }
 
+function validatePng(file, label = path.relative(root, file)) {
+  const data = fs.readFileSync(file);
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (data.length < 33 || !data.subarray(0, 8).equals(signature)) {
+    fail(`PNG inválido ou incompleto: ${label}`);
+  }
+
+  let offset = 8;
+  let sawIhdr = false;
+  let sawIend = false;
+  const idat = [];
+  while (offset < data.length) {
+    if (offset + 12 > data.length) fail(`PNG truncado antes do fim de um bloco: ${label}`);
+    const length = data.readUInt32BE(offset);
+    const type = data.toString('ascii', offset + 4, offset + 8);
+    const end = offset + 12 + length;
+    if (end > data.length) fail(`PNG truncado no bloco ${type || 'desconhecido'}: ${label}`);
+    if (type === 'IHDR') sawIhdr = true;
+    if (type === 'IDAT') idat.push(data.subarray(offset + 8, offset + 8 + length));
+    if (type === 'IEND') {
+      sawIend = true;
+      if (length !== 0) fail(`Bloco IEND inválido: ${label}`);
+      if (end !== data.length) fail(`Dados extras após IEND: ${label}`);
+      break;
+    }
+    offset = end;
+  }
+
+  if (!sawIhdr || !sawIend || idat.length === 0) fail(`Estrutura PNG incompleta: ${label}`);
+  try {
+    zlib.inflateSync(Buffer.concat(idat));
+  } catch (error) {
+    fail(`PNG corrompido ou com checksum incompleto: ${label} (${error instanceof Error ? error.message : String(error)})`);
+  }
+}
+
+function walk(directory) {
+  const files = [];
+  if (!fs.existsSync(directory)) return files;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walk(full));
+    else files.push(full);
+  }
+  return files;
+}
+
 if (!fs.existsSync(androidRoot)) fail('o projeto Android ainda não foi criado. Execute cap add android primeiro.');
 if (!fs.existsSync(sourceRes)) fail('os recursos premium não foram encontrados em resources/android-branding/res.');
 if (!fs.existsSync(targetRes)) fail('a pasta de recursos do aplicativo Android não existe.');
+
+for (const sourcePng of walk(sourceRes).filter((item) => item.endsWith('.png'))) {
+  validatePng(sourcePng);
+}
 
 fs.cpSync(sourceRes, targetRes, { recursive: true, force: true });
 
@@ -35,16 +87,6 @@ if (fs.existsSync(brandingValuesPath)) {
   }
 }
 
-function walk(directory) {
-  const files = [];
-  if (!fs.existsSync(directory)) return files;
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const full = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(full));
-    else files.push(full);
-  }
-  return files;
-}
 
 // O template do Capacitor pode variar entre versões. Qualquer tema que ainda aponte
 // para a splash padrão passa a usar a arte oficial do BuildMaster.
@@ -90,6 +132,7 @@ const required = [
 for (const relative of required) {
   const file = path.join(targetRes, relative);
   if (!fs.existsSync(file) || fs.statSync(file).size === 0) fail(`recurso obrigatório ausente: ${relative}`);
+  if (file.endsWith('.png')) validatePng(file, `android/app/src/main/res/${relative}`);
 }
 
 console.log('Identidade premium Android instalada: ícone legado, adaptativo, monocromático e splash nativa.');

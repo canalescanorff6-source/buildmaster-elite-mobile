@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import zlib from 'node:zlib';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const exists = (file) => fs.existsSync(file) && fs.statSync(file).size > 0;
@@ -11,6 +12,34 @@ function pngSize(file) {
   const data = fs.readFileSync(file);
   assert.equal(data.toString('ascii', 1, 4), 'PNG', `${file} não é PNG`);
   return { width: data.readUInt32BE(16), height: data.readUInt32BE(20) };
+}
+
+function assertCompletePng(file) {
+  const data = fs.readFileSync(file);
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.ok(data.length >= 33 && data.subarray(0, 8).equals(signature), `${file} não possui assinatura PNG completa`);
+  let offset = 8;
+  let sawIhdr = false;
+  let sawIend = false;
+  const idat = [];
+  while (offset < data.length) {
+    assert.ok(offset + 12 <= data.length, `${file} termina no meio de um bloco PNG`);
+    const length = data.readUInt32BE(offset);
+    const type = data.toString('ascii', offset + 4, offset + 8);
+    const end = offset + 12 + length;
+    assert.ok(end <= data.length, `${file} está truncado no bloco ${type}`);
+    if (type === 'IHDR') sawIhdr = true;
+    if (type === 'IDAT') idat.push(data.subarray(offset + 8, offset + 8 + length));
+    if (type === 'IEND') {
+      sawIend = true;
+      assert.equal(length, 0, `${file} possui IEND inválido`);
+      assert.equal(end, data.length, `${file} possui dados extras após IEND`);
+      break;
+    }
+    offset = end;
+  }
+  assert.ok(sawIhdr && sawIend && idat.length > 0, `${file} possui estrutura PNG incompleta`);
+  assert.doesNotThrow(() => zlib.inflateSync(Buffer.concat(idat)), `${file} possui IDAT corrompido ou checksum incompleto`);
 }
 
 for (const [file, expected] of [
@@ -33,6 +62,18 @@ for (const file of [
   'resources/android-branding/res/drawable/buildmaster_native_splash.xml',
   'scripts/install-android-branding.mjs'
 ]) assert.ok(exists(file), `Identidade premium ausente: ${file}`);
+
+for (const file of fs.readdirSync('resources/android-branding/res/drawable-nodpi')
+  .filter((name) => name.endsWith('.png'))
+  .map((name) => path.join('resources/android-branding/res/drawable-nodpi', name))) {
+  assertCompletePng(file);
+}
+for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+  for (const name of fs.readdirSync(path.join('resources/android-branding/res', `mipmap-${density}`)).filter((item) => item.endsWith('.png'))) {
+    assertCompletePng(path.join('resources/android-branding/res', `mipmap-${density}`, name));
+  }
+}
+assert.deepEqual(pngSize('resources/android-branding/res/drawable-nodpi/buildmaster_native_splash.png'), { width: 2732, height: 2732 });
 
 const mark = read('src/components/BuildMasterMark.tsx');
 assert.match(mark, /buildmaster-mark\.png/);
