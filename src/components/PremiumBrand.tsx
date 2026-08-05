@@ -13,8 +13,8 @@ export function PremiumBrand({ variant = 'standard', showVersion = false, classN
     <span className={`bm-premium-brand bm-premium-brand-${variant} ${className}`.trim()}>
       <span className="bm-brand-emblem" aria-hidden="true"><BuildMasterMark size={markSize} /></span>
       <span className="bm-brand-wordmark">
-        <span className="bm-brand-title-row"><strong>BuildMaster</strong><em>FICHAS</em></span>
-        <span className="bm-brand-subtitle">Elite Performance</span>
+        <span className="bm-brand-title-row"><strong>BuildMaster</strong><em>ELITE</em></span>
+        <span className="bm-brand-subtitle">Tático · Máximo desempenho</span>
       </span>
       {showVersion && <small className="bm-brand-version">v{APP_RELEASE_VERSION}</small>}
     </span>

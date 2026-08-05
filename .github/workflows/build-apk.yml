@@ -304,6 +304,7 @@ jobs:
           node scripts/install-android-security-plugin.mjs
           node scripts/install-match-recorder-plugin.mjs
           node scripts/install-native-vault-storage-plugin.mjs
+          node scripts/install-android-branding.mjs
 
       - name: Atualizar versão interna do Android
         run: |

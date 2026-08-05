@@ -3107,7 +3107,7 @@ export function CardVisionApp() {
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       {!showSplash && <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />}
       {showSplash && (
-        <div className="app-splash-screen" role="status" aria-label="Carregando BuildMaster">
+        <div className="app-splash-screen bm-brand-splash-screen" role="status" aria-label="Carregando BuildMaster Elite Tático">
           <div className="splash-premium-shell">
             <div className="splash-brand-row"><PremiumBrand variant="hero" showVersion /></div>
             <div className="splash-secure-badge"><ShieldCheck size={15} /> Ambiente protegido</div>

@@ -124,6 +124,7 @@ jobs:
           node scripts/install-match-recorder-plugin.mjs
           node scripts/install-native-vault-storage-plugin.mjs
           node scripts/install-play-store-bridge.mjs
+          node scripts/install-android-branding.mjs
           npx cap sync android
 
       - name: Fixar compileSdk e targetSdk API 36

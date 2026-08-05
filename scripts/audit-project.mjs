@@ -52,6 +52,19 @@ check(appUpdates.includes("'38.40.0'"), 'Motor de atualização sincronizado');
 check(dataSafety.includes("APP_DATA_VERSION = '38.40.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada e esquema compatível');
 check(manifest.name === 'BuildMaster Elite Tático v38.40', 'Manifesto PWA sincronizado');
 check(sw.includes('buildmaster-v38-40-background-ocr-resume-1'), 'Cache PWA sincronizado');
+for (const file of [
+  'public/assets/branding/buildmaster-app-icon.png',
+  'public/assets/branding/buildmaster-mark.png',
+  'public/assets/branding/buildmaster-splash.webp',
+  'resources/branding/buildmaster-app-icon-1024.png',
+  'resources/android-branding/res/mipmap-anydpi-v26/ic_launcher.xml',
+  'resources/android-branding/res/mipmap-anydpi-v33/ic_launcher.xml',
+  'resources/android-branding/res/drawable/buildmaster_native_splash.xml',
+  'scripts/install-android-branding.mjs',
+  'tests/v38-40-branding-regression.mjs'
+]) check(exists(file), `Identidade premium presente: ${file}`);
+check(workflowApk.includes('install-android-branding.mjs') && workflowPlay.includes('install-android-branding.mjs'), 'Identidade Android integrada aos dois workflows');
+check(String(pkg.scripts?.['test:v3840'] ?? '').includes('v38-40-branding-regression.mjs'), 'Regressão da identidade premium integrada à v38.40');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);

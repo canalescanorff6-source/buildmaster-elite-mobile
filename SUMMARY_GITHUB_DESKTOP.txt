@@ -1,1 +1,1 @@
-v38.40 — corrige TypeScript completo do OCR adaptativo e estabiliza o CI
+v38.40 — aplica novo ícone BM, Adaptive Icon e splash premium no Android

@@ -168,6 +168,18 @@ for (const file of [
 check(read('src/components/CardVisionApp.tsx').split('\n').length < 4200, 'CardVisionApp abaixo de 4.200 linhas');
 check(read('src/lib/analyzer.ts').split('\n').length < 3500, 'Analyzer abaixo de 3.500 linhas');
 check(!exists('public/update-manifest.json'), 'Manifesto remoto não empacotado');
+for (const file of [
+  'public/assets/branding/buildmaster-app-icon.png',
+  'public/assets/branding/buildmaster-mark.png',
+  'public/assets/branding/buildmaster-splash.webp',
+  'resources/android-branding/res/mipmap-anydpi-v26/ic_launcher.xml',
+  'resources/android-branding/res/mipmap-anydpi-v33/ic_launcher.xml',
+  'resources/android-branding/res/drawable/buildmaster_native_splash.xml',
+  'scripts/install-android-branding.mjs',
+  'tests/v38-40-branding-regression.mjs'
+]) check(exists(file), `Identidade premium pronta para produção: ${file}`);
+check(read('.github/workflows/build-apk.yml').includes('install-android-branding.mjs'), 'Workflow APK instala a identidade premium');
+check(read('.github/workflows/build-play-store.yml').includes('install-android-branding.mjs'), 'Workflow Play instala a identidade premium');
 
 const allFiles = [...walk('src'), ...walk('scripts'), ...walk('public'), ...walk('supabase'), ...walk('.github')];
 const forbiddenExtensions = new Set(['.apk', '.aab', '.jks', '.keystore', '.p12', '.pfx']);

@@ -9,10 +9,13 @@
 // Compatibilidade de regressão: buildmaster-v38-10-premium-clean-result-1
 // Compatibilidade de regressão: buildmaster-v38-30-name-skill-integrity-1
 // Cache anterior preservado para atualização por cima: buildmaster-v38-32-complete-integration-1
-const CACHE_NAME = 'buildmaster-v38-40-background-ocr-resume-1';
+const CACHE_NAME = 'buildmaster-v38-40-background-ocr-resume-1-branding-bm-1';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/assets/logo.svg',
+  '/assets/branding/buildmaster-app-icon.png',
+  '/assets/branding/buildmaster-mark.png',
+  '/assets/branding/buildmaster-splash.webp',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 ];
