@@ -73,7 +73,19 @@ for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
     assertCompletePng(path.join('resources/android-branding/res', `mipmap-${density}`, name));
   }
 }
-assert.deepEqual(pngSize('resources/android-branding/res/drawable-nodpi/buildmaster_native_splash.png'), { width: 2732, height: 2732 });
+assert.deepEqual(pngSize('resources/android-branding/res/drawable-nodpi/buildmaster_native_splash_image.png'), { width: 2732, height: 2732 });
+
+const splashDrawable = read('resources/android-branding/res/drawable/buildmaster_native_splash.xml');
+assert.match(splashDrawable, /@drawable\/buildmaster_native_splash_image/);
+assert.doesNotMatch(
+  splashDrawable,
+  /@drawable\/buildmaster_native_splash(?:["'])/,
+  'O drawable XML da splash não pode referenciar a si próprio.'
+);
+assert.ok(
+  !exists('resources/android-branding/res/drawable-nodpi/buildmaster_native_splash.png'),
+  'O PNG legado com o mesmo nome do XML deve ser removido para evitar ResourceCycle.'
+);
 
 const mark = read('src/components/BuildMasterMark.tsx');
 assert.match(mark, /buildmaster-mark\.png/);
@@ -113,6 +125,11 @@ assert.match(fs.readFileSync(fakeManifest, 'utf8'), /android:roundIcon="@mipmap\
 assert.match(fs.readFileSync(path.join(fakeRes, 'values', 'styles.xml'), 'utf8'), /@drawable\/buildmaster_native_splash/);
 assert.ok(exists(path.join(fakeRes, 'mipmap-xxxhdpi', 'ic_launcher.png')));
 assert.ok(exists(path.join(fakeRes, 'mipmap-anydpi-v33', 'ic_launcher.xml')));
+assert.ok(exists(path.join(fakeRes, 'drawable-nodpi', 'buildmaster_native_splash_image.png')));
+assert.ok(!exists(path.join(fakeRes, 'drawable-nodpi', 'buildmaster_native_splash.png')));
+const installedSplashXml = fs.readFileSync(path.join(fakeRes, 'drawable', 'buildmaster_native_splash.xml'), 'utf8');
+assert.match(installedSplashXml, /@drawable\/buildmaster_native_splash_image/);
+assert.doesNotMatch(installedSplashXml, /@drawable\/buildmaster_native_splash(?:["'])/);
 const installedValueXml = fs.readdirSync(path.join(fakeRes, 'values')).filter((name) => name.endsWith('.xml')).map((name) => fs.readFileSync(path.join(fakeRes, 'values', name), 'utf8')).join('\n');
 assert.equal((installedValueXml.match(/name=["']ic_launcher_background["']/g) || []).length, 1, 'ic_launcher_background deve existir uma única vez após instalar a identidade.');
 fs.rmSync(temp, { recursive: true, force: true });

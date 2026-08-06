@@ -2,6 +2,6 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/buildmaster_branding_background" />
     <item android:gravity="fill">
-        <bitmap android:src="@drawable/buildmaster_native_splash" android:gravity="fill" />
+        <bitmap android:src="@drawable/buildmaster_native_splash_image" android:gravity="fill" />
     </item>
 </layer-list>

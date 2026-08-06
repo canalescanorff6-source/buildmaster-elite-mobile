@@ -6,6 +6,7 @@ const root = process.cwd();
 const androidRoot = path.join(root, 'android');
 const sourceRes = path.join(root, 'resources', 'android-branding', 'res');
 const targetRes = path.join(androidRoot, 'app', 'src', 'main', 'res');
+const legacySelfReferencingSplash = path.join(targetRes, 'drawable-nodpi', 'buildmaster_native_splash.png');
 const manifestPath = path.join(androidRoot, 'app', 'src', 'main', 'AndroidManifest.xml');
 
 function fail(message) {
@@ -68,6 +69,12 @@ for (const sourcePng of walk(sourceRes).filter((item) => item.endsWith('.png')))
   validatePng(sourcePng);
 }
 
+// Remove o PNG legado que tinha o mesmo nome do XML drawable. No Android,
+// drawable/ e drawable-nodpi/ compartilham o mesmo namespace de recursos;
+// manter buildmaster_native_splash.xml e buildmaster_native_splash.png fazia
+// o XML resolver @drawable/buildmaster_native_splash para ele próprio.
+fs.rmSync(legacySelfReferencingSplash, { force: true });
+
 fs.cpSync(sourceRes, targetRes, { recursive: true, force: true });
 
 // O template Android/Capacitor já cria @color/ic_launcher_background em
@@ -126,7 +133,7 @@ const required = [
   'drawable/buildmaster_icon_background.xml',
   'drawable-nodpi/buildmaster_icon_monochrome_image.png',
   'drawable/buildmaster_icon_monochrome.xml',
-  'drawable-nodpi/buildmaster_native_splash.png',
+  'drawable-nodpi/buildmaster_native_splash_image.png',
   'drawable/buildmaster_native_splash.xml'
 ];
 for (const relative of required) {
