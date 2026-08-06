@@ -1,1 +1,1 @@
-v38.40 — corrige ciclo recursivo da splash e libera geração do APK
+v38.40 — corrige resíduo legado da splash em atualizações por sobreposição

@@ -63,8 +63,11 @@ for (const file of [
   'scripts/install-android-branding.mjs'
 ]) assert.ok(exists(file), `Identidade premium ausente: ${file}`);
 
+const legacySplashResourceName = 'buildmaster_native_splash.png';
+const legacySplashSourcePath = path.join('resources/android-branding/res/drawable-nodpi', legacySplashResourceName);
+
 for (const file of fs.readdirSync('resources/android-branding/res/drawable-nodpi')
-  .filter((name) => name.endsWith('.png'))
+  .filter((name) => name.endsWith('.png') && name !== legacySplashResourceName)
   .map((name) => path.join('resources/android-branding/res/drawable-nodpi', name))) {
   assertCompletePng(file);
 }
@@ -82,10 +85,9 @@ assert.doesNotMatch(
   /@drawable\/buildmaster_native_splash(?:["'])/,
   'O drawable XML da splash não pode referenciar a si próprio.'
 );
-assert.ok(
-  !exists('resources/android-branding/res/drawable-nodpi/buildmaster_native_splash.png'),
-  'O PNG legado com o mesmo nome do XML deve ser removido para evitar ResourceCycle.'
-);
+// O repositório pode ter sido atualizado por sobreposição e ainda conter o PNG
+// legado. A instalação deve ignorá-lo e removê-lo do projeto Android, em vez de
+// bloquear o diagnóstico antes que a limpeza automática seja executada.
 
 const mark = read('src/components/BuildMasterMark.tsx');
 assert.match(mark, /buildmaster-mark\.png/);
@@ -97,6 +99,8 @@ assert.match(read('public/sw.js'), /background-ocr-resume-1-branding-bm-1/);
 assert.match(read('src/components/RegisterServiceWorker.tsx'), /background-ocr-resume-1-branding-bm-1/);
 assert.match(read('.github/workflows/build-apk.yml'), /install-android-branding\.mjs/);
 assert.match(read('.github/workflows/build-play-store.yml'), /install-android-branding\.mjs/);
+assert.match(read('scripts/install-android-branding.mjs'), /sourceLegacySelfReferencingSplash/);
+assert.match(read('scripts/install-android-branding.mjs'), /filter\(source\)/);
 
 const brandingValues = read('resources/android-branding/res/values/buildmaster_branding.xml');
 assert.doesNotMatch(
@@ -111,6 +115,12 @@ fs.mkdirSync(path.join(temp, 'scripts'), { recursive: true });
 fs.mkdirSync(path.join(temp, 'resources', 'android-branding'), { recursive: true });
 fs.cpSync('scripts/install-android-branding.mjs', path.join(temp, 'scripts', 'install-android-branding.mjs'));
 fs.cpSync('resources/android-branding/res', path.join(temp, 'resources', 'android-branding', 'res'), { recursive: true });
+const tempLegacySource = path.join(temp, 'resources', 'android-branding', 'res', 'drawable-nodpi', legacySplashResourceName);
+fs.copyFileSync(
+  path.join(temp, 'resources', 'android-branding', 'res', 'drawable-nodpi', 'buildmaster_native_splash_image.png'),
+  tempLegacySource
+);
+assert.ok(exists(tempLegacySource), 'A simulação precisa conter o PNG legado para validar a migração por sobreposição.');
 const fakeRes = path.join(temp, 'android', 'app', 'src', 'main', 'res');
 fs.mkdirSync(path.join(fakeRes, 'values'), { recursive: true });
 fs.writeFileSync(path.join(fakeRes, 'values', 'styles.xml'), '<?xml version="1.0" encoding="utf-8"?><resources><style name="AppTheme.NoActionBarLaunch"><item name="android:background">@drawable/splash</item></style></resources>');

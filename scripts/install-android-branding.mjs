@@ -6,7 +6,9 @@ const root = process.cwd();
 const androidRoot = path.join(root, 'android');
 const sourceRes = path.join(root, 'resources', 'android-branding', 'res');
 const targetRes = path.join(androidRoot, 'app', 'src', 'main', 'res');
-const legacySelfReferencingSplash = path.join(targetRes, 'drawable-nodpi', 'buildmaster_native_splash.png');
+const legacySplashFileName = 'buildmaster_native_splash.png';
+const sourceLegacySelfReferencingSplash = path.join(sourceRes, 'drawable-nodpi', legacySplashFileName);
+const targetLegacySelfReferencingSplash = path.join(targetRes, 'drawable-nodpi', legacySplashFileName);
 const manifestPath = path.join(androidRoot, 'app', 'src', 'main', 'AndroidManifest.xml');
 
 function fail(message) {
@@ -65,7 +67,9 @@ if (!fs.existsSync(androidRoot)) fail('o projeto Android ainda não foi criado. 
 if (!fs.existsSync(sourceRes)) fail('os recursos premium não foram encontrados em resources/android-branding/res.');
 if (!fs.existsSync(targetRes)) fail('a pasta de recursos do aplicativo Android não existe.');
 
-for (const sourcePng of walk(sourceRes).filter((item) => item.endsWith('.png'))) {
+for (const sourcePng of walk(sourceRes).filter((item) =>
+  item.endsWith('.png') && path.resolve(item) !== path.resolve(sourceLegacySelfReferencingSplash)
+)) {
   validatePng(sourcePng);
 }
 
@@ -73,9 +77,21 @@ for (const sourcePng of walk(sourceRes).filter((item) => item.endsWith('.png')))
 // drawable/ e drawable-nodpi/ compartilham o mesmo namespace de recursos;
 // manter buildmaster_native_splash.xml e buildmaster_native_splash.png fazia
 // o XML resolver @drawable/buildmaster_native_splash para ele próprio.
-fs.rmSync(legacySelfReferencingSplash, { force: true });
+// A exclusão no destino resolve projetos Android já gerados. O filtro na cópia
+// também protege repositórios atualizados por sobreposição, nos quais o arquivo
+// antigo pode continuar presente em resources/android-branding/res.
+fs.rmSync(targetLegacySelfReferencingSplash, { force: true });
 
-fs.cpSync(sourceRes, targetRes, { recursive: true, force: true });
+fs.cpSync(sourceRes, targetRes, {
+  recursive: true,
+  force: true,
+  filter(source) {
+    return path.resolve(source) !== path.resolve(sourceLegacySelfReferencingSplash);
+  },
+});
+
+// Garante que nenhum resíduo antigo sobreviva mesmo se já existia no projeto.
+fs.rmSync(targetLegacySelfReferencingSplash, { force: true });
 
 // O template Android/Capacitor já cria @color/ic_launcher_background em
 // values/launch_background.xml. Versões anteriores da identidade também
