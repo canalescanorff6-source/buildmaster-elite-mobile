@@ -69,5 +69,14 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // fronteira de Pareto, seis fases de partida e seis arquétipos de adversário.
   // O resultado continua sem overall e mantém orçamento, posição e Top 5 íntegros.
   const supremePerformance = applySupremePerformanceV3870(finalMaximumIntegrity);
-  return enforceComplementarySkillIntegrity(supremePerformance);
+  // Compatibilidade pública: os motores podem manter alternativas extras em
+  // supremeV3870.adaptiveVariants para análise avançada, mas as telas e os
+  // contratos históricos recebem no máximo três fichas aplicáveis. Isso evita
+  // poluir o resultado e preserva as regressões v31.00/v31.30.
+  // Contrato legado v38.70: return enforceComplementarySkillIntegrity(supremePerformance)
+  const finalSupreme = enforceComplementarySkillIntegrity(supremePerformance);
+  return {
+    ...finalSupreme,
+    buildVariants: finalSupreme.buildVariants.slice(0, 3)
+  };
 }

@@ -52,7 +52,7 @@ assert.equal(result.recommendedSkills.length, expectedSlots, 'O Motor Supremo de
 assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, expectedSlots, 'As vagas parciais precisam permanecer únicas.');
 assert.equal(result.trainingPointsUsed, result.trainingPointsTotal, 'A compatibilidade não pode quebrar o orçamento exato.');
 assert.equal(result.trainingPointsRemaining, 0);
-assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 5, 'O contrato legado aceita de uma a cinco fichas/alternativas.');
+assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3, 'A saída pública preserva de uma a três fichas aplicáveis; alternativas extras continuam no diagnóstico v38.70.');
 assert.match(result.buildName, /Ficha Automática v38\.40/, 'O nome deve manter o contrato público e identificar o Motor Supremo no complemento.');
 const usefulImpeto = result.recommendedImpetos.find((item) => item.tier !== 'evitar');
 assert.ok(usefulImpeto, 'A análise precisa manter ao menos um Ímpeto útil.');
@@ -72,4 +72,4 @@ assert.match(pipeline, /const finalAdvanced = advancedReconciled/);
 assert.match(pipeline, /const finalPower = powerIntegrity/);
 assert.match(pipeline, /const finalMaximum = maximumIntegrity/);
 
-console.log('v38.70 compatibilidade legada aprovada: vagas parciais, até 5 variantes, Ímpeto final, triagem em duas etapas e pipeline sem recomputações duplicadas.');
+console.log('v38.70 compatibilidade legada aprovada: vagas parciais, até 3 fichas públicas, alternativas internas preservadas, Ímpeto final e pipeline sem recomputações duplicadas.');
