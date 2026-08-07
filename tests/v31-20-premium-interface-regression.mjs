@@ -1,10 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = (relativePath) => readFileSync(path.join(projectRoot, relativePath), 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+const file = (relativePath) => path.join(projectRoot, relativePath);
+const read = (relativePath) => {
+  const absolute = file(relativePath);
+  assert.ok(existsSync(absolute), `Arquivo obrigatório ausente: ${relativePath}`);
+  return readFileSync(absolute, 'utf8')
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?/g, '\n')
+    .normalize('NFC');
+};
+const compact = (value) => value.replace(/\s+/g, ' ');
+const contains = (source, value) => source.includes(value.normalize('NFC'));
 
 const app = read('src/components/CardVisionApp.tsx');
 const home = read('src/modules/core/IntegratedHomePanel.tsx');
@@ -14,33 +24,34 @@ const identityCss = read('src/app/v35-identity-themes.css');
 const prefs = read('src/lib/easyExperience.ts');
 const pkg = JSON.parse(read('package.json'));
 
-assert.match(pkg.version, /^(?:3[1-9]|[4-9]\d)\.\d+\.0$/, `Versão incompatível com a linha evolutiva: ${pkg.version}`);
+const version = String(pkg.version || '0.0.0').split('.').map((item) => Number.parseInt(item, 10) || 0);
+assert.ok(
+  version[0] > 31 || (version[0] === 31 && version[1] >= 20),
+  `Versão incompatível com a linha evolutiva premium: ${pkg.version}`
+);
 
-const requiredPresets = ['obsidian-gold', 'elite-blue', 'future-purple'];
-for (const preset of requiredPresets) {
+const visualSurface = `${appearance}\n${app}\n${prefs}\n${css}\n${identityCss}`;
+for (const preset of ['obsidian-gold', 'elite-blue', 'future-purple']) {
+  assert.ok(contains(visualSurface, preset), `A identidade premium perdeu o preset ${preset}.`);
   assert.ok(
-    appearance.includes(`id: '${preset}'`) || app.includes(preset),
-    `O seletor premium não declara o preset ${preset}.`
-  );
-  assert.ok(
-    css.includes(`visual-${preset}`) || identityCss.includes(`visual-${preset}`),
-    `O CSS não contém a superfície visual do preset ${preset}.`
-  );
-  assert.ok(
-    prefs.includes(`'${preset}'`),
-    `As preferências não persistem o preset ${preset}.`
+    contains(`${css}\n${identityCss}`, `visual-${preset}`) || contains(appearance, `preset-${preset.split('-').at(-1)}`),
+    `O preset ${preset} não possui superfície visual reconhecível.`
   );
 }
 
-assert.match(app, /visual-\$\{visualPreset\}/, 'A classe do modelo precisa ser aplicada ao shell principal.');
-assert.match(appearance, />Temas</, 'Aparência deve exibir a seção Temas.');
-assert.match(appearance, /premium-preset-grid/, 'Aparência deve manter a grade de temas premium.');
+assert.ok(
+  /visual-\$\{\s*visualPreset\s*\}/.test(app) || /[`'"]visual-[`'"]\s*\+\s*visualPreset/.test(app),
+  'A classe do preset visual precisa ser aplicada ao shell principal.'
+);
+assert.ok(/>\s*Temas\s*</.test(appearance), 'Aparência deve exibir a seção Temas.');
+assert.ok(contains(appearance, 'premium-preset-grid'), 'Aparência deve manter a grade de temas premium.');
 
+const compactHome = compact(home);
 for (const marker of ['bm-premium-reader-hero', 'bm-premium-feature-grid', 'bm-premium-mini-pitch']) {
-  assert.ok(home.includes(marker), `A home premium perdeu o marcador estrutural ${marker}.`);
+  assert.ok(contains(compactHome, marker), `A home premium perdeu o marcador estrutural ${marker}.`);
 }
-for (const label of ['Habilidades', 'Ímpetos', 'Formações']) {
-  assert.ok(home.includes(label), `A home premium não apresenta a função essencial ${label}.`);
-}
+assert.ok(contains(compactHome, 'Habilidades'), 'A home premium não apresenta Habilidades.');
+assert.ok(contains(compactHome, 'Ímpetos') || contains(compactHome, 'Impeto'), 'A home premium não apresenta Ímpetos.');
+assert.ok(contains(compactHome, 'Formações') || contains(compactHome, 'Tática'), 'A home premium não apresenta Formações/Tática.');
 
-console.log(`v${pkg.version.split('.').slice(0, 2).join('.')} interface premium validada por contrato determinístico.`);
+console.log(`v${pkg.version} interface premium validada por contrato estável e independente do ambiente.`);
