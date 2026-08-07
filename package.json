@@ -148,7 +148,7 @@
     "test:v3850": "node tests/v38-50-power-build-engine-regression.mjs",
     "test:v3860": "node -r ./tests/_ts-require.cjs tests/v38-60-max-match-performance-regression.ts",
     "typecheck:v3870": "tsc -p tests/types-v3870/tsconfig.json --pretty false && tsc -p tests/types-v3870-ui/tsconfig.json --pretty false",
-    "test:v3870": "npm run typecheck:v3870 && node -r ./tests/_ts-require.cjs tests/v38-70-supreme-performance-regression.ts"
+    "test:v3870": "npm run typecheck:v3870 && node -r ./tests/_ts-require.cjs tests/v38-70-supreme-performance-regression.ts && node -r ./tests/_ts-require.cjs tests/v38-70-legacy-ci-compatibility-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

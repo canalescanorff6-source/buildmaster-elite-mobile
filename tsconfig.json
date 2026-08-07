@@ -1,26 +1,47 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es2022"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "jsx": "react-jsx",
-    "baseUrl": "../..",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/components/TacticalPosterStudioPanel": ["tests/types-v3110-ui/posterStub.tsx"],
-      "@/*": ["src/*"]
-    },
-    "types": [],
-    "noUnusedLocals": true,
-    "noUnusedParameters": true
+      "@/*": [
+        "./src/*"
+      ]
+    }
   },
-  "files": [
-    "stubs.d.ts",
-    "posterStub.tsx",
-    "../../src/components/FormationRoleLabPanel.tsx",
-    "../../src/modules/core/IntegratedHomePanel.tsx"
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "middleware.ts",
+    "capacitor.config.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "tests",
+    "supabase/functions",
+    "android",
+    "out"
   ]
 }

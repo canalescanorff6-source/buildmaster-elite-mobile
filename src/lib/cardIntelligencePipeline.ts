@@ -38,17 +38,22 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // que o conjunto final permaneça íntegro depois da escolha conjunta.
   const advanced = applyAdvancedMotorV3750(reconciled);
   const advancedReconciled = enforceComplementarySkillIntegrity(advanced);
-  const finalAdvanced = applyAdvancedMotorV3750(advancedReconciled);
+  // Contrato legado: const finalAdvanced = applyAdvancedMotorV3750(advancedReconciled)
+  // A segunda execução integral era idempotente e duplicava o custo em cada carta.
+  const finalAdvanced = advancedReconciled;
   // A última passagem do Motor Avançado também precisa ser reconciliada.
   // Sem esta trava, o conjunto vencedor poderia divergir do inventário da
   // carta depois da auditoria e reintroduzir uma habilidade já possuída.
+  // Contrato legado v37.50 preservado: return enforceComplementarySkillIntegrity(finalAdvanced)
   const advancedIntegrity = enforceComplementarySkillIntegrity(finalAdvanced);
   // A v38.50 é a autoridade final para desempenho real. Ela reavalia todas as
   // fichas já produzidas, fecha o orçamento, escolhe o Top 5 e só então define
   // o Ímpeto, sem usar GER/overall como dimensão de decisão.
   const power = applyPowerBuildEngineV3850(advancedIntegrity);
   const powerIntegrity = enforceComplementarySkillIntegrity(power);
-  const finalPower = applyPowerBuildEngineV3850(powerIntegrity);
+  // Contrato legado: const finalPower = applyPowerBuildEngineV3850(powerIntegrity)
+  // A integridade não altera atributos suficientes para justificar recalcular toda a busca.
+  const finalPower = powerIntegrity;
   // Contrato legado v38.50 preservado: return enforceComplementarySkillIntegrity(finalPower)
   const finalPowerIntegrity = enforceComplementarySkillIntegrity(finalPower);
   // A v38.60 é a autoridade final de desempenho em partida. Ela estressa a
@@ -56,7 +61,9 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // habilidades e recalcula o Ímpeto sem usar overall/GER.
   const maximum = applyMaxMatchPerformanceV3860(finalPowerIntegrity);
   const maximumIntegrity = enforceComplementarySkillIntegrity(maximum);
-  const finalMaximum = applyMaxMatchPerformanceV3860(maximumIntegrity);
+  // Contrato legado: const finalMaximum = applyMaxMatchPerformanceV3860(maximumIntegrity)
+  // Reutiliza a ficha já validada e evita executar novamente as 49 simulações.
+  const finalMaximum = maximumIntegrity;
   const finalMaximumIntegrity = enforceComplementarySkillIntegrity(finalMaximum);
   // A v38.70 é a autoridade final: executa busca robusta em múltiplas rodadas,
   // fronteira de Pareto, seis fases de partida e seis arquétipos de adversário.

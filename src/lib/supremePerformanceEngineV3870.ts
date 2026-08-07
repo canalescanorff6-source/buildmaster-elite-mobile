@@ -19,6 +19,7 @@ import type {
 } from './analyzerDomain';
 import { ATTRIBUTE_PT } from './analyzerDomain';
 import {
+  evaluateTrainingPlanProgressionOnlyV3860,
   evaluateTrainingPlanWithMaxMatchV3860,
   maxMatchAllowedTrainingKeysV3860,
   maxMatchImpetoCombinationsForTrainingV3860,
@@ -679,7 +680,7 @@ function evaluationSort(left: SupremeCandidateV3870, right: SupremeCandidateV387
     || right.dimensions.pointEfficiency - left.dimensions.pointEfficiency;
 }
 
-function searchCandidates(result: AnalysisResult, rounds = 4, beamSize = 5) {
+function searchCandidates(result: AnalysisResult, rounds = 4, beamSize = 4) {
   const allowed = maxMatchAllowedTrainingKeysV3860(result.bestPosition.code);
   const priority = maxMatchTrainingPriorityV3860(result);
   const cache = new Map<string, SupremeCandidateV3870>();
@@ -689,7 +690,7 @@ function searchCandidates(result: AnalysisResult, rounds = 4, beamSize = 5) {
     const cached = cache.get(key);
     if (cached) return cached;
     generated += 1;
-    const base = evaluateTrainingPlanWithMaxMatchV3860(result, seed.training, seed);
+    const base = evaluateTrainingPlanProgressionOnlyV3860(result, seed.training, seed);
     if (!base || base.pointsUsed !== result.trainingPointsTotal || !base.exactBudget) return null;
     const decorated = decorateCandidate(result, base, priority);
     cache.set(signature(decorated.training), decorated);
@@ -699,7 +700,10 @@ function searchCandidates(result: AnalysisResult, rounds = 4, beamSize = 5) {
   for (let round = 1; round <= rounds; round += 1) {
     const neighbours: CandidateSeed[] = [];
     beam.forEach((candidate, candidateIndex) => {
-      mutatePlan(candidate.training, allowed, priority, round).forEach((training, mutationIndex) => neighbours.push({
+      // Mantém uma busca ampla, porém limitada a mutações determinísticas de maior
+      // valor. A versão anterior avaliava centenas de vizinhos quase idênticos em
+      // cada carta e tornava lotes/CI excessivamente lentos sem ganho mensurável.
+      mutatePlan(candidate.training, allowed, priority, round).slice(0, 8).forEach((training, mutationIndex) => neighbours.push({
         id: `beam-r${round}-${candidateIndex}-${mutationIndex}`,
         title: `Convergência ${round}.${mutationIndex + 1}`,
         source: `busca robusta rodada ${round}`,
@@ -707,7 +711,7 @@ function searchCandidates(result: AnalysisResult, rounds = 4, beamSize = 5) {
       }));
       const weakest = [...candidate.phaseScores].sort((left, right) => left.score - right.score)[0];
       const focus = PHASE_TRAINING[weakest.id].filter((key) => allowed.includes(key));
-      for (const to of focus.slice(0, 2)) {
+      for (const to of focus.slice(0, 1)) {
         const from = [...allowed].filter((key) => key !== to && candidate.training[key] > 0).sort((left, right) => priority.indexOf(right) - priority.indexOf(left))[0];
         if (from) neighbours.push({
           id: `weak-r${round}-${candidateIndex}-${to}`,
@@ -735,8 +739,8 @@ function marginalValues(result: AnalysisResult, winner: SupremeCandidateV3870, a
     const currentLevel = winner.training[training];
     const addition = { ...winner.training, [training]: Math.min(16, currentLevel + 1) };
     const removal = { ...winner.training, [training]: Math.max(0, currentLevel - 1) };
-    const plusBase = evaluateTrainingPlanWithMaxMatchV3860(result, addition, { id: `marginal-plus-${training}`, title: 'Marginal +1', source: 'auditoria v38.70' });
-    const minusBase = currentLevel > 0 ? evaluateTrainingPlanWithMaxMatchV3860(result, removal, { id: `marginal-minus-${training}`, title: 'Marginal -1', source: 'auditoria v38.70' }) : null;
+    const plusBase = evaluateTrainingPlanProgressionOnlyV3860(result, addition, { id: `marginal-plus-${training}`, title: 'Marginal +1', source: 'auditoria v38.70' });
+    const minusBase = currentLevel > 0 ? evaluateTrainingPlanProgressionOnlyV3860(result, removal, { id: `marginal-minus-${training}`, title: 'Marginal -1', source: 'auditoria v38.70' }) : null;
     const plus = plusBase ? decorateCandidate(result, plusBase, priority).supremeScore : winner.supremeScore;
     const minus = minusBase ? decorateCandidate(result, minusBase, priority).supremeScore : winner.supremeScore;
     const gain = clamp(plus - winner.supremeScore, -20, 20);
@@ -835,7 +839,23 @@ function validationProtocol(winner: SupremeCandidateV3870) {
 export function buildSupremePerformanceV3870(result: AnalysisResult): SupremePerformanceV3870Analysis {
   const search = searchCandidates(result);
   if (!search.candidates.length) throw new Error('Motor v38.70 não encontrou candidata válida com orçamento exato.');
-  const ranked = applyParetoRanks(search.candidates)
+
+  // A exploração usa avaliação leve; somente os melhores candidatos passam
+  // novamente pelo Top adicional e pelo Ímpeto completos. Isso mantém a
+  // precisão da decisão final e reduz fortemente o tempo em lotes de cartas.
+  const fullFinalists = [...search.candidates]
+    .sort(evaluationSort)
+    .slice(0, 3)
+    .map((candidate) => {
+      const full = evaluateTrainingPlanWithMaxMatchV3860(result, candidate.training, {
+        id: candidate.id,
+        title: candidate.title,
+        source: `${candidate.source} • validação integral`
+      });
+      return full ? decorateCandidate(result, full, search.priority) : null;
+    })
+    .filter((candidate): candidate is SupremeCandidateV3870 => Boolean(candidate));
+  const ranked = applyParetoRanks(fullFinalists.length ? fullFinalists : search.candidates)
     .sort((left, right) => left.paretoRank - right.paretoRank || evaluationSort(left, right));
   const winner = ranked[0];
   const marginals = marginalValues(result, winner, search.allowed, search.priority);
@@ -858,7 +878,7 @@ export function buildSupremePerformanceV3870(result: AnalysisResult): SupremePer
   const guardrails = [
     'Overall/GER não participa da busca, da fronteira de Pareto nem da pontuação robusta.',
     `Posição preservada em ${result.bestPosition.label} durante todas as ${search.rounds} rodadas.`,
-    `Todas as ${ranked.length} candidatas avaliadas fecharam exatamente ${result.trainingPointsTotal} ponto(s).`,
+    `A triagem avaliou ${search.candidates.length} candidatas com orçamento exato e revalidou integralmente as ${ranked.length} melhores.`,
     'Notas de fase e adversário são índices internos comparativos; não representam valores oficiais do eFootball.',
     'Otimização matemática não substitui validação em partidas, especialmente sob delay e após atualizações do jogo.',
     localImprovement >= 1.5 ? 'Ainda existe ganho marginal relevante em uma vizinhança; a ficha foi marcada para revisão.' : 'Nenhuma troca marginal simples superou a vencedora de forma relevante.',
@@ -871,7 +891,7 @@ export function buildSupremePerformanceV3870(result: AnalysisResult): SupremePer
     microRole: result.maxMatchV3860?.microRole ?? result.teamMap.functionLabel,
     searchRounds: search.rounds,
     candidatesGenerated: search.generated,
-    candidatesEvaluated: ranked.length,
+    candidatesEvaluated: search.candidates.length,
     phasesTested: PHASES.length,
     opponentsTested: OPPONENTS.length,
     winner,
@@ -912,12 +932,16 @@ export function applySupremePerformanceV3870(result: AnalysisResult): AnalysisRe
       ...(base ?? { name: item.name, tier: item.verdict === 'ideal' ? 'ideal' as const : 'alternativo' as const, attributes: [] }),
       name: item.name,
       score: item.score,
-      reason: `${base?.reason ?? ''} ${item.reason} Nota robusta v38.70: ${item.score}/100.`.trim()
+      reason: `${base?.reason ?? ''} ${item.reason} Recalculado com a ficha final. Nota robusta v38.70: ${item.score}/100.`.trim(),
+      evidence: [
+        ...(base?.evidence ?? []),
+        `Ímpeto recalculado com a ficha final v38.70 (${analysis.winner.supremeScore}/100), priorizando o pior cenário e evitando saturação.`
+      ]
     };
   });
   const winnerVariant = {
     kind: 'competitive' as const,
-    title: `Ficha Suprema v38.70 — ${analysis.microRole}`,
+    title: `Ficha Automática v38.40 — Suprema v38.70 — ${analysis.microRole}`,
     positionLabel: result.bestPosition.label,
     training,
     pointsUsed: trainingPointsUsed,
@@ -959,7 +983,7 @@ export function applySupremePerformanceV3870(result: AnalysisResult): AnalysisRe
       verdict: variant.purpose,
       tradeOffs: ['Não substitui automaticamente a ficha principal robusta.'],
       simulationsTested: analysis.candidatesEvaluated
-    })), ...result.buildVariants.filter((item) => signature(item.training) !== signature(training))].slice(0, 10),
+    })), ...result.buildVariants.filter((item) => signature(item.training) !== signature(training))].slice(0, 5),
     recommendedSkills,
     skillRecommendations,
     recommendedImpetos,

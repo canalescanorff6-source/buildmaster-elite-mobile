@@ -16,7 +16,7 @@ import type {
   UnifiedSkillDecision
 } from './analyzerDomain';
 import { ATTRIBUTE_PT } from './analyzerDomain';
-import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
+import { availableOfficialAdditionalSkillCount, buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
 import { filterComplementaryAdditionalSkills, skillIdentityKey } from './officialSkillIdentity';
 import { TRAINING_KEYS, normalizeTrainingPlan, trainingPlanCost, trainingPlanTotalCost } from './trainingPlanCore';
 import { TRAINING_LABELS, type TrainingComparisonItem } from './trainingEngine';
@@ -531,23 +531,34 @@ function preferredSkillProfiles(result: AnalysisResult): Array<{ id: string; lab
 }
 
 function skillPackages(result: AnalysisResult, plan: TrainingPlan, role: MicroRole): MaxMatchSkillPackage[] {
+  // Nem toda carta possui cinco vagas oficiais disponíveis. Cartas com muitas
+  // habilidades nativas/especiais podem ter de zero a quatro opções restantes.
+  // O motor antigo exigia exatamente cinco e eliminava todas as candidatas,
+  // fazendo a análise inteira falhar mesmo quando a ficha de progressão era válida.
+  const expectedSkillCount = Math.min(5, availableOfficialAdditionalSkillCount(result));
   const profiles = [{ id: 'automatic', label: 'Automático pela carta', categories: [] as UnifiedSkillDecision['category'][] }, ...preferredSkillProfiles(result)];
   const packages = profiles.map((profile) => {
     const raw = buildPersonalizedSkillPlan(result, plan, profile.categories.length ? { label: profile.label, preferredCategories: profile.categories } : { label: profile.label });
-    const skills = toPowerSkills(result, raw);
+    const skills = toPowerSkills(result, raw).slice(0, expectedSkillCount);
     const categoryCount = new Set(skills.map((item) => item.category)).size;
     const groups = skills.flatMap((item) => skillCategoryGroups(item.category));
     const roleGroups = Object.entries(role.trainingWeights).sort((left, right) => Number(right[1]) - Number(left[1])).slice(0, 4).map(([key]) => key as TrainingKey);
-    const roleCoverage = clamp(roleGroups.filter((group) => groups.includes(group)).length / Math.max(1, roleGroups.length) * 100);
-    const activationCoverage = clamp(average(skills.map((item) => item.score)));
-    const scenarioFit = clamp(skillPlanScore(skills) * .72 + categoryCount * 6 + roleCoverage * .12);
-    const redundancyPenalty = clamp(Math.max(0, 3 - categoryCount) * 8 + skills.reduce((sum, item) => sum + item.redundancyPenalty, 0));
+    const roleCoverage = expectedSkillCount === 0
+      ? 100
+      : clamp(roleGroups.filter((group) => groups.includes(group)).length / Math.max(1, roleGroups.length) * 100);
+    const activationCoverage = expectedSkillCount === 0 ? 100 : clamp(average(skills.map((item) => item.score)));
+    const scenarioFit = expectedSkillCount === 0
+      ? 100
+      : clamp(skillPlanScore(skills) * .72 + categoryCount * 6 + roleCoverage * .12);
+    const redundancyPenalty = expectedSkillCount === 0
+      ? 0
+      : clamp(Math.max(0, Math.min(3, expectedSkillCount) - categoryCount) * 8 + skills.reduce((sum, item) => sum + item.redundancyPenalty, 0));
     const score = clamp(activationCoverage * .42 + roleCoverage * .25 + scenarioFit * .33 - redundancyPenalty);
     return { id: profile.id, label: profile.label, skills, score, activationCoverage, roleCoverage, scenarioFit, redundancyPenalty };
-  }).filter((item) => item.skills.length === 5);
+  }).filter((item) => item.skills.length === expectedSkillCount);
   const unique = new Map<string, MaxMatchSkillPackage>();
   for (const item of packages) {
-    const key = item.skills.map((skill) => skillIdentityKey(skill.name)).sort().join('|');
+    const key = item.skills.map((skill) => skillIdentityKey(skill.name)).sort().join('|') || 'sem-vagas-adicionais';
     const current = unique.get(key);
     if (!current || item.score > current.score) unique.set(key, item);
   }
@@ -652,18 +663,26 @@ function pointEfficiency(plan: TrainingPlan, role: MicroRole, result: AnalysisRe
   return clamp(total ? useful / total * 100 : 50);
 }
 
-function evaluateSeed(result: AnalysisResult, seed: CandidateSeed, role: MicroRole, priority: TrainingKey[]): MaxMatchCandidate | null {
+function evaluateSeed(
+  result: AnalysisResult,
+  seed: CandidateSeed,
+  role: MicroRole,
+  priority: TrainingKey[],
+  reuse: { skillPackage?: MaxMatchSkillPackage; impetoCombination?: MaxMatchImpetoCombination } = {}
+): MaxMatchCandidate | null {
   const training = exactPlan(seed.training, result, priority);
   if (trainingPlanTotalCost(training) !== result.trainingPointsTotal) return null;
   const projected = projectedAttributes(result, training);
   const actions = actionScores(projected, role, result.bestPosition.code);
-  const packages = skillPackages(result, training, role);
-  const skillPackage = packages[0];
+  // A busca profunda da v38.70 avalia dezenas de progressões. Nessa fase,
+  // reutilizamos o pacote de habilidades e o Ímpeto já validados pela v38.60,
+  // evitando recalcular catálogos completos para cada vizinho. Os finalistas
+  // voltam a passar pela avaliação integral antes da decisão definitiva.
+  const skillPackage = reuse.skillPackage ?? skillPackages(result, training, role)[0];
   if (!skillPackage) return null;
   const preliminaryScenarios = scenarioScores(result, training, projected, role, actions, skillPackage.score, result.powerBuildV3850?.impetos?.[0]?.performanceScore ?? 60);
   const preliminaryWeakest = [...preliminaryScenarios].sort((left, right) => left.score - right.score)[0];
-  const impetos = impetoCombinations(result, training, role, preliminaryWeakest);
-  const impetoCombination = impetos[0];
+  const impetoCombination = reuse.impetoCombination ?? impetoCombinations(result, training, role, preliminaryWeakest)[0];
   if (!impetoCombination) return null;
   const scenarios = scenarioScores(result, training, projected, role, actions, skillPackage.score, impetoCombination.score);
   const scenario = scenarioSummary(scenarios);
@@ -791,6 +810,32 @@ export function evaluateTrainingPlanWithMaxMatchV3860(
   }, role, priority);
 }
 
+/**
+ * Avaliação rápida exclusiva para a exploração da v38.70. Ela preserva a
+ * projeção de atributos, ações, cenários e orçamento, mas reutiliza o Top
+ * adicional e o Ímpeto da vencedora v38.60. A decisão final nunca usa somente
+ * esta aproximação: os finalistas são recalculados pela função integral acima.
+ */
+export function evaluateTrainingPlanProgressionOnlyV3860(
+  result: AnalysisResult,
+  training: TrainingPlan,
+  metadata: { id?: string; title?: string; source?: string } = {}
+): MaxMatchCandidate | null {
+  const role = roleFromResult(result);
+  const priority = trainingPriority(result, role);
+  const normalized = exactPlan(training, result, priority);
+  const baseline = result.maxMatchV3860?.winner;
+  return evaluateSeed(result, {
+    id: metadata.id ?? 'progression-only-v3860',
+    title: metadata.title ?? 'Triagem de progressão v38.70',
+    source: metadata.source ?? 'busca suprema otimizada',
+    training: normalized
+  }, role, priority, baseline ? {
+    skillPackage: baseline.skillPackage,
+    impetoCombination: baseline.impetoCombination
+  } : {});
+}
+
 export function maxMatchAllowedTrainingKeysV3860(position: PositionCode): TrainingKey[] {
   return [...allowedKeys(position)];
 }
@@ -912,7 +957,7 @@ export function applyMaxMatchPerformanceV3860(result: AnalysisResult): AnalysisR
     trainingPointsUsed,
     trainingPointsRemaining: result.trainingPointsTotal - trainingPointsUsed,
     trainingComparison: compareTraining(result.parsed.autoTrainingPlan, training),
-    buildVariants: [winnerVariant, ...result.buildVariants.filter((item) => signature(item.training) !== signature(training))].slice(0, 8),
+    buildVariants: [winnerVariant, ...result.buildVariants.filter((item) => signature(item.training) !== signature(training))].slice(0, 5),
     recommendedSkills,
     skillRecommendations,
     recommendedImpetos: impetos,
