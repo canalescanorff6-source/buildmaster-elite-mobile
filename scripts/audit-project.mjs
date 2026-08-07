@@ -65,6 +65,8 @@ for (const file of [
 ]) check(exists(file), `Identidade premium presente: ${file}`);
 check(workflowApk.includes('install-android-branding.mjs') && workflowPlay.includes('install-android-branding.mjs'), 'Identidade Android integrada aos dois workflows');
 check(String(pkg.scripts?.['test:v3840'] ?? '').includes('v38-40-branding-regression.mjs'), 'Regressão da identidade premium integrada à v38.40');
+check(exists('src/lib/performanceBuildEngineV3850.ts') && exists('src/components/PowerBuildEngineV3850Panel.tsx') && exists('tests/v38-50-power-build-engine-regression.mjs'), 'Motor funcional v38.50 integrado');
+check(String(pkg.scripts?.['test:v3850'] ?? '').includes('v38-50-power-build-engine-regression.mjs') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3850'), 'Regressão v38.50 integrada à bateria geral');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);

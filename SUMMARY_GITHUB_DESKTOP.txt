@@ -1,1 +1,1 @@
-v38.40 — corrige resíduo legado da splash em atualizações por sobreposição
+v38.40 — adiciona Motor v38.60 com oito cenários, Top 5 conjunto e desempenho máximo sem overall

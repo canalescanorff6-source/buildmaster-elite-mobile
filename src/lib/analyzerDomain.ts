@@ -940,6 +940,294 @@ export type AdvancedMotorV3750Analysis = {
   safeguards: string[];
 };
 
+export type PowerBuildScoreDimensions = {
+  roleExecution: number;
+  functionalThresholds: number;
+  pointEfficiency: number;
+  responsiveness: number;
+  identityPreservation: number;
+  specialSkillActivation: number;
+  skillCoverage: number;
+  impetoSynergy: number;
+  onlineRobustness: number;
+  antiOverallWaste: number;
+  exactBudget: number;
+  confidenceSafety: number;
+};
+
+export type PowerBuildCandidate = {
+  id: string;
+  title: string;
+  source: string;
+  training: TrainingPlan;
+  pointsUsed: number;
+  exactBudget: boolean;
+  performanceScore: number;
+  dimensions: PowerBuildScoreDimensions;
+  thresholdsMet: number;
+  thresholdsTotal: number;
+  saturationPenalty: number;
+  wastePenalty: number;
+  strengths: string[];
+  tradeOffs: string[];
+};
+
+export type PowerSkillDecision = UnifiedSkillDecision & {
+  activationFrequency: 'muito alta' | 'alta' | 'média';
+  coverageRole: string;
+  redundancyPenalty: number;
+};
+
+export type PowerImpetoDecision = ImpetoRecommendation & {
+  performanceScore: number;
+  roleFit: number;
+  attributeCoverage: number;
+  buildSynergy: number;
+  skillSynergy: number;
+  saturationPenalty: number;
+  supportedGroups: TrainingKey[];
+};
+
+export type PowerBuildEngineV3850Analysis = {
+  engineVersion: '38.50.0';
+  philosophy: 'DESEMPENHO_REAL_SEM_FOCO_EM_OVERALL';
+  improvements: string[];
+  candidatesEvaluated: number;
+  finalists: PowerBuildCandidate[];
+  winner: PowerBuildCandidate;
+  skills: PowerSkillDecision[];
+  impetos: PowerImpetoDecision[];
+  confidence: number;
+  decision: 'aprovada' | 'revisar';
+  guardrails: string[];
+  summary: string;
+};
+
+
+export type MaxMatchScenarioId =
+  | 'RANKED_CORE'
+  | 'HIGH_DELAY'
+  | 'TIGHT_SPACES'
+  | 'HIGH_PRESS'
+  | 'FAST_TRANSITION'
+  | 'PHYSICAL_DUELS'
+  | 'LATE_GAME'
+  | 'SPECIAL_SKILL_TRIGGER';
+
+export type MaxMatchScenarioScore = {
+  id: MaxMatchScenarioId;
+  label: string;
+  score: number;
+  weight: number;
+  bottleneck: string;
+  protectedActions: string[];
+};
+
+export type MaxMatchBreakpoint = {
+  attribute: AttributeKey;
+  label: string;
+  projected: number;
+  targetBand: number;
+  status: 'acima' | 'atingido' | 'proximo' | 'abaixo';
+  impact: string;
+};
+
+export type MaxMatchCounterfactual = {
+  change: string;
+  scoreDelta: number;
+  verdict: 'manter' | 'alternativa situacional' | 'melhoria encontrada';
+};
+
+export type MaxMatchSkillPackage = {
+  id: string;
+  label: string;
+  skills: PowerSkillDecision[];
+  score: number;
+  activationCoverage: number;
+  roleCoverage: number;
+  scenarioFit: number;
+  redundancyPenalty: number;
+};
+
+export type MaxMatchImpetoCombination = {
+  impeto: PowerImpetoDecision;
+  score: number;
+  weakestScenarioGain: number;
+  reason: string;
+};
+
+export type MaxMatchCandidate = PowerBuildCandidate & {
+  projectedAttributes: Partial<Record<AttributeKey, number>>;
+  actionScores: Record<string, number>;
+  scenarioScores: MaxMatchScenarioScore[];
+  scenarioAverage: number;
+  worstScenario: number;
+  consistency: number;
+  minMaxScore: number;
+  breakpointScore: number;
+  fatigueResistance: number;
+  duelReliability: number;
+  tightSpaceControl: number;
+  transitionImpact: number;
+  skillPackage: MaxMatchSkillPackage;
+  impetoCombination: MaxMatchImpetoCombination;
+};
+
+export type MaxMatchPerformanceV3860Analysis = {
+  engineVersion: '38.60.0';
+  philosophy: 'MAXIMO_DESEMPENHO_EM_PARTIDA_SEM_OVERALL';
+  improvements: string[];
+  microRole: string;
+  candidatesEvaluated: number;
+  scenariosTested: number;
+  finalists: MaxMatchCandidate[];
+  winner: MaxMatchCandidate;
+  skillPackages: MaxMatchSkillPackage[];
+  impetoCombinations: MaxMatchImpetoCombination[];
+  breakpoints: MaxMatchBreakpoint[];
+  counterfactuals: MaxMatchCounterfactual[];
+  confidence: number;
+  decision: 'aprovada' | 'revisar';
+  guardrails: string[];
+  summary: string;
+};
+
+export type SupremeMatchPhaseId =
+  | 'BUILDUP'
+  | 'CENTRAL_PROGRESSION'
+  | 'FINAL_THIRD'
+  | 'DEFENSIVE_TRANSITION'
+  | 'SETTLED_DEFENCE'
+  | 'LATE_MATCH';
+
+export type SupremeMatchPhaseScore = {
+  id: SupremeMatchPhaseId;
+  label: string;
+  score: number;
+  weight: number;
+  limitingAction: string;
+  decisiveAttributes: string[];
+};
+
+export type OpponentArchetypeId =
+  | 'LOW_BLOCK'
+  | 'HIGH_PRESS'
+  | 'FAST_COUNTER'
+  | 'PHYSICAL_COMPACT'
+  | 'POSSESSION_CONTROL'
+  | 'BALANCED_META';
+
+export type OpponentStressScore = {
+  id: OpponentArchetypeId;
+  label: string;
+  score: number;
+  weight: number;
+  reason: string;
+  protectedPhase: SupremeMatchPhaseId;
+};
+
+export type RobustnessEnvelopeV3870 = {
+  expected: number;
+  conservative: number;
+  optimistic: number;
+  uncertaintyWidth: number;
+  ocrRiskPenalty: number;
+  stableGroups: TrainingKey[];
+  sensitiveGroups: TrainingKey[];
+};
+
+export type MarginalTrainingValueV3870 = {
+  training: TrainingKey;
+  label: string;
+  currentLevel: number;
+  nextPointCost: number;
+  gain: number;
+  lossIfRemoved: number;
+  verdict: 'proteger' | 'eficiente' | 'situacional' | 'saturado';
+  reason: string;
+};
+
+export type SkillTriggerMatrixV3870 = {
+  skill: string;
+  triggerRate: number;
+  phaseCoverage: SupremeMatchPhaseId[];
+  opponentCoverage: OpponentArchetypeId[];
+  dependencyScore: number;
+  reason: string;
+};
+
+export type ImpetoStressTestV3870 = {
+  name: string;
+  score: number;
+  worstOpponentGain: number;
+  worstPhaseGain: number;
+  saturationRisk: number;
+  verdict: 'ideal' | 'forte' | 'situacional';
+  reason: string;
+};
+
+export type ParetoCandidateV3870 = {
+  candidateId: string;
+  title: string;
+  rank: number;
+  dominated: boolean;
+  phaseAverage: number;
+  worstPhase: number;
+  opponentAverage: number;
+  worstOpponent: number;
+  conservativeScore: number;
+  pointEfficiency: number;
+  reason: string;
+};
+
+export type SupremeCandidateV3870 = MaxMatchCandidate & {
+  phaseScores: SupremeMatchPhaseScore[];
+  phaseAverage: number;
+  worstPhase: number;
+  opponentScores: OpponentStressScore[];
+  opponentAverage: number;
+  worstOpponent: number;
+  attributeSynergy: number;
+  bottleneckBalance: number;
+  robustness: RobustnessEnvelopeV3870;
+  triggerCoverage: number;
+  paretoRank: number;
+  dominated: boolean;
+  supremeScore: number;
+};
+
+export type SupremePerformanceV3870Analysis = {
+  engineVersion: '38.70.0';
+  philosophy: 'OTIMIZACAO_ROBUSTA_PARETO_SEM_OVERALL';
+  improvements: string[];
+  microRole: string;
+  searchRounds: number;
+  candidatesGenerated: number;
+  candidatesEvaluated: number;
+  phasesTested: number;
+  opponentsTested: number;
+  winner: SupremeCandidateV3870;
+  finalists: SupremeCandidateV3870[];
+  paretoFrontier: ParetoCandidateV3870[];
+  marginalValues: MarginalTrainingValueV3870[];
+  skillTriggerMatrix: SkillTriggerMatrixV3870[];
+  impetoStressTests: ImpetoStressTestV3870[];
+  adaptiveVariants: Array<{
+    id: string;
+    label: string;
+    purpose: string;
+    training: TrainingPlan;
+    score: number;
+    bestPhase: SupremeMatchPhaseId;
+    bestOpponent: OpponentArchetypeId;
+  }>;
+  validationProtocol: string[];
+  confidence: number;
+  decision: 'aprovada' | 'revisar';
+  guardrails: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -997,6 +1285,9 @@ export type AnalysisResult = {
   gameplayDna?: GameplayDnaAnalysis;
   structuralPrecision?: StructuralPrecisionAnalysis;
   advancedMotorV3750?: AdvancedMotorV3750Analysis;
+  powerBuildV3850?: PowerBuildEngineV3850Analysis;
+  maxMatchV3860?: MaxMatchPerformanceV3860Analysis;
+  supremeV3870?: SupremePerformanceV3870Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

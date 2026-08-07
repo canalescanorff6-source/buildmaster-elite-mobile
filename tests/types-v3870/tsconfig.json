@@ -1,26 +1,28 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx",
     "baseUrl": "../..",
     "paths": {
-      "@/components/TacticalPosterStudioPanel": ["tests/types-v3110-ui/posterStub.tsx"],
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     },
     "types": [],
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
   "files": [
-    "stubs.d.ts",
-    "posterStub.tsx",
-    "../../src/components/FormationRoleLabPanel.tsx",
-    "../../src/modules/core/IntegratedHomePanel.tsx"
+    "../types-v3170/capacitor-stub.d.ts",
+    "../../src/lib/supremePerformanceEngineV3870.ts",
+    "../../src/lib/cardIntelligencePipeline.ts"
   ]
 }

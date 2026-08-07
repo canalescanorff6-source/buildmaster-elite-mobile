@@ -84,6 +84,9 @@ import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel'
 import { PremiumCleanResultV3810 } from '@/components/PremiumCleanResultV3810';
 import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
+import { PowerBuildEngineV3850Panel } from '@/components/PowerBuildEngineV3850Panel';
+import { SupremePerformanceV3870Panel } from '@/components/SupremePerformanceV3870Panel';
+import { MaxMatchPerformanceV3860Panel } from '@/components/MaxMatchPerformanceV3860Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
 import {
@@ -889,7 +892,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
         </div>
       )}
 
-      {tab === 'motor' && <AdvancedMotorV3750Panel result={result} />}
+      {tab === 'motor' && <><SupremePerformanceV3870Panel result={result} /><MaxMatchPerformanceV3860Panel result={result} /><PowerBuildEngineV3850Panel result={result} /><AdvancedMotorV3750Panel result={result} /></>}
 
       {tab === 'ficha' && (
         <div className="result-section-grid">

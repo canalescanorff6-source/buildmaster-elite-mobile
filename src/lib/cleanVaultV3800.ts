@@ -44,6 +44,15 @@ export type CleanVaultEntry = {
         boosterName?: string;
       };
     };
+    powerBuildV3850?: {
+      impetos?: Array<{ name?: string }>;
+    };
+    maxMatchV3860?: {
+      impetoCombinations?: Array<{ impeto?: { name?: string } }>;
+    };
+    supremeV3870?: {
+      impetoStressTests?: Array<{ name?: string }>;
+    };
   };
 };
 
@@ -149,7 +158,10 @@ export function cleanVaultIsIntentionalVariant(entry: CleanVaultEntry) {
 }
 
 export function cleanVaultBuildSignature(entry: CleanVaultEntry) {
-  const booster = entry.result.advancedMotorV3750?.winner?.boosterName
+  const booster = entry.result.supremeV3870?.impetoStressTests?.[0]?.name
+    ?? entry.result.maxMatchV3860?.impetoCombinations?.[0]?.impeto?.name
+    ?? entry.result.powerBuildV3850?.impetos?.[0]?.name
+    ?? entry.result.advancedMotorV3750?.winner?.boosterName
     ?? entry.result.recommendedImpetos?.[0]?.name
     ?? 'sem-booster';
   return [

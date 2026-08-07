@@ -27,6 +27,9 @@ export type PremiumCleanResultInput = {
   recommendedSkills: string[];
   recommendedImpetos: Array<{ name: string; tier?: string; reason?: string }>;
   advancedMotorV3750?: { winner?: { boosterName?: string | null } };
+  powerBuildV3850?: { impetos?: Array<{ name?: string | null }> };
+  maxMatchV3860?: { impetoCombinations?: Array<{ impeto?: { name?: string | null } }> };
+  supremeV3870?: { impetoStressTests?: Array<{ name?: string | null }> };
   usageTips: string[];
   validation?: { canGenerate?: boolean };
 };
@@ -97,7 +100,10 @@ function safeImageHref(value?: string | null) {
 }
 
 function selectedBooster(result: PremiumCleanResultInput) {
-  const winnerName = result.advancedMotorV3750?.winner?.boosterName;
+  const winnerName = result.supremeV3870?.impetoStressTests?.[0]?.name
+    ?? result.maxMatchV3860?.impetoCombinations?.[0]?.impeto?.name
+    ?? result.powerBuildV3850?.impetos?.[0]?.name
+    ?? result.advancedMotorV3750?.winner?.boosterName;
   const byWinner = winnerName
     ? result.recommendedImpetos.find((item) => item.name === winnerName)
     : undefined;
