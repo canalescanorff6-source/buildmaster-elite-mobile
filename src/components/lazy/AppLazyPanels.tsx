@@ -65,6 +65,11 @@ export const CreatorBuildResearchPanel = dynamic(
   () => import('@/components/CreatorBuildResearchPanel').then((module) => module.CreatorBuildResearchPanel),
   { ssr: false, loading: fallback }
 );
+
+export const GlobalProLabV3900Panel = dynamic(
+  () => import('@/components/GlobalProLabV3900Panel').then((module) => module.GlobalProLabV3900Panel),
+  { ssr: false, loading: fallback }
+);
 export const UpdateCenterPanel = dynamic(
   () => import('@/components/UpdateCenterPanel').then((module) => module.UpdateCenterPanel),
   { ssr: false, loading: fallback }
@@ -182,7 +187,8 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
     () => import('@/components/SinglePrintEvidencePanel'),
     () => import('@/modules/card-reader/OcrVisionCenter'),
     () => import('@/components/PrecisionBuildPanel'),
-    () => import('@/components/CreatorBuildResearchPanel')
+    () => import('@/components/CreatorBuildResearchPanel'),
+    () => import('@/components/GlobalProLabV3900Panel')
   ],
   time: [
     () => import('@/modules/squad/IntegratedTeamLab'),

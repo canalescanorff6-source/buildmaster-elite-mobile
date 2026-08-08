@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": "../..",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "../types-v3900/env-stub.d.ts",
+    "stubs.d.ts",
+    "../../src/components/GlobalProLabV3900Panel.tsx",
+    "../types-v3820-ui/tesseract-stub.d.ts",
+    "../../src/components/CreatorBuildResearchPanel.tsx"
+  ]
+}

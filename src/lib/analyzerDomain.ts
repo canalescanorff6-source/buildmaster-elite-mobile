@@ -1228,6 +1228,340 @@ export type SupremePerformanceV3870Analysis = {
   summary: string;
 };
 
+
+
+export type CardFirstDimensionId =
+  | 'CREATION'
+  | 'CONTROL'
+  | 'FINISHING'
+  | 'MOVEMENT'
+  | 'DEFENDING'
+  | 'PHYSICAL'
+  | 'AERIAL'
+  | 'ENDURANCE'
+  | 'GOALKEEPING';
+
+export type CardFirstDimensionScore = {
+  id: CardFirstDimensionId;
+  label: string;
+  score: number;
+  rank: number;
+  evidence: string[];
+};
+
+export type CardFirstConversionClass =
+  | 'NATURAL'
+  | 'COMPATIVEL'
+  | 'REINTERPRETACAO'
+  | 'ARRISCADA'
+  | 'EXTREMA';
+
+export type CardFirstCandidateV3880 = {
+  id: string;
+  title: string;
+  source: string;
+  training: TrainingPlan;
+  score: number;
+  identityFit: number;
+  targetFunctionFit: number;
+  nativeSkillActivation: number;
+  robustness: number;
+  pointEfficiency: number;
+  antiCloneScore: number;
+  exactBudget: boolean;
+  reasons: string[];
+  tradeOffs: string[];
+};
+
+export type CardFirstAiV3880Analysis = {
+  engineVersion: '38.80.0';
+  philosophy: 'CARTA_PRIMEIRO_POSICAO_COMO_RESTRICAO_SEM_OVERALL';
+  cardFingerprint: string;
+  originProfile: string;
+  targetFunction: string;
+  conversionClass: CardFirstConversionClass;
+  conversionScore: number;
+  archetype: string;
+  secondaryArchetype: string;
+  dimensions: CardFirstDimensionScore[];
+  blendWeights: {
+    cardIdentity: number;
+    targetFunction: number;
+    matchRobustness: number;
+  };
+  candidatesGenerated: number;
+  candidatesEvaluated: number;
+  winner: CardFirstCandidateV3880;
+  finalists: CardFirstCandidateV3880[];
+  skillPlan: UnifiedSkillDecision[];
+  impetoPlan: ImpetoRecommendation[];
+  differencesFromPositionTemplate: string[];
+  guardrails: string[];
+  confidence: number;
+  decision: 'aprovada' | 'revisar';
+  summary: string;
+};
+
+
+
+export type CanonicalCardV3890Analysis = {
+  engineVersion: '38.90.0';
+  philosophy: 'UMA_CARTA_UMA_RECEITA_DEFINITIVA_INDEPENDENTE_DA_POSICAO';
+  canonicalCardId: string;
+  resultSignature: string;
+  canonicalPosition: PositionCode;
+  canonicalPositionLabel: string;
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  positionAffectsOutput: false;
+  training: TrainingPlan;
+  skills: string[];
+  impetos: ImpetoRecommendation[];
+  primaryImpeto: string | null;
+  deterministicChecks: string[];
+  lockedInputs: string[];
+  ignoredInputs: string[];
+  confidence: number;
+  decision: 'aprovada' | 'revisar';
+  summary: string;
+};
+
+export type GlobalProEvidenceLevel = 'FICHA_COMPLETA' | 'PROGRESSAO' | 'PARCIAL';
+
+export type GlobalProBlockComparison = {
+  key: TrainingKey;
+  label: string;
+  buildMaster: number;
+  proConsensus: number;
+  difference: number;
+  agreement: number;
+  sourceCount: number;
+};
+
+export type GlobalProReferenceV3900 = {
+  id: string;
+  gamerTag: string;
+  country: string;
+  platform: string;
+  achievement: string;
+  playerName: string;
+  cardType: string;
+  specialTag: string;
+  mainPosition: PositionCode;
+  trainingPointsTotal: number | null;
+  title: string;
+  url: string;
+  channel: string;
+  publishedAt: string | null;
+  reviewedAt: string;
+  exactCard: boolean;
+  identityScore: number;
+  evidenceLevel: GlobalProEvidenceLevel;
+  training: TrainingPlan;
+  skills: string[];
+  impeto: string | null;
+  trainingSimilarity: number;
+  skillSimilarity: number | null;
+  impetoMatch: boolean | null;
+  completeness: number;
+  testedInMatches: boolean;
+};
+
+export type GlobalProBenchmarkV3900Analysis = {
+  engineVersion: '39.00.0';
+  philosophy: 'COMPARAR_SEM_COPIAR_CEGAMENTE_E_APLICAR_SOMENTE_EVIDENCIA_EXATA';
+  canonicalCardId: string;
+  resultSignature: string;
+  registryProfiles: number;
+  referencesFound: number;
+  exactReferences: number;
+  verifiedProReferences: number;
+  fullBuildReferences: number;
+  globalFullBuildReferences: number;
+  distinctPros: number;
+  confidence: number;
+  confidenceLabel: 'muito alta' | 'alta' | 'média' | 'baixa' | 'sem dados';
+  professionalInfluence: number;
+  automaticCalibrationApplied: boolean;
+  generatedTraining: TrainingPlan;
+  proConsensusTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  generatedSkills: string[];
+  proConsensusSkills: string[];
+  finalSkills: string[];
+  generatedImpeto: string | null;
+  proConsensusImpeto: string | null;
+  finalImpeto: string | null;
+  trainingSimilarity: number | null;
+  skillSimilarity: number | null;
+  impetoAgreement: boolean | null;
+  blockComparisons: GlobalProBlockComparison[];
+  references: GlobalProReferenceV3900[];
+  guardrails: string[];
+  reasons: string[];
+  warnings: string[];
+  summary: string;
+};
+
+export type UniversalPositionPerformanceV3910 = {
+  position: PositionCode;
+  label: string;
+  familiarity: number;
+  weight: number;
+  performanceScore: number;
+  worstScenario: number;
+  consistency: number;
+  pointEfficiency: number;
+  tightSpaceControl: number;
+  transitionImpact: number;
+  duelReliability: number;
+  verdict: 'elite' | 'forte' | 'situacional' | 'inadequada';
+};
+
+export type EliteDominanceCandidateV3910 = {
+  id: string;
+  title: string;
+  source: string;
+  training: TrainingPlan;
+  exactBudget: boolean;
+  universalScore: number;
+  averagePositionScore: number;
+  worstPositionScore: number;
+  naturalPositionScore: number;
+  scenarioFloor: number;
+  crossPositionConsistency: number;
+  pointEfficiency: number;
+  identityFit: number;
+  proChallengeScore: number | null;
+  proMargin: number | null;
+  positionScores: UniversalPositionPerformanceV3910[];
+  reasons: string[];
+  tradeOffs: string[];
+};
+
+export type EliteDominanceV3910Analysis = {
+  engineVersion: '39.10.0';
+  philosophy: 'UMA_CARTA_UMA_RECEITA_UNIVERSAL_DOMINANTE_SEM_OVERALL';
+  canonicalCardId: string;
+  resultSignature: string;
+  selectedPositionAffectsOutput: false;
+  selectedPositionLabel: string;
+  compatiblePositions: UniversalPositionPerformanceV3910[];
+  candidatesGenerated: number;
+  candidatesEvaluated: number;
+  fullFinalistsEvaluated: number;
+  winner: EliteDominanceCandidateV3910;
+  finalists: EliteDominanceCandidateV3910[];
+  skills: UnifiedSkillDecision[];
+  impetos: ImpetoRecommendation[];
+  primaryImpeto: string | null;
+  proReferencesChallenged: number;
+  proBestScore: number | null;
+  proMargin: number | null;
+  proChallengeStatus: 'supera_no_modelo' | 'empata_no_modelo' | 'abaixo_no_modelo' | 'sem_evidencia';
+  proChallengeLabel: string;
+  deterministicChecks: string[];
+  guardrails: string[];
+  confidence: number;
+  decision: 'aprovada' | 'revisar';
+  summary: string;
+};
+
+
+
+export type UnifiedPerformanceResourceStatusV3920 = 'APLICAR_COM_SEGURANCA' | 'TESTAR_ANTES_DE_GASTAR' | 'NAO_GASTAR_RECURSOS';
+
+export type UnifiedPerformanceIdentityV3920 = {
+  source: 'CURADORIA_E_CARTA' | 'SOMENTE_CARTA';
+  profileId: string;
+  label: string;
+  primaryArchetype: string;
+  secondaryArchetype: string;
+  traits: string[];
+  realLifeModel: string;
+  cardEvidence: string[];
+  confidence: number;
+};
+
+export type UnifiedPositionFitV3920 = {
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  naturalPosition: PositionCode;
+  naturalPositionLabel: string;
+  playstyle: string | null;
+  playstyleActive: boolean;
+  movementProfile: 'FIXO' | 'CONTROLADO' | 'MISTO' | 'VERTICAL' | 'AGRESSIVO';
+  roleFit: number;
+  structuralFit: number;
+  identityFit: number;
+  compatibility: number;
+  verdict: 'IDEAL' | 'FORTE' | 'SITUACIONAL' | 'INCOMPATIVEL';
+  conflicts: string[];
+  strengths: string[];
+  recommendedUse: string;
+};
+
+export type UnifiedMicroAdaptationV3920 = {
+  available: boolean;
+  appliedAutomatically: false;
+  maximumLevelShift: number;
+  training: TrainingPlan;
+  changes: Array<{ key: TrainingKey; label: string; from: number; to: number }>;
+  note: string;
+};
+
+export type UnifiedResourceSafetyV3920 = {
+  status: UnifiedPerformanceResourceStatusV3920;
+  label: string;
+  canSpendImpeto: boolean;
+  canApplySkills: boolean;
+  canApplyTraining: boolean;
+  minimumTestMatches: number;
+  recipeLocked: boolean;
+  lockSignature: string;
+  reasons: string[];
+  nextAction: string;
+};
+
+export type UnifiedProCompactV3920 = {
+  exactReferences: number;
+  fullBuildReferences: number;
+  confidence: number;
+  status: 'ACIMA_NO_MODELO' | 'EMPATE_TECNICO' | 'ABAIXO_NO_MODELO' | 'SEM_EVIDENCIA';
+  label: string;
+  margin: number | null;
+};
+
+export type UnifiedPerformanceV3920Analysis = {
+  engineVersion: '39.20.0';
+  philosophy: 'UMA_TELA_UMA_RECEITA_IDENTIDADE_ENCAIXE_E_PROTECAO_DE_RECURSOS';
+  canonicalCardId: string;
+  lockSignature: string;
+  selectedPositionAffectsCanonicalRecipe: false;
+  identity: UnifiedPerformanceIdentityV3920;
+  positionFit: UnifiedPositionFitV3920;
+  canonicalTraining: TrainingPlan;
+  canonicalSkills: UnifiedSkillDecision[];
+  canonicalImpetos: ImpetoRecommendation[];
+  primaryImpeto: string | null;
+  microAdaptation: UnifiedMicroAdaptationV3920;
+  resourceSafety: UnifiedResourceSafetyV3920;
+  proCompact: UnifiedProCompactV3920;
+  performanceCeiling: number;
+  tacticalStability: number;
+  identityPreservation: number;
+  deterministicChecks: string[];
+  compactSections: string[];
+  warnings: string[];
+  summary: string;
+  recipeMemory?: {
+    status: 'NOVA' | 'RECUPERADA' | 'ATUALIZADA' | 'IGNORADA';
+    matchScore: number;
+    previousSignature?: string;
+    note: string;
+  };
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -1288,6 +1622,11 @@ export type AnalysisResult = {
   powerBuildV3850?: PowerBuildEngineV3850Analysis;
   maxMatchV3860?: MaxMatchPerformanceV3860Analysis;
   supremeV3870?: SupremePerformanceV3870Analysis;
+  cardFirstV3880?: CardFirstAiV3880Analysis;
+  canonicalCardV3890?: CanonicalCardV3890Analysis;
+  globalProV3900?: GlobalProBenchmarkV3900Analysis;
+  eliteDominanceV3910?: EliteDominanceV3910Analysis;
+  unifiedPerformanceV3920?: UnifiedPerformanceV3920Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

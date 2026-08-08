@@ -2,6 +2,7 @@ export const CLEAN_EXPERIENCE_VERSION = '37.80.0';
 
 export const CLEAN_RESULT_PRIMARY_VIEWS = [
   'resumo',
+  'proglobal',
   'habilidades',
   'impetos',
   'tatica',

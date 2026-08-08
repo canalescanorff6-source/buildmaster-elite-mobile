@@ -1,5 +1,7 @@
 import type { AnalysisResult } from './analyzerDomain';
 
+declare const process: { env: Record<string, string | undefined> };
+
 export type WorldProPlatform = 'MOBILE' | 'CONSOLE' | 'AMBOS';
 export type WorldProTier = 'WORLD_CHAMPION' | 'WORLD_FINALIST' | 'CLUB_CHAMPION' | 'ELITE_VERIFIED';
 
@@ -26,12 +28,22 @@ export const WORLD_PRO_REGISTRY: readonly WorldProProfile[] = [
   {
     id: 'rentao', gamerTag: 'RENTAO', country: 'Brasil', platform: 'MOBILE',
     tier: 'WORLD_CHAMPION', authorityScore: 100, achievement: 'Campeão mobile do eFootball Championship World Finals 2026',
-    officialSourceUrl: 'https://efootballchampionship.konami.net/worldfinals/results/knockout-stage/', verifiedAt: '2026-07-26', aliases: ['Rentão', 'Rentao eFootball']
+    officialSourceUrl: 'https://www.konami.com/games/eu/en/topics/19220/', verifiedAt: '2026-07-27', aliases: ['Rentão', 'Rentao eFootball']
   },
   {
     id: 'futeasy-10', gamerTag: 'FUTEASY_10', country: 'Brasil', platform: 'CONSOLE',
     tier: 'WORLD_CHAMPION', authorityScore: 100, achievement: 'Campeão console do eFootball Championship World Finals 2026',
-    officialSourceUrl: 'https://efootballchampionship.konami.net/worldfinals/results/knockout-stage/', verifiedAt: '2026-07-26', aliases: ['Futefácil', 'Futeasy eFootball']
+    officialSourceUrl: 'https://www.konami.com/games/eu/en/topics/19220/', verifiedAt: '2026-07-27', aliases: ['Futefácil', 'Futeasy eFootball']
+  },
+  {
+    id: 'ettorito', gamerTag: 'ETTORITO', country: 'Itália', platform: 'CONSOLE',
+    tier: 'WORLD_FINALIST', authorityScore: 98, achievement: 'Vice-campeão console do eFootball Championship World Finals 2026',
+    officialSourceUrl: 'https://www.konami.com/games/eu/en/topics/19220/', verifiedAt: '2026-07-27', aliases: ['Ettorito97', 'Ettorito eFootball']
+  },
+  {
+    id: 'yassine-ettadlaoui', gamerTag: 'YASSINE ETTADLAOUI', country: 'Marrocos', platform: 'MOBILE',
+    tier: 'WORLD_FINALIST', authorityScore: 98, achievement: 'Vice-campeão mobile do eFootball Championship World Finals 2026',
+    officialSourceUrl: 'https://www.konami.com/games/eu/en/topics/19220/', verifiedAt: '2026-07-27', aliases: ['Yassine', 'Yassine Ettadlaoui eFootball']
   },
   {
     id: 'jxmkt', gamerTag: 'JXMKT', displayName: 'Jomkata Yupraphat', country: 'Tailândia', platform: 'MOBILE',
@@ -152,8 +164,7 @@ export function exactCardSearchQuery(result: AnalysisResult, profile?: WorldProP
     card.cardType,
     card.specialTag,
     card.maxOverall ? `overall ${card.maxOverall}` : '',
-    result.bestPosition.code,
-    'progression build'
+    'progression skills booster full build',
   ].filter(Boolean).join(' ');
 }
 

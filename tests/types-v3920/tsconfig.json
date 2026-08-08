@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "env-stub.d.ts",
+    "../types-v3170/capacitor-stub.d.ts",
+    "../../src/lib/playerIdentityRegistryV3920.ts",
+    "../../src/lib/unifiedPerformanceEngineV3920.ts",
+    "../../src/lib/cardIntelligencePipeline.ts"
+  ]
+}

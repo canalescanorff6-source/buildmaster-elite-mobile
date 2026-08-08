@@ -594,8 +594,8 @@ function impetoCombinations(result: AnalysisResult, plan: TrainingPlan, role: Mi
       score,
       weakestScenarioGain,
       reason: groups.length
-        ? `Reforça ${groups.map((key) => TRAINING_LABELS[key]).join(', ')} e foi medido contra o cenário mais fraco: ${weakest.label}.`
-        : `Mantido como alternativa, mas sem grupo funcional suficiente para superar o cenário ${weakest.label}.`
+        ? `Recalculado com a ficha final: reforça ${groups.map((key) => TRAINING_LABELS[key]).join(', ')} e foi medido contra o cenário mais fraco: ${weakest.label}.`
+        : `Recalculado com a ficha final: mantido como alternativa, mas sem grupo funcional suficiente para superar o cenário ${weakest.label}.`
     };
   }).sort((left, right) => right.score - left.score).map((item, index) => ({ ...item, impeto: { ...item.impeto, tier: index === 0 ? 'ideal' : index < 5 ? 'alternativo' : 'evitar' } }));
 }

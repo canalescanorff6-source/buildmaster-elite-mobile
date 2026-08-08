@@ -176,6 +176,7 @@ import { exportCommercialState, importCommercialState, resolveCommercialEntitlem
 import { exportPlayStorePublicationState, importPlayStorePublicationState } from '@/modules/publication/playStorePublication';
 import { CREATOR_BUILD_RESEARCH_EVENT, exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/creatorBuildResearch';
 import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
+import { GLOBAL_PRO_BUILD_EVENT } from '@/lib/globalProBenchmarkV3900';
 import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
 import { canonicalizeSkillList, isSpecialSkillIdentity } from '@/lib/officialSkillIdentity';
 import { regenerateSkillAfterOwnedConfirmation } from '@/lib/intelligentSkillReplacementV3830';
@@ -501,7 +502,7 @@ export function CardVisionApp() {
   const restoredSessionRef = useRef(false);
   useEffect(() => {
     const refresh = () => setResult((current) => current ? applyCompleteCardIntelligence(current) : current);
-    const events = [CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT];
+    const events = [CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT, GLOBAL_PRO_BUILD_EVENT];
     events.forEach((eventName) => window.addEventListener(eventName, refresh));
     return () => events.forEach((eventName) => window.removeEventListener(eventName, refresh));
   }, []);

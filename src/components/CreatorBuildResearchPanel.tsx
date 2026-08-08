@@ -37,7 +37,9 @@ import {
   type CreatorAuthority,
   type CreatorBuildSource,
   type CreatorDevice,
-  type CreatorPlatform
+  type CreatorPlatform,
+  type CreatorEvidenceLevel,
+  type CreatorProofType
 } from '@/lib/creatorBuildResearch';
 import {
   listWorldPros,
@@ -67,6 +69,19 @@ const PLATFORM_LABELS: Record<CreatorPlatform, string> = {
   YOUTUBE: 'YouTube',
   TIKTOK: 'TikTok',
   OUTRA: 'Outra fonte'
+};
+
+const EVIDENCE_LABELS: Record<CreatorEvidenceLevel, string> = {
+  FICHA_COMPLETA: 'Ficha completa',
+  PROGRESSAO: 'Somente progressão',
+  PARCIAL: 'Evidência parcial'
+};
+
+const PROOF_LABELS: Record<CreatorProofType, string> = {
+  VIDEO: 'Vídeo',
+  SCREENSHOT: 'Print',
+  STREAM: 'Transmissão ao vivo',
+  MANUAL: 'Registro manual'
 };
 
 const POSITION_OPTIONS: Array<{ value: PositionCode; label: string }> = [
@@ -207,8 +222,14 @@ ${ocrNote}` : ocrNote };
   }
 
   function useCurrentBuildAsDraft() {
-    setDraft((current) => ({ ...current, training: { ...result.training } }));
-    setStatus('A ficha atual do BuildMaster foi copiada para os blocos. Ajuste os valores para reproduzir exatamente o vídeo.');
+    setDraft((current) => ({
+      ...current,
+      training: { ...result.training },
+      skills: [...result.recommendedSkills.slice(0, 5)],
+      impeto: result.recommendedImpetos[0]?.name ?? '',
+      evidenceLevel: 'FICHA_COMPLETA'
+    }));
+    setStatus('A ficha atual do BuildMaster foi copiada. Ajuste progressão, habilidades e Ímpeto para reproduzir exatamente a fonte.');
   }
 
   function saveSource() {
@@ -232,6 +253,10 @@ ${ocrNote}` : ocrNote };
     }
     if (candidate.card.trainingPointsTotal && draftCost.totalCost > candidate.card.trainingPointsTotal) {
       setStatus(`A ficha custa ${draftCost.totalCost} pontos, acima dos ${candidate.card.trainingPointsTotal} disponíveis. Corrija os blocos antes de salvar.`);
+      return;
+    }
+    if (candidate.evidenceLevel === 'FICHA_COMPLETA' && (!candidate.skills.length || !candidate.impeto)) {
+      setStatus('Para marcar como ficha completa, informe pelo menos uma habilidade adicional e o Ímpeto mostrado na fonte.');
       return;
     }
     const next = saveCreatorBuildSources([candidate, ...sources.filter((item) => item.id !== candidate.id)]);
@@ -323,6 +348,9 @@ ${ocrNote}` : ocrNote };
         <label>Data do vídeo<input type="date" value={draft.publishedAt || ''} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('publishedAt', event.target.value || null)} /></label>
         <label>Posição usada<select value={draft.targetPosition} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft('targetPosition', event.target.value as PositionCode)}>{POSITION_OPTIONS.map((position) => <option key={position.value} value={position.value}>{position.label}</option>)}</select></label>
         <label>Estilo/função usada<input value={draft.playstyle} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('playstyle', event.target.value)} placeholder="Ex.: SA infiltrador" /></label>
+        <label>Nível da evidência<select value={draft.evidenceLevel} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft('evidenceLevel', event.target.value as CreatorEvidenceLevel)}>{Object.entries(EVIDENCE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Tipo de prova<select value={draft.proofType} onChange={(event: ChangeEvent<HTMLSelectElement>) => updateDraft('proofType', event.target.value as CreatorProofType)}>{Object.entries(PROOF_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label className="span-2">Torneio/contexto<input value={draft.tournament} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('tournament', event.target.value)} placeholder="Ex.: World Finals 2026, ranking global, treino em live" /></label>
       </div>
 
       <div className="creator-card-identity-grid">
@@ -337,6 +365,12 @@ ${ocrNote}` : ocrNote };
       <div className="creator-training-editor">
         <div className="creator-editor-heading"><strong>Blocos da ficha</strong><span>Custo real: {draftCost.totalCost}/{draft.card.trainingPointsTotal ?? result.trainingPointsTotal} pontos</span></div>
         <div className="creator-training-grid">{CREATOR_TRAINING_KEYS.map((key) => <label key={key}><span>{CREATOR_TRAINING_LABELS[key]}</span><input type="number" min="0" max="16" value={draft.training[key]} onChange={(event: ChangeEvent<HTMLInputElement>) => updateTraining(key, event.target.value)} /><small>{draftCost.costByBlock[key]} pts reais</small></label>)}</div>
+      </div>
+
+      <div className="creator-complete-build-editor">
+        <div className="creator-editor-heading"><strong>Ficha completa do pro player</strong><span>Esses campos permitem comparar progressão, Top 5 e Ímpeto juntos.</span></div>
+        <label>Habilidades adicionais mostradas<input value={draft.skills.join(', ')} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('skills', event.target.value.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 10))} placeholder="Passe de primeira, Interceptação, Espírito guerreiro..." /></label>
+        <label>Ímpeto mostrado<input value={draft.impeto} onChange={(event: ChangeEvent<HTMLInputElement>) => updateDraft('impeto', event.target.value)} placeholder="Nome exato do Ímpeto" /></label>
       </div>
 
       <label className="creator-notes-field">Observações<textarea value={draft.notes} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => updateDraft('notes', event.target.value)} placeholder="O que o criador explicou? A ficha foi testada? Qual ponto forte e qual fraqueza?" rows={3} /></label>
@@ -380,6 +414,9 @@ ${ocrNote}` : ocrNote };
       <div className="creator-source-grid">{consensus.sources.map((match) => <article key={match.source.id} className={match.score >= 62 ? 'is-compatible' : 'is-rejected'}>
         <div className="creator-source-head"><span>{PLATFORM_LABELS[match.source.platform]}</span><em>{match.score}% compatível</em></div>
         <h5>{match.source.title}</h5><p>{match.source.channel} • {AUTHORITY_LABELS[match.source.authority]} • {DEVICE_LABELS[match.source.device]}</p>
+        <div className="creator-source-build-completeness"><span>{EVIDENCE_LABELS[match.source.evidenceLevel]}</span><span>{PROOF_LABELS[match.source.proofType]}</span>{match.source.tournament && <span>{match.source.tournament}</span>}</div>
+        {match.source.skills.length > 0 && <p><b>Habilidades:</b> {match.source.skills.join(', ')}</p>}
+        {match.source.impeto && <p><b>Ímpeto:</b> {match.source.impeto}</p>}
         <div className="creator-source-signals">{match.reasons.slice(0, 4).map((reason) => <small key={reason}><CheckCircle2 size={12} /> {reason}</small>)}{match.warnings.slice(0, 3).map((warning) => <small key={warning} className="warning"><TriangleAlert size={12} /> {warning}</small>)}</div>
         <div className="creator-source-footer"><a href={match.source.url} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir vídeo</a><button type="button" onClick={() => removeSource(match.source.id)}><Trash2 size={14} /> Excluir</button></div>
       </article>)}</div>

@@ -52,7 +52,7 @@ function source(id: string, channel: string, plan: TrainingPlan): CreatorBuildSo
     title: 'Ficha exata', channel, country: 'Brasil', publishedAt: '2026-07-01', reviewedAt: '2026-07-26', testedInMatches: true,
     targetPosition: 'CF', playstyle: 'Artilheiro',
     card: { playerName: 'Jogador Teste', cardType: 'Epic', specialTag: '2026', mainPosition: 'CF', maxOverall: 102, trainingPointsTotal: 60 },
-    training: plan, notes: 'fonte auditada'
+    training: plan, skills: ['Passe de primeira'], impeto: 'Técnica', evidenceLevel: 'FICHA_COMPLETA', proofType: 'VIDEO', tournament: 'Teste', notes: 'fonte auditada'
   };
 }
 

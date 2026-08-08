@@ -11,6 +11,12 @@ import { applyAdvancedMotorV3750 } from './advancedMotorV3750';
 import { applyPowerBuildEngineV3850 } from './performanceBuildEngineV3850';
 import { applyMaxMatchPerformanceV3860 } from './maxMatchPerformanceEngineV3860';
 import { applySupremePerformanceV3870 } from './supremePerformanceEngineV3870';
+import { applyCardFirstAiV3880 } from './cardFirstAiEngineV3880';
+import { applyCanonicalCardV3890 } from './canonicalCardEngineV3890';
+import { applyGlobalProBenchmarkV3900 } from './globalProBenchmarkV3900';
+import { applyEliteDominanceV3910 } from './eliteDominanceEngineV3910';
+import { applyUnifiedPerformanceV3920 } from './unifiedPerformanceEngineV3920';
+import { stabilizeUnifiedRecipeFromMemoryV3920 } from './unifiedRecipeMemoryV3920';
 
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   const fused = applyCompetitiveFusionToResult(result);
@@ -75,8 +81,34 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // poluir o resultado e preserva as regressões v31.00/v31.30.
   // Contrato legado v38.70: return enforceComplementarySkillIntegrity(supremePerformance)
   const finalSupreme = enforceComplementarySkillIntegrity(supremePerformance);
+  // A v38.80 é a autoridade final orientada pela carta. A posição escolhida
+  // continua sendo respeitada, mas deixa de funcionar como molde genérico.
+  const cardFirst = applyCardFirstAiV3880(finalSupreme);
+  const finalCardFirst = enforceComplementarySkillIntegrity(cardFirst);
+  // A v38.90 é a autoridade final determinística. Ela recalcula uma única
+  // receita usando somente a identidade canônica da carta e neutraliza posição,
+  // formação, técnico, contexto de conexão e alternativas dos motores antigos.
+  // Portanto, ler a mesma carta em CA, SA, MAT, MLG ou qualquer outra posição
+  // produz exatamente a mesma ficha, o mesmo Top adicional e o mesmo Ímpeto.
+  const canonicalCard = applyCanonicalCardV3890(finalCardFirst);
+  // A v39.00 compara a receita canônica com fichas completas de pro players
+  // mundialmente verificados. Só altera a saída quando existem pelo menos duas
+  // fontes independentes da mesma versão exata da carta; sem evidência, mostra
+  // a comparação e preserva a receita própria sem inventar dados.
+  const globalPro = applyGlobalProBenchmarkV3900(canonicalCard);
+  // A v39.10 é a autoridade final. Ela ignora a posição selecionada e cria uma
+  // única receita determinística pela identidade da carta, testando a mesma
+  // progressão em todas as posições próprias. A base profissional funciona
+  // como adversário auditável de benchmark, nunca como fonte aleatória.
+  const dominant = applyEliteDominanceV3910(globalPro);
+  // A v39.20 unifica ficha, habilidades, Ímpeto, identidade, encaixe tático,
+  // benchmark profissional e proteção de recursos em uma única decisão.
+  // A receita canônica permanece invariável por posição; somente o diagnóstico
+  // de encaixe e uma microadaptação opcional podem mudar.
+  const unifiedPerformance = applyUnifiedPerformanceV3920(dominant);
+  const stableUnifiedPerformance = stabilizeUnifiedRecipeFromMemoryV3920(unifiedPerformance);
   return {
-    ...finalSupreme,
-    buildVariants: finalSupreme.buildVariants.slice(0, 3)
+    ...stableUnifiedPerformance,
+    buildVariants: stableUnifiedPerformance.buildVariants.slice(0, 1)
   };
 }

@@ -35,8 +35,11 @@ export const CREATOR_TRAINING_LABELS: Record<TrainingKey, string> = {
 export type CreatorPlatform = 'YOUTUBE' | 'TIKTOK' | 'OUTRA';
 export type CreatorAuthority = 'PRO_PLAYER' | 'TOP_RANK' | 'CRIADOR' | 'COMUNIDADE';
 export type CreatorDevice = 'MOBILE' | 'CONSOLE' | 'AMBOS' | 'NAO_INFORMADO';
+export type CreatorEvidenceLevel = 'FICHA_COMPLETA' | 'PROGRESSAO' | 'PARCIAL';
+export type CreatorProofType = 'VIDEO' | 'SCREENSHOT' | 'STREAM' | 'MANUAL';
 
 export type CreatorCardIdentity = {
+  fingerprint?: string;
   playerName: string;
   cardType: string;
   specialTag: string;
@@ -62,6 +65,11 @@ export type CreatorBuildSource = {
   playstyle: string;
   card: CreatorCardIdentity;
   training: TrainingPlan;
+  skills: string[];
+  impeto: string;
+  evidenceLevel: CreatorEvidenceLevel;
+  proofType: CreatorProofType;
+  tournament: string;
   notes: string;
 };
 
@@ -146,6 +154,15 @@ function safeTraining(value: unknown): TrainingPlan {
     plan[key] = Number.isFinite(number) ? Math.max(0, Math.min(16, Math.round(number))) : 0;
   }
   return plan;
+}
+
+function safeStringList(value: unknown, limit = 12): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => normalizeText(item, 120))
+    .filter(Boolean)
+    .filter((item, index, all) => all.findIndex((candidate) => fold(candidate) === fold(item)) === index)
+    .slice(0, limit);
 }
 
 function safeUrl(value: unknown): string {
@@ -258,6 +275,7 @@ export function parseCreatorTrainingText(value: string): ParsedCreatorTraining {
 
 export function cardIdentityFromResult(result: AnalysisResult): CreatorCardIdentity {
   return {
+    fingerprint: normalizeText(result.canonicalCardV3890?.canonicalCardId ?? result.parsed.internalId, 160),
     playerName: normalizeText(result.parsed.playerName, 100),
     cardType: normalizeText(result.parsed.cardType, 100),
     specialTag: normalizeText(result.parsed.specialTag, 100),
@@ -292,6 +310,7 @@ function sanitizeCard(value: unknown, fallback: CreatorCardIdentity): CreatorCar
   const maxOverall = Number(record.maxOverall);
   const trainingPointsTotal = Number(record.trainingPointsTotal);
   return {
+    fingerprint: normalizeText(record.fingerprint || fallback.fingerprint, 160),
     playerName: normalizeText(record.playerName || fallback.playerName, 100),
     cardType: normalizeText(record.cardType || fallback.cardType, 100),
     specialTag: normalizeText(record.specialTag || fallback.specialTag, 100),
@@ -336,6 +355,15 @@ export function sanitizeCreatorSource(value: unknown, fallbackCard?: CreatorCard
     playstyle: normalizeText(record.playstyle, 100),
     card,
     training: safeTraining(record.training),
+    skills: safeStringList(record.skills, 10),
+    impeto: normalizeText(record.impeto, 120),
+    evidenceLevel: ['FICHA_COMPLETA', 'PROGRESSAO', 'PARCIAL'].includes(String(record.evidenceLevel))
+      ? record.evidenceLevel as CreatorEvidenceLevel
+      : (safeStringList(record.skills, 10).length || normalizeText(record.impeto, 120)) ? 'FICHA_COMPLETA' : 'PROGRESSAO',
+    proofType: ['VIDEO', 'SCREENSHOT', 'STREAM', 'MANUAL'].includes(String(record.proofType))
+      ? record.proofType as CreatorProofType
+      : 'VIDEO',
+    tournament: normalizeText(record.tournament, 160),
     notes: normalizeText(record.notes, 1200)
   };
 }
@@ -538,6 +566,11 @@ export function buildCreatorSourceDraft(result: AnalysisResult): CreatorBuildSou
     playstyle: normalizeText(result.parsed.playstyle, 100),
     card,
     training: emptyCreatorTraining(),
+    skills: [],
+    impeto: '',
+    evidenceLevel: 'PROGRESSAO',
+    proofType: 'VIDEO',
+    tournament: '',
     notes: ''
   };
 }

@@ -86,13 +86,17 @@ import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { PowerBuildEngineV3850Panel } from '@/components/PowerBuildEngineV3850Panel';
 import { SupremePerformanceV3870Panel } from '@/components/SupremePerformanceV3870Panel';
+import { CardFirstAiV3880Panel } from '@/components/CardFirstAiV3880Panel';
+import { CanonicalCardV3890Panel } from '@/components/CanonicalCardV3890Panel';
 import { MaxMatchPerformanceV3860Panel } from '@/components/MaxMatchPerformanceV3860Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
+import { UnifiedPerformanceV3920Panel } from '@/components/UnifiedPerformanceV3920Panel';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
   CreatorBuildResearchPanel,
+  GlobalProLabV3900Panel,
   EliteEvolutionPanel,
   MatchValidationCenter,
   MetaBuildLabPanel,
@@ -148,24 +152,20 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
   PASSE_LONGO: 'Passe longo'
 };
 
-export type ResultTab = 'motor' | 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
+export type ResultTab = 'proglobal' | 'motor' | 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 
-export type ResultPrimaryView = 'resumo' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
+export type ResultPrimaryView = 'resumo' | 'proglobal' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
-  { id: 'resumo', label: 'Ficha final', hint: 'Recomendação única' },
-  { id: 'profissional', label: 'Análise Pro', hint: 'Partidas, perfis e posições' },
-  { id: 'ficha', label: 'Ficha', hint: 'Distribuição de pontos' },
-  { id: 'habilidades', label: 'Habilidades', hint: 'Top 5 oficial' },
-  { id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' },
-  { id: 'tatica', label: 'Tática', hint: 'Função e uso' },
-  { id: 'exportar', label: 'Exportar', hint: 'Imagem e relatório' }
+  { id: 'resumo', label: 'Ficha Suprema', hint: 'Tudo unificado em uma tela' }
 ];
+
+const UNIFIED_COMPACT_RESULT_V3920 = true;
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
-  { label: 'Desenvolvimento', tabs: [{ value: 'motor', label: 'Motor v37.50' }, { value: 'partidas', label: 'Validação v37.60' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Atualização v37.70' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'fontes', label: 'Fichas de criadores' }] }
+  { label: 'Desenvolvimento', tabs: [{ value: 'motor', label: 'IA por Carta' }, { value: 'partidas', label: 'Validação v37.60' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
+  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Atualização v37.70' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'proglobal', label: 'Laboratório Pro Global' }, { value: 'fontes', label: 'Fichas de criadores' }] }
 ];
 
 function skillReason(skill: string) {
@@ -371,6 +371,12 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
   useEffect(() => {
     if (!requestedTab) return;
+    if (UNIFIED_COMPACT_RESULT_V3920) {
+      setAdvancedOpen(false);
+      setTab('resumo');
+      onRequestedTabHandled?.();
+      return;
+    }
     setAdvancedOpen(true);
     setTab(requestedTab.tab);
     onRequestedTabHandled?.();
@@ -537,7 +543,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       <section className="result-navigation-shell luxury-panel">
         <div className="result-navigation-head">
-          <div><p className="kicker">Resultado completo</p><strong>O essencial primeiro; detalhes técnicos ficam separados.</strong></div>
+          <div><p className="kicker">Resultado unificado</p><strong>Ficha, habilidades, Ímpeto, encaixe e Pro Global em uma única tela.</strong></div>
           <span>{result.trainingPointsUsed}/{result.trainingPointsTotal} pts</span>
         </div>
 
@@ -552,14 +558,14 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           })}
         </nav>
 
-        {advancedMode && (tab === 'treinador' || tab === 'mapa') && (
+        {advancedMode && !UNIFIED_COMPACT_RESULT_V3920 && (tab === 'treinador' || tab === 'mapa') && (
           <nav className="result-context-tabs" aria-label="Áreas da tática">
             <button type="button" className={tab === 'treinador' ? 'active' : ''} onClick={() => setTab('treinador')}>Visão tática</button>
             <button type="button" className={tab === 'mapa' ? 'active' : ''} onClick={() => setTab('mapa')}>Mapa e posição</button>
           </nav>
         )}
 
-        {advancedMode && (<>
+        {advancedMode && !UNIFIED_COMPACT_RESULT_V3920 && (<>
         <div className="result-advanced-bar">
           <div><SlidersHorizontal size={17} /><span><strong>Área avançada</strong><small>Auditoria, treino, dados e ferramentas técnicas.</small></span></div>
           <button type="button" className={advancedOpen || advancedSelected ? 'active' : ''} onClick={() => setAdvancedOpen((value) => !value)} aria-expanded={advancedOpen}>
@@ -664,169 +670,15 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'partidas' && <MatchValidationCenter result={result} />}
 
       {tab === 'resumo' && (
-        <div className="result-section-grid bm-simple-result-summary">
-          <PremiumCleanResultV3810
+        <div className="result-section-grid bm-unified-result-v3920">
+          <UnifiedPerformanceV3920Panel
             result={result}
-            playerImage={playerImage}
             onSave={onSaveFicha}
             onShare={() => void shareCurrentResult()}
-            onExportImage={onExportImage}
+            onExportImage={() => onExportImage?.('png')}
+            onSkillToggle={onSkillToggle}
+            skillProgress={skillProgress}
           />
-          <article className="luxury-panel wide-card bm-definitive-build-card">
-            <div className="section-title-row">
-              <div>
-                <p className="kicker">Ficha competitiva definitiva</p>
-                <h3>{result.buildName}</h3>
-              </div>
-              <span>{result.bestPosition.label}</span>
-            </div>
-            <p className="panel-note">Esta é a única ficha principal desta carta. Ela foi montada para preservar a identidade do jogador e melhorar o desempenho real nas partidas.</p>
-            <div className="bm-definitive-training-grid">
-              {Object.entries(result.training)
-                .filter(([, value]) => Number(value) > 0)
-                .map(([key, value]) => (
-                  <div key={key}>
-                    <span>{trainingLabels[key] ?? key}</span>
-                    <strong>+{value}</strong>
-                    <small>{result.trainingCost[key as keyof typeof result.trainingCost]} ponto(s)</small>
-                  </div>
-                ))}
-            </div>
-            <div className="bm-definitive-budget">
-              <span>Pontos usados</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong>
-              <i><b style={{ width: `${pointPercent}%` }} /></i>
-            </div>
-          </article>
-
-          {advancedMode && result.deepCardIntelligence && <article className="luxury-panel wide-card bm-deep-card-intelligence">
-            <div className="section-title-row">
-              <div><p className="kicker"><BrainCircuit size={14} /> Inteligência Profunda da Carta</p><h3>Uma ficha escolhida após simulações locais</h3></div>
-              <span>{result.deepCardIntelligence.confidence}% • confiança {result.deepCardIntelligence.confidenceLabel}</span>
-            </div>
-            <p className="bm-local-ai-summary">{result.deepCardIntelligence.summary}</p>
-            <div className="bm-deep-card-metrics">
-              <div><strong>{result.deepCardIntelligence.validCandidates}</strong><span>fichas válidas comparadas</span></div>
-              <div><strong>{result.deepCardIntelligence.identityScore}</strong><span>identidade preservada</span></div>
-              <div><strong>{result.deepCardIntelligence.dataQuality}</strong><span>qualidade dos dados</span></div>
-              <div><strong>{result.deepCardIntelligence.winnerScore}</strong><span>nota da vencedora</span></div>
-            </div>
-            <div className="bm-deep-card-synergies">
-              {result.deepCardIntelligence.synergies.slice(0, 3).map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.score}/100</strong><small>{item.status}</small></div>)}
-            </div>
-            <details>
-              <summary>Entender por que esta ficha venceu</summary>
-              <div className="bm-deep-card-details">
-                <section><h4>Decisões principais</h4>{result.deepCardIntelligence.reasons.slice(0, 5).map((item) => <p key={item}>• {item}</p>)}</section>
-                <section><h4>Faixas competitivas</h4>{result.deepCardIntelligence.functionalRanges.slice(0, 6).map((item) => <p key={item.label}><b>{item.label}</b>: {item.current} → ideal {item.ideal} ({item.status})</p>)}</section>
-                {result.deepCardIntelligence.physicalInsights.length > 0 && <section><h4>Modelo físico</h4>{result.deepCardIntelligence.physicalInsights.map((item) => <p key={item}>• {item}</p>)}</section>}
-                <section><h4>Aprendizado pelas partidas</h4><p>{result.deepCardIntelligence.learning.samples} partida(s) • estado {result.deepCardIntelligence.learning.state}. {result.deepCardIntelligence.learning.recommendation}</p></section>
-                {result.deepCardIntelligence.warnings.length > 0 && <section className="alert-strip"><h4>Confirmar antes de aplicar</h4>{result.deepCardIntelligence.warnings.map((item) => <p key={item}>• {item}</p>)}</section>}
-              </div>
-            </details>
-          </article>}
-
-          {advancedMode && <SupremeGameplayCard result={result} />}
-
-          {advancedMode && <UnifiedIntelligenceCard result={result} />}
-
-          {advancedMode && result.localAi && <article className="luxury-panel wide-card bm-local-ai-card">
-            <div className="section-title-row">
-              <div><p className="kicker"><BrainCircuit size={14} /> IA local do BuildMaster</p><h3>Raciocínio no aparelho, sem API paga</h3></div>
-              <span>{result.localAi.confidence}% • confiança {result.localAi.confidenceLabel}</span>
-            </div>
-            <p className="bm-local-ai-summary">{result.localAi.summary}</p>
-            <div className="bm-local-ai-models">
-              {result.localAi.models.map((model) => <div key={model.id}><span>{model.label}</span><strong>{model.score}</strong><i><b style={{ width: `${model.score}%` }} /></i><small>{model.note}</small></div>)}
-            </div>
-            <div className="bm-local-ai-footer"><ShieldCheck size={15} /><span>{result.localAi.privacyNote}</span></div>
-            {result.localAi.uncertainties.length > 0 && <details><summary>O que ainda precisa ser confirmado</summary><p>{result.localAi.uncertainties.join(' • ')}</p><b>{result.localAi.nextAction}</b></details>}
-          </article>}
-
-          {advancedMode && result.competitiveFusion && <article className="luxury-panel wide-card bm-world-fusion-card">
-            <div className="section-title-row">
-              <div><p className="kicker"><Trophy size={14} /> Motor Mundial de Fichas</p><h3>Evidência profissional + desempenho real</h3></div>
-              <span>{result.competitiveFusion.confidence}% • {result.competitiveFusion.confidenceLabel}</span>
-            </div>
-            <div className="bm-world-fusion-metrics">
-              <div><strong>{result.competitiveFusion.exactCardCount}</strong><span>fontes da carta exata</span></div>
-              <div><strong>{result.competitiveFusion.proSourceCount}</strong><span>pro players/ranking alto</span></div>
-              <div><strong>{result.competitiveFusion.professionalInfluence}%</strong><span>influência profissional</span></div>
-              <div><strong>{result.competitiveFusion.personalMatchSamples}</strong><span>partidas registradas</span></div>
-            </div>
-            <div className="bm-world-fusion-reasons">{result.competitiveFusion.reasons.slice(0, 3).map((reason) => <p key={reason}><ShieldCheck size={15} /> {reason}</p>)}</div>
-            {result.competitiveFusion.sourceNames.length > 0 && <p className="panel-note"><b>Fontes aceitas:</b> {result.competitiveFusion.sourceNames.join(', ')}.</p>}
-            <details className="bm-world-fusion-guardrails"><summary>Como o app evita copiar uma ficha errada</summary>{result.competitiveFusion.guardrails.map((item) => <p key={item}>• {item}</p>)}</details>
-          </article>}
-
-          <article className="luxury-panel wide-card bm-simple-match-impact bm-v3780-advanced-summary">
-            <p className="kicker">O que deve mudar em campo</p>
-            <div className="stat-bars five-cols">
-              {[
-                ['Finalização', result.pri.finishing],
-                ['Drible', result.pri.dribbling],
-                ['Passe', result.pri.creation],
-                ['Força', result.pri.physical],
-                ['Velocidade', result.pri.mobility]
-              ].map(([label, value]) => (
-                <div key={String(label)}>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                  <i><b style={{ width: `${Math.min(100, Number(value))}%` }} /></i>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="luxury-panel wide-card bm-summary-skill-card">
-            <div className="section-title-row">
-              <div><p className="kicker">Habilidades adicionais</p><h3>Marque as que você já colocou</h3></div>
-              <span>{pendingRecommendedSkills.length} pendente(s)</span>
-            </div>
-            <p className="panel-note">Ao marcar uma habilidade, ela sai da lista pendente e fica guardada nesta carta. Toque novamente para desfazer.</p>
-            <div className="bm-skill-progress-columns">
-              <section>
-                <div className="bm-skill-progress-heading"><strong>Ainda faltam adicionar</strong><span>{pendingRecommendedSkills.length}</span></div>
-                <div className="bm-simple-skill-list">
-                  {pendingRecommendedSkills.length ? pendingRecommendedSkills.map((skill) => {
-                    const detail = skillRecommendations.find((item) => item.name === skill);
-                    return <button type="button" key={skill} onClick={() => onSkillToggle?.(skill)}><span aria-hidden="true">□</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>;
-                  }) : <div className="bm-skills-complete-message"><strong>✓ Todas foram adicionadas</strong><span>Esta carta não possui habilidade pendente.</span></div>}
-                </div>
-              </section>
-              <section>
-                <div className="bm-skill-progress-heading completed"><strong>Já adicionadas</strong><span>{completedRecommendedSkills.length}</span></div>
-                <div className="bm-simple-skill-list completed-list">
-                  {completedRecommendedSkills.length ? completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => onSkillToggle?.(skill)}><span aria-hidden="true">✓</span><div><strong>{skill}</strong><small>Já está aplicada nesta carta.</small></div><em>Desmarcar</em></button>) : <p className="panel-note">Nenhuma marcada ainda.</p>}
-                </div>
-              </section>
-            </div>
-          </article>
-
-          <article className="luxury-panel compact-card bm-summary-impeto-card">
-            <div className="section-title-row"><div><p className="kicker">Ímpeto ideal</p><h3>{bestImpeto?.name ?? 'Revisar dados'}</h3></div><span>{bestImpeto?.score ?? 0}/100</span></div>
-            <p className="panel-note">{bestImpeto?.reason ?? 'O print ainda não trouxe evidência suficiente para escolher com segurança.'}</p>
-            {bestImpeto && <div className="chip-cloud purple">{bestImpeto.attributes.map((attribute) => <span key={attribute}>{attribute}</span>)}</div>}
-            <button type="button" className="bm-open-impeto-button" onClick={() => openPrimaryResult('impetos')}><BrainCircuit size={16} /> Ver por que este ímpeto venceu</button>
-          </article>
-
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Como usar nas partidas</p>
-            <ul className="clean-list">
-              {result.usageTips.slice(0, advancedMode ? 4 : 3).map((tip) => <li key={tip}>{tip}</li>)}
-            </ul>
-          </article>
-
-          <article className="luxury-panel wide-card bm-v3780-why-card">
-            <p className="kicker">Por que esta ficha foi escolhida</p>
-            <ul className="clean-list">
-              {result.recommendationExplanation.slice(0, 3).map((line) => <li key={line}>{line}</li>)}
-            </ul>
-          </article>
-
-          {!advancedMode && <details className="luxury-panel wide-card bm-v3780-analysis-entry">
-            <summary><BrainCircuit size={17} /><span><strong>Ver análise completa</strong><small>Confiança, alternativas, partidas e auditoria</small></span><ChevronDown size={17} /></summary>
-            <p>Ative o modo avançado em Configurações › Aparência para abrir os motores técnicos sem poluir o resultado principal.</p>
-          </details>}
         </div>
       )}
 
@@ -892,7 +744,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
         </div>
       )}
 
-      {tab === 'motor' && <><SupremePerformanceV3870Panel result={result} /><MaxMatchPerformanceV3860Panel result={result} /><PowerBuildEngineV3850Panel result={result} /><AdvancedMotorV3750Panel result={result} /></>}
+      {tab === 'motor' && <><CanonicalCardV3890Panel result={result} /><CardFirstAiV3880Panel result={result} /><SupremePerformanceV3870Panel result={result} /><MaxMatchPerformanceV3860Panel result={result} /><PowerBuildEngineV3850Panel result={result} /><AdvancedMotorV3750Panel result={result} /></>}
 
       {tab === 'ficha' && (
         <div className="result-section-grid">
@@ -1173,6 +1025,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
 
       {tab === 'comunidade' && (communityEnabled ? <CommunityIntelligencePanel result={result} /> : <div className="settings-explanation-card"><div><strong>Inteligência de criadores pausada localmente</strong><span>Reative o módulo em Ajustes › Observabilidade e suporte.</span></div></div>)}
+
+      {tab === 'proglobal' && <GlobalProLabV3900Panel result={result} />}
 
       {tab === 'fontes' && <CreatorBuildResearchPanel result={result} />}
 
