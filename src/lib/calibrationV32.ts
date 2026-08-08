@@ -35,7 +35,7 @@ import { inferAutomaticCardGameplayProfile } from './automaticCardGameplayProfil
 
 const ENGINE_VERSION = '38.37-automatic-card-gameplay-1';
 const PATCH_REFERENCE = 'eFootball v5.4.0' as const;
-const CACHE_LIMIT = 24;
+const CACHE_LIMIT = 0;
 
 const LINE_KEYS: TrainingKey[] = ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending'];
 const GK_KEYS: TrainingKey[] = ['gk1', 'gk2', 'gk3', 'aerialStrength', 'lowerBodyStrength'];

@@ -130,7 +130,7 @@ function run(text: string, position: PositionCode, formation: TacticalFormation,
   }));
 }
 
-function assertOfficialTopFive(result: ReturnType<typeof run>, position: PositionCode) {
+function assertOfficialTopFive(result: ReturnType<typeof run>, position: PositionCode, skillPosition: PositionCode = position) {
   const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
   assert.equal(result.bestPosition.code, position, 'A posição escolhida pelo usuário deve permanecer soberana.');
   assert.equal(result.trainingPointsUsed, 64);
@@ -140,7 +140,7 @@ function assertOfficialTopFive(result: ReturnType<typeof run>, position: Positio
   for (const skill of result.recommendedSkills) {
     assert.ok(OFFICIAL_ADDITIONAL_SKILLS.has(skill), `Habilidade não oficial encontrada no Top 5: ${skill}`);
     assert.ok(!owned.has(skillIdentityKey(skill)), `Habilidade já existente foi repetida: ${skill}`);
-    assert.ok(isRoleCompatibleAdditionalSkill(skill, position), `Habilidade incompatível com ${position}: ${skill}`);
+    assert.ok(isRoleCompatibleAdditionalSkill(skill, skillPosition), `Habilidade incompatível com ${skillPosition}: ${skill}`);
   }
 }
 
@@ -182,15 +182,15 @@ assert.deepEqual(formA.recommendedSkills, formC.recommendedSkills, 'A formação
 
 const possession = run(DRIBBLER, 'SS', '4-3-3', 'POSSE_DE_BOLA');
 const quickCounter = run(DRIBBLER, 'SS', '4-3-3', 'CONTRA_ATAQUE_RAPIDO');
-assert.ok(
-  JSON.stringify(possession.training) !== JSON.stringify(quickCounter.training)
-    || JSON.stringify(possession.recommendedSkills) !== JSON.stringify(quickCounter.recommendedSkills),
-  'O estilo do técnico deve poder recalibrar ficha ou prioridade das habilidades.'
-);
+assert.deepEqual(possession.training, quickCounter.training, 'O estilo do técnico não pode alterar a Receita Canônica da carta.');
+assert.deepEqual(possession.recommendedSkills, quickCounter.recommendedSkills, 'O estilo do técnico não pode trocar o Top adicional canônico.');
+assert.deepEqual(possession.recommendedImpetos, quickCounter.recommendedImpetos, 'O estilo do técnico não pode trocar o Ímpeto canônico.');
 
-const asCF = run(DRIBBLER.replace('POSIÇÃO PRINCIPAL: SS', 'POSIÇÃO PRINCIPAL: CF'), 'CF', '4-3-3', 'POSSE_DE_BOLA');
-assertOfficialTopFive(asCF, 'CF');
-assert.ok(JSON.stringify(asCF.training) !== JSON.stringify(dribbler.training) || JSON.stringify(asCF.recommendedSkills) !== JSON.stringify(dribbler.recommendedSkills), 'A posição escolhida deve mudar a otimização quando a função em campo muda.');
+const asCF = run(DRIBBLER, 'CF', '4-3-3', 'POSSE_DE_BOLA');
+assertOfficialTopFive(asCF, 'CF', 'SS');
+assert.deepEqual(asCF.training, dribbler.training, 'Selecionar outra posição de uso não pode recriar a ficha da mesma carta.');
+assert.deepEqual(asCF.recommendedSkills, dribbler.recommendedSkills, 'Selecionar outra posição de uso não pode recriar as habilidades da mesma carta.');
+assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'Selecionar outra posição de uso não pode recriar os Ímpetos da mesma carta.');
 
 
 const appSource = require('node:fs').readFileSync('src/components/CardVisionApp.tsx', 'utf8');

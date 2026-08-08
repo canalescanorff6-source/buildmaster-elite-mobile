@@ -50,15 +50,15 @@ function recommendationFor(skill: string, rebuilt: UnifiedSkillDecision[], curre
   return previous ?? {
     name: skill,
     tier: 'alternativa' as const,
-    reason: 'Complementa a ficha final, a posição escolhida e o Estilo de Jogo sem repetir habilidade já presente.'
+    reason: 'Complementa a identidade original da carta e o Estilo de Jogo sem repetir habilidade já presente.'
   };
 }
 
 export function enforceComplementarySkillIntegrity(result: AnalysisResult): AnalysisResult {
   const rebuilt = buildPersonalizedSkillPlan(result, result.training);
   const rolePosition = resolveAdditionalSkillPosition(result);
-  // O plano reconstruído é a fonte autoritativa: ele já aplica trava por
-  // posição, estilo da carta, atributos, ficha e habilidades possuídas.
+  // O plano reconstruído é a fonte autoritativa: ele já aplica trava pela
+  // posição original, estilo da carta, atributos, ficha e habilidades possuídas.
   // Recomendações antigas não podem reintroduzir habilidade de atacante em
   // goleiro ou habilidade ofensiva inadequada em zagueiro.
   // Somente o plano oficial v35.00 é autoritativo. Listas de versões anteriores
@@ -123,7 +123,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       const decision = rebuiltMap.get(skillIdentityKey(name));
       return previous ?? {
         name,
-        impact: decision?.gameplayImpact ?? 'Complementa a função escolhida sem repetir habilidade nativa.',
+        impact: decision?.gameplayImpact ?? 'Complementa a identidade original sem repetir habilidade nativa.',
         score: decision?.score ?? Math.max(70, 96 - index * 4)
       };
     }),
@@ -141,7 +141,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
         tier: index === 0 ? 'prioridade máxima' as const : index < 3 ? 'alta' as const : 'útil' as const,
         reasons: [
           decision?.gameplayImpact ?? 'Complementa a ficha final.',
-          `Compatível com ${result.bestPosition.label}.`,
+          `Compatível com a identidade original ${result.parsed.mainPositionPt}.`,
           result.parsed.playstyle ? `Considera o estilo oficial ${result.parsed.playstyle}.` : 'Sem estilo confirmado: decisão pela posição e atributos.'
         ]
       };
@@ -165,7 +165,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       ...result.unifiedIntelligence,
       skillPlan: finalUnifiedPlan,
       safeguards: [
-        'Filtro v35.00 antirrepetição, posição escolhida e estilo oficial aplicados depois de todos os motores.',
+        'Filtro v35.00 antirrepetição, posição original e estilo oficial aplicados depois de todos os motores.',
         ...result.unifiedIntelligence.safeguards
       ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 10)
     } : result.unifiedIntelligence,
@@ -181,7 +181,7 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
       })
     } : result.deepCardIntelligence,
     recommendationExplanation: [
-      `Integridade das habilidades: ${recommendedSkills.length}/${expectedSlots} opção(ões) oficiais disponível(is) para ${rolePosition}, sem repetir as ${ownedSkills.length} habilidade(s) confirmada(s).`,
+      `Integridade das habilidades: ${recommendedSkills.length}/${expectedSlots} opção(ões) oficiais disponível(is) para a identidade original ${rolePosition}, sem repetir as ${ownedSkills.length} habilidade(s) confirmada(s).`,
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 12)
   };

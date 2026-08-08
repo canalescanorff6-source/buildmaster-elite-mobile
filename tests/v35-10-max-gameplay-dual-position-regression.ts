@@ -42,7 +42,10 @@ assert.equal(selected.positionBuildComparison?.natural.position, 'SS');
 assert.equal(selected.positionBuildComparison?.selected.position, 'CF');
 assert.equal(selected.positionBuildComparison?.samePosition, false);
 assert.equal(selected.bestPosition.code, 'CF', 'A posição escolhida pelo usuário deve continuar soberana.');
-assert.notDeepEqual(selected.positionBuildComparison?.natural.training, selected.positionBuildComparison?.selected.training, 'A ficha natural e a ficha da nova posição devem ser calibradas de forma independente.');
+assert.notDeepEqual(selected.positionBuildComparison?.natural.training, selected.positionBuildComparison?.selected.training, 'A auditoria posicional deve continuar comparando exigências diferentes.');
+assert.deepEqual(selected.training, natural.training, 'A ficha pública da mesma carta não pode mudar ao selecionar outra posição.');
+assert.deepEqual(selected.recommendedSkills, natural.recommendedSkills, 'As habilidades da mesma carta não podem mudar ao selecionar outra posição.');
+assert.deepEqual(selected.recommendedImpetos, natural.recommendedImpetos, 'Os Ímpetos da mesma carta não podem mudar ao selecionar outra posição.');
 
 for (const result of [natural, selected]) {
   const dimensions = result.calibrationV32?.dimensions;
@@ -56,7 +59,7 @@ for (const result of [natural, selected]) {
 }
 
 assert.ok(natural.training.dribbling + natural.training.dexterity >= natural.training.shooting + natural.training.aerialStrength, 'O DNA driblador deve receber prioridade técnica na posição natural.');
-assert.ok(selected.training.shooting + selected.training.dexterity >= selected.training.passing + selected.training.defending, 'Como CA, a ficha escolhida deve priorizar execução ofensiva e movimentação.');
+assert.ok((selected.positionBuildComparison?.selected.training.shooting ?? 0) + (selected.positionBuildComparison?.selected.training.dexterity ?? 0) >= (selected.positionBuildComparison?.selected.training.passing ?? 0) + (selected.positionBuildComparison?.selected.training.defending ?? 0), 'A comparação diagnóstica de CA deve reconhecer execução ofensiva e movimentação.');
 
 const formA = run('CF', '4-3-3');
 const formB = run('CF', '5-3-2');

@@ -23,7 +23,7 @@ import { cardAnalysisInputFingerprint, feedbackFingerprint } from './cardAnalysi
 
 const ENGINE_VERSION = '31.10-unified-intelligence-1';
 const SIMULATION_COUNT = 520;
-const CACHE_LIMIT = 24;
+const CACHE_LIMIT = 0;
 
 const ACTIVE_LINE: TrainingKey[] = ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending'];
 const ACTIVE_GK: TrainingKey[] = ['gk1', 'gk2', 'gk3', 'aerialStrength', 'lowerBodyStrength'];

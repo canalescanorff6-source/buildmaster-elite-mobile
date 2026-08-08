@@ -73,10 +73,12 @@ for (const result of [ranked, universal, offline]) {
   assert.equal(result.maxPrecision?.alternatives[0]?.training ? trainingPlanTotalCost(result.maxPrecision.alternatives[0].training) : 64, 64, 'As análises derivadas precisam usar fichas compatíveis com o orçamento final.');
 }
 
-assert.notDeepEqual(ranked.training, offline.training, 'Ranqueado com delay alto e offline estável devem poder produzir fichas diferentes.');
-assert.notDeepEqual(universal.training, offline.training, 'O modo universal não deve ser apenas um rótulo para o perfil offline.');
-assert.ok(ranked.training.passing >= offline.training.passing, 'Passe deve receber proteção adicional no perfil ranqueado com delay alto.');
-assert.ok(offline.training.dribbling >= ranked.training.dribbling, 'O perfil offline/drible pode investir mais em domínio e condução.');
+assert.deepEqual(ranked.training, offline.training, 'A Receita Canônica não pode mudar por modo ou conexão.');
+assert.deepEqual(universal.training, offline.training, 'A mesma carta precisa manter a ficha universal definitiva.');
+assert.deepEqual(ranked.recommendedSkills, offline.recommendedSkills, 'O Top adicional não pode variar por contexto de partida.');
+assert.deepEqual(ranked.recommendedImpetos, offline.recommendedImpetos, 'O ranking de Ímpetos não pode variar por contexto de partida.');
+assert.equal(ranked.calibrationV32?.selectedMode, 'RANKED', 'A auditoria ainda registra o modo solicitado.');
+assert.equal(offline.calibrationV32?.selectedMode, 'OFFLINE', 'A auditoria ainda registra o modo solicitado.');
 
 const fingerprint = fs.readFileSync('src/lib/cardAnalysisFingerprint.ts', 'utf8');
 assert.match(fingerprint, /gameplayMode/);

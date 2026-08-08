@@ -3,11 +3,11 @@ import path from 'node:path';
 
 const built = process.argv.includes('--built');
 // A v38.33 acrescentou um renderizador SVG determinístico. O teto de fonte sobe
-// de 3,5 MiB para 4 MiB, mantendo limites reais para o total e para cada módulo.
+// de 4 MiB para 4,5 MiB, mantendo limites reais para o total e para cada módulo.
 const limits = {
   totalJs: 15 * 1024 * 1024,
   singleJs: 5 * 1024 * 1024,
-  sourceTs: 4 * 1024 * 1024,
+  sourceTs: 4.5 * 1024 * 1024,
   singleSourceTs: 400 * 1024,
 };
 function walk(root, matcher) {

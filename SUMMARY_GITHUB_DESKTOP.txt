@@ -1,1 +1,1 @@
-v38.40 — unifica ficha, habilidades, Ímpeto e encaixe no Motor v39.20
+v38.40 — corrige CI do Motor Unificado v39.20 e trava receita por carta

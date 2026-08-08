@@ -540,6 +540,6 @@ export function applySupremeGameplayEngine(result: AnalysisResult): AnalysisResu
     supremeGameplay: analysis
   };
   cache.set(cacheKey, finalResult);
-  while (cache.size > 20) cache.delete(cache.keys().next().value as string);
+  while (cache.size > 0) cache.delete(cache.keys().next().value as string);
   return finalResult;
 }

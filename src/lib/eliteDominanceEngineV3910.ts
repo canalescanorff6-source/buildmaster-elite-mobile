@@ -551,6 +551,13 @@ function buildUniversalSkillPlan(
     selected.push(decision);
     categories.set(decision.category, categoryCount + 1);
   }
+  // A diversidade é preferência, não motivo para devolver quatro opções quando
+  // ainda existem habilidades oficiais seguras. O segundo passe é estável.
+  for (const decision of ranked) {
+    if (selected.length >= 5) break;
+    if (selected.some((item) => skillIdentityKey(item.name) === skillIdentityKey(decision.name))) continue;
+    selected.push(decision);
+  }
   const filteredNames = filterComplementaryAdditionalSkills(
     selected.map((item) => item.name),
     result.parsed.nativeSkills,

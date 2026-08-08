@@ -1,3 +1,3 @@
-# Capturas de celular
+# Capturas de tablet
 
-Adicione capturas reais da compilação final instalada pelo canal interno. Não use telas simuladas. Sugestões: Início, OCR, resultado da ficha, Meu Time, Estúdio Tático, Treinador e Backup.
+Adicione capturas reais apenas depois de validar o layout em tablet. Caso tablets não façam parte do lançamento inicial, restrinja dispositivos no Play Console e documente a decisão.

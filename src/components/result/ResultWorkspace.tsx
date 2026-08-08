@@ -157,10 +157,18 @@ export type ResultTab = 'proglobal' | 'motor' | 'leitura' | 'confianca' | 'compa
 export type ResultPrimaryView = 'resumo' | 'proglobal' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
-  { id: 'resumo', label: 'Ficha Suprema', hint: 'Tudo unificado em uma tela' }
+  { id: 'resumo', label: 'Ficha Suprema', hint: 'Tudo unificado em uma tela' },
+  { id: 'proglobal', label: 'Pro Global', hint: 'Benchmark mundial auditável' },
+  { id: 'profissional', label: 'Análise Pro', hint: 'Leitura profissional completa' },
+  { id: 'ficha', label: 'Ficha', hint: 'Progressão e alternativas' },
+  { id: 'habilidades', label: 'Habilidades', hint: 'Top adicional oficial' },
+  { id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' },
+  { id: 'tatica', label: 'Tática', hint: 'Encaixe dentro do time' },
+  { id: 'exportar', label: 'Exportar', hint: 'Imagem, relatório e texto' }
 ];
 
 const UNIFIED_COMPACT_RESULT_V3920 = true;
+const COMPACT_PRIMARY_TABS_V3920 = RESULT_PRIMARY_TABS.filter((item) => item.id === 'resumo');
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
   { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
@@ -430,9 +438,11 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const pointsAvailable = Math.max(0, result.trainingPointsTotal - result.trainingPointsUsed);
   const advancedTabs = RESULT_ADVANCED_GROUPS.flatMap((group) => group.tabs.map((item) => item.value));
   const advancedSelected = advancedTabs.includes(tab);
-  const visiblePrimaryTabs = advancedMode
-    ? RESULT_PRIMARY_TABS
-    : RESULT_PRIMARY_TABS.filter((item) => CLEAN_RESULT_PRIMARY_VIEWS.includes(item.id as typeof CLEAN_RESULT_PRIMARY_VIEWS[number]));
+  const visiblePrimaryTabs = UNIFIED_COMPACT_RESULT_V3920
+    ? COMPACT_PRIMARY_TABS_V3920
+    : advancedMode
+      ? RESULT_PRIMARY_TABS
+      : RESULT_PRIMARY_TABS.filter((item) => CLEAN_RESULT_PRIMARY_VIEWS.includes(item.id as typeof CLEAN_RESULT_PRIMARY_VIEWS[number]));
 
   function openPrimaryResult(view: ResultPrimaryView) {
     setAdvancedOpen(false);
@@ -675,10 +685,24 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             result={result}
             onSave={onSaveFicha}
             onShare={() => void shareCurrentResult()}
-            onExportImage={() => onExportImage?.('png')}
+            onExportImage={() => onExportImage?.('portrait')}
             onSkillToggle={onSkillToggle}
             skillProgress={skillProgress}
           />
+          {advancedMode && result.deepCardIntelligence && (
+            <details className="luxury-panel wide-card bm-v3920-technical-audit bm-v3780-analysis-entry">
+              <summary>Auditoria técnica compacta • Ver análise completa</summary>
+              <div className="result-section-grid">
+                <p className="panel-note"><b>Inteligência Profunda da Carta</b> • IA local do BuildMaster • Sem serviço de IA pago.</p>
+                <p className="panel-note">Ainda faltam adicionar: {Math.max(0, 5 - recommendedSkills.length)} • Já adicionadas: {skillInfo.done}.</p>
+                <p className="panel-note">Ver por que este ímpeto venceu • Análise Pro • Motor v37.50.</p>
+                {advancedMode && <SupremeGameplayCard result={result} />}
+                {advancedMode && <UnifiedIntelligenceCard result={result} />}
+                <AdvancedMotorV3750Panel result={result} />
+                <ProfessionalIntelligenceCenter result={result} />
+              </div>
+            </details>
+          )}
         </div>
       )}
 

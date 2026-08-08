@@ -516,6 +516,7 @@ export function applyUnifiedPerformanceV3920(result: AnalysisResult): AnalysisRe
     buildName: variant.title,
     recommendationExplanation: [
       analysis.summary,
+      'Receita otimizada para desempenho real, sem usar overall como objetivo.',
       analysis.identity.realLifeModel,
       analysis.positionFit.recommendedUse,
       ...analysis.deterministicChecks,

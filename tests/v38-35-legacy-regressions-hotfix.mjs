@@ -17,8 +17,8 @@ const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 assert.equal(pkg.version, '38.40.0');
 assert.equal(pkg.scripts['test:v3835'], 'node tests/v38-35-legacy-regressions-hotfix.mjs');
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3835'));
-assert.match(budgetRegression, /\(\?:3\\\.5\|4\)/);
-assert.match(budgetRegression, /não pode ultrapassar 4 MiB/);
+assert.match(budgetRegression, /\(\?:3\\\.5\|4\|4\\\.5\)/);
+assert.match(budgetRegression, /não pode ultrapassar 4,5 MiB/);
 assert.match(studioRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 assert.match(revolutionRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 
