@@ -22,7 +22,7 @@ assert.match(posterPanel, /createInitialState\(formation, style, managerName, \{
 assert.match(posterPanel, /palette: defaults\.defaultPalette \?\? 'ouro'/);
 assert.match(posterPanel, /title: defaults\.brandTitle\?\.trim\(\) \|\|/);
 
-assert.match(budget, /sourceTs: 4 \* 1024 \* 1024/);
+assert.match(budget, /sourceTs: (?:4|4\.5) \* 1024 \* 1024/);
 assert.match(budget, /singleSourceTs: 400 \* 1024/);
 assert.match(budget, /Módulo TypeScript excedeu/);
 

@@ -869,8 +869,10 @@ function buildFastDnaChampion(result: AnalysisResult, selectedMode: GameplayMode
 
   for (const mode of ['RANKED', 'UNIVERSAL', 'OFFLINE'] as GameplayMode[]) seedFromWeights(allMaps[mode].target);
   const mainPriority = [...keys].sort((left, right) => allMaps[selectedMode].target[right] - allMaps[selectedMode].target[left]);
-  add(fitTrainingToBudget(result.training, mainPriority, result.trainingPointsTotal));
-  add(fitTrainingToBudget(result.supremeGameplay?.finalTraining ?? result.training, mainPriority, result.trainingPointsTotal));
+  // A busca DNA não reutiliza fichas intermediárias de motores anteriores.
+  // Essas fichas podem carregar metadados variáveis de OCR (como GER/Overall)
+  // e alterar o conjunto de candidatas da mesma carta. As sementes abaixo são
+  // derivadas somente dos atributos, estilo, habilidades e orçamento canônicos.
 
   const bases = Array.from(plans.values()).slice(0, 3);
   const top = mainPriority.slice(0, Math.min(3, mainPriority.length));

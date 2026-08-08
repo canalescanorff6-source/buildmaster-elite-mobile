@@ -708,16 +708,17 @@ function parsePhysicalProfile(text: string): PhysicalProfile {
 }
 
 function fillAttributes(parsed: Pick<ParsedCard, 'mainPosition' | 'maxOverall' | 'overall' | 'attributes'>): Required<Attributes> {
-  const target = parsed.maxOverall ?? parsed.overall ?? 90;
   const base = BASE_BY_POSITION[parsed.mainPosition];
-  const readCount = Object.keys(parsed.attributes ?? {}).length;
 
-  // GER não pode mandar na ficha. Ele só corrige levemente a base quando o OCR
-  // leu poucos atributos; atributos reais lidos sempre têm prioridade total.
-  const overallDeltaLimit = readCount >= 10 ? 2 : 5;
-  const delta = Math.max(-3, Math.min(overallDeltaLimit, (target - 90) * 0.45));
-  const scaled = Object.fromEntries(Object.entries(base).map(([key, value]) => [key, clamp(Number(value) + delta)])) as Required<Attributes>;
-  return { ...scaled, ...parsed.attributes } as Required<Attributes>;
+  // Regra canônica v39.20: GER/Overall é somente metadado visual da carta.
+  // Ele nunca pode preencher, aumentar ou diminuir atributos ausentes, porque
+  // pequenas variações do OCR criariam fichas, habilidades e Ímpetos diferentes
+  // para a mesma versão. A base determinística da posição cobre apenas campos
+  // realmente ausentes; todo atributo lido continua soberano.
+  const deterministicBase = Object.fromEntries(
+    Object.entries(base).map(([key, value]) => [key, clamp(Number(value))])
+  ) as Required<Attributes>;
+  return { ...deterministicBase, ...parsed.attributes } as Required<Attributes>;
 }
 
 function applySkillBoosts(scores: Record<string, number>, skills: string[]) {
