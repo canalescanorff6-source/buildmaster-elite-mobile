@@ -2,9 +2,9 @@
   "schemaVersion": 3,
   "appId": "com.buildmaster.elitetatico",
   "version": "38.40.0",
-  "versionCode": 2110101891,
-  "buildId": "1152a2a66277dc960651304348714e9591af4934-1",
-  "publishedAt": "2026-08-07T18:22:54.160037+00:00",
+  "versionCode": 2110101921,
+  "buildId": "77542f8ed6e3925ff77a0177abc5003941a587ef-1",
+  "publishedAt": "2026-08-08T20:20:05.581937+00:00",
   "channel": "stable",
   "updateType": "apk",
   "notes": [
@@ -17,15 +17,15 @@
   "mandatory": false,
   "minNativeVersion": "29.00.0",
   "rolloutPercentage": 100,
-  "rolloutSalt": "31205859545-1-1152a2a6",
+  "rolloutSalt": "31276256127-1-77542f8e",
   "paused": false,
-  "checksum": "ef407b119f6ba4f1c2ce7e55ae34cb1e5a97fb802eeb74b73c97942ceeda3eee",
-  "sizeBytes": 24171847,
-  "releaseTag": "buildmaster-v38.40.0-2110101891-01",
-  "assetName": "BuildMaster-Elite-Tatico-v38.40.0-211010189101-1152a2a6.apk",
-  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-v38.40.0-2110101891-01/BuildMaster-Elite-Tatico-v38.40.0-211010189101-1152a2a6.apk",
+  "checksum": "720bde5a541d04fd3a1ea6505142a6ef4abb2a6144d420fb7e039d872e9182b5",
+  "sizeBytes": 24221384,
+  "releaseTag": "buildmaster-v38.40.0-2110101921-01",
+  "assetName": "BuildMaster-Elite-Tatico-v38.40.0-211010192101-77542f8e.apk",
+  "apkUrl": "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-v38.40.0-2110101921-01/BuildMaster-Elite-Tatico-v38.40.0-211010192101-77542f8e.apk",
   "mirrors": [
-    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v38.40.0-211010189101-1152a2a6.apk?publication=31205859545-1-1152a2a6&code=2110101891",
-    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=31205859545-1-1152a2a6&code=2110101891"
+    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-v38.40.0-211010192101-77542f8e.apk?publication=31276256127-1-77542f8e&code=2110101921",
+    "https://github.com/canalescanorff6-source/buildmaster-elite-mobile/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication=31276256127-1-77542f8e&code=2110101921"
   ]
 }
