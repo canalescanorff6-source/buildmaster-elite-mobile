@@ -5,7 +5,7 @@ import { applyLocalAiToResult } from './localAiEngine';
 import { applyLocalCorrectionsToResult } from '../modules/builds/dynamicRules';
 import { applyUnifiedCardIntelligence } from './unifiedCardIntelligence';
 import { applySupremeGameplayEngine } from './supremeGameplayEngine';
-import { enforceComplementarySkillIntegrity } from './skillIntegrity';
+import { enforceComplementarySkillIntegrity, synchronizeFinalSkillIntegrity } from './skillIntegrity';
 import { applyCalibrationV32 } from './calibrationV32';
 import { applyAdvancedMotorV3750 } from './advancedMotorV3750';
 import { applyPowerBuildEngineV3850 } from './performanceBuildEngineV3850';
@@ -82,6 +82,10 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = enforceComplementarySkillIntegrity(current);
   current = applyAdaptivePositionV3930(current);
   current = applyPerformanceFunctionV3940(current);
+  // A função real pode reordenar até duas habilidades complementares. A
+  // auditoria final precisa espelhar exatamente o conjunto exibido, sem
+  // reclassificar a receita nem desfazer o DNA preservado.
+  current = synchronizeFinalSkillIntegrity(current);
 
   return { ...current, buildVariants: current.buildVariants.slice(0, 1) };
 }

@@ -186,3 +186,107 @@ export function enforceComplementarySkillIntegrity(result: AnalysisResult): Anal
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 12)
   };
 }
+
+
+/**
+ * Sincroniza a auditoria com o conjunto FINAL produzido pelos motores de
+ * adaptação/função. Diferente de enforceComplementarySkillIntegrity, esta
+ * rotina não reclassifica nem substitui as habilidades: apenas valida e
+ * espelha a ordem final já escolhida, evitando divergência entre a tela e a
+ * auditoria antirrepetição.
+ */
+export function synchronizeFinalSkillIntegrity(result: AnalysisResult): AnalysisResult {
+  const recommendedSkills = filterComplementaryAdditionalSkills(
+    result.recommendedSkills,
+    result.parsed.nativeSkills,
+    result.parsed.specialSkills,
+    5,
+    result.parsed.additionalSkills ?? []
+  );
+  const ownedKeys = buildOwnedSkillKeys(
+    result.parsed.nativeSkills,
+    result.parsed.specialSkills,
+    result.parsed.additionalSkills ?? []
+  );
+  const ownedSkills = canonicalizeSkillList([
+    ...result.parsed.nativeSkills,
+    ...(result.parsed.additionalSkills ?? []),
+    ...result.parsed.specialSkills
+  ]);
+  const rolePosition = resolveAdditionalSkillPosition(result);
+  const officialOnly = recommendedSkills.every((skill) => isOfficialAdditionalSkillIdentity(skill));
+  const noOwnedDuplicates = recommendedSkills.every((skill) => !ownedKeys.has(skillIdentityKey(skill)));
+  const unique = new Set(recommendedSkills.map(skillIdentityKey)).size === recommendedSkills.length;
+  const availableOfficialCount = availableOfficialAdditionalSkillCount(result);
+  const expectedSlots = Math.min(5, availableOfficialCount);
+  const completeSelection = recommendedSkills.length === 5 || recommendedSkills.length === expectedSlots;
+  const roleCompatible = recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, rolePosition));
+  const sourceConfirmed = ownedSkills.length > 0;
+  const status = officialOnly && noOwnedDuplicates && unique && completeSelection && sourceConfirmed && result.validation.level !== 'blocked'
+    ? 'approved' as const
+    : 'review' as const;
+
+  const byKey = new Map(result.skillRecommendations.map((item) => [skillIdentityKey(item.name), item]));
+  const recommendedItems = recommendedSkills.map((name, index) => {
+    const previous = byKey.get(skillIdentityKey(name));
+    return previous ?? {
+      name,
+      tier: index === 0 ? 'essencial' as const : 'alternativa' as const,
+      reason: 'Habilidade final validada pela função real da carta sem repetir habilidade já possuída.'
+    };
+  });
+  const avoidItems = uniqueBySkill(result.skillRecommendations.filter((item) => item.tier === 'evitar'))
+    .filter((item) => !ownedKeys.has(skillIdentityKey(item.name)) && !recommendedSkills.some((name) => skillIdentityKey(name) === skillIdentityKey(item.name)));
+
+  const specialByKey = new Map(result.specialSkillsAnalysis.missingRecommended.map((item) => [skillIdentityKey(item.name), item]));
+  const priorityByKey = new Map(result.skillPriority.ordered.map((item) => [skillIdentityKey(item.name), item]));
+
+  return {
+    ...result,
+    recommendedSkills,
+    skillRecommendations: [...recommendedItems, ...avoidItems],
+    skillIntegrity: {
+      version: `${VERSION}-final-sync`,
+      status,
+      ownedSkills,
+      recommendedSkills,
+      removedDuplicates: result.skillIntegrity?.removedDuplicates ?? removedFromCurrent(result),
+      missingSlots: Math.max(0, expectedSlots - recommendedSkills.length),
+      checks: [
+        officialOnly ? 'Conjunto final contém somente habilidades adicionais oficiais.' : 'O conjunto final contém habilidade fora do catálogo oficial.',
+        noOwnedDuplicates ? 'Nenhuma habilidade final repete habilidade já detectada na carta.' : 'O conjunto final repete habilidade já possuída.',
+        unique ? 'O conjunto final não possui repetições internas.' : 'O conjunto final possui repetição interna.',
+        completeSelection ? `Foram entregues ${recommendedSkills.length}/${expectedSlots} habilidades oficiais disponíveis.` : `Foram entregues ${recommendedSkills.length}/${expectedSlots}; revise a leitura e o catálogo.`,
+        roleCompatible ? `As habilidades finais são compatíveis com a identidade funcional ${rolePosition}.` : 'Há habilidade de DNA preservada que exige revisão de compatibilidade na posição escolhida.',
+        'A ordem da auditoria foi sincronizada com a ordem exibida na Ficha Suprema.'
+      ]
+    },
+    specialSkillsAnalysis: {
+      ...result.specialSkillsAnalysis,
+      missingRecommended: recommendedSkills.map((name, index) => specialByKey.get(skillIdentityKey(name)) ?? {
+        name,
+        impact: 'Complementa a função final preservando o DNA da carta.',
+        score: Math.max(70, 96 - index * 4)
+      }),
+      officialCatalogOnly: officialOnly
+    },
+    skillPriority: {
+      ...result.skillPriority,
+      ordered: recommendedSkills.map((name, index) => priorityByKey.get(skillIdentityKey(name)) ?? {
+        name,
+        score: Math.max(70, 96 - index * 5),
+        tier: index === 0 ? 'prioridade máxima' as const : index < 3 ? 'alta' as const : 'útil' as const,
+        reasons: ['Conjunto final sincronizado com a função real e o DNA da carta.']
+      }),
+      officialOnly
+    },
+    deepCardIntelligence: result.deepCardIntelligence ? {
+      ...result.deepCardIntelligence,
+      skillPlan: recommendedSkills.map((name, index) => ({
+        name,
+        priority: index === 0 ? 'máxima' as const : index < 3 ? 'alta' as const : 'útil' as const,
+        reason: 'Habilidade final sincronizada após a adaptação funcional da carta.'
+      }))
+    } : result.deepCardIntelligence
+  };
+}
