@@ -258,6 +258,7 @@ export function synchronizeFinalSkillIntegrity(result: AnalysisResult): Analysis
         unique ? 'O conjunto final não possui repetições internas.' : 'O conjunto final possui repetição interna.',
         completeSelection ? `Foram entregues ${recommendedSkills.length}/${expectedSlots} habilidades oficiais disponíveis.` : `Foram entregues ${recommendedSkills.length}/${expectedSlots}; revise a leitura e o catálogo.`,
         roleCompatible ? `As habilidades finais são compatíveis com a identidade funcional ${rolePosition}.` : 'Há habilidade de DNA preservada que exige revisão de compatibilidade na posição escolhida.',
+        'Habilidades adicionais e Ímpetos foram avaliados em trilhas separadas.',
         'A ordem da auditoria foi sincronizada com a ordem exibida na Ficha Suprema.'
       ]
     },
