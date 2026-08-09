@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
-
-type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean } };
+import {
+  cleanNativeCacheRefreshQueryV3840,
+  nativeCacheSchemaIsCurrentV3840,
+  refreshNativeWebRuntimeOnceV3840
+} from '@/lib/nativeWebCacheRecoveryV3840';
 
 // Esquema anterior preservado para a regressão: 35.00.0-official-skills-meta-2
 // Esquema anterior preservado para a regressão: 35.20.0-dna-gameplay-solid-theme-1
@@ -16,50 +18,40 @@ type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean
 // Esquema anterior preservado para a regressão: 38.20.0-invisible-optimization-1
 // Esquema anterior preservado para a regressão: 38.30.0-name-skill-integrity-1
 // Esquema anterior preservado para atualização por cima: 38.31.0-ci-regression-hotfix-1
-const NATIVE_CACHE_SCHEMA = '38.40.0-background-ocr-resume-1-branding-bm-1';
-const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
-
-async function clearNativeWebCaches() {
-  try {
-    const registrations = await navigator.serviceWorker?.getRegistrations?.();
-    await Promise.all((registrations ?? []).map((registration) => registration.unregister()));
-  } catch {
-    // O WebView pode não expor service workers; isso não deve bloquear o app.
-  }
-  try {
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-    }
-  } catch {
-    // Cache é opcional no APK.
-  }
-}
+// Esquema anterior fixo: 38.40.0-background-ocr-resume-1-branding-bm-1
 
 export function RegisterServiceWorker() {
   useEffect(() => {
-    const appWindow = window as CapacitorWindow;
-    const isNative = Boolean(appWindow.Capacitor?.isNativePlatform?.())
-      || window.location.protocol === 'capacitor:'
-      || window.location.protocol === 'file:';
+    let active = true;
 
-    if (isNative) {
-      // Limpa resíduos somente na primeira abertura de uma nova estrutura web.
-      // Antes, isso acontecia em todo início e deixava o APK pesado após atualizar.
-      const currentSchema = safeStorageGet(NATIVE_CACHE_SCHEMA_KEY) || '';
-      if (currentSchema !== NATIVE_CACHE_SCHEMA) {
-        void clearNativeWebCaches().finally(() => {
-          safeStorageSet(NATIVE_CACHE_SCHEMA_KEY, NATIVE_CACHE_SCHEMA);
-        });
+    void (async () => {
+      if (nativeCacheSchemaIsCurrentV3840()) {
+        cleanNativeCacheRefreshQueryV3840();
+        return;
       }
-      return;
-    }
+
+      const reloading = await refreshNativeWebRuntimeOnceV3840('new-build');
+      if (!active || reloading) return;
+      cleanNativeCacheRefreshQueryV3840();
+    })();
 
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      navigator.serviceWorker.register('/sw.js').then((registration) => {
-        registration.update().catch(() => undefined);
-      }).catch(() => undefined);
+      const appWindow = window as Window & { Capacitor?: { isNativePlatform?: () => boolean } };
+      const isNative = Boolean(appWindow.Capacitor?.isNativePlatform?.())
+        || window.location.protocol === 'capacitor:'
+        || window.location.protocol === 'file:';
+
+      if (!isNative) {
+        navigator.serviceWorker.register('/sw.js').then((registration) => {
+          registration.update().catch(() => undefined);
+        }).catch(() => undefined);
+      }
     }
+
+    return () => {
+      active = false;
+    };
   }, []);
+
   return null;
 }

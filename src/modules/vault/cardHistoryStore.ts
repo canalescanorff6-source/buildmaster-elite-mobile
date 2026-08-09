@@ -135,36 +135,70 @@ export function migrateAnalysisResult(value: unknown, rawText = '', imageFileNam
   }
 }
 
-export function normalizeSavedAnalysis(entry: Partial<SavedAnalysis>, fallbackIndex = 0): SavedAnalysis | null {
-  const migratedResult = migrateAnalysisResult(entry?.result, entry?.rawText || '', entry?.playerImage ?? null);
-  if (!migratedResult?.parsed?.playerName) return null;
-  const saveKey = entry.saveKey || resultHistoryKey(migratedResult);
-  const savedAt = entry.savedAt || new Date().toLocaleString('pt-BR');
-  const recommended = migratedResult.recommendedSkills ?? [];
-  const progress: SavedSkillProgress = { ...(entry.skillProgress ?? {}) };
-  for (const skill of recommended) {
-    if (progress[skill] === undefined) progress[skill] = false;
+export function normalizeSavedAnalysis(entry: unknown, fallbackIndex = 0): SavedAnalysis | null {
+  try {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+    const candidate = entry as Partial<SavedAnalysis>;
+    const rawText = typeof candidate.rawText === 'string' ? candidate.rawText : '';
+    const playerImage = typeof candidate.playerImage === 'string' ? candidate.playerImage : null;
+    const migratedResult = migrateAnalysisResult(candidate.result, rawText, playerImage);
+    if (!migratedResult?.parsed?.playerName) return null;
+
+    const generatedKey = resultHistoryKey(migratedResult);
+    const saveKey = typeof candidate.saveKey === 'string' && candidate.saveKey.trim()
+      ? candidate.saveKey
+      : generatedKey;
+    const savedAt = typeof candidate.savedAt === 'string' && candidate.savedAt.trim()
+      ? candidate.savedAt
+      : new Date().toLocaleString('pt-BR');
+    const recommended = migratedResult.recommendedSkills.filter((skill): skill is string => typeof skill === 'string' && Boolean(skill.trim()));
+    const rawProgress = candidate.skillProgress && typeof candidate.skillProgress === 'object' && !Array.isArray(candidate.skillProgress)
+      ? candidate.skillProgress
+      : {};
+    const progress: SavedSkillProgress = { ...rawProgress };
+    for (const skill of recommended) {
+      if (progress[skill] === undefined) progress[skill] = false;
+    }
+
+    const changeLog = Array.isArray(candidate.changeLog)
+      ? candidate.changeLog.filter((item): item is SavedHistoryEvent => (
+          Boolean(item)
+          && typeof item === 'object'
+          && typeof item.at === 'string'
+          && typeof item.action === 'string'
+          && typeof item.note === 'string'
+        )).slice(0, 20)
+      : [{ at: savedAt, action: 'criado', note: 'Ficha adicionada ao Cofre.' }];
+
+    return {
+      id: typeof candidate.id === 'string' && candidate.id.trim()
+        ? candidate.id
+        : `${saveKey || 'ficha'}-${fallbackIndex}`,
+      saveKey,
+      savedAt,
+      updatedAt: typeof candidate.updatedAt === 'string' && candidate.updatedAt.trim() ? candidate.updatedAt : savedAt,
+      rawText,
+      playerImage,
+      fullPreview: typeof candidate.fullPreview === 'string' ? candidate.fullPreview : null,
+      result: migratedResult,
+      skillProgress: progress,
+      notes: typeof candidate.notes === 'string' ? candidate.notes : '',
+      favorite: Boolean(candidate.favorite),
+      statusTag: candidate.statusTag === 'completo' || candidate.statusTag === 'pendente' || candidate.statusTag === 'revisar'
+        ? candidate.statusTag
+        : undefined,
+      personalTags: Array.isArray(candidate.personalTags)
+        ? candidate.personalTags.filter((tag): tag is string => typeof tag === 'string')
+        : [],
+      tacticalRoleNote: typeof candidate.tacticalRoleNote === 'string' ? candidate.tacticalRoleNote : '',
+      changeLog: changeLog.length ? changeLog : [{ at: savedAt, action: 'recuperado', note: 'Ficha antiga reparada automaticamente.' }],
+      lastOpenedAt: typeof candidate.lastOpenedAt === 'string' ? candidate.lastOpenedAt : undefined,
+      folderId: typeof candidate.folderId === 'string' ? candidate.folderId : undefined
+    };
+  } catch (error) {
+    console.error('Uma ficha incompatível foi isolada sem interromper o aplicativo:', error);
+    return null;
   }
-  const changeLog = Array.isArray(entry.changeLog) ? entry.changeLog.slice(0, 20) : [{ at: savedAt, action: 'criado', note: 'Ficha adicionada ao Cofre.' }];
-  return {
-    id: entry.id || `${saveKey || 'ficha'}-${fallbackIndex}`,
-    saveKey,
-    savedAt,
-    updatedAt: entry.updatedAt || savedAt,
-    rawText: entry.rawText || '',
-    playerImage: entry.playerImage ?? null,
-    fullPreview: entry.fullPreview ?? null,
-    result: migratedResult,
-    skillProgress: progress,
-    notes: entry.notes || '',
-    favorite: Boolean(entry.favorite),
-    statusTag: entry.statusTag,
-    personalTags: Array.isArray(entry.personalTags) ? entry.personalTags : [],
-    tacticalRoleNote: entry.tacticalRoleNote || '',
-    changeLog,
-    lastOpenedAt: entry.lastOpenedAt,
-    folderId: entry.folderId
-  };
 }
 
 export function ensureSkillProgress(current: SavedSkillProgress | undefined, skills: string[]) {
@@ -300,8 +334,12 @@ export async function writeIndexedHistory(items: SavedAnalysis[]): Promise<void>
 export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
   const loaded: SavedAnalysis[] = [];
   for (const entry of entries) {
-    const normalized = normalizeSavedAnalysis(entry as Partial<SavedAnalysis>, offset + loaded.length);
-    if (normalized && !loaded.some((item) => item.saveKey === normalized.saveKey)) loaded.push(normalized);
+    try {
+      const normalized = normalizeSavedAnalysis(entry, offset + loaded.length);
+      if (normalized && !loaded.some((item) => item.saveKey === normalized.saveKey)) loaded.push(normalized);
+    } catch (error) {
+      console.error('Entrada defeituosa do Cofre ignorada durante a recuperação:', error);
+    }
   }
   return loaded;
 }
@@ -467,21 +505,86 @@ export function saveLearnedCard(memory: LearnedCardMemory) {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export function isRenderableAnalysisResult(value: unknown): value is AnalysisResult {
-  if (!value || typeof value !== 'object') return false;
+  if (!isRecord(value)) return false;
   const item = value as Partial<AnalysisResult>;
-  if (!item.parsed || typeof item.parsed !== 'object') return false;
-  if (!item.bestPosition || typeof item.bestPosition !== 'object' || typeof item.bestPosition.code !== 'string') return false;
-  if (!item.training || typeof item.training !== 'object') return false;
-  if (!Array.isArray(item.buildVariants) || !Array.isArray(item.recommendedSkills) || !Array.isArray(item.skillRecommendations)) return false;
-  if (!item.deepAnalysis || !item.advancedTacticalFunction || !item.specialSkillsAnalysis || !item.physicalEngine) return false;
-  if (!item.attributeGoals || !item.advancedOptimizer || !item.correctionLimit || !item.errorTolerance || !item.skillPriority) return false;
-  if (!Array.isArray(item.marginalReturn)) return false;
+  if (!isRecord(item.parsed)) return false;
+
+  const parsed = item.parsed as Partial<AnalysisResult['parsed']>;
+  if (typeof parsed.playerName !== 'string' || !parsed.playerName.trim()) return false;
+  if (typeof parsed.mainPosition !== 'string' || typeof parsed.mainPositionPt !== 'string') return false;
+  if (!isStringArray(parsed.positions) || !isStringArray(parsed.positionsPt)) return false;
+  if (!isStringArray(parsed.nativeSkills) || !isStringArray(parsed.specialSkills)) return false;
+  if (!isRecord(parsed.attributes) || !isRecord(parsed.positionRatings)) return false;
+  if (!isRecord(parsed.condition) || !isRecord(parsed.physicalProfile) || !isRecord(parsed.evidence)) return false;
+  if (!isStringArray(parsed.warnings)) return false;
+
+  if (!isRecord(item.bestPosition)) return false;
+  if (typeof item.bestPosition.code !== 'string' || typeof item.bestPosition.label !== 'string') return false;
+  if (!isFiniteNumber(item.bestPosition.score)) return false;
+
+  if (!Array.isArray(item.positionScores)
+    || !item.positionScores.every((position) => (
+      isRecord(position)
+      && typeof position.code === 'string'
+      && typeof position.label === 'string'
+      && typeof position.role === 'string'
+      && isFiniteNumber(position.score)
+    ))) return false;
+
+  if (!isRecord(item.training) || !isRecord(item.trainingCost)) return false;
+  if (!isFiniteNumber(item.trainingPointsUsed)
+    || !isFiniteNumber(item.trainingPointsTotal)
+    || !isFiniteNumber(item.trainingPointsRemaining)) return false;
+  if (typeof item.trainingCostRule !== 'string' || typeof item.buildName !== 'string') return false;
+
+  if (!Array.isArray(item.buildVariants)
+    || !isStringArray(item.recommendationExplanation)
+    || !isStringArray(item.profileTips)
+    || !Array.isArray(item.permittedPositions)
+    || !Array.isArray(item.avoidPositions)
+    || !isStringArray(item.recommendedSkills)
+    || !Array.isArray(item.skillRecommendations)
+    || !item.skillRecommendations.every((skill) => isRecord(skill) && typeof skill.name === 'string')
+    || !isStringArray(item.avoidSkills)
+    || !Array.isArray(item.recommendedImpetos)
+    || !isStringArray(item.strengths)
+    || !isStringArray(item.weaknesses)
+    || !isStringArray(item.usageTips)
+    || !Array.isArray(item.marginalReturn)) return false;
+
+  if (!isRecord(item.tacticalProfile)
+    || !isRecord(item.teamMap)
+    || !isRecord(item.validation)
+    || !isRecord(item.deepAnalysis)
+    || !isRecord(item.advancedTacticalFunction)
+    || !isRecord(item.specialSkillsAnalysis)
+    || !isRecord(item.physicalEngine)
+    || !isRecord(item.attributeGoals)
+    || !isRecord(item.advancedOptimizer)
+    || !isRecord(item.correctionLimit)
+    || !isRecord(item.errorTolerance)
+    || !isRecord(item.skillPriority)) return false;
+
   const special = item.specialSkillsAnalysis as AnalysisResult['specialSkillsAnalysis'];
   const priority = item.skillPriority as AnalysisResult['skillPriority'];
   const tolerance = item.errorTolerance as AnalysisResult['errorTolerance'];
   return Array.isArray(special.usefulOwned)
     && Array.isArray(priority.ordered)
     && Array.isArray(priority.context)
-    && Boolean(tolerance.conservative && tolerance.probable && tolerance.optimistic);
+    && isRecord(tolerance.conservative)
+    && isRecord(tolerance.probable)
+    && isRecord(tolerance.optimistic);
 }

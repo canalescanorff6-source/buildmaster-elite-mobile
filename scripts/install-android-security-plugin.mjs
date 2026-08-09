@@ -10,14 +10,74 @@ fs.mkdirSync(resXmlDir, { recursive: true });
 
 const mainActivity = `package com.buildmaster.elitetatico;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private static final String WEB_CACHE_PREFS = "buildmaster_web_cache_v2";
+    private static final String WEB_CACHE_VERSION = "version_code";
+
+    private long currentVersionCode() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) return info.getLongVersionCode();
+            return info.versionCode;
+        } catch (Exception ignored) {
+            return -1L;
+        }
+    }
+
+    private boolean shouldRefreshWebCache(long versionCode) {
+        if (versionCode < 0L) return true;
+        SharedPreferences preferences = getSharedPreferences(WEB_CACHE_PREFS, Context.MODE_PRIVATE);
+        return preferences.getLong(WEB_CACHE_VERSION, Long.MIN_VALUE) != versionCode;
+    }
+
+    private void refreshWebCacheForInstalledVersion(long versionCode) {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        WebView webView = getBridge().getWebView();
+        webView.post(() -> {
+            try {
+                webView.stopLoading();
+                webView.clearCache(true);
+                webView.clearHistory();
+                webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+                if (versionCode >= 0L) {
+                    getSharedPreferences(WEB_CACHE_PREFS, Context.MODE_PRIVATE)
+                        .edit()
+                        .putLong(WEB_CACHE_VERSION, versionCode)
+                        .apply();
+                }
+                webView.reload();
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+                    } catch (Exception ignored) {
+                        // O WebView já pode ter sido encerrado.
+                    }
+                }, 2500L);
+            } catch (Exception ignored) {
+                // Uma limpeza de cache nunca pode impedir a abertura do aplicativo.
+            }
+        });
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        long installedVersionCode = currentVersionCode();
+        boolean refreshWebCache = shouldRefreshWebCache(installedVersionCode);
         registerPlugin(BuildMasterSecurityPlugin.class);
         super.onCreate(savedInstanceState);
+        if (refreshWebCache) refreshWebCacheForInstalledVersion(installedVersionCode);
     }
 }
 `;

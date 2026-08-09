@@ -8,6 +8,7 @@ import { PremiumExperience2Bootstrap } from '@/modules/experience/PremiumExperie
 import { ObservabilityBootstrap } from '@/modules/observability/ObservabilityBootstrap';
 import { PremiumQualityLayer } from '@/components/PremiumQualityLayer';
 import { RuntimeOptimizationBootstrapV3820 } from '@/components/RuntimeOptimizationBootstrapV3820';
+import { OptionalRuntimeBoundary } from '@/components/OptionalRuntimeBoundary';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import './globals.css';
 import './v33-executive.css';
@@ -54,7 +55,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production bm-v2930-intelligence bm-v2940-player-lab bm-v2950-tactical-opponent bm-v2960-anti-delay-coach bm-v2970-premium-observability bm-v2980-community-commercial bm-v3000-play-publication bm-v3300-executive bm-v3400-studio bm-v3400-clean-responsive bm-v3500-identity bm-v3520-solid bm-v3600-revolution bm-v3700-professional bm-v3780-clean bm-v3790-unified bm-v3800-vault bm-v3810-result bm-v3820-runtime-shell"><ExperiencePreferenceBootstrap /><PremiumExperience2Bootstrap /><ObservabilityBootstrap /><RuntimeOptimizationBootstrapV3820 /><RegisterServiceWorker /><AppRuntimeStatus /><PremiumExperienceLayer /><PremiumQualityLayer />{children}</body>
+      <body className="bm-v28-identity bm-v2820-screens bm-v2830-experience bm-v2840-quality bm-v2850-architecture bm-v2870-squad bm-v2880-training bm-v2910-admin-update bm-v2920-production bm-v2930-intelligence bm-v2940-player-lab bm-v2950-tactical-opponent bm-v2960-anti-delay-coach bm-v2970-premium-observability bm-v2980-community-commercial bm-v3000-play-publication bm-v3300-executive bm-v3400-studio bm-v3400-clean-responsive bm-v3500-identity bm-v3520-solid bm-v3600-revolution bm-v3700-professional bm-v3780-clean bm-v3790-unified bm-v3800-vault bm-v3810-result bm-v3820-runtime-shell">
+        <OptionalRuntimeBoundary name="preferências de experiência"><ExperiencePreferenceBootstrap /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="experiência premium 2"><PremiumExperience2Bootstrap /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="observabilidade"><ObservabilityBootstrap /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="otimização de runtime"><RuntimeOptimizationBootstrapV3820 /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="atualização de cache"><RegisterServiceWorker /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="status do aplicativo"><AppRuntimeStatus /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="camada premium"><PremiumExperienceLayer /></OptionalRuntimeBoundary>
+        <OptionalRuntimeBoundary name="qualidade premium"><PremiumQualityLayer /></OptionalRuntimeBoundary>
+        {children}
+      </body>
     </html>
   );
 }
