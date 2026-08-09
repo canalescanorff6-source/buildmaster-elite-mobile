@@ -21,8 +21,11 @@ export class AppShellSafetyBoundaryV3930 extends Component<Props, State> {
   }
 
   componentDidMount() {
-    clearRecoveryMarkerV3930();
     cleanRecoveryQueryV3930();
+    if (this.state.failed) return;
+    window.setTimeout(() => {
+      if (!this.state.failed) clearRecoveryMarkerV3930();
+    }, 1500);
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {

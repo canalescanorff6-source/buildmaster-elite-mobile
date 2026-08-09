@@ -1,0 +1,1 @@
+Impede que JSON legado ou incompatível derrube a inicialização do app, saneia a lixeira do Cofre, ativa a barreira global de recuperação sem loop e preserva jogadores, fichas, Mapeamento e backups. Mantém também a correção v31.72 de habilidades adicionais e Ímpetos separados.

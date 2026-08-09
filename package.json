@@ -160,7 +160,7 @@
     "typecheck:v3920": "tsc -p tests/types-v3920/tsconfig.json --pretty false && tsc -p tests/types-v3920-ui/tsconfig.json --pretty false",
     "test:v3920": "npm run typecheck:v3920 && node -r ./tests/_ts-require.cjs tests/v39-20-unified-performance-regression.ts && node -r ./tests/_ts-require.cjs tests/v39-20-recipe-memory-regression.ts",
     "typecheck:v3930": "tsc -p tests/types-v3930/tsconfig.json --pretty false && tsc -p tests/types-v3930-ui/tsconfig.json --pretty false",
-    "test:v3930": "npm run typecheck:v3930 && node -r ./tests/_ts-require.cjs tests/v39-30-adaptive-position-regression.ts && node tests/v39-30-runtime-recovery-regression.mjs",
+    "test:v3930": "npm run typecheck:v3930 && node -r ./tests/_ts-require.cjs tests/v39-30-adaptive-position-regression.ts && node tests/v39-30-runtime-recovery-regression.mjs && node -r ./tests/_ts-require.cjs tests/v39-30-storage-shape-recovery-regression.ts",
     "typecheck:v3940": "tsc -p tests/types-v3940/tsconfig.json --pretty false && tsc -p tests/types-v3940-ui/tsconfig.json --pretty false",
     "test:v3940": "npm run typecheck:v3940 && node -r ./tests/_ts-require.cjs tests/v39-40-real-function-performance-regression.ts",
     "typecheck:v3950": "tsc -p tests/types-v3950/tsconfig.json --pretty false && tsc -p tests/types-v3950-ui/tsconfig.json --pretty false",

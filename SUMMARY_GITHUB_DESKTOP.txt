@@ -1,1 +1,1 @@
-v38.40 — adiciona Mapeamento Total v39.50 com banco visual e seleção inteligente do elenco
+Corrige falha de abertura no Android e protege dados locais

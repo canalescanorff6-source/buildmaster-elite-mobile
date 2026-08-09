@@ -115,11 +115,23 @@ export function safeStorageEntries(): Array<[string, string]> {
   }
 }
 
+function hasCompatibleJsonShape(value: unknown, fallback: unknown): boolean {
+  if (fallback === null || fallback === undefined) return true;
+  if (Array.isArray(fallback)) return Array.isArray(value);
+  if (typeof fallback === 'object') return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return typeof value === typeof fallback;
+}
+
 export function safeStorageGetJson<T>(key: string, fallback: T): T {
   const raw = safeStorageGet(key);
   if (!raw) return fallback;
   try {
-    return JSON.parse(raw) as T;
+    const parsed: unknown = JSON.parse(raw);
+    if (!hasCompatibleJsonShape(parsed, fallback)) {
+      reportFailure('read', key, new Error('Formato JSON incompatível com o dado esperado.'));
+      return fallback;
+    }
+    return parsed as T;
   } catch {
     safeStorageRemove(key);
     return fallback;
