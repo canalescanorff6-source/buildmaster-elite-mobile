@@ -110,6 +110,16 @@ public class BuildMasterVaultStoragePlugin extends Plugin {
                 return;
             }
             if (target.length() > MAX_VALUE_BYTES) throw new Exception("Arquivo interno acima do limite seguro.");
+            Object requestedLimit = call.getData().opt("maxBytes");
+            if (requestedLimit != null && requestedLimit != org.json.JSONObject.NULL) {
+                long maxBytes;
+                if (requestedLimit instanceof Number) maxBytes = ((Number) requestedLimit).longValue();
+                else maxBytes = Long.parseLong(String.valueOf(requestedLimit));
+                if (maxBytes > 0L && target.length() > maxBytes) {
+                    call.reject("Arquivo preservado e adiado porque é grande demais para a abertura inicial.");
+                    return;
+                }
+            }
             try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(target));
                  ByteArrayOutputStream output = new ByteArrayOutputStream((int)Math.min(target.length(), 4L * 1024L * 1024L))) {
                 byte[] buffer = new byte[64 * 1024];
@@ -142,9 +152,15 @@ public class BuildMasterVaultStoragePlugin extends Plugin {
     public void info(PluginCall call) {
         try {
             File root = rootDirectory();
+            String key = call.getString("key");
             long used = 0L;
-            File[] files = root.listFiles();
-            if (files != null) for (File file : files) if (file.isFile()) used += file.length();
+            if (key != null && !key.trim().isEmpty()) {
+                File target = fileFor(key);
+                used = target.exists() ? target.length() : 0L;
+            } else {
+                File[] files = root.listFiles();
+                if (files != null) for (File file : files) if (file.isFile()) used += file.length();
+            }
             JSObject result = new JSObject();
             result.put("available", true);
             result.put("usedBytes", used);

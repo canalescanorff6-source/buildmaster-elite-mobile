@@ -17337,6 +17337,25 @@ body.bm-v2830-experience *::-webkit-scrollbar-thumb {
 .bm-recovery-actions .primary { border: 0; color: white; background: linear-gradient(135deg, #1f4f96, #3c79d7); }
 .bm-recovery-actions .secondary { border: 1px solid rgba(54,83,128,.22); color: #17325f; background: #fff; }
 .bm-recovery-actions .danger { border: 1px solid rgba(190,52,71,.26); color: #a2263a; background: rgba(209,74,92,.08); }
+.bm-recovery-diagnostic {
+  display: block;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(78,108,153,.16);
+  border-radius: 12px;
+  color: #52647f;
+  background: rgba(231,237,247,.72);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .bm-recovery-screen { align-items: center; padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom)); }
+  .bm-recovery-card { max-height: calc(100dvh - 36px); overflow: auto; border-radius: 24px; }
+  .bm-recovery-actions { display: grid; grid-template-columns: 1fr; }
+  .bm-recovery-actions :is(button, a) { width: 100%; justify-content: center; }
+}
 
 @keyframes bm-premium-ripple {
   0% { opacity: .2; transform: translate(-50%, -50%) scale(0); }

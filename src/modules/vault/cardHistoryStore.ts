@@ -14,6 +14,7 @@ import {
 } from '@/lib/accountStorage';
 import {
   isNativeVaultStorageAvailable,
+  nativeVaultInfo,
   nativeVaultRead,
   nativeVaultWrite
 } from '@/lib/nativeVaultStorage';
@@ -65,6 +66,7 @@ export const HISTORY_STORE_NAME = 'fichas';
 export const LEARNING_KEY = 'buildmaster_local_learning_v24_3';
 
 export const HISTORY_LIMIT = 200;
+export const STARTUP_NATIVE_HISTORY_MAX_BYTES = 32 * 1024 * 1024;
 
 const NATIVE_HISTORY_STORAGE_KEY = () => accountDatabaseName(`${HISTORY_DB_NAME}_internal_file_v1`);
 
@@ -352,20 +354,38 @@ export function mergeHistoryLists(primary: SavedAnalysis[], secondary: SavedAnal
   return Array.from(map.values()).slice(0, HISTORY_LIMIT);
 }
 
-export async function loadHistoryStore(): Promise<SavedAnalysis[]> {
+export type HistoryLoadOptions = {
+  maxNativeBytes?: number;
+  skipNative?: boolean;
+  onNativeDeferred?: (bytes: number) => void;
+};
+
+export type StartupHistoryLoadResult = {
+  items: SavedAnalysis[];
+  nativeDeferredBytes: number;
+};
+
+export async function loadHistoryStore(options: HistoryLoadOptions = {}): Promise<SavedAnalysis[]> {
   const loaded: SavedAnalysis[] = [];
 
-  if (isNativeVaultStorageAvailable()) {
+  if (isNativeVaultStorageAvailable() && !options.skipNative) {
     try {
-      const raw = await nativeVaultRead(NATIVE_HISTORY_STORAGE_KEY());
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) {
-        for (const item of normalizeHistoryList(parsed)) {
-          if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
+      const storageKey = NATIVE_HISTORY_STORAGE_KEY();
+      const info = await nativeVaultInfo(storageKey).catch(() => null);
+      const maxNativeBytes = Number(options.maxNativeBytes || 0);
+      if (maxNativeBytes > 0 && Number(info?.usedBytes || 0) > maxNativeBytes) {
+        options.onNativeDeferred?.(Number(info?.usedBytes || 0));
+      } else {
+        const raw = await nativeVaultRead(storageKey, maxNativeBytes > 0 ? maxNativeBytes : undefined);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed)) {
+          for (const item of normalizeHistoryList(parsed)) {
+            if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
+          }
         }
       }
     } catch {
-      // Uma instalação antiga pode ainda não possuir o plugin. As rotas web abaixo recuperam o Cofre.
+      // O arquivo principal permanece preservado. As rotas web podem abrir o app sem ele.
     }
   }
 
@@ -398,6 +418,15 @@ export async function loadHistoryStore(): Promise<SavedAnalysis[]> {
   }
 
   return loaded.slice(0, HISTORY_LIMIT);
+}
+
+export async function loadHistoryStoreForStartup(): Promise<StartupHistoryLoadResult> {
+  let nativeDeferredBytes = 0;
+  const items = await loadHistoryStore({
+    maxNativeBytes: STARTUP_NATIVE_HISTORY_MAX_BYTES,
+    onNativeDeferred: (bytes) => { nativeDeferredBytes = bytes; }
+  });
+  return { items, nativeDeferredBytes };
 }
 
 export function compactHistoryForNativeStorage(items: SavedAnalysis[]): SavedAnalysis[] {

@@ -1,14 +1,14 @@
 'use client';
 
-import { APP_RELEASE_VERSION, CURRENT_BUILD_ID } from '@/lib/appUpdates';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 
 type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean } };
 
 export const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
 export const NATIVE_CACHE_BUILD_KEY = 'buildmaster:native-cache-build';
-export const NATIVE_CACHE_SCHEMA = '38.40.0-definitive-opening-1';
-export const NATIVE_CACHE_BUILD_FINGERPRINT = `${APP_RELEASE_VERSION}:${CURRENT_BUILD_ID}:native-web-cache-v2`;
+export const NATIVE_CACHE_SCHEMA = '38.40.0-fail-open-startup-1';
+export const NATIVE_CACHE_BUILD_FINGERPRINT = `${NATIVE_CACHE_SCHEMA}:native-web-cache-v2`;
+// O Android usa o CURRENT_BUILD_ID/versionCode para a invalidação nativa por build.
 
 const CACHE_REFRESH_QUERY = 'bm_cache_refresh';
 const SESSION_RELOAD_KEY = `buildmaster:native-cache-reload:${NATIVE_CACHE_BUILD_FINGERPRINT}`;
@@ -67,25 +67,22 @@ export async function refreshNativeWebRuntimeOnceV3840(reason: string): Promise<
   if (!isNativeRuntimeV3840()) return false;
 
   try {
-    if (window.sessionStorage.getItem(SESSION_RELOAD_KEY) === '1') return false;
+    if (window.sessionStorage.getItem(SESSION_RELOAD_KEY) === '1') {
+      cleanNativeCacheRefreshQueryV3840();
+      return false;
+    }
     window.sessionStorage.setItem(SESSION_RELOAD_KEY, '1');
   } catch {
-    // Se sessionStorage estiver indisponível, as marcas persistentes ainda evitam repetição.
     if (nativeCacheSchemaIsCurrentV3840()) return false;
   }
 
   await clearNativeWebCachesV3840();
   markNativeCacheSchemaCurrentV3840();
-
-  try {
-    const url = new URL(window.location.href);
-    url.searchParams.set(
-      CACHE_REFRESH_QUERY,
-      `${CURRENT_BUILD_ID.slice(0, 12) || 'build'}-${reason.replace(/[^a-z0-9-]/gi, '').slice(0, 24) || 'refresh'}`
-    );
-    window.location.replace(url.toString());
-    return true;
-  } catch {
-    return false;
-  }
+  cleanNativeCacheRefreshQueryV3840();
+  void reason;
+  return false;
 }
+
+// O fluxo antigo chamava window.location.replace após limpar o cache. A limpeza
+// agora é não destrutiva e sem recarregamento JavaScript; o Android já invalida
+// o WebView uma única vez quando o versionCode muda.

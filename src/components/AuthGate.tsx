@@ -440,18 +440,12 @@ function SessionLoadingScreen({ step }: { step: RestoreStep }) {
 }
 
 export function AuthGate({ children }: { children?: ReactNode }) {
-  const firstSecureBoot = useRef(safeStorageGet(FIRST_SECURE_BOOT_KEY) !== '1');
-  const cachedSnapshot = useMemo(() => {
-    try {
-      const raw = safeStorageGet(SESSION_SNAPSHOT_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as { profile: AccountProfile; offline: boolean; savedAt: string };
-      if (!parsed?.profile?.id || Date.now() - Date.parse(parsed.savedAt) > 7 * 24 * 60 * 60 * 1000) return null;
-      return { profile: parsed.profile, offline: true };
-    } catch { return null; }
-  }, []);
-  const [ready, setReady] = useState(Boolean(cachedSnapshot));
-  const [validation, setValidation] = useState<{ profile: AccountProfile; offline: boolean } | null>(cachedSnapshot);
+  // A primeira renderização precisa ser idêntica no servidor e no WebView.
+  // Nenhum localStorage é consultado durante o render; isso evita mismatch de
+  // hidratação e impede que uma sessão antiga derrube toda a abertura.
+  const firstSecureBoot = useRef(false);
+  const [ready, setReady] = useState(false);
+  const [validation, setValidation] = useState<{ profile: AccountProfile; offline: boolean } | null>(null);
   const [restoreError, setRestoreError] = useState('');
   const [restoreStep, setRestoreStep] = useState<RestoreStep>('session');
   const lastSuccessfulValidationRef = useRef(Date.now());
@@ -459,25 +453,63 @@ export function AuthGate({ children }: { children?: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+
+    function readCachedSnapshot(): { profile: AccountProfile; offline: boolean } | null {
+      try {
+        const raw = safeStorageGet(SESSION_SNAPSHOT_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { profile?: AccountProfile; offline?: boolean; savedAt?: string };
+        const savedAt = Date.parse(String(parsed.savedAt || ''));
+        if (!parsed.profile
+          || typeof parsed.profile.id !== 'string'
+          || !parsed.profile.id.trim()
+          || typeof parsed.profile.username !== 'string'
+          || !parsed.profile.username.trim()
+          || !Number.isFinite(savedAt)
+          || Date.now() - savedAt > 7 * 24 * 60 * 60 * 1000) return null;
+        return { profile: parsed.profile, offline: true };
+      } catch {
+        safeStorageRemove(SESSION_SNAPSHOT_KEY);
+        return null;
+      }
+    }
+
+    async function restoreWithTimeout(): Promise<Awaited<ReturnType<typeof restoreAccountAccess>>> {
+      return Promise.race([
+        restoreAccountAccess(),
+        new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('A validação demorou demais. O aplicativo continuará com a sessão protegida disponível.')), 12_000))
+      ]);
+    }
+
     async function restore() {
       const startedAt = Date.now();
+      firstSecureBoot.current = safeStorageGet(FIRST_SECURE_BOOT_KEY) !== '1';
+      const cached = readCachedSnapshot();
+      if (cached && mounted) {
+        setValidation(cached);
+        setReady(true);
+      }
+
       try {
         setRestoreStep('session');
         if (isCloudAccountsConfigured()) {
           setRestoreStep('license');
-          const cloud = await restoreAccountAccess();
+          const cloud = await restoreWithTimeout();
           if (mounted && cloud) {
             setRestoreStep('workspace');
             lastSuccessfulValidationRef.current = Date.now();
             terminalFailureCountRef.current = 0;
             setValidation({ profile: cloud.profile, offline: cloud.offline });
+            setRestoreError('');
             safeStorageSet(SESSION_SNAPSHOT_KEY, JSON.stringify({ profile: cloud.profile, offline: cloud.offline, savedAt: new Date().toISOString() }));
           }
         }
       } catch (cause) {
-        if (mounted) setRestoreError(cause instanceof Error ? cause.message : 'Não foi possível validar sua licença.');
+        if (mounted && !cached) setRestoreError(cause instanceof Error ? cause.message : 'Não foi possível validar sua licença.');
+        // Uma falha de rede nunca substitui uma sessão local ainda válida.
+        if (mounted && cached) setValidation((current) => current ? { ...current, offline: true } : cached);
       } finally {
-        const minimumVisibleMs = firstSecureBoot.current ? 480 : 0;
+        const minimumVisibleMs = firstSecureBoot.current && !cached ? 480 : 0;
         const remaining = Math.max(0, minimumVisibleMs - (Date.now() - startedAt));
         if (remaining) await new Promise<void>((resolve) => window.setTimeout(resolve, remaining));
         if (mounted) {
@@ -486,6 +518,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
         }
       }
     }
+
     void restore();
     return () => { mounted = false; };
   }, []);

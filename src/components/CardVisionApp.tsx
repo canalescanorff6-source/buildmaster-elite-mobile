@@ -195,6 +195,7 @@ import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/ac
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
 import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
+import { isStartupSafeModeV3840, safeStartupInitializerV3840 } from '@/lib/startupResilienceV3840';
 import {
   buildProfessionalReportHtml,
   downloadBlobFile,
@@ -228,7 +229,7 @@ import {
   emptyManualFields,
   ensureSkillProgress,
   findLearnedCard,
-  loadHistoryStore,
+  loadHistoryStoreForStartup,
   memoryKey,
   mergeHistoryLists,
   normalizeHistoryList,
@@ -363,8 +364,30 @@ function safeCentralDashboard(players: IntegratedPlayerRecord[], matches: MatchV
     };
   }
 }
+function safeViewComputation<T>(area: string, compute: () => T, fallback: T): T {
+  try {
+    return compute();
+  } catch (cause) {
+    void recordSafeRuntimeError({
+      area,
+      code: 'render_computation_failed',
+      message: cause instanceof Error ? cause.message : 'Cálculo visual incompatível foi isolado.'
+    });
+    return fallback;
+  }
+}
 export function CardVisionApp() {
-  const account = useBuildMasterAccount(), ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
+  const account = useBuildMasterAccount();
+  const [startupGate, setStartupGate] = useState({ ready: false, safeMode: false });
+  const startupGateReady = startupGate.ready;
+  const startupSafeMode = startupGate.safeMode;
+  useEffect(() => {
+    setStartupGate({
+      ready: true,
+      safeMode: safeStartupInitializerV3840(isStartupSafeModeV3840, false)
+    });
+  }, []);
+  const ocrVisionEnabled = useObservabilityFeatureFlag('ocrVision2');
   const [preview, setPreview] = useState<string | null>(null), [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
   const [cardCropResult, setCardCropResult] = useState<CardCropResult | null>(null), [cardCropAdjustOpen, setCardCropAdjustOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null), [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -404,7 +427,7 @@ export function CardVisionApp() {
   const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
   const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');
   const controlProfile: ControlProfile = 'AUTO';
-  const [status, setStatus] = useState('Escolha como deseja criar a ficha. O aplicativo mostrará uma etapa por vez.');
+  const [status, setStatus] = useState('Preparando uma abertura segura do BuildMaster...');
   const lastPremiumStatusRef = useRef('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -412,14 +435,14 @@ export function CardVisionApp() {
   const [manualFields, setManualFields] = useState<ManualFields>(emptyManualFields());
   const [manualMode, setManualMode] = useState(false);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
-  const [vaultTrash, setVaultTrash] = useState<VaultTrashItem<SavedAnalysis>[]>(() => readVaultTrash<SavedAnalysis>());
+  const [vaultTrash, setVaultTrash] = useState<VaultTrashItem<SavedAnalysis>[]>([]);
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('ALL');
   const [historySort, setHistorySort] = useState<HistorySort>('UPDATED');
   const [onlyPendingSkills, setOnlyPendingSkills] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [vaultView, setVaultView] = useState<VaultView>('jogadores');
-  const [settingsView, setSettingsView] = useState<SettingsView>(() => settingsViewForPremiumTarget(readPremiumExperience2Preferences().startTarget) ?? 'visao-geral');
+  const [settingsView, setSettingsView] = useState<SettingsView>('visao-geral');
   const [updateNotice, setUpdateNotice] = useState<string | null>(null);
   const [comparePlayerIds, setComparePlayerIds] = useState<string[]>([]);
   const [comparePosition, setComparePosition] = useState<PositionCode>('CF');
@@ -429,7 +452,7 @@ export function CardVisionApp() {
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
   const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('midnight-navy');
-  const [profileAvatar, setProfileAvatar] = useState<string | null>(() => readProfileAvatar());
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [teamAdvancedOpen, setTeamAdvancedOpen] = useState(false);
   const [textScale, setTextScale] = useState<TextScale>('standard');
@@ -443,7 +466,7 @@ export function CardVisionApp() {
   const backgroundResumeStartedRef = useRef(false);
 
   useEffect(() => {
-    if (backgroundResumeStartedRef.current) return;
+    if (!startupGateReady || startupSafeMode || backgroundResumeStartedRef.current) return;
     backgroundResumeStartedRef.current = true;
     let active = true;
     void readBackgroundOcrCheckpoint().then((checkpoint) => {
@@ -456,20 +479,12 @@ export function CardVisionApp() {
       window.setTimeout(() => { if (active) void analyzeSelectedImage(restored, true); }, 80);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, []);
+  }, [startupGateReady, startupSafeMode]);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-  const [mainSection, setMainSection] = useState<MainSection>(() => {
-    if (typeof window === 'undefined') return 'inicio';
-    const deepLink = parseInternalDeepLink(window.location.hash);
-    if (deepLink) return sectionForNavigation(deepLink.group, deepLink.workspace);
-    return 'inicio';
-  });
-  const [playerWorkspace, setPlayerWorkspace] = useState<PlayerWorkspace>(() => {
-    if (typeof window === 'undefined') return 'visao-geral';
-    return parseInternalDeepLink(window.location.hash)?.workspace ?? readNavigationSnapshot()?.playerWorkspace ?? 'visao-geral';
-  });
+  const [mainSection, setMainSection] = useState<MainSection>('inicio');
+  const [playerWorkspace, setPlayerWorkspace] = useState<PlayerWorkspace>('visao-geral');
   const scrollPositionsRef = useRef<Partial<Record<MainSection, number>>>({});
   const [navigationTrail, setNavigationTrail] = useState<MainSection[]>([]);
   const [resultTabRequest, setResultTabRequest] = useState<ResultTabRequest | null>(null);
@@ -540,6 +555,7 @@ export function CardVisionApp() {
     return () => { active = false; };
   }, [mainSection, settingsView]);
   useEffect(() => {
+    if (!startupGateReady || startupSafeMode) return;
     const reloadMatches = () => {
       try {
         const parsed = JSON.parse(readAccountStorage(MATCH_VALIDATION_STORAGE_KEY) || '[]') as MatchValidationRecord[];
@@ -554,8 +570,9 @@ export function CardVisionApp() {
       cancelIdleTask(handle);
       window.removeEventListener('buildmaster:match-validation-updated', reloadMatches);
     };
-  }, [performanceMode]);
+  }, [performanceMode, startupGateReady, startupSafeMode]);
   useEffect(() => {
+    if (!startupGateReady || startupSafeMode) return;
     const handle = scheduleIdleTask(() => {
       try {
         const existing = readAccountStorage(CENTRAL_MIGRATION_STORAGE_KEY);
@@ -573,7 +590,7 @@ export function CardVisionApp() {
       }
     }, performanceMode === 'economy' ? 1800 : 700);
     return () => cancelIdleTask(handle);
-  }, [performanceMode]);
+  }, [performanceMode, startupGateReady, startupSafeMode]);
   useEffect(() => {
     if (!mobileLauncher) return;
     const previousOverflow = document.body.style.overflow;
@@ -619,14 +636,18 @@ export function CardVisionApp() {
     if (!selectedFormationBlueprint) return null;
     return { title: `${selectedFormationBlueprint.name} — leitura por funções`, bestStyle: selectedFormationBlueprint.idealStyles[0] ?? 'POSSE_DE_BOLA', styleReason: `${selectedFormationBlueprint.description} Risco principal: ${selectedFormationBlueprint.risk}`, howToPlay: selectedFormationBlueprint.behavior, roles: selectedFormationBlueprint.slots.filter((slot) => slot.line !== 'goleiro').slice(0, 6).map((slot) => `${slot.label}: ${slot.duty}`) };
   }, [formation, selectedFormationBlueprint]);
-  const activeSavedAnalysis = useMemo(() => {
+  const renderHistory = useMemo(
+    () => safeViewComputation('history-render-sanitizer', () => normalizeHistoryList(history), [] as SavedAnalysis[]),
+    [history]
+  );
+  const activeSavedAnalysis = useMemo(() => safeViewComputation('active-saved-analysis', () => {
     if (!result) return null;
     const key = resultHistoryKey(result);
-    return history.find((item) => item.id === activeHistoryId || item.saveKey === key) ?? null;
-  }, [history, activeHistoryId, result]);
-  const filteredHistory = useMemo(() => {
+    return renderHistory.find((item) => item.id === activeHistoryId || item.saveKey === key) ?? null;
+  }, null as SavedAnalysis | null), [renderHistory, activeHistoryId, result]);
+  const filteredHistory = useMemo(() => safeViewComputation('vault-filtering', () => {
     const query = memoryKey(historySearch);
-    let items = history.filter((item) => {
+    let items = renderHistory.filter((item) => {
       const searchable = `${item.result.parsed.playerName} ${item.result.bestPosition.label} ${item.result.buildName} ${item.result.parsed.playstyle ?? ''} ${(item.result.parsed.nativeSkills ?? []).join(' ')} ${(item.result.recommendedSkills ?? []).join(' ')} ${(item.personalTags ?? []).join(' ')} ${item.notes ?? ''} ${item.tacticalRoleNote ?? ''}`;
       const matchesQuery = !query || memoryKey(searchable).includes(query);
       if (!matchesQuery || !entryMatchesAdvancedFilters(item, vaultFilters)) return false;
@@ -650,11 +671,11 @@ export function CardVisionApp() {
       return String(b.updatedAt || b.savedAt).localeCompare(String(a.updatedAt || a.savedAt), 'pt-BR');
     });
     return items;
-  }, [history, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
-  const dashboardStats = useMemo(() => buildDashboardStats(history), [history]);
-  const cleanVaultSummary = useMemo(() => buildCleanVaultSummaryV3800(history), [history]);
-  const smartHome = useMemo(() => buildSmartHomeSummary(history), [history]);
-  const integratedPlayers = useMemo(() => safeIntegratedPlayers(history.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [history, centralMatchRecords]);
+  }, [] as SavedAnalysis[]), [renderHistory, historySearch, historyFilter, historySort, onlyPendingSkills, vaultFilters]);
+  const dashboardStats = useMemo(() => safeViewComputation('dashboard-stats', () => buildDashboardStats(renderHistory), { total: 0, pending: 0, complete: 0, favorites: 0, positions: 0, review: 0, skillsTotal: 0, skillsDone: 0, completion: 0 }), [renderHistory]);
+  const cleanVaultSummary = useMemo(() => safeViewComputation('clean-vault-summary', () => buildCleanVaultSummaryV3800(renderHistory), { players: 0, fichas: 0, favorites: 0, archived: 0, review: 0, duplicateGroups: 0 }), [renderHistory]);
+  const smartHome = useMemo(() => safeViewComputation('smart-home-summary', () => buildSmartHomeSummary(renderHistory), { total: 0, needsReview: 0, lowConfidence: 0, incomplete: 0, recentPlayer: null, nextAction: 'Criar a primeira ficha pelo Leitor Elite ou modo Manual Pro.', alerts: [] }), [renderHistory]);
+  const integratedPlayers = useMemo(() => safeViewComputation('integrated-players', () => safeIntegratedPlayers(renderHistory.map((item) => ({ id: item.id, updatedAt: item.updatedAt || item.savedAt, favorite: item.favorite, status: savedStatusLabel(item), playerImage: item.playerImage, result: item.result })), centralMatchRecords), [] as IntegratedPlayerRecord[]), [renderHistory, centralMatchRecords]);
   const integratedTeam = useMemo(() => safeTeamDiagnosis(integratedPlayers, formation, teamStyle), [integratedPlayers, formation, teamStyle]);
   const centralDashboard = useMemo(() => safeCentralDashboard(integratedPlayers, centralMatchRecords, integratedTeam), [integratedPlayers, centralMatchRecords, integratedTeam]);
   const centralMatchPlans = useMemo(() => {
@@ -669,6 +690,7 @@ export function CardVisionApp() {
     }
   }, [integratedPlayers, integratedTeam, centralMatchRecords, formation, teamStyle]);
   useEffect(() => {
+    if (!startupGateReady || startupSafeMode) return;
     const handle = scheduleIdleTask(() => {
       try {
         writeAccountStorage(CENTRAL_INDEX_STORAGE_KEY, JSON.stringify(centralEntityIndex));
@@ -677,43 +699,84 @@ export function CardVisionApp() {
       }
     }, performanceMode === 'economy' ? 2400 : 900);
     return () => cancelIdleTask(handle);
-  }, [centralEntityIndex, performanceMode]);
+  }, [centralEntityIndex, performanceMode, startupGateReady, startupSafeMode]);
   useEffect(() => {
+    if (!startupGateReady || startupSafeMode) return;
     const handle = scheduleIdleTask(() => {
       const cards = readJsonStorage(CARD_REGISTRY_STORAGE_KEY, []) as unknown[];
       void syncStructuredRepository({
         cards: Array.isArray(cards) ? cards : [],
-        builds: history,
+        builds: renderHistory,
         formations: [centralEntityIndex.team],
         matches: centralMatchRecords
       }).catch((cause) => recordSafeRuntimeError({ area: 'structured-repository', code: 'sync_failed', message: cause instanceof Error ? cause.message : 'Falha ao sincronizar banco estruturado' }));
     }, performanceMode === 'economy' ? 3200 : 1200);
     return () => cancelIdleTask(handle);
-  }, [history, centralMatchRecords, centralEntityIndex, performanceMode]);
-  const localIntegrity = useMemo(() => inspectDataIntegrity({
-    history,
+  }, [renderHistory, centralMatchRecords, centralEntityIndex, performanceMode, startupGateReady, startupSafeMode]);
+  const localIntegrity = useMemo(() => safeViewComputation('local-integrity', () => inspectDataIntegrity({
+    history: renderHistory,
     settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
     calibration: { ocrZones, efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones) },
     folders: vaultFolders,
     plans: {},
-  }), [history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders]);
+  }), { score: 70, status: 'attention' as const, issues: [], totals: { sections: 0, records: renderHistory.length, malformed: 0 } }), [renderHistory, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders]);
   const healthSummary = useMemo(() => {
     const age = lastBackupAt ? Math.max(0, Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000)) : null;
-    return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: history.length });
-  }, [localIntegrity, lastBackupAt, smartHome.needsReview, smartHome.lowConfidence, history.length]);
+    return buildHealthSummary({ integrity: localIntegrity, backupAgeDays: age, pendingReviews: smartHome.needsReview, lowConfidence: smartHome.lowConfidence, totalHistory: renderHistory.length });
+  }, [localIntegrity, lastBackupAt, smartHome.needsReview, smartHome.lowConfidence, renderHistory.length]);
   const fullSyncHealth = useMemo(() => {
-    const local = syncHealthEnvelope ?? createBackupEnvelope({
-      history,
-      settings: { visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode },
-      calibration: { ocrZones, efhubVisualMap: createEfhubCalibrationMap(efhubCalibrationZones) },
-      folders: vaultFolders,
-      evolution: { matchValidation: centralMatchRecords }
-    });
-    return buildSyncHealth({ local, remote: remoteFullBackup, snapshots: backupSnapshots, lastSyncAt: lastFullSyncAt });
-  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, history, visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, ocrZones, efhubCalibrationZones, vaultFolders, centralMatchRecords]);
-  const availablePlaystyles = useMemo(() => Array.from(new Set(history.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
-  const availableSkills = useMemo(() => Array.from(new Set(history.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [history]);
-  const playerComparison = useMemo(() => comparePlayers(history.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), [history, comparePlayerIds, comparePosition]);
+    const lastSyncAge = lastFullSyncAt
+      ? Math.max(0, Math.floor((Date.now() - Date.parse(lastFullSyncAt)) / 86400000))
+      : null;
+
+    if (!syncHealthEnvelope) {
+      // A Central de Backup é informativa e nunca pode impedir a abertura do app.
+      // Na inicialização usamos somente contagens e integridade já calculadas;
+      // a serialização profunda acontece apenas quando o usuário exporta ou sincroniza.
+      const score = Math.max(0, Math.min(100,
+        localIntegrity.score
+        - (lastSyncAge == null ? 12 : lastSyncAge > 14 ? 10 : lastSyncAge > 7 ? 5 : 0)
+        + Math.min(8, backupSnapshots.length * 2)
+      ));
+      return {
+        score,
+        status: score >= 90 ? 'Protegido' : score >= 72 ? 'Atenção' : 'Risco',
+        integrity: localIntegrity,
+        conflicts: [] as SectionConflict[],
+        different: 0,
+        localOnly: 0,
+        remoteOnly: 0,
+        lastSyncAge,
+        recommendation: remoteFullBackup
+          ? 'A cópia da nuvem foi encontrada. Toque em sincronizar para comparar e mesclar sem bloquear a abertura.'
+          : lastSyncAge == null
+            ? 'Faça a primeira sincronização completa quando desejar; o app continuará abrindo sem processar todo o Cofre na inicialização.'
+            : lastSyncAge > 7
+              ? 'Atualize a cópia em nuvem quando desejar.'
+              : 'Dados locais e proteção estão em bom estado.'
+      };
+    }
+
+    try {
+      return buildSyncHealth({ local: syncHealthEnvelope, remote: remoteFullBackup, snapshots: backupSnapshots, lastSyncAt: lastFullSyncAt });
+    } catch (cause) {
+      console.warn('Diagnóstico completo de backup adiado por volume local:', cause);
+      return {
+        score: Math.max(0, Math.min(100, localIntegrity.score - 4)),
+        status: 'Atenção',
+        integrity: localIntegrity,
+        conflicts: [] as SectionConflict[],
+        different: 0,
+        localOnly: 0,
+        remoteOnly: 0,
+        lastSyncAge,
+        recommendation: 'O volume de dados local é grande. O aplicativo continuará abrindo normalmente; a verificação completa será refeita somente ao exportar ou sincronizar.'
+      };
+    }
+  }, [syncHealthEnvelope, remoteFullBackup, backupSnapshots, lastFullSyncAt, localIntegrity]);
+  const availablePlaystyles = useMemo(() => safeViewComputation('available-playstyles', () => Array.from(new Set(renderHistory.map((item) => item.result.parsed.playstyle).filter(Boolean) as string[])).sort((a,b) => a.localeCompare(b, 'pt-BR')), [] as string[]), [renderHistory]);
+  const availableSkills = useMemo(() => safeViewComputation('available-skills', () => Array.from(new Set(renderHistory.flatMap((item) => [...(item.result.parsed.nativeSkills ?? []), ...(item.result.recommendedSkills ?? [])]))).sort((a,b) => a.localeCompare(b, 'pt-BR')), [] as string[]), [renderHistory]);
+  const playerComparison = useMemo(() => safeViewComputation('player-comparison', () => comparePlayers(renderHistory.filter((item) => comparePlayerIds.includes(item.id)).map((item) => ({ id: item.id, result: item.result })), comparePosition), comparePlayers([], comparePosition)), [renderHistory, comparePlayerIds, comparePosition]);
   const activeVaultFilterCount = useMemo(() => [
     Boolean(historySearch.trim()),
     historyFilter !== 'ALL',
@@ -730,7 +793,7 @@ export function CardVisionApp() {
   ].filter(Boolean).length, [historySearch, historyFilter, vaultFilters]);
   const mainNavigation = useMemo<Array<{ id: MainSection; label: string; hint: string; icon: 'dashboard' | 'scan' | 'manual' | 'result' | 'vault' | 'team' | 'settings'; disabled?: boolean }>>(() => [
     { id: 'inicio', label: 'Central', hint: 'Resumo do app', icon: 'dashboard' },
-    { id: 'jogadores', label: 'Jogadores', hint: `${history.length} salvos`, icon: 'vault' },
+    { id: 'jogadores', label: 'Jogadores', hint: `${renderHistory.length} salvos`, icon: 'vault' },
     { id: 'mapeamento', label: 'Mapeamento', hint: 'Melhor time e reservas', icon: 'team' },
     { id: 'time', label: 'Meu Time', hint: 'Formação e elenco', icon: 'team' },
     { id: 'partidas', label: 'Partidas', hint: `${centralMatchRecords.length} análises`, icon: 'result' },
@@ -740,8 +803,8 @@ export function CardVisionApp() {
     { id: 'leitor', label: 'Ler print', hint: 'Importar e analisar', icon: 'scan' },
     { id: 'manual', label: 'Criar manual', hint: 'Preencher sem print', icon: 'manual' },
     { id: 'resultado', label: 'Resultado', hint: result || draftResult ? 'Ficha atual' : 'Sem ficha', icon: 'result', disabled: !result && !draftResult },
-    { id: 'cofre', label: 'Cofre', hint: `${history.length} fichas salvas`, icon: 'vault' }
-  ], [history.length, result, draftResult, centralMatchRecords.length]);
+    { id: 'cofre', label: 'Cofre', hint: `${renderHistory.length} fichas salvas`, icon: 'vault' }
+  ], [renderHistory.length, result, draftResult, centralMatchRecords.length]);
   const currentNavigation = mainNavigation.find((item) => item.id === mainSection) ?? mainNavigation[0];
   const currentNavigationGroup = navigationGroupFor(mainSection);
   const currentPlayerWorkspace = playerWorkspaceFor(mainSection);
@@ -825,7 +888,7 @@ export function CardVisionApp() {
     const recentNavigation = mainNavigation.find((item) => item.id === section);
     recordPremiumRecentActivity({ target: premiumTargetForSection(section), label: recentNavigation?.label ?? section, detail: recentNavigation?.hint ?? 'Área do BuildMaster aberta.' });
     if (section === 'cofre') {
-      setStatus(history.length ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
+      setStatus(renderHistory.length ? `Cofre de Jogadores aberto com ${renderHistory.length} ficha(s) salva(s).` : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui.');
     }
     if (section === 'manual' && !options.skipManualBootstrap && !manualMode && !draftResult && !result && !preview && !rawText.trim() && !manualFields.playerName.trim() && !manualFields.trainingPointsTotal.trim()) {
       startManualPreciseMode();
@@ -866,8 +929,9 @@ export function CardVisionApp() {
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {
+    if (!startupGateReady || startupSafeMode) return;
     void refreshOcrQueue();
-  }, []);
+  }, [startupGateReady, startupSafeMode]);
   useEffect(() => {
     const onUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ version?: string; reason?: string }>).detail;
@@ -892,12 +956,38 @@ export function CardVisionApp() {
   }, []);
   useEffect(() => {
     let mounted = true;
+    if (!startupGateReady) return () => { mounted = false; };
+    if (startupSafeMode) {
+      setHistory([]);
+      setSessionHydrated(true);
+      setShowSplash(false);
+      setStatus('Modo compatível ativo. O app abriu sem restaurar sessão, OCR pendente ou Cofre pesado; seus dados permanentes continuam preservados.');
+      return () => { mounted = false; };
+    }
+    setStatus('Abrindo o BuildMaster com restauração progressiva e protegida...');
+    setVaultTrash(safeStartupInitializerV3840(() => readVaultTrash<SavedAnalysis>(), []));
+    setSettingsView(safeStartupInitializerV3840(() => settingsViewForPremiumTarget(readPremiumExperience2Preferences().startTarget) ?? 'visao-geral', 'visao-geral'));
+    if (typeof window !== 'undefined') {
+      const deepLink = safeStartupInitializerV3840(() => parseInternalDeepLink(window.location.hash), null);
+      const navigation = safeStartupInitializerV3840(readNavigationSnapshot, null);
+      if (deepLink) {
+        setMainSection(sectionForNavigation(deepLink.group, deepLink.workspace));
+        setPlayerWorkspace(deepLink.workspace);
+      } else if (navigation?.playerWorkspace) {
+        setPlayerWorkspace(navigation.playerWorkspace);
+      }
+    }
     void migrateLegacyRuntimeData().catch(() => ({ migrated: 0, skipped: 0 }));
-    void loadHistoryStore()
-      .then((next) => {
+    void loadHistoryStoreForStartup()
+      .then(({ items, nativeDeferredBytes }) => {
         if (!mounted) return;
+        const next = normalizeHistoryList(items);
         setHistory(next);
-        if (next.length) void persistHistoryStore(next);
+        if (next.length && nativeDeferredBytes === 0) void persistHistoryStore(next);
+        if (nativeDeferredBytes > 0) {
+          const megabytes = Math.max(1, Math.round(nativeDeferredBytes / (1024 * 1024)));
+          setStatus(`O Cofre interno de ${megabytes} MB foi preservado e adiado para impedir travamento na abertura. O restante do aplicativo está disponível.`);
+        }
       })
       .catch(() => {
         if (mounted) setHistory([]);
@@ -1016,14 +1106,15 @@ export function CardVisionApp() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [startupGateReady, startupSafeMode]);
   useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
     try {
       writeAccountStorage(CALIBRATION_KEY, JSON.stringify(ocrZones));
     } catch {
       // Calibração é local e opcional.
     }
-  }, [ocrZones]);
+  }, [ocrZones, sessionHydrated, startupSafeMode]);
   useEffect(() => {
     efhubCalibrationZonesRef.current = efhubCalibrationZones;
   }, [efhubCalibrationZones]);
@@ -1031,31 +1122,36 @@ export function CardVisionApp() {
     efhubCalibrationActiveRef.current = efhubCalibrationActive;
   }, [efhubCalibrationActive]);
   useEffect(() => {
-    setProfileAvatar(readProfileAvatar());
-  }, [account?.profile.id, account?.profile.username]);
+    if (!startupGateReady || startupSafeMode) return;
+    setProfileAvatar(safeStartupInitializerV3840(readProfileAvatar, null));
+  }, [account?.profile.id, account?.profile.username, startupGateReady, startupSafeMode]);
   useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
     try {
       writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
     } catch {
       // Preferências visuais são opcionais.
     }
-  }, [visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode]);
+  }, [visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, sessionHydrated, startupSafeMode]);
   useEffect(() => {
+    if (!startupGateReady || startupSafeMode) return;
     try {
       const stored = JSON.parse(readAccountStorage(VAULT_FOLDERS_KEY) || '[]') as VaultFolder[];
       if (Array.isArray(stored) && stored.length) setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...stored.filter((folder) => folder.kind === 'custom' && !DEFAULT_VAULT_FOLDERS.some((base) => base.id === folder.id))]);
     } catch {
       setVaultFolders(DEFAULT_VAULT_FOLDERS);
     }
-  }, []);
+  }, [startupGateReady, startupSafeMode]);
   useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
     try {
       writeAccountStorage(VAULT_FOLDERS_KEY, JSON.stringify(vaultFolders.filter((folder) => folder.kind === 'custom')));
     } catch {
       // Pastas personalizadas continuam opcionais.
     }
-  }, [vaultFolders]);
+  }, [vaultFolders, sessionHydrated, startupSafeMode]);
   useEffect(() => {
+    if (!sessionHydrated || startupSafeMode) return;
     const hasWork = Boolean(rawText.trim() || result || draftResult || manualMode || playerCardImage);
     if (!hasWork) {
       try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
@@ -1099,7 +1195,7 @@ export function CardVisionApp() {
       }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId]);
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId, sessionHydrated, startupSafeMode]);
   // v25.77: a ficha não é mais salva automaticamente ao finalizar.
   // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
   // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
@@ -1177,7 +1273,7 @@ export function CardVisionApp() {
   function requireSecureAccountCloud(): void {
     if (!account?.cloudEnabled) throw new Error('A nuvem segura desta conta não está disponível. O Cofre antigo e compartilhado foi removido.');
   }
-  async function pushCloudHistory(items: SavedAnalysis[] = history, silent = false) {
+  async function pushCloudHistory(items: SavedAnalysis[] = renderHistory, silent = false) {
     if (!items.length) {
       if (!silent) setCloudStatus('Nenhuma ficha local para enviar à nuvem.');
       return;
@@ -1233,7 +1329,7 @@ export function CardVisionApp() {
       requireSecureAccountCloud();
       const snapshot = await loadAccountVault<{ items?: unknown[] }>();
       const cloudItems = normalizeHistoryList(Array.isArray(snapshot?.items) ? snapshot.items : []);
-      const merged = mergeHistoryLists(history, cloudItems);
+      const merged = mergeHistoryLists(renderHistory, cloudItems);
       await persistHistoryStore(merged);
       setHistory(merged);
       await syncAccountVault({ ...(snapshot && typeof snapshot === 'object' ? snapshot : {}), items: merged, version: APP_DATA_VERSION, updatedAt: new Date().toISOString() });
@@ -1252,7 +1348,7 @@ export function CardVisionApp() {
   async function deleteCloudHistoryItem(item: SavedAnalysis) {
     try {
       if (!account?.cloudEnabled) return;
-      const next = history.filter((entry) => entry.id !== item.id && entry.saveKey !== item.saveKey);
+      const next = renderHistory.filter((entry) => entry.id !== item.id && entry.saveKey !== item.saveKey);
       if (next.length) {
         const existing = await loadAccountVault<Record<string, unknown>>();
         await syncAccountVault({ ...(existing || {}), items: next, version: APP_DATA_VERSION, updatedAt: new Date().toISOString() });
@@ -1304,8 +1400,8 @@ export function CardVisionApp() {
   function openCofreDeJogadores() {
     setMainSection('cofre');
     setLibraryOpen(true);
-    setStatus(history.length
-      ? `Cofre de Jogadores aberto com ${history.length} ficha(s) salva(s).`
+    setStatus(renderHistory.length
+      ? `Cofre de Jogadores aberto com ${renderHistory.length} ficha(s) salva(s).`
       : 'Cofre de Jogadores aberto. Quando finalizar uma ficha, ela será salva aqui automaticamente.');
   }
   function restoreHistory(item: SavedAnalysis) {
@@ -1329,7 +1425,7 @@ export function CardVisionApp() {
     setStatus(`Análise restaurada: ${item.result.parsed.playerName}.`);
   }
   function openIntegratedPlayer(id: string, destination: 'vault' | 'result' | 'matches' = 'result') {
-    const item = history.find((entry) => entry.id === id);
+    const item = renderHistory.find((entry) => entry.id === id);
     if (!item) {
       setStatus('O jogador não foi encontrado no banco unificado.');
       return;
@@ -1365,8 +1461,8 @@ export function CardVisionApp() {
     const saveAsReview = !quality.readyToSave;
     const key = resultHistoryKey(result);
     const now = new Date().toLocaleString('pt-BR');
-    const existingByKey = history.find((entry) => entry.saveKey === key);
-    const existing = existingByKey ?? findExactVaultDuplicateByResult(history, result);
+    const existingByKey = renderHistory.find((entry) => entry.saveKey === key);
+    const existing = existingByKey ?? findExactVaultDuplicateByResult(renderHistory, result);
     const base: SavedAnalysis = {
       id: existing?.id ?? createStableId('ficha'),
       saveKey: key,
@@ -1390,7 +1486,7 @@ export function CardVisionApp() {
       existing ? (duplicateDetected ? 'duplicata evitada' : 'atualizado') : 'criado',
       existing ? (duplicateDetected ? 'A mesma carta, ficha, habilidades e Booster já existiam; o registro anterior foi atualizado sem criar uma cópia.' : 'Ficha atualizada por cima da versão salva.') : 'Ficha salva no Cofre Clean.'
     );
-    const next = [item, ...history.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
+    const next = [item, ...renderHistory.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
     setActiveHistoryId(item.id);
     setHistory(next);
     setStatus('Salvando a ficha na memória interna do aparelho...');
@@ -1438,7 +1534,7 @@ export function CardVisionApp() {
     }
   }
   function prepareCommunitySharePayload(kind: CommunityShareKind): unknown {
-    if (kind === 'player_build') return result ?? history[0]?.result ?? { notice: 'Nenhuma ficha selecionada.' };
+    if (kind === 'player_build') return result ?? renderHistory[0]?.result ?? { notice: 'Nenhuma ficha selecionada.' };
     if (kind === 'formation') return { formation, teamStyle, managerId };
     if (kind === 'training_plan') return { goals: readJsonStorage(TRAINING_GOALS_STORAGE_KEY, {}), reviews: readJsonStorage(SMART_COACH_REVIEW_STORAGE_KEY, []) };
     if (kind === 'opponent_plan') return readOpponentMatchPlans()[0] ?? { formation, teamStyle };
@@ -1446,7 +1542,7 @@ export function CardVisionApp() {
   }
   async function collectFullBackupSections(): Promise<BackupEnvelope['sections']> {
     return {
-      history,
+      history: renderHistory,
       settings: {
         ...((readJsonStorage('buildmaster_ui_prefs_v24_24', { appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast }) || {}) as Record<string, unknown>),
         profileAvatar,
@@ -1541,7 +1637,7 @@ export function CardVisionApp() {
   async function exportIncrementalBackup() {
     try {
       const cutoff = lastBackupAt ? Date.parse(lastBackupAt) : 0;
-      const changed = history.filter((item) => {
+      const changed = renderHistory.filter((item) => {
         const updated = Date.parse(item.updatedAt || item.savedAt || '');
         return !cutoff || !Number.isFinite(updated) || updated > cutoff;
       });
@@ -1587,7 +1683,7 @@ export function CardVisionApp() {
   async function exportPlayersBackup(reason: 'manual' | 'update' = 'manual') {
     try {
       const envelope = createBackupEnvelope({
-        history,
+        history: renderHistory,
         folders: vaultFolders,
         calibration: {
           matches: readJsonStorage(CALIBRATION_STORAGE_KEY, {}),
@@ -1607,14 +1703,14 @@ export function CardVisionApp() {
       const suffix = reason === 'update' ? 'antes-atualizacao' : 'jogadores-treinados';
       await downloadEncryptedBackup(envelope, `buildmaster-${suffix}-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
       writeAccountStorage('buildmaster_last_players_backup', envelope.exportedAt);
-      setStatus(reason === 'update' ? 'Backup criptografado criado antes da atualização.' : `Backup criptografado criado com ${history.length} jogador(es).`);
+      setStatus(reason === 'update' ? 'Backup criptografado criado antes da atualização.' : `Backup criptografado criado com ${renderHistory.length} jogador(es).`);
     } catch (cause) {
       setStatus(cause instanceof Error ? cause.message : 'Não foi possível criar o backup criptografado.');
       throw cause;
     }
   }
   async function prepareBackupForUpdate() {
-    await persistHistoryStore(history);
+    await persistHistoryStore(renderHistory);
     const envelope = createBackupEnvelope(await collectFullBackupSections());
     await runtimePut('builds', 'update-recovery', {
       createdAt: envelope.exportedAt,
@@ -1906,9 +2002,9 @@ export function CardVisionApp() {
     }
   }
   async function exportHistoryBackup() {
-    if (!history.length) return;
+    if (!renderHistory.length) return;
     try {
-      const envelope = createBackupEnvelope({ history });
+      const envelope = createBackupEnvelope({ history: renderHistory });
       await downloadEncryptedBackup(envelope, `buildmaster-cofre-v${APP_DATA_VERSION}-${new Date().toISOString().slice(0, 10)}.bmbak`);
       setStatus('Backup rápido do Cofre criado e criptografado.');
     } catch (cause) {
@@ -1972,7 +2068,7 @@ export function CardVisionApp() {
     }
   }
   function deleteHistoryItem(id: string) {
-    const item = history.find((entry) => entry.id === id);
+    const item = renderHistory.find((entry) => entry.id === id);
     if (!item) return;
     moveToVaultTrash(item.id, item.result.parsed.playerName || 'Jogador sem nome', item);
     setVaultTrash(readVaultTrash<SavedAnalysis>());
@@ -1986,11 +2082,16 @@ export function CardVisionApp() {
     setStatus(`${item.result.parsed.playerName} foi movido para a Lixeira por 30 dias.`);
   }
   function restoreTrashItem(id: string) {
-    const item = restoreFromVaultTrash<SavedAnalysis>(id);
-    if (!item) return;
-    setVaultTrash(readVaultTrash<SavedAnalysis>());
+    const restored = restoreFromVaultTrash<SavedAnalysis>(id);
+    const item = normalizeHistoryList(restored ? [restored] : [])[0];
+    setVaultTrash(safeStartupInitializerV3840(() => readVaultTrash<SavedAnalysis>(), []));
+    if (!item) {
+      setStatus('O item antigo da Lixeira era incompatível e foi isolado sem alterar o Cofre.');
+      return;
+    }
     setHistory((current) => {
-      const next = [item, ...current.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT);
+      const safeCurrent = normalizeHistoryList(current);
+      const next = [item, ...safeCurrent.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT);
       void persistHistoryStore(next);
       void pushCloudHistory(next, true);
       return next;
@@ -2028,7 +2129,7 @@ export function CardVisionApp() {
     setStatus(`${ids.length} jogador(es) marcado(s) como ${statusTag || 'pendente'}.`);
   }
   function mergeSelectedHistory(ids: string[]) {
-    const selected = history.filter((entry) => ids.includes(entry.id)).sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0));
+    const selected = renderHistory.filter((entry) => ids.includes(entry.id)).sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0));
     if (selected.length < 2) return;
     const primary = selected[0];
     const duplicates = selected.slice(1);
@@ -2064,7 +2165,7 @@ export function CardVisionApp() {
     });
   }
   function duplicateHistoryItem(id: string) {
-    const item = history.find((entry) => entry.id === id);
+    const item = renderHistory.find((entry) => entry.id === id);
     if (!item) return;
     const copy: SavedAnalysis = {
       ...item,
@@ -2999,7 +3100,7 @@ export function CardVisionApp() {
   const creationReadinessPercent = Math.round((creationReadinessCount / creationReadinessSignals.length) * 100);
   const evolutionInput: EvolutionInput = {
     healthScore: healthSummary.score,
-    playerCount: history.length,
+    playerCount: renderHistory.length,
     pendingReviewCount: smartHome.needsReview,
     incompleteCount: smartHome.incomplete,
     lowConfidenceCount: smartHome.lowConfidence,
@@ -3082,7 +3183,7 @@ export function CardVisionApp() {
     { id: 'home', group: 'Navegação', label: 'Abrir Central', description: 'Resumo premium e prioridades do elenco.', keywords: ['dashboard', 'central'], run: () => openMainSection('inicio') },
     { id: 'new-print', group: 'Criar ficha', label: 'Ler print', description: 'Abre o leitor premium para analisar uma carta.', keywords: ['ocr', 'imagem', 'leitor'], run: () => openMainSection('leitor') },
     { id: 'new-manual', group: 'Criar ficha', label: 'Criar manualmente', description: 'Preencha posição, estilo, pontos e atributos sem usar print.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
-    { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${history.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
+    { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${renderHistory.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
     { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
     { id: 'squad-mapping', group: 'Mapeamento', label: 'Mapear elenco completo', description: 'Leia vários prints e escolha titulares, reservas e a melhor formação pelo desempenho.', keywords: ['elenco', 'formação', 'titulares', 'reservas', 'prints'], run: () => openMainSection('mapeamento') },
     { id: 'team', group: 'Time', label: 'Abrir Meu Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
@@ -3102,6 +3203,19 @@ export function CardVisionApp() {
     { id: 'accounts', group: 'Ajustes', label: account?.profile.role === 'admin' ? 'Criar e gerenciar contas' : 'Minha conta e licença', description: account?.profile.role === 'admin' ? 'Abra diretamente a criação de usuários, prazos e aparelhos.' : 'Consulte os dados e a validade da sua licença.', keywords: ['usuário', 'licença', 'criar conta', 'admin'], run: () => { setMainSection('ajustes'); setSettingsView('contas'); } },
     { id: 'assistant', group: 'Assistente', label: 'Abrir Assistente BuildMaster', description: 'Use os dados integrados de jogadores, time e partidas.', keywords: ['ajuda', 'recomendação'], run: () => setAssistantOpen(true) }
   ];
+  if (!startupGateReady) {
+    return (
+      <main className="app-route-loading" style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 24 }} role="status" aria-live="polite">
+        <div className="splash-premium-shell">
+          <PremiumBrand variant="hero" showVersion />
+          <div className="splash-secure-badge"><ShieldCheck size={15} /> Inicialização protegida</div>
+          <h2>Abrindo o BuildMaster</h2>
+          <p>Preparando a interface antes de ler qualquer sessão ou arquivo local.</p>
+          <i className="splash-progress"><b /></i>
+        </div>
+      </main>
+    );
+  }
   return (
     <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <MobileScrollRecovery />
@@ -3227,8 +3341,8 @@ export function CardVisionApp() {
         <PremiumMenuScreen
           username={account?.profile.username || 'Usuário Elite'}
           role={account?.profile.role || 'user'}
-          playerCount={history.length}
-          favoriteCount={history.filter((item) => item.favorite).length}
+          playerCount={renderHistory.length}
+          favoriteCount={renderHistory.filter((item) => item.favorite).length}
           onLogout={logout}
           onNavigate={(target) => {
             if (target === 'players') openMainSection('jogadores');
@@ -3250,7 +3364,7 @@ export function CardVisionApp() {
         />
       )}
       {mainSection === 'buscar' && (
-        <PremiumSearchScreen commands={appCommands} playerCount={history.length} />
+        <PremiumSearchScreen commands={appCommands} playerCount={renderHistory.length} />
       )}
       {mainSection === 'inicio' && (
         <section className="bm-v3790-home-stack">
@@ -3276,7 +3390,7 @@ export function CardVisionApp() {
       {mainSection === 'mapeamento' && (
         <SectionErrorBoundary area="mapeamento-inteligente-elenco">
           <SquadMappingCenter
-            history={history}
+            history={renderHistory}
             onOpenFicha={(historyId) => openIntegratedPlayer(historyId, 'result')}
           />
         </SectionErrorBoundary>
@@ -3313,7 +3427,7 @@ export function CardVisionApp() {
                     {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
                   </article>
                   <SectionErrorBoundary area="meu-time-avancado">
-                    <TeamFullMapPanel history={history} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
+                    <TeamFullMapPanel history={renderHistory} formation={formation} teamStyle={teamStyle} onFormationChange={(nextFormation) => { setFormation(nextFormation); setStatus(`Formação ${nextFormation} aplicada pela Central Profissional.`); }} />
                   </SectionErrorBoundary>
                 </div>
               )}
@@ -3679,7 +3793,7 @@ export function CardVisionApp() {
             </nav>
             {vaultView === 'jogadores' && (
               <CleanVaultV3800
-                entries={history}
+                entries={renderHistory}
                 visibleEntries={filteredHistory}
                 query={historySearch}
                 onQueryChange={setHistorySearch}
@@ -3720,8 +3834,8 @@ export function CardVisionApp() {
                 </div>
                 <div className="vault-folder-catalog">
                   {vaultFolders.map((folder) => {
-                    const count = folder.id === 'all' ? history.length : history.filter((item) => folderForEntry(item) === folder.id).length;
-                    const percent = history.length ? Math.round((count / history.length) * 100) : 0;
+                    const count = folder.id === 'all' ? renderHistory.length : renderHistory.filter((item) => folderForEntry(item) === folder.id).length;
+                    const percent = renderHistory.length ? Math.round((count / renderHistory.length) * 100) : 0;
                     return <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'vault-folder-card selected' : 'vault-folder-card'} onClick={() => { setVaultFilters((current) => ({ ...current, folderId: folder.id })); setVaultView('jogadores'); }}><div><Layers size={18} /><span>{folder.kind === 'custom' ? 'Pasta personalizada' : 'Pasta do sistema'}</span></div><strong>{folder.name}</strong><small>{count} jogador(es)</small><i><b style={{ width: `${percent}%` }} /></i></button>;
                   })}
                 </div>
@@ -3746,10 +3860,10 @@ export function CardVisionApp() {
                 </div>
                 <div className="comparison-control-bar">
                   <label><Target size={16} /><span>Posição comparada</span><select value={comparePosition} onChange={(event) => setComparePosition(event.target.value as PositionCode)}>{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></label>
-                  <button type="button" onClick={() => setComparePlayerIds(history.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button>
+                  <button type="button" onClick={() => setComparePlayerIds(renderHistory.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button>
                   <button type="button" onClick={() => setComparePlayerIds([])}>Limpar seleção</button>
                 </div>
-                {history.length ? <div className="compare-player-catalog">{history.map((item) => {
+                {renderHistory.length ? <div className="compare-player-catalog">{renderHistory.map((item) => {
                   const selected = comparePlayerIds.includes(item.id);
                   return <button type="button" className={selected ? 'compare-player-card selected' : 'compare-player-card'} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}><div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt="" /> : <span>{item.result.bestPosition.label.slice(0,3)}</span>}</div><div><strong>{item.result.parsed.playerName}</strong><span>{item.result.bestPosition.label}</span><small>Confiança {item.result.parsed.confidence ?? 0}%</small></div><i>{selected ? '✓' : '+'}</i></button>;
                 })}</div> : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}
@@ -3760,15 +3874,15 @@ export function CardVisionApp() {
               <section className="vault-view-panel vault-backup-panel luxury-panel">
                 <div className="vault-catalog-heading">
                   <div><p className="kicker"><ShieldCheck size={14} /> Proteção do Cofre</p><h3>Backup local e sincronização da conta</h3><span>Escolha o tipo de proteção sem misturar essas ações com o catálogo de jogadores.</span></div>
-                  <div className="vault-backup-health"><ShieldCheck size={18} /><div><strong>{history.length} ficha(s)</strong><span>{lastBackupAt ? `Último backup: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Backup manual ainda não registrado'}</span></div></div>
+                  <div className="vault-backup-health"><ShieldCheck size={18} /><div><strong>{renderHistory.length} ficha(s)</strong><span>{lastBackupAt ? `Último backup: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Backup manual ainda não registrado'}</span></div></div>
                 </div>
                 <div className="vault-backup-actions-grid">
-                  <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
-                  <button type="button" onClick={() => void exportHistoryBackup()} disabled={!history.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo criptografado</small></button>
-                  <button type="button" onClick={() => void exportIncrementalBackup()} disabled={!history.length}><div><Save size={21} /></div><strong>Backup incremental</strong><span>Inclui apenas fichas alteradas desde o último backup.</span><small>Mais leve e rápido</small></button>
+                  <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!renderHistory.length}><div><Download size={21} /></div><strong>Jogadores treinados</strong><span>Ficha, posição, habilidades, pastas e calibração.</span><small>Recomendado para trocar de celular</small></button>
+                  <button type="button" onClick={() => void exportHistoryBackup()} disabled={!renderHistory.length}><div><FileText size={21} /></div><strong>Backup simples</strong><span>Exporta rapidamente a lista atual do Cofre.</span><small>Arquivo criptografado</small></button>
+                  <button type="button" onClick={() => void exportIncrementalBackup()} disabled={!renderHistory.length}><div><Save size={21} /></div><strong>Backup incremental</strong><span>Inclui apenas fichas alteradas desde o último backup.</span><small>Mais leve e rápido</small></button>
                   <button type="button" onClick={() => verifyBackupInputRef.current?.click()}><div><ShieldCheck size={21} /></div><strong>Verificar arquivo</strong><span>Testa integridade em ambiente temporário.</span><small>Nenhum dado é substituído</small></button>
                   <button type="button" onClick={() => backupInputRef.current?.click()}><div><UploadCloud size={21} /></div><strong>Importar backup</strong><span>Restaure fichas salvas em outro aparelho.</span><small>O arquivo é validado antes</small></button>
-                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Supabase obrigatório'}</small></button>
+                  <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !renderHistory.length || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <UploadCloud size={21} />}</div><strong>Enviar para a conta</strong><span>Sincronize o Cofre separado deste usuário.</span><small>{account?.cloudEnabled ? 'Supabase conectado' : 'Supabase obrigatório'}</small></button>
                   <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading || !account?.cloudEnabled}><div>{cloudLoading ? <Loader2 className="spin" size={21} /> : <Download size={21} />}</div><strong>Baixar da conta</strong><span>Recupere a versão salva no servidor.</span><small>Mesclagem protegida</small></button>
                   <button type="button" onClick={() => { setMainSection('ajustes'); setSettingsView('backup'); }}><div><Save size={21} /></div><strong>Backup completo</strong><span>Preferências, planos, regras e sessão atual.</span><small>Abrir Backup</small></button>
                   <input ref={backupInputRef} className="sr-only" type="file" accept=".bmbak,application/json,.json" onChange={importHistoryBackup} />
@@ -3790,7 +3904,7 @@ export function CardVisionApp() {
                 <PremiumSettingsOverview
                   username={account?.profile.username || 'Usuário'}
                   version={APP_RELEASE_VERSION}
-                  playerCount={history.length}
+                  playerCount={renderHistory.length}
                   healthScore={healthSummary.score}
                   cloudEnabled={Boolean(account?.cloudEnabled)}
                   themeLabel={themeLabel(visualPreset)}
@@ -3807,7 +3921,7 @@ export function CardVisionApp() {
                 <div className="settings-command-status">
                   <article><span>Conta</span><strong>{account?.profile.username || 'Usuário'}</strong><small>{account?.cloudEnabled ? 'Licença online' : 'Modo local'}</small></article>
                   <article><span>Saúde local</span><strong>{healthSummary.score}/100</strong><small>{healthSummary.status}</small></article>
-                  <article><span>Cofre</span><strong>{history.length}</strong><small>ficha(s) protegida(s)</small></article>
+                  <article><span>Cofre</span><strong>{renderHistory.length}</strong><small>ficha(s) protegida(s)</small></article>
                 </div>
               </section>
               <section className="v27-migration-status luxury-panel"><ShieldCheck size={18}/><div><strong>Migração v27 concluída sem apagar dados</strong><span>{centralMigrationNote || 'Fichas, Cofre, formações, partidas, preferências, login e atualizações foram preservados.'}</span></div></section>
@@ -3904,7 +4018,7 @@ export function CardVisionApp() {
                       <div><p className="kicker"><Save size={15} /> Backup e restauração</p><h3>Proteja tudo antes de trocar ou atualizar</h3><span>Escolha um backup rápido do Cofre ou uma cópia completa do aplicativo.</span></div>
                       <span className="settings-state-pill">{lastBackupAt ? `Último: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Ainda não realizado'}</span>
                     </div>
-                    <div className="backup-readiness-banner"><ShieldCheck size={20} /><div><strong>{history.length} ficha(s) prontas para proteção</strong><span>O backup completo inclui preferências visuais, calibração, planos, pastas, regras e dados do Cofre.</span></div></div>
+                    <div className="backup-readiness-banner"><ShieldCheck size={20} /><div><strong>{renderHistory.length} ficha(s) prontas para proteção</strong><span>O backup completo inclui preferências visuais, calibração, planos, pastas, regras e dados do Cofre.</span></div></div>
                     <div className="backup-password-panel">
                       <div><ShieldCheck size={19} /><div><strong>Senha de criptografia</strong><span>Obrigatória para criar e restaurar arquivos .bmbak. Não existe recuperação sem essa senha.</span></div></div>
                       <div className="backup-password-grid">
@@ -3915,10 +4029,10 @@ export function CardVisionApp() {
                       <small>{backupPasswordReady ? 'Senha disponível no armazenamento seguro.' : 'Defina a senha antes de exportar ou restaurar.'}</small>
                     </div>
                     <div className="safety-actions-grid backup-final-actions">
-                      <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!history.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
+                      <button type="button" onClick={() => void exportPlayersBackup('manual')} disabled={!renderHistory.length}><Save size={18} /><strong>Jogadores treinados</strong><span>Fichas, evolução, habilidades, pastas e calibração.</span><small>Ideal para trocar de celular</small></button>
                       <button type="button" onClick={() => void exportFullBackup()}><Download size={18} /><strong>Backup completo</strong><span>Cofre, Estúdio Tático, imagens, formações, preferências, planos e regras.</span><small>Proteção máxima</small></button>
                       <button type="button" onClick={() => fullBackupInputRef.current?.click()}><UploadCloud size={18} /><strong>Restaurar arquivo</strong><span>Valida e migra o arquivo antes de aplicar.</span><small>Você escolhe as áreas</small></button>
-                      <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !history.length || !account?.cloudEnabled}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}<strong>Enviar Cofre para a conta</strong><span>Sincroniza somente os jogadores deste usuário.</span><small>{account?.cloudEnabled ? 'Servidor conectado' : 'Nuvem indisponível'}</small></button>
+                      <button type="button" onClick={() => syncCloudHistory()} disabled={cloudLoading || !renderHistory.length || !account?.cloudEnabled}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <UploadCloud size={18} />}<strong>Enviar Cofre para a conta</strong><span>Sincroniza somente os jogadores deste usuário.</span><small>{account?.cloudEnabled ? 'Servidor conectado' : 'Nuvem indisponível'}</small></button>
                       <button type="button" onClick={() => pullCloudHistory()} disabled={cloudLoading || !account?.cloudEnabled}>{cloudLoading ? <Loader2 className="spin" size={18} /> : <Download size={18} />}<strong>Baixar Cofre da conta</strong><span>Recupera a versão salva e mescla com segurança.</span><small>Dados separados por usuário</small></button>
                       <input ref={fullBackupInputRef} type="file" accept=".bmbak,application/json,.json" hidden onChange={(event) => void importFullBackup(event)} />
                     </div>

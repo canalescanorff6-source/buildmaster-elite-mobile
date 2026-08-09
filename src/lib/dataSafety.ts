@@ -28,10 +28,13 @@ export type IntegrityReport = {
 
 const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery', 'performance', 'community', 'commercial', 'publication']);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
-const MAX_BACKUP_DEPTH = 18;
-const MAX_BACKUP_NODES = 250_000;
-const MAX_ARRAY_ITEMS = 20_000;
-const MAX_OBJECT_KEYS = 20_000;
+// Os limites precisam comportar o Cofre real (até 200 fichas detalhadas) sem
+// confundir volume legítimo com corrupção. O limite de arquivo continua sendo
+// aplicado antes da leitura; estes tetos protegem contra estruturas abusivas.
+const MAX_BACKUP_DEPTH = 28;
+const MAX_BACKUP_NODES = 2_000_000;
+const MAX_ARRAY_ITEMS = 100_000;
+const MAX_OBJECT_KEYS = 100_000;
 const MAX_STRING_LENGTH = 32 * 1024 * 1024;
 
 type SanitizeBudget = { nodes: number };
