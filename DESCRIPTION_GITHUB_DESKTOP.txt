@@ -1,1 +1,1 @@
-Mantém CapacitorHttp como rota principal, adiciona fallback web independente, normaliza JSON no Android, amplia timeouts, preserva a causa real da falha, remove o bloqueio incorreto de navigator.onLine e permite usar a licença segura em cache dentro do prazo offline. Também garante as permissões INTERNET e ACCESS_NETWORK_STATE nos builds direto e Play Store.
+Restaura a tela principal autenticada em src/app/page.tsx, mantém a política em /privacidade, normaliza workspace opcional dos deep links e adiciona regressão dedicada para impedir nova falha da v38.40.

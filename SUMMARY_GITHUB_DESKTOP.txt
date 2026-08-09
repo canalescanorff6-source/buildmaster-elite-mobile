@@ -1,1 +1,1 @@
-Corrige login Supabase no Android com transporte duplo e acesso offline seguro
+Corrige rota raiz sobrescrita e erro TypeScript do deep link

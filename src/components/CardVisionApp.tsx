@@ -971,8 +971,9 @@ export function CardVisionApp() {
       const deepLink = safeStartupInitializerV3840(() => parseInternalDeepLink(window.location.hash), null);
       const navigation = safeStartupInitializerV3840(readNavigationSnapshot, null);
       if (deepLink) {
-        setMainSection(sectionForNavigation(deepLink.group, deepLink.workspace));
-        setPlayerWorkspace(deepLink.workspace);
+        const targetWorkspace = deepLink.workspace ?? 'visao-geral';
+        setMainSection(sectionForNavigation(deepLink.group, targetWorkspace));
+        if (deepLink.group === 'jogadores') setPlayerWorkspace(targetWorkspace);
       } else if (navigation?.playerWorkspace) {
         setPlayerWorkspace(navigation.playerWorkspace);
       }
