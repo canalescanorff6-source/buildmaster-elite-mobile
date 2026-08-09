@@ -6,6 +6,11 @@ import {
   nativeCacheSchemaIsCurrentV3840,
   refreshNativeWebRuntimeOnceV3840
 } from '@/lib/nativeWebCacheRecoveryV3840';
+import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
+
+// Contrato estável lido também pelas regressões antigas e pelo atualizador.
+const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
+const NATIVE_CACHE_SCHEMA = '38.40.0-definitive-opening-1';
 
 // Esquema anterior preservado para a regressão: 35.00.0-official-skills-meta-2
 // Esquema anterior preservado para a regressão: 35.20.0-dna-gameplay-solid-theme-1
@@ -25,13 +30,15 @@ export function RegisterServiceWorker() {
     let active = true;
 
     void (async () => {
-      if (nativeCacheSchemaIsCurrentV3840()) {
-        cleanNativeCacheRefreshQueryV3840();
-        return;
+      const currentSchema = safeStorageGet(NATIVE_CACHE_SCHEMA_KEY);
+      const runtimeIsCurrent = nativeCacheSchemaIsCurrentV3840();
+
+      if (currentSchema !== NATIVE_CACHE_SCHEMA || !runtimeIsCurrent) {
+        const reloading = await refreshNativeWebRuntimeOnceV3840('new-build');
+        if (!active || reloading) return;
+        safeStorageSet(NATIVE_CACHE_SCHEMA_KEY, NATIVE_CACHE_SCHEMA);
       }
 
-      const reloading = await refreshNativeWebRuntimeOnceV3840('new-build');
-      if (!active || reloading) return;
       cleanNativeCacheRefreshQueryV3840();
     })();
 

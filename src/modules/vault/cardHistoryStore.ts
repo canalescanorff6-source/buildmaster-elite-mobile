@@ -405,12 +405,13 @@ export function compactHistoryForNativeStorage(items: SavedAnalysis[]): SavedAna
   // A ficha calculada, habilidades, Booster, observações e a imagem recortada continuam salvos.
   const maxPlayerImageChars = 900_000;
   const maxEntriesWithImage = 60;
-  return items.slice(0, HISTORY_LIMIT).map((item, index) => ({
-    ...item,
-    playerImage: index < maxEntriesWithImage && item.playerImage && item.playerImage.length <= maxPlayerImageChars ? item.playerImage : null,
+  return items.slice(0, HISTORY_LIMIT).map((entry, index) => ({
+    ...entry,
+    folderId: entry.folderId,
+    playerImage: index < maxEntriesWithImage && entry.playerImage && entry.playerImage.length <= maxPlayerImageChars ? entry.playerImage : null,
     fullPreview: null,
-    rawText: String(item.rawText || '').slice(0, 50_000),
-    changeLog: item.changeLog?.slice(0, 20)
+    rawText: String(entry.rawText || '').slice(0, 50_000),
+    changeLog: entry.changeLog?.slice(0, 20)
   }));
 }
 

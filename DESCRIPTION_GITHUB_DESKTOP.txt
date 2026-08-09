@@ -1,1 +1,5 @@
-Impede que JSON legado ou incompatível derrube a inicialização do app, saneia a lixeira do Cofre, ativa a barreira global de recuperação sem loop e preserva jogadores, fichas, Mapeamento e backups. Mantém também a correção v31.72 de habilidades adicionais e Ímpetos separados.
+Summary:
+Corrige quatro regressões da CI e mantém abertura Android protegida
+
+Description:
+Restaura o contrato versionado do cache nativo exigido pelas regressões v33.00, v37.71 e v38.31, mantém a invalidação real por build do WebView e preserva explicitamente a pasta das fichas do Cofre para corrigir a v38.00. Atualiza também o manifesto de integridade sem apagar jogadores, fichas, Cofre ou backups.

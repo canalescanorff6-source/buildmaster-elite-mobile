@@ -6,10 +6,12 @@ import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean } };
 
 export const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
-export const NATIVE_CACHE_SCHEMA = `${APP_RELEASE_VERSION}:${CURRENT_BUILD_ID}:native-web-cache-v2`;
+export const NATIVE_CACHE_BUILD_KEY = 'buildmaster:native-cache-build';
+export const NATIVE_CACHE_SCHEMA = '38.40.0-definitive-opening-1';
+export const NATIVE_CACHE_BUILD_FINGERPRINT = `${APP_RELEASE_VERSION}:${CURRENT_BUILD_ID}:native-web-cache-v2`;
 
 const CACHE_REFRESH_QUERY = 'bm_cache_refresh';
-const SESSION_RELOAD_KEY = `buildmaster:native-cache-reload:${NATIVE_CACHE_SCHEMA}`;
+const SESSION_RELOAD_KEY = `buildmaster:native-cache-reload:${NATIVE_CACHE_BUILD_FINGERPRINT}`;
 
 export function isNativeRuntimeV3840(): boolean {
   if (typeof window === 'undefined') return false;
@@ -40,11 +42,13 @@ export async function clearNativeWebCachesV3840(): Promise<void> {
 }
 
 export function nativeCacheSchemaIsCurrentV3840(): boolean {
-  return safeStorageGet(NATIVE_CACHE_SCHEMA_KEY) === NATIVE_CACHE_SCHEMA;
+  return safeStorageGet(NATIVE_CACHE_SCHEMA_KEY) === NATIVE_CACHE_SCHEMA
+    && safeStorageGet(NATIVE_CACHE_BUILD_KEY) === NATIVE_CACHE_BUILD_FINGERPRINT;
 }
 
 export function markNativeCacheSchemaCurrentV3840(): void {
   safeStorageSet(NATIVE_CACHE_SCHEMA_KEY, NATIVE_CACHE_SCHEMA);
+  safeStorageSet(NATIVE_CACHE_BUILD_KEY, NATIVE_CACHE_BUILD_FINGERPRINT);
 }
 
 export function cleanNativeCacheRefreshQueryV3840(): void {
@@ -66,7 +70,7 @@ export async function refreshNativeWebRuntimeOnceV3840(reason: string): Promise<
     if (window.sessionStorage.getItem(SESSION_RELOAD_KEY) === '1') return false;
     window.sessionStorage.setItem(SESSION_RELOAD_KEY, '1');
   } catch {
-    // Se sessionStorage estiver indisponível, a marca de esquema ainda evita repetição.
+    // Se sessionStorage estiver indisponível, as marcas persistentes ainda evitam repetição.
     if (nativeCacheSchemaIsCurrentV3840()) return false;
   }
 
