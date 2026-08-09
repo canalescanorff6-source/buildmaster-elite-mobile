@@ -4,6 +4,7 @@ import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import {
   getNativeDeviceIdentity,
   migrateLegacyValueToSecureStorage,
+  nativeSecureHttpRequest,
   secureGet,
   secureRemove,
   secureSet,
@@ -11,8 +12,8 @@ import {
 } from '@/lib/secureStorage';
 import { createStableId } from './stableId';
 
-const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 const SESSION_KEY = 'buildmaster_cloud_auth_session_v2_secure';
 const LICENSE_CACHE_KEY = 'buildmaster_license_cache_v2_secure';
 const DEVICE_ID_KEY = 'buildmaster_device_id_v2_secure';
@@ -353,12 +354,15 @@ function nativeRequestData(body: BodyInit | null | undefined, headers: Headers):
   if (typeof body !== 'string') return body;
   if (!headers.get('content-type')?.toLowerCase().includes('application/json')) return body;
   try {
-    // O Capacitor HTTP trata um objeto JSON de forma mais consistente que uma
-    // string JSON em diferentes versões do Android System WebView.
     return JSON.parse(body) as unknown;
   } catch {
     return body;
   }
+}
+
+function requestBodyText(body: BodyInit | null | undefined): string | undefined {
+  if (body === undefined || body === null) return undefined;
+  return typeof body === 'string' ? body : String(body);
 }
 
 function conciseTransportError(error: unknown): string {
@@ -366,57 +370,97 @@ function conciseTransportError(error: unknown): string {
     .replace(/https:\/\/[^\s]+/gi, '[servidor]')
     .replace(/\s+/g, ' ')
     .trim();
-  if (/timeout|timed out|abort/i.test(raw)) return 'tempo limite';
-  if (/dns|unable to resolve|unknown host|name not resolved/i.test(raw)) return 'falha de DNS';
-  if (/ssl|tls|certificate|certpath/i.test(raw)) return 'falha de certificado TLS';
-  if (/not implemented|plugin.*unavailable|missing plugin/i.test(raw)) return 'ponte HTTP nativa indisponível';
-  if (/network|failed to connect|connection|fetch/i.test(raw)) return 'falha de rede';
-  return raw.slice(0, 120) || 'falha de transporte';
+  if (/NATIVE_HTTP_DNS|dns|unable to resolve|unknown host|name not resolved|localizar o servidor/i.test(raw)) return 'DNS';
+  if (/NATIVE_HTTP_TLS|ssl|tls|certificate|certpath|certificado/i.test(raw)) return 'TLS';
+  if (/NATIVE_HTTP_TIMEOUT|timeout|timed out|abort|dentro do prazo/i.test(raw)) return 'TIMEOUT';
+  if (/not implemented|plugin.*unavailable|missing plugin|not available/i.test(raw)) return 'PLUGIN';
+  if (/network|failed to connect|connection|fetch|conexão/i.test(raw)) return 'NETWORK';
+  return raw.slice(0, 100) || 'UNKNOWN';
+}
+
+function responseHeaders(input: unknown): Headers {
+  try {
+    if (!input || typeof input !== 'object') return new Headers();
+    const output = new Headers();
+    for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+      if (value == null) continue;
+      output.set(key, Array.isArray(value) ? value.join(', ') : String(value));
+    }
+    return output;
+  } catch {
+    return new Headers();
+  }
+}
+
+function createTransportResponse(status: number, data: unknown, headers: unknown): Response {
+  const body = status === 204 || status === 205 || status === 304
+    ? null
+    : typeof data === 'string'
+      ? data
+      : JSON.stringify(data ?? null);
+  return new Response(body, { status, headers: responseHeaders(headers) });
 }
 
 async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?: string) {
   if (!isCloudAccountsConfigured()) throw new Error('Supabase ainda não foi configurado no projeto.');
   const headers = new Headers(init.headers || {});
   headers.set('apikey', SUPABASE_ANON_KEY);
-  headers.set('X-BuildMaster-Version', APP_RELEASE_VERSION);
   headers.set('X-Client-Info', `buildmaster/${APP_RELEASE_VERSION}`);
+  // O Auth hospedado do Supabase não precisa do cabeçalho privado do app e
+  // alguns WebViews transformam esse cabeçalho extra em um preflight CORS.
+  // A versão do BuildMaster continua sendo enviada às Edge Functions, onde é usada.
+  if (path.startsWith('/functions/v1/')) headers.set('X-BuildMaster-Version', APP_RELEASE_VERSION);
   if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
   const url = `${SUPABASE_URL}${path}`;
+  const method = String(init.method || 'GET').toUpperCase();
+  const transportErrors: string[] = [];
 
-  // O Android usa primeiro a ponte HTTP nativa. Se a própria ponte falhar
-  // antes de devolver uma resposta HTTP (plugin, DNS, TLS ou fabricante do
-  // WebView), a requisição é tentada uma única vez pelo transporte web real.
-  // Respostas HTTP 4xx/5xx nunca são repetidas, evitando duplicidade no servidor.
   if (Capacitor.isNativePlatform()) {
+    // Transporte principal independente do WebView e do patch global do Capacitor.
+    // Ele usa HttpsURLConnection dentro do plugin já assinado do BuildMaster.
+    try {
+      const nativeResponse = await nativeSecureHttpRequest({
+        url,
+        method,
+        headers: Object.fromEntries(headers.entries()),
+        body: requestBodyText(init.body),
+        connectTimeoutMs: 25_000,
+        readTimeoutMs: 45_000
+      });
+      return createTransportResponse(nativeResponse.status, nativeResponse.data, nativeResponse.headers);
+    } catch (nativeSecurityError) {
+      transportErrors.push(`NATIVE=${conciseTransportError(nativeSecurityError)}`);
+    }
+
+    // Reserva 1: API HTTP oficial do Capacitor. Uma resposta HTTP, inclusive
+    // 4xx/5xx, é devolvida sem repetir a operação por outro transporte.
     try {
       const nativeResponse = await CapacitorHttp.request({
         url,
-        method: String(init.method || 'GET').toUpperCase(),
+        method,
         headers: Object.fromEntries(headers.entries()),
         data: nativeRequestData(init.body, headers),
         connectTimeout: 25_000,
         readTimeout: 45_000,
         responseType: 'text'
       });
-      const responseBody = typeof nativeResponse.data === 'string'
-        ? nativeResponse.data
-        : JSON.stringify(nativeResponse.data ?? null);
-      return new Response(responseBody, {
-        status: nativeResponse.status,
-        headers: new Headers(nativeResponse.headers as HeadersInit)
-      });
-    } catch (nativeError) {
-      try {
-        return await performWebFetch(url, init, headers, 28_000);
-      } catch (webError) {
-        throw new Error(`Não foi possível alcançar o servidor de contas. Transporte nativo: ${conciseTransportError(nativeError)}; transporte web: ${conciseTransportError(webError)}.`);
-      }
+      return createTransportResponse(nativeResponse.status, nativeResponse.data, nativeResponse.headers);
+    } catch (capacitorError) {
+      transportErrors.push(`CAP=${conciseTransportError(capacitorError)}`);
     }
   }
 
-  return performWebFetch(url, init, headers, 28_000);
+  // Reserva 2: fetch real do WebView/navegador. Como o cabeçalho específico do
+  // BuildMaster só é usado nas Functions, o login Auth não cria preflight extra.
+  try {
+    return await performWebFetch(url, init, headers, 30_000);
+  } catch (webError) {
+    transportErrors.push(`WEB=${conciseTransportError(webError)}`);
+    const detail = transportErrors.join('; ');
+    throw new Error(`Não foi possível conectar ao servidor de contas. Código técnico: ${detail || 'NETWORK=UNKNOWN'}.`);
+  }
 }
 
 async function performWebFetch(url: string, init: RequestInit, headers: Headers, timeoutMs: number): Promise<Response> {
@@ -661,6 +705,7 @@ export function isTransientAccountError(error: unknown) {
     || message.includes('network')
     || message.includes('failed to connect')
     || message.includes('não consegui conectar')
+    || message.includes('não foi possível conectar')
     || message.includes('não foi possível alcançar')
     || message.includes('temporariamente indisponível')
     || message.includes('tente novamente em instantes')

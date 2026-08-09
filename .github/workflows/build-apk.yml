@@ -97,6 +97,23 @@ jobs:
           [[ "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != *test* ]] || { echo "::error::A chave ainda está com valor de teste."; exit 1; }
           echo "Assinatura permanente e Supabase confirmados."
 
+      - name: Verificar servidor Supabase antes de gerar o APK
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          BASE_URL="${NEXT_PUBLIC_SUPABASE_URL%/}"
+          HTTP_CODE="$(curl --silent --show-error --output /tmp/buildmaster-supabase-health.json --write-out '%{http_code}' \
+            --connect-timeout 12 --max-time 25 \
+            --header "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+            --header 'Accept: application/json' \
+            "$BASE_URL/auth/v1/health" || true)"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::O servidor Supabase configurado não respondeu corretamente (HTTP ${HTTP_CODE:-000}). Confira se o projeto está ativo e se URL/chave pertencem ao mesmo projeto."
+            exit 1
+          fi
+          echo "Servidor Supabase e chave pública responderam corretamente."
+
       - name: Calcular versão Android monotônica e ativo imutável
         env:
           RUN_NUMBER: ${{ github.run_number }}

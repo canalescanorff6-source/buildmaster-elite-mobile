@@ -1,1 +1,1 @@
-Corrige rota raiz sobrescrita e erro TypeScript do deep link
+Corrige definitivamente o login e a conexão Supabase no Android

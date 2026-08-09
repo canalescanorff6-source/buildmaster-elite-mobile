@@ -94,6 +94,19 @@ jobs:
             test -n "$SERVICE_ACCOUNT" || { echo '::error::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON ausente para publicação.'; exit 1; }
           fi
 
+      - name: Verificar servidor Supabase antes de gerar o AAB
+        run: |
+          BASE_URL="${NEXT_PUBLIC_SUPABASE_URL%/}"
+          HTTP_CODE="$(curl --silent --show-error --output /tmp/buildmaster-supabase-health.json --write-out '%{http_code}' \
+            --connect-timeout 12 --max-time 25 \
+            --header "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+            --header 'Accept: application/json' \
+            "$BASE_URL/auth/v1/health" || true)"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::O servidor Supabase configurado não respondeu corretamente (HTTP ${HTTP_CODE:-000}). Confira se o projeto está ativo e se URL/chave pertencem ao mesmo projeto."
+            exit 1
+          fi
+
       - name: Instalar dependências travadas
         run: npm ci --no-audit --no-fund
 

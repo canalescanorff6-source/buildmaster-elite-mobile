@@ -120,7 +120,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -134,13 +138,17 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.net.ssl.SSLException;
 
 @CapacitorPlugin(name = "BuildMasterSecurity")
 public class BuildMasterSecurityPlugin extends Plugin {
@@ -359,6 +367,131 @@ public class BuildMasterSecurityPlugin extends Plugin {
         } catch (Exception error) {
             call.reject("Não foi possível identificar a versão instalada.", error);
         }
+    }
+
+    private static void validateNativeHttpUrl(URL url) throws Exception {
+        if (!"https".equalsIgnoreCase(url.getProtocol())) throw new SecurityException("Somente HTTPS é permitido.");
+        String host = url.getHost() == null ? "" : url.getHost().toLowerCase(Locale.ROOT);
+        if (!host.matches("^[a-z0-9-]+\\.supabase\\.co$")) throw new SecurityException("Servidor de contas não autorizado.");
+        String path = url.getPath() == null ? "" : url.getPath();
+        if (!(path.startsWith("/auth/v1/") || path.startsWith("/functions/v1/") || path.startsWith("/rest/v1/"))) {
+            throw new SecurityException("Rota remota não autorizada.");
+        }
+    }
+
+    private static String readNativeHttpBody(InputStream input, int maxBytes) throws IOException {
+        if (input == null) return "";
+        try (InputStream stream = new BufferedInputStream(input); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            int read;
+            while ((read = stream.read(buffer)) != -1) {
+                total += read;
+                if (total > maxBytes) throw new IOException("Resposta do servidor excedeu o limite seguro.");
+                output.write(buffer, 0, read);
+            }
+            return output.toString(StandardCharsets.UTF_8.name());
+        }
+    }
+
+    private static void applyNativeHttpHeaders(HttpURLConnection connection, JSObject headers) {
+        if (headers == null) return;
+        Iterator<String> keys = headers.keys();
+        int count = 0;
+        while (keys.hasNext() && count < 40) {
+            String name = keys.next();
+            String lower = name == null ? "" : name.toLowerCase(Locale.ROOT);
+            if (!lower.matches("^[a-z0-9-]{1,64}$")) continue;
+            if (lower.equals("host") || lower.equals("content-length") || lower.equals("connection") || lower.equals("accept-encoding")) continue;
+            String value = headers.optString(name, "");
+            if (value.length() > 4096 || value.contains("\\r") || value.contains("\\n")) continue;
+            connection.setRequestProperty(name, value);
+            count++;
+        }
+    }
+
+    @PluginMethod
+    public void nativeHttpRequest(PluginCall call) {
+        String rawUrl = call.getString("url");
+        String rawMethod = call.getString("method", "GET");
+        String body = call.getString("body");
+        JSObject headers = call.getObject("headers");
+        Integer connectOption = call.getInt("connectTimeoutMs");
+        Integer readOption = call.getInt("readTimeoutMs");
+        final int connectTimeout = Math.max(5_000, Math.min(60_000, connectOption == null ? 25_000 : connectOption));
+        final int readTimeout = Math.max(5_000, Math.min(90_000, readOption == null ? 45_000 : readOption));
+        final String method = rawMethod == null ? "GET" : rawMethod.trim().toUpperCase(Locale.ROOT);
+
+        if (rawUrl == null || rawUrl.trim().isEmpty()) { call.reject("URL do servidor ausente.", "NATIVE_HTTP_URL_MISSING"); return; }
+        if (!(method.equals("GET") || method.equals("POST") || method.equals("PUT") || method.equals("PATCH") || method.equals("DELETE"))) {
+            call.reject("Método HTTP não autorizado.", "NATIVE_HTTP_METHOD_INVALID");
+            return;
+        }
+        if (body != null && body.getBytes(StandardCharsets.UTF_8).length > 2 * 1024 * 1024) {
+            call.reject("Corpo da requisição excedeu o limite seguro.", "NATIVE_HTTP_BODY_TOO_LARGE");
+            return;
+        }
+
+        final String requestUrl = rawUrl.trim();
+        final String requestBody = body;
+        final JSObject requestHeaders = headers;
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(requestUrl);
+                validateNativeHttpUrl(url);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setInstanceFollowRedirects(false);
+                connection.setConnectTimeout(connectTimeout);
+                connection.setReadTimeout(readTimeout);
+                connection.setUseCaches(false);
+                connection.setRequestMethod(method);
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("Accept-Encoding", "identity");
+                applyNativeHttpHeaders(connection, requestHeaders);
+
+                if (requestBody != null && !method.equals("GET")) {
+                    byte[] payload = requestBody.getBytes(StandardCharsets.UTF_8);
+                    connection.setDoOutput(true);
+                    connection.setFixedLengthStreamingMode(payload.length);
+                    try (OutputStream output = new BufferedOutputStream(connection.getOutputStream())) {
+                        output.write(payload);
+                        output.flush();
+                    }
+                }
+
+                int status = connection.getResponseCode();
+                InputStream responseStream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+                String responseBody = readNativeHttpBody(responseStream, 4 * 1024 * 1024);
+                JSObject responseHeaders = new JSObject();
+                Map<String, List<String>> headerFields = connection.getHeaderFields();
+                if (headerFields != null) {
+                    for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
+                        if (entry.getKey() == null || entry.getValue() == null || entry.getValue().isEmpty()) continue;
+                        responseHeaders.put(entry.getKey(), String.join(", ", entry.getValue()));
+                    }
+                }
+                JSObject result = new JSObject();
+                result.put("status", status);
+                result.put("data", responseBody);
+                result.put("headers", responseHeaders);
+                result.put("url", url.toString());
+                result.put("transport", "buildmaster-native-http");
+                call.resolve(result);
+            } catch (UnknownHostException error) {
+                call.reject("O Android não conseguiu localizar o servidor de contas.", "NATIVE_HTTP_DNS", error);
+            } catch (SSLException error) {
+                call.reject("O Android recusou o certificado seguro do servidor.", "NATIVE_HTTP_TLS", error);
+            } catch (SocketTimeoutException error) {
+                call.reject("O servidor de contas não respondeu dentro do prazo.", "NATIVE_HTTP_TIMEOUT", error);
+            } catch (SecurityException error) {
+                call.reject(error.getMessage(), "NATIVE_HTTP_BLOCKED", error);
+            } catch (Exception error) {
+                call.reject("Falha na conexão nativa com o servidor: " + (error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage()), "NATIVE_HTTP_FAILED", error);
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }, "BuildMaster-NativeHttp").start();
     }
 
     @PluginMethod

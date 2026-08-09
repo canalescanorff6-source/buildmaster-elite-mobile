@@ -16,6 +16,14 @@ export type ApkDownloadProgress = {
   totalBytes: number;
 };
 
+export type NativeHttpResponse = {
+  status: number;
+  data: string;
+  headers: Record<string, string>;
+  url: string;
+  transport: 'buildmaster-native-http';
+};
+
 export type ApkInstallResult = {
   verified: boolean;
   checksum?: string;
@@ -40,6 +48,14 @@ type SecureStoragePlugin = {
   signDeviceMessage(options: { message: string }): Promise<{ signature: string; algorithm: string }>;
   getAppInstallInfo(): Promise<NativeInstallInfo>;
   openInstallPermissionSettings(): Promise<void>;
+  nativeHttpRequest(options: {
+    url: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+    connectTimeoutMs?: number;
+    readTimeoutMs?: number;
+  }): Promise<NativeHttpResponse>;
   downloadAndInstallApk(options: {
     url: string;
     checksum: string;
@@ -113,6 +129,18 @@ export async function getNativeInstallInfo(): Promise<NativeInstallInfo | null> 
 export async function openInstallPermissionSettings(): Promise<void> {
   if (!Capacitor.isNativePlatform()) throw new Error('A permissão de instalação existe somente no Android.');
   await BuildMasterSecurity.openInstallPermissionSettings();
+}
+
+export async function nativeSecureHttpRequest(options: {
+  url: string;
+  method: string;
+  headers?: Record<string, string>;
+  body?: string;
+  connectTimeoutMs?: number;
+  readTimeoutMs?: number;
+}): Promise<NativeHttpResponse> {
+  if (!Capacitor.isNativePlatform()) throw new Error('Transporte HTTP nativo indisponível fora do Android.');
+  return BuildMasterSecurity.nativeHttpRequest(options);
 }
 
 export async function onApkDownloadProgress(listener: (event: ApkDownloadProgress) => void): Promise<PluginListenerHandle | null> {

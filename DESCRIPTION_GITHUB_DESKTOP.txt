@@ -1,1 +1,1 @@
-Restaura a tela principal autenticada em src/app/page.tsx, mantém a política em /privacidade, normaliza workspace opcional dos deep links e adiciona regressão dedicada para impedir nova falha da v38.40.
+Remove a falsa mensagem de VPN/DNS, adiciona três transportes de conexão em sequência (HTTPS nativo, CapacitorHttp e Web), evita bloqueio por navigator.onLine, restringe cabeçalhos de CORS e valida o Supabase no GitHub Actions antes de gerar APK ou AAB. Preserva contas, sessões válidas, jogadores, fichas, Cofre, Mapeamento e backups.

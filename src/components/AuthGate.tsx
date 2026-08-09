@@ -130,10 +130,13 @@ function describeLoginError(message: string): LoginFeedback {
     };
   }
   if (normalized.includes('internet') || normalized.includes('conectar') || normalized.includes('alcançar') || normalized.includes('indisponível') || normalized.includes('network') || normalized.includes('fetch') || normalized.includes('transporte') || normalized.includes('dns') || normalized.includes('tls')) {
+    const technicalCode = message.match(/código técnico:\s*([^.]*)/i)?.[1]?.trim();
     return {
-      title: 'Não foi possível alcançar o servidor',
-      message: 'A validação da conta não terminou porque o servidor não respondeu.',
-      hint: 'Confira a internet, desligue VPN ou DNS privado temporariamente e tente novamente.',
+      title: 'Servidor de contas inacessível',
+      message: 'O aplicativo não conseguiu concluir a conexão com o servidor de contas.',
+      hint: technicalCode
+        ? `Diagnóstico: ${technicalCode}. Confira também se data e hora automáticas estão ativadas.`
+        : 'Confira a conexão e se data e hora automáticas estão ativadas. O app tentará as rotas nativa, Capacitor e Web.',
       tone: 'info'
     };
   }
@@ -328,13 +331,13 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
             </div>
           </div>
 
-          <div className={`auth-license-status ${cloudConfigured && online ? 'is-online' : 'is-local'}`}>
-            <div className="auth-license-icon">{cloudConfigured && online ? <Server size={19} /> : <WifiOff size={19} />}</div>
+          <div className={`auth-license-status ${cloudConfigured ? 'is-online' : 'is-local'}`}>
+            <div className="auth-license-icon">{cloudConfigured ? <Server size={19} /> : <WifiOff size={19} />}</div>
             <div>
               <span>Status da licença</span>
-              <strong>{!online ? 'Aparelho sem internet' : cloudConfigured ? 'Validação online ativa' : 'Servidor não configurado'}</strong>
+              <strong>{cloudConfigured ? 'Servidor configurado' : 'Servidor não configurado'}</strong>
             </div>
-            <i>{cloudConfigured && online ? 'Protegido' : 'Bloqueado'}</i>
+            <i>{cloudConfigured ? 'Verificação ao entrar' : 'Bloqueado'}</i>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit} noValidate aria-busy={loading}>
@@ -383,7 +386,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
             </label>
 
             {capsLock && <div className="auth-caps-warning" role="status"><AlertTriangle size={16}/><span>Caps Lock está ativo. Confira letras maiúsculas na senha.</span></div>}
-            {!online && <div className="auth-network-warning" role="status"><WifiOff size={16}/><span>Sem internet. O login será liberado quando a conexão voltar.</span></div>}
+            {!online && <div className="auth-network-warning" role="status"><WifiOff size={16}/><span>O Android sinalizou conexão limitada. Mesmo assim, o app tentará a rota HTTPS nativa.</span></div>}
 
             {feedback && (
               <div className={`auth-feedback auth-feedback-${feedback.tone}`} role="alert">
@@ -394,7 +397,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
 
             {feedback && <button type="button" className="auth-retry-button" onClick={() => { setError(''); setPhase('idle'); }}><RefreshCw size={16}/> Tentar novamente</button>}
 
-            <button className={`elite-button auth-submit ${phase === 'authorized' ? 'is-authorized' : ''}`} type="submit" disabled={loading || !online || !cloudConfigured} aria-busy={loading}>
+            <button className={`elite-button auth-submit ${phase === 'authorized' ? 'is-authorized' : ''}`} type="submit" disabled={loading || !cloudConfigured} aria-busy={loading}>
               {phase === 'authorized' ? <CheckCircle2 size={19} /> : loading ? <Loader2 className="spin" size={19} /> : <ShieldCheck size={18} />}
               <span>{phaseLabel}</span>
             </button>
