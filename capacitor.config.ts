@@ -18,7 +18,10 @@ const config: CapacitorConfig = {
   },
   plugins: {
     CapacitorHttp: {
-      enabled: true
+      // A API direta continua sendo usada como transporte principal. O patch
+      // global fica desligado para que fetch() seja uma rota web independente
+      // quando a ponte nativa falhar em algum fabricante de Android.
+      enabled: false
     }
   }
 };

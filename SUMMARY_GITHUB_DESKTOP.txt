@@ -1,1 +1,1 @@
-Corrige falha de abertura no Android e protege dados locais
+Corrige login Supabase no Android com transporte duplo e acesso offline seguro

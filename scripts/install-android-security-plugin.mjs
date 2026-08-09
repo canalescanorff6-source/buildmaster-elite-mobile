@@ -925,6 +925,12 @@ fs.writeFileSync(path.join(javaDir, 'BuildMasterSecurityPlugin.java'), plugin);
 fs.writeFileSync(path.join(resXmlDir, 'buildmaster_file_paths.xml'), `<?xml version="1.0" encoding="utf-8"?>\n<paths xmlns:android="http://schemas.android.com/apk/res/android">\n  <cache-path name="verified_updates" path="verified_updates/" />\n</paths>\n`);
 
 let manifest = fs.readFileSync(manifestPath, 'utf8');
+if (!manifest.includes('android.permission.INTERNET')) {
+  manifest = manifest.replace('<application', '    <uses-permission android:name="android.permission.INTERNET" />\n\n    <application');
+}
+if (!manifest.includes('android.permission.ACCESS_NETWORK_STATE')) {
+  manifest = manifest.replace('<application', '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n\n    <application');
+}
 if (!manifest.includes('android.permission.REQUEST_INSTALL_PACKAGES')) {
   manifest = manifest.replace('<application', '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n\n    <application');
 }

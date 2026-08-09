@@ -360,6 +360,8 @@ jobs:
           grep -RqsF 'REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml || { echo '::error::Permissão controlada de instalação ausente.'; exit 1; }
           grep -RqsF 'androidx.core.content.FileProvider' android/app/src/main/AndroidManifest.xml || { echo '::error::FileProvider seguro ausente.'; exit 1; }
           grep -RqsF 'usesCleartextTraffic="false"' android/app/src/main/AndroidManifest.xml || { echo '::error::Tráfego HTTP inseguro não foi bloqueado.'; exit 1; }
+          grep -RqsF 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml || { echo '::error::Permissão INTERNET ausente no APK.'; exit 1; }
+          grep -RqsF 'android.permission.ACCESS_NETWORK_STATE' android/app/src/main/AndroidManifest.xml || { echo '::error::Permissão de estado da rede ausente no APK.'; exit 1; }
           grep -RqsF 'allowBackup="false"' android/app/src/main/AndroidManifest.xml || { echo '::error::Backup Android não autorizado ainda está ativo.'; exit 1; }
 
       - name: Confirmar Supabase nos arquivos Android

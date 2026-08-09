@@ -25,6 +25,7 @@ import {
   isCloudAccountsConfigured,
   isTransientAccountError,
   restoreAccountAccess,
+  restoreCachedAccessForUsername,
   signInWithUsername,
   signOutAccount,
   type AccountProfile,
@@ -128,7 +129,7 @@ function describeLoginError(message: string): LoginFeedback {
       tone: 'warning'
     };
   }
-  if (normalized.includes('internet') || normalized.includes('conectar') || normalized.includes('indisponível') || normalized.includes('network') || normalized.includes('fetch')) {
+  if (normalized.includes('internet') || normalized.includes('conectar') || normalized.includes('alcançar') || normalized.includes('indisponível') || normalized.includes('network') || normalized.includes('fetch') || normalized.includes('transporte') || normalized.includes('dns') || normalized.includes('tls')) {
     return {
       title: 'Não foi possível alcançar o servidor',
       message: 'A validação da conta não terminou porque o servidor não respondeu.',
@@ -250,7 +251,8 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
     let phaseTimer: number | undefined;
 
     try {
-      if (!online) throw new Error('Sem internet no momento. Conecte o aparelho e tente novamente.');
+      // navigator.onLine é apenas um indicador e pode retornar falso em alguns
+      // aparelhos mesmo quando a rede está funcional. A tentativa real decide.
       phaseTimer = window.setTimeout(() => setPhase('license'), 450);
       if (!cloudConfigured) throw new Error('O servidor oficial de contas não está configurado neste APK. O login local foi removido por segurança.');
       const validation = await signInWithUsername(cleanUser, cleanPassword);
@@ -262,6 +264,24 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
       onSuccess(validation);
     } catch (cause) {
       if (phaseTimer) window.clearTimeout(phaseTimer);
+
+      if (isTransientAccountError(cause)) {
+        const cached = await restoreCachedAccessForUsername(cleanUser).catch(() => null);
+        if (cached) {
+          setPhase('authorized');
+          setError('');
+          showPremiumToast({
+            title: 'Acesso offline autorizado',
+            message: 'O servidor não respondeu, mas a validação segura deste aparelho ainda está dentro do prazo.',
+            tone: 'success',
+            duration: 4500
+          });
+          await wait(180);
+          onSuccess(cached);
+          return;
+        }
+      }
+
       const message = cause instanceof Error ? cause.message : 'Não foi possível entrar.';
       setError(message);
       showPremiumToast({ title: 'Acesso não concluído', message: describeLoginError(message).message, tone: 'danger', duration: 6000 });

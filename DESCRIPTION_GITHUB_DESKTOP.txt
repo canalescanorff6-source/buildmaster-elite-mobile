@@ -1,5 +1,1 @@
-Summary:
-Corrige quatro regressões da CI e mantém abertura Android protegida
-
-Description:
-Restaura o contrato versionado do cache nativo exigido pelas regressões v33.00, v37.71 e v38.31, mantém a invalidação real por build do WebView e preserva explicitamente a pasta das fichas do Cofre para corrigir a v38.00. Atualiza também o manifesto de integridade sem apagar jogadores, fichas, Cofre ou backups.
+Mantém CapacitorHttp como rota principal, adiciona fallback web independente, normaliza JSON no Android, amplia timeouts, preserva a causa real da falha, remove o bloqueio incorreto de navigator.onLine e permite usar a licença segura em cache dentro do prazo offline. Também garante as permissões INTERNET e ACCESS_NETWORK_STATE nos builds direto e Play Store.

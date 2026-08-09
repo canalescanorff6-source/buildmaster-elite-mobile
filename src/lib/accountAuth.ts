@@ -348,47 +348,93 @@ function deviceName() {
   return `${platform}${agent ? ` • ${agent}` : ''}`.slice(0, 120);
 }
 
+function nativeRequestData(body: BodyInit | null | undefined, headers: Headers): unknown {
+  if (body === undefined || body === null) return undefined;
+  if (typeof body !== 'string') return body;
+  if (!headers.get('content-type')?.toLowerCase().includes('application/json')) return body;
+  try {
+    // O Capacitor HTTP trata um objeto JSON de forma mais consistente que uma
+    // string JSON em diferentes versões do Android System WebView.
+    return JSON.parse(body) as unknown;
+  } catch {
+    return body;
+  }
+}
+
+function conciseTransportError(error: unknown): string {
+  const raw = String(error instanceof Error ? error.message : error || 'erro desconhecido')
+    .replace(/https:\/\/[^\s]+/gi, '[servidor]')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (/timeout|timed out|abort/i.test(raw)) return 'tempo limite';
+  if (/dns|unable to resolve|unknown host|name not resolved/i.test(raw)) return 'falha de DNS';
+  if (/ssl|tls|certificate|certpath/i.test(raw)) return 'falha de certificado TLS';
+  if (/not implemented|plugin.*unavailable|missing plugin/i.test(raw)) return 'ponte HTTP nativa indisponível';
+  if (/network|failed to connect|connection|fetch/i.test(raw)) return 'falha de rede';
+  return raw.slice(0, 120) || 'falha de transporte';
+}
+
 async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?: string) {
   if (!isCloudAccountsConfigured()) throw new Error('Supabase ainda não foi configurado no projeto.');
   const headers = new Headers(init.headers || {});
   headers.set('apikey', SUPABASE_ANON_KEY);
   headers.set('X-BuildMaster-Version', APP_RELEASE_VERSION);
+  headers.set('X-Client-Info', `buildmaster/${APP_RELEASE_VERSION}`);
   if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
   const url = `${SUPABASE_URL}${path}`;
 
-  // No Android, use a ponte HTTP nativa como rota principal. A implementação
-  // anterior tentava fetch() primeiro e repetia o mesmo POST pela ponte nativa
-  // quando havia timeout. Em ações não idempotentes, como criar usuário, isso
-  // podia enviar a solicitação duas vezes e devolver uma falsa falha de conta
-  // já existente mesmo após a primeira tentativa ter chegado ao Supabase.
+  // O Android usa primeiro a ponte HTTP nativa. Se a própria ponte falhar
+  // antes de devolver uma resposta HTTP (plugin, DNS, TLS ou fabricante do
+  // WebView), a requisição é tentada uma única vez pelo transporte web real.
+  // Respostas HTTP 4xx/5xx nunca são repetidas, evitando duplicidade no servidor.
   if (Capacitor.isNativePlatform()) {
     try {
       const nativeResponse = await CapacitorHttp.request({
         url,
-        method: String(init.method || 'GET'),
+        method: String(init.method || 'GET').toUpperCase(),
         headers: Object.fromEntries(headers.entries()),
-        data: typeof init.body === 'string' ? init.body : undefined,
-        connectTimeout: 18_000,
-        readTimeout: 35_000,
+        data: nativeRequestData(init.body, headers),
+        connectTimeout: 25_000,
+        readTimeout: 45_000,
         responseType: 'text'
       });
-      const responseBody = typeof nativeResponse.data === 'string' ? nativeResponse.data : JSON.stringify(nativeResponse.data ?? null);
-      return new Response(responseBody, { status: nativeResponse.status, headers: nativeResponse.headers });
+      const responseBody = typeof nativeResponse.data === 'string'
+        ? nativeResponse.data
+        : JSON.stringify(nativeResponse.data ?? null);
+      return new Response(responseBody, {
+        status: nativeResponse.status,
+        headers: new Headers(nativeResponse.headers as HeadersInit)
+      });
     } catch (nativeError) {
-      const message = String(nativeError instanceof Error ? nativeError.message : nativeError);
-      if (/timeout|timed out|abort/i.test(message)) throw new Error('Tempo limite ao conectar ao servidor de contas. A operação não foi reenviada automaticamente.');
-      throw nativeError;
+      try {
+        return await performWebFetch(url, init, headers, 28_000);
+      } catch (webError) {
+        throw new Error(`Não foi possível alcançar o servidor de contas. Transporte nativo: ${conciseTransportError(nativeError)}; transporte web: ${conciseTransportError(webError)}.`);
+      }
     }
   }
 
+  return performWebFetch(url, init, headers, 28_000);
+}
+
+async function performWebFetch(url: string, init: RequestInit, headers: Headers, timeoutMs: number): Promise<Response> {
   const timeoutController = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeout = timeoutController ? globalThis.setTimeout(() => timeoutController.abort(), 18_000) : null;
+  const timeout = timeoutController ? globalThis.setTimeout(() => timeoutController.abort(), timeoutMs) : null;
   try {
-    return await fetch(url, { ...init, headers, cache: 'no-store', signal: init.signal || timeoutController?.signal });
+    return await fetch(url, {
+      ...init,
+      headers,
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'follow',
+      signal: init.signal || timeoutController?.signal
+    });
   } catch (webError) {
-    if (webError instanceof DOMException && webError.name === 'AbortError') throw new Error('Tempo limite ao conectar ao servidor de contas.');
+    if (webError instanceof DOMException && webError.name === 'AbortError') {
+      throw new Error('Tempo limite ao conectar ao servidor de contas.');
+    }
     throw webError;
   } finally {
     if (timeout !== null) globalThis.clearTimeout(timeout);
@@ -587,8 +633,9 @@ export async function signInWithUsername(username: string, password: string): Pr
       method: 'POST',
       body: JSON.stringify({ email: usernameToInternalEmail(username), password })
     });
-  } catch {
-    throw new Error('Não consegui conectar ao Supabase. Verifique a internet ou instale um APK novo com a URL correta.');
+  } catch (cause) {
+    if (cause instanceof Error && cause.message) throw cause;
+    throw new Error('Não foi possível alcançar o servidor de contas. Verifique a internet e tente novamente.');
   }
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
   if (!response.ok || !payload?.access_token || !payload.refresh_token) throw new Error(explainAuthFailure(payload, response.status));
@@ -640,6 +687,18 @@ async function restoreCachedLicenseOrThrow(error: unknown): Promise<LicenseValid
     throw new Error(status.reason || 'Sua licença precisa ser validada novamente.');
   }
   throw error;
+}
+
+export async function restoreCachedAccessForUsername(username: string): Promise<LicenseValidation | null> {
+  const normalized = normalizeUsername(username);
+  if (!normalized) return null;
+  const cached = await readCachedLicense();
+  if (!cached || normalizeUsername(cached.profile.username) !== normalized) return null;
+  const status = evaluateCachedLicense(cached);
+  if (!status.valid) return null;
+  const offline = { ...cached, offline: true };
+  await cacheLicense(offline);
+  return offline;
 }
 
 async function performRestoreAccountAccess(): Promise<LicenseValidation | null> {
