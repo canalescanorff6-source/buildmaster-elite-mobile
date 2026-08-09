@@ -17,6 +17,8 @@ import { applyGlobalProBenchmarkV3900 } from './globalProBenchmarkV3900';
 import { applyEliteDominanceV3910 } from './eliteDominanceEngineV3910';
 import { applyUnifiedPerformanceV3920 } from './unifiedPerformanceEngineV3920';
 import { stabilizeUnifiedRecipeFromMemoryV3920 } from './unifiedRecipeMemoryV3920';
+import { applyAdaptivePositionV3930, restoreCanonicalInputBeforeV3930 } from './adaptivePositionEngineV3930';
+import { applyPerformanceFunctionV3940 } from './performanceFunctionEngineV3940';
 
 /**
  * Pipeline único e de memória controlada.
@@ -41,7 +43,8 @@ import { stabilizeUnifiedRecipeFromMemoryV3920 } from './unifiedRecipeMemoryV392
  * const supremePerformance = applySupremePerformanceV3870(finalMaximumIntegrity)
  */
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
-  let current = applyCompetitiveFusionToResult(result);
+  let current = restoreCanonicalInputBeforeV3930(result);
+  current = applyCompetitiveFusionToResult(current);
   current = applyDeepCardIntelligenceToResult(current);
   current = applyLocalAiToResult(current);
   current = applyLocalCorrectionsToResult(current);
@@ -77,6 +80,8 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyUnifiedPerformanceV3920(current);
   current = stabilizeUnifiedRecipeFromMemoryV3920(current);
   current = enforceComplementarySkillIntegrity(current);
+  current = applyAdaptivePositionV3930(current);
+  current = applyPerformanceFunctionV3940(current);
 
   return { ...current, buildVariants: current.buildVariants.slice(0, 1) };
 }

@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
@@ -9,13 +12,19 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "baseUrl": "../..",
-    "paths": { "@/*": ["src/*"] },
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     "types": [],
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "noImplicitAny": false
   },
   "files": [
+    "../../__external_stubs.d.ts",
     "stubs.d.ts",
-    "../../src/components/UnifiedPerformanceV3920Panel.tsx"
+    "../../src/modules/squad-mapping/SquadMappingCenter.tsx"
   ]
 }

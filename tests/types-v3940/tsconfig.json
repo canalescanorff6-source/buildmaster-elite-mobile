@@ -7,7 +7,6 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx",
     "baseUrl": "../..",
     "paths": { "@/*": ["src/*"] },
     "types": [],
@@ -15,7 +14,9 @@
     "noUnusedParameters": true
   },
   "files": [
-    "stubs.d.ts",
-    "../../src/components/UnifiedPerformanceV3920Panel.tsx"
+    "env-stub.d.ts",
+    "capacitor-stub.d.ts",
+    "../../src/lib/performanceFunctionEngineV3940.ts",
+    "../../src/lib/cardIntelligencePipeline.ts"
   ]
 }

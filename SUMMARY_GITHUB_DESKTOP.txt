@@ -1,1 +1,1 @@
-v38.40 — corrige CI do Motor Unificado v39.20 e trava receita por carta
+v38.40 — adiciona Mapeamento Total v39.50 com banco visual e seleção inteligente do elenco

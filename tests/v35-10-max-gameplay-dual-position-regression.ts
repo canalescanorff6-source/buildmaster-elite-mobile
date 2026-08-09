@@ -43,8 +43,11 @@ assert.equal(selected.positionBuildComparison?.selected.position, 'CF');
 assert.equal(selected.positionBuildComparison?.samePosition, false);
 assert.equal(selected.bestPosition.code, 'CF', 'A posição escolhida pelo usuário deve continuar soberana.');
 assert.notDeepEqual(selected.positionBuildComparison?.natural.training, selected.positionBuildComparison?.selected.training, 'A auditoria posicional deve continuar comparando exigências diferentes.');
-assert.deepEqual(selected.training, natural.training, 'A ficha pública da mesma carta não pode mudar ao selecionar outra posição.');
-assert.deepEqual(selected.recommendedSkills, natural.recommendedSkills, 'As habilidades da mesma carta não podem mudar ao selecionar outra posição.');
+assert.deepEqual(selected.adaptivePositionV3930?.coreTraining, natural.adaptivePositionV3930?.coreTraining, 'O núcleo da mesma carta não pode mudar ao selecionar outra posição.');
+assert.notDeepEqual(selected.training, natural.training, 'A camada aplicada deve poder se adaptar de forma controlada à posição escolhida.');
+assert.ok((selected.adaptivePositionV3930?.corePreservation ?? 0) >= 72, 'A adaptação precisa preservar o DNA da carta.');
+const naturalCoreSkills = new Set((natural.adaptivePositionV3930?.coreSkills ?? []).slice(0, 3).map((item) => item.name));
+assert.ok((selected.adaptivePositionV3930?.finalSkills ?? []).filter((item) => naturalCoreSkills.has(item.name)).length >= Math.min(3, naturalCoreSkills.size), 'Três habilidades centrais da identidade precisam ser preservadas.');
 assert.deepEqual(selected.recommendedImpetos, natural.recommendedImpetos, 'Os Ímpetos da mesma carta não podem mudar ao selecionar outra posição.');
 
 for (const result of [natural, selected]) {

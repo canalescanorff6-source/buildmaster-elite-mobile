@@ -1562,6 +1562,96 @@ export type UnifiedPerformanceV3920Analysis = {
   };
 };
 
+
+export type AdaptivePositionStatusV3930 = 'PRONTO' | 'TESTE_RECOMENDADO' | 'REVISAR_LEITURA';
+
+export type AdaptivePositionChangeV3930 = {
+  key: TrainingKey;
+  label: string;
+  from: number;
+  to: number;
+};
+
+export type AdaptivePositionV3930Analysis = {
+  engineVersion: '39.30.0';
+  philosophy: 'NUCLEO_DA_CARTA_FIXO_ADAPTACAO_DETERMINISTICA_POR_POSICAO';
+  canonicalCardId: string;
+  coreSignature: string;
+  positionSignature: string;
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  naturalPosition: PositionCode;
+  naturalPositionLabel: string;
+  selectedPositionAffectsCoreRecipe: false;
+  selectedPositionAffectsAppliedRecipe: true;
+  deterministic: true;
+  adaptationApplied: boolean;
+  adaptationMode: 'NATURAL' | 'COMPATIVEL' | 'FORA_DA_POSICAO';
+  coreTraining: TrainingPlan;
+  adaptedTraining: TrainingPlan;
+  exactBudget: boolean;
+  corePreservation: number;
+  positionalGain: number;
+  maxShiftLevels: number;
+  changes: AdaptivePositionChangeV3930[];
+  coreSkills: UnifiedSkillDecision[];
+  positionalSkills: UnifiedSkillDecision[];
+  finalSkills: UnifiedSkillDecision[];
+  primaryImpeto: string | null;
+  impetoLockedByCard: true;
+  impetos: ImpetoRecommendation[];
+  positionFit: number;
+  status: AdaptivePositionStatusV3930;
+  statusLabel: string;
+  canApplyTraining: boolean;
+  canApplySkills: boolean;
+  canUseImpeto: boolean;
+  warnings: string[];
+  reasons: string[];
+  summary: string;
+};
+
+
+export type PerformanceFunctionV3940Analysis = {
+  engineVersion: '39.40.0';
+  philosophy: 'DNA_DA_CARTA_FUNCAO_REAL_POSICAO_ALVO_SEM_RECEITA_GENERICA';
+  deterministic: true;
+  canonicalCardId: string;
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  roleId: string;
+  roleLabel: string;
+  roleDescription: string;
+  roleSignature: string;
+  playstyle: string;
+  movementProfile: 'FIXO' | 'CONTROLADO' | 'VERTICAL' | 'AGRESSIVO' | 'MISTO';
+  baseTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  exactBudget: boolean;
+  candidateCount: number;
+  corePreservation: number;
+  roleScoreBefore: number;
+  roleScoreAfter: number;
+  responseScoreBefore: number;
+  responseScoreAfter: number;
+  stabilityScore: number;
+  fitBefore: number;
+  fitAfter: number;
+  changes: AdaptivePositionChangeV3930[];
+  fixedSkills: UnifiedSkillDecision[];
+  roleSkills: UnifiedSkillDecision[];
+  finalSkills: UnifiedSkillDecision[];
+  primaryImpeto: string | null;
+  impetoLockedByCard: true;
+  impetos: ImpetoRecommendation[];
+  useLevel: 'PRINCIPAL' | 'ALTERNATIVA' | 'EXPERIMENTAL';
+  canApply: boolean;
+  recommendedUse: string;
+  tacticalWarnings: string[];
+  reasons: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -1627,6 +1717,8 @@ export type AnalysisResult = {
   globalProV3900?: GlobalProBenchmarkV3900Analysis;
   eliteDominanceV3910?: EliteDominanceV3910Analysis;
   unifiedPerformanceV3920?: UnifiedPerformanceV3920Analysis;
+  adaptivePositionV3930?: AdaptivePositionV3930Analysis;
+  performanceFunctionV3940?: PerformanceFunctionV3940Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

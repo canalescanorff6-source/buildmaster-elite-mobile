@@ -6,6 +6,7 @@ import { buildOwnedSkillKeys, filterComplementaryAdditionalSkills, skillIdentity
 export type AdditionalSkillProfileOptions = {
   label?: string;
   preferredCategories?: UnifiedSkillDecision['category'][];
+  positionOverride?: PositionCode;
 };
 
 type SkillCategory = UnifiedSkillDecision['category'];
@@ -467,7 +468,7 @@ function categoryDiversityAdjustment(position: PositionCode, selected: Candidate
 
 /** Sempre produz cinco opções treináveis quando existem cinco habilidades não possuídas no pool seguro da função. */
 export function buildPersonalizedSkillPlan(result: AnalysisResult, plan: TrainingPlan, options: AdditionalSkillProfileOptions = {}): UnifiedSkillDecision[] {
-  const position = resolveAdditionalSkillPosition(result);
+  const position = options.positionOverride ?? resolveAdditionalSkillPosition(result);
   const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
   const orderedPool = officialAdditionalSkillPoolForPosition(position);
   const preferredCategories = options.preferredCategories?.length ? options.preferredCategories.slice(0, 5) : slotBlueprintFor(result, position);

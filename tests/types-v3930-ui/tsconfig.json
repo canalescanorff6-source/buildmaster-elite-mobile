@@ -16,6 +16,10 @@
   },
   "files": [
     "stubs.d.ts",
-    "../../src/components/UnifiedPerformanceV3920Panel.tsx"
+    "../../src/components/UnifiedPerformanceV3920Panel.tsx",
+    "../../src/components/AppShellSafetyBoundaryV3930.tsx",
+    "../../src/lib/runtimeRecoveryV3930.ts",
+    "../../src/app/error.tsx",
+    "../../src/app/global-error.tsx"
   ]
 }

@@ -3,6 +3,7 @@ import { runtimeGet, runtimePut } from '@/lib/localDatabase';
 import { isNativeVaultStorageAvailable, nativeVaultRead, nativeVaultWrite } from '@/lib/nativeVaultStorage';
 import {
   createEmptyMappingState,
+  createMappingCardFingerprint,
   DEFAULT_MAPPING_PREFERENCES,
   SQUAD_MAPPING_VERSION,
   type FormationTrial,
@@ -13,9 +14,45 @@ import {
 export const SQUAD_MAPPING_STORAGE_KEY = 'buildmaster_squad_mapping_v3840';
 const RUNTIME_KEY = 'squad-mapping:state';
 const POSITIONS = ['CF','SS','LWF','RWF','LMF','RMF','AMF','CMF','DMF','CB','LB','RB','GK'] as const;
+const ATTRIBUTE_KEYS = [
+  'offensiveAwareness','ballControl','dribbling','tightPossession','lowPass','loftedPass','finishing','heading','placeKicking','curl',
+  'defensiveAwareness','defensiveEngagement','tackling','aggression','goalkeeperAwareness','goalkeeperCatching','goalkeeperParrying',
+  'goalkeeperReflexes','goalkeeperReach','speed','acceleration','kickingPower','jump','physicalContact','balance','stamina'
+] as const;
 
 function validPosition(value: unknown): value is SquadMappingPlayer['mainPosition'] {
   return POSITIONS.includes(String(value) as SquadMappingPlayer['mainPosition']);
+}
+
+function finiteNumber(value: unknown, min: number, max: number): number | null {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.max(min, Math.min(max, numeric)) : null;
+}
+
+function sanitizeAttributes(raw: unknown): SquadMappingPlayer['attributes'] {
+  if (!raw || typeof raw !== 'object') return {};
+  const source = raw as Record<string, unknown>;
+  return Object.fromEntries(ATTRIBUTE_KEYS.flatMap((key) => {
+    const value = finiteNumber(source[key], 1, 110);
+    return value === null ? [] : [[key, value]];
+  })) as SquadMappingPlayer['attributes'];
+}
+
+function sanitizePositionRatings(raw: unknown): SquadMappingPlayer['positionRatings'] {
+  if (!raw || typeof raw !== 'object') return {};
+  const source = raw as Record<string, unknown>;
+  return Object.fromEntries(POSITIONS.flatMap((position) => {
+    const value = finiteNumber(source[position], 1, 120);
+    return value === null ? [] : [[position, value]];
+  })) as SquadMappingPlayer['positionRatings'];
+}
+
+function sanitizeNumberRecord(raw: unknown, limit = 40) {
+  if (!raw || typeof raw !== 'object') return {};
+  return Object.fromEntries(Object.entries(raw as Record<string, unknown>).flatMap(([key, value]) => {
+    const numeric = finiteNumber(value, 0, 500);
+    return !key || numeric === null ? [] : [[key.slice(0, 80), numeric]];
+  }).slice(0, limit));
 }
 
 function sanitizePlayer(raw: Partial<SquadMappingPlayer>, index: number): SquadMappingPlayer | null {
@@ -25,20 +62,36 @@ function sanitizePlayer(raw: Partial<SquadMappingPlayer>, index: number): SquadM
   const now = new Date().toISOString();
   const positions = Array.isArray(raw.positions) ? raw.positions.filter(validPosition) : [];
   const trainedPositions = Array.isArray(raw.trainedPositions) ? raw.trainedPositions.filter(validPosition) : [];
-  return {
+  const attributes = sanitizeAttributes(raw.attributes);
+  const skills = Array.isArray(raw.skills) ? Array.from(new Set(raw.skills.map(String).map((value) => value.trim()).filter(Boolean))).slice(0, 40) : [];
+  const player: SquadMappingPlayer = {
     id: String(raw.id || `mapped-${Date.now()}-${index}`),
     name,
     cardLabel: String(raw.cardLabel ?? 'Carta mapeada').trim().slice(0, 100),
+    cardFingerprint: String(raw.cardFingerprint ?? '').slice(0, 120),
     mainPosition,
     positions: Array.from(new Set([mainPosition, ...positions])),
     trainedPositions: Array.from(new Set(trainedPositions)),
     playstyle: String(raw.playstyle ?? '').trim().slice(0, 80),
-    overall: Number.isFinite(Number(raw.overall)) ? Math.max(1, Math.min(120, Number(raw.overall))) : null,
+    overall: finiteNumber(raw.overall, 1, 120),
     confidence: Math.max(0, Math.min(100, Math.round(Number(raw.confidence) || 0))),
     status: raw.status === 'pronto' ? 'pronto' : 'revisar',
     portrait: typeof raw.portrait === 'string' && raw.portrait.startsWith('data:image/') ? raw.portrait : null,
     sourceFileName: String(raw.sourceFileName ?? '').slice(0, 160),
     sourceHash: String(raw.sourceHash ?? '').slice(0, 128),
+    imageRef: raw.imageRef ? String(raw.imageRef).slice(0, 180) : null,
+    imageBytes: Math.max(0, Math.round(Number(raw.imageBytes) || 0)),
+    imageStored: Boolean(raw.imageStored || raw.imageRef),
+    attributes,
+    positionRatings: sanitizePositionRatings(raw.positionRatings),
+    skills,
+    impetos: Array.isArray(raw.impetos) ? Array.from(new Set(raw.impetos.map(String).map((value) => value.trim()).filter(Boolean))).slice(0, 12) : [],
+    height: finiteNumber(raw.height, 130, 230),
+    weight: finiteNumber(raw.weight, 35, 180),
+    age: finiteNumber(raw.age, 14, 70),
+    level: finiteNumber(raw.level, 1, 99),
+    physicalModel: sanitizeNumberRecord(raw.physicalModel),
+    profileCoverage: Math.max(0, Math.min(100, Math.round(Number(raw.profileCoverage) || 0))),
     linkedHistoryId: raw.linkedHistoryId ? String(raw.linkedHistoryId) : null,
     locked: Boolean(raw.locked),
     excluded: Boolean(raw.excluded),
@@ -46,6 +99,8 @@ function sanitizePlayer(raw: Partial<SquadMappingPlayer>, index: number): SquadM
     createdAt: String(raw.createdAt || now),
     updatedAt: String(raw.updatedAt || now)
   };
+  if (!player.cardFingerprint) player.cardFingerprint = createMappingCardFingerprint(player);
+  return player;
 }
 
 function sanitizeTrial(raw: Partial<FormationTrial>, index: number): FormationTrial | null {
@@ -80,6 +135,8 @@ export function sanitizeMappingState(raw: unknown): MappingState {
   const preferences = { ...DEFAULT_MAPPING_PREFERENCES, ...(source.preferences ?? {}) };
   preferences.benchSize = 11;
   preferences.reserveGoalkeepers = preferences.reserveGoalkeepers === 1 ? 1 : 0;
+  preferences.allowIntelligentAdaptations = preferences.allowIntelligentAdaptations !== false;
+  preferences.prioritizeFullProfiles = preferences.prioritizeFullProfiles !== false;
   preferences.coachStyle = ['POSSE_DE_BOLA', 'CONTRA_ATAQUE', 'CONTRA_ATAQUE_RAPIDO'].includes(preferences.coachStyle) ? preferences.coachStyle : 'POSSE_DE_BOLA';
   const pins = source.pins && typeof source.pins === 'object'
     ? Object.fromEntries(Object.entries(source.pins).filter(([slotId, playerId]) => slotId && typeof playerId === 'string' && players.some((player) => player.id === playerId)))
@@ -115,11 +172,19 @@ export async function saveSquadMappingState(state: MappingState): Promise<{ targ
 }
 
 export function exportSquadMappingBackup(state: MappingState) {
-  return JSON.stringify({ kind: 'buildmaster-squad-mapping-backup', version: SQUAD_MAPPING_VERSION, exportedAt: new Date().toISOString(), state: sanitizeMappingState(state) }, null, 2);
+  return JSON.stringify({ kind: 'buildmaster-squad-mapping-backup', version: SQUAD_MAPPING_VERSION, exportedAt: new Date().toISOString(), includesImages: false, state: sanitizeMappingState(state) }, null, 2);
+}
+
+export function exportSquadMappingBackupWithImages(state: MappingState, images: Record<string, { dataUrl: string; bytes: number; storedAt: string }>) {
+  return JSON.stringify({ kind: 'buildmaster-squad-mapping-backup', version: SQUAD_MAPPING_VERSION, exportedAt: new Date().toISOString(), includesImages: true, state: sanitizeMappingState(state), images }, null, 2);
+}
+
+export function importSquadMappingBackupPayload(raw: string): { state: MappingState; images: Record<string, { dataUrl?: string; bytes?: number; storedAt?: string }> } {
+  const parsed = JSON.parse(raw) as { kind?: string; state?: unknown; images?: Record<string, { dataUrl?: string; bytes?: number; storedAt?: string }> } | MappingState;
+  if ('kind' in parsed && parsed.kind && parsed.kind !== 'buildmaster-squad-mapping-backup') throw new Error('Este arquivo não é um backup de Mapeamento de Elenco.');
+  return { state: sanitizeMappingState('state' in parsed ? parsed.state : parsed), images: 'images' in parsed && parsed.images ? parsed.images : {} };
 }
 
 export function importSquadMappingBackup(raw: string): MappingState {
-  const parsed = JSON.parse(raw) as { kind?: string; state?: unknown } | MappingState;
-  if ('kind' in parsed && parsed.kind && parsed.kind !== 'buildmaster-squad-mapping-backup') throw new Error('Este arquivo não é um backup de Mapeamento de Elenco.');
-  return sanitizeMappingState('state' in parsed ? parsed.state : parsed);
+  return importSquadMappingBackupPayload(raw).state;
 }

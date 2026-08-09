@@ -141,8 +141,8 @@ assert.match(engine, /UMA_TELA_UMA_RECEITA_IDENTIDADE_ENCAIXE_E_PROTECAO_DE_RECU
 assert.match(engine, /selectedPositionAffectsCanonicalRecipe: false/);
 assert.match(engine, /NAO_GASTAR_RECURSOS/);
 assert.doesNotMatch(engine, /Math\.random/);
-assert.match(panel, /Motor Unificado de Desempenho v39\.20/);
-assert.match(panel, /Bloqueado para evitar perda de giro/);
+assert.match(panel, /Motor Adaptativo por Carta v39\.30/);
+assert.match(panel, /Mesmo Ímpeto em todas as posições/);
 assert.match(workspace, /Ficha Suprema/);
 assert.match(workspace, /Tudo unificado em uma tela/);
 assert.match(workspace, /UNIFIED_COMPACT_RESULT_V3920 = true/);

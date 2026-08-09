@@ -150,7 +150,7 @@ export async function validateImageFile(file: File): Promise<ValidatedImage> {
   };
 }
 
-export async function createImageThumbnail(blob: Blob, maxDimension = IMAGE_IMPORT_LIMITS.thumbnailMaxDimension): Promise<Blob> {
+export async function createImageThumbnail(blob: Blob, maxDimension: number = IMAGE_IMPORT_LIMITS.thumbnailMaxDimension): Promise<Blob> {
   const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   try {
     const ratio = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));

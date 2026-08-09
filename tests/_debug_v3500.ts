@@ -117,7 +117,9 @@ Contato físico: 88
 Resistência: 82`);
 
 function run(text: string, position: PositionCode, formation: TacticalFormation, style: TacticalStyle) {
-  return applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE', position, `v35-${position}-${formation}-${style}.png`, {
+  const started = Date.now();
+  console.log('START', position, formation, style);
+  const output = applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE', position, `v35-${position}-${formation}-${style}.png`, {
     formation,
     style,
     managerId: `manager-${style}`,
@@ -128,6 +130,8 @@ function run(text: string, position: PositionCode, formation: TacticalFormation,
     connectionProfile: 'VARIABLE',
     controlProfile: position === 'SS' ? 'DRIBBLE' : 'BALANCED',
   }));
+  console.log('DONE', position, formation, style, Date.now() - started);
+  return output;
 }
 
 function assertOfficialTopFive(result: ReturnType<typeof run>, position: PositionCode, skillPosition: PositionCode = position) {
