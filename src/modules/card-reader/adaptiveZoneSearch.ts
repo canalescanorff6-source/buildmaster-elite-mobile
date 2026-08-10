@@ -55,12 +55,10 @@ export function adaptiveZoneVariants(zone: OcrZone, mode: 'balanced' | 'precisio
   const variants: AdaptiveZoneVariant[] = [{ id: 'exact', label: 'área exata', zone: safeZone(zone), priority: 100 }];
   const key: OcrZoneKey = zone.key;
   if (mode === 'fast') {
-    // No modo manual/calibrado o nome ganha apenas uma segunda janela mais
-    // concentrada. Isso corrige pequenos desvios do quadrado sem transformar a
-    // leitura rápida em uma bateria pesada de OCR.
-    if (key === 'name') {
-      variants.push({ id: 'name-tight', label: 'nome concentrado', zone: shifted(zone, 0, -Math.max(0.0015, zone.h * 0.03), 0.94, 0.72), priority: 99 });
-    }
+    // Contrato legado: o modo fast deste helper sempre representa somente a
+    // área exata. A segunda tentativa de nome do leitor manual é controlada
+    // diretamente por manualCalibrationFastReader, para não multiplicar zonas
+    // nem chamadas OCR escondidas.
     return variants;
   }
 

@@ -430,6 +430,7 @@ export function CardVisionApp() {
   const [managerId, setManagerId] = useState<string>('AUTO');
   const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
   const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');
+  // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
   const controlProfile: ControlProfile = 'AUTO';
   const [status, setStatus] = useState('Preparando uma abertura segura do BuildMaster...');
   const lastPremiumStatusRef = useRef('');

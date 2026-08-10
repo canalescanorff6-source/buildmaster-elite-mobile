@@ -168,7 +168,7 @@ function chooseAdaptedTraining(result: AnalysisResult, base: TrainingPlan): { pl
   return { plan: clone(winner), maxShift, gain: clamp(positionUtility(winner, position) - baseUtility, -100, 100) };
 }
 
-function mergeSkills(core: UnifiedSkillDecision[], positional: UnifiedSkillDecision[], mode: AdaptivePositionV3930Analysis['adaptationMode']): UnifiedSkillDecision[] {
+function mergeSkills(core: UnifiedSkillDecision[], positional: UnifiedSkillDecision[], _mode: AdaptivePositionV3930Analysis['adaptationMode']): UnifiedSkillDecision[] {
   const selected: UnifiedSkillDecision[] = [];
   const seen = new Set<string>();
   const add = (item: UnifiedSkillDecision | undefined) => {
@@ -178,7 +178,7 @@ function mergeSkills(core: UnifiedSkillDecision[], positional: UnifiedSkillDecis
     seen.add(key);
     selected.push(item);
   };
-  const coreSlots = mode === 'FORA_DA_POSICAO' ? 2 : 3;
+  const coreSlots = 3;
   core.slice(0, coreSlots).forEach(add);
   positional.forEach((item) => { if (selected.length < 5) add(item); });
   core.forEach((item) => { if (selected.length < 5) add(item); });
@@ -255,7 +255,7 @@ export function buildAdaptivePositionV3930(result: AnalysisResult): AdaptivePosi
   const reasons = [
     `Núcleo preservado em ${Math.round(identityPreservation)}%.`,
     adaptationApplied ? `${changes.length} grupo(s) ajustado(s) com orçamento idêntico.` : 'A receita-base foi mantida porque nenhuma troca segura aumentou a utilidade da posição.',
-    mode === 'FORA_DA_POSICAO' ? `Duas habilidades de identidade foram preservadas e até três foram priorizadas para ${selectedLabel}.` : `Três habilidades de identidade foram preservadas e até duas foram escolhidas para ${selectedLabel}.`,
+    `Três habilidades centrais da identidade foram preservadas e até duas vagas podem complementar a função em ${selectedLabel}.`,
     `O Ímpeto ${primaryImpeto ?? 'a confirmar'} permanece fixo para esta versão da carta e não muda ao trocar a posição.`,
     'A mesma carta na mesma posição sempre repete exatamente esta receita.'
   ];
