@@ -21971,3 +21971,19 @@ body::after { display: none !important; }
   .app-splash-screen.bm-brand-splash-screen { background-position: center center !important; }
   .bm-brand-splash-screen .splash-premium-shell { width: 100% !important; }
 }
+
+
+/* v38.40 r3 — leitura ativa separada da fila + progresso visível */
+.reader-interrupted-card{
+  display:grid;gap:12px;padding:14px;border:1px solid rgba(76,143,255,.28);
+  background:linear-gradient(145deg,rgba(17,31,55,.96),rgba(10,20,38,.98));border-radius:16px;
+}
+.reader-interrupted-copy{display:flex;align-items:center;gap:11px;min-width:0}
+.reader-interrupted-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:rgba(62,132,255,.13);color:#73adff;flex:0 0 auto}
+.reader-interrupted-copy div{display:grid;gap:2px;min-width:0}.reader-interrupted-copy strong{font-size:14px}.reader-interrupted-copy span,.reader-interrupted-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--bm-text-muted)}
+.reader-interrupted-actions{display:flex;gap:8px;flex-wrap:wrap}.reader-interrupted-actions button{min-height:44px}
+.reader-live-progress-card{display:grid;grid-template-columns:82px 1fr auto;gap:14px;align-items:center;padding:14px;border-radius:18px;border:1px solid rgba(69,133,246,.28);background:linear-gradient(145deg,rgba(12,26,49,.98),rgba(7,16,31,.99));box-shadow:0 16px 42px rgba(0,0,0,.22)}
+.reader-live-progress-preview{width:82px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;display:grid;place-items:center;background:#07101f;border:1px solid rgba(255,255,255,.08)}
+.reader-live-progress-preview img{width:100%;height:100%;object-fit:cover}.reader-live-progress-copy{min-width:0}.reader-live-progress-copy h3{margin:2px 0 5px;font-size:16px}.reader-live-progress-copy p{margin:0;color:var(--bm-text-muted);font-size:12px;line-height:1.45}.reader-live-progress-steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.reader-live-progress-steps span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.05);font-size:10px;color:var(--bm-text-muted)}.reader-live-progress-steps span.done{color:#82d6ad;background:rgba(48,181,119,.1)}.reader-live-progress-steps span.active{color:#92bdff;background:rgba(54,125,242,.14)}
+.reader-live-progress-card>.cancel-ocr-action{min-height:44px;white-space:nowrap}
+@media(max-width:680px){.reader-live-progress-card{grid-template-columns:66px 1fr}.reader-live-progress-preview{width:66px}.reader-live-progress-card>.cancel-ocr-action{grid-column:1/-1;width:100%}}

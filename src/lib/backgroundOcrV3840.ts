@@ -2,7 +2,9 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import { runtimeDelete, runtimeGet, runtimePut } from './localDatabase';
 
 export const BACKGROUND_OCR_VERSION = '38.40-background-resume-1';
-const ACTIVE_JOB_KEY = 'active-card-reading';
+const ACTIVE_JOB_KEY = 'background-ocr-active-card-reading';
+const LEGACY_ACTIVE_JOB_KEY = 'active-card-reading';
+const ACTIVE_JOB_STORE = 'backup-snapshots' as const;
 
 export type BackgroundOcrStage =
   | 'preparing'
@@ -45,7 +47,7 @@ export async function saveBackgroundOcrCheckpoint(
     version: 1,
     updatedAt: new Date().toISOString()
   };
-  await runtimePut('ocr-queue', ACTIVE_JOB_KEY, checkpoint);
+  await runtimePut(ACTIVE_JOB_STORE, ACTIVE_JOB_KEY, checkpoint);
   return checkpoint;
 }
 
@@ -59,16 +61,27 @@ export async function updateBackgroundOcrCheckpoint(
     ...patch,
     updatedAt: new Date().toISOString()
   };
-  await runtimePut('ocr-queue', ACTIVE_JOB_KEY, next);
+  await runtimePut(ACTIVE_JOB_STORE, ACTIVE_JOB_KEY, next);
   return next;
 }
 
 export async function readBackgroundOcrCheckpoint(): Promise<BackgroundOcrCheckpoint | null> {
-  return runtimeGet<BackgroundOcrCheckpoint>('ocr-queue', ACTIVE_JOB_KEY);
+  const current = await runtimeGet<BackgroundOcrCheckpoint>(ACTIVE_JOB_STORE, ACTIVE_JOB_KEY).catch(() => null);
+  if (current) return current;
+  // Migração do hotfix anterior: a leitura ativa era gravada na mesma store
+  // da fila manual de prints, fazendo-a aparecer como um item impossível de abrir/remover.
+  const legacy = await runtimeGet<BackgroundOcrCheckpoint>('ocr-queue', LEGACY_ACTIVE_JOB_KEY).catch(() => null);
+  if (!legacy || legacy.version !== 1 || !legacy.fileName || !legacy.file) return null;
+  await runtimePut(ACTIVE_JOB_STORE, ACTIVE_JOB_KEY, legacy).catch(() => undefined);
+  await runtimeDelete('ocr-queue', LEGACY_ACTIVE_JOB_KEY).catch(() => undefined);
+  return legacy;
 }
 
 export async function clearBackgroundOcrCheckpoint(): Promise<void> {
-  await runtimeDelete('ocr-queue', ACTIVE_JOB_KEY).catch(() => undefined);
+  await Promise.allSettled([
+    runtimeDelete(ACTIVE_JOB_STORE, ACTIVE_JOB_KEY),
+    runtimeDelete('ocr-queue', LEGACY_ACTIVE_JOB_KEY)
+  ]);
 }
 
 export function checkpointFile(checkpoint: BackgroundOcrCheckpoint): File {

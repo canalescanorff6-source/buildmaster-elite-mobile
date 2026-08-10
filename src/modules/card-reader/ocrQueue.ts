@@ -17,10 +17,23 @@ export type OcrQueueJob = {
   error?: string;
 };
 
+function isRealOcrQueueJob(value: unknown): value is OcrQueueJob {
+  if (!value || typeof value !== 'object') return false;
+  const job = value as Partial<OcrQueueJob>;
+  return typeof job.id === 'string'
+    && job.id.startsWith('ocr-job-')
+    && typeof job.imageHash === 'string'
+    && typeof job.fileName === 'string'
+    && job.blob instanceof Blob
+    && ['waiting', 'processing', 'done', 'failed'].includes(String(job.status))
+    && Number.isFinite(job.attempts);
+}
+
 export async function enqueueOcrFile(file: File): Promise<{ job: OcrQueueJob; duplicate: boolean }> {
   const imageHash = await fileDigest(file);
-  const existing = (await runtimeList<OcrQueueJob>('ocr-queue', 100).catch(() => []))
+  const existing = (await runtimeList<unknown>('ocr-queue', 100).catch(() => []))
     .map((entry) => entry.value)
+    .filter(isRealOcrQueueJob)
     .find((job) => job.imageHash === imageHash && job.status !== 'failed');
   if (existing) return { job: existing, duplicate: true };
   const now = new Date().toISOString();
@@ -42,8 +55,10 @@ export async function enqueueOcrFile(file: File): Promise<{ job: OcrQueueJob; du
 }
 
 export async function listOcrQueue(limit = 30) {
-  return (await runtimeList<OcrQueueJob>('ocr-queue', limit).catch(() => []))
+  return (await runtimeList<unknown>('ocr-queue', Math.max(limit * 2, 30)).catch(() => []))
     .map((entry) => entry.value)
+    .filter(isRealOcrQueueJob)
+    .slice(0, limit)
     .sort((a, b) => b.addedAt.localeCompare(a.addedAt));
 }
 
@@ -64,5 +79,7 @@ export async function removeOcrQueueJob(id: string) {
 }
 
 export function queueJobAsFile(job: OcrQueueJob) {
+  if (!isRealOcrQueueJob(job)) throw new Error('Item inválido na fila de leitura');
   return new File([job.blob], job.fileName, { type: job.mimeType, lastModified: Date.parse(job.updatedAt) || Date.now() });
 }
+

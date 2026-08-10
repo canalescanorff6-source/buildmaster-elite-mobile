@@ -94,6 +94,7 @@ import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
 import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
 import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
 import { UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/UnifiedCreationFlowV3790';
+import { ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840 } from '@/components/ReaderRecoveryAndProgressV3840';
 import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
 import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
@@ -164,7 +165,8 @@ import {
   startBackgroundOcrProtection,
   stopBackgroundOcrProtection,
   updateBackgroundOcrCheckpoint,
-  updateBackgroundOcrProtection
+  updateBackgroundOcrProtection,
+  type BackgroundOcrCheckpoint
 } from '@/lib/backgroundOcrV3840';
 import { validateImageFile } from '@/modules/images/imageSafety';
 import { exportTacticalImageLibrary, importTacticalImageLibrary } from '@/modules/images/accountImageLibrary';
@@ -464,6 +466,7 @@ export function CardVisionApp() {
   const [sessionSaveState, setSessionSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const backgroundResumeStartedRef = useRef(false);
+  const [pendingBackgroundCheckpoint, setPendingBackgroundCheckpoint] = useState<BackgroundOcrCheckpoint | null>(null);
 
   useEffect(() => {
     if (!startupGateReady || startupSafeMode || backgroundResumeStartedRef.current) return;
@@ -471,12 +474,10 @@ export function CardVisionApp() {
     let active = true;
     void readBackgroundOcrCheckpoint().then((checkpoint) => {
       if (!active || !checkpoint || !checkpoint.shouldResume || checkpoint.stage === 'completed') return;
-      const restored = checkpointFile(checkpoint);
-      setSelectedFile(restored);
-      setFileName(checkpoint.fileName);
-      setPreview((current) => current ?? URL.createObjectURL(restored));
-      setStatus(`Retomando leitura salva: ${checkpoint.status}`);
-      window.setTimeout(() => { if (active) void analyzeSelectedImage(restored, true); }, 80);
+      // Nunca reinicia OCR sozinho na abertura. Uma leitura interrompida precisa
+      // ser explicitamente retomada ou descartada pelo usuário.
+      setPendingBackgroundCheckpoint(checkpoint);
+      setStatus(`Leitura interrompida encontrada: ${checkpoint.fileName}. Escolha Retomar ou Descartar.`);
     }).catch(() => undefined);
     return () => { active = false; };
   }, [startupGateReady, startupSafeMode]);
@@ -2285,8 +2286,20 @@ export function CardVisionApp() {
     setStatus(`${value} aplicado como correção de ${field}. Recalcule a prévia e confirme antes de finalizar.`);
   }
   async function cancelCurrentOcr() {
-    setStatus('Cancelando leitura...'); await cancelOcrProcessing();
-    setOcrCancelable(false); setLoading(false); setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
+    setOcrCancelable(false); setLoading(false); setPendingBackgroundCheckpoint(null); delete document.body.dataset.ocrReading; setStatus('Cancelando leitura...');
+    const workerCancel = cancelOcrProcessing();
+    await Promise.allSettled([Promise.race([workerCancel, new Promise<void>((resolve) => window.setTimeout(resolve, 1800))]), clearBackgroundOcrCheckpoint(), stopBackgroundOcrProtection()]);
+    setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
+  }
+  async function resumeInterruptedReading() {
+    const checkpoint = pendingBackgroundCheckpoint ?? await readBackgroundOcrCheckpoint().catch(() => null);
+    if (!checkpoint) { setPendingBackgroundCheckpoint(null); setStatus('Não há leitura interrompida para retomar.'); return; }
+    const restored = checkpointFile(checkpoint); setPendingBackgroundCheckpoint(null); await clearBackgroundOcrCheckpoint().catch(() => undefined); await handleFile(restored);
+    setStatus(`Retomando leitura de ${checkpoint.fileName}...`); await analyzeSelectedImage(restored, true);
+  }
+  async function discardInterruptedReading() {
+    setPendingBackgroundCheckpoint(null); await Promise.allSettled([clearBackgroundOcrCheckpoint(), stopBackgroundOcrProtection()]);
+    setStatus('Leitura interrompida descartada. Nenhuma ficha salva foi apagada.');
   }
   async function adjustDetectedCard(action: 'left' | 'right' | 'up' | 'down' | 'zoom-in' | 'zoom-out') {
     if (!selectedFile || !cardCropResult) return;
@@ -2310,6 +2323,9 @@ export function CardVisionApp() {
       setStatus(error instanceof Error ? error.message : 'Imagem inválida.');
       return;
     }
+    // Selecionar uma nova imagem substitui qualquer retomada antiga pendente.
+    setPendingBackgroundCheckpoint(null);
+    void clearBackgroundOcrCheckpoint().catch(() => undefined);
     setFileName(file.name); setSelectedFile(file);
     if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current);
     previewObjectUrlRef.current = URL.createObjectURL(file); setPreview(previewObjectUrlRef.current);
@@ -3508,6 +3524,7 @@ export function CardVisionApp() {
           {advancedMode && readerCaptureMode === 'complete' ? (
             <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} onCancel={cancelCurrentOcr} /></SectionErrorBoundary>
           ) : (<>
+          {pendingBackgroundCheckpoint && !loading && <ReaderInterruptedCardV3840 checkpoint={pendingBackgroundCheckpoint} onResume={() => void resumeInterruptedReading()} onDiscard={() => void discardInterruptedReading()} />}
           <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
             <div className="creation-source-heading">
               <span className="creation-stage-number">1</span>
@@ -3559,24 +3576,25 @@ export function CardVisionApp() {
               </button>
             )}
           </div>
-          {advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
+          {loading && <ReaderLiveProgressCardV3840 preview={preview} status={status} onCancel={() => void cancelCurrentOcr()} />}
+          {!loading && advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
             {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}
           </div>}
-          {qualityReport && qualityReport.issues.length > 0 && (
+          {!loading && qualityReport && qualityReport.issues.length > 0 && (
             <div className="bm-simple-image-warning" role="status">
               <strong>A imagem pode ficar mais nítida</strong>
               <span>{qualityReport.issues.slice(0, 2).map((issue) => issue.message).join(' ')}</span>
             </div>
           )}
-          {advancedMode && qualityReport && (
+          {!loading && advancedMode && qualityReport && (
             <div className="quality-card">
               <strong>Detalhes da imagem</strong>
               <span>{qualityReport.width}x{qualityReport.height}px • nitidez {qualityReport.sharpness} • contraste {qualityReport.contrast}</span>
             </div>
           )}
-          {advancedMode && ocrVisionEnabled && <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary>}
-          {advancedMode && preview && qualityReport && (
+          {!loading && advancedMode && ocrVisionEnabled && <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary>}
+          {!loading && advancedMode && preview && qualityReport && (
             <div className="premium-image-lab">
               <div className="premium-image-lab-head">
                 <div><strong>Laboratório local da imagem</strong><span>Qualidade {qualityScore(qualityReport)}/100 • {qualityLabel(qualityScore(qualityReport))}</span></div>
@@ -3600,7 +3618,7 @@ export function CardVisionApp() {
               <p>O tratamento ocorre somente no aparelho e não modifica o arquivo original. Ele melhora contraste, brilho e nitidez usados pela leitura.</p>
             </div>
           )}
-          {calibratorOpen && preview && (
+          {!loading && calibratorOpen && preview && (
             <EfhubVisualCalibrator
               imageSrc={preview}
               zones={efhubCalibrationZones}
