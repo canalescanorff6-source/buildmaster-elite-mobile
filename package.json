@@ -20,6 +20,7 @@
     "quality:visual": "node scripts/check-visual-accessibility.mjs",
     "quality:bundle": "node scripts/check-bundle-budget.mjs",
     "quality:bundle-built": "node scripts/check-bundle-budget.mjs --built",
+    "quality:static-export": "node scripts/check-static-export.mjs",
     "quality:audit": "node scripts/audit-project.mjs",
     "release:preflight": "node scripts/production-preflight.mjs",
     "release:play-preflight": "node scripts/validate-play-store-release.mjs",

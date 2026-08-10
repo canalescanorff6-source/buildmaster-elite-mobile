@@ -162,7 +162,7 @@ export async function refreshGlobalProBuildCatalog(): Promise<{ sources: Creator
   }
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/world_pro_builds?select=*&active=eq.true&order=verified_at.desc`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Accept: 'application/json' },
+      headers: { apikey: SUPABASE_ANON_KEY, Accept: 'application/json' },
       cache: 'no-store'
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

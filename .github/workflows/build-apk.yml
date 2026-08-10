@@ -81,6 +81,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Instalar Android SDK 36
+        run: yes | sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+
       - name: Conferir configuração obrigatória
         env:
           ANDROID_SIGNING_BUNDLE: ${{ secrets.ANDROID_SIGNING_BUNDLE }}
@@ -124,6 +130,33 @@ jobs:
           }
           NODE
           echo "Servidor Supabase e chave pública responderam corretamente."
+
+      - name: Verificar função crítica de licença
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          BASE_URL="${NEXT_PUBLIC_SUPABASE_URL%/}"
+          HTTP_CODE="$(curl --silent --show-error --output /tmp/buildmaster-license-preflight.txt --write-out '%{http_code}' \
+            --request OPTIONS --connect-timeout 12 --max-time 25 \
+            --header "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+            --header 'Origin: capacitor://localhost' \
+            --header 'Access-Control-Request-Method: POST' \
+            "$BASE_URL/functions/v1/license-session" || true)"
+          case "$HTTP_CODE" in
+            200|204|400|401|403|405|426) ;;
+            404|000|5??)
+              echo "::error::A rota Supabase license-session não está disponível (HTTP ${HTTP_CODE:-000}). Publique as Edge Functions antes de gerar o aplicativo."
+              cat /tmp/buildmaster-license-preflight.txt 2>/dev/null || true
+              exit 1
+              ;;
+            *)
+              echo "::error::Resposta inesperada da rota license-session (HTTP ${HTTP_CODE:-000})."
+              cat /tmp/buildmaster-license-preflight.txt 2>/dev/null || true
+              exit 1
+              ;;
+          esac
+          echo "Rota license-session encontrada no projeto Supabase (HTTP $HTTP_CODE)."
 
       - name: Calcular versão Android monotônica e ativo imutável
         env:
@@ -216,6 +249,7 @@ jobs:
               handle.write(f'ROLLBACK_FROM_VERSION={rollback_from}\n')
               handle.write(f'ROLLBACK_REASON={rollback_reason}\n')
               handle.write(f'SOURCE_SHA={source_sha}\n')
+              handle.write(f'NEXT_PUBLIC_BUILDMASTER_BUILD_ID={source_sha}\n')
               handle.write(f'CHANNEL_BRANCH={"buildmaster-update-beta" if channel == "beta" else "buildmaster-update"}\n')
               promote_legacy = channel == 'stable' and rollout == 100 and os.environ.get('INPUT_PAUSED', 'false').lower() != 'true'
               handle.write(f'PROMOTE_LEGACY={str(promote_legacy).lower()}\n')
@@ -284,7 +318,6 @@ jobs:
         timeout-minutes: 12
         env:
           BUILDMASTER_ANDROID_STATIC: '1'
-          NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
           NEXT_PUBLIC_BUILDMASTER_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_UPDATE_PRIMARY_URL: https://raw.githubusercontent.com/${{ github.repository }}/buildmaster-update/update-manifest.json
@@ -300,6 +333,9 @@ jobs:
       - name: Validar orçamento do bundle
         timeout-minutes: 3
         run: npm run quality:bundle-built
+
+      - name: Validar exportação estática completa
+        run: npm run quality:static-export
 
       - name: Confirmar configuração real dentro do app
         env:
@@ -327,10 +363,35 @@ jobs:
           rm -rf android
           npx --no-install cap add android
 
+      - name: Fixar SDK Android de produção
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('android/variables.gradle')
+          if not p.exists():
+              raise SystemExit('android/variables.gradle não foi gerado pelo Capacitor.')
+          text = p.read_text(encoding='utf-8')
+          replacements = [
+              (r'compileSdkVersion\s*=\s*\d+', 'compileSdkVersion = 36', 'compileSdkVersion'),
+              (r'targetSdkVersion\s*=\s*\d+', 'targetSdkVersion = 36', 'targetSdkVersion'),
+              (r'minSdkVersion\s*=\s*\d+', 'minSdkVersion = 23', 'minSdkVersion'),
+          ]
+          for pattern, replacement, label in replacements:
+              text, count = re.subn(pattern, replacement, text, count=1)
+              if count != 1:
+                  raise SystemExit(f'{label} não encontrado em android/variables.gradle.')
+          p.write_text(text, encoding='utf-8')
+          PY
+          grep -q 'compileSdkVersion = 36' android/variables.gradle
+          grep -q 'targetSdkVersion = 36' android/variables.gradle
+          grep -q 'minSdkVersion = 23' android/variables.gradle
+
       - name: Instalar Keystore, identidade e atualizador nativo
         run: |
           node scripts/install-android-security-plugin.mjs
           node scripts/install-match-recorder-plugin.mjs
+          node scripts/install-background-ocr-plugin.mjs
           node scripts/install-native-vault-storage-plugin.mjs
           node scripts/install-android-branding.mjs
 
@@ -382,6 +443,11 @@ jobs:
           test -f "$VAULT_PLUGIN" || { echo '::error::Cofre nativo da memória interna ausente.'; exit 1; }
           grep -qF 'getContext().getFilesDir()' "$VAULT_PLUGIN" || { echo '::error::Cofre não está usando a memória interna privada do APK.'; exit 1; }
           grep -qF 'BuildMasterVaultStorage' android/app/src/main/java/com/buildmaster/elitetatico/MainActivity.java || { echo '::error::Plugin do Cofre nativo não foi registrado.'; exit 1; }
+          BACKGROUND_PLUGIN=android/app/src/main/java/com/buildmaster/elitetatico/BuildMasterBackgroundOcrPlugin.java
+          test -f "$BACKGROUND_PLUGIN" || { echo '::error::Plugin de OCR em segundo plano ausente.'; exit 1; }
+          grep -qF 'BuildMasterBackgroundOcrPlugin.class' android/app/src/main/java/com/buildmaster/elitetatico/MainActivity.java || { echo '::error::Plugin de OCR em segundo plano não foi registrado.'; exit 1; }
+          grep -qF 'BuildMasterBackgroundOcrService' android/app/src/main/AndroidManifest.xml || { echo '::error::Serviço de OCR em segundo plano ausente.'; exit 1; }
+          grep -qF 'android.permission.FOREGROUND_SERVICE_DATA_SYNC' android/app/src/main/AndroidManifest.xml || { echo '::error::Permissão dataSync do OCR em segundo plano ausente.'; exit 1; }
           grep -qF 'hasSigningCertificate' "$PLUGIN" || { echo '::error::Validação da assinatura do APK ausente.'; exit 1; }
           grep -qF 'getPackageArchiveInfo' "$PLUGIN" || { echo '::error::Validação do pacote baixado ausente.'; exit 1; }
           grep -qF 'SHA-256 do APK não confere' "$PLUGIN" || { echo '::error::Validação SHA-256 ausente.'; exit 1; }
@@ -408,30 +474,68 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon :app:compileReleaseJavaWithJavac
 
-      - name: Preparar chave permanente
+      - name: Preparar e validar chave permanente
         env:
           ANDROID_SIGNING_BUNDLE: ${{ secrets.ANDROID_SIGNING_BUNDLE }}
         run: |
           python - <<'PY'
-          import base64, json, os, pathlib
+          import base64, json, os, pathlib, subprocess
+
+          def clean_secret(value, label):
+              value = str(value or '')
+              if not value.strip():
+                  raise ValueError(f'{label} vazio')
+              if '\n' in value or '\r' in value:
+                  raise ValueError(f'{label} contém quebra de linha')
+              return value
+
           try:
               bundle = json.loads(os.environ['ANDROID_SIGNING_BUNDLE'])
-              encoded = str(bundle['keystoreBase64'])
-              password = str(bundle['password'])
-              if len(password) < 12:
-                  raise ValueError('senha muito curta')
+              encoded = clean_secret(bundle.get('keystoreBase64'), 'keystoreBase64').strip()
+              store_password = clean_secret(bundle.get('password'), 'password')
+              alias = clean_secret(bundle.get('keyAlias') or 'buildmaster', 'keyAlias').strip()
+              key_password = clean_secret(bundle.get('keyPassword') or store_password, 'keyPassword')
+              if len(store_password) < 12:
+                  raise ValueError('senha do keystore muito curta')
               raw = base64.b64decode(encoded, validate=True)
+              if len(raw) < 1024:
+                  raise ValueError('keystore decodificado é pequeno demais ou inválido')
           except Exception as exc:
               raise SystemExit(f'ANDROID_SIGNING_BUNDLE inválido: {exc}')
+
           path = pathlib.Path('signing/buildmaster-release.keystore')
           path.parent.mkdir(parents=True, exist_ok=True)
           path.write_bytes(raw)
           os.chmod(path, 0o600)
-          print(f'::add-mask::{password}')
+
+          for secret in (store_password, key_password, alias):
+              print(f'::add-mask::{secret}')
+
+          validation_csr = path.with_suffix('.validation.csr')
+          try:
+              subprocess.run([
+                  'keytool', '-list', '-keystore', str(path),
+                  '-storepass', store_password, '-alias', alias
+              ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+              # -list valida o keystore e o alias; -certreq também precisa abrir a
+              # chave privada e por isso detecta keyPassword incorreta antes do apksigner.
+              subprocess.run([
+                  'keytool', '-certreq', '-keystore', str(path),
+                  '-storepass', store_password, '-alias', alias,
+                  '-keypass', key_password, '-file', str(validation_csr)
+              ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+          except subprocess.CalledProcessError as exc:
+              detail = (exc.stderr or '').strip().splitlines()[-1:]
+              suffix = f' ({detail[0]})' if detail else ''
+              raise SystemExit('ANDROID_SIGNING_BUNDLE não abre com alias/storePassword/keyPassword informados' + suffix)
+          finally:
+              validation_csr.unlink(missing_ok=True)
+
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as handle:
               handle.write(f'ANDROID_KEYSTORE_PATH={path.resolve()}\n')
-              handle.write(f'ANDROID_KEYSTORE_PASSWORD={password}\n')
-              handle.write('ANDROID_KEY_ALIAS=buildmaster\n')
+              handle.write(f'ANDROID_KEYSTORE_PASSWORD={store_password}\n')
+              handle.write(f'ANDROID_KEY_ALIAS={alias}\n')
+              handle.write(f'ANDROID_KEY_PASSWORD={key_password}\n')
           PY
 
       - name: Gerar APK release
@@ -453,7 +557,7 @@ jobs:
             --ks "$ANDROID_KEYSTORE_PATH" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
             --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --key-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
             --out "dist-apk/$APK_ASSET_NAME" \
             dist-apk/BuildMaster-aligned.apk
           rm -f dist-apk/BuildMaster-aligned.apk
@@ -493,7 +597,7 @@ jobs:
             'appId': 'com.buildmaster.elitetatico',
             'version': os.environ['BUILDMASTER_VERSION'],
             'versionCode': int(version_code),
-            'buildId': f'{os.environ["GITHUB_SHA"]}-{os.environ["GITHUB_RUN_ATTEMPT"]}',
+            'buildId': f'{os.environ["SOURCE_SHA"]}-{os.environ["GITHUB_RUN_ATTEMPT"]}',
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'channel': os.environ['RELEASE_CHANNEL'],
             'updateType': 'apk',
@@ -583,7 +687,7 @@ jobs:
             dist-apk/legacy/update-manifest.json
             dist-apk/release-history.json
             dist-apk/signing-report.txt
-            MANIFESTO_PRODUCAO_V34.00.sha256
+            MANIFESTO_PRODUCAO_V38.40.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -617,7 +721,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             rm -f verify-release/immutable.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/38.40 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -668,7 +772,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-bridge.apk
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/38.40 Android' \
               --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               --connect-timeout 25 --max-time 240 \
@@ -695,7 +799,7 @@ jobs:
           if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$CHANNEL_BRANCH" >/dev/null 2>&1; then
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/heads/$CHANNEL_BRANCH" \
-              -f sha="$GITHUB_SHA" >/dev/null
+              -f sha="$SOURCE_SHA" >/dev/null
           fi
 
           CONTENT=$(base64 -w0 dist-apk/primary/update-manifest.json)
@@ -754,7 +858,7 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
             if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' \
+              --user-agent 'BuildMaster-Elite-Tatico-Updater/38.40 Android' \
               --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
               "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
               -o verify-release/primary-manifest.json; then
@@ -793,7 +897,7 @@ jobs:
 
           URL=$(cat verify-release/primary-apk-url.txt)
           curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' \
+            --user-agent 'BuildMaster-Elite-Tatico-Updater/38.40 Android' \
             --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
             --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
             "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk

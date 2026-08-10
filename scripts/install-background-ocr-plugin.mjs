@@ -109,9 +109,17 @@ if (!main.includes('registerPlugin(BuildMasterBackgroundOcrPlugin.class);')) {
 
 if (fs.existsSync(manifestPath)) {
   let manifest = fs.readFileSync(manifestPath, 'utf8');
-  if (!manifest.includes('android.permission.FOREGROUND_SERVICE')) {
-    manifest = manifest.replace('<manifest', '<manifest').replace(/(<manifest[^>]*>)/, '$1\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />');
-  }
+  const ensurePermission = (permission) => {
+    const marker = `android.permission.${permission}`;
+    if (manifest.includes(marker)) return;
+    manifest = manifest.replace(/(<manifest[^>]*>)/, `$1\n    <uses-permission android:name="${marker}" />`);
+  };
+  // Android 14+ exige a permissão específica do tipo dataSync além da permissão base.
+  // Cada permissão é conferida separadamente porque outros plugins podem ter adicionado
+  // FOREGROUND_SERVICE antes deste instalador.
+  ensurePermission('FOREGROUND_SERVICE');
+  ensurePermission('FOREGROUND_SERVICE_DATA_SYNC');
+  ensurePermission('POST_NOTIFICATIONS');
   if (!manifest.includes('BuildMasterBackgroundOcrService')) {
     manifest = manifest.replace('</application>', '        <service android:name=".BuildMasterBackgroundOcrService" android:exported="false" android:foregroundServiceType="dataSync" />\n    </application>');
   }

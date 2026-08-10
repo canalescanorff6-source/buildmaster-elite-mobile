@@ -33,6 +33,7 @@ const typedSourceFiles = sourceFiles.filter((file) => /\.(?:ts|tsx)$/.test(file)
 const cssFiles = sourceFiles.filter((file) => file.endsWith('.css'));
 const workflowApk = read('.github/workflows/build-apk.yml');
 const workflowPlay = read('.github/workflows/build-play-store.yml');
+const supabaseConfig = read('supabase/config.toml');
 const appUpdates = read('src/lib/appUpdates.ts');
 const dataSafety = read('src/lib/dataSafety.ts');
 const globals = read('src/app/globals.css');
@@ -47,12 +48,18 @@ const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 const v3840Runner = read('scripts/run-v3840-tests.mjs');
+const worldProRegistrySource = read('src/lib/worldProRegistry.ts');
+const globalProBenchmarkSource = read('src/lib/globalProBenchmarkV3900.ts');
 
 check(pkg.version === '38.40.0', 'Versão atual configurada', pkg.version);
 check(appUpdates.includes("'38.40.0'"), 'Motor de atualização sincronizado');
 check(dataSafety.includes("APP_DATA_VERSION = '38.40.0'") && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada e esquema compatível');
 check(manifest.name === 'BuildMaster Elite Tático v38.40', 'Manifesto PWA sincronizado');
 check(sw.includes('buildmaster-v38-40-background-ocr-resume-1'), 'Cache PWA sincronizado');
+check(/\[functions\.license-session\][\s\S]*?verify_jwt\s*=\s*true/.test(supabaseConfig), 'Supabase mantém licença protegida por JWT');
+check(/\[functions\.account-deletion-request\][\s\S]*?verify_jwt\s*=\s*false/.test(supabaseConfig), 'Supabase permite solicitação pública de exclusão com publishable key');
+check(/\[functions\.pro-build-search\][\s\S]*?verify_jwt\s*=\s*false/.test(supabaseConfig), 'Supabase permite busca Pro com publishable key no apikey');
+check(!worldProRegistrySource.includes('Bearer ${SUPABASE_ANON_KEY}') && !globalProBenchmarkSource.includes('Bearer ${SUPABASE_ANON_KEY}'), 'Publishable/anon key não é enviada como Authorization Bearer nas rotas públicas');
 for (const file of [
   'public/assets/branding/buildmaster-app-icon.png',
   'public/assets/branding/buildmaster-mark.png',

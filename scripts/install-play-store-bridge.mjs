@@ -117,7 +117,7 @@ const dependencies = [
   "implementation 'com.google.android.play:app-update:2.1.0'"
 ];
 for (const dependency of dependencies) {
-  if (!gradle.includes(dependency)) gradle = gradle.replace(/dependencies\s*\{/, `dependencies {\n    ${dependency}`);
+  if (!gradle.includes(dependency)) gradle = gradle.replace(/dependencies\s*\{/, (match) => `${match}\n    ${dependency}\n`);
 }
 fs.writeFileSync(gradlePath, gradle);
 

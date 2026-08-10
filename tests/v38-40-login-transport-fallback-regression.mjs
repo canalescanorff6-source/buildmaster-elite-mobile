@@ -9,6 +9,9 @@ const capacitor = read('capacitor.config.ts');
 const androidInstaller = read('scripts/install-android-security-plugin.mjs');
 const directWorkflow = read('.github/workflows/build-apk.yml');
 const playWorkflow = read('.github/workflows/build-play-store.yml');
+const supabaseConfig = read('supabase/config.toml');
+const worldProRegistry = read('src/lib/worldProRegistry.ts');
+const globalProBenchmark = read('src/lib/globalProBenchmarkV3900.ts');
 
 assert.match(auth, /nativeSecureHttpRequest\(/, 'ponte HTTPS própria do BuildMaster ausente');
 assert.match(auth, /CapacitorHttp\.request\(/, 'transporte oficial do Capacitor precisa continuar como reserva');
@@ -42,6 +45,13 @@ for (const [label, workflow] of [['direto', directWorkflow], ['Play', playWorkfl
   assert.match(workflow, /typeof payload\?\.version !== 'string'/, `workflow ${label} não confirma a versão do GoTrue`);
 }
 assert.match(playWorkflow, /NEXT_PUBLIC_SUPABASE_URL.*URL válida do Supabase/s, 'workflow Play não valida o formato da URL');
+assert.match(directWorkflow, /functions\/v1\/license-session/, 'workflow direto não confirma a rota crítica de licença');
+assert.match(playWorkflow, /functions\/v1\/license-session/, 'workflow Play não confirma a rota crítica de licença');
+assert.match(supabaseConfig, /\[functions\.license-session\][\s\S]*?verify_jwt\s*=\s*true/, 'license-session precisa continuar exigindo JWT de usuário');
+assert.match(supabaseConfig, /\[functions\.account-deletion-request\][\s\S]*?verify_jwt\s*=\s*false/, 'exclusão pública precisa aceitar publishable key sem JWT legado');
+assert.match(supabaseConfig, /\[functions\.pro-build-search\][\s\S]*?verify_jwt\s*=\s*false/, 'busca Pro precisa aceitar publishable key sem JWT legado');
+assert.doesNotMatch(worldProRegistry, /Bearer \$\{SUPABASE_ANON_KEY\}/, 'registry ainda usa a API key pública como Bearer');
+assert.doesNotMatch(globalProBenchmark, /Bearer \$\{SUPABASE_ANON_KEY\}/, 'benchmark global ainda usa a API key pública como Bearer');
 assert.match(playWorkflow, /sb_publishable_\*/, 'workflow Play não aceita explicitamente a Publishable key');
 assert.match(androidInstaller, /validateNativeHttpUrl\(url\)/, 'ponte nativa não valida o host antes de conectar');
 assert.match(androidInstaller, /setInstanceFollowRedirects\(false\)/, 'ponte de login não bloqueia redirecionamentos inesperados');

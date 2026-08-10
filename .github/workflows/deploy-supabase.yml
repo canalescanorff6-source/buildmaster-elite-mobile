@@ -60,3 +60,6 @@ jobs:
           supabase functions list --project-ref "$SUPABASE_PROJECT_ID" | tee functions-list.txt
           grep -q 'license-session' functions-list.txt
           grep -q 'admin-users' functions-list.txt
+          grep -q 'account-deletion-request' functions-list.txt
+          grep -q 'play-integrity-verify' functions-list.txt
+          grep -q 'pro-build-search' functions-list.txt

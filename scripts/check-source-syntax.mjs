@@ -25,6 +25,24 @@ function walk(directory) {
 
 const files = [...walk('src'), ...walk('tests'), ...walk('scripts'), ...walk('supabase')];
 const failures = [];
+const importExtensions = ['', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css', '.d.ts'];
+const indexCandidates = ['index.ts', 'index.tsx', 'index.js', 'index.jsx', 'index.mjs', 'index.cjs'];
+
+function localImportExists(file, specifier) {
+  let base;
+  if (specifier.startsWith('@/')) base = path.join(process.cwd(), 'src', specifier.slice(2));
+  else if (specifier.startsWith('.')) base = path.resolve(path.dirname(file), specifier);
+  else return true;
+  for (const extension of importExtensions) {
+    const candidate = `${base}${extension}`;
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return true;
+  }
+  if (fs.existsSync(base) && fs.statSync(base).isDirectory()) {
+    for (const candidate of indexCandidates) if (fs.existsSync(path.join(base, candidate))) return true;
+  }
+  return false;
+}
+
 for (const file of files) {
   const source = fs.readFileSync(file, 'utf8');
   const kind = file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
@@ -35,11 +53,21 @@ for (const file of files) {
     const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ');
     failures.push(`${file}${position ? `:${position.line + 1}:${position.character + 1}` : ''} — ${message}`);
   }
+  for (const statement of parsed.statements) {
+    const moduleSpecifier = (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement))
+      ? statement.moduleSpecifier?.text
+      : null;
+    if (typeof moduleSpecifier !== 'string') continue;
+    if (!localImportExists(file, moduleSpecifier)) {
+      const position = parsed.getLineAndCharacterOfPosition(statement.getStart(parsed));
+      failures.push(`${file}:${position.line + 1}:${position.character + 1} — importação local inexistente: ${moduleSpecifier}`);
+    }
+  }
 }
 
 if (failures.length) {
-  console.error(`Falha sintática em ${failures.length} ocorrência(s):`);
+  console.error(`Falha sintática/estrutural em ${failures.length} ocorrência(s):`);
   for (const failure of failures.slice(0, 80)) console.error(`✗ ${failure}`);
   process.exit(1);
 }
-console.log(`Sintaxe aprovada em ${files.length} arquivos TypeScript/TSX.`);
+console.log(`Sintaxe e importações locais aprovadas em ${files.length} arquivos TypeScript/TSX.`);
