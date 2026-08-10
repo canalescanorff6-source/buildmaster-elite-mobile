@@ -14,6 +14,10 @@ function check(condition, message) {
 check(packageJson.scripts?.['types:repair'], 'Script types:repair ausente.');
 check(packageJson.scripts?.['quality:root-tsconfig'], 'Script quality:root-tsconfig ausente.');
 check(doctor.includes("['Configuração TypeScript raiz'"), 'ci-doctor não valida a configuração TypeScript raiz.');
+check(doctor.includes("CI_SOURCE_BUILD = 'v38.40-ci-sync-20260809-r1'"), 'ci-doctor não identifica a fonte sincronizada desta correção.');
+check(doctor.includes('EXPECTED_FULL_GROUPS = 84'), 'ci-doctor não protege a quantidade esperada de 84 grupos.');
+check(packageJson.scripts?.['test:v3840'] === 'node scripts/run-v3840-tests.mjs', 'v38.40 não usa o executor detalhado e determinístico.');
+
 check(apkWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow APK não restaura e valida o tsconfig raiz.');
 check(playWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow Play não restaura e valida o tsconfig raiz.');
 check(packageJson.scripts?.['quality:dependencies'], 'Script quality:dependencies ausente.');
@@ -35,6 +39,18 @@ check(doctor.includes("['Regressões v34.00'"), 'ci-doctor completo não executa
 check(doctor.includes("['Regressões v35.00'"), 'ci-doctor completo não executa o catálogo oficial e a ficha universal v35.00.');
 check(doctor.includes("['Regressões v35.10'"), 'ci-doctor completo não executa a ficha máxima anti-overall v35.10.');
 check(doctor.includes("['Regressões v35.20'"), 'ci-doctor completo não executa Perfis de Gameplay e tema sólido v35.20.');
+for (const [version, script] of [['39.30', 'test:v3930'], ['39.40', 'test:v3940'], ['39.50', 'test:v3950']]) {
+  check(doctor.includes(`['Regressões v${version}', ['run', '${script}']]`), `ci-doctor completo não executa a regressão mais recente v${version}.`);
+}
+
+const testAll = String(packageJson.scripts?.['test:all'] ?? '');
+const regressionScripts = [...testAll.matchAll(/npm run (test:v\d+)/g)].map((match) => match[1]);
+for (const script of regressionScripts) {
+  const numeric = script.slice('test:v'.length);
+  const label = numeric.length === 4 ? `${numeric.slice(0, 2)}.${numeric.slice(2)}` : numeric;
+  const doctorScript = script === 'test:v3000' ? 'test:v3000:core' : script;
+  check(doctor.includes(`['Regressões v${label}', ['run', '${doctorScript}']]`), `ci-doctor e test:all divergiram: ${doctorScript} não está no diagnóstico completo.`);
+}
 check(apkWorkflow.includes('npm run ci:verify'), 'Workflow APK não executa ci:verify.');
 check(playWorkflow.includes('npm run ci:verify'), 'Workflow Play não executa ci:verify.');
 check(apkWorkflow.includes('npm run quality:bundle-built'), 'Workflow APK não valida o bundle compilado.');

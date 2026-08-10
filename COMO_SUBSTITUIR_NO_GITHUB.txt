@@ -1,0 +1,16 @@
+CORREÇÃO DE SINCRONIZAÇÃO DO GITHUB — BUILDMASTER v38.40
+
+1. Feche o GitHub Desktop.
+2. Extraia este ZIP em uma pasta temporária.
+3. Abra a pasta local REAL do repositório buildmaster-elite-mobile.
+4. Copie TODOS os arquivos e pastas deste pacote, inclusive .github, diretamente para a RAIZ do repositório.
+5. Confirme a substituição dos arquivos existentes.
+6. Não crie uma subpasta com o nome deste pacote dentro do repositório.
+7. Abra o GitHub Desktop, confirme que scripts/ci-doctor.mjs, package.json, scripts/run-v3840-tests.mjs e .github/workflows foram alterados.
+8. Faça commit e Push origin.
+
+No log correto aparecerá:
+Fonte do diagnóstico: v38.40-ci-sync-20260809-r1
+Executando 84 grupos sem parar na primeira falha.
+
+Se aparecer 81 grupos, o GitHub ainda está usando a raiz antiga.

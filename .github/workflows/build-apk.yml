@@ -112,6 +112,17 @@ jobs:
             echo "::error::O servidor Supabase configurado não respondeu corretamente (HTTP ${HTTP_CODE:-000}). Confira se o projeto está ativo e se URL/chave pertencem ao mesmo projeto."
             exit 1
           fi
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = '/tmp/buildmaster-supabase-health.json';
+          let payload;
+          try { payload = JSON.parse(fs.readFileSync(file, 'utf8')); }
+          catch { console.error('::error::O endpoint de saúde do Supabase não retornou JSON válido.'); process.exit(1); }
+          if (payload?.name !== 'GoTrue' || typeof payload?.version !== 'string' || !payload.version.trim()) {
+            console.error('::error::A URL respondeu, mas não corresponde a um servidor Supabase Auth válido.');
+            process.exit(1);
+          }
+          NODE
           echo "Servidor Supabase e chave pública responderam corretamente."
 
       - name: Calcular versão Android monotônica e ativo imutável

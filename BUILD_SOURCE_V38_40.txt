@@ -1,0 +1,10 @@
+BuildMaster Elite Tático v38.40
+Pacote: CI sincronizado
+Identificador: v38.40-ci-sync-20260809-r1
+
+Sinais esperados no GitHub Actions:
+- "Fonte do diagnóstico: v38.40-ci-sync-20260809-r1"
+- "Executando 84 grupos" no diagnóstico completo
+- v38.40 dividida em 9 verificações detalhadas
+
+Se o log mostrar apenas 81 grupos, o GitHub ainda está executando arquivos antigos na raiz do repositório.

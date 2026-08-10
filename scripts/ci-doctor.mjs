@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 
 const full = process.argv.includes('--full');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const CI_SOURCE_BUILD = 'v38.40-ci-sync-20260809-r1';
+const EXPECTED_FULL_GROUPS = 84;
 
 const quickChecks = [
   ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
@@ -88,13 +90,22 @@ const fullChecks = [
   ['Regressões v39.00', ['run', 'test:v3900']],
   ['Regressões v39.10', ['run', 'test:v3910']],
   ['Regressões v39.20', ['run', 'test:v3920']],
+  ['Regressões v39.30', ['run', 'test:v3930']],
+  ['Regressões v39.40', ['run', 'test:v3940']],
+  ['Regressões v39.50', ['run', 'test:v3950']],
 ];
 
 const checks = full ? [...quickChecks, ...fullChecks] : quickChecks;
+if (full && checks.length !== EXPECTED_FULL_GROUPS) {
+  console.error(`Contrato interno do CI inválido: esperados ${EXPECTED_FULL_GROUPS} grupos, encontrados ${checks.length}.`);
+  process.exit(2);
+}
+
 const failures = [];
 const startedAt = Date.now();
 
 console.log(`\nDIAGNÓSTICO CONSOLIDADO BUILMASTER ${full ? 'COMPLETO' : 'RÁPIDO'}`);
+console.log(`Fonte do diagnóstico: ${CI_SOURCE_BUILD}`);
 console.log(`Executando ${checks.length} grupos sem parar na primeira falha.\n`);
 
 for (const [label, args] of checks) {

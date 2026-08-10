@@ -1,1 +1,1 @@
-Corrige definitivamente o login e a conexão Supabase no Android
+Audita CI e reforça validação do Supabase antes do APK e AAB

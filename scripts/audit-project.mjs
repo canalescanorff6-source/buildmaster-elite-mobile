@@ -46,6 +46,7 @@ const professionalCss = read('src/app/v37-professional-intelligence.css');
 const rootPage = read('src/app/page.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
+const v3840Runner = read('scripts/run-v3840-tests.mjs');
 
 check(pkg.version === '38.40.0', 'Versão atual configurada', pkg.version);
 check(appUpdates.includes("'38.40.0'"), 'Motor de atualização sincronizado');
@@ -64,7 +65,7 @@ for (const file of [
   'tests/v38-40-branding-regression.mjs'
 ]) check(exists(file), `Identidade premium presente: ${file}`);
 check(workflowApk.includes('install-android-branding.mjs') && workflowPlay.includes('install-android-branding.mjs'), 'Identidade Android integrada aos dois workflows');
-check(String(pkg.scripts?.['test:v3840'] ?? '').includes('v38-40-branding-regression.mjs'), 'Regressão da identidade premium integrada à v38.40');
+check(String(pkg.scripts?.['test:v3840'] ?? '') === 'node scripts/run-v3840-tests.mjs' && v3840Runner.includes('v38-40-branding-regression.mjs'), 'Regressão da identidade premium integrada à v38.40');
 check(exists('src/lib/performanceBuildEngineV3850.ts') && exists('src/components/PowerBuildEngineV3850Panel.tsx') && exists('tests/v38-50-power-build-engine-regression.mjs'), 'Motor funcional v38.50 integrado');
 check(String(pkg.scripts?.['test:v3850'] ?? '').includes('v38-50-power-build-engine-regression.mjs') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3850'), 'Regressão v38.50 integrada à bateria geral');
 check(rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre autenticação e aplicativo');

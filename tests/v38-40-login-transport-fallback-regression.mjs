@@ -37,6 +37,14 @@ for (const permission of ['android.permission.INTERNET', 'android.permission.ACC
 }
 assert.match(directWorkflow, /auth\/v1\/health/, 'workflow direto não testa o Supabase antes do APK');
 assert.match(playWorkflow, /auth\/v1\/health/, 'workflow Play não testa o Supabase antes do AAB');
+for (const [label, workflow] of [['direto', directWorkflow], ['Play', playWorkflow]]) {
+  assert.match(workflow, /payload\?\.name !== 'GoTrue'/, `workflow ${label} não confirma que a resposta é do Supabase Auth`);
+  assert.match(workflow, /typeof payload\?\.version !== 'string'/, `workflow ${label} não confirma a versão do GoTrue`);
+}
+assert.match(playWorkflow, /NEXT_PUBLIC_SUPABASE_URL.*URL válida do Supabase/s, 'workflow Play não valida o formato da URL');
+assert.match(playWorkflow, /sb_publishable_\*/, 'workflow Play não aceita explicitamente a Publishable key');
+assert.match(androidInstaller, /validateNativeHttpUrl\(url\)/, 'ponte nativa não valida o host antes de conectar');
+assert.match(androidInstaller, /setInstanceFollowRedirects\(false\)/, 'ponte de login não bloqueia redirecionamentos inesperados');
 
 const secureIndex = auth.indexOf('nativeSecureHttpRequest');
 const capacitorIndex = auth.indexOf('CapacitorHttp.request');
