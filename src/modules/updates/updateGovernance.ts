@@ -9,6 +9,7 @@ import {
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import { createStableId } from '@/lib/stableId';
 import type { UpdateManifestFetchResult } from '@/lib/updateChannel';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 export type UpdateChannelPreference = 'stable' | 'beta';
 
@@ -93,7 +94,7 @@ async function fetchText(url: string) {
     if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
     return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
   }
-  const response = await fetch(target, { cache: 'no-store', headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' } });
+  const response = await fetchWithTimeout(target, { cache: 'no-store', headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' } }, 20_000);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.text();
 }

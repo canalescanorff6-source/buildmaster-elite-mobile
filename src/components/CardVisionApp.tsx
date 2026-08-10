@@ -32,6 +32,7 @@ import {
   Users,
   UserPlus
 } from 'lucide-react';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { CalibrationProfileFields } from '@/components/CalibrationProfileFields';
 import { ManagerSelectionField } from '@/components/ManagerSelectionField';
@@ -1218,7 +1219,7 @@ export function CardVisionApp() {
     try {
       writeAccountStorage(RULE_PACK_URL_KEY, url);
       setRulesStatus('Baixando pacote de regras...');
-      const response = await fetch(url, { cache: 'no-store' });
+      const response = await fetchWithTimeout(url, { cache: 'no-store' }, 20_000);
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload) throw new Error('Não consegui ler o JSON desta URL.');
       const pack = sanitizeContinuousRulePackV3770(payload);
@@ -3239,7 +3240,7 @@ export function CardVisionApp() {
     );
   }
   return (
-    <main id="buildmaster-main-content" tabIndex={-1} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
+    <main id="buildmaster-main-content" tabIndex={-1} data-theme={appTheme} className={`premium-app premium-mobile-shell bm2820-screen-system visual-${visualPreset} theme-${appTheme} accent-${accentTheme} text-${textScale} density-${densityMode} motion-${motionPreference} performance-${performanceMode} ${highContrast ? 'contrast-high' : ''} ${advancedMode ? 'mode-advanced' : 'mode-basic'} section-${mainSection}`}>
       <MobileScrollRecovery />
       <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
       {!showSplash && <UpdateAutoChecker onPrepareBackup={prepareBackupForUpdate} />}

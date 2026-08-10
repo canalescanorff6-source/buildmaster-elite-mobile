@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -21,11 +22,11 @@ export function PublicDeletionRequestForm() {
     setSubmitting(true);
     setStatus('Enviando solicitação...');
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/account-deletion-request`, {
+      const response = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/account-deletion-request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
         body: JSON.stringify({ username: normalized, reason, confirmation: 'EXCLUIR', source: 'public_web' })
-      });
+      }, 25_000);
       const payload = await response.json().catch(() => null) as { requestId?: string; message?: string } | null;
       if (!response.ok) throw new Error(payload?.message || 'Não foi possível registrar a solicitação.');
       setStatus(`Solicitação registrada${payload?.requestId ? ` com o código ${payload.requestId}` : ''}. Guarde este código.`);

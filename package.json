@@ -164,7 +164,9 @@
     "typecheck:v3940": "tsc -p tests/types-v3940/tsconfig.json --pretty false && tsc -p tests/types-v3940-ui/tsconfig.json --pretty false",
     "test:v3940": "npm run typecheck:v3940 && node -r ./tests/_ts-require.cjs tests/v39-40-real-function-performance-regression.ts",
     "typecheck:v3950": "tsc -p tests/types-v3950/tsconfig.json --pretty false && tsc -p tests/types-v3950-ui/tsconfig.json --pretty false",
-    "test:v3950": "npm run typecheck:v3950 && node -r ./tests/_ts-require.cjs tests/v39-50-total-squad-library-regression.ts && node tests/v39-50-total-squad-library-integration-regression.mjs"
+    "test:v3950": "npm run typecheck:v3950 && node -r ./tests/_ts-require.cjs tests/v39-50-total-squad-library-regression.ts && node tests/v39-50-total-squad-library-integration-regression.mjs",
+    "prebuild": "npm run types:repair && npm run sanitize:update-source && npm run routes:repair",
+    "prevercel-build": "npm run types:repair && npm run sanitize:update-source && npm run routes:repair"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

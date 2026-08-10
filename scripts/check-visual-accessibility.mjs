@@ -7,6 +7,9 @@ const navigation = fs.readFileSync('src/components/RefinedNavigation.tsx', 'utf8
 const live = fs.readFileSync('src/components/LiveStatusRegion.tsx', 'utf8');
 const qualityCenter = fs.readFileSync('src/components/PremiumQualityCenter.tsx', 'utf8');
 const qualityLayer = fs.readFileSync('src/components/PremiumQualityLayer.tsx', 'utf8');
+const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
+const cardVisionApp = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const stabilityTheme = fs.readFileSync('src/app/v38-stability-theme.css', 'utf8');
 
 function luminance(hex) {
   const value = hex.replace('#', '');
@@ -37,5 +40,12 @@ assert.match(qualityCenter, /auditVisibleInterface/);
 assert.match(qualityCenter, /Perfil visual e de desempenho/);
 assert.match(qualityLayer, /unhandledrejection/);
 assert.match(qualityLayer, /buildmaster:screen-change/);
+
+
+assert.match(cardVisionApp, /data-theme=\{appTheme\}/, 'O tema ativo precisa ser exposto como data-theme para as proteções globais de contraste.');
+assert.ok(layout.indexOf("./v38-stability-theme.css") > layout.indexOf("./v38-reader-speed-contrast.css"), 'A camada de consistência visual precisa ser a última folha de estilo do app.');
+for (const marker of [".premium-app[data-theme='dark']", 'color-scheme: dark', '.auth-caps-warning', '.architecture-tier-balanced', '.bm2980-warning']) {
+  assert.ok(stabilityTheme.includes(marker), `Proteção visual global ausente: ${marker}`);
+}
 
 console.log('Visual e acessibilidade: contraste, toque, foco, movimento reduzido e regiões ao vivo aprovados.');

@@ -44,6 +44,7 @@ const solidCss = read('src/app/v35-solid-premium.css');
 const revolutionCss = read('src/app/v36-premium-revolution.css');
 const professionalCss = read('src/app/v37-professional-intelligence.css');
 const rootPage = read('src/app/page.tsx');
+const rootPageTemplate = read('scripts/templates/critical-routes/root-page.tsx.txt');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 const v3840Runner = read('scripts/run-v3840-tests.mjs');
@@ -70,6 +71,7 @@ check(exists('src/lib/performanceBuildEngineV3850.ts') && exists('src/components
 check(String(pkg.scripts?.['test:v3850'] ?? '').includes('v38-50-power-build-engine-regression.mjs') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3850'), 'Regressão v38.50 integrada à bateria geral');
 check(rootPage.includes('AppShellSafetyBoundaryV3930') && rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre proteção de runtime, autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');
+check(rootPage.trim() === rootPageTemplate.trim(), 'Rota raiz persistida exatamente no template canônico, sem depender do autorreparo do CI');
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(workflowPlay.includes(marker), `Workflow Play usa ${marker}`);
 for (const marker of ['gradle/actions/setup-gradle@v6', 'actions/upload-artifact@v6']) check(workflowApk.includes(marker), `Workflow APK usa ${marker}`);
@@ -237,6 +239,13 @@ check(privateKeyHits.length === 0, 'Nenhuma chave privada textual incluída', pr
 const directStorage = reachableTypedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
   .filter((item) => item.line.includes('localStorage.') && !item.file.endsWith('safeLocalStorage.ts'));
 check(directStorage.length === 0, 'Acesso direto ao localStorage centralizado nos módulos ativos', directStorage.slice(0, 8).map((item) => `${path.relative(root, item.file)}:${item.index}`).join(', '));
+
+const rawFetchAllowed = new Set(['src/lib/accountAuth.ts', 'src/lib/fetchWithTimeout.ts']);
+const rawFetchHits = reachableTypedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
+  .filter((item) => /\bfetch\s*\(/.test(item.line) && !rawFetchAllowed.has(path.relative(root, item.file).replaceAll(path.sep, '/')));
+check(rawFetchHits.length === 0, 'Chamadas fetch ativas possuem prazo explícito', rawFetchHits.slice(0, 8).map((item) => `${path.relative(root, item.file)}:${item.index}`).join(', '));
+const accountAuthSource = read('src/lib/accountAuth.ts');
+check(accountAuthSource.includes('AbortController') && accountAuthSource.includes('performWebFetch') && accountAuthSource.includes('30_000'), 'Fetch de autenticação mantém AbortController e timeout próprio');
 
 const explicitAnyHits = reachableTypedSourceFiles.flatMap((file) => fs.readFileSync(file, 'utf8').split('\n').map((line, index) => ({ file, line, index: index + 1 })))
   .filter((item) => /(?:\bas any\b|:\s*any\b|<any>)/.test(item.line));

@@ -26,6 +26,7 @@ import './v38-squad-mapping.css';
 import './v39-global-pro-lab.css';
 import './v39-unified-performance.css';
 import './v38-reader-speed-contrast.css';
+import './v38-stability-theme.css';
 
 export const metadata: Metadata = {
   title: `BuildMaster Elite Tático v${APP_RELEASE_VERSION}`,

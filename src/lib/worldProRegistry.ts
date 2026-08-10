@@ -1,4 +1,5 @@
 import type { AnalysisResult } from './analyzerDomain';
+import { fetchWithTimeout } from './fetchWithTimeout';
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -141,10 +142,10 @@ function sanitizeRemoteProfile(input: Record<string, unknown>): WorldProProfile 
 export async function loadWorldProRegistry(platform: WorldProPlatform | 'TODOS' = 'TODOS'): Promise<{ profiles: WorldProProfile[]; source: 'ONLINE' | 'LOCAL' }> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { profiles: listWorldPros(platform), source: 'LOCAL' };
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/world_pro_registry?select=*&active=eq.true&order=authority_score.desc,gamer_tag.asc`, {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/world_pro_registry?select=*&active=eq.true&order=authority_score.desc,gamer_tag.asc`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Accept: 'application/json' },
       cache: 'no-store'
-    });
+    }, 18_000);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json() as Array<Record<string, unknown>>;
     const profiles = body.map(sanitizeRemoteProfile).filter((profile): profile is WorldProProfile => Boolean(profile));
@@ -205,7 +206,7 @@ export async function searchWorldProVideos(result: AnalysisResult, profile?: Wor
     return { mode: 'FALLBACK', query, videos: [], fallbackUrl, message: 'Busca oficial não configurada; abrindo pesquisa exata no YouTube.' };
   }
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/pro-build-search`, {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/pro-build-search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -213,7 +214,7 @@ export async function searchWorldProVideos(result: AnalysisResult, profile?: Wor
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`
       },
       body: JSON.stringify({ query, gamerTag: profile?.gamerTag || '', limit: 8 })
-    });
+    }, 22_000);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json() as { videos?: WorldProVideoCandidate[]; message?: string };
     const videos = Array.isArray(body.videos) ? body.videos.slice(0, 8) : [];

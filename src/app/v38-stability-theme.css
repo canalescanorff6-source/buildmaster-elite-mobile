@@ -1,0 +1,155 @@
+/* ========================================================================== */
+/* BuildMaster v38.40 r8 — consistência visual global e superfícies legadas   */
+/* Carregado por último. Mantém tema claro intacto e elimina vazamentos claros */
+/* quando o aplicativo está no tema escuro.                                   */
+/* ========================================================================== */
+
+.premium-app[data-theme='dark'] {
+  color-scheme: dark;
+  --bm-surface: var(--v35-surface, #101c2f);
+  --bm-surface-soft: var(--v35-surface-2, #17263c);
+  --bm-text: var(--v35-text, #f5f8fd);
+  --bm-text-soft: var(--v35-muted, #afbed0);
+  --bm-border-soft: var(--v35-line, rgba(151,182,219,.15));
+  --bm-sapphire: var(--v35-accent, #5c9dff);
+}
+
+.premium-app[data-theme='light'] { color-scheme: light; }
+
+/* Superfícies de versões antigas que tinham branco fixo ou fallback claro. */
+.premium-app[data-theme='dark'] :where(
+  .auth-connectivity-warning,
+  .auth-caps-warning,
+  .auth-retry-panel,
+  .bm2980-hero,
+  .bm2980-card,
+  .bm2980-empty,
+  .refined-player-card-footer,
+  .architecture-health-panel,
+  .architecture-health-grid article,
+  .bm2920-production-center,
+  .refinement-feature-grid article,
+  .refinement-feature-grid article > button,
+  .refined-continue-card,
+  .refined-health-card
+) {
+  color: var(--v35-text, #f5f8fd) !important;
+  border-color: var(--v35-line, rgba(151,182,219,.15)) !important;
+  background: var(--v35-surface, #101c2f) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.premium-app[data-theme='dark'] :where(
+  .auth-connectivity-warning,
+  .auth-caps-warning,
+  .bm2980-warning,
+  .refined-player-card-footer .duplicate-badge,
+  .architecture-tier-economy
+) {
+  color: #f5d38f !important;
+  border-color: rgba(241,195,110,.28) !important;
+  background: rgba(241,195,110,.11) !important;
+  -webkit-text-fill-color: #f5d38f !important;
+}
+
+.premium-app[data-theme='dark'] :where(
+  .vault-trash-list .danger,
+  .refinement-data-grid .inspection-error
+) {
+  color: #ff9bad !important;
+  border-color: rgba(255,116,141,.26) !important;
+  background: rgba(255,116,141,.10) !important;
+  -webkit-text-fill-color: #ff9bad !important;
+}
+
+.premium-app[data-theme='dark'] .architecture-tier-balanced {
+  color: #a9caff !important;
+  background: rgba(92,157,255,.12) !important;
+  border-color: rgba(92,157,255,.26) !important;
+}
+.premium-app[data-theme='dark'] .architecture-tier-high {
+  color: #8ce3ce !important;
+  background: rgba(79,207,154,.11) !important;
+  border-color: rgba(79,207,154,.25) !important;
+}
+
+.premium-app[data-theme='dark'] .refinement-feature-grid article > button i {
+  color: var(--v35-accent, #5c9dff) !important;
+  background: color-mix(in srgb, var(--v35-accent, #5c9dff) 12%, transparent) !important;
+}
+
+/* Texto nunca pode desaparecer por herança de uma camada clara antiga. */
+.premium-app[data-theme='dark'] :where(
+  .auth-connectivity-warning,
+  .auth-caps-warning,
+  .bm2980-hero,
+  .bm2980-card,
+  .architecture-health-panel,
+  .architecture-health-grid article,
+  .bm2920-production-center,
+  .refined-player-card-footer
+) :where(h1,h2,h3,h4,h5,h6,strong,b,label,legend,summary) {
+  color: var(--v35-text, #f5f8fd) !important;
+  -webkit-text-fill-color: var(--v35-text, #f5f8fd) !important;
+}
+.premium-app[data-theme='dark'] :where(
+  .bm2980-hero,
+  .bm2980-card,
+  .architecture-health-panel,
+  .architecture-health-grid article,
+  .bm2920-production-center,
+  .refined-player-card-footer
+) :where(p,span,small,em) {
+  color: var(--v35-muted, #afbed0) !important;
+  -webkit-text-fill-color: var(--v35-muted, #afbed0) !important;
+}
+
+/* Controles nativos seguem o tema e não reaparecem com fundo branco do WebView. */
+.premium-app[data-theme='dark'] :where(input, textarea, select) {
+  color-scheme: dark;
+}
+.premium-app[data-theme='light'] :where(input, textarea, select) {
+  color-scheme: light;
+}
+
+/* Guarda final: cobre cartões/painéis semânticos antigos independentemente da ordem
+   dos CSS históricos. Este arquivo é o último importado no layout. */
+.premium-app[data-theme='dark'] :where(
+  .luxury-panel,
+  .creation-field-card,
+  .bm32-manual-choice-card,
+  .bm32-manual-identity,
+  .bm32-manual-attributes,
+  .creation-processing-card,
+  .reader-card,
+  .reader-panel,
+  .settings-card,
+  .result-card,
+  .vault-card,
+  .team-card,
+  .modal-card,
+  .drawer-card,
+  .panel-card
+) {
+  background: var(--v35-surface, #101c2f) !important;
+  color: var(--v35-text, #f5f8fd) !important;
+  border-color: var(--v35-line, rgba(151,182,219,.15)) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+.premium-app[data-theme='dark'] :where(input, textarea, select) {
+  background: var(--v35-field, #0c1728) !important;
+  color: var(--v35-text, #f5f8fd) !important;
+  border-color: var(--v35-line-strong, rgba(151,182,219,.24)) !important;
+  -webkit-text-fill-color: var(--v35-text, #f5f8fd) !important;
+  caret-color: var(--v35-accent, #5c9dff);
+}
+.premium-app[data-theme='dark'] :where(input, textarea)::placeholder {
+  color: var(--v35-muted, #afbed0) !important;
+  -webkit-text-fill-color: var(--v35-muted, #afbed0) !important;
+  opacity: .78;
+}
+.premium-app[data-theme='dark'] select option {
+  background: var(--v35-field, #0c1728);
+  color: var(--v35-text, #f5f8fd);
+}

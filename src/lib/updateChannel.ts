@@ -11,6 +11,7 @@ import {
   validateUpdateManifest,
   type AppUpdateManifest
 } from '@/lib/appUpdates';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 export type UpdateChannelSource = 'primary-channel' | 'beta-channel' | 'legacy-manifest' | 'release-api';
 
@@ -75,7 +76,7 @@ async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): 
       throw new Error(`HTTP ${native.status} ao consultar o canal oficial.`);
     } catch (nativeError) {
       try {
-        const response = await fetch(target, { cache: 'no-store', headers: requestHeaders, redirect: 'follow' });
+        const response = await fetchWithTimeout(target, { cache: 'no-store', headers: requestHeaders, redirect: 'follow' }, 20_000);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return parseJsonPayload(await response.text());
       } catch {
@@ -84,7 +85,7 @@ async function fetchJsonUrl(url: string, headers: Record<string, string> = {}): 
     }
   }
 
-  const response = await fetch(target, { cache: 'no-store', headers: requestHeaders, redirect: 'follow' });
+  const response = await fetchWithTimeout(target, { cache: 'no-store', headers: requestHeaders, redirect: 'follow' }, 20_000);
   if (!response.ok) throw new Error(`HTTP ${response.status} ao consultar o canal oficial.`);
   return parseJsonPayload(await response.text());
 }

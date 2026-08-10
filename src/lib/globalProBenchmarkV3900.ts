@@ -20,6 +20,7 @@ import { buildOwnedSkillKeys, canonicalizeSkillList, isOfficialAdditionalSkillId
 import { listWorldPros, type WorldProProfile } from './worldProRegistry';
 import { trainingPlanCost } from './trainingPlanCore';
 import { officialAdditionalSkillPoolForPosition } from './skillIntelligenceV31';
+import { fetchWithTimeout } from './fetchWithTimeout';
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -161,10 +162,10 @@ export async function refreshGlobalProBuildCatalog(): Promise<{ sources: Creator
     return { sources: loadGlobalProBuildSources(), source: 'CACHE', message: 'Base online não configurada; usando fontes verificadas salvas no aparelho.' };
   }
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/world_pro_builds?select=*&active=eq.true&order=verified_at.desc`, {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/world_pro_builds?select=*&active=eq.true&order=verified_at.desc`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Accept: 'application/json' },
       cache: 'no-store'
-    });
+    }, 18_000);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json() as Array<Record<string, unknown>>;
     const sources = body.map(remoteRowToSource).filter((item): item is CreatorBuildSource => Boolean(item));
