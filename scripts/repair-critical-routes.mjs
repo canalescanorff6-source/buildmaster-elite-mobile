@@ -14,8 +14,11 @@ function isValidRootRoute(source) {
   return (
     text.includes("@/components/AuthGate") &&
     text.includes("@/components/CardVisionApp") &&
+    text.includes("@/components/AppShellSafetyBoundaryV3930") &&
+    text.includes('<AppShellSafetyBoundaryV3930>') &&
     text.includes('<AuthGate>') &&
     text.includes('<CardVisionApp') &&
+    text.includes('</AppShellSafetyBoundaryV3930>') &&
     !/PrivacyPolicyPage|AccountDeletionPage|Política de privacidade|Solicitar exclusão da conta|public-policy-page/.test(text)
   );
 }
@@ -36,7 +39,9 @@ export function repairCriticalRoutes(projectRoot = process.cwd(), options = {}) 
       ? 'deletion-page-overwrite'
       : /PrivacyPolicyPage|Política de privacidade|public-policy-page/.test(current)
         ? 'privacy-page-overwrite'
-        : 'invalid-root-route';
+        : /AuthGate|CardVisionApp/.test(current) && !/AppShellSafetyBoundaryV3930/.test(current)
+          ? 'outdated-shell-route'
+          : 'invalid-root-route';
 
   if (checkOnly) {
     const error = new Error(`Rota inicial inválida (${reason}): ${rootPage}`);

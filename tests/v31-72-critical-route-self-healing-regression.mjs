@@ -15,7 +15,10 @@ assert.equal(repaired.reason, 'deletion-page-overwrite');
 const restored = fs.readFileSync(rootPage, 'utf8');
 assert.match(restored, /@\/components\/AuthGate/);
 assert.match(restored, /@\/components\/CardVisionApp/);
+assert.match(restored, /@\/components\/AppShellSafetyBoundaryV3930/);
+assert.match(restored, /<AppShellSafetyBoundaryV3930>/);
 assert.match(restored, /<AuthGate>/);
+assert.match(restored, /<\/AppShellSafetyBoundaryV3930>/);
 assert.doesNotMatch(restored, /AccountDeletionPage|Solicitar exclusão da conta|public-policy-page/);
 
 const secondPass = repairCriticalRoutes(tempRoot);
@@ -31,4 +34,4 @@ assert.throws(
 );
 
 fs.rmSync(tempRoot, { recursive: true, force: true });
-console.log('v31.72 autorreparo da rota inicial aprovado: troca por privacidade/exclusão não bloqueia mais o CI.');
+console.log('v31.72 autorreparo da rota inicial aprovado: restaura boundary, autenticação e app mesmo após sobrescrita por política/exclusão.');

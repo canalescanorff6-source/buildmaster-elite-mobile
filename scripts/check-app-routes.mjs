@@ -10,11 +10,11 @@ const rootPage = read('src/app/page.tsx');
 const privacyPage = read('src/app/privacidade/page.tsx');
 const deletionPage = read('src/app/excluir-conta/page.tsx');
 
-if (!rootPage.includes("@/components/AuthGate") || !rootPage.includes("@/components/CardVisionApp")) {
-  fail('A rota raiz src/app/page.tsx precisa importar AuthGate e CardVisionApp.');
+if (!rootPage.includes("@/components/AuthGate") || !rootPage.includes("@/components/CardVisionApp") || !rootPage.includes("@/components/AppShellSafetyBoundaryV3930")) {
+  fail('A rota raiz src/app/page.tsx precisa importar AppShellSafetyBoundaryV3930, AuthGate e CardVisionApp.');
 }
-if (!rootPage.includes('<AuthGate>') || !rootPage.includes('<CardVisionApp')) {
-  fail('A rota raiz precisa montar o aplicativo dentro do AuthGate.');
+if (!rootPage.includes('<AppShellSafetyBoundaryV3930>') || !rootPage.includes('<AuthGate>') || !rootPage.includes('<CardVisionApp') || !rootPage.includes('</AppShellSafetyBoundaryV3930>')) {
+  fail('A rota raiz precisa montar o aplicativo dentro de AppShellSafetyBoundaryV3930 e AuthGate.');
 }
 if (/PrivacyPolicyPage|Política de privacidade|public-policy-page/.test(rootPage)) {
   fail('A política de privacidade foi copiada para src/app/page.tsx. Ela deve permanecer apenas em src/app/privacidade/page.tsx.');
