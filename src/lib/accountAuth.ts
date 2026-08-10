@@ -209,7 +209,14 @@ export function isCloudAccountsConfigured() {
 }
 
 export function normalizeUsername(input: string): string {
-  return input.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 20);
+  const raw = input.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const internalSuffix = `@${USERNAME_DOMAIN}`;
+  // O login aceita tanto o nome curto quanto o e-mail interno completo
+  // exibido no Supabase. Antes, o
+  // caractere @ era removido e o domínio acabava entrando no username, o que
+  // fazia a conta principal procurar um e-mail inexistente.
+  const candidate = raw.endsWith(internalSuffix) ? raw.slice(0, -internalSuffix.length) : raw;
+  return candidate.replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 20);
 }
 
 export function validateUsername(input: string): string | null {

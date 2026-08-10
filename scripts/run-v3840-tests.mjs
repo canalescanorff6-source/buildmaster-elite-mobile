@@ -9,6 +9,7 @@ const tests = [
   ['Base local grande', ['-r', './tests/_ts-require.cjs', 'tests/v38-40-large-local-dataset-opening-regression.cjs']],
   ['Inicialização fail-open', ['tests/v38-40-fail-open-startup-regression.mjs']],
   ['Login e Supabase', ['tests/v38-40-login-transport-fallback-regression.mjs']],
+  ['Recuperação da conta principal', ['tests/v38-40-owner-admin-access-recovery-regression.mjs']],
   ['Rota inicial e deep link', ['tests/v38-40-root-route-deeplink-types-regression.mjs']],
 ];
 

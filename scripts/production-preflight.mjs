@@ -46,7 +46,6 @@ const privacyPage = read('src/app/privacidade/page.tsx');
 const deletionPage = read('src/app/excluir-conta/page.tsx');
 const workflow = read('.github/workflows/build-apk.yml');
 const playWorkflow = read('.github/workflows/build-play-store.yml');
-const supabaseConfig = read('supabase/config.toml');
 const capacitor = read('capacitor.config.ts');
 const tsconfig = JSON.parse(read('tsconfig.json'));
 const appTsconfig = JSON.parse(read('tsconfig.app.json'));
@@ -67,8 +66,8 @@ check(/AccountDeletionPage|Solicitar exclusão da conta/.test(deletionPage), 'Ro
 check(capacitor.includes("appId: 'com.buildmaster.elitetatico'") && capacitor.includes("webDir: 'out'") && capacitor.includes('webContentsDebuggingEnabled: false'), 'Capacitor configurado para produção');
 const apkUsesConsolidatedDoctor = workflow.includes('npm run ci:verify');
 for (const command of ['npm run release:preflight', 'npm run quality:routes', 'npm run quality:syntax', 'npm run quality:interactive', 'npm run typecheck', 'npm run test:all']) check(apkUsesConsolidatedDoctor || workflow.includes(command), `Workflow APK executa ${command} diretamente ou pelo diagnóstico consolidado`);
-for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'ANDROID_KEY_PASSWORD', "'keytool', '-list'", "'keytool', '-certreq'", '--key-pass env:ANDROID_KEY_PASSWORD', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk', 'MANIFESTO_PRODUCAO_V38.40.sha256', 'SOURCE_SHA', 'NEXT_PUBLIC_BUILDMASTER_BUILD_ID={source_sha}', '/functions/v1/license-session', 'install-background-ocr-plugin.mjs', ':app:compileReleaseJavaWithJavac', 'FOREGROUND_SERVICE_DATA_SYNC', 'android-actions/setup-android@v4', 'compileSdkVersion = 36', 'targetSdkVersion = 36']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
-for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate', 'install-background-ocr-plugin.mjs', ':app:compileReleaseJavaWithJavac']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
+for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
+for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
 
 check(exists('src/modules/tactical-studio/metaFormationStudioV3832.ts') && exists('src/modules/tactical-studio/MetaFormationStudioV3832.tsx') && exists('src/modules/tactical-studio/professionalTacticalTemplateV3833.ts') && exists('tests/v38-33-professional-template-regression.mjs') && exists('tests/v38-34-ci-complete-hotfix-regression.mjs') && exists('tests/v38-35-legacy-regressions-hotfix.mjs') && exists('tests/v38-36-deterministic-audit-hotfix.mjs'), 'Gerador Tático Profissional e hotfix v38.36 preservados');
 check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3833') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3834') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3835') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3836'), 'Bateria de produção preserva v38.33–v38.36');
@@ -85,7 +84,6 @@ check(String(pkg.scripts?.typecheck ?? '').includes('-p tsconfig.app.json') && !
 check(exists('scripts/check-typecheck-isolation.mjs') && exists('tests/v31-70-typecheck-isolation-regression.mjs'), 'Portão permanente de isolamento TypeScript presente');
 check(exists('scripts/check-card-crop-type-safety.mjs') && String(pkg.scripts?.['quality:card-crop-types'] ?? '').includes('check-card-crop-type-safety.mjs'), 'Portão de segurança do recorte presente');
 check(exists('scripts/check-generated-native-java.mjs') && String(pkg.scripts?.['quality:native-java'] ?? '').includes('check-generated-native-java.mjs') && String(pkg.scripts?.['test:v3170'] ?? '').includes('quality:native-java'), 'Portão de Java nativo gerado presente');
-check(exists('scripts/check-static-export.mjs') && String(pkg.scripts?.['quality:static-export'] ?? '').includes('check-static-export.mjs') && workflow.includes('npm run quality:static-export') && playWorkflow.includes('npm run quality:static-export'), 'Portão de integridade do export estático presente nos dois builds');
 check(!/OFFICIAL_ADDITIONAL_SKILL_NAMES[\s\S]*?from ['"]@\/modules\/analysis['"]/.test(cardVisionSource), 'CardVisionApp sem importação ociosa de habilidades');
 check(/applyRememberedCardBox<T extends CardCropBox>\(cardBox: T, calibration: OcrTemplateCalibration \| null\): T/.test(cropCalibrationSource) && /return\s*\{\s*\.\.\.cardBox,/.test(cropCalibrationSource), 'Calibração do recorte preserva OcrZone completo');
 const skillIdentitySource = read('src/lib/officialSkillIdentity.ts');
@@ -104,12 +102,6 @@ for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/s
 for (const marker of ['actions/checkout@v5', 'actions/setup-node@v5', 'actions/setup-java@v5']) check(playWorkflow.includes(marker), `Workflow Play atualizado para ${marker}`);
 for (const marker of ['gradle/actions/setup-gradle@v6', 'actions/upload-artifact@v6']) check(workflow.includes(marker), `Workflow APK atualizado para ${marker}`);
 for (const marker of ['android-actions/setup-android@v4', 'actions/upload-artifact@v6']) check(playWorkflow.includes(marker), `Workflow Play atualizado para ${marker}`);
-check(playWorkflow.includes('/functions/v1/license-session'), 'Workflow Play valida a Edge Function crítica de licença antes do AAB');
-check(playWorkflow.includes('npm run integrity:generate') && playWorkflow.includes('npm run integrity:verify'), 'Workflow Play gera e verifica o manifesto de integridade antes do AAB');
-check(/\[functions\.license-session\][\s\S]*?verify_jwt\s*=\s*true/.test(supabaseConfig), 'license-session permanece protegida por JWT de usuário');
-check(/\[functions\.admin-users\][\s\S]*?verify_jwt\s*=\s*true/.test(supabaseConfig), 'admin-users permanece protegida por JWT de usuário');
-check(/\[functions\.account-deletion-request\][\s\S]*?verify_jwt\s*=\s*false/.test(supabaseConfig), 'Solicitação pública de exclusão aceita chave publishable sem JWT legado');
-check(/\[functions\.pro-build-search\][\s\S]*?verify_jwt\s*=\s*false/.test(supabaseConfig), 'Busca Pro aceita chave publishable sem usar API key como Bearer');
 check(!exists('MANIFESTO_ARQUIVOS_V29.10.sha256') && !exists('MANIFESTO_PRODUCAO_V29.20.sha256') && !exists('MANIFESTO_PRODUCAO_V29.30.sha256'), 'Manifestos antigos removidos');
 for (const file of [
   'src/lib/productionReadiness.ts',

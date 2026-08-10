@@ -113,6 +113,30 @@ function describeLoginError(message: string): LoginFeedback {
       tone: 'warning'
     };
   }
+  if (normalized.includes('perfil da conta não encontrado') || normalized.includes('profile_missing')) {
+    return {
+      title: 'Conta principal precisa de reparo',
+      message: 'A autenticação foi aceita, mas o perfil interno desta conta não está disponível no servidor.',
+      hint: 'Publique a recuperação da conta principal no Supabase. Seus dados e fichas não precisam ser apagados nem a conta recriada.',
+      tone: 'warning'
+    };
+  }
+  if (normalized.includes('limite de aparelhos') || normalized.includes('device_limit')) {
+    return {
+      title: 'Vínculo de aparelho precisa ser renovado',
+      message: 'A conta existe, mas os vínculos antigos de aparelho estão impedindo este acesso.',
+      hint: 'A recuperação da conta principal pode revogar somente os vínculos antigos, preservando fichas, Cofre e histórico.',
+      tone: 'warning'
+    };
+  }
+  if (normalized.includes('identidade deste aparelho') || normalized.includes('device_clone') || normalized.includes('device_registration_failed')) {
+    return {
+      title: 'Proteção do aparelho precisa ser atualizada',
+      message: 'O servidor reconheceu a conta, mas o vínculo criptográfico deste aparelho não pôde ser confirmado.',
+      hint: 'Não exclua a conta. Repare o vínculo do aparelho e tente novamente.',
+      tone: 'warning'
+    };
+  }
   if (normalized.includes('função') || normalized.includes('serviço de licença') || normalized.includes('not found')) {
     return {
       title: 'Serviço de licença indisponível',
@@ -348,7 +372,7 @@ function LoginScreen({ onSuccess, initialError = '' }: { onSuccess: (validation:
                 <input
                   value={username}
                   onChange={(event) => { setUsername(event.target.value); if (error) setError(''); }}
-                  placeholder="ex.: joao10"
+                  placeholder="ex.: tiago ou tiago@accounts.buildmaster.app"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}

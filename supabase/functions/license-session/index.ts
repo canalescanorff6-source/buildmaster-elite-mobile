@@ -133,7 +133,33 @@ Deno.serve(async (request) => {
       throw new HttpError(426, 'UPDATE_REQUIRED', `Esta versão foi desativada. Instale o BuildMaster ${settings.min_app_version} ou superior.`, { minimumVersion: settings.min_app_version });
     }
 
-    const { data: profile, error: profileError } = await service.from('buildmaster_profiles').select('*').eq('id', authData.user.id).single();
+    const OWNER_EMAIL = 'tiago@accounts.buildmaster.app';
+    const OWNER_ID = 'e0064cae-da5d-45a4-af74-439a9b66b503';
+    const isOwnerAccount = authData.user.id === OWNER_ID && String(authData.user.email || '').toLowerCase() === OWNER_EMAIL;
+
+    let { data: profile, error: profileError } = await service.from('buildmaster_profiles').select('*').eq('id', authData.user.id).single();
+
+    // A conta proprietária foi criada antes de algumas migrações de perfil.
+    // Se houver divergência apenas nessa conta conhecida, o servidor repara o
+    // perfil usando o MESMO auth.users.id. Isso preserva Cofre, fichas e dados
+    // vinculados ao usuário em vez de mandar recriar a conta.
+    if (isOwnerAccount && (profileError || !profile || profile.role !== 'admin' || profile.status !== 'active' || profile.expires_at || Number(profile.max_devices || 1) < 10)) {
+      const { data: repairedProfile, error: repairError } = await service.from('buildmaster_profiles').upsert({
+        id: OWNER_ID,
+        username: 'tiago',
+        display_name: String(profile?.display_name || '').trim() || 'Tiago',
+        role: 'admin',
+        status: 'active',
+        plan: String(profile?.plan || 'premium'),
+        expires_at: null,
+        max_devices: 10,
+        offline_grace_hours: 12
+      }, { onConflict: 'id' }).select('*').single();
+      if (repairError || !repairedProfile) throw new HttpError(500, 'OWNER_PROFILE_REPAIR_FAILED', repairError?.message || 'Não foi possível reparar o perfil da conta principal.');
+      profile = repairedProfile;
+      profileError = null;
+    }
+
     if (profileError || !profile) throw new HttpError(403, 'PROFILE_MISSING', 'Perfil da conta não encontrado.');
     if (profile.status === 'blocked') throw new HttpError(403, 'ACCOUNT_BLOCKED', 'Esta conta foi bloqueada pelo administrador.');
     if (profile.status === 'suspended') throw new HttpError(403, 'ACCOUNT_SUSPENDED', 'Esta conta está suspensa.');

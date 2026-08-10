@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { analyzeCard } from '../src/lib/analyzer';
 import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeline';
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
-import type { TrainingPlan } from '../src/lib/analyzerDomain';
+import type { TrainingPlan } from '../src/lib/types';
 
 type MatrixCase = {
   name: string;

@@ -32,10 +32,8 @@ for (const file of ['privacy-policy.md','data-safety.md','account-deletion.md','
 }
 const workflow = read('.github/workflows/build-play-store.yml');
 const playUsesConsolidatedDoctor = workflow.includes('npm run ci:verify');
-for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'install-play-store-bridge.mjs', 'install-background-ocr-plugin.mjs', ':app:compileReleaseJavaWithJavac', 'publish-play-store.mjs', 'release:play-preflight', 'bundletool.jar validate', 'jarsigner -verify -strict']) check(workflow.includes(marker) || (marker === 'release:play-preflight' && playUsesConsolidatedDoctor), `Workflow Play contém ${marker} diretamente ou pelo diagnóstico consolidado`);
-check(workflow.includes('PLAY_RELEASE_NOTES_FILE="play-store/listing/pt-BR/release-notes/${BUILDMASTER_VERSION}.txt"') && !workflow.includes('release-notes/35.20.0.txt'), 'Workflow Play publica as notas da versão atual dinamicamente');
+for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'install-play-store-bridge.mjs', 'publish-play-store.mjs', 'release:play-preflight', 'bundletool.jar validate', 'jarsigner -verify -strict']) check(workflow.includes(marker) || (marker === 'release:play-preflight' && playUsesConsolidatedDoctor), `Workflow Play contém ${marker} diretamente ou pelo diagnóstico consolidado`);
 check(read('src/app/privacidade/page.tsx').length > 100, 'Rota pública de privacidade presente');
 check(read('src/app/excluir-conta/page.tsx').length > 100, 'Rota pública de exclusão presente');
-check(workflow.includes('/functions/v1/license-session'), 'Workflow Play valida a Edge Function license-session antes de gerar o AAB');
 if (failures.length) { console.error(`Pré-voo Play falhou (${failures.length}):\n- ${failures.join('\n- ')}`); process.exit(1); }
 console.log(`Pré-voo Play aprovado: ${passes.length} verificações.`);

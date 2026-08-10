@@ -142,7 +142,7 @@ export async function loadWorldProRegistry(platform: WorldProPlatform | 'TODOS' 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { profiles: listWorldPros(platform), source: 'LOCAL' };
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/world_pro_registry?select=*&active=eq.true&order=authority_score.desc,gamer_tag.asc`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Accept: 'application/json' },
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Accept: 'application/json' },
       cache: 'no-store'
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -209,7 +209,8 @@ export async function searchWorldProVideos(result: AnalysisResult, profile?: Wor
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
       },
       body: JSON.stringify({ query, gamerTag: profile?.gamerTag || '', limit: 8 })
     });

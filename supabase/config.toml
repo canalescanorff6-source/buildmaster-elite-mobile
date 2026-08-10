@@ -5,12 +5,3 @@ verify_jwt = true
 
 [functions.admin-users]
 verify_jwt = true
-
-[functions.account-deletion-request]
-verify_jwt = false
-
-[functions.pro-build-search]
-verify_jwt = false
-
-[functions.play-integrity-verify]
-verify_jwt = true

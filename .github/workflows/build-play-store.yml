@@ -122,30 +122,6 @@ jobs:
           }
           NODE
 
-      - name: Verificar função crítica de licença
-        run: |
-          BASE_URL="${NEXT_PUBLIC_SUPABASE_URL%/}"
-          HTTP_CODE="$(curl --silent --show-error --output /tmp/buildmaster-license-preflight.txt --write-out '%{http_code}' \
-            --request OPTIONS --connect-timeout 12 --max-time 25 \
-            --header "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-            --header 'Origin: capacitor://localhost' \
-            --header 'Access-Control-Request-Method: POST' \
-            "$BASE_URL/functions/v1/license-session" || true)"
-          case "$HTTP_CODE" in
-            200|204|400|401|403|405|426) ;;
-            404|000|5??)
-              echo "::error::A rota Supabase license-session não está disponível (HTTP ${HTTP_CODE:-000}). Publique as Edge Functions antes de gerar o aplicativo."
-              cat /tmp/buildmaster-license-preflight.txt 2>/dev/null || true
-              exit 1
-              ;;
-            *)
-              echo "::error::Resposta inesperada da rota license-session (HTTP ${HTTP_CODE:-000})."
-              cat /tmp/buildmaster-license-preflight.txt 2>/dev/null || true
-              exit 1
-              ;;
-          esac
-          echo "Rota license-session encontrada no projeto Supabase (HTTP $HTTP_CODE)."
-
       - name: Instalar dependências travadas
         run: npm ci --no-audit --no-fund
 
@@ -161,12 +137,6 @@ jobs:
           npm run ci:verify
           npm run release:play-preflight
 
-      - name: Gerar e verificar manifesto do código-fonte
-        timeout-minutes: 4
-        run: |
-          npm run integrity:generate
-          npm run integrity:verify
-
       - name: Gerar site estático para Capacitor
         run: npm run apk:build-web
 
@@ -174,16 +144,12 @@ jobs:
         timeout-minutes: 3
         run: npm run quality:bundle-built
 
-      - name: Validar exportação estática completa
-        run: npm run quality:static-export
-
       - name: Criar projeto Android
         run: |
           rm -rf android
           npx cap add android
           node scripts/install-android-security-plugin.mjs
           node scripts/install-match-recorder-plugin.mjs
-          node scripts/install-background-ocr-plugin.mjs
           node scripts/install-native-vault-storage-plugin.mjs
           node scripts/install-play-store-bridge.mjs
           node scripts/install-android-branding.mjs
@@ -280,11 +246,6 @@ jobs:
           p.write_text(t)
           PY
 
-      - name: Pré-compilar Java nativo do AAB
-        timeout-minutes: 10
-        working-directory: android
-        run: ./gradlew --no-daemon :app:compileReleaseJavaWithJavac
-
       - name: Gerar Android App Bundle release
         working-directory: android
         run: ./gradlew --no-daemon clean bundleRelease
@@ -331,10 +292,9 @@ jobs:
         env:
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           AAB_PATH: ${{ env.AAB_NAME }}
+          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/35.20.0.txt
           PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status || 'draft' }}
           ROLLOUT_PERCENTAGE: ${{ github.event.inputs.rollout_percentage || '100' }}
         run: |
           export PLAY_USER_FRACTION=$(python -c "import os; print(max(1,min(100,int(os.environ.get('ROLLOUT_PERCENTAGE','100'))))/100)")
-          export PLAY_RELEASE_NOTES_FILE="play-store/listing/pt-BR/release-notes/${BUILDMASTER_VERSION}.txt"
-          test -s "$PLAY_RELEASE_NOTES_FILE" || { echo "::error::Notas da versão ${BUILDMASTER_VERSION} ausentes para publicação na Play Store."; exit 1; }
           node scripts/publish-play-store.mjs

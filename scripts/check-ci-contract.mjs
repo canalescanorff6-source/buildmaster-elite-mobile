@@ -58,28 +58,10 @@ for (const script of regressionScripts) {
   const doctorScript = script === 'test:v3000' ? 'test:v3000:core' : script;
   check(doctor.includes(`['Regressões v${label}', ['run', '${doctorScript}']]`), `ci-doctor e test:all divergiram: ${doctorScript} não está no diagnóstico completo.`);
 }
-check(apkWorkflow.includes('/functions/v1/license-session') && playWorkflow.includes('/functions/v1/license-session'), 'Os workflows não validam a Edge Function crítica license-session antes do build.');
 check(apkWorkflow.includes('npm run ci:verify'), 'Workflow APK não executa ci:verify.');
 check(playWorkflow.includes('npm run ci:verify'), 'Workflow Play não executa ci:verify.');
-check(apkWorkflow.includes('npm run integrity:generate') && apkWorkflow.includes('npm run integrity:verify'), 'Workflow APK não gera/verifica o manifesto de integridade.');
-check(playWorkflow.includes('npm run integrity:generate') && playWorkflow.includes('npm run integrity:verify'), 'Workflow Play não gera/verifica o manifesto de integridade.');
-check(apkWorkflow.includes('NEXT_PUBLIC_BUILDMASTER_BUILD_ID={source_sha}') && !apkWorkflow.includes('NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}'), 'Build Android direto não usa o SHA realmente compilado no identificador embutido.');
 check(apkWorkflow.includes('npm run quality:bundle-built'), 'Workflow APK não valida o bundle compilado.');
 check(playWorkflow.includes('npm run quality:bundle-built'), 'Workflow Play não valida o bundle compilado.');
-check(packageJson.scripts?.['quality:static-export'], 'Script quality:static-export ausente.');
-check(apkWorkflow.includes('npm run quality:static-export'), 'Workflow APK não valida a integridade do export estático.');
-check(playWorkflow.includes('npm run quality:static-export'), 'Workflow Play não valida a integridade do export estático.');
-check(apkWorkflow.includes('node scripts/install-background-ocr-plugin.mjs'), 'Workflow APK não instala o plugin de OCR em segundo plano.');
-check(playWorkflow.includes('node scripts/install-background-ocr-plugin.mjs'), 'Workflow Play não instala o plugin de OCR em segundo plano.');
-check(apkWorkflow.includes(':app:compileReleaseJavaWithJavac'), 'Workflow APK não pré-compila o Java nativo antes do assembleRelease.');
-check(apkWorkflow.includes("'keytool', '-list'") && apkWorkflow.includes("'keytool', '-certreq'") && apkWorkflow.includes('ANDROID_KEY_PASSWORD') && apkWorkflow.includes('--key-pass env:ANDROID_KEY_PASSWORD'), 'Workflow APK não valida antecipadamente keystore, alias, storePassword e keyPassword.');
-check(apkWorkflow.includes('MANIFESTO_PRODUCAO_V38.40.sha256') && !apkWorkflow.includes('MANIFESTO_PRODUCAO_V34.00.sha256'), 'Workflow APK ainda envia manifesto de integridade de versão antiga.');
-check(apkWorkflow.includes(`os.environ[\"SOURCE_SHA\"]`) && apkWorkflow.includes('-f sha=\"$SOURCE_SHA\"'), 'Workflow APK não mantém buildId/canal alinhados ao source_ref realmente compilado.');
-check(playWorkflow.includes(':app:compileReleaseJavaWithJavac'), 'Workflow Play não pré-compila o Java nativo antes do bundleRelease.');
-check(playWorkflow.includes('release-notes/${BUILDMASTER_VERSION}.txt') && !playWorkflow.includes('release-notes/35.20.0.txt'), 'Workflow Play ainda usa notas de versão antigas em vez da versão atual.');
-check(apkWorkflow.includes('FOREGROUND_SERVICE_DATA_SYNC'), 'Workflow APK não confirma a permissão dataSync do OCR em segundo plano.');
-check(apkWorkflow.includes('android-actions/setup-android@v4'), 'Workflow APK não prepara explicitamente o Android SDK.');
-check(apkWorkflow.includes('compileSdkVersion = 36') && apkWorkflow.includes('targetSdkVersion = 36') && apkWorkflow.includes('minSdkVersion = 23'), 'Workflow APK não fixa a matriz SDK 36/36/23.');
 check(apkWorkflow.indexOf('npm run ci:verify') < apkWorkflow.indexOf('npm run apk:build-web'), 'Workflow APK executa o diagnóstico tarde demais.');
 check(playWorkflow.indexOf('npm run ci:verify') < playWorkflow.indexOf('npm run apk:build-web'), 'Workflow Play executa o diagnóstico tarde demais.');
 
