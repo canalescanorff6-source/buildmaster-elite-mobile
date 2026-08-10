@@ -372,7 +372,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
     private static void validateNativeHttpUrl(URL url) throws Exception {
         if (!"https".equalsIgnoreCase(url.getProtocol())) throw new SecurityException("Somente HTTPS é permitido.");
         String host = url.getHost() == null ? "" : url.getHost().toLowerCase(Locale.ROOT);
-        if (!host.matches("^[a-z0-9-]+\\.supabase\\.co$")) throw new SecurityException("Servidor de contas não autorizado.");
+        if (!host.matches("^[a-z0-9-]+\\\\.supabase\\\\.co$")) throw new SecurityException("Servidor de contas não autorizado.");
         String path = url.getPath() == null ? "" : url.getPath();
         if (!(path.startsWith("/auth/v1/") || path.startsWith("/functions/v1/") || path.startsWith("/rest/v1/"))) {
             throw new SecurityException("Rota remota não autorizada.");

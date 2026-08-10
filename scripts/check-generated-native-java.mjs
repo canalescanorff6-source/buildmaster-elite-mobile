@@ -111,12 +111,18 @@ try {
     '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application><activity android:name=".MainActivity" /></application></manifest>',
   );
 
+  execFileSync(process.execPath, [path.join(root, 'scripts/install-android-security-plugin.mjs')], {
+    cwd: temp,
+    stdio: 'pipe',
+  });
+
   execFileSync(process.execPath, [path.join(root, 'scripts/install-match-recorder-plugin.mjs')], {
     cwd: temp,
     stdio: 'pipe',
   });
 
   const generated = [
+    'BuildMasterSecurityPlugin.java',
     'BuildMasterMatchRecorderPlugin.java',
     'BuildMasterScreenRecordService.java',
   ];
@@ -128,12 +134,17 @@ try {
     issues.push(...scanJavaStringEscapes(source, fileName));
   }
 
+  const security = fs.readFileSync(path.join(javaDir, 'BuildMasterSecurityPlugin.java'), 'utf8');
+  if (!security.includes('host.matches("^[a-z0-9-]+\\\\.supabase\\\\.co$")')) {
+    fail('Filtro de host do Supabase não foi escapado corretamente no Java gerado.');
+  }
+
   const service = fs.readFileSync(path.join(javaDir, 'BuildMasterScreenRecordService.java'), 'utf8');
   if (!service.includes('replaceFirst("\\\\.mp4$", "")')) fail('replaceFirst da extensão MP4 não foi escapado corretamente no Java gerado.');
   if (!service.includes('name.matches("match-[0-9]{10,20}\\\\.mp4")')) fail('Filtro de gravações MP4 não foi escapado corretamente no Java gerado.');
   if (issues.length) fail(`Java nativo gerado contém escapes ilegais:\n${issues.map((item) => `- ${item}`).join('\n')}`);
 
-  console.log('Java nativo gerado validado: nenhum escape ilegal e regex MP4 correta.');
+  console.log('Java nativo gerado validado: nenhum escape ilegal e regex de segurança/MP4 correta.');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }
