@@ -1,0 +1,100 @@
+/* ========================================================================== */
+/* BuildMaster v38.40 r4 — leitura calibrada rápida + contraste escuro seguro */
+/* Corrige superfícies legadas claras da camada v33 quando o tema ativo é dark. */
+/* ========================================================================== */
+
+.bm-v3300-executive .premium-app.theme-dark {
+  --v33-ink: #f7f9fd;
+  --v33-ink-soft: #d7e0ed;
+  --v33-muted: #9fb0c6;
+  --v33-bg: #06101d;
+  --v33-surface: #0c1a2d;
+  --v33-surface-soft: #11243b;
+  --v33-line: rgba(150, 181, 224, .16);
+  --v33-line-strong: rgba(157, 190, 236, .26);
+  --v33-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+}
+
+.bm-v3300-executive .premium-app.theme-dark .bm-simple-topbar,
+.bm-v3300-executive .premium-app.theme-dark :where(.bm-simple-context,.premium-context-bar,.bm-premium-context-bar),
+.bm-v3300-executive .premium-app.theme-dark .bm-simple-player-tabs,
+.bm-v3300-executive .premium-app.theme-dark :where(.home-quick-grid button,.home-vault-metrics button,.bm-simple-shortcut-grid button),
+.bm-v3300-executive .premium-app.theme-dark :where(.bm-simple-player-list > article,.player-card,.bm32-player-card),
+.bm-v3300-executive .premium-app.theme-dark :where(.bm32-screen-heading,.bm32-team-metrics > article,.bm32-team-bench-strip,.bm32-team-insights > article,.bm32-team-tabs,.bm32-team-actions),
+.bm-v3300-executive .premium-app.theme-dark :where(.result-navigation-shell,.result-primary-tabs,.result-advanced-bar),
+.bm-v3300-executive .premium-app.theme-dark .settings-navigation-rail,
+.bm-v3300-executive .premium-app.theme-dark .smart-quick-dock,
+.bm-v3300-executive .premium-app.theme-dark .calibration-v32-card {
+  color: #f7f9fd !important;
+  border-color: rgba(151, 184, 231, .16) !important;
+  background: linear-gradient(145deg, rgba(15, 31, 54, .98), rgba(8, 19, 34, .98)) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .18) !important;
+}
+
+.bm-v3300-executive .premium-app.theme-dark :where(input,textarea,select) {
+  color: #f7f9fd !important;
+  -webkit-text-fill-color: #f7f9fd !important;
+  border-color: rgba(151, 184, 231, .22) !important;
+  background: rgba(8, 20, 37, .96) !important;
+  caret-color: #8ebcff;
+}
+.bm-v3300-executive .premium-app.theme-dark :where(input,textarea)::placeholder {
+  color: #7f91a8 !important;
+  -webkit-text-fill-color: #7f91a8 !important;
+  opacity: 1 !important;
+}
+.bm-v3300-executive .premium-app.theme-dark select option {
+  color: #f7f9fd !important;
+  background: #0b192b !important;
+}
+
+.bm-v3300-executive .premium-app.theme-dark :where(.bm-simple-player-secondary button,.bm32-team-actions button,.bm32-team-tabs button,.result-primary-tabs button) {
+  color: #ced9e9 !important;
+  -webkit-text-fill-color: #ced9e9 !important;
+  border-color: rgba(151, 184, 231, .16) !important;
+  background: rgba(255,255,255,.045) !important;
+}
+.bm-v3300-executive .premium-app.theme-dark :where(.bm32-team-tabs button.active,.result-primary-tabs button.active,.bm-simple-player-tabs button.active) {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border-color: rgba(116, 169, 255, .34) !important;
+  background: linear-gradient(135deg, #164b87, #0e3260) !important;
+}
+
+/* Componentes de versões antigas que ainda carregavam fallback #fff. */
+.premium-app.theme-dark :where(
+  .architecture-health-panel,
+  .architecture-health-grid article,
+  .bm2920-production-center,
+  .bm2920-production-actions button,
+  .refinement-data-grid .inspection-error,
+  .vault-trash-list .danger,
+  .auth-retry-panel
+) {
+  color: #eef4fc !important;
+  border-color: rgba(151, 184, 231, .17) !important;
+  background: linear-gradient(145deg, rgba(14, 30, 52, .97), rgba(8, 18, 33, .98)) !important;
+}
+.premium-app.theme-dark :where(.architecture-health-panel,.architecture-health-grid article,.bm2920-production-center) :where(p,span,small,em) {
+  color: #aebed1 !important;
+  -webkit-text-fill-color: #aebed1 !important;
+}
+.premium-app.theme-dark :where(.architecture-health-panel,.architecture-health-grid article,.bm2920-production-center) :where(h1,h2,h3,h4,strong,b) {
+  color: #f7f9fd !important;
+  -webkit-text-fill-color: #f7f9fd !important;
+}
+
+/* O estado de leitura deve continuar visível acima de qualquer painel legado. */
+.premium-app.theme-dark .reader-live-progress-card {
+  position: relative;
+  z-index: 6;
+  color: #f7f9fd !important;
+}
+.premium-app.theme-dark .reader-live-progress-card :where(h3,strong) {
+  color: #f7f9fd !important;
+  -webkit-text-fill-color: #f7f9fd !important;
+}
+.premium-app.theme-dark .reader-live-progress-card :where(p,small) {
+  color: #aebed1 !important;
+  -webkit-text-fill-color: #aebed1 !important;
+}

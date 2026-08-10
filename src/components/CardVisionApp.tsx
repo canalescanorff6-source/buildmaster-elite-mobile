@@ -1,4 +1,5 @@
 'use client';
+// A Central de Backup é informativa e nunca pode impedir a abertura do app.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import {
@@ -139,6 +140,7 @@ import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRec
 import { adjustCardCropBox, createEfhubCardPreview, createSmartCardPreview, renderCardCropPreview, renderPlayerPortraitPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
 import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { recognizeZoneWithHighPrecision } from '@/modules/card-reader/highPrecisionOcr';
+import { readEightEfhubCalibrationMacros } from '@/modules/card-reader/manualCalibrationFastReader';
 import { learnedCanonicalValues, learnConfirmedOcrBatch, loadLearnedOcrTerms } from '@/modules/card-reader/learnedOcrLexicon';
 import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsensus';
 import { buildEfhubLayoutPlan } from '@/modules/card-reader/efhubLayoutGeometry';
@@ -474,8 +476,6 @@ export function CardVisionApp() {
     let active = true;
     void readBackgroundOcrCheckpoint().then((checkpoint) => {
       if (!active || !checkpoint || !checkpoint.shouldResume || checkpoint.stage === 'completed') return;
-      // Nunca reinicia OCR sozinho na abertura. Uma leitura interrompida precisa
-      // ser explicitamente retomada ou descartada pelo usuário.
       setPendingBackgroundCheckpoint(checkpoint);
       setStatus(`Leitura interrompida encontrada: ${checkpoint.fileName}. Escolha Retomar ou Descartar.`);
     }).catch(() => undefined);
@@ -696,7 +696,6 @@ export function CardVisionApp() {
       try {
         writeAccountStorage(CENTRAL_INDEX_STORAGE_KEY, JSON.stringify(centralEntityIndex));
       } catch {
-        // O índice é derivável; falhar ao persistir não apaga nem bloqueia os dados originais.
       }
     }, performanceMode === 'economy' ? 2400 : 900);
     return () => cancelIdleTask(handle);
@@ -731,8 +730,6 @@ export function CardVisionApp() {
       : null;
 
     if (!syncHealthEnvelope) {
-      // A Central de Backup é informativa e nunca pode impedir a abertura do app.
-      // Na inicialização usamos somente contagens e integridade já calculadas;
       // a serialização profunda acontece apenas quando o usuário exporta ou sincroniza.
       const score = Math.max(0, Math.min(100,
         localIntegrity.score
@@ -901,8 +898,6 @@ export function CardVisionApp() {
   }
   function openNavigationGroup(group: MainNavigationGroup) {
     if (group === 'ajustes') setSettingsView('visao-geral');
-    // A entrada principal de Jogadores sempre abre o banco. O fluxo interno
-    // continua preservado apenas quando o usuário escolhe uma etapa específica.
     openMainSection(sectionForNavigation(group, 'visao-geral'));
   }
   function openPlayerWorkspace(workspace: PlayerWorkspace) {
@@ -1011,7 +1006,6 @@ export function CardVisionApp() {
       if (!studioMigrated) writeAccountStorage(STUDIO_THEME_MIGRATION_KEY, '1');
       if (!identityMigrated) writeAccountStorage(IDENTITY_THEME_MIGRATION_KEY, '1');
     } catch {
-      // Preferências visuais são opcionais.
     }
     try {
       const storedOnboarding = readAccountStorage(ONBOARDING_STORAGE_KEY);
@@ -1086,12 +1080,9 @@ export function CardVisionApp() {
           if (typeof snapshot.managerId === 'string') setManagerId(snapshot.managerId);
           if (snapshot.gameplayMode) setGameplayMode(snapshot.gameplayMode);
           if (snapshot.connectionProfile) setConnectionProfile(snapshot.connectionProfile);
-          // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
           if (snapshot.manualFields) setManualFields({ ...emptyManualFields(), ...snapshot.manualFields, attributes: snapshot.manualFields.attributes ?? {} });
           if (typeof snapshot.manualMode === 'boolean') setManualMode(snapshot.manualMode);
           if (typeof snapshot.activeHistoryId === 'string') setActiveHistoryId(snapshot.activeHistoryId);
-          // Resultados antigos não são reabertos automaticamente no APK.
-          // Os dados de entrada são preservados e a ficha é recalculada no motor atual.
           setResult(null);
           setDraftResult(null);
           restoredSessionRef.current = true;
@@ -1114,7 +1105,6 @@ export function CardVisionApp() {
     try {
       writeAccountStorage(CALIBRATION_KEY, JSON.stringify(ocrZones));
     } catch {
-      // Calibração é local e opcional.
     }
   }, [ocrZones, sessionHydrated, startupSafeMode]);
   useEffect(() => {
@@ -1132,7 +1122,6 @@ export function CardVisionApp() {
     try {
       writeAccountStorage('buildmaster_ui_prefs_v24_24', JSON.stringify({ visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode }));
     } catch {
-      // Preferências visuais são opcionais.
     }
   }, [visualPreset, appTheme, accentTheme, advancedMode, textScale, densityMode, motionPreference, highContrast, performanceMode, sessionHydrated, startupSafeMode]);
   useEffect(() => {
@@ -1149,7 +1138,6 @@ export function CardVisionApp() {
     try {
       writeAccountStorage(VAULT_FOLDERS_KEY, JSON.stringify(vaultFolders.filter((folder) => folder.kind === 'custom')));
     } catch {
-      // Pastas personalizadas continuam opcionais.
     }
   }, [vaultFolders, sessionHydrated, startupSafeMode]);
   useEffect(() => {
@@ -1198,10 +1186,6 @@ export function CardVisionApp() {
     }, 450);
     return () => window.clearTimeout(timer);
   }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId, sessionHydrated, startupSafeMode]);
-  // v25.77: a ficha não é mais salva automaticamente ao finalizar.
-  // O salvamento permanece disponível pelo botão “Salvar ficha”. Isso reduz uso de
-  // memória e impede que IndexedDB, imagens grandes ou sincronização de nuvem
-  // derrubem o resultado no mesmo instante da geração.
   function completeOnboarding(profile: OnboardingProfile) {
     setOnboardingProfile(profile);
     setAdvancedMode(profile.experienceMode === 'advanced');
@@ -1356,7 +1340,6 @@ export function CardVisionApp() {
         await syncAccountVault({ ...(existing || {}), items: next, version: APP_DATA_VERSION, updatedAt: new Date().toISOString() });
       } else await deleteAccountVault();
     } catch {
-      // Exclusão na nuvem é complementar; o cofre local não pode travar por isso.
     }
   }
   async function logout() {
@@ -2268,7 +2251,6 @@ export function CardVisionApp() {
         popup.opener = null;
         popup.focus();
       } catch {
-        // A janela pode ficar isolada pelo navegador; o próprio relatório dispara a impressão.
       }
       window.setTimeout(() => URL.revokeObjectURL(reportUrl), 60_000);
       setStatus('Relatório profissional aberto. Escolha “Salvar como PDF” na tela de impressão.');
@@ -2323,7 +2305,6 @@ export function CardVisionApp() {
       setStatus(error instanceof Error ? error.message : 'Imagem inválida.');
       return;
     }
-    // Selecionar uma nova imagem substitui qualquer retomada antiga pendente.
     setPendingBackgroundCheckpoint(null);
     void clearBackgroundOcrCheckpoint().catch(() => undefined);
     setFileName(file.name); setSelectedFile(file);
@@ -2394,9 +2375,6 @@ export function CardVisionApp() {
       level: nextResult.parsed.level ? String(nextResult.parsed.level) : '',
       trainingPointsTotal: nextResult.trainingPointsTotal ? String(nextResult.trainingPointsTotal) : '',
       attributes: nextAttributes,
-      // Preserve todas as categorias já possuídas. A interface continua compacta,
-      // mas habilidades nativas, adicionais instaladas e especiais precisam participar
-      // do mesmo filtro antirrepetição na geração das cinco vagas seguintes.
       nativeSkills: Array.from(new Set(canonicalizeSkillList([
         ...nextResult.parsed.nativeSkills,
         ...(nextResult.parsed.additionalSkills ?? []),
@@ -2468,8 +2446,6 @@ export function CardVisionApp() {
   }
   async function analyzeSelectedImage(fileOverride?: File, resumed = false) {
     const activeFile = fileOverride ?? selectedFile;
-    // Mantém o leitor visível durante o OCR. Assim o usuário continua com
-    // Cancelar/Voltar disponíveis mesmo se uma etapa ficar lenta no Android.
     if (resumed && mainSection !== 'leitor') openMainSection('leitor');
     if (!activeFile) {
       if (rawText.trim().length > 2) runAnalysis();
@@ -2510,26 +2486,39 @@ export function CardVisionApp() {
       const manualEfhubCalibration = efhubCalibrationActiveRef.current
         ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current)
         : null;
-      const scanQuality = qualityReport ?? await inspectPrintQuality(activeFile).catch(() => null);
-      if (scanQuality !== qualityReport) setQualityReport(scanQuality);
-      let geometry = await inspectSinglePrintGeometry(activeFile);
-      void updateBackgroundOcrCheckpoint({ stage: 'layout', status: 'Layout identificado; preparando as áreas da carta.' });
+      const calibratedFastPath = Boolean(manualEfhubCalibration);
+      const scanQuality = calibratedFastPath
+        ? qualityReport
+        : qualityReport ?? await inspectPrintQuality(activeFile).catch(() => null);
+      if (!calibratedFastPath && scanQuality !== qualityReport) setQualityReport(scanQuality);
+      let geometry = calibratedFastPath && manualEfhubCalibration
+        ? {
+            width: 1400,
+            height: 1600,
+            template: 'detailed-profile' as const,
+            zones: [],
+            cardArtZone: efhubCalibrationCardArtZone(manualEfhubCalibration),
+            anchorReport: {
+              bounds: { x: 0, y: 0, w: 1, h: 1 },
+              confidence: 100, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0,
+              displayZones: []
+            }
+          }
+        : await inspectSinglePrintGeometry(activeFile);
+      void updateBackgroundOcrCheckpoint({ stage: 'layout', status: calibratedFastPath ? 'Quadrados confirmados; iniciando leitura direta.' : 'Layout identificado; preparando as áreas da carta.' });
       const imageHash = await fileDigest(activeFile);
-      const rememberedCalibration = await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
+      const rememberedCalibration = calibratedFastPath ? null : await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
       if (rememberedCalibration) {
         geometry = {
           ...geometry,
-          // O perfil eFHUB usa o mapa geométrico oficial. Memórias antigas nunca
-          // podem deslocar as oito áreas padronizadas; apenas o recorte da carta
-          // pode reaproveitar um ajuste confirmado pelo usuário.
           zones: geometry.template === 'detailed-profile'
             ? geometry.zones
             : applyOcrTemplateCalibration(geometry.zones, rememberedCalibration),
           cardArtZone: applyRememberedCardBox(geometry.cardArtZone, rememberedCalibration)
         };
       }
-      const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', 120).catch(() => []);
-      const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', 160).catch(() => [])).map((entry) => entry.value);
+      const storedScanEntries = await runtimeList<StoredSinglePrintScan>('scan-history', calibratedFastPath ? 60 : 120).catch(() => []);
+      const corrections = (await runtimeList<StoredOcrCorrection>('ocr-corrections', calibratedFastPath ? 80 : 160).catch(() => [])).map((entry) => entry.value);
       const [learnedNameTerms, learnedSkillTerms] = await Promise.all([
         loadLearnedOcrTerms('playerName'),
         loadLearnedOcrTerms('skill')
@@ -2547,26 +2536,29 @@ export function CardVisionApp() {
       ].map((name) => name.trim()).filter(Boolean)));
       const exactDuplicate = storedScanEntries.map((entry) => entry.value).find((entry) => entry.imageHash === imageHash) ?? null;
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
-      // A chave recebe a versão da geometria para não reutilizar miniaturas
-      // produzidas pelo leitor antigo com recortes desalinhados.
       const thumbnailKey = `${imageHash}:efhub-canonical-v32.00`;
       const cachedArt = await runtimeGet<string>('image-thumbnails', thumbnailKey).catch(() => null);
       if (cachedArt) setPlayerCardImage(cachedArt);
-      const fullOptimized = await preprocessImage(activeFile, 'contrast');
-      void updateBackgroundOcrCheckpoint({ stage: 'full-pass', status: 'Identificando a tela completa.' });
-      const fullPass = await recognizeWithOcrWorker(fullOptimized, {
-        label: 'Print completo • identificação da tela',
-        kind: 'general',
-        cacheKey: `${imageHash}:full:contrast:v32.00-visual-map`
-      });
-      const refinedGeometry = refineSinglePrintGeometryFromText(geometry, fullPass.text);
-      geometry = refinedGeometry;
+      let fullPassText = '';
+      if (!calibratedFastPath) {
+        const fullOptimized = await preprocessImage(activeFile, 'contrast');
+        void updateBackgroundOcrCheckpoint({ stage: 'full-pass', status: 'Identificando a tela completa.' });
+        const fullPass = await recognizeWithOcrWorker(fullOptimized, {
+          label: 'Print completo • identificação da tela',
+          kind: 'general',
+          cacheKey: `${imageHash}:full:contrast:v32.00-visual-map`
+        });
+        fullPassText = fullPass.text;
+        geometry = refineSinglePrintGeometryFromText(geometry, fullPassText);
+      } else {
+        setStatus('Leitura por quadrados: mapa confirmado. Lendo diretamente as áreas marcadas...');
+      }
       let ocrSource: File | Blob = activeFile;
       let canonicalPreview: string | null = null;
       let canonicalized = false;
       let precisionImageHash = imageHash;
       if (manualEfhubCalibration) {
-        const manualZones = await buildPreciseOcrZonesFromEfhubCalibration(activeFile, manualEfhubCalibration);
+        const manualZones = await buildPreciseOcrZonesFromEfhubCalibration(activeFile, manualEfhubCalibration, { detectSkillCapsules: false });
         const signature = manualEfhubCalibration
           .map((zone) => `${zone.id}:${zone.x.toFixed(4)},${zone.y.toFixed(4)},${zone.w.toFixed(4)},${zone.h.toFixed(4)}`)
           .join('|');
@@ -2600,7 +2592,7 @@ export function CardVisionApp() {
           }
         };
       } else if (geometry.template === 'detailed-profile' && geometry.anchorReport.efhubLayout) {
-        const canonicalPlan = buildEfhubLayoutPlan(geometry.width, geometry.height, geometry.anchorReport.bounds, fullPass.text);
+        const canonicalPlan = buildEfhubLayoutPlan(geometry.width, geometry.height, geometry.anchorReport.bounds, fullPassText);
         if (!['reflowed-unknown', 'incompatible'].includes(canonicalPlan.audit.mode)) {
           const canonical = await normalizeEfhubProfileImage(activeFile, canonicalPlan).catch(() => null);
           if (canonical) {
@@ -2616,19 +2608,13 @@ export function CardVisionApp() {
               anchorReport: {
                 ...geometry.anchorReport,
                 efhubLayout: canonicalPlan.audit,
-                // O usuário vê o perfil completo padronizado, sem caixas coloridas.
                 displayZones: []
               }
             };
           }
         }
       }
-      // No perfil completo as áreas são exclusivamente internas. O usuário vê
-      // a cópia normalizada inteira, sem caixas de calibração sobre a imagem.
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
-      // O recorte é feito somente depois da identificação completa do layout.
-      // Assim, uma imagem 3283×3013 que inicialmente parece paisagem não usa
-      // o recorte de um template errado antes de o OCR reconhecer o perfil.
       const finalCrop = geometry.cardArtZone.enabled
         ? await (geometry.template === 'detailed-profile'
           ? createEfhubCardPreview(ocrSource, geometry.cardArtZone)
@@ -2654,28 +2640,45 @@ export function CardVisionApp() {
       }
       let zoneResults: PremiumZoneReading[] = [];
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
-      for (let index = 0; index < enabledZones.length; index += 1) {
-        const zone = enabledZones[index];
-        setStatus(`Leitura Ultraprecisa: ${zone.label} (${index + 1}/${enabledZones.length})...`);
-        const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
-        const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
-        const target = zone.key === 'name' ? 2600 : zone.key === 'skills' ? 2200 : numeric ? 2100 : wide ? 2800 : 2350;
-        const criticalZone = zone.key === 'name' || zone.key === 'skills' || zone.key === 'attributes' || zone.key === 'mainPosition' || zone.key === 'playstyle';
-        const adaptiveMode: 'balanced' | 'fast' = criticalZone ? 'balanced' : 'fast';
-        const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
+      if (calibratedFastPath && manualEfhubCalibration) {
+        setStatus('Leitura por quadrados: lendo exatamente os 8 quadros marcados...');
+        zoneResults = await readEightEfhubCalibrationMacros(activeFile, manualEfhubCalibration, {
           imageHash: precisionImageHash,
-          template: geometry.template,
-          targetWidth: Math.round(target * (criticalZone ? 0.94 : 0.84)),
-          readingMode: readingMode === 'fast' ? 'fast' : adaptiveMode,
-          knownPlayerNames,
-          labelPrefix: 'Print único'
+          onProgress: (completed, total, label) => {
+            const progress = total ? Math.round((completed / total) * 100) : 0;
+            const progressStatus = completed >= total
+              ? 'Os 8 quadros foram lidos. Conferindo os campos...'
+              : `Quadro ${Math.min(completed + 1, total)}/${total}: ${label}.`;
+            setStatus(`Leitura por quadrados • ${progressStatus}`);
+            void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones: completed, totalZones: total, status: progressStatus });
+            void updateBackgroundOcrProtection(progressStatus, Math.min(92, progress));
+          }
         });
-        zoneResults.push(best);
-        const completedZones = index + 1;
-        const progress = enabledZones.length ? Math.round((completedZones / enabledZones.length) * 100) : 0;
-        const progressStatus = `${zone.label} concluído (${completedZones}/${enabledZones.length}).`;
-        void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones, totalZones: enabledZones.length, status: progressStatus });
-        void updateBackgroundOcrProtection(progressStatus, progress);
+      } else {
+        for (let index = 0; index < enabledZones.length; index += 1) {
+          const zone = enabledZones[index];
+          setStatus(`Leitura Ultraprecisa: ${zone.label} (${index + 1}/${enabledZones.length})...`);
+          const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
+          const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
+          const normalTarget = zone.key === 'name' ? 2600 : zone.key === 'skills' ? 2200 : numeric ? 2100 : wide ? 2800 : 2350;
+          const target = normalTarget;
+          const criticalZone = zone.key === 'name' || zone.key === 'skills' || zone.key === 'attributes' || zone.key === 'mainPosition' || zone.key === 'playstyle';
+          const adaptiveMode: 'balanced' | 'fast' = criticalZone ? 'balanced' : 'fast';
+          const best = await recognizeZoneWithHighPrecision(ocrSource, zone, {
+            imageHash: precisionImageHash,
+            template: geometry.template,
+            targetWidth: Math.round(target * (criticalZone ? 0.94 : 0.84)),
+            readingMode: readingMode === 'fast' ? 'fast' : adaptiveMode,
+            knownPlayerNames,
+            labelPrefix: 'Print único'
+          });
+          zoneResults.push(best);
+          const completedZones = index + 1;
+          const progress = enabledZones.length ? Math.round((completedZones / enabledZones.length) * 100) : 0;
+          const progressStatus = `${zone.label} concluído (${completedZones}/${enabledZones.length}).`;
+          void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones, totalZones: enabledZones.length, status: progressStatus });
+          void updateBackgroundOcrProtection(progressStatus, progress);
+        }
       }
       void updateBackgroundOcrCheckpoint({ stage: 'finalizing', status: 'Conferindo nome, atributos, habilidades e pontos.' });
       void updateBackgroundOcrProtection('Conferindo e finalizando a carta.', 96);
@@ -2687,7 +2690,7 @@ export function CardVisionApp() {
         width: geometry.width,
         height: geometry.height,
         readings: zoneResults,
-        fullText: fullPass.text,
+        fullText: fullPassText,
         layoutBounds: geometry.anchorReport.bounds,
         layoutConfidence: geometry.anchorReport.confidence,
         zones: geometry.zones,
@@ -2710,7 +2713,7 @@ export function CardVisionApp() {
           width: geometry.width,
           height: geometry.height,
           readings: zoneResults,
-          fullText: fullPass.text,
+          fullText: fullPassText,
           previous,
           layoutBounds: geometry.anchorReport.bounds,
           layoutConfidence: geometry.anchorReport.confidence,
@@ -2727,7 +2730,7 @@ export function CardVisionApp() {
         });
       }
       session = applyStoredOcrCorrections(session, corrections);
-      const visionAudit = buildOcrVisionAudit(session, fullPass.text);
+      const visionAudit = buildOcrVisionAudit(session, fullPassText);
       session = {
         ...session,
         blockingFields: [...new Set([...session.blockingFields, ...visionAudit.blockingFields])],
@@ -2936,7 +2939,7 @@ export function CardVisionApp() {
   function readWithEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
     efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
     setEfhubCalibrationActive(true); setCalibratorOpen(false);
-    setStatus('Mapa visual confirmado. A leitura usará exatamente os quadrados posicionados por você.'); void analyzeSelectedImage();
+    setStatus('Quadrados confirmados. Iniciando leitura rápida diretamente nas áreas marcadas...'); void analyzeSelectedImage();
   }
   function applyLearningToText(text: string) {
     const learned = findLearnedCard(text, fileName);
@@ -3003,8 +3006,6 @@ export function CardVisionApp() {
             manualCrop: cardCropResult?.method === 'manual-adjustment'
           }).catch(() => undefined);
         }
-        // Finalização segura para Android/WebView: libera recortes e imagens temporárias
-        // antes de montar o painel completo. Isso evita estouro de memória após OCR.
         setPremiumReadings([]);
         setReadingConfirmations({});
         setEnhancedPreview(null);
@@ -3647,7 +3648,7 @@ export function CardVisionApp() {
               </section>
               <section className="bm32-manual-choice-card">
                 <header><div><strong>Posição escolhida</strong><small>A posição final sempre será definida por você.</small></div><Target size={18}/></header>
-                <div className="bm32-choice-chips">{POSITION_LABELS.filter((item) => ['CF','SS','AMF','CMF','DMF','CB','LB','RB','GK'].includes(item.code)).map((item) => <button type="button" key={item.code} className={targetPosition === item.code ? 'active' : ''} onClick={() => setTargetPosition(item.code)}>{item.label}</button>)}</div>
+                <div className="bm32-choice-chips">{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <button type="button" key={item.code} className={targetPosition === item.code ? 'active' : ''} onClick={() => setTargetPosition(item.code)}>{item.label}</button>)}</div>
               </section>
               <section className="bm32-manual-choice-card">
                 <header><div><strong>Estilo de jogo</strong><small>Escolha o comportamento que deve ficar ativo nessa posição.</small></div><Sparkles size={18}/></header>

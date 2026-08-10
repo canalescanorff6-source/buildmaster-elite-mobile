@@ -7,7 +7,7 @@ import {
   EFHUB_CANONICAL_WIDTH
 } from '@/modules/card-reader/efhubLayoutGeometry';
 
-export const EFHUB_MANUAL_CALIBRATION_VERSION = 'v32.00-manual-map-1';
+export const EFHUB_MANUAL_CALIBRATION_VERSION = 'v38.40-manual-map-fast-r4';
 
 export type EfhubCalibrationZoneId =
   | 'identity'
@@ -245,7 +245,8 @@ async function canonicalSkillLayer(file: File | Blob, skills: EfhubCalibrationZo
  */
 export async function buildPreciseOcrZonesFromEfhubCalibration(
   file: File | Blob,
-  zones: EfhubCalibrationZone[]
+  zones: EfhubCalibrationZone[],
+  options: { detectSkillCapsules?: boolean } = {}
 ): Promise<OcrZone[]> {
   const safe = normalizeEfhubCalibrationZones(zones);
   const byId = new Map(safe.map((zone) => [zone.id, zone]));
@@ -280,9 +281,13 @@ export async function buildPreciseOcrZonesFromEfhubCalibration(
   const physical = physicalCanonical.map((item) => transformCanonicalZone(physicalZone, macroBoxById('physical'), item));
   const rows = skillRows.map((item) => transformCanonicalZone(skillZone, macroBoxById('skills'), item));
 
-  const canonicalLayer = await canonicalSkillLayer(file, skillZone).catch(() => null);
-  const detected = await detectEfhubSkillCapsuleZones(canonicalLayer ?? file).catch(() => ({ zones: [], detectedCount: 0, usedFallback: true, diagnostics: [] }));
-  const capsules = detected.zones.map((item) => transformCanonicalZone(skillZone, macroBoxById('skills'), item));
+  const capsules = options.detectSkillCapsules === false
+    ? []
+    : await (async () => {
+        const canonicalLayer = await canonicalSkillLayer(file, skillZone).catch(() => null);
+        const detected = await detectEfhubSkillCapsuleZones(canonicalLayer ?? file).catch(() => ({ zones: [], detectedCount: 0, usedFallback: true, diagnostics: [] }));
+        return detected.zones.map((item) => transformCanonicalZone(skillZone, macroBoxById('skills'), item));
+      })();
 
   return [...base, ...attributes, ...physical, ...rows, ...capsules];
 }

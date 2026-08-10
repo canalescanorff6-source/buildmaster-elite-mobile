@@ -94,19 +94,19 @@ function protectedKeys(base: TrainingPlan): TrainingKey[] {
     .slice(0, 2);
 }
 
-function candidateAllowed(base: TrainingPlan, candidate: TrainingPlan, maxShift: number, protectedCore: TrainingKey[]): boolean {
+function candidateAllowed(base: TrainingPlan, candidate: TrainingPlan, maxShift: number, protectedCore: TrainingKey[], minCorePreservation = 72): boolean {
   const distance = l1Distance(base, candidate);
   if (distance > maxShift) return false;
-  if (corePreservation(base, candidate) < 72) return false;
+  if (corePreservation(base, candidate) < minCorePreservation) return false;
   if (TRAINING_KEYS.some((key) => Number(candidate[key] ?? 0) < 0 || Number(candidate[key] ?? 0) > 16)) return false;
   if (TRAINING_KEYS.some((key) => Number(candidate[key] ?? 0) < Number(base[key] ?? 0) - 2)) return false;
   if (protectedCore.some((key) => Number(candidate[key] ?? 0) < Number(base[key] ?? 0) - 1)) return false;
   return true;
 }
 
-function generateCandidates(base: TrainingPlan, position: PositionCode, maxShift: number): TrainingPlan[] {
+function generateCandidates(base: TrainingPlan, position: PositionCode, maxShift: number, minCorePreservation = 72, protectedCount = 2): TrainingPlan[] {
   const budget = trainingPlanTotalCost(base);
-  const protectedCore = protectedKeys(base);
+  const protectedCore = protectedKeys(base).slice(0, Math.max(0, protectedCount));
   const seen = new Set<string>([signature(base)]);
   const queue: Array<{ plan: TrainingPlan; depth: number }> = [{ plan: clone(base), depth: 0 }];
   const output: TrainingPlan[] = [clone(base)];
@@ -124,7 +124,7 @@ function generateCandidates(base: TrainingPlan, position: PositionCode, maxShift
             next[donor] -= remove;
             next[receiver] += add;
             if (trainingPlanTotalCost(next) !== budget) continue;
-            if (!candidateAllowed(base, next, maxShift, protectedCore)) continue;
+            if (!candidateAllowed(base, next, maxShift, protectedCore, minCorePreservation)) continue;
             const key = signature(next);
             if (seen.has(key)) continue;
             seen.add(key);
@@ -155,14 +155,20 @@ function chooseAdaptedTraining(result: AnalysisResult, base: TrainingPlan): { pl
   const position = result.bestPosition.code;
   if (position === result.parsed.mainPosition) return { plan: clone(base), maxShift: 0, gain: 0 };
   const mode = adaptationMode(result, position);
-  const maxShift = mode === 'COMPATIVEL' ? 8 : 10;
-  const candidates = generateCandidates(base, position, maxShift);
+  // A posição escolhida pelo usuário é soberana. Para uma carta usada fora da
+  // posição nativa, preservar 72% da receita antiga impedia adaptações reais
+  // (ex.: MLE usado como MLG/VOL/MAT). Mantemos o DNA, mas abrimos espaço
+  // determinístico suficiente para a função escolhida.
+  const maxShift = mode === 'COMPATIVEL' ? 11 : 16;
+  const minCorePreservation = mode === 'COMPATIVEL' ? 66 : 56;
+  const protectedCount = mode === 'COMPATIVEL' ? 2 : 1;
+  const candidates = generateCandidates(base, position, maxShift, minCorePreservation, protectedCount);
   const baseUtility = positionUtility(base, position);
   const winner = candidates.find((candidate) => positionUtility(candidate, position) >= baseUtility + .25) ?? candidates[0] ?? base;
   return { plan: clone(winner), maxShift, gain: clamp(positionUtility(winner, position) - baseUtility, -100, 100) };
 }
 
-function mergeSkills(core: UnifiedSkillDecision[], positional: UnifiedSkillDecision[]): UnifiedSkillDecision[] {
+function mergeSkills(core: UnifiedSkillDecision[], positional: UnifiedSkillDecision[], mode: AdaptivePositionV3930Analysis['adaptationMode']): UnifiedSkillDecision[] {
   const selected: UnifiedSkillDecision[] = [];
   const seen = new Set<string>();
   const add = (item: UnifiedSkillDecision | undefined) => {
@@ -172,13 +178,14 @@ function mergeSkills(core: UnifiedSkillDecision[], positional: UnifiedSkillDecis
     seen.add(key);
     selected.push(item);
   };
-  core.slice(0, 3).forEach(add);
+  const coreSlots = mode === 'FORA_DA_POSICAO' ? 2 : 3;
+  core.slice(0, coreSlots).forEach(add);
   positional.forEach((item) => { if (selected.length < 5) add(item); });
   core.forEach((item) => { if (selected.length < 5) add(item); });
   return selected.slice(0, 5).map((item, index) => ({
     ...item,
     priority: index === 0 ? 'essencial' : index < 3 ? 'alta' : 'complementar',
-    reasons: [index < 3 ? 'Núcleo preservado pela identidade da carta.' : 'Complemento determinístico para a posição escolhida.', ...item.reasons].slice(0, 4)
+    reasons: [index < coreSlots ? 'Núcleo preservado pela identidade da carta.' : 'Complemento determinístico para a posição escolhida.', ...item.reasons].slice(0, 4)
   }));
 }
 
@@ -222,7 +229,7 @@ export function buildAdaptivePositionV3930(result: AnalysisResult): AdaptivePosi
     label: `adaptação ${selectedLabel}`,
     positionOverride: selected
   });
-  const finalSkills = mergeSkills(coreSkills, positionalSkills);
+  const finalSkills = mergeSkills(coreSkills, positionalSkills, mode);
   const impetos = [...(unified?.canonicalImpetos ?? result.recommendedImpetos)];
   const primaryImpeto = unified?.primaryImpeto ?? impetos[0]?.name ?? null;
   const familiarity = positionFamiliarity(result, selected);
@@ -248,7 +255,7 @@ export function buildAdaptivePositionV3930(result: AnalysisResult): AdaptivePosi
   const reasons = [
     `Núcleo preservado em ${Math.round(identityPreservation)}%.`,
     adaptationApplied ? `${changes.length} grupo(s) ajustado(s) com orçamento idêntico.` : 'A receita-base foi mantida porque nenhuma troca segura aumentou a utilidade da posição.',
-    `Três habilidades de identidade foram preservadas e até duas foram escolhidas para ${selectedLabel}.`,
+    mode === 'FORA_DA_POSICAO' ? `Duas habilidades de identidade foram preservadas e até três foram priorizadas para ${selectedLabel}.` : `Três habilidades de identidade foram preservadas e até duas foram escolhidas para ${selectedLabel}.`,
     `O Ímpeto ${primaryImpeto ?? 'a confirmar'} permanece fixo para esta versão da carta e não muda ao trocar a posição.`,
     'A mesma carta na mesma posição sempre repete exatamente esta receita.'
   ];

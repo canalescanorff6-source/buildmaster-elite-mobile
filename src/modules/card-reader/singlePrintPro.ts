@@ -413,6 +413,8 @@ function extractPlayerName(readings: PremiumZoneReading[], knownPlayerNames: str
         const letters = (clean.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
         if (clean.length < 3 || clean.length > 52 || /\d/.test(clean) || letters / Math.max(1, clean.length) < 0.67) continue;
         if (FORBIDDEN_NAME_LINES.some((item) => norm.includes(item))) continue;
+        if (PLAYSTYLE_OPTIONS.some((style) => normalized(style) === norm || similarity(clean, style) >= 0.96)) continue;
+        if (POSITION_ALIASES[clean.toUpperCase()]) continue;
         const words = clean.split(/\s+/).length;
         if (words > 6) continue;
         let value = clean;
@@ -445,8 +447,11 @@ function extractPlayerName(readings: PremiumZoneReading[], knownPlayerNames: str
     const agreement = new Set(cluster.map((item) => `${item.reading.enhancement}:${normalized(item.value)}`)).size;
     const averageConfidence = cluster.reduce((sum, item) => sum + item.confidence, 0) / cluster.length;
     const exactLexicon = knownPlayerNames.some((name) => normalized(name) === normalized(representative.value));
-    // Um único palpite sem histórico confirmado não vira nome automático.
-    if (agreement < 2 && !exactLexicon) return [];
+    // No modo manual de 8 quadros, o recorte foi confirmado visualmente pelo
+    // usuário. Uma leitura única pode seguir como REVISÃO (nunca como certeza)
+    // para que o nome não suma só por falta de uma segunda passagem cara.
+    const manualMacroReading = cluster.some((item) => item.reading.precisionVersion === '38.40-macro-8-r5');
+    if (agreement < 2 && !exactLexicon && !manualMacroReading) return [];
     const wordBonus = representative.value.split(/\s+/).length <= 5 ? 10 : 0;
     const agreementBonus = Math.min(24, Math.max(0, (agreement - 1) * 8));
     const lexiconBonus = exactLexicon ? 9 : 0;

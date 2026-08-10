@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": [
+    "../../__external_stubs.d.ts",
+    "stubs.d.ts",
+    "../../src/lib/ocrWorkerManager.ts",
+    "../../src/modules/card-reader/manualCalibrationFastReader.ts",
+    "../../src/modules/card-reader/singlePrintPro.ts",
+    "../../src/lib/adaptivePositionEngineV3930.ts"
+  ]
+}

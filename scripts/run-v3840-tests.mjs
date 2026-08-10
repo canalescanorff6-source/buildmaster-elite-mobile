@@ -4,6 +4,8 @@ const tests = [
   ['OCR em segundo plano', ['tests/v38-40-background-ocr-resume-regression.mjs']],
   ['OCR anti-travamento', ['tests/v38-40-ocr-freeze-hotfix-regression.mjs']],
   ['Leitura ativa x fila', ['tests/v38-40-reader-active-queue-separation-regression.mjs']],
+  ['Quadrados rápidos + contraste', ['tests/v38-40-calibrated-reader-speed-contrast-r4-regression.mjs']],
+  ['Causa-raiz r5', ['tests/v38-40-reader-root-cause-r5-regression.mjs']],
   ['Cofre nativo', ['tests/v38-40-native-vault-storage-hotfix-regression.mjs']],
   ['Mapeamento de elenco', ['tests/v38-40-squad-mapping-regression.mjs']],
   ['Identidade visual', ['tests/v38-40-branding-regression.mjs']],

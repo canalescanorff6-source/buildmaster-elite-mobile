@@ -6,7 +6,7 @@ import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 import { extractCanonicalSkillsFromText } from '@/lib/officialSkillIdentity';
 import { getRuntimeOptimizationProfile } from '@/lib/invisibleOptimizationV3820';
 
-export const HIGH_PRECISION_OCR_VERSION = '38.40-fast-first-precision-fallback-1';
+export const HIGH_PRECISION_OCR_VERSION = '38.40-calibrated-fast-r4';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;
@@ -42,7 +42,9 @@ const NAME_BLOCKLIST = [
   'habilidades', 'posição', 'posicao', 'estilo de jogo', 'pior pé', 'condição física',
   'resistência', 'manager', 'técnico', 'tecnico', 'peso', 'idade', 'altura', 'carta',
   'talento ofensivo', 'talento defensivo', 'finalização', 'finalizacao', 'velocidade',
-  'aceleração', 'aceleracao', 'passe rasteiro', 'passe alto', 'controle de bola'
+  'aceleração', 'aceleracao', 'passe rasteiro', 'passe alto', 'controle de bola',
+  'goleiro', 'zagueiro', 'lateral', 'volante', 'meio campista', 'meia ofensivo',
+  'atacante', 'centroavante', 'ponta esquerda', 'ponta direita'
 ];
 
 const POSITION_TOKENS = new Set([
@@ -135,6 +137,8 @@ function nameLineCandidates(text: string) {
   for (const rawLine of lines) {
     const line = rawLine
       .replace(/^(?:nome(?:\s+do\s+jogador)?|jogador)\s*[:=.-]?\s*/i, '')
+      .replace(/\b(?:GK|GOL|CB|ZAG|LB|LE|RB|LD|DMF|VOL|CMF|MLG|LMF|RMF|AMF|MAT|LWF|PE|RWF|PD|SS|SA|CF|CA)\b/gi, ' ')
+      .replace(/\b(?:posição(?:\s+principal)?|posicao(?:\s+principal)?|overall|ger|nível|nivel)\b/gi, ' ')
       .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ.' -]+$/g, '')
       .replace(/\s+/g, ' ')
       .trim();
@@ -158,6 +162,16 @@ function nameLineCandidates(text: string) {
     if (inline.length >= 3 && inline.length <= 52) candidates.push(titleCaseName(inline));
   }
   return Array.from(new Set(candidates));
+}
+
+
+function embeddedKnownName(value: string, knownNames: string[]) {
+  const source = ` ${comparable(value)} `;
+  const ranked = knownNames
+    .map((name) => ({ name, normalized: comparable(name) }))
+    .filter((item) => item.normalized.length >= 4 && source.includes(` ${item.normalized} `))
+    .sort((left, right) => right.normalized.length - left.normalized.length);
+  return ranked[0]?.name ?? null;
 }
 
 function nearestKnownName(value: string, knownNames: string[]) {
@@ -188,6 +202,8 @@ function repairByZone(text: string, key: OcrZoneKey, knownNames: string[]) {
     const candidates = nameLineCandidates(normalized);
     if (!candidates.length) return normalized;
     const best = candidates[0];
+    const embedded = embeddedKnownName(best, knownNames);
+    if (embedded) return embedded;
     const lexicon = nearestKnownName(best, knownNames);
     return lexicon ? lexicon.name : best;
   }
@@ -367,7 +383,7 @@ export async function recognizeZoneWithHighPrecision(
   const runtimeTier = getRuntimeOptimizationProfile().tier;
   const critical = zone.key === 'name' || zone.key === 'skills' || zone.key === 'attributes' || zone.key === 'mainPosition' || zone.key === 'playstyle';
   const taskCap = options.readingMode === 'fast'
-    ? 1
+    ? (zone.key === 'name' ? 2 : 1)
     : runtimeTier === 'economy'
       ? (critical ? 3 : 2)
       : runtimeTier === 'balanced'
@@ -381,7 +397,9 @@ export async function recognizeZoneWithHighPrecision(
     if (index > 0 && typeof window !== 'undefined') await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
     const { variant, plan } = tasks[index];
     const baseRegion = plan.expanded ? expandOcrRegion(variant.zone, zone.key === 'name' ? 0.06 : 0.025, zone.key === 'name' ? 0.025 : 0.015) : variant.zone;
-    const effectiveTargetWidth = zone.key === 'skills' ? Math.max(options.targetWidth, 2200) : options.targetWidth;
+    const effectiveTargetWidth = zone.key === 'skills'
+      ? Math.max(options.targetWidth, options.readingMode === 'fast' ? 1700 : 2200)
+      : options.targetWidth;
     const image = await cropImage(file, baseRegion, effectiveTargetWidth, plan.enhancement);
     const recognition = await recognizeWithOcrWorker(image, {
       label: `${options.labelPrefix ? `${options.labelPrefix} • ` : ''}${zone.label} • ${variant.label} • ${plan.enhancement} ${index + 1}/${tasks.length}`,

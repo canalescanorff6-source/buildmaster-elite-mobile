@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=(p)=>fs.readFileSync(p,'utf8');
+const app=read('src/components/CardVisionApp.tsx');
+const reader=read('src/modules/card-reader/manualCalibrationFastReader.ts');
+const worker=read('src/lib/ocrWorkerManager.ts');
+const image=read('src/modules/card-reader/imageProcessing.ts');
+const single=read('src/modules/card-reader/singlePrintPro.ts');
+const adaptive=read('src/lib/adaptivePositionEngineV3930.ts');
+const css=read('src/app/globals.css');
+
+assert.match(app,/readEightEfhubCalibrationMacros/);
+assert.match(app,/calibratedFastPath[\s\S]*?zones: \[\]/);
+assert.match(reader,/MANUAL_CALIBRATION_FAST_READER_VERSION = '38\.40-macro-8-r5'/);
+assert.equal((reader.match(/id: '(identity|card|bio|positions|boosters|attributes|physical|skills)'/g)||[]).length,8);
+assert.match(worker,/OCR_WORKER_BOOT_TIMEOUT_MS = 24_000/);
+assert.match(worker,/workerBootDeadline/);
+assert.match(image,/globalThis\.setTimeout\(\(\) => \{ if \(!settled\)/);
+assert.match(single,/manualMacroReading/);
+assert.match(single,/PLAYSTYLE_OPTIONS\.some/);
+assert.match(adaptive,/const maxShift = mode === 'COMPATIVEL' \? 11 : 16/);
+assert.match(adaptive,/const minCorePreservation = mode === 'COMPATIVEL' \? 66 : 56/);
+assert.match(adaptive,/const coreSlots = mode === 'FORA_DA_POSICAO' \? 2 : 3/);
+assert.match(app,/POSITION_LABELS\.filter\(\(item\) => item\.code !== 'AUTO'\)/);
+assert.match(css,/v38\.40 r5 — guarda global contra painel branco/);
+console.log('✓ r5: causa-raiz do OCR, oito quadros, posição soberana e contraste global validados.');

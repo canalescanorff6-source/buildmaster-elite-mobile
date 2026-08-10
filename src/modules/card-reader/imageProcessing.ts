@@ -25,7 +25,14 @@ export function mergeOcrTexts(...texts: string[]) {
 
 async function imageToBitmap(file: File | Blob) {
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-  return createImageBitmap(file).catch(() => null);
+  return new Promise<ImageBitmap | null>((resolve) => {
+    let settled = false;
+    const timer = globalThis.setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, 8_000);
+    createImageBitmap(file).then((bitmap) => {
+      if (settled) { bitmap.close?.(); return; }
+      settled = true; globalThis.clearTimeout(timer); resolve(bitmap);
+    }, () => { if (!settled) { settled = true; globalThis.clearTimeout(timer); resolve(null); } });
+  });
 }
 
 function clampByte(value: number) {
@@ -149,7 +156,16 @@ function enhancePixels(imageData: ImageData, mode: ImageEnhancement) {
 }
 
 function canvasBlob(canvas: HTMLCanvasElement, fallback: File | Blob): Promise<Blob | File> {
-  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob ?? fallback), 'image/png', 0.98));
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = globalThis.setTimeout(() => { if (!settled) { settled = true; resolve(fallback); } }, 6_000);
+    canvas.toBlob((blob) => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timer);
+      resolve(blob ?? fallback);
+    }, 'image/png', 0.98);
+  });
 }
 
 export function expandOcrRegion(

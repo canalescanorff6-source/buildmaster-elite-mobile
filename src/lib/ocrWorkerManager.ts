@@ -23,6 +23,7 @@ type WorkerLike = TesseractNamespace.Worker;
 
 const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const OCR_RECOGNITION_TIMEOUT_MS = 38_000;
+const OCR_WORKER_BOOT_TIMEOUT_MS = 24_000;
 
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
@@ -77,7 +78,10 @@ export function requestOcrWorkerReleaseWhenIdle(delayMs = 0): void {
 
 async function createReusableWorker(): Promise<WorkerLike> {
   const Tesseract = await import('tesseract.js');
-  const worker = await Tesseract.createWorker(['por', 'eng'], Tesseract.OEM.LSTM_ONLY, {
+  // O app trabalha com a interface e os rótulos oficiais em português.
+  // Carregar dois idiomas duplicava o custo de inicialização do primeiro OCR
+  // no Android. Nomes próprios continuam cobertos pelo alfabeto/whitelist.
+  const worker = await Tesseract.createWorker(['por'], Tesseract.OEM.LSTM_ONLY, {
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/core',
     langPath: '/tesseract/lang',
@@ -88,9 +92,33 @@ async function createReusableWorker(): Promise<WorkerLike> {
   return worker;
 }
 
+function workerBootDeadline(promise: Promise<WorkerLike>): Promise<WorkerLike> {
+  return new Promise<WorkerLike>((resolve, reject) => {
+    let settled = false;
+    const timer = globalThis.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      workerPromise = null;
+      workerInstance = null;
+      reject(new Error('O motor OCR não conseguiu iniciar no tempo seguro. Tente novamente; o leitor foi reiniciado.'));
+    }, OCR_WORKER_BOOT_TIMEOUT_MS);
+    promise.then((worker) => {
+      if (settled) { void worker.terminate().catch(() => undefined); return; }
+      settled = true;
+      globalThis.clearTimeout(timer);
+      resolve(worker);
+    }, (error) => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
 async function getWorker(): Promise<WorkerLike> {
   if (!workerPromise) {
-    workerPromise = createReusableWorker().catch((error) => {
+    workerPromise = workerBootDeadline(createReusableWorker()).catch((error) => {
       workerPromise = null;
       workerInstance = null;
       throw error;
@@ -100,7 +128,7 @@ async function getWorker(): Promise<WorkerLike> {
 }
 
 
-function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: string): Promise<T> {
+function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: string, timeoutMs = OCR_RECOGNITION_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let settled = false;
     const timer = window.setTimeout(() => {
@@ -112,7 +140,7 @@ function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: 
       }
       void worker.terminate().catch(() => undefined);
       reject(new Error(`${label} excedeu o tempo seguro de leitura. O motor OCR foi reiniciado.`));
-    }, OCR_RECOGNITION_TIMEOUT_MS);
+    }, Math.max(5_000, timeoutMs));
     promise.then((value) => {
       if (settled) return;
       settled = true;
@@ -187,7 +215,7 @@ function cacheIsFresh(cached: CachedRecognition) {
 
 async function executeRecognition(
   image: File | Blob,
-  options: { label: string; kind: OcrFieldKind; cacheKey: string | null }
+  options: { label: string; kind: OcrFieldKind; cacheKey: string | null; timeoutMs?: number }
 ): Promise<OcrRecognition> {
   const started = performance.now();
   const operationGeneration = generation;
@@ -200,7 +228,7 @@ async function executeRecognition(
       const worker = await getWorker();
       if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
       await worker.setParameters(paramsForKind(options.kind));
-      const result = await recognitionDeadline(worker.recognize(image), worker, options.label);
+      const result = await recognitionDeadline(worker.recognize(image), worker, options.label, options.timeoutMs);
       if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
       const recognition: OcrRecognition = {
         text: String(result.data.text ?? '').trim(),
@@ -231,6 +259,7 @@ export async function recognizeWithOcrWorker(
     kind?: OcrFieldKind;
     cacheKey?: string;
     bypassCache?: boolean;
+    timeoutMs?: number;
   }
 ): Promise<OcrRecognition> {
   const kind = options.kind ?? 'general';
@@ -245,7 +274,7 @@ export async function recognizeWithOcrWorker(
     if (inFlight) return inFlight;
   }
 
-  const recognition = executeRecognition(image, { label: options.label, kind, cacheKey });
+  const recognition = executeRecognition(image, { label: options.label, kind, cacheKey, timeoutMs: options.timeoutMs });
   if (!cacheKey) return recognition;
   inFlightRecognitions.set(cacheKey, recognition);
   return recognition.finally(() => {

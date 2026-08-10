@@ -21987,3 +21987,19 @@ body::after { display: none !important; }
 .reader-live-progress-preview img{width:100%;height:100%;object-fit:cover}.reader-live-progress-copy{min-width:0}.reader-live-progress-copy h3{margin:2px 0 5px;font-size:16px}.reader-live-progress-copy p{margin:0;color:var(--bm-text-muted);font-size:12px;line-height:1.45}.reader-live-progress-steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.reader-live-progress-steps span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.05);font-size:10px;color:var(--bm-text-muted)}.reader-live-progress-steps span.done{color:#82d6ad;background:rgba(48,181,119,.1)}.reader-live-progress-steps span.active{color:#92bdff;background:rgba(54,125,242,.14)}
 .reader-live-progress-card>.cancel-ocr-action{min-height:44px;white-space:nowrap}
 @media(max-width:680px){.reader-live-progress-card{grid-template-columns:66px 1fr}.reader-live-progress-preview{width:66px}.reader-live-progress-card>.cancel-ocr-action{grid-column:1/-1;width:100%}}
+
+/* v38.40 r5 — guarda global contra painel branco/texto invisível em tema escuro */
+[data-theme='dark'] :is(.luxury-panel,.creation-field-card,.bm32-manual-choice-card,.bm32-manual-identity,.bm32-manual-attributes,.creation-processing-card,.reader-card,.reader-panel,.settings-card,.result-card,.vault-card,.team-card,.modal-card,.drawer-card,.panel-card),
+.dark :is(.luxury-panel,.creation-field-card,.bm32-manual-choice-card,.bm32-manual-identity,.bm32-manual-attributes,.creation-processing-card,.reader-card,.reader-panel,.settings-card,.result-card,.vault-card,.team-card,.modal-card,.drawer-card,.panel-card){
+  background-color:#0b1525 !important;
+  color:#eef5ff !important;
+  border-color:rgba(126,169,224,.22) !important;
+}
+[data-theme='dark'] :is(input,select,textarea), .dark :is(input,select,textarea){
+  background:#0a1423 !important;
+  color:#f1f6ff !important;
+  border-color:rgba(130,170,220,.28) !important;
+  -webkit-text-fill-color:#f1f6ff;
+}
+[data-theme='dark'] :is(input,textarea)::placeholder, .dark :is(input,textarea)::placeholder{color:#8da2be !important;opacity:1}
+[data-theme='dark'] :is(label,small,p,span,em), .dark :is(label,small,p,span,em){text-shadow:none}

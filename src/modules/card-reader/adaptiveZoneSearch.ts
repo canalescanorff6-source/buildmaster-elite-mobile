@@ -53,9 +53,17 @@ function criticalOffsets(zone: OcrZone, horizontal: number, vertical: number) {
 
 export function adaptiveZoneVariants(zone: OcrZone, mode: 'balanced' | 'precision' | 'fast'): AdaptiveZoneVariant[] {
   const variants: AdaptiveZoneVariant[] = [{ id: 'exact', label: 'área exata', zone: safeZone(zone), priority: 100 }];
-  if (mode === 'fast') return variants;
-
   const key: OcrZoneKey = zone.key;
+  if (mode === 'fast') {
+    // No modo manual/calibrado o nome ganha apenas uma segunda janela mais
+    // concentrada. Isso corrige pequenos desvios do quadrado sem transformar a
+    // leitura rápida em uma bateria pesada de OCR.
+    if (key === 'name') {
+      variants.push({ id: 'name-tight', label: 'nome concentrado', zone: shifted(zone, 0, -Math.max(0.0015, zone.h * 0.03), 0.94, 0.72), priority: 99 });
+    }
+    return variants;
+  }
+
   if (key === 'name') {
     const { dx, dy } = criticalOffsets(zone, 0.12, 0.30);
     variants.push(
