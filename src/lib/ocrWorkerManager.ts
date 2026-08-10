@@ -22,6 +22,7 @@ type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; v
 type WorkerLike = TesseractNamespace.Worker;
 
 const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const OCR_RECOGNITION_TIMEOUT_MS = 38_000;
 
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
@@ -98,6 +99,33 @@ async function getWorker(): Promise<WorkerLike> {
   return workerPromise;
 }
 
+
+function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const timer = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      if (workerInstance === worker) {
+        workerInstance = null;
+        workerPromise = null;
+      }
+      void worker.terminate().catch(() => undefined);
+      reject(new Error(`${label} excedeu o tempo seguro de leitura. O motor OCR foi reiniciado.`));
+    }, OCR_RECOGNITION_TIMEOUT_MS);
+    promise.then((value) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
 function enqueueWorkerOperation<T>(operation: () => Promise<T>): Promise<T> {
   const queued = operationQueue.then(operation, operation);
   operationQueue = queued.then(() => undefined, () => undefined);
@@ -172,7 +200,7 @@ async function executeRecognition(
       const worker = await getWorker();
       if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
       await worker.setParameters(paramsForKind(options.kind));
-      const result = await worker.recognize(image);
+      const result = await recognitionDeadline(worker.recognize(image), worker, options.label);
       if (operationGeneration !== generation) throw new DOMException('Leitura cancelada', 'AbortError');
       const recognition: OcrRecognition = {
         text: String(result.data.text ?? '').trim(),

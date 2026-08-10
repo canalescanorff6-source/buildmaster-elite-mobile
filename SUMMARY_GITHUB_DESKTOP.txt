@@ -1,1 +1,1 @@
-Audita CI e reforça validação do Supabase antes do APK e AAB
+Corrige travamento da leitura de cartas e mantém cancelamento e navegação responsivos na v38.40

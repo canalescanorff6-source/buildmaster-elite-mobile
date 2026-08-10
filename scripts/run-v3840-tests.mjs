@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 const tests = [
   ['OCR em segundo plano', ['tests/v38-40-background-ocr-resume-regression.mjs']],
+  ['OCR anti-travamento', ['tests/v38-40-ocr-freeze-hotfix-regression.mjs']],
   ['Cofre nativo', ['tests/v38-40-native-vault-storage-hotfix-regression.mjs']],
   ['Mapeamento de elenco', ['tests/v38-40-squad-mapping-regression.mjs']],
   ['Identidade visual', ['tests/v38-40-branding-regression.mjs']],

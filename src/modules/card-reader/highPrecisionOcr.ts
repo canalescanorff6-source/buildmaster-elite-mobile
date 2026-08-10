@@ -4,6 +4,7 @@ import { recognizeWithOcrWorker, type OcrFieldKind } from '@/lib/ocrWorkerManage
 import { cropImage, expandOcrRegion, type ImageEnhancement } from './imageProcessing';
 import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 import { extractCanonicalSkillsFromText } from '@/lib/officialSkillIdentity';
+import { getRuntimeOptimizationProfile } from '@/lib/invisibleOptimizationV3820';
 
 export const HIGH_PRECISION_OCR_VERSION = '38.40-fast-first-precision-fallback-1';
 
@@ -355,7 +356,7 @@ export async function recognizeZoneWithHighPrecision(
   const zoneSignature = `${zone.key}:${zone.label}:${zone.x.toFixed(5)}:${zone.y.toFixed(5)}:${zone.w.toFixed(5)}:${zone.h.toFixed(5)}`;
   const originPreview = await createZoneOriginPreview(file, zone).catch(() => null);
   const scoredPasses: ScoredPass[] = [];
-  const tasks = variants.flatMap((variant, variantIndex) => {
+  const rawTasks = variants.flatMap((variant, variantIndex) => {
     const selectedPlans = variantIndex === 0
       ? plans
       : variantIndex === 1
@@ -363,8 +364,21 @@ export async function recognizeZoneWithHighPrecision(
         : plans.slice(0, 1);
     return selectedPlans.map((plan) => ({ variant, plan }));
   });
+  const runtimeTier = getRuntimeOptimizationProfile().tier;
+  const critical = zone.key === 'name' || zone.key === 'skills' || zone.key === 'attributes' || zone.key === 'mainPosition' || zone.key === 'playstyle';
+  const taskCap = options.readingMode === 'fast'
+    ? 1
+    : runtimeTier === 'economy'
+      ? (critical ? 3 : 2)
+      : runtimeTier === 'balanced'
+        ? (critical ? 5 : 3)
+        : rawTasks.length;
+  const tasks = rawTasks.slice(0, Math.max(1, taskCap));
 
   for (let index = 0; index < tasks.length; index += 1) {
+    // Entrega um frame ao navegador entre passagens para manter toque, voltar e
+    // cancelar responsivos mesmo em aparelhos com pouca folga de CPU/memória.
+    if (index > 0 && typeof window !== 'undefined') await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
     const { variant, plan } = tasks[index];
     const baseRegion = plan.expanded ? expandOcrRegion(variant.zone, zone.key === 'name' ? 0.06 : 0.025, zone.key === 'name' ? 0.025 : 0.015) : variant.zone;
     const effectiveTargetWidth = zone.key === 'skills' ? Math.max(options.targetWidth, 2200) : options.targetWidth;

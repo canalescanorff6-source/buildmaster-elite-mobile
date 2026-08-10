@@ -14,13 +14,14 @@ type Props = {
   loading: boolean;
   onAnalyze: (captures: TotalCardCaptureInput[]) => void | Promise<void>;
   onPrimarySelected?: (file: File) => void | Promise<void>;
+  onCancel?: () => void | Promise<void>;
 };
 
 function captureId(type: string) {
   return createStableId(`capture-${type}`);
 }
 
-export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected }: Props) {
+export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected, onCancel }: Props) {
   const [slots, setSlots] = useState<Partial<Record<Exclude<CardScreenType, 'unknown'>, SlotState>>>({});
   const urlsRef = useRef<string[]>([]);
   const [fileError, setFileError] = useState('');
@@ -137,7 +138,7 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected }: 
 
       <div className="total-reader-footer">
         <div><strong>{requiredReady ? 'Captura mínima pronta' : 'Faltam telas obrigatórias'}</strong><span>{requiredReady ? 'Você já pode executar a leitura combinada. Habilidades e posições aumentam a precisão.' : 'Envie visão geral, atributos e progressão antes de continuar.'}</span></div>
-        <button type="button" className="secondary-action" onClick={reset} disabled={!selectedCount || loading}><RotateCcw size={16} /> Limpar</button>
+        {loading && onCancel ? <button type="button" className="secondary-action cancel-ocr-action" onClick={() => void onCancel()}><RotateCcw size={16} /> Cancelar leitura</button> : <button type="button" className="secondary-action" onClick={reset} disabled={!selectedCount}><RotateCcw size={16} /> Limpar</button>}
         <button type="button" className="elite-button" onClick={() => void analyze()} disabled={!requiredReady || loading}>{loading ? <Loader2 className="spin" size={17} /> : <ScanLine size={17} />}{loading ? 'Lendo todas as telas...' : 'Analisar carta completa'}</button>
       </div>
     </section>

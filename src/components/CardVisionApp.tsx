@@ -2452,7 +2452,9 @@ export function CardVisionApp() {
   }
   async function analyzeSelectedImage(fileOverride?: File, resumed = false) {
     const activeFile = fileOverride ?? selectedFile;
-    setMainSection('resultado');
+    // Mantém o leitor visível durante o OCR. Assim o usuário continua com
+    // Cancelar/Voltar disponíveis mesmo se uma etapa ficar lenta no Android.
+    if (resumed && mainSection !== 'leitor') openMainSection('leitor');
     if (!activeFile) {
       if (rawText.trim().length > 2) runAnalysis();
       return;
@@ -2472,7 +2474,7 @@ export function CardVisionApp() {
     setStatus('Perfil EFHub Padronizado: identificando o painel completo, corrigindo orientação e preparando a cópia 1400×1600...');
     document.body.dataset.ocrReading = 'active';
     const backgroundJobId = `${Date.now()}-${activeFile.name}`;
-    await saveBackgroundOcrCheckpoint({
+    void saveBackgroundOcrCheckpoint({
       id: backgroundJobId,
       file: activeFile,
       fileName: activeFile.name,
@@ -2756,12 +2758,13 @@ export function CardVisionApp() {
       } else {
         setStatus(`OCR Vision concluído com ${visionAudit.score}/100. Posição, estilo, números e base oficial foram conferidos.`);
       }
-      await updateBackgroundOcrCheckpoint({ stage: 'completed', status: 'Leitura concluída.', shouldResume: false }).catch(() => undefined);
-      await clearBackgroundOcrCheckpoint().catch(() => undefined);
+      void updateBackgroundOcrCheckpoint({ stage: 'completed', status: 'Leitura concluída.', shouldResume: false }).catch(() => undefined);
+      void clearBackgroundOcrCheckpoint().catch(() => undefined);
+      openMainSection('resultado');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         setStatus('Leitura cancelada. O arquivo não foi alterado.');
-        await clearBackgroundOcrCheckpoint().catch(() => undefined);
+        void clearBackgroundOcrCheckpoint().catch(() => undefined);
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Falha na leitura';
         void updateBackgroundOcrCheckpoint({ stage: 'failed', status: 'Leitura pausada; será retomada ao voltar.', shouldResume: true, lastError: errorMessage });
@@ -2779,7 +2782,6 @@ export function CardVisionApp() {
   }
   async function analyzeTotalCardCaptures(captures: TotalCardCaptureInput[]) {
     if (!captures.length) return;
-    setMainSection('resultado');
     setLoading(true);
     setOcrCancelable(true);
     setResult(null);
@@ -2888,6 +2890,7 @@ export function CardVisionApp() {
       } else {
         setStatus('Leitura completa concluída. As telas foram cruzadas; confirme somente os campos destacados antes de gerar a ficha final.');
       }
+      openMainSection('resultado');
     } catch (error) {
       console.error('Falha no Leitor Total:', error);
       setStatus('Não foi possível concluir a leitura completa. Tente prints diretos, sem cortes, e mantenha cada tela no espaço correto.');
@@ -3503,7 +3506,7 @@ export function CardVisionApp() {
             </div>
           )}
           {advancedMode && readerCaptureMode === 'complete' ? (
-            <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} /></SectionErrorBoundary>
+            <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} onCancel={cancelCurrentOcr} /></SectionErrorBoundary>
           ) : (<>
           <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
             <div className="creation-source-heading">
