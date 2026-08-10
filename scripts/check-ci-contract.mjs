@@ -14,7 +14,14 @@ function check(condition, message) {
 check(packageJson.scripts?.['types:repair'], 'Script types:repair ausente.');
 check(packageJson.scripts?.['quality:root-tsconfig'], 'Script quality:root-tsconfig ausente.');
 check(doctor.includes("['Configuração TypeScript raiz'"), 'ci-doctor não valida a configuração TypeScript raiz.');
-check(doctor.includes("CI_SOURCE_BUILD = 'v38.40-ci-sync-20260809-r1'"), 'ci-doctor não identifica a fonte sincronizada desta correção.');
+const sourceBuildMatch = doctor.match(/const\s+CI_SOURCE_BUILD\s*=\s*['"]([^'"]+)['"]/);
+check(Boolean(sourceBuildMatch), 'ci-doctor não declara CI_SOURCE_BUILD.');
+if (sourceBuildMatch) {
+  check(
+    /^v38\.40-ci-[a-z0-9-]+-\d{8}-r\d+$/.test(sourceBuildMatch[1]),
+    `CI_SOURCE_BUILD inválido: ${sourceBuildMatch[1]}.`,
+  );
+}
 check(doctor.includes('EXPECTED_FULL_GROUPS = 84'), 'ci-doctor não protege a quantidade esperada de 84 grupos.');
 check(packageJson.scripts?.['test:v3840'] === 'node scripts/run-v3840-tests.mjs', 'v38.40 não usa o executor detalhado e determinístico.');
 

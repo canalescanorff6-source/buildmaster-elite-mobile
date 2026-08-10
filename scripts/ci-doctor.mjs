@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 const full = process.argv.includes('--full');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const CI_SOURCE_BUILD = 'v38.40-ci-route-repair-20260810-r2';
+const CI_SOURCE_BUILD = 'v38.40-ci-contract-20260810-r3';
 const EXPECTED_FULL_GROUPS = 84;
 
 const quickChecks = [
