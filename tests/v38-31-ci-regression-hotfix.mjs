@@ -26,8 +26,8 @@ assert.match(serviceWorker, new RegExp(`CACHE_NAME = 'buildmaster-v${escapedCach
 
 assert.match(v33, /assert\.match\(cache, \/NATIVE_CACHE_SCHEMA/,
   'A regressão v33 precisa preservar a validação do cache nativo.');
-assert.match(v3771, /40\\\.00\\\.0/,
-  'A regressão v37.71 precisa aceitar a linha v40 sem depender de um sufixo específico.');
+assert.ok(v3771.includes('NATIVE_CACHE_SCHEMA') && v3771.includes('pkg.version'),
+  'A regressão v37.71 precisa validar o cache e a versão atual sem fixar uma release antiga.');
 assert.ok(doctor.includes('Regressões v38.31'), 'O diagnóstico consolidado precisa executar a v38.31.');
 assert.equal(pkg.scripts['test:v3831'], 'node tests/v38-31-ci-regression-hotfix.mjs');
 
