@@ -13,7 +13,10 @@ assert.ok(read('public/sw.js').includes('buildmaster-v40-00-card-reader-rebuild-
 assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.00.0-fail-open-startup-1'));
 
 const v3500 = read('tests/v35-00-official-additional-skills-meta-regression.ts');
-assert.ok(v3500.includes('Automática v38\\.(?:37|38|39|40)'), 'A regressão v35.00 precisa aceitar a calibração automática atual.');
+assert.ok(
+  v3500.includes('Automática v38\\.(?:37|38|39|40)') || v3500.includes('Automática v(?:38\\.(?:37|38|39|40)|40\\.00)'),
+  'A regressão v35.00 precisa aceitar a calibração automática atual, incluindo a linha v40.00.'
+);
 assert.ok(v3500.includes('Perfil da carta'), 'A regressão v35.00 precisa validar o novo rótulo automático.');
 
 const v3520 = read('tests/v35-20-gameplay-dna-solid-theme-regression.ts');
