@@ -319,7 +319,6 @@ jobs:
           ! grep -RqsF 'buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' out || { echo '::error::O build contém a nuvem antiga insegura.'; exit 1; }
           test -s out/tesseract/worker.min.js || { echo '::error::Worker OCR local ausente.'; exit 1; }
           test -s out/tesseract/lang/por.traineddata.gz || { echo '::error::Idioma OCR português ausente.'; exit 1; }
-          test -s out/tesseract/lang/eng.traineddata.gz || { echo '::error::Idioma OCR inglês ausente.'; exit 1; }
 
       - name: Criar projeto Android limpo
         timeout-minutes: 5

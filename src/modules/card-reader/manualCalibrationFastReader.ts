@@ -214,7 +214,6 @@ export async function readEightEfhubCalibrationMacros(
   const started = Date.now();
   const safe = normalizeEfhubCalibrationZones(zones);
   const enabledMacros = new Set(safe.filter((zone) => zone.enabled !== false).map((zone) => zone.id));
-  await prewarmOcrWorker();
   const precise = await buildPreciseOcrZonesFromEfhubCalibration(file, safe, { detectSkillCapsules: false });
   const relevant = precise.filter((zone) => {
     if (!zone.enabled) return false;
@@ -224,6 +223,8 @@ export async function readEightEfhubCalibrationMacros(
     return true;
   });
   const plans = relevant.map(planFor);
+  options.onProgress?.(0, plans.length, 'Preparando OCR local');
+  await prewarmOcrWorker();
   const readings: PremiumZoneReading[] = [];
   try {
     for (let index = 0; index < plans.length; index += 1) {

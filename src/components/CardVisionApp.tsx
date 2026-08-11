@@ -160,7 +160,7 @@ import {
 } from '@/modules/card-reader/efhubManualCalibration';
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
-import { cancelOcrProcessing, fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
+import { cancelOcrProcessing, fileDigest, prewarmOcrWorker, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
 import {
   checkpointFile,
   clearBackgroundOcrCheckpoint,
@@ -2314,6 +2314,7 @@ export function CardVisionApp() {
     setPremiumReadings([]); setTotalReadingSession(null); setSinglePrintSession(null); setReadingConfirmations({});
     if (enhancedObjectUrlRef.current) { URL.revokeObjectURL(enhancedObjectUrlRef.current); enhancedObjectUrlRef.current = null; } setEnhancedPreview(null);
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
+    void prewarmOcrWorker().catch(() => undefined);
     const croppedPreview = await createPlayerCardPreview(file).catch(() => null);
     if (croppedPreview) { setPlayerCardImage(croppedPreview.portraitPreview ?? croppedPreview.preview); setCardCropResult(croppedPreview); }
     const quality = await inspectPrintQuality(file).catch(() => null);
@@ -2486,12 +2487,14 @@ export function CardVisionApp() {
     }).catch(() => undefined);
     void startBackgroundOcrProtection('Preparando o print. Você pode usar outros aplicativos.');
     const unsubscribe = subscribeOcrProgress((progress) => {
-      setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
+      const rawStatus = String(progress.status || 'Processando OCR'), bootingLanguage = /loading language traineddata|loading tesseract core|initializing tesseract|loading language/i.test(rawStatus);
+      const friendlyStatus = /loading language traineddata/i.test(rawStatus) ? 'Carregando o leitor local em português'
+        : /loading tesseract core|initializing tesseract/i.test(rawStatus) ? 'Inicializando o motor OCR local' : rawStatus;
+      setStatus(`${progress.label}: ${friendlyStatus}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
       const local = Math.max(0, Math.min(1, Number(progress.progress || 0)));
-      const overall = readerTotal > 0
-        ? 15 + ((Math.min(readerCompleted, Math.max(0, readerTotal - 1)) + local) / readerTotal) * 72
-        : 3 + local * 8;
-      reportReaderProgress(Math.min(87, overall), progress.label || 'Lendo dados', progress.status || 'Processando OCR', readerCompleted, readerTotal);
+      const overall = bootingLanguage ? 10 + local * 5 : readerTotal > 0
+        ? 15 + ((Math.min(readerCompleted, Math.max(0, readerTotal - 1)) + local) / readerTotal) * 72 : 10 + local * 5;
+      reportReaderProgress(Math.min(87, overall), bootingLanguage ? 'Preparando OCR' : (progress.label || 'Lendo dados'), friendlyStatus, readerCompleted, readerTotal);
     });
     try {
       const manualEfhubCalibration = efhubCalibrationActiveRef.current ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current) : null;
@@ -3075,7 +3078,6 @@ ${reading.text}`)) : fullPassText;
     setResult((current) => current ? applyGameplayDnaProfileSelection(current, profileId) : current);
     setStatus('Perfil de Gameplay aplicado. A ficha, os pontos e as cinco habilidades adicionais foram atualizados.');
   }
-
   function replaceOwnedSkillIntelligently(skill: string) {
     const base = result ?? draftResult;
     if (!base) return;
@@ -3093,7 +3095,6 @@ ${reading.text}`)) : fullPassText;
       : `${replacement.removedSkill} foi retirada. O app não encontrou outra opção oficial segura para preencher a vaga sem repetir ou fugir da função.`;
     setStatus(replacementText);
   }
-
   function rejectSkillLocally(skill: string) {
     const base = result ?? draftResult;
     if (!base) return;

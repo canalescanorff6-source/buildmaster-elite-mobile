@@ -29,7 +29,7 @@ assert.match(adaptive, /if \(mode === 'fast'\)/, 'Busca adaptativa antiga contin
 assert.match(precision, /GK\|GOL\|CB\|ZAG\|LB\|LE\|RB\|LD/, 'Parser de nome deve remover siglas de posição.');
 assert.match(precision, /embeddedKnownName/, 'Nome deve conseguir recuperar jogador conhecido com ruído.');
 
-assert.match(worker, /createWorker\(\['por', 'eng'\]/, 'Worker deve combinar português e inglês para nomes próprios e rótulos do jogo.');
+assert.match(worker, /createWorker\(\['por'\]/, 'Worker Android deve usar português local para evitar bloqueio no traineddata; nomes próprios são reconciliados pelo leitor.');
 assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 30_000/, 'Inicialização do worker não pode esperar indefinidamente.');
 assert.match(worker, /workerBootDeadline/, 'Inicialização deve possuir deadline real.');
 assert.match(worker, /timeoutMs\?: number/, 'Cada reconhecimento pode definir prazo específico.');

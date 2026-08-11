@@ -170,7 +170,8 @@
     "typecheck:v4000": "tsc -p tests/types-v4000/tsconfig.json --pretty false",
     "test:v4000": "npm run typecheck:v4000 && node tests/v40-00-card-reader-rebuild-regression.mjs",
     "typecheck:v4010": "tsc -p tests/types-v4010/tsconfig.json --pretty false",
-    "test:v4010": "npm run typecheck:v4010 && node tests/v40-10-progress-experience-regression.mjs"
+    "test:v4010": "npm run typecheck:v4010 && node tests/v40-10-progress-experience-regression.mjs && npm run test:v4010:android-ocr-hotfix",
+    "test:v4010:android-ocr-hotfix": "node tests/v40-10-android-ocr-bootstrap-hotfix-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

@@ -78,10 +78,12 @@ export function requestOcrWorkerReleaseWhenIdle(delayMs = 0): void {
 
 async function createReusableWorker(): Promise<WorkerLike> {
   const Tesseract = await import('tesseract.js');
-  // O app trabalha com a interface e os rótulos oficiais em português.
-  // Carregar dois idiomas duplicava o custo de inicialização do primeiro OCR
-  // no Android. Nomes próprios continuam cobertos pelo alfabeto/whitelist.
-  const worker = await Tesseract.createWorker(['por', 'eng'], Tesseract.OEM.LSTM_ONLY, {
+  // v40.10 r2: o vídeo real no Android mostrou o bloqueio em
+  // `loading language traineddata` quando POR+ENG eram inicializados juntos.
+  // O leitor por quadrados trabalha com rótulos em português e usa whitelist,
+  // histórico e reconciliação de nomes próprios; portanto um único idioma local
+  // é suficiente e reduz fortemente a inicialização/memória no WebView.
+  const worker = await Tesseract.createWorker(['por'], Tesseract.OEM.LSTM_ONLY, {
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/core',
     langPath: '/tesseract/lang',
@@ -129,7 +131,9 @@ async function getWorker(): Promise<WorkerLike> {
 
 export async function prewarmOcrWorker(): Promise<void> {
   await getWorker();
-  armIdleWorkerRelease(Math.max(30_000, getRuntimeOptimizationProfile().ocrWorkerIdleMs));
+  // Mantém o worker quente durante o período em que o usuário ajusta os
+  // quadrados. Isso tira o custo de bootstrap do botão 'Ler os quadrados'.
+  armIdleWorkerRelease(Math.max(180_000, getRuntimeOptimizationProfile().ocrWorkerIdleMs));
 }
 
 

@@ -40,7 +40,7 @@ assert.match(cardVision, /buildOcrVisionAudit\(session, calibratedZoneText\)/);
 assert.match(cardVision, /ocr_hard_failure/);
 assert.match(crop, /method: 'manual-adjustment'/);
 
-assert.match(worker, /createWorker\(\['por', 'eng'\]/);
+assert.match(worker, /createWorker\(\['por'\]/);
 assert.match(worker, /export async function prewarmOcrWorker/);
 assert.match(worker, /version: 3/);
 assert.match(worker, /`v3:\$\{options\.cacheKey\}:\$\{kind\}`/);
@@ -49,4 +49,4 @@ assert.match(background, /version: 2/);
 assert.match(precision, /HIGH_PRECISION_OCR_VERSION = '40\.00-calibrated-rebuild-r1'/);
 assert.match(single, /precisionVersion === '40\.00-calibrated-fields-r1'/);
 
-console.log('v40.00 aprovada: leitor por quadrados reconstruído, OCR bilíngue, recorte manual exato, timeout e parser por campos protegidos.');
+console.log('v40.00 aprovada: leitor por quadrados reconstruído, OCR local em português otimizado, recorte manual exato, timeout e parser por campos protegidos.');
