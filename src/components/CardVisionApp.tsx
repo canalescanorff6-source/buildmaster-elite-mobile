@@ -1,7 +1,6 @@
 'use client';
 // A Central de Backup é informativa e nunca pode impedir a abertura do app.
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react'; import type { ChangeEvent } from 'react';
 import {
   Activity,
   Camera,
@@ -32,10 +31,8 @@ import {
   Users,
   UserPlus
 } from 'lucide-react';
-import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
-import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
-import { CalibrationProfileFields } from '@/components/CalibrationProfileFields';
-import { ManagerSelectionField } from '@/components/ManagerSelectionField';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
+import { CalibrationProfileFields } from '@/components/CalibrationProfileFields'; import { ManagerSelectionField } from '@/components/ManagerSelectionField';
 import {
   analyzeCard,
   normalizeObjective,
@@ -2454,8 +2451,10 @@ export function CardVisionApp() {
     const readerStartedAt = Date.now();
     let readerCompleted = 0;
     let readerTotal = 0;
+    let readerHighestPercent = 0;
     const reportReaderProgress = (percent: number, phase: string, detail: string, completed = readerCompleted, total = readerTotal) => {
-      setReaderProgress({ percent: Math.max(0, Math.min(100, percent)), phase, detail, startedAt: readerStartedAt, completed, total });
+      readerHighestPercent = Math.max(readerHighestPercent, Math.max(0, Math.min(100, percent)));
+      setReaderProgress({ percent: readerHighestPercent, phase, detail, startedAt: readerStartedAt, completed, total, deadlineMs: 90_000 });
     };
     reportReaderProgress(1, 'Recebendo imagem', 'Print recebido. Preparando a leitura segura.');
     setLoading(true);

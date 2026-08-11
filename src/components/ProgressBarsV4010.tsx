@@ -124,12 +124,12 @@ export function UpdateTransferProgressV4010({ progress, targetVersion, compact =
             ? `${formatProgressBytes(progress.downloadedBytes)}${progress.totalBytes > 0 ? ` de ${formatProgressBytes(progress.totalBytes)}` : ''}`
             : 'O BuildMaster acompanha cada etapa até entregar o APK ao instalador.';
 
-  return <section className={`v4010-operation-progress v4010-update-progress ${compact ? 'is-compact' : ''} ${completed ? 'is-complete' : ''}`} role="status" aria-live="polite" aria-label={`Atualização do aplicativo: ${overall}%`}>
-    <div className="v4010-progress-icon">{completed ? <CheckCircle2 size={20} /> : progress?.phase === 'ready' || progress?.phase === 'opening-installer' ? <Smartphone size={20} /> : progress?.phase === 'verifying' ? <ShieldCheck size={20} /> : transferActive ? <Download size={20} /> : <Loader2 className="spin" size={20} />}</div>
-    <div className="v4010-progress-main">
-      <div className="v4010-progress-heading"><div><strong>{stage}</strong>{targetVersion && <span>v{targetVersion}</span>}</div><b>{overall}%</b></div>
-      <div className="v4010-progress-track"><i style={{ width: `${overall}%` }} /></div>
-      <div className="v4010-progress-meta"><span>{detail}</span>{transferActive && speed > 0 && <span><Clock3 size={12} /> {formatProgressBytes(speed)}/s{etaSeconds ? ` • faltam ${formatRemainingTime(etaSeconds)}` : ''}</span>}</div>
+  return <section className={`v4020-operation-progress v4020-update-progress ${compact ? 'is-compact' : ''} ${completed ? 'is-complete' : ''}`} role="status" aria-live="polite" aria-label={`Atualização do aplicativo: ${overall}%`}>
+    <div className="v4020-progress-icon">{completed ? <CheckCircle2 size={20} /> : progress?.phase === 'ready' || progress?.phase === 'opening-installer' ? <Smartphone size={20} /> : progress?.phase === 'verifying' ? <ShieldCheck size={20} /> : transferActive ? <Download size={20} /> : <Loader2 className="spin" size={20} />}</div>
+    <div className="v4020-progress-main">
+      <div className="v4020-progress-heading"><div><strong>{stage}</strong>{targetVersion && <span>v{targetVersion}</span>}</div><b>{overall}%</b></div>
+      <div className="v4020-progress-track"><i style={{ width: `${overall}%` }} /></div>
+      <div className="v4020-progress-meta"><span>{detail}</span>{transferActive && speed > 0 && <span><Clock3 size={12} /> {formatProgressBytes(speed)}/s{etaSeconds ? ` • faltam ${formatRemainingTime(etaSeconds)}` : ''}</span>}</div>
     </div>
   </section>;
 }
@@ -141,6 +141,7 @@ export type ReaderProgressSnapshotV4010 = {
   startedAt: number;
   completed?: number;
   total?: number;
+  deadlineMs?: number;
 };
 
 export function ReaderProgressBarV4010({ progress }: { progress: ReaderProgressSnapshotV4010 | null }) {
@@ -155,10 +156,17 @@ export function ReaderProgressBarV4010({ progress }: { progress: ReaderProgressS
   }, [progress?.startedAt, percent]);
 
   const elapsedSeconds = progress ? Math.max(0, (now - progress.startedAt) / 1000) : 0;
-  const eta = progress && percent >= 5 && percent < 100 ? elapsedSeconds * (100 - percent) / Math.max(percent, 1) : null;
-  return <div className="v4010-reader-progress" aria-label={`Progresso da leitura: ${Math.round(percent)}%`}>
-    <div className="v4010-progress-heading"><div><strong>{progress?.phase || 'Preparando leitura'}</strong>{progress?.total ? <span>{Math.min(progress.completed ?? 0, progress.total)}/{progress.total} campos</span> : null}</div><b>{Math.round(percent)}%</b></div>
-    <div className="v4010-progress-track"><i style={{ width: `${percent}%` }} /></div>
-    <div className="v4010-progress-meta"><span>{progress?.detail || 'Preparando o print.'}</span>{eta ? <span><Clock3 size={12} /> estimativa: {formatRemainingTime(eta)}</span> : null}</div>
+  const deadlineSeconds = Math.max(30, Number(progress?.deadlineMs || 90_000) / 1000);
+  const completed = Math.max(0, Number(progress?.completed || 0));
+  const total = Math.max(0, Number(progress?.total || 0));
+  const byFields = completed > 0 && total > completed ? (elapsedSeconds / completed) * (total - completed) : null;
+  const safeRemaining = Math.max(0, deadlineSeconds - elapsedSeconds);
+  const eta = progress && percent >= 5 && percent < 100
+    ? Math.min(safeRemaining, byFields && Number.isFinite(byFields) ? Math.max(5, byFields) : safeRemaining)
+    : null;
+  return <div className="v4020-reader-progress" aria-label={`Progresso da leitura: ${Math.round(percent)}%`}>
+    <div className="v4020-progress-heading"><div><strong>{progress?.phase || 'Preparando leitura'}</strong>{progress?.total ? <span>{Math.min(progress.completed ?? 0, progress.total)}/{progress.total} campos</span> : null}</div><b>{Math.round(percent)}%</b></div>
+    <div className="v4020-progress-track"><i style={{ width: `${percent}%` }} /></div>
+    <div className="v4020-progress-meta"><span>{progress?.detail || 'Preparando o print.'}</span>{eta ? <span><Clock3 size={12} /> estimativa: {formatRemainingTime(eta)}</span> : null}</div>
   </div>;
 }

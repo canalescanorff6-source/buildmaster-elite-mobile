@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "BuildMaster Elite Tático v40.10",
-  "short_name": "BuildMaster v40.10",
-  "description": "BuildMaster v40.10 com progresso visível no download/validação da atualização e na leitura de cartas, mantendo o leitor por quadrados reconstruído.",
+  "name": "BuildMaster Elite Tático v40.20",
+  "short_name": "BuildMaster v40.20",
+  "description": "BuildMaster v40.20 com progresso visível no download/validação da atualização e na leitura de cartas, mantendo o leitor por quadrados reconstruído.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",

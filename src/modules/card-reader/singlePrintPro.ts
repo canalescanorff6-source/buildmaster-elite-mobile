@@ -450,7 +450,7 @@ function extractPlayerName(readings: PremiumZoneReading[], knownPlayerNames: str
     // No modo manual de 8 quadros, o recorte foi confirmado visualmente pelo
     // usuário. Uma leitura única pode seguir como REVISÃO (nunca como certeza)
     // para que o nome não suma só por falta de uma segunda passagem cara.
-    const manualMacroReading = cluster.some((item) => item.reading.precisionVersion === '40.00-calibrated-fields-r1');
+    const manualMacroReading = cluster.some((item) => ['40.00-calibrated-fields-r1', '40.20-eight-macros-r1'].includes(String(item.reading.precisionVersion || '')));
     if (agreement < 2 && !exactLexicon && !manualMacroReading) return [];
     const wordBonus = representative.value.split(/\s+/).length <= 5 ? 10 : 0;
     const agreementBonus = Math.min(24, Math.max(0, (agreement - 1) * 8));

@@ -20,17 +20,17 @@ assert.match(app, /calibratedFastPath \? 80 : 160/, 'Leitura calibrada deve carr
 
 assert.match(calibration, /detectSkillCapsules\?: boolean/, 'Gerador legado deve continuar podendo desativar cápsulas dinâmicas.');
 assert.match(calibration, /options\.detectSkillCapsules === false[\s\S]*?\? \[\]/, 'Detector de cápsulas deve continuar desativável.');
-assert.match(macroReader, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.00-calibrated-fields-r1'/, 'O fluxo manual deve usar o leitor reconstruído v40.00.');
-assert.match(macroReader, /buildPreciseOcrZonesFromEfhubCalibration/, 'Os 8 quadrados devem gerar subáreas determinísticas para campos reais.');
-assert.match(macroReader, /TOTAL_READER_DEADLINE_MS = 180_000/, 'A leitura inteira deve possuir prazo máximo.');
-assert.match(macroReader, /addLegacyPrecisionFallback/, 'Nome, atributos e habilidades podem receber fallback apenas quando necessário.');
+assert.match(macroReader, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-eight-macros-r1'/, 'O fluxo manual deve usar o leitor de 8 macros v40.20.');
+assert.match(macroReader, /const MACRO_PLANS:[\s\S]*identity[\s\S]*card[\s\S]*bio[\s\S]*positions[\s\S]*boosters[\s\S]*attributes[\s\S]*physical[\s\S]*skills/, 'Os 8 quadrados devem ser as 8 unidades primárias de OCR.');
+assert.match(macroReader, /TOTAL_READER_DEADLINE_MS = 90_000/, 'A leitura inteira deve possuir prazo máximo de 90 s.');
+assert.match(macroReader, /targetedRetry/, 'Nome, atributos e habilidades podem receber conferência seletiva apenas quando necessário.');
 
 assert.match(adaptive, /if \(mode === 'fast'\)/, 'Busca adaptativa antiga continua disponível fora dos 8 quadros.');
 assert.match(precision, /GK\|GOL\|CB\|ZAG\|LB\|LE\|RB\|LD/, 'Parser de nome deve remover siglas de posição.');
 assert.match(precision, /embeddedKnownName/, 'Nome deve conseguir recuperar jogador conhecido com ruído.');
 
 assert.match(worker, /createWorker\(\['por'\]/, 'Worker Android deve usar português local para evitar bloqueio no traineddata; nomes próprios são reconciliados pelo leitor.');
-assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 30_000/, 'Inicialização do worker não pode esperar indefinidamente.');
+assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 18_000/, 'Inicialização do worker não pode esperar indefinidamente.');
 assert.match(worker, /workerBootDeadline/, 'Inicialização deve possuir deadline real.');
 assert.match(worker, /timeoutMs\?: number/, 'Cada reconhecimento pode definir prazo específico.');
 

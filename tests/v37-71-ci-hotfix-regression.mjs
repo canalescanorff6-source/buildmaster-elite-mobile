@@ -29,5 +29,5 @@ for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71', 'v37.80', 'v37.90
   assert.ok(doctor.includes(`Regressões ${version}`), `O diagnóstico consolidado precisa executar ${version}.`);
 }
 
-assert.equal(pkg.version, '40.10.0');
+assert.equal(pkg.version, '40.20.0');
 console.log('v37.71 hotfix aprovado: TypeScript limpo, contrato de cache atual validado sem lista legada frágil e contexto de delay/controle preservado.');

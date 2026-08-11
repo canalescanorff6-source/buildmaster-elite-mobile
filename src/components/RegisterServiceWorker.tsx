@@ -10,7 +10,7 @@ import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 
 // Contrato estável lido também pelas regressões antigas e pelo atualizador.
 const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
-const NATIVE_CACHE_SCHEMA = '40.10.0-progress-runtime-1';
+const NATIVE_CACHE_SCHEMA = '40.20.0-progress-runtime-1';
 
 // Esquema anterior preservado para a regressão: 35.00.0-official-skills-meta-2
 // Esquema anterior preservado para a regressão: 35.20.0-dna-gameplay-solid-theme-1

@@ -12,7 +12,7 @@ import {
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
 
-assert.equal(MATCH_TRAINER_VERSION, '40.10.0');
+assert.equal(MATCH_TRAINER_VERSION, '40.20.0');
 for (const kind of ['defender-out-of-line', 'cursor-error', 'game-management', 'good-transition', 'critical-moment']) {
   assert.ok(MATCH_EVENT_CATALOG.some((item) => item.kind === kind), `Evento ${kind} não está no catálogo.`);
 }

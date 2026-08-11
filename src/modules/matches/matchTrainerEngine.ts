@@ -2,7 +2,7 @@ import { createStableId } from '@/lib/stableId';
 import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 import type { MatchRecordingDescriptor, MatchRecordingQuality } from './matchRecorderBridge';
 
-export const MATCH_TRAINER_VERSION = '40.10.0';
+export const MATCH_TRAINER_VERSION = '40.20.0';
 export const MATCH_TRAINER_STORAGE_KEY = 'buildmaster_match_trainer_sessions_v3170';
 
 export type MatchPhase = 'build-up' | 'attack' | 'defensive-transition' | 'defense' | 'set-piece' | 'game-management' | 'unknown';
@@ -1018,7 +1018,7 @@ export function exportMatchTrainerReport(sessionInput: MatchTrainerSession) {
     marker.detail ? `  Nota: ${marker.detail}` : ''
   ].filter(Boolean).join('\n'));
   return [
-    'BUILDMASTER ELITE TÁTICO — ANÁLISE DE VÍDEO INTELIGENTE 2.0 v40.10',
+    'BUILDMASTER ELITE TÁTICO — ANÁLISE DE VÍDEO INTELIGENTE 2.0 v40.20',
     `Partida: ${session.title}`,
     `Arquivo: ${session.fileName}`,
     `Formação: ${session.formation}`,

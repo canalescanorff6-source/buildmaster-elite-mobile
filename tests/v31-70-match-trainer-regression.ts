@@ -7,7 +7,7 @@ import {
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
 
-assert.equal(MATCH_TRAINER_VERSION, '40.10.0');
+assert.equal(MATCH_TRAINER_VERSION, '40.20.0');
 
 const session = createMatchTrainerSession({
   source: 'native-recording',

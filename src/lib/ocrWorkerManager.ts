@@ -22,8 +22,8 @@ type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; v
 type WorkerLike = TesseractNamespace.Worker;
 
 const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-const OCR_RECOGNITION_TIMEOUT_MS = 38_000;
-const OCR_WORKER_BOOT_TIMEOUT_MS = 30_000;
+const OCR_RECOGNITION_TIMEOUT_MS = 16_000;
+const OCR_WORKER_BOOT_TIMEOUT_MS = 18_000;
 
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
@@ -78,16 +78,14 @@ export function requestOcrWorkerReleaseWhenIdle(delayMs = 0): void {
 
 async function createReusableWorker(): Promise<WorkerLike> {
   const Tesseract = await import('tesseract.js');
-  // v40.10 r2: o vídeo real no Android mostrou o bloqueio em
-  // `loading language traineddata` quando POR+ENG eram inicializados juntos.
-  // O leitor por quadrados trabalha com rótulos em português e usa whitelist,
-  // histórico e reconciliação de nomes próprios; portanto um único idioma local
-  // é suficiente e reduz fortemente a inicialização/memória no WebView.
+  // v40.20: usa o traineddata português BEST já descompactado dentro do APK.
+  // Isso preserva a precisão do modelo de alta qualidade e remove do WebView o
+  // custo/risco de descompactar por.traineddata.gz durante a leitura da carta.
   const worker = await Tesseract.createWorker(['por'], Tesseract.OEM.LSTM_ONLY, {
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/core',
     langPath: '/tesseract/lang',
-    gzip: true,
+    gzip: false,
     logger: (message) => emit(message.status || 'processando', Number(message.progress || 0))
   });
   workerInstance = worker;

@@ -71,7 +71,7 @@ const IGNORED_KEY = 'buildmaster_ignored_update_build';
 const LAST_CHECK_KEY = 'buildmaster_last_update_check';
 const PENDING_KEY = 'buildmaster_pending_update';
 const BACKUP_READY_KEY = 'buildmaster_update_backup_ready_build';
-const UPDATE_TARGET_KEY = 'buildmaster_update_progress_target_v4010';
+const UPDATE_TARGET_KEY = 'buildmaster_update_progress_target_v4020';
 const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const AUTO_THROTTLE_MS = 90 * 1000;
 const AUTO_INSTALL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -409,7 +409,7 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
   }
 
   if (!autoProgress && !completedVersion) return null;
-  return <div className="v4010-global-update-progress"><UpdateTransferProgressV4010 progress={autoProgress} targetVersion={displayedTargetVersion} compact completed={Boolean(completedVersion)} /></div>;
+  return <div className="v4020-global-update-progress"><UpdateTransferProgressV4010 progress={autoProgress} targetVersion={displayedTargetVersion} compact completed={Boolean(completedVersion)} /></div>;
 }
 
 export function UpdateCenterPanel({ onPrepareBackup }: Props) {
