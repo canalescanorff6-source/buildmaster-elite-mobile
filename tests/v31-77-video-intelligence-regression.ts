@@ -81,7 +81,7 @@ assert.match(summary.tacticalDiagnosis.styleFit, /transição rápida|evidência
 assert.match(summary.tacticalDiagnosis.gameManagement, /vantagem|controle/i);
 
 const report = exportMatchTrainerReport(session);
-assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v(?:38\.(?:39|40)|40\.(?:00|10))/);
+assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v(?:38\.(?:39|40)|40\.(?:00|10|20))/);
 assert.match(report, /04:52 — Zagueiro retirado da linha/);
 assert.match(report, /Melhor decisão:/);
 assert.match(report, /PLANO DE TREINO/);

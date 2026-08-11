@@ -137,8 +137,12 @@ jobs:
           npm run ci:verify
           npm run release:play-preflight
 
-      - name: Gerar site estático para Capacitor
-        run: npm run apk:build-web
+      - name: Preparar OCR local e gerar site estático para Capacitor
+        run: |
+          npm run vendor:ocr
+          npm run apk:build-web
+          test -s out/tesseract/worker.min.js || { echo '::error::Worker OCR local ausente no AAB.'; exit 1; }
+          test -s out/tesseract/lang/por.traineddata || { echo '::error::Idioma OCR português BEST descompactado ausente no AAB.'; exit 1; }
 
       - name: Validar orçamento do bundle compilado
         timeout-minutes: 3

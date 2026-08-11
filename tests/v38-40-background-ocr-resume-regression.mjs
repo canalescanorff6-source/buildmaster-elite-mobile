@@ -21,7 +21,7 @@ assert.match(app, /onClick=\{\(\) => void analyzeSelectedImage\(\)\}/);
 assert.doesNotMatch(app, /onClick=\{analyzeSelectedImage\}/);
 assert.match(app, /updateBackgroundOcrCheckpoint\(\{ stage: 'zones'/);
 assert.match(app, /readEightEfhubCalibrationMacros\(activeFile, manualEfhubCalibration/);
-assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 30_000/);
+assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 18_000/);
 assert.match(runtime, /document\.body\.dataset\.ocrReading/);
 assert.match(installer, /BuildMasterBackgroundOcrService/);
 assert.match(installer, /START_STICKY/);

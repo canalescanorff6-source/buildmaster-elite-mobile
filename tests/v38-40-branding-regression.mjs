@@ -96,7 +96,7 @@ assert.match(read('src/components/PremiumBrand.tsx'), /Tático · Máximo desemp
 assert.match(read('src/components/CardVisionApp.tsx'), /bm-brand-splash-screen/);
 assert.match(read('src/app/globals.css'), /buildmaster-splash\.webp/);
 assert.match(read('public/sw.js'), /buildmaster-v40-20-progress-1/);
-assert.match(read('src/components/RegisterServiceWorker.tsx'), /40\.10\.0-progress-runtime-1/);
+assert.match(read('src/components/RegisterServiceWorker.tsx'), /40\.20\.0-progress-runtime-1/);
 assert.match(read('.github/workflows/build-apk.yml'), /install-android-branding\.mjs/);
 assert.match(read('.github/workflows/build-play-store.yml'), /install-android-branding\.mjs/);
 assert.match(read('scripts/install-android-branding.mjs'), /sourceLegacySelfReferencingSplash/);

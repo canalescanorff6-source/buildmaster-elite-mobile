@@ -11,11 +11,11 @@ const css=read('src/app/globals.css');
 
 assert.match(app,/readEightEfhubCalibrationMacros/);
 assert.match(app,/calibratedFastPath[\s\S]*?zones: \[\]/);
-assert.match(reader,/MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.00-calibrated-fields-r1'/);
-assert.match(reader,/buildPreciseOcrZonesFromEfhubCalibration/);
-assert.match(reader,/TOTAL_READER_DEADLINE_MS = 180_000/);
-assert.match(reader,/addLegacyPrecisionFallback/);
-assert.match(worker,/OCR_WORKER_BOOT_TIMEOUT_MS = 30_000/);
+assert.match(reader,/MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-eight-macros-r1'/);
+assert.match(app,/buildPreciseOcrZonesFromEfhubCalibration/);
+assert.match(reader,/TOTAL_READER_DEADLINE_MS = 90_000/);
+assert.match(reader,/targetedRetry/);
+assert.match(worker,/OCR_WORKER_BOOT_TIMEOUT_MS = 18_000/);
 assert.match(worker,/workerBootDeadline/);
 assert.match(image,/globalThis\.setTimeout\(\(\) => \{ if \(!settled\)/);
 assert.match(single,/manualMacroReading/);

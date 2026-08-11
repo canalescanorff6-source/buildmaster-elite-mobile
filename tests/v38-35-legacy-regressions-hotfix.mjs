@@ -24,7 +24,7 @@ assert.match(revolutionRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 
 // O contrato legado não pode depender de um sufixo de cache de uma versão
 // anterior. A v37.71 valida o formato e a v38.31 deriva a versão do pacote.
-assert.ok(cacheRegression.includes('40\\.(?:00|10)\\.0'), 'A regressão v37.71 precisa reconhecer a linha v40.');
+assert.ok(cacheRegression.includes('40\\.(?:00|10|20)\\.0'), 'A regressão v37.71 precisa reconhecer a linha v40.');
 assert.match(cacheRegression, /contrato de cache sem duplicar a lista/);
 assert.doesNotMatch(cacheRegression, /36\\\.0-deterministic-audit/);
 assert.match(cacheHotfixRegression, /const \[major, minor\] = pkg\.version\.split\('\.'\)/);

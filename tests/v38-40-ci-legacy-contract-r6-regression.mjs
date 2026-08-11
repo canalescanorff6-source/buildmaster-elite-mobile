@@ -9,8 +9,8 @@ const pkg=JSON.parse(read('package.json'));
 
 assert.match(adaptiveZones,/if \(mode === 'fast'\)[\s\S]*?return variants;/);
 assert.doesNotMatch(adaptiveZones,/if \(mode === 'fast'\)[\s\S]*?name-tight[\s\S]*?return variants;/);
-assert.match(manualReader,/zone\.key === 'name'[\s\S]*?retry:/);
-assert.match(manualReader,/addLegacyPrecisionFallback/);
+assert.match(manualReader,/const retryNeeded = !reading\.text\.trim\(\) \|\| reading\.confidence < \(plan\.id === 'identity' \? 72 : 58\)/);
+assert.match(manualReader,/targetedRetry/);
 assert.match(adaptivePosition,/const coreSlots = 3/);
 assert.match(adaptivePosition,/Três habilidades centrais da identidade foram preservadas/);
 assert.match(app,/Perfis manuais antigos são migrados para o reconhecimento automático da carta/);
