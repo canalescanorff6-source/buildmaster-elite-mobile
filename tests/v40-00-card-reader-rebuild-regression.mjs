@@ -14,10 +14,10 @@ const background = read('src/lib/backgroundOcrV3840.ts');
 const precision = read('src/modules/card-reader/highPrecisionOcr.ts');
 const single = read('src/modules/card-reader/singlePrintPro.ts');
 
-assert.equal(pkg.version, '40.00.0');
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.00');
-assert.equal(manifest.short_name, 'BuildMaster v40.00');
-assert.match(sw, /buildmaster-v40-00-card-reader-rebuild-1/);
+assert.equal(pkg.version, '40.10.0');
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.10');
+assert.equal(manifest.short_name, 'BuildMaster v40.10');
+assert.match(sw, /buildmaster-v40-10-progress-1/);
 
 assert.match(manual, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.00-calibrated-fields-r1'/);
 assert.match(manual, /TOTAL_READER_DEADLINE_MS = 180_000/);

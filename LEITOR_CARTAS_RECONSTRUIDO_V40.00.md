@@ -1,4 +1,4 @@
-# BuildMaster v40.00 — Leitor de Cartas Reconstruído
+# BuildMaster v40.10 — Leitor de Cartas Reconstruído
 
 ## Por que esta versão existe
 

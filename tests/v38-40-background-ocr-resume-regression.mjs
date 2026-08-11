@@ -11,7 +11,7 @@ const background = read('src/lib/backgroundOcrV3840.ts');
 const installer = read('scripts/install-background-ocr-plugin.mjs');
 const precision = read('src/modules/card-reader/highPrecisionOcr.ts');
 
-assert.equal(pkg.version, '40.00.0');
+assert.equal(pkg.version, '40.10.0');
 assert.match(background, /saveBackgroundOcrCheckpoint/);
 assert.match(background, /checkpointFile/);
 assert.match(background, /BuildMasterBackgroundOcr/);

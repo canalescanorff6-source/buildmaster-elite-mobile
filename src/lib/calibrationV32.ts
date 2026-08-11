@@ -1267,7 +1267,7 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
     warnings: [...ready.warnings, ...activeProfile.tradeOffs.filter((item) => !item.startsWith('Nenhum'))].slice(0, 8),
     safeguards,
     reasons,
-    summary: `A Calibração Automática v40.00 avaliou ${built.reduce((sum, item) => sum + item.candidates, 0) + robust.candidates} candidatas e escolheu um campeão robusto para ${profileLabel(selectedMode).toLowerCase()} com ${champion.score}/100, sem perseguir overall.`
+    summary: `A Calibração Automática v40.10 avaliou ${built.reduce((sum, item) => sum + item.candidates, 0) + robust.candidates} candidatas e escolheu um campeão robusto para ${profileLabel(selectedMode).toLowerCase()} com ${champion.score}/100, sem perseguir overall.`
   };
 
   const derived = updateDerivedPrecision(result, profiles);
@@ -1279,7 +1279,7 @@ export function applyCalibrationV32(result: AnalysisResult): AnalysisResult {
     trainingPointsUsed: used,
     trainingPointsRemaining: Math.max(0, result.trainingPointsTotal - used),
     trainingComparison: result.trainingComparison.map((item) => ({ ...item, recommended: finalPlan[item.key], difference: finalPlan[item.key] - item.auto })),
-    buildName: `Ficha Automática v40.00 — ${profileLabel(selectedMode)}`,
+    buildName: `Ficha Automática v40.10 — ${profileLabel(selectedMode)}`,
     buildVariants: derived.variants,
     recommendationExplanation: [analysis.summary, ...reasons, ...result.recommendationExplanation].filter((item, index, all) => all.indexOf(item) === index).slice(0, 14),
     maxPrecision: derived.maxPrecision,

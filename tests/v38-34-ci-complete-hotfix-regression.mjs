@@ -11,7 +11,7 @@ const doctor = read('scripts/ci-doctor.mjs');
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.ok(/^(?:38\.(?:34|35|36|37|38|39|40)\.0|40\.00\.0)$/.test(pkg.version), `Versão compatível esperada: ${pkg.version}`);
+assert.ok(/^(?:38\.(?:34|35|36|37|38|39|40)\.0|40\.(?:00|10)\.0)$/.test(pkg.version), `Versão compatível esperada: ${pkg.version}`);
 assert.ok(String(pkg.scripts['test:all']).includes('npm run test:v3834'));
 assert.equal(pkg.scripts['test:v3834'], 'node tests/v38-34-ci-complete-hotfix-regression.mjs');
 
@@ -29,10 +29,10 @@ assert.match(budget, /Módulo TypeScript excedeu/);
 assert.match(rootPage, /AuthGate/);
 assert.match(rootPage, /CardVisionApp/);
 assert.doesNotMatch(rootPage, /PrivacyPolicyPage|Política de privacidade|public-policy-page/);
-assert.ok(audit.includes("pkg.version === '40.00.0'"));
-assert.ok(audit.includes("buildmaster-v40-00-card-reader-rebuild-1"));
+assert.ok(audit.includes("pkg.version === '40.10.0'"));
+assert.ok(audit.includes("buildmaster-v40-10-progress-1"));
 assert.ok(doctor.includes('Regressões v38.34'));
-assert.ok(sw.includes('buildmaster-v40-00-card-reader-rebuild-1'));
-assert.ok(nativeCache.includes('40.00.0-fail-open-startup-1'));
+assert.ok(sw.includes('buildmaster-v40-10-progress-1'));
+assert.ok(nativeCache.includes('40.10.0-progress-runtime-1'));
 
 console.log('v38.34 preservada na v38.40: orçamento protegido, rota inicial restaurada e contrato do gerador compatível com o Estúdio Marques.');

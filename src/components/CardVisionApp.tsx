@@ -94,9 +94,10 @@ import { PremiumQualityCenter } from '@/components/PremiumQualityCenter';
 import { PremiumMenuScreen } from '@/components/PremiumMenuScreen';
 import { PremiumSearchScreen } from '@/components/PremiumSearchScreen';
 import { PremiumSettingsOverview } from '@/components/PremiumSettingsOverview';
-import { SmartCardCropPanel } from '@/components/SmartCardCropPanel';
+import { ReaderImageSourceCardV4010 } from '@/components/ReaderImageSourceCardV4010';
 import { UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/UnifiedCreationFlowV3790';
 import { ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840 } from '@/components/ReaderRecoveryAndProgressV3840';
+import type { ReaderProgressSnapshotV4010 } from '@/components/ProgressBarsV4010';
 import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
 import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
@@ -416,6 +417,7 @@ export function CardVisionApp() {
   const [totalReadingSession, setTotalReadingSession] = useState<TotalReadingSession | null>(null);
   const [singlePrintSession, setSinglePrintSession] = useState<SinglePrintSession | null>(null);
   const [ocrCancelable, setOcrCancelable] = useState(false);
+  const [readerProgress, setReaderProgress] = useState<ReaderProgressSnapshotV4010 | null>(null);
   const [ocrQueue, setOcrQueue] = useState<OcrQueueJob[]>([]);
   const [readingConfirmations, setReadingConfirmations] = useState<Record<string, boolean>>({});
   const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
@@ -471,7 +473,6 @@ export function CardVisionApp() {
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const backgroundResumeStartedRef = useRef(false);
   const [pendingBackgroundCheckpoint, setPendingBackgroundCheckpoint] = useState<BackgroundOcrCheckpoint | null>(null);
-
   useEffect(() => {
     if (!startupGateReady || startupSafeMode || backgroundResumeStartedRef.current) return;
     backgroundResumeStartedRef.current = true;
@@ -730,7 +731,6 @@ export function CardVisionApp() {
     const lastSyncAge = lastFullSyncAt
       ? Math.max(0, Math.floor((Date.now() - Date.parse(lastFullSyncAt)) / 86400000))
       : null;
-
     if (!syncHealthEnvelope) {
       // a serialização profunda acontece apenas quando o usuário exporta ou sincroniza.
       const score = Math.max(0, Math.min(100,
@@ -756,7 +756,6 @@ export function CardVisionApp() {
               : 'Dados locais e proteção estão em bom estado.'
       };
     }
-
     try {
       return buildSyncHealth({ local: syncHealthEnvelope, remote: remoteFullBackup, snapshots: backupSnapshots, lastSyncAt: lastFullSyncAt });
     } catch (cause) {
@@ -1477,13 +1476,11 @@ export function CardVisionApp() {
     setActiveHistoryId(item.id);
     setHistory(next);
     setStatus('Salvando a ficha na memória interna do aparelho...');
-
     const persistence = await persistHistoryStore(next);
     if (!persistence.saved) {
       setStatus(`${persistence.error} A ficha continua aberta nesta sessão para você tentar novamente.`);
       return;
     }
-
     void pushCloudHistory(next, true);
     unifiedCreation.markSaved();
     clearPremiumCreationDraft();
@@ -2270,7 +2267,7 @@ export function CardVisionApp() {
     setStatus(`${value} aplicado como correção de ${field}. Recalcule a prévia e confirme antes de finalizar.`);
   }
   async function cancelCurrentOcr() {
-    setOcrCancelable(false); setLoading(false); setPendingBackgroundCheckpoint(null); delete document.body.dataset.ocrReading; setStatus('Cancelando leitura...');
+    setOcrCancelable(false); setLoading(false); setReaderProgress(null); setPendingBackgroundCheckpoint(null); delete document.body.dataset.ocrReading; setStatus('Cancelando leitura...');
     const workerCancel = cancelOcrProcessing();
     await Promise.allSettled([Promise.race([workerCancel, new Promise<void>((resolve) => window.setTimeout(resolve, 1800))]), clearBackgroundOcrCheckpoint(), stopBackgroundOcrProtection()]);
     setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
@@ -2453,6 +2450,13 @@ export function CardVisionApp() {
       if (rawText.trim().length > 2) runAnalysis();
       return;
     }
+    const readerStartedAt = Date.now();
+    let readerCompleted = 0;
+    let readerTotal = 0;
+    const reportReaderProgress = (percent: number, phase: string, detail: string, completed = readerCompleted, total = readerTotal) => {
+      setReaderProgress({ percent: Math.max(0, Math.min(100, percent)), phase, detail, startedAt: readerStartedAt, completed, total });
+    };
+    reportReaderProgress(1, 'Recebendo imagem', 'Print recebido. Preparando a leitura segura.');
     setLoading(true);
     setOcrCancelable(true);
     setResult(null);
@@ -2483,10 +2487,16 @@ export function CardVisionApp() {
     void startBackgroundOcrProtection('Preparando o print. Você pode usar outros aplicativos.');
     const unsubscribe = subscribeOcrProgress((progress) => {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
+      const local = Math.max(0, Math.min(1, Number(progress.progress || 0)));
+      const overall = readerTotal > 0
+        ? 15 + ((Math.min(readerCompleted, Math.max(0, readerTotal - 1)) + local) / readerTotal) * 72
+        : 3 + local * 8;
+      reportReaderProgress(Math.min(87, overall), progress.label || 'Lendo dados', progress.status || 'Processando OCR', readerCompleted, readerTotal);
     });
     try {
       const manualEfhubCalibration = efhubCalibrationActiveRef.current ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current) : null;
       const calibratedFastPath = Boolean(manualEfhubCalibration);
+      reportReaderProgress(5, 'Preparando imagem', calibratedFastPath ? 'Mapa dos quadrados encontrado. Preparando recortes.' : 'Verificando nitidez e estrutura do print.');
       const scanQuality = calibratedFastPath ? qualityReport : qualityReport ?? await inspectPrintQuality(activeFile).catch(() => null);
       if (!calibratedFastPath && scanQuality !== qualityReport) setQualityReport(scanQuality);
       let geometry = calibratedFastPath && manualEfhubCalibration
@@ -2504,6 +2514,7 @@ export function CardVisionApp() {
           }
         : await inspectSinglePrintGeometry(activeFile);
       void updateBackgroundOcrCheckpoint({ stage: 'layout', status: calibratedFastPath ? 'Quadrados confirmados; iniciando leitura direta.' : 'Layout identificado; preparando as áreas da carta.' });
+      reportReaderProgress(10, 'Mapeando a carta', calibratedFastPath ? 'Quadrados confirmados. Preparando os campos.' : 'Layout identificado. Preparando as áreas da carta.');
       const imageHash = await fileDigest(activeFile);
       const rememberedCalibration = calibratedFastPath ? null : await findBestOcrTemplateCalibration(geometry.template, geometry.width, geometry.height);
       if (rememberedCalibration) {
@@ -2637,23 +2648,32 @@ export function CardVisionApp() {
       let zoneResults: PremiumZoneReading[] = [];
       const enabledZones = geometry.zones.filter((zone) => zone.enabled);
       if (calibratedFastPath && manualEfhubCalibration) {
-        setStatus('Leitura por quadrados: lendo exatamente os 8 quadros marcados...');
+        setStatus('Leitura por quadrados: lendo exatamente as áreas calibradas...');
+        reportReaderProgress(15, 'Lendo os quadrados', 'Iniciando reconhecimento dos campos calibrados.');
         zoneResults = await readEightEfhubCalibrationMacros(activeFile, manualEfhubCalibration, {
           imageHash: precisionImageHash,
           knownPlayerNames,
           onProgress: (completed, total, label) => {
-            const progress = total ? Math.round((completed / total) * 100) : 0;
+            readerCompleted = completed;
+            readerTotal = total;
+            const fieldProgress = total ? Math.round((completed / total) * 100) : 0;
+            const overall = total ? 15 + (completed / total) * 72 : 15;
             const progressStatus = completed >= total
-              ? 'Os 8 quadros foram lidos. Conferindo os campos...'
-              : `Campo calibrado ${Math.min(completed + 1, total)}/${total}: ${label}.`;
+              ? 'Todos os campos calibrados foram lidos. Conferindo os dados...'
+              : `Campo ${Math.min(completed + 1, total)}/${total}: ${label}.`;
             setStatus(`Leitura por quadrados • ${progressStatus}`);
+            reportReaderProgress(Math.min(87, overall), 'Lendo os quadrados', progressStatus, completed, total);
             void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones: completed, totalZones: total, status: progressStatus });
-            void updateBackgroundOcrProtection(progressStatus, Math.min(92, progress));
+            void updateBackgroundOcrProtection(progressStatus, Math.min(92, fieldProgress));
           }
         });
       } else {
+        readerTotal = enabledZones.length;
+        readerCompleted = 0;
+        reportReaderProgress(15, 'Lendo a carta', `Iniciando ${enabledZones.length} área(s) detectada(s).`, 0, enabledZones.length);
         for (let index = 0; index < enabledZones.length; index += 1) {
           const zone = enabledZones[index];
+          readerCompleted = index;
           setStatus(`Leitura Ultraprecisa: ${zone.label} (${index + 1}/${enabledZones.length})...`);
           const numeric = zone.key === 'level' || zone.key === 'overall' || zone.key === 'points';
           const wide = zone.key === 'attributes' || zone.key === 'skills' || zone.key === 'autoTraining' || zone.key === 'progression' || zone.key === 'positionGrid' || zone.key === 'physicalModel' || zone.key === 'condition' || zone.key === 'manager' || zone.key === 'impetos' || zone.key === 'identityMeta';
@@ -2671,12 +2691,15 @@ export function CardVisionApp() {
           });
           zoneResults.push(best);
           const completedZones = index + 1;
+          readerCompleted = completedZones;
           const progress = enabledZones.length ? Math.round((completedZones / enabledZones.length) * 100) : 0;
           const progressStatus = `${zone.label} concluído (${completedZones}/${enabledZones.length}).`;
+          reportReaderProgress(Math.min(87, 15 + (completedZones / Math.max(1, enabledZones.length)) * 72), 'Lendo a carta', progressStatus, completedZones, enabledZones.length);
           void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones, totalZones: enabledZones.length, status: progressStatus });
           void updateBackgroundOcrProtection(progressStatus, progress);
         }
       }
+      reportReaderProgress(90, 'Conferindo campos', 'Validando nome, nível, atributos, habilidades e pontos.', readerTotal, readerTotal);
       void updateBackgroundOcrCheckpoint({ stage: 'finalizing', status: 'Conferindo nome, atributos, habilidades e pontos.' });
       void updateBackgroundOcrProtection('Conferindo e finalizando a carta.', 96);
       const forensicConsensus = stabilizeForensicReadings(zoneResults);
@@ -2738,6 +2761,7 @@ ${reading.text}`)) : fullPassText;
       if (exactDuplicate) {
         session = { ...session, warnings: [...new Set(['Este arquivo é idêntico a um print já analisado. O cache foi reutilizado quando disponível.', ...session.warnings])] };
       }
+      reportReaderProgress(95, 'Montando resultado', 'Cruzando as evidências e preparando a revisão.', readerTotal, readerTotal);
       setSinglePrintSession(session);
       if (forensicConsensus.audit.mergedFields.length) setStatus(`Scanner Forense: ${forensicConsensus.audit.attributeRows} atributos e ${forensicConsensus.audit.skillRows} habilidades estabilizados por consenso.`);
       setPremiumReadings(ensureZoneCoverage(geometry.zones, zoneResults));
@@ -2749,6 +2773,7 @@ ${reading.text}`)) : fullPassText;
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
+      reportReaderProgress(98, 'Preparando revisão', 'Aplicando a leitura à ficha sem alterar os dados confirmados.', readerTotal, readerTotal);
       const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
       hydrateReviewFields(autoResult);
       setDraftResult(autoResult);
@@ -2776,10 +2801,12 @@ ${reading.text}`)) : fullPassText;
       } else {
         setStatus(`OCR Vision concluído com ${visionAudit.score}/100. Posição, estilo, números e base oficial foram conferidos.`);
       }
+      reportReaderProgress(100, 'Leitura concluída', 'Campos lidos e revisão preparada.', readerTotal, readerTotal);
       void updateBackgroundOcrCheckpoint({ stage: 'completed', status: 'Leitura concluída.', shouldResume: false }).catch(() => undefined);
       void clearBackgroundOcrCheckpoint().catch(() => undefined);
       openMainSection('resultado');
     } catch (error) {
+      setReaderProgress(null);
       if (error instanceof DOMException && error.name === 'AbortError') {
         setStatus('Leitura cancelada. O arquivo não foi alterado.');
         void clearBackgroundOcrCheckpoint().catch(() => undefined);
@@ -2804,6 +2831,9 @@ ${reading.text}`)) : fullPassText;
   }
   async function analyzeTotalCardCaptures(captures: TotalCardCaptureInput[]) {
     if (!captures.length) return;
+    const readerStartedAt = Date.now();
+    const reportTotalProgress = (percent: number, phase: string, detail: string, completed = 0, total = captures.length) => setReaderProgress({ percent: Math.max(0, Math.min(100, percent)), phase, detail, startedAt: readerStartedAt, completed, total });
+    reportTotalProgress(1, 'Preparando leitura', `Organizando ${captures.length} print(s) da carta.`);
     setLoading(true);
     setOcrCancelable(true);
     setResult(null);
@@ -2836,6 +2866,7 @@ ${reading.text}`)) : fullPassText;
       };
       for (let captureIndex = 0; captureIndex < captures.length; captureIndex += 1) {
         const capture = captures[captureIndex];
+        reportTotalProgress(5 + (captureIndex / captures.length) * 88, 'Lendo os prints', `Tela ${captureIndex + 1}/${captures.length}: identificando ${capture.label}.`, captureIndex, captures.length);
         setStatus(`Tela ${captureIndex + 1}/${captures.length}: identificando ${capture.label}...`);
         const fullImage = await preprocessImage(capture.file, 'contrast');
         const fullPass = await recognize(fullImage, `${capture.label} • identificação`);
@@ -2855,6 +2886,8 @@ ${reading.text}`)) : fullPassText;
         const captureReadings: PremiumZoneReading[] = [];
         for (let zoneIndex = 0; zoneIndex < template.length; zoneIndex += 1) {
           const zone = template[zoneIndex];
+          const captureFraction = (zoneIndex / Math.max(1, template.length)) / captures.length;
+          reportTotalProgress(5 + (captureIndex / captures.length + captureFraction) * 88, 'Lendo os prints', `${capture.label}: ${zone.label} (${zoneIndex + 1}/${template.length}).`, captureIndex, captures.length);
           setStatus(`${capture.label}: Leitura Ultraprecisa em ${zone.label} (${zoneIndex + 1}/${template.length})...`);
           const best = await recognizeZoneWithHighPrecision(capture.file, zone, {
             imageHash: captureHash,
@@ -2889,6 +2922,7 @@ ${reading.text}`)) : fullPassText;
         });
       }
       const mergedText = mergeOcrTexts(...allTexts);
+      reportTotalProgress(95, 'Conferindo telas', 'Cruzando os dados lidos em todos os prints.', captures.length, captures.length);
       const session = buildTotalReadingSession(audits, mergedText);
       setTotalReadingSession(session);
       setPremiumReadings(allReadings);
@@ -2912,8 +2946,10 @@ ${reading.text}`)) : fullPassText;
       } else {
         setStatus('Leitura completa concluída. As telas foram cruzadas; confirme somente os campos destacados antes de gerar a ficha final.');
       }
+      reportTotalProgress(100, 'Leitura concluída', 'Todos os prints foram processados e a revisão está pronta.', captures.length, captures.length);
       openMainSection('resultado');
     } catch (error) {
+      setReaderProgress(null);
       console.error('Falha no Leitor Total:', error);
       setStatus('Não foi possível concluir a leitura completa. Tente prints diretos, sem cortes, e mantenha cada tela no espaço correto.');
     } finally {
@@ -3529,42 +3565,7 @@ ${reading.text}`)) : fullPassText;
             <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} onCancel={cancelCurrentOcr} /></SectionErrorBoundary>
           ) : (<>
           {pendingBackgroundCheckpoint && !loading && <ReaderInterruptedCardV3840 checkpoint={pendingBackgroundCheckpoint} onResume={() => void resumeInterruptedReading()} onDiscard={() => void discardInterruptedReading()} />}
-          <section className={`creation-source-card ${preview ? 'has-preview' : ''}`}>
-            <div className="creation-source-heading">
-              <span className="creation-stage-number">1</span>
-              <div><p className="kicker">Passo 1</p><h3>{preview ? 'Imagem pronta' : 'Escolha uma imagem da carta'}</h3><small>{preview ? selectedFile?.name || fileName || 'Imagem selecionada' : 'Use um print em que o nome, a posição e os atributos estejam visíveis.'}</small></div>
-              {preview && <span className="creation-ready-badge"><CheckCircle2 size={15} /> Pronto</span>}
-            </div>
-            <div className="upload-box premium-upload-box creation-upload-box">
-              {preview ? (
-                <SmartCardCropPanel fullPreview={preview} playerCardImage={playerCardImage}
-                  qualityText={qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'} cropResult={cardCropResult}
-                  adjustOpen={cardCropAdjustOpen} onToggleAdjust={() => setCardCropAdjustOpen((current) => !current)}
-                  onAdjust={(action) => void adjustDetectedCard(action)} onRedetect={() => void redetectPlayerCard()} />
-              ) : (
-                <div className="creation-upload-empty">
-                  <span className="upload-orbit"><UploadCloud size={34} /></span>
-                  <strong>Toque abaixo para escolher a imagem</strong>
-                  <span>O aplicativo fará a leitura e pedirá apenas as confirmações necessárias.</span>
-                  <div className="upload-requirements"><em>Imagem completa</em><em>Texto legível</em></div>
-                </div>
-              )}
-            </div>
-            <div className="upload-buttons premium-upload-actions creation-upload-actions">
-              <label className="primary-upload-action">
-                <ImagePlus size={18} /><span><strong>{preview ? 'Trocar imagem' : 'Escolher da galeria'}</strong><small>PNG, JPG ou captura de tela</small></span>
-                <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
-              </label>
-              <label>
-                <Camera size={18} /><span><strong>Usar câmera</strong><small>Fotografar agora</small></span>
-                <input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
-              </label>
-              <label>
-                <UploadCloud size={18} /><span><strong>Importar arquivo</strong><small>JPEG, PNG, WEBP ou BMP</small></span>
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/bmp,.jpg,.jpeg,.png,.webp,.bmp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); event.currentTarget.value = ''; }} />
-              </label>
-            </div>
-          </section>
+          <ReaderImageSourceCardV4010 preview={preview} fileLabel={selectedFile?.name || fileName || 'Imagem selecionada'} playerCardImage={playerCardImage} qualityText={qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'} cropResult={cardCropResult} adjustOpen={cardCropAdjustOpen} onToggleAdjust={() => setCardCropAdjustOpen((current) => !current)} onAdjust={(action) => void adjustDetectedCard(action)} onRedetect={() => void redetectPlayerCard()} onFile={handleFile} />
           <div className="vision-toolbar creation-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={() => void analyzeSelectedImage()} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
@@ -3580,7 +3581,7 @@ ${reading.text}`)) : fullPassText;
               </button>
             )}
           </div>
-          {loading && <ReaderLiveProgressCardV3840 preview={preview} status={status} onCancel={() => void cancelCurrentOcr()} />}
+          {loading && <ReaderLiveProgressCardV3840 preview={preview} status={status} progress={readerProgress} onCancel={() => void cancelCurrentOcr()} />}
           {!loading && advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
             {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}

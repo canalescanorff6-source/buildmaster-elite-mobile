@@ -7,7 +7,7 @@ import {
   type TacticalArrowKind
 } from './metaFormationStudioV3832';
 
-export const PROFESSIONAL_TACTICAL_TEMPLATE_VERSION = '40.00.0';
+export const PROFESSIONAL_TACTICAL_TEMPLATE_VERSION = '40.10.0';
 
 const GOLD = '#d8a92d';
 const GOLD_LIGHT = '#ffe08a';

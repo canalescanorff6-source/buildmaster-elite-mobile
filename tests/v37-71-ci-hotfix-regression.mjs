@@ -14,7 +14,7 @@ assert.doesNotMatch(workspace, /\bUploadCloud\b/, 'Import não utilizado não po
 // A v37.71 protege a existência do contrato de cache sem duplicar a lista de
 // versões aceita pela regressão v33. Essa lista pertence à própria v33 e é
 // validada quando o grupo v33.00 roda no diagnóstico consolidado.
-assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:(?:37|38)\.\d+\.0|40\.00\.0)-[^']+-1'/,
+assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:(?:37|38)\.\d+\.0|40\.(?:00|10)\.0)-[^']+-1'/,
   'O esquema nativo atual precisa manter o formato versionado reconhecido pelo atualizador.');
 assert.match(v33, /assert\.match\(cache, \/NATIVE_CACHE_SCHEMA/,
   'A regressão v33 precisa continuar validando o esquema nativo atual.');
@@ -29,5 +29,5 @@ for (const version of ['v37.50', 'v37.60', 'v37.70', 'v37.71', 'v37.80', 'v37.90
   assert.ok(doctor.includes(`Regressões ${version}`), `O diagnóstico consolidado precisa executar ${version}.`);
 }
 
-assert.equal(pkg.version, '40.00.0');
+assert.equal(pkg.version, '40.10.0');
 console.log('v37.71 hotfix aprovado: TypeScript limpo, contrato de cache atual validado sem lista legada frágil e contexto de delay/controle preservado.');

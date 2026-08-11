@@ -1,3 +1,11 @@
+# BuildMaster Elite Tático v40.10 — Progresso visível
+
+A v40.10 mantém o leitor de cartas reconstruído da v40.00 e adiciona acompanhamento visual às duas operações mais demoradas do app: atualização do APK e leitura dos prints. O atualizador mostra etapa, porcentagem, bytes, velocidade e ETA durante o download; a leitura mostra porcentagem, campo atual, quantidade concluída e estimativa de término.
+
+Consulte `ATUALIZACAO_PROGRESSO_V40.10.md` para os detalhes desta versão.
+
+---
+
 # BuildMaster Elite Tático v38.34 — Correção completa do CI
 
 A v38.34 preserva o Gerador Tático Profissional da v38.33, corrige o CI e mantém o Estúdio de Formações em um gerador local de artes táticas detalhadas, sem IA paga. O template usa SVG determinístico, mantém exatamente 11 jogadores, organiza setas atrás dos marcadores e exporta PNG/PDF no padrão premium Marques Fichas.

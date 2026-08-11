@@ -14,7 +14,7 @@ const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '40.00.0');
+assert.equal(pkg.version, '40.10.0');
 assert.equal(pkg.scripts['test:v3835'], 'node tests/v38-35-legacy-regressions-hotfix.mjs');
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3835'));
 assert.match(budgetRegression, /\(\?:3\\\.5\|4\|4\\\.5\)/);
@@ -24,20 +24,20 @@ assert.match(revolutionRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 
 // O contrato legado não pode depender de um sufixo de cache de uma versão
 // anterior. A v37.71 valida o formato e a v38.31 deriva a versão do pacote.
-assert.match(cacheRegression, /40\\\.00\\\.0/, 'A regressão v37.71 precisa reconhecer a linha v40.');
+assert.ok(cacheRegression.includes('40\\.(?:00|10)\\.0'), 'A regressão v37.71 precisa reconhecer a linha v40.');
 assert.match(cacheRegression, /contrato de cache sem duplicar a lista/);
 assert.doesNotMatch(cacheRegression, /36\\\.0-deterministic-audit/);
 assert.match(cacheHotfixRegression, /const \[major, minor\] = pkg\.version\.split\('\.'\)/);
 assert.match(cacheHotfixRegression, /escapedCacheVersion/);
 assert.doesNotMatch(cacheHotfixRegression, /36-deterministic-audit/);
 
-assert.ok(audit.includes("pkg.version === '40.00.0'"));
-assert.ok(audit.includes('buildmaster-v40-00-card-reader-rebuild-1'));
+assert.ok(audit.includes("pkg.version === '40.10.0'"));
+assert.ok(audit.includes('buildmaster-v40-10-progress-1'));
 assert.ok(doctor.includes('Regressões v38.39'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.00');
-assert.ok(sw.includes('buildmaster-v40-00-card-reader-rebuild-1'));
-assert.ok(nativeCache.includes('40.00.0-fail-open-startup-1'));
-const playNotes = read('play-store/listing/pt-BR/release-notes/40.00.0.txt').trim();
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.10');
+assert.ok(sw.includes('buildmaster-v40-10-progress-1'));
+assert.ok(nativeCache.includes('40.10.0-progress-runtime-1'));
+const playNotes = read('play-store/listing/pt-BR/release-notes/40.10.0.txt').trim();
 assert.ok(playNotes.length > 0 && playNotes.length <= 500);
 
 console.log('v38.35 preservada na v38.40: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');

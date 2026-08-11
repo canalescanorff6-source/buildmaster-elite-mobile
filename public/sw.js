@@ -9,7 +9,7 @@
 // Compatibilidade de regressão: buildmaster-v38-10-premium-clean-result-1
 // Compatibilidade de regressão: buildmaster-v38-30-name-skill-integrity-1
 // Cache anterior preservado para atualização por cima: buildmaster-v38-32-complete-integration-1
-const CACHE_NAME = 'buildmaster-v40-00-card-reader-rebuild-1';
+const CACHE_NAME = 'buildmaster-v40-10-progress-1';
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/assets/logo.svg',

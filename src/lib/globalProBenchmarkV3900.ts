@@ -576,7 +576,7 @@ export function applyGlobalProBenchmarkV3900(result: AnalysisResult, sources = l
     skillRecommendations,
     recommendedImpetos: impetos,
     buildName: analysis.automaticCalibrationApplied
-      ? `Ficha Automática v40.00 — Benchmark Pro Global v39.00 — ${result.parsed.playerName}`
+      ? `Ficha Automática v40.10 — Benchmark Pro Global v39.00 — ${result.parsed.playerName}`
       : result.buildName,
     buildVariants: result.buildVariants.slice(0, 1).map((variant) => ({
       ...variant,

@@ -25,7 +25,7 @@ assert.equal(tsconfig.compilerOptions?.baseUrl, undefined, 'O tsconfig raiz não
 assert.equal(tsconfig.files, undefined, 'O tsconfig raiz não pode apontar para stubs de uma regressão específica.');
 assert.ok(Array.isArray(appTsconfig.exclude) && appTsconfig.exclude.includes('tests'));
 assert.match(String(packageJson.scripts?.typecheck ?? ''), /-p tsconfig\.app\.json/);
-assert.ok(v3130.includes('40\\.00'), 'A regressão v31.30 deve aceitar a ficha pública v40.00.');
+assert.ok(v3130.includes('40\\.(?:00|10)'), 'A regressão v31.30 deve aceitar as fichas públicas da linha v40.');
 assert.doesNotMatch(v3130, /Ficha Automática v38\\\.\(\?:37\|38\)/);
 
 

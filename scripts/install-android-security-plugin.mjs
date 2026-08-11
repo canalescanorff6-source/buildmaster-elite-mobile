@@ -749,11 +749,18 @@ public class BuildMasterSecurityPlugin extends Plugin {
                  BufferedOutputStream output = new BufferedOutputStream(fileOutput)) {
                 byte[] buffer = new byte[64 * 1024];
                 long copied = 0;
+                int lastCopyPercent = -1;
                 int read;
                 while ((read = input.read(buffer)) != -1) {
                     copied += read;
                     if (copied > MAX_APK_BYTES) throw new SecurityException("APK maior que o limite permitido.");
                     output.write(buffer, 0, read);
+                    long copyTotal = total > 0 ? total : (expectedSize == null ? 0 : expectedSize);
+                    int copyPercent = copyTotal > 0 ? (int) Math.min(100, (copied * 100L) / copyTotal) : 0;
+                    if (copyPercent != lastCopyPercent && (copyPercent == 0 || copyPercent >= lastCopyPercent + 3 || copyPercent == 100)) {
+                        lastCopyPercent = copyPercent;
+                        emitProgress("copying", copyPercent, copied, copyTotal);
+                    }
                 }
                 output.flush();
                 fileOutput.getFD().sync();
@@ -983,7 +990,7 @@ public class BuildMasterSecurityPlugin extends Plugin {
                         transportResult = downloadAttempt % 2 == 1
                                 ? downloadWithSystemManager(initial, partial, manifestSizeBytes, checksumSha256)
                                 : downloadWithHttpStream(initial, partial, manifestSizeBytes, checksumSha256, downloadAttempt);
-                        emitProgress("verifying", 99, transportResult.bytes, manifestSizeBytes == null ? transportResult.bytes : manifestSizeBytes);
+                        emitProgress("verifying", 100, transportResult.bytes, manifestSizeBytes == null ? transportResult.bytes : manifestSizeBytes);
                         finalDownloadError = null;
                         break;
                     } catch (Exception downloadError) {
@@ -1024,8 +1031,11 @@ public class BuildMasterSecurityPlugin extends Plugin {
                     throw new SignatureException("A assinatura do APK é diferente da versão instalada. A atualização foi bloqueada para preservar o aplicativo e os dados.");
                 }
 
-                emitProgress("ready", 100, total, expectedTotal);
+                emitProgress("opening-installer", 100, total, expectedTotal);
+                // Dá tempo para a WebView desenhar 97% antes de o instalador do Android assumir a tela.
+                SystemClock.sleep(320L);
                 launchInstaller(apk);
+                emitProgress("ready", 100, total, expectedTotal);
                 JSObject result = new JSObject();
                 result.put("verified", true);
                 result.put("checksum", actualChecksum);

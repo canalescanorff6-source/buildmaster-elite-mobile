@@ -30,6 +30,7 @@ import {
 } from '@/lib/appUpdates';
 import { fetchUpdateManifest, type UpdateChannelSource } from '@/lib/updateChannel';
 import { DefinitiveUpdateCenter } from '@/modules/updates/DefinitiveUpdateCenter';
+import { UpdateTransferProgressV4010 } from '@/components/ProgressBarsV4010';
 import { checkGooglePlayUpdate, IS_PLAY_DISTRIBUTION, startGooglePlayUpdate } from '@/modules/publication/playIntegrity';
 import { getUpdateEvaluationOptions, readUpdateChannelPreference } from '@/modules/updates/updateGovernance';
 import {
@@ -70,6 +71,7 @@ const IGNORED_KEY = 'buildmaster_ignored_update_build';
 const LAST_CHECK_KEY = 'buildmaster_last_update_check';
 const PENDING_KEY = 'buildmaster_pending_update';
 const BACKUP_READY_KEY = 'buildmaster_update_backup_ready_build';
+const UPDATE_TARGET_KEY = 'buildmaster_update_progress_target_v4010';
 const AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const AUTO_THROTTLE_MS = 90 * 1000;
 const AUTO_INSTALL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -180,10 +182,40 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
   const lastAttemptRef = useRef(0);
   const autoInstallRunningRef = useRef(false);
   const backupRef = useRef(onPrepareBackup);
+  const [autoProgress, setAutoProgress] = useState<ApkDownloadProgress | null>(null);
+  const [completedVersion, setCompletedVersion] = useState<string | null>(null);
+  const progressClearTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     backupRef.current = onPrepareBackup;
   }, [onPrepareBackup]);
+
+  useEffect(() => {
+    let handle: Awaited<ReturnType<typeof onApkDownloadProgress>> = null;
+    let active = true;
+    void onApkDownloadProgress((event) => {
+      if (!active) return;
+      setAutoProgress(event);
+      if (progressClearTimerRef.current != null) window.clearTimeout(progressClearTimerRef.current);
+      if (event.phase === 'ready') {
+        progressClearTimerRef.current = window.setTimeout(() => setAutoProgress(null), 45_000);
+      }
+    }).then((next) => { handle = next; });
+    void readInstalledInfo().then((info) => {
+      if (!active) return;
+      const target = safeStorageGetJson<{ version?: string; versionCode?: number } | null>(UPDATE_TARGET_KEY, null);
+      if (target?.versionCode && info.versionCode >= target.versionCode) {
+        setCompletedVersion(target.version || info.versionName);
+        safeStorageRemove(UPDATE_TARGET_KEY);
+        window.setTimeout(() => { if (active) setCompletedVersion(null); }, 18_000);
+      }
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+      if (progressClearTimerRef.current != null) window.clearTimeout(progressClearTimerRef.current);
+      void handle?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -202,7 +234,9 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
       const manifest = manifests[0];
       if (!manifest) return;
       if (!active || !Capacitor.isNativePlatform() || safeStorageGet(AUTO_INSTALL_KEY) === '0' || autoInstallRunningRef.current) return;
+      safeStorageSetJson(UPDATE_TARGET_KEY, { version: manifest.version, versionCode: manifest.versionCode, startedAt: Date.now() });
       if (!installed.canInstallPackages) {
+        setAutoProgress({ phase: 'awaiting-permission', percent: 0, downloadedBytes: 0, totalBytes: manifest.sizeBytes || 0 });
         appendUpdateAudit({
           phase: 'install',
           outcome: 'warning',
@@ -237,6 +271,7 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
 
       try {
         try {
+          setAutoProgress({ phase: 'preparing-backup', percent: 0, downloadedBytes: 0, totalBytes: manifest.sizeBytes || 0 });
           await backupRef.current?.();
           appendUpdateAudit({ phase: 'backup', outcome: 'success', message: 'Cópia local de recuperação atualizada antes do download automático.' });
         } catch (backupError) {
@@ -367,7 +402,14 @@ export function UpdateAutoChecker({ onPrepareBackup }: AutoCheckerProps = {}) {
     };
   }, []);
 
-  return null;
+  let displayedTargetVersion = completedVersion;
+  if (!displayedTargetVersion) {
+    const savedTarget = safeStorageGetJson<{ version?: string } | null>(UPDATE_TARGET_KEY, null);
+    displayedTargetVersion = savedTarget?.version || null;
+  }
+
+  if (!autoProgress && !completedVersion) return null;
+  return <div className="v4010-global-update-progress"><UpdateTransferProgressV4010 progress={autoProgress} targetVersion={displayedTargetVersion} compact completed={Boolean(completedVersion)} /></div>;
 }
 
 export function UpdateCenterPanel({ onPrepareBackup }: Props) {
@@ -524,12 +566,6 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
   }, [autoCheck, channelReady, checkForUpdates]);
 
   const buildShort = useMemo(() => CURRENT_BUILD_ID === 'local-build' ? 'local' : CURRENT_BUILD_ID.slice(0, 8), []);
-  const progressLabel = progress?.phase === 'connecting' ? 'Conectando ao GitHub'
-    : progress?.phase === 'downloading-system' ? `Android baixando ${progress.percent}%`
-    : progress?.phase === 'downloading-http' || progress?.phase === 'downloading' ? `Baixando pela rota reserva ${progress.percent}%`
-      : progress?.phase === 'verifying' ? 'Conferindo arquivo e assinatura'
-        : progress?.phase === 'ready' ? 'APK validado' : '';
-
   const diagnosticSummary = useMemo(() => {
     if (!diagnostic.length) return null;
     const errors = diagnostic.filter((item) => item.status === 'error').length;
@@ -630,7 +666,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
   async function installUpdate() {
     if (!manifest?.apkUrl || !manifest.checksum) return;
     setInstalling(true);
-    setProgress(null);
+    setProgress({ phase: 'refreshing-manifest', percent: 0, downloadedBytes: 0, totalBytes: manifest.sizeBytes || 0 });
     try {
       const current = await refreshInstalledInfo();
       // Nunca instala usando apenas o manifesto guardado: o SHA-256 e o URL
@@ -660,6 +696,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
       }
 
       if (!current.canInstallPackages) {
+        setProgress({ phase: 'awaiting-permission', percent: 0, downloadedBytes: 0, totalBytes: targetManifest.sizeBytes || 0 });
         setAwaitingPermission(true);
         setMessage('O Android precisa permitir que o BuildMaster abra o instalador. Ative “Permitir desta fonte” e volte ao app.');
         recordAudit({ phase: 'install', outcome: 'warning', message: 'Permissão de instalação solicitada ao Android.' });
@@ -668,6 +705,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
       }
 
       if (safeStorageGet(BACKUP_READY_KEY) !== targetManifest.buildId) {
+        setProgress({ phase: 'preparing-backup', percent: 0, downloadedBytes: 0, totalBytes: targetManifest.sizeBytes || 0 });
         setMessage('Criando uma cópia local de recuperação antes da atualização...');
         recordAudit({ phase: 'backup', outcome: 'info', message: `Preparando cópia local antes da v${targetManifest.version}.` });
         try {
@@ -684,6 +722,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         }
       }
 
+      safeStorageSetJson(UPDATE_TARGET_KEY, { version: targetManifest.version, versionCode: targetManifest.versionCode, startedAt: Date.now() });
       const runVerifiedInstall = (target: AppUpdateManifest) => downloadVerifyAndInstallApk({
         url: target.apkUrl,
         checksum: target.checksum,
@@ -710,7 +749,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         setChannelSource(route.source);
         setManifest(targetManifest);
         safeStorageSetJson(PENDING_KEY, targetManifest);
-        setProgress(null);
+        setProgress({ phase: 'connecting', percent: 0, downloadedBytes: 0, totalBytes: targetManifest.sizeBytes || 0 });
         setMessage(routeIndex === 0
           ? 'Baixando o APK oficial pela rota principal validada...'
           : `A rota anterior divergiu. Tentando a origem oficial ${routeIndex + 1}/${routeCandidates.length}...`);
@@ -745,6 +784,7 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
         recordAudit({ phase: 'install', outcome: 'warning', message: 'O Android solicitou a permissão de instalação.' });
         await openInstallPermissionSettings();
       } else if (result.verified) {
+        setProgress((currentProgress) => currentProgress?.phase === 'ready' ? currentProgress : { phase: 'ready', percent: 100, downloadedBytes: targetManifest.sizeBytes || 0, totalBytes: targetManifest.sizeBytes || 0 });
         setMessage('APK oficial validado. Confirme “Atualizar” na tela do instalador Android. Seus dados serão mantidos.');
         recordAudit({ phase: 'install', outcome: 'success', message: `APK v${targetManifest.version} validado e entregue ao instalador Android.`, detail: `SHA-256 ${result.checksum || targetManifest.checksum} • host ${result.responseHost || 'não informado'} • tipo ${result.contentType || 'não informado'} • transporte ${result.transport || 'não informado'} • bytes ${result.contentLength ?? targetManifest.sizeBytes ?? 'não informado'}${result.etag ? ` • etag ${result.etag}` : ''}` });
       }
@@ -853,15 +893,11 @@ export function UpdateCenterPanel({ onPrepareBackup }: Props) {
 
       <div className={`cloud-status-card update-status-final ${available ? 'update-available' : ''}`} role="status" aria-live="polite">
         {checking || installing || diagnosing ? <Loader2 className="spin" size={17} /> : available ? <Download size={17} /> : <CheckCircle2 size={17} />}
-        <div><strong>{installing ? progressLabel || 'Instalação segura' : diagnosing ? 'Testando atualizador' : checking ? 'Verificando canal' : available ? 'Atualização disponível' : 'Status da atualização'}</strong><span>{message}</span></div>
+        <div><strong>{installing ? 'Instalação segura' : diagnosing ? 'Testando atualizador' : checking ? 'Verificando canal' : available ? 'Atualização disponível' : 'Status da atualização'}</strong><span>{message}</span></div>
       </div>
 
-      {installing && progress && (
-        <div className="update-download-progress" aria-label={`Progresso do download: ${progress.percent}%`}>
-          <div><span>{progressLabel}</span><strong>{progress.percent}%</strong></div>
-          <i><b style={{ width: `${progress.percent}%` }} /></i>
-          <small>{progress.downloadedBytes > 0 ? `${formatBytes(progress.downloadedBytes)} de ${formatBytes(progress.totalBytes)}` : 'Preparando download seguro'}</small>
-        </div>
+      {progress && (installing || progress.phase === 'ready' || progress.phase === 'opening-installer' || progress.phase === 'awaiting-permission') && (
+        <UpdateTransferProgressV4010 progress={progress} targetVersion={manifest?.version || null} />
       )}
 
       {manifest && (

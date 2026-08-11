@@ -61,7 +61,7 @@ assert.doesNotMatch(stripComments(globalError), /window\.location\.(?:replace|re
 assert.match(routeError, /activateStartupSafeModeV3840\(error\)/, 'Erro de rota deve ativar modo seguro antes do reset.');
 assert.match(globalError, /activateStartupSafeModeV3840\(error\)/, 'Erro global deve ativar modo seguro antes do reset.');
 assert.doesNotMatch(stripComments(cache), /window\.location\.(?:replace|reload)\s*\(/, 'Limpeza de cache JavaScript não pode provocar segundo reload.');
-assert.match(cache, /40\.00\.0-fail-open-startup-1/, 'Schema de cache precisa invalidar builds antigos.');
+assert.match(cache, /40\.10\.0-progress-runtime-1/, 'Schema de cache precisa invalidar builds antigos.');
 assert.match(register, /refreshNativeWebRuntimeOnceV3840\('new-build'\)/, 'Registro deve manter a limpeza por build.');
 assert.match(featureFlag, /const \[enabled, setEnabled\] = useState\(false\)/, 'Feature flag deve hidratar de forma determinística.');
 

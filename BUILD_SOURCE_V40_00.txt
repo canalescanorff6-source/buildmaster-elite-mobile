@@ -1,4 +1,4 @@
-BuildMaster Elite Tático v40.00.0
+BuildMaster Elite Tático v40.10.0
 Base: auditoria completa v38.40 r8 sobre o projeto integral enviado em 10/08/2026.
 Objetivo: reconstrução do leitor manual por quadrados, restauração de precisão prática da linha 37 e eliminação de processamento infinito.
 Identidade Android/applicationId e dados persistentes preservados para atualização por cima.

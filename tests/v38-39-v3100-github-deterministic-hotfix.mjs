@@ -12,7 +12,7 @@ const read = (relativePath) => readFileSync(path.join(root, relativePath), 'utf8
 const pkg = JSON.parse(read('package.json'));
 const regression = read('tests/v31-10-unified-intelligence-regression.ts');
 
-assert.match(pkg.version, /^(?:38\.(?:39|40)\.0|40\.00\.0)$/);
+assert.match(pkg.version, /^(?:38\.(?:39|40)\.0|40\.(?:00|10)\.0)$/);
 assert.match(pkg.scripts['test:v3100'], /--max-old-space-size=4096/);
 assert.match(regression, /path\.resolve\(__dirname, '\.\.'\)/);
 assert.match(regression, /readProjectFile/);

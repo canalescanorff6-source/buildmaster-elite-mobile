@@ -1,4 +1,4 @@
-# BuildMaster v40.00 — correção de compatibilidade da regressão v38.38
+# BuildMaster v40.10 — correção de compatibilidade da regressão v38.38
 
 ## Causa
 

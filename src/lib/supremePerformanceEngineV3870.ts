@@ -941,7 +941,7 @@ export function applySupremePerformanceV3870(result: AnalysisResult): AnalysisRe
   });
   const winnerVariant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v40.00 — Suprema v38.70 — ${analysis.microRole}`,
+    title: `Ficha Automática v40.10 — Suprema v38.70 — ${analysis.microRole}`,
     positionLabel: result.bestPosition.label,
     training,
     pointsUsed: trainingPointsUsed,

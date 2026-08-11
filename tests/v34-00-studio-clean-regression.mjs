@@ -40,7 +40,7 @@ assert.doesNotMatch(navigation, /FLUXO DE FICHAS/);
 assert.match(navigation, /Abrir ficha atual/);
 assert.match(navigation, /onWorkspaceChange\('visao-geral'\)/);
 assert.match(navigation, /aria-current=\{item\.active \? 'page'/);
-assert.match(navigation, /(?:Studio Premium · v34\.00|Performance Suite · v36\.00|Professional Suite · v(?:37\.00|38\.(?:3[2-9]|40)|40\.00))/);
+assert.match(navigation, /(?:Studio Premium · v34\.00|Performance Suite · v36\.00|Professional Suite · v(?:37\.00|38\.(?:3[2-9]|40)|40\.(?:00|10)))/);
 
 for (const source of [team, matches, formations]) {
   assert.match(source, /function selectTab/);

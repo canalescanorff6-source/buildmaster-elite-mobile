@@ -6,7 +6,7 @@ type CapacitorWindow = Window & { Capacitor?: { isNativePlatform?: () => boolean
 
 export const NATIVE_CACHE_SCHEMA_KEY = 'buildmaster:native-cache-schema';
 export const NATIVE_CACHE_BUILD_KEY = 'buildmaster:native-cache-build';
-export const NATIVE_CACHE_SCHEMA = '40.00.0-fail-open-startup-1';
+export const NATIVE_CACHE_SCHEMA = '40.10.0-progress-runtime-1';
 export const NATIVE_CACHE_BUILD_FINGERPRINT = `${NATIVE_CACHE_SCHEMA}:native-web-cache-v2`;
 // O Android usa o CURRENT_BUILD_ID/versionCode para a invalidação nativa por build.
 

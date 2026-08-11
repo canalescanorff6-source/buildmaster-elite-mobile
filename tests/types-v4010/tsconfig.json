@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": "../..",
+    "paths": {
+      "@/lib/secureStorage": [
+        "tests/types-v4010/secureStorageStub.ts"
+      ],
+      "@/lib/backgroundOcrV3840": [
+        "tests/types-v4010/backgroundOcrStub.ts"
+      ],
+      "@/*": [
+        "src/*"
+      ],
+      "@/components/SmartCardCropPanel": [
+        "tests/types-v4010/smartCardStub.tsx"
+      ],
+      "@/modules/card-reader/cardArtCrop": [
+        "tests/types-v4010/cardArtCropStub.ts"
+      ]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false
+  },
+  "files": [
+    "../../__external_stubs.d.ts",
+    "stubs.d.ts",
+    "secureStorageStub.ts",
+    "backgroundOcrStub.ts",
+    "../../src/components/ProgressBarsV4010.tsx",
+    "../../src/components/ReaderRecoveryAndProgressV3840.tsx",
+    "smartCardStub.tsx",
+    "cardArtCropStub.ts",
+    "../../src/components/ReaderImageSourceCardV4010.tsx"
+  ]
+}
