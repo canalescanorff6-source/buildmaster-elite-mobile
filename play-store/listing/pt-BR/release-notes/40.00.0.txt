@@ -1,0 +1,1 @@
+Nova linha v40.00. O leitor de cartas por quadrados foi reconstruído para recuperar nome, nível, atributos, habilidades e recorte da carta com subáreas calibradas, OCR português+inglês, cache renovado e limite anti-travamento. A posição escolhida pelo usuário e os motores de desempenho foram preservados.

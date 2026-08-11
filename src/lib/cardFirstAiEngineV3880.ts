@@ -739,7 +739,7 @@ export function applyCardFirstAiV3880(result: AnalysisResult): AnalysisResult {
   const variants = analysis.finalists.slice(0, 3).map((candidate, index) => ({
     kind: index === 0 ? 'competitive' as const : 'alternative' as const,
     title: index === 0
-      ? `Ficha Automática v38.40 — IA por Carta v38.80 — ${analysis.targetFunction}`
+      ? `Ficha Automática v40.00 — IA por Carta v38.80 — ${analysis.targetFunction}`
       : `Alternativa IA por Carta — ${candidate.title}`,
     positionLabel: result.bestPosition.label,
     training: candidate.training,

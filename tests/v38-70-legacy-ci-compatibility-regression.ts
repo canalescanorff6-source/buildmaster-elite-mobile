@@ -53,7 +53,7 @@ assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, expec
 assert.equal(result.trainingPointsUsed, result.trainingPointsTotal, 'A compatibilidade não pode quebrar o orçamento exato.');
 assert.equal(result.trainingPointsRemaining, 0);
 assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3, 'A saída pública preserva de uma a três fichas aplicáveis; alternativas extras continuam no diagnóstico v38.70.');
-assert.match(result.buildName, /Ficha Automática v38\.40/, 'O nome deve manter o contrato público e identificar o Motor Supremo no complemento.');
+assert.match(result.buildName, /Ficha Automática v(?:38\.40|40\.00)/, 'O nome deve manter o contrato público e identificar o Motor Supremo no complemento.');
 const usefulImpeto = result.recommendedImpetos.find((item) => item.tier !== 'evitar');
 assert.ok(usefulImpeto, 'A análise precisa manter ao menos um Ímpeto útil.');
 assert.match(usefulImpeto?.evidence?.join(' ') ?? '', /ficha final/i, 'O Ímpeto precisa registrar que foi recalculado com a ficha final.');

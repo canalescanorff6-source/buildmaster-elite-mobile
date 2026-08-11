@@ -11,7 +11,8 @@ const currentTestId = currentVersion.split('.').slice(0, 2).join('');
 assert.equal(lock.version, currentVersion);
 assert.equal(lock.packages[''].version, currentVersion);
 assert.ok(pkg.scripts['test:all'].includes(`npm run test:v${currentTestId}`));
-assert.ok(pkg.scripts['test:all'].endsWith('npm run quality:audit'));
+assert.ok(pkg.scripts['test:all'].includes('npm run quality:audit'));
+assert.ok(pkg.scripts['test:all'].endsWith('npm run test:v4000'));
 assert.match(read('src/lib/dataSafety.ts'), /CURRENT_DATA_SCHEMA = 3100/);
 assert.ok(read('src/lib/dataSafety.ts').includes(`APP_DATA_VERSION = '${currentVersion}'`));
 

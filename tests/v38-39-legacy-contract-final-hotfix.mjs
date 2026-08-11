@@ -11,7 +11,7 @@ const v3831 = read('tests/v38-31-ci-regression-hotfix.mjs');
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.match(pkg.version, /^38\.(?:39|40)\.0$/);
+assert.match(pkg.version, /^(?:38\.(?:39|40)\.0|40\.00\.0)$/);
 assert.match(pkg.scripts['test:v3839'], /v38-39-legacy-contract-final-hotfix\.mjs/);
 assert.match(pkg.scripts['test:v3839'], /v38-39-v3120-deterministic-contract-hotfix\.mjs/);
 assert.match(pkg.scripts['test:v3839'], /v38-39-v3100-github-deterministic-hotfix\.mjs/);
@@ -22,8 +22,8 @@ assert.ok(v35.includes('assert.doesNotMatch(cacheRegression'), 'A v38.35 deve re
 assert.ok(v35.includes('assert.doesNotMatch(cacheHotfixRegression'), 'A v38.35 deve rejeitar sufixos estáticos no contrato v38.31.');
 assert.ok(v3771.includes('formato versionado'));
 assert.ok(v3831.includes("const [major, minor] = pkg.version.split('.')"));
-assert.match(sw, /buildmaster-v38-(?:39-legacy-contract-final|40-background-ocr-resume)-1/);
-assert.match(nativeCache, /38\.(?:39\.0-legacy-contract-final|40\.0-background-ocr-resume)-1/);
+assert.match(sw, /buildmaster-(?:v38-(?:39-legacy-contract-final|40-background-ocr-resume)-1|v40-00-card-reader-rebuild-1)/);
+assert.match(nativeCache, /(?:38\.(?:39\.0-legacy-contract-final|40\.0-background-ocr-resume)-1|40\.00\.0-fail-open-startup-1)/);
 assert.ok(fs.existsSync('tests/v38-39-v3120-deterministic-contract-hotfix.mjs'));
 assert.doesNotMatch(pkg.scripts['test:v3120'], /typecheck:v3110/);
 

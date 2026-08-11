@@ -1,4 +1,4 @@
-name: Gerar AAB v38.40 Google Play
+name: Gerar AAB v40.00 Google Play
 
 on:
   workflow_dispatch:
@@ -55,10 +55,10 @@ jobs:
           ref: ${{ github.event.inputs.source_ref || github.ref }}
           fetch-depth: 0
 
-      - name: Carregar versão v38.40 do pacote
+      - name: Carregar versão v40.00 do pacote
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          test "$VERSION" = "38.40.0" || { echo "::error::package.json precisa estar em 38.40.0"; exit 1; }
+          test "$VERSION" = "40.00.0" || { echo "::error::package.json precisa estar em 40.00.0"; exit 1; }
           echo "BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION=$VERSION" >> "$GITHUB_ENV"

@@ -429,6 +429,30 @@ export async function renderEfhubPlayerPortraitPreview(file: File | Blob, cardBo
   return preview ? { preview, box: portraitBox } : null;
 }
 
+export async function createManualEfhubCardPreview(file: File | Blob, preferredZone: OcrZone | CardCropBox): Promise<CardCropResult | null> {
+  const box = clampCardCropBox({ x: preferredZone.x, y: preferredZone.y, w: preferredZone.w, h: preferredZone.h });
+  const preview = await renderCardCropPreview(file, box);
+  if (!preview) return null;
+  const portrait = await renderEfhubPlayerPortraitPreview(file, box).catch(() => null);
+  let aspectRatio = CARD_ASPECT;
+  if (typeof createImageBitmap !== 'undefined') {
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (bitmap) {
+      aspectRatio = cardCropAspect(box, bitmap.width, bitmap.height);
+      bitmap.close?.();
+    }
+  }
+  return {
+    preview,
+    portraitPreview: portrait?.preview ?? null,
+    portraitBox: portrait?.box,
+    box,
+    confidence: 99,
+    method: 'manual-adjustment',
+    aspectRatio: Number(aspectRatio.toFixed(3))
+  };
+}
+
 export async function createEfhubCardPreview(file: File | Blob, preferredZone?: OcrZone | CardCropBox): Promise<CardCropResult | null> {
   const result = await createSmartCardPreview(file, preferredZone);
   if (!result) return null;

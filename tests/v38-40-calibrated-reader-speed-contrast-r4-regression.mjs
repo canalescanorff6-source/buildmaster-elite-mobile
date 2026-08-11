@@ -20,18 +20,17 @@ assert.match(app, /calibratedFastPath \? 80 : 160/, 'Leitura calibrada deve carr
 
 assert.match(calibration, /detectSkillCapsules\?: boolean/, 'Gerador legado deve continuar podendo desativar cápsulas dinâmicas.');
 assert.match(calibration, /options\.detectSkillCapsules === false[\s\S]*?\? \[\]/, 'Detector de cápsulas deve continuar desativável.');
-assert.match(macroReader, /const MACRO_PLANS: MacroPlan\[\] = \[/, 'Leitor de macroquadros deve possuir plano fixo.');
-assert.equal((macroReader.match(/id: '(identity|card|bio|positions|boosters|attributes|physical|skills)'/g) || []).length, 8, 'O modo manual deve conter exatamente 8 macroquadros.');
-assert.match(macroReader, /timeoutMs: 16_000/, 'Cada macro OCR deve possuir timeout próprio.');
-assert.match(macroReader, /plan\.id === 'identity'/, 'Nome pode receber somente uma conferência condicional.');
-assert.match(macroReader, /Uma área ruim não pode congelar a carta inteira/, 'Falha de um quadro deve permitir seguir para revisão.');
+assert.match(macroReader, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.00-calibrated-fields-r1'/, 'O fluxo manual deve usar o leitor reconstruído v40.00.');
+assert.match(macroReader, /buildPreciseOcrZonesFromEfhubCalibration/, 'Os 8 quadrados devem gerar subáreas determinísticas para campos reais.');
+assert.match(macroReader, /TOTAL_READER_DEADLINE_MS = 180_000/, 'A leitura inteira deve possuir prazo máximo.');
+assert.match(macroReader, /addLegacyPrecisionFallback/, 'Nome, atributos e habilidades podem receber fallback apenas quando necessário.');
 
 assert.match(adaptive, /if \(mode === 'fast'\)/, 'Busca adaptativa antiga continua disponível fora dos 8 quadros.');
 assert.match(precision, /GK\|GOL\|CB\|ZAG\|LB\|LE\|RB\|LD/, 'Parser de nome deve remover siglas de posição.');
 assert.match(precision, /embeddedKnownName/, 'Nome deve conseguir recuperar jogador conhecido com ruído.');
 
-assert.match(worker, /createWorker\(\['por'\]/, 'Worker Android deve carregar apenas português.');
-assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 24_000/, 'Inicialização do worker não pode esperar indefinidamente.');
+assert.match(worker, /createWorker\(\['por', 'eng'\]/, 'Worker deve combinar português e inglês para nomes próprios e rótulos do jogo.');
+assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 30_000/, 'Inicialização do worker não pode esperar indefinidamente.');
 assert.match(worker, /workerBootDeadline/, 'Inicialização deve possuir deadline real.');
 assert.match(worker, /timeoutMs\?: number/, 'Cada reconhecimento pode definir prazo específico.');
 

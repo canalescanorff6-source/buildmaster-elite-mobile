@@ -105,7 +105,7 @@ for (const result of [cf, amf, tallCf, agileCf]) {
   assert.ok(Array.isArray(result.unifiedIntelligence?.learning.testedPlans));
   assert.ok(result.trainingPointsUsed <= result.trainingPointsTotal);
   assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3);
-  assert.match(result.buildName, /(?:Inteligência v31|Ficha v32|Ficha v35|Ficha Automática v38\.(?:37|38|39|40))/);
+  assert.match(result.buildName, /(?:Inteligência v31|Ficha v32|Ficha v35|Ficha Automática v(?:38\.(?:37|38|39|40)|40\.00))/);
 }
 
 assert.notDeepEqual(cf.recommendedSkills, amf.recommendedSkills, 'Cartas de estilos e funções diferentes não podem receber a mesma lista genérica.');

@@ -18,12 +18,13 @@ const sourceBuildMatch = doctor.match(/const\s+CI_SOURCE_BUILD\s*=\s*['"]([^'"]+
 check(Boolean(sourceBuildMatch), 'ci-doctor não declara CI_SOURCE_BUILD.');
 if (sourceBuildMatch) {
   check(
-    /^v38\.40-ci-[a-z0-9-]+-\d{8}-r\d+$/.test(sourceBuildMatch[1]),
+    /^v40\.00-ci-[a-z0-9-]+-\d{8}-r\d+$/.test(sourceBuildMatch[1]),
     `CI_SOURCE_BUILD inválido: ${sourceBuildMatch[1]}.`,
   );
 }
-check(doctor.includes('EXPECTED_FULL_GROUPS = 84'), 'ci-doctor não protege a quantidade esperada de 84 grupos.');
+check(doctor.includes('EXPECTED_FULL_GROUPS = 85'), 'ci-doctor não protege a quantidade esperada de 85 grupos.');
 check(packageJson.scripts?.['test:v3840'] === 'node scripts/run-v3840-tests.mjs', 'v38.40 não usa o executor detalhado e determinístico.');
+check(String(packageJson.scripts?.['test:v4000'] ?? '').includes('typecheck:v4000') && String(packageJson.scripts?.['test:v4000'] ?? '').includes('v40-00-card-reader-rebuild-regression.mjs'), 'v40.00 não protege o leitor reconstruído com typecheck e regressão dedicados.');
 
 check(apkWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow APK não restaura e valida o tsconfig raiz.');
 check(playWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow Play não restaura e valida o tsconfig raiz.');
@@ -46,7 +47,7 @@ check(doctor.includes("['Regressões v34.00'"), 'ci-doctor completo não executa
 check(doctor.includes("['Regressões v35.00'"), 'ci-doctor completo não executa o catálogo oficial e a ficha universal v35.00.');
 check(doctor.includes("['Regressões v35.10'"), 'ci-doctor completo não executa a ficha máxima anti-overall v35.10.');
 check(doctor.includes("['Regressões v35.20'"), 'ci-doctor completo não executa Perfis de Gameplay e tema sólido v35.20.');
-for (const [version, script] of [['39.30', 'test:v3930'], ['39.40', 'test:v3940'], ['39.50', 'test:v3950']]) {
+for (const [version, script] of [['39.30', 'test:v3930'], ['39.40', 'test:v3940'], ['39.50', 'test:v3950'], ['40.00', 'test:v4000']]) {
   check(doctor.includes(`['Regressões v${version}', ['run', '${script}']]`), `ci-doctor completo não executa a regressão mais recente v${version}.`);
 }
 

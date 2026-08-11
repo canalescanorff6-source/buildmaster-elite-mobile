@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "BuildMaster Elite Tático v38.40",
-  "short_name": "BuildMaster v38.40",
-  "description": "BuildMaster v38.40 com leitura mais rápida, retomada protegida em segundo plano, sessão persistente, perfil automático pela carta e fichas precisas.",
+  "name": "BuildMaster Elite Tático v40.00",
+  "short_name": "BuildMaster v40.00",
+  "description": "BuildMaster v40.00 com leitor de cartas reconstruído, quadrados calibrados, OCR bilíngue, prazo anti-travamento e motores de desempenho preservados.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",

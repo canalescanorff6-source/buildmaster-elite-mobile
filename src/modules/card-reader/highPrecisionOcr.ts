@@ -6,7 +6,7 @@ import { adaptiveZoneVariants } from './adaptiveZoneSearch';
 import { extractCanonicalSkillsFromText } from '@/lib/officialSkillIdentity';
 import { getRuntimeOptimizationProfile } from '@/lib/invisibleOptimizationV3820';
 
-export const HIGH_PRECISION_OCR_VERSION = '38.40-calibrated-fast-r4';
+export const HIGH_PRECISION_OCR_VERSION = '40.00-calibrated-rebuild-r1';
 
 export type PrecisionPass = {
   enhancement: ImageEnhancement;

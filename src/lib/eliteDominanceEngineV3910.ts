@@ -762,7 +762,7 @@ export function applyEliteDominanceV3910(result: AnalysisResult): AnalysisResult
   const pointsUsed = trainingPlanTotalCost(training);
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v38.40 — Motor Dominante Universal v39.10 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.00 — Motor Dominante Universal v39.10 — ${result.parsed.playerName}`,
     positionLabel: 'Receita única da carta para todas as posições próprias',
     training,
     pointsUsed,

@@ -5,12 +5,12 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 
-assert.equal(pkg.version, '38.40.0');
+assert.equal(pkg.version, '40.00.0');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3838'));
 assert.ok(read('scripts/ci-doctor.mjs').includes('Regressões v38.39'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v38.40');
-assert.ok(read('public/sw.js').includes('buildmaster-v38-40-background-ocr-resume-1'));
-assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('38.40.0-background-ocr-resume-1'));
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.00');
+assert.ok(read('public/sw.js').includes('buildmaster-v40-00-card-reader-rebuild-1'));
+assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.00.0-fail-open-startup-1'));
 
 const v3500 = read('tests/v35-00-official-additional-skills-meta-regression.ts');
 assert.ok(v3500.includes('Automática v38\\.(?:37|38|39|40)'), 'A regressão v35.00 precisa aceitar a calibração automática atual.');

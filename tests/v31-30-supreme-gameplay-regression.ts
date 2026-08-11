@@ -61,7 +61,7 @@ for (const result of [cf, dmf]) {
   assert.equal(result.trainingPointsUsed, result.trainingPointsTotal);
   assert.equal(result.trainingPointsRemaining, 0);
   assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3);
-  assert.match(result.buildName, /(?:Ficha Elite Suprema|Ficha v32|Ficha v35|Ficha Automática v38\.\d+)/);
+  assert.match(result.buildName, /(?:Ficha Elite Suprema|Ficha v32|Ficha v35|Ficha Automática v(?:38\.\d+|40\.00))/);
   assert.equal(result.recommendedSkills.length, 5);
   assert.equal(new Set(result.recommendedSkills).size, 5);
   assert.ok(result.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as typeof OFFICIAL_ADDITIONAL_SKILL_NAMES[number])));

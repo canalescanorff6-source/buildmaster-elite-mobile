@@ -11,7 +11,7 @@ const background = read('src/lib/backgroundOcrV3840.ts');
 const installer = read('scripts/install-background-ocr-plugin.mjs');
 const precision = read('src/modules/card-reader/highPrecisionOcr.ts');
 
-assert.equal(pkg.version, '38.40.0');
+assert.equal(pkg.version, '40.00.0');
 assert.match(background, /saveBackgroundOcrCheckpoint/);
 assert.match(background, /checkpointFile/);
 assert.match(background, /BuildMasterBackgroundOcr/);
@@ -21,7 +21,7 @@ assert.match(app, /onClick=\{\(\) => void analyzeSelectedImage\(\)\}/);
 assert.doesNotMatch(app, /onClick=\{analyzeSelectedImage\}/);
 assert.match(app, /updateBackgroundOcrCheckpoint\(\{ stage: 'zones'/);
 assert.match(app, /readEightEfhubCalibrationMacros\(activeFile, manualEfhubCalibration/);
-assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 24_000/);
+assert.match(worker, /OCR_WORKER_BOOT_TIMEOUT_MS = 30_000/);
 assert.match(runtime, /document\.body\.dataset\.ocrReading/);
 assert.match(installer, /BuildMasterBackgroundOcrService/);
 assert.match(installer, /START_STICKY/);

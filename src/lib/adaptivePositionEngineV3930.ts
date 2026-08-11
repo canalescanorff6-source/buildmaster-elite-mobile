@@ -303,7 +303,7 @@ export function applyAdaptivePositionV3930(result: AnalysisResult): AnalysisResu
   const skills = analysis.finalSkills.map((item) => item.name);
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v38.40 — Motor Adaptativo por Carta v39.30 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.00 — Motor Adaptativo por Carta v39.30 — ${result.parsed.playerName}`,
     positionLabel: `${analysis.selectedPositionLabel}: núcleo da carta preservado e adaptação controlada`,
     training,
     pointsUsed,

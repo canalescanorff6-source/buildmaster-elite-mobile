@@ -138,7 +138,7 @@ import {
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, refineSinglePrintGeometryFromText, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
-import { adjustCardCropBox, createEfhubCardPreview, createSmartCardPreview, renderCardCropPreview, renderPlayerPortraitPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
+import { adjustCardCropBox, createEfhubCardPreview, createManualEfhubCardPreview, createSmartCardPreview, renderCardCropPreview, renderPlayerPortraitPreview, type CardCropResult } from '@/modules/card-reader/cardArtCrop';
 import { buildOcrVisionAudit } from '@/modules/card-reader/ocrVisionEngine';
 import { recognizeZoneWithHighPrecision } from '@/modules/card-reader/highPrecisionOcr';
 import { readEightEfhubCalibrationMacros } from '@/modules/card-reader/manualCalibrationFastReader';
@@ -2485,13 +2485,9 @@ export function CardVisionApp() {
       setStatus(`${progress.label}: ${progress.status}${progress.progress ? ` ${Math.round(progress.progress * 100)}%` : ''}`);
     });
     try {
-      const manualEfhubCalibration = efhubCalibrationActiveRef.current
-        ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current)
-        : null;
+      const manualEfhubCalibration = efhubCalibrationActiveRef.current ? normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current) : null;
       const calibratedFastPath = Boolean(manualEfhubCalibration);
-      const scanQuality = calibratedFastPath
-        ? qualityReport
-        : qualityReport ?? await inspectPrintQuality(activeFile).catch(() => null);
+      const scanQuality = calibratedFastPath ? qualityReport : qualityReport ?? await inspectPrintQuality(activeFile).catch(() => null);
       if (!calibratedFastPath && scanQuality !== qualityReport) setQualityReport(scanQuality);
       let geometry = calibratedFastPath && manualEfhubCalibration
         ? {
@@ -2617,11 +2613,9 @@ export function CardVisionApp() {
         }
       }
       setOcrZones(geometry.template === 'detailed-profile' ? [] : geometry.zones);
-      const finalCrop = geometry.cardArtZone.enabled
-        ? await (geometry.template === 'detailed-profile'
-          ? createEfhubCardPreview(ocrSource, geometry.cardArtZone)
-          : createSmartCardPreview(ocrSource, geometry.cardArtZone)).catch(() => null)
-        : null;
+      const finalCrop = geometry.cardArtZone.enabled ? await (calibratedFastPath && manualEfhubCalibration
+        ? createManualEfhubCardPreview(activeFile, geometry.cardArtZone)
+        : geometry.template === 'detailed-profile' ? createEfhubCardPreview(ocrSource, geometry.cardArtZone) : createSmartCardPreview(ocrSource, geometry.cardArtZone)).catch(() => null) : null;
       const artPreview = finalCrop?.portraitPreview ?? finalCrop?.preview ?? cachedArt ?? null;
       if (artPreview) {
         setPlayerCardImage(artPreview);
@@ -2646,11 +2640,12 @@ export function CardVisionApp() {
         setStatus('Leitura por quadrados: lendo exatamente os 8 quadros marcados...');
         zoneResults = await readEightEfhubCalibrationMacros(activeFile, manualEfhubCalibration, {
           imageHash: precisionImageHash,
+          knownPlayerNames,
           onProgress: (completed, total, label) => {
             const progress = total ? Math.round((completed / total) * 100) : 0;
             const progressStatus = completed >= total
               ? 'Os 8 quadros foram lidos. Conferindo os campos...'
-              : `Quadro ${Math.min(completed + 1, total)}/${total}: ${label}.`;
+              : `Campo calibrado ${Math.min(completed + 1, total)}/${total}: ${label}.`;
             setStatus(`Leitura por quadrados • ${progressStatus}`);
             void updateBackgroundOcrCheckpoint({ stage: 'zones', completedZones: completed, totalZones: total, status: progressStatus });
             void updateBackgroundOcrProtection(progressStatus, Math.min(92, progress));
@@ -2686,13 +2681,15 @@ export function CardVisionApp() {
       void updateBackgroundOcrProtection('Conferindo e finalizando a carta.', 96);
       const forensicConsensus = stabilizeForensicReadings(zoneResults);
       zoneResults = forensicConsensus.readings;
+      const calibratedZoneText = calibratedFastPath ? mergeOcrTexts(...zoneResults.filter((reading) => reading.text.trim()).map((reading) => `${reading.label}
+${reading.text}`)) : fullPassText;
       let session = buildSinglePrintSession({
         imageHash,
         template: geometry.template,
         width: geometry.width,
         height: geometry.height,
         readings: zoneResults,
-        fullText: fullPassText,
+        fullText: calibratedZoneText,
         layoutBounds: geometry.anchorReport.bounds,
         layoutConfidence: geometry.anchorReport.confidence,
         zones: geometry.zones,
@@ -2715,7 +2712,7 @@ export function CardVisionApp() {
           width: geometry.width,
           height: geometry.height,
           readings: zoneResults,
-          fullText: fullPassText,
+          fullText: calibratedZoneText,
           previous,
           layoutBounds: geometry.anchorReport.bounds,
           layoutConfidence: geometry.anchorReport.confidence,
@@ -2732,7 +2729,7 @@ export function CardVisionApp() {
         });
       }
       session = applyStoredOcrCorrections(session, corrections);
-      const visionAudit = buildOcrVisionAudit(session, fullPassText);
+      const visionAudit = buildOcrVisionAudit(session, calibratedZoneText);
       session = {
         ...session,
         blockingFields: [...new Set([...session.blockingFields, ...visionAudit.blockingFields])],
@@ -2788,10 +2785,14 @@ export function CardVisionApp() {
         void clearBackgroundOcrCheckpoint().catch(() => undefined);
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Falha na leitura';
-        void updateBackgroundOcrCheckpoint({ stage: 'failed', status: 'Leitura pausada; será retomada ao voltar.', shouldResume: true, lastError: errorMessage });
+        const hardOcrFailure = /motor OCR|tempo seguro|limite seguro|3 minutos|nao foi possivel recortar|não foi possível recortar/i.test(errorMessage);
         console.error('Falha no Print Único Pro:', error);
-        void recordSafeRuntimeError({ area: 'print-unico-pro', code: 'ocr_failed', message: error instanceof Error ? error.message : 'Falha na leitura' });
-        setStatus('A leitura foi preservada. Toque em continuar ou reabra o app para retomar do ponto seguro.');
+        void recordSafeRuntimeError({ area: 'print-unico-pro', code: hardOcrFailure ? 'ocr_hard_failure' : 'ocr_failed', message: errorMessage });
+        if (hardOcrFailure) {
+          void clearBackgroundOcrCheckpoint().catch(() => undefined); setStatus(`A leitura foi interrompida com segurança: ${errorMessage} Ajuste os quadrados e toque em Ler os quadros novamente.`);
+        } else {
+          void updateBackgroundOcrCheckpoint({ stage: 'failed', status: 'Leitura pausada; será retomada ao voltar.', shouldResume: true, lastError: errorMessage }); setStatus('A leitura foi preservada. Toque em continuar ou reabra o app para retomar do ponto seguro.');
+        }
       }
     } finally {
       unsubscribe();

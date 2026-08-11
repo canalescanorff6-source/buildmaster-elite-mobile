@@ -182,7 +182,7 @@ export function applyCanonicalCardV3890(result: AnalysisResult): AnalysisResult 
   const pointsUsed = trainingPlanTotalCost(training);
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v38.40 — Receita Canônica v38.90 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.00 — Receita Canônica v38.90 — ${result.parsed.playerName}`,
     positionLabel: 'Receita única da carta',
     training,
     pointsUsed,

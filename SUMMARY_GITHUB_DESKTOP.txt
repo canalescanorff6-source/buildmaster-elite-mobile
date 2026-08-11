@@ -1,1 +1,1 @@
-Corrige travamento da leitura de cartas e mantém cancelamento e navegação responsivos na v38.40
+Reconstrói a leitura por quadrados e inicia a linha v40.00 do BuildMaster

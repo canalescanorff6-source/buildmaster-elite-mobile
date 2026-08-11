@@ -17,13 +17,13 @@ export type OcrRecognition = {
   durationMs: number;
 };
 
-type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; version: 2 };
+type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; version: 3 };
 
 type WorkerLike = TesseractNamespace.Worker;
 
 const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const OCR_RECOGNITION_TIMEOUT_MS = 38_000;
-const OCR_WORKER_BOOT_TIMEOUT_MS = 24_000;
+const OCR_WORKER_BOOT_TIMEOUT_MS = 30_000;
 
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
@@ -81,7 +81,7 @@ async function createReusableWorker(): Promise<WorkerLike> {
   // O app trabalha com a interface e os rótulos oficiais em português.
   // Carregar dois idiomas duplicava o custo de inicialização do primeiro OCR
   // no Android. Nomes próprios continuam cobertos pelo alfabeto/whitelist.
-  const worker = await Tesseract.createWorker(['por'], Tesseract.OEM.LSTM_ONLY, {
+  const worker = await Tesseract.createWorker(['por', 'eng'], Tesseract.OEM.LSTM_ONLY, {
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/core',
     langPath: '/tesseract/lang',
@@ -125,6 +125,11 @@ async function getWorker(): Promise<WorkerLike> {
     });
   }
   return workerPromise;
+}
+
+export async function prewarmOcrWorker(): Promise<void> {
+  await getWorker();
+  armIdleWorkerRelease(Math.max(30_000, getRuntimeOptimizationProfile().ocrWorkerIdleMs));
 }
 
 
@@ -237,7 +242,7 @@ async function executeRecognition(
         durationMs: Math.round(performance.now() - started)
       };
       if (options.cacheKey) {
-        const cached: CachedRecognition = { ...recognition, createdAt: new Date().toISOString(), version: 2 };
+        const cached: CachedRecognition = { ...recognition, createdAt: new Date().toISOString(), version: 3 };
         delete (cached as Partial<OcrRecognition>).cached;
         void runtimePut('ocr-cache', options.cacheKey, cached)
           .then(() => runtimeTrimStore('ocr-cache', 180))
@@ -263,7 +268,7 @@ export async function recognizeWithOcrWorker(
   }
 ): Promise<OcrRecognition> {
   const kind = options.kind ?? 'general';
-  const cacheKey = options.cacheKey ? `v2:${options.cacheKey}:${kind}` : null;
+  const cacheKey = options.cacheKey ? `v3:${options.cacheKey}:${kind}` : null;
   if (cacheKey && !options.bypassCache) {
     const cached = await runtimeGet<CachedRecognition>('ocr-cache', cacheKey).catch(() => null);
     if (cached && cacheIsFresh(cached)) {

@@ -9,7 +9,7 @@ import {
 import { clearRecoveryMarkerV3930, clearTransientRuntimeV3930 } from '@/lib/runtimeRecoveryV3930';
 import { activateStartupSafeModeV3840 } from '@/lib/startupResilienceV3840';
 
-const AUTO_RESET_KEY = 'buildmaster:route-auto-reset:v38.40-fail-open';
+const AUTO_RESET_KEY = 'buildmaster:route-auto-reset:v40.00-fail-open';
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {

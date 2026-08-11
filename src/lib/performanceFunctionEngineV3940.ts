@@ -387,7 +387,7 @@ export function applyPerformanceFunctionV3940(result: AnalysisResult): AnalysisR
   const skills = analysis.finalSkills.map((item) => item.name);
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v38.40 — Motor Adaptativo por Carta v39.30 + Função Real v39.40 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.00 — Motor Adaptativo por Carta v39.30 + Função Real v39.40 — ${result.parsed.playerName}`,
     positionLabel: `${analysis.selectedPositionLabel} • ${analysis.roleLabel}`,
     training,
     pointsUsed,

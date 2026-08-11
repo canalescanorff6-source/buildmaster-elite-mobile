@@ -13,7 +13,7 @@ const cache = read('src/components/RegisterServiceWorker.tsx');
 
 assert.ok(Number(pkg.version.split('.')[0]) >= 37, `A Revolução Premium deve permanecer ativa na versão atual: ${pkg.version}`);
 assert.match(pkg.name, /v37-00-inteligencia-profissional/);
-assert.match(manifest.name, /v(?:37\.00|38\.(?:3[2-9]|40))/);
+assert.match(manifest.name, /v(?:37\.00|38\.(?:3[2-9]|40)|40\.00)/);
 assert.equal(manifest.theme_color, '#050a12');
 assert.ok(layout.lastIndexOf("import './v36-premium-revolution.css'") > layout.lastIndexOf("import './v35-solid-premium.css'"), 'A Revolução Premium precisa ser a última camada visual.');
 assert.match(layout, /bm-v3600-revolution/);
@@ -30,7 +30,7 @@ for (const marker of [
 ]) assert.ok(css.includes(marker), `Design System v36 incompleto: ${marker}`);
 
 assert.match(navigation, /bm-v36-mobile-dock/);
-assert.match(navigation, /Professional Suite · v(?:37\.00|38\.(?:3[2-9]|40))/);
+assert.match(navigation, /Professional Suite · v(?:37\.00|38\.(?:3[2-9]|40)|40\.00)/);
 assert.match(navigation, /className="create"/);
 assert.match(navigation, /bm-v36-trigger-label/);
 assert.match(home, /Desempenho real\. Sem perseguir overall\./);
