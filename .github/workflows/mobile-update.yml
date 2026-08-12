@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: buildmaster-mobile-update
@@ -16,10 +17,10 @@ concurrency:
 
 jobs:
   apply-mobile-update:
-    name: Validar pacote e aplicar na main
+    name: Validar pacote, aplicar na main e iniciar APK
     if: github.ref == 'refs/heads/mobile-inbox'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Baixar caixa de entrada mobile
@@ -37,7 +38,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validar e extrair atualização
+      - name: Validar pacote e preparar atualização
         id: package
         shell: bash
         run: |
@@ -52,59 +53,119 @@ jobs:
           if not archive.is_file():
               raise SystemExit('mobile-update.zip não foi encontrado na branch mobile-inbox.')
 
-          blocked_roots = {
-              '.git', 'node_modules', '.next', 'out'
-          }
+          if archive.stat().st_size > 25 * 1024 * 1024:
+              raise SystemExit('Pacote mobile excede 25 MiB. Use o pacote completo pelo PC.')
+
+          blocked_roots = {'.git', 'node_modules', '.next', 'out'}
+          allowed_meta = {'.mobile-update.json'}
 
           with zipfile.ZipFile(archive) as z:
-              names = z.namelist()
+              infos = z.infolist()
+              names = [item.filename for item in infos if not item.is_dir()]
+
               if '.mobile-update.json' not in names:
                   raise SystemExit('Pacote inválido: .mobile-update.json ausente.')
+
+              if sum(item.file_size for item in infos) > 120 * 1024 * 1024:
+                  raise SystemExit('Pacote rejeitado: tamanho descompactado acima do limite seguro.')
+
               meta = json.loads(z.read('.mobile-update.json').decode('utf-8'))
 
-              if meta.get('schema') != 1 or meta.get('project') != 'buildmaster-elite-mobile':
-                  raise SystemExit('Pacote não pertence ao BuildMaster ou usa schema incompatível.')
+              if meta.get('schema') not in (1, 2):
+                  raise SystemExit('Schema de atualização mobile incompatível.')
+              if meta.get('project') != 'buildmaster-elite-mobile':
+                  raise SystemExit('Pacote não pertence ao BuildMaster Elite Mobile.')
 
               base = str(meta.get('baseCommit') or '').strip()
               if base:
-                  subprocess.run(
+                  proc = subprocess.run(
                       ['git', '-C', str(repo), 'merge-base', '--is-ancestor', base, 'HEAD'],
-                      check=True,
                       stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL,
                   )
+                  if proc.returncode != 0:
+                      raise SystemExit(
+                          'A main mudou de forma incompatível desde a criação deste pacote. '
+                          'Peça um novo mobile-update.zip.'
+                      )
 
               manifest = meta.get('files')
               if not isinstance(manifest, list) or not manifest:
                   raise SystemExit('Pacote sem lista de arquivos.')
 
+              deletes = meta.get('delete', [])
+              if deletes is None:
+                  deletes = []
+              if not isinstance(deletes, list):
+                  raise SystemExit('Campo delete inválido.')
+
               expected = {}
+              casefolded = set()
+
+              def validate_path(path, action):
+                  pp = PurePosixPath(path)
+                  if not path or pp.is_absolute() or '..' in pp.parts or not pp.parts:
+                      raise SystemExit(f'Caminho inseguro para {action}: {path}')
+                  if pp.parts[0] in blocked_roots:
+                      raise SystemExit(f'Caminho bloqueado para {action}: {path}')
+                  if len(pp.parts) >= 2 and pp.parts[0] == '.github' and pp.parts[1] == 'workflows':
+                      raise SystemExit('Pacotes mobile não podem alterar workflows do GitHub.')
+                  return pp
+
               for item in manifest:
-                  path = str(item.get('path') or '')
-                  digest = str(item.get('sha256') or '').lower()
-                  if not path or len(digest) != 64:
-                      raise SystemExit('Manifesto de arquivo inválido.')
+                  if not isinstance(item, dict):
+                      raise SystemExit('Entrada inválida no manifesto.')
+                  path = str(item.get('path') or '').replace('\\', '/').strip('/')
+                  digest = str(item.get('sha256') or '').lower().strip()
+                  validate_path(path, 'atualização')
+                  if len(digest) != 64:
+                      raise SystemExit(f'SHA-256 inválido no manifesto: {path}')
+                  key = path.casefold()
+                  if key in casefolded:
+                      raise SystemExit(f'Caminho duplicado/conflitante: {path}')
+                  casefolded.add(key)
                   expected[path] = digest
+
+              safe_deletes = []
+              for raw in deletes:
+                  path = str(raw or '').replace('\\', '/').strip('/')
+                  validate_path(path, 'exclusão')
+                  if path in expected:
+                      raise SystemExit(f'O mesmo caminho não pode ser atualizado e excluído: {path}')
+                  safe_deletes.append(path)
+
+              package_files = set(names) - allowed_meta
+              expected_files = set(expected)
+              extras = package_files - expected_files
+              missing = expected_files - package_files
+              if extras:
+                  raise SystemExit('Arquivos não declarados no ZIP: ' + ', '.join(sorted(extras)[:10]))
+              if missing:
+                  raise SystemExit('Arquivos declarados ausentes no ZIP: ' + ', '.join(sorted(missing)[:10]))
+
+              if base:
+                  changed_since_base = subprocess.check_output(
+                      ['git', '-C', str(repo), 'diff', '--name-only', f'{base}..HEAD'],
+                      text=True
+                  ).splitlines()
+                  touched = set(expected) | set(safe_deletes)
+                  conflicts = sorted({p.strip() for p in changed_since_base if p.strip()} & touched)
+                  if conflicts:
+                      raise SystemExit(
+                          'A main mudou nos mesmos arquivos desde a criação do pacote: '
+                          + ', '.join(conflicts[:12])
+                          + '. Gere um novo mobile-update.zip.'
+                      )
 
               if staging.exists():
                   shutil.rmtree(staging)
               staging.mkdir(parents=True)
 
               for path, digest in expected.items():
-                  pp = PurePosixPath(path)
-                  if pp.is_absolute() or '..' in pp.parts or not pp.parts:
-                      raise SystemExit(f'Caminho inseguro no pacote: {path}')
-                  if pp.parts[0] in blocked_roots:
-                      raise SystemExit(f'Caminho bloqueado no pacote: {path}')
-                  if len(pp.parts) >= 2 and pp.parts[0] == '.github' and pp.parts[1] == 'workflows':
-                      raise SystemExit('Atualizações mobile não podem alterar workflows do GitHub.')
-                  if path not in names:
-                      raise SystemExit(f'Arquivo listado não existe no ZIP: {path}')
                   data = z.read(path)
-                  actual = hashlib.sha256(data).hexdigest()
-                  if actual != digest:
+                  if hashlib.sha256(data).hexdigest() != digest:
                       raise SystemExit(f'SHA-256 inválido: {path}')
-                  target = staging.joinpath(*pp.parts)
+                  target = staging.joinpath(*PurePosixPath(path).parts)
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(data)
 
@@ -116,34 +177,122 @@ jobs:
               target.parent.mkdir(parents=True, exist_ok=True)
               shutil.copy2(source, target)
 
+          for path in safe_deletes:
+              target = repo.joinpath(*PurePosixPath(path).parts)
+              if target.exists():
+                  if target.is_dir():
+                      raise SystemExit(f'Exclusão de diretório não é permitida no modo mobile: {path}')
+                  target.unlink()
+
           message = str(meta.get('commitMessage') or 'Aplica atualização mobile do BuildMaster').strip()
           message = message.splitlines()[0][:120] or 'Aplica atualização mobile do BuildMaster'
+
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f'commit_message={message}\n')
               fh.write(f'file_count={len(expected)}\n')
+              fh.write(f'delete_count={len(safe_deletes)}\n')
           PY
 
       - name: Conferir alterações
+        id: changes
         working-directory: repo
+        shell: bash
         run: |
           git diff --check
           git status --short
-          test -n "$(git status --porcelain)" || { echo '::error::O pacote não alterou nenhum arquivo.'; exit 1; }
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "Pacote já está aplicado na main; será apenas disparada a geração do APK."
+          fi
 
       - name: Criar commit e enviar para main
+        id: commit
         working-directory: repo
+        shell: bash
         env:
           COMMIT_MESSAGE: ${{ steps.package.outputs.commit_message }}
+          HAS_CHANGES: ${{ steps.changes.outputs.has_changes }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m "$COMMIT_MESSAGE"
-          git push origin HEAD:main
+
+          if [ "$HAS_CHANGES" = "true" ]; then
+            git add -A
+            git commit -m "$COMMIT_MESSAGE"
+            NEW_SHA="$(git rev-parse HEAD)"
+            git push origin HEAD:main
+          else
+            NEW_SHA="$(git rev-parse HEAD)"
+          fi
+
+          echo "sha=$NEW_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Iniciar geração do APK explicitamente
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          python - <<'PY'
+          import json, os
+          payload = {
+              "ref": "main",
+              "inputs": {
+                  "channel": "stable",
+                  "rollout_percentage": "100",
+                  "mandatory": "false",
+                  "paused": "false",
+                  "source_ref": os.environ["NEW_SHA"],
+              },
+          }
+          with open('/tmp/build-apk-dispatch.json', 'w', encoding='utf-8') as fh:
+              json.dump(payload, fh)
+          PY
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/build-apk.yml/dispatches" \
+            --data-binary @/tmp/build-apk-dispatch.json
+
+      - name: Confirmar início do APK
+        id: apk
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          for attempt in $(seq 1 18); do
+            RESPONSE="$(curl --fail --silent --show-error \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/build-apk.yml/runs?branch=main&event=workflow_dispatch&head_sha=${NEW_SHA}&per_page=5")"
+
+            FOUND="$(printf '%s' "$RESPONSE" | python -c \
+              "import json,sys; d=json.load(sys.stdin); r=d.get('workflow_runs') or []; print(r[0]['html_url'] if r else '')")"
+
+            if [ -n "$FOUND" ]; then
+              echo "url=$FOUND" >> "$GITHUB_OUTPUT"
+              echo "Workflow do APK confirmado: $FOUND"
+              exit 0
+            fi
+
+            sleep 5
+          done
+
+          echo '::error::A atualização foi aplicada, mas não foi possível confirmar o início do APK.'
+          exit 1
 
       - name: Resumo
         run: |
-          echo "### Atualização mobile aplicada" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Arquivos: ${{ steps.package.outputs.file_count }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Commit: ${{ steps.package.outputs.commit_message }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Destino: main" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Atualização mobile concluída" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Arquivos atualizados: ${{ steps.package.outputs.file_count }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Arquivos removidos: ${{ steps.package.outputs.delete_count }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit/Summary: ${{ steps.package.outputs.commit_message }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SHA usado no APK: ${{ steps.commit.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workflow APK: ${{ steps.apk.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
