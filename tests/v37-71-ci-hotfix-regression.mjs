@@ -14,7 +14,7 @@ assert.doesNotMatch(workspace, /\bUploadCloud\b/, 'Import não utilizado não po
 // A v37.71 protege a existência do contrato de cache sem duplicar a lista de
 // versões aceita pela regressão v33. Essa lista pertence à própria v33 e é
 // validada quando o grupo v33.00 roda no diagnóstico consolidado.
-assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:(?:37|38)\.\d+\.0|40\.(?:00|10|20)\.0)-[^']+-1'/,
+assert.match(cache, /NATIVE_CACHE_SCHEMA = '(?:(?:37|38)\.\d+\.0|40\.(?:00|10|20|30|40|50|60|70)\.0)-[^']+-1'/,
   'O esquema nativo atual precisa manter o formato versionado reconhecido pelo atualizador.');
 assert.match(v33, /assert\.match\(cache, \/NATIVE_CACHE_SCHEMA/,
   'A regressão v33 precisa continuar validando o esquema nativo atual.');

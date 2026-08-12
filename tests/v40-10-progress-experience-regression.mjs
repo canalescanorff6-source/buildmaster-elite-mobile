@@ -54,9 +54,11 @@ assert.ok(readerSource.includes('onFile'));
 assert.ok(app.split('\n').length <= 4200, 'CardVisionApp não pode ultrapassar o orçamento estrutural após a barra de progresso.');
 assert.ok(app.includes('setReaderProgress'));
 assert.ok(app.includes('reportReaderProgress'));
-for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Preparando revisão', 'Leitura concluída']) {
+for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Gerando ficha', 'Ficha gerada']) {
   assert.ok(app.includes(label), `Pipeline visual da leitura sem etapa ${label}`);
 }
+assert.ok(app.includes('Leitura concluída sem etapa obrigatória de confirmação.'));
+assert.ok(app.includes('Sem confirmação obrigatória'));
 assert.ok(css.includes('.v4020-progress-track'));
 assert.ok(css.includes('.v4020-global-update-progress'));
 assert.ok(css.includes('.v4020-reader-progress'));

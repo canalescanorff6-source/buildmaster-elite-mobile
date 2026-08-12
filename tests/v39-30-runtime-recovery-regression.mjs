@@ -28,7 +28,7 @@ assert.match(errorPage, /Cofre e os jogadores salvos não serão apagados/);
 assert.match(globalError, /clearTransientRuntimeV3930/);
 assert.match(globalError, /jogadores e backups permanecem salvos/);
 assert.match(panel, /safeArray/);
-assert.match(panel, /Motor Adaptativo por Carta v39\.30/);
+assert.match(panel, /(?:Motor Adaptativo por Carta v39\.30|Precisão Competitiva 99)/);
 assert.match(safeStorage, /hasCompatibleJsonShape/);
 assert.match(safeStorage, /Array\.isArray\(fallback\)/);
 assert.match(safeStorage, /Formato JSON incompatível/);

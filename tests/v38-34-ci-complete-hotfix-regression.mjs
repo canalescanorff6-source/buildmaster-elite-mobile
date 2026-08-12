@@ -11,7 +11,7 @@ const doctor = read('scripts/ci-doctor.mjs');
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.ok(/^(?:38\.(?:34|35|36|37|38|39|40)\.0|40\.(?:00|10|20)\.0)$/.test(pkg.version), `Versão compatível esperada: ${pkg.version}`);
+assert.ok(/^(?:38\.(?:34|35|36|37|38|39|40)\.0|40\.(?:00|10|20|30|40|50|60|70)\.0)$/.test(pkg.version), `Versão compatível esperada: ${pkg.version}`);
 assert.ok(String(pkg.scripts['test:all']).includes('npm run test:v3834'));
 assert.equal(pkg.scripts['test:v3834'], 'node tests/v38-34-ci-complete-hotfix-regression.mjs');
 

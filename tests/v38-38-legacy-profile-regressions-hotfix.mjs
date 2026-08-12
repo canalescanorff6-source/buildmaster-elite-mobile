@@ -14,7 +14,7 @@ assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.70.0-pro
 
 const v3500 = read('tests/v35-00-official-additional-skills-meta-regression.ts');
 assert.ok(
-  v3500.includes('Automática v38\\.(?:37|38|39|40)') || v3500.includes('Automática v(?:38\\.(?:37|38|39|40)|40\\.(?:00|10|20))'),
+  v3500.includes('Automática v38\\.(?:37|38|39|40)') || v3500.includes('Automática v(?:38\\.(?:37|38|39|40)|40\\.(?:00|10|20|30|40|50|60|70))'),
   'A regressão v35.00 precisa aceitar a calibração automática atual, incluindo a linha v40.30.'
 );
 assert.ok(v3500.includes('Perfil da carta'), 'A regressão v35.00 precisa validar o novo rótulo automático.');

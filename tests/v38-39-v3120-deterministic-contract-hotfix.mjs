@@ -9,7 +9,7 @@ const pkg = JSON.parse(read('package.json'));
 const premiumTest = read('tests/v31-20-premium-interface-regression.mjs');
 const tacticalTest = read('tests/v31-20-tactical-context-restored-regression.mjs');
 
-assert.match(pkg.version, /^(?:38\.(?:39|40)\.0|40\.(?:00|10|20)\.0)$/);
+assert.match(pkg.version, /^(?:38\.(?:39|40)\.0|40\.(?:00|10|20|30|40|50|60|70)\.0)$/);
 assert.ok(pkg.scripts['test:v3120'], 'O script test:v3120 precisa existir.');
 assert.doesNotMatch(
   pkg.scripts['test:v3120'],

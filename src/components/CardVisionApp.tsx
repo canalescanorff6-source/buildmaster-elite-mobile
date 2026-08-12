@@ -3526,7 +3526,7 @@ ${reading.text}`)) : fullPassText;
               <div>
                 <p className="kicker">Nova ficha</p>
                 <h1>{mainSection === 'leitor' ? 'Ficha por imagem' : 'Ficha manual'}</h1>
-                <p>{mainSection === 'leitor' ? 'Selecione o print e confirme os dados.' : 'Digite os dados principais.'}</p>
+                <p>{mainSection === 'leitor' ? 'Selecione o print; a leitura confiável será aplicada automaticamente.' : 'Digite os dados principais.'}</p>
               </div>
             </div>
             <div className="bm-creation-methods" role="tablist" aria-label="Escolher forma de criar a ficha">
@@ -4169,7 +4169,7 @@ ${reading.text}`)) : fullPassText;
               <div className="creation-blueprint-copy">
                 <p className="kicker"><Wand2 size={14} /> Prévia da construção</p>
                 <h2>{mainSection === 'leitor' ? (preview ? 'Carta pronta para entrar no motor' : 'Seu build começa com um bom print') : 'Entrada manual sob seu controle'}</h2>
-                <p>{mainSection === 'leitor' ? 'Acompanhe aqui o destino da ficha antes da auditoria. O resultado final só aparece depois da confirmação.' : 'Os dados informados serão reunidos aqui antes da ficha final.'}</p>
+                <p>{mainSection === 'leitor' ? 'Acompanhe aqui o destino da ficha. A revisão é opcional e não bloqueia o resultado automático.' : 'Os dados informados serão reunidos aqui antes da ficha final.'}</p>
                 <div className="creation-blueprint-grid">
                   <article><span>Objetivo</span><strong>{creationObjectiveLabel}</strong></article>
                   <article><span>Posição-alvo</span><strong>{creationTargetLabel}</strong></article>
@@ -4181,7 +4181,7 @@ ${reading.text}`)) : fullPassText;
                 <div className="creation-blueprint-readiness">
                   <div><span>Prontidão para auditoria</span><strong>{creationReadinessPercent}%</strong></div>
                   <i><b style={{ width: `${creationReadinessPercent}%` }} /></i>
-                  <small>{creationReadinessCount >= 3 ? 'Base suficiente para gerar a prévia. Os dados restantes serão confirmados.' : 'Complete a entrada e as escolhas essenciais para avançar.'}</small>
+                  <small>{creationReadinessCount >= 3 ? 'Base suficiente para gerar a prévia. Os dados restantes serão confirmados.' : 'Complete a entrada essencial; os demais campos podem permanecer automáticos.'}</small>
                 </div>
               </div>
             </section>

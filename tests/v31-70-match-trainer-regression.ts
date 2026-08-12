@@ -56,7 +56,7 @@ assert.ok(summary.priorities.some((item) => item.includes('passes verticais')));
 assert.ok(summary.matchRules.some((item) => item.includes('volante')));
 
 const report = exportMatchTrainerReport(session);
-assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v(?:38\.(?:39|40)|40\.(?:00|10|20))/);
+assert.match(report, /ANÁLISE DE VÍDEO INTELIGENTE 2\.0 v(?:38\.(?:39|40)|40\.(?:00|10|20|30|40|50|60|70))/);
 assert.match(report, /00:42 — Perda de bola perigosa/);
 assert.match(report, /Sinais automáticos precisam de revisão/);
 assert.match(report, /4-1-2-2-1/);

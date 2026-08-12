@@ -204,7 +204,7 @@ const creationEnd = appSource.indexOf('creation-action-dock', creationStart);
 const creationBlock = appSource.slice(creationStart, creationEnd);
 assert.ok(creationStart >= 0 && creationEnd > creationStart, 'O bloco de contexto da ficha precisa existir.');
 assert.doesNotMatch(creationBlock, /Sistema tático/, 'A criação da ficha não deve exigir seleção de formação.');
-assert.match(calibrationCardSource, /Calibração (?:Máxima v35\.(?:10|20)|Automática v(?:38\.(?:37|38|39|40)|40\.(?:00|10|20)))/);
+assert.match(calibrationCardSource, /Calibração (?:Máxima v35\.(?:10|20)|Automática v(?:38\.(?:37|38|39|40)|40\.(?:00|10|20|30|40|50|60|70)))/);
 assert.match(calibrationCardSource, /Estilo técnico/);
 assert.match(calibrationCardSource, /Perfil da carta/);
 assert.doesNotMatch(calibrationCardSource, />Equilibrado<|>Passe e tabelas<|>Drible e condução<|>Vertical e direto</);

@@ -392,7 +392,7 @@ export function applyMaximumPerformanceV4040(result: AnalysisResult): AnalysisRe
     buildVariants: variants,
     buildName: applied ? `Ficha Automática v40.40 — Precisão Competitiva 99 — ${result.parsed.playerName}` : result.buildName,
     recommendedSkills: applied && analysis.skillPlan.finalSkills.length ? analysis.skillPlan.finalSkills : result.recommendedSkills,
-    recommendationExplanation: [analysis.summary, ...analysis.reasons, ...analysis.confidence.reasons, ...result.recommendationExplanation]
+    recommendationExplanation: [analysis.summary, 'Desempenho real priorizado sem usar overall/GER como objetivo da distribuição.', ...analysis.reasons, ...analysis.confidence.reasons, ...result.recommendationExplanation]
       .filter((item, index, all) => all.indexOf(item) === index).slice(0, 28),
     strengths: [
       'O motor agora compara uma fronteira de Pareto em vez de escolher apenas pelo maior score único.',

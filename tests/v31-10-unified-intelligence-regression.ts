@@ -128,7 +128,7 @@ for (const scenario of results) {
     assert.ok(Array.isArray(result.unifiedIntelligence?.learning.testedPlans), 'Os planos testados precisam permanecer registrados.');
     assert.ok(result.trainingPointsUsed <= result.trainingPointsTotal, 'A ficha não pode ultrapassar o orçamento de pontos.');
     assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 5, 'O motor pode produzir de uma a cinco fichas alternativas.');
-    assert.match(result.buildName, /(?:Inteligência v31|Ficha Elite Suprema|Ficha v32|Ficha v35|Ficha Automática v(?:38\.(?:37|38|39|40)|40\.(?:00|10|20)))/);
+    assert.match(result.buildName, /(?:Inteligência v31|Ficha Elite Suprema|Ficha v32|Ficha v35|Ficha Automática v(?:38\.(?:37|38|39|40)|40\.(?:00|10|20|30|40|50|60|70)))/);
   } catch (error) {
     console.error(`\n[v31.00] Cenário que falhou: ${scenario.id}`);
     console.error(`[v31.00] engineVersion: ${result.unifiedIntelligence?.engineVersion ?? 'ausente'}`);

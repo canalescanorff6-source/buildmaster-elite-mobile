@@ -114,7 +114,7 @@ assert.match(panel, /Validação Real v37\.60/);
 assert.match(panel, /Laboratório A\/B/);
 assert.match(panel, /Métricas por posição/);
 assert.match(panel, /Aprendizado da conta/);
-assert.match(center, /Opção do laboratório A\/B/);
+assert.match(center, /(?:Opção do laboratório A\/B|Ficha em teste \(v40\.60\))/);
 assert.match(center, /Estilo de controle/);
 assert.match(center, /Delay percebido/);
 assert.match(center, /positionMetricFields/);
