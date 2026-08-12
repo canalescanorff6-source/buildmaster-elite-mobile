@@ -60,12 +60,16 @@ export function UnifiedPerformanceV3920Panel({
   if (!unified) return null;
   const adaptive = result.adaptivePositionV3930;
   const functional = result.performanceFunctionV3940;
+  const adaptiveMaximum = result.adaptiveMaximumV4030;
+  const precision4040 = result.maximumPerformanceV4040;
+  const validatedGameplay = result.gameplayValidationMemoryV4050;
+  const longitudinalGameplay = result.longitudinalGameplayMemoryV4060;
   const positionFit = unified.positionFit;
   const identity = unified.identity;
   const status = adaptive?.status ?? unified.resourceSafety.status;
   const statusLabel = adaptive?.statusLabel ?? unified.resourceSafety.label;
   const statusClassName = statusClass(status);
-  const appliedTraining = functional?.finalTraining ?? adaptive?.adaptedTraining ?? unified.canonicalTraining ?? result.training;
+  const appliedTraining = longitudinalGameplay?.applied ? result.training : precision4040 && result.objective === 'COMPETITIVE' ? precision4040.finalTraining : adaptiveMaximum?.objectiveMode === 'ADAPTATIVO' ? adaptiveMaximum.finalTraining : functional?.finalTraining ?? adaptive?.adaptedTraining ?? unified.canonicalTraining ?? result.training;
   const appliedSkills = safeArray(functional?.finalSkills).length
     ? safeArray(functional?.finalSkills)
     : safeArray(adaptive?.finalSkills).length
@@ -98,10 +102,10 @@ export function UnifiedPerformanceV3920Panel({
   return <article className="luxury-panel wide-card unified-performance-v3920">
     <header className="unified-v3920-head">
       <div>
-        <p className="kicker"><BrainCircuit size={15} /> Ficha Suprema • Função Real v39.40</p>
-        <h3>Uma carta, uma função real e uma ficha que executa o papel escolhido</h3>
-        <p>{functional?.summary ?? adaptive?.summary ?? unified.summary}</p>
-        <small>Base determinística preservada: Motor Adaptativo por Carta v39.30.</small>
+        <p className="kicker"><BrainCircuit size={15} /> Aprendizado Competitivo por Carta • v40.60</p>
+        <h3>DNA + Pareto + gameplay real + estabilidade em várias sessões</h3>
+        <p>{longitudinalGameplay?.applied ? `${result.parsed.playerName}: ${longitudinalGameplay.winnerLabel} foi confirmada em ${longitudinalGameplay.sessions} sessões com confiança ${Math.round(longitudinalGameplay.confidenceScore)}/100.` : longitudinalGameplay?.provisionalV4050Blocked ? `${result.parsed.playerName}: a v40.60 encontrou um vencedor provisório, mas a v40.60 manteve a ficha Pareto até existir repetição longitudinal.` : precision4040?.summary ?? adaptiveMaximum?.summary ?? functional?.summary ?? adaptive?.summary ?? unified.summary}</p>
+        <small>Motor determinístico: compara centenas de distribuições com orçamento idêntico, mantém o DNA e não usa GER como alvo. Versões futuras do eFootball não recebem pesos antes de validação.</small>
       </div>
       <span className={`unified-v3920-safety ${statusClassName}`}>
         {statusClassName === 'safe' ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
@@ -156,6 +160,23 @@ export function UnifiedPerformanceV3920Panel({
           <span><b>{Math.round(functional.stabilityScore)}</b><small>estabilidade</small></span>
           <span><b>{functional.useLevel}</b><small>nível de uso</small></span>
         </div>}
+        {precision4040 && <div className="unified-v3920-metrics">
+          <span><b>{Math.round(precision4040.contextScores.ranked)}</b><small>ranqueada</small></span>
+          <span><b>{Math.round(precision4040.responseScore)}</b><small>resposta funcional</small></span>
+          <span><b>{Math.round(precision4040.confidence.score)}</b><small>confiança {precision4040.confidence.level.toLowerCase()}</small></span>
+        </div>}
+        {precision4040 && <div className="chip-cloud">
+          <span>{precision4040.candidatesEvaluated} candidatas</span>
+          <span>{precision4040.paretoCandidates} Pareto</span>
+          <span>DNA {Math.round(precision4040.dnaPreservation)}</span>
+          <span>Eficiência {Math.round(precision4040.efficiencyScore)}</span>
+        </div>}
+        {adaptiveMaximum && <div className="unified-v3920-metrics">
+          <span><b>{Math.round(adaptiveMaximum.contextScores.ranked)}</b><small>robustez ranqueada</small></span>
+          <span><b>{Math.round(adaptiveMaximum.contextScores.events)}</b><small>eventos</small></span>
+          <span><b>{Math.round(adaptiveMaximum.contextScores.friends)}</b><small>contra amigos</small></span>
+        </div>}
+        {adaptiveMaximum && <div className="chip-cloud">{adaptiveMaximum.profiles.map((profile) => <span key={profile.id}>{profile.rank}. {profile.label} · {Math.round(profile.score)}</span>)}</div>}
         {(functional?.changes.length ?? adaptive?.changes.length) ? <div className="unified-v3920-alerts">{(functional?.changes ?? adaptive?.changes ?? []).map((change) => <span key={change.key}>{change.label}: {change.from} → {change.to}</span>)}</div> : null}
         {conflicts.length > 0 && <details><summary>Ver comportamento tático</summary><div className="unified-v3920-alerts">{conflicts.slice(0, 3).map((item) => <span key={item}>{item}</span>)}</div></details>}
       </article>
@@ -167,15 +188,20 @@ export function UnifiedPerformanceV3920Panel({
         </div>
         <p><LockKeyhole size={14} /> {functional?.roleSignature ?? adaptive?.positionSignature ?? unified.lockSignature}</p>
         {unified.recipeMemory?.note && <small className={`unified-v3920-memory ${String(unified.recipeMemory.status ?? 'NOVA').toLowerCase()}`}>{unified.recipeMemory.note}</small>}
+        {longitudinalGameplay?.applied && <details open><summary>Ver aprendizado longitudinal v40.60</summary><p>{longitudinalGameplay.winnerLabel} foi promovida somente depois de repetir vantagem em várias sessões. A memória continua válida apenas enquanto a mesma alternativa e distribuição existirem no Pareto atual.</p><small>{longitudinalGameplay.sessions} sessões • {longitudinalGameplay.pairedSessions} pareadas • confiança {Math.round(longitudinalGameplay.confidenceScore)}/100 • verificada em {longitudinalGameplay.verifiedAt ? new Date(longitudinalGameplay.verifiedAt).toLocaleDateString('pt-BR') : '—'}</small></details>}
+        {validatedGameplay?.applied && !longitudinalGameplay?.applied && <details><summary>Ver evidência provisória v40.60</summary><p>{validatedGameplay.winnerLabel} venceu o A/B da v40.60, mas a v40.60 ainda exige repetição em sessões distintas antes de aplicar essa memória como ficha permanente.</p></details>}
+        {precision4040 && <details><summary>Ver decisão da Precisão Competitiva 99</summary><p>{precision4040.reasons.join(' ')}</p><small>{precision4040.candidatesEvaluated} candidatas • {precision4040.paretoCandidates} na fronteira de Pareto • orçamento exato: {precision4040.exactBudget ? 'sim' : 'revisar'} • confiança {Math.round(precision4040.confidence.score)}/100 • meta base v{precision4040.metaRuntime.stableVersion}</small><div className="chip-cloud">{precision4040.alternatives.map((item) => <span key={item.id}>{item.label} · {Math.round(item.score)}</span>)}</div></details>}
+        {adaptiveMaximum && <details><summary>Ver decisão do Desempenho Máximo</summary><p>{adaptiveMaximum.reasons.join(' ')}</p><small>{adaptiveMaximum.candidatesEvaluated} candidatas • robustez média {Math.round(adaptiveMaximum.contextScores.average)}/100 • orçamento exato: {adaptiveMaximum.exactBudget ? 'sim' : 'revisar'} • meta base v{adaptiveMaximum.metaRuntime.stableVersion}</small></details>}
         {functional && <details><summary>Ver decisão da função real</summary><p>{functional.recommendedUse}</p><small>{functional.candidateCount} candidatas • resposta {Math.round(functional.responseScoreAfter)}/100 • orçamento exato: {functional.exactBudget ? 'sim' : 'revisar'}</small></details>}
         {!functional && adaptive && <details><summary>Ver núcleo fixo da carta</summary><p>Assinatura: {adaptive.coreSignature}</p><small>Preservação {Math.round(adaptive.corePreservation)}% • orçamento exato: {adaptive.exactBudget ? 'sim' : 'revisar'}</small></details>}
       </article>
 
       <article>
-        <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>Habilidades adicionais</strong><small>Três de identidade + até duas da posição</small></span></div>
+        <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>Habilidades adicionais</strong><small>Top 5 complementar, sem duplicar habilidades já possuídas</small></span></div>
         <div className="unified-v3920-skill-list">
           {displayedSkills.map((skill, index) => <button type="button" key={skill} className={skillProgress?.[skill] ? 'done' : ''} onClick={() => onSkillToggle?.(skill)}><b>{index + 1}</b><span><strong>{skill}</strong><small>{appliedSkills.find((item) => item.name === skill)?.gameplayImpact ?? 'Complementa a carta sem copiar um molde genérico.'}</small></span><em>{skillProgress?.[skill] ? '✓' : '○'}</em></button>)}
         </div>
+        {precision4040 && <small>{precision4040.skillPlan.slotsFilled}/5 slots preenchidos • {precision4040.skillPlan.duplicatesBlocked} duplicações bloqueadas • nomes somente do catálogo reconhecido pelo app.</small>}
       </article>
 
       <article className={`unified-v3920-impeto ${statusClassName}`}>

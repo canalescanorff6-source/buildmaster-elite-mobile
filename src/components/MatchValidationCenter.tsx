@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Activity, CheckCircle2, History, Save, Target, Trash2 } from 'lucide-react';
 import { RealValidationV3760Panel } from '@/components/RealValidationV3760Panel';
+import { RealGameplayValidationV4050Panel } from '@/components/RealGameplayValidationV4050Panel';
+import { LongitudinalGameplayV4060Panel } from '@/components/LongitudinalGameplayV4060Panel';
 import type { AnalysisResult } from '@/lib/analyzer';
 import {
   MATCH_PROBLEM_TAGS,
@@ -19,6 +21,8 @@ import {
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { buildMatchEvidenceLoop } from '@/lib/professionalIntelligenceV37';
 import { buildRealValidationV3760, REAL_VALIDATION_PROFILE_STORAGE_KEY, type ControlStyleV3760 } from '@/lib/realValidationV3760';
+import { buildRealGameplayValidationV4050, persistVerifiedGameplayWinnerV4050 } from '@/lib/realGameplayValidationV4050';
+import { buildLongitudinalGameplayV4060, persistLongitudinalWinnerV4060 } from '@/lib/longitudinalGameplayLearningV4060';
 
 const RATING_OPTIONS: MatchValidationRating[] = [1, 2, 3, 4, 5];
 
@@ -90,7 +94,19 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   const summary = useMemo(() => summarizeMatchValidation(currentRecords), [currentRecords]);
   const evidenceLoop = useMemo(() => buildMatchEvidenceLoop(result, records), [result, records]);
   const realValidation = useMemo(() => buildRealValidationV3760(result, records), [result, records]);
-  const testedOptions = useMemo(() => realValidation.experiment.arms.map((arm) => ({ key: `${arm.buildId}::${arm.boosterName}`, arm: arm.arm, buildId: arm.buildId, buildTitle: arm.buildTitle, boosterName: arm.boosterName })), [realValidation.experiment.arms]);
+  const gameplayValidation = useMemo(() => buildRealGameplayValidationV4050(result, records), [result, records]);
+  const longitudinalValidation = useMemo(() => buildLongitudinalGameplayV4060(result, records), [result, records]);
+  const testedOptions = useMemo(() => {
+    const boosterName = result.recommendedImpetos[0]?.name || 'Sem Booster confirmado';
+    if (gameplayValidation.arms.length > 1) return [...gameplayValidation.arms].sort((a, b) => a.rank - b.rank).map((candidate) => ({
+      key: `${candidate.id}::${boosterName}`,
+      arm: candidate.rank === 1 ? 'A' as const : candidate.rank === 2 ? 'B' as const : 'NONE' as const,
+      buildId: candidate.id,
+      buildTitle: candidate.label,
+      boosterName
+    }));
+    return realValidation.experiment.arms.map((arm) => ({ key: `${arm.buildId}::${arm.boosterName}`, arm: arm.arm, buildId: arm.buildId, buildTitle: arm.buildTitle, boosterName: arm.boosterName }));
+  }, [gameplayValidation.arms, realValidation.experiment.arms, result.recommendedImpetos]);
   const effectiveTestedOptionKey = testedOptionKey || testedOptions[0]?.key || '';
   const positionMetricFields = useMemo<Array<{ key: keyof MatchPerformanceMetrics; label: string }>>(() => {
     const position = result.bestPosition.code;
@@ -106,7 +122,11 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
     writeAccountStorage(MATCH_VALIDATION_STORAGE_KEY, JSON.stringify(safe));
     const profile = buildRealValidationV3760(result, safe).userLearning;
     writeAccountStorage(REAL_VALIDATION_PROFILE_STORAGE_KEY, JSON.stringify(profile));
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated', { detail: { total: safe.length, engineVersion: '37.60.0' } }));
+    const gameplay = buildRealGameplayValidationV4050(result, safe);
+    persistVerifiedGameplayWinnerV4050(result, gameplay);
+    const longitudinal = buildLongitudinalGameplayV4060(result, safe);
+    persistLongitudinalWinnerV4060(result, longitudinal);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated', { detail: { total: safe.length, engineVersion: '40.60.0', verifiedWinnerId: longitudinal.verifiedWinnerId ?? gameplay.verifiedWinnerId, sessions: longitudinal.distinctSessions } }));
   };
 
   const save = () => {
@@ -148,6 +168,8 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   };
 
   return <div className="result-section-grid match-validation-center">
+    <LongitudinalGameplayV4060Panel analysis={longitudinalValidation} />
+    <RealGameplayValidationV4050Panel analysis={gameplayValidation} />
     <RealValidationV3760Panel analysis={realValidation} />
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker"><Target size={14}/> Validação em partidas</p><h3>Teste a ficha sem alterar a recomendação original</h3></div><span>{summary.totalMatches} partida(s)</span></div>
@@ -171,7 +193,7 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
         <label><span>Conexão</span><select value={connection} onChange={(event: ChangeEvent<HTMLSelectElement>) => setConnection(event.target.value as MatchConnectionState)}><option value="stable">Estável</option><option value="variable">Variável</option><option value="high_delay">Delay alto</option></select></label>
         <label><span>Perfil usado</span><select value={gameplayProfileId} onChange={(event: ChangeEvent<HTMLSelectElement>) => setGameplayProfileId(event.target.value)}>{(result.gameplayDna?.profiles ?? []).map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}{!result.gameplayDna?.profiles.length && <option value="MAIN">Ficha principal</option>}</select></label>
         <label className="match-minutes-field"><span>Minutos usados</span><input type="number" min={1} max={130} value={minutes} onChange={(event: ChangeEvent<HTMLInputElement>) => setMinutes(Number(event.target.value) || 1)}/></label>
-        <label><span>Opção do laboratório A/B</span><select value={effectiveTestedOptionKey} onChange={(event: ChangeEvent<HTMLSelectElement>) => setTestedOptionKey(event.target.value)}>{testedOptions.map((option) => <option key={option.key} value={option.key}>Opção {option.arm} • {option.buildTitle} • {option.boosterName}</option>)}</select></label>
+        <label><span>Ficha em teste (v40.60)</span><select value={effectiveTestedOptionKey} onChange={(event: ChangeEvent<HTMLSelectElement>) => setTestedOptionKey(event.target.value)}>{testedOptions.map((option) => <option key={option.key} value={option.key}>{option.arm !== 'NONE' ? `Opção ${option.arm} • ` : ''}{option.buildTitle} • {option.boosterName}</option>)}</select></label>
         <label><span>Estilo de controle</span><select value={controlStyle} onChange={(event: ChangeEvent<HTMLSelectElement>) => setControlStyle(event.target.value as ControlStyleV3760)}><option value="quick-pass">Toques e passes rápidos</option><option value="carry-dribble">Condução e drible</option><option value="mixed">Misto e adaptável</option><option value="manual-defense">Defesa e marcação manual</option></select></label>
         <label><span>Delay percebido</span><select value={inputDelayRating} onChange={(event: ChangeEvent<HTMLSelectElement>) => setInputDelayRating(Number(event.target.value) as MatchValidationRating)}>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating} — {rating <= 2 ? 'baixo' : rating === 3 ? 'médio' : 'alto'}</option>)}</select></label>
       </div>

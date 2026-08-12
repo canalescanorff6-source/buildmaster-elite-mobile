@@ -482,7 +482,7 @@ export function applyUnifiedPerformanceV3920(result: AnalysisResult): AnalysisRe
   const impetos = analysis.canonicalImpetos;
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v40.20 — Ficha Suprema Unificada v39.20 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.40 — Ficha Suprema Unificada v39.20 — ${result.parsed.playerName}`,
     positionLabel: 'Receita canônica da carta com diagnóstico tático separado',
     training,
     pointsUsed,

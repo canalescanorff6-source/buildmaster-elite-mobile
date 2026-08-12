@@ -6,7 +6,7 @@ const worker=read('src/lib/ocrWorkerManager.ts');
 const reader=read('src/modules/card-reader/manualCalibrationFastReader.ts');
 const vendor=read('scripts/vendor-tesseract-assets.mjs');
 const progress=read('src/components/ProgressBarsV4010.tsx');
-assert.equal(pkg.version,'40.20.0');
+assert.equal(pkg.version,'40.70.0');
 assert.match(worker,/gzip:\s*false/);
 assert.match(vendor,/4\.0\.0_best_int/);
 assert.match(vendor,/por\.traineddata'/);
@@ -16,4 +16,4 @@ assert.match(reader,/MACRO_PLANS:[\s\S]*identity[\s\S]*card[\s\S]*bio[\s\S]*posi
 assert.match(reader,/oito quadrados, oito leituras primárias/i);
 assert.match(progress,/deadlineMs\?: number/);
 assert.match(progress,/safeRemaining/);
-console.log('v40.20 aprovada: OCR BEST descompactado, 8 macros primários, teto de 90 s e ETA não explosiva.');
+console.log('v40.30 aprovada: OCR BEST descompactado, 8 macros primários, teto de 90 s e ETA não explosiva.');

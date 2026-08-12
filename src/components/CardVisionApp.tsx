@@ -30,12 +30,10 @@ import {
   Ban,
   Users,
   UserPlus
-} from 'lucide-react';
-import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
+} from 'lucide-react'; import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { CalibrationProfileFields } from '@/components/CalibrationProfileFields'; import { ManagerSelectionField } from '@/components/ManagerSelectionField';
 import {
   analyzeCard,
-  normalizeObjective,
   ATTRIBUTE_INPUTS,
   type AnalysisResult,
   type AttributeKey,
@@ -81,6 +79,7 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
 import { RefinedNavigation } from '@/components/RefinedNavigation';
+import { EfootballV600PreviewV4070 } from '@/components/EfootballV600PreviewV4070';
 import { PremiumContextBar } from '@/components/PremiumContextBar';
 import { MobileScrollRecovery } from '@/components/MobileScrollRecovery';
 import { PremiumBrand } from '@/components/PremiumBrand';
@@ -182,6 +181,7 @@ import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
 import { GLOBAL_PRO_BUILD_EVENT } from '@/lib/globalProBenchmarkV3900';
 import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
 import { canonicalizeSkillList, isSpecialSkillIdentity } from '@/lib/officialSkillIdentity';
+import { recordProvisionalSpecialSkillV4070 } from '@/lib/provisionalSpecialSkillCatalogV4070';
 import { regenerateSkillAfterOwnedConfirmation } from '@/lib/intelligentSkillReplacementV3830';
 import { migrateLegacyRuntimeData, runtimeGet, runtimeList, runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { syncStructuredRepository } from '@/modules/core/structuredRepository';
@@ -1068,7 +1068,7 @@ export function CardVisionApp() {
           if (typeof snapshot.playerCardImage === 'string') setPlayerCardImage(snapshot.playerCardImage);
           if (typeof snapshot.fileName === 'string') setFileName(snapshot.fileName);
           if (typeof snapshot.ocrDone === 'boolean') setOcrDone(snapshot.ocrDone);
-          if (snapshot.objective) setObjective(normalizeObjective(snapshot.objective));
+          if (snapshot.objective) setObjective('COMPETITIVE');
           if (snapshot.targetPosition) setTargetPosition(snapshot.targetPosition);
           if (snapshot.cardPositionOverride) setCardPositionOverride(snapshot.cardPositionOverride);
           if (typeof snapshot.playstyleOverride === 'string') setPlaystyleOverride(snapshot.playstyleOverride);
@@ -2347,10 +2347,8 @@ export function CardVisionApp() {
     if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
     if (manualFields.level.trim()) locks.push(`NÍVEL MÁXIMO: ${manualFields.level.trim()}`);
     if (manualFields.trainingPointsTotal.trim() || learnedPoints) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim() || learnedPoints}`);
-    const confirmedNewSkills = confirmed && readingConfirmations.skills
-      ? (singlePrintSession?.detailedReading.skillCandidates ?? []).map((item) => item.value)
-      : [];
-    const selectedOwnedSkills = canonicalizeSkillList([...manualFields.nativeSkills, ...confirmedNewSkills]);
+    const discoveredNewSkills = (singlePrintSession?.detailedReading.skillCandidates ?? []).map((item) => item.value);
+    const selectedOwnedSkills = canonicalizeSkillList([...manualFields.nativeSkills, ...discoveredNewSkills]);
     const selectedSpecialSkills = selectedOwnedSkills.filter((skill) => isSpecialSkillIdentity(skill));
     const selectedRegularSkills = selectedOwnedSkills.filter((skill) => !isSpecialSkillIdentity(skill));
     if (selectedRegularSkills.length) locks.push(`HABILIDADES JÁ POSSUI: ${selectedRegularSkills.join(', ')}`);
@@ -2437,7 +2435,7 @@ export function CardVisionApp() {
     setCardPositionOverride('CF');
     setPlaystyleOverride('AUTO');
     setManualFields(emptyManualFields());
-    const nextResult = applyCompleteCardIntelligence(analyzeCard(template, objective, targetPosition, 'entrada-manual-precisao', tacticalProfile));
+    const nextResult = applyCompleteCardIntelligence(analyzeCard(template, 'COMPETITIVE', targetPosition, 'entrada-manual-precisao', tacticalProfile));
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
@@ -2773,13 +2771,25 @@ ${reading.text}`)) : fullPassText;
         .map((reading) => `### ${reading.label}\n${reading.text}`);
       const mergedText = mergeOcrTexts(session.canonicalText, ...trustedZoneText);
       const learnedText = applyLearningToText(mergedText);
-      const lockedText = textWithManualLocks(learnedText);
+      const provisionalSkills = session.detailedReading.skillCandidates.map((item) => item.value);
+      for (const item of session.detailedReading.skillCandidates) {
+        recordProvisionalSpecialSkillV4070({
+          name: item.value,
+          confidence: item.confidence,
+          independentPasses: Number(item.source.match(/(\d+) passagens/)?.[1] ?? 2),
+          source: 'ocr',
+          note: 'Detectada automaticamente pelo OCR v40.70; sem peso de gameplay até validação oficial/manual.'
+        });
+      }
+      const discoveryText = provisionalSkills.length
+        ? `${learnedText}\nHABILIDADES ESPECIAIS PROVISÓRIAS: ${provisionalSkills.join(', ')}`
+        : learnedText;
+      const lockedText = textWithManualLocks(discoveryText);
       setRawText(lockedText);
-      reportReaderProgress(98, 'Preparando revisão', 'Aplicando a leitura à ficha sem alterar os dados confirmados.', readerTotal, readerTotal);
-      const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, objective, targetPosition, fileName, tacticalProfile));
+      reportReaderProgress(98, 'Gerando ficha', 'Aplicando a leitura automaticamente ao Desempenho Máximo.', readerTotal, readerTotal);
+      const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, 'COMPETITIVE', targetPosition, fileName, tacticalProfile));
       hydrateReviewFields(autoResult);
-      setDraftResult(autoResult);
-      setResult(null);
+      setDraftResult(null); setResult(autoResult);
       const name = fieldByKey(session, 'playerName');
       const position = fieldByKey(session, 'position');
       const style = fieldByKey(session, 'playstyle');
@@ -2796,14 +2806,12 @@ ${reading.text}`)) : fullPassText;
       const stored = toStoredSinglePrintScan(session);
       await runtimePut('scan-history', `${Date.now()}:${imageHash}`, stored).catch(() => undefined);
       void runtimeTrimStore('scan-history', 120).catch(() => undefined);
-      if (visionAudit.state === 'blocked') {
-        setStatus(`OCR Vision bloqueou a finalização automática. Confirme: ${session.blockingFields.join(', ') || visionAudit.warnings[0] || 'campos críticos'}.`);
-      } else if (visionAudit.state === 'review') {
-        setStatus(`OCR Vision concluiu com ${visionAudit.score}/100. Revise os campos amarelos antes de finalizar.`);
-      } else {
-        setStatus(`OCR Vision concluído com ${visionAudit.score}/100. Posição, estilo, números e base oficial foram conferidos.`);
-      }
-      reportReaderProgress(100, 'Leitura concluída', 'Campos lidos e revisão preparada.', readerTotal, readerTotal);
+      const autoWarnings = session.blockingFields.length || visionAudit.state !== 'ready'
+        ? ` • ${session.blockingFields.length ? `campos incompletos mantidos sem inventar: ${session.blockingFields.join(', ')}` : 'há campos de baixa confiança, mantidos sem bloquear a ficha'}`
+        : '';
+      const discoveryStatus = provisionalSkills.length ? ` • ${provisionalSkills.length} habilidade(s) nova(s) registrada(s) como provisória(s)` : '';
+      setStatus(`OCR v40.70 concluído com ${visionAudit.score}/100. Ficha de Desempenho Máximo gerada automaticamente${autoWarnings}${discoveryStatus}.`);
+      reportReaderProgress(100, 'Ficha gerada', 'Leitura concluída sem etapa obrigatória de confirmação.', readerTotal, readerTotal);
       void updateBackgroundOcrCheckpoint({ stage: 'completed', status: 'Leitura concluída.', shouldResume: false }).catch(() => undefined);
       void clearBackgroundOcrCheckpoint().catch(() => undefined);
       openMainSection('resultado');
@@ -2937,18 +2945,16 @@ ${reading.text}`)) : fullPassText;
       const learnedText = applyLearningToText(mergedText);
       const lockedText = textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, objective, targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile));
+      const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, 'COMPETITIVE', targetPosition, `leitura-total-${overview.file.name}`, tacticalProfile));
       hydrateReviewFields(autoResult);
-      setDraftResult(autoResult);
-      setResult(null);
-      if (session.mismatchRisk === 'block') {
-        setStatus('Leitura concluída, mas há divergência entre os prints. Confirme que todas as telas pertencem à mesma versão da carta antes da ficha final.');
-      } else if (session.missingCriticalScreens.length) {
-        setStatus(`Leitura combinada concluída. Revise os campos e, se possível, envie também: ${session.missingCriticalScreens.join(', ')}.`);
-      } else {
-        setStatus('Leitura completa concluída. As telas foram cruzadas; confirme somente os campos destacados antes de gerar a ficha final.');
-      }
-      reportTotalProgress(100, 'Leitura concluída', 'Todos os prints foram processados e a revisão está pronta.', captures.length, captures.length);
+      setDraftResult(null); setResult(autoResult);
+      const totalWarning = session.mismatchRisk === 'block'
+        ? ' Há divergência entre os prints; o app não inventou os campos conflitantes.'
+        : session.missingCriticalScreens.length
+          ? ` Campos ausentes foram mantidos nulos: ${session.missingCriticalScreens.join(', ')}.`
+          : '';
+      setStatus(`Leitura Total concluída e ficha de Desempenho Máximo gerada automaticamente.${totalWarning}`);
+      reportTotalProgress(100, 'Ficha gerada', 'Todos os prints foram processados sem etapa obrigatória de confirmação.', captures.length, captures.length);
       openMainSection('resultado');
     } catch (error) {
       setReaderProgress(null);
@@ -2998,8 +3004,8 @@ ${reading.text}`)) : fullPassText;
   function runAnalysis(confirmed = false) {
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
     try {
-      const safeObjective = normalizeObjective(objective);
-      if (safeObjective !== objective) setObjective(safeObjective);
+      const safeObjective: Objective = 'COMPETITIVE';
+      if (objective !== 'COMPETITIVE') setObjective('COMPETITIVE');
       const lockedText = textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
       const nextResult = applyCompleteCardIntelligence(analyzeCard(lockedText, safeObjective, targetPosition, fileName, tacticalProfile));
@@ -3128,8 +3134,7 @@ ${reading.text}`)) : fullPassText;
     clearCorrectionsForResult(base);
     refreshResultWithCorrections('Correções locais deste jogador/função foram apagadas. Recalcule a ficha para voltar ao padrão do motor.');
   }
-  const currentPanelResult = result ?? draftResult;
-  const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
+  const currentPanelResult = result ?? draftResult; const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
   const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile || preview) : manualMode;
   const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
   const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
@@ -3683,15 +3688,13 @@ ${reading.text}`)) : fullPassText;
                 </div>
               </div>
               <div className="creation-essential-grid">
-                {advancedMode && (
-                  <label className="creation-field-card">
-                    <span>Objetivo avançado</span>
-                    <select value={objective} onChange={(event) => setObjective(event.target.value as Objective)}>
-                      {objectives.map((item) => <option key={item.value} value={item.value}>{item.title} — {item.hint}</option>)}
-                    </select>
-                    <small>{creationObjectiveLabel}</small>
-                  </label>
-                )}
+                {advancedMode && (<>
+                  <div className="creation-field-card" data-testid="competitive-objective-v4070">
+                    <span>Motor de desempenho</span><strong>Desempenho máximo</strong>
+                    <small>Rendimento real em campo, não GER alto. DNA, função, Pareto e validação competitiva trabalham automaticamente; não há perfis manuais para escolher.</small>
+                  </div>
+                  <EfootballV600PreviewV4070 />
+                </>)}
                 <label className="creation-field-card creation-field-priority">
                   <span>Onde o jogador vai jogar?</span>
                   <select value={targetPosition} onChange={(event) => setTargetPosition(event.target.value as PositionCode | 'AUTO')}>
@@ -3766,8 +3769,7 @@ ${reading.text}`)) : fullPassText;
           <section className="creation-action-dock">
             <div className="creation-action-copy">
               <span>Próxima decisão</span>
-              <strong>{draftResult ? 'Revise e confirme os dados' : mainSection === 'leitor' && !selectedFile ? 'Importe o print da carta' : 'Gerar uma prévia auditável'}</strong>
-              <small>{draftResult ? 'A posição, o estilo e os pontos ainda precisam da sua confirmação final.' : 'A prévia não é salva como ficha definitiva antes da revisão.'}</small>
+              <strong>{draftResult ? 'Revisão opcional disponível' : mainSection === 'leitor' && !selectedFile ? 'Importe o print da carta' : result ? 'Ficha pronta para uso' : 'Gerar Desempenho Máximo'}</strong><small>{draftResult ? 'Você pode ajustar algo manualmente, mas nenhuma confirmação é obrigatória.' : result ? 'O OCR aplicou automaticamente os dados confiáveis e manteve o restante nulo/alertado.' : 'O leitor gera a ficha automaticamente; campos incertos não bloqueiam o resultado.'}</small>
               <div className="creation-readiness-chips" aria-label={`${creationReadinessCount} de ${creationReadinessSignals.length} itens preparados`}>
                 {creationReadinessSignals.map((item) => (
                   <span key={item.label} className={item.ready ? 'ready' : ''}>
@@ -3780,8 +3782,7 @@ ${reading.text}`)) : fullPassText;
             <button className="elite-button generate-button creation-primary-cta" type="button" onClick={() => runAnalysis(false)} disabled={!canProceed}>
               {loading ? <Loader2 className="spin" size={19} /> : <Zap size={19} />}
               <span>
-                <strong>{loading ? 'Processando ficha' : draftResult || result ? 'Atualizar prévia' : 'Gerar prévia'}</strong>
-                <small>{loading ? 'Aguarde a leitura' : 'Abrir revisão antes de finalizar'}</small>
+                <strong>{loading ? 'Processando ficha' : draftResult || result ? 'Recalcular Desempenho Máximo' : 'Gerar Desempenho Máximo'}</strong><small>{loading ? 'Aguarde a leitura' : 'Sem confirmação obrigatória'}</small>
               </span>
             </button>
           </section>

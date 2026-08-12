@@ -9,17 +9,11 @@ export const VAULT_FOLDERS_KEY = 'buildmaster_vault_folders_v25_33';
 export const RULE_PACK_URL_KEY = 'buildmaster_rule_pack_url_v24_29';
 
 export const objectives: Array<{ value: Objective; title: string; hint: string }> = [
-  { value: 'COMPETITIVE', title: 'Desempenho máximo', hint: 'rendimento real em campo, não GER alto' },
-  { value: 'META_2026', title: 'Meta competitivo 2026', hint: 'tendência atual v5.4.0, separada de dados oficiais' },
-  { value: 'FINISHER', title: 'Finalizador', hint: 'gols, área e chute' },
-  { value: 'CREATOR', title: 'Criador', hint: 'passe, controle e assistência' },
-  { value: 'DRIBBLER', title: 'Driblador', hint: 'giro curto e 1 contra 1' },
-  { value: 'QUICK_COUNTER', title: 'Contra-ataque rápido', hint: 'arranque e verticalidade' },
-  { value: 'POSSESSION', title: 'Posse de bola', hint: 'toque curto e paciência' },
-  { value: 'PRESSING', title: 'Pressão alta', hint: 'roubo, fôlego e agressividade' },
-  { value: 'DEFENSIVE', title: 'Defensivo', hint: 'marcação, bloqueio e cobertura' },
-  { value: 'AERIAL', title: 'Jogo aéreo', hint: 'cabeceio, salto e físico' },
-  { value: 'GOALKEEPER', title: 'Goleiro elite', hint: 'reflexo, alcance, firmeza e pênalti' }
+  {
+    value: 'COMPETITIVE',
+    title: 'Desempenho máximo',
+    hint: 'rendimento real em campo, não GER alto; DNA + função + Pareto + A/B real + aprendizagem longitudinal'
+  }
 ];
 
 export const playstyleOptions = PLAYSTYLE_OPTIONS;

@@ -1652,6 +1652,147 @@ export type PerformanceFunctionV3940Analysis = {
   summary: string;
 };
 
+
+export type AdaptiveMaximumProfileV4030 = {
+  id: 'FINISHER' | 'CREATOR' | 'DRIBBLER' | 'QUICK_COUNTER' | 'POSSESSION' | 'PRESSING' | 'DEFENSIVE' | 'AERIAL' | 'GOALKEEPER';
+  label: string;
+  score: number;
+  rank: number;
+  reason: string;
+};
+
+export type AdaptiveMaximumV4030Analysis = {
+  engineVersion: '40.30.0';
+  mode: 'DESEMPENHO_MAXIMO_ADAPTATIVO';
+  objectiveMode: 'ADAPTATIVO' | 'ESPECIALIZACAO_MANUAL';
+  deterministic: true;
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  profiles: AdaptiveMaximumProfileV4030[];
+  baseTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  exactBudget: boolean;
+  candidatesEvaluated: number;
+  baselineScore: number;
+  winnerScore: number;
+  contextScores: { ranked: number; events: number; friends: number; average: number };
+  changes: AdaptivePositionChangeV3930[];
+  consistencyKey: string;
+  skillIntegrity: { duplicatesWithOwned: number; uniqueRecommended: number; fiveSlotsRespected: boolean };
+  metaRuntime: {
+    engineVersion: '40.30.0';
+    stableVersion: '5.5.1';
+    stableSince: '2026-06-04';
+    nextAnnouncedVersion: '6.0.0';
+    nextWindow: 'meados de agosto de 2026';
+    speculativeWeightsApplied: false;
+    policy: string;
+  };
+  guarantees: {
+    gerIsNotOptimizationTarget: true;
+    noRandomness: true;
+    exactPointBudget: boolean;
+    nativeSkillDuplicationBlocked: boolean;
+    speculativeNextPatchWeightsBlocked: boolean;
+  };
+  reasons: string[];
+  summary: string;
+};
+
+
+export type MaximumPerformanceAlternativeV4040 = {
+  id: 'MAXIMO_COMPETITIVO' | 'RESPOSTA_ONLINE' | 'DNA_PRESERVADO';
+  label: string;
+  training: TrainingPlan;
+  score: number;
+  rankedScore: number;
+  dnaPreservation: number;
+  efficiencyScore: number;
+};
+
+export type MaximumPerformanceV4040Analysis = {
+  engineVersion: '40.40.0';
+  mode: 'PRECISAO_COMPETITIVA_99';
+  deterministic: true;
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  baseTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  exactBudget: boolean;
+  candidatesEvaluated: number;
+  paretoCandidates: number;
+  baselineScore: number;
+  winnerScore: number;
+  scoreGap: number;
+  contextScores: { ranked: number; events: number; friends: number; average: number };
+  responseScore: number;
+  dnaPreservation: number;
+  efficiencyScore: number;
+  profileFitScore: number;
+  confidence: {
+    score: number;
+    level: 'ALTA' | 'MEDIA' | 'REVISAR';
+    dataQuality: number;
+    decisionMargin: number;
+    reasons: string[];
+  };
+  alternatives: MaximumPerformanceAlternativeV4040[];
+  changes: AdaptivePositionChangeV3930[];
+  skillPlan: {
+    finalSkills: string[];
+    slotsFilled: number;
+    duplicatesBlocked: number;
+    unique: boolean;
+    sourcePolicy: string;
+  };
+  metaRuntime: {
+    engineVersion: '40.40.0';
+    stableVersion: '5.5.1';
+    stableSince: '2026-06-04';
+    nextAnnouncedVersion: '6.0.0';
+    nextWindow: 'meados de agosto de 2026';
+    announcedTeamPlaystyle: 'Sobreposição';
+    announcedTeamPlaystyleInternalId: 'OVERLOAD';
+    speculativeWeightsApplied: false;
+    automaticActivationAllowed: false;
+    policy: string;
+  };
+  guarantees: {
+    gerIsNotOptimizationTarget: true;
+    noRandomness: true;
+    exactPointBudget: boolean;
+    onlyExistingSkillNames: true;
+    ownedSkillDuplicationBlocked: boolean;
+    speculativeV600WeightsBlocked: boolean;
+  };
+  reasons: string[];
+  summary: string;
+};
+
+
+export type GameplayValidationMemoryV4050 = {
+  engineVersion: '40.50.0';
+  applied: true;
+  winnerId: string;
+  winnerLabel: string;
+  confidenceScore: number;
+  rawMatches: number;
+  effectiveMatches: number;
+  verifiedAt: string;
+};
+
+export type LongitudinalGameplayMemoryV4060 = {
+  engineVersion: '40.60.0';
+  applied: boolean;
+  provisionalV4050Blocked: boolean;
+  winnerId: string | null;
+  winnerLabel: string | null;
+  confidenceScore: number;
+  sessions: number;
+  pairedSessions: number;
+  verifiedAt: string | null;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -1719,6 +1860,10 @@ export type AnalysisResult = {
   unifiedPerformanceV3920?: UnifiedPerformanceV3920Analysis;
   adaptivePositionV3930?: AdaptivePositionV3930Analysis;
   performanceFunctionV3940?: PerformanceFunctionV3940Analysis;
+  adaptiveMaximumV4030?: AdaptiveMaximumV4030Analysis;
+  maximumPerformanceV4040?: MaximumPerformanceV4040Analysis;
+  gameplayValidationMemoryV4050?: GameplayValidationMemoryV4050;
+  longitudinalGameplayMemoryV4060?: LongitudinalGameplayMemoryV4060;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

@@ -22,4 +22,4 @@ assert.doesNotMatch(vendor, /public\/tesseract\/lang\/por\.traineddata\.gz'/, 'W
 assert.doesNotMatch(workflow, /Idioma OCR inglês ausente/, 'Build não deve exigir asset inglês não usado.');
 assert.match(playWorkflow, /npm run vendor:ocr/, 'AAB da Play Store também deve preparar os assets OCR locais antes do build.');
 assert.match(playWorkflow, /out\/tesseract\/lang\/por\.traineddata/, 'AAB deve falhar cedo se o traineddata português não entrar no site estático.');
-console.log('v40.20 r2 aprovada: bootstrap OCR Android usa POR local, pré-aquecimento e progresso monotônico sem bloqueio em traineddata.');
+console.log('v40.30 r2 aprovada: bootstrap OCR Android usa POR local, pré-aquecimento e progresso monotônico sem bloqueio em traineddata.');

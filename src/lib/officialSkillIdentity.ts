@@ -9,6 +9,10 @@ import {
   remoteSkillIdentityKeyV3770,
   resolveRemoteSkillNameV3770
 } from '@/lib/remoteCatalogV3770';
+import {
+  isProvisionalSpecialSkillV4070,
+  resolveProvisionalSpecialSkillNameV4070
+} from '@/lib/provisionalSpecialSkillCatalogV4070';
 
 export type CanonicalSkillName = keyof typeof SKILL_PROFILES;
 
@@ -71,7 +75,8 @@ const EXTRA_ALIASES: Record<string, CanonicalSkillName> = {
   'impulso de ataque': 'Impulso ofensivo',
   'attack trigger': 'Desencadeador de ataques',
   'gatilho de ataque': 'Desencadeador de ataques',
-  'blitz curler': 'Curva Blitz',
+  'blitz curler': 'Curva descendente',
+  'curva blitz': 'Curva descendente',
   'bullet header': 'Cabeçada fulminante',
   'edged crossing': 'Cruzamento cortante',
   'fortress': 'Fortaleza',
@@ -87,7 +92,9 @@ const EXTRA_ALIASES: Record<string, CanonicalSkillName> = {
   'magnetic feet': 'Pés magnéticos',
   'momentum dribbling': 'Drible de impulso',
   'phenomenal finishing': 'Finalização fenomenal',
-  'phenomenal pass': 'Passe fenomenal',
+  'phenomenal pass': 'Passador nato',
+  'passe fenomenal': 'Passador nato',
+  'passador nato': 'Passador nato',
   'willpower': 'Garra',
   'visionary pass': 'Passe visionário',
   'shadow hunt': 'Sombra veloz',
@@ -284,6 +291,8 @@ export function isLikelySkillOcrNoise(value: string | null | undefined) {
 }
 
 export function skillIdentityKey(value: string | null | undefined) {
+  const provisional = resolveProvisionalSpecialSkillNameV4070(value);
+  if (provisional) return compactSkillIdentity(provisional);
   const remoteKey = remoteSkillIdentityKeyV3770(value);
   if (remoteKey) return remoteKey;
   const canonical = canonicalSkillName(value);
@@ -296,7 +305,7 @@ export function canonicalizeSkillList(skills: Array<string | null | undefined>) 
   for (const raw of skills) {
     const cleaned = String(raw ?? '').replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '').trim();
     if (!cleaned) continue;
-    const canonical = resolveRemoteSkillNameV3770(cleaned) ?? canonicalSkillName(cleaned) ?? cleaned;
+    const canonical = resolveRemoteSkillNameV3770(cleaned) ?? resolveProvisionalSpecialSkillNameV4070(cleaned) ?? canonicalSkillName(cleaned) ?? cleaned;
     const key = skillIdentityKey(canonical);
     if (!key || seen.has(key)) continue;
     seen.add(key);
@@ -344,6 +353,7 @@ export function isOfficialAdditionalSkillIdentity(skill: string) {
 }
 
 export function isSpecialSkillIdentity(skill: string) {
+  if (isProvisionalSpecialSkillV4070(skill)) return true;
   const remote = resolveRemoteSkillNameV3770(skill);
   if (remote && isRemoteSpecialSkillActiveV3770(remote)) return true;
   const canonical = canonicalSkillName(skill);

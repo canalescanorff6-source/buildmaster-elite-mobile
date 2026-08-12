@@ -16,11 +16,11 @@ const app = read('src/components/CardVisionApp.tsx');
 const css = read('src/app/v40-progress.css');
 const register = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '40.20.0');
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.20');
-assert.equal(manifest.short_name, 'BuildMaster v40.20');
-assert.ok(sw.includes('buildmaster-v40-20-progress-1'));
-assert.ok(register.includes('40.20.0-progress-runtime-1'));
+assert.equal(pkg.version, '40.70.0');
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.70');
+assert.equal(manifest.short_name, 'BuildMaster v40.70');
+assert.ok(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'));
+assert.ok(register.includes('40.70.0-progress-runtime-1'));
 assert.ok(layout.includes("import './v40-progress.css';"));
 assert.ok(layout.indexOf("import './v40-progress.css';") > layout.indexOf("import './v38-stability-theme.css';"), 'A camada de progresso precisa ficar depois da proteção visual.');
 assert.ok(layout.includes('bm-v4020-progress'));
@@ -54,7 +54,7 @@ assert.ok(readerSource.includes('onFile'));
 assert.ok(app.split('\n').length <= 4200, 'CardVisionApp não pode ultrapassar o orçamento estrutural após a barra de progresso.');
 assert.ok(app.includes('setReaderProgress'));
 assert.ok(app.includes('reportReaderProgress'));
-for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Preparando revisão', 'Leitura concluída']) {
+for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Ficha gerada', 'Leitura concluída']) {
   assert.ok(app.includes(label), `Pipeline visual da leitura sem etapa ${label}`);
 }
 assert.ok(css.includes('.v4020-progress-track'));
@@ -62,5 +62,6 @@ assert.ok(css.includes('.v4020-global-update-progress'));
 assert.ok(css.includes('.v4020-reader-progress'));
 assert.ok(css.includes('.update-download-progress{display:none!important}'));
 
-assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4020'));
-console.log('v40.20 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa sem regressão do leitor v40.00.');
+assert.ok(String(pkg.scripts?.['test:all']).includes('npm run test:v4020'));
+assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4070'));
+console.log('v40.30 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa sem regressão do leitor v40.00.');

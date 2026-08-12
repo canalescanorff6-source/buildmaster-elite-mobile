@@ -35,11 +35,7 @@ import {
   type PositionCode,
   type TacticalStyle
 } from '@/lib/analyzer';
-import {
-  READING_CONFIRMATION_STAGES,
-  buildStageSummary,
-  type PremiumZoneReading
-} from '@/lib/premiumReading';
+import { type PremiumZoneReading } from '@/lib/premiumReading';
 import {
   buildCalibrationReport,
   type MatchFeedback,
@@ -59,6 +55,7 @@ import {
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIdentity';
+import { listProvisionalSpecialSkillsV4070 } from '@/lib/provisionalSpecialSkillCatalogV4070';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import { COMPETITIVE_FUSION_EVENT } from '@/lib/competitiveBuildFusion';
@@ -1630,8 +1627,6 @@ export function ReviewPanel({
   totalReadingSession,
   singlePrintSession,
   onUseSingleCandidate,
-  readingConfirmations,
-  setReadingConfirmations,
   onRefresh,
   onConfirm
 }: {
@@ -1656,6 +1651,11 @@ export function ReviewPanel({
   onConfirm: () => void;
 }) {
   const card = draft.parsed;
+  const [provisionalSpecialSkills, setProvisionalSpecialSkills] = useState<string[]>([]);
+  useEffect(() => {
+    setProvisionalSpecialSkills(listProvisionalSpecialSkillsV4070().map((entry) => entry.name));
+  }, [draft.parsed.playerName]);
+  const visibleSpecialSkills = Array.from(new Set([...SPECIAL_SKILL_NAMES, ...provisionalSpecialSkills]));
   const displayPlayerName = manualFields.playerName.trim() || card.playerName;
   const criticalIssues = draft.validation.issues.filter((issue) => issue.severity === 'block');
   const reviewIssues = draft.validation.issues.filter((issue) => issue.severity === 'review');
@@ -1681,26 +1681,12 @@ export function ReviewPanel({
   const usedPoints = draft.trainingPointsUsed;
   const remainingPoints = Math.max(0, typedPoints - usedPoints);
   const budgetPercent = Math.min(100, Math.round((usedPoints / Math.max(1, typedPoints || draft.trainingPointsTotal)) * 100));
-  const sameCardConfirmed = !totalReadingSession || totalReadingSession.mismatchRisk === 'none' || Boolean(readingConfirmations.sameCard);
-  const allRequiredConfirmed = READING_CONFIRMATION_STAGES.filter((stage) => stage.required).every((stage) => readingConfirmations[stage.id]) && sameCardConfirmed;
-  const identityConfirmed = Boolean(manualFields.playerName.trim() || (card.playerName && card.playerName !== 'Jogador não identificado'));
-  const positionConfirmed = cardPositionOverride !== 'AUTO';
-  const styleConfirmed = playstyleOverride !== 'AUTO' || Boolean(card.playstyle);
-  const pointsConfirmed = typedPoints > 0;
-  const reviewConfirmationCount = [identityConfirmed, positionConfirmed, styleConfirmed, pointsConfirmed].filter(Boolean).length;
-  const reviewProgress = reviewConfirmationCount * 25;
 
   return (
     <section className="review-panel result-panel creation-review-panel bm2820-review-screen">
       <div className="review-workflow-banner luxury-panel">
-        <div><span className="creation-stage-number">3</span><div><p className="kicker">Revisão obrigatória</p><h2>Confirme os dados essenciais</h2><p>Nada será tratado como ficha final até você revisar identidade, posição, estilo e pontos.</p></div></div>
-        <div className="review-progress-summary"><strong>{reviewProgress}%</strong><span>{reviewConfirmationCount}/4 confirmações</span><i><b style={{ width: `${reviewProgress}%` }} /></i></div>
-        <div className="review-essential-checks">
-          <span className={identityConfirmed ? 'confirmed' : ''}>{identityConfirmed ? <CheckCircle2 size={15} /> : '1'} Identidade</span>
-          <span className={positionConfirmed ? 'confirmed' : ''}>{positionConfirmed ? <CheckCircle2 size={15} /> : '2'} Posição</span>
-          <span className={styleConfirmed ? 'confirmed' : ''}>{styleConfirmed ? <CheckCircle2 size={15} /> : '3'} Estilo</span>
-          <span className={pointsConfirmed ? 'confirmed' : ''}>{pointsConfirmed ? <CheckCircle2 size={15} /> : '4'} Pontos</span>
-        </div>
+        <div><span className="creation-stage-number">3</span><div><p className="kicker">Revisão opcional</p><h2>Sem etapas obrigatórias</h2><p>O OCR v40.70 gera a ficha automaticamente. Use esta tela apenas se quiser corrigir algum campo; dado incerto fica nulo ou sinalizado e não exige clique de confirmação.</p></div></div>
+        <div className="review-progress-summary"><strong>Auto</strong><span>zero confirmações obrigatórias</span><i><b style={{ width: '100%' }} /></i></div>
       </div>
 
       <div className="result-head luxury-panel">
@@ -1716,7 +1702,7 @@ export function ReviewPanel({
         <div className="result-intro">
           <p className="kicker"><ShieldCheck size={16} /> Auditoria Elite</p>
           <h2>Revise antes do plano final</h2>
-          <p className="review-copy">Fluxo de precisão: você confirma posição, estilo, pontos e atributos antes de finalizar. Assim o programa não depende de leitura automática e reduz erros de ficha.</p>
+          <p className="review-copy">Fluxo zero-confirmação: o leitor usa consenso e regras de segurança. Esta tela existe apenas para correções opcionais, sem cinco etapas obrigatórias.</p>
           <div className="metric-grid">
             <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
             <div><span>Posição lida</span><strong>{card.mainPositionPt}</strong></div>
@@ -1761,10 +1747,10 @@ export function ReviewPanel({
               <details key={capture.id} className={capture.warnings.length ? 'capture-audit-card has-warning' : 'capture-audit-card'}>
                 <summary><span><strong>{capture.label}</strong><small>Detectado: {capture.detectedType === 'unknown' ? capture.declaredType : capture.detectedType}</small></span><b>{capture.confidence}%</b></summary>
                 <div className="capture-audit-details">
-                  <span>Nome: {capture.identity.playerName || 'não confirmado'}</span>
-                  <span>Posição: {capture.identity.position || 'não confirmada'}</span>
-                  <span>Nível: {capture.identity.level ?? 'não confirmado'}</span>
-                  <span>Tipo: {capture.identity.cardType || 'não confirmado'}</span>
+                  <span>Nome: {capture.identity.playerName || 'não identificado'}</span>
+                  <span>Posição: {capture.identity.position || 'não identificada'}</span>
+                  <span>Nível: {capture.identity.level ?? 'não identificado'}</span>
+                  <span>Tipo: {capture.identity.cardType || 'não identificado'}</span>
                 </div>
                 {capture.warnings.map((warning) => <em key={warning}>⚠ {warning}</em>)}
               </details>
@@ -1776,40 +1762,23 @@ export function ReviewPanel({
             ))}
           </div>
           {totalReadingSession.mismatchRisk !== 'none' && (
-            <label className={`same-card-confirmation risk-${totalReadingSession.mismatchRisk}`}>
-              <input type="checkbox" checked={Boolean(readingConfirmations.sameCard)} onChange={() => setReadingConfirmations((current) => ({ ...current, sameCard: !current.sameCard }))} />
-              <span><strong>Confirmo que todos os prints são da mesma versão da carta</strong><em>{totalReadingSession.mismatchReasons.join(' ') || 'O leitor encontrou uma divergência que precisa de confirmação humana.'}</em></span>
-            </label>
+            <div className={`same-card-confirmation risk-${totalReadingSession.mismatchRisk}`}>
+              <span><strong>Divergência entre prints detectada automaticamente</strong><em>{totalReadingSession.mismatchReasons.join(' ') || 'Campos conflitantes permanecem sem confirmação e não são inventados.'}</em></span>
+            </div>
           )}
         </article>
       )}
 
       {premiumReadings.length > 0 && (
-        <article className="luxury-panel wide-card premium-confirmation-card">
-          <p className="kicker"><ScanText size={16} /> Confirmação em etapas</p>
-          <p className="panel-note no-top">Revise a origem visual e confirme cada etapa obrigatória. Habilidades continuam opcionais quando não estiverem visíveis.</p>
-          <div className="confirmation-stage-grid">
-            {READING_CONFIRMATION_STAGES.map((stage) => {
-              const summary = buildStageSummary(premiumReadings, stage);
-              const checked = Boolean(readingConfirmations[stage.id]);
-              return (
-                <label key={stage.id} className={checked ? 'confirmation-stage confirmed' : 'confirmation-stage'}>
-                  <input type="checkbox" checked={checked} onChange={() => setReadingConfirmations((current) => ({ ...current, [stage.id]: !current[stage.id] }))} />
-                  <span>
-                    <strong>{stage.title}{stage.required ? ' • obrigatória' : ' • opcional'}</strong>
-                    <em>{stage.description}</em>
-                    <small>{summary.found}/{summary.total} áreas lidas • confiança média {summary.average}%{summary.review ? ` • ${summary.review} para revisar` : ''}</small>
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+        <article className="luxury-panel wide-card premium-reading-audit-v4070">
+          <p className="kicker"><ScanText size={16} /> Auditoria automática do OCR</p>
+          <p className="panel-note no-top">Sem confirmações obrigatórias. As áreas abaixo ficam disponíveis apenas para conferência visual ou correção opcional.</p>
           <div className="zone-origin-grid">
             {premiumReadings.map((reading) => (
               <details key={reading.id ?? `${reading.sourceId ?? 'single'}-${reading.key}-${reading.label}`} className={`zone-origin-card status-${reading.status}`}>
-                <summary><strong>{reading.sourceLabel ? `${reading.sourceLabel} • ${reading.label}` : reading.label}</strong><span>{reading.confidence}% • {reading.status === 'confirmed' ? 'boa' : reading.status === 'review' ? 'revisar' : 'não lida'}</span></summary>
+                <summary><strong>{reading.sourceLabel ? `${reading.sourceLabel} • ${reading.label}` : reading.label}</strong><span>{reading.confidence}% • {reading.status === 'confirmed' ? 'boa' : reading.status === 'review' ? 'baixa confiança' : 'não lida'}</span></summary>
                 {reading.originPreview && <img src={reading.originPreview} alt={`Origem visual: ${reading.label}`} loading="lazy" decoding="async" />}
-                <pre>{reading.text || 'Nenhum texto confirmado nesta área.'}</pre>
+                <pre>{reading.text || 'Campo mantido nulo.'}</pre>
                 <em>Origem: {reading.sourceLabel ? `${reading.sourceLabel} • ` : ''}recorte da área • tratamento {reading.enhancement}{reading.passCount && reading.passCount > 1 ? ` • ${reading.passCount} passagens` : ''}</em>
               </details>
             ))}
@@ -1818,8 +1787,8 @@ export function ReviewPanel({
       )}
 
       <div className="review-grid">
-        <article className={`luxury-panel review-step-card ${identityConfirmed ? 'is-confirmed' : ''}`}>
-          <div className="review-step-heading"><span>1</span><div><p className="kicker">Identidade da carta</p><h3>Quem é o jogador?</h3></div>{identityConfirmed && <CheckCircle2 size={19} />}</div>
+        <article className="luxury-panel review-step-card">
+          <div className="review-step-heading"><span>1</span><div><p className="kicker">Identidade detectada</p><h3>Quem é o jogador?</h3></div></div>
           <label className="review-featured-field">
             <span>Nome do jogador</span>
             <input value={manualFields.playerName} onChange={(event) => setManualFields((current) => ({ ...current, playerName: event.target.value }))} placeholder={card.playerName} />
@@ -1827,8 +1796,8 @@ export function ReviewPanel({
           </label>
         </article>
 
-        <article className={`luxury-panel review-step-card ${positionConfirmed ? 'is-confirmed' : ''}`}>
-          <div className="review-step-heading"><span>2</span><div><p className="kicker">Confirmação da posição</p><h3>Origem e função final</h3></div>{positionConfirmed && <CheckCircle2 size={19} />}</div>
+        <article className="luxury-panel review-step-card">
+          <div className="review-step-heading"><span>2</span><div><p className="kicker">Posição e função</p><h3>Origem e função final</h3></div></div>
           <div className="review-form-grid review-position-grid">
             <label>
               <span>Posição principal correta</span>
@@ -1847,8 +1816,8 @@ export function ReviewPanel({
           </div>
         </article>
 
-        <article className={`luxury-panel review-step-card ${styleConfirmed ? 'is-confirmed' : ''}`}>
-          <div className="review-step-heading"><span>3</span><div><p className="kicker">Confirmação do estilo</p><h3>Como a carta se movimenta?</h3></div>{styleConfirmed && <CheckCircle2 size={19} />}</div>
+        <article className="luxury-panel review-step-card">
+          <div className="review-step-heading"><span>3</span><div><p className="kicker">Estilo detectado</p><h3>Como a carta se movimenta?</h3></div></div>
           <label className="review-featured-field">
             <span>Estilo de jogo correto</span>
             <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
@@ -1859,8 +1828,8 @@ export function ReviewPanel({
           </label>
         </article>
 
-        <article className={`luxury-panel review-step-card ${pointsConfirmed ? 'is-confirmed' : ''}`}>
-          <div className="review-step-heading"><span>4</span><div><p className="kicker">Definição dos pontos</p><h3>Feche o orçamento exato</h3></div>{pointsConfirmed && <CheckCircle2 size={19} />}</div>
+        <article className="luxury-panel review-step-card">
+          <div className="review-step-heading"><span>4</span><div><p className="kicker">Orçamento detectado</p><h3>Confira os pontos somente se quiser</h3></div></div>
           <div className="review-form-grid review-points-grid">
             <label>
               <span>Nível máximo</span>
@@ -1893,16 +1862,16 @@ export function ReviewPanel({
             </div>
           </div>
           <div className="native-skill-catalog-group special-native">
-            <div><strong>Habilidades especiais nativas — não treináveis</strong><small>Inclui Drible explosivo, Curva Blitz, Passe visionário, Esticada de Perna e as demais habilidades especiais reconhecidas pelo eFootball 2026/eFHUB.</small></div>
+            <div><strong>Habilidades especiais nativas — não treináveis</strong><small>Inclui Curva descendente, Passador nato, Passe visionário, Sombra veloz, Esticada de Perna e as demais habilidades especiais reconhecidas; nomes novos detectados pelo OCR entram como provisórios sem ganhar peso automático.</small></div>
             <div className="skill-picker-grid">
-              {SPECIAL_SKILL_NAMES.map((skill) => (
+              {visibleSpecialSkills.map((skill) => (
                 <button
                   key={skill}
                   type="button"
                   className={nativeSkillSet.has(skill) ? 'skill-picker-chip selected special-native' : 'skill-picker-chip special-native'}
                   onClick={() => toggleNativeSkill(skill)}
                 >
-                  {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}
+                  {nativeSkillSet.has(skill) ? '✓ ' : ''}{skill}{provisionalSpecialSkills.includes(skill) ? ' • provisória' : ''}
                 </button>
               ))}
             </div>
@@ -1955,10 +1924,10 @@ export function ReviewPanel({
       </div>
 
       <div className="review-finalize-shell luxury-panel">
-        <div className="review-finalize-copy"><span className="creation-stage-number">4</span><div><p className="kicker">Gerar ficha</p><h3>{reviewProgress === 100 ? 'Dados essenciais confirmados' : 'Revise os itens pendentes'}</h3><p>{reviewProgress === 100 ? 'Você pode recalcular ou gerar o plano final com os dados confirmados.' : 'O aplicativo permite continuar, mas os itens não confirmados podem reduzir a precisão.'}</p></div></div>
+        <div className="review-finalize-copy"><span className="creation-stage-number">4</span><div><p className="kicker">Gerar ficha</p><h3>Ajustes opcionais</h3><p>A ficha já pode ser usada. Recalcule apenas se você alterou algum campo manualmente.</p></div></div>
         <div className="review-actions">
           <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular prévia</button>
-          <button type="button" className="elite-button" onClick={onConfirm} disabled={premiumReadings.length > 0 && !allRequiredConfirmed}><CheckCircle2 size={18} /> {premiumReadings.length > 0 && !allRequiredConfirmed ? 'Confirme as etapas obrigatórias' : 'Gerar ficha final'}</button>
+          <button type="button" className="elite-button" onClick={onConfirm}><CheckCircle2 size={18} /> Aplicar ajustes e gerar ficha</button>
         </div>
       </div>
     </section>

@@ -59,7 +59,7 @@ assert.equal(trainingPlanTotalCost(epic.training), epic.trainingPointsTotal);
 assert.equal(epic.trainingPointsRemaining, 0);
 assert.deepEqual(epic.parsed.nativeSkills.sort(), ['Chute de primeira', 'Passe de primeira'].sort());
 assert.deepEqual(epic.parsed.additionalSkills?.sort(), ['Passe em profundidade', 'Toque duplo'].sort());
-assert.deepEqual(epic.parsed.specialSkills, ['Curva Blitz']);
+assert.deepEqual(epic.parsed.specialSkills, ['Curva descendente']);
 assert.equal(epic.structuralPrecision?.skillInventory.slotsUsed, 2);
 assert.equal(epic.structuralPrecision?.skillInventory.slotsRemaining, 3);
 

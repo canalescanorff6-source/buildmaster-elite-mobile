@@ -29,10 +29,10 @@ assert.match(budget, /Módulo TypeScript excedeu/);
 assert.match(rootPage, /AuthGate/);
 assert.match(rootPage, /CardVisionApp/);
 assert.doesNotMatch(rootPage, /PrivacyPolicyPage|Política de privacidade|public-policy-page/);
-assert.ok(audit.includes("pkg.version === '40.20.0'"));
-assert.ok(audit.includes("buildmaster-v40-20-progress-1"));
+assert.ok(audit.includes("pkg.version === '40.70.0'"));
+assert.ok(audit.includes("buildmaster-v40-70-live-catalog-ocr-1"));
 assert.ok(doctor.includes('Regressões v38.34'));
-assert.ok(sw.includes('buildmaster-v40-20-progress-1'));
-assert.ok(nativeCache.includes('40.20.0-progress-runtime-1'));
+assert.ok(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'));
+assert.ok(nativeCache.includes('40.70.0-progress-runtime-1'));
 
 console.log('v38.34 preservada na v38.40: orçamento protegido, rota inicial restaurada e contrato do gerador compatível com o Estúdio Marques.');

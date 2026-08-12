@@ -1,4 +1,4 @@
-name: Gerar AAB v40.20 Google Play
+name: Gerar AAB v40.70 Google Play
 
 on:
   workflow_dispatch:
@@ -55,10 +55,10 @@ jobs:
           ref: ${{ github.event.inputs.source_ref || github.ref }}
           fetch-depth: 0
 
-      - name: Carregar versão v40.20 do pacote
+      - name: Carregar versão v40.70 do pacote
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          test "$VERSION" = "40.20.0" || { echo "::error::package.json precisa estar em 40.20.0"; exit 1; }
+          test "$VERSION" = "40.70.0" || { echo "::error::package.json precisa estar em 40.70.0"; exit 1; }
           echo "BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION=$VERSION" >> "$GITHUB_ENV"
@@ -274,7 +274,7 @@ jobs:
       - name: Publicar artefato para homologação
         uses: actions/upload-artifact@v6
         with:
-          name: buildmaster-play-v38-40-${{ env.ANDROID_VERSION_CODE }}
+          name: buildmaster-play-v40-30-${{ env.ANDROID_VERSION_CODE }}
           path: |
             ${{ env.AAB_NAME }}
             ${{ env.AAB_NAME }}.sha256
@@ -296,7 +296,7 @@ jobs:
         env:
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           AAB_PATH: ${{ env.AAB_NAME }}
-          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/35.20.0.txt
+          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/40.70.0.txt
           PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status || 'draft' }}
           ROLLOUT_PERCENTAGE: ${{ github.event.inputs.rollout_percentage || '100' }}
         run: |

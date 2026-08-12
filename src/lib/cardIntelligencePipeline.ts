@@ -19,6 +19,10 @@ import { applyUnifiedPerformanceV3920 } from './unifiedPerformanceEngineV3920';
 import { stabilizeUnifiedRecipeFromMemoryV3920 } from './unifiedRecipeMemoryV3920';
 import { applyAdaptivePositionV3930, restoreCanonicalInputBeforeV3930 } from './adaptivePositionEngineV3930';
 import { applyPerformanceFunctionV3940 } from './performanceFunctionEngineV3940';
+import { applyAdaptiveMaximumV4030 } from './adaptiveMaximumEngineV4030';
+import { applyMaximumPerformanceV4040 } from './maximumPerformanceOptimizerV4040';
+import { applyVerifiedGameplayWinnerV4050 } from './realGameplayValidationV4050';
+import { applyLongitudinalWinnerV4060 } from './longitudinalGameplayLearningV4060';
 
 /**
  * Pipeline único e de memória controlada.
@@ -82,6 +86,10 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = enforceComplementarySkillIntegrity(current);
   current = applyAdaptivePositionV3930(current);
   current = applyPerformanceFunctionV3940(current);
+  current = applyAdaptiveMaximumV4030(current);
+  current = applyMaximumPerformanceV4040(current);
+  current = applyVerifiedGameplayWinnerV4050(current);
+  current = applyLongitudinalWinnerV4060(current);
   // A função real pode reordenar até duas habilidades complementares. A
   // auditoria final precisa espelhar exatamente o conjunto exibido, sem
   // reclassificar a receita nem desfazer o DNA preservado.

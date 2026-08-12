@@ -1,0 +1,1 @@
+BuildMaster v40.60: aprendizado competitivo longitudinal por carta e posição, confirmação em sessões distintas, comparação pareada entre fichas, detecção de drift e bloqueio de promoções precoces. Mantém a Validação Real v40.50, Precisão Competitiva 99 e OCR dos 8 quadrados.

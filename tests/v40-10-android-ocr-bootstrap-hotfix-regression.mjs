@@ -19,4 +19,4 @@ assert.match(vendor, /4\.0\.0_best_int/, 'Modelo português BEST deve ser preser
 assert.match(vendor, /public\/tesseract\/lang\/por\.traineddata'/, 'traineddata deve entrar descompactado no APK.');
 assert.doesNotMatch(vendor, /public\/tesseract\/lang\/por\.traineddata\.gz'/, 'WebView não deve descompactar traineddata em tempo de leitura.');
 assert.doesNotMatch(workflow, /Idioma OCR inglês ausente/, 'Build não deve exigir asset inglês não usado.');
-console.log('v40.20 r2 aprovada: bootstrap OCR Android usa POR local, pré-aquecimento e progresso monotônico sem bloqueio em traineddata.');
+console.log('v40.30 r2 aprovada: bootstrap OCR Android usa POR local, pré-aquecimento e progresso monotônico sem bloqueio em traineddata.');

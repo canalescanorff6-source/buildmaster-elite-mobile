@@ -70,7 +70,7 @@ export const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
   updatedAt: '2026-08-01T00:00:00.000Z',
   publishedAt: '2026-08-01T00:00:00.000Z',
   gameVersion: 'eFootball 2026',
-  minimumAppVersion: '40.20.0',
+  minimumAppVersion: '40.70.0',
   schemaVersion: 3770,
   source: 'Pacote local embutido',
   releaseNotes: ['Base local compatível com histórico, catálogo remoto e auditoria v37.70.'],

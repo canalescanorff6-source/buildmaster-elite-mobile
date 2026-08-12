@@ -4,6 +4,7 @@ import { buildEfhubProfileAudit, looksLikeEfhubProfileText, type EfhubProfileAud
 import { canonicalSkillName, extractCanonicalSkillsFromText, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
+import { discoverUnknownSpecialSkillsV4070 } from '@/lib/skillDiscoveryV4070';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -524,6 +525,9 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const physicalSource = [sourceText(readings, ['physicalModel', 'progression']), fullText].filter(Boolean).join('\n');
   const skillZoneText = sourceTextWithRawPasses(readings, ['skills']);
   const skillSource = skillZoneText || fullText;
+  const skillIndependentPassTexts = readings
+    .filter((reading) => reading.key === 'skills')
+    .flatMap((reading) => (reading.rawPasses ?? []).map((pass) => cleanMultiline(pass.text)).filter(Boolean));
   const conditionSource = [sourceText(readings, ['condition', 'manager']), fullText].filter(Boolean).join('\n');
   const impetoSource = [sourceText(readings, ['impetos', 'autoTraining']), fullText].filter(Boolean).join('\n');
   const progressionSource = [sourceText(readings, ['progression', 'autoTraining']), fullText].filter(Boolean).join('\n');
@@ -573,7 +577,11 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const physicalModel = parseNumericCatalog(physicalSource, PHYSICAL_ALIASES, physicalConfidence, 'Modelo físico', 0, 400);
   const parsedSkills = parseSkills(skillSource, skillConfidence, 'Lista de habilidades', learnedSkillNames);
   const skills = parsedSkills.skills;
-  const skillCandidates = parsedSkills.candidates;
+  const discoveredSkills = discoverUnknownSpecialSkillsV4070(skillIndependentPassTexts, skillConfidence);
+  const skillCandidates = discoveredSkills.map((candidate) => ({
+    ...makeValue('Habilidade especial provisória', candidate.name, candidate.confidence, `OCR v40.70 • ${candidate.evidenceCount} passagens independentes`),
+    status: 'review' as const
+  }));
   const impetos = parseImpetos(impetoSource, impetoConfidence, 'Faixa de Ímpetos');
   const progressionSequence = parseProgressionSequence(progressionSource, confidenceFromSource(readings, ['progression', 'autoTraining'], 62), 'Faixa de progressão');
 
@@ -630,7 +638,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (efhubDetected && positionRatings.length !== 13) missing.push(`posições ${positionRatings.length}/13`);
   if (efhubDetected && physicalModel.length !== 16) missing.push(`modelo físico ${physicalModel.length}/16`);
   if (skills.length < 1) missing.push('habilidades completas');
-  if (skillCandidates.length) missing.push('confirmar habilidades novas');
+  if (skillCandidates.length) missing.push('habilidades especiais provisórias detectadas');
   if (!impetos.length) missing.push('Ímpetos');
   const recognized = [
     ...Object.values(identity).filter(Boolean), ...condition, ...managerBoosts, ...impetos,
@@ -666,7 +674,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of attributes) canonical.push(`${value.label}: ${value.value}`);
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
-  if (skillCandidates.length) canonical.push(`HABILIDADES NOVAS PARA CONFIRMAÇÃO: ${skillCandidates.map((item) => item.value).join(', ')}`);
+  if (skillCandidates.length) canonical.push(`HABILIDADES ESPECIAIS PROVISÓRIAS: ${skillCandidates.map((item) => item.value).join(', ')}`);
   canonical.push('[FIM LEITURA DETALHADA V32.00]');
 
   const warnings: string[] = [];
@@ -677,7 +685,8 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (weightCandidate && !weightRaw) warnings.push(`Peso descartado por estar fora da faixa plausível: ${weightCandidate} kg.`);
   if (ageCandidate && !ageRaw) warnings.push(`Idade descartada por estar fora da faixa plausível: ${ageCandidate}.`);
   if (levelCandidate && !levelRaw) warnings.push(`Nível descartado por estar fora da faixa plausível: ${levelCandidate}.`);
-  if (!skills.length && skillSource.trim()) warnings.push('O OCR encontrou texto na área de habilidades, mas nenhum nome oficial pôde ser confirmado. O texto bruto foi descartado para não criar habilidades falsas.');
+  if (!skills.length && !skillCandidates.length && skillSource.trim()) warnings.push('O OCR encontrou texto na área de habilidades, mas nenhum nome conhecido nem consenso independente suficiente foi confirmado. O texto bruto foi descartado para não criar habilidades falsas.');
+  if (skillCandidates.length) warnings.push(`OCR v40.70 detectou ${skillCandidates.length} nome(s) novo(s) por consenso independente. Foram cadastrados como provisórios, sem receber peso de gameplay automaticamente.`);
   const highestPosition = Math.max(0, ...positionRatings.map((item) => item.numericValue ?? 0));
   if (identity.overall?.numericValue && highestPosition && Math.abs(identity.overall.numericValue - highestPosition) > 12) {
     identity.overall.status = 'review';

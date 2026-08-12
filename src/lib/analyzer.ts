@@ -2297,10 +2297,10 @@ function addSkillIdentityWeights(weights: Record<TrainingKey, number>, parsed: P
   const names = Array.from(new Set([...(parsed.nativeSkills ?? []), ...(parsed.additionalSkills ?? []), ...(parsed.specialSkills ?? []), ...(parsed.impetos ?? []).map((item) => item.name), parsed.specialTag ?? ''].filter(Boolean)));
   const add = (key: TrainingKey, amount: number) => { weights[key] += amount; };
   const special: Record<string, Partial<Record<TrainingKey, number>>> = {
-    'Curva Blitz': { shooting:1.8, dribbling:.8, dexterity:.55 },
+    'Curva descendente': { shooting:1.8, dribbling:.8, dexterity:.55 },
     'Drible de impulso': { dribbling:1.65, dexterity:.85 },
     'Finalização fenomenal': { shooting:1.85, dexterity:.55 },
-    'Passe fenomenal': { passing:1.9, dribbling:.45 },
+    'Passador nato': { passing:1.9, dribbling:.45 },
     'Passe decisivo': { passing:1.65, lowerBodyStrength:.35 },
     'Fortaleza': { defending:1.65, aerialStrength:.55 },
     'Cruzamento cortante': { passing:1.55, lowerBodyStrength:.55 },
@@ -2671,13 +2671,13 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
 }
 
 const DNA_SPECIAL_SKILL_RULES: Record<string, { positions: PositionCode[]; attrs: AttributeKey[]; groups: TrainingKey[]; use: string }> = {
-  'Curva Blitz': { positions:['LWF','RWF','SS','AMF','CF'], attrs:['curl','finishing','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], use:'cortar para o pé dominante e finalizar com curva sem perder a preparação corporal' },
+  'Curva descendente': { positions:['LWF','RWF','SS','AMF','CF'], attrs:['curl','finishing','kickingPower','ballControl'], groups:['shooting','dribbling','dexterity'], use:'cortar para o pé dominante e finalizar com curva sem perder a preparação corporal' },
   'Esticada de Perna': { positions:['CB','DMF','LB','RB','CMF'], attrs:['tackling','defensiveEngagement','aggression','physicalContact'], groups:['defending','lowerBodyStrength'], use:'fechar linhas de passe e recuperar a bola sem desmontar o bloco' },
   'Impulso ofensivo': { positions:['LWF','RWF','SS','AMF','CF','LMF','RMF'], attrs:['speed','acceleration','offensiveAwareness','stamina'], groups:['dexterity','lowerBodyStrength'], use:'acelerar a movimentação sem bola no campo adversário' },
   'Sombra veloz': { positions:['DMF','CB','LB','RB'], attrs:['speed','acceleration','defensiveAwareness','stamina'], groups:['dexterity','lowerBodyStrength','defending'], use:'recuperar em velocidade quando um passe rompe a linha defensiva' },
   'Drible de impulso': { positions:['LWF','RWF','SS','AMF'], attrs:['dribbling','tightPossession','balance','acceleration'], groups:['dribbling','dexterity'], use:'vencer o duelo curto e conduzir em velocidade' },
   'Finalização fenomenal': { positions:['CF','SS','LWF','RWF','AMF'], attrs:['finishing','kickingPower','balance','offensiveAwareness'], groups:['shooting','dexterity'], use:'finalizar mesmo sob contato ou postura corporal desfavorável' },
-  'Passe fenomenal': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], use:'executar passes difíceis sob pressão e em pouco espaço' },
+  'Passador nato': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','ballControl','tightPossession'], groups:['passing','dribbling'], use:'executar passes difíceis sob pressão e em pouco espaço' },
   'Passe decisivo': { positions:['AMF','CMF','DMF','SS'], attrs:['lowPass','loftedPass','stamina'], groups:['passing','lowerBodyStrength'], use:'aumentar a criação quando a partida exige uma jogada decisiva' },
   'Fortaleza': { positions:['CB','DMF','LB','RB','GK'], attrs:['defensiveAwareness','tackling','physicalContact','defensiveEngagement'], groups:['defending','aerialStrength'], use:'proteger a área e sustentar a vantagem com posicionamento e contato' },
   'Cruzamento cortante': { positions:['LWF','RWF','LMF','RMF','LB','RB'], attrs:['loftedPass','curl','kickingPower'], groups:['passing','lowerBodyStrength'], use:'cruzar com trajetória rápida a partir do corredor' },

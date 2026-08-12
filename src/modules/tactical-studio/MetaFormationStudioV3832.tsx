@@ -232,7 +232,7 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
     <section className="meta-formation-studio-v3832">
       <header className="meta-studio-header">
         <div><p className="kicker"><Layers3 size={15}/> Estúdio de Formações Meta</p><h2>Gerador Tático Profissional por Template</h2><span>Gere artes detalhadas no padrão azul-marinho e dourado, sem IA paga e com todos os dados táticos do projeto.</span></div>
-        <span className="meta-version-pill">v40.20</span>
+        <span className="meta-version-pill">v40.60</span>
       </header>
 
       <nav className="meta-mode-tabs" aria-label="Modo de criação">

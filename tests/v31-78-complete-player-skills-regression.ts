@@ -57,11 +57,11 @@ assert.equal(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length, 64, 'O leitor deve reco
 assert.equal(new Set(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES).size, ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length);
 
 const requiredSpecials = [
-  'Fortaleza aérea', 'Drible explosivo', 'Impulso ofensivo', 'Desencadeador de ataques', 'Curva Blitz',
+  'Fortaleza aérea', 'Drible explosivo', 'Impulso ofensivo', 'Desencadeador de ataques', 'Curva descendente',
   'Cabeçada fulminante', 'Cruzamento cortante', 'Fortaleza', 'Passe decisivo',
   'Comandante da defesa (GO)', 'Rugido do goleiro', 'Esticada de Perna',
   'Chute rasteiro fulminante', 'Pés magnéticos', 'Drible de impulso',
-  'Finalização fenomenal', 'Passe fenomenal', 'Garra', 'Passe visionário', 'Sombra veloz'
+  'Finalização fenomenal', 'Passador nato', 'Garra', 'Passe visionário', 'Sombra veloz'
 ];
 for (const skill of requiredSpecials) {
   assert.ok(SPECIAL_SKILL_NAMES.includes(skill), `${skill} precisa existir no catálogo nativo/especial.`);

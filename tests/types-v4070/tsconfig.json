@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": "../..",
+    "paths": {
+      "@/lib/secureStorage": [
+        "tests/types-v4070/secureStorageStub.ts"
+      ],
+      "@/lib/backgroundOcrV3840": [
+        "tests/types-v4070/backgroundOcrStub.ts"
+      ],
+      "@/*": [
+        "src/*"
+      ],
+      "@/components/SmartCardCropPanel": [
+        "tests/types-v4070/smartCardStub.tsx"
+      ],
+      "@/modules/card-reader/cardArtCrop": [
+        "tests/types-v4070/cardArtCropStub.ts"
+      ]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false
+  },
+  "files": [
+    "tesseract-stub.d.ts",
+    "stubs.d.ts",
+    "secureStorageStub.ts",
+    "backgroundOcrStub.ts",
+    "smartCardStub.tsx",
+    "cardArtCropStub.ts",
+    "../../src/lib/efootballSeasonCatalogV4070.ts",
+    "../../src/lib/provisionalSpecialSkillCatalogV4070.ts",
+    "../../src/lib/skillDiscoveryV4070.ts",
+    "../../src/lib/officialSkillIdentity.ts",
+    "../../src/lib/cardSkillParser.ts",
+    "../../src/modules/card-reader/detailedPrintReader.ts",
+    "../../src/modules/architecture/appOptions.ts"
+  ]
+}

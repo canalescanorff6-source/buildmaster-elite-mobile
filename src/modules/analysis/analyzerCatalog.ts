@@ -176,7 +176,7 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Drible explosivo': { category: 'ESPECIAL', boosts: { mobility: 5, dribbling: 3 }, aliases: ['Acceleration Burst', 'Explosive Dribbling', 'Explosive Dribble', 'Drible explosivos', 'Arranque explosivo', 'Explosão de aceleração'] },
   'Impulso ofensivo': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 1 }, aliases: ['Attacking Surge', 'Attack Surge', 'Surto ofensivo', 'Arrancada ofensiva', 'Impulso de ataque'] },
   'Desencadeador de ataques': { category: 'ESPECIAL', boosts: { creation: 3, pressure: 1 }, aliases: ['Attack Trigger', 'Gatilho de ataque', 'Desencadeador de ataque'] },
-  'Curva Blitz': { category: 'ESPECIAL', boosts: { finishing: 5, creation: 2 }, aliases: ['Blitz Curler', 'Curva blitz', 'Chute curvado blitz', 'Finalização curva blitz'] },
+  'Curva descendente': { category: 'ESPECIAL', boosts: { finishing: 5, creation: 2 }, aliases: ['Blitz Curler', 'Curva Blitz', 'Curva blitz', 'Chute curvado blitz', 'Finalização curva blitz'] },
   'Cabeçada fulminante': { category: 'ESPECIAL', boosts: { aerial: 5, finishing: 3 }, aliases: ['Bullet Header', 'Cabeçada bala', 'Cabecada fulminante'] },
   'Cruzamento cortante': { category: 'ESPECIAL', boosts: { creation: 5 }, aliases: ['Edged Crossing', 'Cruzamento afiado', 'Cruzamento com efeito cortante'] },
   'Fortaleza': { category: 'ESPECIAL', boosts: { defense: 4, physical: 4 }, aliases: ['Fortress'] },
@@ -188,7 +188,7 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Pés magnéticos': { category: 'ESPECIAL', boosts: { dribbling: 5, physical: 1 }, aliases: ['Magnetic Feet', 'Pes magneticos'] },
   'Drible de impulso': { category: 'ESPECIAL', boosts: { dribbling: 5, mobility: 3 }, aliases: ['Momentum Dribbling', 'Drible com impulso', 'Drible de momento'] },
   'Finalização fenomenal': { category: 'ESPECIAL', boosts: { finishing: 6 }, aliases: ['Phenomenal Finishing', 'Finalizacao fenomenal'] },
-  'Passe fenomenal': { category: 'ESPECIAL', boosts: { creation: 6 }, aliases: ['Phenomenal Pass'] },
+  'Passador nato': { category: 'ESPECIAL', boosts: { creation: 6 }, aliases: ['Phenomenal Pass', 'Passe fenomenal', 'Passador Nato'] },
   'Garra': { category: 'ESPECIAL', boosts: { finishing: 3, pressure: 4 }, aliases: ['Willpower', 'Força de vontade', 'Forca de vontade'] },
   'Passe visionário': { category: 'ESPECIAL', boosts: { creation: 6 }, aliases: ['Visionary Pass', 'Passe visionario'] },
 
@@ -265,11 +265,11 @@ export function isOfficialAdditionalSkill(skill: string) {
 }
 
 export const SPECIAL_SKILL_NAMES = [
-  'Fortaleza aérea', 'Drible explosivo', 'Impulso ofensivo', 'Desencadeador de ataques', 'Curva Blitz',
+  'Fortaleza aérea', 'Drible explosivo', 'Impulso ofensivo', 'Desencadeador de ataques', 'Curva descendente',
   'Cabeçada fulminante', 'Cruzamento cortante', 'Fortaleza', 'Passe decisivo',
   'Comandante da defesa (GO)', 'Rugido do goleiro', 'Esticada de Perna',
   'Chute rasteiro fulminante', 'Pés magnéticos', 'Drible de impulso',
-  'Finalização fenomenal', 'Passe fenomenal', 'Garra', 'Passe visionário', 'Sombra veloz'
+  'Finalização fenomenal', 'Passador nato', 'Garra', 'Passe visionário', 'Sombra veloz'
 ];
 
 /** Todos os nomes que o leitor pode reconhecer, incluindo habilidades nativas,

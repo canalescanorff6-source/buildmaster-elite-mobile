@@ -14,7 +14,7 @@ const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '40.20.0');
+assert.equal(pkg.version, '40.70.0');
 assert.equal(pkg.scripts['test:v3835'], 'node tests/v38-35-legacy-regressions-hotfix.mjs');
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3835'));
 assert.match(budgetRegression, /\(\?:3\\\.5\|4\|4\\\.5\)/);
@@ -31,13 +31,13 @@ assert.match(cacheHotfixRegression, /const \[major, minor\] = pkg\.version\.spli
 assert.match(cacheHotfixRegression, /escapedCacheVersion/);
 assert.doesNotMatch(cacheHotfixRegression, /36-deterministic-audit/);
 
-assert.ok(audit.includes("pkg.version === '40.20.0'"));
-assert.ok(audit.includes('buildmaster-v40-20-progress-1'));
+assert.ok(audit.includes("pkg.version === '40.70.0'"));
+assert.ok(audit.includes('buildmaster-v40-70-live-catalog-ocr-1'));
 assert.ok(doctor.includes('Regressões v38.39'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.20');
-assert.ok(sw.includes('buildmaster-v40-20-progress-1'));
-assert.ok(nativeCache.includes('40.20.0-progress-runtime-1'));
-const playNotes = read('play-store/listing/pt-BR/release-notes/40.20.0.txt').trim();
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.70');
+assert.ok(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'));
+assert.ok(nativeCache.includes('40.70.0-progress-runtime-1'));
+const playNotes = read('play-store/listing/pt-BR/release-notes/40.30.0.txt').trim();
 assert.ok(playNotes.length > 0 && playNotes.length <= 500);
 
 console.log('v38.35 preservada na v38.40: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');

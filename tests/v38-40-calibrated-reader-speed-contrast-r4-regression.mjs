@@ -20,7 +20,7 @@ assert.match(app, /calibratedFastPath \? 80 : 160/, 'Leitura calibrada deve carr
 
 assert.match(calibration, /detectSkillCapsules\?: boolean/, 'Gerador legado deve continuar podendo desativar cápsulas dinâmicas.');
 assert.match(calibration, /options\.detectSkillCapsules === false[\s\S]*?\? \[\]/, 'Detector de cápsulas deve continuar desativável.');
-assert.match(macroReader, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-eight-macros-r1'/, 'O fluxo manual deve usar o leitor de 8 macros v40.20.');
+assert.match(macroReader, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-eight-macros-r1'/, 'O fluxo manual deve usar o leitor de 8 macros v40.30.');
 assert.match(macroReader, /const MACRO_PLANS:[\s\S]*identity[\s\S]*card[\s\S]*bio[\s\S]*positions[\s\S]*boosters[\s\S]*attributes[\s\S]*physical[\s\S]*skills/, 'Os 8 quadrados devem ser as 8 unidades primárias de OCR.');
 assert.match(macroReader, /TOTAL_READER_DEADLINE_MS = 90_000/, 'A leitura inteira deve possuir prazo máximo de 90 s.');
 assert.match(macroReader, /targetedRetry/, 'Nome, atributos e habilidades podem receber conferência seletiva apenas quando necessário.');

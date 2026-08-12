@@ -1,4 +1,5 @@
 import { SPECIAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
+import { listProvisionalSpecialSkillsV4070, resolveProvisionalSpecialSkillNameV4070 } from './provisionalSpecialSkillCatalogV4070';
 import {
   canonicalSkillName,
   canonicalizeSkillList,
@@ -32,7 +33,9 @@ function parseSkillContent(content: string) {
     const letters = (skill.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
     if (skill.length < 3 || skill.length > 54 || letters / Math.max(1, skill.length) < 0.62) continue;
     const canonical = canonicalSkillName(skill);
+    const provisional = resolveProvisionalSpecialSkillNameV4070(skill);
     if (canonical) found.push(canonical);
+    else if (provisional) found.push(provisional);
   }
   return canonicalizeSkillList(found);
 }
@@ -45,7 +48,7 @@ function collectExplicitSkillLines(text: string) {
 
   const patterns: Array<{ kind: 'native' | 'additional' | 'special'; pattern: RegExp }> = [
     { kind: 'additional', pattern: /^\s*(?:HABILIDADES?\s+ADICIONAIS?|ADICIONAIS?\s+INSTALADAS?|HABILIDADES?\s+ADICIONADAS?|ADDITIONAL\s+SKILLS?)\s*[:=]\s*(.*)$/i },
-    { kind: 'special', pattern: /^\s*(?:HABILIDADES?\s+ESPECIAIS?|HABILIDADE\s+ESPECIAL|SPECIAL\s+SKILLS?)\s*[:=]\s*(.*)$/i },
+    { kind: 'special', pattern: /^\s*(?:HABILIDADES?\s+ESPECIAIS?(?:\s+PROVIS[OÓ]RIAS?)?|HABILIDADE\s+ESPECIAL|SPECIAL\s+SKILLS?)\s*[:=]\s*(.*)$/i },
     { kind: 'native', pattern: /^\s*HABILIDADES?\s+(?:JÁ POSSUI|JA POSSUI|DO JOGADOR|NATIVAS?|CONFIRMADAS?)\s*[:=]\s*(.*)$/i }
   ];
 
@@ -77,7 +80,7 @@ function scanVisibleSkills(text: string) {
 }
 
 function separateCategories(nativeInput: string[], additionalInput: string[], specialInput: string[]) {
-  const specialKeys = new Set(SPECIAL_SKILL_NAMES.map(skillIdentityKey));
+  const specialKeys = new Set([...SPECIAL_SKILL_NAMES, ...listProvisionalSpecialSkillsV4070().map((entry) => entry.name)].map(skillIdentityKey));
   const special = canonicalizeSkillList([
     ...specialInput,
     ...nativeInput.filter((skill) => specialKeys.has(skillIdentityKey(skill))),

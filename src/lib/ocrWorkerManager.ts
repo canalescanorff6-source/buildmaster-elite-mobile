@@ -78,7 +78,7 @@ export function requestOcrWorkerReleaseWhenIdle(delayMs = 0): void {
 
 async function createReusableWorker(): Promise<WorkerLike> {
   const Tesseract = await import('tesseract.js');
-  // v40.20: usa o traineddata português BEST já descompactado dentro do APK.
+  // v40.40: usa o traineddata português BEST já descompactado dentro do APK.
   // Isso preserva a precisão do modelo de alta qualidade e remove do WebView o
   // custo/risco de descompactar por.traineddata.gz durante a leitura da carta.
   const worker = await Tesseract.createWorker(['por'], Tesseract.OEM.LSTM_ONLY, {

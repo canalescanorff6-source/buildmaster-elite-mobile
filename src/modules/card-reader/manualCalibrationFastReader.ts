@@ -59,7 +59,7 @@ function buildReading(plan: MacroPlan, text: string, confidence: number, enhance
     precisionVersion: MANUAL_CALIBRATION_FAST_READER_VERSION,
     validationNotes: [
       'Leitura primária feita diretamente no quadrado posicionado pelo usuário.',
-      'O modo v40.20 executa oito leituras principais; nova passagem ocorre apenas em campo crítico de baixa confiança.'
+      'O modo v40.40 executa oito leituras principais; nova passagem ocorre apenas em campo crítico de baixa confiança.'
     ],
     rawPasses: passes
   };
@@ -118,7 +118,7 @@ async function targetedRetry(file: File | Blob, macro: EfhubCalibrationZone, rea
 }
 
 /**
- * v40.20 — oito quadrados, oito leituras primárias.
+ * v40.40 — oito quadrados, oito leituras primárias.
  * O quadrado manual é a unidade de trabalho. Não o explode em 20+ OCRs.
  * Nome, atributos e habilidades podem receber UMA conferência curta somente
  * quando a primeira leitura realmente vier vazia ou fraca e ainda houver tempo.

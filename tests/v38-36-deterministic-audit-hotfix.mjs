@@ -11,7 +11,7 @@ const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 
-assert.equal(pkg.version, '40.20.0');
+assert.equal(pkg.version, '40.70.0');
 assert.equal(pkg.scripts['test:v3836'], 'node tests/v38-36-deterministic-audit-hotfix.mjs');
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3836'));
 assert.ok(doctor.includes('Regressões v38.39'));
@@ -21,8 +21,8 @@ assert.ok(audit.includes('módulo(s) não alcançável(is) foram ignorados pela 
 assert.ok(audit.includes('Acesso direto ao localStorage centralizado nos módulos ativos'));
 assert.ok(audit.includes('Tipos explícitos any removidos dos módulos ativos'));
 assert.ok(audit.includes('::error title=Auditoria estrutural::'));
-assert.ok(sw.includes('buildmaster-v40-20-progress-1'));
-assert.ok(nativeCache.includes('40.20.0-progress-runtime-1'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.20');
+assert.ok(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'));
+assert.ok(nativeCache.includes('40.70.0-progress-runtime-1'));
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.70');
 
 console.log('v38.40 aprovada: auditoria determinística valida o código ativo, informa resíduos sem bloquear e preserva falhas críticas.');
