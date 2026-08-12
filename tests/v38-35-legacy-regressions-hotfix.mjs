@@ -23,8 +23,12 @@ assert.match(studioRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 assert.match(revolutionRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 
 // O contrato legado não pode depender de um sufixo de cache de uma versão
-// anterior. A v37.71 valida o formato e a v38.31 deriva a versão do pacote.
-assert.ok(cacheRegression.includes('40\\.(?:00|10|20)\\.0'), 'A regressão v37.71 precisa reconhecer a linha v40.');
+// anterior. A v37.71 valida o formato atual completo da linha v40 e a v38.31
+// deriva a versão real do pacote.
+assert.ok(
+  cacheRegression.includes('40\\.(?:00|10|20|30|40|50|60|70)\\.0'),
+  'A regressão v37.71 precisa reconhecer toda a linha v40 até a versão atual.'
+);
 assert.match(cacheRegression, /contrato de cache sem duplicar a lista/);
 assert.doesNotMatch(cacheRegression, /36\\\.0-deterministic-audit/);
 assert.match(cacheHotfixRegression, /const \[major, minor\] = pkg\.version\.split\('\.'\)/);
@@ -40,4 +44,4 @@ assert.ok(nativeCache.includes('40.70.0-progress-runtime-1'));
 const playNotes = read('play-store/listing/pt-BR/release-notes/40.30.0.txt').trim();
 assert.ok(playNotes.length > 0 && playNotes.length <= 500);
 
-console.log('v38.35 preservada na v38.40: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');
+console.log('v38.35 preservada na v40.70: orçamento, visual e auditoria protegidos com contratos de cache dinâmicos.');

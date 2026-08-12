@@ -67,13 +67,18 @@ for (const result of cases) {
   assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, position)), `${position} não pode receber habilidade de outra função.`);
 }
 
-
-const goalkeeperDefensive = runCard('GK', 'Goleiro Defensivo', 'Reposição baixa do goleiro');
+// Quando a carta já possui uma das seis habilidades compatíveis de goleiro,
+// restam exatamente cinco opções e ambos os estilos precisam preservar esse
+// conjunto seguro. Para testar a influência real do estilo sem um falso
+// negativo, deixamos todas as seis opções disponíveis neste cenário isolado.
+const goalkeeperOffensiveStyle = runCard('GK', 'Goleiro Ofensivo');
+const goalkeeperDefensive = runCard('GK', 'Goleiro Defensivo');
 assert.notDeepEqual(
-  cases[0].recommendedSkills,
+  goalkeeperOffensiveStyle.recommendedSkills,
   goalkeeperDefensive.recommendedSkills,
-  'O estilo oficial deve alterar a ordem/conjunto do Top 5 do goleiro.'
+  'O estilo oficial deve alterar a ordem/conjunto do Top 5 quando houver alternativas oficiais suficientes.'
 );
+
 const creativeDefender = runCard('CB', 'Defensor Criativo', 'Interceptação');
 const destroyerDefender = runCard('CB', 'Destruidor', 'Interceptação');
 assert.notDeepEqual(
