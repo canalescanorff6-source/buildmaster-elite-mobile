@@ -242,6 +242,8 @@ export type ParsedCard = {
     skillConfidence?: number;
     additionalSkillCount?: number;
     specialSkillCount?: number;
+    impetoSlotStatus?: 'DISPONIVEL' | 'OCUPADO' | 'SEM_VAGA' | 'NAO_CONFIRMADO';
+    impetoSlotEvidence?: string | null;
   };
   internalId: string;
   confidence: number;
@@ -1793,6 +1795,61 @@ export type LongitudinalGameplayMemoryV4060 = {
   verifiedAt: string | null;
 };
 
+export type MaximumPerformanceV4080Impeto = {
+  slotStatus: 'DISPONIVEL' | 'OCUPADO' | 'SEM_VAGA' | 'NAO_CONFIRMADO';
+  canCraft: boolean;
+  existing: string[];
+  primary: string | null;
+  candidates: ImpetoRecommendation[];
+  bestScore: number;
+  selectableOfficialCount: 28;
+  randomPool: { outfieldMin: 14; outfieldMax: 15; goalkeeper: 8 };
+  policy: string;
+};
+
+export type MaximumPerformanceV4080Analysis = {
+  engineVersion: '40.80.0';
+  mode: 'DESEMPENHO_MAXIMO_STACK_FINAL';
+  deterministic: true;
+  selectedPosition: PositionCode;
+  selectedPositionLabel: string;
+  trainingSource: 'VALIDADO_LONGITUDINAL' | 'PARETO_RECONCILIADO' | 'ATUAL';
+  baseTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  exactBudget: boolean;
+  candidatesEvaluated: number;
+  baselineJointScore: number;
+  winnerJointScore: number;
+  jointGain: number;
+  skillPlan: {
+    finalSkills: string[];
+    score: number;
+    lateBound: true;
+    duplicatesWithOwned: number;
+    slotsFilled: number;
+  };
+  impeto: MaximumPerformanceV4080Impeto;
+  marginalAudit: Array<{
+    key: TrainingKey;
+    label: string;
+    level: number;
+    roleWeight: number;
+    saturationRisk: number;
+    verdict: 'PROTEGER' | 'EFICIENTE' | 'SATURADO' | 'BAIXA_PRIORIDADE';
+  }>;
+  guarantees: {
+    gerIsNotOptimizationTarget: true;
+    finalBuildFirst: true;
+    finalSkillsReconciled: boolean;
+    invalidImpetoSpendBlocked: boolean;
+    existingImpetoPreserved: true;
+    longitudinalWinnerProtected: boolean;
+    noRandomness: true;
+  };
+  reasons: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -1864,6 +1921,7 @@ export type AnalysisResult = {
   maximumPerformanceV4040?: MaximumPerformanceV4040Analysis;
   gameplayValidationMemoryV4050?: GameplayValidationMemoryV4050;
   longitudinalGameplayMemoryV4060?: LongitudinalGameplayMemoryV4060;
+  maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

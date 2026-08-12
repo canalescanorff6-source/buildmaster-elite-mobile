@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=(file)=>fs.readFileSync(file,'utf8');
+const pkg=JSON.parse(read('package.json'));
+const manifest=JSON.parse(read('public/manifest.webmanifest'));
+const layout=read('src/app/layout.tsx');
+const safeCss=read('src/app/v40-edge-safe.css');
+const progressCss=read('src/app/v40-progress.css');
+const pipeline=read('src/lib/cardIntelligencePipeline.ts');
+const domain=read('src/lib/analyzerDomain.ts');
+const analyzer=read('src/lib/analyzer.ts');
+const impetoCatalog=read('src/lib/officialImpetoCatalog.ts');
+const resultWorkspace=read('src/components/result/ResultWorkspace.tsx');
+const readerProgress=read('src/components/ReaderRecoveryAndProgressV3840.tsx');
+const cardVision=read('src/components/CardVisionApp.tsx');
+const sw=read('public/sw.js');
+const register=read('src/components/RegisterServiceWorker.tsx');
+const doctor=read('scripts/ci-doctor.mjs');
+
+assert.equal(pkg.version,'40.80.0');
+assert.equal(manifest.name,'BuildMaster Elite Tático v40.80');
+assert.equal(manifest.short_name,'BuildMaster v40.80');
+assert.ok(sw.includes('buildmaster-v40-80-edge-stack-1'));
+assert.ok(register.includes('40.80.0-edge-stack-runtime-1'));
+
+assert.match(layout,/import '\.\/v40-edge-safe\.css'/);
+assert.match(layout,/bm-v4080-edge-safe/);
+for(const inset of ['safe-area-inset-top','safe-area-inset-right','safe-area-inset-bottom','safe-area-inset-left']) assert.ok(safeCss.includes(inset),`safe-area ausente: ${inset}`);
+assert.match(safeCss,/\.app-route-loading/);
+assert.match(safeCss,/\.reader-live-progress-card/);
+assert.match(safeCss,/\.v4020-global-update-progress/);
+assert.match(progressCss,/safe-area-inset-bottom/,'progresso legado deve continuar protegendo a barra inferior');
+
+assert.match(pipeline,/applyLongitudinalWinnerV4060\(current\);\s*current = applyMaximumPerformanceV4080\(current\);/s,'v40.80 precisa rodar depois da aprendizagem longitudinal');
+assert.match(domain,/maximumPerformanceV4080\?: MaximumPerformanceV4080Analysis/);
+assert.match(domain,/impetoSlotStatus\?: 'DISPONIVEL' \| 'OCUPADO' \| 'SEM_VAGA' \| 'NAO_CONFIRMADO'/);
+assert.match(analyzer,/function detectImpetoSlotStatus/);
+assert.match(analyzer,/impetoSlotStatus: impetoSlot\.status/);
+assert.match(impetoCatalog,/IMPETO_CRAFTING_SELECTABLE_COUNT = 28/);
+assert.match(impetoCatalog,/goalkeeper: 8/);
+assert.match(resultWorkspace,/Gasto de Token/);
+assert.match(resultWorkspace,/canCraftImpeto/);
+assert.match(resultWorkspace,/Não gaste Token nela/);
+assert.doesNotMatch(readerProgress,/Preparando revisão/);
+assert.match(readerProgress,/Finalizando ficha/);
+assert.match(cardVision,/Validação automática/);
+assert.match(doctor,/EXPECTED_FULL_GROUPS = 93/);
+assert.match(doctor,/Regressões v40\.80/);
+
+console.log('v40.80 estática aprovada: safe-area Android, stack final, Top 5 tardio e Ímpeto seguro integrados.');

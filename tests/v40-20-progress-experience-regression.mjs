@@ -16,11 +16,11 @@ const app = read('src/components/CardVisionApp.tsx');
 const css = read('src/app/v40-progress.css');
 const register = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '40.70.0');
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.70');
-assert.equal(manifest.short_name, 'BuildMaster v40.70');
-assert.ok(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'));
-assert.ok(register.includes('40.70.0-progress-runtime-1'));
+assert.equal(pkg.version, '40.80.0');
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.80');
+assert.equal(manifest.short_name, 'BuildMaster v40.80');
+assert.ok(sw.includes('buildmaster-v40-80-edge-stack-1'));
+assert.ok(register.includes('40.80.0-edge-stack-runtime-1'));
 assert.ok(layout.includes("import './v40-progress.css';"));
 assert.ok(layout.indexOf("import './v40-progress.css';") > layout.indexOf("import './v38-stability-theme.css';"), 'A camada de progresso precisa ficar depois da proteção visual.');
 assert.ok(layout.includes('bm-v4020-progress'));
@@ -63,5 +63,5 @@ assert.ok(css.includes('.v4020-reader-progress'));
 assert.ok(css.includes('.update-download-progress{display:none!important}'));
 
 assert.ok(String(pkg.scripts?.['test:all']).includes('npm run test:v4020'));
-assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4070'));
+assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4080'));
 console.log('v40.30 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa sem regressão do leitor v40.00.');

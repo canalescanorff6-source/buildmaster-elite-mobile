@@ -5,16 +5,16 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 
-assert.equal(pkg.version, '40.70.0');
+assert.equal(pkg.version, '40.80.0');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3838'));
 assert.ok(read('scripts/ci-doctor.mjs').includes('Regressões v38.39'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.70');
-assert.ok(read('public/sw.js').includes('buildmaster-v40-70-live-catalog-ocr-1'));
-assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.70.0-progress-runtime-1'));
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.80');
+assert.ok(read('public/sw.js').includes('buildmaster-v40-80-edge-stack-1'));
+assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.80.0-edge-stack-runtime-1'));
 
 const v3500 = read('tests/v35-00-official-additional-skills-meta-regression.ts');
 assert.ok(
-  v3500.includes('Automática v38\\.(?:37|38|39|40)') || v3500.includes('Automática v(?:38\\.(?:37|38|39|40)|40\\.(?:00|10|20|30|40|50|60|70))'),
+  v3500.includes('Automática v38\\.(?:37|38|39|40)') || v3500.includes('Automática v(?:38\\.(?:37|38|39|40)|40\\.(?:00|10|20|30|40|50|60|70|80))'),
   'A regressão v35.00 precisa aceitar a calibração automática atual, incluindo a linha v40.30.'
 );
 assert.ok(v3500.includes('Perfil da carta'), 'A regressão v35.00 precisa validar o novo rótulo automático.');

@@ -15,7 +15,7 @@ export function ReaderLiveProgressCardV3840({ preview, status, progress, onCance
   const percent = Math.max(0, Math.min(100, Math.round(progress?.percent ?? 0)));
   return <section className="reader-live-progress-card luxury-panel" role="status" aria-live="polite">
     <div className="reader-live-progress-preview">{preview ? <img src={preview} alt="Print em leitura" /> : <ScanText size={30} />}</div>
-    <div className="reader-live-progress-copy"><p className="kicker"><Loader2 className="spin" size={14} /> Leitura do print</p><h3>Analisando a carta agora</h3><p>{status}</p><div className="reader-live-progress-steps"><span className="done">Imagem recebida</span><span className={percent < 89 ? 'active' : 'done'}>Lendo dados</span><span className={percent >= 89 && percent < 98 ? 'active' : percent >= 98 ? 'done' : ''}>Conferindo campos</span><span className={percent >= 98 ? 'active' : ''}>Preparando revisão</span></div></div>
+    <div className="reader-live-progress-copy"><p className="kicker"><Loader2 className="spin" size={14} /> Leitura do print</p><h3>Analisando a carta agora</h3><p>{status}</p><div className="reader-live-progress-steps"><span className="done">Imagem recebida</span><span className={percent < 89 ? 'active' : 'done'}>Lendo dados</span><span className={percent >= 89 && percent < 98 ? 'active' : percent >= 98 ? 'done' : ''}>Conferindo campos</span><span className={percent >= 98 ? 'active' : ''}>Finalizando ficha</span></div></div>
     <button type="button" className="cancel-ocr-action" onClick={onCancel}><Ban size={16} /> Cancelar leitura</button>
     <ReaderProgressBarV4010 progress={progress} />
   </section>;

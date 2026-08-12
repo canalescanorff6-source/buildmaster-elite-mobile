@@ -1,0 +1,54 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": "../..",
+    "paths": {
+      "@/lib/secureStorage": [
+        "tests/types-v4080/secureStorageStub.ts"
+      ],
+      "@/lib/backgroundOcrV3840": [
+        "tests/types-v4080/backgroundOcrStub.ts"
+      ],
+      "@/*": [
+        "src/*"
+      ],
+      "@/components/SmartCardCropPanel": [
+        "tests/types-v4080/smartCardStub.tsx"
+      ],
+      "@/modules/card-reader/cardArtCrop": [
+        "tests/types-v4080/cardArtCropStub.ts"
+      ]
+    },
+    "types": [],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false
+  },
+  "files": [
+    "../../__external_stubs.d.ts",
+    "stubs.d.ts",
+    "secureStorageStub.ts",
+    "backgroundOcrStub.ts",
+    "smartCardStub.tsx",
+    "cardArtCropStub.ts",
+    "../../src/lib/analyzerDomain.ts",
+    "../../src/lib/efootballMetaRuntimeV4030.ts",
+    "../../src/lib/adaptiveMaximumEngineV4030.ts",
+    "../../src/lib/efootballMetaRuntimeV4040.ts",
+    "../../src/lib/maximumPerformanceOptimizerV4040.ts",
+    "../../src/lib/maximumPerformanceV4080.ts",
+    "../../src/lib/cardIntelligencePipeline.ts",
+    "../../src/modules/architecture/appOptions.ts",
+    "../../src/components/UnifiedPerformanceV3920Panel.tsx"
+  ]
+}

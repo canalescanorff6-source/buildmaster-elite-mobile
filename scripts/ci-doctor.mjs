@@ -2,8 +2,8 @@ import { spawnSync } from 'node:child_process';
 
 const full = process.argv.includes('--full');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const CI_SOURCE_BUILD = 'v40.70-ci-live-catalog-zero-confirmation-20260812-r1';
-const EXPECTED_FULL_GROUPS = 92;
+const CI_SOURCE_BUILD = 'v40.80-ci-edge-stack-performance-20260812-r1';
+const EXPECTED_FULL_GROUPS = 93;
 
 const quickChecks = [
   ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
@@ -101,6 +101,7 @@ const fullChecks = [
   ['Regressões v40.50', ['run', 'test:v4050']],
   ['Regressões v40.60', ['run', 'test:v4060']],
   ['Regressões v40.70', ['run', 'test:v4070']],
+  ['Regressões v40.80', ['run', 'test:v4080']],
 ];
 
 const checks = full ? [...quickChecks, ...fullChecks] : quickChecks;

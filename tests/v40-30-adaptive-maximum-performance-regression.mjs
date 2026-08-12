@@ -8,7 +8,7 @@ const pipeline=read('src/lib/cardIntelligencePipeline.ts');
 const panel=read('src/components/UnifiedPerformanceV3920Panel.tsx');
 const app=read('src/components/CardVisionApp.tsx');
 const meta=read('src/lib/efootballMetaRuntimeV4030.ts');
-assert.equal(pkg.version,'40.70.0');
+assert.equal(pkg.version,'40.80.0');
 assert.match(options,/Desempenho máximo/);
 assert.match(app,/competitive-objective-v4070/);
 assert.doesNotMatch(options,/value:\s*'FINALIZER'/);

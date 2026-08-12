@@ -8,7 +8,7 @@ const pipeline=read('src/lib/cardIntelligencePipeline.ts');
 const panel=read('src/components/UnifiedPerformanceV3920Panel.tsx');
 const domain=read('src/lib/analyzerDomain.ts');
 const meta=read('src/lib/efootballMetaRuntimeV4040.ts');
-assert.equal(pkg.version,'40.70.0');
+assert.equal(pkg.version,'40.80.0');
 assert.match(options,/Desempenho máximo/);
 assert.match(engine,/PRECISAO_COMPETITIVA_99/);
 assert.match(engine,/paretoFrontier/);

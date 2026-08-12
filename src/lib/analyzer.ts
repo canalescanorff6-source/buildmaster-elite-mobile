@@ -671,6 +671,25 @@ function parseImpetos(text: string): Impetus[] {
   return Array.from(new Map(impetos.map((item) => [`${skillKey(item.name)}-${item.value ?? ''}`, item])).values());
 }
 
+function detectImpetoSlotStatus(text: string, impetos: Impetus[]): { status: ParsedCard['evidence']['impetoSlotStatus']; evidence: string | null } {
+  const normalized = normalize(text).toLowerCase();
+  const noSlot = /(?:sem|não possui|nao possui)\s+(?:vaga|espaço|espaco|slot)\s+de\s+(?:ímpeto|impeto|booster)|(?:vaga|espaço|espaco|slot)\s+de\s+(?:ímpeto|impeto|booster)\s*[:\-]?\s*(?:indisponível|indisponivel|não disponível|nao disponivel)/i;
+  if (noSlot.test(normalized)) return { status: 'SEM_VAGA', evidence: 'O print informa explicitamente que a carta não possui vaga/espaço de Ímpeto.' };
+
+  const slotMarker = /(?:vaga|espaço|espaco|slot)\s+de\s+(?:ímpeto|impeto|booster)|booster\s+slot/i;
+  const freeMarker = /(?:vaga|espaço|espaco|slot)[^\n]{0,40}(?:livre|vazi[oa]|disponível|disponivel)|(?:sem|nenhum)\s+(?:ímpeto|impeto|booster)\s+adicional/i;
+  const occupiedMarker = /(?:ímpeto|impeto|booster)\s+adicional\s*[:\-]\s*(?!nenhum|sem|vazio|livre)[a-zà-ÿ]/i;
+  const active = impetos.filter((item) => item.active !== false && !/sem\s+(?:ímpeto|impeto|booster)/i.test(item.name));
+
+  if (occupiedMarker.test(normalized) || (slotMarker.test(normalized) && active.length >= 2)) {
+    return { status: 'OCUPADO', evidence: 'A vaga de Ímpeto aparece ocupada por um Ímpeto adicional já lido.' };
+  }
+  if (freeMarker.test(normalized) || (slotMarker.test(normalized) && active.length <= 1)) {
+    return { status: 'DISPONIVEL', evidence: 'O print indica vaga/espaço de Ímpeto disponível para criação.' };
+  }
+  return { status: 'NAO_CONFIRMADO', evidence: null };
+}
+
 function parseCondition(text: string): PlayerCondition {
   const compact = normalize(text).replace(/\r?\n/g, ' ');
   const weakFreq = compact.match(/pior\s+p[eé]\s*\(?frequ[eê]ncia\)?\s*[:=-]?\s*(raramente|ocasionalmente|frequentemente|muito\s+frequentemente|baixo|m[eé]dio|alto|alta)/i)?.[1] ?? null;
@@ -1954,6 +1973,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const condition = parseCondition(text);
   const physicalProfile = parsePhysicalProfile(text);
   const impetos = parseImpetos(text);
+  const impetoSlot = detectImpetoSlotStatus(text, impetos);
   const attributeCount = Object.keys(attributes).length;
   const modelCount = Object.values(physicalProfile).filter((value) => Number.isFinite(value)).length;
   let confidence = 18;
@@ -2040,7 +2060,9 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
       skillSource: parsedSkillInventory.source,
       skillConfidence: parsedSkillInventory.confidence,
       additionalSkillCount: additionalSkills.length,
-      specialSkillCount: specialSkills.length
+      specialSkillCount: specialSkills.length,
+      impetoSlotStatus: impetoSlot.status,
+      impetoSlotEvidence: impetoSlot.evidence
     },
     internalId: id,
     confidence: Math.max(1, Math.min(100, Math.round(confidence))),

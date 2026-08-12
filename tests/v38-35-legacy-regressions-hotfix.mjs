@@ -14,7 +14,7 @@ const manifest = JSON.parse(read('public/manifest.webmanifest'));
 const sw = read('public/sw.js');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 
-assert.equal(pkg.version, '40.70.0');
+assert.equal(pkg.version, '40.80.0');
 assert.equal(pkg.scripts['test:v3835'], 'node tests/v38-35-legacy-regressions-hotfix.mjs');
 assert.ok(pkg.scripts['test:all'].includes('npm run test:v3835'));
 assert.match(budgetRegression, /\(\?:3\\\.5\|4\|4\\\.5\)/);
@@ -26,7 +26,7 @@ assert.match(revolutionRegression, /38\\\.\(\?:3\[2-9\]\|40\)/);
 // anterior. A v37.71 valida o formato atual completo da linha v40 e a v38.31
 // deriva a versão real do pacote.
 assert.ok(
-  cacheRegression.includes('40\\.(?:00|10|20|30|40|50|60|70)\\.0'),
+  cacheRegression.includes('40\\.(?:00|10|20|30|40|50|60|70|80)\\.0'),
   'A regressão v37.71 precisa reconhecer toda a linha v40 até a versão atual.'
 );
 assert.match(cacheRegression, /contrato de cache sem duplicar a lista/);
@@ -35,12 +35,12 @@ assert.match(cacheHotfixRegression, /const \[major, minor\] = pkg\.version\.spli
 assert.match(cacheHotfixRegression, /escapedCacheVersion/);
 assert.doesNotMatch(cacheHotfixRegression, /36-deterministic-audit/);
 
-assert.ok(audit.includes("pkg.version === '40.70.0'"));
-assert.ok(audit.includes('buildmaster-v40-70-live-catalog-ocr-1'));
+assert.ok(audit.includes("pkg.version === '40.80.0'"));
+assert.ok(audit.includes('buildmaster-v40-80-edge-stack-1'));
 assert.ok(doctor.includes('Regressões v38.39'));
-assert.equal(manifest.name, 'BuildMaster Elite Tático v40.70');
-assert.ok(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'));
-assert.ok(nativeCache.includes('40.70.0-progress-runtime-1'));
+assert.equal(manifest.name, 'BuildMaster Elite Tático v40.80');
+assert.ok(sw.includes('buildmaster-v40-80-edge-stack-1'));
+assert.ok(nativeCache.includes('40.80.0-edge-stack-runtime-1'));
 const playNotes = read('play-store/listing/pt-BR/release-notes/40.30.0.txt').trim();
 assert.ok(playNotes.length > 0 && playNotes.length <= 500);
 

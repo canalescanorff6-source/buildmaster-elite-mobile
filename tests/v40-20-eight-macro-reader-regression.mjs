@@ -6,7 +6,7 @@ const worker=read('src/lib/ocrWorkerManager.ts');
 const reader=read('src/modules/card-reader/manualCalibrationFastReader.ts');
 const vendor=read('scripts/vendor-tesseract-assets.mjs');
 const progress=read('src/components/ProgressBarsV4010.tsx');
-assert.equal(pkg.version,'40.70.0');
+assert.equal(pkg.version,'40.80.0');
 assert.match(worker,/gzip:\s*false/);
 assert.match(vendor,/4\.0\.0_best_int/);
 assert.match(vendor,/por\.traineddata'/);

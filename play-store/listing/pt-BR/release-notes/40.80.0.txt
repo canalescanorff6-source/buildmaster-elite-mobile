@@ -1,0 +1,1 @@
+Tela edge-to-edge protegida no Android, progresso visível abaixo da barra do sistema e motor Desempenho Máximo v40.80 que reconcilia ficha, Top 5 e Ímpeto. A criação de Ímpeto só é liberada quando a vaga é confirmada; Ímpetos existentes e fichas validadas em partidas são preservados.

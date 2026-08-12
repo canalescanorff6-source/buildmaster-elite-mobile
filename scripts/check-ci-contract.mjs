@@ -18,11 +18,11 @@ const sourceBuildMatch = doctor.match(/const\s+CI_SOURCE_BUILD\s*=\s*['"]([^'"]+
 check(Boolean(sourceBuildMatch), 'ci-doctor não declara CI_SOURCE_BUILD.');
 if (sourceBuildMatch) {
   check(
-    /^v40\.70-ci-[a-z0-9-]+-\d{8}-r\d+$/.test(sourceBuildMatch[1]),
+    /^v40\.80-ci-[a-z0-9-]+-\d{8}-r\d+$/.test(sourceBuildMatch[1]),
     `CI_SOURCE_BUILD inválido: ${sourceBuildMatch[1]}.`,
   );
 }
-check(doctor.includes('EXPECTED_FULL_GROUPS = 92'), 'ci-doctor não protege a quantidade esperada de 92 grupos.');
+check(doctor.includes('EXPECTED_FULL_GROUPS = 93'), 'ci-doctor não protege a quantidade esperada de 93 grupos.');
 check(packageJson.scripts?.['test:v3840'] === 'node scripts/run-v3840-tests.mjs', 'v38.40 não usa o executor detalhado e determinístico.');
 check(String(packageJson.scripts?.['test:v4000'] ?? '').includes('typecheck:v4000') && String(packageJson.scripts?.['test:v4000'] ?? '').includes('v40-00-card-reader-rebuild-regression.mjs'), 'v40.00 não protege o leitor reconstruído com typecheck e regressão dedicados.');
 check(String(packageJson.scripts?.['test:v4020'] ?? '').includes('typecheck:v4020') && String(packageJson.scripts?.['test:v4020'] ?? '').includes('v40-20-progress-experience-regression.mjs'), 'v40.20 não protege as barras de progresso com typecheck e regressão dedicados.');
@@ -31,6 +31,7 @@ check(String(packageJson.scripts?.['test:v4040'] ?? '').includes('v40-40-precisi
 check(String(packageJson.scripts?.['test:v4050'] ?? '').includes('v40-50-real-gameplay-validation-runtime-regression.ts') && packageJson.scripts?.['typecheck:v4050'], 'v40.50 não protege a Validação Real de Gameplay com typecheck e regressão dedicados.');
 check(String(packageJson.scripts?.['test:v4060'] ?? '').includes('v40-60-longitudinal-gameplay-runtime-regression.ts') && packageJson.scripts?.['typecheck:v4060'], 'v40.60 não protege o aprendizado longitudinal com typecheck e regressão dedicados.');
 check(String(packageJson.scripts?.['test:v4070'] ?? '').includes('v40-70-live-catalog-zero-confirmation-regression.mjs') && String(packageJson.scripts?.['test:v4070'] ?? '').includes('v40-70-skill-discovery-runtime-regression.ts') && packageJson.scripts?.['typecheck:v4070'], 'v40.70 não protege catálogo vivo, zero-confirmação e descoberta segura de habilidades com testes dedicados.');
+check(String(packageJson.scripts?.['test:v4080'] ?? '').includes('v40-80-safe-area-stack-regression.mjs') && String(packageJson.scripts?.['test:v4080'] ?? '').includes('v40-80-maximum-stack-runtime-regression.ts') && packageJson.scripts?.['typecheck:v4080'], 'v40.80 não protege safe-area, stack final, Top 5 e Ímpeto com testes dedicados.');
 
 check(apkWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow APK não restaura e valida o tsconfig raiz.');
 check(playWorkflow.includes('npm run types:repair && npm run quality:root-tsconfig'), 'Workflow Play não restaura e valida o tsconfig raiz.');
@@ -53,7 +54,7 @@ check(doctor.includes("['Regressões v34.00'"), 'ci-doctor completo não executa
 check(doctor.includes("['Regressões v35.00'"), 'ci-doctor completo não executa o catálogo oficial e a ficha universal v35.00.');
 check(doctor.includes("['Regressões v35.10'"), 'ci-doctor completo não executa a ficha máxima anti-overall v35.10.');
 check(doctor.includes("['Regressões v35.20'"), 'ci-doctor completo não executa Perfis de Gameplay e tema sólido v35.20.');
-for (const [version, script] of [['39.30', 'test:v3930'], ['39.40', 'test:v3940'], ['39.50', 'test:v3950'], ['40.00', 'test:v4000'], ['40.10', 'test:v4010'], ['40.20', 'test:v4020'], ['40.30', 'test:v4030'], ['40.40', 'test:v4040'], ['40.50', 'test:v4050'], ['40.60', 'test:v4060'], ['40.70', 'test:v4070']]) {
+for (const [version, script] of [['39.30', 'test:v3930'], ['39.40', 'test:v3940'], ['39.50', 'test:v3950'], ['40.00', 'test:v4000'], ['40.10', 'test:v4010'], ['40.20', 'test:v4020'], ['40.30', 'test:v4030'], ['40.40', 'test:v4040'], ['40.50', 'test:v4050'], ['40.60', 'test:v4060'], ['40.70', 'test:v4070'], ['40.80', 'test:v4080']]) {
   check(doctor.includes(`['Regressões v${version}', ['run', '${script}']]`), `ci-doctor completo não executa a regressão mais recente v${version}.`);
 }
 

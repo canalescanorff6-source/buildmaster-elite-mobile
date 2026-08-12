@@ -413,7 +413,10 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const completedRecommendedSkills = recommendedSkills.filter((skill) => Boolean(skillProgress?.[skill]));
   const pendingRecommendedSkills = recommendedSkills.filter((skill) => !skillProgress?.[skill]);
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
-  const bestImpeto = recommendedImpetos.find((item) => item.tier === 'ideal') ?? recommendedImpetos.find((item) => item.tier !== 'evitar');
+  const impetoV4080 = result.maximumPerformanceV4080?.impeto;
+  const canCraftImpeto = impetoV4080 ? impetoV4080.canCraft : true;
+  const bestImpeto = canCraftImpeto ? (recommendedImpetos.find((item) => item.tier === 'ideal') ?? recommendedImpetos.find((item) => item.tier !== 'evitar')) : undefined;
+  const existingImpetosV4080 = impetoV4080?.existing ?? card.impetos.filter((item) => item.active !== false).map((item) => item.name);
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
   const attributes = Object.entries(card.attributes).filter(([, value]) => Number.isFinite(value));
   const sourceLabel = card.trainingPointSource === 'MANUAL'
@@ -1183,7 +1186,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <div><p className="kicker"><BrainCircuit size={14} /> Escolha final da IA local</p><h3>{bestImpeto?.name ?? 'Ímpeto ainda não definido'}</h3></div>
               <span>{bestImpeto?.score ?? 0}/100 • {bestImpeto?.confidence ?? result.localAi?.confidence ?? 0}% confiança</span>
             </div>
-            <p className="bm-local-ai-summary">{bestImpeto?.reason ?? 'Confirme o print antes de gastar um Token de Ímpeto Selec.'}</p>
+            <p className="bm-local-ai-summary">{bestImpeto?.reason ?? (impetoV4080?.slotStatus === 'OCUPADO' ? `Vaga já ocupada. ${existingImpetosV4080.length ? `Ímpeto(s) preservado(s): ${existingImpetosV4080.join(', ')}.` : 'Nenhum gasto adicional é recomendado.'}` : impetoV4080?.slotStatus === 'SEM_VAGA' ? 'Esta carta foi lida sem Espaço/Vaga de Ímpeto. Não gaste Token nela.' : impetoV4080 ? 'A vaga de Ímpeto não foi confirmada pelo OCR. O gasto fica bloqueado por segurança.' : 'Confirme o print antes de gastar um Token de Ímpeto Selec.')}</p>
+            {impetoV4080 && <div className="data-grid"><div><span>Vaga de Ímpeto</span><strong>{impetoV4080.slotStatus === 'DISPONIVEL' ? 'Disponível' : impetoV4080.slotStatus === 'OCUPADO' ? 'Ocupada' : impetoV4080.slotStatus === 'SEM_VAGA' ? 'Não possui' : 'Não confirmada'}</strong></div><div><span>Gasto de Token</span><strong>{impetoV4080.canCraft ? 'Liberado' : 'Bloqueado'}</strong></div><div><span>Tipos selecionáveis</span><strong>{impetoV4080.selectableOfficialCount}</strong></div><div><span>Ímpeto atual</span><strong>{impetoV4080.primary ?? '—'}</strong></div></div>}
             {bestImpeto && <>
               <div className="bm-impeto-attribute-grid">{bestImpeto.attributes.map((attribute) => <div key={attribute}><ShieldCheck size={15} /><span>{attribute}</span></div>)}</div>
               <div className="bm-impeto-evidence">{(bestImpeto.evidence ?? []).map((line) => <p key={line}><CheckCircle2 size={15} /> {line}</p>)}</div>
@@ -1199,7 +1203,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           <article className="luxury-panel wide-card impeto-master-card">
             <div className="section-title-row"><div><p className="kicker">Alternativas seguras</p><h3>Use apenas quando quiser mudar a função</h3></div><span>{recommendedImpetos.filter((item) => item.tier === 'alternativo').length}</span></div>
             <div className="impeto-rank-list">
-              {recommendedImpetos.filter((item) => item.tier === 'alternativo').map((item, index) => (
+              {canCraftImpeto && recommendedImpetos.filter((item) => item.tier === 'alternativo').map((item, index) => (
                 <div key={`${item.name}-${index}`} className="impeto-row">
                   <strong>{String(index + 2).padStart(2, '0')} • {item.name} <small>{item.score ?? 0}/100</small></strong>
                   <span>{item.attributes.join(' • ')}</span>
@@ -1207,6 +1211,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
                   <div className="correction-actions"><button type="button" onClick={() => onPromoteImpeto?.(item.name)}><ThumbsUp size={14} /> Priorizar</button><button type="button" onClick={() => onRejectImpeto?.(item.name)}><Ban size={14} /> Não combina</button></div>
                 </div>
               ))}
+              {!canCraftImpeto && <p className="panel-note">Alternativas ocultadas porque a v40.80 não confirmou uma vaga livre para criação.</p>}
             </div>
           </article>
 

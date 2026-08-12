@@ -73,12 +73,12 @@ assert.ok(app.includes('schema: 3832'));
 
 const pkg = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
-assert.equal(pkg.version, '40.70.0');
-assert.equal(lock.version, '40.70.0');
-assert.equal(lock.packages[''].version, '40.70.0');
-assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v40.70');
-assert.ok(read('public/sw.js').includes('buildmaster-v40-70-live-catalog-ocr-1'));
-assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.70.0-progress-runtime-1'));
+assert.equal(pkg.version, '40.80.0');
+assert.equal(lock.version, '40.80.0');
+assert.equal(lock.packages[''].version, '40.80.0');
+assert.equal(JSON.parse(read('public/manifest.webmanifest')).name, 'BuildMaster Elite Tático v40.80');
+assert.ok(read('public/sw.js').includes('buildmaster-v40-80-edge-stack-1'));
+assert.ok(read('src/components/RegisterServiceWorker.tsx').includes('40.80.0-edge-stack-runtime-1'));
 assert.ok(read('.github/workflows/build-apk.yml').includes('package_version'));
 assert.ok(read('.github/workflows/build-play-store.yml').includes('BUILDMASTER_VERSION'));
 assert.ok(read('.github/workflows/build-play-store.yml').includes('versionName "{os.environ["BUILDMASTER_VERSION"]}"'));
