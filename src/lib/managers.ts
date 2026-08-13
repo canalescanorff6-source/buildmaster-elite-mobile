@@ -1,4 +1,4 @@
-import type { TacticalStyle } from './analyzer';
+import type { TacticalStyle } from './analyzerDomain';
 
 export type ManagerTier = 'LENDARIO_EPICO' | 'PACOTE_SELECAO' | 'GP';
 export type ManagerRecord = {

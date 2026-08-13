@@ -11,8 +11,8 @@ export const FLUID_FORMATION_V600_VERSION = '6.0.0-buildmaster-1' as const;
 export const FLUID_FORMATION_STORAGE_KEY = 'buildmaster_fluid_formation_v600';
 
 export type FluidFormationPhaseV600 = 'attack' | 'defense';
-export type FluidDefensivePresetV600 = 'COMPACTO_CENTRAL' | 'BLOCO_ALTO' | 'PERSONALIZADO';
-export type FluidTeamPlaystyleV600 = 'LEGADO' | 'SOBREPOSICAO';
+export type FluidDefensivePresetV600 = 'COMPACTO_CENTRAL' | 'MANUAL_SEGURO' | 'BLOCO_ALTO' | 'PERSONALIZADO';
+export type FluidTeamPlaystyleV600 = 'LEGADO' | 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE_RAPIDO' | 'CONTRA_ATAQUE' | 'POR_FORA' | 'PASSE_LONGO' | 'SOBREPOSICAO';
 
 export type FluidFormationPlanV600 = {
   engineVersion: typeof FLUID_FORMATION_V600_VERSION;
@@ -138,31 +138,34 @@ export function inferPositionV600(x: number, y: number, current: PositionCode): 
 
 export function deriveCompactDefenseV600(attack: FormationBlueprint, preset: Exclude<FluidDefensivePresetV600, 'PERSONALIZADO'> = 'COMPACTO_CENTRAL'): FormationBlueprint {
   const high = preset === 'BLOCO_ALTO';
+  const manualSafe = preset === 'MANUAL_SEGURO';
   const fieldAttackers = attack.slots.filter((slot) => ['CF','SS','LWF','RWF'].includes(slot.position));
   const centralCf = fieldAttackers.find((slot) => slot.position === 'CF') ?? fieldAttackers.slice().sort((a,b) => Math.abs(a.x - 50) - Math.abs(b.x - 50))[0];
   const slots = attack.slots.map((slot) => {
     if (slot.position === 'GK') return normalizeFluidSlotV600(slot, 'GK', 50, 93);
-    if (slot.position === 'CB') return normalizeFluidSlotV600(slot, 'CB', slot.x, high ? 72 : 79);
-    if (slot.position === 'LB') return normalizeFluidSlotV600(slot, 'LB', 10, high ? 67 : 74);
-    if (slot.position === 'RB') return normalizeFluidSlotV600(slot, 'RB', 90, high ? 67 : 74);
-    if (slot.position === 'DMF') return normalizeFluidSlotV600(slot, 'DMF', slot.x, high ? 53 : 61);
-    if (slot.position === 'CMF') return normalizeFluidSlotV600(slot, 'CMF', slot.x, high ? 46 : 54);
-    if (slot.position === 'LMF') return normalizeFluidSlotV600(slot, 'LMF', 15, high ? 42 : 49);
-    if (slot.position === 'RMF') return normalizeFluidSlotV600(slot, 'RMF', 85, high ? 42 : 49);
-    if (centralCf && slot.id === centralCf.id) return normalizeFluidSlotV600(slot, 'CF', 50, high ? 20 : 24);
-    if (slot.x < 24) return normalizeFluidSlotV600(slot, 'LMF', 15, high ? 35 : 43);
-    if (slot.x > 76) return normalizeFluidSlotV600(slot, 'RMF', 85, high ? 35 : 43);
-    return normalizeFluidSlotV600(slot, 'AMF', slot.x < 50 ? Math.max(28, slot.x) : Math.min(72, slot.x), high ? 31 : 40);
+    if (slot.position === 'CB') return normalizeFluidSlotV600(slot, 'CB', slot.x, high ? 72 : manualSafe ? 80 : 79);
+    if (slot.position === 'LB') return normalizeFluidSlotV600(slot, 'LB', 10, high ? 67 : manualSafe ? 76 : 74);
+    if (slot.position === 'RB') return normalizeFluidSlotV600(slot, 'RB', 90, high ? 67 : manualSafe ? 76 : 74);
+    if (slot.position === 'DMF') return normalizeFluidSlotV600(slot, 'DMF', slot.x, high ? 53 : manualSafe ? 60 : 61);
+    if (slot.position === 'CMF') return normalizeFluidSlotV600(slot, 'CMF', slot.x, high ? 46 : manualSafe ? 53 : 54);
+    if (slot.position === 'LMF') return normalizeFluidSlotV600(slot, 'LMF', 15, high ? 42 : manualSafe ? 50 : 49);
+    if (slot.position === 'RMF') return normalizeFluidSlotV600(slot, 'RMF', 85, high ? 42 : manualSafe ? 50 : 49);
+    if (centralCf && slot.id === centralCf.id) return normalizeFluidSlotV600(slot, 'CF', 50, high ? 20 : manualSafe ? 27 : 24);
+    if (slot.x < 24) return normalizeFluidSlotV600(slot, 'LMF', 15, high ? 35 : manualSafe ? 46 : 43);
+    if (slot.x > 76) return normalizeFluidSlotV600(slot, 'RMF', 85, high ? 35 : manualSafe ? 46 : 43);
+    return normalizeFluidSlotV600(slot, manualSafe ? 'CMF' : 'AMF', slot.x < 50 ? Math.max(28, slot.x) : Math.min(72, slot.x), high ? 31 : manualSafe ? 46 : 40);
   });
   const name = inferFormationNameV600(slots);
   return {
     ...cloneFormationV600(attack),
     id: `${attack.id}-def-v600`,
-    name: `${name} • ${high ? 'Bloco alto' : 'Bloco compacto'}`,
+    name: `${name} • ${high ? 'Bloco alto' : manualSafe ? 'Manual seguro' : 'Bloco compacto'}`,
     description: high
       ? 'Fase defensiva v6.0 com linha mais alta e pressão coordenada; exige boa Dedicação defensiva e recuperação.'
-      : 'Fase defensiva v6.0 compacta, reduzindo distâncias e mantendo apoios centrais para marcação mais manual.',
-    behavior: high ? 'Pressiona mais alto sem abrir mão da compactação central.' : 'Fecha o centro e mantém coberturas curtas entre meio e defesa.',
+      : manualSafe
+        ? 'Fase defensiva v6.0 para controle manual: bloco um pouco mais baixo, VOL/MLG próximos e apenas uma referência principal de pressão.'
+        : 'Fase defensiva v6.0 compacta, reduzindo distâncias e mantendo apoios centrais para marcação mais manual.',
+    behavior: high ? 'Pressiona mais alto sem abrir mão da compactação central.' : manualSafe ? 'Marca o espaço antes da bola e reduz o risco de dois jogadores saírem juntos.' : 'Fecha o centro e mantém coberturas curtas entre meio e defesa.',
     slots
   };
 }

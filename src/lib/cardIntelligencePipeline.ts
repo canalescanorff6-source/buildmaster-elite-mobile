@@ -26,6 +26,7 @@ import { applyLongitudinalWinnerV4060 } from './longitudinalGameplayLearningV406
 import { applyMaximumPerformanceV4080 } from './maximumPerformanceV4080';
 import { applyEfootballV600Performance } from './efootballV600Performance';
 import { applyRealPerformance2027V4080R7 } from './realPerformance2027V4080R7';
+import { applyMetaVivo2027V4080R8 } from './metaVivo2027V4080R8';
 
 /**
  * Pipeline único e de memória controlada.
@@ -96,6 +97,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyMaximumPerformanceV4080(current);
   current = applyEfootballV600Performance(current);
   current = applyRealPerformance2027V4080R7(current);
+  current = applyMetaVivo2027V4080R8(current);
   // A função real pode reordenar até duas habilidades complementares. A
   // auditoria final precisa espelhar exatamente o conjunto exibido, sem
   // reclassificar a receita nem desfazer o DNA preservado.

@@ -59,7 +59,7 @@ assert.match(resultWorkspace,/data-testid=\"efootball-v600-result\"/);
 assert.match(fluid,/deriveCompactDefenseV600/);
 assert.match(fluid,/BLOCO_ALTO/);
 assert.match(formationEditor,/Formação fluída/);
-assert.match(formationEditor,/Sobreposição/);
+assert.match(formationEditor,/V600_TEAM_PLAYSTYLES/,'editor deve carregar o catálogo vivo de estilos, incluindo Sobreposição');
 assert.match(pkg.scripts['test:v4080'],/v40-80-r5-efootball-v600-runtime-regression/);
 
 console.log('v40.80 estática aprovada: safe-area, Stack Final e adaptação eFootball 2027 v6.0 com formação fluída integrados.');

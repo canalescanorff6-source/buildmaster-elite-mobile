@@ -21,6 +21,9 @@ import {
   type FluidFormationPlanV600,
   type FluidTeamPlaystyleV600
 } from '@/lib/fluidFormationV600';
+import { V600_TEAM_PLAYSTYLES } from '@/lib/efootballV600LiveCatalog';
+import { evaluateFluidFormationMetaV600 } from '@/lib/fluidFormationMetaV600';
+import { buildManualDefenceCoachV600 } from '@/lib/manualDefenceCoachV600';
 
 const STORAGE_KEY = 'buildmaster_custom_formations_v31_10';
 const LAST_EDITOR_KEY = 'buildmaster_free_formation_editor_v4080';
@@ -122,6 +125,10 @@ export function FormationRoleLabPanelV4080({ results, activeFormation, activeSty
   const selectedSlot=draft.slots.find((slot)=>slot.id===selectedSlotId) ?? draft.slots[0] ?? null;
   const attackFit=averageFit(attackLineup);
   const defenseFit=averageFit(defenseLineup);
+  const formationMeta=useMemo(()=>evaluateFluidFormationMetaV600({attack:attackDraft,defense:defenseDraft,teamPlaystyle}),[attackDraft,defenseDraft,teamPlaystyle]);
+  const selectedPick=lineup.find((pick)=>pick.slot.id===selectedSlotId)?.player ?? null;
+  const selectedCoach=useMemo(()=>selectedPick?buildManualDefenceCoachV600(selectedPick):null,[selectedPick]);
+  const teamStyleInfo=V600_TEAM_PLAYSTYLES.find((item)=>item.id===teamPlaystyle) ?? null;
 
   function persistFluid(nextAttack=attackDraft,nextDefense=defenseDraft,nextPreset=defensivePreset,nextTeam=teamPlaystyle,nextEnabled=fluidEnabled) {
     writeFluidFormationPlanV600({
@@ -200,7 +207,7 @@ export function FormationRoleLabPanelV4080({ results, activeFormation, activeSty
     const defense=deriveCompactDefenseV600(attackDraft,preset);
     setDefenseDraft(defense); setDefensivePreset(preset); setPhase('defense');
     persistFluid(attackDraft,defense,preset);
-    setMessage(preset==='BLOCO_ALTO'?'Defesa em bloco alto criada. Use com atenção à recuperação e ao delay.':'Bloco compacto criado para reduzir espaços e facilitar marcação manual.');
+    setMessage(preset==='BLOCO_ALTO'?'Defesa em bloco alto criada. Use com atenção à recuperação e ao delay.':preset==='MANUAL_SEGURO'?'Defesa Manual Seguro criada: um pressiona, outro fecha a linha e VOL/ZAG preservam a cobertura.':'Bloco compacto criado para reduzir espaços e facilitar marcação manual.');
   }
 
   function restoreBase() { selectBase(baseId); setMessage('Ataque e defesa restaurados a partir da formação base.'); }
@@ -232,14 +239,15 @@ export function FormationRoleLabPanelV4080({ results, activeFormation, activeSty
         <label><span>Formação base</span><select value={baseId} onChange={(event:ChangeEvent<HTMLSelectElement>)=>selectBase(event.target.value)}>{FORMATION_BLUEPRINTS.map((formation)=><option key={formation.id} value={formation.id}>{formation.name}</option>)}</select></label>
         <label className="bm4080-auto-position"><input type="checkbox" checked={fluidEnabled} onChange={(event)=>toggleFluid(event.target.checked)}/><span><b>Formação fluída</b><small>{fluidEnabled?'Ataque e defesa separados ativos.':'Usará a fase de ataque como referência única.'}</small></span></label>
         <label className="bm4080-auto-position"><input type="checkbox" checked={autoPosition} onChange={(event)=>setAutoPosition(event.target.checked)}/><span><b>Posição automática</b><small>Arrastar muda PE → SA → CA, MAT → MLG → VOL etc.</small></span></label>
-        <label><span>Estilo v6.0</span><select value={teamPlaystyle} onChange={(event:ChangeEvent<HTMLSelectElement>)=>changeTeamPlaystyle(event.target.value as FluidTeamPlaystyleV600)}><option value="LEGADO">Estilo atual do técnico</option><option value="SOBREPOSICAO">Sobreposição</option></select><small>{teamPlaystyle==='SOBREPOSICAO'?'Compacta no lado da bola e favorece passes curtos/pressão alta.':'Mantém o estilo de técnico já configurado.'}</small></label>
+        <label><span>Estilo v6.0</span><select value={teamPlaystyle} onChange={(event:ChangeEvent<HTMLSelectElement>)=>changeTeamPlaystyle(event.target.value as FluidTeamPlaystyleV600)}><option value="LEGADO">Estilo atual do técnico</option>{V600_TEAM_PLAYSTYLES.map((style)=><option key={style.id} value={style.id}>{style.label}</option>)}</select><small>{teamStyleInfo?`${teamStyleInfo.attack} ${teamStyleInfo.defence}`:'Mantém o estilo de técnico já configurado.'}</small></label>
         <button type="button" onClick={()=>generateDefense('COMPACTO_CENTRAL')}><ShieldCheck size={16}/> Gerar bloco compacto</button>
+        <button type="button" onClick={()=>generateDefense('MANUAL_SEGURO')}><ShieldCheck size={16}/> Manual seguro</button>
         <button type="button" onClick={()=>generateDefense('BLOCO_ALTO')}><Users size={16}/> Gerar bloco alto</button>
         <button type="button" onClick={restoreBase}><RotateCcw size={16}/> Restaurar</button>
         <button type="button" className="elite-button" onClick={saveFormation}><Save size={16}/> Salvar plano fluido</button>
       </div>
 
-      <div className="bm-v600-meta-note"><ShieldCheck size={17}/><div><strong>Motor v6.0</strong><span>Na defesa, priorize compactação e jogadores com Dedicação defensiva/Interceptação. Em conexão variável, o bloco compacto exige menos correções bruscas do que uma pressão permanente.</span></div></div>
+      <div className="bm-v600-meta-note"><ShieldCheck size={17}/><div><strong>Meta Vivo 2027 • defesa manual</strong><span>Compactação {Math.round(formationMeta.compactness)}/100 • cobertura central {Math.round(formationMeta.centralCover)}/100 • risco de dupla pressão {formationMeta.doublePressStructuralRisk.toLowerCase()}. {formationMeta.recommendations[0]}</span></div></div>
 
       <div className="bm4080-free-formation-grid">
         <article ref={pitchRef} className={`bm4080-free-pitch bm-v600-phase-${phase}`} aria-label={`Editor ${phase} ${inferredName}`}>
@@ -254,7 +262,7 @@ export function FormationRoleLabPanelV4080({ results, activeFormation, activeSty
 
         <aside className="bm4080-free-inspector">
           <div className="bm4080-free-identity"><SlidersHorizontal size={18}/><div><span>{phase==='attack'?'Estrutura de ataque':'Estrutura defensiva'}</span><strong>{inferredName}</strong></div></div>
-          {selectedSlot&&<><label><span>Jogador/slot</span><strong>{selectedSlot.label}</strong></label><label><span>Posição manual</span><select value={selectedSlot.position} disabled={selectedSlot.position==='GK'} onChange={(event:ChangeEvent<HTMLSelectElement>)=>updateSlotPosition(selectedSlot.id,event.target.value as PositionCode)}>{selectedSlot.position==='GK'?<option value="GK">GOL</option>:POSITION_OPTIONS.map((position)=><option key={position} value={position}>{POSITION_LABELS[position]}</option>)}</select></label><div className="bm4080-free-position-readout"><span>X <b>{Math.round(selectedSlot.x)}</b></span><span>Y <b>{Math.round(selectedSlot.y)}</b></span><span>Linha <b>{selectedSlot.line}</b></span></div><p>{selectedSlot.position==='GK'?'Goleiro protegido.':'Arraste ou selecione a posição. Na fase defensiva, qualquer edição manual passa a ser preservada como Personalizada.'}</p></>}
+          {selectedSlot&&<><label><span>Jogador/slot</span><strong>{selectedSlot.label}</strong></label><label><span>Posição manual</span><select value={selectedSlot.position} disabled={selectedSlot.position==='GK'} onChange={(event:ChangeEvent<HTMLSelectElement>)=>updateSlotPosition(selectedSlot.id,event.target.value as PositionCode)}>{selectedSlot.position==='GK'?<option value="GK">GOL</option>:POSITION_OPTIONS.map((position)=><option key={position} value={position}>{POSITION_LABELS[position]}</option>)}</select></label><div className="bm4080-free-position-readout"><span>X <b>{Math.round(selectedSlot.x)}</b></span><span>Y <b>{Math.round(selectedSlot.y)}</b></span><span>Linha <b>{selectedSlot.line}</b></span></div><p>{selectedSlot.position==='GK'?'Goleiro protegido.':'Arraste ou selecione a posição. Na fase defensiva, qualquer edição manual passa a ser preservada como Personalizada.'}</p>{selectedCoach&&phase==='defense'&&<div className="bm4080-free-position-readout"><span>Responsabilidade <b>{selectedCoach.responsibility.replaceAll('_',' ')}</b></span><span>Dupla pressão <b>{selectedCoach.doublePressRisk}</b></span><span>{selectedCoach.instruction}</span></div>}</>}
           <div className="bm4080-free-live-lineup"><h4><Users size={16}/> Encaixe da fase</h4>{lineup.filter((pick)=>pick.slot.position!=='GK').slice(0,10).map((pick)=><span key={pick.slot.id}><b>{pick.slot.label}</b>{pick.player?.parsed.playerName??'vaga'}<em>{pick.score||0}</em></span>)}</div>
         </aside>
       </div>

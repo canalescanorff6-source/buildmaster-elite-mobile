@@ -91,6 +91,6 @@ assert.ok((cmfA.adaptivePositionV3930?.changes.length ?? 99) <= 8, 'A adaptaçã
 assert.equal(cf.adaptivePositionV3930?.adaptationMode, 'FORA_DA_POSICAO');
 assert.equal(cf.adaptivePositionV3930?.canApplyTraining, true, 'Fora da posição natural não deve ser bloqueado automaticamente.');
 assert.match(cf.adaptivePositionV3930?.summary ?? '', /adaptação determinística/i);
-assert.match(cmfA.buildName, /(?:Motor Adaptativo por Carta v39\.30|Ficha Automática v\d+\.\d{2}(?: r\d+)? — (?:Precisão Competitiva 99|Desempenho Máximo Stack Final|eFootball 2027 v6\.0 Adaptativa|Desempenho Real 2027))/);
+assert.match(cmfA.buildName, /(?:Motor Adaptativo por Carta v39\.30|Ficha Automática v\d+\.\d{2}(?: r\d+)? — (?:Precisão Competitiva 99|Desempenho Máximo Stack Final|eFootball 2027 v6\.0 Adaptativa|Desempenho Real 2027|Meta Vivo 2027))/);
 
 console.log(`v39.30 aprovada: MLG ${cmfA.adaptivePositionV3930?.positionSignature}, MAT ${amf.adaptivePositionV3930?.positionSignature}, Ímpeto fixo ${cmfA.adaptivePositionV3930?.primaryImpeto}.`);

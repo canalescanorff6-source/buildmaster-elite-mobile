@@ -15,6 +15,7 @@ export type AntiDelayProfile = {
   connectionKind: ConnectionKind;
   preferWifi5Ghz: boolean;
   gameQualityMode: 'desempenho' | 'equilibrado' | 'qualidade';
+  stadiumQuality: 'baixo' | 'padrao' | 'alto';
   targetFps: 30 | 60 | 90 | 120;
   notes: string;
 };
@@ -335,6 +336,7 @@ export function normalizeAntiDelayProfile(input: Partial<AntiDelayProfile> | nul
     connectionKind: input?.connectionKind && input.connectionKind in CONNECTION_LABELS ? input.connectionKind : 'unknown',
     preferWifi5Ghz: input?.preferWifi5Ghz !== false,
     gameQualityMode: input?.gameQualityMode === 'qualidade' || input?.gameQualityMode === 'equilibrado' ? input.gameQualityMode : 'desempenho',
+    stadiumQuality: input?.stadiumQuality === 'alto' || input?.stadiumQuality === 'padrao' ? input.stadiumQuality : 'baixo',
     targetFps: [30, 60, 90, 120].includes(Number(input?.targetFps)) ? Number(input?.targetFps) as AntiDelayProfile['targetFps'] : 60,
     notes: String(input?.notes || '').slice(0, 800)
   };

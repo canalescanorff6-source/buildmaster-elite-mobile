@@ -1946,6 +1946,102 @@ export type RealPerformance2027V4080R7Analysis = {
   summary: string;
 };
 
+export type MetaVivoDefensiveResponsibilityV4080R8 =
+  | 'PRESSOR_PRIMARIO'
+  | 'FECHADOR_LINHA'
+  | 'COBERTURA'
+  | 'ANCORA'
+  | 'RASTREADOR'
+  | 'PROTETOR_AREA'
+  | 'SAIDA_TRANSICAO';
+
+export type MetaVivo2027V4080R8Analysis = {
+  engineVersion: '40.80-r8-meta-vivo-2027';
+  mode: 'META_VIVO_2027';
+  selectedPosition: PositionCode;
+  scores: {
+    firstTouch: number;
+    commandResponse: number;
+    manualDefence: number;
+    coverageDiscipline: number;
+    transition: number;
+    phaseBalance: number;
+    delayRobustness: number;
+    finalFunctional: number;
+    confidence: number;
+  };
+  phaseRole: {
+    attack: string;
+    defence: string;
+    responsibility: MetaVivoDefensiveResponsibilityV4080R8;
+    doublePressRisk: 'BAIXO' | 'MEDIO' | 'ALTO';
+    instruction: string;
+    secondaryInstruction: string;
+    drill: string[];
+  };
+  skillPortfolio: Array<{
+    name: string;
+    role: 'IDENTIDADE' | 'ATAQUE' | 'TRANSICAO_DEFESA' | 'ROBUSTEZ' | 'DIFERENCIAL';
+    marginalGain: number;
+    reason: string;
+  }>;
+  finalSkills: string[];
+  impetoInvestment: {
+    decision: RealPerformance2027V4080R7Analysis['impetoPolicy']['decision'];
+    current: string | null;
+    ideal: string | null;
+    gain: number;
+    priority: 'NAO_GASTAR' | 'BAIXA' | 'MEDIA' | 'ALTA';
+    reason: string;
+  };
+  catalog: {
+    standardAdditionalSkills: number;
+    effectiveAdditionalSkills: number;
+    recognizedSpecialSkills: number;
+    effectiveSpecialSkills: number;
+    provisionalSpecialSkills: number;
+    offensivePlaystyles: number;
+    confirmedDefensivePlaystyles: number;
+    teamPlaystyles: number;
+    playerDefensiveStyleStatus: 'CONFIRMADO' | 'PROVISORIO' | 'AUSENTE';
+  };
+  manager: {
+    teamStyle: string;
+    primaryStyle: string | null;
+    secondaryStyle: string | null;
+    combinationSlotsSupported: 2;
+    observedCombinations: string[];
+    status: 'CONFIGURADO' | 'PARCIAL' | 'SEM_DADOS';
+  };
+  environment: {
+    connectionProfile: ConnectionProfile;
+    reliabilityWeight: number;
+    graphicsPolicy: 'ESTABILIDADE_PRIMEIRO';
+    savedGraphicsMode: string;
+    targetFps: number;
+    stadiumQuality: string;
+    diagnosis: string;
+  };
+  learning: {
+    currentEpochWeight: 1;
+    legacyWeight: 0.35;
+    minimumAbMatchesPerArm: 5;
+    poorConnectionMatchesDownweighted: true;
+    recommendation: string;
+  };
+  guarantees: {
+    gerIsNotOptimizationTarget: true;
+    doesNotClaimToFixNetwork: true;
+    unknownSkillsAreNotWeighted: true;
+    unknownDefensiveStylesAreNotWeighted: true;
+    existingImpetoIsNeverAutoReplaced: true;
+    attackAndDefenceAreJointlyEvaluated: true;
+    doublePressureGuardEnabled: true;
+  };
+  reasons: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -2020,6 +2116,7 @@ export type AnalysisResult = {
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
   efootballV600?: EfootballV600PerformanceAnalysis;
   realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;
+  metaVivo2027V4080R8?: MetaVivo2027V4080R8Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

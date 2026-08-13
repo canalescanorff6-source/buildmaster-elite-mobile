@@ -912,6 +912,30 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="panel-note"><b>Aprendizado v6:</b> {result.realPerformance2027V4080R7.learning.recommendation}</p>
           </article>}
 
+          {result.metaVivo2027V4080R8 && <article className="luxury-panel wide-card meta-vivo-2027-r8" data-testid="meta-vivo-2027-r8">
+            <div className="section-title-row">
+              <div><p className="kicker">Meta Vivo 2027 • r8</p><h3>Ficha final + defesa manual + catálogo vivo</h3></div>
+              <span>{Math.round(result.metaVivo2027V4080R8.scores.finalFunctional)}/100</span>
+            </div>
+            <p className="panel-note">{result.metaVivo2027V4080R8.summary}</p>
+            <div className="health-score-grid dna-score-grid">
+              <article><strong>{Math.round(result.metaVivo2027V4080R8.scores.firstTouch)}</strong><span>Primeiro toque</span></article>
+              <article><strong>{Math.round(result.metaVivo2027V4080R8.scores.commandResponse)}</strong><span>Resposta a comando</span></article>
+              <article><strong>{Math.round(result.metaVivo2027V4080R8.scores.manualDefence)}</strong><span>Defesa manual</span></article>
+              <article><strong>{Math.round(result.metaVivo2027V4080R8.scores.delayRobustness)}</strong><span>Robustez ao delay</span></article>
+            </div>
+            <div className="skill-grid">
+              <div className="skill-check-card"><strong>Responsabilidade defensiva</strong><span>{result.metaVivo2027V4080R8.phaseRole.responsibility.replaceAll('_',' ')}</span><span>Risco de dupla pressão: {result.metaVivo2027V4080R8.phaseRole.doublePressRisk}</span><span>{result.metaVivo2027V4080R8.phaseRole.instruction}</span></div>
+              <div className="skill-check-card"><strong>Ímpeto sem desperdício</strong><span>{result.metaVivo2027V4080R8.impetoInvestment.decision.replaceAll('_',' ')}</span><span>Atual: {result.metaVivo2027V4080R8.impetoInvestment.current ?? 'não confirmado'}</span><span>Ideal futuro: {result.metaVivo2027V4080R8.impetoInvestment.ideal ?? 'sem troca necessária'} • prioridade {result.metaVivo2027V4080R8.impetoInvestment.priority}</span></div>
+            </div>
+            <div className="chip-cloud">{result.metaVivo2027V4080R8.finalSkills.map((skill)=><span key={skill}>{skill}</span>)}</div>
+            <details className="settings-details-card"><summary>Treino de defesa manual v6.0</summary><div className="dna-goal-list"><div><strong>Regra principal</strong><span>{result.metaVivo2027V4080R8.phaseRole.instruction}</span><small>{result.metaVivo2027V4080R8.phaseRole.secondaryInstruction}</small></div>{result.metaVivo2027V4080R8.phaseRole.drill.map((step)=><div key={step}><span>{step}</span></div>)}</div></details>
+            <details className="settings-details-card"><summary>Por que essas 5 habilidades?</summary><div className="dna-goal-list">{result.metaVivo2027V4080R8.skillPortfolio.map((item)=><div key={item.name}><strong>{item.role.replaceAll('_',' ')} • {item.name}</strong><span>Ganho marginal {Math.round(item.marginalGain)}/100</span><small>{item.reason}</small></div>)}</div></details>
+            <details className="settings-details-card"><summary>Catálogo vivo e estilos v6.0</summary><div className="dna-goal-list"><div><strong>{result.metaVivo2027V4080R8.catalog.standardAdditionalSkills} habilidades adicionais padrão</strong><span>{result.metaVivo2027V4080R8.catalog.effectiveAdditionalSkills} efetivas após catálogo remoto</span></div><div><strong>{result.metaVivo2027V4080R8.catalog.recognizedSpecialSkills} especiais reconhecidas</strong><span>{result.metaVivo2027V4080R8.catalog.provisionalSpecialSkills} provisória(s) sem peso inventado</span></div><div><strong>{result.metaVivo2027V4080R8.catalog.offensivePlaystyles} estilos ofensivos canônicos</strong><span>Defensivo desta carta: {result.metaVivo2027V4080R8.catalog.playerDefensiveStyleStatus}</span></div><div><strong>{result.metaVivo2027V4080R8.catalog.teamPlaystyles} estilos coletivos no catálogo tático</strong><span>Técnicos v6 podem ter até {result.metaVivo2027V4080R8.manager.combinationSlotsSupported} Combinações observadas sem inventar condição.</span></div></div></details>
+            <p className="panel-note"><b>Ambiente:</b> {result.metaVivo2027V4080R8.environment.diagnosis}</p>
+            <p className="panel-note"><b>Aprendizado:</b> {result.metaVivo2027V4080R8.learning.recommendation}</p>
+          </article>}
+
           {result.metaBuildUniverse && <MetaBuildLabPanel universe={result.metaBuildUniverse} />}
 
           <EliteEvolutionPanel result={result} />

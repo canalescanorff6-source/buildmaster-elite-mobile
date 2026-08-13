@@ -49,6 +49,13 @@
     "../../src/lib/maximumPerformanceV4080.ts",
     "../../src/lib/cardIntelligencePipeline.ts",
     "../../src/modules/architecture/appOptions.ts",
-    "../../src/components/UnifiedPerformanceV3920Panel.tsx"
+    "../../src/components/UnifiedPerformanceV3920Panel.tsx",
+    "../../src/lib/efootballV600LiveCatalog.ts",
+    "../../src/lib/manualDefenceCoachV600.ts",
+    "../../src/lib/gameplayEnvironmentV600.ts",
+    "../../src/lib/managerMetaV600.ts",
+    "../../src/lib/fluidFormationMetaV600.ts",
+    "../../src/lib/metaVivo2027V4080R8.ts",
+    "../../src/lib/realMatchCalibration.ts"
   ]
 }
