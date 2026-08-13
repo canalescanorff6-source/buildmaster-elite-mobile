@@ -1892,6 +1892,60 @@ export type EfootballV600PerformanceAnalysis = {
   summary: string;
 };
 
+
+export type RealPerformance2027V4080R7Analysis = {
+  engineVersion: '40.80-r7-real-performance-2027';
+  mode: 'DESEMPENHO_REAL_2027';
+  selectedPosition: PositionCode;
+  connectionProfile: ConnectionProfile;
+  phaseProfile: {
+    attackRole: string;
+    defenceRole: string;
+    attackWeight: number;
+    defenceWeight: number;
+    phaseBalanceScore: number;
+  };
+  skillMarginal: Array<{
+    name: string;
+    category: UnifiedSkillDecision['category'];
+    marginalGain: number;
+    attackGain: number;
+    defenceGain: number;
+    delayResilience: number;
+    dnaGain: number;
+    reason: string;
+  }>;
+  finalSkills: string[];
+  impetoPolicy: {
+    slotStatus: 'DISPONIVEL' | 'OCUPADO' | 'SEM_VAGA' | 'NAO_CONFIRMADO';
+    current: string | null;
+    currentScore: number | null;
+    ideal: string | null;
+    idealScore: number | null;
+    gain: number;
+    decision: 'MANTER' | 'ADICIONAR_QUANDO_POSSIVEL' | 'TROCAR_QUANDO_POSSIVEL' | 'SEM_VAGA' | 'CONFIRMAR_ANTES_DE_GASTAR';
+    reason: string;
+  };
+  learning: {
+    epoch: 'V6';
+    memoryState: 'V6_ATUAL' | 'LEGADO_5X' | 'SEM_DADOS';
+    currentMatchWeight: 1;
+    legacyMatchWeight: 0.35;
+    minimumAbMatchesPerArm: 5;
+    recommendation: string;
+  };
+  guarantees: {
+    gerIsNotOptimizationTarget: true;
+    networkIsNotModified: true;
+    existingImpetoNotAutoReplaced: true;
+    onlyOwnedSafeSkills: true;
+    attackAndDefenceEvaluated: true;
+    v5HistoryDownweighted: true;
+  };
+  reasons: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -1965,6 +2019,7 @@ export type AnalysisResult = {
   longitudinalGameplayMemoryV4060?: LongitudinalGameplayMemoryV4060;
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
   efootballV600?: EfootballV600PerformanceAnalysis;
+  realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

@@ -1,7 +1,7 @@
 import type { AnalysisResult, AttributeKey, TrainingKey, TrainingPlan } from './analyzer';
 
 export type MatchFeedbackKey = 'workedWell' | 'feltSlow' | 'tiredEarly' | 'missedPasses' | 'defendedWell' | 'lackedPhysical' | 'createdLittle' | 'finishedPoorly' | 'outOfPosition';
-export type MatchFeedback = Partial<Record<MatchFeedbackKey, boolean>> & { minutes?: number; rating?: number; notes?: string; createdAt?: string; buildSignature?: string; buildLabel?: string; trainingPlan?: TrainingPlan; abVariant?: 'A' | 'B'; managerId?: string | null; managerName?: string | null; formation?: string; tacticalStyle?: string; predictedScore?: number };
+export type MatchFeedback = Partial<Record<MatchFeedbackKey, boolean>> & { minutes?: number; rating?: number; notes?: string; createdAt?: string; buildSignature?: string; buildLabel?: string; trainingPlan?: TrainingPlan; abVariant?: 'A' | 'B'; managerId?: string | null; managerName?: string | null; formation?: string; tacticalStyle?: string; predictedScore?: number; gameSeason?: 'eFootball 2027' | string; gameVersion?: string; gameplayEpoch?: 'V6' | 'LEGACY'; connectionProfile?: string };
 export type CalibrationSuggestion = { title: string; reason: string; trainingGroups: TrainingKey[]; attributes: AttributeKey[]; priority: 'alta' | 'média' | 'baixa' };
 export type CalibrationReport = {
   sampleCount: number;
@@ -26,8 +26,12 @@ const MAP: Record<Exclude<MatchFeedbackKey, 'workedWell' | 'defendedWell'>, Cali
 export function buildCalibrationReport(result: AnalysisResult, feedbacks: MatchFeedback[]): CalibrationReport {
   const valid = feedbacks.filter(Boolean);
   const counts = new Map<MatchFeedbackKey, number>();
-  for (const feedback of valid) for (const key of Object.keys(feedback) as MatchFeedbackKey[]) if (feedback[key] === true) counts.set(key, (counts.get(key) ?? 0) + 1);
-  const threshold = valid.length >= 3 ? 2 : 1;
+  const effectiveSamples = valid.reduce((sum, feedback) => sum + (feedback.gameplayEpoch === 'V6' || feedback.gameVersion?.startsWith('6.') ? 1 : 0.35), 0);
+  for (const feedback of valid) {
+    const weight = feedback.gameplayEpoch === 'V6' || feedback.gameVersion?.startsWith('6.') ? 1 : 0.35;
+    for (const key of Object.keys(feedback) as MatchFeedbackKey[]) if (feedback[key] === true) counts.set(key, (counts.get(key) ?? 0) + weight);
+  }
+  const threshold = effectiveSamples >= 3 ? 2 : 1;
   const corrections = (Object.keys(MAP) as Array<keyof typeof MAP>)
     .filter((key) => (counts.get(key) ?? 0) >= threshold)
     .map((key) => ({ ...MAP[key], priority: (counts.get(key) ?? 0) >= 3 ? 'alta' as const : MAP[key].priority }));
@@ -36,7 +40,7 @@ export function buildCalibrationReport(result: AnalysisResult, feedbacks: MatchF
   if ((counts.get('defendedWell') ?? 0) >= threshold) positives.push('A contribuição defensiva foi confirmada em campo.');
   const learnedWeights: Partial<Record<TrainingKey, number>> = {};
   for (const item of corrections) for (const group of item.trainingGroups) learnedWeights[group] = Math.min(3, (learnedWeights[group] ?? 0) + (item.priority === 'alta' ? 2 : 1));
-  const confidence = valid.length >= 5 ? 'alta' : valid.length >= 2 ? 'moderada' : 'inicial';
+  const confidence = effectiveSamples >= 5 ? 'alta' : effectiveSamples >= 2 ? 'moderada' : 'inicial';
   return {
     sampleCount: valid.length,
     confidence,
@@ -48,7 +52,8 @@ export function buildCalibrationReport(result: AnalysisResult, feedbacks: MatchF
       'O feedback nunca altera a ficha automaticamente.',
       'Uma observação isolada tem peso baixo; padrões repetidos recebem mais confiança.',
       'A posição escolhida e os nomes oficiais permanecem preservados.',
-      'A calibração fica vinculada ao jogador e à posição usada na partida.'
+      'A calibração fica vinculada ao jogador e à posição usada na partida.',
+      'Partidas v6.0 valem peso 1; histórico sem marcação v6 vale 0,35 para não deixar a jogabilidade 5.x dominar a decisão.'
     ]
   };
 }

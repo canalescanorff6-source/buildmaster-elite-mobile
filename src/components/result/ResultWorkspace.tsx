@@ -309,7 +309,11 @@ function RealMatchCalibrationPanel({ result }: { result: AnalysisResult }) {
       managerName: result.tacticalProfile.managerName,
       formation: result.tacticalProfile.formation,
       tacticalStyle: result.tacticalProfile.style,
-      predictedScore: Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)
+      predictedScore: Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0),
+      gameSeason: 'eFootball 2027',
+      gameVersion: '6.0.0',
+      gameplayEpoch: 'V6',
+      connectionProfile: result.efootballV600?.connectionProfile ?? result.tacticalProfile.connectionProfile
     };
     const next = [item, ...feedbacks].slice(0, 30);
     setFeedbacks(next);
@@ -890,6 +894,22 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="panel-note"><b>Ímpeto:</b> {result.efootballV600.impetoPrimary ?? 'sem gasto recomendado nesta carta'}.</p>
             {result.efootballV600.previousSeasonMemoryDownweighted && <p className="panel-note">Partidas registradas antes da v6 continuam no histórico, mas perderam prioridade porque pertencem à jogabilidade 5.x.</p>}
             <p className="panel-note">O BuildMaster não altera ping, rota ou servidor. A adaptação busca reduzir a dependência de timing perfeito por meio da ficha, habilidades e estrutura tática.</p>
+          </article>}
+
+          {result.realPerformance2027V4080R7 && <article className="luxury-panel wide-card real-performance-2027-r7" data-testid="real-performance-2027-r7">
+            <div className="section-title-row">
+              <div><p className="kicker">Motor de Desempenho Real 2027 • r7</p><h3>Ficha final para ataque, defesa e resposta real</h3></div>
+              <span>{Math.round(result.realPerformance2027V4080R7.phaseProfile.phaseBalanceScore)}/100</span>
+            </div>
+            <p className="panel-note">{result.realPerformance2027V4080R7.summary}</p>
+            <div className="skill-grid">
+              <div className="skill-check-card"><strong>Duas fases</strong><span>Atacando: {result.realPerformance2027V4080R7.phaseProfile.attackRole}</span><span>Defendendo: {result.realPerformance2027V4080R7.phaseProfile.defenceRole}</span><span>Peso: {Math.round(result.realPerformance2027V4080R7.phaseProfile.attackWeight)}% ataque • {Math.round(result.realPerformance2027V4080R7.phaseProfile.defenceWeight)}% defesa</span></div>
+              <div className="skill-check-card"><strong>Ímpeto</strong><span>Decisão: {result.realPerformance2027V4080R7.impetoPolicy.decision.replaceAll('_',' ')}</span><span>Atual: {result.realPerformance2027V4080R7.impetoPolicy.current ?? 'nenhum confirmado'}</span><span>Ideal futuro: {result.realPerformance2027V4080R7.impetoPolicy.ideal ?? 'sem troca necessária'}</span></div>
+            </div>
+            <div className="chip-cloud">{result.realPerformance2027V4080R7.finalSkills.map((skill)=><span key={skill}>{skill}</span>)}</div>
+            <details className="settings-details-card"><summary>Ganho marginal das habilidades</summary><div className="dna-goal-list">{result.realPerformance2027V4080R7.skillMarginal.slice(0,8).map((item)=><div key={item.name}><strong>{item.name} • {Math.round(item.marginalGain)}/100</strong><span>Ataque {Math.round(item.attackGain)} • Defesa {Math.round(item.defenceGain)} • Delay {Math.round(item.delayResilience)} • DNA {Math.round(item.dnaGain)}</span><small>{item.reason}</small></div>)}</div></details>
+            <p className="panel-note"><b>Política de Ímpeto:</b> {result.realPerformance2027V4080R7.impetoPolicy.reason}</p>
+            <p className="panel-note"><b>Aprendizado v6:</b> {result.realPerformance2027V4080R7.learning.recommendation}</p>
           </article>}
 
           {result.metaBuildUniverse && <MetaBuildLabPanel universe={result.metaBuildUniverse} />}
