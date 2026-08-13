@@ -356,7 +356,7 @@ export function buildMaximumPerformanceV4040(result: AnalysisResult): MaximumPer
       `A ficha vencedora equilibra resposta funcional, robustez em ranqueadas/eventos/amigos, preservação do DNA e eficiência de pontos.`,
       `Confiança da recomendação: ${Math.round(conf.score)}/100 (${conf.level}); isso mede qualidade da decisão do motor, não chance de vitória.`,
       `As 5 habilidades são reordenadas apenas a partir do catálogo já reconhecido pelo app e passam por bloqueio de duplicação com habilidades possuídas.`,
-      `Meta estável v${EFOOTBALL_META_RUNTIME_V4040.stableVersion}; v${EFOOTBALL_META_RUNTIME_V4040.nextAnnouncedVersion} e o estilo ${EFOOTBALL_META_RUNTIME_V4040.announcedTeamPlaystyle} permanecem em observação sem pesos especulativos.`
+      `Meta oficial v${EFOOTBALL_META_RUNTIME_V4040.stableVersion} ativa; este otimizador legado continua sem pesos especulativos, e a adaptação confirmada da v6.0 é aplicada na etapa dedicada posterior.`
     ],
     summary: `${result.parsed.playerName}: Precisão Competitiva v40.40 em ${POSITION_PT[result.bestPosition.code]} — ${Math.round(winner.metrics.ranked)}/100 ranqueada, ${Math.round(winner.metrics.response)}/100 resposta funcional e ${Math.round(conf.score)}/100 confiança da recomendação.`
   };

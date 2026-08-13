@@ -212,6 +212,12 @@ export type ParsedCard = {
   positionsPt: string[];
   positionRatings: PositionRatings;
   playstyle?: string | null;
+  /** v6.0: estilo ofensivo preservado separadamente quando a carta exibe dois estilos. */
+  offensivePlaystyle?: string | null;
+  /** v6.0: estilo defensivo lido; nomes novos podem ser preservados como provisórios. */
+  defensivePlaystyle?: string | null;
+  /** true somente quando o nome já está confirmado no catálogo oficial/conservador. */
+  defensivePlaystyleConfirmed?: boolean;
   dominantFoot?: string | null;
   overall?: number | null;
   maxOverall?: number | null;
@@ -1683,11 +1689,12 @@ export type AdaptiveMaximumV4030Analysis = {
   skillIntegrity: { duplicatesWithOwned: number; uniqueRecommended: number; fiveSlotsRespected: boolean };
   metaRuntime: {
     engineVersion: '40.30.0';
-    stableVersion: '5.5.1';
-    stableSince: '2026-06-04';
-    nextAnnouncedVersion: '6.0.0';
-    nextWindow: 'meados de agosto de 2026';
+    stableVersion: '6.0.0';
+    stableSince: '2026-08-13';
+    nextAnnouncedVersion: 'não anunciada';
+    nextWindow: 'não anunciada';
     speculativeWeightsApplied: false;
+    confirmedV600WeightsAppliedByDedicatedEngine: true;
     policy: string;
   };
   guarantees: {
@@ -1749,14 +1756,14 @@ export type MaximumPerformanceV4040Analysis = {
   };
   metaRuntime: {
     engineVersion: '40.40.0';
-    stableVersion: '5.5.1';
-    stableSince: '2026-06-04';
-    nextAnnouncedVersion: '6.0.0';
-    nextWindow: 'meados de agosto de 2026';
+    stableVersion: '6.0.0';
+    stableSince: '2026-08-13';
+    nextAnnouncedVersion: 'não anunciada';
     announcedTeamPlaystyle: 'Sobreposição';
     announcedTeamPlaystyleInternalId: 'OVERLOAD';
     speculativeWeightsApplied: false;
-    automaticActivationAllowed: false;
+    confirmedV600WeightsAppliedByDedicatedEngine: true;
+    automaticActivationAllowed: true;
     policy: string;
   };
   guarantees: {
@@ -1850,6 +1857,41 @@ export type MaximumPerformanceV4080Analysis = {
   summary: string;
 };
 
+export type EfootballV600PerformanceAnalysis = {
+  engineVersion: '6.0.0-buildmaster-r5';
+  season: 'eFootball 2027';
+  liveMeta: true;
+  selectedPosition: PositionCode;
+  connectionProfile: ConnectionProfile;
+  offensivePlaystyle: string | null;
+  defensivePlaystyle: string | null;
+  baselineTraining: TrainingPlan;
+  finalTraining: TrainingPlan;
+  exactBudget: boolean;
+  candidatesEvaluated: number;
+  baselineScore: number;
+  winnerScore: number;
+  gain: number;
+  responseScore: number;
+  manualDefenceScore: number;
+  firstTouchScore: number;
+  finalSkills: string[];
+  impetoPrimary: string | null;
+  fluidFormationReady: true;
+  overloadReady: true;
+  previousSeasonMemoryDownweighted: boolean;
+  guarantees: {
+    doesNotClaimToFixNetwork: true;
+    gerIsNotOptimizationTarget: true;
+    exactPointBudget: boolean;
+    onlyConfirmedDefensiveStyleWeighted: boolean;
+    ownedSkillDuplicationBlocked: boolean;
+    invalidImpetoSpendBlocked: boolean;
+  };
+  reasons: string[];
+  summary: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -1922,6 +1964,7 @@ export type AnalysisResult = {
   gameplayValidationMemoryV4050?: GameplayValidationMemoryV4050;
   longitudinalGameplayMemoryV4060?: LongitudinalGameplayMemoryV4060;
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
+  efootballV600?: EfootballV600PerformanceAnalysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

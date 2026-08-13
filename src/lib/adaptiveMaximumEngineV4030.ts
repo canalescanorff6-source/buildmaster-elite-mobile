@@ -272,7 +272,7 @@ export function buildAdaptiveMaximumV4030(result: AnalysisResult): AdaptiveMaxim
     `A otimização não usa GER como objetivo e limita deslocamentos para preservar o DNA já consolidado pelos motores anteriores.`,
     EFOOTBALL_META_RUNTIME_V4030.speculativeWeightsApplied
       ? 'Há pesos experimentais da próxima versão.'
-      : `Meta base: eFootball v${EFOOTBALL_META_RUNTIME_V4030.stableVersion}; v${EFOOTBALL_META_RUNTIME_V4030.nextAnnouncedVersion} permanece apenas em observação até haver comportamento confirmado.`
+      : `Meta oficial: eFootball v${EFOOTBALL_META_RUNTIME_V4030.stableVersion}; este estágio legado não aplica pesos especulativos e delega os pesos confirmados da v6 ao motor dedicado.`
   ];
   return {
     engineVersion: ADAPTIVE_MAXIMUM_V4030_VERSION,

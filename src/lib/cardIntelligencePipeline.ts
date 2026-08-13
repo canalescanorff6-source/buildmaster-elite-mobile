@@ -24,6 +24,7 @@ import { applyMaximumPerformanceV4040 } from './maximumPerformanceOptimizerV4040
 import { applyVerifiedGameplayWinnerV4050 } from './realGameplayValidationV4050';
 import { applyLongitudinalWinnerV4060 } from './longitudinalGameplayLearningV4060';
 import { applyMaximumPerformanceV4080 } from './maximumPerformanceV4080';
+import { applyEfootballV600Performance } from './efootballV600Performance';
 
 /**
  * Pipeline único e de memória controlada.
@@ -92,6 +93,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyVerifiedGameplayWinnerV4050(current);
   current = applyLongitudinalWinnerV4060(current);
   current = applyMaximumPerformanceV4080(current);
+  current = applyEfootballV600Performance(current);
   // A função real pode reordenar até duas habilidades complementares. A
   // auditoria final precisa espelhar exatamente o conjunto exibido, sem
   // reclassificar a receita nem desfazer o DNA preservado.

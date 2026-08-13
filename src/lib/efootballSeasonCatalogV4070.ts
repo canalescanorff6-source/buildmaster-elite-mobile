@@ -14,82 +14,91 @@ export type SeasonFeatureV4070 = {
 };
 
 export const EFOOTBALL_SEASON_V4070 = Object.freeze({
-  stableVersion: '5.5.1',
-  stableSeason: 'eFootball 2026',
-  nextOfficialVersion: '6.0.0',
-  nextSeason: 'Atualização da Temporada v6.0.0',
-  nextReleaseWindow: 'meados de agosto de 2026',
+  stableVersion: '6.0.0',
+  stableSeason: 'eFootball 2027',
+  nextOfficialVersion: 'não anunciada',
+  nextSeason: 'não anunciada',
+  nextReleaseWindow: 'não anunciada',
   previewWeightsEnabled: false,
-  officialSourceCheckedAt: '2026-08-12',
+  officialSourceCheckedAt: '2026-08-13',
   features: [
     {
       id: 'custom-tournament',
       title: 'Torneio Personalizado',
       kind: 'mode',
-      status: 'official-preview',
+      status: 'stable',
       introducedIn: '6.0.0',
       affectsBuildEngine: false,
-      note: 'Usuários poderão criar ou participar de torneios com regulamentos configuráveis.'
+      note: 'Modo ao vivo na v6.0 com torneios criados por usuários e regras configuráveis.'
     },
     {
       id: 'team-playstyle-overload',
       title: 'Sobreposição',
       kind: 'team-playstyle',
-      status: 'official-preview',
+      status: 'stable',
       introducedIn: '6.0.0',
-      affectsBuildEngine: false,
-      note: 'Concentra jogadores no lado da bola para superioridade numérica, passes curtos/posse e defesa compacta com pressão rápida.'
+      affectsBuildEngine: true,
+      note: 'Concentra jogadores no lado da bola para superioridade numérica, passe curto/posse e defesa compacta com pressão rápida.'
     },
     {
       id: 'fluid-formation',
       title: 'Formação fluída',
       kind: 'formation',
-      status: 'official-preview',
+      status: 'stable',
       introducedIn: '6.0.0',
-      affectsBuildEngine: false,
-      note: 'Permite uma formação no ataque e outra na defesa; o BuildMaster deve avaliar a posição funcional nas duas fases.'
+      affectsBuildEngine: true,
+      note: 'Permite uma formação no ataque e outra na defesa; o BuildMaster avalia a função nas duas fases.'
+    },
+    {
+      id: 'dual-player-playstyle',
+      title: 'Estilo ofensivo e defensivo por jogador',
+      kind: 'gameplay',
+      status: 'stable',
+      introducedIn: '6.0.0',
+      affectsBuildEngine: true,
+      note: 'Alguns jogadores agora podem ter um estilo ofensivo e outro defensivo; estilos defensivos novos só recebem peso após confirmação.'
     },
     {
       id: 'dual-link-up-manager',
       title: 'Técnico com duas Combinações',
       kind: 'manager',
-      status: 'official-preview',
+      status: 'stable',
       introducedIn: '6.0.0',
-      affectsBuildEngine: false,
-      note: 'A v6.0 terá técnicos com duas Combinações; pesos permanecem desligados até os requisitos oficiais estarem disponíveis.'
+      affectsBuildEngine: true,
+      note: 'Técnicos com duas Combinações ampliam as opções táticas; requisitos conhecidos podem ser avaliados sem inventar condições.'
+    },
+    {
+      id: 'defensive-ai-rebalance',
+      title: 'Defesa e corte de linhas reequilibrados',
+      kind: 'gameplay',
+      status: 'stable',
+      introducedIn: '6.0.0',
+      affectsBuildEngine: true,
+      note: 'Correção de posicionamento para cortar linhas passa a depender mais de Dedicação defensiva e Interceptação; reações automáticas foram reduzidas.'
+    },
+    {
+      id: 'reception-control-rework',
+      title: 'Domínio e recepção retrabalhados',
+      kind: 'gameplay',
+      status: 'stable',
+      introducedIn: '6.0.0',
+      affectsBuildEngine: true,
+      note: 'Recepção, orientação do corpo e velocidade ao dominar a bola foram retrabalhadas; o motor prioriza robustez de primeiro toque e passe curto quando necessário.'
     },
     {
       id: 'volley-stunning-shot',
-      title: 'Voleio com Chute Fenomenal',
+      title: 'Voleio Dinâmico',
       kind: 'gameplay',
-      status: 'official-preview',
+      status: 'stable',
       introducedIn: '6.0.0',
       affectsBuildEngine: false,
-      note: 'O comando Chute Fenomenal poderá gerar voleios quando a bola estiver no ar; o motor não altera pesos de finalização antes da validação da v6.'
-    },
-    {
-      id: 'daily-game-redesign',
-      title: 'Novo Jogo diário',
-      kind: 'mode',
-      status: 'official-preview',
-      introducedIn: '6.0.0',
-      affectsBuildEngine: false,
-      note: 'O Jogo diário será reformulado.'
-    },
-    {
-      id: 'match-history-reset',
-      title: 'Histórico de Partidas não mantido',
-      kind: 'data',
-      status: 'official-preview',
-      introducedIn: '6.0.0',
-      affectsBuildEngine: false,
-      note: 'O histórico do próprio BuildMaster permanece local e independente do histórico que o eFootball não manterá.'
+      note: 'Novo comando para atacar bolas no ar; não altera automaticamente pesos de ficha sem evidência funcional por posição.'
     }
   ] satisfies SeasonFeatureV4070[]
 });
 
 export function officialPreviewFeaturesV4070() {
-  return EFOOTBALL_SEASON_V4070.features.filter((feature) => feature.status === 'official-preview');
+  return (EFOOTBALL_SEASON_V4070.features as readonly SeasonFeatureV4070[]).filter((feature) => feature.status === 'official-preview');
 }
 
 export function canApplySeasonWeightsV4070(version: string) {

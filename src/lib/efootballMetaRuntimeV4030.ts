@@ -1,11 +1,12 @@
 export const EFOOTBALL_META_RUNTIME_V4030 = {
   engineVersion: '40.30.0',
-  stableVersion: '5.5.1',
-  stableSince: '2026-06-04',
-  nextAnnouncedVersion: '6.0.0',
-  nextWindow: 'meados de agosto de 2026',
+  stableVersion: '6.0.0',
+  stableSince: '2026-08-13',
+  nextAnnouncedVersion: 'não anunciada',
+  nextWindow: 'não anunciada',
   speculativeWeightsApplied: false,
-  policy: 'Ajustar somente com comportamento oficialmente publicado ou validado; anúncio futuro não muda pesos antes da confirmação.'
+  confirmedV600WeightsAppliedByDedicatedEngine: true,
+  policy: 'Este estágio legado preserva busca determinística e não aplica pesos futuros; a adaptação oficial da v6.0 entra depois pelo motor eFootball 2027 dedicado.'
 } as const;
 
 export type EfootballMetaRuntimeV4030 = typeof EFOOTBALL_META_RUNTIME_V4030;

@@ -5,6 +5,7 @@ import { canonicalSkillName, extractCanonicalSkillsFromText, skillIdentityKey } 
 import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
 import { discoverUnknownSpecialSkillsV4070 } from '@/lib/skillDiscoveryV4070';
+import { detectV600Playstyles } from '@/lib/efootballV600Playstyles';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -23,6 +24,8 @@ export type DetailedPrintReading = {
   identity: {
     playerName: DetailedValue | null;
     playstyle: DetailedValue | null;
+    offensivePlaystyle?: DetailedValue | null;
+    defensivePlaystyle?: DetailedValue | null;
     overall: DetailedValue | null;
     mainPosition: DetailedValue | null;
     height: DetailedValue | null;
@@ -570,7 +573,8 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
       : strictNameConsensus
         ? detectedName
         : null;
-  const playstyle = detectPlaystyle(identitySource);
+  const v600Styles = detectV600Playstyles(identitySource);
+  const playstyle = v600Styles.offensive ?? detectPlaystyle(identitySource);
 
   const attributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
   const positionRatings = parsePositionRatings(positionSource, positionConfidence, 'Grade de posições');
@@ -611,6 +615,8 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const identity = {
     playerName: identityValue('Nome do jogador', name, identityConfidence, 'Cabeçalho'),
     playstyle: identityValue('Estilo de jogo', playstyle, identityConfidence, 'Cabeçalho'),
+    offensivePlaystyle: identityValue('Estilo de jogo ofensivo', v600Styles.offensive, identityConfidence, 'Cabeçalho v6.0'),
+    defensivePlaystyle: identityValue('Estilo de jogo defensivo', v600Styles.defensive, identityConfidence, 'Cabeçalho v6.0'),
     overall: identityValue('GER', overallRaw, identityConfidence, 'Selo da carta/grade', true),
     mainPosition: identityValue('Posição principal', positionRaw, identityConfidence, 'Selo da carta', false),
     height: identityValue('Altura', heightRaw ? `${heightRaw} cm` : null, identityConfidence, 'Dados físicos', true),
@@ -660,7 +666,9 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   if (efhubDetected) canonical.push(`PERFIL DE LEITURA: ${profileAudit.id}`);
   if (identity.playerName) canonical.push(`NOME DO JOGADOR: ${identity.playerName.value}`);
   if (identity.mainPosition) canonical.push(`POSIÇÃO PRINCIPAL: ${identity.mainPosition.value}`);
-  if (identity.playstyle) canonical.push(`ESTILO DE JOGO: ${identity.playstyle.value}`);
+  if (identity.offensivePlaystyle) canonical.push(`ESTILO DE JOGO OFENSIVO: ${identity.offensivePlaystyle.value}`);
+  if (identity.defensivePlaystyle) canonical.push(`ESTILO DE JOGO DEFENSIVO: ${identity.defensivePlaystyle.value}`);
+  if (identity.playstyle && !identity.offensivePlaystyle) canonical.push(`ESTILO DE JOGO: ${identity.playstyle.value}`);
   if (identity.overall) canonical.push(`GER: ${identity.overall.value}`);
   if (identity.level) canonical.push(`NÍVEL MÁXIMO: ${identity.level.numericValue ?? identity.level.value}`);
   if (identity.height) canonical.push(`ALTURA: ${identity.height.value}`);

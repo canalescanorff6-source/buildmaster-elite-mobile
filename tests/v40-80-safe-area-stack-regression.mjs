@@ -16,6 +16,10 @@ const cardVision=read('src/components/CardVisionApp.tsx');
 const sw=read('public/sw.js');
 const register=read('src/components/RegisterServiceWorker.tsx');
 const doctor=read('scripts/ci-doctor.mjs');
+const v6Engine=read('src/lib/efootballV600Performance.ts');
+const v6Meta=read('src/lib/efootballV600Meta.ts');
+const fluid=read('src/lib/fluidFormationV600.ts');
+const formationEditor=read('src/components/FormationRoleLabPanelV4080.tsx');
 
 assert.equal(pkg.version,'40.80.0');
 assert.equal(manifest.name,'BuildMaster Elite Tático v40.80');
@@ -46,5 +50,16 @@ assert.match(readerProgress,/Finalizando ficha/);
 assert.match(cardVision,/Validação automática/);
 assert.match(doctor,/EXPECTED_FULL_GROUPS = 93/);
 assert.match(doctor,/Regressões v40\.80/);
+assert.match(pipeline,/applyEfootballV600Performance/);
+assert.match(v6Meta,/season:\s*EFOOTBALL_V600_SEASON/);
+assert.match(v6Engine,/doesNotClaimToFixNetwork:\s*true/);
+assert.match(v6Engine,/manualDefenceScore/);
+assert.match(v6Engine,/defensivePlaystyleConfirmed/);
+assert.match(resultWorkspace,/data-testid=\"efootball-v600-result\"/);
+assert.match(fluid,/deriveCompactDefenseV600/);
+assert.match(fluid,/BLOCO_ALTO/);
+assert.match(formationEditor,/Formação fluída/);
+assert.match(formationEditor,/Sobreposição/);
+assert.match(pkg.scripts['test:v4080'],/v40-80-r5-efootball-v600-runtime-regression/);
 
-console.log('v40.80 estática aprovada: safe-area Android, stack final, Top 5 tardio e Ímpeto seguro integrados.');
+console.log('v40.80 estática aprovada: safe-area, Stack Final e adaptação eFootball 2027 v6.0 com formação fluída integrados.');

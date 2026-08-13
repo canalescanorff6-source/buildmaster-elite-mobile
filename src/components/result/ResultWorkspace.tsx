@@ -841,7 +841,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <article><strong>{result.maxPrecision.signatureProtection.identityRetentionScore}</strong><span>Identidade preservada</span></article>
               <article><strong>{result.maxPrecision.conversion.score}</strong><span>Conversão</span></article>
               <article><strong>{result.maxPrecision.antiCloneDistance}</strong><span>Distância anticlone</span></article>
-              <article><strong>{result.maxPrecision.meta2026.playerMetaFit}</strong><span>Meta 2026</span></article>
+              <article><strong>{result.maxPrecision.meta2026.playerMetaFit}</strong><span>Base histórica 2026</span></article>
             </div>
             <p className="panel-note">Ficha recomendada: <b>{result.maxPrecision.recommendedVariantTitle}</b>. {result.maxPrecision.conversion.verdict}</p>
             <div className="chip-cloud">{result.maxPrecision.versionIdentity.differentiators.map((item)=><span key={item}>{item}</span>)}</div>
@@ -862,7 +862,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <div className="variant-grid">{result.maxPrecision.alternatives.map((item)=><div key={item.title}><strong>{item.title}</strong><span>Nota {item.score}/100 • identidade {item.identityScore} • adaptação {item.adaptationScore}</span><em>Habilidade {item.skillScore} • Meta {item.metaScore} • desperdício {item.wasteScore}</em><p>{item.why}</p></div>)}</div>
             </details>
             <details className="settings-details-card">
-              <summary>Meta atual do eFootball 2026 — {result.maxPrecision.meta2026.patchReference}</summary>
+              <summary>Base histórica do eFootball 2026 — {result.maxPrecision.meta2026.patchReference}</summary>
               <p className="panel-note"><b>{result.maxPrecision.meta2026.classification}</b> • atualização {result.maxPrecision.meta2026.updatedAt} • encaixe {result.maxPrecision.meta2026.fitLabel}</p>
               <div className="skill-grid"><div className="skill-check-card"><strong>Mecânicas oficiais consideradas</strong>{result.maxPrecision.meta2026.officialMechanics.map((item)=><span key={item}>✓ {item}</span>)}</div><div className="skill-check-card"><strong>Tendências competitivas</strong>{result.maxPrecision.meta2026.competitiveTrends.map((item)=><span key={item.name}>{item.name} • confiança {item.confidence}: {item.note}</span>)}</div></div>
               <div className="skill-grid"><div className="skill-check-card"><strong>Pontos fortes no meta</strong>{result.maxPrecision.meta2026.strongestMetaTraits.map((item)=><span key={item}>↑ {item}</span>)}</div><div className="skill-check-card muted"><strong>O que ainda falta</strong>{result.maxPrecision.meta2026.missingMetaTraits.map((item)=><span key={item}>⚠ {item}</span>)}</div></div>
@@ -870,6 +870,28 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </details>
             {result.maxPrecision.explanation.map((item)=><p key={item} className="panel-note">• {item}</p>)}
           </article>}
+          {result.efootballV600 && <article className="luxury-panel wide-card efootball-v600-result" data-testid="efootball-v600-result">
+            <div className="section-title-row">
+              <div><p className="kicker">eFootball 2027 • v6.0</p><h3>Adaptação competitiva ao novo gameplay</h3></div>
+              <span>{Math.round(result.efootballV600.winnerScore)}/100</span>
+            </div>
+            <p className="panel-note">{result.efootballV600.summary}</p>
+            <div className="health-score-grid dna-score-grid">
+              <article><strong>{Math.round(result.efootballV600.responseScore)}</strong><span>Resposta / primeiro toque</span></article>
+              <article><strong>{Math.round(result.efootballV600.manualDefenceScore)}</strong><span>Defesa manual</span></article>
+              <article><strong>{result.efootballV600.candidatesEvaluated}</strong><span>Fichas comparadas</span></article>
+              <article><strong>{result.efootballV600.exactBudget ? '100%' : '!'}</strong><span>Orçamento preservado</span></article>
+            </div>
+            <div className="skill-grid">
+              <div className="skill-check-card"><strong>Função nas duas fases</strong><span>Atacando: {result.efootballV600.offensivePlaystyle ?? result.parsed.playstyle ?? 'sem estilo confirmado'}</span><span>Defendendo: {result.efootballV600.defensivePlaystyle ? `${result.efootballV600.defensivePlaystyle}${result.parsed.defensivePlaystyleConfirmed === false ? ' • provisório' : ''}` : 'sem estilo defensivo confirmado'}</span><span>Conexão: {result.efootballV600.connectionProfile === 'HIGH_DELAY' ? 'alta latência' : result.efootballV600.connectionProfile === 'VARIABLE' ? 'variável' : 'estável'}</span></div>
+              <div className="skill-check-card"><strong>Formação v6</strong><span>✓ Formação fluída pronta</span><span>✓ Ataque e defesa avaliados separadamente</span><span>✓ Sobreposição disponível no editor</span></div>
+            </div>
+            <div className="chip-cloud">{result.efootballV600.finalSkills.map((skill)=><span key={skill}>{skill}</span>)}</div>
+            <p className="panel-note"><b>Ímpeto:</b> {result.efootballV600.impetoPrimary ?? 'sem gasto recomendado nesta carta'}.</p>
+            {result.efootballV600.previousSeasonMemoryDownweighted && <p className="panel-note">Partidas registradas antes da v6 continuam no histórico, mas perderam prioridade porque pertencem à jogabilidade 5.x.</p>}
+            <p className="panel-note">O BuildMaster não altera ping, rota ou servidor. A adaptação busca reduzir a dependência de timing perfeito por meio da ficha, habilidades e estrutura tática.</p>
+          </article>}
+
           {result.metaBuildUniverse && <MetaBuildLabPanel universe={result.metaBuildUniverse} />}
 
           <EliteEvolutionPanel result={result} />

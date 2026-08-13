@@ -208,7 +208,7 @@ const SKILL_IMPACT: Record<string, string> = {
   'Controle com a sola': 'Melhora domínio orientado e pequenos ajustes antes do passe ou chute.',
   'Toque duplo': 'Entrega uma saída objetiva no primeiro duelo e combina com aceleração e drible.',
   'Toque de calcanhar': 'Permite tabelas e passes em ângulos nos quais girar faria a jogada morrer.',
-  'Interceptação': 'Aumenta cortes automáticos em linhas de passe frequentes na função.',
+  'Interceptação': 'Na v6.0, reforça a correção de posicionamento para cortar linhas de passe em conjunto com Dedicação defensiva; é especialmente valiosa em defesa manual.',
   'Bloqueador': 'Melhora o fechamento de chutes e passes em zonas perigosas.',
   'Marcação individual': 'Mantém o defensor mais conectado ao adversário prioritário.',
   'Superioridade aérea': 'Reforça disputas pelo alto quando altura, salto e contato físico sustentam a habilidade.',

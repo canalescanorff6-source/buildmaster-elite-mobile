@@ -7,7 +7,6 @@ import { scheduleIdleTask } from '@/lib/performanceScheduler';
 
 const fallback = () => <PanelLoadingFallback />;
 
-
 export const ResultCard = dynamic(
   () => import('@/components/result/ResultWorkspace').then((module) => module.ResultCard),
   { ssr: false, loading: fallback }
@@ -99,7 +98,7 @@ export const PrecisionBuildPanel = dynamic(
   { ssr: false, loading: fallback }
 );
 export const FormationRoleLabPanel = dynamic(
-  () => import('@/components/FormationRoleLabPanel').then((module) => module.FormationRoleLabPanel),
+  () => import('@/components/FormationRoleLabPanelV4080').then((module) => module.FormationRoleLabPanelV4080),
   { ssr: false, loading: fallback }
 );
 export const FirstUseOnboarding = dynamic(
@@ -147,7 +146,6 @@ export const CompactSharePanel = dynamic(
   { ssr: false, loading: fallback }
 );
 
-
 export const PremiumExperience2Center = dynamic(
   () => import('@/modules/experience/PremiumExperience2Center').then((module) => module.PremiumExperience2Center),
   { ssr: false, loading: fallback }
@@ -156,7 +154,6 @@ export const ObservabilitySupportCenter = dynamic(
   () => import('@/modules/observability/ObservabilitySupportCenter').then((module) => module.ObservabilitySupportCenter),
   { ssr: false, loading: fallback }
 );
-
 
 export const CommunitySharingCenter = dynamic(
   () => import('@/modules/community/CommunitySharingCenter').then((module) => module.CommunitySharingCenter),
@@ -171,7 +168,6 @@ export const PlayStorePublicationCenter = dynamic(
   () => import('@/modules/publication/PlayStorePublicationCenter').then((module) => module.PlayStorePublicationCenter),
   { ssr: false, loading: fallback }
 );
-
 
 export type LazyPanelGroup = 'inicio' | 'jogadores' | 'time' | 'partidas' | 'ajustes';
 
@@ -192,7 +188,7 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
   ],
   time: [
     () => import('@/modules/squad/IntegratedTeamLab'),
-    () => import('@/components/FormationRoleLabPanel')
+    () => import('@/components/FormationRoleLabPanelV4080')
   ],
   partidas: [
     () => import('@/modules/matches/MatchLaboratory'),

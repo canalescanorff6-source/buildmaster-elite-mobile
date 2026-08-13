@@ -102,7 +102,7 @@ for (const result of [scholesMlgA, scholesMlgB, scholesMat, ronaldoSa]) {
   assert.equal(analysis.impetoLockedByCard, true);
   assert.equal(analysis.canApply, true);
   assert.ok(analysis.roleLabel.length > 8);
-  assert.match(result.buildName, /(?:Motor Adaptativo por Carta v39\.30 \+ Função Real v39\.40|Ficha Automática v\d+\.\d{2} — (?:Precisão Competitiva 99|Desempenho Máximo Stack Final))/);
+  assert.match(result.buildName, /(?:Motor Adaptativo por Carta v39\.30 \+ Função Real v39\.40|Ficha Automática v\d+\.\d{2}(?: r\d+)? — (?:Precisão Competitiva 99|Desempenho Máximo Stack Final|eFootball 2027 v6\.0 Adaptativa))/);
 }
 
 assert.deepEqual(scholesMlgA.training, scholesMlgB.training, 'A mesma carta na mesma posição precisa repetir a ficha v39.40.');

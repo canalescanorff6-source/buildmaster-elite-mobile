@@ -11,6 +11,7 @@ import {
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
 import { parseCardSkillInventory } from './cardSkillParser';
 import { RECOGNIZABLE_IMPETO_NAMES } from './officialImpetoCatalog';
+import { detectV600Playstyles } from './efootballV600Playstyles';
 import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
 import { buildMetaBuildUniverse } from './metaBuildUniverse';
@@ -50,7 +51,7 @@ function hasPositionLock(text: string) {
   return /POSI(?:CAO|ÇÃO)\s+PRINCIPAL\s*[:=\-]/i.test(normalize(text));
 }
 function hasPlaystyleLock(text: string) {
-  return /ESTILO\s+DE\s+JOGO\s*[:=\-]/i.test(normalize(text));
+  return /ESTILO\s+DE\s+JOGO(?:\s+(?:OFENSIVO|DEFENSIVO))?\s*[:=\-]/i.test(normalize(text));
 }
 function listLabels(codes: PositionCode[]) {
   return codes.map((code) => POSITION_PT[code]).join(', ');
@@ -1938,7 +1939,8 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const identityName = detectName(identityText, imageFileName);
   const playerName = identityName !== 'Jogador não identificado' ? identityName : detectName(text, imageFileName);
   const localRule = findLocalCardRule(playerName, text);
-  const rawPlaystyle = detectPlaystyle(headerOnlyText) ?? detectPlaystyle(topSection) ?? localRule?.playstyle ?? null;
+  const v600Styles = detectV600Playstyles([headerOnlyText, topSection, identityText].filter(Boolean).join('\n'));
+  const rawPlaystyle = v600Styles.offensive ?? detectPlaystyle(headerOnlyText) ?? detectPlaystyle(topSection) ?? localRule?.playstyle ?? null;
   const explicitMainPosition = detectExplicitMainPosition(headerOnlyText);
   const primaryPositionFromCard = detectCardBadgePosition(badgeSection) ?? detectCardBadgePosition(identitySection) ?? detectPrimaryPositionFromTop(headerOnlyText);
   const manualPositionLocked = hasPositionLock(manualLockText);
@@ -1949,6 +1951,9 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   // A melhor posição recomendada pode mudar abaixo, mas a arte/resumo da carta preserva o que veio no print.
   const mainPosition = mainCandidate;
   const playstyle = resolvePlaystyleForCard(rawPlaystyle, mainPosition, headerOnlyText + '\n' + topSection + '\n' + identityText) ?? (!manualPlaystyleLocked && localRule?.playstyle && playstyleFitsPosition(localRule.playstyle, mainPosition) ? localRule.playstyle : null);
+  const offensivePlaystyle = v600Styles.offensive ?? playstyle;
+  const defensivePlaystyle = v600Styles.defensive;
+  const defensivePlaystyleConfirmed = v600Styles.defensiveConfirmed;
   const detectedPositions = Array.from(new Set([mainPosition, ...positions]));
   const parsedSkillInventory = parseCardSkillInventory(text);
   const nativeSkills = parsedSkillInventory.native;
@@ -1989,6 +1994,9 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const warnings: string[] = [];
   warnings.push('Posições convertidas automaticamente para PT-BR: CF→CA, DMF→VOL, CMF→MLG, CB→ZAG, LB→LE, RB→LD, AMF→MAT, LWF→PE, RWF→PD.');
   warnings.push(`Identidade preservada: a arte da carta usa ${POSITION_PT[mainPosition]}${playstyle ? ` + ${playstyle}` : ''} lidos do print. Recomendações de desempenho em campo aparecem separadas abaixo.`);
+  if (defensivePlaystyle) warnings.push(defensivePlaystyleConfirmed
+    ? `eFootball v6.0: estilo defensivo separado confirmado como ${defensivePlaystyle}; ele será avaliado apenas na fase sem a bola.`
+    : `eFootball v6.0: novo estilo defensivo lido como “${defensivePlaystyle}”. Ele foi preservado como provisório e não recebe peso competitivo até ser confirmado.`);
   if (localRule && !manualPositionLocked) warnings.push(`${localRule.note} Banco local aplicado: melhores posições ${listLabels(localRule.bestPositions)}; evitar ${listLabels(localRule.avoidPositions)}.`);
   if (manualConfirmed) warnings.push('Conferência manual marcada como SIM: o app gerou a ficha final com os dados revisados pelo usuário.');
   if (attributeCount < 12) warnings.push('O OCR local leu poucos atributos. O app usou motor seguro por posição, mas quanto mais atributos lidos, melhor fica a ficha.');
@@ -2031,6 +2039,9 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
     positionsPt: usablePositions.map((position) => POSITION_PT[position]),
     positionRatings,
     playstyle,
+    offensivePlaystyle,
+    defensivePlaystyle,
+    defensivePlaystyleConfirmed,
     dominantFoot,
     overall,
     maxOverall,
