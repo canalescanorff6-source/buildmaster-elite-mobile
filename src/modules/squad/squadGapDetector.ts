@@ -10,22 +10,68 @@ export type SquadGap = {
   why: string;
 };
 
-const PROFILE_RULES: Array<{ match: RegExp; styles: string[]; attributes: string[]; functionLabel: string }> = [
-  { match: /vol|defens|cobertura|primeiro volante/i, styles: ['1º Volante', 'Volante Destruidor'], attributes: ['Consciência defensiva', 'Desarme', 'Contato físico', 'Passe rasteiro'], functionLabel: 'proteção central' },
+type ProfileRule = {
+  match: RegExp;
+  styles: string[];
+  attributes: string[];
+  functionLabel: string;
+};
+
+const GOALKEEPER_RULE: ProfileRule = {
+  match: /goleiro|gol|gk/i,
+  styles: ['Goleiro ofensivo', 'Goleiro defensivo'],
+  attributes: ['Talento de goleiro', 'Reflexo', 'Alcance', 'Firmeza de goleiro'],
+  functionLabel: 'segurança no gol'
+};
+
+const FULLBACK_RULE: ProfileRule = {
+  match: /lateral|ala|corredor/i,
+  styles: ['Lateral defensivo', 'Lateral ofensivo', 'Lateral móvel'],
+  attributes: ['Velocidade', 'Resistência', 'Consciência defensiva', 'Passe rasteiro'],
+  functionLabel: 'proteção e saída pelo corredor'
+};
+
+const CENTRE_BACK_RULE: ProfileRule = {
+  match: /zagueiro|zag|defensor criativo/i,
+  styles: ['Defensor criativo', 'O destruidor'],
+  attributes: ['Consciência defensiva', 'Desarme', 'Velocidade', 'Contato físico'],
+  functionLabel: 'proteção da área'
+};
+
+const DEFENSIVE_MIDFIELD_RULE: ProfileRule = {
+  match: /(^|\s)vol($|\s)|primeiro volante|volante destruidor|cobertura/i,
+  styles: ['Primeiro volante', 'O destruidor'],
+  attributes: ['Consciência defensiva', 'Desarme', 'Contato físico', 'Passe rasteiro'],
+  functionLabel: 'proteção central'
+};
+
+const PROFILE_RULES: ProfileRule[] = [
+  GOALKEEPER_RULE,
+  FULLBACK_RULE,
+  CENTRE_BACK_RULE,
+  DEFENSIVE_MIDFIELD_RULE,
   { match: /orquestr|saida|constr|passe/i, styles: ['Orquestrador', 'Meia versátil'], attributes: ['Passe rasteiro', 'Passe alto', 'Controle de bola', 'Resistência'], functionLabel: 'saída de bola' },
-  { match: /artilheiro|homem de area|finaliz/i, styles: ['Artilheiro', 'Homem de Área'], attributes: ['Talento ofensivo', 'Finalização', 'Aceleração', 'Equilíbrio'], functionLabel: 'finalização' },
-  { match: /pivo|puxa marcacao|apoio/i, styles: ['Pivô', 'Puxa Marcação'], attributes: ['Controle de bola', 'Contato físico', 'Passe rasteiro', 'Equilíbrio'], functionLabel: 'apoio ao ataque' },
-  { match: /lateral|ala|corredor/i, styles: ['Lateral defensivo', 'Lateral móvel', 'Perito em Cruzamento'], attributes: ['Velocidade', 'Resistência', 'Passe alto', 'Consciência defensiva'], functionLabel: 'cobertura de corredor' },
-  { match: /zagueiro|zag|defensor/i, styles: ['Defensor Criativo', 'Destruidor'], attributes: ['Consciência defensiva', 'Desarme', 'Velocidade', 'Contato físico'], functionLabel: 'proteção da área' },
-  { match: /mat|criacao|armador|infiltr/i, styles: ['Armador Criativo', 'Infiltração', 'Clássico 10'], attributes: ['Controle de bola', 'Passe rasteiro', 'Condução firme', 'Aceleração'], functionLabel: 'criação entrelinhas' },
-  { match: /goleiro|gol/i, styles: ['Goleiro Ofensivo', 'Goleiro Defensivo'], attributes: ['Talento de goleiro', 'Reflexo', 'Alcance', 'Espalmada'], functionLabel: 'proteção do gol' }
+  { match: /artilheiro|homem de area|homem de área|finaliz/i, styles: ['Artilheiro', 'Homem de área'], attributes: ['Talento ofensivo', 'Finalização', 'Aceleração', 'Equilíbrio'], functionLabel: 'finalização' },
+  { match: /pivo|pivô|puxa marcacao|puxa marcação|apoio/i, styles: ['Pivô', 'Puxa marcação'], attributes: ['Controle de bola', 'Contato físico', 'Passe rasteiro', 'Equilíbrio'], functionLabel: 'apoio ao ataque' },
+  { match: /mat|criacao|criação|armador|infiltr/i, styles: ['Armador criativo', 'Jogador de infiltração', 'Clássico nº 10'], attributes: ['Controle de bola', 'Passe rasteiro', 'Condução firme', 'Aceleração'], functionLabel: 'criação entrelinhas' }
 ];
+
+function ruleForSlot(slot: string): ProfileRule | null {
+  const normalized = slot.trim().toUpperCase().replace(/\s+/g, ' ');
+  if (/^(GOL|GK)$/.test(normalized)) return GOALKEEPER_RULE;
+  if (/^(LE|LD|LB|RB)$/.test(normalized)) return FULLBACK_RULE;
+  if (/^(ZAG|ZAG E|ZAG D|ZAG C|CB|LCB|RCB)$/.test(normalized)) return CENTRE_BACK_RULE;
+  if (/^(VOL|VOL E|VOL D|DMF)$/.test(normalized)) return DEFENSIVE_MIDFIELD_RULE;
+  return null;
+}
 
 export function detectSquadGaps(team: TeamDiagnosis): SquadGap[] {
   const gaps: SquadGap[] = [];
   for (const [index, missing] of team.missingRoles.entries()) {
     const [slot, description = missing] = missing.split(':').map((item) => item.trim());
-    const rule = PROFILE_RULES.find((item) => item.match.test(description)) ?? {
+    // A posição da vaga é autoritativa. O texto descritivo só entra como
+    // segunda evidência; assim "Goleiro defensivo" nunca cai em "proteção central".
+    const rule = ruleForSlot(slot) ?? PROFILE_RULES.find((item) => item.match.test(description)) ?? {
       styles: ['Meia versátil'],
       attributes: ['Controle de bola', 'Resistência', 'Velocidade', 'Passe rasteiro'],
       functionLabel: description || 'função complementar'

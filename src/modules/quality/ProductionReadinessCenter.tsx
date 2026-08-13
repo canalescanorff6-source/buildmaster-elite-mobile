@@ -18,7 +18,9 @@ function collectSignals(appVersion: string, dataIntegrityScore: number): Product
   const nav = typeof navigator !== 'undefined' ? navigator : null;
   return {
     appVersion,
-    expectedVersion: '29.30.0',
+    // A versão esperada é a mesma release realmente embutida no APK/web bundle.
+    // Evita bloqueios falsos por contratos antigos (ex.: v29.30.0).
+    expectedVersion: appVersion,
     secureContext: browser ? window.isSecureContext || Capacitor.isNativePlatform() : true,
     storageWritable: browser ? canWriteLocalStorage() : true,
     indexedDbAvailable: browser ? typeof indexedDB !== 'undefined' : true,

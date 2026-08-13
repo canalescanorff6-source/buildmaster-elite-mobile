@@ -89,8 +89,8 @@ export function PremiumQualityCenter({ appVersion }: { appVersion: string }) {
 
     <div className="bm2840-quality-metrics">
       <article><MonitorCog size={19}/><div><span>Perfil aplicado</span><strong>{profile.resolvedMode === 'maximum' ? 'Máximo' : 'Econômico'}</strong><small>{profile.reasons[0]}</small></div></article>
-      <article><Activity size={19}/><div><span>Falhas recentes</span><strong>{issues.length}</strong><small>registro local sanitizado</small></div></article>
-      <article><Gauge size={19}/><div><span>Tarefas longas</span><strong>{longTasks.length}</strong><small>acima de 50 ms</small></div></article>
+      <article><Activity size={19}/><div><span>Falhas recentes</span><strong>{issues.length}</strong><small>últimos 10 min, duplicadas agrupadas</small></div></article>
+      <article><Gauge size={19}/><div><span>Tarefas perceptíveis</span><strong>{longTasks.length}</strong><small>≥ 80 ms nos últimos 10 min</small></div></article>
       <article><CheckCircle2 size={19}/><div><span>Interface auditada</span><strong>{audit ? audit.totalInteractive : '—'}</strong><small>{audit ? 'elementos visíveis' : 'execute a verificação'}</small></div></article>
     </div>
 

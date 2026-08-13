@@ -5,6 +5,11 @@ export const QUALITY_PREFERENCE_KEY = 'buildmaster_quality_preference_v2840';
 export const QUALITY_RUNTIME_ISSUES_KEY = 'buildmaster_quality_runtime_issues_v2840';
 export const QUALITY_LONG_TASKS_KEY = 'buildmaster_quality_long_tasks_v2840';
 
+const RUNTIME_ISSUE_WINDOW_MS = 10 * 60 * 1000;
+const LONG_TASK_WINDOW_MS = 10 * 60 * 1000;
+const RUNTIME_DEDUPE_MS = 60 * 1000;
+const APP_LONG_TASK_THRESHOLD_MS = 80;
+
 export type QualityMode = 'automatic' | 'maximum' | 'economy';
 export type ResolvedQualityMode = Exclude<QualityMode, 'automatic'>;
 
@@ -58,6 +63,16 @@ function clampText(value: unknown, limit = 280): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, limit) || 'Falha desconhecida';
 }
 
+function timestamp(value: string): number | null {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isRecent(value: string, windowMs: number, now = Date.now()): boolean {
+  const parsed = timestamp(value);
+  return parsed !== null && parsed <= now + 30_000 && parsed >= now - windowMs;
+}
+
 export function readQualityPreference(): QualityPreference {
   const stored = safeStorageGetJson<Partial<QualityPreference>>(QUALITY_PREFERENCE_KEY, DEFAULT_PREFERENCE);
   const mode: QualityMode = stored.mode === 'maximum' || stored.mode === 'economy' ? stored.mode : 'automatic';
@@ -109,18 +124,36 @@ export function detectDeviceQualityProfile(preference = readQualityPreference())
 }
 
 export function readRuntimeQualityIssues(): RuntimeQualityIssue[] {
-  return safeStorageGetJson<RuntimeQualityIssue[]>(QUALITY_RUNTIME_ISSUES_KEY, []).filter((item) => item && typeof item.message === 'string').slice(0, 25);
+  const raw = safeStorageGetJson<RuntimeQualityIssue[]>(QUALITY_RUNTIME_ISSUES_KEY, [])
+    .filter((item) => item && typeof item.message === 'string');
+  const recent = raw.filter((item) => isRecent(item.at, RUNTIME_ISSUE_WINDOW_MS)).slice(0, 25);
+  if (recent.length !== raw.length) safeStorageSetJson(QUALITY_RUNTIME_ISSUES_KEY, recent);
+  return recent;
 }
 
 export function recordRuntimeQualityIssue(input: Omit<RuntimeQualityIssue, 'id' | 'at' | 'message'> & { message: unknown }): RuntimeQualityIssue {
+  const now = Date.now();
+  const message = clampText(input.message);
+  const location = input.location ? clampText(input.location, 180) : undefined;
+  const recent = readRuntimeQualityIssues();
+  const duplicate = recent.find((item) => {
+    const itemAt = timestamp(item.at);
+    return item.source === input.source
+      && item.message === message
+      && (item.location ?? '') === (location ?? '')
+      && itemAt !== null
+      && now - itemAt <= RUNTIME_DEDUPE_MS;
+  });
+  if (duplicate) return duplicate;
+
   const issue: RuntimeQualityIssue = {
-    id: `quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    at: new Date().toISOString(),
+    id: `quality-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    at: new Date(now).toISOString(),
     source: input.source,
-    message: clampText(input.message),
-    location: input.location ? clampText(input.location, 180) : undefined
+    message,
+    location
   };
-  safeStorageSetJson(QUALITY_RUNTIME_ISSUES_KEY, [issue, ...readRuntimeQualityIssues()].slice(0, 25));
+  safeStorageSetJson(QUALITY_RUNTIME_ISSUES_KEY, [issue, ...recent].slice(0, 25));
   return issue;
 }
 
@@ -129,11 +162,17 @@ export function clearRuntimeQualityIssues(): void {
 }
 
 export function readLongTaskSamples(): LongTaskSample[] {
-  return safeStorageGetJson<LongTaskSample[]>(QUALITY_LONG_TASKS_KEY, []).filter((sample) => Number.isFinite(sample.duration)).slice(0, 40);
+  const raw = safeStorageGetJson<LongTaskSample[]>(QUALITY_LONG_TASKS_KEY, [])
+    .filter((sample) => sample && Number.isFinite(sample.duration));
+  const recent = raw
+    .filter((sample) => sample.duration >= APP_LONG_TASK_THRESHOLD_MS && isRecent(sample.at, LONG_TASK_WINDOW_MS))
+    .slice(0, 40);
+  if (recent.length !== raw.length) safeStorageSetJson(QUALITY_LONG_TASKS_KEY, recent);
+  return recent;
 }
 
 export function recordLongTask(duration: number): LongTaskSample | null {
-  if (!Number.isFinite(duration) || duration < 50) return null;
+  if (!Number.isFinite(duration) || duration < APP_LONG_TASK_THRESHOLD_MS) return null;
   const sample = { at: new Date().toISOString(), duration: Math.round(duration) };
   safeStorageSetJson(QUALITY_LONG_TASKS_KEY, [sample, ...readLongTaskSamples()].slice(0, 40));
   return sample;
@@ -145,7 +184,9 @@ export function clearLongTaskSamples(): void {
 
 export function qualityScore(input: { issues: number; longTasks: number; audit?: InterfaceAuditSummary | null }): number {
   const auditPenalty = input.audit ? Math.min(35, input.audit.buttonsWithoutName * 5 + input.audit.fieldsWithoutName * 4 + input.audit.duplicateIds * 8 + input.audit.smallTouchTargets) : 0;
-  return Math.max(0, Math.min(100, 100 - Math.min(35, input.issues * 7) - Math.min(25, input.longTasks * 2) - auditPenalty));
+  const issuePenalty = Math.min(32, input.issues * 6);
+  const taskPenalty = Math.min(20, Math.ceil(input.longTasks / 3) * 2);
+  return Math.max(0, Math.min(100, 100 - issuePenalty - taskPenalty - auditPenalty));
 }
 
 export function createQualityReport(input: {
@@ -169,8 +210,8 @@ export function createQualityReport(input: {
     `Processadores lógicos: ${input.profile.logicalProcessors ?? 'não informado'}`,
     `Economia de dados: ${input.profile.saveData ? 'sim' : 'não'}`,
     `Tipo de rede: ${input.profile.effectiveType ?? 'não informado'}`,
-    `Falhas locais recentes: ${input.issues.length}`,
-    `Tarefas longas recentes: ${input.longTasks.length}`
+    `Falhas locais recentes (10 min): ${input.issues.length}`,
+    `Tarefas perceptíveis recentes ≥ ${APP_LONG_TASK_THRESHOLD_MS} ms (10 min): ${input.longTasks.length}`
   ];
   if (input.audit) {
     lines.push(
