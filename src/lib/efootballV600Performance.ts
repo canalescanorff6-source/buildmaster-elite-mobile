@@ -201,6 +201,22 @@ function sameBudgetCandidates(seed: TrainingPlan, budget: number): TrainingPlan[
 
 function skillCategories(result: AnalysisResult, connection: ConnectionProfile): UnifiedSkillDecision['category'][] {
   const position = result.bestPosition.code;
+  const attrs = result.parsed.attributes;
+  const dribbleDna = average([
+    Number(attrs.ballControl ?? 0), Number(attrs.dribbling ?? 0), Number(attrs.tightPossession ?? 0),
+    Number(attrs.balance ?? 0), Number(attrs.acceleration ?? 0)
+  ]);
+  const creationDna = average([Number(attrs.lowPass ?? 0), Number(attrs.loftedPass ?? 0), Number(attrs.ballControl ?? 0)]);
+  const finishingDna = average([Number(attrs.finishing ?? 0), Number(attrs.offensiveAwareness ?? 0), Number(attrs.kickingPower ?? 0)]);
+  const dribbleDominant = ['SS','AMF','LWF','RWF','LMF','RMF'].includes(position)
+    && dribbleDna >= 86
+    && dribbleDna >= creationDna + 5
+    && dribbleDna >= finishingDna + 5;
+
+  // A v6.0 pode favorecer passe/segurança em conexão variável, mas não pode
+  // apagar o DNA técnico da carta. Se drible/condução é claramente a maior
+  // vantagem do jogador, reservamos duas das cinco vagas para drible/controle.
+  if (dribbleDominant) return ['drible','drible','passe','finalização','físico'];
   if (position === 'GK') return ['goleiro','goleiro','goleiro','mental','físico'];
   if (position === 'CB') return ['defesa','defesa','defesa','aérea','passe'];
   if (position === 'LB' || position === 'RB') return ['defesa','defesa','passe','físico','drible'];
