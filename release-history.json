@@ -3,6 +3,24 @@
   "releases": [
     {
       "version": "40.80.0",
+      "versionCode": 2110102441,
+      "buildId": "a2d3e9e0b69856a68c9d0ff728c10896d402887f-1",
+      "channel": "stable",
+      "rolloutPercentage": 100,
+      "status": "published",
+      "publishedAt": "2026-08-14T16:38:32.557829+00:00",
+      "releaseTag": "buildmaster-v40.80.0-2110102441-01",
+      "checksum": "7f5efa604e0cfb7049ae44f5c6996c280fbba0e4f1d7ce52ce16698980cb2515",
+      "notes": [
+        "O APK imutável é a rota principal e nunca é substituído depois da publicação.",
+        "O Android DownloadManager é o transporte principal; HTTP direto é apenas reserva.",
+        "Canais estável e beta são independentes e usam rollout determinístico por aparelho.",
+        "Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.",
+        "Rollback recompila uma base conhecida como boa com versionCode maior."
+      ]
+    },
+    {
+      "version": "40.80.0",
       "versionCode": 2110102431,
       "buildId": "5b7c28af2164131ff59b94d9e656455aff3ec5d3-1",
       "channel": "stable",
@@ -515,24 +533,6 @@
       "publishedAt": "2026-08-02T22:10:52.755055+00:00",
       "releaseTag": "buildmaster-v38.36.0-2110101641-01",
       "checksum": "3b9a18a0cfa1f5d31db291b7c5753d769d03cb4b45c9fb658575f8c5d353bf32",
-      "notes": [
-        "O APK imutável é a rota principal e nunca é substituído depois da publicação.",
-        "O Android DownloadManager é o transporte principal; HTTP direto é apenas reserva.",
-        "Canais estável e beta são independentes e usam rollout determinístico por aparelho.",
-        "Cada arquivo é conferido por tamanho, SHA-256, pacote, versionCode, versão e assinatura.",
-        "Rollback recompila uma base conhecida como boa com versionCode maior."
-      ]
-    },
-    {
-      "version": "37.00.0",
-      "versionCode": 2110101551,
-      "buildId": "d90f2a642476c41d0348574569960b957c6c1d15-1",
-      "channel": "stable",
-      "rolloutPercentage": 100,
-      "status": "published",
-      "publishedAt": "2026-08-02T15:45:19.724748+00:00",
-      "releaseTag": "buildmaster-v37.00.0-2110101551-01",
-      "checksum": "eae1b573b1f2c92284e4528a94f72637e8cc70a077df99faaa4437b14aab8982",
       "notes": [
         "O APK imutável é a rota principal e nunca é substituído depois da publicação.",
         "O Android DownloadManager é o transporte principal; HTTP direto é apenas reserva.",
