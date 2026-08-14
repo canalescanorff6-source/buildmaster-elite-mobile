@@ -251,7 +251,7 @@ export function applyDualPhaseBuild2027V4080R14(result: AnalysisResult): Analysi
 
   return {
     ...result,
-    buildName: `Ficha FINAL DUPLA FASE v40.80 r14 — ${result.parsed.playerName}`,
+    buildName: `Ficha Automática v40.80 r14 — Meta Vivo 2027 • Ficha FINAL DUPLA FASE — ${result.parsed.playerName}`,
     buildVariants: variants,
     recommendationExplanation: [
       summary,
