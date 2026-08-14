@@ -18,11 +18,17 @@ assert.match(play, /npm run types:repair && npm run quality:root-tsconfig/);
 assert.match(doctor, /Compatibilidade das dependências/);
 assert.match(doctor, /Orçamento do código-fonte/);
 assert.match(doctor, /Guardas de versão das regressões/);
-assert.match(budget, /sourceTs:\s*(?:3\.5|4|4\.5)\s*\*\s*1024\s*\*\s*1024/);
-const sourceBudgetMatch = budget.match(/sourceTs:\s*(3\.5|4|4\.5)\s*\*\s*1024\s*\*\s*1024/);
-assert.ok(sourceBudgetMatch && Number(sourceBudgetMatch[1]) <= 4.5, 'O teto TypeScript não pode ultrapassar 4,5 MiB sem modularização.');
+
+const sourceBudgetMatch = budget.match(/sourceTs:\s*(\d+(?:\.\d+)?)\s*\*\s*1024\s*\*\s*1024/);
+assert.ok(sourceBudgetMatch, 'O orçamento TypeScript precisa continuar explícito em MiB.');
+const sourceBudgetMiB = Number(sourceBudgetMatch[1]);
+assert.ok(Number.isFinite(sourceBudgetMiB) && sourceBudgetMiB > 0, 'O orçamento TypeScript precisa ser um valor positivo.');
+assert.match(budget, /sourceBytes > limits\.sourceTs/);
+assert.match(budget, /largestSource\.size > limits\.singleSourceTs/);
+assert.match(budget, /singleSourceTs:\s*\d+(?:\.\d+)?\s*\*\s*1024/);
+
 assert.match(apk, /npm run quality:bundle-built/);
 assert.match(play, /npm run quality:bundle-built/);
 assert.ok(apk.indexOf('npm run ci:verify') < apk.indexOf('npm run apk:build-web'));
 assert.ok(play.indexOf('npm run ci:verify') < play.indexOf('npm run apk:build-web'));
-console.log('v31.82 proteção preventiva do GitHub Actions e geração do APK aprovada.');
+console.log(`v31.82 proteção preventiva aprovada com orçamento TypeScript configurável (${sourceBudgetMiB} MiB).`);

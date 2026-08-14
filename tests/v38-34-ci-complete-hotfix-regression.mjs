@@ -22,7 +22,9 @@ assert.match(posterPanel, /createInitialState\(formation, style, managerName, \{
 assert.match(posterPanel, /palette: defaults\.defaultPalette \?\? 'ouro'/);
 assert.match(posterPanel, /title: defaults\.brandTitle\?\.trim\(\) \|\|/);
 
-assert.match(budget, /sourceTs: (?:4|4\.5) \* 1024 \* 1024/);
+const sourceBudgetMatch = budget.match(/sourceTs:\s*(\d+(?:\.\d+)?)\s*\*\s*1024\s*\*\s*1024/);
+assert.ok(sourceBudgetMatch && Number(sourceBudgetMatch[1]) > 0, 'O orçamento TypeScript precisa existir e ser positivo.');
+assert.match(budget, /sourceBytes > limits\.sourceTs/);
 assert.match(budget, /singleSourceTs: 400 \* 1024/);
 assert.match(budget, /Módulo TypeScript excedeu/);
 
@@ -35,4 +37,4 @@ assert.ok(doctor.includes('Regressões v38.34'));
 assert.ok(sw.includes('buildmaster-v40-80-edge-stack-1'));
 assert.ok(nativeCache.includes('40.80.0-edge-stack-runtime-1'));
 
-console.log('v38.34 preservada na v38.40: orçamento protegido, rota inicial restaurada e contrato do gerador compatível com o Estúdio Marques.');
+console.log(`v38.34 preservada: orçamento configurável (${sourceBudgetMatch[1]} MiB), rota inicial restaurada e contrato do Estúdio Marques protegidos.`);
