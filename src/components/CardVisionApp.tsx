@@ -223,6 +223,7 @@ import { activateContinuousRulePackV3770, computeRulePackChecksumV3770, createRu
 import { REMOTE_CATALOG_V3770_STORAGE_KEY } from '@/lib/remoteCatalogV3770';
 import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
 import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
+import { readVaultDeletionPreferencesV4080R12, writeVaultDeletionPreferencesV4080R12 } from '@/lib/vaultDeletionPreferencesV4080R12';
 import {
   HISTORY_KEY,
   HISTORY_LIMIT,
@@ -441,6 +442,8 @@ export function CardVisionApp() {
   const [manualMode, setManualMode] = useState(false);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [vaultTrash, setVaultTrash] = useState<VaultTrashItem<SavedAnalysis>[]>([]);
+  const [pendingDeleteHistoryId, setPendingDeleteHistoryId] = useState<string | null>(null);
+  const [alwaysDeletePermanently, setAlwaysDeletePermanently] = useState(() => safeStartupInitializerV3840(() => readVaultDeletionPreferencesV4080R12().alwaysDeletePermanently, false));
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('ALL');
   const [historySort, setHistorySort] = useState<HistorySort>('UPDATED');
@@ -2048,19 +2051,47 @@ export function CardVisionApp() {
       setStatus(message || 'Não consegui importar esse backup. Use um arquivo .bmbak ou JSON exportado pelo próprio BuildMaster.');
     }
   }
-  function deleteHistoryItem(id: string) {
-    const item = renderHistory.find((entry) => entry.id === id);
-    if (!item) return;
-    moveToVaultTrash(item.id, item.result.parsed.playerName || 'Jogador sem nome', item);
-    setVaultTrash(readVaultTrash<SavedAnalysis>());
+  function removeHistoryEntryAfterDelete(item: SavedAnalysis) {
     setHistory((current) => {
-      const next = current.filter((entry) => entry.id !== id);
+      const next = current.filter((entry) => entry.id !== item.id);
       void persistHistoryStore(next);
       return next;
     });
     void deleteCloudHistoryItem(item);
-    if (activeHistoryId === id) setActiveHistoryId(null);
+    if (activeHistoryId === item.id) setActiveHistoryId(null);
+  }
+  function moveHistoryItemToTrash(id: string) {
+    const item = renderHistory.find((entry) => entry.id === id);
+    if (!item) return;
+    moveToVaultTrash(item.id, item.result.parsed.playerName || 'Jogador sem nome', item);
+    setVaultTrash(readVaultTrash<SavedAnalysis>());
+    removeHistoryEntryAfterDelete(item);
+    setPendingDeleteHistoryId(null);
     setStatus(`${item.result.parsed.playerName} foi movido para a Lixeira por 30 dias.`);
+  }
+  function permanentlyDeleteHistoryItem(id: string) {
+    const item = renderHistory.find((entry) => entry.id === id);
+    if (!item) return;
+    removeFromVaultTrash(id);
+    setVaultTrash(readVaultTrash<SavedAnalysis>());
+    removeHistoryEntryAfterDelete(item);
+    setPendingDeleteHistoryId(null);
+    setStatus(`${item.result.parsed.playerName} foi excluído definitivamente. Esta ação não pode ser desfeita.`);
+  }
+  function deleteHistoryItem(id: string) {
+    const item = renderHistory.find((entry) => entry.id === id);
+    if (!item) return;
+    if (alwaysDeletePermanently) {
+      const confirmed = typeof window === 'undefined' || window.confirm(`Excluir ${item.result.parsed.playerName || 'este jogador'} definitivamente? Esta ação não pode ser desfeita.`);
+      if (confirmed) permanentlyDeleteHistoryItem(id);
+      return;
+    }
+    setPendingDeleteHistoryId(id);
+  }
+  function updateAlwaysDeletePermanently(value: boolean) {
+    setAlwaysDeletePermanently(value);
+    writeVaultDeletionPreferencesV4080R12({ alwaysDeletePermanently: value });
+    setStatus(value ? 'Exclusão direta ativada. O app ainda pedirá confirmação antes de apagar definitivamente.' : 'Lixeira restaurada como exclusão padrão.');
   }
   function restoreTrashItem(id: string) {
     const restored = restoreFromVaultTrash<SavedAnalysis>(id);
@@ -3926,6 +3957,22 @@ ${reading.text}`)) : fullPassText;
             )}
           </div>
           )}
+          {pendingDeleteHistoryId && (() => {
+            const pendingItem = renderHistory.find((entry) => entry.id === pendingDeleteHistoryId);
+            if (!pendingItem) return null;
+            const pendingName = pendingItem.result.parsed.playerName || 'Jogador sem nome';
+            return <div className="vault-delete-choice-backdrop" role="presentation" onClick={() => setPendingDeleteHistoryId(null)}>
+              <section className="vault-delete-choice-dialog luxury-panel" role="dialog" aria-modal="true" aria-labelledby="vault-delete-choice-title" onClick={(event) => event.stopPropagation()}>
+                <div className="vault-delete-choice-icon"><Trash2 size={24} /></div>
+                <div><p className="kicker">Excluir ficha</p><h3 id="vault-delete-choice-title">O que deseja fazer com {pendingName}?</h3><p>Você pode manter a ficha recuperável por 30 dias ou apagá-la agora sem passar pela Lixeira.</p></div>
+                <div className="vault-delete-choice-actions">
+                  <button type="button" onClick={() => moveHistoryItemToTrash(pendingDeleteHistoryId)}><RotateCcw size={17} /><span><strong>Mover para a Lixeira</strong><small>Permite restaurar por até 30 dias</small></span></button>
+                  <button type="button" className="danger" onClick={() => permanentlyDeleteHistoryItem(pendingDeleteHistoryId)}><Trash2 size={17} /><span><strong>Excluir definitivamente</strong><small>Apaga agora e não pode ser desfeito</small></span></button>
+                  <button type="button" className="secondary" onClick={() => setPendingDeleteHistoryId(null)}>Cancelar</button>
+                </div>
+              </section>
+            </div>;
+          })()}
           {mainSection === 'ajustes' && (
             <div className="settings-premium-layout settings-final-layout bm2820-settings-screen">
               {settingsView === 'visao-geral' ? (
@@ -4017,6 +4064,10 @@ ${reading.text}`)) : fullPassText;
                       <article><ShieldCheck size={20} /><div><strong>Dados separados por conta</strong><span>O Cofre e as preferências usam uma identidade própria para cada usuário.</span></div></article>
                       <article><CheckCircle2 size={20} /><div><strong>Restauração validada</strong><span>Arquivos antigos são conferidos e migrados antes de substituir dados.</span></div></article>
                       <article><FileText size={20} /><div><strong>Diagnóstico sem alterações</strong><span>O relatório técnico apenas lê o estado atual do aplicativo.</span></div></article>
+                    </div>
+                    <div className="vault-delete-preference-card">
+                      <div><Trash2 size={20} /><span><strong>Exclusão de fichas do Cofre</strong><small>{alwaysDeletePermanently ? 'Excluir definitivamente é o padrão; uma confirmação continua obrigatória.' : 'Mover para a Lixeira por 30 dias é o padrão seguro.'}</small></span></div>
+                      <label className="update-toggle"><input type="checkbox" checked={alwaysDeletePermanently} onChange={(event) => updateAlwaysDeletePermanently(event.target.checked)} /><span>Sempre excluir definitivamente</span></label>
                     </div>
                     <button type="button" className="settings-diagnostic-button" onClick={() => void exportIntegrityDiagnostic()}><FileText size={17} /><div><strong>Exportar diagnóstico técnico</strong><span>Gera um relatório para conferir integridade sem incluir senhas.</span></div></button>
                     <details className="settings-details-card" open={localIntegrity.issues.length > 0}>

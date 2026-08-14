@@ -22003,3 +22003,12 @@ body::after { display: none !important; }
 }
 [data-theme='dark'] :is(input,textarea)::placeholder, .dark :is(input,textarea)::placeholder{color:#8da2be !important;opacity:1}
 [data-theme='dark'] :is(label,small,p,span,em), .dark :is(label,small,p,span,em){text-shadow:none}
+
+/* v40.80 r12 — escolha segura de exclusão do Cofre */
+.vault-delete-choice-backdrop{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));background:rgba(4,10,20,.68);backdrop-filter:blur(8px)}
+.vault-delete-choice-dialog{width:min(100%,480px);display:grid;gap:16px;padding:20px;border-radius:22px;max-height:min(86dvh,620px);overflow:auto}
+.vault-delete-choice-dialog h3{margin:4px 0 6px;font-size:1.12rem}.vault-delete-choice-dialog p{margin:0;color:var(--muted,#8ea0b8);line-height:1.5}
+.vault-delete-choice-icon{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:color-mix(in srgb,#dc3545 14%,var(--surface-2,#152238));color:#ff6673}
+.vault-delete-choice-actions{display:grid;gap:10px}.vault-delete-choice-actions>button{min-height:54px;padding:12px 14px;border-radius:15px;display:flex;align-items:center;gap:11px;text-align:left}.vault-delete-choice-actions>button span{display:grid;gap:2px}.vault-delete-choice-actions>button small{font-weight:500;opacity:.72}.vault-delete-choice-actions>button.danger{border-color:color-mix(in srgb,#dc3545 52%,transparent);color:#ff6d79}.vault-delete-choice-actions>button.secondary{justify-content:center;min-height:44px}
+.vault-delete-preference-card{display:grid;gap:12px;padding:15px;border:1px solid var(--border,#d8e0eb);border-radius:18px;background:color-mix(in srgb,var(--surface-2,#eef3f8) 70%,transparent)}
+.vault-delete-preference-card>div{display:flex;align-items:flex-start;gap:11px}.vault-delete-preference-card>div>span{display:grid;gap:3px}.vault-delete-preference-card small{color:var(--muted,#8ea0b8);line-height:1.4}
