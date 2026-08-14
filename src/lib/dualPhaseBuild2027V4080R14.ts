@@ -59,6 +59,7 @@ function mergedWeights(base: PhaseWeights, extra: PhaseWeights): Record<Training
 function attackContextWeights(result: AnalysisResult): PhaseWeights {
   const extra: PhaseWeights = {};
   const style = result.tacticalProfile.style;
+  if (result.bestPosition.code !== 'GK') Object.assign(extra, { passing: .10, dribbling: .08, dexterity: .06 });
   if (style === 'POSSE_DE_BOLA') Object.assign(extra, { passing: .24, dribbling: .18, dexterity: .12 });
   if (style === 'CONTRA_ATAQUE_RAPIDO') Object.assign(extra, { dexterity: .24, lowerBodyStrength: .2, passing: .1 });
   if (style === 'CONTRA_ATAQUE') Object.assign(extra, { passing: .14, lowerBodyStrength: .16, dexterity: .12 });

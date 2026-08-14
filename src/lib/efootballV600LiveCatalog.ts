@@ -29,7 +29,7 @@ export const V600_TEAM_PLAYSTYLES: readonly V600TeamPlaystyleEntry[] = [
   { id:'CONTRA_ATAQUE', label:'Contra-ataque', attack:'Sai com segurança e procura profundidade.', defence:'Protege mais o bloco antes da transição.', risk:'Pode ceder território se a saída estiver isolada.' },
   { id:'POR_FORA', label:'Por fora', attack:'Dá amplitude e explora corredores.', defence:'Precisa recompor corredores e proteger inversões.', risk:'Laterais/alas expostos podem criar 2x1 contra sua defesa.' },
   { id:'PASSE_LONGO', label:'Bola longa / passe longo', attack:'Procura progressão direta e segunda bola.', defence:'Mantém referências para saída direta.', risk:'Perder a primeira disputa pode devolver a posse sem bloco montado.' },
-  { id:'SOBREPOSICAO', label:'Sobreposição', attack:'Concentra jogadores no lado da bola para superioridade e passes curtos.', defence:'Compacta no lado da bola e permite pressão mais alta.', risk:'A inversão rápida para o lado oposto exige cobertura disciplinada.', v600New:true }
+  { id:'SOBREPOSICAO', label:'Todos por Um (Overload)', attack:'Concentra jogadores no lado da bola para superioridade e passes curtos.', defence:'Compacta no lado da bola e permite pressão mais alta.', risk:'A inversão rápida para o lado oposto exige cobertura disciplinada.', v600New:true }
 ] as const;
 
 export type V600SkillCatalogEntry = {

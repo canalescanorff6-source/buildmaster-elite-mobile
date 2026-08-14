@@ -937,6 +937,30 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="panel-note"><b>Aprendizado:</b> {result.metaVivo2027V4080R8.learning.recommendation}</p>
           </article>}
 
+          {result.gameplayMetaV600R10 && <article className="luxury-panel wide-card gameplay-meta-v600-r10" data-testid="gameplay-meta-v600-r10">
+            <div className="section-title-row">
+              <div><p className="kicker">Meta v6.0 • r10</p><h3>Passe, condução, tiki-taka e Formação Fluída</h3></div>
+              <span>{Math.round(result.gameplayMetaV600R10.scores.metaReadiness)}/100</span>
+            </div>
+            <p className="panel-note"><b>Recomendação:</b> {result.gameplayMetaV600R10.formation.recommendation.replaceAll('_',' ')} • {result.gameplayMetaV600R10.formation.reason}</p>
+            <div className="health-score-grid dna-score-grid">
+              <article><strong>{Math.round(result.gameplayMetaV600R10.scores.shortPassing)}</strong><span>Passe curto</span></article>
+              <article><strong>{Math.round(result.gameplayMetaV600R10.scores.ballCarry)}</strong><span>Condução</span></article>
+              <article><strong>{Math.round(result.gameplayMetaV600R10.scores.tikiTaka)}</strong><span>Tiki-taka</span></article>
+              <article><strong>{Math.round(result.gameplayMetaV600R10.scores.manualDefence)}</strong><span>Defesa manual</span></article>
+              <article><strong>{Math.round(result.gameplayMetaV600R10.scores.pressResistance)}</strong><span>Resistência à pressão</span></article>
+              <article><strong>{Math.round(result.gameplayMetaV600R10.scores.fluidCompatibility)}</strong><span>Compatibilidade fluída</span></article>
+            </div>
+            <div className="skill-grid">
+              <div className="skill-check-card"><strong>Formação tradicional</strong><span>{Math.round(result.gameplayMetaV600R10.scores.traditionalCompatibility)}/100</span><span>Continua válida quando preservar a função-base gera mais consistência.</span></div>
+              <div className="skill-check-card"><strong>Formação Fluída</strong><span>{Math.round(result.gameplayMetaV600R10.scores.fluidCompatibility)}/100</span><span>{result.gameplayMetaV600R10.formation.warning}</span></div>
+            </div>
+            <details className="settings-details-card"><summary>Mudanças de posição seguras entre ataque e defesa</summary><div className="dna-goal-list">{result.gameplayMetaV600R10.formation.safeMoves.length ? result.gameplayMetaV600R10.formation.safeMoves.map((move)=><div key={`${move.position}-${move.label}`}><strong>{move.label} • risco {move.risk}</strong><span>{move.reason}</span></div>) : <div><strong>Preservar posição</strong><span>Esta carta não precisa ser deslocada para outra função na fase defensiva.</span></div>}</div></details>
+            <details className="settings-details-card"><summary>Prioridades do meta v6.0</summary><div className="dna-goal-list">{result.gameplayMetaV600R10.priorities.map((item)=><div key={item}><span>{item}</span></div>)}</div></details>
+            <details className="settings-details-card"><summary>Treino prático para a nova jogabilidade</summary><div className="dna-goal-list">{result.gameplayMetaV600R10.drills.map((item)=><div key={item}><span>{item}</span></div>)}</div></details>
+            <p className="panel-note">{result.gameplayMetaV600R10.salesSummary}</p>
+          </article>}
+
           {result.metaBuildUniverse && <MetaBuildLabPanel universe={result.metaBuildUniverse} />}
 
           <EliteEvolutionPanel result={result} />
