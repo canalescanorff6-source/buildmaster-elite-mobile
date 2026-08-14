@@ -2,7 +2,7 @@ import { AuthGate } from '@/components/AuthGate';
 import { CardVisionApp } from '@/components/CardVisionApp';
 import { AppShellSafetyBoundaryV3930 } from '@/components/AppShellSafetyBoundaryV3930';
 
-export default function HomePage() {
+export default function LoginPage() {
   return (
     <AppShellSafetyBoundaryV3930>
       <AuthGate>
