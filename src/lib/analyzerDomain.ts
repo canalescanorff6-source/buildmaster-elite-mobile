@@ -2054,6 +2054,7 @@ export type MetaVivo2027V4080R8Analysis = {
 
 
 export type GameplayMetaV600R10Analysis = import('./gameplayMetaV600R10').GameplayMetaV600R10Analysis;
+export type LiveEvolutionV600R11 = import('./liveEvolutionV600R11').LiveEvolutionV600R11;
 
 export type AnalysisResult = {
   objective?: Objective;
@@ -2131,6 +2132,7 @@ export type AnalysisResult = {
   realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;
   metaVivo2027V4080R8?: MetaVivo2027V4080R8Analysis;
   gameplayMetaV600R10?: GameplayMetaV600R10Analysis;
+  liveEvolutionV600R11?: LiveEvolutionV600R11;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

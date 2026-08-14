@@ -29,6 +29,7 @@ import { applyRealPerformance2027V4080R7 } from './realPerformance2027V4080R7';
 import { applyMetaVivo2027V4080R8 } from './metaVivo2027V4080R8';
 import { applyDualPhaseBuild2027V4080R14 } from './dualPhaseBuild2027V4080R14';
 import { applyGameplayMetaV600R10 } from './gameplayMetaV600R10';
+import { applyLiveEvolutionV600R11 } from './liveEvolutionV600R11';
 
 /**
  * Pipeline único e de memória controlada.
@@ -102,6 +103,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyMetaVivo2027V4080R8(current);
   current = applyDualPhaseBuild2027V4080R14(current);
   current = applyGameplayMetaV600R10(current);
+  current = applyLiveEvolutionV600R11(current);
   // A função real pode reordenar até duas habilidades complementares. A
   // auditoria final precisa espelhar exatamente o conjunto exibido, sem
   // reclassificar a receita nem desfazer o DNA preservado.

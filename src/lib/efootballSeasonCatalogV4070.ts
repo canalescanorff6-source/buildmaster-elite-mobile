@@ -33,7 +33,7 @@ export const EFOOTBALL_SEASON_V4070 = Object.freeze({
     },
     {
       id: 'team-playstyle-overload',
-      title: 'Sobreposição',
+      title: 'Todos por Um',
       kind: 'team-playstyle',
       status: 'stable',
       introducedIn: '6.0.0',
@@ -53,10 +53,10 @@ export const EFOOTBALL_SEASON_V4070 = Object.freeze({
       id: 'dual-player-playstyle',
       title: 'Estilo ofensivo e defensivo por jogador',
       kind: 'gameplay',
-      status: 'stable',
+      status: 'official-preview',
       introducedIn: '6.0.0',
       affectsBuildEngine: true,
-      note: 'Alguns jogadores agora podem ter um estilo ofensivo e outro defensivo; estilos defensivos novos só recebem peso após confirmação.'
+      note: 'O app suporta leitura separada de estilo ofensivo/defensivo quando o campo aparecer na carta; nomes não confirmados ficam observados e sem peso competitivo.'
     },
     {
       id: 'dual-link-up-manager',

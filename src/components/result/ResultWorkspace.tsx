@@ -960,6 +960,16 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <details className="settings-details-card"><summary>Treino prático para a nova jogabilidade</summary><div className="dna-goal-list">{result.gameplayMetaV600R10.drills.map((item)=><div key={item}><span>{item}</span></div>)}</div></details>
             <p className="panel-note">{result.gameplayMetaV600R10.salesSummary}</p>
           </article>}
+          {result.liveEvolutionV600R11 && <article className="luxury-panel wide-card live-evolution-v600-r11" data-testid="live-evolution-v600-r11">
+            <div className="section-title-row"><div><p className="kicker">Meta Vivo Semanal • r11</p><h3>Novidades da v6.0 sem congelar o catálogo</h3></div><span>{result.liveEvolutionV600R11.catalog.safeToWeight?'VALIDADO':'OBSERVADO'}</span></div>
+            <div className="skill-check-grid">
+              <div className="skill-check-card"><strong>Estilo ofensivo</strong><span>{result.liveEvolutionV600R11.playerStyles.offensive??'não lido'}</span></div>
+              <div className="skill-check-card"><strong>Estilo defensivo</strong><span>{result.liveEvolutionV600R11.playerStyles.defensive??'não lido'} • {result.liveEvolutionV600R11.playerStyles.defensiveEvidence}</span></div>
+              <div className="skill-check-card"><strong>Estilos coletivos</strong><span>{result.liveEvolutionV600R11.catalog.teamPlaystyles} no catálogo v6.0</span></div><div className="skill-check-card"><strong>Técnicos atuais</strong><span>{result.liveEvolutionV600R11.catalog.managerSeeds} registros verificados prontos para Link-Up</span></div>
+            </div>
+            <details className="settings-details-card"><summary>Novidades detectadas pelo OCR</summary><div className="dna-goal-list">{result.liveEvolutionV600R11.catalog.unknownFields.length?result.liveEvolutionV600R11.catalog.unknownFields.map(item=><div key={item}><strong>Novo dado observado</strong><span>{item}</span><small>Preservado sem inventar peso até confirmação.</small></div>):<div><strong>Catálogo consistente</strong><span>Nenhum campo desconhecido nesta carta.</span></div>}</div></details>
+            <details className="settings-details-card"><summary>Regras de atualização semanal</summary><div className="dna-goal-list">{result.liveEvolutionV600R11.rules.map(item=><div key={item}><span>{item}</span></div>)}</div></details>
+          </article>}
 
           {result.metaBuildUniverse && <MetaBuildLabPanel universe={result.metaBuildUniverse} />}
 
