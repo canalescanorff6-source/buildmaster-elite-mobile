@@ -2,12 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const built = process.argv.includes('--built');
-// A v38.33 acrescentou um renderizador SVG determinístico. O teto de fonte sobe
-// de 4 MiB para 4,5 MiB, mantendo limites reais para o total e para cada módulo.
+// A v40.80 Meta Vivo 2027 acrescentou motores separados de catálogo, defesa,
+// formação e ambiente. O teto de fonte sobe para 5 MiB; os limites de módulo
+// individual e do bundle compilado continuam protegendo crescimento anormal.
 const limits = {
   totalJs: 15 * 1024 * 1024,
   singleJs: 5 * 1024 * 1024,
-  sourceTs: 4.5 * 1024 * 1024,
+  sourceTs: 5 * 1024 * 1024,
   singleSourceTs: 400 * 1024,
 };
 function walk(root, matcher) {

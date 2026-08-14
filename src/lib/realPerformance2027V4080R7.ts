@@ -124,6 +124,33 @@ function finalSkillSelection(result: AnalysisResult, ranked: RealPerformance2027
   return selected.slice(0,5).map((item)=>item.name);
 }
 
+function canonicalFinalSkills(result: AnalysisResult, ranked: RealPerformance2027V4080R7Analysis['skillMarginal']): string[] {
+  // Habilidades adicionais são uma decisão persistente da carta. Rede/delay pode
+  // alterar a auditoria de robustez e o peso das partidas, mas não deve trocar
+  // nem reordenar o Top 5 toda vez que o contexto online muda.
+  const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
+  const base = result.efootballV600?.finalSkills?.length ? result.efootballV600.finalSkills : result.recommendedSkills;
+  const selected: string[] = [];
+  const selectedKeys = new Set<string>();
+
+  for (const name of base) {
+    const key = skillIdentityKey(name);
+    if (!key || owned.has(key) || selectedKeys.has(key)) continue;
+    selected.push(name);
+    selectedKeys.add(key);
+    if (selected.length >= 5) return selected;
+  }
+
+  for (const name of finalSkillSelection(result, ranked)) {
+    const key = skillIdentityKey(name);
+    if (!key || owned.has(key) || selectedKeys.has(key)) continue;
+    selected.push(name);
+    selectedKeys.add(key);
+    if (selected.length >= 5) break;
+  }
+  return selected.slice(0,5);
+}
+
 function scoreExistingImpeto(name: string, result: AnalysisResult): number {
   const normalized = name.toLocaleLowerCase('pt-BR');
   const pos = result.bestPosition.code;
@@ -169,7 +196,7 @@ function learningPolicy(result: AnalysisResult): RealPerformance2027V4080R7Analy
 
 export function buildRealPerformance2027V4080R7(result: AnalysisResult): RealPerformance2027V4080R7Analysis {
   const ranked = marginalSkills(result);
-  const finalSkills = finalSkillSelection(result, ranked);
+  const finalSkills = canonicalFinalSkills(result, ranked);
   const phase = PHASE_WEIGHT[result.bestPosition.code];
   const labels = phaseLabels(result.bestPosition.code);
   const impeto = impetoPolicy(result);
@@ -185,12 +212,12 @@ export function buildRealPerformance2027V4080R7(result: AnalysisResult): RealPer
     guarantees:{ gerIsNotOptimizationTarget:true, networkIsNotModified:true, existingImpetoNotAutoReplaced:true, onlyOwnedSafeSkills:true, attackAndDefenceEvaluated:true, v5HistoryDownweighted:true },
     reasons:[
       `A ficha é julgada nas duas fases: ${Math.round(phase.attack*100)}% ataque e ${Math.round(phase.defence*100)}% defesa para ${POSITION_PT[result.bestPosition.code]}.`,
-      `As cinco habilidades são escolhidas pelo ganho marginal individual depois da progressão final; conexão ${connection(result)} entra como robustez, não como promessa de reduzir ping.`,
+      `As cinco habilidades permanecem canônicas pela carta/DNA e são auditadas por ganho marginal depois da progressão final; conexão ${connection(result)} altera robustez e aprendizado, não o Top 5 permanente.`,
       impeto.reason,
       learning.recommendation,
       'Configuração gráfica não é tratada como “quanto mais baixo, melhor”: o app prioriza estabilidade e repetibilidade do cenário usado nos testes.'
     ],
-    summary:`${result.parsed.playerName}: Desempenho Real 2027 fechou ${POSITION_PT[result.bestPosition.code]} com equilíbrio de fases ${Math.round(phaseBalanceScore)}/100, Top 5 por ganho marginal e política de Ímpeto “${impeto.decision}”.`
+    summary:`${result.parsed.playerName}: Desempenho Real 2027 fechou ${POSITION_PT[result.bestPosition.code]} com equilíbrio de fases ${Math.round(phaseBalanceScore)}/100, Top 5 canônico auditado por ganho marginal e política de Ímpeto “${impeto.decision}”.`
   };
 }
 
