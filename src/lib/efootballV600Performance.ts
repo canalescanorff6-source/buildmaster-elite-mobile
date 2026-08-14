@@ -14,6 +14,7 @@ import { buildPersonalizedSkillPlan } from './skillIntelligenceV31';
 import { buildOwnedSkillKeys, skillIdentityKey } from './officialSkillIdentity';
 import { TRAINING_KEYS, trainingPlanTotalCost } from './trainingPlanCore';
 import { EFOOTBALL_V600_META } from './efootballV600Meta';
+import { getAttributeMetaTrainingBias } from './attributeMeta2027V600';
 
 export const EFOOTBALL_V600_PERFORMANCE_ENGINE_VERSION = '6.0.0-buildmaster-r5' as const;
 
@@ -141,6 +142,7 @@ function effectiveWeights(result: AnalysisResult): Record<TrainingKey, number> {
   if (result.tacticalProfile.style === 'POSSE_DE_BOLA') merge({ passing: .22, dribbling: .15, dexterity: .12 });
   if (result.tacticalProfile.style === 'CONTRA_ATAQUE_RAPIDO') merge({ dexterity: .22, lowerBodyStrength: .18, passing: .12 });
   if (result.tacticalProfile.style === 'CONTRA_ATAQUE') merge({ defending: .12, passing: .14, lowerBodyStrength: .14 });
+  merge(getAttributeMetaTrainingBias(result));
   return output;
 }
 

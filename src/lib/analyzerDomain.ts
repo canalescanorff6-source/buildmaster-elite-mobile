@@ -1959,6 +1959,16 @@ export type MetaVivo2027V4080R8Analysis = {
   engineVersion: '40.80-r8-meta-vivo-2027';
   mode: 'META_VIVO_2027';
   selectedPosition: PositionCode;
+  attributeMeta: {
+    engineVersion: '40.81-r1-attribute-meta-2027';
+    positionLabel: string;
+    playerPlaystyle: string | null;
+    teamPlaystyle: string;
+    topPriorities: Array<{ label: string; current: number; targetMin: number; targetIdeal: number; usefulCeiling: number; priority: 'CRITICA' | 'ALTA' | 'MEDIA' | 'MANTER' | 'SATURADA'; gap: number; reason: string }>;
+    stopSpending: Array<{ label: string; current: number; targetIdeal: number; usefulCeiling: number; priority: 'CRITICA' | 'ALTA' | 'MEDIA' | 'MANTER' | 'SATURADA'; reason: string }>;
+    dnaRule: string;
+    summary: string;
+  };
   scores: {
     firstTouch: number;
     commandResponse: number;

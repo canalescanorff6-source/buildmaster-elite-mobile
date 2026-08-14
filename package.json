@@ -2,7 +2,7 @@
   "name": "buildmaster-elite-tatico-v37-00-inteligencia-profissional",
   "version": "40.80.0",
   "private": true,
-  "description": "BuildMaster Elite Tático v40.80 — Meta Vivo 2027 r8: ficha final multiobjetivo para eFootball v6.0, catálogo vivo, estilos ofensivos/defensivos, formação fluída, defesa manual, Top 5 marginal e Ímpeto sem desperdício.",
+  "description": "BuildMaster Elite Tático v40.80 r9 — Atributos Meta 2027: ficha final multiobjetivo para eFootball v6.0, catálogo vivo, estilos ofensivos/defensivos, formação fluída, defesa manual, Top 5 marginal e Ímpeto sem desperdício.",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -185,7 +185,7 @@
     "typecheck:v4070": "tsc -p tests/types-v4070/tsconfig.json --pretty false",
     "test:v4070": "npm run typecheck:v4070 && node tests/v40-70-live-catalog-zero-confirmation-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-70-skill-discovery-runtime-regression.ts",
     "typecheck:v4080": "tsc -p tests/types-v4080/tsconfig.json --pretty false",
-    "test:v4080": "npm run typecheck:v4080 && node tests/v40-80-safe-area-stack-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-maximum-stack-runtime-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r5-efootball-v600-runtime-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r7-real-performance-2027-runtime-regression.ts && node tests/v40-80-r8-meta-vivo-catalog-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r8-meta-vivo-2027-runtime-regression.ts"
+    "test:v4080": "npm run typecheck:v4080 && node tests/v40-80-safe-area-stack-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-maximum-stack-runtime-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r5-efootball-v600-runtime-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r7-real-performance-2027-runtime-regression.ts && node tests/v40-80-r8-meta-vivo-catalog-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r8-meta-vivo-2027-runtime-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r9-attribute-meta-2027-runtime-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

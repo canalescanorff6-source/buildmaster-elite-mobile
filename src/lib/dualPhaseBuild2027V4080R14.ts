@@ -1,5 +1,6 @@
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from './analyzerDomain';
 import { TRAINING_KEYS, trainingPlanTotalCost } from './trainingPlanCore';
+import { getAttributeMetaTrainingBias } from './attributeMeta2027V600';
 
 export const DUAL_PHASE_BUILD_2027_R14_VERSION = '40.80-r14-dual-phase-build-2027' as const;
 
@@ -173,8 +174,14 @@ export function applyDualPhaseBuild2027V4080R14(result: AnalysisResult): Analysi
   const seed = clone(result.training);
   const budget = trainingPlanTotalCost(seed);
   const candidates = sameBudgetCandidates(seed, budget);
-  const attackWeights = mergedWeights(ATTACK_WEIGHTS[result.bestPosition.code], attackContextWeights(result));
-  const defenceWeights = mergedWeights(DEFENCE_WEIGHTS[result.bestPosition.code], defenceContextWeights(result));
+  const attributeBias = getAttributeMetaTrainingBias(result);
+  const withAttributeBias = (context: PhaseWeights): PhaseWeights => {
+    const merged: PhaseWeights = { ...context };
+    for (const key of TRAINING_KEYS) merged[key] = Number(merged[key] ?? 0) + Number(attributeBias[key] ?? 0) * .72;
+    return merged;
+  };
+  const attackWeights = mergedWeights(ATTACK_WEIGHTS[result.bestPosition.code], withAttributeBias(attackContextWeights(result)));
+  const defenceWeights = mergedWeights(DEFENCE_WEIGHTS[result.bestPosition.code], withAttributeBias(defenceContextWeights(result)));
   const attack = bestForPhase(seed, candidates, attackWeights);
   const defence = bestForPhase(seed, candidates, defenceWeights);
   const attackScore = contextualPhaseScore(result, attack.score, 'attack');

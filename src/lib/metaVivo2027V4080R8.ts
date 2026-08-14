@@ -10,6 +10,7 @@ import { buildManualDefenceCoachV600 } from './manualDefenceCoachV600';
 import { buildGameplayEnvironmentV600 } from './gameplayEnvironmentV600';
 import { buildManagerMetaV600 } from './managerMetaV600';
 import { skillIdentityKey } from './officialSkillIdentity';
+import { buildAttributeMeta2027 } from './attributeMeta2027V600';
 
 export const META_VIVO_2027_V4080_R8_VERSION = '40.80-r8-meta-vivo-2027' as const;
 
@@ -128,6 +129,7 @@ export function buildMetaVivo2027V4080R8(result: AnalysisResult): MetaVivo2027V4
   const coach=buildManualDefenceCoachV600(result);
   const environment=buildGameplayEnvironmentV600(result);
   const manager=buildManagerMetaV600(result);
+  const attributeMeta=buildAttributeMeta2027(result);
   const firstTouch=firstTouchScore(result);
   const commandResponse=commandResponseScore(result);
   const manualDefence=manualDefenceScore(result);
@@ -154,6 +156,7 @@ export function buildMetaVivo2027V4080R8(result: AnalysisResult): MetaVivo2027V4
     engineVersion:META_VIVO_2027_V4080_R8_VERSION,
     mode:'META_VIVO_2027',
     selectedPosition:result.bestPosition.code,
+    attributeMeta:{engineVersion:attributeMeta.engineVersion,positionLabel:attributeMeta.positionLabel,playerPlaystyle:attributeMeta.playerPlaystyle,teamPlaystyle:attributeMeta.teamPlaystyle,topPriorities:attributeMeta.topPriorities.map(({label,current,targetMin,targetIdeal,usefulCeiling,priority,gap,reason})=>({label,current,targetMin,targetIdeal,usefulCeiling,priority,gap,reason})),stopSpending:attributeMeta.stopSpending.map(({label,current,targetIdeal,usefulCeiling,priority,reason})=>({label,current,targetIdeal,usefulCeiling,priority,reason})),dnaRule:attributeMeta.dnaRule,summary:attributeMeta.summary},
     scores:{firstTouch,commandResponse,manualDefence,coverageDiscipline,transition,phaseBalance,delayRobustness:delayRobustnessScore,finalFunctional,confidence},
     phaseRole:{attack:phase.attack,defence:phase.defence,responsibility:coach.responsibility,doublePressRisk:coach.doublePressRisk,instruction:coach.instruction,secondaryInstruction:coach.secondaryInstruction,drill:coach.drill},
     skillPortfolio,
@@ -175,6 +178,7 @@ export function buildMetaVivo2027V4080R8(result: AnalysisResult): MetaVivo2027V4
     learning:{currentEpochWeight:1,legacyWeight:.35,minimumAbMatchesPerArm:5,poorConnectionMatchesDownweighted:true,recommendation:learningRecommendation},
     guarantees:{gerIsNotOptimizationTarget:true,doesNotClaimToFixNetwork:true,unknownSkillsAreNotWeighted:true,unknownDefensiveStylesAreNotWeighted:true,existingImpetoIsNeverAutoReplaced:true,attackAndDefenceAreJointlyEvaluated:true,doublePressureGuardEnabled:true},
     reasons:[
+      attributeMeta.summary,
       `Primeiro toque ${Math.round(firstTouch)}/100 e resposta a comando ${Math.round(commandResponse)}/100 entram separadamente para não confundir qualidade técnica com velocidade pura.`,
       `Defesa manual ${Math.round(manualDefence)}/100 e disciplina de cobertura ${Math.round(coverageDiscipline)}/100 usam a função real da posição e habilidades defensivas já possuídas.`,
       `Responsabilidade defensiva: ${coach.responsibility.replaceAll('_',' ')}; risco de dupla pressão ${coach.doublePressRisk.toLowerCase()}.`,
@@ -204,7 +208,7 @@ export function applyMetaVivo2027V4080R8(result: AnalysisResult): AnalysisResult
     }:variant):result.buildVariants,
     recommendationExplanation:[analysis.summary,...analysis.reasons,...result.recommendationExplanation].filter((item,index,all)=>all.indexOf(item)===index).slice(0,42),
     strengths:[
-      'Meta Vivo 2027 avalia primeiro toque, resposta, defesa manual, cobertura, transição e robustez ao delay sem usar GER como alvo.',
+      'Meta Vivo 2027 avalia atributos-meta por posição + estilo do jogador + técnico, primeiro toque, resposta, defesa manual, cobertura, transição e robustez ao delay sem usar GER como alvo.',
       'Catálogo de habilidades e estilos é vivo: itens desconhecidos ficam provisórios até confirmação, sem peso inventado.',
       'Cada carta recebe responsabilidade defensiva explícita para reduzir dupla pressão na Formação Fluída.',
       ...result.strengths
