@@ -31,6 +31,7 @@ import { applyDualPhaseBuild2027V4080R14 } from './dualPhaseBuild2027V4080R14';
 import { applyGameplayMetaV600R10 } from './gameplayMetaV600R10';
 import { applyLiveEvolutionV600R11 } from './liveEvolutionV600R11';
 import { applyPlayerGenerationFinalizerV4080R13 } from './playerGenerationFinalizerV4080R13';
+import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
 
 /**
  * Pipeline único e de memória controlada.
@@ -68,8 +69,6 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyLocalCorrectionsToResult(current);
   current = enforceComplementarySkillIntegrity(current);
 
-  // Uma única calibração determinística. A antiga segunda passagem voltava a
-  // calcular centenas de candidatas sobre o próprio resultado já calibrado.
   current = applyCalibrationV32(current);
   current = enforceComplementarySkillIntegrity(current);
   current = applyLocalAiToResult(current);
@@ -105,9 +104,10 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyDualPhaseBuild2027V4080R14(current);
   current = applyGameplayMetaV600R10(current);
   current = applyLiveEvolutionV600R11(current);
-  // A função real pode reordenar até duas habilidades complementares. A
-  // auditoria final precisa espelhar exatamente o conjunto exibido, sem
-  // reclassificar a receita nem desfazer o DNA preservado.
+
+  // ÚNICO árbitro final do Top 5: cobre todas as posições e estilos, bloqueia
+  // habilidades já possuídas e deixa o Meta v6.0 refinar — nunca substituir — o DNA.
+  current = applyDefinitiveAdditionalSkillsV600R15(current);
   current = synchronizeFinalSkillIntegrity(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);
 
