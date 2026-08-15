@@ -1,12 +1,8 @@
 import { existsSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
+import { applyPreFinalConfirmationR16 } from './apply-prefinal-confirmation-r16.mjs';
 
-/**
- * Remove manifestos de atualização gerados ou antigos que nunca devem entrar
- * no código-fonte nem ser empacotados dentro do APK. O manifesto oficial é
- * criado pelo GitHub Actions somente depois que o APK público é validado.
- */
 export function sanitizeUpdateSource(rootDirectory = process.cwd()) {
   const root = resolve(rootDirectory);
   const forbiddenRelativePaths = [
@@ -29,6 +25,7 @@ export function sanitizeUpdateSource(rootDirectory = process.cwd()) {
     console.log('Fonte de atualização limpa: nenhum manifesto local antigo encontrado.');
   }
 
+  applyPreFinalConfirmationR16(root);
   return removed;
 }
 
