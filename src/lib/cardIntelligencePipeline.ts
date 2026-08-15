@@ -30,6 +30,7 @@ import { applyMetaVivo2027V4080R8 } from './metaVivo2027V4080R8';
 import { applyDualPhaseBuild2027V4080R14 } from './dualPhaseBuild2027V4080R14';
 import { applyGameplayMetaV600R10 } from './gameplayMetaV600R10';
 import { applyLiveEvolutionV600R11 } from './liveEvolutionV600R11';
+import { applyPlayerGenerationFinalizerV4080R13 } from './playerGenerationFinalizerV4080R13';
 
 /**
  * Pipeline único e de memória controlada.
@@ -108,6 +109,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // auditoria final precisa espelhar exatamente o conjunto exibido, sem
   // reclassificar a receita nem desfazer o DNA preservado.
   current = synchronizeFinalSkillIntegrity(current);
+  current = applyPlayerGenerationFinalizerV4080R13(current);
 
   return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
 }
