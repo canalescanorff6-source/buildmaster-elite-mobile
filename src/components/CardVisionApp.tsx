@@ -1,66 +1,11 @@
 'use client';
 // A Central de Backup é informativa e nunca pode impedir a abertura do app.
 import { useEffect, useMemo, useRef, useState } from 'react'; import type { ChangeEvent } from 'react';
-import {
-  Activity,
-  Camera,
-  CheckCircle2,
-  History,
-  Download,
-  Save,
-  Trash2,
-  FileText,
-  Palette,
-  Layers,
-  Trophy,
-  Target,
-  Clock3,
-  SlidersHorizontal,
-  ImagePlus,
-  Keyboard,
-  Loader2,
-  LogOut,
-  RotateCcw,
-  ScanText,
-  ShieldCheck,
-  Sparkles,
-  UploadCloud,
-  Wand2,
-  Zap,
-  Ban,
-  Users,
-  UserPlus
-} from 'lucide-react'; import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
+import { Activity, Camera, CheckCircle2, History, Download, Save, Trash2, FileText, Palette, Layers, Trophy, Target, Clock3, SlidersHorizontal, ImagePlus, Keyboard, Loader2, LogOut, RotateCcw, ScanText, ShieldCheck, Sparkles, UploadCloud, Wand2, Zap, Ban, Users, UserPlus } from 'lucide-react'; import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { CalibrationProfileFields } from '@/components/CalibrationProfileFields'; import { ManagerSelectionField } from '@/components/ManagerSelectionField';
-import {
-  analyzeCard,
-  ATTRIBUTE_INPUTS,
-  type AnalysisResult,
-  type AttributeKey,
-  type Objective,
-  type PositionCode,
-  POSITION_LABELS,
-  type TacticalFormation,
-  type TacticalProfile,
-  type TacticalStyle,
-  type GameplayMode,
-  type ConnectionProfile,
-  type ControlProfile
-} from '@/modules/analysis';
-import {
-  DEFAULT_OCR_ZONES,
-  enhanceImageLocally,
-  inspectPrintQuality,
-  type OcrZone
-} from '@/lib/ocr';
-import {
-  ensureZoneCoverage,
-  qualityLabel,
-  qualityScore,
-  suggestedEnhancement,
-  type PremiumEnhancementMode,
-  type PremiumZoneReading
-} from '@/lib/premiumReading';
+import { analyzeCard, ATTRIBUTE_INPUTS, type AnalysisResult, type AttributeKey, type Objective, type PositionCode, POSITION_LABELS, type TacticalFormation, type TacticalProfile, type TacticalStyle, type GameplayMode, type ConnectionProfile, type ControlProfile } from '@/modules/analysis';
+import { DEFAULT_OCR_ZONES, enhanceImageLocally, inspectPrintQuality, type OcrZone } from '@/lib/ocr';
+import { ensureZoneCoverage, qualityLabel, qualityScore, suggestedEnhancement, type PremiumEnhancementMode, type PremiumZoneReading } from '@/lib/premiumReading';
 import { getManager } from '@/lib/managers';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import type { PrintQualityReport } from '@/lib/validation';
@@ -107,31 +52,7 @@ import { buildBuildQualityGate } from '@/lib/buildQualityGate';
 import { IntegratedHomePanel } from '@/modules/core/IntegratedHomePanel';
 import { CENTRAL_MIGRATION_STORAGE_KEY, buildCentralDashboard, buildIntegratedPlayers, buildMatchScenarioPlans, buildTeamDiagnosis, createCentralMigrationReport, type CentralDashboard, type CentralPlayerInput, type CentralRecommendation, type IntegratedPlayerRecord, type TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import { CENTRAL_INDEX_STORAGE_KEY, buildCentralEntityIndex } from '@/modules/core/centralRepository';
-import {
-  AccountAdminPanel,
-  BuildMasterAssistant,
-  CommunitySharingCenter,
-  CommercializationCenter,
-  PlayStorePublicationCenter,
-  DelayResponsePanel,
-  EvolutionCommandCenter,
-  FirstUseOnboarding,
-  IntegratedTeamLab,
-  MatchLaboratory,
-  ObservabilitySupportCenter,
-  OcrVisionCenter,
-  OfficialRulesCenter,
-  PlayerLaboratory,
-  PremiumExperience2Center,
-  ProductionReadinessCenter,
-  ResultCard,
-  ReviewPanel,
-  SmartQuickDock,
-  StabilityDiagnosticsPanel,
-  TotalCardReaderPanel,
-  UpdateCenterPanel,
-  preloadPanelGroup
-} from '@/components/lazy/AppLazyPanels';
+import { AccountAdminPanel, BuildMasterAssistant, CommunitySharingCenter, CommercializationCenter, PlayStorePublicationCenter, DelayResponsePanel, EvolutionCommandCenter, FirstUseOnboarding, IntegratedTeamLab, MatchLaboratory, ObservabilitySupportCenter, OcrVisionCenter, OfficialRulesCenter, PlayerLaboratory, PremiumExperience2Center, ProductionReadinessCenter, ResultCard, ReviewPanel, SmartQuickDock, StabilityDiagnosticsPanel, TotalCardReaderPanel, UpdateCenterPanel, preloadPanelGroup } from '@/components/lazy/AppLazyPanels';
 import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY, type MatchValidationRecord, type OnboardingProfile } from '@/lib/appEvolution';
 import { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget, type CaptureReadingAudit, type TotalCardCaptureInput, type TotalReadingSession } from '@/lib/totalCardReader';
 import { applyStoredOcrCorrections, buildSinglePrintSession, createCorrectionRecord, fieldByKey, inspectSinglePrintGeometry, refineSinglePrintGeometryFromText, toStoredSinglePrintScan, type SingleFieldEvidence, type SinglePrintSession, type StoredOcrCorrection, type StoredSinglePrintScan } from '@/modules/card-reader/singlePrintPro';
@@ -144,30 +65,11 @@ import { stabilizeForensicReadings } from '@/modules/card-reader/forensicConsens
 import { buildEfhubLayoutPlan } from '@/modules/card-reader/efhubLayoutGeometry';
 import { EFHUB_CANONICAL_NORMALIZER_VERSION, normalizeEfhubProfileImage } from '@/modules/card-reader/efhubCanonicalNormalizer';
 import { buildDeterministicEfhubOcrZones, EFHUB_DETERMINISTIC_ZONES_VERSION } from '@/modules/card-reader/efhubDeterministicZones';
-import {
-  buildPreciseOcrZonesFromEfhubCalibration,
-  createDefaultEfhubCalibrationZones,
-  createEfhubCalibrationMap,
-  efhubCalibrationCardArtZone,
-  EFHUB_MANUAL_CALIBRATION_VERSION,
-  normalizeEfhubCalibrationZones,
-  readEfhubCalibrationMap,
-  type EfhubCalibrationZone
-} from '@/modules/card-reader/efhubManualCalibration';
+import { buildPreciseOcrZonesFromEfhubCalibration, createDefaultEfhubCalibrationZones, createEfhubCalibrationMap, efhubCalibrationCardArtZone, EFHUB_MANUAL_CALIBRATION_VERSION, normalizeEfhubCalibrationZones, readEfhubCalibrationMap, type EfhubCalibrationZone } from '@/modules/card-reader/efhubManualCalibration';
 import { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration, learnOcrTemplateCalibration } from '@/modules/card-reader/templateCalibration';
 import { activateOfficialRulePack, readOfficialRulePack, sanitizeOfficialRulePack } from '@/modules/rules/officialRuleRegistry';
 import { cancelOcrProcessing, fileDigest, prewarmOcrWorker, recognizeWithOcrWorker, subscribeOcrProgress } from '@/lib/ocrWorkerManager';
-import {
-  checkpointFile,
-  clearBackgroundOcrCheckpoint,
-  readBackgroundOcrCheckpoint,
-  saveBackgroundOcrCheckpoint,
-  startBackgroundOcrProtection,
-  stopBackgroundOcrProtection,
-  updateBackgroundOcrCheckpoint,
-  updateBackgroundOcrProtection,
-  type BackgroundOcrCheckpoint
-} from '@/lib/backgroundOcrV3840';
+import { checkpointFile, clearBackgroundOcrCheckpoint, readBackgroundOcrCheckpoint, saveBackgroundOcrCheckpoint, startBackgroundOcrProtection, stopBackgroundOcrProtection, updateBackgroundOcrCheckpoint, updateBackgroundOcrProtection, type BackgroundOcrCheckpoint } from '@/lib/backgroundOcrV3840';
 import { validateImageFile } from '@/modules/images/imageSafety';
 import { exportTacticalImageLibrary, importTacticalImageLibrary } from '@/modules/images/accountImageLibrary';
 import { exportTacticalPosterLibrary, replaceTacticalPosterLibrary } from '@/lib/tacticalPosterLibrary';
@@ -199,54 +101,15 @@ import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, vali
 import { secureGet, secureSet } from '@/lib/secureStorage';
 import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
 import { isStartupSafeModeV3840, safeStartupInitializerV3840 } from '@/lib/startupResilienceV3840';
-import {
-  buildProfessionalReportHtml,
-  downloadBlobFile,
-  formatReportMarkdown
-} from '@/modules/builds/buildReportExport';
-import {
-  buildPremiumCleanCardSvg,
-  premiumCleanSvgToPngBlob,
-  type PremiumCleanExportFormat
-} from '@/lib/premiumCleanResultV3810';
-import {
-  CORRECTION_KEY,
-  DEFAULT_DYNAMIC_RULE_PACK,
-  RULE_PACK_KEY,
-  applyLocalCorrectionsToResult,
-  clearCorrectionsForResult,
-  readDynamicRulePack,
-  upsertCorrectionForResult,
-  type DynamicRulePack
-} from '@/modules/builds/dynamicRules';
+import { buildProfessionalReportHtml, downloadBlobFile, formatReportMarkdown } from '@/modules/builds/buildReportExport';
+import { buildPremiumCleanCardSvg, premiumCleanSvgToPngBlob, type PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
+import { CORRECTION_KEY, DEFAULT_DYNAMIC_RULE_PACK, RULE_PACK_KEY, applyLocalCorrectionsToResult, clearCorrectionsForResult, readDynamicRulePack, upsertCorrectionForResult, type DynamicRulePack } from '@/modules/builds/dynamicRules';
 import { activateContinuousRulePackV3770, computeRulePackChecksumV3770, createRulePackTemplateV3770, restoreRulePackVersionV3770, sanitizeContinuousRulePackV3770, RULE_PACK_HISTORY_V3770_KEY } from '@/lib/continuousRulesV3770';
 import { REMOTE_CATALOG_V3770_STORAGE_KEY } from '@/lib/remoteCatalogV3770';
 import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
 import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
 import { readVaultDeletionPreferencesV4080R12, writeVaultDeletionPreferencesV4080R12 } from '@/lib/vaultDeletionPreferencesV4080R12';
-import {
-  HISTORY_KEY,
-  HISTORY_LIMIT,
-  LEARNING_KEY,
-  appendSavedEvent,
-  buildDashboardStats,
-  emptyManualFields,
-  ensureSkillProgress,
-  findLearnedCard,
-  loadHistoryStoreForStartup,
-  memoryKey,
-  mergeHistoryLists,
-  normalizeHistoryList,
-  persistHistoryStore,
-  saveLearnedCard,
-  resultHistoryKey,
-  isRenderableAnalysisResult,
-  savedPositionGroup,
-  savedStatusLabel,
-  skillProgressInfo,
-  type ManualFields,
-  type SavedAnalysis
-} from '@/modules/vault/cardHistoryStore';
+import { HISTORY_KEY, HISTORY_LIMIT, LEARNING_KEY, appendSavedEvent, buildDashboardStats, emptyManualFields, ensureSkillProgress, findLearnedCard, loadHistoryStoreForStartup, memoryKey, mergeHistoryLists, normalizeHistoryList, persistHistoryStore, saveLearnedCard, resultHistoryKey, isRenderableAnalysisResult, savedPositionGroup, savedStatusLabel, skillProgressInfo, type ManualFields, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 export { migrateAnalysisResult, normalizeSavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import { enqueueOcrFile, listOcrQueue, queueJobAsFile, removeOcrQueueJob, updateOcrQueueJob, type OcrQueueJob } from '@/modules/card-reader/ocrQueue';
 import { mergeOcrTexts, preprocessImage } from '@/modules/card-reader/imageProcessing';
@@ -255,13 +118,7 @@ import { COMPETITIVE_MATCH_STORAGE_KEY } from '@/modules/matches/competitivePerf
 import { TRAINING_EVOLUTION_STORAGE_KEY, TRAINING_GOALS_STORAGE_KEY } from '@/modules/training/trainingEvolutionEngine';
 import { ANTI_DELAY_LINK_STORAGE_KEY, ANTI_DELAY_PROFILE_STORAGE_KEY, ANTI_DELAY_STORAGE_KEY } from '@/modules/performance/antiDelayEngine';
 import { SMART_COACH_PREFERENCES_KEY, SMART_COACH_REVIEW_STORAGE_KEY } from '@/modules/coaching/smartCoachEngine';
-import {
-  exportPremiumExperience2State,
-  importPremiumExperience2State,
-  readPremiumExperience2Preferences,
-  recordPremiumRecentActivity,
-  type Premium2Target
-} from '@/modules/experience/premiumExperience2';
+import { exportPremiumExperience2State, importPremiumExperience2State, readPremiumExperience2Preferences, recordPremiumRecentActivity, type Premium2Target } from '@/modules/experience/premiumExperience2';
 import { exportObservabilityState, importObservabilityState } from '@/modules/observability/observabilityEngine';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import { clearPremiumCreationDraft, premiumTargetForSection, sectionForPremiumTarget, settingsViewForPremiumTarget, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
