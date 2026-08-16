@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { applyPreFinalConfirmationR16 } from './apply-prefinal-confirmation-r16.mjs';
 import { applyR17RegressionCompatibility } from './apply-r17-regression-compatibility.mjs';
+import { applyPreFinalAutofillR20 } from './apply-prefinal-autofill-r20.mjs';
 
 export function sanitizeUpdateSource(rootDirectory = process.cwd()) {
   const root = resolve(rootDirectory);
@@ -28,6 +29,7 @@ export function sanitizeUpdateSource(rootDirectory = process.cwd()) {
 
   applyPreFinalConfirmationR16(root);
   applyR17RegressionCompatibility(root);
+  applyPreFinalAutofillR20(root);
   return removed;
 }
 
