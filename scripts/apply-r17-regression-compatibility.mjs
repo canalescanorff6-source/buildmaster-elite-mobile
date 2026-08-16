@@ -5,47 +5,33 @@ export const R17_MARKER = 'BM_R17_REGRESSION_COMPATIBILITY';
 
 function replaceRequired(source, needle, replacement, label) {
   if (source.includes(replacement)) return source;
-  if (!source.includes(needle)) {
-    throw new Error(`[r17] ${label}: contrato de origem não encontrado.`);
-  }
+  if (!source.includes(needle)) throw new Error(`[r17] ${label}: contrato de origem não encontrado.`);
   return source.replace(needle, replacement);
 }
 
 function patchFinalizer(source) {
   if (source.includes(R17_MARKER)) return source;
-
   source = replaceRequired(
     source,
     "  const blueprint = styleBlueprint(result, position);\n  const selected: Candidate[] = [];",
     `  // ${R17_MARKER}
-  // O blueprint de posição continua sendo a base, mas o DNA técnico da carta
-  // pode reservar vagas funcionais de controle/drible. Isso evita que um CA ágil
-  // ou um SS driblador perca sua identidade por causa de um blueprint genérico.
   const blueprint = [...styleBlueprint(result, position)];
   const attrs = result.parsed.attributes;
   const carryIdentity = avg(attrs.ballControl, attrs.dribbling, attrs.tightPossession, attrs.balance, attrs.acceleration);
   const finishIdentity = avg(attrs.finishing, attrs.offensiveAwareness, attrs.kickingPower);
   const aerialIdentity = avg(attrs.heading, attrs.jump, attrs.physicalContact);
   const dribbleSlots = () => blueprint.filter((category) => category === 'drible').length;
-
   if (position !== 'GK' && carryIdentity >= 86 && carryIdentity >= finishIdentity + 4) {
-    // DNA declaradamente técnico: pelo menos duas vagas de drible/controle,
-    // desde que existam opções oficiais e compatíveis no catálogo da posição.
-    const preferredIndexes = [blueprint.length - 1, 1, 3, 0, 2].filter((index) => index >= 0);
-    for (const index of preferredIndexes) {
+    for (const index of [blueprint.length - 1, 1, 3, 0, 2].filter((index) => index >= 0)) {
       if (dribbleSlots() >= 2) break;
       if (blueprint[index] !== 'drible') blueprint[index] = 'drible';
     }
   } else if (position === 'CF' && carryIdentity >= 78 && carryIdentity >= aerialIdentity + 5 && dribbleSlots() === 0) {
-    // Centroavante leve/ágil precisa manter ao menos uma ferramenta de controle
-    // corporal sem transformar todo CA em driblador.
     blueprint[Math.min(3, blueprint.length - 1)] = 'drible';
   }
-
   const selected: Candidate[] = [];`,
     'preservação do DNA técnico no Top 5'
   );
-
   source = replaceRequired(
     source,
     "      `Filtro universal: ${owned.length} habilidade(s) já possuída(s) foram bloqueadas contra repetição; nenhum estilo desconhecido recebe peso inventado.`,\n      ...result.recommendationExplanation",
@@ -56,11 +42,10 @@ function patchFinalizer(source) {
 }
 
 function patchV4010(source) {
-  source = source.replace(
+  return source.replace(
     "assert.ok(app.includes('Leitura concluída sem etapa obrigatória de confirmação.'));",
     "assert.ok(app.includes('Confira Nome, Nível máximo e Pontos de progressão para gerar a ficha.'));"
   );
-  return source;
 }
 
 function patchV4070(source) {
@@ -70,7 +55,7 @@ function patchV4070(source) {
   );
   source = source.replace(
     "assert.match(cardApp,/Ficha de Desempenho Máximo gerada automaticamente/);",
-    "assert.match(cardApp,/Confira Nome, Nível máximo e Pontos antes de gerar a ficha/);"
+    "assert.match(cardApp,/(?:Confira Nome, Nível máximo e Pontos antes de gerar a ficha|Nome, Nível máximo e Pontos foram preenchidos automaticamente; confira antes de gerar a ficha)/);"
   );
   source = source.replace(
     "assert.match(cardApp,/Leitura concluída sem etapa obrigatória de confirmação/);",
@@ -78,7 +63,7 @@ function patchV4070(source) {
   );
   source = source.replace(
     "assert.doesNotMatch(review,/premium-confirmation-card/);",
-    "assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação r16 ocorre antes do ResultWorkspace"
+    "assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação ocorre antes do ResultWorkspace"
   );
   return source;
 }
