@@ -31,6 +31,7 @@ import { applyDualPhaseBuild2027V4080R14 } from './dualPhaseBuild2027V4080R14';
 import { applyGameplayMetaV600R10 } from './gameplayMetaV600R10';
 import { applyLiveEvolutionV600R11 } from './liveEvolutionV600R11';
 import { applyPlayerGenerationFinalizerV4080R13 } from './playerGenerationFinalizerV4080R13';
+import { applyFinalIdentityEngineV4080R27 } from './finalIdentityEngineV4080R27';
 import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
 
 /**
@@ -105,8 +106,11 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyGameplayMetaV600R10(current);
   current = applyLiveEvolutionV600R11(current);
 
-  // ÚNICO árbitro final do Top 5: cobre todas as posições e estilos, bloqueia
-  // habilidades já possuídas e deixa o Meta v6.0 refinar — nunca substituir — o DNA.
+  // r27 é o árbitro FINAL da progressão: roda depois de todos os motores legados,
+  // reconstrói a base quando a carta já está upada e aplica travas funcionais duras.
+  current = applyFinalIdentityEngineV4080R27(current);
+
+  // O Top 5 é calculado DEPOIS da ficha final e usa a mesma posição/função.
   current = applyDefinitiveAdditionalSkillsV600R15(current);
   current = synchronizeFinalSkillIntegrity(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);

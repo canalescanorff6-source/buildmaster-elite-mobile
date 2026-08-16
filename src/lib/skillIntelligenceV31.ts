@@ -236,9 +236,9 @@ function hash(value: string) { let output = 2166136261; for (let index = 0; inde
 function average(...values: Array<number | null | undefined>) { const valid = values.map((value) => Number(value ?? 0)).filter((value) => value > 0); return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : 0; }
 
 export function resolveAdditionalSkillPosition(result: AnalysisResult): PositionCode {
-  // A receita pertence à versão exata da carta. A posição selecionada serve ao
-  // diagnóstico tático, mas não pode trocar o Top adicional a cada nova leitura.
-  return result.parsed.mainPosition;
+  // r27: o Top 5 segue a função realmente usada na ficha final.
+  // A identidade continua vindo da carta, mas a posição atual não pode ser ignorada.
+  return result.bestPosition.code;
 }
 
 export function isRoleCompatibleAdditionalSkill(skill: string, position: PositionCode) {

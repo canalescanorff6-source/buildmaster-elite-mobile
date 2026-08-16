@@ -1471,7 +1471,7 @@ function desiredImpetoGroups(position: PositionCode, playstyle?: string | null, 
   return Array.from(new Set(groups));
 }
 
-function recommendImpetos(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective): ImpetoRecommendation[] {
+export function recommendImpetos(parsed: ParsedCard, selectedPosition: PositionCode, objective: Objective): ImpetoRecommendation[] {
   const groups = desiredImpetoGroups(selectedPosition, parsed.playstyle, objective);
   const owned = new Set(parsed.impetos.filter((i) => i.active !== false).map((i) => skillKey(i.name)));
   const scored = Object.entries(IMPETO_DB).map(([name, info]) => {
@@ -2167,16 +2167,35 @@ function validateAnalysis(
   };
 }
 
+function automaticPositionFamilyCompatible(main: PositionCode, candidate: PositionCode): boolean {
+  if (main === candidate) return true;
+  if (main === 'GK' || candidate === 'GK') return false;
+
+  const attack = new Set<PositionCode>(['CF','SS','LWF','RWF']);
+  const creators = new Set<PositionCode>(['SS','AMF','CMF','LMF','RMF']);
+  const midfield = new Set<PositionCode>(['AMF','CMF','DMF','LMF','RMF']);
+  const defence = new Set<PositionCode>(['CB','LB','RB','DMF']);
+
+  if (attack.has(main)) return attack.has(candidate) || (main === 'SS' && candidate === 'AMF');
+  if (main === 'AMF') return creators.has(candidate);
+  if (main === 'CMF' || main === 'LMF' || main === 'RMF') return midfield.has(candidate) || creators.has(candidate);
+  if (main === 'DMF') return midfield.has(candidate) || defence.has(candidate);
+  if (main === 'CB' || main === 'LB' || main === 'RB') return defence.has(candidate);
+  return false;
+}
+
 function chooseGameplaySelectedPosition(parsed: ParsedCard, scored: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>): PositionCode {
-  const best = scored[0];
+  // r27: no modo AUTO, a identidade da posição da carta é uma trava de família.
+  // Adaptação fora da função continua liberada quando o usuário escolhe a posição manualmente.
+  const compatible = scored.filter((item) => automaticPositionFamilyCompatible(parsed.mainPosition, item.code));
+  const best = compatible[0] ?? scored.find((item) => item.code === parsed.mainPosition) ?? scored[0];
   if (!best) return parsed.mainPosition;
 
   const preferred = gameplayPriorityByMainPosition(parsed.mainPosition, parsed.playstyle)
-    .filter((code) => parsed.positions.includes(code))
-    .map((code) => scored.find((item) => item.code === code))
+    .filter((code) => parsed.positions.includes(code) && automaticPositionFamilyCompatible(parsed.mainPosition, code))
+    .map((code) => compatible.find((item) => item.code === code))
     .filter((item): item is { code: PositionCode; label: string; score: number; role: string; cardRating?: number | null } => Boolean(item));
 
-  // O estilo orienta, mas não prende cegamente. Se outra posição tiver desempenho real maior, ela vence.
   const strongPreferred = preferred.find((item) => item.score >= best.score - 4);
   if (strongPreferred) return strongPreferred.code;
   return best.code;
@@ -3388,7 +3407,7 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const buildVariants = buildTrainingVariants(selected.code, POSITION_PT[selected.code], baseTraining, positionScores.slice(0, 10), trainingPointsTotal, objective, parsed);
   const initialTraining = buildVariants[0]?.training ?? baseTraining;
   const exactPriority = trainingTemplate(selected.code, objective, attributes, parsed).priority;
-  const training = fitTrainingToExactBudget(initialTraining, exactPriority, trainingPointsTotal, selected.code);
+  const training = fitTrainingToExactBudget(initialTraining, exactPriority, trainingPointsTotal, selected.code, parsed);
   const trainingCost = trainingPlanCost(training);
   const trainingPointsUsed = trainingPlanTotalCost(training);
   const trainingPointsRemaining = trainingPointsTotal - trainingPointsUsed;

@@ -519,27 +519,62 @@ export function fitTrainingToBudget(target: TrainingPlan, priority: TrainingKey[
 }
 
 
+
+// BM_FINAL_IDENTITY_GUARD_R27
+export function isHardForbiddenTrainingKey(position: PositionCode, key: TrainingKey, parsed?: ParsedCard | null): boolean {
+  const style = normalize(parsed?.playstyle ?? '').toLowerCase();
+
+  if (position === 'GK') return !['gk1', 'gk2', 'gk3', 'aerialStrength', 'lowerBodyStrength'].includes(key);
+  if (key === 'gk1' || key === 'gk2' || key === 'gk3') return true;
+  if (['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(position) && key === 'defending') return true;
+  if (position === 'CB' && key === 'shooting') return true;
+  if (position === 'DMF' && /primeiro volante|1(?:º|o)? volante|ancora|âncora|anchor man|destruidor|destroyer/.test(style) && key === 'shooting') return true;
+  if ((position === 'LB' || position === 'RB') && /lateral defensivo|defensive full/.test(style) && key === 'shooting') return true;
+  return false;
+}
+
+export function enforceHardTrainingIdentity(plan: TrainingPlan, position: PositionCode, parsed?: ParsedCard | null): TrainingPlan {
+  const safe = normalizeTrainingPlan(plan);
+  for (const key of TRAINING_KEYS) if (isHardForbiddenTrainingKey(position, key, parsed)) safe[key] = 0;
+  return safe;
+}
+
+function allowedTrainingKeys(position: PositionCode, parsed?: ParsedCard | null): TrainingKey[] {
+  return TRAINING_KEYS.filter((key) => !isHardForbiddenTrainingKey(position, key, parsed));
+}
+
 /**
  * Fecha o orçamento exatamente. Primeiro preserva a distribuição recebida;
  * se a progressão de custos deixar um resto impossível de preencher de forma
  * gulosa, executa uma busca dinâmica que minimiza a distância da ficha-alvo.
  */
-export function fitTrainingToExactBudget(target: TrainingPlan, priority: TrainingKey[], budget: number, position: PositionCode): TrainingPlan {
+export function fitTrainingToExactBudget(
+  target: TrainingPlan,
+  priority: TrainingKey[],
+  budget: number,
+  position: PositionCode,
+  parsed?: ParsedCard | null
+): TrainingPlan {
   const normalizedBudget = normalizeTrainingBudget(budget);
-  const fitted = fitTrainingToBudget(target, priority, normalizedBudget);
+  const allowedKeys = allowedTrainingKeys(position, parsed);
+  const allowed = new Set<TrainingKey>(allowedKeys);
+  const safeTarget = enforceHardTrainingIdentity(target, position, parsed);
+  const safePriority = priority.filter((key) => allowed.has(key));
+  const fitted = enforceHardTrainingIdentity(
+    fitTrainingToBudget(safeTarget, safePriority.length ? safePriority : allowedKeys, normalizedBudget),
+    position,
+    parsed
+  );
   if (trainingPlanTotalCost(fitted) === normalizedBudget) return fitted;
 
-  const allowedKeys: TrainingKey[] = position === 'GK'
-    ? ['gk1', 'gk2', 'gk3', 'aerialStrength', 'lowerBodyStrength']
-    : ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending'];
-  const priorityIndex = new Map(priority.map((key, index) => [key, index]));
+  const priorityIndex = new Map(safePriority.map((key, index) => [key, index]));
   type ExactState = { penalty: number; plan: TrainingPlan };
   let states: Array<ExactState | null> = Array.from({ length: normalizedBudget + 1 }, () => null);
   states[0] = { penalty: 0, plan: emptyTraining() };
 
   for (const key of allowedKeys) {
     const next: Array<ExactState | null> = Array.from({ length: normalizedBudget + 1 }, () => null);
-    const targetLevel = Math.max(0, Math.min(16, Math.round(Number(target[key] ?? 0))));
+    const targetLevel = Math.max(0, Math.min(16, Math.round(Number(safeTarget[key] ?? 0))));
     const priorityWeight = Math.max(1, allowedKeys.length - (priorityIndex.get(key) ?? allowedKeys.length));
     for (let currentCost = 0; currentCost <= normalizedBudget; currentCost += 1) {
       const state = states[currentCost];
@@ -548,7 +583,9 @@ export function fitTrainingToExactBudget(target: TrainingPlan, priority: Trainin
         const totalCost = currentCost + trainingTotalCost(level);
         if (totalCost > normalizedBudget) break;
         const distance = Math.abs(level - targetLevel);
-        const underTargetPenalty = level < targetLevel ? distance * (18 + priorityWeight * 2) : distance * (11 + priorityWeight);
+        const underTargetPenalty = level < targetLevel
+          ? distance * (20 + priorityWeight * 2)
+          : distance * (12 + priorityWeight);
         const candidatePenalty = state.penalty + underTargetPenalty;
         const previous = next[totalCost];
         if (!previous || candidatePenalty < previous.penalty) {
@@ -559,7 +596,7 @@ export function fitTrainingToExactBudget(target: TrainingPlan, priority: Trainin
     states = next;
   }
 
-  return states[normalizedBudget]?.plan ?? fitted;
+  return enforceHardTrainingIdentity(states[normalizedBudget]?.plan ?? fitted, position, parsed);
 }
 
 function trainingCaps(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard): TrainingPlan {
@@ -628,9 +665,103 @@ function trainingCaps(position: PositionCode, objective: Objective, a: Required<
     caps.dexterity = Math.min(16, caps.dexterity + 1);
   }
 
-  return applyCapAdjustments(caps, role);
+  // BM_UNIVERSAL_DNA_R25: aplica os limites funcionais do DNA na saída real de trainingCaps.
+  return applyUniversalDnaCaps(position, applyCapAdjustments(caps, role), a, parsed);
 }
 
+type DnaFamilyScores = Record<'shooting'|'passing'|'dribbling'|'dexterity'|'lowerBodyStrength'|'aerialStrength'|'defending', number>;
+
+function dnaFamilyScores(a: Required<Attributes>): DnaFamilyScores {
+  const mean = (...values: number[]) => values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+  return {
+    shooting: mean(a.finishing, a.offensiveAwareness, a.kickingPower),
+    passing: mean(a.lowPass, a.loftedPass, a.ballControl),
+    dribbling: mean(a.ballControl, a.dribbling, a.tightPossession, a.balance),
+    dexterity: mean(a.offensiveAwareness, a.acceleration, a.balance),
+    lowerBodyStrength: mean(a.speed, a.kickingPower, a.stamina),
+    aerialStrength: mean(a.heading, a.jump, a.physicalContact),
+    defending: mean(a.defensiveAwareness, a.tackling, a.defensiveEngagement, a.aggression)
+  };
+}
+
+function universalDnaAdjustment(position: PositionCode, key: TrainingKey, a: Required<Attributes>, parsed: ParsedCard): number {
+  if (key === 'gk1' || key === 'gk2' || key === 'gk3') return position === 'GK' ? 0 : -20;
+  if (position === 'GK') return 0;
+
+  const scores = dnaFamilyScores(a);
+  const lineKeys: Array<keyof DnaFamilyScores> = ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending'];
+  const average = lineKeys.reduce((sum, item) => sum + scores[item], 0) / lineKeys.length;
+  const family = key as keyof DnaFamilyScores;
+  let adjustment = Math.max(-2.4, Math.min(2.4, (scores[family] - average) / 7.5));
+  const style = normalize(parsed.playstyle ?? '').toLowerCase();
+
+  const positionBias: Partial<Record<PositionCode, Partial<Record<TrainingKey, number>>>> = {
+    CF: { shooting: 2.0, dexterity: 1.2, lowerBodyStrength: .8, dribbling: .35, defending: -8 },
+    SS: { dribbling: 1.3, dexterity: 1.3, shooting: 1.0, passing: .8, defending: -6 },
+    LWF: { dribbling: 1.6, dexterity: 1.5, lowerBodyStrength: 1.0, shooting: .7, defending: -6 },
+    RWF: { dribbling: 1.6, dexterity: 1.5, lowerBodyStrength: 1.0, shooting: .7, defending: -6 },
+    AMF: { passing: 1.8, dribbling: 1.4, dexterity: .8, shooting: .45, defending: -5 },
+    LMF: { passing: 1.0, dribbling: .8, lowerBodyStrength: 1.0, dexterity: .8, defending: .3 },
+    RMF: { passing: 1.0, dribbling: .8, lowerBodyStrength: 1.0, dexterity: .8, defending: .3 },
+    CMF: { passing: 1.5, lowerBodyStrength: 1.0, defending: .9, dribbling: .45 },
+    DMF: { defending: 2.0, passing: 1.0, lowerBodyStrength: 1.1, aerialStrength: .45, shooting: -4 },
+    CB: { defending: 2.4, aerialStrength: 1.5, lowerBodyStrength: .9, passing: .3, shooting: -8, dribbling: -3 },
+    LB: { lowerBodyStrength: 1.3, defending: 1.2, passing: 1.0, dexterity: .8, dribbling: .45, shooting: -3 },
+    RB: { lowerBodyStrength: 1.3, defending: 1.2, passing: 1.0, dexterity: .8, dribbling: .45, shooting: -3 }
+  };
+  adjustment += positionBias[position]?.[key] ?? 0;
+
+  const add = (entries: Partial<Record<TrainingKey, number>>) => { adjustment += entries[key] ?? 0; };
+
+  if (/artilheiro|goal poacher|atacante matador/.test(style)) add({ shooting: 2.0, dexterity: 1.2, lowerBodyStrength: .55, dribbling: .35, aerialStrength: -.8, defending: -8 });
+  if (/homem de area|homem de área|fox in the box/.test(style)) add({ shooting: 1.7, aerialStrength: 1.2, dexterity: .7, lowerBodyStrength: .65, defending: -8 });
+  if (/pivo|pivô|atacante pivo|atacante pivô|target man/.test(style)) add({ lowerBodyStrength: 1.8, passing: 1.0, aerialStrength: 1.15, shooting: .8, defending: -7 });
+  if (/puxa marcacao|puxa marcação|deep lying forward/.test(style)) add({ passing: 1.35, dribbling: 1.0, dexterity: .8, shooting: .55, defending: -6 });
+  if (/armador criativo|creative playmaker|criador de jogadas/.test(style)) add({ passing: 1.8, dribbling: 1.25, dexterity: .45, defending: -2 });
+  if (/jogador de infiltracao|jogador de infiltração|hole player|atacante surpresa/.test(style)) add({ dexterity: 1.6, shooting: 1.15, lowerBodyStrength: .65, dribbling: .4 });
+  if (/classico n[oº]? 10|clássico n[oº]? 10|classic/.test(style)) add({ passing: 2.0, dribbling: 1.4, dexterity: -.15, lowerBodyStrength: -.25, defending: -3 });
+  if (/meia versatil|meia versátil|box-to-box|todo campo/.test(style)) add({ lowerBodyStrength: 1.2, passing: .9, defending: .8, dexterity: .55 });
+  if (/orquestrador|orchestrator/.test(style)) add({ passing: 1.9, dribbling: .75, lowerBodyStrength: .45, defending: .3 });
+  if (/primeiro volante|1(?:º|o)? volante|ancora|âncora|anchor man/.test(style)) add({ defending: 2.0, passing: .8, lowerBodyStrength: 1.0, aerialStrength: .45, shooting: -4 });
+  if (/destruidor|destroyer/.test(style)) add({ defending: 2.2, lowerBodyStrength: 1.1, aerialStrength: .65, passing: .15 });
+  if (/defensor criativo|construtor|build up/.test(style)) add({ defending: 1.8, passing: 1.0, aerialStrength: .6, lowerBodyStrength: .55, dribbling: -.5 });
+  if (/lateral defensivo|defensive full/.test(style)) add({ defending: 1.9, lowerBodyStrength: 1.1, passing: .45, dribbling: -.35, shooting: -2 });
+  if (/lateral ofensivo|lateral atacante|offensive full/.test(style)) add({ lowerBodyStrength: 1.25, passing: 1.25, dexterity: 1.0, dribbling: .65, defending: .35 });
+  if (/ala produtivo|prolific winger/.test(style)) add({ dribbling: 1.55, dexterity: 1.35, lowerBodyStrength: .85, shooting: .55, defending: -3 });
+  if (/lateral movel|lateral móvel|roaming flank|flanco movel|flanco móvel/.test(style)) add({ dexterity: 1.35, lowerBodyStrength: 1.2, dribbling: 1.1, shooting: .45, passing: .35 });
+  if (/perito em cruzamento|cross specialist/.test(style)) add({ passing: 1.8, lowerBodyStrength: .9, dexterity: .65, dribbling: .4 });
+
+  const score = scores[family];
+  if (score >= 94) adjustment -= 1.15;
+  else if (score >= 90) adjustment -= .55;
+  else if (score <= 72) adjustment += .35;
+
+  return adjustment;
+}
+
+function applyUniversalDnaCaps(position: PositionCode, caps: TrainingPlan, a: Required<Attributes>, parsed: ParsedCard): TrainingPlan {
+  const out = { ...caps };
+  const style = normalize(parsed.playstyle ?? '').toLowerCase();
+  const scores = dnaFamilyScores(a);
+
+  if (position === 'CF') {
+    out.defending = 0;
+    out.dribbling = Math.max(out.dribbling, scores.dribbling >= 82 ? 9 : 6);
+    out.dexterity = Math.max(out.dexterity, 11);
+    if (/artilheiro|goal poacher|atacante matador/.test(style) && scores.aerialStrength < 78) out.aerialStrength = Math.min(out.aerialStrength, 4);
+  }
+  if (position === 'SS' || position === 'LWF' || position === 'RWF' || position === 'AMF') out.defending = 0;
+  if (position === 'CB') {
+    out.shooting = 0;
+    out.dribbling = Math.min(out.dribbling, scores.dribbling >= 82 ? 4 : 2);
+  }
+  if (position === 'DMF' && /primeiro volante|ancora|âncora|anchor man|destruidor|destroyer/.test(style)) out.shooting = Math.min(out.shooting, 1);
+  if ((position === 'LB' || position === 'RB') && /lateral defensivo|defensive full/.test(style)) out.shooting = 0;
+
+  return out;
+}
+
+// BM_UNIVERSAL_DNA_R24
 function trainingKeyWeight(key: TrainingKey, position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard, resolveIdentity: IndividualTrainingAdjustments): number {
   const role = trainingRoleProfile(position, objective, a, parsed);
   const baseByPosition: Record<PositionCode, Partial<Record<TrainingKey, number>>> = {
@@ -664,7 +795,7 @@ function trainingKeyWeight(key: TrainingKey, position: PositionCode, objective: 
   };
 
   const individual = resolveIdentity(position, a, parsed);
-  let weight = (baseByPosition[position][key] ?? 0) + (objectiveBoost[normalizeObjective(objective)]?.[key] ?? 0) + (role?.weightAdjust?.[key] ?? 0) + individual[key];
+  let weight = (baseByPosition[position][key] ?? 0) + (objectiveBoost[normalizeObjective(objective)]?.[key] ?? 0) + (role?.weightAdjust?.[key] ?? 0) + individual[key] + universalDnaAdjustment(position, key, a, parsed);
   const style = normalize(parsed.playstyle ?? '').toLowerCase();
   if (position === 'CF' && /homem de area|pivo|target man|fox|artilheiro|goal poacher|atacante matador/.test(style)) {
     if (key === 'shooting') weight += 1.5;
@@ -720,42 +851,44 @@ function solveTrainingDp(position: PositionCode, objective: Objective, base: Req
   return states[budget]?.plan ?? null;
 }
 
-function loosenTrainingCaps(position: PositionCode, caps: TrainingPlan): TrainingPlan {
+function loosenTrainingCaps(position: PositionCode, caps: TrainingPlan, parsed: ParsedCard): TrainingPlan {
   const loose = { ...caps };
-  if (position === 'GK') {
-    loose.gk1 = Math.max(loose.gk1, 12);
-    loose.gk2 = Math.max(loose.gk2, 12);
-    loose.gk3 = Math.max(loose.gk3, 12);
-    loose.aerialStrength = Math.max(loose.aerialStrength, 6);
-    loose.lowerBodyStrength = Math.max(loose.lowerBodyStrength, 4);
-    return loose;
-  }
-
   for (const key of TRAINING_KEYS) {
-    if (key === 'gk1' || key === 'gk2' || key === 'gk3') {
+    if (isHardForbiddenTrainingKey(position, key, parsed)) {
       loose[key] = 0;
+      continue;
+    }
+    if (position === 'GK') {
+      if (key === 'gk1' || key === 'gk2' || key === 'gk3') loose[key] = Math.max(loose[key] ?? 0, 14);
+      else if (key === 'aerialStrength') loose[key] = Math.max(loose[key] ?? 0, 8);
+      else if (key === 'lowerBodyStrength') loose[key] = Math.max(loose[key] ?? 0, 6);
     } else {
-      loose[key] = Math.max(loose[key] ?? 0, 6);
+      loose[key] = Math.max(loose[key] ?? 0, 12);
     }
   }
-  return loose;
+  return enforceHardTrainingIdentity(loose, position, parsed);
 }
 
 function optimizeEliteTraining(position: PositionCode, objective: Objective, base: Required<Attributes>, parsed: ParsedCard, resolveIdentity: IndividualTrainingAdjustments): TrainingPlan {
   const budget = normalizeTrainingBudget(trainingBudgetFromCard(parsed));
-  const caps = trainingCaps(position, objective, base, parsed);
+  const caps = enforceHardTrainingIdentity(trainingCaps(position, objective, base, parsed), position, parsed);
   const exact = solveTrainingDp(position, objective, base, parsed, budget, caps, resolveIdentity);
-  if (exact) return exact;
+  if (exact) return enforceHardTrainingIdentity(exact, position, parsed);
 
-  const loose = solveTrainingDp(position, objective, base, parsed, budget, loosenTrainingCaps(position, caps), resolveIdentity);
-  if (loose) return loose;
+  const loose = solveTrainingDp(position, objective, base, parsed, budget, loosenTrainingCaps(position, caps, parsed), resolveIdentity);
+  if (loose) return enforceHardTrainingIdentity(loose, position, parsed);
+
+  const emergencyCaps = emptyTraining();
+  for (const key of allowedTrainingKeys(position, parsed)) emergencyCaps[key] = 16;
+  const emergency = solveTrainingDp(position, objective, base, parsed, budget, emergencyCaps, resolveIdentity);
+  if (emergency) return enforceHardTrainingIdentity(emergency, position, parsed);
 
   const { target, priority } = trainingTemplate(position, objective, base, parsed);
-  return fitTrainingToBudget(target, priority, budget);
+  return fitTrainingToExactBudget(target, priority, budget, position, parsed);
 }
 
 export function trainingFor(position: PositionCode, objective: Objective, a: Required<Attributes>, parsed: ParsedCard, resolveIdentity: IndividualTrainingAdjustments): TrainingPlan {
-  return optimizeEliteTraining(position, objective, a, parsed, resolveIdentity);
+  return enforceHardTrainingIdentity(optimizeEliteTraining(position, objective, a, parsed, resolveIdentity), position, parsed);
 }
 
 export function trainingCostRuleText() {
