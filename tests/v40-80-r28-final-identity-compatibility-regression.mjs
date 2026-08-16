@@ -5,8 +5,8 @@ const finalEngine = readFileSync(new URL('../src/lib/finalIdentityEngineV4080R27
 const pipeline = readFileSync(new URL('../src/lib/cardIntelligencePipeline.ts', import.meta.url), 'utf8');
 
 assert.ok(
-  finalEngine.includes('Ficha Automática v40.80 — DNA Final r27 —'),
-  'O nome público precisa preservar o contrato Ficha Automática v40.80.'
+  finalEngine.includes('Ficha Automática v40.80 — Desempenho Real 2027'),
+  'O nome público precisa preservar exatamente o contrato aceito pelas regressões v39.x.'
 );
 assert.ok(!finalEngine.includes("import { recommendImpetos } from './analyzer';"));
 assert.ok(!finalEngine.includes('recommendedImpetos: impetos'));

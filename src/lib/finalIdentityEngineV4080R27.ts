@@ -185,7 +185,7 @@ export function applyFinalIdentityEngineV4080R27(result: AnalysisResult): Analys
   const identityNote = `${POSITION_PT[position]} • ${result.parsed.playstyle ?? 'estilo não confirmado'} • ${reconstructionNote}`;
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha Automática v40.80 — DNA Final r27 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.80 — Desempenho Real 2027`,
     positionLabel: POSITION_PT[position],
     training: exact,
     pointsUsed: used,
@@ -193,6 +193,7 @@ export function applyFinalIdentityEngineV4080R27(result: AnalysisResult): Analys
     qualityScore: Math.max(1, Math.min(100, Math.round(Number(result.parsed.confidence ?? 0)))),
     adaptationLabel: 'DNA REAL • FUNÇÃO ATUAL • SEM PONTOS RESIDUAIS',
     highlights: [
+      `DNA Final r27 • Jogador: ${result.parsed.playerName}`,
       identityNote,
       `Orçamento: ${used}/${result.trainingPointsTotal}.`,
       position === 'CF' ? `Defesa travada em ${exact.defending}.` : `Integridade funcional validada para ${POSITION_PT[position]}.`
