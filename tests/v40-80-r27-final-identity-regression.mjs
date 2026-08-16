@@ -19,11 +19,11 @@ for (const contract of [
 
 assert.ok(analyzer.includes('automaticPositionFamilyCompatible'), 'AUTO precisa preservar família posicional');
 assert.ok(analyzer.includes('fitTrainingToExactBudget(initialTraining, exactPriority, trainingPointsTotal, selected.code, parsed)'), 'fechamento inicial precisa receber parsed');
-assert.ok(analyzer.includes('export function recommendImpetos'), 'Ímpeto precisa ser reutilizável pelo árbitro final');
+assert.ok(analyzer.includes('function recommendImpetos') || analyzer.includes('export function recommendImpetos'), 'Ímpeto canônico precisa continuar disponível no motor-base');
 assert.ok(skill.includes('return result.bestPosition.code;'), 'Top 5 deve usar a posição final');
 assert.ok(finalEngine.includes('reconstructNaturalAttributes'), 'carta treinada precisa reconstruir base');
 assert.ok(finalEngine.includes('autoTrainingPlan'), 'r27 precisa ler distribuição já aplicada');
-assert.ok(finalEngine.includes('recommendImpetos(result.parsed, position'), 'Ímpeto precisa seguir a mesma identidade final');
+assert.ok(!finalEngine.includes('recommendedImpetos: impetos'), 'r27 não pode recalcular Ímpeto ao trocar a posição; preserva o ranking canônico da carta');
 assert.ok(finalEngine.includes("position === 'CF' ? `Defesa travada em ${exact.defending}.`"), 'CA precisa expor trava defensiva');
 assert.ok(pipeline.indexOf('applyFinalIdentityEngineV4080R27(current)') < pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)'), 'ficha final deve fechar antes do Top 5');
 assert.ok(pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') < pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)'), 'Top 5 precisa fechar antes do gerador final');

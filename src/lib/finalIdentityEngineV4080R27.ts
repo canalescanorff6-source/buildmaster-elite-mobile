@@ -7,7 +7,6 @@ import type {
   TrainingPlan
 } from './analyzerDomain';
 import { POSITION_PT } from './analyzerDomain';
-import { recommendImpetos } from './analyzer';
 import {
   enforceHardTrainingIdentity,
   fitTrainingToExactBudget,
@@ -178,7 +177,6 @@ export function applyFinalIdentityEngineV4080R27(result: AnalysisResult): Analys
     fitTrainingToExactBudget(identityPlan, priority, result.trainingPointsTotal, position, result.parsed)
   );
   const used = trainingPlanTotalCost(exact);
-  const impetos = recommendImpetos(result.parsed, position, 'COMPETITIVE');
 
   const reconstructionNote = reconstructed.reconstructed
     ? 'Carta já treinada detectada: o motor retirou a progressão visível antes de recalcular a nova ficha.'
@@ -187,7 +185,7 @@ export function applyFinalIdentityEngineV4080R27(result: AnalysisResult): Analys
   const identityNote = `${POSITION_PT[position]} • ${result.parsed.playstyle ?? 'estilo não confirmado'} • ${reconstructionNote}`;
   const variant = {
     kind: 'competitive' as const,
-    title: `Ficha DNA Final r27 — ${result.parsed.playerName}`,
+    title: `Ficha Automática v40.80 — DNA Final r27 — ${result.parsed.playerName}`,
     positionLabel: POSITION_PT[position],
     training: exact,
     pointsUsed: used,
@@ -214,7 +212,6 @@ export function applyFinalIdentityEngineV4080R27(result: AnalysisResult): Analys
     trainingPointsUsed: used,
     trainingPointsRemaining: result.trainingPointsTotal - used,
     buildVariants: [variant],
-    recommendedImpetos: impetos,
     buildName: variant.title,
     recommendationExplanation: [
       `Motor DNA Final r27: ${identityNote}`,
