@@ -1,0 +1,1 @@
+import assert from'node:assert/strict';import{readFileSync}from'node:fs';const s=readFileSync(new URL('../scripts/apply-training-dna-r23.mjs',import.meta.url),'utf8');for(const x of['BM_TRAINING_DNA_R23','adjusted.defending = 0','weight = -20','technicalDna','aerialDna','isPoacher','isTargetStriker'])assert.ok(s.includes(x));console.log('r23 aprovada');
