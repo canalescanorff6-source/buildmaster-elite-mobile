@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read = (p) => fs.readFileSync(p,'utf8');
+const pre = read('scripts/production-preflight.mjs');
+const v4010 = read('tests/v40-10-progress-experience-regression.mjs');
+const v4020 = read('tests/v40-20-progress-experience-regression.mjs');
+assert.ok(pre.includes("version === '40.80.0'"));
+assert.ok(pre.includes("BuildMaster Elite Tático v40.80"));
+assert.ok(pre.includes("buildmaster-v40-80-edge-stack-1"));
+assert.ok(pre.includes(".endsWith('npm run test:v4080')"));
+assert.ok(v4010.includes("app.split('\\n').length <= 5000"));
+assert.ok(v4020.includes("app.split('\\n').length <= 5000"));
+console.log('r36 aprovada: pré-voo e regressões legadas sincronizados com v40.80 e orçamento estrutural atual.');
