@@ -680,6 +680,10 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   for (const value of impetos) canonical.push(`ÍMPETO: ${value.value}`);
   for (const value of positionRatings) canonical.push(`${value.label}: ${value.value}`);
   for (const value of attributes) canonical.push(`${value.label}: ${value.value}`);
+  if (progressionSequence.length) {
+    canonical.push('PROGRESSÃO AUTOMÁTICA LIDA:');
+    for (const value of progressionSequence) canonical.push(`${value.label}: ${value.numericValue ?? value.value}`);
+  }
   for (const value of physicalModel) canonical.push(`${value.label}: ${value.value}`);
   if (skills.length) canonical.push(`HABILIDADES JÁ POSSUI: ${skills.map((item) => item.value).join(', ')}`);
   if (skillCandidates.length) canonical.push(`HABILIDADES ESPECIAIS PROVISÓRIAS: ${skillCandidates.map((item) => item.value).join(', ')}`);

@@ -437,7 +437,7 @@ export function EfhubVisualCalibrator({
       <header className="efhub-calibrator-head">
         <div>
           <p className="kicker"><Maximize2 size={15}/> Ajustar mapa do print</p>
-          <h3>Arraste os 8 quadrados até cada informação</h3>
+          <h3>Arraste os 9 quadrados até cada informação</h3>
           <p>Toque em uma área, arraste pelo centro e use os pontos dos cantos para aumentar ou diminuir. Você não precisa digitar nada.</p>
         </div>
         <div className="efhub-calibrator-head-actions">
@@ -587,7 +587,7 @@ export function EfhubVisualCalibrator({
       </div>
 
       <footer className="efhub-calibrator-actions">
-        <button type="button" onClick={onReset}><RotateCcw size={17}/> Restaurar os 8 quadrados</button>
+        <button type="button" onClick={onReset}><RotateCcw size={17}/> Restaurar os 9 quadrados</button>
         <button type="button" onClick={onSave} disabled={!complete}><Save size={17}/> Salvar este mapa</button>
         <button type="button" className="primary" onClick={onRead} disabled={!complete}><ScanText size={18}/> Ler com os quadrados ajustados</button>
       </footer>

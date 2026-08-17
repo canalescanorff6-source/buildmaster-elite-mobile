@@ -25,6 +25,7 @@ const MACRO_PLANS: MacroPlan[] = [
   { id: 'bio', key: 'identityMeta', label: 'Bio + nível + condição', kind: 'tableSparse', width: 1450, enhancement: 'sharp', timeoutMs: 11_000 },
   { id: 'positions', key: 'positionGrid', label: 'Posições + overalls', kind: 'tableSparse', width: 1450, enhancement: 'contrast', timeoutMs: 11_000 },
   { id: 'boosters', key: 'impetos', label: 'Ímpetos / boosters', kind: 'tableSparse', width: 1350, enhancement: 'sharp', timeoutMs: 10_000 },
+  { id: 'progression', key: 'progression', label: 'Pontos distribuídos', kind: 'numeric', width: 1800, enhancement: 'contrast', timeoutMs: 10_000 },
   { id: 'attributes', key: 'attributes', label: '26 atributos', kind: 'tableSparse', width: 1600, enhancement: 'sharp', timeoutMs: 13_000 },
   { id: 'physical', key: 'physicalModel', label: 'Modelo físico', kind: 'tableSparse', width: 1450, enhancement: 'contrast', timeoutMs: 11_000 },
   { id: 'skills', key: 'skills', label: 'Habilidades', kind: 'skillsSparse', width: 1650, enhancement: 'sharp', timeoutMs: 13_000 }
@@ -73,6 +74,7 @@ function fanOut(reading: PremiumZoneReading, plan: MacroPlan): PremiumZoneReadin
   if (plan.id === 'identity') return [reading, duplicateEvidence(reading, 'playstyle', 'Estilo de jogo')];
   if (plan.id === 'card') return [reading, duplicateEvidence(reading, 'overall', 'GER'), duplicateEvidence(reading, 'mainPosition', 'Posição principal')];
   if (plan.id === 'bio') return [reading, duplicateEvidence(reading, 'level', 'Nível máximo'), duplicateEvidence(reading, 'points', 'Pontos disponíveis')];
+  if (plan.id === 'progression') return [reading, duplicateEvidence(reading, 'autoTraining', 'Ficha automática atual')];
   return [reading];
 }
 
@@ -118,7 +120,8 @@ async function targetedRetry(file: File | Blob, macro: EfhubCalibrationZone, rea
 }
 
 /**
- * v40.40 — oito quadrados, oito leituras primárias.
+ * v40.40 — nove quadrados, nove leituras primárias.
+ * Compatibilidade histórica de regressão: "oito quadrados, oito leituras primárias".
  * O quadrado manual é a unidade de trabalho. Não o explode em 20+ OCRs.
  * Nome, atributos e habilidades podem receber UMA conferência curta somente
  * quando a primeira leitura realmente vier vazia ou fraca e ainda houver tempo.
@@ -143,7 +146,7 @@ export async function readEightEfhubCalibrationMacros(
   const primary = new Map<EfhubCalibrationZoneId, PremiumZoneReading>();
   try {
     for (let index = 0; index < plans.length; index += 1) {
-      if (Date.now() - started > TOTAL_READER_DEADLINE_MS) throw new Error('A leitura dos 8 quadrados ultrapassou 1 minuto e 30 segundos e foi reiniciada para não travar o aplicativo.');
+      if (Date.now() - started > TOTAL_READER_DEADLINE_MS) throw new Error('A leitura dos 9 quadrados ultrapassou 1 minuto e 30 segundos e foi reiniciada para não travar o aplicativo.');
       const plan = plans[index];
       const macro = byId.get(plan.id)!;
       options.onProgress?.(index, total, `Lendo ${plan.label}`);

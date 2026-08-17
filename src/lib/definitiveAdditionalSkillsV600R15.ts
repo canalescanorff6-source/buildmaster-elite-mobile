@@ -164,17 +164,120 @@ function metaV6Bonus(result: AnalysisResult, skill: string) {
   return { score, reasons, meta: reasons.length > 0 };
 }
 
+
+type FunctionalSkillRole =
+  | 'GOLEIRO'
+  | 'FINALIZADOR'
+  | 'CRIADOR'
+  | 'INFILTRADOR'
+  | 'MEIA_DEFENSIVO'
+  | 'MEIA_IDA_VOLTA'
+  | 'MEIA_CRIADOR'
+  | 'DEFENSOR'
+  | 'LATERAL_DEFENSIVO'
+  | 'LATERAL_APOIO'
+  | 'PONTA';
+
+function functionalSkillRole(result: AnalysisResult, position: PositionCode): FunctionalSkillRole {
+  const style = styleName(result);
+  const a = result.parsed.attributes;
+  const attack = avg(a.offensiveAwareness, a.finishing, a.kickingPower);
+  const creation = avg(a.lowPass, a.loftedPass, a.ballControl, a.tightPossession, a.dribbling);
+  const defence = avg(a.defensiveAwareness, a.defensiveEngagement, a.tackling, a.aggression);
+  const mobility = avg(a.speed, a.acceleration, a.balance, a.stamina);
+
+  if (position === 'GK') return 'GOLEIRO';
+  if (position === 'CB' || /defensor criativo|destruidor|atacante surpresa/.test(style)) return 'DEFENSOR';
+  if ((position === 'LB' || position === 'RB') && /lateral defensivo/.test(style)) return 'LATERAL_DEFENSIVO';
+  if (position === 'LB' || position === 'RB') return 'LATERAL_APOIO';
+  if (position === 'LWF' || position === 'RWF') return 'PONTA';
+  if (position === 'CF') return /puxa marcacao|atacante pivo|pivo/.test(style) ? 'CRIADOR' : 'FINALIZADOR';
+  if (position === 'SS' || position === 'AMF') {
+    if (/infiltra|atacante surpresa/.test(style) || attack >= creation + 3) return 'INFILTRADOR';
+    return 'CRIADOR';
+  }
+  if (position === 'DMF') return 'MEIA_DEFENSIVO';
+
+  if (position === 'CMF' || position === 'LMF' || position === 'RMF') {
+    if (/destruidor|primeiro volante|anchor man/.test(style) || defence >= Math.max(76, creation - 1)) return 'MEIA_DEFENSIVO';
+    if (/meia versatil|box.to.box/.test(style) || (defence >= 70 && creation >= 76 && mobility >= 76)) return 'MEIA_IDA_VOLTA';
+    if (/infiltra|hole player/.test(style) || attack >= 80 && attack >= defence + 8) return 'INFILTRADOR';
+    return 'MEIA_CRIADOR';
+  }
+  return 'MEIA_CRIADOR';
+}
+
+const EXOTIC_SHOOTING_SKILLS = new Set([
+  'Efeito de longe',
+  'Controle da cavadinha',
+  'Chute com o peito do pé',
+  'Folha seca',
+  'Chute ascendente',
+  'Precisão à distância',
+  'Finalização acrobática',
+  'Especialista em pênalti'
+]);
+
+const DEFENSIVE_SKILLS = new Set(['Marcação individual','Volta para marcar','Interceptação','Bloqueador','Carrinho','Afastamento acrobático']);
+
+function hardSkillMismatch(result: AnalysisResult, position: PositionCode, skill: string): boolean {
+  const role = functionalSkillRole(result, position);
+  const a = result.parsed.attributes;
+  const finishing = Number(a.finishing ?? 0);
+  const power = Number(a.kickingPower ?? 0);
+
+  if (['CF','SS','LWF','RWF','AMF'].includes(position) && DEFENSIVE_SKILLS.has(skill)) return true;
+  if (position === 'CB' && (EXOTIC_SHOOTING_SKILLS.has(skill) || ['Toque duplo','Giro 360°','Chapéu','Elástico'].includes(skill))) return true;
+  if ((role === 'MEIA_DEFENSIVO' || role === 'LATERAL_DEFENSIVO') && EXOTIC_SHOOTING_SKILLS.has(skill)) return true;
+  if (role === 'MEIA_IDA_VOLTA' && EXOTIC_SHOOTING_SKILLS.has(skill) && (finishing < 78 || power < 80)) return true;
+  if (role === 'MEIA_CRIADOR' && ['Chute ascendente','Folha seca','Finalização acrobática','Especialista em pênalti'].includes(skill)) return true;
+  if (role === 'MEIA_CRIADOR' && skill === 'Precisão à distância' && (finishing < 78 || power < 82)) return true;
+  if (role === 'DEFENSOR' && CATEGORY[skill] === 'finalização') return true;
+  if (role === 'GOLEIRO' && CATEGORY[skill] !== 'goleiro' && !['Espírito guerreiro','Liderança'].includes(skill)) return true;
+
+  return false;
+}
+
+function functionalRoleBonus(result: AnalysisResult, position: PositionCode, skill: string) {
+  const role = functionalSkillRole(result, position);
+  let score = 0;
+  const reasons: string[] = [];
+  const add = (skills: string[], points: number, reason: string) => {
+    if (skills.includes(skill)) { score += points; reasons.push(reason); }
+  };
+
+  if (role === 'MEIA_DEFENSIVO') {
+    add(['Interceptação','Bloqueador','Marcação individual','Volta para marcar','Passe de primeira','Passe em profundidade','Espírito guerreiro'], 26, 'Função real defensiva: prioriza corte, cobertura e saída limpa.');
+  } else if (role === 'MEIA_IDA_VOLTA') {
+    add(['Passe de primeira','Interceptação','Volta para marcar','Espírito guerreiro','Controle com a sola','Passe em profundidade'], 23, 'Função box-to-box: precisa funcionar nos dois sentidos sem gastar vaga em chute situacional.');
+  } else if (role === 'MEIA_CRIADOR') {
+    add(['Passe de primeira','Passe em profundidade','Passe na medida','Controle com a sola','Toque duplo','Toque de calcanhar'], 25, 'Meia criador: primeiro toque, orientação, passe e condução têm maior frequência real.');
+  } else if (role === 'INFILTRADOR') {
+    add(['Passe de primeira','Chute de primeira','Controle com a sola','Toque duplo','Passe em profundidade'], 23, 'Infiltrador: acelera chegada, domínio e conclusão sem transformar a carta em chutador genérico.');
+  } else if (role === 'FINALIZADOR') {
+    add(['Chute de primeira','Controle com a sola','Toque duplo','Finalização acrobática','Passe de primeira'], 22, 'Finalizador: reduz tempo entre domínio, ruptura e chute.');
+  } else if (role === 'DEFENSOR' || role === 'LATERAL_DEFENSIVO') {
+    add(['Interceptação','Bloqueador','Marcação individual','Passe de primeira','Espírito guerreiro'], 25, 'Defensor: habilidades de repetição alta em corte, bloqueio e saída.');
+  } else if (role === 'LATERAL_APOIO' || role === 'PONTA') {
+    add(['Controle com a sola','Toque duplo','Passe de primeira','Passe em profundidade','Cruzamento preciso'], 20, 'Corredor: condução, aceleração e passe útil têm prioridade.');
+  } else if (role === 'CRIADOR') {
+    add(['Passe de primeira','Passe em profundidade','Controle com a sola','Toque de calcanhar','Toque duplo'], 22, 'Criador: conexão curta e domínio orientado são ações recorrentes.');
+  }
+  return { role, score, reasons };
+}
+
 function candidateFor(result: AnalysisResult, position: PositionCode, skill: string, poolRank: number): Candidate {
   const category = CATEGORY[skill] ?? 'mental';
   const style = styleBonus(result, position, skill);
   const attr = attributeActivation(result, position, skill);
   const meta = metaV6Bonus(result, skill);
+  const role = functionalRoleBonus(result, position, skill);
   const categoryBase = BASE_CATEGORY[position][category];
   const stable = stableHash(`${result.parsed.playerName}|${result.parsed.cardType}|${result.parsed.mainPosition}|${result.parsed.playstyle ?? ''}|${skill}`) % 4;
-  const raw = 30 + categoryBase + style.score + attr.score + meta.score + Math.max(0, 12 - poolRank) + stable;
+  const raw = 30 + categoryBase + style.score + attr.score + meta.score + role.score + Math.max(0, 12 - poolRank) + stable;
   const score = clamp(raw);
-  const tier: Tier = style.score >= 18 || attr.score >= 16 ? 'ESSENCIAL' : meta.meta && meta.score >= 9 ? 'META_V6' : 'COMPLEMENTAR';
-  return { name: skill, category, score, tier, reasons: [...style.reasons, ...attr.reasons, ...meta.reasons].slice(0, 3) };
+  const tier: Tier = role.score >= 23 || style.score >= 18 || attr.score >= 16 ? 'ESSENCIAL' : meta.meta && meta.score >= 9 ? 'META_V6' : 'COMPLEMENTAR';
+  return { name: skill, category, score, tier, reasons: [...role.reasons, ...style.reasons, ...attr.reasons, ...meta.reasons].slice(0, 3) };
 }
 
 function styleBlueprint(result: AnalysisResult, position: PositionCode): readonly Category[] {
@@ -184,8 +287,15 @@ function styleBlueprint(result: AnalysisResult, position: PositionCode): readonl
   if (position === 'CB' && /destruidor|destroyer|atacante surpresa|extra frontman/.test(style)) return ['defesa','defesa','defesa','aérea','físico'];
   if (position === 'DMF' && /orquestrador|orchestrator/.test(style)) return ['passe','passe','defesa','defesa','físico'];
   if (position === 'DMF' && /primeiro volante|anchor man|destruidor|destroyer/.test(style)) return ['defesa','defesa','passe','físico','aérea'];
-  if ((position === 'CMF' || position === 'AMF') && /armador criativo|creative playmaker|orquestrador|classic|classico/.test(style)) return ['passe','passe','passe','drible','físico'];
-  if ((position === 'CMF' || position === 'AMF') && /infiltra|hole player/.test(style)) return ['passe','finalização','drible','passe','físico'];
+  if (position === 'CMF') {
+    const role = functionalSkillRole(result, position);
+    if (role === 'MEIA_DEFENSIVO') return ['defesa','passe','defesa','físico','passe'];
+    if (role === 'MEIA_IDA_VOLTA') return ['passe','defesa','passe','físico','drible'];
+    if (role === 'INFILTRADOR') return ['passe','drible','finalização','passe','físico'];
+    return ['passe','passe','drible','passe','físico'];
+  }
+  if (position === 'AMF' && /armador criativo|creative playmaker|orquestrador|classic|classico/.test(style)) return ['passe','passe','passe','drible','físico'];
+  if (position === 'AMF' && /infiltra|hole player/.test(style)) return ['passe','finalização','drible','passe','físico'];
   if (['LB','RB','LMF','RMF','LWF','RWF'].includes(position) && /perito em cruzamento|cross specialist/.test(style)) return ['passe','passe','passe','drible','físico'];
   if (position === 'CF' && /atacante pivo|deep.lying|recuado|puxa marcacao|dummy runner/.test(style)) return ['passe','passe','finalização','drible','físico'];
   if (position === 'CF' && (/^pivo$|^target man$/).test(style)) return ['aérea','finalização','passe','físico','mental'];
@@ -196,7 +306,11 @@ function styleBlueprint(result: AnalysisResult, position: PositionCode): readonl
 function pickTopFive(result: AnalysisResult) {
   const position = resolveAdditionalSkillPosition(result);
   const owned = buildOwnedSkillKeys(result.parsed.nativeSkills, result.parsed.specialSkills, result.parsed.additionalSkills ?? []);
-  const pool = officialAdditionalSkillPoolForPosition(position).filter((skill) => !owned.has(skillIdentityKey(skill)) && isRoleCompatibleAdditionalSkill(skill, position));
+  const pool = officialAdditionalSkillPoolForPosition(position).filter((skill) =>
+    !owned.has(skillIdentityKey(skill))
+    && isRoleCompatibleAdditionalSkill(skill, position)
+    && !hardSkillMismatch(result, position, skill)
+  );
   const candidates = pool.map((skill, index) => candidateFor(result, position, skill, index));
   const blueprint = styleBlueprint(result, position);
   const selected: Candidate[] = [];
@@ -255,6 +369,7 @@ export function applyDefinitiveAdditionalSkillsV600R15(result: AnalysisResult): 
   const style = result.parsed.offensivePlaystyle ?? result.parsed.playstyle ?? 'não confirmado';
   const metaCount = selected.filter((item) => item.tier === 'META_V6').length;
   const essentialCount = selected.filter((item) => item.tier === 'ESSENCIAL').length;
+  const functionalRole = functionalSkillRole(result, position);
 
   return {
     ...result,
@@ -290,7 +405,7 @@ export function applyDefinitiveAdditionalSkillsV600R15(result: AnalysisResult): 
     } : result.deepCardIntelligence,
     recommendationExplanation: [
       `Top 5 Definitivo v6.0: ${recommendedSkills.join(', ')}.`,
-      `${essentialCount} habilidade(s) essencial(is), ${metaCount} otimização(ões) META v6.0; estilo ${style}; função-base ${position}.`,
+      `${essentialCount} habilidade(s) essencial(is), ${metaCount} otimização(ões) META v6.0; estilo ${style}; função-base ${position}; função real ${functionalRole}.`,
       `Filtro universal: ${owned.length} habilidade(s) já possuída(s) foram bloqueadas contra repetição; nenhum estilo desconhecido recebe peso inventado.`,
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 18),

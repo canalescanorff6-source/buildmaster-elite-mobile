@@ -17,7 +17,8 @@ export type EfhubCalibrationZoneId =
   | 'boosters'
   | 'attributes'
   | 'physical'
-  | 'skills';
+  | 'skills'
+  | 'progression';
 
 export type EfhubCalibrationZone = {
   id: EfhubCalibrationZoneId;
@@ -52,7 +53,8 @@ const MACRO_META: Array<{
   { id: 'boosters', key: 'impetos', shortLabel: 'Boosters / ímpeto', color: '#ff9d45' },
   { id: 'attributes', key: 'attributes', shortLabel: '26 atributos', color: '#ff536b' },
   { id: 'physical', key: 'physicalModel', shortLabel: 'Modelo físico', color: '#4b9bff' },
-  { id: 'skills', key: 'skills', shortLabel: 'Habilidades', color: '#52f4d2' }
+  { id: 'skills', key: 'skills', shortLabel: 'Habilidades', color: '#52f4d2' },
+  { id: 'progression', key: 'progression', shortLabel: 'Pontos distribuídos', color: '#ffcf4a' }
 ];
 
 function clamp(value: number, min = 0, max = 1) {
@@ -137,6 +139,8 @@ const OCR_TO_MACRO: Record<string, EfhubCalibrationZoneId> = {
   manager: 'bio',
   positionGrid: 'positions',
   impetos: 'boosters',
+  progression: 'progression',
+  autoTraining: 'progression',
   attributes: 'attributes',
   physicalModel: 'physical',
   skills: 'skills'
@@ -239,7 +243,7 @@ async function canonicalSkillLayer(file: File | Blob, skills: EfhubCalibrationZo
 }
 
 /**
- * Gera os recortes internos a partir dos oito quadrados movidos pelo usuário.
+ * Gera os recortes internos a partir dos nove quadrados movidos pelo usuário.
  * Atributos e modelo físico continuam separados por coluna, e habilidades
  * preservam linhas completas mais cápsulas/janelas de contingência.
  */

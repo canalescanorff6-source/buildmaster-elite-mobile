@@ -56,7 +56,7 @@ function box(key: OcrZoneKey, label: string, x1: number, y1: number, x2: number,
 }
 
 /**
- * As oito áreas visuais seguem exatamente o mapa 1400 × 1600 enviado como
+ * As nove áreas visuais seguem exatamente o mapa 1400 × 1600 enviado como
  * referência. Elas são usadas no overlay de conferência.
  */
 export const EFHUB_CANONICAL_MACRO_BOXES: EfhubPixelBox[] = [
@@ -67,7 +67,11 @@ export const EFHUB_CANONICAL_MACRO_BOXES: EfhubPixelBox[] = [
   box('impetos', '5. Boosters / Ímpeto', 15, 472, 1385, 555),
   box('attributes', '6. 26 atributos', 15, 555, 1385, 1085),
   box('physicalModel', '7. Modelo físico', 15, 1085, 1385, 1425),
-  box('skills', '8. Habilidades', 15, 1425, 1385, 1590)
+  box('skills', '8. Habilidades', 15, 1425, 1385, 1590),
+  // r31: faixa numérica dos ícones de progressão da ficha automática.
+  // Fica separada do Booster/Ímpeto para não confundir +1/+2 de booster
+  // com níveis de Finalização/Passe/Drible/Destreza/Força/Bola aérea/Defesa.
+  box('progression', '9. Pontos distribuídos', 650, 472, 1385, 555)
 ];
 
 /**
@@ -85,6 +89,7 @@ export const EFHUB_CANONICAL_OCR_BOXES: EfhubPixelBox[] = [
   box('manager', 'Técnico e bônus', 482, 350, 760, 465),
   box('positionGrid', 'Mapa completo de posições', 770, 105, 1388, 470),
   box('impetos', 'Booster e Ímpeto', 15, 472, 1385, 555),
+  box('progression', 'Pontos distribuídos na ficha automática', 650, 472, 1385, 555),
   box('attributes', 'Tabela completa de 26 atributos', 15, 555, 1385, 1085),
   box('physicalModel', 'Modelo físico e alcance corporal', 15, 1085, 1385, 1425),
   // As cápsulas de habilidades mudam de largura e podem ocupar até três

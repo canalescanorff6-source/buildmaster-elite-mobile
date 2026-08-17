@@ -2525,7 +2525,7 @@ export function CardVisionApp() {
       if (geometry.template === 'detailed-profile' && layoutAudit) {
         if (layoutAudit.complete) {
           setStatus(manualEfhubCalibration
-            ? `Mapa visual ativo: os 8 quadrados ajustados serão usados sobre o print ${layoutAudit.width}×${layoutAudit.height}.`
+            ? `Mapa visual ativo: os 9 quadrados ajustados serão usados sobre o print ${layoutAudit.width}×${layoutAudit.height}.`
             : `Perfil eFHUB padronizado: ${layoutAudit.width}×${layoutAudit.height}, modo ${layoutAudit.mode}, cópia interna 1400×1600 pronta para leitura completa.`);
         } else if (layoutAudit.mode === 'reflowed-unknown' || layoutAudit.mode === 'incompatible') {
           setStatus('Layout eFHUB incompatível ou reorganizado: a leitura automática foi bloqueada para não posicionar quadrados errados.');
@@ -2862,14 +2862,14 @@ ${reading.text}`)) : fullPassText;
     catch { setStatus('Não foi possível salvar o mapa no armazenamento local. Você ainda pode usá-lo nesta leitura.'); return false; }
     efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;
     setEfhubCalibrationZones(normalized); setEfhubCalibrationSaved(true); setEfhubCalibrationActive(true);
-    setStatus('Mapa visual salvo. Os oito quadrados serão reaplicados proporcionalmente nos próximos prints com a mesma organização.');
+    setStatus('Mapa visual salvo. Os nove quadrados serão reaplicados proporcionalmente nos próximos prints com a mesma organização.');
     return true;
   }
   function resetEfhubCalibration() { const defaults = createDefaultEfhubCalibrationZones();
     try { removeAccountStorage(EFHUB_MANUAL_CALIBRATION_KEY); } catch {}
     efhubCalibrationZonesRef.current = defaults; efhubCalibrationActiveRef.current = false;
     setEfhubCalibrationZones(defaults); setEfhubCalibrationSaved(false); setEfhubCalibrationActive(false);
-    setStatus('Os oito quadrados voltaram ao mapa padrão. Ajuste-os sobre o print e salve quando estiverem corretos.');
+    setStatus('Os nove quadrados voltaram ao mapa padrão. Ajuste-os sobre o print e salve quando estiverem corretos.');
   }
   function readWithEfhubCalibration() { const normalized = normalizeEfhubCalibrationZones(efhubCalibrationZonesRef.current);
     efhubCalibrationZonesRef.current = normalized; efhubCalibrationActiveRef.current = true;

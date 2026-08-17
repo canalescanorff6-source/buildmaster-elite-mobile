@@ -20690,7 +20690,7 @@ body::after { display: none !important; }
 .native-skill-catalog-group.special-native{border-color:color-mix(in srgb,#4dd9ff 32%,var(--bm-border));background:color-mix(in srgb,#4dd9ff 4%,var(--bm-surface-2))}
 .skill-picker-chip.special-native{border-color:color-mix(in srgb,#4dd9ff 30%,var(--bm-border))}.skill-picker-chip.special-native.selected{border-color:#4dd9ff;background:color-mix(in srgb,#4dd9ff 14%,var(--bm-surface-3))}
 
-/* v31.81 — calibrador visual eFHUB: oito quadrados móveis e proporcionais */
+/* v31.81 — calibrador visual eFHUB: nove quadrados móveis e proporcionais */
 .efhub-visual-calibrator{
   display:grid;
   gap:14px;
