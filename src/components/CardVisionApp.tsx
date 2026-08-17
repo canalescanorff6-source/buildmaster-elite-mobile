@@ -2253,9 +2253,18 @@ export function CardVisionApp() {
     for (const [key, value] of Object.entries(nextResult.parsed.attributes)) {
       if (Number.isFinite(value)) nextAttributes[key as AttributeKey] = String(value);
     }
+    const detectedTrainingPoints = Number(nextResult.trainingPointsTotal || 0);
+    const inferredMaximumLevel = !nextResult.parsed.level
+      && detectedTrainingPoints > 0
+      && detectedTrainingPoints % 2 === 0
+      ? Math.floor(detectedTrainingPoints / 2) + 1
+      : 0;
     setManualFields({
       playerName: nextResult.parsed.playerName !== 'Jogador não identificado' ? nextResult.parsed.playerName : '',
-      level: nextResult.parsed.level ? String(nextResult.parsed.level) : '',
+      // O OCR continua soberano quando encontra o nível. Se ele falhar, o nível é
+      // reconstruído pelo orçamento exato do eFootball: pontos = (nível - 1) * 2.
+      // Ex.: 60 pts -> nível 31; 70 pts -> nível 36.
+      level: nextResult.parsed.level ? String(nextResult.parsed.level) : inferredMaximumLevel ? String(inferredMaximumLevel) : '',
       trainingPointsTotal: nextResult.trainingPointsTotal ? String(nextResult.trainingPointsTotal) : '',
       attributes: nextAttributes,
       nativeSkills: Array.from(new Set(canonicalizeSkillList([
