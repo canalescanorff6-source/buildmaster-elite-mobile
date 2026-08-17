@@ -25,7 +25,7 @@ assert.equal(canonical.audit.mode, 'canonical');
 assert.equal(canonical.audit.complete, true);
 assert.deepEqual(canonical.audit.missingZones, []);
 const canonicalMacro = canonicalEfhubMacroZones();
-assert.equal(canonicalMacro.length, 8);
+assert.equal(canonicalMacro.length, 9);
 const canonicalPosition = canonicalMacro.find((zone) => zone.key === 'positionGrid');
 assert.ok(canonicalPosition);
 close(canonicalPosition.x, 770 / 1400);
@@ -39,7 +39,7 @@ assert.equal(savedProfile.audit.mode, 'canonical');
 assert.equal(savedProfile.audit.visibleFraction, 1);
 assert.equal(savedProfile.audit.missingZones.length, 0);
 const savedMacro = mapEfhubMacroZones(savedProfile);
-assert.equal(savedMacro.length, 8);
+assert.equal(savedMacro.length, 9);
 assert.ok(savedMacro.every((zone) => zone.enabled));
 const savedPosition = savedMacro.find((zone) => zone.key === 'positionGrid');
 const savedSkills = savedMacro.find((zone) => zone.key === 'skills');
@@ -73,6 +73,6 @@ assert.equal(mapEfhubMacroZones(reorganized).length, 0);
 
 const letterboxed = buildEfhubLayoutPlan(3600, 4000, { x: 0.0139, y: 0.0311, w: 0.9722, h: 0.9188 });
 assert.equal(letterboxed.audit.complete, true);
-assert.equal(mapEfhubMacroZones(letterboxed).length, 8);
+assert.equal(mapEfhubMacroZones(letterboxed).length, 9);
 
 console.log('v31.75: resolução dinâmica, mapa exato 1400×1600 e bloqueio seguro de prints cortados aprovados.');

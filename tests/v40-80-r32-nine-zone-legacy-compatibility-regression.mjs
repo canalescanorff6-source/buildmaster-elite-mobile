@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const v3160=readFileSync(new URL('./v31-60-efhub-profile-regression.ts',import.meta.url),'utf8');
+const v3175=readFileSync(new URL('./v31-75-dynamic-efhub-layout-regression.ts',import.meta.url),'utf8');
+const v3179=readFileSync(new URL('./v31-79-canonical-profile-top5-regression.ts',import.meta.url),'utf8');
+const v3181=readFileSync(new URL('./v31-81-visual-efhub-calibration-regression.ts',import.meta.url),'utf8');
+assert.ok(v3160.includes('geometry.zones.length, 20'));
+assert.ok(v3175.includes('canonicalMacro.length, 9'));
+assert.ok(v3175.includes('savedMacro.length, 9'));
+assert.ok(v3179.includes('EFHUB_CANONICAL_MACRO_BOXES.length, 9'));
+assert.ok(v3181.includes('defaults.length, 9'));
+assert.ok(v3181.includes('ocr.length, 20'));
+assert.ok(v3181.includes("'Pontos distribuídos'"));
+console.log('r32 aprovada: regressões legadas alinhadas ao 9º quadrado sem remover compatibilidade OCR.');
