@@ -1375,6 +1375,51 @@ export type GlobalProReferenceV3900 = {
   testedInMatches: boolean;
 };
 
+
+export type ProMatchOptimizerR30Candidate = {
+  id: string;
+  label: string;
+  source: 'DNA_APP' | 'PRO_EXATO' | 'CONSENSO_PRO' | 'HIBRIDA' | 'OTIMIZADA';
+  gamerTag?: string | null;
+  training: TrainingPlan;
+  score: number;
+  identityScore: number;
+  roleScore: number;
+  scenarioFloor: number;
+  consistency: number;
+  exactBudget: boolean;
+  improvementVsApp: number;
+  reasons: string[];
+};
+
+export type ProMatchOptimizerR30Analysis = {
+  engineVersion: '40.80-r30';
+  philosophy: 'COMPARAR_PROS_EXATOS_OTIMIZAR_SEM_COPIAR_E_ESCOLHER_POR_DESEMPENHO_DE_PARTIDA';
+  exactCardOnly: true;
+  referencesAvailable: number;
+  verifiedProReferences: number;
+  referencesUsed: number;
+  distinctPros: number;
+  confidence: number;
+  confidenceLabel: 'alta' | 'media' | 'baixa' | 'sem_evidencia';
+  appBaselineScore: number;
+  bestExternalScore: number | null;
+  winnerScore: number;
+  improvementVsApp: number;
+  winner: ProMatchOptimizerR30Candidate;
+  finalists: ProMatchOptimizerR30Candidate[];
+  proReferences: Array<{
+    gamerTag: string;
+    score: number;
+    evidenceLevel: GlobalProEvidenceLevel;
+    completeness: number;
+    testedInMatches: boolean;
+    training: TrainingPlan;
+  }>;
+  summary: string;
+  warnings: string[];
+};
+
 export type GlobalProBenchmarkV3900Analysis = {
   engineVersion: '39.00.0';
   philosophy: 'COMPARAR_SEM_COPIAR_CEGAMENTE_E_APLICAR_SOMENTE_EVIDENCIA_EXATA';
@@ -2119,6 +2164,7 @@ export type AnalysisResult = {
   cardFirstV3880?: CardFirstAiV3880Analysis;
   canonicalCardV3890?: CanonicalCardV3890Analysis;
   globalProV3900?: GlobalProBenchmarkV3900Analysis;
+  proMatchOptimizerR30?: ProMatchOptimizerR30Analysis;
   eliteDominanceV3910?: EliteDominanceV3910Analysis;
   unifiedPerformanceV3920?: UnifiedPerformanceV3920Analysis;
   adaptivePositionV3930?: AdaptivePositionV3930Analysis;

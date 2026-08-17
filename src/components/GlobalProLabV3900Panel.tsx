@@ -52,6 +52,7 @@ export function GlobalProLabV3900Panel({ result }: { result: AnalysisResult }) {
   const profiles = useMemo(() => listWorldPros('TODOS'), []);
   const benchmark = useMemo(() => buildGlobalProBenchmarkV3900(result, sources), [result, sources]);
   const dominant = result.eliteDominanceV3910;
+  const r30 = result.proMatchOptimizerR30;
 
   useEffect(() => {
     const refresh = () => setSources(loadGlobalProBuildSources());
@@ -103,6 +104,34 @@ export function GlobalProLabV3900Panel({ result }: { result: AnalysisResult }) {
     </div>
 
     <p className="panel-note">O módulo compara somente a mesma versão exata da carta. Quando um pro player não publicou progressão, habilidades e Ímpeto completos, o app mostra “sem dados” e não inventa uma ficha.</p>
+
+    {r30 && <section className="dominant-engine-v3910">
+      <div className="section-title-row">
+        <div>
+          <p className="kicker"><Trophy size={15} /> Benchmark Pro + Performance r30</p>
+          <h4>Compara os melhores, cria híbridas e só então escolhe a ficha final</h4>
+        </div>
+        <span className={`dominant-status ${r30.referencesUsed ? 'supera_no_modelo' : 'sem_evidencia'}`}>{r30.confidence}% confiança</span>
+      </div>
+      <div className="dominant-metrics-v3910">
+        <article><strong>{r30.referencesUsed}</strong><span>referências exatas usadas</span><small>{r30.distinctPros} pro player(s)</small></article>
+        <article><strong>{r30.appBaselineScore}</strong><span>Motor DNA</span><small>base interna</small></article>
+        <article><strong>{r30.bestExternalScore ?? '--'}</strong><span>melhor referência Pro</span><small>mesma carta</small></article>
+        <article><strong>{r30.winnerScore}</strong><span>ficha vencedora</span><small>{r30.improvementVsApp >= 0 ? '+' : ''}{r30.improvementVsApp} vs app</small></article>
+      </div>
+      <div className="dominant-build-v3910">
+        <article><span>Vencedora</span><strong>{r30.winner.label}</strong><small>{planText(r30.winner.training)} • piso {r30.winner.scenarioFloor} • identidade {r30.winner.identityScore}</small></article>
+      </div>
+      <div className="global-pro-reference-list">
+        {r30.finalists.slice(0, 3).map((item, index) => <article key={item.id}>
+          <div><strong>#{index + 1} {item.label}</strong><small>{item.source}{item.gamerTag ? ` • ${item.gamerTag}` : ''}</small></div>
+          <span>{item.score}/100</span>
+          <small>{planText(item.training)}</small>
+        </article>)}
+      </div>
+      <p className="panel-note">{r30.summary}</p>
+      {r30.warnings.map((warning) => <div key={warning} className="professional-correction"><TriangleAlert size={16}/><span>{warning}</span></div>)}
+    </section>}
 
     {dominant && <section className="dominant-engine-v3910">
       <div className="section-title-row">
