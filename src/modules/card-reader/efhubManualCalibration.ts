@@ -311,5 +311,5 @@ export function efhubCalibrationCardArtZone(zones: EfhubCalibrationZone[]): OcrZ
 
 export function isEfhubCalibrationComplete(zones: EfhubCalibrationZone[]) {
   const safe = normalizeEfhubCalibrationZones(zones);
-  return safe.length === 8 && safe.every((zone) => zone.enabled && zone.w >= 0.015 && zone.h >= 0.015);
+  return safe.length === 9 && safe.every((zone) => zone.enabled && zone.w >= 0.015 && zone.h >= 0.015);
 }
