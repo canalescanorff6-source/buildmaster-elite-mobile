@@ -54,7 +54,7 @@ assert.ok(readerSource.includes('onFile'));
 assert.ok(app.split('\n').length <= 5000, 'CardVisionApp não pode ultrapassar o orçamento estrutural após a barra de progresso.');
 assert.ok(app.includes('setReaderProgress'));
 assert.ok(app.includes('reportReaderProgress'));
-for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Preparando revisão', 'Leitura concluída']) {
+for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Ficha gerada', 'Leitura concluída']) {
   assert.ok(app.includes(label), `Pipeline visual da leitura sem etapa ${label}`);
 }
 assert.ok(css.includes('.v4020-progress-track'));
@@ -62,5 +62,5 @@ assert.ok(css.includes('.v4020-global-update-progress'));
 assert.ok(css.includes('.v4020-reader-progress'));
 assert.ok(css.includes('.update-download-progress{display:none!important}'));
 
-assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4070'));
+assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4080'));
 console.log('v40.30 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa sem regressão do leitor v40.00.');

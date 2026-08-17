@@ -63,5 +63,5 @@ assert.ok(css.includes('.v4020-reader-progress'));
 assert.ok(css.includes('.update-download-progress{display:none!important}'));
 
 assert.ok(String(pkg.scripts?.['test:all']).includes('npm run test:v4020'));
-assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4070'));
+assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4080'));
 console.log('v40.30 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa sem regressão do leitor v40.00.');
