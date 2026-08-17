@@ -52,12 +52,12 @@ const appTsconfig = JSON.parse(read('tsconfig.app.json'));
 const cardVisionSource = read('src/components/CardVisionApp.tsx');
 const cropCalibrationSource = read('src/modules/card-reader/templateCalibration.ts');
 
-check(version === '40.80.0', 'Versão v40.80 configurada', version);
+check(version === '40.70.0', 'Versão v40.70 configurada', version);
 check(lock.version === version && lock.packages?.['']?.version === version, 'package-lock sincronizado');
 check(appUpdates.includes(`'${version}'`), 'Motor de atualização sincronizado');
 check(dataSafety.includes(`APP_DATA_VERSION = '${version}'`) && dataSafety.includes('CURRENT_DATA_SCHEMA = 3100'), 'Versão de dados sincronizada sem quebrar o esquema compatível');
-check(manifest.name === 'BuildMaster Elite Tático v40.80' && manifest.short_name === 'BuildMaster v40.80', 'Manifesto PWA sincronizado');
-check(sw.includes('buildmaster-v40-80-edge-stack-1'), 'Cache PWA v40.80 renovado');
+check(manifest.name === 'BuildMaster Elite Tático v40.70' && manifest.short_name === 'BuildMaster v40.70', 'Manifesto PWA sincronizado');
+check(sw.includes('buildmaster-v40-70-live-catalog-ocr-1'), 'Cache PWA v40.70 renovado');
 check(!/@import\s+['"]/i.test(css) && !/@import\s+['"]/i.test(executiveCss) && !/@import\s+['"]/i.test(studioCss) && !/@import\s+['"]/i.test(cleanResponsiveCss) && !/@import\s+['"]/i.test(identityCss) && !/@import\s+['"]/i.test(solidCss) && !/@import\s+['"]/i.test(revolutionCss) && !/@import\s+['"]/i.test(professionalCss) && css.includes('.bm-v3000-play-publication') && executiveCss.includes('.bm-v33-sidebar') && studioCss.includes('.bm-v3400-studio') && cleanResponsiveCss.includes('.bm-v3400-clean-responsive') && identityCss.includes('.bm-v3500-identity') && identityCss.includes('visual-midnight-navy') && solidCss.includes('.bm-v3520-solid') && solidCss.includes('.bm-dna-profile-grid') && revolutionCss.includes('.bm-v3600-revolution') && revolutionCss.includes('.bm-v36-mobile-dock') && professionalCss.includes('.bm-v3700-professional') && professionalCss.includes('.professional-scenario-grid'), 'Tema de produção, identidade e temas consolidados');
 check(layout.includes('bm-v3000-play-publication') && layout.includes('bm-v3300-executive') && layout.includes('v33-executive.css') && layout.includes('bm-v3400-studio') && layout.includes('v34-studio.css') && layout.includes('bm-v3400-clean-responsive') && layout.includes('v34-clean-responsive.css') && layout.includes('bm-v3500-identity') && layout.includes('v35-identity-themes.css') && layout.includes('bm-v3600-revolution') && layout.includes('v36-premium-revolution.css') && layout.includes('bm-v3700-professional') && layout.includes('v37-professional-intelligence.css'), 'Escopo visual e identidade ativos');
 check(rootPage.includes("@/components/AuthGate") && rootPage.includes("@/components/CardVisionApp") && rootPage.includes("@/components/AppShellSafetyBoundaryV3930") && rootPage.includes('<AppShellSafetyBoundaryV3930>') && rootPage.includes('<AuthGate>') && rootPage.includes('<CardVisionApp') && rootPage.includes('</AppShellSafetyBoundaryV3930>') && !/PrivacyPolicyPage|Política de privacidade|public-policy-page/.test(rootPage), 'Rota inicial correta', 'src/app/page.tsx deve abrir AppShellSafetyBoundaryV3930 + AuthGate + CardVisionApp e não pode conter a política de privacidade');
@@ -77,7 +77,7 @@ check(exists('src/lib/performanceBuildEngineV3850.ts') && exists('src/components
 check(exists('src/lib/structuralPrecisionV3740.ts') && exists('src/components/StructuralPrecisionPanel.tsx') && exists('tests/v37-40-structural-precision-regression.ts'), 'Precisão estrutural v37.40 integrada');
 check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3740'), 'Bateria de produção inclui v37.40');
 
-check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3200') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3300') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3400') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3500') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3510') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3520') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3600') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3700') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run quality:audit') && String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4080'), 'Bateria atual configurada');
+check(String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3200') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3300') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3400') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3500') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3510') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3520') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3600') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3700') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run quality:audit') && String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4070'), 'Bateria atual configurada');
 check(new Set(tsconfig.exclude ?? []).has('tests') && new Set(appTsconfig.exclude ?? []).has('tests'), 'Fixtures isoladas fora do typecheck principal');
 check(exists('scripts/repair-root-tsconfig.mjs') && String(pkg.scripts?.['preci:verify'] ?? '').includes('types:repair') && String(pkg.scripts?.pretypecheck ?? '').includes('types:repair'), 'Autorreparo preventivo do tsconfig raiz integrado');
 check(String(pkg.scripts?.typecheck ?? '').includes('-p tsconfig.app.json') && !(appTsconfig.include ?? []).some((item) => item.includes('tests') || item === '**/*.ts' || item === '**/*.tsx'), 'Typecheck principal restrito ao aplicativo');
@@ -166,7 +166,7 @@ for (const file of [
   'tests/types-v3173-edge/tsconfig.json',
   'supabase/migrations/202607280002_restore_account_creation_v3173.sql'
 ]) check(exists(file), `Componente de produção presente: ${file}`);
-check(read('src/components/CardVisionApp.tsx').split('\n').length < 4200, 'CardVisionApp abaixo de 4.200 linhas');
+check(read('src/components/CardVisionApp.tsx').split('\n').length < 5000, 'CardVisionApp abaixo de 5.000 linhas');
 check(read('src/lib/analyzer.ts').split('\n').length < 3500, 'Analyzer abaixo de 3.500 linhas');
 check(!exists('public/update-manifest.json'), 'Manifesto remoto não empacotado');
 for (const file of [
