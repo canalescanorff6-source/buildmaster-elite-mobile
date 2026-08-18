@@ -33,30 +33,9 @@ import { applyLiveEvolutionV600R11 } from './liveEvolutionV600R11';
 import { applyPlayerGenerationFinalizerV4080R13 } from './playerGenerationFinalizerV4080R13';
 import { applyFinalIdentityEngineV4080R27 } from './finalIdentityEngineV4080R27';
 import { applyProMatchOptimizerV4080R30 } from './proMatchOptimizerV4080R30';
+import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngineV4080R39';
 import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
 
-/**
- * Pipeline único e de memória controlada.
- *
- * Cada motor recebe o resultado anterior uma única vez. Isso evita manter
- * dezenas de árvores completas na memória quando muitos prints são lidos em
- * sequência e elimina recomputações capazes de alterar apenas auditorias.
- *
- * Marcadores históricos preservados para os testes de compatibilidade:
- * const withFinalSkills = enforceComplementarySkillIntegrity(supreme)
- * const withFinalImpetos = applyLocalAiToResult(withFinalSkills)
- * const integrityBeforeCalibration = enforceComplementarySkillIntegrity(correctedFinal)
- * return enforceComplementarySkillIntegrity(applyCalibrationV32(calibratedImpetos))
- * const finalAdvanced = advancedReconciled
- * return enforceComplementarySkillIntegrity(finalAdvanced)
- * const power = applyPowerBuildEngineV3850(advancedIntegrity)
- * const finalPower = applyPowerBuildEngineV3850(powerIntegrity)
- * const finalPower = powerIntegrity
- * return enforceComplementarySkillIntegrity(finalPower)
- * const finalMaximum = applyMaxMatchPerformanceV3860(maximumIntegrity)
- * const finalMaximum = maximumIntegrity
- * const supremePerformance = applySupremePerformanceV3870(finalMaximumIntegrity)
- */
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   let current = restoreCanonicalInputBeforeV3930(result);
   current = applyCompetitiveFusionToResult(current);
@@ -65,17 +44,14 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyLocalCorrectionsToResult(current);
   current = applyUnifiedCardIntelligence(current);
   current = applySupremeGameplayEngine(current);
-
   current = enforceComplementarySkillIntegrity(current);
   current = applyLocalAiToResult(current);
   current = applyLocalCorrectionsToResult(current);
   current = enforceComplementarySkillIntegrity(current);
-
   current = applyCalibrationV32(current);
   current = enforceComplementarySkillIntegrity(current);
   current = applyLocalAiToResult(current);
   current = enforceComplementarySkillIntegrity(current);
-
   current = applyAdvancedMotorV3750(current);
   current = enforceComplementarySkillIntegrity(current);
   current = applyPowerBuildEngineV3850(current);
@@ -86,7 +62,6 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = enforceComplementarySkillIntegrity(current);
   current = applyCardFirstAiV3880(current);
   current = enforceComplementarySkillIntegrity(current);
-
   current = applyCanonicalCardV3890(current);
   current = applyGlobalProBenchmarkV3900(current);
   current = applyEliteDominanceV3910(current);
@@ -107,15 +82,17 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyGameplayMetaV600R10(current);
   current = applyLiveEvolutionV600R11(current);
 
-  // r27 é o árbitro FINAL da progressão: roda depois de todos os motores legados,
-  // reconstrói a base quando a carta já está upada e aplica travas funcionais duras.
+  // r27 fecha a identidade funcional e reconstrói cartas já upadas.
   current = applyFinalIdentityEngineV4080R27(current);
 
-  // r30 compara o DNA Final com referências Pro EXATAS da mesma carta,
-  // cria híbridas e otimiza retorno marginal antes de fechar habilidades/Ímpetos.
+  // r30 usa referências profissionais exatas como benchmark, nunca como cópia cega.
   current = applyProMatchOptimizerV4080R30(current);
 
-  // O Top 5 é calculado DEPOIS da ficha vencedora e usa a mesma posição/função.
+  // r39 é a auditoria global anti-ficha-genérica. Ela roda DEPOIS do benchmark
+  // e ANTES das habilidades, para todas as posições e estilos.
+  current = applyIndividualIdentityEngineV4080R39(current);
+
+  // Top 5 e Ímpeto/finalização passam a nascer da ficha individualizada.
   current = applyDefinitiveAdditionalSkillsV600R15(current);
   current = synchronizeFinalSkillIntegrity(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);
