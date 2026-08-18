@@ -47,6 +47,7 @@ export function buildPlayerGenerationFinalizerV4080R13(result: AnalysisResult): 
   const fluidCompatibility = clamp(Number(result.gameplayMetaV600R10?.scores.fluidCompatibility ?? 65));
   const recommendedMode = result.gameplayMetaV600R10?.formation.recommendation ?? 'TRADICIONAL';
   const unknownMetaFields = result.liveEvolutionV600R11?.catalog.unknownFields?.length ?? 0;
+  const stamina90 = result.matchStaminaV4080R44;
 
   const blockers: string[] = [];
   const cautions: string[] = [];
@@ -57,6 +58,8 @@ export function buildPlayerGenerationFinalizerV4080R13(result: AnalysisResult): 
   if (unknownMetaFields > 0) cautions.push('Há dado novo/provisório da v6.0 preservado pelo OCR; ele não recebe peso de gameplay até confirmação.');
   if (cardConfidence < 78) cautions.push('A leitura é utilizável, mas vale revisar nome, posição, estilo e atributos críticos antes de aplicar recursos irreversíveis.');
   if (attributeCoverage < 58) cautions.push('Cobertura de atributos ainda é parcial; a ficha usa proteção conservadora contra falsa precisão.');
+  if (stamina90?.risk === 'ALTO') cautions.push(`Risco físico alto: intensidade projetada até ~${stamina90.projectedMinute} min; alvo de resistência ${stamina90.targetStamina}.`);
+  else if (stamina90?.risk === 'MEDIO') cautions.push(`Resistência moderada: intensidade projetada até ~${stamina90.projectedMinute} min; gerencie sprint/pressão no fim.`);
 
   const confidence = clamp(
     cardConfidence * .34 +
@@ -79,6 +82,7 @@ export function buildPlayerGenerationFinalizerV4080R13(result: AnalysisResult): 
     `Meta v6.0: ${Math.round(metaReadiness)}/100.`,
     `Passe ${Math.round(result.gameplayMetaV600R10?.scores.shortPassing ?? 0)} • condução ${Math.round(result.gameplayMetaV600R10?.scores.ballCarry ?? 0)} • tiki-taka ${Math.round(result.gameplayMetaV600R10?.scores.tikiTaka ?? 0)} • defesa manual ${Math.round(result.gameplayMetaV600R10?.scores.manualDefence ?? 0)}.`,
     `Estrutura recomendada: ${recommendedMode.replaceAll('_', ' ')}.`,
+    stamina90 ? `Resistência 90 min: ${stamina90.enduranceScore}/100 • carga ${stamina90.workload.toLowerCase()} • ~${stamina90.projectedMinute} min.` : 'Resistência 90 min: ainda não calibrada.',
     `Top 5 confirmado: ${finalSkills.length}/5.`
   ];
 

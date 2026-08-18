@@ -1058,10 +1058,14 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <div><span>Força funcional</span><strong>{result.physicalEngine.strengthScore}/100</strong></div>
               <div><span>Jogo aéreo</span><strong>{result.physicalEngine.aerialScore}/100</strong></div>
               <div><span>Resistência</span><strong>{result.physicalEngine.staminaScore}/100</strong></div>
+              {result.matchStaminaV4080R44 && <div><span>Resistência 90 min</span><strong>{result.matchStaminaV4080R44.enduranceScore}/100</strong></div>}
+              {result.matchStaminaV4080R44 && <div><span>Carga física</span><strong>{result.matchStaminaV4080R44.workload}</strong></div>}
+              {result.matchStaminaV4080R44 && <div><span>Intensidade estimada</span><strong>~{result.matchStaminaV4080R44.projectedMinute} min</strong></div>}
               <div><span>Perna dominante</span><strong>{result.physicalEngine.dominantFoot ?? 'Não confirmada'}</strong></div>
             </div>
             <div className="chip-cloud">{result.physicalEngine.advantages.map((item) => <span key={item}>✓ {item}</span>)}</div>
             {result.physicalEngine.limitations.map((item) => <p key={item} className="panel-note">⚠ {item}</p>)}
+            {result.matchStaminaV4080R44 && <p className="panel-note">{result.matchStaminaV4080R44.note} Alvo {result.matchStaminaV4080R44.targetStamina} • projetada {result.matchStaminaV4080R44.projectedStamina}.</p>}
           </article>
 
           <article className="luxury-panel wide-card">

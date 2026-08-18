@@ -2101,6 +2101,20 @@ export type MetaVivo2027V4080R8Analysis = {
 export type GameplayMetaV600R10Analysis = import('./gameplayMetaV600R10').GameplayMetaV600R10Analysis;
 export type LiveEvolutionV600R11 = import('./liveEvolutionV600R11').LiveEvolutionV600R11;
 
+
+export type MatchStaminaV4080R44Analysis = {
+  engineVersion: string;
+  workload: 'BAIXA' | 'MEDIA' | 'ALTA' | 'EXTREMA';
+  naturalStamina: number;
+  projectedStamina: number;
+  targetStamina: number;
+  enduranceScore: number;
+  projectedMinute: number;
+  risk: 'BAIXO' | 'MEDIO' | 'ALTO';
+  adjusted: boolean;
+  note: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -2179,6 +2193,7 @@ export type AnalysisResult = {
   metaVivo2027V4080R8?: MetaVivo2027V4080R8Analysis;
   gameplayMetaV600R10?: GameplayMetaV600R10Analysis;
   liveEvolutionV600R11?: LiveEvolutionV600R11;
+  matchStaminaV4080R44?: MatchStaminaV4080R44Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

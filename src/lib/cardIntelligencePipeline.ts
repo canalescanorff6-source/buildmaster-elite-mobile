@@ -35,6 +35,7 @@ import { applyFinalIdentityEngineV4080R27 } from './finalIdentityEngineV4080R27'
 import { applyProMatchOptimizerV4080R30 } from './proMatchOptimizerV4080R30';
 import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngineV4080R39';
 import { applyIndividualCalibrationEngineV4080R41 } from './individualCalibrationEngineV4080R41';
+import { applyMatchStaminaEngineV4080R44 } from './matchStaminaEngineV4080R44';
 import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
 
 /**
@@ -109,6 +110,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyProMatchOptimizerV4080R30(current);
   current = applyIndividualIdentityEngineV4080R39(current);
   current = applyIndividualCalibrationEngineV4080R41(current);
+  current = applyMatchStaminaEngineV4080R44(current);
   current = applyDefinitiveAdditionalSkillsV600R15(current);
   current = synchronizeFinalSkillIntegrity(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);
