@@ -9,6 +9,7 @@ import type {
   TrainingPlan,
   UnifiedSkillDecision
 } from './analyzerDomain';
+import { defensivePhaseTrainingBias } from './efootballV600Playstyles';
 import { POSITION_PT } from './analyzerDomain';
 import { buildPersonalizedSkillPlan } from './skillIntelligenceV31';
 import { buildOwnedSkillKeys, skillIdentityKey } from './officialSkillIdentity';
@@ -137,7 +138,7 @@ function effectiveWeights(result: AnalysisResult): Record<TrainingKey, number> {
   merge(V600_ROLE_WEIGHTS[result.bestPosition.code]);
   merge(connectionWeights(effectiveConnection(result)));
   if (['CB','LB','RB','DMF','CMF'].includes(result.bestPosition.code)) merge({ defending: .3, dexterity: .16, lowerBodyStrength: .14 });
-  if (result.parsed.defensivePlaystyleConfirmed && result.parsed.defensivePlaystyle === 'Pressão no Ataque') merge({ defending: .25, dexterity: .18, lowerBodyStrength: .22 });
+  if (result.parsed.defensivePlaystyleConfirmed && result.parsed.defensivePlaystyle) merge(defensivePhaseTrainingBias(result.parsed.defensivePlaystyle));
   if (result.tacticalProfile.style === 'POSSE_DE_BOLA') merge({ passing: .22, dribbling: .15, dexterity: .12 });
   if (result.tacticalProfile.style === 'CONTRA_ATAQUE_RAPIDO') merge({ dexterity: .22, lowerBodyStrength: .18, passing: .12 });
   if (result.tacticalProfile.style === 'CONTRA_ATAQUE') merge({ defending: .12, passing: .14, lowerBodyStrength: .14 });

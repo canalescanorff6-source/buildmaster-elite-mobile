@@ -1,6 +1,7 @@
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from './analyzerDomain';
 import { TRAINING_KEYS, trainingPlanTotalCost } from './trainingPlanCore';
 import { getAttributeMetaTrainingBias } from './attributeMeta2027V600';
+import { defensivePhaseTrainingBias } from './efootballV600Playstyles';
 
 export const DUAL_PHASE_BUILD_2027_R14_VERSION = '40.80-r14-dual-phase-build-2027' as const;
 
@@ -84,10 +85,11 @@ function defenceContextWeights(result: AnalysisResult): PhaseWeights {
     Object.assign(extra, { defending: .28, dexterity: .14, passing: .08 });
   }
 
-  if (result.parsed.defensivePlaystyleConfirmed && /press[aã]o no ataque/i.test(result.parsed.defensivePlaystyle ?? '')) {
-    extra.defending = Number(extra.defending ?? 0) + .2;
-    extra.dexterity = Number(extra.dexterity ?? 0) + .18;
-    extra.lowerBodyStrength = Number(extra.lowerBodyStrength ?? 0) + .18;
+  if (result.parsed.defensivePlaystyleConfirmed && result.parsed.defensivePlaystyle) {
+    const bias = defensivePhaseTrainingBias(result.parsed.defensivePlaystyle);
+    for (const [key, value] of Object.entries(bias)) {
+      extra[key as TrainingKey] = Number(extra[key as TrainingKey] ?? 0) + Number(value ?? 0);
+    }
   }
   return extra;
 }

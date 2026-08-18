@@ -6,6 +6,7 @@ import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzer
 import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
 import { discoverUnknownSpecialSkillsV4070 } from '@/lib/skillDiscoveryV4070';
 import { detectV600Playstyles } from '@/lib/efootballV600Playstyles';
+import { recordDualPlaystyleObservation } from '@/lib/dualPlaystyleRegistryV4080R47';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -522,6 +523,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const allText = [fullText, ...readings.map((reading) => reading.text)].filter(Boolean).join('\n');
   const efhubDetected = efhubProfileHint || looksLikeEfhubProfileText(allText);
   const nameSource = sourceText(readings, ['name']);
+  const phaseStyleSource = sourceTextWithRawPasses(readings, ['playstyle']);
   const identitySource = [sourceText(readings, ['playstyle', 'overall', 'mainPosition', 'identityMeta']), fullText].filter(Boolean).join('\n');
   const attributeSource = [sourceText(readings, ['attributes']), fullText].filter(Boolean).join('\n');
   const positionSource = [sourceText(readings, ['positionGrid']), fullText].filter(Boolean).join('\n');
@@ -573,8 +575,10 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
       : strictNameConsensus
         ? detectedName
         : null;
-  const v600Styles = detectV600Playstyles(identitySource);
-  const playstyle = v600Styles.offensive ?? detectPlaystyle(identitySource);
+  const focusedV600Styles = detectV600Playstyles(phaseStyleSource);
+  const fallbackV600Styles = detectV600Playstyles(identitySource);
+  const v600Styles = focusedV600Styles.source !== 'NONE' ? focusedV600Styles : fallbackV600Styles;
+  const playstyle = v600Styles.offensive ?? detectPlaystyle(phaseStyleSource) ?? detectPlaystyle(identitySource);
 
   const attributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
   const positionRatings = parsePositionRatings(positionSource, positionConfidence, 'Grade de posições');
@@ -611,6 +615,12 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     const numeric = numberValue(match?.[1]);
     if (numeric !== null && numeric >= 1 && numeric <= 5) managerBoosts.push(makeValue('Bônus do técnico', `${label} +${numeric}`, conditionConfidence, 'Cartão do técnico', numeric));
   }
+
+  recordDualPlaystyleObservation({
+    playerName: name,
+    offensive: v600Styles.offensive,
+    defensive: v600Styles.defensive
+  });
 
   const identity = {
     playerName: identityValue('Nome do jogador', name, identityConfidence, 'Cabeçalho'),

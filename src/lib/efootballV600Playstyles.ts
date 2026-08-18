@@ -1,6 +1,6 @@
 import { canonicalizePlayerPlaystyle, type CanonicalPlayerPlaystyle } from './efootball2026Playstyles';
 
-export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0.0' as const;
+export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0-r47-dual-phase' as const;
 
 /**
  * A Konami confirmou publicamente Pressão no Ataque como exemplo de estilo
@@ -8,7 +8,7 @@ export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0.0' as const;
  * provisórios, mas só recebem peso de gameplay após confirmação.
  */
 export const CONFIRMED_V600_DEFENSIVE_PLAYSTYLES = ['Pressão no Ataque'] as const;
-export type ConfirmedV600DefensivePlaystyle = typeof CONFIRMED_V600_DEFENSIVE_PLAYSTYLES[number];
+export type ConfirmedV600DefensivePlaystyle = CanonicalPlayerPlaystyle | typeof CONFIRMED_V600_DEFENSIVE_PLAYSTYLES[number];
 
 function normalize(value: unknown): string {
   return String(value ?? '')
@@ -29,10 +29,46 @@ function cleanRawLabel(value: unknown): string | null {
 }
 
 export function canonicalizeV600DefensivePlaystyle(value: unknown): ConfirmedV600DefensivePlaystyle | null {
+  const canonicalPlayerStyle = canonicalizePlayerPlaystyle(value);
+  if (canonicalPlayerStyle) return canonicalPlayerStyle;
   const text = normalize(value);
   if (!text) return null;
   if (/pressao no ataque|attacking pressure|front pressure|frontline pressure/.test(text)) return 'Pressão no Ataque';
   return null;
+}
+
+function canonicalStylesInOrder(text: string): CanonicalPlayerPlaystyle[] {
+  const ordered: CanonicalPlayerPlaystyle[] = [];
+  const lines = String(text ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  for (const line of lines) {
+    const style = canonicalizePlayerPlaystyle(line);
+    if (style && ordered[ordered.length - 1] !== style) ordered.push(style);
+  }
+  return ordered;
+}
+
+function phasePairFromCompactZone(text: string) {
+  const lines = String(text ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  let offensive: CanonicalPlayerPlaystyle | null = null;
+  let defensive: ConfirmedV600DefensivePlaystyle | null = null;
+
+  for (const line of lines) {
+    const n = normalize(line);
+    const style = canonicalizePlayerPlaystyle(line);
+    const defensiveStyle = canonicalizeV600DefensivePlaystyle(line);
+    if (!offensive && style && /ataque|atacando|ofensiv|vermelh|red|\u2191|\u25b2|\u2b06/.test(n + ' ' + line)) offensive = style;
+    if (!defensive && defensiveStyle && /defesa|defendendo|defensiv|azul|blue|\u2193|\u25bc|\u2b07/.test(n + ' ' + line)) defensive = defensiveStyle;
+  }
+
+  if (offensive || defensive) return { offensive, defensive };
+
+  // Layout v6.0: dentro da área exclusiva de estilos, duas linhas distintas
+  // representam fase com bola e fase sem bola, nessa ordem visual.
+  const ordered = canonicalStylesInOrder(text);
+  if (ordered.length === 2 && ordered[0] !== ordered[1]) {
+    return { offensive: ordered[0], defensive: ordered[1] as ConfirmedV600DefensivePlaystyle };
+  }
+  return { offensive: null, defensive: null };
 }
 
 function firstCaptured(text: string, patterns: RegExp[]): string | null {
@@ -49,7 +85,7 @@ export type V600PlaystyleReading = {
   defensive: string | null;
   defensiveConfirmed: boolean;
   defensiveRaw: string | null;
-  source: 'EXPLICIT_V600' | 'LEGACY_SINGLE' | 'NONE';
+  source: 'EXPLICIT_V600' | 'DUAL_PHASE_PAIR' | 'LEGACY_SINGLE' | 'NONE';
 };
 
 export function detectV600Playstyles(text: string): V600PlaystyleReading {
@@ -73,6 +109,18 @@ export function detectV600Playstyles(text: string): V600PlaystyleReading {
     };
   }
 
+
+  const compactPair = phasePairFromCompactZone(text);
+  if (compactPair.offensive || compactPair.defensive) {
+    return {
+      offensive: compactPair.offensive,
+      defensive: compactPair.defensive,
+      defensiveConfirmed: Boolean(compactPair.defensive),
+      defensiveRaw: compactPair.defensive,
+      source: 'DUAL_PHASE_PAIR'
+    };
+  }
+
   const legacy = canonicalizePlayerPlaystyle(text);
   const defensive = canonicalizeV600DefensivePlaystyle(text);
   if (legacy || defensive) return {
@@ -83,4 +131,36 @@ export function detectV600Playstyles(text: string): V600PlaystyleReading {
     source: 'LEGACY_SINGLE'
   };
   return { offensive: null, defensive: null, defensiveConfirmed: false, defensiveRaw: null, source: 'NONE' };
+}
+
+
+export type DefensivePhaseTrainingBias = Partial<Record<
+  'shooting' | 'passing' | 'dribbling' | 'dexterity' | 'lowerBodyStrength' | 'aerialStrength' | 'defending' | 'gk1' | 'gk2' | 'gk3',
+  number
+>>;
+
+/**
+ * Peso somente da fase sem a bola. Estilos antigos que agora aparecem na seta azul
+ * podem ser reutilizados como identidade defensiva sem alterar o nome ofensivo.
+ * Rótulos desconhecidos continuam salvos no catálogo vivo, mas recebem peso zero
+ * até existir mapeamento canônico/confirmado.
+ */
+export function defensivePhaseTrainingBias(value: unknown): DefensivePhaseTrainingBias {
+  const style = canonicalizeV600DefensivePlaystyle(value);
+  if (!style) return {};
+  switch (style) {
+    case 'Pressão no Ataque': return { defending: .25, dexterity: .18, lowerBodyStrength: .22 };
+    case 'Destruidor': return { defending: .34, lowerBodyStrength: .23, dexterity: .12, aerialStrength: .10 };
+    case 'Defensor Criativo': return { defending: .25, passing: .18, lowerBodyStrength: .10, dexterity: .08 };
+    case 'Lateral Defensivo': return { defending: .28, lowerBodyStrength: .20, passing: .10, dexterity: .08 };
+    case '1º Volante': return { defending: .31, passing: .16, lowerBodyStrength: .18, aerialStrength: .08 };
+    case 'Meia versátil': return { defending: .16, lowerBodyStrength: .20, dexterity: .13, passing: .10 };
+    case 'Orquestrador': return { passing: .17, defending: .09, dexterity: .06 };
+    case 'Atacante Surpresa': return { defending: .18, lowerBodyStrength: .14, aerialStrength: .12 };
+    case 'Lateral Ofensivo':
+    case 'Lateral Atacante': return { dexterity: .14, lowerBodyStrength: .18, defending: .11 };
+    case 'Goleiro Ofensivo': return { gk2: .18, gk3: .16, lowerBodyStrength: .06 };
+    case 'Goleiro Defensivo': return { gk1: .18, gk2: .17, gk3: .14 };
+    default: return {};
+  }
 }
