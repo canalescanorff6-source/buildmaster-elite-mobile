@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
+const engine = fs.readFileSync('src/lib/individualCalibrationEngineV4080R41.ts', 'utf8');
+assert.match(pipeline, /applyIndividualIdentityEngineV4080R39\(current\)[\s\S]*applyIndividualCalibrationEngineV4080R41\(current\)[\s\S]*applyDefinitiveAdditionalSkillsV600R15\(current\)/);
+assert.match(engine, /exactPlan/);
+assert.match(engine, /trainingTotalCost\(level\)/);
+assert.match(engine, /robust/);
+assert.match(engine, /VARIANTS/);
+assert.doesNotMatch(engine, /mutate\(safeBase/);
+console.log('r41 aprovada: busca global exata e individual antes do Top 5.');

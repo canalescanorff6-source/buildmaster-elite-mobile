@@ -34,43 +34,32 @@ import { applyPlayerGenerationFinalizerV4080R13 } from './playerGenerationFinali
 import { applyFinalIdentityEngineV4080R27 } from './finalIdentityEngineV4080R27';
 import { applyProMatchOptimizerV4080R30 } from './proMatchOptimizerV4080R30';
 import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngineV4080R39';
+import { applyIndividualCalibrationEngineV4080R41 } from './individualCalibrationEngineV4080R41';
 import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
-
 
 /**
  * Contratos históricos preservados para as regressões e auditorias legadas.
- *
- * Estes marcadores documentam a ordem lógica que existia nas versões anteriores;
- * o runtime atual usa a variável `current`, mas mantém as mesmas garantias:
- * integridade de habilidades, recalculo de Ímpeto e motores em sequência.
- *
  * const withFinalSkills = enforceComplementarySkillIntegrity(supreme)
  * const withFinalImpetos = applyLocalAiToResult(withFinalSkills)
  * const correctedFinal = withFinalImpetos
  * const integrityBeforeCalibration = enforceComplementarySkillIntegrity(correctedFinal)
  * const calibratedImpetos = integrityBeforeCalibration
  * return enforceComplementarySkillIntegrity(applyCalibrationV32(calibratedImpetos))
- *
  * const advancedIntegrity = enforceComplementarySkillIntegrity(current)
  * const finalAdvanced = advancedReconciled
  * return enforceComplementarySkillIntegrity(finalAdvanced)
- *
  * const power = applyPowerBuildEngineV3850(advancedIntegrity)
  * const powerIntegrity = enforceComplementarySkillIntegrity(power)
  * const finalPower = applyPowerBuildEngineV3850(powerIntegrity)
  * const finalPower = powerIntegrity
  * return enforceComplementarySkillIntegrity(finalPower)
- *
  * const maximumIntegrity = enforceComplementarySkillIntegrity(finalPower)
  * const finalMaximum = applyMaxMatchPerformanceV3860(maximumIntegrity)
  * const finalMaximum = maximumIntegrity
- *
  * const finalMaximumIntegrity = enforceComplementarySkillIntegrity(finalMaximum)
  * const supremePerformance = applySupremePerformanceV3870(finalMaximumIntegrity)
- *
  * enforceComplementarySkillIntegrity(supreme)
  */
-
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   let current = restoreCanonicalInputBeforeV3930(result);
   current = applyCompetitiveFusionToResult(current);
@@ -116,21 +105,12 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyDualPhaseBuild2027V4080R14(current);
   current = applyGameplayMetaV600R10(current);
   current = applyLiveEvolutionV600R11(current);
-
-  // r27 fecha a identidade funcional e reconstrói cartas já upadas.
   current = applyFinalIdentityEngineV4080R27(current);
-
-  // r30 usa referências profissionais exatas como benchmark, nunca como cópia cega.
   current = applyProMatchOptimizerV4080R30(current);
-
-  // r39 é a auditoria global anti-ficha-genérica. Ela roda DEPOIS do benchmark
-  // e ANTES das habilidades, para todas as posições e estilos.
   current = applyIndividualIdentityEngineV4080R39(current);
-
-  // Top 5 e Ímpeto/finalização passam a nascer da ficha individualizada.
+  current = applyIndividualCalibrationEngineV4080R41(current);
   current = applyDefinitiveAdditionalSkillsV600R15(current);
   current = synchronizeFinalSkillIntegrity(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);
-
   return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
 }
