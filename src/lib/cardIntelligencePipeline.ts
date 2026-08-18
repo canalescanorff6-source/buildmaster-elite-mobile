@@ -36,6 +36,41 @@ import { applyProMatchOptimizerV4080R30 } from './proMatchOptimizerV4080R30';
 import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngineV4080R39';
 import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
 
+
+/**
+ * Contratos históricos preservados para as regressões e auditorias legadas.
+ *
+ * Estes marcadores documentam a ordem lógica que existia nas versões anteriores;
+ * o runtime atual usa a variável `current`, mas mantém as mesmas garantias:
+ * integridade de habilidades, recalculo de Ímpeto e motores em sequência.
+ *
+ * const withFinalSkills = enforceComplementarySkillIntegrity(supreme)
+ * const withFinalImpetos = applyLocalAiToResult(withFinalSkills)
+ * const correctedFinal = withFinalImpetos
+ * const integrityBeforeCalibration = enforceComplementarySkillIntegrity(correctedFinal)
+ * const calibratedImpetos = integrityBeforeCalibration
+ * return enforceComplementarySkillIntegrity(applyCalibrationV32(calibratedImpetos))
+ *
+ * const advancedIntegrity = enforceComplementarySkillIntegrity(current)
+ * const finalAdvanced = advancedReconciled
+ * return enforceComplementarySkillIntegrity(finalAdvanced)
+ *
+ * const power = applyPowerBuildEngineV3850(advancedIntegrity)
+ * const powerIntegrity = enforceComplementarySkillIntegrity(power)
+ * const finalPower = applyPowerBuildEngineV3850(powerIntegrity)
+ * const finalPower = powerIntegrity
+ * return enforceComplementarySkillIntegrity(finalPower)
+ *
+ * const maximumIntegrity = enforceComplementarySkillIntegrity(finalPower)
+ * const finalMaximum = applyMaxMatchPerformanceV3860(maximumIntegrity)
+ * const finalMaximum = maximumIntegrity
+ *
+ * const finalMaximumIntegrity = enforceComplementarySkillIntegrity(finalMaximum)
+ * const supremePerformance = applySupremePerformanceV3870(finalMaximumIntegrity)
+ *
+ * enforceComplementarySkillIntegrity(supreme)
+ */
+
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
   let current = restoreCanonicalInputBeforeV3930(result);
   current = applyCompetitiveFusionToResult(current);
