@@ -1,7 +1,7 @@
 import type { AnalysisResult, AttributeKey, PositionCode, TrainingKey, TrainingPlan } from './analyzerDomain';
 import { TRAINING_KEYS, trainingPlanTotalCost, trainingTotalCost } from './trainingPlanCore';
 
-export const FINAL_CARD_AUTHORITY_V4080_R45 = '40.80-r45-final-card-authority' as const;
+export const FINAL_CARD_AUTHORITY_V4080_R45 = '40.80-r46-final-card-authority-identity-lock' as const;
 
 const ATTRIBUTE_GROUPS: Record<TrainingKey, AttributeKey[]> = {
   shooting: ['finishing','placeKicking','curl'],
@@ -117,6 +117,162 @@ function physicalBias(result: AnalysisResult, key: TrainingKey) {
   return score;
 }
 
+
+function individualIdentityBias(result: AnalysisResult, key: TrainingKey) {
+  const a = result.parsed.attributes;
+  const position = result.bestPosition.code;
+  const style = normalize(result.parsed.offensivePlaystyle ?? result.parsed.playstyle);
+
+  const carry = mean([
+    Number(a.ballControl ?? 0),
+    Number(a.dribbling ?? 0),
+    Number(a.tightPossession ?? 0),
+    Number(a.balance ?? 0),
+    Number(a.acceleration ?? 0)
+  ]);
+  const finish = mean([
+    Number(a.finishing ?? 0),
+    Number(a.offensiveAwareness ?? 0),
+    Number(a.kickingPower ?? 0)
+  ]);
+  const creation = mean([
+    Number(a.lowPass ?? 0),
+    Number(a.loftedPass ?? 0),
+    Number(a.ballControl ?? 0)
+  ]);
+  const defence = mean([
+    Number(a.defensiveAwareness ?? 0),
+    Number(a.defensiveEngagement ?? 0),
+    Number(a.tackling ?? 0),
+    Number(a.aggression ?? 0)
+  ]);
+  const aerial = mean([
+    Number(a.heading ?? 0),
+    Number(a.jump ?? 0),
+    Number(a.physicalContact ?? 0)
+  ]);
+
+  let score = 0;
+
+  const technicalDribbler =
+    ['SS','AMF','LWF','RWF'].includes(position) &&
+    carry >= 88 &&
+    carry >= Math.max(finish, creation) + 3;
+
+  if (technicalDribbler) {
+    if (key === 'dribbling') score += 6.5;
+    if (key === 'dexterity') score += 5.5;
+    if (key === 'shooting') score -= 1.2;
+    if (key === 'passing') score -= 1.0;
+    if (key === 'aerialStrength') score -= 1.4;
+  }
+
+  if (position === 'CB') {
+    if (key === 'defending') score += 4.5;
+    if (key === 'aerialStrength') score += aerial >= 82 ? 2.2 : 1.1;
+    if (key === 'shooting' || key === 'dribbling') score -= 6;
+  }
+
+  if (position === 'DMF' && /primeiro volante|anchor man/.test(style)) {
+    if (key === 'defending') score += 4.0;
+    if (key === 'passing') score += 1.8;
+    if (key === 'shooting') score -= 4.0;
+  }
+
+  if ((position === 'LB' || position === 'RB') && /lateral defensivo|defensive full/.test(style)) {
+    if (key === 'defending') score += 3.2;
+    if (key === 'lowerBodyStrength') score += 2.0;
+    if (key === 'passing') score += 1.1;
+    if (key === 'shooting') score -= 4.0;
+  }
+
+  if ((position === 'LB' || position === 'RB') && defence >= 88) {
+    if (key === 'defending') score += 1.2;
+  }
+
+  if (position === 'CF' && /artilheiro|goal poacher/.test(style)) {
+    if (key === 'shooting') score += 3.5;
+    if (key === 'dexterity') score += 2.2;
+    if (key === 'defending') score -= 8.0;
+  }
+
+  if (position === 'GK') {
+    if (key === 'gk1' || key === 'gk2' || key === 'gk3') score += 5.0;
+    if (key === 'shooting' || key === 'dribbling' || key === 'defending') score -= 10.0;
+  }
+
+  return score;
+}
+
+function hardIdentityValid(result: AnalysisResult, plan: TrainingPlan) {
+  const a = result.parsed.attributes;
+  const position = result.bestPosition.code;
+  const style = normalize(result.parsed.offensivePlaystyle ?? result.parsed.playstyle);
+
+  const carry = mean([
+    Number(a.ballControl ?? 0),
+    Number(a.dribbling ?? 0),
+    Number(a.tightPossession ?? 0),
+    Number(a.balance ?? 0),
+    Number(a.acceleration ?? 0)
+  ]);
+  const finish = mean([
+    Number(a.finishing ?? 0),
+    Number(a.offensiveAwareness ?? 0),
+    Number(a.kickingPower ?? 0)
+  ]);
+  const creation = mean([
+    Number(a.lowPass ?? 0),
+    Number(a.loftedPass ?? 0),
+    Number(a.ballControl ?? 0)
+  ]);
+
+  const technicalDribbler =
+    ['SS','AMF','LWF','RWF'].includes(position) &&
+    carry >= 88 &&
+    carry >= Math.max(finish, creation) + 3;
+
+  if (
+    technicalDribbler &&
+    Number(plan.dribbling ?? 0) + Number(plan.dexterity ?? 0) <
+      Number(plan.shooting ?? 0) + Number(plan.passing ?? 0)
+  ) return false;
+
+  if (
+    (position === 'LWF' || position === 'RWF') &&
+    Number(plan.dribbling ?? 0) + Number(plan.dexterity ?? 0) + Number(plan.lowerBodyStrength ?? 0) <=
+      Number(plan.defending ?? 0) + Number(plan.aerialStrength ?? 0)
+  ) return false;
+
+  if (
+    position === 'CB' &&
+    Number(plan.defending ?? 0) + Number(plan.aerialStrength ?? 0) <=
+      Number(plan.shooting ?? 0) + Number(plan.dribbling ?? 0)
+  ) return false;
+
+  if (
+    position === 'DMF' &&
+    /primeiro volante|anchor man/.test(style) &&
+    Number(plan.defending ?? 0) + Number(plan.passing ?? 0) <=
+      Number(plan.shooting ?? 0) + Number(plan.dribbling ?? 0)
+  ) return false;
+
+  if (
+    (position === 'LB' || position === 'RB') &&
+    /lateral defensivo|defensive full/.test(style) &&
+    Number(plan.defending ?? 0) + Number(plan.lowerBodyStrength ?? 0) + Number(plan.passing ?? 0) <=
+      Number(plan.shooting ?? 0) + Number(plan.aerialStrength ?? 0)
+  ) return false;
+
+  if (
+    position === 'GK' &&
+    Number(plan.gk1 ?? 0) + Number(plan.gk2 ?? 0) + Number(plan.gk3 ?? 0) <=
+      Number(plan.shooting ?? 0) + Number(plan.dribbling ?? 0) + Number(plan.defending ?? 0)
+  ) return false;
+
+  return true;
+}
+
 function physicalSignals(result: AnalysisResult) {
   const p = result.parsed.physicalProfile;
   const entries = Object.entries(p).filter(([,value]) => Number.isFinite(Number(value)) && Number(value) > 0);
@@ -126,7 +282,7 @@ function physicalSignals(result: AnalysisResult) {
 function levelUtility(result: AnalysisResult, key: TrainingKey, level: number, baseline: number) {
   const natural = groupAverage(result,key);
   const dna = clamp((natural-baseline)/8,-1.6,1.8);
-  const fit = Math.max(.05, positionWeight(result.bestPosition.code,key) + styleWeight(result,key) + physicalBias(result,key));
+  const fit = Math.max(.05, positionWeight(result.bestPosition.code,key) + styleWeight(result,key) + physicalBias(result,key) + individualIdentityBias(result,key));
   let score = 0;
   for (let current=1; current<=level; current+=1) {
     const projected = natural + current - 1;
@@ -140,6 +296,9 @@ function exactIndividualPlan(result: AnalysisResult): TrainingPlan | null {
   const budget = Number(result.trainingPointsTotal ?? trainingPlanTotalCost(result.training));
   if (!Number.isFinite(budget) || budget <= 0) return null;
   const keys = activeKeys(result.bestPosition.code);
+  const staminaFloor = result.matchStaminaV4080R44?.adjusted
+    ? Number(result.training.lowerBodyStrength ?? 0)
+    : 0;
   const baseline = mean(keys.map((key)=>groupAverage(result,key)));
   type Node = { score:number; plan:TrainingPlan };
   let dp: Array<Node|null> = Array.from({length:budget+1},()=>null);
@@ -151,6 +310,7 @@ function exactIndividualPlan(result: AnalysisResult): TrainingPlan | null {
       const previous = dp[spent];
       if (!previous) continue;
       for (let level=0; level<=16; level+=1) {
+        if (key === 'lowerBodyStrength' && level < staminaFloor) continue;
         const total = spent + trainingTotalCost(level);
         if (total>budget) break;
         const score = previous.score + levelUtility(result,key,level,baseline);
@@ -172,7 +332,21 @@ export function applyFinalCardAuthorityV4080R45(result: AnalysisResult): Analysi
   const signals = physicalSignals(result);
   const candidate = exactIndividualPlan(result);
   const budget = Number(result.trainingPointsTotal ?? trainingPlanTotalCost(result.training));
-  const winner = candidate && trainingPlanTotalCost(candidate) === budget ? candidate : result.training;
+  const candidateValid =
+    candidate &&
+    trainingPlanTotalCost(candidate) === budget &&
+    hardIdentityValid(result, candidate);
+
+  const previousValid =
+    trainingPlanTotalCost(result.training) === budget &&
+    hardIdentityValid(result, result.training);
+
+  const winner = candidateValid
+    ? candidate
+    : previousValid
+      ? result.training
+      : result.training;
+
   const changed = signature(winner) !== signature(result.training);
 
   return {
