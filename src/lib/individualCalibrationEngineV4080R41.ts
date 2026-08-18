@@ -91,9 +91,10 @@ function style(result:AnalysisResult,k:TrainingKey){
   return x;
 }
 
-function utility(result:AnalysisResult,a:Required<Attributes>,k:TrainingKey,level:number,base:number){
+function utility(result:AnalysisResult,a:Required<Attributes>,k:TrainingKey,level:number,base:number,technicalDribbler:boolean){
   const naturalAvg=avg(a,k), dna=Math.max(-1.4,Math.min(1.8,(naturalAvg-base)/8));
-  const fit=role(result.bestPosition.code,k)+style(result,k);
+  const identity=technicalDribbler ? (k==='dribbling'?6:k==='dexterity'?5:k==='shooting'?-1:k==='passing'?-1:0) : 0;
+  const fit=role(result.bestPosition.code,k)+style(result,k)+identity;
   let score=0;
   for(let i=1;i<=level;i++){
     const projected=naturalAvg+i-1;
@@ -105,6 +106,11 @@ function utility(result:AnalysisResult,a:Required<Attributes>,k:TrainingKey,leve
 
 function exact(result:AnalysisResult,a:Required<Attributes>,budget:number){
   const keys=keysFor(result.bestPosition.code), base=mean(keys.map(k=>avg(a,k)));
+  const raw=full(result.parsed.attributes);
+  const carry=mean([raw.ballControl,raw.dribbling,raw.tightPossession,raw.balance,raw.acceleration]);
+  const finish=mean([raw.finishing,raw.offensiveAwareness,raw.kickingPower]);
+  const creation=mean([raw.lowPass,raw.loftedPass,raw.ballControl]);
+  const technicalDribbler=['SS','AMF','LWF','RWF'].includes(result.bestPosition.code) && carry>=88 && carry>=Math.max(finish,creation)+3;
   type Node={score:number;plan:TrainingPlan};
   let dp:Array<Node|null>=Array.from({length:budget+1},()=>null); dp[0]={score:0,plan:empty()};
   for(const key of keys){
@@ -113,7 +119,7 @@ function exact(result:AnalysisResult,a:Required<Attributes>,budget:number){
       const prev=dp[spent]; if(!prev)continue;
       for(let level=0;level<=16;level++){
         const total=spent+trainingTotalCost(level); if(total>budget)break;
-        const score=prev.score+utility(result,a,key,level,base);
+        const score=prev.score+utility(result,a,key,level,base,technicalDribbler);
         if(!next[total]||score>(next[total]?.score??-Infinity))next[total]={score,plan:{...prev.plan,[key]:level}};
       }
     }

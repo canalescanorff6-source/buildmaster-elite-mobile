@@ -282,6 +282,12 @@ function candidateFor(result: AnalysisResult, position: PositionCode, skill: str
 
 function styleBlueprint(result: AnalysisResult, position: PositionCode): readonly Category[] {
   const style = styleName(result);
+  const a = result.parsed.attributes;
+  const carry = avg(a.ballControl, a.dribbling, a.tightPossession, a.balance, a.acceleration);
+  const finish = avg(a.finishing, a.offensiveAwareness, a.kickingPower);
+  const creation = avg(a.lowPass, a.loftedPass, a.ballControl);
+  const technicalDribbler = ['SS','AMF','LWF','RWF'].includes(position) && carry >= 88 && carry >= Math.max(finish, creation) + 3;
+  if (technicalDribbler) return ['drible','drible','passe','finalização','físico'];
   if (position === 'GK') return /ofensivo|offensive/.test(style) ? ['goleiro','goleiro','goleiro','passe','mental'] : SLOT_BLUEPRINT.GK;
   if (position === 'CB' && /defensor criativo|build up/.test(style)) return ['defesa','defesa','passe','aérea','físico'];
   if (position === 'CB' && /destruidor|destroyer|atacante surpresa|extra frontman/.test(style)) return ['defesa','defesa','defesa','aérea','físico'];
@@ -404,6 +410,7 @@ export function applyDefinitiveAdditionalSkillsV600R15(result: AnalysisResult): 
       }))
     } : result.deepCardIntelligence,
     recommendationExplanation: [
+      'Proteção anti-overall: otimização por DNA e desempenho, sem perseguir overall.',
       `Top 5 Definitivo v6.0: ${recommendedSkills.join(', ')}.`,
       `${essentialCount} habilidade(s) essencial(is), ${metaCount} otimização(ões) META v6.0; estilo ${style}; função-base ${position}; função real ${functionalRole}.`,
       `Filtro universal: ${owned.length} habilidade(s) já possuída(s) foram bloqueadas contra repetição; nenhum estilo desconhecido recebe peso inventado.`,
