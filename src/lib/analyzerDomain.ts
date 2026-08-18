@@ -2115,6 +2115,15 @@ export type MatchStaminaV4080R44Analysis = {
   note: string;
 };
 
+export type FinalCardAuthorityV4080R45Analysis = {
+  engineVersion: string;
+  changed: boolean;
+  physicalSignalsUsed: number;
+  physicalFingerprint: string;
+  authority: 'result.training';
+  reason: string;
+};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -2194,6 +2203,7 @@ export type AnalysisResult = {
   gameplayMetaV600R10?: GameplayMetaV600R10Analysis;
   liveEvolutionV600R11?: LiveEvolutionV600R11;
   matchStaminaV4080R44?: MatchStaminaV4080R44Analysis;
+  finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

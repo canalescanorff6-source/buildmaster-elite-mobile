@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const panel=fs.readFileSync('src/components/UnifiedPerformanceV3920Panel.tsx','utf8');
+const pipe=fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
+const engine=fs.readFileSync('src/lib/finalCardAuthorityV4080R45.ts','utf8');
+assert.ok(panel.includes('const appliedTraining = result.training;'), 'Ficha aplicada ainda usa motor histórico em vez da autoridade final');
+assert.ok(!panel.includes("precision4040 && result.objective === 'COMPETITIVE' ? precision4040.finalTraining"), 'Plano v40.40 ainda sobrescreve a ficha exibida');
+assert.match(pipe,/applyMatchStaminaEngineV4080R44\(current\)[\s\S]*applyFinalCardAuthorityV4080R45\(current\)[\s\S]*applyDefinitiveAdditionalSkillsV600R15\(current\)/);
+assert.ok(engine.includes('physicalProfile'));
+assert.ok(engine.includes('physicalBias'));
+assert.ok(engine.includes("authority:'result.training'"));
+console.log('r45 aprovada: ficha exibida = ficha final; físico entra na autoridade individual antes do Top 5.');

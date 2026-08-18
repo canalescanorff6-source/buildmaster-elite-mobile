@@ -69,7 +69,8 @@ export function UnifiedPerformanceV3920Panel({
   const status = adaptive?.status ?? unified.resourceSafety.status;
   const statusLabel = adaptive?.statusLabel ?? unified.resourceSafety.label;
   const statusClassName = statusClass(status);
-  const appliedTraining = longitudinalGameplay?.applied ? result.training : precision4040 && result.objective === 'COMPETITIVE' ? precision4040.finalTraining : adaptiveMaximum?.objectiveMode === 'ADAPTATIVO' ? adaptiveMaximum.finalTraining : functional?.finalTraining ?? adaptive?.adaptedTraining ?? unified.canonicalTraining ?? result.training;
+  // r45: uma única autoridade visual e funcional. Motores históricos continuam auditáveis, mas não podem substituir a ficha final na tela.
+  const appliedTraining = result.training;
   const appliedSkills = safeArray(functional?.finalSkills).length
     ? safeArray(functional?.finalSkills)
     : safeArray(adaptive?.finalSkills).length
@@ -77,7 +78,7 @@ export function UnifiedPerformanceV3920Panel({
       : safeArray(unified.canonicalSkills);
   const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
   const impetos = safeArray(functional?.impetos).length ? safeArray(functional?.impetos) : safeArray(adaptive?.impetos).length ? safeArray(adaptive?.impetos) : safeArray(unified.canonicalImpetos);
-  const primaryImpeto = functional?.primaryImpeto ?? adaptive?.primaryImpeto ?? unified.primaryImpeto ?? impetos[0]?.name ?? null;
+  const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? functional?.primaryImpeto ?? adaptive?.primaryImpeto ?? unified.primaryImpeto ?? impetos[0]?.name ?? null;
   const conflicts = safeArray(positionFit?.conflicts);
   const traits = safeArray(identity?.traits);
   const deterministicChecks = safeArray(unified.deterministicChecks);
@@ -186,7 +187,7 @@ export function UnifiedPerformanceV3920Panel({
         <div className="unified-v3920-training-grid">
           {Object.entries(appliedTraining ?? {}).filter(([, value]) => Number(value) > 0).map(([key, value]) => <div key={key}><span>{TRAINING_LABELS[key as TrainingKey] ?? key}</span><strong>+{value}</strong></div>)}
         </div>
-        <p><LockKeyhole size={14} /> {functional?.roleSignature ?? adaptive?.positionSignature ?? unified.lockSignature}</p>
+        <p><LockKeyhole size={14} /> {result.finalCardAuthorityV4080R45 ? `final-r45 • físico ${result.finalCardAuthorityV4080R45.physicalSignalsUsed}` : (functional?.roleSignature ?? adaptive?.positionSignature ?? unified.lockSignature)}</p>
         {unified.recipeMemory?.note && <small className={`unified-v3920-memory ${String(unified.recipeMemory.status ?? 'NOVA').toLowerCase()}`}>{unified.recipeMemory.note}</small>}
         {longitudinalGameplay?.applied && <details open><summary>Ver aprendizado longitudinal v40.60</summary><p>{longitudinalGameplay.winnerLabel} foi promovida somente depois de repetir vantagem em várias sessões. A memória continua válida apenas enquanto a mesma alternativa e distribuição existirem no Pareto atual.</p><small>{longitudinalGameplay.sessions} sessões • {longitudinalGameplay.pairedSessions} pareadas • confiança {Math.round(longitudinalGameplay.confidenceScore)}/100 • verificada em {longitudinalGameplay.verifiedAt ? new Date(longitudinalGameplay.verifiedAt).toLocaleDateString('pt-BR') : '—'}</small></details>}
         {validatedGameplay?.applied && !longitudinalGameplay?.applied && <details><summary>Ver evidência provisória v40.60</summary><p>{validatedGameplay.winnerLabel} venceu o A/B da v40.60, mas a v40.60 ainda exige repetição em sessões distintas antes de aplicar essa memória como ficha permanente.</p></details>}
