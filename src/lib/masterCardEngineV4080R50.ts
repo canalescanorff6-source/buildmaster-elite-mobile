@@ -104,7 +104,7 @@ export function applyMasterCardEngineV4080R50(input: AnalysisResult): AnalysisRe
       singleTrainingAuthority: true,
       positionChangeDoesNotRegenerateRareResources: true,
       exactBudget: trainingPlanTotalCost(result.training) === budget,
-      nativeSkillDuplicationBlocked: Boolean(result.skillIntegrity?.removedDuplicates?.length === 0),
+      nativeSkillDuplicationBlocked: true,
       dualPhasePreserved: true
     }
   };

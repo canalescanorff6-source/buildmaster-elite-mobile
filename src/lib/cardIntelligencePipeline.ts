@@ -5,7 +5,7 @@ import { applyLocalAiToResult } from './localAiEngine';
 import { applyLocalCorrectionsToResult } from '../modules/builds/dynamicRules';
 import { applyUnifiedCardIntelligence } from './unifiedCardIntelligence';
 import { applySupremeGameplayEngine } from './supremeGameplayEngine';
-import { enforceComplementarySkillIntegrity, synchronizeFinalSkillIntegrity } from './skillIntegrity';
+import { enforceComplementarySkillIntegrity } from './skillIntegrity';
 import { applyCalibrationV32 } from './calibrationV32';
 import { applyAdvancedMotorV3750 } from './advancedMotorV3750';
 import { applyPowerBuildEngineV3850 } from './performanceBuildEngineV3850';
