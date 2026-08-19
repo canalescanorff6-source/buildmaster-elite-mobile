@@ -1,7 +1,8 @@
 import { canonicalizePlayerPlaystyle } from './efootball2026Playstyles';
 import { canonicalizeV600DefensivePlaystyle } from './efootballV600Playstyles';
+import { safeStorageGetJson, safeStorageSetJson } from './safeLocalStorage';
 
-export const DUAL_PLAYSTYLE_REGISTRY_V4080_R47 = '40.80-r47-dual-playstyle-registry' as const;
+export const DUAL_PLAYSTYLE_REGISTRY_V4080_R47 = '40.80-r48-dual-playstyle-registry-central-storage' as const;
 const STORAGE_KEY = 'buildmaster.dual-playstyle-registry.v4080-r47';
 
 export type DualPlaystylePhase = 'OFFENSIVE' | 'DEFENSIVE';
@@ -41,19 +42,18 @@ function emptyRegistry(): DualPlaystyleRegistry {
   return { version: DUAL_PLAYSTYLE_REGISTRY_V4080_R47, styles: [], pairs: [] };
 }
 export function readDualPlaystyleRegistry(): DualPlaystyleRegistry {
-  if (typeof window === 'undefined') return emptyRegistry();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed || !Array.isArray(parsed.styles) || !Array.isArray(parsed.pairs)) return emptyRegistry();
-    return { version: DUAL_PLAYSTYLE_REGISTRY_V4080_R47, styles: parsed.styles, pairs: parsed.pairs };
-  } catch {
-    return emptyRegistry();
-  }
+  const parsed = safeStorageGetJson<Partial<DualPlaystyleRegistry>>(STORAGE_KEY, {});
+  if (!Array.isArray(parsed.styles) || !Array.isArray(parsed.pairs)) return emptyRegistry();
+  return {
+    version: DUAL_PLAYSTYLE_REGISTRY_V4080_R47,
+    styles: parsed.styles,
+    pairs: parsed.pairs
+  };
 }
 function writeRegistry(registry: DualPlaystyleRegistry) {
-  if (typeof window === 'undefined') return;
-  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(registry)); } catch { /* armazenamento cheio/privado não bloqueia OCR */ }
+  // r48: todo acesso persistente passa pela camada centralizada de storage.
+  // Falha de quota/ambiente privado continua não bloqueando o OCR.
+  safeStorageSetJson(STORAGE_KEY, registry);
 }
 function upsertStyle(registry: DualPlaystyleRegistry, phase: DualPlaystylePhase, raw: unknown, now: string) {
   const label = clean(raw);
