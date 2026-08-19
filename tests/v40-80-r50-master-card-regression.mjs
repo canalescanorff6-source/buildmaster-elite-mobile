@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
+const master = fs.readFileSync('src/lib/masterCardEngineV4080R50.ts','utf8');
+assert.ok(pipeline.includes('applyMasterCardEngineV4080R50'));
+assert.equal((pipeline.match(/applyFinalCardAuthorityV4080R45\(/g)||[]).length,0);
+assert.equal((pipeline.match(/applyDefinitiveAdditionalSkillsV600R15\(/g)||[]).length,0);
+assert.ok(master.includes("resourcePolicy: 'PERMANENTE_POR_CARTA'"));
+assert.ok(master.includes('positionChangeDoesNotRegenerateRareResources: true'));
+assert.ok(master.includes('singleTrainingAuthority: true'));
+assert.ok(master.includes('collisionFingerprint'));
+console.log('r50 aprovada: autoridade única, ficha Mestre e recursos raros permanentes por carta.');

@@ -36,8 +36,7 @@ import { applyProMatchOptimizerV4080R30 } from './proMatchOptimizerV4080R30';
 import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngineV4080R39';
 import { applyIndividualCalibrationEngineV4080R41 } from './individualCalibrationEngineV4080R41';
 import { applyMatchStaminaEngineV4080R44 } from './matchStaminaEngineV4080R44';
-import { applyFinalCardAuthorityV4080R45 } from './finalCardAuthorityV4080R45';
-import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
+import { applyMasterCardEngineV4080R50 } from './masterCardEngineV4080R50';
 
 /**
  * Contratos históricos preservados para as regressões e auditorias legadas.
@@ -112,9 +111,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyIndividualIdentityEngineV4080R39(current);
   current = applyIndividualCalibrationEngineV4080R41(current);
   current = applyMatchStaminaEngineV4080R44(current);
-  current = applyFinalCardAuthorityV4080R45(current);
-  current = applyDefinitiveAdditionalSkillsV600R15(current);
-  current = synchronizeFinalSkillIntegrity(current);
+  current = applyMasterCardEngineV4080R50(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);
   return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
 }
