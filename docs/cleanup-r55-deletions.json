@@ -1,0 +1,1332 @@
+[
+  {
+    "path": "ANALISE_VIDEO_INTELIGENTE_V31.77.md",
+    "bytes": 1791,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_AUTORREPARO_V38.39.md",
+    "bytes": 672,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_HOTFIX_V31.00_V38.39.md",
+    "bytes": 506,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_HOTFIX_V31.20_V38.39.md",
+    "bytes": 594,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_IDENTIDADE_BM_V38.40.md",
+    "bytes": 638,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_LABORATORIO_PRO_GLOBAL_V39.00.md",
+    "bytes": 753,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_LOGIN_SERVIDOR_V38.40.md",
+    "bytes": 494,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_MAPEAMENTO_TOTAL_V39.50.md",
+    "bytes": 581,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_MOTOR_DOMINANTE_V39.10.md",
+    "bytes": 559,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.32.md",
+    "bytes": 2505,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.33.md",
+    "bytes": 1174,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.34.md",
+    "bytes": 2001,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.35.md",
+    "bytes": 1110,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.36.md",
+    "bytes": 739,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.37.md",
+    "bytes": 1590,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.38.md",
+    "bytes": 2245,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ARQUIVOS_ALTERADOS_V38.39.md",
+    "bytes": 1096,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ATUALIZACAO_COMPLETA_V38.32.md",
+    "bytes": 3507,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ATUALIZACAO_CONTINUA_V37.70.md",
+    "bytes": 1804,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ATUALIZACAO_PROGRESSO_V40.10.md",
+    "bytes": 989,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "AUDITORIA_COMPLETA_ESTABILIDADE_CORES_R8_V38.40.md",
+    "bytes": 5488,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "AUDITORIA_COMPLETA_GAMEPLAY_V31.82.md",
+    "bytes": 5500,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "AUDITORIA_PREVENTIVA_CI_SUPABASE_V38.40.md",
+    "bytes": 2208,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "BUILD_SOURCE_V38_40.txt",
+    "bytes": 367,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "BUILD_SOURCE_V40_00.txt",
+    "bytes": 360,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CALIBRADOR_NITIDO_EFHUB_V31.82.md",
+    "bytes": 1303,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CALIBRADOR_TELA_CHEIA_NITIDEZ_REAL_V31.82.md",
+    "bytes": 1381,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CALIBRADOR_TELA_CHEIA_SALVAR_SAIR_V31.82.md",
+    "bytes": 593,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CALIBRADOR_VISUAL_EFHUB_V31.81.md",
+    "bytes": 1105,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "COFRE_CLEAN_V38.00.md",
+    "bytes": 2979,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "COMO_SUBSTITUIR_NO_GITHUB.txt",
+    "bytes": 811,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_ABERTURA_ANDROID_V38.40.md",
+    "bytes": 1481,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_ARMAZENAMENTO_INTERNO_V38.40.md",
+    "bytes": 1587,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_AUDITORIA_DETERMINISTICA_V38.36.md",
+    "bytes": 884,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_AUTORREPARO_BOUNDARY_V38.40.md",
+    "bytes": 696,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_AUTORREPARO_ROTAS_V31.72.md",
+    "bytes": 1126,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_AUTORREPARO_TSCONFIG_V38.39.md",
+    "bytes": 1082,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_BUILD_V37.31.md",
+    "bytes": 837,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CAUSA_RAIZ_OCR_POSICAO_R5_V38.40.md",
+    "bytes": 4038,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CICLO_RECURSO_SPLASH_ANDROID_V38.40.md",
+    "bytes": 872,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_MOTOR_SUPREMO_V38.70.md",
+    "bytes": 3251,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_MOTOR_UNIFICADO_V39.20.md",
+    "bytes": 573,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_OCR_R6_V38.40.md",
+    "bytes": 893,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_OCR_V31.79.md",
+    "bytes": 2231,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_OCR_V40.20_R3.md",
+    "bytes": 1843,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_PUBLICACAO_V38.40.md",
+    "bytes": 539,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_QUATRO_REGRESSOES_V38.40.md",
+    "bytes": 1441,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_ROTAS_V31.70.md",
+    "bytes": 1433,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_ROTA_RAIZ_TYPESCRIPT_V38.40.md",
+    "bytes": 758,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V31.78.md",
+    "bytes": 970,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V31.81.md",
+    "bytes": 2254,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V32.00_REGRESSAO_V30.md",
+    "bytes": 1426,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V33.00_REGRESSOES_LEGADAS.md",
+    "bytes": 1156,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V34.00_TYPESCRIPT.md",
+    "bytes": 1221,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V37.71.md",
+    "bytes": 866,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V38.31_V40.10.md",
+    "bytes": 1331,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CI_V38.38_V40.00.md",
+    "bytes": 1392,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_COMPATIBILIDADE_DEPENDENCIAS_V31.82.md",
+    "bytes": 1006,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_COMPLETA_CI_V38.34.md",
+    "bytes": 2446,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CONSOLIDADA_V31.70.md",
+    "bytes": 1135,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CONTAS_V31.71.md",
+    "bytes": 2995,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CONTRASTE_V37.32.md",
+    "bytes": 681,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CONTRATOS_LEGADOS_V38.38.md",
+    "bytes": 909,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CONTRATO_CI_R7_V38.40.md",
+    "bytes": 1250,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_CRIAR_USUARIO_V31.74.md",
+    "bytes": 1374,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_DEFINITIVA_LOGIN_SERVIDOR_ANDROID_V38.40.md",
+    "bytes": 3077,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_DEFINITIVA_REGRESSAO_V31.00_V38.39.md",
+    "bytes": 1898,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_DEFINITIVA_REGRESSAO_V31.20_V38.39.md",
+    "bytes": 977,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_DUPLICIDADE_ICONE_ANDROID_V38.40.md",
+    "bytes": 778,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_FINAL_CONTRATO_LEGADO_V38.39.md",
+    "bytes": 1218,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_JAVA_GRAVADOR_V31.70.md",
+    "bytes": 1673,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_LEITURA_ANTI_TRAVAMENTO_V38.40.md",
+    "bytes": 1722,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_LEITURA_FILA_R3_V38.40.md",
+    "bytes": 527,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_LEITURA_QUADRADOS_R4_V38.40.md",
+    "bytes": 2225,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_LOGIN_SUPABASE_ANDROID_V38.40.md",
+    "bytes": 1565,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_MANIFESTO_CI_V31.81.md",
+    "bytes": 1005,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_MEU_TIME_V34.00.md",
+    "bytes": 1253,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_OCR_ANDROID_TRAINEDDATA_V40.10_R2.md",
+    "bytes": 1332,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_ORCAMENTO_BUNDLE_V31.82.md",
+    "bytes": 1073,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_OVERLAY_RECURSO_SPLASH_V38.40.md",
+    "bytes": 827,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_PUBLICACAO_UPDATE_V31.73.md",
+    "bytes": 973,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_RAIZ_TYPESCRIPT_V38.39.md",
+    "bytes": 1551,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_REGRESSAO_V34_MAPEAMENTO_V38.40.md",
+    "bytes": 557,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_REGRESSAO_V37.40_SALVAMENTO_V38.40.md",
+    "bytes": 1379,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_REGRESSOES_CI_V31.82.md",
+    "bytes": 1451,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_REGRESSOES_LEGADAS_V38.35.md",
+    "bytes": 781,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_REGRESSOES_V35_V38.38.md",
+    "bytes": 775,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_REGRESSOES_V38.31.md",
+    "bytes": 1043,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_ROLAGEM_TOQUE_MENU_V34.00.md",
+    "bytes": 538,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_SESSAO_FICHAS_HABILIDADES_IMPETOS_V31.82.md",
+    "bytes": 1661,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_SPLASH_PNG_AAPT2_V38.40.md",
+    "bytes": 767,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TELA_OFFLINE_LATERAL_V34.00.md",
+    "bytes": 1339,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TYPESCRIPT_COMPLETO_NAVEGACAO_V34.00.md",
+    "bytes": 817,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TYPESCRIPT_HANDLER_OCR_V38.40.md",
+    "bytes": 640,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TYPESCRIPT_ISOLAMENTO_V31.70.md",
+    "bytes": 910,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TYPESCRIPT_RECORTES_V31.70.md",
+    "bytes": 1570,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TYPESCRIPT_V38.21.md",
+    "bytes": 1437,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_TYPESCRIPT_V38.22.md",
+    "bytes": 1239,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_VERSIONCODE_ANDROID_V37.00.md",
+    "bytes": 1091,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRECAO_WORKFLOW_V31.74.md",
+    "bytes": 828,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "CORRIGIR_ROTA_INICIAL.cmd",
+    "bytes": 612,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "DESCRIPTION_GITHUB_DESKTOP.txt",
+    "bytes": 259,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "ESTUDIO_FORMACOES_V31.78.md",
+    "bytes": 716,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "EXPERIENCIA_CLEAN_INTELIGENTE_V37.80.md",
+    "bytes": 937,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "EXPORTACAO_GRAVACOES_V31.76.md",
+    "bytes": 817,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "EXPORTACAO_GRAVACOES_V31.77.md",
+    "bytes": 817,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "FICHAS_COMPLEMENTARES_V31.72.md",
+    "bytes": 3067,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "FLUXO_UNICO_V37.90.md",
+    "bytes": 2056,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GERADOR_TATICO_PROFISSIONAL_V38.33.md",
+    "bytes": 1863,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V30.00.md",
+    "bytes": 2775,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V30.10.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V30.20.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V30.30.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V30.40.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V30.50.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.00.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.10.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.20.md",
+    "bytes": 2944,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.30.md",
+    "bytes": 3062,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.40.md",
+    "bytes": 3061,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.60.md",
+    "bytes": 3061,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.70.md",
+    "bytes": 2353,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.72.md",
+    "bytes": 2537,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_GOOGLE_PLAY_V31.73.md",
+    "bytes": 2537,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "GUIA_PUBLICACAO_V31.74.md",
+    "bytes": 1607,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "IDENTIDADE_HABILIDADES_INTELIGENTES_V38.30.md",
+    "bytes": 3861,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "IDENTIDADE_PREMIUM_BM_V38.40.md",
+    "bytes": 1897,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "IDENTIDADE_TEMAS_PERFIL_V34.00.md",
+    "bytes": 1114,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "IMPLEMENTACAO_PREMIUM_COMPLETA.md",
+    "bytes": 2216,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.32.md",
+    "bytes": 1291,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.33.md",
+    "bytes": 807,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.34.md",
+    "bytes": 1571,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.35.md",
+    "bytes": 677,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.36.md",
+    "bytes": 568,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.37.md",
+    "bytes": 864,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.38.md",
+    "bytes": 421,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INSTRUCOES_PUBLICACAO_V38.39.md",
+    "bytes": 612,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INTERFACE_CLEAN_RESPONSIVA_V34.md",
+    "bytes": 1229,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INTERFACE_EXECUTIVE_V33.00.md",
+    "bytes": 1989,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "INTERFACE_STUDIO_PREMIUM_V34.00.md",
+    "bytes": 382,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LABORATORIO_PRO_GLOBAL_V39.00.md",
+    "bytes": 2083,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEIA-ME-APLICACAO.txt",
+    "bytes": 664,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_8_QUADRADOS_V40.20.md",
+    "bytes": 615,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_CARTAS_RECONSTRUIDO_V40.00.md",
+    "bytes": 3337,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_EFHUB_DINAMICO_V31.75.md",
+    "bytes": 1584,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_EFHUB_FINAL_V31.80.md",
+    "bytes": 1691,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_EFHUB_HABILIDADES_V31.78.md",
+    "bytes": 2599,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_EFHUB_RIGIDO_V31.60.md",
+    "bytes": 4654,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITOR_EFHUB_TOP5_V31.79.md",
+    "bytes": 2742,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITURA_8_QUADRADOS_V40.20.md",
+    "bytes": 2140,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LEITURA_SEGUNDO_PLANO_V38.40.md",
+    "bytes": 1143,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LIMITACOES_V38.32.md",
+    "bytes": 880,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "LIMITACOES_V38.35.md",
+    "bytes": 461,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V30.00.sha256",
+    "bytes": 26969,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V30.10.sha256",
+    "bytes": 27508,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V30.20.sha256",
+    "bytes": 27806,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V30.30.sha256",
+    "bytes": 28338,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V30.40.sha256",
+    "bytes": 28754,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V30.50.sha256",
+    "bytes": 29394,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.00.sha256",
+    "bytes": 29921,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.10.sha256",
+    "bytes": 30771,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.20.sha256",
+    "bytes": 34273,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.60.sha256",
+    "bytes": 37392,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.70.sha256",
+    "bytes": 40670,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.71.sha256",
+    "bytes": 41319,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.72.sha256",
+    "bytes": 42577,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.73.sha256",
+    "bytes": 43869,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.74.sha256",
+    "bytes": 45766,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.75.sha256",
+    "bytes": 46307,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.76.sha256",
+    "bytes": 46731,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.77.sha256",
+    "bytes": 47161,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.78.sha256",
+    "bytes": 47691,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.79.sha256",
+    "bytes": 48425,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.80.sha256",
+    "bytes": 49179,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.81.sha256",
+    "bytes": 50215,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V31.82.sha256",
+    "bytes": 53665,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V32.00.sha256",
+    "bytes": 55015,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V33.00.sha256",
+    "bytes": 55900,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V35.10.sha256",
+    "bytes": 59439,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V35.20.sha256",
+    "bytes": 60484,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V36.00.sha256",
+    "bytes": 61009,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V37.00.sha256",
+    "bytes": 62074,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.32.sha256",
+    "bytes": 73313,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.33.sha256",
+    "bytes": 74246,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.34.sha256",
+    "bytes": 75038,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.35.sha256",
+    "bytes": 75920,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.36.sha256",
+    "bytes": 76722,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.37.sha256",
+    "bytes": 77627,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.38.sha256",
+    "bytes": 78529,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.39.sha256",
+    "bytes": 81594,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V38.40.sha256",
+    "bytes": 104623,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.00.sha256",
+    "bytes": 105443,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.10.sha256",
+    "bytes": 107198,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.20.sha256",
+    "bytes": 108350,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.30.sha256",
+    "bytes": 109920,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.40.sha256",
+    "bytes": 111307,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.50.sha256",
+    "bytes": 112713,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.60.sha256",
+    "bytes": 114117,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MANIFESTO_PRODUCAO_V40.70.sha256",
+    "bytes": 115821,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MAPEAMENTO_INTELIGENTE_ELENCO_V38.40.md",
+    "bytes": 2389,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MAPEAMENTO_TOTAL_ELENCO_V39.50.md",
+    "bytes": 1744,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MEGA_CALIBRACAO_V32.00.md",
+    "bytes": 3070,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MELHORIA_ATRIBUTOS_META_2027_V40.80_R9.md",
+    "bytes": 1821,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MELHORIA_GAMEPLAY_META_V600_R10.md",
+    "bytes": 1145,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_AVANCADO_V37.50.md",
+    "bytes": 1559,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_DOMINANTE_UNIVERSAL_V39.10.md",
+    "bytes": 2681,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_FICHAS_HABILIDADES_IMPETOS_V38.50.md",
+    "bytes": 4035,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_FUNCAO_REAL_V39.40.md",
+    "bytes": 1829,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_IA_POR_CARTA_V38.80.md",
+    "bytes": 2499,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_MAXIMO_DESEMPENHO_V38.60.md",
+    "bytes": 3748,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_SUPREMO_FICHAS_V31.30.md",
+    "bytes": 3647,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_SUPREMO_FICHAS_V38.70.md",
+    "bytes": 2815,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "MOTOR_UNIFICADO_DESEMPENHO_V39.20.md",
+    "bytes": 3982,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "OCR_RIGIDO_ADAPTATIVO_V31.40.md",
+    "bytes": 5530,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "OTIMIZACAO_INVISIVEL_V38.20.md",
+    "bytes": 3979,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "PERFIL_AUTOMATICO_CARTA_V38.37.md",
+    "bytes": 2451,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "PROJETO_LIMPO.txt",
+    "bytes": 1166,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "PROTECAO_PREVENTIVA_CI_APK_V31.82.md",
+    "bytes": 1137,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "README.md",
+    "bytes": 4391,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RECUPERACAO_CONTA_PRINCIPAL_V38.40.md",
+    "bytes": 1608,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "REFORMULACAO_PREMIUM_TOTAL_V37.20.md",
+    "bytes": 709,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "REFORMULACAO_PREMIUM_TOTAL_V37.30.md",
+    "bytes": 797,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "REFORMULACAO_VISUAL_V37.10.md",
+    "bytes": 919,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.32.md",
+    "bytes": 774,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.33.md",
+    "bytes": 621,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.34.md",
+    "bytes": 707,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.35.md",
+    "bytes": 645,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.36.md",
+    "bytes": 523,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.37.md",
+    "bytes": 545,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.38.md",
+    "bytes": 271,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RELEASE_NOTES_V38.39.md",
+    "bytes": 413,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RESTAURACAO_CONTEXTO_TATICO_V31.20.md",
+    "bytes": 1294,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RESTAURACAO_CRIAR_CONTAS_V31.73.md",
+    "bytes": 1192,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "RESULTADO_PREMIUM_CLEAN_V38.10.md",
+    "bytes": 3072,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "SUMMARY_GITHUB_DESKTOP.txt",
+    "bytes": 307,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_AUTORREPARO_TSCONFIG_V38.39.md",
+    "bytes": 1503,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_CORRECAO_RAIZ_V38.39.md",
+    "bytes": 1409,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_HOTFIX_REGRESSAO_V31.00_V38.39.md",
+    "bytes": 1049,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_HOTFIX_REGRESSAO_V31.20_V38.39.md",
+    "bytes": 1430,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.32.md",
+    "bytes": 3063,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.33.md",
+    "bytes": 1226,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.34.md",
+    "bytes": 2328,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.35.md",
+    "bytes": 1570,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.36.md",
+    "bytes": 500,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.37.md",
+    "bytes": 2126,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.38.md",
+    "bytes": 1486,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.39.md",
+    "bytes": 1557,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V38.40.md",
+    "bytes": 822,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V39.00.md",
+    "bytes": 550,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V39.10.md",
+    "bytes": 819,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V39.20.md",
+    "bytes": 1441,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V39.50.md",
+    "bytes": 540,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TESTES_V40.10.md",
+    "bytes": 1149,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TRANSFORMACAO_APRENDIZADO_COMPETITIVO_V40.60.md",
+    "bytes": 2886,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TRANSFORMACAO_CATALOGO_VIVO_OCR_V40.70.md",
+    "bytes": 5684,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TRANSFORMACAO_DESEMPENHO_MAXIMO_V40.30.md",
+    "bytes": 1367,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TRANSFORMACAO_PRECISAO_COMPETITIVA_V40.40.md",
+    "bytes": 2713,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TRANSFORMACAO_VALIDACAO_REAL_GAMEPLAY_V40.50.md",
+    "bytes": 5693,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "TREINADOR_PARTIDAS_V31.70.md",
+    "bytes": 3367,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "VALIDACAO_REAL_V37.60.md",
+    "bytes": 2415,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "VERIFICAR_ANTES_DE_ENVIAR.cmd",
+    "bytes": 461,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "VERIFICAR_CORRECAO.cmd",
+    "bytes": 670,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "VERIFICAR_RAPIDO.cmd",
+    "bytes": 267,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "preview-home.html",
+    "bytes": 8513,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "preview-menu.html",
+    "bytes": 10636,
+    "reason": "historical-unreferenced-root-artifact"
+  },
+  {
+    "path": "tsconfig.repro.json",
+    "bytes": 671,
+    "reason": "unused-reproduction-config"
+  }
+]

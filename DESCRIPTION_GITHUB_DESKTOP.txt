@@ -1,1 +1,0 @@
-Inclui as regressões v39.30–v39.50 no diagnóstico consolidado, impede divergência entre test:all e ci:verify, valida a resposta real do Supabase Auth e aplica no workflow Google Play as mesmas verificações de URL e chave pública usadas no APK direto.

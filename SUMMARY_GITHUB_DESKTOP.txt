@@ -1,5 +1,0 @@
-Summary (required):
-Implementa Validação Real de Gameplay v40.50
-
-Description:
-Adiciona laboratório A/B anti-overfitting, amostra ponderada por conexão/minutos/evidência, memória por carta e posição e promoção somente após validação real, preservando a Precisão Competitiva 99 e o OCR v40.20.

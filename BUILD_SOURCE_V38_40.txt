@@ -1,4 +1,0 @@
-BUILDMASTER ELITE TÁTICO v38.40.0
-Identificador do pacote: v38.40-ci-route-repair-20260810-r2
-Correção: o autorreparo da rota raiz agora restaura AppShellSafetyBoundaryV3930 + AuthGate + CardVisionApp.
-Validação esperada no GitHub Actions: 84 grupos; regressões v38.40 e v39.30 aprovadas mesmo se src/app/page.tsx chegar sobrescrito por política ou exclusão.
