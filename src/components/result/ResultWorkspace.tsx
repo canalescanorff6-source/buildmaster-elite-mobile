@@ -1762,6 +1762,7 @@ export function ReviewPanel({
 }) {
   const card = draft.parsed;
   const [provisionalSpecialSkills, setProvisionalSpecialSkills] = useState<string[]>([]);
+  const [progressReferenceExpanded, setProgressReferenceExpanded] = useState(false);
   useEffect(() => {
     setProvisionalSpecialSkills(listProvisionalSpecialSkillsV4070().map((entry) => entry.name));
   }, [draft.parsed.playerName]);
@@ -1939,7 +1940,32 @@ export function ReviewPanel({
         </article>
 
         <article className="luxury-panel review-step-card">
-          <div className="review-step-heading"><span>4</span><div><p className="kicker">Orçamento detectado</p><h3>Confira os pontos somente se quiser</h3></div></div>
+          <div className="review-step-heading"><span>4</span><div><p className="kicker">Orçamento detectado</p><h3>Confira nível e progresso olhando o próprio print</h3></div></div>
+          {originalPreview && (
+            <div className={`progress-reference-card${progressReferenceExpanded ? ' expanded' : ''}`}>
+              <div className="progress-reference-head">
+                <div>
+                  <strong>Print original da carta</strong>
+                  <small>Use esta imagem como referência para conferir o nível máximo e os pontos de progresso sem sair desta tela.</small>
+                </div>
+                <button type="button" onClick={() => setProgressReferenceExpanded((value) => !value)}>
+                  {progressReferenceExpanded ? 'Reduzir' : 'Ampliar'}
+                </button>
+              </div>
+              <button
+                type="button"
+                className="progress-reference-image"
+                onClick={() => setProgressReferenceExpanded((value) => !value)}
+                aria-label={progressReferenceExpanded ? 'Reduzir print original' : 'Ampliar print original'}
+              >
+                <img src={originalPreview} alt={`Print original de ${displayPlayerName}`} loading="eager" decoding="async" />
+              </button>
+              <div className="progress-reference-values">
+                <span><small>Nível lido</small><strong>{manualFields.level || card.level || '—'}</strong></span>
+                <span><small>Progresso lido</small><strong>{manualFields.trainingPointsTotal || draft.trainingPointsTotal || '—'}</strong></span>
+              </div>
+            </div>
+          )}
           <div className="review-form-grid review-points-grid">
             <label>
               <span>Nível máximo</span>
