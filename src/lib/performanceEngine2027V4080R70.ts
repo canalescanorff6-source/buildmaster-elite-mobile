@@ -54,7 +54,7 @@ export type PerformanceEngine2027R70 = {
     masterEngineIsOnlyWriter: true;
     overallIgnored: true;
     phaseAware: true;
-    staminaProtected: true;
+    staminaProtected: boolean;
     diminishingReturns: true;
     bottleneckAware: true;
   };

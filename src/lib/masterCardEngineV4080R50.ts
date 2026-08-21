@@ -86,6 +86,52 @@ function collisionFingerprint(result: AnalysisResult, plan: TrainingPlan) {
   ].join('|');
 }
 
+function average(values: Array<number | null | undefined>) {
+  const safe = values.map(Number).filter((value) => Number.isFinite(value) && value > 0);
+  return safe.length ? safe.reduce((sum, value) => sum + value, 0) / safe.length : 0;
+}
+
+function preservesPermanentCardDNA(result: AnalysisResult, plan: TrainingPlan) {
+  const a = result.parsed.attributes;
+  const technicalCarry = average([
+    a.ballControl,
+    a.dribbling,
+    a.tightPossession,
+    a.balance,
+    a.acceleration
+  ]);
+  const finishing = average([
+    a.finishing,
+    a.offensiveAwareness,
+    a.kickingPower
+  ]);
+  const creation = average([
+    a.lowPass,
+    a.loftedPass,
+    a.ballControl
+  ]);
+
+  const technicalDNA =
+    technicalCarry >= 88 &&
+    technicalCarry >= Math.max(finishing, creation) + 3;
+
+  if (technicalDNA) {
+    const technicalInvestment =
+      Number(plan.dribbling ?? 0) + Number(plan.dexterity ?? 0);
+    const creationInvestment =
+      Number(plan.shooting ?? 0) + Number(plan.passing ?? 0);
+    const physicalFinishInvestment =
+      Number(plan.shooting ?? 0) + Number(plan.aerialStrength ?? 0);
+
+    if (
+      technicalInvestment < creationInvestment ||
+      technicalInvestment < physicalFinishInvestment
+    ) return false;
+  }
+
+  return true;
+}
+
 
 function applyR70WinnerInsideMaster(result: AnalysisResult): AnalysisResult {
   const analysis = (result as AnalysisResult & { performanceEngine2027R70?: PerformanceEngine2027R70 }).performanceEngine2027R70;
@@ -97,6 +143,7 @@ function applyR70WinnerInsideMaster(result: AnalysisResult): AnalysisResult {
     analysis.guards.staminaProtected &&
     analysis.confidence >= 62 &&
     trainingPlanTotalCost(candidate) === budget &&
+    preservesPermanentCardDNA(result, candidate) &&
     analysis.improvementVsIncoming >= 0.3;
   if (!canApply) return result;
   return {

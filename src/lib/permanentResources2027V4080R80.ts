@@ -56,7 +56,7 @@ function roleAffinity(skill:string,pos:PositionCode){
   if(attack && /marcacao individual|carrinho|afastamento/.test(s)) n-=35;
   return clamp(n);
 }
-function skillCandidate(result:AnalysisResult,skill:string,a:PositionCode,d:PositionCode):ResourceCandidate{
+function skillCandidate(skill:string,a:PositionCode,d:PositionCode):ResourceCandidate{
   const sa=roleAffinity(skill,a), sd=roleAffinity(skill,d); const dual=Math.min(sa,sd); const peak=Math.max(sa,sd);
   const stability=clamp(dual*0.72+peak*0.28); const regret=clamp(100-stability);
   const score=clamp(stability + (a===d?5:0) - regret*0.08);
@@ -70,7 +70,7 @@ function impetoCandidate(item:ImpetoRecommendation,a:PositionCode,d:PositionCode
 
 export function applyPermanentResources2027R80(result:AnalysisResult):WithR80{
   const [attack,defence]=positions(result); const owned=ownedKeys(result);
-  const skillScores=(result.recommendedSkills??[]).filter(s=>!owned.has(skillIdentityKey(s))).map(s=>skillCandidate(result,s,attack,defence)).sort((x,y)=>y.score-x.score);
+  const skillScores=(result.recommendedSkills??[]).filter(s=>!owned.has(skillIdentityKey(s))).map(s=>skillCandidate(s,attack,defence)).sort((x,y)=>y.score-x.score);
   const top5=skillScores.slice(0,5).map(x=>x.name);
   const active=result.parsed.impetos?.find(i=>i.active!==false)?.name ?? null;
   const impetos=(result.recommendedImpetos??[]).filter(i=>i.tier!=='evitar').map(i=>impetoCandidate(i,attack,defence)).sort((x,y)=>y.score-x.score);
