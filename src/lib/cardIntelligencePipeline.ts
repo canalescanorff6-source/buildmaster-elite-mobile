@@ -37,6 +37,12 @@ import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngin
 import { applyIndividualCalibrationEngineV4080R41 } from './individualCalibrationEngineV4080R41';
 import { applyMatchStaminaEngineV4080R44 } from './matchStaminaEngineV4080R44';
 import { applyMasterCardEngineV4080R50 } from './masterCardEngineV4080R50';
+import { applyCanonicalCardIdentity2027R60 } from './canonicalCardIdentity2027V4080R60';
+import { applyPerformanceFoundation2027R60 } from './performanceFoundation2027V4080R60';
+import { applyPerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
+import { applyPermanentResources2027R80 } from './permanentResources2027V4080R80';
+import { applyPerformanceLab2027R90 } from './performanceLab2027V4080R90';
+import { applyProduction2027R100 } from './production2027V4080R100';
 
 /**
  * Contratos históricos preservados para as regressões e auditorias legadas.
@@ -111,7 +117,13 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyIndividualIdentityEngineV4080R39(current);
   current = applyIndividualCalibrationEngineV4080R41(current);
   current = applyMatchStaminaEngineV4080R44(current);
+  current = applyCanonicalCardIdentity2027R60(current);
+  current = applyPerformanceFoundation2027R60(current);
+  current = applyPerformanceEngine2027R70(current);
   current = applyMasterCardEngineV4080R50(current);
+  current = applyPermanentResources2027R80(current);
+  current = applyPerformanceLab2027R90(current);
+  current = applyProduction2027R100(current);
   current = applyPlayerGenerationFinalizerV4080R13(current);
   return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
 }

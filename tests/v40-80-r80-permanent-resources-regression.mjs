@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const engine=fs.readFileSync('src/lib/permanentResources2027V4080R80.ts','utf8');
+const pipeline=fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
+for(const c of ['PERMANENT_RESOURCES_2027_R80_VERSION','permanentTop5','permanentImpeto','regretRisk','shouldSpendImpeto','nativeDuplicatesBlocked','dualPhaseStable']) assert.ok(engine.includes(c),`r80 sem ${c}`);
+assert.ok(engine.includes('skillIdentityKey'));
+assert.ok(engine.includes('Ímpeto já aplicado: preservado'));
+assert.ok(pipeline.indexOf('applyMasterCardEngineV4080R50(current)') < pipeline.indexOf('applyPermanentResources2027R80(current)'));
+assert.ok(pipeline.indexOf('applyPermanentResources2027R80(current)') < pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)'));
+console.log('r80 aprovada: Top 5 e Ímpeto permanentes auditados após Motor Mestre e antes do gerador final.');

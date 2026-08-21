@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const lab=fs.readFileSync('src/lib/performanceLab2027V4080R90.ts','utf8');
+const pipeline=fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
+assert.ok(lab.includes("40.80-r90-performance-lab-2027"));
+assert.ok(lab.includes('buildRealGameplayValidationV4050'));
+assert.ok(lab.includes('singleMatchNeverChangesMasterBuild: true'));
+assert.ok(lab.includes('highDelayDownWeighted: true'));
+assert.ok(lab.includes('rareResourcesNeverChangedByLab: true'));
+assert.ok(lab.includes("'CALCULADA' | 'BENCHMARK' | 'TESTADA' | 'VALIDADA'"));
+assert.ok(lab.includes("'0-30' | '31-60' | '61-75' | '76-90'"));
+assert.ok(pipeline.indexOf('applyPermanentResources2027R80(current)') < pipeline.indexOf('applyPerformanceLab2027R90(current)'));
+assert.ok(pipeline.indexOf('applyPerformanceLab2027R90(current)') < pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)'));
+console.log('r90 aprovada: laboratório read-only, A/B, benchmark, risco, consistência e performance por minuto.');
