@@ -40,6 +40,7 @@ import { applyMasterCardEngineV4080R50 } from './masterCardEngineV4080R50';
 import { applyCanonicalCardIdentity2027R60 } from './canonicalCardIdentity2027V4080R60';
 import { applyPerformanceFoundation2027R60 } from './performanceFoundation2027V4080R60';
 import { applyPerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
+import { applyPerformanceEngine2027R107 } from './performanceEngine2027V4080R107';
 import { applyPermanentResources2027R80 } from './permanentResources2027V4080R80';
 import { applyPerformanceLab2027R90 } from './performanceLab2027V4080R90';
 import { applyProduction2027R100 } from './production2027V4080R100';
@@ -120,6 +121,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyCanonicalCardIdentity2027R60(current);
   current = applyPerformanceFoundation2027R60(current);
   current = applyPerformanceEngine2027R70(current);
+  current = applyPerformanceEngine2027R107(current);
   current = applyMasterCardEngineV4080R50(current);
   current = applyPermanentResources2027R80(current);
   current = applyPerformanceLab2027R90(current);

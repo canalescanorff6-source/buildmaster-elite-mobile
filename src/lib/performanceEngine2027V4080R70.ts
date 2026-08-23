@@ -13,9 +13,9 @@ const ATTRIBUTE_GROUPS: Record<TrainingKey, AttributeKey[]> = {
   lowerBodyStrength: ['speed','kickingPower','stamina'],
   aerialStrength: ['heading','jump','physicalContact'],
   defending: ['defensiveAwareness','defensiveEngagement','tackling','aggression'],
-  gk1: ['goalkeeperAwareness','goalkeeperCatching'],
-  gk2: ['goalkeeperParrying','goalkeeperReflexes'],
-  gk3: ['goalkeeperReach','jump']
+  gk1: ['goalkeeperAwareness','jump'],
+  gk2: ['goalkeeperParrying','goalkeeperReach'],
+  gk3: ['goalkeeperCatching','goalkeeperReflexes']
 };
 
 export type PerformanceProfileR70 = 'PEAK' | 'BALANCED_90' | 'FLUID_PHASE';
