@@ -10,20 +10,42 @@ const result:any = applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE'
 }));
 
 const quality = result.performanceEngine2027R107;
-assert.ok(quality, 'r107 precisa estar presente antes do Motor Mestre.');
+assert.ok(quality, 'r107 precisa continuar disponível como especialista Quality.');
 assert.equal(quality.guards.exactBudget, true);
 assert.equal(quality.guards.dnaProtected, true);
 assert.equal(quality.guards.staminaBalanced, true);
-const extreme = result.performanceEngine2027R108;
-if (extreme) {
-  assert.deepEqual(result.training, extreme.winner.training, 'r108 tem precedência sobre r107 quando passa nos guardas do Motor Mestre.');
-  assert.deepEqual(result.masterCardV4080R50?.masterTraining, extreme.winner.training);
-  assert.ok(result.recommendationExplanation.some((line:string)=>/Motor Mestre aplicou Extreme Gameplay r108/.test(line)));
-} else {
-  assert.deepEqual(result.training, quality.winner.training, 'sem r108, r107 continua sendo o fallback Quality do Motor Mestre.');
-  assert.deepEqual(result.masterCardV4080R50?.masterTraining, quality.winner.training);
-  assert.ok(result.recommendationExplanation.some((line:string)=>/Motor Mestre aplicou Ficha Quality r107/.test(line)));
-}
-assert.equal(trainingPlanTotalCost(result.training), 64);
 
-console.log('r107 compatibilidade aprovada: Quality permanece como fallback, com precedência correta do r108.');
+const extreme = result.performanceEngine2027R108;
+const position = result.performanceEngine2027R109;
+const explanation = result.recommendationExplanation as string[];
+
+const r109Applied = explanation.some((line:string) => /Motor Mestre aplicou Extreme Position r109/.test(line));
+const r108Applied = explanation.some((line:string) => /Motor Mestre aplicou Extreme Gameplay r108/.test(line));
+const r107Applied = explanation.some((line:string) => /Motor Mestre aplicou Ficha Quality r107/.test(line));
+const r70Applied = explanation.some((line:string) => /Motor Mestre aplicou a candidata r70/.test(line));
+
+if (r109Applied) {
+  assert.ok(position?.adaptationApplied, 'r109 só pode ser declarado aplicado quando houver adaptação segura.');
+  assert.deepEqual(result.training, position.appliedTraining);
+} else if (r108Applied) {
+  assert.ok(extreme, 'r108 declarado como aplicado precisa existir.');
+  assert.deepEqual(result.training, extreme.winner.training);
+} else if (r107Applied) {
+  assert.deepEqual(result.training, quality.winner.training);
+} else {
+  assert.ok(
+    r70Applied || result.masterCardV4080R50,
+    'Se r109/r108/r107 forem barrados pelos guardas, o Motor Mestre deve manter fallback seguro e auditado.'
+  );
+}
+
+assert.equal(trainingPlanTotalCost(result.training), 64);
+assert.equal(result.trainingPointsRemaining, 0);
+assert.deepEqual(result.masterCardV4080R50?.masterTraining, result.training, 'Ficha Mestre precisa espelhar exatamente a progressão final.');
+
+const technical = Number(result.training.dribbling ?? 0) + Number(result.training.dexterity ?? 0);
+const creation = Number(result.training.shooting ?? 0) + Number(result.training.passing ?? 0);
+assert.ok(technical >= creation, 'Carta tecnicamente dominante não pode perder o DNA para chute+passe na ficha final.');
+assert.ok(explanation.some((line:string) => /sem perseguir overall/i.test(line)), 'A entrega final precisa declarar explicitamente a proteção anti-overall.');
+
+console.log('r107 autoridade atual aprovada: r109 > r108 > r107 > r70/final seguro, orçamento exato e DNA técnico preservado.');

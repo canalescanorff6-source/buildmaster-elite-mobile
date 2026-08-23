@@ -10,6 +10,8 @@ import { applyUniversalDnaR25 } from './apply-universal-dna-r25.mjs';
 import { applyPreFinalVisualR104 } from './apply-prefinal-visual-r104.mjs';
 import { applyPreFinalAutoProgressR105 } from './apply-prefinal-auto-progress-r105.mjs';
 import { applyR109ExtremeCompat } from './apply-r109-extreme-compat.mjs';
+import { applyR111DefinitiveCiGameplay } from './apply-r111-definitive-ci-gameplay.mjs';
+import { applyR111TestContract } from './apply-r111-test-contract.mjs';
 
 export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  const root=resolve(rootDirectory);
@@ -25,6 +27,8 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  applyPreFinalVisualR104(root);
  applyPreFinalAutoProgressR105(root);
  applyR109ExtremeCompat(root);
+ applyR111DefinitiveCiGameplay(root);
+ applyR111TestContract(root);
 }
 const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
 if(invoked===import.meta.url) sanitizeUpdateSource();
