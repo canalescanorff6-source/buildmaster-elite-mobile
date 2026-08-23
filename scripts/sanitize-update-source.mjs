@@ -9,6 +9,7 @@ import { applyUniversalDnaR24 } from './apply-universal-dna-r24.mjs';
 import { applyUniversalDnaR25 } from './apply-universal-dna-r25.mjs';
 import { applyPreFinalVisualR104 } from './apply-prefinal-visual-r104.mjs';
 import { applyPreFinalAutoProgressR105 } from './apply-prefinal-auto-progress-r105.mjs';
+import { applyR109ExtremeCompat } from './apply-r109-extreme-compat.mjs';
 
 export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  const root=resolve(rootDirectory);
@@ -23,6 +24,7 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  applyUniversalDnaR25(root);
  applyPreFinalVisualR104(root);
  applyPreFinalAutoProgressR105(root);
+ applyR109ExtremeCompat(root);
 }
 const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
 if(invoked===import.meta.url) sanitizeUpdateSource();
