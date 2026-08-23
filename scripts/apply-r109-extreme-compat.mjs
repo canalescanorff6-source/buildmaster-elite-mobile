@@ -33,7 +33,7 @@ function patchPipeline(input) {
   source = replaceRequired(
     source,
     '  current = applyPlayerGenerationFinalizerV4080R13(current);\n  return { ...current, buildVariants: current.buildVariants.slice(0, 3) };',
-    "  current = applyPlayerGenerationFinalizerV4080R13(current);\n  current = synchronizeFinalSkillIntegrity(current);\n  // BM_R109_PIPELINE: a última auditoria espelha exatamente o Top 5 exibido.\n  return { ...current, buildVariants: current.buildVariants.slice(0, 3) };",
+    "  current = applyPlayerGenerationFinalizerV4080R13(current);\n  current = enforceComplementarySkillIntegrity(current);\n  current = synchronizeFinalSkillIntegrity(current);\n  // BM_R109_PIPELINE: a última etapa RECONSTRÓI o Top 5 oficial pelo DNA/função e depois sincroniza a auditoria.\n  return { ...current, buildVariants: current.buildVariants.slice(0, 3) };",
     'sincronização final das habilidades'
   );
   return source;

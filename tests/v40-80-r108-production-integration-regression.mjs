@@ -10,7 +10,8 @@ const lab = readFileSync(resolve(root, 'src/lib/performanceLab2027V4080R90.ts'),
 const resources = readFileSync(resolve(root, 'src/lib/permanentResources2027V4080R80.ts'), 'utf8');
 const engine = readFileSync(resolve(root, 'src/lib/performanceEngine2027V4080R108.ts'), 'utf8');
 
-assert.match(pipeline, /applyPerformanceEngine2027R107\(current\);\s+current = applyPerformanceEngine2027R108\(current\);\s+current = applyMasterCardEngineV4080R50\(current\);/);
+assert.match(pipeline, /applyPerformanceEngine2027R107\(current\);\s+current = applyPerformanceEngine2027R108\(current\);\s+current = applyPerformanceEngine2027R109\(current\);\s+current = applyMasterCardEngineV4080R50\(current\);/);
+assert.match(master, /applyR109WinnerInsideMaster/);
 assert.match(master, /applyR108WinnerInsideMaster/);
 assert.match(master, /Motor Mestre aplicou Extreme Gameplay r108/);
 assert.match(production, /performanceEngine2027R108/);
@@ -24,4 +25,4 @@ assert.match(engine, /EXTREME_GAMEPLAY_BREAKPOINT_SYNERGY_V600/);
 assert.doesNotMatch(engine, /maxOverall/);
 assert.doesNotMatch(engine, /\.overall/);
 
-console.log('r108 integração aprovada: pipeline, Mestre, laboratório, recursos e produção usam o motor extremo sem overall.');
+console.log('r108 integração aprovada: r109 preserva o núcleo Extreme e o pipeline continua sem overall.');
