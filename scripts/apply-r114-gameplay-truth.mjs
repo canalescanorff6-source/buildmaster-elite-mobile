@@ -405,7 +405,7 @@ function patchR80(input) {
     source,
     `  let winner=impetos[0]??null;
   if(active) winner={name:active,score:100,stability:100,regretRisk:0,reasons:['Ímpeto já aplicado: preservado como recurso permanente da carta.']};`,
-    `  let winner=impetos[0]??null;
+    `  let winner:ResourceCandidate|null=impetos[0]??null;
   if(active) winner={name:active,score:100,stability:100,regretRisk:0,reasons:['Ímpeto já aplicado: preservado como recurso permanente da carta.']};
   // BM_R114_IMPETO_TRUTH: candidato fraco pode aparecer como alternativa, mas não vira recurso Mestre.
   if(!active && winner && (winner.stability<88 || winner.regretRisk>12)) winner=null;`,
