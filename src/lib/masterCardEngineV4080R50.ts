@@ -7,6 +7,7 @@ import type { CanonicalCardIdentityR60 } from './canonicalCardIdentity2027V4080R
 import type { PerformanceFoundation2027R60 } from './performanceFoundation2027V4080R60';
 import type { PerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
 import type { PerformanceEngine2027R107 } from './performanceEngine2027V4080R107';
+import type { PerformanceEngine2027R108 } from './performanceEngine2027V4080R108';
 
 export const MASTER_CARD_ENGINE_V4080_R50 = '40.80-r50-master-card-single-authority' as const;
 
@@ -40,6 +41,7 @@ type WithMaster = AnalysisResult & {
   performanceFoundation2027R60?: PerformanceFoundation2027R60;
   performanceEngine2027R70?: PerformanceEngine2027R70;
   performanceEngine2027R107?: PerformanceEngine2027R107;
+  performanceEngine2027R108?: PerformanceEngine2027R108;
 };
 
 function clean(value: unknown) {
@@ -135,6 +137,43 @@ function preservesPermanentCardDNA(result: AnalysisResult, plan: TrainingPlan) {
 }
 
 
+function applyR108WinnerInsideMaster(result: AnalysisResult): { result: AnalysisResult; applied: boolean } {
+  const analysis = (result as AnalysisResult & { performanceEngine2027R108?: PerformanceEngine2027R108 }).performanceEngine2027R108;
+  if (!analysis) return { result, applied: false };
+  const budget = Number(result.trainingPointsTotal ?? trainingPlanTotalCost(result.training));
+  const candidate = analysis.winner.training;
+  const canApply =
+    analysis.guards.exactBudget &&
+    analysis.guards.masterEngineIsOnlyWriter &&
+    analysis.guards.overallIgnored &&
+    analysis.guards.formationIndependent &&
+    analysis.guards.positionSelectionDoesNotRewriteCore &&
+    analysis.guards.fatalBottlenecksControlled &&
+    analysis.guards.staminaProtected &&
+    analysis.guards.wasteControlled &&
+    analysis.guards.synergyFirst &&
+    analysis.guards.antiOverallSpread &&
+    analysis.confidence >= 50 &&
+    analysis.winner.synergyScore >= 68 &&
+    analysis.winner.responseScore >= 66 &&
+    trainingPlanTotalCost(candidate) === budget;
+  if (!canApply) return { result, applied: false };
+  return {
+    applied: true,
+    result: {
+      ...result,
+      training: { ...candidate },
+      trainingPointsUsed: trainingPlanTotalCost(candidate),
+      trainingPointsRemaining: 0,
+      recommendationExplanation: [
+        `Motor Mestre aplicou Extreme Gameplay r108 (${analysis.winner.totalScore}/100; sinergia ${analysis.winner.synergyScore}; resposta ${analysis.winner.responseScore}).`,
+        ...result.recommendationExplanation
+      ].filter((item,index,all)=>all.indexOf(item)===index).slice(0,110)
+    }
+  };
+}
+
+
 function applyR107WinnerInsideMaster(result: AnalysisResult): { result: AnalysisResult; applied: boolean } {
   const analysis = (result as AnalysisResult & { performanceEngine2027R107?: PerformanceEngine2027R107 }).performanceEngine2027R107;
   if (!analysis) return { result, applied: false };
@@ -198,9 +237,13 @@ function applyR70WinnerInsideMaster(result: AnalysisResult): AnalysisResult {
  */
 export function applyMasterCardEngineV4080R50(input: AnalysisResult): AnalysisResult {
   let result = applyFinalCardAuthorityV4080R45(input);
-  const qualityR107 = applyR107WinnerInsideMaster(result);
-  result = qualityR107.result;
-  if (!qualityR107.applied) result = applyR70WinnerInsideMaster(result);
+  const extremeR108 = applyR108WinnerInsideMaster(result);
+  result = extremeR108.result;
+  if (!extremeR108.applied) {
+    const qualityR107 = applyR107WinnerInsideMaster(result);
+    result = qualityR107.result;
+    if (!qualityR107.applied) result = applyR70WinnerInsideMaster(result);
+  }
   result = applyDefinitiveAdditionalSkillsV600R15(result);
   result = enforceComplementarySkillIntegrity(result);
   result = synchronizeFinalSkillIntegrity(result);
@@ -237,7 +280,7 @@ export function applyMasterCardEngineV4080R50(input: AnalysisResult): AnalysisRe
       'Motor Mestre r50 + Fundação r60: uma carta = uma identidade canônica permanente.',
       canonicalIdentity(result) ? `Fundação 2027 ativa com confiança ${Math.round(canonicalIdentity(result)?.identityConfidence ?? 0)}%.` : 'Fundação 2027 ainda indisponível para esta leitura.',
       `Ficha Mestre travada em ${trainingPlanTotalCost(result.training)}/${budget} pontos.`,
-      (result as AnalysisResult & { performanceEngine2027R107?: PerformanceEngine2027R107 }).performanceEngine2027R107 ? `Ficha Quality r107 integrada: ${(result as AnalysisResult & { performanceEngine2027R107?: PerformanceEngine2027R107 }).performanceEngine2027R107?.winner.totalScore}/100.` : ((result as AnalysisResult & { performanceEngine2027R70?: PerformanceEngine2027R70 }).performanceEngine2027R70 ? `Performance r70 fallback: ${(result as AnalysisResult & { performanceEngine2027R70?: PerformanceEngine2027R70 }).performanceEngine2027R70?.winner.totalScore}/100.` : 'Performance especializada ainda indisponível.'),
+      (result as AnalysisResult & { performanceEngine2027R108?: PerformanceEngine2027R108 }).performanceEngine2027R108 ? `Extreme Gameplay r108 integrado: ${(result as AnalysisResult & { performanceEngine2027R108?: PerformanceEngine2027R108 }).performanceEngine2027R108?.winner.totalScore}/100.` : ((result as AnalysisResult & { performanceEngine2027R107?: PerformanceEngine2027R107 }).performanceEngine2027R107 ? `Ficha Quality r107 fallback: ${(result as AnalysisResult & { performanceEngine2027R107?: PerformanceEngine2027R107 }).performanceEngine2027R107?.winner.totalScore}/100.` : ((result as AnalysisResult & { performanceEngine2027R70?: PerformanceEngine2027R70 }).performanceEngine2027R70 ? `Performance r70 fallback: ${(result as AnalysisResult & { performanceEngine2027R70?: PerformanceEngine2027R70 }).performanceEngine2027R70?.winner.totalScore}/100.` : 'Performance especializada ainda indisponível.')),
       `Ataque: ${master.attackPosition} • ${master.offensivePlaystyle ?? 'estilo não confirmado'}.`,
       `Defesa: ${master.defencePosition} • ${master.defensivePlaystyle ?? 'estilo defensivo ainda não confirmado'}.`,
       impeto.name ? `Ímpeto permanente: ${impeto.name}; não trocar automaticamente por mudança de posição.` : 'Ímpeto: aguardar confirmação segura antes de gastar recurso raro.',

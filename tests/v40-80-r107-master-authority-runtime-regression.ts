@@ -14,9 +14,16 @@ assert.ok(quality, 'r107 precisa estar presente antes do Motor Mestre.');
 assert.equal(quality.guards.exactBudget, true);
 assert.equal(quality.guards.dnaProtected, true);
 assert.equal(quality.guards.staminaBalanced, true);
-assert.deepEqual(result.training, quality.winner.training, 'quando r107 passa nos guardas, o Motor Mestre deve realmente gravar a vencedora r107.');
-assert.deepEqual(result.masterCardV4080R50?.masterTraining, quality.winner.training);
+const extreme = result.performanceEngine2027R108;
+if (extreme) {
+  assert.deepEqual(result.training, extreme.winner.training, 'r108 tem precedência sobre r107 quando passa nos guardas do Motor Mestre.');
+  assert.deepEqual(result.masterCardV4080R50?.masterTraining, extreme.winner.training);
+  assert.ok(result.recommendationExplanation.some((line:string)=>/Motor Mestre aplicou Extreme Gameplay r108/.test(line)));
+} else {
+  assert.deepEqual(result.training, quality.winner.training, 'sem r108, r107 continua sendo o fallback Quality do Motor Mestre.');
+  assert.deepEqual(result.masterCardV4080R50?.masterTraining, quality.winner.training);
+  assert.ok(result.recommendationExplanation.some((line:string)=>/Motor Mestre aplicou Ficha Quality r107/.test(line)));
+}
 assert.equal(trainingPlanTotalCost(result.training), 64);
-assert.ok(result.recommendationExplanation.some((line:string)=>/Motor Mestre aplicou Ficha Quality r107/.test(line)));
 
-console.log('r107 autoridade aprovada: a ficha exibida é exatamente a vencedora Quality aplicada pelo Motor Mestre.');
+console.log('r107 compatibilidade aprovada: Quality permanece como fallback, com precedência correta do r108.');

@@ -54,11 +54,13 @@ function readRecords(): MatchValidationRecord[] {
 function minuteCurve(result: AnalysisResult, consistency: number) {
   const stamina = Number(result.parsed.attributes.stamina ?? 80);
   const engines = result as AnalysisResult & {
+    performanceEngine2027R108?: { winner?: { projectedStrongUntilMinute?: number } };
     performanceEngine2027R107?: { winner?: { projectedStrongUntilMinute?: number } };
     performanceEngine2027R70?: { winner?: { projectedStrongUntilMinute?: number } };
   };
   const expected = Number(
-    engines.performanceEngine2027R107?.winner?.projectedStrongUntilMinute
+    engines.performanceEngine2027R108?.winner?.projectedStrongUntilMinute
+    ?? engines.performanceEngine2027R107?.winner?.projectedStrongUntilMinute
     ?? engines.performanceEngine2027R70?.winner?.projectedStrongUntilMinute
     ?? (stamina >= 90 ? 86 : stamina >= 84 ? 79 : 70)
   );
