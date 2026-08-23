@@ -88,6 +88,12 @@ import { CanonicalCardV3890Panel } from '@/components/CanonicalCardV3890Panel';
 import { MaxMatchPerformanceV3860Panel } from '@/components/MaxMatchPerformanceV3860Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
+import {
+  GOALKEEPER_PROGRESS_ORDER_R106,
+  TRAINING_PROGRESS_ORDER_R106,
+  TrainingProgressionIconR106,
+  type TrainingProgressionKeyR106
+} from '@/components/result/TrainingProgressionIconR106';
 import { UnifiedPerformanceV3920Panel } from '@/components/UnifiedPerformanceV3920Panel';
 import {
   CommunityIntelligencePanel,
@@ -395,7 +401,16 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const buildComparison = useMemo(() => advancedMode ? compareBuildVariants(result) : null, [advancedMode, result]);
   const card = result.parsed;
   const GER = card.maxOverall ?? card.overall ?? '--';
-  const trainingItems = Object.entries(result.training).filter(([, value]) => Number(value) > 0);
+  const goalkeeperProgressionR106 =
+    card.mainPosition === 'GK' ||
+    result.bestPosition.code === 'GK' ||
+    Number(result.training.gk1 ?? 0) > 0 ||
+    Number(result.training.gk2 ?? 0) > 0 ||
+    Number(result.training.gk3 ?? 0) > 0;
+  const trainingOrderR106 = goalkeeperProgressionR106
+    ? GOALKEEPER_PROGRESS_ORDER_R106
+    : TRAINING_PROGRESS_ORDER_R106;
+  const trainingItems = trainingOrderR106.map((key) => [key, Number(result.training[key] ?? 0)] as const);
   const pointPercent = Math.min(100, Math.round((result.trainingPointsUsed / Math.max(1, result.trainingPointsTotal)) * 100));
   const positionItems = result.positionScores.slice(0, 8);
   const cardPositions = Array.from(new Set([card.mainPosition, ...card.positions])).slice(0, 10);
@@ -983,15 +998,88 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               </div>
               <span>{result.trainingPointsUsed}/{result.trainingPointsTotal}</span>
             </div>
-            <div className="training-ribbon">
-              {trainingItems.map(([key, value]) => (
-                <div key={key}>
-                  <span>{trainingLabels[key] ?? key}</span>
-                  <strong>{value}</strong>
-                  <i><b style={{ width: `${Math.min(100, Number(value) * 7)}%` }} /></i>
-                </div>
-              ))}
+            <div
+              className="training-ribbon training-ribbon-r106"
+              data-testid="training-progression-icons-r106"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${trainingItems.length}, minmax(70px, 1fr))`,
+                gap: 8,
+                overflowX: 'auto',
+                padding: '4px 2px 8px',
+                scrollbarWidth: 'thin'
+              }}
+            >
+              {trainingItems.map(([key, value]) => {
+                const label = trainingLabels[key] ?? key;
+                const cost = result.trainingCost[key as keyof typeof result.trainingCost];
+                return (
+                  <div
+                    key={key}
+                    title={`${label}: ${value}${Number(cost) > 0 ? ` • ${cost} pts` : ''}`}
+                    style={{
+                      minWidth: 70,
+                      display: 'grid',
+                      justifyItems: 'center',
+                      alignContent: 'start',
+                      gap: 6,
+                      padding: '10px 7px',
+                      borderRadius: 14,
+                      border: Number(value) > 0
+                        ? '1px solid rgba(96,165,250,.34)'
+                        : '1px solid rgba(255,255,255,.08)',
+                      background: Number(value) > 0
+                        ? 'linear-gradient(180deg, rgba(37,99,235,.15), rgba(3,12,24,.74))'
+                        : 'rgba(3,12,24,.46)',
+                      boxShadow: Number(value) > 0
+                        ? 'inset 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.12)'
+                        : 'none'
+                    }}
+                  >
+                    <strong
+                      aria-label={`${label}: ${value}`}
+                      style={{
+                        fontSize: 20,
+                        lineHeight: 1,
+                        fontVariantNumeric: 'tabular-nums',
+                        color: Number(value) > 0 ? '#f8fafc' : 'rgba(226,232,240,.5)'
+                      }}
+                    >
+                      {value}
+                    </strong>
+                    <TrainingProgressionIconR106
+                      trainingKey={key as TrainingProgressionKeyR106}
+                      title={label}
+                      size={30}
+                      style={{
+                        color: Number(value) > 0 ? '#f8fafc' : 'rgba(226,232,240,.42)',
+                        filter: Number(value) > 0 ? 'drop-shadow(0 2px 5px rgba(0,0,0,.28))' : 'none'
+                      }}
+                    />
+                    <span
+                      style={{
+                        minHeight: 28,
+                        textAlign: 'center',
+                        fontSize: 10,
+                        lineHeight: 1.25,
+                        fontWeight: 700,
+                        letterSpacing: '.01em',
+                        color: Number(value) > 0 ? 'rgba(226,232,240,.92)' : 'rgba(148,163,184,.62)'
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <i style={{ width: '100%' }}>
+                      <b style={{ width: `${Math.min(100, Number(value) * 7)}%` }} />
+                    </i>
+                  </div>
+                );
+              })}
             </div>
+            <p className="panel-note" style={{ marginTop: 8 }}>
+              Ícones no padrão visual da ficha do jogo. Valores zerados continuam visíveis para facilitar a cópia da progressão.
+              {goalkeeperProgressionR106 ? ' GK1, GK2 e GK3 também aparecem para goleiros.' : ''}
+            </p>
             <p className="panel-note">Custo real: {result.trainingCostRule}. Restante: {result.trainingPointsRemaining} ponto(s).</p>
           </article>
 
