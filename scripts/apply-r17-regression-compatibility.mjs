@@ -62,7 +62,7 @@ function patchV4070(source) {
     "assert.match(cardApp,/Confira Nome, Nível máximo e Pontos de progressão para gerar a ficha/);"
   );
   source = source.replace(
-    "assert.doesNotMatch(review,/premium-confirmation-card/);",
+    /assert\.doesNotMatch\(review,\/premium-confirmation-card\/\);(?: \/\/ confirmação ocorre antes do ResultWorkspace)*/,
     "assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação ocorre antes do ResultWorkspace"
   );
   return source;

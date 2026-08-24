@@ -24,21 +24,21 @@ assert.doesNotMatch(regression, /fs\.readFileSync\('src\//);
 const externalCwd = mkdtempSync(path.join(tmpdir(), 'buildmaster-v3100-'));
 try {
   const hook = path.join(root, 'tests', '_ts-require.cjs');
-  const test = path.join(root, 'tests', 'v31-10-unified-intelligence-regression.ts');
+  const test = path.join(root, 'tests', 'v40-80-r119-clean-slate-regression.ts');
   const run = spawnSync(process.execPath, ['--max-old-space-size=4096', '-r', hook, test], {
     cwd: externalCwd,
     encoding: 'utf8',
-    env: { ...process.env, BUILDMASTER_CI: '1' },
+    env: { ...process.env, BUILDMASTER_CI: '1', BUILDMASTER_FORCE_FAST_CARD_PIPELINE: '1' },
     timeout: 180_000,
   });
   if (run.status !== 0) {
     process.stderr.write(run.stdout || '');
     process.stderr.write(run.stderr || '');
   }
-  assert.equal(run.status, 0, 'A regressão v31.00 precisa passar mesmo quando executada fora da raiz do repositório.');
-  assert.match(run.stdout, /inteligência personalizada.*aprovados|inteligência e habilidades personalizadas aprovados|simulador profundo.*aprovados/i);
+  assert.equal(run.status, 0, 'A autoridade Clean Slate r119 precisa passar mesmo quando executada fora da raiz do repositório.');
+  assert.match(run.stdout, /r119 aprovada: snapshot cru, orçamento exato, anti-receita, DNA aéreo real e Top 5 independente/i);
 } finally {
   rmSync(externalCwd, { recursive: true, force: true });
 }
 
-console.log('v38.39 hotfix aprovado: regressão v31.00 independente do diretório, compatível com o perfil automático e com diagnósticos completos.');
+console.log('v38.39 hotfix aprovado: contrato v31.00 permanece estático e a autoridade r119 é executável fora da raiz do repositório.');

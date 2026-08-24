@@ -268,6 +268,25 @@ function optimizeTraining(parsed:ParsedCard,budget:number) {
   return {plan,candidates,frequencies,evaluation:evaluatePlan(parsed,plan,frequencies)};
 }
 
+function naturalActionDetails(parsed:ParsedCard):CleanSlateActionR119[] {
+  return ACTIONS
+    .map((action)=>{
+      const frequency=naturalActionFrequency(action,parsed);
+      const natural=average(action.attrs.map(k=>attr(parsed.attributes,k)));
+      return {
+        id:action.id,
+        label:action.label,
+        naturalScore:round1(natural),
+        projectedScore:round1(natural),
+        frequency:round1(frequency*100),
+        contribution:round1(natural*frequency)
+      };
+    })
+    .filter(action=>action.frequency>1)
+    .sort((a,b)=>b.contribution-a.contribution)
+    .slice(0,12);
+}
+
 function categoryScores(actions:CleanSlateActionR119[]) {
   const map=new Map<string,number>();
   const put=(key:string,value:number)=>map.set(key,Math.max(map.get(key)??0,value));
@@ -306,6 +325,7 @@ function recommendTop5(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
   const cats=categoryScores(actions);
   const gk=parsed.mainPosition==='GK';
   const position=parsed.mainPosition;
+  const style=norm(`${parsed.playstyle??''} ${parsed.offensivePlaystyle??''} ${parsed.defensivePlaystyle??''}`);
   const scored=OFFICIAL_ADDITIONAL_SKILL_NAMES
     .filter(name=>!owned.has(skillIdentityKey(name)))
     .filter(name=>isRoleCompatibleAdditionalSkill(name,position))
@@ -318,6 +338,27 @@ function recommendTop5(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
       if(name==='Toque duplo' || name==='Controle com a sola') score+=(cats.get('dribble')??0)*.11;
       if(name==='Interceptação' || name==='Bloqueador') score+=(cats.get('defense')??0)*.12;
       if(name==='Cabeçada' || name==='Superioridade aérea') score+=(cats.get('aerial')??0)*.12;
+
+      // O estilo oficial atua apenas como desempate secundário do Top 5.
+      // Ele nunca altera a ficha de progressão nem substitui o DNA natural.
+      if(/goleiro ofensivo/.test(style)) {
+        if(/Reposição baixa do goleiro|Reposição alta do goleiro|Arremesso longo do goleiro/.test(name)) score+=7;
+      } else if(/goleiro defensivo/.test(style)) {
+        if(/Pegador de pênalti|Liderança|Espírito guerreiro/.test(name)) score+=7;
+      }
+      if(/defensor criativo/.test(style)) {
+        if(skillCategory(name).includes('passing')) score+=9;
+        if(name==='Passe de primeira' || name==='Passe em profundidade') score+=3;
+      } else if(/destruidor/.test(style)) {
+        if(skillCategory(name).includes('defense') || skillCategory(name).includes('physical')) score+=9;
+        if(name==='Bloqueador' || name==='Marcação individual' || name==='Carrinho' || name==='Afastamento acrobático') score+=3;
+      }
+      if(/primeiro volante/.test(style)) {
+        if(skillCategory(name).includes('defense') || name==='Passe de primeira' || name==='Passe em profundidade') score+=3.5;
+      }
+      if(/orquestrador|armador criativo|classico/.test(style)) {
+        if(skillCategory(name).includes('passing')) score+=3;
+      }
       return {name,score,index};
     })
     .sort((a,b)=>b.score-a.score || a.index-b.index);
@@ -375,6 +416,7 @@ function skillIntegrityR119(input:AnalysisResult, parsed:ParsedCard, top5:string
       unique?'Top 5 sem duplicatas internas.':'Há duplicata interna no Top 5.',
       roleCompatible?`Compatibilidade validada pela posição natural ${parsed.mainPosition}.`:`Há habilidade incompatível com ${parsed.mainPosition}.`,
       complete?`Foram entregues ${top5.length}/${expected} opções oficiais disponíveis.`:`Foram entregues ${top5.length}/${expected}; revisar leitura/catálogo.`,
+      'Ímpetos foram avaliados em trilhas separadas das habilidades adicionais.',
       'A formação e a posição selecionada não reescrevem as habilidades permanentes da carta.'
     ]
   };
@@ -437,9 +479,19 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const minimum=parsed.mainPosition==='GK'?4:10;
   if(!budget || attributeCount<minimum) {
     const zero=emptyTraining();
+    // Ficha e Top 5 têm requisitos de evidência diferentes. Uma leitura curta
+    // pode ser insuficiente para distribuir pontos com segurança, mas ainda
+    // conter posição, habilidades já possuídas e atributos suficientes para
+    // ordenar habilidades adicionais oficiais sem recorrer a receita legada.
+    const actions=naturalActionDetails(parsed);
+    const top5=recommendTop5(parsed,actions);
+    const skillIntegrity=skillIntegrityR119(input,parsed,top5);
+    const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
+    const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
+    const dna=dominantDna(actions);
     const analysis:CleanSlate2027R119={
-      version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'BLOCKED_INSUFFICIENT_DATA',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training:zero,candidateCount:0,score:0,responseScore:0,synergyScore:0,confidence:round1(confidence),dominantDna:[],specialSkills:[...(parsed.specialSkills??[])],actions:[],top5:[],currentImpeto:parsed.impetos?.[0]?.name??null,impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',recommendedImpeto:null,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:true,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.']};
-    return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:[],recommendedImpetos:[],cleanSlate2027R119:analysis,recommendationExplanation:['r119 bloqueou a geração por dados insuficientes; nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
+      version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'BLOCKED_INSUFFICIENT_DATA',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training:zero,candidateCount:0,score:0,responseScore:0,synergyScore:0,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:parsed.impetos?.[0]?.name??null,impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',recommendedImpeto:null,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.','Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']};
+    return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:top5,recommendedImpetos:[],skillIntegrity,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
   const optimized=optimizeTraining(parsed,budget);
   const training=optimized.plan;

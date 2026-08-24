@@ -20,7 +20,10 @@ assert.ok(
 assert.ok(v3500.includes('Perfil da carta'), 'A regressão v35.00 precisa validar o novo rótulo automático.');
 
 const v3520 = read('tests/v35-20-gameplay-dna-solid-theme-regression.ts');
-assert.ok(v3520.includes('38\\.37-automatic-card-gameplay-1'), 'A regressão v35.20 precisa aceitar o motor automático sem restaurar seleção manual.');
+assert.ok(
+  v3520.includes('CLEAN_SLATE_2027_R119_VERSION') || v3520.includes('Clean Slate r119') || v3520.includes('cleanSlate2027R119'),
+  'A regressão v35.20 precisa aceitar o Clean Slate r119 sem restaurar seleção manual nem o motor v38.37.'
+);
 
 
 const v3771 = read('tests/v37-71-ci-hotfix-regression.mjs');
