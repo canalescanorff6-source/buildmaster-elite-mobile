@@ -26,7 +26,7 @@ assert.match(cardApp,/analyzeCard\(lockedText, 'COMPETITIVE'/);
 assert.match(cardApp,/setDraftResult\(autoResult\);\s*setResult\(null\)/);
 assert.match(cardApp,/(?:Confira Nome, Nível máximo e Pontos antes de gerar a ficha|Nome, Nível máximo e Pontos foram preenchidos automaticamente; confira antes de gerar a ficha)/);
 assert.match(cardApp,/Confira Nome, Nível máximo e Pontos de progressão para gerar a ficha/);
-assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace
+assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace
 assert.doesNotMatch(review,/Confirme as etapas obrigatórias/);
 assert.match(review,/premium-reading-audit-v4070/);
 assert.match(review,/zero confirmações obrigatórias/);

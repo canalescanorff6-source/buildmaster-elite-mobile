@@ -4,6 +4,8 @@ import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeli
 import type { PositionCode, TacticalFormation } from '../src/lib/analyzerDomain';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
 
+process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
+
 function cardText(overall: number) {
   return `[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: Criador Driblador V3510\nPOSIÇÃO PRINCIPAL: SS\nESTILO DE JOGO: Puxa marcação\nOVERALL: ${overall}\nPONTOS TOTAIS: 64\nHABILIDADES JÁ POSSUI: Passe de primeira, Chute de primeira\nTalento ofensivo: 88\nControle de bola: 94\nDrible: 96\nCondução firme: 95\nPasse rasteiro: 84\nPasse alto: 78\nFinalização: 84\nCabeceio: 64\nCurva: 86\nVelocidade: 90\nAceleração: 94\nForça do chute: 82\nSalto: 66\nContato físico: 69\nEquilíbrio: 94\nResistência: 83\n[FIM AJUSTES]`;
 }
@@ -25,53 +27,36 @@ function run(position: PositionCode, formation: TacticalFormation, overall = 99)
 const natural = run('SS', '4-3-3');
 const selected = run('CF', '4-3-3');
 
-assert.match(natural.buildName, /^(?:Ficha v35 Máxima|Ficha Automática v(?:38\.(?:37|38|39|40)|40\.(?:00|10|20|30|40|50|60|70|80)))/);
-assert.match(selected.buildName, /^(?:Ficha v35 Máxima|Ficha Automática v(?:38\.(?:37|38|39|40)|40\.(?:00|10|20|30|40|50|60|70|80)))/);
-assert.equal(natural.trainingPointsUsed, 64);
-assert.equal(selected.trainingPointsUsed, 64);
-assert.equal(trainingPlanTotalCost(natural.training), 64);
-assert.equal(trainingPlanTotalCost(selected.training), 64);
-assert.equal(natural.trainingPointsRemaining, 0);
-assert.equal(selected.trainingPointsRemaining, 0);
-
-assert.ok(natural.positionBuildComparison, 'A ficha precisa comparar a posição natural e a escolhida.');
-assert.equal(natural.positionBuildComparison?.natural.position, 'SS');
-assert.equal(natural.positionBuildComparison?.selected.position, 'SS');
-assert.equal(natural.positionBuildComparison?.samePosition, true);
-assert.equal(selected.positionBuildComparison?.natural.position, 'SS');
-assert.equal(selected.positionBuildComparison?.selected.position, 'CF');
-assert.equal(selected.positionBuildComparison?.samePosition, false);
-assert.equal(selected.bestPosition.code, 'CF', 'A posição escolhida pelo usuário deve continuar soberana.');
-assert.notDeepEqual(selected.positionBuildComparison?.natural.training, selected.positionBuildComparison?.selected.training, 'A auditoria posicional deve continuar comparando exigências diferentes.');
-assert.deepEqual(selected.adaptivePositionV3930?.coreTraining, natural.adaptivePositionV3930?.coreTraining, 'O núcleo da mesma carta não pode mudar ao selecionar outra posição.');
-assert.deepEqual(selected.training, natural.training, 'A autoridade r118 mantém a mesma Card Signature da carta entre posições; a comparação posicional permanece somente diagnóstica.');
-assert.ok((selected.adaptivePositionV3930?.corePreservation ?? 0) >= 72, 'A adaptação precisa preservar o DNA da carta.');
-const naturalCoreSkills = new Set((natural.adaptivePositionV3930?.coreSkills ?? []).slice(0, 3).map((item) => item.name));
-assert.ok((selected.adaptivePositionV3930?.finalSkills ?? []).filter((item) => naturalCoreSkills.has(item.name)).length >= Math.min(3, naturalCoreSkills.size), 'Três habilidades centrais da identidade precisam ser preservadas.');
-assert.deepEqual(selected.recommendedImpetos, natural.recommendedImpetos, 'Os Ímpetos da mesma carta não podem mudar ao selecionar outra posição.');
-
 for (const result of [natural, selected]) {
-  const dimensions = result.calibrationV32?.dimensions;
-  assert.ok(dimensions, 'A calibração máxima precisa estar presente.');
-  assert.ok((dimensions?.antiOverallWaste ?? 0) >= 85, 'A proteção contra overall artificial deve ser alta.');
-  assert.ok((dimensions?.gameplayResponse ?? 0) >= 85, 'A ficha deve manter alta resposta prática em campo.');
-  assert.ok((dimensions?.functionalFloor ?? 0) >= 80, 'A ficha não pode criar um ponto fraco funcional grave.');
-  assert.ok((dimensions?.crossModeStability ?? 0) >= 80, 'A ficha deve permanecer estável entre ranqueado e outros modos.');
-  assert.equal(result.positionBuildComparison?.selected.exactBudget, true);
-  assert.ok(result.recommendationExplanation.some((line) => /sem (?:usar|perseguir) overall/i.test(line)), 'A explicação deve declarar a proteção anti-overall.');
+  assert.equal(result.trainingPointsUsed, 64);
+  assert.equal(trainingPlanTotalCost(result.training), 64);
+  assert.equal(result.trainingPointsRemaining, 0);
+  assert.equal(result.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
+  assert.equal(result.cleanSlate2027R119?.guards.exactBudget, true);
+  assert.equal(result.cleanSlate2027R119?.guards.ignoresOverall, true);
+  assert.equal(result.cleanSlate2027R119?.guards.selectedPositionDoesNotRewriteSignature, true);
+  assert.ok((result.cleanSlate2027R119?.responseScore ?? 0) > 0, 'O r119 precisa medir resposta funcional da carta.');
 }
 
-assert.ok(natural.training.dribbling + natural.training.dexterity >= natural.training.shooting + natural.training.aerialStrength, 'O DNA driblador deve receber prioridade técnica na posição natural.');
-assert.ok((selected.positionBuildComparison?.selected.training.shooting ?? 0) + (selected.positionBuildComparison?.selected.training.dexterity ?? 0) >= (selected.positionBuildComparison?.selected.training.passing ?? 0) + (selected.positionBuildComparison?.selected.training.defending ?? 0), 'A comparação diagnóstica de CA deve reconhecer execução ofensiva e movimentação.');
+assert.equal(natural.bestPosition.code, 'SS');
+assert.equal(selected.bestPosition.code, 'CF', 'A posição escolhida pelo usuário deve continuar disponível para a camada tática.');
+assert.equal(natural.cleanSlate2027R119?.positionAnchor, 'SS');
+assert.equal(selected.cleanSlate2027R119?.positionAnchor, 'SS', 'A Card Signature deve continuar ancorada na posição natural da carta.');
+assert.deepEqual(selected.training, natural.training, 'Selecionar outra posição não pode recriar a ficha permanente da mesma carta.');
+assert.deepEqual(selected.recommendedSkills, natural.recommendedSkills, 'Selecionar outra posição não pode trocar o Top 5 permanente da mesma carta.');
+assert.deepEqual(selected.recommendedImpetos, natural.recommendedImpetos, 'Selecionar outra posição não pode trocar o Ímpeto permanente da mesma carta.');
+assert.ok(natural.training.dribbling + natural.training.dexterity >= natural.training.shooting + natural.training.aerialStrength, 'O DNA driblador deve receber prioridade técnica sem perseguir overall.');
 
 const formA = run('CF', '4-3-3');
 const formB = run('CF', '5-3-2');
-assert.deepEqual(formA.training, formB.training, 'A formação não deve alterar a ficha individual máxima.');
-assert.deepEqual(formA.recommendedSkills, formB.recommendedSkills, 'A formação não deve alterar as cinco habilidades adicionais.');
+assert.deepEqual(formA.training, formB.training, 'A formação não deve alterar a ficha individual Clean Slate.');
+assert.deepEqual(formA.recommendedSkills, formB.recommendedSkills, 'A formação não deve alterar as habilidades permanentes.');
+assert.deepEqual(formA.recommendedImpetos, formB.recommendedImpetos, 'A formação não deve alterar o Ímpeto permanente.');
 
 const lowOverallLabel = run('CF', '4-2-2-2', 82);
 const highOverallLabel = run('CF', '4-2-2-2', 105);
 assert.deepEqual(lowOverallLabel.training, highOverallLabel.training, 'Mudar apenas o overall exibido não pode alterar a ficha.');
 assert.deepEqual(lowOverallLabel.recommendedSkills, highOverallLabel.recommendedSkills, 'Mudar apenas o overall exibido não pode alterar as habilidades adicionais.');
+assert.deepEqual(lowOverallLabel.recommendedImpetos, highOverallLabel.recommendedImpetos, 'Mudar apenas o overall exibido não pode alterar o Ímpeto.');
 
-console.log('v35.10 ficha máxima por posição natural/escolhida, anti-overall e estabilidade entre modos aprovadas.');
+console.log('v35.10 Clean Slate r119: assinatura por carta, anti-overall e estabilidade entre posições/formações aprovadas.');

@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { analyzeCard } from '../src/lib/analyzer';
 import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeline';
-import { applyGameplayDnaProfileSelection } from '../src/lib/gameplayDnaSelection';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '../src/modules/analysis/analyzerCatalog';
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
 import type { AnalysisResult, PositionCode, TacticalFormation } from '../src/lib/analyzerDomain';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
+
+process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
 
 function cardText(name: string, mainPosition: PositionCode, playstyle: string, overall: number, owned: string, attributes: string) {
   return `[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: ${name}\nPOSIÇÃO PRINCIPAL: ${mainPosition}\nESTILO DE JOGO: ${playstyle}\nOVERALL: ${overall}\nPONTOS TOTAIS: 64\nHABILIDADES JÁ POSSUI: ${owned}\n${attributes}\n[FIM AJUSTES]`;
@@ -77,78 +78,61 @@ function run(text: string, position: PositionCode, formation: TacticalFormation 
   }));
 }
 
-function profileSignature(result: AnalysisResult) {
-  return result.gameplayDna?.profiles.map((profile) => ({
-    id: profile.id,
-    training: profile.training,
-    skills: profile.additionalSkills
-  }));
+function cleanSignature(result: AnalysisResult) {
+  return {
+    training: result.training,
+    skills: result.recommendedSkills,
+    impetos: result.recommendedImpetos,
+    dna: result.cleanSlate2027R119?.dominantDna,
+    anchor: result.cleanSlate2027R119?.positionAnchor
+  };
 }
 
-function assertThreeOfficialProfiles(result: AnalysisResult, position: PositionCode) {
-  const dna = result.gameplayDna;
-  assert.ok(dna, 'A análise DNA da carta deve existir.');
-  assert.match(dna?.engineVersion ?? '', /^(?:35\.20-dna-gameplay-profiles-solid-theme-1|38\.37-automatic-card-gameplay-1)$/);
-  assert.equal(dna?.selectedPosition, position);
-  assert.equal(dna?.profiles.length, 3, 'O app deve entregar as três melhores fichas funcionais quando há dados suficientes.');
-  assert.equal(new Set(dna?.profiles.map((profile) => profile.id)).size, 3, 'Os três perfis precisam ter identidades diferentes.');
-  assert.equal(dna?.profiles.filter((profile) => profile.recommended).length, 1, 'Somente uma ficha deve ser recomendada como principal.');
-  assert.equal(dna?.profiles[0].id, dna?.primaryProfileId, 'A primeira ficha deve ser a recomendação automática.');
-  assert.deepEqual(dna?.profiles.map((profile) => profile.rank), [1, 2, 3]);
-
+function assertCleanSlate(result: AnalysisResult, selectedPosition: PositionCode, naturalPosition: PositionCode) {
+  const clean = result.cleanSlate2027R119;
+  assert.ok(clean, 'A análise Clean Slate da carta deve existir.');
+  assert.equal(clean?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
+  assert.equal(clean?.positionAnchor, naturalPosition);
+  assert.equal(result.bestPosition.code, selectedPosition, 'A posição escolhida continua disponível para a camada tática.');
+  assert.equal(trainingPlanTotalCost(result.training), result.trainingPointsTotal);
+  assert.equal(result.trainingPointsRemaining, 0);
+  assert.ok((clean?.dominantDna.length ?? 0) >= 2, 'O r119 precisa identificar múltiplas dimensões dominantes do DNA.');
+  assert.ok((clean?.actions.length ?? 0) >= 3, 'O r119 precisa avaliar várias ações funcionais da carta.');
+  assert.ok(result.recommendedSkills.length >= 3 && result.recommendedSkills.length <= 5, 'O Top adicional deve respeitar o catálogo compatível disponível.');
   const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
-  for (const profile of dna?.profiles ?? []) {
-    assert.equal(profile.position, position, 'Cada perfil deve respeitar a posição escolhida pelo usuário.');
-    assert.equal(profile.exactBudget, true, 'Cada ficha DNA deve usar exatamente o orçamento disponível.');
-    assert.equal(trainingPlanTotalCost(profile.training), result.trainingPointsTotal);
-    assert.equal(profile.additionalSkills.length, 5, 'Cada perfil de jogador com catálogo disponível deve receber cinco adicionais.');
-    assert.equal(new Set(profile.additionalSkills.map(skillIdentityKey)).size, 5, 'As habilidades do perfil não podem repetir.');
-    for (const skill of profile.additionalSkills) {
-      assert.ok(OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]), `Habilidade inexistente no perfil ${profile.label}: ${skill}`);
-      assert.ok(!owned.has(skillIdentityKey(skill)), `O perfil repetiu uma habilidade que a carta já possui: ${skill}`);
-    }
+  for (const skill of result.recommendedSkills) {
+    assert.ok(OFFICIAL_ADDITIONAL_SKILL_NAMES.includes(skill as (typeof OFFICIAL_ADDITIONAL_SKILL_NAMES)[number]), `Habilidade inexistente no r119: ${skill}`);
+    assert.ok(!owned.has(skillIdentityKey(skill)), `O r119 repetiu uma habilidade que a carta já possui: ${skill}`);
   }
 }
 
 const neymar = run(NEYMAR_STYLE, 'SS');
-assertThreeOfficialProfiles(neymar, 'SS');
-assert.ok(neymar.gameplayDna?.profiles.some((profile) => profile.id === 'DRIBBLER'), 'Uma carta com DNA técnico de Neymar deve receber uma opção de driblador.');
-assert.ok(neymar.gameplayDna?.profiles.some((profile) => profile.id === 'CREATOR'), 'Uma carta técnica e criativa deve receber uma opção de criação.');
-assert.ok(neymar.gameplayDna?.detectedDna.some((label) => /Drible e controle/i.test(label)), 'A leitura deve reconhecer drible e controle entre os DNAs dominantes.');
-assert.ok(new Set(neymar.gameplayDna?.profiles.map((profile) => JSON.stringify(profile.training))).size >= 2, 'As três fichas não podem ser apenas cópias com nomes diferentes.');
-
-const alternate = neymar.gameplayDna?.profiles.find((profile) => profile.id !== neymar.gameplayDna?.primaryProfileId);
-assert.ok(alternate, 'Precisa existir um perfil alternativo para seleção manual.');
-const applied = applyGameplayDnaProfileSelection(neymar, alternate!.id);
-assert.equal(applied.gameplayDna?.primaryProfileId, alternate?.id);
-assert.deepEqual(applied.training, alternate?.training, 'Usar esta ficha deve aplicar a distribuição selecionada.');
-assert.deepEqual(applied.recommendedSkills, alternate?.additionalSkills, 'Usar esta ficha deve aplicar as cinco habilidades daquele perfil.');
-assert.match(applied.buildName, new RegExp(alternate!.label));
-assert.equal(applied.trainingPointsUsed, 64);
-assert.equal(applied.trainingPointsRemaining, 0);
+assertCleanSlate(neymar, 'SS', 'SS');
+assert.ok(neymar.cleanSlate2027R119?.dominantDna.some((label) => /controle|condução|mobilidade|criação/i.test(label)), 'Uma carta técnica no perfil do Neymar deve revelar DNA técnico/móvel/criativo.');
+assert.ok((neymar.cleanSlate2027R119?.actions ?? []).some((action) => /Controle|Condução|Tabela|Passe|Giro/i.test(action.label)), 'As ações decisivas precisam refletir o DNA técnico da carta.');
 
 const selectedAmf = run(NEYMAR_STYLE, 'AMF');
-assertThreeOfficialProfiles(selectedAmf, 'AMF');
-assert.equal(selectedAmf.bestPosition.code, 'AMF', 'A posição escolhida continua soberana nos perfis DNA.');
-assert.equal(selectedAmf.positionBuildComparison?.natural.position, 'SS');
-assert.equal(selectedAmf.positionBuildComparison?.selected.position, 'AMF');
+assertCleanSlate(selectedAmf, 'AMF', 'SS');
+assert.deepEqual(selectedAmf.training, neymar.training, 'Selecionar AMF não pode recriar a Card Signature natural do mesmo jogador.');
+assert.deepEqual(selectedAmf.recommendedSkills, neymar.recommendedSkills, 'Selecionar AMF não pode trocar as habilidades permanentes da mesma carta.');
 
 const formationA = run(NEYMAR_STYLE, 'SS', '4-3-3');
 const formationB = run(NEYMAR_STYLE, 'SS', '5-3-2');
-assert.deepEqual(profileSignature(formationA), profileSignature(formationB), 'A formação não pode alterar os perfis individuais da mesma carta e posição.');
+assert.deepEqual(cleanSignature(formationA), cleanSignature(formationB), 'A formação não pode alterar o Clean Slate individual da mesma carta.');
 
 const lowOverall = run(NEYMAR_STYLE.replace('OVERALL: 96', 'OVERALL: 82'), 'SS');
 const highOverall = run(NEYMAR_STYLE.replace('OVERALL: 96', 'OVERALL: 105'), 'SS');
-assert.deepEqual(profileSignature(lowOverall), profileSignature(highOverall), 'Alterar apenas o overall exibido não pode alterar os Perfis de Gameplay.');
+assert.deepEqual(cleanSignature(lowOverall), cleanSignature(highOverall), 'Alterar apenas o overall exibido não pode alterar o Clean Slate.');
 
 const defender = run(DEFENDER, 'CB');
-assertThreeOfficialProfiles(defender, 'CB');
-const defensiveIds = new Set(['AERIAL_TARGET', 'DEEP_PLAYMAKER', 'BALL_WINNER', 'DEFENSIVE_ANCHOR', 'PROGRESSIVE_DEFENDER']);
-assert.ok(defender.gameplayDna?.profiles.every((profile) => defensiveIds.has(profile.id)), 'Zagueiro deve receber somente perfis compatíveis com defesa, jogo aéreo ou construção.');
+assertCleanSlate(defender, 'CB', 'CB');
+assert.ok(defender.cleanSlate2027R119?.dominantDna.some((label) => /defesa|jogo aéreo|criação/i.test(label)), 'Zagueiro deve revelar defesa, jogo aéreo ou construção no DNA dominante.');
+assert.ok((defender.cleanSlate2027R119?.actions ?? []).some((action) => /defensivo|Cobertura|Interceptação|Saída/i.test(action.label)), 'Zagueiro precisa ser avaliado por ações defensivas/construtivas reais.');
 
 const goalkeeper = run(GOALKEEPER, 'GK');
-assertThreeOfficialProfiles(goalkeeper, 'GK');
-assert.ok(goalkeeper.gameplayDna?.profiles.every((profile) => profile.id.startsWith('GK_')), 'Goleiro deve receber somente perfis de goleiro.');
+assertCleanSlate(goalkeeper, 'GK', 'GK');
+assert.ok(goalkeeper.cleanSlate2027R119?.dominantDna.some((label) => /goleiro/i.test(label)), 'Goleiro deve possuir DNA específico de goleiro.');
+assert.ok((goalkeeper.cleanSlate2027R119?.actions ?? []).every((action) => /goleiro|Reflexo|Cobertura|Saída|rebote/i.test(action.label)), 'O motor do goleiro não pode usar ações ofensivas de jogador de linha.');
 
 const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const solidCss = fs.readFileSync('src/app/v35-solid-premium.css', 'utf8');

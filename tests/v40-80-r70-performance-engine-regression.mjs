@@ -19,9 +19,9 @@ for (const contract of [
   'finalAuthorityR118IsOnlyWriter:true'
 ]) assert.ok(engine.includes(contract), `r70 sem contrato: ${contract}`);
 
-assert.ok(pipeline.indexOf('applyPerformanceFoundation2027R60(current)') < pipeline.indexOf('applyPerformanceEngine2027R70(current)'));
-assert.ok(pipeline.indexOf('applyPerformanceEngine2027R70(current)') < pipeline.indexOf('applyMasterCardEngineV4080R50(current)'));
+assert.ok(pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceFoundation2027R60)') < pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R70)'));
+assert.ok(pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R70)') < pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)'));
 assert.ok(master.includes('BM_R118_MASTER_READ_ONLY'));
 assert.ok(!master.includes('applyR70WinnerInsideMaster'));
 assert.ok(!master.includes('result.training ='));
-console.log('r70 aprovada: Digital Twin permanece especialista read-only; r50 não escreve ficha e r118 mantém a autoridade final.');
+console.log('r70 aprovada: Digital Twin permanece especialista read-only; r50 não escreve ficha e r119 mantém a autoridade final.');

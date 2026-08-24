@@ -29,20 +29,22 @@ assert.ok(finalEngine.includes("position === 'CF' ? `Defesa travada em ${exact.d
 
 const authorityOrder =
   pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27)') <
-    pipeline.indexOf('applyMasterCardEngineV4080R50(current)') &&
-  pipeline.indexOf('applyMasterCardEngineV4080R50(current)') <
+    pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)') &&
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)') <
     pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
   pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
     pipeline.indexOf('applyPermanentResources2027R80(current)') &&
   pipeline.indexOf('applyPermanentResources2027R80(current)') <
     pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') &&
   pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') <
+    pipeline.indexOf('applyCleanSlatePerformance2027R119(current, protectedRawCard)') &&
+  pipeline.indexOf('applyCleanSlatePerformance2027R119(current, protectedRawCard)') <
     pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13)');
 
 assert.ok(
   authorityOrder,
-  'r118 deve selar ficha + Top 5 + Ímpeto antes do gerador final protegido'
+  'r119 deve recalcular e selar ficha + Top 5 + Ímpeto depois de toda auditoria histórica'
 );
 assert.ok(masterEngine.includes('BM_R118_MASTER_READ_ONLY'), 'r50 precisa permanecer somente-leitura');
 
-console.log('r27/r118 aprovada: identidade legada read-only, Top 5 r80 e decisão final selada antes do gerador final.');
+console.log('r27/r119 aprovada: identidade legada read-only e Clean Slate sela a decisão final após a auditoria.');

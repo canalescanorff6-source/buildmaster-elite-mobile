@@ -11,6 +11,8 @@ import { canonicalSkillName, skillIdentityKey } from '../src/lib/officialSkillId
 import { availableOfficialAdditionalSkillCount, isRoleCompatibleAdditionalSkill } from '../src/lib/skillIntelligenceV31';
 import type { PositionCode, TacticalFormation, TacticalStyle } from '../src/lib/analyzerDomain';
 
+process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
+
 const EXPECTED_FIELD_SKILLS = [
   'Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada',
   'Puxada de letra', 'Finta de letra', 'Controle com a sola', 'Cabeçada', 'Efeito de longe',
@@ -189,9 +191,9 @@ assert.deepEqual(possession.recommendedImpetos, quickCounter.recommendedImpetos,
 const asCF = run(DRIBBLER, 'CF', '4-3-3', 'POSSE_DE_BOLA');
 assert.equal(asCF.recommendedSkills.length, 5, 'A adaptação para CA precisa manter cinco habilidades oficiais quando houver catálogo disponível.');
 assert.ok(asCF.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILLS.has(skill)), 'A adaptação não pode introduzir habilidade não oficial.');
-assert.deepEqual(asCF.adaptivePositionV3930?.coreTraining, dribbler.adaptivePositionV3930?.coreTraining, 'Selecionar outra posição não pode recriar o núcleo da carta.');
-assert.deepEqual(asCF.training, dribbler.training, 'A Card Signature final pertence à carta e não deve ser reescrita apenas pela posição escolhida; a adaptação fica no diagnóstico.');
-assert.ok((asCF.adaptivePositionV3930?.corePreservation ?? 0) >= 72, 'A adaptação deve preservar a essência da carta.');
+assert.equal(asCF.cleanSlate2027R119?.positionAnchor, dribbler.cleanSlate2027R119?.positionAnchor, 'A posição escolhida não pode trocar a âncora natural usada pelo Clean Slate.');
+assert.deepEqual(asCF.training, dribbler.training, 'A Card Signature final pertence à carta e não deve ser reescrita apenas pela posição escolhida; a adaptação fica na camada tática.');
+assert.equal(asCF.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER', 'A adaptação deve preservar a autoridade única r119.');
 assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'Selecionar outra posição não pode trocar os Ímpetos da carta.');
 
 

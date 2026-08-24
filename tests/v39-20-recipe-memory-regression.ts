@@ -29,14 +29,16 @@ const second = applyCompleteCardIntelligence(analyzeCard(card(86), 'COMPETITIVE'
   formation: '4-2-2-2', style: 'POSSE_DE_BOLA', gameplayMode: 'UNIVERSAL', connectionProfile: 'VARIABLE', controlProfile: 'DRIBBLE'
 }));
 
-assert.equal(first.unifiedPerformanceV3920?.recipeMemory?.status, 'NOVA');
-assert.equal(second.unifiedPerformanceV3920?.recipeMemory?.status, 'RECUPERADA');
-assert.deepEqual(second.adaptivePositionV3930?.coreTraining, first.adaptivePositionV3930?.coreTraining, 'Ruído de um ponto no OCR não pode criar outro núcleo para a mesma versão reconhecida.');
-assert.deepEqual(second.adaptivePositionV3930?.coreSkills.map((item) => item.name), first.adaptivePositionV3930?.coreSkills.map((item) => item.name), 'A memória canônica deve preservar o núcleo das habilidades.');
-assert.deepEqual(second.recommendedImpetos, first.recommendedImpetos, 'A memória canônica deve preservar o ranking de Ímpetos.');
-assert.equal(second.adaptivePositionV3930?.coreSignature, first.adaptivePositionV3930?.coreSignature);
-assert.notEqual(second.bestPosition.code, first.bestPosition.code, 'A posição de uso pode mudar sem mudar o núcleo da carta.');
-assert.notEqual(second.adaptivePositionV3930?.positionSignature, first.adaptivePositionV3930?.positionSignature, 'Posições diferentes podem receber adaptações controladas diferentes.');
-assert.equal(second.adaptivePositionV3930?.primaryImpeto, first.adaptivePositionV3930?.primaryImpeto, 'O Ímpeto não pode variar por posição.');
+assert.equal(first.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
+assert.equal(second.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
+assert.equal(first.unifiedPerformanceV3920?.recipeMemory, undefined, 'A memória v39 não deve rodar no caminho crítico de produção r119.');
+assert.equal(second.unifiedPerformanceV3920?.recipeMemory, undefined, 'A memória v39 não deve recuperar/escrever receitas no caminho crítico r119.');
+assert.deepEqual(second.training, first.training, 'Ruído de um ponto no OCR não pode recriar a ficha da mesma carta quando a decisão funcional permanece equivalente.');
+assert.deepEqual(second.recommendedSkills, first.recommendedSkills, 'Ruído de um ponto no OCR não pode trocar o Top 5 da mesma carta neste cenário.');
+assert.deepEqual(second.recommendedImpetos, first.recommendedImpetos, 'Ruído de um ponto no OCR não pode trocar o Ímpeto da mesma carta neste cenário.');
+assert.equal(second.cleanSlate2027R119?.cardKey, first.cleanSlate2027R119?.cardKey);
+assert.equal(second.cleanSlate2027R119?.positionAnchor, first.cleanSlate2027R119?.positionAnchor, 'A posição de uso não pode trocar a âncora natural da carta.');
+assert.notEqual(second.bestPosition.code, first.bestPosition.code, 'A posição de uso pode mudar sem mudar a assinatura permanente da carta.');
+assert.ok(Math.abs((second.cleanSlate2027R119?.responseScore ?? 0) - (first.cleanSlate2027R119?.responseScore ?? 0)) <= 1, 'Um ponto de ruído no passe não deve provocar salto artificial na resposta funcional.');
 
-console.log(`v39.20/v39.30 memória aprovada: núcleo ${first.adaptivePositionV3930?.coreSignature} recuperado e posições adaptadas sem trocar Ímpeto.`);
+console.log(`v39.20 memória legada retirada do caminho crítico: r119 manteve a ficha estável com ruído OCR e posições diferentes.`);

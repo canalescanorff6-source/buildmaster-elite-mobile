@@ -10,8 +10,11 @@ const production = readFileSync(resolve(root, 'src/lib/production2027V4080R100.t
 const lab = readFileSync(resolve(root, 'src/lib/performanceLab2027V4080R90.ts'), 'utf8');
 const resources = readFileSync(resolve(root, 'src/lib/permanentResources2027V4080R80.ts'), 'utf8');
 const engine = readFileSync(resolve(root, 'src/lib/performanceEngine2027V4080R108.ts'), 'utf8');
+const cleanSlate = readFileSync(resolve(root, 'src/lib/cleanSlatePerformance2027V4080R119.ts'), 'utf8');
 
-assert.match(pipeline, /applyPerformanceEngine2027R108\(current\);\s+current = applyPerformanceEngine2027R109\(current\);\s+current = applyMasterCardEngineV4080R50\(current\);/);
+assert.match(pipeline, /applyLegacyTrainingReadOnly\(current, applyPerformanceEngine2027R108\)/);
+assert.match(pipeline, /applyLegacyTrainingReadOnly\(current, applyPerformanceEngine2027R109\)/);
+assert.match(pipeline, /applyLegacyTrainingReadOnly\(current, applyMasterCardEngineV4080R50\)/);
 assert.match(pipeline, /applyPermanentResources2027R80\(current\);\s+current = applyFinalDecisionAuthority2027R118\(current\);/);
 assert.match(master, /authorityMode: 'LEGACY_READ_ONLY'/);
 assert.match(finalAuthority, /trainingSource: FinalDecisionSourceR118/);
@@ -26,4 +29,7 @@ assert.match(engine, /BM_R118_AERIAL_SPECIALIZATION_PROOF/);
 assert.doesNotMatch(engine, /maxOverall/);
 assert.doesNotMatch(engine, /\.overall/);
 
-console.log('r108 integração aprovada: Card Signature é especialista e r118 sela a decisão sem autoridade legada concorrente.');
+assert.match(cleanSlate, /CLEAN_SLATE_SINGLE_WRITER/);
+assert.match(cleanSlate, /noFloorPeakCeiling: true/);
+assert.match(pipeline, /applyCleanSlatePerformance2027R119\(current, protectedRawCard\)/);
+console.log('r108 integração aprovada: Card Signature é diagnóstico e r119 sela a decisão sem autoridade legada concorrente.');

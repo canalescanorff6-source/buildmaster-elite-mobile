@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { applyPreFinalConfirmationR16 } from './apply-prefinal-confirmation-r16.mjs';
@@ -32,15 +32,23 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  applyUniversalDnaR25(root);
  applyPreFinalVisualR104(root);
  applyPreFinalAutoProgressR105(root);
- applyR109ExtremeCompat(root);
- applyR111DefinitiveCiGameplay(root);
- applyR114GameplayTruth(root);
- applyR115CardSignature(root);
- applyR116TenZoneCompat(root);
- applyR111TestContract(root);
- applyR114TestContract(root);
- applyR115TestContract(root);
- applyR116TestContract(root);
+ const pipelinePath=resolve(root,'src/lib/cardIntelligencePipeline.ts');
+ const cleanSlateR119Installed=existsSync(pipelinePath) && readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');
+ if(cleanSlateR119Installed){
+   // r119 substitui a cadeia mutável r109-r116. Reaplicar esses patchers depois do
+   // Clean Slate tentaria restaurar contratos antigos e pode quebrar o build.
+   console.log('v40.80 r119: patchers legados r109-r116 ignorados; Clean Slate preservado.');
+ } else {
+   applyR109ExtremeCompat(root);
+   applyR111DefinitiveCiGameplay(root);
+   applyR114GameplayTruth(root);
+   applyR115CardSignature(root);
+   applyR116TenZoneCompat(root);
+   applyR111TestContract(root);
+   applyR114TestContract(root);
+   applyR115TestContract(root);
+   applyR116TestContract(root);
+ }
 }
 const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
 if(invoked===import.meta.url) sanitizeUpdateSource();

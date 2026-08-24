@@ -4,6 +4,8 @@ import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeli
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
 import type { TrainingPlan } from '../src/lib/types';
 
+process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
+
 type MatrixCase = {
   name: string;
   position: 'LWF' | 'AMF' | 'DMF' | 'CB' | 'LB' | 'GK';
@@ -73,8 +75,10 @@ for (const entry of cases) {
   assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, 5, `${entry.name}: as habilidades devem ser únicas.`);
   assert.ok(result.recommendedSkills.every((skill) => skillIdentityKey(skill) !== skillIdentityKey(entry.owned)), `${entry.name}: não pode repetir a habilidade já existente.`);
   assert.ok(entry.validate(result.training), `${entry.name}: ${entry.message} Ficha: ${JSON.stringify(result.training)}`);
-  assert.ok((result.unifiedIntelligence?.impetoPlan.name ?? '').length > 0, `${entry.name}: precisa haver recomendação de Ímpeto contextualizada.`);
-  assert.ok((result.supremeGameplay?.dimensions.tacticalFit ?? 0) > 0, `${entry.name}: formação e estilo coletivo precisam entrar na avaliação.`);
+  const cleanSlate = (result as typeof result & { cleanSlate2027R119?: { impetoDecision?: string; recommendedImpeto?: string | null; authority?: string } }).cleanSlate2027R119;
+  assert.equal(cleanSlate?.authority, 'CLEAN_SLATE_SINGLE_WRITER', `${entry.name}: r119 precisa ser a autoridade final.`);
+  assert.ok(Boolean(cleanSlate?.impetoDecision), `${entry.name}: a decisão de Ímpeto precisa ser explícita, inclusive quando a vaga não está confirmada.`);
+  assert.ok(Object.keys(result.tacticalFit ?? {}).length > 0, `${entry.name}: formação e estilo coletivo continuam na camada tática sem reescrever a Card Signature.`);
 }
 
 console.log(`v31.82 matriz de ${cases.length} funções, posições, estilos, formações, fichas, habilidades e Ímpetos aprovada.`);

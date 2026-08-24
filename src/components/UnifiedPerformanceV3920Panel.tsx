@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { AnalysisResult, TrainingKey } from '@/lib/analyzerDomain';
 import type { FinalDecisionAuthority2027R118 } from '@/lib/finalDecisionAuthority2027V4080R118';
+import type { CleanSlate2027R119 } from '@/lib/cleanSlatePerformance2027V4080R119';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
@@ -58,6 +59,55 @@ export function UnifiedPerformanceV3920Panel({
   skillProgress?: Record<string, boolean>;
 }) {
   const unified = result.unifiedPerformanceV3920;
+  const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: CleanSlate2027R119 }).cleanSlate2027R119;
+  if (!unified && cleanSlate) {
+    const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
+    const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
+    return <article className="luxury-panel wide-card unified-performance-v3920">
+      <header className="unified-v3920-head">
+        <div>
+          <p className="kicker"><BrainCircuit size={15} /> Clean Slate • r119</p>
+          <h3>Ficha recalculada do zero pela identidade da carta</h3>
+          <p>{result.parsed.playerName}: o motor avaliou {cleanSlate.candidateCount} estados e escolheu a distribuição com maior retorno funcional para as ações naturais desta carta.</p>
+          <small>Motores históricos não participam do caminho crítico do Android e não podem semear a ficha final.</small>
+        </div>
+        <span className={`unified-v3920-safety ${cleanSlate.status === 'READY' ? 'safe' : 'blocked'}`}>
+          {cleanSlate.status === 'READY' ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
+          {cleanSlate.status === 'READY' ? 'Clean Slate pronto' : 'Leitura insuficiente'}
+        </span>
+      </header>
+      <section className="unified-v3920-actionbar">
+        <button type="button" className="result-action-primary" onClick={onSave} disabled={!onSave}><Save size={16} /> Salvar ficha</button>
+        <button type="button" onClick={onShare}><Share2 size={16} /> Compartilhar</button>
+        <button type="button" onClick={onExportImage}><Download size={16} /> Exportar imagem</button>
+      </section>
+      <section className="unified-v3920-grid">
+        <article>
+          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Único escritor: Clean Slate r119</small></span></div>
+          <h4>{planText(result) || 'Aguardando leitura completa'}</h4>
+          <div className="unified-v3920-metrics">
+            <span><b>{Math.round(cleanSlate.responseScore)}</b><small>resposta</small></span>
+            <span><b>{Math.round(cleanSlate.synergyScore)}</b><small>sinergia</small></span>
+            <span><b>{Math.round(cleanSlate.confidence)}</b><small>confiança</small></span>
+          </div>
+          <div className="chip-cloud">
+            <span>Motor final: Clean Slate r119</span>
+            {cleanSlate.dominantDna.map((dna) => <span key={dna}>{dna}</span>)}
+          </div>
+        </article>
+        <article>
+          <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>Top 5 permanente</strong><small>Sem repetir habilidade já existente</small></span></div>
+          <div className="chip-cloud">{displayedSkills.map((skill) => <span key={skill}>{skill}</span>)}</div>
+          <p>Ímpeto: {cleanSlate.currentImpeto ? `manter ${cleanSlate.currentImpeto}` : primaryImpeto ?? 'nenhum gasto seguro confirmado'}</p>
+        </article>
+        <article>
+          <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Ações decisivas</strong><small>O que realmente puxou o investimento</small></span></div>
+          <div className="chip-cloud">{cleanSlate.actions.slice(0, 6).map((action) => <span key={action.id}>{action.label} {Math.round(action.frequency)}%</span>)}</div>
+          <small>{cleanSlate.reasons[2]}</small>
+        </article>
+      </section>
+    </article>;
+  }
   if (!unified) return null;
   const adaptive = result.adaptivePositionV3930;
   const functional = result.performanceFunctionV3940;
@@ -106,8 +156,8 @@ export function UnifiedPerformanceV3920Panel({
   return <article className="luxury-panel wide-card unified-performance-v3920">
     <header className="unified-v3920-head">
       <div>
-        <p className="kicker"><BrainCircuit size={15} /> Autoridade Única por Carta • r118</p>
-        <h3>Card Signature decide; motores históricos apenas auditam</h3>
+        <p className="kicker"><BrainCircuit size={15} /> Autoridade Única por Carta • r119</p>
+        <h3>Clean Slate decide; motores históricos apenas auditam</h3>
         <p>{longitudinalGameplay?.applied ? `${result.parsed.playerName}: ${longitudinalGameplay.winnerLabel} foi confirmada em ${longitudinalGameplay.sessions} sessões com confiança ${Math.round(longitudinalGameplay.confidenceScore)}/100.` : longitudinalGameplay?.provisionalV4050Blocked ? `${result.parsed.playerName}: a v40.60 encontrou um vencedor provisório, mas a v40.60 manteve a ficha Pareto até existir repetição longitudinal.` : precision4040?.summary ?? adaptiveMaximum?.summary ?? functional?.summary ?? adaptive?.summary ?? unified.summary}</p>
         <small>Um único escritor final sela ficha, Top 5 e Ímpeto. Pareto, v39/v40, r70, r107 e r109 continuam disponíveis somente como diagnóstico.</small>
       </div>

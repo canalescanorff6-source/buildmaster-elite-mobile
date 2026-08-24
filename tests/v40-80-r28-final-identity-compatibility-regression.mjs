@@ -14,18 +14,20 @@ assert.ok(!finalEngine.includes('recommendedImpetos: impetos'));
 
 const authorityOrder =
   pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27)') <
-    pipeline.indexOf('applyMasterCardEngineV4080R50(current)') &&
-  pipeline.indexOf('applyMasterCardEngineV4080R50(current)') <
+    pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)') &&
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)') <
     pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
   pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
-    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)');
+    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') &&
+  pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') <
+    pipeline.indexOf('applyCleanSlatePerformance2027R119(current, protectedRawCard)');
 
 assert.ok(
   authorityOrder,
-  'A identidade histórica fica read-only e a Card Signature fecha antes da autoridade r118.'
+  'A identidade histórica fica read-only e o Clean Slate r119 fecha a decisão depois da auditoria r118.'
 );
 assert.ok(masterEngine.includes('BM_R118_MASTER_READ_ONLY'));
 
 assert.ok(finalEngine.includes('fitTrainingToExactBudget(identityPlan'));
 assert.ok(finalEngine.includes('reconstructNaturalAttributes'));
-console.log('r28/r118 aprovada: contrato público preservado com identidade legada read-only e autoridade final r118.');
+console.log('r28/r119 aprovada: contrato público preservado com identidade legada read-only e autoridade final Clean Slate.');

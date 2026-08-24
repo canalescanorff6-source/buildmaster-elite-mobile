@@ -16,16 +16,17 @@ assert.ok(production.includes('trainingPlanTotalCost(result.training)'));
 assert.ok(production.includes('skillIdentityKey'));
 assert.ok(production.includes("lab?.risk === 'ALTO'"));
 
-const r60 = pipeline.indexOf('applyCanonicalCardIdentity2027R60(current)');
-const r70 = pipeline.indexOf('applyPerformanceEngine2027R70(current)');
-const masterIndex = pipeline.indexOf('applyMasterCardEngineV4080R50(current)');
+const r60 = pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyCanonicalCardIdentity2027R60)');
+const r70 = pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R70)');
+const masterIndex = pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)');
 const r80 = pipeline.indexOf('applyPermanentResources2027R80(current)');
 const r118 = pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)');
+const r119 = pipeline.indexOf('applyCleanSlatePerformance2027R119(current, protectedRawCard)');
 const r90 = pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPerformanceLab2027R90)');
 const r100 = pipeline.indexOf('applyPostAuthorityReadOnly(current, applyProduction2027R100)');
-assert.ok(r60 >= 0 && r60 < r70 && r70 < masterIndex && masterIndex < r80 && r80 < r118 && r118 < r90 && r90 < r100);
+assert.ok(r60 >= 0 && r60 < r70 && r70 < masterIndex && masterIndex < r80 && r80 < r118 && r118 < r90 && r90 < r119 && r119 < r100);
 assert.ok(master.includes('BM_R118_MASTER_READ_ONLY'));
 assert.ok(!master.includes('applyR70WinnerInsideMaster(result)'));
-assert.ok(production.includes("finalAuthority?.authority === 'FINAL_SINGLE_WRITER'"));
+assert.ok(production.includes("cleanSlate?.authority === 'CLEAN_SLATE_SINGLE_WRITER'"));
 
-console.log('r100 aprovada: Fundação -> especialistas -> r80 -> r118 -> Lab/Produção read-only, com autoridade única confirmada pelo r118.');
+console.log('r100 aprovada: Fundação -> auditorias históricas -> r119 -> Produção read-only, com autoridade única Clean Slate.');

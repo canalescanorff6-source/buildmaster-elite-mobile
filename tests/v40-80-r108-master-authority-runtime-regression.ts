@@ -33,24 +33,22 @@ const result:any = applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE'
 }));
 
 const extreme = result.performanceEngine2027R108;
-const authority = result.finalDecisionAuthority2027R118;
+const authority = result.cleanSlate2027R119;
 assert.ok(extreme, 'r108/Card Signature precisa continuar presente como especialista.');
-assert.ok(authority, 'r118 precisa existir.');
+assert.ok(authority, 'r119 precisa existir.');
 assert.equal(extreme.authority, 'SPECIALIST_READ_ONLY');
 assert.equal(extreme.guards.overallIgnored, true);
 assert.equal(extreme.guards.formationIndependent, true);
-assert.equal(authority.authority, 'FINAL_SINGLE_WRITER');
-assert.equal(authority.finalEngineLabel, 'Card Signature');
-assert.equal(authority.trainingSource, 'CARD_SIGNATURE_R115');
+assert.equal(authority.authority, 'CLEAN_SLATE_SINGLE_WRITER');
 assert.deepEqual(result.training, authority.training);
 assert.equal(trainingPlanTotalCost(result.training), 64);
 assert.ok(
-  JSON.stringify(result.training) === JSON.stringify(extreme.winner.training) || authority.legacyPattern.adjusted,
-  'A ficha final deve ser a vencedora Card Signature, salvo a trava explícita contra receita histórica.'
+  JSON.stringify(result.training) === JSON.stringify(authority.training),
+  'A ficha final deve ser exatamente a decisão Clean Slate.'
 );
-assert.deepEqual(result.recommendedSkills, result.permanentResources2027R80?.permanentTop5 ?? []);
-assert.equal(result.recommendedImpetos?.[0]?.name ?? null, result.permanentResources2027R80?.permanentImpeto?.name ?? null);
+assert.deepEqual(result.recommendedSkills, authority.top5);
+assert.equal(result.recommendedImpetos?.[0]?.name ?? null, authority.recommendedImpeto ?? null);
 assert.equal(result.finalCardAuthorityV4080R45, undefined);
-assert.ok((result.recommendationExplanation as string[]).some((line:string) => /Autoridade Final r118: Card Signature/.test(line)));
+assert.ok((result.recommendationExplanation as string[]).some((line:string) => /Motor final: Clean Slate r119/.test(line)));
 
-console.log('r108/r118 aprovado: Card Signature calcula e uma única autoridade sela ficha + Top 5 + Ímpeto.');
+console.log('r108/r119 aprovado: Card Signature fica em auditoria e Clean Slate sela ficha + Top 5 + Ímpeto.');

@@ -27,17 +27,19 @@ assert.ok(
 
 const authorityTop5Order =
   pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyProMatchOptimizerV4080R30)') <
-    pipeline.indexOf('applyMasterCardEngineV4080R50(current)') &&
-  pipeline.indexOf('applyMasterCardEngineV4080R50(current)') <
+    pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)') &&
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)') <
     pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
   pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
     pipeline.indexOf('applyPermanentResources2027R80(current)') &&
   pipeline.indexOf('applyPermanentResources2027R80(current)') <
-    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)');
+    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') &&
+  pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') <
+    pipeline.indexOf('applyCleanSlatePerformance2027R119(current, protectedRawCard)');
 
 assert.ok(
   authorityTop5Order,
-  'benchmark Pro permanece diagnóstico; Top 5 r80 e ficha Card Signature são selados pelo r118.'
+  'benchmark Pro e r80 permanecem diagnóstico; ficha/Top 5/Ímpeto finais são selados pelo r119.'
 );
 assert.ok(masterEngine.includes('BM_R118_MASTER_READ_ONLY'));
 
@@ -46,4 +48,4 @@ assert.ok(panel.includes('referências exatas usadas'));
 assert.ok(domain.includes('ProMatchOptimizerR30Analysis'));
 assert.ok(domain.includes('proMatchOptimizerR30?: ProMatchOptimizerR30Analysis'));
 
-console.log('r30/r118 aprovada: benchmark Pro read-only alimenta a análise e r118 mantém a autoridade final.');
+console.log('r30/r119 aprovada: benchmark Pro fica read-only e r119 mantém a autoridade final.');

@@ -3,7 +3,8 @@ import { analyzeCard } from '../src/lib/analyzer';
 import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeline';
 import type { PositionCode } from '../src/lib/analyzerDomain';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
-import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
+
+process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
 
 const SCHOLES = `[AJUSTES MANUAIS]
 CONFIRMAÇÃO MANUAL: SIM
@@ -55,42 +56,34 @@ const cmfB = build('CMF', 'scholes-b.png');
 const amf = build('AMF', 'scholes-amf.png');
 const cf = build('CF', 'scholes-fora.png');
 
-for (const result of [cmfA, cmfB, amf, cf]) {
-  const analysis = result.adaptivePositionV3930;
-  assert.ok(analysis, 'O Motor v39.30 precisa estar presente.');
-  assert.equal(analysis.engineVersion, '39.30.0');
-  assert.equal(analysis.deterministic, true);
-  assert.equal(analysis.selectedPositionAffectsCoreRecipe, false);
-  assert.equal(analysis.selectedPositionAffectsAppliedRecipe, true);
-  assert.equal(analysis.exactBudget, true);
+for (const [result, selected] of [[cmfA, 'CMF'], [cmfB, 'CMF'], [amf, 'AMF'], [cf, 'CF']] as const) {
+  const clean = result.cleanSlate2027R119;
+  assert.ok(clean, 'O Clean Slate r119 precisa estar presente.');
+  assert.equal(clean?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
+  assert.equal(clean?.source, 'RAW_CARD_SNAPSHOT');
+  assert.equal(clean?.positionAnchor, 'LMF', 'A posição natural da carta deve ancorar a assinatura permanente.');
+  assert.equal(clean?.guards.selectedPositionDoesNotRewriteSignature, true);
+  assert.equal(clean?.guards.exactBudget, true);
   assert.equal(trainingPlanTotalCost(result.training), result.trainingPointsTotal);
-  assert.ok(analysis.corePreservation >= 72);
-  assert.equal(analysis.impetoLockedByCard, true);
-  assert.equal(analysis.canApplyTraining, true);
-  assert.equal(analysis.canApplySkills, true);
-  assert.equal(analysis.canUseImpeto, true);
-  assert.notEqual(analysis.status, 'REVISAR_LEITURA');
+  assert.equal(result.trainingPointsRemaining, 0);
+  assert.equal(result.bestPosition.code, selected, 'A posição escolhida deve continuar disponível para a camada tática, inclusive fora da posição natural.');
+  assert.equal(clean?.status, 'READY');
+  assert.match(clean?.currentImpeto ?? '', /^Técnica(?:\s*\+?2)?$/i, 'O Ímpeto já presente na carta deve ser reconhecido e preservado.');
+  assert.equal(clean?.impetoDecision, 'KEEP_CURRENT', 'O r119 não pode gastar/recomendar outro Ímpeto quando a carta já possui um ativo.');
+  assert.deepEqual(result.recommendedImpetos, [], 'Ímpeto existente não pode reaparecer como recomendação nova.');
 }
 
-assert.deepEqual(cmfA.training, cmfB.training, 'A mesma carta na mesma posição precisa repetir a ficha exatamente.');
-assert.deepEqual(cmfA.recommendedSkills, cmfB.recommendedSkills, 'A mesma carta na mesma posição precisa repetir as habilidades.');
-assert.deepEqual(cmfA.recommendedImpetos, cmfB.recommendedImpetos, 'O Ímpeto precisa ser totalmente repetível.');
-assert.equal(cmfA.adaptivePositionV3930?.positionSignature, cmfB.adaptivePositionV3930?.positionSignature);
+assert.deepEqual(cmfA.training, cmfB.training, 'A mesma carta precisa repetir a ficha exatamente.');
+assert.deepEqual(cmfA.recommendedSkills, cmfB.recommendedSkills, 'A mesma carta precisa repetir as habilidades exatamente.');
+assert.deepEqual(cmfA.recommendedImpetos, cmfB.recommendedImpetos, 'A decisão de Ímpeto precisa ser totalmente repetível.');
+assert.equal(cmfA.cleanSlate2027R119?.cardKey, cmfB.cleanSlate2027R119?.cardKey);
 
-assert.deepEqual(cmfA.adaptivePositionV3930?.coreTraining, amf.adaptivePositionV3930?.coreTraining, 'O núcleo da carta não pode mudar ao trocar a posição.');
-assert.equal(cmfA.adaptivePositionV3930?.coreSignature, amf.adaptivePositionV3930?.coreSignature);
-assert.deepEqual(cmfA.recommendedImpetos, amf.recommendedImpetos, 'O Ímpeto não pode mudar ao trocar a posição.');
-assert.notEqual(cmfA.adaptivePositionV3930?.positionSignature, amf.adaptivePositionV3930?.positionSignature, 'Cada posição precisa ter uma adaptação determinística própria.');
-assert.deepEqual(cmfA.training, amf.training, 'A autoridade r118 mantém a Card Signature da mesma carta; MLG/MAT podem diferir somente nas métricas diagnósticas de adaptação.');
+assert.deepEqual(cmfA.training, amf.training, 'Trocar MLG/MC/MAT não pode recriar a Card Signature permanente da mesma carta.');
+assert.deepEqual(cmfA.training, cf.training, 'Usar a carta fora da posição natural não pode alterar a progressão permanente automaticamente.');
+assert.deepEqual(cmfA.recommendedSkills, amf.recommendedSkills, 'Top 5 permanente não pode variar apenas pela posição selecionada.');
+assert.deepEqual(cmfA.recommendedSkills, cf.recommendedSkills, 'Top 5 permanente não pode variar por adaptação fora da posição.');
+assert.equal(cmfA.cleanSlate2027R119?.positionAnchor, amf.cleanSlate2027R119?.positionAnchor);
+assert.equal(cmfA.cleanSlate2027R119?.positionAnchor, cf.cleanSlate2027R119?.positionAnchor);
+assert.equal(cf.cleanSlate2027R119?.guards.selectedPositionDoesNotRewriteSignature, true, 'Fora da posição natural não deve ser bloqueado nem reescrever a assinatura.');
 
-const cmfSkills = new Set((cmfA.adaptivePositionV3930?.coreSkills ?? []).slice(0, 3).map((item) => skillIdentityKey(item.name)));
-const finalCmf = (cmfA.adaptivePositionV3930?.finalSkills ?? []).map((item) => skillIdentityKey(item.name));
-assert.ok(finalCmf.filter((key) => cmfSkills.has(key)).length >= Math.min(3, cmfSkills.size), 'Ao menos três habilidades de identidade precisam ser preservadas.');
-assert.ok((cmfA.adaptivePositionV3930?.changes.length ?? 99) <= 8, 'A adaptação não pode refazer a carta inteira.');
-
-assert.equal(cf.adaptivePositionV3930?.adaptationMode, 'FORA_DA_POSICAO');
-assert.equal(cf.adaptivePositionV3930?.canApplyTraining, true, 'Fora da posição natural não deve ser bloqueado automaticamente.');
-assert.match(cf.adaptivePositionV3930?.summary ?? '', /adaptação determinística/i);
-assert.match(cmfA.buildName, /(?:Motor Adaptativo por Carta v39\.30|Ficha Automática v\d+\.\d{2}(?: r\d+)? — (?:Precisão Competitiva 99|Desempenho Máximo Stack Final|eFootball 2027 v6\.0 Adaptativa|Desempenho Real 2027|Meta Vivo 2027))/);
-
-console.log(`v39.30 aprovada: MLG ${cmfA.adaptivePositionV3930?.positionSignature}, MAT ${amf.adaptivePositionV3930?.positionSignature}, Ímpeto fixo ${cmfA.adaptivePositionV3930?.primaryImpeto}.`);
+console.log(`v39.30 migrada: r119 preservou a assinatura natural LMF em CMF/AMF/CF e manteve o Ímpeto existente sem duplicar recomendação.`);

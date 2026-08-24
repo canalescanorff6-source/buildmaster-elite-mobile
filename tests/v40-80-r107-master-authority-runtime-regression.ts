@@ -11,17 +11,17 @@ const result:any = applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE'
 
 assert.ok(result.performanceEngine2027R107, 'r107 precisa continuar disponível como especialista somente-leitura.');
 assert.ok(result.performanceEngine2027R108, 'Card Signature/r108 precisa existir.');
-assert.ok(result.finalDecisionAuthority2027R118, 'r118 precisa selar a decisão final.');
+assert.ok(result.finalDecisionAuthority2027R118, 'r118 permanece como auditoria histórica em Node.');
+assert.ok(result.cleanSlate2027R119, 'r119 precisa selar a decisão final.');
 assert.equal(result.masterCardV4080R50?.authorityMode, 'LEGACY_READ_ONLY');
-assert.equal(result.finalDecisionAuthority2027R118.authority, 'FINAL_SINGLE_WRITER');
-assert.equal(result.finalDecisionAuthority2027R118.trainingSource, 'CARD_SIGNATURE_R115');
-assert.deepEqual(result.training, result.finalDecisionAuthority2027R118.training);
+assert.equal(result.cleanSlate2027R119.authority, 'CLEAN_SLATE_SINGLE_WRITER');
+assert.deepEqual(result.training, result.cleanSlate2027R119.training);
 assert.equal(trainingPlanTotalCost(result.training), 64);
 assert.equal(result.trainingPointsRemaining, 0);
-assert.deepEqual(result.recommendedSkills, result.permanentResources2027R80?.permanentTop5 ?? []);
-assert.equal(result.finalDecisionAuthority2027R118.guards.legacyMetricsReadOnly, true);
-assert.equal(result.finalDecisionAuthority2027R118.guards.postAuthorityRewriteBlocked, true);
+assert.deepEqual(result.recommendedSkills, result.cleanSlate2027R119.top5);
+assert.equal(result.cleanSlate2027R119.guards.legacyEnginesReadOnly, true);
+assert.equal(result.cleanSlate2027R119.guards.rawSnapshotProtected, true);
 assert.equal(result.finalCardAuthorityV4080R45, undefined, 'r45 não pode executar quando Card Signature tem dados suficientes.');
 assert.ok(!(result.recommendationExplanation as string[]).some((line:string) => /Motor Mestre aplicou Ficha Quality r107/.test(line)));
 
-console.log('r107 compatível com r118: especialista histórico permanece read-only e não sobrescreve a Card Signature.');
+console.log('r107 compatível com r119: especialista histórico permanece read-only e Clean Slate sela a ficha final.');
