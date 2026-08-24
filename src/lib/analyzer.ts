@@ -1480,7 +1480,7 @@ export function recommendImpetos(parsed: ParsedCard, selectedPosition: PositionC
       const idx = info.groups.indexOf(group);
       if (idx >= 0) score += 120 - Math.min(80, groups.indexOf(group) * 7 + idx * 4);
     }
-    if (owned.has(skillKey(name))) score += 15;
+    if (owned.has(skillKey(name))) return { name, info, score: Number.NEGATIVE_INFINITY };
     return { name, info, score };
   }).sort((a, b) => b.score - a.score);
 

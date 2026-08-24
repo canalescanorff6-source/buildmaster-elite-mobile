@@ -80,6 +80,7 @@ export function UnifiedPerformanceV3920Panel({
       : safeArray(unified.canonicalSkills);
   const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
   const impetos = safeArray(result.recommendedImpetos);
+  const currentImpeto = finalAuthority?.currentImpeto ?? null;
   const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
   const conflicts = safeArray(positionFit?.conflicts);
   const traits = safeArray(identity?.traits);
@@ -93,7 +94,7 @@ export function UnifiedPerformanceV3920Panel({
       `Identidade: ${identity?.label ?? 'carta individual'}`,
       `Ficha aplicada: ${planText(result)}`,
       `Habilidades: ${displayedSkills.join(', ') || 'revisar'}`,
-      `Ímpeto fixo: ${primaryImpeto || 'revisar'}`,
+      `Ímpeto: ${currentImpeto ? `manter ${currentImpeto}` : primaryImpeto || 'nenhum seguro'}`,
       `Posição escolhida: ${functional?.selectedPositionLabel ?? adaptive?.selectedPositionLabel ?? positionFit?.selectedPositionLabel ?? result.bestPosition.label}`,
       `Função real: ${functional?.roleLabel ?? 'análise da carta'}`,
       `Status: ${statusLabel}`,
@@ -209,11 +210,13 @@ export function UnifiedPerformanceV3920Panel({
       </article>
 
       <article className={`unified-v3920-impeto ${statusClassName}`}>
-        <div className="unified-v3920-card-title"><BrainCircuit size={17} /><span><strong>Ímpeto fixo da carta</strong><small>Não muda quando você troca a posição</small></span></div>
-        <h4>{primaryImpeto || 'Nenhum Ímpeto seguro'}</h4>
-        <p>{impetos[0]?.reason ?? 'O r80 não aprovou gasto seguro para esta carta; nenhum Ímpeto antigo será mostrado como fallback.'}</p>
+        <div className="unified-v3920-card-title"><BrainCircuit size={17} /><span><strong>Ímpeto da carta</strong><small>Recurso permanente decidido pelo r80, independente da posição</small></span></div>
+        <h4>{currentImpeto ? `Manter ${currentImpeto}` : primaryImpeto || 'Nenhum Ímpeto seguro'}</h4>
+        <p>{currentImpeto
+          ? 'Este Ímpeto já está aplicado na carta. O r80 o preserva e bloqueia sua repetição como nova recomendação.'
+          : impetos[0]?.reason ?? 'O r80 não aprovou gasto seguro para esta carta; nenhum Ímpeto antigo será mostrado como fallback.'}</p>
         <div className="chip-cloud purple">{safeArray(impetos[0]?.attributes).map((attribute) => <span key={attribute}>{attribute}</span>)}</div>
-        <strong className="unified-v3920-spend-lock">{primaryImpeto ? 'Ímpeto aprovado pelo r80 para a carta' : 'Não gastar Ímpeto até existir aprovação segura'}</strong>
+        <strong className="unified-v3920-spend-lock">{currentImpeto ? 'Ímpeto atual preservado • não gastar para repetir' : primaryImpeto ? 'Ímpeto aprovado pelo r80 para a carta' : 'Não gastar Ímpeto até existir aprovação segura'}</strong>
       </article>
 
       <article>

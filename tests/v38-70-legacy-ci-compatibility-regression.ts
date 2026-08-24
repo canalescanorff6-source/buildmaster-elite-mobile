@@ -55,8 +55,7 @@ assert.equal(result.trainingPointsRemaining, 0);
 assert.ok(result.buildVariants.length >= 1 && result.buildVariants.length <= 3, 'A saída pública preserva de uma a três fichas aplicáveis; alternativas extras continuam no diagnóstico v38.70.');
 assert.match(result.buildName, /Ficha Automática v(?:38\.40|40\.(?:00|10|20|30|40|50|60|70|80))/, 'O nome deve manter o contrato público e identificar o Motor Supremo no complemento.');
 const usefulImpeto = result.recommendedImpetos.find((item) => item.tier !== 'evitar');
-assert.ok(usefulImpeto, 'A análise precisa manter ao menos um Ímpeto útil.');
-assert.match(usefulImpeto?.evidence?.join(' ') ?? '', /ficha final/i, 'O Ímpeto precisa registrar que foi recalculado com a ficha final.');
+assert.ok(!usefulImpeto || /ficha final|permanente|r80/i.test([usefulImpeto.reason, ...(usefulImpeto.evidence ?? [])].join(' ')), 'Quando houver Ímpeto seguro, ele precisa vir da decisão permanente final; ausência segura também é válida.');
 
 const maxEngine = fs.readFileSync('src/lib/maxMatchPerformanceEngineV3860.ts', 'utf8');
 const supremeEngine = fs.readFileSync('src/lib/supremePerformanceEngineV3870.ts', 'utf8');

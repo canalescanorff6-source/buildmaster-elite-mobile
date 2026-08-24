@@ -17,7 +17,9 @@ export type FinalDecisionAuthority2027R118 = {
   trainingSource: FinalDecisionSourceR118;
   training: TrainingPlan;
   recommendedSkills: string[];
+  currentImpeto: string | null;
   recommendedImpeto: string | null;
+  impetoDecision: 'KEEP_CURRENT' | 'APPLY_RECOMMENDED' | 'NONE_SAFE';
   responseScore: number | null;
   synergyScore: number | null;
   confidence: number;
@@ -131,10 +133,16 @@ function top5FromR80(result: Carrier) {
   }).slice(0, 5);
 }
 
+function activeImpetoName(result: Carrier) {
+  return result.parsed.impetos?.find((item) => item.active !== false && !/^sem\s+(?:ímpeto|impeto|booster)/i.test(item.name))?.name ?? null;
+}
+
 function impetoFromR80(result: Carrier): ImpetoRecommendation[] {
   const resources = result.permanentResources2027R80;
   const winner = resources?.permanentImpeto;
-  if (!winner) return [];
+  const active = activeImpetoName(result);
+  // Recurso já aplicado pertence à identidade da carta, mas não é uma nova recomendação.
+  if (!winner || active || !resources?.shouldSpendImpeto) return [];
 
   const existing = result.recommendedImpetos.find((item) => normalize(item.name) === normalize(winner.name));
   if (existing) return [{ ...existing, score: winner.score, confidence: resources.confidence }];
@@ -192,7 +200,13 @@ export function applyFinalDecisionAuthority2027R118(input: AnalysisResult): Anal
 
   const finalTraining = finalCandidate?.training ?? working.training;
   const recommendedSkills = top5FromR80(carrier);
+  const currentImpeto = activeImpetoName(carrier);
   const recommendedImpetos = impetoFromR80(carrier);
+  const impetoDecision: FinalDecisionAuthority2027R118['impetoDecision'] = currentImpeto
+    ? 'KEEP_CURRENT'
+    : recommendedImpetos.length
+      ? 'APPLY_RECOMMENDED'
+      : 'NONE_SAFE';
   const used = trainingPlanTotalCost(finalTraining);
   const exactBudget = Number.isFinite(budget) && used === budget;
   const confidence = Math.round(clamp(
@@ -208,7 +222,9 @@ export function applyFinalDecisionAuthority2027R118(input: AnalysisResult): Anal
     trainingSource: source,
     training: { ...finalTraining },
     recommendedSkills,
+    currentImpeto,
     recommendedImpeto: recommendedImpetos[0]?.name ?? null,
+    impetoDecision,
     responseScore: finalCandidate?.responseScore ?? extreme?.winner.responseScore ?? null,
     synergyScore: finalCandidate?.synergyScore ?? extreme?.winner.synergyScore ?? null,
     confidence,
@@ -227,7 +243,9 @@ export function applyFinalDecisionAuthority2027R118(input: AnalysisResult): Anal
       r45EmergencyOnly: source === 'CARD_SIGNATURE_R115' || !ready,
       legacyMetricsReadOnly: true,
       r80OwnsTop5: Boolean(resources) && recommendedSkills.every((skill, index) => skillIdentityKey(skill) === skillIdentityKey(resources?.permanentTop5[index] ?? '')),
-      r80OwnsImpeto: (recommendedImpetos[0]?.name ?? null) === (resources?.permanentImpeto?.name ?? null),
+      r80OwnsImpeto: currentImpeto
+        ? resources?.shouldSpendImpeto === false && normalize(resources?.permanentImpeto?.name) === normalize(currentImpeto)
+        : (recommendedImpetos[0]?.name ?? null) === (resources?.shouldSpendImpeto ? resources?.permanentImpeto?.name ?? null : null),
       postAuthorityRewriteBlocked: true
     }
   };
@@ -245,9 +263,11 @@ export function applyFinalDecisionAuthority2027R118(input: AnalysisResult): Anal
         ? `Autoridade Final r118: Card Signature selou a ficha; nenhum motor legado pode reescrever result.training.`
         : `Autoridade Final r118: Emergency r45 usado somente porque a leitura está incompleta. ${fallbackReason ?? ''}`.trim(),
       `Top 5 final vem exclusivamente do r80 (${recommendedSkills.length}/5).`,
-      recommendedImpetos[0]
-        ? `Ímpeto final vem exclusivamente do r80: ${recommendedImpetos[0].name}.`
-        : 'Ímpeto final: nenhum recurso seguro aprovado pelo r80; recomendações antigas foram bloqueadas.',
+      currentImpeto
+        ? `Ímpeto atual preservado pelo r80: ${currentImpeto}; ele não é repetido como nova recomendação.`
+        : recommendedImpetos[0]
+          ? `Ímpeto final vem exclusivamente do r80: ${recommendedImpetos[0].name}.`
+          : 'Ímpeto final: nenhum recurso seguro aprovado pelo r80; recomendações antigas foram bloqueadas.',
       legacyAdjusted
         ? 'Trava anti-receita histórica: o padrão 8/8/8/12 foi rejeitado porque não provou ganho suficiente; uma alternativa Card Signature equivalente foi escolhida.'
         : `Trava anti-receita histórica: similaridade ${analysis.legacyPattern.similarity}/100; nenhuma receita antiga recebeu autoridade automática.`,

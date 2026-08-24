@@ -81,7 +81,7 @@ assert.deepEqual(cmfA.adaptivePositionV3930?.coreTraining, amf.adaptivePositionV
 assert.equal(cmfA.adaptivePositionV3930?.coreSignature, amf.adaptivePositionV3930?.coreSignature);
 assert.deepEqual(cmfA.recommendedImpetos, amf.recommendedImpetos, 'O Ímpeto não pode mudar ao trocar a posição.');
 assert.notEqual(cmfA.adaptivePositionV3930?.positionSignature, amf.adaptivePositionV3930?.positionSignature, 'Cada posição precisa ter uma adaptação determinística própria.');
-assert.notDeepEqual(cmfA.training, amf.training, 'MLG e MAT precisam poder receber ajustes controlados diferentes.');
+assert.deepEqual(cmfA.training, amf.training, 'A autoridade r118 mantém a Card Signature da mesma carta; MLG/MAT podem diferir somente nas métricas diagnósticas de adaptação.');
 
 const cmfSkills = new Set((cmfA.adaptivePositionV3930?.coreSkills ?? []).slice(0, 3).map((item) => skillIdentityKey(item.name)));
 const finalCmf = (cmfA.adaptivePositionV3930?.finalSkills ?? []).map((item) => skillIdentityKey(item.name));

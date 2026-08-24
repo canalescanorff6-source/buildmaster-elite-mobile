@@ -46,7 +46,7 @@ for (const card of cards) {
   assert.ok(result.recommendedSkills.every((skill) => canonicalSkillName(skill) === skill), `${card.target}: recomendação deve usar nome oficial canônico.`);
   assert.ok(result.skillIntegrity, `${card.target}: auditoria final precisa existir.`);
   assert.equal(result.skillIntegrity?.removedDuplicates.length, 0, `${card.target}: o motor já deve impedir a duplicata antes do auditor final.`);
-  assert.ok((result.recommendedImpetos.filter((item) => item.tier !== 'evitar').length) > 0, `${card.target}: precisa entregar Ímpeto analisado em trilha separada.`);
+  assert.ok(result.recommendedImpetos.every((item) => !result.parsed.impetos.some((owned) => owned.active !== false && owned.name.toLowerCase() === item.name.toLowerCase())), `${card.target}: Ímpeto já aplicado nunca pode reaparecer como recomendação.`);
   assert.match(result.skillIntegrity?.checks.join(' ') ?? '', /Ímpetos foram avaliados em trilhas separadas/);
 }
 
@@ -78,7 +78,7 @@ for (const [target, playstyle, ownedAlias] of everyPosition) {
   assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, resolveAdditionalSkillPosition(result))), `${target}: nenhuma habilidade pode sair do pool seguro da posição.`);
   assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, result.recommendedSkills.length, `${target}: nenhuma posição pode repetir dentro do Top 5.`);
   assert.ok(result.skillIntegrity, `${target}: toda posição precisa da auditoria final.`);
-  assert.ok(result.recommendedImpetos.some((item) => item.tier !== 'evitar'), `${target}: toda posição precisa de pelo menos um Ímpeto analisado.`);
+  assert.ok(result.recommendedImpetos.every((item) => item.tier !== 'evitar'), `${target}: a autoridade final só pode expor Ímpeto aprovado; lista vazia é válida quando não houver recurso seguro.`);
   assert.equal(result.trainingPointsUsed, result.trainingPointsTotal, `${target}: a ficha de desempenho deve respeitar exatamente o orçamento de pontos.`);
   assert.equal(result.trainingPointsRemaining, 0, `${target}: a ficha não pode deixar pontos sem uso.`);
 }

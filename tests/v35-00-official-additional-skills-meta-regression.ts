@@ -190,7 +190,7 @@ const asCF = run(DRIBBLER, 'CF', '4-3-3', 'POSSE_DE_BOLA');
 assert.equal(asCF.recommendedSkills.length, 5, 'A adaptação para CA precisa manter cinco habilidades oficiais quando houver catálogo disponível.');
 assert.ok(asCF.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILLS.has(skill)), 'A adaptação não pode introduzir habilidade não oficial.');
 assert.deepEqual(asCF.adaptivePositionV3930?.coreTraining, dribbler.adaptivePositionV3930?.coreTraining, 'Selecionar outra posição não pode recriar o núcleo da carta.');
-assert.notDeepEqual(asCF.training, dribbler.training, 'A camada aplicada pode mudar de forma limitada para a posição escolhida.');
+assert.deepEqual(asCF.training, dribbler.training, 'A Card Signature final pertence à carta e não deve ser reescrita apenas pela posição escolhida; a adaptação fica no diagnóstico.');
 assert.ok((asCF.adaptivePositionV3930?.corePreservation ?? 0) >= 72, 'A adaptação deve preservar a essência da carta.');
 assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'Selecionar outra posição não pode trocar os Ímpetos da carta.');
 

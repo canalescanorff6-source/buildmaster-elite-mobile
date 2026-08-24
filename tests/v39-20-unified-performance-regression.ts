@@ -142,7 +142,7 @@ assert.match(engine, /selectedPositionAffectsCanonicalRecipe: false/);
 assert.match(engine, /NAO_GASTAR_RECURSOS/);
 assert.doesNotMatch(engine, /Math\.random/);
 assert.match(panel, /(?:Motor Adaptativo por Carta v39\.30|Precisão Competitiva 99)/);
-assert.match(panel, /Mesmo Ímpeto em todas as posições/);
+assert.match(panel, /Recurso permanente decidido pelo r80, independente da posição/);
 assert.match(workspace, /Ficha Suprema/);
 assert.match(workspace, /Tudo unificado em uma tela/);
 assert.match(workspace, /UNIFIED_COMPACT_RESULT_V3920 = true/);
