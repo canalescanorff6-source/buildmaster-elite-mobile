@@ -13,9 +13,11 @@ import { applyR109ExtremeCompat } from './apply-r109-extreme-compat.mjs';
 import { applyR111DefinitiveCiGameplay } from './apply-r111-definitive-ci-gameplay.mjs';
 import { applyR114GameplayTruth } from './apply-r114-gameplay-truth.mjs';
 import { applyR115CardSignature } from './apply-r115-card-signature.mjs';
+import { applyR116TenZoneCompat } from './apply-r116-ten-zone-compat.mjs';
 import { applyR111TestContract } from './apply-r111-test-contract.mjs';
 import { applyR114TestContract } from './apply-r114-test-contract.mjs';
 import { applyR115TestContract } from './apply-r115-test-contract.mjs';
+import { applyR116TestContract } from './apply-r116-test-contract.mjs';
 
 export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  const root=resolve(rootDirectory);
@@ -34,9 +36,11 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  applyR111DefinitiveCiGameplay(root);
  applyR114GameplayTruth(root);
  applyR115CardSignature(root);
+ applyR116TenZoneCompat(root);
  applyR111TestContract(root);
  applyR114TestContract(root);
  applyR115TestContract(root);
+ applyR116TestContract(root);
 }
 const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
 if(invoked===import.meta.url) sanitizeUpdateSource();
