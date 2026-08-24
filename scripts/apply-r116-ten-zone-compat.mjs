@@ -53,11 +53,24 @@ function patchV3179(input) {
 function patchV3181(input) {
   let source = input
     .replace('assert.equal(defaults.length, 9);', 'assert.equal(defaults.length, 10);')
-    .replace("'Boosters / ímpeto', '26 atributos', 'Modelo físico', 'Habilidades', 'Pontos distribuídos'", "'Boosters / ímpeto', '26 atributos', 'Modelo físico', 'Habilidades', 'Pontos distribuídos', 'Habilidade especial'")
     .replace("assert.equal(ocr.length, 20, 'O mapa manual deve gerar as 20 subáreas internas do OCR, incluindo a progressão.');", "assert.equal(ocr.length, 21, 'O mapa manual deve gerar as 21 subáreas internas do OCR, incluindo progressão e habilidade especial.');")
     .replace('assert.equal(restored?.zones.length, 9);', 'assert.equal(restored?.zones.length, 10);')
     .replace('assert.equal(malformed.length, 9);', 'assert.equal(malformed.length, 10);')
     .replace('calibrador visual com nove áreas proporcionais', 'calibrador visual com dez áreas proporcionais');
+
+  // BM_R117_R116_IDEMPOTENT: sanitize:update-source pode rodar mais de uma vez no mesmo job.
+  // Normaliza a lista antes de inserir a décima área para impedir "Habilidade especial"
+  // duplicada a cada nova passagem do sanitizer.
+  source = source.replace(
+    /'Pontos distribuídos'(?:,\s*'Habilidade especial')+/g,
+    "'Pontos distribuídos', 'Habilidade especial'"
+  );
+  const legacyLabels = "'Boosters / ímpeto', '26 atributos', 'Modelo físico', 'Habilidades', 'Pontos distribuídos'";
+  const tenZoneLabels = `${legacyLabels}, 'Habilidade especial'`;
+  if (!source.includes(tenZoneLabels)) {
+    source = replaceRequired(source, legacyLabels, tenZoneLabels, 'v31.81 lista de 10 áreas');
+  }
+
   if (!source.includes("ocr.filter((zone) => zone.key === 'specialSkill').length")) {
     source = replaceRequired(
       source,
@@ -105,6 +118,8 @@ function patchR32(input) {
   }
   return source;
 }
+
+export function transformV3181R116(input) { return patchV3181(input); }
 
 export function applyR116TenZoneCompat(rootDirectory = process.cwd()) {
   const root = resolve(rootDirectory);
