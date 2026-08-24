@@ -528,10 +528,10 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const attributeSource = [sourceText(readings, ['attributes']), fullText].filter(Boolean).join('\n');
   const positionSource = [sourceText(readings, ['positionGrid']), fullText].filter(Boolean).join('\n');
   const physicalSource = [sourceText(readings, ['physicalModel', 'progression']), fullText].filter(Boolean).join('\n');
-  const skillZoneText = sourceTextWithRawPasses(readings, ['skills']);
+  const skillZoneText = sourceTextWithRawPasses(readings, ['skills', 'specialSkill']);
   const skillSource = skillZoneText || fullText;
   const skillIndependentPassTexts = readings
-    .filter((reading) => reading.key === 'skills')
+    .filter((reading) => reading.key === 'skills' || reading.key === 'specialSkill')
     .flatMap((reading) => (reading.rawPasses ?? []).map((pass) => cleanMultiline(pass.text)).filter(Boolean));
   const conditionSource = [sourceText(readings, ['condition', 'manager']), fullText].filter(Boolean).join('\n');
   const impetoSource = [sourceText(readings, ['impetos', 'autoTraining']), fullText].filter(Boolean).join('\n');

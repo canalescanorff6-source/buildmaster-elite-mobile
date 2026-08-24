@@ -27,25 +27,22 @@ assert.ok(finalEngine.includes('autoTrainingPlan'), 'r27 precisa ler distribuiç
 assert.ok(!finalEngine.includes('recommendedImpetos: impetos'), 'r27 não pode recalcular Ímpeto ao trocar a posição; preserva o ranking canônico da carta');
 assert.ok(finalEngine.includes("position === 'CF' ? `Defesa travada em ${exact.defending}.`"), 'CA precisa expor trava defensiva');
 
-const legacyDirectOrder =
-  pipeline.indexOf('applyFinalIdentityEngineV4080R27(current)') <
-    pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
-  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
-    pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)');
-
-const masterOrder =
-  pipeline.indexOf('applyFinalIdentityEngineV4080R27(current)') <
+const authorityOrder =
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27)') <
     pipeline.indexOf('applyMasterCardEngineV4080R50(current)') &&
   pipeline.indexOf('applyMasterCardEngineV4080R50(current)') <
-    pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)') &&
-  masterEngine.indexOf('applyFinalCardAuthorityV4080R45(input)') <
-    masterEngine.indexOf('applyDefinitiveAdditionalSkillsV600R15(result)') &&
-  masterEngine.indexOf('applyDefinitiveAdditionalSkillsV600R15(result)') <
-    masterEngine.indexOf('synchronizeFinalSkillIntegrity(result)');
+    pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
+  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
+    pipeline.indexOf('applyPermanentResources2027R80(current)') &&
+  pipeline.indexOf('applyPermanentResources2027R80(current)') <
+    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') &&
+  pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') <
+    pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13)');
 
 assert.ok(
-  legacyDirectOrder || masterOrder,
-  'ficha final deve fechar antes do Top 5 e o Top 5 antes do gerador final'
+  authorityOrder,
+  'r118 deve selar ficha + Top 5 + Ímpeto antes do gerador final protegido'
 );
+assert.ok(masterEngine.includes('BM_R118_MASTER_READ_ONLY'), 'r50 precisa permanecer somente-leitura');
 
-console.log('r27/r50 aprovada: ordem ficha -> Top5 -> integridade -> gerador final preservada pela autoridade única do Motor Mestre.');
+console.log('r27/r118 aprovada: identidade legada read-only, Top 5 r80 e decisão final selada antes do gerador final.');

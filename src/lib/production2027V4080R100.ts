@@ -3,8 +3,11 @@ import { trainingPlanTotalCost } from './trainingPlanCore';
 import { skillIdentityKey } from './officialSkillIdentity';
 import type { CanonicalCardIdentityR60 } from './canonicalCardIdentity2027V4080R60';
 import type { PerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
+import type { PerformanceEngine2027R107 } from './performanceEngine2027V4080R107';
+import type { PerformanceEngine2027R108 } from './performanceEngine2027V4080R108';
 import type { PermanentResources2027R80 } from './permanentResources2027V4080R80';
 import type { PerformanceLab2027R90 } from './performanceLab2027V4080R90';
+import type { FinalDecisionAuthority2027R118 } from './finalDecisionAuthority2027V4080R118';
 
 export const PRODUCTION_2027_R100_VERSION = '40.80-r100-production-2027' as const;
 
@@ -25,9 +28,12 @@ type MasterShape = {
 type Enriched = AnalysisResult & {
   canonicalCardIdentity2027R60?: CanonicalCardIdentityR60;
   performanceEngine2027R70?: PerformanceEngine2027R70;
+  performanceEngine2027R107?: PerformanceEngine2027R107;
+  performanceEngine2027R108?: PerformanceEngine2027R108;
   permanentResources2027R80?: PermanentResources2027R80;
   performanceLab2027R90?: PerformanceLab2027R90;
   masterCardV4080R50?: MasterShape;
+  finalDecisionAuthority2027R118?: FinalDecisionAuthority2027R118;
 };
 
 export type Production2027R100 = {
@@ -118,17 +124,24 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   const result = input as Enriched;
   const canonical = result.canonicalCardIdentity2027R60;
   const performance = result.performanceEngine2027R70;
+  const extreme = result.performanceEngine2027R108;
+  const quality = result.performanceEngine2027R107;
   const resources = result.permanentResources2027R80;
   const lab = result.performanceLab2027R90;
   const master = result.masterCardV4080R50;
+  const finalAuthority = result.finalDecisionAuthority2027R118;
 
   const budget = Number(result.trainingPointsTotal ?? trainingPlanTotalCost(result.training));
   const spent = trainingPlanTotalCost(result.training);
-  const finalSkills = resources?.permanentTop5?.length ? resources.permanentTop5 : master?.permanentSkills ?? result.recommendedSkills.slice(0, 5);
+  const finalSkills = finalAuthority?.recommendedSkills?.length
+    ? finalAuthority.recommendedSkills
+    : resources?.permanentTop5?.length
+      ? resources.permanentTop5
+      : result.recommendedSkills.slice(0, 5);
   const exactBudget = spent === budget;
-  const singleAuthority = master?.guarantees.singleTrainingAuthority === true;
-  const dualPhase = master?.guarantees.dualPhasePreserved === true && Boolean(canonical?.attackPosition) && Boolean(canonical?.defencePosition);
-  const staminaProtected = performance?.guards.staminaProtected ?? true;
+  const singleAuthority = finalAuthority?.authority === 'FINAL_SINGLE_WRITER';
+  const dualPhase = Boolean(canonical?.attackPosition) && Boolean(canonical?.defencePosition);
+  const staminaProtected = extreme?.guards.staminaProtected ?? quality?.guards.staminaBalanced ?? performance?.guards.staminaProtected ?? true;
   const duplicatesBlocked = nativeDuplicateGuard(result, finalSkills);
   const rareProtected = Boolean(
     master?.guarantees.positionChangeDoesNotRegenerateRareResources &&
@@ -137,7 +150,7 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   const labReadOnly = lab?.safeguards.readOnlyLab ?? true;
 
   const identity = clamp(canonical?.identityConfidence ?? 55);
-  const performanceScore = clamp(performance?.winner.totalScore ?? 60);
+  const performanceScore = clamp(extreme?.winner.totalScore ?? quality?.winner.totalScore ?? performance?.winner.totalScore ?? 60);
   const resourceScore = clamp(resources?.confidence ?? (finalSkills.length === 5 ? 68 : 52));
   const evidence = evidenceScore(lab);
   const total = round(identity * .28 + performanceScore * .34 + resourceScore * .2 + evidence * .18);
@@ -146,9 +159,13 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   const identitySig = identitySignature(result, canonical);
   const warnings: string[] = [];
   if (!exactBudget) warnings.push(`Orçamento inconsistente: ${spent}/${budget} pontos.`);
-  if (!singleAuthority) warnings.push('Autoridade única da ficha não foi confirmada.');
+  if (!singleAuthority) warnings.push('Final Decision Authority r118 não foi confirmada como escritor único.');
   if (!dualPhase) warnings.push('Ataque/defesa ainda não estão totalmente confirmados para esta carta.');
-  if (!staminaProtected) warnings.push('Piso físico/stamina da função não foi preservado.');
+  if (!staminaProtected) warnings.push('Equilíbrio de stamina da função não foi preservado.');
+  if (extreme && extreme.winner.fatalBottlenecks.length > 2) warnings.push(`Extreme r108 ainda detecta ${extreme.winner.fatalBottlenecks.length} gargalo(s) fatal(is).`);
+  if (extreme && extreme.winner.wastedLevels > 2) warnings.push(`Extreme r108 ainda tem ${extreme.winner.wastedLevels} nível(is) sem retorno de gameplay.`);
+  if (!extreme && quality && quality.winner.essentialFloorCoverage < 70) warnings.push(`Cobertura dos atributos essenciais baixa (${quality.winner.essentialFloorCoverage}/100).`);
+  if (!extreme && quality && quality.winner.wastedLevels > 2) warnings.push(`Ficha ainda tem ${quality.winner.wastedLevels} nível(is) em zona de retorno muito baixo.`);
   if (!duplicatesBlocked) warnings.push('Foi detectada habilidade adicional duplicando habilidade nativa.');
   if (!rareProtected) warnings.push('Recurso raro não atingiu o nível de permanência exigido.');
   if ((canonical?.identityConfidence ?? 0) < 62) warnings.push('Identidade da carta abaixo da confiança mínima para decisão cara.');
@@ -194,6 +211,7 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
     recommendationExplanation: [
       `Production r100: ${productionReady ? 'APROVADA' : 'REVISAR'} • ${total}/100.`,
       `Identidade ${analysis.identityScore} • Performance ${analysis.performanceScore} • Recursos ${analysis.resourceScore} • Evidência ${analysis.evidenceScore}.`,
+      extreme ? `Extreme r108: ${extreme.winner.profile} • sinergia ${extreme.winner.synergyScore}/100 • resposta ${extreme.winner.responseScore}/100 • stamina ${extreme.winner.projectedStamina}/${extreme.staminaTarget}.` : (quality ? `Quality r107 fallback: ${quality.winner.profile} • stamina ${quality.winner.projectedStamina}/${quality.staminaTarget}.` : 'Extreme r108/r107 indisponíveis; produção usa fallback r70.'),
       `Assinatura da ficha ${analysis.buildSignature}; assinatura da identidade ${analysis.identitySignature}.`,
       warnings.length ? `Alertas r100: ${warnings.join(' ')}` : 'Sem alerta crítico r100: orçamento, stamina, duas fases e recursos raros passaram pelos guardas finais.',
       ...result.recommendationExplanation

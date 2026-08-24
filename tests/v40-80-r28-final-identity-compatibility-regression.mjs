@@ -12,21 +12,20 @@ assert.ok(
 assert.ok(!finalEngine.includes("import { recommendImpetos } from './analyzer';"));
 assert.ok(!finalEngine.includes('recommendedImpetos: impetos'));
 
-const legacyDirectOrder =
-  pipeline.indexOf('applyFinalIdentityEngineV4080R27(current)') <
-  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)');
-
-const masterOrder =
-  pipeline.indexOf('applyFinalIdentityEngineV4080R27(current)') <
+const authorityOrder =
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27)') <
     pipeline.indexOf('applyMasterCardEngineV4080R50(current)') &&
-  masterEngine.indexOf('applyFinalCardAuthorityV4080R45(input)') <
-    masterEngine.indexOf('applyDefinitiveAdditionalSkillsV600R15(result)');
+  pipeline.indexOf('applyMasterCardEngineV4080R50(current)') <
+    pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
+  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
+    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)');
 
 assert.ok(
-  legacyDirectOrder || masterOrder,
-  'A ficha DNA continua fechando antes das habilidades adicionais.'
+  authorityOrder,
+  'A identidade histórica fica read-only e a Card Signature fecha antes da autoridade r118.'
 );
+assert.ok(masterEngine.includes('BM_R118_MASTER_READ_ONLY'));
 
 assert.ok(finalEngine.includes('fitTrainingToExactBudget(identityPlan'));
 assert.ok(finalEngine.includes('reconstructNaturalAttributes'));
-console.log('r28/r50 aprovada: contrato público preservado e ordem ficha DNA -> Top 5 mantida pela autoridade única do Motor Mestre.');
+console.log('r28/r118 aprovada: contrato público preservado com identidade legada read-only e autoridade final r118.');

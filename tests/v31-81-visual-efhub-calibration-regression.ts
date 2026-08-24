@@ -11,20 +11,21 @@ import {
 } from '../src/modules/card-reader/efhubManualCalibration';
 
 const defaults = createDefaultEfhubCalibrationZones();
-assert.equal(defaults.length, 9);
+assert.equal(defaults.length, 10);
 assert.equal(isEfhubCalibrationComplete(defaults), true);
 assert.deepEqual(defaults.map((zone) => zone.shortLabel), [
   'Nome + estilo', 'Carta / foto', 'Bio + condição', 'Posições + overalls',
-  'Boosters / ímpeto', '26 atributos', 'Modelo físico', 'Habilidades', 'Pontos distribuídos'
+  'Boosters / ímpeto', '26 atributos', 'Modelo físico', 'Habilidades', 'Pontos distribuídos', 'Habilidade especial'
 ]);
 
 const moved = normalizeEfhubCalibrationZones(defaults.map((zone) =>
   zone.id === 'skills' ? { ...zone, x: 0.05, y: 0.84, w: 0.9, h: 0.14 } : zone
 ));
 const ocr = buildOcrZonesFromEfhubCalibration(moved);
-assert.equal(ocr.length, 20, 'O mapa manual deve gerar as 20 subáreas internas do OCR, incluindo a progressão.');
+assert.equal(ocr.length, 21, 'O mapa manual deve gerar as 21 subáreas internas do OCR, incluindo progressão e habilidade especial.');
 const skillZones = ocr.filter((zone) => zone.key === 'skills');
 assert.equal(skillZones.length, 7, 'Habilidades devem manter bloco, três linhas e três janelas.');
+assert.equal(ocr.filter((zone) => zone.key === 'specialSkill').length, 1, 'A habilidade especial deve ter uma área OCR exclusiva.');
 assert.ok(skillZones.every((zone) => zone.x >= 0.05 && zone.y >= 0.84));
 assert.ok(skillZones.every((zone) => zone.x + zone.w <= 0.951));
 
@@ -38,11 +39,11 @@ assert.equal(cardArt.h, card.h);
 const saved = createEfhubCalibrationMap(moved);
 const restored = readEfhubCalibrationMap(JSON.stringify(saved));
 assert.ok(restored);
-assert.equal(restored?.zones.length, 9);
+assert.equal(restored?.zones.length, 10);
 assert.equal(restored?.zones.find((zone) => zone.id === 'skills')?.y, 0.84);
 
 const malformed = normalizeEfhubCalibrationZones([{ id: 'identity', x: -2, y: 9, w: 3, h: -1 }]);
-assert.equal(malformed.length, 9);
+assert.equal(malformed.length, 10);
 assert.ok(malformed.every((zone) => zone.x >= 0 && zone.y >= 0 && zone.x + zone.w <= 1 && zone.y + zone.h <= 1));
 
 void (async () => {
@@ -50,7 +51,7 @@ void (async () => {
   assert.equal(precise.filter((zone) => zone.key === 'attributes').length, 3, 'Atributos devem continuar separados em três colunas.');
   assert.equal(precise.filter((zone) => zone.key === 'physicalModel').length, 3, 'Modelo físico deve continuar separado em três colunas.');
   assert.ok(precise.filter((zone) => zone.key === 'skills').length >= 15, 'Habilidades devem manter linhas e janelas/cápsulas internas.');
-  console.log('v31.81: calibrador visual com nove áreas proporcionais e recortes internos precisos aprovado.');
+  console.log('v31.81: calibrador visual com dez áreas proporcionais e recortes internos precisos aprovado.');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

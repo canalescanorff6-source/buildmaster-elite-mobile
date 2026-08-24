@@ -20,29 +20,30 @@ for (const contract of [
 ]) assert.ok(engine.includes(contract), `r30 sem contrato: ${contract}`);
 
 assert.ok(
-  pipeline.indexOf('applyFinalIdentityEngineV4080R27(current)') <
-  pipeline.indexOf('applyProMatchOptimizerV4080R30(current)'),
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27)') <
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyProMatchOptimizerV4080R30)'),
   'r30 precisa rodar depois do árbitro DNA.'
 );
 
-const legacyTop5Order =
-  pipeline.indexOf('applyProMatchOptimizerV4080R30(current)') <
-  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)');
-
-const masterTop5Order =
-  pipeline.indexOf('applyProMatchOptimizerV4080R30(current)') <
+const authorityTop5Order =
+  pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyProMatchOptimizerV4080R30)') <
     pipeline.indexOf('applyMasterCardEngineV4080R50(current)') &&
-  masterEngine.indexOf('applyFinalCardAuthorityV4080R45(input)') <
-    masterEngine.indexOf('applyDefinitiveAdditionalSkillsV600R15(result)');
+  pipeline.indexOf('applyMasterCardEngineV4080R50(current)') <
+    pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') &&
+  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)') <
+    pipeline.indexOf('applyPermanentResources2027R80(current)') &&
+  pipeline.indexOf('applyPermanentResources2027R80(current)') <
+    pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)');
 
 assert.ok(
-  legacyTop5Order || masterTop5Order,
-  'habilidades precisam ser calculadas depois da ficha vencedora.'
+  authorityTop5Order,
+  'benchmark Pro permanece diagnóstico; Top 5 r80 e ficha Card Signature são selados pelo r118.'
 );
+assert.ok(masterEngine.includes('BM_R118_MASTER_READ_ONLY'));
 
 assert.ok(panel.includes('Benchmark Pro + Performance r30'));
 assert.ok(panel.includes('referências exatas usadas'));
 assert.ok(domain.includes('ProMatchOptimizerR30Analysis'));
 assert.ok(domain.includes('proMatchOptimizerR30?: ProMatchOptimizerR30Analysis'));
 
-console.log('r30/r50 aprovada: benchmark Pro fecha antes do Top 5, incluindo a autoridade única do Motor Mestre.');
+console.log('r30/r118 aprovada: benchmark Pro read-only alimenta a análise e r118 mantém a autoridade final.');

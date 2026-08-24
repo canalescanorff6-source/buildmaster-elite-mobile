@@ -15,6 +15,7 @@ import {
   Trophy
 } from 'lucide-react';
 import type { AnalysisResult, TrainingKey } from '@/lib/analyzerDomain';
+import type { FinalDecisionAuthority2027R118 } from '@/lib/finalDecisionAuthority2027V4080R118';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
@@ -69,7 +70,8 @@ export function UnifiedPerformanceV3920Panel({
   const status = adaptive?.status ?? unified.resourceSafety.status;
   const statusLabel = adaptive?.statusLabel ?? unified.resourceSafety.label;
   const statusClassName = statusClass(status);
-  // r45: uma única autoridade visual e funcional. Motores históricos continuam auditáveis, mas não podem substituir a ficha final na tela.
+  const finalAuthority = (result as AnalysisResult & { finalDecisionAuthority2027R118?: FinalDecisionAuthority2027R118 }).finalDecisionAuthority2027R118;
+  // r118: a tela lê somente a decisão selada. Métricas históricas permanecem auditáveis nos detalhes.
   const appliedTraining = result.training;
   const appliedSkills = safeArray(functional?.finalSkills).length
     ? safeArray(functional?.finalSkills)
@@ -77,8 +79,8 @@ export function UnifiedPerformanceV3920Panel({
       ? safeArray(adaptive?.finalSkills)
       : safeArray(unified.canonicalSkills);
   const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
-  const impetos = safeArray(functional?.impetos).length ? safeArray(functional?.impetos) : safeArray(adaptive?.impetos).length ? safeArray(adaptive?.impetos) : safeArray(unified.canonicalImpetos);
-  const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? functional?.primaryImpeto ?? adaptive?.primaryImpeto ?? unified.primaryImpeto ?? impetos[0]?.name ?? null;
+  const impetos = safeArray(result.recommendedImpetos);
+  const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
   const conflicts = safeArray(positionFit?.conflicts);
   const traits = safeArray(identity?.traits);
   const deterministicChecks = safeArray(unified.deterministicChecks);
@@ -95,7 +97,7 @@ export function UnifiedPerformanceV3920Panel({
       `Posição escolhida: ${functional?.selectedPositionLabel ?? adaptive?.selectedPositionLabel ?? positionFit?.selectedPositionLabel ?? result.bestPosition.label}`,
       `Função real: ${functional?.roleLabel ?? 'análise da carta'}`,
       `Status: ${statusLabel}`,
-      `Assinatura: ${functional?.roleSignature ?? adaptive?.positionSignature ?? unified.lockSignature}`
+      `Motor final: ${finalAuthority?.finalEngineLabel ?? 'em revisão'}`
     ].join('\n');
     try { await navigator.clipboard.writeText(text); } catch {}
   };
@@ -103,10 +105,10 @@ export function UnifiedPerformanceV3920Panel({
   return <article className="luxury-panel wide-card unified-performance-v3920">
     <header className="unified-v3920-head">
       <div>
-        <p className="kicker"><BrainCircuit size={15} /> Aprendizado Competitivo por Carta • v40.60</p>
-        <h3>DNA + Pareto + gameplay real + estabilidade em várias sessões</h3>
+        <p className="kicker"><BrainCircuit size={15} /> Autoridade Única por Carta • r118</p>
+        <h3>Card Signature decide; motores históricos apenas auditam</h3>
         <p>{longitudinalGameplay?.applied ? `${result.parsed.playerName}: ${longitudinalGameplay.winnerLabel} foi confirmada em ${longitudinalGameplay.sessions} sessões com confiança ${Math.round(longitudinalGameplay.confidenceScore)}/100.` : longitudinalGameplay?.provisionalV4050Blocked ? `${result.parsed.playerName}: a v40.60 encontrou um vencedor provisório, mas a v40.60 manteve a ficha Pareto até existir repetição longitudinal.` : precision4040?.summary ?? adaptiveMaximum?.summary ?? functional?.summary ?? adaptive?.summary ?? unified.summary}</p>
-        <small>Motor determinístico: compara centenas de distribuições com orçamento idêntico, mantém o DNA e não usa GER como alvo. Versões futuras do eFootball não recebem pesos antes de validação.</small>
+        <small>Um único escritor final sela ficha, Top 5 e Ímpeto. Pareto, v39/v40, r70, r107 e r109 continuam disponíveis somente como diagnóstico.</small>
       </div>
       <span className={`unified-v3920-safety ${statusClassName}`}>
         {statusClassName === 'safe' ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
@@ -161,16 +163,16 @@ export function UnifiedPerformanceV3920Panel({
           <span><b>{Math.round(functional.stabilityScore)}</b><small>estabilidade</small></span>
           <span><b>{functional.useLevel}</b><small>nível de uso</small></span>
         </div>}
-        {precision4040 && <div className="unified-v3920-metrics">
-          <span><b>{Math.round(precision4040.contextScores.ranked)}</b><small>ranqueada</small></span>
-          <span><b>{Math.round(precision4040.responseScore)}</b><small>resposta funcional</small></span>
-          <span><b>{Math.round(precision4040.confidence.score)}</b><small>confiança {precision4040.confidence.level.toLowerCase()}</small></span>
+        {finalAuthority && <div className="unified-v3920-metrics">
+          <span><b>{Math.round(Number(finalAuthority.responseScore ?? 0))}</b><small>resposta Card Signature</small></span>
+          <span><b>{Math.round(Number(finalAuthority.synergyScore ?? 0))}</b><small>sinergia</small></span>
+          <span><b>{Math.round(finalAuthority.confidence)}</b><small>confiança final</small></span>
         </div>}
-        {precision4040 && <div className="chip-cloud">
-          <span>{precision4040.candidatesEvaluated} candidatas</span>
-          <span>{precision4040.paretoCandidates} Pareto</span>
-          <span>DNA {Math.round(precision4040.dnaPreservation)}</span>
-          <span>Eficiência {Math.round(precision4040.efficiencyScore)}</span>
+        {finalAuthority && <div className="chip-cloud">
+          <span>Motor final: {finalAuthority.finalEngineLabel}</span>
+          <span>DNA {finalAuthority.dominantDna.join(' + ') || 'em revisão'}</span>
+          <span>{finalAuthority.specialSkills.length ? `Especial: ${finalAuthority.specialSkills.join(', ')}` : 'Sem especial confirmada'}</span>
+          <span>Legado: somente leitura</span>
         </div>}
         {adaptiveMaximum && <div className="unified-v3920-metrics">
           <span><b>{Math.round(adaptiveMaximum.contextScores.ranked)}</b><small>robustez ranqueada</small></span>
@@ -187,7 +189,8 @@ export function UnifiedPerformanceV3920Panel({
         <div className="unified-v3920-training-grid">
           {Object.entries(appliedTraining ?? {}).filter(([, value]) => Number(value) > 0).map(([key, value]) => <div key={key}><span>{TRAINING_LABELS[key as TrainingKey] ?? key}</span><strong>+{value}</strong></div>)}
         </div>
-        <p><LockKeyhole size={14} /> {result.finalCardAuthorityV4080R45 ? `final-r45 • físico ${result.finalCardAuthorityV4080R45.physicalSignalsUsed}` : (functional?.roleSignature ?? adaptive?.positionSignature ?? unified.lockSignature)}</p>
+        <p><LockKeyhole size={14} /> {finalAuthority ? `Motor final: ${finalAuthority.finalEngineLabel} • ${finalAuthority.trainingSource === 'CARD_SIGNATURE_R115' ? 'Card Signature' : 'fallback de emergência'}` : 'Autoridade final em revisão'}</p>
+        {finalAuthority?.fallbackReason && <small className="unified-v3920-memory">{finalAuthority.fallbackReason}</small>}
         {unified.recipeMemory?.note && <small className={`unified-v3920-memory ${String(unified.recipeMemory.status ?? 'NOVA').toLowerCase()}`}>{unified.recipeMemory.note}</small>}
         {longitudinalGameplay?.applied && <details open><summary>Ver aprendizado longitudinal v40.60</summary><p>{longitudinalGameplay.winnerLabel} foi promovida somente depois de repetir vantagem em várias sessões. A memória continua válida apenas enquanto a mesma alternativa e distribuição existirem no Pareto atual.</p><small>{longitudinalGameplay.sessions} sessões • {longitudinalGameplay.pairedSessions} pareadas • confiança {Math.round(longitudinalGameplay.confidenceScore)}/100 • verificada em {longitudinalGameplay.verifiedAt ? new Date(longitudinalGameplay.verifiedAt).toLocaleDateString('pt-BR') : '—'}</small></details>}
         {validatedGameplay?.applied && !longitudinalGameplay?.applied && <details><summary>Ver evidência provisória v40.60</summary><p>{validatedGameplay.winnerLabel} venceu o A/B da v40.60, mas a v40.60 ainda exige repetição em sessões distintas antes de aplicar essa memória como ficha permanente.</p></details>}
@@ -202,15 +205,15 @@ export function UnifiedPerformanceV3920Panel({
         <div className="unified-v3920-skill-list">
           {displayedSkills.map((skill, index) => <button type="button" key={skill} className={skillProgress?.[skill] ? 'done' : ''} onClick={() => onSkillToggle?.(skill)}><b>{index + 1}</b><span><strong>{skill}</strong><small>{appliedSkills.find((item) => item.name === skill)?.gameplayImpact ?? 'Complementa a carta sem copiar um molde genérico.'}</small></span><em>{skillProgress?.[skill] ? '✓' : '○'}</em></button>)}
         </div>
-        {precision4040 && <small>{precision4040.skillPlan.slotsFilled}/5 slots preenchidos • {precision4040.skillPlan.duplicatesBlocked} duplicações bloqueadas • nomes somente do catálogo reconhecido pelo app.</small>}
+        <small>Autoridade r80 • {displayedSkills.length}/5 slots finais • a tela não usa mais Top 5 de motores anteriores.</small>
       </article>
 
       <article className={`unified-v3920-impeto ${statusClassName}`}>
         <div className="unified-v3920-card-title"><BrainCircuit size={17} /><span><strong>Ímpeto fixo da carta</strong><small>Não muda quando você troca a posição</small></span></div>
-        <h4>{primaryImpeto || 'Revisar leitura'}</h4>
-        <p>{impetos[0]?.reason ?? 'A recomendação é presa à identidade da versão exata da carta.'}</p>
+        <h4>{primaryImpeto || 'Nenhum Ímpeto seguro'}</h4>
+        <p>{impetos[0]?.reason ?? 'O r80 não aprovou gasto seguro para esta carta; nenhum Ímpeto antigo será mostrado como fallback.'}</p>
         <div className="chip-cloud purple">{safeArray(impetos[0]?.attributes).map((attribute) => <span key={attribute}>{attribute}</span>)}</div>
-        <strong className="unified-v3920-spend-lock">{adaptive?.canUseImpeto === false ? 'Confirme a leitura antes de gastar' : 'Mesmo Ímpeto em todas as posições'}</strong>
+        <strong className="unified-v3920-spend-lock">{primaryImpeto ? 'Ímpeto aprovado pelo r80 para a carta' : 'Não gastar Ímpeto até existir aprovação segura'}</strong>
       </article>
 
       <article>

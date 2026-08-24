@@ -15,12 +15,13 @@ for (const contract of [
   "['PEAK','BALANCED_90','FLUID_PHASE']",
   'projectedStrongUntilMinute',
   'overallIgnored:true',
-  'masterEngineIsOnlyWriter:true'
+  'masterEngineIsOnlyWriter:false',
+  'finalAuthorityR118IsOnlyWriter:true'
 ]) assert.ok(engine.includes(contract), `r70 sem contrato: ${contract}`);
 
 assert.ok(pipeline.indexOf('applyPerformanceFoundation2027R60(current)') < pipeline.indexOf('applyPerformanceEngine2027R70(current)'));
 assert.ok(pipeline.indexOf('applyPerformanceEngine2027R70(current)') < pipeline.indexOf('applyMasterCardEngineV4080R50(current)'));
-assert.ok(master.includes('applyR70WinnerInsideMaster'));
-assert.ok(master.indexOf('applyR70WinnerInsideMaster(result)') < master.indexOf('applyDefinitiveAdditionalSkillsV600R15(result)'));
-assert.ok(master.includes('analysis.improvementVsIncoming >= 0.3'));
-console.log('r70 aprovada: Digital Twin funcional, retorno marginal, gargalos, duas fases e stamina entram antes do Top 5; Motor Mestre segue único escritor.');
+assert.ok(master.includes('BM_R118_MASTER_READ_ONLY'));
+assert.ok(!master.includes('applyR70WinnerInsideMaster'));
+assert.ok(!master.includes('result.training ='));
+console.log('r70 aprovada: Digital Twin permanece especialista read-only; r50 não escreve ficha e r118 mantém a autoridade final.');

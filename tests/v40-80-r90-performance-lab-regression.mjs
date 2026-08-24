@@ -9,6 +9,6 @@ assert.ok(lab.includes('highDelayDownWeighted: true'));
 assert.ok(lab.includes('rareResourcesNeverChangedByLab: true'));
 assert.ok(lab.includes("'CALCULADA' | 'BENCHMARK' | 'TESTADA' | 'VALIDADA'"));
 assert.ok(lab.includes("'0-30' | '31-60' | '61-75' | '76-90'"));
-assert.ok(pipeline.indexOf('applyPermanentResources2027R80(current)') < pipeline.indexOf('applyPerformanceLab2027R90(current)'));
-assert.ok(pipeline.indexOf('applyPerformanceLab2027R90(current)') < pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)'));
+assert.ok(pipeline.indexOf('applyPermanentResources2027R80(current)') < pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPerformanceLab2027R90)'));
+assert.ok(pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPerformanceLab2027R90)') < pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13)'));
 console.log('r90 aprovada: laboratório read-only, A/B, benchmark, risco, consistência e performance por minuto.');

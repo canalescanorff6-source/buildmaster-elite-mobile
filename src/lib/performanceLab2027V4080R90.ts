@@ -53,8 +53,17 @@ function readRecords(): MatchValidationRecord[] {
 
 function minuteCurve(result: AnalysisResult, consistency: number) {
   const stamina = Number(result.parsed.attributes.stamina ?? 80);
-  const r70 = (result as AnalysisResult & { performanceEngine2027R70?: { stamina?: { expectedCompetitiveMinute?: number } } }).performanceEngine2027R70;
-  const expected = Number(r70?.stamina?.expectedCompetitiveMinute ?? (stamina >= 90 ? 86 : stamina >= 84 ? 79 : 70));
+  const engines = result as AnalysisResult & {
+    performanceEngine2027R108?: { winner?: { projectedStrongUntilMinute?: number } };
+    performanceEngine2027R107?: { winner?: { projectedStrongUntilMinute?: number } };
+    performanceEngine2027R70?: { winner?: { projectedStrongUntilMinute?: number } };
+  };
+  const expected = Number(
+    engines.performanceEngine2027R108?.winner?.projectedStrongUntilMinute
+    ?? engines.performanceEngine2027R107?.winner?.projectedStrongUntilMinute
+    ?? engines.performanceEngine2027R70?.winner?.projectedStrongUntilMinute
+    ?? (stamina >= 90 ? 86 : stamina >= 84 ? 79 : 70)
+  );
   const peak = clamp(82 + consistency * .14 + Math.min(6, Math.max(0, stamina - 80) * .2));
   const drop75 = expected >= 82 ? 1.5 : expected >= 75 ? 4 : 7;
   const drop90 = expected >= 88 ? 3 : expected >= 80 ? 7 : expected >= 72 ? 11 : 16;

@@ -5,7 +5,7 @@ import { applyLocalAiToResult } from './localAiEngine';
 import { applyLocalCorrectionsToResult } from '../modules/builds/dynamicRules';
 import { applyUnifiedCardIntelligence } from './unifiedCardIntelligence';
 import { applySupremeGameplayEngine } from './supremeGameplayEngine';
-import { enforceComplementarySkillIntegrity } from './skillIntegrity';
+import { enforceComplementarySkillIntegrity, synchronizeFinalSkillIntegrity } from './skillIntegrity';
 import { applyCalibrationV32 } from './calibrationV32';
 import { applyAdvancedMotorV3750 } from './advancedMotorV3750';
 import { applyPowerBuildEngineV3850 } from './performanceBuildEngineV3850';
@@ -37,12 +37,60 @@ import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngin
 import { applyIndividualCalibrationEngineV4080R41 } from './individualCalibrationEngineV4080R41';
 import { applyMatchStaminaEngineV4080R44 } from './matchStaminaEngineV4080R44';
 import { applyMasterCardEngineV4080R50 } from './masterCardEngineV4080R50';
+import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
+import { applyFinalDecisionAuthority2027R118 } from './finalDecisionAuthority2027V4080R118';
 import { applyCanonicalCardIdentity2027R60 } from './canonicalCardIdentity2027V4080R60';
 import { applyPerformanceFoundation2027R60 } from './performanceFoundation2027V4080R60';
 import { applyPerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
+import { applyPerformanceEngine2027R107 } from './performanceEngine2027V4080R107';
+import { applyPerformanceEngine2027R108 } from './performanceEngine2027V4080R108';
+import { applyPerformanceEngine2027R109 } from './performanceEngine2027V4080R109';
 import { applyPermanentResources2027R80 } from './permanentResources2027V4080R80';
 import { applyPerformanceLab2027R90 } from './performanceLab2027V4080R90';
 import { applyProduction2027R100 } from './production2027V4080R100';
+
+type AnalysisEngine = (input: AnalysisResult) => AnalysisResult;
+
+function applyLegacyTrainingReadOnly(current: AnalysisResult, engine: AnalysisEngine): AnalysisResult {
+  const lockedTraining = { ...current.training };
+  const lockedTrainingCost = { ...current.trainingCost };
+  const lockedUsed = current.trainingPointsUsed;
+  const lockedRemaining = current.trainingPointsRemaining;
+  const analyzed = engine(current);
+
+  return {
+    ...analyzed,
+    training: lockedTraining,
+    trainingCost: lockedTrainingCost,
+    trainingPointsUsed: lockedUsed,
+    trainingPointsRemaining: lockedRemaining
+  };
+}
+
+function applyPostAuthorityReadOnly(current: AnalysisResult, engine: AnalysisEngine): AnalysisResult {
+  const lockedTraining = { ...current.training };
+  const lockedTrainingCost = { ...current.trainingCost };
+  const lockedUsed = current.trainingPointsUsed;
+  const lockedRemaining = current.trainingPointsRemaining;
+  const lockedSkills = [...current.recommendedSkills];
+  const lockedImpetos = current.recommendedImpetos.map((item) => ({ ...item }));
+  const authority = (
+    current as AnalysisResult & { finalDecisionAuthority2027R118?: unknown }
+  ).finalDecisionAuthority2027R118;
+
+  const analyzed = engine(current);
+
+  return {
+    ...analyzed,
+    training: lockedTraining,
+    trainingCost: lockedTrainingCost,
+    trainingPointsUsed: lockedUsed,
+    trainingPointsRemaining: lockedRemaining,
+    recommendedSkills: lockedSkills,
+    recommendedImpetos: lockedImpetos,
+    ...(authority ? { finalDecisionAuthority2027R118: authority } : {})
+  } as AnalysisResult;
+}
 
 /**
  * Contratos históricos preservados para as regressões e auditorias legadas.
@@ -68,62 +116,83 @@ import { applyProduction2027R100 } from './production2027V4080R100';
  * enforceComplementarySkillIntegrity(supreme)
  */
 export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisResult {
-  let current = restoreCanonicalInputBeforeV3930(result);
-  current = applyCompetitiveFusionToResult(current);
-  current = applyDeepCardIntelligenceToResult(current);
-  current = applyLocalAiToResult(current);
-  current = applyLocalCorrectionsToResult(current);
-  current = applyUnifiedCardIntelligence(current);
-  current = applySupremeGameplayEngine(current);
+  let current = applyLegacyTrainingReadOnly(result, restoreCanonicalInputBeforeV3930);
+  current = applyLegacyTrainingReadOnly(current, applyCompetitiveFusionToResult);
+  current = applyLegacyTrainingReadOnly(current, applyDeepCardIntelligenceToResult);
+  current = applyLegacyTrainingReadOnly(current, applyLocalAiToResult);
+  current = applyLegacyTrainingReadOnly(current, applyLocalCorrectionsToResult);
+  current = applyLegacyTrainingReadOnly(current, applyUnifiedCardIntelligence);
+  current = applyLegacyTrainingReadOnly(current, applySupremeGameplayEngine);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyLocalAiToResult(current);
-  current = applyLocalCorrectionsToResult(current);
+  current = applyLegacyTrainingReadOnly(current, applyLocalAiToResult);
+  current = applyLegacyTrainingReadOnly(current, applyLocalCorrectionsToResult);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyCalibrationV32(current);
+  current = applyLegacyTrainingReadOnly(current, applyCalibrationV32);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyLocalAiToResult(current);
+  current = applyLegacyTrainingReadOnly(current, applyLocalAiToResult);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyAdvancedMotorV3750(current);
+  current = applyLegacyTrainingReadOnly(current, applyAdvancedMotorV3750);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyPowerBuildEngineV3850(current);
+  current = applyLegacyTrainingReadOnly(current, applyPowerBuildEngineV3850);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyMaxMatchPerformanceV3860(current);
+  current = applyLegacyTrainingReadOnly(current, applyMaxMatchPerformanceV3860);
   current = enforceComplementarySkillIntegrity(current);
-  current = applySupremePerformanceV3870(current);
+  current = applyLegacyTrainingReadOnly(current, applySupremePerformanceV3870);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyCardFirstAiV3880(current);
+  current = applyLegacyTrainingReadOnly(current, applyCardFirstAiV3880);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyCanonicalCardV3890(current);
-  current = applyGlobalProBenchmarkV3900(current);
-  current = applyEliteDominanceV3910(current);
-  current = applyUnifiedPerformanceV3920(current);
-  current = stabilizeUnifiedRecipeFromMemoryV3920(current);
+  current = applyLegacyTrainingReadOnly(current, applyCanonicalCardV3890);
+  current = applyLegacyTrainingReadOnly(current, applyGlobalProBenchmarkV3900);
+  current = applyLegacyTrainingReadOnly(current, applyEliteDominanceV3910);
+  current = applyLegacyTrainingReadOnly(current, applyUnifiedPerformanceV3920);
+  current = applyLegacyTrainingReadOnly(current, stabilizeUnifiedRecipeFromMemoryV3920);
   current = enforceComplementarySkillIntegrity(current);
-  current = applyAdaptivePositionV3930(current);
-  current = applyPerformanceFunctionV3940(current);
-  current = applyAdaptiveMaximumV4030(current);
-  current = applyMaximumPerformanceV4040(current);
-  current = applyVerifiedGameplayWinnerV4050(current);
-  current = applyLongitudinalWinnerV4060(current);
-  current = applyMaximumPerformanceV4080(current);
-  current = applyEfootballV600Performance(current);
-  current = applyRealPerformance2027V4080R7(current);
-  current = applyMetaVivo2027V4080R8(current);
-  current = applyDualPhaseBuild2027V4080R14(current);
-  current = applyGameplayMetaV600R10(current);
-  current = applyLiveEvolutionV600R11(current);
-  current = applyFinalIdentityEngineV4080R27(current);
-  current = applyProMatchOptimizerV4080R30(current);
-  current = applyIndividualIdentityEngineV4080R39(current);
-  current = applyIndividualCalibrationEngineV4080R41(current);
-  current = applyMatchStaminaEngineV4080R44(current);
+  current = applyLegacyTrainingReadOnly(current, applyAdaptivePositionV3930);
+  current = applyLegacyTrainingReadOnly(current, applyPerformanceFunctionV3940);
+  current = applyLegacyTrainingReadOnly(current, applyAdaptiveMaximumV4030);
+  current = applyLegacyTrainingReadOnly(current, applyMaximumPerformanceV4040);
+  current = applyLegacyTrainingReadOnly(current, applyVerifiedGameplayWinnerV4050);
+  current = applyLegacyTrainingReadOnly(current, applyLongitudinalWinnerV4060);
+  current = applyLegacyTrainingReadOnly(current, applyMaximumPerformanceV4080);
+  current = applyLegacyTrainingReadOnly(current, applyEfootballV600Performance);
+  current = applyLegacyTrainingReadOnly(current, applyRealPerformance2027V4080R7);
+  current = applyLegacyTrainingReadOnly(current, applyMetaVivo2027V4080R8);
+  current = applyLegacyTrainingReadOnly(current, applyDualPhaseBuild2027V4080R14);
+  current = applyLegacyTrainingReadOnly(current, applyGameplayMetaV600R10);
+  current = applyLegacyTrainingReadOnly(current, applyLiveEvolutionV600R11);
+  current = applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27);
+  current = applyLegacyTrainingReadOnly(current, applyProMatchOptimizerV4080R30);
+  current = applyLegacyTrainingReadOnly(current, applyIndividualIdentityEngineV4080R39);
+  current = applyLegacyTrainingReadOnly(current, applyIndividualCalibrationEngineV4080R41);
+  current = applyLegacyTrainingReadOnly(current, applyMatchStaminaEngineV4080R44);
   current = applyCanonicalCardIdentity2027R60(current);
   current = applyPerformanceFoundation2027R60(current);
   current = applyPerformanceEngine2027R70(current);
+  current = applyPerformanceEngine2027R107(current);
+  current = applyPerformanceEngine2027R108(current);
+  current = applyPerformanceEngine2027R109(current);
   current = applyMasterCardEngineV4080R50(current);
+  current = applyDefinitiveAdditionalSkillsV600R15(current);
+  current = enforceComplementarySkillIntegrity(current);
+  current = synchronizeFinalSkillIntegrity(current);
   current = applyPermanentResources2027R80(current);
-  current = applyPerformanceLab2027R90(current);
-  current = applyProduction2027R100(current);
-  current = applyPlayerGenerationFinalizerV4080R13(current);
+  current = applyFinalDecisionAuthority2027R118(current);
+  current = applyPostAuthorityReadOnly(current, applyPerformanceLab2027R90);
+  current = applyPostAuthorityReadOnly(current, applyProduction2027R100);
+  current = applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13);
+  current = {
+    ...current,
+    recommendationExplanation: [
+      'Card Signature r115: cada carta usa atributos, DNA, físico, habilidades nativas/especiais e frequência de ações; posição/estilo não podem gerar receita clonada.',
+      'Gameplay Truth r114: prioridade absoluta para resposta, sinergia, DNA e ações de alta frequência; overall não participa da distribuição.',
+      'Desempenho extremo: ficha calculada sem perseguir overall; o overall exibido não participa da distribuição dos pontos.',
+      ...current.recommendationExplanation
+    ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 112)
+  };
+  // BM_R115_PIPELINE_CARD_SIGNATURE: identidade completa da carta é a política final.
+  // BM_R114_PIPELINE_TRUTH: a ficha final declara a política de gameplay real.
+  // BM_R111_FINAL_ANTI_OVERALL: a proteção anti-overall fica explícita também no resultado final.
+  // BM_R118_LEGACY_TRAINING_READ_ONLY: motores históricos podem anexar métricas, mas qualquer escrita em training é descartada imediatamente.\n  // BM_R118_PIPELINE_SINGLE_WRITER: depois do r118 nenhuma etapa pode reescrever ficha, Top 5 ou Ímpeto.
+  // BM_R109_PIPELINE: r109 permanece especialista somente-leitura para adaptação posicional.
   return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
 }

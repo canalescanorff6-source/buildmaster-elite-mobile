@@ -65,8 +65,8 @@ export const READING_CONFIRMATION_STAGES: ReadingConfirmationStage[] = [
   {
     id: 'skills',
     title: '5. Habilidades',
-    description: 'Confirme apenas as habilidades que estiverem visíveis.',
-    zoneKeys: ['skills'],
+    description: 'Confirme as habilidades visíveis e, quando existir, a habilidade especial da carta.',
+    zoneKeys: ['skills', 'specialSkill'],
     required: false
   }
 ];

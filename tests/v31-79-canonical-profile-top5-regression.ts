@@ -84,7 +84,8 @@ assert.ok(striker.recommendedSkills.every((skill) => !skill.toLowerCase().includ
 
 assert.equal(EFHUB_CANONICAL_WIDTH, 1400);
 assert.equal(EFHUB_CANONICAL_HEIGHT, 1600);
-assert.equal(EFHUB_CANONICAL_MACRO_BOXES.length, 9);
+assert.equal(EFHUB_CANONICAL_MACRO_BOXES.length, 10);
+assert.equal(EFHUB_CANONICAL_MACRO_BOXES.some((zone) => zone.key === 'specialSkill'), true);
 assert.equal(EFHUB_CANONICAL_OCR_BOXES.filter((zone) => zone.key === 'skills').length, 7);
 const standard = buildEfhubLayoutPlan(3283, 3751);
 assert.equal(standard.audit.complete, true, '3283×3751 deve ser reconhecido como perfil completo compatível.');

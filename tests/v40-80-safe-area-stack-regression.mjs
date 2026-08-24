@@ -35,7 +35,7 @@ assert.match(safeCss,/\.reader-live-progress-card/);
 assert.match(safeCss,/\.v4020-global-update-progress/);
 assert.match(progressCss,/safe-area-inset-bottom/,'progresso legado deve continuar protegendo a barra inferior');
 
-assert.match(pipeline,/applyLongitudinalWinnerV4060\(current\);\s*current = applyMaximumPerformanceV4080\(current\);/s,'v40.80 precisa rodar depois da aprendizagem longitudinal');
+assert.match(pipeline,/applyLegacyTrainingReadOnly\(current, applyLongitudinalWinnerV4060\);\s*current = applyLegacyTrainingReadOnly\(current, applyMaximumPerformanceV4080\);/s,'v40.80 precisa rodar depois da aprendizagem longitudinal em modo somente-leitura');
 assert.match(domain,/maximumPerformanceV4080\?: MaximumPerformanceV4080Analysis/);
 assert.match(domain,/impetoSlotStatus\?: 'DISPONIVEL' \| 'OCUPADO' \| 'SEM_VAGA' \| 'NAO_CONFIRMADO'/);
 assert.match(analyzer,/function detectImpetoSlotStatus/);

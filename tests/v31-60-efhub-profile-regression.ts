@@ -31,8 +31,9 @@ assert.deepEqual(EFHUB_EXPECTED_COUNTS, { attributes: 26, positions: 13, physica
 
 const geometry = getAdaptiveSinglePrintZones(1400, 1600);
 assert.equal(geometry.template, 'detailed-profile');
-assert.equal(geometry.zones.length, 20);
+assert.equal(geometry.zones.length, 21);
 assert.equal(geometry.zones.filter((zone) => zone.key === 'skills').length, 7);
+assert.equal(geometry.zones.filter((zone) => zone.key === 'specialSkill').length, 1);
 assert.equal(geometry.zones.find((zone) => zone.key === 'attributes')?.label, 'Tabela completa de 26 atributos');
 
 const attributes = [

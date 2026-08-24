@@ -7,7 +7,7 @@ const formation=read('src/lib/fluidFormationV600.ts');
 const panel=read('src/components/FormationRoleLabPanelV4080.tsx');
 const match=read('src/lib/realMatchCalibration.ts');
 const catalog=read('src/lib/efootballV600LiveCatalog.ts');
-assert.match(pipeline,/applyRealPerformance2027V4080R7\(current\);\s*current = applyMetaVivo2027V4080R8\(current\);/s);
+assert.match(pipeline,/applyLegacyTrainingReadOnly\(current, applyRealPerformance2027V4080R7\);\s*current = applyLegacyTrainingReadOnly\(current, applyMetaVivo2027V4080R8\);/s);
 assert.match(domain,/metaVivo2027V4080R8\?: MetaVivo2027V4080R8Analysis/);
 assert.match(formation,/MANUAL_SEGURO/);
 assert.match(formation,/SOBREPOSICAO/);

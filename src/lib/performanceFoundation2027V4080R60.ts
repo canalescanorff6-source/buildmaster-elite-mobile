@@ -23,7 +23,8 @@ export type PerformanceFoundation2027R60 = {
   content: CatalogObservationR60;
   guards: {
     oneCardOneIdentity: true;
-    masterEngineOnlyTrainingWriter: true;
+    masterEngineOnlyTrainingWriter: false;
+    finalAuthorityR118OnlyTrainingWriter: true;
     unknownContentNeverGetsInventedWeight: true;
     rareResourcesPersistAcrossCompatiblePositions: true;
     overallIsNotOptimizationTarget: true;
@@ -100,7 +101,8 @@ export function applyPerformanceFoundation2027R60(input: AnalysisResult): Analys
     content,
     guards: {
       oneCardOneIdentity: true,
-      masterEngineOnlyTrainingWriter: true,
+      masterEngineOnlyTrainingWriter: false,
+      finalAuthorityR118OnlyTrainingWriter: true,
       unknownContentNeverGetsInventedWeight: true,
       rareResourcesPersistAcrossCompatiblePositions: true,
       overallIsNotOptimizationTarget: true,

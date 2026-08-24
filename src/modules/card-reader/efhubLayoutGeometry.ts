@@ -56,7 +56,7 @@ function box(key: OcrZoneKey, label: string, x1: number, y1: number, x2: number,
 }
 
 /**
- * As nove áreas visuais seguem exatamente o mapa 1400 × 1600 enviado como
+ * As dez áreas visuais seguem exatamente o mapa 1400 × 1600 enviado como
  * referência. Elas são usadas no overlay de conferência.
  */
 export const EFHUB_CANONICAL_MACRO_BOXES: EfhubPixelBox[] = [
@@ -71,7 +71,8 @@ export const EFHUB_CANONICAL_MACRO_BOXES: EfhubPixelBox[] = [
   // r31: faixa numérica dos ícones de progressão da ficha automática.
   // Fica separada do Booster/Ímpeto para não confundir +1/+2 de booster
   // com níveis de Finalização/Passe/Drible/Destreza/Força/Bola aérea/Defesa.
-  box('progression', '9. Pontos distribuídos', 650, 472, 1385, 555)
+  box('progression', '9. Pontos distribuídos', 650, 472, 1385, 555),
+  box('specialSkill', '10. Habilidade especial', 15, 1425, 1385, 1590)
 ];
 
 /**
@@ -96,6 +97,7 @@ export const EFHUB_CANONICAL_OCR_BOXES: EfhubPixelBox[] = [
   // linhas. O leitor canônico combina o bloco completo, três linhas e três
   // janelas horizontais sobrepostas. Isso reduz texto colado e recupera nomes
   // longos sem depender da posição exata de cada cápsula.
+  box('specialSkill', 'Habilidade especial • área exclusiva', 15, 1425, 1385, 1590),
   box('skills', 'Habilidades • bloco completo', 18, 1427, 1382, 1595),
   box('skills', 'Habilidades • linha 1', 18, 1436, 1382, 1498),
   box('skills', 'Habilidades • linha 2', 18, 1484, 1382, 1550),

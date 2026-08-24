@@ -1,5 +1,5 @@
 'use client';
-// A Central de Backup é informativa e nunca pode impedir a abertura do app.
+// A Central de Backup é informativa e nunca pode impedir a abertura do app. BM_CARDVISION_LINE_BUDGET_R22
 import { useEffect, useMemo, useRef, useState } from 'react'; import type { ChangeEvent } from 'react';
 import { Activity, Camera, CheckCircle2, History, Download, Save, Trash2, FileText, Palette, Layers, Trophy, Target, Clock3, SlidersHorizontal, ImagePlus, Keyboard, Loader2, LogOut, RotateCcw, ScanText, ShieldCheck, Sparkles, UploadCloud, Wand2, Zap, Ban, Users, UserPlus } from 'lucide-react'; import { fetchWithTimeout } from '@/lib/fetchWithTimeout'; import { clearBuildMasterSession, useBuildMasterAccount } from '@/components/AuthGate';
 import { CalibrationProfileFields } from '@/components/CalibrationProfileFields'; import { ManagerSelectionField } from '@/components/ManagerSelectionField';
@@ -295,6 +295,10 @@ export function CardVisionApp() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
+  // BM_PREFINAL_CONFIRMATION_R16
+  // BM_PREFINAL_VISUAL_R104_STATE
+  const [preFinalConfirmation, setPreFinalConfirmation] = useState<{ playerName: string; level: string; points: string; preview: string | null } | null>(null);
+  const [preFinalGenerateRequested, setPreFinalGenerateRequested] = useState(false);
   const [manualFields, setManualFields] = useState<ManualFields>(emptyManualFields());
   const [manualMode, setManualMode] = useState(false);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
@@ -720,7 +724,7 @@ export function CardVisionApp() {
       if (enhancedObjectUrlRef.current) URL.revokeObjectURL(enhancedObjectUrlRef.current);
       previewObjectUrlRef.current = null; enhancedObjectUrlRef.current = null;
       setPreview(null); setPlayerCardImage(null); setCardCropResult(null); setCardCropAdjustOpen(false); setFileName(null); setSelectedFile(null);
-      setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setManualFields(emptyManualFields()); setManualMode(false);
+      setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setPreFinalConfirmation(null); setPreFinalGenerateRequested(false); setManualFields(emptyManualFields()); setManualMode(false);
       setTargetPosition('AUTO'); setCardPositionOverride('AUTO'); setPlaystyleOverride('AUTO'); setQualityReport(null); setPremiumReadings([]);
       setTotalReadingSession(null); setSinglePrintSession(null); setReadingConfirmations({}); setEnhancedPreview(null); setActiveHistoryId(null);
       try { removeAccountStorage(ACTIVE_SESSION_KEY); } catch {}
@@ -729,6 +733,38 @@ export function CardVisionApp() {
     },
     setStatus
   });
+  function confirmPreFinalCardDataR16() {
+    if (!preFinalConfirmation) return;
+    const playerName = preFinalConfirmation.playerName.trim();
+    const level = preFinalConfirmation.level.replace(/[^0-9]/g, '').slice(0, 3);
+    const points = preFinalConfirmation.points.replace(/[^0-9]/g, '').slice(0, 4);
+    if (!playerName) {
+      setStatus('Confira o nome do jogador antes de gerar a ficha.');
+      return;
+    }
+    if (!level || Number(level) <= 0) {
+      setStatus('Informe o nível máximo correto da carta antes de gerar a ficha.');
+      return;
+    }
+    if (!points || Number(points) < 0) {
+      setStatus('Informe os pontos de progressão disponíveis antes de gerar a ficha.');
+      return;
+    }
+    setManualFields((current) => ({
+      ...current,
+      playerName,
+      level,
+      trainingPointsTotal: points
+    }));
+    setPreFinalGenerateRequested(true);
+    setStatus('Dados confirmados. Recalculando a ficha com o nível e o orçamento informados...');
+  }
+  useEffect(() => {
+    if (!preFinalGenerateRequested) return;
+    setPreFinalGenerateRequested(false);
+    setPreFinalConfirmation(null);
+    runAnalysis(true);
+  }, [preFinalGenerateRequested, manualFields.playerName, manualFields.level, manualFields.trainingPointsTotal]);
   function openMainSection(section: MainSection, options: { track?: boolean; skipManualBootstrap?: boolean } = {}) {
     setMobileLauncher(null);
     scrollPositionsRef.current[mainSection] = window.scrollY;
@@ -2686,7 +2722,30 @@ ${reading.text}`)) : fullPassText;
       reportReaderProgress(98, 'Gerando ficha', 'Aplicando a leitura automaticamente ao Desempenho Máximo.', readerTotal, readerTotal);
       const autoResult = applyCompleteCardIntelligence(analyzeCard(lockedText, 'COMPETITIVE', targetPosition, fileName, tacticalProfile));
       hydrateReviewFields(autoResult);
-      setDraftResult(null); setResult(autoResult);
+      // A leitura terminou, mas a ficha definitiva só nasce depois da confirmação
+      // de Nome, Nível máximo e Pontos de progressão.
+      setDraftResult(autoResult);
+      setResult(null);
+      // BM_PREFINAL_AUTOFILL_R20
+      const detectedPlayerName = String(autoResult.parsed.playerName || manualFields.playerName || '').trim();
+      const parsedLevel = Number(autoResult.parsed.level ?? manualFields.level ?? 0);
+      const detectedLevel = parsedLevel > 0 ? parsedLevel : Number(rawText.match(/(?:nível|nivel|level)\s*(?:máx(?:imo)?|max(?:imo)?|maximum)?\s*[:\-]?\s*(\d{1,3})/i)?.[1] ?? 0);
+      const explicitProgress = Number(autoResult.trainingPointsTotal ?? autoResult.parsed.trainingPointsTotal ?? manualFields.trainingPointsTotal ?? 0);
+      const calculatedProgress = detectedLevel > 0 ? Math.max(0, (detectedLevel - 1) * 2) : 0;
+      const detectedProgress = explicitProgress > 0 ? explicitProgress : calculatedProgress;
+      // BM_PREFINAL_VISUAL_R104_DATA
+      const inferredMaximumLevel =
+        detectedLevel <= 0 &&
+        detectedProgress > 0 &&
+        detectedProgress % 2 === 0
+          ? Math.floor(detectedProgress / 2) + 1
+          : 0;
+      setPreFinalConfirmation({
+        playerName: detectedPlayerName,
+        level: detectedLevel > 0 ? String(detectedLevel) : inferredMaximumLevel > 0 ? String(inferredMaximumLevel) : '',
+        points: detectedLevel > 0 || explicitProgress > 0 ? String(detectedProgress) : '',
+        preview: preview ?? null
+      });
       const name = fieldByKey(session, 'playerName');
       const position = fieldByKey(session, 'position');
       const style = fieldByKey(session, 'playstyle');
@@ -2707,8 +2766,8 @@ ${reading.text}`)) : fullPassText;
         ? ` • ${session.blockingFields.length ? `campos incompletos mantidos sem inventar: ${session.blockingFields.join(', ')}` : 'há campos de baixa confiança, mantidos sem bloquear a ficha'}`
         : '';
       const discoveryStatus = provisionalSkills.length ? ` • ${provisionalSkills.length} habilidade(s) nova(s) registrada(s) como provisória(s)` : '';
-      setStatus(`OCR v40.70 concluído com ${visionAudit.score}/100. Ficha de Desempenho Máximo gerada automaticamente${autoWarnings}${discoveryStatus}.`);
-      reportReaderProgress(100, 'Ficha gerada', 'Leitura concluída sem etapa obrigatória de confirmação.', readerTotal, readerTotal);
+      setStatus(`OCR v40.70 concluído com ${visionAudit.score}/100. Nome, Nível máximo e Pontos foram preenchidos automaticamente; confira antes de gerar a ficha${autoWarnings}${discoveryStatus}.`);
+      reportReaderProgress(100, 'Leitura concluída', 'Confira Nome, Nível máximo e Pontos de progressão para gerar a ficha.', readerTotal, readerTotal);
       void updateBackgroundOcrCheckpoint({ stage: 'completed', status: 'Leitura concluída.', shouldResume: false }).catch(() => undefined);
       void clearBackgroundOcrCheckpoint().catch(() => undefined);
       openMainSection('resultado');
@@ -4026,6 +4085,128 @@ ${reading.text}`)) : fullPassText;
                 <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Validação automática</span><span>Ficha final</span></div>
               </div>
+            ) : preFinalConfirmation ? (
+              <section className="luxury-panel" aria-label="Confirmação antes da ficha" style={{ maxWidth: 620, width: '100%', margin: '0 auto', padding: 22, display: 'grid', gap: 18 }}>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <p className="kicker"><CheckCircle2 size={15} /> Leitura concluída</p>
+                  <h2 style={{ margin: 0 }}>Confira antes de gerar a ficha</h2>
+                  <p style={{ margin: 0, opacity: .78 }}>Nome, nível e progressão já vêm preenchidos pela leitura. Só altere algum campo se o OCR tiver identificado algo errado.</p>
+                </div>
+                {/* BM_PREFINAL_VISUAL_R104_UI */}
+                {preFinalConfirmation.preview ? (
+                  <div
+                    aria-label="Print original para conferência"
+                    style={{
+                      display: 'grid',
+                      gap: 10,
+                      padding: 12,
+                      borderRadius: 16,
+                      border: '1px solid rgba(96,165,250,.32)',
+                      background: 'rgba(5,15,29,.78)'
+                    }}
+                  >
+                    <div style={{ display: 'grid', gap: 3 }}>
+                      <strong>Print original da carta</strong>
+                      <span style={{ fontSize: 12, opacity: .72, lineHeight: 1.4 }}>
+                        Confira o nível máximo e os pontos de progressão no mesmo print usado no scan.
+                      </span>
+                    </div>
+                    <a
+                      href={preFinalConfirmation.preview}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="Abrir print original em tamanho maior"
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        maxHeight: '46vh',
+                        overflow: 'auto',
+                        borderRadius: 13,
+                        background: '#050b14',
+                        border: '1px solid rgba(255,255,255,.08)'
+                      }}
+                    >
+                      <img
+                        src={preFinalConfirmation.preview}
+                        alt="Print original usado na leitura"
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          height: 'auto',
+                          maxHeight: '46vh',
+                          objectFit: 'contain',
+                          objectPosition: 'top center'
+                        }}
+                      />
+                    </a>
+                    <small style={{ opacity: .68 }}>
+                      Toque na imagem para abrir maior. Ela fica presa a esta leitura até você gerar a ficha.
+                    </small>
+                  </div>
+                ) : (
+                  <div
+                    role="status"
+                    style={{
+                      padding: 11,
+                      borderRadius: 13,
+                      border: '1px solid rgba(245,158,11,.28)',
+                      background: 'rgba(120,72,8,.12)',
+                      fontSize: 12,
+                      lineHeight: 1.45
+                    }}
+                  >
+                    O print desta leitura não está disponível. Volte à leitura e selecione a imagem novamente.
+                  </div>
+                )}
+                <label style={{ display: 'grid', gap: 7 }}>
+                  <strong>Nome do jogador</strong>
+                  <input
+                    value={preFinalConfirmation.playerName}
+                    onChange={(event) => setPreFinalConfirmation((current) => current ? { ...current, playerName: event.target.value } : current)}
+                    autoComplete="off"
+                    inputMode="text"
+                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: 7 }}>
+                  <strong>Nível máximo da carta</strong>
+                  <input
+                    value={preFinalConfirmation.level}
+                    onChange={(event) => {
+                      const nextLevel = event.target.value.replace(/[^0-9]/g, '').slice(0, 3);
+                      const levelNumber = Number(nextLevel || 0);
+                      const nextPoints = levelNumber > 0 ? String(Math.max(0, (levelNumber - 1) * 2)) : '';
+                      setPreFinalConfirmation((current) => current ? { ...current, level: nextLevel, points: nextPoints } : current);
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
+                  />
+                  {/* BM_PREFINAL_AUTO_PROGRESS_R105 */}
+                  <small style={{ opacity: .68 }}>
+                    O progresso é recalculado automaticamente pelo nível: 31 → 60, 34 → 66.
+                  </small>
+                </label>
+                <label style={{ display: 'grid', gap: 7 }}>
+                  <strong>Pontos de progressão disponíveis</strong>
+                  <input
+                    value={preFinalConfirmation.points}
+                    onChange={(event) => setPreFinalConfirmation((current) => current ? { ...current, points: event.target.value.replace(/[^0-9]/g, '').slice(0, 4) } : current)}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="elite-button"
+                  onClick={confirmPreFinalCardDataR16}
+                  disabled={preFinalGenerateRequested}
+                  style={{ minHeight: 54, width: '100%', justifyContent: 'center' }}
+                >
+                  {preFinalGenerateRequested ? <><Loader2 className="spin" size={17} /> Gerando ficha...</> : <><Sparkles size={17} /> Gerar ficha</>}
+                </button>
+              </section>
             ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onReplaceOwnedSkill={replaceOwnedSkillIntelligently} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} onRestoreRulePackVersion={restoreRulePackVersion} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}
@@ -4113,3 +4294,5 @@ ${reading.text}`)) : fullPassText;
     </main>
   );
 }
+
+/* BM_PREFINAL_VISUAL_R104 */

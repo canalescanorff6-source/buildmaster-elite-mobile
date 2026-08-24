@@ -16,7 +16,8 @@ for (const contract of [
 ]) assert.ok(canonical.includes(contract), `r60 identidade sem contrato: ${contract}`);
 
 for (const guard of [
-  'masterEngineOnlyTrainingWriter: true',
+  'masterEngineOnlyTrainingWriter: false',
+  'finalAuthorityR118OnlyTrainingWriter: true',
   'unknownContentNeverGetsInventedWeight: true',
   'rareResourcesPersistAcrossCompatiblePositions: true',
   'overallIsNotOptimizationTarget: true',
@@ -25,9 +26,10 @@ for (const guard of [
 
 assert.ok(pipeline.indexOf('applyCanonicalCardIdentity2027R60(current)') < pipeline.indexOf('applyPerformanceFoundation2027R60(current)'));
 assert.ok(pipeline.indexOf('applyPerformanceFoundation2027R60(current)') < pipeline.indexOf('applyMasterCardEngineV4080R50(current)'));
-assert.ok(master.includes('canonicalIdentity(result)?.attackPosition'));
-assert.ok(master.includes('canonicalIdentity(result)?.defencePosition'));
+assert.ok(master.includes('identity?.attackPosition'));
+assert.ok(master.includes('identity?.defencePosition'));
+assert.ok(master.includes('BM_R118_MASTER_READ_ONLY'));
 assert.ok(!canonical.includes('training ='));
 assert.ok(!foundation.includes('training ='));
 
-console.log('r60 aprovada: identidade canônica + duas fases + catálogo seguro alimentam o Motor Mestre sem criar outro escritor de ficha.');
+console.log('r60 aprovada: identidade canônica + duas fases alimentam a Card Signature; r50 fica read-only e r118 é o único escritor.');

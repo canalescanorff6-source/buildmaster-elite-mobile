@@ -220,12 +220,70 @@ const EXOTIC_SHOOTING_SKILLS = new Set([
 
 const DEFENSIVE_SKILLS = new Set(['Marcação individual','Volta para marcar','Interceptação','Bloqueador','Carrinho','Afastamento acrobático']);
 
+const SITUATIONAL_SHOOTING_R114 = new Set([
+  'Efeito de longe',
+  'Controle da cavadinha',
+  'Chute com o peito do pé',
+  'Folha seca',
+  'Chute ascendente',
+  'Precisão à distância',
+  'Especialista em pênalti'
+]);
+
+const HIGH_FREQUENCY_GAMEPLAY_R114 = new Set([
+  'Passe de primeira',
+  'Passe em profundidade',
+  'Controle com a sola',
+  'Toque duplo',
+  'Chute de primeira',
+  'Finalização acrobática',
+  'Interceptação',
+  'Bloqueador',
+  'Marcação individual',
+  'Volta para marcar',
+  'Espírito guerreiro',
+  'Cabeçada',
+  'Superioridade aérea'
+]);
+
+function highFrequencyBonusR114(result: AnalysisResult, position: PositionCode, skill: string) {
+  let score = 0;
+  const reasons: string[] = [];
+  if (HIGH_FREQUENCY_GAMEPLAY_R114.has(skill)) {
+    score += 20;
+    reasons.push('Ação de alta frequência: tende a participar de muitas jogadas por partida.');
+  }
+  if (SITUATIONAL_SHOOTING_R114.has(skill)) {
+    const a = result.parsed.attributes;
+    const eliteShot = avg(a.finishing, a.offensiveAwareness, a.kickingPower) >= 90;
+    score -= eliteShot ? 10 : 24;
+    reasons.push('Habilidade situacional: perde prioridade para ações que ativam repetidamente durante a partida.');
+  }
+  if (skill === 'Especialista em pênalti') score -= 80;
+  if (position === 'CF' && ['Passe de primeira','Controle com a sola','Chute de primeira'].includes(skill)) score += 8;
+  return { score, reasons };
+}
+
+function aerialSkillEligibleR114(result: AnalysisResult, position: PositionCode) {
+  if (!['CF','SS','CB','DMF'].includes(position)) return false;
+  const a = result.parsed.attributes;
+  const aerial = avg(a.heading, a.jump, a.physicalContact);
+  const style = styleName(result);
+  if (/^pivo$|target man/.test(style)) return aerial >= 78;
+  if (/homem de area|fox in the box/.test(style)) return aerial >= 84;
+  return aerial >= 87;
+}
+
+// BM_R114_SKILL_FREQUENCY: Top 5 é ganho por frequência de ativação, não por nome chamativo.
+
+
 function hardSkillMismatch(result: AnalysisResult, position: PositionCode, skill: string): boolean {
   const role = functionalSkillRole(result, position);
   const a = result.parsed.attributes;
   const finishing = Number(a.finishing ?? 0);
   const power = Number(a.kickingPower ?? 0);
 
+  if (skill === 'Especialista em pênalti') return true;
   if (['CF','SS','LWF','RWF','AMF'].includes(position) && DEFENSIVE_SKILLS.has(skill)) return true;
   if (position === 'CB' && (EXOTIC_SHOOTING_SKILLS.has(skill) || ['Toque duplo','Giro 360°','Chapéu','Elástico'].includes(skill))) return true;
   if ((role === 'MEIA_DEFENSIVO' || role === 'LATERAL_DEFENSIVO') && EXOTIC_SHOOTING_SKILLS.has(skill)) return true;
@@ -266,18 +324,39 @@ function functionalRoleBonus(result: AnalysisResult, position: PositionCode, ski
   return { role, score, reasons };
 }
 
+
+function specialSkillComplementR115(result: AnalysisResult, skill: string) {
+  const special = norm((result.parsed.specialSkills ?? []).join(' | '));
+  if (!special) return { score: 0, reasons: [] as string[] };
+  let score=0; const reasons:string[]=[];
+  const add=(condition:boolean,points:number,reason:string)=>{ if(condition){score+=points;reasons.push(reason);} };
+  const shooting=/curva descendente|blitz curler|finalizacao fenomenal|chute rasteiro fulminante|cabecada fulminante/.test(special);
+  const dribble=/drible explosivo|drible de impulso|pes magneticos/.test(special);
+  const pass=/desencadeador de ataques|passe decisivo|passador nato|passe visionario|cruzamento cortante/.test(special);
+  const defensive=/esticada de perna|fortaleza|garra|comandante da defesa|rugido do goleiro/.test(special);
+  add(shooting&&['Controle com a sola','Toque duplo','Passe de primeira','Chute de primeira','Espírito guerreiro'].includes(skill),22,'Complementa a especial de finalização com domínio e execução frequente.');
+  add(shooting&&SITUATIONAL_SHOOTING_R114.has(skill),-26,'A especial já cobre uma arma de chute; evita redundância situacional.');
+  add(dribble&&['Passe de primeira','Passe em profundidade','Chute de primeira','Precisão à distância','Espírito guerreiro'].includes(skill),18,'Converte o drible especial em passe ou conclusão.');
+  add(pass&&['Controle com a sola','Toque duplo','Passe de primeira','Espírito guerreiro'].includes(skill),18,'Dá suporte de domínio à especial de criação.');
+  add(defensive&&['Interceptação','Bloqueador','Marcação individual','Passe de primeira','Espírito guerreiro'].includes(skill),16,'Amplifica a especial defensiva em ações repetidas.');
+  return {score,reasons};
+}
+// BM_R115_SPECIAL_COMPLEMENT: Top 5 complementa a especial e evita cinco vagas da mesma função.
+
 function candidateFor(result: AnalysisResult, position: PositionCode, skill: string, poolRank: number): Candidate {
   const category = CATEGORY[skill] ?? 'mental';
   const style = styleBonus(result, position, skill);
   const attr = attributeActivation(result, position, skill);
   const meta = metaV6Bonus(result, skill);
   const role = functionalRoleBonus(result, position, skill);
+  const frequency = highFrequencyBonusR114(result, position, skill);
+  const specialComplement = specialSkillComplementR115(result, skill);
   const categoryBase = BASE_CATEGORY[position][category];
   const stable = stableHash(`${result.parsed.playerName}|${result.parsed.cardType}|${result.parsed.mainPosition}|${result.parsed.playstyle ?? ''}|${skill}`) % 4;
-  const raw = 30 + categoryBase + style.score + attr.score + meta.score + role.score + Math.max(0, 12 - poolRank) + stable;
+  const raw = 30 + categoryBase + style.score + attr.score + meta.score + role.score + frequency.score + specialComplement.score + Math.max(0, 12 - poolRank) + stable;
   const score = clamp(raw);
   const tier: Tier = role.score >= 23 || style.score >= 18 || attr.score >= 16 ? 'ESSENCIAL' : meta.meta && meta.score >= 9 ? 'META_V6' : 'COMPLEMENTAR';
-  return { name: skill, category, score, tier, reasons: [...role.reasons, ...style.reasons, ...attr.reasons, ...meta.reasons].slice(0, 3) };
+  return { name: skill, category, score, tier, reasons: [...specialComplement.reasons, ...frequency.reasons, ...role.reasons, ...style.reasons, ...attr.reasons, ...meta.reasons].slice(0, 3) };
 }
 
 function styleBlueprint(result: AnalysisResult, position: PositionCode): readonly Category[] {
@@ -305,7 +384,11 @@ function styleBlueprint(result: AnalysisResult, position: PositionCode): readonl
   if (['LB','RB','LMF','RMF','LWF','RWF'].includes(position) && /perito em cruzamento|cross specialist/.test(style)) return ['passe','passe','passe','drible','físico'];
   if (position === 'CF' && /atacante pivo|deep.lying|recuado|puxa marcacao|dummy runner/.test(style)) return ['passe','passe','finalização','drible','físico'];
   if (position === 'CF' && (/^pivo$|^target man$/).test(style)) return ['aérea','finalização','passe','físico','mental'];
-    if (position === 'CF' && /homem de area|fox in the box/.test(style)) return ['finalização','finalização','aérea','aérea','físico'];
+  if (position === 'CF' && /homem de area|fox in the box/.test(style)) {
+    return aerialSkillEligibleR114(result, position)
+      ? ['finalização','drible','aérea','passe','físico']
+      : ['finalização','drible','passe','físico','finalização'];
+  }
   return SLOT_BLUEPRINT[position];
 }
 
@@ -318,12 +401,28 @@ function pickTopFive(result: AnalysisResult) {
     && !hardSkillMismatch(result, position, skill)
   );
   const candidates = pool.map((skill, index) => candidateFor(result, position, skill, index));
-  const blueprint = styleBlueprint(result, position);
+  // BM_R17_REGRESSION_COMPATIBILITY
+  const blueprint = [...styleBlueprint(result, position)];
+  const attrs = result.parsed.attributes;
+  const carryIdentity = avg(attrs.ballControl, attrs.dribbling, attrs.tightPossession, attrs.balance, attrs.acceleration);
+  const finishIdentity = avg(attrs.finishing, attrs.offensiveAwareness, attrs.kickingPower);
+  const aerialIdentity = avg(attrs.heading, attrs.jump, attrs.physicalContact);
+  const dribbleSlots = () => blueprint.filter((category) => category === 'drible').length;
+  if (position !== 'GK' && carryIdentity >= 86 && carryIdentity >= finishIdentity + 4) {
+    for (const index of [blueprint.length - 1, 1, 3, 0, 2].filter((index) => index >= 0)) {
+      if (dribbleSlots() >= 2) break;
+      if (blueprint[index] !== 'drible') blueprint[index] = 'drible';
+    }
+  } else if (position === 'CF' && carryIdentity >= 78 && carryIdentity >= aerialIdentity + 5 && dribbleSlots() === 0) {
+    blueprint[Math.min(3, blueprint.length - 1)] = 'drible';
+  }
   const selected: Candidate[] = [];
 
   const ranked = (category?: Category) => candidates
     .filter((candidate) => !selected.some((current) => skillIdentityKey(current.name) === skillIdentityKey(candidate.name)))
     .filter((candidate) => !category || candidate.category === category)
+    .filter((candidate) => !SITUATIONAL_SHOOTING_R114.has(candidate.name) || !selected.some((current) => SITUATIONAL_SHOOTING_R114.has(current.name)))
+    .filter((candidate) => candidate.category !== 'aérea' || aerialSkillEligibleR114(result, position) || !selected.some((current) => current.category === 'aérea'))
     .map((candidate) => {
       const sameCategory = selected.filter((current) => current.category === candidate.category).length;
       const diversity = sameCategory === 0 ? 5 : sameCategory >= 2 ? -7 * (sameCategory - 1) : 0;
@@ -414,6 +513,7 @@ export function applyDefinitiveAdditionalSkillsV600R15(result: AnalysisResult): 
       `Top 5 Definitivo v6.0: ${recommendedSkills.join(', ')}.`,
       `${essentialCount} habilidade(s) essencial(is), ${metaCount} otimização(ões) META v6.0; estilo ${style}; função-base ${position}; função real ${functionalRole}.`,
       `Filtro universal: ${owned.length} habilidade(s) já possuída(s) foram bloqueadas contra repetição; nenhum estilo desconhecido recebe peso inventado.`,
+      'Proteção anti-overall: a ficha otimiza desempenho real sem perseguir overall.',
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 18),
     strengths: [

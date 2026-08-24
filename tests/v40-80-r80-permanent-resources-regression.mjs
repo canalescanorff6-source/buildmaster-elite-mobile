@@ -6,5 +6,5 @@ for(const c of ['PERMANENT_RESOURCES_2027_R80_VERSION','permanentTop5','permanen
 assert.ok(engine.includes('skillIdentityKey'));
 assert.ok(engine.includes('Ímpeto já aplicado: preservado'));
 assert.ok(pipeline.indexOf('applyMasterCardEngineV4080R50(current)') < pipeline.indexOf('applyPermanentResources2027R80(current)'));
-assert.ok(pipeline.indexOf('applyPermanentResources2027R80(current)') < pipeline.indexOf('applyPlayerGenerationFinalizerV4080R13(current)'));
-console.log('r80 aprovada: Top 5 e Ímpeto permanentes auditados após Motor Mestre e antes do gerador final.');
+assert.ok(pipeline.indexOf('applyPermanentResources2027R80(current)') < pipeline.indexOf('applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13)'));
+console.log('r80 aprovada: Top 5 e Ímpeto permanentes são decididos antes do r118 e protegidos até o gerador final.');

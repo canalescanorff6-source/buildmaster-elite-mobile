@@ -13,9 +13,9 @@ const ATTRIBUTE_GROUPS: Record<TrainingKey, AttributeKey[]> = {
   lowerBodyStrength: ['speed','kickingPower','stamina'],
   aerialStrength: ['heading','jump','physicalContact'],
   defending: ['defensiveAwareness','defensiveEngagement','tackling','aggression'],
-  gk1: ['goalkeeperAwareness','goalkeeperCatching'],
-  gk2: ['goalkeeperParrying','goalkeeperReflexes'],
-  gk3: ['goalkeeperReach','jump']
+  gk1: ['goalkeeperAwareness','jump'],
+  gk2: ['goalkeeperParrying','goalkeeperReach'],
+  gk3: ['goalkeeperCatching','goalkeeperReflexes']
 };
 
 export type PerformanceProfileR70 = 'PEAK' | 'BALANCED_90' | 'FLUID_PHASE';
@@ -51,7 +51,8 @@ export type PerformanceEngine2027R70 = {
   confidence: number;
   guards: {
     exactBudget: boolean;
-    masterEngineIsOnlyWriter: true;
+    masterEngineIsOnlyWriter: false;
+    finalAuthorityR118IsOnlyWriter: true;
     overallIgnored: true;
     phaseAware: true;
     staminaProtected: boolean;
@@ -330,7 +331,8 @@ export function applyPerformanceEngine2027R70(input: AnalysisResult): AnalysisRe
     confidence,
     guards:{
       exactBudget:winner.exactBudget,
-      masterEngineIsOnlyWriter:true,
+      masterEngineIsOnlyWriter:false,
+      finalAuthorityR118IsOnlyWriter:true,
       overallIgnored:true,
       phaseAware:true,
       staminaProtected:Number(winner.training.lowerBodyStrength??0)>=floor,

@@ -18,7 +18,8 @@ export type EfhubCalibrationZoneId =
   | 'attributes'
   | 'physical'
   | 'skills'
-  | 'progression';
+  | 'progression'
+  | 'specialSkill';
 
 export type EfhubCalibrationZone = {
   id: EfhubCalibrationZoneId;
@@ -54,7 +55,8 @@ const MACRO_META: Array<{
   { id: 'attributes', key: 'attributes', shortLabel: '26 atributos', color: '#ff536b' },
   { id: 'physical', key: 'physicalModel', shortLabel: 'Modelo físico', color: '#4b9bff' },
   { id: 'skills', key: 'skills', shortLabel: 'Habilidades', color: '#52f4d2' },
-  { id: 'progression', key: 'progression', shortLabel: 'Pontos distribuídos', color: '#ffcf4a' }
+  { id: 'progression', key: 'progression', shortLabel: 'Pontos distribuídos', color: '#ffcf4a' },
+  { id: 'specialSkill', key: 'specialSkill', shortLabel: 'Habilidade especial', color: '#ff65c5' }
 ];
 
 function clamp(value: number, min = 0, max = 1) {
@@ -143,7 +145,8 @@ const OCR_TO_MACRO: Record<string, EfhubCalibrationZoneId> = {
   autoTraining: 'progression',
   attributes: 'attributes',
   physicalModel: 'physical',
-  skills: 'skills'
+  skills: 'skills',
+  specialSkill: 'specialSkill'
 };
 
 function transformCanonicalBox(
@@ -243,7 +246,7 @@ async function canonicalSkillLayer(file: File | Blob, skills: EfhubCalibrationZo
 }
 
 /**
- * Gera os recortes internos a partir dos nove quadrados movidos pelo usuário.
+ * Gera os recortes internos a partir dos dez quadrados movidos pelo usuário.
  * Atributos e modelo físico continuam separados por coluna, e habilidades
  * preservam linhas completas mais cápsulas/janelas de contingência.
  */
@@ -311,5 +314,5 @@ export function efhubCalibrationCardArtZone(zones: EfhubCalibrationZone[]): OcrZ
 
 export function isEfhubCalibrationComplete(zones: EfhubCalibrationZone[]) {
   const safe = normalizeEfhubCalibrationZones(zones);
-  return safe.length === 9 && safe.every((zone) => zone.enabled && zone.w >= 0.015 && zone.h >= 0.015);
+  return safe.length === 10 && safe.every((zone) => zone.enabled && zone.w >= 0.015 && zone.h >= 0.015);
 }

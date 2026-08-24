@@ -23,10 +23,10 @@ assert.equal((options.match(/value:\s*'COMPETITIVE'/g) ?? []).length,1,'objetivo
 assert.doesNotMatch(options,/META_2026|FINALIZER|CREATOR|DRIBBLER|DEFENSIVE/);
 assert.match(cardApp,/data-testid="competitive-objective-v4070"/);
 assert.match(cardApp,/analyzeCard\(lockedText, 'COMPETITIVE'/);
-assert.match(cardApp,/setDraftResult\(null\);\s*setResult\(autoResult\)/);
-assert.match(cardApp,/Ficha de Desempenho Máximo gerada automaticamente/);
-assert.match(cardApp,/Leitura concluída sem etapa obrigatória de confirmação/);
-assert.doesNotMatch(review,/premium-confirmation-card/);
+assert.match(cardApp,/setDraftResult\(autoResult\);\s*setResult\(null\)/);
+assert.match(cardApp,/(?:Confira Nome, Nível máximo e Pontos antes de gerar a ficha|Nome, Nível máximo e Pontos foram preenchidos automaticamente; confira antes de gerar a ficha)/);
+assert.match(cardApp,/Confira Nome, Nível máximo e Pontos de progressão para gerar a ficha/);
+assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace // confirmação ocorre antes do ResultWorkspace
 assert.doesNotMatch(review,/Confirme as etapas obrigatórias/);
 assert.match(review,/premium-reading-audit-v4070/);
 assert.match(review,/zero confirmações obrigatórias/);
