@@ -15,9 +15,9 @@ import {
   trainingPlanTotalCost
 } from './trainingPlanCore';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '../modules/analysis/analyzerCatalog';
-import { RECOGNIZABLE_IMPETO_NAMES } from './officialImpetoCatalog';
 import { skillIdentityKey } from './officialSkillIdentity';
 import { isRoleCompatibleAdditionalSkill } from './skillIntelligenceV31';
+import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from './impetoFunctionalMatrixR119';
 
 export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r119-clean-slate-gameplay-authority' as const;
 
@@ -108,6 +108,7 @@ const ACTIONS: ActionDef[] = [
   { id:'through_creation', label:'Passe de ruptura', attrs:['lowPass','loftedPass','curl','ballControl'], positions:{AMF:1,CMF:.96,SS:.88,DMF:.64,LMF:.78,RMF:.78,LWF:.56,RWF:.56,LB:.52,RB:.52}, tags:['creation'] },
   { id:'hold_up', label:'Proteção e apoio', attrs:['physicalContact','balance','ballControl','offensiveAwareness'], positions:{CF:1,SS:.58,AMF:.35,DMF:.4,CB:.3}, tags:['physical','control'] },
   { id:'aerial_finish', label:'Disputa aérea ofensiva', attrs:['heading','jump','physicalContact','offensiveAwareness'], positions:{CF:1,SS:.3,CB:.22,AMF:.12}, tags:['aerial','physical','finishing'] },
+  { id:'aerial_defend', label:'Defesa aérea', attrs:['heading','jump','physicalContact','defensiveAwareness'], positions:{CB:1,DMF:.72,LB:.4,RB:.4,CMF:.2}, tags:['aerial','defending','physical'] },
   { id:'press_recover', label:'Pressão e recuperação', attrs:['stamina','defensiveEngagement','aggression','speed','acceleration'], positions:{DMF:.9,CMF:.9,LMF:.82,RMF:.82,LB:.78,RB:.78,AMF:.5,SS:.48,CF:.34,CB:.58}, tags:['defending','stamina','movement'] },
   { id:'intercept', label:'Interceptação', attrs:['defensiveAwareness','defensiveEngagement','tackling','speed'], positions:{DMF:1,CB:1,CMF:.78,LB:.86,RB:.86,LMF:.48,RMF:.48,AMF:.2}, tags:['defending'] },
   { id:'defensive_duel', label:'Duelo defensivo', attrs:['tackling','physicalContact','aggression','balance'], positions:{CB:1,DMF:.94,LB:.84,RB:.84,CMF:.66,LMF:.42,RMF:.42}, tags:['defending','physical'] },
@@ -239,7 +240,7 @@ function evaluatePlan(parsed:ParsedCard,plan:TrainingPlan, actionFrequencies:Map
     if(saturated>0) excessPenalty+=level*saturated*.055;
   }
   const aerialLevel=plan.aerialStrength??0;
-  const aerialSupport=actionFrequencies.get('aerial_finish')??0;
+  const aerialSupport=Math.max(actionFrequencies.get('aerial_finish')??0,actionFrequencies.get('aerial_defend')??0);
   // Bola aérea exige evidência de uso, não apenas atributos razoáveis. Evita transformar capacidade secundária em prioridade de treino.
   if(aerialLevel>4 && aerialSupport<.5) excessPenalty+=(aerialLevel-4)*.9;
   if(aerialLevel>7 && aerialSupport<.72) excessPenalty+=(aerialLevel-7)*.7;
@@ -322,9 +323,10 @@ function categoryScores(actions:CleanSlateActionR119[]) {
     if(['finish_box','turn_finish','long_finish'].includes(action.id)) put('finishing',value);
     if(['close_control','carry','turn_finish'].includes(action.id)) put('dribble',value);
     if(['short_creation','through_creation','build_out','cross_support'].includes(action.id)) put('passing',value);
-    if(['hold_up','defensive_duel'].includes(action.id)) put('physical',value);
-    if(['aerial_finish'].includes(action.id)) put('aerial',value);
-    if(['press_recover','intercept','defensive_duel','cover_space'].includes(action.id)) put('defense',value);
+    if(['hold_up','defensive_duel','aerial_defend'].includes(action.id)) put('physical',value);
+    if(action.id==='aerial_finish') { put('aerial',value); put('aerial_attack',value); }
+    if(action.id==='aerial_defend') { put('aerial',value); put('aerial_defense',value); }
+    if(['press_recover','intercept','defensive_duel','cover_space','aerial_defend'].includes(action.id)) put('defense',value);
     if(['press_recover','cover_space','cross_support'].includes(action.id)) put('stamina',value);
     if(['gk_position','gk_reflex','gk_secure'].includes(action.id)) put('goalkeeper',value);
   }
@@ -465,60 +467,65 @@ function skillIntegrityR119(input:AnalysisResult, parsed:ParsedCard, top5:string
   };
 }
 
-function impetoCategories(name:string):string[] {
-  const s=norm(name);
-  if(/goleiro|guardiao|defesaca/.test(s)) return ['goalkeeper'];
-  if(/chute|instinto artilheiro|precisao/.test(s)) return ['finishing'];
-  if(/cobranca de falta/.test(s)) return ['finishing','passing'];
-  if(/disputa aerea|bloqueio aereo/.test(s)) return ['aerial'];
-  if(/passe|criador ofensivo|volante criativo|reconstrucao|cruzamento/.test(s)) return ['passing'];
-  if(/conducao|tecnica|fantasista|protecao de posse/.test(s)) return ['dribble'];
-  if(/defesa|roubo de bola/.test(s)) return ['defense'];
-  if(/duelo|fisicalidade|forca|rompe-barreira/.test(s)) return ['physical'];
-  if(/agilidade|movimento sem a bola|transicao ofensiva/.test(s)) return ['movement'];
-  if(/motor do time/.test(s)) return ['stamina','passing'];
-  return ['movement','dribble','passing','finishing','defense'];
+function weightedScoreR119(values:Array<{value:number;weight:number}>) {
+  const valid=values.filter(item=>item.weight>0);
+  const weight=valid.reduce((sum,item)=>sum+item.weight,0);
+  return weight>0?valid.reduce((sum,item)=>sum+item.value*item.weight,0)/weight:0;
 }
 
 function recommendImpetosR119(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
   const current=parsed.impetos?.find(i=>i.active!==false)?.name ?? parsed.impetos?.[0]?.name ?? null;
   const slot=String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO');
   const cats=categoryScores(actions);
-  const gk=parsed.mainPosition==='GK';
-  const scored=RECOGNIZABLE_IMPETO_NAMES
-    .filter(name=>!current || norm(name)!==norm(current))
-    .filter(name=>gk?/goleiro|guardiao|defesaca|agilidade|fisicalidade|forca/i.test(norm(name)):!/goleiro|guardiao|defesaca/i.test(norm(name)))
-    .map(name=>{
-      const score=average(impetoCategories(name).map(c=>cats.get(c)??18));
-      const confidence=clamp(score*.72+normalizedConfidence(parsed)*.28);
-      return {name,score,confidence};
+  const actionMap=new Map(actions.map(action=>[action.id,action.frequency]));
+  const confidenceBase=normalizedConfidence(parsed);
+  const scored=IMPETO_FUNCTIONAL_MATRIX_R119
+    .filter(profile=>!current || norm(profile.name)!==norm(current))
+    .map((profile,catalogIndex)=>{
+      const domainScore=weightedScoreR119(Object.entries(profile.domains).map(([key,weight])=>({value:cats.get(key as ImpetoFunctionalDomainR119)??0,weight:Number(weight??0)})));
+      const actionScore=weightedScoreR119(Object.entries(profile.actions).map(([key,weight])=>({value:actionMap.get(key)??0,weight:Number(weight??0)})));
+      const positionFit=clamp((profile.positions[parsed.mainPosition]??0.04)*100);
+      const attributeScore=profile.attributes.length?average(profile.attributes.map(key=>attr(parsed.attributes,key))):50;
+      let score=domainScore*.36+actionScore*.30+positionFit*.24+attributeScore*.10;
+      // Compatibilidade posicional baixa não pode ser mascarada por um atributo alto.
+      if(positionFit<30) score*=.62;
+      else if(positionFit<50) score*=.82;
+      const functionalFit=domainScore*.48+actionScore*.52;
+      const confidence=clamp(score*.58+confidenceBase*.30+Math.min(100,functionalFit)*.12);
+      return {name:profile.name,score:round1(score),confidence:round1(confidence),functionalFit:round1(functionalFit),positionFit:round1(positionFit),domainScore:round1(domainScore),actionScore:round1(actionScore),attributeScore:round1(attributeScore),profile,catalogIndex};
     })
-    .sort((a,b)=>b.score-a.score || b.confidence-a.confidence || a.name.localeCompare(b.name));
+    .sort((a,b)=>b.score-a.score || b.functionalFit-a.functionalFit || b.positionFit-a.positionFit || b.confidence-a.confidence || a.catalogIndex-b.catalogIndex);
+
   const best=scored[0];
-  const ideal=best&&best.score>=48?best:null;
+  const second=scored[1];
+  const ambiguous=Boolean(best&&second&&Math.abs(best.score-second.score)<.35&&Math.abs(best.functionalFit-second.functionalFit)<.35);
+  const ideal=best&&best.score>=48&&!ambiguous?best:null;
   const reasonFor=(prefix:string)=>ideal
-    ? `${prefix} ${ideal.name} é o melhor encaixe funcional atual (${Math.round(ideal.score)}/100; confiança ${Math.round(ideal.confidence)}/100).`
-    : `${prefix} Nenhum Ímpeto superou o limiar funcional mínimo com a leitura atual.`;
+    ? `${prefix} ${ideal.name} venceu por função: encaixe ${Math.round(ideal.score)}/100, função ${Math.round(ideal.functionalFit)}/100 e compatibilidade posicional ${Math.round(ideal.positionFit)}/100. ${ideal.profile.explanation}`
+    : ambiguous&&best&&second
+      ? `${prefix} ${best.name} e ${second.name} ficaram tecnicamente empatados; o motor não escolhe por ordem alfabética nem autoriza gasto sem vantagem funcional.`
+      : `${prefix} Nenhum Ímpeto superou o limiar funcional mínimo com a leitura atual.`;
 
   if(current) return {
-    current,decision:'KEEP_CURRENT' as const,recommendations:[] as ImpetoRecommendation[],ideal:current,idealScore:100,idealConfidence:round1(normalizedConfidence(parsed)),slotStatus:slot,
+    current,decision:'KEEP_CURRENT' as const,recommendations:[] as ImpetoRecommendation[],ideal:current,idealScore:100,idealConfidence:round1(confidenceBase),slotStatus:slot,
     reason:`Ímpeto atual ${current} foi identificado na carta e é preservado; o motor não recomenda gastar recurso para repetir ou substituir automaticamente.`
   };
   if(!ideal) return {current:null,decision:'NO_SAFE_IMPETO' as const,recommendations:[] as ImpetoRecommendation[],ideal:null,idealScore:0,idealConfidence:0,slotStatus:slot,reason:reasonFor('Sem candidato seguro.')};
 
-  const toRecommendation=(item:{name:string;score:number;confidence:number},index:number):ImpetoRecommendation=>({
+  const toRecommendation=(item:typeof scored[number],index:number):ImpetoRecommendation=>({
     name:item.name,
     tier:index===0?'ideal':'alternativo',
-    attributes:impetoCategories(item.name),
-    reason:`Clean Slate r119: compatibilidade ${Math.round(item.score)}/100 com as ações de maior prioridade funcional desta carta.`,
+    attributes:[...Object.keys(item.profile.domains),...item.profile.attributes.slice(0,3)],
+    reason:`Clean Slate r119: ${item.profile.explanation} Score funcional ${Math.round(item.functionalFit)}/100; posição ${Math.round(item.positionFit)}/100; total ${Math.round(item.score)}/100.`,
     score:round1(item.score),
     confidence:round1(item.confidence),
     official:true,
-    evidence:['DNA natural da carta','ações funcionais priorizadas','Ímpeto atual ausente',slot==='DISPONIVEL'?'vaga de Ímpeto confirmada':'vaga de Ímpeto ainda não confirmada']
+    evidence:['DNA natural da carta','ações funcionais priorizadas',`posição natural ${parsed.mainPosition}`,`natureza ${item.profile.nature}`,'Ímpeto atual ausente',slot==='DISPONIVEL'?'vaga de Ímpeto confirmada':'vaga de Ímpeto ainda não confirmada']
   });
 
+  const safeAlternatives=scored.filter(item=>item.score>=45&&item.positionFit>=28).slice(0,3);
   if(slot==='DISPONIVEL') return {
-    current:null,decision:'RECOMMEND_NEW' as const,recommendations:scored.slice(0,3).map(toRecommendation),ideal:ideal.name,idealScore:round1(ideal.score),idealConfidence:round1(ideal.confidence),slotStatus:slot,
+    current:null,decision:'RECOMMEND_NEW' as const,recommendations:safeAlternatives.map(toRecommendation),ideal:ideal.name,idealScore:round1(ideal.score),idealConfidence:round1(ideal.confidence),slotStatus:slot,
     reason:reasonFor('Vaga confirmada.')
   };
   if(slot==='OCUPADO'||slot==='SEM_VAGA') return {

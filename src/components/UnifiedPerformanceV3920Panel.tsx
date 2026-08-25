@@ -25,6 +25,7 @@ import {
   TrainingProgressionIconR106,
   type TrainingProgressionKeyR106
 } from '@/components/result/TrainingProgressionIconR106';
+import { OfficialSkillIconR119 } from '@/components/result/OfficialSkillIconR119';
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
@@ -41,33 +42,6 @@ function statusClass(status: string): string {
   if (status === 'PRONTO' || status === 'APLICAR_COM_SEGURANCA') return 'safe';
   if (status === 'TESTE_RECOMENDADO' || status === 'TESTAR_ANTES_DE_GASTAR') return 'test';
   return 'blocked';
-}
-
-function skillVisualKind(skill: string): 'dribble' | 'finishing' | 'passing' | 'defense' | 'mental' | 'goalkeeper' | 'aerial' {
-  const normalized = skill.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  if (/goleiro|pegador de penalti/.test(normalized)) return 'goalkeeper';
-  if (/marcacao|interceptacao|bloqueador|carrinho|afastamento|volta para marcar/.test(normalized)) return 'defense';
-  if (/cabecada|superioridade aerea/.test(normalized)) return 'aerial';
-  if (/passe|cruzamento|calcanhar|de letra|sem olhar/.test(normalized)) return 'passing';
-  if (/chute|finalizacao|efeito|cavadinha|folha seca|precisao|penalti/.test(normalized)) return 'finishing';
-  if (/lideranca|substituto|espirito guerreiro|malicia/.test(normalized)) return 'mental';
-  return 'dribble';
-}
-
-function SkillVisualGlyph({ skill }: { skill: string }) {
-  const kind = skillVisualKind(skill);
-  const Icon = kind === 'finishing'
-    ? Target
-    : kind === 'passing'
-      ? Share2
-      : kind === 'defense'
-        ? ShieldCheck
-        : kind === 'mental' || kind === 'aerial'
-          ? Trophy
-          : kind === 'goalkeeper'
-            ? BrainCircuit
-            : Sparkles;
-  return <span className={`r119-skill-glyph ${kind}`} aria-hidden="true"><Icon size={18} /></span>;
 }
 
 function skillDescription(skill: string): string {
@@ -160,7 +134,7 @@ export function UnifiedPerformanceV3920Panel({
           <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>5 habilidades adicionais</strong><small>Oficiais, complementares e sem repetir habilidade já existente</small></span></div>
           <div className="r119-skill-list">
             {displayedSkills.map((skill, index) => <div key={skill} className="r119-skill-row">
-              <SkillVisualGlyph skill={skill} />
+              <OfficialSkillIconR119 skill={skill} />
               <span><small>ADICIONAL {index + 1}</small><strong>{skill}</strong><em>{skillDescription(skill)}</em></span>
             </div>)}
             {!displayedSkills.length && <p>Nenhuma habilidade adicional segura disponível com a leitura atual.</p>}

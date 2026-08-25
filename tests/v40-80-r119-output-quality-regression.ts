@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { applyCleanSlatePerformance2027R119 } from '../src/lib/cleanSlatePerformance2027V4080R119';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
+import { RECOGNIZABLE_IMPETO_NAMES } from '../src/lib/officialImpetoCatalog';
+import { IMPETO_FUNCTIONAL_MATRIX_R119 } from '../src/lib/impetoFunctionalMatrixR119';
+import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '../src/modules/analysis/analyzerCatalog';
+import { officialSkillIdentityR119 } from '../src/lib/officialSkillVisualIdentityR119';
 
 const zero=()=>({shooting:0,passing:0,dribbling:0,dexterity:0,lowerBodyStrength:0,aerialStrength:0,defending:0,gk1:0,gk2:0,gk3:0});
 
@@ -47,9 +51,41 @@ assert.equal(occupied.cleanSlate2027R119.impetoDecision,'SLOT_NOT_AVAILABLE');
 assert.ok(occupied.cleanSlate2027R119.impetoIdeal,'Sem vaga ainda pode existir candidato ideal para referência futura.');
 assert.equal(occupied.recommendedImpetos.length,0);
 
+
+// Matriz funcional de Ímpetos: todo nome reconhecido precisa ter semântica explícita.
+assert.deepEqual(
+  IMPETO_FUNCTIONAL_MATRIX_R119.map((item)=>item.name).sort(),
+  [...RECOGNIZABLE_IMPETO_NAMES].sort(),
+  'Todo Ímpeto reconhecido precisa ter perfil funcional explícito; não pode cair em categoria genérica.'
+);
+
+const skillIconVariants=OFFICIAL_ADDITIONAL_SKILL_NAMES.map((skill)=>officialSkillIdentityR119(skill).variant);
+assert.equal(new Set(skillIconVariants).size,OFFICIAL_ADDITIONAL_SKILL_NAMES.length,'Cada habilidade oficial precisa ter identidade visual individual, sem ícone repetido.');
+
+const strikerFunctionalCard:any=card('CA aéreo ofensivo',{
+  ...aerialAttrs,defensiveAwareness:45,defensiveEngagement:48,tackling:44,aggression:72
+},{slot:'DISPONIVEL'});
+strikerFunctionalCard.parsed.nativeSkills=['Chute de primeira','Cabeçada','Superioridade aérea'];
+const strikerFunctional:any=applyCleanSlatePerformance2027R119(strikerFunctionalCard);
+assert.equal(strikerFunctional.cleanSlate2027R119.impetoIdeal,'Disputa aérea','Aéreo ofensivo de CA deve ser separado de bloqueio aéreo defensivo.');
+assert.ok(!strikerFunctional.recommendedImpetos.some((item:any)=>item.name==='Bloqueio Aéreo'),'Bloqueio Aéreo não pode aparecer como alternativa segura para CA ofensivo incompatível.');
+
+const defenderCard:any=card('ZAG aéreo defensivo',{
+  offensiveAwareness:58,finishing:55,ballControl:76,dribbling:62,tightPossession:70,acceleration:74,balance:78,speed:78,kickingPower:82,
+  heading:93,jump:94,physicalContact:94,stamina:85,lowPass:78,loftedPass:76,curl:65,placeKicking:58,
+  defensiveAwareness:94,defensiveEngagement:93,tackling:92,aggression:90
+},{slot:'DISPONIVEL'});
+defenderCard.parsed.mainPosition='CB'; defenderCard.parsed.mainPositionPt='ZAG'; defenderCard.parsed.positions=['CB']; defenderCard.parsed.positionsPt=['ZAG']; defenderCard.parsed.positionRatings={CB:100};
+defenderCard.parsed.playstyle='Defensor criativo'; defenderCard.parsed.offensivePlaystyle=null; defenderCard.parsed.defensivePlaystyle='Defensor criativo';
+defenderCard.parsed.nativeSkills=['Cabeçada','Superioridade aérea','Bloqueador'];
+defenderCard.bestPosition={code:'CB',label:'ZAG',score:100};
+const defenderFunctional:any=applyCleanSlatePerformance2027R119(defenderCard);
+assert.equal(defenderFunctional.cleanSlate2027R119.impetoIdeal,'Bloqueio Aéreo','ZAG com defesa + físico + jogo aéreo pode receber Bloqueio Aéreo.');
+assert.match(defenderFunctional.cleanSlate2027R119.impetoReason,/defensiv|bloqueio/i,'A justificativa precisa explicar a natureza defensiva do Ímpeto.');
+
 const current:any=applyCleanSlatePerformance2027R119(card('CF Ímpeto atual',technicalAttrs,{slot:'OCUPADO',impeto:'Chute'}));
 assert.equal(current.cleanSlate2027R119.impetoDecision,'KEEP_CURRENT');
 assert.equal(current.cleanSlate2027R119.currentImpeto,'Chute');
 assert.equal(current.recommendedImpetos.length,0,'Ímpeto existente nunca pode ser recomendado novamente.');
 
-console.log('r119 output quality aprovada: capacidade != frequência, anti-aéreo falso, Top 5 suave e Ímpeto ideal separado do gasto.');
+console.log('r119 output quality aprovada: capacidade != frequência, Ímpeto funcional ataque/defesa, 44 ícones únicos, Top 5 suave e gasto seguro.');
