@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+type IconElementR106 = ReturnType<typeof import('react/jsx-runtime').jsx>;
 
 type IconStyleR106 = Record<string, string | number | undefined>;
 
@@ -31,7 +31,7 @@ function BaseIcon({
 }: {
   title: string;
   size: number;
-  children: ReactNode;
+  children: IconElementR106 | readonly IconElementR106[];
   style?: IconStyleR106;
 }) {
   return (
