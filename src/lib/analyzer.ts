@@ -1959,9 +1959,21 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const nativeSkills = parsedSkillInventory.native;
   const additionalSkills = parsedSkillInventory.additional;
   const specialSkills = parsedSkillInventory.special;
-  const height = readNumber(text, [/altura\s*[:=-]?\s*(\d{3})\s*cm/i, /height\s*[:=-]?\s*(\d{3})\s*cm/i]);
-  const weight = readNumber(text, [/peso\s*[:=-]?\s*(\d{2,3})\s*kg/i, /weight\s*[:=-]?\s*(\d{2,3})\s*kg/i]);
-  const age = readNumber(text, [/idade\s*[:=-]?\s*(\d{1,2})/i, /age\s*[:=-]?\s*(\d{1,2})/i]);
+  // Campos físicos são lidos como rótulos completos para evitar colisões de substring
+  // (ex.: "Velocidade: 80" não pode virar "Idade: 80"). Na conferência manual,
+  // unidade é opcional porque o usuário pode digitar somente o valor.
+  const height = readNumber(text, [
+    /(?:^|\n)\s*altura\s*[:=-]?\s*(\d{3})(?:\s*cm)?\s*(?=$|\n)/im,
+    /(?:^|\n)\s*height\s*[:=-]?\s*(\d{3})(?:\s*cm)?\s*(?=$|\n)/im
+  ]);
+  const weight = readNumber(text, [
+    /(?:^|\n)\s*peso\s*[:=-]?\s*(\d{2,3})(?:\s*kg)?\s*(?=$|\n)/im,
+    /(?:^|\n)\s*weight\s*[:=-]?\s*(\d{2,3})(?:\s*kg)?\s*(?=$|\n)/im
+  ]);
+  const age = readNumber(text, [
+    /(?:^|\n)\s*idade\s*[:=-]?\s*(\d{1,2})\s*(?=$|\n)/im,
+    /(?:^|\n)\s*age\s*[:=-]?\s*(\d{1,2})\s*(?=$|\n)/im
+  ]);
   const level = parseLevel(text);
   const autoTraining = parseTrainingAllocation(text);
   const inferredPoints = inferTrainingPointsFromLevel(level);

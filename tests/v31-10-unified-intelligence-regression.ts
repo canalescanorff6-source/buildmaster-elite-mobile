@@ -145,6 +145,12 @@ const amf = results[1].result;
 const tallCf = results[2].result;
 const agileCf = results[3].result;
 
+// Regressão de parsing físico: a conferência manual pode omitir unidade,
+// "Cabeceio" é rótulo válido e "Velocidade" jamais pode contaminar Idade.
+assert.equal(tallCf.parsed.height, 195, 'Altura manual sem "cm" precisa continuar reconhecida.');
+assert.equal(tallCf.parsed.attributes.heading, 92, 'Cabeceio precisa alimentar o atributo heading.');
+assert.equal(tallCf.parsed.age, null, 'Velocidade não pode ser interpretada como Idade.');
+
 assert.notDeepEqual(cf.recommendedSkills, amf.recommendedSkills, 'Cartas de estilos e funções diferentes não podem receber a mesma lista genérica.');
 assert.notDeepEqual(tallCf.recommendedSkills, agileCf.recommendedSkills, 'Cartas da mesma posição precisam divergir quando corpo e atributos pedem funções distintas.');
 assert.ok(tallCf.recommendedSkills.some((skill) => ['Cabeçada', 'Superioridade aérea', 'Finalização acrobática'].includes(skill)), 'O centroavante aéreo precisa receber uma habilidade sustentada pelo modelo corporal.');

@@ -104,7 +104,7 @@ export const ATTRIBUTE_LABELS: Array<[AttributeKey, RegExp[]]> = [
   ['lowPass', [/passe\s+rasteiro\s*(\d{2,3})/i, /low\s+pass\s*(\d{2,3})/i]],
   ['loftedPass', [/passe\s+alto\s*(\d{2,3})/i, /lofted\s+pass\s*(\d{2,3})/i]],
   ['finishing', [/finaliza[cç][aã]o\s*(\d{2,3})/i, /finishing\s*(\d{2,3})/i]],
-  ['heading', [/cabe[cç]ada\s*(\d{2,3})/i, /heading\s*(\d{2,3})/i]],
+  ['heading', [/cabe[cç]ada\s*(\d{2,3})/i, /cabeceio\s*(\d{2,3})/i, /heading\s*(\d{2,3})/i]],
   ['placeKicking', [/cobran[cç]a\s+de\s+bola\s+parada\s*(\d{2,3})/i, /bola\s+parada\s*(\d{2,3})/i, /place\s+kicking\s*(\d{2,3})/i]],
   ['curl', [/curva\s*(\d{2,3})/i, /curl\s*(\d{2,3})/i]],
   ['defensiveAwareness', [/talento\s+defensivo\s*(\d{2,3})/i, /consci[eê]ncia\s+defensiva\s*(\d{2,3})/i, /defensive\s+awareness\s*(\d{2,3})/i]],

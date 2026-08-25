@@ -29,7 +29,7 @@ function BaseIcon({
 }: {
   title: string;
   size: number;
-  children: any;
+  children: JSX.Element | JSX.Element[];
   style?: IconStyleR106;
 }) {
   return (
