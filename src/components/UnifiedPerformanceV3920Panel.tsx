@@ -18,6 +18,13 @@ import type { AnalysisResult, TrainingKey } from '@/lib/analyzerDomain';
 import type { FinalDecisionAuthority2027R118 } from '@/lib/finalDecisionAuthority2027V4080R118';
 import type { CleanSlate2027R119 } from '@/lib/cleanSlatePerformance2027V4080R119';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
+import { OFFICIAL_ADDITIONAL_SKILL_DESCRIPTIONS } from '@/modules/analysis/analyzerCatalog';
+import {
+  GOALKEEPER_PROGRESS_ORDER_R106,
+  TRAINING_PROGRESS_ORDER_R106,
+  TrainingProgressionIconR106,
+  type TrainingProgressionKeyR106
+} from '@/components/result/TrainingProgressionIconR106';
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
@@ -34,6 +41,45 @@ function statusClass(status: string): string {
   if (status === 'PRONTO' || status === 'APLICAR_COM_SEGURANCA') return 'safe';
   if (status === 'TESTE_RECOMENDADO' || status === 'TESTAR_ANTES_DE_GASTAR') return 'test';
   return 'blocked';
+}
+
+function skillVisualKind(skill: string): 'dribble' | 'finishing' | 'passing' | 'defense' | 'mental' | 'goalkeeper' | 'aerial' {
+  const normalized = skill.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/goleiro|pegador de penalti/.test(normalized)) return 'goalkeeper';
+  if (/marcacao|interceptacao|bloqueador|carrinho|afastamento|volta para marcar/.test(normalized)) return 'defense';
+  if (/cabecada|superioridade aerea/.test(normalized)) return 'aerial';
+  if (/passe|cruzamento|calcanhar|de letra|sem olhar/.test(normalized)) return 'passing';
+  if (/chute|finalizacao|efeito|cavadinha|folha seca|precisao|penalti/.test(normalized)) return 'finishing';
+  if (/lideranca|substituto|espirito guerreiro|malicia/.test(normalized)) return 'mental';
+  return 'dribble';
+}
+
+function SkillVisualGlyph({ skill }: { skill: string }) {
+  const kind = skillVisualKind(skill);
+  const Icon = kind === 'finishing'
+    ? Target
+    : kind === 'passing'
+      ? Share2
+      : kind === 'defense'
+        ? ShieldCheck
+        : kind === 'mental' || kind === 'aerial'
+          ? Trophy
+          : kind === 'goalkeeper'
+            ? BrainCircuit
+            : Sparkles;
+  return <span className={`r119-skill-glyph ${kind}`} aria-hidden="true"><Icon size={18} /></span>;
+}
+
+function skillDescription(skill: string): string {
+  return (OFFICIAL_ADDITIONAL_SKILL_DESCRIPTIONS as Record<string, string>)[skill] ?? 'Habilidade adicional oficial escolhida pelo DNA funcional desta carta.';
+}
+
+function impetoVisualStatus(decision: CleanSlate2027R119['impetoDecision']) {
+  if (decision === 'KEEP_CURRENT') return { className: 'safe', label: 'Manter o atual' };
+  if (decision === 'RECOMMEND_NEW') return { className: 'safe', label: 'Aplicar — vaga confirmada' };
+  if (decision === 'REVIEW_SLOT') return { className: 'test', label: 'Confirmar vaga antes de gastar' };
+  if (decision === 'SLOT_NOT_AVAILABLE') return { className: 'blocked', label: 'Sem vaga — não aplicar' };
+  return { className: 'blocked', label: 'Nenhum candidato seguro' };
 }
 
 function verdictLabel(verdict: string): string {
@@ -60,11 +106,17 @@ export function UnifiedPerformanceV3920Panel({
 }) {
   const unified = result.unifiedPerformanceV3920;
   const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: CleanSlate2027R119 }).cleanSlate2027R119;
-  if (!unified && cleanSlate) {
+  if (cleanSlate) {
     const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
     const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
     const attributeCount = Number(result.parsed.evidence?.attributeCount ?? Object.keys(result.parsed.attributes ?? {}).length);
     const positionRatingsCount = Number(result.parsed.evidence?.positionRatingsCount ?? Object.keys(result.parsed.positionRatings ?? {}).length);
+    const progressionOrder = result.parsed.mainPosition === 'GK' ? GOALKEEPER_PROGRESS_ORDER_R106 : TRAINING_PROGRESS_ORDER_R106;
+    const activeTraining = progressionOrder
+      .map((key) => ({ key, value: Number(result.training?.[key] ?? 0) }))
+      .filter((item) => item.value > 0);
+    const impetoStatus = impetoVisualStatus(cleanSlate.impetoDecision);
+    const impetoName = cleanSlate.currentImpeto ?? primaryImpeto ?? cleanSlate.impetoIdeal;
     return <article className="luxury-panel wide-card unified-performance-v3920">
       <header className="unified-v3920-head">
         <div>
@@ -84,9 +136,15 @@ export function UnifiedPerformanceV3920Panel({
         <button type="button" onClick={onExportImage}><Download size={16} /> Exportar imagem</button>
       </section>
       <section className="unified-v3920-grid">
-        <article>
+        <article className="r119-final-build">
           <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Único escritor: Clean Slate r119</small></span></div>
-          <h4>{planText(result) || 'Aguardando leitura completa'}</h4>
+          {activeTraining.length ? <div className="r119-training-icons">
+            {activeTraining.map(({ key, value }) => <div key={key} className="r119-training-item">
+              <span className="r119-training-icon"><TrainingProgressionIconR106 trainingKey={key as TrainingProgressionKeyR106} title={TRAINING_LABELS[key as TrainingKey] ?? key} size={31} /></span>
+              <span><small>{TRAINING_LABELS[key as TrainingKey] ?? key}</small><strong>+{value}</strong></span>
+            </div>)}
+          </div> : <h4>Aguardando leitura completa</h4>}
+          <small className="r119-training-summary">{planText(result) || 'Nenhum ponto aplicado.'}</small>
           <div className="unified-v3920-metrics">
             <span><b>{Math.round(cleanSlate.responseScore)}</b><small>resposta</small></span>
             <span><b>{Math.round(cleanSlate.synergyScore)}</b><small>sinergia</small></span>
@@ -98,15 +156,26 @@ export function UnifiedPerformanceV3920Panel({
             {cleanSlate.dominantDna.map((dna) => <span key={dna}>{dna}</span>)}
           </div>
         </article>
-        <article>
-          <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>Top 5 permanente</strong><small>Sem repetir habilidade já existente</small></span></div>
-          <div className="chip-cloud">{displayedSkills.map((skill) => <span key={skill}>{skill}</span>)}</div>
-          <p>Ímpeto: {cleanSlate.currentImpeto ? `manter ${cleanSlate.currentImpeto}` : primaryImpeto ?? 'nenhum gasto seguro confirmado'}</p>
+        <article className="r119-resources-card">
+          <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>5 habilidades adicionais</strong><small>Oficiais, complementares e sem repetir habilidade já existente</small></span></div>
+          <div className="r119-skill-list">
+            {displayedSkills.map((skill, index) => <div key={skill} className="r119-skill-row">
+              <SkillVisualGlyph skill={skill} />
+              <span><small>ADICIONAL {index + 1}</small><strong>{skill}</strong><em>{skillDescription(skill)}</em></span>
+            </div>)}
+            {!displayedSkills.length && <p>Nenhuma habilidade adicional segura disponível com a leitura atual.</p>}
+          </div>
+          <div className={`r119-impeto-card ${impetoStatus.className}`}>
+            <div className="r119-impeto-head"><Trophy size={19} /><span><small>ÍMPETO</small><strong>{impetoName ?? 'Nenhum candidato seguro'}</strong></span></div>
+            <span className="r119-impeto-status">{impetoStatus.label}</span>
+            {cleanSlate.impetoIdeal && !cleanSlate.currentImpeto && <div className="r119-impeto-metrics"><span>encaixe <b>{Math.round(cleanSlate.impetoIdealScore)}</b></span><span>confiança <b>{Math.round(cleanSlate.impetoIdealConfidence)}</b></span></div>}
+            <p>{cleanSlate.impetoReason}</p>
+          </div>
         </article>
-        <article>
-          <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Ações decisivas</strong><small>O que realmente puxou o investimento</small></span></div>
+        <article className="r119-actions-card">
+          <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Ações decisivas</strong><small>Prioridade funcional estimada — capacidade não é tratada automaticamente como frequência</small></span></div>
           <div className="chip-cloud">{cleanSlate.actions.slice(0, 6).map((action) => <span key={action.id}>{action.label} {Math.round(action.frequency)}%</span>)}</div>
-          <small>{cleanSlate.reasons[2]}</small>
+          <small>{cleanSlate.reasons[2] ?? cleanSlate.reasons[1]}</small>
         </article>
       </section>
     </article>;

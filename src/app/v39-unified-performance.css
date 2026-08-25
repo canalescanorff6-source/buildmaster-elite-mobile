@@ -75,3 +75,45 @@
   .unified-v3920-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .unified-v3920-memory{display:block;margin-top:8px;padding:9px 10px;border-radius:11px;border:1px solid rgba(87,162,249,.18);background:rgba(31,91,161,.1);color:#a8c9ed;line-height:1.45}.unified-v3920-memory.recuperada,.unified-v3920-memory.atualizada{border-color:rgba(62,211,146,.25);background:rgba(28,143,91,.1);color:#a9eacb}.unified-v3920-memory.ignorada{border-color:rgba(255,181,78,.2);background:rgba(161,100,25,.09);color:#ffd49a}
+
+/* r119 — apresentação visual da ficha, habilidades e Ímpeto no caminho Clean Slate */
+.r119-final-build { grid-column: 1 / -1; }
+.r119-training-icons { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 9px; }
+.r119-training-item { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 9px; min-width: 0; padding: 10px 11px; border-radius: 13px; border: 1px solid color-mix(in srgb, var(--bm-accent, #70adff) 26%, transparent); background: color-mix(in srgb, var(--bm-accent, #3a8ef6) 10%, transparent); }
+.r119-training-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; color: var(--bm-accent, #70adff); background: color-mix(in srgb, var(--bm-accent, #3a8ef6) 15%, transparent); }
+.r119-training-item > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.r119-training-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; }
+.r119-training-item strong { font-size: 1.22rem; line-height: 1; }
+.r119-training-summary { display: block; line-height: 1.45; overflow-wrap: anywhere; }
+.r119-resources-card { grid-column: 1 / -1; }
+.r119-skill-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.r119-skill-row { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 10px; padding: 11px; border-radius: 13px; border: 1px solid color-mix(in srgb, var(--bm-border, #315177) 66%, transparent); background: color-mix(in srgb, var(--bm-accent, #3a8ef6) 7%, transparent); }
+.r119-skill-row > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.r119-skill-row strong { overflow-wrap: anywhere; }
+.r119-skill-row small { font-size: .62rem; letter-spacing: .08em; color: var(--bm-accent, #70adff); }
+.r119-skill-row em { font-style: normal; font-size: .68rem; line-height: 1.35; color: var(--bm-muted, #a8b7cc); }
+.r119-skill-glyph { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: #dcecff; border: 1px solid color-mix(in srgb, var(--bm-accent, #70adff) 45%, transparent); background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--bm-accent, #70adff) 36%, transparent), color-mix(in srgb, #0b1523 82%, transparent)); box-shadow: inset 0 0 0 3px color-mix(in srgb, #ffffff 4%, transparent); }
+.r119-skill-glyph.finishing { color: #ffd77d; }
+.r119-skill-glyph.passing { color: #9fd9ff; }
+.r119-skill-glyph.defense { color: #8ee0b4; }
+.r119-skill-glyph.mental { color: #e1c1ff; }
+.r119-skill-glyph.goalkeeper { color: #ffc5a3; }
+.r119-skill-glyph.aerial { color: #f7e6a8; }
+.r119-impeto-card { display: grid; gap: 9px; margin-top: 4px; padding: 13px; border-radius: 14px; border: 1px solid; }
+.r119-impeto-card.safe { border-color: color-mix(in srgb, #4ad991 58%, transparent); background: color-mix(in srgb, #17673f 14%, transparent); }
+.r119-impeto-card.test { border-color: color-mix(in srgb, #f0b84b 58%, transparent); background: color-mix(in srgb, #7b5b12 14%, transparent); }
+.r119-impeto-card.blocked { border-color: color-mix(in srgb, #ef6666 48%, transparent); background: color-mix(in srgb, #7f2424 11%, transparent); }
+.r119-impeto-head { display: flex; align-items: center; gap: 9px; color: var(--bm-accent, #70adff); }
+.r119-impeto-head > span { display: grid; gap: 1px; }
+.r119-impeto-head small { font-size: .62rem; letter-spacing: .09em; }
+.r119-impeto-status { width: fit-content; padding: 6px 9px; border-radius: 999px; font-size: .68rem; font-weight: 850; background: color-mix(in srgb, currentColor 10%, transparent); }
+.r119-impeto-metrics { display: flex; flex-wrap: wrap; gap: 8px; }
+.r119-impeto-metrics span { padding: 7px 9px; border-radius: 10px; font-size: .68rem; background: color-mix(in srgb, var(--bm-accent, #3a8ef6) 8%, transparent); }
+.r119-actions-card { grid-column: 1 / -1; }
+
+@media (max-width: 620px) {
+  .r119-training-icons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .r119-skill-list { grid-template-columns: 1fr; }
+  .r119-training-item { grid-template-columns: 36px minmax(0, 1fr); padding: 9px; }
+  .r119-training-icon { width: 34px; height: 34px; }
+}

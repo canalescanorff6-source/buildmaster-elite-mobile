@@ -49,8 +49,13 @@ export type CleanSlate2027R119 = {
   actions: CleanSlateActionR119[];
   top5: string[];
   currentImpeto: string | null;
-  impetoDecision: 'KEEP_CURRENT' | 'RECOMMEND_NEW' | 'NO_SAFE_IMPETO' | 'SLOT_NOT_AVAILABLE';
+  impetoDecision: 'KEEP_CURRENT' | 'RECOMMEND_NEW' | 'REVIEW_SLOT' | 'NO_SAFE_IMPETO' | 'SLOT_NOT_AVAILABLE';
   recommendedImpeto: string | null;
+  impetoIdeal: string | null;
+  impetoIdealScore: number;
+  impetoIdealConfidence: number;
+  impetoReason: string;
+  impetoSlotStatus: string;
   guards: {
     ignoresIncomingTraining: true;
     ignoresOverall: true;
@@ -141,39 +146,51 @@ function skillText(parsed:ParsedCard) {
   return norm([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].join(' | '));
 }
 
-function actionEvidence(action:ActionDef,parsed:ParsedCard,natural:number) {
+function actionEvidence(action:ActionDef,parsed:ParsedCard) {
   const skills=skillText(parsed);
   const style=norm(`${parsed.playstyle??''} ${parsed.offensivePlaystyle??''} ${parsed.defensivePlaystyle??''}`);
-  let bonus=0;
-  if(action.tags.includes('finishing') && /chute|finaliza|efeito de longe|curva descendente|blitz|fenomenal/.test(skills)) bonus+=.11;
-  if(action.tags.includes('technical') && /toque duplo|elastico|giro|sola|drible|pes magneticos/.test(skills)) bonus+=.12;
-  if(action.tags.includes('creation') && /passe|visionario|passador|cruzamento/.test(skills)) bonus+=.11;
-  if(action.tags.includes('defending') && /intercept|bloqueador|marcacao|carrinho|esticada|fortaleza/.test(skills)) bonus+=.12;
-  if(action.tags.includes('aerial') && /cabec|superioridade aerea|fortaleza aerea/.test(skills)) bonus+=.16;
-  if(action.tags.includes('goalkeeper') && /goleiro|penalti|comandante|rugido/.test(skills)) bonus+=.13;
-  if(action.tags.includes('stamina') && /espirito guerreiro|lideranca|garra/.test(skills)) bonus+=.07;
-  // Estilo é apenas evidência secundária; nunca cria uma identidade sozinho.
-  if(action.tags.includes('finishing') && /artilheiro|homem de area|pivo|puxa marcacao/.test(style)) bonus+=.025;
-  if(action.tags.includes('creation') && /orquestrador|armador|classico|criativo/.test(style)) bonus+=.025;
-  if(action.tags.includes('defending') && /destruidor|primeiro volante|defensor|lateral defensivo/.test(style)) bonus+=.025;
-  if(action.tags.includes('aerial') && /homem de area|pivo/.test(style) && natural>=80) bonus+=.015;
-  return bonus;
+  let proof=0;
+  if(action.tags.includes('finishing') && /chute|finaliza|efeito de longe|curva descendente|blitz|fenomenal|garra/.test(skills)) proof=Math.max(proof,.68);
+  if(action.tags.includes('technical') && /toque duplo|elastico|giro|sola|drible|pes magneticos|impulso/.test(skills)) proof=Math.max(proof,.72);
+  if(action.tags.includes('creation') && /passe|visionario|passador|cruzamento|toque de calcanhar/.test(skills)) proof=Math.max(proof,.68);
+  if(action.tags.includes('defending') && /intercept|bloqueador|marcacao|carrinho|esticada|fortaleza/.test(skills)) proof=Math.max(proof,.74);
+  if(action.tags.includes('aerial') && /cabec|superioridade aerea|fortaleza aerea/.test(skills)) proof=Math.max(proof,.92);
+  if(action.tags.includes('goalkeeper') && /goleiro|penalti|comandante|rugido/.test(skills)) proof=Math.max(proof,.82);
+  if(action.tags.includes('stamina') && /espirito guerreiro|lideranca|garra/.test(skills)) proof=Math.max(proof,.58);
+  if(action.tags.includes('movement') && /drible explosivo|impulso ofensivo|sombra veloz|super substituto/.test(skills)) proof=Math.max(proof,.58);
+  if(action.tags.includes('physical') && /espirito guerreiro|fortaleza|garra|superioridade aerea/.test(skills)) proof=Math.max(proof,.54);
+  // O estilo oficial é somente um sinal fraco de uso. Capacidade alta, sozinha, não prova frequência.
+  if(action.tags.includes('finishing') && /artilheiro|homem de area|pivo|puxa marcacao/.test(style)) proof+=.06;
+  if(action.tags.includes('creation') && /orquestrador|armador|classico|criativo/.test(style)) proof+=.06;
+  if(action.tags.includes('defending') && /destruidor|primeiro volante|defensor|lateral defensivo/.test(style)) proof+=.06;
+  if(action.tags.includes('aerial') && /pivo/.test(style)) proof+=.05;
+  return clamp(proof,0,1);
+}
+
+function actionQuality(attrs:Attributes, action:ActionDef) {
+  const values=action.attrs.map(key=>attr(attrs,key));
+  if(!values.length) return 0;
+  const mean=average(values);
+  const weakest=Math.min(...values);
+  // Gargalo só existe dentro da ação analisada; não tenta "consertar" fraqueza global da carta.
+  return mean*.84+weakest*.16;
 }
 
 function naturalActionFrequency(action:ActionDef,parsed:ParsedCard) {
   const relevance=positionRelevance(action,parsed);
   if(relevance<=0) return 0;
-  const natural=average(action.attrs.map(k=>attr(parsed.attributes,k)));
-  // A carta ganha peso nas ações que já executa bem. Isso evita "corrigir a fraqueza" só porque ela está baixa.
-  const identity=Math.pow(clamp((natural-48)/52,0,1),1.35);
-  let frequency=relevance*(.22+.78*identity)+actionEvidence(action,parsed,natural);
+  const natural=actionQuality(parsed.attributes,action);
+  const capability=Math.pow(clamp((natural-54)/45,0,1),1.3);
+  const proof=actionEvidence(action,parsed);
+  // Separa capacidade de frequência: atributo alto ajuda, mas não transforma sozinho uma ação em identidade.
+  let frequency=relevance*(.18+.42*capability+.40*proof);
   if(action.tags.includes('aerial')) {
     const aerial=average(['heading','jump','physicalContact'].map(k=>attr(parsed.attributes,k as AttributeKey)));
     const aerialProof=/cabec|superioridade aerea|fortaleza aerea/.test(skillText(parsed));
-    if(aerial<76 && !aerialProof) frequency*=.42;
-    else if(aerial>=84 || aerialProof) frequency*=1.12;
+    if(!aerialProof) frequency*=aerial>=84?.78:.55;
+    else frequency*=1.08;
   }
-  return clamp(frequency,0,1.25);
+  return clamp(frequency,0,1);
 }
 
 function projectedAttributes(parsed:ParsedCard,plan:TrainingPlan):Attributes {
@@ -197,8 +214,8 @@ function evaluatePlan(parsed:ParsedCard,plan:TrainingPlan, actionFrequencies:Map
   for(const action of ACTIONS) {
     const frequency=actionFrequencies.get(action.id)??0;
     if(frequency<=.01) continue;
-    const natural=average(action.attrs.map(k=>attr(parsed.attributes,k)));
-    const projectedScore=average(action.attrs.map(k=>attr(projected,k)));
+    const natural=actionQuality(parsed.attributes,action);
+    const projectedScore=actionQuality(projected,action);
     weighted+=projectedScore*frequency;
     improvement+=(projectedScore-natural)*frequency;
     weightTotal+=frequency;
@@ -213,11 +230,20 @@ function evaluatePlan(parsed:ParsedCard,plan:TrainingPlan, actionFrequencies:Map
     const impacted=ACTIONS.filter(a=>TRAINING_ATTRIBUTES[key].some(attrKey=>a.attrs.includes(attrKey))).reduce((sum,a)=>sum+(actionFrequencies.get(a.id)??0),0);
     identityBonus += level*Math.pow(strength/100,1.8)*Math.min(1.25,impacted*.22)*.12;
     if(strength<60 && impacted<1.05) weakRepairPenalty += level*(60-strength)*.018;
-    if(level>12 && strength<82) excessPenalty += (level-12)*.7;
+    // Concentração alta precisa provar retorno em várias ações, não apenas existir como grupo forte.
+    if(level>10) {
+      const support=Math.min(1,impacted/1.8);
+      excessPenalty += (level-10)*(.12+(1-support)*.42);
+    }
+    const saturated=TRAINING_ATTRIBUTES[key].filter(attribute=>attr(parsed.attributes,attribute)+level>=99).length/TRAINING_ATTRIBUTES[key].length;
+    if(saturated>0) excessPenalty+=level*saturated*.055;
   }
   const aerialLevel=plan.aerialStrength??0;
   const aerialSupport=actionFrequencies.get('aerial_finish')??0;
-  if(aerialLevel>=10 && aerialSupport<.62) excessPenalty+=(aerialLevel-9)*1.15;
+  // Bola aérea exige evidência de uso, não apenas atributos razoáveis. Evita transformar capacidade secundária em prioridade de treino.
+  if(aerialLevel>4 && aerialSupport<.5) excessPenalty+=(aerialLevel-4)*.9;
+  if(aerialLevel>7 && aerialSupport<.72) excessPenalty+=(aerialLevel-7)*.7;
+  if(aerialLevel>=10 && aerialSupport<.82) excessPenalty+=(aerialLevel-9)*1.05;
   const score=actionScore+actionGain*.55+identityBonus-weakRepairPenalty-excessPenalty;
   return { score, actionScore, actionGain, details:details.sort((a,b)=>b.contribution-a.contribution) };
 }
@@ -272,7 +298,7 @@ function naturalActionDetails(parsed:ParsedCard):CleanSlateActionR119[] {
   return ACTIONS
     .map((action)=>{
       const frequency=naturalActionFrequency(action,parsed);
-      const natural=average(action.attrs.map(k=>attr(parsed.attributes,k)));
+      const natural=actionQuality(parsed.attributes,action);
       return {
         id:action.id,
         label:action.label,
@@ -320,6 +346,16 @@ function skillCategory(name:string):string[] {
   return ['dribble','passing'];
 }
 
+function contextualSkillPenalty(name:string) {
+  const s=norm(name);
+  if(/super substituto/.test(s)) return 36;
+  if(/especialista em penalti|arremesso lateral longo/.test(s)) return 14;
+  if(/malicia/.test(s)) return 9;
+  if(/lideranca/.test(s)) return 7;
+  if(/controle da cavadinha/.test(s)) return 5;
+  return 0;
+}
+
 function recommendTop5(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
   const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
   const cats=categoryScores(actions);
@@ -338,6 +374,7 @@ function recommendTop5(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
       if(name==='Toque duplo' || name==='Controle com a sola') score+=(cats.get('dribble')??0)*.11;
       if(name==='Interceptação' || name==='Bloqueador') score+=(cats.get('defense')??0)*.12;
       if(name==='Cabeçada' || name==='Superioridade aérea') score+=(cats.get('aerial')??0)*.12;
+      score-=contextualSkillPenalty(name);
 
       // O estilo oficial atua apenas como desempate secundário do Top 5.
       // Ele nunca altera a ficha de progressão nem substitui o DNA natural.
@@ -364,27 +401,33 @@ function recommendTop5(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
     .sort((a,b)=>b.score-a.score || a.index-b.index);
   if(gk) return scored.slice(0,5).map(x=>x.name);
 
-  // r119: diversidade funcional. Uma carta não deve gastar os cinco slots em
-  // uma única família só porque uma ação correlata ficou no topo do score.
-  // O limite é genérico (não é receita por jogador/estilo) e força o Top 5 a
-  // complementar pelo menos duas dimensões do DNA natural da carta.
+  // Diversidade suave: evita cinco habilidades idênticas em função, mas não empurra
+  // uma habilidade situacional só para cumprir cota artificial de categoria.
   const selected:typeof scored=[];
   const familyCount=new Map<string,number>();
-  for(const candidate of scored){
-    const family=skillCategory(candidate.name)[0]??'other';
-    if((familyCount.get(family)??0)>=2) continue;
-    selected.push(candidate);
+  const target=Math.min(5,scored.length);
+  while(selected.length<target){
+    const remaining=scored.filter(candidate=>!selected.some(item=>item.name===candidate.name));
+    if(!remaining.length) break;
+    remaining.sort((a,b)=>{
+      const familyA=skillCategory(a.name)[0]??'other';
+      const familyB=skillCategory(b.name)[0]??'other';
+      const adjustedA=a.score-(familyCount.get(familyA)??0)*4.5;
+      const adjustedB=b.score-(familyCount.get(familyB)??0)*4.5;
+      return adjustedB-adjustedA || a.index-b.index;
+    });
+    const picked=remaining[0];
+    selected.push(picked);
+    const family=skillCategory(picked.name)[0]??'other';
     familyCount.set(family,(familyCount.get(family)??0)+1);
-    if(selected.length===5) break;
   }
-  // Catálogo curto: complete sem duplicar habilidade; o limite de família é
-  // relaxado somente quando não há cinco alternativas oficiais compatíveis.
-  if(selected.length<Math.min(5,scored.length)){
-    for(const candidate of scored){
-      if(selected.some(item=>item.name===candidate.name)) continue;
-      selected.push(candidate);
-      if(selected.length===Math.min(5,scored.length)) break;
-    }
+  // Se uma única família dominou tudo, troca apenas a última vaga por uma segunda
+  // dimensão compatível; nunca força uma terceira família de baixo valor.
+  const families=new Set(selected.map(item=>skillCategory(item.name)[0]??'other'));
+  if(selected.length>=2 && families.size===1){
+    const primary=[...families][0];
+    const alternative=scored.find(item=>(skillCategory(item.name)[0]??'other')!==primary && !selected.some(sel=>sel.name===item.name));
+    if(alternative) selected[selected.length-1]=alternative;
   }
   return selected.map(x=>x.name);
 }
@@ -439,29 +482,53 @@ function impetoCategories(name:string):string[] {
 
 function recommendImpetosR119(parsed:ParsedCard,actions:CleanSlateActionR119[]) {
   const current=parsed.impetos?.find(i=>i.active!==false)?.name ?? parsed.impetos?.[0]?.name ?? null;
-  if(current) return {current,decision:'KEEP_CURRENT' as const,recommendations:[] as ImpetoRecommendation[]};
-  const slot=parsed.evidence?.impetoSlotStatus;
-  if(slot==='OCUPADO'||slot==='SEM_VAGA') return {current:null,decision:'SLOT_NOT_AVAILABLE' as const,recommendations:[] as ImpetoRecommendation[]};
-  if(slot!=='DISPONIVEL') return {current:null,decision:'NO_SAFE_IMPETO' as const,recommendations:[] as ImpetoRecommendation[]};
+  const slot=String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO');
   const cats=categoryScores(actions);
   const gk=parsed.mainPosition==='GK';
   const scored=RECOGNIZABLE_IMPETO_NAMES
+    .filter(name=>!current || norm(name)!==norm(current))
     .filter(name=>gk?/goleiro|guardiao|defesaca|agilidade|fisicalidade|forca/i.test(norm(name)):!/goleiro|guardiao|defesaca/i.test(norm(name)))
-    .map(name=>({name,score:average(impetoCategories(name).map(c=>cats.get(c)??18))}))
-    .sort((a,b)=>b.score-a.score || a.name.localeCompare(b.name));
+    .map(name=>{
+      const score=average(impetoCategories(name).map(c=>cats.get(c)??18));
+      const confidence=clamp(score*.72+normalizedConfidence(parsed)*.28);
+      return {name,score,confidence};
+    })
+    .sort((a,b)=>b.score-a.score || b.confidence-a.confidence || a.name.localeCompare(b.name));
   const best=scored[0];
-  if(!best||best.score<52) return {current:null,decision:'NO_SAFE_IMPETO' as const,recommendations:[] as ImpetoRecommendation[]};
-  const recommendations=scored.slice(0,3).map((item,index):ImpetoRecommendation=>({
+  const ideal=best&&best.score>=48?best:null;
+  const reasonFor=(prefix:string)=>ideal
+    ? `${prefix} ${ideal.name} é o melhor encaixe funcional atual (${Math.round(ideal.score)}/100; confiança ${Math.round(ideal.confidence)}/100).`
+    : `${prefix} Nenhum Ímpeto superou o limiar funcional mínimo com a leitura atual.`;
+
+  if(current) return {
+    current,decision:'KEEP_CURRENT' as const,recommendations:[] as ImpetoRecommendation[],ideal:current,idealScore:100,idealConfidence:round1(normalizedConfidence(parsed)),slotStatus:slot,
+    reason:`Ímpeto atual ${current} foi identificado na carta e é preservado; o motor não recomenda gastar recurso para repetir ou substituir automaticamente.`
+  };
+  if(!ideal) return {current:null,decision:'NO_SAFE_IMPETO' as const,recommendations:[] as ImpetoRecommendation[],ideal:null,idealScore:0,idealConfidence:0,slotStatus:slot,reason:reasonFor('Sem candidato seguro.')};
+
+  const toRecommendation=(item:{name:string;score:number;confidence:number},index:number):ImpetoRecommendation=>({
     name:item.name,
     tier:index===0?'ideal':'alternativo',
     attributes:impetoCategories(item.name),
-    reason:`Clean Slate r119: compatibilidade ${Math.round(item.score)}/100 com as ações mais frequentes desta carta.`,
+    reason:`Clean Slate r119: compatibilidade ${Math.round(item.score)}/100 com as ações de maior prioridade funcional desta carta.`,
     score:round1(item.score),
-    confidence:round1(clamp(item.score*.72+normalizedConfidence(parsed)*.28)),
+    confidence:round1(item.confidence),
     official:true,
-    evidence:['DNA natural da carta','ações funcionais de maior frequência','Ímpeto atual ausente','vaga de Ímpeto confirmada']
-  }));
-  return {current:null,decision:'RECOMMEND_NEW' as const,recommendations};
+    evidence:['DNA natural da carta','ações funcionais priorizadas','Ímpeto atual ausente',slot==='DISPONIVEL'?'vaga de Ímpeto confirmada':'vaga de Ímpeto ainda não confirmada']
+  });
+
+  if(slot==='DISPONIVEL') return {
+    current:null,decision:'RECOMMEND_NEW' as const,recommendations:scored.slice(0,3).map(toRecommendation),ideal:ideal.name,idealScore:round1(ideal.score),idealConfidence:round1(ideal.confidence),slotStatus:slot,
+    reason:reasonFor('Vaga confirmada.')
+  };
+  if(slot==='OCUPADO'||slot==='SEM_VAGA') return {
+    current:null,decision:'SLOT_NOT_AVAILABLE' as const,recommendations:[] as ImpetoRecommendation[],ideal:ideal.name,idealScore:round1(ideal.score),idealConfidence:round1(ideal.confidence),slotStatus:slot,
+    reason:reasonFor('O candidato ideal foi calculado, mas não deve ser aplicado porque a leitura indica que não há vaga disponível.')
+  };
+  return {
+    current:null,decision:'REVIEW_SLOT' as const,recommendations:[] as ImpetoRecommendation[],ideal:ideal.name,idealScore:round1(ideal.score),idealConfidence:round1(ideal.confidence),slotStatus:slot,
+    reason:reasonFor('O candidato ideal foi calculado; confirme a vaga de Ímpeto antes de gastar o recurso.')
+  };
 }
 
 function dominantDna(actions:CleanSlateActionR119[]) {
@@ -490,7 +557,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
     const dna=dominantDna(actions);
     const analysis:CleanSlate2027R119={
-      version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'BLOCKED_INSUFFICIENT_DATA',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training:zero,candidateCount:0,score:0,responseScore:0,synergyScore:0,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:parsed.impetos?.[0]?.name??null,impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',recommendedImpeto:null,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.','Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']};
+      version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'BLOCKED_INSUFFICIENT_DATA',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training:zero,candidateCount:0,score:0,responseScore:0,synergyScore:0,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:parsed.impetos?.[0]?.name??null,impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',recommendedImpeto:null,impetoIdeal:parsed.impetos?.[0]?.name??null,impetoIdealScore:parsed.impetos?.length?100:0,impetoIdealConfidence:parsed.impetos?.length?round1(confidence):0,impetoReason:parsed.impetos?.length?`Ímpeto atual ${parsed.impetos?.[0]?.name} preservado.`:'A leitura ainda não tem atributos suficientes para classificar um Ímpeto ideal com segurança.',impetoSlotStatus:String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO'),guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.','Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']};
     return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:top5,recommendedImpetos:[],skillIntegrity,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
   const optimized=optimizeTraining(parsed,budget);
@@ -508,8 +575,9 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const synergy=round1(clamp(score*.62+confidence*.38));
   const dna=dominantDna(actions);
   const analysis:CleanSlate2027R119={
-    version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'READY',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training,candidateCount:optimized.candidates,score,responseScore:response,synergyScore:synergy,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:impeto.current,impetoDecision:impeto.decision,recommendedImpeto:impeto.recommendations[0]?.name??null,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:!impeto.current||!impeto.recommendations.some(x=>norm(x.name)===norm(impeto.current)),selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:[
+    version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'READY',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training,candidateCount:optimized.candidates,score,responseScore:response,synergyScore:synergy,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:impeto.current,impetoDecision:impeto.decision,recommendedImpeto:impeto.recommendations[0]?.name??null,impetoIdeal:impeto.ideal,impetoIdealScore:impeto.idealScore,impetoIdealConfidence:impeto.idealConfidence,impetoReason:impeto.reason,impetoSlotStatus:impeto.slotStatus,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:!impeto.current||!impeto.recommendations.some(x=>norm(x.name)===norm(impeto.current)),selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:[
       `Clean Slate r119 avaliou ${optimized.candidates} estados com beam limitado e orçamento ${spent}/${budget}.`,
+      'Capacidade natural e frequência provável são avaliadas separadamente; atributo alto sozinho não transforma uma ação em identidade.',
       `DNA dominante: ${dna.join(' + ')||'em revisão'}.`,
       'A pontuação favorece ações que a carta já executa naturalmente; não tenta elevar o atributo mais fraco só porque ele está abaixo de um alvo.',
       'Posição selecionada, overall, ficha recebida e pesos floor/peak/ceiling não participam da assinatura permanente.'
@@ -531,7 +599,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       `Motor final: Clean Slate r119 • ${score}/100 • resposta ${response}/100 • sinergia ${synergy}/100.`,
       `Ficha calculada do zero pelo snapshot cru da carta: ${spent}/${budget} pontos.`,
       `Top 5 r119: ${top5.join(', ')||'leitura insuficiente'}.`,
-      impeto.current?`Ímpeto atual preservado: ${impeto.current}.`:impeto.recommendations[0]?`Ímpeto r119: ${impeto.recommendations[0].name}.`:'Ímpeto r119: nenhum gasto seguro confirmado.',
+      impeto.current?`Ímpeto atual preservado: ${impeto.current}.`:impeto.recommendations[0]?`Ímpeto r119: ${impeto.recommendations[0].name}.`:impeto.ideal?`Ímpeto ideal r119: ${impeto.ideal} • ${impeto.decision==='REVIEW_SLOT'?'confirmar vaga antes de gastar':'referência sem autorização de gasto'}.`:'Ímpeto r119: nenhum candidato seguro confirmado.',
       ...analysis.reasons,
       ...input.recommendationExplanation
     ].filter((x,i,a)=>a.indexOf(x)===i).slice(0,112)

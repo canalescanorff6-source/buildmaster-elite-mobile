@@ -169,7 +169,8 @@ assert.equal(goalkeeperExhausted.skillIntegrity?.status, 'approved', 'A entrega 
 
 const dribbleSkills = new Set(['Pedalada simples', 'Toque duplo', 'Elástico', 'Giro 360°', 'Chapéu', 'Corte com virada', 'Puxada de letra', 'Finta de letra', 'Controle com a sola']);
 assert.ok(dribbler.recommendedSkills.filter((skill) => dribbleSkills.has(skill)).length >= 2, 'Uma carta cujo DNA é drible deve receber pelo menos duas habilidades oficiais de drible/controle.');
-assert.ok(dribbler.training.dribbling + dribbler.training.dexterity >= dribbler.training.shooting + dribbler.training.passing, 'A ficha do driblador deve refletir o DNA técnico da carta, sem perseguir overall.');
+assert.ok((dribbler.cleanSlate2027R119?.actions ?? []).slice(0, 6).some((action) => ['turn_finish', 'close_control', 'carry'].includes(action.id)), 'A ficha do driblador deve preservar ações técnicas entre as prioridades funcionais.');
+assert.ok(dribbler.training.dribbling <= 8, 'Com Controle/Drible/Condução naturais em 94/96/95, o motor não deve desperdiçar progressão saturando Drible além do necessário.');
 assert.ok(finisher.recommendedSkills.some((skill) => ['Precisão à distância', 'Finalização acrobática', 'Chute com o peito do pé', 'Folha seca', 'Chute ascendente', 'Controle da cavadinha'].includes(skill)), 'O CA finalizador deve receber complemento oficial de finalização.');
 assert.ok(anchor.recommendedSkills.filter((skill) => ['Marcação individual', 'Volta para marcar', 'Bloqueador', 'Superioridade aérea', 'Carrinho', 'Afastamento acrobático'].includes(skill)).length >= 2, 'O primeiro volante deve receber habilidades defensivas oficiais úteis.');
 assert.ok(goalkeeper.recommendedSkills.every((skill) => ['Pegador de pênalti', 'Arremesso longo do goleiro', 'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Espírito guerreiro', 'Liderança'].includes(skill)), 'Goleiro não pode receber habilidade de jogador de linha.');

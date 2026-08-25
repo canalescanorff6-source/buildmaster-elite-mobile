@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+type IconStyleR106 = Record<string, string | number | undefined>;
 
 export type TrainingProgressionKeyR106 =
   | 'shooting'
@@ -18,7 +18,7 @@ type IconProps = {
   trainingKey: TrainingProgressionKeyR106;
   size?: number;
   title?: string;
-  style?: CSSProperties;
+  style?: IconStyleR106;
 };
 
 function BaseIcon({
@@ -29,8 +29,8 @@ function BaseIcon({
 }: {
   title: string;
   size: number;
-  children: ReactNode;
-  style?: CSSProperties;
+  children: any;
+  style?: IconStyleR106;
 }) {
   return (
     <svg
