@@ -2,7 +2,7 @@ import type TesseractNamespace from 'tesseract.js';
 import { runtimeDelete, runtimeGet, runtimePut, runtimeTrimStore } from './localDatabase';
 import { getRuntimeOptimizationProfile } from './invisibleOptimizationV3820';
 
-export type OcrFieldKind = 'general' | 'name' | 'nameSparse' | 'singleWord' | 'numeric' | 'position' | 'style' | 'attributes' | 'skills' | 'skillsSparse' | 'table' | 'tableSparse';
+export type OcrFieldKind = 'general' | 'name' | 'nameSparse' | 'singleWord' | 'numeric' | 'numericColumn' | 'position' | 'style' | 'attributes' | 'skills' | 'skillsSparse' | 'table' | 'tableSparse';
 
 export type OcrProgress = {
   label: string;
@@ -189,6 +189,7 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
     nameSparse: '11',
     singleWord: '8',
     numeric: '7',
+    numericColumn: '6',
     position: '7',
     style: '7',
     attributes: '6',
@@ -200,6 +201,7 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.";
   const whitelist: Partial<Record<OcrFieldKind, string>> = {
     numeric: '0123456789/:.-',
+    numericColumn: '0123456789',
     position: letters,
     name: letters,
     nameSparse: letters,
@@ -211,7 +213,7 @@ function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerPar
     tessedit_char_whitelist: whitelist[kind] ?? '',
     preserve_interword_spaces: '1',
     user_defined_dpi: kind === 'name' || kind === 'nameSparse' || kind === 'singleWord' ? '450' : '300',
-    ...(kind === 'numeric' ? { classify_bln_numeric_mode: '1' } : {})
+    ...(kind === 'numeric' || kind === 'numericColumn' ? { classify_bln_numeric_mode: '1' } : {})
   } as Partial<TesseractNamespace.WorkerParams>;
 }
 

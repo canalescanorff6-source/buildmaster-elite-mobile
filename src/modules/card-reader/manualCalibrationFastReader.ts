@@ -5,7 +5,7 @@ import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { cropImage, mergeOcrTexts } from './imageProcessing';
 import { normalizeEfhubCalibrationZones, type EfhubCalibrationZone, type EfhubCalibrationZoneId } from './efhubManualCalibration';
 
-export const MANUAL_CALIBRATION_FAST_READER_VERSION = '40.20-eight-macros-r1';
+export const MANUAL_CALIBRATION_FAST_READER_VERSION = '40.20-nine-macros-r2';
 const TOTAL_READER_DEADLINE_MS = 90_000;
 const RETRY_DEADLINE_MS = 72_000;
 
@@ -60,7 +60,7 @@ function buildReading(plan: MacroPlan, text: string, confidence: number, enhance
     precisionVersion: MANUAL_CALIBRATION_FAST_READER_VERSION,
     validationNotes: [
       'Leitura primária feita diretamente no quadrado posicionado pelo usuário.',
-      'O modo v40.40 executa oito leituras principais; nova passagem ocorre apenas em campo crítico de baixa confiança.'
+      'O modo v40.40 executa nove leituras principais; nova passagem ocorre apenas em campo crítico de baixa confiança.'
     ],
     rawPasses: passes
   };
@@ -80,23 +80,38 @@ function fanOut(reading: PremiumZoneReading, plan: MacroPlan): PremiumZoneReadin
 
 type AttributeColumnId = 'left' | 'center' | 'right';
 
-const ATTRIBUTE_COLUMNS: Array<{ id: AttributeColumnId; x: number; w: number; expected: number }> = [
-  // Pequena sobreposição evita cortar o último dígito junto às divisórias.
-  { id: 'left', x: 0, w: 0.345, expected: 10 },
-  { id: 'center', x: 0.315, w: 0.37, expected: 9 },
-  { id: 'right', x: 0.655, w: 0.345, expected: 7 }
+type AttributeColumnProfile = { id: AttributeColumnId; x: number; w: number; expected: number; valueX: number; valueW: number };
+
+const ATTRIBUTE_COLUMNS: AttributeColumnProfile[] = [
+  // Colunas amplas preservadas como fallback para rótulo + número.
+  // valueX/valueW apontam apenas para a faixa dos badges numéricos do eFHUB.
+  // Nela os dígitos são escuros sobre caixas verdes/vermelhas/amarelas, por isso
+  // usamos contraste + OCR numérico multlinha antes do binário de tema escuro.
+  { id: 'left', x: 0, w: 0.345, expected: 10, valueX: 0.255, valueW: 0.085 },
+  { id: 'center', x: 0.315, w: 0.37, expected: 9, valueX: 0.590, valueW: 0.100 },
+  { id: 'right', x: 0.655, w: 0.345, expected: 7, valueX: 0.905, valueW: 0.095 }
 ];
 
 function nestedZone(macro: EfhubCalibrationZone, relative: { x: number; w: number }): OcrZone {
+  const x = Math.max(0, macro.x + macro.w * relative.x);
   return {
     key: 'attributes',
     label: `26 atributos • coluna`,
-    x: Math.max(0, macro.x + macro.w * relative.x),
+    x,
     y: macro.y,
-    w: Math.max(0.01, Math.min(1 - macro.x, macro.w * relative.w)),
+    w: Math.max(0.01, Math.min(1 - x, macro.w * relative.w)),
     h: macro.h,
     enabled: macro.enabled
   };
+}
+
+export function buildAttributeValueStripZonesForCalibration(macro: EfhubCalibrationZone): Array<OcrZone & { columnId: AttributeColumnId; expected: number }> {
+  return ATTRIBUTE_COLUMNS.map((column) => ({
+    ...nestedZone(macro, { x: column.valueX, w: column.valueW }),
+    label: `26 atributos • valores ${column.id}`,
+    columnId: column.id,
+    expected: column.expected
+  }));
 }
 
 function numericTokens(text: string, min: number, max: number) {
@@ -114,47 +129,67 @@ async function readAttributeMacro(
   const texts: string[] = [];
   const passes: NonNullable<PremiumZoneReading['rawPasses']> = [];
   const confidences: number[] = [];
+  const valueZones = new Map(buildAttributeValueStripZonesForCalibration(macro).map((zone) => [zone.columnId, zone]));
 
   for (const column of ATTRIBUTE_COLUMNS) {
-    const zone = nestedZone(macro, column);
-    const primaryImage = await cropImage(file, zone, 1380, 'inverted');
-    if (primaryImage === file) throw new Error(`Não foi possível recortar ${plan.label} (${column.id}).`);
-    const primary = await recognizeWithOcrWorker(primaryImage, {
-      label: `${plan.label} • coluna ${column.id}`,
-      kind: 'table',
-      cacheKey: `${cacheBase}:column:${column.id}:inverted:table`,
-      timeoutMs: 9_000
+    const valueZone = valueZones.get(column.id)!;
+    const valueImage = await cropImage(file, valueZone, 760, 'contrast');
+    if (valueImage === file) throw new Error(`Não foi possível recortar ${plan.label} (valores ${column.id}).`);
+    const numeric = await recognizeWithOcrWorker(valueImage, {
+      label: `${plan.label} • valores ${column.id}`,
+      kind: 'numericColumn',
+      cacheKey: `${cacheBase}:values:${column.id}:contrast:numeric-column`,
+      timeoutMs: 7_000
     });
-    let columnText = primary.text;
-    let bestConfidence = primary.confidence;
-    passes.push({ text: primary.text, confidence: primary.confidence, enhancement: 'inverted', kind: `attributes-column-${column.id}:inverted` });
+    const numericCount = numericTokens(numeric.text, 35, 110).length;
+    passes.push({ text: numeric.text, confidence: numeric.confidence, enhancement: 'contrast', kind: `attributes-column-${column.id}:numeric-strip` });
 
-    // Atributos têm 10/9/7 valores nas três colunas. Se o primeiro passe não
-    // enxergar quase todos, fazemos UMA conferência colorida apenas naquela
-    // coluna. Não repetimos a tabela inteira nem aceitamos números inventados.
-    const firstCount = numericTokens(primary.text, 35, 110).length;
-    if (firstCount < Math.max(4, column.expected - 2)) {
-      const retryImage = await cropImage(file, zone, 1380, 'color');
-      if (retryImage !== file) {
-        const retry = await recognizeWithOcrWorker(retryImage, {
-          label: `${plan.label} • coluna ${column.id} • conferência`,
-          kind: 'table',
-          cacheKey: `${cacheBase}:column:${column.id}:color:table`,
-          timeoutMs: 8_000
-        }).catch(() => null);
-        if (retry) {
-          passes.push({ text: retry.text, confidence: retry.confidence, enhancement: 'color', kind: `attributes-column-${column.id}:color` });
-          const retryCount = numericTokens(retry.text, 35, 110).length;
-          if (retryCount > firstCount || (retryCount === firstCount && retry.confidence > primary.confidence)) {
-            columnText = retry.text;
-            bestConfidence = retry.confidence;
-          } else if (retry.text.trim()) {
-            columnText = mergeOcrTexts(primary.text, retry.text);
-            bestConfidence = Math.max(primary.confidence, retry.confidence);
+    let columnText = numeric.text;
+    let bestConfidence = numeric.confidence;
+
+    // O caminho principal lê somente os badges numéricos. Se os 10/9/7 valores
+    // vierem completos, não processamos rótulos nem repetimos OCR da coluna.
+    // Se faltar qualquer valor, caímos para o leitor amplo legado daquela coluna.
+    if (numericCount !== column.expected) {
+      const zone = nestedZone(macro, column);
+      const primaryImage = await cropImage(file, zone, 1380, 'inverted');
+      if (primaryImage === file) throw new Error(`Não foi possível recortar ${plan.label} (${column.id}).`);
+      const primary = await recognizeWithOcrWorker(primaryImage, {
+        label: `${plan.label} • coluna ${column.id}`,
+        kind: 'table',
+        cacheKey: `${cacheBase}:column:${column.id}:inverted:table`,
+        timeoutMs: 9_000
+      });
+      passes.push({ text: primary.text, confidence: primary.confidence, enhancement: 'inverted', kind: `attributes-column-${column.id}:inverted` });
+      const primaryCount = numericTokens(primary.text, 35, 110).length;
+
+      const candidates = [
+        { text: numeric.text, confidence: numeric.confidence, count: numericCount },
+        { text: primary.text, confidence: primary.confidence, count: primaryCount }
+      ];
+
+      if (primaryCount < Math.max(4, column.expected - 2)) {
+        const retryImage = await cropImage(file, zone, 1380, 'color');
+        if (retryImage !== file) {
+          const retry = await recognizeWithOcrWorker(retryImage, {
+            label: `${plan.label} • coluna ${column.id} • conferência`,
+            kind: 'table',
+            cacheKey: `${cacheBase}:column:${column.id}:color:table`,
+            timeoutMs: 8_000
+          }).catch(() => null);
+          if (retry) {
+            passes.push({ text: retry.text, confidence: retry.confidence, enhancement: 'color', kind: `attributes-column-${column.id}:color` });
+            candidates.push({ text: retry.text, confidence: retry.confidence, count: numericTokens(retry.text, 35, 110).length });
           }
         }
       }
+
+      const exact = candidates.filter((candidate) => candidate.count === column.expected).sort((a, b) => b.confidence - a.confidence)[0];
+      const best = exact ?? candidates.sort((a, b) => b.count - a.count || b.confidence - a.confidence)[0];
+      columnText = best?.text ?? '';
+      bestConfidence = best?.confidence ?? 0;
     }
+
     if (columnText.trim()) texts.push(columnText);
     confidences.push(bestConfidence);
   }
@@ -163,7 +198,7 @@ async function readAttributeMacro(
   const confidence = confidences.length
     ? Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length)
     : 0;
-  return buildReading(plan, text, confidence, 'inverted', passes);
+  return buildReading(plan, text, confidence, 'contrast', passes);
 }
 
 async function readMacro(file: File | Blob, macro: EfhubCalibrationZone, plan: MacroPlan, cacheBase: string): Promise<PremiumZoneReading> {
@@ -212,7 +247,7 @@ async function targetedRetry(file: File | Blob, macro: EfhubCalibrationZone, rea
 
 /**
  * v40.40 — nove quadrados, nove leituras primárias.
- * Compatibilidade histórica de regressão: "oito quadrados, oito leituras primárias".
+ * Compatibilidade histórica preservada no nome da função; o mapa atual possui nove quadrados primários.
  * O quadrado manual é a unidade de trabalho. Não o explode em 20+ OCRs.
  * Nome, atributos e habilidades podem receber UMA conferência curta somente
  * quando a primeira leitura realmente vier vazia ou fraca e ainda houver tempo.

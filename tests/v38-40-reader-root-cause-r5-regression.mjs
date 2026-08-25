@@ -11,7 +11,7 @@ const css=read('src/app/globals.css');
 
 assert.match(app,/readEightEfhubCalibrationMacros/);
 assert.match(app,/calibratedFastPath[\s\S]*?zones: \[\]/);
-assert.match(reader,/MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-eight-macros-r1'/);
+assert.match(reader,/MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-nine-macros-r2'/);
 assert.match(app,/buildPreciseOcrZonesFromEfhubCalibration/);
 assert.match(reader,/TOTAL_READER_DEADLINE_MS = 90_000/);
 assert.match(reader,/targetedRetry/);

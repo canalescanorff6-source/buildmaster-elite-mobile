@@ -19,7 +19,7 @@ assert.equal(manifest.name, 'BuildMaster Elite Tático v40.80');
 assert.equal(manifest.short_name, 'BuildMaster v40.80');
 assert.match(sw, /buildmaster-v40-80-edge-stack-1/);
 
-assert.match(manual, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-eight-macros-r1'/);
+assert.match(manual, /MANUAL_CALIBRATION_FAST_READER_VERSION = '40\.20-nine-macros-r2'/);
 assert.match(manual, /TOTAL_READER_DEADLINE_MS = 90_000/);
 assert.match(manual, /MACRO_PLANS/);
 assert.match(manual, /prewarmOcrWorker\(\)/);
@@ -47,6 +47,6 @@ assert.match(worker, /`v3:\$\{options\.cacheKey\}:\$\{kind\}`/);
 assert.match(background, /BACKGROUND_OCR_VERSION = '40\.00-background-resume-2'/);
 assert.match(background, /version: 2/);
 assert.match(precision, /HIGH_PRECISION_OCR_VERSION = '40\.00-calibrated-rebuild-r1'/);
-assert.match(single, /40\.20-eight-macros-r1/);
+assert.match(single, /40\.20-nine-macros-r2/);
 
 console.log('v40.00 aprovada: leitor por quadrados reconstruído, OCR local em português otimizado, recorte manual exato, timeout e parser por campos protegidos.');
