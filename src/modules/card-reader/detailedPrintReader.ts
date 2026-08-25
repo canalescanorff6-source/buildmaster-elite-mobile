@@ -243,6 +243,28 @@ const ATTRIBUTE_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'Resistência', patterns: [/resist[eê]ncia(?!\s+a\s+les[aã]o)\s*[:=-]?\s*(\d{1,3})/i] }
 ];
 
+type AttributeVisualColumn = 'left' | 'center' | 'right';
+
+const ATTRIBUTE_VISUAL_COLUMNS: Record<AttributeVisualColumn, string[]> = {
+  left: [
+    'Talento ofensivo', 'Controle de bola', 'Drible', 'Condução firme', 'Passe rasteiro',
+    'Passe alto', 'Finalização', 'Cabeçada', 'Bola parada', 'Curva'
+  ],
+  center: [
+    'Talento defensivo', 'Dedicação defensiva', 'Desarme', 'Agressividade', 'Talento de GO',
+    'Firmeza de GO', 'Defesa de GO', 'Reflexos de GO', 'Alcance de GO'
+  ],
+  right: [
+    'Velocidade', 'Aceleração', 'Força do chute', 'Salto', 'Contato físico', 'Equilíbrio', 'Resistência'
+  ]
+};
+
+const ATTRIBUTE_VISUAL_ORDER = [
+  ...ATTRIBUTE_VISUAL_COLUMNS.left,
+  ...ATTRIBUTE_VISUAL_COLUMNS.center,
+  ...ATTRIBUTE_VISUAL_COLUMNS.right
+];
+
 const POSITION_CODES = ['LWF', 'CF', 'RWF', 'SS', 'AMF', 'LMF', 'CMF', 'RMF', 'DMF', 'LB', 'CB', 'RB', 'GK'] as const;
 
 const PHYSICAL_ALIASES: Array<{ label: string; patterns: RegExp[] }> = [
@@ -283,6 +305,100 @@ function parseNumericCatalog(text: string, catalog: Array<{ label: string; patte
     values.push(makeValue(item.label, String(numeric), adjustedConfidence, exact !== null ? source : `${source} • rótulo corrigido por similaridade`, numeric));
   }
   return values;
+}
+
+function plausibleAttributeSequence(text: string) {
+  return Array.from(normalizeNumericGlyphs(text).matchAll(/\b(\d{2,3})\b/g))
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isFinite(value) && value >= 35 && value <= 110);
+}
+
+function visualColumnFromText(value: string): AttributeVisualColumn | null {
+  const key = normalized(value);
+  if (/attributes-column-left/.test(key) || /coluna esquerda/.test(key)) return 'left';
+  if (/attributes-column-center/.test(key) || /attributes-column-central/.test(key) || /coluna central/.test(key)) return 'center';
+  if (/attributes-column-right/.test(key) || /coluna direita/.test(key)) return 'right';
+  return null;
+}
+
+function bestExactAttributeSequence(
+  candidates: Array<{ text: string; confidence: number }>,
+  expected: number
+): { values: number[]; confidence: number } | null {
+  const exact = candidates
+    .map((candidate) => ({ ...candidate, values: plausibleAttributeSequence(candidate.text) }))
+    .filter((candidate) => candidate.values.length === expected)
+    .sort((left, right) => right.confidence - left.confidence);
+  if (!exact.length) return null;
+
+  // Quando duas passagens completas concordam por linha, usa a mediana por
+  // posição visual. Divergência grande faz o leitor conservar a passagem de
+  // maior confiança em vez de misturar números possivelmente errados.
+  if (exact.length >= 2) {
+    const first = exact[0].values;
+    const second = exact[1].values;
+    const disagreements = first.filter((value, index) => Math.abs(value - second[index]) > 2).length;
+    if (disagreements <= Math.max(1, Math.floor(expected * 0.18))) {
+      return {
+        values: first.map((value, index) => Math.round((value + second[index]) / 2)),
+        confidence: Math.min(94, Math.round((exact[0].confidence + exact[1].confidence) / 2))
+      };
+    }
+  }
+  return { values: exact[0].values, confidence: exact[0].confidence };
+}
+
+/**
+ * Recuperação determinística da tabela eFHUB. Os 26 atributos possuem ordem
+ * visual fixa (10/9/7). O fallback só é usado quando uma coluna OCR contém
+ * exatamente a quantidade esperada de números plausíveis. Ele nunca completa
+ * uma coluna parcial e nunca substitui um rótulo já lido com segurança.
+ */
+function recoverAttributesFromVisualColumns(
+  readings: PremiumZoneReading[],
+  parsed: DetailedValue[],
+  baseConfidence: number
+) {
+  const byLabel = new Map(parsed.map((item) => [item.label, item]));
+  const columnCandidates: Record<AttributeVisualColumn, Array<{ text: string; confidence: number }>> = {
+    left: [], center: [], right: []
+  };
+
+  for (const reading of readings.filter((item) => item.key === 'attributes')) {
+    const readingColumn = visualColumnFromText(reading.label);
+    if (readingColumn && reading.text.trim()) {
+      columnCandidates[readingColumn].push({ text: reading.text, confidence: reading.confidence });
+    }
+    for (const pass of reading.rawPasses ?? []) {
+      const passColumn = visualColumnFromText(pass.kind) ?? readingColumn;
+      if (!passColumn || !pass.text.trim()) continue;
+      columnCandidates[passColumn].push({ text: pass.text, confidence: pass.confidence });
+    }
+  }
+
+  for (const column of ['left', 'center', 'right'] as const) {
+    const labels = ATTRIBUTE_VISUAL_COLUMNS[column];
+    const sequence = bestExactAttributeSequence(columnCandidates[column], labels.length);
+    if (!sequence) continue;
+    labels.forEach((label, index) => {
+      const current = byLabel.get(label);
+      // Uma sequência 10/9/7 completa e geometricamente isolada é evidência
+      // mais forte que um rótulo aproximado que pode confundir, por exemplo,
+      // “Talento ofensivo” com “Talento defensivo”. Leituras exatas continuam
+      // soberanas e nunca são sobrescritas.
+      if (current && !current.source.includes('rótulo corrigido por similaridade')) return;
+      const confidence = Math.max(72, Math.min(92, Math.round(Math.max(baseConfidence - 4, sequence.confidence - 2))));
+      byLabel.set(label, makeValue(
+        label,
+        String(sequence.values[index]),
+        confidence,
+        `Tabela de atributos • ordem visual eFHUB ${column} • sequência numérica completa`,
+        sequence.values[index]
+      ));
+    });
+  }
+
+  return ATTRIBUTE_VISUAL_ORDER.map((label) => byLabel.get(label)).filter((item): item is DetailedValue => Boolean(item));
 }
 
 const POSITION_OCR_ALIASES: Record<string, (typeof POSITION_CODES)[number]> = {
@@ -580,7 +696,8 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const v600Styles = focusedV600Styles.source !== 'NONE' ? focusedV600Styles : fallbackV600Styles;
   const playstyle = v600Styles.offensive ?? detectPlaystyle(phaseStyleSource) ?? detectPlaystyle(identitySource);
 
-  const attributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
+  const parsedAttributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
+  const attributes = recoverAttributesFromVisualColumns(readings, parsedAttributes, attributeConfidence);
   const positionRatings = parsePositionRatings(positionSource, positionConfidence, 'Grade de posições');
   const physicalModel = parseNumericCatalog(physicalSource, PHYSICAL_ALIASES, physicalConfidence, 'Modelo físico', 0, 400);
   const parsedSkills = parseSkills(skillSource, skillConfidence, 'Lista de habilidades', learnedSkillNames);

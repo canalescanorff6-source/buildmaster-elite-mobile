@@ -273,9 +273,21 @@ function passPlan(key: OcrZoneKey, mode: 'balanced' | 'precision' | 'fast'): Pre
       { enhancement: 'contrast', kind: 'numeric' },
       { enhancement: 'binary', kind: 'numeric' }
     ];
+    if (key === 'attributes') return [
+      // O perfil eFHUB usa valores verdes/vermelhos/amarelos sobre fundo
+      // escuro. O passe invertido adaptativo preserva essas três cores.
+      { enhancement: 'inverted', kind: 'table' },
+      { enhancement: 'color', kind: 'table' },
+      { enhancement: 'sharp', kind: 'table' }
+    ];
+    if (key === 'positionGrid' || key === 'physicalModel') return [
+      { enhancement: 'inverted', kind: 'tableSparse' },
+      { enhancement: 'color', kind: 'tableSparse' },
+      { enhancement: 'contrast', kind: 'table' }
+    ];
     return [
-      { enhancement: 'contrast', kind: key === 'attributes' ? 'table' : key === 'skills' ? 'skills' : 'general' },
-      { enhancement: 'sharp', kind: key === 'attributes' ? 'table' : key === 'skills' ? 'skills' : 'general' }
+      { enhancement: 'contrast', kind: key === 'skills' ? 'skills' : 'general' },
+      { enhancement: 'sharp', kind: key === 'skills' ? 'skills' : 'general' }
     ];
   }
 

@@ -55,6 +55,35 @@ function grayscale(data: PixelBuffer): PixelBuffer {
   return result;
 }
 
+/**
+ * O perfil eFHUB usa texto verde/vermelho/amarelo sobre fundo quase preto.
+ * Em escala de cinza o vermelho pode ficar tão escuro quanto o fundo e
+ * desaparecer no binário. Esta projeção usa o canal mais forte de cada pixel
+ * quando a imagem é predominantemente escura, preservando qualquer texto
+ * colorido/alto brilho sem depender da cor exata do tema.
+ */
+function darkUiSignal(data: PixelBuffer): { buffer: PixelBuffer; darkRatio: number } {
+  const result = new Uint8ClampedArray(data.length);
+  let sampled = 0;
+  let dark = 0;
+  for (let index = 0; index < data.length; index += 4) {
+    const red = data[index];
+    const green = data[index + 1];
+    const blue = data[index + 2];
+    const gray = luminance(red, green, blue);
+    if ((index / 4) % 8 === 0) {
+      sampled += 1;
+      if (gray < 82) dark += 1;
+    }
+    const signal = Math.max(red, green, blue);
+    result[index] = signal;
+    result[index + 1] = signal;
+    result[index + 2] = signal;
+    result[index + 3] = data[index + 3];
+  }
+  return { buffer: result, darkRatio: sampled ? dark / sampled : 0 };
+}
+
 function otsuThreshold(data: PixelBuffer) {
   const histogram = new Uint32Array(256);
   let pixels = 0;
@@ -141,12 +170,19 @@ function enhancePixels(imageData: ImageData, mode: ImageEnhancement) {
     applyContrast(processed, mode === 'sharp' ? 2.08 : 1.72, mode === 'sharp' ? 20 : 15);
     if (mode === 'sharp') processed = sharpenGrayscale(processed, width, height);
   } else {
+    const darkUi = darkUiSignal(imageData.data);
+    const useBrightForeground = darkUi.darkRatio >= 0.58;
+    if (useBrightForeground) processed = darkUi.buffer;
     const threshold = otsuThreshold(processed);
     for (let index = 0; index < processed.length; index += 4) {
-      const darkText = processed[index] <= threshold;
+      const foreground = useBrightForeground
+        ? processed[index] > threshold
+        : processed[index] <= threshold;
+      // Em tema escuro, `inverted` produz texto preto sobre fundo branco,
+      // formato mais estável para o Tesseract e que preserva vermelho/verde.
       const value = mode === 'inverted'
-        ? (darkText ? 255 : 0)
-        : (darkText ? 0 : 255);
+        ? (foreground ? 0 : 255)
+        : (foreground ? 255 : 0);
       processed[index] = value;
       processed[index + 1] = value;
       processed[index + 2] = value;

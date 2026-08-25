@@ -63,6 +63,8 @@ export function UnifiedPerformanceV3920Panel({
   if (!unified && cleanSlate) {
     const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
     const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
+    const attributeCount = Number(result.parsed.evidence?.attributeCount ?? Object.keys(result.parsed.attributes ?? {}).length);
+    const positionRatingsCount = Number(result.parsed.evidence?.positionRatingsCount ?? Object.keys(result.parsed.positionRatings ?? {}).length);
     return <article className="luxury-panel wide-card unified-performance-v3920">
       <header className="unified-v3920-head">
         <div>
@@ -90,6 +92,7 @@ export function UnifiedPerformanceV3920Panel({
             <span><b>{Math.round(cleanSlate.synergyScore)}</b><small>sinergia</small></span>
             <span><b>{Math.round(cleanSlate.confidence)}</b><small>confiança</small></span>
           </div>
+          {cleanSlate.status !== 'READY' && <p><strong>Atributos lidos: {attributeCount}/26.</strong> Posições reconhecidas: {positionRatingsCount}/13. O motor não inventa os valores ausentes; revise a leitura quando a cobertura estiver baixa.</p>}
           <div className="chip-cloud">
             <span>Motor final: Clean Slate r119</span>
             {cleanSlate.dominantDna.map((dna) => <span key={dna}>{dna}</span>)}

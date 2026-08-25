@@ -23,11 +23,11 @@ const MACRO_PLANS: MacroPlan[] = [
   { id: 'identity', key: 'name', label: 'Nome + estilo de jogo', kind: 'tableSparse', width: 1500, enhancement: 'sharp', timeoutMs: 11_000 },
   { id: 'card', key: 'cardType', label: 'Carta + foto + posição', kind: 'tableSparse', width: 1250, enhancement: 'contrast', timeoutMs: 10_000 },
   { id: 'bio', key: 'identityMeta', label: 'Bio + nível + condição', kind: 'tableSparse', width: 1450, enhancement: 'sharp', timeoutMs: 11_000 },
-  { id: 'positions', key: 'positionGrid', label: 'Posições + overalls', kind: 'tableSparse', width: 1450, enhancement: 'contrast', timeoutMs: 11_000 },
+  { id: 'positions', key: 'positionGrid', label: 'Posições + overalls', kind: 'tableSparse', width: 1450, enhancement: 'inverted', timeoutMs: 11_000 },
   { id: 'boosters', key: 'impetos', label: 'Ímpetos / boosters', kind: 'tableSparse', width: 1350, enhancement: 'sharp', timeoutMs: 10_000 },
   { id: 'progression', key: 'progression', label: 'Pontos distribuídos', kind: 'numeric', width: 1800, enhancement: 'contrast', timeoutMs: 10_000 },
-  { id: 'attributes', key: 'attributes', label: '26 atributos', kind: 'tableSparse', width: 1600, enhancement: 'sharp', timeoutMs: 13_000 },
-  { id: 'physical', key: 'physicalModel', label: 'Modelo físico', kind: 'tableSparse', width: 1450, enhancement: 'contrast', timeoutMs: 11_000 },
+  { id: 'attributes', key: 'attributes', label: '26 atributos', kind: 'table', width: 1600, enhancement: 'inverted', timeoutMs: 13_000 },
+  { id: 'physical', key: 'physicalModel', label: 'Modelo físico', kind: 'tableSparse', width: 1450, enhancement: 'inverted', timeoutMs: 11_000 },
   { id: 'skills', key: 'skills', label: 'Habilidades', kind: 'skillsSparse', width: 1650, enhancement: 'sharp', timeoutMs: 13_000 }
 ];
 
@@ -78,7 +78,96 @@ function fanOut(reading: PremiumZoneReading, plan: MacroPlan): PremiumZoneReadin
   return [reading];
 }
 
+type AttributeColumnId = 'left' | 'center' | 'right';
+
+const ATTRIBUTE_COLUMNS: Array<{ id: AttributeColumnId; x: number; w: number; expected: number }> = [
+  // Pequena sobreposição evita cortar o último dígito junto às divisórias.
+  { id: 'left', x: 0, w: 0.345, expected: 10 },
+  { id: 'center', x: 0.315, w: 0.37, expected: 9 },
+  { id: 'right', x: 0.655, w: 0.345, expected: 7 }
+];
+
+function nestedZone(macro: EfhubCalibrationZone, relative: { x: number; w: number }): OcrZone {
+  return {
+    key: 'attributes',
+    label: `26 atributos • coluna`,
+    x: Math.max(0, macro.x + macro.w * relative.x),
+    y: macro.y,
+    w: Math.max(0.01, Math.min(1 - macro.x, macro.w * relative.w)),
+    h: macro.h,
+    enabled: macro.enabled
+  };
+}
+
+function numericTokens(text: string, min: number, max: number) {
+  return Array.from(text.matchAll(/\b(\d{1,3}(?:[,.]\d+)?)\b/g))
+    .map((match) => Number(match[1].replace(',', '.')))
+    .filter((value) => Number.isFinite(value) && value >= min && value <= max);
+}
+
+async function readAttributeMacro(
+  file: File | Blob,
+  macro: EfhubCalibrationZone,
+  plan: MacroPlan,
+  cacheBase: string
+): Promise<PremiumZoneReading> {
+  const texts: string[] = [];
+  const passes: NonNullable<PremiumZoneReading['rawPasses']> = [];
+  const confidences: number[] = [];
+
+  for (const column of ATTRIBUTE_COLUMNS) {
+    const zone = nestedZone(macro, column);
+    const primaryImage = await cropImage(file, zone, 1380, 'inverted');
+    if (primaryImage === file) throw new Error(`Não foi possível recortar ${plan.label} (${column.id}).`);
+    const primary = await recognizeWithOcrWorker(primaryImage, {
+      label: `${plan.label} • coluna ${column.id}`,
+      kind: 'table',
+      cacheKey: `${cacheBase}:column:${column.id}:inverted:table`,
+      timeoutMs: 9_000
+    });
+    let columnText = primary.text;
+    let bestConfidence = primary.confidence;
+    passes.push({ text: primary.text, confidence: primary.confidence, enhancement: 'inverted', kind: `attributes-column-${column.id}:inverted` });
+
+    // Atributos têm 10/9/7 valores nas três colunas. Se o primeiro passe não
+    // enxergar quase todos, fazemos UMA conferência colorida apenas naquela
+    // coluna. Não repetimos a tabela inteira nem aceitamos números inventados.
+    const firstCount = numericTokens(primary.text, 35, 110).length;
+    if (firstCount < Math.max(4, column.expected - 2)) {
+      const retryImage = await cropImage(file, zone, 1380, 'color');
+      if (retryImage !== file) {
+        const retry = await recognizeWithOcrWorker(retryImage, {
+          label: `${plan.label} • coluna ${column.id} • conferência`,
+          kind: 'table',
+          cacheKey: `${cacheBase}:column:${column.id}:color:table`,
+          timeoutMs: 8_000
+        }).catch(() => null);
+        if (retry) {
+          passes.push({ text: retry.text, confidence: retry.confidence, enhancement: 'color', kind: `attributes-column-${column.id}:color` });
+          const retryCount = numericTokens(retry.text, 35, 110).length;
+          if (retryCount > firstCount || (retryCount === firstCount && retry.confidence > primary.confidence)) {
+            columnText = retry.text;
+            bestConfidence = retry.confidence;
+          } else if (retry.text.trim()) {
+            columnText = mergeOcrTexts(primary.text, retry.text);
+            bestConfidence = Math.max(primary.confidence, retry.confidence);
+          }
+        }
+      }
+    }
+    if (columnText.trim()) texts.push(columnText);
+    confidences.push(bestConfidence);
+  }
+
+  const text = mergeOcrTexts(...texts);
+  const confidence = confidences.length
+    ? Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length)
+    : 0;
+  return buildReading(plan, text, confidence, 'inverted', passes);
+}
+
 async function readMacro(file: File | Blob, macro: EfhubCalibrationZone, plan: MacroPlan, cacheBase: string): Promise<PremiumZoneReading> {
+  if (plan.id === 'attributes') return readAttributeMacro(file, macro, plan, cacheBase);
   const zone = toZone(macro, plan);
   const image = await cropImage(file, zone, plan.width, plan.enhancement);
   if (image === file) throw new Error(`Não foi possível recortar ${plan.label}; o app evitou ler o print inteiro no lugar do quadrado.`);
@@ -94,6 +183,8 @@ async function readMacro(file: File | Blob, macro: EfhubCalibrationZone, plan: M
 }
 
 async function targetedRetry(file: File | Blob, macro: EfhubCalibrationZone, reading: PremiumZoneReading, plan: MacroPlan, cacheBase: string): Promise<PremiumZoneReading> {
+  // O macro de atributos já possui conferência independente por coluna.
+  if (plan.id === 'attributes') return reading;
   const retryNeeded = !reading.text.trim() || reading.confidence < (plan.id === 'identity' ? 72 : 58);
   if (!retryNeeded) return reading;
   const zone = toZone(macro, plan);
