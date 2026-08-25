@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 type IconStyleR106 = Record<string, string | number | undefined>;
 
 export type TrainingProgressionKeyR106 =
@@ -29,7 +31,7 @@ function BaseIcon({
 }: {
   title: string;
   size: number;
-  children: JSX.Element | JSX.Element[];
+  children: ReactNode;
   style?: IconStyleR106;
 }) {
   return (
