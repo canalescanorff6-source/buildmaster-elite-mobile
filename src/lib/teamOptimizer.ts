@@ -48,7 +48,8 @@ const styleName: Record<TacticalStyle, string> = {
   CONTRA_ATAQUE: 'Contra-ataque normal',
   CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
   POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo'
+  PASSE_LONGO: 'Passe longo',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 const FORMATION_SLOTS: Record<Exclude<TacticalFormation, 'AUTO'>, EliteTeamSlot[]> = {

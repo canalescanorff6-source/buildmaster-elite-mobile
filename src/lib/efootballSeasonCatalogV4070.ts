@@ -20,7 +20,7 @@ export const EFOOTBALL_SEASON_V4070 = Object.freeze({
   nextSeason: 'não anunciada',
   nextReleaseWindow: 'não anunciada',
   previewWeightsEnabled: false,
-  officialSourceCheckedAt: '2026-08-13',
+  officialSourceCheckedAt: '2026-08-27',
   features: [
     {
       id: 'custom-tournament',
@@ -33,7 +33,7 @@ export const EFOOTBALL_SEASON_V4070 = Object.freeze({
     },
     {
       id: 'team-playstyle-overload',
-      title: 'Todos por Um',
+      title: 'Sobreposição',
       kind: 'team-playstyle',
       status: 'stable',
       introducedIn: '6.0.0',
@@ -57,6 +57,15 @@ export const EFOOTBALL_SEASON_V4070 = Object.freeze({
       introducedIn: '6.0.0',
       affectsBuildEngine: true,
       note: 'O app suporta leitura separada de estilo ofensivo/defensivo quando o campo aparecer na carta; nomes não confirmados ficam observados e sem peso competitivo.'
+    },
+    {
+      id: 'manager-frank-lampard-overload',
+      title: 'Frank Lampard — Sobreposição',
+      kind: 'manager',
+      status: 'stable',
+      introducedIn: '6.0.0',
+      affectsBuildEngine: false,
+      note: 'A Konami confirma grande domínio de Sobreposição para o técnico da Central da Campanha; o app não inventa um número de proficiência que não esteja publicado na fonte oficial.'
     },
     {
       id: 'dual-link-up-manager',

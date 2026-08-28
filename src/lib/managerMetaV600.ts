@@ -26,6 +26,7 @@ function styleToV600(style: TacticalStyle | string | null | undefined): V600Team
   if (style === 'CONTRA_ATAQUE') return 'CONTRA_ATAQUE';
   if (style === 'POR_FORA') return 'POR_FORA';
   if (style === 'PASSE_LONGO') return 'PASSE_LONGO';
+  if (style === 'SOBREPOSICAO') return 'SOBREPOSICAO';
   return 'POSSE_DE_BOLA';
 }
 

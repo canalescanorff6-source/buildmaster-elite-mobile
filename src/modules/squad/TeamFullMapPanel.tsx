@@ -53,7 +53,8 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
   CONTRA_ATAQUE: 'Contra-ataque normal',
   CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
   POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo'
+  PASSE_LONGO: 'Passe longo',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 type TeamCenterView = 'profissional' | 'visao' | 'formacoes' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';

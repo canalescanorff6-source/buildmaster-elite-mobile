@@ -112,6 +112,7 @@ import {
 } from '@/components/lazy/AppLazyPanels';
 
 const playstyleOptions = PLAYSTYLE_OPTIONS;
+const defensivePlaystyleOptions = ['Básico', 'Pressão no Ataque', ...PLAYSTYLE_OPTIONS] as const;
 
 const trainingLabels: Record<string, string> = {
   shooting: 'Finalização',
@@ -152,7 +153,8 @@ const tacticalStyleName: Record<TacticalStyle, string> = {
   CONTRA_ATAQUE: 'Contra-ataque normal',
   CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
   POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo'
+  PASSE_LONGO: 'Passe longo',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 export type ResultTab = 'proglobal' | 'motor' | 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
@@ -383,6 +385,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+  const [pendingSkillAction, setPendingSkillAction] = useState<{ skill: string; kind: 'complete' | 'owned' } | null>(null);
 
   useEffect(() => {
     if (!requestedTab) return;
@@ -474,12 +477,36 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
     return tab === view;
   }
 
+  function requestSkillToggle(skill: string) {
+    if (!onSkillToggle) return;
+    if (skillProgress?.[skill]) {
+      onSkillToggle(skill);
+      return;
+    }
+    setPendingSkillAction({ skill, kind: 'complete' });
+  }
+
+  function requestOwnedSkillReplacement(skill: string) {
+    if (!onReplaceOwnedSkill) return;
+    setPendingSkillAction({ skill, kind: 'owned' });
+  }
+
+  function confirmPendingSkillAction() {
+    if (!pendingSkillAction) return;
+    const action = pendingSkillAction;
+    setPendingSkillAction(null);
+    if (action.kind === 'owned') onReplaceOwnedSkill?.(action.skill);
+    else onSkillToggle?.(action.skill);
+  }
+
   async function shareCurrentResult() {
     const text = [
       `${card.playerName} • ${result.bestPosition.label}`,
-      `Estilo: ${card.playstyle ?? 'não informado'}`,
+      `Estilo ofensivo: ${card.offensivePlaystyle ?? card.playstyle ?? 'Básico'}`,
+      `Estilo defensivo: ${card.defensivePlaystyle ?? 'Básico'}`,
       `Pontos: ${result.trainingPointsUsed}/${result.trainingPointsTotal}`,
-      `Habilidades: ${recommendedSkills.join(', ') || 'sem recomendação segura'}`
+      `Habilidades pendentes: ${pendingRecommendedSkills.join(', ') || 'nenhuma'}`,
+      `Habilidades adicionadas: ${completedRecommendedSkills.join(', ') || 'nenhuma'}`
     ].join('\n');
     try {
       if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
@@ -517,7 +544,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               <h2>{card.playerName}</h2>
               <div className="result-identity-line">
                 <span className="result-position-badge">{result.bestPosition.label}</span>
-                <span>{card.playstyle ?? 'Estilo não informado'}</span>
+                <span>Ataque: {card.offensivePlaystyle ?? card.playstyle ?? 'Básico'}</span>
+                <span>Defesa: {card.defensivePlaystyle ?? 'Básico'}</span>
                 <em>carta original: {card.mainPositionPt}</em>
               </div>
             </div>
@@ -529,6 +557,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
           <div className="result-key-metrics">
             <article><span>Pontos usados</span><strong>{result.trainingPointsUsed}</strong><small>de {result.trainingPointsTotal}</small></article>
             <article><span>Disponíveis</span><strong>{pointsAvailable}</strong><small>pontos restantes</small></article>
+            <article><span>Habilidades</span><strong>{skillInfo.done}/{skillInfo.total || 5}</strong><small>{skillInfo.total && skillInfo.done >= skillInfo.total ? 'Top 5 concluído' : `${Math.max(0, skillInfo.total - skillInfo.done)} pendente(s)`}</small></article>
             {advancedMode && <article><span>Confiança</span><strong>{card.confidence}%</strong><small>{result.validation?.level === 'blocked' ? 'revisão necessária' : 'análise liberada'}</small></article>}
             {advancedMode && <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>}
           </div>
@@ -705,7 +734,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             onSave={onSaveFicha}
             onShare={() => void shareCurrentResult()}
             onExportImage={() => onExportImage?.('portrait')}
-            onSkillToggle={onSkillToggle}
+            onSkillToggle={requestSkillToggle}
+            onReplaceOwnedSkill={requestOwnedSkillReplacement}
             skillProgress={skillProgress}
           />
           {advancedMode && result.deepCardIntelligence && (
@@ -1273,12 +1303,12 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               {pendingRecommendedSkills.length ? pendingRecommendedSkills.map((skill, index) => {
                 const detail = skillRecommendations.find((item) => item.name === skill);
                 return <div className="bm-simple-skill-item" key={skill}>
-                  <button type="button" className="bm-simple-skill-main" onClick={() => onSkillToggle?.(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>
-                  <button type="button" className="bm-simple-skill-replace" onClick={() => onReplaceOwnedSkill?.(skill)} title="Confirmar que a carta já possui esta habilidade e recalcular uma substituta"><RotateCcw size={14} /> Já possui? Gerar outra</button>
+                  <button type="button" className="bm-simple-skill-main" onClick={() => requestSkillToggle(skill)}><span>{index + 1}</span><div><strong>{skill}</strong><small>{detail?.reason ?? skillReason(skill)}</small></div><em>Marcar como feita</em></button>
+                  <button type="button" className="bm-simple-skill-replace" onClick={() => requestOwnedSkillReplacement(skill)} title="Confirmar que a carta já possui esta habilidade e recalcular uma substituta"><RotateCcw size={14} /> Já possui? Gerar outra</button>
                 </div>;
               }) : recommendedSkills.length ? <div className="bm-skills-complete-message"><strong>✓ Lista concluída</strong><span>Todas as habilidades recomendadas já foram adicionadas.</span></div> : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada para esta carta.</p>}
             </div>
-            {completedRecommendedSkills.length > 0 && <details className="bm-completed-skills-details"><summary>Ver {completedRecommendedSkills.length} já adicionada(s)</summary><div className="bm-simple-skill-list completed-list">{completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => onSkillToggle?.(skill)}><span>✓</span><div><strong>{skill}</strong><small>Toque para voltar à lista pendente.</small></div><em>Desmarcar</em></button>)}</div></details>}
+            {completedRecommendedSkills.length > 0 && <details className="bm-completed-skills-details"><summary>Ver {completedRecommendedSkills.length} já adicionada(s)</summary><div className="bm-simple-skill-list completed-list">{completedRecommendedSkills.map((skill) => <button type="button" key={skill} className="completed" onClick={() => requestSkillToggle(skill)}><span>✓</span><div><strong>{skill}</strong><small>Toque para voltar à lista pendente.</small></div><em>Desmarcar</em></button>)}</div></details>}
           </article>
           <article className="luxury-panel wide-card">
             <p className="kicker">Habilidades que a carta já possui</p>
@@ -1322,12 +1352,12 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
                   <div key={skill} className={completed ? 'skill-check-card completed' : 'skill-check-card'}>
                     <strong>{String(index + 1).padStart(2, '0')} • {skill}</strong>
                     <span>{detail?.reason ?? skillReason(skill)}</span>
-                    <button type="button" onClick={() => onSkillToggle?.(skill)}>
+                    <button type="button" onClick={() => requestSkillToggle(skill)}>
                       {completed ? '✓ Concluída' : 'Marcar como feita'}
                     </button>
                     <div className="correction-actions">
                       <button type="button" onClick={() => onPromoteSkill?.(skill)}><ThumbsUp size={14} /> Priorizar</button>
-                      <button type="button" onClick={() => onReplaceOwnedSkill?.(skill)}><RotateCcw size={14} /> Já possui — gerar outra</button>
+                      <button type="button" onClick={() => requestOwnedSkillReplacement(skill)}><RotateCcw size={14} /> Já possui — gerar outra</button>
                       <button type="button" onClick={() => onRejectSkill?.(skill)}><Ban size={14} /> Não combina</button>
                     </div>
                   </div>
@@ -1800,6 +1830,27 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
         </div>
       )}
 
+      {pendingSkillAction && <div className="bm-dialog-backdrop r121-skill-dialog-backdrop" role="presentation" onMouseDown={() => setPendingSkillAction(null)}>
+        <div className="bm-admin-dialog r121-skill-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="r121-skill-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+          <div className="bm-dialog-heading">
+            <div>
+              <p className="kicker"><Sparkles size={14} /> Habilidades adicionais</p>
+              <h3 id="r121-skill-confirm-title">{pendingSkillAction.kind === 'owned' ? 'A carta já possui esta habilidade?' : 'Você já adicionou esta habilidade?'}</h3>
+            </div>
+          </div>
+          <div className="bm-dialog-content">
+            <div className="r121-skill-dialog-selected"><CheckCircle2 size={20} /><span><small>HABILIDADE</small><strong>{pendingSkillAction.skill}</strong></span></div>
+            <p>{pendingSkillAction.kind === 'owned'
+              ? 'Confirme somente se esta habilidade já existe na própria carta. O BuildMaster vai removê-la das vagas adicionais e recalcular outra opção oficial compatível.'
+              : 'Confirme somente depois de adicionar esta habilidade no eFootball. Ela sairá da lista pendente e aparecerá em “Habilidades adicionadas”.'}</p>
+          </div>
+          <div className="bm-dialog-actions">
+            <button type="button" onClick={() => setPendingSkillAction(null)}>Cancelar</button>
+            <button type="button" className="r121-confirm-skill-action" onClick={confirmPendingSkillAction}><CheckCircle2 size={16} /> Confirmar</button>
+          </div>
+        </div>
+      </div>}
+
       <div className="result-floating-actions result-clean-actions">
         <button className="copy-floating result-primary-action" type="button" onClick={onSaveFicha} disabled={!onSaveFicha} title={!result.validation.canGenerate ? 'Salvar no Cofre como ficha para revisar.' : undefined}><Save size={16} /> {result.validation.canGenerate ? 'Salvar' : 'Salvar para revisar'}</button>
         <button className="copy-floating" type="button" onClick={onRecalculate}><RotateCcw size={16} /> Recalcular</button>
@@ -1819,6 +1870,8 @@ export function ReviewPanel({
   setCardPositionOverride,
   playstyleOverride,
   setPlaystyleOverride,
+  defensivePlaystyleOverride,
+  setDefensivePlaystyleOverride,
   targetPosition,
   setTargetPosition,
   premiumReadings,
@@ -1837,6 +1890,8 @@ export function ReviewPanel({
   setCardPositionOverride: (value: PositionCode | 'AUTO') => void;
   playstyleOverride: string;
   setPlaystyleOverride: (value: string) => void;
+  defensivePlaystyleOverride: string;
+  setDefensivePlaystyleOverride: (value: string) => void;
   targetPosition: PositionCode | 'AUTO';
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
   premiumReadings: PremiumZoneReading[];
@@ -2017,14 +2072,24 @@ export function ReviewPanel({
 
         <article className="luxury-panel review-step-card">
           <div className="review-step-heading"><span>3</span><div><p className="kicker">Estilo detectado</p><h3>Como a carta se movimenta?</h3></div></div>
-          <label className="review-featured-field">
-            <span>Estilo de jogo correto</span>
-            <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
-              <option value="AUTO">Automático / não sei</option>
-              {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-            </select>
-            <small>O estilo altera prioridades, movimentação e habilidades recomendadas.</small>
-          </label>
+          <div className="review-form-grid">
+            <label>
+              <span>Estilo ofensivo correto</span>
+              <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
+                <option value="AUTO">Automático / não sei</option>
+                {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
+              </select>
+              <small>Identidade da carta quando o time está atacando.</small>
+            </label>
+            <label>
+              <span>Estilo defensivo correto</span>
+              <select value={defensivePlaystyleOverride} onChange={(event) => setDefensivePlaystyleOverride(event.target.value)}>
+                <option value="AUTO">Detectar / Básico em carta antiga</option>
+                {defensivePlaystyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
+              </select>
+              <small>Cartas antigas usam Básico na defesa; cartas v6 podem ter um estilo próprio sem a bola.</small>
+            </label>
+          </div>
         </article>
 
         <article className="luxury-panel review-step-card">

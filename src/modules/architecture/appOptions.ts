@@ -17,6 +17,7 @@ export const objectives: Array<{ value: Objective; title: string; hint: string }
 ];
 
 export const playstyleOptions = PLAYSTYLE_OPTIONS;
+export const defensivePlaystyleOptions = ['Básico', 'Pressão no Ataque', ...PLAYSTYLE_OPTIONS] as const;
 
 
 
@@ -50,7 +51,8 @@ export const tacticalStyles: Array<{ value: TacticalStyle; label: string }> = [
   { value: 'CONTRA_ATAQUE', label: 'Contra-ataque normal' },
   { value: 'CONTRA_ATAQUE_RAPIDO', label: 'Contra-ataque rápido' },
   { value: 'POR_FORA', label: 'Por fora' },
-  { value: 'PASSE_LONGO', label: 'Passe longo' }
+  { value: 'PASSE_LONGO', label: 'Passe longo' },
+  { value: 'SOBREPOSICAO', label: 'Sobreposição' }
 ];
 
 export const tacticalStyleName: Record<TacticalStyle, string> = {
@@ -59,7 +61,8 @@ export const tacticalStyleName: Record<TacticalStyle, string> = {
   CONTRA_ATAQUE: 'Contra-ataque normal',
   CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
   POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo'
+  PASSE_LONGO: 'Passe longo',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 export type FormationGuide = {

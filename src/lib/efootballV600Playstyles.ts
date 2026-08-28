@@ -1,13 +1,13 @@
 import { canonicalizePlayerPlaystyle, type CanonicalPlayerPlaystyle } from './efootball2026Playstyles';
 
-export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0-r47-dual-phase' as const;
+export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0-r120-dual-phase-basic-safe' as const;
 
 /**
  * A Konami confirmou publicamente Pressão no Ataque como exemplo de estilo
  * defensivo na v6.0. Nomes adicionais podem ser preservados pelo OCR como
  * provisórios, mas só recebem peso de gameplay após confirmação.
  */
-export const CONFIRMED_V600_DEFENSIVE_PLAYSTYLES = ['Pressão no Ataque'] as const;
+export const CONFIRMED_V600_DEFENSIVE_PLAYSTYLES = ['Básico', 'Pressão no Ataque'] as const;
 export type ConfirmedV600DefensivePlaystyle = CanonicalPlayerPlaystyle | typeof CONFIRMED_V600_DEFENSIVE_PLAYSTYLES[number];
 
 function normalize(value: unknown): string {
@@ -33,6 +33,7 @@ export function canonicalizeV600DefensivePlaystyle(value: unknown): ConfirmedV60
   if (canonicalPlayerStyle) return canonicalPlayerStyle;
   const text = normalize(value);
   if (!text) return null;
+  if (/^(basico|basic|padrao|default)$/.test(text)) return 'Básico';
   if (/pressao no ataque|attacking pressure|front pressure|frontline pressure/.test(text)) return 'Pressão no Ataque';
   return null;
 }
@@ -122,12 +123,14 @@ export function detectV600Playstyles(text: string): V600PlaystyleReading {
   }
 
   const legacy = canonicalizePlayerPlaystyle(text);
-  const defensive = canonicalizeV600DefensivePlaystyle(text);
-  if (legacy || defensive) return {
+  const explicitDefensiveOnly = !legacy ? canonicalizeV600DefensivePlaystyle(text) : null;
+  if (legacy || explicitDefensiveOnly) return {
     offensive: legacy,
-    defensive,
-    defensiveConfirmed: Boolean(defensive),
-    defensiveRaw: defensive,
+    // Cartas antigas exibem um único estilo. Na v6.0 isso não autoriza inferir
+    // o mesmo comportamento na fase sem a bola: o fallback seguro é Básico.
+    defensive: legacy ? 'Básico' : explicitDefensiveOnly,
+    defensiveConfirmed: Boolean(legacy || explicitDefensiveOnly),
+    defensiveRaw: legacy ? null : explicitDefensiveOnly,
     source: 'LEGACY_SINGLE'
   };
   return { offensive: null, defensive: null, defensiveConfirmed: false, defensiveRaw: null, source: 'NONE' };
@@ -149,6 +152,7 @@ export function defensivePhaseTrainingBias(value: unknown): DefensivePhaseTraini
   const style = canonicalizeV600DefensivePlaystyle(value);
   if (!style) return {};
   switch (style) {
+    case 'Básico': return {};
     case 'Pressão no Ataque': return { defending: .25, dexterity: .18, lowerBodyStrength: .22 };
     case 'Destruidor': return { defending: .34, lowerBodyStrength: .23, dexterity: .12, aerialStrength: .10 };
     case 'Defensor Criativo': return { defending: .25, passing: .18, lowerBodyStrength: .10, dexterity: .08 };

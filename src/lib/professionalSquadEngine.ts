@@ -17,7 +17,8 @@ const STYLE_LABELS: Record<TacticalStyle, string> = {
   CONTRA_ATAQUE: 'Contra-ataque normal',
   CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
   POR_FORA: 'Posse de bola',
-  PASSE_LONGO: 'Contra-ataque normal'
+  PASSE_LONGO: 'Contra-ataque normal',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 type LineKey = 'ataque' | 'meio' | 'defesa' | 'goleiro';

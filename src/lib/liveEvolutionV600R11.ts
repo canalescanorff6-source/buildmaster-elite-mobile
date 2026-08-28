@@ -28,7 +28,7 @@ export function buildLiveEvolutionV600R11(r:AnalysisResult):LiveEvolutionV600R11
  'Dado novo observado não altera pesos da ficha até confirmação; isso evita ensinar meta falso ao motor.',
  'Formação Fluída e estilo do jogador são tratados separadamente: mudar a posição entre fases não troca automaticamente o estilo da carta.',
  'Técnicos v6.0 podem ter duas Combinações; cada uma deve validar posição e estilo dos dois jogadores envolvidos.',
- 'Todos por Um é tratado como estilo coletivo próprio, com passe curto, apoio próximo e compactação no lado da bola.'
+ 'Sobreposição é tratado como estilo coletivo próprio, com passe curto, apoio próximo e compactação no lado da bola.'
  ]};
 }
 export function applyLiveEvolutionV600R11(r:AnalysisResult):AnalysisResult{

@@ -29,10 +29,11 @@ export type AssistedLineupReport = {
 };
 
 const FORMATIONS: Exclude<TacticalFormation, 'AUTO'>[] = ['4-2-2-2','4-3-3','4-1-2-3','4-2-1-3','4-2-3-1','4-3-1-2','4-1-3-2','4-4-2','4-1-4-1','3-2-4-1','3-4-3','3-5-2','5-3-2','5-2-3'];
-const STYLES: Exclude<TacticalStyle, 'AUTO'>[] = ['POSSE_DE_BOLA','CONTRA_ATAQUE','CONTRA_ATAQUE_RAPIDO','POR_FORA','PASSE_LONGO'];
+const STYLES: Exclude<TacticalStyle, 'AUTO'>[] = ['POSSE_DE_BOLA','CONTRA_ATAQUE','CONTRA_ATAQUE_RAPIDO','POR_FORA','PASSE_LONGO','SOBREPOSICAO'];
 
 const styleLabel: Record<TacticalStyle, string> = {
-  AUTO: 'Automático inteligente', POSSE_DE_BOLA: 'Posse de bola', CONTRA_ATAQUE: 'Contra-ataque longo', CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido', POR_FORA: 'Por fora', PASSE_LONGO: 'Passe longo'
+  AUTO: 'Automático inteligente', POSSE_DE_BOLA: 'Posse de bola', CONTRA_ATAQUE: 'Contra-ataque longo', CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido', POR_FORA: 'Por fora', PASSE_LONGO: 'Passe longo',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 function uniqueKey(formation: TacticalFormation, style: TacticalStyle) {

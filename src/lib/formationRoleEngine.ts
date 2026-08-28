@@ -624,7 +624,7 @@ export function styleAdviceForFormation(formation: FormationBlueprint, style: Ta
 export function styleLabel(style: TacticalStyle) {
   const labels: Record<TacticalStyle,string> = {
     AUTO:'Posse de bola', POSSE_DE_BOLA:'Posse de bola', CONTRA_ATAQUE:'Contra-ataque normal',
-    CONTRA_ATAQUE_RAPIDO:'Contra-ataque rápido', POR_FORA:'Posse de bola', PASSE_LONGO:'Contra-ataque normal'
+    CONTRA_ATAQUE_RAPIDO:'Contra-ataque rápido', POR_FORA:'Posse de bola', PASSE_LONGO:'Contra-ataque normal', SOBREPOSICAO:'Sobreposição'
   };
   return labels[style];
 }

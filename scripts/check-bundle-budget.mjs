@@ -2,13 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const built = process.argv.includes('--built');
-// A v40.80 Meta Vivo 2027 acrescentou motores separados de catálogo, defesa,
-// formação e ambiente. O teto de fonte sobe para 5 MiB; os limites de módulo
-// individual e do bundle compilado continuam protegendo crescimento anormal.
+// A linha r123 ampliou o Clean Slate com confiança, saturação e laboratório A/B.
+// O baseline de fonte agora passa ligeiramente de 5 MiB; elevamos somente o teto
+// agregado para 5,25 MiB, mantendo alerta em 90%, teto por módulo e limites do
+// bundle compilado. Isso registra crescimento legítimo sem desativar a guarda.
 const limits = {
   totalJs: 15 * 1024 * 1024,
   singleJs: 5 * 1024 * 1024,
-  sourceTs: 5 * 1024 * 1024,
+  sourceTs: Math.floor(5.25 * 1024 * 1024),
   singleSourceTs: 400 * 1024,
 };
 function walk(root, matcher) {

@@ -41,7 +41,7 @@ export function normalizeObjective(value: unknown): Objective {
 }
 
 export type TacticalFormation = '4-2-2-2' | '4-3-3' | '4-1-2-3' | '4-2-1-3' | '4-2-3-1' | '4-3-1-2' | '4-1-3-2' | '4-4-2' | '4-1-4-1' | '3-2-4-1' | '3-4-3' | '3-5-2' | '5-3-2' | '5-2-3' | 'AUTO';
-export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'AUTO';
+export type TacticalStyle = 'POSSE_DE_BOLA' | 'CONTRA_ATAQUE' | 'CONTRA_ATAQUE_RAPIDO' | 'POR_FORA' | 'PASSE_LONGO' | 'SOBREPOSICAO' | 'AUTO';
 export type GameplayMode = 'RANKED' | 'UNIVERSAL' | 'OFFLINE';
 export type ConnectionProfile = 'STABLE' | 'VARIABLE' | 'HIGH_DELAY';
 export type ControlProfile = 'AUTO' | 'BALANCED' | 'PASSING' | 'DRIBBLE' | 'DIRECT';

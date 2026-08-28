@@ -43,7 +43,7 @@ import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
 import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
-import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, defensivePlaystyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
@@ -110,6 +110,7 @@ import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
 import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
 import { readVaultDeletionPreferencesV4080R12, writeVaultDeletionPreferencesV4080R12 } from '@/lib/vaultDeletionPreferencesV4080R12';
 import { HISTORY_KEY, HISTORY_LIMIT, LEARNING_KEY, appendSavedEvent, buildDashboardStats, emptyManualFields, ensureSkillProgress, findLearnedCard, loadHistoryStoreForStartup, memoryKey, mergeHistoryLists, normalizeHistoryList, persistHistoryStore, saveLearnedCard, resultHistoryKey, isRenderableAnalysisResult, savedPositionGroup, savedStatusLabel, skillProgressInfo, type ManualFields, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
+import { deriveSkillVaultStatusR121, reconcileSkillProgressR121 } from '@/modules/vault/skillWorkflowR121';
 export { migrateAnalysisResult, normalizeSavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import { enqueueOcrFile, listOcrQueue, queueJobAsFile, removeOcrQueueJob, updateOcrQueueJob, type OcrQueueJob } from '@/modules/card-reader/ocrQueue';
 import { mergeOcrTexts, preprocessImage } from '@/modules/card-reader/imageProcessing';
@@ -163,6 +164,7 @@ const IDENTITY_THEME_MIGRATION_KEY = 'buildmaster_v35_identity_theme_migrated';
   targetPosition: PositionCode | 'AUTO';
   cardPositionOverride: PositionCode | 'AUTO';
   playstyleOverride: string;
+  defensivePlaystyleOverride: string;
   readingMode: ReadingMode;
   formation: TacticalFormation;
   teamStyle: TacticalStyle;
@@ -258,6 +260,7 @@ export function CardVisionApp() {
   const [targetPosition, setTargetPosition] = useState<PositionCode | 'AUTO'>('AUTO');
   const [cardPositionOverride, setCardPositionOverride] = useState<PositionCode | 'AUTO'>('AUTO');
   const [playstyleOverride, setPlaystyleOverride] = useState<string>('AUTO');
+  const [defensivePlaystyleOverride, setDefensivePlaystyleOverride] = useState<string>('AUTO');
   const [readingMode, setReadingMode] = useState<ReadingMode>('precision');
   const [readerCaptureMode, setReaderCaptureMode] = useState<ReaderCaptureMode>('single');
   const [ocrZones, setOcrZones] = useState<OcrZone[]>(DEFAULT_OCR_ZONES);
@@ -968,6 +971,7 @@ export function CardVisionApp() {
           if (snapshot.targetPosition) setTargetPosition(snapshot.targetPosition);
           if (snapshot.cardPositionOverride) setCardPositionOverride(snapshot.cardPositionOverride);
           if (typeof snapshot.playstyleOverride === 'string') setPlaystyleOverride(snapshot.playstyleOverride);
+          if (typeof snapshot.defensivePlaystyleOverride === 'string') setDefensivePlaystyleOverride(snapshot.defensivePlaystyleOverride);
           if (snapshot.readingMode) setReadingMode(snapshot.readingMode);
           if (snapshot.formation) setFormation(snapshot.formation);
           if (snapshot.teamStyle) setTeamStyle(snapshot.teamStyle);
@@ -1058,6 +1062,7 @@ export function CardVisionApp() {
           targetPosition,
           cardPositionOverride,
           playstyleOverride,
+          defensivePlaystyleOverride,
           readingMode,
           formation,
           teamStyle,
@@ -1079,7 +1084,7 @@ export function CardVisionApp() {
       }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId, sessionHydrated, startupSafeMode]);
+  }, [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride, playstyleOverride, defensivePlaystyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode, connectionProfile, controlProfile, result, draftResult, manualFields, manualMode, activeHistoryId, sessionHydrated, startupSafeMode]);
   function completeOnboarding(profile: OnboardingProfile) {
     setOnboardingProfile(profile);
     setAdvancedMode(profile.experienceMode === 'advanced');
@@ -1389,18 +1394,22 @@ export function CardVisionApp() {
   function toggleSavedSkill(skill: string) {
     if (!result) return;
     const key = resultHistoryKey(result), now = new Date().toLocaleString('pt-BR');
+    const markingAsDone = !Boolean(activeSavedAnalysis?.skillProgress?.[skill]);
     setHistory((current) => {
       const existing = current.find((entry) => entry.id === activeHistoryId || entry.saveKey === key);
       const progress = ensureSkillProgress(existing?.skillProgress, result.recommendedSkills);
-      progress[skill] = !progress[skill];
+      progress[skill] = markingAsDone;
       const base: SavedAnalysis = existing ?? { id: createStableId('ficha'), saveKey: key, savedAt: now, updatedAt: now, rawText, playerImage: playerCardImage, fullPreview: preview?.startsWith('data:') ? preview : null, result, skillProgress: progress, notes: '', favorite: false, personalTags: [], tacticalRoleNote: '', changeLog: [] };
-      const item = appendSavedEvent({ ...base, updatedAt: now, skillProgress: progress }, progress[skill] ? 'habilidade concluída' : 'habilidade pendente', skill);
+      const statusTag = deriveSkillVaultStatusR121(result.recommendedSkills, progress, base.statusTag);
+      const item = appendSavedEvent({ ...base, result, updatedAt: now, skillProgress: progress, statusTag }, markingAsDone ? 'habilidade concluída' : 'habilidade pendente', skill);
       setActiveHistoryId(item.id);
       const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== key)].slice(0, HISTORY_LIMIT);
       void persistHistoryStore(next); void pushCloudHistory(next, true);
       return next;
     });
-    setStatus(`Habilidade ${skill} marcada como ${activeSavedAnalysis?.skillProgress?.[skill] ? 'pendente' : 'já adicionada'}.`);
+    setStatus(markingAsDone
+      ? `Habilidade ${skill} confirmada como adicionada. Ela foi movida para “Habilidades adicionadas”.`
+      : `Habilidade ${skill} voltou para a lista pendente.`);
   }
   function readJsonStorage(key: string, fallback: unknown = null) {
     try {
@@ -2258,7 +2267,7 @@ export function CardVisionApp() {
   function textWithManualLocks(text: string, confirmed = false) {
     const learned = findLearnedCard(text, fileName);
     const cleaned = stripManualBlock(text)
-      .replace(/^(POSIÇÃO PRINCIPAL|POSICAO PRINCIPAL|ESTILO DE JOGO|NOME|NOME DO JOGADOR|NÍVEL MÁXIMO|NIVEL MAXIMO|PONTOS TOTAIS|HABILIDADES JÁ POSSUI|HABILIDADES JA POSSUI|HABILIDADES DO JOGADOR|HABILIDADES NATIVAS)\s*[:=\-].*$/gim, '')
+      .replace(/^(POSIÇÃO PRINCIPAL|POSICAO PRINCIPAL|ESTILO DE JOGO OFENSIVO|ESTILO DE JOGO DEFENSIVO|ESTILO DE JOGO|NOME|NOME DO JOGADOR|NÍVEL MÁXIMO|NIVEL MAXIMO|PONTOS TOTAIS|HABILIDADES JÁ POSSUI|HABILIDADES JA POSSUI|HABILIDADES DO JOGADOR|HABILIDADES NATIVAS)\s*[:=\-].*$/gim, '')
       .replace(/^\s+/, '');
     const locks: string[] = ['[AJUSTES MANUAIS]'];
     if (confirmed) locks.push('CONFIRMAÇÃO MANUAL: SIM');
@@ -2268,7 +2277,8 @@ export function CardVisionApp() {
     const learnedPoints = learned?.trainingPointsTotal ?? '';
     if (manualFields.playerName.trim() || learnedName) locks.push(`NOME DO JOGADOR: ${manualFields.playerName.trim() || learnedName}`);
     if (cardPositionOverride !== 'AUTO' || learnedPosition !== 'AUTO') locks.push(`POSIÇÃO PRINCIPAL: ${cardPositionOverride !== 'AUTO' ? cardPositionOverride : learnedPosition}`);
-    if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
+    if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO OFENSIVO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
+    if (defensivePlaystyleOverride !== 'AUTO') locks.push(`ESTILO DE JOGO DEFENSIVO: ${defensivePlaystyleOverride}`);
     if (manualFields.level.trim()) locks.push(`NÍVEL MÁXIMO: ${manualFields.level.trim()}`);
     if (manualFields.trainingPointsTotal.trim() || learnedPoints) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim() || learnedPoints}`);
     const discoveredNewSkills = (singlePrintSession?.detailedReading.skillCandidates ?? []).map((item) => item.value);
@@ -2310,7 +2320,8 @@ export function CardVisionApp() {
       ])))
     });
     if (cardPositionOverride === 'AUTO') setCardPositionOverride(nextResult.parsed.mainPosition);
-    if (playstyleOverride === 'AUTO' && nextResult.parsed.playstyle) setPlaystyleOverride(nextResult.parsed.playstyle);
+    if (playstyleOverride === 'AUTO' && (nextResult.parsed.offensivePlaystyle || nextResult.parsed.playstyle)) setPlaystyleOverride(nextResult.parsed.offensivePlaystyle ?? nextResult.parsed.playstyle ?? 'AUTO');
+    if (defensivePlaystyleOverride === 'AUTO' && nextResult.parsed.defensivePlaystyle) setDefensivePlaystyleOverride(nextResult.parsed.defensivePlaystyle);
   }
   async function refreshOcrQueue() {
     setOcrQueue(await listOcrQueue());
@@ -3049,11 +3060,27 @@ ${reading.text}`)) : fullPassText;
       ...current,
       nativeSkills: canonicalizeSkillList([...current.nativeSkills, replacement.removedSkill])
     }));
-    if (result) setResult(replacement.result);
-    else setDraftResult(replacement.result);
+    if (result) {
+      setResult(replacement.result);
+      const previousKey = resultHistoryKey(base);
+      const nextKey = resultHistoryKey(replacement.result);
+      setHistory((current) => {
+        const existing = current.find((entry) => entry.id === activeHistoryId || entry.saveKey === previousKey);
+        if (!existing) return current;
+        const inherited = ensureSkillProgress(existing.skillProgress, replacement.result.recommendedSkills);
+        const progress = reconcileSkillProgressR121(replacement.result.recommendedSkills, inherited) as SavedAnalysis['skillProgress'];
+        const statusTag = deriveSkillVaultStatusR121(replacement.result.recommendedSkills, progress, existing.statusTag);
+        const item = appendSavedEvent({ ...existing, saveKey: nextKey, result: replacement.result, skillProgress: progress, statusTag }, 'habilidade já possuída confirmada', replacement.removedSkill);
+        setActiveHistoryId(item.id);
+        const next = [item, ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== previousKey && entry.saveKey !== nextKey)].slice(0, HISTORY_LIMIT);
+        void persistHistoryStore(next);
+        void pushCloudHistory(next, true);
+        return next;
+      });
+    } else setDraftResult(replacement.result);
     const replacementText = replacement.replacementSkill
-      ? `${replacement.removedSkill} foi retirada e ${replacement.replacementSkill} entrou após nova análise completa da carta.`
-      : `${replacement.removedSkill} foi retirada. O app não encontrou outra opção oficial segura para preencher a vaga sem repetir ou fugir da função.`;
+      ? `${replacement.removedSkill} foi confirmada como habilidade da carta e ${replacement.replacementSkill} entrou após nova análise completa.`
+      : `${replacement.removedSkill} foi confirmada como habilidade da carta. O app não encontrou outra opção oficial segura para preencher a vaga sem repetir ou fugir da função.`;
     setStatus(replacementText);
   }
   function rejectSkillLocally(skill: string) {
@@ -3092,7 +3119,7 @@ ${reading.text}`)) : fullPassText;
   }
   const currentPanelResult = result ?? draftResult; const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
   const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile || preview) : manualMode;
-  const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
+  const creationConfigurationReady = cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || defensivePlaystyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal);
   const creationStage = result ? 4 : draftResult ? 3 : creationSourceReady && creationConfigurationReady ? 2 : 1;
   const creationProgress = [20, 50, 75, 100][creationStage - 1];
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
@@ -3104,6 +3131,7 @@ ${reading.text}`)) : fullPassText;
     ? 'Ler da carta'
     : POSITION_LABELS.find((item) => item.code === cardPositionOverride)?.label ?? cardPositionOverride;
   const creationStyleLabel = playstyleOverride === 'AUTO' ? 'Confirmar na revisão' : playstyleOverride;
+  const creationDefensiveStyleLabel = defensivePlaystyleOverride === 'AUTO' ? 'Automático / Básico se a carta for antiga' : defensivePlaystyleOverride;
   const creationPointsValue = Number(
     manualFields.trainingPointsTotal
       || draftResult?.trainingPointsTotal
@@ -3114,7 +3142,8 @@ ${reading.text}`)) : fullPassText;
     { label: mainSection === 'leitor' ? 'Print da carta' : 'Entrada manual', ready: creationSourceReady },
     { label: 'Posição-alvo', ready: targetPosition !== 'AUTO' },
     { label: 'Posição original', ready: cardPositionOverride !== 'AUTO' },
-    { label: 'Estilo', ready: playstyleOverride !== 'AUTO' },
+    { label: 'Estilo ofensivo', ready: playstyleOverride !== 'AUTO' },
+    { label: 'Estilo defensivo', ready: defensivePlaystyleOverride !== 'AUTO' },
     { label: 'Pontos', ready: creationPointsValue > 0 }
   ];
   const creationReadinessCount = creationReadinessSignals.filter((item) => item.ready).length;
@@ -3666,12 +3695,20 @@ ${reading.text}`)) : fullPassText;
                   <small>{creationOriginalLabel}</small>
                 </label>
                 <label className="creation-field-card">
-                  <span>Estilo do jogador</span>
+                  <span>Estilo ofensivo</span>
                   <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
                     <option value="AUTO">Deixar o aplicativo identificar</option>
                     {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
                   </select>
                   <small>{creationStyleLabel}</small>
+                </label>
+                <label className="creation-field-card">
+                  <span>Estilo defensivo</span>
+                  <select value={defensivePlaystyleOverride} onChange={(event) => setDefensivePlaystyleOverride(event.target.value)}>
+                    <option value="AUTO">Detectar / usar Básico em carta antiga</option>
+                    {defensivePlaystyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
+                  </select>
+                  <small>{creationDefensiveStyleLabel}</small>
                 </label>
               </div>
               <details className="creation-advanced-details creation-tactical-details" open>
@@ -4217,6 +4254,8 @@ ${reading.text}`)) : fullPassText;
               setCardPositionOverride={setCardPositionOverride}
               playstyleOverride={playstyleOverride}
               setPlaystyleOverride={setPlaystyleOverride}
+              defensivePlaystyleOverride={defensivePlaystyleOverride}
+              setDefensivePlaystyleOverride={setDefensivePlaystyleOverride}
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
               premiumReadings={premiumReadings}
@@ -4240,6 +4279,8 @@ ${reading.text}`)) : fullPassText;
               setCardPositionOverride={setCardPositionOverride}
               playstyleOverride={playstyleOverride}
               setPlaystyleOverride={setPlaystyleOverride}
+              defensivePlaystyleOverride={defensivePlaystyleOverride}
+              setDefensivePlaystyleOverride={setDefensivePlaystyleOverride}
               targetPosition={targetPosition}
               setTargetPosition={setTargetPosition}
               premiumReadings={premiumReadings}

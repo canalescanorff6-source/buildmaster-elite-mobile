@@ -283,7 +283,7 @@ function weakAttributeGroups(attributes: Required<Attributes>): TrainingKey[] {
 function contextStyleLabel(style: TacticalProfile['style']): string {
   const labels: Record<TacticalProfile['style'], string> = {
     POSSE_DE_BOLA: 'Posse de Bola', CONTRA_ATAQUE: 'Contra-Ataque', CONTRA_ATAQUE_RAPIDO: 'Contra-Ataque Rápido',
-    POR_FORA: 'Por Fora', PASSE_LONGO: 'Passe Longo', AUTO: 'Automático'
+    POR_FORA: 'Por Fora', PASSE_LONGO: 'Passe Longo', SOBREPOSICAO: 'Sobreposição', AUTO: 'Automático'
   };
   return labels[style];
 }

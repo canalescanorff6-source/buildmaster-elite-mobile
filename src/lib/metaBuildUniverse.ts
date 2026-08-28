@@ -238,7 +238,7 @@ function riskText(plan:TrainingPlan,weights:Record<TrainingKey,number>,keys:Trai
   const overs=[...keys].filter(key=>(plan[key]??0)>=13).map(key=>`${LABELS[key]} está muito especializado e reduz flexibilidade.`);
   return [...risks,...overs].slice(0,3);
 }
-function styleLabel(style:MetaBuildEntry['style']){return ({CONTRA_ATAQUE_RAPIDO:'Contra-Ataque Rápido',POSSE_DE_BOLA:'Posse de Bola',CONTRA_ATAQUE:'Contra-Ataque',POR_FORA:'Por Fora',PASSE_LONGO:'Passe Longo',HÍBRIDO_SEGURO:'Híbrido seguro'} as const)[style];}
+function styleLabel(style:MetaBuildEntry['style']){return ({CONTRA_ATAQUE_RAPIDO:'Contra-Ataque Rápido',POSSE_DE_BOLA:'Posse de Bola',CONTRA_ATAQUE:'Contra-Ataque',POR_FORA:'Por Fora',PASSE_LONGO:'Passe Longo',SOBREPOSICAO:'Sobreposição',HÍBRIDO_SEGURO:'Híbrido seguro'} as const)[style];}
 
 function officialBasisFor(category:MetaBuildCategory,position:PositionCode):string[]{
   const items=['Drible em velocidade e Sharp Touch mais responsivos na base de gameplay v5.4.0.','Defesa depende mais de orientação corporal, Match-up e reação correta ao espaço.'];

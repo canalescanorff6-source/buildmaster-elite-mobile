@@ -13,7 +13,8 @@ const styleLabel: Record<TacticalStyle, string> = {
   CONTRA_ATAQUE: 'Contra-ataque normal',
   CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
   POR_FORA: 'Posse de bola',
-  PASSE_LONGO: 'Contra-ataque normal'
+  PASSE_LONGO: 'Contra-ataque normal',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 export function ProfessionalSquadPanel({ report, onApplyFormation }: { report: ProfessionalSquadReport; onApplyFormation?: (formation: TacticalFormation) => void }) {

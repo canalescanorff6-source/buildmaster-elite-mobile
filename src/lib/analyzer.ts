@@ -3067,7 +3067,7 @@ function buildTeamMapAnalysis(parsed: ParsedCard, selected: PositionCode, object
   const family = positionFamily(selected);
   const scores = buildSectorScores(selected, a, pri, objective, profile);
   const styleName: Record<TacticalStyle, string> = {
-    AUTO: 'Automático inteligente', POSSE_DE_BOLA: 'Posse de bola', CONTRA_ATAQUE: 'Contra-ataque normal', CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido', POR_FORA: 'Por fora', PASSE_LONGO: 'Passe longo'
+    AUTO: 'Automático inteligente', POSSE_DE_BOLA: 'Posse de bola', CONTRA_ATAQUE: 'Contra-ataque normal', CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido', POR_FORA: 'Por fora', PASSE_LONGO: 'Passe longo', SOBREPOSICAO: 'Sobreposição'
   };
 
   let defensiveJob = 'Manter posição, proteger zona próxima e evitar sair no bote sem cobertura.';

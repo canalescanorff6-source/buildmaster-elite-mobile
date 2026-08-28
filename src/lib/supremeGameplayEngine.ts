@@ -63,7 +63,8 @@ const STYLE_WEIGHTS: Record<TacticalStyle, Partial<Record<TrainingKey, number>>>
   CONTRA_ATAQUE_RAPIDO: { dexterity: 9.3, lowerBodyStrength: 8.5, shooting: 7.6, passing: 5.6, defending: 4.4 },
   CONTRA_ATAQUE: { defending: 7.4, lowerBodyStrength: 7.8, passing: 7.1, aerialStrength: 6.4, shooting: 5.3 },
   POR_FORA: { passing: 8.3, lowerBodyStrength: 7.7, dribbling: 7.2, aerialStrength: 6.2, dexterity: 5.5 },
-  PASSE_LONGO: { passing: 8.7, aerialStrength: 8.2, lowerBodyStrength: 7.4, shooting: 5.4, defending: 5.2 }
+  PASSE_LONGO: { passing: 8.7, aerialStrength: 8.2, lowerBodyStrength: 7.4, shooting: 5.4, defending: 5.2 },
+  SOBREPOSICAO: { passing: 8.8, dribbling: 7.4, lowerBodyStrength: 7.1, defending: 6.8, dexterity: 6.3 }
 };
 
 type Dimensions = SupremeGameplayAnalysis['dimensions'];

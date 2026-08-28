@@ -156,7 +156,8 @@ export function buildOpponentPlans(formation: TacticalFormation, style: Tactical
     CONTRA_ATAQUE: 'contra-ataque normal',
     CONTRA_ATAQUE_RAPIDO: 'contra-ataque rápido',
     POR_FORA: 'jogo por fora',
-    PASSE_LONGO: 'passe longo'
+    PASSE_LONGO: 'passe longo',
+    SOBREPOSICAO: 'sobreposição'
   };
   return [
     {
