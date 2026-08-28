@@ -210,7 +210,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = {
     ...current,
     recommendationExplanation: [
-      'Clean Slate r119: ficha, Top 5 e Ímpeto são recalculados do zero a partir do snapshot cru da carta.',
+      'Clean Slate r123: ficha, Top 5 e Ímpeto são recalculados do zero a partir do snapshot cru da carta; confiança, saturação e A/B permanecem diagnósticos do mesmo motor.',
       'Motores v38/v39/v40/r70/r107/r108/r109 permanecem somente para auditoria e não entram no caminho crítico do Android.',
       'Overall, ficha anterior e regras floor/peak/ceiling não participam da decisão final.',
       ...current.recommendationExplanation
@@ -219,5 +219,6 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // BM_R119_CLEAN_SLATE_SINGLE_WRITER: único escritor final de ficha + Top 5 + Ímpeto.
   // BM_R119_RAW_SNAPSHOT_GUARD: snapshot da carta é capturado antes de qualquer motor legado.
   // BM_R119_FAST_ANDROID_PATH: motores históricos não executam no browser/Android por padrão.
+  // BM_R123_ONLINE_SINGLE_WRITER: o mesmo Clean Slate sela ficha, Top 5 e Ímpeto; confiança/saturação/A-B não criam autoridade paralela.
   return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
 }

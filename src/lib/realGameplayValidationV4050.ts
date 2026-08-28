@@ -178,6 +178,17 @@ function weightedStats(items: Array<{ value: number; weight: number }>) {
 }
 
 function priorForMode(result: AnalysisResult, mode: MatchValidationMode) {
+  const cleanSlate = (result as AnalysisResult & {
+    cleanSlate2027R119?: {
+      onlinePerformance?: { rankedScore?: number; friendsScore?: number; matchConsistency?: number };
+    };
+  }).cleanSlate2027R119;
+  if (cleanSlate?.onlinePerformance) {
+    if (mode === 'ranked') return Number(cleanSlate.onlinePerformance.rankedScore ?? 70);
+    if (mode === 'friendly') return Number(cleanSlate.onlinePerformance.friendsScore ?? 70);
+    if (mode === 'events') return Number(cleanSlate.onlinePerformance.matchConsistency ?? cleanSlate.onlinePerformance.rankedScore ?? 70);
+    return Number(cleanSlate.onlinePerformance.matchConsistency ?? 70);
+  }
   const precision = result.maximumPerformanceV4040;
   if (!precision) return 70;
   if (mode === 'ranked') return precision.contextScores.ranked;
@@ -187,6 +198,22 @@ function priorForMode(result: AnalysisResult, mode: MatchValidationMode) {
 }
 
 function primaryAlternatives(result: AnalysisResult) {
+  const cleanSlate = (result as AnalysisResult & {
+    cleanSlate2027R119?: {
+      competitiveLab?: {
+        arms?: Array<{ id:string; label:string; rank:1|2; score:number; training:AnalysisResult['training'] }>;
+      };
+    };
+  }).cleanSlate2027R119;
+  if (cleanSlate?.competitiveLab?.arms?.length) {
+    return cleanSlate.competitiveLab.arms.slice(0, 2).map((item) => ({
+      id: item.id,
+      label: item.label,
+      rank: item.rank,
+      prior: item.score,
+      training: item.training
+    }));
+  }
   const precision = result.maximumPerformanceV4040;
   if (precision?.alternatives?.length) return precision.alternatives.slice(0, 3).map((item, index) => ({
     id: item.id,
@@ -293,7 +320,7 @@ export function buildRealGameplayValidationV4050(result: AnalysisResult, allReco
   const margin = leader && runnerUp ? round(leader.posteriorScore - runnerUp.posteriorScore) : 0;
   const comparable = Boolean(leader && runnerUp && leader.rawMatches >= REAL_GAMEPLAY_VALIDATION_V4050_MIN_MATCHES_PER_ARM && runnerUp.rawMatches >= REAL_GAMEPLAY_VALIDATION_V4050_MIN_MATCHES_PER_ARM && leader.effectiveMatches >= 3.2 && runnerUp.effectiveMatches >= 3.2);
   const statisticallySeparated = Boolean(comparable && leader && runnerUp && leader.lowerBound > runnerUp.upperBound + .4 && margin >= 3);
-  const currentId = result.maximumPerformanceV4040?.alternatives?.[0]?.id ?? arms.find((arm) => arm.rank === 1)?.id ?? 'CURRENT';
+  const currentId = primaryAlternatives(result).find((item) => item.rank === 1)?.id ?? 'CURRENT';
   const leaderIsCurrent = leader?.id === currentId;
   let action: ValidationAction = 'COLETAR';
   let verifiedWinnerId: string | null = null;
@@ -365,7 +392,7 @@ export function buildRealGameplayValidationV4050(result: AnalysisResult, allReco
       'Partidas com delay alto, poucos minutos ou pouca evidência objetiva recebem peso menor.',
       `Uma troca só pode ser promovida após pelo menos ${REAL_GAMEPLAY_VALIDATION_V4050_MIN_MATCHES_PER_ARM} partidas por braço e separação estatística entre as opções.`,
       'O histórico é preso à mesma carta e à mesma posição para não misturar versões ou funções diferentes.',
-      'O motor recomenda a promoção, mas não gasta pontos, GP, itens ou reset de progressão automaticamente.'
+      'Na r123, o laboratório Clean Slate é somente leitura: mesmo um vencedor A/B não sobrescreve automaticamente ficha, Top 5 ou Ímpeto.'
     ],
     guarantees: {
       singleMatchNeverChangesBuild: true,

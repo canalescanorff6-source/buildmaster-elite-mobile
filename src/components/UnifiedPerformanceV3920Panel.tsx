@@ -26,6 +26,7 @@ import {
   type TrainingProgressionKeyR106
 } from '@/components/result/TrainingProgressionIconR106';
 import { OfficialSkillIconR119 } from '@/components/result/OfficialSkillIconR119';
+import { buildSkillWorkflowStateR121 } from '@/modules/vault/skillWorkflowR121';
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
@@ -56,6 +57,73 @@ function impetoVisualStatus(decision: CleanSlate2027R119['impetoDecision']) {
   return { className: 'blocked', label: 'Nenhum candidato seguro' };
 }
 
+
+function SkillWorkflowR121({
+  skills,
+  progress,
+  description,
+  onToggle,
+  onReplaceOwned
+}: {
+  skills: string[];
+  progress?: Record<string, boolean>;
+  description: (skill: string) => string;
+  onToggle?: (skill: string) => void;
+  onReplaceOwned?: (skill: string) => void;
+}) {
+  const workflow = buildSkillWorkflowStateR121(skills, progress);
+  const { pending, completed, total, done, remaining, percent } = workflow;
+
+  return <div className="r121-skill-workflow">
+    <div className="r121-skill-progress-head">
+      <span><strong>{done}/{total || 5} adicionadas</strong><small>{remaining ? `Faltam ${remaining}` : total ? 'Top 5 concluído' : 'Aguardando recomendações'}</small></span>
+      <b>{percent}%</b>
+    </div>
+    <div className="r121-skill-progress-track" role="progressbar" aria-label="Progresso das habilidades adicionais" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><span style={{ width: `${percent}%` }} /></div>
+
+    <section className="r121-skill-section">
+      <div className="r121-skill-section-title"><strong>Habilidades para adicionar</strong><small>Toque em uma habilidade e confirme somente depois que ela estiver aplicada no jogo.</small></div>
+      <div className="r121-skill-pending-list">
+        {pending.map((skill) => {
+          const slot = Math.max(1, skills.indexOf(skill) + 1);
+          return <div className="r121-skill-pending-item" key={skill}>
+            <button type="button" className="r121-skill-primary" onClick={() => onToggle?.(skill)} disabled={!onToggle}>
+              <OfficialSkillIconR119 skill={skill} />
+              <span><small>ADICIONAL {slot}</small><strong>{skill}</strong><em>{description(skill)}</em></span>
+              <b>Confirmar</b>
+            </button>
+            {onReplaceOwned && <button type="button" className="r121-skill-owned" onClick={() => onReplaceOwned(skill)}><Sparkles size={14} /> A carta já possui? Gerar outra</button>}
+          </div>;
+        })}
+        {!pending.length && total > 0 && <div className="r121-skills-complete"><CheckCircle2 size={21} /><span><strong>Top 5 concluído</strong><small>Todas as habilidades recomendadas foram marcadas como adicionadas.</small></span></div>}
+        {!total && <p>Nenhuma habilidade adicional segura disponível com a leitura atual.</p>}
+      </div>
+    </section>
+
+    <section className="r121-skill-section completed">
+      <div className="r121-skill-section-title"><strong>Habilidades adicionadas</strong><small>Ficam separadas da fila pendente. Toque para devolver uma habilidade à lista se marcou por engano.</small></div>
+      <div className="r121-skill-added-list">
+        {completed.map((skill) => <button type="button" key={skill} onClick={() => onToggle?.(skill)} disabled={!onToggle}><CheckCircle2 size={17} /><span><strong>{skill}</strong><small>Pronta • tocar para reabrir</small></span></button>)}
+        {!completed.length && <span className="r121-empty-added">Nenhuma habilidade marcada como adicionada ainda.</span>}
+      </div>
+    </section>
+  </div>;
+}
+
+function teamStyleLabel(value: unknown): string {
+  const key = String(value ?? '').toUpperCase();
+  const labels: Record<string, string> = {
+    AUTO: 'Automático inteligente',
+    POSSE_DE_BOLA: 'Posse de bola',
+    CONTRA_ATAQUE: 'Contra-ataque',
+    CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
+    POR_FORA: 'Por fora',
+    PASSE_LONGO: 'Passe longo',
+    SOBREPOSICAO: 'Sobreposição'
+  };
+  return labels[key] ?? String(value ?? 'Não informado').replaceAll('_', ' ');
+}
+
 function verdictLabel(verdict: string): string {
   if (verdict === 'IDEAL') return 'Encaixe ideal';
   if (verdict === 'FORTE') return 'Encaixe forte';
@@ -69,6 +137,7 @@ export function UnifiedPerformanceV3920Panel({
   onShare,
   onExportImage,
   onSkillToggle,
+  onReplaceOwnedSkill,
   skillProgress
 }: {
   result: AnalysisResult;
@@ -76,6 +145,7 @@ export function UnifiedPerformanceV3920Panel({
   onShare?: () => void;
   onExportImage?: () => void;
   onSkillToggle?: (skill: string) => void;
+  onReplaceOwnedSkill?: (skill: string) => void;
   skillProgress?: Record<string, boolean>;
 }) {
   const unified = result.unifiedPerformanceV3920;
@@ -91,12 +161,27 @@ export function UnifiedPerformanceV3920Panel({
       .filter((item) => item.value > 0);
     const impetoStatus = impetoVisualStatus(cleanSlate.impetoDecision);
     const impetoName = cleanSlate.currentImpeto ?? primaryImpeto ?? cleanSlate.impetoIdeal;
+    const skillWorkflow = buildSkillWorkflowStateR121(displayedSkills, skillProgress);
+    const pendingSkills = skillWorkflow.pending;
+    const completedSkills = skillWorkflow.completed;
+    const offensiveStyle = result.parsed.offensivePlaystyle ?? result.parsed.playstyle ?? 'Básico';
+    const defensiveStyle = result.parsed.defensivePlaystyle ?? 'Básico';
+    const defensiveStyleStatus = defensiveStyle === 'Básico' || result.parsed.defensivePlaystyleConfirmed ? 'confirmado' : 'provisório';
+    const nextAction = cleanSlate.status !== 'READY'
+      ? 'Revisar os dados do print antes de aplicar a ficha.'
+      : pendingSkills.length
+        ? `Adicionar e confirmar: ${pendingSkills[0]}.`
+        : cleanSlate.impetoDecision === 'REVIEW_SLOT'
+          ? 'Confirmar a vaga de Ímpeto antes de gastar Token.'
+          : cleanSlate.impetoDecision === 'RECOMMEND_NEW'
+            ? `Top 5 concluído. Revisar o Ímpeto ${impetoName ?? 'recomendado'} antes de aplicar.`
+            : 'Ficha e habilidades concluídas. Testar em partida e registrar o comportamento real.';
     return <article className="luxury-panel wide-card unified-performance-v3920">
       <header className="unified-v3920-head">
         <div>
-          <p className="kicker"><BrainCircuit size={15} /> Clean Slate • r119</p>
+          <p className="kicker"><BrainCircuit size={15} /> Clean Slate • r123</p>
           <h3>Ficha recalculada do zero pela identidade da carta</h3>
-          <p>{result.parsed.playerName}: o motor avaliou {cleanSlate.candidateCount} estados e escolheu a distribuição com maior retorno funcional para as ações naturais desta carta.</p>
+          <p>{result.parsed.playerName}: o motor avaliou {cleanSlate.candidateCount} estados e escolheu a distribuição com maior retorno para partidas online, preservando as ações naturais desta carta.</p>
           <small>Motores históricos não participam do caminho crítico do Android e não podem semear a ficha final.</small>
         </div>
         <span className={`unified-v3920-safety ${cleanSlate.status === 'READY' ? 'safe' : 'blocked'}`}>
@@ -109,9 +194,21 @@ export function UnifiedPerformanceV3920Panel({
         <button type="button" onClick={onShare}><Share2 size={16} /> Compartilhar</button>
         <button type="button" onClick={onExportImage}><Download size={16} /> Exportar imagem</button>
       </section>
+      <section className="r121-readiness-panel" aria-label="Central de prontidão eFootball 2027">
+        <div className="r121-readiness-title"><span><BrainCircuit size={18} /><strong>Central 2027</strong></span><small>Resumo operacional sem criar outro motor de decisão.</small></div>
+        <div className="r121-readiness-grid">
+          <div><small>Fase ofensiva</small><strong>{offensiveStyle}</strong><span>posição usada: {result.bestPosition.label}</span></div>
+          <div><small>Fase defensiva</small><strong>{defensiveStyle}</strong><span>{defensiveStyleStatus}{defensiveStyle === 'Básico' ? ' • carta sem estilo defensivo separado' : ''}</span></div>
+          <div><small>Estilo coletivo</small><strong>{teamStyleLabel(result.tacticalProfile?.style)}</strong><span>{result.tacticalProfile?.formation && result.tacticalProfile.formation !== 'AUTO' ? `formação ${result.tacticalProfile.formation}` : 'formação adaptável'}</span></div>
+          <div><small>Top 5</small><strong>{completedSkills.length}/{displayedSkills.length || 5} prontas</strong><span>{pendingSkills.length ? `${pendingSkills.length} pendente(s)` : 'nenhuma pendência'}</span></div>
+          <div><small>Objetivo da ficha</small><strong>Máximo online</strong><span>Ranked + amistoso • sem foco em GER</span></div>
+          <div><small>DNA preservado</small><strong>{Math.round(cleanSlate.onlinePerformance.identityPreservation)}/100</strong><span>atributos + habilidades + estilos + ações naturais</span></div>
+        </div>
+        <div className="r121-next-action"><Target size={18} /><span><small>PRÓXIMA AÇÃO</small><strong>{nextAction}</strong></span></div>
+      </section>
       <section className="unified-v3920-grid">
         <article className="r119-final-build">
-          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Único escritor: Clean Slate r119</small></span></div>
+          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Único escritor: Clean Slate r123 • objetivo online</small></span></div>
           {activeTraining.length ? <div className="r119-training-icons">
             {activeTraining.map(({ key, value }) => <div key={key} className="r119-training-item">
               <span className="r119-training-icon"><TrainingProgressionIconR106 trainingKey={key as TrainingProgressionKeyR106} title={TRAINING_LABELS[key as TrainingKey] ?? key} size={31} /></span>
@@ -119,32 +216,78 @@ export function UnifiedPerformanceV3920Panel({
             </div>)}
           </div> : <h4>Aguardando leitura completa</h4>}
           <small className="r119-training-summary">{planText(result) || 'Nenhum ponto aplicado.'}</small>
-          <div className="unified-v3920-metrics">
+          <div className="unified-v3920-metrics r122-primary-metrics">
+            <span><b>{Math.round(cleanSlate.onlinePerformance.rankedScore)}</b><small>online ranked</small></span>
+            <span><b>{Math.round(cleanSlate.onlinePerformance.identityPreservation)}</b><small>DNA</small></span>
             <span><b>{Math.round(cleanSlate.responseScore)}</b><small>resposta</small></span>
-            <span><b>{Math.round(cleanSlate.synergyScore)}</b><small>sinergia</small></span>
-            <span><b>{Math.round(cleanSlate.confidence)}</b><small>confiança</small></span>
+            <span><b>{Math.round(cleanSlate.decisionConfidence.score)}</b><small>confiança ficha</small></span>
           </div>
           {cleanSlate.status !== 'READY' && <p><strong>Atributos lidos: {attributeCount}/26.</strong> Posições reconhecidas: {positionRatingsCount}/13. O motor não inventa os valores ausentes; revise a leitura quando a cobertura estiver baixa.</p>}
           <div className="chip-cloud">
-            <span>Motor final: Clean Slate r119</span>
+            <span>Motor final: Clean Slate r123</span>
             {cleanSlate.dominantDna.map((dna) => <span key={dna}>{dna}</span>)}
           </div>
         </article>
         <article className="r119-resources-card">
-          <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>5 habilidades adicionais</strong><small>Oficiais, complementares e sem repetir habilidade já existente</small></span></div>
-          <div className="r119-skill-list">
-            {displayedSkills.map((skill, index) => <div key={skill} className="r119-skill-row">
-              <OfficialSkillIconR119 skill={skill} />
-              <span><small>ADICIONAL {index + 1}</small><strong>{skill}</strong><em>{skillDescription(skill)}</em></span>
-            </div>)}
-            {!displayedSkills.length && <p>Nenhuma habilidade adicional segura disponível com a leitura atual.</p>}
-          </div>
+          <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>5 habilidades adicionais</strong><small>Fila prática com confirmação e histórico do que já foi aplicado</small></span></div>
+          <SkillWorkflowR121 skills={displayedSkills} progress={skillProgress} description={skillDescription} onToggle={onSkillToggle} onReplaceOwned={onReplaceOwnedSkill} />
           <div className={`r119-impeto-card ${impetoStatus.className}`}>
             <div className="r119-impeto-head"><Trophy size={19} /><span><small>ÍMPETO</small><strong>{impetoName ?? 'Nenhum candidato seguro'}</strong></span></div>
             <span className="r119-impeto-status">{impetoStatus.label}</span>
             {cleanSlate.impetoIdeal && !cleanSlate.currentImpeto && <div className="r119-impeto-metrics"><span>encaixe <b>{Math.round(cleanSlate.impetoIdealScore)}</b></span><span>confiança <b>{Math.round(cleanSlate.impetoIdealConfidence)}</b></span></div>}
             <p>{cleanSlate.impetoReason}</p>
           </div>
+        </article>
+        <article className="r122-online-card">
+          <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Desempenho online</strong><small>Ranked e partidas casuais com amigos • sem perseguir Overall</small></span></div>
+          <div className="r122-online-grid">
+            <span><Target size={15} /><small>Ranqueada</small><strong>{Math.round(cleanSlate.onlinePerformance.rankedScore)}</strong></span>
+            <span><Sparkles size={15} /><small>Amigos</small><strong>{Math.round(cleanSlate.onlinePerformance.friendsScore)}</strong></span>
+            <span><Target size={15} /><small>Sob pressão</small><strong>{Math.round(cleanSlate.onlinePerformance.pressureReliability)}</strong></span>
+            <span><BrainCircuit size={15} /><small>DNA</small><strong>{Math.round(cleanSlate.onlinePerformance.identityPreservation)}</strong></span>
+            <span><ShieldCheck size={15} /><small>Consistência</small><strong>{Math.round(cleanSlate.onlinePerformance.matchConsistency)}</strong></span>
+            <span><BrainCircuit size={15} /><small>Stamina</small><strong>{Math.round(cleanSlate.onlinePerformance.staminaSustainability)}</strong></span>
+          </div>
+          <p>O nome do jogador não entra no cálculo. A identidade vem da própria carta: atributos, habilidades, estilos e ações que ela tem evidência para executar com frequência.</p>
+        </article>
+        <article className="r122-why-card">
+          <div className="unified-v3920-card-title"><BrainCircuit size={17} /><span><strong>Por que esta ficha?</strong><small>Retorno marginal dos pontos na decisão final</small></span></div>
+          <div className="r122-rationale-list">
+            {cleanSlate.pointRationale.slice(0, 6).map((item) => <div key={item.training}><span><strong>{item.label} +{item.level}</strong><small>{item.actions.slice(0, 2).join(' • ') || 'retorno combinado da carta'}</small></span><b>{item.returnPerCost >= 0 ? '+' : ''}{item.returnPerCost}</b></div>)}
+          </div>
+          <small>Cada grupo precisa justificar seu custo pelas ações reais da carta. Um atributo fraco não recebe pontos apenas para “ficar bonito” ou elevar GER.</small>
+        </article>
+        <article className="r123-confidence-card">
+          <div className="unified-v3920-card-title"><ShieldCheck size={17} /><span><strong>Confiança da ficha</strong><small>Qualidade da leitura + estabilidade da decisão + evidência real</small></span></div>
+          <div className="r123-confidence-head"><strong>{cleanSlate.decisionConfidence.level}</strong><b>{Math.round(cleanSlate.decisionConfidence.score)}/100</b></div>
+          <div className="r123-confidence-grid">
+            <span><small>Dados</small><strong>{Math.round(cleanSlate.decisionConfidence.dataQuality)}</strong></span>
+            <span><small>Cobertura</small><strong>{Math.round(cleanSlate.decisionConfidence.attributeCoverage)}</strong></span>
+            <span><small>Estabilidade</small><strong>{Math.round(cleanSlate.decisionConfidence.decisionStability)}</strong></span>
+            <span><small>Partidas reais</small><strong>{Math.round(cleanSlate.decisionConfidence.realMatchEvidence)}</strong></span>
+          </div>
+          <small>{cleanSlate.decisionConfidence.reasons[3] ?? cleanSlate.decisionConfidence.reasons[0]}</small>
+        </article>
+        <article className="r123-saturation-card">
+          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Saturação dos pontos</strong><small>Detecta quando os níveis finais começam a render menos — sem teto fixo por posição</small></span></div>
+          <div className="r123-saturation-list">
+            {cleanSlate.saturationProfile.slice(0, 7).map((item) => <div key={item.training} className={`r123-saturation-item ${item.status.toLowerCase()}`}>
+              <span><strong>{item.label} +{item.level}</strong><small>{item.status === 'EFICIENTE' ? 'retorno consistente' : item.status === 'ATENCAO' ? 'retorno caindo' : 'zona de baixo retorno'}</small></span>
+              <b>{item.lastReturnPerCost >= 0 ? '+' : ''}{item.lastReturnPerCost}</b>
+            </div>)}
+          </div>
+          <small>A saturação é comparada com o próprio histórico marginal da carta. Ela não cria regra como “Passe máximo 8” ou “Defesa mínimo 10”.</small>
+        </article>
+        <article className="r123-lab-card">
+          <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Laboratório competitivo A/B</strong><small>Comparação controlada em Ranked e partidas com amigos • somente leitura</small></span></div>
+          <div className="r123-lab-arms">
+            {cleanSlate.competitiveLab.arms.map((arm) => <div key={arm.id} className={arm.isPrimary ? 'primary' : ''}>
+              <span><strong>{arm.label}</strong><small>Ranked {Math.round(arm.rankedScore)} • amigos {Math.round(arm.friendsScore)}{arm.distanceFromPrimary ? ` • distância ${arm.distanceFromPrimary}` : ''}</small></span>
+              <b>{Math.round(arm.score)}</b>
+              <em>{arm.hypothesis}</em>
+            </div>)}
+          </div>
+          <small>{cleanSlate.competitiveLab.canCompare ? `Pronto para A/B: mínimo ${cleanSlate.competitiveLab.minMatchesPerArm} partidas por ficha, em condições parecidas.` : 'Ainda não existe uma alternativa suficientemente diferente para um A/B útil.'}</small>
         </article>
         <article className="r119-actions-card">
           <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Ações decisivas</strong><small>Prioridade funcional estimada — capacidade não é tratada automaticamente como frequência</small></span></div>
@@ -298,11 +441,9 @@ export function UnifiedPerformanceV3920Panel({
       </article>
 
       <article>
-        <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>Habilidades adicionais</strong><small>Top 5 complementar, sem duplicar habilidades já possuídas</small></span></div>
-        <div className="unified-v3920-skill-list">
-          {displayedSkills.map((skill, index) => <button type="button" key={skill} className={skillProgress?.[skill] ? 'done' : ''} onClick={() => onSkillToggle?.(skill)}><b>{index + 1}</b><span><strong>{skill}</strong><small>{appliedSkills.find((item) => item.name === skill)?.gameplayImpact ?? 'Complementa a carta sem copiar um molde genérico.'}</small></span><em>{skillProgress?.[skill] ? '✓' : '○'}</em></button>)}
-        </div>
-        <small>Autoridade r80 • {displayedSkills.length}/5 slots finais • a tela não usa mais Top 5 de motores anteriores.</small>
+        <div className="unified-v3920-card-title"><Sparkles size={17} /><span><strong>Habilidades adicionais</strong><small>Top 5 complementar com progresso persistente</small></span></div>
+        <SkillWorkflowR121 skills={displayedSkills} progress={skillProgress} description={(skill) => appliedSkills.find((item) => item.name === skill)?.gameplayImpact ?? 'Complementa a carta sem copiar um molde genérico.'} onToggle={onSkillToggle} onReplaceOwned={onReplaceOwnedSkill} />
+        <small>Autoridade final preservada • {displayedSkills.length}/5 slots finais • motores históricos continuam somente para auditoria.</small>
       </article>
 
       <article className={`unified-v3920-impeto ${statusClassName}`}>

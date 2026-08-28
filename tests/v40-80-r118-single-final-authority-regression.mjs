@@ -31,9 +31,9 @@ assert.ok(pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') < pip
 assert.match(r119, /CLEAN_SLATE_SINGLE_WRITER/);
 assert.match(r119, /ignoresIncomingTraining: true/);
 assert.match(r119, /noFloorPeakCeiling: true/);
-assert.match(ui, /Motor final: Clean Slate r119/);
+assert.match(ui, /Motor final: Clean Slate r12[23]/);
 assert.doesNotMatch(ui, /final-r45/);
 assert.match(r108, /BM_R118_AERIAL_SPECIALIZATION_PROOF/);
 assert.match(r108, /specializationSignals >= 2/);
 
-console.log('r118 compatível e r119 final: legado read-only, snapshot cru protegido, Clean Slate como escritor final e UI sem final-r45.');
+console.log('r118 compatível e r123 final: legado read-only, snapshot cru protegido, Clean Slate como escritor final e UI sem final-r45.');

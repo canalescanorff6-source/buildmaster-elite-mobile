@@ -19,7 +19,13 @@ import { skillIdentityKey } from './officialSkillIdentity';
 import { isRoleCompatibleAdditionalSkill } from './skillIntelligenceV31';
 import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from './impetoFunctionalMatrixR119';
 
-export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r119-clean-slate-gameplay-authority' as const;
+export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r123-competitive-lab-saturation-confidence-authority' as const;
+// BM_R123_ONLINE_OBJECTIVE: Ranked + amistoso online são o objetivo de desempenho, nunca Overall/GER.
+// BM_R123_NAME_AGNOSTIC: nome do jogador não participa da pontuação; identidade vem da evidência da carta.
+// BM_R123_MARGINAL_RETURN: cada grupo usado expõe retorno marginal e ações sustentadas.
+// BM_R123_SATURATION_AUDIT: saturação é medida por retorno local dos níveis, sem pisos/limites fixos por posição.
+// BM_R123_CONFIDENCE_PROFILE: confiança separa qualidade da leitura, estabilidade da decisão e evidência real.
+// BM_R123_AB_LAB_READ_ONLY: alternativas A/B são apenas experimento; nunca sobrescrevem a autoridade final automaticamente.
 
 export type CleanSlateActionR119 = {
   id: string;
@@ -28,6 +34,59 @@ export type CleanSlateActionR119 = {
   projectedScore: number;
   frequency: number;
   contribution: number;
+};
+
+export type CleanSlateConfidenceR123 = {
+  score: number;
+  level: 'ALTA' | 'MODERADA' | 'BAIXA';
+  dataQuality: number;
+  attributeCoverage: number;
+  skillEvidence: number;
+  styleCertainty: number;
+  decisionStability: number;
+  marginalSafety: number;
+  realMatchEvidence: number;
+  reasons: string[];
+};
+
+export type CleanSlateSaturationR123 = {
+  training: TrainingKey;
+  label: string;
+  level: number;
+  status: 'EFICIENTE' | 'ATENCAO' | 'SATURADO';
+  peakReturnPerCost: number;
+  recentReturnPerCost: number;
+  lastReturnPerCost: number;
+  lowReturnSteps: number;
+  reason: string;
+};
+
+export type CleanSlateCompetitiveLabArmR123 = {
+  id: string;
+  label: string;
+  rank: 1 | 2;
+  isPrimary: boolean;
+  score: number;
+  rankedScore: number;
+  friendsScore: number;
+  distanceFromPrimary: number;
+  training: TrainingPlan;
+  hypothesis: string;
+};
+
+export type CleanSlateCompetitiveLabR123 = {
+  mode: 'READ_ONLY_AB';
+  minMatchesPerArm: 5;
+  canCompare: boolean;
+  arms: CleanSlateCompetitiveLabArmR123[];
+  protocol: string[];
+  safeguards: {
+    readOnly: true;
+    neverAutoPromotes: true;
+    sameCardRequired: true;
+    similarConditionsPreferred: true;
+    highDelayMustBeMarked: true;
+  };
 };
 
 export type CleanSlate2027R119 = {
@@ -44,6 +103,30 @@ export type CleanSlate2027R119 = {
   responseScore: number;
   synergyScore: number;
   confidence: number;
+  decisionConfidence: CleanSlateConfidenceR123;
+  saturationProfile: CleanSlateSaturationR123[];
+  competitiveLab: CleanSlateCompetitiveLabR123;
+  onlinePerformance: {
+    objective: 'MAX_ONLINE_PERFORMANCE';
+    rankedScore: number;
+    friendsScore: number;
+    pressureReliability: number;
+    matchConsistency: number;
+    staminaSustainability: number;
+    identityPreservation: number;
+    pointEfficiency: number;
+    notes: string[];
+  };
+  pointRationale: Array<{
+    training: TrainingKey;
+    label: string;
+    level: number;
+    lastStepCost: number;
+    marginalReturn: number;
+    returnPerCost: number;
+    actions: string[];
+    reason: string;
+  }>;
   dominantDna: string[];
   specialSkills: string[];
   actions: CleanSlateActionR119[];
@@ -66,6 +149,12 @@ export type CleanSlate2027R119 = {
     existingImpetoNeverRepeated: boolean;
     selectedPositionDoesNotRewriteSignature: true;
     legacyEnginesReadOnly: true;
+    onlineObjectiveActive: true;
+    nameAgnosticScoring: true;
+    marginalReturnAudited: true;
+    saturationAudited: true;
+    confidenceSeparatedFromOverall: true;
+    abLabReadOnly: true;
   };
   reasons: string[];
 };
@@ -191,6 +280,12 @@ function naturalActionFrequency(action:ActionDef,parsed:ParsedCard) {
     if(!aerialProof) frequency*=aerial>=84?.78:.55;
     else frequency*=1.08;
   }
+  // v6.0: a Konami reduziu parte da correção automática de linhas e passou a
+  // diferenciar mais a reação defensiva por Talento/Dedicação defensiva e
+  // pela habilidade Interceptação. Isso é contexto de frequência, não receita.
+  if(action.id==='intercept' && /interceptacao/.test(skillText(parsed))) frequency*=1.12;
+  if(action.id==='press_recover' && /pressao no ataque/.test(norm(parsed.defensivePlaystyle))) frequency*=1.14;
+  if(action.id==='cover_space' && /pressao no ataque/.test(norm(parsed.defensivePlaystyle))) frequency*=1.06;
   return clamp(frequency,0,1);
 }
 
@@ -206,6 +301,78 @@ function projectedAttributes(parsed:ParsedCard,plan:TrainingPlan):Attributes {
 
 function groupNaturalStrength(parsed:ParsedCard,key:TrainingKey) {
   return average(TRAINING_ATTRIBUTES[key].map(a=>attr(parsed.attributes,a)));
+}
+
+const TRAINING_REASON_LABELS: Record<TrainingKey,string> = {
+  shooting:'Finalização', passing:'Passe', dribbling:'Drible', dexterity:'Destreza',
+  lowerBodyStrength:'Força nas pernas', aerialStrength:'Bola aérea', defending:'Defesa',
+  gk1:'Goleiro 1', gk2:'Goleiro 2', gk3:'Goleiro 3'
+};
+
+function actionPressureKeys(action:ActionDef): AttributeKey[] {
+  if(action.tags.includes('goalkeeper')) return ['goalkeeperAwareness','goalkeeperReflexes','goalkeeperReach'];
+  if(action.tags.includes('defending')) return ['defensiveAwareness','defensiveEngagement','speed','acceleration','balance','stamina'];
+  if(action.tags.includes('creation')) return ['ballControl','tightPossession','lowPass','balance','acceleration'];
+  if(action.tags.includes('technical')) return ['ballControl','dribbling','tightPossession','balance','acceleration'];
+  if(action.tags.includes('finishing')) return ['offensiveAwareness','finishing','ballControl','balance','acceleration'];
+  if(action.tags.includes('movement')) return ['speed','acceleration','balance','stamina'];
+  if(action.tags.includes('physical')) return ['physicalContact','balance','stamina'];
+  return action.attrs;
+}
+
+function pressureReliabilityScore(projected:Attributes, actionFrequencies:Map<string,number>) {
+  let weighted=0, total=0;
+  for(const action of ACTIONS) {
+    const frequency=actionFrequencies.get(action.id)??0;
+    if(frequency<=.01) continue;
+    const keys=[...new Set(actionPressureKeys(action))];
+    const values=keys.map(key=>attr(projected,key));
+    if(!values.length) continue;
+    const mean=average(values);
+    const weakest=Math.min(...values);
+    const natural=actionQuality(projected,action);
+    // Online: gargalos de controle/reação pesam mais que no treino livre.
+    const reliable=natural*.55+mean*.25+weakest*.20;
+    weighted+=reliable*frequency; total+=frequency;
+  }
+  return total?clamp(weighted/total):0;
+}
+
+function identityPreservationScore(parsed:ParsedCard, plan:TrainingPlan, actionFrequencies:Map<string,number>) {
+  let weighted=0,total=0;
+  for(const key of Object.keys(plan) as TrainingKey[]) {
+    const level=Number(plan[key]??0);
+    if(!level) continue;
+    const natural=groupNaturalStrength(parsed,key);
+    const impacted=ACTIONS
+      .filter(action=>TRAINING_ATTRIBUTES[key].some(attribute=>action.attrs.includes(attribute)))
+      .reduce((sum,action)=>sum+(actionFrequencies.get(action.id)??0),0);
+    const evidenceFit=clamp(impacted*43,0,100);
+    const fit=clamp(natural*.58+evidenceFit*.42);
+    weighted+=fit*level; total+=level;
+  }
+  return total?clamp(weighted/total):100;
+}
+
+function onlineMetrics(parsed:ParsedCard, plan:TrainingPlan, actionFrequencies:Map<string,number>, actionScore:number) {
+  const projected=projectedAttributes(parsed,plan);
+  const staminaActionIds=['press_recover','cover_space','cross_support','attack_space','carry'];
+  const staminaDemand=clamp(average(staminaActionIds.map(id=>actionFrequencies.get(id)??0)),0,1);
+  const projectedStamina=attr(projected,'stamina');
+  const staminaFloor=68+staminaDemand*20;
+  const staminaSustainability=clamp(100-Math.max(0,staminaFloor-projectedStamina)*(2.4+staminaDemand*1.8));
+  const pressureReliability=pressureReliabilityScore(projected,actionFrequencies);
+  const identityPreservation=identityPreservationScore(parsed,plan,actionFrequencies);
+  const matchConsistency=clamp(
+    actionScore*.42+pressureReliability*.28+staminaSustainability*.18+identityPreservation*.12
+  );
+  const rankedScore=clamp(
+    actionScore*.48+pressureReliability*.24+staminaSustainability*.16+identityPreservation*.12
+  );
+  const friendsScore=clamp(
+    actionScore*.58+pressureReliability*.17+staminaSustainability*.12+identityPreservation*.13
+  );
+  return { rankedScore, friendsScore, pressureReliability, matchConsistency, staminaSustainability, identityPreservation };
 }
 
 function evaluatePlan(parsed:ParsedCard,plan:TrainingPlan, actionFrequencies:Map<string,number>) {
@@ -225,6 +392,14 @@ function evaluatePlan(parsed:ParsedCard,plan:TrainingPlan, actionFrequencies:Map
   const actionScore=weightTotal?weighted/weightTotal:0;
   const actionGain=weightTotal?improvement/weightTotal:0;
   let identityBonus=0, weakRepairPenalty=0, excessPenalty=0;
+  // v6.0: resistência passa a ser tratada como sustentabilidade de ações reais.
+  // A exigência cresce com a carga funcional da própria carta; não existe alvo
+  // fixo por posição nem bônus simplesmente por ser VOL/ZAG/CA.
+  const staminaActionIds=['press_recover','cover_space','cross_support','attack_space','carry'];
+  const staminaDemand=clamp(average(staminaActionIds.map(id=>actionFrequencies.get(id)??0)),0,1);
+  const projectedStamina=attr(projected,'stamina');
+  const staminaFloor=68+staminaDemand*20;
+  const fatiguePenalty=Math.max(0,staminaFloor-projectedStamina)*staminaDemand*.12;
   for(const key of Object.keys(plan) as TrainingKey[]) {
     const level=Number(plan[key]??0); if(!level) continue;
     const strength=groupNaturalStrength(parsed,key);
@@ -245,8 +420,12 @@ function evaluatePlan(parsed:ParsedCard,plan:TrainingPlan, actionFrequencies:Map
   if(aerialLevel>4 && aerialSupport<.5) excessPenalty+=(aerialLevel-4)*.9;
   if(aerialLevel>7 && aerialSupport<.72) excessPenalty+=(aerialLevel-7)*.7;
   if(aerialLevel>=10 && aerialSupport<.82) excessPenalty+=(aerialLevel-9)*1.05;
-  const score=actionScore+actionGain*.55+identityBonus-weakRepairPenalty-excessPenalty;
-  return { score, actionScore, actionGain, details:details.sort((a,b)=>b.contribution-a.contribution) };
+  const online=onlineMetrics(parsed,plan,actionFrequencies,actionScore);
+  // r123: a decisão final passa a otimizar o uso online real. Ranked pesa mais,
+  // mas amistoso online continua no objetivo para evitar uma build artificialmente extrema.
+  const onlineCompetitive=online.rankedScore*.65+online.friendsScore*.35;
+  const score=onlineCompetitive+actionGain*.52+identityBonus-weakRepairPenalty-excessPenalty-fatiguePenalty;
+  return { score, actionScore, actionGain, online, details:details.sort((a,b)=>b.contribution-a.contribution) };
 }
 
 function planSignature(plan:TrainingPlan) {
@@ -292,7 +471,227 @@ function optimizeTraining(parsed:ParsedCard,budget:number) {
     for(let cost=budget;cost>=0&&!chosen;cost--) chosen=byCost[cost][0];
   }
   const plan=chosen?.plan??zero;
-  return {plan,candidates,frequencies,evaluation:evaluatePlan(parsed,plan,frequencies)};
+  const finalistStates=(byCost[budget]?.length ? byCost[budget] : chosen ? [chosen] : []).slice(0,12);
+  return {plan,candidates,frequencies,evaluation:evaluatePlan(parsed,plan,frequencies),finalistStates};
+}
+
+function pointRationaleR122(parsed:ParsedCard, plan:TrainingPlan, frequencies:Map<string,number>) {
+  const current=evaluatePlan(parsed,plan,frequencies);
+  return (Object.keys(plan) as TrainingKey[])
+    .filter(key=>Number(plan[key]??0)>0)
+    .map(key=>{
+      const level=Number(plan[key]??0);
+      const previous={...plan,[key]:Math.max(0,level-1)};
+      const previousEval=evaluatePlan(parsed,previous,frequencies);
+      const lastStepCost=trainingLevelCost(level);
+      const marginalReturn=round1(current.score-previousEval.score);
+      const returnPerCost=round1(marginalReturn/Math.max(1,lastStepCost));
+      const actions=ACTIONS
+        .filter(action=>TRAINING_ATTRIBUTES[key].some(attribute=>action.attrs.includes(attribute)))
+        .map(action=>({label:action.label,frequency:frequencies.get(action.id)??0}))
+        .filter(item=>item.frequency>.08)
+        .sort((a,b)=>b.frequency-a.frequency)
+        .slice(0,3)
+        .map(item=>item.label);
+      const natural=Math.round(groupNaturalStrength(parsed,key));
+      const reason=actions.length
+        ? `${TRAINING_REASON_LABELS[key]} +${level}: sustenta ${actions.join(', ')}; base natural ${natural}/99 e retorno marginal online ${marginalReturn>=0?'+':''}${marginalReturn}.`
+        : `${TRAINING_REASON_LABELS[key]} +${level}: investimento mantido pelo retorno combinado da carta; base natural ${natural}/99.`;
+      return {training:key,label:TRAINING_REASON_LABELS[key],level,lastStepCost,marginalReturn,returnPerCost,actions,reason};
+    })
+    .sort((a,b)=>b.returnPerCost-a.returnPerCost || b.level-a.level);
+}
+
+
+function localSaturationProfileR123(parsed:ParsedCard, plan:TrainingPlan, frequencies:Map<string,number>):CleanSlateSaturationR123[] {
+  return (Object.keys(plan) as TrainingKey[])
+    .filter(key=>Number(plan[key]??0)>0)
+    .map(key=>{
+      const level=Number(plan[key]??0);
+      const curve:number[]=[];
+      for(let step=1;step<=level;step++) {
+        const previous={...plan,[key]:step-1};
+        const current={...plan,[key]:step};
+        const previousEval=evaluatePlan(parsed,previous,frequencies);
+        const currentEval=evaluatePlan(parsed,current,frequencies);
+        const cost=Math.max(1,trainingLevelCost(step));
+        curve.push((currentEval.score-previousEval.score)/cost);
+      }
+      const peak=Math.max(...curve,0);
+      const last=curve[curve.length-1]??0;
+      const recentValues=curve.slice(-Math.min(3,curve.length));
+      const recent=average(recentValues);
+      const usefulThreshold=Math.max(.018,peak*.34);
+      let lowReturnSteps=0;
+      for(let index=curve.length-1;index>=0;index--) {
+        if(curve[index] < usefulThreshold) lowReturnSteps++;
+        else break;
+      }
+      const ratio=peak>0?last/peak:0;
+      const status:CleanSlateSaturationR123['status'] =
+        last<=0 || lowReturnSteps>=3 || ratio<.22 ? 'SATURADO'
+        : lowReturnSteps>=1 || ratio<.48 ? 'ATENCAO'
+        : 'EFICIENTE';
+      const reason=status==='SATURADO'
+        ? `${TRAINING_REASON_LABELS[key]} chegou a uma zona de retorno local baixo nos últimos níveis; isso é um alerta de redistribuição, não um teto fixo.`
+        : status==='ATENCAO'
+          ? `${TRAINING_REASON_LABELS[key]} ainda contribui, mas os níveis finais já rendem menos que o pico deste mesmo grupo.`
+          : `${TRAINING_REASON_LABELS[key]} mantém retorno competitivo consistente até o nível atual.`;
+      return {
+        training:key,
+        label:TRAINING_REASON_LABELS[key],
+        level,
+        status,
+        peakReturnPerCost:Number(peak.toFixed(3)),
+        recentReturnPerCost:Number(recent.toFixed(3)),
+        lastReturnPerCost:Number(last.toFixed(3)),
+        lowReturnSteps,
+        reason
+      };
+    })
+    .sort((a,b)=>{
+      const order={SATURADO:0,ATENCAO:1,EFICIENTE:2} as const;
+      return order[a.status]-order[b.status] || a.lastReturnPerCost-b.lastReturnPerCost;
+    });
+}
+
+function planDistanceR123(a:TrainingPlan,b:TrainingPlan) {
+  return (Object.keys(a) as TrainingKey[]).reduce((sum,key)=>sum+Math.abs(Number(a[key]??0)-Number(b[key]??0)),0);
+}
+
+function labHypothesisR123(primary:TrainingPlan, alternative:TrainingPlan) {
+  const changes=(Object.keys(primary) as TrainingKey[])
+    .map(key=>({key,delta:Number(alternative[key]??0)-Number(primary[key]??0)}))
+    .filter(item=>item.delta!==0)
+    .sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta))
+    .slice(0,3);
+  if(!changes.length) return 'Alternativa praticamente idêntica; não há contraste suficiente para um teste A/B útil.';
+  const formatted=changes.map(item=>`${item.delta>0?'+':''}${item.delta} ${TRAINING_REASON_LABELS[item.key]}`).join(' • ');
+  return `Testa uma redistribuição controlada (${formatted}) mantendo a mesma carta, posição e objetivo competitivo.`;
+}
+
+function competitiveLabR123(
+  parsed:ParsedCard,
+  primaryPlan:TrainingPlan,
+  frequencies:Map<string,number>,
+  finalistStates:BeamState[]
+):CleanSlateCompetitiveLabR123 {
+  const primaryEval=evaluatePlan(parsed,primaryPlan,frequencies);
+  const candidates=finalistStates
+    .filter(state=>state.signature!==planSignature(primaryPlan))
+    .map(state=>({state,distance:planDistanceR123(primaryPlan,state.plan)}))
+    .sort((a,b)=>b.state.score-a.state.score || b.distance-a.distance);
+  const meaningful=candidates.find(item=>item.distance>=4) ?? candidates.find(item=>item.distance>=2) ?? candidates[0];
+  const arms:CleanSlateCompetitiveLabArmR123[]=[
+    {
+      id:'CLEAN_SLATE_R123_A',
+      label:'A • Ficha principal r123',
+      rank:1,
+      isPrimary:true,
+      score:round1(clamp(primaryEval.score)),
+      rankedScore:round1(primaryEval.online.rankedScore),
+      friendsScore:round1(primaryEval.online.friendsScore),
+      distanceFromPrimary:0,
+      training:{...primaryPlan},
+      hypothesis:'Referência oficial da autoridade única Clean Slate r123.'
+    }
+  ];
+  if(meaningful) {
+    const evaluation=evaluatePlan(parsed,meaningful.state.plan,frequencies);
+    arms.push({
+      id:'CLEAN_SLATE_R123_B',
+      label:'B • Alternativa controlada',
+      rank:2,
+      isPrimary:false,
+      score:round1(clamp(evaluation.score)),
+      rankedScore:round1(evaluation.online.rankedScore),
+      friendsScore:round1(evaluation.online.friendsScore),
+      distanceFromPrimary:meaningful.distance,
+      training:{...meaningful.state.plan},
+      hypothesis:labHypothesisR123(primaryPlan,meaningful.state.plan)
+    });
+  }
+  return {
+    mode:'READ_ONLY_AB',
+    minMatchesPerArm:5,
+    canCompare:arms.length===2,
+    arms,
+    protocol:[
+      'Alternar A e B em condições parecidas, priorizando partidas ranqueadas e conexão estável.',
+      'Registrar pelo menos 5 partidas por braço antes de considerar qualquer vencedor.',
+      'Marcar delay, minutos e queda de rendimento no segundo tempo para reduzir falsos positivos.',
+      'O laboratório nunca muda ficha, Top 5 ou Ímpeto sozinho; ele apenas produz evidência para uma revisão futura.'
+    ],
+    safeguards:{
+      readOnly:true,
+      neverAutoPromotes:true,
+      sameCardRequired:true,
+      similarConditionsPreferred:true,
+      highDelayMustBeMarked:true
+    }
+  };
+}
+
+function decisionConfidenceR123(
+  input:AnalysisResult,
+  parsed:ParsedCard,
+  saturation:CleanSlateSaturationR123[],
+  lab:CleanSlateCompetitiveLabR123,
+  baseConfidence:number
+):CleanSlateConfidenceR123 {
+  const attributeCount=Number(parsed.evidence?.attributeCount ?? Object.keys(parsed.attributes??{}).length);
+  const attributeCoverage=clamp(attributeCount/26*100);
+  const rawSkillConfidence=Number(parsed.evidence?.skillConfidence ?? 0);
+  const skillEvidence=rawSkillConfidence>0
+    ? clamp(rawSkillConfidence<=1?rawSkillConfidence*100:rawSkillConfidence)
+    : clamp((parsed.nativeSkills?.length??0)*12+(parsed.additionalSkills?.length??0)*5,25,88);
+  const offensiveKnown=Boolean(parsed.offensivePlaystyle ?? parsed.playstyle);
+  const defensiveKnown=parsed.defensivePlaystyle==='Básico' || Boolean(parsed.defensivePlaystyleConfirmed);
+  const styleCertainty=clamp((parsed.evidence?.playstyleLocked?48:30)+(offensiveKnown?26:8)+(defensiveKnown?26:12));
+  const alt=lab.arms.find(arm=>!arm.isPrimary);
+  const gap=alt?Math.max(0,lab.arms[0].score-alt.score):5;
+  const decisionStability=clamp(58+gap*13+(alt?Math.min(12,alt.distanceFromPrimary*1.2):14));
+  const saturated=saturation.filter(item=>item.status==='SATURADO').length;
+  const attention=saturation.filter(item=>item.status==='ATENCAO').length;
+  const marginalSafety=clamp(96-saturated*18-attention*7);
+  const longitudinal=input.longitudinalGameplayMemoryV4060;
+  const provisional=input.gameplayValidationMemoryV4050;
+  const realMatchEvidence=longitudinal?.applied
+    ? clamp(longitudinal.confidenceScore)
+    : provisional?.applied
+      ? clamp(provisional.confidenceScore*.86)
+      : 38;
+  const dataQuality=clamp(baseConfidence*.68+attributeCoverage*.32);
+  const score=clamp(
+    dataQuality*.31+
+    attributeCoverage*.17+
+    skillEvidence*.10+
+    styleCertainty*.10+
+    decisionStability*.16+
+    marginalSafety*.10+
+    realMatchEvidence*.06
+  );
+  const level:CleanSlateConfidenceR123['level']=score>=82?'ALTA':score>=65?'MODERADA':'BAIXA';
+  const reasons=[
+    `Qualidade dos dados ${Math.round(dataQuality)}/100 e cobertura de atributos ${Math.round(attributeCoverage)}/100.`,
+    `Estabilidade da decisão ${Math.round(decisionStability)}/100${alt?` diante de uma alternativa a ${round1(gap)} ponto(s) da principal`:''}.`,
+    `Segurança marginal ${Math.round(marginalSafety)}/100: ${saturated} grupo(s) saturado(s) e ${attention} em atenção.`,
+    realMatchEvidence>40
+      ? `Evidência de partidas já disponível: ${Math.round(realMatchEvidence)}/100.`
+      : 'Ainda falta evidência suficiente de partidas reais; a confiança atual é majoritariamente técnica.'
+  ];
+  return {
+    score:round1(score),
+    level,
+    dataQuality:round1(dataQuality),
+    attributeCoverage:round1(attributeCoverage),
+    skillEvidence:round1(skillEvidence),
+    styleCertainty:round1(styleCertainty),
+    decisionStability:round1(decisionStability),
+    marginalSafety:round1(marginalSafety),
+    realMatchEvidence:round1(realMatchEvidence),
+    reasons
+  };
 }
 
 function naturalActionDetails(parsed:ParsedCard):CleanSlateActionR119[] {
@@ -516,7 +915,7 @@ function recommendImpetosR119(parsed:ParsedCard,actions:CleanSlateActionR119[]) 
     name:item.name,
     tier:index===0?'ideal':'alternativo',
     attributes:[...Object.keys(item.profile.domains),...item.profile.attributes.slice(0,3)],
-    reason:`Clean Slate r119: ${item.profile.explanation} Score funcional ${Math.round(item.functionalFit)}/100; posição ${Math.round(item.positionFit)}/100; total ${Math.round(item.score)}/100.`,
+    reason:`Clean Slate r123: ${item.profile.explanation} Score funcional ${Math.round(item.functionalFit)}/100; posição ${Math.round(item.positionFit)}/100; total ${Math.round(item.score)}/100.`,
     score:round1(item.score),
     confidence:round1(item.confidence),
     official:true,
@@ -563,8 +962,18 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
     const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
     const dna=dominantDna(actions);
+    const blockedLab:CleanSlateCompetitiveLabR123={
+      mode:'READ_ONLY_AB',
+      minMatchesPerArm:5,
+      canCompare:false,
+      arms:[],
+      protocol:['Complete a leitura antes de iniciar um teste A/B de ficha.'],
+      safeguards:{readOnly:true,neverAutoPromotes:true,sameCardRequired:true,similarConditionsPreferred:true,highDelayMustBeMarked:true}
+    };
+    const blockedSaturation:CleanSlateSaturationR123[]=[];
+    const blockedDecisionConfidence=decisionConfidenceR123(input,parsed,blockedSaturation,blockedLab,confidence);
     const analysis:CleanSlate2027R119={
-      version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'BLOCKED_INSUFFICIENT_DATA',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training:zero,candidateCount:0,score:0,responseScore:0,synergyScore:0,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:parsed.impetos?.[0]?.name??null,impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',recommendedImpeto:null,impetoIdeal:parsed.impetos?.[0]?.name??null,impetoIdealScore:parsed.impetos?.length?100:0,impetoIdealConfidence:parsed.impetos?.length?round1(confidence):0,impetoReason:parsed.impetos?.length?`Ímpeto atual ${parsed.impetos?.[0]?.name} preservado.`:'A leitura ainda não tem atributos suficientes para classificar um Ímpeto ideal com segurança.',impetoSlotStatus:String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO'),guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.','Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']};
+      version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'BLOCKED_INSUFFICIENT_DATA',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training:zero,candidateCount:0,score:0,responseScore:0,synergyScore:0,confidence:round1(confidence),decisionConfidence:blockedDecisionConfidence,saturationProfile:blockedSaturation,competitiveLab:blockedLab,onlinePerformance:{objective:'MAX_ONLINE_PERFORMANCE',rankedScore:0,friendsScore:0,pressureReliability:0,matchConsistency:0,staminaSustainability:0,identityPreservation:0,pointEfficiency:0,notes:['Leitura insuficiente para medir desempenho online com segurança.']},pointRationale:[],dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:parsed.impetos?.[0]?.name??null,impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',recommendedImpeto:null,impetoIdeal:parsed.impetos?.[0]?.name??null,impetoIdealScore:parsed.impetos?.length?100:0,impetoIdealConfidence:parsed.impetos?.length?round1(confidence):0,impetoReason:parsed.impetos?.length?`Ímpeto atual ${parsed.impetos?.[0]?.name} preservado.`:'A leitura ainda não tem atributos suficientes para classificar um Ímpeto ideal com segurança.',impetoSlotStatus:String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO'),guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true},reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.','Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']};
     return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:top5,recommendedImpetos:[],skillIntegrity,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
   const optimized=optimizeTraining(parsed,budget);
@@ -581,12 +990,35 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const response=round1(clamp(optimized.evaluation.actionScore));
   const synergy=round1(clamp(score*.62+confidence*.38));
   const dna=dominantDna(actions);
+  const pointRationale=pointRationaleR122(parsed,training,optimized.frequencies);
+  const saturationProfile=localSaturationProfileR123(parsed,training,optimized.frequencies);
+  const competitiveLab=competitiveLabR123(parsed,training,optimized.frequencies,optimized.finalistStates);
+  const decisionConfidence=decisionConfidenceR123(input,parsed,saturationProfile,competitiveLab,confidence);
+  const marginalReturns=pointRationale.map(item=>item.returnPerCost);
+  const pointEfficiency=clamp(average(marginalReturns)*32+58);
+  const onlinePerformance={
+    objective:'MAX_ONLINE_PERFORMANCE' as const,
+    rankedScore:round1(optimized.evaluation.online.rankedScore),
+    friendsScore:round1(optimized.evaluation.online.friendsScore),
+    pressureReliability:round1(optimized.evaluation.online.pressureReliability),
+    matchConsistency:round1(optimized.evaluation.online.matchConsistency),
+    staminaSustainability:round1(optimized.evaluation.online.staminaSustainability),
+    identityPreservation:round1(optimized.evaluation.online.identityPreservation),
+    pointEfficiency:round1(pointEfficiency),
+    notes:[
+      'Objetivo final: máximo desempenho em partidas online, com maior peso para ranqueada e sem usar Overall/GER.',
+      'O DNA é inferido de atributos, habilidades, estilos e frequência provável das ações; o nome do jogador não entra na pontuação.',
+      'Pressão online valoriza gargalos de controle, reação, equilíbrio e execução sem criar pisos fixos por posição.'
+    ]
+  };
   const analysis:CleanSlate2027R119={
-    version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'READY',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training,candidateCount:optimized.candidates,score,responseScore:response,synergyScore:synergy,confidence:round1(confidence),dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:impeto.current,impetoDecision:impeto.decision,recommendedImpeto:impeto.recommendations[0]?.name??null,impetoIdeal:impeto.ideal,impetoIdealScore:impeto.idealScore,impetoIdealConfidence:impeto.idealConfidence,impetoReason:impeto.reason,impetoSlotStatus:impeto.slotStatus,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:!impeto.current||!impeto.recommendations.some(x=>norm(x.name)===norm(impeto.current)),selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true},reasons:[
-      `Clean Slate r119 avaliou ${optimized.candidates} estados com beam limitado e orçamento ${spent}/${budget}.`,
+    version:CLEAN_SLATE_2027_R119_VERSION,authority:'CLEAN_SLATE_SINGLE_WRITER',source:'RAW_CARD_SNAPSHOT',status:'READY',cardKey:cardKey(parsed),positionAnchor:parsed.mainPosition,budget,training,candidateCount:optimized.candidates,score,responseScore:response,synergyScore:synergy,confidence:round1(confidence),decisionConfidence,saturationProfile,competitiveLab,onlinePerformance,pointRationale,dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,currentImpeto:impeto.current,impetoDecision:impeto.decision,recommendedImpeto:impeto.recommendations[0]?.name??null,impetoIdeal:impeto.ideal,impetoIdealScore:impeto.idealScore,impetoIdealConfidence:impeto.idealConfidence,impetoReason:impeto.reason,impetoSlotStatus:impeto.slotStatus,guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:!impeto.current||!impeto.recommendations.some(x=>norm(x.name)===norm(impeto.current)),selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true},reasons:[
+      `Clean Slate r123 avaliou ${optimized.candidates} estados com beam limitado e orçamento ${spent}/${budget}.`,
       'Capacidade natural e frequência provável são avaliadas separadamente; atributo alto sozinho não transforma uma ação em identidade.',
+      'Contexto v6.0/r123: resistência responde à carga funcional; Interceptação/Pressão no Ataque só pesam quando existem; pressão online aumenta o valor dos gargalos reais de controle e reação.',
       `DNA dominante: ${dna.join(' + ')||'em revisão'}.`,
-      'A pontuação favorece ações que a carta já executa naturalmente; não tenta elevar o atributo mais fraco só porque ele está abaixo de um alvo.',
+      'A pontuação favorece ações naturais, consistência online e retorno marginal; não tenta elevar o atributo mais fraco só porque ele está abaixo de um alvo.',
+      `Confiança da decisão r123: ${decisionConfidence.level} (${Math.round(decisionConfidence.score)}/100); laboratório A/B ${competitiveLab.canCompare?'pronto':'sem contraste suficiente'}.`,
       'Posição selecionada, overall, ficha recebida e pesos floor/peak/ceiling não participam da assinatura permanente.'
     ]
   };
@@ -603,10 +1035,10 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     skillIntegrity,
     cleanSlate2027R119:analysis,
     recommendationExplanation:[
-      `Motor final: Clean Slate r119 • ${score}/100 • resposta ${response}/100 • sinergia ${synergy}/100.`,
+      `Motor final: Clean Slate r123 • online ${Math.round(onlinePerformance.rankedScore)}/100 • resposta ${response}/100 • sinergia ${synergy}/100.`,
       `Ficha calculada do zero pelo snapshot cru da carta: ${spent}/${budget} pontos.`,
-      `Top 5 r119: ${top5.join(', ')||'leitura insuficiente'}.`,
-      impeto.current?`Ímpeto atual preservado: ${impeto.current}.`:impeto.recommendations[0]?`Ímpeto r119: ${impeto.recommendations[0].name}.`:impeto.ideal?`Ímpeto ideal r119: ${impeto.ideal} • ${impeto.decision==='REVIEW_SLOT'?'confirmar vaga antes de gastar':'referência sem autorização de gasto'}.`:'Ímpeto r119: nenhum candidato seguro confirmado.',
+      `Top 5 Clean Slate: ${top5.join(', ')||'leitura insuficiente'}.`,
+      impeto.current?`Ímpeto atual preservado: ${impeto.current}.`:impeto.recommendations[0]?`Ímpeto Clean Slate: ${impeto.recommendations[0].name}.`:impeto.ideal?`Ímpeto ideal Clean Slate: ${impeto.ideal} • ${impeto.decision==='REVIEW_SLOT'?'confirmar vaga antes de gastar':'referência sem autorização de gasto'}.`:'Ímpeto r119: nenhum candidato seguro confirmado.',
       ...analysis.reasons,
       ...input.recommendationExplanation
     ].filter((x,i,a)=>a.indexOf(x)===i).slice(0,112)

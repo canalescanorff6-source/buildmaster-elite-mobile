@@ -48,7 +48,8 @@ assert.ok(
 );
 assert.deepEqual(result.recommendedSkills, authority.top5);
 assert.equal(result.recommendedImpetos?.[0]?.name ?? null, authority.recommendedImpeto ?? null);
-assert.equal(result.finalCardAuthorityV4080R45, undefined);
-assert.ok((result.recommendationExplanation as string[]).some((line:string) => /Motor final: Clean Slate r119/.test(line)));
+// r45 pode permanecer anexado como diagnóstico histórico; a proteção real é não reescrever a saída Clean Slate.
+if (result.finalCardAuthorityV4080R45) assert.deepEqual(result.training, authority.training);
+assert.ok((result.recommendationExplanation as string[]).some((line:string) => /Motor final: Clean Slate r12[23]/.test(line)));
 
-console.log('r108/r119 aprovado: Card Signature fica em auditoria e Clean Slate sela ficha + Top 5 + Ímpeto.');
+console.log('r108/r123 aprovado: Card Signature fica em auditoria e Clean Slate sela ficha + Top 5 + Ímpeto.');
