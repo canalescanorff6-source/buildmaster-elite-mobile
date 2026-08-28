@@ -190,7 +190,8 @@
     "test:r120": "node -r ./tests/_ts-require.cjs tests/v40-80-r120-efootball-2027-regression.ts",
     "test:r121": "node -r ./tests/_ts-require.cjs tests/v40-80-r121-skill-workflow-app-upgrade-regression.ts",
     "test:r122": "node -r ./tests/_ts-require.cjs tests/v40-80-r122-online-performance-dna-regression.ts && node tests/v40-80-r122-result-ui-regression.mjs",
-    "test:r123": "node -r ./tests/_ts-require.cjs tests/v40-80-r123-competitive-lab-saturation-confidence-regression.ts && node tests/v40-80-r123-result-ui-regression.mjs"
+    "test:r123": "node -r ./tests/_ts-require.cjs tests/v40-80-r123-competitive-lab-saturation-confidence-regression.ts && node tests/v40-80-r123-result-ui-regression.mjs",
+    "test:r1232": "node tests/v40-80-r1232-ci-full-hotfix-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

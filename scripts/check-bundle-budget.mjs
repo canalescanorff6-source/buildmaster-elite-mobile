@@ -3,13 +3,14 @@ import path from 'node:path';
 
 const built = process.argv.includes('--built');
 // A linha r123 ampliou o Clean Slate com confiança, saturação e laboratório A/B.
-// O baseline de fonte agora passa ligeiramente de 5 MiB; elevamos somente o teto
-// agregado para 5,25 MiB, mantendo alerta em 90%, teto por módulo e limites do
-// bundle compilado. Isso registra crescimento legítimo sem desativar a guarda.
+// O baseline de fonte agora passa ligeiramente de 5 MiB; o teto fica explícito
+// em MiB para que as regressões de CI possam auditar a configuração sem
+// depender de avaliação de expressão. Mantemos alerta em 90%, teto por módulo
+// e limites do bundle compilado; a guarda continua ativa.
 const limits = {
   totalJs: 15 * 1024 * 1024,
   singleJs: 5 * 1024 * 1024,
-  sourceTs: Math.floor(5.25 * 1024 * 1024),
+  sourceTs: 5.25 * 1024 * 1024,
   singleSourceTs: 400 * 1024,
 };
 function walk(root, matcher) {
