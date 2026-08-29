@@ -11,6 +11,8 @@ assert.equal(canonicalizeV600DefensivePlaystyle('Goal Poacher'), null, 'Artilhei
 assert.equal(canonicalizeV600DefensivePlaystyle('Front Line Pressure'), 'Pressão no Ataque');
 assert.equal(canonicalizeV600DefensivePlaystyle('Covering Role'), 'Covering Role');
 assert.equal(canonicalizeV600DefensivePlaystyle('Pass Disruptor'), 'Pass Disruptor');
+assert.deepEqual(detectV600Playstyles('O destruidor'), { offensive:'Básico', defensive:'Destruidor', defensiveConfirmed:true, defensiveRaw:'Destruidor', source:'LEGACY_SINGLE' });
+assert.deepEqual(detectV600Playstyles('Goleiro Ofensivo'), { offensive:'Básico', defensive:'Goleiro Ofensivo', defensiveConfirmed:true, defensiveRaw:'Goleiro Ofensivo', source:'LEGACY_SINGLE' });
 assert.equal(inspectPlaystyleActivationR124('Goleiro Ofensivo','DEFENSIVE','GK').status,'LIKELY_ACTIVE');
 assert.equal(inspectPlaystyleActivationR124('Goleiro Ofensivo','DEFENSIVE','CF').status,'LIKELY_INACTIVE');
 console.log('r124 phase catalog regression: ok');

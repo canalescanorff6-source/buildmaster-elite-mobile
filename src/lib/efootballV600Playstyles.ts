@@ -132,9 +132,12 @@ export function detectV600Playstyles(text: string): V600PlaystyleReading {
   const legacy = canonicalizeV600OffensivePlaystyle(text);
   const explicitDefensiveOnly = !legacy ? canonicalizeV600DefensivePlaystyle(text) : null;
   if (legacy || explicitDefensiveOnly) return {
-    offensive: legacy,
-    // Cartas antigas exibem um único estilo. Na v6.0 isso não autoriza inferir
-    // o mesmo comportamento na fase sem a bola: o fallback seguro é Básico.
+    // Cartas antigas exibem um único estilo. Quando esse rótulo hoje pertence
+    // apenas à defesa (ex.: Goleiro Ofensivo/Destruidor), o ataque deve cair em
+    // Básico em vez de ficar vazio e depois herdar o estilo genérico legado.
+    offensive: legacy ?? 'Básico',
+    // Para um estilo ofensivo legado conhecido, a fase sem a bola continua
+    // neutra; para um rótulo exclusivamente defensivo, preservamos a defesa.
     defensive: legacy ? 'Básico' : explicitDefensiveOnly,
     defensiveConfirmed: Boolean(legacy || explicitDefensiveOnly),
     defensiveRaw: legacy ? null : explicitDefensiveOnly,

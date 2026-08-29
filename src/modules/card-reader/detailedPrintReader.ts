@@ -7,6 +7,7 @@ import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
 import { discoverUnknownSpecialSkillsV4070 } from '@/lib/skillDiscoveryV4070';
 import { detectV600Playstyles, canonicalizeV600OffensivePlaystyle } from '@/lib/efootballV600Playstyles';
 import { recordDualPlaystyleObservation } from '@/lib/dualPlaystyleRegistryV4080R47';
+import { canonicalizePlayerPlaystyle } from '@/lib/efootball2026Playstyles';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
 
@@ -697,7 +698,15 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const focusedV600Styles = detectV600Playstyles(phaseStyleSource);
   const fallbackV600Styles = detectV600Playstyles(identitySource);
   const v600Styles = focusedV600Styles.source !== 'NONE' ? focusedV600Styles : fallbackV600Styles;
-  const playstyle = v600Styles.offensive ?? detectPlaystyle(phaseStyleSource) ?? detectPlaystyle(identitySource);
+  // `playstyle` é o contrato legado/genérico da identidade da carta. Ele precisa
+  // continuar reconhecendo estilos pré-v6.0 (ex.: Destruidor) mesmo quando, no
+  // modelo 2027, esse rótulo pertence somente à fase defensiva. As fases novas
+  // continuam vindo exclusivamente de `v600Styles`, portanto este fallback não
+  // volta a duplicar ataque/defesa nem contamina o cálculo moderno.
+  const legacyIdentityPlaystyle = canonicalizePlayerPlaystyle(phaseStyleSource) ?? canonicalizePlayerPlaystyle(identitySource);
+  const playstyle = v600Styles.source === 'LEGACY_SINGLE'
+    ? legacyIdentityPlaystyle ?? v600Styles.offensive ?? detectPlaystyle(phaseStyleSource) ?? detectPlaystyle(identitySource)
+    : v600Styles.offensive ?? legacyIdentityPlaystyle ?? detectPlaystyle(phaseStyleSource) ?? detectPlaystyle(identitySource);
 
   const parsedAttributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
   const attributes = recoverAttributesFromVisualColumns(readings, parsedAttributes, attributeConfidence);

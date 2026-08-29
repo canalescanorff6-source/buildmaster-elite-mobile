@@ -65,7 +65,7 @@ export const BUILTIN_DEFENSIVE_PLAYSTYLES_R124: readonly PhasePlaystyleEntryR124
   DEF('1º Volante', ['Anchor Man','Primeiro volante','Âncora'], ['DMF','CMF'], 'LEGACY_GAME'),
   DEF('Covering Role', ['Covering','Coverage Role'], ['CMF','DMF','CB','LB','RB']),
   DEF('High Line Master', ['High-Line Master','Offside Trap Master'], ['CB','LB','RB']),
-  DEF('Destruidor', ['The Destroyer','Destroyer'], ['CB','DMF','LB','RB'], 'GAME_EXPORT_CORROBORATED'),
+  DEF('Destruidor', ['O destruidor','The Destroyer','Destroyer'], ['CB','DMF','LB','RB'], 'GAME_EXPORT_CORROBORATED'),
   DEF('Sweeper GK', ['Sweeper Goalkeeper'], ['GK'], 'GAME_EXPORT_CORROBORATED', true),
   DEF('Goleiro Ofensivo', ['Offensive GK','Attacking GK','Offensive Goalkeeper'], ['GK'], 'GAME_EXPORT_CORROBORATED', true),
   DEF('Goleiro Defensivo', ['Defensive GK','Defensive Goalkeeper'], ['GK'], 'GAME_EXPORT_CORROBORATED', true)
