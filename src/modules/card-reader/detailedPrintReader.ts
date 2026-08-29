@@ -5,7 +5,7 @@ import { canonicalSkillName, extractCanonicalSkillsFromText, skillIdentityKey } 
 import { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import { RECOGNIZABLE_IMPETO_NAMES } from '@/lib/officialImpetoCatalog';
 import { discoverUnknownSpecialSkillsV4070 } from '@/lib/skillDiscoveryV4070';
-import { detectV600Playstyles } from '@/lib/efootballV600Playstyles';
+import { detectV600Playstyles, canonicalizeV600OffensivePlaystyle } from '@/lib/efootballV600Playstyles';
 import { recordDualPlaystyleObservation } from '@/lib/dualPlaystyleRegistryV4080R47';
 
 export type DetailedReadStatus = 'confirmed' | 'review' | 'missing';
@@ -612,9 +612,12 @@ function detectName(text: string, knownPlayerNames: string[] = []) {
 }
 
 function detectPlaystyle(text: string) {
-  const styles = ['Artilheiro', 'Homem de Área', 'Pivô', 'Atacante Pivô', 'Puxa Marcação', 'Armador Criativo', 'Infiltração', 'Ala Produtivo', 'Lateral Móvel', 'Clássico 10', 'Meia versátil', '1º Volante', 'Orquestrador', 'Lateral Defensivo', 'Perito em Cruzamento', 'Lateral Atacante', 'Lateral Ofensivo', 'Destruidor', 'Defensor Criativo', 'Atacante Surpresa', 'Goleiro Ofensivo', 'Goleiro Defensivo'];
-  const norm = normalized(text);
-  return styles.find((style) => norm.includes(normalized(style))) ?? null;
+  const lines = String(text ?? '').split(/\r?\n/).map((line)=>line.trim()).filter(Boolean);
+  for (const line of lines) {
+    const style = canonicalizeV600OffensivePlaystyle(line);
+    if (style) return style;
+  }
+  return canonicalizeV600OffensivePlaystyle(text);
 }
 
 function independentNameAgreement(reading: PremiumZoneReading | null, detectedName: string | null) {

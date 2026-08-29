@@ -27,7 +27,6 @@ import {
   ATTRIBUTE_PT,
   OFFICIAL_ADDITIONAL_SKILL_NAMES,
   SPECIAL_SKILL_NAMES,
-  PLAYSTYLE_OPTIONS,
   POSITION_LABELS,
   type AnalysisResult,
   type AttributeKey,
@@ -95,6 +94,7 @@ import {
   type TrainingProgressionKeyR106
 } from '@/components/result/TrainingProgressionIconR106';
 import { UnifiedPerformanceV3920Panel } from '@/components/UnifiedPerformanceV3920Panel';
+import { PhasePlaystyleSelectorR124 } from '@/components/PhasePlaystyleSelectorR124';
 import {
   CommunityIntelligencePanel,
   CompactSharePanel,
@@ -111,8 +111,6 @@ import {
   VideoReviewPanel
 } from '@/components/lazy/AppLazyPanels';
 
-const playstyleOptions = PLAYSTYLE_OPTIONS;
-const defensivePlaystyleOptions = ['Básico', 'Pressão no Ataque', ...PLAYSTYLE_OPTIONS] as const;
 
 const trainingLabels: Record<string, string> = {
   shooting: 'Finalização',
@@ -2072,24 +2070,14 @@ export function ReviewPanel({
 
         <article className="luxury-panel review-step-card">
           <div className="review-step-heading"><span>3</span><div><p className="kicker">Estilo detectado</p><h3>Como a carta se movimenta?</h3></div></div>
-          <div className="review-form-grid">
-            <label>
-              <span>Estilo ofensivo correto</span>
-              <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
-                <option value="AUTO">Automático / não sei</option>
-                {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-              </select>
-              <small>Identidade da carta quando o time está atacando.</small>
-            </label>
-            <label>
-              <span>Estilo defensivo correto</span>
-              <select value={defensivePlaystyleOverride} onChange={(event) => setDefensivePlaystyleOverride(event.target.value)}>
-                <option value="AUTO">Detectar / Básico em carta antiga</option>
-                {defensivePlaystyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-              </select>
-              <small>Cartas antigas usam Básico na defesa; cartas v6 podem ter um estilo próprio sem a bola.</small>
-            </label>
-          </div>
+          <PhasePlaystyleSelectorR124
+            offensiveValue={playstyleOverride}
+            defensiveValue={defensivePlaystyleOverride}
+            onOffensiveChange={setPlaystyleOverride}
+            onDefensiveChange={setDefensivePlaystyleOverride}
+            position={targetPosition}
+            compact
+          />
         </article>
 
         <article className="luxury-panel review-step-card">

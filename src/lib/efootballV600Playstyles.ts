@@ -1,14 +1,14 @@
-import { canonicalizePlayerPlaystyle, type CanonicalPlayerPlaystyle } from './efootball2026Playstyles';
+import { canonicalizeOffensivePlaystyleR124, canonicalizeDefensivePlaystyleR124, findPhasePlaystyleMatchesR124, phasePlaystyleOptionsR124 } from './efootball2027PhaseCatalogR124';
 
-export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0-r120-dual-phase-basic-safe' as const;
+export const EFOOTBALL_V600_PLAYSTYLE_VERSION = '6.0-r124-phase-separated-live-safe' as const;
 
 /**
  * A Konami confirmou publicamente Pressão no Ataque como exemplo de estilo
  * defensivo na v6.0. Nomes adicionais podem ser preservados pelo OCR como
  * provisórios, mas só recebem peso de gameplay após confirmação.
  */
-export const CONFIRMED_V600_DEFENSIVE_PLAYSTYLES = ['Básico', 'Pressão no Ataque'] as const;
-export type ConfirmedV600DefensivePlaystyle = CanonicalPlayerPlaystyle | typeof CONFIRMED_V600_DEFENSIVE_PLAYSTYLES[number];
+export const CONFIRMED_V600_DEFENSIVE_PLAYSTYLES = phasePlaystyleOptionsR124('DEFENSIVE');
+export type ConfirmedV600DefensivePlaystyle = string;
 
 function normalize(value: unknown): string {
   return String(value ?? '')
@@ -29,46 +29,51 @@ function cleanRawLabel(value: unknown): string | null {
 }
 
 export function canonicalizeV600DefensivePlaystyle(value: unknown): ConfirmedV600DefensivePlaystyle | null {
-  const canonicalPlayerStyle = canonicalizePlayerPlaystyle(value);
-  if (canonicalPlayerStyle) return canonicalPlayerStyle;
-  const text = normalize(value);
-  if (!text) return null;
-  if (/^(basico|basic|padrao|default)$/.test(text)) return 'Básico';
-  if (/pressao no ataque|attacking pressure|front pressure|frontline pressure/.test(text)) return 'Pressão no Ataque';
-  return null;
+  return canonicalizeDefensivePlaystyleR124(value);
 }
 
-function canonicalStylesInOrder(text: string): CanonicalPlayerPlaystyle[] {
-  const ordered: CanonicalPlayerPlaystyle[] = [];
-  const lines = String(text ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  for (const line of lines) {
-    const style = canonicalizePlayerPlaystyle(line);
-    if (style && ordered[ordered.length - 1] !== style) ordered.push(style);
-  }
-  return ordered;
+export function canonicalizeV600OffensivePlaystyle(value: unknown): string | null {
+  return canonicalizeOffensivePlaystyleR124(value);
 }
 
 function phasePairFromCompactZone(text: string) {
   const lines = String(text ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  let offensive: CanonicalPlayerPlaystyle | null = null;
+  let offensive: string | null = null;
   let defensive: ConfirmedV600DefensivePlaystyle | null = null;
+  const unphased: Array<{ offensive:string|null; defensive:ConfirmedV600DefensivePlaystyle|null }> = [];
 
   for (const line of lines) {
     const n = normalize(line);
-    const style = canonicalizePlayerPlaystyle(line);
-    const defensiveStyle = canonicalizeV600DefensivePlaystyle(line);
-    if (!offensive && style && /ataque|atacando|ofensiv|vermelh|red|\u2191|\u25b2|\u2b06/.test(n + ' ' + line)) offensive = style;
-    if (!defensive && defensiveStyle && /defesa|defendendo|defensiv|azul|blue|\u2193|\u25bc|\u2b07/.test(n + ' ' + line)) defensive = defensiveStyle;
+    const hasOffensiveMarker = /^(?:att|attack|attacking|offensive|ataque|atacando|ofensivo)\b|ataque|atacando|ofensiv|com a bola|vermelh|red|\u2191|\u25b2|\u2b06/.test(n);
+    const hasDefensiveMarker = /^(?:def|defence|defense|defending|defensive|defesa|defendendo|defensivo)\b|defesa|defendendo|defensiv|sem a bola|azul|blue|\u2193|\u25bc|\u2b07/.test(n);
+    if (hasOffensiveMarker && !offensive) offensive = canonicalizeV600OffensivePlaystyle(line);
+    if (hasDefensiveMarker && !defensive) defensive = canonicalizeV600DefensivePlaystyle(line);
+    if (!hasOffensiveMarker && !hasDefensiveMarker) {
+      unphased.push({
+        offensive: canonicalizeV600OffensivePlaystyle(line),
+        defensive: canonicalizeV600DefensivePlaystyle(line)
+      });
+    }
   }
 
   if (offensive || defensive) return { offensive, defensive };
 
-  // Layout v6.0: dentro da área exclusiva de estilos, duas linhas distintas
-  // representam fase com bola e fase sem bola, nessa ordem visual.
-  const ordered = canonicalStylesInOrder(text);
-  if (ordered.length === 2 && ordered[0] !== ordered[1]) {
-    return { offensive: ordered[0], defensive: ordered[1] as ConfirmedV600DefensivePlaystyle };
+  // Layout compacto v6.0: duas linhas na área exclusiva de estilos representam
+  // ataque e defesa nessa ordem. Cada linha é validada pela família correta.
+  if (unphased.length >= 2) {
+    const firstOffensive=unphased[0]?.offensive ?? null;
+    const secondDefensive=unphased[1]?.defensive ?? null;
+    if (firstOffensive || secondDefensive) return { offensive:firstOffensive, defensive:secondDefensive };
   }
+
+  // Alguns OCRs colam as duas cápsulas numa única linha (ex.:
+  // "Basic Attacking GK"). Nesse caso preservamos a ordem visual e ainda
+  // exigimos que cada rótulo pertença à sua fase correta.
+  const offensiveMatches=findPhasePlaystyleMatchesR124(text,'OFFENSIVE');
+  const defensiveMatches=findPhasePlaystyleMatchesR124(text,'DEFENSIVE');
+  const firstOffensive=offensiveMatches[0] ?? null;
+  const afterOffensive=firstOffensive ? defensiveMatches.find((x)=>x.index>=firstOffensive.end) ?? null : defensiveMatches[0] ?? null;
+  if (firstOffensive && afterOffensive) return { offensive:firstOffensive.label, defensive:afterOffensive.label };
   return { offensive: null, defensive: null };
 }
 
@@ -81,7 +86,7 @@ function firstCaptured(text: string, patterns: RegExp[]): string | null {
 }
 
 export type V600PlaystyleReading = {
-  offensive: CanonicalPlayerPlaystyle | null;
+  offensive: string | null;
   /** Nome exibido na carta; pode ser provisório quando ainda não está no catálogo confirmado. */
   defensive: string | null;
   defensiveConfirmed: boolean;
@@ -91,13 +96,15 @@ export type V600PlaystyleReading = {
 
 export function detectV600Playstyles(text: string): V600PlaystyleReading {
   const offensiveRaw = firstCaptured(text, [
-    /(?:estilo\s+de\s+jogo\s+ofensivo|estilo\s+ofensivo|offensive\s+playstyle)\s*[:=\-]?\s*([^\n|•]{2,48})/i
+    /(?:estilo\s+de\s+jogo\s+ofensivo|estilo\s+ofensivo|offensive\s+playstyle|attacking\s+playstyle)\s*[:=\-]?\s*([^\n|•]{2,48})/i,
+    /^(?:att|attack|ataque|atacando)\s*[:=\-]\s*([^\n|•]{2,48})/im
   ]);
   const defensiveRaw = firstCaptured(text, [
-    /(?:estilo\s+de\s+jogo\s+defensivo|estilo\s+defensivo|defensive\s+playstyle)\s*[:=\-]?\s*([^\n|•]{2,48})/i
+    /(?:estilo\s+de\s+jogo\s+defensivo|estilo\s+defensivo|defensive\s+playstyle|defending\s+playstyle)\s*[:=\-]?\s*([^\n|•]{2,48})/i,
+    /^(?:def|defence|defense|defesa|defendendo)\s*[:=\-]\s*([^\n|•]{2,48})/im
   ]);
 
-  const explicitOffensive = canonicalizePlayerPlaystyle(offensiveRaw);
+  const explicitOffensive = canonicalizeV600OffensivePlaystyle(offensiveRaw);
   const confirmedDefensive = canonicalizeV600DefensivePlaystyle(defensiveRaw);
   const preservedDefensive = confirmedDefensive ?? cleanRawLabel(defensiveRaw);
   if (offensiveRaw || defensiveRaw) {
@@ -122,7 +129,7 @@ export function detectV600Playstyles(text: string): V600PlaystyleReading {
     };
   }
 
-  const legacy = canonicalizePlayerPlaystyle(text);
+  const legacy = canonicalizeV600OffensivePlaystyle(text);
   const explicitDefensiveOnly = !legacy ? canonicalizeV600DefensivePlaystyle(text) : null;
   if (legacy || explicitDefensiveOnly) return {
     offensive: legacy,
@@ -154,6 +161,13 @@ export function defensivePhaseTrainingBias(value: unknown): DefensivePhaseTraini
   switch (style) {
     case 'Básico': return {};
     case 'Pressão no Ataque': return { defending: .25, dexterity: .18, lowerBodyStrength: .22 };
+    case 'Front Line Poacher': return { defending: .18, dexterity: .12, lowerBodyStrength: .08 };
+    case 'Pass Disruptor': return { defending: .25, dexterity: .10, lowerBodyStrength: .07 };
+    case 'All Action Defender': return { defending: .24, lowerBodyStrength: .22, dexterity: .11 };
+    case 'Covering Role': return { defending: .28, lowerBodyStrength: .13, dexterity: .12 };
+    case 'High Line Master': return { defending: .31, dexterity: .10, lowerBodyStrength: .08 };
+    case 'Sweeper GK': return { gk2: .16, gk3: .18, lowerBodyStrength: .08 };
+    case 'Attack Outlet': return { lowerBodyStrength: .05, dexterity: .04 };
     case 'Destruidor': return { defending: .34, lowerBodyStrength: .23, dexterity: .12, aerialStrength: .10 };
     case 'Defensor Criativo': return { defending: .25, passing: .18, lowerBodyStrength: .10, dexterity: .08 };
     case 'Lateral Defensivo': return { defending: .28, lowerBodyStrength: .20, passing: .10, dexterity: .08 };

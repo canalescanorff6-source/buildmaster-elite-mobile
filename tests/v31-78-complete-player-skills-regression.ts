@@ -52,8 +52,8 @@ function reading(label: string, text: string, confidence = 94): PremiumZoneReadi
 }
 
 assert.equal(OFFICIAL_ADDITIONAL_SKILL_NAMES.length, 44, 'O catálogo treinável deve preservar as 44 habilidades adicionais oficiais (40 de linha + 4 de goleiro).');
-assert.equal(SPECIAL_SKILL_NAMES.length, 20, 'O catálogo especial/nativo deve trazer as 20 habilidades especiais atuais.');
-assert.equal(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length, 64, 'O leitor deve reconhecer 64 nomes canônicos no total.');
+assert.equal(SPECIAL_SKILL_NAMES.length, 21, 'O catálogo especial/nativo deve trazer as 21 habilidades especiais atuais confirmadas no catálogo local.');
+assert.equal(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length, 65, 'O leitor deve reconhecer 65 nomes canônicos no total.');
 assert.equal(new Set(ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES).size, ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES.length);
 
 const requiredSpecials = [
@@ -61,7 +61,7 @@ const requiredSpecials = [
   'Cabeçada fulminante', 'Cruzamento cortante', 'Fortaleza', 'Passe decisivo',
   'Comandante da defesa (GO)', 'Rugido do goleiro', 'Esticada de Perna',
   'Chute rasteiro fulminante', 'Pés magnéticos', 'Drible de impulso',
-  'Finalização fenomenal', 'Passador nato', 'Garra', 'Passe visionário', 'Sombra veloz'
+  'Finalização fenomenal', 'Passador nato', 'Garra', 'Passe visionário', 'Sombra veloz', 'Tap Trick'
 ];
 for (const skill of requiredSpecials) {
   assert.ok(SPECIAL_SKILL_NAMES.includes(skill), `${skill} precisa existir no catálogo nativo/especial.`);
@@ -73,6 +73,7 @@ assert.equal(canonicalSkillName('Drible explosivos'), 'Drible explosivo');
 assert.equal(canonicalSkillName('Attack Trigger'), 'Desencadeador de ataques');
 assert.equal(canonicalSkillName('Attacking Surge'), 'Impulso ofensivo');
 assert.equal(canonicalSkillName('Shadow Hunt'), 'Sombra veloz');
+assert.equal(canonicalSkillName('Tap Trick'), 'Tap Trick');
 assert.equal(canonicalSkillName('Visionary Pass'), 'Passe visionário');
 assert.equal(canonicalSkillName('Comandante da defesa GO'), 'Comandante da defesa (GO)');
 assert.equal(canonicalSkillName('Reposição baixa do GO'), 'Reposição baixa do goleiro');
@@ -84,6 +85,7 @@ assert.equal(isSpecialSkillIdentity('Acceleration Burst'), true);
 assert.equal(isSpecialSkillIdentity('Visionary Pass'), true);
 assert.equal(isSpecialSkillIdentity('Attacking Surge'), true);
 assert.equal(isSpecialSkillIdentity('Shadow Hunt'), true);
+assert.equal(isSpecialSkillIdentity('Tap Trick'), true);
 
 const complementary = filterComplementaryAdditionalSkills([
   'Drible explosivo', 'Acceleration Burst', 'Passe visionário',

@@ -25,6 +25,7 @@ import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
 import { AppCommandPalette, type AppCommand } from '@/components/AppCommandPalette';
 import { RefinedNavigation } from '@/components/RefinedNavigation';
 import { EfootballV600PreviewV4070 } from '@/components/EfootballV600PreviewV4070';
+import { PhasePlaystyleSelectorR124 } from '@/components/PhasePlaystyleSelectorR124';
 import { PremiumContextBar } from '@/components/PremiumContextBar';
 import { MobileScrollRecovery } from '@/components/MobileScrollRecovery';
 import { PremiumBrand } from '@/components/PremiumBrand';
@@ -43,7 +44,7 @@ import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
 import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { EfhubVisualCalibrator } from '@/components/EfhubVisualCalibrator';
 import { ArchitectureHealthPanel } from '@/components/ArchitectureHealthPanel';
-import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, playstyleOptions, defensivePlaystyleOptions, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
+import { ACTIVE_SESSION_KEY, CALIBRATION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, VAULT_FOLDERS_KEY, formationGuides, objectives, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { LiveStatusRegion } from '@/components/LiveStatusRegion';
 import { announcePremiumScreen, celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import { parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot, type MainNavigationGroup, type PlayerWorkspace } from '@/lib/appRefinement';
@@ -3644,10 +3645,13 @@ ${reading.text}`)) : fullPassText;
                 <header><div><strong>Posição escolhida</strong><small>A posição final sempre será definida por você.</small></div><Target size={18}/></header>
                 <div className="bm32-choice-chips">{POSITION_LABELS.filter((item) => item.code !== 'AUTO').map((item) => <button type="button" key={item.code} className={targetPosition === item.code ? 'active' : ''} onClick={() => setTargetPosition(item.code)}>{item.label}</button>)}</div>
               </section>
-              <section className="bm32-manual-choice-card">
-                <header><div><strong>Estilo de jogo</strong><small>Escolha o comportamento que deve ficar ativo nessa posição.</small></div><Sparkles size={18}/></header>
-                <div className="bm32-choice-chips bm32-style-chips">{playstyleOptions.slice(0, 18).map((style) => <button type="button" key={style} className={playstyleOverride === style ? 'active' : ''} onClick={() => setPlaystyleOverride(style)}>{style}</button>)}</div>
-              </section>
+              <PhasePlaystyleSelectorR124
+                offensiveValue={playstyleOverride}
+                defensiveValue={defensivePlaystyleOverride}
+                onOffensiveChange={setPlaystyleOverride}
+                onDefensiveChange={setDefensivePlaystyleOverride}
+                position={targetPosition}
+              />
               <section className="bm32-manual-attributes">
                 <header><div><strong>Atributos da carta</strong><small>Preencha somente os valores visíveis. O restante pode ficar vazio.</small></div><span>{Object.keys(manualFields.attributes).length}/{ATTRIBUTE_INPUTS.length}</span></header>
                 <div className="bm32-attribute-grid">{ATTRIBUTE_INPUTS.map((item) => {
@@ -3694,22 +3698,14 @@ ${reading.text}`)) : fullPassText;
                   </select>
                   <small>{creationOriginalLabel}</small>
                 </label>
-                <label className="creation-field-card">
-                  <span>Estilo ofensivo</span>
-                  <select value={playstyleOverride} onChange={(event) => setPlaystyleOverride(event.target.value)}>
-                    <option value="AUTO">Deixar o aplicativo identificar</option>
-                    {playstyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-                  </select>
-                  <small>{creationStyleLabel}</small>
-                </label>
-                <label className="creation-field-card">
-                  <span>Estilo defensivo</span>
-                  <select value={defensivePlaystyleOverride} onChange={(event) => setDefensivePlaystyleOverride(event.target.value)}>
-                    <option value="AUTO">Detectar / usar Básico em carta antiga</option>
-                    {defensivePlaystyleOptions.map((style) => <option key={style} value={style}>{style}</option>)}
-                  </select>
-                  <small>{creationDefensiveStyleLabel}</small>
-                </label>
+                <PhasePlaystyleSelectorR124
+                  offensiveValue={playstyleOverride}
+                  defensiveValue={defensivePlaystyleOverride}
+                  onOffensiveChange={setPlaystyleOverride}
+                  onDefensiveChange={setDefensivePlaystyleOverride}
+                  position={targetPosition}
+                  compact
+                />
               </div>
               <details className="creation-advanced-details creation-tactical-details" open>
                 <summary>
@@ -4313,7 +4309,8 @@ ${reading.text}`)) : fullPassText;
                   <article><span>Objetivo</span><strong>{creationObjectiveLabel}</strong></article>
                   <article><span>Posição-alvo</span><strong>{creationTargetLabel}</strong></article>
                   <article><span>Posição original</span><strong>{creationOriginalLabel}</strong></article>
-                  <article><span>Estilo</span><strong>{creationStyleLabel}</strong></article>
+                  <article><span>Ataque</span><strong>{creationStyleLabel}</strong></article>
+                  <article><span>Defesa</span><strong>{creationDefensiveStyleLabel}</strong></article>
                   <article><span>Pontos</span><strong>{creationPointsValue || 'Na revisão'}</strong></article>
                   <article><span>Contexto</span><strong>{selectedManager ? selectedManager.name : tacticalStyleName[teamStyle] || 'Automático'}</strong></article>
                 </div>

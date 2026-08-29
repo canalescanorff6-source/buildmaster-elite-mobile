@@ -192,7 +192,8 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Garra': { category: 'ESPECIAL', boosts: { finishing: 3, pressure: 4 }, aliases: ['Willpower', 'Força de vontade', 'Forca de vontade'] },
   'Passe visionário': { category: 'ESPECIAL', boosts: { creation: 6 }, aliases: ['Visionary Pass', 'Passe visionario'] },
 
-  'Sombra veloz': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 3 }, aliases: ['Shadow Hunt', 'Caça-sombras', 'Caca-sombras', 'Sombra Veloz', 'Speeding Bullet'] },
+  'Sombra veloz': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 3 }, aliases: ['Shadow Hunt', 'Caça-sombras', 'Caca-sombras', 'Sombra Veloz'] },
+  'Tap Trick': { category: 'ESPECIAL', boosts: {}, aliases: ['Tap Trick', 'Tap-trick', 'タップトリック'] },
 };
 
 export const OFFICIAL_ADDITIONAL_SKILL_CATALOG_VERSION = '35.00-user-photo-catalog-2026-07-31';
@@ -269,7 +270,7 @@ export const SPECIAL_SKILL_NAMES = [
   'Cabeçada fulminante', 'Cruzamento cortante', 'Fortaleza', 'Passe decisivo',
   'Comandante da defesa (GO)', 'Rugido do goleiro', 'Esticada de Perna',
   'Chute rasteiro fulminante', 'Pés magnéticos', 'Drible de impulso',
-  'Finalização fenomenal', 'Passador nato', 'Garra', 'Passe visionário', 'Sombra veloz'
+  'Finalização fenomenal', 'Passador nato', 'Garra', 'Passe visionário', 'Sombra veloz', 'Tap Trick'
 ];
 
 /** Todos os nomes que o leitor pode reconhecer, incluindo habilidades nativas,

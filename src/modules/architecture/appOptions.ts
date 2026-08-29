@@ -1,4 +1,5 @@
-import { PLAYSTYLE_OPTIONS, type Objective, type TacticalFormation, type TacticalStyle } from '@/lib/analyzerDomain';
+import { type Objective, type TacticalFormation, type TacticalStyle } from '@/lib/analyzerDomain';
+import { phasePlaystyleOptionsR124 } from '@/lib/efootball2027PhaseCatalogR124';
 
 export const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
 export const EFHUB_MANUAL_CALIBRATION_KEY = 'buildmaster_efhub_visual_calibration_v31_81';
@@ -16,8 +17,8 @@ export const objectives: Array<{ value: Objective; title: string; hint: string }
   }
 ];
 
-export const playstyleOptions = PLAYSTYLE_OPTIONS;
-export const defensivePlaystyleOptions = ['Básico', 'Pressão no Ataque', ...PLAYSTYLE_OPTIONS] as const;
+export const playstyleOptions = phasePlaystyleOptionsR124('OFFENSIVE');
+export const defensivePlaystyleOptions = phasePlaystyleOptionsR124('DEFENSIVE');
 
 
 

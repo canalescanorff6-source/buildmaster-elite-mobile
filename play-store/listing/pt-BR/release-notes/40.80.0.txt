@@ -1,1 +1,3 @@
 Clean Slate r123: máximo desempenho online sem foco em Overall/GER, com confiança da ficha, auditoria de saturação dos pontos e laboratório competitivo A/B ligado à autoridade atual. O teste A/B compara a ficha principal com uma alternativa controlada, registra Ranked/amistosos e nunca altera ficha, Top 5 ou Ímpeto automaticamente.
+
+r124.1: estilos 2027 separados por fase, detecção segura de cartas antigas/novas, catálogo vivo com validação multi-fonte e hotfix do pacote mobile para impedir bloqueio do CI por whitespace no fim de arquivo.
