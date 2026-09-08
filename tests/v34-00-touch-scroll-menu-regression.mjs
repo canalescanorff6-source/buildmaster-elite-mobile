@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const app = read('src/components/CardVisionApp.tsx');
+const chrome = read('src/components/CardVisionAppChromeR185.tsx');
 const recovery = read('src/components/MobileScrollRecovery.tsx');
 const navigation = read('src/components/RefinedNavigation.tsx');
 const context = read('src/components/PremiumContextBar.tsx');
@@ -12,7 +13,7 @@ const sw = read('public/sw.js');
 
 // A gaveta lateral não pode mais deixar overflow hidden preso no body.
 assert.doesNotMatch(navigation, /document\.body\.style\.overflow\s*=\s*['"]hidden['"]/);
-assert.match(app, /<MobileScrollRecovery \/>/);
+assert.match(chrome, /<MobileScrollRecovery \/>/);
 assert.match(recovery, /const restorePageScroll = \(\) =>/);
 assert.match(recovery, /document\.body\.style\.removeProperty\('overflow'\)/);
 assert.match(recovery, /document\.documentElement\.style\.removeProperty\('overflow'\)/);

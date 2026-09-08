@@ -5,6 +5,7 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const layout = read('src/app/layout.tsx');
 const css = read('src/app/v34-clean-responsive.css');
 const app = read('src/components/CardVisionApp.tsx');
+const settings = read('src/components/settings/CardVisionSettingsWorkspaceR190.tsx');
 const home = read('src/modules/core/IntegratedHomePanel.tsx');
 const players = read('src/modules/players/PlayerLaboratory.tsx');
 const calibrator = read('src/components/EfhubVisualCalibrator.tsx');
@@ -44,10 +45,11 @@ assert.match(players, />Filtros<\/span>/);
 assert.match(players, /Cofre<\/button>/);
 assert.match(players, /Novo<\/button>/);
 
-assert.match(app, /<h2>Carregando<\/h2>/);
+assert.match(app, /className="app-route-loading"/);
+assert.match(app, /<h2>(?:Carregando|Abrindo o BuildMaster)<\/h2>/);
 assert.match(app, /Ficha por imagem/);
 assert.match(app, /Ficha manual/);
-assert.match(app, /<h2>Configurações<\/h2>/);
+assert.match(settings, /<h2>Configurações<\/h2>/);
 assert.match(app, /<strong>Opções do time<\/strong>/);
 
 console.log('v34.00 Clean Responsive aprovado: enquadramento universal, textos curtos, guias sem corte e tela cheia opcional.');

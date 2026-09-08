@@ -57,7 +57,6 @@ for (const marker of [
   'node scripts/install-android-security-plugin.mjs',
   'node scripts/install-match-recorder-plugin.mjs',
   'node scripts/install-native-vault-storage-plugin.mjs',
-  'node scripts/install-background-ocr-plugin.mjs',
   'node scripts/install-android-branding.mjs',
   'npx --no-install cap sync android',
   ':app:compileReleaseJavaWithJavac',
@@ -66,12 +65,22 @@ for (const marker of [
   "package: name='com.buildmaster.elitetatico'",
 ]) check(directWorkflow.includes(marker), `workflow APK direto contém ${marker}`);
 
-check(directWorkflow.indexOf('install-background-ocr-plugin.mjs') < directWorkflow.indexOf('cap sync android'), 'plugin OCR é instalado antes do cap sync');
-check(directWorkflow.includes('FOREGROUND_SERVICE_DATA_SYNC'), 'workflow direto valida permissão dataSync do OCR');
-check(directWorkflow.includes('BuildMasterBackgroundOcrService'), 'workflow direto valida serviço OCR');
+const directOcrExplicit = directWorkflow.includes('node scripts/install-background-ocr-plugin.mjs');
+const directOcrDelegated = securityInstaller.includes("NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION || 'direct'")
+  && securityInstaller.includes("distribution !== 'play'")
+  && securityInstaller.includes('install-background-ocr-plugin.mjs');
+check(directOcrExplicit || directOcrDelegated, 'APK direto instala foreground OCR de forma explícita ou pelo instalador de segurança');
+check(directWorkflow.indexOf('install-android-security-plugin.mjs') < directWorkflow.indexOf('cap sync android'), 'instalador de segurança roda antes do cap sync');
+if (directOcrExplicit) {
+  check(directWorkflow.indexOf('install-background-ocr-plugin.mjs') < directWorkflow.indexOf('cap sync android'), 'plugin OCR é instalado antes do cap sync');
+  check(directWorkflow.includes('FOREGROUND_SERVICE_DATA_SYNC'), 'workflow direto valida permissão dataSync do OCR quando usa instalação explícita');
+  check(directWorkflow.includes('BuildMasterBackgroundOcrService'), 'workflow direto valida serviço OCR quando usa instalação explícita');
+} else {
+  check(directOcrDelegated, 'instalador de segurança delega a proteção OCR no canal direto');
+}
 
+check(playWorkflow.includes('NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION: play'), 'workflow Play identifica explicitamente a distribuição conservadora');
 check(!playWorkflow.includes('node scripts/install-background-ocr-plugin.mjs'), 'AAB Play não instala foreground OCR direto sem declaração de política');
-check(playWorkflow.includes('BuildMasterBackgroundOcr é exclusivo do APK direto por enquanto'), 'workflow Play documenta diferença de foreground OCR');
 check(playWorkflow.includes('targetSdkVersion = 36'), 'AAB Play fixa targetSdk 36');
 check(playWorkflow.includes('bundleRelease'), 'AAB Play usa bundleRelease');
 
