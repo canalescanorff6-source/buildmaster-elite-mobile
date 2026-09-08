@@ -79,7 +79,7 @@ export function PremiumSearchScreen({ commands, playerCount }: Props) {
     <section className="bm32-search-screen" aria-label="Buscar">
       <header className="bm32-screen-heading">
         <div className="bm32-heading-icon"><Search size={28}/></div>
-        <div><h1>Buscar</h1><p>Encontre jogadores, formações, técnicos e qualquer função do app.</p></div>
+        <div><h1>Buscar</h1><p>Encontre jogadores, formações, técnicos e qualquer função do app. {playerCount} jogador(es) no Cofre.</p></div>
         <span className="bm32-elite-badge"><Crown size={17}/> ELITE</span>
       </header>
 

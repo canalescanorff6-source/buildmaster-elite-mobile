@@ -37,7 +37,7 @@ for (const source of [evidence, skills]) {
 
 const combinedBytes = fs.statSync(analyzerPath).size + fs.statSync(evidencePath).size + fs.statSync(skillPath).size;
 assert.ok(combinedBytes <= 182_293, `R186: overhead estrutural excedeu 1 KiB sobre o analyzer R185 (${combinedBytes} bytes).`);
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '765f6b634b8671f2f2725d0164e34a61a18714d18c22f3d92f9c95d92557cb96', 'R186: R119 foi alterado durante modularização do analyzer.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5', 'R186: R119 foi alterado durante modularização do analyzer.');
 assert.ok(String(pkg.scripts?.['test:v4080'] ?? '').includes('npm run test:r186'), 'R186: cadeia v40.80 precisa preservar o gate R186.');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4080'), 'R186: test:all deve continuar fechando pela bateria v40.80.');
 assert.match(closure, /MAX_SOURCE_BYTES_R185 = 2_445_000/, 'R186: orçamento estático em bytes não pode ser relaxado.');

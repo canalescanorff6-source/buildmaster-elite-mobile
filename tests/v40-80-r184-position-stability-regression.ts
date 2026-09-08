@@ -30,8 +30,10 @@ assert.equal(adapted.cleanSlate2027R119?.cardKey,natural.cleanSlate2027R119?.car
 assert.notEqual(adapted.bestPosition.code,natural.bestPosition.code,'R184: posição de uso continua podendo mudar sem reescrever a carta.');
 
 const material=applyCompleteCardIntelligence(analyzeCard(card(87),'COMPETITIVE','CB','r184-c.png',context));
-assert.equal(material.cleanSlate2027R119?.positionStabilityR184?.decision,'TARGET_ADAPTATION','R184: mudança funcional material SS→CB não pode ser neutralizada pela trava de estabilidade.');
-assert.notDeepEqual(material.training,natural.training,'R184: adaptação material continua alterando a ficha.');
-assert.ok((material.cleanSlate2027R119?.positionStabilityR184?.targetGain??0)>0.25 || (material.cleanSlate2027R119?.positionStabilityR184?.planDistance??0)>4);
+assert.equal(material.cleanSlate2027R119?.positionStabilityR184?.decision,'NATURAL_ANCHOR','R184: até uma mudança funcional material deve preservar a progressão permanente da mesma carta.');
+assert.deepEqual(material.training,natural.training,'R184: posição real de uso não pode recriar a ficha permanente da mesma carta.');
+assert.equal(material.cleanSlate2027R119?.usagePosition,'CB','R184: a posição real de uso continua registrada para diagnóstico/tática.');
+assert.equal(material.cleanSlate2027R119?.usagePositionChanged,true,'R184: o runtime precisa reconhecer que o uso mudou sem reescrever a progressão.');
+assert.ok((material.cleanSlate2027R119?.positionStabilityR184?.targetGain??0)>0.25 || (material.cleanSlate2027R119?.positionStabilityR184?.planDistance??0)>4,'R184: a diferença funcional pode continuar diagnosticada mesmo quando a ficha permanente fica ancorada.');
 
-console.log('R184 estabilidade aprovada: empate marginal usa âncora canônica; mudança funcional material continua adaptando a ficha.');
+console.log('R184 estabilidade aprovada: posição de uso continua diagnosticada, enquanto a progressão permanente permanece ancorada na carta natural.');

@@ -7,7 +7,7 @@ const options=read('src/modules/architecture/appOptions.ts');
 const cardApp=read('src/components/CardVisionApp.tsx');
 const readerRuntimeR163=read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 const readerFlowR163=`${cardApp}\n${readerRuntimeR163}`;
-const review=read('src/components/result/ResultWorkspace.tsx');
+const review=`${read('src/components/result/ResultWorkspace.tsx')}\n${read('src/components/result/ResultReviewPanelR189.tsx')}`;
 const season=read('tests/legacy/efootballSeasonCatalogV4070.ts');
 const discovery=read('src/lib/skillDiscoveryV4070.ts');
 const provisional=read('src/lib/provisionalSpecialSkillCatalogV4070.ts');
@@ -16,6 +16,7 @@ const identity=read('src/lib/officialSkillIdentity.ts');
 const detailed=read('src/modules/card-reader/detailedPrintReader.ts');
 const parser=read('src/lib/cardSkillParser.ts');
 const workflow=read('.github/workflows/build-play-store.yml');
+const playValidator=read('scripts/validate-play-store-release.mjs');
 
 assert.equal(pkg.version,'40.80.0');
 assert.equal(manifest.name,'BuildMaster Elite Tático v40.80');
@@ -50,6 +51,9 @@ assert.match(identity,/'phenomenal pass': 'Passador nato'/);
 assert.match(identity,/'passe fenomenal': 'Passador nato'/);
 assert.match(identity,/'blitz curler': 'Curva descendente'/);
 assert.match(identity,/'sombra veloz': 'Sombra veloz'/);
-assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/);
+assert.match(playValidator,/release-notes\/\$\{packageVersion\}\.txt/, 'O validador Play precisa sempre usar as notas da versão real do package.json.');
+if (/Google Play|Gerar AAB/i.test(String(process.env.GITHUB_WORKFLOW || ''))) {
+  assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/, 'No workflow Play, as notas publicadas precisam acompanhar a versão calculada.');
+}
 assert.match(workflow,/npm run ci:verify/);
 console.log('v40.70 aprovada: Catálogo Vivo atualizado para v6.0, Desempenho Máximo único e OCR sem confirmações obrigatórias.');

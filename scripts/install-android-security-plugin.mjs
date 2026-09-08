@@ -1094,6 +1094,9 @@ if (!manifest.includes('android:usesCleartextTraffic=')) {
 }
 fs.writeFileSync(manifestPath, manifest);
 
+// R200.1: o canal direto precisa da proteção OCR mesmo quando o workflow externo
+// ainda não foi migrado. O canal Play declara a distribuição no job e permanece
+// conservador: nele o foreground OCR não é instalado automaticamente.
 const distribution = String(process.env.NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION || 'direct').trim().toLowerCase();
 if (distribution !== 'play') {
   const backgroundInstaller = fileURLToPath(new URL('./install-background-ocr-plugin.mjs', import.meta.url));

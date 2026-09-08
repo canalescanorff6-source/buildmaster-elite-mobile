@@ -5,7 +5,7 @@ const files = {
   engine: fs.readFileSync('src/lib/globalProBenchmarkV3900.ts', 'utf8'),
   panel: fs.readFileSync('src/components/GlobalProLabV3900Panel.tsx', 'utf8'),
   creator: fs.readFileSync('src/components/CreatorBuildResearchPanel.tsx', 'utf8'),
-  workspace: fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8'),
+  workspace: `${fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8')}\n${fs.readFileSync('src/components/result/ResultAdvancedWorkspaceR192.tsx', 'utf8')}`,
   lazy: fs.readFileSync('src/components/lazy/AppLazyPanels.tsx', 'utf8'),
   pipeline: fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8'),
   domain: fs.readFileSync('src/lib/analyzerDomain.ts', 'utf8'),

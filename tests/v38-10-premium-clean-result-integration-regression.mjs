@@ -5,7 +5,7 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const layout = read('src/app/layout.tsx');
 const workspace = read('src/components/result/ResultWorkspace.tsx');
 const component = read('src/components/PremiumCleanResultV3810.tsx');
-const app = read('src/components/CardVisionApp.tsx');
+const app = `${read('src/components/CardVisionApp.tsx')}\n${read('src/modules/result/cardVisionResultActionsR188.ts')}`;
 const engine = read('src/lib/premiumCleanResultV3810.ts');
 const css = read('src/app/v38-premium-clean-result.css');
 const cache = read('src/components/RegisterServiceWorker.tsx');

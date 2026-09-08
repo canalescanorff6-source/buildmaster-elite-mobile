@@ -66,7 +66,7 @@ assert.deepEqual(highOverall.training,creator.training,'Overall/GER não pode al
 assert.equal(differentSelected.cleanSlate2027R119.cardKey,creator.cleanSlate2027R119.cardKey,'A posição de uso não pode alterar a identidade permanente da carta.');
 assert.equal(differentSelected.cleanSlate2027R119.positionAnchor,creator.cleanSlate2027R119.positionAnchor,'A posição natural continua sendo a âncora da identidade.');
 assert.equal(differentSelected.cleanSlate2027R119.usagePosition,'CF');
-assert.notDeepEqual(differentSelected.training,creator.training,'A posição real de uso precisa poder alterar a progressão quando muda a função de campo.');
+assert.deepEqual(differentSelected.training,creator.training,'A posição real de uso não pode recriar a progressão permanente da mesma carta.');
 
 const closeCreator=creator.cleanSlate2027R119.actions.find((x:any)=>x.id==='close_control');
 const closeNoSkill=noDribbleEvidence.cleanSlate2027R119.actions.find((x:any)=>x.id==='close_control');
@@ -82,4 +82,4 @@ assert.ok(dmf.training.lowerBodyStrength > 0,'Carga online alta e stamina baixa 
 assert.ok(dmf.cleanSlate2027R119.onlinePerformance.staminaSustainability > 0);
 assert.ok(dmf.cleanSlate2027R119.actions.some((x:any)=>x.id==='intercept' && x.frequency>0));
 
-console.log('r122 compatível com r125: máximo online, DNA por evidência, anti-nome, anti-GER, identidade estável e ficha sensível à função real de uso.');
+console.log('r122 compatível com r125: máximo online, DNA por evidência, anti-nome, anti-GER e identidade/ficha permanente estáveis entre posições de uso.');

@@ -3,7 +3,8 @@ import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const navigation = read('src/components/RefinedNavigation.tsx');
-const app = read('src/components/CardVisionApp.tsx');
+const app = `${read('src/components/CardVisionApp.tsx')}\n${read('src/modules/runtime/cardVisionStartupRuntimeR177.ts')}`;
+const navigationController = read('src/hooks/useCardVisionNavigationControllerR176.ts');
 const team = read('src/modules/core/centralIntelligence.ts');
 const squad = read('src/lib/professionalSquadEngine.ts');
 const cache = read('src/components/RegisterServiceWorker.tsx');
@@ -25,7 +26,7 @@ assert.match(navigation, /onWorkspaceChange\('visao-geral'\)/, 'Jogadores precis
 assert.match(navigation, /Meu Time/);
 assert.match(navigation, /aria-expanded=\{drawerOpen\}/);
 
-assert.match(app, /openMainSection\(sectionForNavigation\(group, 'visao-geral'\)\)/, 'A entrada principal não pode reutilizar uma subaba antiga.');
+assert.match(navigationController, /openMainSection\(sectionForNavigation\(group, 'visao-geral'\)\)/, 'A entrada principal não pode reutilizar uma subaba antiga.');
 assert.match(app, /(?:EXECUTIVE_THEME_MIGRATION_KEY|STUDIO_THEME_MIGRATION_KEY|IDENTITY_THEME_MIGRATION_KEY)/);
 assert.ok(/setAppTheme\((?:executiveMigrated|studioMigrated) \? ui\.appTheme : '(?:light|dark)'\)/.test(app) || /setAppTheme\(selectedPreset === 'pearl-executive' \? 'light' : 'dark'\)/.test(app), 'A migração visual precisa escolher um tema com contraste definido.');
 assert.doesNotMatch(team, /lineScores\.at\(/, 'Meu Time precisa ser compatível com WebViews Android sem Array.at.');

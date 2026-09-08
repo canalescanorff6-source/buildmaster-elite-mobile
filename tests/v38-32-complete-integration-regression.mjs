@@ -67,7 +67,7 @@ for (const marker of ['40.60.0', 'commandEvidence', 'candidate', 'confirmed', 'r
 for (const tab of ['Resumo','Momentos','Ataque','Defesa','Comandos','Tática','Treino','Evolução']) assert.ok(videoUi.includes(tab), `aba ${tab} ausente`);
 for (const marker of ['Inferência tática — comando não confirmado diretamente.', 'Minhas gravações', 'Salvar automaticamente em Filmes/BuildMaster/Partidas', 'Quadro-chave', 'Renomear', 'Compartilhar vídeo']) assert.ok(videoUi.includes(marker), `UI de vídeo sem ${marker}`);
 
-const app = read('src/components/CardVisionApp.tsx');
+const app = `${read('src/components/CardVisionApp.tsx')}\n${read('src/modules/backup/backupSectionCollectorR141.ts')}\n${read('src/modules/backup/cardVisionBackupRuntimeR162.ts')}\n${read('src/modules/matches/MatchTrainerCenter.tsx')}\n${read('src/modules/tactical-studio/MetaFormationStudioV3832.tsx')}`;
 for (const marker of ['MetaFormationStudioV3832', 'readMetaFormationProjects', 'replaceMetaFormationProjects', 'readMatchTrainerSessions', 'replaceMatchTrainerSessions']) assert.ok(app.includes(marker), `integração principal sem ${marker}`);
 assert.ok(app.includes('schema: 3832'));
 

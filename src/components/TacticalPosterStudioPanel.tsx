@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DragEvent as ReactDragEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Copy,
   Download,
@@ -739,8 +739,8 @@ export function TacticalPosterStudioPanel({
     setImageLayers((current) => current.filter((layer) => layer.id !== id));
   }
 
-  function handleStudioDrop(event: ReactDragEvent<HTMLElement>): void {
-    const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('image/') || /\.(?:jpe?g|png|webp|gif|bmp|svg|avif|heic|heif|tiff?|json)$/i.test(item.name));
+  function handleStudioDrop(event: { dataTransfer: DataTransfer; preventDefault(): void }): void {
+    const file = Array.from(event.dataTransfer.files).find((item: File) => item.type.startsWith('image/') || /\.(?:jpe?g|png|webp|gif|bmp|svg|avif|heic|heif|tiff?|json)$/i.test(item.name));
     if (!file) return;
     event.preventDefault();
     void importStudioFile(file);

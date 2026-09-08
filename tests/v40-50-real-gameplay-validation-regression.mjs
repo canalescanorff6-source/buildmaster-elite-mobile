@@ -12,6 +12,7 @@ const options=read('src/modules/architecture/appOptions.ts');
 const sw=read('public/sw.js');
 const register=read('src/components/RegisterServiceWorker.tsx');
 const workflow=read('.github/workflows/build-play-store.yml');
+const playValidator=read('scripts/validate-play-store-release.mjs');
 assert.equal(pkg.version,'40.80.0');
 assert.equal(manifest.name,'BuildMaster Elite Tático v40.80');
 assert.equal(manifest.short_name,'BuildMaster v40.80');
@@ -33,6 +34,9 @@ assert.match(center,/Ficha em teste \(v40\.60\)/);
 assert.match(panel,/Validação Real de Gameplay • v40\.50/);
 assert.match(pipeline,/applyVerifiedGameplayWinnerV4050/);
 assert.match(domain,/gameplayValidationMemoryV4050\?: GameplayValidationMemoryV4050/);
-assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/);
+assert.match(playValidator,/release-notes\/\$\{packageVersion\}\.txt/, 'O validador Play precisa sempre usar as notas da versão real do package.json.');
+if (/Google Play|Gerar AAB/i.test(String(process.env.GITHUB_WORKFLOW || ''))) {
+  assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/, 'No workflow Play, as notas publicadas precisam acompanhar a versão calculada.');
+}
 assert.match(workflow,/npm run ci:verify/);
 console.log('v40.50 aprovada: validação real ponderada, laboratório A/B anti-overfitting, memória validada e promoção somente com amostra suficiente.');

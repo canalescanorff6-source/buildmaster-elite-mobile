@@ -41,14 +41,14 @@ const cases = [
   {
     natural:'CMF', target:'DMF', style:'Orquestrador', skill:'Passe de primeira',
     attrs:baseAttrs.replace('Passe rasteiro: 84','Passe rasteiro: 91').replace('Passe alto: 80','Passe alto: 89'),
-    expectedTraining:{shooting:0,passing:7,dribbling:8,dexterity:7,lowerBodyStrength:4,aerialStrength:0,defending:12,gk1:0,gk2:0,gk3:0},
-    expectedTop5:['Passe em profundidade','Passe na medida','Cruzamento preciso','Passe aéreo baixo','Toque de calcanhar'], expectedScore:95.1
+    expectedTraining:{shooting:0,passing:7,dribbling:12,dexterity:8,lowerBodyStrength:2,aerialStrength:0,defending:8,gk1:0,gk2:0,gk3:0},
+    expectedTop5:['Passe em profundidade','Passe na medida','Cruzamento preciso','Curva para fora','Toque de calcanhar'], expectedScore:94.5
   },
   {
     natural:'CF', target:'CB', style:'Artilheiro', skill:'Chute de primeira',
     attrs:baseAttrs.replace('Talento defensivo: 74','Talento defensivo: 68').replace('Finalização: 76','Finalização: 90'),
-    expectedTraining:{shooting:0,passing:0,dribbling:0,dexterity:8,lowerBodyStrength:4,aerialStrength:4,defending:16,gk1:0,gk2:0,gk3:0},
-    expectedTop5:['Interceptação','Bloqueador','Espírito guerreiro','Passe de primeira','Marcação individual'], expectedScore:91.6
+    expectedTraining:{shooting:4,passing:0,dribbling:10,dexterity:13,lowerBodyStrength:7,aerialStrength:0,defending:0,gk1:0,gk2:0,gk3:0},
+    expectedTop5:['Efeito de longe','Toque duplo','Chute com o peito do pé','Controle com a sola','Folha seca'], expectedScore:84.5
   },
   {
     natural:'GK', target:'GK', style:'Goleiro ofensivo', skill:'Pegador de pênalti',

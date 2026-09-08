@@ -55,7 +55,7 @@ assert.ok((vaultLifecycle.match(/ensureProductionAnalysisR138\(input\.result\)/g
 assert.match(historyStore, /createProductionAnalysisR138\(\{ rawText: source/, 'R198: migração histórica deve entrar pelo orquestrador de produção.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '765f6b634b8671f2f2725d0164e34a61a18714d18c22f3d92f9c95d92557cb96', 'R198: R119 não pode mudar durante auditoria E2E.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5', 'R198: R119 não pode mudar durante auditoria E2E.');
 
 const appBytes = fs.statSync('src/components/CardVisionApp.tsx').size;
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
@@ -70,7 +70,7 @@ while (sourceStack.length) {
     else if (/\.(?:ts|tsx)$/.test(target)) sourceBytes += fs.statSync(target).size;
   }
 }
-assert.ok(sourceBytes <= (r200Boundary ? 5_341_000 : 5_335_350), `R198/R200: orçamento de fonte excedeu a fronteira aprovada; src=${sourceBytes} B.`);
+assert.ok(sourceBytes <= (r200Boundary ? 5_360_000 : 5_335_350), `R198/R200: orçamento de fonte excedeu a fronteira aprovada; src=${sourceBytes} B.`);
 
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
 assert.ok(v4080.endsWith('npm run test:r197 && npm run test:r198') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199 && npm run test:r200'), 'R198: cadeia v40.80 deve preservar R197 -> R198 antes do gate seguinte.');

@@ -19,3 +19,13 @@ Esta rodada cruza o estado verde R200.3 com requisitos recuperados das fases ant
 - Estúdio continua local, sem API paga, com SVG/PNG/PDF e JSON editável.
 - Atualizador continua exigindo backup, tamanho, SHA-256, pacote, versionCode e assinatura antes da instalação.
 - Workflows GitHub permanecem fora do pacote mobile-update, conforme a proteção do canal móvel.
+
+## Orçamento estrutural R200.4
+
+- As capacidades históricas acrescentam uma pequena margem de fonte legítima: o snapshot R198/R199/R200 passa de 5.341.000 para 5.360.000 bytes.
+- O teto global real não foi ampliado: `scripts/check-bundle-budget.mjs` continua em 5.25 MiB (5.505.024 bytes).
+- Estado validado desta rodada: 5.357.194 bytes TypeScript, 97,3% do teto, com alerta preventivo ainda ativo.
+
+## R200.4.2 — reconstrução corretiva
+
+O cumulativo R200.4.1 foi reconstruído originalmente a partir de um snapshot intermediário que não continha integralmente os hotfixes R200.1, R200.2 e R200.3. A R200.4.2 volta a usar a cadeia aplicada de fato no GitHub — R200 → R200.1 → R200.2 → R200.3 — e sobrepõe somente as restaurações históricas desta rodada. Isso preserva as correções de CI, estabilidade permanente da ficha, contratos Android e regressões modernas sem retirar as capacidades recuperadas do Estúdio.
