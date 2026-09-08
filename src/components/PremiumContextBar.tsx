@@ -43,7 +43,7 @@ export function PremiumContextBar({
     <section className="bm-simple-context" aria-label="Área atual">
       <div>
         {canGoBack && <button type="button" onClick={onBack} aria-label="Voltar"><ArrowLeft size={20}/></button>}
-        <h1>{title}</h1>
+        <span className="bm-v41-context-copy"><small className="bm-v41-context-eyebrow">Workspace</small><h1>{title}</h1></span>
       </div>
       <div>
         {currentPlayer && group !== 'inicio' && (

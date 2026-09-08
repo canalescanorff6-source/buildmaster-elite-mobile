@@ -22094,3 +22094,502 @@ body::after { display: none !important; }
   background: rgba(7,21,34,.45);
   font-size: .72rem;
 }
+
+/* =====================================================================
+   R204 — COFRE PREMIUM / COMPETITIVE COLLECTION EXPERIENCE
+   Camada final específica do Cofre. Preserva lógica R139/R153/R185/R191.
+   ===================================================================== */
+.bm2820-vault-screen.bm-v3800-vault {
+  --r204-gold:#c9994a;
+  --r204-blue:#2764dc;
+  --r204-green:#128466;
+  --r204-ink:#0a1830;
+  --r204-soft:#718096;
+  gap:16px !important;
+}
+
+/* Hero editorial: coleção, não dashboard genérico */
+.bm2820-vault-screen .bm-v3800-vault-hero {
+  min-height:244px;
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end !important;
+  gap:22px;
+  padding:30px 32px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:32px !important;
+  background:
+    radial-gradient(circle at 88% 8%,rgba(201,153,74,.18),transparent 19rem),
+    radial-gradient(circle at 12% 0%,rgba(39,100,220,.13),transparent 24rem),
+    linear-gradient(145deg,#fffefa 0%,#f6f1e8 58%,#eee7db 100%) !important;
+  box-shadow:0 28px 72px rgba(17,33,60,.12),inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+.bm2820-vault-screen .bm-v3800-vault-hero::before {
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:5px;
+  z-index:-1;
+  background:linear-gradient(180deg,var(--r204-gold),var(--r204-blue));
+}
+.bm2820-vault-screen .bm-v3800-vault-hero::after {
+  content:"BM";
+  position:absolute;
+  right:20px;
+  top:-35px;
+  z-index:-1;
+  font-size:170px;
+  line-height:1;
+  font-weight:950;
+  letter-spacing:-.1em;
+  color:rgba(12,30,58,.027);
+}
+.bm2820-vault-screen .bm-v3800-vault-hero > div { max-width:780px; display:grid; gap:9px; }
+.bm2820-vault-screen .bm-v3800-vault-hero .kicker {
+  margin:0;
+  width:max-content;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
+  border:1px solid rgba(39,100,220,.13);
+  border-radius:999px;
+  background:rgba(255,255,255,.46);
+  color:#36527b;
+  font-size:.67rem;
+  letter-spacing:.075em;
+}
+.bm2820-vault-screen .bm-v3800-vault-hero h2 {
+  margin:0 !important;
+  max-width:25ch;
+  color:#0d203f !important;
+  font-size:clamp(2rem,4.2vw,3.45rem) !important;
+  line-height:.98 !important;
+  letter-spacing:-.052em !important;
+  text-wrap:balance;
+}
+.bm2820-vault-screen .bm-v3800-vault-hero > div > span {
+  color:#6e7d92 !important;
+  font-size:.88rem !important;
+  line-height:1.5;
+}
+.bm2820-vault-screen .bm-v3800-vault-hero > button {
+  min-width:154px;
+  min-height:52px !important;
+  padding:0 19px !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:0 !important;
+  border-radius:16px !important;
+  color:#fff !important;
+  background:linear-gradient(135deg,#0d1d37,#17437e 58%,#2764dc) !important;
+  box-shadow:0 15px 32px rgba(27,72,154,.23),inset 0 1px 0 rgba(255,255,255,.16) !important;
+  font-weight:850 !important;
+}
+
+/* Navegação: todas as áreas do Cofre expostas */
+.bm2820-vault-screen .r204-vault-tabs {
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:5px !important;
+  padding:6px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:19px !important;
+  background:rgba(255,253,249,.88) !important;
+  box-shadow:0 13px 35px rgba(17,33,60,.075) !important;
+  backdrop-filter:blur(20px);
+}
+.bm2820-vault-screen .r204-vault-tabs > button {
+  min-height:56px !important;
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:1px solid transparent !important;
+  border-radius:14px !important;
+  color:#6d7a8f !important;
+  background:transparent !important;
+  font-size:.76rem !important;
+  font-weight:800 !important;
+}
+.bm2820-vault-screen .r204-vault-tabs > button.active {
+  color:#173664 !important;
+  border-color:rgba(39,100,220,.18) !important;
+  background:linear-gradient(145deg,rgba(39,100,220,.105),rgba(255,255,255,.72)) !important;
+  box-shadow:0 8px 20px rgba(39,100,220,.09),inset 0 1px 0 rgba(255,255,255,.85) !important;
+}
+.bm2820-vault-screen .r204-vault-tabs > button.active svg { color:var(--r204-blue); }
+
+/* Catálogo: cabeçalho de coleção */
+.bm2820-vault-screen .bm-v3800-vault-panel {
+  gap:14px;
+  padding:18px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:27px !important;
+  background:linear-gradient(145deg,rgba(255,254,251,.94),rgba(245,241,233,.9)) !important;
+  box-shadow:0 24px 58px rgba(17,33,60,.09) !important;
+}
+.r204-vault-catalog-intro {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:18px;
+  padding:5px 2px 2px;
+}
+.r204-vault-catalog-copy { min-width:0; display:grid; gap:3px; }
+.r204-vault-catalog-copy > span {
+  color:#94702f;
+  font-size:.61rem;
+  font-weight:900;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.r204-vault-catalog-copy > strong { color:#122844; font-size:1.13rem; letter-spacing:-.025em; }
+.r204-vault-catalog-copy > small { max-width:640px; color:#748197; font-size:.74rem; line-height:1.45; }
+.r204-vault-catalog-kpis { display:grid; grid-template-columns:repeat(3,86px); gap:7px; }
+.r204-vault-catalog-kpis > span {
+  min-height:67px;
+  display:grid;
+  place-content:center;
+  justify-items:center;
+  gap:1px;
+  padding:8px;
+  border:1px solid rgba(19,42,76,.09);
+  border-radius:15px;
+  background:rgba(255,255,255,.5);
+}
+.r204-vault-catalog-kpis b { color:#142e52; font-size:1.05rem; }
+.r204-vault-catalog-kpis small { color:#7a8798; font-size:.58rem; font-weight:750; text-transform:uppercase; letter-spacing:.06em; }
+
+/* Search + filtros como command bar */
+.bm2820-vault-screen .bm-v3800-vault-toolbar {
+  grid-template-columns:minmax(0,1fr) 185px !important;
+  gap:9px !important;
+  padding:9px !important;
+  border:1px solid rgba(19,42,76,.09);
+  border-radius:18px;
+  background:rgba(255,255,255,.47);
+}
+.bm2820-vault-screen .bm-v3800-vault-search {
+  min-height:50px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:14px !important;
+  background:#fffdf9 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85);
+}
+.bm2820-vault-screen .bm-v3800-vault-search:focus-within {
+  border-color:rgba(39,100,220,.35) !important;
+  box-shadow:0 0 0 4px rgba(39,100,220,.08) !important;
+}
+.bm2820-vault-screen .bm-v3800-vault-search > svg { color:#6e84a3; }
+.bm2820-vault-screen .bm-v3800-vault-sort {
+  min-height:50px;
+  padding:0 8px 0 11px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:14px !important;
+  background:#fffdf9 !important;
+}
+.bm2820-vault-screen .bm-v3800-vault-sort > span { color:#7c8798 !important; font-size:.63rem !important; text-transform:uppercase; letter-spacing:.06em; }
+.bm2820-vault-screen .bm-v3800-vault-sort select { background:transparent !important; border:0 !important; box-shadow:none !important; font-weight:800; }
+.bm2820-vault-screen .bm-v3800-vault-chips {
+  gap:7px !important;
+  padding-bottom:1px;
+  overflow:auto;
+  scrollbar-width:none;
+}
+.bm2820-vault-screen .bm-v3800-vault-chips::-webkit-scrollbar { display:none; }
+.bm2820-vault-screen .bm-v3800-vault-chips button {
+  flex:0 0 auto;
+  min-height:38px !important;
+  padding:0 12px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:999px !important;
+  color:#69788e !important;
+  background:rgba(255,255,255,.47) !important;
+  font-size:.69rem !important;
+  font-weight:800 !important;
+}
+.bm2820-vault-screen .bm-v3800-vault-chips button.active {
+  color:#173866 !important;
+  border-color:rgba(39,100,220,.22) !important;
+  background:rgba(39,100,220,.09) !important;
+}
+.bm2820-vault-screen .bm-v3800-vault-advanced {
+  border:1px solid rgba(19,42,76,.09) !important;
+  border-radius:16px !important;
+  background:rgba(255,255,255,.38) !important;
+}
+.bm2820-vault-screen .bm-v3800-vault-advanced > summary { min-height:44px; padding:0 13px !important; }
+.bm2820-vault-screen .bm-v3800-vault-advanced[open] { padding:0 12px 12px; }
+
+/* Cards: sensação de coleção/portfolio */
+.bm2820-vault-screen .bm-v3800-player-groups { gap:12px !important; }
+.bm2820-vault-screen .bm-v3800-player-card {
+  position:relative;
+  overflow:visible;
+  padding:16px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:21px !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(250,247,241,.8)) !important;
+  box-shadow:0 8px 24px rgba(17,33,60,.055) !important;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease !important;
+}
+.bm2820-vault-screen .bm-v3800-player-card::before {
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:3px;
+  border-radius:21px 21px 0 0;
+  background:linear-gradient(90deg,rgba(39,100,220,.7),rgba(201,153,74,.62),transparent 88%);
+  opacity:.55;
+}
+.bm2820-vault-screen .bm-v3800-player-card:hover {
+  transform:translateY(-3px) !important;
+  border-color:rgba(39,100,220,.2) !important;
+  box-shadow:0 18px 38px rgba(17,33,60,.1) !important;
+}
+.bm2820-vault-screen .bm-v3800-player-card.favorite {
+  box-shadow:inset 3px 0 0 rgba(201,153,74,.72),0 8px 24px rgba(17,33,60,.055) !important;
+}
+.bm2820-vault-screen .bm-v3800-player-avatar {
+  width:63px !important;
+  height:76px !important;
+  border:1px solid rgba(19,42,76,.11) !important;
+  border-radius:16px !important;
+  background:linear-gradient(145deg,#edf1f6,#fffdf9) !important;
+  box-shadow:0 12px 25px rgba(17,33,60,.1);
+}
+.bm2820-vault-screen .bm-v3800-player-identity { gap:13px !important; }
+.bm2820-vault-screen .bm-v3800-player-identity strong { color:#102644 !important; font-size:1.08rem !important; letter-spacing:-.02em; }
+.bm2820-vault-screen .bm-v3800-player-identity span { color:#64748b !important; font-size:.76rem !important; font-weight:700; }
+.bm2820-vault-screen .bm-v3800-player-identity small { color:#8792a2 !important; }
+.bm2820-vault-screen .bm-v3800-status { background:rgba(255,255,255,.62) !important; border-color:rgba(19,42,76,.09) !important; }
+.bm2820-vault-screen .bm-v3800-status.status-completo { color:#11765f !important; background:rgba(17,118,95,.07) !important; }
+.bm2820-vault-screen .bm-v3800-status.status-revisar { color:#9b6d20 !important; background:rgba(201,153,74,.1) !important; }
+.r204-player-meta {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:13px;
+  padding-top:11px;
+  border-top:1px solid rgba(19,42,76,.075);
+}
+.r204-player-meta > span {
+  padding:5px 8px;
+  border-radius:999px;
+  color:#738095;
+  background:rgba(39,100,220,.045);
+  font-size:.62rem;
+  font-weight:700;
+}
+.r204-player-meta b { color:#274a79; }
+.bm2820-vault-screen .bm-v3800-player-actions { grid-template-columns:minmax(0,1fr) 42px 42px !important; gap:7px !important; margin-top:10px !important; }
+.bm2820-vault-screen .bm-v3800-player-actions > button,
+.bm2820-vault-screen .bm-v3800-more-menu > summary {
+  min-height:42px !important;
+  border-color:rgba(19,42,76,.1) !important;
+  border-radius:13px !important;
+  background:rgba(255,255,255,.54) !important;
+}
+.bm2820-vault-screen .bm-v3800-player-actions > button.primary {
+  color:#fff !important;
+  border-color:transparent !important;
+  background:linear-gradient(135deg,#13315c,#2764dc) !important;
+  box-shadow:0 9px 20px rgba(39,100,220,.16);
+}
+.bm2820-vault-screen .bm-v3800-more-menu > div {
+  min-width:228px !important;
+  padding:7px !important;
+  border-color:rgba(19,42,76,.1) !important;
+  border-radius:16px !important;
+  background:#fffdf9 !important;
+  box-shadow:0 24px 55px rgba(17,33,60,.18) !important;
+}
+.bm2820-vault-screen .bm-v3800-version-list {
+  margin-top:11px !important;
+  padding:9px 10px 0 !important;
+  border-top:1px solid rgba(19,42,76,.075) !important;
+}
+.bm2820-vault-screen .bm-v3800-version-row button { border-color:rgba(19,42,76,.09) !important; background:rgba(255,255,255,.5) !important; }
+.bm2820-vault-screen .bm-v3800-organize-card {
+  margin-top:12px !important;
+  padding:12px !important;
+  border:1px solid rgba(39,100,220,.12) !important;
+  border-radius:16px;
+  background:rgba(39,100,220,.035);
+}
+
+/* Organização, comparação e backup */
+.bm2820-vault-screen .vault-view-panel {
+  padding:22px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:28px !important;
+  background:linear-gradient(145deg,rgba(255,254,251,.94),rgba(245,241,233,.9)) !important;
+  box-shadow:0 22px 55px rgba(17,33,60,.08) !important;
+}
+.bm2820-vault-screen .vault-catalog-heading {
+  padding-bottom:18px;
+  margin-bottom:2px;
+  border-bottom:1px solid rgba(19,42,76,.075);
+}
+.bm2820-vault-screen .vault-catalog-heading h3 { color:#102644 !important; font-size:clamp(1.35rem,2.8vw,2rem) !important; letter-spacing:-.035em; }
+.bm2820-vault-screen .vault-catalog-heading > div:first-child > span { color:#748197 !important; }
+.bm2820-vault-screen .vault-filter-counter {
+  min-width:115px;
+  padding:11px 14px !important;
+  border:1px solid rgba(39,100,220,.11) !important;
+  border-radius:17px !important;
+  background:rgba(39,100,220,.055) !important;
+}
+.bm2820-vault-screen .vault-folder-catalog { gap:10px !important; }
+.bm2820-vault-screen .vault-folder-card {
+  min-height:150px !important;
+  padding:15px !important;
+  border:1px solid rgba(19,42,76,.1) !important;
+  border-radius:19px !important;
+  background:rgba(255,255,255,.55) !important;
+  box-shadow:0 8px 22px rgba(17,33,60,.045);
+}
+.bm2820-vault-screen .vault-folder-card.selected { border-color:rgba(39,100,220,.25) !important; background:rgba(39,100,220,.075) !important; box-shadow:0 12px 28px rgba(39,100,220,.09) !important; }
+.bm2820-vault-screen .create-folder-premium { border-radius:20px !important; background:rgba(201,153,74,.055) !important; border-color:rgba(201,153,74,.17) !important; }
+.bm2820-vault-screen .vault-status-dashboard > button { min-height:112px !important; border-radius:18px !important; background:rgba(255,255,255,.52) !important; border-color:rgba(19,42,76,.09) !important; }
+
+.bm2820-vault-screen .comparison-control-bar {
+  padding:10px !important;
+  border:1px solid rgba(19,42,76,.09);
+  border-radius:18px !important;
+  background:rgba(255,255,255,.47);
+}
+.bm2820-vault-screen .compare-player-catalog { gap:9px !important; }
+.bm2820-vault-screen .compare-player-card {
+  min-height:84px !important;
+  padding:10px 11px !important;
+  border:1px solid rgba(19,42,76,.09) !important;
+  border-radius:17px !important;
+  background:rgba(255,255,255,.55) !important;
+}
+.bm2820-vault-screen .compare-player-card.selected { border-color:rgba(39,100,220,.28) !important; background:rgba(39,100,220,.08) !important; box-shadow:0 10px 24px rgba(39,100,220,.08) !important; }
+.bm2820-vault-screen .comparison-winner-card {
+  border-radius:21px !important;
+  background:linear-gradient(135deg,rgba(201,153,74,.12),rgba(39,100,220,.06)) !important;
+  border-color:rgba(201,153,74,.18) !important;
+}
+.bm2820-vault-screen .ranking-player-card { border-radius:18px !important; border-color:rgba(19,42,76,.09) !important; background:rgba(255,255,255,.5) !important; }
+.bm2820-vault-screen .ranking-player-card.winner { border-color:rgba(201,153,74,.24) !important; box-shadow:inset 4px 0 0 rgba(201,153,74,.62) !important; }
+
+.bm2820-vault-screen .vault-backup-actions-grid { gap:10px !important; }
+.bm2820-vault-screen .vault-backup-actions-grid > button {
+  min-height:158px !important;
+  padding:16px !important;
+  border:1px solid rgba(19,42,76,.09) !important;
+  border-radius:20px !important;
+  background:rgba(255,255,255,.56) !important;
+  box-shadow:0 8px 22px rgba(17,33,60,.045);
+}
+.bm2820-vault-screen .vault-backup-actions-grid > button:hover:not(:disabled) { transform:translateY(-2px); border-color:rgba(39,100,220,.22) !important; box-shadow:0 15px 32px rgba(17,33,60,.09) !important; }
+.bm2820-vault-screen .vault-backup-actions-grid > button > div { width:43px !important; height:43px !important; border-radius:14px !important; background:rgba(39,100,220,.075) !important; color:#2764dc !important; }
+.bm2820-vault-screen .vault-trash-panel { padding:17px !important; border-color:rgba(19,42,76,.09) !important; background:rgba(255,255,255,.38) !important; }
+.bm2820-vault-screen .vault-trash-list article { border-radius:16px !important; border-color:rgba(19,42,76,.08) !important; background:rgba(255,255,255,.54) !important; }
+
+/* Dark: mesma arquitetura, materiais mais nobres e sem neon excessivo */
+.premium-app.theme-dark .bm2820-vault-screen.bm-v3800-vault { --r204-soft:#9cafc6; }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-hero {
+  border-color:rgba(231,202,137,.14) !important;
+  background:
+    radial-gradient(circle at 88% 8%,rgba(201,153,74,.11),transparent 20rem),
+    radial-gradient(circle at 12% 0%,rgba(73,126,229,.18),transparent 25rem),
+    linear-gradient(145deg,#09182e,#102b50 62%,#0b213f) !important;
+  box-shadow:0 28px 72px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-hero::after { color:rgba(255,255,255,.022); }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-hero .kicker { color:#c1d3ed; border-color:rgba(151,182,226,.16); background:rgba(255,255,255,.035); }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-hero h2 { color:#fffdf8 !important; }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-hero > div > span { color:#a9b8cc !important; }
+.premium-app.theme-dark .bm2820-vault-screen .r204-vault-tabs,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-panel,
+.premium-app.theme-dark .bm2820-vault-screen .vault-view-panel {
+  border-color:rgba(231,202,137,.12) !important;
+  background:linear-gradient(145deg,rgba(13,31,58,.96),rgba(9,23,45,.95)) !important;
+  box-shadow:0 22px 55px rgba(0,0,0,.21) !important;
+}
+.premium-app.theme-dark .bm2820-vault-screen .r204-vault-tabs > button { color:#9badc4 !important; }
+.premium-app.theme-dark .bm2820-vault-screen .r204-vault-tabs > button.active { color:#edf4ff !important; border-color:rgba(119,163,236,.2) !important; background:rgba(82,133,224,.12) !important; }
+.premium-app.theme-dark .r204-vault-catalog-copy > strong,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-player-identity strong,
+.premium-app.theme-dark .bm2820-vault-screen .vault-catalog-heading h3 { color:#f7f4ee !important; }
+.premium-app.theme-dark .r204-vault-catalog-copy > small,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-player-identity span { color:#9eafc5 !important; }
+.premium-app.theme-dark .r204-vault-catalog-kpis > span,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-toolbar,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-advanced,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-player-card,
+.premium-app.theme-dark .bm2820-vault-screen .vault-folder-card,
+.premium-app.theme-dark .bm2820-vault-screen .vault-status-dashboard > button,
+.premium-app.theme-dark .bm2820-vault-screen .compare-player-card,
+.premium-app.theme-dark .bm2820-vault-screen .ranking-player-card,
+.premium-app.theme-dark .bm2820-vault-screen .vault-backup-actions-grid > button,
+.premium-app.theme-dark .bm2820-vault-screen .vault-trash-panel,
+.premium-app.theme-dark .bm2820-vault-screen .vault-trash-list article { border-color:rgba(231,202,137,.105) !important; background:rgba(255,255,255,.035) !important; }
+.premium-app.theme-dark .r204-vault-catalog-kpis b { color:#f5f2eb; }
+.premium-app.theme-dark .r204-vault-catalog-kpis small,.premium-app.theme-dark .r204-player-meta > span { color:#98abc3; }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-search,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-vault-sort { border-color:rgba(231,202,137,.12) !important; background:rgba(255,255,255,.04) !important; }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-player-avatar { border-color:rgba(231,202,137,.13) !important; background:linear-gradient(145deg,#102643,#0b1b33) !important; box-shadow:0 13px 28px rgba(0,0,0,.24); }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-player-actions > button,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-more-menu > summary,
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-version-row button { border-color:rgba(231,202,137,.1) !important; background:rgba(255,255,255,.035) !important; }
+.premium-app.theme-dark .bm2820-vault-screen .bm-v3800-more-menu > div { border-color:rgba(231,202,137,.13) !important; background:#0d203b !important; box-shadow:0 24px 60px rgba(0,0,0,.36) !important; }
+
+@media(max-width:900px) {
+  .r204-vault-catalog-intro { grid-template-columns:1fr; }
+  .r204-vault-catalog-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .r204-vault-catalog-kpis > span { min-height:60px; }
+  .bm2820-vault-screen .bm-v3800-vault-toolbar { grid-template-columns:1fr !important; }
+}
+@media(max-width:680px) {
+  .bm2820-vault-screen .bm-v3800-vault-hero {
+    min-height:auto;
+    grid-template-columns:1fr;
+    align-items:start !important;
+    gap:17px;
+    padding:21px !important;
+    border-radius:25px !important;
+  }
+  .bm2820-vault-screen .bm-v3800-vault-hero::after { font-size:120px; right:12px; top:-20px; }
+  .bm2820-vault-screen .bm-v3800-vault-hero h2 { max-width:20ch; font-size:2rem !important; }
+  .bm2820-vault-screen .bm-v3800-vault-hero > button { width:100%; min-height:52px !important; }
+  .bm2820-vault-screen .r204-vault-tabs { position:relative !important; top:auto !important; display:flex !important; overflow:auto; scroll-snap-type:x proximity; scrollbar-width:none; }
+  .bm2820-vault-screen .r204-vault-tabs::-webkit-scrollbar { display:none; }
+  .bm2820-vault-screen .r204-vault-tabs > button { flex:0 0 112px; min-height:54px !important; scroll-snap-align:start; }
+  .bm2820-vault-screen .bm-v3800-vault-panel { padding:13px !important; border-radius:22px !important; }
+  .r204-vault-catalog-intro { gap:11px; }
+  .r204-vault-catalog-kpis { gap:5px; }
+  .r204-vault-catalog-kpis > span { min-height:56px; padding:6px; border-radius:13px; }
+  .bm2820-vault-screen .bm-v3800-vault-toolbar { padding:7px !important; }
+  .bm2820-vault-screen .bm-v3800-player-card { padding:14px !important; border-radius:19px !important; }
+  .bm2820-vault-screen .bm-v3800-player-avatar { width:55px !important; height:66px !important; border-radius:14px !important; }
+  .r204-player-meta { gap:4px; }
+  .r204-player-meta > span { padding:4px 7px; font-size:.58rem; }
+  .bm2820-vault-screen .vault-view-panel { padding:15px !important; border-radius:22px !important; }
+  .bm2820-vault-screen .vault-catalog-heading { display:grid !important; gap:10px; }
+  .bm2820-vault-screen .vault-filter-counter { width:100%; }
+  .bm2820-vault-screen .comparison-control-bar { grid-template-columns:1fr !important; }
+  .bm2820-vault-screen .comparison-control-bar label { grid-column:auto !important; }
+  .bm2820-vault-screen .vault-backup-actions-grid > button { min-height:132px !important; }
+}
+@media(max-width:430px) {
+  .r204-vault-catalog-kpis small { font-size:.52rem; letter-spacing:.035em; }
+  .bm2820-vault-screen .bm-v3800-player-state { display:none !important; }
+  .bm2820-vault-screen .bm-v3800-player-actions { grid-template-columns:minmax(0,1fr) 42px 42px !important; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .bm2820-vault-screen .bm-v3800-player-card,
+  .bm2820-vault-screen .vault-backup-actions-grid > button { transition:none !important; }
+  .bm2820-vault-screen .bm-v3800-player-card:hover,
+  .bm2820-vault-screen .vault-backup-actions-grid > button:hover { transform:none !important; }
+}

@@ -168,9 +168,9 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
       <div className="cofre-section cofre-premium-layout bm2820-vault-screen bm-v3800-vault">
         <section className="bm-v3800-vault-hero">
           <div>
-            <p className="kicker"><History size={14} /> Cofre Clean</p>
-            <h2>{cleanVaultSummary.players ? `${cleanVaultSummary.players} jogador(es) organizado(s)` : 'Seu Cofre começa com a primeira ficha'}</h2>
-            <span>{cleanVaultSummary.fichas} ficha(s) ativa(s){cleanVaultSummary.archived ? ` · ${cleanVaultSummary.archived} arquivada(s)` : ''}</span>
+            <p className="kicker"><History size={14} /> Cofre Clean · Coleção competitiva</p>
+            <h2>{cleanVaultSummary.players ? 'Sua coleção competitiva, organizada para decidir mais rápido' : 'Seu Cofre começa com a primeira ficha'}</h2>
+            <span>{cleanVaultSummary.players} jogador(es) · {cleanVaultSummary.fichas} ficha(s) ativa(s){cleanVaultSummary.archived ? ` · ${cleanVaultSummary.archived} arquivada(s)` : ''}</span>
           </div>
           <button type="button" onClick={onCreateByImage}><ImagePlus size={17} /> Nova ficha</button>
         </section>
@@ -182,16 +182,11 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
           cloudPendingCount={cloudPendingCountR154}
         />
 
-        <nav className="section-segmented-tabs vault-main-tabs luxury-panel" aria-label="Áreas do Cofre">
+        <nav className="section-segmented-tabs vault-main-tabs r204-vault-tabs luxury-panel" aria-label="Áreas do Cofre">
           <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Jogadores</span></button>
           <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Organizar</span></button>
-          <details className={`bm-v3800-vault-more${vaultView === 'comparar' || vaultView === 'backup' ? ' active' : ''}`}>
-            <summary><SlidersHorizontal size={17} /><span>{vaultView === 'comparar' ? 'Comparar' : vaultView === 'backup' ? 'Backup' : 'Mais'}</span></summary>
-            <div>
-              <button type="button" onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
-              <button type="button" onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Backup</span></button>
-            </div>
-          </details>
+          <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
+          <button type="button" className={vaultView === 'backup' ? 'active' : ''} onClick={() => setVaultView('backup')}><ShieldCheck size={17} /><span>Proteção</span></button>
         </nav>
 
         {vaultView === 'jogadores' && (

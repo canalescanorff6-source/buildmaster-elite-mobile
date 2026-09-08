@@ -301,7 +301,11 @@
     "test:r197": "npm run typecheck:r151 && node -r ./tests/_ts-require.cjs tests/v40-80-r197-training-budget-hotpath-regression.ts && node scripts/check-cardvision-static-closure-r196.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r193-analyzer-special-meta-equivalence-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r186-analyzer-equivalence-regression.ts && npm run quality:bundle",
     "test:r198": "npm run typecheck:r151 && node tests/v40-80-r198-e2e-production-finalization-authority-regression.mjs && node scripts/check-cardvision-static-closure-r198.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r193-analyzer-special-meta-equivalence-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r186-analyzer-equivalence-regression.ts && npm run quality:bundle",
     "test:r199": "npm run typecheck:r151 && node -r ./tests/_ts-require.cjs tests/v40-80-r199-session-version-recovery-regression.ts && node tests/v40-80-r199-persistence-session-cache-audit-regression.mjs && node scripts/check-cardvision-static-closure-r199.mjs && npm run quality:bundle",
-    "test:r200": "npm run typecheck:r151 && node tests/v40-80-r200-mobile-startup-runtime-boundary-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r200-startup-model-equivalence-regression.ts && node scripts/check-cardvision-static-closure-r200.mjs && npm run quality:bundle"
+    "test:r200": "npm run typecheck:r151 && node tests/v40-80-r200-mobile-startup-runtime-boundary-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r200-startup-model-equivalence-regression.ts && node scripts/check-cardvision-static-closure-r200.mjs && npm run quality:bundle",
+    "test:r201": "node tests/v41-00-premium-product-design-regression.mjs",
+    "test:r202": "node tests/v42-00-home-central-premium-regression.mjs",
+    "test:r203": "node tests/v43-00-reader-result-premium-regression.mjs",
+    "test:r204": "node tests/v41-03-r204-vault-premium-collection-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

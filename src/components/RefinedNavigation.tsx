@@ -91,6 +91,7 @@ export function RefinedNavigation({
         <Plus size={20}/><span><strong>Criar ficha</strong><small>Print ou preenchimento manual</small></span><ChevronRight size={18}/>
       </button>
 
+      <span className="bm-v41-nav-section-label">Navegação</span>
       <nav className="bm-v33-main-navigation" aria-label="Áreas principais">
         {mainItems.map((item) => {
           const Icon = item.icon;
@@ -104,6 +105,7 @@ export function RefinedNavigation({
         })}
       </nav>
 
+      <span className="bm-v41-nav-section-label">Ferramentas</span>
       <footer className="bm-v33-nav-footer">
         {hasResult && <button type="button" onClick={() => run(() => onWorkspaceChange('resultado'))}><FileText size={18}/><span>Abrir ficha atual</span></button>}
         <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Buscar no aplicativo</span></button>

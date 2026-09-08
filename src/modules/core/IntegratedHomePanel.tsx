@@ -130,7 +130,7 @@ export function IntegratedHomePanel({
         </article>
       </section>
 
-      <details className="bm-v3780-home-details">
+      <details className="bm-v3780-home-details" open>
         <summary><span><LayoutDashboard size={18} /><strong>Ver painel completo</strong><small>Elenco, partidas, tática e indicadores</small></span><ArrowRight size={17} /></summary>
         <div className="bm-v3780-home-details-content">
       <section className="bm-v36-metrics" aria-label="Resumo do aplicativo">

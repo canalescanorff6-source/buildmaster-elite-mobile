@@ -129,13 +129,26 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
           <div><strong>{props.operationLabel || 'Confirmando alteração no Cofre'}</strong><span>Aguarde a confirmação local. Toques repetidos na mesma ação são bloqueados.</span></div>
         </div>
       )}
+      <div className="r204-vault-catalog-intro">
+        <div className="r204-vault-catalog-copy">
+          <span>Biblioteca ativa</span>
+          <strong>{groups.length ? `${groups.length} jogador(es) prontos para consulta` : 'Sua biblioteca ainda está vazia'}</strong>
+          <small>{props.visibleEntries.length} ficha(s) visível(is) de {props.entries.length} salva(s). Busque, filtre e abra sem perder o contexto da coleção.</small>
+        </div>
+        <div className="r204-vault-catalog-kpis" aria-label="Resumo do catálogo">
+          <span><b>{groups.length}</b><small>jogadores</small></span>
+          <span><b>{groups.filter((group) => group.favorite).length}</b><small>favoritos</small></span>
+          <span><b>{props.activeFilterCount}</b><small>filtros</small></span>
+        </div>
+      </div>
+
       <header className="bm-v3800-vault-toolbar">
         <div className="bm-v3800-vault-search">
           <Search size={19} />
           <input
             value={props.query}
             onChange={(event: ChangeEvent<HTMLInputElement>) => props.onQueryChange(event.target.value)}
-            placeholder="Buscar jogador"
+            placeholder="Buscar jogador, posição, estilo ou habilidade"
             aria-label="Buscar jogador no Cofre"
           />
           {props.query && <button type="button" onClick={() => props.onQueryChange('')} aria-label="Limpar busca"><RotateCcw size={15} /></button>}
@@ -202,6 +215,12 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
                     <span className={`bm-v3800-status status-${status}`}>{statusIcon(status)} {statusLabel(status)}</span>
                     {group.favorite && <span className="bm-v3800-favorite-label"><Star size={13} fill="currentColor" /> Favorito</span>}
                   </div>
+                </div>
+
+                <div className="r204-player-meta" aria-label="Resumo da ficha">
+                  <span><b>{group.buildCount}</b> {group.buildCount === 1 ? 'ficha' : 'fichas'}</span>
+                  <span><b>{group.cardVersionCount}</b> {group.cardVersionCount === 1 ? 'versão' : 'versões'}</span>
+                  <span><b>{primary.result.parsed.confidence ?? 0}%</b> confiança</span>
                 </div>
 
                 <div className="bm-v3800-player-actions">

@@ -86,7 +86,7 @@ export function CardVisionAppChromeR185({
     /></SectionErrorBoundary>}
     <header className="bm-simple-topbar">
       <button type="button" className="bm-simple-brand" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
-        <span><BuildMasterMark size={35} /></span><div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div>
+        <span><BuildMasterMark size={35} /></span><div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div><em className="bm-v41-product-badge">PRO SUITE</em>
       </button>
       <div className="bm-simple-topbar-actions">
         <span className={`bm-simple-save-state save-${sessionSaveState}`} role="status" aria-live="polite">
