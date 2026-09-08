@@ -163,7 +163,7 @@ const learningEngine = readProjectFile('src/lib/unifiedCardIntelligence.ts');
 assert.match(learningEngine, /testedPlans/);
 assert.match(learningEngine, /variantASamples/);
 assert.match(learningEngine, /Ficha testada em/);
-const workspace = readProjectFile('src/components/result/ResultWorkspace.tsx');
+const workspace = `${readProjectFile('src/components/result/ResultWorkspace.tsx')}\n${readProjectFile('src/components/result/RealMatchCalibrationPanelR189.tsx')}`;
 assert.match(workspace, /Ficha A • principal/);
 assert.match(workspace, /Ficha B • teste/);
 assert.match(workspace, /trainingPlan: selectedPlan/);

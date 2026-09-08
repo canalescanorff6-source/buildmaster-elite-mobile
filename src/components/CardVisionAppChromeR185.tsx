@@ -63,7 +63,7 @@ export function CardVisionAppChromeR185({
   return <>
     <MobileScrollRecovery />
     <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
-    {!showSplash && deferredStartupReady && <DeferredUpdateAutoCheckerR155 onPrepareBackup={prepareBackupForUpdate} />}
+    {!showSplash && deferredStartupReady && <DeferredUpdateAutoCheckerR155 onPrepareBackup={async () => { await prepareBackupForUpdate(); }} />}
     {showSplash && (
       <div className="app-splash-screen bm-brand-splash-screen" role="status" aria-label="Carregando BuildMaster Elite Tático">
         <div className="splash-premium-shell">

@@ -12,6 +12,7 @@ const options=read('src/modules/architecture/appOptions.ts');
 const sw=read('public/sw.js');
 const register=read('src/components/RegisterServiceWorker.tsx');
 const workflow=read('.github/workflows/build-play-store.yml');
+const playValidator=read('scripts/validate-play-store-release.mjs');
 assert.equal(pkg.version,'40.80.0');
 assert.equal(manifest.name,'BuildMaster Elite Tático v40.80');
 assert.equal(manifest.short_name,'BuildMaster v40.80');

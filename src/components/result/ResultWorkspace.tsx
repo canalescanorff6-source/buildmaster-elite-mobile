@@ -24,14 +24,9 @@ import {
   Trophy
 } from 'lucide-react';
 import {
-  ATTRIBUTE_INPUTS,
-  OFFICIAL_ADDITIONAL_SKILL_NAMES,
-  SPECIAL_SKILL_NAMES,
-  POSITION_LABELS,
   type AnalysisResult,
   type GameplayDnaProfileId,
-  type PositionCode,
-  type TacticalStyle
+  type PositionCode
 } from '@/lib/analyzer';
 import {
   buildOpponentPlans,

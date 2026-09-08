@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
 const javaDir = path.join(root, 'android/app/src/main/java/com/buildmaster/elitetatico');
@@ -1091,4 +1093,17 @@ if (!manifest.includes('android:usesCleartextTraffic=')) {
   manifest = manifest.replace('<application', '<application\n        android:usesCleartextTraffic="false"');
 }
 fs.writeFileSync(manifestPath, manifest);
+
+// R200.1: o canal direto precisa da proteção OCR mesmo quando o workflow externo
+// ainda não foi migrado. O canal Play declara a distribuição no job e permanece
+// conservador: nele o foreground OCR não é instalado automaticamente.
+const distribution = String(process.env.NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION || 'direct').trim().toLowerCase();
+if (distribution !== 'play') {
+  const backgroundInstaller = fileURLToPath(new URL('./install-background-ocr-plugin.mjs', import.meta.url));
+  const backgroundResult = spawnSync(process.execPath, [backgroundInstaller], { cwd: root, stdio: 'inherit', env: process.env });
+  if (backgroundResult.status !== 0) throw new Error(`Falha ao instalar proteção OCR foreground (status ${backgroundResult.status ?? 'desconhecido'}).`);
+} else {
+  console.log('Canal Play detectado: foreground OCR direto permanece desativado por política.');
+}
+
 console.log('Plugin Android v29.00 instalado: ponte numérica corrigida, DownloadManager + HTTP reserva, SHA-256, pacote/versionCode e assinatura verificados.');

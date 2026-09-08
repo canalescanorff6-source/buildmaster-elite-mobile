@@ -126,11 +126,6 @@ try {
     stdio: 'pipe',
   });
 
-  execFileSync(process.execPath, [path.join(root, 'scripts/install-background-ocr-plugin.mjs')], {
-    cwd: temp,
-    stdio: 'pipe',
-  });
-
   const generated = [
     'BuildMasterSecurityPlugin.java',
     'BuildMasterMatchRecorderPlugin.java',

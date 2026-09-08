@@ -1520,28 +1520,24 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   let recommendationEvaluation=optimized.evaluation;
   let positionStabilityR184: CleanSlate2027R119['positionStabilityR184'];
   if (usageContext.usagePositionChanged) {
+    const targetOptimized=optimized;
     const naturalContext=buildUsageContextR125(input,parsed,parsed.mainPosition);
     const naturalOptimized=optimizeTraining(input,parsed,budget,naturalContext);
-    const naturalUnderTarget=evaluatePlan(input,parsed,naturalOptimized.plan,optimized.frequencies,true,optimized.evaluationContext);
-    const targetGain=optimized.evaluation.score-naturalUnderTarget.score;
-    const planDistance=trainingPlanDistanceR184(optimized.plan,naturalOptimized.plan);
-    const stableTie=targetGain<=POSITION_STABILITY_GAIN_THRESHOLD_R184 && planDistance<=POSITION_STABILITY_MAX_DISTANCE_R184;
+    const naturalUnderTarget=evaluatePlan(input,parsed,naturalOptimized.plan,targetOptimized.frequencies,true,targetOptimized.evaluationContext);
+    const targetGain=targetOptimized.evaluation.score-naturalUnderTarget.score;
+    const planDistance=trainingPlanDistanceR184(targetOptimized.plan,naturalOptimized.plan);
     positionStabilityR184={
       version:POSITION_STABILITY_R184_VERSION,
-      decision:stableTie?'NATURAL_ANCHOR':'TARGET_ADAPTATION',
+      decision:'NATURAL_ANCHOR',
       targetGain:round1(targetGain),
       planDistance,
       gainThreshold:POSITION_STABILITY_GAIN_THRESHOLD_R184,
       maxNoiseDistance:POSITION_STABILITY_MAX_DISTANCE_R184,
-      reason:stableTie
-        ? `A adaptação para ${usageContext.targetPosition} ficou em empate funcional (${round1(targetGain)} ponto de ganho; distância ${planDistance}); a ficha canônica de ${parsed.mainPosition} foi preservada contra ruído marginal.`
-        : `A adaptação para ${usageContext.targetPosition} provou mudança funcional material (${round1(targetGain)} ponto de ganho; distância ${planDistance}) e permaneceu ativa.`
+      reason:`A posição de uso ${usageContext.targetPosition} permanece consultiva para a leitura tática; a ficha canônica de ${parsed.mainPosition} é a autoridade permanente da mesma carta (ganho alvo ${round1(targetGain)}; distância ${planDistance}).`
     };
-    if(stableTie) {
-      optimized={...optimized,plan:naturalOptimized.plan,evaluation:naturalUnderTarget};
-      recommendationContext=naturalContext;
-      recommendationEvaluation=naturalOptimized.evaluation;
-    }
+    optimized={...naturalOptimized,evaluation:naturalUnderTarget};
+    recommendationContext=naturalContext;
+    recommendationEvaluation=naturalOptimized.evaluation;
   }
   const training=optimized.plan;
   const spent=trainingPlanTotalCost(training);

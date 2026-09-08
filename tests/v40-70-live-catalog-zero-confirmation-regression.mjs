@@ -7,7 +7,7 @@ const options=read('src/modules/architecture/appOptions.ts');
 const cardApp=read('src/components/CardVisionApp.tsx');
 const readerRuntimeR163=read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 const readerFlowR163=`${cardApp}\n${readerRuntimeR163}`;
-const review=read('src/components/result/ResultWorkspace.tsx');
+const review=`${read('src/components/result/ResultWorkspace.tsx')}\n${read('src/components/result/ResultReviewPanelR189.tsx')}`;
 const season=read('tests/legacy/efootballSeasonCatalogV4070.ts');
 const discovery=read('src/lib/skillDiscoveryV4070.ts');
 const provisional=read('src/lib/provisionalSpecialSkillCatalogV4070.ts');
@@ -16,6 +16,7 @@ const identity=read('src/lib/officialSkillIdentity.ts');
 const detailed=read('src/modules/card-reader/detailedPrintReader.ts');
 const parser=read('src/lib/cardSkillParser.ts');
 const workflow=read('.github/workflows/build-play-store.yml');
+const playValidator=read('scripts/validate-play-store-release.mjs');
 
 assert.equal(pkg.version,'40.80.0');
 assert.equal(manifest.name,'BuildMaster Elite Tático v40.80');

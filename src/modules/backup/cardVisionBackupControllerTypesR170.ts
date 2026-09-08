@@ -1,5 +1,5 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { BackupSection, IntegrityReport } from '@/lib/dataSafety';
+import type { IntegrityReport } from '@/lib/dataSafety';
 import type { OcrZone } from '@/lib/ocrZonesModelR164';
 import type { VaultFolder } from '@/lib/vaultUsability';
 import type { OnboardingProfile } from '@/lib/appEvolution';
@@ -7,7 +7,7 @@ import type { EfhubCalibrationZone } from '@/modules/card-reader/efhubCalibratio
 import type { AccentTheme, AppTheme, DensityMode, MotionPreference, PerformanceMode, PremiumVisualPreset, TextScale } from '@/lib/easyExperience';
 import type { SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import type { TacticalFormation, TacticalStyle } from '@/modules/analysis';
-import type { BackupSnapshot, SectionConflict } from '@/modules/backup/syncBackupEngine';
+import type { SectionConflict } from '@/modules/backup/syncBackupEngine';
 
 export type AppThemeR162 = AppTheme;
 export type AccentThemeR162 = AccentTheme;
