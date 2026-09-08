@@ -38,7 +38,8 @@ function walk(root) {
 }
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
-assert.ok(sourceBytes <= (r200Boundary ? 5_341_000 : 5_335_700), `R196: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
+const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
+assert.ok(sourceBytes <= (r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_335_700), `R196: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
   '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5',

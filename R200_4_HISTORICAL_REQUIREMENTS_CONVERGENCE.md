@@ -29,3 +29,7 @@ Esta rodada cruza o estado verde R200.3 com requisitos recuperados das fases ant
 ## R200.4.2 — reconstrução corretiva
 
 O cumulativo R200.4.1 foi reconstruído originalmente a partir de um snapshot intermediário que não continha integralmente os hotfixes R200.1, R200.2 e R200.3. A R200.4.2 volta a usar a cadeia aplicada de fato no GitHub — R200 → R200.1 → R200.2 → R200.3 — e sobrepõe somente as restaurações históricas desta rodada. Isso preserva as correções de CI, estabilidade permanente da ficha, contratos Android e regressões modernas sem retirar as capacidades recuperadas do Estúdio.
+
+## R200.4.3 — alinhamento completo dos orçamentos históricos
+
+O diagnóstico completo revelou que o R184 e os snapshots R193–R197 ainda mantinham fronteiras anteriores à convergência histórica. A R200.4.3 alinha esses contratos ao mesmo checkpoint de 5.360.000 bytes já usado por R198–R200, sem alterar o teto global real de 5.505.024 bytes. O estado atual permanece em 5.357.194 bytes, com 147.830 bytes de margem real.

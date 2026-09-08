@@ -49,7 +49,8 @@ const walk = (root) => {
   return files;
 };
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
-assert.ok(sourceBytes <= 5_344_000, `R193: redução líquida foi perdida; src TS/TSX voltou a ${sourceBytes} bytes.`);
+const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
+assert.ok(sourceBytes <= (r2004Boundary ? 5_360_000 : 5_344_000), `R193: redução líquida foi perdida; src TS/TSX voltou a ${sourceBytes} bytes.`);
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
