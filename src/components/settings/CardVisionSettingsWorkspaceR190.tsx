@@ -183,7 +183,7 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                       <summary>Migração e compatibilidade</summary>
                       <div className="migration-health-panel"><span>Esquema atual: {APP_DATA_VERSION}</span><span>Backups antigos são convertidos antes da restauração.</span><span>Campos novos recebem valores seguros sem apagar informações antigas.</span>{migrationLog.length > 0 && migrationLog.map((item: string) => <em key={item}>{item}</em>)}</div>
                     </details>
-                    {healthSummary.alerts.length > 0 && <div className="health-alert-list" role="status">{healthSummary.alerts.map((alert) => <span key={alert}>{alert}</span>)}</div>}
+                    {healthSummary.alerts.length > 0 && <div className="health-alert-list" role="status">{healthSummary.alerts.map((alert: string) => <span key={alert}>{alert}</span>)}</div>}
                     <RefinementCenterPanel players={integratedPlayers} appVersion={APP_RELEASE_VERSION} healthScore={healthSummary.score} onOpenPlayer={(id) => openIntegratedPlayer(id, 'result')} />
                     <SectionErrorBoundary area="qualidade-final"><PremiumQualityCenter appVersion={APP_RELEASE_VERSION} /></SectionErrorBoundary>
                     <SectionErrorBoundary area="producao-final"><ProductionReadinessCenter appVersion={APP_RELEASE_VERSION} dataIntegrityScore={localIntegrity.score} /></SectionErrorBoundary>

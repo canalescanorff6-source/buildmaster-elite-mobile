@@ -34,6 +34,9 @@ assert.match(center,/Ficha em teste \(v40\.60\)/);
 assert.match(panel,/Validação Real de Gameplay • v40\.50/);
 assert.match(pipeline,/applyVerifiedGameplayWinnerV4050/);
 assert.match(domain,/gameplayValidationMemoryV4050\?: GameplayValidationMemoryV4050/);
-assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/);
+assert.match(playValidator,/release-notes\/\$\{packageVersion\}\.txt/, 'O validador Play precisa sempre usar as notas da versão real do package.json.');
+if (/Google Play|Gerar AAB/i.test(String(process.env.GITHUB_WORKFLOW || ''))) {
+  assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/, 'No workflow Play, as notas publicadas precisam acompanhar a versão calculada.');
+}
 assert.match(workflow,/npm run ci:verify/);
 console.log('v40.50 aprovada: validação real ponderada, laboratório A/B anti-overfitting, memória validada e promoção somente com amostra suficiente.');

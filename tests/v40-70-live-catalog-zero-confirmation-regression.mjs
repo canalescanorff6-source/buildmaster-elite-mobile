@@ -51,6 +51,9 @@ assert.match(identity,/'phenomenal pass': 'Passador nato'/);
 assert.match(identity,/'passe fenomenal': 'Passador nato'/);
 assert.match(identity,/'blitz curler': 'Curva descendente'/);
 assert.match(identity,/'sombra veloz': 'Sombra veloz'/);
-assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/);
+assert.match(playValidator,/release-notes\/\$\{packageVersion\}\.txt/, 'O validador Play precisa sempre usar as notas da versão real do package.json.');
+if (/Google Play|Gerar AAB/i.test(String(process.env.GITHUB_WORKFLOW || ''))) {
+  assert.match(workflow,/RELEASE_NOTES_FILE=\"play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt\"/, 'No workflow Play, as notas publicadas precisam acompanhar a versão calculada.');
+}
 assert.match(workflow,/npm run ci:verify/);
 console.log('v40.70 aprovada: Catálogo Vivo atualizado para v6.0, Desempenho Máximo único e OCR sem confirmações obrigatórias.');
