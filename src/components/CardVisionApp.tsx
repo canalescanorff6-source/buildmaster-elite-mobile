@@ -349,21 +349,45 @@ export function CardVisionApp() {
     setLibraryOpen,
     setStatus,
     cloud: { setCloudLoading, setCloudStatus, requireSecureAccountCloud, pushCloudHistory, pullCloudHistory, runGuardedVaultActionR154, persistAndAdoptVaultHistoryR140 },
-  });
-  const {
+  });  const {
     backupInputRef,
+    fullBackupInputRef,
     verifyBackupInputRef,
+    restoreSections,
+    setRestoreSections,
     lastBackupAt,
     setLastBackupAt,
+    migrationLog,
+    backupPassword,
+    setBackupPassword,
+    backupPasswordConfirm,
+    setBackupPasswordConfirm,
+    rememberBackupPassword,
+    setRememberBackupPassword,
+    backupPasswordReady,
+    setBackupPasswordReady,
+    backupSnapshots,
+    syncConflicts,
+    lastFullSyncAt,
     healthSummary,
+    fullSyncHealth,
+    exportFullBackup,
     exportIncrementalBackup,
     verifyBackupFile,
     exportPlayersBackup,
     prepareBackupForUpdate,
+    createLocalRestorePoint,
+    syncFullCloudBackup,
+    pullAndMergeFullCloudBackup,
+    restoreBackupSnapshot,
+    deleteBackupSnapshot,
+    importFullBackup,
+    exportIntegrityDiagnostic,
     exportHistoryBackup,
     importHistoryBackup,
   } = backupControllerR162;
   const {
+    mainNavigation,
     currentNavigation,
     currentNavigationGroup,
     currentPlayerWorkspace,
@@ -1052,10 +1076,10 @@ export function CardVisionApp() {
             </div>
           )}
           {advancedMode && readerCaptureMode === 'complete' ? (
-            <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={async (file) => { await handleFile(file); }} onAnalyze={async (captures) => { await analyzeTotalCardCaptures(captures); }} onCancel={async () => { await cancelCurrentOcr(); }} /></SectionErrorBoundary>
+            <SectionErrorBoundary area="leitor-total"><TotalCardReaderPanel loading={loading} onPrimarySelected={handleFile} onAnalyze={analyzeTotalCardCaptures} onCancel={cancelCurrentOcr} /></SectionErrorBoundary>
           ) : (<>
           {pendingBackgroundCheckpoint && !loading && <ReaderInterruptedCardV3840 checkpoint={pendingBackgroundCheckpoint} onResume={() => void resumeInterruptedReading()} onDiscard={() => void discardInterruptedReading()} />}
-          <ReaderImageSourceCardV4010 preview={preview} fileLabel={selectedFile?.name || fileName || 'Imagem selecionada'} playerCardImage={playerCardImage} qualityText={qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'} cropResult={cardCropResult} adjustOpen={cardCropAdjustOpen} onToggleAdjust={() => setCardCropAdjustOpen((current) => !current)} onAdjust={(action) => void adjustDetectedCard(action)} onRedetect={() => void redetectPlayerCard()} onFile={async (file) => { await handleFile(file); }} />
+          <ReaderImageSourceCardV4010 preview={preview} fileLabel={selectedFile?.name || fileName || 'Imagem selecionada'} playerCardImage={playerCardImage} qualityText={qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'} cropResult={cardCropResult} adjustOpen={cardCropAdjustOpen} onToggleAdjust={() => setCardCropAdjustOpen((current) => !current)} onAdjust={(action) => void adjustDetectedCard(action)} onRedetect={() => void redetectPlayerCard()} onFile={handleFile} />
           <div className="vision-toolbar creation-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={() => void analyzeSelectedImage()} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}

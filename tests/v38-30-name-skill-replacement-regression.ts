@@ -65,7 +65,7 @@ assert.equal(replacement.result.trainingPointsUsed, 64);
 assert.deepEqual(replacement.result.recommendedSkills, replacement.result.skillIntegrity.recommendedSkills);
 assert.ok(replacement.replacementSkill, 'A troca inteligente deve identificar qual nova habilidade entrou no conjunto.');
 
-const app = `${fs.readFileSync('src/modules/card-reader/cardReviewWorkflowR131.ts', 'utf8')}\n${fs.readFileSync('src/modules/result/cardVisionResultActionsR188.ts', 'utf8')}`;
+const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const workspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
 assert.match(app, /HABILIDADES ESPECIAIS: \$\{selectedSpecialSkills\.join\(', '\)\}/);

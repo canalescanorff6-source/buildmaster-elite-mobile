@@ -26,12 +26,12 @@ assert.match(resultWorkspace, /Ainda faltam adicionar/, 'A ficha deve separar ha
 assert.match(resultWorkspace, /Já adicionadas/, 'A ficha deve manter visíveis as habilidades concluídas.');
 assert.match(resultWorkspace, /Marcar como feita/, 'A marcação de habilidades adicionais precisa continuar disponível.');
 assert.match(read('src/modules/vault/vaultProductionLifecycleR139.ts'), /habilidade concluída/, 'A marcação de habilidade deve continuar no lifecycle persistente do Cofre.');
-assert.match(read('src/components/settings/CardVisionSettingsWorkspaceR190.tsx'), /settings-update-quick-access/, 'A atualização precisa ter um acesso direto e visível nos Ajustes simples.');
+assert.match(read('src/components/CardVisionApp.tsx'), /settings-update-quick-access/, 'A atualização precisa ter um acesso direto e visível nos Ajustes simples.');
 assert.match(css, /Atualizações sempre visíveis no modo simples/, 'O menu móvel de Ajustes não pode esconder a área de atualização.');
 assert.match(css, /settings-navigation-rail > button:nth-child\(11\)/, 'O botão de Atualizações precisa permanecer destacado no modo simples.');
 
 assert.ok(read('src/app/layout.tsx').includes('bm-v3000-play-publication'));
-assert.ok(read('src/components/settings/CardVisionSettingsWorkspaceR190.tsx').includes('PlayStorePublicationCenter'));
+assert.ok(read('src/components/CardVisionApp.tsx').includes('PlayStorePublicationCenter'));
 assert.ok(read('src/modules/backup/backupSectionCollectorR141.ts').includes('exportPlayStorePublicationState'));
 assert.ok(fs.existsSync('src/app/privacidade/page.tsx'));
 assert.ok(fs.existsSync('src/app/excluir-conta/page.tsx'));

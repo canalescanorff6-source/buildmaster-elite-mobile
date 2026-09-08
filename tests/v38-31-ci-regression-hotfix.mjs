@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
-const reviewWorkflow = read('src/modules/card-reader/cardReviewWorkflowR131.ts');
+const app = read('src/components/CardVisionApp.tsx');
 const nativeCache = read('src/components/RegisterServiceWorker.tsx');
 const serviceWorker = read('public/sw.js');
 const v33 = read('tests/v33-00-executive-redesign-regression.mjs');
@@ -10,10 +10,8 @@ const v3771 = read('tests/v37-71-ci-hotfix-regression.mjs');
 const doctor = read('scripts/ci-doctor.mjs');
 const pkg = JSON.parse(read('package.json'));
 
-assert.match(reviewWorkflow, /const parsedOwnedSkills = canonicalizeSkillList\(\[/,
-  'O inventário completo precisa manter normalização canônica e deduplicação na autoridade R131.');
-assert.match(reviewWorkflow, /nativeSkills:\s*trustedSessionSkills\s*\?\?\s*parsedOwnedSkills/,
-  'A revisão deve usar evidência OCR confirmada ou o inventário canônico parseado.');
+assert.match(app, /nativeSkills: Array\.from\(new Set\(canonicalizeSkillList\(\[/,
+  'O inventário completo precisa manter deduplicação explícita e normalização canônica.');
 
 // O teste antigo mantinha uma expressão fixa e chegou a montar o sufixo
 // 38.39 como "38-39", rejeitando o esquema real 38.40.0. O contrato agora é

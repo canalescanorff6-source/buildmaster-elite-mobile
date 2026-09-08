@@ -7,7 +7,7 @@ export const IMAGE_IMPORT_LIMITS = {
   maxLibraryBytes: 160 * 1024 * 1024
 } as const;
 
-export type SupportedImageKind = 'jpeg' | 'png' | 'webp' | 'gif' | 'bmp' | 'svg' | 'avif' | 'heic' | 'heif';
+export type SupportedImageKind = 'jpeg' | 'png' | 'webp' | 'gif' | 'bmp' | 'svg' | 'avif' | 'heic' | 'heif' | 'tiff';
 
 export type ValidatedImage = {
   kind: SupportedImageKind;
@@ -18,6 +18,7 @@ export type ValidatedImage = {
   size: number;
   animatedFramePolicy: 'first-frame' | 'static';
   sanitizedBlob: Blob;
+  previewAvailable: boolean;
 };
 
 const MIME_KIND: Record<string, SupportedImageKind> = {
@@ -31,11 +32,14 @@ const MIME_KIND: Record<string, SupportedImageKind> = {
   'image/svg+xml': 'svg',
   'image/avif': 'avif',
   'image/heic': 'heic',
-  'image/heif': 'heif'
+  'image/heif': 'heif',
+  'image/tiff': 'tiff',
+  'image/tif': 'tiff',
+  'image/x-tiff': 'tiff'
 };
 
 const EXT_KIND: Record<string, SupportedImageKind> = {
-  jpg: 'jpeg', jpeg: 'jpeg', png: 'png', webp: 'webp', gif: 'gif', bmp: 'bmp', svg: 'svg', avif: 'avif', heic: 'heic', heif: 'heif'
+  jpg: 'jpeg', jpeg: 'jpeg', png: 'png', webp: 'webp', gif: 'gif', bmp: 'bmp', svg: 'svg', avif: 'avif', heic: 'heic', heif: 'heif', tif: 'tiff', tiff: 'tiff'
 };
 
 function extensionOf(name: string): string {
@@ -51,6 +55,7 @@ function sniffRasterKind(bytes: Uint8Array): SupportedImageKind | null {
   if (bytesEqual(bytes, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'png';
   if (bytesEqual(bytes, 0, [0x47, 0x49, 0x46, 0x38])) return 'gif';
   if (bytesEqual(bytes, 0, [0x42, 0x4d])) return 'bmp';
+  if (bytesEqual(bytes, 0, [0x49, 0x49, 0x2a, 0x00]) || bytesEqual(bytes, 0, [0x4d, 0x4d, 0x00, 0x2a])) return 'tiff';
   if (bytesEqual(bytes, 0, [0x52, 0x49, 0x46, 0x46]) && bytesEqual(bytes, 8, [0x57, 0x45, 0x42, 0x50])) return 'webp';
   const brand = new TextDecoder().decode(bytes.slice(4, 16)).toLowerCase();
   if (brand.includes('ftypavif') || brand.includes('ftypavis')) return 'avif';
@@ -92,14 +97,14 @@ async function sanitizedInput(file: File): Promise<{ blob: Blob; kind: Supported
     return { blob: new Blob([clean], { type: 'image/svg+xml' }), kind: 'svg', mime: 'image/svg+xml' };
   }
   const kind = sniffed || declared || extension;
-  if (!kind || kind === 'svg') throw new Error('Formato não reconhecido. Use JPG, JPEG, PNG, WebP, GIF, BMP, SVG, AVIF, HEIC ou HEIF.');
+  if (!kind || kind === 'svg') throw new Error('Formato não reconhecido. Use JPG, JPEG, PNG, WebP, GIF, BMP, SVG, AVIF, HEIC, HEIF, TIFF ou TIF.');
   if (sniffed && declared && sniffed !== declared && !(sniffed === 'heic' && declared === 'heif')) {
     throw new Error('A extensão e o conteúdo real da imagem não conferem.');
   }
   return { blob: file, kind, mime: file.type || `image/${kind === 'jpeg' ? 'jpeg' : kind}` };
 }
 
-async function decodeDimensions(blob: Blob, kind: SupportedImageKind): Promise<{ width: number; height: number }> {
+async function decodeDimensions(blob: Blob, kind: SupportedImageKind): Promise<{ width: number; height: number } | null> {
   if (typeof createImageBitmap === 'function') {
     try {
       const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
@@ -107,8 +112,7 @@ async function decodeDimensions(blob: Blob, kind: SupportedImageKind): Promise<{
       bitmap.close();
       return dimensions;
     } catch (error) {
-      if (kind === 'heic' || kind === 'heif') throw new Error('Este aparelho não possui codec para HEIC/HEIF. Converta a imagem para JPEG ou PNG.');
-      if (kind === 'avif') throw new Error('Este aparelho não conseguiu abrir AVIF. Converta a imagem para JPEG, PNG ou WebP.');
+      if (kind === 'heic' || kind === 'heif' || kind === 'avif' || kind === 'tiff') return null;
       if (kind !== 'svg') throw error;
     }
   }
@@ -122,6 +126,9 @@ async function decodeDimensions(blob: Blob, kind: SupportedImageKind): Promise<{
       image.src = url;
     });
     return dimensions;
+  } catch (error) {
+    if (kind === 'heic' || kind === 'heif' || kind === 'avif' || kind === 'tiff') return null;
+    throw error;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -131,7 +138,21 @@ export async function validateImageFile(file: File): Promise<ValidatedImage> {
   if (!file || file.size <= 0) throw new Error('Selecione uma imagem válida.');
   if (file.size > IMAGE_IMPORT_LIMITS.maxFileBytes) throw new Error('A imagem ultrapassa o limite de 20 MB.');
   const input = await sanitizedInput(file);
-  const { width, height } = await decodeDimensions(input.blob, input.kind);
+  const dimensions = await decodeDimensions(input.blob, input.kind);
+  if (!dimensions) {
+    return {
+      kind: input.kind,
+      mime: input.mime,
+      width: 0,
+      height: 0,
+      pixels: 0,
+      size: input.blob.size,
+      animatedFramePolicy: input.kind === 'gif' ? 'first-frame' : 'static',
+      sanitizedBlob: input.blob,
+      previewAvailable: false
+    };
+  }
+  const { width, height } = dimensions;
   if (!width || !height) throw new Error('Não foi possível confirmar as dimensões da imagem.');
   if (width > IMAGE_IMPORT_LIMITS.maxDimension || height > IMAGE_IMPORT_LIMITS.maxDimension) {
     throw new Error(`A imagem ultrapassa ${IMAGE_IMPORT_LIMITS.maxDimension}px em um dos lados.`);
@@ -146,8 +167,15 @@ export async function validateImageFile(file: File): Promise<ValidatedImage> {
     pixels,
     size: input.blob.size,
     animatedFramePolicy: input.kind === 'gif' ? 'first-frame' : 'static',
-    sanitizedBlob: input.blob
+    sanitizedBlob: input.blob,
+    previewAvailable: true
   };
+}
+
+export function createUnavailableImageThumbnail(name = 'Imagem sem prévia'): Blob {
+  const safeName = name.replace(/[<>&"']/g, '').slice(0, 42) || 'Imagem sem prévia';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="320" viewBox="0 0 512 320"><rect width="512" height="320" rx="24" fill="#0b1320"/><rect x="22" y="22" width="468" height="276" rx="18" fill="#111e2d" stroke="#60758a" stroke-width="3"/><path d="M154 202l54-58 46 42 44-48 64 72" fill="none" stroke="#8aa0b5" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="190" cy="112" r="18" fill="#8aa0b5"/><text x="256" y="256" text-anchor="middle" fill="#dce6ef" font-size="20" font-family="Arial,sans-serif">${safeName}</text><text x="256" y="282" text-anchor="middle" fill="#8aa0b5" font-size="14" font-family="Arial,sans-serif">Prévia indisponível • original preservado</text></svg>`;
+  return new Blob([svg], { type: 'image/svg+xml' });
 }
 
 export async function createImageThumbnail(blob: Blob, maxDimension: number = IMAGE_IMPORT_LIMITS.thumbnailMaxDimension): Promise<Blob> {

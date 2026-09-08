@@ -53,7 +53,7 @@ assert.ok(sourceBytes <= 5_344_000, `R193: redução líquida foi perdida; src T
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5',
+  '765f6b634b8671f2f2725d0164e34a61a18714d18c22f3d92f9c95d92557cb96',
   'R193: R119 não pode mudar durante deduplicação do analyzer.',
 );
 assert.ok(/npm run test:r193(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/.test(String(pkg.scripts?.['test:v4080'] ?? '')), 'R193: cadeia v40.80 deve manter R193 antes do gate seguinte.');

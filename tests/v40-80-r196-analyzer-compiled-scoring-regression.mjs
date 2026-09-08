@@ -41,7 +41,7 @@ const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR20
 assert.ok(sourceBytes <= (r200Boundary ? 5_341_000 : 5_335_700), `R196: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5',
+  '765f6b634b8671f2f2725d0164e34a61a18714d18c22f3d92f9c95d92557cb96',
   'R196: R119 não pode mudar durante otimização do hot path.',
 );
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');

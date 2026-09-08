@@ -164,7 +164,7 @@ assert.equal(uncertain.validation.level, 'blocked');
 assert.ok(uncertain.structuralPrecision?.blockReasons.some((reason) => /estilo|pontos|atributos/i.test(reason)));
 
 
-const workspaceSource = `${fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8')}\n${fs.readFileSync('src/components/result/ResultAdvancedWorkspaceR192.tsx', 'utf8')}`;
+const workspaceSource = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 const cleanResultSource = fs.readFileSync('src/components/PremiumCleanResultV3810.tsx', 'utf8');
 const panelSource = fs.readFileSync('src/components/StructuralPrecisionPanel.tsx', 'utf8');
 const structuralSource = fs.readFileSync('src/lib/structuralPrecisionV3740.ts', 'utf8');

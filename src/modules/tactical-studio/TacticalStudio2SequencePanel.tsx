@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { ChevronLeft, ChevronRight, Copy, Download, Pause, Play, RotateCcw, Save, Trash2, Waypoints } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Download, Pause, Play, RotateCcw, Save, Trash2, Upload, Waypoints } from 'lucide-react';
 import type { TacticalStyle } from '@/lib/analyzer';
 import type { FormationBlueprint, FormationSlotFit } from '@/lib/formationRoleEngine';
 import { downloadBlob, safeFileName } from '@/modules/tactical-studio/exportUtils';
@@ -28,6 +28,7 @@ export function TacticalStudio2SequencePanel({ formation, lineup, style }: Props
   const [projects, setProjects] = useState<TacticalSequenceProject[]>([]);
   const [message, setMessage] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => { setProjects(readTacticalSequenceProjects()); }, []);
   useEffect(() => { setProject(initial); setFrameIndex(0); setPlaying(false); }, [initial]);
@@ -82,6 +83,33 @@ export function TacticalStudio2SequencePanel({ formation, lineup, style }: Props
     setMessage('Sequência exportada em JSON.');
   }
 
+  async function importProject(file: File): Promise<void> {
+    try {
+      if (file.size <= 0) throw new Error('Selecione um projeto JSON válido.');
+      if (file.size > 1_500_000) throw new Error('O projeto é maior que o limite de 1,5 MB.');
+      const parsed = JSON.parse(await file.text()) as { project?: unknown } | TacticalSequenceProject;
+      const candidate = (parsed && typeof parsed === 'object' && 'project' in parsed ? parsed.project : parsed) as Partial<TacticalSequenceProject> | undefined;
+      if (!candidate || typeof candidate !== 'object' || !Array.isArray(candidate.frames)) throw new Error('O JSON não contém uma sequência tática válida.');
+      const normalized: TacticalSequenceProject = {
+        id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id.slice(0, 180) : `tactical-sequence-import-${Date.now()}`,
+        name: typeof candidate.name === 'string' && candidate.name.trim() ? candidate.name.trim().slice(0, 90) : 'Sequência importada',
+        formationId: typeof candidate.formationId === 'string' && candidate.formationId.trim() ? candidate.formationId.slice(0, 180) : formation.id,
+        style: candidate.style ?? style,
+        createdAt: typeof candidate.createdAt === 'string' && !Number.isNaN(Date.parse(candidate.createdAt)) ? candidate.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        frames: candidate.frames.slice(0, 12)
+      };
+      const check = validateTacticalSequence(normalized);
+      if (!check.valid) throw new Error(`Projeto inválido: ${check.blockers[0] || 'estrutura incompleta'}.`);
+      setProject(normalized);
+      setFrameIndex(0);
+      setPlaying(false);
+      setMessage('Sequência importada. Revise e salve para adicioná-la à biblioteca desta conta.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível importar a sequência.');
+    }
+  }
+
   if (!frame) return null;
 
   return <section className="bm2950-sequence-studio" aria-labelledby="bm2950-sequence-title">
@@ -91,7 +119,9 @@ export function TacticalStudio2SequencePanel({ formation, lineup, style }: Props
       <label><span>Salvos</span><select defaultValue="" onChange={(event) => { if (event.target.value) loadProject(event.target.value); }}><option value="">Selecionar</option>{projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <button type="button" onClick={saveProject}><Save size={16}/> Salvar</button>
       <button type="button" onClick={exportProject}><Download size={16}/> Exportar</button>
+      <button type="button" onClick={() => importInputRef.current?.click()}><Upload size={16}/> Importar</button>
       <button type="button" onClick={() => { setProject(initial); setFrameIndex(0); }}><RotateCcw size={16}/> Restaurar</button>
+      <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void importProject(file); event.currentTarget.value = ''; }}/>
     </div>
 
     <div className="bm2950-sequence-layout">

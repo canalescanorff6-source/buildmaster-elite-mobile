@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { DragEvent as ReactDragEvent, PointerEvent as ReactPointerEvent } from 'react';
 import {
   Copy,
   Download,
@@ -34,6 +34,7 @@ import {
   type TacticalPosterConfig,
   type TacticalPosterCustomColors,
   type TacticalPosterDisplayOptions,
+  type TacticalPosterImageLayerRole,
   type TacticalPosterOrientation,
   type TacticalPosterPalette,
   type TacticalPosterPlayerOverride
@@ -45,6 +46,7 @@ import {
   readTacticalPosterLibrary,
   saveTacticalPosterProject,
   type SavedTacticalPosterProject,
+  type TacticalPosterStoredImageLayer,
   type TacticalPosterEditableState
 } from '@/lib/tacticalPosterLibrary';
 import { createStableId } from '@/lib/stableId';
@@ -134,6 +136,8 @@ function createInitialState(
     playerOverrides: {},
     backgroundImageId: undefined,
     backgroundImageOpacity: 0.2,
+    imageLayers: [],
+    referenceImageId: undefined,
     customColors: {},
     useAutomaticArrows: true,
     manualArrows: [],
@@ -173,6 +177,10 @@ export function TacticalPosterStudioPanel({
   const [backgroundImageId, setBackgroundImageId] = useState<string | undefined>(undefined);
   const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(0.2);
   const [backgroundImageDataUrl, setBackgroundImageDataUrl] = useState('');
+  const [imageLayers, setImageLayers] = useState<TacticalPosterStoredImageLayer[]>([]);
+  const [imageLayerDataUrls, setImageLayerDataUrls] = useState<Record<string, string>>({});
+  const [referenceImageId, setReferenceImageId] = useState<string | undefined>(undefined);
+  const [referenceImageDataUrl, setReferenceImageDataUrl] = useState('');
   const [imageLibrary, setImageLibrary] = useState<TacticalImageSummary[]>([]);
   const [imageThumbnailUrls, setImageThumbnailUrls] = useState<Record<string, string>>({});
   const [customColors, setCustomColors] = useState<TacticalPosterCustomColors>({});
@@ -195,6 +203,7 @@ export function TacticalPosterStudioPanel({
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectName, setProjectName] = useState(`${formation.name} • arte tática`);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const initialLoadRef = useRef(false);
   const [studioTab, setStudioTab] = useState<StudioTab>('editar');
   const [showGrid, setShowGrid] = useState(true);
@@ -217,6 +226,8 @@ export function TacticalPosterStudioPanel({
     playerOverrides,
     backgroundImageId,
     backgroundImageOpacity,
+    imageLayers,
+    referenceImageId,
     customColors,
     useAutomaticArrows,
     manualArrows,
@@ -228,7 +239,7 @@ export function TacticalPosterStudioPanel({
     defensive,
     avoid,
     whyItWorks
-  }), [attack, avoid, backgroundImageId, backgroundImageOpacity, customColors, defend, defensive, focus, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, subtitle, title, useAutomaticArrows, whyItWorks]);
+  }), [attack, avoid, backgroundImageId, backgroundImageOpacity, customColors, defend, defensive, focus, imageLayers, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, referenceImageId, subtitle, title, useAutomaticArrows, whyItWorks]);
 
   useEffect(() => {
     if (!initialLoadRef.current) {
@@ -259,6 +270,8 @@ export function TacticalPosterStudioPanel({
     setPlayerOverrides(state.playerOverrides ?? {});
     setBackgroundImageId(state.backgroundImageId);
     setBackgroundImageOpacity(state.backgroundImageOpacity ?? 0.2);
+    setImageLayers(state.imageLayers ?? []);
+    setReferenceImageId(state.referenceImageId);
     setCustomColors(state.customColors ?? {});
     setUseAutomaticArrows(state.useAutomaticArrows !== false);
     setManualArrows(state.manualArrows ?? []);
@@ -353,6 +366,24 @@ export function TacticalPosterStudioPanel({
   }, [imageLibrary]);
 
   useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+      const file = Array.from(event.clipboardData?.items ?? [])
+        .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .find((item): item is File => Boolean(item));
+      if (!file) return;
+      event.preventDefault();
+      void importStudioFile(file);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  // A função de importação lê sempre o estado atual do componente; o listener é único enquanto o Estúdio estiver montado.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     if (!backgroundImageId) {
       setBackgroundImageDataUrl('');
@@ -360,11 +391,50 @@ export function TacticalPosterStudioPanel({
     }
     void getTacticalImage(backgroundImageId).then(async (item) => {
       if (!item || cancelled) return;
+      if (item.previewAvailable === false) {
+        setBackgroundImageDataUrl('');
+        if (!cancelled) setMessage('O original foi preservado, mas este aparelho não consegue exibir esse formato. Converta para PNG/JPEG para usá-lo na arte.');
+        return;
+      }
       const dataUrl = await blobToDataUrl(item.original);
       if (!cancelled) setBackgroundImageDataUrl(dataUrl);
     }).catch(() => { if (!cancelled) setBackgroundImageDataUrl(''); });
     return () => { cancelled = true; };
   }, [backgroundImageId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const uniqueIds = [...new Set(imageLayers.map((layer) => layer.imageId))];
+    if (!uniqueIds.length) {
+      setImageLayerDataUrls({});
+      return () => { cancelled = true; };
+    }
+    void Promise.all(uniqueIds.map(async (id) => {
+      const item = await getTacticalImage(id);
+      if (!item || item.previewAvailable === false) return [id, ''] as const;
+      return [id, await blobToDataUrl(item.original)] as const;
+    })).then((entries) => {
+      if (!cancelled) setImageLayerDataUrls(Object.fromEntries(entries));
+    }).catch(() => { if (!cancelled) setImageLayerDataUrls({}); });
+    return () => { cancelled = true; };
+  }, [imageLayers]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!referenceImageId) {
+      setReferenceImageDataUrl('');
+      return () => { cancelled = true; };
+    }
+    void getTacticalImage(referenceImageId).then(async (item) => {
+      if (!item || cancelled || item.previewAvailable === false) {
+        if (!cancelled) setReferenceImageDataUrl('');
+        return;
+      }
+      const dataUrl = await blobToDataUrl(item.original);
+      if (!cancelled) setReferenceImageDataUrl(dataUrl);
+    }).catch(() => { if (!cancelled) setReferenceImageDataUrl(''); });
+    return () => { cancelled = true; };
+  }, [referenceImageId]);
 
   useEffect(() => {
     setLibrary(readTacticalPosterLibrary());
@@ -425,6 +495,10 @@ export function TacticalPosterStudioPanel({
     playerOverrides,
     backgroundImageDataUrl,
     backgroundImageOpacity,
+    imageLayers: imageLayers.flatMap((layer) => {
+      const imageDataUrl = imageLayerDataUrls[layer.imageId];
+      return imageDataUrl ? [{ ...layer, imageDataUrl }] : [];
+    }),
     customColors,
     useAutomaticArrows,
     manualArrows,
@@ -438,7 +512,7 @@ export function TacticalPosterStudioPanel({
       avoid: textToLines(avoid),
       whyItWorks: textToLines(whyItWorks)
     }
-  }), [attack, avoid, backgroundImageDataUrl, backgroundImageOpacity, customColors, defend, defensive, focus, formation, lineup, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, style, subtitle, title, useAutomaticArrows, whyItWorks]);
+  }), [attack, avoid, backgroundImageDataUrl, backgroundImageOpacity, customColors, defend, defensive, focus, formation, imageLayerDataUrls, imageLayers, lineup, manualArrows, offensive, options, orientation, palette, passing, playerOverrides, recycle, style, subtitle, title, useAutomaticArrows, whyItWorks]);
 
   const svg = useMemo(() => createTacticalPosterSvg(config), [config]);
 
@@ -607,6 +681,10 @@ export function TacticalPosterStudioPanel({
     try {
       const item = await addTacticalImage(file);
       await refreshImageLibrary();
+      if (item.previewAvailable === false) {
+        setMessage(`${item.name} foi preservada na galeria, mas este aparelho não possui decodificador para exibi-la. Converta para PNG/JPEG para usar na arte.`);
+        return;
+      }
       setBackgroundImageId(item.id);
       setBackgroundImageOpacity(0.2);
       setMessage(item.kind === 'gif'
@@ -617,10 +695,63 @@ export function TacticalPosterStudioPanel({
     }
   }
 
+  function useGalleryImageAs(imageId: string, role: 'background' | 'reference' | TacticalPosterImageLayerRole): void {
+    const item = imageLibrary.find((candidate) => candidate.id === imageId);
+    if (!item) return;
+    if (item.previewAvailable === false) {
+      setMessage('O original está preservado, mas precisa ser convertido para PNG/JPEG antes de ser usado visualmente.');
+      return;
+    }
+    if (role === 'background') {
+      setBackgroundImageId(imageId);
+      setMessage('Imagem aplicada como cenário/fundo do campo.');
+      return;
+    }
+    if (role === 'reference') {
+      setReferenceImageId(imageId);
+      setMessage('Imagem definida como referência visual. Ela não será exportada no pôster.');
+      return;
+    }
+    const defaults = role === 'watermark'
+      ? { opacity: .12, x: 24, y: 24, width: 52, height: 52 }
+      : role === 'logo'
+        ? { opacity: .95, x: 80, y: 2, width: 16, height: 13 }
+        : { opacity: .92, x: 30, y: 30, width: 40, height: 30 };
+    setImageLayers((current) => {
+      const withoutSingleton = role === 'watermark' || role === 'logo'
+        ? current.filter((layer) => layer.role !== role)
+        : current;
+      return [...withoutSingleton, {
+        id: createStableId(`poster-image-${role}`),
+        imageId,
+        role,
+        ...defaults
+      }].slice(-8);
+    });
+    setMessage(role === 'watermark' ? 'Marca d’água aplicada.' : role === 'logo' ? 'Escudo/logotipo aplicado.' : 'Camada livre adicionada ao pôster.');
+  }
+
+  function updateImageLayer(id: string, patch: Partial<TacticalPosterStoredImageLayer>): void {
+    setImageLayers((current) => current.map((layer) => layer.id === id ? { ...layer, ...patch } : layer));
+  }
+
+  function removeImageLayer(id: string): void {
+    setImageLayers((current) => current.filter((layer) => layer.id !== id));
+  }
+
+  function handleStudioDrop(event: ReactDragEvent<HTMLElement>): void {
+    const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('image/') || /\.(?:jpe?g|png|webp|gif|bmp|svg|avif|heic|heif|tiff?|json)$/i.test(item.name));
+    if (!file) return;
+    event.preventDefault();
+    void importStudioFile(file);
+  }
+
   async function removeGalleryImage(id: string): Promise<void> {
     try {
       await deleteTacticalImage(id);
       if (backgroundImageId === id) setBackgroundImageId(undefined);
+      if (referenceImageId === id) setReferenceImageId(undefined);
+      setImageLayers((current) => current.filter((layer) => layer.imageId !== id));
       await refreshImageLibrary();
       setMessage('Imagem removida da galeria. Nenhum outro projeto foi apagado.');
     } catch (error) {
@@ -702,7 +833,7 @@ export function TacticalPosterStudioPanel({
     : `${Math.round(1536 * exportScale)} × ${Math.round(1024 * exportScale)}`;
 
   return (
-    <article className={`tactical-poster-studio luxury-panel studio-tab-${studioTab}`}>
+    <article className={`tactical-poster-studio luxury-panel studio-tab-${studioTab}`} onDragOver={(event) => { if (event.dataTransfer.types.includes('Files')) event.preventDefault(); }} onDrop={handleStudioDrop}>
       <div className="section-title-row tactical-poster-heading">
         <div>
           <p className="kicker"><Sparkles size={15}/> Estúdio Tático Completo • Meta 2026</p>
@@ -779,17 +910,36 @@ export function TacticalPosterStudioPanel({
 
           <details open className="studio-group-edit"><summary>Galeria de imagens da conta</summary><div className="tactical-image-library">
             <div className="tactical-image-library-toolbar">
-              <button type="button" onClick={() => importInputRef.current?.click()}><Upload size={15}/> Importar JPG, PNG e outros</button>
+              <button type="button" onClick={() => importInputRef.current?.click()}><Upload size={15}/> Arquivos / galeria</button>
+              <button type="button" onClick={() => cameraInputRef.current?.click()}><ImageIcon size={15}/> Câmera</button>
               <button type="button" onClick={() => setBackgroundImageId(undefined)} disabled={!backgroundImageId}><RefreshCcw size={15}/> Remover fundo</button>
               <label><span>Opacidade {Math.round(backgroundImageOpacity * 100)}%</span><input type="range" min={5} max={80} value={Math.round(backgroundImageOpacity * 100)} onChange={(event) => setBackgroundImageOpacity(Number(event.target.value) / 100)}/></label>
             </div>
+            <p className="panel-note">Também aceita arrastar e soltar imagens sobre o Estúdio ou colar uma imagem da área de transferência. JPG/JPEG, PNG, WebP, GIF, BMP, SVG, AVIF, HEIC/HEIF e TIFF/TIF são preservados; formatos sem codec no aparelho ficam guardados até serem convertidos para PNG/JPEG.</p>
             {imageLibrary.length === 0 ? <p className="panel-note">Nenhuma imagem importada. A galeria é local, separada por conta e não apaga arquivos antigos automaticamente.</p> : <div className="tactical-image-grid">
               {imageLibrary.map((item) => <div key={item.id} className={backgroundImageId === item.id ? 'active' : ''}>
                 {imageThumbnailUrls[item.id] ? <img src={imageThumbnailUrls[item.id]} alt={item.name}/> : <span>Prévia</span>}
-                <strong title={item.name}>{item.name}</strong><small>{item.width}×{item.height} • {Math.max(1, Math.round(item.size / 1024))} KB</small>
-                <div><button type="button" onClick={() => setBackgroundImageId(item.id)}>Usar</button><button type="button" className="danger" aria-label={`Apagar imagem ${item.name}`} onClick={() => void removeGalleryImage(item.id)}><Trash2 size={14}/></button></div>
+                <strong title={item.name}>{item.name}</strong><small>{item.previewAvailable === false ? 'Original preservado • prévia indisponível' : `${item.width}×${item.height}`} • {Math.max(1, Math.round(item.size / 1024))} KB</small>
+                <div className="tactical-image-role-actions">
+                  <button type="button" disabled={item.previewAvailable === false} onClick={() => useGalleryImageAs(item.id, 'background')}>Fundo</button>
+                  <button type="button" disabled={item.previewAvailable === false} onClick={() => useGalleryImageAs(item.id, 'watermark')}>Marca</button>
+                  <button type="button" disabled={item.previewAvailable === false} onClick={() => useGalleryImageAs(item.id, 'logo')}>Logo</button>
+                  <button type="button" disabled={item.previewAvailable === false} onClick={() => useGalleryImageAs(item.id, 'free')}>Camada</button>
+                  <button type="button" disabled={item.previewAvailable === false} onClick={() => useGalleryImageAs(item.id, 'reference')}>Referência</button>
+                  <button type="button" className="danger" aria-label={`Apagar imagem ${item.name}`} onClick={() => void removeGalleryImage(item.id)}><Trash2 size={14}/></button>
+                </div>
               </div>)}
             </div>}
+            {referenceImageDataUrl && <div className="tactical-reference-image"><div><strong>Imagem de referência</strong><span>Somente para consulta no editor; não entra na exportação.</span></div><img src={referenceImageDataUrl} alt="Referência visual do projeto"/><button type="button" onClick={() => setReferenceImageId(undefined)}>Remover referência</button></div>}
+            {imageLayers.length > 0 && <div className="tactical-image-layer-editor"><strong>Camadas visuais</strong>{imageLayers.map((layer, index) => <div key={layer.id} className="tactical-image-layer-row">
+              <span>{index + 1}. {layer.role === 'watermark' ? 'Marca d’água' : layer.role === 'logo' ? 'Escudo / logotipo' : 'Camada livre'}</span>
+              <label>Opacidade <input type="range" min={4} max={100} value={Math.round(layer.opacity * 100)} onChange={(event) => updateImageLayer(layer.id, { opacity: Number(event.target.value) / 100 })}/></label>
+              <label>X <input type="range" min={0} max={96} value={Math.round(layer.x)} onChange={(event) => updateImageLayer(layer.id, { x: Number(event.target.value) })}/></label>
+              <label>Y <input type="range" min={0} max={96} value={Math.round(layer.y)} onChange={(event) => updateImageLayer(layer.id, { y: Number(event.target.value) })}/></label>
+              <label>Largura <input type="range" min={4} max={100} value={Math.round(layer.width)} onChange={(event) => updateImageLayer(layer.id, { width: Number(event.target.value) })}/></label>
+              <label>Altura <input type="range" min={4} max={100} value={Math.round(layer.height)} onChange={(event) => updateImageLayer(layer.id, { height: Number(event.target.value) })}/></label>
+              <button type="button" className="danger" onClick={() => removeImageLayer(layer.id)}><Trash2 size={14}/> Remover camada</button>
+            </div>)}</div>}
           </div></details>
 
           <details className="studio-group-move"><summary>Jogadores e funções exibidas</summary><div className="tactical-player-overrides">
@@ -854,7 +1004,8 @@ export function TacticalPosterStudioPanel({
             <button type="button" className="elite-button secondary" onClick={() => importInputRef.current?.click()}><Upload size={16}/> Importar</button>
             <button type="button" className="elite-button secondary" onClick={resetAutomatic}><RefreshCcw size={16}/> Gerar automático</button>
           </div>
-          <input ref={importInputRef} className="tactical-hidden-input" type="file" accept="application/json,.json,image/jpeg,image/png,image/webp,image/gif,image/bmp,image/svg+xml,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.heic,.heif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importStudioFile(file); event.currentTarget.value = ''; }}/>
+          <input ref={importInputRef} className="tactical-hidden-input" type="file" accept="application/json,.json,image/jpeg,image/png,image/webp,image/gif,image/bmp,image/svg+xml,image/avif,image/heic,image/heif,image/tiff,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.heic,.heif,.tif,.tiff" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importStudioFile(file); event.currentTarget.value = ''; }}/>
+          <input ref={cameraInputRef} className="tactical-hidden-input" type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importStudioFile(file); event.currentTarget.value = ''; }}/>
           {message && <p className="panel-note tactical-poster-message" role="status">{message}</p>}
         </div>
 

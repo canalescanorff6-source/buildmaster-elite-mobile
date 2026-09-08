@@ -26,7 +26,6 @@ declare module 'lucide-react' {
   export const FileText: Icon;
   export const Folder: Icon;
   export const MoreHorizontal: Icon;
-  export const Loader2: Icon;
   export const RotateCcw: Icon;
   export const Search: Icon;
   export const ShieldAlert: Icon;

@@ -1,6 +1,6 @@
 import { accountDatabaseName } from '@/lib/accountStorage';
 import { createStableId } from '@/lib/stableId';
-import { createImageThumbnail, IMAGE_IMPORT_LIMITS, validateImageFile, type SupportedImageKind } from './imageSafety';
+import { createImageThumbnail, createUnavailableImageThumbnail, IMAGE_IMPORT_LIMITS, validateImageFile, type SupportedImageKind } from './imageSafety';
 
 const DB_BASE_NAME = 'buildmaster_tactical_image_library_v1';
 const DB_VERSION = 1;
@@ -17,6 +17,7 @@ export type StoredTacticalImage = {
   createdAt: string;
   updatedAt: string;
   favorite: boolean;
+  previewAvailable?: boolean;
   original: Blob;
   thumbnail: Blob;
 };
@@ -50,7 +51,7 @@ async function run<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore, 
 export async function listTacticalImages(): Promise<TacticalImageSummary[]> {
   return run<TacticalImageSummary[]>('readonly', (store, resolve, reject) => {
     const request = store.getAll();
-    request.onsuccess = () => resolve((request.result as StoredTacticalImage[]).map((stored) => { const { original, ...item } = stored; void original; return item; }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    request.onsuccess = () => resolve((request.result as StoredTacticalImage[]).map((stored) => { const { original, ...item } = stored; void original; return { ...item, previewAvailable: stored.previewAvailable !== false }; }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
     request.onerror = () => reject(request.error);
   });
 }
@@ -68,7 +69,9 @@ export async function addTacticalImage(file: File): Promise<StoredTacticalImage>
   const current = await listTacticalImages();
   if (current.length >= IMAGE_IMPORT_LIMITS.maxLibraryItems) throw new Error('A galeria já possui 40 imagens. Apague uma imagem manualmente antes de importar outra.');
   const currentBytes = current.reduce((sum, item) => sum + item.size + item.thumbnail.size, 0);
-  const thumbnail = await createImageThumbnail(validated.sanitizedBlob);
+  const thumbnail = validated.previewAvailable
+    ? await createImageThumbnail(validated.sanitizedBlob)
+    : createUnavailableImageThumbnail(file.name);
   if (currentBytes + validated.size + thumbnail.size > IMAGE_IMPORT_LIMITS.maxLibraryBytes) {
     throw new Error('A galeria atingiu 160 MB. Apague imagens manualmente; o app não remove arquivos antigos sozinho.');
   }
@@ -84,6 +87,7 @@ export async function addTacticalImage(file: File): Promise<StoredTacticalImage>
     createdAt: now,
     updatedAt: now,
     favorite: false,
+    previewAvailable: validated.previewAvailable,
     original: validated.sanitizedBlob,
     thumbnail
   };
@@ -143,7 +147,9 @@ export async function importTacticalImageLibrary(value: unknown): Promise<number
     const originalBlob = dataUrlToBlob(raw.originalDataUrl);
     const file = new File([originalBlob], String(raw.name || 'imagem-restaurada').slice(0, 120), { type: originalBlob.type || String(raw.mime || '') });
     const validated = await validateImageFile(file);
-    const thumbnail = await createImageThumbnail(validated.sanitizedBlob);
+    const thumbnail = validated.previewAvailable
+      ? await createImageThumbnail(validated.sanitizedBlob)
+      : createUnavailableImageThumbnail(file.name);
     totalBytes += validated.size + thumbnail.size;
     if (totalBytes > IMAGE_IMPORT_LIMITS.maxLibraryBytes) throw new Error('A galeria restaurada ultrapassa 160 MB.');
     const now = new Date().toISOString();
@@ -158,6 +164,7 @@ export async function importTacticalImageLibrary(value: unknown): Promise<number
       createdAt: Number.isNaN(Date.parse(String(raw.createdAt || ''))) ? now : String(raw.createdAt),
       updatedAt: Number.isNaN(Date.parse(String(raw.updatedAt || ''))) ? now : String(raw.updatedAt),
       favorite: raw.favorite === true,
+      previewAvailable: validated.previewAvailable,
       original: validated.sanitizedBlob,
       thumbnail
     });
@@ -177,4 +184,3 @@ export async function importTacticalImageLibrary(value: unknown): Promise<number
   });
   return prepared.length;
 }
-

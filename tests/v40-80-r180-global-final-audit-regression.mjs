@@ -76,8 +76,8 @@ assert.match(v3030, /readerAnalysisRuntimeR163\.ts/);
 assert.match(v3040, /readerAnalysisRuntimeR163\.ts/);
 assert.match(v3050, /readerAnalysisRuntimeR163\.ts/);
 assert.match(v3140, /readerAnalysisRuntimeR163\.ts/);
-assert.match(v3500, /assert\.deepEqual\(asCF\.training, dribbler\.training/,
-  'R180: v35 precisa validar progressão permanente estável para a mesma carta entre posições de uso.');
+assert.match(v3500, /assert\.notDeepEqual\(asCF\.training, dribbler\.training/,
+  'R180: v35 precisa validar ficha adaptável por posição, não receita imutável.');
 assert.match(v3500, /assert\.equal\(asCF\.cleanSlate2027R119\?\.cardKey, dribbler\.cleanSlate2027R119\?\.cardKey/,
   'R180: identidade permanente da mesma carta precisa continuar fixa.');
 

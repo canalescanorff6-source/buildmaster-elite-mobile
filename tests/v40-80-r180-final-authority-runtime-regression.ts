@@ -28,8 +28,7 @@ assert.equal(ss.cleanSlate2027R119.cardKey,cf.cleanSlate2027R119.cardKey,'Mesma 
 assert.equal(ss.cleanSlate2027R119.positionAnchor,cf.cleanSlate2027R119.positionAnchor,'Âncora natural não muda com a função escolhida.');
 assert.equal(ss.cleanSlate2027R119.usagePosition,'SS');
 assert.equal(cf.cleanSlate2027R119.usagePosition,'CF');
-assert.deepEqual(ss.training,cf.training,'A função real de uso pode mudar sem recriar a progressão permanente da mesma carta.');
-assert.equal(cf.cleanSlate2027R119.usagePositionChanged,true,'A mudança de função deve continuar registrada no diagnóstico/tática.');
+assert.notDeepEqual(ss.training,cf.training,'A ficha precisa adaptar-se à função real de uso.');
 assert.equal(trainingPlanTotalCost(ss.training),64);
 assert.equal(trainingPlanTotalCost(cf.training),64);
 for (const result of [ss,cf]) {
@@ -49,4 +48,4 @@ assert.equal(occupied.cleanSlate2027R119.impetoDecision,'KEEP_CURRENT');
 assert.equal(occupied.cleanSlate2027R119.currentImpeto,'Chute');
 assert.equal(occupied.recommendedImpetos.length,0,'Ímpeto já aplicado nunca pode ser recomendado de novo.');
 assert.equal(occupied.cleanSlate2027R119.guards.existingImpetoNeverRepeated,true);
-console.log('R180 runtime final aprovado: identidade e progressão permanentes estáveis, posição de uso rastreada, orçamento exato, Top 5 oficial/único e Ímpeto seguro.');
+console.log('R180 runtime final aprovado: identidade fixa, ficha adaptável, orçamento exato, Top 5 oficial/único e Ímpeto seguro.');

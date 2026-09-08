@@ -196,8 +196,8 @@ assert.equal(asCF.cleanSlate2027R119?.positionAnchor, dribbler.cleanSlate2027R11
 assert.equal(asCF.cleanSlate2027R119?.cardKey, dribbler.cleanSlate2027R119?.cardKey, 'A posição escolhida não pode trocar a identidade permanente da carta.');
 assert.equal(asCF.cleanSlate2027R119?.usagePosition, 'CF', 'A posição de uso precisa ser registrada pela autoridade final.');
 assert.equal(dribbler.cleanSlate2027R119?.usagePosition, 'SS', 'A posição original de uso precisa permanecer explícita.');
-assert.deepEqual(asCF.training, dribbler.training, 'A mesma carta deve preservar a progressão permanente mesmo quando a posição real de uso muda.');
-assert.equal(asCF.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'A posição de uso precisa permanecer separada da identidade e da progressão permanente da carta.');
+assert.notDeepEqual(asCF.training, dribbler.training, 'A mesma carta precisa adaptar a progressão quando a função real de uso muda, sem trocar sua identidade.');
+assert.equal(asCF.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'A adaptação por posição precisa preservar a trava identidade fixa / ficha adaptável.');
 assert.equal(asCF.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER', 'A adaptação deve preservar a autoridade única r119.');
 assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'Selecionar outra posição não pode trocar os Ímpetos da carta.');
 

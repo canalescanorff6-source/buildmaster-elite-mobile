@@ -9,7 +9,7 @@ import {
   buildProfessionalIntelligenceReport,
   buildScenarioGameplayAnalysis
 } from '../src/lib/professionalIntelligenceV37';
-import { cardFingerprint, type MatchValidationRecord } from '../src/lib/appEvolution';
+import type { MatchValidationRecord } from '../src/lib/appEvolution';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
 
 const card = `[AJUSTES MANUAIS]
@@ -46,18 +46,17 @@ const result = applyCompleteCardIntelligence(analyzeCard(card, 'COMPETITIVE', 'A
   controlProfile: 'DRIBBLE'
 }));
 
-const exactCardFingerprint = cardFingerprint(result);
 const matches: MatchValidationRecord[] = [
   {
-    id: 'm1', cardFingerprint: exactCardFingerprint, playerName: result.parsed.playerName, targetPosition: 'AMF', formation: '4-2-2-2', teamStyle: 'POSSE_DE_BOLA', buildName: result.buildName, buildSignature: 'b', playedAt: '2026-07-30T10:00:00.000Z', minutes: 90,
+    id: 'm1', cardFingerprint: 'x', playerName: result.parsed.playerName, targetPosition: 'AMF', formation: '4-2-2-2', teamStyle: 'POSSE_DE_BOLA', buildName: result.buildName, buildSignature: 'b', playedAt: '2026-07-30T10:00:00.000Z', minutes: 90,
     overallRating: 4, passing: 4, movement: 5, finishing: 3, defending: 2, physical: 3, stamina: 4, tags: ['Criou boas linhas de passe'], note: '', mode: 'ranked', connection: 'variable', gameplayProfileId: 'DRIBBLER', metrics: { goals: 1, assists: 1, passErrors: 3, tackles: 0, interceptions: 1, ballLosses: 5, dribblesCompleted: 8, shots: 3 }
   },
   {
-    id: 'm2', cardFingerprint: exactCardFingerprint, playerName: result.parsed.playerName, targetPosition: 'AMF', formation: '4-3-3', teamStyle: 'CONTRA_ATAQUE_RAPIDO', buildName: result.buildName, buildSignature: 'b', playedAt: '2026-07-31T10:00:00.000Z', minutes: 90,
+    id: 'm2', cardFingerprint: 'x', playerName: result.parsed.playerName, targetPosition: 'AMF', formation: '4-3-3', teamStyle: 'CONTRA_ATAQUE_RAPIDO', buildName: result.buildName, buildSignature: 'b', playedAt: '2026-07-31T10:00:00.000Z', minutes: 90,
     overallRating: 4, passing: 4, movement: 4, finishing: 3, defending: 2, physical: 3, stamina: 3, tags: ['Jogador pesado'], note: '', mode: 'ranked', connection: 'high_delay', gameplayProfileId: 'CREATOR', secondHalfDrop: true, metrics: { goals: 0, assists: 2, passErrors: 4, tackles: 0, interceptions: 0, ballLosses: 6, dribblesCompleted: 6, shots: 2 }
   },
   {
-    id: 'm3', cardFingerprint: exactCardFingerprint, playerName: result.parsed.playerName, targetPosition: 'AMF', formation: '4-1-2-3', teamStyle: 'POSSE_DE_BOLA', buildName: result.buildName, buildSignature: 'b', playedAt: '2026-08-01T10:00:00.000Z', minutes: 90,
+    id: 'm3', cardFingerprint: 'x', playerName: result.parsed.playerName, targetPosition: 'AMF', formation: '4-1-2-3', teamStyle: 'POSSE_DE_BOLA', buildName: result.buildName, buildSignature: 'b', playedAt: '2026-08-01T10:00:00.000Z', minutes: 90,
     overallRating: 5, passing: 5, movement: 5, finishing: 4, defending: 2, physical: 3, stamina: 4, tags: ['Criou boas linhas de passe'], note: '', mode: 'events', connection: 'stable', gameplayProfileId: 'DRIBBLER', metrics: { goals: 1, assists: 2, passErrors: 2, tackles: 0, interceptions: 0, ballLosses: 3, dribblesCompleted: 9, shots: 4 }
   }
 ];

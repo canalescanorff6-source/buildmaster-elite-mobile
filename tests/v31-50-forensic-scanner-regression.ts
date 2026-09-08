@@ -70,14 +70,14 @@ assert.ok(calibrated[0].w > zones[0].w);
 const rememberedBox = applyRememberedCardBox({ x: 0.02, y: 0.06, w: 0.42, h: 0.34 }, calibration);
 assert.ok(rememberedBox.x > 0.02 && rememberedBox.y > 0.06);
 
-const readerActionsR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const readerAnalysisRuntimeR163 = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
 const templateCalibrationRuntime = fs.readFileSync('src/modules/card-reader/templateCalibration.ts', 'utf8');
 assert.match(readerAnalysisRuntimeR163, /stabilizeForensicReadings/, 'Consenso forense deve permanecer no runtime canônico R163.');
 assert.match(readerAnalysisRuntimeR163, /findBestOcrTemplateCalibration/, 'Calibração lembrada deve permanecer no runtime canônico R163.');
 assert.match(templateCalibrationRuntime, /export async function learnOcrTemplateCalibration/, 'Aprendizado de calibração deve permanecer na autoridade templateCalibration.');
 assert.match(readerAnalysisRuntimeR163, /qualityReport: scanQuality/, 'Relatório de qualidade deve continuar saindo do runtime R163.');
-assert.match(readerActionsR187, /confirmedReaderRuntime\.templateCalibration\.learnOcrTemplateCalibration/, 'A autoridade R187 deve continuar delegando confirmação de calibração ao runtime do leitor.');
+assert.match(app, /confirmedReaderRuntime\.templateCalibration\.learnOcrTemplateCalibration/, 'Shell deve continuar delegando confirmação de calibração ao runtime do leitor.');
 const database = fs.readFileSync('src/lib/localDatabase.ts', 'utf8');
 assert.match(database, /DB_VERSION = 6/);
 assert.match(database, /'ocr-calibrations'/);

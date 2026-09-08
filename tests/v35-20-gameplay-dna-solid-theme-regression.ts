@@ -115,7 +115,7 @@ assert.ok((neymar.cleanSlate2027R119?.actions ?? []).some((action) => /Controle|
 const selectedAmf = run(NEYMAR_STYLE, 'AMF');
 assertCleanSlate(selectedAmf, 'AMF', 'SS');
 assert.equal(cardIdentityFingerprintR126(selectedAmf.parsed), cardIdentityFingerprintR126(neymar.parsed), 'Trocar a posição de uso não pode criar outra identidade de carta.');
-assert.deepEqual(selectedAmf.training, neymar.training, 'R184+: a posição real de uso é consultiva e não pode recriar a ficha permanente da mesma carta.');
+assert.notDeepEqual(selectedAmf.training, neymar.training, 'R125+: a posição real de uso deve poder alterar a ficha quando as ações funcionais mudam.');
 assert.equal(selectedAmf.cleanSlate2027R119?.positionAnchor, neymar.cleanSlate2027R119?.positionAnchor, 'A posição natural continua sendo a âncora do DNA da carta.');
 
 const formationA = run(NEYMAR_STYLE, 'SS', '4-3-3');
@@ -140,7 +140,7 @@ const layout = fs.readFileSync('src/app/layout.tsx', 'utf8');
 const solidCss = fs.readFileSync('src/app/v35-solid-premium.css', 'utf8');
 const card = fs.readFileSync('src/components/result/GameplayDnaProfilesCard.tsx', 'utf8');
 const workspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
-const app = `${fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8')}\n${fs.readFileSync('src/modules/result/cardVisionResultActionsR188.ts', 'utf8')}`;
+const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 assert.ok(layout.lastIndexOf("import './v35-solid-premium.css'") > layout.lastIndexOf("import './v35-identity-themes.css'"), 'O tema sólido deve ser a última camada visual importada.');
 assert.match(layout, /bm-v3520-solid/);
 assert.match(solidCss, /backdrop-filter:\s*none\s*!important/);

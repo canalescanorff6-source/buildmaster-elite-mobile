@@ -4,6 +4,7 @@ import type {
   TacticalPosterArrow,
   TacticalPosterCustomColors,
   TacticalPosterDisplayOptions,
+  TacticalPosterImageLayerRole,
   TacticalPosterOrientation,
   TacticalPosterPalette,
   TacticalPosterPlayerOverride
@@ -15,6 +16,18 @@ const MAX_PROJECTS = 60;
 const MAX_ARROWS = 24;
 const PALETTES: TacticalPosterPalette[] = ['ouro', 'ciano', 'rubi', 'esmeralda', 'grafite'];
 const ARROW_KINDS = ['support', 'recycle', 'defend', 'movement'] as const;
+const IMAGE_LAYER_ROLES: TacticalPosterImageLayerRole[] = ['watermark', 'logo', 'free'];
+
+export type TacticalPosterStoredImageLayer = {
+  id: string;
+  imageId: string;
+  role: TacticalPosterImageLayerRole;
+  opacity: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 export type TacticalPosterEditableState = {
   title: string;
@@ -26,6 +39,8 @@ export type TacticalPosterEditableState = {
   playerOverrides: Record<string, TacticalPosterPlayerOverride>;
   backgroundImageId?: string;
   backgroundImageOpacity: number;
+  imageLayers: TacticalPosterStoredImageLayer[];
+  referenceImageId?: string;
   customColors: TacticalPosterCustomColors;
   useAutomaticArrows: boolean;
   manualArrows: TacticalPosterArrow[];
@@ -102,6 +117,35 @@ function normalizeArrows(value: unknown): TacticalPosterArrow[] {
   });
 }
 
+function normalizeImageLayers(value: unknown): TacticalPosterStoredImageLayer[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 8).flatMap((raw, index) => {
+    if (!raw || typeof raw !== 'object') return [];
+    const item = raw as Partial<TacticalPosterStoredImageLayer>;
+    const imageId = cleanText(item.imageId, 180);
+    if (!imageId) return [];
+    const role = IMAGE_LAYER_ROLES.includes(item.role as TacticalPosterImageLayerRole)
+      ? item.role as TacticalPosterImageLayerRole
+      : 'free';
+    const defaults = role === 'watermark'
+      ? { opacity: .12, x: 24, y: 24, width: 52, height: 52 }
+      : role === 'logo'
+        ? { opacity: .95, x: 80, y: 2, width: 16, height: 13 }
+        : { opacity: .92, x: 30, y: 30, width: 40, height: 30 };
+    const x = Math.max(0, Math.min(96, Number(item.x) || defaults.x));
+    const y = Math.max(0, Math.min(96, Number(item.y) || defaults.y));
+    const width = Math.max(4, Math.min(100 - x, Number(item.width) || defaults.width));
+    const height = Math.max(4, Math.min(100 - y, Number(item.height) || defaults.height));
+    return [{
+      id: cleanText(item.id, 180) || `image-layer-${index + 1}`,
+      imageId,
+      role,
+      opacity: Math.max(.04, Math.min(1, Number(item.opacity) || defaults.opacity)),
+      x, y, width, height
+    }];
+  });
+}
+
 export function normalizeTacticalPosterState(value: unknown): TacticalPosterEditableState | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Partial<TacticalPosterEditableState>;
@@ -125,6 +169,8 @@ export function normalizeTacticalPosterState(value: unknown): TacticalPosterEdit
     playerOverrides: normalizeOverrides(raw.playerOverrides),
     backgroundImageId: cleanText(raw.backgroundImageId, 180) || undefined,
     backgroundImageOpacity: Math.max(0.05, Math.min(0.8, Number(raw.backgroundImageOpacity) || 0.2)),
+    imageLayers: normalizeImageLayers(raw.imageLayers),
+    referenceImageId: cleanText(raw.referenceImageId, 180) || undefined,
     customColors: normalizeCustomColors(raw.customColors),
     useAutomaticArrows: raw.useAutomaticArrows !== false,
     manualArrows: normalizeArrows(raw.manualArrows),
