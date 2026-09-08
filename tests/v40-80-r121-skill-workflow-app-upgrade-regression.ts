@@ -27,6 +27,8 @@ const root = path.resolve(__dirname, '..');
 const workspace = fs.readFileSync(path.join(root, 'src/components/result/ResultWorkspace.tsx'), 'utf8');
 const unified = fs.readFileSync(path.join(root, 'src/components/UnifiedPerformanceV3920Panel.tsx'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8');
+const vaultActionsR185 = fs.readFileSync(path.join(root, 'src/hooks/useCardVisionVaultActionsR185.ts'), 'utf8');
+const resultActionsR188 = fs.readFileSync(path.join(root, 'src/modules/result/cardVisionResultActionsR188.ts'), 'utf8');
 
 assert.match(workspace, /Você já adicionou esta habilidade\?/);
 assert.match(workspace, /Cancelar/);
@@ -38,8 +40,9 @@ assert.match(unified, /Habilidades para adicionar/);
 assert.match(unified, /Central 2027/);
 assert.match(unified, /Fase ofensiva/);
 assert.match(unified, /Fase defensiva/);
-assert.match(app, /deriveSkillVaultStatusR121/);
-assert.match(app, /Habilidade .* confirmada como adicionada/);
-assert.match(app, /habilidade já possuída confirmada/);
+assert.match(resultActionsR188, /deriveSkillVaultStatusR121/);
+assert.match(vaultActionsR185, /Habilidade .* confirmada como adicionada/);
+assert.match(resultActionsR188, /habilidade já possuída confirmada/);
+assert.doesNotMatch(app, /deriveSkillVaultStatusR121/, 'R188 mantém a derivação de status fora do shell principal.');
 
 console.log('r121 aprovada: confirmação antes de concluir, lista pendente/adicionada, progresso persistente, Cofre coerente e Central 2027 na tela principal.');

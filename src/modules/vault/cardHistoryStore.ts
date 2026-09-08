@@ -1,10 +1,13 @@
 import {
   ATTRIBUTE_PT,
-  analyzeCard,
   type AnalysisResult,
   type AttributeKey,
   type PositionCode
 } from '@/lib/analyzer';
+import { createProductionAnalysisR138 } from '@/modules/analysis/productionOrchestratorR138';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { analysisUsagePositionR138, optionalAnalysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { buildVaultIdentitySealR134 } from './vaultIdentitySealR134';
 import {
   accountDatabaseName,
   getActiveAccountIdentity,
@@ -53,6 +56,13 @@ export type SavedAnalysis = {
   changeLog?: SavedHistoryEvent[];
   lastOpenedAt?: string;
   folderId?: string;
+  /** Selo de migração lazy do registro; não participa da identidade da carta. */
+  productionRecordVersion?: string;
+  /** R134: identidades persistidas e auditáveis. Não substituem o resultado, apenas selam o que foi salvo. */
+  cardIdentity?: string;
+  playerIdentity?: string;
+  evidenceFingerprint?: string;
+  identitySealVersion?: string;
 };
 
 export const HISTORY_KEY = 'buildmaster_history_v24_6_cofre_persistente';
@@ -89,13 +99,10 @@ export function memoryKey(value: string) {
 }
 
 export function resultHistoryKey(result: AnalysisResult) {
-  return memoryKey([
-    result.parsed.playerName,
-    result.parsed.mainPosition,
-    result.bestPosition.code,
-    result.buildName,
-    result.trainingPointsTotal
-  ].join(' '));
+  // R126: a chave do Cofre representa somente carta + função real de uso.
+  // GER, orçamento corrigido pelo OCR e nome da build são estado revisável e não podem duplicar a mesma ficha.
+  const cardIdentity = cardIdentityFingerprintR126(result.parsed);
+  return `${cardIdentity}-${analysisUsagePositionR138(result).toLowerCase()}`;
 }
 
 export function buildLegacyRecoveryText(result: Partial<AnalysisResult> | null | undefined, rawText = '') {
@@ -123,14 +130,16 @@ export function buildLegacyRecoveryText(result: Partial<AnalysisResult> | null |
 }
 
 export function migrateAnalysisResult(value: unknown, rawText = '', imageFileName?: string | null): AnalysisResult | null {
+  // Fichas renderizáveis são carregadas sem recalcular o Cofre inteiro no startup.
+  // A atualização para a autoridade atual acontece sob demanda quando a ficha é aberta.
   if (isRenderableAnalysisResult(value)) return value;
   if (!value || typeof value !== 'object') return null;
   const legacy = value as Partial<AnalysisResult>;
-  const target = typeof legacy.bestPosition?.code === 'string' ? legacy.bestPosition.code as PositionCode : 'AUTO';
+  const target = optionalAnalysisUsagePositionR138(legacy as Parameters<typeof optionalAnalysisUsagePositionR138>[0]) ?? 'AUTO';
   const source = buildLegacyRecoveryText(legacy, rawText);
   if (!source.trim()) return null;
   try {
-    return analyzeCard(source, 'COMPETITIVE', target, imageFileName ?? null, { formation: 'AUTO', style: 'AUTO' });
+    return createProductionAnalysisR138({ rawText: source, objective: 'COMPETITIVE', targetPosition: target, imageFileName: imageFileName ?? null, tacticalProfile: { formation: 'AUTO', style: 'AUTO' } });
   } catch (error) {
     console.error('Não foi possível migrar uma ficha antiga do Cofre:', error);
     return null;
@@ -147,9 +156,10 @@ export function normalizeSavedAnalysis(entry: unknown, fallbackIndex = 0): Saved
     if (!migratedResult?.parsed?.playerName) return null;
 
     const generatedKey = resultHistoryKey(migratedResult);
-    const saveKey = typeof candidate.saveKey === 'string' && candidate.saveKey.trim()
-      ? candidate.saveKey
-      : generatedKey;
+    const previousSaveKey = typeof candidate.saveKey === 'string' ? candidate.saveKey.trim() : '';
+    // Cópias/variantes criadas deliberadamente continuam independentes.
+    // Entradas normais são migradas para a chave canônica para evitar duplicata entre versões do motor.
+    const saveKey = /-variante-/i.test(previousSaveKey) ? previousSaveKey : generatedKey;
     const savedAt = typeof candidate.savedAt === 'string' && candidate.savedAt.trim()
       ? candidate.savedAt
       : new Date().toLocaleString('pt-BR');
@@ -172,6 +182,7 @@ export function normalizeSavedAnalysis(entry: unknown, fallbackIndex = 0): Saved
         )).slice(0, 20)
       : [{ at: savedAt, action: 'criado', note: 'Ficha adicionada ao Cofre.' }];
 
+    const identitySeal = buildVaultIdentitySealR134(migratedResult);
     return {
       id: typeof candidate.id === 'string' && candidate.id.trim()
         ? candidate.id
@@ -195,7 +206,9 @@ export function normalizeSavedAnalysis(entry: unknown, fallbackIndex = 0): Saved
       tacticalRoleNote: typeof candidate.tacticalRoleNote === 'string' ? candidate.tacticalRoleNote : '',
       changeLog: changeLog.length ? changeLog : [{ at: savedAt, action: 'recuperado', note: 'Ficha antiga reparada automaticamente.' }],
       lastOpenedAt: typeof candidate.lastOpenedAt === 'string' ? candidate.lastOpenedAt : undefined,
-      folderId: typeof candidate.folderId === 'string' ? candidate.folderId : undefined
+      folderId: typeof candidate.folderId === 'string' ? candidate.folderId : undefined,
+      productionRecordVersion: typeof candidate.productionRecordVersion === 'string' ? candidate.productionRecordVersion : undefined,
+      ...identitySeal
     };
   } catch (error) {
     console.error('Uma ficha incompatível foi isolada sem interromper o aplicativo:', error);
@@ -239,7 +252,7 @@ export function savedStatusText(item: SavedAnalysis) {
 }
 
 export function savedPositionGroup(item: SavedAnalysis) {
-  return item.result.bestPosition.code;
+  return analysisUsagePositionR138(item.result);
 }
 
 export function buildDashboardStats(history: SavedAnalysis[]) {
@@ -247,7 +260,7 @@ export function buildDashboardStats(history: SavedAnalysis[]) {
   const pending = history.filter((item) => savedStatusLabel(item) === 'pendente').length;
   const complete = history.filter((item) => savedStatusLabel(item) === 'completo').length;
   const favorites = history.filter((item) => item.favorite).length;
-  const positions = new Set(history.map((item) => item.result.bestPosition.code));
+  const positions = new Set(history.map((item) => analysisUsagePositionR138(item.result)));
   const review = history.filter((item) => savedStatusLabel(item) === 'revisar').length;
   const skillsTotal = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).total, 0);
   const skillsDone = history.reduce((sum, item) => sum + skillProgressInfo(item.result.recommendedSkills, item.skillProgress).done, 0);

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const app = read('src/components/CardVisionApp.tsx');
+const readerRuntime = read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 const calibration = read('src/modules/card-reader/efhubManualCalibration.ts');
 const adaptive = read('src/modules/card-reader/adaptiveZoneSearch.ts');
 const precision = read('src/modules/card-reader/highPrecisionOcr.ts');
@@ -11,12 +12,12 @@ const worker = read('src/lib/ocrWorkerManager.ts');
 const layout = read('src/app/layout.tsx');
 const contrast = read('src/app/v38-reader-speed-contrast.css');
 
-assert.match(app, /const calibratedFastPath = Boolean\(manualEfhubCalibration\)/, 'Fluxo calibrado precisa possuir fast path explícito.');
-assert.match(app, /if \(!calibratedFastPath\) \{[\s\S]*?recognizeWithOcrWorker\(fullOptimized/, 'OCR do print inteiro deve existir apenas fora do caminho calibrado.');
-assert.match(app, /readEightEfhubCalibrationMacros\(activeFile, manualEfhubCalibration/, 'Os 9 quadrados devem ser lidos diretamente, sem dezenas de subleituras.');
-assert.match(app, /calibratedFastPath[\s\S]*?qualityReport[\s\S]*?: qualityReport \?\? await inspectPrintQuality/, 'Modo calibrado deve pular inspeção pesada de qualidade antes do OCR.');
-assert.match(app, /calibratedFastPath \? 60 : 120/, 'Leitura calibrada deve carregar histórico reduzido.');
-assert.match(app, /calibratedFastPath \? 80 : 160/, 'Leitura calibrada deve carregar correções reduzidas.');
+assert.match(readerRuntime, /const calibratedFastPath = Boolean\(manualEfhubCalibration\)/, 'Fluxo calibrado precisa possuir fast path explícito.');
+assert.match(readerRuntime, /if \(!calibratedFastPath\) \{[\s\S]*?recognizeWithOcrWorker\(fullOptimized/, 'OCR do print inteiro deve existir apenas fora do caminho calibrado.');
+assert.match(readerRuntime, /readEightEfhubCalibrationMacros\(activeFile, manualEfhubCalibration/, 'Os 9 quadrados devem ser lidos diretamente, sem dezenas de subleituras.');
+assert.match(readerRuntime, /calibratedFastPath[\s\S]*?qualityReport[\s\S]*?: qualityReport \?\? await inspectPrintQuality/, 'Modo calibrado deve pular inspeção pesada de qualidade antes do OCR.');
+assert.match(readerRuntime, /calibratedFastPath \? 60 : 120/, 'Leitura calibrada deve carregar histórico reduzido.');
+assert.match(readerRuntime, /calibratedFastPath \? 80 : 160/, 'Leitura calibrada deve carregar correções reduzidas.');
 
 assert.match(calibration, /detectSkillCapsules\?: boolean/, 'Gerador legado deve continuar podendo desativar cápsulas dinâmicas.');
 assert.match(calibration, /options\.detectSkillCapsules === false[\s\S]*?\? \[\]/, 'Detector de cápsulas deve continuar desativável.');

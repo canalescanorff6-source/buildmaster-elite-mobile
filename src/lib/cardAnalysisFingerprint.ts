@@ -1,5 +1,6 @@
 import type { AnalysisResult, TrainingPlan } from './analyzerDomain';
 import { TRAINING_KEYS } from './trainingPlanCore';
+import { cardEvidenceFingerprintR126 } from './cardIdentityFingerprintR126';
 
 function normalizeText(value: unknown) {
   return String(value ?? '')
@@ -56,7 +57,7 @@ export function cardAnalysisInputFingerprint(result: AnalysisResult, extra = '')
     : '';
 
   const source = [
-    parsed.internalId,
+    cardEvidenceFingerprintR126(parsed),
     normalizeText(parsed.playerName),
     normalizeText(parsed.cardType),
     parsed.mainPosition,

@@ -74,7 +74,7 @@ assert.match(workspace, /Ver por que este ímpeto venceu/);
 assert.match(workspace, /Sem serviço de IA pago/);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-assert.match(app, /applyCompleteCardIntelligence/);
+assert.match(app, /rebuildProductionAnalysisR138/);
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
 assert.match(pipeline, /applyLocalAiToResult/);
 assert.match(pipeline, /applyDeepCardIntelligenceToResult/);

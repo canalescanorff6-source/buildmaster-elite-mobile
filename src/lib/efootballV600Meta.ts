@@ -8,7 +8,7 @@ export const EFOOTBALL_V600_META = Object.freeze({
   version: EFOOTBALL_V600_META_VERSION,
   season: EFOOTBALL_V600_SEASON,
   live: true,
-  checkedAt: '2026-08-13',
+  checkedAt: '2026-09-04',
   features: {
     fluidFormation: true,
     dualPlayerPlaystyles: true,

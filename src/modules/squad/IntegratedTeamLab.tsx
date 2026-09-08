@@ -117,12 +117,12 @@ export function IntegratedTeamLab({ team, players, teamStyle, onOpenFormationLab
             const name = fit.player?.parsed.playerName ?? '';
             const record = playerByName.get(name);
             return (
-              <button type="button" className={`bm32-squad-card line-${fit.slot.line} ${fit.player ? '' : 'empty'}`} key={fit.slot.id} style={{ left: `${fit.slot.x}%`, top: `${fit.slot.y}%` }} aria-label={`${fit.slot.label}: ${name || 'sem encaixe'}`}>
+              <div className={`bm32-squad-card line-${fit.slot.line} ${fit.player ? '' : 'empty'}`} key={fit.slot.id} style={{ left: `${fit.slot.x}%`, top: `${fit.slot.y}%` }} aria-label={`${fit.slot.label}: ${name || 'sem encaixe'}`}>
                 <span className="bm32-squad-art">{record?.playerImage ? <img src={record.playerImage} alt=""/> : <b>{name ? initials(name) : '+'}</b>}<em>{record?.overall || fit.score || '--'}</em></span>
                 <strong>{fit.slot.label}</strong>
                 <small>{name || 'Sem encaixe'}</small>
                 <i>{record?.playstyle || fit.slot.primaryRoles[0]}</i>
-              </button>
+              </div>
             );
           })}
           <span className="bm32-reserve-count"><Users size={15}/> Reservas {reservePlayers.length}/5</span>

@@ -1,4 +1,5 @@
 'use client';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 import {
   BrainCircuit,
@@ -14,7 +15,7 @@ import {
   Target,
   Trophy
 } from 'lucide-react';
-import type { AnalysisResult, TrainingKey } from '@/lib/analyzerDomain';
+import { POSITION_PT, type AnalysisResult, type TrainingKey } from '@/lib/analyzerDomain';
 import type { FinalDecisionAuthority2027R118 } from '@/lib/finalDecisionAuthority2027V4080R118';
 import type { CleanSlate2027R119 } from '@/lib/cleanSlatePerformance2027V4080R119';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
@@ -148,6 +149,8 @@ export function UnifiedPerformanceV3920Panel({
   onReplaceOwnedSkill?: (skill: string) => void;
   skillProgress?: Record<string, boolean>;
 }) {
+  const usagePosition = analysisUsagePositionR138(result);
+  const usagePositionLabel = POSITION_PT[usagePosition];
   const unified = result.unifiedPerformanceV3920;
   const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: CleanSlate2027R119 }).cleanSlate2027R119;
   if (cleanSlate) {
@@ -155,7 +158,7 @@ export function UnifiedPerformanceV3920Panel({
     const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
     const attributeCount = Number(result.parsed.evidence?.attributeCount ?? Object.keys(result.parsed.attributes ?? {}).length);
     const positionRatingsCount = Number(result.parsed.evidence?.positionRatingsCount ?? Object.keys(result.parsed.positionRatings ?? {}).length);
-    const progressionOrder = result.parsed.mainPosition === 'GK' ? GOALKEEPER_PROGRESS_ORDER_R106 : TRAINING_PROGRESS_ORDER_R106;
+    const progressionOrder = cleanSlate.usagePosition === 'GK' ? GOALKEEPER_PROGRESS_ORDER_R106 : TRAINING_PROGRESS_ORDER_R106;
     const activeTraining = progressionOrder
       .map((key) => ({ key, value: Number(result.training?.[key] ?? 0) }))
       .filter((item) => item.value > 0);
@@ -179,9 +182,9 @@ export function UnifiedPerformanceV3920Panel({
     return <article className="luxury-panel wide-card unified-performance-v3920">
       <header className="unified-v3920-head">
         <div>
-          <p className="kicker"><BrainCircuit size={15} /> Clean Slate • r123</p>
+          <p className="kicker"><BrainCircuit size={15} /> Produção R126 • Clean Slate R125</p>
           <h3>Ficha recalculada do zero pela identidade da carta</h3>
-          <p>{result.parsed.playerName}: o motor avaliou {cleanSlate.candidateCount} estados e escolheu a distribuição com maior retorno para partidas online, preservando as ações naturais desta carta.</p>
+          <p>{result.parsed.playerName}: o motor gerou {cleanSlate.searchOptimizationR146?.generatedStates ?? cleanSlate.searchOptimizationR145?.generatedStates ?? cleanSlate.searchOptimizationR144?.generatedStates ?? cleanSlate.searchOptimizationR143?.generatedStates ?? cleanSlate.candidateCount} estados e avaliou {cleanSlate.searchOptimizationR146?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR145?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR144?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR143?.uniqueEvaluations ?? cleanSlate.candidateCount} progressões únicas; a r146 compila atributos, pressão e perfis estáticos por nível uma única vez, preservando a chave incremental e a deduplicação da r145.</p>
           <small>Motores históricos não participam do caminho crítico do Android e não podem semear a ficha final.</small>
         </div>
         <span className={`unified-v3920-safety ${cleanSlate.status === 'READY' ? 'safe' : 'blocked'}`}>
@@ -197,10 +200,11 @@ export function UnifiedPerformanceV3920Panel({
       <section className="r121-readiness-panel" aria-label="Central de prontidão eFootball 2027">
         <div className="r121-readiness-title"><span><BrainCircuit size={18} /><strong>Central 2027</strong></span><small>Resumo operacional sem criar outro motor de decisão.</small></div>
         <div className="r121-readiness-grid">
-          <div><small>Fase ofensiva</small><strong>{offensiveStyle}</strong><span>posição usada: {result.bestPosition.label}</span></div>
-          <div><small>Fase defensiva</small><strong>{defensiveStyle}</strong><span>{defensiveStyleStatus}{defensiveStyle === 'Básico' ? ' • carta sem estilo defensivo separado' : ''}</span></div>
+          <div><small>Fase ofensiva</small><strong>{offensiveStyle}</strong><span>{cleanSlate.playstyleContext.offensive.status === 'LIKELY_INACTIVE' ? 'inativo nesta posição • não força a ficha' : `ativação ${cleanSlate.playstyleContext.offensive.status.toLowerCase().replaceAll('_', ' ')}`}</span></div>
+          <div><small>Fase defensiva</small><strong>{defensiveStyle}</strong><span>{defensiveStyle === 'Básico' ? 'carta sem estilo defensivo separado' : `${defensiveStyleStatus} • ${cleanSlate.playstyleContext.defensive.status.toLowerCase().replaceAll('_', ' ')}`}</span></div>
           <div><small>Estilo coletivo</small><strong>{teamStyleLabel(result.tacticalProfile?.style)}</strong><span>{result.tacticalProfile?.formation && result.tacticalProfile.formation !== 'AUTO' ? `formação ${result.tacticalProfile.formation}` : 'formação adaptável'}</span></div>
           <div><small>Top 5</small><strong>{completedSkills.length}/{displayedSkills.length || 5} prontas</strong><span>{pendingSkills.length ? `${pendingSkills.length} pendente(s)` : 'nenhuma pendência'}</span></div>
+          <div><small>Função calculada</small><strong>{cleanSlate.usagePosition}</strong><span>natural: {cleanSlate.positionAnchor}{cleanSlate.usagePositionChanged ? ' • adaptação ativa' : ' • posição natural'}</span></div>
           <div><small>Objetivo da ficha</small><strong>Máximo online</strong><span>Ranked + amistoso • sem foco em GER</span></div>
           <div><small>DNA preservado</small><strong>{Math.round(cleanSlate.onlinePerformance.identityPreservation)}/100</strong><span>atributos + habilidades + estilos + ações naturais</span></div>
         </div>
@@ -208,7 +212,7 @@ export function UnifiedPerformanceV3920Panel({
       </section>
       <section className="unified-v3920-grid">
         <article className="r119-final-build">
-          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Único escritor: Clean Slate r123 • objetivo online</small></span></div>
+          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Autoridade R126 • Clean Slate R125 • {cleanSlate.positionAnchor} → {cleanSlate.usagePosition} • objetivo online</small></span></div>
           {activeTraining.length ? <div className="r119-training-icons">
             {activeTraining.map(({ key, value }) => <div key={key} className="r119-training-item">
               <span className="r119-training-icon"><TrainingProgressionIconR106 trainingKey={key as TrainingProgressionKeyR106} title={TRAINING_LABELS[key as TrainingKey] ?? key} size={31} /></span>
@@ -224,7 +228,10 @@ export function UnifiedPerformanceV3920Panel({
           </div>
           {cleanSlate.status !== 'READY' && <p><strong>Atributos lidos: {attributeCount}/26.</strong> Posições reconhecidas: {positionRatingsCount}/13. O motor não inventa os valores ausentes; revise a leitura quando a cobertura estiver baixa.</p>}
           <div className="chip-cloud">
-            <span>Motor final: Clean Slate r123</span>
+            <span>Motor final: Produção R126 / Clean Slate R125</span>
+            <span>Uso: {cleanSlate.usagePosition}</span>
+            {cleanSlate.usagePositionChanged && <span>Natural: {cleanSlate.positionAnchor}</span>}
+            {cleanSlate.playstyleContext.neutralRoleMode && <span>Estilo inativo: função neutra</span>}
             {cleanSlate.dominantDna.map((dna) => <span key={dna}>{dna}</span>)}
           </div>
         </article>
@@ -334,7 +341,7 @@ export function UnifiedPerformanceV3920Panel({
       `Ficha aplicada: ${planText(result)}`,
       `Habilidades: ${displayedSkills.join(', ') || 'revisar'}`,
       `Ímpeto: ${currentImpeto ? `manter ${currentImpeto}` : primaryImpeto || 'nenhum seguro'}`,
-      `Posição escolhida: ${functional?.selectedPositionLabel ?? adaptive?.selectedPositionLabel ?? positionFit?.selectedPositionLabel ?? result.bestPosition.label}`,
+      `Posição escolhida: ${usagePositionLabel}`,
       `Função real: ${functional?.roleLabel ?? 'análise da carta'}`,
       `Status: ${statusLabel}`,
       `Motor final: ${finalAuthority?.finalEngineLabel ?? 'em revisão'}`
@@ -387,7 +394,7 @@ export function UnifiedPerformanceV3920Panel({
 
       <article>
         <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Adaptação para a posição escolhida</strong><small>Sem proibir jogador fora da posição natural</small></span></div>
-        <h4>{functional?.selectedPositionLabel ?? adaptive?.selectedPositionLabel ?? positionFit?.selectedPositionLabel ?? result.bestPosition.label} • {functional?.roleLabel ?? (adaptive ? `${Math.round(adaptive.positionFit)}/100` : verdictLabel(positionFit?.verdict ?? ''))}</h4>
+        <h4>{usagePositionLabel} • {functional?.roleLabel ?? (adaptive ? `${Math.round(adaptive.positionFit)}/100` : verdictLabel(positionFit?.verdict ?? ''))}</h4>
         <div className="unified-v3920-metrics">
           <span><b>{Math.round(Number(functional?.corePreservation ?? adaptive?.corePreservation ?? positionFit?.identityFit ?? 0))}</b><small>DNA preservado</small></span>
           <span><b>{functional?.candidateCount ?? adaptive?.changes.length ?? 0}</b><small>fichas comparadas</small></span>

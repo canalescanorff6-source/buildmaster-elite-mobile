@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react';
 import type { ChangeEvent } from 'react';
+import { POSITION_PT } from '@/lib/analyzerDomain';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import {
   Archive,
   ArchiveRestore,
@@ -11,6 +13,7 @@ import {
   Copy,
   FileText,
   Folder,
+  Loader2,
   MoreHorizontal,
   RotateCcw,
   Search,
@@ -78,6 +81,8 @@ export type CleanVaultV3800Props<T extends CleanVaultEntry> = {
   onMergeDuplicates: (ids: string[]) => void;
   onCreateByImage: () => void;
   onCreateManual: () => void;
+  activeActionKeys?: readonly string[];
+  operationLabel?: string;
 };
 
 function statusLabel(status: CleanVaultStatus) {
@@ -97,6 +102,8 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
   const duplicateGroups = useMemo(() => detectExactVaultDuplicates(props.entries), [props.entries]);
   const archivedSelected = props.advancedFilters.folderId === 'arquivados';
   const allSelected = props.historyFilter === 'ALL' && props.advancedFilters.folderId === 'all';
+  const actionBusy = (key: string) => Boolean(props.activeActionKeys?.includes(key));
+  const mergeKey = (ids: string[]) => `merge:${ids.slice().sort().join('|')}`;
 
   function chooseQuickFilter(filter: 'all' | 'favorites' | 'complete' | 'review' | 'archived') {
     props.onAdvancedFiltersChange((current) => ({
@@ -115,7 +122,13 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
   }
 
   return (
-    <section className="bm-v3800-vault-panel" aria-label="Cofre clean de jogadores">
+    <section className="bm-v3800-vault-panel" aria-label="Cofre clean de jogadores" aria-busy={Boolean(props.activeActionKeys?.length)}>
+      {Boolean(props.activeActionKeys?.length) && (
+        <div className="bm-v154-vault-operation" role="status" aria-live="polite">
+          <Loader2 className="spin" size={17} />
+          <div><strong>{props.operationLabel || 'Confirmando alteração no Cofre'}</strong><span>Aguarde a confirmação local. Toques repetidos na mesma ação são bloqueados.</span></div>
+        </div>
+      )}
       <header className="bm-v3800-vault-toolbar">
         <div className="bm-v3800-vault-search">
           <Search size={19} />
@@ -164,7 +177,7 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
         <div className="bm-v3800-duplicate-notice" role="status">
           <ShieldAlert size={18} />
           <div><strong>{duplicateGroups.length} duplicidade(s) exata(s) encontrada(s)</strong><span>O app mantém a ficha mais recente e envia as cópias para a Lixeira.</span></div>
-          <button type="button" onClick={() => props.onMergeDuplicates(duplicateGroups[0].entryIds)}>Unir primeira</button>
+          <button type="button" onClick={() => props.onMergeDuplicates(duplicateGroups[0].entryIds)} disabled={actionBusy(mergeKey(duplicateGroups[0].entryIds))}>Unir primeira</button>
         </div>
       )}
 
@@ -177,11 +190,11 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
             return (
               <article className={`bm-v3800-player-card status-${status}${group.favorite ? ' favorite' : ''}`} key={group.key}>
                 <div className="bm-v3800-player-main">
-                  <button type="button" className="bm-v3800-player-identity" onClick={() => props.onOpen(primary)}>
-                    <div className="bm-v3800-player-avatar">{primary.playerImage ? <img src={primary.playerImage} alt={`Carta de ${group.playerName}`} loading="lazy" decoding="async" /> : <span>{primary.result.bestPosition.label.slice(0, 3)}</span>}</div>
+                  <button type="button" className="bm-v3800-player-identity" onClick={() => props.onOpen(primary)} disabled={actionBusy(`open:${primary.id}`)}>
+                    <div className="bm-v3800-player-avatar">{primary.playerImage ? <img src={primary.playerImage} alt={`Carta de ${group.playerName}`} loading="lazy" decoding="async" /> : <span>{POSITION_PT[analysisUsagePositionR138(primary.result)].slice(0, 3)}</span>}</div>
                     <div>
                       <strong>{group.playerName}</strong>
-                      <span>{primary.result.bestPosition.label}{primary.result.parsed.playstyle ? ` · ${primary.result.parsed.playstyle}` : ''}</span>
+                      <span>{POSITION_PT[analysisUsagePositionR138(primary.result)]}{primary.result.parsed.playstyle ? ` · ${primary.result.parsed.playstyle}` : ''}</span>
                       <small>{group.cardVersionCount > 1 ? `${group.cardVersionCount} versões de carta` : cleanVaultVersionLabel(primary)}</small>
                     </div>
                   </button>
@@ -192,13 +205,13 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
                 </div>
 
                 <div className="bm-v3800-player-actions">
-                  <button type="button" className="primary" onClick={() => props.onOpen(primary)}>Abrir ficha</button>
-                  <button type="button" className={primary.favorite ? 'icon active' : 'icon'} onClick={() => props.onToggleFavorite(primary.id)} aria-label={primary.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}><Star size={17} fill={primary.favorite ? 'currentColor' : 'none'} /></button>
+                  <button type="button" className="primary" onClick={() => props.onOpen(primary)} disabled={actionBusy(`open:${primary.id}`)}>Abrir ficha</button>
+                  <button type="button" className={primary.favorite ? 'icon active' : 'icon'} onClick={() => props.onToggleFavorite(primary.id)} disabled={actionBusy(`favorite:${primary.id}`)} aria-label={primary.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}><Star size={17} fill={primary.favorite ? 'currentColor' : 'none'} /></button>
                   <details className="bm-v3800-more-menu">
                     <summary aria-label={`Mais ações para ${group.playerName}`}><MoreHorizontal size={18} /></summary>
                     <div>
-                      <button type="button" onClick={() => props.onArchive(primary.id, !archived)}>{archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}{archived ? 'Restaurar do arquivo' : 'Arquivar'}</button>
-                      <button type="button" onClick={() => props.onDuplicate(primary.id)}><Copy size={15} /> Criar variação</button>
+                      <button type="button" onClick={() => props.onArchive(primary.id, !archived)} disabled={actionBusy(`archive:${primary.id}`)}>{archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}{archived ? 'Restaurar do arquivo' : 'Arquivar'}</button>
+                      <button type="button" onClick={() => props.onDuplicate(primary.id)} disabled={actionBusy(`duplicate:${primary.id}`)}><Copy size={15} /> Criar variação</button>
                       <button type="button" onClick={() => props.onExport(primary)}><FileText size={15} /> Exportar</button>
                       <button type="button" className="danger" onClick={() => props.onDelete(primary.id)}><Trash2 size={15} /> Mover para Lixeira</button>
                     </div>
@@ -213,11 +226,11 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
                         const entryStatus = cleanVaultStatus(entry);
                         return (
                           <div className="bm-v3800-version-row" key={entry.id}>
-                            <button type="button" onClick={() => props.onOpen(entry)}>
+                            <button type="button" onClick={() => props.onOpen(entry)} disabled={actionBusy(`open:${entry.id}`)}>
                               <strong>{cleanVaultVersionLabel(entry)}</strong>
-                              <span>{entry.result.bestPosition.label} · {statusLabel(entryStatus)}</span>
+                              <span>{POSITION_PT[analysisUsagePositionR138(entry.result)]} · {statusLabel(entryStatus)}</span>
                             </button>
-                            <button type="button" className={entry.favorite ? 'active' : ''} onClick={() => props.onToggleFavorite(entry.id)} aria-label="Alternar favorito"><Star size={15} fill={entry.favorite ? 'currentColor' : 'none'} /></button>
+                            <button type="button" className={entry.favorite ? 'active' : ''} onClick={() => props.onToggleFavorite(entry.id)} disabled={actionBusy(`favorite:${entry.id}`)} aria-label="Alternar favorito"><Star size={15} fill={entry.favorite ? 'currentColor' : 'none'} /></button>
                           </div>
                         );
                       })}
@@ -227,9 +240,9 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
 
                 {props.organizing && (
                   <div className="bm-v3800-organize-card">
-                    <label><span>Pasta</span><select value={primary.folderId || 'all'} onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onMoveFolder(primary.id, event.target.value)}>{props.folders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
-                    <label><span>Status</span><select value={status} onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onChangeStatus(primary.id, event.target.value as CleanVaultStatus)}><option value="pendente">Pendente</option><option value="completo">Pronto</option><option value="revisar">Revisar</option></select></label>
-                    <div><button type="button" onClick={() => props.onMarkSkills(primary.id, true)}>Concluir habilidades</button><button type="button" onClick={() => props.onMarkSkills(primary.id, false)}>Reabrir</button></div>
+                    <label><span>Pasta</span><select value={primary.folderId || 'all'} onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onMoveFolder(primary.id, event.target.value)} disabled={actionBusy(`move:${primary.id}`)}>{props.folders.filter((folder) => folder.id !== 'all').map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+                    <label><span>Status</span><select value={status} onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onChangeStatus(primary.id, event.target.value as CleanVaultStatus)} disabled={actionBusy(`status:${primary.id}`)}><option value="pendente">Pendente</option><option value="completo">Pronto</option><option value="revisar">Revisar</option></select></label>
+                    <div><button type="button" onClick={() => props.onMarkSkills(primary.id, true)} disabled={actionBusy(`skills:${primary.id}`)}>Concluir habilidades</button><button type="button" onClick={() => props.onMarkSkills(primary.id, false)} disabled={actionBusy(`skills:${primary.id}`)}>Reabrir</button></div>
                     <label className="notes"><span>Observação</span><textarea value={primary.notes ?? ''} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => props.onNotesChange(primary.id, event.target.value)} placeholder="Observação curta" /></label>
                   </div>
                 )}

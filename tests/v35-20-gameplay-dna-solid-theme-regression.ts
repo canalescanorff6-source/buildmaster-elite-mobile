@@ -6,6 +6,7 @@ import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '../src/modules/analysis/analyze
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
 import type { AnalysisResult, PositionCode, TacticalFormation } from '../src/lib/analyzerDomain';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
+import { cardIdentityFingerprintR126 } from '../src/lib/cardIdentityFingerprintR126';
 
 process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
 
@@ -113,8 +114,9 @@ assert.ok((neymar.cleanSlate2027R119?.actions ?? []).some((action) => /Controle|
 
 const selectedAmf = run(NEYMAR_STYLE, 'AMF');
 assertCleanSlate(selectedAmf, 'AMF', 'SS');
-assert.deepEqual(selectedAmf.training, neymar.training, 'Selecionar AMF não pode recriar a Card Signature natural do mesmo jogador.');
-assert.deepEqual(selectedAmf.recommendedSkills, neymar.recommendedSkills, 'Selecionar AMF não pode trocar as habilidades permanentes da mesma carta.');
+assert.equal(cardIdentityFingerprintR126(selectedAmf.parsed), cardIdentityFingerprintR126(neymar.parsed), 'Trocar a posição de uso não pode criar outra identidade de carta.');
+assert.notDeepEqual(selectedAmf.training, neymar.training, 'R125+: a posição real de uso deve poder alterar a ficha quando as ações funcionais mudam.');
+assert.equal(selectedAmf.cleanSlate2027R119?.positionAnchor, neymar.cleanSlate2027R119?.positionAnchor, 'A posição natural continua sendo a âncora do DNA da carta.');
 
 const formationA = run(NEYMAR_STYLE, 'SS', '4-3-3');
 const formationB = run(NEYMAR_STYLE, 'SS', '5-3-2');

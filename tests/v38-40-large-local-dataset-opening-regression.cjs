@@ -20,10 +20,11 @@ assert.equal(envelope.sections.history.length, 200);
 assert.match(envelope.checksum, /^[0-9a-f]{8}$/);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+const backupControllerR162 = fs.readFileSync('src/modules/backup/useCardVisionBackupControllerR162.ts', 'utf8');
 assert.match(app, /A Central de Backup é informativa e nunca pode impedir a abertura do app/);
-assert.match(app, /O volume de dados local é grande\. O aplicativo continuará abrindo normalmente/);
-assert.match(app, /if \(!syncHealthEnvelope\)[\s\S]*a serialização profunda acontece apenas quando o usuário exporta ou sincroniza/);
-assert.doesNotMatch(app, /syncHealthEnvelope \?\? createBackupEnvelope/);
+assert.match(backupControllerR162, /O volume de dados local é grande\. O aplicativo continuará abrindo normalmente/);
+assert.match(backupControllerR162, /if \(!backupSettingsActive \|\| !syncHealthEnvelope\)[\s\S]*import\('\.\/syncBackupEngine'\)/);
+assert.doesNotMatch(backupControllerR162, /syncHealthEnvelope \?\? createBackupEnvelope/);
 
 const boundary = fs.readFileSync('src/components/AppShellSafetyBoundaryV3930.tsx', 'utf8');
 assert.match(boundary, /bm-recovery-diagnostic/);

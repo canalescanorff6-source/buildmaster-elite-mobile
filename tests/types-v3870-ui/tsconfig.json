@@ -23,6 +23,6 @@
   },
   "files": [
     "stubs.d.ts",
-    "../../src/components/SupremePerformanceV3870Panel.tsx"
+    "../../legacy-src/components/SupremePerformanceV3870Panel.tsx"
   ]
 }

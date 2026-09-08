@@ -46,6 +46,8 @@ function player(id: string, mainPosition: PositionCode, patch: Partial<SquadMapp
     name: `Jogador ${id}`,
     cardLabel: `Carta completa ${id}`,
     cardFingerprint: '',
+    playerFingerprint: '',
+    identityStatus: 'provisional',
     mainPosition,
     positions: [mainPosition],
     trainedPositions: [],

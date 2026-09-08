@@ -1,8 +1,6 @@
 import { safeStorageGetJson, safeStorageSetJson } from './safeLocalStorage';
 
 export const APP_REFINEMENT_VERSION = 2810;
-export const NAVIGATION_STATE_KEY = 'buildmaster_navigation_state_v2810';
-const LEGACY_NAVIGATION_STATE_KEY = 'buildmaster_navigation_state_v2739';
 export const SHORTCUTS_KEY = 'buildmaster_home_shortcuts_v2739';
 export const FEATURE_FLAGS_KEY = 'buildmaster_feature_flags_v2739';
 export const DECISION_HISTORY_KEY = 'buildmaster_decision_history_v2739';
@@ -10,8 +8,6 @@ export const PRESETS_KEY = 'buildmaster_personal_presets_v2739';
 export const DEMO_MODE_KEY = 'buildmaster_demo_mode_v2739';
 export const PERFORMANCE_LOG_KEY = 'buildmaster_performance_log_v2739';
 
-export type MainNavigationGroup = 'inicio' | 'jogadores' | 'mapeamento' | 'time' | 'partidas' | 'ajustes';
-export type PlayerWorkspace = 'visao-geral' | 'leitor' | 'manual' | 'resultado' | 'cofre';
 export type RefinementFeatureFlag =
   | 'guidedReader'
   | 'unifiedPlayers'
@@ -21,14 +17,6 @@ export type RefinementFeatureFlag =
   | 'demoMode'
   | 'universalCompare'
   | 'contextHelp';
-
-export type NavigationSnapshot = {
-  version: 2;
-  group: MainNavigationGroup;
-  playerWorkspace?: PlayerWorkspace;
-  scrollY: number;
-  updatedAt: string;
-};
 
 export type HomeShortcutId = 'continue' | 'new-card' | 'team' | 'match' | 'backup' | 'updates';
 
@@ -75,20 +63,6 @@ export function setRefinementFlag(flag: RefinementFeatureFlag, enabled: boolean)
   const next = { ...getRefinementFlags(), [flag]: enabled };
   safeStorageSetJson(FEATURE_FLAGS_KEY, next);
   return next;
-}
-
-export function readNavigationSnapshot(): NavigationSnapshot | null {
-  const value = safeStorageGetJson<NavigationSnapshot | null>(NAVIGATION_STATE_KEY, null);
-  if (value?.version === 2) return value;
-  const legacy = safeStorageGetJson<(Omit<NavigationSnapshot, 'version'> & { version: 1 }) | null>(LEGACY_NAVIGATION_STATE_KEY, null);
-  if (!legacy || legacy.version !== 1) return null;
-  const migrated: NavigationSnapshot = { ...legacy, version: 2 };
-  safeStorageSetJson(NAVIGATION_STATE_KEY, migrated);
-  return migrated;
-}
-
-export function writeNavigationSnapshot(snapshot: Omit<NavigationSnapshot, 'version' | 'updatedAt'>) {
-  safeStorageSetJson(NAVIGATION_STATE_KEY, { version: 2, updatedAt: new Date().toISOString(), ...snapshot } satisfies NavigationSnapshot);
 }
 
 export function readHomeShortcuts(): HomeShortcutId[] {
@@ -171,12 +145,5 @@ export async function measureAsync<T>(name: string, task: () => Promise<T>, deta
   }
 }
 
-export function parseInternalDeepLink(hash: string): { group: MainNavigationGroup; workspace?: PlayerWorkspace } | null {
-  const clean = hash.replace(/^#\/?/, '').trim().toLowerCase();
-  if (!clean) return null;
-  const [group, workspace] = clean.split('/');
-  if (!['inicio', 'jogadores', 'mapeamento', 'time', 'partidas', 'ajustes'].includes(group)) return null;
-  if (group !== 'jogadores') return { group: group as MainNavigationGroup };
-  const validWorkspace = ['visao-geral', 'leitor', 'manual', 'resultado', 'cofre'].includes(workspace || '') ? workspace as PlayerWorkspace : 'visao-geral';
-  return { group: 'jogadores', workspace: validWorkspace };
-}
+export { NAVIGATION_STATE_KEY, parseInternalDeepLink, readNavigationSnapshot, writeNavigationSnapshot } from './appNavigationR127';
+export type { MainNavigationGroup, PlayerWorkspace, NavigationSnapshot } from './appNavigationR127';

@@ -8,6 +8,7 @@ const sw = read('public/sw.js');
 const manual = read('src/modules/card-reader/manualCalibrationFastReader.ts');
 const calibration = read('src/modules/card-reader/efhubManualCalibration.ts');
 const cardVision = read('src/components/CardVisionApp.tsx');
+const readerRuntimeR163 = read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 const crop = read('src/modules/card-reader/cardArtCrop.ts');
 const worker = read('src/lib/ocrWorkerManager.ts');
 const background = read('src/lib/backgroundOcrV3840.ts');
@@ -32,12 +33,12 @@ assert.match(manual, /image === file/);
 assert.match(manual, /knownPlayerNames/);
 
 assert.match(calibration, /EFHUB_MANUAL_CALIBRATION_VERSION = 'v40\.00-manual-map-rebuild-r1'/);
-assert.match(cardVision, /createManualEfhubCardPreview\(activeFile, geometry\.cardArtZone\)/);
-assert.match(cardVision, /knownPlayerNames,/);
-assert.match(cardVision, /const calibratedZoneText = calibratedFastPath/);
-assert.match(cardVision, /fullText: calibratedZoneText/);
-assert.match(cardVision, /buildOcrVisionAudit\(session, calibratedZoneText\)/);
-assert.match(cardVision, /ocr_hard_failure/);
+assert.match(readerRuntimeR163, /createManualEfhubCardPreview\(activeFile, geometry\.cardArtZone\)/);
+assert.match(readerRuntimeR163, /knownPlayerNames,/);
+assert.match(readerRuntimeR163, /const calibratedZoneText = calibratedFastPath/);
+assert.match(readerRuntimeR163, /fullText: calibratedZoneText/);
+assert.match(readerRuntimeR163, /buildOcrVisionAudit\(session, calibratedZoneText\)/);
+assert.match(readerRuntimeR163, /ocr_hard_failure/);
 assert.match(crop, /method: 'manual-adjustment'/);
 
 assert.match(worker, /createWorker\(\['por'\]/);

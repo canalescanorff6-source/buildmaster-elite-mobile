@@ -73,7 +73,8 @@ try {
 
   for (const followUpInstaller of [
     'scripts/install-match-recorder-plugin.mjs',
-    'scripts/install-native-vault-storage-plugin.mjs'
+    'scripts/install-native-vault-storage-plugin.mjs',
+    'scripts/install-background-ocr-plugin.mjs'
   ]) {
     const followUp = spawnSync(process.execPath, [path.join(root, followUpInstaller)], {
       cwd: temporaryRoot,
@@ -92,7 +93,14 @@ try {
   assert.match(generatedMain, /registerPlugin\(BuildMasterSecurityPlugin\.class\)/);
   assert.match(generatedMain, /registerPlugin\(BuildMasterMatchRecorderPlugin\.class\)/);
   assert.match(generatedMain, /registerPlugin\(BuildMasterVaultStoragePlugin\.class\)/);
+  assert.match(generatedMain, /registerPlugin\(BuildMasterBackgroundOcrPlugin\.class\)/);
   assert.match(generatedMain, /super\.onCreate\(savedInstanceState\)/);
+
+  const generatedManifest = fs.readFileSync(manifest, 'utf8');
+  assert.match(generatedManifest, /android\.permission\.FOREGROUND_SERVICE/);
+  assert.match(generatedManifest, /android\.permission\.FOREGROUND_SERVICE_DATA_SYNC/);
+  assert.match(generatedManifest, /BuildMasterBackgroundOcrService/);
+  assert.match(generatedManifest, /android:foregroundServiceType="dataSync"/);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });
 }

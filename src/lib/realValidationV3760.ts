@@ -1,5 +1,6 @@
 import type { AnalysisResult, PositionCode, TrainingKey } from './analyzerDomain';
 import { cardFingerprint, type MatchPerformanceMetrics, type MatchValidationRecord } from './appEvolution';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import { TRAINING_LABELS } from './trainingEngine';
 
 export const REAL_VALIDATION_V3760_VERSION = '37.60.0' as const;
@@ -180,8 +181,8 @@ function summarizeArm(result: AnalysisResult, arm: 'A' | 'B', option: { buildId:
     const boosterMatches = !record.testedBoosterName || record.testedBoosterName === option.boosterName;
     return buildMatches && boosterMatches;
   });
-  const rawScores = armRecords.map((record) => recordBaseScore(record, result.bestPosition.code));
-  const adjustedScores = armRecords.map((record) => recordBaseScore(record, result.bestPosition.code) + delayContextBonus(record));
+  const rawScores = armRecords.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)));
+  const adjustedScores = armRecords.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)) + delayContextBonus(record));
   const stable = armRecords.filter((record) => record.connection === 'stable');
   const delayed = armRecords.filter((record) => record.connection === 'high_delay');
   return {
@@ -192,8 +193,8 @@ function summarizeArm(result: AnalysisResult, arm: 'A' | 'B', option: { buildId:
     matches: armRecords.length,
     rawScore: round(safeAverage(rawScores) ?? 0),
     contextAdjustedScore: round(safeAverage(adjustedScores) ?? 0),
-    stableScore: stable.length ? round(safeAverage(stable.map((record) => recordBaseScore(record, result.bestPosition.code))) ?? 0) : null,
-    delayedScore: delayed.length ? round(safeAverage(delayed.map((record) => recordBaseScore(record, result.bestPosition.code))) ?? 0) : null,
+    stableScore: stable.length ? round(safeAverage(stable.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)))) ?? 0) : null,
+    delayedScore: delayed.length ? round(safeAverage(delayed.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)))) ?? 0) : null,
     passErrorsPer90: round(per90(armRecords, 'passErrors')),
     ballLossesPer90: round(per90(armRecords, 'ballLosses'))
   };
@@ -285,8 +286,8 @@ function buildDelayAnalysis(result: AnalysisResult, records: MatchValidationReco
   const stable = records.filter((record) => record.connection === 'stable');
   const variable = records.filter((record) => record.connection === 'variable');
   const delayed = records.filter((record) => record.connection === 'high_delay');
-  const stableScore = stable.length ? round(safeAverage(stable.map((record) => recordBaseScore(record, result.bestPosition.code))) ?? 0) : null;
-  const delayedScore = delayed.length ? round(safeAverage(delayed.map((record) => recordBaseScore(record, result.bestPosition.code))) ?? 0) : null;
+  const stableScore = stable.length ? round(safeAverage(stable.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)))) ?? 0) : null;
+  const delayedScore = delayed.length ? round(safeAverage(delayed.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)))) ?? 0) : null;
   const sensitivity = stableScore != null && delayedScore != null ? Math.max(0, round(stableScore - delayedScore)) : 0;
   const level: DelayAnalysisV3760['level'] = sensitivity >= 12 ? 'alta' : sensitivity >= 6 ? 'moderada' : 'baixa';
   return {
@@ -357,12 +358,12 @@ function buildUserLearning(allRecords: MatchValidationRecord[], delay: DelayAnal
 
 function buildMatchAnalysis(result: AnalysisResult, records: MatchValidationRecord[]): MatchAnalysisV3760 {
   const delay = buildDelayAnalysis(result, records);
-  const templates = positionMetricTemplates(result.bestPosition.code);
+  const templates = positionMetricTemplates(analysisUsagePositionR138(result));
   const positionMetrics = templates.map((template) => {
     const score = records.length ? template.score(records) : 0;
     return { key: template.key, label: template.label, score, sampleCount: records.length, evidence: template.evidence(records), status: metricStatus(score) };
   });
-  const scores = records.map((record) => recordBaseScore(record, result.bestPosition.code));
+  const scores = records.map((record) => recordBaseScore(record, analysisUsagePositionR138(result)));
   const score = round(safeAverage(scores) ?? 0);
   const confidence: ValidationConfidenceV3760 = records.length >= 8 ? 'alta' : records.length >= 3 ? 'moderada' : 'inicial';
   const sorted = [...positionMetrics].sort((a, b) => b.score - a.score);
@@ -417,9 +418,9 @@ function buildAdjustment(result: AnalysisResult, matchAnalysis: MatchAnalysisV37
 export function buildRealValidationV3760(result: AnalysisResult, allRecords: MatchValidationRecord[]): RealValidationV3760Analysis {
   const fingerprint = result.structuralPrecision?.canonical.canonicalId || result.parsed.playerName;
   const exactFingerprint = cardFingerprint(result);
-  const exactRecords = allRecords.filter((record) => record.cardFingerprint === exactFingerprint);
-  const legacyRecords = allRecords.filter((record) => record.playerName.toLowerCase() === result.parsed.playerName.toLowerCase() && record.targetPosition === result.bestPosition.code);
-  const currentRecords = exactRecords.length ? exactRecords : legacyRecords;
+  const usagePosition = analysisUsagePositionR138(result);
+  // R138: memória de outra edição do mesmo jogador ou outra posição nunca entra por fallback de nome.
+  const currentRecords = allRecords.filter((record) => record.cardFingerprint === exactFingerprint && record.targetPosition === usagePosition);
   const experiment = buildExperiment(result, currentRecords);
   const matchAnalysis = buildMatchAnalysis(result, currentRecords);
   const userLearning = buildUserLearning(allRecords, matchAnalysis.delay);

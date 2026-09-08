@@ -486,28 +486,28 @@ export function fitTrainingToBudget(target: TrainingPlan, priority: TrainingKey[
   budget = normalizeTrainingBudget(budget);
   const plan = { ...target };
   const cleanPriority = priority.length ? priority : TRAINING_KEYS;
+  const reverse = [...cleanPriority].reverse();
+  let currentCost = trainingPlanTotalCost(plan);
 
-  // Se passou do orçamento real do eFootball, remove primeiro das prioridades menores.
   let guard = 0;
-  while (trainingPlanTotalCost(plan) > budget && guard < 500) {
+  while (currentCost > budget && guard < 500) {
     guard += 1;
-    const removable = [...cleanPriority].reverse().find((key) => (plan[key] ?? 0) > 0) ?? TRAINING_KEYS.find((key) => (plan[key] ?? 0) > 0);
+    const removable = reverse.find((key) => (plan[key] ?? 0) > 0) ?? TRAINING_KEYS.find((key) => (plan[key] ?? 0) > 0);
     if (!removable) break;
+    currentCost -= trainingLevelCost(plan[removable] ?? 0);
     removeTrainingLevel(plan, removable);
   }
 
-  // Se ainda sobrar ponto, coloca onde tem mais impacto, respeitando custo progressivo.
   guard = 0;
-  while (guard < 500) {
+  while (currentCost < budget && guard < 500) {
     guard += 1;
-    const current = trainingPlanTotalCost(plan);
-    if (current >= budget) break;
     let added = false;
     for (const key of cleanPriority) {
       const nextLevel = (plan[key] ?? 0) + 1;
       const nextCost = trainingLevelCost(nextLevel);
-      if (current + nextCost <= budget && nextLevel <= 16) {
+      if (currentCost + nextCost <= budget && nextLevel <= 16) {
         addTrainingLevel(plan, key);
+        currentCost += nextCost;
         added = true;
         break;
       }

@@ -14,9 +14,10 @@ while (lines.length < 4200) {
 writeFileSync(join(root, 'src/components/CardVisionApp.tsx'), lines.join('\n'));
 
 const result = applyCardVisionLineBudgetR22(root);
-assert.ok(result.afterLines < 4200);
+assert.ok(result.afterLines <= result.beforeLines, 'o guardião de linhas não pode aumentar o componente');
+assert.equal(result.afterLines, result.beforeLines, 'r35 preserva código funcional quando não há compactação segura');
 const output = readFileSync(join(root, 'src/components/CardVisionApp.tsx'), 'utf8');
 assert.ok(output.includes('BM_CARDVISION_LINE_BUDGET_R22'));
 assert.ok(output.includes("'use client';"));
 assert.ok(output.includes('const x100'));
-console.log(`r22 aprovado: ${result.beforeLines} -> ${result.afterLines} linhas.`);
+console.log(`r22/r35 aprovado: ${result.beforeLines} linhas preservadas sem mutilar código funcional.`);

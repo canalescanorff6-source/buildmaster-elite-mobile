@@ -11,7 +11,7 @@ declare namespace React {
   interface FormEvent<T = Element> extends SyntheticEvent<T> {}
   interface ChangeEvent<T = Element> extends SyntheticEvent<T> { target: EventTarget & T; }
   interface MouseEvent<T = Element, E = globalThis.MouseEvent> extends SyntheticEvent<T, E> { clientX: number; clientY: number; button: number; }
-  interface PointerEvent<T = Element> extends MouseEvent<T, globalThis.PointerEvent> { pointerId: number; }
+  interface PointerEvent<T = Element> extends MouseEvent<T, globalThis.PointerEvent> { pointerId: number; pointerType: string; }
   interface ErrorInfo { componentStack?: string | null; }
   type ComponentType<P = {}> = (props: P) => any;
   interface Context<T> { Provider: any; Consumer: any; _default?: T; }
@@ -80,14 +80,27 @@ declare module '@capacitor/core' {
   export function registerPlugin<T>(name: string): T;
 }
 declare module 'tesseract.js' {
-  const Tesseract: any;
+  namespace Tesseract {
+    type PSM = string | number;
+    interface WorkerParams { [key: string]: string | number | boolean | undefined; }
+    interface RecognizeResult { data: { text?: string; confidence?: number; [key: string]: unknown } }
+    interface Worker {
+      setParameters(params: Partial<WorkerParams>): Promise<void>;
+      recognize(image: File | Blob | string): Promise<RecognizeResult>;
+      terminate(): Promise<void>;
+    }
+    enum OEM { LSTM_ONLY = 1 }
+    function createWorker(langs?: string[], oem?: OEM, options?: any): Promise<Worker>;
+  }
+  export const OEM: typeof Tesseract.OEM;
+  export const createWorker: typeof Tesseract.createWorker;
   export default Tesseract;
-  export = Tesseract;
 }
 
 declare module 'lucide-react' {
   export const Activity: React.ComponentType<any>;
   export const AlertTriangle: React.ComponentType<any>;
+  export const Archive: React.ComponentType<any>;
   export const ArchiveRestore: React.ComponentType<any>;
   export const ArrowDown: React.ComponentType<any>;
   export const ArrowLeft: React.ComponentType<any>;
@@ -103,6 +116,7 @@ declare module 'lucide-react' {
   export const Beaker: React.ComponentType<any>;
   export const Bell: React.ComponentType<any>;
   export const BookOpen: React.ComponentType<any>;
+  export const BookOpenCheck: React.ComponentType<any>;
   export const Bot: React.ComponentType<any>;
   export const Brain: React.ComponentType<any>;
   export const BrainCircuit: React.ComponentType<any>;
@@ -112,6 +126,7 @@ declare module 'lucide-react' {
   export const Check: React.ComponentType<any>;
   export const CheckCircle2: React.ComponentType<any>;
   export const ChevronDown: React.ComponentType<any>;
+  export const ChevronLeft: React.ComponentType<any>;
   export const ChevronRight: React.ComponentType<any>;
   export const CircleStop: React.ComponentType<any>;
   export const Clipboard: React.ComponentType<any>;
@@ -187,6 +202,7 @@ declare module 'lucide-react' {
   export const MessageSquare: React.ComponentType<any>;
   export const MonitorCog: React.ComponentType<any>;
   export const MonitorSmartphone: React.ComponentType<any>;
+  export const Move: React.ComponentType<any>;
   export const MoreHorizontal: React.ComponentType<any>;
   export const MoreVertical: React.ComponentType<any>;
   export const MouseEvent: React.ComponentType<any>;
@@ -230,6 +246,7 @@ declare module 'lucide-react' {
   export const Target: React.ComponentType<any>;
   export const TestTube2: React.ComponentType<any>;
   export const Thermometer: React.ComponentType<any>;
+  export const TimerReset: React.ComponentType<any>;
   export const ThumbsUp: React.ComponentType<any>;
   export const Trash2: React.ComponentType<any>;
   export const TrendingUp: React.ComponentType<any>;

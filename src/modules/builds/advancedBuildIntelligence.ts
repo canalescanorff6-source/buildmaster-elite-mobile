@@ -24,6 +24,8 @@ import {
   buildCalibrationReport,
   type MatchFeedback
 } from '@/lib/realMatchCalibration';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { POSITION_PT } from '@/lib/analyzerDomain';
 
 export const ADVANCED_BUILD_INTELLIGENCE_VERSION = '28.60.0';
 
@@ -232,7 +234,7 @@ function roleDefinitions(position: PositionCode, result: AnalysisResult): Tactic
 }
 
 function rolePlan(result: AnalysisResult, role: TacticalRoleDefinition): TrainingPlan {
-  const keys = activeKeys(result.bestPosition.code);
+  const keys = activeKeys(analysisUsagePositionR138(result));
   const priority = role.priorities.filter((key) => keys.includes(key));
   const remaining = keys.filter((key) => !priority.includes(key));
   const target: TrainingPlan = { ...result.training };
@@ -254,22 +256,24 @@ function rolePlan(result: AnalysisResult, role: TacticalRoleDefinition): Trainin
 }
 
 function roleFitScore(result: AnalysisResult, role: TacticalRoleDefinition, plan: TrainingPlan): number {
-  const priorities = role.priorities.filter((key) => activeKeys(result.bestPosition.code).includes(key));
+  const usagePosition = analysisUsagePositionR138(result);
+  const priorities = role.priorities.filter((key) => activeKeys(usagePosition).includes(key));
   const weighted = priorities.reduce((sum, key, index) => sum + Number(plan[key] ?? 0) * Math.max(1, 5 - index), 0);
   const maxWeighted = priorities.reduce((sum, _key, index) => sum + 16 * Math.max(1, 5 - index), 0) || 1;
-  const positionScore = result.positionScores.find((item) => item.code === result.bestPosition.code)?.score ?? result.bestPosition.score;
+  const positionScore = result.positionScores.find((item) => item.code === usagePosition)?.score ?? result.bestPosition.score;
   const identityScore = result.cardDna?.antiClone.identityContribution ?? result.playerIdentity?.individualityScore ?? 78;
   const exactBonus = trainingPlanPoints(plan) === result.trainingPointsTotal ? 8 : -10;
   return clamp((weighted / maxWeighted) * 45 + positionScore * 0.28 + identityScore * 0.19 + exactBonus, 1, 99);
 }
 
 function evaluateRoles(result: AnalysisResult, selectedRoleId?: string | null): TacticalRoleEvaluation[] {
-  const definitions = roleDefinitions(result.bestPosition.code, result);
+  const usagePosition = analysisUsagePositionR138(result);
+  const definitions = roleDefinitions(usagePosition, result);
   const raw = definitions.map((role) => {
     const training = rolePlan(result, role);
     const pointsUsed = trainingPlanPoints(training);
     const gains = role.priorities.slice(0, 3).map((key) => `${TRAINING_LABELS[key]} recebe prioridade para ${role.label.toLocaleLowerCase('pt-BR')}.`);
-    const lowPriority = activeKeys(result.bestPosition.code).filter((key) => !role.priorities.slice(0, 4).includes(key));
+    const lowPriority = activeKeys(usagePosition).filter((key) => !role.priorities.slice(0, 4).includes(key));
     const tradeOffs = lowPriority.slice(0, 2).map((key) => `${TRAINING_LABELS[key]} deixa de ser prioridade máxima nesta função.`);
     return {
       ...role,
@@ -287,13 +291,14 @@ function evaluateRoles(result: AnalysisResult, selectedRoleId?: string | null): 
 }
 
 function profileComparison(result: AnalysisResult): PrecisionProposal[] {
+  const usagePosition = analysisUsagePositionR138(result);
   const variants = result.buildVariants.length ? result.buildVariants : [];
   const competitive = variants[0];
   const unused = variants.slice(1);
   const attackScore = (variant: typeof competitive) => {
     const scenarios = variant?.scenarioScores;
     if (!scenarios) return Number(variant?.qualityScore ?? 0);
-    const attacking = ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(result.bestPosition.code);
+    const attacking = ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(usagePosition);
     return attacking
       ? scenarios.counterAttack * 0.55 + scenarios.possession * 0.2 + Number(variant?.qualityScore ?? 0) * 0.25
       : scenarios.possession * 0.42 + scenarios.counterAttack * 0.25 + Number(variant?.qualityScore ?? 0) * 0.33;
@@ -303,7 +308,7 @@ function profileComparison(result: AnalysisResult): PrecisionProposal[] {
     ?? [...variants].sort((a, b) => Number(b.balanceScore ?? 0) - Number(a.balanceScore ?? 0))[0]
     ?? competitive;
 
-  const selectedPositionScore = result.positionScores.find((item) => item.code === result.bestPosition.code)?.score ?? result.bestPosition.score;
+  const selectedPositionScore = result.positionScores.find((item) => item.code === usagePosition)?.score ?? result.bestPosition.score;
   const identityScore = clamp(result.cardDna?.antiClone.identityContribution ?? result.playerIdentity?.individualityScore ?? 82);
   const make = (
     id: PrecisionProposal['id'],
@@ -334,6 +339,7 @@ function profileComparison(result: AnalysisResult): PrecisionProposal[] {
 }
 
 function pointJustifications(result: AnalysisResult, role: TacticalRoleEvaluation): PointInvestmentJustification[] {
+  const usagePosition = analysisUsagePositionR138(result);
   const goals = new Map((result.cardDna?.individualGoals ?? []).map((item) => [item.training, item]));
   const returns = new Map((result.marginalReturn ?? []).map((item) => [item.training, item]));
   const skillGroups = new Map<TrainingKey, string[]>();
@@ -343,7 +349,7 @@ function pointJustifications(result: AnalysisResult, role: TacticalRoleEvaluatio
     }
   }
 
-  return activeKeys(result.bestPosition.code)
+  return activeKeys(usagePosition)
     .filter((key) => Number(role.training[key] ?? 0) > 0)
     .map((key) => {
       const level = Number(role.training[key] ?? 0);
@@ -361,7 +367,7 @@ function pointJustifications(result: AnalysisResult, role: TacticalRoleEvaluatio
           : 'baixo';
       const priorityText = rank >= 0
         ? `É a prioridade ${rank + 1} da função “${role.label}”.`
-        : `É um grupo complementar para a posição ${result.bestPosition.label}.`;
+        : `É um grupo complementar para a posição ${POSITION_PT[usagePosition]}.`;
       const goalText = goal?.reason ? ` ${goal.reason}` : '';
       const skillText = supportedSkills.length ? ` Sustenta ${supportedSkills.slice(0, 2).join(' e ')}.` : '';
       const stopRule = goal
@@ -465,7 +471,8 @@ export function buildAdvancedBuildIntelligence(
   const fingerprint = result.cardDna?.antiClone.fingerprint || cardFingerprint(result);
   const uniquenessScore = clamp(result.cardDna?.antiClone.individualityScore ?? result.playerIdentity?.individualityScore ?? 76);
   const cloneRisk = result.cardDna?.antiClone.cloneRisk ?? (uniquenessScore >= 82 ? 'baixo' : uniquenessScore >= 65 ? 'médio' : 'alto');
-  const positionScore = result.positionScores.find((item) => item.code === result.bestPosition.code)?.score ?? result.bestPosition.score;
+  const usagePosition = analysisUsagePositionR138(result);
+  const positionScore = result.positionScores.find((item) => item.code === usagePosition)?.score ?? result.bestPosition.score;
   const creatorConsensus = creatorSnapshot(result, selectedRole.training, input.creatorSources);
   const matchLearning = matchLearningSnapshot(result, input.matchRecords ?? [], input.calibrationFeedbacks ?? []);
   const skillActivation = (result.cardDna?.skillSynergies ?? []).slice(0, 10).map((item) => ({
@@ -490,11 +497,11 @@ export function buildAdvancedBuildIntelligence(
       ]).slice(0, 6)
     },
     selectedPosition: {
-      code: result.bestPosition.code,
-      label: result.bestPosition.label,
+      code: usagePosition,
+      label: POSITION_PT[usagePosition],
       score: clamp(positionScore),
       preserved: result.advancedOptimizer?.positionPreserved !== false,
-      explanation: `A posição ${result.bestPosition.label} continua sendo a decisão principal. As funções e perfis apenas mudam a prioridade dos pontos dentro dessa escolha.`
+      explanation: `A posição ${POSITION_PT[usagePosition]} continua sendo a função real desta ficha. As funções e perfis apenas mudam a prioridade dos pontos dentro dessa escolha.`
     },
     profileComparison: profileComparison(result),
     tacticalRoles,

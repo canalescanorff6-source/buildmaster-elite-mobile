@@ -51,7 +51,7 @@ const differentSelected:any=applyCleanSlatePerformance2027R119(resultFor({name:'
 const noDribbleEvidence:any=applyCleanSlatePerformance2027R119(resultFor({name:'Carta sem skill',attrs:creatorAttrs,native:['Passe de primeira']}));
 
 assert.equal(creator.cleanSlate2027R119.authority,'CLEAN_SLATE_SINGLE_WRITER');
-assert.match(creator.cleanSlate2027R119.version,/r12(?:2-online-competitive-dna|3-competitive-lab-saturation-confidence)/);
+assert.match(creator.cleanSlate2027R119.version,/r12(?:2-online-competitive-dna|3-competitive-lab-saturation-confidence|5-role-aware-card-specific-performance-authority)/);
 assert.equal(trainingPlanTotalCost(creator.training),64);
 assert.ok(creator.cleanSlate2027R119.onlinePerformance.rankedScore > 0 && creator.cleanSlate2027R119.onlinePerformance.rankedScore <= 100);
 assert.ok(creator.cleanSlate2027R119.onlinePerformance.friendsScore > 0 && creator.cleanSlate2027R119.onlinePerformance.friendsScore <= 100);
@@ -63,7 +63,10 @@ assert.deepEqual(renamed.training,creator.training,'O nome do jogador não pode 
 assert.deepEqual(renamed.recommendedSkills,creator.recommendedSkills,'O nome do jogador não pode alterar o Top 5.');
 assert.equal(renamed.cleanSlate2027R119.onlinePerformance.rankedScore,creator.cleanSlate2027R119.onlinePerformance.rankedScore,'O nome do jogador não pode alterar a nota online.');
 assert.deepEqual(highOverall.training,creator.training,'Overall/GER não pode alterar a ficha r122.');
-assert.deepEqual(differentSelected.training,creator.training,'A posição selecionada não pode reescrever a assinatura permanente da mesma carta.');
+assert.equal(differentSelected.cleanSlate2027R119.cardKey,creator.cleanSlate2027R119.cardKey,'A posição de uso não pode alterar a identidade permanente da carta.');
+assert.equal(differentSelected.cleanSlate2027R119.positionAnchor,creator.cleanSlate2027R119.positionAnchor,'A posição natural continua sendo a âncora da identidade.');
+assert.equal(differentSelected.cleanSlate2027R119.usagePosition,'CF');
+assert.notDeepEqual(differentSelected.training,creator.training,'A posição real de uso precisa poder alterar a progressão quando muda a função de campo.');
 
 const closeCreator=creator.cleanSlate2027R119.actions.find((x:any)=>x.id==='close_control');
 const closeNoSkill=noDribbleEvidence.cleanSlate2027R119.actions.find((x:any)=>x.id==='close_control');
@@ -79,4 +82,4 @@ assert.ok(dmf.training.lowerBodyStrength > 0,'Carga online alta e stamina baixa 
 assert.ok(dmf.cleanSlate2027R119.onlinePerformance.staminaSustainability > 0);
 assert.ok(dmf.cleanSlate2027R119.actions.some((x:any)=>x.id==='intercept' && x.frequency>0));
 
-console.log('r122 aprovada: máximo online, DNA por evidência da carta, anti-nome, anti-GER, estabilidade de assinatura e justificativa marginal por ponto.');
+console.log('r122 compatível com r125: máximo online, DNA por evidência, anti-nome, anti-GER, identidade estável e ficha sensível à função real de uso.');

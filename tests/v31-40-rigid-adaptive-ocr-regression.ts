@@ -60,12 +60,18 @@ assert.ok(session.blockingFields.some((field) => field.includes('Nome')));
 assert.equal(session.detailedReading.skillCandidates.length, 0);
 
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-assert.match(app, /loadLearnedOcrTerms\('playerName'/);
-assert.match(app, /loadLearnedOcrTerms\('skill'/);
-assert.match(app, /learnConfirmedOcrBatch/);
-assert.match(app, /runtimeList\('ocr-lexicon'/);
-assert.match(app, /reading\.key !== 'name' \|\| reading\.status === 'confirmed'/);
-assert.match(app, /nativeSkills: Array\.from\(new Set/);
+const readerRuntime = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
+const learnedLexicon = fs.readFileSync('src/modules/card-reader/learnedOcrLexicon.ts', 'utf8');
+assert.match(readerRuntime, /loadLearnedOcrTerms\('playerName'/, 'O runtime canônico R163 precisa carregar nomes aprendidos.');
+assert.match(readerRuntime, /loadLearnedOcrTerms\('skill'/, 'O runtime canônico R163 precisa carregar habilidades aprendidas.');
+assert.match(app, /learnConfirmedOcrBatch/, 'Confirmações humanas continuam alimentando o léxico aprendido.');
+assert.match(learnedLexicon, /runtimeList<LearnedOcrTerm>\('ocr-lexicon'/, 'O léxico canônico precisa continuar persistido no store ocr-lexicon.');
+const evidenceBoundary = fs.readFileSync('src/modules/card-reader/cardOcrEvidenceBoundaryR132.ts', 'utf8');
+assert.match(readerRuntime, /buildProductionOcrEvidenceTextR134\(session, zoneResults\)/, 'A evidência física final precisa continuar sendo montada no runtime R163.');
+assert.match(evidenceBoundary, /item\.status === 'confirmed'/);
+assert.match(evidenceBoundary, /rawMergeAllowed/);
+const reviewWorkflow = fs.readFileSync('src/modules/card-reader/cardReviewWorkflowR131.ts', 'utf8');
+assert.match(reviewWorkflow, /nativeSkills:\s*trustedSessionSkills\s*\?\?\s*parsedOwnedSkills/);
 
 const database = fs.readFileSync('src/lib/localDatabase.ts', 'utf8');
 assert.match(database, /DB_VERSION = 6/);

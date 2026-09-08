@@ -1,5 +1,5 @@
 import type { AnalysisResult } from './analyzerDomain';
-import { applyCompleteCardIntelligence } from './cardIntelligencePipeline';
+import { rebuildProductionAnalysisR138 } from '../modules/analysis/productionOrchestratorR138';
 import {
   canonicalizeSkillList,
   isSpecialSkillIdentity,
@@ -47,7 +47,7 @@ export function regenerateSkillAfterOwnedConfirmation(result: AnalysisResult, sk
   const canonical = canonicalizeSkillList([skill])[0] ?? skill.trim();
   const previous = result.recommendedSkills.map(skillIdentityKey);
   const marked = markRecommendedSkillAsOwned(result, canonical);
-  const rebuilt = applyCompleteCardIntelligence(marked);
+  const rebuilt = rebuildProductionAnalysisR138(marked);
   const removedKey = skillIdentityKey(canonical);
   const replacementSkill = rebuilt.recommendedSkills.find((item) => {
     const key = skillIdentityKey(item);

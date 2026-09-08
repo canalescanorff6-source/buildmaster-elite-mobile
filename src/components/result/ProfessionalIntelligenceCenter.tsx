@@ -18,7 +18,6 @@ import {
 import type { AnalysisResult, TrainingKey, TrainingPlan } from '@/lib/analyzer';
 import {
   CARD_REGISTRY_STORAGE_KEY,
-  MATCH_VALIDATION_STORAGE_KEY,
   type CardRegistryEntry,
   type MatchValidationRecord
 } from '@/lib/appEvolution';
@@ -28,6 +27,10 @@ import {
   type ScenarioGameplayProfile
 } from '@/lib/professionalIntelligenceV37';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { readMatchValidationRepositoryR137, subscribeMatchValidationRepositoryR137 } from '@/modules/matches/matchValidationRepositoryR137';
+import { POSITION_PT } from '@/lib/analyzerDomain';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 function loadArray<T>(key: string): T[] {
   try {
@@ -80,13 +83,13 @@ export function ProfessionalIntelligenceCenter({ result }: { result: AnalysisRes
 
   useEffect(() => {
     const refresh = () => {
-      setMatches(loadArray<MatchValidationRecord>(MATCH_VALIDATION_STORAGE_KEY));
+      setMatches(readMatchValidationRepositoryR137());
       setRegistry(loadArray<CardRegistryEntry>(CARD_REGISTRY_STORAGE_KEY));
     };
     refresh();
-    window.addEventListener('buildmaster:match-validation-updated', refresh);
-    return () => window.removeEventListener('buildmaster:match-validation-updated', refresh);
-  }, [result.parsed.internalId]);
+    const unsubscribe = subscribeMatchValidationRepositoryR137(refresh);
+    return unsubscribe;
+  }, [cardIdentityFingerprintR126(result.parsed)]);
 
   const report = useMemo(() => buildProfessionalIntelligenceReport(result, { matches, registry }), [result, matches, registry]);
   const visiblePositions = report.positionMatrix.entries.slice(0, 8);
@@ -124,7 +127,7 @@ export function ProfessionalIntelligenceCenter({ result }: { result: AnalysisRes
     <article className="luxury-panel wide-card professional-scenarios-card">
       <div className="section-title-row"><div><p className="kicker"><Layers3 size={14}/> Perfis profundos de gameplay</p><h3>Principal, alternativas e contextos de partida</h3></div><span>{report.scenarios.profiles.length} fichas</span></div>
       <p className="panel-note">{report.scenarios.summary}</p>
-      <div className="professional-scenario-grid">{report.scenarios.profiles.map((profile) => <ProfileCard key={profile.id} profile={profile} playerName={result.parsed.playerName} position={result.bestPosition.label}/>)}</div>
+      <div className="professional-scenario-grid">{report.scenarios.profiles.map((profile) => <ProfileCard key={profile.id} profile={profile} playerName={result.parsed.playerName} position={POSITION_PT[analysisUsagePositionR138(result)]}/>)}</div>
       <div className="professional-guardrails">{report.scenarios.safeguards.map((item) => <span key={item}><ShieldCheck size={14}/>{item}</span>)}</div>
     </article>
 

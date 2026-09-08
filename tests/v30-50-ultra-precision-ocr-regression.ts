@@ -106,11 +106,11 @@ assert.equal(invalidIdentity.identity.age, null);
 assert.equal(invalidIdentity.identity.level?.numericValue, 99);
 assert.ok(invalidIdentity.warnings.some((warning) => warning.includes('GER descartado')));
 
-const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-assert.match(app, /recognizeZoneWithHighPrecision/);
-assert.match(app, /knownPlayerNames/);
-assert.match(app, /LOCAL_CARD_RULES/);
-assert.match(app, /Leitura Ultraprecisa em/);
+const readerRuntime = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
+assert.match(readerRuntime, /recognizeZoneWithHighPrecision/, 'O runtime canônico R163 precisa continuar executando o OCR ultrapreciso.');
+assert.match(readerRuntime, /knownPlayerNames/, 'O consenso de identidade precisa continuar usando nomes conhecidos no runtime canônico.');
+assert.match(readerRuntime, /LOCAL_CARD_RULES/, 'As regras locais confirmadas continuam alimentando a identidade do Leitor.');
+assert.match(readerRuntime, /Leitura Ultraprecisa em/, 'O progresso visível da leitura ultraprecisa precisa continuar presente.');
 const engine = fs.readFileSync('src/modules/card-reader/highPrecisionOcr.ts', 'utf8');
 assert.match(engine, /binary/);
 assert.match(engine, /inverted/);

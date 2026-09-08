@@ -24,6 +24,17 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  for(const p of ['public/update-manifest.json','out/update-manifest.json','android/app/src/main/assets/public/update-manifest.json']){
    const t=resolve(root,p); if(existsSync(t)) rmSync(t,{force:true});
  }
+ const pipelinePath=resolve(root,'src/lib/cardIntelligencePipeline.ts');
+ const cleanSlateR119Installed=existsSync(pipelinePath) && readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');
+ if(cleanSlateR119Installed){
+   // A árvore atual já contém, por definição, todos os contratos históricos r16-r116.
+   // Reexecutar patchers textuais contra o CardVision modularizado é incorreto: eles
+   // procuram blocos antigos que legitimamente deixaram o shell nas fronteiras r150+.
+   // O sanitizador moderno portanto é somente destrutivo para manifests temporários e
+   // NÃO reescreve source/tests quando a autoridade Clean Slate r119+ está instalada.
+   console.log('v40.80 r119+: patchers históricos r16-r116 ignorados; árvore modular preservada.');
+   return { modernTree: true, sourcePatched: false };
+ }
  applyPreFinalConfirmationR16(root);
  applyR17RegressionCompatibility(root);
  applyPreFinalAutofillR20(root);
@@ -32,23 +43,16 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  applyUniversalDnaR25(root);
  applyPreFinalVisualR104(root);
  applyPreFinalAutoProgressR105(root);
- const pipelinePath=resolve(root,'src/lib/cardIntelligencePipeline.ts');
- const cleanSlateR119Installed=existsSync(pipelinePath) && readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');
- if(cleanSlateR119Installed){
-   // r119 substitui a cadeia mutável r109-r116. Reaplicar esses patchers depois do
-   // Clean Slate tentaria restaurar contratos antigos e pode quebrar o build.
-   console.log('v40.80 r119: patchers legados r109-r116 ignorados; Clean Slate preservado.');
- } else {
-   applyR109ExtremeCompat(root);
-   applyR111DefinitiveCiGameplay(root);
-   applyR114GameplayTruth(root);
-   applyR115CardSignature(root);
-   applyR116TenZoneCompat(root);
-   applyR111TestContract(root);
-   applyR114TestContract(root);
-   applyR115TestContract(root);
-   applyR116TestContract(root);
- }
+ applyR109ExtremeCompat(root);
+ applyR111DefinitiveCiGameplay(root);
+ applyR114GameplayTruth(root);
+ applyR115CardSignature(root);
+ applyR116TenZoneCompat(root);
+ applyR111TestContract(root);
+ applyR114TestContract(root);
+ applyR115TestContract(root);
+ applyR116TestContract(root);
+ return { modernTree: false, sourcePatched: true };
 }
 const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
 if(invoked===import.meta.url) sanitizeUpdateSource();

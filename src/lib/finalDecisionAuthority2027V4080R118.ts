@@ -172,7 +172,7 @@ function emergencyReason(result: Carrier) {
  * BM_R118_SINGLE_FINAL_AUTHORITY
  * Esta camada NÃO otimiza uma nova ficha. Ela apenas sela uma decisão já calculada:
  * r60 define identidade; Card Signature/r108 calcula a progressão; r80 decide Top 5/Ímpeto.
- * Motores v38/v39/v40, r70/r107/r109 e r45 permanecem diagnósticos; r45 só executa em leitura incompleta.
+ * Motores v38/v39/v40 e r45 permanecem diagnósticos; r108 é a Card Signature moderna e r45 só executa em leitura incompleta.
  */
 export function applyFinalDecisionAuthority2027R118(input: AnalysisResult): AnalysisResult {
   const carrier = input as Carrier;
@@ -271,7 +271,7 @@ export function applyFinalDecisionAuthority2027R118(input: AnalysisResult): Anal
       legacyAdjusted
         ? 'Trava anti-receita histórica: o padrão 8/8/8/12 foi rejeitado porque não provou ganho suficiente; uma alternativa Card Signature equivalente foi escolhida.'
         : `Trava anti-receita histórica: similaridade ${analysis.legacyPattern.similarity}/100; nenhuma receita antiga recebeu autoridade automática.`,
-      'Motores v38/v39/v40, r70, r107 e r109 permanecem somente como diagnóstico/benchmark após a decisão final.',
+      'Motores v38/v39/v40 permanecem somente como diagnóstico/benchmark após a decisão final; r108 é a Card Signature moderna preservada.',
       ...working.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 120)
   } as AnalysisResult;

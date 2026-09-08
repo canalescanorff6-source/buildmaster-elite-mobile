@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const geometry = readFileSync(new URL('../src/modules/card-reader/efhubLayoutGeometry.ts', import.meta.url), 'utf8');
+const calibrationModel = readFileSync(new URL('../src/modules/card-reader/efhubCalibrationModelR164.ts', import.meta.url), 'utf8');
 const calibration = readFileSync(new URL('../src/modules/card-reader/efhubManualCalibration.ts', import.meta.url), 'utf8');
 const reader = readFileSync(new URL('../src/modules/card-reader/manualCalibrationFastReader.ts', import.meta.url), 'utf8');
 const detailed = readFileSync(new URL('../src/modules/card-reader/detailedPrintReader.ts', import.meta.url), 'utf8');
@@ -11,8 +12,8 @@ const skills = readFileSync(new URL('../src/lib/definitiveAdditionalSkillsV600R1
 assert.match(geometry, /9\. Pontos distribuídos/);
 assert.match(geometry, /10\. Habilidade especial/);
 assert.match(geometry, /box\('progression', 'Pontos distribuídos na ficha automática'/);
-assert.match(calibration, /\| 'progression'\s*\n\s*\| 'specialSkill';/);
-assert.match(calibration, /id: 'progression', key: 'progression', shortLabel: 'Pontos distribuídos'/);
+assert.match(calibrationModel, /\| 'progression'\s*\n\s*\| 'specialSkill';/);
+assert.match(calibrationModel, /\['progression', 'progression', '9\. Pontos distribuídos', 'Pontos distribuídos'/);
 assert.match(calibration, /progression: 'progression'/);
 assert.match(reader, /id: 'progression', key: 'progression'.*kind: 'numeric'/);
 assert.match(reader, /duplicateEvidence\(reading, 'autoTraining', 'Ficha automática atual'\)/);

@@ -329,9 +329,9 @@ export function FormationRoleLabPanel({ results, activeFormation, activeStyle }:
               {lineup.map((pick) => {
                 const recommendedRole = recommendedRoleForSlot(pick.slot, style);
                 const role = FORMATION_ROLE_CATALOG[recommendedRole];
-                return <button type="button" key={pick.slot.id} className={`formation-pitch-slot ${pick.player ? 'filled' : 'empty'} fit-${pick.score >= 80 ? 'high' : pick.score >= 60 ? 'medium' : 'low'}`} style={{ left:`${pick.slot.x}%`, top:`${pick.slot.y}%` }} title={`${pick.slot.label}: ${role.officialName}`}>
+                return <div key={pick.slot.id} className={`formation-pitch-slot ${pick.player ? 'filled' : 'empty'} fit-${pick.score >= 80 ? 'high' : pick.score >= 60 ? 'medium' : 'low'}`} style={{ left:`${pick.slot.x}%`, top:`${pick.slot.y}%` }} title={`${pick.slot.label}: ${role.officialName}`}>
                   <span>{pick.slot.label}</span><strong>{pick.player?.parsed.playerName ?? role.officialName}</strong><small>{pick.player ? `${pick.score}/100` : role.officialName}</small>
-                </button>;
+                </div>;
               })}
             </article>
 

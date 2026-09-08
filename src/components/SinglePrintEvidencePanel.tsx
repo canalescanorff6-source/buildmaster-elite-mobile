@@ -30,6 +30,15 @@ export function SinglePrintEvidencePanel({
   originalPreview?: string | null;
   onUseCandidate?: (field: SingleFieldEvidence['key'], value: string) => void;
 }) {
+  const zoneStatus = (key: string) => session.zoneBoxes?.find((item) => item.key === key)?.status;
+  const physicalReview = {
+    identity: [session.detailedReading.identity.height, session.detailedReading.identity.weight, session.detailedReading.identity.age].some((item) => item?.status === 'review') || (Boolean(session.detailedReading.identity.height || session.detailedReading.identity.weight || session.detailedReading.identity.age) && zoneStatus('identityMeta') !== 'confirmed'),
+    condition: session.detailedReading.condition.some((item) => item.status === 'review') || (session.detailedReading.condition.length > 0 && zoneStatus('condition') !== 'confirmed'),
+    impetos: session.detailedReading.impetos.some((item) => item.status === 'review') || (session.detailedReading.impetos.length > 0 && zoneStatus('impetos') !== 'confirmed'),
+    physical: session.detailedReading.physicalModel.some((item) => item.status === 'review') || (session.detailedReading.physicalModel.length > 0 && (session.detailedReading.coverage.physicalCount !== 16 || zoneStatus('physicalModel') !== 'confirmed'))
+  };
+  const structuredReview = { scalarReview: session.fields.filter((field) => field.status === 'review' && ['playerName', 'position', 'playstyle', 'level', 'points', 'cardType'].includes(field.key)), positionReview: session.detailedReading.positionRatings.filter((item) => item.status !== 'confirmed'), progressionNeedsReview: session.detailedReading.progressionSequence.some((item) => item.status !== 'confirmed') };
+  const directlyApplicable = new Set<SingleFieldEvidence['key']>(['playerName', 'position', 'playstyle', 'level', 'points']);
   return (
     <>
     <article className="single-print-evidence luxury-panel wide-card">
@@ -152,8 +161,8 @@ export function SinglePrintEvidencePanel({
           <details open>
             <summary>Identidade e condição</summary>
             <div className="detailed-chip-list">
-              {Object.values(session.detailedReading.identity).filter((item): item is NonNullable<typeof item> => Boolean(item)).map((item) => <span key={item.label}><b>{item.label}</b>{item.value}<em>{item.confidence}%</em></span>)}
-              {session.detailedReading.condition.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}<em>{item.confidence}%</em></span>)}
+              {Object.values(session.detailedReading.identity).filter((item): item is NonNullable<typeof item> => Boolean(item)).map((item) => <span key={item.label} className={item.status === 'review' ? 'needs-review' : ''}><b>{item.label}</b>{item.value}<em>{item.status === 'review' ? 'não usado' : `${item.confidence}%`}</em></span>)}
+              {session.detailedReading.condition.map((item) => <span key={item.label} className={item.status === 'review' ? 'needs-review' : ''}><b>{item.label}</b>{item.value}<em>{item.status === 'review' ? 'não usado' : `${item.confidence}%`}</em></span>)}
             </div>
           </details>
           <details>
@@ -161,7 +170,7 @@ export function SinglePrintEvidencePanel({
             <div className="detailed-chip-list">
               {session.detailedReading.manager.name && <span><b>Técnico</b>{session.detailedReading.manager.name}<em>{session.detailedReading.manager.confidence}%</em></span>}
               {session.detailedReading.manager.boosts.map((item) => <span key={item.value}><b>{item.label}</b>{item.value}<em>{item.confidence}%</em></span>)}
-              {session.detailedReading.impetos.map((item) => <span key={item.value}><b>Ímpeto</b>{item.value}<em>{item.confidence}%</em></span>)}
+              {session.detailedReading.impetos.map((item) => <span key={item.value} className={item.status === 'review' ? 'needs-review' : ''}><b>Ímpeto</b>{item.value}<em>{item.status === 'review' ? 'não usado' : `${item.confidence}%`}</em></span>)}
               {session.detailedReading.progressionSequence.map((item) => <span key={`${item.label}-${item.value}`} className={item.status === 'review' ? 'needs-review' : ''}><b>{item.label}</b>{item.value}<em>{item.status === 'review' ? 'confirmar' : `${item.confidence}%`}</em></span>)}
             </div>
           </details>
@@ -169,13 +178,13 @@ export function SinglePrintEvidencePanel({
             <summary>Atributos e posições reconhecidos</summary>
             <div className="detailed-chip-list compact">
               {session.detailedReading.attributes.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
-              {session.detailedReading.positionRatings.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
+              {session.detailedReading.positionRatings.map((item) => <span key={item.label} className={item.status === 'review' ? 'needs-review' : ''}><b>{item.label}</b>{item.value}<em>{item.status === 'review' ? 'não usado' : `${item.confidence}%`}</em></span>)}
             </div>
           </details>
           <details>
             <summary>Modelo físico e habilidades</summary>
             <div className="detailed-chip-list compact">
-              {session.detailedReading.physicalModel.map((item) => <span key={item.label}><b>{item.label}</b>{item.value}</span>)}
+              {session.detailedReading.physicalModel.map((item) => <span key={item.label} className={item.status === 'review' ? 'needs-review' : ''}><b>{item.label}</b>{item.value}<em>{item.status === 'review' ? 'não usado' : `${item.confidence}%`}</em></span>)}
               {session.detailedReading.skills.map((item) => <span key={item.value}><b>{item.label}</b>{item.value}</span>)}
             </div>
           </details>
@@ -210,6 +219,11 @@ export function SinglePrintEvidencePanel({
               <div className="single-evidence-text">
                 <strong>Origem: {field.sourceLabel}</strong>
                 <pre>{field.sourceText || 'Nenhum texto reconhecido nesta área.'}</pre>
+                {field.status === 'review' && field.value && directlyApplicable.has(field.key) && (
+                  <button type="button" className="single-evidence-use-best" onClick={() => onUseCandidate?.(field.key, field.value!)}>
+                    Usar {field.value}
+                  </button>
+                )}
                 {field.alternatives.length > 0 && (
                   <div className="single-evidence-alternatives">
                     <span>Outros candidatos</span>
@@ -226,9 +240,19 @@ export function SinglePrintEvidencePanel({
         ))}
       </div>
 
+      {(structuredReview.scalarReview.length > 0 || structuredReview.positionReview.length > 0 || structuredReview.progressionNeedsReview) && (
+        <div className="single-print-warning-list r133-structured-evidence-warning">
+          <span><ShieldCheck size={15}/>R133: posição, estilo, nível/pontos, grade e progressão em revisão ficam visíveis aqui, mas não entram automaticamente no motor.</span>
+        </div>
+      )}
+      {(physicalReview.identity || physicalReview.condition || physicalReview.impetos || physicalReview.physical) && (
+        <div className="single-print-warning-list r134-physical-evidence-warning">
+          <span><ShieldCheck size={15}/>R134: altura/peso/idade, condição, Ímpetos e modelo físico em revisão ficam visíveis para auditoria, mas não entram na identidade nem na ficha até confirmação confiável.</span>
+        </div>
+      )}
       <footer className="single-print-evidence-footer">
         <ShieldCheck size={16}/>
-        <span>Campos críticos em amarelo ou vermelho precisam de confirmação humana antes da ficha final.</span>
+        <span>Campo em revisão só vira dado de produção quando você o aceita explicitamente ou quando a evidência atinge confirmação.</span>
       </footer>
     </article>
     <OcrConfidenceHistoryPanel session={session} />

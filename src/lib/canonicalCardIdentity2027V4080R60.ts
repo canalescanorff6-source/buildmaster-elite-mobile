@@ -1,3 +1,4 @@
+import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import type { AnalysisResult, PositionCode } from './analyzerDomain';
 
 export const CANONICAL_CARD_IDENTITY_2027_R60_VERSION = '40.80-r60-canonical-card-identity-2027' as const;
@@ -80,17 +81,9 @@ function explicitDefencePosition(result: AnalysisResult): PositionCode | null {
 }
 
 function cardKey(result: AnalysisResult) {
-  const parsed = result.parsed;
-  const intrinsicId = clean(parsed.internalId);
-  const base = [
-    clean(parsed.playerName),
-    clean(parsed.cardType),
-    parsed.mainPosition,
-    parsed.maxOverall ?? parsed.overall ?? '',
-    parsed.level ?? '',
-    clean(parsed.specialTag)
-  ].join('|');
-  return intrinsicId ? `${base}|${intrinsicId}` : base;
+  // R126: identidade da carta é intrínseca e não depende de Overall/GER,
+  // técnico, posição de uso ou qualquer saída calculada pelo aplicativo.
+  return cardIdentityFingerprintR126(result.parsed);
 }
 
 function dnaScores(result: AnalysisResult): CardDnaScoresR60 {

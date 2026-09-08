@@ -2,11 +2,7 @@
 
 import { Palette, ShieldCheck, Sparkles } from 'lucide-react';
 import { ProfileAvatarEditor } from '@/components/ProfileAvatarEditor';
-import type { PremiumVisualPreset } from '@/lib/easyExperience';
-
-type TextScale = 'compact' | 'standard' | 'large';
-type DensityMode = 'compact' | 'comfortable';
-type MotionPreference = 'system' | 'reduced' | 'full';
+import type { DensityMode, MotionPreference, PremiumVisualPreset, TextScale } from '@/lib/easyExperience';
 
 type Props = {
   visualPreset: PremiumVisualPreset;
@@ -70,7 +66,7 @@ export function IdentityAppearancePanel({
 
       <div className="appearance-live-preview" aria-label="Prévia da aparência selecionada">
         <div className="appearance-preview-top"><span><Sparkles size={15} /> BuildMaster</span><i /></div>
-        <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Contraste e ações claras.</span><button type="button" tabIndex={-1}>Ação principal</button></div>
+        <div className="appearance-preview-body"><strong>Ficha premium</strong><span>Contraste e ações claras.</span><span className="appearance-preview-action" aria-hidden="true">Ação principal</span></div>
       </div>
 
       <div className="settings-control-section premium-preset-section">

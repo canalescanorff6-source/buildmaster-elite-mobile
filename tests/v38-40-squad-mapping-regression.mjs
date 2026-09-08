@@ -10,6 +10,7 @@ const engine = read('src/modules/squad-mapping/squadMappingEngine.ts');
 const storage = read('src/modules/squad-mapping/squadMappingStorage.ts');
 const screen = read('src/modules/squad-mapping/SquadMappingCenter.tsx');
 const app = read('src/components/CardVisionApp.tsx');
+const appNavigation = read('src/lib/appNavigationR127.ts');
 const navigation = read('src/components/RefinedNavigation.tsx');
 const menu = read('src/components/PremiumMenuScreen.tsx');
 const experience = read('src/modules/experience/premiumExperience2.ts');
@@ -72,7 +73,8 @@ assert.match(screen, /recognizeZoneWithHighPrecision/);
 assert.match(screen, /selectedFormationId/);
 assert.match(screen, /onOpenFicha/);
 
-assert.match(app, /type MainSection = [^\n]*'mapeamento'/);
+assert.match(appNavigation, /type MainSection = [^\n]*'mapeamento'/);
+assert.match(app, /from '@\/lib\/appNavigationR127'/);
 assert.match(app, /<SquadMappingCenter/);
 assert.match(app, /openMainSection\('mapeamento'\)/);
 assert.match(app, /area="mapeamento-inteligente-elenco"/);

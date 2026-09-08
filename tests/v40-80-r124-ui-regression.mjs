@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 const card=fs.readFileSync('src/components/CardVisionApp.tsx','utf8');
-const result=fs.readFileSync('src/components/result/ResultWorkspace.tsx','utf8');
+const result=fs.readFileSync('src/components/result/ResultReviewPanelR189.tsx','utf8');
 const component=fs.readFileSync('src/components/PhasePlaystyleSelectorR124.tsx','utf8');
 const appOptions=fs.readFileSync('src/modules/architecture/appOptions.ts','utf8');
 if(!card.includes('PhasePlaystyleSelectorR124')) throw new Error('CardVision sem seletor r124');

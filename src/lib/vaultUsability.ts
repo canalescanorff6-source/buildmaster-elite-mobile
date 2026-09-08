@@ -1,4 +1,5 @@
 import type { AnalysisResult, PositionCode } from './analyzer';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 export type VaultFolder = {
   id: string;
@@ -65,7 +66,7 @@ export function entryMatchesAdvancedFilters(entry: VaultEntryLike, filters: Vaul
   const result = entry.result;
   const folder = folderForEntry(entry);
   if (filters.folderId !== 'all' && folder !== filters.folderId) return false;
-  if (filters.position !== 'ALL' && result.bestPosition.code !== filters.position) return false;
+  if (filters.position !== 'ALL' && analysisUsagePositionR138(result) !== filters.position) return false;
   if (filters.playstyle && normalize(result.parsed.playstyle) !== normalize(filters.playstyle)) return false;
   if (filters.skill) {
     const skills = [...result.parsed.nativeSkills, ...result.recommendedSkills].map(normalize);

@@ -1,5 +1,7 @@
 import type { AnalysisResult, CompetitiveFusionSummary, PositionCode, TrainingKey, TrainingPlan } from './analyzerDomain';
 import { readAccountStorage } from './accountStorage';
+import { cardUsageIdentityKeyR126 } from './cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import {
   CREATOR_TRAINING_KEYS,
   buildCreatorBuildConsensus,
@@ -7,10 +9,10 @@ import {
   loadCreatorBuildSources,
   type CreatorBuildSource
 } from './creatorBuildResearch';
+export { COMPETITIVE_FUSION_EVENT } from './appEvolution';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import type { MatchFeedback } from './realMatchCalibration';
 
-export const COMPETITIVE_FUSION_EVENT = 'buildmaster:competitive-fusion-updated';
 
 const LINE_KEYS: TrainingKey[] = ['shooting', 'passing', 'dribbling', 'dexterity', 'lowerBodyStrength', 'aerialStrength', 'defending'];
 const GK_KEYS: TrainingKey[] = ['gk1', 'gk2', 'gk3', 'aerialStrength', 'lowerBodyStrength'];
@@ -34,8 +36,11 @@ function loadFeedbacks(result: AnalysisResult): MatchFeedback[] {
   try {
     const raw = readAccountStorage(CALIBRATION_STORAGE_KEY);
     const all = raw ? JSON.parse(raw) as Record<string, MatchFeedback[]> : {};
-    const key = `${result.parsed.internalId}:${result.bestPosition.code}`;
-    return Array.isArray(all[key]) ? all[key].slice(0, 20) : [];
+    const usagePosition = analysisUsagePositionR138(result);
+    const key = cardUsageIdentityKeyR126(result.parsed, usagePosition);
+    const legacyKey = `${result.parsed.internalId}:${usagePosition}`;
+    const records = Array.isArray(all[key]) ? all[key] : all[legacyKey];
+    return Array.isArray(records) ? records.slice(0, 20) : [];
   } catch { return []; }
 }
 

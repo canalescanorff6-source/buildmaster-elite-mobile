@@ -1,4 +1,7 @@
 import type { AnalysisResult, PositionCode, TacticalFormation, TacticalStyle, TeamMapPhaseScores } from './analyzer';
+import { playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { POSITION_PT, TACTICAL_STYLE_NAME } from './analyzerDomain';
 
 export type EliteTeamSlot = {
   id: string;
@@ -11,6 +14,7 @@ export type EliteTeamSlot = {
 export type EliteLineupPick = {
   slot: EliteTeamSlot;
   playerName: string | null;
+  playerKey: string | null;
   position: string | null;
   functionLabel: string | null;
   score: number;
@@ -37,20 +41,6 @@ export type EliteTeamReport = {
 };
 
 const AUTO_FORMATION: TacticalFormation = '4-2-2-2';
-
-const positionPt: Record<PositionCode, string> = {
-  CF: 'CA', SS: 'SA', LWF: 'PE', RWF: 'PD', LMF: 'ME', RMF: 'MD', AMF: 'MAT', CMF: 'MLG', DMF: 'VOL', CB: 'ZAG', LB: 'LE', RB: 'LD', GK: 'GOL'
-};
-
-const styleName: Record<TacticalStyle, string> = {
-  AUTO: 'Automático inteligente',
-  POSSE_DE_BOLA: 'Posse de bola',
-  CONTRA_ATAQUE: 'Contra-ataque normal',
-  CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
-  POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo',
-  SOBREPOSICAO: 'Sobreposição'
-};
 
 const FORMATION_SLOTS: Record<Exclude<TacticalFormation, 'AUTO'>, EliteTeamSlot[]> = {
   '4-2-2-2': [
@@ -127,13 +117,21 @@ function avg(values: number[]) {
   return usable.reduce((sum, value) => sum + value, 0) / usable.length;
 }
 
+function usagePosition(result: AnalysisResult) {
+  return analysisUsagePositionR138(result);
+}
+
+function usagePositionLabel(result: AnalysisResult) {
+  return POSITION_PT[usagePosition(result)];
+}
+
 function textOf(result: AnalysisResult) {
-  return `${result.bestPosition.label} ${result.buildName} ${result.teamMap?.functionLabel ?? ''} ${result.parsed.playstyle ?? ''}`.toLowerCase();
+  return `${usagePositionLabel(result)} ${result.buildName} ${result.teamMap?.functionLabel ?? ''} ${result.parsed.playstyle ?? ''}`.toLowerCase();
 }
 
 function slotScore(result: AnalysisResult, target: EliteTeamSlot, alreadyPicked: Set<string>) {
-  if (alreadyPicked.has(result.parsed.internalId)) return -999;
-  const positionMatch = target.accepted.includes(result.bestPosition.code) ? 38 : target.accepted.includes(result.parsed.mainPosition) ? 22 : 0;
+  if (alreadyPicked.has(playerIdentityFingerprintR126(result.parsed))) return -999;
+  const positionMatch = target.accepted.includes(usagePosition(result)) ? 38 : target.accepted.includes(result.parsed.mainPosition) ? 22 : 0;
   const phaseScore = Number(result.teamMap?.sectorScores?.[target.phase] ?? 55) * 0.38;
   const roleText = textOf(result);
   const desiredScore = target.desired.reduce((score, key) => score + (roleText.includes(key.toLowerCase()) ? 10 : 0), 0);
@@ -151,7 +149,7 @@ function formationScore(results: AnalysisResult[], formation: Exclude<TacticalFo
       .map((result) => ({ result, score: slotScore(result, target, picked) }))
       .sort((left, right) => right.score - left.score)[0];
     if (best && best.score > 0) {
-      picked.add(best.result.parsed.internalId);
+      picked.add(playerIdentityFingerprintR126(best.result.parsed));
       score += best.score;
     }
   }
@@ -197,19 +195,21 @@ function buildLineup(results: AnalysisResult[], formation: Exclude<TacticalForma
       return {
         slot: target,
         playerName: null,
+        playerKey: null,
         position: null,
         functionLabel: null,
         score: 0,
         reason: `faltou jogador salvo para ${target.label}`,
-        warning: `salve um jogador ${target.accepted.map((code) => positionPt[code]).join('/')} para fechar essa função`
+        warning: `salve um jogador ${target.accepted.map((code) => POSITION_PT[code]).join('/')} para fechar essa função`
       };
     }
-    picked.add(best.result.parsed.internalId);
-    const accepted = target.accepted.includes(best.result.bestPosition.code);
+    picked.add(playerIdentityFingerprintR126(best.result.parsed));
+    const accepted = target.accepted.includes(usagePosition(best.result));
     return {
       slot: target,
       playerName: best.result.parsed.playerName,
-      position: best.result.bestPosition.label,
+      playerKey: playerIdentityFingerprintR126(best.result.parsed),
+      position: usagePositionLabel(best.result),
       functionLabel: best.result.teamMap?.functionLabel ?? best.result.buildName,
       score: best.score,
       reason: accepted ? `encaixe natural para ${target.label}` : `encaixe alternativo; confira se a posição é permitida no jogo`,
@@ -228,18 +228,26 @@ export function buildEliteTeamReport(results: AnalysisResult[], formation: Tacti
   const concreteFormation = (bestFormation === 'AUTO' ? AUTO_FORMATION : bestFormation) as Exclude<TacticalFormation, 'AUTO'>;
   const bestStyle = chooseBestStyle(results, teamStyle);
   const lineup = buildLineup(results, concreteFormation);
-  const usedNames = new Set(lineup.map((pick) => pick.playerName).filter(Boolean));
-  const bench = results
-    .filter((result) => !usedNames.has(result.parsed.playerName))
-    .map((result) => ({
+  const starterPlayerKeys = new Set(lineup.flatMap((pick) => pick.playerKey ? [pick.playerKey] : []));
+  const benchByPlayer = new Map<string, { playerName: string; position: string; functionLabel: string; score: number; use: string }>();
+  for (const result of results) {
+    const playerKey = playerIdentityFingerprintR126(result.parsed);
+    if (starterPlayerKeys.has(playerKey)) continue;
+    const phases = result.teamMap?.sectorScores;
+    const functionalScore = phases
+      ? avg([phases.marcacao, phases.cobertura, phases.saidaDeBola, phases.passe, phases.criacao, phases.aceleracao, phases.finalizacao, phases.jogoAereo, phases.fisico])
+      : Number(result.bestPosition.score ?? 60);
+    const candidate = {
       playerName: result.parsed.playerName,
-      position: result.bestPosition.label,
+      position: usagePositionLabel(result),
       functionLabel: result.teamMap?.functionLabel ?? result.buildName,
-      score: clamp(Number(result.pri?.GER ?? 70)),
+      score: clamp(functionalScore * .82 + Number(result.bestPosition.score ?? 60) * .18),
       use: result.teamMap?.matchPlan?.[0] ?? 'usar como alternativa quando precisar mudar o ritmo da partida'
-    }))
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 6);
+    };
+    const previous = benchByPlayer.get(playerKey);
+    if (!previous || candidate.score > previous.score) benchByPlayer.set(playerKey, candidate);
+  }
+  const bench = [...benchByPlayer.values()].sort((left, right) => right.score - left.score).slice(0, 6);
 
   const phaseAverages = results.map((result) => result.teamMap?.sectorScores).filter(Boolean) as TeamMapPhaseScores[];
   const marcacao = avg(phaseAverages.map((score) => score.marcacao));
@@ -252,13 +260,13 @@ export function buildEliteTeamReport(results: AnalysisResult[], formation: Tacti
   const lineupScore = avg(lineup.map((pick) => pick.score));
 
   const roleCoverage = [
-    coverage('Goleiro salvo', countWhere(results, (r) => r.bestPosition.code === 'GK'), 'necessário para mapa completo e fichas de GOL'),
-    coverage('Zagueiros/cobertura', countWhere(results, (r) => ['CB', 'LB', 'RB'].includes(r.bestPosition.code)), 'mínimo de 3 defensores para medir proteção'),
-    coverage('VOL de proteção', countWhere(results, (r) => r.bestPosition.code === 'DMF' || /primeiro volante|destruidor|proteção|marcador/i.test(textOf(r))), 'segura contra-ataque e cobre laterais'),
+    coverage('Goleiro salvo', countWhere(results, (r) => usagePosition(r) === 'GK'), 'necessário para mapa completo e fichas de GOL'),
+    coverage('Zagueiros/cobertura', countWhere(results, (r) => ['CB', 'LB', 'RB'].includes(usagePosition(r))), 'mínimo de 3 defensores para medir proteção'),
+    coverage('VOL de proteção', countWhere(results, (r) => usagePosition(r) === 'DMF' || /primeiro volante|destruidor|proteção|marcador/i.test(textOf(r))), 'segura contra-ataque e cobre laterais'),
     coverage('Construtor/orquestrador', countWhere(results, (r) => /orquestrador|criativo|armador|clássico|passe|saída/i.test(textOf(r))), 'melhora saída de bola e passe'),
-    coverage('Criador final', countWhere(results, (r) => ['AMF', 'SS', 'CMF'].includes(r.bestPosition.code) && Number(r.teamMap?.sectorScores?.criacao ?? 0) >= 74), 'alimenta CA e pontas'),
-    coverage('Finalizador claro', countWhere(results, (r) => ['CF', 'SS', 'LWF', 'RWF'].includes(r.bestPosition.code) && Number(r.teamMap?.sectorScores?.finalizacao ?? 0) >= 76), 'transforma criação em gol'),
-    coverage('Amplitude/lados', countWhere(results, (r) => ['LWF', 'RWF', 'LMF', 'RMF', 'LB', 'RB'].includes(r.bestPosition.code)), 'abre defesa, cruza e estica campo'),
+    coverage('Criador final', countWhere(results, (r) => ['AMF', 'SS', 'CMF'].includes(usagePosition(r)) && Number(r.teamMap?.sectorScores?.criacao ?? 0) >= 74), 'alimenta CA e pontas'),
+    coverage('Finalizador claro', countWhere(results, (r) => ['CF', 'SS', 'LWF', 'RWF'].includes(usagePosition(r)) && Number(r.teamMap?.sectorScores?.finalizacao ?? 0) >= 76), 'transforma criação em gol'),
+    coverage('Amplitude/lados', countWhere(results, (r) => ['LWF', 'RWF', 'LMF', 'RMF', 'LB', 'RB'].includes(usagePosition(r))), 'abre defesa, cruza e estica campo'),
     coverage('Jogo aéreo/físico', countWhere(results, (r) => Number(r.teamMap?.sectorScores?.jogoAereo ?? 0) >= 76 || Number(r.teamMap?.sectorScores?.fisico ?? 0) >= 80), 'importante para bolas paradas e passe longo')
   ];
 
@@ -281,7 +289,7 @@ export function buildEliteTeamReport(results: AnalysisResult[], formation: Tacti
   if (criacao < 72) tacticalAlerts.push('Criação baixa: falta Armador criativo, Clássico 10, Orquestrador ou SA de apoio.');
   if (finalizacao < 72) tacticalAlerts.push('Finalização baixa: falta CA artilheiro/homem de área com habilidades de chute.');
   if (jogoAereo < 68) tacticalAlerts.push('Jogo aéreo vulnerável: use ZAG/CA com Superioridade aérea, Cabeçada ou ímpeto Bloqueio Aéreo.');
-  if (bestStyle === 'POR_FORA' && countWhere(results, (r) => ['LWF', 'RWF', 'LMF', 'RMF', 'LB', 'RB'].includes(r.bestPosition.code)) < 4) tacticalAlerts.push('Por fora exige laterais, alas ou pontas suficientes; salve mais jogadores de lado.');
+  if (bestStyle === 'POR_FORA' && countWhere(results, (r) => ['LWF', 'RWF', 'LMF', 'RMF', 'LB', 'RB'].includes(usagePosition(r))) < 4) tacticalAlerts.push('Por fora exige laterais, alas ou pontas suficientes; salve mais jogadores de lado.');
   if (bestStyle === 'PASSE_LONGO' && jogoAereo < 74) tacticalAlerts.push('Passe longo precisa de alvo físico e segunda bola; hoje o time ainda não sustenta bem essa proposta.');
 
   const upgradePriorities = [
@@ -297,7 +305,7 @@ export function buildEliteTeamReport(results: AnalysisResult[], formation: Tacti
     bestFormation,
     bestFormationReason: formation === 'AUTO' ? `o app escolheu ${bestFormation} pelo melhor encaixe dos jogadores salvos` : `você escolheu ${bestFormation}; o app mapeou os melhores encaixes dentro dela`,
     bestStyle,
-    bestStyleReason: teamStyle === 'AUTO' ? `o estilo mais compatível pelo elenco é ${styleName[bestStyle]}` : `análise ajustada para ${styleName[bestStyle]}`,
+    bestStyleReason: teamStyle === 'AUTO' ? `o estilo mais compatível pelo elenco é ${TACTICAL_STYLE_NAME[bestStyle]}` : `análise ajustada para ${TACTICAL_STYLE_NAME[bestStyle]}`,
     lineup,
     bench,
     roleCoverage,

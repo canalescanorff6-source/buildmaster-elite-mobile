@@ -1,4 +1,6 @@
 import type { AnalysisResult } from '@/lib/analyzer';
+import { POSITION_PT } from '@/lib/analyzerDomain';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 const trainingLabels: Record<string, string> = {
   shooting: 'Finalização',
@@ -109,7 +111,7 @@ export function buildProfessionalReportHtml(result: AnalysisResult, notes = '', 
     <p class="subtitle">${escapeHtml(result.teamMap?.functionLabel ?? result.buildName)} • ${escapeHtml(result.parsed.mainPositionPt)} • ${escapeHtml(result.parsed.playstyle ?? 'Estilo não informado')}</p>
   </header>
   <div class="metrics">
-    <div class="metric"><span>Posição escolhida</span><b>${escapeHtml(result.bestPosition.label)}</b></div>
+    <div class="metric"><span>Posição escolhida</span><b>${escapeHtml(POSITION_PT[analysisUsagePositionR138(result)])}</b></div>
     <div class="metric"><span>Pontos</span><b>${escapeHtml(result.trainingPointsUsed)}/${escapeHtml(result.trainingPointsTotal)}</b></div>
     <div class="metric"><span>PRI em campo</span><b>${escapeHtml(result.pri.GER)}</b></div>
     <div class="metric"><span>Confiança</span><b>${escapeHtml(result.parsed.confidence)}%</b></div>
@@ -152,7 +154,7 @@ export function buildProfessionalCardSvg(result: AnalysisResult) {
     <rect x="46" y="44" width="988" height="1262" rx="44" fill="rgba(15,23,42,.72)" stroke="#2c3d55" stroke-width="2" filter="url(#shadow)"/>
     <text x="70" y="106" fill="#f7c76b" font-size="24" font-weight="900" letter-spacing="4">BUILDMASTER ELITE TÁTICO</text>
     <text x="70" y="178" fill="#ffffff" font-size="62" font-weight="900">${escapeHtml(result.parsed.playerName)}</text>
-    <text x="70" y="226" fill="#9fb1c8" font-size="28" font-weight="700">${escapeHtml(result.teamMap?.functionLabel ?? result.buildName)} • ${escapeHtml(result.bestPosition.label)}</text>
+    <text x="70" y="226" fill="#9fb1c8" font-size="28" font-weight="700">${escapeHtml(result.teamMap?.functionLabel ?? result.buildName)} • ${escapeHtml(POSITION_PT[analysisUsagePositionR138(result)])}</text>
     <rect x="70" y="270" width="940" height="148" rx="28" fill="rgba(255,255,255,.06)" stroke="#26374f"/>
     <text x="106" y="328" fill="#9fb1c8" font-size="22" font-weight="800">PONTOS</text><text x="106" y="376" fill="#fff" font-size="42" font-weight="900">${escapeHtml(result.trainingPointsUsed)}/${escapeHtml(result.trainingPointsTotal)}</text>
     <text x="372" y="328" fill="#9fb1c8" font-size="22" font-weight="800">PRI</text><text x="372" y="376" fill="#fff" font-size="42" font-weight="900">${escapeHtml(result.pri.GER)}</text>
@@ -178,7 +180,7 @@ export function formatReportMarkdown(result: AnalysisResult, notes = '') {
     '',
     `**Função real:** ${result.teamMap?.functionLabel ?? result.buildName}`,
     `**Posição da carta:** ${result.parsed.mainPositionPt}`,
-    `**Posição escolhida:** ${result.bestPosition.label}`,
+    `**Posição escolhida:** ${POSITION_PT[analysisUsagePositionR138(result)]}`,
     `**Estilo:** ${result.parsed.playstyle ?? 'Não informado'}`,
     `**Pontos:** ${result.trainingPointsUsed}/${result.trainingPointsTotal}`,
     '',

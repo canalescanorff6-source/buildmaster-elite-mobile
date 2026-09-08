@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { analyzeCard } from '../src/lib/analyzer';
-import { applyCanonicalCardV3890 } from '../src/lib/canonicalCardEngineV3890';
+import { applyCanonicalCardV3890 } from '../legacy-src/lib/canonicalCardEngineV3890';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
 
 const CARD = `[AJUSTES MANUAIS]
@@ -78,14 +78,14 @@ assert.equal(asMlg.canonicalCardV3890?.resultSignature, asSa.canonicalCardV3890?
 assert.equal(asMlg.buildName, asMat.buildName);
 assert.equal(asMlg.buildName, asSa.buildName);
 
-const engine = fs.readFileSync('src/lib/canonicalCardEngineV3890.ts', 'utf8');
+const engine = fs.readFileSync('legacy-src/lib/canonicalCardEngineV3890.ts', 'utf8');
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
-const panel = fs.readFileSync('src/components/CanonicalCardV3890Panel.tsx', 'utf8');
+const panel = fs.readFileSync('legacy-src/components/CanonicalCardV3890Panel.tsx', 'utf8');
 assert.match(engine, /UMA_CARTA_UMA_RECEITA_DEFINITIVA_INDEPENDENTE_DA_POSICAO/);
 assert.match(engine, /positionAffectsOutput: false/);
 assert.match(engine, /buildVariants: \[variant\]/);
 assert.doesNotMatch(engine, /Math\.random|Date\.now/);
-assert.match(pipeline, /applyCanonicalCardV3890/);
+assert.match(pipeline, /applyLegacyPerformanceDiagnosticsBridgeR184/);
 assert.match(panel, /Uma carta, uma ficha, as mesmas habilidades e o mesmo Ímpeto/);
 
 console.log(`v38.90 aprovada: ${asMlg.canonicalCardV3890?.resultSignature}; MLG, MAT e SA retornaram ficha, habilidades e Ímpetos idênticos.`);

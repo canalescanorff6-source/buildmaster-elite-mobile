@@ -22,7 +22,7 @@
   },
   "files": [
     "../types-v3170/capacitor-stub.d.ts",
-    "../../src/lib/supremePerformanceEngineV3870.ts",
+    "../../legacy-src/lib/supremePerformanceEngineV3870.ts",
     "../../src/lib/cardIntelligencePipeline.ts"
   ]
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { analyzeCard } from '../src/lib/analyzer';
-import { applyCanonicalCardV3890 } from '../src/lib/canonicalCardEngineV3890';
+import { applyCanonicalCardV3890 } from '../legacy-src/lib/canonicalCardEngineV3890';
 import { applyGlobalProBenchmarkV3900 } from '../src/lib/globalProBenchmarkV3900';
 import {
   applyEliteDominanceV3910,

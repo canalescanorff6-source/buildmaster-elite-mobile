@@ -48,6 +48,7 @@ import {
   createFormationTrial,
   createMappingCardFingerprint,
   mergeMappingPlayer,
+  refreshMappingPlayerIdentityR127,
   suggestedTrainingPositions,
   trialProgress,
   type FormationTrial,
@@ -63,6 +64,8 @@ import {
   saveSquadMappingState
 } from './squadMappingStorage';
 import { collectSquadMappingImages, loadSquadMappingImage, removeSquadMappingImage, restoreSquadMappingImages, storeSquadMappingImage } from './squadMappingImageStorage';
+import { playerIdentityKeyFromNameR126 } from '@/lib/cardIdentityFingerprintR126';
+import { findBestHistoryLinkR127 } from './squadMappingHistoryLinkR127';
 
 const POSITIONS: PositionCode[] = ['GK', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'LMF', 'RMF', 'AMF', 'LWF', 'RWF', 'SS', 'CF'];
 type MappingTab = 'visao' | 'jogadores' | 'formacoes' | 'escalacao' | 'testes' | 'backup';
@@ -262,7 +265,13 @@ export function SquadMappingCenter({ history, onOpenFicha }: Props) {
   }
 
   function updatePlayer(playerId: string, patch: Partial<SquadMappingPlayer>) {
-    setState((current) => ({ ...current, players: current.players.map((player) => player.id === playerId ? { ...player, ...patch, updatedAt: new Date().toISOString() } : player), updatedAt: new Date().toISOString() }));
+    setState((current) => ({
+      ...current,
+      players: current.players.map((player) => player.id === playerId
+        ? refreshMappingPlayerIdentityR127({ ...player, ...patch, updatedAt: new Date().toISOString() })
+        : player),
+      updatedAt: new Date().toISOString()
+    }));
   }
 
   async function readMappingImage(file: File, currentPlayers: SquadMappingPlayer[]): Promise<SquadMappingPlayer> {
@@ -310,15 +319,25 @@ export function SquadMappingCenter({ history, onOpenFicha }: Props) {
     const playstyle = detailed.identity.playstyle?.value?.trim() || '';
     const confidences = [detailed.identity.playerName?.confidence, detailed.identity.mainPosition?.confidence, detailed.identity.playstyle?.confidence, ...detailed.positionRatings.map((item) => item.confidence)].filter((value): value is number => typeof value === 'number');
     const confidence = confidences.length ? Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length) : fallbackConfidence;
-    const existingHistory = history.find((item) => item.result.parsed.playerName.trim().toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
-    const parsed = existingHistory?.result.parsed;
-    const attributes = { ...(parsed?.attributes ?? {}), ...detailedAttributes(detailed.attributes) };
+    const observedAttributes = detailedAttributes(detailed.attributes);
+    const observedSkills = detailedNames(detailed.skills);
+    const historyLink = findBestHistoryLinkR127({
+      name,
+      mainPosition,
+      playstyle,
+      attributes: observedAttributes,
+      skills: observedSkills,
+      height: detailed.identity.height?.numericValue ?? null,
+      level: detailed.identity.level?.numericValue ?? null
+    }, history);
+    const parsed = historyLink?.result.parsed;
+    const attributes = { ...(parsed?.attributes ?? {}), ...observedAttributes };
     const mergedRatings = { ...(parsed?.positionRatings ?? {}), ...positionRatings };
     const skills = Array.from(new Set([
       ...(parsed?.nativeSkills ?? []),
       ...(parsed?.additionalSkills ?? []),
       ...(parsed?.specialSkills ?? []),
-      ...detailedNames(detailed.skills)
+      ...observedSkills
     ]));
     const impetos = Array.from(new Set([...(parsed?.impetos ?? []).map((item) => item.name), ...detailedNames(detailed.impetos)]));
     const crop = geometry.template === 'detailed-profile' ? await createEfhubCardPreview(safeFile, geometry.cardArtZone).catch(() => null) : await createSmartCardPreview(safeFile, geometry.cardArtZone).catch(() => null);
@@ -332,7 +351,9 @@ export function SquadMappingCenter({ history, onOpenFicha }: Props) {
       id: `mapped-${Date.now()}-${hash.slice(0, 10)}`,
       name,
       cardLabel: overall ? `${mainPosition} • carta ${overall} • nível ${detailed.identity.level?.numericValue ?? parsed?.level ?? '?'}` : `${mainPosition} • ${file.name.replace(/\.[^.]+$/, '')}`,
-      cardFingerprint: '',
+      cardFingerprint: historyLink?.cardFingerprint ?? '',
+      playerFingerprint: historyLink?.playerFingerprint ?? playerIdentityKeyFromNameR126(name, hash),
+      identityStatus: historyLink ? 'canonical' : 'provisional',
       mainPosition,
       positions: Array.from(new Set([mainPosition, ...(parsed?.positions ?? []), ...positions])),
       trainedPositions: [],
@@ -356,15 +377,15 @@ export function SquadMappingCenter({ history, onOpenFicha }: Props) {
       level: detailed.identity.level?.numericValue ?? parsed?.level ?? null,
       physicalModel: { ...numericRecord(parsed?.physicalProfile), ...detailedNumberRecord(detailed.physicalModel) },
       profileCoverage: Math.max(detailed.coverage.score, parsed ? Math.min(100, 55 + parsed.evidence.attributeCount * 2) : 0),
-      linkedHistoryId: existingHistory?.id ?? null,
+      linkedHistoryId: historyLink?.historyId ?? null,
       locked: false,
       excluded: false,
       note: status === 'revisar' ? 'Confira nome, posição, estilo e atributos antes de usar na escalação definitiva.' : '',
       createdAt: now,
       updatedAt: now
     };
-    draft.cardFingerprint = createMappingCardFingerprint(draft);
-    return draft;
+    if (!historyLink) draft.cardFingerprint = createMappingCardFingerprint(draft);
+    return refreshMappingPlayerIdentityR127(draft);
   }
 
   async function importImages(files: FileList | File[]) {
@@ -395,7 +416,8 @@ export function SquadMappingCenter({ history, onOpenFicha }: Props) {
 
   function addManualPlayer() {
     const now = new Date().toISOString();
-    const player: SquadMappingPlayer = { id: `mapped-manual-${Date.now()}`, name: 'Novo jogador', cardLabel: 'Cadastro manual do mapeamento', cardFingerprint: `manual-${Date.now()}`, mainPosition: 'CF', positions: ['CF'], trainedPositions: [], playstyle: '', overall: null, confidence: 100, status: 'revisar', portrait: null, sourceFileName: 'manual', sourceHash: `manual-${Date.now()}`, imageRef: null, imageBytes: 0, imageStored: false, attributes: {}, positionRatings: {}, skills: [], impetos: [], height: null, weight: null, age: null, level: null, physicalModel: {}, profileCoverage: 0, linkedHistoryId: null, locked: false, excluded: false, note: '', createdAt: now, updatedAt: now };
+    const seed = `manual-${Date.now()}`;
+    const player: SquadMappingPlayer = refreshMappingPlayerIdentityR127({ id: `mapped-${seed}`, name: 'Novo jogador', cardLabel: 'Cadastro manual do mapeamento', cardFingerprint: seed, playerFingerprint: playerIdentityKeyFromNameR126('Novo jogador', seed), identityStatus: 'provisional', mainPosition: 'CF', positions: ['CF'], trainedPositions: [], playstyle: '', overall: null, confidence: 100, status: 'revisar', portrait: null, sourceFileName: 'manual', sourceHash: seed, imageRef: null, imageBytes: 0, imageStored: false, attributes: {}, positionRatings: {}, skills: [], impetos: [], height: null, weight: null, age: null, level: null, physicalModel: {}, profileCoverage: 0, linkedHistoryId: null, locked: false, excluded: false, note: '', createdAt: now, updatedAt: now });
     updateState({ players: [player, ...state.players] });
     setEditingId(player.id);
     setTab('jogadores');

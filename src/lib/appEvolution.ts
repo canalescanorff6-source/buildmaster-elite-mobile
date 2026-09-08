@@ -1,9 +1,16 @@
 import type { AnalysisResult, PositionCode, TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import { createStableId } from './stableId';
+import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { EFOOTBALL_V600_META_VERSION, EFOOTBALL_V600_SEASON } from './efootballV600Meta';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { POSITION_PT } from './analyzerDomain';
 
 export const ONBOARDING_STORAGE_KEY = 'buildmaster_onboarding_v2680';
 export const CARD_REGISTRY_STORAGE_KEY = 'buildmaster_verified_card_registry_v2680';
 export const MATCH_VALIDATION_STORAGE_KEY = 'buildmaster_match_validation_v2680';
+export const CREATOR_BUILD_RESEARCH_EVENT = 'buildmaster:creator-build-research-updated';
+export const COMPETITIVE_FUSION_EVENT = 'buildmaster:competitive-fusion-updated';
+export const GLOBAL_PRO_BUILD_EVENT = 'buildmaster:global-pro-builds-updated';
 
 export type ExperienceMode = 'simple' | 'advanced';
 
@@ -113,6 +120,9 @@ export type MatchValidationRecord = {
   experimentArm?: 'A' | 'B' | 'NONE';
   controlStyle?: 'quick-pass' | 'carry-dribble' | 'mixed' | 'manual-defense';
   inputDelayRating?: 1 | 2 | 3 | 4 | 5;
+  gameSeason?: string;
+  gameVersion?: string;
+  gameplayEpoch?: 'V6' | 'LEGACY' | string;
 };
 
 export type MatchValidationSummary = {
@@ -156,26 +166,18 @@ function stableHash(input: string) {
 }
 
 function roundedAttributes(result: AnalysisResult) {
-  return Object.entries(result.parsed.attributes)
-    .filter(([, value]) => Number.isFinite(value))
-    .sort(([a], [b]) => a.localeCompare(b))
+  return Object.entries(result.parsed.attributes ?? {})
+    .filter(([, value]) => Number.isFinite(Number(value)))
+    .sort(([left], [right]) => left.localeCompare(right, 'en'))
     .map(([key, value]) => `${key}:${Math.round(Number(value))}`)
     .join('|');
 }
 
+
 export function cardFingerprint(result: AnalysisResult) {
-  const payload = [
-    normalize(result.parsed.playerName),
-    result.parsed.mainPosition,
-    normalize(result.parsed.playstyle),
-    result.parsed.level ?? 0,
-    result.trainingPointsTotal,
-    roundedAttributes(result),
-    [...result.parsed.nativeSkills].map(normalize).sort().join(','),
-    [...(result.parsed.additionalSkills ?? [])].map(normalize).sort().join(','),
-    [...result.parsed.specialSkills].map(normalize).sort().join(',')
-  ].join('::');
-  return `card-${stableHash(payload)}`;
+  // R126: mesma identidade usada por Clean Slate, Cofre, partidas, memória longitudinal e elenco.
+  // GER, ficha calculada, posição de uso e técnico não participam desta assinatura.
+  return cardIdentityFingerprintR126(result.parsed);
 }
 
 export function buildSignature(result: AnalysisResult) {
@@ -183,7 +185,8 @@ export function buildSignature(result: AnalysisResult) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}:${Number(value)}`)
     .join('|');
-  return `build-${stableHash(`${cardFingerprint(result)}::${result.bestPosition.code}::${normalize(result.buildName)}::${training}`)}`;
+  const usagePosition = analysisUsagePositionR138(result);
+  return `build-${stableHash(`${cardFingerprint(result)}::${usagePosition}::${normalize(result.buildName)}::${training}`)}`;
 }
 
 export function createCardRegistryEntry(result: AnalysisResult, source: CardRegistrySource, note = '', metadata: { sourceLabel?: string; sourceUrl?: string; cardVersion?: string; observedAt?: string } = {}): CardRegistryEntry {
@@ -195,7 +198,7 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
     fingerprint,
     playerName: result.parsed.playerName,
     mainPosition: result.parsed.mainPositionPt,
-    targetPosition: result.bestPosition.label,
+    targetPosition: POSITION_PT[analysisUsagePositionR138(result)],
     playstyle: result.parsed.playstyle || 'Não informado',
     level: Number.isFinite(result.parsed.level) ? Number(result.parsed.level) : null,
     points: result.trainingPointsTotal,
@@ -243,7 +246,8 @@ function normalizeWeights(items: Array<Omit<DecisionWeight, 'weight'> & { raw: n
 }
 
 export function buildDecisionWeights(result: AnalysisResult): DecisionWeight[] {
-  const selectedIsNative = result.parsed.positions.includes(result.bestPosition.code) || result.parsed.mainPosition === result.bestPosition.code;
+  const usagePosition = analysisUsagePositionR138(result);
+  const selectedIsNative = result.parsed.positions.includes(usagePosition) || result.parsed.mainPosition === usagePosition;
   const styleKnown = Boolean(result.parsed.playstyle);
   const skillEvidence = (result.specialSkillsAnalysis?.ownedOfficial?.length ?? 0) + (result.specialSkillsAnalysis?.missingRecommended?.length ?? 0) || result.parsed.nativeSkills.length;
   const contextKnown = result.tacticalProfile.formation !== 'AUTO' || result.tacticalProfile.style !== 'AUTO' || Boolean(result.tacticalProfile.managerId);
@@ -284,13 +288,16 @@ export function createMatchValidationRecord(result: AnalysisResult, input: Omit<
     id: createStableId('match'),
     cardFingerprint: cardFingerprint(result),
     playerName: result.parsed.playerName,
-    targetPosition: result.bestPosition.code,
+    targetPosition: analysisUsagePositionR138(result),
     formation: result.tacticalProfile.formation,
     teamStyle: result.tacticalProfile.style,
     buildName: result.buildName,
     buildSignature: buildSignature(result),
     playedAt,
-    ...input
+    ...input,
+    gameSeason: input.gameSeason?.trim() || EFOOTBALL_V600_SEASON,
+    gameVersion: input.gameVersion?.trim() || EFOOTBALL_V600_META_VERSION,
+    gameplayEpoch: input.gameplayEpoch || 'V6'
   };
 }
 

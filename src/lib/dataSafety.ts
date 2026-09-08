@@ -2,6 +2,7 @@ export const CURRENT_DATA_SCHEMA = 3100;
 export const APP_DATA_VERSION = '40.80.0';
 
 export type BackupSection = 'history' | 'settings' | 'calibration' | 'plans' | 'folders' | 'rules' | 'session' | 'evolution' | 'tacticalStudio' | 'customFormations' | 'imageGallery' | 'performance' | 'community' | 'commercial' | 'publication';
+export const BACKUP_SECTION_KEYS: readonly BackupSection[] = ['history','settings','calibration','plans','folders','rules','session','evolution','tacticalStudio','customFormations','imageGallery','performance','community','commercial','publication'];
 
 export type BackupEnvelope = {
   app: 'BuildMaster Elite Tático';
@@ -26,7 +27,7 @@ export type IntegrityReport = {
   totals: { sections: number; records: number; malformed: number };
 };
 
-const BACKUP_SECTIONS = new Set<BackupSection>(['history', 'settings', 'calibration', 'plans', 'folders', 'rules', 'session', 'evolution', 'tacticalStudio', 'customFormations', 'imageGallery', 'performance', 'community', 'commercial', 'publication']);
+const BACKUP_SECTIONS = new Set<BackupSection>(BACKUP_SECTION_KEYS);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 // Os limites precisam comportar o Cofre real (até 200 fichas detalhadas) sem
 // confundir volume legítimo com corrupção. O limite de arquivo continua sendo

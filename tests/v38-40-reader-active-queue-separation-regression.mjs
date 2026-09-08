@@ -5,6 +5,7 @@ const background = fs.readFileSync('src/lib/backgroundOcrV3840.ts', 'utf8');
 const queue = fs.readFileSync('src/modules/card-reader/ocrQueue.ts', 'utf8');
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const ui = fs.readFileSync('src/components/ReaderRecoveryAndProgressV3840.tsx', 'utf8');
+const interactionR164 = fs.readFileSync('src/modules/card-reader/readerInteractionRuntimeR164.ts', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 
 assert.match(background, /ACTIVE_JOB_STORE = 'backup-snapshots'/, 'Leitura ativa deve ficar fora da fila manual.');
@@ -15,7 +16,7 @@ assert.match(queue, /job\.id\.startsWith\('ocr-job-'\)/, 'Checkpoint de backgrou
 assert.match(app, /Leitura interrompida encontrada/, 'A retomada deve ser explícita.');
 assert.match(app, /resumeInterruptedReading/, 'Deve existir ação real de retomar.');
 assert.match(app, /discardInterruptedReading/, 'Deve existir ação real de descartar.');
-assert.match(app, /clearBackgroundOcrCheckpoint\(\)/, 'Cancelar/descartar deve limpar checkpoint.');
+assert.match(interactionR164, /clearBackgroundOcrCheckpoint\(\)/, 'Cancelar/descartar deve limpar checkpoint na fronteira R164.');
 assert.doesNotMatch(app, /window\.setTimeout\(\(\) => \{ if \(active\) void analyzeSelectedImage\(restored, true\); \}, 80\)/, 'OCR não deve reiniciar sozinho na abertura.');
 assert.match(app, /ReaderLiveProgressCardV3840/, 'Leitura ativa deve renderizar o componente de progresso.');
 assert.match(ui, /reader-live-progress-card/, 'Leitura ativa deve ter tela de progresso visível.');

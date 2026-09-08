@@ -44,11 +44,14 @@ function collectExplicitSkillLines(text: string) {
   const native: string[] = [];
   const additional: string[] = [];
   const special: string[] = [];
+  const provisional: string[] = [];
   let sawExplicit = false;
 
-  const patterns: Array<{ kind: 'native' | 'additional' | 'special'; pattern: RegExp }> = [
+  const patterns: Array<{ kind: 'native' | 'additional' | 'special' | 'provisional'; pattern: RegExp }> = [
     { kind: 'additional', pattern: /^\s*(?:HABILIDADES?\s+ADICIONAIS?|ADICIONAIS?\s+INSTALADAS?|HABILIDADES?\s+ADICIONADAS?|ADDITIONAL\s+SKILLS?)\s*[:=]\s*(.*)$/i },
-    { kind: 'special', pattern: /^\s*(?:HABILIDADES?\s+ESPECIAIS?(?:\s+PROVIS[OÓ]RIAS?)?|HABILIDADE\s+ESPECIAL|SPECIAL\s+SKILLS?)\s*[:=]\s*(.*)$/i },
+    // R131: candidatos provisórios do OCR são evidência para revisão, nunca posse confirmada.
+    { kind: 'provisional', pattern: /^\s*HABILIDADES?\s+ESPECIAIS?\s+PROVIS[OÓ]RIAS?\s*[:=]\s*(.*)$/i },
+    { kind: 'special', pattern: /^\s*(?:HABILIDADES?\s+ESPECIAIS?|HABILIDADE\s+ESPECIAL|SPECIAL\s+SKILLS?)\s*[:=]\s*(.*)$/i },
     { kind: 'native', pattern: /^\s*HABILIDADES?\s+(?:JÁ POSSUI|JA POSSUI|DO JOGADOR|NATIVAS?|CONFIRMADAS?)\s*[:=]\s*(.*)$/i }
   ];
 
@@ -61,11 +64,12 @@ function collectExplicitSkillLines(text: string) {
       if (entry.kind === 'native') native.push(...parsed);
       if (entry.kind === 'additional') additional.push(...parsed);
       if (entry.kind === 'special') special.push(...parsed);
+      if (entry.kind === 'provisional') provisional.push(...parsed);
       break;
     }
   }
 
-  return { native, additional, special, sawExplicit };
+  return { native, additional, special, provisional, sawExplicit };
 }
 
 function scanVisibleSkills(text: string) {
@@ -113,7 +117,7 @@ export function parseCardSkillInventory(text: string): CardSkillInventory {
     const count = categories.native.length + categories.additional.length + categories.special.length;
     return {
       ...categories,
-      unknown: [],
+      unknown: canonicalizeSkillList(explicit.provisional),
       source: 'explicit',
       confidence: count ? 98 : 58
     };

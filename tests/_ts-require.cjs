@@ -29,4 +29,17 @@ for (const ext of ['.ts', '.tsx']) {
     module._compile(result.outputText, filename);
   };
 }
+
+// R184: motores históricos v38.50-v38.90 ficam fora de src/runtime e são carregados
+// somente quando uma regressão Node executa a cadeia legada completa.
+if (!global.__BUILDMASTER_LEGACY_PERFORMANCE_DIAGNOSTICS_R184__) {
+  let cachedLegacyDiagnosticsR184;
+  global.__BUILDMASTER_LEGACY_PERFORMANCE_DIAGNOSTICS_R184__ = function(input) {
+    if (!cachedLegacyDiagnosticsR184) {
+      cachedLegacyDiagnosticsR184 = require(path.join(root, 'legacy-src', 'lib', 'legacyPerformanceDiagnosticsR184.ts')).applyLegacyPerformanceDiagnosticsR184;
+    }
+    return cachedLegacyDiagnosticsR184(input);
+  };
+}
+
 module.exports = { root };

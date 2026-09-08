@@ -108,14 +108,16 @@ export async function learnConfirmedOcrBatch(input: {
   playerName?: string | null;
   skills?: string[];
   manuallyConfirmed?: boolean;
+  playerNameManuallyConfirmed?: boolean;
+  skillsManuallyConfirmed?: boolean;
 }) {
   const saved: LearnedOcrTerm[] = [];
   if (input.playerName) {
-    const name = await learnConfirmedOcrTerm({ category: 'playerName', value: input.playerName, imageHash: input.imageHash, manuallyConfirmed: input.manuallyConfirmed });
+    const name = await learnConfirmedOcrTerm({ category: 'playerName', value: input.playerName, imageHash: input.imageHash, manuallyConfirmed: input.playerNameManuallyConfirmed ?? input.manuallyConfirmed });
     if (name) saved.push(name);
   }
   for (const skill of Array.from(new Set(input.skills ?? []))) {
-    const savedSkill = await learnConfirmedOcrTerm({ category: 'skill', value: skill, imageHash: input.imageHash, manuallyConfirmed: input.manuallyConfirmed });
+    const savedSkill = await learnConfirmedOcrTerm({ category: 'skill', value: skill, imageHash: input.imageHash, manuallyConfirmed: input.skillsManuallyConfirmed ?? input.manuallyConfirmed });
     if (savedSkill) saved.push(savedSkill);
   }
   return saved;

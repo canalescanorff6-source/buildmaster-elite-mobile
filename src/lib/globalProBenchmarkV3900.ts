@@ -7,6 +7,8 @@ import type {
   TrainingKey,
   TrainingPlan
 } from './analyzerDomain';
+import { GLOBAL_PRO_BUILD_EVENT } from './appEvolution';
+export { GLOBAL_PRO_BUILD_EVENT } from './appEvolution';
 import {
   CREATOR_TRAINING_KEYS,
   creatorTrainingCost,
@@ -26,7 +28,6 @@ declare const process: { env: Record<string, string | undefined> };
 
 export const GLOBAL_PRO_V3900_VERSION = '39.00.0' as const;
 export const GLOBAL_PRO_BUILD_CACHE_KEY = 'buildmaster_global_pro_build_cache_v39_00';
-export const GLOBAL_PRO_BUILD_EVENT = 'buildmaster:global-pro-builds-updated';
 
 export type {
   GlobalProBenchmarkV3900Analysis,

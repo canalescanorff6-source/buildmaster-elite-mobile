@@ -121,10 +121,23 @@ try {
     stdio: 'pipe',
   });
 
+  execFileSync(process.execPath, [path.join(root, 'scripts/install-native-vault-storage-plugin.mjs')], {
+    cwd: temp,
+    stdio: 'pipe',
+  });
+
+  execFileSync(process.execPath, [path.join(root, 'scripts/install-background-ocr-plugin.mjs')], {
+    cwd: temp,
+    stdio: 'pipe',
+  });
+
   const generated = [
     'BuildMasterSecurityPlugin.java',
     'BuildMasterMatchRecorderPlugin.java',
     'BuildMasterScreenRecordService.java',
+    'BuildMasterVaultStoragePlugin.java',
+    'BuildMasterBackgroundOcrPlugin.java',
+    'BuildMasterBackgroundOcrService.java',
   ];
   const issues = [];
   for (const fileName of generated) {
@@ -142,9 +155,32 @@ try {
   const service = fs.readFileSync(path.join(javaDir, 'BuildMasterScreenRecordService.java'), 'utf8');
   if (!service.includes('replaceFirst("\\\\.mp4$", "")')) fail('replaceFirst da extensão MP4 não foi escapado corretamente no Java gerado.');
   if (!service.includes('name.matches("match-[0-9]{10,20}\\\\.mp4")')) fail('Filtro de gravações MP4 não foi escapado corretamente no Java gerado.');
+
+  const mainActivity = fs.readFileSync(path.join(javaDir, 'MainActivity.java'), 'utf8');
+  for (const registration of [
+    'BuildMasterSecurityPlugin.class',
+    'BuildMasterMatchRecorderPlugin.class',
+    'BuildMasterVaultStoragePlugin.class',
+    'BuildMasterBackgroundOcrPlugin.class',
+  ]) {
+    if (!mainActivity.includes(`registerPlugin(${registration});`)) fail(`Registro nativo ausente em MainActivity: ${registration}`);
+  }
+
+  const vault = fs.readFileSync(path.join(javaDir, 'BuildMasterVaultStoragePlugin.java'), 'utf8');
+  if (!vault.includes('getContext().getFilesDir()')) fail('Cofre nativo não está usando memória interna privada.');
+
+  const manifest = fs.readFileSync(path.join(manifestDir, 'AndroidManifest.xml'), 'utf8');
+  for (const contract of [
+    'android.permission.FOREGROUND_SERVICE',
+    'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+    'BuildMasterBackgroundOcrService',
+    'android:foregroundServiceType="dataSync"',
+  ]) {
+    if (!manifest.includes(contract)) fail(`Contrato de proteção OCR Android ausente: ${contract}`);
+  }
   if (issues.length) fail(`Java nativo gerado contém escapes ilegais:\n${issues.map((item) => `- ${item}`).join('\n')}`);
 
-  console.log('Java nativo gerado validado: nenhum escape ilegal e regex de segurança/MP4 correta.');
+  console.log('Java nativo gerado validado: segurança, gravação, Cofre privado e proteção OCR em segundo plano aprovados.');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }

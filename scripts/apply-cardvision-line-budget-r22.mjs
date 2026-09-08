@@ -9,6 +9,7 @@ export function applyCardVisionLineBudgetR22(rootDirectory = process.cwd()) {
   if (!existsSync(target)) throw new Error('[r22] CardVisionApp.tsx não encontrado.');
 
   let source = readFileSync(target, 'utf8');
+  const originalSource = source;
   const beforeLines = source.split('\n').length;
 
   if (!source.includes(CARDVISION_LINE_BUDGET_R22)) {
@@ -41,5 +42,5 @@ export function applyCardVisionLineBudgetR22(rootDirectory = process.cwd()) {
   const afterLines = source.split('\n').length;
 
   console.log(`v40.80 r35 aplicada: CardVisionApp ${beforeLines} -> ${afterLines} linhas; lógica preservada.`);
-  return { changed: source !== readFileSync(target, 'utf8'), beforeLines, afterLines, target };
+  return { changed: source !== originalSource, beforeLines, afterLines, target };
 }

@@ -2,13 +2,15 @@
 
 import { Activity, CheckCircle2, ShieldCheck } from 'lucide-react';
 import type { AnalysisResult, TrainingKey } from '@/lib/analyzer';
+import { POSITION_PT } from '@/lib/analyzerDomain';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 const LABELS: Record<TrainingKey, string> = {
   shooting: 'Finalização', passing: 'Passe', dribbling: 'Drible', dexterity: 'Destreza', lowerBodyStrength: 'Força das pernas', aerialStrength: 'Bola aérea', defending: 'Defendendo', gk1: 'Goleiro 1', gk2: 'Goleiro 2', gk3: 'Goleiro 3'
 };
 
 function reasonFor(key: TrainingKey, result: AnalysisResult) {
-  const position = result.bestPosition.label;
+  const position = POSITION_PT[analysisUsagePositionR138(result)];
   const role = result.teamMap?.functionLabel ?? result.buildName;
   const style = result.parsed.playstyle ?? 'estilo não confirmado';
   const reasons: Record<TrainingKey, string> = {

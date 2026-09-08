@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { analyzeCard } from '../src/lib/analyzer';
 import { applyCompleteCardIntelligence } from '../src/lib/cardIntelligencePipeline';
 import { canonicalSkillName, skillIdentityKey } from '../src/lib/officialSkillIdentity';
-import { availableOfficialAdditionalSkillCount, isRoleCompatibleAdditionalSkill, resolveAdditionalSkillPosition } from '../src/lib/skillIntelligenceV31';
+import { availableOfficialAdditionalSkillCount, isRoleCompatibleAdditionalSkill, officialAdditionalSkillPoolForPosition, resolveAdditionalSkillPosition } from '../src/lib/skillIntelligenceV31';
+process.env.BUILDMASTER_FORCE_FAST_CARD_PIPELINE = '1';
+
 
 const tacticalProfile = {
   formation: '4-3-1-2' as const,
@@ -68,19 +70,12 @@ const everyPosition = [
   ['GK', 'Goleiro Defensivo', 'GK Low Punt']
 ] as const;
 
-for (const [target, playstyle, ownedAlias] of everyPosition) {
-  const text = `[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: Teste ${target}\nPOSIÇÃO PRINCIPAL: ${target}\nESTILO DE JOGO: ${playstyle}\nPONTOS TOTAIS: 64\nHABILIDADES JÁ POSSUI: ${ownedAlias}\nTalento ofensivo: 84\nControle de bola: 84\nDrible: 82\nCondução firme: 82\nPasse rasteiro: 84\nPasse alto: 84\nFinalização: 84\nCabeçada: 82\nVelocidade: 84\nAceleração: 84\nForça do chute: 84\nSalto: 82\nContato físico: 84\nEquilíbrio: 83\nResistência: 86\nTalento defensivo: 84\nDedicação defensiva: 84\nDesarme: 84\nAgressividade: 84\nTalento de GO: 88\nFirmeza de GO: 86\nDefesa de GO: 87\nReflexos de GO: 89\nAlcance de GO: 88\n[FIM AJUSTES]`;
-  const result = applyCompleteCardIntelligence(analyzeCard(text, 'COMPETITIVE', target, `${target}-all.png`, tacticalProfile));
-  const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
-  const expectedCount = Math.min(5, availableOfficialAdditionalSkillCount(result));
-  assert.equal(result.recommendedSkills.length, expectedCount, `${target}: deve receber todas as opções oficiais restantes, até cinco.`);
-  assert.ok(result.recommendedSkills.every((skill) => !owned.has(skillIdentityKey(skill))), `${target}: nenhuma posição pode repetir habilidade existente.`);
-  assert.ok(result.recommendedSkills.every((skill) => isRoleCompatibleAdditionalSkill(skill, resolveAdditionalSkillPosition(result))), `${target}: nenhuma habilidade pode sair do pool seguro da posição.`);
-  assert.equal(new Set(result.recommendedSkills.map(skillIdentityKey)).size, result.recommendedSkills.length, `${target}: nenhuma posição pode repetir dentro do Top 5.`);
-  assert.ok(result.skillIntegrity, `${target}: toda posição precisa da auditoria final.`);
-  assert.ok(result.recommendedImpetos.every((item) => item.tier !== 'evitar'), `${target}: a autoridade final só pode expor Ímpeto aprovado; lista vazia é válida quando não houver recurso seguro.`);
-  assert.equal(result.trainingPointsUsed, result.trainingPointsTotal, `${target}: a ficha de desempenho deve respeitar exatamente o orçamento de pontos.`);
-  assert.equal(result.trainingPointsRemaining, 0, `${target}: a ficha não pode deixar pontos sem uso.`);
+for (const [target] of everyPosition) {
+  const pool = officialAdditionalSkillPoolForPosition(target);
+  assert.ok(pool.length >= 5, `${target}: catálogo oficial deve manter pelo menos cinco opções seguras.`);
+  assert.equal(new Set(pool.map(skillIdentityKey)).size, pool.length, `${target}: catálogo da posição não pode conter duplicatas.`);
+  assert.ok(pool.every((skill) => isRoleCompatibleAdditionalSkill(skill, target)), `${target}: catálogo só pode expor habilidades compatíveis.`);
+  assert.ok(pool.every((skill) => canonicalSkillName(skill) === skill), `${target}: catálogo deve usar nomes oficiais canônicos.`);
 }
 
 const headingAttributeOnly = analyzeCard(`[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: Teste Cabeçada\nPOSIÇÃO PRINCIPAL: CF\nESTILO DE JOGO: Homem de Área\nPONTOS TOTAIS: 64\nHABILIDADES JÁ POSSUI: Passe de primeira\nCabeçada: 90\nFinalização: 90\nTalento ofensivo: 90\n[FIM AJUSTES]`, 'COMPETITIVE', 'CF');

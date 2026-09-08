@@ -1,5 +1,7 @@
 import type { AnalysisResult, PositionCode, TacticalStyle } from './analyzer';
 import { canonicalizePlayerPlaystyle, getPlayerStyleMeta2026, normalizeFormationCoachStyle, type FormationCoachStyle } from './efootball2026Playstyles';
+import { playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 export type FormationFamily = 'oficial-app' | 'extra' | 'personalizada';
 export type FormationRoleId =
@@ -522,7 +524,7 @@ function roleMatchScore(result: AnalysisResult, roleIds: FormationRoleId[], posi
     const exactStyle = Boolean(actualStyle && roleCanonical && actualStyle === roleCanonical);
     if (exactStyle) best = Math.max(best, Math.round(25 + metaScore * .75));
     else if (text.includes(roleName)) best = Math.max(best, Math.round(18 + metaScore * .62));
-    else if (role.positions.includes(result.bestPosition.code) || role.usablePositions?.includes(result.bestPosition.code)) best = Math.max(best, Math.round(28 + metaScore * .34));
+    else if (role.positions.includes(analysisUsagePositionR138(result)) || role.usablePositions?.includes(analysisUsagePositionR138(result))) best = Math.max(best, Math.round(28 + metaScore * .34));
     const matchedTraits = role.strengths.filter((trait) => text.includes(normalizeText(trait))).length;
     best = Math.max(best, Math.round(24 + matchedTraits * 9 + metaScore * .22));
   }
@@ -530,7 +532,7 @@ function roleMatchScore(result: AnalysisResult, roleIds: FormationRoleId[], posi
 }
 
 function positionMatchScore(result: AnalysisResult, slotItem: FormationSlot) {
-  const selected = result.bestPosition.code;
+  const selected = analysisUsagePositionR138(result);
   if (selected === slotItem.position) return 100;
   if (slotItem.alternatives.includes(selected)) return 82;
   if (result.permittedPositions?.some((position) => position.code === slotItem.position)) return 72;
@@ -555,7 +557,7 @@ export function scorePlayerForFormationSlot(result: AnalysisResult, slotItem: Fo
       ? ((phase?.passe ?? 60) * .38 + (phase?.criacao ?? 60) * .24 + (phase?.marcacao ?? 60) * .2 + (phase?.aceleracao ?? 60) * .18)
       : slotItem.line === 'defesa'
         ? ((phase?.marcacao ?? 60) * .42 + (phase?.cobertura ?? 60) * .32 + (phase?.fisico ?? 60) * .16 + (phase?.passe ?? 60) * .1)
-        : result.bestPosition.code === 'GK' ? 90 : 10;
+        : analysisUsagePositionR138(result) === 'GK' ? 90 : 10;
   const actualMeta = getPlayerStyleMeta2026(result.parsed.playstyle, slotItem.position);
   const metaScore = actualMeta?.score ?? 55;
   const score = Math.max(0, Math.min(100, Math.round(positionFit * .42 + primaryFit * .27 + complementaryFit * .07 + phaseScore * .14 + metaScore * .10)));
@@ -580,7 +582,7 @@ export function buildFormationLineup(results: AnalysisResult[], blueprint: Forma
 
   for (const slotItem of blueprint.slots) {
     const ranked = results
-      .filter((result) => !used.has(result.parsed.internalId))
+      .filter((result) => !used.has(playerIdentityFingerprintR126(result.parsed)))
       .map((result) => scorePlayerForFormationSlot(result, slotItem))
       .sort((a,b) => b.score - a.score);
 
@@ -601,7 +603,7 @@ export function buildFormationLineup(results: AnalysisResult[], blueprint: Forma
     const style = canonicalizePlayerPlaystyle(best.player?.parsed.playstyle);
     if (style === 'Destruidor' && slotItem.position === 'CB') styleCounts.set('CB:Destruidor', (styleCounts.get('CB:Destruidor') ?? 0) + 1);
     if (style && ['Lateral Ofensivo', 'Lateral Atacante'].includes(style) && ['LB', 'RB'].includes(slotItem.position)) styleCounts.set('FB:ofensivo', (styleCounts.get('FB:ofensivo') ?? 0) + 1);
-    used.add(best.player!.parsed.internalId);
+    used.add(playerIdentityFingerprintR126(best.player!.parsed));
     output.push(best);
   }
 

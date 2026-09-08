@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
-const engine = read('src/lib/performanceBuildEngineV3850.ts');
+const engine = read('legacy-src/lib/performanceBuildEngineV3850.ts');
 const domain = read('src/lib/analyzerDomain.ts');
 const pipeline = read('src/lib/cardIntelligencePipeline.ts');
-const panel = read('src/components/PowerBuildEngineV3850Panel.tsx');
+const panel = read('legacy-src/components/PowerBuildEngineV3850Panel.tsx');
 const workspace = read('src/components/result/ResultWorkspace.tsx');
 const premiumClean = read('src/lib/premiumCleanResultV3810.ts');
 const cleanVault = read('src/lib/cleanVaultV3800.ts');
@@ -45,10 +45,10 @@ for (const marker of [
   'powerBuildV3850?: PowerBuildEngineV3850Analysis'
 ]) assert.ok(domain.includes(marker), `tipo ausente: ${marker}`);
 
-assert.match(pipeline, /applyPowerBuildEngineV3850/);
-assert.match(pipeline, /const power = applyPowerBuildEngineV3850\(advancedIntegrity\)/);
-assert.match(pipeline, /const finalPower = applyPowerBuildEngineV3850\(powerIntegrity\)/);
-assert.match(pipeline, /return enforceComplementarySkillIntegrity\(finalPower\)/);
+assert.match(pipeline, /applyLegacyPerformanceDiagnosticsBridgeR184/);
+assert.doesNotMatch(pipeline, /from '.\/performanceBuildEngineV3850'/);
+assert.ok(!workspace.includes('PowerBuildEngineV3850Panel'), 'R184: painel v38.50 não pode permanecer no workspace de produção.');
+assert.match(read('legacy-src/lib/legacyPerformanceDiagnosticsR184.ts'), /applyPowerBuildEngineV3850/);
 
 for (const marker of [
   'Motor de Desempenho v38.50',
@@ -59,8 +59,7 @@ for (const marker of [
   'analysis.improvements.map'
 ]) assert.ok(panel.includes(marker), `painel v38.50 sem ${marker}`);
 
-assert.match(workspace, /PowerBuildEngineV3850Panel/);
-assert.match(workspace, /<PowerBuildEngineV3850Panel result=\{result\}/);
+assert.doesNotMatch(workspace, /PowerBuildEngineV3850Panel/);
 assert.match(premiumClean, /powerBuildV3850\?\.impetos\?\.\[0\]\?\.name/);
 assert.match(cleanVault, /powerBuildV3850\?\.impetos\?\.\[0\]\?\.name/);
 assert.equal(pkg.scripts['test:v3850'], 'node tests/v38-50-power-build-engine-regression.mjs');

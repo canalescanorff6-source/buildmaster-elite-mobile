@@ -17,6 +17,7 @@ import {
 } from './trainingPlanCore';
 import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
 import { cardAnalysisInputFingerprint } from './cardAnalysisFingerprint';
+import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 
 const ENGINE_VERSION = '35.00-universal-position-dna-manager-style-1';
 const SEARCH_VARIANTS = 960;
@@ -357,7 +358,7 @@ function candidateMap(result: AnalysisResult, roleWeights: Partial<Record<Traini
     { values: tacticalWeights, factor: 1.15 },
     { values: learnedWeights(result), factor: 0.55 }
   );
-  const seed = hash(`${result.parsed.internalId}|${result.bestPosition.code}|${result.tacticalProfile.style}|${result.parsed.playstyle ?? ''}`);
+  const seed = hash(`${cardIdentityFingerprintR126(result.parsed)}|${result.bestPosition.code}|${result.tacticalProfile.style}|${result.parsed.playstyle ?? ''}`);
   for (let index = 0; index < SEARCH_VARIANTS; index += 1) add(allocateExact(result, merged, index, seed), `Busca competitiva ${index + 1}`);
   return Array.from(map.values());
 }

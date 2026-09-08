@@ -2,8 +2,6 @@ import type { AnalysisResult, TrainingPlan } from './analyzerDomain';
 import { trainingPlanTotalCost } from './trainingPlanCore';
 import { skillIdentityKey } from './officialSkillIdentity';
 import type { CanonicalCardIdentityR60 } from './canonicalCardIdentity2027V4080R60';
-import type { PerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
-import type { PerformanceEngine2027R107 } from './performanceEngine2027V4080R107';
 import type { PerformanceEngine2027R108 } from './performanceEngine2027V4080R108';
 import type { PermanentResources2027R80 } from './permanentResources2027V4080R80';
 import type { PerformanceLab2027R90 } from './performanceLab2027V4080R90';
@@ -28,8 +26,6 @@ type MasterShape = {
 
 type Enriched = AnalysisResult & {
   canonicalCardIdentity2027R60?: CanonicalCardIdentityR60;
-  performanceEngine2027R70?: PerformanceEngine2027R70;
-  performanceEngine2027R107?: PerformanceEngine2027R107;
   performanceEngine2027R108?: PerformanceEngine2027R108;
   permanentResources2027R80?: PermanentResources2027R80;
   performanceLab2027R90?: PerformanceLab2027R90;
@@ -125,9 +121,7 @@ function evidenceScore(lab?: PerformanceLab2027R90) {
 export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   const result = input as Enriched;
   const canonical = result.canonicalCardIdentity2027R60;
-  const performance = result.performanceEngine2027R70;
   const extreme = result.performanceEngine2027R108;
-  const quality = result.performanceEngine2027R107;
   const resources = result.permanentResources2027R80;
   const lab = result.performanceLab2027R90;
   const master = result.masterCardV4080R50;
@@ -146,7 +140,7 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   const exactBudget = spent === budget;
   const singleAuthority = cleanSlate?.authority === 'CLEAN_SLATE_SINGLE_WRITER';
   const dualPhase = Boolean(canonical?.attackPosition) && Boolean(canonical?.defencePosition);
-  const staminaProtected = extreme?.guards.staminaProtected ?? quality?.guards.staminaBalanced ?? performance?.guards.staminaProtected ?? true;
+  const staminaProtected = extreme?.guards.staminaProtected ?? true;
   const duplicatesBlocked = nativeDuplicateGuard(result, finalSkills);
   const rareProtected = cleanSlate
     ? cleanSlate.guards.existingImpetoNeverRepeated
@@ -154,7 +148,7 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   const labReadOnly = lab?.safeguards.readOnlyLab ?? true;
 
   const identity = clamp(canonical?.identityConfidence ?? 55);
-  const performanceScore = clamp(cleanSlate?.score ?? extreme?.winner.totalScore ?? quality?.winner.totalScore ?? performance?.winner.totalScore ?? 60);
+  const performanceScore = clamp(cleanSlate?.score ?? extreme?.winner.totalScore ?? 60);
   const resourceScore = clamp(cleanSlate?.decisionConfidence?.score ?? cleanSlate?.confidence ?? resources?.confidence ?? (finalSkills.length === 5 ? 68 : 52));
   const evidence = evidenceScore(lab);
   const total = round(identity * .28 + performanceScore * .34 + resourceScore * .2 + evidence * .18);
@@ -168,8 +162,6 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
   if (!staminaProtected) warnings.push('Equilíbrio de stamina da função não foi preservado.');
   if (extreme && extreme.winner.fatalBottlenecks.length > 2) warnings.push(`Extreme r108 ainda detecta ${extreme.winner.fatalBottlenecks.length} gargalo(s) fatal(is).`);
   if (extreme && extreme.winner.wastedLevels > 2) warnings.push(`Extreme r108 ainda tem ${extreme.winner.wastedLevels} nível(is) sem retorno de gameplay.`);
-  if (!extreme && quality && quality.winner.essentialFloorCoverage < 70) warnings.push(`Cobertura dos atributos essenciais baixa (${quality.winner.essentialFloorCoverage}/100).`);
-  if (!extreme && quality && quality.winner.wastedLevels > 2) warnings.push(`Ficha ainda tem ${quality.winner.wastedLevels} nível(is) em zona de retorno muito baixo.`);
   if (!duplicatesBlocked) warnings.push('Foi detectada habilidade adicional duplicando habilidade nativa.');
   if (!rareProtected) warnings.push('Recurso raro não atingiu o nível de permanência exigido.');
   if ((cleanSlate?.decisionConfidence?.score ?? cleanSlate?.confidence ?? canonical?.identityConfidence ?? 0) < 62) warnings.push('Confiança da ficha abaixo da faixa mínima para decisão cara.');
@@ -216,7 +208,7 @@ export function applyProduction2027R100(input: AnalysisResult): WithProduction {
     recommendationExplanation: [
       `Production r100: ${productionReady ? 'APROVADA' : 'REVISAR'} • ${total}/100.`,
       `Identidade ${analysis.identityScore} • Performance ${analysis.performanceScore} • Recursos ${analysis.resourceScore} • Evidência ${analysis.evidenceScore}.`,
-      cleanSlate ? `Clean Slate r123: resposta ${cleanSlate.responseScore}/100 • sinergia ${cleanSlate.synergyScore}/100 • ${cleanSlate.candidateCount} estados avaliados.` : (extreme ? `Extreme r108 diagnóstico: ${extreme.winner.profile} • sinergia ${extreme.winner.synergyScore}/100 • resposta ${extreme.winner.responseScore}/100.` : 'Clean Slate r123 indisponível.'),
+      cleanSlate ? `Clean Slate r146: resposta ${cleanSlate.responseScore}/100 • sinergia ${cleanSlate.synergyScore}/100 • ${cleanSlate.searchOptimizationR146?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR145?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR144?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR143?.uniqueEvaluations ?? cleanSlate.candidateCount} progressões únicas • kernel compilado ${cleanSlate.searchOptimizationR146?.compiledEvaluationKernel ? 'ativo' : 'legado'} • chave incremental ${cleanSlate.searchOptimizationR145?.incrementalStateKey ? 'ativa' : 'legada'}.` : (extreme ? `Extreme r108 diagnóstico: ${extreme.winner.profile} • sinergia ${extreme.winner.synergyScore}/100 • resposta ${extreme.winner.responseScore}/100.` : 'Clean Slate r123 indisponível.'),
       `Assinatura da ficha ${analysis.buildSignature}; assinatura da identidade ${analysis.identitySignature}.`,
       warnings.length ? `Alertas r100: ${warnings.join(' ')}` : 'Sem alerta crítico r100: orçamento, stamina, duas fases e recursos raros passaram pelos guardas finais.',
       ...result.recommendationExplanation

@@ -3,8 +3,7 @@ import type { MatchValidationRecord } from '../../lib/appEvolution';
 import type { TeamDiagnosis } from '../core/centralIntelligence';
 
 export const TRAINING_EVOLUTION_VERSION = '28.80.0';
-export const TRAINING_EVOLUTION_STORAGE_KEY = 'buildmaster_training_evolution_sessions_v2880';
-export const TRAINING_GOALS_STORAGE_KEY = 'buildmaster_training_evolution_goals_v2880';
+export { TRAINING_EVOLUTION_STORAGE_KEY, TRAINING_GOALS_STORAGE_KEY } from './trainingStorageKeysR167';
 
 export type TrainingArea = 'ataque' | 'defesa' | 'posse' | 'contra-ataque';
 export type TrainingMode = 'desenvolvimento' | 'pre-ranqueada';

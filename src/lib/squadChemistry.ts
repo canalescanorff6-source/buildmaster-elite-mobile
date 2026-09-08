@@ -1,5 +1,7 @@
 import type { AnalysisResult, TacticalFormation, TacticalStyle, TeamMapPhaseScores } from './analyzer';
 import { buildEliteTeamReport } from './teamOptimizer';
+import { playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 export type SquadSectorScore = {
   key: 'defesa' | 'meio' | 'ataque' | 'transicao' | 'amplitude' | 'equilibrio';
@@ -65,7 +67,7 @@ export function buildSquadChemistryReport(results: AnalysisResult[], formation: 
   const attackScore = clamp(avg(attack.map((p) => avg([score(p, 'finalizacao'), score(p, 'aceleracao'), score(p, 'criacao'), score(p, 'passe')]))));
   const transitionScore = clamp(avg(players.map((p) => avg([score(p, 'aceleracao'), score(p, 'passe'), score(p, 'cobertura')]))));
 
-  const widePlayers = players.filter((p) => ['LWF', 'RWF', 'LMF', 'RMF', 'LB', 'RB'].includes(p.bestPosition.code));
+  const widePlayers = players.filter((p) => ['LWF', 'RWF', 'LMF', 'RMF', 'LB', 'RB'].includes(analysisUsagePositionR138(p)));
   const widthScore = clamp(avg(widePlayers.map((p) => avg([score(p, 'aceleracao'), score(p, 'passe'), score(p, 'cobertura')])) || [45]));
 
   const phaseAverages = ['marcacao','cobertura','saidaDeBola','passe','criacao','aceleracao','finalizacao','jogoAereo','fisico']
@@ -96,7 +98,7 @@ export function buildSquadChemistryReport(results: AnalysisResult[], formation: 
   if (defense.length >= 2) {
     const cover = [...defense].sort((a,b) => score(b,'cobertura') - score(a,'cobertura'))[0];
     const combat = [...defense].sort((a,b) => score(b,'marcacao') + score(b,'fisico') - score(a,'marcacao') - score(a,'fisico'))[0];
-    if (cover.parsed.internalId !== combat.parsed.internalId) synergies.push({ title: 'Cobertura + combate', players: `${cover.parsed.playerName} + ${combat.parsed.playerName}`, score: clamp(avg([score(cover,'cobertura'), score(combat,'marcacao'), score(combat,'fisico')])), reason: 'Um antecipa e cobre espaço; o outro ganha o duelo direto.' });
+    if (playerIdentityFingerprintR126(cover.parsed) !== playerIdentityFingerprintR126(combat.parsed)) synergies.push({ title: 'Cobertura + combate', players: `${cover.parsed.playerName} + ${combat.parsed.playerName}`, score: clamp(avg([score(cover,'cobertura'), score(combat,'marcacao'), score(combat,'fisico')])), reason: 'Um antecipa e cobre espaço; o outro ganha o duelo direto.' });
   }
 
   const conflicts: SquadChemistryReport['conflicts'] = [];
@@ -175,7 +177,7 @@ export function buildSquadChemistryReport(results: AnalysisResult[], formation: 
 
   const dependencies: SquadChemistryReport['dependencies'] = [];
   const addDependency = (source: AnalysisResult | undefined, target: AnalysisResult | undefined, relation: string, strengthValue: number, risk: string) => {
-    if (!source || !target || source.parsed.internalId === target.parsed.internalId) return;
+    if (!source || !target || playerIdentityFingerprintR126(source.parsed) === playerIdentityFingerprintR126(target.parsed)) return;
     dependencies.push({ source: source.parsed.playerName, target: target.parsed.playerName, relation, strength: clamp(strengthValue), risk });
   };
   const left = corridorItems.esquerdo.map((i) => i.player);

@@ -13,7 +13,7 @@ const engine = readFileSync(resolve(root, 'src/lib/performanceEngine2027V4080R10
 const cleanSlate = readFileSync(resolve(root, 'src/lib/cleanSlatePerformance2027V4080R119.ts'), 'utf8');
 
 assert.match(pipeline, /applyLegacyTrainingReadOnly\(current, applyPerformanceEngine2027R108\)/);
-assert.match(pipeline, /applyLegacyTrainingReadOnly\(current, applyPerformanceEngine2027R109\)/);
+assert.doesNotMatch(pipeline, /applyPerformanceEngine2027R109/);
 assert.match(pipeline, /applyLegacyTrainingReadOnly\(current, applyMasterCardEngineV4080R50\)/);
 assert.match(pipeline, /applyPermanentResources2027R80\(current\);\s+current = applyFinalDecisionAuthority2027R118\(current\);/);
 assert.match(master, /authorityMode: 'LEGACY_READ_ONLY'/);

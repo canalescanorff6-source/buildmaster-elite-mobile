@@ -6,128 +6,32 @@ import {
   EFHUB_CANONICAL_OCR_BOXES,
   EFHUB_CANONICAL_WIDTH
 } from '@/modules/card-reader/efhubLayoutGeometry';
+import {
+  createDefaultEfhubCalibrationZones,
+  createEfhubCalibrationMap,
+  normalizeEfhubCalibrationZones,
+  readEfhubCalibrationMap,
+  type EfhubCalibrationMap,
+  type EfhubCalibrationZone,
+  type EfhubCalibrationZoneId,
+} from '@/modules/card-reader/efhubCalibrationModelR164';
 
 export const EFHUB_MANUAL_CALIBRATION_VERSION = 'v40.00-manual-map-rebuild-r1';
-
-export type EfhubCalibrationZoneId =
-  | 'identity'
-  | 'card'
-  | 'bio'
-  | 'positions'
-  | 'boosters'
-  | 'attributes'
-  | 'physical'
-  | 'skills'
-  | 'progression'
-  | 'specialSkill';
-
-export type EfhubCalibrationZone = {
-  id: EfhubCalibrationZoneId;
-  key: OcrZoneKey;
-  label: string;
-  shortLabel: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  enabled: boolean;
-  locked: boolean;
-  color: string;
+export {
+  createDefaultEfhubCalibrationZones,
+  createEfhubCalibrationMap,
+  normalizeEfhubCalibrationZones,
+  readEfhubCalibrationMap,
 };
-
-export type EfhubCalibrationMap = {
-  version: string;
-  updatedAt: string;
-  zones: EfhubCalibrationZone[];
-};
-
-const MACRO_META: Array<{
-  id: EfhubCalibrationZoneId;
-  key: OcrZoneKey;
-  shortLabel: string;
-  color: string;
-}> = [
-  { id: 'identity', key: 'name', shortLabel: 'Nome + estilo', color: '#ffd24c' },
-  { id: 'card', key: 'cardType', shortLabel: 'Carta / foto', color: '#23d8ff' },
-  { id: 'bio', key: 'identityMeta', shortLabel: 'Bio + condição', color: '#69ef91' },
-  { id: 'positions', key: 'positionGrid', shortLabel: 'Posições + overalls', color: '#c777ff' },
-  { id: 'boosters', key: 'impetos', shortLabel: 'Boosters / ímpeto', color: '#ff9d45' },
-  { id: 'attributes', key: 'attributes', shortLabel: '26 atributos', color: '#ff536b' },
-  { id: 'physical', key: 'physicalModel', shortLabel: 'Modelo físico', color: '#4b9bff' },
-  { id: 'skills', key: 'skills', shortLabel: 'Habilidades', color: '#52f4d2' },
-  { id: 'progression', key: 'progression', shortLabel: 'Pontos distribuídos', color: '#ffcf4a' },
-  { id: 'specialSkill', key: 'specialSkill', shortLabel: 'Habilidade especial', color: '#ff65c5' }
-];
+export type { EfhubCalibrationMap, EfhubCalibrationZone, EfhubCalibrationZoneId };
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));
 }
 
 function macroBoxById(id: EfhubCalibrationZoneId) {
-  const index = MACRO_META.findIndex((item) => item.id === id);
+  const index = ['identity', 'card', 'bio', 'positions', 'boosters', 'attributes', 'physical', 'skills', 'progression', 'specialSkill'].indexOf(id);
   return EFHUB_CANONICAL_MACRO_BOXES[index];
-}
-
-export function createDefaultEfhubCalibrationZones(): EfhubCalibrationZone[] {
-  return MACRO_META.map((meta, index) => {
-    const item = EFHUB_CANONICAL_MACRO_BOXES[index];
-    return {
-      ...meta,
-      label: item.label,
-      x: item.x1 / EFHUB_CANONICAL_WIDTH,
-      y: item.y1 / EFHUB_CANONICAL_HEIGHT,
-      w: (item.x2 - item.x1) / EFHUB_CANONICAL_WIDTH,
-      h: (item.y2 - item.y1) / EFHUB_CANONICAL_HEIGHT,
-      enabled: true,
-      locked: false
-    };
-  });
-}
-
-export function normalizeEfhubCalibrationZones(input: unknown): EfhubCalibrationZone[] {
-  const defaults = createDefaultEfhubCalibrationZones();
-  if (!Array.isArray(input)) return defaults;
-  const incoming = input as Array<Partial<EfhubCalibrationZone>>;
-  return defaults.map((fallback) => {
-    const item = incoming.find((candidate) => candidate.id === fallback.id);
-    if (!item) return fallback;
-    const x = clamp(Number(item.x ?? fallback.x), 0, 0.985);
-    const y = clamp(Number(item.y ?? fallback.y), 0, 0.985);
-    const w = clamp(Number(item.w ?? fallback.w), 0.015, 1 - x);
-    const h = clamp(Number(item.h ?? fallback.h), 0.015, 1 - y);
-    return {
-      ...fallback,
-      x,
-      y,
-      w,
-      h,
-      enabled: item.enabled !== false,
-      locked: Boolean(item.locked)
-    };
-  });
-}
-
-export function createEfhubCalibrationMap(zones: EfhubCalibrationZone[]): EfhubCalibrationMap {
-  return {
-    version: EFHUB_MANUAL_CALIBRATION_VERSION,
-    updatedAt: new Date().toISOString(),
-    zones: normalizeEfhubCalibrationZones(zones)
-  };
-}
-
-export function readEfhubCalibrationMap(raw: string | null | undefined): EfhubCalibrationMap | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Partial<EfhubCalibrationMap>;
-    if (!parsed || !Array.isArray(parsed.zones)) return null;
-    return {
-      version: String(parsed.version || EFHUB_MANUAL_CALIBRATION_VERSION),
-      updatedAt: String(parsed.updatedAt || ''),
-      zones: normalizeEfhubCalibrationZones(parsed.zones)
-    };
-  } catch {
-    return null;
-  }
 }
 
 const OCR_TO_MACRO: Record<string, EfhubCalibrationZoneId> = {

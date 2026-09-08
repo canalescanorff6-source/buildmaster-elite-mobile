@@ -15,7 +15,7 @@
   },
   "files": [
     "../types-v3170/capacitor-stub.d.ts",
-    "../../src/lib/cardFirstAiEngineV3880.ts",
+    "../../legacy-src/lib/cardFirstAiEngineV3880.ts",
     "../../src/lib/cardIntelligencePipeline.ts"
   ]
 }

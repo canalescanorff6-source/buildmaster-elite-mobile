@@ -1,9 +1,11 @@
 import type { AnalysisResult, PositionCode, TrainingPlan } from './analyzerDomain';
 import type { MatchValidationMode, MatchValidationRecord } from './appEvolution';
-import { cardFingerprint, MATCH_VALIDATION_STORAGE_KEY } from './appEvolution';
+import { cardFingerprint } from './appEvolution';
 import { readAccountStorage, writeAccountStorage } from './accountStorage';
+import { readMatchValidationRepositoryR137 } from '../modules/matches/matchValidationRepositoryR137';
 import { trainingPlanTotalCost } from './trainingPlanCore';
 import { buildRealGameplayValidationV4050 } from './realGameplayValidationV4050';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 export const LONGITUDINAL_GAMEPLAY_V4060_VERSION = '40.60.0' as const;
 export const LONGITUDINAL_GAMEPLAY_V4060_MIN_SESSIONS = 3;
@@ -104,7 +106,7 @@ function sessionLabel(key: string) {
 
 function exactRecords(result: AnalysisResult, records: MatchValidationRecord[]) {
   const fingerprint = cardFingerprint(result);
-  return records.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === result.bestPosition.code);
+  return records.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === analysisUsagePositionR138(result));
 }
 
 function groupSessions(result: AnalysisResult, records: MatchValidationRecord[]): LongitudinalSessionV4060[] {
@@ -275,7 +277,7 @@ export function buildLongitudinalGameplayV4060(result: AnalysisResult, allRecord
   return {
     engineVersion: LONGITUDINAL_GAMEPLAY_V4060_VERSION,
     cardFingerprint: cardFingerprint(result),
-    position: result.bestPosition.code,
+    position: analysisUsagePositionR138(result),
     mode: 'APRENDIZADO_COMPETITIVO_LONGITUDINAL',
     totalMatches: records.length,
     distinctSessions: sessions.length,
@@ -358,14 +360,7 @@ function readMemory(): LongitudinalMemoryEnvelopeV4060 {
 
 
 function readMatchHistoryForSelfHealV4060(): MatchValidationRecord[] {
-  try {
-    const raw = readAccountStorage(MATCH_VALIDATION_STORAGE_KEY, { migrateLegacy: false });
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as MatchValidationRecord[];
-    return Array.isArray(parsed) ? parsed.slice(0, 1000) : [];
-  } catch {
-    return [];
-  }
+  return readMatchValidationRepositoryR137();
 }
 
 function writeMemory(envelope: LongitudinalMemoryEnvelopeV4060) {
@@ -386,7 +381,7 @@ export function persistLongitudinalWinnerV4060(result: AnalysisResult, analysis:
   const entry: LongitudinalMemoryEntryV4060 = {
     engineVersion: LONGITUDINAL_GAMEPLAY_V4060_VERSION,
     cardFingerprint: analysis.cardFingerprint,
-    position: result.bestPosition.code,
+    position: analysisUsagePositionR138(result),
     winnerId: candidate.id,
     winnerLabel: candidate.label,
     training: { ...candidate.training },
@@ -406,88 +401,29 @@ export function persistLongitudinalWinnerV4060(result: AnalysisResult, analysis:
 export function applyLongitudinalWinnerV4060(result: AnalysisResult): AnalysisResult {
   if (result.objective !== 'COMPETITIVE' || !result.maximumPerformanceV4040) return result;
   const fingerprint = cardFingerprint(result);
-  let entry = readMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === result.bestPosition.code);
+  let entry = readMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === analysisUsagePositionR138(result));
   if (!entry) {
     const recovered = buildLongitudinalGameplayV4060(result, readMatchHistoryForSelfHealV4060());
     if (persistLongitudinalWinnerV4060(result, recovered)) {
-      entry = readMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === result.bestPosition.code);
+      entry = readMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === analysisUsagePositionR138(result));
     }
   }
-  if (!entry) {
-    if (!result.gameplayValidationMemoryV4050?.applied) return result;
-    const fallback = result.maximumPerformanceV4040.finalTraining;
-    const used = trainingPlanTotalCost(fallback);
-    return {
-      ...result,
-      training: { ...fallback },
-      trainingPointsUsed: used,
-      trainingPointsRemaining: Math.max(0, result.trainingPointsTotal - used),
-      buildName: `Ficha Automática v40.60 — Pareto até validação longitudinal — ${result.parsed.playerName}`,
-      recommendationExplanation: [
-        'A v40.60 encontrou um vencedor A/B provisório, mas a v40.60 exige repetição em sessões distintas antes de tornar a mudança permanente.',
-        ...result.recommendationExplanation
-      ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 32),
-      note: `${result.note} v40.60: promoção v40.60 mantida como evidência provisória; a ficha Pareto permanece aplicada até validação longitudinal.`,
-      longitudinalGameplayMemoryV4060: {
-        engineVersion: LONGITUDINAL_GAMEPLAY_V4060_VERSION,
-        applied: false,
-        provisionalV4050Blocked: true,
-        winnerId: null,
-        winnerLabel: null,
-        confidenceScore: 0,
-        sessions: 0,
-        pairedSessions: 0,
-        verifiedAt: null
-      }
-    };
-  }
+  if (!entry) return result;
   const candidate = result.maximumPerformanceV4040.alternatives.find((item) => item.id === entry.winnerId);
-  if (!candidate || JSON.stringify(candidate.training) !== JSON.stringify(entry.training) || trainingPlanTotalCost(entry.training) !== result.trainingPointsTotal) {
-    const fallback = result.maximumPerformanceV4040.finalTraining;
-    const used = trainingPlanTotalCost(fallback);
-    return {
-      ...result,
-      training: { ...fallback },
-      trainingPointsUsed: used,
-      trainingPointsRemaining: Math.max(0, result.trainingPointsTotal - used),
-      buildName: `Ficha Automática v40.60 — Memória longitudinal em revisão — ${result.parsed.playerName}`,
-      recommendationExplanation: [
-        'A memória longitudinal salva deixou de coincidir com o Pareto atual e foi suspensa. A ficha campeã atual voltou a ser a referência até nova validação.',
-        ...result.recommendationExplanation
-      ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 32),
-      longitudinalGameplayMemoryV4060: {
-        engineVersion: LONGITUDINAL_GAMEPLAY_V4060_VERSION,
-        applied: false,
-        provisionalV4050Blocked: Boolean(result.gameplayValidationMemoryV4050?.applied),
-        winnerId: null,
-        winnerLabel: null,
-        confidenceScore: 0,
-        sessions: 0,
-        pairedSessions: 0,
-        verifiedAt: null
-      }
-    };
-  }
-  const used = trainingPlanTotalCost(entry.training);
+  if (!candidate || JSON.stringify(candidate.training) !== JSON.stringify(entry.training) || trainingPlanTotalCost(entry.training) !== result.trainingPointsTotal) return result;
+
+  // R135: a memória longitudinal continua útil para confiança/drift, mas não pode
+  // mais escrever uma ficha antiga. O padrão real vira input limitado do Clean Slate.
   return {
     ...result,
-    training: { ...entry.training },
-    trainingPointsUsed: used,
-    trainingPointsRemaining: Math.max(0, result.trainingPointsTotal - used),
-    buildName: `Ficha Automática v40.60 — Aprendizado Competitivo — ${entry.winnerLabel} — ${result.parsed.playerName}`,
     recommendationExplanation: [
-      `Aprendizado longitudinal v40.60 reaplicou ${entry.winnerLabel}: ${entry.sessions} sessões, ${entry.pairedSessions} sessões pareadas, consistência ${Math.round(entry.consistencyScore)}/100 e confiança ${Math.round(entry.confidenceScore)}/100.`,
-      'A memória só continua válida porque a mesma alternativa e a mesma distribuição ainda existem no Pareto atual.',
+      `Aprendizado longitudinal v40.60 observou ${entry.winnerLabel}: ${entry.sessions} sessão(ões), ${entry.pairedSessions} pareada(s), consistência ${Math.round(entry.consistencyScore)}/100. R135 mantém essa evidência somente leitura.`,
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 32),
-    strengths: [
-      'A ficha aplicada foi confirmada em várias sessões, reduzindo o risco de overfitting a um único dia ou condição de conexão.',
-      ...result.strengths
-    ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 18),
-    note: `${result.note} Aprendizado v40.60: ${entry.winnerLabel} validada longitudinalmente e reaplicada somente enquanto a receita Pareto permanecer idêntica.`,
     longitudinalGameplayMemoryV4060: {
       engineVersion: LONGITUDINAL_GAMEPLAY_V4060_VERSION,
-      applied: true,
+      applied: false,
+      observationalOnly: true,
       provisionalV4050Blocked: false,
       winnerId: entry.winnerId,
       winnerLabel: entry.winnerLabel,

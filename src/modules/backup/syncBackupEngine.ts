@@ -1,4 +1,4 @@
-import { APP_DATA_VERSION, checksumFor, createBackupEnvelope, inspectDataIntegrity, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
+import { APP_DATA_VERSION, BACKUP_SECTION_KEYS, checksumFor, createBackupEnvelope, inspectDataIntegrity, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { createStableId } from '@/lib/stableId';
 
 export type BackupSnapshot = {
@@ -34,7 +34,7 @@ export type SectionConflict = {
 
 const MAX_LOCAL_SNAPSHOTS = 8;
 const MAX_CLOUD_SNAPSHOTS = 3;
-const SECTION_KEYS: BackupSection[] = ['history','settings','calibration','plans','folders','rules','session','evolution','tacticalStudio','customFormations','imageGallery','performance'];
+const SECTION_KEYS: readonly BackupSection[] = BACKUP_SECTION_KEYS;
 
 function jsonSize(value: unknown) {
   try { return new Blob([JSON.stringify(value)]).size; } catch { return 0; }

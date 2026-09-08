@@ -93,7 +93,7 @@ const mark = read('src/components/BuildMasterMark.tsx');
 assert.match(mark, /buildmaster-mark\.png/);
 assert.match(mark, /<path d="M32 4 54 12v17/);
 assert.match(read('src/components/PremiumBrand.tsx'), /Tático · Máximo desempenho/);
-assert.match(read('src/components/CardVisionApp.tsx'), /bm-brand-splash-screen/);
+assert.match(read('src/components/CardVisionAppChromeR185.tsx'), /bm-brand-splash-screen/);
 assert.match(read('src/app/globals.css'), /buildmaster-splash\.webp/);
 assert.match(read('public/sw.js'), /buildmaster-v40-80-edge-stack-1/);
 assert.match(read('src/components/RegisterServiceWorker.tsx'), /40\.80\.0-edge-stack-runtime-1/);

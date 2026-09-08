@@ -44,9 +44,8 @@ export function trainingLevelCost(level: number): number {
 }
 
 export function trainingTotalCost(level: number): number {
-  let cost = 0;
-  for (let current = 1; current <= Math.max(0, level); current += 1) cost += trainingLevelCost(current);
-  return cost;
+  const n = Math.max(0, Math.floor(level)), groups = Math.floor(n / 4);
+  return (groups + 1) * (2 * groups + n % 4);
 }
 
 export function trainingPlanCost(plan: TrainingPlan): TrainingPlan {
@@ -56,7 +55,7 @@ export function trainingPlanCost(plan: TrainingPlan): TrainingPlan {
 }
 
 export function trainingPlanTotalCost(plan: TrainingPlan): number {
-  return Object.values(trainingPlanCost(plan)).reduce((sum, value) => sum + value, 0);
+  return TRAINING_KEYS.reduce((sum, key) => sum + trainingTotalCost(plan[key] ?? 0), 0);
 }
 
 export function parseTrainingAllocation(text: string): { plan: TrainingPlan; points: number; keysRead: number } | null {

@@ -1824,9 +1824,60 @@ export type MaximumPerformanceV4040Analysis = {
 };
 
 
+
+
+export type MatchEvidenceCalibrationR136 = {
+  version: '40.80-r136-temporal-context-calibration-v1';
+  status: 'NO_EVIDENCE' | 'OBSERVE' | 'ACTIVE';
+  cardFingerprint: string;
+  position: PositionCode;
+  evidenceFingerprint: string;
+  contextSignature: string;
+  rawMatches: number;
+  effectiveMatches: number;
+  distinctSessions: number;
+  distinctBuilds: number;
+  stableShare: number;
+  currentPatchShare: number;
+  legacyShare: number;
+  recencyScore: number;
+  freshMatches: number;
+  staleMatches: number;
+  latestMatchAt: string | null;
+  temporalStatus: 'NO_EVIDENCE' | 'FRESH' | 'MIXED' | 'STALE';
+  confidenceScore: number;
+  calibrationStrength: number;
+  domainNeeds: Partial<Record<'passing' | 'movement' | 'finishing' | 'defending' | 'physical' | 'stamina', number>>;
+  domainSupport: Partial<Record<'passing' | 'movement' | 'finishing' | 'defending' | 'physical' | 'stamina', { effectiveMatches: number; distinctSessions: number; recentSessions: number }>>;
+  actionNeedAdjustments: Record<string, number>;
+  reasons: string[];
+  safeguards: string[];
+};
+
+export type MatchEvidenceCalibrationR135 = {
+  version: '40.80-r135-match-evidence-calibration-v1';
+  status: 'NO_EVIDENCE' | 'OBSERVE' | 'ACTIVE';
+  cardFingerprint: string;
+  position: PositionCode;
+  evidenceFingerprint: string;
+  rawMatches: number;
+  effectiveMatches: number;
+  distinctSessions: number;
+  distinctBuilds: number;
+  stableShare: number;
+  confidenceScore: number;
+  calibrationStrength: number;
+  domainNeeds: Partial<Record<'passing' | 'movement' | 'finishing' | 'defending' | 'physical' | 'stamina', number>>;
+  domainSupport: Partial<Record<'passing' | 'movement' | 'finishing' | 'defending' | 'physical' | 'stamina', { effectiveMatches: number; distinctSessions: number }>>;
+  actionNeedAdjustments: Record<string, number>;
+  reasons: string[];
+  safeguards: string[];
+};
+
 export type GameplayValidationMemoryV4050 = {
   engineVersion: '40.50.0';
-  applied: true;
+  applied: boolean;
+  observationalOnly?: true;
   winnerId: string;
   winnerLabel: string;
   confidenceScore: number;
@@ -1838,6 +1889,7 @@ export type GameplayValidationMemoryV4050 = {
 export type LongitudinalGameplayMemoryV4060 = {
   engineVersion: '40.60.0';
   applied: boolean;
+  observationalOnly?: true;
   provisionalV4050Blocked: boolean;
   winnerId: string | null;
   winnerLabel: string | null;
@@ -2196,6 +2248,8 @@ export type AnalysisResult = {
   maximumPerformanceV4040?: MaximumPerformanceV4040Analysis;
   gameplayValidationMemoryV4050?: GameplayValidationMemoryV4050;
   longitudinalGameplayMemoryV4060?: LongitudinalGameplayMemoryV4060;
+  matchEvidenceCalibrationR135?: MatchEvidenceCalibrationR135;
+  matchEvidenceCalibrationR136?: MatchEvidenceCalibrationR136;
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
   efootballV600?: EfootballV600PerformanceAnalysis;
   realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;
@@ -2204,6 +2258,16 @@ export type AnalysisResult = {
   liveEvolutionV600R11?: LiveEvolutionV600R11;
   matchStaminaV4080R44?: MatchStaminaV4080R44Analysis;
   finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;
+};
+
+export const TACTICAL_STYLE_NAME: Record<TacticalStyle, string> = {
+  AUTO: 'Automático inteligente',
+  POSSE_DE_BOLA: 'Posse de bola',
+  CONTRA_ATAQUE: 'Contra-ataque normal',
+  CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
+  POR_FORA: 'Por fora',
+  PASSE_LONGO: 'Passe longo',
+  SOBREPOSICAO: 'Sobreposição'
 };
 
 export const POSITION_PT: Record<PositionCode, string> = {

@@ -3,14 +3,18 @@
 import { useState } from 'react';
 import { CheckCircle2, Copy, Download, Share2 } from 'lucide-react';
 import type { AnalysisResult } from '@/lib/analyzer';
+import { POSITION_PT } from '@/lib/analyzerDomain';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 function compactText(result: AnalysisResult) {
+  const usagePosition = analysisUsagePositionR138(result);
+  const usageLabel = POSITION_PT[usagePosition];
   const distribution = Object.entries(result.training)
     .filter(([, value]) => Number(value) > 0)
     .map(([key, value]) => `${key} +${value}`)
     .join(' • ');
   return [
-    `${result.parsed.playerName} — ${result.bestPosition.label}`,
+    `${result.parsed.playerName} — ${usageLabel}`,
     `${result.buildName} • ${result.parsed.playstyle || 'estilo não confirmado'}`,
     `Pontos: ${result.trainingPointsTotal - result.trainingPointsRemaining}/${result.trainingPointsTotal}`,
     distribution,
@@ -19,6 +23,8 @@ function compactText(result: AnalysisResult) {
 }
 
 export function CompactSharePanel({ result, playerImage, onExportImage }: { result: AnalysisResult; playerImage?: string | null; onExportImage: () => void }) {
+  const usagePosition = analysisUsagePositionR138(result);
+  const usageLabel = POSITION_PT[usagePosition];
   const [message, setMessage] = useState('');
   const copy = async () => {
     const text = compactText(result);
@@ -44,9 +50,9 @@ export function CompactSharePanel({ result, playerImage, onExportImage }: { resu
     <div className="compact-share-preview">
       <div className="compact-share-player">
         {playerImage ? <img src={playerImage} alt="Recorte da carta" loading="lazy" decoding="async"/> : <span>{result.parsed.playerName.slice(0, 2).toUpperCase()}</span>}
-        <div><small>FICHA BUILDMASTER</small><strong>{result.parsed.playerName}</strong><em>{result.bestPosition.label} • {result.buildName}</em></div>
+        <div><small>FICHA BUILDMASTER</small><strong>{result.parsed.playerName}</strong><em>{usageLabel} • {result.buildName}</em></div>
       </div>
-      <div className="compact-share-metrics"><span><b>{result.trainingPointsTotal - result.trainingPointsRemaining}</b> pontos usados</span><span><b>{result.parsed.confidence}%</b> confiança</span><span><b>{result.bestPosition.code}</b> destino</span></div>
+      <div className="compact-share-metrics"><span><b>{result.trainingPointsTotal - result.trainingPointsRemaining}</b> pontos usados</span><span><b>{result.parsed.confidence}%</b> confiança</span><span><b>{usagePosition}</b> destino</span></div>
       <div className="compact-share-training">{Object.entries(result.training).filter(([, value]) => Number(value) > 0).slice(0, 8).map(([key, value]) => <span key={key}>{key}<b>+{value}</b></span>)}</div>
     </div>
     <div className="compact-share-actions">

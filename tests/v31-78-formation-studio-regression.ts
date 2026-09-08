@@ -7,7 +7,7 @@ import {
   defaultRoleOverrides,
   recommendMetaFormations,
   validateFormationRoles
-} from '../src/modules/formations/metaFormationCatalog';
+} from './legacy/metaFormationCatalogV3178';
 
 assert.equal(MARQUES_FORMATION_STUDIO_VERSION, '31.78.0');
 assert.equal(Object.values(OFFICIAL_MARQUES_PLAYSTYLES).flat().length, 22);

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Search, X } from 'lucide-react';
+import { recordRecentCommandR152 } from '@/lib/searchCommandHistoryR152';
 
 export type AppCommand = {
   id: string;
@@ -58,6 +59,7 @@ export function AppCommandPalette({ open, onOpenChange, commands }: Props) {
 
   function execute(command: AppCommand | undefined) {
     if (!command) return;
+    recordRecentCommandR152(command.id);
     onOpenChange(false);
     window.setTimeout(command.run, 0);
   }

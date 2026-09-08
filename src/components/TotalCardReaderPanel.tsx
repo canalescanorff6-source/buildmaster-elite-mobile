@@ -6,7 +6,7 @@ import { inspectPrintQuality } from '@/lib/ocr';
 import { qualityLabel, qualityScore } from '@/lib/premiumReading';
 import { TOTAL_CAPTURE_SLOTS, type CardScreenType, type TotalCardCaptureInput } from '@/lib/totalCardReader';
 import { createStableId } from '@/lib/stableId';
-import { validateImageFile } from '@/modules/images/imageSafety';
+import { createImageThumbnail, validateImageFile } from '@/modules/images/imageSafety';
 
 type SlotState = Omit<TotalCardCaptureInput, 'id' | 'declaredType' | 'label' | 'requirement'> & { id: string };
 
@@ -23,12 +23,20 @@ function captureId(type: string) {
 
 export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected, onCancel }: Props) {
   const [slots, setSlots] = useState<Partial<Record<Exclude<CardScreenType, 'unknown'>, SlotState>>>({});
-  const urlsRef = useRef<string[]>([]);
+  const previewUrlsRef = useRef<Map<string, string>>(new Map());
   const [fileError, setFileError] = useState('');
 
   useEffect(() => () => {
-    for (const url of urlsRef.current) URL.revokeObjectURL(url);
+    for (const url of previewUrlsRef.current.values()) URL.revokeObjectURL(url);
+    previewUrlsRef.current.clear();
   }, []);
+
+  function releasePreview(type: Exclude<CardScreenType, 'unknown'>) {
+    const current = previewUrlsRef.current.get(type);
+    if (!current) return;
+    previewUrlsRef.current.delete(type);
+    URL.revokeObjectURL(current);
+  }
 
   const requiredReady = useMemo(() => TOTAL_CAPTURE_SLOTS.filter((slot) => slot.requirement === 'required').every((slot) => Boolean(slots[slot.type]?.file)), [slots]);
   const selectedCount = Object.values(slots).filter(Boolean).length;
@@ -37,15 +45,13 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected, on
   async function selectFile(type: Exclude<CardScreenType, 'unknown'>, file: File) {
     setFileError('');
     try {
-      await validateImageFile(file);
-      const preview = URL.createObjectURL(file);
-      urlsRef.current.push(preview);
+      const validated = await validateImageFile(file);
+      const thumbnail = await createImageThumbnail(validated.sanitizedBlob, 420).catch(() => validated.sanitizedBlob);
+      releasePreview(type);
+      const preview = URL.createObjectURL(thumbnail);
+      previewUrlsRef.current.set(type, preview);
       const quality = await inspectPrintQuality(file).catch(() => null);
-      setSlots((current) => {
-        const old = current[type];
-        if (old?.preview) URL.revokeObjectURL(old.preview);
-        return { ...current, [type]: { id: captureId(type), file, preview, quality } };
-      });
+      setSlots((current) => ({ ...current, [type]: { id: captureId(type), file, preview, quality } }));
       if (type === 'overview') await onPrimarySelected?.(file);
     } catch (error) {
       setFileError(error instanceof Error ? error.message : 'Imagem inválida.');
@@ -55,15 +61,14 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected, on
   function removeFile(type: Exclude<CardScreenType, 'unknown'>) {
     setSlots((current) => {
       const next = { ...current };
-      const old = next[type];
-      if (old?.preview) URL.revokeObjectURL(old.preview);
+      releasePreview(type);
       delete next[type];
       return next;
     });
   }
 
   function reset() {
-    for (const item of Object.values(slots)) if (item?.preview) URL.revokeObjectURL(item.preview);
+    for (const type of previewUrlsRef.current.keys()) releasePreview(type as Exclude<CardScreenType, 'unknown'>);
     setSlots({});
   }
 
@@ -113,7 +118,7 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected, on
               </div>
               {item ? (
                 <>
-                  <figure><img src={item.preview} alt={`Print de ${slot.label}`} /><figcaption>{item.file.name}</figcaption></figure>
+                  <figure><img src={item.preview} alt={`Print de ${slot.label}`} loading="lazy" decoding="async" /><figcaption>{item.file.name}</figcaption></figure>
                   <div className="total-capture-quality">
                     <strong>{score}/100</strong><span>{qualityLabel(score)}</span>
                     {item.quality?.issues.length ? <em><TriangleAlert size={13} /> {item.quality.issues[0].message}</em> : <em><CheckCircle2 size={13} /> Imagem pronta</em>}

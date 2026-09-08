@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { MainSection } from '@/lib/appNavigationR127';
 import { readPremiumExperience2Preferences, removePremiumDraft, savePremiumDraft, type Premium2Target } from './premiumExperience2';
 
-export type PremiumMainSection = 'inicio' | 'jogadores' | 'mapeamento' | 'partidas' | 'leitor' | 'manual' | 'resultado' | 'cofre' | 'time' | 'ajustes' | 'menu' | 'buscar';
+export type PremiumMainSection = MainSection;
 export type PremiumSettingsView = 'evolucao' | 'experiencia' | 'aparencia' | 'desempenho' | 'seguranca' | 'suporte' | 'backup' | 'atualizacoes' | 'contas';
 
 export function premiumTargetForSection(section: PremiumMainSection): Premium2Target {

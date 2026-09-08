@@ -67,7 +67,7 @@ for (const file of [
 ]) check(exists(file), `Identidade premium presente: ${file}`);
 check(workflowApk.includes('install-android-branding.mjs') && workflowPlay.includes('install-android-branding.mjs'), 'Identidade Android integrada aos dois workflows');
 check(String(pkg.scripts?.['test:v3840'] ?? '') === 'node scripts/run-v3840-tests.mjs' && v3840Runner.includes('v38-40-branding-regression.mjs'), 'Regressão da identidade premium integrada à v38.40');
-check(exists('src/lib/performanceBuildEngineV3850.ts') && exists('src/components/PowerBuildEngineV3850Panel.tsx') && exists('tests/v38-50-power-build-engine-regression.mjs'), 'Motor funcional v38.50 integrado');
+check(!exists('src/lib/performanceBuildEngineV3850.ts') && !exists('src/components/PowerBuildEngineV3850Panel.tsx') && exists('legacy-src/lib/performanceBuildEngineV3850.ts') && exists('legacy-src/components/PowerBuildEngineV3850Panel.tsx') && exists('legacy-src/lib/legacyPerformanceDiagnosticsR184.ts') && exists('tests/v38-50-power-build-engine-regression.mjs'), 'Diagnóstico histórico v38.50 isolado do runtime de produção pela R184');
 check(String(pkg.scripts?.['test:v3850'] ?? '').includes('v38-50-power-build-engine-regression.mjs') && String(pkg.scripts?.['test:all'] ?? '').includes('npm run test:v3850'), 'Regressão v38.50 integrada à bateria geral');
 check(rootPage.includes('AppShellSafetyBoundaryV3930') && rootPage.includes('AuthGate') && rootPage.includes('CardVisionApp') && !rootPage.includes('Política de privacidade'), 'Rota inicial abre proteção de runtime, autenticação e aplicativo');
 check(!/PrivacyPolicyPage|public-policy-page/.test(rootPage), 'Rota raiz sem conteúdo da política pública');

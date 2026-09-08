@@ -16,6 +16,6 @@
   },
   "files": [
     "stubs.d.ts",
-    "../../src/components/CardFirstAiV3880Panel.tsx"
+    "../../legacy-src/components/CardFirstAiV3880Panel.tsx"
   ]
 }

@@ -1,35 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-
-const canonical = fs.readFileSync('src/lib/canonicalCardIdentity2027V4080R60.ts','utf8');
-const foundation = fs.readFileSync('src/lib/performanceFoundation2027V4080R60.ts','utf8');
-const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
-const master = fs.readFileSync('src/lib/masterCardEngineV4080R50.ts','utf8');
-
-for (const contract of [
-  '40.80-r60-canonical-card-identity-2027',
-  'rareResourceLock: \'PERMANENT_BY_CARD\'',
-  'physicalFingerprint',
-  'positionCompatibility',
-  'identityConfidence',
-  "defencePositionSource: explicitDefence ? 'EXPLICIT' : 'FALLBACK_SELECTED'"
-]) assert.ok(canonical.includes(contract), `r60 identidade sem contrato: ${contract}`);
-
-for (const guard of [
-  'masterEngineOnlyTrainingWriter: false',
-  'finalAuthorityR118OnlyTrainingWriter: true',
-  'unknownContentNeverGetsInventedWeight: true',
-  'rareResourcesPersistAcrossCompatiblePositions: true',
-  'overallIsNotOptimizationTarget: true',
-  'incompleteDualPhaseDoesNotInventDefence: true'
-]) assert.ok(foundation.includes(guard), `r60 fundação sem guarda: ${guard}`);
-
-assert.ok(pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyCanonicalCardIdentity2027R60)') < pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceFoundation2027R60)'));
-assert.ok(pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceFoundation2027R60)') < pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50)'));
-assert.ok(master.includes('identity?.attackPosition'));
-assert.ok(master.includes('identity?.defencePosition'));
-assert.ok(master.includes('BM_R118_MASTER_READ_ONLY'));
-assert.ok(!canonical.includes('training ='));
-assert.ok(!foundation.includes('training ='));
-
-console.log('r60 aprovada: identidade canônica + duas fases alimentam a Card Signature; r50 fica read-only e r119 é o único escritor.');
+const canonical=fs.readFileSync('src/lib/canonicalCardIdentity2027V4080R60.ts','utf8');
+const pipeline=fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
+for (const contract of ['40.80-r60-canonical-card-identity-2027','physicalFingerprint','positionCompatibility','identityConfidence']) assert.ok(canonical.includes(contract), `r60 identidade sem ${contract}`);
+assert.equal(fs.existsSync('src/lib/performanceFoundation2027V4080R60.ts'), false, 'Foundation R60 redundante deve permanecer aposentada.');
+const identity=pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyCanonicalCardIdentity2027R60)');
+const r108=pipeline.indexOf('applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R108)');
+const writer=pipeline.indexOf('applyCleanSlatePerformance2027R119(current, protectedRawCard)');
+assert.ok(identity>=0 && identity<r108 && r108<writer);
+console.log('r60 aprovada: identidade canônica permanece; Foundation histórica aposentada; R108/R119 preservados.');

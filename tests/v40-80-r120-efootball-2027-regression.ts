@@ -32,6 +32,7 @@ function dmf(stamina:number, defensivePlaystyle='Básico') {
 const low:any=applyCleanSlatePerformance2027R119(dmf(68));
 const high:any=applyCleanSlatePerformance2027R119(dmf(91));
 const press:any=applyCleanSlatePerformance2027R119(dmf(78,'Pressão no Ataque'));
+const pressBaseline:any=applyCleanSlatePerformance2027R119(dmf(78,'Básico'));
 
 assert.equal(trainingPlanTotalCost(low.training),64);
 assert.equal(trainingPlanTotalCost(high.training),64);
@@ -39,7 +40,7 @@ assert.equal(low.training.shooting,0,'VOL defensivo sem evidência ofensiva não
 assert.ok(low.training.lowerBodyStrength >= high.training.lowerBodyStrength,'Resistência baixa com carga alta deve justificar pelo menos o mesmo investimento físico que stamina já alta.');
 const lowIntercept=low.cleanSlate2027R119.actions.find((x:any)=>x.id==='intercept');
 const pressRecover=press.cleanSlate2027R119.actions.find((x:any)=>x.id==='press_recover');
-const basicRecover=high.cleanSlate2027R119.actions.find((x:any)=>x.id==='press_recover');
+const basicRecover=pressBaseline.cleanSlate2027R119.actions.find((x:any)=>x.id==='press_recover');
 assert.ok(lowIntercept && lowIntercept.frequency>0,'Interceptação deve permanecer ação funcional do VOL com habilidade nativa.');
 assert.ok(pressRecover && basicRecover && pressRecover.frequency>basicRecover.frequency,'Pressão no Ataque deve aumentar a frequência projetada de pressão, sem criar receita fixa de treino.');
 

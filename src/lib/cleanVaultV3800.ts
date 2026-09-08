@@ -1,3 +1,8 @@
+import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import type { ParsedCard } from './analyzerDomain';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { cleanVaultPlayerKeyR173 } from '@/modules/vault/vaultBootstrapSummaryR173';
+
 export const CLEAN_VAULT_VERSION = '38.00.0' as const;
 
 export type CleanVaultStatus = 'completo' | 'pendente' | 'revisar';
@@ -115,20 +120,13 @@ function cleanSkillList(skills: string[]) {
 }
 
 export function cleanVaultPlayerKey(entry: CleanVaultEntry) {
-  return normalize(entry.result.parsed.playerName) || `sem-nome-${entry.id}`;
+  return cleanVaultPlayerKeyR173(entry);
 }
 
 export function cleanVaultCardVersionKey(entry: CleanVaultEntry) {
-  const canonical = entry.result.structuralPrecision?.canonical;
-  if (canonical?.canonicalId) return canonical.canonicalId;
-  const parsed = entry.result.parsed;
-  return [
-    cleanVaultPlayerKey(entry),
-    normalize(parsed.cardType),
-    normalize(parsed.mainPosition),
-    parsed.level ?? 'nivel',
-    parsed.maxOverall ?? parsed.overall ?? 'overall'
-  ].join('::');
+  // R126 é deliberadamente recalculado a partir do ParsedCard salvo para também
+  // migrar entradas antigas cuja structuralPrecision ainda carregava GER na identidade.
+  return cardIdentityFingerprintR126(entry.result.parsed as ParsedCard);
 }
 
 export function cleanVaultVersionLabel(entry: CleanVaultEntry) {
@@ -166,7 +164,7 @@ export function cleanVaultBuildSignature(entry: CleanVaultEntry) {
     ?? 'sem-booster';
   return [
     cleanVaultCardVersionKey(entry),
-    entry.result.bestPosition.code,
+    analysisUsagePositionR138(entry.result),
     entry.result.trainingPointsTotal,
     stableTrainingSignature(entry.result.training),
     cleanSkillList(entry.result.recommendedSkills ?? []),
@@ -253,7 +251,7 @@ export function cleanVaultMatchesSearch(entry: CleanVaultEntry, query: string) {
     entry.result.parsed.playstyle,
     entry.result.parsed.cardType,
     entry.result.parsed.mainPosition,
-    entry.result.bestPosition.code,
+    analysisUsagePositionR138(entry.result),
     entry.result.bestPosition.label,
     entry.result.buildName,
     ...(entry.result.parsed.nativeSkills ?? []),

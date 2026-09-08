@@ -1,3 +1,4 @@
+import type { Objective, PositionCode } from './analyzerDomain';
 import { readAccountStorage, writeAccountStorage } from './accountStorage';
 
 export const REMOTE_CATALOG_V3770_VERSION = '37.70.0' as const;
@@ -39,6 +40,105 @@ export const EMPTY_REMOTE_CATALOG_V3770: RemoteCatalogPatchV3770 = {
   additionalSkills: [],
   specialSkills: [],
   boosters: []
+};
+
+
+export const DYNAMIC_RULE_CONTRACTS_R200_VERSION = '40.80-r200-dynamic-rule-contracts-v1' as const;
+export const RULE_PACK_KEY = 'buildmaster_rule_pack_v24_29';
+
+export type DynamicRuleMatch = {
+  position?: PositionCode | 'ANY';
+  playstyleIncludes?: string[];
+  functionIncludes?: string[];
+  objective?: Objective | 'ANY';
+};
+
+export type DynamicRule = {
+  id: string;
+  title: string;
+  match: DynamicRuleMatch;
+  promoteSkills?: string[];
+  blockSkills?: string[];
+  promoteImpetos?: string[];
+  blockImpetos?: string[];
+  note?: string;
+};
+
+export type DynamicRulePack = {
+  version: string;
+  updatedAt: string;
+  source: string;
+  rules: DynamicRule[];
+  globalBlockedSkills?: string[];
+  globalBlockedImpetos?: string[];
+  schemaVersion?: number;
+  gameVersion?: string;
+  publishedAt?: string;
+  expiresAt?: string;
+  minimumAppVersion?: string;
+  checksum?: string;
+  releaseNotes?: string[];
+  catalog?: RemoteCatalogPatchV3770;
+};
+
+export const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
+  version: '37.70.0-local',
+  updatedAt: '2026-08-01T00:00:00.000Z',
+  publishedAt: '2026-08-01T00:00:00.000Z',
+  gameVersion: 'eFootball 2026',
+  minimumAppVersion: '40.70.0',
+  schemaVersion: 3770,
+  source: 'Pacote local embutido',
+  releaseNotes: ['Base local compatível com histórico, catálogo remoto e auditoria v37.70.'],
+  catalog: EMPTY_REMOTE_CATALOG_V3770,
+  globalBlockedSkills: [],
+  globalBlockedImpetos: [],
+  rules: [
+    {
+      id: 'cf-finalizador-nao-marca',
+      title: 'CA finalizador não vira marcador',
+      match: { position: 'CF', playstyleIncludes: ['artilheiro', 'homem de área'] },
+      blockSkills: ['Volta para marcar', 'Interceptação', 'Marcação individual', 'Carrinho', 'Bloqueador'],
+      promoteSkills: ['Toque de calcanhar', 'Passe de primeira', 'Controle com a sola', 'Passe em profundidade', 'Super substituto'],
+      promoteImpetos: ['Movimento sem a bola'],
+      note: 'Regra atualizável: CA finalizador preserva o pacote de finalização nativo e prioriza habilidades que melhoram tabelas, domínio e movimentação.'
+    },
+    {
+      id: 'goleiro-oficial',
+      title: 'Goleiro usa habilidades oficiais de GOL',
+      match: { position: 'GK' },
+      blockSkills: ['Chute de primeira', 'Precisão à distância', 'Toque duplo', 'Cruzamento preciso', 'Marcação individual', 'Carrinho', 'Bloqueador'],
+      promoteSkills: ['Pegador de pênalti', 'Arremesso longo do goleiro', 'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Liderança'],
+      promoteImpetos: ['Goleiro', 'Defesaça'],
+      note: 'Regra atualizável: GOL fica separado de jogadores de linha.'
+    },
+    {
+      id: 'vol-destruidor',
+      title: 'VOL/ZAG destruidor prioriza roubo e bloqueio',
+      match: { position: 'ANY', playstyleIncludes: ['destruidor'] },
+      promoteSkills: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Passe de primeira'],
+      promoteImpetos: ['Roubo de bola', 'Defesa', 'Duelo', 'Motor do time'],
+      blockSkills: ['Controle da cavadinha', 'Finalização acrobática'],
+      note: 'Regra atualizável: destruidor ganha prioridade defensiva sem virar atacante.'
+    },
+    {
+      id: 'orquestrador-construtor',
+      title: 'Orquestrador é construtor, não cão de guarda puro',
+      match: { position: 'ANY', playstyleIncludes: ['orquestrador'] },
+      promoteSkills: ['Passe de primeira', 'Passe em profundidade', 'Passe longo', 'Controle orientado', 'Interceptação'],
+      promoteImpetos: ['Reconstrução', 'Passe', 'Proteção de Posse', 'Volante criativo'],
+      blockSkills: ['Chute acrobático', 'Finalização acrobática', 'Controle da cavadinha'],
+      note: 'Regra atualizável: orquestrador precisa saída de bola e passe antes de combate extremo.'
+    },
+    {
+      id: 'lateral-cruzamento',
+      title: 'Lateral perito em cruzamento prioriza corredor',
+      match: { position: 'ANY', playstyleIncludes: ['perito em cruzamento', 'lateral ofensivo', 'lateral atacante'] },
+      promoteSkills: ['Cruzamento preciso', 'Passe de primeira', 'Passe longo', 'Interceptação', 'Volta para marcar'],
+      promoteImpetos: ['Cruzamento', 'Agilidade', 'Transição ofensiva', 'Fisicalidade'],
+      note: 'Regra atualizável: lateral ofensivo precisa apoiar sem perder recomposição.'
+    }
+  ]
 };
 
 export function normalizeRemoteCatalogIdentity(value: string | null | undefined) {

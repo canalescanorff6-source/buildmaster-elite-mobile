@@ -3,8 +3,6 @@
  * Isso permite mover os motores internos sem quebrar a interface do aplicativo.
  */
 export {
-  analyzeCard,
-  parseCard,
   ATTRIBUTE_INPUTS,
   POSITION_LABELS
 } from '@/lib/analyzer';
@@ -26,3 +24,9 @@ export {
 } from '@/lib/analyzerDomain';
 
 export { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES, OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from './analyzerCatalog';
+
+// R126/R128 permanecem internos para regressão/migração histórica.
+// Código de aplicação deve entrar exclusivamente pela fachada R138 abaixo.
+
+// R138: fachada obrigatória para criação/refresh/guarda de resultados de produção.
+export { createProductionAnalysisR138, rebuildProductionAnalysisR138, ensureProductionAnalysisR138, productionUsagePositionR138 } from './productionOrchestratorR138';

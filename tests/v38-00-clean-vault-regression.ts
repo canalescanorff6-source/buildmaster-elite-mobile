@@ -35,6 +35,7 @@ function entry(overrides: Partial<CleanVaultEntry> & { id: string; name?: string
         playerName: name,
         playstyle: 'Meia versátil',
         cardType: 'Epic',
+        specialTag: versionKey,
         mainPosition: 'CMF',
         level: 30,
         maxOverall: 100,

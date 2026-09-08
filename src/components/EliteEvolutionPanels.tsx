@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AnalysisResult } from '@/lib/analyzer';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { createStableId } from '@/lib/stableId';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 const TRAINING_LABELS: Record<string,string> = {
   shooting:'Finalização', passing:'Passe', dribbling:'Drible', dexterity:'Destreza', lowerBodyStrength:'Força pernas',
@@ -100,7 +101,7 @@ export function VideoReviewPanel({result}:{result:AnalysisResult}){
   const [videoUrl,setVideoUrl]=useState<string|null>(null);
   const [markerType,setMarkerType]=useState(e?.videoAssist.supportedMarkers[0]??'passe atrasado');
   const [note,setNote]=useState('');
-  const key=e?`buildmaster_video_markers_${e.learning.versionSignature}_${result.bestPosition.code}`:'buildmaster_video_markers';
+  const key=e?`buildmaster_video_markers_${e.learning.versionSignature}_${analysisUsagePositionR138(result)}`:'buildmaster_video_markers';
   const [markers,setMarkers]=useState<VideoMarker[]>([]);
   useEffect(()=>{try{setMarkers(JSON.parse(readAccountStorage(key)??'[]'));}catch{setMarkers([]);}},[key]);
   useEffect(()=>()=>{if(videoUrl)URL.revokeObjectURL(videoUrl);},[videoUrl]);

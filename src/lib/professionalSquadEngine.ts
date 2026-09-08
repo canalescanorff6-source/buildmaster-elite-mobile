@@ -2,6 +2,8 @@ import type { AnalysisResult, TacticalFormation, TacticalStyle } from './analyze
 import { buildFormationLineup, FORMATION_BLUEPRINTS, styleAdviceForFormation } from './formationRoleEngine';
 import { buildSquadRotationReport, type RealSubstitution } from './squadRotation';
 import { OPPONENT_PROFILE_LABELS, type OpponentProfile } from './opponentAnalysis';
+import { cardIdentityFingerprintR126, playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 export const PROFESSIONAL_SQUAD_VERSION = '28.70.0';
 
@@ -110,20 +112,9 @@ const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 const avg = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 
 function prepareRosterResults(results: AnalysisResult[]) {
-  const occurrences = new Map<string, number>();
-  return results.map((result, index) => {
-    const baseId = (result.parsed.internalId || `${result.parsed.playerName}-${result.bestPosition.code || 'SEM_POSICAO'}`).trim() || `jogador-${index + 1}`;
-    const occurrence = occurrences.get(baseId) ?? 0;
-    occurrences.set(baseId, occurrence + 1);
-    if (occurrence === 0) return result;
-    return {
-      ...result,
-      parsed: {
-        ...result.parsed,
-        internalId: `${baseId}--elenco-${occurrence + 1}`
-      }
-    };
-  });
+  // R126: versões diferentes da mesma carta/jogador permanecem candidatas para comparação,
+  // mas a seleção de formação usa playerIdentityFingerprintR126 e jamais escala a mesma pessoa duas vezes.
+  return results;
 }
 
 function roleLabel(result: AnalysisResult) {
@@ -177,8 +168,8 @@ function analyzeFormation(results: AnalysisResult[], formation: TacticalFormatio
 function buildSectorReport(results: AnalysisResult[], rank: ProfessionalFormationRank): ProfessionalSector[] {
   const blueprint = FORMATION_BLUEPRINTS.find((item) => item.id === rank.formation) ?? FORMATION_BLUEPRINTS[0];
   const lineup = buildFormationLineup(results, blueprint);
-  const starterIds = new Set(lineup.filter((item) => item.player).map((item) => item.player!.parsed.internalId));
-  const reserves = results.filter((result) => !starterIds.has(result.parsed.internalId));
+  const starterPlayers = new Set(lineup.filter((item) => item.player).map((item) => playerIdentityFingerprintR126(item.player!.parsed)));
+  const reserves = results.filter((result) => !starterPlayers.has(playerIdentityFingerprintR126(result.parsed)));
   const linePositions: Record<LineKey, string[]> = {
     goleiro: ['GK'], defesa: ['CB', 'LB', 'RB'], meio: ['DMF', 'CMF', 'AMF', 'LMF', 'RMF'], ataque: ['CF', 'SS', 'LWF', 'RWF']
   };
@@ -190,7 +181,7 @@ function buildSectorReport(results: AnalysisResult[], rank: ProfessionalFormatio
   };
   return (['goleiro', 'defesa', 'meio', 'ataque'] as LineKey[]).map((line) => {
     const starters = lineup.filter((item) => item.slot.line === line && item.player).map((item) => item.player!.parsed.playerName);
-    const reserveNames = reserves.filter((result) => linePositions[line].includes(result.bestPosition.code)).map((result) => result.parsed.playerName);
+    const reserveNames = reserves.filter((result) => linePositions[line].includes(analysisUsagePositionR138(result))).map((result) => result.parsed.playerName);
     const lineItems = lineup.filter((item) => item.slot.line === line);
     const score = clamp(avg(lineItems.map((item) => item.score)) * .76 + Math.min(100, reserveNames.length * 34) * .24);
     const coverage: ProfessionalSector['coverage'] = starters.length < lineItems.length ? 'crítica' : reserveNames.length >= 2 ? 'forte' : reserveNames.length === 1 ? 'adequada' : 'curta';
@@ -259,7 +250,7 @@ function scenario(results: AnalysisResult[], formation: TacticalFormation, style
 
 function lineupFor(results: AnalysisResult[], formation: TacticalFormation) {
   const blueprint = FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? FORMATION_BLUEPRINTS[0];
-  return buildFormationLineup(results, blueprint).map((item) => ({ id: item.player?.parsed.internalId ?? null, slot: item.slot.label, player: item.player?.parsed.playerName ?? null, score: item.score }));
+  return buildFormationLineup(results, blueprint).map((item) => ({ id: item.player ? cardIdentityFingerprintR126(item.player.parsed) : null, slot: item.slot.label, player: item.player?.parsed.playerName ?? null, score: item.score }));
 }
 
 function buildPlans(results: AnalysisResult[], current: ProfessionalFormationRank, ranking: ProfessionalFormationRank[]): ProfessionalPlan[] {

@@ -1,6 +1,7 @@
 import { accountStorageKey } from '@/lib/accountStorage';
 import { runtimeGet, runtimePut } from '@/lib/localDatabase';
 import { isNativeVaultStorageAvailable, nativeVaultRead, nativeVaultWrite } from '@/lib/nativeVaultStorage';
+import { playerIdentityKeyFromNameR126 } from '@/lib/cardIdentityFingerprintR126';
 import {
   createEmptyMappingState,
   createMappingCardFingerprint,
@@ -69,6 +70,8 @@ function sanitizePlayer(raw: Partial<SquadMappingPlayer>, index: number): SquadM
     name,
     cardLabel: String(raw.cardLabel ?? 'Carta mapeada').trim().slice(0, 100),
     cardFingerprint: String(raw.cardFingerprint ?? '').slice(0, 120),
+    playerFingerprint: String(raw.playerFingerprint ?? '').slice(0, 120),
+    identityStatus: raw.identityStatus === 'canonical' ? 'canonical' : 'provisional',
     mainPosition,
     positions: Array.from(new Set([mainPosition, ...positions])),
     trainedPositions: Array.from(new Set(trainedPositions)),
@@ -100,6 +103,8 @@ function sanitizePlayer(raw: Partial<SquadMappingPlayer>, index: number): SquadM
     updatedAt: String(raw.updatedAt || now)
   };
   if (!player.cardFingerprint) player.cardFingerprint = createMappingCardFingerprint(player);
+  if (player.cardFingerprint.startsWith('card-r126-')) player.identityStatus = 'canonical';
+  if (!player.playerFingerprint) player.playerFingerprint = playerIdentityKeyFromNameR126(player.name, player.cardFingerprint);
   return player;
 }
 

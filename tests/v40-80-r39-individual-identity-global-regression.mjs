@@ -1,27 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-
-const engine = fs.readFileSync('src/lib/individualIdentityEngineV4080R39.ts','utf8');
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts','utf8');
-
-for (const marker of [
-  'INDIVIDUAL_IDENTITY_ENGINE_V4080_R39',
-  'identitySignals',
-  'candidateScore',
-  'reconstruct(result',
-  'Mesma posição e mesmo estilo só podem resultar em ficha idêntica',
-  'POSITION_ROLE',
-  'styleWeight'
-]) assert.ok(engine.includes(marker), `r39 sem ${marker}`);
-
-assert.ok(pipeline.includes("applyIndividualIdentityEngineV4080R39"));
-assert.ok(
-  pipeline.indexOf('applyProMatchOptimizerV4080R30(current)') <
-  pipeline.indexOf('applyIndividualIdentityEngineV4080R39(current)')
-);
-assert.ok(
-  pipeline.indexOf('applyIndividualIdentityEngineV4080R39(current)') <
-  pipeline.indexOf('applyDefinitiveAdditionalSkillsV600R15(current)')
-);
-
-console.log('r39 aprovada: identidade individual global após benchmark e antes de habilidades/Ímpeto.');
+assert.equal(fs.existsSync('src/lib/individualIdentityEngineV4080R39.ts'), false, 'R39 deve permanecer aposentado do runtime.');
+assert.doesNotMatch(pipeline, /applyIndividualIdentityEngineV4080R39/);
+assert.match(pipeline, /applyCanonicalCardIdentity2027R60/);
+assert.match(pipeline, /applyPerformanceEngine2027R108/);
+assert.match(pipeline, /applyCleanSlatePerformance2027R119/);
+console.log('r39 aposentadoria aprovada: identidade moderna R60/R108/R119 substitui o estágio histórico sem segundo writer.');

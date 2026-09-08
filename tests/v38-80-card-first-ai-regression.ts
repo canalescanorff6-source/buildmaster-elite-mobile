@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { analyzeCard } from '../src/lib/analyzer';
 import { applyAdvancedMotorV3750 } from '../src/lib/advancedMotorV3750';
-import { applyPowerBuildEngineV3850 } from '../src/lib/performanceBuildEngineV3850';
+import { applyPowerBuildEngineV3850 } from '../legacy-src/lib/performanceBuildEngineV3850';
 import { applyMaxMatchPerformanceV3860 } from '../src/lib/maxMatchPerformanceEngineV3860';
-import { applySupremePerformanceV3870 } from '../src/lib/supremePerformanceEngineV3870';
-import { applyCardFirstAiV3880 } from '../src/lib/cardFirstAiEngineV3880';
+import { applySupremePerformanceV3870 } from '../legacy-src/lib/supremePerformanceEngineV3870';
+import { applyCardFirstAiV3880 } from '../legacy-src/lib/cardFirstAiEngineV3880';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
 
@@ -132,10 +132,10 @@ const repeated = complete(MAT_CARD, 'mat-para-sa.png');
 assert.deepEqual(repeated.training, matResult.training, 'A mesma carta e contexto devem produzir resultado determinístico.');
 assert.deepEqual(repeated.recommendedSkills, matResult.recommendedSkills);
 
-const engine = fs.readFileSync('src/lib/cardFirstAiEngineV3880.ts', 'utf8');
+const engine = fs.readFileSync('legacy-src/lib/cardFirstAiEngineV3880.ts', 'utf8');
 const domain = fs.readFileSync('src/lib/analyzerDomain.ts', 'utf8');
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
-const panel = fs.readFileSync('src/components/CardFirstAiV3880Panel.tsx', 'utf8');
+const panel = fs.readFileSync('legacy-src/components/CardFirstAiV3880Panel.tsx', 'utf8');
 const workspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 assert.match(engine, /CARD_FIRST_AI_V3880_VERSION = '38\.80\.0'/);
 assert.match(engine, /CARTA_PRIMEIRO_POSICAO_COMO_RESTRICAO_SEM_OVERALL/);
@@ -144,8 +144,8 @@ assert.match(engine, /buildCardFirstSkillPlan/);
 assert.match(engine, /buildCardFirstImpetos/);
 assert.doesNotMatch(engine, /parsed\.(?:overall|maxOverall)/, 'GER/Overall não pode participar do cálculo v38.80.');
 assert.match(domain, /CardFirstAiV3880Analysis/);
-assert.match(pipeline, /applyCardFirstAiV3880/);
+assert.match(pipeline, /applyLegacyPerformanceDiagnosticsBridgeR184/);
 assert.match(panel, /IA por Carta v38\.80/);
-assert.match(workspace, /<CardFirstAiV3880Panel result=\{result\}/);
+assert.doesNotMatch(workspace, /CardFirstAiV3880Panel/);
 
 console.log(`v38.80 aprovada: CA→SA = ${caMotor?.archetype}/${caMotor?.targetFunction}; MAT→SA = ${matMotor?.archetype}/${matMotor?.targetFunction}; fichas e Top adicional distintos por carta.`);

@@ -21,6 +21,13 @@ export type EasyUiPreferences = {
   performanceMode: 'balanced' | 'economy';
 };
 
+export type AppTheme = EasyUiPreferences['appTheme'];
+export type AccentTheme = EasyUiPreferences['accentTheme'];
+export type TextScale = EasyUiPreferences['textScale'];
+export type DensityMode = EasyUiPreferences['densityMode'];
+export type MotionPreference = EasyUiPreferences['motionPreference'];
+export type PerformanceMode = EasyUiPreferences['performanceMode'];
+
 const UI_KEY = 'buildmaster_ui_prefs_v24_24';
 const EASY_MIGRATION_KEY = 'buildmaster_easy_ui_v5';
 

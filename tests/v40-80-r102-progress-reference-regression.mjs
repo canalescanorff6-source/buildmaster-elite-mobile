@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const source = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
+const source = fs.readFileSync('src/components/result/ResultReviewPanelR189.tsx', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 
 assert.match(source, /Print original da carta/);

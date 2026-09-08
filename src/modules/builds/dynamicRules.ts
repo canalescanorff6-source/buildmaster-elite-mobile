@@ -1,4 +1,5 @@
-import type { AnalysisResult, Objective, PositionCode } from '@/lib/analyzer';
+import type { AnalysisResult } from '@/lib/analyzer';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import {
   canonicalSkillName,
@@ -8,16 +9,14 @@ import {
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { memoryKey } from '@/modules/vault/cardHistoryStore';
 import {
-  EMPTY_REMOTE_CATALOG_V3770,
   resolveRemoteSkillNameV3770,
   isRemoteAdditionalSkillActiveV3770,
   sanitizeRemoteCatalogV3770,
-  type RemoteCatalogPatchV3770
 } from '@/lib/remoteCatalogV3770';
+import { DEFAULT_DYNAMIC_RULE_PACK, RULE_PACK_KEY, type DynamicRule, type DynamicRulePack } from '@/lib/remoteCatalogV3770';
+export { DEFAULT_DYNAMIC_RULE_PACK, RULE_PACK_KEY, type DynamicRule, type DynamicRuleMatch, type DynamicRulePack } from '@/lib/remoteCatalogV3770';
 
 export const CORRECTION_KEY = 'buildmaster_local_corrections_v24_29';
-
-export const RULE_PACK_KEY = 'buildmaster_rule_pack_v24_29';
 
 export type LocalCorrectionProfile = {
   blockedSkills: string[];
@@ -29,101 +28,6 @@ export type LocalCorrectionProfile = {
 };
 
 export type LocalCorrectionStore = Record<string, LocalCorrectionProfile>;
-
-export type DynamicRuleMatch = {
-  position?: PositionCode | 'ANY';
-  playstyleIncludes?: string[];
-  functionIncludes?: string[];
-  objective?: Objective | 'ANY';
-};
-
-export type DynamicRule = {
-  id: string;
-  title: string;
-  match: DynamicRuleMatch;
-  promoteSkills?: string[];
-  blockSkills?: string[];
-  promoteImpetos?: string[];
-  blockImpetos?: string[];
-  note?: string;
-};
-
-export type DynamicRulePack = {
-  version: string;
-  updatedAt: string;
-  source: string;
-  rules: DynamicRule[];
-  globalBlockedSkills?: string[];
-  globalBlockedImpetos?: string[];
-  schemaVersion?: number;
-  gameVersion?: string;
-  publishedAt?: string;
-  expiresAt?: string;
-  minimumAppVersion?: string;
-  checksum?: string;
-  releaseNotes?: string[];
-  catalog?: RemoteCatalogPatchV3770;
-};
-
-export const DEFAULT_DYNAMIC_RULE_PACK: DynamicRulePack = {
-  version: '37.70.0-local',
-  updatedAt: '2026-08-01T00:00:00.000Z',
-  publishedAt: '2026-08-01T00:00:00.000Z',
-  gameVersion: 'eFootball 2026',
-  minimumAppVersion: '40.70.0',
-  schemaVersion: 3770,
-  source: 'Pacote local embutido',
-  releaseNotes: ['Base local compatível com histórico, catálogo remoto e auditoria v37.70.'],
-  catalog: EMPTY_REMOTE_CATALOG_V3770,
-  globalBlockedSkills: [],
-  globalBlockedImpetos: [],
-  rules: [
-    {
-      id: 'cf-finalizador-nao-marca',
-      title: 'CA finalizador não vira marcador',
-      match: { position: 'CF', playstyleIncludes: ['artilheiro', 'homem de área'] },
-      blockSkills: ['Volta para marcar', 'Interceptação', 'Marcação individual', 'Carrinho', 'Bloqueador'],
-      promoteSkills: ['Toque de calcanhar', 'Passe de primeira', 'Controle com a sola', 'Passe em profundidade', 'Super substituto'],
-      promoteImpetos: ['Movimento sem a bola'],
-      note: 'Regra atualizável: CA finalizador preserva o pacote de finalização nativo e prioriza habilidades que melhoram tabelas, domínio e movimentação.'
-    },
-    {
-      id: 'goleiro-oficial',
-      title: 'Goleiro usa habilidades oficiais de GOL',
-      match: { position: 'GK' },
-      blockSkills: ['Chute de primeira', 'Precisão à distância', 'Toque duplo', 'Cruzamento preciso', 'Marcação individual', 'Carrinho', 'Bloqueador'],
-      promoteSkills: ['Pegador de pênalti', 'Arremesso longo do goleiro', 'Reposição alta do goleiro', 'Reposição baixa do goleiro', 'Liderança'],
-      promoteImpetos: ['Goleiro', 'Defesaça'],
-      note: 'Regra atualizável: GOL fica separado de jogadores de linha.'
-    },
-    {
-      id: 'vol-destruidor',
-      title: 'VOL/ZAG destruidor prioriza roubo e bloqueio',
-      match: { position: 'ANY', playstyleIncludes: ['destruidor'] },
-      promoteSkills: ['Interceptação', 'Bloqueador', 'Marcação individual', 'Carrinho', 'Passe de primeira'],
-      promoteImpetos: ['Roubo de bola', 'Defesa', 'Duelo', 'Motor do time'],
-      blockSkills: ['Controle da cavadinha', 'Finalização acrobática'],
-      note: 'Regra atualizável: destruidor ganha prioridade defensiva sem virar atacante.'
-    },
-    {
-      id: 'orquestrador-construtor',
-      title: 'Orquestrador é construtor, não cão de guarda puro',
-      match: { position: 'ANY', playstyleIncludes: ['orquestrador'] },
-      promoteSkills: ['Passe de primeira', 'Passe em profundidade', 'Passe longo', 'Controle orientado', 'Interceptação'],
-      promoteImpetos: ['Reconstrução', 'Passe', 'Proteção de Posse', 'Volante criativo'],
-      blockSkills: ['Chute acrobático', 'Finalização acrobática', 'Controle da cavadinha'],
-      note: 'Regra atualizável: orquestrador precisa saída de bola e passe antes de combate extremo.'
-    },
-    {
-      id: 'lateral-cruzamento',
-      title: 'Lateral perito em cruzamento prioriza corredor',
-      match: { position: 'ANY', playstyleIncludes: ['perito em cruzamento', 'lateral ofensivo', 'lateral atacante'] },
-      promoteSkills: ['Cruzamento preciso', 'Passe de primeira', 'Passe longo', 'Interceptação', 'Volta para marcar'],
-      promoteImpetos: ['Cruzamento', 'Agilidade', 'Transição ofensiva', 'Fisicalidade'],
-      note: 'Regra atualizável: lateral ofensivo precisa apoiar sem perder recomposição.'
-    }
-  ]
-};
 
 export const emptyCorrectionProfile = (): LocalCorrectionProfile => ({
   blockedSkills: [],
@@ -185,7 +89,8 @@ export function writeDynamicRulePack(pack: DynamicRulePack) {
 
 export function ruleMatchesResult(rule: DynamicRule, result: AnalysisResult) {
   const match = rule.match ?? {};
-  if (match.position && match.position !== 'ANY' && match.position !== result.bestPosition.code && match.position !== result.parsed.mainPosition) return false;
+  const usagePosition = analysisUsagePositionR138(result);
+  if (match.position && match.position !== 'ANY' && match.position !== usagePosition && match.position !== result.parsed.mainPosition) return false;
   if (match.objective && match.objective !== 'ANY' && match.objective !== 'COMPETITIVE') return false;
   const playstyle = normalizeRuleText(result.parsed.playstyle);
   if (match.playstyleIncludes?.length && !match.playstyleIncludes.some((item) => playstyle.includes(normalizeRuleText(item)))) return false;
@@ -241,10 +146,11 @@ export function writeCorrectionStore(store: LocalCorrectionStore) {
 export function correctionKeysForResult(result: AnalysisResult) {
   const player = memoryKey(result.parsed.playerName || 'jogador');
   const style = memoryKey(result.parsed.playstyle || 'sem-estilo');
-  const role = memoryKey(result.teamMap?.functionLabel || result.buildName || result.bestPosition.label);
+  const usagePosition = analysisUsagePositionR138(result);
+  const role = memoryKey(result.teamMap?.functionLabel || result.buildName || usagePosition);
   return {
     player: `player:${player}`,
-    role: `role:${result.parsed.mainPosition}:${style}:${role}`
+    role: `role:${usagePosition}:${style}:${role}`
   };
 }
 

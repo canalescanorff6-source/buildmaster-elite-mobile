@@ -3,6 +3,7 @@ import { cardFingerprint, type MatchValidationMode, type MatchConnectionState, t
 import { TRAINING_LABELS } from './trainingEngine';
 import { readAccountStorage, writeAccountStorage } from './accountStorage';
 import { trainingPlanTotalCost } from './trainingPlanCore';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 export const REAL_GAMEPLAY_VALIDATION_V4050_VERSION = '40.50.0' as const;
 export const REAL_GAMEPLAY_VALIDATION_V4050_MIN_MATCHES_PER_ARM = 5;
@@ -116,7 +117,7 @@ function minutesWeight(minutes: number) {
 }
 
 function positionSubjectiveScore(result: AnalysisResult, record: MatchValidationRecord) {
-  const position = result.bestPosition.code;
+  const position = analysisUsagePositionR138(result);
   const scores = {
     passing: Number(record.passing || 0) * 20,
     movement: Number(record.movement || 0) * 20,
@@ -136,7 +137,7 @@ function positionSubjectiveScore(result: AnalysisResult, record: MatchValidation
 
 function objectiveScore(result: AnalysisResult, record: MatchValidationRecord) {
   const per90 = (value: number) => value * 90 / Math.max(1, Number(record.minutes || 1));
-  const position = result.bestPosition.code;
+  const position = analysisUsagePositionR138(result);
   const errors = per90(metric(record, 'passErrors')) * 1.15 + per90(metric(record, 'ballLosses')) * .62;
   if (position === 'GK') {
     return clamp(55 + per90(metric(record, 'saves')) * 4.2 + per90(metric(record, 'progressivePasses')) * .8 + per90(metric(record, 'aerialDuelsWon')) * 1.5 - per90(metric(record, 'goalsConceded')) * 6 - errors * .45);
@@ -302,16 +303,16 @@ function learningSignals(result: AnalysisResult, records: MatchValidationRecord[
   if (ratings.passing < 64 || per90('passErrors') > 3.5) candidates.push({ group: 'passing', score: clamp(75 - ratings.passing + per90('passErrors') * 4), evidence: `Passe ${Math.round(ratings.passing)}/100 e ${round(per90('passErrors'))} erro(s)/90.` });
   if (ratings.movement < 65) candidates.push({ group: 'dexterity', score: clamp(75 - ratings.movement), evidence: `Movimentação ${Math.round(ratings.movement)}/100.` });
   if (ratings.stamina < 64 || records.filter((record) => record.secondHalfDrop).length >= 2) candidates.push({ group: 'lowerBodyStrength', score: clamp(78 - ratings.stamina + records.filter((r) => r.secondHalfDrop).length * 3), evidence: `Resistência ${Math.round(ratings.stamina)}/100 e ${records.filter((r) => r.secondHalfDrop).length} queda(s) no 2º tempo.` });
-  if (ratings.finishing < 63 && !['GK', 'CB', 'LB', 'RB', 'DMF'].includes(result.bestPosition.code)) candidates.push({ group: 'shooting', score: clamp(76 - ratings.finishing), evidence: `Finalização ${Math.round(ratings.finishing)}/100.` });
-  if (ratings.defending < 64 && ['GK', 'CB', 'LB', 'RB', 'DMF', 'CMF'].includes(result.bestPosition.code)) candidates.push({ group: 'defending', score: clamp(78 - ratings.defending), evidence: `Defesa ${Math.round(ratings.defending)}/100.` });
+  if (ratings.finishing < 63 && !['GK', 'CB', 'LB', 'RB', 'DMF'].includes(analysisUsagePositionR138(result))) candidates.push({ group: 'shooting', score: clamp(76 - ratings.finishing), evidence: `Finalização ${Math.round(ratings.finishing)}/100.` });
+  if (ratings.defending < 64 && ['GK', 'CB', 'LB', 'RB', 'DMF', 'CMF'].includes(analysisUsagePositionR138(result))) candidates.push({ group: 'defending', score: clamp(78 - ratings.defending), evidence: `Defesa ${Math.round(ratings.defending)}/100.` });
   if (ratings.physical < 62) candidates.push({ group: 'aerialStrength', score: clamp(75 - ratings.physical), evidence: `Físico ${Math.round(ratings.physical)}/100.` });
-  if (per90('ballLosses') > 4.5 && result.bestPosition.code !== 'GK') candidates.push({ group: 'dribbling', score: clamp(55 + per90('ballLosses') * 4), evidence: `${round(per90('ballLosses'))} perda(s) de bola/90.` });
+  if (per90('ballLosses') > 4.5 && analysisUsagePositionR138(result) !== 'GK') candidates.push({ group: 'dribbling', score: clamp(55 + per90('ballLosses') * 4), evidence: `${round(per90('ballLosses'))} perda(s) de bola/90.` });
   return candidates.sort((a, b) => b.score - a.score).slice(0, 4).map((item) => ({ group: item.group, label: TRAINING_LABELS[item.group], direction: 'reforcar' as const, score: round(item.score), evidence: item.evidence }));
 }
 
 export function buildRealGameplayValidationV4050(result: AnalysisResult, allRecords: MatchValidationRecord[]): RealGameplayValidationV4050Analysis {
   const fingerprint = cardFingerprint(result);
-  const records = allRecords.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === result.bestPosition.code);
+  const records = allRecords.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === analysisUsagePositionR138(result));
   const scored = records.map((record) => scoreRecord(result, record));
   const allStats = weightedStats(scored.map((item) => ({ value: item.score, weight: item.weight })));
   const arms = primaryAlternatives(result).map((alternative) => buildArm(result, records, alternative)).sort((a, b) => b.posteriorScore - a.posteriorScore || a.rank - b.rank);
@@ -453,7 +454,7 @@ export function persistVerifiedGameplayWinnerV4050(result: AnalysisResult, analy
   const entry: GameplayValidationMemoryEntryV4050 = {
     engineVersion: REAL_GAMEPLAY_VALIDATION_V4050_VERSION,
     cardFingerprint: analysis.cardFingerprint,
-    position: result.bestPosition.code,
+    position: analysisUsagePositionR138(result),
     winnerId: arm.id,
     winnerLabel: arm.label,
     training: { ...arm.training },
@@ -471,34 +472,25 @@ export function persistVerifiedGameplayWinnerV4050(result: AnalysisResult, analy
 export function applyVerifiedGameplayWinnerV4050(result: AnalysisResult): AnalysisResult {
   if (result.objective !== 'COMPETITIVE' || !result.maximumPerformanceV4040) return result;
   const fingerprint = cardFingerprint(result);
-  const entry = readValidationMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === result.bestPosition.code);
+  const entry = readValidationMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === analysisUsagePositionR138(result));
   if (!entry) return result;
   const candidate = result.maximumPerformanceV4040.alternatives.find((item) => item.id === entry.winnerId);
   if (!candidate) return result;
-  // O candidato precisa continuar existindo na busca atual. Isso impede uma memória antiga de sobreviver a mudanças estruturais do motor.
   const samePlan = JSON.stringify(candidate.training) === JSON.stringify(entry.training);
-  if (!samePlan) return result;
-  if (trainingPlanTotalCost(entry.training) !== result.trainingPointsTotal) return result;
-  const used = trainingPlanTotalCost(entry.training);
+  if (!samePlan || trainingPlanTotalCost(entry.training) !== result.trainingPointsTotal) return result;
+
+  // R135: v40.50 continua preservada como laboratório/evidência histórica, mas perdeu
+  // qualquer capacidade de reaplicar uma receita. O Clean Slate é o único escritor.
   return {
     ...result,
-    training: { ...entry.training },
-    trainingPointsUsed: used,
-    trainingPointsRemaining: Math.max(0, result.trainingPointsTotal - used),
-    buildName: `Ficha Automática v40.50 — Validada em Gameplay — ${entry.winnerLabel} — ${result.parsed.playerName}`,
     recommendationExplanation: [
-      `Validação real v40.50 recuperou ${entry.winnerLabel}, confirmada com confiança ${Math.round(entry.confidenceScore)}/100 e ${entry.rawMatches} partidas no braço vencedor.`,
-      'A promoção só foi aceita porque a mesma alternativa continua existindo na busca Pareto atual e mantém orçamento exato.',
+      `Validação real v40.50 observou ${entry.winnerLabel} com confiança ${Math.round(entry.confidenceScore)}/100 em ${entry.rawMatches} partida(s); R135 usa isso apenas como evidência, nunca como receita reaplicável.`,
       ...result.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 30),
-    strengths: [
-      'A ficha aplicada possui vencedor confirmado por amostra comparável de gameplay real, sem decisão baseada em uma partida isolada.',
-      ...result.strengths
-    ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 18),
-    note: `${result.note} Validação real v40.50: ${entry.winnerLabel} foi promovida após evidência A/B suficiente; a memória é descartada automaticamente se o candidato deixar de existir ou mudar de distribuição.`,
     gameplayValidationMemoryV4050: {
       engineVersion: REAL_GAMEPLAY_VALIDATION_V4050_VERSION,
-      applied: true,
+      applied: false,
+      observationalOnly: true,
       winnerId: entry.winnerId,
       winnerLabel: entry.winnerLabel,
       confidenceScore: entry.confidenceScore,

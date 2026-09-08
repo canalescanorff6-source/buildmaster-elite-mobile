@@ -18,8 +18,8 @@ assert.ok(closer.w < fitted.w && closer.h < fitted.h);
 assert.ok(farther.w > fitted.w && farther.h > fitted.h);
 assert.deepEqual(clampCardCropBox({ x: -1, y: 2, w: 4, h: 0.01 }), { x: 0, y: 0.96, w: 1, h: 0.04 });
 
-const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
-assert.match(app, /createSmartCardPreview/);
+const readerRuntime = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
+assert.match(readerRuntime, /createSmartCardPreview/, 'O runtime canônico do Leitor R163 precisa continuar criando o recorte inteligente da carta.');
 const cropPanel = fs.readFileSync('src/components/SmartCardCropPanel.tsx', 'utf8');
 assert.match(cropPanel, /Recorte quadrado da foto, sem bordas do menu/);
 assert.match(cropPanel, /Ajustar recorte/);

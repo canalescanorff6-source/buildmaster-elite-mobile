@@ -1,4 +1,4 @@
-import type { AttributeKey, Attributes, PositionCode } from '@/lib/analyzerDomain';
+import type { AttributeKey, Attributes, PositionCode, TrainingKey } from '@/lib/analyzerDomain';
 
 export const POSITION_ALIASES: Record<PositionCode, string[]> = {
   CF: ['CF', 'CA', 'CENTROAVANTE', 'CENTRE FORWARD', 'CENTER FORWARD', 'STRIKER'],
@@ -195,6 +195,42 @@ export const SKILL_PROFILES: Record<string, { category: string; boosts: Partial<
   'Sombra veloz': { category: 'ESPECIAL', boosts: { mobility: 5, pressure: 3 }, aliases: ['Shadow Hunt', 'Caça-sombras', 'Caca-sombras', 'Sombra Veloz'] },
   'Tap Trick': { category: 'ESPECIAL', boosts: {}, aliases: ['Tap Trick', 'Tap-trick', 'タップトリック'] },
 };
+
+export type SpecialSkillAnalysisMeta = {
+  positions: PositionCode[];
+  attrs: AttributeKey[];
+  groups: TrainingKey[];
+  use: string;
+  identity: Partial<Record<TrainingKey, number>>;
+};
+
+const SPECIAL_SKILL_ANALYSIS_ROWS: Array<[string, PositionCode[], AttributeKey[], TrainingKey[], string, Partial<Record<TrainingKey, number>>]> = [
+  ['Curva descendente',['LWF','RWF','SS','AMF','CF'],['curl','finishing','kickingPower','ballControl'],['shooting','dribbling','dexterity'],'cortar para o pé dominante e finalizar com curva sem perder a preparação corporal',{ shooting:1.8, dribbling:.8, dexterity:.55 }],
+  ['Esticada de Perna',['CB','DMF','LB','RB','CMF'],['tackling','defensiveEngagement','aggression','physicalContact'],['defending','lowerBodyStrength'],'fechar linhas de passe e recuperar a bola sem desmontar o bloco',{ defending:1.55, lowerBodyStrength:.7 }],
+  ['Impulso ofensivo',['LWF','RWF','SS','AMF','CF','LMF','RMF'],['speed','acceleration','offensiveAwareness','stamina'],['dexterity','lowerBodyStrength'],'acelerar a movimentação sem bola no campo adversário',{ dexterity:1.25, lowerBodyStrength:1.15 }],
+  ['Sombra veloz',['DMF','CB','LB','RB'],['speed','acceleration','defensiveAwareness','stamina'],['dexterity','lowerBodyStrength','defending'],'recuperar em velocidade quando um passe rompe a linha defensiva',{ dexterity:1.0, lowerBodyStrength:1.15, defending:.75 }],
+  ['Drible de impulso',['LWF','RWF','SS','AMF'],['dribbling','tightPossession','balance','acceleration'],['dribbling','dexterity'],'vencer o duelo curto e conduzir em velocidade',{ dribbling:1.65, dexterity:.85 }],
+  ['Finalização fenomenal',['CF','SS','LWF','RWF','AMF'],['finishing','kickingPower','balance','offensiveAwareness'],['shooting','dexterity'],'finalizar mesmo sob contato ou postura corporal desfavorável',{ shooting:1.85, dexterity:.55 }],
+  ['Passador nato',['AMF','CMF','DMF','SS'],['lowPass','loftedPass','ballControl','tightPossession'],['passing','dribbling'],'executar passes difíceis sob pressão e em pouco espaço',{ passing:1.9, dribbling:.45 }],
+  ['Passe decisivo',['AMF','CMF','DMF','SS'],['lowPass','loftedPass','stamina'],['passing','lowerBodyStrength'],'aumentar a criação quando a partida exige uma jogada decisiva',{ passing:1.65, lowerBodyStrength:.35 }],
+  ['Fortaleza',['CB','DMF','LB','RB','GK'],['defensiveAwareness','tackling','physicalContact','defensiveEngagement'],['defending','aerialStrength'],'proteger a área e sustentar a vantagem com posicionamento e contato',{ defending:1.65, aerialStrength:.55 }],
+  ['Cruzamento cortante',['LWF','RWF','LMF','RMF','LB','RB'],['loftedPass','curl','kickingPower'],['passing','lowerBodyStrength'],'cruzar com trajetória rápida a partir do corredor',{ passing:1.55, lowerBodyStrength:.55 }],
+  ['Cabeçada fulminante',['CF','SS','CB'],['heading','jump','physicalContact','offensiveAwareness'],['aerialStrength','shooting'],'atacar cruzamentos e bolas paradas com impulsão e presença de área',{ aerialStrength:1.75, shooting:.65 }],
+  ['Fortaleza aérea',['CB','DMF','LB','RB','CF','GK'],['heading','jump','physicalContact','defensiveAwareness'],['aerialStrength','defending'],'dominar duelos aéreos e proteger a zona de queda',{ aerialStrength:1.8, defending:.55 }],
+  ['Drible explosivo',['LWF','RWF','SS','AMF','CF','LMF','RMF'],['acceleration','dribbling','tightPossession','balance'],['dribbling','dexterity','lowerBodyStrength'],'romper o primeiro marcador com aceleração curta',{ dribbling:1.1, dexterity:1.55, lowerBodyStrength:.5 }],
+  ['Desencadeador de ataques',['AMF','CMF','DMF','SS'],['lowPass','ballControl','offensiveAwareness','stamina'],['passing','dribbling','lowerBodyStrength'],'controlar a bola em zona central para melhorar a movimentação ofensiva dos companheiros',{ passing:1.5, dribbling:.45, lowerBodyStrength:.35 }],
+  ['Comandante da defesa (GO)',['GK'],['goalkeeperAwareness','goalkeeperParrying','goalkeeperReflexes','goalkeeperReach'],['gk1','gk2','gk3'],'organizar a última linha a partir do gol',{ gk1:1.35, gk2:1.2, gk3:1.15, defending:.4 }],
+  ['Rugido do goleiro',['GK'],['goalkeeperAwareness','goalkeeperReflexes','goalkeeperReach','jump'],['gk1','gk2','gk3','aerialStrength'],'sustentar presença e reação do goleiro em alta pressão',{ gk1:1.1, gk2:1.35, gk3:1.25, aerialStrength:.35 }],
+  ['Chute rasteiro fulminante',['CF','SS','LWF','RWF','AMF'],['finishing','kickingPower','balance','offensiveAwareness'],['shooting','dexterity'],'finalizar rasteiro com potência em corredor aberto',{ shooting:1.85, dexterity:.45 }],
+  ['Pés magnéticos',['LWF','RWF','SS','AMF','CMF'],['ballControl','dribbling','tightPossession','balance'],['dribbling','dexterity'],'reter a bola próxima do corpo sob pressão',{ dribbling:1.8, dexterity:.55 }],
+  ['Garra',['CF','SS','AMF','CMF','DMF','CB','GK'],['stamina','balance','aggression','physicalContact'],['lowerBodyStrength','defending','dexterity'],'manter a capacidade de decisão e disputa em momentos críticos',{ lowerBodyStrength:1.15, defending:.7, dexterity:.5 }],
+  ['Passe visionário',['AMF','CMF','DMF','SS','LMF','RMF'],['lowPass','loftedPass','ballControl','offensiveAwareness'],['passing','dribbling'],'encontrar linhas de passe difíceis e acelerar a criação',{ passing:1.9, dribbling:.4 }],
+];
+
+/** R193: metadados únicos para identidade de treino + DNA das habilidades especiais. */
+export const SPECIAL_SKILL_ANALYSIS_META: Record<string, SpecialSkillAnalysisMeta> = Object.fromEntries(
+  SPECIAL_SKILL_ANALYSIS_ROWS.map(([name, positions, attrs, groups, use, identity]) => [name, { positions, attrs, groups, use, identity }])
+);
 
 export const OFFICIAL_ADDITIONAL_SKILL_CATALOG_VERSION = '35.00-user-photo-catalog-2026-07-31';
 

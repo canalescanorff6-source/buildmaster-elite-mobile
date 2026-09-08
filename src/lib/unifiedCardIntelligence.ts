@@ -20,6 +20,8 @@ import {
 } from './trainingPlanCore';
 import { buildPersonalizedSkillPlan, skillPlanScore } from './skillIntelligenceV31';
 import { cardAnalysisInputFingerprint, feedbackFingerprint } from './cardAnalysisFingerprint';
+import { cardIdentityFingerprintR126, cardUsageIdentityKeyR126 } from './cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 
 const ENGINE_VERSION = '31.10-unified-intelligence-1';
 const SIMULATION_COUNT = 520;
@@ -81,8 +83,11 @@ function loadFeedbacks(result: AnalysisResult): MatchFeedback[] {
   try {
     const raw = readAccountStorage(CALIBRATION_STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) as Record<string, MatchFeedback[]> : {};
-    const key = `${result.parsed.internalId}:${result.bestPosition.code}`;
-    return Array.isArray(parsed[key]) ? parsed[key].slice(0, 30) : [];
+    const usagePosition = analysisUsagePositionR138(result);
+    const key = cardUsageIdentityKeyR126(result.parsed, usagePosition);
+    const legacyKey = `${result.parsed.internalId}:${usagePosition}`;
+    const records = Array.isArray(parsed[key]) ? parsed[key] : parsed[legacyKey];
+    return Array.isArray(records) ? records.slice(0, 30) : [];
   } catch { return []; }
 }
 
@@ -312,7 +317,7 @@ function generateCandidates(result: AnalysisResult, learning: MatchLearningV31) 
   for (const tested of learning.testedPlans) {
     if (tested.samples >= 2) add(tested.plan, `Ficha testada em ${tested.samples} partida(s) • desempenho ${tested.performanceScore}/100`);
   }
-  const seed = hash(`${result.parsed.internalId}|${result.parsed.playerName}|${result.parsed.cardType}|${result.bestPosition.code}`);
+  const seed = hash(`${cardIdentityFingerprintR126(result.parsed)}|${result.bestPosition.code}`);
   for (let index = 0; index < SIMULATION_COUNT; index += 1) add(allocateCandidate(result, learning, index, seed), `Simulação profunda ${index + 1}`);
   return Array.from(bySignature.values());
 }

@@ -173,3 +173,24 @@
   .bm-v3800-player-card,.bm-v3800-version-list > summary svg:last-child,.bm-v3800-vault-advanced > summary svg:last-child { transition:none; }
   .bm-v3800-player-card:hover { transform:none; }
 }
+
+/* R154 — feedback reativo e bloqueio de repetição durante commits do Cofre */
+.bm-v154-vault-operation {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+  border-radius:13px;
+  background:color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+  color:var(--text);
+}
+.bm-v154-vault-operation > svg { flex:none; color:var(--accent); }
+.bm-v154-vault-operation > div { display:grid; gap:2px; min-width:0; }
+.bm-v154-vault-operation strong { font-size:.82rem; }
+.bm-v154-vault-operation span { color:var(--text-muted); font-size:.74rem; }
+.bm-v3800-vault-panel button:disabled,
+.bm-v3800-vault-panel select:disabled {
+  cursor:not-allowed;
+  opacity:.56;
+}

@@ -5,6 +5,7 @@ import type {
   TrainingKey,
   TrainingPlan
 } from './analyzerDomain';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import { ATTRIBUTE_PT, POSITION_PT } from './analyzerDomain';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '@/modules/analysis/analyzerCatalog';
 import {
@@ -13,7 +14,7 @@ import {
   trainingLevelCost,
   trainingPlanTotalCost
 } from './trainingPlanCore';
-import type { CardRegistryEntry, MatchValidationRecord } from './appEvolution';
+import { cardFingerprint, type CardRegistryEntry, type MatchValidationRecord } from './appEvolution';
 
 export const PROFESSIONAL_INTELLIGENCE_VERSION = '37.00.0';
 
@@ -188,7 +189,7 @@ export function buildPositionCompatibilityMatrix(result: AnalysisResult): Positi
     const cardRating = Number.isFinite(reported?.cardRating) ? Number(reported?.cardRating) : Number.isFinite(result.parsed.positionRatings[position]) ? Number(result.parsed.positionRatings[position]) : null;
     const ratingFit = cardRating == null ? attrFit : Math.min(100, cardRating);
     const isNatural = native.has(position);
-    const isSelected = result.bestPosition.code === position;
+    const isSelected = analysisUsagePositionR138(result) === position;
     const isPermitted = permitted.has(position) || isNatural || isSelected;
     let score = average([
       Number(reported?.score ?? attrFit),
@@ -225,7 +226,7 @@ export function buildPositionCompatibilityMatrix(result: AnalysisResult): Positi
     };
   }).sort((left, right) => right.score - left.score || Number(right.selected) - Number(left.selected));
 
-  const selected = entries.find((item) => item.position === result.bestPosition.code) ?? entries[0];
+  const selected = entries.find((item) => item.position === analysisUsagePositionR138(result)) ?? entries[0];
   const natural = entries.find((item) => item.position === result.parsed.mainPosition) ?? entries[0];
   const alternatives = entries.filter((item) => !item.selected && !item.natural && item.level !== 'não recomendada').slice(0, 4);
   const warning = selected.score < 72
@@ -375,7 +376,7 @@ export function buildScenarioGameplayAnalysis(result: AnalysisResult): ScenarioG
   });
 
   for (const definition of SCENARIO_DEFINITIONS) {
-    const position = result.bestPosition.code;
+    const position = analysisUsagePositionR138(result);
     const increase = position === 'GK'
       ? ['gk1', 'gk2', 'gk3', 'aerialStrength'] as TrainingKey[]
       : definition.increase.filter((key) => !key.startsWith('gk'));
@@ -560,7 +561,9 @@ export function buildPersonalGameplayLearning(records: MatchValidationRecord[]):
 }
 
 export function buildMatchEvidenceLoop(result: AnalysisResult, records: MatchValidationRecord[]): MatchEvidenceLoop {
-  const fingerprintRecords = records.filter((record) => record.playerName.toLowerCase() === result.parsed.playerName.toLowerCase() && record.targetPosition === result.bestPosition.code);
+  const usagePosition = analysisUsagePositionR138(result);
+  const exactFingerprint = cardFingerprint(result);
+  const fingerprintRecords = records.filter((record) => record.cardFingerprint === exactFingerprint && record.targetPosition === usagePosition);
   const samples = fingerprintRecords.length;
   if (!samples) return { samples: 0, confidence: 'baixa', verdict: 'Esta ficha ainda não foi validada em partida.', correction: null, preserve: ['Ficha original preservada até existir evidência real.'], evidence: ['Registre gols, assistências, perdas, dribles, ações defensivas e sensação de delay.'] };
   const avg = (key: 'passing' | 'movement' | 'finishing' | 'defending' | 'physical' | 'stamina') => fingerprintRecords.reduce((sum, record) => sum + Number(record[key] || 0), 0) / samples;
@@ -593,7 +596,7 @@ export function buildMatchEvidenceLoop(result: AnalysisResult, records: MatchVal
       'Posição escolhida, habilidades oficiais e DNA da carta não são trocados automaticamente.'
     ],
     evidence: [
-      `${samples} partida(s) na posição ${POSITION_PT[result.bestPosition.code]}.`,
+      `${samples} partida(s) na posição ${POSITION_PT[usagePosition]}.`,
       `${metrics.passErrors} erro(s) de passe • ${metrics.losses} perda(s) de bola.`,
       `${metrics.secondHalf} relato(s) de queda no segundo tempo.`
     ]

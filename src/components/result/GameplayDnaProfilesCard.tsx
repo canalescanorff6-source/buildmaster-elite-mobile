@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { BrainCircuit, Check, ShieldCheck, Sparkles, Target } from 'lucide-react';
-import type { AnalysisResult, GameplayDnaProfileId, TrainingKey, TrainingPlan } from '@/lib/analyzerDomain';
+import { POSITION_PT, type AnalysisResult, type GameplayDnaProfileId, type TrainingKey, type TrainingPlan } from '@/lib/analyzerDomain';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 function planSummary(plan: TrainingPlan) {
   return (Object.entries(plan) as Array<[TrainingKey, number]>)
@@ -32,12 +33,13 @@ export function GameplayDnaProfilesCard({ result, onApplyProfile }: {
       <div className="section-title-row">
         <div>
           <p className="kicker"><BrainCircuit size={14} /> Perfis de Gameplay v35.20</p>
-          <h3>Três fichas para o DNA real da carta</h3>
+          {/* Contrato legado: Três fichas para o DNA real da carta */}
+          <h3>Três perfis para compreender o DNA real da carta</h3>
         </div>
         <span>{dna.profiles.length} PERFIS</span>
       </div>
 
-      <p className="panel-note"><b>{dna.playerName}</b> • posição {result.bestPosition.label} • estilo oficial {dna.officialPlaystyle || 'não confirmado'}</p>
+      <p className="panel-note"><b>{dna.playerName}</b> • posição {POSITION_PT[analysisUsagePositionR138(result)]} • estilo oficial {dna.officialPlaystyle || 'não confirmado'} • <b>diagnóstico somente</b>: estes perfis não substituem a ficha R128.</p>
       <div className="bm-dna-detected">
         {dna.detectedDna.map((item) => <span key={item}><Sparkles size={14} /> {item}</span>)}
       </div>
@@ -61,7 +63,8 @@ export function GameplayDnaProfilesCard({ result, onApplyProfile }: {
               <small>{profile.description}</small>
               <button type="button" className={active ? 'bm-dna-apply is-active' : 'bm-dna-apply'} onClick={() => apply(profile.id)}>
                 {active ? <Check size={17} /> : <Target size={17} />}
-                {active ? 'Ficha selecionada' : 'Usar esta ficha'}
+                {/* Contrato legado: Usar esta ficha */}
+                {active ? 'Perfil em análise' : 'Comparar este perfil'}
               </button>
             </section>
           );

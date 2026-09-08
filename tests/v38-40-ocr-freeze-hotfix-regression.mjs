@@ -3,15 +3,16 @@ import fs from 'node:fs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const app = read('src/components/CardVisionApp.tsx');
+const analysisR163 = read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 const db = read('src/lib/localDatabase.ts');
 const worker = read('src/lib/ocrWorkerManager.ts');
 const precision = read('src/modules/card-reader/highPrecisionOcr.ts');
 const total = read('src/components/TotalCardReaderPanel.tsx');
 
-assert.ok(app.includes("void saveBackgroundOcrCheckpoint({"), 'Checkpoint inicial não pode bloquear o começo do OCR.');
-assert.ok(!app.includes("await saveBackgroundOcrCheckpoint({"), 'Regressão: checkpoint voltou a bloquear o leitor.');
-assert.ok(app.includes("openMainSection('resultado');"), 'Resultado deve abrir somente após a leitura produzir a prévia.');
-assert.ok(app.includes("if (resumed && mainSection !== 'leitor') openMainSection('leitor');"), 'Retomada precisa manter controles do leitor visíveis.');
+assert.ok(analysisR163.includes("void saveBackgroundOcrCheckpoint({"), 'Checkpoint inicial não pode bloquear o começo do OCR.');
+assert.ok(!analysisR163.includes("await saveBackgroundOcrCheckpoint({"), 'Regressão: checkpoint voltou a bloquear o leitor.');
+assert.ok(analysisR163.includes("openMainSection('resultado');"), 'Resultado deve abrir somente após a leitura produzir a prévia.');
+assert.ok(analysisR163.includes("if (resumed && mainSection !== 'leitor') openMainSection('leitor');"), 'Retomada precisa manter controles do leitor visíveis.');
 assert.ok(total.includes('Cancelar leitura') && total.includes('onCancel'), 'Leitor total precisa manter saída/cancelamento durante processamento.');
 
 assert.ok(db.includes('DB_OPEN_TIMEOUT_MS'), 'IndexedDB precisa de timeout de abertura.');

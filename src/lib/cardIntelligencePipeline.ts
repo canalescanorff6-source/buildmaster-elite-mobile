@@ -8,11 +8,6 @@ import { applySupremeGameplayEngine } from './supremeGameplayEngine';
 import { enforceComplementarySkillIntegrity, synchronizeFinalSkillIntegrity } from './skillIntegrity';
 import { applyCalibrationV32 } from './calibrationV32';
 import { applyAdvancedMotorV3750 } from './advancedMotorV3750';
-import { applyPowerBuildEngineV3850 } from './performanceBuildEngineV3850';
-import { applyMaxMatchPerformanceV3860 } from './maxMatchPerformanceEngineV3860';
-import { applySupremePerformanceV3870 } from './supremePerformanceEngineV3870';
-import { applyCardFirstAiV3880 } from './cardFirstAiEngineV3880';
-import { applyCanonicalCardV3890 } from './canonicalCardEngineV3890';
 import { applyGlobalProBenchmarkV3900 } from './globalProBenchmarkV3900';
 import { applyEliteDominanceV3910 } from './eliteDominanceEngineV3910';
 import { applyUnifiedPerformanceV3920 } from './unifiedPerformanceEngineV3920';
@@ -33,24 +28,28 @@ import { applyLiveEvolutionV600R11 } from './liveEvolutionV600R11';
 import { applyPlayerGenerationFinalizerV4080R13 } from './playerGenerationFinalizerV4080R13';
 import { applyFinalIdentityEngineV4080R27 } from './finalIdentityEngineV4080R27';
 import { applyProMatchOptimizerV4080R30 } from './proMatchOptimizerV4080R30';
-import { applyIndividualIdentityEngineV4080R39 } from './individualIdentityEngineV4080R39';
-import { applyIndividualCalibrationEngineV4080R41 } from './individualCalibrationEngineV4080R41';
 import { applyMatchStaminaEngineV4080R44 } from './matchStaminaEngineV4080R44';
 import { applyMasterCardEngineV4080R50 } from './masterCardEngineV4080R50';
 import { applyDefinitiveAdditionalSkillsV600R15 } from './definitiveAdditionalSkillsV600R15';
 import { applyFinalDecisionAuthority2027R118 } from './finalDecisionAuthority2027V4080R118';
 import { applyCanonicalCardIdentity2027R60 } from './canonicalCardIdentity2027V4080R60';
-import { applyPerformanceFoundation2027R60 } from './performanceFoundation2027V4080R60';
-import { applyPerformanceEngine2027R70 } from './performanceEngine2027V4080R70';
-import { applyPerformanceEngine2027R107 } from './performanceEngine2027V4080R107';
 import { applyPerformanceEngine2027R108 } from './performanceEngine2027V4080R108';
-import { applyPerformanceEngine2027R109 } from './performanceEngine2027V4080R109';
 import { applyPermanentResources2027R80 } from './permanentResources2027V4080R80';
 import { applyPerformanceLab2027R90 } from './performanceLab2027V4080R90';
 import { applyProduction2027R100 } from './production2027V4080R100';
 import { applyCleanSlatePerformance2027R119 } from './cleanSlatePerformance2027V4080R119';
+import { sealProductionAuthorityR126 } from './productionAuthorityR126';
+import { sealProductionAuthorityR128 } from './productionAuthorityR128';
+import { attachMatchEvidenceCalibrationR136 } from '../modules/matches/matchEvidenceCalibrationR136';
 
 type AnalysisEngine = (input: AnalysisResult) => AnalysisResult;
+
+type LegacyPerformanceDiagnosticsR184Hook = (input: AnalysisResult) => AnalysisResult;
+
+function applyLegacyPerformanceDiagnosticsBridgeR184(current: AnalysisResult): AnalysisResult {
+  const hook = (globalThis as typeof globalThis & { __BUILDMASTER_LEGACY_PERFORMANCE_DIAGNOSTICS_R184__?: LegacyPerformanceDiagnosticsR184Hook }).__BUILDMASTER_LEGACY_PERFORMANCE_DIAGNOSTICS_R184__;
+  return typeof hook === 'function' ? hook(current) : current;
+}
 
 function applyLegacyTrainingReadOnly(current: AnalysisResult, engine: AnalysisEngine): AnalysisResult {
   const lockedTraining = { ...current.training };
@@ -152,15 +151,9 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
     current = enforceComplementarySkillIntegrity(current);
     current = applyLegacyTrainingReadOnly(current, applyAdvancedMotorV3750);
     current = enforceComplementarySkillIntegrity(current);
-    current = applyLegacyTrainingReadOnly(current, applyPowerBuildEngineV3850);
-    current = enforceComplementarySkillIntegrity(current);
-    current = applyLegacyTrainingReadOnly(current, applyMaxMatchPerformanceV3860);
-    current = enforceComplementarySkillIntegrity(current);
-    current = applyLegacyTrainingReadOnly(current, applySupremePerformanceV3870);
-    current = enforceComplementarySkillIntegrity(current);
-    current = applyLegacyTrainingReadOnly(current, applyCardFirstAiV3880);
-    current = enforceComplementarySkillIntegrity(current);
-    current = applyLegacyTrainingReadOnly(current, applyCanonicalCardV3890);
+    // R184: v38.50-v38.90 saíram do runtime de produção. Em Node, a suíte histórica
+    // instala uma ponte lazy test-only que reproduz exatamente a cadeia antiga.
+    current = applyLegacyPerformanceDiagnosticsBridgeR184(current);
     current = applyLegacyTrainingReadOnly(current, applyGlobalProBenchmarkV3900);
     current = applyLegacyTrainingReadOnly(current, applyEliteDominanceV3910);
     current = applyLegacyTrainingReadOnly(current, applyUnifiedPerformanceV3920);
@@ -181,15 +174,9 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
     current = applyLegacyTrainingReadOnly(current, applyLiveEvolutionV600R11);
     current = applyLegacyTrainingReadOnly(current, applyFinalIdentityEngineV4080R27);
     current = applyLegacyTrainingReadOnly(current, applyProMatchOptimizerV4080R30);
-    current = applyLegacyTrainingReadOnly(current, applyIndividualIdentityEngineV4080R39);
-    current = applyLegacyTrainingReadOnly(current, applyIndividualCalibrationEngineV4080R41);
     current = applyLegacyTrainingReadOnly(current, applyMatchStaminaEngineV4080R44);
     current = applyLegacyTrainingReadOnly(current, applyCanonicalCardIdentity2027R60);
-    current = applyLegacyTrainingReadOnly(current, applyPerformanceFoundation2027R60);
-    current = applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R70);
-    current = applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R107);
     current = applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R108);
-    current = applyLegacyTrainingReadOnly(current, applyPerformanceEngine2027R109);
     current = applyLegacyTrainingReadOnly(current, applyMasterCardEngineV4080R50);
     current = applyDefinitiveAdditionalSkillsV600R15(current);
     current = enforceComplementarySkillIntegrity(current);
@@ -200,18 +187,22 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   } else {
     // Fast path de produção: identidade leve + Clean Slate. Nenhuma cadeia v38/v39/v40 roda no celular.
     current = applyLegacyTrainingReadOnly(current, applyCanonicalCardIdentity2027R60);
-    current = applyLegacyTrainingReadOnly(current, applyPerformanceFoundation2027R60);
   }
+
+  // R136: feedback real vira evidência temporal/contextual limitada ANTES do único escritor final.
+  // Histórico antigo/fora de contexto perde peso; nenhum calibrador escolhe pontos/Top 5/Ímpeto.
+  current = attachMatchEvidenceCalibrationR136(current);
 
   // Único escritor final: sempre recalcula do snapshot cru obtido ANTES de qualquer motor histórico.
   current = applyCleanSlatePerformance2027R119(current, protectedRawCard);
   current = applyPostAuthorityReadOnly(current, applyProduction2027R100);
   current = applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13);
+  current = sealProductionAuthorityR126(current);
   current = {
     ...current,
     recommendationExplanation: [
-      'Clean Slate r123: ficha, Top 5 e Ímpeto são recalculados do zero a partir do snapshot cru da carta; confiança, saturação e A/B permanecem diagnósticos do mesmo motor.',
-      'Motores v38/v39/v40/r70/r107/r108/r109 permanecem somente para auditoria e não entram no caminho crítico do Android.',
+      'Produção r128: Clean Slate r125 é o único escritor de ficha, Top 5 e Ímpeto; o selo R128 rejeita qualquer mutação posterior desses outputs e mantém Overall/GER fora da decisão.',
+      'Motores históricos permanecem somente para auditoria; a Card Signature r108 é o especialista moderno preservado e não entra no caminho crítico do Android.',
       'Overall, ficha anterior e regras floor/peak/ceiling não participam da decisão final.',
       ...current.recommendationExplanation
     ].filter((item, index, all) => all.indexOf(item) === index).slice(0, 112)
@@ -220,5 +211,10 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // BM_R119_RAW_SNAPSHOT_GUARD: snapshot da carta é capturado antes de qualquer motor legado.
   // BM_R119_FAST_ANDROID_PATH: motores históricos não executam no browser/Android por padrão.
   // BM_R123_ONLINE_SINGLE_WRITER: o mesmo Clean Slate sela ficha, Top 5 e Ímpeto; confiança/saturação/A-B não criam autoridade paralela.
-  return { ...current, buildVariants: current.buildVariants.slice(0, 3) };
+  // BM_R126_PRODUCTION_CONTRACT: toda saída de produção carrega selo explícito e rejeita decisão persistida obsoleta.
+  // BM_R128_OUTPUT_INTEGRITY: qualquer mutação posterior em ficha/Top 5/Ímpeto invalida a saída de produção.
+  // BM_R136_TEMPORAL_CONTEXT_EVIDENCE: partidas reais só calibram retorno marginal dentro do Clean Slate; tempo/patch/contexto limitam evidência antiga.
+  current = { ...current, buildVariants: current.buildVariants.slice(0, 3) };
+  current = sealProductionAuthorityR128(current);
+  return current;
 }

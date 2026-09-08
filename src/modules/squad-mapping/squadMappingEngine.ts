@@ -1,5 +1,6 @@
 import type { AnalysisResult, AttributeKey, PositionCode } from '@/modules/analysis';
 import { FORMATION_BLUEPRINTS, type FormationBlueprint, type FormationRoleId, type FormationSlot } from '@/lib/formationRoleEngine';
+import { cardIdentityFingerprintR126, playerIdentityKeyFromNameR126 } from '@/lib/cardIdentityFingerprintR126';
 import {
   canonicalizePlayerPlaystyle,
   getPlayerStyleMeta2026,
@@ -7,13 +8,16 @@ import {
   type FormationCoachStyle
 } from '@/lib/efootball2026Playstyles';
 
-export const SQUAD_MAPPING_VERSION = '39.50-mapeamento-total-elenco-1';
+// Linhagem preservada para auditoria: 39.50-mapeamento-total-elenco
+export const SQUAD_MAPPING_VERSION = '40.80-r127-mapeamento-identidade-unica-1';
 
 export type SquadMappingPlayer = {
   id: string;
   name: string;
   cardLabel: string;
   cardFingerprint: string;
+  playerFingerprint: string;
+  identityStatus: 'canonical' | 'provisional';
   mainPosition: PositionCode;
   positions: PositionCode[];
   trainedPositions: PositionCode[];
@@ -234,6 +238,20 @@ function uniquePositions(player: SquadMappingPlayer) {
   return Array.from(new Set([player.mainPosition, ...player.positions, ...player.trainedPositions]));
 }
 
+export function mappingPlayerIdentityKeyR127(player: Pick<SquadMappingPlayer, 'name' | 'playerFingerprint' | 'cardFingerprint'>) {
+  return player.playerFingerprint || playerIdentityKeyFromNameR126(player.name, player.cardFingerprint);
+}
+
+export function refreshMappingPlayerIdentityR127(player: SquadMappingPlayer): SquadMappingPlayer {
+  const next = { ...player };
+  next.playerFingerprint = playerIdentityKeyFromNameR126(next.name, next.cardFingerprint || next.id);
+  if (next.identityStatus !== 'canonical' || !next.cardFingerprint.startsWith('card-r126-')) {
+    next.identityStatus = 'provisional';
+    next.cardFingerprint = createMappingCardFingerprint(next);
+  }
+  return next;
+}
+
 function positionLine(position: PositionCode) {
   if (position === 'GK') return 'gk';
   if (['CB', 'LB', 'RB'].includes(position)) return 'defesa';
@@ -367,10 +385,13 @@ function styleFit(player: SquadMappingPlayer, slot: FormationSlot) {
 
 function linkedResult(player: SquadMappingPlayer, history: Map<string, AnalysisResult>) {
   if (player.linkedHistoryId && history.has(player.linkedHistoryId)) return history.get(player.linkedHistoryId) ?? null;
-  const name = player.name.trim().toLocaleLowerCase('pt-BR');
-  for (const result of history.values()) {
-    if (result.parsed.playerName.trim().toLocaleLowerCase('pt-BR') === name) return result;
+  if (player.identityStatus === 'canonical' && player.cardFingerprint.startsWith('card-r126-')) {
+    for (const result of history.values()) {
+      if (cardIdentityFingerprintR126(result.parsed) === player.cardFingerprint) return result;
+    }
   }
+  // R127: nunca cai para "mesmo nome". Com duas versões do mesmo atleta isso
+  // contaminava atributos e posição da carta errada. Sem evidência canônica, não vincula.
   return null;
 }
 
@@ -552,7 +573,7 @@ function pairAdjustment(existing: MappingSlotPick[], candidate: MappingSlotPick)
   return delta;
 }
 
-type BeamState = { picks: MappingSlotPick[]; used: Set<string>; total: number };
+type BeamState = { picks: MappingSlotPick[]; usedPlayers: Set<string>; total: number };
 
 function buildLineup(
   formation: FormationBlueprint,
@@ -563,23 +584,23 @@ function buildLineup(
 ) {
   const eligible = players.filter((player) => !player.excluded);
   const pinnedPicks: MappingSlotPick[] = [];
-  const pinnedUsed = new Set<string>();
+  const pinnedUsedPlayers = new Set<string>();
   for (const slot of formation.slots) {
     const playerId = pins[slot.id];
     if (!playerId) continue;
-    const player = eligible.find((item) => item.id === playerId && !pinnedUsed.has(item.id));
+    const player = eligible.find((item) => item.id === playerId && !pinnedUsedPlayers.has(mappingPlayerIdentityKeyR127(item)));
     if (!player) continue;
     const pick = scoreMappingPlayerForSlot(player, slot, preferences, history);
     pick.reasons.unshift('Jogador fixado manualmente nesta posição.');
     pinnedPicks.push(pick);
-    pinnedUsed.add(player.id);
+    pinnedUsedPlayers.add(mappingPlayerIdentityKeyR127(player));
   }
   const remainingSlots = formation.slots
     .filter((slot) => !pinnedPicks.some((pick) => pick.slot.id === slot.id))
     .map((slot) => ({
       slot,
       candidates: eligible
-        .filter((player) => !pinnedUsed.has(player.id))
+        .filter((player) => !pinnedUsedPlayers.has(mappingPlayerIdentityKeyR127(player)))
         .map((player) => scoreMappingPlayerForSlot(player, slot, preferences, history))
         .filter((pick) => preferences.allowIntelligentAdaptations ? pick.score >= 18 : pick.adaptationMode !== 'intelligent' && pick.adaptationMode !== 'experimental')
         .sort((left, right) => right.score - left.score || right.adaptationFit - left.adaptationFit || (left.player?.name ?? '').localeCompare(right.player?.name ?? ''))
@@ -591,23 +612,23 @@ function buildLineup(
       return leftViable - rightViable || (left.slot.position === 'GK' ? -1 : right.slot.position === 'GK' ? 1 : 0);
     });
 
-  let beam: BeamState[] = [{ picks: [...pinnedPicks], used: new Set(pinnedUsed), total: pinnedPicks.reduce((sum, pick) => sum + pick.score, 0) }];
+  let beam: BeamState[] = [{ picks: [...pinnedPicks], usedPlayers: new Set(pinnedUsedPlayers), total: pinnedPicks.reduce((sum, pick) => sum + pick.score, 0) }];
   for (const entry of remainingSlots) {
     const next: BeamState[] = [];
     const candidates = entry.candidates.length ? entry.candidates : [emptyPick(entry.slot)];
     for (const state of beam) {
       let added = false;
       for (const candidate of candidates) {
-        if (candidate.player && state.used.has(candidate.player.id)) continue;
+        if (candidate.player && state.usedPlayers.has(mappingPlayerIdentityKeyR127(candidate.player))) continue;
         if (candidate.player && candidate.adaptationMode === 'experimental' && candidate.score < 38) continue;
         const synergy = pairAdjustment(state.picks, candidate);
         const pick = { ...candidate, collectiveFit: Math.round(clamp(50 + synergy * 3)) };
-        const used = new Set(state.used);
-        if (pick.player) used.add(pick.player.id);
-        next.push({ picks: [...state.picks, pick], used, total: state.total + pick.score + synergy });
+        const usedPlayers = new Set(state.usedPlayers);
+        if (pick.player) usedPlayers.add(mappingPlayerIdentityKeyR127(pick.player));
+        next.push({ picks: [...state.picks, pick], usedPlayers, total: state.total + pick.score + synergy });
         added = true;
       }
-      if (!added) next.push({ picks: [...state.picks, emptyPick(entry.slot)], used: new Set(state.used), total: state.total - 20 });
+      if (!added) next.push({ picks: [...state.picks, emptyPick(entry.slot)], usedPlayers: new Set(state.usedPlayers), total: state.total - 20 });
     }
     beam = next
       .sort((left, right) => right.total - left.total || left.picks.map((pick) => pick.player?.id ?? '~').join('|').localeCompare(right.picks.map((pick) => pick.player?.id ?? '~').join('|')))
@@ -618,25 +639,30 @@ function buildLineup(
 }
 
 function buildBench(players: SquadMappingPlayer[], lineup: MappingSlotPick[], preferences: SquadMappingPreferences, history: Map<string, AnalysisResult>) {
-  const used = new Set(lineup.flatMap((pick) => pick.player ? [pick.player.id] : []));
+  const usedPlayers = new Set(lineup.flatMap((pick) => pick.player ? [mappingPlayerIdentityKeyR127(pick.player)] : []));
   const hasStartingGoalkeeper = lineup.some((pick) => Boolean(pick.player) && pick.slot.position === 'GK');
-  const candidates = players
-    .filter((player) => !player.excluded && !used.has(player.id))
-    .map((player): MappingBenchPick => {
-      const possibleSlots = lineup.map((pick) => scoreMappingPlayerForSlot(player, pick.slot, preferences, history)).sort((left, right) => right.score - left.score);
-      const best = possibleSlots[0];
-      const coverage = possibleSlots.filter((pick) => pick.score >= 62).map((pick) => pick.slot.position).filter((value, index, all) => all.indexOf(value) === index).slice(0, 6);
-      const versatility = Math.min(15, Math.max(0, coverage.length - 1) * 3);
-      const profileBonus = player.profileCoverage >= 70 ? 3 : 0;
-      return {
-        player,
-        score: clamp(Math.round((best?.score ?? 25) + versatility + profileBonus)),
-        coverage,
-        bestRole: best?.roleLabel ?? player.mainPosition,
-        reason: coverage.length >= 3 ? 'Cobre vários setores por capacidade real e facilita substituições sem desmontar a formação.' : `Melhor opção disponível para ${best?.slot.label ?? player.mainPosition}.`
-      };
-    })
-    .sort((left, right) => right.score - left.score || left.player.name.localeCompare(right.player.name));
+  const bestByPlayer = new Map<string, MappingBenchPick>();
+  for (const player of players) {
+    const playerKey = mappingPlayerIdentityKeyR127(player);
+    if (player.excluded || usedPlayers.has(playerKey)) continue;
+    const possibleSlots = lineup.map((pick) => scoreMappingPlayerForSlot(player, pick.slot, preferences, history)).sort((left, right) => right.score - left.score);
+    const best = possibleSlots[0];
+    const coverage = possibleSlots.filter((pick) => pick.score >= 62).map((pick) => pick.slot.position).filter((value, index, all) => all.indexOf(value) === index).slice(0, 6);
+    const versatility = Math.min(15, Math.max(0, coverage.length - 1) * 3);
+    const profileBonus = player.profileCoverage >= 70 ? 3 : 0;
+    const candidate: MappingBenchPick = {
+      player,
+      score: clamp(Math.round((best?.score ?? 25) + versatility + profileBonus)),
+      coverage,
+      bestRole: best?.roleLabel ?? player.mainPosition,
+      reason: coverage.length >= 3 ? 'Cobre vários setores por capacidade real e facilita substituições sem desmontar a formação.' : `Melhor opção disponível para ${best?.slot.label ?? player.mainPosition}.`
+    };
+    const previous = bestByPlayer.get(playerKey);
+    if (!previous || candidate.score > previous.score || (candidate.score === previous.score && player.identityStatus === 'canonical' && previous.player.identityStatus !== 'canonical')) {
+      bestByPlayer.set(playerKey, candidate);
+    }
+  }
+  const candidates = [...bestByPlayer.values()].sort((left, right) => right.score - left.score || left.player.name.localeCompare(right.player.name));
   const goalkeeperLimit = hasStartingGoalkeeper ? preferences.reserveGoalkeepers : 1;
   const bench: MappingBenchPick[] = [];
   let goalkeepers = 0;
@@ -740,27 +766,25 @@ export function suggestedTrainingPositions(player: SquadMappingPlayer, ranking: 
   return Array.from(suggestions.entries()).map(([position, value]) => ({ position, ...value })).sort((left, right) => right.score - left.score).slice(0, 6);
 }
 
-export function createMappingCardFingerprint(input: Pick<SquadMappingPlayer, 'name' | 'cardLabel' | 'mainPosition' | 'playstyle' | 'level' | 'attributes' | 'skills'>) {
+export function createMappingCardFingerprint(input: Pick<SquadMappingPlayer, 'name' | 'mainPosition' | 'playstyle' | 'level' | 'attributes' | 'skills'>) {
+  // Assinatura PROVISÓRIA da evidência do Mapeamento. Overall/GER e cardLabel ficam fora.
+  // Quando há vínculo seguro com o Cofre, o cardFingerprint é substituído pelo card-r126 canônico.
   const attributeSignature = Object.entries(input.attributes).sort(([left], [right]) => left.localeCompare(right)).map(([key, value]) => `${key}:${value}`).join('|');
-  const source = [normalizedText(input.name), normalizedText(input.cardLabel), input.mainPosition, normalizedText(input.playstyle), input.level ?? '', attributeSignature, [...input.skills].map(normalizedText).sort().join('|')].join('::');
+  const source = [normalizedText(input.name), input.mainPosition, normalizedText(input.playstyle), input.level ?? '', attributeSignature, [...input.skills].map(normalizedText).sort().join('|')].join('::');
   let hash = 2166136261;
   for (let index = 0; index < source.length; index += 1) {
     hash ^= source.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return `map-card-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+  return `map-evidence-r127-${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
 export function mergeMappingPlayer(existing: SquadMappingPlayer[], incoming: SquadMappingPlayer) {
-  const name = incoming.name.trim().toLocaleLowerCase('pt-BR');
   const duplicate = existing.find((player) => {
     if (incoming.sourceHash && player.sourceHash && player.sourceHash === incoming.sourceHash) return true;
-    if (incoming.cardFingerprint && player.cardFingerprint && player.cardFingerprint === incoming.cardFingerprint) return true;
-    return Boolean(incoming.sourceFileName)
-      && player.sourceFileName === incoming.sourceFileName
-      && player.name.trim().toLocaleLowerCase('pt-BR') === name
-      && player.mainPosition === incoming.mainPosition
-      && canonicalizePlayerPlaystyle(player.playstyle) === canonicalizePlayerPlaystyle(incoming.playstyle);
+    if (incoming.identityStatus === 'canonical' && player.identityStatus === 'canonical' && incoming.cardFingerprint === player.cardFingerprint) return true;
+    if (incoming.cardFingerprint && player.cardFingerprint && incoming.cardFingerprint === player.cardFingerprint) return true;
+    return false;
   });
   if (!duplicate) return { players: [incoming, ...existing], action: 'created' as const, player: incoming };
   const merged: SquadMappingPlayer = {

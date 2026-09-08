@@ -8,7 +8,6 @@ import { LongitudinalGameplayV4060Panel } from '@/components/LongitudinalGamepla
 import type { AnalysisResult } from '@/lib/analyzer';
 import {
   MATCH_PROBLEM_TAGS,
-  MATCH_VALIDATION_STORAGE_KEY,
   cardFingerprint,
   createMatchValidationRecord,
   summarizeMatchValidation,
@@ -18,21 +17,24 @@ import {
   type MatchValidationRating,
   type MatchValidationRecord
 } from '@/lib/appEvolution';
-import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { writeAccountStorage } from '@/lib/accountStorage';
 import { buildMatchEvidenceLoop } from '@/lib/professionalIntelligenceV37';
 import { buildRealValidationV3760, REAL_VALIDATION_PROFILE_STORAGE_KEY, type ControlStyleV3760 } from '@/lib/realValidationV3760';
 import { buildRealGameplayValidationV4050, persistVerifiedGameplayWinnerV4050 } from '@/lib/realGameplayValidationV4050';
 import { buildLongitudinalGameplayV4060, persistLongitudinalWinnerV4060 } from '@/lib/longitudinalGameplayLearningV4060';
+import { buildMatchEvidenceCalibrationR136 } from '@/modules/matches/matchEvidenceCalibrationR136';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import {
+  exactUsageMatchValidationRecordsR137,
+  persistMatchValidationRepositoryR137,
+  readMatchValidationRepositoryR137,
+  removeUsageMatchValidationRecordsR137
+} from '@/modules/matches/matchValidationRepositoryR137';
 
 const RATING_OPTIONS: MatchValidationRating[] = [1, 2, 3, 4, 5];
 
 function loadRecords(): MatchValidationRecord[] {
-  try {
-    const parsed = JSON.parse(readAccountStorage(MATCH_VALIDATION_STORAGE_KEY) || '[]') as MatchValidationRecord[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readMatchValidationRepositoryR137();
 }
 
 function RatingField({ label, value, onChange }: { label: string; value: MatchValidationRating; onChange: (value: MatchValidationRating) => void }) {
@@ -90,12 +92,14 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
 
   useEffect(() => setRecords(loadRecords()), []);
   const fingerprint = cardFingerprint(result);
-  const currentRecords = useMemo(() => records.filter((record) => record.cardFingerprint === fingerprint), [records, fingerprint]);
+  const usagePosition = analysisUsagePositionR138(result);
+  const currentRecords = useMemo(() => exactUsageMatchValidationRecordsR137(result, records), [records, fingerprint, usagePosition]);
   const summary = useMemo(() => summarizeMatchValidation(currentRecords), [currentRecords]);
   const evidenceLoop = useMemo(() => buildMatchEvidenceLoop(result, records), [result, records]);
   const realValidation = useMemo(() => buildRealValidationV3760(result, records), [result, records]);
   const gameplayValidation = useMemo(() => buildRealGameplayValidationV4050(result, records), [result, records]);
   const longitudinalValidation = useMemo(() => buildLongitudinalGameplayV4060(result, records), [result, records]);
+  const matchCalibrationR136 = useMemo(() => buildMatchEvidenceCalibrationR136(result, records), [result, records]);
   const testedOptions = useMemo(() => {
     const boosterName = result.recommendedImpetos[0]?.name || 'Sem Booster confirmado';
     if (gameplayValidation.arms.length > 1) return [...gameplayValidation.arms].sort((a, b) => a.rank - b.rank).map((candidate) => ({
@@ -109,24 +113,28 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   }, [gameplayValidation.arms, realValidation.experiment.arms, result.recommendedImpetos]);
   const effectiveTestedOptionKey = testedOptionKey || testedOptions[0]?.key || '';
   const positionMetricFields = useMemo<Array<{ key: keyof MatchPerformanceMetrics; label: string }>>(() => {
-    const position = result.bestPosition.code;
+    const position = usagePosition;
     if (position === 'GK') return [{ key: 'saves', label: 'Defesas' }, { key: 'goalsConceded', label: 'Gols sofridos' }, { key: 'progressivePasses', label: 'Saídas progressivas' }, { key: 'aerialDuelsWon', label: 'Bolas aéreas dominadas' }];
     if (['CB', 'LB', 'RB'].includes(position)) return [{ key: 'clearances', label: 'Cortes' }, { key: 'blocks', label: 'Bloqueios' }, { key: 'aerialDuelsWon', label: 'Duelos aéreos ganhos' }, { key: 'duelsWon', label: 'Duelos vencidos' }];
     if (['DMF', 'CMF', 'LMF', 'RMF', 'AMF'].includes(position)) return [{ key: 'progressivePasses', label: 'Passes progressivos' }, { key: 'keyPasses', label: 'Passes-chave' }, { key: 'recoveries', label: 'Recuperações' }, { key: 'successfulPressures', label: 'Pressões bem-sucedidas' }];
     return [{ key: 'shotsOnTarget', label: 'Chutes no alvo' }, { key: 'runsBehind', label: 'Desmarques em profundidade' }, { key: 'keyPasses', label: 'Passes-chave' }, { key: 'successfulPressures', label: 'Pressões bem-sucedidas' }];
-  }, [result.bestPosition.code]);
+  }, [usagePosition]);
 
   const persist = (next: MatchValidationRecord[]) => {
-    const safe = next.slice(0, 1000);
+    const storage = persistMatchValidationRepositoryR137(next, { source: 'match-validation-center' });
+    if (!storage.persisted) {
+      setMessage('Não foi possível salvar o histórico de partidas nesta conta. Nenhuma memória derivada foi atualizada.');
+      return false;
+    }
+    const safe = storage.records;
     setRecords(safe);
-    writeAccountStorage(MATCH_VALIDATION_STORAGE_KEY, JSON.stringify(safe));
     const profile = buildRealValidationV3760(result, safe).userLearning;
     writeAccountStorage(REAL_VALIDATION_PROFILE_STORAGE_KEY, JSON.stringify(profile));
     const gameplay = buildRealGameplayValidationV4050(result, safe);
     persistVerifiedGameplayWinnerV4050(result, gameplay);
     const longitudinal = buildLongitudinalGameplayV4060(result, safe);
     persistLongitudinalWinnerV4060(result, longitudinal);
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('buildmaster:match-validation-updated', { detail: { total: safe.length, engineVersion: '40.60.0', verifiedWinnerId: longitudinal.verifiedWinnerId ?? gameplay.verifiedWinnerId, sessions: longitudinal.distinctSessions } }));
+    return true;
   };
 
   const save = () => {
@@ -154,17 +162,17 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
       controlStyle,
       inputDelayRating
     });
-    persist([record, ...records]);
+    if (!persist([record, ...records])) return;
     setTags([]);
     setNote('');
     setSecondHalfDrop(false);
     setMetrics(EMPTY_METRICS);
-    setMessage(`Partida registrada. Esta ficha agora possui ${currentRecords.length + 1} avaliação(ões).`);
+    setMessage(`Partida registrada. Esta ficha agora possui ${currentRecords.length + 1} avaliação(ões). A evidência R136 será aplicada pelo Clean Slate na próxima recalculação se houver repetição recente, contextual e confiável suficiente.`);
   };
 
   const reset = () => {
-    persist(records.filter((record) => record.cardFingerprint !== fingerprint));
-    setMessage('Histórico desta carta removido. A ficha original foi preservada.');
+    if (!persist(removeUsageMatchValidationRecordsR137(result, records))) return;
+    setMessage(`Histórico desta carta em ${usagePosition} removido. Partidas da mesma edição em outras posições foram preservadas.`);
   };
 
   return <div className="result-section-grid match-validation-center">
@@ -172,12 +180,16 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
     <RealGameplayValidationV4050Panel analysis={gameplayValidation} />
     <RealValidationV3760Panel analysis={realValidation} />
     <article className="luxury-panel wide-card">
+      <div className="section-title-row"><div><p className="kicker"><Activity size={14}/> Calibração temporal/contextual R136</p><h3>Partidas reais como evidência, não como receita</h3></div><span>{matchCalibrationR136.status}</span></div>
+      <div className="match-validation-verdict professional-evidence-verdict"><CheckCircle2 size={20}/><div><strong>{matchCalibrationR136.rawMatches} partida(s) • {matchCalibrationR136.distinctSessions} sessão(ões) • confiança {matchCalibrationR136.confidenceScore}/100</strong><span>{matchCalibrationR136.reasons[1] || matchCalibrationR136.reasons[0]}</span><small>Força atual: {Math.round(matchCalibrationR136.calibrationStrength * 100)}% • recência {matchCalibrationR136.recencyScore}/100 • contexto v6.0 {matchCalibrationR136.currentPatchShare}%. O Clean Slate continua sendo o único escritor da ficha.</small></div></div>
+    </article>
+    <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker"><Target size={14}/> Validação em partidas</p><h3>Teste a ficha sem alterar a recomendação original</h3></div><span>{summary.totalMatches} partida(s)</span></div>
       <div className="health-score-grid match-summary-grid">
         <article><strong>{summary.average || '—'}</strong><span>Média geral</span><small>de 5</small></article>
         <article><strong>{summary.consistency || '—'}</strong><span>Consistência</span><small>de 100</small></article>
         <article><strong>{summary.confidence}</strong><span>Confiança</span><small>da amostra</small></article>
-        <article><strong>{summary.totalMatches}</strong><span>Partidas</span><small>mesma carta</small></article>
+        <article><strong>{summary.totalMatches}</strong><span>Partidas</span><small>mesma carta • mesma posição</small></article>
       </div>
       <div className="match-validation-verdict"><CheckCircle2 size={20}/><div><strong>Leitura do histórico</strong><span>{summary.recommendation}</span></div></div>
       <div className="match-validation-verdict professional-evidence-verdict"><Activity size={20}/><div><strong>Ciclo profissional • confiança {evidenceLoop.confidence}</strong><span>{evidenceLoop.verdict}</span>{evidenceLoop.correction && <small>{evidenceLoop.correction}</small>}</div></div>

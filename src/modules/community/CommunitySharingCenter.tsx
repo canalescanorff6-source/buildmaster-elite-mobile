@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Copy, Download, FileUp, Library, MessageSquare, PackagePlus, ShieldCheck, Star, UserRound } from 'lucide-react';
+import { resolveCommercialEntitlements } from '@/modules/commercial/commercialization';
 import {
   addCommunityPackage, addCommunityRating, createCommunitySharePackage, decideCommunityImport, exportCommunityState,
   queueCommunityImport, readCommunityState, reportCommunityPackage, updateCommunityProfile, type CommunityShareKind,
@@ -17,10 +18,11 @@ function downloadJson(filename: string, payload: unknown): void {
   const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); URL.revokeObjectURL(url);
 }
 
-export function CommunitySharingCenter({ preparePayload, canPublish = false, publicationLimit = 0 }: {
+export function CommunitySharingCenter({ preparePayload, canPublish, publicationLimit, commercialProfile }: {
   preparePayload?: (kind: CommunityShareKind) => unknown;
   canPublish?: boolean;
   publicationLimit?: number;
+  commercialProfile?: { role?: string; plan?: string; licenseExpiresAt?: string | null; active?: boolean } | null;
 }) {
   const [state, setState] = useState(() => readCommunityState());
   const [tab, setTab] = useState<'create' | 'library' | 'review' | 'profile'>('create');
@@ -29,9 +31,12 @@ export function CommunitySharingCenter({ preparePayload, canPublish = false, pub
   const [title, setTitle] = useState(''); const [description, setDescription] = useState(''); const [message, setMessage] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
   const publicCount = useMemo(() => state.packages.filter((pkg) => pkg.visibility === 'community').length, [state.packages]);
+  const commercialRights = useMemo(() => resolveCommercialEntitlements(commercialProfile), [commercialProfile?.role, commercialProfile?.plan, commercialProfile?.licenseExpiresAt, commercialProfile?.active]);
+  const effectiveCanPublish = canPublish ?? (commercialProfile !== undefined ? commercialRights.features.community_publish : false);
+  const effectivePublicationLimit = publicationLimit ?? (commercialProfile !== undefined ? commercialRights.limits.communityPublications : 0);
 
   function createPackage(): void {
-    const effectiveVisibility: CommunityVisibility = visibility === 'community' && (!canPublish || publicCount >= publicationLimit) ? 'unlisted' : visibility;
+    const effectiveVisibility: CommunityVisibility = visibility === 'community' && (!effectiveCanPublish || publicCount >= effectivePublicationLimit) ? 'unlisted' : visibility;
     const pkg = createCommunitySharePackage({ kind, title: title || KIND_LABELS[kind], description, visibility: effectiveVisibility, author: { id: state.profile.id, displayName: state.profile.displayName }, payload: preparePayload?.(kind) ?? { kind, notice: 'Conteúdo preparado manualmente.' }, expiresInDays: effectiveVisibility === 'private' ? 7 : 30 });
     setState(addCommunityPackage(pkg)); downloadJson(`${pkg.code}.buildmaster-share.json`, pkg); setMessage(effectiveVisibility !== visibility ? 'Pacote criado como não listado porque o plano atual não permite nova publicação comunitária.' : 'Pacote criado. Nada foi publicado ou importado sem confirmação.');
   }
@@ -53,7 +58,7 @@ export function CommunitySharingCenter({ preparePayload, canPublish = false, pub
 
     {tab === 'create' && <div className="bm2980-grid two">
       <article className="bm2980-card"><h3>Novo pacote</h3><label>Tipo<select value={kind} onChange={(event) => setKind(event.target.value as CommunityShareKind)}>{Object.entries(KIND_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Título<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={100} placeholder={KIND_LABELS[kind]} /></label><label>Descrição<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} /></label><label>Visibilidade<select value={visibility} onChange={(event) => setVisibility(event.target.value as CommunityVisibility)}><option value="private">Privado</option><option value="unlisted">Não listado</option><option value="community">Comunidade moderada</option></select></label><button type="button" className="bm2980-primary" onClick={createPackage}><Download size={17} />Gerar e baixar pacote</button></article>
-      <article className="bm2980-card"><h3>Proteções</h3><ul><li>Checksum identifica alterações no arquivo.</li><li>Senhas, tokens, sessões, e-mails e imagens embutidas são removidos.</li><li>Importações entram em revisão e nunca sobrescrevem automaticamente.</li><li>Publicações comunitárias dependem do plano e de moderação.</li></ul><p><strong>{publicCount}</strong> de <strong>{publicationLimit}</strong> publicações comunitárias no plano atual.</p><button type="button" onClick={() => fileRef.current?.click()}><FileUp size={17} />Importar pacote para revisão</button><input ref={fileRef} hidden type="file" accept=".json,application/json" onChange={(event) => void importFile(event.currentTarget.files?.[0] || null)} /></article>
+      <article className="bm2980-card"><h3>Proteções</h3><ul><li>Checksum identifica alterações no arquivo.</li><li>Senhas, tokens, sessões, e-mails e imagens embutidas são removidos.</li><li>Importações entram em revisão e nunca sobrescrevem automaticamente.</li><li>Publicações comunitárias dependem do plano e de moderação.</li></ul><p><strong>{publicCount}</strong> de <strong>{effectivePublicationLimit}</strong> publicações comunitárias no plano atual.</p><button type="button" onClick={() => fileRef.current?.click()}><FileUp size={17} />Importar pacote para revisão</button><input ref={fileRef} hidden type="file" accept=".json,application/json" onChange={(event) => void importFile(event.currentTarget.files?.[0] || null)} /></article>
     </div>}
 
     {tab === 'library' && <div className="bm2980-list">{state.packages.length === 0 ? <div className="bm2980-empty">Nenhum pacote salvo.</div> : state.packages.map((pkg) => <article className="bm2980-card" key={pkg.id}><div className="bm2980-card-head"><div><small>{KIND_LABELS[pkg.kind]} · {pkg.visibility}</small><h3>{pkg.title}</h3></div><CheckCircle2 size={20} /></div><p>{pkg.description || 'Sem descrição.'}</p><code>{pkg.code}</code><div className="bm2980-actions"><button type="button" onClick={() => void navigator.clipboard?.writeText(pkg.code)}><Copy size={16} />Copiar código</button><button type="button" onClick={() => downloadJson(`${pkg.code}.json`, pkg)}><Download size={16} />Exportar</button><button type="button" onClick={() => setState(addCommunityRating(pkg.id, 5, 'Avaliação local'))}><Star size={16} />Avaliar</button><button type="button" onClick={() => setState(reportCommunityPackage(pkg.id, 'Revisão solicitada pelo usuário'))}><MessageSquare size={16} />Denunciar</button></div></article>)}</div>}

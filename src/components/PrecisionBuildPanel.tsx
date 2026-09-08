@@ -32,16 +32,17 @@ import {
 } from '@/modules/builds/advancedBuildIntelligence';
 import { safeStorageSetJson } from '@/lib/safeLocalStorage';
 import { readAccountStorage } from '@/lib/accountStorage';
+import { exactUsageMatchValidationRecordsR137 } from '@/modules/matches/matchValidationRepositoryR137';
 import {
   CREATOR_BUILD_RESEARCH_EVENT
 } from '@/lib/creatorBuildResearch';
 import {
-  MATCH_VALIDATION_STORAGE_KEY,
-  cardFingerprint,
   type MatchValidationRecord
 } from '@/lib/appEvolution';
 import type { MatchFeedback } from '@/lib/realMatchCalibration';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
+import { cardUsageIdentityKeyR126 } from '@/lib/cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 const KEYS: TrainingKey[] = ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending','gk1','gk2','gk3'];
 const FEEDBACK: Array<{ key: MatchFeedbackKey; label: string }> = [
@@ -72,21 +73,16 @@ function clonePlan(plan: TrainingPlan): TrainingPlan {
 }
 
 function loadMatchRecords(result: AnalysisResult): MatchValidationRecord[] {
-  try {
-    const parsed = JSON.parse(readAccountStorage(MATCH_VALIDATION_STORAGE_KEY) || '[]') as MatchValidationRecord[];
-    if (!Array.isArray(parsed)) return [];
-    const fingerprint = cardFingerprint(result);
-    return parsed.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === result.bestPosition.code);
-  } catch {
-    return [];
-  }
+  return exactUsageMatchValidationRecordsR137(result);
 }
 
 function loadCalibrationFeedbacks(result: AnalysisResult): MatchFeedback[] {
   try {
     const parsed = JSON.parse(readAccountStorage(CALIBRATION_STORAGE_KEY) || '{}') as Record<string, MatchFeedback[]>;
-    const storageId = `${result.parsed.internalId}:${result.bestPosition.code}`;
-    return Array.isArray(parsed[storageId]) ? parsed[storageId] : [];
+    const usagePosition = analysisUsagePositionR138(result);
+    const storageId = cardUsageIdentityKeyR126(result.parsed, usagePosition);
+    const legacyId = `${result.parsed.internalId}:${usagePosition}`;
+    return Array.isArray(parsed[storageId]) ? parsed[storageId] : Array.isArray(parsed[legacyId]) ? parsed[legacyId] : [];
   } catch {
     return [];
   }
@@ -94,6 +90,8 @@ function loadCalibrationFeedbacks(result: AnalysisResult): MatchFeedback[] {
 
 export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
   const report = useMemo(() => buildPrecisionBuildReport(result), [result]);
+  const usagePosition = analysisUsagePositionR138(result);
+  const usageIdentity = cardUsageIdentityKeyR126(result.parsed, usagePosition);
   const [activeView, setActiveView] = useState<FichaWorkspaceView>('resumo');
   const [activeProposalId, setActiveProposalId] = useState<ProposalId>('competitive');
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -110,7 +108,7 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
 
   const comparison = useMemo(() => compareTrainingPlan(result, customPlan), [result, customPlan]);
   const feedbackCorrection = useMemo(() => buildFeedbackCorrection(result, feedback), [result, feedback]);
-  const activeKeys = KEYS.filter((key) => result.bestPosition.code === 'GK'
+  const activeKeys = KEYS.filter((key) => usagePosition === 'GK'
     ? key.startsWith('gk') || key === 'lowerBodyStrength' || key === 'aerialStrength'
     : !key.startsWith('gk'));
   const activeProposal = intelligence.profileComparison.find((proposal) => proposal.id === activeProposalId)
@@ -138,7 +136,7 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
     setActiveView('resumo');
     setActiveProposalId('competitive');
     setSelectedRoleId(null);
-  }, [result.parsed.internalId, result.bestPosition.code, result.trainingPointsTotal]);
+  }, [usageIdentity, result.trainingPointsTotal]);
 
   function changeTraining(key: TrainingKey, value: number) {
     setCustomPlan((current) => ({ ...current, [key]: Math.max(0, Math.min(16, Math.round(value))) }));
@@ -149,7 +147,7 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
   }
 
   function saveExperiment() {
-    const storageKey = `buildmaster_precision_experiment_${result.parsed.internalId}_${result.bestPosition.code}`;
+    const storageKey = `buildmaster_precision_experiment_${usageIdentity}`;
     const saved = safeStorageSetJson(storageKey, {
       version: intelligence.version,
       savedAt: new Date().toISOString(),

@@ -1,4 +1,4 @@
-import { type Objective, type TacticalFormation, type TacticalStyle } from '@/lib/analyzerDomain';
+import { TACTICAL_STYLE_NAME, type Objective, type TacticalFormation, type TacticalStyle } from '@/lib/analyzerDomain';
 import { phasePlaystyleOptionsR124 } from '@/lib/efootball2027PhaseCatalogR124';
 
 export const CALIBRATION_KEY = 'buildmaster_ocr_zones_v24_3_goleiro_stable';
@@ -56,15 +56,7 @@ export const tacticalStyles: Array<{ value: TacticalStyle; label: string }> = [
   { value: 'SOBREPOSICAO', label: 'Sobreposição' }
 ];
 
-export const tacticalStyleName: Record<TacticalStyle, string> = {
-  AUTO: 'Automático inteligente',
-  POSSE_DE_BOLA: 'Posse de bola',
-  CONTRA_ATAQUE: 'Contra-ataque normal',
-  CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
-  POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo',
-  SOBREPOSICAO: 'Sobreposição'
-};
+export const tacticalStyleName = TACTICAL_STYLE_NAME;
 
 export type FormationGuide = {
   title: string;

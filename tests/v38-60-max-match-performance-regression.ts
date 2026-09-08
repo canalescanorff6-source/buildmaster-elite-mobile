@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { analyzeCard } from '../src/lib/analyzer';
 import { applyAdvancedMotorV3750 } from '../src/lib/advancedMotorV3750';
-import { applyPowerBuildEngineV3850 } from '../src/lib/performanceBuildEngineV3850';
+import { applyPowerBuildEngineV3850 } from '../legacy-src/lib/performanceBuildEngineV3850';
 import { applyMaxMatchPerformanceV3860 } from '../src/lib/maxMatchPerformanceEngineV3860';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
 import { skillIdentityKey } from '../src/lib/officialSkillIdentity';
@@ -84,7 +84,7 @@ assert.equal(skillIdentityKey(result.recommendedImpetos[0]?.name ?? ''), skillId
 
 const engine = fs.readFileSync('src/lib/maxMatchPerformanceEngineV3860.ts', 'utf8');
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
-const panel = fs.readFileSync('src/components/MaxMatchPerformanceV3860Panel.tsx', 'utf8');
+const panel = fs.readFileSync('legacy-src/components/MaxMatchPerformanceV3860Panel.tsx', 'utf8');
 const workspace = fs.readFileSync('src/components/result/ResultWorkspace.tsx', 'utf8');
 assert.match(engine, /MAX_MATCH_ENGINE_V3860_VERSION = '38\.60\.0'/);
 assert.match(engine, /MAXIMO_DESEMPENHO_EM_PARTIDA_SEM_OVERALL/);
@@ -93,11 +93,11 @@ assert.match(engine, /counterfactuals/);
 assert.match(engine, /skillPackages/);
 assert.match(engine, /impetoCombinations/);
 assert.doesNotMatch(engine, /parsed\.(?:overall|maxOverall)/, 'Overall não pode entrar no cálculo da v38.60.');
-assert.match(pipeline, /applyMaxMatchPerformanceV3860/);
-assert.match(pipeline, /const finalMaximum = applyMaxMatchPerformanceV3860\(maximumIntegrity\)/);
+assert.match(pipeline, /applyLegacyPerformanceDiagnosticsBridgeR184/);
+assert.doesNotMatch(pipeline, /from '.\/maxMatchPerformanceEngineV3860'/);
 assert.match(panel, /Motor Máximo Desempenho v38\.60/);
 assert.match(panel, /Oito cenários/);
 assert.match(panel, /Auditoria contrafactual/);
-assert.match(workspace, /<MaxMatchPerformanceV3860Panel result=\{result\}/);
+assert.doesNotMatch(workspace, /MaxMatchPerformanceV3860Panel/);
 
 console.log(`v38.60 aprovada: ${motor?.candidatesEvaluated} fichas, 8 cenários, Top 5 conjunto, Ímpeto contra o pior caso e orçamento exato sem overall.`);

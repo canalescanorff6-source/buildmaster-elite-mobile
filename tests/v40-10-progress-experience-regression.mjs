@@ -13,6 +13,7 @@ const nativeGenerator = read('scripts/install-android-security-plugin.mjs');
 const readerCard = read('src/components/ReaderRecoveryAndProgressV3840.tsx');
 const readerSource = read('src/components/ReaderImageSourceCardV4010.tsx');
 const app = read('src/components/CardVisionApp.tsx');
+const readerRuntimeR163 = read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 const css = read('src/app/v40-progress.css');
 const register = read('src/components/RegisterServiceWorker.tsx');
 
@@ -53,9 +54,9 @@ assert.ok(readerSource.includes('SmartCardCropPanel'));
 assert.ok(readerSource.includes('onFile'));
 assert.ok(app.split('\n').length <= 5000, 'CardVisionApp não pode ultrapassar o orçamento estrutural após a barra de progresso.');
 assert.ok(app.includes('setReaderProgress'));
-assert.ok(app.includes('reportReaderProgress'));
+assert.ok(readerRuntimeR163.includes('reportReaderProgress'));
 for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Ficha gerada', 'Leitura concluída']) {
-  assert.ok(app.includes(label), `Pipeline visual da leitura sem etapa ${label}`);
+  assert.ok(readerRuntimeR163.includes(label), `Pipeline visual da leitura sem etapa ${label}`);
 }
 assert.ok(css.includes('.v4020-progress-track'));
 assert.ok(css.includes('.v4020-global-update-progress'));

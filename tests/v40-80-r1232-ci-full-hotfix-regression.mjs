@@ -3,7 +3,7 @@ import fs from 'node:fs';
 
 const read=(p)=>fs.readFileSync(p,'utf8');
 const budget=read('scripts/check-bundle-budget.mjs');
-const season=read('src/lib/efootballSeasonCatalogV4070.ts');
+const season=read('tests/legacy/efootballSeasonCatalogV4070.ts');
 const v3182=read('tests/v31-82-ci-protection-regression.mjs');
 const v3834=read('tests/v38-34-ci-complete-hotfix-regression.mjs');
 const v4070=read('tests/v40-70-live-catalog-zero-confirmation-regression.mjs');

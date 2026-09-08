@@ -58,7 +58,7 @@ const usefulImpeto = result.recommendedImpetos.find((item) => item.tier !== 'evi
 assert.ok(!usefulImpeto || /ficha final|permanente|r80/i.test([usefulImpeto.reason, ...(usefulImpeto.evidence ?? [])].join(' ')), 'Quando houver Ímpeto seguro, ele precisa vir da decisão permanente final; ausência segura também é válida.');
 
 const maxEngine = fs.readFileSync('src/lib/maxMatchPerformanceEngineV3860.ts', 'utf8');
-const supremeEngine = fs.readFileSync('src/lib/supremePerformanceEngineV3870.ts', 'utf8');
+const supremeEngine = fs.readFileSync('legacy-src/lib/supremePerformanceEngineV3870.ts', 'utf8');
 const pipeline = fs.readFileSync('src/lib/cardIntelligencePipeline.ts', 'utf8');
 assert.match(maxEngine, /availableOfficialAdditionalSkillCount/);
 assert.match(maxEngine, /expectedSkillCount/);

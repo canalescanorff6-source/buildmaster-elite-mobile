@@ -11,6 +11,7 @@ import type {
 } from './analyzerDomain';
 import { TRAINING_KEYS, trainingPlanCost, trainingPlanTotalCost } from './trainingPlanCore';
 import { canonicalizeSkillList, skillIdentityKey } from './officialSkillIdentity';
+import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 
 export const STRUCTURAL_PRECISION_VERSION = '37.40.0' as const;
 
@@ -127,13 +128,6 @@ function pointAudit(parsed: ParsedCard, training: TrainingPlan, budget: number, 
   };
 }
 
-function attributeSignature(parsed: ParsedCard) {
-  return Object.entries(parsed.attributes)
-    .filter(([, value]) => Number.isFinite(value))
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, value]) => `${key}:${Math.round(Number(value))}`)
-    .join('|');
-}
 
 export function buildStructuralPrecisionAnalysis(parsed: ParsedCard, training: TrainingPlan, budget: number, targetPosition: PositionCode = parsed.mainPosition): StructuralPrecisionAnalysis {
   const skills = uniqueInventory(parsed);
@@ -162,27 +156,15 @@ export function buildStructuralPrecisionAnalysis(parsed: ParsedCard, training: T
   if (!points.exact) blockReasons.push(points.invalidGroups.length ? 'A distribuição possui grupos inválidos para a posição ou níveis fora da faixa.' : `A ficha usa ${points.actualCost}/${points.budget} pontos; o orçamento precisa fechar exatamente.`);
   if (skills.additional.length > 5) blockReasons.push('A carta possui mais de cinco habilidades adicionais classificadas; revise a separação das habilidades.');
 
-  const canonicalPayload = [
-    normalize(parsed.playerName),
-    normalize(parsed.cardType),
-    normalize(parsed.specialTag),
-    parsed.mainPosition,
-    normalize(parsed.playstyle),
-    parsed.level ?? 0,
-    budget,
-    parsed.overall ?? 0,
-    parsed.maxOverall ?? 0,
-    attributeSignature(parsed),
-    skills.native.map(normalize).sort().join(','),
-    skills.additional.map(normalize).sort().join(','),
-    skills.special.map(normalize).sort().join(','),
-    parsed.impetos.map((item) => `${normalize(item.name)}:${item.value ?? ''}`).sort().join(',')
-  ].join('::');
-  const canonicalHash = stableHash(canonicalPayload);
+  // R126: a Precisão Estrutural não possui mais uma identidade paralela.
+  // GER, orçamento, habilidades adicionais e Ímpeto são estado/progressão do usuário,
+  // não identidade intrínseca da edição da carta.
+  const intrinsicFingerprint = cardIdentityFingerprintR126(parsed);
+  const canonicalHash = intrinsicFingerprint.replace(/^card-r126-/, '');
   const canonicalConfidence = clamp(criticalConfidence * .72 + overallConfidence * .28);
   const matchStatus = canonicalConfidence >= 90 && !blockReasons.length ? 'confirmed' : canonicalConfidence >= 72 ? 'probable' : 'uncertain';
-  const canonicalId = `ef-card-${normalize(parsed.playerName) || 'unknown'}-${canonicalHash}`;
-  const versionKey = [normalize(parsed.cardType) || 'unknown-type', parsed.level ?? 'unknown-level', parsed.maxOverall ?? parsed.overall ?? 'unknown-overall', canonicalHash.slice(-6)].join('-');
+  const canonicalId = `ef-${intrinsicFingerprint}`;
+  const versionKey = [normalize(parsed.cardType) || 'unknown-type', parsed.level ?? 'unknown-level', 'r126', canonicalHash].join('-');
   const blocked = blockReasons.length > 0;
   const decision = blocked ? 'blocked' : fields.some((item) => item.status === 'review') || matchStatus === 'probable' ? 'review' : 'approved';
 
@@ -199,7 +181,7 @@ export function buildStructuralPrecisionAnalysis(parsed: ParsedCard, training: T
         `${skills.native.length} nativa(s), ${skills.additional.length} adicional(is), ${skills.special.length} especial(is)`,
         `posição registrada ${parsed.mainPositionPt}`,
         parsed.playstyle ? `estilo ${parsed.playstyle}` : 'estilo não confirmado',
-        `orçamento ${budget} pontos`
+        `orçamento ${budget} pontos (estado da ficha, fora da identidade canônica)`
       ]
     },
     fields,

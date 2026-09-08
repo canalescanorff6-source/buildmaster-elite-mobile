@@ -1,3 +1,5 @@
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { POSITION_PT } from './analyzerDomain';
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from './analyzer';
 import { TRAINING_LABELS } from './trainingEngine';
 
@@ -204,13 +206,14 @@ function proposalFromVariant(result: AnalysisResult, id: PrecisionProposal['id']
 }
 
 function strictValidation(result: AnalysisResult) {
-  const selectedIsGoalkeeper = result.bestPosition.code === 'GK';
+  const usagePosition = analysisUsagePositionR138(result);
+  const selectedIsGoalkeeper = usagePosition === 'GK';
   const gkPoints = Number(result.training.gk1 ?? 0) + Number(result.training.gk2 ?? 0) + Number(result.training.gk3 ?? 0);
   const linePoints = Number(result.training.shooting ?? 0) + Number(result.training.passing ?? 0) + Number(result.training.dribbling ?? 0) + Number(result.training.defending ?? 0);
   const exact = result.trainingPointsUsed === result.trainingPointsTotal && result.trainingPointsRemaining === 0;
   return [
     { label: 'Orçamento exato', ok: exact, note: exact ? `${result.trainingPointsUsed}/${result.trainingPointsTotal}, sem sobra.` : `${result.trainingPointsRemaining} ponto(s) precisam de revisão.` },
-    { label: 'Posição escolhida preservada', ok: result.advancedOptimizer?.positionPreserved !== false, note: `${result.bestPosition.label} continua sendo a posição da ficha.` },
+    { label: 'Posição escolhida preservada', ok: result.advancedOptimizer?.positionPreserved !== false, note: `${POSITION_PT[usagePosition]} continua sendo a posição da ficha.` },
     { label: 'Grupos de goleiro coerentes', ok: selectedIsGoalkeeper ? gkPoints > 0 : gkPoints === 0, note: selectedIsGoalkeeper ? 'Treinos de goleiro ativos.' : 'Nenhum ponto de goleiro em jogador de linha.' },
     { label: 'Grupos de linha coerentes', ok: selectedIsGoalkeeper ? linePoints === 0 : true, note: selectedIsGoalkeeper ? 'Sem investimento indevido em finalização/passe/drible/defesa de linha.' : 'Distribuição compatível com jogador de linha.' },
     { label: 'Estilo sem nome inventado', ok: result.advancedTacticalFunction?.status === 'oficial_confirmado' || !result.parsed.playstyle, note: result.parsed.playstyle ?? 'Estilo não confirmado — nenhuma nomenclatura foi criada.' },

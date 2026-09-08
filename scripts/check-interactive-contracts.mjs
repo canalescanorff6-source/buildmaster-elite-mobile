@@ -52,7 +52,11 @@ for (const file of walk('src')) {
       const location = `${file}:${position.line + 1}`;
       if (tag === 'button') {
         buttons += 1;
-        if (!attr(opening, 'type')) failures.push(`${location} botão sem type="button|submit|reset".`);
+        const typeAttribute = attr(opening, 'type');
+        if (!typeAttribute) failures.push(`${location} botão sem type="button|submit|reset".`);
+        const typeText = typeAttribute?.initializer?.getText(source) ?? '';
+        const actionable = Boolean(attr(opening, 'onClick') || attr(opening, 'onPointerDown') || attr(opening, 'onKeyDown') || attr(opening, 'disabled'));
+        if (typeText.includes('button') && !actionable) failures.push(`${location} botão type="button" sem ação explícita; use handler ou elemento não interativo.`);
         const parentElement = ts.isJsxElement(node) ? node : null;
         if (!attr(opening, 'aria-label') && !attr(opening, 'aria-labelledby') && !attr(opening, 'title') && parentElement && !hasText(parentElement)) {
           failures.push(`${location} botão sem nome acessível identificável.`);

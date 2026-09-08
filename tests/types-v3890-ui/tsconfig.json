@@ -16,6 +16,6 @@
   },
   "files": [
     "stubs.d.ts",
-    "../../src/components/CanonicalCardV3890Panel.tsx"
+    "../../legacy-src/components/CanonicalCardV3890Panel.tsx"
   ]
 }

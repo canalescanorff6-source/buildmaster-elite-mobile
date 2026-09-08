@@ -41,7 +41,7 @@
     "backgroundOcrStub.ts",
     "smartCardStub.tsx",
     "cardArtCropStub.ts",
-    "../../src/lib/efootballSeasonCatalogV4070.ts",
+    "../legacy/efootballSeasonCatalogV4070.ts",
     "../../src/lib/provisionalSpecialSkillCatalogV4070.ts",
     "../../src/lib/skillDiscoveryV4070.ts",
     "../../src/lib/officialSkillIdentity.ts",

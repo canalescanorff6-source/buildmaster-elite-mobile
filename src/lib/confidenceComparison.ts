@@ -1,4 +1,5 @@
-import { ATTRIBUTE_PT, PLAYSTYLE_OPTIONS, POSITION_PT, type AnalysisResult, type AttributeKey, type PositionCode } from './analyzer';
+import { ATTRIBUTE_PT, PLAYSTYLE_OPTIONS, POSITION_PT, type AnalysisResult, type AttributeKey } from './analyzer';
+import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import { TRAINING_LABELS } from './trainingEngine';
 
 export type ReliabilitySource = 'confirmado' | 'lido' | 'inferido' | 'fallback';
@@ -11,8 +12,8 @@ export type InconsistencyReport = { status: 'aprovado' | 'revisar' | 'bloqueado'
 export type BuildComparisonRow = { key: string; label: string; values: Array<{ title: string; value: string | number; best?: boolean }> };
 export type BuildComparisonReport = { winner: string; reason: string; rows: BuildComparisonRow[]; variants: Array<{ title: string; score: number; efficiency: number; balance: number; points: number; risks: string[] }> };
 
-export type PlayerComparisonItem = { id: string; name: string; originalPosition: string; targetPosition: string; score: number; adaptation: string; confidence: number; efficiency: number; physical: number; skills: number; goals: number; dna: number; individuality: number; cloneRisk: 'baixo' | 'médio' | 'alto' | 'não calculado'; uniqueEdge: string; behavior: string; strengths: string[]; risks: string[] };
-export type PlayerComparisonReport = { targetPosition: PositionCode; targetLabel: string; ranking: PlayerComparisonItem[]; winner: string | null; reason: string };
+export { comparePlayers } from './playerComparisonR171';
+export type { PlayerComparisonItem, PlayerComparisonReport } from './playerComparisonR171';
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 const sourceScore: Record<ReliabilitySource, number> = { confirmado: 100, lido: 82, inferido: 58, fallback: 30 };
@@ -25,7 +26,7 @@ export function buildReliabilityCenter(result: AnalysisResult): ReliabilityCente
     const impact: ReliabilityItem['impact'] = /posição|estilo|pontos|atributo/i.test(item.field) ? 'alto' : /altura|peso|habilidade/i.test(item.field) ? 'médio' : 'baixo';
     return { field: item.field, value: item.value, source, confidence: Math.min(confidence, sourceScore[source]), impact, note: item.note };
   });
-  if (!items.some((x) => /posição escolhida/i.test(x.field))) items.push({ field: 'Posição escolhida', value: result.bestPosition.label, source: 'confirmado', confidence: 100, impact: 'alto', note: 'Definida pelo usuário e preservada pelo motor.' });
+  if (!items.some((x) => /posição escolhida/i.test(x.field))) items.push({ field: 'Posição escolhida', value: POSITION_PT[analysisUsagePositionR138(result)], source: 'confirmado', confidence: 100, impact: 'alto', note: 'Definida pelo usuário e preservada pelo motor.' });
   if (!items.some((x) => /pontos/i.test(x.field))) items.push({ field: 'Orçamento de pontos', value: `${result.trainingPointsUsed}/${result.trainingPointsTotal}`, source: card.trainingPointSource === 'MANUAL' ? 'confirmado' : card.trainingPointSource === 'FALLBACK' ? 'fallback' : 'lido', confidence: card.trainingPointSource === 'MANUAL' ? 100 : card.trainingPointSource === 'FALLBACK' ? 30 : 82, impact: 'alto', note: 'Controla a validade de toda a ficha.' });
   const weighted = items.reduce((sum, item) => sum + item.confidence * (item.impact === 'alto' ? 3 : item.impact === 'médio' ? 2 : 1), 0);
   const weight = items.reduce((sum, item) => sum + (item.impact === 'alto' ? 3 : item.impact === 'médio' ? 2 : 1), 0) || 1;
@@ -70,23 +71,4 @@ export function compareBuildVariants(result: AnalysisResult): BuildComparisonRep
     ...trainingKeys.map((key) => ({ key, label: TRAINING_LABELS[key], values: result.buildVariants.map((v) => ({ title: v.title, value: v.training[key], best: v.training[key] === Math.max(...result.buildVariants.map((x) => x.training[key])) })) }))
   ];
   return { winner: winner?.title ?? result.buildName, reason: winner ? `Venceu pela melhor combinação de qualidade, eficiência e equilíbrio, sem ultrapassar ${result.trainingPointsTotal} pontos.` : 'Ficha principal mantida.', rows, variants };
-}
-
-export function comparePlayers(entries: Array<{ id: string; result: AnalysisResult }>, targetPosition: PositionCode): PlayerComparisonReport {
-  const ranking = entries.map(({ id, result }) => {
-    const physical = result.physicalEngine?.suitabilityScore ?? 50;
-    const skills = result.specialSkillsAnalysis?.coverageScore ?? 50;
-    const goals = result.attributeGoals?.readinessScore ?? 50;
-    const efficiency = result.advancedOptimizer?.efficiencyScore ?? 50;
-    const sameTarget = result.bestPosition.code === targetPosition;
-    const adaptation = sameTarget ? (result.advancedTacticalFunction?.fitLabel ?? 'boa') : 'requer nova ficha';
-    const individuality = result.cardDna?.antiClone.individualityScore ?? result.playerIdentity?.individualityScore ?? 50;
-    const dna = result.cardDna ? clamp((individuality * .45) + (result.cardDna.behavior.matchConsistency * .25) + (result.cardDna.behavior.specialSkillUsage * .15) + (result.cardDna.antiClone.distributionDiversity * .15)) : individuality;
-    const score = clamp((physical * .16) + (skills * .14) + (goals * .2) + (efficiency * .18) + (result.parsed.confidence * .12) + (dna * .2) + (sameTarget ? 8 : -8));
-    const uniqueEdge = result.cardDna?.behavior.strongestBehaviors[0] ?? result.playerIdentity?.naturalStrengths[0] ?? result.strengths[0] ?? 'Identidade ainda não calculada';
-    const behavior = result.cardDna?.behavior.summary ?? 'Gere novamente a ficha nesta versão para calcular o comportamento em campo.';
-    const cloneRisk: PlayerComparisonItem['cloneRisk'] = result.cardDna?.antiClone.cloneRisk ?? 'não calculado';
-    return { id, name: result.parsed.playerName, originalPosition: result.parsed.mainPositionPt, targetPosition: POSITION_PT[targetPosition], score, adaptation, confidence: result.parsed.confidence, efficiency, physical, skills, goals, dna, individuality, cloneRisk, uniqueEdge, behavior, strengths: result.strengths.slice(0,3), risks: result.weaknesses.slice(0,3) };
-  }).sort((a,b) => b.score - a.score);
-  return { targetPosition, targetLabel: POSITION_PT[targetPosition], ranking, winner: ranking[0]?.name ?? null, reason: ranking[0] ? `${ranking[0].name} apresentou o melhor conjunto para ${POSITION_PT[targetPosition]}, considerando também DNA, comportamento projetado e risco de ficha clonada.` : 'Selecione jogadores do Cofre para comparar.' };
 }

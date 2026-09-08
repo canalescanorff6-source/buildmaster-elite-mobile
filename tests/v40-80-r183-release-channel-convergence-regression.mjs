@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = (file) => fs.readFileSync(file, 'utf8');
+const pkg = JSON.parse(read('package.json'));
+const play = read('.github/workflows/build-play-store.yml');
+const direct = read('.github/workflows/build-apk.yml');
+const convergence = read('scripts/check-android-release-convergence-r183.mjs');
+const r182Direct = read('tests/v40-80-r182-android-direct-release-readiness-regression.mjs');
+const background = read('scripts/install-background-ocr-plugin.mjs');
+const notes = `play-store/listing/pt-BR/release-notes/${pkg.version}.txt`;
+
+assert.equal(pkg.version, '40.80.0');
+assert.ok(fs.existsSync(notes) && read(notes).trim().length > 0, 'R183: release notes da versão corrente precisam existir.');
+assert.doesNotMatch(play, /40\.70\.0|buildmaster-play-v40-30-/, 'R183: Play não pode regredir para hardcodes históricos.');
+assert.match(play, /RELEASE_NOTES_FILE="play-store\/listing\/pt-BR\/release-notes\/\$\{VERSION\}\.txt"/);
+assert.match(play, /PLAY_RELEASE_NOTES_FILE=\$RELEASE_NOTES_FILE/);
+assert.match(play, /buildmaster-play-\$\{\{ env\.BUILDMASTER_VERSION \}\}-\$\{\{ env\.ANDROID_VERSION_CODE \}\}/);
+assert.match(play, /npm run apk:preflight-native/);
+assert.match(direct, /npm run apk:preflight-native/);
+assert.match(direct, /node scripts\/install-background-ocr-plugin\.mjs/);
+assert.doesNotMatch(play, /node scripts\/install-background-ocr-plugin\.mjs/);
+assert.match(play, /canal Play permanece sem BuildMasterBackgroundOcr\/FOREGROUND_SERVICE_DATA_SYNC/);
+assert.match(background, /FOREGROUND_SERVICE_DATA_SYNC/);
+assert.match(background, /POST_NOTIFICATIONS/);
+assert.match(convergence, /Capacitor core\/android\/cli sincronizados no lockfile/);
+assert.match(r182Direct, /proteção OCR nativa/);
+assert.equal(pkg.scripts['apk:preflight'], 'node scripts/check-android-release-convergence-r183.mjs');
+assert.equal(pkg.scripts['apk:preflight-native'], 'node scripts/check-android-release-convergence-r183.mjs --strict-env');
+assert.equal(pkg.scripts['test:r183'], 'node tests/v40-80-r183-release-channel-convergence-regression.mjs && npm run apk:preflight');
+assert.match(pkg.scripts['test:v4080'] ?? '', /npm run test:r180 && npm run test:r181 && npm run test:r182 && npm run test:r183/);
+console.log('R183 aprovada: variantes R182 convergidas; APK direto preserva OCR foreground e Play preserva versionamento dinâmico/política conservadora.');

@@ -10,6 +10,9 @@ const stripComments = (source) => source
 
 const auth = read('src/components/AuthGate.tsx');
 const card = read('src/components/CardVisionApp.tsx');
+const startupHookR177 = read('src/hooks/useCardVisionStartupLifecycleR177.ts');
+const startupRuntimeR177 = read('src/modules/runtime/cardVisionStartupRuntimeR177.ts');
+const derivedStateR179 = read('src/hooks/useCardVisionDerivedStateR179.ts');
 const boundary = read('src/components/AppShellSafetyBoundaryV3930.tsx');
 const routeError = read('src/app/error.tsx');
 const globalError = read('src/app/global-error.tsx');
@@ -36,14 +39,14 @@ assert.match(boundary, /key=\{`buildmaster-shell-\$\{this\.state\.attempt\}`\}/,
 assert.doesNotMatch(stripComments(boundary), /window\.location\.(?:replace|reload)\s*\(/, 'Boundary não pode recarregar o WebView.');
 
 assert.match(card, /const \[startupGate, setStartupGate\] = useState\(\{ ready: false, safeMode: false \}\)/, 'App precisa de portão de startup hidratável.');
-assert.match(card, /if \(!startupGateReady\) return/, 'Efeitos persistentes devem aguardar o portão de startup.');
-assert.match(card, /loadHistoryStoreForStartup\(\)/, 'Cofre deve usar carregamento limitado na abertura.');
-assert.match(card, /nativeDeferredBytes === 0/, 'Cofre nativo adiado não pode ser sobrescrito por fallback vazio.');
-assert.match(card, /const renderHistory = useMemo\([\s\S]*normalizeHistoryList\(history\)/, 'Dados renderizados devem ser normalizados.');
-assert.match(card, /if \(!sessionHydrated \|\| startupSafeMode\) return;[\s\S]*const hasWork/, 'Autosave não pode apagar sessão antes da hidratação.');
+assert.match(startupHookR177, /if \(!input\.startupGateReady\)/, 'Efeitos persistentes devem aguardar o portão de startup.');
+assert.match(startupRuntimeR177, /loadHistoryStoreForStartup\(\)/, 'Cofre deve usar carregamento limitado na abertura.');
+assert.match(startupRuntimeR177, /nativeDeferredBytes === 0/, 'Cofre nativo adiado não pode ser sobrescrito por fallback vazio.');
+assert.match(derivedStateR179, /const renderHistory = useMemo\([\s\S]*(?:normalizeHistoryList|sanitizeRuntimeHistoryR200)\(input\.history\)/, 'Dados renderizados devem ser normalizados/sanitizados pela fronteira R179 antes da renderização.');
+assert.match(card, /enabled: sessionHydrated && !startupSafeMode/, 'Autosave não pode apagar sessão antes da hidratação.');
 assert.match(card, /const \[vaultTrash, setVaultTrash\] = useState<VaultTrashItem<SavedAnalysis>\[]>\(\[\]\)/, 'Lixeira não deve ser lida no render inicial.');
 assert.match(card, /const \[mainSection, setMainSection\] = useState<MainSection>\('inicio'\)/, 'Rota inicial deve ser determinística.');
-assert.match(card, /safeViewComputation\('history-render-sanitizer'/, 'Falhas de dados devem ser isoladas por área.');
+assert.match(derivedStateR179, /safeViewComputationR130\('history-render-sanitizer'/, 'Falhas de dados devem ser isoladas por área.');
 
 assert.match(history, /STARTUP_NATIVE_HISTORY_MAX_BYTES = 32 \* 1024 \* 1024/, 'Leitura nativa deve ter limite de startup.');
 assert.match(history, /nativeVaultInfo\(storageKey\)/, 'Tamanho deve ser consultado antes da leitura.');

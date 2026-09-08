@@ -7,8 +7,7 @@ import type { TrainingArea, TrainingEvolutionSummary, TrainingSessionRecord } fr
 import { analyzeTrainingEvolution, areaLabel, getTrainingDrill, TRAINING_DRILLS_V2880 } from '@/modules/training/trainingEvolutionEngine';
 
 export const SMART_COACH_VERSION = '29.60.0';
-export const SMART_COACH_REVIEW_STORAGE_KEY = 'buildmaster_smart_coach_reviews_v2960';
-export const SMART_COACH_PREFERENCES_KEY = 'buildmaster_smart_coach_preferences_v2960';
+export { SMART_COACH_REVIEW_STORAGE_KEY, SMART_COACH_PREFERENCES_KEY } from './smartCoachStorageKeysR167';
 
 export type CoachDifficulty = 1 | 2 | 3 | 4 | 5;
 export type CoachGoal = 'subir-divisao' | 'reduzir-erros' | 'melhorar-posse' | 'defender-melhor' | 'finalizar-melhor' | 'equilibrado';

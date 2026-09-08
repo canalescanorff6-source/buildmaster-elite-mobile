@@ -34,7 +34,7 @@ const highOverall:any=applyCleanSlatePerformance2027R119(baseResult({overall:115
 const evidenced:any=applyCleanSlatePerformance2027R119(baseResult({withMatchEvidence:true}));
 const clean=baseline.cleanSlate2027R119;
 
-assert.match(clean.version,/r123-competitive-lab-saturation-confidence/);
+assert.match(clean.version,/r12(?:3-competitive-lab-saturation-confidence|5-role-aware-card-specific-performance-authority)/);
 assert.equal(clean.authority,'CLEAN_SLATE_SINGLE_WRITER');
 assert.equal(trainingPlanTotalCost(baseline.training),64);
 assert.deepEqual(highOverall.training,baseline.training,'Overall não pode alterar a ficha r123.');

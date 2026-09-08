@@ -193,7 +193,11 @@ const asCF = run(DRIBBLER, 'CF', '4-3-3', 'POSSE_DE_BOLA');
 assert.equal(asCF.recommendedSkills.length, 5, 'A adaptação para CA precisa manter cinco habilidades oficiais quando houver catálogo disponível.');
 assert.ok(asCF.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILLS.has(skill)), 'A adaptação não pode introduzir habilidade não oficial.');
 assert.equal(asCF.cleanSlate2027R119?.positionAnchor, dribbler.cleanSlate2027R119?.positionAnchor, 'A posição escolhida não pode trocar a âncora natural usada pelo Clean Slate.');
-assert.deepEqual(asCF.training, dribbler.training, 'A Card Signature final pertence à carta e não deve ser reescrita apenas pela posição escolhida; a adaptação fica na camada tática.');
+assert.equal(asCF.cleanSlate2027R119?.cardKey, dribbler.cleanSlate2027R119?.cardKey, 'A posição escolhida não pode trocar a identidade permanente da carta.');
+assert.equal(asCF.cleanSlate2027R119?.usagePosition, 'CF', 'A posição de uso precisa ser registrada pela autoridade final.');
+assert.equal(dribbler.cleanSlate2027R119?.usagePosition, 'SS', 'A posição original de uso precisa permanecer explícita.');
+assert.notDeepEqual(asCF.training, dribbler.training, 'A mesma carta precisa adaptar a progressão quando a função real de uso muda, sem trocar sua identidade.');
+assert.equal(asCF.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'A adaptação por posição precisa preservar a trava identidade fixa / ficha adaptável.');
 assert.equal(asCF.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER', 'A adaptação deve preservar a autoridade única r119.');
 assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'Selecionar outra posição não pode trocar os Ímpetos da carta.');
 

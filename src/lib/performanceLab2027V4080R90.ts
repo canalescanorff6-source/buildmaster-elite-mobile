@@ -1,6 +1,6 @@
 import type { AnalysisResult } from './analyzerDomain';
-import { MATCH_VALIDATION_STORAGE_KEY, type MatchValidationRecord } from './appEvolution';
-import { readAccountStorage } from './accountStorage';
+import type { MatchValidationRecord } from './appEvolution';
+import { readMatchValidationRepositoryR137 } from '../modules/matches/matchValidationRepositoryR137';
 import { buildRealGameplayValidationV4050 } from './realGameplayValidationV4050';
 
 export const PERFORMANCE_LAB_2027_R90_VERSION = '40.80-r90-performance-lab-2027' as const;
@@ -44,24 +44,16 @@ const clamp=(v:number,min=0,max=100)=>Math.max(min,Math.min(max,Number.isFinite(
 const round=(v:number,d=1)=>Number(v.toFixed(d));
 
 function readRecords(): MatchValidationRecord[] {
-  try {
-    const raw = readAccountStorage(MATCH_VALIDATION_STORAGE_KEY, { migrateLegacy: false });
-    const parsed = JSON.parse(raw || '[]');
-    return Array.isArray(parsed) ? parsed.filter(Boolean).slice(-1200) : [];
-  } catch { return []; }
+  return readMatchValidationRepositoryR137();
 }
 
 function minuteCurve(result: AnalysisResult, consistency: number) {
   const stamina = Number(result.parsed.attributes.stamina ?? 80);
   const engines = result as AnalysisResult & {
     performanceEngine2027R108?: { winner?: { projectedStrongUntilMinute?: number } };
-    performanceEngine2027R107?: { winner?: { projectedStrongUntilMinute?: number } };
-    performanceEngine2027R70?: { winner?: { projectedStrongUntilMinute?: number } };
   };
   const expected = Number(
     engines.performanceEngine2027R108?.winner?.projectedStrongUntilMinute
-    ?? engines.performanceEngine2027R107?.winner?.projectedStrongUntilMinute
-    ?? engines.performanceEngine2027R70?.winner?.projectedStrongUntilMinute
     ?? (stamina >= 90 ? 86 : stamina >= 84 ? 79 : 70)
   );
   const peak = clamp(82 + consistency * .14 + Math.min(6, Math.max(0, stamina - 80) * .2));

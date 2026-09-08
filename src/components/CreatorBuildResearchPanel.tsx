@@ -18,6 +18,7 @@ import {
   Trophy
 } from 'lucide-react';
 import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from '@/lib/analyzerDomain';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import { validateImageFile } from '@/modules/images/imageSafety';
 import { fileDigest, recognizeWithOcrWorker } from '@/lib/ocrWorkerManager';
 import {
@@ -122,7 +123,7 @@ export function CreatorBuildResearchPanel({ result }: { result: AnalysisResult }
     setStatus('');
     window.addEventListener(CREATOR_BUILD_RESEARCH_EVENT, refresh);
     return () => window.removeEventListener(CREATOR_BUILD_RESEARCH_EVENT, refresh);
-  }, [result.parsed.internalId, result.parsed.playerName, result.parsed.cardType, result.trainingPointsTotal]);
+  }, [cardIdentityFingerprintR126(result.parsed), result.trainingPointsTotal]);
 
   useEffect(() => {
     let active = true;

@@ -37,7 +37,7 @@ import { buildSquadRotationReport } from '@/lib/squadRotation';
 import { buildProfessionalSquadReport } from '@/lib/professionalSquadEngine';
 import { inspectPrintQuality } from '@/lib/ocr';
 import { fileDigest, recognizeWithOcrWorker } from '@/lib/ocrWorkerManager';
-import { validateImageFile } from '@/modules/images/imageSafety';
+import { createImageThumbnail, validateImageFile } from '@/modules/images/imageSafety';
 import { preprocessImage } from '@/modules/card-reader/imageProcessing';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { FormationRoleLabPanel } from '@/components/lazy/AppLazyPanels';
@@ -46,16 +46,9 @@ import { ProfessionalSquadPanel } from '@/modules/squad/ProfessionalSquadPanel';
 import { OpponentMatchAssistantPanel } from '@/modules/opponents/OpponentMatchAssistantPanel';
 import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import { isRenderableAnalysisResult, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
-
-const tacticalStyleName: Record<TacticalStyle, string> = {
-  AUTO: 'Automático inteligente',
-  POSSE_DE_BOLA: 'Posse de bola',
-  CONTRA_ATAQUE: 'Contra-ataque normal',
-  CONTRA_ATAQUE_RAPIDO: 'Contra-ataque rápido',
-  POR_FORA: 'Por fora',
-  PASSE_LONGO: 'Passe longo',
-  SOBREPOSICAO: 'Sobreposição'
-};
+import { cardUsageIdentityKeyR126 } from '@/lib/cardIdentityFingerprintR126';
+import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { POSITION_PT, TACTICAL_STYLE_NAME } from '@/lib/analyzerDomain';
 
 type TeamCenterView = 'profissional' | 'visao' | 'formacoes' | 'escalacao' | 'elenco' | 'entrosamento' | 'planos' | 'adversario';
 
@@ -114,13 +107,13 @@ function safeTeamReport<T>(factory: () => T | null): T | null {
 function uniqueSavedResults(history: SavedAnalysis[]) {
   const map = new Map<string, AnalysisResult>();
   for (const item of safeSavedHistory(history)) {
-    const playerName = String(item.result.parsed.playerName || '').trim();
-    const position = item.result.bestPosition?.code;
-    if (!playerName || !position) continue;
-    const key = `${playerName.toLowerCase()}-${position}-${item.result.parsed.playstyle ?? ''}`;
+    const position = analysisUsagePositionR138(item.result);
+    // R127: Cofre/Meu Time compartilham a mesma identidade Carta + posição de uso.
+    // Nome + estilo não é mais chave porque duas edições do mesmo atleta podem coexistir.
+    const key = cardUsageIdentityKeyR126(item.result.parsed, position);
     if (!map.has(key)) map.set(key, item.result);
   }
-  return Array.from(map.values()).slice(0, 30);
+  return Array.from(map.values()).slice(0, 60);
 }
 
 function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation, teamStyle: TacticalStyle): SquadReport | null {
@@ -139,7 +132,7 @@ function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation
     phaseScores.fisico
   ]));
 
-  const count = (codes: PositionCode[]) => results.filter((result) => codes.includes(result.bestPosition.code)).length;
+  const count = (codes: PositionCode[]) => results.filter((result) => codes.includes(analysisUsagePositionR138(result))).length;
   const composition = {
     goleiros: count(['GK']),
     defensores: count(['CB', 'LB', 'RB']),
@@ -148,7 +141,7 @@ function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation
     lateraisAlas: count(['LB', 'RB', 'LMF', 'RMF', 'LWF', 'RWF']),
     volantes: count(['DMF', 'CMF']),
     criadores: results.filter((result) => /criador|orquestrador|armador|clássico|classico|passe|organizador/i.test(`${result.teamMap?.functionLabel ?? ''} ${result.parsed.playstyle ?? ''}`)).length,
-    finalizadores: results.filter((result) => ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(result.bestPosition.code) && Number(result.teamMap?.sectorScores?.finalizacao ?? 0) >= 76).length
+    finalizadores: results.filter((result) => ['CF', 'SS', 'LWF', 'RWF', 'AMF'].includes(analysisUsagePositionR138(result)) && Number(result.teamMap?.sectorScores?.finalizacao ?? 0) >= 76).length
   };
 
   const phaseLeaders: Array<[string, SquadPhaseKey]> = [
@@ -164,7 +157,7 @@ function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation
     return {
       title,
       player: leader.parsed.playerName,
-      position: leader.bestPosition.label,
+      position: POSITION_PT[analysisUsagePositionR138(leader)],
       score: Number(leader.teamMap?.sectorScores?.[key] ?? 0),
       functionLabel: leader.teamMap?.functionLabel ?? leader.buildName
     };
@@ -217,10 +210,10 @@ function buildSquadReport(history: SavedAnalysis[], formation: TacticalFormation
 function FormationMiniBoard({ history, formation }: { history: SavedAnalysis[]; formation: TacticalFormation }) {
   const players = uniqueSavedResults(history);
   const byLine = {
-    gol: players.filter((item) => item.bestPosition.code === 'GK').slice(0, 1),
-    defesa: players.filter((item) => ['CB', 'LB', 'RB'].includes(item.bestPosition.code)).slice(0, 5),
-    meio: players.filter((item) => ['DMF', 'CMF', 'AMF', 'LMF', 'RMF'].includes(item.bestPosition.code)).slice(0, 5),
-    ataque: players.filter((item) => ['CF', 'SS', 'LWF', 'RWF'].includes(item.bestPosition.code)).slice(0, 4)
+    gol: players.filter((item) => analysisUsagePositionR138(item) === 'GK').slice(0, 1),
+    defesa: players.filter((item) => ['CB', 'LB', 'RB'].includes(analysisUsagePositionR138(item))).slice(0, 5),
+    meio: players.filter((item) => ['DMF', 'CMF', 'AMF', 'LMF', 'RMF'].includes(analysisUsagePositionR138(item))).slice(0, 5),
+    ataque: players.filter((item) => ['CF', 'SS', 'LWF', 'RWF'].includes(analysisUsagePositionR138(item))).slice(0, 4)
   };
   const row = (label: string, items: AnalysisResult[], min: number) => {
     const padded = [...items];
@@ -230,7 +223,7 @@ function FormationMiniBoard({ history, formation }: { history: SavedAnalysis[]; 
         <span>{label}</span>
         <div>
           {padded.slice(0, Math.max(min, items.length)).map((item, index) => (
-            <em key={`${label}-${index}`} className={item ? 'filled' : ''}>{item ? `${item.parsed.playerName.split(' ')[0]} • ${item.bestPosition.label}` : 'vaga'}</em>
+            <em key={`${label}-${index}`} className={item ? 'filled' : ''}>{item ? `${item.parsed.playerName.split(' ')[0]} • ${POSITION_PT[analysisUsagePositionR138(item)]}` : 'vaga'}</em>
           ))}
         </div>
       </div>
@@ -447,7 +440,7 @@ const formationVisualLayouts: Record<Exclude<TacticalFormation, 'AUTO'>, VisualL
 };
 
 function lineupScoreForSlot(result: AnalysisResult, slot: VisualLineupSlot) {
-  const code = result.bestPosition.code;
+  const code = analysisUsagePositionR138(result);
   const scoreMap = result.teamMap?.sectorScores;
   const base = Number(result.pri?.GER ?? 70);
   let score = base;
@@ -478,9 +471,9 @@ function buildVisualLineup(history: SavedAnalysis[], formation: TacticalFormatio
     const best = ranked[0];
     if (!best || best.fit < 55) return { ...slot, player: null, fit: 0, reason: 'Nenhum jogador salvo encaixa com segurança nesta função.' };
     used.add(best.player.parsed.playerName);
-    const exact = slot.preferred.includes(best.player.bestPosition.code);
+    const exact = slot.preferred.includes(analysisUsagePositionR138(best.player));
     const reason = exact
-      ? `Encaixe natural em ${best.player.bestPosition.label}.`
+      ? `Encaixe natural em ${POSITION_PT[analysisUsagePositionR138(best.player)]}.`
       : `Encaixe adaptado: função real ${best.player.teamMap?.functionLabel ?? best.player.buildName}.`;
     return { ...slot, player: best.player, fit: Math.max(0, Math.min(100, Math.round(best.fit / 2))), reason };
   });
@@ -506,7 +499,7 @@ function VisualLineupPitch({ history, formation, teamStyle }: { history: SavedAn
         <strong>{filledCount}/11 • {averageFit}/100</strong>
       </div>
       <div className="visual-pitch-meta">
-        <span>Estilo: {tacticalStyleName[teamStyle] ?? 'Automático'}</span>
+        <span>Estilo: {TACTICAL_STYLE_NAME[teamStyle] ?? 'Automático'}</span>
         <span>Arrume o Cofre com titulares e reservas para o encaixe ficar mais preciso.</span>
       </div>
       <div className="visual-pitch-field">
@@ -520,7 +513,7 @@ function VisualLineupPitch({ history, formation, teamStyle }: { history: SavedAn
                   <div key={pick.id} className={pick.player ? 'pitch-player-slot filled' : 'pitch-player-slot empty'}>
                     <span>{pick.label}</span>
                     <strong>{pick.player ? pick.player.parsed.playerName.split(' ').slice(0, 2).join(' ') : 'Vaga'}</strong>
-                    <em>{pick.player ? `${pick.player.bestPosition.label} • ${pick.fit}/100` : pick.duty}</em>
+                    <em>{pick.player ? `${POSITION_PT[analysisUsagePositionR138(pick.player)]} • ${pick.fit}/100` : pick.duty}</em>
                     <small>{pick.player ? pick.reason : 'Salve uma ficha compatível no Cofre.'}</small>
                   </div>
                 ))}
@@ -575,9 +568,10 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
     setOpponentPrintLoading(true);
     setOpponentPrintReport(null);
     try {
-      await validateImageFile(file);
+      const validated = await validateImageFile(file);
+      const thumbnail = await createImageThumbnail(validated.sanitizedBlob, 720).catch(() => validated.sanitizedBlob);
       if (opponentPrintObjectUrlRef.current) URL.revokeObjectURL(opponentPrintObjectUrlRef.current);
-      opponentPrintObjectUrlRef.current = URL.createObjectURL(file);
+      opponentPrintObjectUrlRef.current = URL.createObjectURL(thumbnail);
       setOpponentPrintPreview(opponentPrintObjectUrlRef.current);
       const quality = await inspectPrintQuality(file).catch(() => null);
       const processed = await preprocessImage(file, 'sharp');
@@ -656,7 +650,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
           <p>Veja o essencial primeiro e abra cada camada somente quando precisar ajustar o elenco.</p>
           <div className="team-center-tags">
             <span>{formation === 'AUTO' ? 'Formação assistida' : formation}</span>
-            <span>{tacticalStyleName[teamStyle] ?? 'Estilo automático'}</span>
+            <span>{TACTICAL_STYLE_NAME[teamStyle] ?? 'Estilo automático'}</span>
             <span>{starterCount}/11 titulares preenchidos</span>
           </div>
         </div>
@@ -739,7 +733,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
                 <div className="assisted-option-grid">
                   {assistedLineup.options.map((option) => (
                     <article key={option.id} className={`assisted-option-card ${option.id}`}>
-                      <div className="assisted-option-head"><div><span>{option.title}</span><strong>{option.formation} • {tacticalStyleName[option.style]}</strong></div><b>{option.score}/100</b></div>
+                      <div className="assisted-option-head"><div><span>{option.title}</span><strong>{option.formation} • {TACTICAL_STYLE_NAME[option.style]}</strong></div><b>{option.score}/100</b></div>
                       <p>{option.subtitle}</p>
                       <div className="assisted-mini-scores"><span>Entrosamento <b>{option.chemistry}</b></span><span>Estilo <b>{option.styleFit}</b></span><span>{option.complete ? '11/11 completos' : 'Há vagas abertas'}</span></div>
                       <div className="assisted-lineup-list">{option.lineup.map((pick) => <span key={pick.slot.id}><b>{pick.slot.label}</b><em>{pick.playerName ?? 'Vaga aberta'} • {pick.score}/100</em></span>)}</div>
@@ -759,7 +753,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
           <div className="team-layer-heading"><div><p className="kicker">Elenco e banco</p><h3>Titulares, reservas e substituições</h3></div><span>{rotationReport?.squadCount ?? report.playerCount} jogadores</span></div>
 
           <div className="team-starter-list">
-            {visualLineup.map((pick) => <article key={pick.id} className={pick.player ? '' : 'missing'}><span>{pick.label}</span><strong>{pick.player?.parsed.playerName ?? 'Vaga aberta'}</strong><small>{pick.player ? `${pick.player.bestPosition.label} • encaixe ${pick.fit}/100` : pick.reason}</small></article>)}
+            {visualLineup.map((pick) => <article key={pick.id} className={pick.player ? '' : 'missing'}><span>{pick.label}</span><strong>{pick.player?.parsed.playerName ?? 'Vaga aberta'}</strong><small>{pick.player ? `${POSITION_PT[analysisUsagePositionR138(pick.player)]} • encaixe ${pick.fit}/100` : pick.reason}</small></article>)}
           </div>
 
           {rotationReport && (
@@ -816,7 +810,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
           )}
 
           {rotationReport && (
-            <div className="rotation-card team-plans-card"><strong>Planos A, B e C</strong><div className="game-phase-grid">{rotationReport.plans.map((plan) => <article key={plan.id} className="game-phase-card"><div><span>{plan.id} • {plan.formation} • {tacticalStyleName[plan.style]}</span><strong>{plan.title}</strong></div><p>{plan.purpose}</p><small>Nota do plano: {plan.score}/100</small><details><summary>Ver mudanças e orientações</summary><ul>{plan.changes.map((item) => <li key={item}>{item}</li>)}</ul><b>Orientações</b><ul>{plan.instructions.map((item) => <li key={item}>{item}</li>)}</ul><small>{plan.decisionNote}</small></details><button type="button" onClick={() => toggleSavedTeamPlan(plan.id)}>{savedTeamPlans[plan.id] ? <CheckCircle2 size={15}/> : <Save size={15}/>} {savedTeamPlans[plan.id] ? 'Plano salvo' : 'Salvar plano'}</button></article>)}</div></div>
+            <div className="rotation-card team-plans-card"><strong>Planos A, B e C</strong><div className="game-phase-grid">{rotationReport.plans.map((plan) => <article key={plan.id} className="game-phase-card"><div><span>{plan.id} • {plan.formation} • {TACTICAL_STYLE_NAME[plan.style]}</span><strong>{plan.title}</strong></div><p>{plan.purpose}</p><small>Nota do plano: {plan.score}/100</small><details><summary>Ver mudanças e orientações</summary><ul>{plan.changes.map((item) => <li key={item}>{item}</li>)}</ul><b>Orientações</b><ul>{plan.instructions.map((item) => <li key={item}>{item}</li>)}</ul><small>{plan.decisionNote}</small></details><button type="button" onClick={() => toggleSavedTeamPlan(plan.id)}>{savedTeamPlans[plan.id] ? <CheckCircle2 size={15}/> : <Save size={15}/>} {savedTeamPlans[plan.id] ? 'Plano salvo' : 'Salvar plano'}</button></article>)}</div></div>
           )}
         </section>
       )}
@@ -847,7 +841,7 @@ export function TeamFullMapPanel({ history, formation, teamStyle, onFormationCha
           /> : <div className="settings-explanation-card"><div><strong>Assistente de adversário pausado localmente</strong><span>A análise básica permanece ativa. Reative Planos A/B/C em Observabilidade e suporte.</span></div></div>}
           <div className="chemistry-columns"><div className="chemistry-box warn"><strong>Principais ameaças</strong>{opponentReport.mainThreats.map((item) => <span key={item}>{item}</span>)}</div><div className="chemistry-box good"><strong>Onde explorar</strong>{opponentReport.exploitableWeaknesses.map((item) => <span key={item}>{item}</span>)}</div></div>
           <div className="opponent-adjustment-grid">{opponentReport.adjustments.slice(0, 6).map((item) => <article key={`${item.area}-${item.title}`} className={`opponent-adjustment-card priority-${item.priority}`}><div><span>{item.area}</span><b>{item.priority}</b></div><strong>{item.title}</strong><p>{item.action}</p><small>{item.reason}</small></article>)}</div>
-          <div className="squad-suggestion-box"><strong>Resposta assistida</strong><span>{opponentReport.recommendedFormation} • {tacticalStyleName[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>
+          <div className="squad-suggestion-box"><strong>Resposta assistida</strong><span>{opponentReport.recommendedFormation} • {TACTICAL_STYLE_NAME[opponentReport.recommendedStyle]}</span><span>{opponentReport.comparisonNote}</span></div>
 
           {advancedOpponentReport && <details className="team-layer-details"><summary>Ver comparação avançada, duelos e mapas</summary><div className="team-layer-details-body"><div className="sector-comparison-grid">{advancedOpponentReport.sectorComparisons.map((item) => <article key={item.key} className={`sector-comparison-card ${item.status}`}><div><span>{item.label}</span><b>{item.advantage}/100</b></div><small>Seu setor {item.ownScore} × Rival {item.opponentScore}</small><p>{item.verdict}</p></article>)}</div><div className="duel-grid">{advancedOpponentReport.duels.map((duel,index) => <article key={`${duel.ownPlayer}-${index}`} className={`duel-card ${duel.status}`}><div><span>{duel.zone}</span><b>{duel.duelScore}/100</b></div><strong>{duel.ownPlayer}</strong><small>{duel.ownRole} × {duel.opponentRole}</small><p>{duel.reason}</p><em>{duel.adjustment}</em></article>)}</div><div className="advanced-map-columns"><div className="advanced-opponent-block threat-map"><strong>Mapa de ameaças</strong>{advancedOpponentReport.threats.map((item) => <article key={`${item.zone}-${item.title}`} className={`map-item ${item.severity}`}><div><span>{item.zone}</span><b>{item.level}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.protection}</small></article>)}</div><div className="advanced-opponent-block weakness-map"><strong>Mapa de fraquezas</strong>{advancedOpponentReport.weaknesses.map((item) => <article key={`${item.zone}-${item.title}`} className="map-item opportunity"><div><span>{item.zone}</span><b>{item.opportunity}/100</b></div><strong>{item.title}</strong><p>{item.reason}</p><small>{item.howToExplore}</small></article>)}</div></div></div></details>}
         </section>

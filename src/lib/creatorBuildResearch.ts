@@ -2,9 +2,10 @@ import type { AnalysisResult, PositionCode, TrainingKey, TrainingPlan } from './
 import { readAccountStorage, writeAccountStorage } from './accountStorage';
 import { createStableId } from './stableId';
 
+import { CREATOR_BUILD_RESEARCH_EVENT } from './appEvolution';
+export { CREATOR_BUILD_RESEARCH_EVENT } from './appEvolution';
 export const CREATOR_BUILD_RESEARCH_STORAGE_KEY = 'buildmaster_creator_build_research_v27_37';
 export const CREATOR_BUILD_RESEARCH_LIMIT = 500;
-export const CREATOR_BUILD_RESEARCH_EVENT = 'buildmaster:creator-build-research-updated';
 
 export const CREATOR_TRAINING_KEYS: readonly TrainingKey[] = [
   'shooting',
