@@ -1,5 +1,5 @@
 import type { AtomicCommitVerificationContextR389, AtomicSavedRecordR389 } from './atomicMigrationCommitAuthorityR389';
-import type { VaultConvergenceDecisionR390, VaultReplicaKindR390 } from './multiReplicaVaultConvergenceR390';
+import type { VaultConvergenceDecisionR390 } from './multiReplicaVaultConvergenceR390';
 import type { ConcreteReplicaBackendR393 } from './concreteReplicaBackendHealthR393';
 import {
   auditHealthAwareReplicasR394,
@@ -23,8 +23,7 @@ export type CoordinatorExecutionLockR395 = {
 export type CoordinatorSaveOptionsR395 = {
   namespace: string;
   lock: CoordinatorExecutionLockR395;
-  /** Set true when two independent JS contexts/processes may save the same vault. */
-  requireCrossContext?: boolean;
+    requireCrossContext?: boolean;
 };
 
 export type CoordinatorSaveR395<T> = {
@@ -130,11 +129,6 @@ async function runProcessExclusiveR395<R>(namespace: string, task: () => Promise
   }
 }
 
-/**
- * Same-runtime lock. Safe for double-clicks, multiple React trees, routes and
- * asynchronous callers that share one JS realm. It is intentionally labelled
- * PROCESS and must not be mistaken for a cross-context lock.
- */
 export function createProcessExecutionLockR395(): CoordinatorExecutionLockR395 {
   return {
     version: COORDINATOR_IDEMPOTENCY_LOCK_R395_VERSION,
@@ -144,11 +138,6 @@ export function createProcessExecutionLockR395(): CoordinatorExecutionLockR395 {
   };
 }
 
-/**
- * Cross-tab/window lock backed by the Web Locks API. The browser owns lock
- * lifetime, so a crashed/closed context automatically releases the execution
- * lock; R391/R394 remain responsible for recovering any durable STAGED/ARMED IO.
- */
 export function createWebLocksExecutionLockR395(runtime: unknown = globalThis): CoordinatorExecutionLockR395 | null {
   const carrier = runtime as WebLockRuntimeR395;
   const locks = carrier.navigator?.locks ?? carrier.locks;
@@ -303,11 +292,6 @@ async function executeLockedSaveR395<T>(
   });
 }
 
-/**
- * R395 save boundary. Identical requests coalesce in-process, while every save
- * (identical or different) is serialized by the namespace execution lock.
- * The canonical R389 commit itself is the durable idempotency token.
- */
 export function saveIdempotentHealthAwareReplicasR395<T>(
   backends: readonly ConcreteReplicaBackendR393[],
   target: AtomicSavedRecordR389<T>,
