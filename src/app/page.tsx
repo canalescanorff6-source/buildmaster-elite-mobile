@@ -1,4 +1,3 @@
-import '@/modules/vault/nativeCrossProcessSaveSurfaceR396';
 import { AuthGate } from '@/components/AuthGate';
 import { CardVisionApp } from '@/components/CardVisionApp';
 import { AppShellSafetyBoundaryV3930 } from '@/components/AppShellSafetyBoundaryV3930';
