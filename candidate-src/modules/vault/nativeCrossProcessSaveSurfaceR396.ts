@@ -21,6 +21,14 @@ export type NativeVaultLockReleaseResultR396 = {
   token?: string;
 };
 
+/**
+ * Host contract for Android/native locking.
+ *
+ * The host MUST hold an OS/process-safe exclusive lock until release(token), and
+ * the OS MUST release it automatically when the owning process dies. The token is
+ * opaque and MUST NOT be a timestamp/lease that can silently expire while JS is
+ * still inside the critical section.
+ */
 export type NativeVaultLockPluginR396 = {
   acquire(options: { namespace: string }): Promise<NativeVaultLockAcquireResultR396>;
   release(options: { token: string }): Promise<NativeVaultLockReleaseResultR396 | void>;
@@ -47,7 +55,11 @@ export type SaveSurfaceOptionsR396 = {
   namespace: string;
   runtime?: unknown;
   nativePlugin?: NativeVaultLockPluginR396 | null;
-    singleContextProven?: boolean;
+  /**
+   * PROCESS fallback is forbidden by default. Set only if the embedding runtime
+   * has independently proven there cannot be another tab/WebView/process writer.
+   */
+  singleContextProven?: boolean;
 };
 
 export type SaveSurfaceResultR396<T> = {
@@ -120,6 +132,11 @@ function releasedOk(result: NativeVaultLockReleaseResultR396 | void, token: stri
   return !clean(result.token) || clean(result.token) === token;
 }
 
+/**
+ * CROSS_CONTEXT adapter backed by the native host. No TTL and no wall clock are
+ * used: process death is the crash-release mechanism, while R391/R392 recover
+ * any durable staged transaction left behind.
+ */
 export function createNativeCrossProcessExecutionLockR396(
   plugin: NativeVaultLockPluginR396
 ): CoordinatorExecutionLockR395 {
@@ -201,6 +218,11 @@ function blockedResultR396<T>(resolved: ResolvedExecutionLockR396): SaveSurfaceR
   };
 }
 
+/**
+ * Canonical R396 save surface. UI/routes/services should call this boundary,
+ * never R394/R395 directly. Lock resolution happens here and R395 remains the
+ * single idempotent coordinator underneath it.
+ */
 export async function saveVaultThroughEnforcedSurfaceR396<T>(
   backends: readonly ConcreteReplicaBackendR393[],
   target: AtomicSavedRecordR389<T>,

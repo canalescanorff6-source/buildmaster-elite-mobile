@@ -5,8 +5,6 @@ import {
 } from '@/lib/cardIdentityFingerprintR126';
 import type { AnalysisResult } from '@/lib/analyzerDomain';
 
-export type { SaveSurfaceResultR396 } from './nativeCrossProcessSaveSurfaceR396';
-
 export const VAULT_IDENTITY_SEAL_R134_VERSION = '40.80-r134-vault-identity-seal-v1' as const;
 export const VAULT_EVIDENCE_FINGERPRINT_R134_VERSION = '40.80-r134-vault-evidence-v1' as const;
 
