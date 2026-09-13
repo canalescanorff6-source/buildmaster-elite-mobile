@@ -18,41 +18,24 @@ import { applyR111TestContract } from './apply-r111-test-contract.mjs';
 import { applyR114TestContract } from './apply-r114-test-contract.mjs';
 import { applyR115TestContract } from './apply-r115-test-contract.mjs';
 import { applyR116TestContract } from './apply-r116-test-contract.mjs';
+import { applyCardDnaBuildDiversityR404 } from './apply-r404-card-dna-build-diversity.mjs';
+import { applyMarginalReturnDiversityR405 } from './apply-r405-marginal-return-diversity.mjs';
+import { applyParetoNoWastedPointR406 } from './apply-r406-pareto-no-wasted-point.mjs';
 
 export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  const root=resolve(rootDirectory);
- for(const p of ['public/update-manifest.json','out/update-manifest.json','android/app/src/main/assets/public/update-manifest.json']){
-   const t=resolve(root,p); if(existsSync(t)) rmSync(t,{force:true});
- }
+ for(const p of ['public/update-manifest.json','out/update-manifest.json','android/app/src/main/assets/public/update-manifest.json']){const t=resolve(root,p);if(existsSync(t))rmSync(t,{force:true});}
  const pipelinePath=resolve(root,'src/lib/cardIntelligencePipeline.ts');
- const cleanSlateR119Installed=existsSync(pipelinePath) && readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');
- if(cleanSlateR119Installed){
-   // A árvore atual já contém, por definição, todos os contratos históricos r16-r116.
-   // Reexecutar patchers textuais contra o CardVision modularizado é incorreto: eles
-   // procuram blocos antigos que legitimamente deixaram o shell nas fronteiras r150+.
-   // O sanitizador moderno portanto é somente destrutivo para manifests temporários e
-   // NÃO reescreve source/tests quando a autoridade Clean Slate r119+ está instalada.
-   console.log('v40.80 r119+: patchers históricos r16-r116 ignorados; árvore modular preservada.');
-   return { modernTree: true, sourcePatched: false };
+ const modern=existsSync(pipelinePath)&&readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');
+ if(modern){
+   const r404=applyCardDnaBuildDiversityR404(root);
+   const r405=applyMarginalReturnDiversityR405(root);
+   const r406=applyParetoNoWastedPointR406(root);
+   console.log('v40.80 r406: DNA + retorno marginal + frontier Pareto aplicada de forma idempotente.');
+   return {modernTree:true,sourcePatched:r404.sourceChanged||r405.sourceChanged||r406.sourceChanged,r404,r405,r406};
  }
- applyPreFinalConfirmationR16(root);
- applyR17RegressionCompatibility(root);
- applyPreFinalAutofillR20(root);
- applyCardVisionLineBudgetR22(root);
- applyUniversalDnaR24(root);
- applyUniversalDnaR25(root);
- applyPreFinalVisualR104(root);
- applyPreFinalAutoProgressR105(root);
- applyR109ExtremeCompat(root);
- applyR111DefinitiveCiGameplay(root);
- applyR114GameplayTruth(root);
- applyR115CardSignature(root);
- applyR116TenZoneCompat(root);
- applyR111TestContract(root);
- applyR114TestContract(root);
- applyR115TestContract(root);
- applyR116TestContract(root);
- return { modernTree: false, sourcePatched: true };
+ applyPreFinalConfirmationR16(root);applyR17RegressionCompatibility(root);applyPreFinalAutofillR20(root);applyCardVisionLineBudgetR22(root);applyUniversalDnaR24(root);applyUniversalDnaR25(root);applyPreFinalVisualR104(root);applyPreFinalAutoProgressR105(root);applyR109ExtremeCompat(root);applyR111DefinitiveCiGameplay(root);applyR114GameplayTruth(root);applyR115CardSignature(root);applyR116TenZoneCompat(root);applyR111TestContract(root);applyR114TestContract(root);applyR115TestContract(root);applyR116TestContract(root);
+ return {modernTree:false,sourcePatched:true};
 }
 const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
 if(invoked===import.meta.url) sanitizeUpdateSource();
