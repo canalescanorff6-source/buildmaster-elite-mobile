@@ -26,26 +26,6 @@ import { applyCleanSlateR125RevisionContractR406Fix3 } from './apply-r406-fix3-r
 import { applyMatchCalibrationPrecedenceR406Fix4 } from './apply-r406-fix4-match-calibration-precedence.mjs';
 import { applyCalibratedGroupReturnR406Fix5 } from './apply-r406-fix5-calibrated-group-return.mjs';
 import { applyReviewedR119BaselinesR186R200 } from './apply-r406-fix7-r186-r200-reviewed-baselines.mjs';
-
-export function sanitizeUpdateSource(rootDirectory=process.cwd()){
- const root=resolve(rootDirectory);
- for(const p of ['public/update-manifest.json','out/update-manifest.json','android/app/src/main/assets/public/update-manifest.json']){const t=resolve(root,p);if(existsSync(t))rmSync(t,{force:true});}
- const pipelinePath=resolve(root,'src/lib/cardIntelligencePipeline.ts');
- const modern=existsSync(pipelinePath)&&readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');
- if(modern){
-   const r404=applyCardDnaBuildDiversityR404(root);
-   const r405=applyMarginalReturnDiversityR405(root);
-   const r406=applyParetoNoWastedPointR406(root);
-   const r406fix2=applyCleanSlateRevisionContractsR406Fix2(root);
-   const r406fix3=applyCleanSlateR125RevisionContractR406Fix3(root);
-   const r406fix4=applyMatchCalibrationPrecedenceR406Fix4(root);
-   const r406fix5=applyCalibratedGroupReturnR406Fix5(root);
-   const r406fix7=applyReviewedR119BaselinesR186R200(root);
-   console.log('v40.80 r406-fix7: baselines R186-R200 alinhados ao R119 moderno revisado sem relaxar o fail-closed.');
-   return {modernTree:true,sourcePatched:r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged,r404,r405,r406,r406fix2,r406fix3,r406fix4,r406fix5,r406fix7};
- }
- applyPreFinalConfirmationR16(root);applyR17RegressionCompatibility(root);applyPreFinalAutofillR20(root);applyCardVisionLineBudgetR22(root);applyUniversalDnaR24(root);applyUniversalDnaR25(root);applyPreFinalVisualR104(root);applyPreFinalAutoProgressR105(root);applyR109ExtremeCompat(root);applyR111DefinitiveCiGameplay(root);applyR114GameplayTruth(root);applyR115CardSignature(root);applyR116TenZoneCompat(root);applyR111TestContract(root);applyR114TestContract(root);applyR115TestContract(root);applyR116TestContract(root);
- return {modernTree:false,sourcePatched:true};
-}
-const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';
-if(invoked===import.meta.url) sanitizeUpdateSource();
+import { applyScalableVaultCapacityR407 } from './apply-r407-scalable-vault-capacity.mjs';
+export function sanitizeUpdateSource(rootDirectory=process.cwd()){const root=resolve(rootDirectory);for(const p of ['public/update-manifest.json','out/update-manifest.json','android/app/src/main/assets/public/update-manifest.json']){const t=resolve(root,p);if(existsSync(t))rmSync(t,{force:true});}const pipelinePath=resolve(root,'src/lib/cardIntelligencePipeline.ts');const modern=existsSync(pipelinePath)&&readFileSync(pipelinePath,'utf8').includes('BM_R119_CLEAN_SLATE_SINGLE_WRITER');if(modern){const r404=applyCardDnaBuildDiversityR404(root);const r405=applyMarginalReturnDiversityR405(root);const r406=applyParetoNoWastedPointR406(root);const r406fix2=applyCleanSlateRevisionContractsR406Fix2(root);const r406fix3=applyCleanSlateR125RevisionContractR406Fix3(root);const r406fix4=applyMatchCalibrationPrecedenceR406Fix4(root);const r406fix5=applyCalibratedGroupReturnR406Fix5(root);const r406fix7=applyReviewedR119BaselinesR186R200(root);const r407=applyScalableVaultCapacityR407(root);console.log('v40.80 r407: Cofre escalável sem teto arbitrário de fichas; progressão isolada por carta e mídia limitada por bytes.');return{modernTree:true,sourcePatched:r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged||r407.sourceChanged,r404,r405,r406,r406fix2,r406fix3,r406fix4,r406fix5,r406fix7,r407};}applyPreFinalConfirmationR16(root);applyR17RegressionCompatibility(root);applyPreFinalAutofillR20(root);applyCardVisionLineBudgetR22(root);applyUniversalDnaR24(root);applyUniversalDnaR25(root);applyPreFinalVisualR104(root);applyPreFinalAutoProgressR105(root);applyR109ExtremeCompat(root);applyR111DefinitiveCiGameplay(root);applyR114GameplayTruth(root);applyR115CardSignature(root);applyR116TenZoneCompat(root);applyR111TestContract(root);applyR114TestContract(root);applyR115TestContract(root);applyR116TestContract(root);return{modernTree:false,sourcePatched:true};}
+const invoked=process.argv[1]?pathToFileURL(resolve(process.argv[1])).href:'';if(invoked===import.meta.url)sanitizeUpdateSource();
