@@ -1,0 +1,35 @@
+async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
+  const next = [...items];
+  const compacted = compactHistoryForNativeStorage(next);
+  let nativeError: unknown = null;
+  let indexedError: unknown = null;
+
+  if (isNativeVaultStorageAvailable()) {
+    try {
+      await writeNativeHistoryShardedR409(compacted);
+      removeAccountStorage(HISTORY_KEY);
+      for (const key of OLD_HISTORY_KEYS) removeAccountStorage(key);
+      return { saved: true, backend: 'native-internal', items: next.length };
+    } catch (cause) {
+      nativeError = cause;
+    }
+  }
+
+  try {
+    await writeIndexedHistory(compacted);
+    removeAccountStorage(HISTORY_KEY);
+    return { saved: true, backend: 'indexeddb', items: next.length };
+  } catch (cause) {
+    indexedError = cause;
+  }
+
+  const fallbackSaved = writeAccountStorage(HISTORY_KEY, JSON.stringify(compactHistoryForLocalFallback(next)));
+  if (fallbackSaved) return { saved: true, backend: 'local-fallback', items: next.length };
+
+  const detail = nativeError instanceof Error
+    ? nativeError.message
+    : indexedError instanceof Error
+      ? indexedError.message
+      : 'O aparelho recusou todas as rotas locais.';
+  return { saved: false, backend: 'none', items: 0, error: `Não foi possível salvar o Cofre na memória do aparelho. ${detail}` };
+}

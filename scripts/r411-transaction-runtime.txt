@@ -1,0 +1,115 @@
+export const NATIVE_HISTORY_TRANSACTION_VERSION_R411 = 1;
+const NATIVE_HISTORY_TRANSACTION_KEY_R411 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r411_transaction_v1`;
+const NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411 = `${HISTORY_KEY}_native_fallback_authority_r411`;
+
+type NativeHistoryTransactionJournalR411 = {
+  version: typeof NATIVE_HISTORY_TRANSACTION_VERSION_R411;
+  targetManifestFingerprint: string;
+  cleanupKeys: string[];
+  startedAt: string;
+};
+
+type NativeHistorySecondaryAuthorityR411 = {
+  version: typeof NATIVE_HISTORY_TRANSACTION_VERSION_R411;
+  backend: 'indexeddb' | 'local-fallback';
+  count: number;
+  savedAt: string;
+};
+
+let nativeHistoryTransactionActiveR411 = false;
+
+function parseNativeHistoryTransactionJournalR411(raw: string | null): NativeHistoryTransactionJournalR411 | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<NativeHistoryTransactionJournalR411>;
+    if (value.version !== NATIVE_HISTORY_TRANSACTION_VERSION_R411) return null;
+    if (typeof value.targetManifestFingerprint !== 'string' || !value.targetManifestFingerprint) return null;
+    if (!Array.isArray(value.cleanupKeys) || value.cleanupKeys.length > NATIVE_HISTORY_BUCKET_COUNT_R409 * 2) return null;
+    if (!value.cleanupKeys.every((key) => typeof key === 'string' && Boolean(key))) return null;
+    if (new Set(value.cleanupKeys).size !== value.cleanupKeys.length) return null;
+    if (typeof value.startedAt !== 'string' || !value.startedAt) return null;
+    return value as NativeHistoryTransactionJournalR411;
+  } catch {
+    return null;
+  }
+}
+
+function parseNativeHistorySecondaryAuthorityR411(raw: string | null): NativeHistorySecondaryAuthorityR411 | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<NativeHistorySecondaryAuthorityR411>;
+    if (value.version !== NATIVE_HISTORY_TRANSACTION_VERSION_R411) return null;
+    if (value.backend !== 'indexeddb' && value.backend !== 'local-fallback') return null;
+    if (!Number.isInteger(value.count) || Number(value.count) < 0) return null;
+    if (typeof value.savedAt !== 'string' || !value.savedAt) return null;
+    return value as NativeHistorySecondaryAuthorityR411;
+  } catch {
+    return null;
+  }
+}
+
+function writeNativeHistorySecondaryAuthorityR411(
+  backend: NativeHistorySecondaryAuthorityR411['backend'],
+  count: number
+): boolean {
+  const marker: NativeHistorySecondaryAuthorityR411 = {
+    version: NATIVE_HISTORY_TRANSACTION_VERSION_R411,
+    backend,
+    count,
+    savedAt: new Date().toISOString(),
+  };
+  return writeAccountStorage(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411, JSON.stringify(marker));
+}
+
+function manifestProtectedBucketKeysR411(...manifests: Array<NativeHistoryManifestR409 | null>): Set<string> {
+  return new Set(manifests.flatMap((manifest) => (manifest?.buckets ?? []).map((bucket) => bucket.key)));
+}
+
+async function verifyNativePayloadR411(key: string, expected: string, label: string): Promise<void> {
+  const stored = await nativeVaultRead(key);
+  if (stored !== expected) throw new Error(`R411: confirmação de escrita falhou em ${label}.`);
+}
+
+async function cleanupInterruptedNativeTransactionR411(): Promise<void> {
+  if (nativeHistoryTransactionActiveR411) return;
+  let journalRaw: string | null;
+  try {
+    journalRaw = await nativeVaultRead(NATIVE_HISTORY_TRANSACTION_KEY_R411());
+  } catch {
+    return;
+  }
+  if (!journalRaw) return;
+
+  const journal = parseNativeHistoryTransactionJournalR411(journalRaw);
+  if (!journal) {
+    await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411()).catch(() => undefined);
+    return;
+  }
+
+  let currentRaw: string | null;
+  let backupRaw: string | null;
+  try {
+    [currentRaw, backupRaw] = await Promise.all([
+      nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()),
+      nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()),
+    ]);
+  } catch {
+    // Sem saber quais shards ainda estão protegidos por um manifesto, não removemos nada.
+    return;
+  }
+
+  const protectedKeys = manifestProtectedBucketKeysR411(
+    parseNativeHistoryManifestR409(currentRaw),
+    parseNativeHistoryManifestR409(backupRaw)
+  );
+  let cleanupFailed = false;
+  for (const key of journal.cleanupKeys) {
+    if (protectedKeys.has(key)) continue;
+    try {
+      await nativeVaultRemove(key);
+    } catch {
+      cleanupFailed = true;
+    }
+  }
+  if (!cleanupFailed) await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411()).catch(() => undefined);
+}

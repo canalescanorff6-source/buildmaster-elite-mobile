@@ -1,0 +1,82 @@
+async function writeNativeHistoryShardedR409(items: SavedAnalysis[]): Promise<void> {
+  await cleanupInterruptedNativeTransactionR411();
+  nativeHistoryTransactionActiveR411 = true;
+  let committed = false;
+  try {
+    const currentManifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()).catch(() => null);
+    const currentManifest = parseNativeHistoryManifestR409(currentManifestRaw);
+    const oldBackupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()).catch(() => null);
+    const oldBackup = parseNativeHistoryManifestR409(oldBackupRaw);
+    const currentByIndex = new Map((currentManifest?.buckets ?? []).map((bucket) => [bucket.index, bucket]));
+    const buckets = Array.from({ length: NATIVE_HISTORY_BUCKET_COUNT_R409 }, () => [] as SavedAnalysis[]);
+    for (const item of items) buckets[bucketIndexR409(item.saveKey)].push(item);
+
+    const nextBuckets: NativeHistoryBucketManifestR409[] = [];
+    const staged: Array<{ key: string; payload: string; fingerprint: string; index: number; count: number }> = [];
+    for (let index = 0; index < buckets.length; index += 1) {
+      const bucketItems = buckets[index];
+      if (!bucketItems.length) continue;
+      const payload = JSON.stringify(bucketItems);
+      const fingerprint = contentFingerprintR409(payload);
+      const previous = currentByIndex.get(index);
+      if (previous && previous.fingerprint === fingerprint && previous.count === bucketItems.length) {
+        nextBuckets.push(previous);
+        continue;
+      }
+      const key = NATIVE_HISTORY_BUCKET_KEY_R409(index, fingerprint);
+      staged.push({ key, payload, fingerprint, index, count: bucketItems.length });
+      nextBuckets.push({ index, key, fingerprint, count: bucketItems.length });
+    }
+
+    const manifest: NativeHistoryManifestR409 = {
+      version: NATIVE_HISTORY_SHARD_VERSION_R409,
+      count: items.length,
+      bucketCount: NATIVE_HISTORY_BUCKET_COUNT_R409,
+      buckets: nextBuckets,
+      order: items.map((item) => item.saveKey),
+      savedAt: new Date().toISOString(),
+    };
+    const manifestRaw = JSON.stringify(manifest);
+    const cleanupKeys = Array.from(new Set<string>([
+      ...staged.map((entry) => entry.key),
+      ...(oldBackup?.buckets ?? []).map((bucket) => bucket.key),
+    ]));
+    const journal: NativeHistoryTransactionJournalR411 = {
+      version: NATIVE_HISTORY_TRANSACTION_VERSION_R411,
+      targetManifestFingerprint: contentFingerprintR409(manifestRaw),
+      cleanupKeys,
+      startedAt: new Date().toISOString(),
+    };
+    const journalRaw = JSON.stringify(journal);
+
+    // O journal é persistido e confirmado antes de qualquer shard novo. Se o APK for
+    // interrompido, a próxima abertura sabe exatamente quais arquivos podem ter ficado órfãos.
+    await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw);
+    await verifyNativePayloadR411(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw, 'journal transacional');
+
+    for (const entry of staged) {
+      await nativeVaultWrite(entry.key, entry.payload);
+      await verifyNativePayloadR411(entry.key, entry.payload, `shard ${entry.index}`);
+    }
+
+    // Snapshot anterior vira recuperação e é confirmado antes do ponteiro atual. Portanto, uma interrupção durante
+    // a troca do manifesto nunca exige misturar uma geração antiga com shards novos.
+    if (currentManifest && currentManifestRaw) {
+      await nativeVaultWrite(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw);
+      await verifyNativePayloadR411(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw, 'manifesto de recuperação');
+    }
+
+    await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw);
+    await verifyNativePayloadR411(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw, 'manifesto atual');
+    committed = true;
+
+    // O monólito legado só deixa de existir depois de o commit atual ter sido lido de volta.
+    await nativeVaultRemove(NATIVE_HISTORY_STORAGE_KEY()).catch(() => undefined);
+  } finally {
+    nativeHistoryTransactionActiveR411 = false;
+  }
+
+  // Depois do commit, o coletor preserva automaticamente todos os shards referenciados pelo
+  // atual e pelo backup e remove somente staging/gerações antigas realmente órfãs.
+  if (committed) await cleanupInterruptedNativeTransactionR411();
+}

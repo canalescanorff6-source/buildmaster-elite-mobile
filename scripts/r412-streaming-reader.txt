@@ -1,0 +1,78 @@
+function nativeHistoryReadConcurrencyR412(manifest: NativeHistoryManifestR409): number {
+  if (!manifest.buckets.length) return 1;
+  const largestBucket = manifest.buckets.reduce((largest, bucket) => Math.max(largest, bucket.count), 1);
+  return Math.max(
+    1,
+    Math.min(
+      NATIVE_HISTORY_READ_CONCURRENCY_R410,
+      Math.floor(NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412 / largestBucket) || 1
+    )
+  );
+}
+
+async function readAndNormalizeNativeHistoryBucketR412(
+  bucket: NativeHistoryBucketManifestR409,
+  fallbackOffset: number
+): Promise<SavedAnalysis[]> {
+  const raw = await nativeVaultRead(bucket.key);
+  if (!raw || contentFingerprintR409(raw) !== bucket.fingerprint) {
+    throw new Error(`R412: shard ${bucket.index} ausente ou corrompido.`);
+  }
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed) || parsed.length !== bucket.count) {
+    throw new Error(`R412: shard ${bucket.index} com contagem inválida.`);
+  }
+  return normalizeHistoryList(parsed, fallbackOffset);
+}
+
+async function readNativeHistoryManifestPayloadR409(manifest: NativeHistoryManifestR409): Promise<SavedAnalysis[]> {
+  if (!manifest.count) return [];
+
+  // R412: a saída nasce diretamente na ordem final. Não retemos os arrays JSON
+  // de todos os shards até o fim da leitura, reduzindo muito o pico de memória.
+  const ordered = new Array<SavedAnalysis | undefined>(manifest.count);
+  const orderIndex = new Map<string, number>();
+  for (let index = 0; index < manifest.order.length; index += 1) {
+    orderIndex.set(manifest.order[index], index);
+  }
+
+  // Mantém o fallbackIndex compatível com a ordem de buckets usada pelo R410,
+  // mesmo que o agendamento abaixo priorize shards maiores para reduzir o tail.
+  const fallbackOffsetByKey = new Map<string, number>();
+  let fallbackOffset = 0;
+  for (const bucket of manifest.buckets) {
+    fallbackOffsetByKey.set(bucket.key, fallbackOffset);
+    fallbackOffset += bucket.count;
+  }
+  if (fallbackOffset !== manifest.count) throw new Error('R412: contagem do manifesto divergiu antes da hidratação.');
+
+  const scheduledBuckets = [...manifest.buckets].sort((left, right) => (
+    right.count - left.count || left.index - right.index
+  ));
+  const concurrency = nativeHistoryReadConcurrencyR412(manifest);
+
+  await mapWithConcurrencyR410(
+    scheduledBuckets,
+    concurrency,
+    async (bucket) => {
+      const normalized = await readAndNormalizeNativeHistoryBucketR412(
+        bucket,
+        fallbackOffsetByKey.get(bucket.key) ?? 0
+      );
+      for (const item of normalized) {
+        const targetIndex = orderIndex.get(item.saveKey);
+        if (targetIndex === undefined) {
+          throw new Error(`R412: shard contém ficha ausente da ordem ou duplicada: ${item.saveKey}.`);
+        }
+        ordered[targetIndex] = item;
+        orderIndex.delete(item.saveKey);
+      }
+      return undefined;
+    }
+  );
+
+  if (orderIndex.size !== 0 || ordered.some((item) => item === undefined)) {
+    throw new Error('R412: manifesto e shards divergiram durante a hidratação incremental.');
+  }
+  return ordered as SavedAnalysis[];
+}

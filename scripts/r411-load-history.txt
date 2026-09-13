@@ -1,0 +1,97 @@
+export async function loadHistoryStore(options: HistoryLoadOptions = {}): Promise<SavedAnalysis[]> {
+  const loaded: SavedAnalysis[] = [];
+  const loadedKeys = new Set<string>();
+  const pushUnique = (item: SavedAnalysis) => {
+    if (loadedKeys.has(item.saveKey)) return;
+    loadedKeys.add(item.saveKey);
+    loaded.push(item);
+  };
+  let nativeAuthoritativeR409 = false;
+  const secondaryAuthorityR411 = parseNativeHistorySecondaryAuthorityR411(
+    readAccountStorage(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411)
+  );
+
+  // A coleta do journal é independente de quem será a autoridade desta abertura. Se o plugin
+  // nativo voltou a responder, aproveitamos para retirar staging órfão mesmo enquanto o fallback
+  // mais novo continua sendo a fonte oficial dos dados.
+  if (isNativeVaultStorageAvailable() && !options.skipNative) await cleanupInterruptedNativeTransactionR411();
+
+  // Se uma gravação nativa falhou depois de o fallback ter sido salvo, o fallback é a versão
+  // mais nova e explícita da verdade. Não permitimos que um snapshot nativo antigo ressuscite
+  // fichas removidas ou descarte alterações mais recentes.
+  if (secondaryAuthorityR411) {
+    try {
+      if (secondaryAuthorityR411.backend === 'indexeddb') {
+        for (const item of normalizeHistoryList(await readIndexedHistory())) pushUnique(item);
+      } else {
+        const stored = readAccountStorage(HISTORY_KEY);
+        const parsed = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(parsed)) throw new Error('R411: fallback local autoritativo inválido.');
+        for (const item of normalizeHistoryList(parsed)) pushUnique(item);
+      }
+      if (loaded.length !== secondaryAuthorityR411.count) {
+        console.warn(`R411: fallback autoritativo declarou ${secondaryAuthorityR411.count} ficha(s), mas ${loaded.length} foram recuperadas.`);
+      }
+    } catch (error) {
+      console.error('R411: não foi possível ler o fallback autoritativo mais recente.', error);
+    }
+    return loaded;
+  }
+
+  if (isNativeVaultStorageAvailable() && !options.skipNative) {
+    try {
+      const sharded = await readNativeHistoryShardedR409();
+      if (sharded !== null) {
+        for (const item of sharded) pushUnique(item);
+        nativeAuthoritativeR409 = true;
+      } else {
+        // Migração transparente: instalações antigas ainda podem ter o snapshot monolítico.
+        const storageKey = NATIVE_HISTORY_STORAGE_KEY();
+        const info = await nativeVaultInfo(storageKey).catch(() => null);
+        const maxNativeBytes = Number(options.maxNativeBytes || 0);
+        if (maxNativeBytes > 0 && Number(info?.usedBytes || 0) > maxNativeBytes) {
+          options.onNativeDeferred?.(Number(info?.usedBytes || 0));
+        } else {
+          const raw = await nativeVaultRead(storageKey, maxNativeBytes > 0 ? maxNativeBytes : undefined);
+          if (raw !== null) {
+            const parsed = raw ? JSON.parse(raw) : [];
+            if (Array.isArray(parsed)) {
+              for (const item of normalizeHistoryList(parsed)) pushUnique(item);
+              nativeAuthoritativeR409 = true;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('R411: snapshot nativo indisponível; recuperando pelas rotas secundárias.', error);
+    }
+  }
+
+  if (!nativeAuthoritativeR409) {
+    try {
+      for (const item of normalizeHistoryList(await readIndexedHistory(), loaded.length)) pushUnique(item);
+      if (!loaded.length) {
+        const legacy = normalizeHistoryList(await readLegacyIndexedHistoryForAdmin());
+        for (const item of legacy) pushUnique(item);
+        if (legacy.length) await writeIndexedHistory(legacy);
+      }
+    } catch {
+      // Se o IndexedDB falhar, o app tenta recuperar pelo armazenamento antigo.
+    }
+
+    try {
+      const keys = [HISTORY_KEY, ...OLD_HISTORY_KEYS];
+      for (const key of keys) {
+        const stored = readAccountStorage(key);
+        if (!stored) continue;
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) continue;
+        for (const item of normalizeHistoryList(parsed, loaded.length)) pushUnique(item);
+      }
+    } catch {
+      // O cofre antigo é opcional; falha de leitura não pode travar o app.
+    }
+  }
+
+  return loaded;
+}

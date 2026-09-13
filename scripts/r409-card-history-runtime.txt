@@ -1,0 +1,146 @@
+export const NATIVE_HISTORY_BUCKET_COUNT_R409 = 64;
+export const NATIVE_HISTORY_SHARD_VERSION_R409 = 2;
+
+const NATIVE_HISTORY_MANIFEST_KEY_R409 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_manifest_v2`;
+const NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_manifest_backup_v2`;
+const NATIVE_HISTORY_BUCKET_KEY_R409 = (index: number, fingerprint: string) => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_b${index}_${fingerprint}`;
+
+type NativeHistoryBucketManifestR409 = { index: number; key: string; fingerprint: string; count: number };
+type NativeHistoryManifestR409 = {
+  version: typeof NATIVE_HISTORY_SHARD_VERSION_R409;
+  count: number;
+  bucketCount: number;
+  buckets: NativeHistoryBucketManifestR409[];
+  order: string[];
+  savedAt: string;
+};
+
+function fnv1a32R409(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function djb2R409(value: string): number {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash, 33) ^ value.charCodeAt(index);
+  return hash >>> 0;
+}
+
+function contentFingerprintR409(value: string): string {
+  return `${fnv1a32R409(value).toString(36)}-${djb2R409(value).toString(36)}-${value.length.toString(36)}`;
+}
+
+function bucketIndexR409(saveKey: string): number {
+  return fnv1a32R409(saveKey) % NATIVE_HISTORY_BUCKET_COUNT_R409;
+}
+
+function parseNativeHistoryManifestR409(raw: string | null): NativeHistoryManifestR409 | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<NativeHistoryManifestR409>;
+    if (value.version !== NATIVE_HISTORY_SHARD_VERSION_R409) return null;
+    if (!Number.isInteger(value.count) || Number(value.count) < 0) return null;
+    if (value.bucketCount !== NATIVE_HISTORY_BUCKET_COUNT_R409) return null;
+    if (!Array.isArray(value.order) || value.order.length !== value.count || !value.order.every((key) => typeof key === 'string' && Boolean(key))) return null;
+    if (!Array.isArray(value.buckets)) return null;
+    const seenIndexes = new Set<number>();
+    const seenKeys = new Set<string>();
+    for (const bucket of value.buckets) {
+      if (!bucket || !Number.isInteger(bucket.index) || bucket.index < 0 || bucket.index >= NATIVE_HISTORY_BUCKET_COUNT_R409) return null;
+      if (typeof bucket.key !== 'string' || !bucket.key || typeof bucket.fingerprint !== 'string' || !bucket.fingerprint) return null;
+      if (!Number.isInteger(bucket.count) || bucket.count <= 0 || seenIndexes.has(bucket.index) || seenKeys.has(bucket.key)) return null;
+      seenIndexes.add(bucket.index);
+      seenKeys.add(bucket.key);
+    }
+    return value as NativeHistoryManifestR409;
+  } catch {
+    return null;
+  }
+}
+
+async function readNativeHistoryManifestPayloadR409(manifest: NativeHistoryManifestR409): Promise<SavedAnalysis[]> {
+  const bySaveKey = new Map<string, SavedAnalysis>();
+  let total = 0;
+  for (const bucket of manifest.buckets) {
+    const raw = await nativeVaultRead(bucket.key);
+    if (!raw || contentFingerprintR409(raw) !== bucket.fingerprint) throw new Error(`R409: shard ${bucket.index} ausente ou corrompido.`);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length !== bucket.count) throw new Error(`R409: shard ${bucket.index} com contagem inválida.`);
+    total += parsed.length;
+    for (const item of normalizeHistoryList(parsed, total - parsed.length)) bySaveKey.set(item.saveKey, item);
+  }
+  if (total !== manifest.count || bySaveKey.size !== manifest.count) throw new Error('R409: manifesto e shards divergiram.');
+  const ordered = manifest.order.map((saveKey) => bySaveKey.get(saveKey)).filter((item): item is SavedAnalysis => Boolean(item));
+  if (ordered.length !== manifest.count) throw new Error('R409: ordem do Cofre incompleta.');
+  return ordered;
+}
+
+async function readNativeHistoryShardedR409(): Promise<SavedAnalysis[] | null> {
+  const manifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409());
+  if (!manifestRaw) return null;
+  const manifest = parseNativeHistoryManifestR409(manifestRaw);
+  if (manifest) {
+    try {
+      return await readNativeHistoryManifestPayloadR409(manifest);
+    } catch (error) {
+      console.warn('R409: snapshot nativo atual inválido; tentando snapshot anterior.', error);
+    }
+  }
+  const backupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()).catch(() => null);
+  const backup = parseNativeHistoryManifestR409(backupRaw);
+  if (backup) return readNativeHistoryManifestPayloadR409(backup);
+  throw new Error('R409: nenhum snapshot nativo íntegro disponível.');
+}
+
+async function writeNativeHistoryShardedR409(items: SavedAnalysis[]): Promise<void> {
+  const currentManifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()).catch(() => null);
+  const currentManifest = parseNativeHistoryManifestR409(currentManifestRaw);
+  const oldBackupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()).catch(() => null);
+  const oldBackup = parseNativeHistoryManifestR409(oldBackupRaw);
+  const currentByIndex = new Map((currentManifest?.buckets ?? []).map((bucket) => [bucket.index, bucket]));
+  const buckets = Array.from({ length: NATIVE_HISTORY_BUCKET_COUNT_R409 }, () => [] as SavedAnalysis[]);
+  for (const item of items) buckets[bucketIndexR409(item.saveKey)].push(item);
+
+  const nextBuckets: NativeHistoryBucketManifestR409[] = [];
+  for (let index = 0; index < buckets.length; index += 1) {
+    const bucketItems = buckets[index];
+    if (!bucketItems.length) continue;
+    const payload = JSON.stringify(bucketItems);
+    const fingerprint = contentFingerprintR409(payload);
+    const previous = currentByIndex.get(index);
+    if (previous && previous.fingerprint === fingerprint && previous.count === bucketItems.length) {
+      nextBuckets.push(previous);
+      continue;
+    }
+    const key = NATIVE_HISTORY_BUCKET_KEY_R409(index, fingerprint);
+    await nativeVaultWrite(key, payload);
+    nextBuckets.push({ index, key, fingerprint, count: bucketItems.length });
+  }
+
+  const manifest: NativeHistoryManifestR409 = {
+    version: NATIVE_HISTORY_SHARD_VERSION_R409,
+    count: items.length,
+    bucketCount: NATIVE_HISTORY_BUCKET_COUNT_R409,
+    buckets: nextBuckets,
+    order: items.map((item) => item.saveKey),
+    savedAt: new Date().toISOString(),
+  };
+
+  // Snapshot anterior vira recuperação antes de trocar a autoridade atual.
+  if (currentManifest && currentManifestRaw) await nativeVaultWrite(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw);
+  await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), JSON.stringify(manifest));
+
+  // Só depois do manifesto novo confirmado removemos o monólito legado e shards de 2 gerações atrás.
+  await nativeVaultRemove(NATIVE_HISTORY_STORAGE_KEY()).catch(() => undefined);
+  const keepKeys = new Set<string>([
+    ...manifest.buckets.map((bucket) => bucket.key),
+    ...(currentManifest?.buckets ?? []).map((bucket) => bucket.key),
+  ]);
+  for (const bucket of oldBackup?.buckets ?? []) {
+    if (!keepKeys.has(bucket.key)) await nativeVaultRemove(bucket.key).catch(() => undefined);
+  }
+}
