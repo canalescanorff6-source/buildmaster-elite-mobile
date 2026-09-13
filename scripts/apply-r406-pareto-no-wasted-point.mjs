@@ -3,6 +3,11 @@ import { resolve } from 'node:path';
 
 const SOURCE='src/lib/cleanSlatePerformance2027V4080R119.ts';
 const TEST='tests/v40-80-r125-role-aware-card-specific-build-regression.ts';
+const UI='src/components/UnifiedPerformanceV3920Panel.tsx';
+const TEST_R108='tests/v40-80-r108-master-authority-runtime-regression.ts';
+const TEST_R118='tests/v40-80-r118-single-final-authority-regression.mjs';
+const TEST_R122='tests/v40-80-r122-result-ui-regression.mjs';
+const TEST_R123='tests/v40-80-r123-result-ui-regression.mjs';
 const VERSION_OLD="export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r405-marginal-return-card-specific-authority' as const;";
 const VERSION_NEW="export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r406-pareto-no-wasted-point-authority' as const;";
 const TEST_MARKER='BM_R406_PARETO_NO_WASTED_POINT_REGRESSION';
@@ -105,5 +110,42 @@ export function applyParetoNoWastedPointR406(rootDirectory=process.cwd()){
     testChanged=true;
   }
   if(test!==readFileSync(testPath,'utf8')){writeFileSync(testPath,test,'utf8');testChanged=true;}
-  return {sourceChanged:source!==before,testChanged,version:'40.80-r406-pareto-no-wasted-point-authority'};
+
+  const uiPath=resolve(root,UI);
+  if(!existsSync(uiPath)) throw new Error('R406: UI final ausente');
+  let ui=readFileSync(uiPath,'utf8'),uiBefore=ui;
+  if(!ui.includes('const cleanSlateRevision=')) ui=replaceOnce(ui,
+`  if (cleanSlate) {
+`,
+`  if (cleanSlate) {
+    const cleanSlateRevision=cleanSlate.version.match(/-r(\\d+)-/)?.[1]??'119';
+`,'ui-dynamic-version');
+  ui=ui.replaceAll('Clean Slate R125','Clean Slate R{cleanSlateRevision}');
+  if(ui!==uiBefore) writeFileSync(uiPath,ui,'utf8');
+
+  const patchContract=(relative,oldText,newText,label)=>{
+    const path=resolve(root,relative); if(!existsSync(path)) throw new Error(`R406: contrato ausente: ${relative}`);
+    const prior=readFileSync(path,'utf8'); const next=replaceOnce(prior,oldText,newText,label);
+    if(next!==prior) writeFileSync(path,next,'utf8');
+    return next!==prior;
+  };
+  const r108Changed=patchContract(TEST_R108,
+`assert.ok((result.recommendationExplanation as string[]).some((line:string) => /Motor final: Clean Slate r12[235]/.test(line)));`,
+`const finalMotorLine=(result.recommendationExplanation as string[]).find((line:string)=>/Motor final: Clean Slate r\\d+/.test(line));
+assert.ok(finalMotorLine,'A explicação precisa identificar o Motor final Clean Slate.');
+assert.ok(Number(finalMotorLine.match(/r(\\d+)/)?.[1])>=119,'A autoridade Clean Slate não pode regredir abaixo da r119.');`,'r108-version-contract');
+  const r118Changed=patchContract(TEST_R118,
+`assert.match(ui, /(?:Motor final: Produção R126 \\/ Clean Slate R125|Motor final: Clean Slate r12[235])/);`,
+`assert.match(ui,/cleanSlateRevision=cleanSlate\\.version\\.match/);
+assert.ok((ui.match(/Clean Slate R\\{cleanSlateRevision\\}/g)??[]).length>=3,'A UI precisa derivar o rótulo Clean Slate da versão real do motor.');`,'r118-ui-version-contract');
+  const r122Changed=patchContract(TEST_R122,
+`assert.match(panel,/(?:Produção R126 • Clean Slate R125|Clean Slate • r12[235])/);`,
+`assert.match(panel,/cleanSlateRevision=cleanSlate\\.version\\.match/);
+assert.ok((panel.match(/Clean Slate R\\{cleanSlateRevision\\}/g)??[]).length>=3);`,'r122-ui-version-contract');
+  const r123Changed=patchContract(TEST_R123,
+`assert.match(panel,/(?:Produção R126 • Clean Slate R125|Clean Slate • r12[35])/);`,
+`assert.match(panel,/cleanSlateRevision=cleanSlate\\.version\\.match/);
+assert.ok((panel.match(/Clean Slate R\\{cleanSlateRevision\\}/g)??[]).length>=3);`,'r123-ui-version-contract');
+
+  return {sourceChanged:source!==before,testChanged,uiChanged:ui!==uiBefore,contractsChanged:r108Changed||r118Changed||r122Changed||r123Changed,version:'40.80-r406-pareto-no-wasted-point-authority'};
 }
