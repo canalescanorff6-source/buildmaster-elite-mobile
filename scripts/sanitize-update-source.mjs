@@ -24,6 +24,7 @@ import { applyParetoNoWastedPointR406 } from './apply-r406-pareto-no-wasted-poin
 import { applyCleanSlateRevisionContractsR406Fix2 } from './apply-r406-fix2-clean-slate-revision-contracts.mjs';
 import { applyCleanSlateR125RevisionContractR406Fix3 } from './apply-r406-fix3-r125-revision-contract.mjs';
 import { applyMatchCalibrationPrecedenceR406Fix4 } from './apply-r406-fix4-match-calibration-precedence.mjs';
+import { applyCalibratedGroupReturnR406Fix5 } from './apply-r406-fix5-calibrated-group-return.mjs';
 
 export function sanitizeUpdateSource(rootDirectory=process.cwd()){
  const root=resolve(rootDirectory);
@@ -37,8 +38,9 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
    const r406fix2=applyCleanSlateRevisionContractsR406Fix2(root);
    const r406fix3=applyCleanSlateR125RevisionContractR406Fix3(root);
    const r406fix4=applyMatchCalibrationPrecedenceR406Fix4(root);
-   console.log('v40.80 r406-fix4: calibração real ACTIVE tem precedência sobre desempates R405/R406.');
-   return {modernTree:true,sourcePatched:r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed,r404,r405,r406,r406fix2,r406fix3,r406fix4};
+   const r406fix5=applyCalibratedGroupReturnR406Fix5(root);
+   console.log('v40.80 r406-fix5: calibração ACTIVE repondera retorno marginal e contratos R143-R149 seguem a heurística atual.');
+   return {modernTree:true,sourcePatched:r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged,r404,r405,r406,r406fix2,r406fix3,r406fix4,r406fix5};
  }
  applyPreFinalConfirmationR16(root);applyR17RegressionCompatibility(root);applyPreFinalAutofillR20(root);applyCardVisionLineBudgetR22(root);applyUniversalDnaR24(root);applyUniversalDnaR25(root);applyPreFinalVisualR104(root);applyPreFinalAutoProgressR105(root);applyR109ExtremeCompat(root);applyR111DefinitiveCiGameplay(root);applyR114GameplayTruth(root);applyR115CardSignature(root);applyR116TenZoneCompat(root);applyR111TestContract(root);applyR114TestContract(root);applyR115TestContract(root);applyR116TestContract(root);
  return {modernTree:false,sourcePatched:true};
