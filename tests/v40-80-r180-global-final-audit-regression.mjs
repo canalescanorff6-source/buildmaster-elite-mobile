@@ -6,15 +6,23 @@ const root = process.cwd();
 const srcRoot = path.join(root, 'src');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
-// 1) Sanitizador moderno: patchers textuais históricos não podem reescrever a árvore r119+.
+// 1) Sanitizador moderno: migrações R404+ podem evoluir a árvore atual,
+// mas patchers históricos r16-r116 nunca podem executar dentro do branch moderno.
 const sanitizer = read('scripts/sanitize-update-source.mjs');
 const detectIndex = sanitizer.indexOf("BM_R119_CLEAN_SLATE_SINGLE_WRITER");
-const skipIndex = sanitizer.indexOf("patchers históricos r16-r116 ignorados");
+const modernBranchIndex = sanitizer.indexOf('if(modern){');
+const r404Index = sanitizer.indexOf('applyCardDnaBuildDiversityR404(root)');
+const modernReturnIndex = sanitizer.indexOf('return {modernTree:true');
 const firstHistoricalCall = sanitizer.indexOf('applyPreFinalConfirmationR16(root)');
-assert.ok(detectIndex >= 0 && skipIndex > detectIndex && firstHistoricalCall > skipIndex,
-  'R180: o sanitizador precisa detectar r119+ antes de qualquer patcher histórico.');
-assert.match(sanitizer, /return \{ modernTree: true, sourcePatched: false \}/,
-  'R180: árvore moderna precisa sair do sanitizador sem reescrita de source/tests.');
+assert.ok(detectIndex >= 0 && modernBranchIndex > detectIndex && r404Index > modernBranchIndex && modernReturnIndex > r404Index && firstHistoricalCall > modernReturnIndex,
+  'R180: detectar árvore r119+ deve preceder migrações modernas e o retorno deve ocorrer antes de qualquer patcher histórico.');
+const modernBranch = sanitizer.slice(modernBranchIndex, modernReturnIndex);
+assert.match(modernBranch,/applyCardDnaBuildDiversityR404\(root\)/,
+  'R180: migrações modernas explícitas podem evoluir a autoridade r119+.');
+assert.doesNotMatch(modernBranch,/applyPreFinalConfirmationR16\(root\)|applyR17RegressionCompatibility\(root\)|applyPreFinalAutofillR20\(root\)|applyCardVisionLineBudgetR22\(root\)|applyUniversalDnaR2[45]\(root\)|applyPreFinalVisualR104\(root\)|applyPreFinalAutoProgressR105\(root\)|applyR109ExtremeCompat\(root\)|applyR11[1456].*?\(root\)/,
+  'R180: patchers históricos r16-r116 não podem executar dentro do branch moderno.');
+assert.match(sanitizer,/return \{modernTree:true,sourcePatched:/,
+  'R180: branch moderno precisa retornar explicitamente antes do caminho legado; sourcePatched pode refletir migrações modernas idempotentes.');
 
 // 2) O bridge OCR pode reexportar DEFAULT_OCR_ZONES, mas não deve importá-lo como valor não usado.
 const ocr = read('src/lib/ocr.ts');
