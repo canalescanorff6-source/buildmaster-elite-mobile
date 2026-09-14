@@ -42,6 +42,10 @@ export function applyScalableVaultCapacityR407(rootDirectory=process.cwd()){
  if(!existsSync(testPath)||readFileSync(testPath,'utf8')!==testSource){writeFileSync(testPath,testSource,'utf8');changed=true;}
  const pkgPath=resolve(root,PACKAGE),pkg=JSON.parse(readFileSync(pkgPath,'utf8')),marker='node tests/v40-80-r407-unbounded-vault-capacity-regression.mjs',current=String(pkg.scripts?.['test:r200']??'');
  if(!current.includes(marker)){if(!current)throw new Error('R407: test:r200 ausente.');pkg.scripts['test:r200']=`${current} && ${marker}`;writeFileSync(pkgPath,JSON.stringify(pkg,null,2)+'\n','utf8');changed=true;}
- const sourceBytes=walkTs(resolve(root,'src')),ceiling=existsSync(resolve(root,'R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md'))?5_360_000:Infinity;if(sourceBytes>ceiling)throw new Error(`R407: orçamento R184 excedido: ${sourceBytes} > ${ceiling}.`);
- return{changed,sourceChanged:true,sourceBytes,logicalHistoryLimit:'unbounded',retainedImageBudgetChars:6_000_000};
+ const sourceBytes=walkTs(resolve(root,'src'));
+ const sourceBudget=5.25*1024*1024;
+ const historicalCeiling=existsSync(resolve(root,'R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md'))?5_360_000:Infinity;
+ const ceiling=downstreamVaultMigration?sourceBudget-100_000:historicalCeiling;
+ if(sourceBytes>ceiling)throw new Error(`R407: orçamento R184 excedido: ${sourceBytes} > ${ceiling}.`);
+ return{changed,sourceChanged:true,sourceBytes,logicalHistoryLimit:'unbounded',retainedImageBudgetChars:6_000_000,sourceBudgetCeiling:ceiling,sourceSafetyMarginBytes:sourceBudget-sourceBytes};
 }

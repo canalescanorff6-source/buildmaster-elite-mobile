@@ -40,7 +40,7 @@ assert.doesNotMatch(stripComments(boundary), /window\.location\.(?:replace|reloa
 
 assert.match(card, /const \[startupGate, setStartupGate\] = useState\(\{ ready: false, safeMode: false \}\)/, 'App precisa de portão de startup hidratável.');
 assert.match(startupHookR177, /if \(!input\.startupGateReady\)/, 'Efeitos persistentes devem aguardar o portão de startup.');
-assert.match(startupRuntimeR177, /loadHistoryStoreForStartup\(\)/, 'Cofre deve usar carregamento limitado na abertura.');
+assert.match(startupRuntimeR177, /loadHistoryStoreForStartup\(\)/, 'Cofre deve usar carregamento protegido na abertura.');
 assert.match(startupRuntimeR177, /nativeDeferredBytes === 0/, 'Cofre nativo adiado não pode ser sobrescrito por fallback vazio.');
 assert.match(derivedStateR179, /const renderHistory = useMemo\([\s\S]*(?:normalizeHistoryList|sanitizeRuntimeHistoryR200)\(input\.history\)/, 'Dados renderizados devem ser normalizados/sanitizados pela fronteira R179 antes da renderização.');
 assert.match(card, /enabled: sessionHydrated && !startupSafeMode/, 'Autosave não pode apagar sessão antes da hidratação.');
@@ -48,9 +48,17 @@ assert.match(card, /const \[vaultTrash, setVaultTrash\] = useState<VaultTrashIte
 assert.match(card, /const \[mainSection, setMainSection\] = useState<MainSection>\('inicio'\)/, 'Rota inicial deve ser determinística.');
 assert.match(derivedStateR179, /safeViewComputationR130\('history-render-sanitizer'/, 'Falhas de dados devem ser isoladas por área.');
 
-assert.match(history, /STARTUP_NATIVE_HISTORY_MAX_BYTES = 32 \* 1024 \* 1024/, 'Leitura nativa deve ter limite de startup.');
-assert.match(history, /nativeVaultInfo\(storageKey\)/, 'Tamanho deve ser consultado antes da leitura.');
-assert.match(history, /onNativeDeferred/, 'Arquivo grande deve ser adiado, não apagado.');
+const legacyStartupByteLimit = /STARTUP_NATIVE_HISTORY_MAX_BYTES = 32 \* 1024 \* 1024/.test(history);
+const shardedBoundedStartup = /STARTUP_NATIVE_HISTORY_MAX_BYTES = 0/.test(history)
+  && /NATIVE_HISTORY_READ_CONCURRENCY_R410 = 8/.test(history)
+  && /NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412 = 2048/.test(history)
+  && /readAndNormalizeNativeHistoryBucketR412/.test(history);
+assert.ok(
+  legacyStartupByteLimit || shardedBoundedStartup,
+  'Leitura nativa deve ter limite monolítico ou hidratação sharded com concorrência/memória limitadas.'
+);
+assert.match(history, /nativeVaultInfo\(storageKey\)/, 'Snapshot monolítico legado deve consultar tamanho antes da leitura.');
+assert.match(history, /onNativeDeferred/, 'Arquivo monolítico grande deve poder ser adiado sem ser apagado.');
 assert.match(nativeVault, /read\(options: \{ key: string; maxBytes\?: number \}\)/, 'Bridge nativa deve aceitar limite de leitura.');
 assert.ok(nativeInstaller.indexOf('target.length() > maxBytes') < nativeInstaller.indexOf('new ByteArrayOutputStream'), 'Java deve bloquear arquivo grande antes de alocar memória.');
 assert.match(nativeInstaller, /String key = call\.getString\("key"\)/, 'Info nativa deve aceitar chave específica.');
@@ -68,4 +76,4 @@ assert.match(cache, /40\.80\.0-edge-stack-runtime-1/, 'Schema de cache precisa i
 assert.match(register, /refreshNativeWebRuntimeOnceV3840\('new-build'\)/, 'Registro deve manter a limpeza por build.');
 assert.match(featureFlag, /const \[enabled, setEnabled\] = useState\(false\)/, 'Feature flag deve hidratar de forma determinística.');
 
-console.log('v38.40 fail-open aprovada: hidratação determinística, login não bloqueante, Cofre limitado, modo seguro em processo e nenhum ciclo de reload.');
+console.log('v38.40 fail-open aprovada: hidratação determinística, login não bloqueante, Cofre sharded/legado limitado, modo seguro em processo e nenhum ciclo de reload.');

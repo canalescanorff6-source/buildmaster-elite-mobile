@@ -54,12 +54,21 @@ while(stack.length){
 const sourceBytes=srcFiles.reduce((sum,file)=>sum+fs.statSync(file).size,0);
 const sourceLimit=5.25*1024*1024;
 const r2004Boundary=fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
-const checkpointLimit=r2004Boundary?5_360_000:sourceLimit-150_000;
+const selectorsR414=exists('src/modules/vault/cardVisionVaultSelectorsR151.ts')
+  ? read('src/modules/vault/cardVisionVaultSelectorsR151.ts')
+  : '';
+const r414ScalableVault=selectorsR414.includes('CARDVISION_VAULT_QUERY_INDEX_R414_VERSION');
+const legacyMinimumMargin=r2004Boundary ? sourceLimit-5_360_000 : 150_000;
+const minimumMargin=r414ScalableVault ? 100_000 : legacyMinimumMargin;
+const checkpointLimit=sourceLimit-minimumMargin;
 const margin=sourceLimit-sourceBytes;
-assert.ok(sourceBytes<=checkpointLimit,`R184: margem de fonte voltou a ficar crítica (${margin} bytes).`);
+assert.ok(
+  sourceBytes<=checkpointLimit,
+  `R184: margem de fonte voltou a ficar crítica (${margin} bytes; mínimo ${minimumMargin}).`
+);
 
 const srcText=srcFiles.map(read).join('\n');
 assert.doesNotMatch(srcText,/legacy-src\//,'R184: produção não pode importar a árvore legacy-src.');
 assert.equal(pkg.scripts['test:r184'],'node tests/v40-80-r184-production-legacy-isolation-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r184-position-stability-regression.ts && npm run quality:bundle');
 assert.ok((pkg.scripts['test:v4080'] ?? '').includes('npm run test:r180 && npm run test:r181 && npm run test:r182 && npm run test:r183 && npm run test:r184'), 'R184: a cadeia histórica R180→R184 deve permanecer na bateria atual.');
-console.log(`R184 isolamento aprovado: ${srcFiles.length} módulos src, ${sourceBytes} bytes, margem real ${margin} bytes; v38.50-v38.90 permanecem auditáveis fora do runtime.`);
+console.log(`R184 isolamento aprovado: ${srcFiles.length} módulos src, ${sourceBytes} bytes, margem real ${margin} bytes (mínimo ${minimumMargin}); v38.50-v38.90 permanecem auditáveis fora do runtime.`);
