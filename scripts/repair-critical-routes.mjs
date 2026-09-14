@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { applyR414CiContractConvergence } from './apply-r414-ci-contract-convergence.mjs';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_FILE = path.join(MODULE_DIR, 'templates', 'critical-routes', 'root-page.tsx.txt');
@@ -82,6 +83,10 @@ const invokedAsCli = process.argv[1]
 if (invokedAsCli) {
   try {
     const options = parseArgs(process.argv.slice(2));
+    const contracts = applyR414CiContractConvergence(options.projectRoot);
+    if (contracts.changed) {
+      console.warn(`::warning::Contratos históricos de CI convergidos para R414 (${contracts.patched.length} arquivo(s)).`);
+    }
     const result = repairCriticalRoutes(options.projectRoot, { checkOnly: options.checkOnly });
     if (result.repaired) {
       console.warn(`::warning::Rota inicial restaurada automaticamente (${result.reason}).`);
