@@ -61,11 +61,86 @@ const TARGETS = [
   },
 ];
 
+const R408_TEST = 'tests/v40-80-r408-unlimited-fichas-pp-integrity-regression.mjs';
+
 function patchExact(source, from, to, label) {
   if (source.includes(to)) return { source, changed: false };
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`R414 CI convergence: contrato inesperado em ${label}; ocorrências=${count}`);
   return { source: source.replace(from, to), changed: true };
+}
+
+function convergeR408PpContract(root) {
+  const testPath = resolve(root, R408_TEST);
+  if (!existsSync(testPath)) return { changed: false, available: false };
+
+  const budgetPath = resolve(root, 'src/modules/builds/pointBudget.ts');
+  const corePath = resolve(root, 'src/lib/trainingPlanCore.ts');
+  const optimizerPath = resolve(root, 'src/modules/builds/trainingOptimizer.ts');
+  for (const [path, label] of [
+    [budgetPath, 'pointBudget'],
+    [corePath, 'trainingPlanCore'],
+    [optimizerPath, 'trainingOptimizer'],
+  ]) {
+    if (!existsSync(path)) throw new Error(`R414 CI convergence: autoridade de PP ausente: ${label}.`);
+  }
+
+  const budget = readFileSync(budgetPath, 'utf8');
+  const core = readFileSync(corePath, 'utf8');
+  const optimizer = readFileSync(optimizerPath, 'utf8');
+
+  if (!/MAX_PLAYER_TRAINING_BUDGET\s*=\s*140/.test(budget)) {
+    throw new Error('R414 CI convergence: teto individual de PP deixou de ser 140.');
+  }
+  if (!/export function normalizePlayerTrainingBudget/.test(budget)) {
+    throw new Error('R414 CI convergence: normalização canônica do orçamento individual de PP ausente.');
+  }
+  if (!/export function trainingPlanTotalCost\(plan: TrainingPlan\): number/.test(core)
+      || !/TRAINING_KEYS\.reduce\(\(sum, key\) => sum \+ trainingTotalCost\(plan\[key\] \?\? 0\), 0\)/.test(core)) {
+    throw new Error('R414 CI convergence: autoridade canônica de PP usados não é trainingPlanTotalCost.');
+  }
+  if (!/trainingPlanTotalCost/.test(optimizer) || !/parsed\.trainingPointsTotal/.test(optimizer)) {
+    throw new Error('R414 CI convergence: otimizador não conecta orçamento da carta ao custo canônico do plano.');
+  }
+  for (const [source, label] of [[budget, 'pointBudget'], [core, 'trainingPlanCore'], [optimizer, 'trainingOptimizer']]) {
+    if (/HISTORY_LIMIT|cardHistory/.test(source)) {
+      throw new Error(`R414 CI convergence: ${label} voltou a depender da capacidade do Cofre.`);
+    }
+  }
+
+  let test = readFileSync(testPath, 'utf8');
+  let changed = false;
+
+  let result = patchExact(
+    test,
+    "const budget=read('src/modules/builds/pointBudget.ts');\nconst optimizer=read('src/modules/builds/trainingOptimizer.ts');",
+    "const budget=read('src/modules/builds/pointBudget.ts');\nconst core=read('src/lib/trainingPlanCore.ts');\nconst optimizer=read('src/modules/builds/trainingOptimizer.ts');",
+    'R408 autoridade canônica de custo'
+  );
+  test = result.source;
+  changed ||= result.changed;
+
+  result = patchExact(
+    test,
+    "assert.match(budget,/usedProgressionPoints/);\nassert.match(budget,/trainingPointsTotal|allocatablePotential|calculateAllocatablePotential/);",
+    "assert.match(budget,/MAX_PLAYER_TRAINING_BUDGET\\s*=\\s*140/);\nassert.match(budget,/normalizePlayerTrainingBudget/);\nassert.match(core,/export function trainingPlanTotalCost\\(plan: TrainingPlan\\): number/);\nassert.match(core,/TRAINING_KEYS\\.reduce\\(\\(sum, key\\) => sum \\+ trainingTotalCost\\(plan\\[key\\] \\?\\? 0\\), 0\\)/);\nassert.match(optimizer,/trainingPlanTotalCost/);\nassert.match(optimizer,/parsed\\.trainingPointsTotal/);\nassert.doesNotMatch(core,/HISTORY_LIMIT|cardHistory/);",
+    'R408 contrato obsoleto usedProgressionPoints'
+  );
+  test = result.source;
+  changed ||= result.changed;
+
+  if (/usedProgressionPoints|allocatablePotential|calculateAllocatablePotential/.test(test)) {
+    throw new Error('R414 CI convergence: contrato legado de PP ainda presente no teste R408.');
+  }
+  if (changed) writeFileSync(testPath, test, 'utf8');
+
+  return {
+    changed,
+    available: true,
+    maxPlayerTrainingBudget: 140,
+    usedPointsAuthority: 'trainingPlanTotalCost',
+    historyIndependent: true,
+  };
 }
 
 export function applyR414CiContractConvergence(rootDirectory = process.cwd()) {
@@ -85,8 +160,14 @@ export function applyR414CiContractConvergence(rootDirectory = process.cwd()) {
     }
   }
 
-  // Guardrails: o reparo só converge contratos de orçamento. O teto global real continua
-  // em 5,25 MiB e a reserva R414 continua em 100.000 bytes (5.405.024 bytes efetivos).
+  const r408Pp = convergeR408PpContract(root);
+  if (r408Pp.changed) {
+    changed = true;
+    patched.push(R408_TEST);
+  }
+
+  // Guardrails: o reparo só converge contratos de CI. O teto global real continua
+  // em 5,25 MiB, a reserva R414 continua em 100.000 bytes e PP individual continua 140.
   const budgetCheck = readFileSync(resolve(root, 'scripts/check-bundle-budget.mjs'), 'utf8');
   if (!budgetCheck.includes('sourceTs: 5.25 * 1024 * 1024')) {
     throw new Error('R414 CI convergence: orçamento global de 5,25 MiB não está mais presente.');
@@ -107,5 +188,6 @@ export function applyR414CiContractConvergence(rootDirectory = process.cwd()) {
     sourceGlobalLimitBytes: 5.25 * 1024 * 1024,
     sourceReserveBytes: 100_000,
     resultClosureBudgetR192: R414_RESULT_CLOSURE_BUDGET_R192,
+    r408Pp,
   };
 }
