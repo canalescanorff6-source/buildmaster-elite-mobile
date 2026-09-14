@@ -34,6 +34,9 @@ export function applyShardedNativeVaultR409(rootDirectory = process.cwd()) {
   const persistImmediate = readFragment('r409-persist-history.txt');
   let store = readFileSync(storePath, 'utf8');
   let changed = false;
+  const downstreamVaultGenerationR409 = store.includes('NATIVE_HISTORY_READ_CONCURRENCY_R410')
+    || store.includes('NATIVE_HISTORY_TRANSACTION_VERSION_R411')
+    || store.includes('NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412');
 
   let r = replaceRequired(
     store,
@@ -50,21 +53,23 @@ export function applyShardedNativeVaultR409(rootDirectory = process.cwd()) {
     changed = true;
   }
 
-  r = replaceRegexRequired(
-    store,
-    /export async function loadHistoryStore\(options: HistoryLoadOptions = \{\}\): Promise<SavedAnalysis\[]> \{[\s\S]*?\n\}\n\nexport async function loadHistoryStoreForStartup/,
-    `${loadHistory}\n\nexport async function loadHistoryStoreForStartup`,
-    'loader autoritativo/sharded'
-  );
-  store = r.source; changed ||= r.changed;
+  if (!downstreamVaultGenerationR409) {
+    r = replaceRegexRequired(
+      store,
+      /export async function loadHistoryStore\(options: HistoryLoadOptions = \{\}\): Promise<SavedAnalysis\[]> \{[\s\S]*?\n\}\n\nexport async function loadHistoryStoreForStartup/,
+      `${loadHistory}\n\nexport async function loadHistoryStoreForStartup`,
+      'loader autoritativo/sharded'
+    );
+    store = r.source; changed ||= r.changed;
 
-  r = replaceRegexRequired(
-    store,
-    /async function persistHistoryStoreImmediate\(items: SavedAnalysis\[]\): Promise<HistoryPersistenceResult> \{[\s\S]*?\n\}\n\nexport function persistHistoryStore/,
-    `${persistImmediate}\n\nexport function persistHistoryStore`,
-    'persistência sharded'
-  );
-  store = r.source; changed ||= r.changed;
+    r = replaceRegexRequired(
+      store,
+      /async function persistHistoryStoreImmediate\(items: SavedAnalysis\[]\): Promise<HistoryPersistenceResult> \{[\s\S]*?\n\}\n\nexport function persistHistoryStore/,
+      `${persistImmediate}\n\nexport function persistHistoryStore`,
+      'persistência sharded'
+    );
+    store = r.source; changed ||= r.changed;
+  }
 
   if (!store.includes('nativeAuthoritativeR409')) throw new Error('R409: autoridade nativa não instalada.');
   if (!store.includes('writeNativeHistoryShardedR409(compacted)')) throw new Error('R409: persistência em shards não instalada.');

@@ -113,6 +113,7 @@ export function applyFastResilientVaultReadR410(rootDirectory = process.cwd()) {
 
   let store = readFileSync(storePath, 'utf8');
   let changed = false;
+  const downstreamHydrationR410 = store.includes('NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412');
 
   let r = replaceRequired(
     store,
@@ -138,13 +139,15 @@ export function applyFastResilientVaultReadR410(rootDirectory = process.cwd()) {
   );
   store = r.source; changed ||= r.changed;
 
-  r = replaceRegexRequired(
-    store,
-    /async function readNativeHistoryManifestPayloadR409\(manifest: NativeHistoryManifestR409\): Promise<SavedAnalysis\[]> \{[\s\S]*?\n\}\n\nasync function readNativeHistoryShardedR409\(\): Promise<SavedAnalysis\[] \| null> \{[\s\S]*?\n\}/,
-    FAST_READER,
-    'leitor concorrente e recuperação autopromovida'
-  );
-  store = r.source; changed ||= r.changed;
+  if (!downstreamHydrationR410) {
+    r = replaceRegexRequired(
+      store,
+      /async function readNativeHistoryManifestPayloadR409\(manifest: NativeHistoryManifestR409\): Promise<SavedAnalysis\[]> \{[\s\S]*?\n\}\n\nasync function readNativeHistoryShardedR409\(\): Promise<SavedAnalysis\[] \| null> \{[\s\S]*?\n\}/,
+      FAST_READER,
+      'leitor concorrente e recuperação autopromovida'
+    );
+    store = r.source; changed ||= r.changed;
+  }
 
   if (!store.includes('NATIVE_HISTORY_READ_CONCURRENCY_R410 = 8')) throw new Error('R410: concorrência de leitura não instalada.');
   if (!store.includes('mapWithConcurrencyR410')) throw new Error('R410: leitor concorrente não instalado.');

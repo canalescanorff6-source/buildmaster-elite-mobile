@@ -39,7 +39,21 @@ export function applyIndexedVaultQueryR414(rootDirectory = process.cwd()) {
   let selectors = readFileSync(selectorsPath, 'utf8');
   let cleanLib = readFileSync(cleanLibPath, 'utf8');
 
+  const obsoleteUsageImportR414 = "import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';\n";
+  if (selectors.includes(obsoleteUsageImportR414)) {
+    selectors = selectors.replace(obsoleteUsageImportR414, '');
+    changed = true;
+  }
+
   let r = replaceRequired(
+    selectors,
+    "import { memoryKeyR200 as memoryKey, savedPositionGroupR200 as savedPositionGroup, savedStatusLabelR200 as savedStatusLabel, skillProgressInfoR200 as skillProgressInfo } from './cardHistoryStartupModelR200';",
+    "import { memoryKeyR200 as memoryKey, savedPositionGroupR200 as savedPositionGroup, skillProgressInfoR200 as skillProgressInfo } from './cardHistoryStartupModelR200';",
+    'imports derivados do índice'
+  );
+  selectors = r.source; changed ||= r.changed;
+
+  r = replaceRequired(
     selectors,
     "import { entryMatchesAdvancedFilters, folderForEntry, type VaultFilterState } from '@/lib/vaultUsability';",
     "import { folderForEntry, type VaultFilterState } from '@/lib/vaultUsability';",
@@ -151,7 +165,7 @@ export function applyIndexedVaultQueryR414(rootDirectory = process.cwd()) {
 
   const testPath = resolve(root, TEST);
   mkdirSync(dirname(testPath), { recursive: true });
-  const testSource = `import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst selectors=fs.readFileSync('src/modules/vault/cardVisionVaultSelectorsR151.ts','utf8');\nconst clean=fs.readFileSync('src/lib/cleanVaultV3800.ts','utf8');\nassert.match(selectors,/CARDVISION_VAULT_QUERY_INDEX_R414_VERSION/);\nassert.match(selectors,/vaultEntryIndexCacheR414 = new WeakMap/);\nassert.match(selectors,/const index = vaultEntryIndexR414\\(item\\)/);\nassert.match(selectors,/matches\\.push\\(\\{ item, index \\}\\)/);\nassert.doesNotMatch(selectors,/entryMatchesAdvancedFilters\\(item, input\\.advancedFilters\\)/);\nassert.doesNotMatch(selectors,/history\\.flatMap\\(\\(item\\) => \\[/);\nassert.match(clean,/cleanVaultBuildSignatureCacheR414\\.get\\(entry\\)/);\nassert.match(clean,/cleanVaultCardVersionCacheR414\\.get\\(entry\\)/);\nassert.match(clean,/const duplicates: CleanVaultDuplicateGroup<T>\\[\\] = \\[\\]/);\n\nconst count=10000;\nlet indexBuilds=0;\nconst indexCache=new WeakMap();\nconst cards=Array.from({length:count},(_,i)=>({id:'card-'+i,name:'Jogador '+i,result:{trainingPointsTotal:(i%140)+1}}));\nfunction indexed(card){let value=indexCache.get(card);if(value)return value;indexBuilds++;value={search:card.name.toLowerCase(),pp:card.result.trainingPointsTotal};indexCache.set(card,value);return value;}\nfor(let pass=0;pass<8;pass++)for(const card of cards)indexed(card);\nassert.equal(indexBuilds,count);\nconst beforePP=cards[7777].result.trainingPointsTotal;\ncards[7777]={...cards[7777],name:'Jogador 7777 atualizado'};\nfor(const card of cards)indexed(card);\nassert.equal(indexBuilds,count+1);\nassert.equal(cards[7777].result.trainingPointsTotal,beforePP);\n\nlet signatureBuilds=0;\nconst signatureCache=new WeakMap();\nfunction signature(card){let value=signatureCache.get(card);if(value)return value;signatureBuilds++;value=card.id+'::'+card.result.trainingPointsTotal;signatureCache.set(card,value);return value;}\nfor(let pass=0;pass<5;pass++)for(const card of cards)signature(card);\nassert.equal(signatureBuilds,count);\nassert.equal(cards.length,count);\nconsole.log('R414 aprovada: índice de busca/ordenação e assinaturas derivadas são reutilizados; 10.000 fichas e PP preservados.');\n`;
+  const testSource = `import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst selectors=fs.readFileSync('src/modules/vault/cardVisionVaultSelectorsR151.ts','utf8');\nconst clean=fs.readFileSync('src/lib/cleanVaultV3800.ts','utf8');\nassert.match(selectors,/CARDVISION_VAULT_QUERY_INDEX_R414_VERSION/);\nassert.match(selectors,/vaultEntryIndexCacheR414 = new WeakMap/);\nassert.match(selectors,/const index = vaultEntryIndexR414\\(item\\)/);\nassert.match(selectors,/matches\\.push\\(\\{ item, index \\}\\)/);\nassert.doesNotMatch(selectors,/entryMatchesAdvancedFilters\\(item, input\\.advancedFilters\\)/);\nassert.doesNotMatch(selectors,/history\\.flatMap\\(\\(item\\) => \\[/);\nassert.doesNotMatch(selectors,/analysisUsagePositionR138/);\nassert.doesNotMatch(selectors,/savedStatusLabelR200 as savedStatusLabel/);\nassert.match(clean,/cleanVaultBuildSignatureCacheR414\\.get\\(entry\\)/);\nassert.match(clean,/cleanVaultCardVersionCacheR414\\.get\\(entry\\)/);\nassert.match(clean,/const duplicates: CleanVaultDuplicateGroup<T>\\[\\] = \\[\\]/);\n\nconst count=10000;\nlet indexBuilds=0;\nconst indexCache=new WeakMap();\nconst cards=Array.from({length:count},(_,i)=>({id:'card-'+i,name:'Jogador '+i,result:{trainingPointsTotal:(i%140)+1}}));\nfunction indexed(card){let value=indexCache.get(card);if(value)return value;indexBuilds++;value={search:card.name.toLowerCase(),pp:card.result.trainingPointsTotal};indexCache.set(card,value);return value;}\nfor(let pass=0;pass<8;pass++)for(const card of cards)indexed(card);\nassert.equal(indexBuilds,count);\nconst beforePP=cards[7777].result.trainingPointsTotal;\ncards[7777]={...cards[7777],name:'Jogador 7777 atualizado'};\nfor(const card of cards)indexed(card);\nassert.equal(indexBuilds,count+1);\nassert.equal(cards[7777].result.trainingPointsTotal,beforePP);\n\nlet signatureBuilds=0;\nconst signatureCache=new WeakMap();\nfunction signature(card){let value=signatureCache.get(card);if(value)return value;signatureBuilds++;value=card.id+'::'+card.result.trainingPointsTotal;signatureCache.set(card,value);return value;}\nfor(let pass=0;pass<5;pass++)for(const card of cards)signature(card);\nassert.equal(signatureBuilds,count);\nassert.equal(cards.length,count);\nconsole.log('R414 aprovada: índice de busca/ordenação e assinaturas derivadas são reutilizados; 10.000 fichas e PP preservados.');\n`;
   if (!existsSync(testPath) || readFileSync(testPath, 'utf8') !== testSource) {
     writeFileSync(testPath, testSource, 'utf8');
     changed = true;
