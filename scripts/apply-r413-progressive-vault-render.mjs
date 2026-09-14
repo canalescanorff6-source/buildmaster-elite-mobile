@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 
 const CLEAN_COMPONENT = 'src/components/CleanVaultV3800.tsx';
 const WORKSPACE_COMPONENT = 'src/components/vault/CardVisionVaultWorkspaceR191.tsx';
+const WORKSPACE_RUNTIME = 'src/modules/vault/useProgressiveVaultWorkspaceR413.ts';
 const CLEAN_LIB = 'src/lib/cleanVaultV3800.ts';
 const PACKAGE = 'package.json';
 const TEST = 'tests/v40-80-r413-progressive-vault-render-regression.mjs';
@@ -22,6 +23,7 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
   const root = resolve(rootDirectory);
   const cleanPath = resolve(root, CLEAN_COMPONENT);
   const workspacePath = resolve(root, WORKSPACE_COMPONENT);
+  const workspaceRuntimePath = resolve(root, WORKSPACE_RUNTIME);
   const libPath = resolve(root, CLEAN_LIB);
   const packagePath = resolve(root, PACKAGE);
   for (const file of [cleanPath, workspacePath, libPath, packagePath]) {
@@ -32,6 +34,57 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
   let clean = readFileSync(cleanPath, 'utf8');
   let workspace = readFileSync(workspacePath, 'utf8');
   let lib = readFileSync(libPath, 'utf8');
+
+
+  const workspaceRuntime = `import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CardVisionVaultView } from '@/lib/appNavigationR127';
+import { folderForEntry } from '@/lib/vaultUsability';
+import type { SavedAnalysis } from './cardHistoryStore';
+
+export const CARDVISION_COMPARE_RENDER_BATCH_R413 = 80 as const;
+
+export function useProgressiveVaultWorkspaceR413(vaultView: CardVisionVaultView, renderHistory: SavedAnalysis[]) {
+  const [compareVisibleCountR413, setCompareVisibleCountR413] = useState<number>(CARDVISION_COMPARE_RENDER_BATCH_R413);
+  const compareLoadMoreRefR413 = useRef<HTMLDivElement | null>(null);
+  const compareViewRefR413 = useRef(vaultView);
+  const enteringCompareR413 = vaultView === 'comparar' && compareViewRefR413.current !== 'comparar';
+  const effectiveCompareVisibleCountR413 = enteringCompareR413 ? CARDVISION_COMPARE_RENDER_BATCH_R413 : compareVisibleCountR413;
+  const compareHistoryR413 = useMemo(() => renderHistory.slice(0, effectiveCompareVisibleCountR413), [renderHistory, effectiveCompareVisibleCountR413]);
+  const compareHasMoreR413 = effectiveCompareVisibleCountR413 < renderHistory.length;
+  const folderCountsR413 = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of renderHistory) {
+      const folderId = folderForEntry(item);
+      counts.set(folderId, (counts.get(folderId) ?? 0) + 1);
+    }
+    return counts;
+  }, [renderHistory]);
+  const loadMoreCompareR413 = () => setCompareVisibleCountR413(Math.min(renderHistory.length, effectiveCompareVisibleCountR413 + CARDVISION_COMPARE_RENDER_BATCH_R413));
+
+  useEffect(() => {
+    const previousView = compareViewRefR413.current;
+    compareViewRefR413.current = vaultView;
+    if (vaultView === 'comparar' && previousView !== 'comparar') setCompareVisibleCountR413(CARDVISION_COMPARE_RENDER_BATCH_R413);
+  }, [vaultView]);
+
+  useEffect(() => {
+    const node = compareLoadMoreRefR413.current;
+    if (vaultView !== 'comparar' || !node || !compareHasMoreR413 || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMoreCompareR413();
+    }, { rootMargin: '720px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [vaultView, renderHistory.length, compareHasMoreR413, effectiveCompareVisibleCountR413]);
+
+  return { compareHistoryR413, compareHasMoreR413, compareLoadMoreRefR413, folderCountsR413, loadMoreCompareR413 };
+}
+`;
+  if (!existsSync(workspaceRuntimePath) || readFileSync(workspaceRuntimePath, 'utf8') !== workspaceRuntime) {
+    mkdirSync(dirname(workspaceRuntimePath), { recursive: true });
+    writeFileSync(workspaceRuntimePath, workspaceRuntime, 'utf8');
+    changed = true;
+  }
 
   let r = replaceRequired(
     clean,
@@ -83,23 +136,15 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
 
   r = replaceRequired(
     workspace,
-    "import type { Dispatch, SetStateAction } from 'react';",
-    "import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';",
-    'hooks do workspace'
-  );
-  workspace = r.source; changed ||= r.changed;
-
-  r = replaceRequired(
-    workspace,
-    "export const CARDVISION_VAULT_WORKSPACE_R191_VERSION = '40.80-r191-cardvision-vault-workspace-v1' as const;",
-    "export const CARDVISION_VAULT_WORKSPACE_R191_VERSION = '40.80-r191-cardvision-vault-workspace-v1' as const;\nexport const CARDVISION_COMPARE_RENDER_BATCH_R413 = 80 as const;",
-    'batch progressivo do comparador'
+    "import { folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';",
+    "import type { VaultFilterState, VaultFolder } from '@/lib/vaultUsability';\nimport { useProgressiveVaultWorkspaceR413 } from '@/modules/vault/useProgressiveVaultWorkspaceR413';",
+    'runtime progressivo do workspace'
   );
   workspace = r.source; changed ||= r.changed;
 
   const workspaceStateAnchor = "  const vaultActionBusyR154 = (key: string) => activeVaultActionKeysR154.includes(key);";
-  const workspaceStatePatched = `${workspaceStateAnchor}\n  const [compareVisibleCountR413, setCompareVisibleCountR413] = useState<number>(CARDVISION_COMPARE_RENDER_BATCH_R413);\n  const compareLoadMoreRefR413 = useRef<HTMLDivElement | null>(null);\n  const compareViewRefR413 = useRef(vaultView);\n  const enteringCompareR413 = vaultView === 'comparar' && compareViewRefR413.current !== 'comparar';\n  const effectiveCompareVisibleCountR413 = enteringCompareR413 ? CARDVISION_COMPARE_RENDER_BATCH_R413 : compareVisibleCountR413;\n  const compareHistoryR413 = useMemo(\n    () => renderHistory.slice(0, effectiveCompareVisibleCountR413),\n    [renderHistory, effectiveCompareVisibleCountR413]\n  );\n  const compareHasMoreR413 = effectiveCompareVisibleCountR413 < renderHistory.length;\n  const folderCountsR413 = useMemo(() => {\n    const counts = new Map<string, number>();\n    for (const item of renderHistory) {\n      const folderId = folderForEntry(item);\n      counts.set(folderId, (counts.get(folderId) ?? 0) + 1);\n    }\n    return counts;\n  }, [renderHistory]);\n\n  useEffect(() => {\n    const previousView = compareViewRefR413.current;\n    compareViewRefR413.current = vaultView;\n    if (vaultView === 'comparar' && previousView !== 'comparar') {\n      setCompareVisibleCountR413(CARDVISION_COMPARE_RENDER_BATCH_R413);\n    }\n  }, [vaultView]);\n\n  useEffect(() => {\n    const node = compareLoadMoreRefR413.current;\n    if (vaultView !== 'comparar' || !node || !compareHasMoreR413 || typeof IntersectionObserver === 'undefined') return;\n    const observer = new IntersectionObserver((entries) => {\n      if (entries.some((entry) => entry.isIntersecting)) {\n        setCompareVisibleCountR413(Math.min(renderHistory.length, effectiveCompareVisibleCountR413 + CARDVISION_COMPARE_RENDER_BATCH_R413));\n      }\n    }, { rootMargin: '720px 0px' });\n    observer.observe(node);\n    return () => observer.disconnect();\n  }, [vaultView, renderHistory.length, compareHasMoreR413, effectiveCompareVisibleCountR413]);`;
-  r = replaceRequired(workspace, workspaceStateAnchor, workspaceStatePatched, 'estado progressivo e contagem de pastas');
+  const workspaceStatePatched = `${workspaceStateAnchor}\n  const { compareHistoryR413, compareHasMoreR413, compareLoadMoreRefR413, folderCountsR413, loadMoreCompareR413 } = useProgressiveVaultWorkspaceR413(vaultView, renderHistory);`;
+  r = replaceRequired(workspace, workspaceStateAnchor, workspaceStatePatched, 'hook progressivo e contagem de pastas');
   workspace = r.source; changed ||= r.changed;
 
   r = replaceRequired(
@@ -121,7 +166,7 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
   r = replaceRequired(
     workspace,
     "            })}</div> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
-    "            })}</div>{compareHasMoreR413 && <div className=\"bm-v3800-progressive-loader\" ref={compareLoadMoreRefR413} role=\"status\" aria-live=\"polite\"><span>Mostrando {compareHistoryR413.length} de {renderHistory.length} ficha(s).</span><button type=\"button\" onClick={() => setCompareVisibleCountR413(Math.min(renderHistory.length, effectiveCompareVisibleCountR413 + CARDVISION_COMPARE_RENDER_BATCH_R413))}>Carregar mais</button></div>}</> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
+    "            })}</div>{compareHasMoreR413 && <div className=\"bm-v3800-progressive-loader\" ref={compareLoadMoreRefR413} role=\"status\" aria-live=\"polite\"><span>Mostrando {compareHistoryR413.length} de {renderHistory.length} ficha(s).</span><button type=\"button\" onClick={loadMoreCompareR413}>Carregar mais</button></div>}</> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
     'sentinela progressiva do comparador'
   );
   workspace = r.source; changed ||= r.changed;
@@ -137,15 +182,24 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
   if (clean.includes('          {groups.map((group) => {')) throw new Error('R413: catálogo principal ainda renderiza todos os grupos de uma vez.');
 
   const workspaceContracts = [
-    'CARDVISION_COMPARE_RENDER_BATCH_R413 = 80',
-    'renderHistory.slice(0, effectiveCompareVisibleCountR413)',
+    'useProgressiveVaultWorkspaceR413(vaultView, renderHistory)',
     'compareHistoryR413.map((item)',
     'folderCountsR413.get(folder.id)',
     'compareLoadMoreRefR413',
+    'onClick={loadMoreCompareR413}',
   ];
   for (const contract of workspaceContracts) assertContract(workspace, contract, 'CardVisionVaultWorkspaceR191');
+  const workspaceRuntimeContracts = [
+    'CARDVISION_COMPARE_RENDER_BATCH_R413 = 80',
+    'renderHistory.slice(0, effectiveCompareVisibleCountR413)',
+    'IntersectionObserver',
+    "rootMargin: '720px 0px'",
+  ];
+  for (const contract of workspaceRuntimeContracts) assertContract(workspaceRuntime, contract, 'useProgressiveVaultWorkspaceR413');
   if (workspace.includes('{renderHistory.map((item) => {')) throw new Error('R413: comparador ainda renderiza todo o histórico de uma vez.');
   if (workspace.includes("renderHistory.filter((item) => folderForEntry(item) === folder.id).length")) throw new Error('R413: contagem de pastas ainda é O(pastas × fichas).');
+  if (Buffer.byteLength(workspace, 'utf8') > 26_000) throw new Error(`R413: workspace R191 excedeu 26000 bytes após extração do runtime progressivo: ${Buffer.byteLength(workspace, 'utf8')}.`);
+
 
   assertContract(lib, 'if (bucket) bucket.push(entry);', 'cleanVaultV3800');
   if (lib.includes('byPlayer.set(key, [...(byPlayer.get(key) ?? []), entry]);')) throw new Error('R413: agrupamento ainda copia arrays a cada ficha.');
@@ -158,7 +212,49 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
 
   const testPath = resolve(root, TEST);
   mkdirSync(dirname(testPath), { recursive: true });
-  const testSource = `import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst clean=fs.readFileSync('src/components/CleanVaultV3800.tsx','utf8');\nconst workspace=fs.readFileSync('src/components/vault/CardVisionVaultWorkspaceR191.tsx','utf8');\nconst lib=fs.readFileSync('src/lib/cleanVaultV3800.ts','utf8');\nassert.match(clean,/CLEAN_VAULT_RENDER_BATCH_R413 = 48/);\nassert.match(clean,/groups\\.slice\\(0, effectiveRenderedGroupCountR413\\)/);\nassert.match(clean,/progressiveGroupsR413\\.map\\(\\(group\\)/);\nassert.match(clean,/IntersectionObserver/);\nassert.doesNotMatch(clean,/\\{groups\\.map\\(\\(group\\) => \\{/);\nassert.match(workspace,/CARDVISION_COMPARE_RENDER_BATCH_R413 = 80/);\nassert.match(workspace,/renderHistory\\.slice\\(0, effectiveCompareVisibleCountR413\\)/);\nassert.match(workspace,/compareHistoryR413\\.map\\(\\(item\\)/);\nassert.match(workspace,/folderCountsR413\\.get\\(folder\\.id\\)/);\nassert.doesNotMatch(workspace,/renderHistory\\.filter\\(\\(item\\) => folderForEntry\\(item\\) === folder\\.id\\)\\.length/);\nassert.match(lib,/if \\(bucket\\) bucket\\.push\\(entry\\)/);\nassert.doesNotMatch(lib,/byPlayer\\.set\\(key, \\[\\.\\.\\.\\(byPlayer\\.get\\(key\\) \\?\\? \\[\\]\\), entry\\]\\)/);\n\nconst count=10000;\nconst cards=Array.from({length:count},(_,i)=>({id:'card-'+i,result:{trainingPointsTotal:(i%140)+1}}));\nlet visible=48;\nassert.equal(cards.slice(0,visible).length,48);\nwhile(visible<count)visible=Math.min(count,visible+48);\nassert.equal(visible,count);\nassert.equal(cards.length,count);\nassert.equal(cards[7777].result.trainingPointsTotal,(7777%140)+1);\nlet compareVisible=80;\nwhile(compareVisible<count)compareVisible=Math.min(count,compareVisible+80);\nassert.equal(compareVisible,count);\n\nconst folderEntries=Array.from({length:10000},(_,i)=>({folder:'f'+(i%25)}));\nconst counts=new Map();\nlet visits=0;\nfor(const item of folderEntries){visits++;counts.set(item.folder,(counts.get(item.folder)??0)+1);}\nassert.equal(visits,10000);\nassert.equal([...counts.values()].reduce((a,b)=>a+b,0),10000);\nconsole.log('R413 aprovada: renderização progressiva, comparação em lotes, contagem linear e 10.000 fichas/PP preservados.');\n`;
+  const testSource = `import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const clean=fs.readFileSync('src/components/CleanVaultV3800.tsx','utf8');
+const workspace=fs.readFileSync('src/components/vault/CardVisionVaultWorkspaceR191.tsx','utf8');
+const runtime=fs.readFileSync('src/modules/vault/useProgressiveVaultWorkspaceR413.ts','utf8');
+const lib=fs.readFileSync('src/lib/cleanVaultV3800.ts','utf8');
+assert.match(clean,/CLEAN_VAULT_RENDER_BATCH_R413 = 48/);
+assert.match(clean,/groups\\.slice\\(0, effectiveRenderedGroupCountR413\\)/);
+assert.match(clean,/progressiveGroupsR413\\.map\\(\\(group\\)/);
+assert.match(clean,/IntersectionObserver/);
+assert.doesNotMatch(clean,/\\{groups\\.map\\(\\(group\\) => \\{/);
+assert.match(runtime,/CARDVISION_COMPARE_RENDER_BATCH_R413 = 80/);
+assert.match(runtime,/renderHistory\\.slice\\(0, effectiveCompareVisibleCountR413\\)/);
+assert.match(runtime,/IntersectionObserver/);
+assert.match(workspace,/useProgressiveVaultWorkspaceR413\\(vaultView, renderHistory\\)/);
+assert.match(workspace,/compareHistoryR413\\.map\\(\\(item\\)/);
+assert.match(workspace,/folderCountsR413\\.get\\(folder\\.id\\)/);
+assert.match(workspace,/onClick=\\{loadMoreCompareR413\\}/);
+assert.ok(Buffer.byteLength(workspace,'utf8')<=26000,'R413: workspace R191 acima do limite: '+Buffer.byteLength(workspace,'utf8'));
+assert.doesNotMatch(workspace,/renderHistory\\.filter\\(\\(item\\) => folderForEntry\\(item\\) === folder\\.id\\)\\.length/);
+assert.match(lib,/if \\(bucket\\) bucket\\.push\\(entry\\)/);
+assert.doesNotMatch(lib,/byPlayer\\.set\\(key, \\[\\.\\.\\.\\(byPlayer\\.get\\(key\\) \\?\\? \\[\\]\\), entry\\]\\)/);
+
+const count=10000;
+const cards=Array.from({length:count},(_,i)=>({id:'card-'+i,result:{trainingPointsTotal:(i%140)+1}}));
+let visible=48;
+assert.equal(cards.slice(0,visible).length,48);
+while(visible<count)visible=Math.min(count,visible+48);
+assert.equal(visible,count);
+assert.equal(cards.length,count);
+assert.equal(cards[7777].result.trainingPointsTotal,(7777%140)+1);
+let compareVisible=80;
+while(compareVisible<count)compareVisible=Math.min(count,compareVisible+80);
+assert.equal(compareVisible,count);
+
+const folderEntries=Array.from({length:10000},(_,i)=>({folder:'f'+(i%25)}));
+const counts=new Map();
+let visits=0;
+for(const item of folderEntries){visits++;counts.set(item.folder,(counts.get(item.folder)??0)+1);}
+assert.equal(visits,10000);
+assert.equal([...counts.values()].reduce((a,b)=>a+b,0),10000);
+console.log('R413 aprovada: renderização progressiva extraída do workspace, comparação em lotes, contagem linear e 10.000 fichas/PP preservados.');
+`;
   if (!existsSync(testPath) || readFileSync(testPath, 'utf8') !== testSource) {
     writeFileSync(testPath, testSource, 'utf8');
     changed = true;
@@ -180,6 +276,7 @@ export function applyProgressiveVaultRenderR413(rootDirectory = process.cwd()) {
     progressiveVaultRender: true,
     playerRenderBatch: 48,
     comparisonRenderBatch: 80,
+    comparisonRuntime: 'extracted-hook',
     folderCounting: 'linear',
     playerGrouping: 'linear-append',
     logicalHistoryLimit: 'unbounded',
