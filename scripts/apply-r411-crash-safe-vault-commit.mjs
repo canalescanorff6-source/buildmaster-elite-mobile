@@ -45,7 +45,7 @@ export function applyCrashSafeVaultCommitR411(rootDirectory = process.cwd()) {
 
   let r = replaceRegexRequired(
     store,
-    /async function writeNativeHistoryShardedR409\(items: SavedAnalysis\[]\): Promise<void> \{[\s\S]*?\n\}(?=\n(?:export type LearnedCardMemory|const normalizeSavedAnalysis))/, 
+    /async function writeNativeHistoryShardedR409\(items: SavedAnalysis\[]\): Promise<void> \{[\s\S]*?\n\}(?=\r?\n(?:[ \t]*\r?\n)*(?:export type LearnedCardMemory|const normalizeSavedAnalysis))/,
     writeNativeHistory,
     'commit nativo transacional'
   );
