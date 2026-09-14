@@ -92,8 +92,12 @@ export function applyR414CiContractConvergence(rootDirectory = process.cwd()) {
     throw new Error('R414 CI convergence: orçamento global de 5,25 MiB não está mais presente.');
   }
   const r184 = readFileSync(resolve(root, 'tests/v40-80-r184-production-legacy-isolation-regression.mjs'), 'utf8');
-  if (!r184.includes('sourceLimit-100_000')) {
-    throw new Error('R414 CI convergence: reserva mínima de 100 KB do R184 não está mais presente.');
+  const r184HasGlobalLimit = /const\s+sourceLimit\s*=\s*5\.25\s*\*\s*1024\s*\*\s*1024\s*;/.test(r184);
+  const r184HasR414Reserve = /const\s+minimumMargin\s*=\s*r414ScalableVault\s*\?\s*100_000\s*:\s*legacyMinimumMargin\s*;/.test(r184);
+  const r184UsesCheckpoint = /const\s+checkpointLimit\s*=\s*sourceLimit\s*-\s*minimumMargin\s*;/.test(r184)
+    && /sourceBytes\s*<=\s*checkpointLimit/.test(r184);
+  if (!r184HasGlobalLimit || !r184HasR414Reserve || !r184UsesCheckpoint) {
+    throw new Error('R414 CI convergence: contrato semântico de reserva mínima de 100 KB do R184 não está mais presente.');
   }
 
   return {
