@@ -1,6 +1,10 @@
 declare module 'react' {
   export type ChangeEvent<T> = { target: T };
+  export type SetStateAction<S> = S | ((previous: S) => S);
   export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
+  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
+  export function useRef<T>(initialValue: T): { current: T };
+  export function useState<T>(initialValue: T | (() => T)): [T, (value: SetStateAction<T>) => void];
 }
 
 declare namespace JSX {

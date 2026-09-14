@@ -29,7 +29,18 @@ assert.ok(history.includes("backend: 'native-internal'"));
 assert.ok(history.includes('compactHistoryForNativeStorage'));
 assert.ok(history.includes('historyPersistenceQueue'), 'gravações sucessivas precisam ser serializadas para evitar sobrescrita fora de ordem');
 assert.ok(history.includes('fullPreview: null'));
-assert.ok(history.indexOf('nativeVaultWrite') < history.indexOf('writeIndexedHistory(compactHistoryForNativeStorage(next))'), 'Cofre nativo deve ser a rota principal no APK');
+
+const shardedNativeWrite = history.indexOf('await writeNativeHistoryShardedR409(compacted)');
+const legacyNativeWrite = history.indexOf('await nativeVaultWrite(NATIVE_HISTORY_STORAGE_KEY(), payload)');
+const indexedShardedWrite = history.indexOf('await writeIndexedHistory(compacted)');
+const indexedLegacyWrite = history.indexOf('await writeIndexedHistory(compactHistoryForNativeStorage(next))');
+const nativeWrite = shardedNativeWrite >= 0 ? shardedNativeWrite : legacyNativeWrite;
+const indexedWrite = indexedShardedWrite >= 0 ? indexedShardedWrite : indexedLegacyWrite;
+assert.ok(nativeWrite >= 0 && indexedWrite > nativeWrite, 'Cofre nativo deve ser a rota principal no APK');
+if (shardedNativeWrite >= 0) {
+  assert.ok(history.includes('nativeVaultWrite'), 'Cofre sharded deve continuar gravando pela ponte nativa privada');
+}
+
 assert.ok(resultUi.includes('Salvar para revisar'));
 assert.ok(!resultUi.includes("disabled={!result.validation.canGenerate}"), 'alertas de OCR não podem impedir o salvamento para revisão');
 assert.ok(cleanResultUi.includes('Salvar para revisar'));
