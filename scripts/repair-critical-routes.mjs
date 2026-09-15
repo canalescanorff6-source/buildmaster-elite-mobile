@@ -10,6 +10,28 @@ function normalize(text) {
   return String(text).replace(/\r\n/g, '\n').trimEnd() + '\n';
 }
 
+function sourceHas(projectRoot, relativePath, fragments) {
+  const file = path.join(projectRoot, ...relativePath.split('/'));
+  if (!fs.existsSync(file)) return false;
+  const source = fs.readFileSync(file, 'utf8');
+  return fragments.every((fragment) => source.includes(fragment));
+}
+
+export function hasConvergedR417(projectRoot = process.cwd()) {
+  return (
+    sourceHas(projectRoot, 'src/hooks/useCardVisionVaultActionsR185.ts', [
+      'async function batchHistoryR417',
+      'const stableIds = [...new Set(ids)].filter(Boolean).sort();',
+      "`batch:${action}:${stableIds.join('|')}`",
+    ]) &&
+    sourceHas(projectRoot, 'src/lib/autonomousCardR417.ts', ['AUTONOMOUS_CARD_R417_VERSION']) &&
+    sourceHas(projectRoot, 'src/lib/cardIntelligencePipeline.ts', ['applyAutonomousRoleSeedR417(current)']) &&
+    sourceHas(projectRoot, 'src/lib/cleanSlatePerformance2027V4080R119.ts', ['usageContext.targetPosition !== autonomousPrimaryR417']) &&
+    sourceHas(projectRoot, 'src/modules/vault/cardVisionVaultSelectorsR151.ts', ["index.folderId === 'lixeira'"]) &&
+    sourceHas(projectRoot, 'src/components/CleanVaultV3800.tsx', ['Selecionar tudo', 'Lixeira'])
+  );
+}
+
 function isValidRootRoute(source) {
   const text = normalize(source);
   return (
@@ -83,9 +105,13 @@ const invokedAsCli = process.argv[1]
 if (invokedAsCli) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const contracts = applyR414CiContractConvergence(options.projectRoot);
-    if (contracts.changed) {
-      console.warn(`::warning::Contratos históricos de CI convergidos para R414 (${contracts.patched.length} arquivo(s)).`);
+    if (hasConvergedR417(options.projectRoot)) {
+      console.log('R417 já convergida: reparo de contratos históricos não será reaplicado.');
+    } else {
+      const contracts = applyR414CiContractConvergence(options.projectRoot);
+      if (contracts.changed) {
+        console.warn(`::warning::Contratos históricos de CI convergidos para R414 (${contracts.patched.length} arquivo(s)).`);
+      }
     }
     const result = repairCriticalRoutes(options.projectRoot, { checkOnly: options.checkOnly });
     if (result.repaired) {
