@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { applyR414CiContractConvergence } from './apply-r414-ci-contract-convergence.mjs';
 import { applyR418UnboundedCapacity } from './apply-r418-unbounded-capacity.mjs';
+import { applyR418Fix2HistoricalCapacityContracts } from './apply-r418-fix2-historical-contracts.mjs';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_FILE = path.join(MODULE_DIR, 'templates', 'critical-routes', 'root-page.tsx.txt');
@@ -119,6 +120,12 @@ if (invokedAsCli) {
       console.warn(`::warning::R418 removeu tetos artificiais de coleções persistentes (${capacity.patched.length} arquivo(s)).`);
     } else {
       console.log('R418: coleções persistentes já estão sem tetos artificiais.');
+    }
+    const historicalCapacity = applyR418Fix2HistoricalCapacityContracts(options.projectRoot);
+    if (historicalCapacity.changed) {
+      console.warn(`::warning::R418-fix2 convergiu contratos históricos de capacidade (${historicalCapacity.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R418-fix2: contratos históricos de capacidade já estão convergidos.');
     }
     const result = repairCriticalRoutes(options.projectRoot, { checkOnly: options.checkOnly });
     if (result.repaired) {
