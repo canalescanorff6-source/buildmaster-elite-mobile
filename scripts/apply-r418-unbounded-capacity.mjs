@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R418_UNBOUNDED_CAPACITY_VERSION = '40.80-r418-unbounded-persistent-collections-v1';
+export const R418_UNBOUNDED_CAPACITY_VERSION = '40.80-r418-unbounded-persistent-collections-v2';
 
 const FILES = {
   vault: 'src/modules/vault/cardHistoryStore.ts',
@@ -94,6 +94,46 @@ function patchSquad(source) {
   return { source: next, removed };
 }
 
+
+function removeUnusedHistoryLimitImport(source) {
+  const withoutImportToken = source
+    .replace(/\bHISTORY_LIMIT_R200 as HISTORY_LIMIT,\s*/g, '')
+    .replace(/^\s*HISTORY_LIMIT,\r?\n/gm, '')
+    .replace(/\bHISTORY_LIMIT,\s*/g, '');
+  return /\bHISTORY_LIMIT\b/.test(withoutImportToken) ? source : withoutImportToken;
+}
+
+function patchActiveVaultCapsAcrossSourceTree(root) {
+  const srcRoot = path.join(root, 'src');
+  const patched = [];
+  let removed = 0;
+  if (!fs.existsSync(srcRoot)) return { patched, removed };
+
+  const walk = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!/\.(?:ts|tsx|js|mjs)$/.test(entry.name)) continue;
+      const source = fs.readFileSync(full, 'utf8');
+      const count = countMatches(source, /\.slice\(0,\s*HISTORY_LIMIT\)/g);
+      if (!count) continue;
+      let next = source.replace(/\.slice\(0,\s*HISTORY_LIMIT\)/g, '');
+      next = removeUnusedHistoryLimitImport(next);
+      if (/\.slice\(0,\s*HISTORY_LIMIT\)/.test(next)) {
+        throw new Error(`R418: não foi possível remover poda ativa em ${path.relative(root, full)}.`);
+      }
+      fs.writeFileSync(full, next, 'utf8');
+      removed += count;
+      patched.push(path.relative(root, full));
+    }
+  };
+  walk(srcRoot);
+  return { patched, removed };
+}
+
 export function validateNetworkMobilityContractR418(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
   const { source } = readRequired(root, FILES.license);
@@ -144,6 +184,15 @@ export function applyR418UnboundedCapacity(rootDirectory = process.cwd()) {
       fs.writeFileSync(file, result.source, 'utf8');
       changed = true;
       patched.push(relative);
+    }
+  }
+
+  const activeVaultCaps = patchActiveVaultCapsAcrossSourceTree(root);
+  if (activeVaultCaps.removed) {
+    changed = true;
+    vaultCountCapsRemoved += activeVaultCaps.removed;
+    for (const relative of activeVaultCaps.patched) {
+      if (!patched.includes(relative)) patched.push(relative);
     }
   }
 

@@ -41,6 +41,31 @@ export function sanitizeMappingState(source) {
   return { players, trials };
 }
 `);
+
+write('src/hooks/useCardVisionVaultActionsR185.ts', `
+import { HISTORY_LIMIT_R200 as HISTORY_LIMIT, sanitizeRuntimeHistoryR200 } from '@/modules/vault/cardHistoryStartupModelR200';
+export function restoreTrash(item, renderHistory) {
+  const safeCurrent = sanitizeRuntimeHistoryR200(renderHistory);
+  return [item, ...safeCurrent.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT);
+}
+`);
+write('src/modules/backup/cardVisionBackupRuntimeR162.ts', `
+import { HISTORY_LIMIT, normalizeHistoryList } from '@/modules/vault/cardHistoryStore';
+export function stage(sections) { return normalizeHistoryList(sections.history).slice(0, HISTORY_LIMIT); }
+`);
+write('src/modules/backup/vaultCloudRuntimeR166.ts', `
+import { HISTORY_LIMIT, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
+export function snapshot(items: SavedAnalysis[]) { return items.slice(0, HISTORY_LIMIT); }
+`);
+write('src/modules/result/cardVisionResultActionsR188.ts', `
+import {\n  HISTORY_LIMIT,\n  type SavedAnalysis,\n} from '@/modules/vault/cardHistoryStore';
+export function replace(item, current: SavedAnalysis[]) { return [item, ...current].slice(0, HISTORY_LIMIT); }
+`);
+write('src/modules/vault/vaultProductionLifecycleR139.ts', `
+import {\n  HISTORY_LIMIT,\n  type SavedAnalysis\n} from './cardHistoryStore';
+export function save(item, history: SavedAnalysis[]) { return [item, ...history].slice(0, HISTORY_LIMIT); }
+export function toggle(item, history: SavedAnalysis[]) { return [item, ...history].slice(0, HISTORY_LIMIT); }
+`);
 write('supabase/functions/license-session/index.ts', `
 async function verifyDeviceProof() {}
 const deviceId = 'bm2-test';
@@ -64,10 +89,22 @@ const vault = read('src/modules/vault/cardHistoryStore.ts');
 const mutations = read('src/modules/vault/vaultHistoryMutationsR129.ts');
 const tactical = read('src/modules/tactical-studio/tacticalStudio2Storage.ts');
 const squad = read('src/modules/squad-mapping/squadMappingStorage.ts');
+const legacyVaultSurfaces = [
+  'src/hooks/useCardVisionVaultActionsR185.ts',
+  'src/modules/backup/cardVisionBackupRuntimeR162.ts',
+  'src/modules/backup/vaultCloudRuntimeR166.ts',
+  'src/modules/result/cardVisionResultActionsR188.ts',
+  'src/modules/vault/vaultProductionLifecycleR139.ts',
+];
 
 assert.doesNotMatch(vault, /slice\(0, HISTORY_LIMIT\)/, 'Cofre não pode descartar fichas por quantidade.');
 assert.doesNotMatch(mutations, /slice\(0, HISTORY_LIMIT\)/, 'Mutações do Cofre não podem descartar fichas por quantidade.');
 assert.doesNotMatch(mutations, /\bHISTORY_LIMIT\b/, 'Import legado do teto não pode permanecer sem uso.');
+for (const relative of legacyVaultSurfaces) {
+  const source = read(relative);
+  assert.doesNotMatch(source, /\.slice\(0,\s*HISTORY_LIMIT\)/, `${relative} não pode reintroduzir poda por HISTORY_LIMIT.`);
+  assert.doesNotMatch(source, /\bHISTORY_LIMIT\b/, `${relative} não pode manter import/referência órfã a HISTORY_LIMIT.`);
+}
 assert.doesNotMatch(tactical, /\.slice\(0,\s*MAX_TACTICAL_SEQUENCE_PROJECTS\)/, 'Tactical Studio não pode podar projetos por quantidade.');
 assert.doesNotMatch(squad, /source\.players[\s\S]{0,160}\.slice\(0,\s*500\)|source\.trials[\s\S]{0,160}\.slice\(0,\s*100\)/, 'Mapeamento não pode podar jogadores/testes por quantidade.');
 assert.match(squad, /String\('x'\)\.slice\(0, 100\)/, 'R418 deve preservar limites de segurança de texto.');
