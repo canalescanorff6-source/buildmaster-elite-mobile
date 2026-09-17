@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyR424Fix2CiConvergence } from './apply-r424-fix2-ci-convergence.mjs';
+import { applyR424Fix3CiConvergence } from './apply-r424-fix3-ci-convergence.mjs';
 
-const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r424-fix2';
+const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r424-fix3';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(process.env.BUILDMASTER_PROJECT_ROOT || path.join(here, '..'));
 const checkOnly = process.argv.includes('--check');
@@ -69,7 +70,9 @@ const validateRoot = (config) => {
   if (config?.files !== undefined) failures.push('files de fixture não podem existir no tsconfig raiz');
   if (config?.compilerOptions?.baseUrl !== undefined) failures.push('baseUrl de fixture não pode existir no tsconfig raiz');
   if (hasFixturePath(config?.compilerOptions?.paths)) failures.push('paths do tsconfig raiz apontam para fixtures');
-  if (JSON.stringify(config?.compilerOptions?.paths ?? {}) !== JSON.stringify(canonicalRoot.compilerOptions.paths)) failures.push('alias @/* do tsconfig raiz está incorreto');
+  if (JSON.stringify(config?.compilerOptions?.paths ?? {}) !== JSON.stringify(canonicalRoot.compilerOptions.paths)) {
+    failures.push('alias @/* do tsconfig raiz está incorreto');
+  }
   return failures;
 };
 
@@ -83,11 +86,23 @@ const validateApp = (config) => {
   return failures;
 };
 
-if (!checkOnly) {
+// R424-fix3: fixtures de autorreparo testam apenas tsconfig e não carregam a árvore completa do app.
+// Convergência R419-R426 só é executada quando o root realmente é o projeto BuildMaster completo.
+const fullBuildMasterProject = fs.existsSync(path.join(projectRoot, 'scripts', 'repair-critical-routes.mjs'))
+  && fs.existsSync(path.join(projectRoot, 'src', 'lib', 'analyzerDomain.ts'))
+  && fs.existsSync(path.join(projectRoot, 'tests', 'v40-80-r133-structured-evidence-boundary-regression.ts'));
+
+if (!checkOnly && fullBuildMasterProject) {
   const convergence = applyR424Fix2CiConvergence(projectRoot);
   console.log(convergence.changed
     ? `R424-fix2 pré-CI convergiu ${convergence.patched.length} arquivo(s).`
     : 'R424-fix2 pré-CI já estava convergida.');
+  const fix3 = applyR424Fix3CiConvergence(projectRoot);
+  console.log(fix3.changed
+    ? `R424-fix3 pré-CI convergiu ${fix3.patched.length} contrato(s).`
+    : 'R424-fix3 pré-CI já estava convergida.');
+} else if (!checkOnly) {
+  console.log('Fixture TypeScript isolada: convergência do aplicativo não é necessária.');
 }
 
 const initialFailures = [
