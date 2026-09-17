@@ -5,8 +5,9 @@ import { applyR424Fix2CiConvergence } from './apply-r424-fix2-ci-convergence.mjs
 import { applyR424Fix3CiConvergence } from './apply-r424-fix3-ci-convergence.mjs';
 import { applyR427BuildPipelineRepair } from './apply-r427-build-pipeline-repair.mjs';
 import { applyR428R424R425FixtureRepair } from './apply-r428-r424-r425-fixture-repair.mjs';
+import { applyR429R154SemanticConvergenceRepair } from './apply-r429-r154-semantic-convergence-repair.mjs';
 
-const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r428';
+const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r429';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(process.env.BUILDMASTER_PROJECT_ROOT || path.join(here, '..'));
 const checkOnly = process.argv.includes('--check');
@@ -111,6 +112,10 @@ if (!checkOnly && fullBuildMasterProject) {
   console.log(r428.changed
     ? `R428 pré-CI corrigiu ${r428.patched.length} fixture(s) R424/R425.`
     : 'R428 pré-CI: fixture R424/R425 já estava convergida.');
+  const r429 = applyR429R154SemanticConvergenceRepair(projectRoot);
+  console.log(r429.changed
+    ? `R429 pré-CI corrigiu ${r429.patched.length} contrato(s) R154/R424-fix2.`
+    : 'R429 pré-CI: contrato R154/R424-fix2 já estava convergido.');
 } else if (!checkOnly) {
   console.log('Fixture TypeScript isolada: convergência do aplicativo não é necessária.');
 }
