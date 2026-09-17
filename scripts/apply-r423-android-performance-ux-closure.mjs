@@ -99,8 +99,9 @@ function sourceFiles(root) {
   return output;
 }
 
-function pruneRetiredSourceR423(root, patched) {
+export function pruneRetiredSourceR423(root, patched = []) {
   let bytes = 0;
+  const preserved = [];
   const allSources = sourceFiles(root);
   for (const candidate of RETIRED_SOURCE_CANDIDATES_R423) {
     const legacy = path.resolve(root, candidate.path);
@@ -112,13 +113,14 @@ function pruneRetiredSourceR423(root, patched) {
       catch { return false; }
     });
     if (references.length) {
-      throw new Error(`R423: fonte legado ainda referenciado e não pode ser podado: ${candidate.path} <- ${references.map((file) => path.relative(root, file)).join(', ')}`);
+      preserved.push({ path: candidate.path, references: references.map((file) => path.relative(root, file).replaceAll('\\\\', '/')) });
+      continue;
     }
     bytes += fs.statSync(legacy).size;
     fs.unlinkSync(legacy);
     patched.push(candidate.path);
   }
-  return bytes;
+  return { bytes, preserved };
 }
 
 export function applyR423AndroidPerformanceUxClosure(rootDirectory = process.cwd()) {
@@ -130,19 +132,22 @@ export function applyR423AndroidPerformanceUxClosure(rootDirectory = process.cwd
     const next = key === 'bootstrap' ? patchBootstrap(source) : key === 'reader' ? patchReader(source) : patchConvergence(source);
     changed = writeIfChanged(file, source, next, patched) || changed;
   }
-  const retiredSourceBytes = pruneRetiredSourceR423(root, patched);
-  changed = retiredSourceBytes > 0 || changed;
+  const retired = pruneRetiredSourceR423(root, patched);
+  changed = retired.bytes > 0 || changed;
   const bootstrap = fs.readFileSync(path.resolve(root, TARGETS.bootstrap), 'utf8');
   const reader = fs.readFileSync(path.resolve(root, TARGETS.reader), 'utf8');
   const convergence = fs.readFileSync(path.resolve(root, TARGETS.convergence), 'utf8');
   for (const marker of ['app-resume', 'app-background', "stage: 'app-lifecycle'"]) if (!bootstrap.includes(marker)) throw new Error(`R423: lifecycle incompleto: ${marker}`);
   for (const marker of ['total-read-complete', 'total-read-failed', '90_000', 'performance.now()']) if (!reader.includes(marker)) throw new Error(`R423: medição de leitura incompleta: ${marker}`);
   for (const marker of ['appUpdatesFallbackReleaseR423', 'appUpdatesFallbackNativeR423']) if (!convergence.includes(marker)) throw new Error(`R423: preflight de versão incompleto: ${marker}`);
-  return { changed, patched, lifecycleDiagnostics: true, scanTiming: true, versionConvergence: true, retiredSourceBytes };
+  return { changed, patched, lifecycleDiagnostics: true, scanTiming: true, versionConvergence: true, retiredSourceBytes: retired.bytes, preservedActiveLegacy: retired.preserved };
 }
 
 const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
 if (invoked === import.meta.url) {
   const result = applyR423AndroidPerformanceUxClosure(process.cwd());
+  if (result.preservedActiveLegacy.length) {
+    console.log(`R423-fix1: ${result.preservedActiveLegacy.length} fonte(s) legado ativo(s) preservado(s); source budget será validado pelo gate dedicado.`);
+  }
   console.log(result.changed ? `R423 aplicada em ${result.patched.length} arquivo(s).` : 'R423: Android/performance/UX já estavam convergidos.');
 }

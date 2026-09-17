@@ -9,8 +9,8 @@ const reader = read('src/components/TotalCardReaderPanel.tsx');
 const result = read('src/components/result/ResultWorkspace.tsx');
 const updater = read('src/components/UpdateCenterPanel.tsx');
 const convergence = read('scripts/check-android-release-convergence-r183.mjs');
-const retiredFormationRoleLab = 'src/components/FormationRoleLabPanel.tsx';
-const currentFormationRoleLab = 'src/components/FormationRoleLabPanelV4080.tsx';
+const legacyPath = 'src/components/FormationRoleLabPanel.tsx';
+const currentPath = 'src/components/FormationRoleLabPanelV4080.tsx';
 
 const releaseFallback = (appUpdates.match(/APP_RELEASE_VERSION\s*=\s*[^\n]*\|\|\s*'([^']+)'/) || [])[1] || '';
 const nativeFallback = (appUpdates.match(/APP_NATIVE_VERSION\s*=\s*[^\n]*\|\|\s*'([^']+)'/) || [])[1] || '';
@@ -18,8 +18,10 @@ assert.equal(releaseFallback, String(pkg.version), 'R423: versão package e fall
 assert.equal(nativeFallback, String(pkg.version), 'R423: versão package e fallback nativo precisam ser idênticas.');
 assert.match(convergence, /appUpdatesFallbackReleaseR423/, 'R423: preflight Android precisa validar a versão do appUpdates contra package.json.');
 assert.match(convergence, /appUpdatesFallbackNativeR423/, 'R423: preflight Android precisa validar a versão nativa contra package.json.');
-assert.equal(fs.existsSync(retiredFormationRoleLab), false, 'R423: painel de formação legado sem uso deve sair do source budget.');
-assert.equal(fs.existsSync(currentFormationRoleLab), true, 'R423: substituto V4080 precisa permanecer presente.');
+assert.equal(fs.existsSync(currentPath), true, 'R423: substituto V4080 precisa permanecer presente.');
+const current = read(currentPath);
+const needsLegacy = /from ['"]@\/components\/FormationRoleLabPanel['"]/.test(current) || /<LegacyFormationRoleLabPanel\b/.test(current);
+assert.equal(fs.existsSync(legacyPath), needsLegacy, 'R423-fix1: fonte legado deve existir exatamente enquanto o V4080 depender dele.');
 
 assert.match(bootstrap, /visibilitychange/, 'R423: lifecycle precisa observar retorno/background da WebView.');
 assert.match(bootstrap, /app-resume/, 'R423: retorno ao foreground precisa ficar diagnosticável.');
@@ -37,9 +39,7 @@ assert.match(reader, /decoding="async"/, 'R423: decode de preview deve permanece
 for (const marker of ['Pontos usados', 'Disponíveis', 'trainingPointsRemaining', 'Top 5', 'Ímpeto']) {
   assert.ok(result.includes(marker), `R423: ficha final precisa manter informação crítica visível: ${marker}`);
 }
-
 for (const marker of ['expectedPackageName', 'expectedVersionCode', 'expectedVersionName', 'visibilitychange']) {
   assert.ok(updater.includes(marker), `R423: fluxo de atualização perdeu proteção/retomada: ${marker}`);
 }
-
-console.log('R423 aprovada: lifecycle diagnosticável, leitura cronometrada, versão Android coerente e UX/integridade final preservadas.');
+console.log('R423-fix1 aprovada: legado ativo é preservado; poda só ocorre quando não existe dependência real.');
