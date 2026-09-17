@@ -15,7 +15,7 @@ assert.doesNotMatch(store, /\.slice\(0,\s*HISTORY_LIMIT\)/);
 assert.doesNotMatch(store, /\.slice\(0,\s*40\)/);
 assert.doesNotMatch(store, /Math\.min\([^\n]{0,80},\s*40\)/);
 assert.match(store, /const snapshot = \[\.\.\.items\]/);
-assert.match(startup, /HISTORY_LIMIT_R200 = Number\.MAX_SAFE_INTEGER/);
+assert.match(startup, /HISTORY_LIMIT_R200\s*=\s*Number\.MAX_SAFE_INTEGER\b/);
 
 assert.doesNotMatch(backup, /\bHISTORY_LIMIT\b/);
 assert.match(backup, /verifyRestoredHistoryR420/);

@@ -127,6 +127,17 @@ if (r420Regression.status !== 0) {
   process.exit(r420Regression.status || 1);
 }
 if (r420Output) console.log(r420Output);
+const r420Fix1Regression = spawnSync(process.execPath, ['tests/v40-80-r420-fix1-history-limit-normalization-regression.mjs'], {
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe']
+});
+const r420Fix1Output = `${r420Fix1Regression.stdout || ''}${r420Fix1Regression.stderr || ''}`.trim();
+if (r420Fix1Regression.status !== 0) {
+  console.error('R151/R420-fix1: normalização semântica do HISTORY_LIMIT_R200 falhou.');
+  if (r420Fix1Output) console.error(r420Fix1Output);
+  process.exit(r420Fix1Regression.status || 1);
+}
+if (r420Fix1Output) console.log(r420Fix1Output);
 const r421Regression = spawnSync(process.execPath, ['tests/v40-80-r421-squad-video-tactical-closure-regression.mjs'], {
   encoding: 'utf8',
   stdio: ['ignore', 'pipe', 'pipe']

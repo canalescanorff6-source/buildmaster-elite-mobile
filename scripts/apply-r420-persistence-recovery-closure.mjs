@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R420_PERSISTENCE_RECOVERY_CLOSURE_VERSION = '40.80-r420-persistence-recovery-closure-v1';
+export const R420_PERSISTENCE_RECOVERY_CLOSURE_VERSION = '40.80-r420-fix1-history-limit-normalization-v2';
 
 const FILES = {
   store: 'src/modules/vault/cardHistoryStore.ts',
@@ -66,11 +66,20 @@ function patchStore(source) {
   return next;
 }
 
+export function normalizeR200HistoryLimitR420(source) {
+  const canonical = 'export const HISTORY_LIMIT_R200 = Number.MAX_SAFE_INTEGER; // R420: símbolo legado sem teto lógico.';
+  const pattern = /export const HISTORY_LIMIT_R200\s*=\s*([^;]+);[^\n]*/;
+  const match = source.match(pattern);
+  if (!match) throw new Error('R420: declaração HISTORY_LIMIT_R200 ausente.');
+  const observed = String(match[1] || '').trim();
+  if (!['200', 'Infinity', 'Number.MAX_SAFE_INTEGER'].includes(observed)) {
+    throw new Error(`R420: valor inesperado de HISTORY_LIMIT_R200: ${observed}.`);
+  }
+  return source.replace(pattern, canonical);
+}
+
 function patchStartup(source) {
-  return source.replace(
-    /export const HISTORY_LIMIT_R200 = 200;/,
-    'export const HISTORY_LIMIT_R200 = Number.MAX_SAFE_INTEGER; // R420: símbolo legado sem teto lógico.'
-  );
+  return normalizeR200HistoryLimitR420(source);
 }
 
 function patchSafety(source) {
@@ -271,7 +280,7 @@ function validate(root) {
     [store.includes('R420_UNBOUNDED_CANONICAL_VAULT'), 'marcador canônico do Cofre'],
     [!/.slice\(0,\s*HISTORY_LIMIT\)/.test(store), 'ausência de HISTORY_LIMIT ativo'],
     [!/.slice\(0,\s*40\)/.test(store), 'ausência de fallback truncado em 40'],
-    [startup.includes('HISTORY_LIMIT_R200 = Number.MAX_SAFE_INTEGER'), 'símbolo R200 sem teto'],
+    [/HISTORY_LIMIT_R200\s*=\s*Number\.MAX_SAFE_INTEGER\b/.test(startup), 'símbolo R200 sem teto'],
     [backup.includes('verifyRestoredHistoryR420'), 'verificador pós-restore'],
     [!(/\bHISTORY_LIMIT\b/.test(backup)), 'backup sem HISTORY_LIMIT'],
     [/schema > CURRENT_DATA_SCHEMA[\s\S]{0,500}valid:\s*false/.test(safety), 'schema futuro fail-closed'],
