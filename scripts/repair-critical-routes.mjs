@@ -4,6 +4,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { applyR414CiContractConvergence } from './apply-r414-ci-contract-convergence.mjs';
 import { applyR418UnboundedCapacity } from './apply-r418-unbounded-capacity.mjs';
 import { applyR418Fix2HistoricalCapacityContracts } from './apply-r418-fix2-historical-contracts.mjs';
+import { applyR419ReaderMasterEngineClosure } from './apply-r419-reader-master-engine-closure.mjs';
+import { applyR420PersistenceRecoveryClosure } from './apply-r420-persistence-recovery-closure.mjs';
+import { applyR421SquadVideoTacticalClosure } from './apply-r421-squad-video-tactical-closure.mjs';
+import { applyR422SecurityObservabilityClosure } from './apply-r422-security-observability-closure.mjs';
+import { applyR423AndroidPerformanceUxClosure } from './apply-r423-android-performance-ux-closure.mjs';
+import { applyR425SupabaseSecurityChain } from './apply-r425-supabase-security-chain.mjs';
+import { assertR426SupabaseForwardSecurityMigration } from './check-r426-supabase-forward-security-migration.mjs';
+import { assertR424CodeClosure } from './audit-r424-final-requirements-closure.mjs';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_FILE = path.join(MODULE_DIR, 'templates', 'critical-routes', 'root-page.tsx.txt');
@@ -127,6 +135,46 @@ if (invokedAsCli) {
     } else {
       console.log('R418-fix2: contratos históricos de capacidade já estão convergidos.');
     }
+    const r419 = applyR419ReaderMasterEngineClosure(options.projectRoot);
+    if (r419.changed) {
+      console.warn(`::warning::R419 convergiu leitor e Motor Mestre fail-closed (${r419.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R419: leitor e Motor Mestre já estão convergidos.');
+    }
+    const r420 = applyR420PersistenceRecoveryClosure(options.projectRoot);
+    if (r420.changed) {
+      console.warn(`::warning::R420 convergiu persistência, recuperação e backup (${r420.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R420: persistência, recuperação e backup já estão convergidos.');
+    }
+    const r421 = applyR421SquadVideoTacticalClosure(options.projectRoot);
+    if (r421.changed) {
+      console.warn(`::warning::R421 convergiu elenco, vídeo revisável e Estúdio Tático (${r421.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R421: elenco, vídeo revisável e Estúdio Tático já estão convergidos.');
+    }
+    const r422 = applyR422SecurityObservabilityClosure(options.projectRoot);
+    if (r422.changed) {
+      console.warn(`::warning::R422 convergiu segurança fail-closed e observabilidade (${r422.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R422: segurança fail-closed e observabilidade já estão convergidas.');
+    }
+    const r423 = applyR423AndroidPerformanceUxClosure(options.projectRoot);
+    if (r423.changed) {
+      console.warn(`::warning::R423 convergiu Android, medição de leitura e UX final (${r423.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R423: Android, medição de leitura e UX final já estão convergidos.');
+    }
+    const r425 = applyR425SupabaseSecurityChain(options.projectRoot);
+    if (r425.changed) {
+      console.warn(`::warning::R425 convergiu cadeia Supabase estática fail-closed (${r425.patched.length} arquivo(s)).`);
+    } else {
+      console.log('R425: cadeia Supabase estática já está convergida.');
+    }
+    const r426 = assertR426SupabaseForwardSecurityMigration(options.projectRoot);
+    console.log(`R426: migration forward-only validada (${r426.migration}).`);
+    const r424 = assertR424CodeClosure(options.projectRoot);
+    console.log(`R424: auditoria estrutural aprovada (${r424.counts.ENTREGUE} requisito(s) de código entregues; dependências externas permanecem explícitas).`);
     const result = repairCriticalRoutes(options.projectRoot, { checkOnly: options.checkOnly });
     if (result.repaired) {
       console.warn(`::warning::Rota inicial restaurada automaticamente (${result.reason}).`);
