@@ -3,8 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyR424Fix2CiConvergence } from './apply-r424-fix2-ci-convergence.mjs';
 import { applyR424Fix3CiConvergence } from './apply-r424-fix3-ci-convergence.mjs';
+import { applyR427BuildPipelineRepair } from './apply-r427-build-pipeline-repair.mjs';
 
-const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r424-fix3';
+const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r427';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(process.env.BUILDMASTER_PROJECT_ROOT || path.join(here, '..'));
 const checkOnly = process.argv.includes('--check');
@@ -101,6 +102,10 @@ if (!checkOnly && fullBuildMasterProject) {
   console.log(fix3.changed
     ? `R424-fix3 pré-CI convergiu ${fix3.patched.length} contrato(s).`
     : 'R424-fix3 pré-CI já estava convergida.');
+  const r427 = applyR427BuildPipelineRepair(projectRoot);
+  console.log(r427.changed
+    ? `R427 pré-CI corrigiu ${r427.patched.length} contrato(s) do pipeline.`
+    : 'R427 pré-CI: pipeline já estava convergido.');
 } else if (!checkOnly) {
   console.log('Fixture TypeScript isolada: convergência do aplicativo não é necessária.');
 }
