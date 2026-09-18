@@ -7,8 +7,9 @@ import { applyR427BuildPipelineRepair } from './apply-r427-build-pipeline-repair
 import { applyR428R424R425FixtureRepair } from './apply-r428-r424-r425-fixture-repair.mjs';
 import { applyR429R154SemanticConvergenceRepair } from './apply-r429-r154-semantic-convergence-repair.mjs';
 import { applyR432SourceBudgetConvergence } from './apply-r432-source-budget-convergence.mjs';
+import { applyR434R200StartupBudgetConvergence } from './apply-r434-r200-startup-budget-convergence.mjs';
 
-const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r432';
+const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r434';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(process.env.BUILDMASTER_PROJECT_ROOT || path.join(here, '..'));
 const checkOnly = process.argv.includes('--check');
@@ -121,6 +122,10 @@ if (!checkOnly && fullBuildMasterProject) {
   console.log(r432.changed
     ? `R432 pré-CI convergiu ${r432.patched.length} contrato(s) de orçamento-fonte.`
     : 'R432 pré-CI: orçamento-fonte já estava convergido.');
+  const r434 = applyR434R200StartupBudgetConvergence(projectRoot);
+  console.log(r434.changed
+    ? `R434 pré-CI convergiu ${r434.patched.length} contrato(s) do orçamento de startup R200.`
+    : 'R434 pré-CI: orçamento de startup R200 já estava convergido.');
 } else if (!checkOnly) {
   console.log('Fixture TypeScript isolada: convergência do aplicativo não é necessária.');
 }

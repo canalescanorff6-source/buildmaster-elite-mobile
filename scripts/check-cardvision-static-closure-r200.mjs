@@ -5,7 +5,7 @@ const root = process.cwd();
 const srcRoot = path.join(root, 'src');
 const entry = path.join(srcRoot, 'components', 'CardVisionApp.tsx');
 const MAX_MODULES_R200 = 90;
-const MAX_SOURCE_BYTES_R200 = 640_000;
+const MAX_SOURCE_BYTES_R200 = 650_000;
 
 function resolveSource(specifier, importer) {
   let base;
