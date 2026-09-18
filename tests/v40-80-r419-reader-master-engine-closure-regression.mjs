@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-master-engine-closure.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 const budget = read('src/modules/builds/pointBudget.ts');
@@ -10,6 +11,7 @@ const helperPath='src/modules/analysis/cardEvidenceAuthorityR419.ts';
 const helper = fs.existsSync(helperPath) ? read(helperPath) : '';
 assert.ok(fs.existsSync(helperPath), 'R419 precisa materializar a autoridade canônica de evidência.');
 const r417 = read('scripts/apply-r417-autonomous-card-vault.mjs');
+const r192Closure = read('scripts/check-result-workspace-static-closure-r192.mjs');
 
 const repair = read('scripts/repair-critical-routes.mjs');
 const typecheck = read('scripts/check-source-types-r151.mjs');
@@ -46,5 +48,22 @@ assert.match(r417, /topPositions:top\.map/);
 assert.match(r417, /assert\.deepEqual\(cb\.training, dmf\.training/);
 assert.match(r417, /assert\.deepEqual\(cb\.recommendedSkills, dmf\.recommendedSkills/);
 assert.match(r417, /assert\.deepEqual\(cb\.recommendedImpetos, dmf\.recommendedImpetos/);
+assert.match(r417, /MAX_MODULES_R192 = 125;[\s\S]{0,120}MAX_MODULES_R192 = 127;/,
+  'R433: R417 deve continuar contabilizando apenas os dois módulos R416/R417.');
 
-console.log('R419 aprovado: orçamento fail-closed, evidência crítica explícita e autoridade permanente R417/Clean Slate preservada.');
+assert.match(r192Closure, /const MAX_MODULES_R192 = 128;/,
+  'R433: depois do R419, R192 precisa contabilizar o helper estático de evidência como 128º módulo.');
+for (const value of [125, 127, 128]) {
+  const input = `const MAX_MODULES_R192 = ${value};\nconst MAX_SOURCE_BYTES_R192 = 2_135_000;`;
+  const output = convergeR192ModuleBudgetR419(input);
+  assert.match(output, /const MAX_MODULES_R192 = 128;/);
+  assert.match(output, /const MAX_SOURCE_BYTES_R192 = 2_135_000;/,
+    'R433: correção do contador não pode alterar o orçamento por bytes.');
+}
+assert.throws(
+  () => convergeR192ModuleBudgetR419('const MAX_MODULES_R192 = 130;'),
+  /contrato de módulos R192 inesperado/,
+  'R433: contador desconhecido deve falhar fechado em vez de ampliar o teto silenciosamente.',
+);
+
+console.log('R419/R433 aprovado: orçamento fail-closed, evidência crítica explícita e closure R192 exata em 128 módulos.');

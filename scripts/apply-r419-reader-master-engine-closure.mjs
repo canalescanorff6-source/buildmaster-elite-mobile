@@ -10,6 +10,7 @@ const FILES = {
   domain: 'src/lib/analyzerDomain.ts',
   clean: 'src/lib/cleanSlatePerformance2027V4080R119.ts',
   helper: 'src/modules/analysis/cardEvidenceAuthorityR419.ts',
+  r192Closure: 'scripts/check-result-workspace-static-closure-r192.mjs',
 };
 
 function readRequired(root, relative) {
@@ -174,6 +175,15 @@ function patchDomain(source) {
   return next;
 }
 
+export function convergeR192ModuleBudgetR419(source) {
+  const finalMarker = 'const MAX_MODULES_R192 = 128;';
+  if (source.includes(finalMarker)) return source;
+  for (const legacy of ['const MAX_MODULES_R192 = 127;', 'const MAX_MODULES_R192 = 125;']) {
+    if (source.includes(legacy)) return source.replace(legacy, finalMarker);
+  }
+  throw new Error('R419: contrato de módulos R192 inesperado; esperado 125, 127 ou 128.');
+}
+
 function patchClean(source) {
   let next = source;
   if (!next.includes("import { applyCriticalEvidenceR419 } from '../modules/analysis/cardEvidenceAuthorityR419';")) {
@@ -227,17 +237,24 @@ export function applyR419ReaderMasterEngineClosure(rootDirectory = process.cwd()
     changed = true;
   }
 
+  // R433: R417 reserva dois módulos (125→127); o helper R419 adiciona o 128º módulo.
+  const r192 = readRequired(root, FILES.r192Closure);
+  const r192Next = convergeR192ModuleBudgetR419(r192.source);
+  changed = writeIfChanged(r192.file, r192.source, r192Next, patched, FILES.r192Closure) || changed;
+
   const finalBudget = fs.readFileSync(budget.file, 'utf8');
   const finalOptimizer = fs.readFileSync(optimizer.file, 'utf8');
   const finalDomain = fs.readFileSync(domain.file, 'utf8');
   const finalClean = fs.readFileSync(clean.file, 'utf8');
+  const finalR192 = fs.readFileSync(r192.file, 'utf8');
   if (/return\s+SAFE_PLAYER_TRAINING_BUDGET\s*;/.test(finalBudget)) throw new Error('R419: pointBudget ainda fabrica fallback.');
   if (/return\s+SAFE_DEFAULT_TRAINING_BUDGET\s*;/.test(finalOptimizer)) throw new Error('R419: optimizer ainda fabrica fallback.');
   if (!finalDomain.includes('trainingBudgetStateR419?: CardEvidenceStateR419;')) throw new Error('R419: estado de evidência não entrou no domínio.');
   if (!finalClean.includes("budgetEvidenceStateR419!=='TRUSTED'")) throw new Error('R419: Clean Slate não bloqueia PP não confiável.');
   if (!/ignoresOverall:true/.test(finalClean)) throw new Error('R419: guard Overall/GER ausente.');
+  if (!finalR192.includes('const MAX_MODULES_R192 = 128;')) throw new Error('R419/R433: R192 não contabiliza o helper estático de evidência R419.');
 
-  return { changed, patched, version: R419_READER_MASTER_ENGINE_VERSION, fabricatedBudgetFallback: false, failClosedEvidence: true };
+  return { changed, patched, version: R419_READER_MASTER_ENGINE_VERSION, fabricatedBudgetFallback: false, failClosedEvidence: true, r192ClosureModules: 128 };
 }
 
 const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
