@@ -102,7 +102,9 @@ export function deriveTrainingBudgetEvidenceR419(parsed: ParsedCard): TrainingBu
 
 export function applyCriticalEvidenceR419(parsed: ParsedCard): ParsedCard {
   const budget = deriveTrainingBudgetEvidenceR419(parsed);
-  const attributeCount = Number(parsed.evidence?.attributeCount ?? Object.keys(parsed.attributes ?? {}).length);
+  const evidenceAttributeCount = Number(parsed.evidence?.attributeCount ?? 0);
+  const actualAttributeCount = Object.values(parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length;
+  const attributeCount = Math.max(Number.isFinite(evidenceAttributeCount) ? evidenceAttributeCount : 0, actualAttributeCount);
   const criticalState: CardEvidenceStateR419 = budget.state !== 'TRUSTED'
     ? budget.state
     : attributeCount > 0
@@ -197,8 +199,10 @@ function patchClean(source) {
   else if (!next.includes('const parsed:ParsedCard=applyCriticalEvidenceR419(')) throw new Error('R419: clone protegido do Clean Slate não encontrado.');
 
   const oldGate = "  if(!budget || attributeCount<minimum) {";
-  const newGate = "  const budgetEvidenceStateR419=parsed.evidence?.trainingBudgetStateR419??'MISSING';\n  if(!budget || budgetEvidenceStateR419!=='TRUSTED' || attributeCount<minimum) {";
+  const r452Gate = "  if(!budget) {";
+  const newGate = "  const budgetEvidenceStateR419=parsed.evidence?.trainingBudgetStateR419??'MISSING';\n  if(!budget || budgetEvidenceStateR419!=='TRUSTED') {";
   if (next.includes(oldGate)) next = next.replace(oldGate, newGate);
+  else if (next.includes(r452Gate) && next.includes('R452: ficha provisória')) next = next.replace(r452Gate, newGate);
   else if (!next.includes("budgetEvidenceStateR419!=='TRUSTED'")) throw new Error('R419: gate de orçamento Clean Slate ausente.');
 
   next = next.replace(
