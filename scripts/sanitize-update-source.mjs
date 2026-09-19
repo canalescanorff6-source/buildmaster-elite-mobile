@@ -69,8 +69,7 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
     const r413=applyProgressiveVaultRenderR413(root);
     const r414=applyIndexedVaultQueryR414(root);
     console.log(`v40.80 r449: sweep completo aplicado (${r449.patched.length} arquivo(s)); ordem R448 e convergências anteriores preservadas.`);
-    return {modernTree:true,
-      sourcePatched:r449.changed||r448.changed||r447.changed||r446.changed||r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged||r407.sourceChanged||r408.sourceChanged||r409.sourceChanged||r410.sourceChanged||r411.sourceChanged||r412.sourceChanged||r413.sourceChanged||r414.sourceChanged,
+    return {modernTree:true,sourcePatched:r449.changed||r448.changed||r447.changed||r446.changed||r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged||r407.sourceChanged||r408.sourceChanged||r409.sourceChanged||r410.sourceChanged||r411.sourceChanged||r412.sourceChanged||r413.sourceChanged||r414.sourceChanged,
       r449,r448,r447,r446,r404,r405,r406,r406fix2,r406fix3,r406fix4,r406fix5,r406fix7,r407,r408,r409,r410,r411,r412,r413,r414
     };
   }
