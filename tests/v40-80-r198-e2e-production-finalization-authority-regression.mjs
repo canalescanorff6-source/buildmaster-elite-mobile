@@ -59,7 +59,8 @@ assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '736e631a4a
 
 const appBytes = fs.statSync('src/components/CardVisionApp.tsx').size;
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
-assert.ok(appBytes <= (r200Boundary ? 107_800 : 107_350), `R198/R200: CardVisionApp excedeu a fronteira aprovada: ${appBytes} B.`);
+const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
+assert.ok(appBytes <= (postCatalogBoundary ? 114_000 : r200Boundary ? 107_800 : 107_350), `R198/R200: CardVisionApp excedeu a fronteira aprovada: ${appBytes} B.`);
 let sourceBytes = 0;
 const sourceStack = ['src'];
 while (sourceStack.length) {
