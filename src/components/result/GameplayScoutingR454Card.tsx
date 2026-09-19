@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { BrainCircuit, CheckCircle2, Database, MessageSquareText, ShieldAlert, Sparkles } from 'lucide-react';
+import { BrainCircuit, CheckCircle2, Database, MessageSquare, ShieldAlert, Sparkles } from 'lucide-react';
 import type { AnalysisResult } from '@/lib/analyzer';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import {
@@ -107,7 +107,7 @@ export function GameplayScoutingR454Card({ result }: { result: AnalysisResult })
       {fit.warnings.map((item) => <p className="panel-note" key={item}>⚠ {item}</p>)}
 
       <div className="skill-check-card">
-        <strong><MessageSquareText size={16} /> Meus testes</strong>
+        <strong><MessageSquare size={16} /> Meus testes</strong>
         <p className="panel-note">Registre observações como “essa carta está pesada”, “intercepta muito”, “essa dupla funcionou” ou “some do jogo”. Isso entra como USER_GAMEPLAY e não sobrescreve dados oficiais.</p>
         <textarea
           value={feedback}
