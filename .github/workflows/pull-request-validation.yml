@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   validate:
-    name: TypeScript, R454 e build
+    name: TypeScript, R454-R455 e build
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -37,6 +37,9 @@ jobs:
 
       - name: Regressões R454
         run: npm run test:r454
+
+      - name: Regressões R455
+        run: npm run test:r455
 
       - name: Build de produção
         env:
