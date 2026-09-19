@@ -31,6 +31,7 @@ const approvedCreateCallers = new Set([
   'src/modules/card-reader/readerAnalysisRuntimeR163.ts',   // OCR único/total
   'src/modules/vault/cardHistoryStore.ts',            // migração controlada de legado
   'src/modules/analysis/productionOrchestratorR138.ts',
+  'src/modules/card-catalog/masterCardAnalysisRequestR438.ts', // catálogo mestre completo entra pela mesma autoridade R138
 ]);
 const createCallers = [];
 const stack = ['src'];
