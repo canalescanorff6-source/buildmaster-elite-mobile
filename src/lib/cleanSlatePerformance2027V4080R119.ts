@@ -22,7 +22,7 @@ import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from '
 import { inspectPlaystyleActivationR124 } from './efootball2027PhaseCatalogR124';
 import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 
-export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r453-partial-ficha-rebuild-authority-v1' as const;
+export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r125-role-aware-card-specific-performance-authority' as const;
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R143_VERSION = '40.80-r143-equivalent-state-cache-v1' as const;
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R144_VERSION = '40.80-r144-frontier-dedup-diagnostic-memo-v1' as const;
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R145_VERSION = '40.80-r145-incremental-state-key-beam-v1' as const;

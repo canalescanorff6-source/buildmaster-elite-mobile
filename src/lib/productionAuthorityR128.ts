@@ -3,7 +3,7 @@ import { TRAINING_KEYS } from './trainingPlanCore';
 import { cardEvidenceFingerprintR126, cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { isCurrentProductionAnalysisR126 } from './productionAuthorityR126';
 
-export const PRODUCTION_AUTHORITY_R128_VERSION = '40.80-r128-output-integrity-v1' as const;
+export const PRODUCTION_AUTHORITY_R128_VERSION = '40.80-r453-output-integrity-v2' as const;
 
 export type ProductionAuthorityR128 = {
   version: typeof PRODUCTION_AUTHORITY_R128_VERSION;

@@ -36,14 +36,12 @@ stale.training = emptyTraining();
 stale.trainingCost = emptyTraining();
 stale.trainingPointsUsed = 0;
 stale.trainingPointsRemaining = 56;
-stale.cleanSlate2027R119.version = '40.80-r125-role-aware-card-specific-performance-authority';
-stale.productionAuthorityR126.decisionEngine = '40.80-r125-role-aware-card-specific-performance-authority';
-
-// Simula uma ficha 0/56 que estava corretamente selada pela versão antiga.
-// O selo R128 sozinho não pode impedir a migração quando a autoridade de decisão mudou.
+// Simula uma ficha 0/56 que estava selada pela autoridade R128 anterior.
+// A política R453 precisa invalidar esse selo, mesmo quando identidade/evidência não mudaram.
 const staleSealed = sealProductionAuthorityR128(stale) as any;
+staleSealed.productionAuthorityR128.version = '40.80-r128-output-integrity-v1';
 const rebuilt = ensureProductionAnalysisR138(staleSealed) as any;
-assert.notEqual(rebuilt, staleSealed, 'A autoridade antiga precisa ser invalidada e recalculada.');
+assert.notEqual(rebuilt, staleSealed, 'O selo R128 anterior precisa ser invalidado e recalculado pela política R453.');
 assert.equal(rebuilt.trainingPointsUsed, 56);
 assert.equal(rebuilt.trainingPointsRemaining, 0);
 assert.ok(Object.values(rebuilt.training).some((value) => Number(value) > 0));
