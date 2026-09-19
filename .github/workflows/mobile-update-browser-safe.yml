@@ -6,6 +6,7 @@ on:
     paths:
       - 'mobile-update*.zip'
       - 'android-inbox/mobile-update*.zip'
+      - '.mobile-upload-trigger'
   workflow_dispatch:
 
 permissions:
@@ -53,6 +54,22 @@ jobs:
           repo = Path('repo').resolve()
           staging = Path('/tmp/buildmaster-mobile-update')
 
+          # ChatGPT-safe transport: a ZIP may arrive as base64 text chunks.
+          trigger = inbox / '.mobile-upload-trigger'
+          parts_dir = inbox / '.mobile-upload-parts'
+          reconstructed = inbox / 'mobile-update.zip'
+          if trigger.is_file():
+              parts = sorted(parts_dir.glob('part*.b64')) if parts_dir.is_dir() else []
+              if not parts:
+                  raise SystemExit('Trigger encontrado, mas nenhum chunk base64 foi enviado.')
+              import base64
+              payload = ''.join(p.read_text(encoding='utf-8').strip() for p in parts)
+              try:
+                  reconstructed.write_bytes(base64.b64decode(payload, validate=True))
+              except Exception as exc:
+                  raise SystemExit(f'Falha ao reconstruir mobile-update.zip: {exc}')
+              print(f'Pacote reconstruído de {len(parts)} chunks base64.')
+
           def accepted_name(path):
               pp = PurePosixPath(path)
               if len(pp.parts) == 1:
@@ -69,6 +86,8 @@ jobs:
               inbox / rel for rel in changed
               if accepted_name(rel) and (inbox / rel).is_file()
           ]
+          if trigger.is_file() and reconstructed.is_file():
+              changed_candidates = [reconstructed]
 
           if len(changed_candidates) == 1:
               archive = changed_candidates[0]
@@ -340,7 +359,15 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           if [ -f "$PACKAGE_REL" ]; then
-            git rm -- "$PACKAGE_REL"
+            git rm -- "$PACKAGE_REL" || true
+          fi
+          if [ -f ".mobile-upload-trigger" ]; then
+            git rm -- ".mobile-upload-trigger"
+          fi
+          if [ -d ".mobile-upload-parts" ]; then
+            git rm -r -- ".mobile-upload-parts"
+          fi
+          if [ -n "$(git status --porcelain)" ]; then
             git commit -m "[mobile-cleanup] remove pacote processado"
             git push origin HEAD:mobile-inbox
           fi
