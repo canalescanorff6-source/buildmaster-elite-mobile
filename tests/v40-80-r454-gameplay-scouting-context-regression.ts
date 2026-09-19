@@ -56,7 +56,7 @@ const lowFit = evaluateTacticalFitR454(lowOverall, { position: 'CF', formationId
 const highFit = evaluateTacticalFitR454(highOverall, { position: 'CF', formationId: '4-2-2-2', teamStyle: 'POSSE_DE_BOLA' });
 assert.equal(lowFit.score, highFit.score, 'GER/OVR não pode alterar Tactical Fit');
 
-const inactive = result({ parsed: { ...result().parsed, mainPosition: 'RB', positions: ['RB'], playstyle: 'Ala Produtivo', offensivePlaystyle: 'Ala Produtivo' } });
+const inactive = result({ parsed: { ...result().parsed, mainPosition: 'RB', positions: ['RB'], playstyle: 'Artilheiro', offensivePlaystyle: 'Artilheiro' } });
 const inactiveFit = evaluateTacticalFitR454(inactive, { position: 'RB', formationId: '4-2-2-2', teamStyle: 'POSSE_DE_BOLA' });
 assert.ok(inactiveFit.warnings.includes('ESTILO INATIVO NESTA POSIÇÃO'), 'estilo inativo precisa aparecer de forma explícita');
 
