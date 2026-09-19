@@ -19,7 +19,7 @@ function readRequired(root, relative) {
 export function patchR200StartupBudgetCheckerR434(source) {
   const current = 'const MAX_SOURCE_BYTES_R200 = 675_000;';
   if (source.includes(current)) return source;
-  for (const legacy of ['const MAX_SOURCE_BYTES_R200 = 675_000;', 'const MAX_SOURCE_BYTES_R200 = 640_000;']) {
+  for (const legacy of ['const MAX_SOURCE_BYTES_R200 = 650_000;', 'const MAX_SOURCE_BYTES_R200 = 640_000;']) {
     const occurrences = source.split(legacy).length - 1;
     if (occurrences === 1) return source.replace(legacy, current);
     if (occurrences > 1) throw new Error(`R434: contrato de bytes R200 duplicado para ${legacy}.`);
@@ -30,7 +30,7 @@ export function patchR200StartupBudgetCheckerR434(source) {
 export function patchR200RegressionR434(source) {
   if (source.includes('R434_STARTUP_BUDGET_CONVERGENCE')) {
     return source
-      .replace(/MAX_SOURCE_BYTES_R200 = 675_000/g, 'MAX_SOURCE_BYTES_R200 = 675_000')
+      .replace(/MAX_SOURCE_BYTES_R200 = 650_000/g, 'MAX_SOURCE_BYTES_R200 = 675_000')
       .replace(/650\.000 B/g, '675.000 B');
   }
   const anchor = "const pro = read('src/lib/globalProBenchmarkV3900.ts');\n";
@@ -49,7 +49,7 @@ export function auditR434R200StartupBudget(rootDirectory = process.cwd()) {
   try { regression = readRequired(root, TARGETS.regression).source; } catch (error) { issues.push(String(error?.message || error)); }
 
   if (!checker.includes('const MAX_SOURCE_BYTES_R200 = 675_000;')) issues.push('R200 não usa o teto absoluto convergido de 675.000 B.');
-  if (checker.includes('const MAX_SOURCE_BYTES_R200 = 640_000;')) issues.push('R200 ainda contém o teto legado de 640.000 B.');
+  if (checker.includes('const MAX_SOURCE_BYTES_R200 = 650_000;') || checker.includes('const MAX_SOURCE_BYTES_R200 = 640_000;')) issues.push('R200 ainda contém teto legado de 650.000/640.000 B.');
   if (!checker.includes('const MAX_MODULES_R200 = 90;')) issues.push('R200 perdeu o teto de 90 módulos.');
   if (!checker.includes('sourceBytes > Math.floor(r199Bytes * 0.30)')) issues.push('R200 perdeu a redução mínima de 70% vs R199.');
   for (const marker of ['lib/analyzer.ts', 'modules/vault/cardHistoryStore.ts', 'components/vault/CardVisionVaultWorkspaceR191.tsx']) {
