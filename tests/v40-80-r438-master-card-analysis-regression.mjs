@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync('src/modules/card-catalog/masterCardAnalysisRequestR438.ts','utf8');
+assert.match(source,/card\.completeness !== 'COMPLETE'/);
+assert.match(source,/buildMasterCardAnalysisRawTextR438/);
+assert.match(source,/createProductionAnalysisR138/);
+assert.match(source,/PONTOS TOTAIS/);
+assert.match(source,/HABILIDADES ESPECIAIS/);
+assert.match(source,/ÍMPETOS/);
+assert.match(source,/ATTRIBUTE_PT/);
+console.log('R438 análise aprovada: geração direta exige COMPLETE e usa exclusivamente createProductionAnalysisR138.');

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { planSquadMappingMigrationR438, squadMappingCardToMasterCardR438 } from '../src/modules/card-catalog/masterCardMigrationR438';
+const attrs:any={offensiveAwareness:90,ballControl:90,dribbling:90,tightPossession:90,lowPass:90,loftedPass:90,finishing:90,heading:90,placeKicking:90,curl:90,defensiveAwareness:50,defensiveEngagement:50,tackling:50,aggression:50,goalkeeperAwareness:40,goalkeeperCatching:40,goalkeeperParrying:40,goalkeeperReflexes:40,goalkeeperReach:40,speed:90,acceleration:90,kickingPower:90,jump:90,physicalContact:90,balance:90,stamina:90};
+const provisional:any={id:'a',name:'Cristiano Ronaldo',cardLabel:'Capa parcial',cardFingerprint:'map-evidence-a',playerFingerprint:'player-cr7',identityStatus:'provisional',mainPosition:'CF',positions:['CF'],positionRatings:{CF:107},playstyle:'Artilheiro',overall:107,level:32,attributes:attrs,skills:['Chute de primeira','Cabeçada'],impetos:['Finalização +3'],height:187,weight:83,age:41,physicalModel:{},imageRef:'squad-mapping:image:hash-a',portrait:'data:image/webp;base64,AAA',sourceHash:'hash-a',linkedHistoryId:null,confidence:92,profileCoverage:92};
+const canonical:any={...provisional,id:'b',cardLabel:'Show Time',cardFingerprint:'card-r126-cr7-showtime',identityStatus:'canonical',sourceHash:'hash-b',linkedHistoryId:'history-1'};
+const converted=squadMappingCardToMasterCardR438(provisional);
+assert.deepEqual(converted.nativeSkills,[]);
+assert.deepEqual(converted.unclassifiedSkills,['Chute de primeira','Cabeçada']);
+assert.equal(converted.imageRef,'squad-mapping:image:hash-a');
+const convertedCanonical=squadMappingCardToMasterCardR438(canonical);
+assert.deepEqual(convertedCanonical.nativeSkills,['Chute de primeira','Cabeçada']);
+const first=planSquadMappingMigrationR438([provisional,canonical]);
+const second=planSquadMappingMigrationR438([provisional,canonical],first.catalog,first.owned);
+assert.equal(first.catalog.length,2); assert.equal(first.owned.length,2);
+assert.equal(second.catalog.length,2); assert.equal(second.owned.length,2);
+console.log('R438 migração aprovada: plano idempotente, imagens preservadas e habilidades provisórias não promovidas silenciosamente.');

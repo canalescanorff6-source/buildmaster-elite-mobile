@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { createIntelligentImportStatsR439, recordIntelligentImportR439, intelligentImportSummaryR439 } from '../src/modules/card-catalog/intelligentImportStatsR439';
+let stats = createIntelligentImportStatsR439(222);
+for (let i=0;i<189;i++) stats = recordIntelligentImportR439(stats, 'catalog');
+for (let i=0;i<21;i++) stats = recordIntelligentImportR439(stats, 'ambiguous');
+for (let i=0;i<8;i++) stats = recordIntelligentImportR439(stats, 'full-ocr');
+for (let i=0;i<4;i++) stats = recordIntelligentImportR439(stats, 'review');
+assert.deepEqual(stats, { total:222, catalogResolved:189, ambiguous:21, fullOcr:8, review:4 });
+const text = intelligentImportSummaryR439(stats);
+assert.match(text, /189 identificada\(s\) sem OCR completo/);
+assert.match(text, /21 aguardando escolha de versão/);
+assert.match(text, /8 com OCR completo necessário/);
+assert.match(text, /4 para revisar identidade/);
+console.log('R439 estatísticas aprovadas: lote 222 distingue catálogo, ambiguidade, OCR completo e revisão.');

@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const storage=fs.readFileSync('src/modules/card-catalog/masterCardCatalogStorageR438.ts','utf8');
+const owned=fs.readFileSync('src/modules/card-catalog/ownedCardCollectionR438.ts','utf8');
+assert.match(storage,/runtimeList<MasterCardCatalogEntryR438>\('cards', Number\.MAX_SAFE_INTEGER\)/);
+assert.match(owned,/runtimeList<OwnedCardRecordR438>\('cards', Number\.MAX_SAFE_INTEGER\)/);
+assert.match(storage,/MASTER_CARD_PREFIX_R438 = 'master-card:v1:'/);
+assert.match(owned,/OWNED_CARD_PREFIX_R438 = 'owned-card:v1:'/);
+assert.doesNotMatch(storage,/slice\(0,\s*(?:120|500)\)/);
+assert.doesNotMatch(owned,/slice\(0,\s*(?:120|500)\)/);
+console.log('R438 storage aprovado: store cards separado, posse independente e sem teto artificial 120/500.');
