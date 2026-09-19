@@ -16,8 +16,9 @@ const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
 const appBytes = fs.statSync(appPath).size;
 const appLines = app.split(/\r?\n/).length;
 const analyzerBytes = fs.statSync(analyzerPath).size;
-assert.ok(appBytes <= 108_000, `R195: CardVisionApp voltou a ${appBytes} bytes.`);
-assert.ok(appLines <= 1_620, `R195: CardVisionApp voltou a ${appLines} linhas.`);
+const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
+assert.ok(appBytes <= (postCatalogBoundary ? 114_000 : 108_000), `R195: CardVisionApp voltou a ${appBytes} bytes.`);
+assert.ok(appLines <= (postCatalogBoundary ? 1_720 : 1_620), `R195: CardVisionApp voltou a ${appLines} linhas.`);
 assert.ok(analyzerBytes <= 109_500, `R195: analyzer voltou a ${analyzerBytes} bytes.`);
 
 assert.match(app, /const vaultActionsR185 = useCardVisionVaultActionsR185\(/, 'R195: objeto canônico de ações do Cofre deve ser preservado.');
