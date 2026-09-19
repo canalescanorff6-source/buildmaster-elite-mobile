@@ -24,4 +24,16 @@ for (const ext of ['.ts', '.tsx']) {
     module._compile(result.outputText, filename);
   };
 }
+
+// R184: os motores v38.50-v38.90 ficam fora de src/ e só são carregados
+// quando uma regressão histórica executada em Node realmente pede a ponte.
+let cachedLegacyDiagnosticsR184;
+globalThis.__BUILDMASTER_LEGACY_PERFORMANCE_DIAGNOSTICS_R184__ = function legacyPerformanceDiagnosticsR184(input) {
+  if (!cachedLegacyDiagnosticsR184) {
+    const legacy = require(path.join(root, 'legacy-src', 'lib', 'legacyPerformanceDiagnosticsR184.ts'));
+    cachedLegacyDiagnosticsR184 = legacy.applyLegacyPerformanceDiagnosticsR184;
+  }
+  return cachedLegacyDiagnosticsR184(input);
+};
+
 module.exports = { root };
