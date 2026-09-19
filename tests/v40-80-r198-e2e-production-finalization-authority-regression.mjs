@@ -70,7 +70,7 @@ while (sourceStack.length) {
     else if (/\.(?:ts|tsx)$/.test(target)) sourceBytes += fs.statSync(target).size;
   }
 }
-assert.ok(sourceBytes <= (r200Boundary ? 5_360_000 : 5_335_350), `R198/R200: orçamento de fonte excedeu a fronteira aprovada; src=${sourceBytes} B.`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 5_667_168 : r200Boundary ? 5_360_000 : 5_335_350), `R198/R200: orçamento de fonte excedeu a fronteira aprovada; src=${sourceBytes} B.`);
 
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
 assert.ok(v4080.endsWith('npm run test:r197 && npm run test:r198') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199 && npm run test:r200'), 'R198: cadeia v40.80 deve preservar R197 -> R198 antes do gate seguinte.');

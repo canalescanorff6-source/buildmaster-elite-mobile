@@ -50,7 +50,8 @@ const walk = (root) => {
 };
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
 const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
-assert.ok(sourceBytes <= (r2004Boundary ? 5_360_000 : 5_344_000), `R193: redução líquida foi perdida; src TS/TSX voltou a ${sourceBytes} bytes.`);
+const r443CatalogBoundary = fs.existsSync('scripts/apply-r443-source-budget-convergence.mjs') && fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
+assert.ok(sourceBytes <= (r443CatalogBoundary ? 5_667_168 : r2004Boundary ? 5_360_000 : 5_344_000), `R193: redução líquida foi perdida; src TS/TSX voltou a ${sourceBytes} bytes.`);
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),

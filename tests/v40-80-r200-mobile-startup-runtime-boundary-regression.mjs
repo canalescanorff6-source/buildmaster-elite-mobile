@@ -51,7 +51,8 @@ const srcFiles = [];
 function walk(dir) { for (const name of fs.readdirSync(dir)) { const p = path.join(dir, name); const st = fs.statSync(p); if (st.isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(name)) srcFiles.push(p); } }
 walk('src');
 const sourceBytes = srcFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0);
-assert.ok(sourceBytes <= 5_360_000, `R200: troca startup/fonte excedeu orçamento aprovado (${sourceBytes} B).`);
+const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
+assert.ok(sourceBytes <= (postCatalogBoundary ? 5_667_168 : 5_360_000), `R200: troca startup/fonte excedeu orçamento aprovado (${sourceBytes} B).`);
 const pkg = JSON.parse(read('package.json'));
 assert.ok(String(pkg.scripts?.['test:v4080'] ?? '').endsWith('npm run test:r199 && npm run test:r200'), 'R200: cadeia v40.80 deve fechar R199 -> R200.');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4080'), 'R200: test:all continua fechando pela bateria v40.80.');

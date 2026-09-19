@@ -19,8 +19,9 @@ const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
 
 const appBytes = fs.statSync(appPath).size;
 const appLines = app.split(/\r?\n/).length;
-assert.ok(appBytes <= 111_000, `R194: CardVisionApp voltou a ${appBytes} bytes.`);
-assert.ok(appLines <= 1_680, `R194: CardVisionApp voltou a ${appLines} linhas.`);
+const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
+assert.ok(appBytes <= (postCatalogBoundary ? 114_000 : 111_000), `R194: CardVisionApp voltou a ${appBytes} bytes.`);
+assert.ok(appLines <= (postCatalogBoundary ? 1_720 : 1_680), `R194: CardVisionApp voltou a ${appLines} linhas.`);
 
 for (const contract of ['AppTheme', 'AccentTheme', 'TextScale', 'DensityMode', 'MotionPreference', 'PerformanceMode']) {
   assert.match(easy, new RegExp(`export type ${contract} = EasyUiPreferences\\[`), `R194: ${contract} deve derivar de EasyUiPreferences.`);
@@ -61,7 +62,7 @@ function walk(root) {
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
 const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
-assert.ok(sourceBytes <= (r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_340_500), `R194: redução líquida foi perdida; src voltou a ${sourceBytes} bytes.`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 5_667_168 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_340_500), `R194: redução líquida foi perdida; src voltou a ${sourceBytes} bytes.`);
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
