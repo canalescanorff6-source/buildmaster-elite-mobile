@@ -145,7 +145,7 @@ assert.match(panel, /(?:Motor Adaptativo por Carta v39\.30|Precisão Competitiva
 assert.match(panel, /Recurso permanente decidido pelo r80, independente da posição/);
 assert.match(workspace, /Ficha Suprema/);
 assert.match(workspace, /Tudo unificado em uma tela/);
-assert.match(workspace, /UNIFIED_COMPACT_RESULT_V3920 = true/);
+assert.match(workspace, /UNIFIED_COMPACT_RESULT_V3920 = false/, 'R453 mantém as melhorias e abas da tela de resultado visíveis em vez de forçar o modo compacto histórico.');
 assert.match(pipeline, /applyUnifiedPerformanceV3920/);
 
 console.log(`v39.20 aprovada: receita ${scholesCmf.lockSignature}, MLG ${Math.round(scholesCmf.positionFit.compatibility)}/100 e MAT ${Math.round(scholesAmf.positionFit.compatibility)}/100.`);
