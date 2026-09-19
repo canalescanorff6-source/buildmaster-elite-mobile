@@ -1,5 +1,5 @@
 import type { SquadMappingPlayer } from '@/modules/squad-mapping/squadMappingEngine';
-import type { MasterCardCatalogEntryR438 } from './masterCardCatalogR438';
+import { masterCardGenerationReadinessR452, type MasterCardCatalogEntryR438 } from './masterCardCatalogR438';
 import { masterCardToSquadMappingPlayerR438 } from './masterCardToSquadMappingR438';
 
 export const KNOWN_CATALOG_ACQUISITION_R442_VERSION = '40.80-r442-known-catalog-acquisition-v1' as const;
@@ -17,11 +17,12 @@ export type KnownCatalogCardActionR442 = {
 
 export function knownCatalogCardActionR442(card: MasterCardCatalogEntryR438, owned: boolean): KnownCatalogCardActionR442 {
   const complete = card.completeness === 'COMPLETE' && card.missingFields.length === 0;
+  const readiness = masterCardGenerationReadinessR452(card);
   if (!owned) {
     return { owned: false, complete, canAdd: true, canGenerate: false, needsReview: !complete, primaryAction: 'ADD' };
   }
-  if (complete) {
-    return { owned: true, complete: true, canAdd: false, canGenerate: true, needsReview: false, primaryAction: 'GENERATE' };
+  if (readiness.canGenerate) {
+    return { owned: true, complete, canAdd: false, canGenerate: true, needsReview: !complete, primaryAction: 'GENERATE' };
   }
   return { owned: true, complete: false, canAdd: false, canGenerate: false, needsReview: true, primaryAction: 'REVIEW' };
 }

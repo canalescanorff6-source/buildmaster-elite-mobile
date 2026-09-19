@@ -436,6 +436,12 @@ const average = (values:number[]) => values.length ? values.reduce((a,b)=>a+b,0)
 const attr = (attrs:Attributes,key:AttributeKey) => clamp(Number(attrs[key] ?? 50),1,99);
 const round1 = (v:number) => Number(v.toFixed(1));
 
+function effectiveAttributeCountR452(parsed: ParsedCard) {
+  const evidenceCount = Number(parsed.evidence?.attributeCount ?? 0);
+  const actualCount = Object.values(parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length;
+  return Math.max(Number.isFinite(evidenceCount) ? evidenceCount : 0, actualCount);
+}
+
 function cardKey(parsed:ParsedCard) {
   return cardIdentityFingerprintR126(parsed);
 }
@@ -443,7 +449,7 @@ function cardKey(parsed:ParsedCard) {
 function normalizedConfidence(parsed:ParsedCard) {
   const raw=Number(parsed.confidence ?? 0);
   const conf=raw<=1 ? raw*100 : raw;
-  const coverage=clamp(Number(parsed.evidence?.attributeCount ?? Object.keys(parsed.attributes??{}).length)*4,0,100);
+  const coverage=clamp(effectiveAttributeCountR452(parsed)*4,0,100);
   return clamp(conf*.7+coverage*.3);
 }
 
@@ -1143,7 +1149,7 @@ function decisionConfidenceR123(
   lab:CleanSlateCompetitiveLabR123,
   baseConfidence:number
 ):CleanSlateConfidenceR123 {
-  const attributeCount=Number(parsed.evidence?.attributeCount ?? Object.keys(parsed.attributes??{}).length);
+  const attributeCount=effectiveAttributeCountR452(parsed);
   const attributeCoverage=clamp(attributeCount/26*100);
   const rawSkillConfidence=Number(parsed.evidence?.skillConfidence ?? 0);
   const skillEvidence=rawSkillConfidence>0
@@ -1456,9 +1462,10 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const budgetCandidate=Number(parsed.trainingPointsTotal ?? input.trainingPointsTotal ?? 0);
   const budget=Number.isFinite(budgetCandidate)&&budgetCandidate>0?Math.round(budgetCandidate):0;
   const confidence=normalizedConfidence(parsed);
-  const attributeCount=Number(parsed.evidence?.attributeCount ?? Object.keys(parsed.attributes??{}).length);
+  const attributeCount=effectiveAttributeCountR452(parsed);
   const minimum=usageContext.targetPosition==='GK'?4:10;
-  if(!budget || attributeCount<minimum) {
+  const limitedEvidence=attributeCount<minimum;
+  if(!budget) {
     const zero=emptyTraining();
     // Ficha e Top 5 têm requisitos de evidência diferentes. Uma leitura curta
     // pode ser insuficiente para distribuir pontos com segurança, mas ainda
@@ -1604,6 +1611,9 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:!impeto.current||!impeto.recommendations.some(x=>norm(x.name)===norm(impeto.current)),selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
     reasons:[
       `Clean Slate r149 avaliou ${searchOptimizationR149.generatedStates} estados com hot path escalar de score no mesmo kernel de avaliação, sem objetos de resultado/online/detalhes por candidato; preservou r148, beam 20 e orçamento ${spent}/${budget}.`,
+      ...(limitedEvidence
+        ? [`R452: ficha provisória foi gerada mesmo com cobertura parcial (${attributeCount}/${minimum} atributos mínimos recomendados). Valores ausentes ficam neutros e a ficha permanece marcada para revisão, em vez de voltar 0/${budget}.`]
+        : []),
       `Posição natural ${parsed.mainPosition}; posição real de uso ${usageContext.targetPosition}. A posição de uso muda a demanda funcional sem trocar a identidade da carta.`,
       ...(positionStabilityR184?[positionStabilityR184.reason]:[]),
       playstyleContext.note,

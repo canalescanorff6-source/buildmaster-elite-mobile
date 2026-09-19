@@ -105,6 +105,7 @@ function patchQuickReader(source) {
 }
 
 function patchCenter(source) {
+  if (source.includes('resolveMasterCardObservationR440') && source.includes('saveCardVisualFingerprintR440') && source.includes('learnedCardR440')) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,

@@ -16,8 +16,9 @@ import { applyR439IntelligentCardResolver } from './apply-r439-intelligent-card-
 import { applyR440VisualCardIdentity } from './apply-r440-visual-card-identity.mjs';
 import { applyR441CatalogSyncPrintVault } from './apply-r441-catalog-sync-print-vault.mjs';
 import { applyR442KnownCatalogAcquisition } from './apply-r442-known-catalog-acquisition.mjs';
+import { applyR452PartialFicha } from './apply-r452-partial-ficha.mjs';
 
-const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r442';
+const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r452';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(process.env.BUILDMASTER_PROJECT_ROOT || path.join(here, '..'));
 const checkOnly = process.argv.includes('--check');
@@ -166,6 +167,8 @@ if (!checkOnly && fullBuildMasterProject) {
   console.log(r442.changed
     ? `R442 pré-CI convergiu ${r442.patched.length} arquivo(s) da aquisição direta do Catálogo Geral.`
     : 'R442 pré-CI: aquisição direta do Catálogo Geral já estava convergida.');
+  const r452 = applyR452PartialFicha(projectRoot);
+  console.log(r452.changed ? `R452 pré-CI convergiu ${r452.patched.length} arquivo(s) da UI/ficha provisória.` : 'R452 pré-CI: UI/ficha provisória já convergida.');
 } else if (!checkOnly) {
   console.log('Fixture TypeScript isolada: convergência do aplicativo não é necessária.');
 }

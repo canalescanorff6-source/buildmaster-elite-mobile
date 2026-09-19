@@ -109,7 +109,6 @@ export function masterRosterCardReadinessR436(player: MasterRosterPlayerR436): M
     name
     && !/^(novo jogador|jogador para revisar|jogador nao identificado)$/i.test(normalize(name))
     && String(player.mainPosition ?? '').trim()
-    && String(player.playstyle ?? '').trim()
     && String(player.cardFingerprint ?? '').trim()
   );
 
@@ -119,14 +118,16 @@ export function masterRosterCardReadinessR436(player: MasterRosterPlayerR436): M
   if (skillCount < 1) missing.push('habilidades possuídas');
   if (Number(player.profileCoverage ?? 0) < 70) missing.push('cobertura mínima de leitura');
 
-  const canGenerate = identityReady
+  // R452: identidade + PP conhecido liberam ficha provisória; cobertura completa continua definindo status complete.
+  const canGenerate = identityReady && Boolean(trainingPointsTotal);
+  const complete = identityReady
     && Boolean(trainingPointsTotal)
     && attributeCount >= 20
     && skillCount >= 1
     && Number(player.profileCoverage ?? 0) >= 70;
 
   let status: MasterRosterCardStatusR436 = 'identity-only';
-  if (canGenerate) status = 'complete';
+  if (complete) status = 'complete';
   else if (attributeCount > 0 || skillCount > 0 || trainingPointsTotal) status = 'partial';
 
   return { status, canGenerate, trainingPointsTotal, attributeCount, skillCount, missing };
@@ -168,17 +169,17 @@ export function masterRosterSearchTextR436(player: MasterRosterPlayerR436) {
 export function buildMasterRosterRawTextR436(player: MasterRosterPlayerR436) {
   const readiness = masterRosterCardReadinessR436(player);
   if (!readiness.canGenerate || readiness.trainingPointsTotal === null) {
-    throw new Error(`R436: dados completos são obrigatórios para gerar a ficha sem OCR (${readiness.missing.join(', ')}).`);
+    throw new Error(`R452: identidade da edição e nível/PP são obrigatórios para gerar a ficha (${readiness.missing.join(', ')}).`);
   }
 
   const lines = [
     '[AJUSTES MANUAIS]',
     'CONFIRMAÇÃO MANUAL: SIM',
     `NOME DO JOGADOR: ${String(player.name).trim()}`,
-    `POSIÇÃO PRINCIPAL: ${String(player.mainPosition).trim()}`,
-    `ESTILO DE JOGO: ${String(player.playstyle).trim()}`
+    `POSIÇÃO PRINCIPAL: ${String(player.mainPosition).trim()}`
   ];
 
+  if (String(player.playstyle ?? '').trim()) lines.push(`ESTILO DE JOGO: ${String(player.playstyle).trim()}`);
   if (player.offensivePlaystyle?.trim()) lines.push(`ESTILO DE JOGO OFENSIVO: ${player.offensivePlaystyle.trim()}`);
   if (player.defensivePlaystyle?.trim()) lines.push(`ESTILO DE JOGO DEFENSIVO: ${player.defensivePlaystyle.trim()}`);
   if (finiteInteger(player.overall, 1, 120) !== null) lines.push(`GER: ${Math.round(Number(player.overall))}`);

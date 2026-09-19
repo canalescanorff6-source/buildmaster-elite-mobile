@@ -163,6 +163,15 @@ export function masterCardCompletenessR438(card: Parameters<typeof masterCardMis
   return hasTechnical ? 'PARTIAL' : 'IDENTITY_ONLY';
 }
 
+export function masterCardGenerationReadinessR452(card: MasterCardCatalogEntryR438) {
+  const points = masterCardTrainingPointsR438(card);
+  const validName = Boolean(card.playerName.trim()) && !/^(novo jogador|jogador para revisar|jogador nao identificado)$/i.test(normalizeText(card.playerName));
+  const identityStable = Boolean(card.mainPosition && (card.cardFingerprint.startsWith('card-r126-') || String(card.sourceHash ?? '').trim() || card.catalogCardId));
+  const canGenerate = validName && identityStable && points !== null;
+  const provisional = canGenerate && card.completeness !== 'COMPLETE';
+  return { canGenerate, provisional, points, missing: masterCardMissingFieldsR438(card) };
+}
+
 function provisionalCatalogId(input: MasterCardCatalogInputR438) {
   const canonical = String(input.cardFingerprint ?? '').trim();
   if (canonical.startsWith('card-r126-')) return `master-r438-${canonical}`;

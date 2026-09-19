@@ -1,24 +1,23 @@
 import type { Objective, PositionCode, TacticalProfile } from '@/lib/analyzerDomain';
 import { ATTRIBUTE_PT } from '@/lib/analyzerDomain';
 import { createProductionAnalysisR138 } from '@/modules/analysis/productionOrchestratorR138';
-import { masterCardTrainingPointsR438, type MasterCardCatalogEntryR438 } from './masterCardCatalogR438';
+import { masterCardGenerationReadinessR452, masterCardTrainingPointsR438, type MasterCardCatalogEntryR438 } from './masterCardCatalogR438';
 
 export const MASTER_CARD_ANALYSIS_REQUEST_R438_VERSION = '40.80-r438-master-card-analysis-request-v1' as const;
 
 export function buildMasterCardAnalysisRawTextR438(card: MasterCardCatalogEntryR438) {
-  if (card.completeness !== 'COMPLETE' || card.missingFields.length) {
-    throw new Error(`R438: carta incompleta não pode gerar ficha sem OCR (${card.missingFields.join(', ')}).`);
-  }
-  const points = masterCardTrainingPointsR438(card);
-  if (points === null) throw new Error('R438: PP não confirmado nem derivável.');
+  const readiness = masterCardGenerationReadinessR452(card);
+  if (!readiness.canGenerate) throw new Error(`R452: identidade da edição e PP são obrigatórios para gerar ficha (${readiness.missing.join(', ')}).`);
+  const points = readiness.points ?? masterCardTrainingPointsR438(card);
+  if (points === null) throw new Error('R452: PP não confirmado nem derivável.');
   const lines = [
     '[AJUSTES MANUAIS]',
     'CONFIRMAÇÃO MANUAL: SIM',
     `NOME DO JOGADOR: ${card.playerName}`,
     `POSIÇÃO PRINCIPAL: ${card.mainPosition}`,
-    `NÍVEL MÁXIMO: ${card.level}`,
     `PONTOS TOTAIS: ${points}`
   ];
+  if (card.level !== null) lines.push(`NÍVEL MÁXIMO: ${card.level}`);
   const style = card.offensivePlaystyle || card.playstyle;
   if (style) lines.push(`ESTILO DE JOGO: ${style}`, `ESTILO DE JOGO OFENSIVO: ${style}`);
   if (card.defensivePlaystyle) lines.push(`ESTILO DE JOGO DEFENSIVO: ${card.defensivePlaystyle}`);

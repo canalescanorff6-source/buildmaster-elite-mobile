@@ -32,6 +32,7 @@ function writeIfChanged(file, before, after) {
 }
 
 function patchCenter(source) {
+  if (source.includes('findImportedRosterCardBySourceHashR437') && source.includes('readMappingImage(file, nextPlayers, sourceHash)') && source.includes('Pausar após esta carta') && (source.includes('batchRosterImportSummaryR437(stats)') || source.includes('intelligentImportSummaryR439('))) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,
@@ -149,7 +150,7 @@ function validate(root) {
     [center.includes('findImportedRosterCardBySourceHashR437'), 'skip pré-OCR'],
     [center.includes('readMappingImage(file, nextPlayers, sourceHash)'), 'reuso de hash'],
     [center.includes('Pausar após esta carta'), 'pausa segura'],
-    [center.includes('batchRosterImportSummaryR437(stats)'), 'resumo do lote'],
+    [center.includes('batchRosterImportSummaryR437(stats)') || center.includes('intelligentImportSummaryR439('), 'resumo do lote/sucessor R439'],
     [center.includes('const selected = Array.from(files);'), 'lote sem teto'],
     [!center.includes('Array.from(files).slice(0, 120)'), 'teto 120 ausente'],
     [center.includes('Gerar ficha sem OCR'), 'R436 preservada'],

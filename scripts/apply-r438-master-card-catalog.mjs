@@ -40,6 +40,7 @@ function writeIfChanged(file, before, after) {
 }
 
 function patchCenter(source) {
+  if (source.includes("label: 'Catálogo Geral'") && source.includes('knownCatalogCardActionR442') && source.includes('resolveMasterCardObservationR440')) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,
@@ -125,6 +126,7 @@ function patchCenter(source) {
 }
 
 function patchApp(source) {
+  if (source.includes('async function generateFichaFromMasterCardR438(') && source.includes('onGenerateMasterCard={(card) => void generateFichaFromMasterCardR438(card)}')) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,

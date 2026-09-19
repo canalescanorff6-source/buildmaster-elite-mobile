@@ -37,6 +37,7 @@ function writeIfChanged(file, before, after) {
 }
 
 function patchCenter(source) {
+  if (source.includes('readQuickCardIdentityR439') && (source.includes('resolveMasterCardObservationR439') || source.includes('resolveMasterCardObservationR440')) && source.includes('saveCardResolutionQueueItemR439') && source.includes('intelligentImportSummaryR439') && source.includes('saveResolvedFullOcrCardR439')) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,
@@ -209,7 +210,7 @@ function validate(root) {
   const pkg = fs.readFileSync(path.resolve(root, FILES.package), 'utf8');
   const checks = [
     [center.includes('readQuickCardIdentityR439'), 'leitura rápida'],
-    [center.includes('resolveMasterCardObservationR439'), 'resolvedor'],
+    [center.includes('resolveMasterCardObservationR439') || center.includes('resolveMasterCardObservationR440'), 'resolvedor R439/sucessor R440'],
     [center.includes('saveCardResolutionQueueItemR439'), 'fila persistente'],
     [center.includes('Selecionar esta versão'), 'seleção de edição'],
     [center.includes('intelligentImportSummaryR439'), 'resumo inteligente'],

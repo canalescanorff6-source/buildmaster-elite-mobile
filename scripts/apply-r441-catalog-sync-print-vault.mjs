@@ -61,6 +61,7 @@ function patchLocalDatabase(source) {
 }
 
 function patchCenter(source) {
+  if (source.includes('storeCardSourceImageR441') && source.includes('Refazer ficha com este print') && source.includes('Exportar ZIP') && source.includes('Atualizar catálogo')) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,
@@ -143,6 +144,7 @@ function patchCenter(source) {
 }
 
 function patchApp(source) {
+  if (source.includes('async function rereadOriginalPrintR441(') && source.includes('onRereadOriginal={(sourceHash) => void rereadOriginalPrintR441(sourceHash)}')) return source;
   let next = source;
   const runAnchor = "  const runAnalysis = (confirmed = false) => invokeReaderActionR187('runAnalysis', confirmed);";
   const runBlock = `${runAnchor}\n\n  async function rereadOriginalPrintR441(sourceHash: string) {\n    try {\n      const { loadCardSourceFileR441 } = await import('@/modules/master-catalog/cardSourceVaultR441');\n      const restored = await loadCardSourceFileR441(sourceHash);\n      if (!restored) { setStatus('O print original não foi encontrado. Restaure o ZIP de prints ou importe a imagem novamente.'); return; }\n      const file = restored as File;\n      openMainSection('leitor');\n      await handleFile(file);\n      setStatus('Print original recuperado. Relendo com o motor atual do BuildMaster...');\n      await analyzeSelectedImage(file);\n    } catch (cause) {\n      setStatus(cause instanceof Error ? cause.message : 'Não foi possível reler o print original.');\n    }\n  }`;

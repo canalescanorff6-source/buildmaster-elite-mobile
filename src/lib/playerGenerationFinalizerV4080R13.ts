@@ -38,7 +38,7 @@ function unique(values: string[]) {
 
 export function buildPlayerGenerationFinalizerV4080R13(result: AnalysisResult): PlayerGenerationFinalizerV4080R13 {
   const cardConfidence = clamp(Number(result.parsed.confidence ?? 0));
-  const attributeCount = Number(result.parsed.evidence.attributeCount ?? 0);
+  const attributeCount = Math.max(Number(result.parsed.evidence.attributeCount ?? 0), Object.values(result.parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length);
   const attributeCoverage = clamp(attributeCount / 26 * 100);
   const pointBudgetExact = trainingPlanTotalCost(result.training) === Number(result.parsed.trainingPointsTotal ?? trainingPlanTotalCost(result.training));
   const finalSkills = unique(result.recommendedSkills.slice(0, 5));
