@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R436_MASTER_ROSTER_CATALOG_VERSION = '40.80-r436-master-roster-catalog-v1';
+export const R436_MASTER_ROSTER_CATALOG_VERSION = '40.80-r436-master-roster-catalog-v1+r445-forward-idempotence';
 
 const FILES = {
   engine: 'src/modules/squad-mapping/squadMappingEngine.ts',
@@ -13,6 +13,7 @@ const FILES = {
   helper: 'src/modules/squad-mapping/masterRosterCatalogR436.ts',
   runtimeTest: 'tests/v40-80-r436-master-roster-catalog-runtime-regression.ts',
   integrationTest: 'tests/v40-80-r436-master-roster-catalog-integration-regression.mjs',
+  forwardRegressionTest: 'tests/v40-80-r445-r436-forward-idempotence-regression.mjs',
   package: 'package.json'
 };
 
@@ -33,6 +34,30 @@ function writeIfChanged(file, before, after) {
   if (before === after) return false;
   fs.writeFileSync(file, after, 'utf8');
   return true;
+}
+
+function hasForwardCompatibleCenterR445(source) {
+  return Boolean(
+    source.includes("masterRosterCardReadinessR436") &&
+    source.includes("masterRosterSearchTextR436") &&
+    source.includes("onGenerateFicha?: (player: SquadMappingPlayer) => void;") &&
+    /export function SquadMappingCenter\(\{[^}]*\bonGenerateFicha\b[^}]*\}: Props\)/s.test(source) &&
+    source.includes("const selected = Array.from(files);") &&
+    !source.includes("Array.from(files).slice(0, 120)") &&
+    source.includes("offensivePlaystyle:") &&
+    source.includes("defensivePlaystyle:") &&
+    source.includes("trainingPointsTotal:") &&
+    source.includes("Gerar ficha sem OCR")
+  );
+}
+
+function hasForwardCompatibleAppR445(source) {
+  return Boolean(
+    source.includes("generateFichaFromMasterRosterR436") &&
+    source.includes("onGenerateFicha={(player) => void generateFichaFromMasterRosterR436(player)}") &&
+    source.includes("openMainSection('resultado')") &&
+    source.includes("SquadMappingPlayer")
+  );
 }
 
 function patchEngine(source) {
@@ -71,6 +96,7 @@ function patchStorage(source) {
 }
 
 function patchCenter(source) {
+  if (hasForwardCompatibleCenterR445(source)) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,
@@ -115,6 +141,7 @@ function patchCenter(source) {
 }
 
 function patchApp(source) {
+  if (hasForwardCompatibleAppR445(source)) return source;
   let next = source;
   let r = replaceOnceRequired(
     next,
@@ -148,11 +175,13 @@ function patchPackage(source) {
   const pkg = JSON.parse(source);
   const runtime = 'node -r ./tests/_ts-require.cjs tests/v40-80-r436-master-roster-catalog-runtime-regression.ts';
   const integration = 'node tests/v40-80-r436-master-roster-catalog-integration-regression.mjs';
+  const forwardRegression = 'node tests/v40-80-r445-r436-forward-idempotence-regression.mjs';
   const current = String(pkg.scripts?.['test:r200'] ?? '');
   if (!current) throw new Error('R436: script test:r200 ausente.');
   let next = current;
   if (!next.includes(runtime)) next += ` && ${runtime}`;
   if (!next.includes(integration)) next += ` && ${integration}`;
+  if (!next.includes(forwardRegression)) next += ` && ${forwardRegression}`;
   pkg.scripts['test:r200'] = next;
   return JSON.stringify(pkg, null, 2) + '\n';
 }
@@ -179,7 +208,8 @@ function validate(root) {
     [app.includes("openMainSection('resultado')"), 'abertura do resultado'],
     [nav.includes("id: 'mapeamento', label: 'Meu Elenco'"), 'navegação Meu Elenco'],
     [pkg.includes('v40-80-r436-master-roster-catalog-runtime-regression.ts'), 'runtime regression no CI'],
-    [pkg.includes('v40-80-r436-master-roster-catalog-integration-regression.mjs'), 'integration regression no CI']
+    [pkg.includes('v40-80-r436-master-roster-catalog-integration-regression.mjs'), 'integration regression no CI'],
+    [pkg.includes('v40-80-r445-r436-forward-idempotence-regression.mjs'), 'forward idempotence R445 no CI']
   ];
   const missing = checks.filter(([ok]) => !ok).map(([, label]) => label);
   if (missing.length) throw new Error(`R436: validação final incompleta: ${missing.join(', ')}`);
