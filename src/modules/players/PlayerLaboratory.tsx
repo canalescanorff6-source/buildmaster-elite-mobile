@@ -150,6 +150,7 @@ export function PlayerLaboratory(props: Props) {
                   <mark className={`status-${player.status}`}>{statusLabel(player.status)}</mark>
                   {player.favorite && <mark className="favorite"><Heart size={12}/> Favorito</mark>}
                   <mark>{sourceLabel(player)}</mark>
+                  <mark>{player.scoutingStatus === 'READY' ? `Scouting ${player.scoutingConfidence}` : player.scoutingStatus === 'SOURCE_CONFLICT' ? 'Scouting com conflito' : 'Scouting pendente'}</mark>
                 </small>
               </span>
               <span className="bm32-player-overall"><small>GERAL</small><strong>{player.overall || player.efficiency}</strong></span>
