@@ -63,6 +63,15 @@ function patchLocalDatabase(source) {
 function patchCenter(source) {
   if (source.includes('storeCardSourceImageR441') && source.includes('Refazer ficha com este print') && source.includes('Exportar ZIP') && source.includes('Atualizar catálogo')) return source;
   let next = source;
+  if (!/\bScanText\b/.test(next.slice(0, next.indexOf("from 'lucide-react';") + 20))) {
+    let iconImport = replaceOnceRequired(
+      next,
+      "  Search,\n  ShieldCheck,",
+      "  Search,\n  ScanText,\n  ShieldCheck,",
+      'ícone ScanText R441'
+    );
+    next = iconImport.source;
+  }
   let r = replaceOnceRequired(
     next,
     "import { saveCardVisualFingerprintR440 } from '@/modules/card-catalog/masterCardVisualLearningR440';",
