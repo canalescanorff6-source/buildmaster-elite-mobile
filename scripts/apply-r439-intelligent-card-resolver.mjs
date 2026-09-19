@@ -186,6 +186,17 @@ function patchCenter(source) {
     'mensagem de progresso R439'
   ); next = r.source;
 
+  // R454 CI hardening: R439 substitui o resumo R437 e o upsert R438.
+  // Limpe os imports que se tornam obsoletos após a própria convergência R439.
+  next = next.replace(
+    "import { batchRosterImportSummaryR437, createBatchRosterImportStatsR437, findImportedRosterCardBySourceHashR437, pauseBatchRosterImportR437, recordBatchRosterImportOutcomeR437 } from './batchRosterImportR437';",
+    "import { createBatchRosterImportStatsR437, findImportedRosterCardBySourceHashR437, pauseBatchRosterImportR437, recordBatchRosterImportOutcomeR437 } from './batchRosterImportR437';"
+  );
+  next = next.replace(
+    "import { migrateSquadMappingToMasterCatalogR438, upsertOwnedMasterCardFromSquadMappingR438 } from '@/modules/card-catalog/masterCardMigrationR438';",
+    "import { migrateSquadMappingToMasterCatalogR438 } from '@/modules/card-catalog/masterCardMigrationR438';"
+  );
+
   return next;
 }
 
