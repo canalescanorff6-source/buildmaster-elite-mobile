@@ -2,6 +2,7 @@ import type { AnalysisResult, PositionCode, TacticalStyle } from './analyzer';
 import { canonicalizePlayerPlaystyle, getPlayerStyleMeta2026, normalizeFormationCoachStyle, type FormationCoachStyle } from './efootball2026Playstyles';
 import { playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { evaluatePairSynergyR454, evaluateTacticalFitR454, type GameplayScoutingStatusR454, type TacticalFitLabelR454 } from '@/modules/scouting/gameplayScoutingR454';
 
 export type FormationFamily = 'oficial-app' | 'extra' | 'personalizada';
 export type FormationRoleId =
@@ -55,6 +56,9 @@ export type FormationSlotFit = {
   positionFit: number;
   reasons: string[];
   warnings: string[];
+  tacticalFitLabel?: TacticalFitLabelR454;
+  scoutingStatus?: GameplayScoutingStatusR454;
+  synergyScore?: number;
 };
 
 export const FORMATION_ROLE_CATALOG: Record<FormationRoleId, FormationRole> = {
@@ -546,7 +550,11 @@ function positionMatchScore(result: AnalysisResult, slotItem: FormationSlot) {
   return sameLine ? 48 : 12;
 }
 
-export function scorePlayerForFormationSlot(result: AnalysisResult, slotItem: FormationSlot): FormationSlotFit {
+export function scorePlayerForFormationSlot(
+  result: AnalysisResult,
+  slotItem: FormationSlot,
+  context: { formationId?: string | null; teamStyle?: TacticalStyle | null; partnerResults?: AnalysisResult[] } = {}
+): FormationSlotFit {
   const positionFit = positionMatchScore(result, slotItem);
   const primaryFit = roleMatchScore(result, slotItem.primaryRoles, slotItem.position);
   const complementaryFit = roleMatchScore(result, slotItem.complementaryRoles, slotItem.position);
@@ -560,22 +568,53 @@ export function scorePlayerForFormationSlot(result: AnalysisResult, slotItem: Fo
         : analysisUsagePositionR138(result) === 'GK' ? 90 : 10;
   const actualMeta = getPlayerStyleMeta2026(result.parsed.playstyle, slotItem.position);
   const metaScore = actualMeta?.score ?? 55;
-  const score = Math.max(0, Math.min(100, Math.round(positionFit * .42 + primaryFit * .27 + complementaryFit * .07 + phaseScore * .14 + metaScore * .10)));
+  const legacyScore = Math.max(0, Math.min(100, Math.round(positionFit * .42 + primaryFit * .27 + complementaryFit * .07 + phaseScore * .14 + metaScore * .10)));
+  const desiredFunctions = [...slotItem.primaryRoles, ...slotItem.complementaryRoles]
+    .map((roleId) => FORMATION_ROLE_CATALOG[roleId]?.officialName)
+    .filter((value): value is string => Boolean(value));
+  const contextual = evaluateTacticalFitR454(result, {
+    position: slotItem.position,
+    formationId: context.formationId ?? result.tacticalProfile?.formation ?? null,
+    slotLabel: slotItem.label,
+    teamStyle: context.teamStyle ?? result.tacticalProfile?.style ?? 'AUTO',
+    desiredFunctions,
+    partnerResults: context.partnerResults ?? []
+  });
+  const partnerScores = (context.partnerResults ?? []).map((partner) => evaluatePairSynergyR454(result, partner, {
+    formationId: context.formationId,
+    teamStyle: context.teamStyle
+  }).score);
+  const synergyScore = partnerScores.length ? Math.round(partnerScores.reduce((sum, value) => sum + value, 0) / partnerScores.length) : 64;
+  const synergyDelta = Math.max(-5, Math.min(5, Math.round((synergyScore - 64) * .12)));
+  const score = Math.max(0, Math.min(100, Math.round(legacyScore * .72 + contextual.score * .28 + synergyDelta)));
   const reasons = [
     positionFit >= 90 ? `Posição natural para ${slotItem.label}.` : positionFit >= 70 ? `Pode atuar em ${slotItem.label} com adaptação segura.` : `Posição exige adaptação relevante.`,
     primaryFit >= 85 ? 'O estilo oficial combina com a prioridade deste espaço.' : primaryFit >= 58 ? 'A função é compatível, mas não é o encaixe mais específico.' : 'O estilo não corresponde à primeira recomendação do espaço.',
     actualMeta ? `Meta 2026: ${actualMeta.verdict}. ${actualMeta.advice}` : 'Estilo oficial ainda precisa ser confirmado.',
+    `Tactical Fit R454: ${contextual.label} (${contextual.score}/100) para este slot específico.`,
+    ...(partnerScores.length ? [`Sinergia média com os jogadores já escolhidos: ${synergyScore}/100.`] : []),
     `${slotItem.duty}`
   ];
-  const warnings: string[] = [];
+  const warnings: string[] = [...contextual.warnings];
   if (positionFit < 55) warnings.push('Evite forçar este jogador fora da linha natural.');
   if (actualMeta?.tier === 'evitar') warnings.push(`Estilo marcado como “${actualMeta.verdict}” para esta posição.`);
   for (const restriction of actualMeta?.restrictions ?? []) warnings.push(restriction);
   if (score < 65) warnings.push('Procure outra carta ou ajuste a função do espaço.');
-  return { slot: slotItem, player: result, score, roleFit: primaryFit, positionFit, reasons, warnings };
+  return {
+    slot: slotItem,
+    player: result,
+    score,
+    roleFit: primaryFit,
+    positionFit,
+    reasons: [...new Set(reasons)],
+    warnings: [...new Set(warnings)],
+    tacticalFitLabel: contextual.label,
+    scoutingStatus: contextual.scoutingStatus,
+    synergyScore
+  };
 }
 
-export function buildFormationLineup(results: AnalysisResult[], blueprint: FormationBlueprint): FormationSlotFit[] {
+export function buildFormationLineup(results: AnalysisResult[], blueprint: FormationBlueprint, teamStyle: TacticalStyle = 'AUTO'): FormationSlotFit[] {
   const used = new Set<string>();
   const styleCounts = new Map<string, number>();
   const output: FormationSlotFit[] = [];
@@ -583,7 +622,7 @@ export function buildFormationLineup(results: AnalysisResult[], blueprint: Forma
   for (const slotItem of blueprint.slots) {
     const ranked = results
       .filter((result) => !used.has(playerIdentityFingerprintR126(result.parsed)))
-      .map((result) => scorePlayerForFormationSlot(result, slotItem))
+      .map((result) => scorePlayerForFormationSlot(result, slotItem, { formationId: blueprint.id, teamStyle, partnerResults: output.flatMap((item) => item.player ? [item.player] : []) }))
       .sort((a,b) => b.score - a.score);
 
     const compatible = ranked.find((candidate) => {

@@ -354,7 +354,17 @@ function convergeR416UniversalPositions(root) {
       else patch(domainPath,"export type AnalysisResult = {",`${newUsageTypes}\n\nexport type AnalysisResult = {`,'R416 analysis types');
     }
   }
-  patch(domainPath,"  finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;\n};","  finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;\n  positionUsageR416?: PositionUsageR416Analysis;\n};",'R416 result field');
+  {
+    const domainSource=readFileSync(domainPath,'utf8');
+    if(!domainSource.includes('  positionUsageR416?: PositionUsageR416Analysis;')){
+      patch(
+        domainPath,
+        "  finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;\n",
+        "  finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;\n  positionUsageR416?: PositionUsageR416Analysis;\n",
+        'R416 result field'
+      );
+    }
+  }
 
   patch(readerPath,"import { loadReaderEvidenceRuntimeR161 } from '@/modules/card-reader/readerEvidenceRuntimeR161';","import { loadReaderEvidenceRuntimeR161 } from '@/modules/card-reader/readerEvidenceRuntimeR161';\nimport { readPositionProficiencyGridR416 } from './positionProficiencyVisionR416';",'R416 reader import');
   patch(readerPath,"      reportReaderProgress(90, 'Conferindo campos', 'Validando nome, nível, atributos, habilidades e pontos.', readerTotal, readerTotal);","      const positionGridZoneR416=geometry.zones.find((item)=>item.key==='positionGrid');\n      if(positionGridZoneR416){const visualR416=await readPositionProficiencyGridR416(ocrSource,positionGridZoneR416).catch(()=>null);if(visualR416)zoneResults=zoneResults.map((reading)=>reading.key==='positionGrid'?{...reading,positionProficienciesR416:visualR416}:reading);}\n      reportReaderProgress(90, 'Conferindo campos', 'Validando nome, nível, atributos, habilidades e pontos.', readerTotal, readerTotal);",'R416 grid visual hook');

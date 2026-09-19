@@ -1,6 +1,7 @@
 import type { AnalysisResult, TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import { buildFormationLineup, FORMATION_BLUEPRINTS, getFormationBlueprint, scorePlayerForFormationSlot, styleAdviceForFormation } from '@/lib/formationRoleEngine';
 import { cardFingerprint, type MatchValidationRecord } from '@/lib/appEvolution';
+import { createPendingGameplayScoutingR454, evaluatePairSynergyR454 } from '@/modules/scouting/gameplayScoutingR454';
 
 export const CENTRAL_SCHEMA_VERSION = 27;
 export const CENTRAL_MIGRATION_STORAGE_KEY = 'buildmaster_central_intelligence_schema_v27';
@@ -38,6 +39,8 @@ export type IntegratedPlayerRecord = {
   bestFormations: Array<{ id: string; name: string; slot: string; score: number }>;
   strengths: string[];
   limitations: string[];
+  scoutingStatus: 'READY' | 'SCOUTING_PENDENTE' | 'SOURCE_CONFLICT';
+  scoutingConfidence: 'ALTA' | 'MEDIA' | 'BAIXA';
   result: AnalysisResult;
 };
 
@@ -62,7 +65,7 @@ export type TeamDiagnosis = {
   missingRoles: string[];
   repeatedFunctions: string[];
   lineup: ReturnType<typeof buildFormationLineup>;
-  benchSuggestions: Array<{ id: string; name: string; role: string; score: number; reason: string }>;
+  benchSuggestions: Array<{ id: string; name: string; role: string; score: number; reason: string; replaces: string; replacementMode: 'MANTER_FUNCAO' | 'MUDAR_COMPORTAMENTO'; behaviourChange: string }>;
   pairingNotes: string[];
   recommendations: CentralRecommendation[];
 };
@@ -144,6 +147,8 @@ export function buildIntegratedPlayers(inputs: CentralPlayerInput[], matches: Ma
       bestFormations: formationFits,
       strengths: (result.strengths || []).slice(0, 4),
       limitations: (result.weaknesses || []).slice(0, 3),
+      scoutingStatus: (result.gameplayScoutingR454 ?? createPendingGameplayScoutingR454(result)).status,
+      scoutingConfidence: (result.gameplayScoutingR454 ?? createPendingGameplayScoutingR454(result)).confidence,
       result
     };
   }).sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.updatedAt.localeCompare(a.updatedAt));
@@ -160,7 +165,7 @@ function normalize(value: string) {
 
 export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle): TeamDiagnosis {
   const blueprint = getFormationBlueprint(formation === 'AUTO' ? '4-2-2-2' : formation);
-  const lineup = buildFormationLineup(players.map((player) => player.result), blueprint);
+  const lineup = buildFormationLineup(players.map((player) => player.result), blueprint, style);
   const styleFit = styleAdviceForFormation(blueprint, style);
   const filledSlots = lineup.filter((item) => item.player).length;
   const lineScores = [
@@ -179,23 +184,53 @@ export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation:
   });
   const repeatedFunctions = [...functionCounts.entries()].filter(([, count]) => count >= 3).map(([label, count]) => `${label} (${count})`);
   const starterFingerprints = new Set(lineup.filter((item) => item.player).map((item) => item.player ? cardFingerprint(item.player) : ''));
+  const starterResults = lineup.flatMap((item) => item.player ? [item.player] : []);
   const benchSuggestions = players
     .filter((player) => !starterFingerprints.has(player.fingerprint))
-    .sort((a, b) => (b.matchAverage || 0) - (a.matchAverage || 0) || b.efficiency - a.efficiency)
-    .slice(0, 7)
-    .map((player) => ({
-      id: player.id,
-      name: player.name,
-      role: player.functionLabel,
-      score: player.efficiency,
-      reason: player.matchCount ? `Validado em ${player.matchCount} partida(s), média ${player.matchAverage}/5.` : `Cobertura para ${player.targetPosition}; ficha ${player.buildName}.`
-    }));
+    .map((player) => {
+      const candidates = lineup
+        .filter((item) => item.player)
+        .map((item) => {
+          const fit = scorePlayerForFormationSlot(player.result, item.slot, {
+            formationId: blueprint.id,
+            teamStyle: style,
+            partnerResults: starterResults.filter((starter) => starter !== item.player)
+          });
+          const sameStyle = normalize(player.playstyle) === normalize(item.player?.parsed.playstyle || '');
+          const sameRole = normalize(player.functionLabel) === normalize(item.player?.teamMap?.functionLabel || item.player?.buildName || '');
+          const replacementMode = sameStyle || sameRole ? 'MANTER_FUNCAO' as const : 'MUDAR_COMPORTAMENTO' as const;
+          const behaviourChange = replacementMode === 'MANTER_FUNCAO'
+            ? `Mantém ${item.player?.teamMap?.functionLabel || item.player?.buildName || item.slot.primaryRoles[0]} com perfil semelhante.`
+            : `Troca ${item.player?.parsed.playstyle || item.player?.teamMap?.functionLabel || 'a função atual'} por ${player.playstyle || player.functionLabel}, alterando a dinâmica do slot.`;
+          return { item, fit, replacementMode, behaviourChange };
+        })
+        .sort((a, b) => b.fit.score - a.fit.score);
+      const best = candidates[0];
+      return {
+        id: player.id,
+        name: player.name,
+        role: player.functionLabel,
+        score: best?.fit.score ?? 0,
+        replaces: best?.item.player?.parsed.playerName ?? 'slot ainda não definido',
+        replacementMode: best?.replacementMode ?? 'MUDAR_COMPORTAMENTO',
+        behaviourChange: best?.behaviourChange ?? 'Reserva de cobertura geral.',
+        reason: best
+          ? `${best.fit.tacticalFitLabel ?? 'Fit contextual'} para ${best.item.slot.label}; ${player.matchCount ? `validado em ${player.matchCount} partida(s)` : 'ainda sem validação de partida'}.`
+          : `Cobertura para ${player.targetPosition}; ficha ${player.buildName}.`
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 7);
   const attackRoles = lineup.filter((item) => item.slot.line === 'ataque' && item.player).map((item) => item.player?.teamMap?.functionLabel || item.player?.buildName || '').filter(Boolean);
   const midfieldRoles = lineup.filter((item) => item.slot.line === 'meio' && item.player).map((item) => item.player?.teamMap?.functionLabel || item.player?.buildName || '').filter(Boolean);
+  const attackPlayers = lineup.filter((item) => item.slot.line === 'ataque' && item.player).flatMap((item) => item.player ? [item.player] : []);
+  const midfieldPlayers = lineup.filter((item) => item.slot.line === 'meio' && item.player).flatMap((item) => item.player ? [item.player] : []);
+  const attackSynergy = attackPlayers.length >= 2 ? evaluatePairSynergyR454(attackPlayers[0], attackPlayers[1], { formationId: blueprint.id, teamStyle: style }) : null;
+  const midfieldSynergy = midfieldPlayers.length >= 2 ? evaluatePairSynergyR454(midfieldPlayers[0], midfieldPlayers[1], { formationId: blueprint.id, teamStyle: style }) : null;
   const pairingNotes = [
-    attackRoles.length >= 2 ? `Ataque: combinar ${attackRoles.slice(0, 2).join(' + ')} para evitar dois jogadores fazendo a mesma movimentação.` : 'Ataque: ainda falta uma dupla complementar confirmada.',
-    midfieldRoles.length >= 2 ? `Meio: ${midfieldRoles.slice(0, 2).join(' + ')} formam a base; preserve ao menos uma função de cobertura.` : 'Meio: ainda falta equilíbrio entre criação e cobertura.',
-    benchSuggestions.length ? `Banco: ${benchSuggestions.slice(0, 3).map((player) => player.name).join(', ')} são as primeiras alternativas pelo índice atual.` : 'Banco: não há alternativas suficientes fora dos titulares.'
+    attackSynergy ? `Ataque: sinergia ${attackSynergy.label} — ${attackSynergy.reasons[0]}` : attackRoles.length >= 2 ? `Ataque: combinar ${attackRoles.slice(0, 2).join(' + ')}.` : 'Ataque: ainda falta uma dupla complementar confirmada.',
+    midfieldSynergy ? `Meio: sinergia ${midfieldSynergy.label} — ${midfieldSynergy.reasons[0]}` : midfieldRoles.length >= 2 ? `Meio: ${midfieldRoles.slice(0, 2).join(' + ')} formam a base; preserve ao menos uma função de cobertura.` : 'Meio: ainda falta equilíbrio entre criação e cobertura.',
+    benchSuggestions.length ? `Banco: ${benchSuggestions[0].name} é a primeira alternativa para ${benchSuggestions[0].replaces} (${benchSuggestions[0].replacementMode === 'MANTER_FUNCAO' ? 'manter função' : 'mudar comportamento'}).` : 'Banco: não há alternativas suficientes fora dos titulares.'
   ];
   const recommendations: CentralRecommendation[] = [];
   if (filledSlots < blueprint.slots.length) recommendations.push({ id: 'missing-slots', priority: 'critical', title: 'Escalação incompleta', detail: `${blueprint.slots.length - filledSlots} espaço(s) não possuem encaixe seguro no Cofre.`, action: 'players' });
