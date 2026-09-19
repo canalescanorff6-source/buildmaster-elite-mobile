@@ -2258,6 +2258,8 @@ export type AnalysisResult = {
   liveEvolutionV600R11?: LiveEvolutionV600R11;
   matchStaminaV4080R44?: MatchStaminaV4080R44Analysis;
   finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;
+  /** R454: scouting contextual por edição da carta; nunca substitui a autoridade da ficha. */
+  gameplayScoutingR454?: import('../modules/scouting/gameplayScoutingR454').GameplayScoutingRecordR454;
 };
 
 export const TACTICAL_STYLE_NAME: Record<TacticalStyle, string> = {
