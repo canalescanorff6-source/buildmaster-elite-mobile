@@ -48,7 +48,7 @@ export function applyReviewedR119BaselinesR186R200(rootDirectory=process.cwd()){
     if(expectedCount===1&&total===1){results.push({path:rel,changed:false});continue;}
     let from=total===1?counts.find(([,count])=>count===1)?.[0]:undefined;
     if(!from&&total===0&&(downstreamR452||downstreamR417)){
-      const generic=[...before.matchAll(/\\b[a-f0-9]{64}\\b/g)].map((match)=>match[0]);
+      const generic=[...before.matchAll(/\b[a-f0-9]{64}\b/g)].map((match)=>match[0]);
       const unique=[...new Set(generic)];
       if(unique.length===1) from=unique[0];
       else if(unique.length===0){results.push({path:rel,changed:false,semanticBaseline:true});continue;}
