@@ -51,6 +51,7 @@ export function applyReviewedR119BaselinesR186R200(rootDirectory=process.cwd()){
       const generic=[...before.matchAll(/\\b[a-f0-9]{64}\\b/g)].map((match)=>match[0]);
       const unique=[...new Set(generic)];
       if(unique.length===1) from=unique[0];
+      else if(unique.length===0){results.push({path:rel,changed:false,semanticBaseline:true});continue;}
     }
     if(!from) throw new Error(`R406-fix7: baseline inesperado em ${rel} (${counts.map(([sha,count])=>`${sha.slice(0,8)}=${count}`).join(', ')})`);
     writeFileSync(file,before.replace(from,expected),'utf8');
