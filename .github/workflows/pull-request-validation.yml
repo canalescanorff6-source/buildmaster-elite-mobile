@@ -35,6 +35,12 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
 
+      - name: TypeScript completo do APK
+        run: npm run typecheck:r151
+
+      - name: Closure inicial R200
+        run: node scripts/check-cardvision-static-closure-r200.mjs
+
       - name: Regressões R454
         run: npm run test:r454
 

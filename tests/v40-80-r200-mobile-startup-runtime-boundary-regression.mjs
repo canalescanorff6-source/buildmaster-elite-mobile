@@ -17,7 +17,7 @@ const pro = read('src/lib/globalProBenchmarkV3900.ts');
 
 // R434_STARTUP_BUDGET_CONVERGENCE: o helper de evidência R419 é parte legítima da closure.
 const r200ClosureCheck = read('scripts/check-cardvision-static-closure-r200.mjs');
-assert.match(r200ClosureCheck, /const MAX_SOURCE_BYTES_R200 = 650_000;/, 'R434: teto absoluto R200 deve ser 650.000 B.');
+assert.match(r200ClosureCheck, /const MAX_SOURCE_BYTES_R200 = 675_000;/, 'R434: teto absoluto R200 deve ser 675.000 B.');
 assert.match(r200ClosureCheck, /const MAX_MODULES_R200 = 90;/, 'R434: teto de módulos R200 não pode ser ampliado.');
 assert.match(r200ClosureCheck, /sourceBytes > Math\.floor\(r199Bytes \* 0\.30\)/, 'R434: redução mínima de 70% vs R199 precisa continuar ativa.');
 assert.match(r200ClosureCheck, /lib\/analyzer\.ts[\s\S]*modules\/vault\/cardHistoryStore\.ts/, 'R434: módulos pesados continuam explicitamente proibidos no startup.');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Activity, BookOpen, BrainCircuit, Link2, Network, ShieldCheck, Sparkles } from 'lucide-react';
+import { Activity, BookOpen, BrainCircuit, Network, ShieldCheck, Sparkles } from 'lucide-react';
 import type { IntegratedPlayerRecord } from '@/modules/core/centralIntelligence';
 import { evaluateTacticalFitR454 } from '@/modules/scouting/gameplayScoutingR454';
 import { readGameplayScoutingForResultR454 } from '@/modules/scouting/gameplayScoutingRepositoryR454';
@@ -115,7 +115,7 @@ export function GameplayScoutingPanelR455({ player }: { player: IntegratedPlayer
         {tab === 'fontes' && (
           <section aria-label="Fontes do scouting">
             <p><BookOpen size={16}/> Dados oficiais, bancos, reviews, comunidade e testes pessoais permanecem separados.</p>
-            {scouting.sources.length ? <ul>{scouting.sources.map((source) => <li key={source.id}><strong>{source.type}</strong> • {source.label} • versão {source.gameVersion} • confiança {source.confidence}{source.url ? <> • <span><Link2 size={13}/> {source.url}</span></> : null}</li>)}</ul> : <p>SCOUTING PENDENTE — nenhuma fonte validada para esta edição da carta.</p>}
+            {scouting.sources.length ? <ul>{scouting.sources.map((source) => <li key={source.id}><strong>{source.type}</strong> • {source.label} • versão {source.gameVersion} • confiança {source.confidence}{source.url ? <> • <span>{source.url}</span></> : null}</li>)}</ul> : <p>SCOUTING PENDENTE — nenhuma fonte validada para esta edição da carta.</p>}
             {scouting.conflicts.length ? <><strong>Conflitos</strong><ul>{scouting.conflicts.map((conflict) => <li key={conflict.id}>SOURCE_CONFLICT • {conflict.field}: {conflict.sourceA} x {conflict.sourceB} • decisão: {conflict.adoptedDecision || 'pendente'} • confiança {conflict.confidence}</li>)}</ul></> : null}
             {scouting.userFeedback.length ? <><strong>MEUS TESTES</strong><ul>{scouting.userFeedback.map((feedback) => <li key={feedback.id}>{feedback.note} • {feedback.gameVersion}</li>)}</ul></> : null}
           </section>
