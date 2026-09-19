@@ -267,6 +267,10 @@ jobs:
       - name: Recuperar e validar rota inicial
         run: npm run quality:routes
 
+      - name: Pré-check rápido das regressões R193-R200
+        timeout-minutes: 12
+        run: npm run test:r193 && npm run test:r194 && npm run test:r195 && npm run test:r196 && npm run test:r197 && npm run test:r198 && npm run test:r199 && npm run test:r200
+
       - name: Diagnóstico consolidado do código-fonte
         timeout-minutes: 35
         run: npm run ci:verify
