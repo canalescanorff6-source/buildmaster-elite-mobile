@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { applyR414CiContractConvergence } from './apply-r414-ci-contract-convergence.mjs';
 import { applyR417Fix2StableVaultActionIdentity } from './apply-r417-fix2-stable-vault-action-identity.mjs';
+import { applyReviewedR119BaselinesR186R200 } from './apply-r406-fix7-r186-r200-reviewed-baselines.mjs';
 import { applyR418UnboundedCapacity } from './apply-r418-unbounded-capacity.mjs';
 import { applyR418Fix2HistoricalCapacityContracts } from './apply-r418-fix2-historical-contracts.mjs';
 import { applyR419ReaderMasterEngineClosure } from './apply-r419-reader-master-engine-closure.mjs';
@@ -67,6 +68,12 @@ if (r423.changed) {
 const r425 = applyR425SupabaseSecurityChain();
 if (r425.changed) {
   console.log(`R425 convergiu cadeia Supabase estática antes do R151 (${r425.patched.length} arquivo(s)).`);
+}
+// R417-fix2 e convergências posteriores podem alterar legitimamente R119.
+// Sincronize os contratos R186-R200 somente depois de todas essas mutações.
+const r119Baselines = applyReviewedR119BaselinesR186R200();
+if (r119Baselines.changed) {
+  console.log(`R151 sincronizou baselines R186-R200 com o R119 final (${r119Baselines.sourceSha.slice(0, 12)}).`);
 }
 const r426 = assertR426SupabaseForwardSecurityMigration();
 console.log(`R426 validou migration forward-only antes do R151 (${r426.migration}).`);
