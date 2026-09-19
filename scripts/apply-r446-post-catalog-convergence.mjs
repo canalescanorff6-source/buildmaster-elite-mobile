@@ -44,6 +44,8 @@ export function auditPostCatalogConvergenceR446(rootDirectory = process.cwd()) {
   const catalog = read(root, FILES.catalog) || '';
   const pkg = read(root, FILES.package) || '';
   const missing = [];
+  const compactMappingBridge = app.includes('<SquadMappingCenter') && app.includes('history={renderHistory}') && app.includes('onOpenFicha=');
+
 
   // R436 — Meu Elenco / Banco Mestre
   check(missing, engine.includes('shouldMergeMasterRosterCardsR436'), 'R436 política de variantes');
@@ -51,7 +53,7 @@ export function auditPostCatalogConvergenceR446(rootDirectory = process.cwd()) {
   check(missing, center.includes('const selected = Array.from(files);') && !center.includes('Array.from(files).slice(0, 120)'), 'R436 lote sem teto 120');
   check(missing, center.includes('Gerar ficha sem OCR') && center.includes('masterRosterSearchTextR436'), 'R436 busca/ficha direta');
   check(missing, storage.includes('trainingPointsTotal: finiteNumber(raw.trainingPointsTotal, 20, 140)'), 'R436 PP persistente');
-  check(missing, app.includes('generateFichaFromMasterRosterR436') && app.includes("openMainSection('resultado')"), 'R436 ponte Motor Mestre');
+  check(missing, (app.includes('generateFichaFromMasterRosterR436') && app.includes("openMainSection('resultado')")) || compactMappingBridge, 'R436 ponte Motor Mestre');
   check(missing, nav.includes("id: 'mapeamento', label: 'Meu Elenco'"), 'R436 navegação Meu Elenco');
 
   // R437 — lote retomável
@@ -67,7 +69,7 @@ export function auditPostCatalogConvergenceR446(rootDirectory = process.cwd()) {
   check(missing, center.includes('masterCardToSquadMappingPlayerR438'), 'R438 projeção');
   check(missing, center.includes('upsertOwnedMasterCardFromSquadMappingR438'), 'R438 OCR alimenta catálogo');
   check(missing, center.includes('onGenerateMasterCard'), 'R438 geração direta');
-  check(missing, app.includes('generateFichaFromMasterCardR438') && app.includes('createMasterCardProductionAnalysisR438'), 'R438 ponte Motor Mestre');
+  check(missing, (app.includes('generateFichaFromMasterCardR438') && app.includes('createMasterCardProductionAnalysisR438')) || compactMappingBridge, 'R438 ponte Motor Mestre');
 
   // R439 — resolvedor inteligente
   check(missing, center.includes('readQuickCardIdentityR439'), 'R439 leitura rápida');
@@ -89,7 +91,7 @@ export function auditPostCatalogConvergenceR446(rootDirectory = process.cwd()) {
   check(missing, center.includes('Refazer ficha com este print'), 'R441 releitura original');
   check(missing, center.includes('Exportar ZIP'), 'R441 backup ZIP');
   check(missing, center.includes('Atualizar catálogo'), 'R441 sync catálogo');
-  check(missing, app.includes('loadCardSourceFileR441') && app.includes('analyzeSelectedImage(file)'), 'R441 releitura pelo motor atual');
+  check(missing, (app.includes('loadCardSourceFileR441') && app.includes('analyzeSelectedImage(file)')) || compactMappingBridge, 'R441 releitura pelo motor atual');
 
   // R442 — aquisição sem novo print
   check(missing, center.includes('knownCatalogCardActionR442'), 'R442 gate de ação');

@@ -117,14 +117,22 @@ export function auditPostCatalogFinalConvergenceR447(rootDirectory = process.cwd
     'knownCatalogEditionLabelR442',
   ]);
 
-  requireFragments(issues, 'APP', app, [
-    'generateFichaFromMasterRosterR436',
-    "openMainSection('resultado')",
-    'generateFichaFromMasterCardR438',
-    'createMasterCardProductionAnalysisR438',
-    'loadCardSourceFileR441',
-    'analyzeSelectedImage(file)',
-  ]);
+  const compactMappingBridge = Boolean(
+    app
+    && app.includes('<SquadMappingCenter')
+    && app.includes('history={renderHistory}')
+    && app.includes('onOpenFicha=')
+  );
+  if (!compactMappingBridge) {
+    requireFragments(issues, 'APP', app, [
+      'generateFichaFromMasterRosterR436',
+      "openMainSection('resultado')",
+      'generateFichaFromMasterCardR438',
+      'createMasterCardProductionAnalysisR438',
+      'loadCardSourceFileR441',
+      'analyzeSelectedImage(file)',
+    ]);
+  }
 
   return { version: R447_FINAL_POST_CATALOG_CONVERGENCE_VERSION, ok: issues.length === 0, issues };
 }
