@@ -22,7 +22,7 @@ assert.ok(reconcile.includes('squadMappingCardToMasterCardR438'));
 assert.ok(reconcile.includes('saveMasterCardCatalogEntryR438'));
 assert.ok(reconcile.includes('setOwnedCardR438'));
 assert.ok(center.includes('readQuickCardIdentityR439'));
-assert.ok(center.includes('resolveMasterCardObservationR439'));
+assert.ok(center.includes('resolveMasterCardObservationR439') || center.includes('resolveMasterCardObservationR440'), 'R439: o resolvedor inteligente pode ser atendido pelo sucessor visual R440 após a convergência final.');
 assert.ok(center.includes('saveCardResolutionQueueItemR439'));
 assert.ok(center.includes('Selecionar esta versão'));
 assert.ok(center.includes('Identificada sem OCR completo'));
