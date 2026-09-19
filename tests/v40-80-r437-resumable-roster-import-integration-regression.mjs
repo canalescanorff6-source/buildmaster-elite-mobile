@@ -13,7 +13,7 @@ assert.match(center, /Pausar após esta carta/);
 assert.match(center, /const selected = Array\.from\(files\);/);
 assert.doesNotMatch(center, /Array\.from\(files\)\.slice\(0,\s*120\)/);
 assert.match(center, /Meu Elenco — Banco Mestre/);
-assert.match(center, /batchRosterImportSummaryR437\(stats\)/);
+assert.match(center, /batchRosterImportSummaryR437\(stats\)|intelligentImportSummaryR439\(/, 'R437: o resumo retomável pode ser servido pelo sucessor inteligente R439 após a convergência final.');
 assert.match(helper, /já existente\(s\) pulada\(s\) sem OCR/);
 assert.match(pkg, /v40-80-r437-resumable-roster-import-runtime-regression\.ts/);
 assert.match(pkg, /v40-80-r437-resumable-roster-import-integration-regression\.mjs/);
