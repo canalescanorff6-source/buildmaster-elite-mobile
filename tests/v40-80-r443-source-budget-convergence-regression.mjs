@@ -19,7 +19,7 @@ write('scripts/apply-r414-ci-contract-convergence.mjs', [
   'const x=/5\\.25\\s*\\*\\s*1024/;',
   'const result={sourceGlobalLimitBytes: 5.25 * 1024 * 1024};',
 ].join('\n'));
-write('scripts/audit-r424-final-requirements-closure.mjs', "const a=5.25 * 1024 * 1024; const b=5_405_024; const c=/5\\.25\\s*\\*\\s*1024/; // 5,25 MiB\n");
+write('scripts/audit-r424-final-requirements-closure.mjs', "const ok=/sourceTs:\\s*5\\.25\\s*\\*\\s*1024\\s*\\*\\s*1024/.test(b)&&/R414_SOURCE_BUDGET_BYTES\\s*=\\s*5_405_024/.test(r414); // 5,25 MiB\n");
 write('tests/v40-80-r424-final-requirements-closure-regression.mjs', "const a='sourceTs: 5.25 * 1024 * 1024'; const b='R414_SOURCE_BUDGET_BYTES = 5_405_024';\n");
 
 const failingSourceBytes = 5_485_036;

@@ -90,7 +90,8 @@ export function applySourceBudgetConvergenceR443(rootDirectory = process.cwd()) 
   if (!bundle.includes('sourceTs: 5.5 * 1024 * 1024')) issues.push('bundle ainda usa teto antigo');
   if (!r184.includes('const sourceLimit=5.5*1024*1024;')) issues.push('R184 ainda usa teto antigo');
   if (!r414.includes('R414_SOURCE_BUDGET_BYTES = 5_667_168') || !r414.includes('sourceTs: 5.5 * 1024 * 1024')) issues.push('R414 ainda diverge');
-  if (!r424Audit.includes('5_667_168') || !r424Audit.includes('5.5 * 1024 * 1024')) issues.push('R424 audit ainda diverge');
+  const r424HasGlobalBudget = r424Audit.includes('5.5 * 1024 * 1024') || r424Audit.includes('5\\.5\\s*\\*\\s*1024');
+  if (!r424Audit.includes('5_667_168') || !r424HasGlobalBudget) issues.push('R424 audit ainda diverge');
   if (!r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_667_168') || !r424Fixture.includes('sourceTs: 5.5 * 1024 * 1024')) issues.push('R424 fixture ainda diverge');
   if (issues.length) throw new Error(`R443: convergência de orçamento incompleta — ${issues.join(' | ')}`);
 
