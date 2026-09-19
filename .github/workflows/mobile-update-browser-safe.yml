@@ -59,16 +59,26 @@ jobs:
           parts_dir = inbox / '.mobile-upload-parts'
           reconstructed = inbox / 'mobile-update.zip'
           if trigger.is_file():
-              parts = sorted(parts_dir.glob('part*.b64')) if parts_dir.is_dir() else []
-              if not parts:
-                  raise SystemExit('Trigger encontrado, mas nenhum chunk base64 foi enviado.')
-              import base64
-              payload = ''.join(p.read_text(encoding='utf-8').strip() for p in parts)
-              try:
-                  reconstructed.write_bytes(base64.b64decode(payload, validate=True))
-              except Exception as exc:
-                  raise SystemExit(f'Falha ao reconstruir mobile-update.zip: {exc}')
-              print(f'Pacote reconstruído de {len(parts)} chunks base64.')
+              source = trigger.read_text(encoding='utf-8').strip()
+              if source.startswith(('https://', 'http://')):
+                  import urllib.request
+                  try:
+                      with urllib.request.urlopen(source, timeout=60) as response:
+                          reconstructed.write_bytes(response.read())
+                  except Exception as exc:
+                      raise SystemExit(f'Falha ao baixar pacote indicado pelo trigger: {exc}')
+                  print(f'Pacote baixado do trigger URL: {reconstructed.stat().st_size} bytes.')
+              else:
+                  parts = sorted(parts_dir.glob('part*.b64')) if parts_dir.is_dir() else []
+                  if not parts:
+                      raise SystemExit('Trigger encontrado, mas nenhum chunk base64 foi enviado.')
+                  import base64
+                  payload = ''.join(p.read_text(encoding='utf-8').strip() for p in parts)
+                  try:
+                      reconstructed.write_bytes(base64.b64decode(payload, validate=True))
+                  except Exception as exc:
+                      raise SystemExit(f'Falha ao reconstruir mobile-update.zip: {exc}')
+                  print(f'Pacote reconstruído de {len(parts)} chunks base64.')
 
           def accepted_name(path):
               pp = PurePosixPath(path)
