@@ -231,7 +231,8 @@ export function buildAdaptivePositionV3930(result: AnalysisResult): AdaptivePosi
   });
   const finalSkills = mergeSkills(coreSkills, positionalSkills, mode);
   const impetos = [...(unified?.canonicalImpetos ?? result.recommendedImpetos)];
-  const primaryImpeto = unified?.primaryImpeto ?? impetos[0]?.name ?? null;
+  const currentCardImpeto = result.parsed.impetos.find((item) => item.active !== false)?.name ?? result.parsed.impetos[0]?.name ?? null;
+  const primaryImpeto = currentCardImpeto ?? unified?.primaryImpeto ?? impetos[0]?.name ?? null;
   const familiarity = positionFamiliarity(result, selected);
   const identityPreservation = corePreservation(coreTraining, adapted.plan);
   const fit = clamp(familiarity * .42 + identityPreservation * .3 + Math.min(100, 72 + adapted.gain * 4) * .28);
