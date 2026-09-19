@@ -20,7 +20,7 @@ masterRosterSearchTextR436 Gerar ficha sem OCR
 const selected = Array.from(files);
 preflightSourceHashR437 importCancelRequestedRef recordBatchRosterImportOutcomeR437 pauseBatchRosterImportR437 Pausar após esta carta
 readQuickCardIdentityR439 saveCardResolutionQueueItemR439 Selecionar esta versão intelligentImportSummaryR439 saveResolvedFullOcrCardR439
-label: 'Catálogo Geral' label: 'Revisar' migrateSquadMappingToMasterCatalogR438 masterCardToSquadMappingPlayerR438 upsertOwnedMasterCardFromSquadMappingR438 onGenerateMasterCard
+label: 'Catálogo Geral' label: 'Revisar' migrateSquadMappingToMasterCatalogR438 masterCardToSquadMappingPlayerR438 onGenerateMasterCard
 resolveMasterCardObservationR440 saveCardVisualFingerprintR440
 storeCardSourceImageR441 Refazer ficha com este print Exportar ZIP Atualizar catálogo
 knownCatalogCardActionR442 addKnownCatalogCardToMappingR442 async function addKnownCatalogCardR442(){} Adicionar ao Meu Elenco actionR442.canGenerate knownCatalogEditionLabelR442
@@ -80,6 +80,10 @@ write(root, 'package.json', JSON.stringify({ scripts: { 'test:r200': 'node base-
 const before = auditPostCatalogFinalConvergenceR447(root);
 assert.equal(before.ok, true, before.issues.join(' | '));
 
+const successorOnly = auditPostCatalogFinalConvergenceR447(root);
+assert.equal(successorOnly.ok, true, `R447 deve aceitar saveResolvedFullOcrCardR439 como sucessor do upsert R438: ${successorOnly.issues.join(' | ')}`);
+assert.doesNotMatch(fs.readFileSync(path.join(root, 'src/modules/squad-mapping/SquadMappingCenter.tsx'), 'utf8'), /upsertOwnedMasterCardFromSquadMappingR438/, 'fixture final não deve depender do import R438 aposentado');
+
 const first = applyR447FinalPostCatalogConvergence(root);
 assert.equal(first.changed, true);
 const second = applyR447FinalPostCatalogConvergence(root);
@@ -96,13 +100,15 @@ assert.match(pkg.scripts['test:r200'], /v40-80-r447-final-post-catalog-convergen
 
 let center = fs.readFileSync(path.join(root, 'src/modules/squad-mapping/SquadMappingCenter.tsx'), 'utf8');
 center = center.replace('Pausar após esta carta', '').replace('Selecionar esta versão', '').replace('Atualizar catálogo', '').replace('actionR442.canGenerate', '');
+center = center.replace('saveResolvedFullOcrCardR439', '');
 fs.writeFileSync(path.join(root, 'src/modules/squad-mapping/SquadMappingCenter.tsx'), center, 'utf8');
 const broken = auditPostCatalogFinalConvergenceR447(root);
 assert.equal(broken.ok, false);
-assert.ok(broken.issues.length >= 4, `esperava múltiplas falhas, recebi ${broken.issues.join(' | ')}`);
+assert.ok(broken.issues.length >= 5, `esperava múltiplas falhas, recebi ${broken.issues.join(' | ')}`);
 assert.ok(broken.issues.some((item) => item.includes('R437')));
 assert.ok(broken.issues.some((item) => item.includes('R439')));
 assert.ok(broken.issues.some((item) => item.includes('R441')));
 assert.ok(broken.issues.some((item) => item.includes('R442')));
+assert.ok(broken.issues.some((item) => item.includes('R438/R439')));
 
-console.log('R447 aprovada: auditoria final R436-R442, skip seguro no types:repair/routes:repair, múltiplas falhas reportadas de uma vez e idempotência preservada.');
+console.log('R451 aprovada: R447 v2 aceita a persistência sucessora R439, rejeita ausência real e preserva auditoria múltipla/idempotência.');

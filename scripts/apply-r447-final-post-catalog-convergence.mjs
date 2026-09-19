@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R447_FINAL_POST_CATALOG_CONVERGENCE_VERSION = '40.80-r447-final-post-catalog-convergence-v1';
+export const R447_FINAL_POST_CATALOG_CONVERGENCE_VERSION = '40.80-r447-final-post-catalog-convergence-v2';
 
 const FILES = Object.freeze({
   repairRoot: 'scripts/repair-root-tsconfig.mjs',
@@ -86,9 +86,12 @@ export function auditPostCatalogFinalConvergenceR447(rootDirectory = process.cwd
     "label: 'Revisar'",
     'migrateSquadMappingToMasterCatalogR438',
     'masterCardToSquadMappingPlayerR438',
-    'upsertOwnedMasterCardFromSquadMappingR438',
     'onGenerateMasterCard',
   ]);
+  // R439 substitui legitimamente o upsert direto R438 pela persistência da edição resolvida.
+  if (center && !center.includes('upsertOwnedMasterCardFromSquadMappingR438') && !center.includes('saveResolvedFullOcrCardR439')) {
+    issues.push('R438/R439: persistência do Catálogo Mestre após OCR ausente');
+  }
 
   requireFragments(issues, 'R439', center, [
     'readQuickCardIdentityR439',
