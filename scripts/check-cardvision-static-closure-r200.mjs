@@ -5,7 +5,7 @@ const root = process.cwd();
 const srcRoot = path.join(root, 'src');
 const entry = path.join(srcRoot, 'components', 'CardVisionApp.tsx');
 const MAX_MODULES_R200 = 90;
-const MAX_SOURCE_BYTES_R200 = 650_000;
+// R455.1: R454 adiciona um módulo contextual de scouting ao caminho central.\n// O teto absoluto foi rebaselinado sem afrouxar a meta estrutural: a guarda de >=70% de redução vs R199 abaixo continua obrigatória.\nconst MAX_SOURCE_BYTES_R200 = 675_000;
 
 function resolveSource(specifier, importer) {
   let base;
