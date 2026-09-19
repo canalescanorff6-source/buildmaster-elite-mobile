@@ -35,6 +35,9 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
 
+      - name: TypeScript completo do APK
+        run: npm run typecheck:r151
+
       - name: Regressões R454
         run: npm run test:r454
 
