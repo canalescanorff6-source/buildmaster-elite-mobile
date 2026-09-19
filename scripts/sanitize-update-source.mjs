@@ -36,6 +36,7 @@ import { applyProgressiveVaultRenderR413 } from './apply-r413-progressive-vault-
 import { applyIndexedVaultQueryR414 } from './apply-r414-indexed-vault-query.mjs';
 import { applyPostCatalogForwardIdempotenceR446 } from './apply-r446-post-catalog-convergence.mjs';
 import { applyR447FinalPostCatalogConvergence } from './apply-r447-final-post-catalog-convergence.mjs';
+import { applyR448CiFoundationOrder } from './apply-r448-ci-foundation-order.mjs';
 
 export function sanitizeUpdateSource(rootDirectory=process.cwd()){
   const root=resolve(rootDirectory);
@@ -48,6 +49,7 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
   if(modern){
     const r446=applyPostCatalogForwardIdempotenceR446(root);
     const r447=applyR447FinalPostCatalogConvergence(root);
+    const r448=applyR448CiFoundationOrder(root);
     const r404=applyCardDnaBuildDiversityR404(root);
     const r405=applyMarginalReturnDiversityR405(root);
     const r406=applyParetoNoWastedPointR406(root);
@@ -64,11 +66,11 @@ export function sanitizeUpdateSource(rootDirectory=process.cwd()){
     const r412=applyBoundedVaultHydrationR412(root);
     const r413=applyProgressiveVaultRenderR413(root);
     const r414=applyIndexedVaultQueryR414(root);
-    console.log(`v40.80 r447: convergência final pós-catálogo protegida (${r447.patched.length} arquivo(s)); R446 e Cofre R414 preservados.`);
+    console.log(`v40.80 r448: ordem de convergência determinística aplicada (${r448.patched.length} arquivo(s)); R447, R446 e Cofre R414 preservados.`);
     return {
       modernTree:true,
-      sourcePatched:r447.changed||r446.changed||r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged||r407.sourceChanged||r408.sourceChanged||r409.sourceChanged||r410.sourceChanged||r411.sourceChanged||r412.sourceChanged||r413.sourceChanged||r414.sourceChanged,
-      r447,r446,r404,r405,r406,r406fix2,r406fix3,r406fix4,r406fix5,r406fix7,r407,r408,r409,r410,r411,r412,r413,r414
+      sourcePatched:r448.changed||r447.changed||r446.changed||r404.sourceChanged||r405.sourceChanged||r406.sourceChanged||r406fix4.changed||r406fix5.sourceChanged||r407.sourceChanged||r408.sourceChanged||r409.sourceChanged||r410.sourceChanged||r411.sourceChanged||r412.sourceChanged||r413.sourceChanged||r414.sourceChanged,
+      r448,r447,r446,r404,r405,r406,r406fix2,r406fix3,r406fix4,r406fix5,r406fix7,r407,r408,r409,r410,r411,r412,r413,r414
     };
   }
   applyPreFinalConfirmationR16(root);
