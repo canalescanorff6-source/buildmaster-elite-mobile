@@ -264,6 +264,17 @@ export function CardVisionApp() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+  useEffect(() => {
+    let active = true;
+    void import('@/lib/formationRoleEngine')
+      .then(({ FORMATION_BLUEPRINTS }) => {
+        if (active) setFormationBlueprintsR455(FORMATION_BLUEPRINTS);
+      })
+      .catch(() => {
+        if (active) setFormationBlueprintsR455([]);
+      });
+    return () => { active = false; };
+  }, []);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...formationBlueprintsR455.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], [formationBlueprintsR455]);
   const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : formationBlueprintsR455.find((item) => item.id === formation) ?? null, [formation, formationBlueprintsR455]);
