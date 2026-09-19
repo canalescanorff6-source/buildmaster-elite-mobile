@@ -156,7 +156,10 @@ export function UnifiedPerformanceV3920Panel({
   if (cleanSlate) {
     const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
     const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
-    const attributeCount = Number(result.parsed.evidence?.attributeCount ?? Object.keys(result.parsed.attributes ?? {}).length);
+    const attributeCount = Math.max(
+      Number(result.parsed.evidence?.attributeCount ?? 0),
+      Object.values(result.parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length
+    );
     const positionRatingsCount = Number(result.parsed.evidence?.positionRatingsCount ?? Object.keys(result.parsed.positionRatings ?? {}).length);
     const progressionOrder = cleanSlate.usagePosition === 'GK' ? GOALKEEPER_PROGRESS_ORDER_R106 : TRAINING_PROGRESS_ORDER_R106;
     const activeTraining = progressionOrder

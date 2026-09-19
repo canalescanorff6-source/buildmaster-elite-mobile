@@ -66,6 +66,7 @@ jobs:
       - name: Remover manifesto local antigo antes dos testes
         run: |
           node scripts/sanitize-update-source.mjs
+          rm -f public/update-manifest.json out/update-manifest.json android/app/src/main/assets/public/update-manifest.json
           test ! -e public/update-manifest.json || { echo '::error::O manifesto local antigo não foi removido.'; exit 1; }
 
       - name: Configurar Node.js

@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 
 const panel=readFileSync(new URL('../src/components/UnifiedPerformanceV3920Panel.tsx',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/app/v39-unified-performance.css',import.meta.url),'utf8');
+const workspace=readFileSync(new URL('../src/components/result/ResultWorkspace.tsx',import.meta.url),'utf8');
+const cleanExperience=readFileSync(new URL('../src/lib/cleanExperience.ts',import.meta.url),'utf8');
 
 assert.match(panel,/if \(cleanSlate\)/,'A UI deve priorizar r119 mesmo quando diagnósticos históricos existirem.');
 assert.match(panel,/TrainingProgressionIconR106/,'A ficha final precisa reutilizar os ícones visuais de progressão já existentes no projeto.');
@@ -17,5 +19,9 @@ assert.match(css,/\.r119-training-icons/);
 assert.match(css,/\.r119-skill-list/);
 assert.match(css,/\.r119-skill-glyph/);
 assert.match(css,/\.r119-impeto-card/);
+assert.match(panel,/Math\.max\([\s\S]*evidence\?\.attributeCount[\s\S]*Object\.values\(result\.parsed\.attributes/,'A UI deve ignorar evidence.attributeCount=0 obsoleto quando atributos reais existem.');
+assert.match(workspace,/const UNIFIED_COMPACT_RESULT_V3920 = false;/,'As melhorias da tela de resultado não podem ficar escondidas pelo modo compacto forçado.');
+assert.match(cleanExperience,/'profissional'/,'Análise Pro deve permanecer acessível no fluxo principal.');
+assert.match(cleanExperience,/'ficha'/,'A aba Ficha deve permanecer acessível no fluxo principal.');
 
 console.log('r119 UI aprovada: ícones da ficha, Top 5 explícito e Ímpeto ideal com estado de gasto.');

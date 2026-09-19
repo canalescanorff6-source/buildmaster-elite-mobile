@@ -114,7 +114,7 @@ const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: s
   { id: 'exportar', label: 'Exportar', hint: 'Imagem, relatório e texto' }
 ];
 
-const UNIFIED_COMPACT_RESULT_V3920 = true;
+const UNIFIED_COMPACT_RESULT_V3920 = false;
 const COMPACT_PRIMARY_TABS_V3920 = RESULT_PRIMARY_TABS.filter((item) => item.id === 'resumo');
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
