@@ -50,6 +50,7 @@ import { PremiumCleanResultV3810 } from '@/components/PremiumCleanResultV3810';
 import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { GameplayDnaProfilesCard } from '@/components/result/GameplayDnaProfilesCard';
+import { GameplayScoutingR454Card } from '@/components/result/GameplayScoutingR454Card';
 import {
   GOALKEEPER_PROGRESS_ORDER_R106,
   TRAINING_PROGRESS_ORDER_R106,
@@ -558,6 +559,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       {tab === 'ficha' && (
         <div className="result-section-grid">
           <GameplayDnaProfilesCard result={result} onApplyProfile={onApplyGameplayProfile} />
+          <GameplayScoutingR454Card result={result} />
           <CalibrationV32Card result={result} />
           <PrecisionBuildPanel result={result} />
           {result.playerIdentity && <article className="luxury-panel wide-card identity-card">
