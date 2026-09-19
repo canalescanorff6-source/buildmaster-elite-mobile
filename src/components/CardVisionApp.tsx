@@ -6,7 +6,7 @@ import { ATTRIBUTE_INPUTS, POSITION_LABELS, type AnalysisResult, type Objective,
 import { DEFAULT_OCR_ZONES, type OcrZone } from '@/lib/ocrZonesModelR164';
 import { qualityLabel, qualityScore, type PremiumEnhancementMode, type PremiumZoneReading } from '@/lib/premiumReading';
 import { getManager } from '@/lib/managers';
-import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
+import type { FormationBlueprint } from '@/lib/formationRoleEngine';
 import type { PrintQualityReport } from '@/lib/validation';
 import { DEFAULT_VAULT_FOLDERS, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
 import type { GameplayDnaProfileId } from '@/lib/analyzerDomain';
@@ -122,6 +122,7 @@ export function CardVisionApp() {
   const readerImageMemoryR156 = useReaderImageMemoryR156();
   const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
+  const [formationBlueprintsR455, setFormationBlueprintsR455] = useState<FormationBlueprint[]>([]);
   const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
   const [managerId, setManagerId] = useState<string>('AUTO');
   const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
@@ -264,8 +265,8 @@ export function CardVisionApp() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
-  const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
-  const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? null, [formation]);
+  const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...formationBlueprintsR455.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], [formationBlueprintsR455]);
+  const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : formationBlueprintsR455.find((item) => item.id === formation) ?? null, [formation, formationBlueprintsR455]);
   const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation: 'AUTO', style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null, gameplayMode, connectionProfile, controlProfile }), [teamStyle, selectedManager, gameplayMode, connectionProfile, controlProfile]);
   const selectedFormationGuide = useMemo(() => {
     if (formation === 'AUTO') return null;
