@@ -452,7 +452,7 @@ function roleLabels(role: FormationRoleId | null) {
 export function buildGameplayScoutingRecordR454(
   result: AnalysisResult,
   sources: GameplayScoutingEvidenceR454[] = [],
-  gameVersion = GAMEPLAY_SCOUTING_GAME_VERSION_R454
+  gameVersion: string = GAMEPLAY_SCOUTING_GAME_VERSION_R454
 ): GameplayScoutingRecordR454 {
   const card = result.parsed;
   const cardId = cardIdentityFingerprintR126(card);
@@ -508,7 +508,7 @@ export function buildGameplayScoutingRecordR454(
     bodyProfile: [card.height ? `${card.height} cm` : '', card.weight ? `${card.weight} kg` : ''].filter(Boolean),
     height: card.height ?? null,
     dominantFoot: card.dominantFoot ?? null,
-    physicalProfile: result.physicalEngine?.summary ? [result.physicalEngine.summary] : [],
+    physicalProfile: result.physicalEngine ? [`Adequação física: ${Math.round(Number(result.physicalEngine.suitabilityScore ?? 0))}/100`] : [],
     playerIdNotes: [`Card ID conceitual: ${cardId}`, 'A identidade da carta não usa GER/OVR.'],
     animationNotes: [],
     bestRoles: roles.best,
@@ -518,7 +518,7 @@ export function buildGameplayScoutingRecordR454(
     badFormations: [],
     bestPartners: role === 'armador-criativo' ? ['Infiltração'] : role === 'artilheiro' ? ['Puxa Marcação', 'Atacante Pivô'] : role === 'puxa-marcacao' ? ['Artilheiro'] : [],
     badPartners: role === 'armador-criativo' ? ['Outro Armador Criativo no mesmo corredor, sem ruptura'] : role === 'zagueiro-destruidor' ? ['Outro ZAG Destruidor sem cobertura'] : [],
-    recommendedBuilds: unique([result.buildName, ...(result.buildVariants ?? []).map((item) => item.name)]).filter(Boolean).slice(0, 4),
+    recommendedBuilds: [result.buildName].filter(Boolean).slice(0, 4),
     recommendedSkills: result.recommendedSkills.slice(0, 5),
     formationSynergies: bestFormationNames(role, usagePosition),
     coachSynergies: [],
