@@ -1,4 +1,4 @@
-export const MIN_PLAYER_TRAINING_BUDGET = 20;
+export const MIN_PLAYER_TRAINING_BUDGET = 1;
 export const MAX_PLAYER_TRAINING_BUDGET = 140;
 export const SAFE_PLAYER_TRAINING_BUDGET = 64;
 
@@ -7,10 +7,11 @@ export const SAFE_PLAYER_TRAINING_BUDGET = 64;
  * Valores válidos são inteiros entre 20 e 140; entradas ausentes/inválidas usam
  * o orçamento seguro para que o resolvedor possa continuar sem inventar PP.
  */
-export function normalizePlayerTrainingBudget(value?: number | null): number {
+export function normalizePlayerTrainingBudget(value: number | null | undefined): number {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return SAFE_PLAYER_TRAINING_BUDGET;
-  return Math.min(MAX_PLAYER_TRAINING_BUDGET, Math.max(MIN_PLAYER_TRAINING_BUDGET, Math.round(numeric)));
+  // R419: 0 representa orçamento desconhecido/bloqueado. Nunca fabricar 64 PP.
+  if (!Number.isFinite(numeric) || numeric < MIN_PLAYER_TRAINING_BUDGET || numeric > MAX_PLAYER_TRAINING_BUDGET) return 0;
+  return Math.round(numeric);
 }
 export function inferPointsFromCardLevel(level?: number | null): number | null {
   if (!Number.isFinite(level ?? NaN)) return null;
