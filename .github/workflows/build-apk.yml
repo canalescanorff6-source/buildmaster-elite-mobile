@@ -48,7 +48,7 @@ permissions:
 
 concurrency:
   group: buildmaster-release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-apk:
