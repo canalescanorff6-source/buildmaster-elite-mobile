@@ -46,9 +46,13 @@ export function applyReviewedR119BaselinesR186R200(rootDirectory=process.cwd()){
     const total=counts.reduce((sum,[,count])=>sum+count,0);
     const expectedCount=counts.find(([sha])=>sha===expected)?.[1]??0;
     if(expectedCount===1&&total===1){results.push({path:rel,changed:false});continue;}
-    if(total!==1) throw new Error(`R406-fix7: baseline inesperado em ${rel} (${counts.map(([sha,count])=>`${sha.slice(0,8)}=${count}`).join(', ')})`);
-    const from=counts.find(([,count])=>count===1)?.[0];
-    if(!from) throw new Error(`R406-fix7: baseline fonte ausente em ${rel}`);
+    let from=total===1?counts.find(([,count])=>count===1)?.[0]:undefined;
+    if(!from&&total===0&&(downstreamR452||downstreamR417)){
+      const generic=[...before.matchAll(/\\b[a-f0-9]{64}\\b/g)].map((match)=>match[0]);
+      const unique=[...new Set(generic)];
+      if(unique.length===1) from=unique[0];
+    }
+    if(!from) throw new Error(`R406-fix7: baseline inesperado em ${rel} (${counts.map(([sha,count])=>`${sha.slice(0,8)}=${count}`).join(', ')})`);
     writeFileSync(file,before.replace(from,expected),'utf8');
     results.push({path:rel,changed:true});
   }
