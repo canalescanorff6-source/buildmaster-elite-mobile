@@ -50,7 +50,8 @@ assert.equal(identityOnly.canGenerate, false);
 assert.ok(identityOnly.missing.includes('atributos completos'));
 const partial = masterRosterCardReadinessR436({ ...card, id: 'cr7-b2', cardLabel: 'Epic parcial', attributes: {}, skills: [], profileCoverage: 30 });
 assert.equal(partial.status, 'partial');
-assert.throws(() => buildMasterRosterRawTextR436({ ...card, attributes: {} }), /dados completos/i, 'Carta incompleta não pode gerar ficha silenciosamente.');
+assert.equal(partial.canGenerate, true, 'Carta identificada com PP conhecido deve gerar ficha provisória.');
+assert.match(buildMasterRosterRawTextR436({ ...card, attributes: {}, skills: [], profileCoverage: 30 }), /PONTOS TOTAIS: 62/);
 
 const text = buildMasterRosterRawTextR436(card);
 for (const fragment of [
@@ -89,4 +90,4 @@ assert.equal(shouldMergeMasterRosterCardsR436(
 const sameNameOtherCard = masterRosterSearchTextR436({ ...card, id: 'cr7-c', cardLabel: 'Epic Portugal', cardFingerprint: 'card-r126-cr7-epic' });
 assert.notEqual(search, sameNameOtherCard, 'Duas cartas do mesmo jogador precisam continuar distinguíveis por versão/fingerprint.');
 
-console.log('R436 runtime aprovado: banco mestre distingue versões, deriva PP e só gera ficha com dados completos.');
+console.log('R436 runtime aprovado: banco mestre distingue versões, deriva PP e libera ficha provisória com identidade + PP.');

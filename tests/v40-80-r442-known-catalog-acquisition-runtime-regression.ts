@@ -86,8 +86,8 @@ const partial = createMasterCardCatalogEntryR438({
   mainPosition: 'LWF', positions: ['LWF'], level: 30, confidence: 70, sources: ['CATALOG_PATCH']
 });
 const partialOwned = knownCatalogCardActionR442(partial, true);
-assert.equal(partialOwned.primaryAction, 'REVIEW');
-assert.equal(partialOwned.canGenerate, false);
+assert.equal(partialOwned.primaryAction, 'GENERATE');
+assert.equal(partialOwned.canGenerate, true);
 assert.equal(partialOwned.needsReview, true);
 
 const label = knownCatalogEditionLabelR442(complete);

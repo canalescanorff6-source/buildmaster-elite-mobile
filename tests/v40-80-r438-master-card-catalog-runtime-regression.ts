@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createMasterCardCatalogEntryR438, masterCardTrainingPointsR438, mergeMasterCardCatalogEntryR438, sameMasterCardEditionR438 } from '../src/modules/card-catalog/masterCardCatalogR438';
+import { createMasterCardCatalogEntryR438, masterCardGenerationReadinessR452, masterCardTrainingPointsR438, mergeMasterCardCatalogEntryR438, sameMasterCardEditionR438 } from '../src/modules/card-catalog/masterCardCatalogR438';
 import { searchMasterCardsR438 } from '../src/modules/card-catalog/masterCardSearchIndexR438';
 
 const attributes = {
@@ -20,6 +20,10 @@ const incomplete = createMasterCardCatalogEntryR438({ playerName:'Cristiano Rona
 assert.equal(incomplete.completeness,'IDENTITY_ONLY');
 assert.ok(incomplete.missingFields.includes('nível'));
 assert.ok(incomplete.missingFields.includes('26 atributos'));
+assert.equal(masterCardGenerationReadinessR452(incomplete).canGenerate,false);
+const partialWithPoints=createMasterCardCatalogEntryR438({playerName:'Cristiano Ronaldo',cardLabel:'Epic parcial',cardFingerprint:'card-r126-cr7-partial-r452',mainPosition:'CF',positions:['CF'],level:29,attributes:{finishing:94,offensiveAwareness:90},nativeSkills:[],sourceHash:'hash-partial-r452',sources:['OCR_IMPORT']});
+const partialReadiness=masterCardGenerationReadinessR452(partialWithPoints);
+assert.equal(partialReadiness.points,56); assert.equal(partialReadiness.canGenerate,true); assert.equal(partialReadiness.provisional,true);
 
 const other = createMasterCardCatalogEntryR438({ ...base, catalogCardId:undefined, cardFingerprint:'card-r126-cr7-epic', cardLabel:'Epic Portugal', sourceHash:'hash-epic-2' });
 assert.equal(sameMasterCardEditionR438(base,other),false,'Duas edições do mesmo jogador não podem colidir.');
@@ -31,4 +35,4 @@ const reread = createMasterCardCatalogEntryR438({ ...base, catalogCardId:base.ca
 const merged=mergeMasterCardCatalogEntryR438(base,reread);
 assert.equal(merged.attributes.finishing,95);
 assert.equal(merged.catalogCardId,base.catalogCardId);
-console.log('R438 runtime aprovado: catálogo mestre separa edições, deriva PP e bloqueia dados incompletos.');
+console.log('R438 runtime aprovado: catálogo mestre separa edições, deriva PP e permite ficha provisória segura.');
