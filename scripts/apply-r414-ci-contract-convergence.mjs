@@ -67,6 +67,13 @@ const R415_READER_MARKER = 'BM_R415_READER_INTAKE_INTEGRITY';
 
 function patchExact(source, from, to, label) {
   if (source.includes(to)) return { source, changed: false };
+  // R443/R442 são sucessores legítimos do checkpoint histórico R414.
+  // Quando o teste já usa o budget pós-catálogo de 5.667.168 B,
+  // não tente rebaixá-lo nem trate a ausência do literal antigo como corrupção.
+  if (label.endsWith('source budget') && (
+    source.includes('postCatalogBoundary ? 5_667_168')
+    || source.includes('r443CatalogBoundary ? 5_667_168')
+  )) return { source, changed: false };
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`R414 CI convergence: contrato inesperado em ${label}; ocorrências=${count}`);
   return { source: source.replace(from, to), changed: true };
