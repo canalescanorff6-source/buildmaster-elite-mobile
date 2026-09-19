@@ -19,7 +19,7 @@ import { ACTIVE_SESSION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, fo
 import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import type { CardVisionSettingsView, CardVisionVaultView, MainSection, PlayerWorkspace } from '@/lib/appNavigationR127';
 import type { EvolutionInput } from '@/lib/appEvolutionV2740';
-import { type CentralRecommendation } from '@/modules/core/centralIntelligence';
+import type { CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
 import { CalibrationProfileFields, EfootballV600PreviewV4070, ManagerSelectionField, UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/lazy/CardVisionConditionalFieldsR179';
 import { ONBOARDING_STORAGE_KEY, type OnboardingProfile } from '@/lib/appEvolution';
