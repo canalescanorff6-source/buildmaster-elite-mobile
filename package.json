@@ -309,7 +309,8 @@
     "test:r452": "node -r ./tests/_ts-require.cjs tests/v40-80-r452-partial-ficha-availability-regression.ts",
     "test:r453": "node -r ./tests/_ts-require.cjs tests/v40-80-r453-stale-partial-ficha-upgrade-regression.ts",
     "test:r454": "node -r ./tests/_ts-require.cjs tests/v40-80-r454-gameplay-scouting-context-regression.ts && node tests/v40-80-r454-scouting-ui-integration-regression.mjs",
-    "test:r455": "node tests/v40-80-r455-gameplay-scouting-panel-regression.mjs"
+    "test:r455": "node tests/v40-80-r455-gameplay-scouting-panel-regression.mjs",
+    "test:r419": "node tests/v40-80-r419-reader-master-engine-closure-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
