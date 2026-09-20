@@ -7,7 +7,8 @@ const entry = path.join(srcRoot, 'components', 'result', 'ResultWorkspace.tsx');
 // R456: Gameplay Scouting contextual adiciona exatamente um módulo estático legítimo ao caminho do resultado.
 // O teto continua exato/fail-closed e o orçamento por bytes permanece inalterado.
 const MAX_MODULES_R192 = 129;
-const MAX_SOURCE_BYTES_R192 = 2_135_000;
+// R456: scouting contextual elevou a closure em ~12,5 KB; teto avança só 25 KB e continua fail-closed.
+const MAX_SOURCE_BYTES_R192 = 2_185_000;
 
 function resolveSource(specifier, importer) {
   let base;
