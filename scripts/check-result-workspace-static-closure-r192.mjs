@@ -4,7 +4,9 @@ import path from 'node:path';
 const root = process.cwd();
 const srcRoot = path.join(root, 'src');
 const entry = path.join(srcRoot, 'components', 'result', 'ResultWorkspace.tsx');
-const MAX_MODULES_R192 = 125;
+// R456: Gameplay Scouting contextual adiciona exatamente um módulo estático legítimo ao caminho do resultado.
+// O teto continua exato/fail-closed e o orçamento por bytes permanece inalterado.
+const MAX_MODULES_R192 = 129;
 const MAX_SOURCE_BYTES_R192 = 2_135_000;
 
 function resolveSource(specifier, importer) {
