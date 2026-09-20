@@ -102,7 +102,10 @@ export function applyAutonomousCardVaultR417(rootDirectory=process.cwd()){
  p(R184_POSITION_TEST,"console.log('R184 estabilidade aprovada: posição de uso continua diagnosticada, enquanto a progressão permanente permanece ancorada na carta natural.');","console.log('R184 estabilidade aprovada: R417 ignora alvo manual legado e preserva função automática, progressão, Top 5 e Ímpeto canônicos.');",'R184 mensagem');
 
  p(R186_EQ_TEST,"d3a8c3226cdc2cceab2e19fab6751ae11745b66c6a93844657ccc516b27cd57f","80bc7241532a47402242f6bcf61202cb4ca5f095ecbd8f56ade1ff40df190fae",'R186 snapshot R416 com proficiência');
- p(R192_CHECK,"const MAX_MODULES_R192 = 125;","const MAX_MODULES_R192 = 127;",'R192 dois módulos R416/R417');
+ const r192CurrentR417=readFileSync(resolve(root,R192_CHECK),'utf8');
+ if(!/const MAX_MODULES_R192 = (?:127|128|129);/.test(r192CurrentR417)){
+   p(R192_CHECK,"const MAX_MODULES_R192 = 125;","const MAX_MODULES_R192 = 127;",'R192 dois módulos R416/R417');
+ }
  for(const path of R119_HASH_GUARD_TESTS){const file=resolve(root,path);if(!existsSync(file))throw new Error(`R417: guardrail R119 ausente: ${path}`);let source=readFileSync(file,'utf8'),next=source.split(R119_HASH_R406).join(R119_HASH_R417).split(R119_HASH_R416).join(R119_HASH_R417).split(R119_HASH_LEGACY).join(R119_HASH_R417);if(next!==source){writeFileSync(file,next,'utf8');patched.push(path);changed=true;}}
 
  p(RESULT_UI,"  const positionItems = result.positionScores.slice(0, 8);","  const autonomousPositions = result.positionUsageR416?.automaticTopPositions ?? result.positionUsageR416?.recommendedPositions ?? [];\n  const autonomousEntries = result.positionUsageR416?.entries.filter((item) => autonomousPositions.includes(item.position)).sort((a,b)=>autonomousPositions.indexOf(a.position)-autonomousPositions.indexOf(b.position)) ?? [];\n  const positionItems = result.positionScores.slice(0, 8);",'dados Top 3 automáticos');
