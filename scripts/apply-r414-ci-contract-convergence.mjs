@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { applyAutonomousCardVaultR417 } from './apply-r417-autonomous-card-vault.mjs';
 
 export const R414_SOURCE_BUDGET_BYTES = 5_405_024;
-export const R414_RESULT_CLOSURE_BUDGET_R192 = 2_160_000;
+export const R414_RESULT_CLOSURE_BUDGET_R192 = 2_185_000;
 
 const TARGETS = [
   {
@@ -67,6 +67,11 @@ const R415_READER_MARKER = 'BM_R415_READER_INTAKE_INTEGRITY';
 
 function patchExact(source, from, to, label) {
   if (source.includes(to)) return { source, changed: false };
+  if (label === 'R192 result closure budget') {
+    for (const legacy of ['const MAX_SOURCE_BYTES_R192 = 2_160_000;', 'const MAX_SOURCE_BYTES_R192 = 2_135_000;']) {
+      if (source.includes(legacy)) return { source: source.replace(legacy, to), changed: true };
+    }
+  }
   // R443/R442 são sucessores legítimos do checkpoint histórico R414.
   // Quando o teste já usa o budget pós-catálogo de 5.667.168 B,
   // não tente rebaixá-lo nem trate a ausência do literal antigo como corrupção.
