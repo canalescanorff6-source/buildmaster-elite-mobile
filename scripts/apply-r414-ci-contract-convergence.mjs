@@ -9,7 +9,7 @@ const TARGETS = [
   {
     path: 'scripts/check-result-workspace-static-closure-r192.mjs',
     from: 'const MAX_SOURCE_BYTES_R192 = 2_135_000;',
-    to: `const MAX_SOURCE_BYTES_R192 = ${R414_RESULT_CLOSURE_BUDGET_R192};`,
+    to: 'const MAX_SOURCE_BYTES_R192 = 2_185_000;',
     label: 'R192 result closure budget',
   },
   {
