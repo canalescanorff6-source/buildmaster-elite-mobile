@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R419_READER_MASTER_ENGINE_VERSION = '40.80-r419-reader-master-engine-closure-v1';
+export const R419_READER_MASTER_ENGINE_VERSION = '40.80-r419-reader-master-engine-closure-v2-r456';
 
 const FILES = {
   budget: 'src/modules/builds/pointBudget.ts',
@@ -178,12 +178,14 @@ function patchDomain(source) {
 }
 
 export function convergeR192ModuleBudgetR419(source) {
-  const finalMarker = 'const MAX_MODULES_R192 = 128;';
+  // R456: R454/R455 adicionam exatamente um módulo estático legítimo de scouting ao caminho do resultado.
+  // O contador permanece exato/fail-closed; qualquer valor futuro desconhecido continua bloqueado.
+  const finalMarker = 'const MAX_MODULES_R192 = 129;';
   if (source.includes(finalMarker)) return source;
-  for (const legacy of ['const MAX_MODULES_R192 = 127;', 'const MAX_MODULES_R192 = 125;']) {
+  for (const legacy of ['const MAX_MODULES_R192 = 128;', 'const MAX_MODULES_R192 = 127;', 'const MAX_MODULES_R192 = 125;']) {
     if (source.includes(legacy)) return source.replace(legacy, finalMarker);
   }
-  throw new Error('R419: contrato de módulos R192 inesperado; esperado 125, 127 ou 128.');
+  throw new Error('R419/R456: contrato de módulos R192 inesperado; esperado 125, 127, 128 ou 129.');
 }
 
 function patchClean(source) {
@@ -241,7 +243,7 @@ export function applyR419ReaderMasterEngineClosure(rootDirectory = process.cwd()
     changed = true;
   }
 
-  // R433: R417 reserva dois módulos (125→127); o helper R419 adiciona o 128º módulo.
+  // R456: R417 reserva 125→127, R419 adiciona o 128º e o scouting contextual R454/R455 adiciona exatamente o 129º.
   const r192 = readRequired(root, FILES.r192Closure);
   const r192Next = convergeR192ModuleBudgetR419(r192.source);
   changed = writeIfChanged(r192.file, r192.source, r192Next, patched, FILES.r192Closure) || changed;
@@ -256,9 +258,9 @@ export function applyR419ReaderMasterEngineClosure(rootDirectory = process.cwd()
   if (!finalDomain.includes('trainingBudgetStateR419?: CardEvidenceStateR419;')) throw new Error('R419: estado de evidência não entrou no domínio.');
   if (!finalClean.includes("budgetEvidenceStateR419!=='TRUSTED'")) throw new Error('R419: Clean Slate não bloqueia PP não confiável.');
   if (!/ignoresOverall:true/.test(finalClean)) throw new Error('R419: guard Overall/GER ausente.');
-  if (!finalR192.includes('const MAX_MODULES_R192 = 128;')) throw new Error('R419/R433: R192 não contabiliza o helper estático de evidência R419.');
+  if (!finalR192.includes('const MAX_MODULES_R192 = 129;')) throw new Error('R419/R456: R192 não contabiliza a closure atual com scouting contextual.');
 
-  return { changed, patched, version: R419_READER_MASTER_ENGINE_VERSION, fabricatedBudgetFallback: false, failClosedEvidence: true, r192ClosureModules: 128 };
+  return { changed, patched, version: R419_READER_MASTER_ENGINE_VERSION, fabricatedBudgetFallback: false, failClosedEvidence: true, r192ClosureModules: 129 };
 }
 
 const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
