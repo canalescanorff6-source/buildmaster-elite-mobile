@@ -53,11 +53,13 @@ assert.match(r417, /MAX_MODULES_R192 = 125;[\s\S]{0,120}MAX_MODULES_R192 = 127;/
 
 assert.match(r192Closure, /const MAX_MODULES_R192 = 129;/,
   'R456: R192 precisa contabilizar exatamente o módulo adicional de scouting contextual.');
+assert.match(r192Closure, /const MAX_SOURCE_BYTES_R192 = 2_185_000;/,
+  'R456: closure R192 deve reservar somente 25 KB adicionais para o scouting contextual.');
 for (const value of [125, 127, 128, 129]) {
-  const input = `const MAX_MODULES_R192 = ${value};\nconst MAX_SOURCE_BYTES_R192 = 2_135_000;`;
+  const input = `const MAX_MODULES_R192 = ${value};\nconst MAX_SOURCE_BYTES_R192 = 2_185_000;`;
   const output = convergeR192ModuleBudgetR419(input);
   assert.match(output, /const MAX_MODULES_R192 = 129;/);
-  assert.match(output, /const MAX_SOURCE_BYTES_R192 = 2_135_000;/,
+  assert.match(output, /const MAX_SOURCE_BYTES_R192 = 2_185_000;/,
     'R456: correção do contador não pode alterar o orçamento por bytes.');
 }
 assert.throws(
