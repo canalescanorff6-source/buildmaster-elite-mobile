@@ -25,7 +25,7 @@ import {
   type ManualFields,
   type SavedAnalysis,
 } from '@/modules/vault/cardHistoryStore';
-import { ONBOARDING_STORAGE_KEY, type OnboardingProfile } from '@/lib/appEvolution';
+import { ONBOARDING_STORAGE_KEY, type OnboardingProfile } from '@/lib/appStartupContractsR200';
 import type { MutableRefObject } from 'react';
 import type {
   ConnectionProfile,
