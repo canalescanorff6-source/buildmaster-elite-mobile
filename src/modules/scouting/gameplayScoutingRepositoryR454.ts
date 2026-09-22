@@ -1,7 +1,8 @@
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import type { AnalysisResult } from '@/lib/analyzerDomain';
-import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { cardIdentityAliasesR457, cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import {
+  CURRENT_EFOOTBALL_GAME_VERSION_R457,
   GAMEPLAY_SCOUTING_STORAGE_KEY_R454,
   GAMEPLAY_SCOUTING_R454_VERSION,
   createPendingGameplayScoutingR454,
@@ -43,9 +44,25 @@ export function readGameplayScoutingR454(cardId: string): GameplayScoutingRecord
   return readStore()[cardId] ?? null;
 }
 
-export function readGameplayScoutingForResultR454(result: AnalysisResult): GameplayScoutingRecordR454 {
-  const cardId = cardIdentityFingerprintR126(result.parsed);
-  return readGameplayScoutingR454(cardId) ?? createPendingGameplayScoutingR454(result);
+export function readGameplayScoutingForResultR454(
+  result: AnalysisResult,
+  gameVersion = CURRENT_EFOOTBALL_GAME_VERSION_R457
+): GameplayScoutingRecordR454 {
+  const canonical = cardIdentityFingerprintR126(result.parsed);
+  const store = readStore();
+  for (const alias of cardIdentityAliasesR457(result.parsed)) {
+    const found = store[alias];
+    if (!found || found.gameVersion !== gameVersion) continue;
+    if (alias !== canonical || found.cardId !== canonical) {
+      const migrated = normalizeRecord({ ...found, cardId: canonical, gameVersion });
+      store[canonical] = migrated;
+      delete store[alias];
+      writeStore(store);
+      return migrated;
+    }
+    return normalizeRecord(found);
+  }
+  return createPendingGameplayScoutingR454(result, gameVersion);
 }
 
 export function upsertGameplayScoutingR454(record: GameplayScoutingRecordR454) {
