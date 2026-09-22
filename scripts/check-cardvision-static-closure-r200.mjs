@@ -26,6 +26,7 @@ function staticRuntimeImports(source) {
   return imports;
 }
 const seen = new Set();
+const parentByFile = new Map();
 const stack = [entry];
 while (stack.length) {
   const file = path.resolve(stack.pop());
@@ -34,7 +35,11 @@ while (stack.length) {
   const source = fs.readFileSync(file, 'utf8');
   for (const specifier of staticRuntimeImports(source)) {
     const resolved = resolveSource(specifier, file);
-    if (resolved && !seen.has(path.resolve(resolved))) stack.push(resolved);
+    if (resolved && !seen.has(path.resolve(resolved))) {
+      const absoluteResolved = path.resolve(resolved);
+      if (!parentByFile.has(absoluteResolved)) parentByFile.set(absoluteResolved, { importer: file, specifier });
+      stack.push(resolved);
+    }
   }
 }
 const sourceBytes = [...seen].reduce((sum, file) => sum + fs.statSync(file).size, 0);
@@ -55,7 +60,21 @@ for (const [relative, label] of forbidden) {
   if (seen.has(path.resolve(path.join(srcRoot, relative)))) throw new Error(`R200: ${label} voltou à closure inicial.`);
 }
 if (seen.size > MAX_MODULES_R200) throw new Error(`R200: closure inicial cresceu para ${seen.size} módulos (limite ${MAX_MODULES_R200}).`);
-if (sourceBytes > MAX_SOURCE_BYTES_R200) throw new Error(`R200: closure inicial cresceu para ${sourceBytes} bytes (limite ${MAX_SOURCE_BYTES_R200}).`);
+if (sourceBytes > MAX_SOURCE_BYTES_R200) {
+  const appEvolutionFile = path.resolve(path.join(srcRoot, 'lib/appEvolution.ts'));
+  if (seen.has(appEvolutionFile)) {
+    const chain = [];
+    let cursor = appEvolutionFile;
+    while (cursor) {
+      chain.push(path.relative(root, cursor));
+      const parent = parentByFile.get(cursor);
+      if (!parent) break;
+      cursor = parent.importer;
+    }
+    console.error(`R200 diagnóstico: appEvolution.ts entrou pela cadeia ${chain.reverse().join(' -> ')}`);
+  }
+  throw new Error(`R200: closure inicial cresceu para ${sourceBytes} bytes (limite ${MAX_SOURCE_BYTES_R200}).`);
+}
 const r199Bytes = 2_377_217;
 if (sourceBytes > Math.floor(r199Bytes * 0.30)) throw new Error(`R200: redução de startup ficou abaixo de 70% vs R199 (${sourceBytes} B).`);
 console.log(`R200 static closure aprovada: ${seen.size} módulos, ${sourceBytes} bytes; redução ${(100 * (1 - sourceBytes / r199Bytes)).toFixed(1)}% vs R199.`);
