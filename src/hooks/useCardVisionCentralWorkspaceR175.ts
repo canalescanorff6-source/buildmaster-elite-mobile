@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { TacticalFormation, TacticalStyle } from '@/lib/analyzerDomain';
-import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY } from '@/lib/appEvolution';
+import { CARD_REGISTRY_STORAGE_KEY, MATCH_VALIDATION_STORAGE_KEY, ONBOARDING_STORAGE_KEY } from '@/lib/appStartupContractsR200';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { cancelIdleTask, scheduleIdleTask } from '@/lib/performanceScheduler';
 import { recordSafeRuntimeError } from '@/lib/safeDiagnostics';
