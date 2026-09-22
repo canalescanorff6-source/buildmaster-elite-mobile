@@ -22,15 +22,15 @@ write('scripts/apply-r414-ci-contract-convergence.mjs', [
 write('scripts/audit-r424-final-requirements-closure.mjs', "const ok=/sourceTs:\\s*5\\.25\\s*\\*\\s*1024\\s*\\*\\s*1024/.test(b)&&/R414_SOURCE_BUDGET_BYTES\\s*=\\s*5_405_024/.test(r414); // 5,25 MiB\n");
 write('tests/v40-80-r424-final-requirements-closure-regression.mjs', "const a='sourceTs: 5.25 * 1024 * 1024'; const b='R414_SOURCE_BUDGET_BYTES = 5_405_024';\n");
 
-const failingSourceBytes = 5_485_036;
-assert.ok(failingSourceBytes > 5_360_000, 'fixture deve reproduzir o teto que falhou no CI');
+const failingSourceBytes = 5_697_846;
+assert.ok(failingSourceBytes > 5_667_168, 'fixture deve reproduzir o teto R443/R407 que falhou após R468');
 assert.ok(failingSourceBytes <= R443_SOURCE_CHECKPOINT_BYTES, 'novo checkpoint deve comportar a árvore R442 sem consumir a reserva');
 
 const first = applySourceBudgetConvergenceR443(root);
 assert.equal(first.changed, true);
-assert.equal(first.checkpointBytes, 5_667_168);
+assert.equal(first.checkpointBytes, 5_732_704);
 assert.equal(first.reserveBytes, 100_000);
-assert.equal(first.globalSourceBudgetBytes, 5.5 * 1024 * 1024);
+assert.equal(first.globalSourceBudgetBytes, 5.5625 * 1024 * 1024);
 assert.ok(first.patched.length >= 5);
 
 const second = applySourceBudgetConvergenceR443(root);
@@ -39,6 +39,6 @@ assert.equal(second.patched.length, 0);
 
 assert.match(fs.readFileSync(path.join(root,'scripts/check-bundle-budget.mjs'),'utf8'), /sourceTs: 5\.5 \* 1024 \* 1024/);
 assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r184-production-legacy-isolation-regression.mjs'),'utf8'), /sourceLimit=5\.5\*1024\*1024/);
-assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'), /R414_SOURCE_BUDGET_BYTES = 5_667_168/);
+assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'), /R414_SOURCE_BUDGET_BYTES = 5_732_704/);
 assert.doesNotMatch(fs.readFileSync(path.join(root,'scripts/audit-r424-final-requirements-closure.mjs'),'utf8'), /5\.25 \* 1024 \* 1024|5_405_024|5,25 MiB/);
-console.log('R443 aprovada: árvore R442 de 5.485.036 B cabe no checkpoint 5.667.168 B, com reserva de 100 KB e gates convergidos/idempotentes.');
+console.log('R443/R468 aprovada: árvore de 5.697.846 B cabe no checkpoint 5.732.704 B, com reserva de 100 KB e gates convergidos/idempotentes.');
