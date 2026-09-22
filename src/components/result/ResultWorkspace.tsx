@@ -23,10 +23,10 @@ import {
   ThumbsUp,
   Trophy
 } from 'lucide-react';
-import {
-  type AnalysisResult,
-  type GameplayDnaProfileId,
-  type PositionCode
+import type {
+  AnalysisResult,
+  GameplayDnaProfileId,
+  PositionCode
 } from '@/lib/analyzer';
 import {
   buildOpponentPlans,
