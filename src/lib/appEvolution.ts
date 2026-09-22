@@ -5,23 +5,15 @@ import { EFOOTBALL_V600_META_VERSION, EFOOTBALL_V600_SEASON } from './efootballV
 import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import { POSITION_PT } from './analyzerDomain';
 
-export const ONBOARDING_STORAGE_KEY = 'buildmaster_onboarding_v2680';
-export const CARD_REGISTRY_STORAGE_KEY = 'buildmaster_verified_card_registry_v2680';
-export const MATCH_VALIDATION_STORAGE_KEY = 'buildmaster_match_validation_v2680';
-export const CREATOR_BUILD_RESEARCH_EVENT = 'buildmaster:creator-build-research-updated';
-export const COMPETITIVE_FUSION_EVENT = 'buildmaster:competitive-fusion-updated';
-export const GLOBAL_PRO_BUILD_EVENT = 'buildmaster:global-pro-builds-updated';
-
-export type ExperienceMode = 'simple' | 'advanced';
-
-export type OnboardingProfile = {
-  version: 1;
-  completedAt: string;
-  experienceMode: ExperienceMode;
-  favoriteFormation: TacticalFormation;
-  teamStyle: TacticalStyle;
-  goal: 'fichas' | 'elenco' | 'formacoes' | 'treino';
-};
+export {
+  ONBOARDING_STORAGE_KEY,
+  CARD_REGISTRY_STORAGE_KEY,
+  MATCH_VALIDATION_STORAGE_KEY,
+  CREATOR_BUILD_RESEARCH_EVENT,
+  COMPETITIVE_FUSION_EVENT,
+  GLOBAL_PRO_BUILD_EVENT,
+} from './appStartupContractsR200';
+export type { ExperienceMode, OnboardingProfile } from './appStartupContractsR200';
 
 export type DecisionWeight = {
   key: 'position' | 'function' | 'style' | 'attributes' | 'skills' | 'context';
