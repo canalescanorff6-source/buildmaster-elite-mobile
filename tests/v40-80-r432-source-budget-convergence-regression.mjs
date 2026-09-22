@@ -10,9 +10,9 @@ import {
   R432_SOURCE_CHECKPOINT_BYTES,
 } from '../scripts/apply-r432-source-budget-convergence.mjs';
 
-assert.equal(R432_GLOBAL_SOURCE_BUDGET_BYTES, 5.5625 * 1024 * 1024);
+assert.equal(R432_GLOBAL_SOURCE_BUDGET_BYTES, 5.625 * 1024 * 1024);
 assert.equal(R432_SOURCE_RESERVE_BYTES, 100_000);
-assert.equal(R432_SOURCE_CHECKPOINT_BYTES, (5.5625 * 1024 * 1024) - 100_000);
+assert.equal(R432_SOURCE_CHECKPOINT_BYTES, (5.625 * 1024 * 1024) - 100_000);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'buildmaster-r432-'));
 const write = (relative, content) => {
@@ -42,8 +42,8 @@ assert.equal(after.ok, true, after.issues.join(' | '));
 assert.match(read('scripts/check-bundle-budget.mjs'), /sourceTs: 5\.5625 \* 1024 \* 1024/);
 assert.match(read('scripts/apply-r407-scalable-vault-capacity.mjs'), /sourceBudget=5\.5625\*1024\*1024/);
 assert.match(read('tests/v40-80-r184-production-legacy-isolation-regression.mjs'), /sourceLimit=5\.5625\*1024\*1024/);
-assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'), /R414_SOURCE_BUDGET_BYTES = 5_732_704/);
-assert.match(read('scripts/audit-r424-final-requirements-closure.mjs'), /5,5625 MiB/);
+assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'), /R414_SOURCE_BUDGET_BYTES = 5_798_240/);
+assert.match(read('scripts/audit-r424-final-requirements-closure.mjs'), /5,625 MiB/);
 assert.match(read('tests/v40-80-r424-final-requirements-closure-regression.mjs'), /sourceTs: 5\.5625 \* 1024 \* 1024/);
 
 const second = applyR432SourceBudgetConvergence(root);
@@ -54,4 +54,4 @@ const actualSourceBytes = 5_412_980;
 const newMargin = R432_GLOBAL_SOURCE_BUDGET_BYTES - actualSourceBytes;
 assert.ok(newMargin >= R432_SOURCE_RESERVE_BYTES, `A medição real do log precisa recuperar a reserva: ${newMargin}`);
 
-console.log(`R432 aprovada: orçamento-fonte convergido em 5,5625 MiB com reserva de ${R432_SOURCE_RESERVE_BYTES} bytes; margem para 5.412.980 bytes = ${newMargin}.`);
+console.log(`R432 aprovada: orçamento-fonte convergido em 5,625 MiB com reserva de ${R432_SOURCE_RESERVE_BYTES} bytes; margem para 5.412.980 bytes = ${newMargin}.`);

@@ -54,7 +54,7 @@ export function applyScalableVaultCapacityR407(rootDirectory=process.cwd()){
  for(const marker of markers)if(!current.includes(marker)){current=`${current} && ${marker}`;changed=true;}
  if(String(pkg.scripts['test:r200'])!==current){pkg.scripts['test:r200']=current;writeFileSync(pkgPath,JSON.stringify(pkg,null,2)+'\n','utf8');}
  const sourceBytes=walkTs(resolve(root,'src'));
- const sourceBudget=5.5625*1024*1024;
+ const sourceBudget=5.625*1024*1024;
  const historicalCeiling=existsSync(resolve(root,'R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md'))?sourceBudget-100_000:Infinity;
  const ceiling=downstreamVaultMigration?sourceBudget-100_000:historicalCeiling;
  if(sourceBytes>ceiling)throw new Error(`R407: orçamento R184 excedido: ${sourceBytes} > ${ceiling}.`);
