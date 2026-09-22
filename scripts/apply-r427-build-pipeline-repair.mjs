@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R427_BUILD_PIPELINE_REPAIR_VERSION = '40.80-r468-r427-forward-compatible-v3';
+export const R427_BUILD_PIPELINE_REPAIR_VERSION = '40.80-r468-r427-forward-compatible-v4';
 
 const TARGETS = Object.freeze({
   r407: 'scripts/apply-r407-scalable-vault-capacity.mjs',
@@ -23,7 +23,7 @@ function writeChanged(file, before, after, relative, patched) {
 }
 
 export function auditR427BuildPipelineContracts(sourceR407, sourceR420) {
-  const r407Ok = sourceR407.includes('const sourceBudget=5.5625*1024*1024;');
+  const r407Ok = sourceR407.includes('const sourceBudget=5.625*1024*1024;');
   const r420HasSavedAnalysisReplacement = sourceR420.includes(
     "type SavedAnalysis } from '@/modules/vault/cardHistoryStore';"
   );
@@ -42,8 +42,10 @@ export function auditR427BuildPipelineContracts(sourceR407, sourceR420) {
 export function patchR407SourceBudgetR427(source) {
   const legacy = 'const sourceBudget=5.25*1024*1024;';
   const previous = 'const sourceBudget=5.5*1024*1024;';
-  const current = 'const sourceBudget=5.5625*1024*1024;';
+  const previousR432 = 'const sourceBudget=5.5625*1024*1024;';
+  const current = 'const sourceBudget=5.625*1024*1024;';
   if (source.includes(current)) return source;
+  if (source.includes(previousR432)) return source.replace(previousR432, current);
   if (source.includes(previous)) return source.replace(previous, current);
   if (source.includes(legacy)) return source.replace(legacy, current);
   throw new Error('R427: orçamento-fonte R407 não está no contrato esperado.');
@@ -83,7 +85,7 @@ export function patchR420SavedAnalysisImportR427(source) {
 
   // Forward compatibility: if a newer release already provides the same semantic
   // replacement with an order-independent matcher, keep it and only add the guardrail.
-  const semantic = auditR427BuildPipelineContracts('const sourceBudget=5.5625*1024*1024;', source);
+  const semantic = auditR427BuildPipelineContracts('const sourceBudget=5.625*1024*1024;', source);
   if (semantic.r420HasSavedAnalysisReplacement && semantic.r420OrderIndependent) {
     if (source.includes("R420/R427: o tipo SavedAnalysis não foi importado")) return source;
     const replacementMarker = `    "import { LEARNING_KEY, normalizeHistoryList, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';"\n  );`;
@@ -122,7 +124,7 @@ export function applyR427BuildPipelineRepair(rootDirectory = process.cwd()) {
   const audit = auditR427BuildPipelineContracts(finalR407, finalR420);
   if (!audit.ok) {
     const missing = [];
-    if (!audit.r407Ok) missing.push('R407 5,5625 MiB');
+    if (!audit.r407Ok) missing.push('R407 5,625 MiB');
     if (!audit.r420HasSavedAnalysisReplacement) missing.push('R420 SavedAnalysis');
     if (!audit.r420OrderIndependent) missing.push('R420 matcher order-independent');
     throw new Error(`R427: pipeline permaneceu divergente — ${missing.join(', ')}`);

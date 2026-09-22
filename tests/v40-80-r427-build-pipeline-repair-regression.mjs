@@ -26,7 +26,7 @@ assert.deepEqual(first.patched.sort(), [
 
 const r407 = fs.readFileSync(path.join(root, 'scripts/apply-r407-scalable-vault-capacity.mjs'), 'utf8');
 const r420 = fs.readFileSync(path.join(root, 'scripts/apply-r420-persistence-recovery-closure.mjs'), 'utf8');
-assert.match(r407, /sourceBudget=5\.5\*1024\*1024/);
+assert.match(r407, /sourceBudget=5\.625\*1024\*1024/);
 assert.doesNotMatch(r407, /sourceBudget=5\.25\*1024\*1024/);
 assert.match(r420, /\(\?:HISTORY_LIMIT, \)\?LEARNING_KEY/);
 assert.match(r420, /R420\/R427: o tipo SavedAnalysis não foi importado/);
@@ -40,4 +40,4 @@ const second = applyR427BuildPipelineRepair(root);
 assert.equal(second.changed, false, 'R427 deve ser idempotente');
 assert.deepEqual(second.patched, []);
 
-console.log('R427 aprovada: orçamento R407 rebaselined e R420 importa SavedAnalysis mesmo após R418 remover HISTORY_LIMIT.');
+console.log('R427 aprovada: orçamento R407 convergido em 5,625 MiB e R420 importa SavedAnalysis mesmo após R418 remover HISTORY_LIMIT.');
