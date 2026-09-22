@@ -15,7 +15,8 @@ export function applyMatchCalibrationPrecedenceR406Fix4(rootDirectory=process.cw
   if(!existsSync(file)) throw new Error(`R406-fix4: fonte ausente: ${SOURCE}`);
   let source=readFileSync(file,'utf8');
   const before=source;
-  if((source.includes(VERSION_NEW)||source.includes(VERSION_LATER))&&source.includes(NEW)) return {changed:false,version:source.includes(VERSION_LATER)?'40.80-r406-match-calibration-group-return-fix5':'40.80-r406-match-calibration-precedence-fix4'};
+  const successorR457=source.includes(VERSION_LATER)&&source.includes('const matchNeed=actions.reduce(')&&source.includes('const exactR457=certifyExactTrainingR457(');
+  if(((source.includes(VERSION_NEW)||source.includes(VERSION_LATER))&&source.includes(NEW))||successorR457) return {changed:false,version:source.includes(VERSION_LATER)?'40.80-r406-match-calibration-group-return-fix5':'40.80-r406-match-calibration-precedence-fix4',successorR457};
   if(!source.includes(VERSION_OLD)) throw new Error('R406-fix4: versão R406 base não encontrada');
   const first=source.indexOf(OLD);
   if(first<0) throw new Error('R406-fix4: seletor final R405/R406 não encontrado');
