@@ -26,7 +26,7 @@ export function createProductionAnalysisR138(request: ProductionAnalysisRequestR
     request.tacticalProfile ?? { formation: 'AUTO', style: 'AUTO' },
     request.editionIdentity ?? null,
     request.usageFunction ?? null
-  );
+  ));
 }
 
 /** Refresh forçado de regras/correções/evidência. A UI não conhece mais o pipeline interno. */
