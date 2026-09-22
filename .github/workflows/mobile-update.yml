@@ -248,7 +248,7 @@ jobs:
           payload = {
               "ref": "main",
               "inputs": {
-                  "channel": "stable",
+                  "channel": "beta",
                   "rollout_percentage": "100",
                   "mandatory": "false",
                   "paused": "false",
