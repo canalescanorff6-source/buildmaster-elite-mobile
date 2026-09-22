@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { buildGenerationSignatureR464, cardFingerprint, type MatchValidationRecord } from '../src/lib/appEvolution';
+import { buildBuildOutcomeCalibrationR460 } from '../src/modules/matches/buildOutcomeCalibrationR460';
+const result:any={parsed:{playerName:'R465',mainPosition:'CMF',nativeSkills:[],specialSkills:[],additionalSkills:[],attributes:{}},training:{passing:4},buildName:'A',recommendedSkills:[],recommendedImpetos:[],tacticalProfile:{formation:'4-2-2-2',style:'POSSE_DE_BOLA'},usageFunctionR457:'Orquestrador'};
+const fingerprint=cardFingerprint(result); const gen=buildGenerationSignatureR464(result); const snap:any={version:'40.80-r460-build-outcome-snapshot-v1',engineRevision:'R459',usageFunction:'Orquestrador',tacticalStyle:'POSSE_DE_BOLA',formation:'4-2-2-2',actions:[{id:'short_creation',label:'Passe',demand:90,projectedGain:3,projectedScore:85,decisionConfidence:95}]};
+const rec=(id:string,r:1|5,arm:any='NONE'):MatchValidationRecord=>({id,cardFingerprint:fingerprint,playerName:'R465',targetPosition:'CMF',formation:'4-2-2-2',teamStyle:'POSSE_DE_BOLA',buildName:'A',buildSignature:'b',playedAt:`2026-09-${id.slice(-2)}T12:00:00Z`,minutes:90,overallRating:r,passing:r,movement:3,finishing:3,defending:3,physical:3,stamina:3,tags:[],note:'',usageFunction:'Orquestrador',connection:'stable',inputDelayRating:1,sessionIdR462:id,buildGenerationSignatureR464:gen,gameplayImpactSnapshotR460:snap,actionRatingsR461:{short_creation:r},experimentArm:arm} as any);
+assert.equal(buildBuildOutcomeCalibrationR460(result,[rec('g01',5),rec('g03',5),rec('g05',5),rec('g07',5)]).status,'CONVERGED');
+assert.equal(buildBuildOutcomeCalibrationR460(result,[rec('a01',3,'A'),rec('b03',3,'B')]).status,'EXPERIMENTING');
+assert.equal(buildBuildOutcomeCalibrationR460(result,[rec('c01',1),rec('c03',1),rec('c05',5),rec('c07',5)]).status,'CONFLICT');
+console.log('R465 aprovado: convergência, A/B e conflito são estados distintos.');

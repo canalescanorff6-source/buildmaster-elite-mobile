@@ -201,10 +201,24 @@ export type PlayerCondition = {
   injuryResistance?: string | null;
 };
 
+export type CardEditionIdentityR457 = {
+  schemaVersion: 1;
+  /** ID externo/oficial somente quando a fonte estiver realmente verificada. */
+  officialCardId?: string | null;
+  officialCardIdVerified?: boolean;
+  /** ID canônico interno do Catálogo Mestre BuildMaster R438. */
+  catalogCardId?: string | null;
+  releaseDate?: string | null;
+  source: 'OFFICIAL' | 'MASTER_CATALOG' | 'FINGERPRINT_FALLBACK';
+  confidence: number;
+};
+
 export type ParsedCard = {
   playerName: string;
   cardType: string;
   specialTag?: string | null;
+  /** Identidade da edição; não inclui ficha, GER, skills adicionais, Ímpeto ou versão do jogo. */
+  editionIdentity?: CardEditionIdentityR457 | null;
   country?: string | null;
   mainPosition: PositionCode;
   mainPositionPt: string;
@@ -1826,6 +1840,28 @@ export type MaximumPerformanceV4040Analysis = {
 
 
 
+export type BuildOutcomeCalibrationR460 = {
+  version: '40.80-r460-build-outcome-learning-v1';
+  status: 'NO_EVIDENCE' | 'OBSERVE' | 'ACTIVE';
+  cardFingerprint: string;
+  position: string;
+  usageFunction: string;
+  evidenceFingerprint: string;
+  snapshotMatches: number;
+  compatibleMatches: number;
+  legacyMatches: number;
+  mismatchedFunctionMatches: number;
+  distinctSessions: number;
+  stableShare: number;
+  currentPatchShare: number;
+  confidenceScore: number;
+  directActionEvidenceRate: number;
+  actionLearningMultipliers: Record<string, number>;
+  actions: Array<{ id:string; label:string; status:'INSUFFICIENT'|'MIXED'|'VALIDATED'|'PERSISTENT_GAP'; demand:number; projectedGain:number; projectedScore:number; observedScore:number; effectiveMatches:number; distinctSessions:number; confidence:number; learningMultiplier:number; reason:string }>;
+  reasons: string[];
+  safeguards: string[];
+};
+
 export type MatchEvidenceCalibrationR136 = {
   version: '40.80-r136-temporal-context-calibration-v1';
   status: 'NO_EVIDENCE' | 'OBSERVE' | 'ACTIVE';
@@ -2203,6 +2239,9 @@ export type AnalysisResult = {
   avoidSkills: string[];
   recommendedImpetos: ImpetoRecommendation[];
   skillIntegrity?: SkillIntegrityAudit;
+  finalAdditionalSkillSetR457?: import('./finalAdditionalSkillSetR457').FinalAdditionalSkillSetR457;
+  finalImpetoDecisionR457?: import('./finalImpetoDecisionR457').FinalImpetoDecisionR457;
+  gameplayScoutingR454?: import('@/modules/scouting/gameplayScoutingR454').GameplayScoutingRecordR454;
   buildName: string;
   strengths: string[];
   weaknesses: string[];
@@ -2250,6 +2289,7 @@ export type AnalysisResult = {
   longitudinalGameplayMemoryV4060?: LongitudinalGameplayMemoryV4060;
   matchEvidenceCalibrationR135?: MatchEvidenceCalibrationR135;
   matchEvidenceCalibrationR136?: MatchEvidenceCalibrationR136;
+  buildOutcomeCalibrationR460?: BuildOutcomeCalibrationR460;
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
   efootballV600?: EfootballV600PerformanceAnalysis;
   realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;
@@ -2258,8 +2298,6 @@ export type AnalysisResult = {
   liveEvolutionV600R11?: LiveEvolutionV600R11;
   matchStaminaV4080R44?: MatchStaminaV4080R44Analysis;
   finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;
-  /** R454: scouting contextual por edição da carta; nunca substitui a autoridade da ficha. */
-  gameplayScoutingR454?: import('../modules/scouting/gameplayScoutingR454').GameplayScoutingRecordR454;
 };
 
 export const TACTICAL_STYLE_NAME: Record<TacticalStyle, string> = {

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { buildGenerationSignatureR464, cardFingerprint, type MatchValidationRecord } from '../src/lib/appEvolution';
+import { buildBuildOutcomeCalibrationR460 } from '../src/modules/matches/buildOutcomeCalibrationR460';
+const result:any={parsed:{playerName:'R464',mainPosition:'CMF',nativeSkills:[],specialSkills:[],additionalSkills:[],attributes:{}},training:{passing:4,dribbling:4},buildName:'A',recommendedSkills:['Passe de primeira'],recommendedImpetos:[],tacticalProfile:{formation:'4-2-2-2',style:'POSSE_DE_BOLA'},usageFunctionR457:'Orquestrador'};
+const fingerprint=cardFingerprint(result); const current=buildGenerationSignatureR464(result);
+const snap:any={version:'40.80-r460-build-outcome-snapshot-v1',engineRevision:'R459',usageFunction:'Orquestrador',tacticalStyle:'POSSE_DE_BOLA',formation:'4-2-2-2',actions:[{id:'short_creation',label:'Passe curto',demand:95,projectedGain:4,projectedScore:85,decisionConfidence:95}]};
+const rec=(id:string,gen:string,rating:1|5):MatchValidationRecord=>({id,cardFingerprint:fingerprint,playerName:'R464',targetPosition:'CMF',formation:'4-2-2-2',teamStyle:'POSSE_DE_BOLA',buildName:'A',buildSignature:'b',playedAt:`2026-09-${id.slice(-2)}T12:00:00Z`,minutes:90,overallRating:rating,passing:rating,movement:3,finishing:3,defending:3,physical:3,stamina:3,tags:[],note:'',usageFunction:'Orquestrador',connection:'stable',inputDelayRating:1,sessionIdR462:id,buildGenerationSignatureR464:gen,gameplayImpactSnapshotR460:snap,actionRatingsR461:{short_creation:rating}} as any);
+const old=[rec('old01','generation-old',1),rec('old03','generation-old',1),rec('old05','generation-old',1),rec('old07','generation-old',1)];
+const rows=[...old,rec('new09',current,5),rec('new11',current,5),rec('new13',current,5)];
+const out=buildBuildOutcomeCalibrationR460(result,rows);
+assert.equal(out.excludedOtherGenerationMatchesR464,4);
+assert.equal(out.generationMatchesR464,3);
+assert.notEqual(out.status,'ACTIVE');
+console.log('R464 aprovado: geração antiga ruim não contamina a geração atual.');

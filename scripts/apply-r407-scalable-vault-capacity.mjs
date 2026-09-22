@@ -5,7 +5,14 @@ const STORE='src/modules/vault/cardHistoryStore.ts';
 const STARTUP='src/modules/vault/cardHistoryStartupModelR200.ts';
 const PACKAGE='package.json';
 const TEST='tests/v40-80-r407-unbounded-vault-capacity-regression.mjs';
-function replaceOnce(source,from,to,label){const count=source.split(from).length-1;if(count===0&&source.includes(to))return{source,changed:false};if(count!==1)throw new Error(`R407: contrato inesperado em ${label}; ocorrências=${count}`);return{source:source.replace(from,to),changed:true};}
+function replaceOnce(source,from,to,label){
+ const count=source.split(from).length-1;
+ if(count===0&&source.includes(to))return{source,changed:false};
+ if(count===0&&label==='compactação nativa'&&source.includes('maxRetainedImageChars = 6_000_000')&&/return items\.map\(\(entry(?:, index)?\) => \(\{/.test(source))return{source,changed:false};
+ if(count===0&&label==='orçamento de mídia'&&source.includes('retainedImageChars + entry.playerImage.length <= maxRetainedImageChars'))return{source,changed:false};
+ if(count!==1)throw new Error(`R407: contrato inesperado em ${label}; ocorrências=${count}`);
+ return{source:source.replace(from,to),changed:true};
+}
 function walkTs(root){let total=0,stack=[root];while(stack.length){const current=stack.pop();for(const entry of readdirSync(current,{withFileTypes:true})){const target=join(current,entry.name);if(entry.isDirectory())stack.push(target);else if(/\.(?:ts|tsx)$/.test(target))total+=statSync(target).size;}}return total;}
 export function applyScalableVaultCapacityR407(rootDirectory=process.cwd()){
  const root=resolve(rootDirectory),storePath=resolve(root,STORE),startupPath=resolve(root,STARTUP);

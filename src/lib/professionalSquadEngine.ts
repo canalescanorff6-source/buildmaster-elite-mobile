@@ -1,5 +1,6 @@
 import type { AnalysisResult, TacticalFormation, TacticalStyle } from './analyzer';
-import { buildFormationLineup, FORMATION_BLUEPRINTS, styleAdviceForFormation } from './formationRoleEngine';
+import { FORMATION_BLUEPRINTS, styleAdviceForFormation } from './formationRoleEngine';
+import { optimizeGlobalFormationLineupR457 } from './globalLineupOptimizerR457';
 import { buildSquadRotationReport, type RealSubstitution } from './squadRotation';
 import { OPPONENT_PROFILE_LABELS, type OpponentProfile } from './opponentAnalysis';
 import { cardIdentityFingerprintR126, playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
@@ -38,6 +39,8 @@ export type ProfessionalFormationRank = {
   strongestLine: string;
   weakestLine: string;
   repeatedFunctions: string[];
+  globalLineupStatus?: 'PROVEN_GLOBAL'|'BEST_FOUND_NOT_PROVEN'|'NO_COMPLETE_LINEUP';
+  globalLineupNodes?: number;
   reason: string;
 };
 
@@ -127,7 +130,8 @@ function lineLabel(line: LineKey) {
 
 function analyzeFormation(results: AnalysisResult[], formation: TacticalFormation, style: TacticalStyle): ProfessionalFormationRank {
   const blueprint = FORMATION_BLUEPRINTS.find((item) => item.id === (formation === 'AUTO' ? '4-2-2-2' : formation)) ?? FORMATION_BLUEPRINTS[0];
-  const lineup = buildFormationLineup(results, blueprint);
+  const globalLineup = optimizeGlobalFormationLineupR457(results, blueprint, style);
+  const lineup = globalLineup.lineup;
   const styleFit = styleAdviceForFormation(blueprint, style).fit;
   const filled = lineup.filter((item) => item.player);
   const naturalFits = filled.filter((item) => item.positionFit >= 82).length;
@@ -161,13 +165,15 @@ function analyzeFormation(results: AnalysisResult[], formation: TacticalFormatio
     strongestLine: lineLabel(lineScores[0]?.line ?? 'meio'),
     weakestLine: lineLabel(lineScores[lineScores.length - 1]?.line ?? 'meio'),
     repeatedFunctions,
+    globalLineupStatus: globalLineup.status,
+    globalLineupNodes: globalLineup.nodesVisited,
     reason: `${blueprint.name}: ${filled.length}/11 preenchidos, ${naturalFits} encaixes naturais, entrosamento ${chemistry}/100 e estilo ${styleFit}/100.`
   };
 }
 
 function buildSectorReport(results: AnalysisResult[], rank: ProfessionalFormationRank): ProfessionalSector[] {
   const blueprint = FORMATION_BLUEPRINTS.find((item) => item.id === rank.formation) ?? FORMATION_BLUEPRINTS[0];
-  const lineup = buildFormationLineup(results, blueprint);
+  const lineup = optimizeGlobalFormationLineupR457(results, blueprint, rank.style).lineup;
   const starterPlayers = new Set(lineup.filter((item) => item.player).map((item) => playerIdentityFingerprintR126(item.player!.parsed)));
   const reserves = results.filter((result) => !starterPlayers.has(playerIdentityFingerprintR126(result.parsed)));
   const linePositions: Record<LineKey, string[]> = {
@@ -196,7 +202,7 @@ function buildSectorReport(results: AnalysisResult[], rank: ProfessionalFormatio
 
 function buildRepeatedFunctions(results: AnalysisResult[], rank: ProfessionalFormationRank) {
   const blueprint = FORMATION_BLUEPRINTS.find((item) => item.id === rank.formation) ?? FORMATION_BLUEPRINTS[0];
-  const lineup = buildFormationLineup(results, blueprint).filter((item) => item.player);
+  const lineup = optimizeGlobalFormationLineupR457(results, blueprint, rank.style).lineup.filter((item) => item.player);
   const counts = new Map<string, number>();
   lineup.forEach((item) => {
     const role = roleLabel(item.player!);
@@ -248,9 +254,9 @@ function scenario(results: AnalysisResult[], formation: TacticalFormation, style
   };
 }
 
-function lineupFor(results: AnalysisResult[], formation: TacticalFormation) {
+function lineupFor(results: AnalysisResult[], formation: TacticalFormation, style: TacticalStyle) {
   const blueprint = FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? FORMATION_BLUEPRINTS[0];
-  return buildFormationLineup(results, blueprint).map((item) => ({ id: item.player ? cardIdentityFingerprintR126(item.player.parsed) : null, slot: item.slot.label, player: item.player?.parsed.playerName ?? null, score: item.score }));
+  return optimizeGlobalFormationLineupR457(results, blueprint, style).lineup.map((item) => ({ id: item.player ? cardIdentityFingerprintR126(item.player.parsed) : null, slot: item.slot.label, player: item.player?.parsed.playerName ?? null, score: item.score }));
 }
 
 function buildPlans(results: AnalysisResult[], current: ProfessionalFormationRank, ranking: ProfessionalFormationRank[]): ProfessionalPlan[] {
@@ -272,7 +278,7 @@ function buildPlans(results: AnalysisResult[], current: ProfessionalFormationRan
     style: definition.rank.style,
     score: definition.rank.score,
     objective: definition.objective,
-    lineup: lineupFor(results, definition.rank.formation),
+    lineup: lineupFor(results, definition.rank.formation, definition.rank.style),
     changes: definition.id === 'A'
       ? ['Mantém sua escolha atual e organiza os melhores encaixes disponíveis.']
       : [`Usa ${definition.rank.formation} com ${STYLE_LABELS[definition.rank.style]}.`, `${definition.rank.naturalFits} encaixes naturais e ${definition.rank.improvisedFits} improvisado(s).`, `Setor prioritário: ${definition.rank.weakestLine}.`],

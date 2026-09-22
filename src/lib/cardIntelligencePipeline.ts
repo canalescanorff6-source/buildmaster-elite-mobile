@@ -41,6 +41,7 @@ import { applyCleanSlatePerformance2027R119 } from './cleanSlatePerformance2027V
 import { sealProductionAuthorityR126 } from './productionAuthorityR126';
 import { sealProductionAuthorityR128 } from './productionAuthorityR128';
 import { attachMatchEvidenceCalibrationR136 } from '../modules/matches/matchEvidenceCalibrationR136';
+import { attachBuildOutcomeCalibrationR460 } from '../modules/matches/buildOutcomeCalibrationR460';
 
 type AnalysisEngine = (input: AnalysisResult) => AnalysisResult;
 
@@ -192,6 +193,9 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // R136: feedback real vira evidência temporal/contextual limitada ANTES do único escritor final.
   // Histórico antigo/fora de contexto perde peso; nenhum calibrador escolhe pontos/Top 5/Ímpeto.
   current = attachMatchEvidenceCalibrationR136(current);
+  // R460: promessa da ficha × resultado real, com função isolada e snapshot histórico soberano.
+  // Continua read-only: apenas repondera retorno marginal; Clean Slate permanece único escritor.
+  current = attachBuildOutcomeCalibrationR460(current);
 
   // Único escritor final: sempre recalcula do snapshot cru obtido ANTES de qualquer motor histórico.
   current = applyCleanSlatePerformance2027R119(current, protectedRawCard);
@@ -201,7 +205,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = {
     ...current,
     recommendationExplanation: [
-      'Produção r128: Clean Slate r125 é o único escritor de ficha, Top 5 e Ímpeto; o selo R128 rejeita qualquer mutação posterior desses outputs e mantém Overall/GER fora da decisão.',
+      'Produção R128: Clean Slate R406-fix5 é o único escritor de ficha, Top 5 e Ímpeto; R126 sela a autoridade e R128 rejeita qualquer mutação posterior desses outputs, mantendo Overall/GER fora da decisão.',
       'Motores históricos permanecem somente para auditoria; a Card Signature r108 é o especialista moderno preservado e não entra no caminho crítico do Android.',
       'Overall, ficha anterior e regras floor/peak/ceiling não participam da decisão final.',
       ...current.recommendationExplanation
@@ -213,6 +217,7 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // BM_R123_ONLINE_SINGLE_WRITER: o mesmo Clean Slate sela ficha, Top 5 e Ímpeto; confiança/saturação/A-B não criam autoridade paralela.
   // BM_R126_PRODUCTION_CONTRACT: toda saída de produção carrega selo explícito e rejeita decisão persistida obsoleta.
   // BM_R128_OUTPUT_INTEGRITY: qualquer mutação posterior em ficha/Top 5/Ímpeto invalida a saída de produção.
+  // BM_R457_AUTHORITY_CHAIN: Clean Slate R406-fix5 decide -> R126 sela -> R128 protege; nenhum writer posterior é permitido.
   // BM_R136_TEMPORAL_CONTEXT_EVIDENCE: partidas reais só calibram retorno marginal dentro do Clean Slate; tempo/patch/contexto limitam evidência antiga.
   current = { ...current, buildVariants: current.buildVariants.slice(0, 3) };
   current = sealProductionAuthorityR128(current);

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { buildMatchScoutingSourceR457, MATCH_SCOUTING_SOURCE_PREFIX_R457 } from '../src/modules/scouting/matchScoutingBridgeR457';
+const c:any={status:'ACTIVE',rawMatches:6,effectiveMatches:4.7,distinctSessions:3,confidenceScore:86,contextSignature:'40.80-r136-match-evidence-calibration-v1|POSSE_DE_BOLA|4-2-2-2',latestMatchAt:'2026-09-20T10:00:00Z',evidenceFingerprint:'abc',recencyScore:91,currentPatchShare:94,reasons:['a','Déficit atual em passe.']};
+const s=buildMatchScoutingSourceR457(c)!;
+assert.equal(s.type,'USER_GAMEPLAY');
+assert.ok(s.id.startsWith(MATCH_SCOUTING_SOURCE_PREFIX_R457));
+assert.equal(s.confidence,'ALTA');
+assert.equal(s.gameVersion,'6.0.0','gameVersion deve vir da fonte canônica do eFootball, não da versão do contrato R136.');
+const bridge=fs.readFileSync('src/modules/scouting/matchScoutingBridgeR457.ts','utf8');
+assert.doesNotMatch(bridge,/userFeedback\s*:/,'Bridge não pode duplicar partidas em userFeedback.');
+const evidence=fs.readFileSync('src/lib/scoutingDecisionEvidenceR457.ts','utf8');
+assert.match(evidence,/MATCH_SCOUTING_SOURCE_PREFIX_R457|match-r136:/,'Scouting decisório deve excluir fonte sintética R136 do fator de fonte.');
+console.log('R457 Stage 11 aprovada: R136 é fonte primária; R454 reflete uma fonte sintética sem duplicar partidas/peso.');

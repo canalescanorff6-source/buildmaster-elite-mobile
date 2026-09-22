@@ -222,7 +222,7 @@ const SKILL_IMPACT: Record<string, string> = {
   'Reposição baixa do goleiro': 'Cria reposição tensa e rápida para iniciar a saída curta.'
 };
 
-const COMPLEMENTS: Array<[string, string]> = [
+export const SKILL_COMPLEMENTS_R457: Array<[string, string]> = [
   ['Passe de primeira', 'Passe em profundidade'], ['Passe de primeira', 'Toque de calcanhar'],
   ['Controle com a sola', 'Toque duplo'], ['Precisão à distância', 'Efeito de longe'],
   ['Chute de primeira', 'Finalização acrobática'], ['Cabeçada', 'Superioridade aérea'],
@@ -453,7 +453,7 @@ function buildCandidate(result: AnalysisResult, plan: TrainingPlan, position: Po
 
 function complementBonus(selected: Candidate[], candidate: Candidate) {
   let bonus = 0;
-  for (const [left, right] of COMPLEMENTS) {
+  for (const [left, right] of SKILL_COMPLEMENTS_R457) {
     if ((candidate.name === left && selected.some((item) => item.name === right)) || (candidate.name === right && selected.some((item) => item.name === left))) bonus += 7;
   }
   return bonus;

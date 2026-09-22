@@ -82,7 +82,7 @@ export function useActiveSessionAutosaveR157({ storageKey, enabled, hasWork, sna
     const timer = window.setTimeout(persistMetadataNow, ACTIVE_SESSION_AUTOSAVE_DELAY_R157);
     return () => window.clearTimeout(timer);
   }, [enabled, hasWork, storageKey, snapshot.rawText, snapshot.fileName, snapshot.ocrDone, snapshot.objective,
-    snapshot.targetPosition, snapshot.cardPositionOverride, snapshot.playstyleOverride, snapshot.defensivePlaystyleOverride,
+    snapshot.targetPosition, snapshot.usageFunction, snapshot.cardPositionOverride, snapshot.playstyleOverride, snapshot.defensivePlaystyleOverride,
     snapshot.readingMode, snapshot.formation, snapshot.teamStyle, snapshot.managerId, snapshot.gameplayMode,
     snapshot.connectionProfile, snapshot.controlProfile, snapshot.manualFields, snapshot.manualMode, snapshot.activeHistoryId]);
 

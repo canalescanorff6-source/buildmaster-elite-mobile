@@ -1,5 +1,5 @@
 import type { AnalysisResult } from '@/lib/analyzerDomain';
-import { cardFingerprint, type MatchValidationRecord } from '@/lib/appEvolution';
+import { cardFingerprint, cardFingerprintAliasesR457, type MatchValidationRecord } from '@/lib/appEvolution';
 import { readMatchValidationRepositoryR137 } from './matchValidationRepositoryR137';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
@@ -59,9 +59,11 @@ function stableHash(input: string) {
 }
 
 export function matchSessionKeyR135(record: MatchValidationRecord) {
+  const explicit = String(record.sessionIdR462 ?? '').trim();
+  if (explicit) return `session:${explicit}`;
   const parsed = new Date(record.playedAt);
-  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
-  return String(record.playedAt || 'sem-data').slice(0, 10) || 'sem-data';
+  if (!Number.isNaN(parsed.getTime())) return `legacy-day:${parsed.toISOString().slice(0, 10)}`;
+  return `legacy-day:${String(record.playedAt || 'sem-data').slice(0, 10) || 'sem-data'}`;
 }
 
 export function matchReliabilityR135(record: MatchValidationRecord) {
@@ -131,9 +133,9 @@ export function matchRecordNeedsR135(record: MatchValidationRecord): DomainScore
 }
 
 export function exactMatchRecordsR135(result: AnalysisResult, records: MatchValidationRecord[]) {
-  const fingerprint = cardFingerprint(result);
+  const fingerprints = new Set(cardFingerprintAliasesR457(result));
   const usagePosition = analysisUsagePositionR138(result);
-  return records.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === usagePosition);
+  return records.filter((record) => fingerprints.has(record.cardFingerprint) && record.targetPosition === usagePosition);
 }
 
 function evidenceFingerprint(records: MatchValidationRecord[]) {

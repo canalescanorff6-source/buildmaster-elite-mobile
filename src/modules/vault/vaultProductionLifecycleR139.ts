@@ -4,7 +4,6 @@ import { findExactVaultDuplicateByResult } from '@/lib/cleanVaultV3800';
 import { createStableId } from '@/lib/stableId';
 import { ensureProductionAnalysisR138 } from '@/modules/analysis/productionOrchestratorR138';
 import {
-  HISTORY_LIMIT,
   appendSavedEvent,
   ensureSkillProgress,
   resultHistoryKey,
@@ -101,7 +100,7 @@ export function prepareVaultSaveR139(input: VaultSaveContextR139): VaultSaveTran
   const nextHistory = [
     item,
     ...input.history.filter((entry) => entry.id !== item.id && entry.saveKey !== key)
-  ].slice(0, HISTORY_LIMIT);
+  ];
   return {
     productionResult,
     item,
@@ -160,6 +159,6 @@ export function prepareVaultSkillToggleR139(input: VaultSkillToggleContextR139) 
   const nextHistory = [
     item,
     ...input.history.filter((entry) => entry.id !== item.id && entry.saveKey !== key)
-  ].slice(0, HISTORY_LIMIT);
+  ];
   return { productionResult, item, nextHistory, markingAsDone };
 }

@@ -34,7 +34,7 @@ const highOverall:any=applyCleanSlatePerformance2027R119(baseResult({overall:115
 const evidenced:any=applyCleanSlatePerformance2027R119(baseResult({withMatchEvidence:true}));
 const clean=baseline.cleanSlate2027R119;
 
-assert.match(clean.version,/r12(?:3-competitive-lab-saturation-confidence|5-role-aware-card-specific-performance-authority)/);
+assert.ok(Number(clean.version.match(/-r(\d+)-/)?.[1])>=123,'R123: a autoridade Clean Slate não pode regredir abaixo da revisão de confiança/saturação/laboratório.');
 assert.equal(clean.authority,'CLEAN_SLATE_SINGLE_WRITER');
 assert.equal(trainingPlanTotalCost(baseline.training),64);
 assert.deepEqual(highOverall.training,baseline.training,'Overall não pode alterar a ficha r123.');

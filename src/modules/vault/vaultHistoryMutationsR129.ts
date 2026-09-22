@@ -1,6 +1,5 @@
 import { createStableId } from '@/lib/stableId';
 import {
-  HISTORY_LIMIT,
   appendSavedEvent,
   ensureSkillProgress,
   type SavedAnalysis
@@ -118,7 +117,7 @@ export function duplicateHistoryEntryR129(item: SavedAnalysis): SavedAnalysis {
 }
 
 export function prependHistoryEntryR129(history: SavedAnalysis[], item: SavedAnalysis) {
-  return [item, ...history].slice(0, HISTORY_LIMIT);
+  return [item, ...history];
 }
 
 export function updateHistoryStatusR129(history: SavedAnalysis[], id: string, statusTag: SavedAnalysis['statusTag']) {

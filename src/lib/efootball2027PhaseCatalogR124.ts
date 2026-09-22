@@ -171,6 +171,7 @@ export function inspectPlaystyleActivationR124(style: string | null | undefined,
   const entry=effectivePhaseEntriesR124(phase).find((x)=>x.label===canonical)!;
   if (!position || position==='AUTO' || entry.positions.length===0) return { known:true, canonical, status:'UNVERIFIED_POSITION' as const, message:'Estilo reconhecido; confirme a posição final para avaliar ativação.' };
   if (entry.positions.includes(position)) return { known:true, canonical, status:'LIKELY_ACTIVE' as const, message:'Compatível com a posição selecionada segundo o catálogo atual.' };
-  if (entry.strictPositions) return { known:true, canonical, status:'LIKELY_INACTIVE' as const, message:`Este estilo é conhecido para ${entry.positions.join('/')} e pode ficar inativo em ${position}.` };
-  return { known:true, canonical, status:'CHECK_POSITION' as const, message:`A posição ${position} não está entre as posições mais observadas (${entry.positions.join('/') || 'sem lista'}). Confira se o estilo fica ativo no jogo.` };
+  const builtInPositionContract = entry.evidence !== 'REMOTE_CONFIRMED';
+  if (entry.strictPositions || builtInPositionContract) return { known:true, canonical, status:'LIKELY_INACTIVE' as const, message:`ESTILO INATIVO NESTA POSIÇÃO — ${canonical} ativa em ${entry.positions.join('/')}; uso em ${position} recebe peso funcional zero.` };
+  return { known:true, canonical, status:'CHECK_POSITION' as const, message:`A extensão remota confirma o estilo, mas a posição ${position} ainda não foi validada para ativação.` };
 }

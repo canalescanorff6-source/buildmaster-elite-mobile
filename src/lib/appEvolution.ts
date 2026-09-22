@@ -1,6 +1,6 @@
 import type { AnalysisResult, PositionCode, TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import { createStableId } from './stableId';
-import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { cardIdentityAliasesR457, cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { EFOOTBALL_V600_META_VERSION, EFOOTBALL_V600_SEASON } from './efootballV600Meta';
 import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import { POSITION_PT } from './analyzerDomain';
@@ -89,6 +89,24 @@ export type MatchPerformanceMetrics = {
   successfulPressures?: number;
 };
 
+export type GameplayImpactSnapshotActionR460 = {
+  id: string;
+  label: string;
+  demand: number;
+  projectedGain: number;
+  projectedScore: number;
+  decisionConfidence: number;
+};
+
+export type GameplayImpactSnapshotR460 = {
+  version: '40.80-r460-build-outcome-snapshot-v1';
+  engineRevision: string;
+  usageFunction: string;
+  tacticalStyle: string;
+  formation: string;
+  actions: GameplayImpactSnapshotActionR460[];
+};
+
 export type MatchValidationRecord = {
   id: string;
   cardFingerprint: string;
@@ -123,6 +141,15 @@ export type MatchValidationRecord = {
   gameSeason?: string;
   gameVersion?: string;
   gameplayEpoch?: 'V6' | 'LEGACY' | string;
+  usageFunction?: string;
+  usageContextSignatureR460?: string;
+  gameplayImpactSnapshotR460?: GameplayImpactSnapshotR460;
+  actionRatingsR461?: Record<string, MatchValidationRating>;
+  sessionIdR462?: string;
+  /** R464: assinatura da geração exata da ficha testada. */
+  buildGenerationSignatureR464?: string;
+  /** R468: métricas efetivamente observadas; zero passa a ser evidência real. */
+  observedMetricKeysR468?: Array<keyof MatchPerformanceMetrics>;
 };
 
 export type MatchValidationSummary = {
@@ -175,9 +202,14 @@ function roundedAttributes(result: AnalysisResult) {
 
 
 export function cardFingerprint(result: AnalysisResult) {
-  // R126: mesma identidade usada por Clean Slate, Cofre, partidas, memória longitudinal e elenco.
-  // GER, ficha calculada, posição de uso e técnico não participam desta assinatura.
+  // R126/R457: identidade canônica atual da edição.
   return cardIdentityFingerprintR126(result.parsed);
+}
+
+export function cardFingerprintAliasesR457(result: AnalysisResult) {
+  // Preserva partidas/Registry/memória quando uma carta migra do fingerprint
+  // estrutural legado para catalogCardId/officialCardId verificado.
+  return cardIdentityAliasesR457(result.parsed);
 }
 
 export function buildSignature(result: AnalysisResult) {
@@ -187,6 +219,16 @@ export function buildSignature(result: AnalysisResult) {
     .join('|');
   const usagePosition = analysisUsagePositionR138(result);
   return `build-${stableHash(`${cardFingerprint(result)}::${usagePosition}::${normalize(result.buildName)}::${training}`)}`;
+}
+
+
+export function buildGenerationSignatureR464(result: AnalysisResult, testedBuildId = '') {
+  const skills = [...new Set([...(result.parsed.nativeSkills ?? []), ...(result.parsed.specialSkills ?? []), ...(result.parsed.additionalSkills ?? []), ...(result.recommendedSkills ?? [])])]
+    .map((item) => normalize(item)).filter(Boolean).sort().join('|');
+  const impeto = (result.recommendedImpetos ?? []).map((item) => normalize(item.name)).filter(Boolean).sort().join('|');
+  const usageFunction = usageFunctionForMatchR460(result);
+  const trainingSignature = result.training && typeof result.training === 'object' ? buildSignature(result) : `build-fallback-${stableHash(`${cardFingerprint(result)}::${analysisUsagePositionR138(result)}::${normalize(result.buildName)}`)}`;
+  return `generation-r464-${stableHash(`${trainingSignature}::${normalize(usageFunction)}::${skills}::${impeto}::${normalize(testedBuildId)}`)}`;
 }
 
 export function createCardRegistryEntry(result: AnalysisResult, source: CardRegistrySource, note = '', metadata: { sourceLabel?: string; sourceUrl?: string; cardVersion?: string; observedAt?: string } = {}): CardRegistryEntry {
@@ -224,9 +266,10 @@ export function createCardRegistryEntry(result: AnalysisResult, source: CardRegi
 
 export function compareRegistryEntry(entry: CardRegistryEntry, result: AnalysisResult) {
   const differences: string[] = [];
+  const fingerprintAliases = new Set(cardFingerprintAliasesR457(result));
   if (entry.canonicalId && result.structuralPrecision?.canonical.canonicalId) {
-    if (entry.canonicalId !== result.structuralPrecision.canonical.canonicalId) differences.push('A identidade canônica desta versão não coincide com o registro salvo.');
-  } else if (entry.fingerprint !== cardFingerprint(result)) differences.push('Os atributos, nível, pontos ou habilidades mudaram em relação ao registro salvo.');
+    if (entry.canonicalId !== result.structuralPrecision.canonical.canonicalId && !fingerprintAliases.has(entry.fingerprint)) differences.push('A identidade canônica desta versão não coincide com o registro salvo.');
+  } else if (!fingerprintAliases.has(entry.fingerprint)) differences.push('Os atributos, nível, pontos ou habilidades mudaram em relação ao registro salvo.');
   if (normalize(entry.playstyle) !== normalize(result.parsed.playstyle || 'Não informado')) differences.push('O estilo de jogo atual difere do registro salvo.');
   if (entry.mainPosition !== result.parsed.mainPositionPt) differences.push('A posição original atual difere do registro salvo.');
   return {
@@ -282,8 +325,45 @@ export function buildDecisionWeights(result: AnalysisResult): DecisionWeight[] {
   ]);
 }
 
+function usageFunctionForMatchR460(result: AnalysisResult) {
+  const current = result as AnalysisResult & { usageFunctionR457?: string; cleanSlate2027R119?: { usageFunction?: string } };
+  return String(current.cleanSlate2027R119?.usageFunction ?? current.usageFunctionR457 ?? result.teamMap?.functionLabel ?? result.advancedTacticalFunction?.officialPlaystyle ?? '').trim() || `${analysisUsagePositionR138(result)} funcional`;
+}
+
+function usageContextSignatureR460(result: AnalysisResult, usageFunction: string) {
+  return `usage-r460-${stableHash([cardFingerprint(result), analysisUsagePositionR138(result), normalize(usageFunction), result.tacticalProfile.style, result.tacticalProfile.formation].join('::'))}`;
+}
+
+export function buildGameplayImpactSnapshotR460(result: AnalysisResult): GameplayImpactSnapshotR460 | undefined {
+  const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: { gameplayImpactR458?: any } }).cleanSlate2027R119;
+  const impact = cleanSlate?.gameplayImpactR458;
+  if (!impact || !Array.isArray(impact.actions)) return undefined;
+  return {
+    version: '40.80-r460-build-outcome-snapshot-v1',
+    engineRevision: String(impact.engineRevision ?? 'R458'),
+    usageFunction: String(impact.usageFunction ?? usageFunctionForMatchR460(result)),
+    tacticalStyle: String(impact.tacticalStyle ?? result.tacticalProfile.style ?? 'AUTO'),
+    formation: String(impact.formation ?? result.tacticalProfile.formation ?? 'AUTO'),
+    actions: impact.actions.slice(0, 12).map((action: any) => ({
+      id: String(action.id ?? '').trim().slice(0, 64),
+      label: String(action.label ?? action.id ?? '').trim().slice(0, 96),
+      demand: Math.max(0, Math.min(100, Number(action.demand ?? 0) || 0)),
+      projectedGain: Math.max(-20, Math.min(30, Number(action.gain ?? 0) || 0)),
+      projectedScore: Math.max(0, Math.min(100, Number(action.projectedScore ?? 0) || 0)),
+      decisionConfidence: Math.max(0, Math.min(100, Number(action.decisionConfidence ?? 0) || 0))
+    })).filter((action: GameplayImpactSnapshotActionR460) => Boolean(action.id))
+  };
+}
+
+export function createMatchSessionIdR462(): string {
+  return createStableId('session-r462');
+}
+
 export function createMatchValidationRecord(result: AnalysisResult, input: Omit<MatchValidationRecord, 'id' | 'cardFingerprint' | 'playerName' | 'targetPosition' | 'formation' | 'teamStyle' | 'buildName' | 'buildSignature' | 'playedAt'>): MatchValidationRecord {
   const playedAt = new Date().toISOString();
+  const usageFunction = usageFunctionForMatchR460(result);
+  const generationSignature = buildGenerationSignatureR464(result, input.testedBuildId ?? '');
+  const isExperiment = input.experimentArm === 'A' || input.experimentArm === 'B';
   return {
     id: createStableId('match'),
     cardFingerprint: cardFingerprint(result),
@@ -297,7 +377,12 @@ export function createMatchValidationRecord(result: AnalysisResult, input: Omit<
     ...input,
     gameSeason: input.gameSeason?.trim() || EFOOTBALL_V600_SEASON,
     gameVersion: input.gameVersion?.trim() || EFOOTBALL_V600_META_VERSION,
-    gameplayEpoch: input.gameplayEpoch || 'V6'
+    gameplayEpoch: input.gameplayEpoch || 'V6',
+    usageFunction,
+    usageContextSignatureR460: usageContextSignatureR460(result, usageFunction),
+    buildGenerationSignatureR464: generationSignature,
+    // R466: A/B continua válido para laboratório, mas não ensina promessa×resultado até virar ficha principal.
+    gameplayImpactSnapshotR460: isExperiment ? undefined : buildGameplayImpactSnapshotR460(result)
   };
 }
 

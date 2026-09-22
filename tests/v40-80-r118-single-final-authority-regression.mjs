@@ -31,7 +31,8 @@ assert.ok(pipeline.indexOf('applyFinalDecisionAuthority2027R118(current)') < pip
 assert.match(r119, /CLEAN_SLATE_SINGLE_WRITER/);
 assert.match(r119, /ignoresIncomingTraining: true/);
 assert.match(r119, /noFloorPeakCeiling: true/);
-assert.match(ui, /(?:Motor final: Produção R126 \/ Clean Slate R125|Motor final: Clean Slate r12[235])/);
+assert.match(ui,/cleanSlateRevision=cleanSlate\.version\.match/);
+assert.ok((ui.match(/Clean Slate R\{cleanSlateRevision\}/g)??[]).length>=3,'A UI precisa derivar o rótulo Clean Slate da versão real do motor.');
 assert.doesNotMatch(ui, /final-r45/);
 assert.match(r108, /BM_R118_AERIAL_SPECIALIZATION_PROOF/);
 assert.match(r108, /specializationSignals >= 2/);

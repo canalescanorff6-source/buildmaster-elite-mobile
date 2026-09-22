@@ -45,6 +45,15 @@ export function createMasterCardProductionAnalysisR438(card: MasterCardCatalogEn
     objective: input?.objective ?? 'COMPETITIVE',
     targetPosition: input?.targetPosition ?? card.mainPosition,
     imageFileName: `catalogo-r438-${card.catalogCardId}`,
-    tacticalProfile: input?.tacticalProfile ?? { formation: 'AUTO', style: 'AUTO' }
+    tacticalProfile: input?.tacticalProfile ?? { formation: 'AUTO', style: 'AUTO' },
+    editionIdentity: {
+      schemaVersion: 1,
+      officialCardId: null,
+      officialCardIdVerified: false,
+      catalogCardId: card.catalogCardId,
+      releaseDate: card.releaseDate,
+      source: 'MASTER_CATALOG',
+      confidence: card.confidence
+    }
   });
 }

@@ -46,6 +46,7 @@ export type ReaderAnalysisContextR163 = {
   qualityReport: PrintQualityReport | null;
   readingMode: 'precision' | 'fast';
   targetPosition: PositionCode | 'AUTO';
+  usageFunction: string;
   tacticalProfile: TacticalProfile;
   efhubCalibrationActiveRef: MutableRefObject<boolean>;
   efhubCalibrationZonesRef: MutableRefObject<EfhubCalibrationZone[]>;
@@ -85,6 +86,7 @@ export function createCardVisionReaderAnalysisOperationsR163(context: ReaderAnal
     qualityReport,
     readingMode,
     targetPosition,
+    usageFunction,
     tacticalProfile,
     efhubCalibrationActiveRef,
     efhubCalibrationZonesRef,
@@ -489,7 +491,7 @@ ${reading.text}`)) : fullPassText;
       const lockedText = await textWithManualLocks(discoveryText);
       setRawText(lockedText);
       reportReaderProgress(98, 'Gerando ficha', 'Aplicando a leitura automaticamente ao Desempenho Máximo.', readerTotal, readerTotal);
-      const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, imageFileName: fileName, tacticalProfile });
+      const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       const reviewHydration = await hydrateReviewFields(autoResult, session);
       // A leitura terminou, mas a ficha definitiva só nasce depois da confirmação
       // de Nome, Nível máximo e Pontos de progressão.
@@ -648,7 +650,7 @@ ${reading.text}`)) : fullPassText;
       const learnedText = await applyLearningToText(mergedText);
       const lockedText = await textWithManualLocks(learnedText);
       setRawText(lockedText);
-      const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, imageFileName: `leitura-total-${overview.file.name}`, tacticalProfile });
+      const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, usageFunction, imageFileName: `leitura-total-${overview.file.name}`, tacticalProfile });
       await hydrateReviewFields(autoResult, null);
       setDraftResult(null); setResult(autoResult);
       const totalWarning = session.mismatchRisk === 'block'

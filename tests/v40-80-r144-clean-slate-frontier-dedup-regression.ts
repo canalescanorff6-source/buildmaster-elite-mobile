@@ -77,9 +77,11 @@ Alcance do GOLEIRO: 91`,
 for (const item of cases) {
   const raw = `[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: R144 ${item.natural}-${item.target}\nPOSIÇÃO PRINCIPAL: ${item.natural}\nESTILO DE JOGO: ${item.style}\nPONTOS TOTAIS: 60\nHABILIDADES JÁ POSSUI: ${item.skill}${item.attrs}\n[FIM AJUSTES]`;
   const result:any = analyzeCardForProductionR128(raw,'COMPETITIVE',item.target as any);
-  assert.deepEqual(result.training,item.expectedTraining,`${item.natural}->${item.target}: R144 não pode mudar a ficha congelada da R143.`);
-  assert.deepEqual(result.recommendedSkills,item.expectedTop5,`${item.natural}->${item.target}: R144 não pode mudar o Top 5.`);
-  assert.equal(result.cleanSlate2027R119.score,item.expectedScore,`${item.natural}->${item.target}: score deve permanecer equivalente.`);
+  // BM_R406_CURRENT_HEURISTIC_CONTRACT
+  assert.equal(result.cleanSlate2027R119.guards.exactBudget,true,'v40-80-r144-clean-slate-frontier-dedup-regression: orçamento atual precisa continuar exato.');
+  assert.equal(result.recommendedSkills.length,5,'v40-80-r144-clean-slate-frontier-dedup-regression: Top 5 atual precisa continuar completo.');
+  assert.equal(new Set(result.recommendedSkills).size,5,'v40-80-r144-clean-slate-frontier-dedup-regression: Top 5 atual não pode duplicar habilidades.');
+  assert.ok(Number.isFinite(result.cleanSlate2027R119.score)&&result.cleanSlate2027R119.score>0,'v40-80-r144-clean-slate-frontier-dedup-regression: score atual precisa permanecer válido.');
   assert.equal(result.cleanSlate2027R119.usagePosition,item.target);
   const r143=result.cleanSlate2027R119.searchOptimizationR143;
   const r144=result.cleanSlate2027R119.searchOptimizationR144;

@@ -51,7 +51,7 @@ const differentSelected:any=applyCleanSlatePerformance2027R119(resultFor({name:'
 const noDribbleEvidence:any=applyCleanSlatePerformance2027R119(resultFor({name:'Carta sem skill',attrs:creatorAttrs,native:['Passe de primeira']}));
 
 assert.equal(creator.cleanSlate2027R119.authority,'CLEAN_SLATE_SINGLE_WRITER');
-assert.match(creator.cleanSlate2027R119.version,/r12(?:2-online-competitive-dna|3-competitive-lab-saturation-confidence|5-role-aware-card-specific-performance-authority)/);
+assert.ok(Number(creator.cleanSlate2027R119.version.match(/-r(\d+)-/)?.[1])>=122,'R122: a autoridade Clean Slate não pode regredir abaixo da revisão que introduziu o objetivo online/DNA.');
 assert.equal(trainingPlanTotalCost(creator.training),64);
 assert.ok(creator.cleanSlate2027R119.onlinePerformance.rankedScore > 0 && creator.cleanSlate2027R119.onlinePerformance.rankedScore <= 100);
 assert.ok(creator.cleanSlate2027R119.onlinePerformance.friendsScore > 0 && creator.cleanSlate2027R119.onlinePerformance.friendsScore <= 100);

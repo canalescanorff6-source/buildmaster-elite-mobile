@@ -1,6 +1,6 @@
 import type { AnalysisResult, PositionCode, TrainingPlan } from './analyzerDomain';
 import type { MatchValidationMode, MatchValidationRecord } from './appEvolution';
-import { cardFingerprint } from './appEvolution';
+import { cardFingerprint, cardFingerprintAliasesR457 } from './appEvolution';
 import { readAccountStorage, writeAccountStorage } from './accountStorage';
 import { readMatchValidationRepositoryR137 } from '../modules/matches/matchValidationRepositoryR137';
 import { trainingPlanTotalCost } from './trainingPlanCore';
@@ -105,8 +105,8 @@ function sessionLabel(key: string) {
 }
 
 function exactRecords(result: AnalysisResult, records: MatchValidationRecord[]) {
-  const fingerprint = cardFingerprint(result);
-  return records.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === analysisUsagePositionR138(result));
+  const fingerprints = new Set(cardFingerprintAliasesR457(result));
+  return records.filter((record) => fingerprints.has(record.cardFingerprint) && record.targetPosition === analysisUsagePositionR138(result));
 }
 
 function groupSessions(result: AnalysisResult, records: MatchValidationRecord[]): LongitudinalSessionV4060[] {
@@ -393,19 +393,20 @@ export function persistLongitudinalWinnerV4060(result: AnalysisResult, analysis:
     verifiedAt: new Date().toISOString()
   };
   const memory = readMemory();
-  const entries = [entry, ...memory.entries.filter((item) => !(item.cardFingerprint === entry.cardFingerprint && item.position === entry.position))];
+  const identityAliases = new Set(cardFingerprintAliasesR457(result));
+  const entries = [entry, ...memory.entries.filter((item) => !(identityAliases.has(item.cardFingerprint) && item.position === entry.position))];
   writeMemory({ version: LONGITUDINAL_GAMEPLAY_V4060_VERSION, entries });
   return true;
 }
 
 export function applyLongitudinalWinnerV4060(result: AnalysisResult): AnalysisResult {
   if (result.objective !== 'COMPETITIVE' || !result.maximumPerformanceV4040) return result;
-  const fingerprint = cardFingerprint(result);
-  let entry = readMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === analysisUsagePositionR138(result));
+  const fingerprints = new Set(cardFingerprintAliasesR457(result));
+  let entry = readMemory().entries.find((item) => fingerprints.has(item.cardFingerprint) && item.position === analysisUsagePositionR138(result));
   if (!entry) {
     const recovered = buildLongitudinalGameplayV4060(result, readMatchHistoryForSelfHealV4060());
     if (persistLongitudinalWinnerV4060(result, recovered)) {
-      entry = readMemory().entries.find((item) => item.cardFingerprint === fingerprint && item.position === analysisUsagePositionR138(result));
+      entry = readMemory().entries.find((item) => fingerprints.has(item.cardFingerprint) && item.position === analysisUsagePositionR138(result));
     }
   }
   if (!entry) return result;

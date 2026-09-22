@@ -24,6 +24,7 @@ export type ActiveSessionSnapshotR137 = {
   rawText: string;
   objective: Objective;
   targetPosition: PositionCode | 'AUTO';
+  usageFunction: string;
   cardPositionOverride: PositionCode | 'AUTO';
   playstyleOverride: string;
   defensivePlaystyleOverride: string;

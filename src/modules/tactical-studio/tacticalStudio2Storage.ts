@@ -1,9 +1,9 @@
+// R418_UNBOUNDED_PERSISTENT_COLLECTIONS: conteúdo do usuário não é descartado por teto artificial de quantidade.
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import type { TacticalSequenceProject } from './tacticalStudio2Engine';
 
 export const TACTICAL_SEQUENCE_STORAGE_KEY = 'buildmaster_tactical_sequence_projects_v2950';
-// Contrato histórico do Estúdio Tático: até 40 projetos por conta.
-// O módulo de sequências não pode reduzir silenciosamente esse limite.
+// R418: MAX_TACTICAL_SEQUENCE_PROJECTS permanece exportado só por compatibilidade histórica; não poda projetos.
 export const MAX_TACTICAL_SEQUENCE_PROJECTS = 40;
 
 function isProject(value: unknown): value is TacticalSequenceProject {
@@ -15,14 +15,14 @@ export function readTacticalSequenceProjects(): TacticalSequenceProject[] {
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isProject).slice(0, MAX_TACTICAL_SEQUENCE_PROJECTS) : [];
+    return Array.isArray(parsed) ? parsed.filter(isProject) : [];
   } catch {
     return [];
   }
 }
 
 export function replaceTacticalSequenceProjects(value: unknown): TacticalSequenceProject[] {
-  const normalized = Array.isArray(value) ? value.filter(isProject).slice(0, MAX_TACTICAL_SEQUENCE_PROJECTS) : [];
+  const normalized = Array.isArray(value) ? value.filter(isProject) : [];
   writeAccountStorage(TACTICAL_SEQUENCE_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }

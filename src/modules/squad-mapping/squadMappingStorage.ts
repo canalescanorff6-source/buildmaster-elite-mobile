@@ -1,3 +1,4 @@
+// R418_UNBOUNDED_PERSISTENT_COLLECTIONS: conteúdo do usuário não é descartado por teto artificial de quantidade.
 import { accountStorageKey } from '@/lib/accountStorage';
 import { runtimeGet, runtimePut } from '@/lib/localDatabase';
 import { isNativeVaultStorageAvailable, nativeVaultRead, nativeVaultWrite } from '@/lib/nativeVaultStorage';
@@ -135,8 +136,8 @@ function sanitizeTrial(raw: Partial<FormationTrial>, index: number): FormationTr
 export function sanitizeMappingState(raw: unknown): MappingState {
   if (!raw || typeof raw !== 'object') return createEmptyMappingState();
   const source = raw as Partial<MappingState>;
-  const players = Array.isArray(source.players) ? source.players.map(sanitizePlayer).filter((item): item is SquadMappingPlayer => Boolean(item)).slice(0, 500) : [];
-  const trials = Array.isArray(source.trials) ? source.trials.map(sanitizeTrial).filter((item): item is FormationTrial => Boolean(item)).slice(0, 100) : [];
+  const players = Array.isArray(source.players) ? source.players.map(sanitizePlayer).filter((item): item is SquadMappingPlayer => Boolean(item)) : [];
+  const trials = Array.isArray(source.trials) ? source.trials.map(sanitizeTrial).filter((item): item is FormationTrial => Boolean(item)) : [];
   const preferences = { ...DEFAULT_MAPPING_PREFERENCES, ...(source.preferences ?? {}) };
   preferences.benchSize = 11;
   preferences.reserveGoalkeepers = preferences.reserveGoalkeepers === 1 ? 1 : 0;
