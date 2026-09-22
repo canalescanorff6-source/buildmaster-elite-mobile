@@ -27,7 +27,7 @@ assert.doesNotMatch(app, /from '@\/modules\/analysis'/, 'R200: barrel pesado de 
 assert.match(app, /await import\('@\/modules\/analysis\/productionOrchestratorR138'\)/, 'R200: criação manual/refresh devem carregar R138 sob demanda.');
 assert.doesNotMatch(app, /from '@\/modules\/vault\/cardHistoryStore';\nexport/, 'R200: shell não deve reexportar store pesado do Cofre.');
 assert.match(app, /from '@\/modules\/vault\/cardHistoryStartupModelR200'/, 'R200: shell deve usar modelo leve do Cofre.');
-assert.match(app, /CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT, GLOBAL_PRO_BUILD_EVENT \} from '@\/lib\/appEvolution'/, 'R200: eventos de pesquisa devem reutilizar o contrato app-level já carregado.');
+assert.match(app, /CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT, GLOBAL_PRO_BUILD_EVENT \} from '@\/lib\/appStartupContractsR200'/, 'R200: eventos de pesquisa devem usar contrato leve de startup.');
 assert.match(app, /DEFAULT_DYNAMIC_RULE_PACK, RULE_PACK_KEY, type DynamicRulePack \} from '@\/lib\/remoteCatalogV3770'/, 'R200: pacote default de regras deve reutilizar o contrato de catálogo já carregado.');
 assert.doesNotMatch(app, /from '@\/modules\/builds\/dynamicRules'/, 'R200: motor completo de regras não pode ser import estático do shell.');
 
