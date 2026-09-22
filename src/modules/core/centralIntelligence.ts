@@ -1,6 +1,7 @@
 import type { AnalysisResult, TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import { buildFormationLineup, FORMATION_BLUEPRINTS, getFormationBlueprint, scorePlayerForFormationSlot, styleAdviceForFormation } from '@/lib/formationRoleEngine';
-import { cardFingerprint, type MatchValidationRecord } from '@/lib/appEvolution';
+import type { MatchValidationRecord } from '@/lib/appEvolution';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import { createPendingGameplayScoutingR454, evaluatePairSynergyR454 } from '@/modules/scouting/gameplayScoutingR454';
 
 export const CENTRAL_SCHEMA_VERSION = 27;
@@ -116,7 +117,7 @@ function matchSummary(records: MatchValidationRecord[]) {
 export function buildIntegratedPlayers(inputs: CentralPlayerInput[], matches: MatchValidationRecord[]): IntegratedPlayerRecord[] {
   return inputs.map((entry) => {
     const result = entry.result;
-    const fingerprint = cardFingerprint(result);
+    const fingerprint = cardIdentityFingerprintR126(result.parsed);
     const playerMatches = matches.filter((record) => record.cardFingerprint === fingerprint);
     const match = matchSummary(playerMatches);
     const formationFits = FORMATION_BLUEPRINTS.flatMap((formation) => formation.slots.map((slot) => ({
@@ -183,7 +184,7 @@ export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation:
     functionCounts.set(label, (functionCounts.get(label) ?? 0) + 1);
   });
   const repeatedFunctions = [...functionCounts.entries()].filter(([, count]) => count >= 3).map(([label, count]) => `${label} (${count})`);
-  const starterFingerprints = new Set(lineup.filter((item) => item.player).map((item) => item.player ? cardFingerprint(item.player) : ''));
+  const starterFingerprints = new Set(lineup.filter((item) => item.player).map((item) => item.player ? cardIdentityFingerprintR126(item.player.parsed) : ''));
   const starterResults = lineup.flatMap((item) => item.player ? [item.player] : []);
   const benchSuggestions = players
     .filter((player) => !starterFingerprints.has(player.fingerprint))
