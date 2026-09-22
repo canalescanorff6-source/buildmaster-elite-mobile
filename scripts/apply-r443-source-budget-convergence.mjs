@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION = '40.80-r468-source-budget-convergence-v2';
+export const R443_SOURCE_BUDGET_VERSION = '40.80-r468-source-budget-convergence-v3';
 export const R443_GLOBAL_SOURCE_BUDGET_BYTES = 5.5625 * 1024 * 1024;
 export const R443_SOURCE_RESERVE_BYTES = 100_000;
 export const R443_SOURCE_CHECKPOINT_BYTES = R443_GLOBAL_SOURCE_BUDGET_BYTES - R443_SOURCE_RESERVE_BYTES;
@@ -54,10 +54,12 @@ function patchR424Audit(source) {
   return replaceKnown(source, [
     ['5.25 * 1024 * 1024', '5.5625 * 1024 * 1024'],
     ['5.5 * 1024 * 1024', '5.5625 * 1024 * 1024'],
-    ['5\\.25\\s*\\*\\s*1024', '5\\.5\\s*\\*\\s*1024'],
+    ['5\\.25\\s*\\*\\s*1024', '5\\.5625\\s*\\*\\s*1024'],
+    ['5\\.5\\s*\\*\\s*1024', '5\\.5625\\s*\\*\\s*1024'],
     ['5_405_024', '5_732_704'],
     ['5_667_168', '5_732_704'],
-    ['5,25 MiB', '5,5 MiB'],
+    ['5,25 MiB', '5,5625 MiB'],
+    ['5,5 MiB', '5,5625 MiB'],
   ]);
 }
 
