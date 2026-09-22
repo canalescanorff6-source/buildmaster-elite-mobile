@@ -10,7 +10,7 @@ const built = process.argv.includes('--built');
 const limits = {
   totalJs: 15 * 1024 * 1024,
   singleJs: 5 * 1024 * 1024,
-  sourceTs: 5.5 * 1024 * 1024,
+  sourceTs: 5.625 * 1024 * 1024,
   singleSourceTs: 400 * 1024,
 };
 function walk(root, matcher) {

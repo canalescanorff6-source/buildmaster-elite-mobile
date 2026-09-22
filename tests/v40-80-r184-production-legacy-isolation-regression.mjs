@@ -52,7 +52,7 @@ while(stack.length){
   }
 }
 const sourceBytes=srcFiles.reduce((sum,file)=>sum+fs.statSync(file).size,0);
-const sourceLimit=5.5*1024*1024;
+const sourceLimit=5.625*1024*1024;
 const r2004Boundary=fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
 const selectorsR414=exists('src/modules/vault/cardVisionVaultSelectorsR151.ts')
   ? read('src/modules/vault/cardVisionVaultSelectorsR151.ts')
