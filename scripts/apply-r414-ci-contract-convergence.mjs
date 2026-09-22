@@ -77,7 +77,7 @@ function patchExact(source, from, to, label) {
   // antes de comparar para que um contrato semanticamente atual não seja
   // rejeitado só porque o template literal produz 5798240 sem "_".
   if (label.endsWith('source budget')) {
-    const numericNormalized = source.replace(/(?<=\\d)_(?=\\d)/g, '');
+    const numericNormalized = source.replace(/(?<=\d)_(?=\d)/g, '');
     const currentBudget = String(R414_SOURCE_BUDGET_BYTES);
     const hasCurrentBudget = numericNormalized.includes(currentBudget);
     const hasModernBoundary = /postCatalogBoundary|r443CatalogBoundary|r2004Boundary|r200Boundary/.test(source);
