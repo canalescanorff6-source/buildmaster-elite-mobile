@@ -73,12 +73,16 @@ function patchExact(source, from, to, label) {
     }
   }
   // R443/R442/R468 são sucessores legítimos do checkpoint histórico R414.
-  // Quando o teste já usa o budget pós-catálogo atual, não tente rebaixá-lo
-  // nem trate a ausência do literal antigo como corrupção.
-  if (label.endsWith('source budget') && (
-    source.includes(`postCatalogBoundary ? ${R414_SOURCE_BUDGET_BYTES}`)
-    || source.includes(`r443CatalogBoundary ? ${R414_SOURCE_BUDGET_BYTES}`)
-  )) return { source, changed: false };
+  // Numeric separators (ex.: 5_798_240) são apenas sintaxe JS: normalize-os
+  // antes de comparar para que um contrato semanticamente atual não seja
+  // rejeitado só porque o template literal produz 5798240 sem "_".
+  if (label.endsWith('source budget')) {
+    const numericNormalized = source.replace(/(?<=\\d)_(?=\\d)/g, '');
+    const currentBudget = String(R414_SOURCE_BUDGET_BYTES);
+    const hasCurrentBudget = numericNormalized.includes(currentBudget);
+    const hasModernBoundary = /postCatalogBoundary|r443CatalogBoundary|r2004Boundary|r200Boundary/.test(source);
+    if (hasCurrentBudget && hasModernBoundary) return { source, changed: false };
+  }
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`R414 CI convergence: contrato inesperado em ${label}; ocorrências=${count}`);
   return { source: source.replace(from, to), changed: true };
