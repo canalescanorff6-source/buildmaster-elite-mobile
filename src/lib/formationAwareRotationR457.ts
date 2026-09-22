@@ -74,7 +74,7 @@ function lineupCacheKey(results:AnalysisResult[],formationId:string,style:Tactic
   const roster=results.map(result=>JSON.stringify([cardIdentityFingerprintR126(result.parsed),analysisUsagePositionR138(result),result.parsed.playstyle??null,result.bestPosition?.score??null,result.teamMap?.functionLabel??null,result.teamMap?.sectorScores??null,result.permittedPositions?.map(p=>p.code).sort()??[],result.parsed.positionRatings??{}])).sort();
   return JSON.stringify([formationId,style,roster]);
 }
-function cachedGlobalLineup(results:AnalysisResult[],blueprint:any,style:TacticalStyle){
+function cachedGlobalLineup(results:AnalysisResult[],blueprint:Parameters<typeof optimizeGlobalFormationLineupR457>[1],style:TacticalStyle){
   const key=lineupCacheKey(results,blueprint.id,style);
   const cached=FORMATION_LINEUP_CACHE_R457.get(key);
   if(cached){FORMATION_LINEUP_CACHE_R457.delete(key);FORMATION_LINEUP_CACHE_R457.set(key,cached);return cached;}

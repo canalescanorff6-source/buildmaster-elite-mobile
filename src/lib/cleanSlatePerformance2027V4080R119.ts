@@ -1992,7 +1992,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
         ? `R136 reponderou retorno marginal com evidência temporal/contextual de ${activeMatchCalibration(input)?.rawMatches ?? 0} partida(s), limitada a ${Math.round((activeMatchCalibration(input)?.calibrationStrength ?? 0)*100)}% de força de calibração.`
         : 'R136 ainda não possui evidência recente/contextual suficiente para reponderar a ficha.',
       (input as AnalysisResult & { buildOutcomeCalibrationR460?: { status?:string; snapshotMatches?:number; confidenceScore?:number } }).buildOutcomeCalibrationR460?.status==='ACTIVE'
-        ? `R460 confirmou falha persistente entre promessa da ficha e execução real em ${(input as any).buildOutcomeCalibrationR460?.snapshotMatches ?? 0} partida(s); reforço por ação limitado a +6%.`
+        ? `R460 confirmou falha persistente entre promessa da ficha e execução real em ${(input as AnalysisResult & { buildOutcomeCalibrationR460?: { snapshotMatches?:number } }).buildOutcomeCalibrationR460?.snapshotMatches ?? 0} partida(s); reforço por ação limitado a +6%.`
         : 'R460 ainda está observando promessa × resultado; nenhuma pressão extra foi aplicada.'
     ]
   };
@@ -2025,7 +2025,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       `Posição natural ${parsed.mainPosition}; posição real de uso ${usageContext.targetPosition}. A posição de uso muda a demanda funcional sem trocar a identidade da carta.`,
       `R459: função ${usageFunction} dirige a demanda antes da capacidade atual; ${gameplayImpactR458.actions.slice(0,3).map(item=>`${item.label} ${Math.round(item.demand)}`).join(' • ')||'ações em revisão'}.`,
       (input as AnalysisResult & { buildOutcomeCalibrationR460?: { status?:string; reasons?:string[] } }).buildOutcomeCalibrationR460?.status==='ACTIVE'
-        ? `R460 ativo: ${(input as any).buildOutcomeCalibrationR460?.reasons?.[1] ?? 'há falha persistente entre promessa da ficha e resultado real.'}`
+        ? `R460 ativo: ${(input as AnalysisResult & { buildOutcomeCalibrationR460?: { reasons?:string[] } }).buildOutcomeCalibrationR460?.reasons?.[1] ?? 'há falha persistente entre promessa da ficha e resultado real.'}`
         : 'R460: aprendizado promessa × resultado ainda não reuniu evidência suficiente para alterar retorno marginal.',
       ...(positionStabilityR184?[positionStabilityR184.reason]:[]),
       playstyleContext.note,

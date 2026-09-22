@@ -24,6 +24,23 @@ export type DecisionWeight = {
   reason: string;
 };
 
+type GameplayImpactActionLikeR460 = {
+  id?: unknown;
+  label?: unknown;
+  demand?: unknown;
+  gain?: unknown;
+  projectedScore?: unknown;
+  decisionConfidence?: unknown;
+};
+
+type GameplayImpactLikeR460 = {
+  engineRevision?: unknown;
+  usageFunction?: unknown;
+  tacticalStyle?: unknown;
+  formation?: unknown;
+  actions?: GameplayImpactActionLikeR460[];
+};
+
 export type CardRegistrySource = 'print' | 'manual' | 'imported' | 'official_source';
 export type CardRegistryStatus = 'confirmed' | 'review';
 
@@ -248,7 +265,7 @@ function usageContextSignatureR460(result: AnalysisResult, usageFunction: string
 }
 
 export function buildGameplayImpactSnapshotR460(result: AnalysisResult): GameplayImpactSnapshotR460 | undefined {
-  const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: { gameplayImpactR458?: any } }).cleanSlate2027R119;
+  const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: { gameplayImpactR458?: GameplayImpactLikeR460 } }).cleanSlate2027R119;
   const impact = cleanSlate?.gameplayImpactR458;
   if (!impact || !Array.isArray(impact.actions)) return undefined;
   return {
@@ -257,7 +274,7 @@ export function buildGameplayImpactSnapshotR460(result: AnalysisResult): Gamepla
     usageFunction: String(impact.usageFunction ?? usageFunctionForMatchR460(result)),
     tacticalStyle: String(impact.tacticalStyle ?? result.tacticalProfile.style ?? 'AUTO'),
     formation: String(impact.formation ?? result.tacticalProfile.formation ?? 'AUTO'),
-    actions: impact.actions.slice(0, 12).map((action: any) => ({
+    actions: impact.actions.slice(0, 12).map((action) => ({
       id: String(action.id ?? '').trim().slice(0, 64),
       label: String(action.label ?? action.id ?? '').trim().slice(0, 96),
       demand: Math.max(0, Math.min(100, Number(action.demand ?? 0) || 0)),
