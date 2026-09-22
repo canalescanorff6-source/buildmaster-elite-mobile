@@ -39,12 +39,12 @@ assert.ok(first.patched.length >= 5);
 const after = auditR432SourceBudgetConvergence(root);
 assert.equal(after.ok, true, after.issues.join(' | '));
 
-assert.match(read('scripts/check-bundle-budget.mjs'), /sourceTs: 5\.5625 \* 1024 \* 1024/);
-assert.match(read('scripts/apply-r407-scalable-vault-capacity.mjs'), /sourceBudget=5\.5625\*1024\*1024/);
-assert.match(read('tests/v40-80-r184-production-legacy-isolation-regression.mjs'), /sourceLimit=5\.5625\*1024\*1024/);
+assert.match(read('scripts/check-bundle-budget.mjs'), /sourceTs: 5\.625 \* 1024 \* 1024/);
+assert.match(read('scripts/apply-r407-scalable-vault-capacity.mjs'), /sourceBudget=5\.625\*1024\*1024/);
+assert.match(read('tests/v40-80-r184-production-legacy-isolation-regression.mjs'), /sourceLimit=5\.625\*1024\*1024/);
 assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'), /R414_SOURCE_BUDGET_BYTES = 5_798_240/);
 assert.match(read('scripts/audit-r424-final-requirements-closure.mjs'), /5,625 MiB/);
-assert.match(read('tests/v40-80-r424-final-requirements-closure-regression.mjs'), /sourceTs: 5\.5625 \* 1024 \* 1024/);
+assert.match(read('tests/v40-80-r424-final-requirements-closure-regression.mjs'), /sourceTs: 5\.625 \* 1024 \* 1024/);
 
 const second = applyR432SourceBudgetConvergence(root);
 assert.equal(second.changed, false, 'R432 precisa ser idempotente.');

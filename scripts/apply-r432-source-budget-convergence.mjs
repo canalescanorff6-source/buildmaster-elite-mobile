@@ -117,7 +117,7 @@ export function auditR432SourceBudgetConvergence(rootDirectory = process.cwd()) 
       && !/minimumMargin\s*=\s*r414ScalableVault\s*\?\s*100_000\s*:\s*legacyMinimumMargin/.test(content.r184)) {
     issues.push(`${TARGETS.r184}: reserva mínima de 100 KB ausente.`);
   }
-  if (!content.r414.includes('R414_SOURCE_BUDGET_BYTES = 5_798_240')) issues.push(`${TARGETS.r414}: checkpoint R414 não está em 5.732.704 bytes.`);
+  if (!content.r414.includes('R414_SOURCE_BUDGET_BYTES = 5_798_240')) issues.push(`${TARGETS.r414}: checkpoint R414 não está em 5.798.240 bytes.`);
   if (!content.r414.includes('sourceTs: 5.625 * 1024 * 1024')) issues.push(`${TARGETS.r414}: guardrail global R414 ainda diverge.`);
   if (!content.r424Audit.includes('5_798_240') || !content.r424Audit.includes('5,625 MiB')) issues.push(`${TARGETS.r424Audit}: auditoria R424 ainda valida o baseline antigo.`);
   if (!content.r424Fixture.includes('sourceTs: 5.625 * 1024 * 1024') || !content.r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_798_240')) issues.push(`${TARGETS.r424Fixture}: fixture R424 ainda representa 5,625 MiB.`);
