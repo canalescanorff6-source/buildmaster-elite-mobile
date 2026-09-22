@@ -1,6 +1,5 @@
 import type { AnalysisResult, PositionCode } from '@/lib/analyzerDomain';
-import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
-import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { analysisUsageIdentityKeyR138, analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import type { ManualFields, SavedAnalysis, SavedSkillProgress } from './cardHistoryStore';
 
 export const CARD_HISTORY_STARTUP_MODEL_R200_VERSION = '40.80-r200-card-history-startup-model-v1' as const;
@@ -16,8 +15,9 @@ export function memoryKeyR200(value: string) {
 }
 
 export function resultHistoryKeyR200(result: AnalysisResult) {
-  const cardIdentity = cardIdentityFingerprintR126(result.parsed);
-  return `${cardIdentity}-${analysisUsagePositionR138(result).toLowerCase()}`;
+  // R457: o startup leve deve usar exatamente a mesma identidade persistente do Cofre:
+  // carta canônica + posição real de uso + função real de uso.
+  return analysisUsageIdentityKeyR138(result);
 }
 
 export function skillProgressInfoR200(skills: string[], progress: SavedSkillProgress | undefined) {
