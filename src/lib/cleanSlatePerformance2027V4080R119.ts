@@ -1215,7 +1215,7 @@ function optimizeTraining(input:AnalysisResult,parsed:ParsedCard,budget:number,c
   }
   if(!chosen) for(let cost=budget;cost>=0&&!chosen;cost--) chosen=byCost[cost][0];
   const exactR457=certifyExactTrainingR457(evaluationContext,allowed,budget,chosen);
-  chosen=exactR457.winner;
+  if(exactR457.winner) chosen=exactR457.winner;
   const exactBestScoreR457=exactR457.winner?.score??chosen?.score??0;
   const jointR457=selectJointConfigurationR457(parsed,context.targetPosition,evaluationContext,exactR457.equivalentStates,exactBestScoreR457);
   if(jointR457.selected) chosen=jointR457.selected.state;

@@ -1842,7 +1842,7 @@ export type MaximumPerformanceV4040Analysis = {
 
 export type BuildOutcomeCalibrationR460 = {
   version: '40.80-r460-build-outcome-learning-v1';
-  status: 'NO_EVIDENCE' | 'OBSERVE' | 'ACTIVE';
+  status: 'NO_EVIDENCE' | 'OBSERVE' | 'ACTIVE' | 'CONVERGED' | 'EXPERIMENTING' | 'CONFLICT';
   cardFingerprint: string;
   position: string;
   usageFunction: string;
