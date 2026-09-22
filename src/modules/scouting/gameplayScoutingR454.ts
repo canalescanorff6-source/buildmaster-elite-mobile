@@ -4,6 +4,7 @@ import { inspectPlaystyleActivationR124 } from '@/lib/efootball2027PhaseCatalogR
 
 export const GAMEPLAY_SCOUTING_R454_VERSION = '40.80-r454-gameplay-scouting-v1' as const;
 export const GAMEPLAY_SCOUTING_STORAGE_KEY_R454 = 'buildmaster_gameplay_scouting_r454' as const;
+export const CURRENT_EFOOTBALL_GAME_VERSION_R457 = '6.0.0' as const;
 
 export type GameplayScoutingSourceTypeR454 =
   | 'OFFICIAL'
