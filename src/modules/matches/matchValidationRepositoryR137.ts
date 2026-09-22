@@ -1,5 +1,7 @@
 import type { AnalysisResult } from '@/lib/analyzerDomain';
-import { MATCH_VALIDATION_STORAGE_KEY, cardFingerprintAliasesR457, type MatchValidationRecord } from '@/lib/appEvolution';
+import type { MatchValidationRecord } from '@/lib/appEvolution';
+import { MATCH_VALIDATION_STORAGE_KEY } from '@/lib/appStartupContractsR200';
+import { cardIdentityAliasesR457 } from '@/lib/cardIdentityFingerprintR126';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
@@ -102,13 +104,13 @@ export function replaceMatchValidationRepositoryR137(input: unknown, detail: Rec
 }
 
 export function exactUsageMatchValidationRecordsR137(result: AnalysisResult, records: MatchValidationRecord[] = readMatchValidationRepositoryR137()) {
-  const fingerprints = new Set(cardFingerprintAliasesR457(result));
+  const fingerprints = new Set(cardIdentityAliasesR457(result.parsed));
   const position = analysisUsagePositionR138(result);
   return records.filter((record) => fingerprints.has(record.cardFingerprint) && record.targetPosition === position);
 }
 
 export function removeUsageMatchValidationRecordsR137(result: AnalysisResult, records: MatchValidationRecord[]) {
-  const fingerprints = new Set(cardFingerprintAliasesR457(result));
+  const fingerprints = new Set(cardIdentityAliasesR457(result.parsed));
   const position = analysisUsagePositionR138(result);
   return records.filter((record) => !fingerprints.has(record.cardFingerprint) || record.targetPosition !== position);
 }
