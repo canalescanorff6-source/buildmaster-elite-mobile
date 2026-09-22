@@ -42,7 +42,7 @@ import type { DynamicRulePack } from '@/modules/builds/dynamicRules';
 import {
   skillProgressInfo,
   type SavedSkillProgress
-} from '@/modules/vault/cardHistoryStore';
+} from '@/components/result/skillProgressR192';
 import { UnifiedIntelligenceCard } from '@/components/result/UnifiedIntelligenceCard';
 import { SupremeGameplayCard } from '@/components/result/SupremeGameplayCard';
 import { CalibrationV32Card } from '@/components/result/CalibrationV32Card';

@@ -20,6 +20,16 @@ assert.ok(advancedBytes <= 26_000, `R192: fronteira avançada cresceu para ${adv
 assert.match(workspace, /const ResultAdvancedWorkspaceR192 = dynamic\(/, 'R192: workspace principal deve adquirir a superfície avançada via dynamic.');
 assert.match(workspace, /import\('@\/components\/result\/ResultAdvancedWorkspaceR192'\)/, 'R192: fronteira avançada precisa permanecer em import dinâmico.');
 assert.match(workspace, /advancedSurfaceActiveR192 && <ResultAdvancedWorkspaceR192/, 'R192: chunk avançado só deve montar quando uma aba técnica estiver ativa.');
+assert.doesNotMatch(
+  workspace,
+  /from ['"]@\/modules\/vault\/cardHistoryStore['"]/,
+  'R192: ResultWorkspace não pode puxar o Cofre persistente apenas para progresso de habilidades.',
+);
+assert.match(
+  workspace,
+  /from ['"]@\/components\/result\/skillProgressR192['"]/,
+  'R192: progresso de habilidades deve usar contrato leve dedicado.',
+);
 
 for (const moved of [
   'buildReliabilityCenter',
