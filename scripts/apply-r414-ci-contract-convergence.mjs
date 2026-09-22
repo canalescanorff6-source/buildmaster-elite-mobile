@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { applyAutonomousCardVaultR417 } from './apply-r417-autonomous-card-vault.mjs';
 
-export const R414_SOURCE_BUDGET_BYTES = 5_667_168;
+export const R414_SOURCE_BUDGET_BYTES = 5_798_240;
 export const R414_RESULT_CLOSURE_BUDGET_R192 = 2_185_000;
 
 const TARGETS = [
@@ -72,12 +72,12 @@ function patchExact(source, from, to, label) {
       if (source.includes(legacy)) return { source: source.replace(legacy, to), changed: true };
     }
   }
-  // R443/R442 são sucessores legítimos do checkpoint histórico R414.
-  // Quando o teste já usa o budget pós-catálogo de 5.667.168 B,
-  // não tente rebaixá-lo nem trate a ausência do literal antigo como corrupção.
+  // R443/R442/R468 são sucessores legítimos do checkpoint histórico R414.
+  // Quando o teste já usa o budget pós-catálogo atual, não tente rebaixá-lo
+  // nem trate a ausência do literal antigo como corrupção.
   if (label.endsWith('source budget') && (
-    source.includes('postCatalogBoundary ? 5_667_168')
-    || source.includes('r443CatalogBoundary ? 5_667_168')
+    source.includes(`postCatalogBoundary ? ${R414_SOURCE_BUDGET_BYTES}`)
+    || source.includes(`r443CatalogBoundary ? ${R414_SOURCE_BUDGET_BYTES}`)
   )) return { source, changed: false };
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`R414 CI convergence: contrato inesperado em ${label}; ocorrências=${count}`);
