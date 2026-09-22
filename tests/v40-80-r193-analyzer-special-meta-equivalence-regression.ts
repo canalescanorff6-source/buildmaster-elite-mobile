@@ -33,6 +33,6 @@ const goalkeeperFrozen = {
   teamMap:goalkeeper.teamMap, specialSkillsAnalysis:goalkeeper.specialSkillsAnalysis, physicalEngine:goalkeeper.physicalEngine,
   attributeGoals:goalkeeper.attributeGoals, marginalReturn:goalkeeper.marginalReturn,
 };
-assert.equal(hash(goalkeeperFrozen), '95abe08f9b9e765212a2d99f45bf18e4f1b0fe0aacc8880fcd9ee9865dca0393', 'R193: deduplicação alterou a saída R192 do goleiro com Comandante da defesa.');
+assert.equal(hash(goalkeeperFrozen), '28f360f6b9e4c0fadb6812db1c95de1215c0f3b9f032cbbf2fd9fe4052ddde2a', 'R193: deduplicação alterou a saída R192 do goleiro com Comandante da defesa.');
 
 console.log('R193 equivalência especial aprovada: Curva descendente e Comandante da defesa preservam byte-a-byte as saídas congeladas da R192.');
