@@ -1,6 +1,6 @@
 import type { AnalysisResult, TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import { buildFormationLineup, FORMATION_BLUEPRINTS, getFormationBlueprint, scorePlayerForFormationSlot, styleAdviceForFormation } from '@/lib/formationRoleEngine';
-import type { MatchValidationRecord } from '@/lib/appEvolution';
+import type { MatchValidationRecord } from '@/lib/appStartupContractsR200';
 import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import { createPendingGameplayScoutingR454, evaluatePairSynergyR454 } from '@/modules/scouting/gameplayScoutingR454';
 

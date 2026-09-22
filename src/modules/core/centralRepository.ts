@@ -1,4 +1,5 @@
-import { cardFingerprint, type MatchValidationRecord } from '@/lib/appEvolution';
+import type { MatchValidationRecord } from '@/lib/appStartupContractsR200';
+import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import type { IntegratedPlayerRecord, TeamDiagnosis } from '@/modules/core/centralIntelligence';
 
 export const CENTRAL_INDEX_STORAGE_KEY = 'buildmaster_central_entity_index_v27';
@@ -51,7 +52,7 @@ export function buildCentralEntityIndex(
   });
 
   const lineupFingerprints = team.lineup
-    .map((slot) => slot.player ? cardFingerprint(slot.player) : '')
+    .map((slot) => slot.player ? cardIdentityFingerprintR126(slot.player.parsed) : '')
     .filter(Boolean);
 
   const impacts: CentralImpactNotice[] = [];
