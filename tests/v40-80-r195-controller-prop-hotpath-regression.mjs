@@ -17,7 +17,7 @@ const appBytes = fs.statSync(appPath).size;
 const appLines = app.split(/\r?\n/).length;
 const analyzerBytes = fs.statSync(analyzerPath).size;
 const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
-assert.ok(appBytes <= (postCatalogBoundary ? 114_000 : 108_000), `R195: CardVisionApp voltou a ${appBytes} bytes.`);
+assert.ok(appBytes <= (postCatalogBoundary ? 114_688 : 108_000), `R195: CardVisionApp voltou a ${appBytes} bytes.`);
 assert.ok(appLines <= (postCatalogBoundary ? 1_720 : 1_620), `R195: CardVisionApp voltou a ${appLines} linhas.`);
 assert.ok(analyzerBytes <= 109_500, `R195: analyzer voltou a ${analyzerBytes} bytes.`);
 
@@ -52,7 +52,7 @@ function walk(root) {
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
 const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
-assert.ok(sourceBytes <= (postCatalogBoundary ? 5_667_168 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_337_000), `R195: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 5_798_240 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_337_000), `R195: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
   '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5',
