@@ -1,5 +1,5 @@
 import type { ParsedCard, PositionCode } from './analyzerDomain';
-import { OFFICIAL_ADDITIONAL_SKILL_NAMES, SKILL_PROFILES } from '@/modules/analysis/analyzerCatalog';
+import { SKILL_PROFILES } from '@/modules/analysis/analyzerCatalog';
 import { officialAdditionalSkillPoolForPosition, isRoleCompatibleAdditionalSkill, SKILL_COMPLEMENTS_R457 } from './skillIntelligenceV31';
 import { canonicalizeSkillList, isOfficialAdditionalSkillIdentity, skillIdentityKey } from './officialSkillIdentity';
 import { skillActionSupportDetailR459 } from './gameplayImpactR458';

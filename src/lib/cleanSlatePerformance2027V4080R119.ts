@@ -559,10 +559,6 @@ function positionRelevance(action:ActionDef, parsed:ParsedCard, context:UsageCon
   return Math.max(target,natural*.18,...alternates.map(value=>value*.10),0);
 }
 
-function skillText(parsed:ParsedCard) {
-  return norm([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].join(' | '));
-}
-
 function skillActionList(parsed:ParsedCard){
   return [...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])];
 }

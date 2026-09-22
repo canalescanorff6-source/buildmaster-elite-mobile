@@ -6,7 +6,7 @@ import {
   type PositionCode
 } from '@/lib/analyzer';
 import { createProductionAnalysisR138 } from '@/modules/analysis/productionOrchestratorR138';
-import { cardIdentityAliasesR457, cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { cardIdentityAliasesR457 } from '@/lib/cardIdentityFingerprintR126';
 import { analysisUsageFunctionR457, analysisUsageIdentityKeyR138, analysisUsagePositionR138, optionalAnalysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { buildVaultIdentitySealR134 } from './vaultIdentitySealR134';
 import {
@@ -499,14 +499,6 @@ export function memoryKey(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
-}
-
-function sameHistoryUsageIdentityR457(left: SavedAnalysis, right: SavedAnalysis) {
-  if (/-variante-/i.test(left.saveKey) || /-variante-/i.test(right.saveKey)) return left.saveKey === right.saveKey;
-  if (analysisUsagePositionR138(left.result) !== analysisUsagePositionR138(right.result)) return false;
-  if (analysisUsageFunctionR457(left.result) !== analysisUsageFunctionR457(right.result)) return false;
-  const rightAliases = new Set(cardIdentityAliasesR457(right.result.parsed));
-  return cardIdentityAliasesR457(left.result.parsed).some((alias) => rightAliases.has(alias));
 }
 
 function historyUsageIdentityTokensR457(item: SavedAnalysis): string[] {

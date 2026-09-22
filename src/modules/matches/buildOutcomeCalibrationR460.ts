@@ -83,13 +83,11 @@ function metricWasObservedR468(record: MatchValidationRecord, key: keyof MatchPe
 
 function positiveMetricScore(record: MatchValidationRecord, key: keyof MatchPerformanceMetrics, targetPer90: number) {
   if (!metricWasObservedR468(record, key)) return null;
-  const raw = Number(record.metrics?.[key] || 0);
   return clamp(per90(record, key) / Math.max(.1, targetPer90), 0, 1.15) * 100 / 1.15;
 }
 
 function negativeMetricScore(record: MatchValidationRecord, key: keyof MatchPerformanceMetrics, goodPer90: number, badPer90: number) {
   if (!metricWasObservedR468(record, key)) return null;
-  const raw = Number(record.metrics?.[key] || 0);
   const value = per90(record, key);
   if (value <= goodPer90) return 100;
   return (1 - clamp((value - goodPer90) / Math.max(.1, badPer90 - goodPer90))) * 100;
