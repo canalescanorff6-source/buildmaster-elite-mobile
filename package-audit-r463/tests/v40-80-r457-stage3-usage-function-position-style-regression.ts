@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { inspectPlaystyleActivationR124 } from '../src/lib/efootball2027PhaseCatalogR124';
+import { cardUsageIdentityKeyR126 } from '../src/lib/cardIdentityFingerprintR126';
+
+assert.equal(inspectPlaystyleActivationR124('Ala Produtivo','OFFENSIVE','RB').status,'LIKELY_INACTIVE','Ala Produtivo em LD/RB precisa ficar inativo, não CHECK_POSITION.');
+assert.equal(inspectPlaystyleActivationR124('Ala Produtivo','OFFENSIVE','RWF').status,'LIKELY_ACTIVE');
+const parsed:any={playerName:'R457',cardType:'Epic',mainPosition:'CMF',positions:['CMF'],nativeSkills:[],specialSkills:[],attributes:{},positionRatings:{}};
+assert.notEqual(cardUsageIdentityKeyR126(parsed,'CMF','MLG orquestrador'),cardUsageIdentityKeyR126(parsed,'CMF','MLG box-to-box'),'Mesma carta/posição com funções diferentes precisa representar builds diferentes.');
+const clean=fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts','utf8');
+const analyzer=fs.readFileSync('src/lib/analyzer.ts','utf8');
+const r126=fs.readFileSync('src/lib/productionAuthorityR126.ts','utf8');
+const r128=fs.readFileSync('src/lib/productionAuthorityR128.ts','utf8');
+assert.match(clean,/decision:targetAdaptation\?'TARGET_ADAPTATION':'NATURAL_ANCHOR'/);
+assert.match(clean,/targetGain >= POSITION_STABILITY_GAIN_THRESHOLD_R184/);
+assert.match(analyzer,/activeFunctionStyleTextR457/);
+assert.match(analyzer,/inspectPlaystyleActivationR124/);
+assert.match(r126,/usageFunction: cleanSlate\.usageFunction/);
+assert.match(r128,/usageFunction/);
+console.log('R457 Stage 3 aprovada: posição material adapta build, estilo inativo zera influência e função passa a identificar a build.');

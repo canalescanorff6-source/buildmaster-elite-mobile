@@ -1,0 +1,528 @@
+{
+  "schema": 2,
+  "project": "buildmaster-elite-mobile",
+  "baseCommit": "26d76e456083b0f6d26c9434d6aa97feef4f39c8",
+  "commitMessage": "R463 final: aprendizado promessa×resultado, evidência por ação, sessões reais e selo R128",
+  "files": [
+    {
+      "path": "R457_STAGE3_VALIDATION.md",
+      "sha256": "93ec3ffdddcd7f24406e2cb23efc7098bd061bb67c5794d308ff819c0ec4ba91"
+    },
+    {
+      "path": "apply-r457-stage10-scouting-decision-evidence.mjs",
+      "sha256": "3db7d2726803e5c78057ce0c117344b7a2f248ca4f313dd4ff469f5bddb059e0"
+    },
+    {
+      "path": "apply-r457-stage11-match-scouting-bridge.mjs",
+      "sha256": "f46358f4e9890d4b01f82cfc0ff40908eb045a7e4b09fa932703cf3f7cd8d713"
+    },
+    {
+      "path": "apply-r457-stage7-final-impeto-decision.mjs",
+      "sha256": "f64fb8f48c4b5af41421744f927e8111c05893c0d2834665689ec6430c76c4e5"
+    },
+    {
+      "path": "apply-r457-stage9-canonical-dna.mjs",
+      "sha256": "2e7a14c360f978e9093ab7c4235bac03b25991f7ed57a8747fa9d2812de9da9c"
+    },
+    {
+      "path": "docs/R457_DEVICE_ACCEPTANCE.md",
+      "sha256": "613e368153faefe4ef6024fa3c3fc7cc386fe730880c9565c7cb7a914db78f6d"
+    },
+    {
+      "path": "docs/r457-device-acceptance.example.json",
+      "sha256": "aff04bfffdaa5248e7d299f62b0975da8af9150a08c5a5a39b248be44aeb0d33"
+    },
+    {
+      "path": "package.json",
+      "sha256": "96ee5231c5fa40638135ca9dd0aba659857650f6b7b6ab5746f79f11a6e12df6"
+    },
+    {
+      "path": "scripts/apply-r406-fix7-r186-r200-reviewed-baselines.mjs",
+      "sha256": "d7e193525086eb9c9a51620f69090ca7bf2114d1926400488bb7513df035a6a8"
+    },
+    {
+      "path": "scripts/apply-r407-scalable-vault-capacity.mjs",
+      "sha256": "3a896f77e614f124322dc7470607122e5822863fc77a9aa324008fccf83121a1"
+    },
+    {
+      "path": "scripts/apply-r408-unlimited-fichas-pp-integrity.mjs",
+      "sha256": "e991a968e61a8a8ba4f6b4c92582198121695bc5342e192438025b7c5d907c79"
+    },
+    {
+      "path": "scripts/apply-r414-ci-contract-convergence.mjs",
+      "sha256": "69cfa097e1a3ad35fb3ade885480b1ec530d5ca1fcf88e3232a6dea614021244"
+    },
+    {
+      "path": "scripts/apply-r457-stage15-source-runtime-equivalence.mjs",
+      "sha256": "92b04b422aa4df3eccb1a948a5b342c9210dbcc843646db74108269e21cdd91b"
+    },
+    {
+      "path": "scripts/apply-r457-stage16-device-acceptance-release-gate.mjs",
+      "sha256": "1a577c70a8acb6a8082007f5cdbbb59db50b473438dea181f583600f7cd05f40"
+    },
+    {
+      "path": "scripts/audit-r424-final-requirements-closure.mjs",
+      "sha256": "dae646aa8042ef1bec9010643a3f57a7d5b121a870472e8224ad0bf2f26a2333"
+    },
+    {
+      "path": "scripts/check-bundle-budget.mjs",
+      "sha256": "4b3360da002a3092a362f404e8611eceb00faefe50d33114c65a2bb56fbe5f44"
+    },
+    {
+      "path": "scripts/validate-device-acceptance-r457.mjs",
+      "sha256": "0e9527fcbc1c0680b8e59c9906ca37c57e6eed9c234dce89ae793c167001944d"
+    },
+    {
+      "path": "src/components/CardVisionApp.tsx",
+      "sha256": "7ccee05c83fc61bae853d88c3dfc430994f9cf1a569b953d2cb3bf2e336fb2ea"
+    },
+    {
+      "path": "src/components/CleanVaultV3800.tsx",
+      "sha256": "526ae3e53f1cd5ceade41e3f43627a42742e2937f8ec8f336f3e5c8c6d496d7c"
+    },
+    {
+      "path": "src/components/MatchValidationCenter.tsx",
+      "sha256": "4dcd26c2fcfe715543a0becef7cfdb67feef111543a60aa72e6a942b3870b809"
+    },
+    {
+      "path": "src/components/UnifiedPerformanceV3920Panel.tsx",
+      "sha256": "47945e5fac58c50276437afd72b16b611f8da21d5492c4986d990431b7ed53f0"
+    },
+    {
+      "path": "src/components/vault/CardVisionVaultWorkspaceR191.tsx",
+      "sha256": "cf2e4ab726c83102b6251e1490d3e869a75821bda7a090130cc3115ac6c830ee"
+    },
+    {
+      "path": "src/hooks/useActiveSessionAutosaveR157.ts",
+      "sha256": "552b5e52fc51d88804a560af8ac9c1b40f3b9c1f242d6af3634a7f671a3291dd"
+    },
+    {
+      "path": "src/hooks/useCardVisionStartupLifecycleR177.ts",
+      "sha256": "8c3b25375744a50fdac850b53d143475b402a65b874cf950764fbec8b82458de"
+    },
+    {
+      "path": "src/hooks/useCardVisionVaultActionsR185.ts",
+      "sha256": "414f708e57063f7bee5e77caad81a6bd2f71eb58804f1aaf70f67b1c760f1089"
+    },
+    {
+      "path": "src/lib/analysisUsagePositionR138.ts",
+      "sha256": "4e2442cf6539c17ee9f0fe315b99057c68c08896a5d61a4d158fc644b6f405d9"
+    },
+    {
+      "path": "src/lib/analyzer.ts",
+      "sha256": "2cd3e781aae1ad5e95a22a7387e2b4160f3d76c330621875f6f5873b1d23d22a"
+    },
+    {
+      "path": "src/lib/analyzerDomain.ts",
+      "sha256": "40f2903c3bf8e1aa4002848122f2532dccc2b5d7c7e9a464dff4cb0639f94761"
+    },
+    {
+      "path": "src/lib/appEvolution.ts",
+      "sha256": "70462265efea4e21fa89d70d8499178385bd6ecb72ac5570fe3134a5570c1498"
+    },
+    {
+      "path": "src/lib/canonicalDnaR457.ts",
+      "sha256": "ee2b5c4c4c2905f60752b00f0240e681ff22d0bc13445664c314a7268ca10ba1"
+    },
+    {
+      "path": "src/lib/cardIdentityFingerprintR126.ts",
+      "sha256": "eec965e0fa098fa208cf8b1191eea7906615e99c63dbbee42d6c63f45a921ac8"
+    },
+    {
+      "path": "src/lib/cardIntelligencePipeline.ts",
+      "sha256": "20be26e8738dc2c62853cd3e120d20b4d94fdc620cc187a1fbd03ec4fa1bbdcb"
+    },
+    {
+      "path": "src/lib/cleanSlatePerformance2027V4080R119.ts",
+      "sha256": "7e613227d022aba7315916af238a5ec51ecb83c8003209794ef8b283c075fd01"
+    },
+    {
+      "path": "src/lib/cleanVaultV3800.ts",
+      "sha256": "f2a56c8438c274f01692a6f4b65dd0078bed2d84937e5dfffd66ea7a8a0adb86"
+    },
+    {
+      "path": "src/lib/deviceAcceptanceR457.ts",
+      "sha256": "b4f27b6fe8761a7a95f1937076e4896776c49327d12e949752fb9ae66cf3c209"
+    },
+    {
+      "path": "src/lib/efootball2027PhaseCatalogR124.ts",
+      "sha256": "f12f848826e9a72315284635487c1509c8d248702a48818a8c525b3f175d1c93"
+    },
+    {
+      "path": "src/lib/finalAdditionalSkillSetR457.ts",
+      "sha256": "ef2e6b583a02b66fa442754aa3b839db2f546d14562dc801ae99cb2422f8bf05"
+    },
+    {
+      "path": "src/lib/finalImpetoDecisionR457.ts",
+      "sha256": "50bc8cbf3387cf103ef610adaf6d4a974949399ddc814ff7b4b8f4a462303a07"
+    },
+    {
+      "path": "src/lib/formationAwareRotationR457.ts",
+      "sha256": "e03d23a447d6752c5af7d21ccc3158089d05bb0d296c0cafab832150db8a09a9"
+    },
+    {
+      "path": "src/lib/gameplayImpactR458.ts",
+      "sha256": "7643c03abad223ba666020c7a991c6555f84d7f616d2b272b7b2482be63207fb"
+    },
+    {
+      "path": "src/lib/globalLineupOptimizerR457.ts",
+      "sha256": "86a05b774e45681822f2da82890c8620667e0c4d8752acee838acd2e05e6da51"
+    },
+    {
+      "path": "src/lib/impetoFunctionalMatrixR119.ts",
+      "sha256": "e7080aaec1a2ac51140ef2617c7387ff450175f64d4aa5e60060ebf37aa0a593"
+    },
+    {
+      "path": "src/lib/longitudinalGameplayLearningV4060.ts",
+      "sha256": "1bc0938621e98461570fbbf3f62c91d696f9a91608fbda4c5d5f6d63fd2e4c0c"
+    },
+    {
+      "path": "src/lib/productionAnalysisR128.ts",
+      "sha256": "7bee3e5fabd7eaea04e34ab45921112bf215631b595a363e04903cf1d7f73397"
+    },
+    {
+      "path": "src/lib/productionAuthorityR126.ts",
+      "sha256": "6c9772808ed5b7b221dba31e01cd2e66ab0aad5803ee8ec6aa978b1353bf8083"
+    },
+    {
+      "path": "src/lib/productionAuthorityR128.ts",
+      "sha256": "4010095eee2d0b8da269c911e376fe3e0dca590a62bf2d415dc8e4210f94a02f"
+    },
+    {
+      "path": "src/lib/professionalSquadEngine.ts",
+      "sha256": "76b9a2910cd0f0195b208ebdaafb2c3dc447214cab08873a16b9ee2e5bbc1a97"
+    },
+    {
+      "path": "src/lib/scoutingDecisionEvidenceR457.ts",
+      "sha256": "f2b58af1a1183501decb1a501cfc30063d2658f388c9c1b5c41be4c304cd4c37"
+    },
+    {
+      "path": "src/lib/skillIntelligenceV31.ts",
+      "sha256": "ea10aaeb7ff28c7b0b291dd242a0c70b4d2da76090a9c303693bfc3eab931f5e"
+    },
+    {
+      "path": "src/lib/squadRotation.ts",
+      "sha256": "2131326cc6d2ec80f331d156972ee5d7d7d1d5ae45ac933d51dd0d9078b902f9"
+    },
+    {
+      "path": "src/modules/analysis/productionOrchestratorR138.ts",
+      "sha256": "f98010056c4d999277e49a4aafea5a3f4a79e676fddf803834b605f46006782d"
+    },
+    {
+      "path": "src/modules/backup/cardVisionBackupRuntimeR162.ts",
+      "sha256": "ab55a7c511677aa885cc415d062d4cacff1e77dc099f3a63617360e89a322526"
+    },
+    {
+      "path": "src/modules/backup/vaultCloudRuntimeR166.ts",
+      "sha256": "095b8087c5e7039d058abac8c6231666093f182d2568b84a0261a54dec5b66fa"
+    },
+    {
+      "path": "src/modules/card-catalog/masterCardAnalysisRequestR438.ts",
+      "sha256": "d530968bef3e4ab8b4a6418f02a2240f9d1d7ea2610c501424aa0d39568f36f9"
+    },
+    {
+      "path": "src/modules/card-reader/cardVisionReaderActionsR187.ts",
+      "sha256": "772a2d10ce56c4576562d6125ed6a8c801748f60f164902a75add74e3e12c372"
+    },
+    {
+      "path": "src/modules/card-reader/readerAnalysisRuntimeR163.ts",
+      "sha256": "1b991c71dd378753d1111e2873432495bb7997cd724d22f32000322e7ac8e58a"
+    },
+    {
+      "path": "src/modules/matches/buildOutcomeCalibrationR460.ts",
+      "sha256": "19fabfced4bdcf22500c802972e6b0bce77ea0f1caa4a183fc46b9f75b415706"
+    },
+    {
+      "path": "src/modules/matches/matchEvidenceCalibrationR135.ts",
+      "sha256": "4f51cdb32f62c1060dde1d00a96252890adfe52f2e3669dc44890bd3fcb4f096"
+    },
+    {
+      "path": "src/modules/matches/matchEvidenceCalibrationR136.ts",
+      "sha256": "c0a08b0954bb9cd562d47212ae974011b1516cba8c4edf7b613a38aae09813cf"
+    },
+    {
+      "path": "src/modules/matches/matchValidationRepositoryR137.ts",
+      "sha256": "acbee40c8d9cbb5dd95afbbc59d1c78dcabf07643a434c47b9ab7f61324d9388"
+    },
+    {
+      "path": "src/modules/result/cardVisionResultActionsR188.ts",
+      "sha256": "2f3b526378ed02645a96d81fe0eb9a31e113c1fd9ff2be4ace6017eb82d15528"
+    },
+    {
+      "path": "src/modules/runtime/cardVisionStartupRuntimeR177.ts",
+      "sha256": "0694e85d556c6a783646a530560f6f19c0fdff718d781fd4306f8e3fe2ed05e6"
+    },
+    {
+      "path": "src/modules/scouting/gameplayScoutingR454.ts",
+      "sha256": "88589634f038ed3ad722fca410592c3a4f5e5fa528842452b872a3d03990a466"
+    },
+    {
+      "path": "src/modules/scouting/gameplayScoutingRepositoryR454.ts",
+      "sha256": "ef932e4d97773867c96cc2e452f1f4ee122fce3ebbbc12c4c4947331a91bb319"
+    },
+    {
+      "path": "src/modules/scouting/matchScoutingBridgeR457.ts",
+      "sha256": "a8e08925816211c931f27df68c9545413fedb5ff87bdbb724299617d33f0e1e9"
+    },
+    {
+      "path": "src/modules/session/activeSessionRepositoryR137.ts",
+      "sha256": "fc7e45dabfffa4d502881db6ebbd1f6ecb81e0b59a018a233436b6da5c5afca8"
+    },
+    {
+      "path": "src/modules/squad-mapping/squadMappingStorage.ts",
+      "sha256": "8c0cf36d8910174d8ae43d5cf8852c1025f30d0c8a5e8eb87440887562153d62"
+    },
+    {
+      "path": "src/modules/tactical-studio/tacticalStudio2Storage.ts",
+      "sha256": "f83a3210128c39b2f3a2224da2c4af8da272129e0b3b9b5d622f0cbe51c96a38"
+    },
+    {
+      "path": "src/modules/vault/cardHistoryStartupModelR200.ts",
+      "sha256": "a36da87ca86b7deef9348197918115348ff9f565928771335bf4513e865060ec"
+    },
+    {
+      "path": "src/modules/vault/cardHistoryStore.ts",
+      "sha256": "f8200871962ef3eba942cf5d52a0e2eeb2aa9b0b816272e9517ea2239764ded6"
+    },
+    {
+      "path": "src/modules/vault/cardVisionVaultSelectorsR151.ts",
+      "sha256": "94c7597faf089e32b09a1034f312ff65f70f31897499c49a515177ed02807a8d"
+    },
+    {
+      "path": "src/modules/vault/useProgressiveVaultWorkspaceR413.ts",
+      "sha256": "776331bb0aff18a9e85e3d0b322e23ddd090d010e97587a4a4968f30d11af17a"
+    },
+    {
+      "path": "src/modules/vault/vaultHistoryMutationsR129.ts",
+      "sha256": "936f8de04490b2bac4ffeedaa918780162c4a140266d795477a251e8fbc16d91"
+    },
+    {
+      "path": "src/modules/vault/vaultProductionLifecycleR139.ts",
+      "sha256": "4b738add53c10e2a19e65f77e71f2cc8b0e15edb3238302579d8ea658a1065b2"
+    },
+    {
+      "path": "tests/v40-80-r108-master-authority-runtime-regression.ts",
+      "sha256": "d7f5fbc596eeb3d4939966518b7ab997854c0e3df67da603bd9ac0754b51bc01"
+    },
+    {
+      "path": "tests/v40-80-r118-single-final-authority-regression.mjs",
+      "sha256": "bb8f2ecd6145b00fac4f49e75b3fa0f4016792b17b9979d32918e5ed385539a7"
+    },
+    {
+      "path": "tests/v40-80-r122-online-performance-dna-regression.ts",
+      "sha256": "cb9d9c6c8ce47af6cbffff8af8bd30aa3fa31b30da00778621ee301c430a639c"
+    },
+    {
+      "path": "tests/v40-80-r122-result-ui-regression.mjs",
+      "sha256": "5aafeed304463723f3f69bd5a5c6eea130921e65831b500d1f67c5b296f64aba"
+    },
+    {
+      "path": "tests/v40-80-r123-competitive-lab-saturation-confidence-regression.ts",
+      "sha256": "c2fb60a272f3445ec88dd8c43aa162503f5fcec550f9df3b33ef4c720b327401"
+    },
+    {
+      "path": "tests/v40-80-r123-result-ui-regression.mjs",
+      "sha256": "a5a452da3abf6c42322289bc2d77ba5ec629f440532bd765ca2b4c8e7f49933a"
+    },
+    {
+      "path": "tests/v40-80-r125-role-aware-card-specific-build-regression.ts",
+      "sha256": "07451798c7011d8c10a16988ed0ce6577aa28897954e49a3073dc77a240650bb"
+    },
+    {
+      "path": "tests/v40-80-r143-clean-slate-equivalent-state-cache-regression.ts",
+      "sha256": "c2b7e1b70e6997adbd6ba18071cab8ca6e68442c6016a6397b3ec63331d5cc48"
+    },
+    {
+      "path": "tests/v40-80-r144-clean-slate-frontier-dedup-regression.ts",
+      "sha256": "4a10f52cb8a7e5da482a0b50e4ce24d7dea6abab903449a8997198e451b35c87"
+    },
+    {
+      "path": "tests/v40-80-r145-incremental-state-key-beam-regression.ts",
+      "sha256": "3746e9dce08306c8d6f2d5ff80743cb8866f62045191edb3c20d8419b8eff7e9"
+    },
+    {
+      "path": "tests/v40-80-r146-compiled-evaluation-kernel-regression.ts",
+      "sha256": "0fe2820eef466eb505596b75b7bbe7694c89d8248adccd91986a6f1f496fea64"
+    },
+    {
+      "path": "tests/v40-80-r147-compact-search-state-regression.ts",
+      "sha256": "efbfbb30a1a95d9f622e4055b9abc4c558cdb379b7f488146af33747884eda99"
+    },
+    {
+      "path": "tests/v40-80-r148-fused-evaluation-pass-regression.ts",
+      "sha256": "572ff152471b1873e74d7d9419dfe6f68f2d3ff3d5671e3e984f87dd3ab19c07"
+    },
+    {
+      "path": "tests/v40-80-r149-scalar-score-hot-path-regression.ts",
+      "sha256": "8bb02124456f532b1c160b41c9d40c19c0d90dcd03f37c79a9dfb188e449a799"
+    },
+    {
+      "path": "tests/v40-80-r184-production-legacy-isolation-regression.mjs",
+      "sha256": "16a88de23c6c8009ef2969bfd0fc5616dc21bbfc64091781361f859fa0fa25bc"
+    },
+    {
+      "path": "tests/v40-80-r407-unbounded-vault-capacity-regression.mjs",
+      "sha256": "16a25c24f2346d6a85accf4859d71b992cf36ef1f2d2dad743f930a9d281709a"
+    },
+    {
+      "path": "tests/v40-80-r408-unlimited-fichas-pp-integrity-regression.mjs",
+      "sha256": "2cc839784cbe9fc451e49af85798b25eb23c541bfa688239e9ac9081a37cec56"
+    },
+    {
+      "path": "tests/v40-80-r409-sharded-native-vault-regression.mjs",
+      "sha256": "98c17e618ce427ac96fc00df2d2b079c4488e77b87f2fc58993554508f834b6c"
+    },
+    {
+      "path": "tests/v40-80-r410-fast-resilient-vault-read-regression.mjs",
+      "sha256": "1849323a366697077375798a473f740bd60e31d15ef5097ffddd8ac881ee1861"
+    },
+    {
+      "path": "tests/v40-80-r411-crash-safe-vault-commit-regression.mjs",
+      "sha256": "2904df4357de6b87600294b92c5c3e531d7e4154ac48b2f54d6dcd4b135adb5d"
+    },
+    {
+      "path": "tests/v40-80-r412-bounded-vault-hydration-regression.mjs",
+      "sha256": "a83d182a0326ad6fed9cac8601374be7c1fbadcb8dffab2ef8bde63cf54695a7"
+    },
+    {
+      "path": "tests/v40-80-r413-progressive-vault-render-regression.mjs",
+      "sha256": "bc42c158c34d2ec8194d3f447dd04a629dca430a1f3e8dfe0c919e8dc7b487a0"
+    },
+    {
+      "path": "tests/v40-80-r414-indexed-vault-query-regression.mjs",
+      "sha256": "2077daa31fa41f4dbc33f9b228b1a1fbfd8fff86a508dee7f42d6048e8d2c7c8"
+    },
+    {
+      "path": "tests/v40-80-r424-final-requirements-closure-regression.mjs",
+      "sha256": "3624b09d332727dcf31173346f9ebc5ae38a621b51980a66d8e569a86dc09582"
+    },
+    {
+      "path": "tests/v40-80-r457-canonical-dna-regression.ts",
+      "sha256": "d6d3416e7280b6720c3a6eaedc9875d3a5f70fbf13477877188a80cfc7baa68a"
+    },
+    {
+      "path": "tests/v40-80-r457-device-acceptance-workflow-regression.mjs",
+      "sha256": "91ec17650a93fb5f330d30b031f743c9e43b31f76a75d9fa860adc87722b47b9"
+    },
+    {
+      "path": "tests/v40-80-r457-final-additional-skill-set-regression.ts",
+      "sha256": "34980a4603d13ce8c3832ee7771df938c7dcafe05aee1d94f63b83f79c094147"
+    },
+    {
+      "path": "tests/v40-80-r457-final-impeto-decision-regression.ts",
+      "sha256": "e31d50884c08b8af3947b5e79455625a11cbb2a1661f901308c904b3d3d426b1"
+    },
+    {
+      "path": "tests/v40-80-r457-formation-aware-rotation-behavior.ts",
+      "sha256": "53522578730c55ce6613b44f3bf471cc650f33faa1f39a5355993483a413305b"
+    },
+    {
+      "path": "tests/v40-80-r457-formation-aware-rotation-regression.ts",
+      "sha256": "f8f5562f68639989d1ce4cb6144fcf902475cdfbd1208108915c131243ccb6c9"
+    },
+    {
+      "path": "tests/v40-80-r457-full-core-integration-regression.ts",
+      "sha256": "bf71b99e058bc365091059042eb33cc51732aa61df8e2c48f4b329c711d6ea2c"
+    },
+    {
+      "path": "tests/v40-80-r457-full-source-contract-regression.mjs",
+      "sha256": "c32f1c714173ce6df9689bf2a7dc71e07c4e4b4efc8174e18578f581db63e35d"
+    },
+    {
+      "path": "tests/v40-80-r457-global-lineup-optimizer-regression.ts",
+      "sha256": "bbf244f32cf6a7eb4b205f092e2e2ac993f3ae36b03136918501d64ada577156"
+    },
+    {
+      "path": "tests/v40-80-r457-joint-performance-frontier-regression.ts",
+      "sha256": "be96f2df9fcf93deff508a24379b377faa673c0a4938228a4f3bbf2b31aa31c3"
+    },
+    {
+      "path": "tests/v40-80-r457-match-scouting-bridge-regression.ts",
+      "sha256": "615010a6ccce47474716bdbc4a794460b6d7d43edbfb09c957d90a92137c01dc"
+    },
+    {
+      "path": "tests/v40-80-r457-r125-card-identity-64-regression.ts",
+      "sha256": "a93f2486de53478bd11b13f2d07ea9b126745149e1638e97d6f76861e1f3a571"
+    },
+    {
+      "path": "tests/v40-80-r457-r125-dna-role-32-regression.ts",
+      "sha256": "2552aa0d56567415c664fc86e6783176fda9ec93a98a07ea7b17e4a9732d1691"
+    },
+    {
+      "path": "tests/v40-80-r457-r125-style-context-16-regression.ts",
+      "sha256": "8f070ae91cccb8635bbc6384304c6cba995e6436f838c9e7e8c9400adf6c8e8a"
+    },
+    {
+      "path": "tests/v40-80-r457-r404-archetypes-32-regression.ts",
+      "sha256": "0d802cdcdf0a43a4d2b2692b7639d89d959c370a6ee6fe57b785e3c93fd0253a"
+    },
+    {
+      "path": "tests/v40-80-r457-r404-name-partial-32-regression.ts",
+      "sha256": "0b16ecf24047ab68d9bd5542cba556578d6fa2df18bd7a2feb6fb1fdf67fdcc2"
+    },
+    {
+      "path": "tests/v40-80-r457-r405-r406-determinism-16-regression.ts",
+      "sha256": "80ae3b4ffc0a8a69f18b12b3f1fb1f1ad9ed0c6315177314f4440b8a6046daac"
+    },
+    {
+      "path": "tests/v40-80-r457-scouting-decision-evidence-regression.ts",
+      "sha256": "61f12f50f2be7c6bde9827e43f10b6f268cdb8447f23fd83af71d2b7ee29a44f"
+    },
+    {
+      "path": "tests/v40-80-r457-source-runtime-equivalence-regression.mjs",
+      "sha256": "9e73f03dbe82cd7c5388510b4094e18efda8c49002448e4eab3412b0767776fb"
+    },
+    {
+      "path": "tests/v40-80-r457-stage1-authority-canonical-regression.mjs",
+      "sha256": "6e8157e95c912b9901bd42a8bbae09512ca988ae304bec2cf629c41c1a8f8390"
+    },
+    {
+      "path": "tests/v40-80-r457-stage2-card-edition-identity-regression.ts",
+      "sha256": "f4e24c28689045118d18cbacae8510f4df930ffe929cf70c04eb59356a46f244"
+    },
+    {
+      "path": "tests/v40-80-r457-stage3-usage-function-position-style-regression.ts",
+      "sha256": "74a636e56f4b58bac205470d6461ba40776c9e9f4246077d8906b35b3ebc7f8f"
+    },
+    {
+      "path": "tests/v40-80-r457-stage3b-usage-function-e2e-regression.ts",
+      "sha256": "e3867872cc8698a00d037d97b262b931ab398c2f79a1465231bc030d10feadfe"
+    },
+    {
+      "path": "tests/v40-80-r457-stage4-exact-training-certificate-regression.ts",
+      "sha256": "85331ae3012fc68b1700866066db8b474c1f17d81fef71563c794721f52448b3"
+    },
+    {
+      "path": "tests/v40-80-r458-output-integrity-regression.ts",
+      "sha256": "5df60d471ee4c93b525646ad368ea99405b845b61a58012d6e3ffecb2f6f5ee6"
+    },
+    {
+      "path": "tests/v40-80-r458-real-gameplay-impact-regression.ts",
+      "sha256": "c0c6f555904a901691226c69c9cf20bb1a6101ef9943ac0c81f2cc2d55a14f87"
+    },
+    {
+      "path": "tests/v40-80-r459-gameplay-skill-synergy-regression.ts",
+      "sha256": "e34641785803fd9ec69f1ce8c4fb1c2651a5389791295d69ca4e8c08ae1c3f42"
+    },
+    {
+      "path": "tests/v40-80-r459-vault-linear-merge-regression.ts",
+      "sha256": "bfde7733c2ed23fc896d5195013536356f1a664bd5becadf194bed605c2bb595"
+    },
+    {
+      "path": "tests/v40-80-r460-build-outcome-learning-regression.ts",
+      "sha256": "a92b12284d37301622729b6d31b687c296ffe25ea03378bf4aebf4e399fb0c9b"
+    },
+    {
+      "path": "tests/v40-80-r461-direct-action-evidence-regression.ts",
+      "sha256": "98aec141bb78bd732847334c7135502e2fc802a822e8e4461d2792fbd7bf4696"
+    },
+    {
+      "path": "tests/v40-80-r462-explicit-match-session-regression.ts",
+      "sha256": "74a30bafd0907bfa41a7d15984a3664f134f2b6a1422611079a3d7d5becf03e1"
+    },
+    {
+      "path": "tests/v40-80-r463-build-outcome-integrity-seal-regression.ts",
+      "sha256": "8710a810c18f8a884a8a4459f9d5dd90d3e31f8b7d321f385126391f7f4279fd"
+    }
+  ]
+}

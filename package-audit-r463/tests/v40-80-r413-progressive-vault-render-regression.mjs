@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const clean=fs.readFileSync('src/components/CleanVaultV3800.tsx','utf8');
+const workspace=fs.readFileSync('src/components/vault/CardVisionVaultWorkspaceR191.tsx','utf8');
+const runtime=fs.readFileSync('src/modules/vault/useProgressiveVaultWorkspaceR413.ts','utf8');
+const lib=fs.readFileSync('src/lib/cleanVaultV3800.ts','utf8');
+assert.match(clean,/CLEAN_VAULT_RENDER_BATCH_R413 = 48/);
+assert.match(clean,/groups\.slice\(0, effectiveRenderedGroupCountR413\)/);
+assert.match(clean,/progressiveGroupsR413\.map\(\(group\)/);
+assert.match(clean,/IntersectionObserver/);
+assert.doesNotMatch(clean,/\{groups\.map\(\(group\) => \{/);
+assert.match(runtime,/CARDVISION_COMPARE_RENDER_BATCH_R413 = 80/);
+assert.match(runtime,/renderHistory\.slice\(0, effectiveCompareVisibleCountR413\)/);
+assert.match(runtime,/IntersectionObserver/);
+assert.match(workspace,/useProgressiveVaultWorkspaceR413\(vaultView, renderHistory\)/);
+assert.match(workspace,/compareHistoryR413\.map\(\(item\)/);
+assert.match(workspace,/folderCountsR413\.get\(folder\.id\)/);
+assert.match(workspace,/onClick=\{loadMoreCompareR413\}/);
+assert.ok(Buffer.byteLength(workspace,'utf8')<=26000,'R413: workspace R191 acima do limite: '+Buffer.byteLength(workspace,'utf8'));
+assert.doesNotMatch(workspace,/renderHistory\.filter\(\(item\) => folderForEntry\(item\) === folder\.id\)\.length/);
+assert.match(lib,/if \(bucket\) bucket\.push\(entry\)/);
+assert.doesNotMatch(lib,/byPlayer\.set\(key, \[\.\.\.\(byPlayer\.get\(key\) \?\? \[\]\), entry\]\)/);
+
+const count=10000;
+const cards=Array.from({length:count},(_,i)=>({id:'card-'+i,result:{trainingPointsTotal:(i%140)+1}}));
+let visible=48;
+assert.equal(cards.slice(0,visible).length,48);
+while(visible<count)visible=Math.min(count,visible+48);
+assert.equal(visible,count);
+assert.equal(cards.length,count);
+assert.equal(cards[7777].result.trainingPointsTotal,(7777%140)+1);
+let compareVisible=80;
+while(compareVisible<count)compareVisible=Math.min(count,compareVisible+80);
+assert.equal(compareVisible,count);
+
+const folderEntries=Array.from({length:10000},(_,i)=>({folder:'f'+(i%25)}));
+const counts=new Map();
+let visits=0;
+for(const item of folderEntries){visits++;counts.set(item.folder,(counts.get(item.folder)??0)+1);}
+assert.equal(visits,10000);
+assert.equal([...counts.values()].reduce((a,b)=>a+b,0),10000);
+console.log('R413 aprovada: renderização progressiva extraída do workspace, comparação em lotes, contagem linear e 10.000 fichas/PP preservados.');

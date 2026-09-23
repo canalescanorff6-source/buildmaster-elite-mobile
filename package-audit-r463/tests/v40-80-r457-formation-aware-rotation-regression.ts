@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source=fs.readFileSync('src/lib/formationAwareRotationR457.ts','utf8');
+assert.match(source,/optimizeGlobalFormationLineupR457/);
+assert.match(source,/evaluateAssignments\(swapped/);
+assert.match(source,/MANTER_FUNCAO/);
+assert.match(source,/MUDAR_COMPORTAMENTO/);
+assert.match(source,/generic433SplitUsed:false/);
+assert.match(source,/automatic:false/);
+const rotation=fs.readFileSync('src/lib/squadRotation.ts','utf8');
+assert.match(rotation,/buildFormationAwareRotationR457/);
+assert.doesNotMatch(rotation,/const starters=pickStarters\(players,style\)/,'R457 não pode voltar ao 1 GK\/4 DEF\/3 MID\/3 ATT genérico.');
+console.log('R457 Stage 13 aprovada: banco nasce do XI global da formação e substituições recalculam os 11 antes/depois.');

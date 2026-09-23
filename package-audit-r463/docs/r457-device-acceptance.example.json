@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "project": "BuildMaster Elite Tático",
+  "candidateChannel": "beta",
+  "appPackage": "com.buildmaster.elitetatico",
+  "sourceSha": "COLE_AQUI_O_SHA_COMPLETO_DO_BETA_TESTADO",
+  "testedAt": "2026-09-20T15:00:00-03:00",
+  "cardsTested": 10,
+  "positionsTested": [
+    "GK",
+    "CB",
+    "DMF",
+    "CMF",
+    "AMF",
+    "SS",
+    "CF"
+  ],
+  "largeVaultCount": 225,
+  "device": {
+    "platform": "android",
+    "physicalDevice": true,
+    "model": "MODELO_DO_APARELHO",
+    "osVersion": "VERSAO_ANDROID"
+  },
+  "checks": {
+    "exactEditionResolved": true,
+    "trainingExactBudget": true,
+    "finalSkillSetVisible": true,
+    "impetoDecisionVisible": true,
+    "inactiveStyleFlagged": true,
+    "vaultSave": true,
+    "vaultReopen": true,
+    "sameDecisionAfterReopen": true,
+    "formationUsesSavedBuild": true,
+    "benchAndSubstitutions": true,
+    "gameplayRecorded": true,
+    "feedbackReanalysis": true,
+    "zero56RegressionChecked": true,
+    "noDuplicateCardAfterCatalogResolution": true,
+    "noCrashDuringLargeVault": true,
+    "updateCheckWorks": true
+  },
+  "notes": []
+}

@@ -1,0 +1,54 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const built = process.argv.includes('--built');
+// A linha r123 ampliou o Clean Slate com confiança, saturação e laboratório A/B.
+// O baseline de fonte agora passa ligeiramente de 5 MiB; o teto fica explícito
+// em MiB para que as regressões de CI possam auditar a configuração sem
+// depender de avaliação de expressão. Mantemos alerta em 90%, teto por módulo
+// e limites do bundle compilado; a guarda continua ativa.
+const limits = {
+  totalJs: 15 * 1024 * 1024,
+  singleJs: 5 * 1024 * 1024,
+  sourceTs: 5.5 * 1024 * 1024,
+  singleSourceTs: 400 * 1024,
+};
+function walk(root, matcher) {
+  if (!fs.existsSync(root)) return [];
+  const files = [];
+  const stack = [root];
+  while (stack.length) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const target = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(target);
+      else if (matcher(target)) files.push(target);
+    }
+  }
+  return files;
+}
+function bytes(files) { return files.reduce((sum, file) => sum + fs.statSync(file).size, 0); }
+
+const source = walk('src', (file) => /\.(?:ts|tsx)$/.test(file));
+const sourceBytes = bytes(source);
+const largestSource = source.reduce((current, file) => {
+  const size = fs.statSync(file).size;
+  return size > current.size ? { file, size } : current;
+}, { file: '', size: 0 });
+const sourceUsage = sourceBytes / limits.sourceTs;
+if (sourceUsage >= 0.9 && sourceBytes <= limits.sourceTs) console.warn(`⚠ Código TypeScript usa ${(sourceUsage * 100).toFixed(1)}% do orçamento; planeje modularização antes de 100%.`);
+if (sourceBytes > limits.sourceTs) throw new Error(`Código TypeScript excedeu o orçamento de ${limits.sourceTs} bytes: ${sourceBytes}.`);
+if (largestSource.size > limits.singleSourceTs) throw new Error(`Módulo TypeScript excedeu ${limits.singleSourceTs} bytes: ${largestSource.file} (${largestSource.size}).`);
+
+if (built) {
+  const outputRoot = fs.existsSync('out/_next/static') ? 'out/_next/static' : '.next/static';
+  const scripts = walk(outputRoot, (file) => file.endsWith('.js'));
+  if (!scripts.length) throw new Error('Nenhum JavaScript compilado foi encontrado para validar o orçamento.');
+  const total = bytes(scripts);
+  const largest = Math.max(...scripts.map((file) => fs.statSync(file).size));
+  if (total > limits.totalJs) throw new Error(`Bundle JS total excedeu ${limits.totalJs} bytes: ${total}.`);
+  if (largest > limits.singleJs) throw new Error(`Um chunk JS excedeu ${limits.singleJs} bytes: ${largest}.`);
+  console.log(`Bundle aprovado: ${scripts.length} chunks, ${total} bytes no total, maior chunk ${largest} bytes.`);
+} else {
+  console.log(`Orçamento de fonte aprovado: ${source.length} arquivos, ${sourceBytes} de ${limits.sourceTs} bytes (${(sourceUsage * 100).toFixed(1)}%); maior módulo ${largestSource.file} com ${largestSource.size} bytes.`);
+}

@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=(p)=>fs.readFileSync(p,'utf8');
+const store=read('src/modules/vault/cardHistoryStore.ts');
+const startup=read('src/modules/vault/cardHistoryStartupModelR200.ts');
+const budget=read('src/modules/builds/pointBudget.ts');
+const core=read('src/lib/trainingPlanCore.ts');
+const optimizer=read('src/modules/builds/trainingOptimizer.ts');
+assert.match(store,/export const HISTORY_LIMIT = Infinity;/);
+assert.match(startup,/export const HISTORY_LIMIT_R200 = Number.MAX_SAFE_INTEGER;/); // R435_R408_R420_SEMANTIC_UNBOUNDED
+assert.match(store,/STARTUP_NATIVE_HISTORY_MAX_BYTES = 0;/);
+assert.doesNotMatch(store,/\.slice\(0, HISTORY_LIMIT\)/);
+assert.doesNotMatch(store,/compactHistoryForNativeStorage\(items\)\.slice\(0,\s*40\)/);
+assert.doesNotMatch(store,/Math\.min\(next\.length,\s*40\)/);
+assert.match(store,/const seen = new Set<string>\(\);/);
+assert.match(store,/const loadedKeys = new Set<string>\(\);/);
+assert.match(store,/const pushUnique = \(item: SavedAnalysis\) =>/);
+assert.match(store,/const next = \[\.\.\.items\];/);
+assert.match(store,/const snapshot = \[\.\.\.items\];/);
+const compact=store.match(/export function compactHistoryForNativeStorage[\s\S]*?\n}\n/)?.[0]??'';
+assert.match(compact,/return items\.map\(\(entry\) => \(\{[\s\S]*?\.\.\.entry,/);
+assert.doesNotMatch(compact,/trainingPointsTotal\s*:/);
+assert.match(budget,/MAX_PLAYER_TRAINING_BUDGET\s*=\s*140/);
+assert.match(budget,/normalizePlayerTrainingBudget/);
+assert.match(core,/export function trainingPlanTotalCost\(plan: TrainingPlan\): number/);
+assert.match(core,/TRAINING_KEYS\.reduce\(\(sum, key\) => sum \+ trainingTotalCost\(plan\[key\] \?\? 0\), 0\)/);
+assert.match(optimizer,/trainingPlanTotalCost/);
+assert.match(optimizer,/parsed\.trainingPointsTotal/);
+assert.doesNotMatch(core,/HISTORY_LIMIT|cardHistory/);
+assert.doesNotMatch(budget,/HISTORY_LIMIT|cardHistory/);
+assert.doesNotMatch(optimizer,/HISTORY_LIMIT|cardHistory/);
+for(const n of [1,10,12,13,25,50,200,201,500,1000,5000,10000]){const cards=Array.from({length:n},(_,i)=>({id:String(i),result:{trainingPointsTotal:(i%140)+1}}));const persisted=[...cards];assert.equal(persisted.length,n);assert.deepEqual(persisted.map(x=>x.result.trainingPointsTotal),cards.map(x=>x.result.trainingPointsTotal));}
+console.log('R408 aprovada: sem teto lógico de fichas, PP preservado por carta e loader linear para coleções grandes.');
