@@ -347,7 +347,8 @@
     "test:r454": "node -r ./tests/_ts-require.cjs tests/v40-80-r454-gameplay-scouting-context-regression.ts && node tests/v40-80-r454-scouting-ui-integration-regression.mjs",
     "test:r455": "node tests/v40-80-r455-gameplay-scouting-panel-regression.mjs",
     "test:r419": "node tests/v40-80-r419-reader-master-engine-closure-regression.mjs",
-    "ci:gate": "npm run ci:preflight && npm run typecheck && npm run test:r419 && npm run test:r192 && npm run test:r200"
+    "ci:gate": "npm run ci:preflight && npm run typecheck && npm run test:r419 && npm run test:r192 && npm run test:r200 && npm run ci:r463-contract",
+    "ci:r463-contract": "npm run test:r457:all && npm run test:r457:source-canonical && npm run test:r457:release-gate && npm run test:r459 && npm run test:r460-463"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
