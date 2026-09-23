@@ -782,13 +782,16 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const aerialSkillEvidence=key==='aerialStrength'
       ? Math.max(skillActionSupportR458(skillActionList(parsed),'aerial_finish'),skillActionSupportR458(skillActionList(parsed),'aerial_defend'))
       : 0;
-    const aerialIdentityEvidence=key==='aerialStrength'
+    const aerialIdentityQualified=key==='aerialStrength'
+      && aerialNaturalEvidence>=.55
+      && (aerialActionEvidence>=.28 || aerialSkillEvidence>=.35);
+    const aerialIdentityEvidence=aerialIdentityQualified
       ? clamp(aerialActionEvidence*.46+aerialNaturalEvidence*.34+aerialSkillEvidence*.20,0,1)
       : 0;
     const identityBonusByLevel=Array.from({length:17},(_,level)=>level
       ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
         +Math.min(level,8)*matchNeed*1.1
-        +(key==='aerialStrength'?Math.min(level,8)*aerialIdentityEvidence*.22:0)
+        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*.55:0)
       : 0);
     const weakRepairPenaltyByLevel=Array.from({length:17},(_,level)=>level && naturalStrength<60 && impacted<1.05?level*(60-naturalStrength)*.018:0);
     const excessPenaltyByLevel=Array.from({length:17},(_,level)=>{
