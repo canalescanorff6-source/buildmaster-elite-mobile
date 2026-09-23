@@ -1879,11 +1879,12 @@ function usageFunctionR457(input:AnalysisResult, context:UsageContextR125) {
   // R469: não herdar função calculada para um alvo diferente do contexto final.
   // teamMap e advancedTacticalFunction nascem da posição selecionada pelo analisador;
   // quando R184 volta ao NATURAL_ANCHOR, esses rótulos podem pertencer ao alvo rejeitado.
-  const team= input.bestPosition?.code===context.targetPosition
+  const tacticalContextMatches = input.advancedTacticalFunction?.position===context.targetPosition;
+  const team= tacticalContextMatches
     ? String(input.teamMap?.functionLabel ?? '').trim()
     : '';
   if(team) return team;
-  const advanced= input.advancedTacticalFunction?.position===context.targetPosition
+  const advanced= tacticalContextMatches
     ? String(input.advancedTacticalFunction?.officialPlaystyle ?? '').trim()
     : '';
   if(advanced) return advanced;
