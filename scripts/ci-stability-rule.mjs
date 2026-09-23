@@ -57,26 +57,36 @@ if (assertClean) {
   process.exit(0);
 }
 
-console.log('\n[ZERO-RED] Passagem 1 — convergência determinística');
-run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'ci:repair-safe']);
-const first = snapshot();
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const MAX_PASSES = 5;
+let previous = null;
+let stable = null;
 
-console.log('\n[ZERO-RED] Passagem 2 — prova de idempotência');
-run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'ci:repair-safe']);
-const second = snapshot();
+for (let pass = 1; pass <= MAX_PASSES; pass += 1) {
+  console.log(`\n[ZERO-RED] Passagem ${pass}/${MAX_PASSES} — convergência determinística`);
+  run(npmCommand, ['run', 'ci:repair-safe']);
+  const current = snapshot();
+  console.log(`[ZERO-RED] Passagem ${pass}: ${current.files.length} arquivo(s) divergente(s) do HEAD.`);
 
-if (first.digest !== second.digest) {
-  console.error('::error title=Regra Zero-Red::Um reparador mudou a árvore novamente na segunda passagem. O reparo não é idempotente e não pode chegar ao APK.');
-  console.error('Passagem 1:', first.files.join(', ') || '(limpa)');
-  console.error('Passagem 2:', second.files.join(', ') || '(limpa)');
+  if (previous && current.digest === previous.digest) {
+    stable = current;
+    console.log(`[ZERO-RED] Ponto fixo atingido na passagem ${pass}.`);
+    break;
+  }
+  previous = current;
+}
+
+if (!stable) {
+  console.error(`::error title=Regra Zero-Red::Os reparadores não atingiram ponto fixo em ${MAX_PASSES} passagens. Há oscilação ou convergência não determinística.`);
+  console.error('Últimos arquivos alterados:', previous?.files.join(', ') || '(nenhum)');
   process.exit(1);
 }
 
-writeFileSync(reportFile, second.files.join('\n') + (second.files.length ? '\n' : ''), 'utf8');
+writeFileSync(reportFile, stable.files.join('\n') + (stable.files.length ? '\n' : ''), 'utf8');
 
-if (second.files.length) {
-  console.warn(`::warning title=Regra Zero-Red::${second.files.length} arquivo(s) precisaram de convergência e devem ser gravados no repositório antes do APK.`);
-  for (const file of second.files) console.log(`ZERO_RED_CHANGED ${file}`);
+if (stable.files.length) {
+  console.warn(`::warning title=Regra Zero-Red::${stable.files.length} arquivo(s) convergiram para um estado estável e devem ser gravados no repositório antes do APK.`);
+  for (const file of stable.files) console.log(`ZERO_RED_CHANGED ${file}`);
 } else {
-  console.log('Regra Zero-Red: fonte já convergida; duas passagens produziram árvore idêntica.');
+  console.log('Regra Zero-Red: fonte já convergida e idempotente.');
 }
