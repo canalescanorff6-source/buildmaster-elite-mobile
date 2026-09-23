@@ -13,6 +13,10 @@ import {
 
 type ScoutingStoreR454 = Record<string, GameplayScoutingRecordR454>;
 
+export function scoutingStoreKeyR457(cardId: string, gameVersion: string) {
+  return `${cardId}::game:${gameVersion || CURRENT_EFOOTBALL_GAME_VERSION_R457}`;
+}
+
 function readStore(): ScoutingStoreR454 {
   try {
     const parsed = JSON.parse(readAccountStorage(GAMEPLAY_SCOUTING_STORAGE_KEY_R454) || '{}') as unknown;
@@ -40,8 +44,12 @@ function normalizeRecord(record: GameplayScoutingRecordR454): GameplayScoutingRe
   };
 }
 
-export function readGameplayScoutingR454(cardId: string): GameplayScoutingRecordR454 | null {
-  return readStore()[cardId] ?? null;
+export function readGameplayScoutingR454(
+  cardId: string,
+  gameVersion = CURRENT_EFOOTBALL_GAME_VERSION_R457
+): GameplayScoutingRecordR454 | null {
+  const store = readStore();
+  return store[scoutingStoreKeyR457(cardId, gameVersion)] ?? store[cardId] ?? null;
 }
 
 export function readGameplayScoutingForResultR454(
@@ -51,16 +59,18 @@ export function readGameplayScoutingForResultR454(
   const canonical = cardIdentityFingerprintR126(result.parsed);
   const store = readStore();
   for (const alias of cardIdentityAliasesR457(result.parsed)) {
-    const found = store[alias];
+    const compositeKey = scoutingStoreKeyR457(alias, gameVersion);
+    const found = store[compositeKey] ?? store[alias];
     if (!found || found.gameVersion !== gameVersion) continue;
-    if (alias !== canonical || found.cardId !== canonical) {
-      const migrated = normalizeRecord({ ...found, cardId: canonical, gameVersion });
-      store[canonical] = migrated;
-      delete store[alias];
+    const normalized = normalizeRecord({ ...found, cardId: canonical, gameVersion });
+    const canonicalKey = scoutingStoreKeyR457(canonical, gameVersion);
+    if (compositeKey !== canonicalKey || found.cardId !== canonical || store[alias]) {
+      store[canonicalKey] = normalized;
+      if (compositeKey !== canonicalKey) delete store[compositeKey];
+      if (store[alias]) delete store[alias];
       writeStore(store);
-      return migrated;
     }
-    return normalizeRecord(found);
+    return normalized;
   }
   return createPendingGameplayScoutingR454(result, gameVersion);
 }
@@ -68,7 +78,7 @@ export function readGameplayScoutingForResultR454(
 export function upsertGameplayScoutingR454(record: GameplayScoutingRecordR454) {
   const store = readStore();
   const normalized = normalizeRecord(record);
-  store[normalized.cardId] = normalized;
+  store[scoutingStoreKeyR457(normalized.cardId, normalized.gameVersion)] = normalized;
   writeStore(store);
   return normalized;
 }
@@ -94,9 +104,16 @@ export function addUserGameplayFeedbackR454(result: AnalysisResult, feedback: Us
   });
 }
 
-export function deleteGameplayScoutingR454(cardId: string) {
+export function deleteGameplayScoutingR454(
+  cardId: string,
+  gameVersion = CURRENT_EFOOTBALL_GAME_VERSION_R457
+) {
   const store = readStore();
-  if (!store[cardId]) return false;
+  const key = scoutingStoreKeyR457(cardId, gameVersion);
+  const hadComposite = Boolean(store[key]);
+  const hadLegacy = Boolean(store[cardId]);
+  if (!hadComposite && !hadLegacy) return false;
+  delete store[key];
   delete store[cardId];
   writeStore(store);
   return true;
