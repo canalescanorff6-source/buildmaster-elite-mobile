@@ -45,6 +45,9 @@ check(playWorkflow.includes('npm run types:repair && npm run quality:root-tsconf
 check(packageJson.scripts?.['quality:dependencies'], 'Script quality:dependencies ausente.');
 check(packageJson.scripts?.['quality:version-guards'], 'Script quality:version-guards ausente.');
 check(packageJson.scripts?.['quality:ci-contract'], 'Script quality:ci-contract ausente.');
+const releaseGate = String(packageJson.scripts?.['ci:gate'] ?? '');
+check(releaseGate.includes('test:r455'), 'ci:gate não protege a integração visual do Scouting R455.');
+check(releaseGate.includes('test:v4080'), 'ci:gate não antecipa a regressão corrente v40.80.');
 check(packageJson.scripts?.['quality:bundle'], 'Script quality:bundle ausente.');
 check(doctor.includes("['Compatibilidade das dependências'"), 'ci-doctor não valida exports das dependências.');
 check(doctor.includes("['Orçamento do código-fonte'"), 'ci-doctor não valida o orçamento TypeScript antes do build.');
