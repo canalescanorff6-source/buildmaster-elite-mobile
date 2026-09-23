@@ -37,7 +37,8 @@ assert.equal(rotationReport!.starters[0]?.position, 'CF', 'Rotação deve carreg
 const saved = prepareVaultSaveR139({ history: [], result: cb, rawText, playerImage: null, fullPreview: null, now: '04/09/2026, 16:30:00' });
 assert.equal(saved.nextHistory.length, 1);
 assert.equal(saved.item.result, saved.productionResult);
-assert.match(saved.item.saveKey, /-cf$/);
+assert.equal(saved.item.saveKey, resultHistoryKey(saved.productionResult), 'R457: saveKey deve ser exatamente a identidade canônica moderna da ficha.');
+assert.match(saved.item.saveKey, /::usage:CF::function:/, 'R457: a chave deve preservar carta + posição + função real de uso.');
 assert.equal(savedIdentitySealCurrentR134(saved.item), true, 'Registro criado pela transação R139 deve sair com selo coerente.');
 
 const skill = saved.productionResult.recommendedSkills[0];
