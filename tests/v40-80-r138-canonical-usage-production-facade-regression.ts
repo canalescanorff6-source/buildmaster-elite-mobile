@@ -39,8 +39,8 @@ assert.equal(cb.bestPosition.code, 'CF', 'O teste exige que bestPosition seja di
 assert.equal(analysisUsagePositionR138(cb), 'CB');
 assert.equal(analysisUsagePositionR138(dmf), 'DMF');
 assert.notEqual(analysisUsageIdentityKeyR138(cb), analysisUsageIdentityKeyR138(dmf), 'A mesma carta em duas funções deve ter identidades de uso distintas.');
-assert.match(resultHistoryKey(cb), /-cb$/);
-assert.match(resultHistoryKey(dmf), /-dmf$/);
+assert.match(resultHistoryKey(cb), /::usage:CB::function:/, 'A chave deve preservar a posição real CB dentro da identidade R457 carta + posição + função.');
+assert.match(resultHistoryKey(dmf), /::usage:DMF::function:/, 'A chave deve preservar a posição real DMF dentro da identidade R457 carta + posição + função.');
 assert.notEqual(resultHistoryKey(cb), resultHistoryKey(dmf), 'Cofre não pode colidir duas funções reais só porque bestPosition ficou igual.');
 assert.notEqual(buildSignature(cb), buildSignature(dmf), 'A/B e histórico precisam distinguir a posição real de uso.');
 
