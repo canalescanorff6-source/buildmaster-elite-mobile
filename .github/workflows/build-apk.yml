@@ -80,6 +80,8 @@ jobs:
       - name: Gravar convergência determinística no main
         id: commit_stability
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           CHANGED="$(cat .ci-stability/changed-files.txt 2>/dev/null || true)"
@@ -111,7 +113,9 @@ jobs:
           git commit -m "chore(ci): autoestabiliza fonte pela Regra Zero-Red"
           git push origin HEAD:main
           echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "Convergência gravada. Um novo run validará exatamente o código persistido no main."
+          echo "Convergência gravada no main."
+          gh workflow run build-apk.yml --ref main
+          echo "Novo workflow disparado explicitamente para validar exatamente o commit estabilizado."
 
   build-apk:
     needs: stabilize-source
