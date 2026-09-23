@@ -347,11 +347,12 @@
     "test:r454": "node -r ./tests/_ts-require.cjs tests/v40-80-r454-gameplay-scouting-context-regression.ts && node tests/v40-80-r454-scouting-ui-integration-regression.mjs",
     "test:r455": "node tests/v40-80-r455-gameplay-scouting-panel-regression.mjs",
     "test:r419": "node tests/v40-80-r419-reader-master-engine-closure-regression.mjs",
-    "ci:gate": "npm run ci:preflight && npm run typecheck && npm run ci:calibration-gate && npm run test:r419 && npm run test:r192 && npm run test:r200 && npm run test:r455 && npm run test:v4080 && npm run ci:r463-contract",
+    "ci:gate": "npm run ci:preflight && npm run typecheck && npm run ci:calibration-gate && npm run test:r419 && npm run test:r192 && npm run test:r200 && npm run test:r455 && npm run test:v4080:gate && npm run ci:r463-contract",
     "ci:r463-contract": "node scripts/r457-r463-doctor.mjs",
     "ci:calibration-gate": "npm run test:r135 && npm run test:r136",
     "ci:repair-safe": "node scripts/ci-safe-repair.mjs",
-    "ci:diagnose-all": "npm run ci:repair-safe && node scripts/ci-doctor.mjs --full --report-dir .ci-reports"
+    "ci:diagnose-all": "npm run ci:repair-safe && node scripts/ci-doctor.mjs --full --report-dir .ci-reports",
+    "test:v4080:gate": "npm run typecheck:v4080 && node tests/v40-80-safe-area-stack-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r119-clean-slate-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r119-output-quality-regression.ts && node tests/v40-80-r119-result-ui-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r119-ocr-dark-profile-recovery-regression.ts"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
