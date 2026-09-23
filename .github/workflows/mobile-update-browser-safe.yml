@@ -376,34 +376,21 @@ exact_staging = Path('/tmp/buildmaster-mobile-package-exact')
               fh.write(f'package_base={base}\n')
           PY
 
-      - name: Publicar referência exata do pacote para auditoria
+      - name: Salvar conteúdo exato do pacote para auditoria
         shell: bash
-        env:
-          PACKAGE_BASE: ${{ steps.package.outputs.package_base }}
         run: |
           set -euo pipefail
-          REF_DIR="/tmp/buildmaster-package-reference"
-          rm -rf "$REF_DIR"
-          git -C repo worktree add --detach "$REF_DIR" "$PACKAGE_BASE"
-          cp -a /tmp/buildmaster-mobile-package-exact/. "$REF_DIR"/
-          python - <<'PY'
-          import json
-          from pathlib import Path, PurePosixPath
-          meta = json.loads(Path('/tmp/buildmaster-mobile-package-exact/.mobile-update.json').read_text(encoding='utf-8')) if Path('/tmp/buildmaster-mobile-package-exact/.mobile-update.json').exists() else None
-          if meta:
-              for path in meta.get('delete', []):
-                  target = Path('/tmp/buildmaster-package-reference').joinpath(*PurePosixPath(path).parts)
-                  if target.is_file():
-                      target.unlink()
-          PY
-          rm -f "$REF_DIR/.mobile-update.json"
-          git -C "$REF_DIR" config user.name "BuildMaster CI"
-          git -C "$REF_DIR" config user.email "actions@github.com"
-          git -C "$REF_DIR" add -A
-          if ! git -C "$REF_DIR" diff --cached --quiet; then
-            git -C "$REF_DIR" commit -m "ref(package): conteúdo exato do pacote mobile recebido"
+          AUDIT_DIR="inbox/package-audit-r463"
+          rm -rf "$AUDIT_DIR"
+          mkdir -p "$AUDIT_DIR"
+          cp -a /tmp/buildmaster-mobile-package-exact/. "$AUDIT_DIR"/
+          git -C inbox config user.name "BuildMaster CI"
+          git -C inbox config user.email "actions@github.com"
+          git -C inbox add package-audit-r463
+          if ! git -C inbox diff --cached --quiet; then
+            git -C inbox commit -m "audit: salva conteúdo exato do pacote R463 recebido"
+            git -C inbox push origin HEAD:mobile-inbox
           fi
-          git -C "$REF_DIR" push --force origin HEAD:refs/heads/mobile-package-reference
 
       - name: Conferir alterações
         id: changes
