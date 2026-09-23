@@ -47,6 +47,8 @@ check(packageJson.scripts?.['quality:version-guards'], 'Script quality:version-g
 check(packageJson.scripts?.['quality:ci-contract'], 'Script quality:ci-contract ausente.');
 const releaseGate = String(packageJson.scripts?.['ci:gate'] ?? '');
 check(releaseGate.includes('test:r455'), 'ci:gate não protege a integração visual do Scouting R455.');
+check(releaseGate.includes('test:r464-r468'), 'ci:gate não protege as regressões pós-R463 (R464-R468).');
+check(doctor.includes("['Regressões R464-R468', ['run', 'test:r464-r468']]"), 'ci-doctor completo não executa as regressões R464-R468.');
 check(releaseGate.includes('test:v4080:gate'), 'ci:gate não antecipa o smoke crítico da regressão corrente v40.80.');
 check(packageJson.scripts?.['quality:bundle'], 'Script quality:bundle ausente.');
 check(doctor.includes("['Compatibilidade das dependências'"), 'ci-doctor não valida exports das dependências.');
