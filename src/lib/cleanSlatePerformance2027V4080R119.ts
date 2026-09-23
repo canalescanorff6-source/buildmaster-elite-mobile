@@ -734,6 +734,7 @@ function actionPressureKeys(action:ActionDef): AttributeKey[] {
 }
 
 function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actionFrequencies:Map<string,number>):EvaluationContextR143 {
+  const evaluationTargetPosition=input.bestPosition?.code ?? parsed.mainPosition;
   const actionSeeds=ACTIONS
     .map(action=>{
       const frequency=actionFrequencies.get(action.id)??0;
@@ -783,7 +784,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
       ? Math.max(skillActionSupportR458(skillActionList(parsed),'aerial_finish'),skillActionSupportR458(skillActionList(parsed),'aerial_defend'))
       : 0;
     const defensiveAerialIdentity=key==='aerialStrength'
-      && ['CB','DMF'].includes(context.targetPosition)
+      && ['CB','DMF'].includes(evaluationTargetPosition)
       && aerialNaturalEvidence>=.68
       && aerialActionEvidence>=.18;
     const aerialIdentityQualified=key==='aerialStrength'
