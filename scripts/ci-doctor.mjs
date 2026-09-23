@@ -1,6 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const full = process.argv.includes('--full');
+const reportArgIndex = process.argv.indexOf('--report-dir');
+const reportDir = reportArgIndex >= 0 ? String(process.argv[reportArgIndex + 1] || '').trim() : '';
+if (reportDir) fs.mkdirSync(reportDir, { recursive: true });
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const CI_SOURCE_BUILD = 'v40.80-ci-edge-stack-performance-20260812-r1';
 const EXPECTED_FULL_GROUPS = 93;
@@ -120,12 +125,34 @@ console.log(`Executando ${checks.length} grupos sem parar na primeira falha.\n`)
 for (const [label, args] of checks) {
   console.log(`\n========== ${label} ==========`);
   const result = spawnSync(npmCommand, args, {
-    stdio: 'inherit',
+    stdio: reportDir ? 'pipe' : 'inherit',
+    encoding: reportDir ? 'utf8' : undefined,
+    maxBuffer: 64 * 1024 * 1024,
     env: process.env,
     shell: false,
   });
+  if (reportDir) {
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+  }
   if (result.error || result.status !== 0) {
-    failures.push({ label, status: result.status ?? 'erro de execução', error: result.error?.message });
+    const failure = { label, status: result.status ?? 'erro de execução', error: result.error?.message };
+    failures.push(failure);
+    if (reportDir) {
+      const slug = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const body = [
+        `Grupo: ${label}`,
+        `Código: ${failure.status}`,
+        failure.error ? `Erro: ${failure.error}` : '',
+        '',
+        '--- STDOUT ---',
+        result.stdout || '',
+        '',
+        '--- STDERR ---',
+        result.stderr || ''
+      ].join('\n');
+      fs.writeFileSync(path.join(reportDir, `${slug || 'falha'}.log`), body, 'utf8');
+    }
     console.error(`✗ ${label} falhou, mas o diagnóstico continuará para revelar os demais problemas.`);
   } else {
     console.log(`✓ ${label} aprovado.`);
@@ -136,6 +163,16 @@ const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
 console.log('\n========== RESUMO CONSOLIDADO ==========');
 console.log(`Grupos executados: ${checks.length}`);
 console.log(`Tempo aproximado: ${elapsedSeconds}s`);
+
+if (reportDir) {
+  fs.writeFileSync(path.join(reportDir, 'summary.json'), JSON.stringify({
+    source: CI_SOURCE_BUILD,
+    mode: full ? 'full' : 'quick',
+    groupsExecuted: checks.length,
+    elapsedSeconds,
+    failures
+  }, null, 2) + '\n', 'utf8');
+}
 
 if (failures.length > 0) {
   console.error(`Falhas encontradas: ${failures.length}`);

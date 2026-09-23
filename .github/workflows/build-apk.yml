@@ -292,9 +292,29 @@ jobs:
         timeout-minutes: 6
         run: npm run test:r419 && npm run test:r192
 
-      - name: Diagnóstico consolidado do código-fonte
-        timeout-minutes: 35
-        run: npm run ci:verify
+      - name: Diagnóstico consolidado de todos os erros
+        id: diagnose_all
+        timeout-minutes: 55
+        continue-on-error: true
+        run: npm run ci:diagnose-all
+
+      - name: Salvar relatório completo do diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostico-completo-${{ github.run_id }}
+          path: .ci-reports
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Bloquear publicação se restarem falhas
+        if: steps.diagnose_all.outcome != 'success'
+        run: |
+          echo "::error::O diagnóstico completo encontrou falhas. Todas foram executadas e reunidas no artefato ci-diagnostico-completo-${{ github.run_id }}."
+          if [ -f .ci-reports/summary.json ]; then
+            cat .ci-reports/summary.json
+          fi
+          exit 1
 
       - name: Gerar e verificar manifesto do código-fonte
         timeout-minutes: 4
