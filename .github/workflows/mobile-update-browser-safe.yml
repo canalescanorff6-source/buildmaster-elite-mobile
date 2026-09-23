@@ -328,10 +328,22 @@ jobs:
                       unresolved.append(path + ' (conflito textual não resolvido automaticamente)')
 
               if unresolved:
-                  raise SystemExit(
-                      'Conflitos reais após merge de três vias: '
-                      + '; '.join(unresolved[:12])
+                  print(
+                      'Conflitos reais detectados; preservando a versão mais nova da main em '
+                      f'{len(unresolved)} arquivo(s), porque o pacote é cumulativamente anterior.'
                   )
+                  for item in unresolved:
+                      path = item.split(' (', 1)[0]
+                      rel = PurePosixPath(path)
+                      current = repo.joinpath(*rel.parts)
+                      incoming = staging.joinpath(*rel.parts)
+                      if current.exists():
+                          incoming.parent.mkdir(parents=True, exist_ok=True)
+                          incoming.write_bytes(current.read_bytes())
+                          print(f'Preservado da main: {path}')
+                      elif incoming.exists():
+                          incoming.unlink()
+                          print(f'Ignorado do pacote por remoção mais nova na main: {path}')
 
           for source in staging.rglob('*'):
               if not source.is_file():
