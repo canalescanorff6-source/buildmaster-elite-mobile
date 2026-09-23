@@ -53,7 +53,6 @@ jobs:
           inbox = Path('inbox').resolve()
           repo = Path('repo').resolve()
           staging = Path('/tmp/buildmaster-mobile-update')
-exact_staging = Path('/tmp/buildmaster-mobile-package-exact')
 
           # ChatGPT-safe transport: a ZIP may arrive as base64 text chunks.
           trigger = inbox / '.mobile-upload-trigger'
@@ -254,10 +253,6 @@ exact_staging = Path('/tmp/buildmaster-mobile-package-exact')
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(data)
 
-              if exact_staging.exists():
-                  shutil.rmtree(exact_staging)
-              shutil.copytree(staging, exact_staging)
-
               unresolved = []
               for path in conflicts:
                   rel = PurePosixPath(path)
@@ -373,24 +368,7 @@ exact_staging = Path('/tmp/buildmaster-mobile-package-exact')
               fh.write(f'file_count={len(expected)}\n')
               fh.write(f'delete_count={len(safe_deletes)}\n')
               fh.write(f'archive_rel={archive_rel}\n')
-              fh.write(f'package_base={base}\n')
           PY
-
-      - name: Salvar conteúdo exato do pacote para auditoria
-        shell: bash
-        run: |
-          set -euo pipefail
-          AUDIT_DIR="inbox/package-audit-r463"
-          rm -rf "$AUDIT_DIR"
-          mkdir -p "$AUDIT_DIR"
-          cp -a /tmp/buildmaster-mobile-package-exact/. "$AUDIT_DIR"/
-          git -C inbox config user.name "BuildMaster CI"
-          git -C inbox config user.email "actions@github.com"
-          git -C inbox add package-audit-r463
-          if ! git -C inbox diff --cached --quiet; then
-            git -C inbox commit -m "audit: salva conteúdo exato do pacote R463 recebido"
-            git -C inbox push origin HEAD:mobile-inbox
-          fi
 
       - name: Conferir alterações
         id: changes

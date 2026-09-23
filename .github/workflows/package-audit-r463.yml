@@ -1,0 +1,56 @@
+name: Auditar pacote R463 completo
+
+on:
+  push:
+    branches: [mobile-inbox]
+    paths:
+      - '.github/workflows/package-audit-r463.yml'
+      - 'mobile-update116.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit-package:
+    name: Extrair e salvar pacote R463 exato
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar mobile-inbox
+        uses: actions/checkout@v5
+        with:
+          ref: mobile-inbox
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extrair pacote exato
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf package-audit-r463
+          mkdir -p package-audit-r463
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          archive = Path('mobile-update116.zip')
+          if not archive.is_file():
+              raise SystemExit('mobile-update116.zip não encontrado')
+          out = Path('package-audit-r463')
+          with zipfile.ZipFile(archive) as z:
+              z.extractall(out)
+              print(f'Extraídos {len(z.namelist())} itens do pacote.')
+          PY
+
+      - name: Salvar referência auditável no mobile-inbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "BuildMaster CI"
+          git config user.email "actions@github.com"
+          git add package-audit-r463
+          if git diff --cached --quiet; then
+            echo "Referência do pacote já está atualizada."
+            exit 0
+          fi
+          git commit -m "audit: materializa conteúdo exato do pacote R463"
+          git push origin HEAD:mobile-inbox
