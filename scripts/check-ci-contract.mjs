@@ -22,7 +22,14 @@ if (sourceBuildMatch) {
     `CI_SOURCE_BUILD inválido: ${sourceBuildMatch[1]}.`,
   );
 }
-check(doctor.includes('EXPECTED_FULL_GROUPS = 93'), 'ci-doctor não protege a quantidade esperada de 93 grupos.');
+const expectedFullGroupsMatch = doctor.match(/const\\s+EXPECTED_FULL_GROUPS\\s*=\\s*(\\d+)\\s*;/);
+check(Boolean(expectedFullGroupsMatch), 'ci-doctor não declara EXPECTED_FULL_GROUPS.');
+if (expectedFullGroupsMatch) {
+  const expectedFullGroups = Number(expectedFullGroupsMatch[1]);
+  const declaredDoctorGroups = [...doctor.matchAll(/^\\s*\\['[^']+',\\s*\\['run',\\s*'[^']+'\\]\\],?\\s*$/gm)].length;
+  check(Number.isInteger(expectedFullGroups) && expectedFullGroups > 0, 'EXPECTED_FULL_GROUPS precisa ser inteiro positivo.');
+  check(expectedFullGroups === declaredDoctorGroups, `ci-doctor declara ${expectedFullGroups} grupos, mas contém ${declaredDoctorGroups} grupos executáveis.`);
+}
 check(packageJson.scripts?.['test:v3840'] === 'node scripts/run-v3840-tests.mjs', 'v38.40 não usa o executor detalhado e determinístico.');
 check(String(packageJson.scripts?.['test:v4000'] ?? '').includes('typecheck:v4000') && String(packageJson.scripts?.['test:v4000'] ?? '').includes('v40-00-card-reader-rebuild-regression.mjs'), 'v40.00 não protege o leitor reconstruído com typecheck e regressão dedicados.');
 check(String(packageJson.scripts?.['test:v4020'] ?? '').includes('typecheck:v4020') && String(packageJson.scripts?.['test:v4020'] ?? '').includes('v40-20-progress-experience-regression.mjs'), 'v40.20 não protege as barras de progresso com typecheck e regressão dedicados.');
@@ -66,12 +73,20 @@ for (const script of regressionScripts) {
   const doctorScript = script === 'test:v3000' ? 'test:v3000:core' : script;
   check(doctor.includes(`['Regressões v${label}', ['run', '${doctorScript}']]`), `ci-doctor e test:all divergiram: ${doctorScript} não está no diagnóstico completo.`);
 }
-check(apkWorkflow.includes('npm run ci:verify'), 'Workflow APK não executa ci:verify.');
-check(playWorkflow.includes('npm run ci:verify'), 'Workflow Play não executa ci:verify.');
+function fullCiIndex(workflow) {
+  const candidates = ['npm run ci:diagnose-all', 'npm run ci:verify']
+    .map((command) => workflow.indexOf(command))
+    .filter((index) => index >= 0);
+  return candidates.length ? Math.min(...candidates) : -1;
+}
+const apkFullCiIndex = fullCiIndex(apkWorkflow);
+const playFullCiIndex = fullCiIndex(playWorkflow);
+check(apkFullCiIndex >= 0, 'Workflow APK não executa o diagnóstico completo do CI.');
+check(playFullCiIndex >= 0, 'Workflow Play não executa o diagnóstico completo do CI.');
 check(apkWorkflow.includes('npm run quality:bundle-built'), 'Workflow APK não valida o bundle compilado.');
 check(playWorkflow.includes('npm run quality:bundle-built'), 'Workflow Play não valida o bundle compilado.');
-check(apkWorkflow.indexOf('npm run ci:verify') < apkWorkflow.indexOf('npm run apk:build-web'), 'Workflow APK executa o diagnóstico tarde demais.');
-check(playWorkflow.indexOf('npm run ci:verify') < playWorkflow.indexOf('npm run apk:build-web'), 'Workflow Play executa o diagnóstico tarde demais.');
+check(apkFullCiIndex >= 0 && apkFullCiIndex < apkWorkflow.indexOf('npm run apk:build-web'), 'Workflow APK executa o diagnóstico tarde demais.');
+check(playFullCiIndex >= 0 && playFullCiIndex < playWorkflow.indexOf('npm run apk:build-web'), 'Workflow Play executa o diagnóstico tarde demais.');
 
 if (checks.length) {
   for (const failure of checks) console.error(`✗ ${failure}`);

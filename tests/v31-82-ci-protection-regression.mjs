@@ -29,6 +29,14 @@ assert.match(budget, /singleSourceTs:\s*\d+(?:\.\d+)?\s*\*\s*1024/);
 
 assert.match(apk, /npm run quality:bundle-built/);
 assert.match(play, /npm run quality:bundle-built/);
-assert.ok(apk.indexOf('npm run ci:verify') < apk.indexOf('npm run apk:build-web'));
-assert.ok(play.indexOf('npm run ci:verify') < play.indexOf('npm run apk:build-web'));
+const fullCiIndex = (workflow) => {
+  const indexes = ['npm run ci:diagnose-all', 'npm run ci:verify']
+    .map((command) => workflow.indexOf(command))
+    .filter((index) => index >= 0);
+  return indexes.length ? Math.min(...indexes) : -1;
+};
+const apkFullCiIndex = fullCiIndex(apk);
+const playFullCiIndex = fullCiIndex(play);
+assert.ok(apkFullCiIndex >= 0 && apkFullCiIndex < apk.indexOf('npm run apk:build-web'));
+assert.ok(playFullCiIndex >= 0 && playFullCiIndex < play.indexOf('npm run apk:build-web'));
 console.log(`v31.82 proteção preventiva aprovada com orçamento TypeScript configurável (${sourceBudgetMiB} MiB).`);

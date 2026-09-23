@@ -64,7 +64,7 @@ check(rootPage.includes("@/components/AuthGate") && rootPage.includes("@/compone
 check(/PrivacyPolicyPage|Política de privacidade/.test(privacyPage), 'Rota de privacidade separada');
 check(/AccountDeletionPage|Solicitar exclusão da conta/.test(deletionPage), 'Rota de exclusão separada');
 check(capacitor.includes("appId: 'com.buildmaster.elitetatico'") && capacitor.includes("webDir: 'out'") && capacitor.includes('webContentsDebuggingEnabled: false'), 'Capacitor configurado para produção');
-const apkUsesConsolidatedDoctor = workflow.includes('npm run ci:verify');
+const apkUsesConsolidatedDoctor = workflow.includes('npm run ci:verify') || workflow.includes('npm run ci:diagnose-all');
 for (const command of ['npm run release:preflight', 'npm run quality:routes', 'npm run quality:syntax', 'npm run quality:interactive', 'npm run typecheck', 'npm run test:all']) check(apkUsesConsolidatedDoctor || workflow.includes(command), `Workflow APK executa ${command} diretamente ou pelo diagnóstico consolidado`);
 for (const marker of ['assembleRelease', 'ANDROID_SIGNING_BUNDLE', 'SHA-256', 'Validar release imutável publicamente', 'BuildMaster-Elite-Tatico-latest.apk']) check(workflow.includes(marker), `Workflow APK contém ${marker}`);
 for (const marker of ['bundleRelease', 'targetSdkVersion = 36', 'GOOGLE_PLAY_UPLOAD_KEY_BUNDLE', 'bundletool.jar validate']) check(playWorkflow.includes(marker), `Workflow Play contém ${marker}`);
