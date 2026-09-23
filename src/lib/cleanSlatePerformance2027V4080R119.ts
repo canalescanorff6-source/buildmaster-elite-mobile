@@ -828,6 +828,9 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
       actionFrequencies.get('aerial_defend')??0,
       ['CB','DMF'].includes(evaluationTargetPosition)
         ? clamp((average(['heading','jump','physicalContact'].map(attribute=>Number(parsed.attributes[attribute as AttributeKey])).filter(Number.isFinite))-68)/28*.85,0,1)
+        : 0,
+      ['CF','SS'].includes(evaluationTargetPosition)
+        ? clamp((average(['heading','jump','physicalContact'].map(attribute=>Number(parsed.attributes[attribute as AttributeKey])).filter(Number.isFinite))-68)/28*.90,0,1)
         : 0
     ),
     compiledActionAttributeCount:actions.reduce((sum,item)=>sum+item.compiledAttributes.length,0),
