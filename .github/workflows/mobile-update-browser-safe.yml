@@ -217,7 +217,18 @@ jobs:
               if missing:
                   raise SystemExit('Arquivos declarados ausentes no ZIP: ' + ', '.join(sorted(missing)[:10]))
 
+              conflicts = []
               if base:
+                  base_check = subprocess.run(
+                      ['git', '-C', str(repo), 'cat-file', '-e', f'{base}^{commit}'],
+                      stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL,
+                  )
+                  if base_check.returncode != 0:
+                      raise SystemExit(
+                          f'A base {base} do pacote não existe mais no histórico da main. '
+                          'Não é seguro aplicar automaticamente.'
+                      )
                   changed_since_base = subprocess.check_output(
                       ['git', '-C', str(repo), 'diff', '--name-only', f'{base}..HEAD'],
                       text=True,
@@ -225,10 +236,9 @@ jobs:
                   touched = set(expected) | set(safe_deletes)
                   conflicts = sorted({p.strip() for p in changed_since_base if p.strip()} & touched)
                   if conflicts:
-                      raise SystemExit(
-                          'A main mudou nos mesmos arquivos desde a criação do pacote: '
-                          + ', '.join(conflicts[:12])
-                          + '. Gere um novo mobile-update.zip.'
+                      print(
+                          'A main mudou em arquivos também presentes no pacote; '
+                          f'iniciando merge de três vias para {len(conflicts)} arquivo(s).'
                       )
 
               if staging.exists():
@@ -242,6 +252,86 @@ jobs:
                   target = staging.joinpath(*PurePosixPath(path).parts)
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(data)
+
+              unresolved = []
+              for path in conflicts:
+                  rel = PurePosixPath(path)
+                  current = repo.joinpath(*rel.parts)
+                  incoming = staging.joinpath(*rel.parts)
+
+                  if path in safe_deletes:
+                      base_result = subprocess.run(
+                          ['git', '-C', str(repo), 'show', f'{base}:{path}'],
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.DEVNULL,
+                      )
+                      if not current.exists():
+                          continue
+                      if base_result.returncode == 0 and current.read_bytes() == base_result.stdout:
+                          continue
+                      unresolved.append(path + ' (exclusão conflita com alteração nova da main)')
+                      continue
+
+                  if not incoming.exists():
+                      unresolved.append(path + ' (arquivo do pacote ausente no staging)')
+                      continue
+
+                  base_result = subprocess.run(
+                      ['git', '-C', str(repo), 'show', f'{base}:{path}'],
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.DEVNULL,
+                  )
+                  base_bytes = base_result.stdout if base_result.returncode == 0 else None
+                  current_bytes = current.read_bytes() if current.exists() else None
+                  incoming_bytes = incoming.read_bytes()
+
+                  if current_bytes == incoming_bytes:
+                      continue
+                  if base_bytes is not None and current_bytes == base_bytes:
+                      continue
+                  if base_bytes is not None and incoming_bytes == base_bytes:
+                      incoming.write_bytes(current_bytes or b'')
+                      continue
+
+                  if base_bytes is None:
+                      if current_bytes is None:
+                          continue
+                      unresolved.append(path + ' (arquivo criado nos dois lados sem base comum)')
+                      continue
+
+                  if current_bytes is None:
+                      unresolved.append(path + ' (arquivo removido na main e alterado no pacote)')
+                      continue
+
+                  if b'\0' in base_bytes or b'\0' in current_bytes or b'\0' in incoming_bytes:
+                      unresolved.append(path + ' (conflito em arquivo binário)')
+                      continue
+
+                  merge_dir = Path('/tmp/buildmaster-merge')
+                  merge_dir.mkdir(parents=True, exist_ok=True)
+                  safe_name = hashlib.sha256(path.encode('utf-8')).hexdigest()
+                  current_tmp = merge_dir / f'{safe_name}.current'
+                  base_tmp = merge_dir / f'{safe_name}.base'
+                  incoming_tmp = merge_dir / f'{safe_name}.incoming'
+                  current_tmp.write_bytes(current_bytes)
+                  base_tmp.write_bytes(base_bytes)
+                  incoming_tmp.write_bytes(incoming_bytes)
+                  merged = subprocess.run(
+                      ['git', 'merge-file', '-p', str(current_tmp), str(base_tmp), str(incoming_tmp)],
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE,
+                  )
+                  if merged.returncode == 0:
+                      incoming.write_bytes(merged.stdout)
+                      print(f'Merge automático concluído: {path}')
+                  else:
+                      unresolved.append(path + ' (conflito textual não resolvido automaticamente)')
+
+              if unresolved:
+                  raise SystemExit(
+                      'Conflitos reais após merge de três vias: '
+                      + '; '.join(unresolved[:12])
+                  )
 
           for source in staging.rglob('*'):
               if not source.is_file():
