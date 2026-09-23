@@ -24,8 +24,10 @@ if (scout) {
   assert.match(scout,/::game:/);
   assert.match(scout,/scoutingStoreKeyR457\(normalized\.cardId, normalized\.gameVersion\)/);
 }
-assert.match(vault,/sameHistoryUsageIdentityR457/);
+assert.match(vault,/function historyUsageIdentityTokensR457\(item: SavedAnalysis\): string\[\]/);
+assert.match(vault,/tokens\.push\(`usage:\$\{alias\}\|\$\{position\}\|\$\{usageFunction\}`\)/);
 assert.match(vault,/cardIdentityAliasesR457/);
+assert.match(vault,/const tokens = historyUsageIdentityTokensR457\(item\)/);
 const evolution=fs.readFileSync('src/lib/appEvolution.ts','utf8');
 const r135=fs.readFileSync('src/modules/matches/matchEvidenceCalibrationR135.ts','utf8');
 const r137=fs.readFileSync('src/modules/matches/matchValidationRepositoryR137.ts','utf8');
