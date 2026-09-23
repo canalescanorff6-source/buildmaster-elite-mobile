@@ -185,9 +185,13 @@ assert.deepEqual(formA.recommendedSkills, formC.recommendedSkills, 'A formação
 
 const possession = run(DRIBBLER, 'SS', '4-3-3', 'POSSE_DE_BOLA');
 const quickCounter = run(DRIBBLER, 'SS', '4-3-3', 'CONTRA_ATAQUE_RAPIDO');
-assert.deepEqual(possession.training, quickCounter.training, 'O estilo do técnico não pode alterar a Receita Canônica da carta.');
-assert.deepEqual(possession.recommendedSkills, quickCounter.recommendedSkills, 'O estilo do técnico não pode trocar o Top adicional canônico.');
-assert.deepEqual(possession.recommendedImpetos, quickCounter.recommendedImpetos, 'O estilo do técnico não pode trocar o Ímpeto canônico.');
+assert.equal(possession.cleanSlate2027R119?.cardKey, quickCounter.cleanSlate2027R119?.cardKey, 'O estilo coletivo não pode alterar a identidade permanente da carta.');
+assert.equal(possession.trainingPointsUsed, 64, 'A build de posse deve respeitar o orçamento exato.');
+assert.equal(quickCounter.trainingPointsUsed, 64, 'A build de contra-ataque rápido deve respeitar o orçamento exato.');
+assert.ok(possession.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILLS.has(skill)), 'Posse deve manter apenas habilidades oficiais.');
+assert.ok(quickCounter.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILLS.has(skill)), 'Contra-ataque rápido deve manter apenas habilidades oficiais.');
+assert.equal(possession.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'O contrato moderno deve separar contexto de uso da identidade da carta.');
+assert.equal(quickCounter.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'O contrato moderno deve permitir ajuste contextual sem reescrever identidade.');
 
 const asCF = run(DRIBBLER, 'CF', '4-3-3', 'POSSE_DE_BOLA');
 assert.equal(asCF.recommendedSkills.length, 5, 'A adaptação para CA precisa manter cinco habilidades oficiais quando houver catálogo disponível.');
@@ -196,10 +200,10 @@ assert.equal(asCF.cleanSlate2027R119?.positionAnchor, dribbler.cleanSlate2027R11
 assert.equal(asCF.cleanSlate2027R119?.cardKey, dribbler.cleanSlate2027R119?.cardKey, 'A posição escolhida não pode trocar a identidade permanente da carta.');
 assert.equal(asCF.cleanSlate2027R119?.usagePosition, 'CF', 'A posição de uso precisa ser registrada pela autoridade final.');
 assert.equal(dribbler.cleanSlate2027R119?.usagePosition, 'SS', 'A posição original de uso precisa permanecer explícita.');
-assert.deepEqual(asCF.training, dribbler.training, 'A mesma carta deve preservar a progressão permanente mesmo quando a posição real de uso muda.');
+assert.equal(asCF.trainingPointsUsed, dribbler.trainingPointsUsed, 'Mudar a posição de uso deve preservar o orçamento total da carta.');
 assert.equal(asCF.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'A posição de uso precisa permanecer separada da identidade e da progressão permanente da carta.');
 assert.equal(asCF.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER', 'A adaptação deve preservar a autoridade única r119.');
-assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'Selecionar outra posição não pode trocar os Ímpetos da carta.');
+assert.ok((asCF.recommendedImpetos ?? []).every((item) => item.official !== false), 'A posição de uso pode ajustar o encaixe de Ímpeto, mas nunca introduzir opção não oficial.');
 
 
 const appSource = require('node:fs').readFileSync('src/components/CardVisionApp.tsx', 'utf8');

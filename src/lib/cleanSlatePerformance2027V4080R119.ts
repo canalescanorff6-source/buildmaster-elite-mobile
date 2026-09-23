@@ -773,7 +773,23 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const dnaAffinity=Number(canonicalDnaR457.groupAffinity[key]??naturalStrength);
     const identityFit=clamp(naturalStrength*.55+evidenceFit*.25+dnaAffinity*.20);
     const matchNeed=actions.reduce((m,item)=>TRAINING_ATTRIBUTES[key].some(a=>item.action.attrs.includes(a)&&Number(item.action.weights?.[a]??1)>=.95)?Math.max(m,item.matchNeedMultiplier-1):m,0);
-    const identityBonusByLevel=Array.from({length:17},(_,level)=>level?level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16+Math.min(level,8)*matchNeed*1.1:0);
+    const aerialActionEvidence=key==='aerialStrength'
+      ? Math.max(actionFrequencies.get('aerial_finish')??0,actionFrequencies.get('aerial_defend')??0)
+      : 0;
+    const aerialNaturalEvidence=key==='aerialStrength'
+      ? clamp((average(['heading','jump','physicalContact'].map(attribute=>Number(parsed.attributes[attribute as AttributeKey])).filter(Number.isFinite))-68)/28,0,1)
+      : 0;
+    const aerialSkillEvidence=key==='aerialStrength'
+      ? Math.max(skillActionSupportR458(skillActionList(parsed),'aerial_finish'),skillActionSupportR458(skillActionList(parsed),'aerial_defend'))
+      : 0;
+    const aerialIdentityEvidence=key==='aerialStrength'
+      ? clamp(aerialActionEvidence*.46+aerialNaturalEvidence*.34+aerialSkillEvidence*.20,0,1)
+      : 0;
+    const identityBonusByLevel=Array.from({length:17},(_,level)=>level
+      ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
+        +Math.min(level,8)*matchNeed*1.1
+        +(key==='aerialStrength'?Math.min(level,8)*aerialIdentityEvidence*.22:0)
+      : 0);
     const weakRepairPenaltyByLevel=Array.from({length:17},(_,level)=>level && naturalStrength<60 && impacted<1.05?level*(60-naturalStrength)*.018:0);
     const excessPenaltyByLevel=Array.from({length:17},(_,level)=>{
       if(!level) return 0;

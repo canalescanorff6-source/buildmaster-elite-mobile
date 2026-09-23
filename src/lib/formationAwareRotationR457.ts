@@ -3,7 +3,7 @@ import type { MatchState, TeamEnergy } from './gamePlan';
 import { cardIdentityFingerprintR126, playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
 import { canonicalizePlayerPlaystyle } from './efootball2026Playstyles';
-import { FORMATION_BLUEPRINTS, scorePlayerForFormationSlot, type FormationSlot, type FormationSlotFit } from './formationRoleEngine';
+import { FORMATION_BLUEPRINTS, scorePlayerForFormationSlot, type FormationSlot } from './formationRoleEngine';
 import { optimizeGlobalFormationLineupR457 } from './globalLineupOptimizerR457';
 
 export const FORMATION_AWARE_ROTATION_R457_VERSION='40.80-r457-formation-aware-rotation-v1' as const;
