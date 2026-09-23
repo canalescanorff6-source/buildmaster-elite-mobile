@@ -786,7 +786,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const defensiveAerialIdentity=key==='aerialStrength'
       && ['CB','DMF'].includes(evaluationTargetPosition)
       && aerialNaturalEvidence>=.68
-      && aerialActionEvidence>=.18;
+      && aerialActionEvidence>=.12;
     const aerialIdentityQualified=key==='aerialStrength'
       && aerialNaturalEvidence>=.55
       && (aerialActionEvidence>=.28 || aerialSkillEvidence>=.35 || defensiveAerialIdentity);
@@ -803,7 +803,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const identityBonusByLevel=Array.from({length:17},(_,level)=>level
       ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
         +Math.min(level,12)*matchNeed*6
-        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*(defensiveAerialIdentity ? 2.35 : 1.15):0)
+        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*(defensiveAerialIdentity ? 3.6 : 1.15):0)
       : 0);
     const weakRepairPenaltyByLevel=Array.from({length:17},(_,level)=>level && naturalStrength<60 && impacted<1.05?level*(60-naturalStrength)*.018:0);
     const excessPenaltyByLevel=Array.from({length:17},(_,level)=>{
