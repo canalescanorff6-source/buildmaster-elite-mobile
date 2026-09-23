@@ -22,11 +22,11 @@ if (sourceBuildMatch) {
     `CI_SOURCE_BUILD inválido: ${sourceBuildMatch[1]}.`,
   );
 }
-const expectedFullGroupsMatch = doctor.match(/const\\s+EXPECTED_FULL_GROUPS\\s*=\\s*(\\d+)\\s*;/);
+const expectedFullGroupsMatch = doctor.match(/const\s+EXPECTED_FULL_GROUPS\s*=\s*(\d+)\s*;/);
 check(Boolean(expectedFullGroupsMatch), 'ci-doctor não declara EXPECTED_FULL_GROUPS.');
 if (expectedFullGroupsMatch) {
   const expectedFullGroups = Number(expectedFullGroupsMatch[1]);
-  const declaredDoctorGroups = [...doctor.matchAll(/^\\s*\\['[^']+',\\s*\\['run',\\s*'[^']+'\\]\\],?\\s*$/gm)].length;
+  const declaredDoctorGroups = [...doctor.matchAll(/^\s*\['[^']+',\s*\['run',\s*'[^']+'\]\],?\s*$/gm)].length;
   check(Number.isInteger(expectedFullGroups) && expectedFullGroups > 0, 'EXPECTED_FULL_GROUPS precisa ser inteiro positivo.');
   check(expectedFullGroups === declaredDoctorGroups, `ci-doctor declara ${expectedFullGroups} grupos, mas contém ${declaredDoctorGroups} grupos executáveis.`);
 }
