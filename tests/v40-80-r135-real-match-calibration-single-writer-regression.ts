@@ -79,7 +79,7 @@ assert.ok(Object.values(calibration.actionNeedAdjustments).every((value)=>value<
 
 const calibrated:any=applyCleanSlatePerformance2027R119({...source,matchEvidenceCalibrationR135:calibration});
 assert.equal(trainingPlanTotalCost(calibrated.training),64,'Clean Slate continua responsável pelo orçamento exato.');
-assert.ok(calibrated.training.passing>base.training.passing,'Deficiência de passe repetida deve poder elevar o retorno marginal de Passe no próprio Clean Slate.');
+assert.ok(calibrated.training.passing>base.training.passing,`Deficiência de passe repetida deve poder elevar o retorno marginal de Passe no próprio Clean Slate. base=${JSON.stringify(base.training)} calibrated=${JSON.stringify(calibrated.training)} adjustment=${JSON.stringify(calibration.actionNeedAdjustments)}`);
 assert.notDeepEqual(calibrated.training,base.training,'Evidência real suficiente pode alterar a decisão, mas somente através do Clean Slate.');
 assert.equal(calibrated.cleanSlate2027R119.authority,'CLEAN_SLATE_SINGLE_WRITER');
 assert.equal(calibrated.cleanSlate2027R119.guards.matchEvidenceCalibrated,true);

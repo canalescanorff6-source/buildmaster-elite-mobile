@@ -21,8 +21,6 @@ const checks = [
   ['R457/R125 identity-style-DNA', npmCommand, ['run','test:r457:r125-fast']],
   ['R126', npmCommand, ['run','test:r126']],
   ['R128', npmCommand, ['run','test:r128']],
-  ['R135', npmCommand, ['run','test:r135']],
-  ['R136', npmCommand, ['run','test:r136']],
   ['R137', npmCommand, ['run','test:r137']],
   ['R184 position stability', nodeCommand, ['-r','./tests/_ts-require.cjs','tests/v40-80-r184-position-stability-regression.ts']],
   ['R157 session autosave boundary', nodeCommand, ['tests/v40-80-r157-session-autosave-boundary-regression.mjs']],

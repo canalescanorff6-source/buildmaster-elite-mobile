@@ -57,7 +57,7 @@ assert.ok((active.actionNeedAdjustments.short_creation??0)>0);
 const base:any=applyCleanSlatePerformance2027R119(source);
 const calibrated:any=applyCleanSlatePerformance2027R119({...source,matchEvidenceCalibrationR136:active});
 assert.equal(trainingPlanTotalCost(calibrated.training),64);
-assert.ok(calibrated.training.passing>base.training.passing,'R136 deve conseguir elevar retorno marginal de passe somente via Clean Slate.');
+assert.ok(calibrated.training.passing>base.training.passing,`R136 deve conseguir elevar retorno marginal de passe somente via Clean Slate. base=${JSON.stringify(base.training)} calibrated=${JSON.stringify(calibrated.training)} adjustment=${JSON.stringify(active.actionNeedAdjustments)}`);
 assert.equal(calibrated.cleanSlate2027R119.authority,'CLEAN_SLATE_SINGLE_WRITER');
 assert.match(calibrated.cleanSlate2027R119.reasons.join(' '),/R136/i);
 
