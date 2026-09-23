@@ -310,11 +310,12 @@ jobs:
 
       - name: Salvar relatório completo do diagnóstico
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ci-diagnostico-completo-${{ github.run_id }}
           path: .ci-reports
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 14
 
       - name: Bloquear publicação somente após coletar todas as falhas
