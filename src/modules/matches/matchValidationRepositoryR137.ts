@@ -1,5 +1,5 @@
 import type { AnalysisResult } from '@/lib/analyzerDomain';
-import { MATCH_VALIDATION_STORAGE_KEY, cardFingerprint, type MatchValidationRecord } from '@/lib/appEvolution';
+import { MATCH_VALIDATION_STORAGE_KEY, cardFingerprintAliasesR457, type MatchValidationRecord } from '@/lib/appEvolution';
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
@@ -63,7 +63,8 @@ export function matchValidationRevisionR137(records: MatchValidationRecord[]) {
     record.connection ?? '', record.inputDelayRating ?? '', record.secondHalfDrop ? 1 : 0, ...(record.tags ?? []), record.note ?? '',
     record.metrics?.goals ?? '', record.metrics?.assists ?? '', record.metrics?.passErrors ?? '', record.metrics?.tackles ?? '',
     record.metrics?.interceptions ?? '', record.metrics?.ballLosses ?? '', record.metrics?.shots ?? '', record.metrics?.shotsOnTarget ?? '',
-    record.gameVersion ?? '', record.gameplayEpoch ?? ''
+    record.gameVersion ?? '', record.gameplayEpoch ?? '', record.usageFunction ?? '', record.usageContextSignatureR460 ?? '', record.sessionIdR462 ?? '',
+    JSON.stringify(record.gameplayImpactSnapshotR460 ?? null), JSON.stringify(record.actionRatingsR461 ?? null)
   ].join(':')).join('|');
   return `matches-r137-${stableHash(signature)}`;
 }
@@ -101,15 +102,15 @@ export function replaceMatchValidationRepositoryR137(input: unknown, detail: Rec
 }
 
 export function exactUsageMatchValidationRecordsR137(result: AnalysisResult, records: MatchValidationRecord[] = readMatchValidationRepositoryR137()) {
-  const fingerprint = cardFingerprint(result);
+  const fingerprints = new Set(cardFingerprintAliasesR457(result));
   const position = analysisUsagePositionR138(result);
-  return records.filter((record) => record.cardFingerprint === fingerprint && record.targetPosition === position);
+  return records.filter((record) => fingerprints.has(record.cardFingerprint) && record.targetPosition === position);
 }
 
 export function removeUsageMatchValidationRecordsR137(result: AnalysisResult, records: MatchValidationRecord[]) {
-  const fingerprint = cardFingerprint(result);
+  const fingerprints = new Set(cardFingerprintAliasesR457(result));
   const position = analysisUsagePositionR138(result);
-  return records.filter((record) => record.cardFingerprint !== fingerprint || record.targetPosition !== position);
+  return records.filter((record) => !fingerprints.has(record.cardFingerprint) || record.targetPosition !== position);
 }
 
 export function subscribeMatchValidationRepositoryR137(listener: () => void) {

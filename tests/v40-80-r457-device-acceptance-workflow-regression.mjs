@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const wf=fs.readFileSync('.github/workflows/build-apk.yml','utf8');
+const validator=fs.readFileSync('scripts/validate-device-acceptance-r457.mjs','utf8');
+assert.ok(wf.includes('default: beta'));
+assert.ok(wf.includes("github.event_name == 'push' && 'beta'"));
+assert.ok(wf.includes('device_acceptance_json:'));
+assert.ok(wf.includes('Aceitação física R457 para publicação stable'));
+assert.ok(wf.includes("if: env.RELEASE_CHANNEL == 'stable'"));
+assert.ok(validator.includes('receipt?.sourceSha===sourceSha'));
+assert.ok(validator.includes('Number(receipt?.largeVaultCount)>=225'));
+assert.ok(validator.includes('Number(receipt?.cardsTested)>=10'));
+assert.ok(validator.includes('receipt?.device?.physicalDevice===true'));
+assert.ok(validator.includes('zero56RegressionChecked'));
+assert.ok(validator.includes('sameDecisionAfterReopen'));
+assert.ok(validator.includes('feedbackReanalysis'));
+console.log('R457 Stage 16 aprovada: main gera beta; stable normal exige recibo físico do mesmo commit e fluxo completo.');

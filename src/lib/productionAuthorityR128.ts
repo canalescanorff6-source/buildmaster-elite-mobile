@@ -11,12 +11,17 @@ export type ProductionAuthorityR128 = {
   cardIdentity: string;
   cardEvidence: string;
   usagePosition: string;
+  usageFunction: string;
   outputFingerprint: string;
   protects: {
     training: true;
     top5: true;
+    finalSkillSet: true;
+    finalImpetoDecision: true;
     impeto: true;
     budget: true;
+    gameplayImpactR458: true;
+    buildOutcomeCalibrationR460: true;
   };
   diagnostics: {
     postWriterMutationRejected: true;
@@ -26,7 +31,7 @@ export type ProductionAuthorityR128 = {
 
 type WithProductionAuthorityR128 = AnalysisResult & {
   productionAuthorityR128?: ProductionAuthorityR128;
-  cleanSlate2027R119?: { usagePosition?: string };
+  cleanSlate2027R119?: { usagePosition?: string; usageFunction?: string };
 };
 
 function normalizeText(value: unknown) {
@@ -70,12 +75,19 @@ export function productionOutputFingerprintR128(result: AnalysisResult) {
     cardEvidenceFingerprintR126(result.parsed),
     String(result.bestPosition?.code ?? ''),
     String((result as WithProductionAuthorityR128).cleanSlate2027R119?.usagePosition ?? result.bestPosition?.code ?? ''),
+    String((result as WithProductionAuthorityR128).cleanSlate2027R119?.usageFunction ?? ''),
     trainingFingerprint(result),
     result.trainingPointsTotal,
     result.trainingPointsUsed,
     result.trainingPointsRemaining,
     (result.recommendedSkills ?? []).map(normalizeText).join('>'),
-    impetoFingerprint(result)
+    JSON.stringify((result as AnalysisResult & { finalAdditionalSkillSetR457?: unknown }).finalAdditionalSkillSetR457 ?? null),
+    JSON.stringify((result as any).cleanSlate2027R119?.finalAdditionalSkillSetR457 ?? null),
+    JSON.stringify((result as AnalysisResult & { finalImpetoDecisionR457?: unknown }).finalImpetoDecisionR457 ?? null),
+    JSON.stringify((result as any).cleanSlate2027R119?.finalImpetoDecisionR457 ?? null),
+    impetoFingerprint(result),
+    JSON.stringify((result as any).cleanSlate2027R119?.gameplayImpactR458 ?? null),
+    JSON.stringify((result as AnalysisResult & { buildOutcomeCalibrationR460?: unknown }).buildOutcomeCalibrationR460 ?? null)
   ].join('|');
   return `output-r128-${fnv1a(source)}`;
 }
@@ -83,14 +95,16 @@ export function productionOutputFingerprintR128(result: AnalysisResult) {
 export function sealProductionAuthorityR128(input: AnalysisResult): AnalysisResult {
   const result = input as WithProductionAuthorityR128;
   const usagePosition = String(result.cleanSlate2027R119?.usagePosition ?? result.bestPosition?.code ?? '');
+  const usageFunction = String(result.cleanSlate2027R119?.usageFunction ?? '');
   const authority: ProductionAuthorityR128 = {
     version: PRODUCTION_AUTHORITY_R128_VERSION,
     authority: 'PRODUCTION_OUTPUT_INTEGRITY',
     cardIdentity: cardIdentityFingerprintR126(result.parsed),
     cardEvidence: cardEvidenceFingerprintR126(result.parsed),
     usagePosition,
+    usageFunction,
     outputFingerprint: productionOutputFingerprintR128(result),
-    protects: { training: true, top5: true, impeto: true, budget: true },
+    protects: { training: true, top5: true, finalSkillSet: true, finalImpetoDecision: true, impeto: true, budget: true, gameplayImpactR458: true, buildOutcomeCalibrationR460: true },
     diagnostics: { postWriterMutationRejected: true, gameplayDnaReadOnly: true }
   };
   return { ...result, productionAuthorityR128: authority } as AnalysisResult;
@@ -105,6 +119,7 @@ export function isCurrentProductionAnalysisR128(input: AnalysisResult) {
     && authority.cardIdentity === cardIdentityFingerprintR126(result.parsed)
     && authority.cardEvidence === cardEvidenceFingerprintR126(result.parsed)
     && authority.usagePosition === String(result.cleanSlate2027R119?.usagePosition ?? result.bestPosition?.code ?? '')
+    && authority.usageFunction === String(result.cleanSlate2027R119?.usageFunction ?? '')
     && authority.outputFingerprint === productionOutputFingerprintR128(result)
   );
 }

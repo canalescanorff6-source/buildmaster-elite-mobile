@@ -64,6 +64,7 @@ export function useCardVisionStartupLifecycleR177(input: CardVisionStartupLifecy
         setOcrDone: input.setOcrDone,
         setObjectiveCompetitive: () => input.setObjective('COMPETITIVE'),
         setTargetPosition: input.setTargetPosition,
+        setUsageFunction: input.setUsageFunction,
         setCardPositionOverride: input.setCardPositionOverride,
         setPlaystyleOverride: input.setPlaystyleOverride,
         setDefensivePlaystyleOverride: input.setDefensivePlaystyleOverride,

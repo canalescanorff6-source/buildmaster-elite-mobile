@@ -2,7 +2,7 @@ import { deleteAccountVault, loadAccountVault, syncAccountVault } from '@/lib/ac
 import { APP_DATA_VERSION } from '@/lib/dataSafety';
 import { runSerializedVaultCloudMutationR128 } from '@/modules/vault/vaultCloudQueueR128';
 import { commitVaultHistoryR140 } from '@/modules/vault/vaultPersistenceCoordinatorR140';
-import { HISTORY_LIMIT, mergeHistoryLists, normalizeHistoryList, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
+import { mergeHistoryLists, normalizeHistoryList, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 
 export const VAULT_CLOUD_RUNTIME_R166_VERSION = '40.80-r166-vault-cloud-lazy-runtime-v1' as const;
 
@@ -35,7 +35,7 @@ export function createVaultCloudOperationsR166(
 
   async function pushCloudHistory(items: SavedAnalysis[] = input.history, silent = false) {
     if (!items.length) { if (!silent) setCloudStatus('Nenhuma ficha local para enviar à nuvem.'); return; }
-    const snapshot = (items === input.history && input.getCanonicalHistory ? input.getCanonicalHistory() : items).slice(0, HISTORY_LIMIT);
+    const snapshot = (items === input.history && input.getCanonicalHistory ? input.getCanonicalHistory() : items);
     setCloudLoading(true);
     try {
       await runSerializedVaultCloudMutationR128(async () => {

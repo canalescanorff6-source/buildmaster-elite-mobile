@@ -35,8 +35,22 @@ export function analysisUsagePositionR138(result: UsagePositionCarrierR138): Pos
   return optionalAnalysisUsagePositionR138(result) ?? 'CMF';
 }
 
+export function analysisUsageFunctionR457(result: AnalysisResult) {
+  const current=result as AnalysisResult & { cleanSlate2027R119?: { usageFunction?: string }; usageFunctionR457?: string; gameplayScoutingR454?: { status?: string; bestRoles?: Array<{position?:string;label?:string;function?:string}> } };
+  const finalized=String(current.cleanSlate2027R119?.usageFunction ?? '').trim();
+  if(finalized) return finalized;
+  const explicit=String(current.usageFunctionR457 ?? '').trim();
+  if(explicit && explicit.toUpperCase()!=='AUTO') return explicit;
+  if(current.gameplayScoutingR454?.status==='READY') {
+    const role=current.gameplayScoutingR454.bestRoles?.find((item)=>item.position===analysisUsagePositionR138(result));
+    const scouting=String(role?.function ?? role?.label ?? '').trim();
+    if(scouting) return scouting;
+  }
+  return String(result.teamMap?.functionLabel ?? result.advancedTacticalFunction?.officialPlaystyle ?? '').trim() || `${analysisUsagePositionR138(result)} funcional`;
+}
+
 export function analysisUsageIdentityKeyR138(result: AnalysisResult) {
-  return cardUsageIdentityKeyR126(result.parsed, analysisUsagePositionR138(result));
+  return cardUsageIdentityKeyR126(result.parsed, analysisUsagePositionR138(result), analysisUsageFunctionR457(result));
 }
 
 export function analysisUsageChangedR138(result: AnalysisResult) {

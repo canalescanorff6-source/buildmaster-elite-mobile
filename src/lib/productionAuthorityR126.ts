@@ -11,10 +11,13 @@ export type ProductionAuthorityR126 = {
   cardIdentity: string;
   cardEvidence: string;
   usagePosition: string;
+  usageFunction: string;
   status: 'READY' | 'BLOCKED_INSUFFICIENT_DATA';
   owns: {
     training: true;
     top5: true;
+    finalSkillSet: true;
+    finalImpetoDecision: true;
     impeto: true;
   };
   diagnostics: {
@@ -43,8 +46,9 @@ export function sealProductionAuthorityR126(input: AnalysisResult): AnalysisResu
     cardIdentity,
     cardEvidence,
     usagePosition: cleanSlate.usagePosition,
+    usageFunction: cleanSlate.usageFunction,
     status: cleanSlate.status,
-    owns: { training: true, top5: true, impeto: true },
+    owns: { training: true, top5: true, finalSkillSet: true, finalImpetoDecision: true, impeto: true },
     diagnostics: {
       legacyEnginesReadOnly: true,
       overallExcludedFromDecision: true,
@@ -65,6 +69,7 @@ export function isCurrentProductionAnalysisR126(input: AnalysisResult) {
     result.productionAuthorityR126?.version === PRODUCTION_AUTHORITY_R126_VERSION &&
     result.productionAuthorityR126?.cardIdentity === cardIdentityFingerprintR126(result.parsed) &&
     result.productionAuthorityR126?.cardEvidence === cardEvidenceFingerprintR126(result.parsed) &&
-    result.productionAuthorityR126?.usagePosition === result.cleanSlate2027R119?.usagePosition
+    result.productionAuthorityR126?.usagePosition === result.cleanSlate2027R119?.usagePosition &&
+    result.productionAuthorityR126?.usageFunction === result.cleanSlate2027R119?.usageFunction
   );
 }

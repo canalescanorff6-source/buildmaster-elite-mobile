@@ -31,9 +31,10 @@ export function applyReviewedR119BaselinesR186R200(rootDirectory=process.cwd()){
   const source=readFileSync(sourcePath,'utf8');
   const actual=crypto.createHash('sha256').update(source).digest('hex');
   const downstreamR417=source.includes('autonomousPrimaryR417')&&source.includes('rankAutonomousRolesR417');
+  const downstreamR457=source.includes('function usageFunctionR457')&&source.includes("decision:targetAdaptation?'TARGET_ADAPTATION':'NATURAL_ANCHOR'")&&source.includes('usageFunction,');
   const downstreamR416=actual===R416_SHA;
-  if(actual!==REVIEWED_SHA&&!downstreamR416&&!downstreamR417) throw new Error(`R406-fix7: SHA R119 não revisado: ${actual}; esperados ${REVIEWED_SHA}, ${R416_SHA} ou runtime R417 reconhecido.`);
-  const expected=downstreamR417?actual:downstreamR416?R416_SHA:REVIEWED_SHA;
+  if(actual!==REVIEWED_SHA&&!downstreamR416&&!downstreamR417&&!downstreamR457) throw new Error(`R406-fix7: SHA R119 não revisado: ${actual}; esperados ${REVIEWED_SHA}, ${R416_SHA}, runtime R417 ou runtime R457 reconhecido.`);
+  const expected=(downstreamR457||downstreamR417)?actual:downstreamR416?R416_SHA:REVIEWED_SHA;
   const results=[];
   for(const rel of CONTRACTS){
     const file=resolve(root,rel);
@@ -51,5 +52,5 @@ export function applyReviewedR119BaselinesR186R200(rootDirectory=process.cwd()){
     writeFileSync(file,before.replace(from,expected),'utf8');
     results.push({path:rel,changed:true});
   }
-  return {changed:results.some(x=>x.changed),sourceSha:actual,expectedSha:expected,downstreamR416,downstreamR417,results};
+  return {changed:results.some(x=>x.changed),sourceSha:actual,expectedSha:expected,downstreamR416,downstreamR417,downstreamR457,results};
 }

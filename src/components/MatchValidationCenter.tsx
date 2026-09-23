@@ -10,6 +10,7 @@ import {
   MATCH_PROBLEM_TAGS,
   cardFingerprint,
   createMatchValidationRecord,
+  createMatchSessionIdR462,
   summarizeMatchValidation,
   type MatchConnectionState,
   type MatchPerformanceMetrics,
@@ -23,6 +24,7 @@ import { buildRealValidationV3760, REAL_VALIDATION_PROFILE_STORAGE_KEY, type Con
 import { buildRealGameplayValidationV4050, persistVerifiedGameplayWinnerV4050 } from '@/lib/realGameplayValidationV4050';
 import { buildLongitudinalGameplayV4060, persistLongitudinalWinnerV4060 } from '@/lib/longitudinalGameplayLearningV4060';
 import { buildMatchEvidenceCalibrationR136 } from '@/modules/matches/matchEvidenceCalibrationR136';
+import { buildBuildOutcomeCalibrationR460 } from '@/modules/matches/buildOutcomeCalibrationR460';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import {
   exactUsageMatchValidationRecordsR137,
@@ -39,6 +41,10 @@ function loadRecords(): MatchValidationRecord[] {
 
 function RatingField({ label, value, onChange }: { label: string; value: MatchValidationRating; onChange: (value: MatchValidationRating) => void }) {
   return <label className="match-rating-field"><span>{label}</span><div>{RATING_OPTIONS.map((rating) => <button type="button" key={rating} className={value === rating ? 'selected' : ''} onClick={() => onChange(rating)}>{rating}</button>)}</div></label>;
+}
+
+function OptionalActionRatingField({ label, value, onChange }: { label: string; value?: MatchValidationRating; onChange: (value?: MatchValidationRating) => void }) {
+  return <label className="match-rating-field"><span>{label}</span><div><button type="button" className={value == null ? 'selected' : ''} onClick={() => onChange(undefined)}>—</button>{RATING_OPTIONS.map((rating) => <button type="button" key={rating} className={value === rating ? 'selected' : ''} onClick={() => onChange(rating)}>{rating}</button>)}</div></label>;
 }
 
 function MetricField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
@@ -89,8 +95,27 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   const [testedOptionKey, setTestedOptionKey] = useState('');
   const [controlStyle, setControlStyle] = useState<ControlStyleV3760>('mixed');
   const [inputDelayRating, setInputDelayRating] = useState<MatchValidationRating>(3);
+  const [actionRatingsR461, setActionRatingsR461] = useState<Record<string, MatchValidationRating>>({});
+  const [matchSessionIdR462, setMatchSessionIdR462] = useState('');
 
   useEffect(() => setRecords(loadRecords()), []);
+  useEffect(() => {
+    try {
+      const key = 'buildmaster-match-session-r462';
+      const existing = window.sessionStorage.getItem(key)?.trim();
+      const next = existing || createMatchSessionIdR462();
+      if (!existing) window.sessionStorage.setItem(key, next);
+      setMatchSessionIdR462(next);
+    } catch {
+      setMatchSessionIdR462((current) => current || createMatchSessionIdR462());
+    }
+  }, []);
+  const startNewMatchSessionR462 = () => {
+    const next = createMatchSessionIdR462();
+    try { window.sessionStorage.setItem('buildmaster-match-session-r462', next); } catch { /* memória de sessão é opcional */ }
+    setMatchSessionIdR462(next);
+    setMessage('Nova sessão R462 iniciada. As próximas partidas serão tratadas como uma sessão independente.');
+  };
   const fingerprint = cardFingerprint(result);
   const usagePosition = analysisUsagePositionR138(result);
   const currentRecords = useMemo(() => exactUsageMatchValidationRecordsR137(result, records), [records, fingerprint, usagePosition]);
@@ -100,6 +125,11 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
   const gameplayValidation = useMemo(() => buildRealGameplayValidationV4050(result, records), [result, records]);
   const longitudinalValidation = useMemo(() => buildLongitudinalGameplayV4060(result, records), [result, records]);
   const matchCalibrationR136 = useMemo(() => buildMatchEvidenceCalibrationR136(result, records), [result, records]);
+  const buildOutcomeR460 = useMemo(() => buildBuildOutcomeCalibrationR460(result, records), [result, records]);
+  const observedActionsR461 = useMemo(() => {
+    const impact = (result as AnalysisResult & { cleanSlate2027R119?: { gameplayImpactR458?: { actions?: Array<{ id:string; label:string; demand:number }> } } }).cleanSlate2027R119?.gameplayImpactR458;
+    return [...(impact?.actions ?? [])].filter((action) => Number(action.demand) >= 25).sort((a,b) => Number(b.demand)-Number(a.demand)).slice(0, 4);
+  }, [result]);
   const testedOptions = useMemo(() => {
     const boosterName = result.recommendedImpetos[0]?.name || 'Sem Booster confirmado';
     if (gameplayValidation.arms.length > 1) return [...gameplayValidation.arms].sort((a, b) => a.rank - b.rank).map((candidate) => ({
@@ -160,14 +190,17 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
       testedBoosterName: testedOption?.boosterName,
       experimentArm: testedOption?.arm ?? 'NONE',
       controlStyle,
-      inputDelayRating
+      inputDelayRating,
+      actionRatingsR461: Object.keys(actionRatingsR461).length ? actionRatingsR461 : undefined,
+      sessionIdR462: matchSessionIdR462 || undefined
     });
     if (!persist([record, ...records])) return;
     setTags([]);
     setNote('');
     setSecondHalfDrop(false);
     setMetrics(EMPTY_METRICS);
-    setMessage(`Partida registrada. Esta ficha agora possui ${currentRecords.length + 1} avaliação(ões). A evidência R136 será aplicada pelo Clean Slate na próxima recalculação se houver repetição recente, contextual e confiável suficiente.`);
+    setActionRatingsR461({});
+    setMessage(`Partida registrada com snapshot R460 e evidência por ação R461. Esta ficha agora possui ${currentRecords.length + 1} avaliação(ões). R136/R460 só recalibram o Clean Slate após repetição recente, contextual e confiável suficiente.`);
   };
 
   const reset = () => {
@@ -182,6 +215,11 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker"><Activity size={14}/> Calibração temporal/contextual R136</p><h3>Partidas reais como evidência, não como receita</h3></div><span>{matchCalibrationR136.status}</span></div>
       <div className="match-validation-verdict professional-evidence-verdict"><CheckCircle2 size={20}/><div><strong>{matchCalibrationR136.rawMatches} partida(s) • {matchCalibrationR136.distinctSessions} sessão(ões) • confiança {matchCalibrationR136.confidenceScore}/100</strong><span>{matchCalibrationR136.reasons[1] || matchCalibrationR136.reasons[0]}</span><small>Força atual: {Math.round(matchCalibrationR136.calibrationStrength * 100)}% • recência {matchCalibrationR136.recencyScore}/100 • contexto v6.0 {matchCalibrationR136.currentPatchShare}%. O Clean Slate continua sendo o único escritor da ficha.</small></div></div>
+    </article>
+    <article className="luxury-panel wide-card">
+      <div className="section-title-row"><div><p className="kicker"><Activity size={14}/> Aprendizado promessa × resultado R460</p><h3>A ficha melhora o que prometeu?</h3></div><span>{buildOutcomeR460.status}</span></div>
+      <div className="match-validation-verdict professional-evidence-verdict"><CheckCircle2 size={20}/><div><strong>{buildOutcomeR460.snapshotMatches} partida(s) com snapshot • {buildOutcomeR460.distinctSessions} sessão(ões) • confiança {buildOutcomeR460.confidenceScore}/100 • ação direta {buildOutcomeR460.directActionEvidenceRate}%</strong><span>{buildOutcomeR460.reasons[1] || buildOutcomeR460.reasons[0]}</span><small>Função isolada: {buildOutcomeR460.usageFunction}. {buildOutcomeR460.mismatchedFunctionMatches ? `${buildOutcomeR460.mismatchedFunctionMatches} partida(s) de outra função foram separadas.` : 'Nenhuma evidência de outra função foi misturada.'}</small></div></div>
+      {buildOutcomeR460.actions.length > 0 && <div className="match-area-summary"><div><strong>Ações acompanhadas</strong>{buildOutcomeR460.actions.slice(0,4).map((action) => <span key={action.id}>{action.label} • observado {Math.round(action.observedScore)}/100 • {action.status}</span>)}</div><div><strong>Reforço aprendido</strong>{buildOutcomeR460.actions.filter((action) => action.learningMultiplier > 1).slice(0,4).map((action) => <span key={action.id}>{action.label} ×{action.learningMultiplier.toFixed(3)}</span>)}{!buildOutcomeR460.actions.some((action) => action.learningMultiplier > 1) && <span>Nenhuma ação recebeu pressão extra.</span>}</div></div>}
     </article>
     <article className="luxury-panel wide-card">
       <div className="section-title-row"><div><p className="kicker"><Target size={14}/> Validação em partidas</p><h3>Teste a ficha sem alterar a recomendação original</h3></div><span>{summary.totalMatches} partida(s)</span></div>
@@ -209,6 +247,7 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
         <label><span>Estilo de controle</span><select value={controlStyle} onChange={(event: ChangeEvent<HTMLSelectElement>) => setControlStyle(event.target.value as ControlStyleV3760)}><option value="quick-pass">Toques e passes rápidos</option><option value="carry-dribble">Condução e drible</option><option value="mixed">Misto e adaptável</option><option value="manual-defense">Defesa e marcação manual</option></select></label>
         <label><span>Delay percebido</span><select value={inputDelayRating} onChange={(event: ChangeEvent<HTMLSelectElement>) => setInputDelayRating(Number(event.target.value) as MatchValidationRating)}>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating} — {rating <= 2 ? 'baixo' : rating === 3 ? 'médio' : 'alto'}</option>)}</select></label>
       </div>
+      <div className="match-validation-verdict professional-evidence-verdict"><History size={20}/><div><strong>Sessão R462 • {matchSessionIdR462 ? matchSessionIdR462.slice(-8) : 'iniciando'}</strong><span>Partidas desta sequência compartilham a mesma sessão. Use “Nova sessão” somente quando começar outro bloco real de jogos.</span><small>Isso impede que várias partidas do mesmo dia sejam confundidas com uma única sessão ou contem como sessões independentes sem motivo.</small></div><button type="button" onClick={startNewMatchSessionR462}>Nova sessão</button></div>
       <div className="match-rating-grid">
         <RatingField label="Avaliação geral" value={overallRating} onChange={setOverallRating}/>
         <RatingField label="Passe" value={passing} onChange={setPassing}/>
@@ -218,6 +257,7 @@ export function MatchValidationCenter({ result }: { result: AnalysisResult }) {
         <RatingField label="Físico" value={physical} onChange={setPhysical}/>
         <RatingField label="Resistência" value={stamina} onChange={setStamina}/>
       </div>
+      {observedActionsR461.length > 0 && <><div className="section-title-row compact-professional-title"><div><p className="kicker">Evidência direta R461</p><h3>Como as ações principais funcionaram?</h3></div><span>opcional • — = não observei</span></div><div className="match-rating-grid">{observedActionsR461.map((action) => <OptionalActionRatingField key={action.id} label={`${action.label} • demanda ${Math.round(action.demand)}%`} value={actionRatingsR461[action.id]} onChange={(value) => setActionRatingsR461((current) => { const next={...current}; if(value == null) delete next[action.id]; else next[action.id]=value; return next; })}/>)}</div></>}
       <div className="section-title-row compact-professional-title"><div><p className="kicker">Evidência objetiva</p><h3>Números da atuação</h3></div><span>opcional</span></div>
       <div className="professional-match-metrics-grid">
         <MetricField label="Gols" value={metrics.goals} onChange={(value) => setMetrics((current) => ({ ...current, goals: value }))}/>

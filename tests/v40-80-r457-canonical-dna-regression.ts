@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { buildCanonicalDnaR457 } from '../src/lib/canonicalDnaR457';
+const actions:any=[{id:'short_creation',frequency:88},{id:'close_control',frequency:82},{id:'press_recover',frequency:58}];
+const base:any={playerName:'A',overall:105,attributes:{ballControl:92,dribbling:90,tightPossession:91,balance:88,lowPass:93,loftedPass:89,stamina:87,speed:82,acceleration:84},nativeSkills:['Passe de primeira'],specialSkills:[],additionalSkills:['Toque duplo'],impetos:[{name:'Passe'}]};
+const a=buildCanonicalDnaR457(base,actions);
+const b=buildCanonicalDnaR457({...base,playerName:'B',overall:120,additionalSkills:['Interceptação'],impetos:[{name:'Chute'}]},actions);
+assert.deepEqual(a.dimensions,b.dimensions,'Nome/GER/skill adicional/Ímpeto não podem reescrever DNA estrutural.');
+assert.equal(a.fingerprint,b.fingerprint);
+const nativeChanged=buildCanonicalDnaR457({...base,nativeSkills:['Interceptação']},actions);
+assert.notEqual(a.fingerprint,nativeChanged.fingerprint,'Skill nativa pode alterar evidência estrutural.');
+assert.ok(a.groupAffinity.passing!>0);
+assert.ok(a.dominant.length===3);
+console.log('R457 DNA aprovado: DNA canônico exclui estado mutável e entra por atributos/skills permanentes/ações.');

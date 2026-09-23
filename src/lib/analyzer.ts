@@ -5,6 +5,7 @@ import { buildSkillRecommendations, recommendAdditionalSkills, recommendImpetos 
 import { avg, calculatePri, calculateTacticalFit, clamp, clampDecimal, fillAttributes, gameplayPositionWeight, gameplayPriorityByMainPosition, playstylePositionBonus, positionScore, preferredPositionsByPlaystyle, roleName, styleText } from '../modules/analysis/analyzerPositionCoreR142';
 import { BASE_BY_POSITION, OFFICIAL_ADDITIONAL_SKILLS, SKILL_PROFILES, SPECIAL_SKILL_ANALYSIS_META } from '../modules/analysis/analyzerCatalog';
 import { canonicalSkillName } from './officialSkillIdentity';
+import { inspectPlaystyleActivationR124 } from './efootball2027PhaseCatalogR124';
 import { TRAINING_LABELS, type BuildVariant, type TrainingComparisonItem } from './trainingEngine';
 import { buildMaxPrecisionAnalysis } from './maxPrecision';
 import { buildEliteEvolutionAnalysis } from './eliteEvolution';
@@ -200,7 +201,7 @@ function addSkillIdentityWeights(weights: Record<TrainingKey, number>, parsed: P
 }
 
 function addPlaystyleIdentityWeights(weights: Record<TrainingKey, number>, parsed: ParsedCard, position: PositionCode) {
-  const style = styleText(parsed.playstyle);
+  const style = activeFunctionStyleTextR457(parsed, position);
   const add = (key: TrainingKey, amount: number) => { weights[key] += amount; };
   if (/armador criativo|creative playmaker|classico 10|clássico 10|orquestrador/.test(style)) { add('passing',1.15); add('dribbling',.55); }
   if (/jogador de infiltracao|jogador de infiltração|hole player|atacante surpresa/.test(style)) { add('dexterity',1.1); add('shooting',.75); }
@@ -707,8 +708,17 @@ function buildCardDnaAnalysis(position: PositionCode, objective: Objective, a: R
 const POSITION_FAMILY: Record<PositionCode, string> = { GK:'goleiro', CB:'zagueiro', LB:'lateral', RB:'lateral', DMF:'volante', CMF:'meia de ligação', AMF:'meia atacante', LMF:'meia lateral', RMF:'meia lateral', LWF:'ponta', RWF:'ponta', SS:'segundo atacante', CF:'centroavante' };
 function positionFamily(position: PositionCode) { return POSITION_FAMILY[position]; }
 
+function activeFunctionStyleTextR457(parsed: ParsedCard, selected: PositionCode) {
+  const active:string[]=[];
+  const offensive=inspectPlaystyleActivationR124(parsed.offensivePlaystyle ?? parsed.playstyle, 'OFFENSIVE', selected);
+  const defensive=inspectPlaystyleActivationR124(parsed.defensivePlaystyle, 'DEFENSIVE', selected);
+  if(offensive.status==='LIKELY_ACTIVE' && offensive.canonical) active.push(offensive.canonical);
+  if(defensive.status==='LIKELY_ACTIVE' && defensive.canonical) active.push(defensive.canonical);
+  return styleText(active.join(' '));
+}
+
 function realFunctionLabel(parsed: ParsedCard, selected: PositionCode, objective: Objective, a: Required<Attributes>) {
-  const style = styleText(parsed.playstyle);
+  const style = activeFunctionStyleTextR457(parsed, selected);
   if (selected === 'GK') {
     if (/ofensivo/.test(style) || a.lowPass >= 72 || a.kickingPower >= 82) return 'GOL de reposição e saída rápida';
     if (a.goalkeeperReflexes >= a.goalkeeperReach + 3) return 'GOL de reflexo';

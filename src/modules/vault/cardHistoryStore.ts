@@ -1,3 +1,4 @@
+// R418_UNBOUNDED_PERSISTENT_COLLECTIONS: conteúdo do usuário não é descartado por teto artificial de quantidade.
 import {
   ATTRIBUTE_PT,
   type AnalysisResult,
@@ -5,8 +6,8 @@ import {
   type PositionCode
 } from '@/lib/analyzer';
 import { createProductionAnalysisR138 } from '@/modules/analysis/productionOrchestratorR138';
-import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
-import { analysisUsagePositionR138, optionalAnalysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { cardIdentityAliasesR457, cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { analysisUsageFunctionR457, analysisUsageIdentityKeyR138, analysisUsagePositionR138, optionalAnalysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { buildVaultIdentitySealR134 } from './vaultIdentitySealR134';
 import {
   accountDatabaseName,
@@ -19,6 +20,7 @@ import {
   isNativeVaultStorageAvailable,
   nativeVaultInfo,
   nativeVaultRead,
+  nativeVaultRemove,
   nativeVaultWrite
 } from '@/lib/nativeVaultStorage';
 
@@ -75,10 +77,411 @@ export const HISTORY_STORE_NAME = 'fichas';
 
 export const LEARNING_KEY = 'buildmaster_local_learning_v24_3';
 
-export const HISTORY_LIMIT = 200;
-export const STARTUP_NATIVE_HISTORY_MAX_BYTES = 32 * 1024 * 1024;
+export const HISTORY_LIMIT = Infinity;
+export const STARTUP_NATIVE_HISTORY_MAX_BYTES = 0;
 
 const NATIVE_HISTORY_STORAGE_KEY = () => accountDatabaseName(`${HISTORY_DB_NAME}_internal_file_v1`);
+
+export const NATIVE_HISTORY_BUCKET_COUNT_R409 = 64;
+export const NATIVE_HISTORY_SHARD_VERSION_R409 = 2;
+export const NATIVE_HISTORY_READ_CONCURRENCY_R410 = 8;
+export const NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412 = 2048;
+
+const NATIVE_HISTORY_MANIFEST_KEY_R409 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_manifest_v2`;
+const NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_manifest_backup_v2`;
+const NATIVE_HISTORY_BUCKET_KEY_R409 = (index: number, fingerprint: string) => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_b${index}_${fingerprint}`;
+
+type NativeHistoryBucketManifestR409 = { index: number; key: string; fingerprint: string; count: number };
+type NativeHistoryManifestR409 = {
+  version: typeof NATIVE_HISTORY_SHARD_VERSION_R409;
+  count: number;
+  bucketCount: number;
+  buckets: NativeHistoryBucketManifestR409[];
+  order: string[];
+  savedAt: string;
+};
+
+function fnv1a32R409(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function djb2R409(value: string): number {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash, 33) ^ value.charCodeAt(index);
+  return hash >>> 0;
+}
+
+function contentFingerprintR409(value: string): string {
+  return `${fnv1a32R409(value).toString(36)}-${djb2R409(value).toString(36)}-${value.length.toString(36)}`;
+}
+
+function bucketIndexR409(saveKey: string): number {
+  return fnv1a32R409(saveKey) % NATIVE_HISTORY_BUCKET_COUNT_R409;
+}
+
+export const NATIVE_HISTORY_TRANSACTION_VERSION_R411 = 1;
+const NATIVE_HISTORY_TRANSACTION_KEY_R411 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r411_transaction_v1`;
+const NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411 = `${HISTORY_KEY}_native_fallback_authority_r411`;
+
+type NativeHistoryTransactionJournalR411 = {
+  version: typeof NATIVE_HISTORY_TRANSACTION_VERSION_R411;
+  targetManifestFingerprint: string;
+  cleanupKeys: string[];
+  startedAt: string;
+};
+
+type NativeHistorySecondaryAuthorityR411 = {
+  version: typeof NATIVE_HISTORY_TRANSACTION_VERSION_R411;
+  backend: 'indexeddb' | 'local-fallback';
+  count: number;
+  savedAt: string;
+};
+
+let nativeHistoryTransactionActiveR411 = false;
+
+function parseNativeHistoryTransactionJournalR411(raw: string | null): NativeHistoryTransactionJournalR411 | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<NativeHistoryTransactionJournalR411>;
+    if (value.version !== NATIVE_HISTORY_TRANSACTION_VERSION_R411) return null;
+    if (typeof value.targetManifestFingerprint !== 'string' || !value.targetManifestFingerprint) return null;
+    if (!Array.isArray(value.cleanupKeys) || value.cleanupKeys.length > NATIVE_HISTORY_BUCKET_COUNT_R409 * 2) return null;
+    if (!value.cleanupKeys.every((key) => typeof key === 'string' && Boolean(key))) return null;
+    if (new Set(value.cleanupKeys).size !== value.cleanupKeys.length) return null;
+    if (typeof value.startedAt !== 'string' || !value.startedAt) return null;
+    return value as NativeHistoryTransactionJournalR411;
+  } catch {
+    return null;
+  }
+}
+
+function parseNativeHistorySecondaryAuthorityR411(raw: string | null): NativeHistorySecondaryAuthorityR411 | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<NativeHistorySecondaryAuthorityR411>;
+    if (value.version !== NATIVE_HISTORY_TRANSACTION_VERSION_R411) return null;
+    if (value.backend !== 'indexeddb' && value.backend !== 'local-fallback') return null;
+    if (!Number.isInteger(value.count) || Number(value.count) < 0) return null;
+    if (typeof value.savedAt !== 'string' || !value.savedAt) return null;
+    return value as NativeHistorySecondaryAuthorityR411;
+  } catch {
+    return null;
+  }
+}
+
+function writeNativeHistorySecondaryAuthorityR411(
+  backend: NativeHistorySecondaryAuthorityR411['backend'],
+  count: number
+): boolean {
+  const marker: NativeHistorySecondaryAuthorityR411 = {
+    version: NATIVE_HISTORY_TRANSACTION_VERSION_R411,
+    backend,
+    count,
+    savedAt: new Date().toISOString(),
+  };
+  return writeAccountStorage(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411, JSON.stringify(marker));
+}
+
+function manifestProtectedBucketKeysR411(...manifests: Array<NativeHistoryManifestR409 | null>): Set<string> {
+  return new Set(manifests.flatMap((manifest) => (manifest?.buckets ?? []).map((bucket) => bucket.key)));
+}
+
+async function verifyNativePayloadR411(key: string, expected: string, label: string): Promise<void> {
+  const stored = await nativeVaultRead(key);
+  if (stored !== expected) throw new Error(`R411: confirmação de escrita falhou em ${label}.`);
+}
+
+async function cleanupInterruptedNativeTransactionR411(): Promise<void> {
+  if (nativeHistoryTransactionActiveR411) return;
+  let journalRaw: string | null;
+  try {
+    journalRaw = await nativeVaultRead(NATIVE_HISTORY_TRANSACTION_KEY_R411());
+  } catch {
+    return;
+  }
+  if (!journalRaw) return;
+
+  const journal = parseNativeHistoryTransactionJournalR411(journalRaw);
+  if (!journal) {
+    await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411()).catch(() => undefined);
+    return;
+  }
+
+  let currentRaw: string | null;
+  let backupRaw: string | null;
+  try {
+    [currentRaw, backupRaw] = await Promise.all([
+      nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()),
+      nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()),
+    ]);
+  } catch {
+    // Sem saber quais shards ainda estão protegidos por um manifesto, não removemos nada.
+    return;
+  }
+
+  const protectedKeys = manifestProtectedBucketKeysR411(
+    parseNativeHistoryManifestR409(currentRaw),
+    parseNativeHistoryManifestR409(backupRaw)
+  );
+  let cleanupFailed = false;
+  for (const key of journal.cleanupKeys) {
+    if (protectedKeys.has(key)) continue;
+    try {
+      await nativeVaultRemove(key);
+    } catch {
+      cleanupFailed = true;
+    }
+  }
+  if (!cleanupFailed) await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411()).catch(() => undefined);
+}
+
+function parseNativeHistoryManifestR409(raw: string | null): NativeHistoryManifestR409 | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<NativeHistoryManifestR409>;
+    if (value.version !== NATIVE_HISTORY_SHARD_VERSION_R409) return null;
+    if (!Number.isInteger(value.count) || Number(value.count) < 0) return null;
+    if (value.bucketCount !== NATIVE_HISTORY_BUCKET_COUNT_R409) return null;
+    if (!Array.isArray(value.order) || value.order.length !== value.count || !value.order.every((key) => typeof key === 'string' && Boolean(key))) return null;
+    if (new Set(value.order).size !== value.count) return null;
+    if (!Array.isArray(value.buckets)) return null;
+    const seenIndexes = new Set<number>();
+    const seenKeys = new Set<string>();
+    let declaredCountR410 = 0;
+    for (const bucket of value.buckets) {
+      if (!bucket || !Number.isInteger(bucket.index) || bucket.index < 0 || bucket.index >= NATIVE_HISTORY_BUCKET_COUNT_R409) return null;
+      if (typeof bucket.key !== 'string' || !bucket.key || typeof bucket.fingerprint !== 'string' || !bucket.fingerprint) return null;
+      if (!Number.isInteger(bucket.count) || bucket.count <= 0 || seenIndexes.has(bucket.index) || seenKeys.has(bucket.key)) return null;
+      seenIndexes.add(bucket.index);
+      seenKeys.add(bucket.key);
+      declaredCountR410 += bucket.count;
+    }
+    if (declaredCountR410 !== value.count) return null;
+    return value as NativeHistoryManifestR409;
+  } catch {
+    return null;
+  }
+}
+
+async function mapWithConcurrencyR410<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (!items.length) return [];
+  const output = new Array<R>(items.length);
+  let cursor = 0;
+  const runner = async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= items.length) return;
+      output[index] = await worker(items[index], index);
+    }
+  };
+  const workers = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workers }, () => runner()));
+  return output;
+}
+
+function nativeHistoryReadConcurrencyR412(manifest: NativeHistoryManifestR409): number {
+  if (!manifest.buckets.length) return 1;
+  const largestBucket = manifest.buckets.reduce((largest, bucket) => Math.max(largest, bucket.count), 1);
+  return Math.max(
+    1,
+    Math.min(
+      NATIVE_HISTORY_READ_CONCURRENCY_R410,
+      Math.floor(NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412 / largestBucket) || 1
+    )
+  );
+}
+
+async function readAndNormalizeNativeHistoryBucketR412(
+  bucket: NativeHistoryBucketManifestR409,
+  fallbackOffset: number
+): Promise<SavedAnalysis[]> {
+  const raw = await nativeVaultRead(bucket.key);
+  if (!raw || contentFingerprintR409(raw) !== bucket.fingerprint) {
+    throw new Error(`R412: shard ${bucket.index} ausente ou corrompido.`);
+  }
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed) || parsed.length !== bucket.count) {
+    throw new Error(`R412: shard ${bucket.index} com contagem inválida.`);
+  }
+  return normalizeHistoryList(parsed, fallbackOffset);
+}
+
+async function readNativeHistoryManifestPayloadR409(manifest: NativeHistoryManifestR409): Promise<SavedAnalysis[]> {
+  if (!manifest.count) return [];
+
+  // R412: a saída nasce diretamente na ordem final. Não retemos os arrays JSON
+  // de todos os shards até o fim da leitura, reduzindo muito o pico de memória.
+  const ordered = new Array<SavedAnalysis | undefined>(manifest.count);
+  const orderIndex = new Map<string, number>();
+  for (let index = 0; index < manifest.order.length; index += 1) {
+    orderIndex.set(manifest.order[index], index);
+  }
+
+  // Mantém o fallbackIndex compatível com a ordem de buckets usada pelo R410,
+  // mesmo que o agendamento abaixo priorize shards maiores para reduzir o tail.
+  const fallbackOffsetByKey = new Map<string, number>();
+  let fallbackOffset = 0;
+  for (const bucket of manifest.buckets) {
+    fallbackOffsetByKey.set(bucket.key, fallbackOffset);
+    fallbackOffset += bucket.count;
+  }
+  if (fallbackOffset !== manifest.count) throw new Error('R412: contagem do manifesto divergiu antes da hidratação.');
+
+  const scheduledBuckets = [...manifest.buckets].sort((left, right) => (
+    right.count - left.count || left.index - right.index
+  ));
+  const concurrency = nativeHistoryReadConcurrencyR412(manifest);
+
+  await mapWithConcurrencyR410(
+    scheduledBuckets,
+    concurrency,
+    async (bucket) => {
+      const normalized = await readAndNormalizeNativeHistoryBucketR412(
+        bucket,
+        fallbackOffsetByKey.get(bucket.key) ?? 0
+      );
+      for (const item of normalized) {
+        const targetIndex = orderIndex.get(item.saveKey);
+        if (targetIndex === undefined) {
+          throw new Error(`R412: shard contém ficha ausente da ordem ou duplicada: ${item.saveKey}.`);
+        }
+        ordered[targetIndex] = item;
+        orderIndex.delete(item.saveKey);
+      }
+      return undefined;
+    }
+  );
+
+  if (orderIndex.size !== 0 || ordered.some((item) => item === undefined)) {
+    throw new Error('R412: manifesto e shards divergiram durante a hidratação incremental.');
+  }
+  return ordered as SavedAnalysis[];
+}
+
+async function promoteRecoveredNativeManifestR410(raw: string): Promise<void> {
+  try {
+    await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), raw);
+  } catch (error) {
+    console.warn('R410: snapshot anterior foi recuperado, mas a promoção automática falhou.', error);
+  }
+}
+
+async function readNativeHistoryShardedR409(): Promise<SavedAnalysis[] | null> {
+  const manifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()).catch(() => null);
+  const manifest = parseNativeHistoryManifestR409(manifestRaw);
+  if (manifest && manifestRaw) {
+    try {
+      return await readNativeHistoryManifestPayloadR409(manifest);
+    } catch (error) {
+      console.warn('R410: snapshot nativo atual inválido; tentando snapshot anterior.', error);
+    }
+  }
+
+  // O backup não participa do caminho saudável. Só há I/O extra quando o atual
+  // está ausente, inválido ou algum shard falhou na validação.
+  const backupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()).catch(() => null);
+  if (!manifestRaw && !backupRaw) return null;
+  const backup = parseNativeHistoryManifestR409(backupRaw);
+  if (backup && backupRaw) {
+    const recovered = await readNativeHistoryManifestPayloadR409(backup);
+    await promoteRecoveredNativeManifestR410(backupRaw);
+    return recovered;
+  }
+  throw new Error('R410: nenhum snapshot nativo íntegro disponível.');
+}
+
+async function writeNativeHistoryShardedR409(items: SavedAnalysis[]): Promise<void> {
+  await cleanupInterruptedNativeTransactionR411();
+  nativeHistoryTransactionActiveR411 = true;
+  let committed = false;
+  try {
+    const currentManifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()).catch(() => null);
+    const currentManifest = parseNativeHistoryManifestR409(currentManifestRaw);
+    const oldBackupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()).catch(() => null);
+    const oldBackup = parseNativeHistoryManifestR409(oldBackupRaw);
+    const currentByIndex = new Map((currentManifest?.buckets ?? []).map((bucket) => [bucket.index, bucket]));
+    const buckets = Array.from({ length: NATIVE_HISTORY_BUCKET_COUNT_R409 }, () => [] as SavedAnalysis[]);
+    for (const item of items) buckets[bucketIndexR409(item.saveKey)].push(item);
+
+    const nextBuckets: NativeHistoryBucketManifestR409[] = [];
+    const staged: Array<{ key: string; payload: string; fingerprint: string; index: number; count: number }> = [];
+    for (let index = 0; index < buckets.length; index += 1) {
+      const bucketItems = buckets[index];
+      if (!bucketItems.length) continue;
+      const payload = JSON.stringify(bucketItems);
+      const fingerprint = contentFingerprintR409(payload);
+      const previous = currentByIndex.get(index);
+      if (previous && previous.fingerprint === fingerprint && previous.count === bucketItems.length) {
+        nextBuckets.push(previous);
+        continue;
+      }
+      const key = NATIVE_HISTORY_BUCKET_KEY_R409(index, fingerprint);
+      staged.push({ key, payload, fingerprint, index, count: bucketItems.length });
+      nextBuckets.push({ index, key, fingerprint, count: bucketItems.length });
+    }
+
+    const manifest: NativeHistoryManifestR409 = {
+      version: NATIVE_HISTORY_SHARD_VERSION_R409,
+      count: items.length,
+      bucketCount: NATIVE_HISTORY_BUCKET_COUNT_R409,
+      buckets: nextBuckets,
+      order: items.map((item) => item.saveKey),
+      savedAt: new Date().toISOString(),
+    };
+    const manifestRaw = JSON.stringify(manifest);
+    const cleanupKeys = Array.from(new Set<string>([
+      ...staged.map((entry) => entry.key),
+      ...(oldBackup?.buckets ?? []).map((bucket) => bucket.key),
+    ]));
+    const journal: NativeHistoryTransactionJournalR411 = {
+      version: NATIVE_HISTORY_TRANSACTION_VERSION_R411,
+      targetManifestFingerprint: contentFingerprintR409(manifestRaw),
+      cleanupKeys,
+      startedAt: new Date().toISOString(),
+    };
+    const journalRaw = JSON.stringify(journal);
+
+    // O journal é persistido e confirmado antes de qualquer shard novo. Se o APK for
+    // interrompido, a próxima abertura sabe exatamente quais arquivos podem ter ficado órfãos.
+    await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw);
+    await verifyNativePayloadR411(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw, 'journal transacional');
+
+    for (const entry of staged) {
+      await nativeVaultWrite(entry.key, entry.payload);
+      await verifyNativePayloadR411(entry.key, entry.payload, `shard ${entry.index}`);
+    }
+
+    // Snapshot anterior vira recuperação e é confirmado antes do ponteiro atual. Portanto, uma interrupção durante
+    // a troca do manifesto nunca exige misturar uma geração antiga com shards novos.
+    if (currentManifest && currentManifestRaw) {
+      await nativeVaultWrite(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw);
+      await verifyNativePayloadR411(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw, 'manifesto de recuperação');
+    }
+
+    await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw);
+    await verifyNativePayloadR411(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw, 'manifesto atual');
+    committed = true;
+
+    // O monólito legado só deixa de existir depois de o commit atual ter sido lido de volta.
+    await nativeVaultRemove(NATIVE_HISTORY_STORAGE_KEY()).catch(() => undefined);
+  } finally {
+    nativeHistoryTransactionActiveR411 = false;
+  }
+
+  // Depois do commit, o coletor preserva automaticamente todos os shards referenciados pelo
+  // atual e pelo backup e remove somente staging/gerações antigas realmente órfãs.
+  if (committed) await cleanupInterruptedNativeTransactionR411();
+}
 
 export type LearnedCardMemory = {
   playerName: string;
@@ -98,11 +501,27 @@ export function memoryKey(value: string) {
     .replace(/(^-|-$)/g, '');
 }
 
+function sameHistoryUsageIdentityR457(left: SavedAnalysis, right: SavedAnalysis) {
+  if (/-variante-/i.test(left.saveKey) || /-variante-/i.test(right.saveKey)) return left.saveKey === right.saveKey;
+  if (analysisUsagePositionR138(left.result) !== analysisUsagePositionR138(right.result)) return false;
+  if (analysisUsageFunctionR457(left.result) !== analysisUsageFunctionR457(right.result)) return false;
+  const rightAliases = new Set(cardIdentityAliasesR457(right.result.parsed));
+  return cardIdentityAliasesR457(left.result.parsed).some((alias) => rightAliases.has(alias));
+}
+
+function historyUsageIdentityTokensR457(item: SavedAnalysis): string[] {
+  const tokens = [`save:${item.saveKey}`];
+  if (/-variante-/i.test(item.saveKey)) return tokens;
+  const position = analysisUsagePositionR138(item.result);
+  const usageFunction = analysisUsageFunctionR457(item.result);
+  for (const alias of cardIdentityAliasesR457(item.result.parsed)) tokens.push(`usage:${alias}|${position}|${usageFunction}`);
+  return tokens;
+}
+
 export function resultHistoryKey(result: AnalysisResult) {
-  // R126: a chave do Cofre representa somente carta + função real de uso.
-  // GER, orçamento corrigido pelo OCR e nome da build são estado revisável e não podem duplicar a mesma ficha.
-  const cardIdentity = cardIdentityFingerprintR126(result.parsed);
-  return `${cardIdentity}-${analysisUsagePositionR138(result).toLowerCase()}`;
+  // R457 Stage 3: a carta é estável; a build é identificada por posição + função real de uso.
+  // GER, orçamento, ficha aplicada, skill adicional e Ímpeto nunca criam outra carta.
+  return analysisUsageIdentityKeyR138(result);
 }
 
 export function buildLegacyRecoveryText(result: Partial<AnalysisResult> | null | undefined, rawText = '') {
@@ -334,7 +753,7 @@ export async function writeIndexedHistory(items: SavedAnalysis[]): Promise<void>
   return new Promise((resolve, reject) => {
     const tx = db.transaction(HISTORY_STORE_NAME, 'readwrite');
     const store = tx.objectStore(HISTORY_STORE_NAME);
-    store.put(items.slice(0, HISTORY_LIMIT), HISTORY_KEY);
+    store.put(items, HISTORY_KEY);
     tx.oncomplete = () => {
       db.close();
       resolve();
@@ -348,10 +767,15 @@ export async function writeIndexedHistory(items: SavedAnalysis[]): Promise<void>
 
 export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
   const loaded: SavedAnalysis[] = [];
+  const seen = new Set<string>();
   for (const entry of entries) {
     try {
       const normalized = normalizeSavedAnalysis(entry, offset + loaded.length);
-      if (normalized && !loaded.some((item) => item.saveKey === normalized.saveKey)) loaded.push(normalized);
+      if (!normalized) continue;
+      const tokens = historyUsageIdentityTokensR457(normalized);
+      if (tokens.some((token) => seen.has(token))) continue;
+      for (const token of tokens) seen.add(token);
+      loaded.push(normalized);
     } catch (error) {
       console.error('Entrada defeituosa do Cofre ignorada durante a recuperação:', error);
     }
@@ -360,11 +784,52 @@ export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnaly
 }
 
 export function mergeHistoryLists(primary: SavedAnalysis[], secondary: SavedAnalysis[]): SavedAnalysis[] {
-  const map = new Map<string, SavedAnalysis>();
+  // R459: merge linear por tokens canônicos de identidade. Mantém exatamente a precedência histórica:
+  // secondary entra primeiro e primary substitui a primeira identidade equivalente encontrada.
+  const merged: SavedAnalysis[] = [];
+  const tokensByIndex: string[][] = [];
+  const tokenIndexes = new Map<string, Set<number>>();
+
+  const addIndex = (index: number, tokens: string[]) => {
+    tokensByIndex[index] = tokens;
+    for (const token of tokens) {
+      let indexes = tokenIndexes.get(token);
+      if (!indexes) { indexes = new Set<number>(); tokenIndexes.set(token, indexes); }
+      indexes.add(index);
+    }
+  };
+  const removeIndex = (index: number) => {
+    for (const token of tokensByIndex[index] ?? []) {
+      const indexes = tokenIndexes.get(token);
+      if (!indexes) continue;
+      indexes.delete(index);
+      if (!indexes.size) tokenIndexes.delete(token);
+    }
+  };
+  const equivalentIndex = (tokens: string[]) => {
+    let best = -1;
+    for (const token of tokens) {
+      for (const index of tokenIndexes.get(token) ?? []) {
+        if (best < 0 || index < best) best = index;
+      }
+    }
+    return best;
+  };
+
   for (const item of [...secondary, ...primary]) {
-    map.set(item.saveKey, item);
+    const tokens = historyUsageIdentityTokensR457(item);
+    const index = equivalentIndex(tokens);
+    if (index >= 0) {
+      removeIndex(index);
+      merged[index] = item;
+      addIndex(index, tokens);
+    } else {
+      const nextIndex = merged.length;
+      merged.push(item);
+      addIndex(nextIndex, tokens);
+    }
   }
-  return Array.from(map.values()).slice(0, HISTORY_LIMIT);
+  return merged;
 }
 
 export type HistoryLoadOptions = {
@@ -380,57 +845,100 @@ export type StartupHistoryLoadResult = {
 
 export async function loadHistoryStore(options: HistoryLoadOptions = {}): Promise<SavedAnalysis[]> {
   const loaded: SavedAnalysis[] = [];
+  const loadedKeys = new Set<string>();
+  const pushUnique = (item: SavedAnalysis) => {
+    if (loadedKeys.has(item.saveKey)) return;
+    loadedKeys.add(item.saveKey);
+    loaded.push(item);
+  };
+  let nativeAuthoritativeR409 = false;
+  const secondaryAuthorityR411 = parseNativeHistorySecondaryAuthorityR411(
+    readAccountStorage(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411)
+  );
+
+  // A coleta do journal é independente de quem será a autoridade desta abertura. Se o plugin
+  // nativo voltou a responder, aproveitamos para retirar staging órfão mesmo enquanto o fallback
+  // mais novo continua sendo a fonte oficial dos dados.
+  if (isNativeVaultStorageAvailable() && !options.skipNative) await cleanupInterruptedNativeTransactionR411();
+
+  // Se uma gravação nativa falhou depois de o fallback ter sido salvo, o fallback é a versão
+  // mais nova e explícita da verdade. Não permitimos que um snapshot nativo antigo ressuscite
+  // fichas removidas ou descarte alterações mais recentes.
+  if (secondaryAuthorityR411) {
+    try {
+      if (secondaryAuthorityR411.backend === 'indexeddb') {
+        for (const item of normalizeHistoryList(await readIndexedHistory())) pushUnique(item);
+      } else {
+        const stored = readAccountStorage(HISTORY_KEY);
+        const parsed = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(parsed)) throw new Error('R411: fallback local autoritativo inválido.');
+        for (const item of normalizeHistoryList(parsed)) pushUnique(item);
+      }
+      if (loaded.length !== secondaryAuthorityR411.count) {
+        console.warn(`R411: fallback autoritativo declarou ${secondaryAuthorityR411.count} ficha(s), mas ${loaded.length} foram recuperadas.`);
+      }
+    } catch (error) {
+      console.error('R411: não foi possível ler o fallback autoritativo mais recente.', error);
+    }
+    return loaded;
+  }
 
   if (isNativeVaultStorageAvailable() && !options.skipNative) {
     try {
-      const storageKey = NATIVE_HISTORY_STORAGE_KEY();
-      const info = await nativeVaultInfo(storageKey).catch(() => null);
-      const maxNativeBytes = Number(options.maxNativeBytes || 0);
-      if (maxNativeBytes > 0 && Number(info?.usedBytes || 0) > maxNativeBytes) {
-        options.onNativeDeferred?.(Number(info?.usedBytes || 0));
+      const sharded = await readNativeHistoryShardedR409();
+      if (sharded !== null) {
+        for (const item of sharded) pushUnique(item);
+        nativeAuthoritativeR409 = true;
       } else {
-        const raw = await nativeVaultRead(storageKey, maxNativeBytes > 0 ? maxNativeBytes : undefined);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(parsed)) {
-          for (const item of normalizeHistoryList(parsed)) {
-            if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
+        // Migração transparente: instalações antigas ainda podem ter o snapshot monolítico.
+        const storageKey = NATIVE_HISTORY_STORAGE_KEY();
+        const info = await nativeVaultInfo(storageKey).catch(() => null);
+        const maxNativeBytes = Number(options.maxNativeBytes || 0);
+        if (maxNativeBytes > 0 && Number(info?.usedBytes || 0) > maxNativeBytes) {
+          options.onNativeDeferred?.(Number(info?.usedBytes || 0));
+        } else {
+          const raw = await nativeVaultRead(storageKey, maxNativeBytes > 0 ? maxNativeBytes : undefined);
+          if (raw !== null) {
+            const parsed = raw ? JSON.parse(raw) : [];
+            if (Array.isArray(parsed)) {
+              for (const item of normalizeHistoryList(parsed)) pushUnique(item);
+              nativeAuthoritativeR409 = true;
+            }
           }
         }
       }
-    } catch {
-      // O arquivo principal permanece preservado. As rotas web podem abrir o app sem ele.
+    } catch (error) {
+      console.error('R411: snapshot nativo indisponível; recuperando pelas rotas secundárias.', error);
     }
   }
 
-  try {
-    for (const item of normalizeHistoryList(await readIndexedHistory(), loaded.length)) {
-      if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
-    }
-    if (!loaded.length) {
-      const legacy = normalizeHistoryList(await readLegacyIndexedHistoryForAdmin());
-      for (const item of legacy) if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
-      if (legacy.length) await writeIndexedHistory(legacy);
-    }
-  } catch {
-    // Se o IndexedDB falhar, o app tenta recuperar pelo armazenamento antigo.
-  }
-
-  try {
-    const keys = [HISTORY_KEY, ...OLD_HISTORY_KEYS];
-    for (const key of keys) {
-      const stored = readAccountStorage(key);
-      if (!stored) continue;
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) continue;
-      for (const item of normalizeHistoryList(parsed, loaded.length)) {
-        if (!loaded.some((entry) => entry.saveKey === item.saveKey)) loaded.push(item);
+  if (!nativeAuthoritativeR409) {
+    try {
+      for (const item of normalizeHistoryList(await readIndexedHistory(), loaded.length)) pushUnique(item);
+      if (!loaded.length) {
+        const legacy = normalizeHistoryList(await readLegacyIndexedHistoryForAdmin());
+        for (const item of legacy) pushUnique(item);
+        if (legacy.length) await writeIndexedHistory(legacy);
       }
+    } catch {
+      // Se o IndexedDB falhar, o app tenta recuperar pelo armazenamento antigo.
     }
-  } catch {
-    // O cofre antigo é opcional; falha de leitura não pode travar o app.
+
+    try {
+      const keys = [HISTORY_KEY, ...OLD_HISTORY_KEYS];
+      for (const key of keys) {
+        const stored = readAccountStorage(key);
+        if (!stored) continue;
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) continue;
+        for (const item of normalizeHistoryList(parsed, loaded.length)) pushUnique(item);
+      }
+    } catch {
+      // O cofre antigo é opcional; falha de leitura não pode travar o app.
+    }
   }
 
-  return loaded.slice(0, HISTORY_LIMIT);
+  return loaded;
 }
 
 export async function loadHistoryStoreForStartup(): Promise<StartupHistoryLoadResult> {
@@ -446,11 +954,12 @@ export function compactHistoryForNativeStorage(items: SavedAnalysis[]): SavedAna
   // O print inteiro não é duplicado no Cofre: ele costuma ser a maior parte do tamanho.
   // A ficha calculada, habilidades, Booster, observações e a imagem recortada continuam salvos.
   const maxPlayerImageChars = 900_000;
-  const maxEntriesWithImage = 60;
-  return items.slice(0, HISTORY_LIMIT).map((entry, index) => ({
+  let retainedImageChars = 0;
+  const maxRetainedImageChars = 6_000_000;
+  return items.map((entry) => ({
     ...entry,
     folderId: entry.folderId,
-    playerImage: index < maxEntriesWithImage && entry.playerImage && entry.playerImage.length <= maxPlayerImageChars ? entry.playerImage : null,
+    playerImage: entry.playerImage && entry.playerImage.length <= maxPlayerImageChars && retainedImageChars + entry.playerImage.length <= maxRetainedImageChars ? (retainedImageChars += entry.playerImage.length, entry.playerImage) : null,
     fullPreview: null,
     rawText: String(entry.rawText || '').slice(0, 50_000),
     changeLog: entry.changeLog?.slice(0, 20)
@@ -459,7 +968,7 @@ export function compactHistoryForNativeStorage(items: SavedAnalysis[]): SavedAna
 
 export function compactHistoryForLocalFallback(items: SavedAnalysis[]): SavedAnalysis[] {
   // O localStorage é somente a última rota de emergência no navegador.
-  return compactHistoryForNativeStorage(items).slice(0, 40).map((item) => ({
+  return compactHistoryForNativeStorage(items).map((item) => ({
     ...item,
     playerImage: null,
     rawText: String(item.rawText || '').slice(0, 12_000)
@@ -473,16 +982,16 @@ export type HistoryPersistenceResult =
 let historyPersistenceQueue: Promise<HistoryPersistenceResult> = Promise.resolve({ saved: true, backend: 'indexeddb', items: 0 });
 
 async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
-  const next = items.slice(0, HISTORY_LIMIT);
+  const next = [...items];
+  const compacted = compactHistoryForNativeStorage(next);
   let nativeError: unknown = null;
   let indexedError: unknown = null;
+  const nativeAvailableR411 = isNativeVaultStorageAvailable();
 
-  if (isNativeVaultStorageAvailable()) {
+  if (nativeAvailableR411) {
     try {
-      const payload = JSON.stringify(compactHistoryForNativeStorage(next));
-      await nativeVaultWrite(NATIVE_HISTORY_STORAGE_KEY(), payload);
-      // Elimina apenas a cópia web antiga. O arquivo principal fica em
-      // getFilesDir(), memória privada do APK, e permanece após atualizações.
+      await writeNativeHistoryShardedR409(compacted);
+      removeAccountStorage(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411);
       removeAccountStorage(HISTORY_KEY);
       for (const key of OLD_HISTORY_KEYS) removeAccountStorage(key);
       return { saved: true, backend: 'native-internal', items: next.length };
@@ -492,15 +1001,39 @@ async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<His
   }
 
   try {
-    await writeIndexedHistory(compactHistoryForNativeStorage(next));
+    await writeIndexedHistory(compacted);
     removeAccountStorage(HISTORY_KEY);
+    if (nativeAvailableR411 && nativeError) {
+      const authoritySaved = writeNativeHistorySecondaryAuthorityR411('indexeddb', next.length);
+      if (!authoritySaved) {
+        return {
+          saved: false,
+          backend: 'none',
+          items: 0,
+          error: 'A ficha foi gravada no IndexedDB, mas o marcador de autoridade não pôde ser confirmado. Tente salvar novamente para evitar voltar ao snapshot nativo antigo.'
+        };
+      }
+    }
     return { saved: true, backend: 'indexeddb', items: next.length };
   } catch (cause) {
     indexedError = cause;
   }
 
   const fallbackSaved = writeAccountStorage(HISTORY_KEY, JSON.stringify(compactHistoryForLocalFallback(next)));
-  if (fallbackSaved) return { saved: true, backend: 'local-fallback', items: Math.min(next.length, 40) };
+  if (fallbackSaved) {
+    if (nativeAvailableR411 && nativeError) {
+      const authoritySaved = writeNativeHistorySecondaryAuthorityR411('local-fallback', next.length);
+      if (!authoritySaved) {
+        return {
+          saved: false,
+          backend: 'none',
+          items: 0,
+          error: 'O fallback local foi escrito, mas não pôde assumir autoridade com segurança. Tente salvar novamente.'
+        };
+      }
+    }
+    return { saved: true, backend: 'local-fallback', items: next.length };
+  }
 
   const detail = nativeError instanceof Error
     ? nativeError.message
@@ -511,7 +1044,7 @@ async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<His
 }
 
 export function persistHistoryStore(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
-  const snapshot = items.slice(0, HISTORY_LIMIT);
+  const snapshot = [...items];
   historyPersistenceQueue = historyPersistenceQueue
     .catch(() => ({ saved: false, backend: 'none', items: 0, error: 'Falha anterior de salvamento ignorada.' } as HistoryPersistenceResult))
     .then(() => persistHistoryStoreImmediate(snapshot));

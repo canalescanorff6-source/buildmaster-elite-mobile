@@ -10,7 +10,6 @@ import {
   upsertCorrectionForResult,
 } from '@/modules/builds/dynamicRules';
 import {
-  HISTORY_LIMIT,
   appendSavedEvent,
   ensureSkillProgress,
   memoryKey,
@@ -183,7 +182,7 @@ export function createCardVisionResultActionsR188(input: CardVisionResultActions
           const next = [
             item,
             ...current.filter((entry) => entry.id !== item.id && entry.saveKey !== previousKey && entry.saveKey !== nextKey),
-          ].slice(0, HISTORY_LIMIT);
+          ];
           return { nextHistory: next, value: item };
         }, `A confirmação de ${replacement.removedSkill} ficou apenas nesta sessão porque o Cofre não confirmou a gravação.`, true, {
           key: `replace-owned:${existing.id}:${replacement.removedSkill}`,

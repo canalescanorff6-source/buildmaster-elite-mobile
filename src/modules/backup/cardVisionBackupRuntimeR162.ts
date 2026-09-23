@@ -45,7 +45,7 @@ import { collectFullBackupSectionsR141, collectPlayersBackupSectionsR141 } from 
 import { commitCriticalVaultRestoreR140, commitVaultHistoryR140 } from '@/modules/vault/vaultPersistenceCoordinatorR140';
 import { runSerializedVaultCloudMutationR128 } from '@/modules/vault/vaultCloudQueueR128';
 import { downloadClientTextExportR129 } from '@/modules/export/clientTextExportR129';
-import { HISTORY_LIMIT, LEARNING_KEY, normalizeHistoryList } from '@/modules/vault/cardHistoryStore';
+import { LEARNING_KEY, normalizeHistoryList } from '@/modules/vault/cardHistoryStore';
 import type { CardVisionBackupControllerInputR162 } from './cardVisionBackupControllerTypesR170';
 
 export const CARDVISION_BACKUP_RUNTIME_R162_VERSION = '40.80-r162-backup-runtime-v1' as const;
@@ -304,7 +304,7 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
     const migrated = migrateBackup(envelope);
     const sections = migrated.envelope.sections;
     const stagedHistory = selected.history && Array.isArray(sections.history)
-      ? normalizeHistoryList(sections.history).slice(0, HISTORY_LIMIT)
+      ? normalizeHistoryList(sections.history)
       : undefined;
     const stagedEvolution = selected.evolution && sections.evolution && typeof sections.evolution === 'object'
       ? sections.evolution as Record<string, unknown>
@@ -640,11 +640,11 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
         setStatus('Backup não importado: nenhum jogador salvo foi encontrado no arquivo.');
         return;
       }
-      const next = [...imported, ...renderHistory.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT);
+      const next = [...imported, ...renderHistory.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))];
       const committed = await persistAndAdoptVaultHistoryR140(
         next,
         'O backup foi lido, mas o Cofre local não confirmou a importação.',
-        (current) => [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))].slice(0, HISTORY_LIMIT),
+        (current) => [...imported, ...current.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))],
         { key: 'import-vault-backup', label: 'Importando backup do Cofre' }
       );
       if (!committed) return;

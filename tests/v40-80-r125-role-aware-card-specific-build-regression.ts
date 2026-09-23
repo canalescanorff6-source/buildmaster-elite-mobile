@@ -34,7 +34,7 @@ const naturalCF:any=applyCleanSlatePerformance2027R119(resultFor({attrs:cfAttrs,
 const sameCardCB:any=applyCleanSlatePerformance2027R119(resultFor({attrs:cfAttrs,best:'CB',native:['Finalização de primeira','Cabeçada']}));
 const sameCardHighOverall:any=applyCleanSlatePerformance2027R119(resultFor({attrs:cfAttrs,overall:118,native:['Finalização de primeira','Cabeçada']}));
 
-assert.match(naturalCF.cleanSlate2027R119.version,/r125-role-aware-card-specific-performance-authority/);
+assert.ok(Number(naturalCF.cleanSlate2027R119.version.match(/-r(\d+)-/)?.[1])>=125,'R125: a autoridade Clean Slate não pode regredir abaixo da revisão card-specific.');
 assert.equal(naturalCF.cleanSlate2027R119.authority,'CLEAN_SLATE_SINGLE_WRITER');
 assert.equal(trainingPlanTotalCost(naturalCF.training),64);
 assert.equal(trainingPlanTotalCost(sameCardCB.training),64);
@@ -84,3 +84,59 @@ assert.ok(stopperCB.training.aerialStrength > buildCB.training.aerialStrength,'Z
 assert.ok(buildCB.training.dribbling <= 4 && stopperCB.training.dribbling <= 4,'Zagueiro não deve ganhar drible alto apenas porque o grupo matematicamente soma vários atributos.');
 
 console.log('r125 aprovada: posição de uso afeta a função sem apagar o DNA, estilo inativo não força receita, GER é neutro e cartas distintas geram fichas distintas por evidência.');
+
+
+// BM_R404_CARD_DNA_DIVERSITY_REGRESSION
+const r404SameStyleArchetypes:any[]=[
+  {...cfAttrs,ballControl:96,dribbling:96,tightPossession:95,balance:94,heading:63,jump:65,physicalContact:68,speed:83,acceleration:86,finishing:86},
+  {...cfAttrs,offensiveAwareness:96,speed:96,acceleration:97,balance:84,ballControl:84,dribbling:80,tightPossession:79,heading:66,jump:70,physicalContact:72},
+  {...cfAttrs,offensiveAwareness:95,finishing:97,kickingPower:96,curl:91,ballControl:84,dribbling:78,tightPossession:77,speed:82,acceleration:83,heading:70},
+  {...cfAttrs,heading:97,jump:96,physicalContact:97,finishing:91,kickingPower:91,balance:86,ballControl:77,dribbling:70,tightPossession:69,speed:78,acceleration:76},
+  {...cfAttrs,lowPass:94,loftedPass:91,ballControl:94,tightPossession:93,dribbling:89,balance:90,finishing:82,kickingPower:82,speed:80,acceleration:82,heading:65}
+];
+const r404ArchetypeBuilds=r404SameStyleArchetypes.map((attrs,index)=>applyCleanSlatePerformance2027R119(resultFor({name:`R404 DNA ${index}`,attrs,style:'Artilheiro',native:[]})));
+for(const build of r404ArchetypeBuilds){
+  assert.ok(Number(build.cleanSlate2027R119.version.match(/-r(\d+)-/)?.[1])>=404);
+  assert.equal(trainingPlanTotalCost(build.training),64);
+}
+const r404Signatures=new Set(r404ArchetypeBuilds.map(build=>JSON.stringify(build.training)));
+assert.ok(r404Signatures.size>=4,`R404: cinco CFs de mesmo papel, estilo e orçamento devem preservar diversidade real de DNA; assinaturas=${r404Signatures.size}.`);
+
+const r404NameA:any=applyCleanSlatePerformance2027R119(resultFor({name:'Nome A não decide',attrs:r404SameStyleArchetypes[0],style:'Artilheiro',native:[]}));
+const r404NameB:any=applyCleanSlatePerformance2027R119(resultFor({name:'Nome B não decide',attrs:r404SameStyleArchetypes[0],style:'Artilheiro',native:[]}));
+assert.deepEqual(r404NameA.training,r404NameB.training,'R404: nome não pode ser usado para fabricar diversidade.');
+
+const r404Partial:any=applyCleanSlatePerformance2027R119(resultFor({name:'R404 leitura parcial',style:'Artilheiro',native:[],attrs:{
+  offensiveAwareness:93,ballControl:91,dribbling:90,tightPossession:89,finishing:92,
+  speed:91,acceleration:92,kickingPower:90,balance:88,stamina:84
+}}));
+assert.equal(r404Partial.cleanSlate2027R119.status,'READY');
+assert.equal(r404Partial.training.passing,0,'R404: passe totalmente não observado não pode receber pontos por fallback artificial.');
+assert.equal(r404Partial.training.aerialStrength,0,'R404: bola aérea totalmente não observada não pode receber pontos por fallback artificial.');
+assert.equal(trainingPlanTotalCost(r404Partial.training),64);
+
+console.log('r404 aprovada: diversidade vem do DNA observado; posição/receita não domina, nome não interfere e atributo ausente não fabrica retorno.');
+
+
+// BM_R405_MARGINAL_RETURN_DIVERSITY_REGRESSION
+for(const build of r404ArchetypeBuilds){
+  assert.ok(Number(build.cleanSlate2027R119.version.match(/-r(\d+)-/)?.[1])>=405);
+  assert.equal(trainingPlanTotalCost(build.training),64);
+  assert.ok(build.cleanSlate2027R119.pointRationale.every((x:any)=>Number.isFinite(x.returnPerCost)),'R405: retorno marginal final deve ser auditável.');
+}
+assert.ok(new Set(r404ArchetypeBuilds.map(build=>JSON.stringify(build.training))).size>=4,'R405: desempate marginal não pode recolapsar os cinco DNAs em uma receita.');
+const r405Repeat:any=applyCleanSlatePerformance2027R119(resultFor({name:'R405 repetição determinística',attrs:r404SameStyleArchetypes[0],style:'Artilheiro',native:[]}));
+assert.deepEqual(r405Repeat.training,r404ArchetypeBuilds[0].training,'R405: mesma evidência deve produzir a mesma ficha sem aleatoriedade.');
+console.log('r405 aprovada: finalistas near-tie usam retorno marginal + DNA; desempenho continua primeiro e a ficha permanece determinística.');
+
+
+// BM_R406_PARETO_NO_WASTED_POINT_REGRESSION
+for(const build of r404ArchetypeBuilds){
+  assert.ok(Number(build.cleanSlate2027R119.version.match(/-r(\d+)-/)?.[1])>=406);
+  assert.equal(trainingPlanTotalCost(build.training),64);
+  assert.equal(build.cleanSlate2027R119.guards.exactBudget,true);
+}
+assert.ok(new Set(r404ArchetypeBuilds.map(build=>JSON.stringify(build.training))).size>=4,'R406: Pareto não pode recolapsar DNAs distintos em receita única.');
+const r406Again:any=applyCleanSlatePerformance2027R119(resultFor({name:'R406 determinismo',attrs:r404SameStyleArchetypes[3],style:'Artilheiro',native:[]}));
+assert.deepEqual(r406Again.training,r404ArchetypeBuilds[3].training,'R406: frontier Pareto precisa ser determinística.');
+console.log('r406 aprovada: ficha final permanece exata, determinística, diversa por DNA e protegida contra candidato Pareto-dominado no frontier.');

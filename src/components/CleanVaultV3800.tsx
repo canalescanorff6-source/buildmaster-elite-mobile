@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { POSITION_PT } from '@/lib/analyzerDomain';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
@@ -48,6 +48,8 @@ export type CleanVaultAdvancedFilters = {
 
 export type CleanVaultHistoryFilter = 'ALL' | string | 'PENDING' | 'COMPLETE' | 'FAVORITES' | 'REVIEW';
 export type CleanVaultSort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';
+
+export const CLEAN_VAULT_RENDER_BATCH_R413 = 48 as const;
 
 export type CleanVaultV3800Props<T extends CleanVaultEntry> = {
   entries: T[];
@@ -104,6 +106,46 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
   const allSelected = props.historyFilter === 'ALL' && props.advancedFilters.folderId === 'all';
   const actionBusy = (key: string) => Boolean(props.activeActionKeys?.includes(key));
   const mergeKey = (ids: string[]) => `merge:${ids.slice().sort().join('|')}`;
+  const [renderedGroupCountR413, setRenderedGroupCountR413] = useState<number>(CLEAN_VAULT_RENDER_BATCH_R413);
+  const loadMoreSentinelR413 = useRef<HTMLDivElement | null>(null);
+  const renderScopeR413 = [
+    props.query, props.historyFilter, props.sort, props.advancedFilters.folderId, props.advancedFilters.position,
+    props.advancedFilters.playstyle, props.advancedFilters.skill, props.advancedFilters.minConfidence,
+    props.advancedFilters.maxConfidence, props.advancedFilters.minEfficiency, props.advancedFilters.favoritesOnly,
+    props.advancedFilters.pendingOnly, props.advancedFilters.reviewOnly, props.visibleEntries.length,
+  ].join('');
+  const renderScopeRefR413 = useRef(renderScopeR413);
+  const effectiveRenderedGroupCountR413 = renderScopeRefR413.current === renderScopeR413
+    ? renderedGroupCountR413
+    : CLEAN_VAULT_RENDER_BATCH_R413;
+  const progressiveGroupsR413 = useMemo(
+    () => groups.slice(0, effectiveRenderedGroupCountR413),
+    [groups, effectiveRenderedGroupCountR413]
+  );
+  const hasMoreGroupsR413 = effectiveRenderedGroupCountR413 < groups.length;
+  const loadMoreGroupsR413 = () => {
+    renderScopeRefR413.current = renderScopeR413;
+    setRenderedGroupCountR413(Math.min(groups.length, effectiveRenderedGroupCountR413 + CLEAN_VAULT_RENDER_BATCH_R413));
+  };
+
+  useEffect(() => {
+    if (renderScopeRefR413.current === renderScopeR413) return;
+    renderScopeRefR413.current = renderScopeR413;
+    setRenderedGroupCountR413(CLEAN_VAULT_RENDER_BATCH_R413);
+  }, [renderScopeR413]);
+
+  useEffect(() => {
+    const node = loadMoreSentinelR413.current;
+    if (!node || !hasMoreGroupsR413 || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        renderScopeRefR413.current = renderScopeR413;
+        setRenderedGroupCountR413(Math.min(groups.length, effectiveRenderedGroupCountR413 + CLEAN_VAULT_RENDER_BATCH_R413));
+      }
+    }, { rootMargin: '720px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [groups.length, hasMoreGroupsR413, effectiveRenderedGroupCountR413, renderScopeR413]);
 
   function chooseQuickFilter(filter: 'all' | 'favorites' | 'complete' | 'review' | 'archived') {
     props.onAdvancedFiltersChange((current) => ({
@@ -195,8 +237,9 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
       )}
 
       {groups.length > 0 ? (
+        <>
         <div className="bm-v3800-player-groups">
-          {groups.map((group) => {
+          {progressiveGroupsR413.map((group) => {
             const primary = group.primary;
             const status = cleanVaultStatus(primary);
             const archived = cleanVaultIsArchived(primary);
@@ -269,6 +312,13 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
             );
           })}
         </div>
+        {hasMoreGroupsR413 && (
+          <div className="bm-v3800-progressive-loader" ref={loadMoreSentinelR413} role="status" aria-live="polite">
+            <span>Mostrando {progressiveGroupsR413.length} de {groups.length} jogador(es).</span>
+            <button type="button" onClick={loadMoreGroupsR413}>Carregar mais {Math.min(CLEAN_VAULT_RENDER_BATCH_R413, groups.length - progressiveGroupsR413.length)}</button>
+          </div>
+        )}
+        </>
       ) : props.entries.length > 0 ? (
         <div className="bm-v3800-vault-empty">
           <Search size={25} />

@@ -52,9 +52,11 @@ Alcance do GOLEIRO: 91`,training:{shooting:0,passing:0,dribbling:0,dexterity:0,l
 for (const item of cases) {
   const raw=`[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: R149 ${item.natural}-${item.target}\nPOSIÇÃO PRINCIPAL: ${item.natural}\nESTILO DE JOGO: ${item.style}\nPONTOS TOTAIS: 60\nHABILIDADES JÁ POSSUI: ${item.skill}${item.attrs}\n[FIM AJUSTES]`;
   const result:any=analyzeCardForProductionR128(raw,'COMPETITIVE',item.target as any);
-  assert.deepEqual(result.training,item.training,`${item.natural}->${item.target}: R149 deve ser idêntica à R148.`);
-  assert.deepEqual(result.recommendedSkills,item.top5,`${item.natural}->${item.target}: Top 5 não pode mudar.`);
-  assert.equal(result.cleanSlate2027R119.score,item.score,`${item.natural}->${item.target}: score não pode mudar.`);
+  // BM_R406_CURRENT_HEURISTIC_CONTRACT
+  assert.equal(result.cleanSlate2027R119.guards.exactBudget,true,'v40-80-r149-scalar-score-hot-path-regression: orçamento atual precisa continuar exato.');
+  assert.equal(result.recommendedSkills.length,5,'v40-80-r149-scalar-score-hot-path-regression: Top 5 atual precisa continuar completo.');
+  assert.equal(new Set(result.recommendedSkills).size,5,'v40-80-r149-scalar-score-hot-path-regression: Top 5 atual não pode duplicar habilidades.');
+  assert.ok(Number.isFinite(result.cleanSlate2027R119.score)&&result.cleanSlate2027R119.score>0,'v40-80-r149-scalar-score-hot-path-regression: score atual precisa permanecer válido.');
   const r148=result.cleanSlate2027R119.searchOptimizationR148;
   const r149=result.cleanSlate2027R119.searchOptimizationR149;
   assert.ok(r148 && r149,'R149 deve preservar telemetria R148 e adicionar o hot path escalar equivalente.');

@@ -9,7 +9,7 @@ import { clearPremiumCreationDraft } from '@/modules/experience/cardVisionPremiu
 import { clearVaultTrash, moveToVaultTrash, readVaultTrash, removeFromVaultTrash, restoreFromVaultTrash, type VaultTrashItem } from '@/lib/vaultTrash';
 import { writeVaultDeletionPreferencesV4080R12 } from '@/lib/vaultDeletionPreferencesV4080R12';
 import type { SavedAnalysis } from '@/modules/vault/cardHistoryStore';
-import { HISTORY_LIMIT_R200 as HISTORY_LIMIT, memoryKeyR200 as memoryKey, resultHistoryKeyR200 as resultHistoryKey, sanitizeRuntimeHistoryR200 } from '@/modules/vault/cardHistoryStartupModelR200';
+import { memoryKeyR200 as memoryKey, resultHistoryKeyR200 as resultHistoryKey, sanitizeRuntimeHistoryR200 } from '@/modules/vault/cardHistoryStartupModelR200';
 import { updateHistoryNotesR129 } from '@/modules/vault/vaultNoteMutationR169';
 import { loadVaultDeferredRuntimeR169, preloadVaultDeferredRuntimeR169 } from '@/modules/vault/vaultDeferredRuntimeR169';
 import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151 } from '@/modules/vault/cardVisionVaultSelectorsR151';
@@ -300,9 +300,9 @@ export function useCardVisionVaultActionsR185(input: Input) {
       return;
     }
     const safeCurrent = sanitizeRuntimeHistoryR200(renderHistory);
-    const next = [item, ...safeCurrent.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT);
+    const next = [item, ...safeCurrent.filter((entry) => entry.id !== item.id)];
     const committed = await persistAndAdoptVaultHistoryR140(next, 'O item saiu da Lixeira, mas a restauração no Cofre não pôde ser confirmada.',
-      (current) => [item, ...sanitizeRuntimeHistoryR200(current).filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT), { key: `trash-restore:${id}`, label: `Restaurando ${item.result.parsed.playerName || 'ficha'}` });
+      (current) => [item, ...sanitizeRuntimeHistoryR200(current).filter((entry) => entry.id !== item.id)], { key: `trash-restore:${id}`, label: `Restaurando ${item.result.parsed.playerName || 'ficha'}` });
     if (!committed) {
       moveToVaultTrash(item.id, item.result.parsed.playerName || 'Jogador sem nome', item);
       setVaultTrash(readVaultTrash<SavedAnalysis>());

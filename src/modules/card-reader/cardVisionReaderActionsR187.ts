@@ -47,6 +47,7 @@ export type CardVisionReaderActionsInputR187 = {
   readingMode: CardVisionReadingModeR187;
   objective: Objective;
   targetPosition: PositionCode | 'AUTO';
+  usageFunction: string;
   tacticalProfile: TacticalProfile;
   manualFields: ManualFields;
   cardPositionOverride: PositionCode | 'AUTO';
@@ -94,7 +95,7 @@ export type CardVisionReaderActionsInputR187 = {
 export function createCardVisionReaderActionsR187(input: CardVisionReaderActionsInputR187) {
   const {
     selectedFile, cardCropResult, pendingBackgroundCheckpoint, readerImageMemory, mainSection, rawText, fileName,
-    preview, qualityReport, readingMode, objective, targetPosition, tacticalProfile, manualFields, cardPositionOverride,
+    preview, qualityReport, readingMode, objective, targetPosition, usageFunction, tacticalProfile, manualFields, cardPositionOverride,
     playstyleOverride, defensivePlaystyleOverride, singlePrintSession, efhubCalibrationActiveRef,
     efhubCalibrationZonesRef, setObjective, setOcrCancelable, setLoading, setReaderProgress, setPendingBackgroundCheckpoint,
     setStatus, setPlayerCardImage, setCardCropResult, setFileName, setSelectedFile, setPreview, setCardCropAdjustOpen,
@@ -146,7 +147,7 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       if (objective !== 'COMPETITIVE') setObjective('COMPETITIVE');
       const lockedText = await textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
-      const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, imageFileName: fileName, tacticalProfile });
+      const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
         const confirmedReaderRuntime = singlePrintSession ? await loadReaderRuntimeR160() : null;
@@ -225,7 +226,7 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
 
   function buildReaderAnalysisContextR187(): ReaderAnalysisContextR163 {
     return {
-      selectedFile, mainSection, rawText, fileName, preview, qualityReport, readingMode, targetPosition, tacticalProfile,
+      selectedFile, mainSection, rawText, fileName, preview, qualityReport, readingMode, targetPosition, usageFunction, tacticalProfile,
       efhubCalibrationActiveRef, efhubCalibrationZonesRef,
       setReaderProgress, setLoading, setOcrCancelable, setResult, setDraftResult, setManualFields, setManualMode, setRawText,
       setOcrDone, setPremiumReadings, setTotalReadingSession, setSinglePrintSession, setStatus, setQualityReport, setOcrZones,

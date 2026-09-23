@@ -10,7 +10,7 @@ import {
   type MatchEvidenceDomainR135
 } from './matchEvidenceCalibrationR135';
 import { readMatchValidationRepositoryR137 } from './matchValidationRepositoryR137';
-import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { analysisUsageFunctionR457, analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 
 export const MATCH_EVIDENCE_CALIBRATION_R136_VERSION = '40.80-r136-temporal-context-calibration-v1' as const;
 export const MATCH_EVIDENCE_CONTEXT_R136 = `${EFOOTBALL_V600_SEASON}|${EFOOTBALL_V600_META_VERSION}|${EFOOTBALL_V600_LIVE_CATALOG_VERSION}` as const;
@@ -124,28 +124,37 @@ function sameOrAuto(current: unknown, observed: unknown) {
   return a === b;
 }
 
+function functionContextWeightR460(result: AnalysisResult, record: MatchValidationRecord) {
+  const current = normalize(analysisUsageFunctionR457(result));
+  const observed = normalize(record.usageFunction);
+  if (!observed) return .68;
+  if (!current || current === 'AUTO') return .82;
+  return current === observed ? 1 : .35;
+}
+
 function tacticalContextWeight(result: AnalysisResult, record: MatchValidationRecord, domain: MatchEvidenceDomainR135) {
   const sameStyle = sameOrAuto(result.tacticalProfile?.style, record.teamStyle);
   const sameFormation = sameOrAuto(result.tacticalProfile?.formation, record.formation);
   const contextSensitive = domain === 'movement' || domain === 'defending';
   const styleWeight = sameStyle === false ? (contextSensitive ? .70 : .88) : 1;
   const formationWeight = sameFormation === false ? (contextSensitive ? .82 : .94) : 1;
-  return styleWeight * formationWeight;
+  const functionWeight = functionContextWeightR460(result, record);
+  return styleWeight * formationWeight * functionWeight;
 }
 
 function generalContextWeight(result: AnalysisResult, record: MatchValidationRecord) {
   const sameStyle = sameOrAuto(result.tacticalProfile?.style, record.teamStyle);
   const sameFormation = sameOrAuto(result.tacticalProfile?.formation, record.formation);
-  return (sameStyle === false ? .82 : 1) * (sameFormation === false ? .90 : 1);
+  return (sameStyle === false ? .82 : 1) * (sameFormation === false ? .90 : 1) * functionContextWeightR460(result, record);
 }
 
 function evidenceFingerprintR136(result: AnalysisResult, records: MatchValidationRecord[], now: number) {
-  const context = [MATCH_EVIDENCE_CONTEXT_R136, result.tacticalProfile?.style ?? 'AUTO', result.tacticalProfile?.formation ?? 'AUTO'].join('|');
+  const context = [MATCH_EVIDENCE_CONTEXT_R136, result.tacticalProfile?.style ?? 'AUTO', result.tacticalProfile?.formation ?? 'AUTO', analysisUsageFunctionR457(result)].join('|');
   const signature = [...records]
     .sort((a, b) => String(a.id).localeCompare(String(b.id)))
     .map((record) => [
       record.id, record.playedAt, recencyBandR136(record, now), record.minutes, record.buildSignature,
-      record.gameSeason ?? '', record.gameVersion ?? '', record.gameplayEpoch ?? '', record.formation, record.teamStyle,
+      record.gameSeason ?? '', record.gameVersion ?? '', record.gameplayEpoch ?? '', record.formation, record.teamStyle, record.usageFunction ?? '',
       record.connection, record.inputDelayRating, record.passing, record.movement, record.finishing, record.defending,
       record.physical, record.stamina, record.secondHalfDrop ? 1 : 0, ...(record.tags ?? []),
       record.metrics?.passErrors ?? '', record.metrics?.ballLosses ?? '', record.metrics?.shots ?? '', record.metrics?.shotsOnTarget ?? ''
@@ -277,7 +286,7 @@ export function buildMatchEvidenceCalibrationR136(result: AnalysisResult, allRec
     cardFingerprint: cardFingerprint(result),
     position: analysisUsagePositionR138(result),
     evidenceFingerprint: evidenceFingerprintR136(result, records, now),
-    contextSignature: [MATCH_EVIDENCE_CONTEXT_R136, result.tacticalProfile?.style ?? 'AUTO', result.tacticalProfile?.formation ?? 'AUTO'].join('|'),
+    contextSignature: [MATCH_EVIDENCE_CONTEXT_R136, result.tacticalProfile?.style ?? 'AUTO', result.tacticalProfile?.formation ?? 'AUTO', analysisUsageFunctionR457(result)].join('|'),
     rawMatches: records.length,
     effectiveMatches,
     distinctSessions,
@@ -304,7 +313,8 @@ export function buildMatchEvidenceCalibrationR136(result: AnalysisResult, allRec
       `Compatibilidade com o contexto v6.0 atual: ${Math.round(currentPatchShare * 100)}%; histórico legado/sem versão representa ${Math.round(legacyShare * 100)}% do peso efetivo.`,
       result.tacticalProfile?.style !== 'AUTO' || result.tacticalProfile?.formation !== 'AUTO'
         ? 'Movimentação e defesa recebem desconto maior quando a evidência veio de formação/estilo coletivo diferente do contexto atual.'
-        : 'Contexto tático está em AUTO; a calibração não penaliza registros por formação/estilo coletivo.'
+        : 'Contexto tático está em AUTO; a calibração não penaliza registros por formação/estilo coletivo.',
+      `R460: função atual ${analysisUsageFunctionR457(result)}; registros sem função explícita recebem peso legado e função conhecida diferente recebe forte desconto.`
     ],
     safeguards: [
       'R136 nunca escolhe níveis de treino, Top 5 ou Ímpeto; apenas recalibra o retorno marginal dentro do Clean Slate.',
@@ -312,7 +322,8 @@ export function buildMatchEvidenceCalibrationR136(result: AnalysisResult, allRec
       'Partidas sem versão conhecida são preservadas como histórico migrado, mas não comandam sozinhas o meta v6.0 atual.',
       'Mudanças de formação/estilo reduzem sobretudo evidências de movimentação e posicionamento, sem apagar tendências intrínsecas da carta.',
       'Uma única partida, uma única sessão, delay alto ou déficit sem repetição continuam incapazes de alterar a ficha.',
-      'A calibração continua exclusiva da mesma edição da carta e da mesma posição de uso; Overall/GER nunca entra como alvo.'
+      'A calibração continua exclusiva da mesma edição da carta e da mesma posição de uso; Overall/GER nunca entra como alvo.',
+      'R460: a função de uso faz parte do contexto. Evidência conhecida de outra função não pode dominar a calibração atual.'
     ]
   };
 }

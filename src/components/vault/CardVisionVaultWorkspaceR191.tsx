@@ -25,7 +25,8 @@ import { CleanVaultV3800 } from '@/components/CleanVaultV3800';
 import { VaultOperationStatusR154 } from '@/modules/vault/VaultOperationStatusR154';
 import { POSITION_LABELS, POSITION_PT, type PositionCode } from '@/modules/analysis';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
-import { folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';
+import type { VaultFilterState, VaultFolder } from '@/lib/vaultUsability';
+import { useProgressiveVaultWorkspaceR413 } from '@/modules/vault/useProgressiveVaultWorkspaceR413';
 import type { VaultTrashItem } from '@/lib/vaultTrash';
 import type { SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import type { CardVisionHistoryFilterR151, CardVisionHistorySortR151 } from '@/modules/vault/cardVisionVaultSelectorsR151';
@@ -162,6 +163,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
     exportIncrementalBackup, verifyBackupFile, importHistoryBackup,
   } = backup;
   const vaultActionBusyR154 = (key: string) => activeVaultActionKeysR154.includes(key);
+  const { compareHistoryR413, compareHasMoreR413, compareLoadMoreRefR413, folderCountsR413, loadMoreCompareR413 } = useProgressiveVaultWorkspaceR413(vaultView, renderHistory);
 
   return (
     <>
@@ -235,7 +237,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
             </div>
             <div className="vault-folder-catalog">
               {vaultFolders.map((folder) => {
-                const count = folder.id === 'all' ? renderHistory.length : renderHistory.filter((item) => folderForEntry(item) === folder.id).length;
+                const count = folder.id === 'all' ? renderHistory.length : (folderCountsR413.get(folder.id) ?? 0);
                 const percent = renderHistory.length ? Math.round((count / renderHistory.length) * 100) : 0;
                 return <button type="button" key={folder.id} className={vaultFilters.folderId === folder.id ? 'vault-folder-card selected' : 'vault-folder-card'} onClick={() => { setVaultFilters((current) => ({ ...current, folderId: folder.id })); setVaultView('jogadores'); }}><div><Layers size={18} /><span>{folder.kind === 'custom' ? 'Pasta personalizada' : 'Pasta do sistema'}</span></div><strong>{folder.name}</strong><small>{count} jogador(es)</small><i><b style={{ width: `${percent}%` }} /></i></button>;
               })}
@@ -265,10 +267,10 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
               <button type="button" onClick={() => setComparePlayerIds(renderHistory.slice(0, 4).map((item) => item.id))}>Selecionar recentes</button>
               <button type="button" onClick={() => setComparePlayerIds([])}>Limpar seleção</button>
             </div>
-            {renderHistory.length ? <div className="compare-player-catalog">{renderHistory.map((item) => {
+            {renderHistory.length ? <><div className="compare-player-catalog">{compareHistoryR413.map((item) => {
               const selected = comparePlayerIds.includes(item.id);
               return <button type="button" className={selected ? 'compare-player-card selected' : 'compare-player-card'} key={item.id} onClick={() => setComparePlayerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : current.length < 6 ? [...current, item.id] : current)}><div className="saved-player-avatar">{item.playerImage ? <img src={item.playerImage} alt="" /> : <span>{POSITION_PT[analysisUsagePositionR138(item.result)].slice(0,3)}</span>}</div><div><strong>{item.result.parsed.playerName}</strong><span>{POSITION_PT[analysisUsagePositionR138(item.result)]}</span><small>Confiança {item.result.parsed.confidence ?? 0}%</small></div><i>{selected ? '✓' : '+'}</i></button>;
-            })}</div> : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}
+            })}</div>{compareHasMoreR413 && <div className="bm-v3800-progressive-loader" ref={compareLoadMoreRefR413} role="status" aria-live="polite"><span>Mostrando {compareHistoryR413.length} de {renderHistory.length} ficha(s).</span><button type="button" onClick={loadMoreCompareR413}>Carregar mais</button></div>}</> : <div className="empty-cofre-card vault-empty-state"><div className="empty-icon"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}
             {playerComparison.ranking.length > 0 ? <div className="player-ranking premium-player-ranking"><div className="comparison-winner-card"><Trophy size={22} /><div><span>Melhor encaixe para {POSITION_LABELS.find((item) => item.code === comparePosition)?.label ?? comparePosition}</span><strong>{playerComparison.winner}</strong><small>{playerComparison.reason}</small></div></div>{playerComparison.ranking.map((item, index) => <article key={item.id} className={index === 0 ? 'ranking-player-card winner' : 'ranking-player-card'}><div className="ranking-place">#{index + 1}</div><div className="ranking-main"><strong>{item.name}</strong><span>{item.score}/100 • adaptação {item.adaptation}</span><i><b style={{ width: `${item.score}%` }} /></i></div><div className="ranking-metrics"><span>Físico <b>{item.physical}</b></span><span>Habilidades <b>{item.skills}</b></span><span>Eficiência <b>{item.efficiency}</b></span><span>DNA <b>{item.dna}</b></span></div><small>{item.behavior}</small>{item.risks.length > 0 && <em>Riscos: {item.risks.join(' • ')}</em>}</article>)}</div> : comparePlayerIds.length > 0 ? <div className="empty-cofre-card compact-empty-state"><strong>Selecione pelo menos dois jogadores</strong><span>Você escolheu {comparePlayerIds.length}. Adicione mais um para gerar o ranking.</span></div> : null}
           </section>
         )}

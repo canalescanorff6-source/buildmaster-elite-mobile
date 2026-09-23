@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { buildScoutingDecisionEvidenceR457 } from '../src/lib/scoutingDecisionEvidenceR457';
+const result:any={gameplayScoutingR454:{status:'READY',confidence:'ALTA',sourceTypes:['OFFICIAL'],testedPositions:['CMF'],bestRoles:[{position:'CMF',label:'Orquestrador',function:'criação e passe curto',fit:'EXCELENTE',reason:'organiza saída'}],acceptableRoles:[],badRoles:[]}};
+const e=buildScoutingDecisionEvidenceR457(result,'CMF');
+assert.equal(e.status,'APPLIED');
+assert.ok(e.actionMultipliers.short_creation>1);
+assert.ok(e.actionMultipliers.short_creation<=1.06);
+assert.equal(e.safeguards.neverWritesTraining,true);
+const low=buildScoutingDecisionEvidenceR457({gameplayScoutingR454:{...result.gameplayScoutingR454,confidence:'BAIXA'}} as any,'CMF');
+assert.equal(low.status,'IGNORED_LOW_CONFIDENCE');
+assert.deepEqual(low.actionMultipliers,{});
+console.log('R457 Scouting aprovado: scouting READY influencia somente frequência funcional, com peso limitado e auditável.');

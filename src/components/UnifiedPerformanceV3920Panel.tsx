@@ -15,7 +15,7 @@ import {
   Target,
   Trophy
 } from 'lucide-react';
-import { POSITION_PT, type AnalysisResult, type TrainingKey } from '@/lib/analyzerDomain';
+import { ATTRIBUTE_PT, POSITION_PT, type AnalysisResult, type AttributeKey, type TrainingKey } from '@/lib/analyzerDomain';
 import type { FinalDecisionAuthority2027R118 } from '@/lib/finalDecisionAuthority2027V4080R118';
 import type { CleanSlate2027R119 } from '@/lib/cleanSlatePerformance2027V4080R119';
 import { TRAINING_LABELS } from '@/lib/trainingEngine';
@@ -154,6 +154,9 @@ export function UnifiedPerformanceV3920Panel({
   const unified = result.unifiedPerformanceV3920;
   const cleanSlate = (result as AnalysisResult & { cleanSlate2027R119?: CleanSlate2027R119 }).cleanSlate2027R119;
   if (cleanSlate) {
+    const cleanSlateRevision=cleanSlate.version.match(/-r(\d+)-/)?.[1]??'119';
+    const gameplayImpactR458=cleanSlate.gameplayImpactR458;
+    const buildOutcomeR460=(result as AnalysisResult & { buildOutcomeCalibrationR460?: { status?:string; snapshotMatches?:number; confidenceScore?:number } }).buildOutcomeCalibrationR460;
     const displayedSkills = safeArray(result.recommendedSkills).slice(0, 5);
     const primaryImpeto = result.recommendedImpetos?.[0]?.name ?? null;
     const attributeCount = Number(result.parsed.evidence?.attributeCount ?? Object.keys(result.parsed.attributes ?? {}).length);
@@ -182,7 +185,7 @@ export function UnifiedPerformanceV3920Panel({
     return <article className="luxury-panel wide-card unified-performance-v3920">
       <header className="unified-v3920-head">
         <div>
-          <p className="kicker"><BrainCircuit size={15} /> Produção R126 • Clean Slate R125</p>
+          <p className="kicker"><BrainCircuit size={15} /> Produção R126 • Clean Slate R{cleanSlateRevision}</p>
           <h3>Ficha recalculada do zero pela identidade da carta</h3>
           <p>{result.parsed.playerName}: o motor gerou {cleanSlate.searchOptimizationR146?.generatedStates ?? cleanSlate.searchOptimizationR145?.generatedStates ?? cleanSlate.searchOptimizationR144?.generatedStates ?? cleanSlate.searchOptimizationR143?.generatedStates ?? cleanSlate.candidateCount} estados e avaliou {cleanSlate.searchOptimizationR146?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR145?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR144?.uniqueFrontierStates ?? cleanSlate.searchOptimizationR143?.uniqueEvaluations ?? cleanSlate.candidateCount} progressões únicas; a r146 compila atributos, pressão e perfis estáticos por nível uma única vez, preservando a chave incremental e a deduplicação da r145.</p>
           <small>Motores históricos não participam do caminho crítico do Android e não podem semear a ficha final.</small>
@@ -212,7 +215,7 @@ export function UnifiedPerformanceV3920Panel({
       </section>
       <section className="unified-v3920-grid">
         <article className="r119-final-build">
-          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Autoridade R126 • Clean Slate R125 • {cleanSlate.positionAnchor} → {cleanSlate.usagePosition} • objetivo online</small></span></div>
+          <div className="unified-v3920-card-title"><Target size={17} /><span><strong>Ficha final</strong><small>Autoridade R126 • Clean Slate R{cleanSlateRevision} • {cleanSlate.positionAnchor} → {cleanSlate.usagePosition} • objetivo online</small></span></div>
           {activeTraining.length ? <div className="r119-training-icons">
             {activeTraining.map(({ key, value }) => <div key={key} className="r119-training-item">
               <span className="r119-training-icon"><TrainingProgressionIconR106 trainingKey={key as TrainingProgressionKeyR106} title={TRAINING_LABELS[key as TrainingKey] ?? key} size={31} /></span>
@@ -228,7 +231,7 @@ export function UnifiedPerformanceV3920Panel({
           </div>
           {cleanSlate.status !== 'READY' && <p><strong>Atributos lidos: {attributeCount}/26.</strong> Posições reconhecidas: {positionRatingsCount}/13. O motor não inventa os valores ausentes; revise a leitura quando a cobertura estiver baixa.</p>}
           <div className="chip-cloud">
-            <span>Motor final: Produção R126 / Clean Slate R125</span>
+            <span>Motor final: Produção R126 / Clean Slate R{cleanSlateRevision}</span>
             <span>Uso: {cleanSlate.usagePosition}</span>
             {cleanSlate.usagePositionChanged && <span>Natural: {cleanSlate.positionAnchor}</span>}
             {cleanSlate.playstyleContext.neutralRoleMode && <span>Estilo inativo: função neutra</span>}
@@ -296,6 +299,35 @@ export function UnifiedPerformanceV3920Panel({
           </div>
           <small>{cleanSlate.competitiveLab.canCompare ? `Pronto para A/B: mínimo ${cleanSlate.competitiveLab.minMatchesPerArm} partidas por ficha, em condições parecidas.` : 'Ainda não existe uma alternativa suficientemente diferente para um A/B útil.'}</small>
         </article>
+        {gameplayImpactR458 && <article className="r458-gameplay-impact-card">
+          <div className="unified-v3920-card-title"><BrainCircuit size={17} /><span><strong>Impacto real R458</strong><small>O que a função realmente exige da carta — gargalos, ganho da ficha e lacunas de leitura</small></span></div>
+          <div className="chip-cloud">
+            <span>Função: {gameplayImpactR458.usageFunction}</span>
+            <span>Tática: {teamStyleLabel(gameplayImpactR458.tacticalStyle)}</span>
+            <span>Cobertura observada: {Math.round(gameplayImpactR458.observedAttributeCoverage)}%</span>
+            {gameplayImpactR458.engineRevision === 'R459' && <span>Confiança da decisão: {Math.round(gameplayImpactR458.decisionConfidence)}%</span>}
+            {buildOutcomeR460 && <span>R460: {buildOutcomeR460.status} • {buildOutcomeR460.snapshotMatches ?? 0} partida(s) • confiança {Math.round(buildOutcomeR460.confidenceScore ?? 0)}%</span>}
+            {gameplayImpactR458.immutableContext?.dominantFoot && <span>Pé dominante: {gameplayImpactR458.immutableContext.dominantFoot}</span>}
+            {(gameplayImpactR458.immutableContext?.weakFootFrequency || gameplayImpactR458.immutableContext?.weakFootAccuracy) && <span>Pé fraco: {[gameplayImpactR458.immutableContext.weakFootFrequency, gameplayImpactR458.immutableContext.weakFootAccuracy].filter(Boolean).join(' • ')}</span>}
+            {gameplayImpactR458.immutableContext?.form && <span>Forma: {gameplayImpactR458.immutableContext.form}</span>}
+            {(gameplayImpactR458.immutableContext?.height || gameplayImpactR458.immutableContext?.weight) && <span>Físico: {gameplayImpactR458.immutableContext.height ? `${gameplayImpactR458.immutableContext.height} cm` : ''}{gameplayImpactR458.immutableContext.height && gameplayImpactR458.immutableContext.weight ? ' • ' : ''}{gameplayImpactR458.immutableContext.weight ? `${gameplayImpactR458.immutableContext.weight} kg` : ''}</span>}
+            {gameplayImpactR458.immutableContext?.physicalEvidenceCount > 0 && <span>Modelo físico: {gameplayImpactR458.immutableContext.physicalEvidenceCount} sinais</span>}
+            <span>GER fora da decisão</span>
+          </div>
+          <div className="r122-rationale-list">
+            {gameplayImpactR458.actions.slice(0, 6).map((action) => <div key={action.id}>
+              <span>
+                <strong>{action.label} • demanda {Math.round(action.demand)}%</strong>
+                <small>{action.bottleneckAttributes.length ? `gargalo: ${action.bottleneckAttributes.map((key) => ATTRIBUTE_PT[key as AttributeKey] ?? key).join(' + ')}` : 'sem gargalo observado suficiente'}{action.missingAttributes.length ? ` • faltam ${action.missingAttributes.map((key) => ATTRIBUTE_PT[key as AttributeKey] ?? key).join(', ')}` : ''}{action.skillSupportSkills?.length ? ` • skills: ${action.skillSupportSkills.join(' + ')}` : ''}{Number.isFinite(action.decisionConfidence) ? ` • confiança ${Math.round(action.decisionConfidence)}%` : ''}</small>
+              </span>
+              <b>{Math.round(action.naturalScore)}→{Math.round(action.projectedScore)}{action.gain ? ` (+${action.gain})` : ''}</b>
+            </div>)}
+          </div>
+          {gameplayImpactR458.criticalMissingAttributes.length > 0
+            ? <p><strong>Leitura ainda incompleta:</strong> {gameplayImpactR458.criticalMissingAttributes.map((key) => ATTRIBUTE_PT[key as AttributeKey] ?? key).join(', ')}. Esses valores não são inventados pelo motor.</p>
+            : <p><strong>Leitura funcional coberta.</strong> As ações principais têm os atributos críticos observados para esta análise.</p>}
+          <small>R458/R459 calculam a demanda da função antes da capacidade atual; R460/R461 acompanham promessa × resultado real por função e ação, reforçando retorno marginal somente quando a falha persiste em sessões confiáveis. Traços imutáveis são lidos e exibidos, mas nunca recebem bônus numérico inventado.</small>
+        </article>}
         <article className="r119-actions-card">
           <div className="unified-v3920-card-title"><Trophy size={17} /><span><strong>Ações decisivas</strong><small>Prioridade funcional estimada — capacidade não é tratada automaticamente como frequência</small></span></div>
           <div className="chip-cloud">{cleanSlate.actions.slice(0, 6).map((action) => <span key={action.id}>{action.label} {Math.round(action.frequency)}%</span>)}</div>

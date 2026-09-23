@@ -2,6 +2,7 @@ import { POSITION_LABELS, type AnalysisResult, type PositionCode, type TacticalF
 import type { MatchState, TeamEnergy } from './gamePlan';
 import { cardIdentityFingerprintR126, playerIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { buildFormationAwareRotationR457 } from './formationAwareRotationR457';
 
 export const OFFICIAL_INDIVIDUAL_INSTRUCTIONS = [
   'Ofensivo','Defensivo','Manter posição','Contra-ataque','Marcação individual','Marcação cerrada','Linha defensiva recuada','Contra-ataque nos jogadores avançados'
@@ -14,7 +15,7 @@ export type PlayerSummary = {
   coveredPositions: PositionCode[];
 };
 export type BenchRole = { player: PlayerSummary; label: string; reason: string; coverage: string[]; priority: 'alta'|'média'|'baixa' };
-export type RealSubstitution = { minute:string; trigger:string; outPlayer:string; inPlayer:string; score:number; gain:string; reason:string; priority:'alta'|'média'|'baixa' };
+export type RealSubstitution = { minute:string; trigger:string; outPlayer:string; inPlayer:string; score:number; gain:string; reason:string; priority:'alta'|'média'|'baixa'; mode?:'MANTER_FUNCAO'|'MUDAR_COMPORTAMENTO'; beforeTeamScore?:number; afterTeamScore?:number; tacticalDelta?:number; contextDelta?:number };
 export type IndividualInstructionSuggestion = { player:string; instruction:OfficialIndividualInstruction; confidence:number; reason:string; warning?:string };
 
 export type PositionCoverage = {
@@ -90,17 +91,17 @@ function buildPlans(starters:PlayerSummary[],benchPlayers:PlayerSummary[],format
 export function buildSquadRotationReport(results:AnalysisResult[],formation:TacticalFormation,style:TacticalStyle,state:MatchState,energy:TeamEnergy):SquadRotationReport|null{
   const cardUnique=new Map<string,AnalysisResult>();
   for(const r of results){const key=cardIdentityFingerprintR126(r.parsed);if(!cardUnique.has(key))cardUnique.set(key,r)}
-  const players=[...cardUnique.values()].map(summarize);if(!players.length)return null;
-  const starters=pickStarters(players,style),starterPlayers=new Set(starters.map(p=>p.playerKey));
-  const bestBenchByPlayer=new Map<string,PlayerSummary>();
-  for(const candidate of players.filter(p=>!starterPlayers.has(p.playerKey))){
-    const previous=bestBenchByPlayer.get(candidate.playerKey);
-    if(!previous||candidate.versatility+candidate.stamina+candidate.score>previous.versatility+previous.stamina+previous.score)bestBenchByPlayer.set(candidate.playerKey,candidate);
-  }
-  const benchPlayers=[...bestBenchByPlayer.values()].sort((a,b)=>b.versatility+b.stamina-(a.versatility+a.stamina)),bench=benchPlayers.slice(0,12).map(benchRole);
+  const uniqueResults=[...cardUnique.values()];
+  const players=uniqueResults.map(summarize);if(!players.length)return null;
+  const formationAware=buildFormationAwareRotationR457(uniqueResults,formation,style,state,energy);
+  if(!formationAware)return null;
+  const byCard=new Map(uniqueResults.map(result=>[cardIdentityFingerprintR126(result.parsed),result]));
+  const starters=formationAware.starterResults.map((result,index)=>summarize(result,index));
+  const benchPlayers=formationAware.benchResults.map((result,index)=>summarize(result,100+index));
+  const bench=benchPlayers.map(benchRole);
   const activePool=[...starters,...benchPlayers];
   const positionCoverage=buildPositionCoverage(activePool,starters),reserveByStarter=buildReservePairs(starters,benchPlayers),benchBalance=buildBenchBalance(benchPlayers),plans=buildPlans(starters,benchPlayers,formation,style);
   const missing=positionCoverage.filter(x=>['vazia','sem reserva'].includes(x.status)).map(x=>`${x.label}: ${x.warning}`);
   const coverage=clamp(positionCoverage.reduce((s,p)=>s+p.score,0)/positionCoverage.length),rotation=clamp((benchBalance.score+(reserveByStarter.reduce((s,p)=>s+p.fit,0)/Math.max(1,reserveByStarter.length)))/2);
-  return {squadCount:activePool.length,starterCount:starters.length,benchCount:bench.length,coverageScore:coverage,rotationScore:rotation,headline:`${activePool.length} jogadores únicos analisados para ${formation}; ${starters.length} titulares e ${bench.length} opções de banco.`,starters,bench,missingCoverage:missing,substitutions:substitutions(starters,bench,state,energy),instructions:instructionSuggestions(starters,style),positionCoverage,reserveByStarter,benchBalance,plans,locks:['Nenhuma troca, instrução ou plano é aplicado automaticamente.','Posições, estilos e instruções continuam vindo dos catálogos validados do app.','Você confirma titulares, reservas, substituições e Planos A, B e C antes de usar.']};
+  return {squadCount:activePool.length,starterCount:starters.length,benchCount:bench.length,coverageScore:coverage,rotationScore:rotation,headline:`${activePool.length} jogadores únicos analisados para ${formation}; ${starters.length} titulares e ${bench.length} opções de banco.`,starters,bench,missingCoverage:missing,substitutions:formationAware.substitutions.map(item=>({minute:item.minute,trigger:item.trigger,outPlayer:item.outPlayer,inPlayer:item.inPlayer,score:item.score,gain:item.mode==='MANTER_FUNCAO'?'manter a função com XI recalculado':'mudar o comportamento com XI recalculado',reason:item.reason,priority:item.adjustedGain>2?'alta':item.adjustedGain>=0?'média':'baixa',mode:item.mode,beforeTeamScore:item.beforeTeamScore,afterTeamScore:item.afterTeamScore,tacticalDelta:item.tacticalDelta,contextDelta:item.contextDelta})),instructions:instructionSuggestions(starters,style),positionCoverage,reserveByStarter,benchBalance,plans,locks:['Nenhuma troca, instrução ou plano é aplicado automaticamente.','Posições, estilos e instruções continuam vindo dos catálogos validados do app.','Você confirma titulares, reservas, substituições e Planos A, B e C antes de usar.']};
 }

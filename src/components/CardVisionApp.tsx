@@ -14,6 +14,7 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { ResultSafetyBoundary } from '@/components/ResultSafetyBoundary';
 import type { AppCommand } from '@/components/AppCommandPalette';
 import type { ReaderProgressSnapshotV4010 } from '@/components/ProgressBarsV4010';
+import { effectivePhaseEntriesR124 } from '@/lib/efootball2027PhaseCatalogR124';
 import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { ACTIVE_SESSION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, formationGuides, objectives, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
@@ -99,6 +100,7 @@ export function CardVisionApp() {
   const [rawText, setRawText] = useState('');
   const [objective, setObjective] = useState<Objective>('COMPETITIVE');
   const [targetPosition, setTargetPosition] = useState<PositionCode | 'AUTO'>('AUTO');
+  const [usageFunction, setUsageFunction] = useState<string>('AUTO');
   const [cardPositionOverride, setCardPositionOverride] = useState<PositionCode | 'AUTO'>('AUTO');
   const [playstyleOverride, setPlaystyleOverride] = useState<string>('AUTO');
   const [defensivePlaystyleOverride, setDefensivePlaystyleOverride] = useState<string>('AUTO');
@@ -265,6 +267,16 @@ export function CardVisionApp() {
   }, []);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
   const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
+  const usageFunctionOptionsR457 = useMemo(() => {
+    if (targetPosition === 'AUTO') return [{ value:'AUTO', label:'Automático inteligente' }];
+    const labels=[...effectivePhaseEntriesR124('OFFENSIVE'),...effectivePhaseEntriesR124('DEFENSIVE')]
+      .filter((entry)=>entry.label !== 'Básico' && (entry.positions.length===0 || entry.positions.includes(targetPosition)))
+      .map((entry)=>entry.label);
+    return [{ value:'AUTO', label:'Automático inteligente' }, ...Array.from(new Set(labels)).map((label)=>({value:label,label}))];
+  }, [targetPosition]);
+  useEffect(() => {
+    if (usageFunction !== 'AUTO' && !usageFunctionOptionsR457.some((item)=>item.value===usageFunction)) setUsageFunction('AUTO');
+  }, [usageFunction, usageFunctionOptionsR457]);
   const selectedFormationBlueprint = useMemo(() => formation === 'AUTO' ? null : FORMATION_BLUEPRINTS.find((item) => item.id === formation) ?? null, [formation]);
   const tacticalProfile = useMemo<TacticalProfile>(() => ({ formation: 'AUTO', style: teamStyle, managerId: selectedManager?.id ?? null, managerName: selectedManager?.name ?? null, managerProficiency: selectedManager ? (selectedManager.primaryStyle === teamStyle ? selectedManager.primaryProficiency : selectedManager.secondaryStyle === teamStyle ? selectedManager.secondaryProficiency ?? selectedManager.primaryProficiency : selectedManager.primaryProficiency) : null, managerBooster: selectedManager?.booster ?? null, gameplayMode, connectionProfile, controlProfile }), [teamStyle, selectedManager, gameplayMode, connectionProfile, controlProfile]);
   const selectedFormationGuide = useMemo(() => {
@@ -420,10 +432,10 @@ export function CardVisionApp() {
     if (sessionSaveState === 'error') showPremiumToast({ title: 'Rascunho não salvo', message: 'Seus dados continuam na tela. Tente novamente antes de sair.', tone: 'danger', duration: 6000 });
   }, [sessionSaveState]);
   const activeSessionSnapshotR157 = useMemo(() => ({
-    preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride,
+    preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, usageFunction, cardPositionOverride,
     playstyleOverride, defensivePlaystyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode,
     connectionProfile, controlProfile, manualFields, manualMode, activeHistoryId
-  }), [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, cardPositionOverride,
+  }), [preview, playerCardImage, fileName, ocrDone, rawText, objective, targetPosition, usageFunction, cardPositionOverride,
     playstyleOverride, defensivePlaystyleOverride, readingMode, formation, teamStyle, managerId, gameplayMode,
     connectionProfile, controlProfile, manualFields, manualMode, activeHistoryId]);
   useActiveSessionAutosaveR157({
@@ -461,7 +473,7 @@ export function CardVisionApp() {
       readerImageMemoryR156.releaseAll();
       setPreview(null); setPlayerCardImage(null); setCardCropResult(null); setCardCropAdjustOpen(false); setFileName(null); setSelectedFile(null);
       setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setPreFinalConfirmation(null); setPreFinalGenerateRequested(false); setManualFields(emptyManualFields()); setManualMode(false);
-      setTargetPosition('AUTO'); setCardPositionOverride('AUTO'); setPlaystyleOverride('AUTO'); setQualityReport(null); setPremiumReadings([]);
+      setTargetPosition('AUTO'); setUsageFunction('AUTO'); setCardPositionOverride('AUTO'); setPlaystyleOverride('AUTO'); setQualityReport(null); setPremiumReadings([]);
       setTotalReadingSession(null); setSinglePrintSession(null);  setEnhancedPreview(null); setActiveHistoryId(null);
       clearActiveSessionSnapshotR157(ACTIVE_SESSION_KEY);
       clearPremiumCreationDraft();
@@ -556,7 +568,7 @@ export function CardVisionApp() {
     setDensityMode, setMotionPreference, setHighContrast, setPerformanceMode, setOnboardingProfile, setOnboardingOpen, setLastBackupAt,
     setRulesUrl, setRulePackInfo, setRulesStatus, setOcrZones, setEfhubCalibrationZones, setEfhubCalibrationSaved, setEfhubCalibrationActive,
     setVaultFolders, setRawText, setPreview, setPlayerCardImage, setFileName, setOcrDone, setObjective: () => setObjective('COMPETITIVE'),
-    setTargetPosition, setCardPositionOverride, setPlaystyleOverride, setDefensivePlaystyleOverride, setReadingMode, setFormation, setTeamStyle,
+    setTargetPosition, setUsageFunction, setCardPositionOverride, setPlaystyleOverride, setDefensivePlaystyleOverride, setReadingMode, setFormation, setTeamStyle,
     setManagerId, setGameplayMode, setConnectionProfile, setManualFields, setManualMode, setActiveHistoryId,
     clearDerivedResult: () => { setResult(null); setDraftResult(null); },
     markSessionRestored: () => { restoredSessionRef.current = true; },
@@ -716,13 +728,13 @@ export function CardVisionApp() {
     setPlaystyleOverride('AUTO');
     setManualFields(emptyManualFields());
     const { createProductionAnalysisR138 } = await import('@/modules/analysis/productionOrchestratorR138');
-    const nextResult = createProductionAnalysisR138({ rawText: template, objective: 'COMPETITIVE', targetPosition, imageFileName: 'entrada-manual-precisao', tacticalProfile });
+    const nextResult = createProductionAnalysisR138({ rawText: template, objective: 'COMPETITIVE', targetPosition, usageFunction, imageFileName: 'entrada-manual-precisao', tacticalProfile });
     setDraftResult(nextResult);
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
   const readerActionContextR187: CardVisionReaderActionsInputR187 = {
     selectedFile, cardCropResult, pendingBackgroundCheckpoint, readerImageMemory: readerImageMemoryR156,
-    mainSection, rawText, fileName, preview, qualityReport, readingMode, objective, targetPosition, tacticalProfile,
+    mainSection, rawText, fileName, preview, qualityReport, readingMode, objective, targetPosition, usageFunction, tacticalProfile,
     manualFields, cardPositionOverride, playstyleOverride, defensivePlaystyleOverride, singlePrintSession,
     efhubCalibrationActiveRef, efhubCalibrationZonesRef,
     setObjective, setOcrCancelable, setLoading, setReaderProgress, setPendingBackgroundCheckpoint, setStatus,
@@ -787,7 +799,7 @@ export function CardVisionApp() {
   }
   const currentPanelResult = result ?? draftResult; const isCreationSection = mainSection === 'leitor' || mainSection === 'manual';
   const creationSourceReady = mainSection === 'leitor' ? Boolean(selectedFile || preview) : manualMode;
-  const creationProgress = result ? 100 : draftResult ? 75 : creationSourceReady && (cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || playstyleOverride !== 'AUTO' || defensivePlaystyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal)) ? 50 : 20;
+  const creationProgress = result ? 100 : draftResult ? 75 : creationSourceReady && (cardPositionOverride !== 'AUTO' || targetPosition !== 'AUTO' || usageFunction !== 'AUTO' || playstyleOverride !== 'AUTO' || defensivePlaystyleOverride !== 'AUTO' || Boolean(manualFields.trainingPointsTotal)) ? 50 : 20;
   const accountInitial = (account?.profile.displayName || account?.profile.username || 'B').trim().slice(0, 1).toUpperCase();
   const creationObjectiveLabel = objectives.find((item) => item.value === objective)?.title ?? 'Desempenho máximo';
   const creationTargetLabel = targetPosition === 'AUTO'
@@ -1183,6 +1195,13 @@ export function CardVisionApp() {
                     {POSITION_LABELS.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
                   </select>
                   <small>Esta é a escolha mais importante da ficha.</small>
+                </label>
+                <label className="creation-field-card">
+                  <span>Função da build</span>
+                  <select value={usageFunction} onChange={(event) => setUsageFunction(event.target.value)}>
+                    {usageFunctionOptionsR457.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                  <small>{usageFunction === 'AUTO' ? 'O BuildMaster escolhe pela carta + Scouting READY + posição.' : `Prioridade manual: ${usageFunction}. Só aparecem funções compatíveis com a posição.`}</small>
                 </label>
                 <label className="creation-field-card">
                   <span>Posição escrita na carta</span>

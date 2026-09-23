@@ -53,7 +53,7 @@ function trainingSignature(parsed: ParsedCard) {
  * jogador + tipo/tag + posição/estilos registrados + dados físicos + nível máximo
  * + inventário nativo/especial. O `internalId` legado fica fora porque embute GER.
  */
-export function cardIdentityFingerprintR126(parsed: ParsedCard) {
+export function legacyStructuralCardIdentityFingerprintR126(parsed: ParsedCard) {
   const positions = [...new Set<PositionCode>([parsed.mainPosition, ...(parsed.positions ?? [])])]
     .sort((left, right) => left.localeCompare(right, 'en'))
     .join(',');
@@ -81,6 +81,29 @@ export function cardIdentityFingerprintR126(parsed: ParsedCard) {
   ].join('|');
 
   return `card-r126-${fnv1a(source)}`;
+}
+
+/**
+ * Identidade canônica da edição.
+ * Prioridade: ID oficial verificado > catalogCardId R438 > fingerprint estrutural legado.
+ * gameVersion fica fora: patches do jogo versionam evidência/scouting, não a carta.
+ */
+export function cardIdentityFingerprintR126(parsed: ParsedCard) {
+  const edition = parsed.editionIdentity;
+  const official = normalizeText(edition?.officialCardId);
+  if (edition?.officialCardIdVerified === true && official) {
+    return `card-r126-official-${fnv1a(`${CARD_IDENTITY_FINGERPRINT_R126_VERSION}|official|${official}`)}`;
+  }
+  const catalog = normalizeText(edition?.catalogCardId);
+  if (catalog) {
+    return `card-r126-catalog-${fnv1a(`${CARD_IDENTITY_FINGERPRINT_R126_VERSION}|catalog|${catalog}`)}`;
+  }
+  return legacyStructuralCardIdentityFingerprintR126(parsed);
+}
+
+/** Aliases de migração: permitem que uma ficha antiga pelo fingerprint estrutural seja reconhecida após resolução no catálogo. */
+export function cardIdentityAliasesR457(parsed: ParsedCard) {
+  return [...new Set([cardIdentityFingerprintR126(parsed), legacyStructuralCardIdentityFingerprintR126(parsed)])];
 }
 
 /**
@@ -133,8 +156,9 @@ export function playerIdentityFingerprintR126(parsed: ParsedCard) {
   return playerIdentityKeyFromNameR126(parsed.playerName, cardIdentityFingerprintR126(parsed));
 }
 
-export function cardUsageIdentityKeyR126(parsed: ParsedCard, usagePosition: PositionCode | string) {
-  return `${cardIdentityFingerprintR126(parsed)}::usage:${String(usagePosition || parsed.mainPosition).toUpperCase()}`;
+export function cardUsageIdentityKeyR126(parsed: ParsedCard, usagePosition: PositionCode | string, usageFunction = '') {
+  const normalizedFunction=normalizeText(usageFunction).replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  return `${cardIdentityFingerprintR126(parsed)}::usage:${String(usagePosition || parsed.mainPosition).toUpperCase()}::function:${normalizedFunction || 'default'}`;
 }
 
 export function sameIntrinsicCardR126(left: ParsedCard, right: ParsedCard) {

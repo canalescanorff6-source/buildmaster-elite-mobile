@@ -5,7 +5,7 @@ import type { ManualFields, SavedAnalysis, SavedSkillProgress } from './cardHist
 
 export const CARD_HISTORY_STARTUP_MODEL_R200_VERSION = '40.80-r200-card-history-startup-model-v1' as const;
 export const HISTORY_KEY_R200 = 'buildmaster_history_v24_6_cofre_persistente';
-export const HISTORY_LIMIT_R200 = 200;
+export const HISTORY_LIMIT_R200 = Number.MAX_SAFE_INTEGER; // R420: símbolo legado sem teto lógico.
 
 export function emptyManualFieldsR200(): ManualFields {
   return { playerName: '', level: '', trainingPointsTotal: '', attributes: {}, nativeSkills: [] };

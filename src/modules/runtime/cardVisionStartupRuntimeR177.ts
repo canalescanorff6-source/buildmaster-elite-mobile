@@ -110,6 +110,7 @@ export type CardVisionStartupLifecycleInputR177 = {
   setOcrDone: SetValueR177<boolean>;
   setObjective: SetValueR177<'COMPETITIVE'>;
   setTargetPosition: SetValueR177<PositionCode | 'AUTO'>;
+  setUsageFunction: SetValueR177<string>;
   setCardPositionOverride: SetValueR177<PositionCode | 'AUTO'>;
   setPlaystyleOverride: SetValueR177<string>;
   setDefensivePlaystyleOverride: SetValueR177<string>;
@@ -159,6 +160,7 @@ export type CardVisionStartupHydrationTargetR177 = {
   setOcrDone: (value: boolean) => void;
   setObjectiveCompetitive: () => void;
   setTargetPosition: (value: PositionCode | 'AUTO') => void;
+  setUsageFunction: (value: string) => void;
   setCardPositionOverride: (value: PositionCode | 'AUTO') => void;
   setPlaystyleOverride: (value: string) => void;
   setDefensivePlaystyleOverride: (value: string) => void;
@@ -285,6 +287,7 @@ export function hydrateCardVisionStartupR177(target: CardVisionStartupHydrationT
     if (typeof snapshot.ocrDone === 'boolean') target.setOcrDone(snapshot.ocrDone);
     if (snapshot.objective) target.setObjectiveCompetitive();
     if (snapshot.targetPosition) target.setTargetPosition(snapshot.targetPosition);
+    if (typeof snapshot.usageFunction === 'string') target.setUsageFunction(snapshot.usageFunction);
     if (snapshot.cardPositionOverride) target.setCardPositionOverride(snapshot.cardPositionOverride);
     if (typeof snapshot.playstyleOverride === 'string') target.setPlaystyleOverride(snapshot.playstyleOverride);
     if (typeof snapshot.defensivePlaystyleOverride === 'string') target.setDefensivePlaystyleOverride(snapshot.defensivePlaystyleOverride);

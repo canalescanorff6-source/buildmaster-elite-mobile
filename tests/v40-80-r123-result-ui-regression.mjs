@@ -3,7 +3,8 @@ import fs from 'node:fs';
 
 const panel=fs.readFileSync('src/components/UnifiedPerformanceV3920Panel.tsx','utf8');
 const css=fs.readFileSync('src/app/v39-unified-performance.css','utf8');
-assert.match(panel,/(?:Produção R126 • Clean Slate R125|Clean Slate • r12[35])/);
+assert.match(panel,/cleanSlateRevision=cleanSlate\.version\.match/);
+assert.ok((panel.match(/Clean Slate R\{cleanSlateRevision\}/g)??[]).length>=3);
 assert.match(panel,/Confiança da ficha/);
 assert.match(panel,/Saturação dos pontos/);
 assert.match(panel,/Laboratório competitivo A\/B/);

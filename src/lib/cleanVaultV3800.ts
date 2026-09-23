@@ -123,10 +123,18 @@ export function cleanVaultPlayerKey(entry: CleanVaultEntry) {
   return cleanVaultPlayerKeyR173(entry);
 }
 
+export const CLEAN_VAULT_DERIVED_CACHE_R414_VERSION = '38.00-r414-derived-cache-v1' as const;
+const cleanVaultCardVersionCacheR414 = new WeakMap<object, string>();
+const cleanVaultBuildSignatureCacheR414 = new WeakMap<object, string>();
+
 export function cleanVaultCardVersionKey(entry: CleanVaultEntry) {
+  const cached = cleanVaultCardVersionCacheR414.get(entry);
+  if (cached) return cached;
   // R126 é deliberadamente recalculado a partir do ParsedCard salvo para também
   // migrar entradas antigas cuja structuralPrecision ainda carregava GER na identidade.
-  return cardIdentityFingerprintR126(entry.result.parsed as ParsedCard);
+  const key = cardIdentityFingerprintR126(entry.result.parsed as ParsedCard);
+  cleanVaultCardVersionCacheR414.set(entry, key);
+  return key;
 }
 
 export function cleanVaultVersionLabel(entry: CleanVaultEntry) {
@@ -156,13 +164,15 @@ export function cleanVaultIsIntentionalVariant(entry: CleanVaultEntry) {
 }
 
 export function cleanVaultBuildSignature(entry: CleanVaultEntry) {
+  const cached = cleanVaultBuildSignatureCacheR414.get(entry);
+  if (cached) return cached;
   const booster = entry.result.supremeV3870?.impetoStressTests?.[0]?.name
     ?? entry.result.maxMatchV3860?.impetoCombinations?.[0]?.impeto?.name
     ?? entry.result.powerBuildV3850?.impetos?.[0]?.name
     ?? entry.result.advancedMotorV3750?.winner?.boosterName
     ?? entry.result.recommendedImpetos?.[0]?.name
     ?? 'sem-booster';
-  return [
+  const signature = [
     cleanVaultCardVersionKey(entry),
     analysisUsagePositionR138(entry.result),
     entry.result.trainingPointsTotal,
@@ -170,6 +180,8 @@ export function cleanVaultBuildSignature(entry: CleanVaultEntry) {
     cleanSkillList(entry.result.recommendedSkills ?? []),
     normalize(booster)
   ].join('::');
+  cleanVaultBuildSignatureCacheR414.set(entry, signature);
+  return signature;
 }
 
 export function findExactVaultDuplicateByResult<T extends CleanVaultEntry>(entries: T[], candidate: T['result']): T | null {
@@ -189,17 +201,18 @@ export function detectExactVaultDuplicates<T extends CleanVaultEntry>(entries: T
   for (const entry of entries) {
     if (cleanVaultIsArchived(entry) || cleanVaultIsIntentionalVariant(entry)) continue;
     const signature = cleanVaultBuildSignature(entry);
-    const list = groups.get(signature) ?? [];
-    list.push(entry);
-    groups.set(signature, list);
+    const list = groups.get(signature);
+    if (list) list.push(entry);
+    else groups.set(signature, [entry]);
   }
-  return [...groups.entries()]
-    .filter(([, list]) => list.length > 1)
-    .map(([signature, list]) => {
-      const ordered = [...list].sort((left, right) => Number(Boolean(right.favorite)) - Number(Boolean(left.favorite)) || parseDate(right.updatedAt) - parseDate(left.updatedAt));
-      return { signature, keeper: ordered[0], duplicates: ordered.slice(1), entryIds: ordered.map((entry) => entry.id) };
-    })
-    .sort((left, right) => right.entryIds.length - left.entryIds.length);
+  const duplicates: CleanVaultDuplicateGroup<T>[] = [];
+  for (const [signature, list] of groups) {
+    if (list.length < 2) continue;
+    const ordered = [...list].sort((left, right) => Number(Boolean(right.favorite)) - Number(Boolean(left.favorite)) || parseDate(right.updatedAt) - parseDate(left.updatedAt));
+    duplicates.push({ signature, keeper: ordered[0], duplicates: ordered.slice(1), entryIds: ordered.map((entry) => entry.id) });
+  }
+  duplicates.sort((left, right) => right.entryIds.length - left.entryIds.length);
+  return duplicates;
 }
 
 function groupStatus<T extends CleanVaultEntry>(entries: T[]): CleanVaultStatus {
@@ -223,7 +236,9 @@ export function groupVaultPlayersV3800<T extends CleanVaultEntry>(entries: T[]):
   const byPlayer = new Map<string, T[]>();
   for (const entry of entries) {
     const key = cleanVaultPlayerKey(entry);
-    byPlayer.set(key, [...(byPlayer.get(key) ?? []), entry]);
+    const bucket = byPlayer.get(key);
+    if (bucket) bucket.push(entry);
+    else byPlayer.set(key, [entry]);
   }
   return [...byPlayer.entries()].map(([key, list]) => {
     const ordered = [...list].sort((left, right) => parseDate(right.updatedAt) - parseDate(left.updatedAt));

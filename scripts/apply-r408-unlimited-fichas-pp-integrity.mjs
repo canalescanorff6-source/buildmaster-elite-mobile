@@ -8,6 +8,8 @@ const TEST = 'tests/v40-80-r408-unlimited-fichas-pp-integrity-regression.mjs';
 
 function replaceRequired(source, from, to, label) {
   if (source.includes(to)) return { source, changed: false };
+  if (label === 'normalização linear do Cofre' && source.includes('const seen = new Set<string>();') && source.includes('historyUsageIdentityTokensR457')) return { source, changed: false };
+  if (label === 'índice linear do loader' && source.includes('const loadedKeys = new Set<string>();') && source.includes('const pushUnique = (item: SavedAnalysis) =>')) return { source, changed: false };
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`R408: contrato inesperado em ${label}; ocorrências=${count}`);
   return { source: source.replace(from, to), changed: true };
@@ -76,11 +78,44 @@ export function applyUnlimitedFichasPpIntegrityR408(rootDirectory = process.cwd(
     "return compactHistoryForNativeStorage(items).slice(0, 40).map((item) => ({",
     "return compactHistoryForNativeStorage(items).map((item) => ({"
   );
+  // R418 pode reintroduzir a assinatura `(entry, index)` mesmo depois de retirar o uso de index.
+  // Canonicalizamos a assinatura para que a compactação tenha uma única forma equivalente.
+  const beforeMapSignature = store;
+  store = store.replace('return items.map((entry, index) => ({', 'return items.map((entry) => ({');
+  changed ||= store !== beforeMapSignature;
 
   // Coleções grandes não podem degradar para O(n²) ao normalizar ou combinar backends.
-  r = replaceRequired(
-    store,
-`export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
+  // R457 já possui equivalência por aliases + posição + função. O índice precisa preservar
+  // essa semântica, e não reduzi-la para saveKey.
+  if (!store.includes('function historyUsageIdentityTokensR457')) {
+    const anchor = '\nexport function resultHistoryKey(result: AnalysisResult) {';
+    if (!store.includes(anchor)) throw new Error('R408: âncora da identidade R457 ausente.');
+    const helper = `\nfunction historyUsageIdentityTokensR457(item: SavedAnalysis): string[] {
+  const tokens = [\`save:\${item.saveKey}\`];
+  if (/-variante-/i.test(item.saveKey)) return tokens;
+  const position = analysisUsagePositionR138(item.result);
+  const usageFunction = analysisUsageFunctionR457(item.result);
+  for (const alias of cardIdentityAliasesR457(item.result.parsed)) tokens.push(\`usage:\${alias}|\${position}|\${usageFunction}\`);
+  return tokens;
+}\n`;
+    store = store.replace(anchor, helper + anchor);
+    changed = true;
+  }
+
+  if (!(store.includes('const seen = new Set<string>();') && store.includes('historyUsageIdentityTokensR457(normalized)'))) {
+    const currentR457 = `export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
+  const loaded: SavedAnalysis[] = [];
+  for (const entry of entries) {
+    try {
+      const normalized = normalizeSavedAnalysis(entry, offset + loaded.length);
+      if (normalized && !loaded.some((item) => item.saveKey === normalized.saveKey || sameHistoryUsageIdentityR457(item, normalized))) loaded.push(normalized);
+    } catch (error) {
+      console.error('Entrada defeituosa do Cofre ignorada durante a recuperação:', error);
+    }
+  }
+  return loaded;
+}`;
+    const legacy = `export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
   const loaded: SavedAnalysis[] = [];
   for (const entry of entries) {
     try {
@@ -91,26 +126,29 @@ export function applyUnlimitedFichasPpIntegrityR408(rootDirectory = process.cwd(
     }
   }
   return loaded;
-}`,
-`export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
+}`;
+    const optimized = `export function normalizeHistoryList(entries: unknown[], offset = 0): SavedAnalysis[] {
   const loaded: SavedAnalysis[] = [];
   const seen = new Set<string>();
   for (const entry of entries) {
     try {
       const normalized = normalizeSavedAnalysis(entry, offset + loaded.length);
-      if (normalized && !seen.has(normalized.saveKey)) {
-        seen.add(normalized.saveKey);
-        loaded.push(normalized);
-      }
+      if (!normalized) continue;
+      const tokens = historyUsageIdentityTokensR457(normalized);
+      if (tokens.some((token) => seen.has(token))) continue;
+      for (const token of tokens) seen.add(token);
+      loaded.push(normalized);
     } catch (error) {
       console.error('Entrada defeituosa do Cofre ignorada durante a recuperação:', error);
     }
   }
   return loaded;
-}`,
-    'normalização linear do Cofre'
-  );
-  store = r.source; changed ||= r.changed;
+}`;
+    if (store.includes(currentR457)) store = store.replace(currentR457, optimized);
+    else if (store.includes(legacy)) store = store.replace(legacy, optimized);
+    else throw new Error('R408: contrato inesperado em normalização linear R457.');
+    changed = true;
+  }
 
   r = replaceRequired(
     store,
