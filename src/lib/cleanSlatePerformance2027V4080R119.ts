@@ -791,7 +791,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const identityBonusByLevel=Array.from({length:17},(_,level)=>level
       ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
         +Math.min(level,8)*matchNeed*1.1
-        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*.55:0)
+        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*1.15:0)
       : 0);
     const weakRepairPenaltyByLevel=Array.from({length:17},(_,level)=>level && naturalStrength<60 && impacted<1.05?level*(60-naturalStrength)*.018:0);
     const excessPenaltyByLevel=Array.from({length:17},(_,level)=>{
