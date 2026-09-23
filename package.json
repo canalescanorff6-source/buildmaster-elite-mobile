@@ -353,7 +353,10 @@
     "ci:repair-safe": "node scripts/ci-safe-repair.mjs",
     "ci:diagnose-all": "npm run ci:repair-safe && node scripts/ci-doctor.mjs --full --report-dir .ci-reports",
     "test:v4080:gate": "npm run typecheck:v4080 && node tests/v40-80-safe-area-stack-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r119-clean-slate-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r119-output-quality-regression.ts && node tests/v40-80-r119-result-ui-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r119-ocr-dark-profile-recovery-regression.ts",
-    "test:r464-r468": "npm run test:r464 && npm run test:r465 && npm run test:r466 && npm run test:r467 && npm run test:r468"
+    "test:r464-r468": "npm run test:r464 && npm run test:r465 && npm run test:r466 && npm run test:r467 && npm run test:r468",
+    "ci:stabilize": "node scripts/ci-stability-rule.mjs",
+    "ci:assert-clean": "node scripts/ci-stability-rule.mjs --assert-clean",
+    "ci:zero-red": "npm run ci:stabilize && npm run ci:gate && npm run ci:diagnose-all && npm run ci:assert-clean && npm run build && npm run ci:assert-clean"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
