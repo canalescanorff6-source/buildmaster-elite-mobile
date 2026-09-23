@@ -802,8 +802,8 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
       : 0;
     const identityBonusByLevel=Array.from({length:17},(_,level)=>level
       ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
-        +Math.min(level,8)*matchNeed*1.1
-        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*1.15:0)
+        +Math.min(level,8)*matchNeed*2.4
+        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*(defensiveAerialIdentity ? 2.35 : 1.15):0)
       : 0);
     const weakRepairPenaltyByLevel=Array.from({length:17},(_,level)=>level && naturalStrength<60 && impacted<1.05?level*(60-naturalStrength)*.018:0);
     const excessPenaltyByLevel=Array.from({length:17},(_,level)=>{
@@ -823,7 +823,13 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
   const staminaDemand=clamp(average(staminaActionIds.map(id=>actionFrequencies.get(id)??0)),0,1);
   return {
     canonicalDnaR457,actions,groupProfiles,attributeBases,stamina:compileAttribute('stamina'),staminaDemand,staminaFloor:68+staminaDemand*20,
-    aerialSupport:Math.max(actionFrequencies.get('aerial_finish')??0,actionFrequencies.get('aerial_defend')??0),
+    aerialSupport:Math.max(
+      actionFrequencies.get('aerial_finish')??0,
+      actionFrequencies.get('aerial_defend')??0,
+      ['CB','DMF'].includes(evaluationTargetPosition)
+        ? clamp((average(['heading','jump','physicalContact'].map(attribute=>Number(parsed.attributes[attribute as AttributeKey])).filter(Number.isFinite))-68)/28*.85,0,1)
+        : 0
+    ),
     compiledActionAttributeCount:actions.reduce((sum,item)=>sum+item.compiledAttributes.length,0),
     compiledPressureAttributeCount:actions.reduce((sum,item)=>sum+item.compiledPressureAttributes.length,0)
   };

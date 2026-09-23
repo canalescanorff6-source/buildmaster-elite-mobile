@@ -40,6 +40,10 @@ on:
         description: Motivo do rollback
         type: string
         required: false
+      device_acceptance_json:
+        description: Recibo JSON opcional de aceitação física R457 do mesmo commit
+        type: string
+        required: false
   push:
     branches: [main]
 
@@ -222,6 +226,14 @@ jobs:
               handle.write(f'PROMOTE_LEGACY={str(promote_legacy).lower()}\n')
           print(f'Versão {version}; versionCode {version_code}; canal {channel}; rollout {rollout}%; release {release_tag}; asset {asset}')
           PY
+
+      - name: Validar aceitação física R457 quando fornecida
+        if: env.RELEASE_CHANNEL == 'stable' && github.event.inputs.device_acceptance_json != ''
+        env:
+          R457_DEVICE_ACCEPTANCE_JSON: ${{ github.event.inputs.device_acceptance_json }}
+          SOURCE_SHA: ${{ env.SOURCE_SHA }}
+          ROLLBACK_FROM_VERSION: ${{ env.ROLLBACK_FROM_VERSION }}
+        run: npm run validate:r457:device
 
       - name: Exibir versões do ambiente
         run: |
