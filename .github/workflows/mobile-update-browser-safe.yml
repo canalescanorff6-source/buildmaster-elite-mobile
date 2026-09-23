@@ -370,6 +370,53 @@ jobs:
               fh.write(f'archive_rel={archive_rel}\n')
           PY
 
+      - name: Configurar Node.js para validar pacote aplicado
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: repo/.node-version
+          cache: npm
+          cache-dependency-path: repo/package-lock.json
+
+      - name: Configurar Java para validações nativas
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Instalar dependências travadas antes de tocar na main
+        working-directory: repo
+        timeout-minutes: 30
+        env:
+          npm_config_registry: https://registry.npmjs.org/
+          npm_config_replace_registry_host: always
+          npm_config_fetch_retries: '4'
+          npm_config_fetch_retry_factor: '2'
+          npm_config_fetch_retry_mintimeout: '15000'
+          npm_config_fetch_retry_maxtimeout: '120000'
+          npm_config_fetch_timeout: '300000'
+        run: |
+          set -e
+          npm config set registry https://registry.npmjs.org/
+          for tentativa in 1 2 3; do
+            if npm ci --no-audit --no-fund; then
+              exit 0
+            fi
+            if [ "$tentativa" -lt 3 ]; then
+              sleep $((tentativa * 20))
+            fi
+          done
+          echo "::error::Falha ao instalar dependências para validar o pacote."
+          exit 1
+
+      - name: Gate preventivo do pacote antes da main
+        working-directory: repo
+        timeout-minutes: 25
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION: direct
+        run: npm run ci:gate
+
       - name: Conferir alterações
         id: changes
         working-directory: repo
