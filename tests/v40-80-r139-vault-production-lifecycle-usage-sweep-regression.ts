@@ -19,6 +19,13 @@ const dmf: any = createProductionAnalysisR138({ rawText, objective: 'COMPETITIVE
 assert.equal(analysisUsagePositionR138(cb), 'CB');
 assert.equal(analysisUsagePositionR138(dmf), 'DMF');
 assert.notEqual(resultHistoryKey(cb), resultHistoryKey(dmf));
+assert.equal(cb.cleanSlate2027R119?.positionStabilityR184?.decision, 'NATURAL_ANCHOR');
+assert.equal(dmf.cleanSlate2027R119?.positionStabilityR184?.decision, 'NATURAL_ANCHOR');
+assert.equal(
+  cb.cleanSlate2027R119?.usageFunction,
+  dmf.cleanSlate2027R119?.usageFunction,
+  'Sem função manual aceita, o alvo rejeitado não pode deixar rótulos diferentes de CB/DMF dentro da identidade funcional ancorada.'
+);
 assert.notEqual(correctionKeysForResult(cb).role, correctionKeysForResult(dmf).role, 'Correção funcional não pode vazar entre ZAG e VOL da mesma carta.');
 
 const cbWithDiagnosticCf: any = { ...cb, bestPosition: { ...cb.bestPosition, code: 'CF', label: 'CA', score: 99 } };
