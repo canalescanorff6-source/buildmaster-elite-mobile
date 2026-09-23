@@ -55,7 +55,67 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  stabilize-source:
+    name: Regra Zero-Red — estabilizar fonte
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      changed: ${{ steps.commit_stability.outputs.changed }}
+
+    steps:
+      - name: Baixar código para estabilização
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.source_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Configurar Node.js para estabilização
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+
+      - name: Regra Zero-Red — convergir duas vezes
+        run: npm run ci:stabilize
+
+      - name: Gravar convergência determinística no main
+        id: commit_stability
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHANGED="$(cat .ci-stability/changed-files.txt 2>/dev/null || true)"
+          if [ -z "$CHANGED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Fonte já estável; nenhum auto-commit necessário."
+            exit 0
+          fi
+
+          echo "Arquivos convergidos pela Regra Zero-Red:"
+          printf '%s\n' "$CHANGED"
+
+          if [ "$GITHUB_EVENT_NAME" != "push" ] || [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::A fonte precisa de convergência, mas este run não é push da main. Rode/commite npm run ci:stabilize antes de publicar."
+            exit 1
+          fi
+
+          git config user.name "buildmaster-zero-red[bot]"
+          git config user.email "buildmaster-zero-red[bot]@users.noreply.github.com"
+          git add -A
+          git reset -- .ci-stability public/update-manifest.json out/update-manifest.json android/app/src/main/assets/public/update-manifest.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Só havia arquivos efêmeros; nada será commitado."
+            exit 0
+          fi
+
+          git commit -m "chore(ci): autoestabiliza fonte pela Regra Zero-Red"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "Convergência gravada. Um novo run validará exatamente o código persistido no main."
+
   build-apk:
+    needs: stabilize-source
+    if: needs.stabilize-source.outputs.changed != 'true'
     name: Build, testes, assinatura e publicação verificada
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -326,6 +386,9 @@ jobs:
             cat .ci-reports/summary.json
           fi
           exit 1
+
+      - name: Regra Zero-Red — confirmar árvore imutável após testes
+        run: npm run ci:assert-clean
 
       - name: Gerar e verificar manifesto do código-fonte
         timeout-minutes: 4
