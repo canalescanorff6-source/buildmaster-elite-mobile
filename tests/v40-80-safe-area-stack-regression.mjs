@@ -49,7 +49,7 @@ assert.match(resultWorkspace,/Não gaste Token nela/);
 assert.doesNotMatch(readerProgress,/Preparando revisão/);
 assert.match(readerProgress,/Finalizando ficha/);
 assert.match(cardVision,/Validação automática/);
-assert.match(doctor,/const EXPECTED_FULL_GROUPS = \\d+;/,'ci-doctor deve declarar explicitamente a quantidade de grupos completos sem congelar um número histórico neste teste.');
+assert.match(doctor,/const\s+EXPECTED_FULL_GROUPS\s*=\s*\d+\s*;/,'ci-doctor deve declarar explicitamente a quantidade de grupos completos sem congelar um número histórico neste teste.');
 assert.match(doctor,/Regressões v40\.80/);
 assert.match(pipeline,/applyEfootballV600Performance/);
 assert.match(v6Meta,/season:\s*EFOOTBALL_V600_SEASON/);
