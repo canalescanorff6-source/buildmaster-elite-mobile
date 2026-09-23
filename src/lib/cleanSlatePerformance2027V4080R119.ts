@@ -659,7 +659,9 @@ function naturalActionFrequency(action:ActionDef,parsed:ParsedCard,context:Usage
     const aerialValues=['heading','jump','physicalContact'].map(k=>Number(parsed.attributes[k as AttributeKey])).filter(Number.isFinite);
     const aerial=aerialValues.length?average(aerialValues):0;
     const aerialProof=skillProof>=.75;
+    const provenAerialIdentity=aerialProof && aerialValues.length>=3 && aerial>=88;
     if(!aerialProof && aerialValues.length>=2) frequency*=aerial>=84?.86:.68;
+    else if(provenAerialIdentity) frequency=frequency*1.08+.13;
     else if(aerialProof) frequency*=1.06;
   }
   frequency*=Number(context.scoutingEvidenceR457.actionMultipliers[action.id]??1);
