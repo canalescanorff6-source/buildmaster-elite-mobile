@@ -8,7 +8,7 @@ const reportDir = reportArgIndex >= 0 ? String(process.argv[reportArgIndex + 1] 
 if (reportDir) fs.mkdirSync(reportDir, { recursive: true });
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const CI_SOURCE_BUILD = 'v40.80-ci-edge-stack-performance-20260812-r1';
-const EXPECTED_FULL_GROUPS = 93;
+const EXPECTED_FULL_GROUPS = 96;
 
 const quickChecks = [
   ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
@@ -29,6 +29,9 @@ const quickChecks = [
 ];
 
 const fullChecks = [
+  ['Calibração R135-R136', ['run', 'ci:calibration-gate']],
+  ['Contrato R457-R463', ['run', 'ci:r463-contract']],
+  ['Reader/closure R419-R456', ['run', 'test:r419']],
   ['TypeScript completo', ['run', 'typecheck']],
   ['Regressões v30.00', ['run', 'test:v3000:core']],
   ['Regressões v30.10', ['run', 'test:v3010']],

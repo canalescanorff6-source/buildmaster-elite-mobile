@@ -275,21 +275,31 @@ jobs:
           exit 1
 
       - name: Gate preventivo antes dos testes pesados
+        id: preventive_gate
         timeout-minutes: 20
+        continue-on-error: true
         run: npm run ci:gate
 
       - name: Restaurar e validar configuração TypeScript raiz
+        id: root_config_check
+        continue-on-error: true
         run: npm run types:repair && npm run quality:root-tsconfig
 
       - name: Recuperar e validar rota inicial
+        id: routes_check
+        continue-on-error: true
         run: npm run quality:routes
 
       - name: Pré-check rápido das regressões R193-R200
+        id: r193_r200_precheck
         timeout-minutes: 12
+        continue-on-error: true
         run: npm run test:r193 && npm run test:r194 && npm run test:r195 && npm run test:r196 && npm run test:r197 && npm run test:r198 && npm run test:r199 && npm run test:r200
 
       - name: Gate antecipado R192/R419/R456
+        id: r192_r419_gate
         timeout-minutes: 6
+        continue-on-error: true
         run: npm run test:r419 && npm run test:r192
 
       - name: Diagnóstico consolidado de todos os erros
@@ -307,10 +317,10 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Bloquear publicação se restarem falhas
-        if: steps.diagnose_all.outcome != 'success'
+      - name: Bloquear publicação somente após coletar todas as falhas
+        if: always() && (steps.diagnose_all.outcome != 'success' || steps.preventive_gate.outcome != 'success' || steps.root_config_check.outcome != 'success' || steps.routes_check.outcome != 'success' || steps.r193_r200_precheck.outcome != 'success' || steps.r192_r419_gate.outcome != 'success')
         run: |
-          echo "::error::O diagnóstico completo encontrou falhas. Todas foram executadas e reunidas no artefato ci-diagnostico-completo-${{ github.run_id }}."
+          echo "::error::A publicação foi bloqueada somente depois da coleta consolidada. Consulte ci-diagnostico-completo-${{ github.run_id }} e os gates acima."
           if [ -f .ci-reports/summary.json ]; then
             cat .ci-reports/summary.json
           fi
