@@ -782,11 +782,22 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const aerialSkillEvidence=key==='aerialStrength'
       ? Math.max(skillActionSupportR458(skillActionList(parsed),'aerial_finish'),skillActionSupportR458(skillActionList(parsed),'aerial_defend'))
       : 0;
+    const defensiveAerialIdentity=key==='aerialStrength'
+      && ['CB','DMF'].includes(context.targetPosition)
+      && aerialNaturalEvidence>=.68
+      && aerialActionEvidence>=.18;
     const aerialIdentityQualified=key==='aerialStrength'
       && aerialNaturalEvidence>=.55
-      && (aerialActionEvidence>=.28 || aerialSkillEvidence>=.35);
+      && (aerialActionEvidence>=.28 || aerialSkillEvidence>=.35 || defensiveAerialIdentity);
     const aerialIdentityEvidence=aerialIdentityQualified
-      ? clamp(aerialActionEvidence*.46+aerialNaturalEvidence*.34+aerialSkillEvidence*.20,0,1)
+      ? clamp(
+          aerialActionEvidence*.42
+          +aerialNaturalEvidence*(defensiveAerialIdentity?.43:.34)
+          +aerialSkillEvidence*.20
+          +(defensiveAerialIdentity?.08:0),
+          0,
+          1
+        )
       : 0;
     const identityBonusByLevel=Array.from({length:17},(_,level)=>level
       ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
