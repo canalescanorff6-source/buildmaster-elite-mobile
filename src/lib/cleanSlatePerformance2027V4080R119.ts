@@ -1876,9 +1876,16 @@ function usageFunctionR457(input:AnalysisResult, context:UsageContextR125) {
     if(scoutingFunction) return scoutingFunction;
   }
 
-  const team=String(input.teamMap?.functionLabel ?? '').trim();
+  // R469: não herdar função calculada para um alvo diferente do contexto final.
+  // teamMap e advancedTacticalFunction nascem da posição selecionada pelo analisador;
+  // quando R184 volta ao NATURAL_ANCHOR, esses rótulos podem pertencer ao alvo rejeitado.
+  const team= input.bestPosition?.code===context.targetPosition
+    ? String(input.teamMap?.functionLabel ?? '').trim()
+    : '';
   if(team) return team;
-  const advanced=String(input.advancedTacticalFunction?.officialPlaystyle ?? '').trim();
+  const advanced= input.advancedTacticalFunction?.position===context.targetPosition
+    ? String(input.advancedTacticalFunction?.officialPlaystyle ?? '').trim()
+    : '';
   if(advanced) return advanced;
   return `${context.targetPosition} funcional`;
 }
@@ -1986,6 +1993,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       recommendationEvaluation=naturalOptimized.evaluation;
     }
   }
+  const finalizedUsageFunctionR469=String(recommendationContext.usageFunction ?? usageFunction).trim() || usageFunction;
   const training=optimized.plan;
   const spent=trainingPlanTotalCost(training);
   const actions=optimized.evaluation.details.slice(0,12);
@@ -2047,7 +2055,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     positionAnchor:parsed.mainPosition,
     usagePosition:usageContext.targetPosition,
     usagePositionChanged:usageContext.usagePositionChanged,
-    usageFunction,
+    usageFunction:finalizedUsageFunctionR469,
     gameplayImpactR458,
     positionStabilityR184,
     playstyleContext,
@@ -2065,7 +2073,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       `Certificação R457: ${optimized.optimalityCertificateR457.status}; ${optimized.optimalityCertificateR457.exactStatesEvaluated} combinações exatas; ganho vs Beam ${optimized.optimalityCertificateR457.scoreGainVsBeam>=0?'+':''}${optimized.optimalityCertificateR457.scoreGainVsBeam}.`,
       `Otimização conjunta R457: ${optimized.jointConfigurationR457.status}; ${optimized.jointConfigurationR457.equivalentTrainingCandidates} ficha(s) dentro da faixa exata foram comparadas com Top 5 e Ímpeto; sacrifício de score-base ${optimized.jointConfigurationR457.baseScoreSacrifice}.`,
       `Posição natural ${parsed.mainPosition}; posição real de uso ${usageContext.targetPosition}. A posição de uso muda a demanda funcional sem trocar a identidade da carta.`,
-      `R459: função ${usageFunction} dirige a demanda antes da capacidade atual; ${gameplayImpactR458.actions.slice(0,3).map(item=>`${item.label} ${Math.round(item.demand)}`).join(' • ')||'ações em revisão'}.`,
+      `R459: função ${finalizedUsageFunctionR469} dirige a demanda antes da capacidade atual; ${gameplayImpactR458.actions.slice(0,3).map(item=>`${item.label} ${Math.round(item.demand)}`).join(' • ')||'ações em revisão'}.`,
       (input as AnalysisResult & { buildOutcomeCalibrationR460?: { status?:string; reasons?:string[] } }).buildOutcomeCalibrationR460?.status==='ACTIVE'
         ? `R460 ativo: ${(input as AnalysisResult & { buildOutcomeCalibrationR460?: { reasons?:string[] } }).buildOutcomeCalibrationR460?.reasons?.[1] ?? 'há falha persistente entre promessa da ficha e resultado real.'}`
         : 'R460: aprendizado promessa × resultado ainda não reuniu evidência suficiente para alterar retorno marginal.',
