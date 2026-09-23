@@ -53,6 +53,7 @@ jobs:
           inbox = Path('inbox').resolve()
           repo = Path('repo').resolve()
           staging = Path('/tmp/buildmaster-mobile-update')
+exact_staging = Path('/tmp/buildmaster-mobile-package-exact')
 
           # ChatGPT-safe transport: a ZIP may arrive as base64 text chunks.
           trigger = inbox / '.mobile-upload-trigger'
@@ -253,6 +254,10 @@ jobs:
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(data)
 
+              if exact_staging.exists():
+                  shutil.rmtree(exact_staging)
+              shutil.copytree(staging, exact_staging)
+
               unresolved = []
               for path in conflicts:
                   rel = PurePosixPath(path)
@@ -368,7 +373,37 @@ jobs:
               fh.write(f'file_count={len(expected)}\n')
               fh.write(f'delete_count={len(safe_deletes)}\n')
               fh.write(f'archive_rel={archive_rel}\n')
+              fh.write(f'package_base={base}\n')
           PY
+
+      - name: Publicar referência exata do pacote para auditoria
+        shell: bash
+        env:
+          PACKAGE_BASE: ${{ steps.package.outputs.package_base }}
+        run: |
+          set -euo pipefail
+          REF_DIR="/tmp/buildmaster-package-reference"
+          rm -rf "$REF_DIR"
+          git -C repo worktree add --detach "$REF_DIR" "$PACKAGE_BASE"
+          cp -a /tmp/buildmaster-mobile-package-exact/. "$REF_DIR"/
+          python - <<'PY'
+          import json
+          from pathlib import Path, PurePosixPath
+          meta = json.loads(Path('/tmp/buildmaster-mobile-package-exact/.mobile-update.json').read_text(encoding='utf-8')) if Path('/tmp/buildmaster-mobile-package-exact/.mobile-update.json').exists() else None
+          if meta:
+              for path in meta.get('delete', []):
+                  target = Path('/tmp/buildmaster-package-reference').joinpath(*PurePosixPath(path).parts)
+                  if target.is_file():
+                      target.unlink()
+          PY
+          rm -f "$REF_DIR/.mobile-update.json"
+          git -C "$REF_DIR" config user.name "BuildMaster CI"
+          git -C "$REF_DIR" config user.email "actions@github.com"
+          git -C "$REF_DIR" add -A
+          if ! git -C "$REF_DIR" diff --cached --quiet; then
+            git -C "$REF_DIR" commit -m "ref(package): conteúdo exato do pacote mobile recebido"
+          fi
+          git -C "$REF_DIR" push --force origin HEAD:refs/heads/mobile-package-reference
 
       - name: Conferir alterações
         id: changes
