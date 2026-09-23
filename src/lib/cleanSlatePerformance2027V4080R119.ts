@@ -792,9 +792,9 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     const aerialIdentityEvidence=aerialIdentityQualified
       ? clamp(
           aerialActionEvidence*.42
-          +aerialNaturalEvidence*(defensiveAerialIdentity?.43:.34)
+          +aerialNaturalEvidence*(defensiveAerialIdentity ? .43 : .34)
           +aerialSkillEvidence*.20
-          +(defensiveAerialIdentity?.08:0),
+          +(defensiveAerialIdentity ? .08 : 0),
           0,
           1
         )
