@@ -21,8 +21,13 @@ const directR182 = read('scripts/check-android-release-readiness-r182.mjs');
 const backgroundInstaller = read('scripts/install-background-ocr-plugin.mjs');
 const securityInstaller = read('scripts/install-android-security-plugin.mjs');
 const playValidator = read('scripts/validate-play-store-release.mjs');
+const appUpdatesR423 = read('src/lib/appUpdates.ts');
+const appUpdatesFallbackReleaseR423 = (appUpdatesR423.match(/APP_RELEASE_VERSION\s*=\s*[^\n]*\|\|\s*'([^']+)'/) || [])[1] || '';
+const appUpdatesFallbackNativeR423 = (appUpdatesR423.match(/APP_NATIVE_VERSION\s*=\s*[^\n]*\|\|\s*'([^']+)'/) || [])[1] || '';
 
 check(/^\d+\.\d+\.\d+$/.test(version), 'package.json usa SemVer X.Y.Z');
+check(appUpdatesFallbackReleaseR423 === version, 'APP_RELEASE_VERSION fallback coincide com package.json');
+check(appUpdatesFallbackNativeR423 === version, 'APP_NATIVE_VERSION fallback coincide com package.json');
 check(read(notesPath).trim().length > 0, `release notes ${version} existem`);
 warn(!play.includes('40.70.0'), 'Workflow Play protegido ainda contém hardcode histórico 40.70.0; atualizar .github/workflows manualmente antes de publicar na Play.');
 warn(!play.includes('buildmaster-play-v40-30-'), 'Workflow Play protegido ainda usa rótulo histórico v40-30.');

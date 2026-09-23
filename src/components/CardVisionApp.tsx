@@ -27,6 +27,8 @@ import { ONBOARDING_STORAGE_KEY, type OnboardingProfile } from '@/lib/appStartup
 import type { TotalReadingSession } from '@/lib/totalCardReader';
 import type { SingleFieldEvidence, SinglePrintSession } from '@/modules/card-reader/singlePrintPro';
 import type { CardCropResult } from '@/modules/card-reader/cardArtCrop';
+import type { SquadMappingPlayer } from '@/modules/squad-mapping/squadMappingEngine';
+import type { MasterCardCatalogEntryR438 } from '@/modules/card-catalog/masterCardCatalogR438';
 
 
 import { createDefaultEfhubCalibrationZones, createEfhubCalibrationMap, normalizeEfhubCalibrationZones, type EfhubCalibrationZone } from '@/modules/card-reader/efhubCalibrationModelR164';
@@ -702,6 +704,92 @@ export function CardVisionApp() {
   const rejectImpetoLocally = (impeto: string) => fireResultActionR188('rejectImpetoLocally', impeto);
   const promoteImpetoLocally = (impeto: string) => fireResultActionR188('promoteImpetoLocally', impeto);
   const resetLocalCorrectionsForCurrent = () => fireResultActionR188('resetLocalCorrectionsForCurrent');
+  async function generateFichaFromMasterCardR438(card: MasterCardCatalogEntryR438) {
+    const { masterCardGenerationReadinessR452 } = await import('@/modules/card-catalog/masterCardCatalogR438');
+    const readiness = masterCardGenerationReadinessR452(card);
+    if (!readiness.canGenerate) { setStatus('Esta carta ainda não pode gerar ficha porque falta identidade da edição ou PP válido.'); return; }
+    const { buildMasterCardAnalysisRawTextR438, createMasterCardProductionAnalysisR438 } = await import('@/modules/card-catalog/masterCardAnalysisRequestR438');
+    const source = buildMasterCardAnalysisRawTextR438(card);
+    const nextResult = createMasterCardProductionAnalysisR438(card, { objective: 'COMPETITIVE', targetPosition: card.mainPosition, tacticalProfile });
+    setSelectedFile(null);
+    setPreview(null);
+    setPlayerCardImage(null);
+    setCardCropResult(null);
+    setCardCropAdjustOpen(false);
+    setFileName(`catalogo-r438-${card.catalogCardId}`);
+    setRawText(source);
+    setOcrDone(true);
+    setPremiumReadings([]);
+    setTotalReadingSession(null);
+    setSinglePrintSession(null);
+    setPreFinalConfirmation(null);
+    setPreFinalGenerateRequested(false);
+    setManualMode(true);
+    setManualFields({
+      playerName: card.playerName,
+      level: card.level ? String(card.level) : '',
+      trainingPointsTotal: readiness.points ? String(readiness.points) : '',
+      attributes: Object.fromEntries(Object.entries(card.attributes).map(([key, value]) => [key, String(value)])) as ManualFields['attributes'],
+      nativeSkills: Array.from(new Set([...card.nativeSkills, ...card.additionalSkills, ...card.specialSkills]))
+    });
+    setCardPositionOverride(card.mainPosition);
+    setPlaystyleOverride(card.offensivePlaystyle || card.playstyle || 'AUTO');
+    setDefensivePlaystyleOverride(card.defensivePlaystyle || 'AUTO');
+    setResult(nextResult);
+    setDraftResult(nextResult);
+    setStatus('Ficha gerada pelo Catálogo Mestre; cartas parciais permanecem marcadas para revisão.');
+    openMainSection('resultado');
+  }
+
+  async function generateFichaFromMasterRosterR436(player: SquadMappingPlayer) {
+    const { buildMasterRosterRawTextR436, masterRosterCardReadinessR436 } = await import('@/modules/squad-mapping/masterRosterCatalogR436');
+    const readiness = masterRosterCardReadinessR436(player);
+    if (!readiness.canGenerate || readiness.trainingPointsTotal === null) {
+      setStatus(`Esta carta ainda não pode gerar ficha sem OCR. Falta: ${readiness.missing.join(', ')}.`);
+      return;
+    }
+    const source = buildMasterRosterRawTextR436(player);
+    const { createProductionAnalysisR138 } = await import('@/modules/analysis/productionOrchestratorR138');
+    const nextResult = createProductionAnalysisR138({
+      rawText: source,
+      objective: 'COMPETITIVE',
+      targetPosition: player.mainPosition,
+      imageFileName: player.sourceFileName || `catalogo-r436-${player.id}`,
+      tacticalProfile
+    });
+    const attributes = Object.fromEntries(Object.entries(player.attributes).flatMap(([key, value]) =>
+      typeof value === 'number' && Number.isFinite(value) ? [[key, String(value)]] : []
+    )) as ManualFields['attributes'];
+    setSelectedFile(null);
+    setPreview(player.portrait || null);
+    setPlayerCardImage(player.portrait || null);
+    setCardCropResult(null);
+    setCardCropAdjustOpen(false);
+    setFileName(player.sourceFileName || `catalogo-r436-${player.id}`);
+    setRawText(source);
+    setOcrDone(true);
+    setPremiumReadings([]);
+    setTotalReadingSession(null);
+    setSinglePrintSession(null);
+    setPreFinalConfirmation(null);
+    setPreFinalGenerateRequested(false);
+    setManualMode(true);
+    setManualFields({
+      playerName: player.name,
+      level: player.level ? String(player.level) : '',
+      trainingPointsTotal: String(readiness.trainingPointsTotal),
+      attributes,
+      nativeSkills: [...player.skills]
+    });
+    setCardPositionOverride(player.mainPosition);
+    setPlaystyleOverride(player.offensivePlaystyle || player.playstyle || 'AUTO');
+    setDefensivePlaystyleOverride(player.defensivePlaystyle || 'AUTO');
+    setResult(nextResult);
+    setDraftResult(nextResult);
+    setStatus(`Ficha de ${player.name} gerada diretamente do Meu Elenco, sem nova leitura OCR.`);
+    openMainSection('resultado');
+  }
+
   async function startManualPreciseMode() {
     setMainSection('manual');
     const template = [
@@ -764,6 +852,21 @@ export function CardVisionApp() {
   const analyzeSelectedImage = (fileOverride?: File, resumed = false) => invokeReaderActionR187('analyzeSelectedImage', fileOverride, resumed);
   const analyzeTotalCardCaptures = (captures: import('@/lib/totalCardReader').TotalCardCaptureInput[]) => invokeReaderActionR187('analyzeTotalCardCaptures', captures);
   const runAnalysis = (confirmed = false) => invokeReaderActionR187('runAnalysis', confirmed);
+
+  async function rereadOriginalPrintR441(sourceHash: string) {
+    try {
+      const { loadCardSourceFileR441 } = await import('@/modules/master-catalog/cardSourceVaultR441');
+      const restored = await loadCardSourceFileR441(sourceHash);
+      if (!restored) { setStatus('O print original não foi encontrado. Restaure o ZIP de prints ou importe a imagem novamente.'); return; }
+      const file = restored as File;
+      openMainSection('leitor');
+      await handleFile(file);
+      setStatus('Print original recuperado. Relendo com o motor atual do BuildMaster...');
+      await analyzeSelectedImage(file);
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'Não foi possível reler o print original.');
+    }
+  }
 
   function applySinglePrintCandidate(field: SingleFieldEvidence['key'], value: string) {
     if (!value) return;
@@ -954,6 +1057,9 @@ export function CardVisionApp() {
           <SquadMappingCenter
             history={renderHistory}
             onOpenFicha={(historyId) => openIntegratedPlayer(historyId, 'result')}
+            onGenerateFicha={(player) => void generateFichaFromMasterRosterR436(player)}
+            onGenerateMasterCard={(card) => void generateFichaFromMasterCardR438(card)}
+            onRereadOriginal={(sourceHash) => void rereadOriginalPrintR441(sourceHash)}
           />
         </SectionErrorBoundary>
       )}

@@ -20,7 +20,9 @@ expect(edge.includes("expiryMode === 'never'" ) || edge.includes("['days', 'date
 expect(edge.indexOf("if (action === 'health')") < edge.indexOf("MFA_REQUIRED"), 'Health check continua bloqueado pelo MFA.');
 expect(edge.includes('USERNAME_EXISTS'), 'Mensagem de usuário duplicado ausente.');
 expect(migration.includes('profile_count = 1'), 'Recuperação do primeiro administrador ausente.');
-expect(migration.includes("factor.status::text = 'verified'"), 'Migração não detecta MFA verificado.');
+expect(migration.includes('R425_MFA_FAIL_CLOSED'), 'Migração não registra a política MFA fail-closed atual.');
+expect(migration.includes('admin_mfa_required = true'), 'Migração não mantém MFA administrativo obrigatório.');
+expect(!migration.includes('has_verified_admin_factor'), 'Migração antiga ainda pode desligar MFA quando não há fator cadastrado.');
 expect(workflow.includes("- 'supabase/**'"), 'Deploy automático do backend ausente.');
 expect(workflow.includes("grep -q 'admin-users'"), 'Workflow não confirma a função admin-users.');
 

@@ -7,7 +7,23 @@ export const TACTICAL_SEQUENCE_STORAGE_KEY = 'buildmaster_tactical_sequence_proj
 export const MAX_TACTICAL_SEQUENCE_PROJECTS = 40;
 
 function isProject(value: unknown): value is TacticalSequenceProject {
-  return Boolean(value && typeof value === 'object' && Array.isArray((value as TacticalSequenceProject).frames));
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const project = value as Partial<TacticalSequenceProject>;
+  if (typeof project.id !== 'string' || !project.id.trim()) return false;
+  if (typeof project.name !== 'string' || !project.name.trim()) return false;
+  if (typeof project.formationId !== 'string' || !project.formationId.trim()) return false;
+  if (typeof project.style !== 'string' || !project.style.trim()) return false;
+  if (!Array.isArray(project.frames) || project.frames.length < 2 || project.frames.length > 12) return false;
+  return project.frames.every((frame) => {
+    if (!frame || typeof frame !== 'object' || Array.isArray(frame)) return false;
+    if (typeof frame.id !== 'string' || !frame.id.trim()) return false;
+    if (typeof frame.title !== 'string' || typeof frame.objective !== 'string') return false;
+    if (!Number.isFinite(Number(frame.durationMs)) || Number(frame.durationMs) < 600 || Number(frame.durationMs) > 10000) return false;
+    if (!Array.isArray(frame.players) || !Array.isArray(frame.actions)) return false;
+    const playersValid = frame.players.every((player) => Boolean(player && typeof player.slotId === 'string' && typeof player.label === 'string' && Number.isFinite(Number(player.x)) && Number.isFinite(Number(player.y))));
+    const actionsValid = frame.actions.every((action) => Boolean(action && typeof action.id === 'string' && typeof action.fromSlotId === 'string' && typeof action.toSlotId === 'string' && typeof action.kind === 'string' && typeof action.label === 'string'));
+    return playersValid && actionsValid;
+  });
 }
 
 export function readTacticalSequenceProjects(): TacticalSequenceProject[] {

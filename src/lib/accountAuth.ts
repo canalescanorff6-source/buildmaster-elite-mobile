@@ -46,11 +46,6 @@ export type AccountSession = {
   expiresAt: number;
   userId: string;
 };
-
-// A sessão precisa sobreviver a trocas de tela, retorno do segundo plano e
-// remontagens rápidas do React/WebView. O cache em memória evita leituras
-// concorrentes do armazenamento nativo, enquanto as Promises single-flight
-// impedem duas renovações do mesmo refresh token ao mesmo tempo.
 let memorySession: AccountSession | null | undefined;
 let sessionReadInFlight: Promise<AccountSession | null> | null = null;
 let refreshSessionInFlight: Promise<AccountSession> | null = null;
@@ -144,7 +139,6 @@ export type AccountExpiryMode = 'days' | 'date' | 'never';
 
 export type AdminUserAction =
   | { action: 'health' }
-  | { action: 'restore_account_creation' }
   | { action: 'list' }
   | { action: 'overview'; auditLimit?: number }
   | { action: 'list_devices'; userId?: string; includeRevoked?: boolean }
@@ -211,10 +205,6 @@ export function isCloudAccountsConfigured() {
 export function normalizeUsername(input: string): string {
   const raw = input.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const internalSuffix = `@${USERNAME_DOMAIN}`;
-  // O login aceita tanto o nome curto quanto o e-mail interno completo
-  // exibido no Supabase. Antes, o
-  // caractere @ era removido e o domínio acabava entrando no username, o que
-  // fazia a conta principal procurar um e-mail inexistente.
   const candidate = raw.endsWith(internalSuffix) ? raw.slice(0, -internalSuffix.length) : raw;
   return candidate.replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 20);
 }
@@ -268,17 +258,11 @@ async function readSessionFromStorage(): Promise<AccountSession | null> {
         if (raw) await secureSet(SESSION_KEY, raw);
       }
       if (raw) return parseStoredSession(raw);
-      // O plugin do Android pode responder vazio durante os primeiros
-      // milissegundos depois que o WebView volta ou remonta. Tente novamente
-      // antes de concluir que não existe sessão.
       continue;
     } catch (error) {
       lastError = error;
     }
   }
-  // Uma indisponibilidade momentânea do plugin nativo não deve expulsar o
-  // usuário. Quando existe sessão em memória, ela continua sendo a fonte mais
-  // recente até o armazenamento responder novamente.
   if (memorySession !== undefined) return memorySession;
   if (lastError) console.warn('BuildMaster: armazenamento seguro temporariamente indisponível.', lastError);
   return null;
@@ -413,9 +397,6 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
   const headers = new Headers(init.headers || {});
   headers.set('apikey', SUPABASE_ANON_KEY);
   headers.set('X-Client-Info', `buildmaster/${APP_RELEASE_VERSION}`);
-  // O Auth hospedado do Supabase não precisa do cabeçalho privado do app e
-  // alguns WebViews transformam esse cabeçalho extra em um preflight CORS.
-  // A versão do BuildMaster continua sendo enviada às Edge Functions, onde é usada.
   if (path.startsWith('/functions/v1/')) headers.set('X-BuildMaster-Version', APP_RELEASE_VERSION);
   if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
@@ -425,8 +406,6 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
   const transportErrors: string[] = [];
 
   if (Capacitor.isNativePlatform()) {
-    // Transporte principal independente do WebView e do patch global do Capacitor.
-    // Ele usa HttpsURLConnection dentro do plugin já assinado do BuildMaster.
     try {
       const nativeResponse = await nativeSecureHttpRequest({
         url,
@@ -440,9 +419,6 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
     } catch (nativeSecurityError) {
       transportErrors.push(`NATIVE=${conciseTransportError(nativeSecurityError)}`);
     }
-
-    // Reserva 1: API HTTP oficial do Capacitor. Uma resposta HTTP, inclusive
-    // 4xx/5xx, é devolvida sem repetir a operação por outro transporte.
     try {
       const nativeResponse = await CapacitorHttp.request({
         url,
@@ -458,9 +434,6 @@ async function supabaseFetch(path: string, init: RequestInit = {}, accessToken?:
       transportErrors.push(`CAP=${conciseTransportError(capacitorError)}`);
     }
   }
-
-  // Reserva 2: fetch real do WebView/navegador. Como o cabeçalho específico do
-  // BuildMaster só é usado nas Functions, o login Auth não cria preflight extra.
   try {
     return await performWebFetch(url, init, headers, 30_000);
   } catch (webError) {
@@ -500,8 +473,6 @@ async function performSessionRefresh(current: AccountSession): Promise<AccountSe
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
   if (!response.ok) {
     if (response.status === 400 || response.status === 401) {
-      // Antes de apagar a sessão, confirme se outra chamada concorrente já
-      // rotacionou o refresh token. Isso elimina o logout ao trocar de tela.
       const latest = memorySession ?? await readSessionFromStorage();
       if (latest && latest.refreshToken !== current.refreshToken && latest.expiresAt > Date.now()) return latest;
       await clearSessionStorage();
@@ -532,8 +503,6 @@ async function refreshSession(current: AccountSession): Promise<AccountSession> 
 export async function getValidAccountSession(): Promise<AccountSession | null> {
   const session = await readSession();
   if (!session) return null;
-  // Uma margem de dois minutos evita trocar o token durante navegação comum,
-  // mas ainda o renova com antecedência antes de chamadas protegidas.
   if (session.expiresAt - Date.now() > 120_000) return session;
   return refreshSession(session);
 }
@@ -758,9 +727,6 @@ async function performRestoreAccountAccess(): Promise<LicenseValidation | null> 
   try {
     const session = await getValidAccountSession();
     if (!session) {
-      // Em uma remontagem rápida do WebView, o plugin seguro pode levar alguns
-      // milissegundos para responder. A licença em cache mantém o acesso dentro
-      // do prazo offline em vez de exibir a tela de login indevidamente.
       const cached = await readCachedLicense();
       if (!cached) return null;
       const status = evaluateCachedLicense(cached);
@@ -788,7 +754,6 @@ export async function signOutAccount() {
   try {
     if (session && isCloudAccountsConfigured()) await supabaseFetch('/auth/v1/logout', { method: 'POST' }, session.accessToken);
   } catch {
-    // A sessão protegida do aparelho será removida mesmo sem conexão.
   }
   await clearSessionStorage();
 }

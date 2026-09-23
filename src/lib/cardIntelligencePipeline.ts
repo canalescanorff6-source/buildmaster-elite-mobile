@@ -38,6 +38,8 @@ import { applyPermanentResources2027R80 } from './permanentResources2027V4080R80
 import { applyPerformanceLab2027R90 } from './performanceLab2027V4080R90';
 import { applyProduction2027R100 } from './production2027V4080R100';
 import { applyCleanSlatePerformance2027R119 } from './cleanSlatePerformance2027V4080R119';
+import { applyPositionUsageR416 } from './positionUsageIntelligenceR416';
+import { applyAutonomousRoleSeedR417 } from './autonomousCardR417';
 import { sealProductionAuthorityR126 } from './productionAuthorityR126';
 import { sealProductionAuthorityR128 } from './productionAuthorityR128';
 import { attachMatchEvidenceCalibrationR136 } from '../modules/matches/matchEvidenceCalibrationR136';
@@ -197,8 +199,11 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   // Continua read-only: apenas repondera retorno marginal; Clean Slate permanece único escritor.
   current = attachBuildOutcomeCalibrationR460(current);
 
+  // R417: escolhe a função automaticamente pelo DNA local antes do único escritor final.
+  current = applyAutonomousRoleSeedR417(current);
   // Único escritor final: sempre recalcula do snapshot cru obtido ANTES de qualquer motor histórico.
   current = applyCleanSlatePerformance2027R119(current, protectedRawCard);
+  current = applyPostAuthorityReadOnly(current, applyPositionUsageR416);
   current = applyPostAuthorityReadOnly(current, applyProduction2027R100);
   current = applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13);
   current = sealProductionAuthorityR126(current);

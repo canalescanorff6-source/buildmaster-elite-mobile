@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 const SOURCE='src/lib/cleanSlatePerformance2027V4080R119.ts';
 const REVIEWED_SHA='42c95c332ff0cd1dcc1a61d42cef2139c3995792b7f51a317b402dc69226cd1e';
 const R416_SHA='8e31a5d224836cef882d9bb23e396358299adf64cfb1405ce2baa79f280cf0e4';
+const R417_SHA='299db08a35e14c8ba7dea325b9fc8722480309c3417f915058243b8a3b50e312';
 const LEGACY_SHA='736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5';
 const CONTRACTS=[
   "tests/v40-80-r186-analyzer-boundary-regression.mjs",
@@ -41,7 +42,7 @@ export function applyReviewedR119BaselinesR186R200(rootDirectory=process.cwd()){
     const file=resolve(root,rel);
     if(!existsSync(file)) throw new Error(`R406-fix7: contrato ausente: ${rel}`);
     const before=readFileSync(file,'utf8');
-    const known=[LEGACY_SHA,REVIEWED_SHA,R416_SHA];
+    const known=[LEGACY_SHA,REVIEWED_SHA,R416_SHA,R417_SHA];
     if(!known.includes(expected)) known.push(expected);
     const counts=known.map((sha)=>[sha,(before.match(new RegExp(sha,'g'))||[]).length]);
     const total=counts.reduce((sum,[,count])=>sum+count,0);

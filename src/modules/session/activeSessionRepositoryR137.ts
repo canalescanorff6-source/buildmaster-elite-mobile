@@ -88,7 +88,6 @@ export function buildActiveSessionSnapshotR137(input: Omit<ActiveSessionSnapshot
     ...input,
     preview: safeDataImage(input.preview),
     playerCardImage: safeDataImage(input.playerCardImage),
-    // Resultado é derivado e selado; a sessão salva apenas dados de entrada para não reidratar uma autoridade antiga.
     result: null,
     draftResult: null,
     savedAt: Number.isFinite(Number(input.savedAt)) ? Number(input.savedAt) : Date.now()
@@ -102,8 +101,6 @@ export function writeActiveSessionSnapshotR137(storageKey: string, snapshot: Act
 export function clearActiveSessionSnapshotR137(storageKey: string) {
   return removeAccountStorage(storageKey);
 }
-
-// R157 — mesma autoridade de sessão R137, agora com persistência dividida entre metadados e mídia.
 export const ACTIVE_SESSION_REPOSITORY_R157_VERSION = '40.80-r157-split-session-persistence-v1' as const;
 const PREVIEW_SUFFIX_R157 = '__r157_preview';
 const PLAYER_IMAGE_SUFFIX_R157 = '__r157_player_image';
@@ -190,7 +187,6 @@ function readSplitSessionMetadataR157(storageKey: string, now: number): ActiveSe
 export function readActiveSessionSnapshotR157(storageKey: string, now = Date.now()): ActiveSessionReadR137 {
   const split = readSplitSessionMetadataR157(storageKey, now);
   if (split) return split;
-  // Compatibilidade: snapshots R137 monolíticos continuam restauráveis e serão convertidos no próximo autosave.
   const legacy = readActiveSessionSnapshotR137(storageKey, now);
   if (legacy.status !== 'RESTORED') {
     removeAccountStorage(sessionMediaKeyR157(storageKey, PREVIEW_SUFFIX_R157));

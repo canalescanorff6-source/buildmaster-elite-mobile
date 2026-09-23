@@ -8,7 +8,7 @@ assert.ok(actions.includes('`delete:${stableIds[0]}`'), 'Exclusão individual pr
 assert.ok(actions.includes("`batch:${action}:${stableIds.join('|')}`"), 'Lotes diferentes precisam ser distinguidos pelos IDs reais.');
 assert.ok(!actions.includes('`batch:${action}:${ids.length}`'), 'Quantidade de itens não pode ser a identidade de uma ação do Cofre.');
 assert.match(routeRepair,/export function hasConvergedR417/);
-assert.match(routeRepair,/const stableIds = \[\.\.\.new Set\(ids\)\]\.filter\(Boolean\)\.sort\(\);/);
+assert.match(routeRepair,/R424_FIX2_SEMANTIC_R417_CONVERGENCE/); assert.match(routeRepair,/batchHistoryR417/); assert.match(routeRepair,/batchRemoveHistoryR417/); assert.doesNotMatch(routeRepair,/stableIds/);
 assert.match(routeRepair,/R417 já convergida: reparo de contratos históricos não será reaplicado\./);
 assert.match(routeRepair,/if \(hasConvergedR417\(options\.projectRoot\)\)/);
 assert.match(routeRepair,/applyR418UnboundedCapacity/);

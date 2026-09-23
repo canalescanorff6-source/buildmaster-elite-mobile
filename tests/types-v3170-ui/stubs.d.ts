@@ -33,7 +33,6 @@ declare module '@capacitor/core' {
   export function registerPlugin<T>(name: string): T;
 }
 
-declare module '@/lib/analyzer' { export type TacticalStyle = string; }
 declare module '@/modules/core/centralIntelligence' { export type TeamDiagnosis = { formation: string }; }
 
 declare module '@/modules/matches/matchRecorderBridge' {
@@ -75,4 +74,4 @@ declare module '@/modules/matches/matchTrainerEngine' {
   export function upsertMatchTrainerSession(session:MatchTrainerSession):MatchTrainerSession[];
 }
 
-declare module '@/lib/safeLocalStorage' { export function safeStorageGet(key:string):string|null; export function safeStorageSet(key:string,value:string):boolean; export function safeStorageGetJson<T>(key:string,fallback:T):T; export function safeStorageSetJson(key:string,value:unknown):boolean; }
+declare module '@/lib/safeLocalStorage' { export function safeStorageGet(key:string):string|null; export function safeStorageSet(key:string,value:string):boolean; export function safeStorageGetJson<T>(key:string,fallback:T):T; export function safeStorageSetJson(key:string,value:unknown):boolean; export function safeStorageRemove(key:string):boolean; }

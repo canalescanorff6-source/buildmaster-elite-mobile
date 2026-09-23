@@ -39,6 +39,7 @@ export type DetailedPrintReading = {
   manager: { name: string | null; boosts: DetailedValue[]; confidence: number };
   impetos: DetailedValue[];
   positionRatings: DetailedValue[];
+  positionProficiencies: NonNullable<PremiumZoneReading['positionProficienciesR416']>;
   attributes: DetailedValue[];
   progressionSequence: DetailedValue[];
   physicalModel: DetailedValue[];
@@ -325,16 +326,12 @@ function visualColumnFromText(value: string): AttributeVisualColumn | null {
 function bestExactAttributeSequence(
   candidates: Array<{ text: string; confidence: number }>,
   expected: number
-): { values: number[]; confidence: number } | null {
+): { values: number[]; confidence: number; agreeingPasses: number } | null { // BM_R415_MULTIPASS_ATTRIBUTE_CONSENSUS
   const exact = candidates
     .map((candidate) => ({ ...candidate, values: plausibleAttributeSequence(candidate.text) }))
     .filter((candidate) => candidate.values.length === expected)
     .sort((left, right) => right.confidence - left.confidence);
   if (!exact.length) return null;
-
-  // Quando duas passagens completas concordam por linha, usa a mediana por
-  // posição visual. Divergência grande faz o leitor conservar a passagem de
-  // maior confiança em vez de misturar números possivelmente errados.
   if (exact.length >= 2) {
     const first = exact[0].values;
     const second = exact[1].values;
@@ -342,11 +339,12 @@ function bestExactAttributeSequence(
     if (disagreements <= Math.max(1, Math.floor(expected * 0.18))) {
       return {
         values: first.map((value, index) => Math.round((value + second[index]) / 2)),
-        confidence: Math.min(94, Math.round((exact[0].confidence + exact[1].confidence) / 2))
+        confidence: Math.min(94, Math.round((exact[0].confidence + exact[1].confidence) / 2)),
+        agreeingPasses: 2
       };
     }
   }
-  return { values: exact[0].values, confidence: exact[0].confidence };
+  return { values: exact[0].values, confidence: exact[0].confidence, agreeingPasses: 1 };
 }
 
 /**
@@ -383,17 +381,14 @@ function recoverAttributesFromVisualColumns(
     if (!sequence) continue;
     labels.forEach((label, index) => {
       const current = byLabel.get(label);
-      // Uma sequência 10/9/7 completa e geometricamente isolada é evidência
-      // mais forte que um rótulo aproximado que pode confundir, por exemplo,
-      // “Talento ofensivo” com “Talento defensivo”. Leituras exatas continuam
-      // soberanas e nunca são sobrescritas.
       if (current && !current.source.includes('rótulo corrigido por similaridade')) return;
-      const confidence = Math.max(72, Math.min(92, Math.round(Math.max(baseConfidence - 4, sequence.confidence - 2))));
+      const consensusFloor = sequence.agreeingPasses >= 2 ? 84 : 72;
+      const confidence = Math.max(consensusFloor, Math.min(94, Math.round(Math.max(baseConfidence - 4, sequence.confidence - 2))));
       byLabel.set(label, makeValue(
         label,
         String(sequence.values[index]),
         confidence,
-        `Tabela de atributos • ordem visual eFHUB ${column} • sequência numérica completa`,
+        `Tabela de atributos • ordem visual eFHUB ${column} • sequência numérica completa • ${sequence.agreeingPasses} passagem(ns) concordante(s)`,
         sequence.values[index]
       ));
     });
@@ -511,9 +506,6 @@ function parseSkills(text: string, confidence: number, source: string, learnedSk
   );
   return {
     skills: canonical.map((skill) => makeValue('Habilidade', skill, confidence, `${source} • catálogo oficial estrito`)),
-    // A v31.80 nunca transforma lixo bruto do OCR em habilidade. Caso o texto
-    // não corresponda ao catálogo, ele fica apenas nos diagnósticos internos e
-    // a etapa Habilidades permanece incompleta para revisão visual.
     candidates: [] as DetailedValue[]
   };
 }
@@ -682,9 +674,6 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     ? knownPlayerNames.map((candidate) => ({ candidate, similarity: textSimilarity(detectedName, candidate) })).sort((left, right) => right.similarity - left.similarity)[0]
     : null;
   const nameAgreement = independentNameAgreement(nameReading, detectedName);
-  // Um nome novo pode ser aceito sem já existir no banco, mas somente quando duas
-  // passagens independentes da área exclusiva do nome concordam. Isso evita tanto
-  // o preenchimento aleatório quanto o bloqueio permanente de jogadores inéditos.
   const independentPassesAvailable = (nameReading?.rawPasses?.length ?? 0) >= 2;
   const strictNameConsensus = Boolean(detectedName && nameReading && nameReading.confidence >= 82
     && (independentPassesAvailable ? nameAgreement >= 2 : nameReading.status === 'confirmed' && nameReading.confidence >= 88));
@@ -698,11 +687,6 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const focusedV600Styles = detectV600Playstyles(phaseStyleSource);
   const fallbackV600Styles = detectV600Playstyles(identitySource);
   const v600Styles = focusedV600Styles.source !== 'NONE' ? focusedV600Styles : fallbackV600Styles;
-  // `playstyle` é o contrato legado/genérico da identidade da carta. Ele precisa
-  // continuar reconhecendo estilos pré-v6.0 (ex.: Destruidor) mesmo quando, no
-  // modelo 2027, esse rótulo pertence somente à fase defensiva. As fases novas
-  // continuam vindo exclusivamente de `v600Styles`, portanto este fallback não
-  // volta a duplicar ataque/defesa nem contamina o cálculo moderno.
   const legacyIdentityPlaystyle = canonicalizePlayerPlaystyle(phaseStyleSource) ?? canonicalizePlayerPlaystyle(identitySource);
   const playstyle = v600Styles.source === 'LEGACY_SINGLE'
     ? legacyIdentityPlaystyle ?? v600Styles.offensive ?? detectPlaystyle(phaseStyleSource) ?? detectPlaystyle(identitySource)
@@ -711,6 +695,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
   const parsedAttributes = parseNumericCatalog(attributeSource, ATTRIBUTE_ALIASES, attributeConfidence, 'Tabela de atributos', 1, 110);
   const attributes = recoverAttributesFromVisualColumns(readings, parsedAttributes, attributeConfidence);
   const positionRatings = parsePositionRatings(positionSource, positionConfidence, 'Grade de posições');
+  const positionProficiencies=(readings.filter((item)=>item.key==='positionGrid'&&item.positionProficienciesR416).sort((a,b)=>b.confidence-a.confidence)[0]?.positionProficienciesR416 ?? {});
   const physicalModel = parseNumericCatalog(physicalSource, PHYSICAL_ALIASES, physicalConfidence, 'Modelo físico', 0, 400);
   const parsedSkills = parseSkills(skillSource, skillConfidence, 'Lista de habilidades', learnedSkillNames);
   const skills = parsedSkills.skills;
@@ -855,6 +840,7 @@ export function readDetailedPrint(fullText: string, readings: PremiumZoneReading
     manager: { name: managerName, boosts: managerBoosts, confidence: managerName || managerBoosts.length ? conditionConfidence : 0 },
     impetos,
     positionRatings,
+    positionProficiencies,
     attributes,
     progressionSequence,
     physicalModel,

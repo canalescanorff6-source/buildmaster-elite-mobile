@@ -147,7 +147,7 @@ export function correctionKeysForResult(result: AnalysisResult) {
   const player = memoryKey(result.parsed.playerName || 'jogador');
   const style = memoryKey(result.parsed.playstyle || 'sem-estilo');
   const usagePosition = analysisUsagePositionR138(result);
-  const role = memoryKey(result.teamMap?.functionLabel || result.buildName || usagePosition);
+  const role = memoryKey(usagePosition); // R417: alvo manual legado não cria outra autoridade de correção.
   return {
     player: `player:${player}`,
     role: `role:${usagePosition}:${style}:${role}`

@@ -90,6 +90,7 @@ export type AttributeKey =
 
 export type Attributes = Partial<Record<AttributeKey, number>>;
 export type PositionRatings = Partial<Record<PositionCode, number>>;
+export type CardEvidenceStateR419 = 'MISSING' | 'UNCERTAIN' | 'CONFLICTING' | 'TRUSTED';
 
 export type PrecisionIssue = {
   severity: 'ok' | 'review' | 'block';
@@ -213,6 +214,9 @@ export type CardEditionIdentityR457 = {
   confidence: number;
 };
 
+export type PositionProficiencyLevel = 'HIGH' | 'INTERMEDIATE' | 'LOW' | 'UNKNOWN';
+export type PositionProficiencies = Partial<Record<PositionCode, PositionProficiencyLevel>>;
+
 export type ParsedCard = {
   playerName: string;
   cardType: string;
@@ -225,6 +229,7 @@ export type ParsedCard = {
   positions: PositionCode[];
   positionsPt: string[];
   positionRatings: PositionRatings;
+  positionProficiencies?: PositionProficiencies;
   playstyle?: string | null;
   /** v6.0: estilo ofensivo preservado separadamente quando a carta exibe dois estilos. */
   offensivePlaystyle?: string | null;
@@ -264,6 +269,10 @@ export type ParsedCard = {
     specialSkillCount?: number;
     impetoSlotStatus?: 'DISPONIVEL' | 'OCUPADO' | 'SEM_VAGA' | 'NAO_CONFIRMADO';
     impetoSlotEvidence?: string | null;
+    criticalStateR419?: CardEvidenceStateR419;
+    criticalReasonsR419?: string[];
+    trainingBudgetStateR419?: CardEvidenceStateR419;
+    levelStateR419?: CardEvidenceStateR419;
   };
   internalId: string;
   confidence: number;
@@ -2212,6 +2221,9 @@ export type FinalCardAuthorityV4080R45Analysis = {
   reason: string;
 };
 
+export type PositionUsageR416Entry={position:PositionCode;label:string;rating:number|null;proficiency:PositionProficiencyLevel;proficiencyState:'NATURAL'|'READY'|'POSITION_TRAINING'|'LOW'|'REVIEW'|'BLOCKED';offensiveStyleStatus:string;defensiveStyleStatus:string;styleFit:'ACTIVE'|'PARTIAL'|'INACTIVE'|'UNKNOWN';recommended:boolean;fitScore:number;reason:string};
+export type PositionUsageR416Analysis={version:'40.80-r416-universal-position-usage-v1';canonicalBuildLocked:true;sameBuildAcrossFieldPositions:true;goalkeeperLocked:boolean;naturalPosition:PositionCode;entries:PositionUsageR416Entry[];recommendedPositions:PositionCode[];automaticPrimaryPosition?:PositionCode;automaticTopPositions?:PositionCode[];warnings:string[]};
+
 export type AnalysisResult = {
   objective?: Objective;
   parsed: ParsedCard;
@@ -2298,6 +2310,7 @@ export type AnalysisResult = {
   liveEvolutionV600R11?: LiveEvolutionV600R11;
   matchStaminaV4080R44?: MatchStaminaV4080R44Analysis;
   finalCardAuthorityV4080R45?: FinalCardAuthorityV4080R45Analysis;
+  positionUsageR416?: PositionUsageR416Analysis;
 };
 
 export const TACTICAL_STYLE_NAME: Record<TacticalStyle, string> = {

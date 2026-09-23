@@ -149,6 +149,17 @@ function patchCenter(source) {
   const backupPrefix = `{tab === 'backup' && <section className="mapping-backup-grid"><article className="mapping-backup-card luxury-panel"><Download size={28}/>`;
   const backupR441 = `{tab === 'backup' && <section className="mapping-backup-grid"><article className="mapping-backup-card luxury-panel"><HardDrive size={28}/><div><p className="kicker">Arquivo de Prints</p><h2>Originais permanentes</h2><p>{printVaultLabelR441(printVaultSummaryStateR441)}</p><small>Os originais ficam separados das miniaturas e podem ser relidos por versões futuras do motor.</small></div><div className="mapping-backup-actions"><button type="button" className="elite-button" disabled={backupBusy} onClick={() => void exportPrintsZipR441()}><Download size={17}/> Exportar ZIP</button><button type="button" disabled={backupBusy} onClick={() => printBackupInputRefR441.current?.click()}><FileUp size={17}/> Restaurar ZIP</button><input ref={printBackupInputRefR441} className="sr-only" type="file" accept="application/zip,.zip" onChange={(event: ChangeEvent<HTMLInputElement>) => void restorePrintsZipR441(event.target.files?.[0])}/></div></article><article className="mapping-backup-card luxury-panel"><UploadCloud size={28}/><div><p className="kicker">Catálogo Mestre</p><h2>Atualizar sem novo APK</h2><p>{catalogSyncStatusR441}</p><input value={catalogManifestUrlR441} onChange={(event) => setCatalogManifestUrlR441(event.target.value)} placeholder="https://.../catalog-manifest.json"/></div><div className="mapping-backup-actions"><button type="button" disabled={catalogSyncBusyR441 || !catalogManifestUrlR441.trim()} onClick={() => void checkCatalogUpdateR441()}>Verificar atualizações</button><button type="button" className="elite-button" disabled={catalogSyncBusyR441 || !catalogPreparedUpdateR441Ref.current?.plan.changed} onClick={() => void applyCatalogUpdateR441()}>Atualizar catálogo</button><button type="button" disabled={catalogSyncBusyR441} onClick={() => void rollbackCatalogR441()}>Restaurar versão anterior</button></div></article><article className="mapping-backup-card luxury-panel"><Download size={28}/>`;
   r = replaceOnceRequired(next, backupPrefix, backupR441, 'cards de backup/sync R441'); next = r.source;
+
+  // R449_FINAL_IMPORT_NORMALIZATION: versões posteriores substituem usos de símbolos R437/R438.
+  next = next.replace(
+    "import { batchRosterImportSummaryR437, createBatchRosterImportStatsR437, findImportedRosterCardBySourceHashR437, pauseBatchRosterImportR437, recordBatchRosterImportOutcomeR437 } from './batchRosterImportR437';",
+    "import { createBatchRosterImportStatsR437, findImportedRosterCardBySourceHashR437, pauseBatchRosterImportR437, recordBatchRosterImportOutcomeR437 } from './batchRosterImportR437';"
+  );
+  next = next.replace(
+    "import { migrateSquadMappingToMasterCatalogR438, upsertOwnedMasterCardFromSquadMappingR438 } from '@/modules/card-catalog/masterCardMigrationR438';",
+    "import { migrateSquadMappingToMasterCatalogR438 } from '@/modules/card-catalog/masterCardMigrationR438';"
+  );
+  if (!next.includes('  ScanText,')) next = next.replace('  Save,\n  Search,', '  Save,\n  ScanText,\n  Search,');
   return next;
 }
 
@@ -205,6 +216,8 @@ function validate(root) {
 
 export function applyR441CatalogSyncPrintVault(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
+  // R446_FORWARD_IDEMPOTENCE:applyR441CatalogSyncPrintVault
+  try { validate(root); return { changed: false, patched: [], version: R441_CATALOG_SYNC_PRINT_VAULT_VERSION }; } catch {}
   const patchers = [[FILES.localDb, patchLocalDatabase], [FILES.center, patchCenter], [FILES.app, patchApp], [FILES.package, patchPackage]];
   const patched = [];
   for (const [relative, patcher] of patchers) {

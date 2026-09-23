@@ -43,6 +43,7 @@ export type MatchEventKind =
   | 'double-defender'
   | 'central-corridor-open'
   | 'second-ball-failure'
+  | 'interception'
   | 'command-pass-early'
   | 'command-sprint-excess'
   | 'command-double-tap'
@@ -57,6 +58,9 @@ export type MatchEventMarker = {
   title: string;
   detail: string;
   playerId?: string | null;
+  playerLabel?: string | null;
+  playerCardFingerprint?: string | null;
+  playerHistoryId?: string | null;
   phase?: MatchPhase;
   severity?: MatchSeverity;
   evidence?: MatchEvidenceKind;
@@ -230,6 +234,15 @@ type EventTemplate = {
 };
 
 const EVENT_TEMPLATES: Record<MatchEventKind, EventTemplate> = {
+  'interception': {
+    label: 'Interceptação bem executada', shortLabel: 'Interceptação', group: 'positive', phase: 'defense', severity: 'positive',
+    observed: 'A linha de passe foi lida e cortada antes de o adversário receber em vantagem.',
+    why: 'O defensor protegeu o espaço e antecipou a intenção do passe sem quebrar a estrutura por um bote isolado.',
+    consequence: 'A posse adversária foi interrompida e a equipe ganhou uma oportunidade segura de transição ou reciclagem.',
+    betterDecision: 'Após interceptar, confirmar a primeira opção curta antes de acelerar para não devolver a posse imediatamente.',
+    correction: 'Repetir a leitura de linha de passe mantendo corpo orientado e cobertura atrás da ação.',
+    drill: { title: 'Interceptar e sair jogando', objective: 'Transformar leitura defensiva em recuperação limpa da posse.', rule: 'Fechar a linha antes de atacar a bola e usar o primeiro passe seguro após recuperar.', repetitions: '15 leituras de passe', successCriteria: 'Interceptar ou desviar 10 de 15 e manter a posse na ação seguinte.', estimatedMinutes: 12 }
+  },
   'pass-error': {
     label: 'Passe forçado ou impreciso', shortLabel: 'Erro de passe', group: 'attack', phase: 'build-up', severity: 'medium',
     observed: 'A posse foi exposta por um passe com pouco espaço, direção ruim ou receptor pressionado.',
@@ -480,9 +493,9 @@ export const MATCH_EVENT_CATALOG = (Object.entries(EVENT_TEMPLATES) as Array<[Ma
 }));
 
 const PROBLEM_KINDS = new Set<MatchEventKind>(['pass-error', 'dangerous-turnover', 'marking-error', 'cursor-error', 'forced-shot', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'game-management', 'goal-against', 'delayed-pass', 'pressured-receiver', 'late-release', 'dangerous-dribble', 'unbalanced-shot', 'predictable-attack', 'no-triangulation', 'lost-counterattack', 'wrong-double-mark', 'premature-tackle', 'fullback-corridor-open', 'double-defender', 'central-corridor-open', 'second-ball-failure', 'command-pass-early', 'command-sprint-excess', 'command-double-tap']);
-const POSITIVE_KINDS = new Set<MatchEventKind>(['good-transition', 'good-build-up', 'good-play', 'goal-for']);
+const POSITIVE_KINDS = new Set<MatchEventKind>(['good-transition', 'good-build-up', 'good-play', 'goal-for', 'interception']);
 const ATTACK_KINDS = new Set<MatchEventKind>(['pass-error', 'dangerous-turnover', 'forced-shot', 'good-transition', 'good-build-up', 'good-play', 'goal-for', 'delayed-pass', 'pressured-receiver', 'late-release', 'dangerous-dribble', 'unbalanced-shot', 'predictable-attack', 'no-triangulation', 'lost-counterattack']);
-const DEFENSE_KINDS = new Set<MatchEventKind>(['marking-error', 'cursor-error', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'goal-against', 'wrong-double-mark', 'premature-tackle', 'fullback-corridor-open', 'double-defender', 'central-corridor-open', 'second-ball-failure']);
+const DEFENSE_KINDS = new Set<MatchEventKind>(['marking-error', 'cursor-error', 'defender-out-of-line', 'late-recomposition', 'pressing-error', 'goal-against', 'wrong-double-mark', 'premature-tackle', 'fullback-corridor-open', 'double-defender', 'central-corridor-open', 'second-ball-failure', 'interception']);
 
 const SEVERITY_WEIGHT: Record<MatchSeverity, number> = { positive: -1, low: .5, medium: 1, high: 1.7, critical: 2.5 };
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
@@ -784,6 +797,7 @@ export async function analyzeMatchVideo(source: Blob | string, options: { sample
       automaticMarkers,
       safeguards: [
         'Momentos automáticos são candidatos para revisão; não entram como erro confirmado.',
+        'Passe, marcação, finalização e interceptação só viram diagnóstico específico após confirmação humana; candidatos automáticos continuam neutros.',
         'A análise automática não conhece os botões pressionados e não afirma a causa de um lance sem revisão humana.',
         'Baixa movimentação pode ser replay, pausa ou bola parada; nunca é chamada automaticamente de lag.',
         'Nenhuma ficha, formação ou configuração é alterada automaticamente a partir do vídeo.',

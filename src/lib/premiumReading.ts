@@ -1,4 +1,5 @@
 import type { OcrZone, OcrZoneKey } from './ocr';
+import type { PositionProficiencyGridR416 } from '@/modules/card-reader/positionProficiencyVisionR416';
 import type { PrintQualityReport } from './validation';
 
 export type PremiumReadingStatus = 'confirmed' | 'review' | 'unread';
@@ -23,6 +24,7 @@ export type PremiumZoneReading = {
   agreement?: number;
   validationNotes?: string[];
   rawPasses?: Array<{ text: string; confidence: number; enhancement: PremiumEnhancementMode; kind: string }>;
+  positionProficienciesR416?: PositionProficiencyGridR416;
 };
 
 export type ReadingConfirmationStage = {

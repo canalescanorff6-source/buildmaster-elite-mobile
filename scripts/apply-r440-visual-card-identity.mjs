@@ -190,6 +190,8 @@ function validate(root) {
 
 export function applyR440VisualCardIdentity(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
+  // R446_FORWARD_IDEMPOTENCE:applyR440VisualCardIdentity
+  try { validate(root); return { changed: false, patched: [], version: R440_VISUAL_CARD_IDENTITY_VERSION }; } catch {}
   const patchers = [
     [FILES.catalog, patchCatalog],
     [FILES.resolver439, patchResolver439],

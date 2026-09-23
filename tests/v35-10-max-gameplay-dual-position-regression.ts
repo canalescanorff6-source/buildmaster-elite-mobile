@@ -38,8 +38,8 @@ for (const result of [natural, selected]) {
   assert.ok((result.cleanSlate2027R119?.responseScore ?? 0) > 0, 'O r119 precisa medir resposta funcional da carta.');
 }
 
-assert.equal(natural.bestPosition.code, 'SS');
-assert.equal(selected.bestPosition.code, 'CF', 'A posição escolhida pelo usuário deve continuar disponível para a camada tática.');
+assert.equal(natural.bestPosition.code, selected.bestPosition.code, 'R417 deve ignorar a posição manual e convergir a mesma carta para uma única posição automática.');
+assert.ok(natural.positionUsageR416?.automaticTopPositions?.includes(natural.bestPosition.code), 'A posição automática precisa pertencer ao Top 3 de DNA.');
 assert.equal(natural.cleanSlate2027R119?.positionAnchor, 'SS');
 assert.equal(selected.cleanSlate2027R119?.positionAnchor, 'SS', 'A Card Signature deve continuar ancorada na posição natural da carta.');
 assert.deepEqual(selected.training, natural.training, 'Selecionar outra posição não pode recriar a ficha permanente da mesma carta.');

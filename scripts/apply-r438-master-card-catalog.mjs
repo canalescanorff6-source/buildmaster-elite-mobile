@@ -189,6 +189,8 @@ function validate(root) {
 
 export function applyR438MasterCardCatalog(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
+  // R446_FORWARD_IDEMPOTENCE:applyR438MasterCardCatalog
+  try { validate(root); return { changed: false, patched: [], version: R438_MASTER_CARD_CATALOG_VERSION }; } catch {}
   const patchers = [[FILES.center, patchCenter], [FILES.app, patchApp], [FILES.package, patchPackage]];
   const patched = [];
   for (const [relative, patcher] of patchers) {

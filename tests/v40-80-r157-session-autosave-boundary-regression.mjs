@@ -20,7 +20,7 @@ assert.match(hook, /mediaPersistedRef\.current \|\| persistMediaNow\(\)/, 'Flush
 assert.match(hook, /ACTIVE_SESSION_AUTOSAVE_DELAY_R157 = 900/, 'Autosave textual deve ser coalescido em 900 ms.');
 assert.match(hook, /window\.addEventListener\('pagehide', flush\)/, 'Saída da página deve forçar flush do metadado pendente.');
 assert.match(hook, /document\.visibilityState === 'hidden'/, 'Background mobile deve forçar flush seguro.');
-assert.match(repo, /Compatibilidade: snapshots R137 monolíticos continuam restauráveis/, 'Migração deve preservar recovery antigo.');
+assert.match(repo, /const legacy = readActiveSessionSnapshotR137\(storageKey, now\);/, 'Migração deve preservar recovery antigo de snapshots R137 monolíticos.');
 assert.match(backup, /readActiveSessionBackupPayloadR157\(ACTIVE_SESSION_KEY\)/, 'Backup integral deve reunificar metadados + mídia.');
 assert.match(backupRuntime, /writeActiveSessionBackupPayloadR157\(ACTIVE_SESSION_KEY, sections\.session\)/, 'Restore de backup deve voltar ao formato dividido canônico.');
 

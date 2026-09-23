@@ -98,12 +98,17 @@ function bytesToHexR441(bytes: Uint8Array) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function arrayBufferForCryptoR449(value: Uint8Array | ArrayBuffer): ArrayBuffer {
+  if (value instanceof ArrayBuffer) return value;
+  const copy = new ArrayBuffer(value.byteLength);
+  new Uint8Array(copy).set(value);
+  return copy;
+}
+
 export async function sha256BytesR441(value: Uint8Array | ArrayBuffer | Blob) {
   const buffer = value instanceof Blob
     ? await value.arrayBuffer()
-    : value instanceof Uint8Array
-      ? value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)
-      : value;
+    : arrayBufferForCryptoR449(value);
   const digest = await crypto.subtle.digest('SHA-256', buffer);
   return bytesToHexR441(new Uint8Array(digest));
 }

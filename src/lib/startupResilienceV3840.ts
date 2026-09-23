@@ -23,7 +23,6 @@ function sessionSet(key: string, value: string): void {
   try {
     window.sessionStorage.setItem(key, value);
   } catch {
-    // O modo seguro também funciona quando o WebView bloqueia sessionStorage.
   }
 }
 
@@ -32,7 +31,6 @@ function sessionRemove(key: string): void {
   try {
     window.sessionStorage.removeItem(key);
   } catch {
-    // A remoção é complementar e não pode interromper a abertura.
   }
 }
 
@@ -70,7 +68,6 @@ export function activateStartupSafeModeV3840(error?: unknown): number {
   try {
     clearTransientRuntimeV3930();
   } catch {
-    // A proteção principal é a remontagem sem restaurar dados temporários.
   }
   return nextCount;
 }
@@ -91,7 +88,6 @@ export function clearStartupSafeModeV3840(): void {
     url.searchParams.delete('bm_safe_start');
     window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
   } catch {
-    // Limpar a URL é apenas cosmético.
   }
 }
 

@@ -42,7 +42,7 @@ export function buildMainNavigationR127(input: { historyCount: number; matchCoun
   return [
     { id: 'inicio', label: 'Central', hint: 'Resumo do app', icon: 'dashboard' },
     { id: 'jogadores', label: 'Jogadores', hint: `${historyCount} salvos`, icon: 'vault' },
-    { id: 'mapeamento', label: 'Mapeamento', hint: 'Melhor time e reservas', icon: 'team' },
+    { id: 'mapeamento', label: 'Meu Elenco', hint: 'Banco mestre, fichas e formações', icon: 'team' },
     { id: 'time', label: 'Meu Time', hint: 'Formação e elenco', icon: 'team' },
     { id: 'partidas', label: 'Partidas', hint: `${matchCount} análises`, icon: 'result' },
     { id: 'ajustes', label: 'Configurações', hint: 'Visual, conta e sistema', icon: 'settings' },

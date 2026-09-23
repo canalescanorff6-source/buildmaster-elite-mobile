@@ -86,6 +86,8 @@ export function ResultAdvancedWorkspaceR192({
   const localCorrections = getMergedCorrectionsForResult(result);
   const hasLocalCorrections = Boolean(localCorrections.blockedSkills.length || localCorrections.promotedSkills.length || localCorrections.blockedImpetos.length || localCorrections.promotedImpetos.length);
   const cardPositions = Array.from(new Set([card.mainPosition, ...card.positions])).slice(0, 10);
+  const autonomousPositions = result.positionUsageR416?.automaticTopPositions ?? result.positionUsageR416?.recommendedPositions ?? [];
+  const autonomousEntries = result.positionUsageR416?.entries.filter((item) => autonomousPositions.includes(item.position)).sort((a,b)=>autonomousPositions.indexOf(a.position)-autonomousPositions.indexOf(b.position)) ?? [];
   const positionItems = result.positionScores.slice(0, 8);
   const positionRatings = Object.entries(card.positionRatings).filter(([, value]) => Number.isFinite(value));
   const attributes = Object.entries(card.attributes).filter(([, value]) => Number.isFinite(value));
@@ -327,17 +329,17 @@ export function ResultAdvancedWorkspaceR192({
           </article>
 
           <article className="luxury-panel wide-card">
-            <p className="kicker">Ranking de rendimento real</p>
+            <p className="kicker">Top 3 automático por DNA</p>
             <div className="position-list">
-              {positionItems.map((item, index) => (
-                <div key={item.code}>
+              {autonomousEntries.length ? autonomousEntries.map((item, index) => (
+                <div key={item.position}>
                   <strong>{item.label}</strong>
-                  <span>{index === 0 ? 'Melhor uso' : item.score >= 90 ? 'Ótima' : item.score >= 82 ? 'Boa' : 'Alternativa'}</span>
-                  <em>{item.role}{item.cardRating ? ` • ${item.cardRating}` : ''}</em>
+                  <span>{index === 0 ? 'Melhor função automática' : `Opção ${index + 1}`}</span>
+                  <em>{Math.round(item.fitScore)}/100 • {item.proficiencyState === 'POSITION_TRAINING' ? 'Treino de Posição' : item.proficiencyState === 'NATURAL' ? 'posição registrada' : 'posição pronta'} • estilo {item.styleFit === 'INACTIVE' ? 'inativo, mas não bloqueado' : item.styleFit.toLowerCase()}</em>
                 </div>
-              ))}
+              )) : positionItems.slice(0,3).map((item,index)=><div key={item.code}><strong>{item.label}</strong><span>{index===0?'Melhor uso':'Alternativa'}</span><em>{item.role}</em></div>)}
             </div>
-            <p className="panel-note">Aqui sim o app pode recomendar outra posição, mas sem alterar a identidade original da carta.</p>
+            <p className="panel-note">R417 não usa GER/Overall para decidir o Top 3. A ficha, as 5 habilidades e o Ímpeto permanecem os mesmos nessas posições; estilo cinza reduz o encaixe, mas não elimina uma função superior pelo DNA.</p>
           </article>
 
           <article className="luxury-panel wide-card">

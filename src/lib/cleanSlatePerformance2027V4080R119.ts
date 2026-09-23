@@ -25,6 +25,8 @@ import { isRoleCompatibleAdditionalSkill } from './skillIntelligenceV31';
 import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from './impetoFunctionalMatrixR119';
 import { inspectPlaystyleActivationR124 } from './efootball2027PhaseCatalogR124';
 import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { applyCriticalEvidenceR419 } from '../modules/analysis/cardEvidenceAuthorityR419';
+import { rankAutonomousRolesR417 } from './autonomousCardR417';
 import { GAMEPLAY_IMPACT_R458_VERSION, functionActionDemandR458, teamStyleActionDemandR458, skillActionSupportR458, skillActionSupportDetailR459, type GameplayImpactR458 } from './gameplayImpactR458';
 
 export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r406-match-calibration-group-return-fix5' as const;
@@ -518,7 +520,8 @@ function activationWeight(status:string) {
 }
 
 function buildUsageContextR125(input:AnalysisResult, parsed:ParsedCard, targetOverride?:PositionCode):UsageContextR125 {
-  const targetPosition=targetOverride ?? input.bestPosition?.code ?? parsed.mainPosition;
+  const requestedPosition=targetOverride ?? input.bestPosition?.code ?? parsed.mainPosition;
+  const targetPosition=parsed.mainPosition==='GK'||requestedPosition==='GK'?parsed.mainPosition:requestedPosition;
   const offensiveStyle=parsed.offensivePlaystyle ?? parsed.playstyle ?? null;
   const defensiveStyle=parsed.defensivePlaystyle ?? null;
   const offensiveActivation=inspectPlaystyleActivationR124(offensiveStyle,'OFFENSIVE',targetPosition);
@@ -1892,7 +1895,7 @@ function usageFunctionR457(input:AnalysisResult, context:UsageContextR125) {
 }
 
 export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnapshot?:ParsedCard):WithR119 {
-  const parsed:ParsedCard=rawSnapshot ? JSON.parse(JSON.stringify(rawSnapshot)) as ParsedCard : JSON.parse(JSON.stringify(input.parsed)) as ParsedCard;
+  const parsed:ParsedCard=applyCriticalEvidenceR419(rawSnapshot ? JSON.parse(JSON.stringify(rawSnapshot)) as ParsedCard : JSON.parse(JSON.stringify(input.parsed)) as ParsedCard);
   const usageContext=buildUsageContextR125(input,parsed);
   const playstyleContext=publicPlaystyleContextR125(usageContext);
   const usageFunction=usageFunctionR457(input,usageContext);
@@ -1903,7 +1906,8 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const attributeCount=effectiveAttributeCountR452(parsed);
   const minimum=usageContext.targetPosition==='GK'?4:10;
   const limitedEvidence=attributeCount<minimum;
-  if(!budget) {
+  const budgetEvidenceStateR419=parsed.evidence?.trainingBudgetStateR419??'MISSING';
+  if(!budget || budgetEvidenceStateR419!=='TRUSTED') {
     const zero=emptyTraining();
     const actions=naturalActionDetails(parsed,functionalUsageContext);
     const top5=recommendTop5(parsed,actions,usageContext.targetPosition);
@@ -1959,7 +1963,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       impetoReason:parsed.impetos?.length?`Ímpeto atual ${parsed.impetos?.[0]?.name} preservado.`:'A leitura ainda não tem atributos suficientes para classificar um Ímpeto ideal com segurança.',
       impetoSlotStatus:String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO'),
       guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
-      reasons:['Leitura insuficiente para gerar uma ficha Clean Slate segura; a ficha antiga não foi usada como fallback.',playstyleContext.note,'Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']
+      reasons:[`Leitura insuficiente para gerar a ficha: atributos utilizáveis ${attributeCount}/${minimum}; orçamento ${budget || 0}. Nenhuma ficha antiga ou genérica foi usada como fallback.`,playstyleContext.note,'Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']
     };
     return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:top5,recommendedImpetos:[],skillIntegrity,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
@@ -1967,7 +1971,8 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   let recommendationContext=functionalUsageContext;
   let recommendationEvaluation=optimized.evaluation;
   let positionStabilityR184: CleanSlate2027R119['positionStabilityR184'];
-  if (usageContext.usagePositionChanged) {
+  const autonomousPrimaryR417=rankAutonomousRolesR417(parsed).primary;
+  if (usageContext.usagePositionChanged && usageContext.targetPosition !== autonomousPrimaryR417) {
     const targetOptimized=optimized;
     const naturalBaseContext=buildUsageContextR125(input,parsed,parsed.mainPosition);
     const naturalUsageFunction=usageFunctionR457(input,naturalBaseContext);

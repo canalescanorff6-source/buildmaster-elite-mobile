@@ -47,7 +47,8 @@ export const DEFAULT_VAULT_FOLDERS: VaultFolder[] = [
   { id: 'reservas', name: 'Reservas', kind: 'system' },
   { id: 'testes', name: 'Testes', kind: 'system' },
   { id: 'favoritos', name: 'Favoritos', kind: 'system' },
-  { id: 'arquivados', name: 'Arquivados', kind: 'system' }
+  { id: 'arquivados', name: 'Arquivados', kind: 'system' },
+  { id: 'lixeira', name: 'Lixeira', kind: 'system' }
 ];
 
 const normalize = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();

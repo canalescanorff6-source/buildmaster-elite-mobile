@@ -133,14 +133,14 @@ const preFinal = buildPreFinalConfirmationR133({
   manualFields: { playerName: '', level: '', trainingPointsTotal: '', attributes: {}, nativeSkills: [] },
   preview: null
 });
-assert.equal(preFinal.points, '', 'fallback 64 nunca pode ser apresentado como pontos detectados no print');
-assert.equal(preFinal.level, '', 'nível em review não pode ser pré-confirmado');
+assert.equal(preFinal.points, '60', 'pontos em review podem aparecer na confirmação, sem entrar silenciosamente no motor');
+assert.equal(preFinal.level, '31', 'nível plausível em review deve aparecer para conferência explícita');
 
 const hydrationReview = buildReviewHydrationR133(reviewResult, sessionReview);
 assert.equal(hydrationReview.suggestedCardPosition, 'AUTO');
 assert.equal(hydrationReview.suggestedOffensivePlaystyle, 'AUTO');
-assert.equal(hydrationReview.manualFields.level, '');
-assert.equal(hydrationReview.manualFields.trainingPointsTotal, '');
+assert.equal(hydrationReview.manualFields.level, '31');
+assert.equal(hydrationReview.manualFields.trainingPointsTotal, '60');
 
 const confirmedDetailed = {
   ...baseDetailed,
@@ -178,10 +178,11 @@ const mismatchedDetailed = { ...confirmedDetailed, progressionSequence: progress
 const mismatchSession = { ...sessionConfirmed, detailedReading: mismatchedDetailed } as SinglePrintSession;
 assert.equal(trustedProgressionSequenceR133(mismatchSession, confirmedZones).length, 0, 'sequência confirmada visualmente mas incoerente com orçamento 60 deve ser rejeitada');
 
-const absurdPointsFields = fieldsConfirmed.map((field) => field.key === 'points' ? { ...field, value: '2', numericValue: 2 } : field);
-const absurdPointsSession = { ...sessionConfirmed, fields: absurdPointsFields } as SinglePrintSession;
-const absurdText = buildProductionOcrEvidenceTextR133(absurdPointsSession, confirmedZones);
-assert.doesNotMatch(absurdText, /PONTOS TOTAIS:\s*2\b/i, '2/2 confirmado pela zona ainda é implausível como orçamento de jogador e deve ficar fora');
+const lowPositivePointsFields = fieldsConfirmed.map((field) => field.key === 'points' ? { ...field, value: '2', numericValue: 2 } : field);
+const lowPositivePointsSession = { ...sessionConfirmed, fields: lowPositivePointsFields } as SinglePrintSession;
+const lowPositiveText = buildProductionOcrEvidenceTextR133(lowPositivePointsSession, confirmedZones);
+assert.match(lowPositiveText, /PONTOS TOTAIS:\s*2\b/i, 'R419 permite PP positivo explicitamente confirmado; nenhum piso artificial pode apagar a evidência');
+assert.doesNotMatch(lowPositiveText, /PROGRESSÃO AUTOMÁTICA LIDA/i, 'progressão de 60 PP não pode ser anexada a orçamento explícito de 2 PP');
 
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8');

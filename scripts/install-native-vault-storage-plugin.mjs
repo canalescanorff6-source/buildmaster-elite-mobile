@@ -1,3 +1,4 @@
+// R420_ATOMIC_NATIVE_WRITE: AtomicFile preserva a última cópia válida durante substituição.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -12,6 +13,7 @@ fs.mkdirSync(javaDir, { recursive: true });
 
 const plugin = `package com.buildmaster.elitetatico;
 
+import android.util.AtomicFile;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -68,25 +70,18 @@ public class BuildMasterVaultStoragePlugin extends Plugin {
                 call.reject("O aparelho realmente está sem espaço livre para concluir o salvamento.");
                 return;
             }
-            File temporary = new File(target.getAbsolutePath() + ".tmp");
-            try (FileOutputStream stream = new FileOutputStream(temporary, false);
-                 BufferedOutputStream output = new BufferedOutputStream(stream)) {
-                output.write(data);
-                output.flush();
+            AtomicFile atomicFile = new AtomicFile(target);
+            FileOutputStream stream = null;
+            try {
+                stream = atomicFile.startWrite();
+                stream.write(data);
+                stream.flush();
                 stream.getFD().sync();
-            }
-            if (target.exists() && !target.delete()) throw new Exception("Não foi possível substituir o Cofre anterior.");
-            if (!temporary.renameTo(target)) {
-                try (FileInputStream input = new FileInputStream(temporary);
-                     FileOutputStream stream = new FileOutputStream(target, false);
-                     BufferedOutputStream output = new BufferedOutputStream(stream)) {
-                    byte[] buffer = new byte[64 * 1024];
-                    int read;
-                    while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
-                    output.flush();
-                    stream.getFD().sync();
-                }
-                if (!temporary.delete()) temporary.deleteOnExit();
+                atomicFile.finishWrite(stream);
+                stream = null;
+            } catch (Exception writeError) {
+                if (stream != null) atomicFile.failWrite(stream);
+                throw writeError;
             }
             JSObject result = new JSObject();
             result.put("bytes", data.length);
@@ -120,7 +115,7 @@ public class BuildMasterVaultStoragePlugin extends Plugin {
                     return;
                 }
             }
-            try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(target));
+            try (BufferedInputStream input = new BufferedInputStream(new AtomicFile(target).openRead());
                  ByteArrayOutputStream output = new ByteArrayOutputStream((int)Math.min(target.length(), 4L * 1024L * 1024L))) {
                 byte[] buffer = new byte[64 * 1024];
                 int read;
@@ -141,7 +136,7 @@ public class BuildMasterVaultStoragePlugin extends Plugin {
         if (key == null) { call.reject("Chave de armazenamento ausente."); return; }
         try {
             File target = fileFor(key);
-            if (target.exists() && !target.delete()) throw new Exception("Não foi possível apagar o arquivo interno.");
+            new AtomicFile(target).delete();
             call.resolve();
         } catch (Exception error) {
             call.reject("Não foi possível remover o Cofre interno.", error);

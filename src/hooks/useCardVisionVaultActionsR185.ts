@@ -237,41 +237,22 @@ export function useCardVisionVaultActionsR185(input: Input) {
       : `Habilidade ${skill} voltou para a lista pendente e a alteração foi salva.`);
   }
 
-  async function removeHistoryEntryAfterDelete(item: SavedAnalysis) {
+  // R417-fix1: exclusões individuais e em lote usam a mesma autoridade persistente.
+
+  async function batchHistoryR417(action: 'archive'|'unarchive'|'trash'|'restore'|'delete', ids: string[]) {
+    if (!ids.length) return;
+    if (action === 'delete' && typeof window !== 'undefined' && !window.confirm(`Excluir definitivamente ${ids.length} ficha(s)?`)) return;
     const { mutations } = await loadVaultDeferredRuntimeR169();
-    const { removeHistoryEntryR129 } = mutations;
-    const next = removeHistoryEntryR129(renderHistory, item);
-    const committed = await persistAndAdoptVaultHistoryR140(next, 'A exclusão não foi confirmada pela memória local.',
-      (current) => removeHistoryEntryR129(current, item), { key: `delete:${item.id}`, label: `Removendo ${item.result.parsed.playerName || 'ficha'}` });
-    if (!committed) return false;
-    void deleteCloudHistoryItem(item);
-    if (activeHistoryId === item.id) setActiveHistoryId(null);
-    return true;
+    const folder = action === 'archive' ? 'arquivados' : action === 'trash' ? 'lixeira' : 'all';
+    const mutate = (current: SavedAnalysis[]) => action === 'delete' ? mutations.batchRemoveHistoryR417(current, ids) : mutations.batchMoveHistoryFolderR417(current, ids, folder, action, `${ids.length} ficha(s)`);
+    const committed = await persistAndAdoptVaultHistoryR140(mutate(renderHistory), 'A operação em lote não foi confirmada.', mutate, { key: `batch:${action}:${ids.length}`, label: `${action} ${ids.length} ficha(s)` });
+    if (!committed) return;
+    if (action === 'delete') { for (const id of ids) removeFromVaultTrash(id); setVaultTrash(readVaultTrash<SavedAnalysis>()); }
+    void pushCloudHistory(committed, true); setPendingDeleteHistoryId(null); setStatus(`${ids.length} ficha(s): ${action}.`);
   }
 
-  async function moveHistoryItemToTrash(id: string) {
-    const item = renderHistory.find((entry) => entry.id === id);
-    if (!item) return;
-    moveToVaultTrash(item.id, item.result.parsed.playerName || 'Jogador sem nome', item);
-    setVaultTrash(readVaultTrash<SavedAnalysis>());
-    if (!await removeHistoryEntryAfterDelete(item)) {
-      restoreFromVaultTrash<SavedAnalysis>(item.id);
-      setVaultTrash(readVaultTrash<SavedAnalysis>());
-      return;
-    }
-    setPendingDeleteHistoryId(null);
-    setStatus(`${item.result.parsed.playerName} foi movido para a Lixeira por 30 dias e removido do Cofre ativo.`);
-  }
-
-  async function permanentlyDeleteHistoryItem(id: string) {
-    const item = renderHistory.find((entry) => entry.id === id);
-    if (!item) return;
-    if (!await removeHistoryEntryAfterDelete(item)) return;
-    removeFromVaultTrash(id);
-    setVaultTrash(readVaultTrash<SavedAnalysis>());
-    setPendingDeleteHistoryId(null);
-    setStatus(`${item.result.parsed.playerName} foi excluído definitivamente e a remoção foi confirmada no Cofre.`);
-  }
+  async function moveHistoryItemToTrash(id: string) { await batchHistoryR417('trash', [id]); }
+  async function permanentlyDeleteHistoryItem(id: string) { await batchHistoryR417('delete', [id]); }
 
   function deleteHistoryItem(id: string) {
     const item = renderHistory.find((entry) => entry.id === id);
@@ -445,6 +426,7 @@ export function useCardVisionVaultActionsR185(input: Input) {
     toggleSavedSkill,
     moveHistoryItemToTrash,
     permanentlyDeleteHistoryItem,
+    batchHistoryR417,
     deleteHistoryItem,
     updateAlwaysDeletePermanently,
     restoreTrashItem,

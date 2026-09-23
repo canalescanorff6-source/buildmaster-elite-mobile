@@ -15,21 +15,9 @@ begin
 end
 $$;
 
-do $$
-declare
-  has_verified_admin_factor boolean := false;
-begin
-  if to_regclass('auth.mfa_factors') is not null then
-    execute $query$
-      select exists (
-        select 1 from auth.mfa_factors factor
-        join public.buildmaster_profiles profile on profile.id = factor.user_id
-        where profile.role = 'admin' and profile.status = 'active' and factor.status::text = 'verified'
-      )
-    $query$ into has_verified_admin_factor;
-  end if;
-  update public.buildmaster_security_settings set admin_mfa_required = has_verified_admin_factor, updated_at = now() where id = 1;
-end
-$$;
+-- R425_MFA_FAIL_CLOSED: a ausência de fator cadastrado não pode desligar a política administrativa.
+update public.buildmaster_security_settings
+set admin_mfa_required = true, updated_at = now()
+where id = 1;
 
 create index if not exists buildmaster_profiles_role_status_idx on public.buildmaster_profiles(role, status, created_at desc);

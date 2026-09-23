@@ -12,6 +12,8 @@ import { applyR423AndroidPerformanceUxClosure } from './apply-r423-android-perfo
 import { applyR425SupabaseSecurityChain } from './apply-r425-supabase-security-chain.mjs';
 import { assertR426SupabaseForwardSecurityMigration } from './check-r426-supabase-forward-security-migration.mjs';
 import { assertR424CodeClosure } from './audit-r424-final-requirements-closure.mjs';
+import { auditPostCatalogFinalConvergenceR447 } from './apply-r447-final-post-catalog-convergence.mjs';
+import { convergeHistoricalFoundationR448 } from './apply-r448-ci-foundation-order.mjs';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_FILE = path.join(MODULE_DIR, 'templates', 'critical-routes', 'root-page.tsx.txt');
@@ -28,13 +30,11 @@ function sourceHas(projectRoot, relativePath, fragments) {
 }
 
 export function hasConvergedR417(projectRoot = process.cwd()) {
+  // R424_FIX2_SEMANTIC_R417_CONVERGENCE: detalhes internos de implementação não definem a autoridade R417.
   return (
-    sourceHas(projectRoot, 'src/hooks/useCardVisionVaultActionsR185.ts', [
-      'async function batchHistoryR417',
-      'const stableIds = [...new Set(ids)].filter(Boolean).sort();',
-      "`batch:${action}:${stableIds.join('|')}`",
-    ]) &&
-    sourceHas(projectRoot, 'src/lib/autonomousCardR417.ts', ['AUTONOMOUS_CARD_R417_VERSION']) &&
+    sourceHas(projectRoot, 'src/hooks/useCardVisionVaultActionsR185.ts', ['batchHistoryR417', "action === 'delete'"]) &&
+    sourceHas(projectRoot, 'src/modules/vault/vaultHistoryMutationsR129.ts', ['batchRemoveHistoryR417']) &&
+    sourceHas(projectRoot, 'src/lib/autonomousCardR417.ts', ['AUTONOMOUS_CARD_R417_VERSION', 'slice(0,3)', 'buildPositionUsageR416']) &&
     sourceHas(projectRoot, 'src/lib/cardIntelligencePipeline.ts', ['applyAutonomousRoleSeedR417(current)']) &&
     sourceHas(projectRoot, 'src/lib/cleanSlatePerformance2027V4080R119.ts', ['usageContext.targetPosition !== autonomousPrimaryR417']) &&
     sourceHas(projectRoot, 'src/modules/vault/cardVisionVaultSelectorsR151.ts', ["index.folderId === 'lixeira'"]) &&
@@ -115,7 +115,11 @@ const invokedAsCli = process.argv[1]
 if (invokedAsCli) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    if (hasConvergedR417(options.projectRoot)) {
+    // R447_FINAL_POST_CATALOG_ROUTES
+    const postCatalogR447 = auditPostCatalogFinalConvergenceR447(options.projectRoot);
+    if (postCatalogR447.ok) {
+      console.log('R447: árvore pós-catálogo detectada; R414 histórico não será reaplicado.');
+    } else if (hasConvergedR417(options.projectRoot)) {
       console.log('R417 já convergida: reparo de contratos históricos não será reaplicado.');
     } else {
       const contracts = applyR414CiContractConvergence(options.projectRoot);
@@ -123,54 +127,64 @@ if (invokedAsCli) {
         console.warn(`::warning::Contratos históricos de CI convergidos para R414 (${contracts.patched.length} arquivo(s)).`);
       }
     }
-    const capacity = applyR418UnboundedCapacity(options.projectRoot);
-    if (capacity.changed) {
-      console.warn(`::warning::R418 removeu tetos artificiais de coleções persistentes (${capacity.patched.length} arquivo(s)).`);
+    // R448_FOUNDATION_ROUTE_GATE
+    if (postCatalogR447.ok) {
+      const foundationR448 = convergeHistoricalFoundationR448(options.projectRoot);
+      console.log(foundationR448.changed
+        ? `R448 routes convergiu fundação histórica em ${foundationR448.steps.filter((step) => step.changed).length} etapa(s).`
+        : 'R448 routes: fundação histórica íntegra; reparos R418-R425 não serão reaplicados.');
+      const postCatalogAfterR448 = auditPostCatalogFinalConvergenceR447(options.projectRoot);
+      if (!postCatalogAfterR448.ok) throw new Error(`R448: fundação histórica alterou a camada moderna — ${postCatalogAfterR448.issues.join(' | ')}`);
     } else {
-      console.log('R418: coleções persistentes já estão sem tetos artificiais.');
-    }
-    const historicalCapacity = applyR418Fix2HistoricalCapacityContracts(options.projectRoot);
-    if (historicalCapacity.changed) {
-      console.warn(`::warning::R418-fix2 convergiu contratos históricos de capacidade (${historicalCapacity.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R418-fix2: contratos históricos de capacidade já estão convergidos.');
-    }
-    const r419 = applyR419ReaderMasterEngineClosure(options.projectRoot);
-    if (r419.changed) {
-      console.warn(`::warning::R419 convergiu leitor e Motor Mestre fail-closed (${r419.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R419: leitor e Motor Mestre já estão convergidos.');
-    }
-    const r420 = applyR420PersistenceRecoveryClosure(options.projectRoot);
-    if (r420.changed) {
-      console.warn(`::warning::R420 convergiu persistência, recuperação e backup (${r420.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R420: persistência, recuperação e backup já estão convergidos.');
-    }
-    const r421 = applyR421SquadVideoTacticalClosure(options.projectRoot);
-    if (r421.changed) {
-      console.warn(`::warning::R421 convergiu elenco, vídeo revisável e Estúdio Tático (${r421.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R421: elenco, vídeo revisável e Estúdio Tático já estão convergidos.');
-    }
-    const r422 = applyR422SecurityObservabilityClosure(options.projectRoot);
-    if (r422.changed) {
-      console.warn(`::warning::R422 convergiu segurança fail-closed e observabilidade (${r422.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R422: segurança fail-closed e observabilidade já estão convergidas.');
-    }
-    const r423 = applyR423AndroidPerformanceUxClosure(options.projectRoot);
-    if (r423.changed) {
-      console.warn(`::warning::R423 convergiu Android, medição de leitura e UX final (${r423.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R423: Android, medição de leitura e UX final já estão convergidos.');
-    }
-    const r425 = applyR425SupabaseSecurityChain(options.projectRoot);
-    if (r425.changed) {
-      console.warn(`::warning::R425 convergiu cadeia Supabase estática fail-closed (${r425.patched.length} arquivo(s)).`);
-    } else {
-      console.log('R425: cadeia Supabase estática já está convergida.');
-    }
+      const capacity = applyR418UnboundedCapacity(options.projectRoot);
+      if (capacity.changed) {
+        console.warn(`::warning::R418 removeu tetos artificiais de coleções persistentes (${capacity.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R418: coleções persistentes já estão sem tetos artificiais.');
+      }
+      const historicalCapacity = applyR418Fix2HistoricalCapacityContracts(options.projectRoot);
+      if (historicalCapacity.changed) {
+        console.warn(`::warning::R418-fix2 convergiu contratos históricos de capacidade (${historicalCapacity.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R418-fix2: contratos históricos de capacidade já estão convergidos.');
+      }
+      const r419 = applyR419ReaderMasterEngineClosure(options.projectRoot);
+      if (r419.changed) {
+        console.warn(`::warning::R419 convergiu leitor e Motor Mestre fail-closed (${r419.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R419: leitor e Motor Mestre já estão convergidos.');
+      }
+      const r420 = applyR420PersistenceRecoveryClosure(options.projectRoot);
+      if (r420.changed) {
+        console.warn(`::warning::R420 convergiu persistência, recuperação e backup (${r420.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R420: persistência, recuperação e backup já estão convergidos.');
+      }
+      const r421 = applyR421SquadVideoTacticalClosure(options.projectRoot);
+      if (r421.changed) {
+        console.warn(`::warning::R421 convergiu elenco, vídeo revisável e Estúdio Tático (${r421.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R421: elenco, vídeo revisável e Estúdio Tático já estão convergidos.');
+      }
+      const r422 = applyR422SecurityObservabilityClosure(options.projectRoot);
+      if (r422.changed) {
+        console.warn(`::warning::R422 convergiu segurança fail-closed e observabilidade (${r422.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R422: segurança fail-closed e observabilidade já estão convergidas.');
+      }
+      const r423 = applyR423AndroidPerformanceUxClosure(options.projectRoot);
+      if (r423.changed) {
+        console.warn(`::warning::R423 convergiu Android, medição de leitura e UX final (${r423.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R423: Android, medição de leitura e UX final já estão convergidos.');
+      }
+      const r425 = applyR425SupabaseSecurityChain(options.projectRoot);
+      if (r425.changed) {
+        console.warn(`::warning::R425 convergiu cadeia Supabase estática fail-closed (${r425.patched.length} arquivo(s)).`);
+      } else {
+        console.log('R425: cadeia Supabase estática já está convergida.');
+      }
+      }
     const r426 = assertR426SupabaseForwardSecurityMigration(options.projectRoot);
     console.log(`R426: migration forward-only validada (${r426.migration}).`);
     const r424 = assertR424CodeClosure(options.projectRoot);

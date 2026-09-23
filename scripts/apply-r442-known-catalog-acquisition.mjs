@@ -91,6 +91,8 @@ function validate(root) {
 
 export function applyR442KnownCatalogAcquisition(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
+  // R446_FORWARD_IDEMPOTENCE:applyR442KnownCatalogAcquisition
+  try { validate(root); return { changed: false, patched: [], version: R442_KNOWN_CATALOG_ACQUISITION_VERSION }; } catch {}
   const patchers = [[FILES.center, patchCenter], [FILES.package, patchPackage]];
   const patched = [];
   for (const [relative, patcher] of patchers) {

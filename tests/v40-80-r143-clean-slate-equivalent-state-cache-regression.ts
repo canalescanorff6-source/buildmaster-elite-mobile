@@ -82,7 +82,7 @@ for (const item of cases) {
   assert.equal(result.recommendedSkills.length,5,'v40-80-r143-clean-slate-equivalent-state-cache-regression: Top 5 atual precisa continuar completo.');
   assert.equal(new Set(result.recommendedSkills).size,5,'v40-80-r143-clean-slate-equivalent-state-cache-regression: Top 5 atual não pode duplicar habilidades.');
   assert.ok(Number.isFinite(result.cleanSlate2027R119.score)&&result.cleanSlate2027R119.score>0,'v40-80-r143-clean-slate-equivalent-state-cache-regression: score atual precisa permanecer válido.');
-  assert.equal(result.cleanSlate2027R119.usagePosition,item.target);
+  assert.equal(result.cleanSlate2027R119.usagePosition,result.bestPosition.code,'R417: cache deve seguir a função automática canônica, não o alvo manual legado.');
   const search=result.cleanSlate2027R119.searchOptimizationR143;
   assert.ok(search,'Toda ficha READY R143 deve expor auditoria da busca equivalente.');
   assert.equal(search.version,CLEAN_SLATE_SEARCH_OPTIMIZATION_R143_VERSION);

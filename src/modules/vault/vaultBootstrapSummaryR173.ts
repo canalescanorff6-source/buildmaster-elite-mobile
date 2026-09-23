@@ -30,10 +30,10 @@ export function cleanVaultPlayerKeyR173(entry: VaultBootstrapEntryR173): string 
 }
 
 export function buildVaultBootstrapSummaryR173<T extends VaultBootstrapEntryR173>(entries: T[]): VaultBootstrapSummaryR173 {
-  const active = entries.filter((entry) => entry.folderId !== 'arquivados');
+  const active = entries.filter((entry) => entry.folderId !== 'arquivados' && entry.folderId !== 'lixeira');
   return {
     players: new Set(active.map(cleanVaultPlayerKeyR173)).size,
     fichas: active.length,
-    archived: entries.length - active.length,
+    archived: entries.filter((entry) => entry.folderId === 'arquivados').length,
   };
 }

@@ -109,7 +109,7 @@ export function filterVaultHistoryR151(input: {
     if (filters.favoritesOnly && !item.favorite) continue;
     if (filters.pendingOnly && index.statusTag !== 'pendente') continue;
     if (filters.reviewOnly && index.statusTag !== 'revisar') continue;
-    if (filters.folderId === 'all' && index.folderId === 'arquivados') continue;
+    if (filters.folderId === 'all' && (index.folderId === 'arquivados' || index.folderId === 'lixeira')) continue;
     if (input.onlyPendingSkills && index.status !== 'pendente') continue;
     if (input.filter === 'FAVORITES' && !item.favorite) continue;
     if (input.filter === 'PENDING' && index.status !== 'pendente') continue;

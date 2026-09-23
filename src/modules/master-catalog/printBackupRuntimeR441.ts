@@ -22,6 +22,12 @@ function safeFileNameStampR441(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+function ownedArrayBufferR449(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 export async function createPrintBackupBlobR441() {
   const [metadata, catalogModule, ownedModule] = await Promise.all([
     listCardSourceMetadataR441(),
@@ -40,7 +46,7 @@ export async function createPrintBackupBlobR441() {
   ]);
   const bytes = await buildPrintBackupArchiveR441(sources, { catalogLocal, ownedCards });
   return {
-    blob: new Blob([bytes], { type: 'application/zip' }),
+    blob: new Blob([ownedArrayBufferR449(bytes)], { type: 'application/zip' }),
     filename: `BuildMaster-Prints-${safeFileNameStampR441()}.zip`,
     count: sources.length,
     totalBytes: sources.reduce((sum, item) => sum + item.data.byteLength, 0),
@@ -81,7 +87,7 @@ export async function restorePrintBackupBlobR441(blob: Blob): Promise<PrintBacku
     if (existing?.originalChecksum === item.checksum) { skipped += 1; continue; }
     if (existing && existing.originalChecksum !== item.checksum) { conflicts += 1; continue; }
 
-    const rawBlob = new Blob([data], { type: item.mime });
+    const rawBlob = new Blob([ownedArrayBufferR449(data)], { type: item.mime });
     const file = typeof File === 'function'
       ? new File([rawBlob], item.originalName || `${item.sourceHash}.${String(item.file).split('.').pop() || 'bin'}`, { type: item.mime })
       : Object.assign(rawBlob, { name: item.originalName || item.sourceHash, lastModified: Date.now() }) as File;

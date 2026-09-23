@@ -7,6 +7,7 @@ import {
 } from './masterCatalogSyncR441';
 import { sanitizeMasterCatalogManifestR441 } from './masterCatalogManifestR441';
 import { sha256BytesR441 } from './cardSourceVaultR441';
+import type { RuntimeBatchOperation } from '@/lib/localDatabase';
 
 export const MASTER_CATALOG_SYNC_RUNTIME_R441_VERSION = '40.80-r441-master-catalog-sync-runtime-v1' as const;
 export const MASTER_CATALOG_MANIFEST_URL_KEY_R441 = 'buildmaster_master_catalog_manifest_url_r441';
@@ -119,12 +120,12 @@ function indexItemR441(card: MasterCatalogSyncPlanR441['nextCatalog'][number]) {
 }
 
 export async function promotePreparedMasterCatalogUpdateR441(prepared: PreparedMasterCatalogUpdateR441) {
-  if (!prepared.plan.changed) return { changed: false, ...prepared.plan };
+  if (!prepared.plan.changed) return { ...prepared.plan, changed: false };
   const local = await import('@/lib/localDatabase');
   const storage = await import('@/modules/card-catalog/masterCardCatalogStorageR438');
   const currentCatalog = prepared.plan.input.localCatalog;
   const nextIds = new Set(prepared.plan.nextCatalog.map((card) => card.catalogCardId));
-  const operations: Array<{ type: 'put' | 'delete'; key: IDBValidKey; value?: unknown }> = [];
+  const operations: RuntimeBatchOperation[] = [];
   for (const card of currentCatalog) {
     if (!nextIds.has(card.catalogCardId)) operations.push({ type: 'delete', key: `${storage.MASTER_CARD_PREFIX_R438}${card.catalogCardId}` });
   }
@@ -136,7 +137,7 @@ export async function promotePreparedMasterCatalogUpdateR441(prepared: PreparedM
   operations.push({ type: 'put', key: CATALOG_SYNC_STATE_KEY_R441, value: { schemaVersion: 1, activeVersion: prepared.manifest.catalogVersion, previousVersion: state.activeVersion, lastCheckedAt: prepared.checkedAt, lastUpdatedAt: new Date().toISOString(), manifestUrl: prepared.manifestUrl } satisfies MasterCatalogSyncStateR441 });
   await local.runtimeBatchMutate('cards', operations);
   await writeMasterCatalogManifestUrlR441(prepared.manifestUrl);
-  return { changed: true, ...prepared.plan };
+  return { ...prepared.plan, changed: true };
 }
 
 export async function rollbackMasterCatalogRuntimeR441() {
@@ -146,7 +147,7 @@ export async function rollbackMasterCatalogRuntimeR441() {
   const current = await storage.loadMasterCardCatalogR438();
   const previousIds = new Set(previous.catalog.map((card) => card.catalogCardId));
   const state = await readMasterCatalogSyncStateR441();
-  const operations: Array<{ type: 'put' | 'delete'; key: IDBValidKey; value?: unknown }> = [];
+  const operations: RuntimeBatchOperation[] = [];
   for (const card of current) if (!previousIds.has(card.catalogCardId)) operations.push({ type: 'delete', key: `${storage.MASTER_CARD_PREFIX_R438}${card.catalogCardId}` });
   for (const card of previous.catalog) operations.push({ type: 'put', key: `${storage.MASTER_CARD_PREFIX_R438}${card.catalogCardId}`, value: card });
   operations.push({ type: 'put', key: storage.MASTER_CARD_INDEX_KEY_R438, value: previous.catalog.map(indexItemR441) });

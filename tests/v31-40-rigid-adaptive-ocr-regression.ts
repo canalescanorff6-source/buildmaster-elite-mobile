@@ -74,7 +74,8 @@ const reviewWorkflow = fs.readFileSync('src/modules/card-reader/cardReviewWorkfl
 assert.match(reviewWorkflow, /nativeSkills:\s*trustedSessionSkills\s*\?\?\s*parsedOwnedSkills/);
 
 const database = fs.readFileSync('src/lib/localDatabase.ts', 'utf8');
-assert.match(database, /DB_VERSION = 6/);
+const databaseVersion = Number(database.match(/DB_VERSION = (\d+)/)?.[1] ?? 0);
+assert.ok(databaseVersion >= 6, 'v31.40: schema do IndexedDB não pode regredir abaixo da v6.');
 assert.match(database, /'ocr-lexicon'/);
 const crop = fs.readFileSync('src/modules/card-reader/cardArtCrop.ts', 'utf8');
 assert.match(crop, /squareOutput: true/);

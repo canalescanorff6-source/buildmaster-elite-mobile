@@ -83,6 +83,7 @@ export type CleanVaultV3800Props<T extends CleanVaultEntry> = {
   onMergeDuplicates: (ids: string[]) => void;
   onCreateByImage: () => void;
   onCreateManual: () => void;
+  onBatch: (action: 'archive'|'unarchive'|'trash'|'restore'|'delete', ids: string[]) => Promise<void>;
   activeActionKeys?: readonly string[];
   operationLabel?: string;
 };
@@ -103,7 +104,12 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
   const groups = useMemo(() => groupVaultPlayersV3800(props.visibleEntries), [props.visibleEntries]);
   const duplicateGroups = useMemo(() => detectExactVaultDuplicates(props.entries), [props.entries]);
   const archivedSelected = props.advancedFilters.folderId === 'arquivados';
+  const trashSelected = props.advancedFilters.folderId === 'lixeira';
   const allSelected = props.historyFilter === 'ALL' && props.advancedFilters.folderId === 'all';
+  const [selectedIds, setSelectedIds] = useState<string[]>([]), selected = new Set(selectedIds), visibleIds = props.visibleEntries.map((entry) => entry.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+  const toggleGroup = (ids: string[]) => setSelectedIds((current) => { const next=new Set(current),checked=ids.every((id)=>next.has(id));for(const id of ids)checked?next.delete(id):next.add(id);return [...next]; });
+  const runBatch = async (action: 'archive'|'unarchive'|'trash'|'restore'|'delete') => { const ids=selectedIds.filter((id)=>visibleIds.includes(id));if(ids.length){await props.onBatch(action,ids);setSelectedIds([]);} };
   const actionBusy = (key: string) => Boolean(props.activeActionKeys?.includes(key));
   const mergeKey = (ids: string[]) => `merge:${ids.slice().sort().join('|')}`;
   const [renderedGroupCountR413, setRenderedGroupCountR413] = useState<number>(CLEAN_VAULT_RENDER_BATCH_R413);
@@ -147,10 +153,11 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
     return () => observer.disconnect();
   }, [groups.length, hasMoreGroupsR413, effectiveRenderedGroupCountR413, renderScopeR413]);
 
-  function chooseQuickFilter(filter: 'all' | 'favorites' | 'complete' | 'review' | 'archived') {
+  function chooseQuickFilter(filter: 'all' | 'favorites' | 'complete' | 'review' | 'archived' | 'trash') {
+    setSelectedIds([]);
     props.onAdvancedFiltersChange((current) => ({
       ...current,
-      folderId: filter === 'archived' ? 'arquivados' : 'all',
+      folderId: filter === 'archived' ? 'arquivados' : filter === 'trash' ? 'lixeira' : 'all',
       favoritesOnly: false,
       pendingOnly: false,
       reviewOnly: false,
@@ -212,7 +219,9 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
         <button type="button" className={props.historyFilter === 'COMPLETE' ? 'active' : ''} onClick={() => chooseQuickFilter('complete')}><CheckCircle2 size={14} /> Prontos</button>
         <button type="button" className={props.historyFilter === 'REVIEW' ? 'active' : ''} onClick={() => chooseQuickFilter('review')}><ShieldAlert size={14} /> Revisar</button>
         <button type="button" className={archivedSelected ? 'active' : ''} onClick={() => chooseQuickFilter('archived')}><Archive size={14} /> Arquivados</button>
+        <button type="button" className={trashSelected ? 'active' : ''} onClick={() => chooseQuickFilter('trash')}><Trash2 size={14} /> Lixeira</button>
       </div>
+      <div className="bm-v3800-vault-advanced-actions"><button type="button" onClick={() => setSelectedIds(allVisibleSelected?[]:visibleIds)}>{allVisibleSelected?'Limpar seleção':'Selecionar tudo'}</button>{selectedIds.length>0&&<><strong>{selectedIds.length} selecionada(s)</strong>{trashSelected?<><button type="button" onClick={()=>void runBatch('restore')}><ArchiveRestore size={14}/> Restaurar</button><button type="button" className="danger" onClick={()=>void runBatch('delete')}><Trash2 size={14}/> Excluir</button></>:<><button type="button" onClick={()=>void runBatch(archivedSelected?'unarchive':'archive')}>{archivedSelected?<ArchiveRestore size={14}/>:<Archive size={14}/>} {archivedSelected?'Restaurar':'Arquivar'}</button><button type="button" onClick={()=>void runBatch('trash')}><Trash2 size={14}/> Lixeira</button><button type="button" className="danger" onClick={()=>void runBatch('delete')}>Excluir</button></>}</>}</div>
 
       <details className="bm-v3800-vault-advanced">
         <summary><SlidersHorizontal size={15} /> Mais filtros {props.activeFilterCount > 0 && <b>{props.activeFilterCount}</b>}<ChevronDown size={15} /></summary>
@@ -245,6 +254,7 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
             const archived = cleanVaultIsArchived(primary);
             return (
               <article className={`bm-v3800-player-card status-${status}${group.favorite ? ' favorite' : ''}`} key={group.key}>
+                <label className="bm-v3800-bulk-select"><input type="checkbox" checked={group.entries.every((entry)=>selected.has(entry.id))} onChange={()=>toggleGroup(group.entries.map((entry)=>entry.id))}/> Selecionar</label>
                 <div className="bm-v3800-player-main">
                   <button type="button" className="bm-v3800-player-identity" onClick={() => props.onOpen(primary)} disabled={actionBusy(`open:${primary.id}`)}>
                     <div className="bm-v3800-player-avatar">{primary.playerImage ? <img src={primary.playerImage} alt={`Carta de ${group.playerName}`} loading="lazy" decoding="async" /> : <span>{POSITION_PT[analysisUsagePositionR138(primary.result)].slice(0, 3)}</span>}</div>
@@ -272,10 +282,7 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
                   <details className="bm-v3800-more-menu">
                     <summary aria-label={`Mais ações para ${group.playerName}`}><MoreHorizontal size={18} /></summary>
                     <div>
-                      <button type="button" onClick={() => props.onArchive(primary.id, !archived)} disabled={actionBusy(`archive:${primary.id}`)}>{archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}{archived ? 'Restaurar do arquivo' : 'Arquivar'}</button>
-                      <button type="button" onClick={() => props.onDuplicate(primary.id)} disabled={actionBusy(`duplicate:${primary.id}`)}><Copy size={15} /> Criar variação</button>
-                      <button type="button" onClick={() => props.onExport(primary)}><FileText size={15} /> Exportar</button>
-                      <button type="button" className="danger" onClick={() => props.onDelete(primary.id)}><Trash2 size={15} /> Mover para Lixeira</button>
+                      {trashSelected ? <><button type="button" onClick={()=>void props.onBatch('restore',[primary.id])}><ArchiveRestore size={15}/> Restaurar</button><button type="button" className="danger" onClick={()=>void props.onBatch('delete',[primary.id])}><Trash2 size={15}/> Excluir</button></> : <><button type="button" onClick={() => props.onArchive(primary.id, !archived)} disabled={actionBusy(`archive:${primary.id}`)}>{archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}{archived ? 'Restaurar do arquivo' : 'Arquivar'}</button><button type="button" onClick={() => props.onDuplicate(primary.id)} disabled={actionBusy(`duplicate:${primary.id}`)}><Copy size={15} /> Criar variação</button><button type="button" onClick={() => props.onExport(primary)}><FileText size={15} /> Exportar</button><button type="button" className="danger" onClick={() => props.onDelete(primary.id)}><Trash2 size={15} /> Lixeira</button></>}
                     </div>
                   </details>
                 </div>

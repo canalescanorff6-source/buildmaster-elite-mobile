@@ -15,10 +15,26 @@ function external(id,label,details){return{id,label,status:R424_REQUIREMENT_STAT
 function walkSources(root){const start=path.resolve(root,'src'),out=[],stack=fs.existsSync(start)?[start]:[];while(stack.length){const d=stack.pop();for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory())stack.push(f);else if(TEXT_EXTENSIONS.test(e.name))out.push(f)}}return out}
 
 function evaluateR417(root){
+ // R448_R417_DETAILED_DIAGNOSTICS
  const actions=read(root,'src/hooks/useCardVisionVaultActionsR185.ts')||'',mut=read(root,'src/modules/vault/vaultHistoryMutationsR129.ts')||'',auto=read(root,'src/lib/autonomousCardR417.ts')||'',pipe=read(root,'src/lib/cardIntelligencePipeline.ts')||'',clean=read(root,'src/lib/cleanSlatePerformance2027V4080R119.ts')||'',sel=read(root,'src/modules/vault/cardVisionVaultSelectorsR151.ts')||'',ui=read(root,'src/components/CleanVaultV3800.tsx')||'';
- const bulk=fragments(actions,['batchHistoryR417',"action === 'delete'"])&&!actions.includes('removeHistoryEntryAfterDelete')&&mut.includes('batchRemoveHistoryR417');
- const ok=bulk&&fragments(auto,['AUTONOMOUS_CARD_R417_VERSION','slice(0,3)','buildPositionUsageR416'])&&!/parsed\.(?:overall|maxOverall)/.test(auto)&&pipe.includes('applyAutonomousRoleSeedR417(current)')&&clean.includes('usageContext.targetPosition !== autonomousPrimaryR417')&&sel.includes("index.folderId === 'lixeira'")&&fragments(ui,['Selecionar tudo','Lixeira']);
- return item('r417-permanent-card-authority','R417 — ficha permanente, função autônoma e ações estáveis do Cofre',ok,ok?'Contrato semântico R417 presente.':'Contrato semântico R417 incompleto.');
+ const checks=[
+  ['R417: batchHistoryR417 ausente',actions.includes('batchHistoryR417')],
+  ["R417: ramo action === 'delete' ausente",actions.includes("action === 'delete'")],
+  ['R417: helper legado removeHistoryEntryAfterDelete ainda presente',!actions.includes('removeHistoryEntryAfterDelete')],
+  ['R417: batchRemoveHistoryR417 ausente',mut.includes('batchRemoveHistoryR417')],
+  ['R417: autonomousCardR417/version ausente',auto.includes('AUTONOMOUS_CARD_R417_VERSION')],
+  ['R417: Top 3 autônomo ausente',auto.includes('slice(0,3)')],
+  ['R417: buildPositionUsageR416 ausente',auto.includes('buildPositionUsageR416')],
+  ['R417: Overall/GER reapareceu como autoridade autônoma',!/parsed\.(?:overall|maxOverall)/.test(auto)],
+  ['R417: seed autônomo ausente do pipeline',pipe.includes('applyAutonomousRoleSeedR417(current)')],
+  ['R417: âncora automática R184 ausente',clean.includes('usageContext.targetPosition !== autonomousPrimaryR417')],
+  ['R417: lixeira ausente dos seletores',sel.includes("index.folderId === 'lixeira'")],
+  ['R417: selecionar tudo ausente da UI',ui.includes('Selecionar tudo')],
+  ['R417: lixeira ausente da UI',ui.includes('Lixeira')],
+ ];
+ const missing=checks.filter(([,ok])=>!ok).map(([label])=>label);
+ const ok=missing.length===0;
+ return item('r417-permanent-card-authority','R417 — ficha permanente, função autônoma e ações estáveis do Cofre',ok,ok?'Contrato semântico R417 presente.':['Contrato semântico R417 incompleto.',...missing]);
 }
 function evaluateR418(root,sources){const tactical=read(root,'src/modules/tactical-studio/tacticalStudio2Storage.ts')||'',squad=read(root,'src/modules/squad-mapping/squadMappingStorage.ts')||'',license=read(root,'supabase/functions/license-session/index.ts')||'';const caps=sources.filter(f=>/\.slice\(0,\s*HISTORY_LIMIT\)/.test(fs.readFileSync(f,'utf8')));const ip=[/headers\.get\(\s*['"]x-forwarded-for['"]\s*\)/i,/headers\.get\(\s*['"]cf-connecting-ip['"]\s*\)/i,/headers\.get\(\s*['"]x-real-ip['"]\s*\)/i,/\bpreviousIp\b/i,/\b(?:vpn|proxy)\b[^\n]{0,80}\b(?:block|blocked|deny|denied|reject|forbid)/i,/\b(?:block|blocked|deny|denied|reject|forbid)[^\n]{0,80}\b(?:vpn|proxy)\b/i].some(p=>p.test(license));const ok=!caps.length&&!/\.slice\(0,\s*MAX_TACTICAL_SEQUENCE_PROJECTS\)/.test(tactical)&&!/source\.players[\s\S]{0,220}\.slice\(0,\s*500\)|source\.trials[\s\S]{0,220}\.slice\(0,\s*100\)/.test(squad)&&/verifyDeviceProof/.test(license)&&/\bdeviceId\b/.test(license)&&/buildmaster_register_secure_device/.test(license)&&!ip;return item('r418-capacity-network-mobility','R418 — coleções sem teto e licença por aparelho, não IP/VPN',ok,ok?'R418 íntegra.':'Teto persistente ou vínculo IP/VPN detectado.')}
 function evaluateR419(root){const b=read(root,'src/modules/builds/pointBudget.ts')||'',o=read(root,'src/modules/builds/trainingOptimizer.ts')||'',e=read(root,'src/modules/analysis/cardEvidenceAuthorityR419.ts')||'',c=read(root,'src/lib/cleanSlatePerformance2027V4080R119.ts')||'',d=read(root,'src/lib/analyzerDomain.ts')||'';const fallback=/return\s+SAFE_PLAYER_TRAINING_BUDGET\s*;/.test(b)||/return\s+SAFE_DEFAULT_TRAINING_BUDGET\s*;/.test(o);const ok=!fallback&&o.includes('R419: orçamento ausente permanece 0')&&fragments(e,['CARD_EVIDENCE_AUTHORITY_R419_VERSION','deriveTrainingBudgetEvidenceR419','applyCriticalEvidenceR419'])&&fragments(c,['applyCriticalEvidenceR419',"budgetEvidenceStateR419!=='TRUSTED'"])&&fragments(d,['CardEvidenceStateR419','trainingBudgetStateR419']);return item('r419-reader-master-engine','R419 — leitor/Motor Mestre fail-closed e PP sem fabricação',ok,ok?'R419 íntegra.':'Fallback de PP ou gate de evidência incompleto.')}

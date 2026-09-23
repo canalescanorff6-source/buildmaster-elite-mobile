@@ -165,6 +165,8 @@ function validate(root) {
 
 export function applyR437ResumableRosterImport(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
+  // R446_FORWARD_IDEMPOTENCE:applyR437ResumableRosterImport
+  try { validate(root); return { changed: false, patched: [], version: R437_RESUMABLE_ROSTER_IMPORT_VERSION }; } catch {}
   const patchers = [
     [FILES.center, patchCenter],
     [FILES.package, patchPackage]

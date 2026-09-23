@@ -1,6 +1,7 @@
 import type { AnalysisResult, AttributeKey, PositionCode } from '@/modules/analysis';
 import { FORMATION_BLUEPRINTS, type FormationBlueprint, type FormationRoleId, type FormationSlot } from '@/lib/formationRoleEngine';
 import { cardIdentityFingerprintR126, playerIdentityKeyFromNameR126 } from '@/lib/cardIdentityFingerprintR126';
+import { shouldMergeMasterRosterCardsR436 } from './masterRosterCatalogR436';
 import {
   canonicalizePlayerPlaystyle,
   getPlayerStyleMeta2026,
@@ -22,6 +23,9 @@ export type SquadMappingPlayer = {
   positions: PositionCode[];
   trainedPositions: PositionCode[];
   playstyle: string;
+  offensivePlaystyle?: string | null;
+  defensivePlaystyle?: string | null;
+  trainingPointsTotal?: number | null;
   overall: number | null;
   confidence: number;
   status: 'pronto' | 'revisar';
@@ -780,12 +784,7 @@ export function createMappingCardFingerprint(input: Pick<SquadMappingPlayer, 'na
 }
 
 export function mergeMappingPlayer(existing: SquadMappingPlayer[], incoming: SquadMappingPlayer) {
-  const duplicate = existing.find((player) => {
-    if (incoming.sourceHash && player.sourceHash && player.sourceHash === incoming.sourceHash) return true;
-    if (incoming.identityStatus === 'canonical' && player.identityStatus === 'canonical' && incoming.cardFingerprint === player.cardFingerprint) return true;
-    if (incoming.cardFingerprint && player.cardFingerprint && incoming.cardFingerprint === player.cardFingerprint) return true;
-    return false;
-  });
+  const duplicate = existing.find((player) => shouldMergeMasterRosterCardsR436(player, incoming));
   if (!duplicate) return { players: [incoming, ...existing], action: 'created' as const, player: incoming };
   const merged: SquadMappingPlayer = {
     ...duplicate,

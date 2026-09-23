@@ -1,3 +1,4 @@
+// R420_UNBOUNDED_CANONICAL_VAULT: nenhuma rota de persistência pode truncar silenciosamente o Cofre.
 // R418_UNBOUNDED_PERSISTENT_COLLECTIONS: conteúdo do usuário não é descartado por teto artificial de quantidade.
 import {
   ATTRIBUTE_PT,

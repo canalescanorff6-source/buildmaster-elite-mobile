@@ -2,6 +2,7 @@ import type { AnalysisResult, PositionCode } from '@/lib/analyzerDomain';
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import { MAX_PLAYER_TRAINING_BUDGET, MIN_PLAYER_TRAINING_BUDGET, inferPointsFromCardLevel } from '@/modules/builds/pointBudget';
 import { trainingTotalCost } from '@/lib/trainingPlanCore';
+import { effectivePhaseEntriesR124 } from '@/lib/efootball2027PhaseCatalogR124';
 import type { ManualFields } from '@/modules/vault/cardHistoryStore';
 import { buildProductionOcrEvidenceTextR132, buildReviewHydrationR132 } from './cardOcrEvidenceBoundaryR132';
 import type { DetailedValue } from './detailedPrintReader';
@@ -37,6 +38,27 @@ function confirmedTrainingPointsField(session: SinglePrintSession) {
   return field && Number.isFinite(value) && value >= MIN_PLAYER_TRAINING_BUDGET && value <= MAX_PLAYER_TRAINING_BUDGET ? field : null;
 }
 
+// BM_R415_REVIEW_AUTOFILL: review plausível preenche a conferência, mas não entra silenciosamente no motor.
+function reviewableFieldR415(session: SinglePrintSession, key: SingleFieldEvidence['key'], minConfidence: number) {
+  const field = fieldByKey(session, key);
+  return field?.value && field.status !== 'missing' && field.confidence >= minConfidence ? field : null;
+}
+
+function reviewableTrainingPointsFieldR415(session: SinglePrintSession) {
+  const field = reviewableFieldR415(session, 'points', 64);
+  const value = Number(field?.numericValue ?? field?.value ?? NaN);
+  return field && Number.isFinite(value) && value >= MIN_PLAYER_TRAINING_BUDGET && value <= MAX_PLAYER_TRAINING_BUDGET ? field : null;
+}
+
+function playstyleFitsPrimaryPositionR415(item: DetailedValue | SingleFieldEvidence | null | undefined, position: SingleFieldEvidence | null | undefined) {
+  if (!item?.value || !position?.value) return Boolean(item?.value);
+  const code = position.value as PositionCode;
+  const key = normalize(item.value);
+  const matches = [...effectivePhaseEntriesR124('OFFENSIVE'), ...effectivePhaseEntriesR124('DEFENSIVE')]
+    .filter((entry) => [entry.label, ...entry.aliases].some((alias) => normalize(alias) === key));
+  return !matches.length || matches.some((entry) => entry.positions.length === 0 || entry.positions.includes(code));
+}
+
 function confirmedZone(readings: PremiumZoneReading[], keys: Array<PremiumZoneReading['key']>) {
   return readings.some((item) => keys.includes(item.key) && item.status === 'confirmed' && item.text.trim());
 }
@@ -48,6 +70,8 @@ function detailedConfirmed(value: DetailedValue | null | undefined) {
 function isControlledScalarLine(line: string) {
   return /^(?:NOME DO JOGADOR|NOME|POSI[CÇ][AÃ]O PRINCIPAL|ESTILO DE JOGO(?: OFENSIVO| DEFENSIVO)?|GER|OVERALL|N[IÍ]VEL M[AÁ]XIMO|PONTOS TOTAIS|TIPO DA CARTA)\s*:/i.test(line);
 }
+
+function isPositionProficiencyLineR416(line:string){return /^PROFICI[ÊE]NCIA POSICIONAL\s+(?:GK|CB|LB|RB|DMF|CMF|LMF|RMF|AMF|LWF|RWF|SS|CF)\s*:/i.test(line); }
 
 function isPositionRatingLine(line: string) {
   return new RegExp(`^(?:${POSITION_CODES.join('|')})\\s*:\\s*\\d{2,3}\\s*$`, 'i').test(line);
@@ -73,7 +97,7 @@ function stripUntrustedStructuredLinesR133(text: string) {
       inProgression = false;
     }
     if (isControlledScalarLine(line)) continue;
-    if (isPositionRatingLine(line)) continue;
+    if (isPositionRatingLine(line) || isPositionProficiencyLineR416(line)) continue;
     output.push(line);
   }
   return output.join('\n');
@@ -164,11 +188,15 @@ export function buildProductionOcrEvidenceTextR133(session: SinglePrintSession, 
   if (name) lines.push(`NOME DO JOGADOR: ${name.value}`);
   if (position) lines.push(`POSIÇÃO PRINCIPAL: ${position.value}`);
 
+  const stylePosition = position ?? reviewableFieldR415(session, 'position', 72);
   const playstyleZoneConfirmed = confirmedZone(readings, ['playstyle']);
-  const offensive = playstyleZoneConfirmed ? detailedConfirmed(session.detailedReading.identity.offensivePlaystyle) : null;
-  const defensive = playstyleZoneConfirmed ? detailedConfirmed(session.detailedReading.identity.defensivePlaystyle) : null;
+  const offensiveCandidate = playstyleZoneConfirmed ? detailedConfirmed(session.detailedReading.identity.offensivePlaystyle) : null;
+  const defensiveCandidate = playstyleZoneConfirmed ? detailedConfirmed(session.detailedReading.identity.defensivePlaystyle) : null;
+  const offensive = playstyleFitsPrimaryPositionR415(offensiveCandidate, stylePosition) ? offensiveCandidate : null;
+  const defensive = playstyleFitsPrimaryPositionR415(defensiveCandidate, stylePosition) ? defensiveCandidate : null;
+  const legacyPlaystyle = playstyleFitsPrimaryPositionR415(playstyle, stylePosition) ? playstyle : null;
   if (offensive) lines.push(`ESTILO DE JOGO OFENSIVO: ${offensive.value}`);
-  else if (playstyle) lines.push(`ESTILO DE JOGO: ${playstyle.value}`);
+  else if (legacyPlaystyle) lines.push(`ESTILO DE JOGO: ${legacyPlaystyle.value}`);
   if (defensive) lines.push(`ESTILO DE JOGO DEFENSIVO: ${defensive.value}`);
 
   if (overall) lines.push(`GER: ${overall.value}`);
@@ -177,6 +205,7 @@ export function buildProductionOcrEvidenceTextR133(session: SinglePrintSession, 
   if (cardType) lines.push(`TIPO DA CARTA: ${cardType.value}`);
 
   for (const rating of trustedPositionRatingsR133(session, readings)) lines.push(`${rating.code}: ${rating.value}`);
+  for(const [code,item] of Object.entries(session.detailedReading.positionProficiencies??{})){if(item&&item.confidence>=68)lines.push(`PROFICIÊNCIA POSICIONAL ${code}: ${item.level}`);}
 
   const progression = trustedProgressionSequenceR133(session, readings);
   if (progression.length) {
@@ -191,15 +220,17 @@ export function buildReviewHydrationR133(nextResult: AnalysisResult, session?: S
   const hydration = buildReviewHydrationR132(nextResult, session);
   if (!session) return hydration;
 
-  const name = confirmedField(session, 'playerName');
-  const position = confirmedField(session, 'position');
+  const name = confirmedField(session, 'playerName') ?? reviewableFieldR415(session, 'playerName', 70);
+  const position = confirmedField(session, 'position') ?? reviewableFieldR415(session, 'position', 72);
   const playstyle = confirmedField(session, 'playstyle');
-  const level = confirmedField(session, 'level');
-  const points = confirmedTrainingPointsField(session);
+  const level = confirmedField(session, 'level') ?? reviewableFieldR415(session, 'level', 66);
+  const points = confirmedTrainingPointsField(session) ?? reviewableTrainingPointsFieldR415(session);
   const levelNumber = Number(level?.numericValue ?? level?.value ?? 0);
   const inferredPoints = levelNumber > 0 ? inferPointsFromCardLevel(levelNumber) : null;
-  const defensive = playstyle ? detailedConfirmed(session.detailedReading.identity.defensivePlaystyle) : null;
-  const offensive = playstyle ? detailedConfirmed(session.detailedReading.identity.offensivePlaystyle) : null;
+  const rawDefensive = playstyle ? detailedConfirmed(session.detailedReading.identity.defensivePlaystyle) : null;
+  const rawOffensive = playstyle ? detailedConfirmed(session.detailedReading.identity.offensivePlaystyle) : null;
+  const defensive = playstyleFitsPrimaryPositionR415(rawDefensive, position) ? rawDefensive : null;
+  const offensive = playstyleFitsPrimaryPositionR415(rawOffensive, position) ? rawOffensive : null;
 
   return {
     ...hydration,
@@ -210,7 +241,7 @@ export function buildReviewHydrationR133(nextResult: AnalysisResult, session?: S
       trainingPointsTotal: points?.value ?? (inferredPoints ? String(inferredPoints) : '')
     },
     suggestedCardPosition: (position?.value as PositionCode | undefined) ?? 'AUTO',
-    suggestedOffensivePlaystyle: offensive?.value ?? playstyle?.value ?? 'AUTO',
+    suggestedOffensivePlaystyle: offensive?.value ?? (playstyleFitsPrimaryPositionR415(playstyle, position) ? playstyle?.value : undefined) ?? 'AUTO',
     suggestedDefensivePlaystyle: defensive?.value ?? 'AUTO'
   };
 }
@@ -222,9 +253,9 @@ export function buildPreFinalConfirmationR133(input: {
   preview: string | null;
 }) {
   const { result, session, manualFields, preview } = input;
-  const name = manualFields.playerName.trim() || confirmedField(session, 'playerName')?.value || '';
-  const levelField = confirmedField(session, 'level');
-  const pointsField = confirmedTrainingPointsField(session);
+  const name = manualFields.playerName.trim() || confirmedField(session, 'playerName')?.value || reviewableFieldR415(session, 'playerName', 70)?.value || '';
+  const levelField = confirmedField(session, 'level') ?? reviewableFieldR415(session, 'level', 66);
+  const pointsField = confirmedTrainingPointsField(session) ?? reviewableTrainingPointsFieldR415(session);
   const level = manualFields.level.trim() || levelField?.value || '';
   const manualPoints = manualFields.trainingPointsTotal.trim();
   const inferred = inferPointsFromCardLevel(Number(level || 0));

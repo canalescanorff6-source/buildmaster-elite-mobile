@@ -211,4 +211,15 @@ if (r425Regression.status !== 0) {
   process.exit(r425Regression.status || 1);
 }
 if (r425Output) console.log(r425Output);
+const r424Fix2Regression = spawnSync(process.execPath, ['tests/v40-80-r424-fix2-ci-convergence-regression.mjs'], {
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe']
+});
+const r424Fix2Output = `${r424Fix2Regression.stdout || ''}${r424Fix2Regression.stderr || ''}`.trim();
+if (r424Fix2Regression.status !== 0) {
+  console.error('R151/R424-fix2: convergência histórica/CI voltou a regredir.');
+  if (r424Fix2Output) console.error(r424Fix2Output);
+  process.exit(r424Fix2Regression.status || 1);
+}
+if (r424Fix2Output) console.log(r424Fix2Output);
 console.log('R151 aprovado: toda a pasta src passou no contrato TypeScript autocontido do pacote limpo.');

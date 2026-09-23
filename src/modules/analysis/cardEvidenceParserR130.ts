@@ -111,9 +111,6 @@ export function detectCardBadgePosition(text: string): PositionCode | null {
     const direct = line.match(new RegExp(`^(${shortPattern})$`, 'i'));
     return direct?.[1] ? codeFromPositionToken(direct[1]) : null;
   };
-
-  // Regra mais confiável para o card: overall grande e sigla da posição logo abaixo/acima.
-  // Ex.: "104" + "CB" ou "107 AMF" no recorte da carta.
   for (let index = 0; index < Math.min(lines.length, 28); index += 1) {
     const line = lines[index];
     const numberMatch = line.match(/\b(8\d|9\d|10\d|11\d)\b/);
@@ -143,9 +140,6 @@ export function detectCardBadgePosition(text: string): PositionCode | null {
       }
     }
   }
-
-  // Fallback: primeira sigla curta isolada no recorte de identidade. Não usa nomes longos
-  // para evitar confundir "Atacante surpresa" ou menus com posição.
   for (const line of lines.slice(0, 28)) {
     const code = isPurePosition(line);
     if (code) return code;
@@ -157,8 +151,6 @@ export function detectCardBadgePosition(text: string): PositionCode | null {
 export function detectPrimaryPositionFromTop(text: string): PositionCode | null {
   const lines = normalizedLines(text).slice(0, 40);
   const positionAliases = POSITION_ALIAS_ENTRIES.flatMap(([, aliases]) => aliases).map(escapeRegex).join('|');
-
-  // Formato comum da carta recortada: overall grande e posição logo abaixo. Ex.: "104" na linha anterior e "CA" na linha atual.
   for (let index = 1; index < lines.length; index += 1) {
     const previousNumber = lines[index - 1].match(/\b(8\d|9\d|10\d|11\d)\b/);
     const currentPosition = lines[index].match(new RegExp(`^(${positionAliases})$`, 'i'));
@@ -167,8 +159,6 @@ export function detectPrimaryPositionFromTop(text: string): PositionCode | null 
       if (code) return code;
     }
   }
-
-  // Formato em uma linha só. Em grades como "CA 102 PE 100", a primeira posição da linha é a principal.
   for (const line of lines.slice(0, 25)) {
     const leadingPositionThenNumber = line.match(new RegExp(`^(${positionAliases})\\s*(8\\d|9\\d|10\\d|11\\d)\\b`, 'i'));
     if (leadingPositionThenNumber) {
@@ -194,9 +184,6 @@ export function detectPositionRatings(text: string): PositionRatings {
   };
 
   const ptMap = POSITION_ALIAS_ENTRIES;
-
-  // 1) Leitura clássica na MESMA linha: CA 101, CF 101, VOL 97 etc.
-  // Não colapsa o texto inteiro: uma grade em duas linhas precisa preservar colunas.
   for (const line of lines) {
     for (const [code, aliases] of ptMap) {
       for (const alias of aliases) {
@@ -206,9 +193,6 @@ export function detectPositionRatings(text: string): PositionRatings {
       }
     }
   }
-
-  // 2) Leitura quando o OCR separa UMA posição e seu número em linhas diferentes.
-  // Linhas com várias posições são grades e ficam para a etapa 3.
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const orderedCodes = positionCodesInTextOrder(line);
@@ -219,8 +203,6 @@ export function detectPositionRatings(text: string): PositionRatings {
     const number = nearby.match(/\b(\d{2,3})\b/);
     if (number?.[1]) setRating(code, Number(number[1]));
   }
-
-  // 3) Leitura de grades em duas linhas: uma linha com posições, outra com números.
   for (let index = 0; index < lines.length - 1; index += 1) {
     const current = lines[index];
     const next = lines[index + 1];
@@ -326,10 +308,6 @@ export function resolvePlaystyleForCard(rawPlaystyle: string | null, mainPositio
   const candidates = findPlaystylesInText(searchText);
   const fitted = candidates.find((candidate) => playstyleFitsPosition(candidate, mainPosition));
   if (fitted) return fitted;
-
-  // Quando a leitura local só encontrou um estilo incompatível com a posição principal
-  // (ex.: ZAG lido como "Lateral defensivo" por ruído de OCR), é mais seguro não exibir
-  // estilo do que trocar a identidade da carta por uma informação errada.
   return null;
 }
 
@@ -337,21 +315,14 @@ export function detectPlaystyle(text: string) {
   const lines = text.split(/\r?\n/).map(cleanLine).filter(Boolean);
   const topLines = lines.slice(0, 28);
   const attributeOrMenuLine = /talento|controle|drible|passe|finaliza|cabe[cç]ada|velocidade|acelera|for[cç]a|salto|contato|equil|resist|habilidades|modelo|impetos|aumenta os atributos|qualificado|posi[cç][aã]o alvo|objetivo/i;
-
-  // Primeiro procura no topo da carta, porque o estilo verdadeiro fica logo abaixo do nome.
-  // Isso evita que textos auxiliares/listas do app sejam confundidos como estilo do jogador.
   for (const line of topLines) {
     if (attributeOrMenuLine.test(line)) continue;
     const direct = findPlaystyleInText(line);
     if (direct) return direct;
   }
-
-  // Depois tenta uma janela um pouco maior, ainda antes da zona de atributos.
   const topBlock = topLines.join('\n');
   const fromTop = findPlaystyleInText(topBlock);
   if (fromTop) return fromTop;
-
-  // Não procura no texto inteiro para não confundir menu/lista/recomendação com o estilo real da carta.
   return null;
 }
 
@@ -385,8 +356,6 @@ function explicitPlayerName(rawText: string) {
 }
 
 export function detectName(rawText: string, fileName?: string | null) {
-  // A identidade digitada pelo usuário é autoritativa. Ela precisa ser lida
-  // antes de qualquer nome completo encontrado pelo OCR no restante do print.
   const explicit = explicitPlayerName(rawText);
   if (explicit) return explicit;
 

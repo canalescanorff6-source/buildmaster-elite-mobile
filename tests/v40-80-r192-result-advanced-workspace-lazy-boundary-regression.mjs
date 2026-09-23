@@ -56,7 +56,7 @@ for (const forbidden of ['createProductionAnalysisR138', 'runCanonicalVaultMutat
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '736e631a4aa930bfadf07c81c3330132459ddbaf613531cd4cfc610eacaa1fb5',
+  'bc888d06abb39827b43dc1cb260a3d57db57c0f18321014e3cd4e34a1c126704',
   'R192: R119 não pode mudar durante modularização do Resultado.',
 );
 assert.match(String(pkg.scripts?.['test:v4080'] ?? ''), /npm run test:r192(?: && npm run test:r193)?(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/, 'R192: cadeia v40.80 deve preservar R192 antes do gate seguinte.');

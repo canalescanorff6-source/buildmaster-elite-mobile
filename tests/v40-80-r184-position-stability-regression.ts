@@ -20,20 +20,21 @@ function card(lowPass:number){
 const context={formation:'4-2-2-2',style:'POSSE_DE_BOLA',gameplayMode:'UNIVERSAL',connectionProfile:'VARIABLE',controlProfile:'DRIBBLE'} as const;
 const adapted=applyCompleteCardIntelligence(analyzeCard(card(87),'COMPETITIVE','AMF','r184-a.png',context));
 const natural=applyCompleteCardIntelligence(analyzeCard(card(86),'COMPETITIVE','SS','r184-b.png',context));
-assert.equal(adapted.cleanSlate2027R119?.positionStabilityR184?.decision,'NATURAL_ANCHOR','R184: empate funcional estreito precisa preservar a ficha canônica.');
-assert.ok((adapted.cleanSlate2027R119?.positionStabilityR184?.targetGain??99)<=0.25);
-assert.ok((adapted.cleanSlate2027R119?.positionStabilityR184?.planDistance??99)<=4);
+// R417_AUTONOMOUS_R184_CONTRACT: alvo manual não é mais autoridade da função final.
 assert.deepEqual(adapted.training,natural.training,'R184: 1 ponto de ruído OCR + mudança funcional marginal não pode oscilar a progressão.');
 assert.deepEqual(adapted.recommendedSkills,natural.recommendedSkills,'R184: Top 5 também precisa ficar estável no empate funcional.');
 assert.deepEqual(adapted.recommendedImpetos,natural.recommendedImpetos,'R184: Ímpeto precisa ficar estável no empate funcional.');
 assert.equal(adapted.cleanSlate2027R119?.cardKey,natural.cleanSlate2027R119?.cardKey);
-assert.notEqual(adapted.bestPosition.code,natural.bestPosition.code,'R184: posição de uso continua podendo mudar sem reescrever a carta.');
+assert.equal(adapted.bestPosition.code,natural.bestPosition.code,'R417: alvo manual não pode substituir a função automática canônica.');
+assert.equal(adapted.cleanSlate2027R119?.usagePosition,adapted.bestPosition.code);
+assert.equal(adapted.cleanSlate2027R119?.usagePositionChanged,false);
 
 const material=applyCompleteCardIntelligence(analyzeCard(card(87),'COMPETITIVE','CB','r184-c.png',context));
-assert.equal(material.cleanSlate2027R119?.positionStabilityR184?.decision,'NATURAL_ANCHOR','R184: até uma mudança funcional material deve preservar a progressão permanente da mesma carta.');
+assert.deepEqual(material.recommendedSkills,natural.recommendedSkills,'R184/R417: alvo manual material não pode trocar o Top 5.');
+assert.deepEqual(material.recommendedImpetos,natural.recommendedImpetos,'R184/R417: alvo manual material não pode trocar o Ímpeto.');
 assert.deepEqual(material.training,natural.training,'R184: posição real de uso não pode recriar a ficha permanente da mesma carta.');
-assert.equal(material.cleanSlate2027R119?.usagePosition,'CB','R184: a posição real de uso continua registrada para diagnóstico/tática.');
-assert.equal(material.cleanSlate2027R119?.usagePositionChanged,true,'R184: o runtime precisa reconhecer que o uso mudou sem reescrever a progressão.');
-assert.ok((material.cleanSlate2027R119?.positionStabilityR184?.targetGain??0)>0.25 || (material.cleanSlate2027R119?.positionStabilityR184?.planDistance??0)>4,'R184: a diferença funcional pode continuar diagnosticada mesmo quando a ficha permanente fica ancorada.');
+assert.equal(material.bestPosition.code,natural.bestPosition.code,'R417: seleção autônoma deve convergir para a mesma função da carta.');
+assert.equal(material.cleanSlate2027R119?.usagePosition,material.bestPosition.code);
+assert.equal(material.cleanSlate2027R119?.usagePositionChanged,false);
 
-console.log('R184 estabilidade aprovada: posição de uso continua diagnosticada, enquanto a progressão permanente permanece ancorada na carta natural.');
+console.log('R184 estabilidade aprovada: R417 ignora alvo manual legado e preserva função automática, progressão, Top 5 e Ímpeto canônicos.');

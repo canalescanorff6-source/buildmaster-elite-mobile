@@ -89,12 +89,12 @@ function cleanSignature(result: AnalysisResult) {
   };
 }
 
-function assertCleanSlate(result: AnalysisResult, selectedPosition: PositionCode, naturalPosition: PositionCode) {
+function assertCleanSlate(result: AnalysisResult, _selectedPosition: PositionCode, naturalPosition: PositionCode) {
   const clean = result.cleanSlate2027R119;
   assert.ok(clean, 'A análise Clean Slate da carta deve existir.');
   assert.equal(clean?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
   assert.equal(clean?.positionAnchor, naturalPosition);
-  assert.equal(result.bestPosition.code, selectedPosition, 'A posição escolhida continua disponível para a camada tática.');
+  assert.ok(result.positionUsageR416?.automaticTopPositions?.includes(result.bestPosition.code), 'A posição final deve vir do Top 3 automático por DNA R417.');
   assert.equal(trainingPlanTotalCost(result.training), result.trainingPointsTotal);
   assert.equal(result.trainingPointsRemaining, 0);
   assert.ok((clean?.dominantDna.length ?? 0) >= 2, 'O r119 precisa identificar múltiplas dimensões dominantes do DNA.');

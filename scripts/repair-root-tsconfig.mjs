@@ -16,6 +16,8 @@ import { applyR439IntelligentCardResolver } from './apply-r439-intelligent-card-
 import { applyR440VisualCardIdentity } from './apply-r440-visual-card-identity.mjs';
 import { applyR441CatalogSyncPrintVault } from './apply-r441-catalog-sync-print-vault.mjs';
 import { applyR442KnownCatalogAcquisition } from './apply-r442-known-catalog-acquisition.mjs';
+import { auditPostCatalogFinalConvergenceR447 } from './apply-r447-final-post-catalog-convergence.mjs';
+import { convergeHistoricalFoundationR448 } from './apply-r448-ci-foundation-order.mjs';
 import { applyR452PartialFicha } from './apply-r452-partial-ficha.mjs';
 
 const SCRIPT_VERSION = '38.39-root-config-self-healing-1+r452';
@@ -139,36 +141,52 @@ if (!checkOnly && fullBuildMasterProject) {
   console.log(r435.changed
     ? `R435 pré-CI convergiu ${r435.patched.length} gerador(es) R408/R420.`
     : 'R435 pré-CI: gerador R408/R420 já estava convergido.');
-  const r436 = applyR436MasterRosterCatalog(projectRoot);
-  console.log(r436.changed
-    ? `R436 pré-CI convergiu ${r436.patched.length} arquivo(s) do Meu Elenco/Banco Mestre.`
-    : 'R436 pré-CI: Meu Elenco/Banco Mestre já estava convergido.');
-  const r437 = applyR437ResumableRosterImport(projectRoot);
-  console.log(r437.changed
-    ? `R437 pré-CI convergiu ${r437.patched.length} arquivo(s) da importação retomável.`
-    : 'R437 pré-CI: importação retomável já estava convergida.');
-  const r438 = applyR438MasterCardCatalog(projectRoot);
-  console.log(r438.changed
-    ? `R438 pré-CI convergiu ${r438.patched.length} arquivo(s) do Catálogo Mestre.`
-    : 'R438 pré-CI: Catálogo Mestre já estava convergido.');
-  const r439 = applyR439IntelligentCardResolver(projectRoot);
-  console.log(r439.changed
-    ? `R439 pré-CI convergiu ${r439.patched.length} arquivo(s) do resolvedor inteligente.`
-    : 'R439 pré-CI: resolvedor inteligente já estava convergido.');
-  const r440 = applyR440VisualCardIdentity(projectRoot);
-  console.log(r440.changed
-    ? `R440 pré-CI convergiu ${r440.patched.length} arquivo(s) da identidade visual.`
-    : 'R440 pré-CI: identidade visual já estava convergida.');
-  const r441 = applyR441CatalogSyncPrintVault(projectRoot);
-  console.log(r441.changed
-    ? `R441 pré-CI convergiu ${r441.patched.length} arquivo(s) do catálogo remoto/Cofre de Prints.`
-    : 'R441 pré-CI: catálogo remoto/Cofre de Prints já estava convergido.');
-  const r442 = applyR442KnownCatalogAcquisition(projectRoot);
-  console.log(r442.changed
-    ? `R442 pré-CI convergiu ${r442.patched.length} arquivo(s) da aquisição direta do Catálogo Geral.`
-    : 'R442 pré-CI: aquisição direta do Catálogo Geral já estava convergida.');
-  const r452 = applyR452PartialFicha(projectRoot);
-  console.log(r452.changed ? `R452 pré-CI convergiu ${r452.patched.length} arquivo(s) da UI/ficha provisória.` : 'R452 pré-CI: UI/ficha provisória já convergida.');
+  // R448_FOUNDATION_BEFORE_POST_CATALOG
+  const foundationR448 = convergeHistoricalFoundationR448(projectRoot);
+  console.log(foundationR448.changed
+    ? `R448 pré-CI convergiu a fundação histórica em ${foundationR448.steps.filter((step) => step.changed).length} etapa(s).`
+    : 'R448 pré-CI: fundação histórica já estava íntegra.');
+  // R447_FINAL_POST_CATALOG_REPAIR_ROOT
+  const postCatalogR447Before = auditPostCatalogFinalConvergenceR447(projectRoot);
+  if (postCatalogR447Before.ok) {
+    console.log('R447 pré-CI: pilha R436-R442 já está no contrato final; patchers históricos não serão reaplicados.');
+  } else {
+    const r436 = applyR436MasterRosterCatalog(projectRoot);
+    console.log(r436.changed
+      ? `R436 pré-CI convergiu ${r436.patched.length} arquivo(s) do Meu Elenco/Banco Mestre.`
+      : 'R436 pré-CI: Meu Elenco/Banco Mestre já estava convergido.');
+    const r437 = applyR437ResumableRosterImport(projectRoot);
+    console.log(r437.changed
+      ? `R437 pré-CI convergiu ${r437.patched.length} arquivo(s) da importação retomável.`
+      : 'R437 pré-CI: importação retomável já estava convergida.');
+    const r438 = applyR438MasterCardCatalog(projectRoot);
+    console.log(r438.changed
+      ? `R438 pré-CI convergiu ${r438.patched.length} arquivo(s) do Catálogo Mestre.`
+      : 'R438 pré-CI: Catálogo Mestre já estava convergido.');
+    const r439 = applyR439IntelligentCardResolver(projectRoot);
+    console.log(r439.changed
+      ? `R439 pré-CI convergiu ${r439.patched.length} arquivo(s) do resolvedor inteligente.`
+      : 'R439 pré-CI: resolvedor inteligente já estava convergido.');
+    const r440 = applyR440VisualCardIdentity(projectRoot);
+    console.log(r440.changed
+      ? `R440 pré-CI convergiu ${r440.patched.length} arquivo(s) da identidade visual.`
+      : 'R440 pré-CI: identidade visual já estava convergida.');
+    const r441 = applyR441CatalogSyncPrintVault(projectRoot);
+    console.log(r441.changed
+      ? `R441 pré-CI convergiu ${r441.patched.length} arquivo(s) do catálogo remoto/Cofre de Prints.`
+      : 'R441 pré-CI: catálogo remoto/Cofre de Prints já estava convergido.');
+    const r442 = applyR442KnownCatalogAcquisition(projectRoot);
+    console.log(r442.changed
+      ? `R442 pré-CI convergiu ${r442.patched.length} arquivo(s) da aquisição direta do Catálogo Geral.`
+      : 'R442 pré-CI: aquisição direta do Catálogo Geral já estava convergida.');
+    const r452 = applyR452PartialFicha(projectRoot);
+    console.log(r452.changed ? `R452 pré-CI convergiu ${r452.patched.length} arquivo(s) da UI/ficha provisória.` : 'R452 pré-CI: UI/ficha provisória já convergida.');
+  
+    const postCatalogR447After = auditPostCatalogFinalConvergenceR447(projectRoot);
+    if (!postCatalogR447After.ok) {
+      throw new Error(`R447: convergência pós-catálogo incompleta — ${postCatalogR447After.issues.join(' | ')}`);
+    }
+  }
 } else if (!checkOnly) {
   console.log('Fixture TypeScript isolada: convergência do aplicativo não é necessária.');
 }

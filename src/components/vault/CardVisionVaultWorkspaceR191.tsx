@@ -58,6 +58,7 @@ type VaultActionsR191 = Pick<ReturnType<typeof useCardVisionVaultActionsR185>,
   | 'emptyVaultTrash'
   | 'moveHistoryItemToTrash'
   | 'permanentlyDeleteHistoryItem'
+  | 'batchHistoryR417'
 >;
 
 type VaultCoordinatorR191 = Pick<ReturnType<typeof useCardVisionVaultCoordinatorR153>,
@@ -151,7 +152,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
     toggleFavoriteHistory, duplicateHistoryItem, exportSingleHistoryItem, deleteHistoryItem,
     updateHistoryStatus, markAllHistorySkills, updateHistoryNotes, mergeSelectedHistory,
     restoreTrashItem, permanentlyDeleteTrashItem, emptyVaultTrash, moveHistoryItemToTrash,
-    permanentlyDeleteHistoryItem,
+    permanentlyDeleteHistoryItem, batchHistoryR417,
   } = actions;
   const {
     cloudLoading, cloudPendingCountR154, cloudStatus, activeVaultActionKeysR154,
@@ -224,6 +225,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
             onMergeDuplicates={mergeSelectedHistory}
             onCreateByImage={onCreateByImage}
             onCreateManual={onCreateManual}
+            onBatch={batchHistoryR417}
             activeActionKeys={activeVaultActionKeysR154}
             operationLabel={vaultOperationLabelR154}
           />

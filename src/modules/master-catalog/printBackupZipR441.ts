@@ -186,7 +186,7 @@ export type PrintBackupManifestR441 = {
 };
 
 export async function buildPrintBackupArchiveR441(
-  sources: readonly Array<{ metadata: CardSourceImageR441; data: Uint8Array }>,
+  sources: ReadonlyArray<{ metadata: CardSourceImageR441; data: Uint8Array }>,
   extras?: { catalogLocal?: unknown; ownedCards?: unknown; createdAt?: string }
 ) {
   const manifestEntries: PrintBackupManifestR441['entries'] = [];

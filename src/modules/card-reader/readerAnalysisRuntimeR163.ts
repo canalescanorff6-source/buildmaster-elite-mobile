@@ -29,6 +29,7 @@ import {
 } from '@/modules/card-reader/efhubManualCalibration';
 import { loadReaderRuntimeR160 } from '@/modules/card-reader/readerRuntimeR160';
 import { loadReaderEvidenceRuntimeR161 } from '@/modules/card-reader/readerEvidenceRuntimeR161';
+import { readPositionProficiencyGridR416 } from './positionProficiencyVisionR416';
 
 export const READER_ANALYSIS_RUNTIME_R163_VERSION = '40.80-r163-reader-analysis-runtime-v1' as const;
 
@@ -405,6 +406,8 @@ export function createCardVisionReaderAnalysisOperationsR163(context: ReaderAnal
           void updateBackgroundOcrProtection(progressStatus, progress);
         }
       }
+      const positionGridZoneR416=geometry.zones.find((item)=>item.key==='positionGrid');
+      if(positionGridZoneR416){const visualR416=await readPositionProficiencyGridR416(ocrSource,positionGridZoneR416).catch(()=>null);if(visualR416)zoneResults=zoneResults.map((reading)=>reading.key==='positionGrid'?{...reading,positionProficienciesR416:visualR416}:reading);}
       reportReaderProgress(90, 'Conferindo campos', 'Validando nome, nível, atributos, habilidades e pontos.', readerTotal, readerTotal);
       void updateBackgroundOcrCheckpoint({ stage: 'finalizing', status: 'Conferindo nome, atributos, habilidades e pontos.' });
       void updateBackgroundOcrProtection('Conferindo e finalizando a carta.', 96);

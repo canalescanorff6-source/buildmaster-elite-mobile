@@ -55,8 +55,6 @@ function automaticPositionFamilyCompatible(main: PositionCode, candidate: Positi
 }
 
 function chooseGameplaySelectedPosition(parsed: ParsedCard, scored: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>): PositionCode {
-  // r27: no modo AUTO, a identidade da posição da carta é uma trava de família.
-  // Adaptação fora da função continua liberada quando o usuário escolhe a posição manualmente.
   const compatible = scored.filter((item) => automaticPositionFamilyCompatible(parsed.mainPosition, item.code));
   const best = compatible[0] ?? scored.find((item) => item.code === parsed.mainPosition) ?? scored[0];
   if (!best) return parsed.mainPosition;
@@ -232,7 +230,6 @@ function individualTrainingAdjustments(position: PositionCode, a: Required<Attri
     const target = trainingGroupAverage(key, reference);
     const standout = current - playerMean;
     const gap = target - current;
-    // A posição define o mínimo funcional, mas a identidade da carta define onde vale especializar.
     weights[key] += Math.max(-.55, Math.min(1.15, standout / 13));
     if (core.includes(key)) weights[key] += Math.max(-.45, Math.min(1.2, gap / 13));
     else if (gap > 8) weights[key] -= Math.min(.55, gap / 28);
@@ -410,9 +407,6 @@ function buildTrainingVariants(selected: PositionCode, selectedLabel: string, tr
   };
   push(training); push(softenTraining(training, selected)); push(aggressiveTraining(training, selected));
   const keys = dnaGroupKeys(selected);
-  // R142: em produção o Clean Slate é o único escritor final; não há retorno em enumerar
-  // centenas de distribuições provisórias que serão descartadas alguns milissegundos depois.
-  // O modo FULL continua intacto para regressões/diagnósticos históricos.
   if (executionModeR142 === 'FULL') {
     for (const plus of keys) for (const minus of keys) {
       if (plus === minus) continue;
@@ -1126,8 +1120,6 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
   const autoSelectedCode = chooseGameplaySelectedPosition(parsed, nativePositionScores);
   const explicitTarget = targetPosition !== 'AUTO';
   const requestedCode = explicitTarget ? targetPosition as PositionCode : autoSelectedCode;
-  // Quando o usuário escolhe uma posição, a decisão é soberana.
-  // O motor pode avaliar a adaptação, mas nunca troca ou bloqueia silenciosamente a escolha.
   const selectedCode = explicitTarget ? requestedCode : autoSelectedCode;
   const targetScore = positionScore(selectedCode, attributes, parsed.nativeSkills, parsed.positionRatings) + tacticalScoreBonus(selectedCode, tacticalProfile, attributes);
   const selected = nativePositionScores.find((item) => item.code === selectedCode) ?? {
@@ -1223,6 +1215,4 @@ export function analyzeCard(rawText: string, objective: Objective = 'COMPETITIVE
 export function analyzeCardProductionBaseR142(rawText: string, objective: Objective = 'COMPETITIVE', targetPosition: PositionCode | 'AUTO' = 'AUTO', imageFileName?: string | null, tacticalProfile: TacticalProfile = { formation: 'AUTO', style: 'AUTO' }): AnalysisResult {
   return analyzeCard(rawText, objective, targetPosition, imageFileName, tacticalProfile, 'PRODUCTION_BASE');
 }
-
-// Compatibilidade com integrações e regressões anteriores; novas telas devem importar pela fachada modules/analysis.
 export { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES, OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from '../modules/analysis/analyzerCatalog';

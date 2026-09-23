@@ -24,6 +24,12 @@ export function ObservabilityBootstrap() {
       const detail = (event as CustomEvent<StorageFailure>).detail;
       recordObservabilityEvent({ kind: 'storage', level: 'warning', area: 'storage', code: detail.operation, message: `${detail.operation} bloqueado para uma chave local.` });
     };
+    const onVisibility = () => recordObservabilityEvent({
+      kind: 'performance', level: 'info', area: 'app-lifecycle',
+      code: document.visibilityState === 'visible' ? 'app-resume' : 'app-background',
+      message: document.visibilityState === 'visible' ? 'Aplicativo retornou ao primeiro plano.' : 'Aplicativo foi para segundo plano.',
+      context: { stage: 'app-lifecycle', action: document.visibilityState }
+    });
 
     let observer: PerformanceObserver | null = null;
     try {
@@ -44,11 +50,13 @@ export function ObservabilityBootstrap() {
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
     window.addEventListener(STORAGE_FAILURE_EVENT, onStorage);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('buildmaster:screen-change', onScreen);
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
       window.removeEventListener(STORAGE_FAILURE_EVENT, onStorage);
+      document.removeEventListener('visibilitychange', onVisibility);
       observer?.disconnect();
     };
   }, []);

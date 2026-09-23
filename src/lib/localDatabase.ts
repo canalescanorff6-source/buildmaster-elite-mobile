@@ -2,13 +2,13 @@ import { accountDatabaseName } from './accountStorage';
 import { safeStorageGet, safeStorageRemove } from './safeLocalStorage';
 
 const DB_BASE_NAME = 'buildmaster_runtime_v27_10';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const DB_OPEN_TIMEOUT_MS = 3500;
 const DB_TRANSACTION_TIMEOUT_MS = 5000;
 
-export type RuntimeStoreName = 'ocr-cache' | 'ocr-corrections' | 'ocr-lexicon' | 'ocr-calibrations' | 'scan-history' | 'diagnostics' | 'image-thumbnails' | 'ocr-queue' | 'cards' | 'builds' | 'formations' | 'matches' | 'backup-snapshots';
+export type RuntimeStoreName = 'ocr-cache' | 'ocr-corrections' | 'ocr-lexicon' | 'ocr-calibrations' | 'scan-history' | 'diagnostics' | 'image-thumbnails' | 'card-source-images' | 'ocr-queue' | 'cards' | 'builds' | 'formations' | 'matches' | 'backup-snapshots';
 
-const STORE_NAMES: RuntimeStoreName[] = ['ocr-cache', 'ocr-corrections', 'ocr-lexicon', 'ocr-calibrations', 'scan-history', 'diagnostics', 'image-thumbnails', 'ocr-queue', 'cards', 'builds', 'formations', 'matches', 'backup-snapshots'];
+const STORE_NAMES: RuntimeStoreName[] = ['ocr-cache', 'ocr-corrections', 'ocr-lexicon', 'ocr-calibrations', 'scan-history', 'diagnostics', 'image-thumbnails', 'card-source-images', 'ocr-queue', 'cards', 'builds', 'formations', 'matches', 'backup-snapshots'];
 
 function openRuntimeDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -107,6 +107,19 @@ export function runtimePut<T>(storeName: RuntimeStoreName, key: IDBValidKey, val
 
 export function runtimeDelete(storeName: RuntimeStoreName, key: IDBValidKey): Promise<void> {
   return runtimeMutate(storeName, `Exclusão de ${storeName}`, (store) => { store.delete(key); });
+}
+
+export type RuntimeBatchOperation =
+  | { type: 'put'; key: IDBValidKey; value: unknown }
+  | { type: 'delete'; key: IDBValidKey };
+
+export function runtimeBatchMutate(storeName: RuntimeStoreName, operations: readonly RuntimeBatchOperation[]): Promise<void> {
+  return runtimeMutate(storeName, `Lote atômico de ${storeName}`, (store) => {
+    for (const operation of operations) {
+      if (operation.type === 'delete') store.delete(operation.key);
+      else store.put(operation.value, operation.key);
+    }
+  });
 }
 
 export async function runtimeList<T>(storeName: RuntimeStoreName, limit = 100): Promise<Array<{ key: IDBValidKey; value: T }>> {

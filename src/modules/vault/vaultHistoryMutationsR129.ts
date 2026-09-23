@@ -32,6 +32,16 @@ export function removeHistoryEntryR129(history: SavedAnalysis[], item: SavedAnal
   return history.filter((entry) => entry.id !== item.id);
 }
 
+export function batchMoveHistoryFolderR417(history: SavedAnalysis[], ids: string[], folderId: string, action: string, note: string) {
+  const selected = new Set(ids);
+  return history.map((entry) => selected.has(entry.id) ? appendSavedEvent({ ...entry, folderId }, action, note) : entry);
+}
+
+export function batchRemoveHistoryR417(history: SavedAnalysis[], ids: string[]) {
+  const selected = new Set(ids);
+  return history.filter((entry) => !selected.has(entry.id));
+}
+
 export function batchFavoriteHistoryR129(history: SavedAnalysis[], ids: string[], favorite: boolean) {
   const selected = new Set(ids);
   return history.map((entry) => selected.has(entry.id)

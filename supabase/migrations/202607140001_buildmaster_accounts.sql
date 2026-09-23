@@ -1,3 +1,4 @@
+-- R425_AUTHORIZATION_METADATA_FAIL_CLOSED: autorização/licença nunca nasce de raw_user_meta_data.
 -- BuildMaster Elite Tático v26.72
 -- Contas fechadas por usuário, licença com prazo e separação de dados.
 
@@ -77,10 +78,10 @@ begin
     coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), requested_username),
     'user',
     case when coalesce(new.raw_app_meta_data->>'buildmaster_managed', 'false') = 'true' then 'active' else 'suspended' end,
-    coalesce(nullif(new.raw_user_meta_data->>'plan', ''), 'premium'),
-    nullif(new.raw_user_meta_data->>'expires_at', '')::timestamptz,
-    greatest(1, least(10, coalesce((new.raw_user_meta_data->>'max_devices')::integer, 1))),
-    greatest(0, least(168, coalesce((new.raw_user_meta_data->>'offline_grace_hours')::integer, 24)))
+    'premium',
+    null,
+    1,
+    4
   )
   on conflict (id) do nothing;
   return new;

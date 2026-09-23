@@ -56,7 +56,7 @@ const cmfB = build('CMF', 'scholes-b.png');
 const amf = build('AMF', 'scholes-amf.png');
 const cf = build('CF', 'scholes-fora.png');
 
-for (const [result, selected] of [[cmfA, 'CMF'], [cmfB, 'CMF'], [amf, 'AMF'], [cf, 'CF']] as const) {
+for (const result of [cmfA, cmfB, amf, cf]) {
   const clean = result.cleanSlate2027R119;
   assert.ok(clean, 'O Clean Slate r119 precisa estar presente.');
   assert.equal(clean?.authority, 'CLEAN_SLATE_SINGLE_WRITER');
@@ -66,7 +66,7 @@ for (const [result, selected] of [[cmfA, 'CMF'], [cmfB, 'CMF'], [amf, 'AMF'], [c
   assert.equal(clean?.guards.exactBudget, true);
   assert.equal(trainingPlanTotalCost(result.training), result.trainingPointsTotal);
   assert.equal(result.trainingPointsRemaining, 0);
-  assert.equal(result.bestPosition.code, selected, 'A posição escolhida deve continuar disponível para a camada tática, inclusive fora da posição natural.');
+  assert.equal(result.bestPosition.code, cmfA.bestPosition.code, 'R417 deve convergir toda solicitação manual da mesma carta para a mesma posição automática por DNA.');
   assert.equal(clean?.status, 'READY');
   assert.match(clean?.currentImpeto ?? '', /^Técnica(?:\s*\+?2)?$/i, 'O Ímpeto já presente na carta deve ser reconhecido e preservado.');
   assert.equal(clean?.impetoDecision, 'KEEP_CURRENT', 'O r119 não pode gastar/recomendar outro Ímpeto quando a carta já possui um ativo.');

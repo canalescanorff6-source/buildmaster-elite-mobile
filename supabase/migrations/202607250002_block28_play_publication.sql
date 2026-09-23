@@ -53,3 +53,15 @@ create policy buildmaster_public_deletion_read_own
 create policy buildmaster_integrity_read_own
   on public.buildmaster_play_integrity_audit for select to authenticated
   using (user_id = auth.uid());
+
+-- R425_DATA_API_GRANTS_EXPLICIT: leitura autenticada explícita; escrita permanece somente no serviço privilegiado.
+revoke all on table
+  public.buildmaster_public_deletion_requests,
+  public.buildmaster_public_request_limits,
+  public.buildmaster_play_integrity_audit
+from anon, authenticated;
+
+grant select on table
+  public.buildmaster_public_deletion_requests,
+  public.buildmaster_play_integrity_audit
+to authenticated;

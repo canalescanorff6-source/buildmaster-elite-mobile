@@ -1,6 +1,6 @@
 import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 
-export const OBSERVABILITY_VERSION = '29.70.0';
+export const OBSERVABILITY_VERSION = '40.80-r422-security-observability-v1';
 export const OBSERVABILITY_EVENTS_KEY = 'buildmaster_observability_events_v2970';
 export const OBSERVABILITY_FLAGS_KEY = 'buildmaster_feature_flags_v2970';
 export const OBSERVABILITY_SESSION_KEY = 'buildmaster_observability_session_v2970';
@@ -8,6 +8,15 @@ export const OBSERVABILITY_EVENT = 'buildmaster:observability-changed';
 
 export type ObservabilityKind = 'navigation' | 'error' | 'performance' | 'ocr' | 'backup' | 'update' | 'storage' | 'support';
 export type ObservabilityLevel = 'info' | 'warning' | 'critical';
+export type ObservabilityContextR422 = {
+  appVersion?: string;
+  buildId?: string;
+  stage?: string;
+  trainingPointsTotal?: number | null;
+  fallbackUsed?: boolean;
+  action?: string;
+  details?: Record<string, unknown>;
+};
 export type FeatureFlagId = 'ocrVision2' | 'tacticalStudio2' | 'opponentAssistant' | 'antiDelay' | 'smartCoach' | 'community';
 
 export type ObservabilityEventRecord = {
@@ -19,6 +28,7 @@ export type ObservabilityEventRecord = {
   code: string;
   message: string;
   durationMs: number | null;
+  context?: ObservabilityContextR422;
 };
 
 export type FeatureFlagState = Record<FeatureFlagId, boolean>;
@@ -48,6 +58,29 @@ function text(value: unknown, limit: number): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, limit);
 }
 
+function redactObservabilityDetailsR422(value: unknown, depth = 0): unknown {
+  if (depth > 3) return '[depth-limit]';
+  if (value === null || value === undefined || typeof value === 'boolean' || typeof value === 'number') return value;
+  if (typeof value === 'string') return text(value, 180);
+  if (Array.isArray(value)) return value.slice(0, 20).map((item) => redactObservabilityDetailsR422(item, depth + 1));
+  if (typeof value !== 'object') return text(value, 180);
+  const blocked = /password|senha|token|authorization|cookie|secret|key|email|e-mail|username|user_name|image|ocr_text/i;
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 30).map(([key, item]) => [key, blocked.test(key) ? '[redacted]' : redactObservabilityDetailsR422(item, depth + 1)]));
+}
+
+function normalizeObservabilityContextR422(context: ObservabilityContextR422 | undefined): ObservabilityContextR422 | undefined {
+  if (!context) return undefined;
+  return {
+    appVersion: context.appVersion ? text(context.appVersion, 40) : undefined,
+    buildId: context.buildId ? text(context.buildId, 80) : undefined,
+    stage: context.stage ? text(context.stage, 80) : undefined,
+    trainingPointsTotal: Number.isFinite(context.trainingPointsTotal) ? Number(context.trainingPointsTotal) : null,
+    fallbackUsed: typeof context.fallbackUsed === 'boolean' ? context.fallbackUsed : undefined,
+    action: context.action ? text(context.action, 80) : undefined,
+    details: context.details && typeof context.details === 'object' ? redactObservabilityDetailsR422(context.details) as Record<string, unknown> : undefined
+  };
+}
+
 function emit(detail: unknown) {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(OBSERVABILITY_EVENT, { detail }));
@@ -68,7 +101,8 @@ export function recordObservabilityEvent(input: Omit<ObservabilityEventRecord, '
     area: text(input.area, 80) || 'app',
     code: text(input.code, 60) || 'event',
     message: text(input.message, 360) || 'Evento sem descrição.',
-    durationMs: Number.isFinite(input.durationMs) ? Math.max(0, Math.round(Number(input.durationMs))) : null
+    durationMs: Number.isFinite(input.durationMs) ? Math.max(0, Math.round(Number(input.durationMs))) : null,
+    context: normalizeObservabilityContextR422(input.context)
   };
   const next = [event, ...readObservabilityEvents()].slice(0, 300);
   safeStorageSetJson(OBSERVABILITY_EVENTS_KEY, next);
@@ -144,13 +178,14 @@ export function createSupportCode(version: string, generatedAt = new Date().toIS
   return `BM-${version.replace(/\./g, '')}-${checksum(`${version}|${generatedAt}`).slice(0, 7)}`;
 }
 
-export function createObservabilitySupportBundle(input: { version: string; snapshot?: ObservabilitySnapshot; health?: unknown; integrity?: unknown }): string {
+export function createObservabilitySupportBundle(input: { version: string; buildId?: string; snapshot?: ObservabilitySnapshot; health?: unknown; integrity?: unknown }): string {
   const generatedAt = new Date().toISOString();
   const snapshot = input.snapshot ?? buildObservabilitySnapshot();
   const payload = {
     schemaVersion: 1,
     app: 'BuildMaster Elite Tático',
     version: input.version,
+    buildId: input.buildId ? text(input.buildId, 80) : null,
     generatedAt,
     supportCode: createSupportCode(input.version, generatedAt),
     observability: snapshot,

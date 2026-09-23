@@ -1,3 +1,4 @@
+// R420_FAIL_CLOSED_RESTORE: restauração só conclui após validação e verificação do conjunto lógico.
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react';
 import { APP_DATA_VERSION, createBackupEnvelope, inspectDataIntegrity, migrateBackup, validateBackupEnvelope, type BackupEnvelope, type BackupSection } from '@/lib/dataSafety';
 import { DEFAULT_OCR_ZONES, type OcrZone } from '@/lib/ocrZonesModelR164';
@@ -45,10 +46,41 @@ import { collectFullBackupSectionsR141, collectPlayersBackupSectionsR141 } from 
 import { commitCriticalVaultRestoreR140, commitVaultHistoryR140 } from '@/modules/vault/vaultPersistenceCoordinatorR140';
 import { runSerializedVaultCloudMutationR128 } from '@/modules/vault/vaultCloudQueueR128';
 import { downloadClientTextExportR129 } from '@/modules/export/clientTextExportR129';
-import { LEARNING_KEY, normalizeHistoryList } from '@/modules/vault/cardHistoryStore';
+import { LEARNING_KEY, normalizeHistoryList, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import type { CardVisionBackupControllerInputR162 } from './cardVisionBackupControllerTypesR170';
 
 export const CARDVISION_BACKUP_RUNTIME_R162_VERSION = '40.80-r162-backup-runtime-v1' as const;
+
+export type RestoreVerificationR420 =
+  | { ok: true; count: number }
+  | { ok: false; count: number; error: string };
+
+export function verifyRestoredHistoryR420(expected: SavedAnalysis[], actual: SavedAnalysis[]): RestoreVerificationR420 {
+  if (expected.length !== actual.length) {
+    return { ok: false, count: actual.length, error: `R420: restauração incompleta; esperado=${expected.length}, persistido=${actual.length}.` };
+  }
+  const actualByKey = new Map(actual.map((item) => [item.saveKey, item]));
+  if (actualByKey.size !== actual.length) {
+    return { ok: false, count: actual.length, error: 'R420: restauração contém saveKey duplicado.' };
+  }
+  for (const expectedItem of expected) {
+    const current = actualByKey.get(expectedItem.saveKey);
+    if (!current) return { ok: false, count: actual.length, error: `R420: ficha ausente após restauração: ${expectedItem.saveKey}.` };
+    for (const key of ['trainingPointsTotal', 'trainingPointsUsed', 'trainingPointsRemaining'] as const) {
+      if (Number(expectedItem.result[key]) !== Number(current.result[key])) {
+        return { ok: false, count: actual.length, error: `R420: PP divergente em ${expectedItem.saveKey} (${key}).` };
+      }
+    }
+    for (const key of ['cardIdentity', 'playerIdentity', 'evidenceFingerprint'] as const) {
+      const expectedIdentity = expectedItem[key];
+      if (expectedIdentity && expectedIdentity !== current[key]) {
+        return { ok: false, count: actual.length, error: `R420: identidade divergente em ${expectedItem.saveKey} (${key}).` };
+      }
+    }
+  }
+  return { ok: true, count: actual.length };
+}
+
 
 
 const DEFAULT_RESTORE_SECTIONS_R162: Record<BackupSection, boolean> = {
@@ -315,7 +347,14 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
       nextMatchValidation: stagedEvolution ? (stagedEvolution.matchValidation ?? []) : undefined
     });
     if (!criticalRestore.ok) throw new Error(criticalRestore.error ?? 'A restauração crítica do Cofre não foi confirmada.');
-    if (stagedHistory) setHistory(criticalRestore.history);
+    if (stagedHistory) {
+      if (!criticalRestore.historyPersistence?.saved || criticalRestore.historyPersistence.items !== stagedHistory.length) {
+        throw new Error(`R420: o backend não confirmou todas as fichas restauradas (esperado=${stagedHistory.length}, confirmado=${criticalRestore.historyPersistence?.items ?? 0}).`);
+      }
+      const verifiedR420 = verifyRestoredHistoryR420(stagedHistory, criticalRestore.history);
+      if (!verifiedR420.ok) throw new Error(verifiedR420.error);
+      setHistory(criticalRestore.history);
+    }
     if (selected.settings && sections.settings && typeof sections.settings === 'object') {
       const ui = sections.settings as { visualPreset?: PremiumVisualPreset; appTheme?: AppTheme; accentTheme?: AccentTheme; advancedMode?: boolean; textScale?: TextScale; densityMode?: DensityMode; motionPreference?: MotionPreference; highContrast?: boolean; performanceMode?: PerformanceMode; profileAvatar?: string; autoUpdateCheck?: boolean };
       writeStorage('buildmaster_ui_prefs_v24_24', ui);
@@ -555,6 +594,7 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
         setStatus(checked.issues.map((item) => item.message).join(' ') || 'Backup inválido.');
         return;
       }
+      await createLocalRestorePoint('Antes de importar backup completo');
       const migrated = await applyBackupEnvelope(checked.migrated);
       setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
       setStatus(`Restauração concluída. ${migrated.steps.length ? 'Dados antigos foram migrados com segurança.' : 'O backup já estava no formato atual.'}`);
@@ -605,6 +645,8 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
       const parsed = await readBackupFile(file);
       let entries: unknown[] = [];
       let restoredExtras = false;
+      let stagedCustomFoldersR420: VaultFolder[] | null = null;
+      let stagedCalibrationR420: Record<string, unknown> | null = null;
       if (Array.isArray(parsed)) {
         entries = parsed;
       } else if (parsed && typeof parsed === 'object') {
@@ -618,17 +660,10 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
           const migrated = migrateBackup(checked.migrated);
           entries = Array.isArray(migrated.envelope.sections.history) ? migrated.envelope.sections.history : [];
           if (Array.isArray(migrated.envelope.sections.folders)) {
-            const customFolders = (migrated.envelope.sections.folders as VaultFolder[]).filter((folder) => folder.kind === 'custom');
-            writeStorage(VAULT_FOLDERS_KEY, customFolders);
-            setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...customFolders]);
-            restoredExtras = true;
+            stagedCustomFoldersR420 = (migrated.envelope.sections.folders as VaultFolder[]).filter((folder) => folder.kind === 'custom');
           }
           if (migrated.envelope.sections.calibration && typeof migrated.envelope.sections.calibration === 'object') {
-            const calibration = migrated.envelope.sections.calibration as Record<string, unknown>;
-            writeStorage(CALIBRATION_STORAGE_KEY, calibration.matches ?? {});
-            writeStorage(LEARNING_KEY, calibration.learning ?? {});
-            writeStorage(CORRECTION_KEY, calibration.corrections ?? {});
-            restoredExtras = true;
+            stagedCalibrationR420 = migrated.envelope.sections.calibration as Record<string, unknown>;
           }
           setMigrationLog([...checked.issues.map((item) => item.message), ...migrated.steps]);
         } else if (Array.isArray(record.items)) {
@@ -641,6 +676,7 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
         return;
       }
       const next = [...imported, ...renderHistory.filter((entry) => !imported.some((item) => item.saveKey === entry.saveKey))];
+      await createLocalRestorePoint('Antes de importar backup do Cofre');
       const committed = await persistAndAdoptVaultHistoryR140(
         next,
         'O backup foi lido, mas o Cofre local não confirmou a importação.',
@@ -648,6 +684,19 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
         { key: 'import-vault-backup', label: 'Importando backup do Cofre' }
       );
       if (!committed) return;
+      const verifiedImportR420 = verifyRestoredHistoryR420(next, committed);
+      if (!verifiedImportR420.ok) throw new Error(verifiedImportR420.error);
+      if (stagedCustomFoldersR420) {
+        writeStorage(VAULT_FOLDERS_KEY, stagedCustomFoldersR420);
+        setVaultFolders([...DEFAULT_VAULT_FOLDERS, ...stagedCustomFoldersR420]);
+        restoredExtras = true;
+      }
+      if (stagedCalibrationR420) {
+        writeStorage(CALIBRATION_STORAGE_KEY, stagedCalibrationR420.matches ?? {});
+        writeStorage(LEARNING_KEY, stagedCalibrationR420.learning ?? {});
+        writeStorage(CORRECTION_KEY, stagedCalibrationR420.corrections ?? {});
+        restoredExtras = true;
+      }
       void pushCloudHistory(committed, true);
       setLibraryOpen(true);
       setStatus(`Backup importado com ${imported.length} ficha(s)${restoredExtras ? ', pastas e calibração' : ''}. Elas ficam no Cofre até você apagar.`);

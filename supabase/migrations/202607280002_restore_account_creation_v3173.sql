@@ -1,6 +1,7 @@
+-- R425_MFA_FAIL_CLOSED: recuperação de conta não pode desativar MFA administrativo.
 -- BuildMaster Elite Tático v31.73 — restauração definitiva da criação de contas
 -- Recupera o comportamento administrativo anterior: usuário + senha + prazo,
--- sem exigir MFA para abrir o painel. O MFA continua disponível como opção.
+-- mantendo MFA obrigatório para ações administrativas sensíveis.
 
 insert into public.buildmaster_security_settings (
   id,
@@ -16,13 +17,13 @@ insert into public.buildmaster_security_settings (
   '29.00.0',
   false,
   true,
-  false,
+  true,
   4,
   12,
   now()
 )
 on conflict (id) do update set
-  admin_mfa_required = false,
+  admin_mfa_required = true,
   require_device_proof = true,
   updated_at = now();
 

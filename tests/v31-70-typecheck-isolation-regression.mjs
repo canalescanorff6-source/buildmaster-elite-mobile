@@ -13,7 +13,10 @@ for (const config of [root, app]) {
 const lucideStub = fs.readFileSync('tests/types-v3170-ui/stubs.d.ts', 'utf8');
 assert.match(lucideStub, /declare module 'lucide-react'/);
 assert.match(lucideStub, /export const Video/);
-const analyzerStub = lucideStub;
-assert.match(analyzerStub, /declare module '@\/lib\/analyzer'/);
+const uiConfig = JSON.parse(fs.readFileSync('tests/types-v3170-ui/tsconfig.json', 'utf8'));
+assert.deepEqual(uiConfig.compilerOptions?.paths?.['@/lib/analyzer'], ['tests/types-v3170-ui/analyzer-stub.ts']);
+const analyzerStub = fs.readFileSync('tests/types-v3170-ui/analyzer-stub.ts', 'utf8');
+assert.match(analyzerStub, /TacticalStyle/);
+assert.match(analyzerStub, /ATTRIBUTE_INPUTS/);
 
 console.log('Regressão v31.72 aprovada: stubs parciais não podem substituir os tipos reais no build principal.');

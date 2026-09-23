@@ -60,7 +60,11 @@ try {
   const plugin = fs.readFileSync(path.join(javaDir, 'BuildMasterVaultStoragePlugin.java'), 'utf8');
   assert.equal((main.match(/registerPlugin\(BuildMasterVaultStoragePlugin\.class\)/g) || []).length, 1, 'registro nativo deve ser idempotente');
   assert.ok(plugin.includes('getContext().getFilesDir()'));
-  assert.ok(plugin.includes('temporary.renameTo(target)'));
+  assert.ok(plugin.includes('AtomicFile'), 'plugin deve usar android.util.AtomicFile');
+  assert.ok(plugin.includes('atomicFile.startWrite()'));
+  assert.ok(plugin.includes('atomicFile.finishWrite(stream)'));
+  assert.ok(plugin.includes('atomicFile.failWrite(stream)'));
+  assert.ok(!plugin.includes('temporary.renameTo(target)'), 'R420 não pode reintroduzir rename não atômico');
 } finally {
   fs.rmSync(temporary, { recursive: true, force: true });
 }

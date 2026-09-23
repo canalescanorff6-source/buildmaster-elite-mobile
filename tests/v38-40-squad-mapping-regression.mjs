@@ -49,7 +49,7 @@ for (const marker of [
 ]) assert.ok(storage.includes(marker), `armazenamento do mapeamento sem ${marker}`);
 
 for (const marker of [
-  'Mapeamento Inteligente de Elenco',
+  'Meu Elenco — Banco Mestre',
   'Adicionar prints',
   'multiple',
   'Melhores 11 titulares',
@@ -64,7 +64,8 @@ for (const marker of [
   'Memória privada do aplicativo'
 ]) assert.ok(screen.includes(marker), `tela de mapeamento sem ${marker}`);
 
-assert.match(screen, /slice\(0, 120\)/, 'importação em lote precisa aceitar um banco grande de prints');
+assert.match(screen, /const selected = Array\.from\(files\);/, 'importação precisa aceitar todo o lote selecionado');
+assert.doesNotMatch(screen, /Array\.from\(files\)\.slice\(0,\s*120\)/, 'o teto artificial de 120 cartas não pode voltar');
 assert.match(screen, /readDetailedPrint/);
 assert.match(screen, /needsFullFallback/);
 assert.match(screen, /sourceHash: hash/);

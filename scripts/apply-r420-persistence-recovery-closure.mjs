@@ -120,9 +120,12 @@ function patchBackup(source) {
   if (!next.includes('R420_FAIL_CLOSED_RESTORE')) next = `${BACKUP_MARKER}\n${next}`;
 
   next = next.replace(
-    /import \{ HISTORY_LIMIT, LEARNING_KEY, normalizeHistoryList \} from '@\/modules\/vault\/cardHistoryStore';/,
+    /import \{[^}]*\bLEARNING_KEY\b[^}]*\bnormalizeHistoryList\b[^}]*\} from '@\/modules\/vault\/cardHistoryStore';/,
     "import { LEARNING_KEY, normalizeHistoryList, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';"
   );
+  if (!next.includes("type SavedAnalysis } from '@/modules/vault/cardHistoryStore';")) {
+    throw new Error('R420/R427: o tipo SavedAnalysis não foi importado no runtime de backup.');
+  }
   next = next.replace(/\.slice\(0,\s*HISTORY_LIMIT\)/g, '');
 
   if (!next.includes('export function verifyRestoredHistoryR420')) {

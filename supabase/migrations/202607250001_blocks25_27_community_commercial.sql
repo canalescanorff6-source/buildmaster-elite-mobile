@@ -191,3 +191,38 @@ values
  ('elite','Elite','Todos os recursos competitivos.',null,'BRL','manual','{"ocr":true,"player_lab":true,"tactical_studio":true,"opponent_assistant":true,"anti_delay":true,"smart_coach":true,"community_publish":true,"cloud_sync":true}'::jsonb,'{"devices":4,"communityPublications":50,"cloudVersions":8}'::jsonb),
  ('administrator','Administrador','Governança completa.',null,'BRL','manual','{"admin":true,"all":true}'::jsonb,'{"devices":20,"communityPublications":1000,"cloudVersions":20}'::jsonb)
 on conflict (id) do update set name=excluded.name,description=excluded.description,features=excluded.features,limits=excluded.limits,updated_at=now();
+
+-- R425_DATA_API_GRANTS_EXPLICIT: RLS e privilégios do Data API são camadas independentes.
+-- Primeiro removemos privilégios herdados; depois liberamos somente operações cobertas pelas policies acima.
+revoke all on table
+  public.buildmaster_commercial_plans,
+  public.buildmaster_commercial_licenses,
+  public.buildmaster_commercial_coupons,
+  public.buildmaster_commercial_ledger,
+  public.buildmaster_terms_acceptances,
+  public.buildmaster_lgpd_requests,
+  public.buildmaster_community_profiles,
+  public.buildmaster_community_packages,
+  public.buildmaster_community_ratings,
+  public.buildmaster_community_comments,
+  public.buildmaster_community_reports
+from anon, authenticated;
+
+grant select on table
+  public.buildmaster_commercial_plans,
+  public.buildmaster_commercial_licenses,
+  public.buildmaster_commercial_ledger
+to authenticated;
+
+grant select, insert, update, delete on table
+  public.buildmaster_terms_acceptances,
+  public.buildmaster_community_profiles,
+  public.buildmaster_community_packages,
+  public.buildmaster_community_ratings
+to authenticated;
+
+grant select, insert on table
+  public.buildmaster_lgpd_requests,
+  public.buildmaster_community_comments,
+  public.buildmaster_community_reports
+to authenticated;

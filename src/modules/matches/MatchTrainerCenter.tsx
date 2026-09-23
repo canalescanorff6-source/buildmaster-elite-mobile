@@ -6,6 +6,8 @@ import { Capacitor } from '@capacitor/core';
 import { safeStorageGet, safeStorageSet } from '@/lib/safeLocalStorage';
 import type { TacticalStyle } from '@/lib/analyzer';
 import type { TeamDiagnosis } from '@/modules/core/centralIntelligence';
+import { loadSquadMappingState } from '@/modules/squad-mapping/squadMappingStorage';
+import type { SquadMappingPlayer } from '@/modules/squad-mapping/squadMappingEngine';
 import {
   deleteMatchRecording,
   getMatchRecorderCapabilities,
@@ -75,6 +77,7 @@ const MARKER_ACTIONS: Array<{ kind: MatchEventKind; label: string }> = [
   { kind: 'game-management', label: 'Gestão da vantagem' },
   { kind: 'good-transition', label: 'Boa transição' },
   { kind: 'good-build-up', label: 'Boa construção' },
+  { kind: 'interception', label: 'Boa interceptação' },
   { kind: 'goal-for', label: 'Gol marcado' },
   { kind: 'goal-against', label: 'Gol sofrido' },
   { kind: 'possible-delay', label: 'Possível atraso' },
@@ -124,6 +127,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   const [markerNote, setMarkerNote] = useState('');
   const [markerPhase, setMarkerPhase] = useState<MatchPhase>('unknown');
   const [markerPlayer, setMarkerPlayer] = useState('');
+  const [mappedPlayersR421, setMappedPlayersR421] = useState<SquadMappingPlayer[]>([]);
   const [analysisTab, setAnalysisTab] = useState<AnalysisTab>('resumo');
   const [candidateKinds, setCandidateKinds] = useState<Record<string, MatchEventKind>>({});
   const [videoAction, setVideoAction] = useState<'saving' | 'sharing' | 'renaming' | null>(null);
@@ -139,7 +143,16 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   const exportAttemptsRef = useRef(new Set<string>());
   const clipTimerRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    void loadSquadMappingState()
+      .then((state) => { if (!cancelled) setMappedPlayersR421(state.players.filter((player) => !player.excluded)); })
+      .catch(() => { if (!cancelled) setMappedPlayersR421([]); });
+    return () => { cancelled = true; };
+  }, []);
+
   const active = useMemo(() => sessions.find((session) => session.id === activeId) || null, [activeId, sessions]);
+  const selectedMappedPlayerR421 = useMemo(() => mappedPlayersR421.find((player) => player.id === markerPlayer) ?? null, [mappedPlayersR421, markerPlayer]);
   const summary = useMemo(() => active ? summarizeMatchTrainerSession(active) : null, [active]);
   const evolution = useMemo(() => buildMatchTrainerEvolution(sessions, activeId), [sessions, activeId]);
   const visibleMarkers = useMemo(() => active ? getVisibleMatchMarkers(active) : [], [active]);
@@ -444,7 +457,10 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     const atMs = Math.round((videoRef.current?.currentTime || 0) * 1000);
     const marker = createMatchMarker(kind, atMs, markerNote, 'manual', 100, {
       phase: markerPhase === 'unknown' ? undefined : markerPhase,
-      playerId: markerPlayer.trim() || null,
+      playerId: selectedMappedPlayerR421?.id ?? null,
+      playerLabel: selectedMappedPlayerR421?.name ?? null,
+      playerCardFingerprint: selectedMappedPlayerR421?.cardFingerprint ?? null,
+      playerHistoryId: selectedMappedPlayerR421?.linkedHistoryId ?? null,
       commandEvidence: markerCommand !== 'outro' || COMMAND_EVENT_KINDS.has(kind) ? { command: markerCommand, status: markerCommandStatus, note: markerCommandStatus === 'observed' ? 'Comando confirmado pelo usuário durante a revisão.' : 'Inferência tática — comando não confirmado diretamente.' } : undefined,
       annotations: isDefenseEvent(kind)
         ? [{ kind: 'wrong-arrow', x1: 52, y1: 62, x2: 52, y2: 38, label: 'movimento errado' }, { kind: 'hold-position', x1: 52, y1: 62, label: 'manter posição' }]
@@ -468,7 +484,10 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     const kind = candidateKinds[marker.id] || (marker.kind === 'possible-delay' ? 'possible-delay' : 'note');
     const confirmed = createMatchMarker(kind, marker.atMs, markerNote || marker.detail, 'manual', 92, {
       phase: markerPhase === 'unknown' ? marker.phase : markerPhase,
-      playerId: markerPlayer.trim() || null,
+      playerId: selectedMappedPlayerR421?.id ?? null,
+      playerLabel: selectedMappedPlayerR421?.name ?? null,
+      playerCardFingerprint: selectedMappedPlayerR421?.cardFingerprint ?? null,
+      playerHistoryId: selectedMappedPlayerR421?.linkedHistoryId ?? null,
       relatedMarkerId: marker.id,
       clipStartMs: marker.clipStartMs,
       clipEndMs: marker.clipEndMs,
@@ -666,7 +685,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
             <div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Confirmar lance atual</p><h3>Marcação rápida com contexto</h3></div><span>{formatDuration(Math.round((videoRef.current?.currentTime || 0) * 1000))}</span></div>
             <div className="match-marker-context-grid">
               <label>Fase da jogada<select value={markerPhase} onChange={(event: { target: HTMLSelectElement }) => setMarkerPhase(event.target.value as MatchPhase)}>{PHASE_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-              <label>Jogador ou setor<input value={markerPlayer} maxLength={60} placeholder="Ex.: Maldini, Rodri, lado esquerdo" onChange={(event: { target: HTMLInputElement }) => setMarkerPlayer(event.target.value)}/></label>
+              <label>Jogador do elenco<select value={markerPlayer} onChange={(event: { target: HTMLSelectElement }) => setMarkerPlayer(event.target.value)}><option value="">Não vinculado / setor não identificado</option>{mappedPlayersR421.map((player) => <option key={player.id} value={player.id}>{player.name} • {player.mainPosition} • {player.cardLabel}</option>)}</select></label>
               <label className="wide">Sua observação<input value={markerNote} maxLength={240} placeholder="Ex.: tirei o zagueiro da linha e abri o corredor central" onChange={(event: { target: HTMLInputElement }) => setMarkerNote(event.target.value)}/></label>
             </div>
             <div className="match-command-context"><label>Comando relacionado<select value={markerCommand} onChange={(event: { target: HTMLSelectElement }) => setMarkerCommand(event.target.value as NonNullable<MatchEventMarker['commandEvidence']>['command'])}><option value="outro">Não informado</option><option value="passe">Passe</option><option value="lançamento">Lançamento</option><option value="chute">Chute</option><option value="corrida">Corrida</option><option value="pressão">Pressão</option><option value="marcação dupla">Marcação dupla</option><option value="troca de jogador">Troca de jogador</option><option value="direção">Direção</option></select></label><label>Nível de evidência<select value={markerCommandStatus} onChange={(event: { target: HTMLSelectElement }) => setMarkerCommandStatus(event.target.value as NonNullable<MatchEventMarker['commandEvidence']>['status'])}><option value="unconfirmed">Não confirmado</option><option value="inferred">Inferência tática</option><option value="observed">Confirmado pelo usuário</option></select></label></div>

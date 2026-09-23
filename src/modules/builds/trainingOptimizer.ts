@@ -62,16 +62,17 @@ export function normalizeTrainingBudget(value: number | null | undefined): numbe
 }
 
 export function trainingBudgetFromCard(parsed: ParsedCard): number {
-  const fromTraining = Number(parsed.autoTrainingPoints ?? NaN);
-  if (Number.isFinite(fromTraining) && fromTraining >= MIN_AUTO_TRAINING_BUDGET && fromTraining <= MAX_AUTO_TRAINING_BUDGET) return normalizeTrainingBudget(fromTraining);
+  // R419: trainingPointsTotal é a autoridade primária. Orçamento ausente nunca vira 64.
+  const total = normalizeTrainingBudget(parsed.trainingPointsTotal);
+  if (total > 0) return total;
 
   const inferred = inferTrainingPointsFromLevel(parsed.level);
-  if (inferred && inferred >= MIN_AUTO_TRAINING_BUDGET && inferred <= MAX_AUTO_TRAINING_BUDGET) return normalizeTrainingBudget(inferred);
+  const inferredTrusted = parsed.trainingPointSource === 'LEVEL_INFERRED'
+    && (parsed.manualConfirmed || Number(parsed.confidence ?? 0) >= 0.9);
+  if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);
 
-  const total = Number(parsed.trainingPointsTotal ?? NaN);
-  if (Number.isFinite(total) && total >= MIN_AUTO_TRAINING_BUDGET && total <= MAX_AUTO_TRAINING_BUDGET) return normalizeTrainingBudget(total);
-
-  return SAFE_DEFAULT_TRAINING_BUDGET;
+  // R419: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate.
+  return 0;
 }
 
 export function isGoalkeeperStyle(playstyle?: string | null) {

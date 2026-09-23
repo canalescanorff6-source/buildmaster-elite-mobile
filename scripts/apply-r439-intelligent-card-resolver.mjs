@@ -236,6 +236,8 @@ function validate(root) {
 
 export function applyR439IntelligentCardResolver(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
+  // R446_FORWARD_IDEMPOTENCE:applyR439IntelligentCardResolver
+  try { validate(root); return { changed: false, patched: [], version: R439_INTELLIGENT_CARD_RESOLVER_VERSION }; } catch {}
   const patchers = [[FILES.center, patchCenter], [FILES.package, patchPackage]];
   const patched = [];
   for (const [relative, patcher] of patchers) {

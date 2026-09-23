@@ -1,3 +1,4 @@
+// R420_FUTURE_SCHEMA_FAIL_CLOSED: schema futuro nunca é rebaixado silenciosamente.
 export const CURRENT_DATA_SCHEMA = 3100;
 export const APP_DATA_VERSION = '40.80.0';
 
@@ -29,7 +30,7 @@ export type IntegrityReport = {
 
 const BACKUP_SECTIONS = new Set<BackupSection>(BACKUP_SECTION_KEYS);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
-// Os limites precisam comportar o Cofre real (até 200 fichas detalhadas) sem
+// Os limites precisam comportar o Cofre real (sem teto lógico de quantidade) sem
 // confundir volume legítimo com corrupção. O limite de arquivo continua sendo
 // aplicado antes da leitura; estes tetos protegem contra estruturas abusivas.
 const MAX_BACKUP_DEPTH = 28;
@@ -127,7 +128,17 @@ export function validateBackupEnvelope(input: unknown): { valid: boolean; migrat
     if (!Number.isSafeInteger(schema) || schema < 0) {
       return { valid: false, migrated: null, issues: [{ level: 'critical', code: 'invalid-schema', message: 'O esquema do backup é inválido.' }] };
     }
-    if (schema > CURRENT_DATA_SCHEMA) issues.push({ level: 'warning', code: 'future-schema', message: 'O backup foi criado por uma versão mais nova do app.' });
+    if (schema > CURRENT_DATA_SCHEMA) {
+      return {
+        valid: false,
+        migrated: null,
+        issues: [{
+          level: 'critical',
+          code: 'future-schema',
+          message: `O backup usa o esquema ${schema}, mais novo que o suportado (${CURRENT_DATA_SCHEMA}). Atualize o app antes de restaurar.`
+        }]
+      };
+    }
     const exportedAt = String(raw.exportedAt || '');
     if (!exportedAt || Number.isNaN(Date.parse(exportedAt))) issues.push({ level: 'warning', code: 'invalid-date', message: 'A data do backup não pôde ser confirmada.' });
     const safeSections = sanitizeSections(raw.sections);
@@ -190,6 +201,9 @@ export function inspectDataIntegrity(sections: BackupEnvelope['sections']): Inte
 }
 
 export function migrateBackup(envelope: BackupEnvelope): { envelope: BackupEnvelope; steps: string[] } {
+  if (envelope.schema > CURRENT_DATA_SCHEMA) {
+    throw new Error(`O backup usa o esquema ${envelope.schema}, mais novo que o suportado (${CURRENT_DATA_SCHEMA}). Atualize o app antes de restaurar.`);
+  }
   const steps: string[] = [];
   const sections = { ...envelope.sections };
   if (!sections.folders) { sections.folders = []; steps.push('Pastas personalizadas inicializadas.'); }

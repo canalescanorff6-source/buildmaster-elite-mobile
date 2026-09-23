@@ -78,9 +78,6 @@ export function requestOcrWorkerReleaseWhenIdle(delayMs = 0): void {
 
 async function createReusableWorker(): Promise<WorkerLike> {
   const Tesseract = await import('tesseract.js');
-  // v40.40: usa o traineddata português BEST já descompactado dentro do APK.
-  // Isso preserva a precisão do modelo de alta qualidade e remove do WebView o
-  // custo/risco de descompactar por.traineddata.gz durante a leitura da carta.
   const worker = await Tesseract.createWorker(['por'], Tesseract.OEM.LSTM_ONLY, {
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/core',
@@ -129,8 +126,6 @@ async function getWorker(): Promise<WorkerLike> {
 
 export async function prewarmOcrWorker(): Promise<void> {
   await getWorker();
-  // Mantém o worker quente durante o período em que o usuário ajusta os
-  // quadrados. Isso tira o custo de bootstrap do botão 'Ler os quadrados'.
   armIdleWorkerRelease(Math.max(180_000, getRuntimeOptimizationProfile().ocrWorkerIdleMs));
 }
 

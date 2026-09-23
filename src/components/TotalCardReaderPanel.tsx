@@ -7,6 +7,7 @@ import { qualityLabel, qualityScore } from '@/lib/premiumReading';
 import { TOTAL_CAPTURE_SLOTS, type CardScreenType, type TotalCardCaptureInput } from '@/lib/totalCardReader';
 import { createStableId } from '@/lib/stableId';
 import { createImageThumbnail, validateImageFile } from '@/modules/images/imageSafety';
+import { recordObservabilityEvent } from '@/modules/observability/observabilityEngine';
 
 type SlotState = Omit<TotalCardCaptureInput, 'id' | 'declaredType' | 'label' | 'requirement'> & { id: string };
 
@@ -86,7 +87,16 @@ export function TotalCardReaderPanel({ loading, onAnalyze, onPrimarySelected, on
         quality: item.quality
       } satisfies TotalCardCaptureInput];
     });
-    await onAnalyze(captures);
+    const startedAtR423 = performance.now();
+    try {
+      await onAnalyze(captures);
+      const durationMs = performance.now() - startedAtR423;
+      recordObservabilityEvent({ kind: 'ocr', level: durationMs > 90_000 ? 'warning' : 'info', area: 'card-reader', code: 'total-read-complete', message: 'Leitura completa finalizada.', durationMs, context: { stage: 'total-card-reader', action: 'analyze', details: { captureCount: captures.length } } });
+    } catch (error) {
+      const durationMs = performance.now() - startedAtR423;
+      recordObservabilityEvent({ kind: 'ocr', level: 'critical', area: 'card-reader', code: 'total-read-failed', message: error instanceof Error ? error.message : 'Falha na leitura completa.', durationMs, context: { stage: 'total-card-reader', action: 'analyze', details: { captureCount: captures.length } } });
+      throw error;
+    }
   }
 
   return (

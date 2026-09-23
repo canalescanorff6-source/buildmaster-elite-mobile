@@ -23,6 +23,6 @@ const frozen = {
   impetosDirect: recommendImpetos(parsed, 'CB', 'COMPETITIVE')
 };
 const hash = crypto.createHash('sha256').update(JSON.stringify(frozen)).digest('hex');
-assert.equal(hash, 'd3a8c3226cdc2cceab2e19fab6751ae11745b66c6a93844657ccc516b27cd57f', 'R186: modularização alterou parsing, ficha provisória, skills, Ímpetos, validação ou DNA em relação à R185.');
+assert.equal(hash, '80bc7241532a47402242f6bcf61202cb4ca5f095ecbd8f56ade1ff40df190fae', 'R186: modularização alterou parsing, ficha provisória, skills, Ímpetos, validação ou DNA em relação à R185.');
 assert.deepEqual(frozen.recommendedImpetos, frozen.impetosDirect, 'R186: fachada recommendImpetos divergiu do pipeline do analyzer.');
 console.log('R186 equivalência aprovada: snapshot R185 preservado byte-a-byte nas saídas congeladas de evidência, skills, Ímpetos, posição e ficha provisória.');

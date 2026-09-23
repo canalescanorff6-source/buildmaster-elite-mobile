@@ -1,3 +1,4 @@
+-- R425_AUTHORIZATION_METADATA_FAIL_CLOSED: autorização/licença nunca nasce de raw_user_meta_data.
 -- BuildMaster Elite Tático v26.75
 -- Endurecimento: versão mínima, MFA administrativo, prova criptográfica do aparelho,
 -- redução do modo offline e rate limit atômico das ações administrativas.
@@ -228,6 +229,7 @@ for select to authenticated using (
   public.buildmaster_is_admin() and coalesce(auth.jwt()->>'aal', 'aal1') = 'aal2'
 );
 
+-- R422: campos de autorização nunca vêm de raw_user_meta_data.
 -- Novas contas externas continuam suspensas e recebem somente quatro horas
 -- caso sejam posteriormente ativadas pelo administrador.
 create or replace function public.buildmaster_handle_new_auth_user()
@@ -248,10 +250,10 @@ begin
     coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), requested_username),
     'user',
     case when coalesce(new.raw_app_meta_data->>'buildmaster_managed', 'false') = 'true' then 'active' else 'suspended' end,
-    coalesce(nullif(new.raw_user_meta_data->>'plan', ''), 'premium'),
-    nullif(new.raw_user_meta_data->>'expires_at', '')::timestamptz,
-    greatest(1, least(10, coalesce((new.raw_user_meta_data->>'max_devices')::integer, 1))),
-    greatest(0, least(24, coalesce((new.raw_user_meta_data->>'offline_grace_hours')::integer, 4)))
+    'premium',
+    null,
+    1,
+    4
   )
   on conflict (id) do nothing;
   return new;

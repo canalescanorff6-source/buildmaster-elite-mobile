@@ -79,7 +79,8 @@ assert.match(templateCalibrationRuntime, /export async function learnOcrTemplate
 assert.match(readerAnalysisRuntimeR163, /qualityReport: scanQuality/, 'Relatório de qualidade deve continuar saindo do runtime R163.');
 assert.match(readerActionsR187, /confirmedReaderRuntime\.templateCalibration\.learnOcrTemplateCalibration/, 'A autoridade R187 deve continuar delegando confirmação de calibração ao runtime do leitor.');
 const database = fs.readFileSync('src/lib/localDatabase.ts', 'utf8');
-assert.match(database, /DB_VERSION = 6/);
+const databaseVersion = Number(database.match(/DB_VERSION = (\d+)/)?.[1] ?? 0);
+assert.ok(databaseVersion >= 6, 'v31.50: schema do IndexedDB não pode regredir abaixo da v6.');
 assert.match(database, /'ocr-calibrations'/);
 const center = fs.readFileSync('src/modules/card-reader/OcrVisionCenter.tsx', 'utf8');
 assert.match(center, /(?:Leitor eFHUB Forense 4\.0|Perfil eFHUB Padronizado 5\.0)/);

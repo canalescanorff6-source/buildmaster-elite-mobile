@@ -38,7 +38,7 @@ assert.deepEqual(second.recommendedSkills, first.recommendedSkills, 'Ruído de u
 assert.deepEqual(second.recommendedImpetos, first.recommendedImpetos, 'Ruído de um ponto no OCR não pode trocar o Ímpeto da mesma carta neste cenário.');
 assert.equal(second.cleanSlate2027R119?.cardKey, first.cleanSlate2027R119?.cardKey);
 assert.equal(second.cleanSlate2027R119?.positionAnchor, first.cleanSlate2027R119?.positionAnchor, 'A posição de uso não pode trocar a âncora natural da carta.');
-assert.notEqual(second.bestPosition.code, first.bestPosition.code, 'A posição de uso pode mudar sem mudar a assinatura permanente da carta.');
+assert.equal(second.bestPosition.code, first.bestPosition.code, 'R417 deve convergir a mesma carta para a mesma posição automática, ignorando alvos manuais diferentes.');
 assert.ok(Math.abs((second.cleanSlate2027R119?.responseScore ?? 0) - (first.cleanSlate2027R119?.responseScore ?? 0)) <= 1, 'Um ponto de ruído no passe não deve provocar salto artificial na resposta funcional.');
 
 console.log(`v39.20 memória legada retirada do caminho crítico: r119 manteve a ficha estável com ruído OCR e posições diferentes.`);

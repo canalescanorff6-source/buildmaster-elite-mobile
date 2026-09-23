@@ -8,7 +8,7 @@ import { isImpossibleByCoreStyle } from '../../lib/positionRules';
 import { parseCardSkillInventory } from '../../lib/cardSkillParser';
 import { detectV600Playstyles } from '../../lib/efootballV600Playstyles';
 import { parseTrainingAllocation } from '../../lib/trainingPlanCore';
-import { type Attributes, type ParsedCard, type PositionCode, type PrecisionIssue, type PrecisionValidation, POSITION_PT } from '../../lib/analyzerDomain';
+import { type Attributes, type ParsedCard, type PositionCode, type PositionProficiencies, type PositionProficiencyLevel, type PrecisionIssue, type PrecisionValidation, POSITION_PT } from '../../lib/analyzerDomain';
 
 const ALL_POSITIONS = Object.keys(POSITION_PT) as PositionCode[];
 
@@ -27,6 +27,8 @@ function hasPositionLock(text: string) {
 function hasPlaystyleLock(text: string) {
   return /ESTILO\s+DE\s+JOGO(?:\s+(?:OFENSIVO|DEFENSIVO))?\s*[:=\-]/i.test(normalize(text));
 }
+
+function parsePositionProficienciesR416(text:string,main:PositionCode):PositionProficiencies{const out:PositionProficiencies={};for(const m of text.matchAll(/PROFICI[ÊE]NCIA POSICIONAL\s+(GK|CB|LB|RB|DMF|CMF|LMF|RMF|AMF|LWF|RWF|SS|CF)\s*:\s*(HIGH|INTERMEDIATE|LOW|UNKNOWN)/gi))out[m[1].toUpperCase() as PositionCode]=m[2].toUpperCase() as PositionProficiencyLevel;if(main==='GK')return{GK:'HIGH'};out[main]='HIGH';delete out.GK;return out;}
 
 function listLabels(codes: PositionCode[]) {
   return codes.map((code) => POSITION_PT[code]).join(', ');
@@ -64,6 +66,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   const manualConfirmed = hasManualConfirmation(text);
   const mainCandidate = explicitMainPosition ?? (!manualPositionLocked ? localRule?.mainPosition : null) ?? primaryPositionFromCard ?? detectMainPosition(positions, positionRatings, attributes, rawPlaystyle);
   const mainPosition = mainCandidate;
+  const positionProficiencies=parsePositionProficienciesR416(text,mainPosition);
   const playstyle = resolvePlaystyleForCard(rawPlaystyle, mainPosition, headerOnlyText + '\n' + topSection + '\n' + identityText) ?? (!manualPlaystyleLocked && localRule?.playstyle && playstyleFitsPosition(localRule.playstyle, mainPosition) ? localRule.playstyle : null);
   const offensivePlaystyle = v600Styles.offensive ?? playstyle;
   const defensivePlaystyle = v600Styles.defensive;
@@ -122,6 +125,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   if (!explicitMainPosition && !primaryPositionFromCard) warnings.push('A posição original não foi lida com alta confiança no badge da carta. O app usou fallback seguro; confirme no campo Dados lidos antes de copiar a ficha.');
   if (!playstyle && rawPlaystyle) warnings.push(`Estilo OCR "${rawPlaystyle}" descartado porque não combina com a posição original ${POSITION_PT[mainPosition]}. A carta não foi alterada com estilo suspeito.`);
   if (!playstyle) warnings.push('O estilo de jogo não foi lido com alta confiança no topo da carta. A recomendação foi gerada sem alterar a identidade visual.');
+  if(Object.keys(positionProficiencies).length>1)warnings.push('R416: cor da grade de posições foi lida separadamente da nota; verde forte, intermediário e escuro não são inferidos pelo Overall.');
   if (Object.keys(positionRatings).length < 4) warnings.push('A grade de posições não foi lida por completo. O app preservou a identidade lida no topo da carta e usou a função real só para recomendar a melhor posição abaixo.');
   if (!overall && !maxOverall) warnings.push('GER não identificado. O programa estimou a análise pela posição e atributos lidos.');
   if (trainingPointSource === 'MANUAL') warnings.push(`Orçamento manual aplicado pela Auditoria Elite: ${trainingPointsTotal} pontos. A ficha foi recalculada usando esse limite.`);
@@ -130,20 +134,9 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
   if (trainingPointSource === 'FALLBACK') warnings.push(pointBudget.warning ?? 'Pontos e nível não foram lidos com segurança; usando orçamento competitivo padrão de 64 pontos.');
   if (pointBudget.warning && trainingPointSource !== 'FALLBACK') warnings.push(pointBudget.warning);
   const bestRating = Math.max(0, ...Object.values(positionRatings).filter((value): value is number => Number.isFinite(value)));
-  const usablePositions = detectedPositions.length
-    ? Array.from(new Set([mainPosition, ...detectedPositions]))
-        .filter((position) => {
-          if (position === mainPosition) return true;
-          const rating = Number(positionRatings[position] ?? 0);
-          if (position === 'GK' && mainPosition !== 'GK') return false;
-          if (rating > 0) return rating >= 75 && (!bestRating || rating >= bestRating - 18);
-          return false;
-        })
-        .sort((left, right) => {
-          const leftWeight = gameplayPositionWeight(left, mainPosition, playstyle) + Number(positionRatings[left] ?? 0) * 0.15;
-          const rightWeight = gameplayPositionWeight(right, mainPosition, playstyle) + Number(positionRatings[right] ?? 0) * 0.15;
-          return rightWeight - leftWeight;
-        })
+  const visualPositions=(Object.entries(positionProficiencies) as Array<[PositionCode,string]>).filter(([position,level])=>position!=='GK'&&(level==='HIGH'||level==='INTERMEDIATE')).map(([position])=>position);
+  const usablePositions=mainPosition==='GK'?['GK' as PositionCode]:visualPositions.length?Array.from(new Set([mainPosition,...visualPositions])):detectedPositions.length
+    ? Array.from(new Set([mainPosition,...detectedPositions])).filter((position)=>{if(position===mainPosition)return true;const rating=Number(positionRatings[position]??0);if(position==='GK')return false;return rating>0&&rating>=75&&(!bestRating||rating>=bestRating-18);}).sort((left,right)=>gameplayPositionWeight(right,mainPosition,playstyle)+Number(positionRatings[right]??0)*.15-gameplayPositionWeight(left,mainPosition,playstyle)-Number(positionRatings[left]??0)*.15)
     : [mainPosition];
 
   const parsedCard: ParsedCard = {
@@ -156,6 +149,7 @@ export function parseCard(rawText: string, imageFileName?: string | null): Parse
     positions: usablePositions,
     positionsPt: usablePositions.map((position) => POSITION_PT[position]),
     positionRatings,
+    positionProficiencies,
     playstyle,
     offensivePlaystyle,
     defensivePlaystyle,

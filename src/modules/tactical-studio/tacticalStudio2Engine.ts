@@ -59,8 +59,8 @@ function makeActions(players: TacticalSequencePlayer[], phase: TacticalPhase): T
   const striker = [...players].sort((a, b) => a.y - b.y)[0];
   const action = (from: TacticalSequencePlayer, to: TacticalSequencePlayer, kind: TacticalActionKind, label: string): TacticalSequenceAction => ({ id: createStableId('seq-action'), fromSlotId: from.slotId, toSlotId: to.slotId, kind, label });
   if (phase === 'saida') return [action(keeper, leftDefender, 'passe', 'Saída segura'), action(leftDefender, midfielder, 'passe', 'Quebrar primeira linha'), action(rightDefender, midfielder, 'movimento', 'Criar apoio')];
-  if (phase === 'progressao') return [action(midfielder, creator, 'passe', 'Passe vertical'), action(leftDefender, creator, 'movimento', 'Apoio por fora'), action(striker, creator, 'movimento', 'Fixar e aproximar')];
-  if (phase === 'criacao') return [action(creator, striker, 'passe', 'Último passe'), action(midfielder, creator, 'cobertura', 'Sustentar a jogada'), action(rightDefender, striker, 'movimento', 'Amplitude oposta')];
+  if (phase === 'progressao') return [action(midfielder, creator, 'passe', 'Passe vertical'), action(leftDefender, midfielder, 'movimento', 'Aproximar por dentro'), action(striker, creator, 'movimento', 'Fixar e aproximar')];
+  if (phase === 'criacao') return [action(creator, striker, 'passe', 'Último passe'), action(midfielder, creator, 'cobertura', 'Sustentar a jogada'), action(rightDefender, midfielder, 'movimento', 'Apoio interior')];
   if (phase === 'finalizacao') return [action(creator, striker, 'finalizacao', 'Atacar a área'), action(midfielder, striker, 'movimento', 'Chegada de segunda linha'), action(leftDefender, midfielder, 'cobertura', 'Proteger a sobra')];
   if (phase === 'transicao-defensiva') return [action(striker, creator, 'pressao', 'Pressão imediata'), action(creator, midfielder, 'retorno', 'Fechar o centro'), action(leftDefender, rightDefender, 'cobertura', 'Restabelecer linha')];
   return [action(striker, creator, 'retorno', 'Compactar ataque'), action(creator, midfielder, 'retorno', 'Fechar entrelinhas'), action(midfielder, leftDefender, 'cobertura', 'Proteger a defesa')];

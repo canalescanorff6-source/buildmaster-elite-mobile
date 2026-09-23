@@ -82,7 +82,7 @@ for (const item of cases) {
   assert.equal(result.recommendedSkills.length,5,'v40-80-r144-clean-slate-frontier-dedup-regression: Top 5 atual precisa continuar completo.');
   assert.equal(new Set(result.recommendedSkills).size,5,'v40-80-r144-clean-slate-frontier-dedup-regression: Top 5 atual não pode duplicar habilidades.');
   assert.ok(Number.isFinite(result.cleanSlate2027R119.score)&&result.cleanSlate2027R119.score>0,'v40-80-r144-clean-slate-frontier-dedup-regression: score atual precisa permanecer válido.');
-  assert.equal(result.cleanSlate2027R119.usagePosition,item.target);
+  assert.equal(result.cleanSlate2027R119.usagePosition,result.bestPosition.code,'R417: frontier deve usar a função automática canônica, não o alvo manual legado.');
   const r143=result.cleanSlate2027R119.searchOptimizationR143;
   const r144=result.cleanSlate2027R119.searchOptimizationR144;
   assert.ok(r143 && r144,'R144 deve preservar auditoria R143 e adicionar sua própria telemetria.');

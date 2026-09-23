@@ -34,7 +34,7 @@ const EMPTY_SETTINGS: AdminSecuritySettings = {
   minAppVersion: '29.00.0',
   allowLegacyClients: false,
   requireDeviceProof: true,
-  adminMfaRequired: false,
+  adminMfaRequired: true,
   userOfflineGraceHours: 4,
   adminOfflineGraceHours: 12,
   updatedAt: new Date(0).toISOString()
@@ -80,7 +80,7 @@ export function AdministrationSecurityCenter() {
     try {
       const data = await adminAccountRequest<AdminOverview>({ action: 'overview', auditLimit: 80 });
       setOverview(data);
-      setSettings(data.settings);
+      setSettings({ ...data.settings, allowLegacyClients: false, requireDeviceProof: true, adminMfaRequired: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível carregar a central administrativa.');
     } finally {
@@ -114,14 +114,14 @@ export function AdministrationSecurityCenter() {
         action: 'update_security_settings',
         settings: {
           minAppVersion: settings.minAppVersion,
-          allowLegacyClients: settings.allowLegacyClients,
+          allowLegacyClients: false,
           requireDeviceProof: true,
-          adminMfaRequired: settings.adminMfaRequired,
+          adminMfaRequired: true,
           userOfflineGraceHours: settings.userOfflineGraceHours,
           adminOfflineGraceHours: settings.adminOfflineGraceHours
         }
       });
-      setSettings(response.settings);
+      setSettings({ ...response.settings, allowLegacyClients: false, requireDeviceProof: true, adminMfaRequired: true });
       setMessage(`Política salva. APKs abaixo da v${response.settings.minAppVersion} serão bloqueados na próxima validação online.`);
       await loadOverview();
     } catch (cause) {
@@ -168,15 +168,15 @@ export function AdministrationSecurityCenter() {
 
       <div className="bm2910-admin-columns">
         <section className="bm2910-security-policy">
-          <div className="bm2910-subheading"><LockKeyhole size={19} /><div><strong>Política de acesso</strong><span>O MFA é opcional. Ative somente depois de configurar o autenticador.</span></div></div>
+          <div className="bm2910-subheading"><LockKeyhole size={19} /><div><strong>Política de acesso</strong><span>MFA, prova do aparelho e bloqueio de clientes legados são obrigatórios em produção.</span></div></div>
           <label><span>Versão mínima permitida</span><input value={settings.minAppVersion} onChange={(event) => setSettings((current) => ({ ...current, minAppVersion: event.target.value.replace(/^v/i, '') }))} inputMode="decimal" placeholder="29.40.0" /><small>Elevar esta versão bloqueia APKs antigos na validação de licença.</small></label>
           <div className="bm2910-inline-fields">
             <label><span>Offline do usuário</span><select value={settings.userOfflineGraceHours} onChange={(event) => setSettings((current) => ({ ...current, userOfflineGraceHours: Number(event.target.value) }))}><option value={0}>Sempre online</option><option value={2}>2 horas</option><option value={4}>4 horas</option><option value={8}>8 horas</option><option value={12}>12 horas</option><option value={24}>24 horas</option></select></label>
             <label><span>Offline do admin</span><select value={settings.adminOfflineGraceHours} onChange={(event) => setSettings((current) => ({ ...current, adminOfflineGraceHours: Number(event.target.value) }))}><option value={0}>Sempre online</option><option value={4}>4 horas</option><option value={8}>8 horas</option><option value={12}>12 horas</option><option value={24}>24 horas</option></select></label>
           </div>
-          <label className="update-toggle"><input type="checkbox" checked={settings.adminMfaRequired} onChange={(event) => setSettings((current) => ({ ...current, adminMfaRequired: event.target.checked }))} aria-label="Exigir MFA para administração" /><span><b>Exigir MFA para administração</b><small>{settings.adminMfaRequired ? 'Ligado: o painel exigirá código de 6 números.' : 'Desligado: criação de contas funciona com login administrativo normal.'}</small></span></label>
+          <label className="update-toggle"><input type="checkbox" checked readOnly disabled aria-label="MFA administrativo obrigatório" /><span><b>Exigir MFA para administração</b><small>Proteção obrigatória: ações administrativas exigem AAL2/TOTP.</small></span></label>
           <label className="update-toggle"><input type="checkbox" checked readOnly disabled aria-label="Prova criptográfica obrigatória e bloqueada" /><span><b>Prova criptográfica do aparelho</b><small>Proteção obrigatória: cada aparelho precisa provar sua identidade.</small></span></label>
-          <label className="update-toggle bm2910-danger-toggle"><input type="checkbox" checked={settings.allowLegacyClients} onChange={(event) => setSettings((current) => ({ ...current, allowLegacyClients: event.target.checked }))} /><span><b>Permitir clientes sem versão</b><small>Deixe desligado em produção.</small></span></label>
+          <label className="update-toggle bm2910-danger-toggle"><input type="checkbox" checked={false} readOnly disabled aria-label="Clientes legados bloqueados" /><span><b>Clientes sem versão</b><small>Bloqueados em produção para impedir downgrade de segurança.</small></span></label>
           <button type="button" className="elite-button" onClick={() => void saveSecurityPolicy()} disabled={saving}>{saving ? <Loader2 className="spin" size={17} /> : <Save size={17} />} Salvar política de segurança</button>
         </section>
 

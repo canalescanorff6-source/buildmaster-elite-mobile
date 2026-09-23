@@ -132,9 +132,10 @@ function run(text: string, position: PositionCode, formation: TacticalFormation,
   }));
 }
 
-function assertOfficialTopFive(result: ReturnType<typeof run>, position: PositionCode, skillPosition: PositionCode = position) {
+function assertOfficialTopFive(result: ReturnType<typeof run>, _position: PositionCode, _skillPosition: PositionCode = _position) {
   const owned = new Set([...result.parsed.nativeSkills, ...result.parsed.specialSkills].map(skillIdentityKey));
-  assert.equal(result.bestPosition.code, position, 'A posição escolhida pelo usuário deve permanecer soberana.');
+  const canonicalSkillPosition = result.bestPosition.code;
+  assert.ok(result.positionUsageR416?.automaticTopPositions?.includes(result.bestPosition.code), 'A posição final deve pertencer ao Top 3 automático por DNA R417.');
   assert.equal(result.trainingPointsUsed, 64);
   assert.equal(result.trainingPointsRemaining, 0);
   assert.equal(result.recommendedSkills.length, 5, 'A ficha precisa entregar exatamente cinco habilidades adicionais.');
@@ -142,7 +143,7 @@ function assertOfficialTopFive(result: ReturnType<typeof run>, position: Positio
   for (const skill of result.recommendedSkills) {
     assert.ok(OFFICIAL_ADDITIONAL_SKILLS.has(skill), `Habilidade não oficial encontrada no Top 5: ${skill}`);
     assert.ok(!owned.has(skillIdentityKey(skill)), `Habilidade já existente foi repetida: ${skill}`);
-    assert.ok(isRoleCompatibleAdditionalSkill(skill, skillPosition), `Habilidade incompatível com ${skillPosition}: ${skill}`);
+    assert.ok(isRoleCompatibleAdditionalSkill(skill, canonicalSkillPosition), `Habilidade incompatível com ${canonicalSkillPosition}: ${skill}`);
   }
 }
 
@@ -198,8 +199,8 @@ assert.equal(asCF.recommendedSkills.length, 5, 'A adaptação para CA precisa ma
 assert.ok(asCF.recommendedSkills.every((skill) => OFFICIAL_ADDITIONAL_SKILLS.has(skill)), 'A adaptação não pode introduzir habilidade não oficial.');
 assert.equal(asCF.cleanSlate2027R119?.positionAnchor, dribbler.cleanSlate2027R119?.positionAnchor, 'A posição escolhida não pode trocar a âncora natural usada pelo Clean Slate.');
 assert.equal(asCF.cleanSlate2027R119?.cardKey, dribbler.cleanSlate2027R119?.cardKey, 'A posição escolhida não pode trocar a identidade permanente da carta.');
-assert.equal(asCF.cleanSlate2027R119?.usagePosition, 'CF', 'A posição de uso precisa ser registrada pela autoridade final.');
-assert.equal(dribbler.cleanSlate2027R119?.usagePosition, 'SS', 'A posição original de uso precisa permanecer explícita.');
+assert.equal(asCF.cleanSlate2027R119?.usagePosition, dribbler.cleanSlate2027R119?.usagePosition, 'R417 deve convergir alvos manuais diferentes para a mesma posição autônoma da carta.');
+assert.equal(asCF.bestPosition.code, dribbler.bestPosition.code, 'A posição autônoma canônica deve ser estável para a mesma carta.');
 assert.equal(asCF.trainingPointsUsed, dribbler.trainingPointsUsed, 'Mudar a posição de uso deve preservar o orçamento total da carta.');
 assert.equal(asCF.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'A posição de uso precisa permanecer separada da identidade e da progressão permanente da carta.');
 assert.equal(asCF.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER', 'A adaptação deve preservar a autoridade única r119.');

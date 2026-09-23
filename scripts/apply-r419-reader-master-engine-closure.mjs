@@ -63,7 +63,6 @@ function validBudget(value: unknown): number {
 export function deriveTrainingBudgetEvidenceR419(parsed: ParsedCard): TrainingBudgetEvidenceR419 {
   const budget = validBudget(parsed.trainingPointsTotal);
   const source = parsed.trainingPointSource ?? 'UNSPECIFIED';
-  const reasons: string[] = [];
   if (!budget) return { state: 'MISSING', budget: 0, source, reasons: ['PP total ausente ou inválido.'] };
 
   const used = Number(parsed.trainingPointsUsed ?? 0);
