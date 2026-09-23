@@ -262,6 +262,10 @@ jobs:
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
 
+      - name: Gate preventivo antes dos testes pesados
+        timeout-minutes: 20
+        run: npm run ci:gate
+
       - name: Restaurar e validar configuração TypeScript raiz
         run: npm run types:repair && npm run quality:root-tsconfig
 
