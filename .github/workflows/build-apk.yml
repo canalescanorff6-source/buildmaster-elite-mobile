@@ -444,6 +444,12 @@ jobs:
           ! grep -RqsF 'buildmaster-ai-git-main-buildmaster-ai.vercel.app/api/cloud/fichas' out || { echo '::error::O build contém a nuvem antiga insegura.'; exit 1; }
           test -s out/tesseract/worker.min.js || { echo '::error::Worker OCR local ausente.'; exit 1; }
           test -s out/tesseract/lang/por.traineddata || { echo '::error::Idioma OCR português BEST descompactado ausente.'; exit 1; }
+          grep -RqsF '40.80-r470-intelligent-learning-foundation-v1' out || { echo '::error::R470 não entrou no bundle web final.'; exit 1; }
+          grep -RqsF '40.80-r471-resilient-learning-sync-v1' out || { echo '::error::R471 offline-first não entrou no bundle web final.'; exit 1; }
+          grep -RqsF '40.80-r472-motor-lab-lifecycle-v1' out || { echo '::error::R472 Motor Lab não entrou no bundle web final.'; exit 1; }
+          grep -RqsF 'masterCardGenerationReadinessR452' out || { echo '::error::Proteção R452 contra ficha 0/56 não entrou no bundle web final.'; exit 1; }
+          grep -RqsF 'IA local grátis' out || { echo '::error::Painel visível da IA local R470 não entrou no bundle web final.'; exit 1; }
+          grep -RqsF 'Motor Lab • R472' out || { echo '::error::Painel visível do Motor Lab R472 não entrou no bundle web final.'; exit 1; }
 
       - name: Criar projeto Android limpo
         timeout-minutes: 5
@@ -523,6 +529,12 @@ jobs:
         run: |
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_URL" android/app/src/main/assets/public || { echo '::error::A URL real não foi copiada para o APK.'; exit 1; }
           grep -RqsF "$NEXT_PUBLIC_SUPABASE_ANON_KEY" android/app/src/main/assets/public || { echo '::error::A chave real não foi copiada para o APK.'; exit 1; }
+          grep -RqsF '40.80-r470-intelligent-learning-foundation-v1' android/app/src/main/assets/public || { echo '::error::R470 não foi copiado para os assets Android.'; exit 1; }
+          grep -RqsF '40.80-r471-resilient-learning-sync-v1' android/app/src/main/assets/public || { echo '::error::R471 offline-first não foi copiado para os assets Android.'; exit 1; }
+          grep -RqsF '40.80-r472-motor-lab-lifecycle-v1' android/app/src/main/assets/public || { echo '::error::R472 Motor Lab não foi copiado para os assets Android.'; exit 1; }
+          grep -RqsF 'masterCardGenerationReadinessR452' android/app/src/main/assets/public || { echo '::error::Proteção R452 contra ficha 0/56 não foi copiada para os assets Android.'; exit 1; }
+          grep -RqsF 'IA local grátis' android/app/src/main/assets/public || { echo '::error::Painel visível da IA local R470 não foi copiado para os assets Android.'; exit 1; }
+          grep -RqsF 'Motor Lab • R472' android/app/src/main/assets/public || { echo '::error::Painel visível do Motor Lab R472 não foi copiado para os assets Android.'; exit 1; }
 
       - name: Dar permissão ao Gradle
         run: chmod +x android/gradlew
