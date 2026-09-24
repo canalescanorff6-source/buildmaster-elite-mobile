@@ -53,6 +53,9 @@ jobs:
       - name: Regressões R471 — sync offline-first
         run: npm run test:r471
 
+      - name: Regressões R472 — Motor Lab lifecycle
+        run: npm run test:r472
+
       - name: Build de produção
         env:
           NEXT_TELEMETRY_DISABLED: '1'
