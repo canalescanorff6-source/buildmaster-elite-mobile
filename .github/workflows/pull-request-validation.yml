@@ -50,6 +50,9 @@ jobs:
       - name: Regressões R470 — IA local e aprendizado
         run: npm run test:r470
 
+      - name: Regressões R471 — sync offline-first
+        run: npm run test:r471
+
       - name: Build de produção
         env:
           NEXT_TELEMETRY_DISABLED: '1'
