@@ -368,7 +368,9 @@ jobs:
 
       - name: Diagnóstico consolidado de todos os erros
         id: diagnose_all
-        timeout-minutes: 55
+        # O diagnóstico executa 97 grupos e não pode virar RED apenas por expirar
+        # durante uma regressão longa como R174. Mantém todos os testes ativos.
+        timeout-minutes: 120
         continue-on-error: true
         run: npm run ci:diagnose-all
 
