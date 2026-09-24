@@ -44,6 +44,7 @@ import { sealProductionAuthorityR126 } from './productionAuthorityR126';
 import { sealProductionAuthorityR128 } from './productionAuthorityR128';
 import { attachMatchEvidenceCalibrationR136 } from '../modules/matches/matchEvidenceCalibrationR136';
 import { attachBuildOutcomeCalibrationR460 } from '../modules/matches/buildOutcomeCalibrationR460';
+import { attachIntelligentLearningR470 } from './intelligentLearningR470';
 
 type AnalysisEngine = (input: AnalysisResult) => AnalysisResult;
 
@@ -207,6 +208,9 @@ export function applyCompleteCardIntelligence(result: AnalysisResult): AnalysisR
   current = applyPostAuthorityReadOnly(current, applyProduction2027R100);
   current = applyPostAuthorityReadOnly(current, applyPlayerGenerationFinalizerV4080R13);
   current = sealProductionAuthorityR126(current);
+  // R470: IA local/estatística é observacional e roda depois da autoridade R126.
+  // Ela aprende e propõe evidência, mas não pode escrever ficha, Top 5 ou Ímpeto.
+  current = attachIntelligentLearningR470(current);
   current = {
     ...current,
     recommendationExplanation: [

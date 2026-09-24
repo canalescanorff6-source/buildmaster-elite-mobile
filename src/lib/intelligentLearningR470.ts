@@ -1,0 +1,733 @@
+import type { AnalysisResult, PositionCode, TrainingPlan } from './analyzerDomain';
+import type { MatchValidationRecord } from './appStartupContractsR200';
+import { cardEvidenceFingerprintR126, cardIdentityAliasesR457, cardIdentityFingerprintR126, cardUsageIdentityKeyR126 } from './cardIdentityFingerprintR126';
+import { analysisUsageFunctionR457, analysisUsagePositionR138 } from './analysisUsagePositionR138';
+import { readMatchValidationRepositoryR137 } from '../modules/matches/matchValidationRepositoryR137';
+import { createStableId } from './stableId';
+import { runtimeDelete, runtimeGet, runtimeList, runtimePut } from './localDatabase';
+
+export const INTELLIGENT_LEARNING_R470_VERSION = '40.80-r470-intelligent-learning-foundation-v1' as const;
+export const INTELLIGENT_LEARNING_R470_MODE = 'LOCAL_STATISTICAL_FREE' as const;
+export const INTELLIGENT_LEARNING_R470_READING_PREFIX = 'intelligent-learning:r470:reading:';
+export const INTELLIGENT_LEARNING_R470_BUILD_PREFIX = 'intelligent-learning:r470:build:';
+export const INTELLIGENT_LEARNING_R470_MODEL_PREFIX = 'intelligent-learning:r470:model:';
+export const INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY = 'intelligent-learning:r470:active-reading';
+export const INTELLIGENT_LEARNING_R470_MAX_READING_SESSIONS = 180;
+export const INTELLIGENT_LEARNING_R470_MAX_BUILD_HISTORY = 320;
+
+export type ReadingStatusR470 =
+  | 'CAPTURED'
+  | 'OCR_RUNNING'
+  | 'OCR_COMPLETE'
+  | 'NORMALIZED'
+  | 'CARD_MATCHED'
+  | 'ENGINE_RUNNING'
+  | 'BUILD_COMPLETE'
+  | 'SYNCED'
+  | 'ERROR';
+
+export type EvidenceRetentionR470 = 'HASH_ONLY' | 'KEEP_TEMPORARY' | 'KEEP_COMPRESSED';
+export type LearningScopeR470 = 'GLOBAL' | 'FUNCTION' | 'CARD';
+
+export type LearningScopeProfileR470 = {
+  scope: LearningScopeR470;
+  scopeKey: string;
+  rawMatches: number;
+  effectiveMatches: number;
+  distinctSessions: number;
+  stableShare: number;
+  currentPatchShare: number;
+  performanceScore: number | null;
+  confidence: number;
+};
+
+export type AbExperimentR470 = {
+  status: 'NO_TEST' | 'COLLECTING' | 'COMPARABLE' | 'STRONG_SIGNAL';
+  armA: { rawMatches: number; effectiveMatches: number; distinctSessions: number; score: number | null };
+  armB: { rawMatches: number; effectiveMatches: number; distinctSessions: number; score: number | null };
+  difference: number | null;
+  evidenceLeadingArm: 'A' | 'B' | null;
+  confidence: number;
+  note: string;
+};
+
+export type LearningProposalR470 = {
+  kind: 'OBSERVE' | 'CALIBRATION_WEIGHT' | 'AB_CANDIDATE';
+  risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'OBSERVE' | 'PROPOSED';
+  autoPromotionEligible: boolean;
+  reason: string;
+  evidence: string[];
+};
+
+export type IntelligentLearningR470Analysis = {
+  version: typeof INTELLIGENT_LEARNING_R470_VERSION;
+  mode: typeof INTELLIGENT_LEARNING_R470_MODE;
+  externalApiRequired: false;
+  cardIdentity: string;
+  usageIdentity: string;
+  evidenceIdentity: string;
+  position: PositionCode;
+  usageFunction: string;
+  predictedPerformance: number;
+  confidence: number;
+  confidenceLevel: 'INITIAL' | 'MODERATE' | 'HIGH';
+  scopes: LearningScopeProfileR470[];
+  experiment: AbExperimentR470;
+  drift: { detected: boolean; delta: number; note: string };
+  evidenceRetention: EvidenceRetentionR470;
+  proposal: LearningProposalR470;
+  safeguards: string[];
+};
+
+export type ReadingSessionR470 = {
+  version: typeof INTELLIGENT_LEARNING_R470_VERSION;
+  sessionKey: string;
+  status: ReadingStatusR470;
+  sourceFileName: string;
+  sourceMime: string;
+  sourceBytes: number;
+  imageHash: string | null;
+  imageRetention: EvidenceRetentionR470;
+  ocrConfidence: number | null;
+  qualityScore: number | null;
+  rawTextExcerpt: string;
+  cardIdentity: string | null;
+  evidenceIdentity: string | null;
+  buildFingerprint: string | null;
+  errorCode: string | null;
+  cloudState: 'LOCAL_ONLY' | 'PENDING' | 'SYNCED' | 'FAILED';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BuildHistoryR470 = {
+  version: typeof INTELLIGENT_LEARNING_R470_VERSION;
+  buildFingerprint: string;
+  cardIdentity: string;
+  usageIdentity: string;
+  playerName: string;
+  position: PositionCode;
+  usageFunction: string;
+  engineVersion: string;
+  training: TrainingPlan;
+  skills: string[];
+  impetos: Array<{ name: string; tier?: string; score?: number; confidence?: number }>;
+  pointsUsed: number;
+  pointsTotal: number;
+  sourceSessionKey: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+};
+
+export type PersistConfirmedAnalysisInputR470 = {
+  rawText?: string;
+  imageHash?: string | null;
+  sourceFileName?: string | null;
+  qualityScore?: number | null;
+};
+
+function clamp(value: number, min = 0, max = 100) {
+  const safe = Number.isFinite(value) ? value : min;
+  return Math.max(min, Math.min(max, safe));
+}
+
+function round(value: number, digits = 2) {
+  return Number(value.toFixed(digits));
+}
+
+function normalize(value: unknown) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stableHash(value: string) {
+  let output = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    output ^= value.charCodeAt(index);
+    output = Math.imul(output, 16777619);
+  }
+  return (output >>> 0).toString(16).padStart(8, '0');
+}
+
+function recordSessionKey(record: MatchValidationRecord) {
+  return String(record.sessionIdR462 || record.playedAt || record.id).slice(0, 32);
+}
+
+function currentPatchRecord(record: MatchValidationRecord) {
+  const version = String(record.gameVersion ?? '');
+  return version.startsWith('6.') || record.gameplayEpoch === 'V6';
+}
+
+function recordWeight(record: MatchValidationRecord, now = Date.now()) {
+  const playedAt = Date.parse(String(record.playedAt || ''));
+  const ageDays = Number.isFinite(playedAt) ? Math.max(0, (now - playedAt) / 86_400_000) : 365;
+  const recency = ageDays <= 14 ? 1 : ageDays <= 30 ? .92 : ageDays <= 60 ? .78 : ageDays <= 120 ? .58 : .35;
+  const connection = record.connection === 'stable' ? 1 : record.connection === 'variable' ? .82 : record.connection === 'high_delay' ? .55 : .78;
+  const inputDelay = Number(record.inputDelayRating || 3);
+  const delay = inputDelay <= 2 ? 1 : inputDelay === 3 ? .9 : inputDelay === 4 ? .74 : .58;
+  const patch = currentPatchRecord(record) ? 1 : record.gameVersion ? .4 : .65;
+  const minutes = clamp(Number(record.minutes || 0), 0, 90) / 90;
+  return Math.max(.08, recency * connection * delay * patch * (.55 + minutes * .45));
+}
+
+function ratingScore(value: unknown) {
+  const rating = clamp(Number(value || 3), 1, 5);
+  return (rating - 1) * 25;
+}
+
+function recordPerformance(record: MatchValidationRecord, position: PositionCode) {
+  const common = ratingScore(record.overallRating) * .2;
+  if (position === 'GK') {
+    return common
+      + ratingScore(record.defending) * .32
+      + ratingScore(record.movement) * .16
+      + ratingScore(record.physical) * .14
+      + ratingScore(record.passing) * .08
+      + ratingScore(record.stamina) * .1;
+  }
+  if (position === 'CB' || position === 'DMF') {
+    return common
+      + ratingScore(record.defending) * .28
+      + ratingScore(record.physical) * .18
+      + ratingScore(record.movement) * .14
+      + ratingScore(record.passing) * .12
+      + ratingScore(record.stamina) * .08;
+  }
+  if (position === 'CF' || position === 'SS') {
+    return common
+      + ratingScore(record.finishing) * .28
+      + ratingScore(record.movement) * .2
+      + ratingScore(record.physical) * .12
+      + ratingScore(record.passing) * .1
+      + ratingScore(record.stamina) * .1;
+  }
+  return common
+    + ratingScore(record.movement) * .2
+    + ratingScore(record.passing) * .2
+    + ratingScore(record.stamina) * .12
+    + ratingScore(record.physical) * .1
+    + ratingScore(record.finishing) * .1
+    + ratingScore(record.defending) * .08;
+}
+
+function scopeProfile(scope: LearningScopeR470, scopeKey: string, rows: MatchValidationRecord[], position: PositionCode): LearningScopeProfileR470 {
+  const weighted = rows.map((record) => ({ record, weight: recordWeight(record), score: recordPerformance(record, position) }));
+  const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0);
+  const sessions = new Set(rows.map(recordSessionKey));
+  const stableWeight = weighted.filter((item) => item.record.connection === 'stable').reduce((sum, item) => sum + item.weight, 0);
+  const patchWeight = weighted.filter((item) => currentPatchRecord(item.record)).reduce((sum, item) => sum + item.weight, 0);
+  const performanceScore = totalWeight
+    ? weighted.reduce((sum, item) => sum + item.score * item.weight, 0) / totalWeight
+    : null;
+  const stableShare = totalWeight ? stableWeight / totalWeight : 0;
+  const currentPatchShare = totalWeight ? patchWeight / totalWeight : 0;
+  const confidence = clamp(
+    Math.min(1, totalWeight / 8) * 48
+    + Math.min(1, sessions.size / 4) * 28
+    + stableShare * 12
+    + currentPatchShare * 12
+  );
+  return {
+    scope,
+    scopeKey,
+    rawMatches: rows.length,
+    effectiveMatches: round(totalWeight),
+    distinctSessions: sessions.size,
+    stableShare: Math.round(stableShare * 100),
+    currentPatchShare: Math.round(currentPatchShare * 100),
+    performanceScore: performanceScore == null ? null : round(performanceScore, 1),
+    confidence: Math.round(confidence)
+  };
+}
+
+function scoreRows(rows: MatchValidationRecord[], position: PositionCode) {
+  const weighted = rows.map((record) => ({ weight: recordWeight(record), score: recordPerformance(record, position) }));
+  const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+  return {
+    score: total ? weighted.reduce((sum, item) => sum + item.score * item.weight, 0) / total : null,
+    effectiveMatches: total,
+    distinctSessions: new Set(rows.map(recordSessionKey)).size
+  };
+}
+
+export function evaluateAbExperimentRowsR470(rows: MatchValidationRecord[], position: PositionCode): AbExperimentR470 {
+  const aRows = rows.filter((record) => record.experimentArm === 'A');
+  const bRows = rows.filter((record) => record.experimentArm === 'B');
+  const a = scoreRows(aRows, position);
+  const b = scoreRows(bRows, position);
+  const minEffective = Math.min(a.effectiveMatches, b.effectiveMatches);
+  const minSessions = Math.min(a.distinctSessions, b.distinctSessions);
+  const difference = a.score == null || b.score == null ? null : Math.abs(a.score - b.score);
+  const comparable = aRows.length >= 2 && bRows.length >= 2 && minEffective >= 1.2;
+  const strong = comparable && minSessions >= 2 && minEffective >= 2.2 && Number(difference) >= 4;
+  const confidence = comparable
+    ? Math.round(clamp(Math.min(1, minEffective / 4) * 55 + Math.min(1, minSessions / 3) * 35 + Math.min(10, Number(difference || 0))))
+    : 0;
+  const leading = strong && a.score != null && b.score != null ? (a.score > b.score ? 'A' : 'B') as 'A' | 'B' : null;
+  const status: AbExperimentR470['status'] = !aRows.length && !bRows.length
+    ? 'NO_TEST'
+    : !comparable
+      ? 'COLLECTING'
+      : strong
+        ? 'STRONG_SIGNAL'
+        : 'COMPARABLE';
+  return {
+    status,
+    armA: { rawMatches: aRows.length, effectiveMatches: round(a.effectiveMatches), distinctSessions: a.distinctSessions, score: a.score == null ? null : round(a.score, 1) },
+    armB: { rawMatches: bRows.length, effectiveMatches: round(b.effectiveMatches), distinctSessions: b.distinctSessions, score: b.score == null ? null : round(b.score, 1) },
+    difference: difference == null ? null : round(difference, 1),
+    evidenceLeadingArm: leading,
+    confidence,
+    note: status === 'STRONG_SIGNAL'
+      ? `O braço ${leading} repetiu vantagem com ${minSessions} sessões comparáveis; isso é evidência para revisão, não autorização para reescrever a ficha.`
+      : status === 'COMPARABLE'
+        ? 'Os braços já podem ser comparados, mas a vantagem ainda não é robusta.'
+        : status === 'COLLECTING'
+          ? 'Ainda faltam partidas/sessões comparáveis nos dois braços.'
+          : 'Nenhum teste A/B ativo para esta carta e função.'
+  };
+}
+
+function driftForRows(rows: MatchValidationRecord[], position: PositionCode) {
+  const ordered = [...rows].sort((left, right) => String(right.playedAt).localeCompare(String(left.playedAt)));
+  if (ordered.length < 5) return { detected: false, delta: 0, note: 'Amostra ainda pequena para medir drift.' };
+  const split = Math.min(3, Math.floor(ordered.length / 2));
+  const recent = scoreRows(ordered.slice(0, split), position);
+  const historical = scoreRows(ordered.slice(split), position);
+  if (recent.score == null || historical.score == null || recent.effectiveMatches < 1 || historical.effectiveMatches < 1.5) {
+    return { detected: false, delta: 0, note: 'Evidência insuficiente para separar comportamento recente e histórico.' };
+  }
+  const delta = round(recent.score - historical.score, 1);
+  const detected = Math.abs(delta) >= 10;
+  return {
+    detected,
+    delta,
+    note: detected
+      ? `O desempenho recente mudou ${Math.abs(delta).toFixed(1)} ponto(s) frente ao histórico; promoções ficam suspensas até nova confirmação.`
+      : `Sem drift relevante: variação recente de ${Math.abs(delta).toFixed(1)} ponto(s).`
+  };
+}
+
+export function decideEvidenceRetentionR470(input: {
+  ocrConfidence: number;
+  exactCardResolved: boolean;
+  sourceConflict?: boolean;
+  imageBytes?: number;
+}): EvidenceRetentionR470 {
+  const confidence = clamp(Number(input.ocrConfidence || 0));
+  if (input.sourceConflict || !input.exactCardResolved || confidence < 72) return 'KEEP_COMPRESSED';
+  if (confidence < 90) return 'KEEP_TEMPORARY';
+  return 'HASH_ONLY';
+}
+
+function exactCardResolved(result: AnalysisResult) {
+  const edition = result.parsed.editionIdentity;
+  return Boolean(edition?.officialCardIdVerified || edition?.catalogCardId);
+}
+
+function buildProposal(result: AnalysisResult, experiment: AbExperimentR470, drift: IntelligentLearningR470Analysis['drift'], confidence: number): LearningProposalR470 {
+  if (drift.detected) {
+    return {
+      kind: 'OBSERVE',
+      risk: 'HIGH',
+      status: 'OBSERVE',
+      autoPromotionEligible: false,
+      reason: 'Drift detectado; nenhuma melhoria deve ser promovida enquanto o comportamento recente não estabilizar.',
+      evidence: [drift.note]
+    };
+  }
+  if (experiment.status === 'STRONG_SIGNAL' && experiment.evidenceLeadingArm) {
+    return {
+      kind: 'AB_CANDIDATE',
+      risk: 'MEDIUM',
+      status: 'PROPOSED',
+      autoPromotionEligible: false,
+      reason: `O braço ${experiment.evidenceLeadingArm} é candidato a revisão humana após vantagem repetida.`,
+      evidence: [experiment.note, `Confiança A/B: ${experiment.confidence}/100.`]
+    };
+  }
+  const persistent = result.buildOutcomeCalibrationR460?.actions?.filter((item) => item.status === 'PERSISTENT_GAP') ?? [];
+  if (result.buildOutcomeCalibrationR460?.status === 'ACTIVE' && persistent.length && confidence >= 75) {
+    return {
+      kind: 'CALIBRATION_WEIGHT',
+      risk: 'LOW',
+      status: 'PROPOSED',
+      autoPromotionEligible: confidence >= 88 && result.buildOutcomeCalibrationR460.distinctSessions >= 3,
+      reason: 'Há lacuna persistente entre promessa e desempenho; apenas um ajuste limitado de peso pode ser candidato.',
+      evidence: persistent.slice(0, 3).map((item) => item.reason)
+    };
+  }
+  return {
+    kind: 'OBSERVE',
+    risk: 'LOW',
+    status: 'OBSERVE',
+    autoPromotionEligible: false,
+    reason: 'Ainda não existe evidência forte o bastante para propor alteração do motor.',
+    evidence: result.buildOutcomeCalibrationR460?.reasons?.slice(0, 2) ?? []
+  };
+}
+
+export function buildIntelligentLearningR470(
+  result: AnalysisResult,
+  allRecords: MatchValidationRecord[] = readMatchValidationRepositoryR137()
+): IntelligentLearningR470Analysis {
+  const cardIdentity = cardIdentityFingerprintR126(result.parsed);
+  const aliases = new Set(cardIdentityAliasesR457(result.parsed));
+  const position = analysisUsagePositionR138(result);
+  const usageFunction = analysisUsageFunctionR457(result);
+  const normalizedFunction = normalize(usageFunction);
+  const sameFunction = (record: MatchValidationRecord) => !record.usageFunction || normalize(record.usageFunction) === normalizedFunction;
+  const exactRows = allRecords.filter((record) => aliases.has(record.cardFingerprint) && record.targetPosition === position && sameFunction(record));
+  const functionRows = allRecords.filter((record) => record.targetPosition === position && normalize(record.usageFunction) === normalizedFunction);
+  const currentRows = allRecords.filter((record) => currentPatchRecord(record));
+  const scopes = [
+    scopeProfile('CARD', `${cardIdentity}:${position}:${normalizedFunction || 'default'}`, exactRows, position),
+    scopeProfile('FUNCTION', `${position}:${normalizedFunction || 'default'}`, functionRows, position),
+    scopeProfile('GLOBAL', 'account-current-meta', currentRows, position)
+  ];
+  const weightedScopes = scopes
+    .filter((scope) => scope.performanceScore != null && scope.rawMatches > 0)
+    .map((scope) => {
+      const base = scope.scope === 'CARD' ? .62 : scope.scope === 'FUNCTION' ? .26 : .12;
+      return { scope, weight: base * Math.max(.12, scope.confidence / 100) };
+    });
+  const scopeWeight = weightedScopes.reduce((sum, item) => sum + item.weight, 0);
+  const dataPrediction = scopeWeight
+    ? weightedScopes.reduce((sum, item) => sum + Number(item.scope.performanceScore) * item.weight, 0) / scopeWeight
+    : result.bestPosition.score;
+  const structuralWeight = scopeWeight ? Math.max(.18, 1 - Math.min(.82, scopeWeight)) : 1;
+  const predictedPerformance = clamp(
+    (dataPrediction * (1 - structuralWeight)) + (result.bestPosition.score * structuralWeight)
+  );
+  const confidence = Math.round(clamp(
+    scopes[0].confidence * .62 + scopes[1].confidence * .25 + scopes[2].confidence * .13
+  ));
+  const experiment = evaluateAbExperimentRowsR470(exactRows, position);
+  const drift = driftForRows(exactRows, position);
+  const evidenceRetention = decideEvidenceRetentionR470({
+    ocrConfidence: result.parsed.confidence,
+    exactCardResolved: exactCardResolved(result),
+    sourceConflict: result.gameplayScoutingR454?.status === 'SOURCE_CONFLICT'
+  });
+  return {
+    version: INTELLIGENT_LEARNING_R470_VERSION,
+    mode: INTELLIGENT_LEARNING_R470_MODE,
+    externalApiRequired: false,
+    cardIdentity,
+    usageIdentity: cardUsageIdentityKeyR126(result.parsed, position, usageFunction),
+    evidenceIdentity: cardEvidenceFingerprintR126(result.parsed),
+    position,
+    usageFunction,
+    predictedPerformance: Math.round(predictedPerformance),
+    confidence,
+    confidenceLevel: confidence >= 78 ? 'HIGH' : confidence >= 45 ? 'MODERATE' : 'INITIAL',
+    scopes,
+    experiment,
+    drift,
+    evidenceRetention,
+    proposal: buildProposal(result, experiment, drift, confidence),
+    safeguards: [
+      'IA R470 roda localmente com estatística contextual; nenhuma API paga é necessária.',
+      'Clean Slate R119 continua sendo o único escritor de ficha, Top 5 e Ímpeto.',
+      'R470 aprende em três níveis: conta global, função/posição e carta exata.',
+      'Evidência antiga, conexão ruim, delay e versão antiga do jogo recebem peso menor.',
+      'A/B exige os dois braços e repetição em sessões distintas antes de sinalizar vantagem forte.',
+      'Drift suspende promoção para evitar aprender permanentemente com um patch ou contexto que mudou.',
+      'AutoPromotionEligible significa apenas que um ajuste de calibração de baixo risco pode ser revisado; nunca autoriza alteração automática de código-fonte.',
+      'Overall/GER não é alvo do aprendizado.'
+    ]
+  };
+}
+
+export function attachIntelligentLearningR470(result: AnalysisResult): AnalysisResult {
+  return { ...result, intelligentLearningR470: buildIntelligentLearningR470(result) } as AnalysisResult;
+}
+
+function buildFingerprintR470(result: AnalysisResult) {
+  const analysis = result.intelligentLearningR470 ?? buildIntelligentLearningR470(result);
+  const training = Object.entries(result.training)
+    .sort(([left], [right]) => left.localeCompare(right, 'en'))
+    .map(([key, value]) => `${key}:${Number(value || 0)}`)
+    .join(',');
+  const skills = [...result.recommendedSkills].map(normalize).sort().join(',');
+  const impetos = [...result.recommendedImpetos].map((item) => `${normalize(item.name)}:${item.tier ?? ''}`).sort().join(',');
+  return `build-r470-${stableHash([
+    INTELLIGENT_LEARNING_R470_VERSION,
+    analysis.usageIdentity,
+    training,
+    skills,
+    impetos,
+    result.trainingPointsUsed,
+    result.trainingPointsTotal
+  ].join('|'))}`;
+}
+
+async function getActiveReadingSessionR470() {
+  const active = await runtimeGet<{ sessionKey?: string }>('scan-history', INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY).catch(() => null);
+  if (!active?.sessionKey) return null;
+  return runtimeGet<ReadingSessionR470>('scan-history', `${INTELLIGENT_LEARNING_R470_READING_PREFIX}${active.sessionKey}`).catch(() => null);
+}
+
+async function trimPrefixedStoreR470(store: 'scan-history' | 'builds', prefix: string, keep: number) {
+  const rows = await runtimeList<{ updatedAt?: string; lastSeenAt?: string }>(store, Number.MAX_SAFE_INTEGER).catch(() => []);
+  const matching = rows
+    .filter((row) => String(row.key).startsWith(prefix))
+    .sort((left, right) => String(right.value?.updatedAt || right.value?.lastSeenAt || '').localeCompare(String(left.value?.updatedAt || left.value?.lastSeenAt || '')));
+  for (const row of matching.slice(Math.max(0, keep))) {
+    await runtimeDelete(store, row.key).catch(() => undefined);
+  }
+}
+
+async function sampledImageHashR470(file: File) {
+  const head = new Uint8Array(await file.slice(0, Math.min(file.size, 65_536)).arrayBuffer());
+  const tailStart = Math.max(0, file.size - 65_536);
+  const tail = new Uint8Array(await file.slice(tailStart).arrayBuffer());
+  const meta = new TextEncoder().encode(`${file.size}|${file.type}|${file.lastModified}`);
+  const data = new Uint8Array(meta.length + head.length + tail.length);
+  data.set(meta, 0);
+  data.set(head, meta.length);
+  data.set(tail, meta.length + head.length);
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  return `sample-${stableHash(Array.from(data.slice(0, 4096)).join(','))}`;
+}
+
+export async function beginReadingSessionR470(file: File): Promise<ReadingSessionR470> {
+  const now = new Date().toISOString();
+  const session: ReadingSessionR470 = {
+    version: INTELLIGENT_LEARNING_R470_VERSION,
+    sessionKey: createStableId('reading-r470'),
+    status: 'CAPTURED',
+    sourceFileName: String(file.name || 'imagem').slice(0, 160),
+    sourceMime: String(file.type || 'application/octet-stream').slice(0, 100),
+    sourceBytes: Math.max(0, Number(file.size || 0)),
+    imageHash: null,
+    imageRetention: 'KEEP_TEMPORARY',
+    ocrConfidence: null,
+    qualityScore: null,
+    rawTextExcerpt: '',
+    cardIdentity: null,
+    evidenceIdentity: null,
+    buildFingerprint: null,
+    errorCode: null,
+    cloudState: 'LOCAL_ONLY',
+    createdAt: now,
+    updatedAt: now
+  };
+  await runtimePut('scan-history', `${INTELLIGENT_LEARNING_R470_READING_PREFIX}${session.sessionKey}`, session);
+  await runtimePut('scan-history', INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY, { sessionKey: session.sessionKey });
+  void sampledImageHashR470(file)
+    .then((imageHash) => markActiveReadingSessionR470('CAPTURED', { imageHash }))
+    .catch(() => undefined);
+  void trimPrefixedStoreR470('scan-history', INTELLIGENT_LEARNING_R470_READING_PREFIX, INTELLIGENT_LEARNING_R470_MAX_READING_SESSIONS);
+  return session;
+}
+
+export async function markActiveReadingSessionR470(
+  status: ReadingStatusR470,
+  patch: Partial<Omit<ReadingSessionR470, 'version' | 'sessionKey' | 'createdAt' | 'status'>> = {}
+) {
+  const current = await getActiveReadingSessionR470();
+  if (!current) return null;
+  const next: ReadingSessionR470 = {
+    ...current,
+    ...patch,
+    status,
+    updatedAt: new Date().toISOString()
+  };
+  await runtimePut('scan-history', `${INTELLIGENT_LEARNING_R470_READING_PREFIX}${next.sessionKey}`, next);
+  return next;
+}
+
+function learningModelRowsR470(analysis: IntelligentLearningR470Analysis) {
+  const now = new Date().toISOString();
+  return analysis.scopes.map((scope) => ({
+    version: INTELLIGENT_LEARNING_R470_VERSION,
+    scope: scope.scope,
+    scopeKey: scope.scopeKey,
+    cardIdentity: analysis.cardIdentity,
+    position: analysis.position,
+    usageFunction: analysis.usageFunction,
+    samples: scope.rawMatches,
+    effectiveSamples: scope.effectiveMatches,
+    distinctSessions: scope.distinctSessions,
+    stableShare: scope.stableShare,
+    currentPatchShare: scope.currentPatchShare,
+    confidence: scope.confidence,
+    performanceScore: scope.performanceScore,
+    driftDetected: analysis.drift.detected,
+    updatedAt: now
+  }));
+}
+
+async function persistLearningModelsR470(analysis: IntelligentLearningR470Analysis) {
+  const rows = learningModelRowsR470(analysis);
+  for (const row of rows) {
+    await runtimePut('builds', `${INTELLIGENT_LEARNING_R470_MODEL_PREFIX}${row.scope}:${row.scopeKey}`, row).catch(() => undefined);
+  }
+  return rows;
+}
+
+function compactReadingForCloudR470(session: ReadingSessionR470) {
+  return {
+    session_key: session.sessionKey,
+    status: session.status,
+    source_file_name: session.sourceFileName,
+    source_mime: session.sourceMime,
+    source_bytes: session.sourceBytes,
+    image_hash: session.imageHash,
+    image_retention: session.imageRetention,
+    ocr_confidence: session.ocrConfidence,
+    quality_score: session.qualityScore,
+    raw_text_excerpt: session.rawTextExcerpt,
+    card_id: session.cardIdentity,
+    evidence_id: session.evidenceIdentity,
+    build_fingerprint: session.buildFingerprint,
+    error_code: session.errorCode,
+    created_at: session.createdAt,
+    updated_at: session.updatedAt
+  };
+}
+
+function compactBuildForCloudR470(build: BuildHistoryR470) {
+  return {
+    build_fingerprint: build.buildFingerprint,
+    card_id: build.cardIdentity,
+    usage_id: build.usageIdentity,
+    player_name: build.playerName,
+    usage_position: build.position,
+    usage_function: build.usageFunction,
+    engine_version: build.engineVersion,
+    training: build.training,
+    skills: build.skills,
+    impetos: build.impetos,
+    points_used: build.pointsUsed,
+    points_total: build.pointsTotal,
+    source_session_key: build.sourceSessionKey,
+    first_seen_at: build.firstSeenAt,
+    last_seen_at: build.lastSeenAt
+  };
+}
+
+function compactModelsForCloudR470(rows: ReturnType<typeof learningModelRowsR470>) {
+  return rows.map((row) => ({
+    scope: row.scope,
+    scope_key: row.scopeKey,
+    card_id: row.cardIdentity,
+    usage_position: row.position,
+    usage_function: row.usageFunction,
+    model_version: row.version,
+    samples: row.samples,
+    effective_samples: row.effectiveSamples,
+    distinct_sessions: row.distinctSessions,
+    stable_share: row.stableShare,
+    current_patch_share: row.currentPatchShare,
+    confidence: row.confidence,
+    performance_score: row.performanceScore,
+    drift_detected: row.driftDetected,
+    updated_at: row.updatedAt
+  }));
+}
+
+export async function persistConfirmedAnalysisR470(
+  result: AnalysisResult,
+  input: PersistConfirmedAnalysisInputR470 = {}
+) {
+  const analysis = result.intelligentLearningR470 ?? buildIntelligentLearningR470(result);
+  const now = new Date().toISOString();
+  let session = await getActiveReadingSessionR470();
+  if (!session) {
+    session = {
+      version: INTELLIGENT_LEARNING_R470_VERSION,
+      sessionKey: createStableId('reading-r470-manual'),
+      status: 'ENGINE_RUNNING',
+      sourceFileName: String(input.sourceFileName || 'entrada-manual').slice(0, 160),
+      sourceMime: 'text/plain',
+      sourceBytes: 0,
+      imageHash: input.imageHash ?? null,
+      imageRetention: analysis.evidenceRetention,
+      ocrConfidence: result.parsed.confidence,
+      qualityScore: input.qualityScore ?? null,
+      rawTextExcerpt: '',
+      cardIdentity: null,
+      evidenceIdentity: null,
+      buildFingerprint: null,
+      errorCode: null,
+      cloudState: 'LOCAL_ONLY',
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+  const buildFingerprint = buildFingerprintR470(result);
+  const existingBuild = await runtimeGet<BuildHistoryR470>('builds', `${INTELLIGENT_LEARNING_R470_BUILD_PREFIX}${buildFingerprint}`).catch(() => null);
+  const build: BuildHistoryR470 = {
+    version: INTELLIGENT_LEARNING_R470_VERSION,
+    buildFingerprint,
+    cardIdentity: analysis.cardIdentity,
+    usageIdentity: analysis.usageIdentity,
+    playerName: String(result.parsed.playerName || 'Jogador').slice(0, 120),
+    position: analysis.position,
+    usageFunction: analysis.usageFunction,
+    engineVersion: INTELLIGENT_LEARNING_R470_VERSION,
+    training: { ...result.training },
+    skills: [...result.recommendedSkills],
+    impetos: result.recommendedImpetos.map((item) => ({
+      name: item.name,
+      tier: item.tier,
+      score: item.score,
+      confidence: item.confidence
+    })),
+    pointsUsed: result.trainingPointsUsed,
+    pointsTotal: result.trainingPointsTotal,
+    sourceSessionKey: session.sessionKey,
+    firstSeenAt: existingBuild?.firstSeenAt ?? now,
+    lastSeenAt: now
+  };
+  const finalized: ReadingSessionR470 = {
+    ...session,
+    status: 'BUILD_COMPLETE',
+    imageHash: input.imageHash || session.imageHash,
+    imageRetention: analysis.evidenceRetention,
+    ocrConfidence: result.parsed.confidence,
+    qualityScore: input.qualityScore ?? session.qualityScore,
+    rawTextExcerpt: String(input.rawText || '').slice(0, 12_000),
+    cardIdentity: analysis.cardIdentity,
+    evidenceIdentity: analysis.evidenceIdentity,
+    buildFingerprint,
+    cloudState: 'PENDING',
+    updatedAt: now
+  };
+  await Promise.all([
+    runtimePut('scan-history', `${INTELLIGENT_LEARNING_R470_READING_PREFIX}${finalized.sessionKey}`, finalized),
+    runtimePut('builds', `${INTELLIGENT_LEARNING_R470_BUILD_PREFIX}${buildFingerprint}`, build)
+  ]);
+  const modelRows = await persistLearningModelsR470(analysis);
+  void trimPrefixedStoreR470('builds', INTELLIGENT_LEARNING_R470_BUILD_PREFIX, INTELLIGENT_LEARNING_R470_MAX_BUILD_HISTORY);
+  void (async () => {
+    try {
+      const { syncIntelligentLearningR470 } = await import('./accountAuth');
+      const synced = await syncIntelligentLearningR470({
+        readingSession: compactReadingForCloudR470(finalized),
+        buildHistory: compactBuildForCloudR470(build),
+        learningModels: compactModelsForCloudR470(modelRows)
+      });
+      if (synced) {
+        await markActiveReadingSessionR470('SYNCED', { cloudState: 'SYNCED' });
+        await runtimeDelete('scan-history', INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY).catch(() => undefined);
+      } else {
+        await markActiveReadingSessionR470('BUILD_COMPLETE', { cloudState: 'LOCAL_ONLY' });
+      }
+    } catch {
+      await markActiveReadingSessionR470('BUILD_COMPLETE', { cloudState: 'FAILED' }).catch(() => undefined);
+    }
+  })();
+  return { session: finalized, build, analysis };
+}

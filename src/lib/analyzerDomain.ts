@@ -2302,6 +2302,7 @@ export type AnalysisResult = {
   matchEvidenceCalibrationR135?: MatchEvidenceCalibrationR135;
   matchEvidenceCalibrationR136?: MatchEvidenceCalibrationR136;
   buildOutcomeCalibrationR460?: BuildOutcomeCalibrationR460;
+  intelligentLearningR470?: import('./intelligentLearningR470').IntelligentLearningR470Analysis;
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
   efootballV600?: EfootballV600PerformanceAnalysis;
   realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;

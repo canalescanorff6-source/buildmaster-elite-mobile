@@ -93,6 +93,7 @@ export function ProfessionalIntelligenceCenter({ result }: { result: AnalysisRes
 
   const report = useMemo(() => buildProfessionalIntelligenceReport(result, { matches, registry }), [result, matches, registry]);
   const visiblePositions = report.positionMatrix.entries.slice(0, 8);
+  const intelligentLearningR470 = result.intelligentLearningR470;
 
   return <div className="professional-intelligence-center result-section-grid">
     <article className="luxury-panel wide-card professional-command-card">
@@ -149,6 +150,16 @@ export function ProfessionalIntelligenceCenter({ result }: { result: AnalysisRes
       <div className="professional-learning-grid">{report.learning.tendencies.map((item) => <article key={item.label}><header><strong>{item.label}</strong><b>{item.score}</b></header><i><b style={{ width: `${item.score}%` }}/></i><small>{item.evidence}</small></article>)}</div>
       {report.learning.recommendations.map((item) => <p key={item} className="panel-note">• {item}</p>)}
     </article>
+
+    {intelligentLearningR470 && <article className="luxury-panel wide-card professional-learning-card">
+      <div className="section-title-row"><div><p className="kicker"><BrainCircuit size={14}/> IA local grátis • R470</p><h3>Aprendizado contextual sem API paga</h3></div><span>{intelligentLearningR470.confidence}/100 • {intelligentLearningR470.confidenceLevel}</span></div>
+      <p className="panel-note"><b>Previsão de desempenho: {intelligentLearningR470.predictedPerformance}/100.</b> O motor aprende com sua conta, com a função/posição e com esta carta exata, sem enviar a decisão da ficha para uma IA externa.</p>
+      <div className="professional-learning-grid">{intelligentLearningR470.scopes.map((scope) => <article key={scope.scopeKey}><header><strong>{scope.scope === 'CARD' ? 'Carta exata' : scope.scope === 'FUNCTION' ? 'Função/posição' : 'Conta/meta atual'}</strong><b>{scope.confidence}</b></header><i><b style={{ width: `${scope.confidence}%` }}/></i><small>{scope.rawMatches} partida(s) • {scope.distinctSessions} sessão(ões) • desempenho {scope.performanceScore ?? '—'}</small></article>)}</div>
+      <p className="panel-note"><b>A/B:</b> {intelligentLearningR470.experiment.note}</p>
+      <p className="panel-note"><b>Drift:</b> {intelligentLearningR470.drift.note}</p>
+      <p className="panel-note"><b>Retenção de evidência:</b> {intelligentLearningR470.evidenceRetention === 'HASH_ONLY' ? 'somente hash/metadados' : intelligentLearningR470.evidenceRetention === 'KEEP_TEMPORARY' ? 'imagem temporária' : 'imagem comprimida quando necessária'}.</p>
+      <div className="professional-correction"><ShieldCheck size={18}/><span>{intelligentLearningR470.proposal.reason} Clean Slate continua sendo o único escritor da ficha, Top 5 e Ímpeto.</span></div>
+    </article>}
 
     <article className="luxury-panel wide-card professional-knowledge-card">
       <div className="section-title-row"><div><p className="kicker"><Database size={14}/> Banco verificado por versão</p><h3>Identidade da carta sem confundir versões diferentes</h3></div><span>{report.cardKnowledge.status}</span></div>
