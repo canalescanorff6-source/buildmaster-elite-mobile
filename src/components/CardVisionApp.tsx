@@ -76,6 +76,7 @@ import { PremiumBrand } from '@/components/PremiumBrand';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 type ReaderCaptureMode = 'single' | 'complete';
 
+// Perfis manuais antigos são migrados para o reconhecimento automático da carta.
 export function CardVisionApp() {
   const account = useBuildMasterAccount();
   const [startupGate, setStartupGate] = useState({ ready: false, safeMode: false });
