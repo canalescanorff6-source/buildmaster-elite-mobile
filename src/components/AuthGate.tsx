@@ -79,6 +79,15 @@ function wait(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+async function flushPendingIntelligentLearningR471() {
+  try {
+    const runtime = await import('@/lib/intelligentLearningR470');
+    await runtime.flushIntelligentLearningOutboxR471();
+  } catch {
+    // A fila offline-first nunca pode bloquear login, restauração ou reconexão.
+  }
+}
+
 function formatAccessDate(value: string | null) {
   if (!value) return 'Sem prazo definido';
   const date = new Date(value);
@@ -549,6 +558,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
             setValidation({ profile: cloud.profile, offline: cloud.offline });
             setRestoreError('');
             safeStorageSet(SESSION_SNAPSHOT_KEY, JSON.stringify({ profile: cloud.profile, offline: cloud.offline, savedAt: new Date().toISOString() }));
+            if (!cloud.offline) void flushPendingIntelligentLearningR471();
           }
         }
       } catch (cause) {
@@ -605,6 +615,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
         lastSuccessfulValidationRef.current = Date.now();
         setValidation({ profile: cloud.profile, offline: cloud.offline });
         setRestoreError('');
+        if (!cloud.offline) void flushPendingIntelligentLearningR471();
       } catch (cause) {
         if (!mounted) return;
 
@@ -671,7 +682,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
   if (!ready) return firstSecureBoot.current ? <SessionLoadingScreen step={restoreStep} /> : <QuietResumeScreen />;
 
   if (!validation) {
-    return <LoginScreen initialError={restoreError} onSuccess={(next) => { terminalFailureCountRef.current = 0; lastSuccessfulValidationRef.current = Date.now(); setRestoreError(''); setValidation({ profile: next.profile, offline: next.offline }); safeStorageSet(SESSION_SNAPSHOT_KEY, JSON.stringify({ profile: next.profile, offline: next.offline, savedAt: new Date().toISOString() })); }} />;
+    return <LoginScreen initialError={restoreError} onSuccess={(next) => { terminalFailureCountRef.current = 0; lastSuccessfulValidationRef.current = Date.now(); setRestoreError(''); setValidation({ profile: next.profile, offline: next.offline }); safeStorageSet(SESSION_SNAPSHOT_KEY, JSON.stringify({ profile: next.profile, offline: next.offline, savedAt: new Date().toISOString() })); if (!next.offline) void flushPendingIntelligentLearningR471(); }} />;
   }
 
   if (validation.profile.status === 'blocked' || validation.profile.status === 'suspended') {
