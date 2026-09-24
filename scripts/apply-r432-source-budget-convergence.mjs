@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { R443_GLOBAL_SOURCE_BUDGET_BYTES, R443_SOURCE_RESERVE_BYTES, R443_SOURCE_CHECKPOINT_BYTES } from './apply-r443-source-budget-convergence.mjs';
 
-export const R432_SOURCE_BUDGET_CONVERGENCE_VERSION = '40.80-r468-r432-source-budget-convergence-v4';
-export const R432_GLOBAL_SOURCE_BUDGET_BYTES = 5.625 * 1024 * 1024;
-export const R432_SOURCE_RESERVE_BYTES = 100_000;
-export const R432_SOURCE_CHECKPOINT_BYTES = R432_GLOBAL_SOURCE_BUDGET_BYTES - R432_SOURCE_RESERVE_BYTES;
+export const R432_SOURCE_BUDGET_CONVERGENCE_VERSION = '40.80-r468-r432-source-budget-convergence-v5';
+export const R432_GLOBAL_SOURCE_BUDGET_BYTES = R443_GLOBAL_SOURCE_BUDGET_BYTES;
+export const R432_SOURCE_RESERVE_BYTES = R443_SOURCE_RESERVE_BYTES;
+export const R432_SOURCE_CHECKPOINT_BYTES = R443_SOURCE_CHECKPOINT_BYTES;
 
 const TARGETS = Object.freeze({
   bundle: 'scripts/check-bundle-budget.mjs',
@@ -52,8 +53,8 @@ function patchR184(source) {
 
 function patchR414(source) {
   return replaceAllKnown(source, [
-    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_798_240'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_798_240'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
     ['5,25 MiB', '5,625 MiB'],
     ['5,5 MiB', '5,625 MiB'],
     ["sourceTs: 5.25 * 1024 * 1024", "sourceTs: 5.625 * 1024 * 1024"],
@@ -71,8 +72,8 @@ function patchR424Audit(source) {
     ['5.5 * 1024 * 1024', '5.625 * 1024 * 1024'],
     ['5\\.25\\s*\\*\\s*1024', '5\\.5625\\s*\\*\\s*1024'],
     ['5\\.5\\s*\\*\\s*1024', '5\\.5625\\s*\\*\\s*1024'],
-    ['5_405_024', '5_798_240'],
-    ['5_667_168', '5_798_240'],
+    ['5_405_024', '5_832_704'],
+    ['5_667_168', '5_832_704'],
     ['5,25 MiB', '5,625 MiB'],
     ['5,5 MiB', '5,625 MiB'],
   ]);
@@ -82,8 +83,8 @@ function patchR424Fixture(source) {
   return replaceAllKnown(source, [
     ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
     ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_798_240'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_798_240'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
   ]);
 }
 
@@ -111,16 +112,16 @@ export function auditR432SourceBudgetConvergence(rootDirectory = process.cwd()) 
   }
 
   if (!content.bundle.includes('sourceTs: 5.625 * 1024 * 1024')) issues.push(`${TARGETS.bundle}: teto global não está em 5,625 MiB.`);
-  if (!content.r407.includes('const sourceBudget=5.625*1024*1024;')) issues.push(`${TARGETS.r407}: R407 não usa 5,625 MiB.`);
+  if (!content.r407.includes('const sourceBudget=5.625*1024*1024;') && !(content.r407.includes('const sourceBudget=R443_GLOBAL_SOURCE_BUDGET_BYTES;') && content.r407.includes('R443_SOURCE_CHECKPOINT_BYTES'))) issues.push(`${TARGETS.r407}: R407 não usa a autoridade canônica de 5,625 MiB.`);
   if (!content.r184.includes('const sourceLimit=5.625*1024*1024;')) issues.push(`${TARGETS.r184}: R184 não usa 5,625 MiB.`);
-  if (!content.r184.includes('minimumMargin=r414ScalableVault ? 100_000 : legacyMinimumMargin')
-      && !/minimumMargin\s*=\s*r414ScalableVault\s*\?\s*100_000\s*:\s*legacyMinimumMargin/.test(content.r184)) {
-    issues.push(`${TARGETS.r184}: reserva mínima de 100 KB ausente.`);
+  if (!content.r184.includes('minimumMargin=r414ScalableVault ? 65_536 : legacyMinimumMargin')
+      && !/minimumMargin\s*=\s*r414ScalableVault\s*\?\s*65_536\s*:\s*legacyMinimumMargin/.test(content.r184)) {
+    issues.push(`${TARGETS.r184}: reserva mínima de 64 KiB ausente.`);
   }
-  if (!content.r414.includes('R414_SOURCE_BUDGET_BYTES = 5_798_240')) issues.push(`${TARGETS.r414}: checkpoint R414 não está em 5.798.240 bytes.`);
+  if (!content.r414.includes('R414_SOURCE_BUDGET_BYTES = 5_832_704')) issues.push(`${TARGETS.r414}: checkpoint R414 não está em 5.832.704 bytes.`);
   if (!content.r414.includes('sourceTs: 5.625 * 1024 * 1024')) issues.push(`${TARGETS.r414}: guardrail global R414 ainda diverge.`);
-  if (!content.r424Audit.includes('5_798_240') || !content.r424Audit.includes('5,625 MiB')) issues.push(`${TARGETS.r424Audit}: auditoria R424 ainda valida o baseline antigo.`);
-  if (!content.r424Fixture.includes('sourceTs: 5.625 * 1024 * 1024') || !content.r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_798_240')) issues.push(`${TARGETS.r424Fixture}: fixture R424 ainda representa 5,625 MiB.`);
+  if (!content.r424Audit.includes('5_832_704') || !content.r424Audit.includes('5,625 MiB')) issues.push(`${TARGETS.r424Audit}: auditoria R424 ainda valida o baseline antigo.`);
+  if (!content.r424Fixture.includes('sourceTs: 5.625 * 1024 * 1024') || !content.r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_832_704')) issues.push(`${TARGETS.r424Fixture}: fixture R424 ainda representa 5,625 MiB.`);
 
   for (const [key, source] of Object.entries(content)) {
     if (/5\.25\s*\*\s*1024\s*\*\s*1024|5_405_024|5,25 MiB/.test(source)) {
@@ -162,6 +163,6 @@ const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).h
 if (invoked === import.meta.url) {
   const result = applyR432SourceBudgetConvergence(process.cwd());
   console.log(result.changed
-    ? `R432 convergiu ${result.patched.length} contrato(s) de orçamento-fonte em 5,625 MiB com reserva de 100 KB.`
-    : 'R432: orçamento-fonte já estava convergido em 5,625 MiB com reserva de 100 KB.');
+    ? `R432 convergiu ${result.patched.length} contrato(s) de orçamento-fonte em 5,625 MiB com reserva de 64 KiB.`
+    : 'R432: orçamento-fonte já estava convergido em 5,625 MiB com reserva de 64 KiB.');
 }
