@@ -240,15 +240,19 @@ export function useCardVisionVaultActionsR185(input: Input) {
   // R417-fix1: exclusões individuais e em lote usam a mesma autoridade persistente.
 
   async function batchHistoryR417(action: 'archive'|'unarchive'|'trash'|'restore'|'delete', ids: string[]) {
-    if (!ids.length) return;
-    if (action === 'delete' && typeof window !== 'undefined' && !window.confirm(`Excluir definitivamente ${ids.length} ficha(s)?`)) return;
+    const stableIds = [...new Set(ids)].filter(Boolean).sort();
+    if (!stableIds.length) return;
+    if (action === 'delete' && typeof window !== 'undefined' && !window.confirm(`Excluir definitivamente ${stableIds.length} ficha(s)?`)) return;
     const { mutations } = await loadVaultDeferredRuntimeR169();
     const folder = action === 'archive' ? 'arquivados' : action === 'trash' ? 'lixeira' : 'all';
-    const mutate = (current: SavedAnalysis[]) => action === 'delete' ? mutations.batchRemoveHistoryR417(current, ids) : mutations.batchMoveHistoryFolderR417(current, ids, folder, action, `${ids.length} ficha(s)`);
-    const committed = await persistAndAdoptVaultHistoryR140(mutate(renderHistory), 'A operação em lote não foi confirmada.', mutate, { key: `batch:${action}:${ids.length}`, label: `${action} ${ids.length} ficha(s)` });
+    const mutate = (current: SavedAnalysis[]) => action === 'delete' ? mutations.batchRemoveHistoryR417(current, stableIds) : mutations.batchMoveHistoryFolderR417(current, stableIds, folder, action, `${stableIds.length} ficha(s)`);
+    const actionKey = action === 'delete' && stableIds.length === 1
+      ? `delete:${stableIds[0]}`
+      : `batch:${action}:${stableIds.join('|')}`;
+    const committed = await persistAndAdoptVaultHistoryR140(mutate(renderHistory), 'A operação em lote não foi confirmada.', mutate, { key: actionKey, label: `${action} ${stableIds.length} ficha(s)` });
     if (!committed) return;
-    if (action === 'delete') { for (const id of ids) removeFromVaultTrash(id); setVaultTrash(readVaultTrash<SavedAnalysis>()); }
-    void pushCloudHistory(committed, true); setPendingDeleteHistoryId(null); setStatus(`${ids.length} ficha(s): ${action}.`);
+    if (action === 'delete') { for (const id of stableIds) removeFromVaultTrash(id); setVaultTrash(readVaultTrash<SavedAnalysis>()); }
+    void pushCloudHistory(committed, true); setPendingDeleteHistoryId(null); setStatus(`${stableIds.length} ficha(s): ${action}.`);
   }
 
   async function moveHistoryItemToTrash(id: string) { await batchHistoryR417('trash', [id]); }
