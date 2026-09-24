@@ -883,11 +883,8 @@ export async function syncIntelligentLearningR470(payload: IntelligentLearningCl
   return true;
 }
 
-type IntelligentLearningSyncGlobalR471 = typeof globalThis & {
-  __buildmasterR471SyncLearning?: (payload: IntelligentLearningCloudPayloadR470) => Promise<boolean>;
-};
-
-(globalThis as IntelligentLearningSyncGlobalR471).__buildmasterR471SyncLearning = syncIntelligentLearningR470;
+type R471SyncGlobal=typeof globalThis&{__bmR471Sync?:typeof syncIntelligentLearningR470};
+(globalThis as R471SyncGlobal).__bmR471Sync=syncIntelligentLearningR470;
 
 export async function syncAccountVault(payload: unknown): Promise<void> {
   const session = await getValidAccountSession();
