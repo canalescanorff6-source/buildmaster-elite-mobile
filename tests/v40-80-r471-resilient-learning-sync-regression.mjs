@@ -21,9 +21,9 @@ assert.ok(engine.includes('void flushIntelligentLearningOutboxR471().catch'));
 assert.ok(!engine.includes('bytea'));
 assert.ok(!engine.includes('FileReader'));
 assert.ok(!engine.includes("import('./accountAuth')"), 'R471 não pode puxar accountAuth para closures históricas');
-assert.ok(engine.includes('__buildmasterR471SyncLearning'));
+assert.ok(engine.includes('__bmR471Sync'));
 const auth = fs.readFileSync('src/lib/accountAuth.ts','utf8');
-assert.ok(auth.includes('__buildmasterR471SyncLearning = syncIntelligentLearningR470'));
+assert.ok(auth.includes('__bmR471Sync = syncIntelligentLearningR470'));
 
 assert.ok(reader.includes("markActiveReadingSessionR470('NORMALIZED'"));
 assert.ok(reader.includes("markActiveReadingSessionR470('ENGINE_RUNNING'"));
