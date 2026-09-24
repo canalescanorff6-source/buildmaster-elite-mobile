@@ -169,14 +169,19 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       const lockedText = await textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
       if (confirmed) {
-        await markActiveReadingSessionR470('ENGINE_RUNNING', {
+        await markActiveReadingSessionR470('NORMALIZED', {
           rawTextExcerpt: lockedText.slice(0, 12_000),
           qualityScore: null
         }).catch(() => null);
+        await markActiveReadingSessionR470('ENGINE_RUNNING').catch(() => null);
       }
       const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
+        const edition = nextResult.parsed.editionIdentity;
+        if (edition?.officialCardIdVerified || edition?.catalogCardId) {
+          await markActiveReadingSessionR470('CARD_MATCHED').catch(() => null);
+        }
         const confirmedReaderRuntime = singlePrintSession ? await loadReaderRuntimeR160() : null;
         if (singlePrintSession && confirmedReaderRuntime) {
           const { createCorrectionRecord } = confirmedReaderRuntime.singlePrint;
