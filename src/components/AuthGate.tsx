@@ -79,6 +79,7 @@ function wait(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+
 function formatAccessDate(value: string | null) {
   if (!value) return 'Sem prazo definido';
   const date = new Date(value);
@@ -639,13 +640,12 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     const timer = window.setInterval(() => void revalidate(), 5 * 60 * 1000);
     const onVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      // Não valide novamente em toda troca curta de tela. Isso evita concorrência
-      // de refresh token quando o seletor de arquivos, câmera ou outra aba abre.
+      // Evita refresh concorrente em trocas curtas de tela.
       if (Date.now() - lastSuccessfulValidationRef.current < 2 * 60 * 1000) return;
       if (resumeTimer !== null) window.clearTimeout(resumeTimer);
       resumeTimer = window.setTimeout(() => void revalidate(), 2200);
     };
-    const onOnline = () => void revalidate();
+    const onOnline=()=>{void revalidate();void import('@/lib/intelligentLearningR470').then(x=>x.flushIntelligentLearningOutboxR471()).catch(()=>{});};
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('online', onOnline);
     return () => {
