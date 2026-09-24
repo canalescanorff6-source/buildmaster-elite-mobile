@@ -14,6 +14,8 @@ export const INTELLIGENT_LEARNING_R470_MODEL_PREFIX = 'intelligent-learning:r470
 export const INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY = 'intelligent-learning:r470:active-reading';
 export const INTELLIGENT_LEARNING_R470_MAX_READING_SESSIONS = 180;
 export const INTELLIGENT_LEARNING_R470_MAX_BUILD_HISTORY = 320;
+export const INTELLIGENT_LEARNING_R471_SYNC_PREFIX = 'intelligent-learning:r471:outbox:';
+export const INTELLIGENT_LEARNING_R471_SYNC_BATCH = 20;
 
 export type ReadingStatusR470 =
   | 'CAPTURED'
@@ -125,6 +127,23 @@ export type PersistConfirmedAnalysisInputR470 = {
   imageHash?: string | null;
   sourceFileName?: string | null;
   qualityScore?: number | null;
+};
+
+export type IntelligentLearningCloudPayloadR471 = {
+  readingSession?: Record<string, unknown> | null;
+  buildHistory?: Record<string, unknown> | null;
+  learningModels?: Array<Record<string, unknown>>;
+};
+
+export type IntelligentLearningSyncEnvelopeR471 = {
+  version: '40.80-r471-resilient-learning-sync-v1';
+  queueKey: string;
+  sessionKey: string;
+  payload: IntelligentLearningCloudPayloadR471;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 function clamp(value: number, min = 0, max = 100) {
@@ -484,6 +503,86 @@ async function trimPrefixedStoreR470(store: 'scan-history' | 'builds', prefix: s
   }
 }
 
+function outboxKeyR471(sessionKey: string) {
+  return `${INTELLIGENT_LEARNING_R471_SYNC_PREFIX}${sessionKey}`;
+}
+
+async function queueIntelligentLearningSyncR471(
+  sessionKey: string,
+  payload: IntelligentLearningCloudPayloadR471
+) {
+  const now = new Date().toISOString();
+  const key = outboxKeyR471(sessionKey);
+  const current = await runtimeGet<IntelligentLearningSyncEnvelopeR471>('diagnostics', key).catch(() => null);
+  const envelope: IntelligentLearningSyncEnvelopeR471 = {
+    version: '40.80-r471-resilient-learning-sync-v1',
+    queueKey: key,
+    sessionKey,
+    payload,
+    attempts: current?.attempts ?? 0,
+    lastError: current?.lastError ?? null,
+    createdAt: current?.createdAt ?? now,
+    updatedAt: now
+  };
+  await runtimePut('diagnostics', key, envelope);
+  return envelope;
+}
+
+export async function flushIntelligentLearningOutboxR471(limit = INTELLIGENT_LEARNING_R471_SYNC_BATCH) {
+  const safeLimit = Math.max(1, Math.min(50, Math.floor(Number(limit) || INTELLIGENT_LEARNING_R471_SYNC_BATCH)));
+  const rows = await runtimeList<IntelligentLearningSyncEnvelopeR471>('diagnostics', Number.MAX_SAFE_INTEGER).catch(() => []);
+  const pending = rows
+    .filter((row) => String(row.key).startsWith(INTELLIGENT_LEARNING_R471_SYNC_PREFIX))
+    .map((row) => row.value)
+    .filter((value): value is IntelligentLearningSyncEnvelopeR471 => Boolean(value?.sessionKey && value?.payload))
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+    .slice(0, safeLimit);
+  if (!pending.length) return { attempted: 0, synced: 0, pending: 0, syncedSessionKeys: [] as string[] };
+
+  const { syncIntelligentLearningR470 } = await import('./accountAuth');
+  const syncedSessionKeys: string[] = [];
+  let attempted = 0;
+  for (const envelope of pending) {
+    attempted += 1;
+    try {
+      const synced = await syncIntelligentLearningR470(envelope.payload);
+      if (!synced) {
+        await runtimePut('diagnostics', envelope.queueKey, {
+          ...envelope,
+          attempts: envelope.attempts + 1,
+          lastError: 'OFFLINE_OR_NO_SESSION',
+          updatedAt: new Date().toISOString()
+        });
+        break;
+      }
+      await runtimeDelete('diagnostics', envelope.queueKey);
+      const readingKey = `${INTELLIGENT_LEARNING_R470_READING_PREFIX}${envelope.sessionKey}`;
+      const session = await runtimeGet<ReadingSessionR470>('scan-history', readingKey).catch(() => null);
+      if (session) {
+        await runtimePut('scan-history', readingKey, {
+          ...session,
+          status: 'SYNCED',
+          cloudState: 'SYNCED',
+          updatedAt: new Date().toISOString()
+        } satisfies ReadingSessionR470);
+      }
+      syncedSessionKeys.push(envelope.sessionKey);
+    } catch (error) {
+      await runtimePut('diagnostics', envelope.queueKey, {
+        ...envelope,
+        attempts: envelope.attempts + 1,
+        lastError: error instanceof Error ? error.message.slice(0, 180) : 'SYNC_ERROR',
+        updatedAt: new Date().toISOString()
+      }).catch(() => undefined);
+      break;
+    }
+  }
+  const remaining = await runtimeList<IntelligentLearningSyncEnvelopeR471>('diagnostics', Number.MAX_SAFE_INTEGER)
+    .then((items) => items.filter((row) => String(row.key).startsWith(INTELLIGENT_LEARNING_R471_SYNC_PREFIX)).length)
+    .catch(() => 0);
+  return { attempted, synced: syncedSessionKeys.length, pending: remaining, syncedSessionKeys };
+}
+
 async function sampledImageHashR470(file: File) {
   const head = new Uint8Array(await file.slice(0, Math.min(file.size, 65_536)).arrayBuffer());
   const tailStart = Math.max(0, file.size - 65_536);
@@ -524,6 +623,7 @@ export async function beginReadingSessionR470(file: File): Promise<ReadingSessio
   };
   await runtimePut('scan-history', `${INTELLIGENT_LEARNING_R470_READING_PREFIX}${session.sessionKey}`, session);
   await runtimePut('scan-history', INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY, { sessionKey: session.sessionKey });
+  void flushIntelligentLearningOutboxR471().catch(() => undefined);
   void sampledImageHashR470(file)
     .then((imageHash) => markActiveReadingSessionR470('CAPTURED', { imageHash }))
     .catch(() => undefined);
@@ -710,23 +810,20 @@ export async function persistConfirmedAnalysisR470(
     runtimePut('builds', `${INTELLIGENT_LEARNING_R470_BUILD_PREFIX}${buildFingerprint}`, build)
   ]);
   const modelRows = await persistLearningModelsR470(analysis);
+  const cloudPayload: IntelligentLearningCloudPayloadR471 = {
+    readingSession: compactReadingForCloudR470(finalized),
+    buildHistory: compactBuildForCloudR470(build),
+    learningModels: compactModelsForCloudR470(modelRows)
+  };
+  await queueIntelligentLearningSyncR471(finalized.sessionKey, cloudPayload);
   void trimPrefixedStoreR470('builds', INTELLIGENT_LEARNING_R470_BUILD_PREFIX, INTELLIGENT_LEARNING_R470_MAX_BUILD_HISTORY);
   void (async () => {
-    try {
-      const { syncIntelligentLearningR470 } = await import('./accountAuth');
-      const synced = await syncIntelligentLearningR470({
-        readingSession: compactReadingForCloudR470(finalized),
-        buildHistory: compactBuildForCloudR470(build),
-        learningModels: compactModelsForCloudR470(modelRows)
-      });
-      if (synced) {
-        await markActiveReadingSessionR470('SYNCED', { cloudState: 'SYNCED' });
+    const flush = await flushIntelligentLearningOutboxR471().catch(() => ({ attempted: 0, synced: 0, pending: 1, syncedSessionKeys: [] as string[] }));
+    if (flush.syncedSessionKeys.includes(finalized.sessionKey)) {
+      const active = await runtimeGet<{ sessionKey?: string }>('scan-history', INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY).catch(() => null);
+      if (active?.sessionKey === finalized.sessionKey) {
         await runtimeDelete('scan-history', INTELLIGENT_LEARNING_R470_ACTIVE_READING_KEY).catch(() => undefined);
-      } else {
-        await markActiveReadingSessionR470('BUILD_COMPLETE', { cloudState: 'LOCAL_ONLY' });
       }
-    } catch {
-      await markActiveReadingSessionR470('BUILD_COMPLETE', { cloudState: 'FAILED' }).catch(() => undefined);
     }
   })();
   return { session: finalized, build, analysis };
