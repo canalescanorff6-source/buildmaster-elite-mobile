@@ -201,6 +201,9 @@ assert.equal(asCF.cleanSlate2027R119?.positionAnchor, dribbler.cleanSlate2027R11
 assert.equal(asCF.cleanSlate2027R119?.cardKey, dribbler.cleanSlate2027R119?.cardKey, 'A posição escolhida não pode trocar a identidade permanente da carta.');
 assert.equal(asCF.cleanSlate2027R119?.usagePosition, dribbler.cleanSlate2027R119?.usagePosition, 'R417 deve convergir alvos manuais diferentes para a mesma posição autônoma da carta.');
 assert.equal(asCF.bestPosition.code, dribbler.bestPosition.code, 'A posição autônoma canônica deve ser estável para a mesma carta.');
+assert.deepEqual(asCF.training, dribbler.training, 'R417: a mesma carta deve preservar exatamente a progressão permanente ao receber alvos manuais diferentes.');
+assert.deepEqual(asCF.recommendedSkills, dribbler.recommendedSkills, 'R417: a mesma carta deve preservar o Top 5 permanente ao receber alvos manuais diferentes.');
+assert.deepEqual(asCF.recommendedImpetos, dribbler.recommendedImpetos, 'R417: a mesma carta deve preservar o Ímpeto permanente ao receber alvos manuais diferentes.');
 assert.equal(asCF.trainingPointsUsed, dribbler.trainingPointsUsed, 'Mudar a posição de uso deve preservar o orçamento total da carta.');
 assert.equal(asCF.cleanSlate2027R119?.guards.usagePositionAffectsBuildNotCardIdentity, true, 'A posição de uso precisa permanecer separada da identidade e da progressão permanente da carta.');
 assert.equal(asCF.cleanSlate2027R119?.authority, 'CLEAN_SLATE_SINGLE_WRITER', 'A adaptação deve preservar a autoridade única r119.');
