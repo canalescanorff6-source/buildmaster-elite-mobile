@@ -883,6 +883,12 @@ export async function syncIntelligentLearningR470(payload: IntelligentLearningCl
   return true;
 }
 
+type IntelligentLearningSyncGlobalR471 = typeof globalThis & {
+  __buildmasterR471SyncLearning?: (payload: IntelligentLearningCloudPayloadR470) => Promise<boolean>;
+};
+
+(globalThis as IntelligentLearningSyncGlobalR471).__buildmasterR471SyncLearning = syncIntelligentLearningR470;
+
 export async function syncAccountVault(payload: unknown): Promise<void> {
   const session = await getValidAccountSession();
   if (!session) throw new Error('Entre novamente para sincronizar.');
