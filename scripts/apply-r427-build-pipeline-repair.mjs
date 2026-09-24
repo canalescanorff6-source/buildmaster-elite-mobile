@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R427_BUILD_PIPELINE_REPAIR_VERSION = '40.80-r468-r427-forward-compatible-v4';
+export const R427_BUILD_PIPELINE_REPAIR_VERSION = '40.80-r468-r427-forward-compatible-v5';
 
 const TARGETS = Object.freeze({
   r407: 'scripts/apply-r407-scalable-vault-capacity.mjs',
@@ -23,7 +23,7 @@ function writeChanged(file, before, after, relative, patched) {
 }
 
 export function auditR427BuildPipelineContracts(sourceR407, sourceR420) {
-  const r407Ok = sourceR407.includes('const sourceBudget=5.625*1024*1024;');
+  const r407Ok = sourceR407.includes('const sourceBudget=5.625*1024*1024;') || (sourceR407.includes('const sourceBudget=R443_GLOBAL_SOURCE_BUDGET_BYTES;') && sourceR407.includes('R443_SOURCE_CHECKPOINT_BYTES'));
   const r420HasSavedAnalysisReplacement = sourceR420.includes(
     "type SavedAnalysis } from '@/modules/vault/cardHistoryStore';"
   );
@@ -44,6 +44,8 @@ export function patchR407SourceBudgetR427(source) {
   const previous = 'const sourceBudget=5.5*1024*1024;';
   const previousR432 = 'const sourceBudget=5.5625*1024*1024;';
   const current = 'const sourceBudget=5.625*1024*1024;';
+  const canonical = 'const sourceBudget=R443_GLOBAL_SOURCE_BUDGET_BYTES;';
+  if (source.includes(canonical) && source.includes('R443_SOURCE_CHECKPOINT_BYTES')) return source;
   if (source.includes(current)) return source;
   if (source.includes(previousR432)) return source.replace(previousR432, current);
   if (source.includes(previous)) return source.replace(previous, current);
@@ -124,7 +126,7 @@ export function applyR427BuildPipelineRepair(rootDirectory = process.cwd()) {
   const audit = auditR427BuildPipelineContracts(finalR407, finalR420);
   if (!audit.ok) {
     const missing = [];
-    if (!audit.r407Ok) missing.push('R407 5,625 MiB');
+    if (!audit.r407Ok) missing.push('R407 orçamento canônico 5,625 MiB');
     if (!audit.r420HasSavedAnalysisReplacement) missing.push('R420 SavedAnalysis');
     if (!audit.r420OrderIndependent) missing.push('R420 matcher order-independent');
     throw new Error(`R427: pipeline permaneceu divergente — ${missing.join(', ')}`);

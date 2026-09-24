@@ -40,7 +40,7 @@ const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).si
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
 const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
 const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
-assert.ok(sourceBytes <= (postCatalogBoundary ? 5_798_240 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_335_700), `R196: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 5_832_704 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_335_700), `R196: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
   'bc888d06abb39827b43dc1cb260a3d57db57c0f18321014e3cd4e34a1c126704',

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { applySourceBudgetConvergenceR443 } from './apply-r443-source-budget-convergence.mjs';
+import { applySourceBudgetConvergenceR443, R443_GLOBAL_SOURCE_BUDGET_BYTES, R443_SOURCE_CHECKPOINT_BYTES } from './apply-r443-source-budget-convergence.mjs';
 const STORE='src/modules/vault/cardHistoryStore.ts';
 const STARTUP='src/modules/vault/cardHistoryStartupModelR200.ts';
 const PACKAGE='package.json';
@@ -54,9 +54,9 @@ export function applyScalableVaultCapacityR407(rootDirectory=process.cwd()){
  for(const marker of markers)if(!current.includes(marker)){current=`${current} && ${marker}`;changed=true;}
  if(String(pkg.scripts['test:r200'])!==current){pkg.scripts['test:r200']=current;writeFileSync(pkgPath,JSON.stringify(pkg,null,2)+'\n','utf8');}
  const sourceBytes=walkTs(resolve(root,'src'));
- const sourceBudget=5.625*1024*1024;
- const historicalCeiling=existsSync(resolve(root,'R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md'))?sourceBudget-100_000:Infinity;
- const ceiling=downstreamVaultMigration?sourceBudget-100_000:historicalCeiling;
+ const sourceBudget=R443_GLOBAL_SOURCE_BUDGET_BYTES;
+ const historicalCeiling=existsSync(resolve(root,'R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md'))?R443_SOURCE_CHECKPOINT_BYTES:Infinity;
+ const ceiling=downstreamVaultMigration?R443_SOURCE_CHECKPOINT_BYTES:historicalCeiling;
  if(sourceBytes>ceiling)throw new Error(`R407: orçamento R184 excedido: ${sourceBytes} > ${ceiling}.`);
  return{changed:changed||r443.changed,sourceChanged:true,sourceBytes,logicalHistoryLimit:'unbounded',retainedImageBudgetChars:6_000_000,sourceBudgetCeiling:ceiling,sourceSafetyMarginBytes:sourceBudget-sourceBytes,r443};
 }

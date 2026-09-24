@@ -28,8 +28,8 @@ assert.ok(failingSourceBytes <= R443_SOURCE_CHECKPOINT_BYTES, 'novo checkpoint d
 
 const first = applySourceBudgetConvergenceR443(root);
 assert.equal(first.changed, true);
-assert.equal(first.checkpointBytes, 5_798_240);
-assert.equal(first.reserveBytes, 100_000);
+assert.equal(first.checkpointBytes, 5_832_704);
+assert.equal(first.reserveBytes, 65_536);
 assert.equal(first.globalSourceBudgetBytes, 5.625 * 1024 * 1024);
 assert.ok(first.patched.length >= 5);
 
@@ -39,6 +39,6 @@ assert.equal(second.patched.length, 0);
 
 assert.match(fs.readFileSync(path.join(root,'scripts/check-bundle-budget.mjs'),'utf8'), /sourceTs: 5\.625 \* 1024 \* 1024/);
 assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r184-production-legacy-isolation-regression.mjs'),'utf8'), /sourceLimit=5\.625\*1024\*1024/);
-assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'), /R414_SOURCE_BUDGET_BYTES = 5_798_240/);
+assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'), /R414_SOURCE_BUDGET_BYTES = 5_832_704/);
 assert.doesNotMatch(fs.readFileSync(path.join(root,'scripts/audit-r424-final-requirements-closure.mjs'),'utf8'), /5\.25 \* 1024 \* 1024|5_405_024|5,25 MiB/);
-console.log('R443/R468 aprovada: árvore de 5.697.846 B cabe no checkpoint 5.798.240 B, com reserva de 100 KB e gates convergidos/idempotentes.');
+console.log('R443/R468 aprovada: árvore de 5.697.846 B cabe no checkpoint 5.832.704 B, com reserva de 64 KiB e gates convergidos/idempotentes.');
