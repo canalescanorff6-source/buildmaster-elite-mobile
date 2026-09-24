@@ -47,6 +47,9 @@ jobs:
       - name: Regressões R455
         run: npm run test:r455
 
+      - name: Regressões R470 — IA local e aprendizado
+        run: npm run test:r470
+
       - name: Build de produção
         env:
           NEXT_TELEMETRY_DISABLED: '1'

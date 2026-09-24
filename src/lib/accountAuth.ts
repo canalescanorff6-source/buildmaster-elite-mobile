@@ -843,6 +843,46 @@ export async function verifyAdminMfa(factorId: string, code: string): Promise<Ad
   return getAdminMfaStatus();
 }
 
+export type IntelligentLearningCloudPayloadR470 = {
+  readingSession?: Record<string, unknown> | null;
+  buildHistory?: Record<string, unknown> | null;
+  learningModels?: Array<Record<string, unknown>>;
+};
+
+async function upsertIntelligentLearningRowsR470(
+  table: 'card_reading_sessions_r470' | 'card_build_history_r470' | 'learning_models_r470',
+  conflict: string,
+  rows: Array<Record<string, unknown>>,
+  session: AccountSession
+) {
+  if (!rows.length) return;
+  const body = rows.map((row) => ({ ...row, user_id: session.userId }));
+  const response = await supabaseFetch(`/rest/v1/${table}?on_conflict=${encodeURIComponent(conflict)}`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(body)
+  }, session.accessToken);
+  if (!response.ok) throw new Error(`R470: falha ao sincronizar ${table}.`);
+}
+
+export async function syncIntelligentLearningR470(payload: IntelligentLearningCloudPayloadR470): Promise<boolean> {
+  if (!isCloudAccountsConfigured()) return false;
+  let session: AccountSession | null = null;
+  try {
+    session = await getValidAccountSession();
+  } catch {
+    return false;
+  }
+  if (!session) return false;
+  const reading = payload.readingSession ? [payload.readingSession] : [];
+  const build = payload.buildHistory ? [payload.buildHistory] : [];
+  const models = Array.isArray(payload.learningModels) ? payload.learningModels : [];
+  await upsertIntelligentLearningRowsR470('card_reading_sessions_r470', 'user_id,session_key', reading, session);
+  await upsertIntelligentLearningRowsR470('card_build_history_r470', 'user_id,build_fingerprint', build, session);
+  await upsertIntelligentLearningRowsR470('learning_models_r470', 'user_id,scope,scope_key', models, session);
+  return true;
+}
+
 export async function syncAccountVault(payload: unknown): Promise<void> {
   const session = await getValidAccountSession();
   if (!session) throw new Error('Entre novamente para sincronizar.');

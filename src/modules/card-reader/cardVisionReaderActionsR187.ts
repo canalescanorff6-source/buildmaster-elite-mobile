@@ -29,6 +29,27 @@ import { loadOcrQueueRuntimeR160, loadReaderAnalysisRuntimeR163, loadReaderInter
 
 export const CARDVISION_READER_ACTIONS_R187_VERSION = '40.80-r187-cardvision-reader-actions-v1' as const;
 
+async function beginReadingSessionR470(file: File) {
+  const runtime = await import('@/lib/intelligentLearningR470');
+  return runtime.beginReadingSessionR470(file);
+}
+
+async function markActiveReadingSessionR470(
+  status: import('@/lib/intelligentLearningR470').ReadingStatusR470,
+  patch: Parameters<typeof import('@/lib/intelligentLearningR470').markActiveReadingSessionR470>[1] = {}
+) {
+  const runtime = await import('@/lib/intelligentLearningR470');
+  return runtime.markActiveReadingSessionR470(status, patch);
+}
+
+async function persistConfirmedAnalysisR470(
+  result: AnalysisResult,
+  payload: import('@/lib/intelligentLearningR470').PersistConfirmedAnalysisInputR470
+) {
+  const runtime = await import('@/lib/intelligentLearningR470');
+  return runtime.persistConfirmedAnalysisR470(result, payload);
+}
+
 type SetState<T> = Dispatch<SetStateAction<T>>;
 export type CardVisionReadingModeR187 = 'precision' | 'fast';
 type ReaderImageMemoryR187 = { replacePreview(blob: Blob): string; replaceEnhanced(blob: Blob): string; releaseEnhanced(): void; releaseAll(): void };
@@ -147,6 +168,12 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       if (objective !== 'COMPETITIVE') setObjective('COMPETITIVE');
       const lockedText = await textWithManualLocks(rawText, confirmed);
       if (lockedText !== rawText) setRawText(lockedText);
+      if (confirmed) {
+        await markActiveReadingSessionR470('ENGINE_RUNNING', {
+          rawTextExcerpt: lockedText.slice(0, 12_000),
+          qualityScore: null
+        }).catch(() => null);
+      }
       const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       if (confirmed) {
@@ -165,6 +192,11 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
             if (correction) void runtimePut('ocr-corrections', correction.id, correction).then(() => runtimeTrimStore('ocr-corrections', 120)).catch(() => undefined);
           }
         }
+        await persistConfirmedAnalysisR470(nextResult, {
+          rawText: lockedText,
+          sourceFileName: fileName,
+          qualityScore: null
+        }).catch(() => null);
         saveLearnedCard({
           playerName: nextResult.parsed.playerName,
           mainPosition: nextResult.parsed.mainPosition,
@@ -236,8 +268,18 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
   }
 
   async function analyzeSelectedImage(fileOverride?: File, resumed = false) {
-    const runtime = await loadReaderAnalysisRuntimeR163();
-    return runtime.createCardVisionReaderAnalysisOperationsR163(buildReaderAnalysisContextR187()).analyzeSelectedImage(fileOverride, resumed);
+    await markActiveReadingSessionR470('OCR_RUNNING').catch(() => null);
+    try {
+      const runtime = await loadReaderAnalysisRuntimeR163();
+      const output = await runtime.createCardVisionReaderAnalysisOperationsR163(buildReaderAnalysisContextR187()).analyzeSelectedImage(fileOverride, resumed);
+      await markActiveReadingSessionR470('OCR_COMPLETE', {
+        rawTextExcerpt: String(rawText || '').slice(0, 12_000)
+      }).catch(() => null);
+      return output;
+    } catch (cause) {
+      await markActiveReadingSessionR470('ERROR', { errorCode: 'OCR_FAILED' }).catch(() => null);
+      throw cause;
+    }
   }
 
   async function analyzeTotalCardCaptures(captures: TotalCardCaptureInput[]) {
@@ -273,7 +315,11 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
     discardInterruptedReading: () => interactionOperation('discardInterruptedReading'),
     adjustDetectedCard: (action: 'left' | 'right' | 'up' | 'down' | 'zoom-in' | 'zoom-out') => interactionOperation('adjustDetectedCard', action),
     redetectPlayerCard: () => interactionOperation('redetectPlayerCard'),
-    handleFile: (file: File) => interactionOperation('handleFile', file),
+    handleFile: async (file: File) => {
+      await beginReadingSessionR470(file).catch(() => null);
+      await markActiveReadingSessionR470('OCR_RUNNING').catch(() => null);
+      return interactionOperation('handleFile', file);
+    },
     textWithManualLocks,
     hydrateReviewFields,
     refreshOcrQueue,
