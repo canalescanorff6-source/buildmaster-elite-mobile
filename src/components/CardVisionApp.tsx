@@ -73,17 +73,9 @@ import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151, ty
 import { useCardVisionVaultCoordinatorR153 } from '@/modules/vault/useCardVisionVaultCoordinatorR153';
 import { CardVisionAppChromeR185 } from '@/components/CardVisionAppChromeR185';
 import { PremiumBrand } from '@/components/PremiumBrand';
+import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 type ReaderCaptureMode = 'single' | 'complete';
-const SETTINGS_COMMANDS_R195 = [
-  ['evolution-360', 'Abrir Evolução 360', 'Pendências, metas, foco, rotinas guiadas, experiência adaptável, diagnóstico e manutenção.', ['evolução', 'metas', 'saúde', 'notificações', 'rotinas', 'diagnóstico', 'contraste', 'letras'], 'evolucao'],
-  ['premium-experience', 'Experiência Premium 2.0', 'Atalhos, retomada, rascunhos, pesquisa e ajuda.', ['favoritos', 'continuar', 'rascunho', 'ajuda'], 'experiencia'],
-  ['appearance', 'Aparência e acessibilidade', 'Tema, textos, contraste, animações e densidade.', ['visual', 'design'], 'aparencia'],
-  ['performance', 'Desempenho do aplicativo', 'Ative o modo econômico e revise estabilidade.', ['rápido', 'leve', 'delay'], 'desempenho'],
-  ['security', 'Segurança e integridade', 'Saúde local, diagnóstico e compatibilidade.', ['proteção', 'erros'], 'seguranca'],
-  ['support', 'Observabilidade e suporte', 'Saúde da versão, falhas, lentidão e pacote técnico.', ['diagnóstico', 'erro', 'suporte', 'feature flags'], 'suporte'],
-  ['backup', 'Backup e restauração', 'Proteja fichas e configurações antes de atualizar.', ['cofre', 'restaurar'], 'backup'],
-  ['updates', 'Atualizações do APK', 'Verifique versão, manifesto e instalação segura.', ['apk', 'versão'], 'atualizacoes'],
-] as const;
+
 export function CardVisionApp() {
   const account = useBuildMasterAccount();
   const [startupGate, setStartupGate] = useState({ ready: false, safeMode: false });
@@ -130,7 +122,6 @@ export function CardVisionApp() {
   const [managerId, setManagerId] = useState<string>('AUTO');
   const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
   const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');
-  // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
   const controlProfile: ControlProfile = 'AUTO';
   const [status, setStatus] = useState('Preparando uma abertura segura do BuildMaster...');
   const lastPremiumStatusRef = useRef('');
@@ -268,7 +259,7 @@ export function CardVisionApp() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
   const selectedManager = useMemo(() => getManager(managerId), [managerId]);
-  const formationSelectionOptions = useMemo(() => [{ value: 'AUTO' as TacticalFormation, label: 'Automático inteligente' }, ...FORMATION_BLUEPRINTS.map((item) => ({ value: item.id as TacticalFormation, label: `${item.name} — ${item.family === 'extra' ? 'meta/personalizada' : 'base do app'}` }))], []);
+  const formationSelectionOptions = FORMATION_SELECTION_OPTIONS_R191;
   const usageFunctionOptionsR457 = useMemo(() => {
     if (targetPosition === 'AUTO') return [{ value:'AUTO', label:'Automático inteligente' }];
     const labels=[...effectivePhaseEntriesR124('OFFENSIVE'),...effectivePhaseEntriesR124('DEFENSIVE')]
