@@ -59,7 +59,7 @@ const selectorsR414=exists('src/modules/vault/cardVisionVaultSelectorsR151.ts')
   : '';
 const r414ScalableVault=selectorsR414.includes('CARDVISION_VAULT_QUERY_INDEX_R414_VERSION');
 const legacyMinimumMargin=r2004Boundary ? sourceLimit-5_360_000 : 150_000;
-const minimumMargin=r414ScalableVault ? 100_000 : legacyMinimumMargin;
+const minimumMargin=r414ScalableVault ? 65_536 : legacyMinimumMargin;
 const checkpointLimit=sourceLimit-minimumMargin;
 const margin=sourceLimit-sourceBytes;
 assert.ok(

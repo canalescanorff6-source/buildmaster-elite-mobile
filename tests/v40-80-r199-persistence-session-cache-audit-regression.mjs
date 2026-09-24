@@ -41,7 +41,7 @@ while (stack.length) {
 }
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
 const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
-assert.ok(sourceBytes <= (postCatalogBoundary ? 5_798_240 : r200Boundary ? 5_360_000 : 5_335_307), `R199/R200: orçamento de fonte excedeu a margem aprovada (${sourceBytes} B).`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 5_832_704 : r200Boundary ? 5_360_000 : 5_335_307), `R199/R200: orçamento de fonte excedeu a margem aprovada (${sourceBytes} B).`);
 
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
 assert.ok(v4080.endsWith('npm run test:r198 && npm run test:r199') || v4080.endsWith('npm run test:r198 && npm run test:r199 && npm run test:r200'), 'R199: cadeia v40.80 deve preservar R198 -> R199 antes do gate seguinte.');

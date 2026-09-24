@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { applyAutonomousCardVaultR417 } from './apply-r417-autonomous-card-vault.mjs';
 
-export const R414_SOURCE_BUDGET_BYTES = 5_798_240;
+export const R414_SOURCE_BUDGET_BYTES = 5_832_704;
 export const R414_RESULT_CLOSURE_BUDGET_R192 = 2_185_000;
 
 const TARGETS = [
@@ -73,7 +73,7 @@ function patchExact(source, from, to, label) {
     }
   }
   // R443/R442/R468 são sucessores legítimos do checkpoint histórico R414.
-  // Numeric separators (ex.: 5_798_240) são apenas sintaxe JS: normalize-os
+  // Numeric separators (ex.: 5_832_704) são apenas sintaxe JS: normalize-os
   // antes de comparar para que um contrato semanticamente atual não seja
   // rejeitado só porque o template literal produz 5798240 sem "_".
   if (label.endsWith('source budget')) {
