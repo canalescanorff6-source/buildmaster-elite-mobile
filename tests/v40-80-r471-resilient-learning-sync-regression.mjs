@@ -18,6 +18,7 @@ for (const marker of [
 
 assert.ok(engine.includes('await queueIntelligentLearningSyncR471(finalized.sessionKey, cloudPayload)'));
 assert.ok(engine.includes('void flushIntelligentLearningOutboxR471().catch'));
+assert.ok(engine.includes('left.attempts-right.attempts||left.createdAt.localeCompare(right.createdAt)'), 'R471 deve priorizar pendências com menos falhas para evitar starvation.');
 assert.ok(!engine.includes('bytea'));
 assert.ok(!engine.includes('FileReader'));
 assert.ok(!engine.includes("import('./accountAuth')"), 'R471 não pode puxar accountAuth para closures históricas');
