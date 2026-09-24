@@ -24,6 +24,10 @@ assert.ok(!engine.includes("import('./accountAuth')"), 'R471 não pode puxar acc
 assert.ok(engine.includes('__bmR471Sync'));
 const auth = fs.readFileSync('src/lib/accountAuth.ts','utf8');
 assert.match(auth, /__bmR471Sync\s*=\s*syncIntelligentLearningR470/);
+const authGate = fs.readFileSync('src/components/AuthGate.tsx','utf8');
+assert.ok(authGate.includes("import('@/lib/intelligentLearningR470')"), 'R471 precisa carregar o flush lazy sem bloquear o AuthGate.');
+assert.ok(authGate.includes('flushPendingIntelligentLearningR471'), 'R471 precisa de helper de flush na reconexão.');
+assert.ok((authGate.match(/flushPendingIntelligentLearningR471\(\)/g) ?? []).length >= 3, 'R471 deve drenar pendências no restore, revalidate e login online.');
 
 assert.ok(reader.includes("markActiveReadingSessionR470('NORMALIZED'"));
 assert.ok(reader.includes("markActiveReadingSessionR470('ENGINE_RUNNING'"));
