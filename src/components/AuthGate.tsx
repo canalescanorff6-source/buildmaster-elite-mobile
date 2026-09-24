@@ -640,8 +640,7 @@ export function AuthGate({ children }: { children?: ReactNode }) {
     const timer = window.setInterval(() => void revalidate(), 5 * 60 * 1000);
     const onVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      // Não valide novamente em toda troca curta de tela. Isso evita concorrência
-      // de refresh token quando o seletor de arquivos, câmera ou outra aba abre.
+      // Evita refresh concorrente em trocas curtas de tela.
       if (Date.now() - lastSuccessfulValidationRef.current < 2 * 60 * 1000) return;
       if (resumeTimer !== null) window.clearTimeout(resumeTimer);
       resumeTimer = window.setTimeout(() => void revalidate(), 2200);
