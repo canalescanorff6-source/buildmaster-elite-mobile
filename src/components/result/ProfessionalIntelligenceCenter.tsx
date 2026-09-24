@@ -94,6 +94,7 @@ export function ProfessionalIntelligenceCenter({ result }: { result: AnalysisRes
   const report = useMemo(() => buildProfessionalIntelligenceReport(result, { matches, registry }), [result, matches, registry]);
   const visiblePositions = report.positionMatrix.entries.slice(0, 8);
   const intelligentLearningR470 = result.intelligentLearningR470;
+  const motorLabLifecycleR472 = result.motorLabLifecycleR472;
 
   return <div className="professional-intelligence-center result-section-grid">
     <article className="luxury-panel wide-card professional-command-card">
@@ -159,6 +160,13 @@ export function ProfessionalIntelligenceCenter({ result }: { result: AnalysisRes
       <p className="panel-note"><b>Drift:</b> {intelligentLearningR470.drift.note}</p>
       <p className="panel-note"><b>Retenção de evidência:</b> {intelligentLearningR470.evidenceRetention === 'HASH_ONLY' ? 'somente hash/metadados' : intelligentLearningR470.evidenceRetention === 'KEEP_TEMPORARY' ? 'imagem temporária' : 'imagem comprimida quando necessária'}.</p>
       <div className="professional-correction"><ShieldCheck size={18}/><span>{intelligentLearningR470.proposal.reason} Clean Slate continua sendo o único escritor da ficha, Top 5 e Ímpeto.</span></div>
+    </article>}
+
+    {motorLabLifecycleR472 && <article className="luxury-panel wide-card professional-learning-card">
+      <div className="section-title-row"><div><p className="kicker"><Layers3 size={14}/> Motor Lab • R472</p><h3>Production → Experimental → Candidate</h3></div><span>{motorLabLifecycleR472.candidate.status}</span></div>
+      <p className="panel-note"><b>PRODUCTION:</b> Clean Slate R119/R126/R128 bloqueado como autoridade atual. <b>EXPERIMENTAL:</b> {motorLabLifecycleR472.experimental.active ? 'ativo, somente leitura' : 'aguardando evidência'}.</p>
+      <p className="panel-note"><b>CANDIDATE:</b> {motorLabLifecycleR472.candidate.reason}</p>
+      <div className="professional-correction"><ShieldCheck size={18}/><span>Nenhum código ou ficha é promovido automaticamente. Candidate exige sua revisão, Zero-Red, regressões completas e publicação APK verificada.</span></div>
     </article>}
 
     <article className="luxury-panel wide-card professional-knowledge-card">

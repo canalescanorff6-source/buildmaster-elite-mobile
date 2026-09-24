@@ -2303,6 +2303,7 @@ export type AnalysisResult = {
   matchEvidenceCalibrationR136?: MatchEvidenceCalibrationR136;
   buildOutcomeCalibrationR460?: BuildOutcomeCalibrationR460;
   intelligentLearningR470?: import('./intelligentLearningR470').IntelligentLearningR470Analysis;
+  motorLabLifecycleR472?: import('./motorLabLifecycleR472').MotorLabLifecycleR472;
   maximumPerformanceV4080?: MaximumPerformanceV4080Analysis;
   efootballV600?: EfootballV600PerformanceAnalysis;
   realPerformance2027V4080R7?: RealPerformance2027V4080R7Analysis;
