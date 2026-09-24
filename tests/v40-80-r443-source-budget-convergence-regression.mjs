@@ -41,4 +41,4 @@ assert.match(fs.readFileSync(path.join(root,'scripts/check-bundle-budget.mjs'),'
 assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r184-production-legacy-isolation-regression.mjs'),'utf8'), /sourceLimit=5\.625\*1024\*1024/);
 assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'), /R414_SOURCE_BUDGET_BYTES = 5_832_704/);
 assert.doesNotMatch(fs.readFileSync(path.join(root,'scripts/audit-r424-final-requirements-closure.mjs'),'utf8'), /5\.25 \* 1024 \* 1024|5_405_024|5,25 MiB/);
-console.log('R443/R468 aprovada: árvore de 5.697.846 B cabe no checkpoint 5.798.240 B, com reserva de 64 KiB e gates convergidos/idempotentes.');
+console.log('R443/R468 aprovada: árvore de 5.697.846 B cabe no checkpoint 5.832.704 B, com reserva de 64 KiB e gates convergidos/idempotentes.');

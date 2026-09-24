@@ -62,6 +62,7 @@ function patchR414(source) {
 function patchR424Audit(source) {
   return replaceKnown(source, [
     ['100_000', '65_536'],
+    ['5_798_240', '5_832_704'],
     ['5.5625 * 1024 * 1024', '5.625 * 1024 * 1024'],
     ['5\\.5625\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
     ['5_732_704', '5_832_704'],
@@ -81,6 +82,7 @@ function patchR424Audit(source) {
 function patchR424Fixture(source) {
   return replaceKnown(source, [
     ['100_000', '65_536'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
     ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
     ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
     ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
