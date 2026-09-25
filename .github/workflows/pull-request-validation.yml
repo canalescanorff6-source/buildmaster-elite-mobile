@@ -56,6 +56,9 @@ jobs:
       - name: Regressões R472 — Motor Lab lifecycle
         run: npm run test:r472
 
+      - name: Regressões R473 — Clean Experience
+        run: npm run test:r473
+
       - name: Build de produção
         env:
           NEXT_TELEMETRY_DISABLED: '1'

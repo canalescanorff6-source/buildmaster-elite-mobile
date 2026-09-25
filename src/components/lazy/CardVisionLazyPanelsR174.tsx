@@ -13,8 +13,6 @@ export const CleanVaultV3800 = dynamic(() => import('@/components/CleanVaultV380
 export const CardVisionSettingsWorkspaceR190 = dynamic(() => import('@/components/settings/CardVisionSettingsWorkspaceR190').then((module) => module.CardVisionSettingsWorkspaceR190), { ssr: false, loading: fallback });
 export const CardVisionVaultWorkspaceR191 = dynamic(() => import('@/components/vault/CardVisionVaultWorkspaceR191').then((module) => module.CardVisionVaultWorkspaceR191), { ssr: false, loading: fallback });
 export const CloudSyncCenter = dynamic(() => import('@/modules/backup/CloudSyncCenter').then((module) => module.CloudSyncCenter), { ssr: false, loading: fallback });
-export const CommunitySharingCenter = dynamic(() => import('@/modules/community/CommunitySharingCenter').then((module) => module.CommunitySharingCenter), { ssr: false, loading: fallback });
-export const CommercializationCenter = dynamic(() => import('@/modules/commercial/CommercializationCenter').then((module) => module.CommercializationCenter), { ssr: false, loading: fallback });
 
 export const DeferredUpdateAutoCheckerR155 = dynamic(
   () => import('@/components/UpdateCenterPanel').then((module) => module.UpdateAutoChecker),
@@ -22,7 +20,6 @@ export const DeferredUpdateAutoCheckerR155 = dynamic(
 );
 export const DelayResponsePanel = dynamic(() => import('@/components/DevelopmentPanels').then((module) => module.DelayResponsePanel), { ssr: false, loading: fallback });
 export const EfhubVisualCalibrator = dynamic(() => import('@/components/EfhubVisualCalibrator').then((module) => module.EfhubVisualCalibrator), { ssr: false, loading: fallback });
-export const EvolutionCommandCenter = dynamic(() => import('@/components/EvolutionCommandCenter').then((module) => module.EvolutionCommandCenter), { ssr: false, loading: fallback });
 export const FirstUseOnboarding = dynamic(() => import('@/components/FirstUseOnboarding').then((module) => module.FirstUseOnboarding), { ssr: false, loading: fallback });
 export const IdentityAppearancePanel = dynamic(() => import('@/components/IdentityAppearancePanel').then((module) => module.IdentityAppearancePanel), { ssr: false, loading: fallback });
 export const IntegratedHomePanel = dynamic(() => import('@/modules/core/IntegratedHomePanel').then((module) => module.IntegratedHomePanel), { ssr: false, loading: fallback });
@@ -35,7 +32,6 @@ export const OfficialRulesCenter = dynamic(() => import('@/modules/rules/Officia
 export const PhasePlaystyleSelectorR124 = dynamic(() => import('@/components/PhasePlaystyleSelectorR124').then((module) => module.PhasePlaystyleSelectorR124), { ssr: false, loading: fallback });
 export const PlayerLaboratory = dynamic(() => import('@/modules/players/PlayerLaboratory').then((module) => module.PlayerLaboratory), { ssr: false, loading: fallback });
 export const PlayStorePublicationCenter = dynamic(() => import('@/modules/publication/PlayStorePublicationCenter').then((module) => module.PlayStorePublicationCenter), { ssr: false, loading: fallback });
-export const PremiumExperience2Center = dynamic(() => import('@/modules/experience/PremiumExperience2Center').then((module) => module.PremiumExperience2Center), { ssr: false, loading: fallback });
 export const PremiumMenuScreen = dynamic(() => import('@/components/PremiumMenuScreen').then((module) => module.PremiumMenuScreen), { ssr: false, loading: fallback });
 export const PremiumQualityCenter = dynamic(() => import('@/components/PremiumQualityCenter').then((module) => module.PremiumQualityCenter), { ssr: false, loading: fallback });
 export const PremiumSearchScreen = dynamic(() => import('@/components/PremiumSearchScreen').then((module) => module.PremiumSearchScreen), { ssr: false, loading: fallback });

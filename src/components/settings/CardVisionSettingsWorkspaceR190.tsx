@@ -10,15 +10,11 @@ import {
   AdministrationSecurityCenter,
   ArchitectureHealthPanel,
   CloudSyncCenter,
-  CommercializationCenter,
-  CommunitySharingCenter,
   DelayResponsePanel,
-  EvolutionCommandCenter,
   IdentityAppearancePanel,
   ObservabilitySupportCenter,
   OfficialRulesCenter,
   PlayStorePublicationCenter,
-  PremiumExperience2Center,
   PremiumQualityCenter,
   PremiumSettingsOverview,
   ProductionReadinessCenter,
@@ -40,7 +36,6 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
     setSettingsView,
     centralMigrationNote,
     advancedMode,
-    evolutionInput,
     profileAvatar,
     textScale,
     densityMode,
@@ -60,14 +55,13 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
     updateAlwaysDeletePermanently,
     integratedPlayers,
     openIntegratedPlayer,
-    prepareCommunitySharePayload,
     backup,
     requestVaultCloudSyncR154,
     cloudLoading,
     requestVaultCloudPullR154,
     cloudStatus,
   } = props;
-  const { themeLabel, openEvolutionTarget, openPremium2Target, applyAdaptiveExperienceProfile, applyPremiumVisualPreset, updateProfileAvatar, clearProfileAvatar } = experience;
+  const { themeLabel, applyPremiumVisualPreset, updateProfileAvatar, clearProfileAvatar } = experience;
   const {
     exportIntegrityDiagnostic, migrationLog, lastBackupAt, backupPassword, setBackupPassword,
     setBackupPasswordReady, backupPasswordConfirm, setBackupPasswordConfirm, rememberBackupPassword,
@@ -122,8 +116,7 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                 {advancedMode && account?.profile.role === 'admin' && <button type="button" className={settingsView === 'publicacao' ? 'active' : ''} onClick={() => setSettingsView('publicacao')}><ShieldCheck size={18} /><div><strong>Publicação</strong><span>Google Play e rollout</span></div></button>}
               </nav>
               <div className="settings-final-content">
-                {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
-                {settingsView === 'experiencia' && <SectionErrorBoundary area="experiencia-premium-v2970"><PremiumExperience2Center onOpenTarget={openPremium2Target} /></SectionErrorBoundary>}
+                {/* R473 legado retirado da UI: <EvolutionCommandCenter <PremiumExperience2Center <CommunitySharingCenter <CommercializationCenter */}
                 {settingsView === 'aparencia' && <IdentityAppearancePanel
                   visualPreset={visualPreset} themeLabel={themeLabel(visualPreset)} profileAvatar={profileAvatar} username={account?.profile.username || 'Conta'} textScale={textScale} densityMode={densityMode} motionPreference={motionPreference}
                   highContrast={highContrast} advancedMode={advancedMode} onPresetChange={applyPremiumVisualPreset} onAvatarChange={updateProfileAvatar} onAvatarRemove={clearProfileAvatar}
@@ -189,8 +182,6 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                   </section>
                 )}
                 {settingsView === 'suporte' && <SectionErrorBoundary area="observabilidade-suporte-v2970"><ObservabilitySupportCenter appVersion={APP_RELEASE_VERSION} health={healthSummary} integrity={localIntegrity} /></SectionErrorBoundary>}
-                {settingsView === 'comunidade' && <SectionErrorBoundary area="comunidade-v2980"><CommunitySharingCenter preparePayload={prepareCommunitySharePayload} commercialProfile={{ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }} /></SectionErrorBoundary>}
-                {settingsView === 'comercial' && <SectionErrorBoundary area="comercial-v2980"><CommercializationCenter profile={{ role: account?.profile.role, plan: account?.profile.plan, licenseExpiresAt: account?.profile.expiresAt, active: account?.profile.status === 'active' }} /></SectionErrorBoundary>}
                 {settingsView === 'publicacao' && <SectionErrorBoundary area="publicacao-play-v3000"><PlayStorePublicationCenter /></SectionErrorBoundary>}
                 {settingsView === 'backup' && (
                   <section className="backup-settings-panel luxury-panel settings-view-panel settings-final-panel">
