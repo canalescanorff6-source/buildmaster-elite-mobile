@@ -92,9 +92,9 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
               <button type="button" className="bm32-settings-back" onClick={() => setSettingsView('visao-geral')}>← Voltar</button>
               <section className="settings-command-hero luxury-panel">
                 <div className="settings-command-copy">
-                  <p className="kicker"><SlidersHorizontal size={15} /> Configuração premium</p>
+                  <p className="kicker"><SlidersHorizontal size={15} /> Configurações</p>
                   <h2>Configurações</h2>
-                  <p>Conta, aparência e segurança.</p>
+                  <p>Conta, aparência, desempenho, backup e atualizações.</p>
                 </div>
                 <div className="settings-command-status">
                   <article><span>Conta</span><strong>{account?.profile.username || 'Usuário'}</strong><small>{account?.cloudEnabled ? 'Licença online' : 'Modo local'}</small></article>
@@ -112,18 +112,14 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                 </button>
               )}
               <nav className="settings-navigation-rail luxury-panel" aria-label="Áreas dos Ajustes">
-                <button type="button" className={settingsView === 'evolucao' ? 'active settings-evolution-navigation' : 'settings-evolution-navigation'} onClick={() => setSettingsView('evolucao')}><Sparkles size={18} /><div><strong>Evolução 360</strong><span>Metas e manutenção</span></div></button>
-                <button type="button" className={settingsView === 'experiencia' ? 'active settings-v2970-navigation' : 'settings-v2970-navigation'} onClick={() => setSettingsView('experiencia')}><Sparkles size={18} /><div><strong>Experiência 2.0</strong><span>Atalhos e retomada</span></div></button>
                 <button type="button" className={settingsView === 'aparencia' ? 'active' : ''} onClick={() => setSettingsView('aparencia')}><Palette size={18} /><div><strong>Aparência</strong><span>Tema e acessibilidade</span></div></button>
-                <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Resposta e estabilidade</span></div></button>
-                <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={18} /><div><strong>Segurança</strong><span>Integridade e saúde</span></div></button>
-                <button type="button" className={settingsView === 'suporte' ? 'active settings-v2970-navigation' : 'settings-v2970-navigation'} onClick={() => setSettingsView('suporte')}><Activity size={18} /><div><strong>Suporte</strong><span>Falhas e diagnóstico</span></div></button>
-                <button type="button" className={settingsView === 'comunidade' ? 'active settings-v2980-navigation' : 'settings-v2980-navigation'} onClick={() => setSettingsView('comunidade')}><Users size={18} /><div><strong>Comunidade</strong><span>Compartilhar e revisar</span></div></button>
-                <button type="button" className={settingsView === 'comercial' ? 'active settings-v2980-navigation' : 'settings-v2980-navigation'} onClick={() => setSettingsView('comercial')}><Trophy size={18} /><div><strong>Planos e LGPD</strong><span>Licença e privacidade</span></div></button>
-                <button type="button" className={settingsView === 'publicacao' ? 'active settings-v3000-navigation' : 'settings-v3000-navigation'} onClick={() => setSettingsView('publicacao')}><ShieldCheck size={18} /><div><strong>Publicação Play</strong><span>AAB, políticas e rollout</span></div></button>
+                <button type="button" className={settingsView === 'desempenho' ? 'active' : ''} onClick={() => setSettingsView('desempenho')}><Zap size={18} /><div><strong>Desempenho</strong><span>Interface e estabilidade</span></div></button>
                 <button type="button" className={settingsView === 'backup' ? 'active' : ''} onClick={() => setSettingsView('backup')}><Save size={18} /><div><strong>Backup</strong><span>Proteger e restaurar</span></div></button>
                 <button type="button" className={settingsView === 'atualizacoes' ? 'active' : ''} onClick={() => setSettingsView('atualizacoes')}><RotateCcw size={18} /><div><strong>Atualizações</strong><span>Versão e novo APK</span></div></button>
-                <button type="button" className={settingsView === 'contas' ? 'active admin-account-navigation' : 'admin-account-navigation'} onClick={() => setSettingsView('contas')}>{account?.profile.role === 'admin' ? <UserPlus size={18} /> : <Users size={18} />}<div><strong>{account?.profile.role === 'admin' ? 'Criar contas' : 'Minha conta'}</strong><span>{account?.profile.role === 'admin' ? 'Usuários e licenças' : 'Licença e aparelhos'}</span></div></button>
+                <button type="button" className={settingsView === 'contas' ? 'active admin-account-navigation' : 'admin-account-navigation'} onClick={() => setSettingsView('contas')}>{account?.profile.role === 'admin' ? <UserPlus size={18} /> : <Users size={18} />}<div><strong>{account?.profile.role === 'admin' ? 'Contas' : 'Minha conta'}</strong><span>{account?.profile.role === 'admin' ? 'Usuários e licenças' : 'Licença e aparelhos'}</span></div></button>
+                {advancedMode && <button type="button" className={settingsView === 'seguranca' ? 'active' : ''} onClick={() => setSettingsView('seguranca')}><ShieldCheck size={18} /><div><strong>Diagnóstico</strong><span>Integridade e ferramentas técnicas</span></div></button>}
+                {advancedMode && <button type="button" className={settingsView === 'suporte' ? 'active' : ''} onClick={() => setSettingsView('suporte')}><Activity size={18} /><div><strong>Suporte técnico</strong><span>Falhas e observabilidade</span></div></button>}
+                {advancedMode && account?.profile.role === 'admin' && <button type="button" className={settingsView === 'publicacao' ? 'active' : ''} onClick={() => setSettingsView('publicacao')}><ShieldCheck size={18} /><div><strong>Publicação</strong><span>Google Play e rollout</span></div></button>}
               </nav>
               <div className="settings-final-content">
                 {settingsView === 'evolucao' && <SectionErrorBoundary area="evolucao-360"><EvolutionCommandCenter {...evolutionInput} appVersion={APP_RELEASE_VERSION} onOpenTarget={openEvolutionTarget} onApplyAdaptiveProfile={applyAdaptiveExperienceProfile} /></SectionErrorBoundary>}
@@ -146,9 +142,11 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                       </div>
                       <small>{performanceMode === 'economy' ? 'Ativo: interface mais leve para celulares que aquecem ou engasgam.' : 'Ativo: visual completo com transparências e movimentos premium.'}</small>
                     </div>
-                    <ArchitectureHealthPanel />
-                    <DelayResponsePanel />
-                    <StabilityDiagnosticsPanel result={result ?? undefined} />
+                    {advancedMode && <>
+                      <ArchitectureHealthPanel />
+                      <DelayResponsePanel />
+                      <StabilityDiagnosticsPanel result={result ?? undefined} />
+                    </>}
                   </section>
                 )}
                 {settingsView === 'seguranca' && (
