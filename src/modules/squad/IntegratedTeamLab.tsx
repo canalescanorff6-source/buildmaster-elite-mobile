@@ -19,15 +19,18 @@ import {
 } from 'lucide-react';
 import { buildTeamDiagnosis, type IntegratedPlayerRecord, type TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import type { TacticalFormation, TacticalStyle } from '@/lib/analyzer';
+import type { MatchValidationRecord } from '@/lib/appStartupContractsR200';
 import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import { SquadGapPanel } from '@/components/SquadGapPanel';
 import { upsertPersonalPreset } from '@/lib/appRefinement';
+import { buildTacticalTwinR480 } from '@/modules/tactical-twin/tacticalTwinEngineR480';
 
 type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 
 type Props = {
   team: TeamDiagnosis;
   players: IntegratedPlayerRecord[];
+  records: MatchValidationRecord[];
   teamStyle: TacticalStyle;
   onOpenFormationLab: () => void;
   onPrepareMatch: () => void;
@@ -47,7 +50,7 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
 
-export function IntegratedTeamLab({ team, players, teamStyle, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
+export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFormationLab, onPrepareMatch, onFormationChange }: Props) {
   const [tab, setTab] = useState<TeamTab>('escalacao');
   const [gameMode, setGameMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
@@ -59,6 +62,7 @@ export function IntegratedTeamLab({ team, players, teamStyle, onOpenFormationLab
   const playerByName = useMemo(() => new Map(players.map((player) => [player.name, player])), [players]);
   const starterIds = useMemo(() => new Set(team.lineup.map((item) => item.player?.parsed.playerName).filter(Boolean)), [team.lineup]);
   const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.name)).slice(0, 5), [players, starterIds]);
+  const tacticalTwinR480 = useMemo(() => buildTacticalTwinR480({ team, players, records, teamStyle }), [team, players, records, teamStyle]);
 
   function selectTab(next: TeamTab) {
     setTab(next);
@@ -165,7 +169,36 @@ export function IntegratedTeamLab({ team, players, teamStyle, onOpenFormationLab
 
       {tab === 'elenco' && <section className="bm32-team-roster luxury-panel"><header><Users size={19}/><div><strong>Titulares e cobertura</strong><small>{team.filledSlots + team.benchSuggestions.length} jogadores analisados</small></div></header><div>{team.lineup.filter((item) => item.player).map((item) => <article key={item.slot.id}><strong>{item.player?.parsed.playerName}</strong><span>{item.slot.label} • {item.score}%</span><small>{item.player?.teamMap?.functionLabel || item.player?.buildName}</small></article>)}{team.benchSuggestions.map((item) => <article key={item.id} className="bench"><strong>{item.name}</strong><span>Banco • {item.score}/100 • {item.replacementMode === 'MANTER_FUNCAO' ? 'Manter função' : 'Mudar comportamento'}</span><small>{item.replaces}: {item.behaviourChange}</small></article>)}</div></section>}
 
-      {tab === 'tatica' && <section className="bm32-team-tactics"><article className="luxury-panel"><header><Target size={19}/><div><strong>Estilo coletivo</strong><small>{team.styleFit}% de encaixe</small></div></header><p>{team.styleNote}</p><div className="v27-pairing-list">{team.pairingNotes.map((note) => <span key={note}><CheckCircle2 size={15}/>{note}</span>)}</div></article><article className="luxury-panel bm32-formation-compare"><header><Layers size={19}/><div><strong>Comparar formações</strong><small>{team.formation} x {comparisonFormation}</small></div></header><label>Formação alternativa<select value={comparisonFormation} onChange={(event) => setComparisonFormation(event.target.value as TacticalFormation)}>{formationOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label><div><span><strong>{team.globalScore}</strong>Atual</span><b>VS</b><span><strong>{comparisonTeam.globalScore}</strong>Alternativa</span></div><small>{comparisonTeam.globalScore > team.globalScore ? `${comparisonFormation} melhora ${comparisonTeam.globalScore - team.globalScore} ponto(s) na prontidão.` : `${team.formation} continua ${team.globalScore - comparisonTeam.globalScore} ponto(s) à frente.`}</small><button type="button" className="elite-button" disabled={comparisonFormation === team.formation} onClick={() => onFormationChange(comparisonFormation)}>Aplicar alternativa</button></article></section>}
+      {tab === 'tatica' && <section className="bm32-team-tactics">
+        <article className="luxury-panel">
+          <header><Target size={19}/><div><strong>Estilo coletivo</strong><small>{team.styleFit}% de encaixe</small></div></header>
+          <p>{team.styleNote}</p>
+          <div className="v27-pairing-list">{team.pairingNotes.map((note) => <span key={note}><CheckCircle2 size={15}/>{note}</span>)}</div>
+        </article>
+        <article className="luxury-panel bm32-formation-compare">
+          <header><Layers size={19}/><div><strong>Comparar formações</strong><small>{team.formation} x {comparisonFormation}</small></div></header>
+          <label>Formação alternativa<select value={comparisonFormation} onChange={(event) => setComparisonFormation(event.target.value as TacticalFormation)}>{formationOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+          <div><span><strong>{team.globalScore}</strong>Atual</span><b>VS</b><span><strong>{comparisonTeam.globalScore}</strong>Alternativa</span></div>
+          <small>{comparisonTeam.globalScore > team.globalScore ? `${comparisonFormation} melhora ${comparisonTeam.globalScore - team.globalScore} ponto(s) na prontidão.` : `${team.formation} continua ${team.globalScore - comparisonTeam.globalScore} ponto(s) à frente.`}</small>
+          <button type="button" className="elite-button" disabled={comparisonFormation === team.formation} onClick={() => onFormationChange(comparisonFormation)}>Aplicar alternativa</button>
+        </article>
+        <article className="luxury-panel" aria-label="Gêmeo tático R480">
+          <header><Sparkles size={19}/><div><strong>Gêmeo tático</strong><small>R480 • somente leitura • confiança {tacticalTwinR480.confidence}%</small></div></header>
+          <p>{tacticalTwinR480.guardrails[1]}</p>
+          <div className="v27-pairing-list">
+            <span><CheckCircle2 size={15}/>Evidência real: {tacticalTwinR480.evidence.contextualMatchRecords} partida(s) no mesmo contexto • {tacticalTwinR480.evidence.starterEvidenceCoverage}% dos titulares cobertos.</span>
+            <span><CheckCircle2 size={15}/>Estrutura: controle {tacticalTwinR480.scenarios[0]?.control ?? 0} • progressão {tacticalTwinR480.scenarios[0]?.progression ?? 0} • segurança {tacticalTwinR480.scenarios[0]?.defensiveSecurity ?? 0}.</span>
+          </div>
+          <div className="v27-recommendation-list compact">
+            {tacticalTwinR480.scenarios.map((scenario) => (
+              <article key={scenario.id}>
+                <div><strong>{scenario.label} • {scenario.readiness}/100</strong><span>{scenario.summary}</span><small>Controle {scenario.control} • Progressão {scenario.progression} • Segurança {scenario.defensiveSecurity} • Risco de transição {scenario.transitionRisk}</small></div>
+              </article>
+            ))}
+          </div>
+          {tacticalTwinR480.risks.length > 0 && <div className="v27-pairing-list">{tacticalTwinR480.risks.slice(0, 3).map((risk) => <span key={risk}><AlertTriangle size={15}/>{risk}</span>)}</div>}
+        </article>
+      </section>}
 
       {tab === 'banco' && <section className="luxury-panel bm32-bench-detail"><header><Users size={19}/><div><strong>Banco recomendado</strong><small>Cobertura para cenários diferentes</small></div></header><div>{team.benchSuggestions.map((player, index) => <article key={player.id}><span>#{index + 1}</span><div><strong>{player.name}</strong><small>{player.replacementMode === 'MANTER_FUNCAO' ? 'MANTER A FUNÇÃO' : 'MUDAR O COMPORTAMENTO'} • substitui {player.replaces}</small><small>{player.behaviourChange} • {player.reason}</small></div><b>{player.score}</b></article>)}{!team.benchSuggestions.length && <p>Cadastre mais jogadores para montar um banco complementar.</p>}</div><footer><History size={18}/><span>Presets salvos mantêm um retrato da escalação sem sobrescrever o time atual.</span></footer></section>}
       </div>

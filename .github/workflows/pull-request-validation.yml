@@ -83,6 +83,9 @@ jobs:
       - name: Regressão R474 — telemetria global unificada
         run: npm run test:r474
 
+      - name: Regressão R480 — Tactical Twin read-only
+        run: npm run test:r480
+
       - name: Regressão v38.40 — abertura Android e boundaries
         run: node tests/v38-40-definitive-android-opening-regression.mjs
 
