@@ -55,6 +55,15 @@ for (const target of [
   assert.ok(lazy.includes(`import('${target}')`), `R473: ferramenta avançada deixou de existir no registro lazy: ${target}.`);
 }
 
+for (const retired of [
+  '@/components/EvolutionCommandCenter',
+  '@/modules/experience/PremiumExperience2Center',
+  '@/modules/community/CommunitySharingCenter',
+  '@/modules/commercial/CommercializationCenter',
+]) {
+  assert.ok(!lazy.includes(`import('${retired}')`), `R473: registro lazy voltou a declarar superfície aposentada ${retired}.`);
+}
+
 assert.ok(fs.statSync('src/components/CardVisionApp.tsx').size <= 112_000, 'R473: CardVisionApp perdeu novamente a margem de limpeza.');
 assert.ok(fs.statSync('src/components/lazy/AppPanelPreloadR174.ts').size < 5_000, 'R473: catálogo de preload voltou a crescer demais.');
 
