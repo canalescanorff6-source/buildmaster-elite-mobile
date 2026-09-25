@@ -70,10 +70,9 @@ export function RefinedNavigation({
   }
 
   const mainItems = [
-    { id: 'inicio', label: 'Central', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
-    { id: 'jogadores', label: 'Elenco', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
-    { id: 'mapeamento', label: 'Mapeamento', description: 'Melhor time e reservas', icon: Target, active: group === 'mapeamento', action: () => onGroupChange('mapeamento') },
-    { id: 'time', label: 'Meu Time', description: 'Elenco e tática', icon: Target, active: group === 'time', action: () => onGroupChange('time') },
+    { id: 'inicio', label: 'Início', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
+    { id: 'jogadores', label: 'Jogadores', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
+    { id: 'time', label: 'Time', description: 'Elenco, formações e tática', icon: Target, active: group === 'time' || group === 'mapeamento', action: () => onGroupChange('time') },
     { id: 'partidas', label: 'Partidas', description: 'Treino e análise', icon: Trophy, active: group === 'partidas', action: () => onGroupChange('partidas') },
     { id: 'ajustes', label: 'Configurações', description: 'Conta, visual e sistema', icon: Settings2, active: group === 'ajustes', action: () => onGroupChange('ajustes') }
   ] as const;
@@ -83,7 +82,7 @@ export function RefinedNavigation({
     <>
       <header className="bm-v33-nav-brand">
         <span className="bm-v35-nav-mark"><BuildMasterMark size={43} /></span>
-        <div><strong>BuildMaster</strong><small>Premium Suite · Elite Tático</small></div>
+        <div><strong>BuildMaster</strong><small>Elite Tático</small></div>
         {mobile && <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu lateral"><X size={21}/></button>}
       </header>
 
@@ -109,7 +108,7 @@ export function RefinedNavigation({
       <footer className="bm-v33-nav-footer">
         {hasResult && <button type="button" onClick={() => run(() => onWorkspaceChange('resultado'))}><FileText size={18}/><span>Abrir ficha atual</span></button>}
         <button type="button" className={searchActive ? 'active' : ''} onClick={() => run(onSearch)}><Search size={18}/><span>Buscar no aplicativo</span></button>
-        <button type="button" className={menuActive ? 'active' : ''} onClick={() => run(onMenu)}><Menu size={18}/><span>Módulos e atalhos</span></button>
+        <button type="button" className={menuActive ? 'active' : ''} onClick={() => run(onMenu)}><Menu size={18}/><span>Mais opções</span></button>
         <div className="bm-v35-nav-account" aria-label={`Conta ${username}`}>
           <span>{profileAvatar ? <img src={profileAvatar} alt="" /> : accountInitial}</span>
           <div><strong>{username || 'Conta'}</strong><small>Perfil salvo</small></div>
@@ -147,16 +146,16 @@ export function RefinedNavigation({
 
       <nav className="bm-v36-mobile-dock" aria-label="Navegação móvel rápida">
         <button type="button" className={group === 'inicio' ? 'active' : ''} aria-current={group === 'inicio' ? 'page' : undefined} onClick={() => run(() => onGroupChange('inicio'))}>
-          <Home size={20}/><span>Central</span>
+          <Home size={20}/><span>Início</span>
         </button>
         <button type="button" className={group === 'jogadores' ? 'active' : ''} aria-current={group === 'jogadores' ? 'page' : undefined} onClick={() => run(() => onWorkspaceChange('visao-geral'))}>
-          <Users size={20}/><span>Elenco</span>
+          <Users size={20}/><span>Jogadores</span>
         </button>
         <button type="button" className="create" onClick={() => run(onCreate)} aria-label="Criar nova ficha">
           <span><Plus size={24}/></span><strong>Novo</strong>
         </button>
-        <button type="button" className={group === 'time' ? 'active' : ''} aria-current={group === 'time' ? 'page' : undefined} onClick={() => run(() => onGroupChange('time'))}>
-          <Target size={20}/><span>Meu Time</span>
+        <button type="button" className={group === 'time' || group === 'mapeamento' ? 'active' : ''} aria-current={group === 'time' || group === 'mapeamento' ? 'page' : undefined} onClick={() => run(() => onGroupChange('time'))}>
+          <Target size={20}/><span>Time</span>
         </button>
         <button type="button" className={menuActive ? 'active' : ''} aria-current={menuActive ? 'page' : undefined} onClick={() => run(onMenu)}>
           <Menu size={20}/><span>Menu</span>
