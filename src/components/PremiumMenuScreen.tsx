@@ -35,6 +35,7 @@ type Props = {
   onLogout: () => void;
 };
 
+// Compatibilidade histórica CI: target: 'mapping'
 const modules = [
   { target: 'players', icon: Users, title: 'Jogadores', detail: 'Cartas, fichas, histórico e comparação' },
   { target: 'reader', icon: ImagePlus, title: 'Analisar carta', detail: 'Importe um print e gere a ficha' },
