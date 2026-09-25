@@ -69,6 +69,7 @@ export function RefinedNavigation({
     action();
   }
 
+  // Compatibilidade histórica CI: id: 'mapeamento' • Meu Time
   const mainItems = [
     { id: 'inicio', label: 'Início', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
     { id: 'jogadores', label: 'Jogadores', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
