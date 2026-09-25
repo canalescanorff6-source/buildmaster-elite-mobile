@@ -7,6 +7,7 @@ const workspacePath = 'src/components/result/ResultWorkspace.tsx';
 const advancedPath = 'src/components/result/ResultAdvancedWorkspaceR192.tsx';
 const workspace = read(workspacePath);
 const advanced = read(advancedPath);
+const lazy = read('src/components/lazy/AppLazyPanels.tsx');
 const pkg = JSON.parse(read('package.json'));
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
 
@@ -52,6 +53,9 @@ for (const requiredTab of ['leitura', 'confianca', 'comparar', 'partidas', 'moto
 
 assert.ok(!advanced.includes("tab === 'comunidade'"), 'R473: aba avançada aposentada de Comunidade voltou ao Resultado.');
 assert.ok(!advanced.includes('CommunityIntelligencePanel'), 'R473: painel aposentado de Comunidade voltou à fronteira avançada.');
+assert.ok(!lazy.includes('CommunityIntelligencePanel'), 'R473: export lazy aposentado de Comunidade voltou.');
+assert.ok(!fs.existsSync('src/components/CommunityIntelligencePanel.tsx'), 'R473: arquivo aposentado de Comunidade voltou ao source.');
+assert.match(workspace, /requestedTab\.tab === 'comunidade' \? 'fontes' : requestedTab\.tab/, 'R473: deep link legado de Comunidade deve redirecionar para Fontes.');
 
 for (const forbidden of ['createProductionAnalysisR138', 'runCanonicalVaultMutationR153', 'commitVaultHistoryR140', 'localStorage.setItem', 'indexedDB.open']) {
   assert.ok(!advanced.includes(forbidden), `R192: fronteira visual adquiriu autoridade proibida: ${forbidden}`);
