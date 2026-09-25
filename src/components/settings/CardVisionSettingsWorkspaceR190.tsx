@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, CheckCircle2, Download, FileText, Loader2, Palette, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, Trophy, UploadCloud, UserPlus, Users, Zap } from 'lucide-react';
+import { Activity, CheckCircle2, Download, FileText, Loader2, Palette, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Trash2, UploadCloud, UserPlus, Users, Zap } from 'lucide-react';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { APP_DATA_VERSION, type BackupSection } from '@/lib/dataSafety';
