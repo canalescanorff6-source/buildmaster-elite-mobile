@@ -19,7 +19,6 @@ import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationCon
 import { ACTIVE_SESSION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, formationGuides, objectives, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
 import type { CardVisionSettingsView, CardVisionVaultView, MainSection, PlayerWorkspace } from '@/lib/appNavigationR127';
-import type { EvolutionInput } from '@/lib/appEvolutionV2740';
 import type { CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
 import { CalibrationProfileFields, EfootballV600PreviewV4070, ManagerSelectionField, UnifiedCreationFlowV3790, UnifiedCreationResumeCardV3790 } from '@/components/lazy/CardVisionConditionalFieldsR179';
@@ -35,9 +34,6 @@ import { createDefaultEfhubCalibrationZones, createEfhubCalibrationMap, normaliz
 
 import type { BackgroundOcrCheckpoint } from '@/lib/backgroundOcrV3840';
 
-import { readTacticalSequenceProjects } from '@/modules/tactical-studio/tacticalStudio2Storage';
-import { readOpponentMatchPlans } from '@/modules/opponents/opponentPlanStorage';
-import type { CommunityShareKind } from '@/modules/community/communitySharing';
 import { CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT, GLOBAL_PRO_BUILD_EVENT } from '@/lib/appStartupContractsR200';
 import { clearActiveSessionSnapshotR157 } from '@/modules/session/activeSessionRepositoryR137';
 import type { ResultTabRequest } from '@/components/result/ResultWorkspace';
@@ -63,11 +59,8 @@ import type { OcrQueueJob } from '@/modules/card-reader/ocrQueue';
 import { loadBackgroundOcrRuntimeR160 } from '@/modules/card-reader/readerRuntimeR160';
 import type { CardVisionReaderActionsInputR187, CardVisionReadingModeR187, createCardVisionReaderActionsR187 } from '@/modules/card-reader/cardVisionReaderActionsR187';
 import type { CardVisionResultActionsInputR188, createCardVisionResultActionsR188 } from '@/modules/result/cardVisionResultActionsR188';
-import { TRAINING_GOALS_STORAGE_KEY } from '@/modules/training/trainingStorageKeysR167';
-import { SMART_COACH_REVIEW_STORAGE_KEY } from '@/modules/coaching/smartCoachStorageKeysR167';
 import { loadCardVisionExportRuntimeR168, loadContinuousRulesRuntimeR168 } from '@/modules/runtime/cardVisionDeferredActionsR168';
 import { clearPremiumCreationDraft, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
-import { readAccountJsonR141 } from '@/modules/backup/backupStorageJsonR165';
 import { useCardVisionBackupControllerR162 } from '@/modules/backup/useCardVisionBackupControllerR162';
 import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151, type CardVisionHistorySortR151 } from '@/modules/vault/cardVisionVaultSelectorsR151';
 import { useCardVisionVaultCoordinatorR153 } from '@/modules/vault/useCardVisionVaultCoordinatorR153';
@@ -656,13 +649,6 @@ export function CardVisionApp() {
     else if (item.action === 'vault') openCofreDeJogadores();
     else if (item.action === 'result' && (result || draftResult)) openMainSection('resultado');
   }
-  function prepareCommunitySharePayload(kind: CommunityShareKind): unknown {
-    if (kind === 'player_build') return result ?? renderHistory[0]?.result ?? { notice: 'Nenhuma ficha selecionada.' };
-    if (kind === 'formation') return { formation, teamStyle, managerId };
-    if (kind === 'training_plan') return { goals: readAccountJsonR141(TRAINING_GOALS_STORAGE_KEY, {}), reviews: readAccountJsonR141(SMART_COACH_REVIEW_STORAGE_KEY, []) };
-    if (kind === 'opponent_plan') return readOpponentMatchPlans()[0] ?? { formation, teamStyle };
-    return readTacticalSequenceProjects()[0] ?? { formation, teamStyle };
-  }
   const resultActionContextR188: CardVisionResultActionsInputR188 = {
     result,
     draftResult,
@@ -921,19 +907,6 @@ export function CardVisionApp() {
   ];
   const creationReadinessCount = creationReadinessSignals.filter((item) => item.ready).length;
   const creationReadinessPercent = Math.round((creationReadinessCount / creationReadinessSignals.length) * 100);
-  const evolutionInput: EvolutionInput = {
-    healthScore: healthSummary.score,
-    playerCount: renderHistory.length,
-    pendingReviewCount: smartHome.needsReview,
-    incompleteCount: smartHome.incomplete,
-    lowConfidenceCount: smartHome.lowConfidence,
-    matchCount: centralMatchRecords.length,
-    ocrQueueCount: ocrQueue.length,
-    trashCount: vaultTrash.length,
-    lastBackupAt,
-    hasCurrentResult: Boolean(result || draftResult),
-    updateNotice
-  };
   const experienceControllerR178 = createCardVisionExperienceControllerR178({
     openMainSection, openCofreDeJogadores, setMainSection, setSettingsView, setDensityMode, setPerformanceMode, setMotionPreference, setVisualPreset, setAppTheme, setAccentTheme, setProfileAvatar, setStatus,
   });
@@ -1452,7 +1425,6 @@ export function CardVisionApp() {
               setSettingsView={setSettingsView}
               centralMigrationNote={centralMigrationNote}
               advancedMode={advancedMode}
-              evolutionInput={evolutionInput}
               profileAvatar={profileAvatar}
               textScale={textScale}
               densityMode={densityMode}
@@ -1472,7 +1444,6 @@ export function CardVisionApp() {
               updateAlwaysDeletePermanently={updateAlwaysDeletePermanently}
               integratedPlayers={integratedPlayers}
               openIntegratedPlayer={openIntegratedPlayer}
-              prepareCommunitySharePayload={prepareCommunitySharePayload}
               backup={backupControllerR162}
               requestVaultCloudSyncR154={requestVaultCloudSyncR154}
               cloudLoading={cloudLoading}
