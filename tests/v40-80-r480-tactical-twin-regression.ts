@@ -143,4 +143,15 @@ assert.equal(noEvidence.evidence.contextualMatchRecords, 0);
 assert.ok(noEvidence.confidence < first.confidence, 'Sem partidas contextuais a confiança precisa cair, não ser inventada.');
 assert.ok(noEvidence.risks.some((item) => item.includes('Sem amostra de partida')));
 
+import fs from 'node:fs';
+
+const teamUi = fs.readFileSync('src/modules/squad/IntegratedTeamLab.tsx', 'utf8');
+const appUi = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
+assert.match(teamUi, /buildTacticalTwinR480/);
+assert.match(teamUi, /Gêmeo tático/);
+assert.match(teamUi, /somente leitura/);
+assert.match(teamUi, /records: MatchValidationRecord\[\]/);
+assert.match(appUi, /records=\{centralMatchRecords\}/);
+assert.doesNotMatch(teamUi, /setResult\(|recommendedSkills\s*=|recommendedImpetos\s*=|training\s*=/);
+
 console.log('R480 aprovada: Tactical Twin determinístico, read-only, contextual e sem autoridade paralela sobre ficha/Top 5/Ímpeto.');
