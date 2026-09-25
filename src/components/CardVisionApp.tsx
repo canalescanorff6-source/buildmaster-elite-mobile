@@ -945,8 +945,8 @@ export function CardVisionApp() {
     { id: 'new-manual', group: 'Criar ficha', label: 'Criar manualmente', description: 'Preencha posição, estilo, pontos e atributos sem usar print.', keywords: ['precisão', 'dados'], run: () => openMainSection('manual') },
     { id: 'players', group: 'Jogadores', label: 'Abrir jogadores', description: `${renderHistory.length} jogador(es) no banco integrado.`, keywords: ['elenco', 'cartas'], run: () => openMainSection('jogadores') },
     { id: 'vault', group: 'Jogadores', label: 'Abrir Cofre', description: 'Pesquisar, organizar, comparar e proteger fichas.', keywords: ['salvos', 'backup'], run: openCofreDeJogadores },
-    { id: 'squad-mapping', group: 'Time', label: 'Mapear elenco', description: 'Escolha titulares, reservas e a melhor formação pelo desempenho.', keywords: ['elenco', 'formação', 'titulares', 'reservas', 'prints'], run: () => openMainSection('mapeamento') },
-    { id: 'team', group: 'Time', label: 'Abrir Time', description: 'Formação, setores, entrosamento e escalação.', keywords: ['tática', 'formação'], run: () => openMainSection('time') },
+    { id: 'squad-mapping', group: 'Time', label: 'Mapear elenco', description: 'Titulares, reservas e formação.', keywords: ['elenco', 'formação'], run: () => openMainSection('mapeamento') },
+    { id: 'team', group: 'Time', label: 'Abrir Time', description: 'Formação e escalação.', keywords: ['tática'], run: () => openMainSection('time') },
     { id: 'matches', group: 'Partidas', label: 'Abrir Partidas', description: `${centralMatchRecords.length} registro(s) de validação real.`, keywords: ['treino', 'pós-jogo'], run: () => openMainSection('partidas') },
     ...(result || draftResult ? [
       { id: 'current-result', group: 'Ficha atual', label: 'Abrir resultado atual', description: result ? `Ficha de ${result.parsed.playerName}.` : 'Revisão da ficha em andamento.', keywords: ['resultado', 'auditoria'], run: () => openMainSection('resultado') },
@@ -1069,9 +1069,6 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace" aria-label="Meu Time">
-            <div className="result-hero-actions">
-              <button type="button" onClick={() => openMainSection('mapeamento')}><Target size={17} /> Mapear elenco</button>
-            </div>
             <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}

@@ -103,6 +103,7 @@ export type ResultTab = 'proglobal' | 'motor' | 'leitura' | 'confianca' | 'compa
 
 export type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'impetos' | 'profissional' | 'tatica';
 
+// Compatibilidade histórica CI: id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' • Ficha Suprema • Tudo unificado em uma tela • Validação v37.60 • Atualização v37.70
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
   { id: 'resumo', label: 'Resultado', hint: 'Visão geral da carta' },
   { id: 'ficha', label: 'Ficha', hint: 'Progressão e alternativas' },
