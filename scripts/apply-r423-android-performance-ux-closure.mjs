@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const TARGETS = {
-  bootstrap: 'src/modules/observability/ObservabilityBootstrap.tsx',
+  bootstrap: 'src/components/PremiumQualityLayer.tsx',
   reader: 'src/components/TotalCardReaderPanel.tsx',
   convergence: 'scripts/check-android-release-convergence-r183.mjs',
 };
@@ -33,7 +33,7 @@ function patchBootstrap(source) {
   let next = source;
   if (!next.includes("code: document.visibilityState === 'visible' ? 'app-resume' : 'app-background'")) {
     const anchor = "    const onStorage = (event: Event) => {\n      const detail = (event as CustomEvent<StorageFailure>).detail;\n      recordObservabilityEvent({ kind: 'storage', level: 'warning', area: 'storage', code: detail.operation, message: `${detail.operation} bloqueado para uma chave local.` });\n    };";
-    if (!next.includes(anchor)) throw new Error('R423: contrato inesperado em ObservabilityBootstrap (onStorage).');
+    if (!next.includes(anchor)) throw new Error('R423: contrato inesperado no coletor global de qualidade/observabilidade (storage).');
     const lifecycle = `${anchor}\n    const onVisibility = () => recordObservabilityEvent({\n      kind: 'performance', level: 'info', area: 'app-lifecycle',\n      code: document.visibilityState === 'visible' ? 'app-resume' : 'app-background',\n      message: document.visibilityState === 'visible' ? 'Aplicativo retornou ao primeiro plano.' : 'Aplicativo foi para segundo plano.',\n      context: { stage: 'app-lifecycle', action: document.visibilityState }\n    });`;
     next = next.replace(anchor, lifecycle);
     next = next.replace(

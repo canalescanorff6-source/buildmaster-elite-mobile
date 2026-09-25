@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const read = (p) => fs.readFileSync(p, 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const appUpdates = read('src/lib/appUpdates.ts');
-const bootstrap = read('src/modules/observability/ObservabilityBootstrap.tsx');
+const bootstrap = read('src/components/PremiumQualityLayer.tsx');
 const reader = read('src/components/TotalCardReaderPanel.tsx');
 const result = read('src/components/result/ResultWorkspace.tsx');
 const updater = read('src/components/UpdateCenterPanel.tsx');

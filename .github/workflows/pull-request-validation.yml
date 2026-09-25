@@ -80,6 +80,9 @@ jobs:
       - name: Regressões R473 — Clean Experience
         run: npm run test:r473
 
+      - name: Regressão R474 — telemetria global unificada
+        run: npm run test:r474
+
       - name: Build de produção
         env:
           NEXT_TELEMETRY_DISABLED: '1'
