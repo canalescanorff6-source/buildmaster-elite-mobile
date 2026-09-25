@@ -47,6 +47,7 @@ import {
   type MatchPhase,
   type MatchTrainerSession
 } from './matchTrainerEngine';
+import { buildMatchVisionR482 } from './matchVisionEngineR482';
 
 const QUALITY_LABELS: Record<MatchRecordingQuality, { title: string; detail: string }> = {
   economy: { title: 'Econômico', detail: '540p • 24 FPS • menor aquecimento' },
@@ -84,7 +85,7 @@ const MARKER_ACTIONS: Array<{ kind: MatchEventKind; label: string }> = [
   { kind: 'note', label: 'Observação' }
 ];
 
-type AnalysisTab = 'resumo' | 'momentos' | 'ataque' | 'defesa' | 'comandos' | 'tatica' | 'treino' | 'evolucao';
+type AnalysisTab = 'resumo' | 'visao' | 'momentos' | 'ataque' | 'defesa' | 'comandos' | 'tatica' | 'treino' | 'evolucao';
 
 const PHASE_OPTIONS: Array<{ value: MatchPhase; label: string }> = [
   { value: 'unknown', label: 'Fase automática' },
@@ -154,6 +155,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
   const active = useMemo(() => sessions.find((session) => session.id === activeId) || null, [activeId, sessions]);
   const selectedMappedPlayerR421 = useMemo(() => mappedPlayersR421.find((player) => player.id === markerPlayer) ?? null, [mappedPlayersR421, markerPlayer]);
   const summary = useMemo(() => active ? summarizeMatchTrainerSession(active) : null, [active]);
+  const matchVisionR482 = useMemo(() => active ? buildMatchVisionR482({ session: active, team, teamStyle }) : null, [active, team, teamStyle]);
   const evolution = useMemo(() => buildMatchTrainerEvolution(sessions, activeId), [sessions, activeId]);
   const visibleMarkers = useMemo(() => active ? getVisibleMatchMarkers(active) : [], [active]);
   const confirmedMarkers = useMemo(() => active ? getConfirmedMatchMarkers(active) : [], [active]);
@@ -699,7 +701,7 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
     {active && <>
       <nav className="match-analysis-tabs luxury-panel" aria-label="Áreas da análise de vídeo">
         {([
-          ['resumo', 'Resumo'], ['momentos', `Momentos (${visibleMarkers.length})`], ['ataque', `Ataque (${attackMarkers.length})`], ['defesa', `Defesa (${defenseMarkers.length})`], ['comandos', `Comandos (${commandMarkers.length})`], ['tatica', 'Tática'], ['treino', `Treino (${summary?.trainingPlan.length || 0})`], ['evolucao', 'Evolução']
+          ['resumo', 'Resumo'], ['visao', `Match Vision (${matchVisionR482?.confidence ?? 0}%)`], ['momentos', `Momentos (${visibleMarkers.length})`], ['ataque', `Ataque (${attackMarkers.length})`], ['defesa', `Defesa (${defenseMarkers.length})`], ['comandos', `Comandos (${commandMarkers.length})`], ['tatica', 'Tática'], ['treino', `Treino (${summary?.trainingPlan.length || 0})`], ['evolucao', 'Evolução']
         ] as Array<[AnalysisTab, string]>).map(([id, label]) => <button type="button" key={id} className={analysisTab === id ? 'active' : ''} onClick={() => setAnalysisTab(id)}>{label}</button>)}
       </nav>
 
@@ -740,6 +742,54 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
         <article className="luxury-panel match-strengths-panel">
           <div className="v27-panel-heading"><div><p className="kicker"><CheckCircle2 size={14}/> Jogadas-modelo</p><h3>O que você deve repetir</h3></div><span>{summary.goodPlays}</span></div>
           <div>{summary.strengths.map((item) => <p key={item}><CheckCircle2 size={16}/><span>{item}</span></p>)}</div>
+        </article>
+      </div>}
+
+      {analysisTab === 'visao' && matchVisionR482 && <div className="match-v3177-summary">
+        <article className="luxury-panel match-analysis-summary">
+          <div className="v27-panel-heading"><div><p className="kicker"><Film size={14}/> Match Vision R482</p><h3>Mapa visual da partida</h3></div><span>{matchVisionR482.confidence}% confiança</span></div>
+          <div className="match-summary-hero">
+            <div><strong>{matchVisionR482.evidence.confirmedMarkers}</strong><span>lances confirmados</span></div>
+            <div><strong>{matchVisionR482.evidence.suggestedMarkers}</strong><span>candidatos pendentes</span></div>
+            <div><strong>{matchVisionR482.evidence.reviewedCoverage}%</strong><span>cobertura revisada</span></div>
+            <div><strong>{matchVisionR482.criticalWindows.length}</strong><span>janelas críticas</span></div>
+          </div>
+          <p className="match-trust-note"><ShieldCheck size={16}/>{matchVisionR482.guardrails[0]}</p>
+        </article>
+
+        <article className="luxury-panel match-area-panel">
+          <div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Linha do tempo</p><h3>Intensidade e fase dominante</h3></div><span>{matchVisionR482.timeline.length} blocos</span></div>
+          <div className="match-area-grid">
+            {matchVisionR482.timeline.map((segment) => <div key={segment.index}>
+              <strong>{segment.intensity}</strong>
+              <span>{segment.label}</span>
+              <small>{segment.dominantPhase} • {formatDuration(segment.startMs)}–{formatDuration(segment.endMs)}</small>
+              <em>{segment.confirmedEvents} confirmado(s) • {segment.riskEvents} risco(s)</em>
+            </div>)}
+          </div>
+        </article>
+
+        <article className="luxury-panel match-top-errors">
+          <div className="v27-panel-heading"><div><p className="kicker"><AlertTriangle size={14}/> Janelas críticas</p><h3>Trechos que mais merecem revisão</h3></div><span>{matchVisionR482.criticalWindows.length}</span></div>
+          <div className="match-top-error-grid">
+            {matchVisionR482.criticalWindows.map((window, index) => <article key={window.id}>
+              <div><b>#{index + 1}</b><span>{formatDuration(window.startMs)}–{formatDuration(window.endMs)} • impacto {window.score}</span></div>
+              <h4>{window.title}</h4>
+              <p><b>Por que revisar</b>{window.reason}</p>
+              <small>{window.confirmedEvents} evento(s) confirmado(s) na janela • fase {window.phase}</small>
+            </article>)}
+            {!matchVisionR482.criticalWindows.length && <div className="v27-empty"><CheckCircle2 size={25}/><strong>Sem janela crítica confirmada</strong><span>Confirme lances relevantes na aba Momentos para o Match Vision organizar a linha do tempo.</span></div>}
+          </div>
+        </article>
+
+        <article className="luxury-panel match-tactical-recommendations">
+          <div className="v27-panel-heading"><div><p className="kicker"><Gauge size={14}/> Execução tática</p><h3>{team.formation} • leitura do estilo observado</h3></div><span>{teamStyle}</span></div>
+          <p>{matchVisionR482.styleObservation}</p>
+          <p className="match-trust-note"><Wifi size={16}/>{matchVisionR482.connectionGuardrail}</p>
+          <div className="v27-pairing-list">
+            {matchVisionR482.recurringPatterns.map((pattern) => <span key={pattern.kind}><AlertTriangle size={15}/>{pattern.label}: {pattern.occurrences} ocorrência(s) • impacto {pattern.impact} • fase {pattern.phase}.</span>)}
+            {!matchVisionR482.recurringPatterns.length && <span><CheckCircle2 size={15}/>Nenhum padrão negativo recorrente confirmado nesta sessão.</span>}
+          </div>
         </article>
       </div>}
 
