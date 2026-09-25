@@ -116,7 +116,6 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                 {advancedMode && account?.profile.role === 'admin' && <button type="button" className={settingsView === 'publicacao' ? 'active' : ''} onClick={() => setSettingsView('publicacao')}><ShieldCheck size={18} /><div><strong>Publicação</strong><span>Google Play e rollout</span></div></button>}
               </nav>
               <div className="settings-final-content">
-                {/* R473 legado retirado da UI: <EvolutionCommandCenter <PremiumExperience2Center <CommunitySharingCenter <CommercializationCenter */}
                 {settingsView === 'aparencia' && <IdentityAppearancePanel
                   visualPreset={visualPreset} themeLabel={themeLabel(visualPreset)} profileAvatar={profileAvatar} username={account?.profile.username || 'Conta'} textScale={textScale} densityMode={densityMode} motionPreference={motionPreference}
                   highContrast={highContrast} advancedMode={advancedMode} onPresetChange={applyPremiumVisualPreset} onAvatarChange={updateProfileAvatar} onAvatarRemove={clearProfileAvatar}
