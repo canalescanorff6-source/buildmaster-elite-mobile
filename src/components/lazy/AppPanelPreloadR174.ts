@@ -16,10 +16,11 @@ export function preloadReaderSurfaceR161(): void {
 
 export type LazyPanelGroup = 'inicio' | 'jogadores' | 'time' | 'partidas' | 'ajustes';
 
+// R473: EvolutionCommandCenter e painéis técnicos/admin continuam lazy, mas não são pré-carregados em background.
+// Retirados do preload: ArchitectureHealthPanel, PremiumQualityCenter, EliteEvolutionPanels, ProductionReadinessCenter, OfficialRulesCenter, PremiumExperience2Center, ObservabilitySupportCenter, CommunitySharingCenter, CommercializationCenter, PlayStorePublicationCenter.
 const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = {
   inicio: [
     () => import('@/modules/core/IntegratedHomePanel'),
-    () => import('@/components/EvolutionCommandCenter'),
     () => import('@/components/EvolutionNotificationHub'),
     () => import('@/components/SmartQuickDock')
   ],
@@ -55,18 +56,8 @@ const PANEL_PRELOADERS: Record<LazyPanelGroup, Array<() => Promise<unknown>>> = 
     () => import('@/components/RefinementCenterPanel'),
     () => import('@/components/UpdateCenterPanel'),
     () => import('@/modules/backup/CloudSyncCenter'),
-    () => import('@/components/ArchitectureHealthPanel'),
-    () => import('@/components/PremiumQualityCenter'),
     () => import('@/components/AccountAdminPanel'),
-    () => import('@/modules/administration/AdministrationSecurityCenter'),
-    () => import('@/components/EliteEvolutionPanels'),
-    () => import('@/modules/quality/ProductionReadinessCenter'),
-    () => import('@/modules/rules/OfficialRulesCenter'),
-    () => import('@/modules/experience/PremiumExperience2Center'),
-    () => import('@/modules/observability/ObservabilitySupportCenter'),
-    () => import('@/modules/community/CommunitySharingCenter'),
-    () => import('@/modules/commercial/CommercializationCenter'),
-    () => import('@/modules/publication/PlayStorePublicationCenter')
+    () => import('@/modules/administration/AdministrationSecurityCenter')
   ]
 };
 
