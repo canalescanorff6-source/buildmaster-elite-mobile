@@ -347,7 +347,7 @@
     "test:r454": "node -r ./tests/_ts-require.cjs tests/v40-80-r454-gameplay-scouting-context-regression.ts && node tests/v40-80-r454-scouting-ui-integration-regression.mjs && node tests/v40-80-r454-data-api-security-regression.mjs",
     "test:r455": "node tests/v40-80-r455-gameplay-scouting-panel-regression.mjs",
     "test:r419": "node tests/v40-80-r419-reader-master-engine-closure-regression.mjs",
-    "ci:gate": "npm run ci:preflight && npm run typecheck && npm run ci:calibration-gate && npm run test:r138 && npm run test:r139 && npm run test:r464-r468 && npm run test:r470 && npm run test:r471 && npm run test:r472 && npm run test:r417 && npm run test:r180 && npm run test:r419 && npm run test:r192 && npm run test:r200 && npm run test:r455 && npm run test:v4080:gate && npm run ci:r463-contract",
+    "ci:gate": "npm run ci:preflight && npm run typecheck && npm run ci:calibration-gate && npm run test:r138 && npm run test:r139 && npm run test:r464-r468 && npm run test:r470 && npm run test:r471 && npm run test:r472 && npm run test:r473 && npm run test:r417 && npm run test:r180 && npm run test:r419 && npm run test:r192 && npm run test:r200 && npm run test:r455 && npm run test:v4080:gate && npm run ci:r463-contract",
     "ci:r463-contract": "node scripts/r457-r463-doctor.mjs",
     "ci:calibration-gate": "npm run test:r135 && npm run test:r136",
     "ci:repair-safe": "node scripts/ci-safe-repair.mjs",
@@ -360,7 +360,8 @@
     "test:r417": "node tests/v40-80-r417-autonomous-card-native-bulk-vault-regression.mjs",
     "test:r470": "node tests/v40-80-r470-intelligent-learning-foundation-regression.mjs && node -r ./tests/_ts-require.cjs tests/v40-80-r470-intelligent-learning-runtime-regression.ts",
     "test:r471": "node tests/v40-80-r471-resilient-learning-sync-regression.mjs",
-    "test:r472": "node -r ./tests/_ts-require.cjs tests/v40-80-r472-motor-lab-lifecycle-regression.ts"
+    "test:r472": "node -r ./tests/_ts-require.cjs tests/v40-80-r472-motor-lab-lifecycle-regression.ts",
+    "test:r473": "node tests/v40-80-r473-clean-experience-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
