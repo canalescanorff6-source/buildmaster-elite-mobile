@@ -44,6 +44,12 @@ jobs:
       - name: R473 — detectar testes com arquivos removidos
         run: node scripts/check-stale-test-file-references-r473.mjs
 
+      - name: Regressão R178 — closure estática da experiência
+        run: npm run test:r178
+
+      - name: Regressão R180 — auditoria global e módulos órfãos
+        run: npm run test:r180
+
       - name: Regressão R165 — bootstrap leve de backup
         run: npm run test:r165
 

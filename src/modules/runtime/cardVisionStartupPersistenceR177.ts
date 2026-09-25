@@ -1,5 +1,4 @@
 import { readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
-import { readProfileAvatar } from '@/lib/profileAvatar';
 import type { PremiumVisualPreset } from '@/lib/easyExperience';
 import type { OcrZone } from '@/lib/ocrZonesModelR164';
 import type { VaultFolder } from '@/lib/vaultUsability';
@@ -44,10 +43,9 @@ export function persistCardVisionVaultFoldersR177(folders: VaultFolder[]): void 
 
 export function readCardVisionProfileAvatarR177(): string | null {
   try {
-    return readProfileAvatar();
+    const value = readAccountStorage('buildmaster_profile_avatar_v1');
+    return value?.startsWith('data:image/') ? value : null;
   } catch {
-    return readAccountStorage('buildmaster_profile_avatar_v1')?.startsWith('data:image/')
-      ? readAccountStorage('buildmaster_profile_avatar_v1')
-      : null;
+    return null;
   }
 }

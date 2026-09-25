@@ -2,7 +2,6 @@
 
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Camera, ImagePlus, Trash2, UserRound } from 'lucide-react';
-import { createProfileAvatar } from '@/lib/profileAvatar';
 
 type Props = {
   avatar: string | null;
@@ -23,6 +22,7 @@ export function ProfileAvatarEditor({ avatar, username, onChange, onRemove }: Pr
     if (!file) return;
     setBusy(true);
     try {
+      const { createProfileAvatar } = await import('@/lib/profileAvatar');
       const next = await createProfileAvatar(file);
       onChange(next);
       setMessage('Foto salva. Ela continuará após sair e entrar novamente.');
