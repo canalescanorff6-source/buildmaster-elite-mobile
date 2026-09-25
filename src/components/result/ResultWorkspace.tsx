@@ -101,26 +101,24 @@ const teamMapLabels: Record<string, string> = {
 
 export type ResultTab = 'proglobal' | 'motor' | 'leitura' | 'confianca' | 'comparar' | 'calibracao' | 'partidas' | 'profissional' | 'ficha' | 'habilidades' | 'treino' | 'impetos' | 'treinador' | 'mapa' | 'exportar' | 'validacao' | 'correcao' | 'regras' | 'posicoes' | 'dados' | 'resumo' | 'comunidade' | 'fontes';
 
-export type ResultPrimaryView = 'resumo' | 'proglobal' | 'profissional' | 'ficha' | 'habilidades' | 'impetos' | 'tatica' | 'exportar';
+export type ResultPrimaryView = 'resumo' | 'ficha' | 'habilidades' | 'impetos' | 'profissional' | 'tatica';
 
 const RESULT_PRIMARY_TABS: Array<{ id: ResultPrimaryView; label: string; hint: string }> = [
-  { id: 'resumo', label: 'Ficha Suprema', hint: 'Tudo unificado em uma tela' },
-  { id: 'proglobal', label: 'Pro Global', hint: 'Benchmark mundial auditável' },
-  { id: 'profissional', label: 'Análise Pro', hint: 'Leitura profissional completa' },
+  { id: 'resumo', label: 'Resultado', hint: 'Visão geral da carta' },
   { id: 'ficha', label: 'Ficha', hint: 'Progressão e alternativas' },
-  { id: 'habilidades', label: 'Habilidades', hint: 'Top adicional oficial' },
-  { id: 'impetos', label: 'Ímpeto', hint: 'Escolha ideal da IA' },
-  { id: 'tatica', label: 'Tática', hint: 'Encaixe dentro do time' },
-  { id: 'exportar', label: 'Exportar', hint: 'Imagem, relatório e texto' }
+  { id: 'habilidades', label: 'Habilidades', hint: 'Top 5 recomendado' },
+  { id: 'impetos', label: 'Ímpeto', hint: 'Escolha final' },
+  { id: 'profissional', label: 'Análise Pro', hint: 'Por que esta ficha venceu' },
+  { id: 'tatica', label: 'Tática', hint: 'Encaixe no time' }
 ];
 
 const UNIFIED_COMPACT_RESULT_V3920 = false;
 const COMPACT_PRIMARY_TABS_V3920 = RESULT_PRIMARY_TABS.filter((item) => item.id === 'resumo');
 
 const RESULT_ADVANCED_GROUPS: Array<{ label: string; tabs: Array<{ value: ResultTab; label: string }> }> = [
-  { label: 'Análise e confiança', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }] },
-  { label: 'Desenvolvimento', tabs: [{ value: 'motor', label: 'IA por Carta' }, { value: 'partidas', label: 'Validação v37.60' }, { value: 'treino', label: 'Treino' }, { value: 'impetos', label: 'Ímpetos' }, { value: 'posicoes', label: 'Posições' }] },
-  { label: 'Ferramentas técnicas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'calibracao', label: 'Calibração' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Atualização v37.70' }, { value: 'comunidade', label: 'Comunidade' }, { value: 'proglobal', label: 'Laboratório Pro Global' }, { value: 'fontes', label: 'Fichas de criadores' }] }
+  { label: 'Evidências', tabs: [{ value: 'leitura', label: 'Leitura' }, { value: 'confianca', label: 'Confiança' }, { value: 'validacao', label: 'Validação' }, { value: 'correcao', label: 'Correções' }, { value: 'fontes', label: 'Fontes' }] },
+  { label: 'Laboratório', tabs: [{ value: 'motor', label: 'Motor Lab' }, { value: 'partidas', label: 'Partidas' }, { value: 'treino', label: 'Treino' }, { value: 'posicoes', label: 'Posições' }, { value: 'calibracao', label: 'Calibração' }] },
+  { label: 'Ferramentas', tabs: [{ value: 'comparar', label: 'Comparar' }, { value: 'proglobal', label: 'Pro Global' }, { value: 'exportar', label: 'Exportar' }, { value: 'dados', label: 'Dados' }, { value: 'regras', label: 'Regras' }] }
 ];
 
 function skillReason(skill: string) {
@@ -417,7 +415,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
       <section className="result-navigation-shell luxury-panel">
         <div className="result-navigation-head">
-          <div><p className="kicker">Resultado unificado</p><strong>Ficha, habilidades, Ímpeto, encaixe e Pro Global em uma única tela.</strong></div>
+          <div><p className="kicker">Resultado unificado</p><strong>Ficha, habilidades, Ímpeto e encaixe em uma única tela.</strong></div>
           <span>{result.trainingPointsUsed}/{result.trainingPointsTotal} pts</span>
         </div>
 
