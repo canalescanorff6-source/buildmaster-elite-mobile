@@ -1006,17 +1006,14 @@ export function CardVisionApp() {
           username={account?.profile.username || 'Usuário Elite'}
           role={account?.profile.role || 'user'}
           playerCount={renderHistory.length}
-          favoriteCount={renderHistory.filter((item) => item.favorite).length}
           onLogout={logout}
           onNavigate={(target) => {
             if (target === 'players') openMainSection('jogadores');
             else if (target === 'manual') openMainSection('manual');
             else if (target === 'reader') openMainSection('leitor');
-            else if (target === 'mapping') openMainSection('mapeamento');
             else if (target === 'team') openMainSection('time');
             else if (target === 'matches') openMainSection('partidas');
-            else if (target === 'search') openMainSection('buscar');
-            else openSettingsView(target === 'accounts' ? 'contas' : target === 'backup' ? 'backup' : target === 'updates' ? 'atualizacoes' : target === 'support' ? 'suporte' : 'visao-geral');
+            else openSettingsView('visao-geral');
           }}
         />
       )}

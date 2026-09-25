@@ -11,26 +11,12 @@ import {
   Users
 } from 'lucide-react';
 
-type MenuTarget =
-  | 'players'
-  | 'manual'
-  | 'reader'
-  | 'mapping'
-  | 'team'
-  | 'matches'
-  | 'settings'
-  | 'accounts'
-  | 'backup'
-  | 'updates'
-  | 'support'
-  | 'search';
+type MenuTarget = 'players' | 'manual' | 'reader' | 'team' | 'matches' | 'settings';
 
 type Props = {
   username: string;
   role: string;
   playerCount: number;
-  favoriteCount: number;
-  level?: number;
   onNavigate: (target: MenuTarget) => void;
   onLogout: () => void;
 };
