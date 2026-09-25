@@ -64,6 +64,15 @@ for (const retired of [
   assert.ok(!lazy.includes(`import('${retired}')`), `R473: registro lazy voltou a declarar superfície aposentada ${retired}.`);
 }
 
+for (const retiredFile of [
+  'src/components/EvolutionCommandCenter.tsx',
+  'src/modules/experience/PremiumExperience2Center.tsx',
+  'src/modules/community/CommunitySharingCenter.tsx',
+  'src/modules/commercial/CommercializationCenter.tsx',
+]) {
+  assert.ok(!fs.existsSync(retiredFile), `R473: arquivo de UI aposentado voltou ao source: ${retiredFile}.`);
+}
+
 assert.ok(fs.statSync('src/components/CardVisionApp.tsx').size <= 112_000, 'R473: CardVisionApp perdeu novamente a margem de limpeza.');
 assert.ok(fs.statSync('src/components/lazy/AppPanelPreloadR174.ts').size < 5_000, 'R473: catálogo de preload voltou a crescer demais.');
 
