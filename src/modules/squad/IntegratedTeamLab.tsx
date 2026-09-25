@@ -24,6 +24,7 @@ import { FORMATION_BLUEPRINTS } from '@/lib/formationRoleEngine';
 import { SquadGapPanel } from '@/components/SquadGapPanel';
 import { upsertPersonalPreset } from '@/lib/appRefinement';
 import { buildTacticalTwinR480 } from '@/modules/tactical-twin/tacticalTwinEngineR480';
+import { buildSquadBrainR481 } from '@/modules/squad-brain/squadBrainEngineR481';
 
 type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 
@@ -63,6 +64,7 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
   const starterIds = useMemo(() => new Set(team.lineup.map((item) => item.player?.parsed.playerName).filter(Boolean)), [team.lineup]);
   const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.name)).slice(0, 5), [players, starterIds]);
   const tacticalTwinR480 = useMemo(() => buildTacticalTwinR480({ team, players, records, teamStyle }), [team, players, records, teamStyle]);
+  const squadBrainR481 = useMemo(() => buildSquadBrainR481({ team, players, records, twin: tacticalTwinR480 }), [team, players, records, tacticalTwinR480]);
 
   function selectTab(next: TeamTab) {
     setTab(next);
@@ -167,7 +169,32 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
       <div ref={detailRef} className="bm34-tab-panel" role="tabpanel" aria-live="polite">
       {tab === 'escalacao' && <section className="bm32-team-detail-grid"><article className="luxury-panel"><header><ShieldCheck size={19}/><div><strong>Diagnóstico da escalação</strong><small>O que corrigir primeiro</small></div></header><div className="v27-recommendation-list compact">{team.recommendations.map((item) => <article key={item.id} className={`priority-${item.priority}`}>{item.priority === 'critical' ? <AlertTriangle size={18}/> : <CheckCircle2 size={18}/>}<div><strong>{item.title}</strong><span>{item.detail}</span></div></article>)}</div></article><SquadGapPanel team={team}/></section>}
 
-      {tab === 'elenco' && <section className="bm32-team-roster luxury-panel"><header><Users size={19}/><div><strong>Titulares e cobertura</strong><small>{team.filledSlots + team.benchSuggestions.length} jogadores analisados</small></div></header><div>{team.lineup.filter((item) => item.player).map((item) => <article key={item.slot.id}><strong>{item.player?.parsed.playerName}</strong><span>{item.slot.label} • {item.score}%</span><small>{item.player?.teamMap?.functionLabel || item.player?.buildName}</small></article>)}{team.benchSuggestions.map((item) => <article key={item.id} className="bench"><strong>{item.name}</strong><span>Banco • {item.score}/100 • {item.replacementMode === 'MANTER_FUNCAO' ? 'Manter função' : 'Mudar comportamento'}</span><small>{item.replaces}: {item.behaviourChange}</small></article>)}</div></section>}
+      {tab === 'elenco' && <section className="bm32-team-detail-grid">
+        <article className="bm32-team-roster luxury-panel">
+          <header><Users size={19}/><div><strong>Titulares e cobertura</strong><small>{team.filledSlots + team.benchSuggestions.length} jogadores analisados</small></div></header>
+          <div>
+            {team.lineup.filter((item) => item.player).map((item) => <article key={item.slot.id}><strong>{item.player?.parsed.playerName}</strong><span>{item.slot.label} • {item.score}%</span><small>{item.player?.teamMap?.functionLabel || item.player?.buildName}</small></article>)}
+            {team.benchSuggestions.map((item) => <article key={item.id} className="bench"><strong>{item.name}</strong><span>Banco • {item.score}/100 • {item.replacementMode === 'MANTER_FUNCAO' ? 'Manter função' : 'Mudar comportamento'}</span><small>{item.replaces}: {item.behaviourChange}</small></article>)}
+          </div>
+        </article>
+        <article className="luxury-panel" aria-label="Cérebro do elenco R481">
+          <header><Sparkles size={19}/><div><strong>Cérebro do elenco</strong><small>R481 • somente leitura • confiança {squadBrainR481.confidence}%</small></div></header>
+          <div className="v27-pairing-list">
+            {squadBrainR481.coverage.map((item) => <span key={item.line}><CheckCircle2 size={15}/>{item.label}: {item.status} • {item.reserves} reserva(s) • melhor cobertura {item.bestReserveScore || 0}/100.</span>)}
+          </div>
+          <div className="v27-recommendation-list compact">
+            {squadBrainR481.core.slice(0, 4).map((item) => (
+              <article key={item.playerId}>
+                <div><strong>{item.playerName} • importância {item.importance}/100</strong><span>{item.role} • {item.reason}</span><small>{item.evidenceMatches} partida(s) de evidência • diferença para reserva {item.replacementGap}.</small></div>
+              </article>
+            ))}
+          </div>
+          <div className="v27-pairing-list">
+            {squadBrainR481.rotations.slice(0, 4).map((item) => <span key={item.reserveId}><ChevronRight size={15}/>{item.reserveName} → {item.replaces} • prontidão {item.readiness}/100 • {item.replacementMode === 'MANTER_FUNCAO' ? 'mantém função' : 'muda comportamento'}.</span>)}
+          </div>
+          {squadBrainR481.warnings.length > 0 && <div className="v27-pairing-list">{squadBrainR481.warnings.slice(0, 3).map((warning) => <span key={warning}><AlertTriangle size={15}/>{warning}</span>)}</div>}
+        </article>
+      </section>}
 
       {tab === 'tatica' && <section className="bm32-team-tactics">
         <article className="luxury-panel">
