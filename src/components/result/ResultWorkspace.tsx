@@ -201,7 +201,7 @@ function trainingSummary(plan: Record<string, number>) {
     .join(' • ');
 }
 
-const R192_ADVANCED_SURFACE_TABS = new Set<ResultTab>(['leitura', 'confianca', 'comparar', 'partidas', 'motor', 'comunidade', 'proglobal', 'fontes', 'calibracao', 'treino', 'correcao', 'regras', 'validacao', 'posicoes', 'dados']);
+const R192_ADVANCED_SURFACE_TABS = new Set<ResultTab>(['leitura', 'confianca', 'comparar', 'partidas', 'motor', 'proglobal', 'fontes', 'calibracao', 'treino', 'correcao', 'regras', 'validacao', 'posicoes', 'dados']);
 
 const ResultAdvancedWorkspaceR192 = dynamic(
   () => import('@/components/result/ResultAdvancedWorkspaceR192').then((module) => module.ResultAdvancedWorkspaceR192),
@@ -226,7 +226,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       return;
     }
     setAdvancedOpen(true);
-    setTab(requestedTab.tab);
+    setTab(requestedTab.tab === 'comunidade' ? 'fontes' : requestedTab.tab);
     onRequestedTabHandled?.();
   }, [requestedTab]);
   const card = result.parsed;
