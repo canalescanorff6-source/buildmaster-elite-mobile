@@ -73,10 +73,6 @@ export const MetaBuildLabPanel = dynamic(
   { ssr: false, loading: fallback }
 );
 
-export const CommunityIntelligencePanel = dynamic(
-  () => import('@/components/CommunityIntelligencePanel').then((module) => module.CommunityIntelligencePanel),
-  { ssr: false, loading: fallback }
-);
 
 export const CreatorBuildResearchPanel = dynamic(
   () => import('@/components/CreatorBuildResearchPanel').then((module) => module.CreatorBuildResearchPanel),
