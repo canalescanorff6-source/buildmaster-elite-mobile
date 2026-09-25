@@ -7,12 +7,10 @@ import { buildReliabilityCenter, compareBuildVariants, detectInconsistencies } f
 import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { getMergedCorrectionsForResult, type DynamicRulePack } from '@/modules/builds/dynamicRules';
-import { useObservabilityFeatureFlag } from '@/modules/observability/useObservabilityFeatureFlag';
 import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
 import {
-  CommunityIntelligencePanel,
   CreatorBuildResearchPanel,
   GlobalProLabV3900Panel,
   MatchValidationCenter,
@@ -26,7 +24,7 @@ const RealMatchCalibrationPanelR189 = dynamic(
   { ssr: false, loading: () => <article className="luxury-panel wide-card"><p className="panel-note">Carregando calibração pós-partida…</p></article> }
 );
 
-export type AdvancedResultTabR192 = 'leitura' | 'confianca' | 'comparar' | 'partidas' | 'motor' | 'comunidade' | 'proglobal' | 'fontes' | 'calibracao' | 'treino' | 'correcao' | 'regras' | 'validacao' | 'posicoes' | 'dados';
+export type AdvancedResultTabR192 = 'leitura' | 'confianca' | 'comparar' | 'partidas' | 'motor' | 'proglobal' | 'fontes' | 'calibracao' | 'treino' | 'correcao' | 'regras' | 'validacao' | 'posicoes' | 'dados';
 
 function positionPt(code: string) { return POSITION_PT[code as PositionCode] ?? code; }
 
@@ -63,7 +61,6 @@ export function ResultAdvancedWorkspaceR192({
   onExportRulePack: () => void;
   onRestoreRulePackVersion: (version: string) => void;
 }) {
-  const communityEnabled = useObservabilityFeatureFlag('community');
   const card = result.parsed;
   const usagePositionLabel = positionPt(analysisUsagePositionR138(result));
   const reliabilityCenter = buildReliabilityCenter(result);
@@ -191,9 +188,6 @@ export function ResultAdvancedWorkspaceR192({
 
 
       {tab === 'motor' && <AdvancedMotorV3750Panel result={result} />}
-
-
-      {tab === 'comunidade' && (communityEnabled ? <CommunityIntelligencePanel result={result} /> : <div className="settings-explanation-card"><div><strong>Inteligência de criadores pausada localmente</strong><span>Reative o módulo em Ajustes › Observabilidade e suporte.</span></div></div>)}
 
 
       {tab === 'proglobal' && <GlobalProLabV3900Panel result={result} />}
