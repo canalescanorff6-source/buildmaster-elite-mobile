@@ -31,7 +31,17 @@ assert.match(globalError, /clearNativeWebCachesV3840/);
 
 const layout = read('src/app/layout.tsx');
 assert.match(layout, /OptionalRuntimeBoundary/);
-assert.ok((layout.match(/<OptionalRuntimeBoundary/g) ?? []).length >= 8);
+assert.ok((layout.match(/<OptionalRuntimeBoundary/g) ?? []).length >= 7);
+assert.match(
+  layout,
+  /name="qualidade e observabilidade"><PremiumQualityLayer \/>/,
+  'v38.40/R474: qualidade e observabilidade devem compartilhar a boundary global unificada.'
+);
+assert.doesNotMatch(
+  layout,
+  /ObservabilityBootstrap/,
+  'v38.40/R474: bootstrap separado de observabilidade não pode voltar ao layout.'
+);
 
 const history = read('src/modules/vault/cardHistoryStore.ts');
 assert.match(history, /Uma ficha incompatível foi isolada/);
