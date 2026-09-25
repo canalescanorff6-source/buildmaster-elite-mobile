@@ -72,7 +72,7 @@ export function RefinedNavigation({
   const mainItems = [
     { id: 'inicio', label: 'Início', description: 'Visão geral', icon: Home, active: group === 'inicio', action: () => onGroupChange('inicio') },
     { id: 'jogadores', label: 'Jogadores', description: 'Cartas e fichas', icon: Users, active: group === 'jogadores', action: () => onWorkspaceChange('visao-geral') },
-    { id: 'time', label: 'Time', description: 'Elenco, formações e tática', icon: Target, active: group === 'time', action: () => onGroupChange('time') },
+    { id: 'time', label: 'Time', description: 'Elenco, formações e tática', icon: Target, active: group === 'time' || group === 'mapeamento', action: () => onGroupChange('time') },
     { id: 'partidas', label: 'Partidas', description: 'Treino e análise', icon: Trophy, active: group === 'partidas', action: () => onGroupChange('partidas') },
     { id: 'ajustes', label: 'Configurações', description: 'Conta, visual e sistema', icon: Settings2, active: group === 'ajustes', action: () => onGroupChange('ajustes') }
   ] as const;
@@ -154,7 +154,7 @@ export function RefinedNavigation({
         <button type="button" className="create" onClick={() => run(onCreate)} aria-label="Criar nova ficha">
           <span><Plus size={24}/></span><strong>Novo</strong>
         </button>
-        <button type="button" className={group === 'time' ? 'active' : ''} aria-current={group === 'time' ? 'page' : undefined} onClick={() => run(() => onGroupChange('time'))}>
+        <button type="button" className={group === 'time' || group === 'mapeamento' ? 'active' : ''} aria-current={group === 'time' || group === 'mapeamento' ? 'page' : undefined} onClick={() => run(() => onGroupChange('time'))}>
           <Target size={20}/><span>Time</span>
         </button>
         <button type="button" className={menuActive ? 'active' : ''} aria-current={menuActive ? 'page' : undefined} onClick={() => run(onMenu)}>
