@@ -89,6 +89,9 @@ jobs:
       - name: Regressão R481 — Squad Brain read-only
         run: npm run test:r481
 
+      - name: Regressão R482 — Match Vision read-only
+        run: npm run test:r482
+
       - name: Regressão v38.40 — abertura Android e boundaries
         run: node tests/v38-40-definitive-android-opening-regression.mjs
 
