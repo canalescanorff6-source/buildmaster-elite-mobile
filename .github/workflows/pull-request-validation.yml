@@ -50,6 +50,9 @@ jobs:
       - name: Regressão R177 — lifecycle de startup
         run: npm run test:r177
 
+      - name: Regressão R175 — boundary da Central e UI aposentada
+        run: npm run test:r175
+
       - name: Regressões R454
         run: npm run test:r454
 

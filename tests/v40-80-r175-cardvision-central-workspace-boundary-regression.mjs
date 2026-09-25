@@ -2,7 +2,6 @@ import fs from 'node:fs';
 
 const shell = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const central = fs.readFileSync('src/hooks/useCardVisionCentralWorkspaceR175.ts', 'utf8');
-const community = fs.readFileSync('src/modules/community/CommunitySharingCenter.tsx', 'utf8');
 const settings = fs.readFileSync('src/components/settings/CardVisionSettingsWorkspaceR190.tsx', 'utf8');
 
 function expect(value, message) {
@@ -62,10 +61,9 @@ for (const returned of [
   expect(central.includes(returned), `boundary Central não retorna ${returned}`);
 }
 
-expect(community.includes("import { resolveCommercialEntitlements } from '@/modules/commercial/commercialization';"), 'entitlements comerciais não ficaram dentro da superfície lazy de Comunidade.');
-expect(community.includes('commercialProfile?:'), 'Comunidade não aceita perfil comercial lazy.');
-expect(community.includes('const effectiveCanPublish = canPublish ?? (commercialProfile !== undefined ? commercialRights.features.community_publish : false);'), 'compatibilidade canPublish/default histórico foi perdida.');
-expect(community.includes('const effectivePublicationLimit = publicationLimit ?? (commercialProfile !== undefined ? commercialRights.limits.communityPublications : 0);'), 'compatibilidade publicationLimit/default histórico foi perdida.');
-expect(settings.includes('commercialProfile={{ role: account?.profile.role'), 'Ajustes R190 não encaminha o perfil comercial para a superfície lazy de Comunidade.');
+expect(!fs.existsSync('src/modules/community/CommunitySharingCenter.tsx'), 'R473: superfície aposentada de Comunidade voltou ao source.');
+expect(!shell.includes('resolveCommercialEntitlements'), 'R175/R473: entitlement comercial não pode voltar ao shell.');
+expect(!settings.includes('CommunitySharingCenter'), 'R175/R473: Ajustes não pode voltar a renderizar a superfície aposentada de Comunidade.');
+expect(!settings.includes('commercialProfile={{ role: account?.profile.role'), 'R175/R473: contrato comercial aposentado não pode voltar ao workspace de Ajustes.');
 
-console.log(`R175 aprovada: Central saiu do shell (${shellLines} linhas) e entitlement da Comunidade ficou lazy sem alterar writers.`);
+console.log(`R175 aprovada: Central saiu do shell (${shellLines} linhas) e a superfície aposentada de Comunidade permanece ausente.`);
