@@ -1069,9 +1069,6 @@ export function CardVisionApp() {
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
           <section className="bm-v34-team-workspace" aria-label="Meu Time">
-            <div className="result-hero-actions">
-              <button type="button" onClick={() => openMainSection('mapeamento')}><Target size={17} /> Mapear elenco</button>
-            </div>
             <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} teamStyle={teamStyle}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
