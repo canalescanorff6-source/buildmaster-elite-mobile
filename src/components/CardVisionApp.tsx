@@ -63,6 +63,9 @@ import { loadCardVisionExportRuntimeR168, loadContinuousRulesRuntimeR168 } from 
 import { clearPremiumCreationDraft, usePremiumDraftAutosave } from '@/modules/experience/cardVisionPremiumBridge';
 import { useCardVisionBackupControllerR162 } from '@/modules/backup/useCardVisionBackupControllerR162';
 import { readAccountJsonR141 } from '@/modules/backup/backupStorageJsonR165';
+import { TRAINING_GOALS_STORAGE_KEY } from '@/modules/training/trainingStorageKeysR167';
+import { SMART_COACH_REVIEW_STORAGE_KEY } from '@/modules/coaching/smartCoachStorageKeysR167';
+import { UI_PREFERENCES_KEY_R177 } from '@/modules/runtime/cardVisionStartupPersistenceR177';
 import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151, type CardVisionHistorySortR151 } from '@/modules/vault/cardVisionVaultSelectorsR151';
 import { useCardVisionVaultCoordinatorR153 } from '@/modules/vault/useCardVisionVaultCoordinatorR153';
 import { CardVisionAppChromeR185 } from '@/components/CardVisionAppChromeR185';
@@ -73,7 +76,11 @@ type ReaderCaptureMode = 'single' | 'complete';
 // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
 export function CardVisionApp() {
   const account = useBuildMasterAccount();
-  useEffect(() => { void readAccountJsonR141('buildmaster_ui_prefs_v24_24', null); }, [account?.profile.id]);
+  useEffect(() => {
+    void readAccountJsonR141(UI_PREFERENCES_KEY_R177, null);
+    void readAccountJsonR141(TRAINING_GOALS_STORAGE_KEY, {});
+    void readAccountJsonR141(SMART_COACH_REVIEW_STORAGE_KEY, []);
+  }, [account?.profile.id]);
   const [startupGate, setStartupGate] = useState({ ready: false, safeMode: false });
   const startupGateReady = startupGate.ready;
   const startupSafeMode = startupGate.safeMode;

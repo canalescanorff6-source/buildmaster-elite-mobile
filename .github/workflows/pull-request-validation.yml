@@ -41,6 +41,15 @@ jobs:
       - name: Closure inicial R200
         run: node scripts/check-cardvision-static-closure-r200.mjs
 
+      - name: Regressão R165 — bootstrap leve de backup
+        run: npm run test:r165
+
+      - name: Regressão R167 — storage leve de treino e coach
+        run: npm run test:r167
+
+      - name: Regressão R177 — lifecycle de startup
+        run: npm run test:r177
+
       - name: Regressões R454
         run: npm run test:r454
 

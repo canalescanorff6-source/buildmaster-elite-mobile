@@ -6,7 +6,7 @@ import type { VaultFolder } from '@/lib/vaultUsability';
 import { CALIBRATION_KEY, VAULT_FOLDERS_KEY } from '@/modules/architecture/appOptions';
 
 export const CARDVISION_STARTUP_PERSISTENCE_R177_VERSION = '40.80-r177-startup-persistence-v1' as const;
-const UI_PREFERENCES_KEY_R177 = 'buildmaster_ui_prefs_v24_24';
+export const UI_PREFERENCES_KEY_R177 = 'buildmaster_ui_prefs_v24_24';
 
 export function persistCardVisionOcrZonesR177(zones: OcrZone[]): void {
   try {
