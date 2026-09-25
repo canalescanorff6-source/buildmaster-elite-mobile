@@ -59,6 +59,9 @@ jobs:
       - name: Regressões R473 — Clean Experience
         run: npm run test:r473
 
+      - name: Regressões R165 — bootstrap leve
+        run: npm run test:r165
+
       - name: Build de produção
         env:
           NEXT_TELEMETRY_DISABLED: '1'
