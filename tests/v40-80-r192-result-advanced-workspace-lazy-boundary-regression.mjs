@@ -46,9 +46,12 @@ for (const moved of [
   assert.ok(advanced.includes(moved), `R192: fronteira avançada perdeu ${moved}`);
 }
 
-for (const requiredTab of ['leitura', 'confianca', 'comparar', 'partidas', 'motor', 'comunidade', 'proglobal', 'fontes', 'calibracao', 'treino', 'correcao', 'regras', 'validacao', 'posicoes', 'dados']) {
+for (const requiredTab of ['leitura', 'confianca', 'comparar', 'partidas', 'motor', 'proglobal', 'fontes', 'calibracao', 'treino', 'correcao', 'regras', 'validacao', 'posicoes', 'dados']) {
   assert.ok(advanced.includes(`tab === '${requiredTab}'`), `R192: aba avançada ausente: ${requiredTab}`);
 }
+
+assert.ok(!advanced.includes("tab === 'comunidade'"), 'R473: aba avançada aposentada de Comunidade voltou ao Resultado.');
+assert.ok(!advanced.includes('CommunityIntelligencePanel'), 'R473: painel aposentado de Comunidade voltou à fronteira avançada.');
 
 for (const forbidden of ['createProductionAnalysisR138', 'runCanonicalVaultMutationR153', 'commitVaultHistoryR140', 'localStorage.setItem', 'indexedDB.open']) {
   assert.ok(!advanced.includes(forbidden), `R192: fronteira visual adquiriu autoridade proibida: ${forbidden}`);
