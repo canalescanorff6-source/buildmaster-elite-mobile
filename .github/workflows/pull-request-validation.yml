@@ -41,6 +41,9 @@ jobs:
       - name: Closure inicial R200
         run: node scripts/check-cardvision-static-closure-r200.mjs
 
+      - name: R473 — detectar testes com arquivos removidos
+        run: node scripts/check-stale-test-file-references-r473.mjs
+
       - name: Regressão R165 — bootstrap leve de backup
         run: npm run test:r165
 
