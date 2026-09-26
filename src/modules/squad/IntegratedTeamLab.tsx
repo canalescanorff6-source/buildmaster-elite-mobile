@@ -25,6 +25,7 @@ import { SquadGapPanel } from '@/components/SquadGapPanel';
 import { upsertPersonalPreset } from '@/lib/appRefinement';
 import { buildTacticalTwinR480 } from '@/modules/tactical-twin/tacticalTwinEngineR480';
 import { buildSquadBrainR481 } from '@/modules/squad-brain/squadBrainEngineR481';
+import { buildChemistryGraphR484 } from '@/modules/chemistry/chemistryGraphEngineR484';
 
 type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 
@@ -47,6 +48,13 @@ function teamStyleLabel(style: TacticalStyle) {
   return 'Automático inteligente';
 }
 
+function chemistryLabel(score: number) {
+  if (score >= 84) return 'Forte';
+  if (score >= 72) return 'Boa';
+  if (score >= 58) return 'Neutra';
+  return 'Ajustar';
+}
+
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('pt-BR')).join('') || '?';
 }
@@ -65,6 +73,7 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
   const reservePlayers = useMemo(() => players.filter((player) => !starterIds.has(player.name)).slice(0, 5), [players, starterIds]);
   const tacticalTwinR480 = useMemo(() => buildTacticalTwinR480({ team, players, records, teamStyle }), [team, players, records, teamStyle]);
   const squadBrainR481 = useMemo(() => buildSquadBrainR481({ team, players, records, twin: tacticalTwinR480 }), [team, players, records, tacticalTwinR480]);
+  const chemistryR484 = useMemo(() => buildChemistryGraphR484({ team, players, records, teamStyle, squadBrain: squadBrainR481 }), [team, players, records, teamStyle, squadBrainR481]);
 
   function selectTab(next: TeamTab) {
     setTab(next);
@@ -143,7 +152,7 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
 
       <section className="bm32-team-insights">
         <article><header><Target size={19}/><strong>Instruções rápidas</strong></header><span>• Preserve a posição escolhida de cada jogador.</span><span>• Controle primeiro o setor mais fraco: {team.weakestLine}.</span><span>• Use o estilo do técnico com {team.styleFit}% de encaixe.</span><button type="button" onClick={() => selectTab('tatica')}>Editar instruções <ChevronRight size={16}/></button></article>
-        <article><header><Sparkles size={19}/><strong>Entrosamento</strong></header><div className="bm32-chemistry-ring"><strong>{team.globalScore}</strong><small>{team.globalScore >= 80 ? 'Excelente' : 'Ajustar'}</small></div><span>Jogadores: {team.filledSlots}/{team.totalSlots}</span><span>Links fortes: {Math.max(0, team.filledSlots - team.missingRoles.length)}</span><button type="button" onClick={() => selectTab('escalacao')}>Detalhes <ChevronRight size={16}/></button></article>
+        <article><header><Sparkles size={19}/><strong>Entrosamento</strong></header><div className="bm32-chemistry-ring"><strong>{chemistryR484.score}</strong><small>{chemistryLabel(chemistryR484.score)}</small></div><span>Confiança: {chemistryR484.confidence}% • {chemistryR484.evidence.links} links</span><span>Links fortes: {chemistryR484.counts.strong + chemistryR484.counts.good}</span><button type="button" onClick={() => selectTab('escalacao')}>Detalhes <ChevronRight size={16}/></button></article>
       </section>
 
       <nav className="bm32-team-actions" aria-label="Ações do time">
@@ -167,7 +176,32 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
       {savedNotice && <div className="refined-inline-success" role="status"><CheckCircle2 size={16}/>{savedNotice}</div>}
 
       <div ref={detailRef} className="bm34-tab-panel" role="tabpanel" aria-live="polite">
-      {tab === 'escalacao' && <section className="bm32-team-detail-grid"><article className="luxury-panel"><header><ShieldCheck size={19}/><div><strong>Diagnóstico da escalação</strong><small>O que corrigir primeiro</small></div></header><div className="v27-recommendation-list compact">{team.recommendations.map((item) => <article key={item.id} className={`priority-${item.priority}`}>{item.priority === 'critical' ? <AlertTriangle size={18}/> : <CheckCircle2 size={18}/>}<div><strong>{item.title}</strong><span>{item.detail}</span></div></article>)}</div></article><SquadGapPanel team={team}/></section>}
+      {tab === 'escalacao' && <section className="bm32-team-detail-grid">
+        <article className="luxury-panel">
+          <header><ShieldCheck size={19}/><div><strong>Diagnóstico da escalação</strong><small>O que corrigir primeiro</small></div></header>
+          <div className="v27-recommendation-list compact">{team.recommendations.map((item) => <article key={item.id} className={`priority-${item.priority}`}>{item.priority === 'critical' ? <AlertTriangle size={18}/> : <CheckCircle2 size={18}/>}<div><strong>{item.title}</strong><span>{item.detail}</span></div></article>)}</div>
+        </article>
+        <SquadGapPanel team={team}/>
+        <article className="luxury-panel" aria-label="Chemistry Graph R484">
+          <header><Sparkles size={19}/><div><strong>Chemistry Graph</strong><small>R484 • somente leitura • confiança {chemistryR484.confidence}%</small></div></header>
+          <div className="v27-pairing-list">
+            <span><CheckCircle2 size={15}/>Química estrutural: {chemistryR484.score}/100 • {chemistryR484.counts.strong} forte(s) • {chemistryR484.counts.good} boa(s) • {chemistryR484.counts.redundant} redundante(s) • {chemistryR484.counts.poor} ruim(ns).</span>
+            {chemistryR484.mostConnected && <span><CheckCircle2 size={15}/>Mais conectado: {chemistryR484.mostConnected.playerName} • {chemistryR484.mostConnected.links} ligação(ões) • média {chemistryR484.mostConnected.averageScore}/100.</span>}
+            {chemistryR484.mostIsolated && <span><AlertTriangle size={15}/>Mais isolado: {chemistryR484.mostIsolated.playerName} • {chemistryR484.mostIsolated.links} ligação(ões).</span>}
+          </div>
+          <div className="v27-pairing-list">
+            {chemistryR484.sectors.map((sector) => <span key={sector.id}><CheckCircle2 size={15}/>{sector.label}: {sector.score == null ? 'sem links suficientes' : `${sector.score}/100`} • {sector.links} ligação(ões){sector.confidence == null ? '' : ` • confiança ${sector.confidence}%`}.</span>)}
+          </div>
+          {(chemistryR484.bestLink || chemistryR484.weakestLink) && <div className="v27-pairing-list">
+            {chemistryR484.bestLink && <span><CheckCircle2 size={15}/>Melhor ligação: {chemistryR484.bestLink.leftName} ↔ {chemistryR484.bestLink.rightName} • {chemistryR484.bestLink.score}/100 • {chemistryR484.bestLink.label}.</span>}
+            {chemistryR484.weakestLink && <span><AlertTriangle size={15}/>Ligação mais frágil: {chemistryR484.weakestLink.leftName} ↔ {chemistryR484.weakestLink.rightName} • {chemistryR484.weakestLink.score}/100 • {chemistryR484.weakestLink.label}.</span>}
+          </div>}
+          {chemistryR484.rotations.length > 0 && <div className="v27-recommendation-list compact">
+            {chemistryR484.rotations.map((item) => <article key={`${item.reserveId}-${item.replaces}`}><div><strong>{item.reserveName} → {item.replaces} • {item.delta >= 0 ? '+' : ''}{item.delta}</strong><span>{item.summary}</span><small>Química {item.scoreBefore} → {item.scoreAfter} • confiança {item.confidence}% • simulação somente leitura.</small></div></article>)}
+          </div>}
+          {chemistryR484.warnings.length > 0 && <div className="v27-pairing-list">{chemistryR484.warnings.slice(0, 3).map((warning) => <span key={warning}><AlertTriangle size={15}/>{warning}</span>)}</div>}
+        </article>
+      </section>}
 
       {tab === 'elenco' && <section className="bm32-team-detail-grid">
         <article className="bm32-team-roster luxury-panel">
