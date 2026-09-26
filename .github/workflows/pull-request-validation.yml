@@ -53,6 +53,9 @@ jobs:
       - name: Regressão R489 — integração Meu Time (TDD)
         run: node tests/v40-80-r489-team-integration-regression.mjs
 
+      - name: Regressão R489 — integração Match Vision (TDD)
+        run: node tests/v40-80-r489-match-integration-regression.mjs
+
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
           npm run test:r192
