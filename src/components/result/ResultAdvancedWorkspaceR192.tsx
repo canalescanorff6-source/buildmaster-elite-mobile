@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Ban, BrainCircuit, RotateCcw, ThumbsUp } from 'lucide-react';
 import { ATTRIBUTE_PT, POSITION_PT, type AnalysisResult, type AttributeKey, type PositionCode } from '@/lib/analyzer';
@@ -9,9 +8,7 @@ import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIden
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { getMergedCorrectionsForResult, type DynamicRulePack } from '@/modules/builds/dynamicRules';
 import { BuildSimulatorPanelR483 } from '@/modules/build-simulator/BuildSimulatorPanelR483';
-import { buildBuildSimulatorR483 } from '@/modules/build-simulator/buildSimulatorEngineR483';
-import { buildExplainableDecisionR489 } from '@/modules/explainable-ai/explainableDecisionEngineR489';
-import { ExplainableDecisionPanelR489 } from '@/modules/explainable-ai/ExplainableDecisionPanelR489';
+import { BuildExplainabilityR489 } from '@/modules/explainable-ai/BuildExplainabilityR489';
 import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
@@ -103,28 +100,6 @@ export function ResultAdvancedWorkspaceR192({
           ? 'Informado no registro técnico'
           : 'Padrão seguro';
   const recommendedImpetos = result.recommendedImpetos.slice(0, 8);
-  const targetPositionR489 = analysisUsagePositionR138(result);
-  const buildSimulatorR489 = useMemo(
-    () => buildBuildSimulatorR483({ result, targetPosition: targetPositionR489 }),
-    [result, targetPositionR489]
-  );
-  const explainableBuildR489 = useMemo(
-    () => buildExplainableDecisionR489({
-      kind: 'BUILD',
-      decisionId: String(result.parsed.internalId || result.parsed.playerName || 'build-sem-id'),
-      verdict: result.buildName || `Ficha oficial de ${result.parsed.playerName}`,
-      availability: {
-        r480: 'NOT_APPLICABLE',
-        r481: 'NOT_APPLICABLE',
-        r482: 'NOT_APPLICABLE',
-        r483: buildSimulatorR489.blockedReason ? 'BLOCKED' : 'AVAILABLE',
-        r484: 'NOT_APPLICABLE'
-      },
-      result,
-      buildSimulator: buildSimulatorR489
-    }),
-    [result, buildSimulatorR489]
-  );
 
   return <>
       {tab === 'leitura' && (
@@ -194,7 +169,7 @@ export function ResultAdvancedWorkspaceR192({
       {tab === 'comparar' && (
         <div className="result-section-grid">
           <BuildSimulatorPanelR483 result={result} />
-          <ExplainableDecisionPanelR489 decision={explainableBuildR489} compact />
+          <BuildExplainabilityR489 result={result} />
           {buildComparison && <>
             <article className="luxury-panel wide-card">
               <div className="section-title-row"><div><p className="kicker">Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
