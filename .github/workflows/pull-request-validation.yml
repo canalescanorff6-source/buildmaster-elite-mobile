@@ -32,6 +32,9 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: R500 TDD — contrato RED/GREEN
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-contract-regression.ts
+
       - name: Regressão R483 — contrato read-only (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
