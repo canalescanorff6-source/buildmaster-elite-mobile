@@ -207,6 +207,25 @@ function selectGameplayVariantR483(candidates: TrainingPlan[], official: Trainin
   return best;
 }
 
+function scoreVariantR483(official: TrainingPlan, candidate: TrainingPlan): number {
+  const deltas = buildDeltasR483(official, candidate);
+  const gain = deltas.filter((delta) => delta.delta > 0).reduce((sum, delta) => sum + delta.delta, 0);
+  const distance = planDistanceR483(official, candidate);
+  return Math.max(1, Math.min(99, 100 - distance + gain));
+}
+
+function explainVariantR483(official: TrainingPlan, candidate: TrainingPlan): Pick<BuildSimulatorVariantR483, 'strengths' | 'sacrifices' | 'explanation'> {
+  const deltas = buildDeltasR483(official, candidate);
+  const strengths = deltas
+    .filter((delta) => delta.delta > 0)
+    .map((delta) => `${delta.key} +${delta.delta} nível(is) em relação à ficha Oficial.`);
+  const sacrifices = deltas
+    .filter((delta) => delta.delta < 0)
+    .map((delta) => `${delta.key} ${delta.delta} nível(is) em relação à ficha Oficial.`);
+  const explanation = `Redistribuição read-only com ${strengths.length} ganho(s) e ${sacrifices.length} sacrifício(s), mantendo exatamente ${trainingPlanTotalCost(candidate)} PP da mesma carta.`;
+  return { strengths, sacrifices, explanation };
+}
+
 function makeVariantR483(
   id: Exclude<BuildSimulatorVariantR483['id'], 'official'>,
   label: string,
@@ -214,20 +233,19 @@ function makeVariantR483(
   official: TrainingPlan,
   officialPoints: number,
   budget: number,
-  score: number,
 ): BuildSimulatorVariantR483 {
+  const normalized = normalizeTrainingPlan({ ...plan });
+  const explanation = explainVariantR483(official, normalized);
   return {
     id,
     label,
-    plan: normalizeTrainingPlan({ ...plan }),
+    plan: normalized,
     pointsUsed: officialPoints,
     pointsAvailable: budget - officialPoints,
-    validBudget: trainingPlanTotalCost(plan) === officialPoints && officialPoints <= budget,
-    score,
-    deltas: buildDeltasR483(official, plan),
-    strengths: [],
-    sacrifices: [],
-    explanation: '',
+    validBudget: trainingPlanTotalCost(normalized) === officialPoints && officialPoints <= budget,
+    score: scoreVariantR483(official, normalized),
+    deltas: buildDeltasR483(official, normalized),
+    ...explanation,
   };
 }
 
@@ -272,14 +290,14 @@ export function buildBuildSimulatorR483(input: BuildSimulatorInputR483): BuildSi
   const candidates = enumerateExactCostTransfersR483(officialPlan, canonicalOfficialCost);
   const variants: BuildSimulatorVariantR483[] = [official];
   const balanced = selectBalancedVariantR483(candidates, officialPlan);
-  if (balanced) variants.push(makeVariantR483('balanced', 'Equilibrada', balanced, officialPlan, canonicalOfficialCost, budget, 90));
+  if (balanced) variants.push(makeVariantR483('balanced', 'Equilibrada', balanced, officialPlan, canonicalOfficialCost, budget));
 
   const functionReady = result.validation?.level !== 'blocked' && Boolean(result.teamMap?.functionLabel?.trim());
   if (functionReady) {
     const specialist = selectSpecialistVariantR483(candidates, officialPlan);
-    if (specialist) variants.push(makeVariantR483('specialist', 'Especialista', specialist, officialPlan, canonicalOfficialCost, budget, 92));
+    if (specialist) variants.push(makeVariantR483('specialist', 'Especialista', specialist, officialPlan, canonicalOfficialCost, budget));
     const gameplay = selectGameplayVariantR483(candidates, officialPlan, result.tacticalProfile.style);
-    if (gameplay) variants.push(makeVariantR483('gameplay', 'Gameplay', gameplay, officialPlan, canonicalOfficialCost, budget, 94));
+    if (gameplay) variants.push(makeVariantR483('gameplay', 'Gameplay', gameplay, officialPlan, canonicalOfficialCost, budget));
   }
 
   return {
