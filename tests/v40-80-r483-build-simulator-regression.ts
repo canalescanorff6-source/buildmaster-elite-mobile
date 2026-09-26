@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
+import { TRAINING_LABELS } from '../src/lib/trainingEngine';
 import {
   BUILD_SIMULATOR_R483_VERSION,
   buildBuildSimulatorR483
@@ -113,6 +115,33 @@ assert.ok(!insufficient.variants.some((variant) => variant.id === 'specialist' |
 for (const variant of first.variants.slice(1)) {
   assert.equal(trainingPlanTotalCost(variant.plan), officialPointsUsed,
     'Transferência cujo custo escalonado não fecha exatamente deve ser descartada antes de virar variante.');
+  assert.ok(variant.deltas.some((delta) => delta.delta > 0), `${variant.id} precisa declarar ganho real.`);
+  assert.ok(variant.deltas.some((delta) => delta.delta < 0), `${variant.id} precisa declarar sacrifício real.`);
+  assert.ok(variant.strengths.length > 0);
+  assert.ok(variant.sacrifices.length > 0);
+  assert.ok(variant.explanation.length > 0);
+
+  const positive = variant.deltas.find((delta) => delta.delta > 0)!;
+  const negative = variant.deltas.find((delta) => delta.delta < 0)!;
+  const positiveLabel = TRAINING_LABELS[positive.key];
+  const negativeLabel = TRAINING_LABELS[negative.key];
+  const strengthText = variant.strengths.join(' ');
+  const sacrificeText = variant.sacrifices.join(' ');
+
+  assert.match(strengthText, new RegExp(positiveLabel, 'i'), `${variant.id} deve explicar o grupo que recebeu PP.`);
+  assert.match(sacrificeText, new RegExp(negativeLabel, 'i'), `${variant.id} deve explicar o grupo que cedeu PP.`);
+  assert.ok(variant.explanation.includes(`${positive.delta > 0 ? '+' : ''}${positive.delta} ${positiveLabel}`),
+    `${variant.id} deve citar o delta positivo real na explicação.`);
+  assert.ok(variant.explanation.includes(`${negative.delta} ${negativeLabel}`),
+    `${variant.id} deve citar o delta negativo real na explicação.`);
 }
 
-console.log('R483 Task 2 aprovada: variantes determinísticas, funcionais e com PP exatamente igual ao Oficial.');
+const engineSource = fs.readFileSync('src/modules/build-simulator/buildSimulatorEngineR483.ts', 'utf8');
+assert.doesNotMatch(engineSource, /parsed\.(?:overall|maxOverall)\b/, 'R483 não pode ler Overall da carta.');
+assert.doesNotMatch(engineSource, /pri\s*\.\s*GER\b/, 'R483 não pode usar GER no score.');
+assert.doesNotMatch(engineSource, /recommendedSkills\s*=/, 'R483 não pode escrever Top 5.');
+assert.doesNotMatch(engineSource, /recommendedImpetos\s*=/, 'R483 não pode escrever Ímpeto.');
+assert.doesNotMatch(engineSource, /from\s+['"][^'"]*(?:vault|persistence|storage)[^'"]*['"]/, 'R483 não pode importar writers persistentes.');
+assert.doesNotMatch(engineSource, /\b(?:fetch|supabase)\s*\(/i, 'R483 deve funcionar local/offline na v1.');
+
+console.log('R483 Task 3 aprovada: trade-offs derivados dos deltas, sem GER e sem autoridade de escrita.');
