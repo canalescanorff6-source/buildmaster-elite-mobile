@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { AnalysisResult, TrainingPlan } from '../src/lib/analyzer';
 import { trainingPlanTotalCost } from '../src/lib/trainingPlanCore';
 import { buildBuildSimulatorR483 } from '../src/modules/build-simulator/buildSimulatorEngineR483';
@@ -113,6 +115,12 @@ assert.deepEqual(snapshot.variants[0]?.plan, result.training);
 assert.equal(snapshot.variants[0]?.pointsUsed, result.trainingPointsUsed);
 assert.equal(snapshot.baselineFingerprint, result.parsed.internalId);
 assert.equal(snapshot.authority.readOnly, true);
+assert.equal(snapshot.authority.canWriteTraining, false);
+assert.equal(snapshot.authority.canWriteSkills, false);
+assert.equal(snapshot.authority.canWriteImpetus, false);
+assert.equal(snapshot.authority.canChangePosition, false);
+assert.equal(snapshot.authority.canOverrideCleanSlate, false);
+assert.equal(snapshot.authority.canOverrideR126, false);
 assert.equal(snapshot.authority.canOverrideR128, false);
 assert.equal(snapshot.authority.optimizeOverall, false);
 assert.equal(JSON.stringify(input), before, 'R483 não pode mutar o AnalysisResult de entrada');
@@ -144,6 +152,19 @@ for (const variant of first.variants) {
 }
 assert.ok(first.variants.slice(1).every((variant) => JSON.stringify(variant.plan) !== JSON.stringify(result.training)), 'Alternativas não podem ser clones da Oficial');
 
+for (const variant of first.variants.slice(1)) {
+  assert.ok(variant.deltas.some((delta) => delta.delta !== 0), `${variant.id} precisa ter deltas reais`);
+  assert.ok(variant.strengths.length > 0, `${variant.id} precisa explicar ganhos`);
+  assert.ok(variant.sacrifices.length > 0, `${variant.id} precisa explicar sacrifícios`);
+  assert.ok(variant.explanation.length > 0, `${variant.id} precisa explicar o trade-off`);
+  for (const strength of variant.strengths) {
+    assert.ok(variant.deltas.some((delta) => delta.delta > 0 && strength.includes(delta.key)), `${variant.id} força sem delta positivo correspondente: ${strength}`);
+  }
+  for (const sacrifice of variant.sacrifices) {
+    assert.ok(variant.deltas.some((delta) => delta.delta < 0 && sacrifice.includes(delta.key)), `${variant.id} sacrifício sem delta negativo correspondente: ${sacrifice}`);
+  }
+}
+
 const blockedFunctionResult = makeResult({
   validation: { level: 'blocked', confirmed: false, canGenerate: false, issues: [] },
 });
@@ -158,4 +179,12 @@ const noFunction = buildBuildSimulatorR483({ result: noFunctionResult, targetPos
 assert.equal(noFunction.variants.some((variant) => variant.id === 'specialist'), false);
 assert.equal(noFunction.variants.some((variant) => variant.id === 'gameplay'), false);
 
-console.log('R483 Task 1-2 contract: OK');
+const engineSource = readFileSync(resolve(process.cwd(), 'src/modules/build-simulator/buildSimulatorEngineR483.ts'), 'utf8');
+assert.doesNotMatch(engineSource, /from\s+['\"][^'\"]*(?:vault|storage|persistence)[^'\"]*['\"]/i, 'R483 não pode importar persistência/Cofre');
+assert.doesNotMatch(engineSource, /\b(?:save|persist|store)[A-Z]\w*\s*\(/, 'R483 não pode chamar writer de ficha');
+assert.doesNotMatch(engineSource, /recommendedSkills\s*=/, 'R483 não pode escrever habilidades');
+assert.doesNotMatch(engineSource, /recommendedImpetos\s*=/, 'R483 não pode escrever ímpetos');
+assert.doesNotMatch(engineSource, /parsed\.(?:overall|maxOverall)|pri\.GER/, 'R483 não pode ler GER/Overall');
+assert.doesNotMatch(engineSource, /setResult\s*\(/, 'R483 não pode substituir resultado oficial');
+
+console.log('R483 Task 1-3 contract: OK');
