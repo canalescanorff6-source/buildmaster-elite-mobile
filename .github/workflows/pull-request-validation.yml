@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: buildmaster-pr-${{ github.event.pull_request.number || github.ref }}
@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0
 
       - name: Configurar Node.js
         uses: actions/setup-node@v5
@@ -31,6 +34,20 @@ jobs:
 
       - name: Instalar dependências
         run: npm ci
+
+      - name: Aplicar integração R489 no Resultado uma única vez
+        if: github.event_name == 'pull_request'
+        run: |
+          node scripts/r489-apply-result-integration.mjs
+          if git diff --quiet -- src/components/result/ResultAdvancedWorkspaceR192.tsx; then
+            echo 'Integração R489 já estava aplicada.'
+            exit 0
+          fi
+          git config user.name 'buildmaster-r489[bot]'
+          git config user.email 'buildmaster-r489[bot]@users.noreply.github.com'
+          git add src/components/result/ResultAdvancedWorkspaceR192.tsx
+          git commit -m 'R489: integrar explicacao de ficha na Analise Pro'
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Regressão R483 — contrato read-only (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
