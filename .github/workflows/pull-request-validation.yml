@@ -35,6 +35,9 @@ jobs:
       - name: Regressão R483 — contrato read-only (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
+      - name: Selo R128 — autoridade final preservada
+        run: npm run test:r128
+
       - name: TypeScript
         run: npm run typecheck
 
