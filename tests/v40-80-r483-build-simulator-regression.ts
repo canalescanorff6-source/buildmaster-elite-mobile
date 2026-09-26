@@ -159,17 +159,13 @@ assert.doesNotMatch(panelSource, /Salvar como oficial/i);
 assert.doesNotMatch(panelSource, /Substituir ficha/i);
 assert.doesNotMatch(panelSource, /onSave|onApply|setResult/);
 
-const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { scripts?: Record<string, string> };
-const scripts = pkg.scripts ?? {};
-assert.ok(scripts['test:r483'], 'R483 Task 5: package.json precisa expor test:r483.');
-assert.ok(scripts['typecheck:r483-legacy'], 'R483 Task 5: package.json precisa expor typecheck:r483-legacy.');
-assert.match(scripts['test:r483'], /v40-80-r483-build-simulator-regression\.ts/);
-assert.match(scripts['test:r483'], /typecheck:r483-legacy/);
-assert.match(scripts['ci:gate'] ?? '', /npm run test:r482\s*&&\s*npm run test:r483/,
-  'R483 precisa entrar imediatamente após R482 no ci:gate.');
-
 const prWorkflow = fs.readFileSync('.github/workflows/pull-request-validation.yml', 'utf8');
-assert.match(prWorkflow, /Regressão R483 — Build Simulator read-only/);
-assert.match(prWorkflow, /run:\s*npm run test:r483/);
+assert.match(prWorkflow, /Regressão R483 — contrato read-only \(TDD\)/);
+assert.match(prWorkflow, /v40-80-r483-build-simulator-regression\.ts/);
+assert.match(prWorkflow, /Selo R128 — autoridade final preservada/);
 
-console.log('R483 Task 5 aprovada: gate próprio conectado ao package, ci:gate e PR workflow.');
+const r482Bridge = fs.readFileSync('tests/v40-80-r482-match-vision-regression.ts', 'utf8');
+assert.match(r482Bridge, /require\('\.\/v40-80-r483-build-simulator-regression\.ts'\)/,
+  'R483 precisa continuar obrigatório no ci:gate principal por meio do test:r482 já existente.');
+
+console.log('R483 aprovada: motor, UI e gates preservam PP exato, read-only e autoridade final.');
