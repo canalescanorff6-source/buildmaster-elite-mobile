@@ -1,44 +1,53 @@
 # R489 Explainable AI Implementation Plan
 
-> **Execution:** use `superpowers:executing-plans` in the current session and complete tasks in order. Do not skip RED/GREEN checkpoints.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** adicionar uma camada única, determinística e somente leitura que explique por que uma ficha, titularidade, rotação, leitura tática ou conclusão de partida foi apresentada, usando apenas R128 e snapshots R480–R484 já existentes.
+**Goal:** adicionar uma camada única, determinística e somente leitura que explique por que uma ficha, titularidade, rotação, leitura tática ou conclusão de partida foi apresentada, usando somente R128 e snapshots R480–R484 existentes.
 
-**Architecture:** R489 é uma camada pós-decisão. Um único motor público `buildExplainableDecisionR489()` recebe uma entrada discriminada por `kind`, normaliza evidências de R128/R480/R481/R482/R483/R484, controla dependências para evitar dupla contagem, calcula confiança explicativa sem recalcular a confiança nativa das fontes e produz uma cadeia auditável. A UI usa um painel reutilizável e recolhido por padrão em Resultado, Meu Time e Partidas; não cria menu ou aba global.
+**Architecture:** R489 é uma camada pós-decisão. Um único motor público `buildExplainableDecisionR489()` recebe uma entrada discriminada por `kind`, normaliza evidências, controla dependências para evitar dupla contagem e produz uma cadeia auditável sem recalcular decisões dos motores de origem. Um painel reutilizável e recolhido por padrão entra nas superfícies existentes de Resultado, Meu Time e Partidas, sem criar menu ou aba global.
 
-**Tech Stack:** TypeScript, React/Next.js, motores read-only R480–R484, `AnalysisResult`/R128, Node regression tests via `tests/_ts-require.cjs`, GitHub Actions.
+**Tech Stack:** TypeScript, React/Next.js, R128, R480–R484, Node regression tests via `tests/_ts-require.cjs`, GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-09-26-r489-explainable-ai-design.md`
 
 ## Global Constraints
 
-- `R119 → R126 → R128` permanece a autoridade final.
-- R489 nunca recalcula ou substitui a decisão oficial.
-- Sem escrita de ficha, PP, skills, Ímpeto, posição, formação, escalação, Cofre ou marcadores de partida.
-- Sem `fetch`, LLM remoto ou dependência obrigatória de rede.
+- `R119 → R126 → R128` permanece autoridade final.
+- R489 nunca cria/recalcula ficha, PP, Top 5, Ímpeto, posição, formação, escalação ou marcador de partida.
+- Sem writer de Cofre/store, `fetch`, LLM remoto ou dependência de rede no motor.
 - GER/Overall não entra em score, confiança, evidência, desempate ou justificativa.
-- `nativeConfidence` vem do motor de origem e não pode ser recalculada pelo R489.
-- R480/R481/R484 têm dependência explícita e não podem inflar confiança como três provas independentes da mesma afirmação.
-- Motivo relevante sem `evidenceIds` é inválido.
-- `NOT_APPLICABLE` não é erro; `BLOCKED` e `UNAVAILABLE` precisam ser reportados.
-- O mesmo input deve produzir exatamente o mesmo snapshot e fingerprint.
-- Nenhuma integração R489 pode expor botão de aplicar/promover/salvar/trocar.
-- A falha do R489 deve degradar apenas a explicação; ficha, Meu Time e Match Vision continuam funcionais.
+- `nativeConfidence` vem do motor de origem; R489 não a recalcula.
+- R480/R481/R484 não podem valer como três provas independentes da mesma afirmação.
+- Todo motivo material precisa resolver para `evidenceIds` reais no mesmo snapshot.
+- `NOT_APPLICABLE` não é erro; `BLOCKED`/`UNAVAILABLE` precisam ser explícitos.
+- Mesmo input precisa produzir snapshot e fingerprint idênticos.
+- Falha do R489 degrada só a explicação; Resultado, Meu Time e Match Vision continuam operando.
+
+## File Map
+
+- `src/modules/explainable-ai/explainableDecisionTypesR489.ts` — contrato público e entradas discriminadas.
+- `src/modules/explainable-ai/explainableEvidenceR489.ts` — normalização, independência, confiança e tetos.
+- `src/modules/explainable-ai/explainableDecisionBuildersR489.ts` — builders internos BUILD/STARTER/ROTATION/TACTICAL/MATCH.
+- `src/modules/explainable-ai/explainableDecisionEngineR489.ts` — único entrypoint público, ranking, contradições, contrafactual e fingerprint.
+- `src/modules/explainable-ai/ExplainableDecisionPanelR489.tsx` — UI somente leitura reutilizável.
+- `src/components/result/ResultAdvancedWorkspaceR192.tsx` — integração BUILD em Resultado → Avançado → Comparar.
+- `src/modules/squad/IntegratedTeamLab.tsx` — integrações STARTER/ROTATION/TACTICAL usando snapshots já calculados R480/R481/R484.
+- `src/modules/matches/MatchTrainerCenter.tsx` — integração MATCH usando `matchVisionR482` existente.
+- `tests/v40-80-r489-explainable-ai-regression.ts` — contrato/regressão única R489.
+- `package.json` — `test:r489` + inclusão em `ci:gate`.
+- `.github/workflows/pull-request-validation.yml` — gate R489 explícito após R484.
 
 ## Review Focus
 
-- Não duplicar algoritmos de R480–R484.
-- Não transformar correlação entre motores dependentes em confiança artificial.
-- Não usar candidatos pendentes do R482 como evidência confirmada.
-- Não fabricar contrafactual quando nenhum candidato real existir.
-- Não transformar ausência de vídeo em erro do R482.
-- Não adicionar nova aba global ou superfície pesada.
-- Não permitir que UI/erro R489 bloqueie Resultado, Meu Time ou Partidas.
-- Preservar gates históricos que já impediram PR-green/main-red.
+- **Fonte ausente/bloqueada:** degradar para PARTIAL/INSUFFICIENT sem inventar evidência ou derrubar a superfície original.
+- **Evidência dependente:** R480/R481/R484 não pode inflar artificialmente diversidade/confiança quando sustenta a mesma afirmação.
+- **Partida sem confirmação:** candidatos/suggested markers R482 nunca viram prova confirmada.
+- **Contradição real:** benefício e sacrifício conflitantes devem aparecer e reduzir confiança deterministicamente, não ser ocultados por média.
+- **Autoridade/UI:** nenhuma integração R489 pode aplicar variante, trocar titular, mudar formação, escrever ficha/Cofre ou criar nova aba global.
 
 ---
 
-## Task 1 — Fixar o contrato R489 em RED e colocá-lo nos dois gates de CI
+### Task 1: Contrato RED e gates PR/main
 
 **Files:**
 - Create: `tests/v40-80-r489-explainable-ai-regression.ts`
@@ -46,13 +55,10 @@
 - Modify: `.github/workflows/pull-request-validation.yml`
 
 **Interfaces:**
-- Future import: `EXPLAINABLE_AI_R489_VERSION`, `buildExplainableDecisionR489` from `src/modules/explainable-ai/explainableDecisionEngineR489.ts`.
-- Script: `test:r489`.
-- Main preventive gate: `ci:gate`.
+- Consumes futuramente: `EXPLAINABLE_AI_R489_VERSION`, `buildExplainableDecisionR489(input)`.
+- Produces: `npm run test:r489` executado tanto no PR quanto no `ci:gate` usado pelo APK da main.
 
-- [ ] **Step 1: write only the initial failing contract test**
-
-Create a minimal test importing the nonexistent engine and fixing these initial invariants:
+- [ ] **Step 1: Write the failing import/authority test**
 
 ```ts
 import assert from 'node:assert/strict';
@@ -74,17 +80,13 @@ assert.equal(first.authority.canWriteVault, false);
 assert.equal(first.authority.optimizeOverall, false);
 ```
 
-Do **not** add later behavior assertions yet; each later task adds its own failing tests before implementation.
+- [ ] **Step 2: Run RED**
 
-- [ ] **Step 2: prove RED for the correct reason**
+Run: `node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-regression.ts`
 
-```bash
-node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-regression.ts
-```
+Expected: FAIL apenas porque `explainableDecisionEngineR489` ainda não existe.
 
-Expected: FAIL because `explainableDecisionEngineR489` does not exist; no unrelated syntax/configuration failure.
-
-- [ ] **Step 3: add `test:r489` and put it in `ci:gate`**
+- [ ] **Step 3: Add npm script and main preventive gate**
 
 Add:
 
@@ -92,383 +94,305 @@ Add:
 "test:r489": "node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-regression.ts"
 ```
 
-In the existing `ci:gate`, insert `npm run test:r489` directly after `npm run test:r482`. Do not remove/reorder historical gates.
+Insert `npm run test:r489` in existing `ci:gate` directly after `npm run test:r482`; do not remove/reorder historical gates. This is mandatory because `.github/workflows/build-apk.yml` executes `npm run ci:gate` before heavy APK work.
 
-Reason: `.github/workflows/build-apk.yml` executes `npm run ci:gate` in the main APK preventive gate, so R489 must be present there to prevent PR-green/main-red.
+- [ ] **Step 4: Add PR gate**
 
-- [ ] **Step 4: add explicit R489 PR step after R484**
-
-In `.github/workflows/pull-request-validation.yml`:
+After R484 in `.github/workflows/pull-request-validation.yml`:
 
 ```yaml
 - name: Regressão R489 — Explainable AI read-only (TDD)
   run: npm run test:r489
 ```
 
-Keep R483, R484, R128, TypeScript, closure and historical gates intact.
+- [ ] **Step 5: Commit RED checkpoint**
 
-- [ ] **Step 5: commit RED checkpoint**
-
-```text
-R489: fixar contrato RED e gates de CI
+```bash
+git add tests/v40-80-r489-explainable-ai-regression.ts package.json .github/workflows/pull-request-validation.yml
+git commit -m "R489: fixar contrato RED e gates de CI"
 ```
-
-No PR/merge yet; RED is intentional only on the feature branch at this checkpoint.
 
 ---
 
-## Task 2 — Criar tipos públicos, autoridade e degradação determinística mínima
+### Task 2: Tipos públicos, autoridade e degradação mínima
 
 **Files:**
 - Create: `src/modules/explainable-ai/explainableDecisionTypesR489.ts`
 - Create: `src/modules/explainable-ai/explainableDecisionEngineR489.ts`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-- [ ] **Step 1: add failing tests for five discriminated kinds**
+**Interfaces:**
+- Produces: `ExplainableDecisionInputR489`, `ExplainableDecisionR489`, `buildExplainableDecisionR489(input)`.
+- Decision kinds: `BUILD | STARTER | ROTATION | TACTICAL | MATCH`.
 
-```ts
-type ExplainableDecisionKindR489 =
-  | 'BUILD'
-  | 'STARTER'
-  | 'ROTATION'
-  | 'TACTICAL'
-  | 'MATCH';
-```
+- [ ] **Step 1: Add failing degraded-state tests**
 
-Each kind must return a valid degraded snapshot with stable version/kind, complete read-only authority, availability, deterministic fingerprint, no mutation and `performanceConfidence: null` when performance evidence is insufficient.
+For each kind assert stable `version`, `kind`, full read-only authority, availability object, deterministic fingerprint, no input mutation and `performanceConfidence === null` when no performance evidence exists.
 
-- [ ] **Step 2: implement public types once**
+Also pin Review Focus case “fonte ausente/bloqueada”: `NOT_APPLICABLE` must not be reported as failure; relevant `BLOCKED`/`UNAVAILABLE` must create limitations.
 
-`explainableDecisionTypesR489.ts` defines:
+- [ ] **Step 2: Implement public types**
 
-- `EvidenceSourceR489`
-- `EvidenceFamilyR489`
-- `EvidenceAvailabilityR489`
-- `ExplainableEvidenceR489`
-- `ExplainableReasonKindR489`
-- `ExplainableReasonR489`
-- `ExplainableCounterfactualR489`
-- `ExplainableAvailabilityR489`
-- `ExplainableDecisionR489`
-- BUILD/STARTER/ROTATION/TACTICAL/MATCH input variants
-- `ExplainableDecisionInputR489`
+In `explainableDecisionTypesR489.ts`, define exact spec types:
 
-Use type-only imports from R480–R484 where possible. Do not import store/writer/network modules.
+`EvidenceSourceR489`, `EvidenceFamilyR489`, `EvidenceAvailabilityR489`, `ExplainableEvidenceR489`, `ExplainableReasonKindR489`, `ExplainableReasonR489`, `ExplainableCounterfactualR489`, `ExplainableAvailabilityR489`, `ExplainableDecisionR489`, five discriminated input variants and their union.
 
-- [ ] **Step 3: implement minimal pure engine**
+Use type-only imports from R480–R484 where possible.
+
+- [ ] **Step 3: Implement minimal engine signature**
 
 ```ts
 export const EXPLAINABLE_AI_R489_VERSION = '40.80-r489-explainable-ai-v1' as const;
 
 export function buildExplainableDecisionR489(
   input: ExplainableDecisionInputR489
-): ExplainableDecisionR489
+): ExplainableDecisionR489;
 ```
 
-At this task the engine only validates availability, describes supplied decision identity, returns empty evidence/reasons when no proof exists, degrades to `INSUFFICIENT`, produces deterministic fingerprint and exposes immutable authority.
+Minimal behavior: validate availability, preserve supplied decision identity, no speculative reasons, `INSUFFICIENT` when evidence is absent, deterministic fingerprint and complete false/read-only authority flags.
 
-- [ ] **Step 4: add source guardrail scan**
+- [ ] **Step 4: Add forbidden-source scan**
 
-Test executable R489 source for absence of writer/network/random/time dependencies:
+Regression reads R489 engine source and rejects executable use of `fetch(`, `localStorage`, `sessionStorage`, `upsert`, `setResult(`, training/writer calls, `Math.random`, `Date.now`, `new Date(` and GER/Overall scoring/reasoning.
 
-```text
-fetch(
-localStorage
-sessionStorage
-upsert
-setResult(
-setTraining
-Math.random
-Date.now
-new Date(
-```
+- [ ] **Step 5: Run GREEN**
 
-Also assert no Overall/GER objective/reference in R489 scoring/reasoning logic.
+Run: `npm run test:r489`
 
-- [ ] **Step 5: run and require GREEN**
+Expected: PASS.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-npm run test:r489
-```
-
-- [ ] **Step 6: commit**
-
-```text
-R489: criar contrato read-only e degradacao deterministica
+git add src/modules/explainable-ai tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: criar contrato read-only e degradacao deterministica"
 ```
 
 ---
 
-## Task 3 — Normalizar evidências e implementar confiança sem dupla contagem
+### Task 3: Evidência, independência e confiança
 
 **Files:**
 - Create: `src/modules/explainable-ai/explainableEvidenceR489.ts`
 - Modify: `src/modules/explainable-ai/explainableDecisionEngineR489.ts`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-- [ ] **Step 1: add failing evidence/confidence tests**
+**Interfaces:**
+- Consumes: public source/family types from Task 2.
+- Produces internal helpers `effectiveWeightR489`, `independenceForR489`, `confidenceCeilingR489` and final decision/performance confidence used by engine.
 
-Cover:
+- [ ] **Step 1: Add failing confidence tests**
 
-1. native confidence copied from source, never recalculated;
-2. effective weight = native × relevance × independence × completeness after `[0,1]` normalization;
-3. R481 same-claim support of R480 has independence `<= 0.75`;
-4. R484 rotation-derived support of R481 has independence `<= 0.65`;
-5. R484 chemistry-only claim may be `1.0` independent;
-6. R482 confirmed facts may be `1.0` independent;
-7. one independent relevant family ceiling 65;
-8. two families ceiling 82;
-9. three+ may exceed 82 but never 100;
-10. R480 + dependent R481 + dependent R484 cannot count as three independent confirmations of the same claim.
-
-- [ ] **Step 2: implement focused helpers**
-
-In `explainableEvidenceR489.ts`:
+Assert exact rules:
 
 ```ts
-clamp01R489(value)
-normalizeConfidenceR489(value)
-effectiveWeightR489(parts)
-independenceForR489(source, claimOrigin)
-familyDiversityR489(evidence)
-confidenceCeilingR489(independentFamilies)
+assert.equal(r481SameClaim.independence <= 0.75, true);
+assert.equal(r484RotationDerived.independence <= 0.65, true);
+assert.equal(r484ChemistryOnly.independence, 1);
+assert.equal(r482Confirmed.independence, 1);
 ```
 
-Dependency rules are explicit/table-driven, never inferred from prose strings.
+Also assert effective weight equals normalized native × relevance × independence × completeness; one independent relevant family caps at 65, two at 82, three+ at 100 maximum.
 
-- [ ] **Step 3: separate decision and performance confidence**
+Pin Review Focus “evidência dependente”: R480 + same-claim R481 + derived R484 must not count as three independent confirmations.
 
-- `decisionConfidence`: certainty about what was actually decided; R128 fingerprint/identity may make this high.
-- `performanceConfidence`: only when relevant performance evidence exists; otherwise `null`.
-- bounded deterministic contradiction/completeness penalties.
-- `NOT_APPLICABLE` gets no error penalty.
-- `BLOCKED`/`UNAVAILABLE` lowers completeness only when relevant to the kind.
+- [ ] **Step 2: Implement focused evidence helpers**
 
-- [ ] **Step 4: run twice for determinism**
+```ts
+clamp01R489(value: number): number;
+normalizeConfidenceR489(value: number): number;
+effectiveWeightR489(parts: WeightPartsR489): number;
+independenceForR489(source: EvidenceSourceR489, origin: EvidenceOriginR489): number;
+familyDiversityR489(evidence: ExplainableEvidenceR489[]): number;
+confidenceCeilingR489(independentFamilies: number): number;
+```
+
+Dependency rules are explicit/table-driven, never parsed from human prose.
+
+- [ ] **Step 3: Implement two confidence channels**
+
+`decisionConfidence` measures certainty about the actual decision identity. `performanceConfidence` is `null` without relevant performance proof. `NOT_APPLICABLE` has no error penalty; relevant BLOCKED/UNAVAILABLE reduces completeness. Contradiction penalty is bounded and deterministic.
+
+- [ ] **Step 4: Run twice**
+
+Run: `npm run test:r489 && npm run test:r489`
+
+Expected: both PASS with identical object output for identical fixtures.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-npm run test:r489
-npm run test:r489
-```
-
-Both GREEN and identical outputs.
-
-- [ ] **Step 5: commit**
-
-```text
-R489: calibrar evidencias e confianca sem dupla contagem
+git add src/modules/explainable-ai tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: calibrar evidencias e confianca sem dupla contagem"
 ```
 
 ---
 
-## Task 4 — Implementar os cinco explicadores atrás do único motor público
+### Task 4: BUILD/STARTER/ROTATION/TACTICAL/MATCH builders
 
 **Files:**
 - Create: `src/modules/explainable-ai/explainableDecisionBuildersR489.ts`
 - Modify: `src/modules/explainable-ai/explainableDecisionEngineR489.ts`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-No builder is exported as a competing authority; only `buildExplainableDecisionR489()` is public.
+**Interfaces:**
+- Consumes: real snapshots supplied in the discriminated input.
+- Produces internal candidate evidence/reasons only; no independent exported authority.
 
-- [ ] **Step 1: BUILD RED cases**
+- [ ] **Step 1: Add BUILD failing test**
 
-Final official `AnalysisResult` + R483 snapshot:
-- official decision remains verdict baseline;
-- R483 variants are alternatives/trade-offs only;
-- `blockedReason` maps to `BLOCKED` + limitation;
-- zero/inconsistent PP never causes fabricated alternative.
+Official `AnalysisResult` remains verdict baseline. R483 variants can only appear as alternatives/trade-offs. `blockedReason` maps to `BLOCKED` + limitation. Zero/inconsistent PP never causes a fabricated alternative.
 
-- [ ] **Step 2: STARTER RED cases**
+- [ ] **Step 2: Add STARTER failing test**
 
-Target starter + R481 + optional R484:
-- importance/replacement gap comes from R481;
-- chemistry wording only with real R484 link;
-- no R484 => no chemistry claim;
-- no lineup mutation.
+Importance/replacement gap must come from R481; chemistry statement only when real R484 link exists. No R484 => no chemistry claim.
 
-- [ ] **Step 3: ROTATION RED cases**
+- [ ] **Step 3: Add ROTATION failing test**
 
-Real R481 rotation + matching R480 scenario + optional R484 simulation:
-- no synthetic reserve/scenario;
-- R484 delta only with actual matching simulation;
-- explanation never applies the rotation.
+Rotation must exist in R481; scenario must exist in R480; chemistry delta only when matching R484 simulation exists. No synthetic reserve/scenario.
 
-- [ ] **Step 4: TACTICAL RED cases**
+- [ ] **Step 4: Add TACTICAL failing test**
 
-R480 scenario + R481 coverage + optional R484:
-- readiness/risk from R480;
-- coverage from R481;
-- chemistry from R484 only;
-- repeated claims use dependency discount.
+Readiness/risk from R480; coverage from R481; chemistry from R484 only; dependency discount applies to repeated claim.
 
-- [ ] **Step 5: MATCH RED cases**
+- [ ] **Step 5: Add MATCH failing test**
 
-R482 snapshot:
-- `criticalWindows`, recurring patterns and confirmed/reviewed evidence may support reasons;
-- `suggestedMarkers` may only be pending/limitation metadata;
-- zero confirmed evidence cannot produce a strong performance conclusion.
+R482 `criticalWindows`, recurring patterns and confirmed/reviewed evidence may support reasons. Pin Review Focus “partida sem confirmação”: `suggestedMarkers` may only appear as pending/limitation metadata and never as supporting proof; zero confirmed evidence forbids strong performance conclusion.
 
-- [ ] **Step 6: implement internal builders**
+- [ ] **Step 6: Implement internal builders**
 
-Builders only convert existing snapshot fields into candidate claims/evidence. They do not score players, PP, chemistry, tactics or matches themselves.
+One builder per kind converts existing source fields to candidate evidence/reasons; no builder re-scores players, PP, chemistry, tactics or matches.
 
-- [ ] **Step 7: reject orphan reasons**
+- [ ] **Step 7: Enforce evidence linkage**
 
-Before return, drop/reject every material reason whose `evidenceIds` do not resolve inside the same snapshot.
+Engine rejects/drops every material reason whose `evidenceIds` do not resolve in the same snapshot.
 
-- [ ] **Step 8: run**
+- [ ] **Step 8: Run**
+
+Run: `npm run test:r489 && npm run test:r128`
+
+Expected: PASS.
+
+- [ ] **Step 9: Commit**
 
 ```bash
-npm run test:r489
-npm run test:r128
-```
-
-- [ ] **Step 9: commit**
-
-```text
-R489: explicar ficha elenco tatica e partida
+git add src/modules/explainable-ai tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: explicar ficha elenco tatica e partida"
 ```
 
 ---
 
-## Task 5 — Contradições, contrafactual, ranking e fingerprint final
+### Task 5: Contradição, contrafactual, ranking e fingerprint final
 
 **Files:**
 - Modify: `src/modules/explainable-ai/explainableDecisionEngineR489.ts`
 - Modify: `src/modules/explainable-ai/explainableEvidenceR489.ts`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-- [ ] **Step 1: contradiction RED case**
+**Interfaces:**
+- Produces final ranked/capped `ExplainableDecisionR489` snapshot.
 
-Fixture example: R483 says Gameplay improves progression; R484 shows structural/chemistry sacrifice; R482 confirms recurring progression problems.
+- [ ] **Step 1: Add contradiction failing test**
 
-Assert explicit conflict/trade-off and lower confidence than equivalent no-conflict fixture. Never silently average conflict away.
+Fixture: R483 says Gameplay improves progression; R484 indicates structural/chemistry sacrifice; R482 confirms progression problems. Pin Review Focus “contradição real”: output must expose conflict/trade-off and confidence must be lower than equivalent no-conflict fixture.
 
-- [ ] **Step 2: counterfactual RED cases**
+- [ ] **Step 2: Add counterfactual failing tests**
 
-Only real candidates from R483 variants, R481 rotations, R480 scenarios or R484 rotation simulations are allowed.
-
-No candidate:
+Only real R483 variant, R481 rotation, R480 scenario or R484 rotation simulation may populate counterfactual. No candidate must return exactly:
 
 ```ts
-{
-  available: false,
-  explanation: null,
-  evidenceIds: []
-}
+{ available: false, explanation: null, evidenceIds: [] }
 ```
 
-- [ ] **Step 3: deterministic ranking/caps**
+- [ ] **Step 3: Implement deterministic rank/caps**
 
-Order:
-1. impact descending;
-2. effective evidence strength descending;
-3. `CONTRADICTION > RISK > TRADE_OFF > BENEFIT` on ties;
-4. stable id.
+Sort: impact desc → effective evidence strength desc → `CONTRADICTION > RISK > TRADE_OFF > BENEFIT` → stable id. Caps: reasons 5; benefits/trade-offs/risks/alternatives 3 each.
 
-Caps: reasons 5; benefits/trade-offs/risks/alternatives 3 each.
+- [ ] **Step 4: Finalize fingerprint**
 
-- [ ] **Step 4: deterministic fingerprint**
+Include kind, official decision id/fingerprint when applicable, source versions, selected evidence ids/fingerprints and availability. Exclude time/random/locale/UI state.
 
-Include kind, official decision fingerprint/id when applicable, source versions, selected evidence ids/fingerprints and availability. Exclude current time/random/locale/UI state.
+- [ ] **Step 5: Run 10x determinism per kind**
 
-- [ ] **Step 5: run 10x determinism matrix per kind**
+Run: `npm run test:r489`
+
+Expected: PASS with deep equality across repeated runs.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-npm run test:r489
-```
-
-- [ ] **Step 6: commit**
-
-```text
-R489: fechar contradicoes contrafactual e fingerprint
+git add src/modules/explainable-ai tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: fechar contradicoes contrafactual e fingerprint"
 ```
 
 ---
 
-## Task 6 — Criar painel reutilizável “Por que esta recomendação?”
+### Task 6: Reusable read-only panel
 
 **Files:**
 - Create: `src/modules/explainable-ai/ExplainableDecisionPanelR489.tsx`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-**Interface:**
+**Interfaces:**
+- Consumes: `ExplainableDecisionR489`.
+- Produces: `ExplainableDecisionPanelR489({ decision, compact? })` with no mutation callback.
 
-```ts
-export function ExplainableDecisionPanelR489({
-  decision,
-  compact = true
-}: {
-  decision: ExplainableDecisionR489;
-  compact?: boolean;
-})
-```
+- [ ] **Step 1: Add UI contract failing test**
 
-No mutation callbacks.
+Assert title `Por que esta recomendação?`, decision confidence, conditional performance confidence, friendly evidence-state label, max 5 reasons, optional benefit/trade-off/risk and collapsed `Ver evidências` detail with source/native confidence/relevance/independence/completeness/fingerprint/version.
 
-- [ ] **Step 1: UI contract RED assertions**
+Pin Review Focus “autoridade/UI”: test source contains no R489 mutation/apply/promote/save/swap callback.
 
-Require:
-- `Por que esta recomendação?`;
-- decision confidence;
-- performance confidence only when non-null;
-- friendly FULL/PARTIAL/INSUFFICIENT labels;
-- 3–5 reasons max;
-- benefit/trade-off/risk only when present;
-- collapsed `Ver evidências` detail;
-- evidence source/native confidence/relevance/independence/completeness/fingerprint/version;
-- no apply/promote/save/swap control.
+- [ ] **Step 2: Implement presentational component**
 
-- [ ] **Step 2: implement pure presentational component**
+Reuse `luxury-panel`, `v27-pairing-list`, `v27-recommendation-list`, `panel-note`; prefer `<details>` default closed. No broad new CSS unless unavoidable.
 
-Reuse existing `luxury-panel`, `v27-pairing-list`, `v27-recommendation-list`, `panel-note` classes. Avoid new broad CSS. Prefer semantic `<details>` default closed.
+- [ ] **Step 3: Isolate panel failure**
 
-- [ ] **Step 3: isolate UI failure locally**
+If a boundary is required, wrap only the R489 panel and render a fallback that says the explanation is unavailable while the original recommendation remains intact.
 
-If an error boundary is necessary, wrap only the R489 panel; fallback says explanation is unavailable while original recommendation remains intact.
+- [ ] **Step 4: Run**
 
-- [ ] **Step 4: run**
+Run: `npm run test:r489 && npm run typecheck`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
 
 ```bash
-npm run test:r489
-npm run typecheck
-```
-
-- [ ] **Step 5: commit**
-
-```text
-R489: criar painel reutilizavel de explicacao
+git add src/modules/explainable-ai tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: criar painel reutilizavel de explicacao"
 ```
 
 ---
 
-## Task 7 — Integrar BUILD na Análise Pro existente, sem nova aba
+### Task 7: BUILD integration in existing Result advanced workspace
 
 **Files:**
 - Modify: `src/components/result/ResultAdvancedWorkspaceR192.tsx`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-**Current surface:** `Resultado → Avançado → Comparar`, where `BuildSimulatorPanelR483` already renders.
+**Interfaces:**
+- Consumes existing `result`, `analysisUsagePositionR138(result)`, pure `buildBuildSimulatorR483(...)` and R489 engine/panel.
+- Produces compact BUILD explanation inside existing `comparar` tab.
 
-Decision: keep `BuildSimulatorPanelR483.tsx` unchanged in v1. `ResultAdvancedWorkspaceR192` computes one additional pure R483 snapshot for R489 rather than coupling the two components with mutable callbacks.
+Decision: leave `BuildSimulatorPanelR483.tsx` unchanged in v1. `ResultAdvancedWorkspaceR192` computes one additional pure R483 snapshot for R489 rather than coupling components with mutable callbacks.
 
-- [ ] **Step 1: compute R483 snapshot locally**
+- [ ] **Step 1: Add integration failing test**
 
-Use existing `analysisUsagePositionR138(result)` + `buildBuildSimulatorR483({ result, targetPosition })` with `useMemo`.
+Assert R489 panel appears in existing `comparar`; `AdvancedResultTabR192` gains no new value; no R489 path calls `onPromoteImpeto`, `onRejectImpeto`, training setter or apply callback.
 
-- [ ] **Step 2: build BUILD R489 decision**
+- [ ] **Step 2: Compute BUILD decision with `useMemo`**
 
-Pass final official result + R483 snapshot; derive R483 availability from `blockedReason`.
+Use `analysisUsagePositionR138(result)` + `buildBuildSimulatorR483({ result, targetPosition })`; map R483 blocked state to R489 availability.
 
-- [ ] **Step 3: render immediately after R483 panel**
+- [ ] **Step 3: Render immediately after R483 panel**
 
-Compact R489 panel in existing `comparar` section. No new `AdvancedResultTabR192` value.
+No new tab/menu.
 
-- [ ] **Step 4: authority regression**
+- [ ] **Step 4: Run Result gates**
 
-Assert R489 integration is not wired to `onPromoteImpeto`, `onRejectImpeto`, training setters or apply callbacks.
-
-- [ ] **Step 5: run Result gates**
+Run:
 
 ```bash
 npm run test:r489
@@ -480,39 +404,46 @@ npm run test:v3177
 npm run test:r128
 ```
 
-- [ ] **Step 6: commit**
+Expected: all PASS.
 
-```text
-R489: integrar explicacao de ficha na Analise Pro
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/result/ResultAdvancedWorkspaceR192.tsx tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: integrar explicacao de ficha na Analise Pro"
 ```
 
 ---
 
-## Task 8 — Integrar STARTER/ROTATION/TACTICAL em Meu Time de forma recolhida
+### Task 8: STARTER/ROTATION/TACTICAL integration in Meu Time
 
 **Files:**
 - Modify: `src/modules/squad/IntegratedTeamLab.tsx`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-Use the already computed `tacticalTwinR480`, `squadBrainR481`, `chemistryR484`; never rebuild them inside R489.
+**Interfaces:**
+- Consumes already computed `tacticalTwinR480`, `squadBrainR481`, `chemistryR484`.
+- Produces collapsed local explanations; does not rebuild source snapshots.
 
-- [ ] **Step 1: STARTER**
+- [ ] **Step 1: Add team integration failing test**
 
-In `elenco`, real starters resolvable in `squadBrainR481.core` get a collapsed “Por que titular?” explanation. Evidence detail stays closed by default.
+Assert no new `TeamTab`, no R489 call to `onFormationChange`, preset writer, import/export or lineup mutation.
 
-- [ ] **Step 2: ROTATION**
+- [ ] **Step 2: Integrate STARTER**
 
-In `banco`, real `squadBrainR481.rotations` get “Por que esta rotação?” using the actual matching R480 scenario and R484 simulation when present. No apply action.
+In `elenco`, real starters resolvable in `squadBrainR481.core` get collapsed `Por que titular?` explanation.
 
-- [ ] **Step 3: TACTICAL**
+- [ ] **Step 3: Integrate ROTATION**
 
-In `tatica`, one compact R489 panel explains the current/base R480 scenario using R481 coverage and optional R484 chemistry.
+In `banco`, real `squadBrainR481.rotations` get `Por que esta rotação?`, using actual matching R480 scenario and R484 simulation when present. No apply action.
 
-- [ ] **Step 4: regression**
+- [ ] **Step 4: Integrate TACTICAL**
 
-Assert no new team tab, no R489 call to `onFormationChange`, preset writer, import/export path or lineup mutation.
+In `tatica`, one compact R489 panel explains current/base R480 scenario using R481 coverage and optional R484 chemistry.
 
-- [ ] **Step 5: run**
+- [ ] **Step 5: Run team gates**
+
+Run:
 
 ```bash
 npm run test:r489
@@ -522,35 +453,42 @@ node -r ./tests/_ts-require.cjs tests/v40-80-r484-chemistry-graph-regression.ts
 npm run typecheck
 ```
 
-- [ ] **Step 6: commit**
+Expected: all PASS.
 
-```text
-R489: explicar titular rotacao e tatica no Meu Time
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/modules/squad/IntegratedTeamLab.tsx tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: explicar titular rotacao e tatica no Meu Time"
 ```
 
 ---
 
-## Task 9 — Integrar MATCH no Match Vision existente
+### Task 9: MATCH integration in existing Match Vision
 
 **Files:**
 - Modify: `src/modules/matches/MatchTrainerCenter.tsx`
 - Modify: `tests/v40-80-r489-explainable-ai-regression.ts`
 
-Use existing `matchVisionR482`; R489 never rereads raw video/markers.
+**Interfaces:**
+- Consumes existing `matchVisionR482`.
+- Produces compact MATCH explanation inside existing `analysisTab === 'visao'`.
 
-- [ ] **Step 1: build MATCH decision from existing snapshot**
+- [ ] **Step 1: Add match integration failing test**
 
-Only when active session has `matchVisionR482`.
+Assert no new MatchTrainer analysis tab; R489 consumes `matchVisionR482`; suggested markers cannot create evidence support.
 
-- [ ] **Step 2: render inside existing `analysisTab === 'visao'`**
+- [ ] **Step 2: Build MATCH decision**
 
-Place compact panel near R482 summary. Do not create a new MatchTrainer tab.
+Only when active session already has `matchVisionR482`. R489 does not reread raw video/markers.
 
-- [ ] **Step 3: pending-marker guardrail**
+- [ ] **Step 3: Render near R482 summary**
 
-Test that `suggestedMarkers` cannot create supporting evidence and can only appear as pending/limitation metadata.
+No new tab/menu.
 
-- [ ] **Step 4: run**
+- [ ] **Step 4: Run match gates**
+
+Run:
 
 ```bash
 npm run test:r489
@@ -561,19 +499,26 @@ npm run test:v3177
 npm run typecheck
 ```
 
-- [ ] **Step 5: commit**
+Expected: all PASS.
 
-```text
-R489: integrar explicacao ao Match Vision
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/modules/matches/MatchTrainerCenter.tsx tests/v40-80-r489-explainable-ai-regression.ts
+git commit -m "R489: integrar explicacao ao Match Vision"
 ```
 
 ---
 
-## Task 10 — Rodar matriz completa de compatibilidade antes do PR
+### Task 10: Full compatibility matrix before PR
 
-**Files:** no feature expansion. Modify only files proven necessary by failing gates.
+**Files:**
+- Modify only files proven necessary by failing gates; no feature expansion.
 
-- [ ] **Step 1: R489 + authorities/sources**
+**Interfaces:**
+- Produces branch ready for PR only if local main-equivalent gates pass.
+
+- [ ] **Step 1: Run R489 + source authorities**
 
 ```bash
 npm run test:r489
@@ -585,7 +530,9 @@ node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 node -r ./tests/_ts-require.cjs tests/v40-80-r484-chemistry-graph-regression.ts
 ```
 
-- [ ] **Step 2: historical surfaces**
+Expected: all PASS.
+
+- [ ] **Step 2: Run historical surfaces**
 
 ```bash
 npm run test:r192
@@ -596,15 +543,15 @@ npm run test:v3177
 node tests/v38-40-definitive-android-opening-regression.mjs
 ```
 
-- [ ] **Step 3: main-equivalent preventive gate**
+Expected: all PASS.
 
-```bash
-npm run ci:gate
-```
+- [ ] **Step 3: Run main-equivalent preventive gate**
 
-This explicitly exercises R489 because Task 1 added it to `ci:gate` used by the APK workflow.
+Run: `npm run ci:gate`
 
-- [ ] **Step 4: repository type/closure/build gates**
+Expected: PASS, including `test:r489` inserted in Task 1.
+
+- [ ] **Step 4: Run type/closure/build gates**
 
 ```bash
 npm run typecheck
@@ -614,75 +561,84 @@ node scripts/check-stale-test-file-references-r473.mjs
 npm run build
 ```
 
-- [ ] **Step 5: review diff/static leak scan**
+Expected: all PASS.
 
-Confirm no authority/network/persistence leak, Overall/GER objective, new global menu/tab, duplicated R480–R484 algorithm, broad unnecessary CSS, or R489 startup import that enlarges CardVision static closure.
+- [ ] **Step 5: Review complete diff**
 
-- [ ] **Step 6: commit hardening only if real changes were necessary**
+Confirm no writer/network leak, Overall/GER objective, new global tab/menu, duplicated R480–R484 algorithm, broad unnecessary CSS or R489 startup import that enlarges CardVision static closure.
 
-```text
-R489: endurecer gates e compatibilidade
+- [ ] **Step 6: Commit only real hardening fixes**
+
+If fixes were required:
+
+```bash
+git add <only-fixed-files>
+git commit -m "R489: endurecer gates e compatibilidade"
 ```
 
 No no-op commit.
 
 ---
 
-## Task 11 — Abrir PR e exigir CI real GREEN antes do merge
+### Task 11: PR and real GitHub CI validation
 
-**Files:** none expected except fixes justified by CI evidence.
+**Files:**
+- None expected except root-cause fixes justified by CI.
 
-- [ ] **Step 1: open PR**
+**Interfaces:**
+- Produces fully GREEN PR; no merge while any required check is RED/pending.
 
-Title:
+- [ ] **Step 1: Open PR**
 
-```text
-R489 — Explainable AI read-only
-```
+Title: `R489 — Explainable AI read-only`
 
-Body: one read-only engine; five kinds; anti-double-counting; R128 preserved; no new global tab; exact local gates executed.
+Body includes: single read-only engine, five kinds, anti-double-counting, R128 preserved, no new global tab, exact local gates executed.
 
-- [ ] **Step 2: inspect complete PR patch**
+- [ ] **Step 2: Inspect complete PR patch**
 
-Look for authority leak, persistence/network imports, Overall/GER objective, source-engine duplication, orphan evidence, UI apply/promote controls or unrelated changes.
+Check authority leak, persistence/network imports, Overall/GER objective, source-engine duplication, orphan evidence, mutation controls and unrelated changes.
 
-- [ ] **Step 3: query actual PR workflow**
+- [ ] **Step 3: Query actual PR workflow/jobs**
 
-Do not claim GREEN from local results. Fetch workflow run/jobs. On RED, inspect failed job logs, fix root cause on branch, rerun affected checks.
+Expected: all required checks SUCCESS. If RED, inspect failed job log, fix root cause on branch and revalidate; do not infer GREEN from local results.
 
-- [ ] **Step 4: merge only after all PR checks SUCCESS**
+- [ ] **Step 4: Merge using expected head SHA only after SUCCESS**
 
-Capture expected PR head SHA and require it during merge.
+Capture PR head SHA and require it during merge so a moved head cannot be merged accidentally.
 
 ---
 
-## Task 12 — Validar main, APK e Latest no SHA exato após merge
+### Task 12: Exact-main APK and Latest validation
 
-**Files:** none expected unless main CI proves a real regression.
+**Files:**
+- None expected unless main CI proves a real regression.
 
-- [ ] **Step 1: capture exact new `main` SHA**
+**Interfaces:**
+- Produces completion evidence for shipped R489.
 
-- [ ] **Step 2: follow `Gerar APK Canal Direto` for that SHA**
+- [ ] **Step 1: Capture exact new `main` SHA**
 
-Inspect workflow jobs/logs; never substitute a previous successful run.
+- [ ] **Step 2: Follow `Gerar APK Canal Direto` for that exact SHA**
 
-- [ ] **Step 3: require workflow conclusion `success`**
+Never substitute a previous successful run.
 
-- [ ] **Step 4: verify `/releases/latest` targets exact new main SHA**
+- [ ] **Step 3: Require workflow conclusion `success`**
 
-Require APK, `signing-report.txt` and expected update/immutable manifest.
+If RED, inspect exact failed job/log and repair root cause; do not publish/claim complete.
 
-- [ ] **Step 5: final evidence record**
+- [ ] **Step 4: Verify `/releases/latest`**
 
-Record main SHA, PR number, PR validation run/status, main APK run/status, release tag, APK asset name and R489/R128/R480–R484 gate status.
+It must target exact new main SHA and contain APK, `signing-report.txt` and expected update/immutable manifest.
+
+- [ ] **Step 5: Record completion evidence**
+
+Record main SHA, PR number, PR validation run/status, main APK run/status, release tag, APK asset name, and R489/R128/R480–R484 gate status.
 
 Only then call R489 complete.
 
 ---
 
 ## Acceptance Criteria
-
-R489 is complete only when all are true:
 
 1. Same input returns same snapshot/fingerprint.
 2. R489 is read-only and cannot override R119/R126/R128.
@@ -695,13 +651,13 @@ R489 is complete only when all are true:
 9. Counterfactuals only use real R480/R481/R483/R484 candidates.
 10. R482 pending/suggested markers never become confirmed proof.
 11. BUILD, STARTER, ROTATION, TACTICAL and MATCH are tested.
-12. No Overall/GER objective/tiebreaker enters R489.
+12. No GER/Overall objective/tiebreaker enters R489.
 13. No network/LLM/persistence dependency enters the engine.
 14. No new global tab/menu is added.
 15. UI provides compact “Por que esta recomendação?” plus deep evidence details.
 16. R489 failure never blocks original Result/Team/Match surface.
 17. R128 and R480–R484 regressions remain GREEN.
-18. `test:r489` is in both PR validation and `ci:gate` used by main APK preventive validation.
+18. `test:r489` is in PR validation and `ci:gate` used by main APK preventive validation.
 19. TypeScript, closure and production build remain GREEN.
 20. PR CI is GREEN before merge.
 21. Main APK pipeline is GREEN after merge and Latest points to exact new main SHA.
