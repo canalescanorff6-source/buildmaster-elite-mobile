@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CheckCircle2, Clock3, Layers, ShieldCheck, Sparkles, Target, Trophy, Users } from 'lucide-react';
 import type { TacticalFormation, TacticalStyle } from '@/lib/analyzer';
 import type { ProfessionalSquadReport } from '@/lib/professionalSquadEngine';
+import { TACTICAL_DIRECTOR_R500_VERSION } from '@/modules/tactical-director/tacticalDirectorEngineR500';
 
 type ProfessionalView = 'formacoes' | 'setores' | 'banco' | 'planos' | 'adversarios';
 
@@ -20,7 +21,7 @@ const styleLabel: Record<TacticalStyle, string> = {
 export function ProfessionalSquadPanel({ report, onApplyFormation }: { report: ProfessionalSquadReport; onApplyFormation?: (formation: TacticalFormation) => void }) {
   const [view, setView] = useState<ProfessionalView>('formacoes');
   return (
-    <section className="professional-squad-shell">
+    <section className="professional-squad-shell" data-tactical-director-contract={TACTICAL_DIRECTOR_R500_VERSION}>
       <header className="professional-squad-hero">
         <div>
           <p className="kicker"><ShieldCheck size={14}/> Bloco 8 • Central profissional</p>
