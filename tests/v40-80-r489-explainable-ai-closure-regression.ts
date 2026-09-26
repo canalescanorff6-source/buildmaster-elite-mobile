@@ -29,10 +29,11 @@ assert.ok((conflict.performanceConfidence ?? 0) < (aligned.performanceConfidence
 
 const official = { id: 'official', label: 'Oficial', plan: {}, pointsUsed: 20, pointsAvailable: 0, validBudget: true, score: 0, deltas: [], strengths: [], sacrifices: [], explanation: 'Oficial' };
 const gameplay = { id: 'gameplay', label: 'Gameplay', plan: {}, pointsUsed: 20, pointsAvailable: 0, validBudget: true, score: 9, deltas: [], strengths: ['Progressão'], sacrifices: ['Finalização'], explanation: 'Mais progressão' };
-function buildInput(baselineFingerprint: string, variants: any[], decisionId = baselineFingerprint) {
+function buildInput(baselineFingerprint: string, variants: any[], officialFingerprint = baselineFingerprint) {
   return {
-    kind: 'BUILD', decisionId, verdict: 'Ficha Oficial',
+    kind: 'BUILD', decisionId: `build:${officialFingerprint}`, verdict: 'Ficha Oficial',
     availability: { r480: 'NOT_APPLICABLE', r481: 'NOT_APPLICABLE', r482: 'NOT_APPLICABLE', r483: 'AVAILABLE', r484: 'NOT_APPLICABLE' },
+    result: { parsed: { internalId: officialFingerprint } },
     buildSimulator: { version: 'r483', baselineFingerprint, budget: 20, officialPointsUsed: 20, variants, blockedReason: null, authority: {} }
   } as any;
 }
