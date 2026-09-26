@@ -95,11 +95,11 @@ function fingerprintR489(
 }
 
 function buildFingerprintMismatchR489(input: ExplainableDecisionInputR489): string | null {
-  if (input.kind !== 'BUILD' || !input.buildSimulator) return null;
-  const decisionId = String(input.decisionId || '').trim();
+  if (input.kind !== 'BUILD' || !input.buildSimulator || !input.result) return null;
+  const officialFingerprint = String(input.result.parsed.internalId || '').trim();
   const baselineFingerprint = String(input.buildSimulator.baselineFingerprint || '').trim();
-  if (!decisionId || !baselineFingerprint || decisionId === baselineFingerprint) return null;
-  return `Fingerprint incompatível: a decisão oficial ${decisionId} não corresponde ao baseline R483 ${baselineFingerprint}. A explicação foi degradada sem corrigir a origem.`;
+  if (!officialFingerprint || !baselineFingerprint || officialFingerprint === baselineFingerprint) return null;
+  return `Fingerprint incompatível: o resultado oficial ${officialFingerprint} não corresponde ao baseline R483 ${baselineFingerprint}. A explicação foi degradada sem corrigir a origem.`;
 }
 
 function emptyPiecesR489(limitation: string): ExplainablePiecesR489 {
