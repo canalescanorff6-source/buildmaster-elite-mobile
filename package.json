@@ -365,7 +365,8 @@
     "test:r474": "node tests/v40-80-r474-unified-runtime-telemetry-regression.mjs",
     "test:r480": "node -r ./tests/_ts-require.cjs tests/v40-80-r480-tactical-twin-regression.ts",
     "test:r481": "node -r ./tests/_ts-require.cjs tests/v40-80-r481-squad-brain-regression.ts",
-    "test:r482": "node -r ./tests/_ts-require.cjs tests/v40-80-r482-match-vision-regression.ts"
+    "test:r482": "npm run typecheck:r482-legacy && node -r ./tests/_ts-require.cjs tests/v40-80-r482-match-vision-regression.ts",
+    "typecheck:r482-legacy": "tsc -p tests/types-v3170-ui/tsconfig.json --pretty false"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

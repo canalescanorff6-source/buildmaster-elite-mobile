@@ -310,11 +310,12 @@ export function buildMatchVisionR482({ session, team, teamStyle }: MatchVisionIn
   const sampleCount = Number(session.analysis?.sampleCount || 0);
   const videoEvidence = session.analysis ? Math.min(100, 35 + videoQualityScore * .45 + Math.min(20, sampleCount / 8)) : 0;
   const confirmedEvidence = Math.min(100, confirmed.length * 11);
+  const contextEvidence = team.formation ? 10 : 0;
   const confidence = clamp(
     confirmedEvidence * .48 +
     reviewedCoverage * .22 +
     videoEvidence * .2 +
-    (team.filledSlots / Math.max(1, team.totalSlots)) * 10
+    contextEvidence
   );
 
   const timeline = buildTimeline(confirmed, durationMs);
