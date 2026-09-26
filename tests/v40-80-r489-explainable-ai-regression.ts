@@ -4,6 +4,12 @@ import {
   EXPLAINABLE_AI_R489_VERSION,
   buildExplainableDecisionR489
 } from '../src/modules/explainable-ai/explainableDecisionEngineR489';
+import {
+  confidenceCeilingR489,
+  effectiveWeightR489,
+  familyDiversityR489,
+  independenceForR489
+} from '../src/modules/explainable-ai/explainableEvidenceR489';
 
 const kinds = ['BUILD', 'STARTER', 'ROTATION', 'TACTICAL', 'MATCH'] as const;
 
@@ -82,8 +88,36 @@ const blockedBuild = buildExplainableDecisionR489({
 } as any);
 assert.ok(blockedBuild.limitations.some((item: string) => item.includes('R483') && /bloquead/i.test(item)));
 
+assert.equal(
+  effectiveWeightR489({ nativeConfidence: 80, relevance: 0.5, independence: 0.75, completeness: 1 }),
+  0.3,
+  'peso efetivo deve ser confiança normalizada × relevância × independência × completude'
+);
+assert.equal(independenceForR489('R481', 'SAME_R480_CLAIM'), 0.75);
+assert.equal(independenceForR489('R484', 'R481_ROTATION_DERIVED'), 0.65);
+assert.equal(independenceForR489('R484', 'CHEMISTRY_ONLY'), 1);
+assert.equal(independenceForR489('R482', 'CONFIRMED_MATCH'), 1);
+assert.equal(confidenceCeilingR489(0), 35);
+assert.equal(confidenceCeilingR489(1), 65);
+assert.equal(confidenceCeilingR489(2), 82);
+assert.equal(confidenceCeilingR489(3), 100);
+
+const dependentEvidence = [
+  { family: 'TACTICAL_STRUCTURE', independence: 1, relevance: 1 },
+  { family: 'SQUAD_STRUCTURE', independence: 0.75, relevance: 1 },
+  { family: 'CHEMISTRY', independence: 0.65, relevance: 1 }
+] as any;
+assert.equal(familyDiversityR489(dependentEvidence), 1, 'R480 + R481 dependente + R484 derivado não podem contar como três confirmações independentes.');
+
+const independentEvidence = [
+  { family: 'TACTICAL_STRUCTURE', independence: 1, relevance: 1 },
+  { family: 'MATCH_EVIDENCE', independence: 1, relevance: 1 },
+  { family: 'CHEMISTRY', independence: 1, relevance: 1 }
+] as any;
+assert.equal(familyDiversityR489(independentEvidence), 3);
+
 const engineSource = fs.readFileSync('src/modules/explainable-ai/explainableDecisionEngineR489.ts', 'utf8');
 assert.doesNotMatch(engineSource, /fetch\(|localStorage|sessionStorage|upsert|setResult\(|setTraining|Math\.random|Date\.now|new Date\(/);
 assert.doesNotMatch(engineSource, /\.overall\b|maxOverall|\bGER\b/);
 
-console.log('R489 contrato base aprovado para BUILD, STARTER, ROTATION, TACTICAL e MATCH.');
+console.log('R489 contrato base e regras de independência aprovados.');
