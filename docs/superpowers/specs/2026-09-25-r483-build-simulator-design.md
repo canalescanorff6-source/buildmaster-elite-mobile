@@ -3,52 +3,47 @@
 **Data:** 2026-09-25  
 **Projeto:** BuildMaster Elite Tático  
 **Base:** `main` em `c9242179f5af25d584fbde37e530d45693b8a8a5`  
-**Status:** design aprovado para implementação posterior  
-**Objetivo:** adicionar um laboratório de comparação de fichas que gere variantes temporárias e explicáveis a partir da ficha oficial já produzida pelo pipeline atual, sem criar uma autoridade paralela, sem otimizar GER/Overall e sem escrever automaticamente na ficha de produção.
+**Status:** aguardando revisão final do usuário antes do plano de implementação  
+**Objetivo:** adicionar um laboratório de comparação de fichas que gere variantes temporárias e explicáveis a partir da ficha oficial já produzida pelo pipeline atual, sem criar autoridade paralela, sem otimizar GER/Overall e sem escrever automaticamente na ficha de produção.
 
 ---
 
-## 1. Problema que a R483 resolve
+## 1. Problema
 
-O BuildMaster já possui um pipeline de produção com regras rígidas de orçamento, otimização, Clean Slate, identidade da carta e selos finais. O usuário, porém, precisa comparar alternativas de distribuição de PP antes de decidir se uma característica específica de gameplay valeria sacrificar outra.
+O BuildMaster já possui um pipeline de produção com orçamento, otimização funcional, Clean Slate, identidade da carta e selos finais. Falta uma forma segura de comparar redistribuições de PP sem transformar a comparação em uma segunda “ficha oficial”.
 
-Hoje essa comparação tende a acontecer de forma manual ou mental. A R483 deve transformar isso em uma bancada de testes interna e segura.
-
-O Build Simulator não deve competir com o pipeline de produção. A ficha final continua sendo produzida e selada pelas autoridades existentes.
+A R483 cria uma bancada de testes local para visualizar trade-offs. A ficha final existente continua sendo a única verdade de produção.
 
 ---
 
-## 2. Decisão principal de produto
+## 2. Decisão de produto
 
-A primeira versão da R483 será **somente comparação**.
+A R483 v1 será **somente comparação**.
 
-Ela poderá:
+Pode:
 
-- ler a ficha oficial final;
-- ler orçamento real de PP já validado;
+- ler a ficha oficial selada;
+- ler o orçamento real de PP já validado;
 - gerar variantes temporárias;
-- calcular custo real de cada variante;
-- comparar atributos e tendências de gameplay;
+- recalcular custo pelo núcleo existente;
+- comparar deltas funcionais;
 - explicar ganhos e perdas;
-- ordenar variantes por adequação funcional, nunca por GER.
+- ordenar variantes por adequação funcional.
 
-Ela não poderá:
+Não pode:
 
-- aplicar uma variante automaticamente;
-- substituir a ficha oficial;
-- salvar uma variante como nova autoridade;
-- escrever Top 5 de habilidades adicionais;
+- aplicar ou salvar uma variante como ficha oficial;
+- escrever Top 5 de habilidades;
 - escrever Ímpeto;
-- alterar posição final;
-- alterar estilo de jogo da carta;
-- sobrescrever R119, R126 ou R128;
-- usar GER/Overall como função objetivo.
+- mudar posição final ou estilo oficial;
+- sobrescrever Clean Slate, R126 ou R128;
+- usar GER/Overall, estrelas ou proxies de Overall na função objetivo.
 
 ---
 
 ## 3. Arquitetura de autoridade
 
-Fluxo oficial continua intacto:
+Fluxo oficial permanece intacto:
 
 ```text
 Carta / leitura
@@ -64,7 +59,7 @@ R128
 Ficha oficial selada
 ```
 
-A R483 fica depois do resultado oficial, em uma ramificação somente leitura:
+A R483 fica em uma ramificação read-only:
 
 ```text
 Ficha oficial selada
@@ -76,58 +71,81 @@ R483 Build Simulator
   └── Gameplay
 ```
 
-A saída do R483 é descartável e observacional. Nenhuma variante retorna ao pipeline de autoridade.
+Nenhuma saída R483 retorna ao pipeline oficial.
 
 ---
 
-## 4. Princípios obrigatórios
+## 4. Orçamento e custo
 
-### 4.1 Orçamento exato
+### 4.1 Fontes de verdade
 
-Toda variante deve respeitar exatamente o orçamento real reconhecido para a carta.
+- `trainingPointsTotal` continua primário quando validado;
+- `0` continua significando orçamento desconhecido/bloqueado;
+- `0` nunca pode virar `64` por fallback;
+- custo deve ser calculado pelo mesmo `trainingPlanCore` usado pelo app;
+- R483 não cria tabela própria de custo ou orçamento.
 
-Regras:
+### 4.2 Comparação justa
 
-- `trainingPointsTotal` continua sendo a fonte primária quando validado;
-- `0` significa orçamento desconhecido/bloqueado e nunca deve virar `64` por fallback;
-- uma variante nunca pode gastar mais PP que o orçamento real;
-- uma variante não pode inventar PP livres;
-- o custo deve ser recalculado pelo mesmo núcleo de custo de treino já usado pelo app;
-- se o orçamento estiver ausente, inválido ou bloqueado, a simulação deve ser bloqueada.
+Existem dois números diferentes:
 
-Mensagem esperada:
+- **budget**: teto real disponível para a carta;
+- **officialPointsUsed**: PP realmente consumidos pela ficha oficial.
+
+Para comparar fichas sem favorecer uma variante com mais investimento, toda alternativa válida deve consumir **exatamente `officialPointsUsed`**.
+
+Se uma combinação candidata não conseguir manter o mesmo custo real, ela é descartada. O simulador não usa PP que a ficha oficial deixou livres apenas para fazer uma variante parecer melhor.
+
+Consequências:
+
+- `pointsUsed` deve ser igual ao Oficial em todas as variantes válidas;
+- `pointsAvailable` deve permanecer igual ao Oficial;
+- nenhuma variante pode ultrapassar `budget`;
+- se o plano oficial já exceder `budget`, o simulador bloqueia em vez de corrigir silenciosamente.
+
+### 4.3 Orçamento desconhecido
+
+Se o orçamento estiver ausente, inválido ou bloqueado:
 
 `Simulação indisponível: confirme primeiro o orçamento real de PP desta carta.`
 
-### 4.2 DNA da carta
+---
 
-O simulador trabalha sobre a identidade da carta já conhecida.
+## 5. DNA da carta
 
-Não pode modificar:
+O simulador não pode modificar:
 
-- edição/card ID;
+- edição/Card ID;
+- fingerprint;
 - nível máximo validado;
 - booster conhecido;
 - atributos-base de origem;
 - posições originais;
 - estilo oficial da carta;
 - habilidades existentes;
-- identidade/fingerprint da carta.
+- identidade do jogador/cartão.
 
-### 4.3 Sem otimização de GER
+A R483 só redistribui grupos de treino dentro do mesmo custo oficial.
 
-`Overall`, `GER`, estrela visual ou qualquer proxy de Overall não entra na função objetivo.
+---
 
-O motor pode exibir Overall existente como informação se a UI já o recebe, mas não pode usá-lo para:
+## 6. Sem otimização de GER
 
-- escolher uma variante;
-- desempatar variantes;
+`Overall`, `GER`, estrela visual ou proxy de Overall pode ser exibido apenas se já fizer parte da UI, mas não pode ser usado para:
+
+- gerar candidatos;
+- escolher variante;
+- desempatar;
 - aumentar score;
-- justificar a recomendação.
+- justificar recomendação.
 
-### 4.4 Read-only por contrato
+Os testes devem procurar regressões estruturais que introduzam Overall/GER na função objetivo.
 
-Toda saída R483 deve carregar explicitamente:
+---
+
+## 7. Autoridade read-only
+
+Toda saída R483 carrega:
 
 ```ts
 authority: {
@@ -143,85 +161,69 @@ authority: {
 }
 ```
 
-Os testes devem falhar se qualquer flag acima mudar.
+Essas flags são invariantes de produto e de regressão.
 
 ---
 
-## 5. Perfis de simulação
+## 8. Perfis de simulação
 
-A primeira versão terá quatro cartões comparáveis.
+### 8.1 Oficial
 
-### 5.1 Oficial
+Baseline idêntico ao plano oficial selado.
 
-É o baseline.
+- não redistribui PP;
+- mantém `pointsUsed` e `pointsAvailable` originais;
+- é referência para todos os deltas.
 
-- cópia fiel da ficha oficial selada;
-- não sofre redistribuição;
-- PP usados e orçamento devem coincidir com o resultado oficial;
-- serve como referência para todos os deltas.
+### 8.2 Equilibrada
 
-### 5.2 Equilibrada
+Pequena redistribuição com baixa distância do Oficial.
 
-Objetivo: procurar uma distribuição com pequenas mudanças e baixa distância em relação à ficha oficial.
+- preserva prioridades principais da função;
+- evita mudanças agressivas;
+- busca melhor equilíbrio entre grupos já relevantes;
+- mantém o mesmo custo real do Oficial.
 
-Características:
+### 8.3 Especialista
 
-- preserva as prioridades principais da função;
-- limita mudanças agressivas;
-- favorece uma distribuição mais homogênea entre grupos já relevantes;
-- nunca enfraquece deliberadamente o principal atributo funcional abaixo de um piso de segurança derivado da ficha oficial.
-
-Uso esperado: usuário quer ver se existe uma alternativa menos extrema sem mudar o DNA funcional.
-
-### 5.3 Especialista
-
-Objetivo: concentrar PP nos grupos mais determinantes para a função reconhecida da carta.
+Concentra o mesmo custo oficial nos grupos mais determinantes para a função reconhecida.
 
 Exemplos conceituais:
 
-- CA finalizador: finalização, destreza, força inferior conforme o perfil;
+- CA finalizador: finalização/destreza/força inferior conforme perfil;
 - SA infiltrador: destreza, aceleração funcional e finalização;
 - MLG meia versátil: mobilidade, passe, controle e sustentação;
-- VOL 1º volante: defesa, físico e passe de segurança;
-- ZAG destruidor: defesa, contato, jogo aéreo conforme perfil;
-- lateral defensivo: defesa e sustentação, evitando gasto sem função.
+- VOL 1º volante: defesa, físico e passe seguro;
+- ZAG destruidor: defesa, contato e jogo aéreo conforme perfil;
+- lateral defensivo: defesa e sustentação.
 
-O simulador deve reutilizar conhecimento de função existente no projeto em vez de manter uma tabela paralela desnecessária.
+O conhecimento de função deve vir dos perfis já existentes, não de uma segunda tabela paralela.
 
-### 5.4 Gameplay
+### 8.4 Gameplay
 
-Objetivo: testar uma variante voltada para impacto prático da função no modelo de jogo configurado, sem virar uma nova autoridade.
-
-Pode considerar, quando disponíveis:
+Na v1, usa apenas sinais estáveis já disponíveis no contexto da carta:
 
 - posição-alvo;
-- função reconhecida;
-- estilo de jogo da carta;
-- estilo tático do time;
-- perfil já calculado pelo motor de treino;
-- evidência observacional de partidas já disponível no resultado, desde que seja somente leitura e não se torne autoridade.
+- função/playstyle;
+- objetivo funcional;
+- estilo tático configurado, quando disponível;
+- perfil do motor de treino existente.
 
-Não pode considerar como verdade:
-
-- previsão de vitória;
-- matchmaking;
-- suposição de servidor;
-- lag não confirmado;
-- GER como objetivo.
+**R460/R470/R472 e evidência de partidas ficam fora da R483 v1.** Isso reduz acoplamento e evita transformar observações de gameplay em autoridade de ficha. Uma integração posterior exigirá design próprio.
 
 ---
 
-## 6. Motor R483
+## 9. Motor R483
 
-Novo módulo proposto:
+Novo módulo:
 
 `src/modules/build-simulator/buildSimulatorEngineR483.ts`
 
-Responsabilidade única:
+Responsabilidade:
 
-`entrada imutável → validar autoridade/orçamento → gerar variantes → validar custo → calcular deltas → explicar trade-offs → retornar snapshot read-only`
+`entrada imutável → validar orçamento/autoridade → gerar candidatos → validar custo idêntico ao Oficial → calcular score funcional → calcular deltas → explicar trade-offs → snapshot read-only`
 
-Contrato sugerido:
+Contrato alvo:
 
 ```ts
 export type BuildSimulatorInputR483 = {
@@ -256,6 +258,7 @@ export type BuildSimulatorSnapshotR483 = {
   version: string;
   baselineFingerprint: string | null;
   budget: number;
+  officialPointsUsed: number;
   variants: BuildSimulatorVariantR483[];
   blockedReason: string | null;
   authority: {
@@ -272,91 +275,89 @@ export type BuildSimulatorSnapshotR483 = {
 };
 ```
 
-O contrato final pode ser adaptado aos tipos reais disponíveis, desde que preserve essas garantias semânticas.
+O contrato final pode adaptar nomes a tipos reais desde que preserve essas garantias.
 
 ---
 
-## 7. Reuso do núcleo existente
+## 10. Reuso obrigatório
 
-A R483 deve reutilizar, sempre que aplicável:
+Reutilizar, quando aplicável:
 
-- `trainingPlanCore` para custo e normalização;
-- `pointBudget` para orçamento e bloqueios;
-- perfis já existentes no otimizador de treino;
-- atributos e posição já validados pela análise oficial;
-- fingerprint/identidade já produzidos pelo pipeline.
+- `trainingPlanCore` para custo/normalização;
+- `pointBudget` para orçamento/bloqueio;
+- perfis funcionais do otimizador atual;
+- atributos e posição já validados;
+- fingerprint/identidade já selados.
 
 Não criar:
 
-- segunda implementação de custo de PP;
-- segunda tabela de orçamento;
+- segunda implementação de custo;
+- segunda tabela de PP;
 - segundo resolvedor de posição;
 - segundo Clean Slate;
-- segunda autoridade de habilidades;
+- segunda autoridade de skills;
 - segundo sistema de Ímpeto.
 
 ---
 
-## 8. Estratégia de geração de variantes
+## 11. Geração determinística de variantes
 
-A R483 deve ser determinística.
+Mesma entrada deve produzir a mesma saída, inclusive ordem e score.
 
-Mesma entrada deve produzir exatamente a mesma saída.
+Algoritmo de alto nível:
 
-Estratégia recomendada:
+1. normalizar plano oficial;
+2. calcular `officialPointsUsed` pelo núcleo oficial;
+3. validar contra `budget`;
+4. extrair prioridades funcionais existentes;
+5. gerar conjunto limitado de candidatos por pequenas redistribuições;
+6. recalcular custo de cada candidato;
+7. rejeitar candidato cujo custo não seja exatamente `officialPointsUsed`;
+8. rejeitar candidato estruturalmente inválido;
+9. pontuar por perfil funcional;
+10. aplicar penalidade por distância do Oficial quando pertinente;
+11. escolher um vencedor por perfil;
+12. calcular deltas e explicações.
 
-1. normalizar o plano oficial;
-2. validar custo oficial contra orçamento;
-3. extrair prioridades funcionais existentes;
-4. gerar candidatos por pequenas operações de redistribuição entre grupos de treino;
-5. rejeitar qualquer candidato que exceda orçamento;
-6. rejeitar candidato estruturalmente inválido;
-7. calcular score funcional por perfil;
-8. aplicar penalidade por distância excessiva da ficha oficial onde aplicável;
-9. escolher o melhor candidato de cada perfil;
-10. calcular deltas contra a ficha oficial;
-11. produzir explicações curtas e objetivas.
-
-O motor não deve fazer busca combinatória sem limite. A primeira versão deve usar um espaço de candidatos controlado e determinístico para manter custo previsível no mobile.
+Sem busca combinatória ilimitada. O espaço de candidatos deve ser pequeno, previsível e adequado ao mobile.
 
 ---
 
-## 9. Score funcional
+## 12. Score funcional
 
-O score interno da R483 não representa qualidade absoluta da carta.
+O score serve apenas para comparar variantes **da mesma carta e do mesmo contexto**.
 
-Serve apenas para comparar variantes da mesma carta sob o mesmo contexto.
-
-Deve usar pesos derivados de:
+Pode usar:
 
 - posição-alvo;
 - função/playstyle;
-- objetivo funcional já reconhecido pelo motor;
+- objetivo funcional;
 - grupos de treino relevantes;
-- contexto tático quando disponível.
+- estilo tático configurado.
 
-Deve excluir explicitamente:
+Não pode usar:
 
 - GER/Overall;
-- preço da carta;
+- preço;
 - raridade estética;
 - popularidade;
-- nome do jogador como atalho para força;
-- previsão de resultado de partida.
+- nome do jogador como atalho de força;
+- previsão de resultado;
+- dados de matchmaking/servidor.
 
-Os scores não devem ser comparados entre jogadores diferentes.
+Scores de jogadores diferentes não são comparáveis.
 
 ---
 
-## 10. Explicabilidade
+## 13. Explicabilidade
 
-Cada variante precisa responder três perguntas:
+Cada variante responde:
 
-1. **O que mudou?**
-2. **O que tende a melhorar?**
-3. **O que foi sacrificado?**
+1. o que mudou;
+2. o que tende a melhorar;
+3. o que foi sacrificado.
 
-Exemplo de apresentação:
+Exemplo:
 
 ```text
 Gameplay
@@ -368,251 +369,218 @@ Tende a favorecer infiltração curta e aceleração após apoio.
 Sacrifício: menor margem para criação e passe sob pressão.
 ```
 
-A explicação deve ser baseada nos deltas reais calculados, não em texto genérico pré-fabricado que contradiga a variante.
+O texto deve derivar dos deltas reais. Nenhuma explicação pode contradizer a distribuição calculada.
 
 ---
 
-## 11. Interface
+## 14. Interface
 
-A R483 não cria item novo no menu principal.
+Não criar novo item no menu principal.
 
-Local preferido:
+Local:
 
-`Resultado da carta → área avançada / Simulador de ficha`
+`Resultado da carta → área avançada → Simulador de ficha — R483`
 
-Nome de UI:
+Conteúdo:
 
-**Simulador de ficha — R483**
-
-Estrutura:
-
-- cabeçalho com orçamento real;
+- orçamento real;
 - aviso `Somente simulação — não altera sua ficha`;
-- quatro cartões comparáveis;
-- PP usados / disponíveis;
+- cartão Oficial destacado;
+- cartões Equilibrada, Especialista e Gameplay quando válidos;
+- PP usados/disponíveis;
 - principais deltas;
 - pontos fortes;
 - sacrifícios;
-- explicação;
-- indicação clara de qual cartão é a ficha Oficial.
+- explicação.
 
-Não incluir na v1:
+Fora da v1:
 
-- botão Aplicar;
-- botão Salvar como oficial;
-- botão Substituir ficha;
-- edição livre de sliders;
-- publicação no Cofre como nova ficha.
+- Aplicar;
+- Salvar como oficial;
+- Substituir ficha;
+- sliders livres;
+- persistir variante no Cofre.
 
 ---
 
-## 12. Estados de erro e bloqueio
+## 15. Estados de erro
 
-### 12.1 Orçamento desconhecido
+### 15.1 Orçamento desconhecido
 
-Bloquear a geração de variantes.
+Bloqueia todas as variantes alternativas.
 
-### 12.2 Plano oficial excede orçamento
+### 15.2 Plano oficial acima do orçamento
 
-Tratar como inconsistência de autoridade. Não tentar “consertar” dentro do R483.
-
-Mensagem:
+Bloqueia o simulador:
 
 `A ficha oficial possui uma inconsistência de orçamento. O simulador foi bloqueado para não mascarar o problema.`
 
-### 12.3 Dados insuficientes de função
+### 15.3 Nenhum candidato de custo idêntico
 
-Manter `Oficial` e, se for seguro, `Equilibrada`.
+Omitir a variante específica e explicar:
 
-Não inventar perfil Especialista/Gameplay sem base suficiente.
+`Nenhuma redistribuição segura com o mesmo custo da ficha oficial foi encontrada para este perfil.`
 
-A UI deve mostrar por que a variante não foi produzida.
+### 15.4 Dados funcionais insuficientes
 
-### 12.4 Exceção interna
+Mostrar Oficial e somente variantes que possam ser produzidas sem inferência inventada.
 
-Falha no R483 não pode impedir a exibição da ficha oficial.
+### 15.5 Falha interna
 
-O componente deve degradar para:
+Nunca derrubar o resultado oficial:
 
 `Simulador temporariamente indisponível. Sua ficha oficial continua intacta.`
 
 ---
 
-## 13. Imutabilidade
+## 16. Imutabilidade
 
-O motor não pode mutar:
+O R483 não muta:
 
-- `AnalysisResult` recebido;
+- `AnalysisResult`;
 - `ParsedCard`;
-- `TrainingPlan` oficial;
-- arrays de habilidades;
+- plano oficial;
+- habilidades;
 - Ímpeto;
 - objetos de autoridade;
 - stores persistentes.
 
-Os testes devem serializar a entrada antes/depois e exigir igualdade.
+Testes devem serializar entradas antes/depois e exigir igualdade.
 
 ---
 
-## 14. Integração com evidência de gameplay
+## 17. Testes obrigatórios
 
-A primeira versão pode consumir apenas sinais já consolidados e read-only.
-
-Se dados de R460/R470/R472 estiverem disponíveis na análise, podem ajustar levemente o perfil `Gameplay`, desde que:
-
-- nunca alterem orçamento;
-- nunca alterem ficha oficial;
-- nunca sejam tratados como verdade universal;
-- nunca façam previsão de vitória;
-- nunca provoquem escrita em produção.
-
-Se essa integração aumentar demais o acoplamento, ela deve ficar fora da primeira implementação e o perfil Gameplay deve usar apenas posição, função e contexto tático.
-
----
-
-## 15. Testes obrigatórios
-
-Novo teste principal:
+Novo teste:
 
 `tests/v40-80-r483-build-simulator-regression.ts`
 
 Deve provar:
 
 1. determinismo;
-2. imutabilidade da entrada;
-3. nenhuma variante acima do orçamento;
-4. orçamento `0` bloqueia simulação;
-5. nenhum fallback inventa `64` PP;
-6. `Official` é idêntica ao plano oficial;
-7. toda variante válida tem custo recalculado pelo núcleo existente;
-8. autoridade read-only completa;
-9. nenhuma propriedade de skills/Ímpeto é escrita;
-10. nenhuma variante pode sobrescrever R128;
-11. `optimizeOverall === false`;
-12. score não usa Overall/GER;
-13. candidatos inválidos são descartados;
-14. mesma entrada produz mesma ordem e mesmo resultado;
-15. erro do simulador não derruba a ficha oficial na UI.
+2. imutabilidade;
+3. orçamento `0` bloqueia;
+4. nenhum fallback inventa `64` PP;
+5. Oficial é idêntica ao plano oficial;
+6. toda alternativa válida usa exatamente `officialPointsUsed`;
+7. nenhuma alternativa excede `budget`;
+8. custo vem do núcleo existente;
+9. flags read-only permanecem invariantes;
+10. nenhuma propriedade de skills/Ímpeto é escrita;
+11. nenhuma ação sobrescreve Clean Slate/R126/R128;
+12. `optimizeOverall === false`;
+13. score não usa Overall/GER;
+14. candidatos de custo diferente são descartados;
+15. ordem/resultados são estáveis para a mesma entrada;
+16. erro do simulador não derruba a ficha oficial;
+17. UI v1 não expõe ação `Aplicar`.
 
-Além disso:
+Integração CI:
 
 - adicionar `test:r483` ao `ci:gate`;
-- adicionar regressão explícita ao workflow de PR;
-- garantir compatibilidade com os typechecks históricos que importarem o componente onde o R483 for integrado;
+- adicionar etapa R483 ao workflow de PR;
+- executar typechecks históricos que importarem o componente de resultado;
 - executar build de produção.
 
 ---
 
-## 16. Segurança contra regressão de autoridade
+## 18. Segurança contra autoridade paralela
 
-O teste R483 deve fazer busca estrutural suficiente para impedir integração acidental com escritores de produção.
+A regressão deve impedir que o motor:
 
-Exemplos de proibições a validar:
-
-- motor R483 não importar função de persistência de ficha;
-- motor R483 não chamar setter de resultado oficial;
-- motor R483 não salvar no Cofre;
-- motor R483 não alterar `recommendedSkills`;
-- motor R483 não alterar `recommendedImpetos`;
-- UI não possuir ação `Aplicar` na primeira versão.
+- importe persistência de ficha;
+- chame setter da ficha oficial;
+- grave no Cofre;
+- escreva `recommendedSkills`;
+- escreva `recommendedImpetos`;
+- altere posição final;
+- ofereça botão Aplicar na v1.
 
 ---
 
-## 17. Performance
+## 19. Performance e operação
 
-A R483 deve rodar localmente e offline.
+R483 é local e offline.
 
-Metas de desenho:
-
-- busca de candidatos limitada;
-- sem dependência de rede;
+- sem rede obrigatória;
+- sem Supabase para simular;
 - sem LLM obrigatório;
-- sem chamadas Supabase para simular;
+- conjunto de candidatos limitado;
 - sem loops combinatórios explosivos;
-- memoização na UI quando entrada não mudar.
+- memoização quando a entrada não mudar.
 
-A simulação deve ser suficientemente leve para uso em Android intermediário sem travar a tela de resultado.
+A falha do simulador é isolada e não bloqueia a tela de resultado.
 
 ---
 
-## 18. Observabilidade
+## 20. Observabilidade
 
-Pode registrar apenas telemetria técnica já suportada pela camada global, por exemplo:
+Pode usar a telemetria global existente apenas para eventos técnicos, como:
 
 - simulador aberto;
-- simulação bloqueada por orçamento;
-- quantidade de variantes geradas;
-- falha técnica do motor.
+- bloqueio por orçamento;
+- quantidade de variantes válidas;
+- falha técnica.
 
-Não registrar como telemetria:
-
-- conteúdo sensível desnecessário da carta;
-- imagem original;
-- decisões que possam virar autoridade paralela.
+Não enviar imagem original nem transformar decisões de simulação em autoridade persistente.
 
 ---
 
-## 19. Arquivos previstos para implementação
+## 21. Arquivos previstos
 
-Arquivos novos prováveis:
+Novos:
 
 - `src/modules/build-simulator/buildSimulatorEngineR483.ts`
 - `src/modules/build-simulator/BuildSimulatorPanelR483.tsx`
 - `tests/v40-80-r483-build-simulator-regression.ts`
 
-Arquivos existentes que podem ser alterados:
+Possíveis alterações:
 
-- componente avançado do resultado da carta onde o painel será encaixado;
+- componente avançado da tela de resultado;
 - `package.json`;
 - `.github/workflows/pull-request-validation.yml`.
 
-Alterações em `trainingOptimizer.ts` ou `trainingPlanCore.ts` só devem ocorrer se for necessário extrair uma função pura reutilizável. Não alterar comportamento de produção apenas para facilitar o simulador.
+`trainingOptimizer.ts` ou `trainingPlanCore.ts` só podem ser alterados para extrair função pura reutilizável, sem mudar o comportamento de produção.
 
 ---
 
-## 20. Fora do escopo da R483 v1
+## 22. Fora do escopo e aceite
 
-- aplicar variante automaticamente;
+### Fora da v1
+
+- aplicar variante;
 - editor manual livre;
 - salvar múltiplas fichas oficiais;
-- sincronizar variantes na nuvem;
+- sincronizar variantes;
 - compartilhar variantes;
 - comparar jogadores diferentes;
 - alterar Top 5;
 - alterar Ímpeto;
 - alterar posição final;
-- prever desempenho futuro;
-- escolher automaticamente “a melhor ficha definitiva”.
+- usar evidência R460/R470/R472;
+- prever desempenho/resultado;
+- declarar automaticamente “a melhor ficha definitiva”.
 
-Esses itens podem ser avaliados em versões futuras somente se mantiverem a autoridade única do pipeline.
+### Critérios de aceite
 
----
+R483 só pode ir para merge quando:
 
-## 21. Critérios de aceite
-
-A R483 estará pronta para merge somente quando:
-
-- o simulador aparecer dentro da área de resultado, sem novo menu principal;
-- a ficha oficial permanecer claramente identificada;
-- variantes respeitarem orçamento real;
-- orçamento desconhecido bloquear a simulação;
+- aparecer dentro do resultado, sem novo menu;
+- Oficial estiver claramente identificado;
+- alternativas tiverem o mesmo `officialPointsUsed`;
+- orçamento desconhecido bloquear;
 - nenhum PP for inventado;
-- nenhuma variante escrever em produção;
+- nenhuma escrita em produção existir;
 - nenhum score usar GER/Overall;
-- o motor for determinístico;
-- entradas permanecerem imutáveis;
+- motor for determinístico e imutável;
 - R119/R126/R128 permanecerem soberanos;
-- `test:r483` passar;
-- gates históricos relevantes passarem;
-- build de produção passar;
-- PR ficar GREEN antes de qualquer merge.
+- `test:r483`, typechecks históricos e build de produção passarem;
+- PR estiver GREEN.
 
-Após merge, a publicação oficial deverá seguir o protocolo completo da `main`: Zero-Red, diagnóstico consolidado, build web, Android, APK, assinatura, manifestos, artefato, release imutável, canal principal, ponte legacy e validação de `Latest` contra o SHA correto da `main`.
+Após merge, a `main` deve passar pelo protocolo completo: Zero-Red, diagnóstico consolidado, build web, Android, APK, assinatura, manifestos, artefato, release imutável, canal principal, ponte legacy e validação de `Latest` contra o SHA correto.
 
 ---
 
-## 22. Decisão final
+## Decisão final
 
-A R483 é um **laboratório de comparação**, não uma segunda autoridade de ficha.
-
-A ficha oficial continua sendo a única fonte de verdade para produção. O Build Simulator existe para mostrar trade-offs de forma segura, transparente e tecnicamente verificável antes de qualquer decisão humana futura.
+A R483 é um **laboratório de comparação com custo idêntico à ficha oficial**, não uma segunda autoridade. Sua função é tornar trade-offs visíveis e verificáveis sem alterar a única fonte de verdade de produção.
