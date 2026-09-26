@@ -7,6 +7,7 @@ import { buildReliabilityCenter, compareBuildVariants, detectInconsistencies } f
 import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIdentity';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { getMergedCorrectionsForResult, type DynamicRulePack } from '@/modules/builds/dynamicRules';
+import { BuildSimulatorPanelR483 } from '@/modules/build-simulator/BuildSimulatorPanelR483';
 import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
@@ -164,22 +165,25 @@ export function ResultAdvancedWorkspaceR192({
       )}
 
 
-      {tab === 'comparar' && buildComparison && (
+      {tab === 'comparar' && (
         <div className="result-section-grid">
-          <article className="luxury-panel wide-card">
-            <div className="section-title-row"><div><p className="kicker">Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
-            <p>{buildComparison.reason}</p>
-          </article>
-          <article className="luxury-panel wide-card comparison-table-card">
-            <div className="comparison-table">
-              <div className="comparison-row comparison-head"><strong>Critério</strong>{buildComparison.variants.map((v) => <b key={v.title}>{v.title}</b>)}</div>
-              {buildComparison.rows.map((row) => <div className="comparison-row" key={row.key}><strong>{row.label}</strong>{row.values.map((cell) => <span className={cell.best ? 'comparison-best' : ''} key={`${row.key}-${cell.title}`}>{cell.value}</span>)}</div>)}
-            </div>
-          </article>
-          <article className="luxury-panel wide-card">
-            <p className="kicker">Riscos de cada opção</p>
-            <div className="position-list">{buildComparison.variants.map((v) => <div key={v.title}><strong>{v.title} • {v.points} pts</strong><span>Qualidade {v.score} • eficiência {v.efficiency} • equilíbrio {v.balance}</span><em>{v.risks.length ? v.risks.join(' • ') : 'Sem risco crítico identificado.'}</em></div>)}</div>
-          </article>
+          <BuildSimulatorPanelR483 result={result} />
+          {buildComparison && <>
+            <article className="luxury-panel wide-card">
+              <div className="section-title-row"><div><p className="kicker">Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
+              <p>{buildComparison.reason}</p>
+            </article>
+            <article className="luxury-panel wide-card comparison-table-card">
+              <div className="comparison-table">
+                <div className="comparison-row comparison-head"><strong>Critério</strong>{buildComparison.variants.map((v) => <b key={v.title}>{v.title}</b>)}</div>
+                {buildComparison.rows.map((row) => <div className="comparison-row" key={row.key}><strong>{row.label}</strong>{row.values.map((cell) => <span className={cell.best ? 'comparison-best' : ''} key={`${row.key}-${cell.title}`}>{cell.value}</span>)}</div>)}
+              </div>
+            </article>
+            <article className="luxury-panel wide-card">
+              <p className="kicker">Riscos de cada opção</p>
+              <div className="position-list">{buildComparison.variants.map((v) => <div key={v.title}><strong>{v.title} • {v.points} pts</strong><span>Qualidade {v.score} • eficiência {v.efficiency} • equilíbrio {v.balance}</span><em>{v.risks.length ? v.risks.join(' • ') : 'Sem risco crítico identificado.'}</em></div>)}</div>
+            </article>
+          </>}
         </div>
       )}
 
@@ -228,7 +232,7 @@ export function ResultAdvancedWorkspaceR192({
               <div className="skill-check-card muted"><strong>Evitar habilidades</strong><span>{localCorrections.blockedSkills.length ? localCorrections.blockedSkills.join(' • ') : 'Nenhuma habilidade bloqueada.'}</span></div>
               <div className="skill-check-card"><strong>Priorizar habilidades</strong><span>{localCorrections.promotedSkills.length ? localCorrections.promotedSkills.join(' • ') : 'Nenhuma habilidade priorizada.'}</span></div>
               <div className="skill-check-card muted"><strong>Evitar ímpetos</strong><span>{localCorrections.blockedImpetos.length ? localCorrections.blockedImpetos.join(' • ') : 'Nenhum ímpeto bloqueado.'}</span></div>
-              <div className="skill-check-card"><strong>Priorizar ímpetos</strong><span>{localCorrections.promotedImpetos.length ? localCorrections.promotedImpetos.join(' • ') : 'Nenhum ímpeto priorizado.'}</span></div>
+              <div className="skill-check-card"><strong>Priorizar ímpetos</strong><span>{localCorrections.promotedImpetos.length ? localCorrections.promotedImpetos.join(' • ') : 'Nenhuma ímpeto priorizado.'}</span></div>
             </div>
           </article>
 
