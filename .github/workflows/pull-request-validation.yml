@@ -92,6 +92,9 @@ jobs:
       - name: Regressão R482 — Match Vision read-only
         run: npm run test:r482
 
+      - name: Regressão R483 — contrato read-only (TDD)
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
+
       - name: Regressão v38.40 — abertura Android e boundaries
         run: node tests/v38-40-definitive-android-opening-regression.mjs
 
