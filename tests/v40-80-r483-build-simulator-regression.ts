@@ -88,4 +88,31 @@ const overBudget = buildBuildSimulatorR483({ ...input, result: overBudgetResult 
 assert.match(overBudget.blockedReason ?? '', /inconsistência de orçamento/i);
 assert.equal(overBudget.variants.length, 0);
 
-console.log('R483 Task 1 aprovada: baseline oficial, orçamento real e autoridade read-only protegidos.');
+const first = buildBuildSimulatorR483(input);
+const second = buildBuildSimulatorR483(input);
+assert.deepEqual(first, second, 'Mesma entrada deve produzir a mesma ordem, planos e scores.');
+assert.deepEqual(first.variants.map((variant) => variant.id), ['official', 'balanced', 'specialist', 'gameplay']);
+for (const variant of first.variants) {
+  assert.equal(trainingPlanTotalCost(variant.plan), result.trainingPointsUsed, `${variant.id} precisa manter o custo oficial exato.`);
+  assert.equal(variant.pointsUsed, result.trainingPointsUsed, `${variant.id} precisa declarar o custo oficial exato.`);
+  assert.equal(variant.pointsAvailable, result.trainingPointsTotal - result.trainingPointsUsed);
+  assert.ok(variant.pointsUsed <= result.trainingPointsTotal);
+}
+assert.ok(first.variants.slice(1).every((variant) => JSON.stringify(variant.plan) !== JSON.stringify(result.training)),
+  'Variantes alternativas precisam redistribuir PP de verdade.');
+
+const insufficientFunctionResult = {
+  ...result,
+  validation: { ...result.validation, level: 'blocked', canGenerate: false },
+  teamMap: { ...result.teamMap, functionLabel: '' }
+} as any;
+const insufficient = buildBuildSimulatorR483({ ...input, result: insufficientFunctionResult });
+assert.deepEqual(insufficient.variants.map((variant) => variant.id), ['official', 'balanced']);
+assert.ok(!insufficient.variants.some((variant) => variant.id === 'specialist' || variant.id === 'gameplay'));
+
+for (const variant of first.variants.slice(1)) {
+  assert.equal(trainingPlanTotalCost(variant.plan), officialPointsUsed,
+    'Transferência cujo custo escalonado não fecha exatamente deve ser descartada antes de virar variante.');
+}
+
+console.log('R483 Task 2 aprovada: variantes determinísticas, funcionais e com PP exatamente igual ao Oficial.');
