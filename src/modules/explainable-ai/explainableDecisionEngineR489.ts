@@ -5,6 +5,8 @@ import type {
   ExplainableDecisionInputR489,
   ExplainableDecisionR489
 } from './explainableDecisionTypesR489';
+import { buildExplainablePiecesR489 } from './explainableDecisionBuildersR489';
+import { evidenceConfidenceR489 } from './explainableEvidenceR489';
 
 export const EXPLAINABLE_AI_R489_VERSION = '40.80-r489-explainable-ai-v1' as const;
 
@@ -42,41 +44,64 @@ function availabilityLimitationsR489(availability: ExplainableAvailabilityR489):
   });
 }
 
-function fingerprintR489(input: ExplainableDecisionInputR489): string {
+function uniqueStringsR489(items: string[]): string[] {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function fingerprintR489(input: ExplainableDecisionInputR489, evidenceIds: string[]): string {
   const availability = AVAILABILITY_KEYS_R489
     .map((key) => `${sourceLabelR489(key)}:${input.availability[key]}`)
     .join('|');
   const decisionId = String(input.decisionId || '').trim() || 'SEM_ID';
-  return `R489:${input.kind}:${decisionId}:${availability}`;
+  const evidence = evidenceIds.slice().sort().join(',') || 'SEM_EVIDENCIA';
+  return `R489:${input.kind}:${decisionId}:${availability}:${evidence}`;
 }
 
 export function buildExplainableDecisionR489(
   input: ExplainableDecisionInputR489
 ): ExplainableDecisionR489 {
   const availability: ExplainableAvailabilityR489 = { ...input.availability };
-  const limitations = availabilityLimitationsR489(availability);
+  const pieces = buildExplainablePiecesR489(input);
+  const evidenceIds = new Set(pieces.evidence.map((item) => item.id));
+  const reasons = pieces.reasons
+    .filter((reason) => reason.evidenceIds.length > 0 && reason.evidenceIds.every((id) => evidenceIds.has(id)))
+    .map((reason, index) => ({ ...reason, rank: index + 1 }));
+  const limitations = uniqueStringsR489([
+    ...availabilityLimitationsR489(availability),
+    ...pieces.limitations
+  ]);
+  const performanceConfidence = evidenceConfidenceR489(pieces.evidence);
+  const decisionPenalty = Math.min(25, availabilityLimitationsR489(availability).length * 5);
+  const decisionConfidence = String(input.decisionId || '').trim()
+    ? Math.max(35, 92 - decisionPenalty)
+    : 0;
+  const evidenceState: ExplainableDecisionR489['evidenceState'] = !pieces.evidence.length
+    ? 'INSUFFICIENT'
+    : limitations.length
+      ? 'PARTIAL'
+      : 'FULL';
 
   return {
     version: EXPLAINABLE_AI_R489_VERSION,
     kind: input.kind,
     verdict: String(input.verdict || '').trim(),
-    decisionConfidence: String(input.decisionId || '').trim() ? 35 : 0,
-    performanceConfidence: null,
-    evidenceState: 'INSUFFICIENT',
+    decisionConfidence,
+    performanceConfidence,
+    evidenceState,
     availability,
-    reasons: [],
-    evidence: [],
-    benefits: [],
-    tradeOffs: [],
-    risks: [],
-    alternatives: [],
+    reasons,
+    evidence: pieces.evidence,
+    benefits: pieces.benefits,
+    tradeOffs: pieces.tradeOffs,
+    risks: pieces.risks,
+    alternatives: pieces.alternatives,
     counterfactual: {
       available: false,
       explanation: null,
       evidenceIds: []
     },
     limitations,
-    fingerprint: fingerprintR489(input),
+    fingerprint: fingerprintR489(input, pieces.evidence.map((item) => item.id)),
     authority: { ...AUTHORITY_R489 },
     guardrails: [
       'R119 → R126 → R128 permanece a autoridade final.',
