@@ -47,6 +47,9 @@ jobs:
       - name: Regressão R489 — painel explicável read-only (TDD)
         run: node tests/v40-80-r489-explainable-ai-ui-regression.mjs
 
+      - name: Regressão R489 — integração Resultado/Comparar (TDD)
+        run: node tests/v40-80-r489-result-integration-regression.mjs
+
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
           npm run test:r192
