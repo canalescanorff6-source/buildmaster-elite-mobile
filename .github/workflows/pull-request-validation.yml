@@ -35,6 +35,9 @@ jobs:
       - name: R500 TDD — contrato RED/GREEN
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-contract-regression.ts
 
+      - name: R500 TDD — orçamento fonte com reserva
+        run: node tests/v40-80-r443-source-budget-convergence-regression.mjs
+
       - name: Regressão R483 — contrato read-only (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
