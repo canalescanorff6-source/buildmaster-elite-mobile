@@ -1,0 +1,44 @@
+name: R483 Final Verification
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: R483 final suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: R483
+        run: npm run test:r483
+      - name: TypeScript
+        run: npm run typecheck
+      - name: R180
+        run: npm run test:r180
+      - name: R192
+        run: npm run test:r192
+      - name: R200
+        run: npm run test:r200
+      - name: R128
+        run: npm run test:r128
+      - name: Android v38.40
+        run: node tests/v38-40-definitive-android-opening-regression.mjs
+      - name: Build produção
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
