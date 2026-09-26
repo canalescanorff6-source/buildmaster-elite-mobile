@@ -7,7 +7,7 @@ import type {
   ExplainableEvidenceR489,
   ExplainableReasonR489
 } from './explainableDecisionTypesR489';
-import { buildExplainablePiecesR489 } from './explainableDecisionBuildersR489';
+import { buildExplainablePiecesR489, type ExplainablePiecesR489 } from './explainableDecisionBuildersR489';
 import { evidenceConfidenceR489 } from './explainableEvidenceR489';
 
 export const EXPLAINABLE_AI_R489_VERSION = '40.80-r489-explainable-ai-v1' as const;
@@ -92,6 +92,26 @@ function fingerprintR489(
     .map((item) => `${item.id}@${item.fingerprint}`)
     .join(',') || 'SEM_EVIDENCIA';
   return `R489:${input.kind}:${decisionId}:${availability}:${versions}:${evidenceTokens}`;
+}
+
+function buildFingerprintMismatchR489(input: ExplainableDecisionInputR489): string | null {
+  if (input.kind !== 'BUILD' || !input.buildSimulator) return null;
+  const decisionId = String(input.decisionId || '').trim();
+  const baselineFingerprint = String(input.buildSimulator.baselineFingerprint || '').trim();
+  if (!decisionId || !baselineFingerprint || decisionId === baselineFingerprint) return null;
+  return `Fingerprint incompatível: a decisão oficial ${decisionId} não corresponde ao baseline R483 ${baselineFingerprint}. A explicação foi degradada sem corrigir a origem.`;
+}
+
+function emptyPiecesR489(limitation: string): ExplainablePiecesR489 {
+  return {
+    evidence: [],
+    reasons: [],
+    benefits: [],
+    tradeOffs: [],
+    risks: [],
+    alternatives: [],
+    limitations: [limitation]
+  };
 }
 
 function evidenceStrengthForReasonR489(
@@ -205,7 +225,10 @@ export function buildExplainableDecisionR489(
   input: ExplainableDecisionInputR489
 ): ExplainableDecisionR489 {
   const availability: ExplainableAvailabilityR489 = { ...input.availability };
-  const pieces = buildExplainablePiecesR489(input);
+  const fingerprintMismatch = buildFingerprintMismatchR489(input);
+  const pieces = fingerprintMismatch
+    ? emptyPiecesR489(fingerprintMismatch)
+    : buildExplainablePiecesR489(input);
   const evidenceIds = new Set(pieces.evidence.map((item) => item.id));
   const linkedReasons = pieces.reasons.filter(
     (reason) => reason.evidenceIds.length > 0 && reason.evidenceIds.every((id) => evidenceIds.has(id))
