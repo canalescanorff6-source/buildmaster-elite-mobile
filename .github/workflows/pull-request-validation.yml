@@ -44,6 +44,9 @@ jobs:
       - name: Regressão R489 — closure explicável (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-closure-regression.ts
 
+      - name: Regressão R489 — painel explicável read-only (TDD)
+        run: node tests/v40-80-r489-explainable-ai-ui-regression.mjs
+
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
           npm run test:r192
