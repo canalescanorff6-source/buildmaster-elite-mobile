@@ -134,6 +134,15 @@ function officialPriorityR483(official: TrainingPlan): TrainingKey[] {
     });
 }
 
+function respectsFunctionalPriorityR483(candidate: TrainingPlan, official: TrainingPlan, priority: TrainingKey[]): boolean {
+  const top2 = new Set(priority.slice(0, 2));
+  const top3 = new Set(priority.slice(0, 3));
+  const deltas = buildDeltasR483(official, candidate);
+  const removesTop2 = deltas.some((delta) => delta.delta < 0 && top2.has(delta.key));
+  const feedsOutsideTop3 = deltas.some((delta) => delta.delta > 0 && !top3.has(delta.key));
+  return !(removesTop2 && feedsOutsideTop3);
+}
+
 function selectBalancedVariantR483(candidates: TrainingPlan[], official: TrainingPlan): TrainingPlan | null {
   const active = new Set(TRAINING_KEYS.filter((key) => Number(official[key] ?? 0) > 0));
   const eligible = candidates.filter((candidate) => buildDeltasR483(official, candidate).every((delta) => active.has(delta.key)));
@@ -174,6 +183,7 @@ function selectSpecialistVariantR483(candidates: TrainingPlan[], official: Train
   let best: TrainingPlan | null = null;
   let bestScore = Number.NEGATIVE_INFINITY;
   for (const candidate of candidates) {
+    if (!respectsFunctionalPriorityR483(candidate, official, priority)) continue;
     const score = specialistScoreR483(candidate, official, priority);
     if (score > bestScore) {
       best = candidate;
@@ -195,9 +205,11 @@ function gameplayScoreR483(candidate: TrainingPlan, official: TrainingPlan, styl
 }
 
 function selectGameplayVariantR483(candidates: TrainingPlan[], official: TrainingPlan, style: TacticalStyle): TrainingPlan | null {
+  const priority = officialPriorityR483(official);
   let best: TrainingPlan | null = null;
   let bestScore = Number.NEGATIVE_INFINITY;
   for (const candidate of candidates) {
+    if (!respectsFunctionalPriorityR483(candidate, official, priority)) continue;
     const score = gameplayScoreR483(candidate, official, style);
     if (score > bestScore) {
       best = candidate;
