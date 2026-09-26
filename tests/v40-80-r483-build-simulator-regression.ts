@@ -129,4 +129,33 @@ const inconsistent = buildBuildSimulatorR483({ result: inconsistentCostResult, t
 assert.match(inconsistent.blockedReason ?? '', /inconsistência de orçamento/i);
 assert.equal(inconsistent.variants.length, 0);
 
-console.log('R483 Task 1 RED/GREEN contract: OK');
+const first = buildBuildSimulatorR483(input);
+const second = buildBuildSimulatorR483(input);
+assert.deepEqual(first, second, 'R483 precisa ser determinístico para a mesma ficha/contexto');
+assert.deepEqual(
+  first.variants.map((variant) => variant.id),
+  ['official', 'balanced', 'specialist', 'gameplay'],
+  'R483 deve expor Oficial, Equilibrada, Especialista e Gameplay quando a função estiver válida',
+);
+for (const variant of first.variants) {
+  assert.equal(trainingPlanTotalCost(variant.plan), result.trainingPointsUsed, `${variant.id} precisa manter PP exato`);
+  assert.equal(variant.pointsUsed, result.trainingPointsUsed, `${variant.id} reporta PP diferente da ficha oficial`);
+  assert.ok(variant.pointsUsed <= result.trainingPointsTotal, `${variant.id} ultrapassou orçamento`);
+}
+assert.ok(first.variants.slice(1).every((variant) => JSON.stringify(variant.plan) !== JSON.stringify(result.training)), 'Alternativas não podem ser clones da Oficial');
+
+const blockedFunctionResult = makeResult({
+  validation: { level: 'blocked', confirmed: false, canGenerate: false, issues: [] },
+});
+const blockedFunction = buildBuildSimulatorR483({ result: blockedFunctionResult, targetPosition: 'AMF' });
+assert.equal(blockedFunction.variants.some((variant) => variant.id === 'specialist'), false, 'Função bloqueada não pode inventar Especialista');
+assert.equal(blockedFunction.variants.some((variant) => variant.id === 'gameplay'), false, 'Função bloqueada não pode inventar Gameplay');
+
+const noFunctionResult = makeResult({
+  teamMap: { ...result.teamMap, functionLabel: '' },
+});
+const noFunction = buildBuildSimulatorR483({ result: noFunctionResult, targetPosition: 'AMF' });
+assert.equal(noFunction.variants.some((variant) => variant.id === 'specialist'), false);
+assert.equal(noFunction.variants.some((variant) => variant.id === 'gameplay'), false);
+
+console.log('R483 Task 1-2 contract: OK');
