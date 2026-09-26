@@ -1,29 +1,36 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const file = 'src/components/result/ResultAdvancedWorkspaceR192.tsx';
-const source = fs.readFileSync(file, 'utf8');
+const advancedPath = 'src/components/result/ResultAdvancedWorkspaceR192.tsx';
+const bridgePath = 'src/modules/explainable-ai/BuildExplainabilityR489.tsx';
+const advanced = fs.readFileSync(advancedPath, 'utf8');
+const bridge = fs.readFileSync(bridgePath, 'utf8');
 
-assert.match(source, /buildBuildSimulatorR483/);
-assert.match(source, /buildExplainableDecisionR489/);
-assert.match(source, /ExplainableDecisionPanelR489/);
-assert.match(source, /analysisUsagePositionR138\(result\)/);
-assert.match(source, /useMemo/);
-assert.match(source, /tab === ['"]comparar['"][\s\S]*BuildSimulatorPanelR483[\s\S]*ExplainableDecisionPanelR489/);
+assert.match(advanced, /BuildExplainabilityR489/);
+assert.match(advanced, /tab === ['"]comparar['"][\s\S]*BuildSimulatorPanelR483[\s\S]*BuildExplainabilityR489/);
 
-const tabType = source.match(/export type AdvancedResultTabR192 = ([^;]+);/)?.[1] ?? '';
+const tabType = advanced.match(/export type AdvancedResultTabR192 = ([^;]+);/)?.[1] ?? '';
 assert.ok(tabType.includes("'comparar'"), 'aba comparar existente precisa ser preservada');
 assert.doesNotMatch(tabType, /explica|r489|porque/i, 'R489 não pode criar nova aba global');
+assert.doesNotMatch(advanced, /buildExplainableDecisionR489|buildBuildSimulatorR483|explainableBuildR489/, 'R192 deve delegar a composição R489 para a fronteira dedicada.');
 
-const panelUsage = source.match(/<ExplainableDecisionPanelR489[^>]*>/)?.[0] ?? '';
-assert.ok(panelUsage, 'painel R489 precisa ser renderizado dentro do comparar');
+assert.match(bridge, /useMemo/);
+assert.match(bridge, /analysisUsagePositionR138\(result\)/);
+assert.match(bridge, /buildBuildSimulatorR483/);
+assert.match(bridge, /buildExplainableDecisionR489/);
+assert.match(bridge, /ExplainableDecisionPanelR489/);
+assert.match(bridge, /kind: ['"]BUILD['"]/);
+assert.match(bridge, /r483: buildSimulatorR489\.blockedReason \? ['"]BLOCKED['"] : ['"]AVAILABLE['"]/);
+
+const panelUsage = bridge.match(/<ExplainableDecisionPanelR489[^>]*>/)?.[0] ?? '';
+assert.ok(panelUsage, 'ponte BUILD precisa renderizar painel R489');
 assert.doesNotMatch(panelUsage, /onPromoteImpeto|onRejectImpeto|onApply|onSave|setTraining|setResult/);
 
-const compareStart = source.indexOf("tab === 'comparar'");
-const compareEnd = source.indexOf("tab === 'partidas'", compareStart);
-const compareBlock = compareStart >= 0 ? source.slice(compareStart, compareEnd > compareStart ? compareEnd : undefined) : '';
+const compareStart = advanced.indexOf("tab === 'comparar'");
+const compareEnd = advanced.indexOf("tab === 'partidas'", compareStart);
+const compareBlock = compareStart >= 0 ? advanced.slice(compareStart, compareEnd > compareStart ? compareEnd : undefined) : '';
 assert.match(compareBlock, /BuildSimulatorPanelR483/);
-assert.match(compareBlock, /ExplainableDecisionPanelR489/);
+assert.match(compareBlock, /BuildExplainabilityR489/);
 assert.doesNotMatch(compareBlock, /onPromoteImpeto=|onRejectImpeto=|onApply=|onSave=/);
 
-console.log('R489 Resultado aprovado: explicação dentro de Comparar, sem nova aba ou escrita.');
+console.log('R489 Resultado aprovado: ponte BUILD isolada dentro de Comparar, sem nova aba ou escrita.');
