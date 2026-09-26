@@ -29,9 +29,9 @@ assert.ok((conflict.performanceConfidence ?? 0) < (aligned.performanceConfidence
 
 const official = { id: 'official', label: 'Oficial', plan: {}, pointsUsed: 20, pointsAvailable: 0, validBudget: true, score: 0, deltas: [], strengths: [], sacrifices: [], explanation: 'Oficial' };
 const gameplay = { id: 'gameplay', label: 'Gameplay', plan: {}, pointsUsed: 20, pointsAvailable: 0, validBudget: true, score: 9, deltas: [], strengths: ['Progressão'], sacrifices: ['Finalização'], explanation: 'Mais progressão' };
-function buildInput(baselineFingerprint: string, variants: any[]) {
+function buildInput(baselineFingerprint: string, variants: any[], decisionId = baselineFingerprint) {
   return {
-    kind: 'BUILD', decisionId: 'card-1', verdict: 'Ficha Oficial',
+    kind: 'BUILD', decisionId, verdict: 'Ficha Oficial',
     availability: { r480: 'NOT_APPLICABLE', r481: 'NOT_APPLICABLE', r482: 'NOT_APPLICABLE', r483: 'AVAILABLE', r484: 'NOT_APPLICABLE' },
     buildSimulator: { version: 'r483', baselineFingerprint, budget: 20, officialPointsUsed: 20, variants, blockedReason: null, authority: {} }
   } as any;
@@ -47,6 +47,15 @@ assert.deepEqual(buildWithoutAlternative.counterfactual, { available: false, exp
 
 const changedFingerprint = buildExplainableDecisionR489(buildInput('card-B', [official, gameplay]));
 assert.notEqual(buildWithAlternative.fingerprint, changedFingerprint.fingerprint, 'fingerprint deve incluir fingerprint/versão das fontes, não só ids lógicos');
+
+const incompatibleBuild = buildExplainableDecisionR489(buildInput('card-A', [official, gameplay], 'card-B'));
+assert.equal(incompatibleBuild.evidenceState, 'INSUFFICIENT', 'fingerprint incompatível deve degradar a explicação');
+assert.equal(incompatibleBuild.performanceConfidence, null);
+assert.equal(incompatibleBuild.evidence.length, 0);
+assert.equal(incompatibleBuild.reasons.length, 0);
+assert.equal(incompatibleBuild.alternatives.length, 0);
+assert.deepEqual(incompatibleBuild.counterfactual, { available: false, explanation: null, evidenceIds: [] });
+assert.ok(incompatibleBuild.limitations.some((item: string) => /fingerprint|incompat/i.test(item)), 'mismatch precisa ficar explícito como limitação');
 
 const manyWindows = Array.from({ length: 8 }, (_, index) => ({
   id: `w${index}`, centerMs: 10000 * index, startMs: 10000 * index, endMs: 10000 * index + 5000,
@@ -79,4 +88,4 @@ for (const kind of minimalKinds) {
   for (let pass = 0; pass < 10; pass += 1) assert.deepEqual(buildExplainableDecisionR489(input), expected);
 }
 
-console.log('R489 closure aprovada: contradição, contrafactual, ranking, caps e fingerprint determinístico.');
+console.log('R489 closure aprovada: contradição, contrafactual, ranking, caps, fingerprint e mismatch determinísticos.');
