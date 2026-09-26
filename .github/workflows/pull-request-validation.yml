@@ -56,6 +56,9 @@ jobs:
       - name: Regressão R489 — integração Match Vision (TDD)
         run: node tests/v40-80-r489-match-integration-regression.mjs
 
+      - name: Regressão R489 — gate preventivo da main (TDD)
+        run: node tests/v40-80-r489-ci-gate-regression.mjs
+
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
           npm run test:r192
