@@ -167,3 +167,8 @@ assert.match(ui, /matchVisionR482\.recurringPatterns/);
 assert.doesNotMatch(ui, /matchVisionR482[^\n]*setResult\(/);
 
 console.log('R482 aprovada: Match Vision determinístico, read-only e baseado apenas em evidência confirmada para diagnóstico tático.');
+
+// R483 compatibility bridge: test:r482 already belongs to the production ci:gate.
+// Keep the new read-only Build Simulator regression mandatory on main without
+// rewriting the large package.json through a whole-file connector mutation.
+require('./v40-80-r483-build-simulator-regression.ts');
