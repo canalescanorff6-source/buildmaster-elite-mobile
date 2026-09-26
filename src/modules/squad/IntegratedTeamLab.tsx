@@ -26,6 +26,11 @@ import { upsertPersonalPreset } from '@/lib/appRefinement';
 import { buildTacticalTwinR480 } from '@/modules/tactical-twin/tacticalTwinEngineR480';
 import { buildSquadBrainR481 } from '@/modules/squad-brain/squadBrainEngineR481';
 import { buildChemistryGraphR484 } from '@/modules/chemistry/chemistryGraphEngineR484';
+import {
+  RotationExplainabilityR489,
+  StarterExplainabilityR489,
+  TacticalExplainabilityR489
+} from '@/modules/explainable-ai/TeamExplainabilityR489';
 
 type TeamTab = 'escalacao' | 'elenco' | 'tatica' | 'banco';
 
@@ -220,6 +225,7 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
             {squadBrainR481.core.slice(0, 4).map((item) => (
               <article key={item.playerId}>
                 <div><strong>{item.playerName} • importância {item.importance}/100</strong><span>{item.role} • {item.reason}</span><small>{item.evidenceMatches} partida(s) de evidência • diferença para reserva {item.replacementGap}.</small></div>
+                <StarterExplainabilityR489 starter={item} squadBrain={squadBrainR481} chemistry={chemistryR484} />
               </article>
             ))}
           </div>
@@ -259,9 +265,32 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
           </div>
           {tacticalTwinR480.risks.length > 0 && <div className="v27-pairing-list">{tacticalTwinR480.risks.slice(0, 3).map((risk) => <span key={risk}><AlertTriangle size={15}/>{risk}</span>)}</div>}
         </article>
+        {(tacticalTwinR480.scenarios.find((scenario) => scenario.id === 'base') ?? tacticalTwinR480.scenarios[0]) && (
+          <TacticalExplainabilityR489
+            scenario={tacticalTwinR480.scenarios.find((scenario) => scenario.id === 'base') ?? tacticalTwinR480.scenarios[0]!}
+            tacticalTwin={tacticalTwinR480}
+            squadBrain={squadBrainR481}
+            chemistry={chemistryR484}
+          />
+        )}
       </section>}
 
-      {tab === 'banco' && <section className="luxury-panel bm32-bench-detail"><header><Users size={19}/><div><strong>Banco recomendado</strong><small>Cobertura para cenários diferentes</small></div></header><div>{team.benchSuggestions.map((player, index) => <article key={player.id}><span>#{index + 1}</span><div><strong>{player.name}</strong><small>{player.replacementMode === 'MANTER_FUNCAO' ? 'MANTER A FUNÇÃO' : 'MUDAR O COMPORTAMENTO'} • substitui {player.replaces}</small><small>{player.behaviourChange} • {player.reason}</small></div><b>{player.score}</b></article>)}{!team.benchSuggestions.length && <p>Cadastre mais jogadores para montar um banco complementar.</p>}</div><footer><History size={18}/><span>Presets salvos mantêm um retrato da escalação sem sobrescrever o time atual.</span></footer></section>}
+      {tab === 'banco' && <section className="luxury-panel bm32-bench-detail">
+        <header><Users size={19}/><div><strong>Banco recomendado</strong><small>Cobertura para cenários diferentes</small></div></header>
+        <div>
+          {team.benchSuggestions.map((player, index) => {
+            const rotation = squadBrainR481.rotations.find((item) => (item.reserveId === player.id || item.reserveName === player.name) && item.replaces === player.replaces);
+            return <article key={player.id}>
+              <span>#{index + 1}</span>
+              <div><strong>{player.name}</strong><small>{player.replacementMode === 'MANTER_FUNCAO' ? 'MANTER A FUNÇÃO' : 'MUDAR O COMPORTAMENTO'} • substitui {player.replaces}</small><small>{player.behaviourChange} • {player.reason}</small></div>
+              <b>{player.score}</b>
+              {rotation && <RotationExplainabilityR489 rotation={rotation} tacticalTwin={tacticalTwinR480} squadBrain={squadBrainR481} chemistry={chemistryR484} />}
+            </article>;
+          })}
+          {!team.benchSuggestions.length && <p>Cadastre mais jogadores para montar um banco complementar.</p>}
+        </div>
+        <footer><History size={18}/><span>Presets salvos mantêm um retrato da escalação sem sobrescrever o time atual.</span></footer>
+      </section>}
       </div>
     </section>
   );

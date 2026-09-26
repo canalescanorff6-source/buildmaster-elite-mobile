@@ -8,6 +8,7 @@ import type { TacticalStyle } from '@/lib/analyzer';
 import type { TeamDiagnosis } from '@/modules/core/centralIntelligence';
 import { loadSquadMappingState } from '@/modules/squad-mapping/squadMappingStorage';
 import type { SquadMappingPlayer } from '@/modules/squad-mapping/squadMappingEngine';
+import { MatchExplainabilityR489 } from '@/modules/explainable-ai/MatchExplainabilityR489';
 import {
   deleteMatchRecording,
   getMatchRecorderCapabilities,
@@ -756,6 +757,8 @@ export function MatchTrainerCenter({ team, teamStyle }: { team: TeamDiagnosis; t
           </div>
           <p className="match-trust-note"><ShieldCheck size={16}/>{matchVisionR482.guardrails[0]}</p>
         </article>
+
+        <MatchExplainabilityR489 matchVision={matchVisionR482} />
 
         <article className="luxury-panel match-area-panel">
           <div className="v27-panel-heading"><div><p className="kicker"><Clock3 size={14}/> Linha do tempo</p><h3>Intensidade e fase dominante</h3></div><span>{matchVisionR482.timeline.length} blocos</span></div>

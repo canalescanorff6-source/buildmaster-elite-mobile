@@ -8,6 +8,7 @@ import { canonicalizeSkillList, skillIdentityKey } from '@/lib/officialSkillIden
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { getMergedCorrectionsForResult, type DynamicRulePack } from '@/modules/builds/dynamicRules';
 import { BuildSimulatorPanelR483 } from '@/modules/build-simulator/BuildSimulatorPanelR483';
+import { BuildExplainabilityR489 } from '@/modules/explainable-ai/BuildExplainabilityR489';
 import { StructuralPrecisionPanel } from '@/components/StructuralPrecisionPanel';
 import { AdvancedMotorV3750Panel } from '@/components/AdvancedMotorV3750Panel';
 import { ContinuousUpdateV3770Panel } from '@/components/ContinuousUpdateV3770Panel';
@@ -168,6 +169,7 @@ export function ResultAdvancedWorkspaceR192({
       {tab === 'comparar' && (
         <div className="result-section-grid">
           <BuildSimulatorPanelR483 result={result} />
+          <BuildExplainabilityR489 result={result} />
           {buildComparison && <>
             <article className="luxury-panel wide-card">
               <div className="section-title-row"><div><p className="kicker">Comparador de fichas</p><h3>{buildComparison.winner}</h3></div><span>{result.buildVariants.length} opções</span></div>
