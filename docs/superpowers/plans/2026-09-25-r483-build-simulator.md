@@ -4,9 +4,9 @@
 
 **Goal:** adicionar um simulador determinístico e somente leitura que compare a ficha oficial com variantes Equilibrada, Especialista e Gameplay sem alterar a autoridade Clean Slate/R126/R128 e sem usar GER/Overall como objetivo.
 
-**Architecture:** o R483 será uma ramificação observacional pós-ficha oficial. O motor recebe o `AnalysisResult` já finalizado, usa `result.training` como baseline, valida o custo com `trainingPlanCore`, gera candidatos por redistribuições pequenas e limitadas e devolve um snapshot read-only. A UI será um painel isolado dentro de `Resultado → Avançado → Ferramentas → Comparar`; qualquer falha no simulador degrada somente esse painel e nunca impede a ficha oficial de aparecer.
+**Architecture:** o R483 será uma ramificação observacional pós-ficha oficial. O motor recebe o `AnalysisResult` já finalizado, usa `result.training` como baseline funcional e fonte de verdade dos PP consumidos, valida tudo com `trainingPlanCore` e gera candidatos por redistribuições pequenas e limitadas. A UI será um painel isolado dentro de `Resultado → Avançado → Ferramentas → Comparar`; falha do simulador degrada somente esse painel e nunca impede a ficha oficial de aparecer.
 
-**Tech Stack:** TypeScript, React/Next.js, `trainingPlanCore`, `pointBudget`, conhecimento funcional já exposto por `trainingOptimizer`, Node regression tests via `tests/_ts-require.cjs`, GitHub Actions.
+**Tech Stack:** TypeScript, React/Next.js, `trainingPlanCore`, `pointBudget`, `AnalysisResult` já selado pelo pipeline, Node regression tests via `tests/_ts-require.cjs`, GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-09-25-r483-build-simulator-design.md`
 
@@ -16,23 +16,23 @@
 - Não criar botão `Aplicar`, `Salvar como oficial`, `Substituir ficha` nem qualquer escrita de produção.
 - `trainingPointsTotal = 0` continua significando orçamento desconhecido/bloqueado; nunca fabricar 64 PP.
 - Cada variante válida deve consumir exatamente o mesmo número de PP que a ficha Oficial, não apenas ficar abaixo do teto.
-- Recalcular custo exclusivamente por `trainingPlanTotalCost()` / núcleo canônico; não duplicar fórmula de PP.
-- Não alterar Card ID, edição, booster, atributos-base, posição final, playstyle oficial, skills existentes ou fingerprint.
+- Recalcular custo exclusivamente por `trainingPlanTotalCost()`; não duplicar fórmula de PP.
+- Não alterar Card ID, edição, booster, atributos-base, posição final, playstyle oficial, skills existentes ou identidade da carta.
 - Não escrever `recommendedSkills`, `recommendedImpetos`, stores, Cofre ou sessão.
 - Não importar nem chamar writers de ficha/persistência no motor R483.
 - `Overall`/`GER` não pode entrar no score, desempate ou justificativa.
 - R460/R470/R472 e evidência de partidas ficam fora da v1.
 - O motor deve ser determinístico, local/offline e sem rede/LLM obrigatório.
-- O perfil Gameplay pode usar somente posição, função/playstyle, objetivo e contexto tático já presente no resultado.
+- O perfil Gameplay pode usar somente a prioridade implícita na ficha oficial, posição, objetivo e contexto tático já presente no resultado.
 - R119, R126 e R128 permanecem soberanos.
 
 ## Review Focus
 
 - **Ficha oficial com custo inconsistente:** se `trainingPlanTotalCost(result.training) !== result.trainingPointsUsed`, bloquear variantes em vez de mascarar ou corrigir o resultado.
 - **Orçamento válido mas menor que o custo oficial:** bloquear o simulador e preservar a ficha oficial sem alteração.
-- **Perfil funcional inexistente/insuficiente:** produzir Oficial e, se houver candidato seguro, Equilibrada; não inventar Especialista/Gameplay.
-- **Candidato que não consegue repor exatamente os PP retirados por causa do custo escalonado:** descartá-lo; nunca aceitar custo diferente do Oficial.
-- **Erro de runtime no painel R483:** mostrar fallback local `Simulador temporariamente indisponível. Sua ficha oficial continua intacta.` e manter o restante do Resultado funcional.
+- **Função insuficiente:** se `result.validation.level === 'blocked'` ou `result.teamMap.functionLabel` estiver vazio, produzir Oficial e, se houver candidato seguro, Equilibrada; não inventar Especialista/Gameplay.
+- **Transferência com custo escalonado que não fecha exatamente os PP:** descartar o candidato; nunca aceitar custo diferente da Oficial.
+- **Erro de runtime no painel R483:** mostrar `Simulador temporariamente indisponível. Sua ficha oficial continua intacta.` e manter o restante do Resultado funcional.
 
 ---
 
@@ -43,7 +43,7 @@
 - Create: `tests/v40-80-r483-build-simulator-regression.ts`
 
 **Interfaces:**
-- Consumes: `AnalysisResult`, `PositionCode`, `TrainingKey`, `TrainingPlan` de `@/lib/analyzer`; `normalizeTrainingPlan`, `trainingPlanTotalCost`, `TRAINING_KEYS` de `@/lib/trainingPlanCore`; `normalizePlayerTrainingBudget` de `@/modules/builds/pointBudget`.
+- Consumes: `AnalysisResult`, `PositionCode`, `TrainingKey`, `TrainingPlan` de `@/lib/analyzer`; `normalizeTrainingPlan`, `trainingPlanTotalCost` e `TRAINING_KEYS` de `@/lib/trainingPlanCore`; `normalizePlayerTrainingBudget` de `@/modules/builds/pointBudget`.
 - Produces: `BUILD_SIMULATOR_R483_VERSION`, `BuildSimulatorInputR483`, `BuildSimulatorVariantR483`, `BuildSimulatorSnapshotR483`, `buildBuildSimulatorR483(input)`.
 
 Contrato público obrigatório:
@@ -93,7 +93,7 @@ export function buildBuildSimulatorR483(input: BuildSimulatorInputR483): BuildSi
 
 - [ ] **Step 1: escrever os testes falhando para bloqueios, baseline e autoridade**
 
-No teste R483, criar um `AnalysisResult` mínimo compatível com os campos usados e afirmar:
+Criar fixture de `AnalysisResult` com `trainingPointsTotal > 0`, `trainingPointsUsed` coerente e `result.training` não vazio. Testar:
 
 ```ts
 const before = JSON.stringify(input);
@@ -101,23 +101,29 @@ const snapshot = buildBuildSimulatorR483(input);
 assert.equal(snapshot.variants[0].id, 'official');
 assert.deepEqual(snapshot.variants[0].plan, result.training);
 assert.equal(snapshot.variants[0].pointsUsed, result.trainingPointsUsed);
+assert.equal(snapshot.baselineFingerprint, result.parsed.internalId);
 assert.equal(snapshot.authority.readOnly, true);
 assert.equal(snapshot.authority.canOverrideR128, false);
 assert.equal(snapshot.authority.optimizeOverall, false);
 assert.equal(JSON.stringify(input), before);
 ```
 
-Adicionar casos separados:
+Adicionar casos:
 
 ```ts
-assert.match(buildBuildSimulatorR483({ ...input, result: zeroBudgetResult }).blockedReason!, /orçamento real/i);
-assert.equal(buildBuildSimulatorR483({ ...input, result: zeroBudgetResult }).variants.length, 0);
-assert.match(buildBuildSimulatorR483({ ...input, result: inconsistentCostResult }).blockedReason!, /inconsistência de orçamento/i);
+const blocked = buildBuildSimulatorR483({ ...input, result: zeroBudgetResult });
+assert.match(blocked.blockedReason!, /orçamento real/i);
+assert.equal(blocked.variants.length, 0);
+assert.equal(blocked.budget, 0);
+
+const inconsistent = buildBuildSimulatorR483({ ...input, result: inconsistentCostResult });
+assert.match(inconsistent.blockedReason!, /inconsistência de orçamento/i);
+assert.equal(inconsistent.variants.length, 0);
 ```
 
-Também afirmar que `64` não aparece como fallback em snapshot bloqueado quando o orçamento de entrada é `0`.
+Afirmar que snapshot com orçamento `0` nunca contém `budget: 64` nem cria variante com 64 PP.
 
-- [ ] **Step 2: executar o teste e verificar falha por módulo inexistente**
+- [ ] **Step 2: executar e verificar FAIL por módulo inexistente**
 
 Run:
 
@@ -127,18 +133,19 @@ node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
 Expected: FAIL porque `buildSimulatorEngineR483` ainda não existe.
 
-- [ ] **Step 3: implementar o contrato mínimo e os guardrails**
+- [ ] **Step 3: implementar contrato mínimo e guardrails**
 
 Em `buildSimulatorEngineR483.ts`:
 
-- clonar/normalizar `result.training` sem mutar entrada;
-- calcular `canonicalOfficialCost = trainingPlanTotalCost(officialPlan)`;
-- calcular `budget = normalizePlayerTrainingBudget(result.trainingPointsTotal)`;
-- bloquear quando `budget === 0` com a mensagem exata `Simulação indisponível: confirme primeiro o orçamento real de PP desta carta.`;
-- bloquear quando `canonicalOfficialCost !== result.trainingPointsUsed` ou `canonicalOfficialCost > budget` com `A ficha oficial possui uma inconsistência de orçamento. O simulador foi bloqueado para não mascarar o problema.`;
+- `BUILD_SIMULATOR_R483_VERSION = '40.80-r483-build-simulator-v1'`;
+- `officialPlan = normalizeTrainingPlan({ ...result.training })`;
+- `canonicalOfficialCost = trainingPlanTotalCost(officialPlan)`;
+- `budget = normalizePlayerTrainingBudget(result.trainingPointsTotal)`;
+- bloquear `budget === 0` com `Simulação indisponível: confirme primeiro o orçamento real de PP desta carta.`;
+- bloquear `canonicalOfficialCost !== result.trainingPointsUsed` ou `canonicalOfficialCost > budget` com `A ficha oficial possui uma inconsistência de orçamento. O simulador foi bloqueado para não mascarar o problema.`;
 - criar somente a variante `official` neste task;
 - `pointsAvailable = budget - canonicalOfficialCost`;
-- `baselineFingerprint` pode usar `result.parsed.internalId` como fallback estável; se o resultado já expuser fingerprint canônico, preferi-lo sem criar novo algoritmo de identidade;
+- `baselineFingerprint = result.parsed.internalId || null`; não criar algoritmo novo de identidade;
 - não ler `overall`, `maxOverall`, `pri.GER`, `recommendedSkills` ou `recommendedImpetos`.
 
 - [ ] **Step 4: rodar o teste R483**
@@ -149,7 +156,7 @@ Run:
 node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 ```
 
-Expected: PASS nos testes de baseline/bloqueio/imutabilidade; ainda não exigir as três variantes adicionais.
+Expected: PASS nos testes de baseline, bloqueio, orçamento e imutabilidade.
 
 - [ ] **Step 5: commit**
 
@@ -167,45 +174,68 @@ git commit -m "R483: criar contrato read-only do Build Simulator"
 - Modify: `tests/v40-80-r483-build-simulator-regression.ts`
 
 **Interfaces:**
-- Consumes: contrato do Task 1; `addTrainingLevel`, `removeTrainingLevel`, `trainingPlanTotalCost`, `trainingPlanSignature` se disponível no branch de execução; `trainingRoleProfile(position, objective, attributes, parsed)` de `src/modules/builds/trainingOptimizer.ts` apenas como conhecimento funcional read-only.
-- Produces: variantes `balanced`, `specialist` e `gameplay` quando houver evidência funcional suficiente, todas com `pointsUsed === officialPointsUsed`.
+- Consumes: contrato do Task 1; `TRAINING_KEYS`, `addTrainingLevel`, `removeTrainingLevel`, `trainingPlanTotalCost` de `trainingPlanCore`; a própria distribuição oficial `result.training` como prioridade funcional já decidida pelo pipeline soberano.
+- Produces: variantes `balanced`, `specialist` e `gameplay` quando o resultado tiver função suficiente, todas com `pointsUsed === officialPointsUsed`.
 
 Decisão de algoritmo da v1:
 
-- espaço de busca limitado a redistribuições entre pares de `TrainingKey`;
-- por candidato, remover no máximo 2 níveis do grupo doador e adicionar no máximo 4 níveis ao receptor;
-- testar todas as combinações em ordem fixa de `TRAINING_KEYS`;
-- descartar qualquer candidato cujo custo canônico não volte exatamente a `officialPointsUsed`;
-- nunca criar busca combinatória recursiva ilimitada;
-- desempate sempre por ordem determinística, nunca por GER.
+- enumerar transferências entre pares de `TrainingKey` na ordem fixa de `TRAINING_KEYS`;
+- por candidato, remover 1 ou 2 níveis do grupo doador;
+- depois adicionar de 1 a 4 níveis ao receptor;
+- normalizar e recalcular custo após cada candidato;
+- aceitar somente candidatos cujo custo seja exatamente `officialPointsUsed`;
+- deduplicar por `planKeyR483(plan) = TRAINING_KEYS.map((key) => `${key}:${plan[key]}`).join('|')`;
+- não usar recursão nem busca combinatória sem limite;
+- desempate pela ordem estável dos candidatos, nunca por GER.
 
-Regras por perfil:
+Prioridade funcional v1:
 
-- **Balanced:** receptor e doador devem pertencer aos grupos que já têm investimento na ficha Oficial; score principal reduz dispersão dos níveis ativos e aplica penalidade pela distância absoluta à Oficial.
-- **Specialist:** usar `trainingRoleProfile(...).priority` quando o perfil existir; priorizar transferências para os primeiros grupos funcionais e penalizar retirada desses mesmos grupos.
-- **Gameplay:** partir da prioridade funcional do Specialist e aplicar ajuste pequeno pelo `result.tacticalProfile.style`/`result.objective`; não consultar R460/R470/R472 nem histórico de partidas.
-- Se `trainingRoleProfile` retornar `null`, omitir Specialist/Gameplay em vez de inventar função.
+```ts
+function officialPriorityR483(official: TrainingPlan): TrainingKey[];
+```
 
-- [ ] **Step 1: adicionar testes falhando para custo exato, determinismo e perfis**
+Ordenar grupos com investimento `> 0` por:
+1. nível oficial decrescente;
+2. custo canônico do grupo decrescente;
+3. ordem de `TRAINING_KEYS`.
 
-Adicionar assertions:
+Isso reutiliza a decisão funcional da própria ficha final em vez de criar uma segunda tabela de funções.
+
+Ajuste tático do perfil Gameplay:
+
+```ts
+const GAMEPLAY_STYLE_PRIORITY_R483: Partial<Record<TacticalStyle, TrainingKey[]>> = {
+  POSSE_DE_BOLA: ['passing', 'dribbling', 'dexterity'],
+  CONTRA_ATAQUE_RAPIDO: ['dexterity', 'lowerBodyStrength', 'shooting'],
+  CONTRA_ATAQUE: ['lowerBodyStrength', 'passing', 'dexterity'],
+  POR_FORA: ['lowerBodyStrength', 'passing', 'dribbling'],
+  PASSE_LONGO: ['passing', 'lowerBodyStrength', 'aerialStrength'],
+  SOBREPOSICAO: ['passing', 'lowerBodyStrength', 'dexterity']
+};
+```
+
+`AUTO` não adiciona prioridade. O ajuste tático só desempata/bonifica candidatos; não pode superar a prioridade funcional base a ponto de escolher um candidato que retire investimento dos dois primeiros grupos oficiais para alimentar um grupo sem relevância oficial.
+
+- [ ] **Step 1: adicionar testes falhando para custo exato e determinismo**
 
 ```ts
 const first = buildBuildSimulatorR483(input);
 const second = buildBuildSimulatorR483(input);
 assert.deepEqual(first, second);
+assert.deepEqual(first.variants.map((v) => v.id), ['official', 'balanced', 'specialist', 'gameplay']);
 
 for (const variant of first.variants) {
   assert.equal(trainingPlanTotalCost(variant.plan), result.trainingPointsUsed);
   assert.equal(variant.pointsUsed, result.trainingPointsUsed);
   assert.ok(variant.pointsUsed <= result.trainingPointsTotal);
 }
-assert.deepEqual(first.variants.map((v) => v.id), ['official', 'balanced', 'specialist', 'gameplay']);
 ```
 
-Criar um caso de custo escalonado em que uma transferência simples não fecha os PP e afirmar que o candidato inválido não aparece.
+A fixture deve ser escolhida para permitir ao menos uma transferência exata em cada perfil.
 
-Criar um caso sem `trainingRoleProfile` válido e afirmar que o snapshot não inventa `specialist`/`gameplay`.
+Criar outro caso em que uma transferência libera PP que não podem ser recolocados exatamente dentro dos limites 1–4 níveis; afirmar que esse plano não aparece.
+
+Criar caso com `validation.level = 'blocked'` ou `teamMap.functionLabel = ''` e afirmar que não há `specialist`/`gameplay`.
 
 - [ ] **Step 2: executar e confirmar FAIL nas variantes ainda ausentes**
 
@@ -217,40 +247,50 @@ node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
 Expected: FAIL porque ainda existe apenas `official`.
 
-- [ ] **Step 3: implementar enumerador de candidatos bounded**
+- [ ] **Step 3: implementar enumerador bounded**
 
-Criar funções privadas pequenas no engine:
+Criar:
 
 ```ts
+function planKeyR483(plan: TrainingPlan): string;
 function enumerateExactCostTransfersR483(official: TrainingPlan, officialPoints: number): TrainingPlan[];
 function planDistanceR483(a: TrainingPlan, b: TrainingPlan): number;
 function buildDeltasR483(official: TrainingPlan, candidate: TrainingPlan): BuildSimulatorVariantR483['deltas'];
 ```
 
-Cada candidato deve ser normalizado e validado com `trainingPlanTotalCost`; deduplicar por assinatura estável do plano.
+Nenhuma função acima pode mutar `official`.
 
 - [ ] **Step 4: implementar seleção Equilibrada**
-
-Criar:
 
 ```ts
 function selectBalancedVariantR483(candidates: TrainingPlan[], official: TrainingPlan): TrainingPlan | null;
 ```
 
-Escolher somente entre candidatos exatos. O score deve favorecer menor dispersão dos grupos já ativos e menor distância da Oficial. Empates seguem a ordem estável gerada pelo enumerador.
+Critérios, nesta ordem:
+1. somente receptor/doador dentro dos grupos ativos na Oficial;
+2. menor dispersão dos níveis ativos;
+3. menor `planDistanceR483`;
+4. ordem estável original do enumerador.
 
-- [ ] **Step 5: implementar seleção Especialista e Gameplay**
-
-Criar:
+- [ ] **Step 5: implementar seleção Especialista**
 
 ```ts
-function selectSpecialistVariantR483(...): TrainingPlan | null;
-function selectGameplayVariantR483(...): TrainingPlan | null;
+function selectSpecialistVariantR483(candidates: TrainingPlan[], official: TrainingPlan): TrainingPlan | null;
 ```
 
-Usar o `priority` do `trainingRoleProfile` como fonte funcional. Para Gameplay, aplicar somente ajustes táticos v1 definidos no próprio engine e explicitamente limitados aos grupos de treino; manter ajuste pequeno o bastante para não substituir a prioridade de função.
+Usar `officialPriorityR483`. Bonificar ganho nos primeiros 3 grupos da prioridade e penalizar retirada deles; candidatos que retiram de um dos 2 primeiros grupos para alimentar grupo fora do top 3 não podem vencer.
 
-- [ ] **Step 6: rodar teste R483 e typecheck**
+Só produzir Specialist se `result.validation.level !== 'blocked'` e `result.teamMap.functionLabel.trim()` não estiver vazio.
+
+- [ ] **Step 6: implementar seleção Gameplay**
+
+```ts
+function selectGameplayVariantR483(candidates: TrainingPlan[], official: TrainingPlan, tacticalStyle: TacticalStyle): TrainingPlan | null;
+```
+
+Pontuar primeiro pela prioridade funcional oficial e usar `GAMEPLAY_STYLE_PRIORITY_R483[result.tacticalProfile.style]` apenas como bônus secundário. Não consultar partidas, R460, R470 ou R472.
+
+- [ ] **Step 7: rodar teste R483 e typecheck**
 
 Run:
 
@@ -261,7 +301,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 7: commit**
+- [ ] **Step 8: commit**
 
 ```bash
 git add src/modules/build-simulator/buildSimulatorEngineR483.ts tests/v40-80-r483-build-simulator-regression.ts
@@ -278,11 +318,9 @@ git commit -m "R483: gerar variantes determinísticas com PP exato"
 
 **Interfaces:**
 - Consumes: variantes exatas do Task 2.
-- Produces: `strengths`, `sacrifices`, `explanation` e scores relativos da mesma carta, sem Overall/GER e sem writers.
+- Produces: `strengths`, `sacrifices`, `explanation` e score relativo dentro da mesma carta.
 
-- [ ] **Step 1: escrever testes falhando para explicabilidade e autoridade**
-
-Adicionar verificações:
+- [ ] **Step 1: escrever testes falhando para explicabilidade**
 
 ```ts
 for (const variant of snapshot.variants.slice(1)) {
@@ -293,16 +331,21 @@ for (const variant of snapshot.variants.slice(1)) {
 }
 ```
 
-Adicionar teste estrutural que lê `src/modules/build-simulator/buildSimulatorEngineR483.ts` e rejeita tokens/imports de writers e objetivos proibidos, incluindo:
+Para cada delta positivo citado em `strengths`, exigir que o mesmo `TrainingKey` tenha `delta > 0`; para cada sacrifício citado, exigir `delta < 0`.
 
-- `save`/`persist`/`vault` quando usados como import/chamada de produção;
-- `recommendedSkills` e `recommendedImpetos` como destinos de escrita;
-- `overall`, `maxOverall`, `pri.GER` na função de score;
-- qualquer setter de resultado oficial.
+- [ ] **Step 2: adicionar teste estrutural de autoridade**
 
-O teste não deve proibir a palavra `Overall` apenas em comentários/guardrails; deve focar uso executável no engine.
+Ler o source do engine e rejeitar:
 
-- [ ] **Step 2: executar e confirmar FAIL na explicabilidade ainda incompleta**
+- imports de módulos de persistência/Cofre;
+- chamadas com prefixos `save`, `persist`, `store` dirigidas a ficha oficial;
+- atribuições a `recommendedSkills` ou `recommendedImpetos`;
+- leitura de `result.parsed.overall`, `result.parsed.maxOverall` ou `result.pri.GER` dentro do engine;
+- setter/callback de resultado oficial.
+
+Também afirmar as oito flags do objeto `authority`, incluindo `optimizeOverall === false`.
+
+- [ ] **Step 3: executar e confirmar FAIL na explicabilidade ainda incompleta**
 
 Run:
 
@@ -310,18 +353,16 @@ Run:
 node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 ```
 
-- [ ] **Step 3: implementar score relativo e textos a partir dos deltas reais**
-
-Criar funções privadas:
+- [ ] **Step 4: implementar score e textos somente a partir dos deltas**
 
 ```ts
 function scoreVariantR483(...): number;
 function explainVariantR483(...): Pick<BuildSimulatorVariantR483, 'strengths' | 'sacrifices' | 'explanation'>;
 ```
 
-O score serve somente para ordenar variantes da mesma carta. O texto deve citar apenas grupos com delta real; nunca afirmar melhora de um grupo cujo delta seja `0` ou negativo.
+O score só ordena variantes da mesma carta. Não expor o score como qualidade absoluta entre jogadores.
 
-- [ ] **Step 4: rodar regressão, typecheck e autoridade R128**
+- [ ] **Step 5: rodar regressão, R128 e typecheck**
 
 Run:
 
@@ -333,7 +374,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 5: commit**
+- [ ] **Step 6: commit**
 
 ```bash
 git add src/modules/build-simulator/buildSimulatorEngineR483.ts tests/v40-80-r483-build-simulator-regression.ts
@@ -350,32 +391,34 @@ git commit -m "R483: explicar trade-offs sem autoridade paralela"
 - Modify: `tests/v40-80-r483-build-simulator-regression.ts`
 
 **Interfaces:**
-- Consumes: `buildBuildSimulatorR483({ result, targetPosition })`; `analysisUsagePositionR138(result)` para fornecer a posição já escolhida pelo pipeline atual.
-- Produces: painel visual `BuildSimulatorPanelR483({ result }: { result: AnalysisResult })` sem callbacks de escrita.
+- Consumes: `buildBuildSimulatorR483({ result, targetPosition })`; `analysisUsagePositionR138(result)` para usar a posição já decidida pelo pipeline atual.
+- Produces: `BuildSimulatorPanelR483({ result }: { result: AnalysisResult })`; nenhuma prop de callback de escrita.
 
 Decisão de integração:
 
 - manter a aba existente `comparar` em `ResultAdvancedWorkspaceR192`;
-- renderizar o painel R483 no topo dessa aba e preservar o comparador legado abaixo durante a v1 para não remover funcionalidade existente;
-- o painel não recebe `onSave`, `onApply`, `setResult` ou equivalente;
-- erro do R483 deve ficar contido em boundary local ou fallback seguro do painel.
+- renderizar R483 no topo dessa aba;
+- manter o comparador legado abaixo na v1 para não remover funcionalidade existente;
+- não adicionar item de navegação principal;
+- o painel não recebe `onSave`, `onApply`, `setResult` ou equivalente.
 
 - [ ] **Step 1: escrever teste de integração UI falhando**
 
-No teste R483, ler os fontes e afirmar:
+Ler os sources e afirmar:
 
 ```ts
 assert.match(advancedWorkspaceSource, /BuildSimulatorPanelR483/);
-assert.match(panelSource, /Somente simulação/);
+assert.match(panelSource, /Simulador de ficha — R483/);
+assert.match(panelSource, /Somente simulação — não altera sua ficha/);
 assert.match(panelSource, /Ficha oficial/);
 assert.doesNotMatch(panelSource, />\s*Aplicar\s*</i);
 assert.doesNotMatch(panelSource, /Salvar como oficial/i);
 assert.doesNotMatch(panelSource, /Substituir ficha/i);
 ```
 
-Também afirmar que o componente exportado recebe somente `result` e não callbacks de escrita.
+Afirmar também que a assinatura pública do componente aceita somente `{ result: AnalysisResult }`.
 
-- [ ] **Step 2: executar e confirmar FAIL porque painel não existe**
+- [ ] **Step 2: executar e confirmar FAIL porque o painel não existe**
 
 Run:
 
@@ -385,29 +428,30 @@ node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
 - [ ] **Step 3: implementar `BuildSimulatorPanelR483`**
 
-O painel deve:
+Estrutura do arquivo:
 
-- calcular `targetPosition` via `analysisUsagePositionR138(result)`;
-- usar `useMemo` para montar snapshot quando `result` mudar;
-- mostrar cabeçalho `Simulador de ficha — R483`;
-- mostrar `Somente simulação — não altera sua ficha`;
-- quando bloqueado, mostrar `blockedReason` sem lançar erro;
-- mostrar cartões em ordem `official`, `balanced`, `specialist`, `gameplay` quando presentes;
-- mostrar PP usados, PP disponíveis, principais deltas, forças, sacrifícios e explicação;
-- rotular `official` como `Ficha oficial`;
-- não incluir controles mutáveis.
+```ts
+export function BuildSimulatorPanelR483({ result }: { result: AnalysisResult }): React.ReactNode;
+```
 
-Se uma exceção inesperada ocorrer na renderização/cálculo, usar boundary local com fallback exato:
+Internamente:
+
+- `targetPosition = analysisUsagePositionR138(result)`;
+- `useMemo(() => buildBuildSimulatorR483({ result, targetPosition }), [result, targetPosition])`;
+- mostrar orçamento, Oficial e variantes;
+- para cada variante mostrar PP usados, PP disponíveis, deltas, forças, sacrifícios e explicação;
+- se `blockedReason`, renderizar aviso sem lançar erro;
+- não renderizar controle mutável.
+
+Criar no mesmo arquivo uma boundary local `BuildSimulatorBoundaryR483` para capturar exceções de render/cálculo e exibir exatamente:
 
 `Simulador temporariamente indisponível. Sua ficha oficial continua intacta.`
 
 - [ ] **Step 4: integrar no bloco `tab === 'comparar'` de `ResultAdvancedWorkspaceR192.tsx`**
 
-Importar o painel de forma compatível com o boundary/lazy pattern atual e renderizá-lo antes do comparador legado `buildComparison`.
+Importar `BuildSimulatorPanelR483` e renderizá-lo antes dos cards atuais de `buildComparison`. Não alterar `ResultTab`, `RESULT_PRIMARY_TABS` ou navegação normal.
 
-Não adicionar nova entrada a `RESULT_PRIMARY_TABS`, navegação principal ou menu global.
-
-- [ ] **Step 5: validar regressões históricas da superfície Resultado**
+- [ ] **Step 5: validar superfície Resultado e stubs históricos**
 
 Run:
 
@@ -420,7 +464,7 @@ npm run test:v3177
 npm run typecheck
 ```
 
-Expected: PASS. Estes typechecks históricos são obrigatórios porque o R482 demonstrou que uma integração nova pode passar no TypeScript moderno e falhar em stubs legados.
+Expected: PASS. Esta verificação é obrigatória para evitar repetição do padrão PR-green/main-red observado no R482.
 
 - [ ] **Step 6: commit**
 
@@ -439,12 +483,10 @@ git commit -m "R483: integrar simulador read-only ao Resultado"
 - Modify: `tests/v40-80-r483-build-simulator-regression.ts`
 
 **Interfaces:**
-- Consumes: regressão R483 completa dos Tasks 1–4.
-- Produces: `npm run test:r483` como gate único do recurso, incluído em `ci:gate` e no PR workflow.
+- Consumes: regressão R483 dos Tasks 1–4.
+- Produces: `npm run test:r483`, incluído em `ci:gate` e no workflow de PR.
 
-- [ ] **Step 1: adicionar teste estrutural que exige o gate no CI**
-
-No teste R483, ler `package.json` e o workflow e afirmar:
+- [ ] **Step 1: adicionar teste estrutural que exige R483 no CI**
 
 ```ts
 assert.match(pkg.scripts['ci:gate'], /npm run test:r483/);
@@ -453,7 +495,7 @@ assert.match(prWorkflow, /Regressão R483/);
 assert.match(prWorkflow, /npm run test:r483/);
 ```
 
-- [ ] **Step 2: executar e confirmar FAIL porque scripts/workflow ainda não contêm R483**
+- [ ] **Step 2: executar e confirmar FAIL antes das alterações de CI**
 
 Run:
 
@@ -461,13 +503,13 @@ Run:
 node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 ```
 
-- [ ] **Step 3: adicionar scripts**
+- [ ] **Step 3: adicionar scripts exatos**
 
 Em `package.json`:
 
 ```json
-"typecheck:r483-legacy": "tsc -p tests/types-v3170-ui/tsconfig.json --pretty false",
-"test:r483": "npm run typecheck:r483-legacy && node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts"
+"typecheck:r483-legacy": "npm run typecheck:v3170",
+"test:r483": "npm run typecheck:r151 && npm run typecheck:r483-legacy && node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts"
 ```
 
 Inserir `npm run test:r483` imediatamente após `npm run test:r482` no `ci:gate`.
@@ -506,14 +548,13 @@ git commit -m "R483: adicionar gate preventivo do Build Simulator"
 ### Task 6: Verificação completa, PR e publicação segura
 
 **Files:**
-- No new production files expected.
 - Review all files changed in Tasks 1–5.
 
 **Interfaces:**
 - Consumes: branch R483 completa.
-- Produces: evidência de branch pronta para PR; depois do merge, release oficial somente se toda a cadeia `main` passar.
+- Produces: evidência de branch pronta para PR e, depois do merge, release oficial validada ponta a ponta.
 
-- [ ] **Step 1: executar suíte local direcionada final**
+- [ ] **Step 1: executar suíte final direcionada**
 
 Run:
 
@@ -532,18 +573,18 @@ Expected: todos PASS / build concluído sem erro.
 
 - [ ] **Step 2: revisar diff por autoridade**
 
-Confirmar manualmente no diff:
+Confirmar:
 
 - nenhum writer/persistência importado no motor R483;
-- nenhum `onApply`/`setResult`/`save` adicionado ao painel;
+- nenhum callback de Apply/Save/setResult no painel;
 - nenhuma alteração em Clean Slate, R126, R128, pipeline de finalização, skills ou Ímpeto;
-- nenhuma alteração em fórmula de PP;
-- nenhuma remoção de funcionalidade existente da aba Comparar;
-- nenhuma referência executável a GER/Overall no score.
+- nenhuma alteração na fórmula canônica de PP;
+- nenhuma remoção do comparador existente;
+- nenhuma leitura de GER/Overall no engine R483.
 
-- [ ] **Step 3: abrir PR contra `main` e aguardar o workflow completo**
+- [ ] **Step 3: abrir PR contra `main` e aguardar workflow completo**
 
-O PR só pode ser considerado apto ao merge após:
+O PR só fica apto a merge após:
 
 - TypeScript normal GREEN;
 - TypeScript completo do APK GREEN;
@@ -556,9 +597,9 @@ O PR só pode ser considerado apto ao merge após:
 
 Usar squash merge e registrar o novo SHA de `main`.
 
-- [ ] **Step 5: validar o workflow oficial da `main` até o fim**
+- [ ] **Step 5: validar workflow oficial da `main` até o fim**
 
-Não encerrar no primeiro GREEN. Verificar a cadeia completa:
+Verificar:
 
 1. Zero-Red;
 2. diagnóstico consolidado;
@@ -578,7 +619,7 @@ Não encerrar no primeiro GREEN. Verificar a cadeia completa:
 16. manifesto/ponte legacy;
 17. nova release marcada `Latest`.
 
-- [ ] **Step 6: confirmar integridade da release**
+- [ ] **Step 6: confirmar integridade final da release**
 
 Confirmar via GitHub:
 
