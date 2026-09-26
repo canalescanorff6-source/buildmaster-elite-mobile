@@ -25,6 +25,9 @@
       "@/modules/matches/matchTrainerEngine": [
         "tests/types-v3170-ui/engine-stub.ts"
       ],
+      "@/modules/explainable-ai/MatchExplainabilityR489": [
+        "tests/types-v3170-ui/match-explainability-stub.ts"
+      ],
       "@/*": [
         "src/*"
       ]
@@ -39,6 +42,7 @@
     "central-stub.ts",
     "recorder-stub.ts",
     "engine-stub.ts",
+    "match-explainability-stub.ts",
     "../../src/modules/matches/MatchTrainerCenter.tsx"
   ]
 }
