@@ -38,6 +38,9 @@ jobs:
       - name: Regressão R484 — Chemistry Graph read-only (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r484-chemistry-graph-regression.ts
 
+      - name: Regressão R489 — Explainable AI read-only (TDD)
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-regression.ts
+
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
           npm run test:r192
