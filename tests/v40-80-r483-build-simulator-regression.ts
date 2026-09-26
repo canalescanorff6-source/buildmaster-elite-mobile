@@ -144,4 +144,19 @@ assert.doesNotMatch(engineSource, /recommendedImpetos\s*=/, 'R483 não pode escr
 assert.doesNotMatch(engineSource, /from\s+['"][^'"]*(?:vault|persistence|storage)[^'"]*['"]/, 'R483 não pode importar writers persistentes.');
 assert.doesNotMatch(engineSource, /\b(?:fetch|supabase)\s*\(/i, 'R483 deve funcionar local/offline na v1.');
 
-console.log('R483 Task 3 aprovada: trade-offs derivados dos deltas, sem GER e sem autoridade de escrita.');
+const panelPath = 'src/modules/build-simulator/BuildSimulatorPanelR483.tsx';
+assert.ok(fs.existsSync(panelPath), 'R483 Task 4: o painel read-only precisa existir.');
+const panelSource = fs.readFileSync(panelPath, 'utf8');
+const advancedWorkspaceSource = fs.readFileSync('src/components/result/ResultAdvancedWorkspaceR192.tsx', 'utf8');
+assert.match(advancedWorkspaceSource, /BuildSimulatorPanelR483/);
+assert.match(panelSource, /Simulador de ficha — R483/);
+assert.match(panelSource, /Somente simulação — não altera sua ficha/);
+assert.match(panelSource, /Ficha oficial/);
+assert.match(panelSource, /Simulador temporariamente indisponível\. Sua ficha oficial continua intacta\./);
+assert.match(panelSource, /export function BuildSimulatorPanelR483\(\{ result \}: \{ result: AnalysisResult \}\)/);
+assert.doesNotMatch(panelSource, />\s*Aplicar\s*</i);
+assert.doesNotMatch(panelSource, /Salvar como oficial/i);
+assert.doesNotMatch(panelSource, /Substituir ficha/i);
+assert.doesNotMatch(panelSource, /onSave|onApply|setResult/);
+
+console.log('R483 Task 4 aprovada: painel read-only integrado ao Comparar sem controles de escrita.');
