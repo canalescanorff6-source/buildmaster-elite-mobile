@@ -92,6 +92,9 @@ jobs:
       - name: Regressão R482 — Match Vision read-only
         run: npm run test:r482
 
+      - name: Regressão R483 — Build Simulator read-only
+        run: npm run test:r483
+
       - name: Regressão v38.40 — abertura Android e boundaries
         run: node tests/v38-40-definitive-android-opening-regression.mjs
 
