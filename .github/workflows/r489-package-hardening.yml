@@ -1,0 +1,44 @@
+name: R489 Package Hardening
+
+on:
+  push:
+    branches: [r489-explainable-ai-design]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: r489-explainable-ai-design
+          fetch-depth: 0
+
+      - name: Inserir test:r489 e proteger ci:gate
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          pkg.scripts['test:r489'] = 'node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-regression.ts && node -r ./tests/_ts-require.cjs tests/v40-80-r489-explainable-ai-closure-regression.ts && node tests/v40-80-r489-explainable-ai-ui-regression.mjs && node tests/v40-80-r489-result-integration-regression.mjs && node tests/v40-80-r489-team-integration-regression.mjs && node tests/v40-80-r489-match-integration-regression.mjs';
+          if (!pkg.scripts['ci:gate'].includes('npm run test:r489')) {
+            const anchor = 'npm run test:r482 &&';
+            if (!pkg.scripts['ci:gate'].includes(anchor)) throw new Error('Âncora test:r482 não encontrada em ci:gate');
+            pkg.scripts['ci:gate'] = pkg.scripts['ci:gate'].replace(anchor, `${anchor} npm run test:r489 &&`);
+          }
+          fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+          NODE
+
+      - name: Commitar somente se houver mudança
+        run: |
+          if git diff --quiet -- package.json; then
+            echo 'package.json já está endurecido.'
+            exit 0
+          fi
+          git config user.name 'buildmaster-r489[bot]'
+          git config user.email 'buildmaster-r489[bot]@users.noreply.github.com'
+          git add package.json
+          git commit -m 'R489: proteger ci gate da main'
+          git push origin HEAD:r489-explainable-ai-design
