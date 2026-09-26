@@ -1,4 +1,5 @@
 import type { AnalysisResult, PositionCode, TacticalStyle, TrainingKey, TrainingPlan } from '../../lib/analyzer';
+import { TRAINING_LABELS } from '../../lib/trainingEngine';
 import {
   TRAINING_KEYS,
   normalizeTrainingPlan,
@@ -259,6 +260,17 @@ function variantFromPlanR483(
   budget: number,
   score: number
 ): BuildSimulatorVariantR483 {
+  const deltas = buildDeltasR483(official, plan);
+  const strengths = deltas
+    .filter((item) => item.delta > 0)
+    .map((item) => `${TRAINING_LABELS[item.key]} recebe ${item.delta > 0 ? '+' : ''}${item.delta} nível(is) nesta simulação.`);
+  const sacrifices = deltas
+    .filter((item) => item.delta < 0)
+    .map((item) => `${TRAINING_LABELS[item.key]} cede ${Math.abs(item.delta)} nível(is) para manter o mesmo custo total.`);
+  const deltaSummary = deltas
+    .map((item) => `${item.delta > 0 ? '+' : ''}${item.delta} ${TRAINING_LABELS[item.key]}`)
+    .join(' • ');
+
   return {
     id,
     label,
@@ -267,10 +279,10 @@ function variantFromPlanR483(
     pointsAvailable: budget - officialPointsUsed,
     validBudget: trainingPlanTotalCost(plan) === officialPointsUsed && officialPointsUsed <= budget,
     score,
-    deltas: buildDeltasR483(official, plan),
-    strengths: ['Redistribuição temporária com o mesmo custo da ficha oficial.'],
-    sacrifices: ['Trade-offs detalhados serão derivados dos deltas no estágio de explicabilidade.'],
-    explanation: 'Variante somente leitura; não altera a ficha oficial.'
+    deltas,
+    strengths,
+    sacrifices,
+    explanation: `${label}: ${deltaSummary}. Mantém exatamente ${officialPointsUsed} PP, igual à ficha Oficial, e existe somente para comparação.`
   };
 }
 
