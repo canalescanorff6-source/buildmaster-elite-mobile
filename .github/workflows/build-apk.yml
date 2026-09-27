@@ -49,6 +49,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: buildmaster-release-${{ github.ref }}
@@ -872,7 +873,7 @@ jobs:
               existing = []
           rows = [current] + [row for row in existing if row.get('versionCode') != current['versionCode'] or row.get('channel') != current['channel']]
           rows = sorted(rows, key=lambda row: int(row.get('versionCode', 0)), reverse=True)[:30]
-          pathlib.Path('dist-apk/release-history.json').write_text(json.dumps({'schemaVersion': 1, 'releases': rows}, ensure_ascii=False, indent=2), encoding='utf-8')
+          pathlib.Path('dist-apk', 'release-history.json').write_text(json.dumps({'schemaVersion': 1, 'releases': rows}, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
           CONTENT=$(base64 -w0 dist-apk/release-history.json)
           EXISTING_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/release-history.json?ref=$CHANNEL_BRANCH" --jq '.sha' 2>/dev/null || true)
