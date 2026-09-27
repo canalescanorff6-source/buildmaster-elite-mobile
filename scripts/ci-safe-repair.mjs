@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { applyTotalReaderFinalizationR501 } from './apply-r501-total-reader-finalization.mjs';
+import { applyR502StructuralCardTruthCertification } from './apply-r502-structural-card-truth-certification.mjs';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const repairs = [
@@ -28,6 +29,20 @@ if (!failed) {
   } catch (error) {
     failed = true;
     console.error('Falha no reparo determinístico: Card Truth R501 — finalização do Leitor Total');
+    console.error(error);
+  }
+}
+
+if (!failed) {
+  console.log('\n[CI SAFE REPAIR] Card Truth R502 — certificação estrutural');
+  try {
+    const result = applyR502StructuralCardTruthCertification(process.cwd());
+    console.log(result.changed
+      ? `R502 materializou certificação estrutural em ${result.patched.length} arquivo(s).`
+      : 'R502 certificação estrutural já estava convergida.');
+  } catch (error) {
+    failed = true;
+    console.error('Falha no reparo determinístico: Card Truth R502 — certificação estrutural');
     console.error(error);
   }
 }
