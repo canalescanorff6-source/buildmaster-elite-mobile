@@ -6,6 +6,23 @@ import {
 } from '../src/modules/tactical-director/tacticalDirectorEvidenceR500';
 import { buildAutonomousTacticalDirectorR500 } from '../src/modules/tactical-director/tacticalDirectorEngineR500';
 
+function scenario(id: 'base' | 'pressao' | 'proteger' | 'buscar', overrides: Record<string, unknown> = {}) {
+  const labels = { base: 'Plano base', pressao: 'Sob pressão', proteger: 'Protegendo vantagem', buscar: 'Buscando o resultado' } as const;
+  return {
+    id,
+    label: labels[id],
+    readiness: 88,
+    control: id === 'pressao' ? 72 : 90,
+    progression: id === 'buscar' ? 94 : 84,
+    defensiveSecurity: id === 'proteger' ? 95 : 90,
+    transitionRisk: id === 'buscar' ? 38 : 18,
+    confidence: 89,
+    summary: `${labels[id]} com estrutura confirmada`,
+    actions: [`Ação ${id} 1`, `Ação ${id} 2`],
+    ...overrides
+  };
+}
+
 function baseInput() {
   return {
     officialDecisionFingerprint: 'official-card-1',
@@ -24,8 +41,8 @@ function baseInput() {
       version: 'r480', mode: 'READ_ONLY_TACTICAL_SIMULATION', formation: '4-2-2-2', teamStyle: 'POSSE_DE_BOLA', confidence: 88,
       evidence: { starters: 11, playersWithMatchEvidence: 8, starterEvidenceCoverage: 72, matchRecords: 8, contextualMatchRecords: 5, contextualAverageRating: 4 },
       structure: { globalScore: 84, attackScore: 82, midfieldScore: 88, defenseScore: 85, goalkeeperScore: 80, styleFit: 91, filledSlots: 11, totalSlots: 11 },
-      strengths: ['Controle central'], risks: [],
-      scenarios: [{ id: 'base', label: 'Plano base', readiness: 88, control: 90, progression: 84, defensiveSecurity: 90, transitionRisk: 18, confidence: 89, summary: 'Estrutura segura', actions: ['Controlar o meio'] }],
+      strengths: ['Controle central'], risks: ['Evitar perda central'],
+      scenarios: [scenario('base'), scenario('pressao'), scenario('proteger'), scenario('buscar')],
       authority: {}, guardrails: []
     },
     squadBrain: {
@@ -33,7 +50,10 @@ function baseInput() {
       evidence: { totalPlayers: 18, confirmedPlayers: 18, playersWithMatches: 8, matchRecords: 8 }, core: [],
       rotations: [{ reserveId: 'r1', reserveName: 'Reserva B', replaces: 'Titular A', replacementMode: 'MANTER_FUNCAO', readiness: 91, evidenceMatches: 3, reason: 'Boa cobertura' }],
       coverage: [{ line: 'defesa', label: 'Defesa', starters: 4, reserves: 2, averageStarterScore: 85, bestReserveScore: 82, status: 'forte', note: 'Coberta' }],
-      scenarioBench: [{ scenario: 'base', label: 'Base', reserveIds: ['r1'], reserveNames: ['Reserva B'], rationale: 'Cobertura' }],
+      scenarioBench: [
+        { scenario: 'base', label: 'Base', reserveIds: ['r1'], reserveNames: ['Reserva B'], rationale: 'Cobertura' },
+        { scenario: 'proteger', label: 'Proteger', reserveIds: ['r1'], reserveNames: ['Reserva B'], rationale: 'Cobertura defensiva' }
+      ],
       warnings: [], authority: {}, guardrails: []
     },
     chemistry: {
@@ -47,6 +67,7 @@ function baseInput() {
     buildSimulator: null,
     proMetaContext: null,
     proMetaDataset: { version: 'fixture-empty', observations: [] },
+    phase: 'PRE_MATCH',
     currentScenario: 'base',
     previousPlan: null
   } as any;
@@ -138,4 +159,72 @@ assert.ok(enginePlan.confidence.planConfidence > 0);
 assert.ok(enginePlan.confidence.evidenceConfidence > 0);
 assert.ok(enginePlan.confidence.executionConfidence > 0);
 
-console.log('R500 engine base aprovado: evidência correlacionada, conflitos explícitos e três confianças calibradas.');
+// Task 6 — composição real do plano, cenários e fases.
+const preMatch = buildAutonomousTacticalDirectorR500(baseInput());
+assert.equal(preMatch.phase, 'PRE_MATCH');
+assert.ok(preMatch.priorities.length > 0, 'pré-jogo precisa expor prioridade real do cenário R480.');
+assert.ok(preMatch.risks.length > 0, 'pré-jogo precisa expor riscos reais.');
+assert.ok(preMatch.recommendedActions.length > 0, 'pré-jogo precisa produzir ações rastreáveis.');
+assert.ok(preMatch.contingencies.some((item: any) => item.scenario === 'proteger'));
+assert.ok(preMatch.contingencies.some((item: any) => item.scenario === 'buscar'));
+assert.ok(preMatch.recommendedActions.every((item: any) => item.evidenceIds.length > 0));
+assert.equal(preMatch.recommendedActions.some((item: any) => /Jogador Inventado|fake/i.test(`${item.title} ${item.description}`)), false);
+
+const protectInput = baseInput();
+protectInput.currentScenario = 'proteger';
+const protectPlan = buildAutonomousTacticalDirectorR500(protectInput);
+assert.equal(protectPlan.scenario, 'proteger');
+assert.match(protectPlan.summary, /Proteg|vantagem|seguran/i);
+assert.ok(protectPlan.recommendedActions.some((item: any) => /Reserva B|cobertura/i.test(`${item.title} ${item.description}`)), 'rotação só pode vir do R481 real.');
+
+const invalidScenarioInput = baseInput();
+invalidScenarioInput.currentScenario = 'inexistente';
+const invalidScenario = buildAutonomousTacticalDirectorR500(invalidScenarioInput as any);
+assert.equal(invalidScenario.scenario, 'base', 'cenário inexistente precisa degradar para cenário R480 real, nunca sintetizar um novo.');
+
+const inMatchInput = baseInput();
+inMatchInput.phase = 'IN_MATCH_PREPARED';
+inMatchInput.currentScenario = 'pressao';
+const inMatch = buildAutonomousTacticalDirectorR500(inMatchInput);
+assert.equal(inMatch.phase, 'IN_MATCH_PREPARED');
+assert.equal(inMatch.scenario, 'pressao');
+assert.doesNotMatch(`${inMatch.summary} ${inMatch.recommendedActions.map((item: any) => item.description).join(' ')}`, /ao vivo|tempo real|estou vendo|detectando agora/i, 'modo durante a partida é preparado, não telemetria ao vivo.');
+
+const postInput = riskyInput;
+postInput.phase = 'POST_MATCH';
+postInput.previousPlan = preMatch;
+const postMatch = buildAutonomousTacticalDirectorR500(postInput);
+assert.equal(postMatch.phase, 'POST_MATCH');
+assert.match(`${postMatch.summary} ${postMatch.priorities.join(' ')} ${postMatch.risks.join(' ')}`, /execu[cç][aã]o|plano|p[oó]s-jogo|partida/i);
+assert.ok(postMatch.evidence.some((item: any) => item.source === 'R482'));
+
+const candidate = buildAutonomousTacticalDirectorR500({ ...baseInput(), previousPlan: null });
+const previousPlusTwo = {
+  ...candidate,
+  planFingerprint: 'previous-plus-two',
+  title: 'Plano anterior estável',
+  summary: 'Plano anterior deve ser mantido por histerese.',
+  confidence: { ...candidate.confidence, planConfidence: Math.max(0, candidate.confidence.planConfidence - 2) }
+};
+const held = buildAutonomousTacticalDirectorR500({ ...baseInput(), previousPlan: previousPlusTwo });
+assert.equal(held.title, 'Plano anterior estável', 'ganho de apenas +2 não pode derrubar plano anterior.');
+
+const previousMinusEight = {
+  ...candidate,
+  planFingerprint: 'previous-minus-eight',
+  title: 'Plano anterior superado',
+  summary: 'Pode ser promovido se a diferença for >=8.',
+  confidence: { ...candidate.confidence, planConfidence: Math.max(0, candidate.confidence.planConfidence - 8) }
+};
+const promoted = buildAutonomousTacticalDirectorR500({ ...baseInput(), previousPlan: previousMinusEight });
+assert.notEqual(promoted.title, 'Plano anterior superado', 'vantagem de +8 pode promover novo plano.');
+
+const explicitScenarioPrevious = { ...candidate, planFingerprint: 'previous-base', scenario: 'base', title: 'Plano base anterior' };
+const explicitChangeInput = baseInput();
+explicitChangeInput.currentScenario = 'buscar';
+explicitChangeInput.previousPlan = explicitScenarioPrevious;
+const explicitChange = buildAutonomousTacticalDirectorR500(explicitChangeInput);
+assert.equal(explicitChange.scenario, 'buscar', 'mudança explícita de cenário bypassa histerese.');
+assert.notEqual(explicitChange.title, 'Plano base anterior');
+
+console.log('R500 engine aprovado: evidência, conflitos, confiança, cenários, fases e histerese calibrados.');
