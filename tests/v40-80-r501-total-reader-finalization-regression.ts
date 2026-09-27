@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import type { TotalReadingSession } from '../src/lib/totalCardReader';
 import { deriveTotalReadingFinalizationR501 } from '../src/modules/card-reader/totalReaderFinalizationR501';
+import { applyTotalReaderFinalizationR501 } from '../scripts/apply-r501-total-reader-finalization.mjs';
 
 function session(overrides: Partial<TotalReadingSession> = {}): TotalReadingSession {
   return {
@@ -58,6 +59,11 @@ assert.equal(lowConfidence.canFinalize, false, 'R501: média OCR baixa não pode
 const reviewMismatch = deriveTotalReadingFinalizationR501(session({ mismatchRisk: 'review', mismatchReasons: ['Posição divergente.'] }));
 assert.equal(reviewMismatch.state, 'REVIEW_REQUIRED');
 assert.equal(reviewMismatch.canFinalize, false);
+
+const convergence = applyTotalReaderFinalizationR501(process.cwd());
+assert.ok(Array.isArray(convergence.patched));
+const secondConvergence = applyTotalReaderFinalizationR501(process.cwd());
+assert.equal(secondConvergence.changed, false, 'R501: convergência do Leitor Total precisa ser idempotente.');
 
 const runtime = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
 assert.match(runtime, /deriveTotalReadingFinalizationR501\(session\)/,
