@@ -5,6 +5,7 @@ const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const r500 = pkg.scripts?.['test:r500'] ?? '';
 const gate = pkg.scripts?.['ci:gate'] ?? '';
 const workflow = fs.readFileSync('.github/workflows/pull-request-validation.yml', 'utf8');
+const apkWorkflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 
 assert.ok(r500, 'package.json precisa expor test:r500');
 for (const fragment of [
@@ -26,4 +27,12 @@ assert.match(gate, /npm run test:r489[\s\S]*npm run test:r500/, 'ci:gate da main
 assert.match(workflow, /R500[^\n]*(closure|seguran|gate)[\s\S]*(v40-80-r500-closure-regression|npm run test:r500)/i, 'PR precisa possuir gate R500 explícito');
 assert.match(workflow, /v40-80-r500-ci-gate-regression\.mjs/);
 
-console.log('R500 gate aprovado: PR e main compartilham o contrato completo do diretor tático.');
+if (/gh workflow run\s+build-apk\.yml/.test(apkWorkflow)) {
+  assert.match(
+    apkWorkflow,
+    /permissions:\s*[\s\S]*?contents:\s*write[\s\S]*?actions:\s*write/i,
+    'build-apk precisa de actions: write quando a Regra Zero-Red redispara o próprio workflow.'
+  );
+}
+
+console.log('R500 gate aprovado: PR/main compartilham o contrato e o Zero-Red pode redisparar o APK estabilizado.');
