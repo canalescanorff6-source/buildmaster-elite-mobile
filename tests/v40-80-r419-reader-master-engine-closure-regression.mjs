@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-master-engine-closure.mjs';
+import { applyR503SingleReaderFinalization } from '../scripts/apply-r503-single-reader-finalization.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 const budget = read('src/modules/builds/pointBudget.ts');
@@ -87,6 +88,9 @@ assert.throws(
   /contrato de módulos R192 inesperado/,
   'R456: contador desconhecido deve falhar fechado em vez de ampliar o teto silenciosamente.',
 );
+
+const r503 = applyR503SingleReaderFinalization(process.cwd());
+if (r503.changed) console.log(`R503 materializou o gate do leitor unitário em ${r503.patched.length} arquivo(s).`);
 
 for (const regression of [
   'tests/v40-80-r501-card-truth-layer-regression.ts',
