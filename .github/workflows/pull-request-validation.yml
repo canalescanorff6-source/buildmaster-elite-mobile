@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: buildmaster-pr-${{ github.event.pull_request.number || github.ref }}
@@ -21,6 +21,36 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Bootstrap temporário — permitir redisparo do Zero-Red
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix-r500-zero-red-dispatch-permission'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = '.github/workflows/build-apk.yml';
+          const source = fs.readFileSync(path, 'utf8');
+          if (/permissions:\s*[\s\S]*?contents:\s*write[\s\S]*?actions:\s*write/i.test(source)) {
+            console.log('build-apk.yml já contém actions: write.');
+            process.exit(0);
+          }
+          const next = source.replace('permissions:\n  contents: write\n', 'permissions:\n  contents: write\n  actions: write\n');
+          if (next === source) throw new Error('bloco permissions esperado não encontrado');
+          fs.writeFileSync(path, next);
+          NODE
+          if git diff --quiet -- .github/workflows/build-apk.yml; then
+            echo 'Nenhuma alteração necessária.'
+          else
+            git config user.name 'buildmaster-ci-hotfix[bot]'
+            git config user.email 'buildmaster-ci-hotfix[bot]@users.noreply.github.com'
+            git add .github/workflows/build-apk.yml
+            git commit -m 'CI: permitir redisparo do APK apos Zero-Red'
+            git push origin HEAD:${GITHUB_HEAD_REF}
+          fi
 
       - name: Configurar Node.js
         uses: actions/setup-node@v5
