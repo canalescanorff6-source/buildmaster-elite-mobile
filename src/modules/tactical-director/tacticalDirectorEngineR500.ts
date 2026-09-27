@@ -1,3 +1,4 @@
+import { buildContextFingerprintR500, buildPlanFingerprintR500 } from './tacticalDirectorFingerprintR500';
 import type {
   TacticalDirectorAuthorityR500,
   TacticalDirectorInputR500,
@@ -22,21 +23,32 @@ const AUTHORITY_R500: TacticalDirectorAuthorityR500 = {
   optimizeOverall: false
 };
 
-function minimalContextFingerprintR500(input: TacticalDirectorInputR500): string {
-  return [
-    'R500CTX',
-    String(input.formation || 'SEM_FORMACAO'),
-    String(input.teamStyle || 'SEM_ESTILO'),
-    String(input.officialDecisionFingerprint || 'SEM_DECISAO')
-  ].join(':');
-}
-
 export function buildAutonomousTacticalDirectorR500(
   input: TacticalDirectorInputR500
 ): TacticalDirectorPlanR500 {
   const scenario = input.currentScenario ?? 'base';
-  const contextFingerprint = minimalContextFingerprintR500(input);
-  const planFingerprint = `R500PLAN:${contextFingerprint}:${scenario}:INSUFFICIENT`;
+  const contextFingerprint = buildContextFingerprintR500({
+    officialDecisionFingerprint: input.officialDecisionFingerprint,
+    formation: input.formation,
+    teamStyle: input.teamStyle,
+    lineup: []
+  });
+  const sourceVersions = [
+    input.tacticalTwin?.version ? `R480:${input.tacticalTwin.version}` : null,
+    input.squadBrain?.version ? `R481:${input.squadBrain.version}` : null,
+    input.matchVision?.version ? `R482:${input.matchVision.version}` : null,
+    input.buildSimulator?.version ? `R483:${input.buildSimulator.version}` : null,
+    input.chemistry?.version ? `R484:${input.chemistry.version}` : null,
+    ...(input.explanations ?? []).map((item) => `R489:${item.version}`)
+  ].filter((item): item is string => Boolean(item));
+  const planFingerprint = buildPlanFingerprintR500({
+    contextFingerprint,
+    scenario,
+    sourceVersions,
+    evidenceFingerprints: [],
+    proMetaDigest: null,
+    previousPlanFingerprint: input.previousPlan?.planFingerprint ?? null
+  });
 
   return {
     version: TACTICAL_DIRECTOR_R500_VERSION,
