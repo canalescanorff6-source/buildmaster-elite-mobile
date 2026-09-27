@@ -91,6 +91,15 @@ export type ProMetaDatasetR500 = {
   observations: ProMetaObservationR500[];
 };
 
+export type ProMetaContextR500 = {
+  platform: 'MOBILE' | 'CONSOLE' | 'UNKNOWN';
+  gameVersion: string;
+  matchFormat: ProMetaMatchFormatR500;
+  rulesetFingerprint: string;
+  formation: string;
+  teamStyle: TacticalStyle;
+};
+
 export type TacticalDirectorProMetaSummaryR500 = {
   available: boolean;
   datasetVersion: string | null;
@@ -160,6 +169,11 @@ export type TacticalDirectorInputR500 = {
   formation: string;
   teamStyle: TacticalStyle;
   phase?: TacticalDirectorPhaseR500;
+  lineupContext?: {
+    lineup: Array<{ slotId: string; cardFingerprint: string | null }>;
+    expectedSlots?: string[];
+  };
+  proMetaContext?: ProMetaContextR500 | null;
   tacticalTwin?: TacticalTwinSnapshotR480 | null;
   squadBrain?: SquadBrainSnapshotR481 | null;
   matchVision?: MatchVisionSnapshotR482 | null;
