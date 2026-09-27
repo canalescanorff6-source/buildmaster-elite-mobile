@@ -27,7 +27,7 @@ assert.doesNotMatch(trim, /runtimeList|runtimeDelete|Promise\.all/, 'R199: trim 
 assert.ok((db.match(/transactionGuard\(/g) ?? []).length >= 5, 'R199: get/mutate/list/trim devem compartilhar o mesmo lifecycle de timeout/close.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'ea78e063fb1a8650d413711eb7e28f1d617ab5b4a04e6502c0deadcfc701ba6f', 'R199: R119 não pode mudar na auditoria de persistência.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '4ecfa54330d17418c96763beb4bec48c9bc22a4b31dc349269b2badeacce637d', 'R199: R119 não pode mudar na auditoria de persistência.');
 
 let sourceBytes = 0;
 const stack = ['src'];

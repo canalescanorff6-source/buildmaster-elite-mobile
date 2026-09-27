@@ -37,7 +37,7 @@ assert.match(actions, /runCanonicalVaultMutationR153/, 'R191: mutações do Cofr
 assert.match(coordinator, /runCanonicalVaultMutationR153/, 'R191: coordenador canônico R153 deve continuar presente.');
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  'ea78e063fb1a8650d413711eb7e28f1d617ab5b4a04e6502c0deadcfc701ba6f',
+  '4ecfa54330d17418c96763beb4bec48c9bc22a4b31dc349269b2badeacce637d',
   'R191: R119 não pode mudar durante modularização do Cofre.',
 );
 assert.match(String(pkg.scripts?.['test:v4080'] ?? ''), /npm run test:r191(?: && npm run test:r192)?(?: && npm run test:r193)?(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/, 'R191: cadeia v40.80 deve preservar R191 antes do gate seguinte.');

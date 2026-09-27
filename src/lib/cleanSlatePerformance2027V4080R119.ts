@@ -1126,8 +1126,9 @@ function selectJointConfigurationR457(
     if(state.score<exactBestScore-band-1e-12)continue;
     const evaluation=evaluateCompactPlanR148(state.levels,evaluationContext,true);
     const actions=evaluation.details.slice(0,12);
+    const projectedState=deriveProjectedPlayerStateR504(parsed,materializeTrainingPlanR147(state.levels));
     const skill=optimizeFinalAdditionalSkillSetR457(parsed,actions,position);
-    const impeto=evaluateFinalImpetoDecisionR457(parsed,actions,position);
+    const impeto=evaluateFinalImpetoDecisionR457(parsed,actions,position,projectedState.finalAttributes);
     const skillAverage=skill.finalSkills.length?skill.finalSetScore/skill.finalSkills.length:0;
     const impetoScore=impeto.technicalIdealScore;
     const jointUtility=evaluation.score*.50+evaluation.online.rankedScore*.20+skillAverage*.22+impetoScore*.08;
@@ -1777,7 +1778,7 @@ function weightedScoreR119(values:Array<{value:number;weight:number}>) {
   return weight>0?valid.reduce((sum,item)=>sum+item.value*item.weight,0)/weight:0;
 }
 
-function recommendImpetosR119(parsed:ParsedCard,actions:CleanSlateActionR119[],position:PositionCode) {
+function recommendImpetosR119(parsed:ParsedCard,actions:CleanSlateActionR119[],position:PositionCode,projectedAttributes:Attributes=parsed.attributes) {
   const current=parsed.impetos?.find(i=>i.active!==false)?.name ?? parsed.impetos?.[0]?.name ?? null;
   const slot=String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO');
   const cats=categoryScores(actions);
@@ -1789,7 +1790,7 @@ function recommendImpetosR119(parsed:ParsedCard,actions:CleanSlateActionR119[],p
       const domainScore=weightedScoreR119(Object.entries(profile.domains).map(([key,weight])=>({value:cats.get(key as ImpetoFunctionalDomainR119)??0,weight:Number(weight??0)})));
       const actionScore=weightedScoreR119(Object.entries(profile.actions).map(([key,weight])=>({value:actionMap.get(key)??0,weight:Number(weight??0)})));
       const positionFit=clamp((profile.positions[position]??0.04)*100);
-      const attributeScore=profile.attributes.length?average(profile.attributes.map(key=>attr(parsed.attributes,key))):50;
+      const attributeScore=profile.attributes.length?average(profile.attributes.map(key=>attr(projectedAttributes,key))):50;
       let score=domainScore*.36+actionScore*.30+positionFit*.24+attributeScore*.10;
       if(positionFit<30) score*=.62;
       else if(positionFit<50) score*=.82;
@@ -1907,7 +1908,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     const actions=naturalActionDetails(parsed,functionalUsageContext);
     const top5=recommendTop5(parsed,actions,usageContext.targetPosition);
     const blockedFinalSkillSetR457=optimizeFinalAdditionalSkillSetR457(parsed,actions,usageContext.targetPosition);
-    const blockedFinalImpetoR457=evaluateFinalImpetoDecisionR457(parsed,actions,usageContext.targetPosition);
+    const blockedFinalImpetoR457=evaluateFinalImpetoDecisionR457(parsed,actions,usageContext.targetPosition,projectedPlayerStateR504.finalAttributes);
     const skillIntegrity=skillIntegrityR119(input,parsed,top5,usageContext.targetPosition);
     const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
     const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
@@ -2004,8 +2005,8 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const recommendationActions=recommendationEvaluation.details.slice(0,12);
   const top5=recommendTop5(parsed,recommendationActions,recommendationContext.targetPosition);
   const finalAdditionalSkillSetR457=optimizeFinalAdditionalSkillSetR457(parsed,recommendationActions,recommendationContext.targetPosition);
-  const finalImpetoDecisionR457=evaluateFinalImpetoDecisionR457(parsed,recommendationActions,recommendationContext.targetPosition);
-  const impeto=recommendImpetosR119(parsed,recommendationActions,recommendationContext.targetPosition);
+  const finalImpetoDecisionR457=evaluateFinalImpetoDecisionR457(parsed,recommendationActions,recommendationContext.targetPosition,projectedPlayerStateR504.finalAttributes);
+  const impeto=recommendImpetosR119(parsed,recommendationActions,recommendationContext.targetPosition,projectedPlayerStateR504.finalAttributes);
   const skillIntegrity=skillIntegrityR119(input,parsed,top5,recommendationContext.targetPosition);
   const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
   const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
