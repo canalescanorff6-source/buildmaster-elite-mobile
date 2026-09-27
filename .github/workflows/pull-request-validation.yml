@@ -56,6 +56,12 @@ jobs:
       - name: R500 TDD — integração pós-jogo
         run: node tests/v40-80-r500-match-integration-regression.mjs
 
+      - name: R500 TDD — closure de segurança
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-closure-regression.ts
+
+      - name: R500 TDD — paridade PR/main
+        run: node tests/v40-80-r500-ci-gate-regression.mjs
+
       - name: R500 TDD — orçamento fonte com reserva
         run: node tests/v40-80-r443-source-budget-convergence-regression.mjs
 
