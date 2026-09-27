@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const source = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts', 'utf8');
+const safeRepair = fs.readFileSync('scripts/ci-safe-repair.mjs', 'utf8');
 
 assert.match(
   source,
@@ -26,7 +27,7 @@ assert.ok(blockedIndex >= 0, 'R502: caminho BLOCKED legado precisa continuar exi
 const blockedChunk = source.slice(blockedIndex, blockedIndex + 1200);
 assert.match(
   blockedChunk,
-  /cardTruthCertificationR501,/, 
+  /cardTruthCertificationR501,/,
   'R502: ficha bloqueada também precisa carregar o motivo estrutural da certificação.',
 );
 
@@ -35,7 +36,7 @@ assert.ok(readyIndex >= 0, 'R502: caminho READY legado precisa continuar existin
 const readyChunk = source.slice(readyIndex, readyIndex + 1200);
 assert.match(
   readyChunk,
-  /cardTruthCertificationR501,/, 
+  /cardTruthCertificationR501,/,
   'R502: ficha renderizável precisa declarar explicitamente se é FINAL ou PROVISIONAL.',
 );
 
@@ -51,4 +52,15 @@ assert.match(
   'R502: cobertura parcial deve continuar identificável como provisória, agora também estruturalmente.',
 );
 
-console.log('R502 aprovado: toda ficha Clean Slate carrega certificação R501 estrutural sem quebrar READY/BLOCKED legado.');
+assert.match(
+  safeRepair,
+  /applyR502StructuralCardTruthCertification/,
+  'R502: ci:repair-safe precisa materializar a certificação antes dos testes pesados; typecheck não pode sujar a árvore depois do Zero-Red.',
+);
+assert.match(
+  safeRepair,
+  /Card Truth R502[^\n]*certificação estrutural/,
+  'R502: Zero-Red precisa expor uma etapa explícita para a certificação estrutural.',
+);
+
+console.log('R502 aprovado: toda ficha Clean Slate carrega certificação R501 estrutural e o Zero-Red a materializa antes dos testes.');
