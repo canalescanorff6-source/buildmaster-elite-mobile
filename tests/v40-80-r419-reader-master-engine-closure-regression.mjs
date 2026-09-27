@@ -106,8 +106,9 @@ for (const regression of [
   'tests/v40-80-r503-single-reader-certification-gate-regression.ts',
   'tests/v40-80-r504-projected-player-state-regression.ts',
   'tests/v40-80-r505-post-build-impeto-regression.ts',
+  'tests/v40-80-r506-post-build-skills-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto pós-build e teto R192 preservado.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto e Top 5 pós-build e teto R192 preservado.');
