@@ -55,13 +55,22 @@ assert.ok(readerSource.includes('onFile'));
 assert.ok(app.split('\n').length <= 5000, 'CardVisionApp não pode ultrapassar o orçamento estrutural após a barra de progresso.');
 assert.ok(app.includes('setReaderProgress'));
 assert.ok(readerRuntimeR163.includes('reportReaderProgress'));
-for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Ficha gerada', 'Leitura concluída']) {
+for (const label of ['Recebendo imagem', 'Preparando imagem', 'Mapeando a carta', 'Lendo os quadrados', 'Conferindo campos', 'Montando resultado', 'Leitura concluída']) {
   assert.ok(readerRuntimeR163.includes(label), `Pipeline visual da leitura sem etapa ${label}`);
 }
+assert.ok(
+  readerRuntimeR163.includes('Confira Nome, Nível máximo e Pontos de progressão para gerar a ficha.'),
+  'R501/R503: a leitura unitária concluída deve orientar revisão antes de gerar a ficha final.',
+);
+assert.doesNotMatch(
+  readerRuntimeR163,
+  /reportReaderProgress\(100,\s*['"]Ficha gerada['"]/,
+  'R501/R503: OCR unitário não pode anunciar ficha gerada antes da confirmação/certificação.',
+);
 assert.ok(css.includes('.v4020-progress-track'));
 assert.ok(css.includes('.v4020-global-update-progress'));
 assert.ok(css.includes('.v4020-reader-progress'));
 assert.ok(css.includes('.update-download-progress{display:none!important}'));
 
 assert.ok(String(pkg.scripts?.['test:all']).endsWith('npm run test:v4080'));
-console.log('v40.30 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa sem regressão do leitor v40.00.');
+console.log('v40.30 aprovada: download/validação/instalador e leitura de cartas possuem progresso visual, porcentagem e estimativa com finalização unitária fail-closed.');
