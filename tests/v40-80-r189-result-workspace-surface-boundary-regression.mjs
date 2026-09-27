@@ -36,7 +36,7 @@ for (const marker of ['buildCalibrationReport', 'buildAdvancedCalibration', 'CAL
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '6aba2f9e70c37a8de804fcfb59f1cea7451bb36b6a59ebe931ef4d969947b78d',
+  'ea78e063fb1a8650d413711eb7e28f1d617ab5b4a04e6502c0deadcfc701ba6f',
   'R189: R119 não pode mudar durante modularização do workspace.',
 );
 assert.ok(String(pkg.scripts?.['test:v4080'] ?? '').includes('npm run test:r189'), 'R189: cadeia v40.80 deve preservar o gate R189.');

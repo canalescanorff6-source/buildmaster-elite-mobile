@@ -43,7 +43,7 @@ const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acqu
 assert.ok(sourceBytes <= (postCatalogBoundary ? 5_963_776 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_335_700), `R196: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '6aba2f9e70c37a8de804fcfb59f1cea7451bb36b6a59ebe931ef4d969947b78d',
+  'ea78e063fb1a8650d413711eb7e28f1d617ab5b4a04e6502c0deadcfc701ba6f',
   'R196: R119 não pode mudar durante otimização do hot path.',
 );
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');

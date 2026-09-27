@@ -27,6 +27,7 @@ import { inspectPlaystyleActivationR124 } from './efootball2027PhaseCatalogR124'
 import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { applyCriticalEvidenceR419 } from '../modules/analysis/cardEvidenceAuthorityR419';
 import { deriveCardTruthCertificationR501, type CardTruthCertificationR501 } from '../modules/analysis/cardTruthLayerR501';
+import { deriveProjectedPlayerStateR504, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';
 import { rankAutonomousRolesR417 } from './autonomousCardR417';
 import { GAMEPLAY_IMPACT_R458_VERSION, functionActionDemandR458, teamStyleActionDemandR458, skillActionSupportR458, skillActionSupportDetailR459, type GameplayImpactR458 } from './gameplayImpactR458';
 
@@ -153,6 +154,7 @@ export type CleanSlate2027R119 = {
   source: 'RAW_CARD_SNAPSHOT';
   status: 'READY' | 'BLOCKED_INSUFFICIENT_DATA';
   cardTruthCertificationR501: CardTruthCertificationR501;
+  projectedPlayerStateR504: ProjectedPlayerStateR504;
   cardKey: string;
   positionAnchor: PositionCode;
   usagePosition: PositionCode;
@@ -425,18 +427,7 @@ type EvaluationContextR143 = {
   compiledPressureAttributeCount:number;
 };
 
-const TRAINING_ATTRIBUTES: Record<TrainingKey, AttributeKey[]> = {
-  shooting: ['finishing', 'placeKicking', 'curl'],
-  passing: ['lowPass', 'loftedPass'],
-  dribbling: ['ballControl', 'dribbling', 'tightPossession'],
-  dexterity: ['offensiveAwareness', 'acceleration', 'balance'],
-  lowerBodyStrength: ['speed', 'kickingPower', 'stamina'],
-  aerialStrength: ['heading', 'jump', 'physicalContact'],
-  defending: ['defensiveAwareness', 'defensiveEngagement', 'tackling', 'aggression'],
-  gk1: ['goalkeeperAwareness', 'goalkeeperCatching'],
-  gk2: ['goalkeeperParrying', 'goalkeeperReflexes'],
-  gk3: ['goalkeeperReach']
-};
+const TRAINING_ATTRIBUTES: Record<TrainingKey, AttributeKey[]> = TRAINING_ATTRIBUTE_GROUPS_R504;
 
 const ATTRIBUTE_TRAINING_GROUP_R144: Partial<Record<AttributeKey,TrainingKey>> = (()=>{
   const mapping:Partial<Record<AttributeKey,TrainingKey>>={};
@@ -1912,6 +1903,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const budgetEvidenceStateR419=parsed.evidence?.trainingBudgetStateR419??'MISSING';
   if(!budget || budgetEvidenceStateR419!=='TRUSTED') {
     const zero=emptyTraining();
+    const projectedPlayerStateR504=deriveProjectedPlayerStateR504(parsed,zero);
     const actions=naturalActionDetails(parsed,functionalUsageContext);
     const top5=recommendTop5(parsed,actions,usageContext.targetPosition);
     const blockedFinalSkillSetR457=optimizeFinalAdditionalSkillSetR457(parsed,actions,usageContext.targetPosition);
@@ -1937,6 +1929,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       source:'RAW_CARD_SNAPSHOT',
       status:'BLOCKED_INSUFFICIENT_DATA',
       cardTruthCertificationR501,
+      projectedPlayerStateR504,
       cardKey:cardKey(parsed),
       positionAnchor:parsed.mainPosition,
       usagePosition:usageContext.targetPosition,
@@ -2005,6 +1998,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   }
   const finalizedUsageFunctionR469=String(recommendationContext.usageFunction ?? usageFunction).trim() || usageFunction;
   const training=optimized.plan;
+  const projectedPlayerStateR504=deriveProjectedPlayerStateR504(parsed,training);
   const spent=trainingPlanTotalCost(training);
   const actions=optimized.evaluation.details.slice(0,12);
   const recommendationActions=recommendationEvaluation.details.slice(0,12);
@@ -2062,6 +2056,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     source:'RAW_CARD_SNAPSHOT',
     status:'READY',
     cardTruthCertificationR501,
+    projectedPlayerStateR504,
     cardKey:cardKey(parsed),
     positionAnchor:parsed.mainPosition,
     usagePosition:usageContext.targetPosition,
