@@ -126,6 +126,25 @@ console.log(`\nDIAGNÓSTICO CONSOLIDADO BUILMASTER ${full ? 'COMPLETO' : 'RÁPID
 console.log(`Fonte do diagnóstico: ${CI_SOURCE_BUILD}`);
 console.log(`Executando ${checks.length} grupos sem parar na primeira falha.\n`);
 
+console.log('\n========== R500 — Autonomous Tactical Director ==========');
+const r500Result = spawnSync(process.execPath, ['scripts/run-r500-tests.mjs'], {
+  stdio: reportDir ? 'pipe' : 'inherit',
+  encoding: reportDir ? 'utf8' : undefined,
+  maxBuffer: 64 * 1024 * 1024,
+  env: process.env,
+  shell: false,
+});
+if (reportDir) {
+  if (r500Result.stdout) process.stdout.write(r500Result.stdout);
+  if (r500Result.stderr) process.stderr.write(r500Result.stderr);
+}
+if (r500Result.error || r500Result.status !== 0) {
+  failures.push({ label: 'R500 — Autonomous Tactical Director', status: r500Result.status ?? 'erro de execução', error: r500Result.error?.message });
+  console.error('✗ R500 falhou, mas o diagnóstico continuará para revelar os demais problemas.');
+} else {
+  console.log('✓ R500 aprovado.');
+}
+
 for (const [label, args] of checks) {
   console.log(`\n========== ${label} ==========`);
   const result = spawnSync(npmCommand, args, {
