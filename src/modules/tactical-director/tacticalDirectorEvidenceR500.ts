@@ -78,8 +78,17 @@ export function buildDirectorEvidenceR500(
   context: DirectorEvidenceContextR500
 ): TacticalDirectorEvidenceR500[] {
   const evidence: TacticalDirectorEvidenceR500[] = [];
+  const hasSpecializedSource = Boolean(
+    input.tacticalTwin ||
+    input.squadBrain ||
+    input.matchVision ||
+    input.buildSimulator ||
+    input.chemistry ||
+    context.applicableProMeta.length ||
+    context.memory.confirmedSessions
+  );
 
-  if (String(input.officialDecisionFingerprint || '').trim()) {
+  if (hasSpecializedSource && String(input.officialDecisionFingerprint || '').trim()) {
     evidence.push(evidenceR500({
       id: `R128:context:${input.officialDecisionFingerprint}`,
       family: 'OFFICIAL_CONTEXT',
