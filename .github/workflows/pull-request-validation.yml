@@ -47,6 +47,15 @@ jobs:
       - name: R500 TDD — links R489 sem inflar confiança
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-r489-links-regression.ts
 
+      - name: R500 TDD — painel read-only
+        run: node tests/v40-80-r500-ui-regression.mjs
+
+      - name: R500 TDD — integração Meu Time
+        run: node tests/v40-80-r500-team-integration-regression.mjs
+
+      - name: R500 TDD — integração pós-jogo
+        run: node tests/v40-80-r500-match-integration-regression.mjs
+
       - name: R500 TDD — orçamento fonte com reserva
         run: node tests/v40-80-r443-source-budget-convergence-regression.mjs
 
