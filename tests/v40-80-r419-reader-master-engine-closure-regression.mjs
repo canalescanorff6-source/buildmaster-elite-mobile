@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-master-engine-closure.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
@@ -46,6 +47,12 @@ assert.match(helper, /deriveCriticalAttributeEvidenceR501/,
   'R501: cobertura crítica precisa vir da autoridade central.');
 assert.match(truth, /normalizeConfidenceR501/);
 assert.match(truth, /minimum = parsed\.mainPosition === 'GK' \? 4 : 10/);
+assert.match(truth, /deriveCardTruthCertificationR501/,
+  'R501: estados final/provisório/bloqueado precisam ter uma autoridade explícita.');
+assert.match(truth, /FINAL_CERTIFIED/);
+assert.match(truth, /PROVISIONAL_HIGH_CONFIDENCE/);
+assert.match(truth, /PROVISIONAL_LOW_CONFIDENCE/);
+assert.match(truth, /BLOCKED_INSUFFICIENT_DATA/);
 
 assert.match(clean, /applyCriticalEvidenceR419/);
 assert.match(clean, /budgetEvidenceStateR419!==['"]TRUSTED['"]/);
@@ -81,4 +88,11 @@ assert.throws(
   'R456: contador desconhecido deve falhar fechado em vez de ampliar o teto silenciosamente.',
 );
 
-console.log('R419/R501/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura crítica explícita e teto R192 preservado.');
+for (const regression of [
+  'tests/v40-80-r501-card-truth-layer-regression.ts',
+  'tests/v40-80-r501-certification-regression.ts',
+]) {
+  execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
+}
+
+console.log('R419/R501/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas e teto R192 preservado.');
