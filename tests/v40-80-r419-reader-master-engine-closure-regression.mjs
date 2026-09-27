@@ -93,8 +93,9 @@ for (const regression of [
   'tests/v40-80-r501-certification-regression.ts',
   'tests/v40-80-r501-total-reader-finalization-regression.ts',
   'tests/v40-80-r502-structural-card-truth-certification-regression.ts',
+  'tests/v40-80-r503-single-reader-certification-gate-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, Leitor Total fail-closed, certificação estrutural e teto R192 preservado.');
+console.log('R419/R501/R502/R503/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores Total e unitário fail-closed, certificação estrutural e teto R192 preservado.');
