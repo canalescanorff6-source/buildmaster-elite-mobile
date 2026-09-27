@@ -12,7 +12,8 @@ const tests = [
   ['closure', ['-r', './tests/_ts-require.cjs', 'tests/v40-80-r500-closure-regression.ts']],
   ['UI', ['tests/v40-80-r500-ui-regression.mjs']],
   ['Meu Time', ['tests/v40-80-r500-team-integration-regression.mjs']],
-  ['Match Trainer', ['tests/v40-80-r500-match-integration-regression.mjs']]
+  ['Match Trainer', ['tests/v40-80-r500-match-integration-regression.mjs']],
+  ['gate PR/main', ['tests/v40-80-r500-ci-gate-regression.mjs']]
 ];
 
 for (const [label, args] of tests) {
