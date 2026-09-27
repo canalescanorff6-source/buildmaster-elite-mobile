@@ -82,7 +82,7 @@ export const PRO_META_DATASET_R500: ProMetaDatasetR500 = {
       matchFormat: '1V1',
       rulesetId: 'efc2026-world-finals-club-themed-reported',
       rulesetFingerprint: 'EFC2026:WORLD_FINALS:CLUB_THEMED:REPORTED',
-      rulesetTags: ['CLUB_EVENT'],
+      rulesetTags: ['CLUB_THEMED'],
       formation: '4-3-1-2',
       teamStyle: null,
       tacticalTags: [
