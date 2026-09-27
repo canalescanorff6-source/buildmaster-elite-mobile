@@ -17,6 +17,7 @@ import type {
   TacticalDirectorActionR500,
   TacticalDirectorAuthorityR500,
   TacticalDirectorContingencyR500,
+  TacticalDirectorExplanationLinkR500,
   TacticalDirectorInputR500,
   TacticalDirectorPhaseR500,
   TacticalDirectorPlanR500,
@@ -154,6 +155,50 @@ function phaseSummaryR500(
   return `${scenarioLabel}: ${scenarioSummary}`;
 }
 
+function explanationMatchesR500(
+  input: TacticalDirectorInputR500,
+  scenario: TacticalDirectorScenarioR500,
+  phase: TacticalDirectorPhaseR500,
+  kind: NonNullable<TacticalDirectorInputR500['explanations']>[number]['kind'],
+  fingerprint: string
+): boolean {
+  const token = String(fingerprint || '').toLocaleLowerCase('pt-BR');
+  if (!token) return false;
+  if (kind === 'TACTICAL') return token.includes(`tactical:${scenario}`);
+  if (kind === 'MATCH') return phase === 'POST_MATCH' && Boolean(input.matchVision) && token.includes('r489:match:');
+  if (kind === 'BUILD') {
+    const baseline = String(input.buildSimulator?.baselineFingerprint || input.officialDecisionFingerprint || '').toLocaleLowerCase('pt-BR');
+    return Boolean(input.buildSimulator && baseline && token.includes(baseline));
+  }
+  if (kind === 'ROTATION') {
+    return Boolean(input.squadBrain?.rotations.some((rotation) => token.includes(`rotation:${String(rotation.reserveId).toLocaleLowerCase('pt-BR')}:`)));
+  }
+  if (kind === 'STARTER') {
+    return Boolean(input.squadBrain?.core.some((starter) => token.includes(`starter:${String(starter.playerId).toLocaleLowerCase('pt-BR')}`)));
+  }
+  return false;
+}
+
+function explanationLinksR500(
+  input: TacticalDirectorInputR500,
+  scenario: TacticalDirectorScenarioR500,
+  phase: TacticalDirectorPhaseR500
+): { links: TacticalDirectorExplanationLinkR500[]; rejected: number } {
+  const links: TacticalDirectorExplanationLinkR500[] = [];
+  let rejected = 0;
+  for (const item of input.explanations ?? []) {
+    if (!explanationMatchesR500(input, scenario, phase, item.kind, item.fingerprint)) {
+      rejected += 1;
+      continue;
+    }
+    links.push({ kind: item.kind, fingerprint: item.fingerprint, verdict: item.verdict });
+  }
+  return {
+    links: links.sort((left, right) => left.kind.localeCompare(right.kind) || left.fingerprint.localeCompare(right.fingerprint)),
+    rejected
+  };
+}
+
 function applyHysteresisR500(
   candidate: TacticalDirectorPlanR500,
   previous: TacticalDirectorPlanR500 | null | undefined
@@ -246,10 +291,14 @@ export function buildAutonomousTacticalDirectorR500(
       ? []
       : ['Nenhuma observação Pro Meta curada é aplicável ao contexto atual.']
     : ['Contexto competitivo Pro Meta não informado; nenhuma equivalência externa foi presumida.'];
+  const explanationResult = explanationLinksR500(input, scenario, phase);
   const limitations = uniqueStringsR500([
     ...conflicts.filter((item) => item.level === 'BLOCKING').map((item) => item.description),
     ...memory.limitations,
     ...proMetaLimitations,
+    ...(explanationResult.rejected
+      ? [`R489: ${explanationResult.rejected} explicação(ões) incompatível(is) com a decisão/contexto atual foram omitidas.`]
+      : []),
     ...(!hasUsableEvidence && !blocking ? ['Evidência insuficiente para promover um plano forte.'] : []),
     ...(phase === 'POST_MATCH' && !(input.matchVision?.evidence.confirmedMarkers ?? 0)
       ? ['Pós-jogo sem marcador confirmado: nenhuma conclusão forte de execução foi produzida.']
@@ -292,11 +341,7 @@ export function buildAutonomousTacticalDirectorR500(
       limitations: proMetaLimitations
     },
     memory,
-    explanations: (input.explanations ?? []).map((item) => ({
-      kind: item.kind,
-      fingerprint: item.fingerprint,
-      verdict: item.verdict
-    })),
+    explanations: explanationResult.links,
     limitations,
     authority: { ...AUTHORITY_R500 },
     guardrails: [
