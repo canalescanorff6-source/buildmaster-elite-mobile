@@ -1,6 +1,8 @@
-import { collectDirectorEvidenceR500, detectDirectorConflictsR500, directorConfidenceR500 } from './tacticalDirectorEvidenceR500';
+import { validateDirectorContextR500 } from './tacticalDirectorContextR500';
+import { collectDirectorEvidenceR500, detectDirectorConflictsR500, directorConfidenceR500, materializeEvidenceR500 } from './tacticalDirectorEvidenceR500';
 import { buildContextFingerprintR500, buildPlanFingerprintR500 } from './tacticalDirectorFingerprintR500';
 import { buildTacticalMemoryR500 } from './tacticalDirectorMemoryR500';
+import { selectApplicableProMetaR500 } from './tacticalDirectorProMetaR500';
 import type {
   TacticalDirectorAuthorityR500,
   TacticalDirectorInputR500,
@@ -52,8 +54,7 @@ function selectScenarioR500(input: TacticalDirectorInputR500): TacticalDirectorS
 }
 
 function phaseForR500(input: TacticalDirectorInputR500): TacticalDirectorPhaseR500 {
-  const requested = (input as TacticalDirectorInputR500 & { phase?: TacticalDirectorPhaseR500 }).phase;
-  return requested ?? 'PRE_MATCH';
+  return input.phase ?? 'PRE_MATCH';
 }
 
 function phaseSummaryR500(
@@ -66,35 +67,66 @@ function phaseSummaryR500(
   }
   if (phase === 'POST_MATCH') {
     const confirmedRisk = input.matchVision?.evidence.confirmedMarkers && input.matchVision.risks.length > 0;
-    if (confirmedRisk) return `Auditoria pós-jogo: o plano foi comparado com evidência confirmada da partida; há sinais de execução problemática a revisar.`;
+    if (confirmedRisk) return 'Auditoria pós-jogo: o plano foi comparado com evidência confirmada da partida; há sinais de execução problemática a revisar.';
     return 'Auditoria pós-jogo: ainda não há evidência confirmada suficiente para separar falha do plano de falha de execução.';
   }
   return baseSummary;
 }
 
+function safeInputR500(input: TacticalDirectorInputR500, blocked: Set<'R480' | 'R482' | 'R483' | 'R484'>): TacticalDirectorInputR500 {
+  return {
+    ...input,
+    tacticalTwin: blocked.has('R480') ? null : input.tacticalTwin,
+    squadBrain: blocked.has('R480') ? null : input.squadBrain,
+    matchVision: blocked.has('R482') ? null : input.matchVision,
+    buildSimulator: blocked.has('R483') ? null : input.buildSimulator,
+    chemistry: blocked.has('R484') ? null : input.chemistry
+  };
+}
+
 export function buildAutonomousTacticalDirectorR500(
   input: TacticalDirectorInputR500
 ): TacticalDirectorPlanR500 {
-  const scenario = selectScenarioR500(input);
+  const validation = validateDirectorContextR500(input);
+  const safeBase = safeInputR500(input, validation.blockedSources);
+  const scenario = selectScenarioR500(safeBase);
   const phase = phaseForR500(input);
-  const effectiveInput: TacticalDirectorInputR500 = { ...input, currentScenario: scenario };
-  const activeScenario = input.tacticalTwin?.scenarios.find((item) => item.id === scenario) ?? null;
+  const effectiveInput: TacticalDirectorInputR500 = { ...safeBase, currentScenario: scenario };
+  const activeScenario = effectiveInput.tacticalTwin?.scenarios.find((item) => item.id === scenario) ?? null;
   const contextFingerprint = buildContextFingerprintR500({
     officialDecisionFingerprint: input.officialDecisionFingerprint,
     formation: input.formation,
     teamStyle: input.teamStyle,
-    lineup: []
+    lineup: input.lineupContext?.lineup ?? [],
+    expectedSlots: input.lineupContext?.expectedSlots
   });
 
-  const evidence = collectDirectorEvidenceR500(effectiveInput);
-  const conflicts = detectDirectorConflictsR500(effectiveInput);
+  const proMetaSelection = input.proMetaDataset && input.proMetaContext
+    ? selectApplicableProMetaR500(input.proMetaDataset, input.proMetaContext)
+    : null;
+  const applicableProMeta = (proMetaSelection?.observations ?? []).filter((item) => item.compatibility.finalCompatibility >= 0.5).slice(0, 5);
+  const proMetaEvidence = applicableProMeta.map(({ observation, compatibility }) => materializeEvidenceR500({
+    id: `PRO_META:${observation.id}`,
+    family: 'PRO_META',
+    source: 'PRO_META',
+    claim: observation.observations[0] || `Padrão profissional verificado em ${observation.competition}.`,
+    nativeConfidence: observation.confidence,
+    relevance: 1,
+    independence: 1,
+    completeness: observation.sourceUrl && observation.sourceFingerprint ? 1 : 0.5,
+    contextCompatibility: compatibility.finalCompatibility,
+    fingerprint: `PRO_META:${observation.id}:${observation.sourceFingerprint}:${observation.gameVersion}:${observation.matchFormat}:${observation.rulesetFingerprint}`
+  }));
+
+  const evidence = [...collectDirectorEvidenceR500(effectiveInput), ...proMetaEvidence];
+  const conflicts = [...validation.conflicts, ...detectDirectorConflictsR500(effectiveInput)];
   const confidence = directorConfidenceR500(effectiveInput, evidence, conflicts);
   const sourceVersions = [
-    input.tacticalTwin?.version ? `R480:${input.tacticalTwin.version}` : null,
-    input.squadBrain?.version ? `R481:${input.squadBrain.version}` : null,
-    input.matchVision?.version ? `R482:${input.matchVision.version}` : null,
-    input.buildSimulator?.version ? `R483:${input.buildSimulator.version}` : null,
-    input.chemistry?.version ? `R484:${input.chemistry.version}` : null,
+    effectiveInput.tacticalTwin?.version ? `R480:${effectiveInput.tacticalTwin.version}` : null,
+    effectiveInput.squadBrain?.version ? `R481:${effectiveInput.squadBrain.version}` : null,
+    effectiveInput.matchVision?.version ? `R482:${effectiveInput.matchVision.version}` : null,
+    effectiveInput.buildSimulator?.version ? `R483:${effectiveInput.buildSimulator.version}` : null,
+    effectiveInput.chemistry?.version ? `R484:${effectiveInput.chemistry.version}` : null,
     ...(input.explanations ?? []).map((item) => `R489:${item.version}`)
   ].filter((item): item is string => Boolean(item));
   const planFingerprint = buildPlanFingerprintR500({
@@ -102,15 +134,16 @@ export function buildAutonomousTacticalDirectorR500(
     scenario,
     sourceVersions,
     evidenceFingerprints: evidence.map((item) => item.fingerprint),
-    proMetaDigest: null,
+    proMetaDigest: proMetaSelection?.digest ?? null,
     previousPlanFingerprint: input.previousPlan?.planFingerprint ?? null
   });
 
-  const patternTag = input.matchVision?.recurringPatterns[0]?.kind ?? null;
+  const patternTag = effectiveInput.matchVision?.recurringPatterns[0]?.kind ?? null;
   const memory = buildTacticalMemoryR500(input.confirmedMatchRecords, {
     formation: input.formation,
     teamStyle: input.teamStyle,
-    cardFingerprints: Array.from(new Set(input.confirmedMatchRecords.map((record) => record.cardFingerprint))),
+    cardFingerprints: input.lineupContext?.lineup.map((item) => item.cardFingerprint).filter((item): item is string => Boolean(item))
+      ?? Array.from(new Set(input.confirmedMatchRecords.map((record) => record.cardFingerprint))),
     patternTag
   });
   const explanations = (input.explanations ?? []).map((item) => ({
@@ -127,7 +160,7 @@ export function buildAutonomousTacticalDirectorR500(
         evidenceIds: evidence.filter((item) => item.source === 'R480').map((item) => item.id)
       }))
     : [];
-  const contingencies = (input.tacticalTwin?.scenarios ?? []).map((item) => ({
+  const contingencies = (effectiveInput.tacticalTwin?.scenarios ?? []).map((item) => ({
     scenario: item.id,
     label: item.label,
     summary: item.summary,
@@ -135,15 +168,20 @@ export function buildAutonomousTacticalDirectorR500(
   }));
   const priorities = activeScenario ? activeScenario.actions.slice(0, 2) : [];
   const risks = uniqueR500([
-    ...(input.tacticalTwin?.risks ?? []),
-    ...(input.matchVision?.risks ?? [])
+    ...(effectiveInput.tacticalTwin?.risks ?? []),
+    ...(effectiveInput.matchVision?.risks ?? [])
   ]).slice(0, 5);
+  const hasBlocking = validation.conflicts.some((item) => item.level === 'BLOCKING');
   const availability: TacticalDirectorPlanR500['availability'] = evidence.length === 0
-    ? 'INSUFFICIENT'
-    : confidence.planConfidence >= 70 && evidence.some((item) => item.family === 'MATCH_CONFIRMED')
+    ? (hasBlocking ? 'BLOCKED' : 'INSUFFICIENT')
+    : confidence.planConfidence >= 70 && evidence.some((item) => item.family === 'MATCH_CONFIRMED') && !hasBlocking
       ? 'READY'
       : 'PARTIAL';
   const baseSummary = activeScenario?.summary ?? 'Ainda não há evidência suficiente para uma recomendação forte.';
+  const limitations = uniqueR500([
+    ...validation.limitations,
+    ...(availability === 'READY' ? [] : ['Evidência insuficiente para promover um plano forte.'])
+  ]);
 
   return {
     version: TACTICAL_DIRECTOR_R500_VERSION,
@@ -153,7 +191,7 @@ export function buildAutonomousTacticalDirectorR500(
     planFingerprint,
     scenario,
     title: activeScenario?.label ?? 'Diretor Tático',
-    summary: phaseSummaryR500(phase, baseSummary, input),
+    summary: phaseSummaryR500(phase, baseSummary, effectiveInput),
     priorities,
     risks,
     recommendedActions,
@@ -162,21 +200,24 @@ export function buildAutonomousTacticalDirectorR500(
     confidence,
     evidence,
     proMeta: {
-      available: false,
+      available: applicableProMeta.length > 0,
       datasetVersion: input.proMetaDataset?.version ?? null,
-      datasetDigest: null,
-      applicableObservationIds: [],
-      compatibility: 0,
-      notes: input.proMetaDataset?.observations.length ? ['Dataset presente; contexto Pro Meta ainda não foi fornecido ao diretor.'] : []
+      datasetDigest: proMetaSelection?.digest ?? null,
+      applicableObservationIds: applicableProMeta.map((item) => item.observation.id),
+      compatibility: applicableProMeta.length ? Math.round(Math.max(...applicableProMeta.map((item) => item.compatibility.finalCompatibility)) * 100) : 0,
+      notes: input.proMetaDataset && !input.proMetaContext
+        ? ['Dataset Pro Meta presente, mas sem contexto de plataforma/patch/formato/ruleset; evidência externa não foi usada.']
+        : []
     },
     memory,
     explanations,
-    limitations: availability === 'READY' ? [] : ['Evidência insuficiente para promover um plano forte.'],
+    limitations,
     authority: { ...AUTHORITY_R500 },
     guardrails: [
       'R119 → R126 → R128 permanece a autoridade final.',
       'R500 recomenda e nunca aplica alterações automaticamente.',
       'R489 explica, mas não adiciona confiança ao plano.',
+      'Pro Meta complementa o contexto pessoal e nunca substitui evidência real do usuário.',
       phase === 'IN_MATCH_PREPARED' ? 'Modo durante a partida é condicional e não afirma telemetria em tempo real.' : '',
       'Sem evidência suficiente, o plano permanece degradado e conservador.'
     ].filter(Boolean)
