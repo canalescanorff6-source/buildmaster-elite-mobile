@@ -1,3 +1,8 @@
+import {
+  buildContextFingerprintR500,
+  buildPlanFingerprintR500,
+  validateContextCoherenceR500
+} from './tacticalDirectorFingerprintR500';
 import type {
   TacticalDirectorAuthorityR500,
   TacticalDirectorInputR500,
@@ -23,45 +28,59 @@ const AUTHORITY_R500: TacticalDirectorAuthorityR500 = {
   optimizeOverall: false
 };
 
-function tokenR500(value: unknown, fallback: string) {
-  const normalized = String(value ?? '').trim();
-  return normalized || fallback;
-}
-
-function baseContextFingerprintR500(input: TacticalDirectorInputR500) {
-  return [
-    'R500CTX',
-    tokenR500(input.formation, 'SEM_FORMACAO'),
-    tokenR500(input.teamStyle, 'SEM_ESTILO'),
-    tokenR500(input.officialDecisionFingerprint, 'SEM_DECISAO')
-  ].join(':');
-}
-
-function basePlanFingerprintR500(contextFingerprint: string, scenario: TacticalDirectorScenarioR500) {
-  return `R500PLAN:${contextFingerprint}:${scenario}:${TACTICAL_DIRECTOR_R500_VERSION}`;
+function sourceVersionsR500(input: TacticalDirectorInputR500): string[] {
+  const versions: string[] = [];
+  if (input.tacticalTwin?.version) versions.push(`R480:${input.tacticalTwin.version}`);
+  if (input.squadBrain?.version) versions.push(`R481:${input.squadBrain.version}`);
+  if (input.matchVision?.version) versions.push(`R482:${input.matchVision.version}`);
+  if (input.buildSimulator?.version) versions.push(`R483:${input.buildSimulator.version}`);
+  if (input.chemistry?.version) versions.push(`R484:${input.chemistry.version}`);
+  for (const explanation of input.explanations ?? []) {
+    if (explanation.version) versions.push(`R489:${explanation.version}:${explanation.kind}`);
+  }
+  return versions;
 }
 
 export function buildAutonomousTacticalDirectorR500(
   input: TacticalDirectorInputR500
 ): TacticalDirectorPlanR500 {
   const scenario: TacticalDirectorScenarioR500 = input.currentScenario ?? 'base';
-  const contextFingerprint = baseContextFingerprintR500(input);
-  const planFingerprint = basePlanFingerprintR500(contextFingerprint, scenario);
+  const contextFingerprint = buildContextFingerprintR500(input);
+  const contextIssues = validateContextCoherenceR500(input);
+  const blockingIssues = contextIssues.filter((issue) => issue.level === 'BLOCKING');
+  const planFingerprint = buildPlanFingerprintR500({
+    contextFingerprint,
+    scenario,
+    sourceVersions: sourceVersionsR500(input),
+    evidenceFingerprints: (input.explanations ?? []).map((item) => item.fingerprint).filter(Boolean),
+    proMetaDigest: null,
+    previousPlanFingerprint: input.previousPlan?.planFingerprint ?? null
+  });
+  const blocked = blockingIssues.length > 0;
 
   return {
     version: TACTICAL_DIRECTOR_R500_VERSION,
-    availability: 'INSUFFICIENT',
+    availability: blocked ? 'BLOCKED' : 'INSUFFICIENT',
     phase: 'PRE_MATCH',
     contextFingerprint,
     planFingerprint,
     scenario,
     title: 'Diretor Tático',
-    summary: 'Ainda não há evidência suficiente para uma recomendação tática forte.',
+    summary: blocked
+      ? 'O contexto contém fontes incompatíveis; o plano forte foi bloqueado sem corrigir a origem silenciosamente.'
+      : 'Ainda não há evidência suficiente para uma recomendação tática forte.',
     priorities: [],
     risks: [],
     recommendedActions: [],
     contingencies: [],
-    conflicts: [],
+    conflicts: contextIssues.map((issue, index) => ({
+      id: `context-${index + 1}-${issue.code}`,
+      level: issue.level,
+      title: 'Contexto incompatível',
+      description: issue.message,
+      sourceIds: [issue.source],
+      penalty: issue.level === 'BLOCKING' ? 100 : 20
+    })),
     confidence: {
       planConfidence: 0,
       evidenceConfidence: 0,
@@ -83,13 +102,19 @@ export function buildAutonomousTacticalDirectorR500(
       patterns: [],
       limitations: []
     },
-    explanations: [],
-    limitations: ['Evidência insuficiente para promover um plano forte.'],
+    explanations: (input.explanations ?? []).map((item) => ({
+      kind: item.kind,
+      fingerprint: item.fingerprint,
+      verdict: item.verdict
+    })),
+    limitations: contextIssues.length
+      ? contextIssues.map((issue) => issue.message)
+      : ['Evidência insuficiente para promover um plano forte.'],
     authority: { ...AUTHORITY_R500 },
     guardrails: [
       'R119 → R126 → R128 permanece a autoridade final.',
       'R500 recomenda e nunca aplica mudanças automaticamente.',
-      'Sem evidência suficiente, o plano permanece degradado.'
+      'Incompatibilidade de contexto bloqueia a fonte afetada em vez de ser corrigida por inferência.'
     ]
   };
 }
