@@ -41,6 +41,9 @@ jobs:
       - name: R500 TDD — memória tática confirmada
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-memory-regression.ts
 
+      - name: R500 TDD — evidências, conflitos e confiança
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-engine-regression.ts
+
       - name: R500 TDD — orçamento fonte com reserva
         run: node tests/v40-80-r443-source-budget-convergence-regression.mjs
 
