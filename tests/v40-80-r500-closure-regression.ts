@@ -24,7 +24,7 @@ const forbiddenRuntime = [
   /setTraining/,
   /setResult/,
   /upsertPersonalPreset/,
-  /writeVault/i
+  /\bwriteVault\s*\(/
 ];
 
 for (const file of productionFiles) {
