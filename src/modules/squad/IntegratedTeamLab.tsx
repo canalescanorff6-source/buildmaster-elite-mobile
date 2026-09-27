@@ -26,6 +26,8 @@ import { upsertPersonalPreset } from '@/lib/appRefinement';
 import { buildTacticalTwinR480 } from '@/modules/tactical-twin/tacticalTwinEngineR480';
 import { buildSquadBrainR481 } from '@/modules/squad-brain/squadBrainEngineR481';
 import { buildChemistryGraphR484 } from '@/modules/chemistry/chemistryGraphEngineR484';
+import { buildAutonomousTacticalDirectorR500 } from '@/modules/tactical-director/tacticalDirectorEngineR500';
+import { TacticalDirectorPanelR500 } from '@/modules/tactical-director/TacticalDirectorPanelR500';
 import {
   RotationExplainabilityR489,
   StarterExplainabilityR489,
@@ -79,6 +81,28 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
   const tacticalTwinR480 = useMemo(() => buildTacticalTwinR480({ team, players, records, teamStyle }), [team, players, records, teamStyle]);
   const squadBrainR481 = useMemo(() => buildSquadBrainR481({ team, players, records, twin: tacticalTwinR480 }), [team, players, records, tacticalTwinR480]);
   const chemistryR484 = useMemo(() => buildChemistryGraphR484({ team, players, records, teamStyle, squadBrain: squadBrainR481 }), [team, players, records, teamStyle, squadBrainR481]);
+  const tacticalDirectorR500 = useMemo(() => buildAutonomousTacticalDirectorR500({
+    officialDecisionFingerprint: `team:${team.formation}:${teamStyle}`,
+    formation: team.formation,
+    teamStyle,
+    lineupContext: team.lineup.map((fit) => ({
+      slotId: fit.slot.id,
+      cardFingerprint: fit.player
+        ? playerByName.get(fit.player.parsed.playerName)?.fingerprint ?? fit.player.parsed.internalId ?? null
+        : null
+    })),
+    tacticalTwin: tacticalTwinR480,
+    squadBrain: squadBrainR481,
+    matchVision: null,
+    buildSimulator: null,
+    chemistry: chemistryR484,
+    explanations: [],
+    confirmedMatchRecords: records,
+    proMetaContext: null,
+    phase: 'PRE_MATCH',
+    currentScenario: 'base',
+    previousPlan: null
+  }), [team, teamStyle, playerByName, tacticalTwinR480, squadBrainR481, chemistryR484, records]);
 
   function selectTab(next: TeamTab) {
     setTab(next);
@@ -129,6 +153,8 @@ export function IntegratedTeamLab({ team, players, records, teamStyle, onOpenFor
         <article><span>FORMAÇÃO</span><strong>{team.formation}</strong><small>{team.strongestLine} em destaque</small></article>
         <article><span>FORÇA COLETIVA</span><strong>{team.globalScore}</strong><small>{team.globalScore >= 80 ? 'Excelente' : team.globalScore >= 65 ? 'Competitiva' : 'Em construção'}</small></article>
       </section>
+
+      <TacticalDirectorPanelR500 plan={tacticalDirectorR500} compact />
 
       <section className="bm32-team-pitch-panel">
         <div className="bm32-team-pitch" role="img" aria-label={`Escalação ${team.formation} com ${team.filledSlots} de ${team.totalSlots} posições preenchidas`}>

@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION = '40.80-r468-source-budget-convergence-v6';
-export const R443_GLOBAL_SOURCE_BUDGET_BYTES = 5.625 * 1024 * 1024;
+export const R443_SOURCE_BUDGET_VERSION = '40.80-r500-source-budget-convergence-v7';
+export const R443_GLOBAL_SOURCE_BUDGET_BYTES = 5.75 * 1024 * 1024;
 export const R443_SOURCE_RESERVE_BYTES = 65_536;
 export const R443_SOURCE_CHECKPOINT_BYTES = R443_GLOBAL_SOURCE_BUDGET_BYTES - R443_SOURCE_RESERVE_BYTES;
 
@@ -23,74 +23,84 @@ function replaceKnown(source, replacements) {
 
 function patchBundle(source) {
   return replaceKnown(source, [
-    ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
+    ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['sourceTs: 5.625 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
   ]);
 }
 
 function patchR184(source) {
   return replaceKnown(source, [
     ['const minimumMargin=r414ScalableVault ? 100_000 : legacyMinimumMargin;', 'const minimumMargin=r414ScalableVault ? 65_536 : legacyMinimumMargin;'],
-    ['const sourceLimit=5.25*1024*1024;', 'const sourceLimit=5.625*1024*1024;'],
-    ['const sourceLimit=5.5*1024*1024;', 'const sourceLimit=5.625*1024*1024;'],
-    ['const sourceLimit=5.5625*1024*1024;', 'const sourceLimit=5.625*1024*1024;'],
+    ['const sourceLimit=5.25*1024*1024;', 'const sourceLimit=5.75*1024*1024;'],
+    ['const sourceLimit=5.5*1024*1024;', 'const sourceLimit=5.75*1024*1024;'],
+    ['const sourceLimit=5.5625*1024*1024;', 'const sourceLimit=5.75*1024*1024;'],
+    ['const sourceLimit=5.625*1024*1024;', 'const sourceLimit=5.75*1024*1024;'],
   ]);
 }
 
 function patchR414(source) {
   return replaceKnown(source, [
-    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['5,25 MiB', '5,625 MiB'],
-    ['5,5 MiB', '5,625 MiB'],
-    ['5,5625 MiB', '5,625 MiB'],
-    ["sourceTs: 5.25 * 1024 * 1024", "sourceTs: 5.625 * 1024 * 1024"],
-    ["sourceTs: 5.5 * 1024 * 1024", "sourceTs: 5.625 * 1024 * 1024"],
-    ["sourceTs: 5.5625 * 1024 * 1024", "sourceTs: 5.625 * 1024 * 1024"],
-    ['5\\.25\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['5\\.5\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['5\\.5625\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['sourceGlobalLimitBytes: 5.25 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.625 * 1024 * 1024'],
-    ['sourceGlobalLimitBytes: 5.5 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.625 * 1024 * 1024'],
-    ['sourceGlobalLimitBytes: 5.5625 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.625 * 1024 * 1024'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_832_704', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['5,25 MiB', '5,75 MiB'],
+    ['5,5 MiB', '5,75 MiB'],
+    ['5,5625 MiB', '5,75 MiB'],
+    ['5,625 MiB', '5,75 MiB'],
+    ["sourceTs: 5.25 * 1024 * 1024", "sourceTs: 5.75 * 1024 * 1024"],
+    ["sourceTs: 5.5 * 1024 * 1024", "sourceTs: 5.75 * 1024 * 1024"],
+    ["sourceTs: 5.5625 * 1024 * 1024", "sourceTs: 5.75 * 1024 * 1024"],
+    ["sourceTs: 5.625 * 1024 * 1024", "sourceTs: 5.75 * 1024 * 1024"],
+    ['5\\.25\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5\\.5\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5\\.5625\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5\\.625\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['sourceGlobalLimitBytes: 5.25 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.75 * 1024 * 1024'],
+    ['sourceGlobalLimitBytes: 5.5 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.75 * 1024 * 1024'],
+    ['sourceGlobalLimitBytes: 5.5625 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.75 * 1024 * 1024'],
+    ['sourceGlobalLimitBytes: 5.625 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.75 * 1024 * 1024'],
   ]);
 }
 
 function patchR424Audit(source) {
   return replaceKnown(source, [
     ['100_000', '65_536'],
-    ['5_798_240', '5_832_704'],
-    ['5.5625 * 1024 * 1024', '5.625 * 1024 * 1024'],
-    ['5\\.5625\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['5_732_704', '5_832_704'],
-    ['5.25 * 1024 * 1024', '5.625 * 1024 * 1024'],
-    ['5.5 * 1024 * 1024', '5.625 * 1024 * 1024'],
-    ['5\\.25\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['5\\.5\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['5\\.5625\\s*\\*\\s*1024', '5\\.625\\s*\\*\\s*1024'],
-    ['5_405_024', '5_832_704'],
-    ['5_667_168', '5_832_704'],
-    ['5,25 MiB', '5,625 MiB'],
-    ['5,5 MiB', '5,625 MiB'],
-    ['5,5625 MiB', '5,625 MiB'],
+    ['5_798_240', '5_963_776'],
+    ['5_832_704', '5_963_776'],
+    ['5.5625 * 1024 * 1024', '5.75 * 1024 * 1024'],
+    ['5.625 * 1024 * 1024', '5.75 * 1024 * 1024'],
+    ['5\\.5625\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5\\.625\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5_732_704', '5_963_776'],
+    ['5.25 * 1024 * 1024', '5.75 * 1024 * 1024'],
+    ['5.5 * 1024 * 1024', '5.75 * 1024 * 1024'],
+    ['5\\.25\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5\\.5\\s*\\*\\s*1024', '5\\.75\\s*\\*\\s*1024'],
+    ['5_405_024', '5_963_776'],
+    ['5_667_168', '5_963_776'],
+    ['5,25 MiB', '5,75 MiB'],
+    ['5,5 MiB', '5,75 MiB'],
+    ['5,5625 MiB', '5,75 MiB'],
+    ['5,625 MiB', '5,75 MiB'],
   ]);
 }
 
 function patchR424Fixture(source) {
   return replaceKnown(source, [
     ['100_000', '65_536'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.625 * 1024 * 1024'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_832_704'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['sourceTs: 5.625 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.75 * 1024 * 1024'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
+    ['R414_SOURCE_BUDGET_BYTES = 5_832_704', 'R414_SOURCE_BUDGET_BYTES = 5_963_776'],
   ]);
 }
 
@@ -122,12 +132,12 @@ export function applySourceBudgetConvergenceR443(rootDirectory = process.cwd()) 
   const r424Audit = fs.readFileSync(path.resolve(root, TARGETS.r424Audit), 'utf8');
   const r424Fixture = fs.readFileSync(path.resolve(root, TARGETS.r424Fixture), 'utf8');
   const issues = [];
-  if (!bundle.includes('sourceTs: 5.625 * 1024 * 1024')) issues.push('bundle ainda usa teto antigo');
-  if (!r184.includes('const sourceLimit=5.625*1024*1024;')) issues.push('R184 ainda usa teto antigo');
-  if (!r414.includes('R414_SOURCE_BUDGET_BYTES = 5_832_704') || !r414.includes('sourceTs: 5.625 * 1024 * 1024')) issues.push('R414 ainda diverge');
-  const r424HasGlobalBudget = r424Audit.includes('5.625 * 1024 * 1024') || r424Audit.includes('5\\.625\\s*\\*\\s*1024');
-  if (!r424Audit.includes('5_832_704') || !r424HasGlobalBudget) issues.push('R424 audit ainda diverge');
-  if (!r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_832_704') || !r424Fixture.includes('sourceTs: 5.625 * 1024 * 1024')) issues.push('R424 fixture ainda diverge');
+  if (!bundle.includes('sourceTs: 5.75 * 1024 * 1024')) issues.push('bundle ainda usa teto antigo');
+  if (!r184.includes('const sourceLimit=5.75*1024*1024;')) issues.push('R184 ainda usa teto antigo');
+  if (!r414.includes('R414_SOURCE_BUDGET_BYTES = 5_963_776') || !r414.includes('sourceTs: 5.75 * 1024 * 1024')) issues.push('R414 ainda diverge');
+  const r424HasGlobalBudget = r424Audit.includes('5.75 * 1024 * 1024') || r424Audit.includes('5\\.75\\s*\\*\\s*1024');
+  if (!r424Audit.includes('5_963_776') || !r424HasGlobalBudget) issues.push('R424 audit ainda diverge');
+  if (!r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_963_776') || !r424Fixture.includes('sourceTs: 5.75 * 1024 * 1024')) issues.push('R424 fixture ainda diverge');
   if (issues.length) throw new Error(`R443: convergência de orçamento incompleta — ${issues.join(' | ')}`);
 
   return {

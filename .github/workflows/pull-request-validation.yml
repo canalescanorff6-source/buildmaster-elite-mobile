@@ -32,6 +32,39 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: R500 TDD — contrato RED/GREEN
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-contract-regression.ts
+
+      - name: R500 TDD — Pro Meta contextual
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-pro-meta-regression.ts
+
+      - name: R500 TDD — memória tática confirmada
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-memory-regression.ts
+
+      - name: R500 TDD — evidências, conflitos e confiança
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-engine-regression.ts
+
+      - name: R500 TDD — links R489 sem inflar confiança
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-r489-links-regression.ts
+
+      - name: R500 TDD — painel read-only
+        run: node tests/v40-80-r500-ui-regression.mjs
+
+      - name: R500 TDD — integração Meu Time
+        run: node tests/v40-80-r500-team-integration-regression.mjs
+
+      - name: R500 TDD — integração pós-jogo
+        run: node tests/v40-80-r500-match-integration-regression.mjs
+
+      - name: R500 TDD — closure de segurança
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-closure-regression.ts
+
+      - name: R500 TDD — paridade PR/main
+        run: node tests/v40-80-r500-ci-gate-regression.mjs
+
+      - name: R500 TDD — orçamento fonte com reserva
+        run: node tests/v40-80-r443-source-budget-convergence-regression.mjs
+
       - name: Regressão R483 — contrato read-only (TDD)
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r483-build-simulator-regression.ts
 
