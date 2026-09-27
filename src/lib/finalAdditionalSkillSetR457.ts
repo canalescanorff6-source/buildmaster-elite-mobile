@@ -4,7 +4,7 @@ import { officialAdditionalSkillPoolForPosition, isRoleCompatibleAdditionalSkill
 import { canonicalizeSkillList, isOfficialAdditionalSkillIdentity, skillIdentityKey } from './officialSkillIdentity';
 import { skillActionSupportDetailR459 } from './gameplayImpactR458';
 
-export const FINAL_ADDITIONAL_SKILL_SET_R457_VERSION = '40.80-r459-final-additional-skill-set-v3-action-aligned' as const;
+export const FINAL_ADDITIONAL_SKILL_SET_R457_VERSION = '40.80-r506-final-additional-skill-set-v4-post-build-action-state' as const;
 
 export type SkillActionInputR457 = {
   id: string;
@@ -27,6 +27,8 @@ export type FinalAdditionalSkillSetR457 = {
   version: typeof FINAL_ADDITIONAL_SKILL_SET_R457_VERSION;
   status: 'OPTIMAL_SET_PROVEN' | 'PARTIAL_POOL';
   position: PositionCode;
+  actionStateSource: 'PROJECTED_POST_BUILD_ACTIONS' | 'PARTIAL_PROJECTED_ACTIONS' | 'LEGACY_ACTION_FALLBACK';
+  projectedActionCoverage: number;
   currentSkills: string[];
   finalSkills: string[];
   additions: string[];
@@ -67,13 +69,41 @@ const DIMENSION_ACTIONS: Record<Dimension, readonly string[]> = {
 function clamp(value:number,min=0,max=100){ return Math.max(min,Math.min(max,value)); }
 function round2(value:number){ return Math.round(value*100)/100; }
 
+function projectedScoreOf(action:SkillActionInputR457){
+  const value=Number(action.projectedScore);
+  return Number.isFinite(value)?clamp(value):null;
+}
+
+function actionImportance(action:SkillActionInputR457){
+  const frequency=clamp(Number(action.frequency)||0);
+  const contribution=clamp(Number(action.contribution)||0);
+  const projected=projectedScoreOf(action);
+  // R506: skill não substitui atributo. Quando a ação vem do estado final da ficha,
+  // a utilidade funcional considera se os atributos pós-build realmente sustentam a ação.
+  // Sem projectedScore, preservamos exatamente a ponderação legada R459.
+  return projected===null
+    ? clamp(frequency*.68+contribution*.32)
+    : clamp(frequency*.50+contribution*.25+projected*.25);
+}
+
+function projectedActionCoverage(actions:SkillActionInputR457[]){
+  if(!actions.length) return 0;
+  const projected=actions.filter(action=>projectedScoreOf(action)!==null).length;
+  return round2(projected/actions.length*100);
+}
+
+function actionStateSource(actions:SkillActionInputR457[]):FinalAdditionalSkillSetR457['actionStateSource']{
+  const coverage=projectedActionCoverage(actions);
+  if(coverage===100&&actions.length>0) return 'PROJECTED_POST_BUILD_ACTIONS';
+  if(coverage>0) return 'PARTIAL_PROJECTED_ACTIONS';
+  return 'LEGACY_ACTION_FALLBACK';
+}
+
 function dimensionDemand(actions:SkillActionInputR457[], dimension:Dimension){
   const ids=DIMENSION_ACTIONS[dimension];
   const relevant=actions.filter(action=>ids.includes(action.id));
   if(!relevant.length) return 0;
-  const frequency=relevant.reduce((sum,item)=>sum+clamp(Number(item.frequency)||0),0)/relevant.length;
-  const contribution=relevant.reduce((sum,item)=>sum+clamp(Number(item.contribution)||0),0)/relevant.length;
-  return clamp(frequency*.68+contribution*.32);
+  return clamp(relevant.reduce((sum,item)=>sum+actionImportance(item),0)/relevant.length);
 }
 
 function skillVector(name:string):Partial<Record<Dimension,number>>{
@@ -102,11 +132,13 @@ function individualScore(name:string,actions:SkillActionInputR457[]){
   }
   const genericScore=genericTotal>0?clamp(genericWeighted/genericTotal):0;
 
-  // R459: o Top 5 usa a MESMA ação funcional que dirige a ficha, não apenas categorias amplas.
+  // R459/R506: o Top 5 usa a MESMA ação funcional que dirige a ficha e, quando
+  // disponível, o projectedScore pós-build dessa ação. Isto é relevância funcional
+  // interna; não representa bônus numérico oficial da habilidade sobre atributos.
   let specificWeighted=0,specificTotal=0;
   const actionSupport:Array<{label:string;value:number}>=[];
   for(const action of actions){
-    const importance=clamp((Number(action.frequency)||0)*.68+(Number(action.contribution)||0)*.32);
+    const importance=actionImportance(action);
     if(importance<=0) continue;
     specificTotal+=importance;
     const detail=skillActionSupportDetailR459([name],action.id);
@@ -161,6 +193,8 @@ export function optimizeFinalAdditionalSkillSetR457(
   actions:SkillActionInputR457[],
   position:PositionCode
 ):FinalAdditionalSkillSetR457{
+  const stateSource=actionStateSource(actions);
+  const stateCoverage=projectedActionCoverage(actions);
   const nativeSpecial=new Set(canonicalizeSkillList([...(parsed.nativeSkills??[]),...(parsed.specialSkills??[])]).map(skillIdentityKey));
   const current=canonicalizeSkillList(parsed.additionalSkills??[])
     .filter(isOfficialAdditionalSkillIdentity);
@@ -222,6 +256,8 @@ export function optimizeFinalAdditionalSkillSetR457(
     version:FINAL_ADDITIONAL_SKILL_SET_R457_VERSION,
     status:target===5?'OPTIMAL_SET_PROVEN':'PARTIAL_POOL',
     position,
+    actionStateSource:stateSource,
+    projectedActionCoverage:stateCoverage,
     currentSkills:currentInstalled,
     finalSkills:winner,
     additions,
@@ -241,6 +277,10 @@ export function optimizeFinalAdditionalSkillSetR457(
     roleCompatible:winner.every(skill=>isRoleCompatibleAdditionalSkill(skill,position)),
     nativeSpecialDuplicatesBlocked:winner.every(skill=>!nativeSpecial.has(skillIdentityKey(skill))),
     deterministic:true,
-    modelNote:'R459 alinha o Top 5 às ações Clean Slate específicas; a matriz dimensional fica apenas como fallback. Scores e sinergias são estimativas funcionais internas e não representam bônus numéricos oficiais de atributos.'
+    modelNote:stateSource==='PROJECTED_POST_BUILD_ACTIONS'
+      ? 'R506 alinha o Top 5 às ações e ao projectedScore pós-build da ficha. A skill só recebe relevância quando a ação final é funcionalmente sustentada; nenhum bônus numérico oficial de atributo é inventado.'
+      : stateSource==='PARTIAL_PROJECTED_ACTIONS'
+        ? 'R506 recebeu apenas parte dos projectedScore; usa o estado pós-build onde existe e preserva a ponderação R459 nos demais sinais sem inventar atributos.'
+        : 'Fallback R459 explícito: não havia projectedScore pós-build nas ações; frequência/contribuição permanecem a fonte funcional. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
   };
 }
