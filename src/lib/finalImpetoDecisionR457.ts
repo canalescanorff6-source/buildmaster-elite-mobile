@@ -1,7 +1,7 @@
-import type { ParsedCard, PositionCode } from './analyzerDomain';
+import type { Attributes, ParsedCard, PositionCode } from './analyzerDomain';
 import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from './impetoFunctionalMatrixR119';
 
-export const FINAL_IMPETO_DECISION_R457_VERSION='40.80-r457-final-impeto-decision-v2' as const;
+export const FINAL_IMPETO_DECISION_R457_VERSION='40.80-r505-final-impeto-post-build-v1' as const;
 
 export type ImpetoActionR457 =
   | 'KEEP_CURRENT'
@@ -32,6 +32,7 @@ export type FinalImpetoDecisionR457={
   slotStatus:string;
   candidates:FinalImpetoCandidateR457[];
   ambiguity:boolean;
+  attributeSource:'BASE_CARD'|'PROJECTED_POST_BUILD';
   numericAttributeEffectVerified:false;
   effectModel:'FUNCTIONAL_FIT_ONLY';
   automaticSpendAuthorized:false;
@@ -44,7 +45,7 @@ function clamp(v:number,min=0,max=100){return Math.max(min,Math.min(max,v));}
 function round1(v:number){return Math.round(v*10)/10;}
 function norm(v:unknown){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
 function avg(values:number[]){return values.length?values.reduce((a,b)=>a+b,0)/values.length:0;}
-function attr(parsed:ParsedCard,key:string){const value=Number((parsed.attributes as Record<string,unknown>)[key]);return Number.isFinite(value)?clamp(value,1,99):50;}
+function attr(attributes:Attributes,key:string){const value=Number((attributes as Record<string,unknown>)[key]);return Number.isFinite(value)?clamp(value,1,99):50;}
 
 function categories(actions:ActionLike[]){
   const map=new Map<string,number>();
@@ -73,19 +74,22 @@ function weighted(values:Array<{value:number;weight:number}>){
 export function evaluateFinalImpetoDecisionR457(
   parsed:ParsedCard,
   actions:ActionLike[],
-  position:PositionCode
+  position:PositionCode,
+  projectedAttributes?:Attributes
 ):FinalImpetoDecisionR457{
   const current=parsed.impetos?.find(x=>x.active!==false)?.name??parsed.impetos?.[0]?.name??null;
   const slotStatus=String(parsed.evidence?.impetoSlotStatus??'NAO_CONFIRMADO');
   const cats=categories(actions);
   const actionMap=new Map(actions.map(a=>[a.id,clamp(Number(a.frequency)||0)]));
   const confidenceBase=clamp(Number(parsed.confidence??50));
+  const attributes=projectedAttributes??parsed.attributes;
+  const attributeSource:FinalImpetoDecisionR457['attributeSource']=projectedAttributes?'PROJECTED_POST_BUILD':'BASE_CARD';
 
   const scored=IMPETO_FUNCTIONAL_MATRIX_R119.map((profile,index)=>{
     const domainScore=weighted(Object.entries(profile.domains).map(([key,weight])=>({value:cats.get(key as ImpetoFunctionalDomainR119)??0,weight:Number(weight??0)})));
     const actionScore=weighted(Object.entries(profile.actions).map(([key,weight])=>({value:actionMap.get(key)??0,weight:Number(weight??0)})));
     const positionFit=clamp((profile.positions[position]??0.04)*100);
-    const attributeSupport=profile.attributes.length?avg(profile.attributes.map(key=>attr(parsed,key))):50;
+    const attributeSupport=profile.attributes.length?avg(profile.attributes.map(key=>attr(attributes,key))):50;
     let total=domainScore*.36+actionScore*.30+positionFit*.24+attributeSupport*.10;
     if(positionFit<30) total*=.62;
     else if(positionFit<50) total*=.82;
@@ -144,10 +148,13 @@ export function evaluateFinalImpetoDecisionR457(
     slotStatus,
     candidates:scored.slice(0,5).map(({index,...item})=>item),
     ambiguity,
+    attributeSource,
     numericAttributeEffectVerified:false,
     effectModel:'FUNCTIONAL_FIT_ONLY',
     automaticSpendAuthorized:false,
     reason,
-    modelNote:'A recomendação usa encaixe funcional, posição, ações e atributos observados. O BuildMaster não inventa bônus numéricos de atributos onde a mecânica oficial não está estruturada no catálogo.'
+    modelNote:attributeSource==='PROJECTED_POST_BUILD'
+      ? 'A recomendação usa encaixe funcional, posição, ações e atributos finais projetados pela ficha R504. O BuildMaster não inventa bônus numéricos oficiais de Ímpeto.'
+      : 'Fallback explícito: a recomendação usa a carta-base porque nenhum estado pós-build foi fornecido. O BuildMaster não inventa bônus numéricos oficiais de Ímpeto.'
   };
 }

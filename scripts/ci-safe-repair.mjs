@@ -3,6 +3,7 @@ import { applyTotalReaderFinalizationR501 } from './apply-r501-total-reader-fina
 import { applyR502StructuralCardTruthCertification } from './apply-r502-structural-card-truth-certification.mjs';
 import { applyR503SingleReaderFinalization } from './apply-r503-single-reader-finalization.mjs';
 import { applyR504ProjectedPlayerState } from './apply-r504-projected-player-state.mjs';
+import { applyR505PostBuildImpeto } from './apply-r505-post-build-impeto.mjs';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const repairs = [
@@ -73,6 +74,20 @@ if (!failed) {
   } catch (error) {
     failed = true;
     console.error('Falha no reparo determinístico: Projected Player State R504 — estado pós-build');
+    console.error(error);
+  }
+}
+
+if (!failed) {
+  console.log('\n[CI SAFE REPAIR] Post-build Impeto R505 — gargalo residual');
+  try {
+    const result = applyR505PostBuildImpeto(process.cwd());
+    console.log(result.changed
+      ? `R505 materializou o Ímpeto pós-build em ${result.patched.length} arquivo(s).`
+      : 'R505 Ímpeto pós-build já estava convergido.');
+  } catch (error) {
+    failed = true;
+    console.error('Falha no reparo determinístico: Post-build Impeto R505 — gargalo residual');
     console.error(error);
   }
 }
