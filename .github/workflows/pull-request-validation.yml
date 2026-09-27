@@ -59,8 +59,20 @@ jobs:
       - name: Regressão R489 — gate preventivo da main (TDD)
         run: node tests/v40-80-r489-ci-gate-regression.mjs
 
-      - name: Regressão R500 — contrato read-only (TDD RED/GREEN)
-        run: node -r ./tests/_ts-require.cjs tests/v40-80-r500-contract-regression.ts
+      - name: Regressões R500 — Autonomous Tactical Director
+        run: |
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-contract-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-fingerprint-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-context-coherence-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-pro-meta-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-pro-meta-engine-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-memory-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-engine-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-hysteresis-regression.ts
+          node -r ./tests/_ts-require.cjs tests/v40-80-r500-closure-regression.ts
+          node tests/v40-80-r500-ui-regression.mjs
+          node tests/v40-80-r500-team-integration-regression.mjs
+          node tests/v40-80-r500-match-integration-regression.mjs
 
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
