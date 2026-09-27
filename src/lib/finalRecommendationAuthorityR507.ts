@@ -32,6 +32,10 @@ export type FinalRecommendationProjectionR507 = {
   impeto: PublicImpetoProjectionR507;
 };
 
+export type FinalRecommendationProjectionOptionsR507 = {
+  actionable?: boolean;
+};
+
 function normalize(value: unknown) {
   return String(value ?? '')
     .normalize('NFD')
@@ -40,7 +44,8 @@ function normalize(value: unknown) {
     .toLowerCase();
 }
 
-function publicDecision(action: ImpetoActionR457): PublicImpetoDecisionR507 {
+function publicDecision(action: ImpetoActionR457, actionable: boolean): PublicImpetoDecisionR507 {
+  if (!actionable) return 'NO_SAFE_IMPETO';
   if (action === 'KEEP_CURRENT') return 'KEEP_CURRENT';
   if (action === 'ADD_IF_AVAILABLE' || action === 'REPLACE_IF_ALLOWED') return 'RECOMMEND_NEW';
   if (action === 'REVIEW_SLOT') return 'REVIEW_SLOT';
@@ -53,9 +58,9 @@ function candidateConfidence(decision: FinalImpetoDecisionR457, name: string | n
   return decision.candidates.find((item) => normalize(item.name) === normalize(name))?.confidence ?? 0;
 }
 
-function actionableRecommendations(decision: FinalImpetoDecisionR457): ImpetoRecommendation[] {
-  const actionable = decision.action === 'ADD_IF_AVAILABLE' || decision.action === 'REPLACE_IF_ALLOWED';
-  if (!actionable || !decision.technicalIdeal) return [];
+function actionableRecommendations(decision: FinalImpetoDecisionR457, actionable: boolean): ImpetoRecommendation[] {
+  const actionAllows = decision.action === 'ADD_IF_AVAILABLE' || decision.action === 'REPLACE_IF_ALLOWED';
+  if (!actionable || !actionAllows || !decision.technicalIdeal) return [];
 
   const currentKey = normalize(decision.current);
   const idealKey = normalize(decision.technicalIdeal);
@@ -87,9 +92,11 @@ function actionableRecommendations(decision: FinalImpetoDecisionR457): ImpetoRec
 export function projectFinalRecommendationsR507(
   skills: FinalAdditionalSkillSetR457,
   impetoDecision: FinalImpetoDecisionR457,
+  options: FinalRecommendationProjectionOptionsR507 = {},
 ): FinalRecommendationProjectionR507 {
-  const recommendations = actionableRecommendations(impetoDecision);
-  const decision = publicDecision(impetoDecision.action);
+  const actionable = options.actionable !== false;
+  const recommendations = actionableRecommendations(impetoDecision, actionable);
+  const decision = publicDecision(impetoDecision.action, actionable);
   const ideal = impetoDecision.technicalIdeal;
   const recommendedImpeto = decision === 'RECOMMEND_NEW' ? ideal : null;
   const currentKey = normalize(impetoDecision.current);
@@ -105,7 +112,7 @@ export function projectFinalRecommendationsR507(
       ideal,
       idealScore: impetoDecision.technicalIdealScore,
       idealConfidence: candidateConfidence(impetoDecision, ideal),
-      reason: impetoDecision.reason,
+      reason: actionable ? impetoDecision.reason : 'Leitura/ficha bloqueada: nenhuma recomendação de Ímpeto pode virar ação antes da certificação necessária.',
       slotStatus: impetoDecision.slotStatus,
       recommendations,
       existingImpetoNeverRepeated,
