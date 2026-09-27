@@ -1,13 +1,18 @@
 import {
   buildContextFingerprintR500,
-  buildPlanFingerprintR500,
-  validateContextCoherenceR500
+  buildPlanFingerprintR500
 } from './tacticalDirectorFingerprintR500';
 import { PRO_META_DATASET_R500 } from './proMetaDatasetR500';
 import {
   proMetaDatasetDigestR500,
   selectApplicableProMetaR500
 } from './tacticalDirectorProMetaR500';
+import { buildTacticalMemoryR500 } from './tacticalDirectorMemoryR500';
+import {
+  buildDirectorConflictsR500,
+  buildDirectorEvidenceR500,
+  directorConfidenceR500
+} from './tacticalDirectorEvidenceR500';
 import type {
   TacticalDirectorAuthorityR500,
   TacticalDirectorInputR500,
@@ -40,9 +45,6 @@ function sourceVersionsR500(input: TacticalDirectorInputR500): string[] {
   if (input.matchVision?.version) versions.push(`R482:${input.matchVision.version}`);
   if (input.buildSimulator?.version) versions.push(`R483:${input.buildSimulator.version}`);
   if (input.chemistry?.version) versions.push(`R484:${input.chemistry.version}`);
-  for (const explanation of input.explanations ?? []) {
-    if (explanation.version) versions.push(`R489:${explanation.version}:${explanation.kind}`);
-  }
   return versions;
 }
 
@@ -55,22 +57,36 @@ export function buildAutonomousTacticalDirectorR500(
 ): TacticalDirectorPlanR500 {
   const scenario: TacticalDirectorScenarioR500 = input.currentScenario ?? 'base';
   const contextFingerprint = buildContextFingerprintR500(input);
-  const contextIssues = validateContextCoherenceR500(input);
-  const blockingIssues = contextIssues.filter((issue) => issue.level === 'BLOCKING');
   const proMetaDataset = input.proMetaDataset ?? PRO_META_DATASET_R500;
   const proMetaDigest = proMetaDatasetDigestR500(proMetaDataset);
   const applicableProMeta = input.proMetaContext
     ? selectApplicableProMetaR500(proMetaDataset, input.proMetaContext)
     : [];
+  const cardFingerprints = (input.lineupContext ?? [])
+    .map((item) => item.cardFingerprint)
+    .filter((item): item is string => Boolean(item));
+  const memory = buildTacticalMemoryR500(
+    input.confirmedMatchRecords,
+    {
+      formation: input.formation,
+      teamStyle: input.teamStyle,
+      cardFingerprints
+    },
+    input.matchVision ? { sessionId: null, snapshot: input.matchVision } : null
+  );
+  const evidence = buildDirectorEvidenceR500(input, { memory, applicableProMeta });
+  const conflicts = buildDirectorConflictsR500(evidence, input);
+  const confidence = directorConfidenceR500({ input, evidence, conflicts, memory });
+  const blocking = conflicts.some((item) => item.level === 'BLOCKING');
+  const hasUsableEvidence = evidence.some((item) => item.family === 'STRUCTURAL_TEAM' || item.family === 'MATCH_CONFIRMED' || item.family === 'PRO_META');
   const planFingerprint = buildPlanFingerprintR500({
     contextFingerprint,
     scenario,
     sourceVersions: sourceVersionsR500(input),
-    evidenceFingerprints: (input.explanations ?? []).map((item) => item.fingerprint).filter(Boolean),
+    evidenceFingerprints: evidence.map((item) => item.fingerprint),
     proMetaDigest,
     previousPlanFingerprint: input.previousPlan?.planFingerprint ?? null
   });
-  const blocked = blockingIssues.length > 0;
   const proMetaPatterns = uniqueStringsR500(
     applicableProMeta.flatMap((item) => item.observation.tacticalTags)
   ).slice(0, 5);
@@ -79,36 +95,33 @@ export function buildAutonomousTacticalDirectorR500(
       ? []
       : ['Nenhuma observação Pro Meta curada é aplicável ao contexto atual.']
     : ['Contexto competitivo Pro Meta não informado; nenhuma equivalência externa foi presumida.'];
+  const limitations = uniqueStringsR500([
+    ...conflicts.filter((item) => item.level === 'BLOCKING').map((item) => item.description),
+    ...memory.limitations,
+    ...proMetaLimitations,
+    ...(!hasUsableEvidence && !blocking ? ['Evidência insuficiente para promover um plano forte.'] : [])
+  ]);
 
   return {
     version: TACTICAL_DIRECTOR_R500_VERSION,
-    availability: blocked ? 'BLOCKED' : 'INSUFFICIENT',
+    availability: blocking ? 'BLOCKED' : hasUsableEvidence ? 'PARTIAL' : 'INSUFFICIENT',
     phase: 'PRE_MATCH',
     contextFingerprint,
     planFingerprint,
     scenario,
     title: 'Diretor Tático',
-    summary: blocked
+    summary: blocking
       ? 'O contexto contém fontes incompatíveis; o plano forte foi bloqueado sem corrigir a origem silenciosamente.'
-      : 'Ainda não há evidência suficiente para uma recomendação tática forte.',
+      : hasUsableEvidence
+        ? 'Há evidência suficiente para uma leitura preliminar, mas o plano completo ainda depende das próximas camadas do R500.'
+        : 'Ainda não há evidência suficiente para uma recomendação tática forte.',
     priorities: [],
     risks: [],
     recommendedActions: [],
     contingencies: [],
-    conflicts: contextIssues.map((issue, index) => ({
-      id: `context-${index + 1}-${issue.code}`,
-      level: issue.level,
-      title: 'Contexto incompatível',
-      description: issue.message,
-      sourceIds: [issue.source],
-      penalty: issue.level === 'BLOCKING' ? 100 : 20
-    })),
-    confidence: {
-      planConfidence: 0,
-      evidenceConfidence: 0,
-      executionConfidence: 0
-    },
-    evidence: [],
+    conflicts,
+    confidence,
+    evidence,
     proMeta: {
       datasetVersion: proMetaDataset.version,
       datasetDigest: proMetaDigest,
@@ -117,26 +130,19 @@ export function buildAutonomousTacticalDirectorR500(
       patterns: proMetaPatterns,
       limitations: proMetaLimitations
     },
-    memory: {
-      state: 'SEM_EVIDENCIA',
-      compatibleMatches: 0,
-      confirmedSessions: 0,
-      patterns: [],
-      limitations: []
-    },
+    memory,
     explanations: (input.explanations ?? []).map((item) => ({
       kind: item.kind,
       fingerprint: item.fingerprint,
       verdict: item.verdict
     })),
-    limitations: contextIssues.length
-      ? contextIssues.map((issue) => issue.message)
-      : ['Evidência insuficiente para promover um plano forte.'],
+    limitations,
     authority: { ...AUTHORITY_R500 },
     guardrails: [
       'R119 → R126 → R128 permanece a autoridade final.',
       'R500 recomenda e nunca aplica mudanças automaticamente.',
-      'Pro Meta só participa quando plataforma, patch, formato e ruleset têm compatibilidade explícita.'
+      'Pro Meta só participa quando plataforma, patch, formato e ruleset têm compatibilidade explícita.',
+      'R489 explica decisões existentes e não adiciona confiança ao R500.'
     ]
   };
 }
