@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-master-engine-closure.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
@@ -9,7 +10,10 @@ const domain = read('src/lib/analyzerDomain.ts');
 const clean = read('src/lib/cleanSlatePerformance2027V4080R119.ts');
 const helperPath='src/modules/analysis/cardEvidenceAuthorityR419.ts';
 const helper = fs.existsSync(helperPath) ? read(helperPath) : '';
+const truthPath='src/modules/analysis/cardTruthLayerR501.ts';
+const truth = fs.existsSync(truthPath) ? read(truthPath) : '';
 assert.ok(fs.existsSync(helperPath), 'R419 precisa materializar a autoridade canônica de evidência.');
+assert.ok(fs.existsSync(truthPath), 'R501 precisa materializar a autoridade central de confiança/cobertura.');
 const r417 = read('scripts/apply-r417-autonomous-card-vault.mjs');
 const r192Closure = read('scripts/check-result-workspace-static-closure-r192.mjs');
 
@@ -25,6 +29,10 @@ assert.match(budget, /return 0;/, 'Orçamento inválido deve permanecer bloquead
 assert.doesNotMatch(optimizer, /return\s+SAFE_DEFAULT_TRAINING_BUDGET\s*;/, 'trainingOptimizer não pode fabricar fallback 64.');
 assert.match(optimizer, /trainingPointsTotal é a autoridade primária/);
 assert.match(optimizer, /orçamento ausente permanece 0/);
+assert.match(optimizer, /confidenceAtLeastR501\(parsed\.confidence, 90\)/,
+  'R501: trainingOptimizer precisa usar a autoridade central de confiança após o repair.');
+assert.doesNotMatch(optimizer, /Number\(parsed\.confidence\s*\?\?\s*0\)\s*>=\s*0\.9/,
+  'R501: escala 0–1 antiga não pode reaparecer no optimizer.');
 
 assert.match(domain, /CardEvidenceStateR419 = 'MISSING' \| 'UNCERTAIN' \| 'CONFLICTING' \| 'TRUSTED'/);
 assert.match(domain, /criticalStateR419\?: CardEvidenceStateR419/);
@@ -33,6 +41,18 @@ assert.match(helper, /source === 'FALLBACK'/);
 assert.match(helper, /state: 'CONFLICTING'/);
 assert.match(helper, /state: 'TRUSTED'/);
 assert.match(helper, /applyCriticalEvidenceR419/);
+assert.match(helper, /confidenceAtLeastR501\(parsed\.confidence, 78\)/,
+  'R501: OCR do R419 precisa usar 78/100 canônico.');
+assert.match(helper, /deriveCriticalAttributeEvidenceR501/,
+  'R501: cobertura crítica precisa vir da autoridade central.');
+assert.match(truth, /normalizeConfidenceR501/);
+assert.match(truth, /minimum = parsed\.mainPosition === 'GK' \? 4 : 10/);
+assert.match(truth, /deriveCardTruthCertificationR501/,
+  'R501: estados final/provisório/bloqueado precisam ter uma autoridade explícita.');
+assert.match(truth, /FINAL_CERTIFIED/);
+assert.match(truth, /PROVISIONAL_HIGH_CONFIDENCE/);
+assert.match(truth, /PROVISIONAL_LOW_CONFIDENCE/);
+assert.match(truth, /BLOCKED_INSUFFICIENT_DATA/);
 
 assert.match(clean, /applyCriticalEvidenceR419/);
 assert.match(clean, /budgetEvidenceStateR419!==['"]TRUSTED['"]/);
@@ -68,4 +88,12 @@ assert.throws(
   'R456: contador desconhecido deve falhar fechado em vez de ampliar o teto silenciosamente.',
 );
 
-console.log('R419/R456 aprovado: orçamento fail-closed, evidência crítica explícita e teto R192 de até 129 módulos.');
+for (const regression of [
+  'tests/v40-80-r501-card-truth-layer-regression.ts',
+  'tests/v40-80-r501-certification-regression.ts',
+  'tests/v40-80-r501-total-reader-finalization-regression.ts',
+]) {
+  execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
+}
+
+console.log('R419/R501/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, Leitor Total fail-closed e teto R192 preservado.');

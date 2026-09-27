@@ -109,6 +109,12 @@ jobs:
       - name: TypeScript completo do APK
         run: npm run typecheck:r151
 
+      - name: R501 — Card Truth Layer após convergência determinística
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r501-card-truth-layer-regression.ts
+
+      - name: R501 — estados de certificação da ficha
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r501-certification-regression.ts
+
       - name: Closure inicial R200
         run: node scripts/check-cardvision-static-closure-r200.mjs
 
