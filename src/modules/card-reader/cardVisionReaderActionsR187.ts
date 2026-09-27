@@ -26,6 +26,8 @@ import { runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { recordSafeRuntimeError } from '@/lib/safeDiagnostics';
 import { loadReaderEvidenceRuntimeR161 } from '@/modules/card-reader/readerEvidenceRuntimeR161';
 import { loadOcrQueueRuntimeR160, loadReaderAnalysisRuntimeR163, loadReaderInteractionRuntimeR164, loadReaderRuntimeR160 } from '@/modules/card-reader/readerRuntimeR160';
+import { deriveSingleReaderFinalizationR503 } from '@/modules/card-reader/singleReaderFinalizationR503';
+import type { CardTruthCertificationR501 } from '@/modules/analysis/cardTruthLayerR501';
 
 export const CARDVISION_READER_ACTIONS_R187_VERSION = '40.80-r187-cardvision-reader-actions-v1' as const;
 
@@ -177,7 +179,17 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       }
       const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
+      const cardTruthCertificationR501 = (nextResult as AnalysisResult & { cleanSlate2027R119?: { cardTruthCertificationR501?: CardTruthCertificationR501 } }).cleanSlate2027R119?.cardTruthCertificationR501 ?? null;
+      const confirmationDecisionR503=deriveSingleReaderFinalizationR503(cardTruthCertificationR501);
       if (confirmed) {
+        if (!confirmationDecisionR503.canPersistConfirmed) {
+          await hydrateReviewFields(nextResult, singlePrintSession);
+          setDraftResult(nextResult);
+          setResult(null);
+          setManualMode(true);
+          setStatus(confirmationDecisionR503.reason);
+          return;
+        }
         const edition = nextResult.parsed.editionIdentity;
         if (edition?.officialCardIdVerified || edition?.catalogCardId) {
           await markActiveReadingSessionR470('CARD_MATCHED').catch(() => null);
