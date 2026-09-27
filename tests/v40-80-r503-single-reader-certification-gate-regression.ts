@@ -65,4 +65,10 @@ assert.match(reader,
   /if\s*\(confirmed\)[\s\S]{0,1800}confirmationDecisionR503\.canPersistConfirmed[\s\S]{0,3000}persistConfirmedAnalysisR470\(nextResult/,
   'R503: persistência confirmada só pode ocorrer depois do gate estrutural.');
 
+const safeRepair = fs.readFileSync('scripts/ci-safe-repair.mjs', 'utf8');
+assert.match(safeRepair, /applyR503SingleReaderFinalization/,
+  'R503: Zero-Red precisa materializar o gate unitário antes dos testes pesados.');
+assert.match(safeRepair, /Card Truth R503[^\n]*confirmação unitária/,
+  'R503: ci:repair-safe precisa expor uma etapa explícita para a confirmação unitária fail-closed.');
+
 console.log('R503 aprovado: confirmação manual não vence Card Truth; somente FINAL_CERTIFIED pode persistir e virar resultado final.');
