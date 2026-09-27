@@ -12,6 +12,11 @@ export type TacticalDirectorConflictLevelR500 = 'NONE' | 'LOW' | 'MATERIAL' | 'B
 export type TacticalDirectorPhaseR500 = 'PRE_MATCH' | 'IN_MATCH_PREPARED' | 'POST_MATCH';
 export type TacticalDirectorScenarioR500 = TacticalTwinScenarioIdR480;
 
+export type TacticalDirectorLineupContextR500 = {
+  slotId: string;
+  cardFingerprint: string | null;
+};
+
 export type TacticalDirectorConfidenceR500 = {
   planConfidence: number;
   evidenceConfidence: number;
@@ -170,6 +175,7 @@ export type TacticalDirectorInputR500 = {
   officialDecisionFingerprint: string;
   formation: string;
   teamStyle: TacticalStyle;
+  lineupContext?: TacticalDirectorLineupContextR500[];
   tacticalTwin?: TacticalTwinSnapshotR480 | null;
   squadBrain?: SquadBrainSnapshotR481 | null;
   matchVision?: MatchVisionSnapshotR482 | null;
