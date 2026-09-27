@@ -73,6 +73,7 @@ jobs:
           node tests/v40-80-r500-ui-regression.mjs
           node tests/v40-80-r500-team-integration-regression.mjs
           node tests/v40-80-r500-match-integration-regression.mjs
+          node tests/v40-80-r500-ci-gate-regression.mjs
 
       - name: Verificação R483 — superfícies legadas do Resultado
         run: |
