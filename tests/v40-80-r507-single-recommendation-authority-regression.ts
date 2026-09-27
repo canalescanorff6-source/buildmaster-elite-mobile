@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import type { FinalAdditionalSkillSetR457 } from '../src/lib/finalAdditionalSkillSetR457';
 import type { FinalImpetoDecisionR457 } from '../src/lib/finalImpetoDecisionR457';
 import { projectFinalRecommendationsR507 } from '../src/lib/finalRecommendationAuthorityR507';
@@ -73,7 +74,22 @@ assert.equal(review.impeto.decision, 'REVIEW_SLOT');
 assert.equal(review.impeto.recommendedImpeto, null, 'R507: vaga não confirmada não pode publicar recomendação acionável.');
 assert.deepEqual(review.impeto.recommendations, [], 'R507: REVIEW_SLOT deve permanecer fail-closed.');
 
+const blocked = projectFinalRecommendationsR507(skills, impeto, { actionable: false });
+assert.equal(blocked.impeto.decision, 'NO_SAFE_IMPETO', 'R507: ficha bloqueada nunca pode publicar ação de Ímpeto.');
+assert.equal(blocked.impeto.recommendedImpeto, null, 'R507: ficha bloqueada não pode publicar Ímpeto acionável.');
+assert.deepEqual(blocked.impeto.recommendations, [], 'R507: ficha bloqueada deve manter lista acionável vazia.');
+assert.deepEqual(blocked.skills, skills.finalSkills, 'R507: bloqueio da ficha não cria uma segunda autoridade de Top 5.');
+
 const repeated = projectFinalRecommendationsR507(skills, impeto);
 assert.deepEqual(repeated, projected, 'R507: mesma decisão R505/R506 deve produzir a mesma projeção pública.');
 
-console.log('R507 aprovado: campos públicos de Top 5 e Ímpeto espelham uma única autoridade pós-build, sem gasto automático.');
+const clean = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts', 'utf8');
+assert.match(clean, /projectFinalRecommendationsR507/, 'R507: Clean Slate precisa importar/usar a autoridade pública única.');
+assert.match(clean, /recommendedSkills:publicRecommendationsR507\.skills/, 'R507: saída pública READY de skills deve vir de R506 via R507.');
+assert.match(clean, /recommendedImpetos:publicRecommendationsR507\.impeto\.recommendations/, 'R507: saída pública READY de Ímpeto deve vir de R505 via R507.');
+assert.match(clean, /blockedPublicRecommendationsR507=projectFinalRecommendationsR507\([\s\S]{0,160}actionable:false/, 'R507: caminho bloqueado precisa ser explicitamente não acionável.');
+assert.match(clean, /top5:publicRecommendationsR507\.skills/, 'R507: campo estrutural top5 não pode divergir da autoridade R506.');
+assert.match(clean, /impetoDecision:publicRecommendationsR507\.impeto\.decision/, 'R507: campo estrutural de Ímpeto não pode divergir da autoridade R505.');
+assert.match(clean, /existingImpetoNeverRepeated:publicRecommendationsR507\.impeto\.existingImpetoNeverRepeated/, 'R507: guard público deve ser calculado pela mesma projeção final.');
+
+console.log('R507 aprovado: campos públicos de Top 5 e Ímpeto espelham uma única autoridade pós-build, bloqueios são fail-closed e não há gasto automático.');
