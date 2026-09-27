@@ -49,6 +49,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: buildmaster-release-${{ github.ref }}
@@ -235,10 +236,6 @@ jobs:
               raise SystemExit('Canal inválido.')
           rollout = max(1, min(100, int(os.environ.get('INPUT_ROLLOUT', '100'))))
 
-          # Até a v35.20, o versionCode codificava major/minor e chegou a 2.110.001.431.
-          # Na v37.00 a fórmula antiga ultrapassaria Integer.MAX_VALUE (2.147.483.647),
-          # fazendo o Gradle falhar ao avaliar android/app/build.gradle na linha versionCode.
-          # A partir daqui, o canal direto usa uma época monotônica baseada no número da execução.
           run = max(1, int(os.environ['RUN_NUMBER']))
           attempt = min(max(1, int(os.environ['RUN_ATTEMPT'])), 9)
           direct_epoch = 2_110_100_000
@@ -254,17 +251,9 @@ jobs:
 
           version_code = max(direct_epoch + run * 10 + attempt, max_published_code + 1)
           if version_code > android_version_code_max:
-              raise SystemExit(
-                  f'versionCode {version_code} ultrapassa o limite Android '
-                  f'{android_version_code_max}. Ajuste a época monotônica antes de publicar.'
-              )
+              raise SystemExit(f'versionCode {version_code} ultrapassa o limite Android {android_version_code_max}. Ajuste a época monotônica antes de publicar.')
           if version_code <= max_published_code:
-              raise SystemExit(
-                  f'versionCode {version_code} não é superior ao último publicado '
-                  f'({max_published_code}).'
-              )
-          # O token do nome inclui a tentativa. Assim, "Re-run jobs" nunca sobrescreve
-          # um APK que já pode estar em cache no GitHub ou no aparelho.
+              raise SystemExit(f'versionCode {version_code} não é superior ao último publicado ({max_published_code}).')
           asset_token = f'{version_code}{attempt:02d}'
           short_sha = source_sha[:8]
           asset = f'BuildMaster-Elite-Tatico-v{version}-{asset_token}-{short_sha}.apk'
@@ -368,8 +357,6 @@ jobs:
 
       - name: Diagnóstico consolidado de todos os erros
         id: diagnose_all
-        # O diagnóstico executa 97 grupos e não pode virar RED apenas por expirar
-        # durante uma regressão longa como R174. Mantém todos os testes ativos.
         timeout-minutes: 120
         continue-on-error: true
         run: npm run ci:diagnose-all
@@ -619,14 +606,8 @@ jobs:
           apk = pathlib.Path('dist-apk') / asset_name
           repo = os.environ['GITHUB_REPOSITORY']
           immutable_url = f'https://github.com/{repo}/releases/download/{release_tag}/{asset_name}'
-          versioned_bridge_url = (
-              f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}'
-              f'?publication={publication_id}&code={version_code}'
-          )
-          legacy_url = (
-              f'https://github.com/{repo}/releases/download/buildmaster-latest/'
-              f'BuildMaster-Elite-Tatico-latest.apk?publication={publication_id}&code={version_code}'
-          )
+          versioned_bridge_url = f'https://github.com/{repo}/releases/download/buildmaster-latest/{asset_name}?publication={publication_id}&code={version_code}'
+          legacy_url = f'https://github.com/{repo}/releases/download/buildmaster-latest/BuildMaster-Elite-Tatico-latest.apk?publication={publication_id}&code={version_code}'
 
           common = {
             'schemaVersion': 3,
@@ -662,8 +643,7 @@ jobs:
           immutable['apkUrl'] = immutable_url
           promote_legacy = os.environ.get('PROMOTE_LEGACY', 'false').lower() == 'true'
           immutable['mirrors'] = ([versioned_bridge_url, legacy_url] if promote_legacy else [versioned_bridge_url]) if common['channel'] == 'stable' else []
-          pathlib.Path('dist-apk', manifest_asset).write_text(
-              json.dumps(immutable, ensure_ascii=False, indent=2), encoding='utf-8')
+          pathlib.Path('dist-apk', manifest_asset).write_text(json.dumps(immutable, ensure_ascii=False, indent=2), encoding='utf-8')
 
           primary = dict(common)
           primary['releaseTag'] = release_tag
@@ -672,8 +652,7 @@ jobs:
           primary['mirrors'] = ([versioned_bridge_url, legacy_url] if promote_legacy else [versioned_bridge_url]) if common['channel'] == 'stable' else []
           primary_dir = pathlib.Path('dist-apk', 'primary')
           primary_dir.mkdir(parents=True, exist_ok=True)
-          (primary_dir / 'update-manifest.json').write_text(
-              json.dumps(primary, ensure_ascii=False, indent=2), encoding='utf-8')
+          (primary_dir / 'update-manifest.json').write_text(json.dumps(primary, ensure_ascii=False, indent=2), encoding='utf-8')
 
           legacy = dict(common)
           legacy['schemaVersion'] = 2
@@ -685,8 +664,7 @@ jobs:
           legacy['mirrors'] = [immutable_url, versioned_bridge_url]
           legacy_dir = pathlib.Path('dist-apk', 'legacy')
           legacy_dir.mkdir(parents=True, exist_ok=True)
-          (legacy_dir / 'update-manifest.json').write_text(
-              json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
+          (legacy_dir / 'update-manifest.json').write_text(json.dumps(legacy, ensure_ascii=False, indent=2), encoding='utf-8')
 
           status = 'paused' if common['paused'] else ('rolled_back' if common.get('rollbackFromVersion') else ('testing' if common['channel'] == 'beta' else 'published'))
           history_entry = {
@@ -695,8 +673,7 @@ jobs:
             'publishedAt': common['publishedAt'], 'releaseTag': release_tag, 'checksum': common['checksum'],
             'notes': common['notes']
           }
-          pathlib.Path('dist-apk', 'release-history.json').write_text(
-              json.dumps({'schemaVersion': 1, 'releases': [history_entry]}, ensure_ascii=False, indent=2), encoding='utf-8')
+          pathlib.Path('dist-apk', 'release-history.json').write_text(json.dumps({'schemaVersion': 1, 'releases': [history_entry]}, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
 
           cat > dist-apk/RELEASE_NOTES.md <<NOTES
@@ -781,23 +758,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view buildmaster-latest >/dev/null 2>&1; then
-            gh release edit buildmaster-latest \
-              --title "BuildMaster Elite Tático — Ponte automática versionada" \
-              --notes-file dist-apk/RELEASE_NOTES.md
+            gh release edit buildmaster-latest --title "BuildMaster Elite Tático — Ponte automática versionada" --notes-file dist-apk/RELEASE_NOTES.md
           else
-            gh release create buildmaster-latest \
-              --target "$SOURCE_SHA" \
-              --title "BuildMaster Elite Tático — Ponte automática versionada" \
-              --notes-file dist-apk/RELEASE_NOTES.md
+            gh release create buildmaster-latest --target "$SOURCE_SHA" --title "BuildMaster Elite Tático — Ponte automática versionada" --notes-file dist-apk/RELEASE_NOTES.md
           fi
 
       - name: Publicar APK versionado na ponte fixa
         if: env.RELEASE_CHANNEL == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          # O nome é único por execução. Nunca usamos --clobber e nunca apagamos este ativo.
-          gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME"
+        run: gh release upload buildmaster-latest "dist-apk/$APK_ASSET_NAME"
 
       - name: Validar APK versionado da rota principal
         if: env.RELEASE_CHANNEL == 'stable'
@@ -833,22 +803,15 @@ jobs:
           set -euo pipefail
           CHANNEL_BRANCH="$CHANNEL_BRANCH"
           if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$CHANNEL_BRANCH" >/dev/null 2>&1; then
-            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref="refs/heads/$CHANNEL_BRANCH" \
-              -f sha="$GITHUB_SHA" >/dev/null
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/heads/$CHANNEL_BRANCH" -f sha="$GITHUB_SHA" >/dev/null
           fi
-
           CONTENT=$(base64 -w0 dist-apk/primary/update-manifest.json)
           for attempt in 1 2 3; do
             EXISTING_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/update-manifest.json?ref=$CHANNEL_BRANCH" --jq '.sha' 2>/dev/null || true)
             if [ -n "$EXISTING_SHA" ]; then
-              gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update-manifest.json" \
-                -f message="Ativar ponte versionada v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE" \
-                -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" -f sha="$EXISTING_SHA" >/dev/null && break
+              gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update-manifest.json" -f message="Ativar ponte versionada v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE" -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" -f sha="$EXISTING_SHA" >/dev/null && break
             else
-              gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update-manifest.json" \
-                -f message="Criar ponte versionada v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE" \
-                -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" >/dev/null && break
+              gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/update-manifest.json" -f message="Criar ponte versionada v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE" -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" >/dev/null && break
             fi
             test "$attempt" -lt 3 || { echo '::error::Não foi possível publicar o canal principal.'; exit 1; }
             sleep $((attempt * 5))
@@ -864,9 +827,7 @@ jobs:
           branch = os.environ['CHANNEL_BRANCH']
           current = json.loads(pathlib.Path('dist-apk/release-history.json').read_text(encoding='utf-8'))['releases'][0]
           try:
-              encoded = subprocess.check_output([
-                  'gh', 'api', f'repos/{os.environ["GITHUB_REPOSITORY"]}/contents/release-history.json?ref={branch}', '--jq', '.content'
-              ], text=True).replace('\n', '')
+              encoded = subprocess.check_output(['gh', 'api', f'repos/{os.environ["GITHUB_REPOSITORY"]}/contents/release-history.json?ref={branch}', '--jq', '.content'], text=True).replace('\n', '')
               existing = json.loads(base64.b64decode(encoded).decode('utf-8')).get('releases', [])
           except Exception:
               existing = []
@@ -877,13 +838,9 @@ jobs:
           CONTENT=$(base64 -w0 dist-apk/release-history.json)
           EXISTING_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/release-history.json?ref=$CHANNEL_BRANCH" --jq '.sha' 2>/dev/null || true)
           if [ -n "$EXISTING_SHA" ]; then
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/release-history.json" \
-              -f message="Registrar v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE no canal $RELEASE_CHANNEL" \
-              -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" -f sha="$EXISTING_SHA" >/dev/null
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/release-history.json" -f message="Registrar v$BUILDMASTER_VERSION code $ANDROID_VERSION_CODE no canal $RELEASE_CHANNEL" -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" -f sha="$EXISTING_SHA" >/dev/null
           else
-            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/release-history.json" \
-              -f message="Criar histórico do canal $RELEASE_CHANNEL" \
-              -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" >/dev/null
+            gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/release-history.json" -f message="Criar histórico do canal $RELEASE_CHANNEL" -f content="$CONTENT" -f branch="$CHANNEL_BRANCH" >/dev/null
           fi
 
       - name: Validar canal principal e o APK apontado
@@ -893,11 +850,7 @@ jobs:
           ready=0
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/primary-manifest.json
-            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' \
-              --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
-              "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" \
-              -o verify-release/primary-manifest.json; then
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' "$RAW_MANIFEST_URL?buildmasterCache=$APK_PUBLICATION_ID-$attempt-$(date +%s%N)" -o verify-release/primary-manifest.json; then
               if python - <<'PY'
           import json, os, pathlib, sys
           try:
@@ -930,13 +883,8 @@ jobs:
             sleep $((attempt * 6))
           done
           test "$ready" = 1 || { echo '::error::O manifesto principal não propagou corretamente.'; exit 1; }
-
           URL=$(cat verify-release/primary-apk-url.txt)
-          curl --fail --silent --show-error --location --retry 8 --retry-all-errors \
-            --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' \
-            --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' \
-            --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
-            "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk
+          curl --fail --silent --show-error --location --retry 8 --retry-all-errors --user-agent 'BuildMaster-Elite-Tatico-Updater/31.30 Android' --header 'Accept: application/vnd.android.package-archive,application/octet-stream,*/*;q=0.8' --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' "$URL?bmDownloadAttempt=99-$(date +%s%N)" -o verify-release/primary-final.apk
           test "$(sha256sum verify-release/primary-final.apk | awk '{print $1}')" = "$(cat verify-release/expected-sha.txt)" || { echo '::error::O canal principal apontou para bytes diferentes.'; exit 1; }
           test "$(stat -c%s verify-release/primary-final.apk)" = "$(cat verify-release/expected-size.txt)" || { echo '::error::O canal principal apontou para tamanho diferente.'; exit 1; }
 
@@ -964,11 +912,7 @@ jobs:
           ready=0
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             rm -f verify-release/legacy-latest.apk
-            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/28.00 Legacy-Android' \
-              --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
-              "$LEGACY_APK_URL&bmDownloadAttempt=$attempt-$(date +%s%N)" \
-              -o verify-release/legacy-latest.apk; then
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors --user-agent 'BuildMaster-Elite-Tatico-Updater/28.00 Legacy-Android' --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' "$LEGACY_APK_URL&bmDownloadAttempt=$attempt-$(date +%s%N)" -o verify-release/legacy-latest.apk; then
               SHA=$(sha256sum verify-release/legacy-latest.apk | awk '{print $1}')
               SIZE=$(stat -c%s verify-release/legacy-latest.apk)
               if [ "$SHA" = "$(cat verify-release/expected-sha.txt)" ] && [ "$SIZE" = "$(cat verify-release/expected-size.txt)" ]; then
@@ -994,11 +938,7 @@ jobs:
           ready=0
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             rm -f verify-release/legacy-manifest.json
-            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
-              --user-agent 'BuildMaster-Elite-Tatico-Updater/28.00 Legacy-Android' \
-              --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' \
-              "$LEGACY_MANIFEST_URL&attempt=$attempt&ts=$(date +%s%N)" \
-              -o verify-release/legacy-manifest.json; then
+            if curl --fail --silent --show-error --location --retry 3 --retry-all-errors --user-agent 'BuildMaster-Elite-Tatico-Updater/28.00 Legacy-Android' --header 'Accept-Encoding: identity' --header 'Cache-Control: no-cache, no-store, max-age=0' "$LEGACY_MANIFEST_URL&attempt=$attempt&ts=$(date +%s%N)" -o verify-release/legacy-manifest.json; then
               if python - <<'PY'
           import json, os, pathlib, sys
           try:
