@@ -8,6 +8,7 @@ import { applyR418UnboundedCapacity } from './apply-r418-unbounded-capacity.mjs'
 import { applyR418Fix2HistoricalCapacityContracts } from './apply-r418-fix2-historical-contracts.mjs';
 import { applyR419ReaderMasterEngineClosure } from './apply-r419-reader-master-engine-closure.mjs';
 import { applyR502StructuralCardTruthCertification } from './apply-r502-structural-card-truth-certification.mjs';
+import { applyR504ProjectedPlayerState } from './apply-r504-projected-player-state.mjs';
 import { applyR420PersistenceRecoveryClosure } from './apply-r420-persistence-recovery-closure.mjs';
 import { applyR421SquadVideoTacticalClosure } from './apply-r421-squad-video-tactical-closure.mjs';
 import { applyR422SecurityObservabilityClosure } from './apply-r422-security-observability-closure.mjs';
@@ -54,6 +55,10 @@ const r502 = applyR502StructuralCardTruthCertification();
 if (r502.changed) {
   console.log(`R502 materializou certificação estrutural antes do R151 (${r502.patched.length} arquivo(s)).`);
 }
+const r504 = applyR504ProjectedPlayerState();
+if (r504.changed) {
+  console.log(`R504 materializou Projected Player State antes do R151 (${r504.patched.length} arquivo(s)).`);
+}
 const r420 = applyR420PersistenceRecoveryClosure();
 if (r420.changed) {
   console.log(`R420 convergiu persistência/recuperação antes do R151 (${r420.patched.length} arquivo(s)).`);
@@ -75,7 +80,7 @@ if (r425.changed) {
   console.log(`R425 convergiu cadeia Supabase estática antes do R151 (${r425.patched.length} arquivo(s)).`);
 }
 // R417-fix2 e convergências posteriores podem alterar legitimamente R119.
-// Sincronize os contratos R186-R200 somente depois de todas essas mutações.
+// Sincronize os contratos R186-R200 somente depois de todas essas mutações, incluindo R504.
 const r119Baselines = applyReviewedR119BaselinesR186R200();
 if (r119Baselines.changed) {
   console.log(`R151 sincronizou baselines R186-R200 com o R119 final (${r119Baselines.sourceSha.slice(0, 12)}).`);
