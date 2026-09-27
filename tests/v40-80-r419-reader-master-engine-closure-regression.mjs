@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-master-engine-closure.mjs';
+import { applyR503SingleReaderFinalization } from '../scripts/apply-r503-single-reader-finalization.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 const budget = read('src/modules/builds/pointBudget.ts');
@@ -88,13 +89,17 @@ assert.throws(
   'R456: contador desconhecido deve falhar fechado em vez de ampliar o teto silenciosamente.',
 );
 
+const r503 = applyR503SingleReaderFinalization(process.cwd());
+if (r503.changed) console.log(`R503 materializou o gate do leitor unitário em ${r503.patched.length} arquivo(s).`);
+
 for (const regression of [
   'tests/v40-80-r501-card-truth-layer-regression.ts',
   'tests/v40-80-r501-certification-regression.ts',
   'tests/v40-80-r501-total-reader-finalization-regression.ts',
   'tests/v40-80-r502-structural-card-truth-certification-regression.ts',
+  'tests/v40-80-r503-single-reader-certification-gate-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, Leitor Total fail-closed, certificação estrutural e teto R192 preservado.');
+console.log('R419/R501/R502/R503/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores Total e unitário fail-closed, certificação estrutural e teto R192 preservado.');
