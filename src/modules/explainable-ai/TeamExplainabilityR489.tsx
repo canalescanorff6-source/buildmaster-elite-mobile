@@ -3,6 +3,8 @@
 import type { TacticalTwinScenarioR480, TacticalTwinSnapshotR480 } from '../tactical-twin/tacticalTwinEngineR480';
 import type { SquadBrainCorePlayerR481, SquadBrainRotationR481, SquadBrainSnapshotR481 } from '../squad-brain/squadBrainEngineR481';
 import type { ChemistryGraphSnapshotR484 } from '../chemistry/chemistryGraphEngineR484';
+import { buildAutonomousTacticalDirectorR500 } from '../tactical-director/tacticalDirectorEngineR500';
+import { TacticalDirectorPanelR500 } from '../tactical-director/TacticalDirectorPanelR500';
 import { buildExplainableDecisionR489 } from './explainableDecisionEngineR489';
 import { ExplainableDecisionPanelR489 } from './ExplainableDecisionPanelR489';
 
@@ -106,6 +108,27 @@ export function TacticalExplainabilityR489({
     squadBrain,
     chemistry
   });
+  const director = buildAutonomousTacticalDirectorR500({
+    officialDecisionFingerprint: `team:${tacticalTwin.formation}:${tacticalTwin.teamStyle}`,
+    formation: tacticalTwin.formation,
+    teamStyle: tacticalTwin.teamStyle,
+    phase: 'PRE_MATCH',
+    tacticalTwin,
+    squadBrain,
+    matchVision: null,
+    buildSimulator: null,
+    chemistry,
+    explanations: [decision],
+    confirmedMatchRecords: [],
+    proMetaDataset: null,
+    currentScenario: scenario.id,
+    previousPlan: null
+  });
 
-  return collapsedPanelR489('Por que esta leitura tática?', decision);
+  return (
+    <>
+      <TacticalDirectorPanelR500 plan={director} compact />
+      {collapsedPanelR489('Por que esta leitura tática?', decision)}
+    </>
+  );
 }
