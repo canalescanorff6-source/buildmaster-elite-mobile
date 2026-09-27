@@ -1,0 +1,52 @@
+name: Redisparar APK após Zero-Red
+
+on:
+  workflow_run:
+    workflows: ["Gerar APK Canal Direto"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  redispatch-stabilized-main:
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Redisparar somente o commit Zero-Red filho direto
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          FAILED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MAIN_SHA="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$MAIN_SHA" = "$FAILED_HEAD_SHA" ]; then
+            echo "A main não avançou durante o run; não é caso de redisparo Zero-Red."
+            exit 0
+          fi
+
+          COMMIT_JSON="$(gh api "repos/$REPOSITORY/commits/$MAIN_SHA")"
+          PARENT_SHA="$(printf '%s' "$COMMIT_JSON" | jq -r '.parents[0].sha // empty')"
+          MESSAGE="$(printf '%s' "$COMMIT_JSON" | jq -r '.commit.message // empty')"
+
+          if [ "$PARENT_SHA" != "$FAILED_HEAD_SHA" ]; then
+            echo "A main avançou, mas não por um filho direto do SHA que falhou; não redisparar."
+            exit 0
+          fi
+
+          if [ "$MESSAGE" != "chore(ci): autoestabiliza fonte pela Regra Zero-Red" ]; then
+            echo "O novo commit não é o auto-commit oficial da Regra Zero-Red; não redisparar."
+            exit 0
+          fi
+
+          echo "Autoestabilização confirmada: $FAILED_HEAD_SHA -> $MAIN_SHA"
+          gh workflow run build-apk.yml --ref main
+          echo "APK redisparado para validar a main estabilizada em $MAIN_SHA."
