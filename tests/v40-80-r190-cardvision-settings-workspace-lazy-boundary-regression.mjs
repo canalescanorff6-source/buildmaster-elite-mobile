@@ -25,7 +25,7 @@ for (const marker of ['PremiumSettingsOverview', 'IdentityAppearancePanel', 'Arc
 }
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  'bc888d06abb39827b43dc1cb260a3d57db57c0f18321014e3cd4e34a1c126704',
+  '6aba2f9e70c37a8de804fcfb59f1cea7451bb36b6a59ebe931ef4d969947b78d',
   'R190: R119 não pode mudar durante modularização de Ajustes.',
 );
 assert.match(String(pkg.scripts?.['test:v4080'] ?? ''), /npm run test:r190(?: && npm run test:r191)?(?: && npm run test:r192)?(?: && npm run test:r193)?(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/, 'R190: cadeia v40.80 deve preservar R190 → R191 → R192 em ordem.');

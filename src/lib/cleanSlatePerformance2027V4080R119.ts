@@ -26,6 +26,7 @@ import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from '
 import { inspectPlaystyleActivationR124 } from './efootball2027PhaseCatalogR124';
 import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { applyCriticalEvidenceR419 } from '../modules/analysis/cardEvidenceAuthorityR419';
+import { deriveCardTruthCertificationR501, type CardTruthCertificationR501 } from '../modules/analysis/cardTruthLayerR501';
 import { rankAutonomousRolesR417 } from './autonomousCardR417';
 import { GAMEPLAY_IMPACT_R458_VERSION, functionActionDemandR458, teamStyleActionDemandR458, skillActionSupportR458, skillActionSupportDetailR459, type GameplayImpactR458 } from './gameplayImpactR458';
 
@@ -151,6 +152,7 @@ export type CleanSlate2027R119 = {
   authority: 'CLEAN_SLATE_SINGLE_WRITER';
   source: 'RAW_CARD_SNAPSHOT';
   status: 'READY' | 'BLOCKED_INSUFFICIENT_DATA';
+  cardTruthCertificationR501: CardTruthCertificationR501;
   cardKey: string;
   positionAnchor: PositionCode;
   usagePosition: PositionCode;
@@ -1896,6 +1898,7 @@ function usageFunctionR457(input:AnalysisResult, context:UsageContextR125) {
 
 export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnapshot?:ParsedCard):WithR119 {
   const parsed:ParsedCard=applyCriticalEvidenceR419(rawSnapshot ? JSON.parse(JSON.stringify(rawSnapshot)) as ParsedCard : JSON.parse(JSON.stringify(input.parsed)) as ParsedCard);
+  const cardTruthCertificationR501=deriveCardTruthCertificationR501(parsed);
   const usageContext=buildUsageContextR125(input,parsed);
   const playstyleContext=publicPlaystyleContextR125(usageContext);
   const usageFunction=usageFunctionR457(input,usageContext);
@@ -1933,6 +1936,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       authority:'CLEAN_SLATE_SINGLE_WRITER',
       source:'RAW_CARD_SNAPSHOT',
       status:'BLOCKED_INSUFFICIENT_DATA',
+      cardTruthCertificationR501,
       cardKey:cardKey(parsed),
       positionAnchor:parsed.mainPosition,
       usagePosition:usageContext.targetPosition,
@@ -2057,6 +2061,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     authority:'CLEAN_SLATE_SINGLE_WRITER',
     source:'RAW_CARD_SNAPSHOT',
     status:'READY',
+    cardTruthCertificationR501,
     cardKey:cardKey(parsed),
     positionAnchor:parsed.mainPosition,
     usagePosition:usageContext.targetPosition,

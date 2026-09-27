@@ -57,7 +57,7 @@ assert.ok((vaultLifecycle.match(/ensureProductionAnalysisR138\(input\.result\)/g
 assert.match(historyStore, /createProductionAnalysisR138\(\{ rawText: source/, 'R198: migração histórica deve entrar pelo orquestrador de produção.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'bc888d06abb39827b43dc1cb260a3d57db57c0f18321014e3cd4e34a1c126704', 'R198: R119 não pode mudar durante auditoria E2E.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '6aba2f9e70c37a8de804fcfb59f1cea7451bb36b6a59ebe931ef4d969947b78d', 'R198: R119 não pode mudar durante auditoria E2E.');
 
 const appBytes = fs.statSync('src/components/CardVisionApp.tsx').size;
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
