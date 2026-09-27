@@ -91,8 +91,9 @@ assert.throws(
 for (const regression of [
   'tests/v40-80-r501-card-truth-layer-regression.ts',
   'tests/v40-80-r501-certification-regression.ts',
+  'tests/v40-80-r501-total-reader-finalization-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas e teto R192 preservado.');
+console.log('R419/R501/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, Leitor Total fail-closed e teto R192 preservado.');
