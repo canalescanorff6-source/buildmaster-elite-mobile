@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {
-  deriveTotalReadingFinalizationR501,
-  type TotalReadingSession,
-} from '../src/lib/totalCardReader';
+import type { TotalReadingSession } from '../src/lib/totalCardReader';
+import { deriveTotalReadingFinalizationR501 } from '../src/modules/card-reader/totalReaderFinalizationR501';
 
 function session(overrides: Partial<TotalReadingSession> = {}): TotalReadingSession {
   return {
