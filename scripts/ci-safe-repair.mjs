@@ -4,6 +4,7 @@ import { applyR502StructuralCardTruthCertification } from './apply-r502-structur
 import { applyR503SingleReaderFinalization } from './apply-r503-single-reader-finalization.mjs';
 import { applyR504ProjectedPlayerState } from './apply-r504-projected-player-state.mjs';
 import { applyR505PostBuildImpeto } from './apply-r505-post-build-impeto.mjs';
+import { applyR507SingleRecommendationAuthority } from './apply-r507-single-recommendation-authority.mjs';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const repairs = [
@@ -88,6 +89,20 @@ if (!failed) {
   } catch (error) {
     failed = true;
     console.error('Falha no reparo determinístico: Post-build Impeto R505 — gargalo residual');
+    console.error(error);
+  }
+}
+
+if (!failed) {
+  console.log('\n[CI SAFE REPAIR] Recommendation Authority R507 — saída pública única');
+  try {
+    const result = applyR507SingleRecommendationAuthority(process.cwd());
+    console.log(result.changed
+      ? `R507 materializou a autoridade pública única em ${result.patched.length} arquivo(s).`
+      : 'R507 autoridade pública única já estava convergida.');
+  } catch (error) {
+    failed = true;
+    console.error('Falha no reparo determinístico: Recommendation Authority R507 — saída pública única');
     console.error(error);
   }
 }

@@ -5,6 +5,8 @@ import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-maste
 import { applyR503SingleReaderFinalization } from '../scripts/apply-r503-single-reader-finalization.mjs';
 import { applyR504ProjectedPlayerState } from '../scripts/apply-r504-projected-player-state.mjs';
 import { applyR505PostBuildImpeto } from '../scripts/apply-r505-post-build-impeto.mjs';
+import { applyR507SingleRecommendationAuthority } from '../scripts/apply-r507-single-recommendation-authority.mjs';
+import { applyReviewedR119BaselinesR186R200 } from '../scripts/apply-r406-fix7-r186-r200-reviewed-baselines.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 const budget = read('src/modules/builds/pointBudget.ts');
@@ -97,6 +99,10 @@ const r504 = applyR504ProjectedPlayerState(process.cwd());
 if (r504.changed) console.log(`R504 materializou o estado pós-build em ${r504.patched.length} arquivo(s).`);
 const r505 = applyR505PostBuildImpeto(process.cwd());
 if (r505.changed) console.log(`R505 materializou o Ímpeto pós-build em ${r505.patched.length} arquivo(s).`);
+const r507 = applyR507SingleRecommendationAuthority(process.cwd());
+if (r507.changed) console.log(`R507 materializou a autoridade pública única em ${r507.patched.length} arquivo(s).`);
+const r507Baselines = applyReviewedR119BaselinesR186R200(process.cwd());
+if (r507Baselines.changed) console.log(`R507 sincronizou baselines R186-R200 com o R119 final (${r507Baselines.sourceSha.slice(0, 12)}).`);
 
 for (const regression of [
   'tests/v40-80-r501-card-truth-layer-regression.ts',
@@ -107,8 +113,9 @@ for (const regression of [
   'tests/v40-80-r504-projected-player-state-regression.ts',
   'tests/v40-80-r505-post-build-impeto-regression.ts',
   'tests/v40-80-r506-post-build-skills-regression.ts',
+  'tests/v40-80-r507-single-recommendation-authority-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto e Top 5 pós-build e teto R192 preservado.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única e teto R192 preservado.');
