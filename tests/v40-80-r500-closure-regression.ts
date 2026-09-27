@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import './v40-80-r501-card-truth-layer-regression';
 
 const root = 'src/modules/tactical-director';
 const productionFiles = fs.readdirSync(root)
