@@ -25,7 +25,7 @@ export function effectiveWeightR500(parts: WeightPartsR500): number {
   return Number(value.toFixed(4));
 }
 
-function evidenceR500(
+export function materializeEvidenceR500(
   item: Omit<TacticalDirectorEvidenceR500, 'effectiveWeight'>
 ): TacticalDirectorEvidenceR500 {
   return {
@@ -44,7 +44,7 @@ export function collectDirectorEvidenceR500(input: TacticalDirectorInputR500): T
   const scenario = scenarioForInputR500(input);
 
   if (input.tacticalTwin && scenario) {
-    result.push(evidenceR500({
+    result.push(materializeEvidenceR500({
       id: `R480:scenario:${scenario.id}`,
       family: 'STRUCTURAL_TEAM',
       source: 'R480',
@@ -60,7 +60,7 @@ export function collectDirectorEvidenceR500(input: TacticalDirectorInputR500): T
 
   const rotation = input.squadBrain?.rotations[0] ?? null;
   if (input.squadBrain && rotation) {
-    result.push(evidenceR500({
+    result.push(materializeEvidenceR500({
       id: `R481:rotation:${rotation.reserveId}:${rotation.replaces}`,
       family: 'STRUCTURAL_TEAM',
       source: 'R481',
@@ -75,7 +75,7 @@ export function collectDirectorEvidenceR500(input: TacticalDirectorInputR500): T
   }
 
   if (input.chemistry) {
-    result.push(evidenceR500({
+    result.push(materializeEvidenceR500({
       id: 'R484:chemistry:team',
       family: 'STRUCTURAL_TEAM',
       source: 'R484',
@@ -91,7 +91,7 @@ export function collectDirectorEvidenceR500(input: TacticalDirectorInputR500): T
 
   if (input.matchVision && input.matchVision.evidence.confirmedMarkers > 0) {
     const recurring = input.matchVision.recurringPatterns[0];
-    result.push(evidenceR500({
+    result.push(materializeEvidenceR500({
       id: `R482:match:${recurring?.kind ?? 'confirmed'}`,
       family: 'MATCH_CONFIRMED',
       source: 'R482',
@@ -108,7 +108,7 @@ export function collectDirectorEvidenceR500(input: TacticalDirectorInputR500): T
   }
 
   if (input.buildSimulator && !input.buildSimulator.blockedReason && input.buildSimulator.variants.length > 1) {
-    result.push(evidenceR500({
+    result.push(materializeEvidenceR500({
       id: 'R483:build:alternatives',
       family: 'BUILD_ALTERNATIVE',
       source: 'R483',
@@ -168,13 +168,16 @@ export function directorConfidenceR500(
   const structural = evidence.filter((item) => item.family === 'STRUCTURAL_TEAM');
   const match = evidence.filter((item) => item.family === 'MATCH_CONFIRMED');
   const build = evidence.filter((item) => item.family === 'BUILD_ALTERNATIVE');
+  const proMeta = evidence.filter((item) => item.family === 'PRO_META');
   const structuralStrength = structural.length ? Math.max(...structural.map((item) => item.effectiveWeight)) : 0;
   const matchStrength = match.length ? Math.max(...match.map((item) => item.effectiveWeight)) : 0;
   const buildStrength = build.length ? Math.max(...build.map((item) => item.effectiveWeight)) : 0;
-  const conflictPenalty = conflicts.reduce((sum, item) => sum + item.penalty, 0);
+  const proMetaStrength = proMeta.length ? Math.max(...proMeta.map((item) => item.effectiveWeight)) : 0;
+  const conflictPenalty = conflicts.filter((item) => item.level !== 'BLOCKING').reduce((sum, item) => sum + item.penalty, 0);
 
-  let planConfidence = clamp100R500(structuralStrength * 35 + matchStrength * 30 + buildStrength * 5 + 10 - conflictPenalty);
+  let planConfidence = clamp100R500(structuralStrength * 35 + matchStrength * 30 + proMetaStrength * 20 + buildStrength * 5 + 10 - conflictPenalty);
   if (!match.length) planConfidence = Math.min(65, planConfidence);
+  if (!structural.length && !match.length && proMeta.length) planConfidence = Math.min(65, planConfidence);
 
   const evidenceConfidence = evidence.length
     ? clamp100R500((evidence.reduce((sum, item) => sum + item.effectiveWeight, 0) / evidence.length) * 100 - conflictPenalty)
