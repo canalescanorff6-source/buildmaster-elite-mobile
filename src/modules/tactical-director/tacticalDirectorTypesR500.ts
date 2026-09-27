@@ -71,6 +71,15 @@ export type TacticalDirectorEvidenceR500 = {
 export type ProMetaPlatformR500 = 'MOBILE' | 'CONSOLE' | 'UNKNOWN';
 export type ProMetaMatchFormatR500 = '1V1' | '2V2' | 'UNKNOWN';
 
+export type ProMetaContextR500 = {
+  platform: ProMetaPlatformR500;
+  gameVersion: string;
+  matchFormat: ProMetaMatchFormatR500;
+  rulesetFingerprint: string;
+  formation: string;
+  teamStyle: TacticalStyle;
+};
+
 export type ProMetaObservationR500 = {
   id: string;
   sourceUrl: string;
@@ -183,6 +192,7 @@ export type TacticalDirectorInputR500 = {
   chemistry?: ChemistryGraphSnapshotR484 | null;
   explanations?: ExplainableDecisionR489[];
   confirmedMatchRecords: MatchValidationRecord[];
+  proMetaContext?: ProMetaContextR500 | null;
   proMetaDataset?: ProMetaDatasetR500 | null;
   currentScenario?: TacticalDirectorScenarioR500;
   previousPlan?: TacticalDirectorPlanR500 | null;
