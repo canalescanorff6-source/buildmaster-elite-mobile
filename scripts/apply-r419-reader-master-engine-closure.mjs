@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R419_READER_MASTER_ENGINE_VERSION = '40.80-r419-reader-master-engine-closure-v2-r456';
+export const R419_READER_MASTER_ENGINE_VERSION = '40.80-r501-reader-master-engine-closure-v3';
 
 const FILES = {
   budget: 'src/modules/builds/pointBudget.ts',
@@ -10,6 +10,7 @@ const FILES = {
   domain: 'src/lib/analyzerDomain.ts',
   clean: 'src/lib/cleanSlatePerformance2027V4080R119.ts',
   helper: 'src/modules/analysis/cardEvidenceAuthorityR419.ts',
+  truth: 'src/modules/analysis/cardTruthLayerR501.ts',
   r192Closure: 'scripts/check-result-workspace-static-closure-r192.mjs',
 };
 
@@ -45,8 +46,9 @@ function replaceRegexOnce(source, pattern, replacement, label) {
 
 const helperSource = `import type { CardEvidenceStateR419, ParsedCard } from '../../lib/analyzerDomain';
 import { inferPointsFromCardLevel } from '../builds/pointBudget';
+import { confidenceAtLeastR501, deriveCriticalAttributeEvidenceR501 } from './cardTruthLayerR501';
 
-export const CARD_EVIDENCE_AUTHORITY_R419_VERSION = '40.80-r419-critical-evidence-v1' as const;
+export const CARD_EVIDENCE_AUTHORITY_R419_VERSION = '40.80-r501-critical-evidence-v2' as const;
 
 export type TrainingBudgetEvidenceR419 = {
   state: CardEvidenceStateR419;
@@ -77,7 +79,7 @@ export function deriveTrainingBudgetEvidenceR419(parsed: ParsedCard): TrainingBu
     return { state: 'TRUSTED', budget, source, reasons: ['PP confirmado por fonte explícita.'] };
   }
   if (source === 'OCR') {
-    const trusted = parsed.manualConfirmed || Number(parsed.confidence ?? 0) >= 0.78;
+    const trusted = parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 78);
     return { state: trusted ? 'TRUSTED' : 'UNCERTAIN', budget, source, reasons: [trusted ? 'OCR com confiança suficiente para PP.' : 'OCR de PP precisa de confirmação.'] };
   }
   if (source === 'LEVEL_INFERRED') {
@@ -85,7 +87,7 @@ export function deriveTrainingBudgetEvidenceR419(parsed: ParsedCard): TrainingBu
     if (inferred !== budget) {
       return { state: 'CONFLICTING', budget, source, reasons: ['PP inferido não coincide com o nível lido.'] };
     }
-    const trusted = parsed.manualConfirmed || Number(parsed.confidence ?? 0) >= 0.9;
+    const trusted = parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90);
     return { state: trusted ? 'TRUSTED' : 'UNCERTAIN', budget, source, reasons: [trusted ? 'Nível confiável confirma o PP inferido.' : 'Nível inferido ainda precisa de confirmação.'] };
   }
 
@@ -93,7 +95,7 @@ export function deriveTrainingBudgetEvidenceR419(parsed: ParsedCard): TrainingBu
     return { state: 'TRUSTED', budget, source, reasons: ['Carta confirmada manualmente com PP positivo.'] };
   }
   const inferred = inferPointsFromCardLevel(parsed.level);
-  if (inferred === budget && Number(parsed.confidence ?? 0) >= 0.92) {
+  if (inferred === budget && confidenceAtLeastR501(parsed.confidence, 92)) {
     return { state: 'TRUSTED', budget, source, reasons: ['PP e nível convergem com alta confiança.'] };
   }
   return { state: 'UNCERTAIN', budget, source, reasons: ['PP positivo sem proveniência suficiente para autorizar progressão.'] };
@@ -101,22 +103,18 @@ export function deriveTrainingBudgetEvidenceR419(parsed: ParsedCard): TrainingBu
 
 export function applyCriticalEvidenceR419(parsed: ParsedCard): ParsedCard {
   const budget = deriveTrainingBudgetEvidenceR419(parsed);
-  const evidenceAttributeCount = Number(parsed.evidence?.attributeCount ?? 0);
-  const actualAttributeCount = Object.values(parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length;
-  const attributeCount = Math.max(Number.isFinite(evidenceAttributeCount) ? evidenceAttributeCount : 0, actualAttributeCount);
+  const attributes = deriveCriticalAttributeEvidenceR501(parsed);
   const criticalState: CardEvidenceStateR419 = budget.state !== 'TRUSTED'
     ? budget.state
-    : attributeCount > 0
-      ? 'TRUSTED'
-      : 'MISSING';
+    : attributes.state;
   return {
     ...parsed,
     evidence: {
       ...parsed.evidence,
       criticalStateR419: criticalState,
-      criticalReasonsR419: [...budget.reasons, ...(attributeCount > 0 ? [] : ['Atributos críticos ausentes.'])],
+      criticalReasonsR419: [...budget.reasons, ...attributes.reasons],
       trainingBudgetStateR419: budget.state,
-      levelStateR419: parsed.level == null ? 'MISSING' : (parsed.manualConfirmed || Number(parsed.confidence ?? 0) >= 0.9 ? 'TRUSTED' : 'UNCERTAIN')
+      levelStateR419: parsed.level == null ? 'MISSING' : (parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90) ? 'TRUSTED' : 'UNCERTAIN')
     }
   };
 }
@@ -143,6 +141,8 @@ function patchBudget(source) {
 
 function patchOptimizer(source) {
   let next = source;
+  const truthImport = "import { confidenceAtLeastR501 } from '../analysis/cardTruthLayerR501';";
+  if (!next.includes(truthImport)) next = `${truthImport}\n${next}`;
   const start = next.indexOf('export function trainingBudgetFromCard(parsed: ParsedCard): number {');
   const endMarker = '\nexport function isGoalkeeperStyle';
   const end = start >= 0 ? next.indexOf(endMarker, start) : -1;
@@ -150,7 +150,7 @@ function patchOptimizer(source) {
     if (!next.includes('R419: orçamento ausente permanece 0')) throw new Error('R419: trainingBudgetFromCard não encontrado.');
   } else {
     if (end < 0) throw new Error('R419: fim de trainingBudgetFromCard não encontrado.');
-    const replacement = `export function trainingBudgetFromCard(parsed: ParsedCard): number {\n  // R419: trainingPointsTotal é a autoridade primária. Orçamento ausente nunca vira 64.\n  const total = normalizeTrainingBudget(parsed.trainingPointsTotal);\n  if (total > 0) return total;\n\n  const inferred = inferTrainingPointsFromLevel(parsed.level);\n  const inferredTrusted = parsed.trainingPointSource === 'LEVEL_INFERRED'\n    && (parsed.manualConfirmed || Number(parsed.confidence ?? 0) >= 0.9);\n  if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);\n\n  // R419: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate.\n  return 0;\n}\n`;
+    const replacement = `export function trainingBudgetFromCard(parsed: ParsedCard): number {\n  // R419/R501: trainingPointsTotal é a autoridade primária. Orçamento ausente nunca vira 64.\n  const total = normalizeTrainingBudget(parsed.trainingPointsTotal);\n  if (total > 0) return total;\n\n  const inferred = inferTrainingPointsFromLevel(parsed.level);\n  const inferredTrusted = parsed.trainingPointSource === 'LEVEL_INFERRED'\n    && (parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90));\n  if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);\n\n  // R419/R501: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate.\n  return 0;\n}\n`;
     next = next.slice(0, start) + replacement + next.slice(end);
   }
   next = next.replace(/export function normalizeTrainingBudget\(value: number \| null \| undefined\): number \{\n\s*return normalizePlayerTrainingBudget\(value\);\n\}/,
@@ -234,6 +234,11 @@ export function applyR419ReaderMasterEngineClosure(rootDirectory = process.cwd()
   const cleanNext = patchClean(clean.source);
   changed = writeIfChanged(clean.file, clean.source, cleanNext, patched, FILES.clean) || changed;
 
+  const truth = readRequired(root, FILES.truth);
+  if (!truth.source.includes('CARD_TRUTH_LAYER_R501_VERSION') || !truth.source.includes('normalizeConfidenceR501')) {
+    throw new Error('R501: autoridade central de confiança/cobertura ausente ou incompleta.');
+  }
+
   const helperPath = path.resolve(root, FILES.helper);
   if (!fs.existsSync(helperPath) || fs.readFileSync(helperPath, 'utf8') !== helperSource) {
     fs.mkdirSync(path.dirname(helperPath), { recursive: true });
@@ -254,18 +259,19 @@ export function applyR419ReaderMasterEngineClosure(rootDirectory = process.cwd()
   const finalR192 = fs.readFileSync(r192.file, 'utf8');
   if (/return\s+SAFE_PLAYER_TRAINING_BUDGET\s*;/.test(finalBudget)) throw new Error('R419: pointBudget ainda fabrica fallback.');
   if (/return\s+SAFE_DEFAULT_TRAINING_BUDGET\s*;/.test(finalOptimizer)) throw new Error('R419: optimizer ainda fabrica fallback.');
+  if (!finalOptimizer.includes('confidenceAtLeastR501(parsed.confidence, 90)')) throw new Error('R501: optimizer ainda interpreta confiança fora da escala canônica.');
   if (!finalDomain.includes('trainingBudgetStateR419?: CardEvidenceStateR419;')) throw new Error('R419: estado de evidência não entrou no domínio.');
   if (!finalClean.includes("budgetEvidenceStateR419!=='TRUSTED'")) throw new Error('R419: Clean Slate não bloqueia PP não confiável.');
   if (!/ignoresOverall:true/.test(finalClean)) throw new Error('R419: guard Overall/GER ausente.');
   if (!finalR192.includes('const MAX_MODULES_R192 = 129;')) throw new Error('R419/R456: R192 não contabiliza a closure atual com scouting contextual.');
 
-  return { changed, patched, version: R419_READER_MASTER_ENGINE_VERSION, fabricatedBudgetFallback: false, failClosedEvidence: true, r192ClosureModules: 129 };
+  return { changed, patched, version: R419_READER_MASTER_ENGINE_VERSION, fabricatedBudgetFallback: false, failClosedEvidence: true, canonicalConfidenceR501: true, r192ClosureModules: 129 };
 }
 
 const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
 if (invoked === import.meta.url) {
   const result = applyR419ReaderMasterEngineClosure(process.cwd());
   console.log(result.changed
-    ? `R419: leitor/motor convergidos em ${result.patched.length} arquivo(s).`
-    : 'R419: leitor/motor já estavam convergidos.');
+    ? `R419/R501: leitor/motor convergidos em ${result.patched.length} arquivo(s).`
+    : 'R419/R501: leitor/motor já estavam convergidos.');
 }
