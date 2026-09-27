@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R502_STRUCTURAL_CARD_TRUTH_CERTIFICATION_VERSION = '40.80-r502-structural-card-truth-certification-v1';
+export const R502_STRUCTURAL_CARD_TRUTH_CERTIFICATION_VERSION = '40.80-r502-structural-card-truth-certification-v2-r504';
 
 const CLEAN_SLATE_FILE = 'src/lib/cleanSlatePerformance2027V4080R119.ts';
 
@@ -56,8 +56,10 @@ export function applyR502StructuralCardTruthCertification(rootDirectory = proces
   if (!next.includes(truthImport)) throw new Error('R502: import da autoridade R501 não foi materializado.');
   if (!next.includes('cardTruthCertificationR501: CardTruthCertificationR501;')) throw new Error('R502: tipo estrutural ausente.');
   if (!next.includes('const cardTruthCertificationR501=deriveCardTruthCertificationR501(parsed);')) throw new Error('R502: derivação estrutural ausente.');
-  const objectBindings = (next.match(/\n\s*cardTruthCertificationR501,\n\s*cardKey:/g) ?? []).length;
-  if (objectBindings !== 2) throw new Error(`R502: esperado vínculo estrutural nos dois resultados Clean Slate; encontrados=${objectBindings}.`);
+  // R504 pode inserir sua autoridade pós-build entre a certificação e cardKey.
+  // A certificação R502 continua obrigatória exatamente uma vez em cada um dos dois resultados.
+  const objectBindings = (next.match(/\n\s*cardTruthCertificationR501,\n(?:\s*projectedPlayerStateR504,\n)?\s*cardKey:/g) ?? []).length;
+  if (objectBindings !== 2) throw new Error(`R502/R504: esperado vínculo estrutural nos dois resultados Clean Slate; encontrados=${objectBindings}.`);
   if (!next.includes("status: 'READY' | 'BLOCKED_INSUFFICIENT_DATA';")) throw new Error('R502: status legado READY/BLOCKED foi alterado indevidamente.');
 
   const changed = next !== source;
@@ -68,6 +70,7 @@ export function applyR502StructuralCardTruthCertification(rootDirectory = proces
     version: R502_STRUCTURAL_CARD_TRUTH_CERTIFICATION_VERSION,
     structuralCertification: true,
     legacyStatusPreserved: true,
+    r504SuccessorAware: true,
   };
 }
 

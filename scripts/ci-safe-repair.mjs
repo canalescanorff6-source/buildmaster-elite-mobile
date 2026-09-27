@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { applyTotalReaderFinalizationR501 } from './apply-r501-total-reader-finalization.mjs';
 import { applyR502StructuralCardTruthCertification } from './apply-r502-structural-card-truth-certification.mjs';
 import { applyR503SingleReaderFinalization } from './apply-r503-single-reader-finalization.mjs';
+import { applyR504ProjectedPlayerState } from './apply-r504-projected-player-state.mjs';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const repairs = [
@@ -58,6 +59,20 @@ if (!failed) {
   } catch (error) {
     failed = true;
     console.error('Falha no reparo determinístico: Card Truth R503 — confirmação unitária');
+    console.error(error);
+  }
+}
+
+if (!failed) {
+  console.log('\n[CI SAFE REPAIR] Projected Player State R504 — estado pós-build');
+  try {
+    const result = applyR504ProjectedPlayerState(process.cwd());
+    console.log(result.changed
+      ? `R504 materializou o estado pós-build em ${result.patched.length} arquivo(s).`
+      : 'R504 Projected Player State já estava convergido.');
+  } catch (error) {
+    failed = true;
+    console.error('Falha no reparo determinístico: Projected Player State R504 — estado pós-build');
     console.error(error);
   }
 }

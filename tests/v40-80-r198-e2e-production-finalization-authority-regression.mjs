@@ -45,7 +45,7 @@ while (stack.length) {
 }
 assert.deepEqual(new Set(createCallers), approvedCreateCallers, `R198: novos criadores diretos de análise detectados: ${createCallers.join(', ')}`);
 
-// O leitor único e o Leitor Total R501 usam promoção explícita; leitura total incompleta permanece prévia.
+// O leitor único deve continuar em prévia antes da confirmação; o leitor total só finaliza com certificação R501.
 assert.match(readerRuntime, /setDraftResult\(autoResult\);[\s\S]{0,80}setResult\(null\);/, 'R198: OCR único deve continuar gerando prévia antes da confirmação final.');
 assert.match(readerRuntime, /deriveTotalReadingFinalizationR501\(session\)[\s\S]{0,180}totalFinalization\.canFinalize[\s\S]{0,360}setDraftResult\(null\);\s*setResult\(autoResult\);/, 'R198/R501: Leitura Total só pode promover automaticamente quando a autoridade R501 liberar.');
 assert.match(readerRuntime, /setDraftResult\(autoResult\);\s*setResult\(null\);/, 'R198/R501: Leitura Total não certificada deve permanecer prévia.');
@@ -57,7 +57,7 @@ assert.ok((vaultLifecycle.match(/ensureProductionAnalysisR138\(input\.result\)/g
 assert.match(historyStore, /createProductionAnalysisR138\(\{ rawText: source/, 'R198: migração histórica deve entrar pelo orquestrador de produção.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '6aba2f9e70c37a8de804fcfb59f1cea7451bb36b6a59ebe931ef4d969947b78d', 'R198: R119 não pode mudar durante auditoria E2E.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'ea78e063fb1a8650d413711eb7e28f1d617ab5b4a04e6502c0deadcfc701ba6f', 'R198/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.');
 
 const appBytes = fs.statSync('src/components/CardVisionApp.tsx').size;
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
@@ -79,4 +79,4 @@ const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
 assert.ok(v4080.endsWith('npm run test:r197 && npm run test:r198') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199 && npm run test:r200'), 'R198: cadeia v40.80 deve preservar R197 -> R198 antes do gate seguinte.');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4080'), 'R198: test:all deve continuar fechando pela bateria v40.80.');
 
-console.log(`R198 aprovada: OCR→análise→prévia/final→Cofre usa autoridades explícitas; CardVisionApp=${appBytes} B; src=${sourceBytes} B; R119 intacto.`);
+console.log(`R198/R504 aprovada: OCR→análise→prévia/final→Cofre usa autoridades explícitas; CardVisionApp=${appBytes} B; src=${sourceBytes} B; R119 pós-build intacto.`);

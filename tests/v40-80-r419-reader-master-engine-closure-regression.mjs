@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { convergeR192ModuleBudgetR419 } from '../scripts/apply-r419-reader-master-engine-closure.mjs';
 import { applyR503SingleReaderFinalization } from '../scripts/apply-r503-single-reader-finalization.mjs';
+import { applyR504ProjectedPlayerState } from '../scripts/apply-r504-projected-player-state.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 const budget = read('src/modules/builds/pointBudget.ts');
@@ -91,6 +92,8 @@ assert.throws(
 
 const r503 = applyR503SingleReaderFinalization(process.cwd());
 if (r503.changed) console.log(`R503 materializou o gate do leitor unitário em ${r503.patched.length} arquivo(s).`);
+const r504 = applyR504ProjectedPlayerState(process.cwd());
+if (r504.changed) console.log(`R504 materializou o estado pós-build em ${r504.patched.length} arquivo(s).`);
 
 for (const regression of [
   'tests/v40-80-r501-card-truth-layer-regression.ts',
@@ -98,8 +101,9 @@ for (const regression of [
   'tests/v40-80-r501-total-reader-finalization-regression.ts',
   'tests/v40-80-r502-structural-card-truth-certification-regression.ts',
   'tests/v40-80-r503-single-reader-certification-gate-regression.ts',
+  'tests/v40-80-r504-projected-player-state-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores Total e unitário fail-closed, certificação estrutural e teto R192 preservado.');
+console.log('R419/R501/R502/R503/R504/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado e teto R192 preservado.');

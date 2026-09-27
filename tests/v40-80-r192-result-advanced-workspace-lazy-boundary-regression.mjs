@@ -63,10 +63,10 @@ for (const forbidden of ['createProductionAnalysisR138', 'runCanonicalVaultMutat
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '6aba2f9e70c37a8de804fcfb59f1cea7451bb36b6a59ebe931ef4d969947b78d',
-  'R192: R119 não pode mudar durante modularização do Resultado.',
+  'ea78e063fb1a8650d413711eb7e28f1d617ab5b4a04e6502c0deadcfc701ba6f',
+  'R192/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.',
 );
 assert.match(String(pkg.scripts?.['test:v4080'] ?? ''), /npm run test:r192(?: && npm run test:r193)?(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/, 'R192: cadeia v40.80 deve preservar R192 antes do gate seguinte.');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4080'), 'R192: test:all deve continuar fechando pela bateria v40.80.');
 
-console.log(`R192 aprovada: ResultWorkspace=${workspaceLines} linhas/${workspaceBytes} B; avançado=${advancedBytes} B lazy e R119 intacto.`);
+console.log(`R192/R504 aprovada: ResultWorkspace=${workspaceLines} linhas/${workspaceBytes} B; avançado=${advancedBytes} B lazy e R119 pós-build intacto.`);
