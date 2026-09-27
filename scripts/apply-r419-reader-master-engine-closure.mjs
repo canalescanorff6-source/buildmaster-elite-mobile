@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R419_READER_MASTER_ENGINE_VERSION = '40.80-r501-reader-master-engine-closure-v3';
+export const R419_READER_MASTER_ENGINE_VERSION = '40.80-r501-reader-master-engine-closure-v4';
 
 const FILES = {
   budget: 'src/modules/builds/pointBudget.ts',
@@ -150,7 +150,7 @@ function patchOptimizer(source) {
     if (!next.includes('R419: orçamento ausente permanece 0')) throw new Error('R419: trainingBudgetFromCard não encontrado.');
   } else {
     if (end < 0) throw new Error('R419: fim de trainingBudgetFromCard não encontrado.');
-    const replacement = `export function trainingBudgetFromCard(parsed: ParsedCard): number {\n  // R419/R501: trainingPointsTotal é a autoridade primária. Orçamento ausente nunca vira 64.\n  const total = normalizeTrainingBudget(parsed.trainingPointsTotal);\n  if (total > 0) return total;\n\n  const inferred = inferTrainingPointsFromLevel(parsed.level);\n  const inferredTrusted = parsed.trainingPointSource === 'LEVEL_INFERRED'\n    && (parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90));\n  if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);\n\n  // R419/R501: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate.\n  return 0;\n}\n`;
+    const replacement = `export function trainingBudgetFromCard(parsed: ParsedCard): number {\n  // R419: trainingPointsTotal é a autoridade primária. R501 normaliza confiança; orçamento ausente nunca vira 64.\n  const total = normalizeTrainingBudget(parsed.trainingPointsTotal);\n  if (total > 0) return total;\n\n  const inferred = inferTrainingPointsFromLevel(parsed.level);\n  const inferredTrusted = parsed.trainingPointSource === 'LEVEL_INFERRED'\n    && (parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90));\n  if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);\n\n  // R419: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate; R501 usa confiança canônica.\n  return 0;\n}\n`;
     next = next.slice(0, start) + replacement + next.slice(end);
   }
   next = next.replace(/export function normalizeTrainingBudget\(value: number \| null \| undefined\): number \{\n\s*return normalizePlayerTrainingBudget\(value\);\n\}/,
@@ -260,6 +260,7 @@ export function applyR419ReaderMasterEngineClosure(rootDirectory = process.cwd()
   if (/return\s+SAFE_PLAYER_TRAINING_BUDGET\s*;/.test(finalBudget)) throw new Error('R419: pointBudget ainda fabrica fallback.');
   if (/return\s+SAFE_DEFAULT_TRAINING_BUDGET\s*;/.test(finalOptimizer)) throw new Error('R419: optimizer ainda fabrica fallback.');
   if (!finalOptimizer.includes('confidenceAtLeastR501(parsed.confidence, 90)')) throw new Error('R501: optimizer ainda interpreta confiança fora da escala canônica.');
+  if (!finalOptimizer.includes('R419: orçamento ausente permanece 0')) throw new Error('R419: marcador histórico do gate fail-closed ausente do optimizer.');
   if (!finalDomain.includes('trainingBudgetStateR419?: CardEvidenceStateR419;')) throw new Error('R419: estado de evidência não entrou no domínio.');
   if (!finalClean.includes("budgetEvidenceStateR419!=='TRUSTED'")) throw new Error('R419: Clean Slate não bloqueia PP não confiável.');
   if (!/ignoresOverall:true/.test(finalClean)) throw new Error('R419: guard Overall/GER ausente.');
