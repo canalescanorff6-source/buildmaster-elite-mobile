@@ -194,6 +194,7 @@ export type TacticalDirectorInputR500 = {
   confirmedMatchRecords: MatchValidationRecord[];
   proMetaContext?: ProMetaContextR500 | null;
   proMetaDataset?: ProMetaDatasetR500 | null;
+  phase?: TacticalDirectorPhaseR500;
   currentScenario?: TacticalDirectorScenarioR500;
   previousPlan?: TacticalDirectorPlanR500 | null;
 };
