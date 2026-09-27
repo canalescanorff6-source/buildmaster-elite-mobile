@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION = '40.80-r500-source-budget-convergence-v9';
+export const R443_SOURCE_BUDGET_VERSION = '40.80-r500-source-budget-convergence-v10';
 export const R443_GLOBAL_SOURCE_BUDGET_BYTES = 5.75 * 1024 * 1024;
 export const R443_SOURCE_RESERVE_BYTES = 65_536;
 export const R443_SOURCE_CHECKPOINT_BYTES = R443_GLOBAL_SOURCE_BUDGET_BYTES - R443_SOURCE_RESERVE_BYTES;
@@ -12,6 +12,12 @@ const TARGETS = Object.freeze({
   r184: 'tests/v40-80-r184-production-legacy-isolation-regression.mjs',
   r193: 'tests/v40-80-r193-analyzer-dedup-budget-regression.mjs',
   r194: 'tests/v40-80-r194-cardvision-contract-dedup-regression.mjs',
+  r195: 'tests/v40-80-r195-controller-prop-hotpath-regression.mjs',
+  r196: 'tests/v40-80-r196-analyzer-compiled-scoring-regression.mjs',
+  r197: 'tests/v40-80-r197-training-budget-hotpath-regression.ts',
+  r198: 'tests/v40-80-r198-e2e-production-finalization-authority-regression.mjs',
+  r199: 'tests/v40-80-r199-persistence-session-cache-audit-regression.mjs',
+  r200: 'tests/v40-80-r200-mobile-startup-runtime-boundary-regression.mjs',
   r414: 'scripts/apply-r414-ci-contract-convergence.mjs',
   r424Audit: 'scripts/audit-r424-final-requirements-closure.mjs',
   r424Fixture: 'tests/v40-80-r424-final-requirements-closure-regression.mjs',
@@ -42,13 +48,7 @@ function patchR184(source) {
   ]);
 }
 
-function patchR193(source) {
-  return replaceKnown(source, [
-    ['5_832_704', '5_963_776'],
-  ]);
-}
-
-function patchR194(source) {
+function patchLegacyCheckpoint(source) {
   return replaceKnown(source, [
     ['5_832_704', '5_963_776'],
   ]);
@@ -121,8 +121,14 @@ function patchR424Fixture(source) {
 const PATCHERS = Object.freeze({
   bundle: patchBundle,
   r184: patchR184,
-  r193: patchR193,
-  r194: patchR194,
+  r193: patchLegacyCheckpoint,
+  r194: patchLegacyCheckpoint,
+  r195: patchLegacyCheckpoint,
+  r196: patchLegacyCheckpoint,
+  r197: patchLegacyCheckpoint,
+  r198: patchLegacyCheckpoint,
+  r199: patchLegacyCheckpoint,
+  r200: patchLegacyCheckpoint,
   r414: patchR414,
   r424Audit: patchR424Audit,
   r424Fixture: patchR424Fixture,
@@ -144,16 +150,17 @@ export function applySourceBudgetConvergenceR443(rootDirectory = process.cwd()) 
 
   const bundle = fs.readFileSync(path.resolve(root, TARGETS.bundle), 'utf8');
   const r184 = fs.readFileSync(path.resolve(root, TARGETS.r184), 'utf8');
-  const r193 = fs.readFileSync(path.resolve(root, TARGETS.r193), 'utf8');
-  const r194 = fs.readFileSync(path.resolve(root, TARGETS.r194), 'utf8');
+  const legacyCheckpointSources = ['r193', 'r194', 'r195', 'r196', 'r197', 'r198', 'r199', 'r200']
+    .map((key) => [key, fs.readFileSync(path.resolve(root, TARGETS[key]), 'utf8')]);
   const r414 = fs.readFileSync(path.resolve(root, TARGETS.r414), 'utf8');
   const r424Audit = fs.readFileSync(path.resolve(root, TARGETS.r424Audit), 'utf8');
   const r424Fixture = fs.readFileSync(path.resolve(root, TARGETS.r424Fixture), 'utf8');
   const issues = [];
   if (!bundle.includes('sourceTs: 5.75 * 1024 * 1024')) issues.push('bundle ainda usa teto antigo');
   if (!r184.includes('const sourceLimit=5.75*1024*1024;')) issues.push('R184 ainda usa teto antigo');
-  if (!r193.includes('5_963_776') || r193.includes('5_832_704')) issues.push('R193 ainda usa checkpoint antigo');
-  if (!r194.includes('5_963_776') || r194.includes('5_832_704')) issues.push('R194 ainda usa checkpoint antigo');
+  for (const [key, source] of legacyCheckpointSources) {
+    if (!source.includes('5_963_776') || source.includes('5_832_704')) issues.push(`${key.toUpperCase()} ainda usa checkpoint antigo`);
+  }
   if (!r414.includes('R414_SOURCE_BUDGET_BYTES = 5_963_776') || !r414.includes('sourceTs: 5.75 * 1024 * 1024')) issues.push('R414 ainda diverge');
   const r424HasGlobalBudget = r424Audit.includes('5.75 * 1024 * 1024') || r424Audit.includes('5\\.75\\s*\\*\\s*1024');
   if (!r424Audit.includes('5_963_776') || !r424HasGlobalBudget) issues.push('R424 audit ainda diverge');
