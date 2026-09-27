@@ -159,6 +159,7 @@ export type TacticalDirectorInputR500 = {
   officialDecisionFingerprint: string;
   formation: string;
   teamStyle: TacticalStyle;
+  phase?: TacticalDirectorPhaseR500;
   tacticalTwin?: TacticalTwinSnapshotR480 | null;
   squadBrain?: SquadBrainSnapshotR481 | null;
   matchVision?: MatchVisionSnapshotR482 | null;
