@@ -30,6 +30,7 @@ import {
 import { loadReaderRuntimeR160 } from '@/modules/card-reader/readerRuntimeR160';
 import { loadReaderEvidenceRuntimeR161 } from '@/modules/card-reader/readerEvidenceRuntimeR161';
 import { readPositionProficiencyGridR416 } from './positionProficiencyVisionR416';
+import { deriveTotalReadingFinalizationR501 } from './totalReaderFinalizationR501';
 
 export const READER_ANALYSIS_RUNTIME_R163_VERSION = '40.80-r163-reader-analysis-runtime-v1' as const;
 
@@ -655,14 +656,17 @@ ${reading.text}`)) : fullPassText;
       setRawText(lockedText);
       const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, usageFunction, imageFileName: `leitura-total-${overview.file.name}`, tacticalProfile });
       await hydrateReviewFields(autoResult, null);
-      setDraftResult(null); setResult(autoResult);
-      const totalWarning = session.mismatchRisk === 'block'
-        ? ' Há divergência entre os prints; o app não inventou os campos conflitantes.'
-        : session.missingCriticalScreens.length
-          ? ` Campos ausentes foram mantidos nulos: ${session.missingCriticalScreens.join(', ')}.`
-          : '';
-      setStatus(`Leitura Total concluída e ficha de Desempenho Máximo gerada automaticamente.${totalWarning}`);
-      reportTotalProgress(100, 'Ficha gerada', 'Todos os prints foram processados sem etapa obrigatória de confirmação.', captures.length, captures.length);
+      const totalFinalization = deriveTotalReadingFinalizationR501(session);
+      if (totalFinalization.canFinalize) {
+        setDraftResult(null); setResult(autoResult);
+        setStatus('Leitura Total concluída e ficha de Desempenho Máximo certificada automaticamente.');
+        reportTotalProgress(100, 'Ficha certificada', 'Todos os prints e campos críticos atenderam ao contrato R501.', captures.length, captures.length);
+      } else {
+        setDraftResult(autoResult); setResult(null);
+        const reason = totalFinalization.reasons.join(' ');
+        setStatus(`Leitura Total concluída como prévia. Revise os campos antes da ficha final. ${reason}`);
+        reportTotalProgress(100, 'Revisão necessária', 'A análise foi preservada como prévia; dados incertos não foram promovidos como finais.', captures.length, captures.length);
+      }
       openMainSection('resultado');
     } catch (error) {
       setReaderProgress(null);

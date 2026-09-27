@@ -45,9 +45,10 @@ while (stack.length) {
 }
 assert.deepEqual(new Set(createCallers), approvedCreateCallers, `R198: novos criadores diretos de análise detectados: ${createCallers.join(', ')}`);
 
-// O leitor único deve continuar em prévia antes da confirmação; o leitor total mantém seu contrato explícito.
+// O leitor único e o Leitor Total R501 usam promoção explícita; leitura total incompleta permanece prévia.
 assert.match(readerRuntime, /setDraftResult\(autoResult\);[\s\S]{0,80}setResult\(null\);/, 'R198: OCR único deve continuar gerando prévia antes da confirmação final.');
-assert.match(readerRuntime, /setDraftResult\(null\);\s*setResult\(autoResult\);/, 'R198: Leitura Total deve manter contrato explícito de finalização automática.');
+assert.match(readerRuntime, /deriveTotalReadingFinalizationR501\(session\)[\s\S]{0,180}totalFinalization\.canFinalize[\s\S]{0,360}setDraftResult\(null\);\s*setResult\(autoResult\);/, 'R198/R501: Leitura Total só pode promover automaticamente quando a autoridade R501 liberar.');
+assert.match(readerRuntime, /setDraftResult\(autoResult\);\s*setResult\(null\);/, 'R198/R501: Leitura Total não certificada deve permanecer prévia.');
 assert.match(readerActions, /if \(confirmed\)[\s\S]*?setDraftResult\(null\);\s*setResult\(nextResult\);/, 'R198: confirmação deve continuar sendo o ponto de promoção da prévia para resultado no fluxo unitário.');
 
 // Persistência deve normalizar/selar a análise antes de entrar no Cofre.
