@@ -3,6 +3,11 @@ import {
   buildPlanFingerprintR500,
   validateContextCoherenceR500
 } from './tacticalDirectorFingerprintR500';
+import { PRO_META_DATASET_R500 } from './proMetaDatasetR500';
+import {
+  proMetaDatasetDigestR500,
+  selectApplicableProMetaR500
+} from './tacticalDirectorProMetaR500';
 import type {
   TacticalDirectorAuthorityR500,
   TacticalDirectorInputR500,
@@ -41,6 +46,10 @@ function sourceVersionsR500(input: TacticalDirectorInputR500): string[] {
   return versions;
 }
 
+function uniqueStringsR500(items: string[]) {
+  return Array.from(new Set(items.map((item) => String(item ?? '').trim()).filter(Boolean)));
+}
+
 export function buildAutonomousTacticalDirectorR500(
   input: TacticalDirectorInputR500
 ): TacticalDirectorPlanR500 {
@@ -48,15 +57,28 @@ export function buildAutonomousTacticalDirectorR500(
   const contextFingerprint = buildContextFingerprintR500(input);
   const contextIssues = validateContextCoherenceR500(input);
   const blockingIssues = contextIssues.filter((issue) => issue.level === 'BLOCKING');
+  const proMetaDataset = input.proMetaDataset ?? PRO_META_DATASET_R500;
+  const proMetaDigest = proMetaDatasetDigestR500(proMetaDataset);
+  const applicableProMeta = input.proMetaContext
+    ? selectApplicableProMetaR500(proMetaDataset, input.proMetaContext)
+    : [];
   const planFingerprint = buildPlanFingerprintR500({
     contextFingerprint,
     scenario,
     sourceVersions: sourceVersionsR500(input),
     evidenceFingerprints: (input.explanations ?? []).map((item) => item.fingerprint).filter(Boolean),
-    proMetaDigest: null,
+    proMetaDigest,
     previousPlanFingerprint: input.previousPlan?.planFingerprint ?? null
   });
   const blocked = blockingIssues.length > 0;
+  const proMetaPatterns = uniqueStringsR500(
+    applicableProMeta.flatMap((item) => item.observation.tacticalTags)
+  ).slice(0, 5);
+  const proMetaLimitations = input.proMetaContext
+    ? applicableProMeta.length
+      ? []
+      : ['Nenhuma observação Pro Meta curada é aplicável ao contexto atual.']
+    : ['Contexto competitivo Pro Meta não informado; nenhuma equivalência externa foi presumida.'];
 
   return {
     version: TACTICAL_DIRECTOR_R500_VERSION,
@@ -88,12 +110,12 @@ export function buildAutonomousTacticalDirectorR500(
     },
     evidence: [],
     proMeta: {
-      datasetVersion: null,
-      datasetDigest: null,
-      applicableObservations: 0,
-      strongestCompatibility: 0,
-      patterns: [],
-      limitations: []
+      datasetVersion: proMetaDataset.version,
+      datasetDigest: proMetaDigest,
+      applicableObservations: applicableProMeta.length,
+      strongestCompatibility: applicableProMeta[0]?.compatibility.finalCompatibility ?? 0,
+      patterns: proMetaPatterns,
+      limitations: proMetaLimitations
     },
     memory: {
       state: 'SEM_EVIDENCIA',
@@ -114,7 +136,7 @@ export function buildAutonomousTacticalDirectorR500(
     guardrails: [
       'R119 → R126 → R128 permanece a autoridade final.',
       'R500 recomenda e nunca aplica mudanças automaticamente.',
-      'Incompatibilidade de contexto bloqueia a fonte afetada em vez de ser corrigida por inferência.'
+      'Pro Meta só participa quando plataforma, patch, formato e ruleset têm compatibilidade explícita.'
     ]
   };
 }
