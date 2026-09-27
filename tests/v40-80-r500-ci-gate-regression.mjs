@@ -35,6 +35,6 @@ assert.match(redispatch, /workflow_run\.conclusion\s*==\s*'failure'/, 'redisparo
 assert.match(redispatch, /workflow_run\.head_branch\s*==\s*'main'/, 'redisparo deve ser limitado à main.');
 assert.match(redispatch, /PARENT_SHA[\s\S]*FAILED_HEAD_SHA/, 'redisparo precisa provar que o novo main é filho direto do SHA que falhou.');
 assert.match(redispatch, /chore\(ci\): autoestabiliza fonte pela Regra Zero-Red/, 'redisparo precisa exigir a mensagem canônica do auto-commit Zero-Red.');
-assert.match(redispatch, /gh workflow run build-apk\.yml --ref main/, 'redisparo precisa iniciar o workflow oficial no main estabilizado.');
+assert.match(redispatch, /gh workflow run build-apk\.yml --ref main --repo "\$REPOSITORY"/, 'redisparo isolado precisa informar o repositório explicitamente porque esse job não possui checkout/.git.');
 
-console.log('R500 gate aprovado: PR/main compartilham o contrato e o Zero-Red possui redisparo isolado e seguro.');
+console.log('R500 gate aprovado: PR/main compartilham o contrato e o Zero-Red possui redisparo isolado, seguro e com repositório explícito.');

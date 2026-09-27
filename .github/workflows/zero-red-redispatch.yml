@@ -48,5 +48,5 @@ jobs:
           fi
 
           echo "Autoestabilização confirmada: $FAILED_HEAD_SHA -> $MAIN_SHA"
-          gh workflow run build-apk.yml --ref main
+          gh workflow run build-apk.yml --ref main --repo "$REPOSITORY"
           echo "APK redisparado para validar a main estabilizada em $MAIN_SHA."
