@@ -17,6 +17,7 @@ import {
 } from './trainingPlanCore';
 import { optimizeFinalAdditionalSkillSetR457, type FinalAdditionalSkillSetR457 } from './finalAdditionalSkillSetR457';
 import { evaluateFinalImpetoDecisionR457, type FinalImpetoDecisionR457 } from './finalImpetoDecisionR457';
+import { projectFinalRecommendationsR507 } from './finalRecommendationAuthorityR507';
 import { buildCanonicalDnaR457, type CanonicalDnaR457 } from './canonicalDnaR457';
 import { buildScoutingDecisionEvidenceR457, type ScoutingDecisionEvidenceR457 } from './scoutingDecisionEvidenceR457';
 import { OFFICIAL_ADDITIONAL_SKILL_NAMES } from '../modules/analysis/analyzerCatalog';
@@ -1909,7 +1910,8 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     const top5=recommendTop5(parsed,actions,usageContext.targetPosition);
     const blockedFinalSkillSetR457=optimizeFinalAdditionalSkillSetR457(parsed,actions,usageContext.targetPosition);
     const blockedFinalImpetoR457=evaluateFinalImpetoDecisionR457(parsed,actions,usageContext.targetPosition,projectedPlayerStateR504.finalAttributes);
-    const skillIntegrity=skillIntegrityR119(input,parsed,top5,usageContext.targetPosition);
+    const blockedPublicRecommendationsR507=projectFinalRecommendationsR507(blockedFinalSkillSetR457,blockedFinalImpetoR457,{actionable:false});
+    const skillIntegrity=skillIntegrityR119(input,parsed,blockedPublicRecommendationsR507.skills,usageContext.targetPosition);
     const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
     const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
     const dna=dominantDna(actions);
@@ -1951,19 +1953,19 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       saturationProfile:blockedSaturation,
       competitiveLab:blockedLab,
       onlinePerformance:{objective:'MAX_ONLINE_PERFORMANCE',rankedScore:0,friendsScore:0,pressureReliability:0,matchConsistency:0,staminaSustainability:0,identityPreservation:0,pointEfficiency:0,notes:['Leitura insuficiente para medir desempenho online com segurança.']},
-      pointRationale:[],canonicalDnaR457:blockedCanonicalDnaR457,dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,
-      currentImpeto:parsed.impetos?.[0]?.name??null,
-      impetoDecision:parsed.impetos?.length?'KEEP_CURRENT':'NO_SAFE_IMPETO',
-      recommendedImpeto:null,
-      impetoIdeal:parsed.impetos?.[0]?.name??null,
-      impetoIdealScore:parsed.impetos?.length?100:0,
-      impetoIdealConfidence:parsed.impetos?.length?round1(confidence):0,
-      impetoReason:parsed.impetos?.length?`Ímpeto atual ${parsed.impetos?.[0]?.name} preservado.`:'A leitura ainda não tem atributos suficientes para classificar um Ímpeto ideal com segurança.',
-      impetoSlotStatus:String(parsed.evidence?.impetoSlotStatus??'DESCONHECIDO'),
+      pointRationale:[],canonicalDnaR457:blockedCanonicalDnaR457,dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5:blockedPublicRecommendationsR507.skills,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,
+      currentImpeto:blockedPublicRecommendationsR507.impeto.current,
+      impetoDecision:blockedPublicRecommendationsR507.impeto.decision,
+      recommendedImpeto:blockedPublicRecommendationsR507.impeto.recommendedImpeto,
+      impetoIdeal:blockedPublicRecommendationsR507.impeto.ideal,
+      impetoIdealScore:blockedPublicRecommendationsR507.impeto.idealScore,
+      impetoIdealConfidence:blockedPublicRecommendationsR507.impeto.idealConfidence,
+      impetoReason:blockedPublicRecommendationsR507.impeto.reason,
+      impetoSlotStatus:blockedPublicRecommendationsR507.impeto.slotStatus,
       guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
       reasons:[`Leitura insuficiente para gerar a ficha: atributos utilizáveis ${attributeCount}/${minimum}; orçamento ${budget || 0}. Nenhuma ficha antiga ou genérica foi usada como fallback.`,playstyleContext.note,'Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']
     };
-    return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:top5,recommendedImpetos:[],skillIntegrity,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
+    return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:blockedPublicRecommendationsR507.skills,recommendedImpetos:blockedPublicRecommendationsR507.impeto.recommendations,skillIntegrity,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
   let optimized=optimizeTraining(input,parsed,budget,functionalUsageContext);
   let recommendationContext=functionalUsageContext;
@@ -2006,8 +2008,9 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const top5=recommendTop5(parsed,recommendationActions,recommendationContext.targetPosition);
   const finalAdditionalSkillSetR457=optimizeFinalAdditionalSkillSetR457(parsed,recommendationActions,recommendationContext.targetPosition);
   const finalImpetoDecisionR457=evaluateFinalImpetoDecisionR457(parsed,recommendationActions,recommendationContext.targetPosition,projectedPlayerStateR504.finalAttributes);
+  const publicRecommendationsR507=projectFinalRecommendationsR507(finalAdditionalSkillSetR457,finalImpetoDecisionR457);
   const impeto=recommendImpetosR119(parsed,recommendationActions,recommendationContext.targetPosition,projectedPlayerStateR504.finalAttributes);
-  const skillIntegrity=skillIntegrityR119(input,parsed,top5,recommendationContext.targetPosition);
+  const skillIntegrity=skillIntegrityR119(input,parsed,publicRecommendationsR507.skills,recommendationContext.targetPosition);
   const owned=new Set([...(parsed.nativeSkills??[]),...(parsed.additionalSkills??[]),...(parsed.specialSkills??[])].map(skillIdentityKey));
   const duplicatesBlocked=top5.every(s=>!owned.has(skillIdentityKey(s)))&&new Set(top5.map(skillIdentityKey)).size===top5.length;
   const exactBudget=spent===budget;
@@ -2068,10 +2071,10 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     playstyleContext,
     budget,training,candidateCount:optimized.candidates,optimalityCertificateR457:optimized.optimalityCertificateR457,jointConfigurationR457:optimized.jointConfigurationR457,searchOptimizationR143:optimized.searchOptimizationR143,searchOptimizationR144,searchOptimizationR145,searchOptimizationR146,searchOptimizationR147,searchOptimizationR148,searchOptimizationR149,score,responseScore:response,synergyScore:synergy,
     confidence:round1(confidence),decisionConfidence,saturationProfile,competitiveLab,onlinePerformance,pointRationale,canonicalDnaR457:optimized.evaluationContext.canonicalDnaR457,
-    dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5,finalAdditionalSkillSetR457,finalImpetoDecisionR457,currentImpeto:impeto.current,
-    impetoDecision:impeto.decision,recommendedImpeto:impeto.recommendations[0]?.name??null,impetoIdeal:impeto.ideal,
-    impetoIdealScore:impeto.idealScore,impetoIdealConfidence:impeto.idealConfidence,impetoReason:impeto.reason,impetoSlotStatus:impeto.slotStatus,
-    guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:!impeto.current||!impeto.recommendations.some(x=>norm(x.name)===norm(impeto.current)),selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
+    dominantDna:dna,specialSkills:[...(parsed.specialSkills??[])],actions,top5:publicRecommendationsR507.skills,finalAdditionalSkillSetR457,finalImpetoDecisionR457,currentImpeto:publicRecommendationsR507.impeto.current,
+    impetoDecision:publicRecommendationsR507.impeto.decision,recommendedImpeto:publicRecommendationsR507.impeto.recommendedImpeto,impetoIdeal:publicRecommendationsR507.impeto.ideal,
+    impetoIdealScore:publicRecommendationsR507.impeto.idealScore,impetoIdealConfidence:publicRecommendationsR507.impeto.idealConfidence,impetoReason:publicRecommendationsR507.impeto.reason,impetoSlotStatus:publicRecommendationsR507.impeto.slotStatus,
+    guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:publicRecommendationsR507.impeto.existingImpetoNeverRepeated,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
     reasons:[
       `Clean Slate r149 avaliou ${searchOptimizationR149.generatedStates} estados com hot path escalar de score no mesmo kernel de avaliação, sem objetos de resultado/online/detalhes por candidato; preservou r148, beam 20 e orçamento ${spent}/${budget}.`,
       ...(limitedEvidence
@@ -2107,8 +2110,8 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     trainingPointsUsed:spent,
     trainingPointsTotal:budget,
     trainingPointsRemaining:Math.max(0,budget-spent),
-    recommendedSkills:top5,
-    recommendedImpetos:impeto.recommendations,
+    recommendedSkills:publicRecommendationsR507.skills,
+    recommendedImpetos:publicRecommendationsR507.impeto.recommendations,
     skillIntegrity,
     finalAdditionalSkillSetR457,
     finalImpetoDecisionR457,

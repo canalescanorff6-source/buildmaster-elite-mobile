@@ -55,7 +55,7 @@ assert.ok(sourceBytes <= (r443CatalogBoundary ? 5_963_776 : r2004Boundary ? 5_36
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '4ecfa54330d17418c96763beb4bec48c9bc22a4b31dc349269b2badeacce637d',
+  '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8',
   'R193: R119 não pode mudar durante deduplicação do analyzer.',
 );
 assert.ok(/npm run test:r193(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/.test(String(pkg.scripts?.['test:v4080'] ?? '')), 'R193: cadeia v40.80 deve manter R193 antes do gate seguinte.');

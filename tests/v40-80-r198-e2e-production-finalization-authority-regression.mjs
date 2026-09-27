@@ -57,7 +57,7 @@ assert.ok((vaultLifecycle.match(/ensureProductionAnalysisR138\(input\.result\)/g
 assert.match(historyStore, /createProductionAnalysisR138\(\{ rawText: source/, 'R198: migração histórica deve entrar pelo orquestrador de produção.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '4ecfa54330d17418c96763beb4bec48c9bc22a4b31dc349269b2badeacce637d', 'R198/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8', 'R198/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.');
 
 const appBytes = fs.statSync('src/components/CardVisionApp.tsx').size;
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
