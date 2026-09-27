@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: buildmaster-pr-${{ github.event.pull_request.number || github.ref }}
@@ -21,49 +21,6 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          fetch-depth: 0
-
-      - name: Bootstrap temporário do gate R500
-        if: github.event_name == 'pull_request' && github.head_ref == 'r500-autonomous-tactical-director'
-        shell: bash
-        run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = 'package.json';
-          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
-          if (!pkg.scripts?.['test:r500']) {
-            pkg.scripts['test:r500'] = [
-              'node -r ./tests/_ts-require.cjs tests/v40-80-r500-contract-regression.ts',
-              'node -r ./tests/_ts-require.cjs tests/v40-80-r500-pro-meta-regression.ts',
-              'node -r ./tests/_ts-require.cjs tests/v40-80-r500-memory-regression.ts',
-              'node -r ./tests/_ts-require.cjs tests/v40-80-r500-engine-regression.ts',
-              'node -r ./tests/_ts-require.cjs tests/v40-80-r500-r489-links-regression.ts',
-              'node tests/v40-80-r500-ui-regression.mjs',
-              'node tests/v40-80-r500-team-integration-regression.mjs',
-              'node tests/v40-80-r500-match-integration-regression.mjs',
-              'node -r ./tests/_ts-require.cjs tests/v40-80-r500-closure-regression.ts',
-              'node tests/v40-80-r500-ci-gate-regression.mjs'
-            ].join(' && ');
-          }
-          const gate = String(pkg.scripts?.['ci:gate'] || '');
-          if (!gate.includes('npm run test:r500')) {
-            if (!gate.includes('npm run test:r489')) throw new Error('ci:gate sem âncora test:r489');
-            pkg.scripts['ci:gate'] = gate.replace('npm run test:r489', 'npm run test:r489 && npm run test:r500');
-          }
-          fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
-          NODE
-          if git diff --quiet -- package.json; then
-            echo 'package.json já contém o gate R500.'
-          else
-            git config user.name 'buildmaster-r500[bot]'
-            git config user.email 'buildmaster-r500[bot]@users.noreply.github.com'
-            git add package.json
-            git commit -m 'R500: registrar test:r500 no gate da main'
-            git push origin HEAD:${GITHUB_HEAD_REF}
-          fi
 
       - name: Configurar Node.js
         uses: actions/setup-node@v5
