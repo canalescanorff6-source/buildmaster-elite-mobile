@@ -7,6 +7,7 @@ import { applyReviewedR119BaselinesR186R200 } from './apply-r406-fix7-r186-r200-
 import { applyR418UnboundedCapacity } from './apply-r418-unbounded-capacity.mjs';
 import { applyR418Fix2HistoricalCapacityContracts } from './apply-r418-fix2-historical-contracts.mjs';
 import { applyR419ReaderMasterEngineClosure } from './apply-r419-reader-master-engine-closure.mjs';
+import { applyR502StructuralCardTruthCertification } from './apply-r502-structural-card-truth-certification.mjs';
 import { applyR420PersistenceRecoveryClosure } from './apply-r420-persistence-recovery-closure.mjs';
 import { applyR421SquadVideoTacticalClosure } from './apply-r421-squad-video-tactical-closure.mjs';
 import { applyR422SecurityObservabilityClosure } from './apply-r422-security-observability-closure.mjs';
@@ -48,6 +49,10 @@ if (r418Fix2.changed) {
 const r419 = applyR419ReaderMasterEngineClosure();
 if (r419.changed) {
   console.log(`R419 convergiu leitor/Motor Mestre antes do R151 (${r419.patched.length} arquivo(s)).`);
+}
+const r502 = applyR502StructuralCardTruthCertification();
+if (r502.changed) {
+  console.log(`R502 materializou certificação estrutural antes do R151 (${r502.patched.length} arquivo(s)).`);
 }
 const r420 = applyR420PersistenceRecoveryClosure();
 if (r420.changed) {
