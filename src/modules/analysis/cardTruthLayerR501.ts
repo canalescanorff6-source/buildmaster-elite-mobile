@@ -1,6 +1,6 @@
 import type { CardEvidenceStateR419, ParsedCard } from '../../lib/analyzerDomain';
 
-export const CARD_TRUTH_LAYER_R501_VERSION = '40.80-r501-card-truth-layer-v1' as const;
+export const CARD_TRUTH_LAYER_R501_VERSION = '40.80-r501-card-truth-layer-v2' as const;
 
 export function normalizeConfidenceR501(value: unknown): number {
   const numeric = Number(value);
@@ -52,5 +52,120 @@ export function deriveCriticalAttributeEvidenceR501(parsed: ParsedCard): Critica
     minimum,
     coveragePercent,
     reasons: [`Cobertura crítica mínima atendida: ${count}/${minimum}.`],
+  };
+}
+
+export type CardTruthCertificationStateR501 =
+  | 'FINAL_CERTIFIED'
+  | 'PROVISIONAL_HIGH_CONFIDENCE'
+  | 'PROVISIONAL_LOW_CONFIDENCE'
+  | 'BLOCKED_INSUFFICIENT_DATA';
+
+export type CardTruthCertificationR501 = {
+  state: CardTruthCertificationStateR501;
+  confidencePercent: number;
+  criticalState: CardEvidenceStateR419;
+  trainingBudgetState: CardEvidenceStateR419;
+  levelState: CardEvidenceStateR419;
+  canFinalize: boolean;
+  reasons: string[];
+};
+
+function evidenceState(value: CardEvidenceStateR419 | undefined): CardEvidenceStateR419 {
+  return value ?? 'MISSING';
+}
+
+export function deriveCardTruthCertificationR501(parsed: ParsedCard): CardTruthCertificationR501 {
+  const confidencePercent = normalizeConfidenceR501(parsed.confidence);
+  const criticalState = evidenceState(parsed.evidence?.criticalStateR419);
+  const trainingBudgetState = evidenceState(parsed.evidence?.trainingBudgetStateR419);
+  const levelState = evidenceState(parsed.evidence?.levelStateR419);
+  const reasons = [...(parsed.evidence?.criticalReasonsR419 ?? [])];
+
+  if (trainingBudgetState !== 'TRUSTED') {
+    reasons.push(`Orçamento de progressão não confiável: ${trainingBudgetState}.`);
+    return {
+      state: 'BLOCKED_INSUFFICIENT_DATA',
+      confidencePercent,
+      criticalState,
+      trainingBudgetState,
+      levelState,
+      canFinalize: false,
+      reasons: [...new Set(reasons)],
+    };
+  }
+
+  const identityPresent = Boolean(String(parsed.playerName ?? '').trim())
+    && Boolean(parsed.mainPosition)
+    && Boolean(String(parsed.playstyle ?? '').trim());
+  const identityLocked = Boolean(parsed.manualConfirmed)
+    || (parsed.evidence?.positionLocked === true && parsed.evidence?.playstyleLocked === true);
+
+  if (criticalState === 'TRUSTED'
+      && levelState === 'TRUSTED'
+      && identityPresent
+      && identityLocked
+      && confidencePercent >= 90) {
+    reasons.push('Cobertura crítica, identidade, nível e PP atingiram o contrato final R501.');
+    return {
+      state: 'FINAL_CERTIFIED',
+      confidencePercent,
+      criticalState,
+      trainingBudgetState,
+      levelState,
+      canFinalize: true,
+      reasons: [...new Set(reasons)],
+    };
+  }
+
+  if (criticalState === 'MISSING' || !identityPresent) {
+    reasons.push(criticalState === 'MISSING'
+      ? 'Atributos críticos ainda estão ausentes; resultado permanece provisório.'
+      : 'Identidade crítica da carta está incompleta; resultado permanece provisório.');
+    return {
+      state: 'PROVISIONAL_LOW_CONFIDENCE',
+      confidencePercent,
+      criticalState,
+      trainingBudgetState,
+      levelState,
+      canFinalize: false,
+      reasons: [...new Set(reasons)],
+    };
+  }
+
+  if (criticalState === 'CONFLICTING') {
+    reasons.push('Há evidência crítica conflitante; certificação final bloqueada.');
+    return {
+      state: 'BLOCKED_INSUFFICIENT_DATA',
+      confidencePercent,
+      criticalState,
+      trainingBudgetState,
+      levelState,
+      canFinalize: false,
+      reasons: [...new Set(reasons)],
+    };
+  }
+
+  if (criticalState === 'UNCERTAIN' || !identityLocked || levelState !== 'TRUSTED' || confidencePercent < 90) {
+    reasons.push('A carta possui dados úteis, mas ainda não atende todos os requisitos de certificação final.');
+    return {
+      state: confidencePercent >= 60 ? 'PROVISIONAL_HIGH_CONFIDENCE' : 'PROVISIONAL_LOW_CONFIDENCE',
+      confidencePercent,
+      criticalState,
+      trainingBudgetState,
+      levelState,
+      canFinalize: false,
+      reasons: [...new Set(reasons)],
+    };
+  }
+
+  return {
+    state: 'PROVISIONAL_LOW_CONFIDENCE',
+    confidencePercent,
+    criticalState,
+    trainingBudgetState,
+    levelState,
+    canFinalize: false,
+    reasons: [...new Set([...reasons, 'A carta ainda não possui evidência suficiente para certificação final.'])],
   };
 }
