@@ -1,6 +1,8 @@
 'use client';
 
 import type { MatchVisionSnapshotR482 } from '../matches/matchVisionEngineR482';
+import { buildAutonomousTacticalDirectorR500 } from '../tactical-director/tacticalDirectorEngineR500';
+import { TacticalDirectorPanelR500 } from '../tactical-director/TacticalDirectorPanelR500';
 import { buildExplainableDecisionR489 } from './explainableDecisionEngineR489';
 import { ExplainableDecisionPanelR489 } from './ExplainableDecisionPanelR489';
 
@@ -18,6 +20,26 @@ export function MatchExplainabilityR489({ matchVision }: { matchVision: MatchVis
     },
     matchVision
   });
+  const director = buildAutonomousTacticalDirectorR500({
+    officialDecisionFingerprint: `match:${matchVision.configuredContext.formation}:${matchVision.configuredContext.teamStyle}`,
+    formation: matchVision.configuredContext.formation,
+    teamStyle: matchVision.configuredContext.teamStyle,
+    phase: 'POST_MATCH',
+    tacticalTwin: null,
+    squadBrain: null,
+    matchVision,
+    buildSimulator: null,
+    chemistry: null,
+    explanations: [decision],
+    confirmedMatchRecords: [],
+    proMetaDataset: null,
+    previousPlan: null
+  });
 
-  return <ExplainableDecisionPanelR489 decision={decision} compact />;
+  return (
+    <>
+      <TacticalDirectorPanelR500 plan={director} compact />
+      <ExplainableDecisionPanelR489 decision={decision} compact />
+    </>
+  );
 }
