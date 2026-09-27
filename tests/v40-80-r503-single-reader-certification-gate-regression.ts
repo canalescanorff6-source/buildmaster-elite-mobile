@@ -8,7 +8,6 @@ function certification(
   canFinalize: boolean,
 ): CardTruthCertificationR501 {
   return {
-    version: '40.80-r501-card-truth-certification-v1',
     state,
     confidencePercent: state === 'FINAL_CERTIFIED' ? 96 : 72,
     criticalState: state === 'FINAL_CERTIFIED' ? 'TRUSTED' : 'UNCERTAIN',
