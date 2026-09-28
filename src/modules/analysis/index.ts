@@ -52,6 +52,20 @@ export {
   type PossessionEngineResultR511,
 } from './possessionEngineR511';
 
+// R512 / Fase 7: Joint Optimizer V2 em shadow/read-only.
+// Audita ficha + Top 5 + Ímpeto no frontier equivalente, re-simula Posse/gargalos
+// e mede estabilidade sem trocar a autoridade pública única de produção.
+export {
+  analyzeJointFrontierR512,
+  JOINT_OPTIMIZER_R512_VERSION,
+  JOINT_OPTIMIZER_R512_CALIBRATION,
+  type JointOptimizerCandidateR512,
+  type JointOptimizerInputR512,
+  type JointResidualBottleneckR512,
+  type JointCandidateAuditR512,
+  type JointOptimizerResultR512,
+} from './jointOptimizerR512';
+
 // R126/R128 permanecem internos para regressão/migração histórica.
 // Código de aplicação deve entrar exclusivamente pela fachada R138 abaixo.
 
