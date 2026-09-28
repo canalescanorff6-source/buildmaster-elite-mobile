@@ -45,11 +45,9 @@ for (const result of [ss,cf]) {
   assert.equal(result.cleanSlate2027R119.guards.exactBudget,true);
 }
 const occupied:any=applyCleanSlatePerformance2027R119(base('SS','Chute'));
-assert.equal(occupied.cleanSlate2027R119.impetoDecision,'RECOMMEND_NEW','R180 deve respeitar a autoridade pós-build R505/R507 quando o Ímpeto atual não é o ideal técnico.');
+assert.equal(occupied.cleanSlate2027R119.impetoDecision,'KEEP_CURRENT','R508 deve preservar o Ímpeto ativo reconhecido mesmo quando outro candidato tenha maior encaixe técnico estimado.');
 assert.equal(occupied.cleanSlate2027R119.currentImpeto,'Chute');
-assert.ok(occupied.cleanSlate2027R119.recommendedImpeto,'R180 deve expor o Ímpeto técnico recomendado pela autoridade final quando houver ganho suficiente.');
-assert.notEqual(occupied.cleanSlate2027R119.recommendedImpeto,'Chute','Ímpeto já aplicado nunca pode ser publicado como nova recomendação.');
-assert.ok(occupied.recommendedImpetos.length>0,'R180 deve preservar a recomendação pós-build quando a troca é tecnicamente indicada.');
-assert.equal(occupied.recommendedImpetos.some((item:any)=>skillIdentityKey(item.name)==='chute'),false,'Ímpeto já aplicado nunca pode ser recomendado de novo.');
+assert.equal(occupied.cleanSlate2027R119.recommendedImpeto,null,'Ímpeto ativo reconhecido não pode virar recomendação pública de gasto ou troca.');
+assert.deepEqual(occupied.recommendedImpetos,[],'KEEP_CURRENT não deve publicar alternativas acionáveis como se fossem recomendação final.');
 assert.equal(occupied.cleanSlate2027R119.guards.existingImpetoNeverRepeated,true);
-console.log('R180 runtime final aprovado: identidade e progressão permanentes estáveis, posição de uso rastreada, orçamento exato, Top 5 oficial/único e Ímpeto seguro sob a autoridade pós-build R505/R507.');
+console.log('R180 runtime final aprovado: identidade e progressão permanentes estáveis, posição de uso rastreada, orçamento exato, Top 5 oficial/único e Ímpeto ativo preservado sob a autoridade pós-build R505/R507/R508.');
