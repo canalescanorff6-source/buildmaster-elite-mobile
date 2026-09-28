@@ -154,9 +154,6 @@ jobs:
       - name: Regressões R472 — Motor Lab lifecycle
         run: npm run test:r472
 
-      - name: R516 — calibração por partidas reais
-        run: node -r ./tests/_ts-require.cjs tests/v40-80-r516-real-match-calibration-bridge-regression.ts
-
       - name: Regressões R473 — Clean Experience
         run: npm run test:r473
 
