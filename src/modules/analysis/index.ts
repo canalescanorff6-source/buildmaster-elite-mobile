@@ -25,6 +25,19 @@ export {
 
 export { ALL_RECOGNIZABLE_PLAYER_SKILL_NAMES, OFFICIAL_ADDITIONAL_SKILL_NAMES, SPECIAL_SKILL_NAMES } from './analyzerCatalog';
 
+// R510 / Fase 3: diagnóstico read-only sobre o estado projetado R504.
+// Não grava ficha, Top 5 ou Ímpeto e não substitui a autoridade final R138/R119.
+export {
+  analyzeGameplayEngineR510,
+  GAMEPLAY_ENGINE_R510_VERSION,
+  type GameplayActionIdR510,
+  type GameplayEngineContextR510,
+  type GameplayEngineResultR510,
+  type GameplayActionScoreR510,
+  type GameplayBottleneckR510,
+  type MarginalTrainingOptionR510,
+} from './gameplayEngineR510';
+
 // R126/R128 permanecem internos para regressão/migração histórica.
 // Código de aplicação deve entrar exclusivamente pela fachada R138 abaixo.
 
