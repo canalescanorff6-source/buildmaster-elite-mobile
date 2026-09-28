@@ -4,7 +4,7 @@ import { officialAdditionalSkillPoolForPosition, isRoleCompatibleAdditionalSkill
 import { canonicalizeSkillList, isOfficialAdditionalSkillIdentity, skillIdentityKey } from './officialSkillIdentity';
 import { skillActionSupportDetailR459 } from './gameplayImpactR458';
 
-export const FINAL_ADDITIONAL_SKILL_SET_R457_VERSION = '40.80-r506-final-additional-skill-set-v4-post-build-action-state' as const;
+export const FINAL_ADDITIONAL_SKILL_SET_R457_VERSION = '40.80-r508-final-additional-skill-set-v5-style-post-build' as const;
 
 export type SkillActionInputR457 = {
   id: string;
@@ -68,6 +68,34 @@ const DIMENSION_ACTIONS: Record<Dimension, readonly string[]> = {
 
 function clamp(value:number,min=0,max=100){ return Math.max(min,Math.min(max,value)); }
 function round2(value:number){ return Math.round(value*100)/100; }
+function norm(value:unknown){ return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+
+/**
+ * R508: reconecta ao escritor final o contexto de estilo oficial que já existia
+ * no motor de habilidades v35. O ajuste só desempata/prioriza dentro do pool
+ * oficial e compatível da posição; não cria habilidades e não usa Overall/GER.
+ *
+ * O caso de goleiros precisa ser explícito porque as ações de defesa de meta são
+ * muito semelhantes entre Goleiro Ofensivo e Goleiro Defensivo. Sem este sinal,
+ * o R506 convergia os dois estilos para o mesmo Top 5 apesar de haver seis opções
+ * oficiais seguras disponíveis.
+ */
+function officialPlaystyleAdjustmentR508(parsed:ParsedCard,position:PositionCode,name:string){
+  if(position!=='GK') return 0;
+  const style=norm(`${parsed.playstyle??''} ${parsed.offensivePlaystyle??''} ${parsed.defensivePlaystyle??''}`);
+  if(/goleiro ofensivo|offensive goalkeeper/.test(style)){
+    if(['Reposição baixa do goleiro','Reposição alta do goleiro','Arremesso longo do goleiro'].includes(name)) return 34;
+    if(['Espírito guerreiro','Liderança'].includes(name)) return 12;
+    if(name==='Pegador de pênalti') return -55;
+  }
+  if(/goleiro defensivo|defensive goalkeeper/.test(style)){
+    if(name==='Pegador de pênalti') return 96;
+    if(['Espírito guerreiro','Liderança'].includes(name)) return 25;
+    if(name==='Reposição alta do goleiro') return 8;
+    if(['Reposição baixa do goleiro','Arremesso longo do goleiro'].includes(name)) return -55;
+  }
+  return 0;
+}
 
 function projectedScoreOf(action:SkillActionInputR457){
   const value=Number(action.projectedScore);
@@ -118,7 +146,7 @@ function skillVector(name:string):Partial<Record<Dimension,number>>{
   return out;
 }
 
-function individualScore(name:string,actions:SkillActionInputR457[]){
+function individualScore(name:string,actions:SkillActionInputR457[],parsed:ParsedCard,position:PositionCode){
   // Base genérica preservada apenas como fallback para habilidades ainda sem mapeamento de ação.
   const vector=skillVector(name);
   let genericWeighted=0,genericTotal=0;
@@ -148,10 +176,14 @@ function individualScore(name:string,actions:SkillActionInputR457[]){
     actionSupport.push({label:action.label||action.id,value});
   }
   const specificScore=specificTotal>0?clamp(specificWeighted/specificTotal*100):0;
-  const score=specificTotal>0?clamp(specificScore*.82+genericScore*.18):genericScore;
+  const functionalScore=specificTotal>0?clamp(specificScore*.82+genericScore*.18):genericScore;
+  const styleAdjustment=officialPlaystyleAdjustmentR508(parsed,position,name);
+  const score=clamp(functionalScore+styleAdjustment);
   const support=actionSupport.length?actionSupport:genericSupport;
   support.sort((a,b)=>b.value-a.value||a.label.localeCompare(b.label,'pt-BR'));
-  return {score:round2(score),supportedActions:support.slice(0,3).map(item=>item.label)};
+  const supportedActions=support.slice(0,3).map(item=>item.label);
+  if(styleAdjustment!==0) supportedActions.unshift(`Estilo oficial ${String(parsed.playstyle??'').trim()||position}`);
+  return {score:round2(score),supportedActions:supportedActions.slice(0,3)};
 }
 
 function pairKey(left:string,right:string){
@@ -208,7 +240,7 @@ export function optimizeFinalAdditionalSkillSetR457(
   );
 
   const individual=new Map<string,{score:number;supportedActions:string[]}>();
-  for(const skill of pool) individual.set(skillIdentityKey(skill),individualScore(skill,actions));
+  for(const skill of pool) individual.set(skillIdentityKey(skill),individualScore(skill,actions,parsed,position));
 
   const target=Math.min(5,pool.length);
   const sets=combinations(pool,target);
@@ -278,9 +310,9 @@ export function optimizeFinalAdditionalSkillSetR457(
     nativeSpecialDuplicatesBlocked:winner.every(skill=>!nativeSpecial.has(skillIdentityKey(skill))),
     deterministic:true,
     modelNote:stateSource==='PROJECTED_POST_BUILD_ACTIONS'
-      ? 'R506 alinha o Top 5 às ações e ao projectedScore pós-build da ficha. A skill só recebe relevância quando a ação final é funcionalmente sustentada; nenhum bônus numérico oficial de atributo é inventado.'
+      ? 'R508 mantém o Top 5 alinhado às ações e ao projectedScore pós-build da ficha e restaura o contexto de estilo oficial como prioridade adicional dentro do pool oficial compatível. Nenhum bônus numérico oficial de atributo é inventado.'
       : stateSource==='PARTIAL_PROJECTED_ACTIONS'
-        ? 'R506 recebeu apenas parte dos projectedScore; usa o estado pós-build onde existe e preserva a ponderação R459 nos demais sinais sem inventar atributos.'
-        : 'Fallback R459 explícito: não havia projectedScore pós-build nas ações; frequência/contribuição permanecem a fonte funcional. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
+        ? 'R508 recebeu apenas parte dos projectedScore; usa o estado pós-build onde existe, preserva a ponderação R459 e aplica contexto de estilo oficial apenas dentro do pool compatível, sem inventar atributos.'
+        : 'Fallback R508 explícito: sem projectedScore pós-build, frequência/contribuição e contexto de estilo oficial permanecem fontes funcionais. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
   };
 }
