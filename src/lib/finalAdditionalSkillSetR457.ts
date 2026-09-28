@@ -71,28 +71,41 @@ function round2(value:number){ return Math.round(value*100)/100; }
 function norm(value:unknown){ return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
 
 /**
- * R508: reconecta ao escritor final o contexto de estilo oficial que já existia
- * no motor de habilidades v35. O ajuste só desempata/prioriza dentro do pool
- * oficial e compatível da posição; não cria habilidades e não usa Overall/GER.
+ * R508/R509: reconecta ao escritor final o contexto de estilo oficial que já
+ * existia no motor de habilidades v35. O ajuste só desempata/prioriza dentro
+ * do pool oficial e compatível da posição; não cria habilidades, não declara
+ * bônus oficiais e não usa Overall/GER.
  *
- * O caso de goleiros precisa ser explícito porque as ações de defesa de meta são
- * muito semelhantes entre Goleiro Ofensivo e Goleiro Defensivo. Sem este sinal,
- * o R506 convergia os dois estilos para o mesmo Top 5 apesar de haver seis opções
- * oficiais seguras disponíveis.
+ * R509 amplia a propagação aos zagueiros: Defensor Criativo preserva a demanda
+ * de saída/construção, enquanto Destruidor preserva a prioridade de duelo e
+ * corte. A ficha pós-build continua soberana; estilo atua apenas como contexto.
  */
 function officialPlaystyleAdjustmentR508(parsed:ParsedCard,position:PositionCode,name:string){
-  if(position!=='GK') return 0;
   const style=norm(`${parsed.playstyle??''} ${parsed.offensivePlaystyle??''} ${parsed.defensivePlaystyle??''}`);
-  if(/goleiro ofensivo|offensive goalkeeper/.test(style)){
-    if(['Reposição baixa do goleiro','Reposição alta do goleiro','Arremesso longo do goleiro'].includes(name)) return 34;
-    if(['Espírito guerreiro','Liderança'].includes(name)) return 12;
-    if(name==='Pegador de pênalti') return -55;
+  if(position==='GK'){
+    if(/goleiro ofensivo|offensive goalkeeper/.test(style)){
+      if(['Reposição baixa do goleiro','Reposição alta do goleiro','Arremesso longo do goleiro'].includes(name)) return 34;
+      if(['Espírito guerreiro','Liderança'].includes(name)) return 12;
+      if(name==='Pegador de pênalti') return -55;
+    }
+    if(/goleiro defensivo|defensive goalkeeper/.test(style)){
+      if(name==='Pegador de pênalti') return 96;
+      if(['Espírito guerreiro','Liderança'].includes(name)) return 25;
+      if(name==='Reposição alta do goleiro') return 8;
+      if(['Reposição baixa do goleiro','Arremesso longo do goleiro'].includes(name)) return -55;
+    }
   }
-  if(/goleiro defensivo|defensive goalkeeper/.test(style)){
-    if(name==='Pegador de pênalti') return 96;
-    if(['Espírito guerreiro','Liderança'].includes(name)) return 25;
-    if(name==='Reposição alta do goleiro') return 8;
-    if(['Reposição baixa do goleiro','Arremesso longo do goleiro'].includes(name)) return -55;
+  if(position==='CB'){
+    if(/defensor criativo|build up/.test(style)){
+      if(['Passe de primeira','Passe em profundidade','Passe na medida','Passe aéreo baixo'].includes(name)) return 48;
+      if(name==='Liderança') return 16;
+      if(['Carrinho','Volta para marcar'].includes(name)) return -18;
+    }
+    if(/destruidor|destroyer/.test(style)){
+      if(['Bloqueador','Marcação individual','Carrinho','Afastamento acrobático','Interceptação'].includes(name)) return 28;
+      if(['Espírito guerreiro','Superioridade aérea'].includes(name)) return 14;
+      if(['Passe em profundidade','Passe na medida','Passe aéreo baixo'].includes(name)) return -12;
+    }
   }
   return 0;
 }
@@ -310,9 +323,9 @@ export function optimizeFinalAdditionalSkillSetR457(
     nativeSpecialDuplicatesBlocked:winner.every(skill=>!nativeSpecial.has(skillIdentityKey(skill))),
     deterministic:true,
     modelNote:stateSource==='PROJECTED_POST_BUILD_ACTIONS'
-      ? 'R508 mantém o Top 5 alinhado às ações e ao projectedScore pós-build da ficha e restaura o contexto de estilo oficial como prioridade adicional dentro do pool oficial compatível. Nenhum bônus numérico oficial de atributo é inventado.'
+      ? 'R509 mantém o Top 5 alinhado às ações e ao projectedScore pós-build da ficha e preserva o contexto de estilo oficial por função dentro do pool oficial compatível. Nenhum bônus numérico oficial de atributo é inventado.'
       : stateSource==='PARTIAL_PROJECTED_ACTIONS'
-        ? 'R508 recebeu apenas parte dos projectedScore; usa o estado pós-build onde existe, preserva a ponderação R459 e aplica contexto de estilo oficial apenas dentro do pool compatível, sem inventar atributos.'
-        : 'Fallback R508 explícito: sem projectedScore pós-build, frequência/contribuição e contexto de estilo oficial permanecem fontes funcionais. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
+        ? 'R509 recebeu apenas parte dos projectedScore; usa o estado pós-build onde existe, preserva a ponderação R459 e aplica contexto de estilo oficial apenas dentro do pool compatível, sem inventar atributos.'
+        : 'Fallback R509 explícito: sem projectedScore pós-build, frequência/contribuição e contexto de estilo oficial permanecem fontes funcionais. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
   };
 }
