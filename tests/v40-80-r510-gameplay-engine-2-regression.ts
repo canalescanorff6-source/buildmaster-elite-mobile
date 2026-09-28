@@ -69,11 +69,11 @@ const state: ProjectedPlayerStateR504 = {
 
 const possessionContext: GameplayEngineContextR510 = {
   actionWeights: {
-    shortCombination: 1.4,
-    lineBreakingPass: 1.3,
-    firstTouchUnderPressure: 1.15,
-    centralCarry: 0.8,
-    pressEscape: 1.0,
+    shortCombination: 1.8,
+    lineBreakingPass: 1.6,
+    firstTouchUnderPressure: 0.55,
+    centralCarry: 0.25,
+    pressEscape: 0.45,
     duelShield: 0.45,
     attackingMovement: 0.35,
     finishingAction: 0.25,
