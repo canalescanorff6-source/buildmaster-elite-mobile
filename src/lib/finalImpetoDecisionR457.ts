@@ -1,7 +1,7 @@
 import type { Attributes, ParsedCard, PositionCode } from './analyzerDomain';
 import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from './impetoFunctionalMatrixR119';
 
-export const FINAL_IMPETO_DECISION_R457_VERSION='40.80-r505-final-impeto-post-build-v1' as const;
+export const FINAL_IMPETO_DECISION_R457_VERSION='40.80-r508-preserve-active-impeto-v1' as const;
 
 export type ImpetoActionR457 =
   | 'KEEP_CURRENT'
@@ -108,21 +108,19 @@ export function evaluateFinalImpetoDecisionR457(
 
   let action:ImpetoActionR457='NO_SAFE_CANDIDATE';
   let reason='Nenhum Ímpeto ultrapassou o limiar funcional seguro com a evidência atual.';
-  if(ideal){
-    if(current){
-      if(!currentEntry){
-        action='REVIEW_SLOT';
-        reason=`O Ímpeto atual ${current} não existe na matriz funcional confirmada; o ideal técnico ${ideal.name} é apenas referência e nenhuma troca é recomendada sem identificar o efeito atual.`;
-      }else if(norm(current)===norm(ideal.name) || (gain!==null&&gain<4)){
-        action='KEEP_CURRENT';
-        reason=norm(current)===norm(ideal.name)
-          ? `O Ímpeto atual ${current} também é o ideal técnico para esta função.`
-          : `O Ímpeto ideal técnico ${ideal.name} supera ${current} em apenas ${gain} ponto(s) funcionais; ganho insuficiente para justificar substituição.`;
-      }else{
-        action='REPLACE_IF_ALLOWED';
-        reason=`O ideal técnico é ${ideal.name}, com ganho funcional estimado de ${gain??'não calculado'} sobre ${current}. A troca continua condicionada à mecânica/vaga e à decisão do usuário.`;
-      }
-    }else if(slotStatus==='DISPONIVEL'){
+  if(current){
+    action='KEEP_CURRENT';
+    if(!currentEntry){
+      reason=`O Ímpeto atual ${current} já está aplicado e é preservado. O motor pode comparar candidatos tecnicamente, mas não recomenda novo gasto nem substituição automática quando a carta já possui Ímpeto ativo.`;
+    }else if(ideal&&norm(current)===norm(ideal.name)){
+      reason=`O Ímpeto atual ${current} já está aplicado e também é o ideal técnico para esta função; nenhum novo gasto é necessário.`;
+    }else if(ideal){
+      reason=`O Ímpeto atual ${current} já está aplicado e permanece preservado. ${ideal.name} aparece apenas como referência técnica${gain!==null?` (${gain} ponto(s) funcionais de diferença)`:''}; o BuildMaster não transforma essa comparação em recomendação de troca ou novo gasto.`;
+    }else{
+      reason=`O Ímpeto atual ${current} já está aplicado e permanece preservado; nenhuma nova recomendação de gasto é emitida.`;
+    }
+  }else if(ideal){
+    if(slotStatus==='DISPONIVEL'){
       action='ADD_IF_AVAILABLE';
       reason=`Vaga confirmada: ${ideal.name} é o melhor encaixe funcional atual.`;
     }else if(slotStatus==='OCUPADO'||slotStatus==='SEM_VAGA'){
@@ -154,7 +152,7 @@ export function evaluateFinalImpetoDecisionR457(
     automaticSpendAuthorized:false,
     reason,
     modelNote:attributeSource==='PROJECTED_POST_BUILD'
-      ? 'A recomendação usa encaixe funcional, posição, ações e atributos finais projetados pela ficha R504. O BuildMaster não inventa bônus numéricos oficiais de Ímpeto.'
-      : 'Fallback explícito: a recomendação usa a carta-base porque nenhum estado pós-build foi fornecido. O BuildMaster não inventa bônus numéricos oficiais de Ímpeto.'
+      ? 'A recomendação usa encaixe funcional, posição, ações e atributos finais projetados pela ficha R504. Ímpeto já ativo é preservado e comparações com alternativas são apenas informativas; o BuildMaster não inventa bônus numéricos oficiais nem autoriza troca automática.'
+      : 'Fallback explícito: a recomendação usa a carta-base porque nenhum estado pós-build foi fornecido. Ímpeto já ativo é preservado; o BuildMaster não inventa bônus numéricos oficiais nem autoriza troca automática.'
   };
 }
