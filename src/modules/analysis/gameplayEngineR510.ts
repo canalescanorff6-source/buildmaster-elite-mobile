@@ -7,6 +7,14 @@ import {
 
 export const GAMEPLAY_ENGINE_R510_VERSION = '40.80-r510-gameplay-engine-2-v1' as const;
 
+export const GAMEPLAY_ENGINE_R510_CALIBRATION = {
+  status: 'PROVISIONAL_UNCALIBRATED',
+  provenance: 'ENGINEERING_SEED',
+  officialGameData: false,
+  certifiedForFinalWrite: false,
+  calibrationRequired: ['GOLDEN_CARD_LAB', 'REAL_MATCH_DATA'],
+} as const;
+
 export type GameplayActionIdR510 =
   | 'firstTouchUnderPressure'
   | 'shortCombination'
@@ -34,115 +42,140 @@ type ActionDefinitionR510 = {
   dependencies: readonly ActionDependencyR510[];
 };
 
-const ACTION_DEFINITIONS_R510: Record<GameplayActionIdR510, ActionDefinitionR510> = {
-  firstTouchUnderPressure: {
-    dependencies: [
-      { attribute: 'ballControl', weight: 0.28, target: 91, saturation: 96 },
-      { attribute: 'tightPossession', weight: 0.28, target: 92, saturation: 96 },
-      { attribute: 'balance', weight: 0.17, target: 89, saturation: 95 },
-      { attribute: 'dribbling', weight: 0.11, target: 88, saturation: 95 },
-      { attribute: 'lowPass', weight: 0.10, target: 88, saturation: 95 },
-      { attribute: 'physicalContact', weight: 0.06, target: 82, saturation: 92 },
-    ],
+type GameplaySeedPolicyR510 = {
+  attributeMaximum: number;
+  defaultActionWeight: number;
+  utility: {
+    belowTargetExponent: number;
+    targetUtility: number;
+    saturationUtility: number;
+    maximumUtility: number;
+  };
+  saturationPenalty: {
+    atSaturation: number;
+    maximum: number;
+  };
+  actions: Record<GameplayActionIdR510, ActionDefinitionR510>;
+};
+
+/**
+ * R510 seed policy.
+ *
+ * Estes parâmetros são uma semente de engenharia explícita e auditável para
+ * validar a arquitetura do motor (gargalo, saturação e ganho marginal por PP).
+ * Não representam dados oficiais do jogo nem podem, nesta fase, certificar ou
+ * escrever a ficha final. Golden Card Lab + dados reais precisam calibrá-los.
+ */
+export const GAMEPLAY_ENGINE_R510_SEED_POLICY: GameplaySeedPolicyR510 = {
+  attributeMaximum: 99,
+  defaultActionWeight: 1,
+  utility: {
+    belowTargetExponent: 1.12,
+    targetUtility: 1,
+    saturationUtility: 1.04,
+    maximumUtility: 1.05,
   },
-  shortCombination: {
-    dependencies: [
-      { attribute: 'lowPass', weight: 0.40, target: 90, saturation: 96 },
-      { attribute: 'ballControl', weight: 0.22, target: 90, saturation: 96 },
-      { attribute: 'tightPossession', weight: 0.16, target: 90, saturation: 96 },
-      { attribute: 'offensiveAwareness', weight: 0.12, target: 88, saturation: 95 },
-      { attribute: 'balance', weight: 0.10, target: 87, saturation: 94 },
-    ],
+  saturationPenalty: {
+    atSaturation: 0.7,
+    maximum: 1,
   },
-  lineBreakingPass: {
-    dependencies: [
-      { attribute: 'lowPass', weight: 0.48, target: 91, saturation: 97 },
-      { attribute: 'loftedPass', weight: 0.14, target: 89, saturation: 96 },
-      { attribute: 'ballControl', weight: 0.11, target: 89, saturation: 95 },
-      { attribute: 'offensiveAwareness', weight: 0.10, target: 88, saturation: 95 },
-      { attribute: 'tightPossession', weight: 0.09, target: 88, saturation: 95 },
-      { attribute: 'kickingPower', weight: 0.08, target: 84, saturation: 94 },
-    ],
-  },
-  centralCarry: {
-    dependencies: [
-      { attribute: 'tightPossession', weight: 0.30, target: 92, saturation: 97 },
-      { attribute: 'dribbling', weight: 0.27, target: 92, saturation: 97 },
-      { attribute: 'ballControl', weight: 0.18, target: 90, saturation: 96 },
-      { attribute: 'balance', weight: 0.15, target: 90, saturation: 96 },
-      { attribute: 'acceleration', weight: 0.10, target: 88, saturation: 95 },
-    ],
-  },
-  pressEscape: {
-    dependencies: [
-      { attribute: 'tightPossession', weight: 0.27, target: 92, saturation: 97 },
-      { attribute: 'ballControl', weight: 0.22, target: 91, saturation: 96 },
-      { attribute: 'balance', weight: 0.18, target: 90, saturation: 96 },
-      { attribute: 'acceleration', weight: 0.12, target: 89, saturation: 95 },
-      { attribute: 'dribbling', weight: 0.11, target: 90, saturation: 96 },
-      { attribute: 'lowPass', weight: 0.10, target: 87, saturation: 94 },
-    ],
-  },
-  duelShield: {
-    dependencies: [
-      { attribute: 'physicalContact', weight: 0.34, target: 87, saturation: 95 },
-      { attribute: 'balance', weight: 0.24, target: 88, saturation: 95 },
-      { attribute: 'ballControl', weight: 0.16, target: 88, saturation: 95 },
-      { attribute: 'tightPossession', weight: 0.14, target: 88, saturation: 95 },
-      { attribute: 'stamina', weight: 0.12, target: 86, saturation: 94 },
-    ],
-  },
-  attackingMovement: {
-    dependencies: [
-      { attribute: 'offensiveAwareness', weight: 0.38, target: 91, saturation: 97 },
-      { attribute: 'acceleration', weight: 0.28, target: 90, saturation: 96 },
-      { attribute: 'speed', weight: 0.18, target: 88, saturation: 95 },
-      { attribute: 'finishing', weight: 0.16, target: 86, saturation: 95 },
-    ],
-  },
-  finishingAction: {
-    dependencies: [
-      { attribute: 'finishing', weight: 0.54, target: 92, saturation: 97 },
-      { attribute: 'offensiveAwareness', weight: 0.20, target: 90, saturation: 96 },
-      { attribute: 'kickingPower', weight: 0.16, target: 88, saturation: 95 },
-      { attribute: 'balance', weight: 0.10, target: 85, saturation: 93 },
-    ],
-  },
-  defensiveDuel: {
-    dependencies: [
-      { attribute: 'defensiveAwareness', weight: 0.28, target: 91, saturation: 97 },
-      { attribute: 'defensiveEngagement', weight: 0.25, target: 91, saturation: 97 },
-      { attribute: 'tackling', weight: 0.23, target: 90, saturation: 96 },
-      { attribute: 'aggression', weight: 0.11, target: 87, saturation: 94 },
-      { attribute: 'speed', weight: 0.07, target: 85, saturation: 93 },
-      { attribute: 'physicalContact', weight: 0.06, target: 86, saturation: 94 },
-    ],
-  },
-  aerialDuel: {
-    dependencies: [
-      { attribute: 'heading', weight: 0.30, target: 90, saturation: 96 },
-      { attribute: 'jump', weight: 0.27, target: 90, saturation: 96 },
-      { attribute: 'physicalContact', weight: 0.25, target: 88, saturation: 95 },
-      { attribute: 'defensiveAwareness', weight: 0.10, target: 86, saturation: 94 },
-      { attribute: 'offensiveAwareness', weight: 0.08, target: 84, saturation: 93 },
-    ],
+  actions: {
+    firstTouchUnderPressure: {
+      dependencies: [
+        { attribute: 'ballControl', weight: 0.28, target: 91, saturation: 96 },
+        { attribute: 'tightPossession', weight: 0.28, target: 92, saturation: 96 },
+        { attribute: 'balance', weight: 0.17, target: 89, saturation: 95 },
+        { attribute: 'dribbling', weight: 0.11, target: 88, saturation: 95 },
+        { attribute: 'lowPass', weight: 0.10, target: 88, saturation: 95 },
+        { attribute: 'physicalContact', weight: 0.06, target: 82, saturation: 92 },
+      ],
+    },
+    shortCombination: {
+      dependencies: [
+        { attribute: 'lowPass', weight: 0.40, target: 90, saturation: 96 },
+        { attribute: 'ballControl', weight: 0.22, target: 90, saturation: 96 },
+        { attribute: 'tightPossession', weight: 0.16, target: 90, saturation: 96 },
+        { attribute: 'offensiveAwareness', weight: 0.12, target: 88, saturation: 95 },
+        { attribute: 'balance', weight: 0.10, target: 87, saturation: 94 },
+      ],
+    },
+    lineBreakingPass: {
+      dependencies: [
+        { attribute: 'lowPass', weight: 0.48, target: 91, saturation: 97 },
+        { attribute: 'loftedPass', weight: 0.14, target: 89, saturation: 96 },
+        { attribute: 'ballControl', weight: 0.11, target: 89, saturation: 95 },
+        { attribute: 'offensiveAwareness', weight: 0.10, target: 88, saturation: 95 },
+        { attribute: 'tightPossession', weight: 0.09, target: 88, saturation: 95 },
+        { attribute: 'kickingPower', weight: 0.08, target: 84, saturation: 94 },
+      ],
+    },
+    centralCarry: {
+      dependencies: [
+        { attribute: 'tightPossession', weight: 0.30, target: 92, saturation: 97 },
+        { attribute: 'dribbling', weight: 0.27, target: 92, saturation: 97 },
+        { attribute: 'ballControl', weight: 0.18, target: 90, saturation: 96 },
+        { attribute: 'balance', weight: 0.15, target: 90, saturation: 96 },
+        { attribute: 'acceleration', weight: 0.10, target: 88, saturation: 95 },
+      ],
+    },
+    pressEscape: {
+      dependencies: [
+        { attribute: 'tightPossession', weight: 0.27, target: 92, saturation: 97 },
+        { attribute: 'ballControl', weight: 0.22, target: 91, saturation: 96 },
+        { attribute: 'balance', weight: 0.18, target: 90, saturation: 96 },
+        { attribute: 'acceleration', weight: 0.12, target: 89, saturation: 95 },
+        { attribute: 'dribbling', weight: 0.11, target: 90, saturation: 96 },
+        { attribute: 'lowPass', weight: 0.10, target: 87, saturation: 94 },
+      ],
+    },
+    duelShield: {
+      dependencies: [
+        { attribute: 'physicalContact', weight: 0.34, target: 87, saturation: 95 },
+        { attribute: 'balance', weight: 0.24, target: 88, saturation: 95 },
+        { attribute: 'ballControl', weight: 0.16, target: 88, saturation: 95 },
+        { attribute: 'tightPossession', weight: 0.14, target: 88, saturation: 95 },
+        { attribute: 'stamina', weight: 0.12, target: 86, saturation: 94 },
+      ],
+    },
+    attackingMovement: {
+      dependencies: [
+        { attribute: 'offensiveAwareness', weight: 0.38, target: 91, saturation: 97 },
+        { attribute: 'acceleration', weight: 0.28, target: 90, saturation: 96 },
+        { attribute: 'speed', weight: 0.18, target: 88, saturation: 95 },
+        { attribute: 'finishing', weight: 0.16, target: 86, saturation: 95 },
+      ],
+    },
+    finishingAction: {
+      dependencies: [
+        { attribute: 'finishing', weight: 0.54, target: 92, saturation: 97 },
+        { attribute: 'offensiveAwareness', weight: 0.20, target: 90, saturation: 96 },
+        { attribute: 'kickingPower', weight: 0.16, target: 88, saturation: 95 },
+        { attribute: 'balance', weight: 0.10, target: 85, saturation: 93 },
+      ],
+    },
+    defensiveDuel: {
+      dependencies: [
+        { attribute: 'defensiveAwareness', weight: 0.28, target: 91, saturation: 97 },
+        { attribute: 'defensiveEngagement', weight: 0.25, target: 91, saturation: 97 },
+        { attribute: 'tackling', weight: 0.23, target: 90, saturation: 96 },
+        { attribute: 'aggression', weight: 0.11, target: 87, saturation: 94 },
+        { attribute: 'speed', weight: 0.07, target: 85, saturation: 93 },
+        { attribute: 'physicalContact', weight: 0.06, target: 86, saturation: 94 },
+      ],
+    },
+    aerialDuel: {
+      dependencies: [
+        { attribute: 'heading', weight: 0.30, target: 90, saturation: 96 },
+        { attribute: 'jump', weight: 0.27, target: 90, saturation: 96 },
+        { attribute: 'physicalContact', weight: 0.25, target: 88, saturation: 95 },
+        { attribute: 'defensiveAwareness', weight: 0.10, target: 86, saturation: 94 },
+        { attribute: 'offensiveAwareness', weight: 0.08, target: 84, saturation: 93 },
+      ],
+    },
   },
 };
 
-const ACTION_IDS_R510 = Object.keys(ACTION_DEFINITIONS_R510) as GameplayActionIdR510[];
-
-const DEFAULT_ACTION_WEIGHTS_R510: Record<GameplayActionIdR510, number> = {
-  firstTouchUnderPressure: 1,
-  shortCombination: 1,
-  lineBreakingPass: 1,
-  centralCarry: 1,
-  pressEscape: 1,
-  duelShield: 1,
-  attackingMovement: 1,
-  finishingAction: 1,
-  defensiveDuel: 1,
-  aerialDuel: 1,
-};
+const ACTION_IDS_R510 = Object.keys(GAMEPLAY_ENGINE_R510_SEED_POLICY.actions) as GameplayActionIdR510[];
 
 export type GameplayActionScoreR510 = {
   action: GameplayActionIdR510;
@@ -172,6 +205,7 @@ export type MarginalTrainingOptionR510 = {
 export type GameplayEngineResultR510 = {
   version: typeof GAMEPLAY_ENGINE_R510_VERSION;
   source: 'PROJECTED_PLAYER_STATE_R504';
+  calibration: typeof GAMEPLAY_ENGINE_R510_CALIBRATION;
   actionScores: Record<GameplayActionIdR510, GameplayActionScoreR510>;
   overallFunctionalScore: number;
   coverage: number;
@@ -185,28 +219,41 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function finiteAttribute(attributes: Attributes, key: AttributeKey): number | null {
   const value = Number(attributes[key]);
-  return Number.isFinite(value) ? clamp(value, 1, 99) : null;
+  return Number.isFinite(value)
+    ? clamp(value, 1, GAMEPLAY_ENGINE_R510_SEED_POLICY.attributeMaximum)
+    : null;
 }
 
 function actionWeight(context: GameplayEngineContextR510, action: GameplayActionIdR510): number {
-  const requested = Number(context.actionWeights?.[action] ?? DEFAULT_ACTION_WEIGHTS_R510[action]);
+  const requested = Number(
+    context.actionWeights?.[action] ?? GAMEPLAY_ENGINE_R510_SEED_POLICY.defaultActionWeight,
+  );
   return Number.isFinite(requested) ? Math.max(0, requested) : 0;
 }
 
 function attributeUtility(value: number, target: number, saturation: number): number {
+  const utility = GAMEPLAY_ENGINE_R510_SEED_POLICY.utility;
   if (value <= target) {
-    return clamp(Math.pow(value / target, 1.12), 0, 1);
+    return clamp(
+      Math.pow(value / target, utility.belowTargetExponent),
+      0,
+      utility.targetUtility,
+    );
   }
   if (value <= saturation) {
     const span = Math.max(1, saturation - target);
-    return 1 + 0.04 * ((value - target) / span);
+    const progress = (value - target) / span;
+    return utility.targetUtility
+      + (utility.saturationUtility - utility.targetUtility) * progress;
   }
-  const tail = Math.max(1, 99 - saturation);
-  return 1.04 + 0.01 * ((value - saturation) / tail);
+  const tail = Math.max(1, GAMEPLAY_ENGINE_R510_SEED_POLICY.attributeMaximum - saturation);
+  const progress = (value - saturation) / tail;
+  return utility.saturationUtility
+    + (utility.maximumUtility - utility.saturationUtility) * progress;
 }
 
 function scoreAction(attributes: Attributes, action: GameplayActionIdR510): GameplayActionScoreR510 {
-  const definition = ACTION_DEFINITIONS_R510[action];
+  const definition = GAMEPLAY_ENGINE_R510_SEED_POLICY.actions[action];
   let availableWeight = 0;
   let totalWeight = 0;
   let weightedUtility = 0;
@@ -216,14 +263,19 @@ function scoreAction(attributes: Attributes, action: GameplayActionIdR510): Game
     const value = finiteAttribute(attributes, dependency.attribute);
     if (value === null) continue;
     availableWeight += dependency.weight;
-    weightedUtility += dependency.weight * attributeUtility(value, dependency.target, dependency.saturation);
+    weightedUtility += dependency.weight * attributeUtility(
+      value,
+      dependency.target,
+      dependency.saturation,
+    );
   }
 
   const coverage = totalWeight > 0 ? availableWeight / totalWeight : 0;
   const normalized = availableWeight > 0 ? weightedUtility / availableWeight : 0;
+  const scoreNormalizer = 100 / GAMEPLAY_ENGINE_R510_SEED_POLICY.utility.maximumUtility;
   return {
     action,
-    score: clamp(normalized * 95.2380952381, 0, 100),
+    score: clamp(normalized * scoreNormalizer, 0, 100),
     coverage: clamp(coverage, 0, 1),
   };
 }
@@ -266,10 +318,14 @@ function contextualAttributeStats(
   for (const action of ACTION_IDS_R510) {
     const weight = actionWeight(context, action);
     if (weight <= 0) continue;
-    for (const dependency of ACTION_DEFINITIONS_R510[action].dependencies) {
+    for (const dependency of GAMEPLAY_ENGINE_R510_SEED_POLICY.actions[action].dependencies) {
       if (finiteAttribute(attributes, dependency.attribute) === null) continue;
       const impact = weight * dependency.weight;
-      const current = stats.get(dependency.attribute) ?? { impact: 0, targetWeighted: 0, saturationWeighted: 0 };
+      const current = stats.get(dependency.attribute) ?? {
+        impact: 0,
+        targetWeighted: 0,
+        saturationWeighted: 0,
+      };
       current.impact += impact;
       current.targetWeighted += impact * dependency.target;
       current.saturationWeighted += impact * dependency.saturation;
@@ -303,9 +359,9 @@ function deriveBottlenecks(
   }
 
   return rows.sort((a, b) =>
-    b.severity - a.severity ||
-    b.actionImpact - a.actionImpact ||
-    a.attribute.localeCompare(b.attribute),
+    b.severity - a.severity
+    || b.actionImpact - a.actionImpact
+    || a.attribute.localeCompare(b.attribute),
   );
 }
 
@@ -315,6 +371,7 @@ function groupSaturationPenalty(
   context: GameplayEngineContextR510,
 ): number {
   const stats = contextualAttributeStats(attributes, context);
+  const penaltyPolicy = GAMEPLAY_ENGINE_R510_SEED_POLICY.saturationPenalty;
   let weight = 0;
   let penalty = 0;
 
@@ -327,8 +384,19 @@ function groupSaturationPenalty(
     const localPenalty = currentValue <= target
       ? 0
       : currentValue >= saturation
-        ? clamp(0.7 + 0.3 * ((currentValue - saturation) / Math.max(1, 99 - saturation)), 0, 1)
-        : clamp(0.7 * ((currentValue - target) / Math.max(1, saturation - target)), 0, 0.7);
+        ? clamp(
+          penaltyPolicy.atSaturation
+            + (penaltyPolicy.maximum - penaltyPolicy.atSaturation)
+              * ((currentValue - saturation)
+                / Math.max(1, GAMEPLAY_ENGINE_R510_SEED_POLICY.attributeMaximum - saturation)),
+          0,
+          penaltyPolicy.maximum,
+        )
+        : clamp(
+          penaltyPolicy.atSaturation * ((currentValue - target) / Math.max(1, saturation - target)),
+          0,
+          penaltyPolicy.atSaturation,
+        );
     penalty += localPenalty * stat.impact;
     weight += stat.impact;
   }
@@ -341,7 +409,11 @@ function projectOneTrainingLevel(attributes: Attributes, group: TrainingKey): At
   for (const attribute of TRAINING_ATTRIBUTE_GROUPS_R504[group]) {
     const value = finiteAttribute(attributes, attribute);
     if (value === null) continue;
-    next[attribute] = clamp(value + 1, 1, 99);
+    next[attribute] = clamp(
+      value + 1,
+      1,
+      GAMEPLAY_ENGINE_R510_SEED_POLICY.attributeMaximum,
+    );
   }
   return next;
 }
@@ -384,10 +456,10 @@ function marginalTrainingOptions(
   }
 
   return options.sort((a, b) =>
-    b.gainPerPp - a.gainPerPp ||
-    b.functionalGain - a.functionalGain ||
-    a.ppCost - b.ppCost ||
-    a.trainingKey.localeCompare(b.trainingKey),
+    b.gainPerPp - a.gainPerPp
+    || b.functionalGain - a.functionalGain
+    || a.ppCost - b.ppCost
+    || a.trainingKey.localeCompare(b.trainingKey),
   );
 }
 
@@ -401,6 +473,7 @@ export function analyzeGameplayEngineR510(
   return {
     version: GAMEPLAY_ENGINE_R510_VERSION,
     source: 'PROJECTED_PLAYER_STATE_R504',
+    calibration: GAMEPLAY_ENGINE_R510_CALIBRATION,
     actionScores,
     overallFunctionalScore: functional.score,
     coverage: clamp(functional.coverage, 0, 1),
