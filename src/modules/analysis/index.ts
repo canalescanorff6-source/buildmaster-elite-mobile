@@ -66,19 +66,12 @@ export {
   type JointOptimizerResultR512,
 } from './jointOptimizerR512';
 
-// R513 / Fase 8: Golden Card Lab inicial com referências sintéticas auditáveis.
-// Mede determinismo e perturbações controladas sem fingir dados oficiais ou certificar produção.
+// R513 / Fase 8: Golden Card Lab inicial, somente leitura e ainda não certificado.
 export {
   GOLDEN_CARD_LAB_R513_VERSION,
   GOLDEN_CARD_LAB_R513_REFERENCES,
   runGoldenDeterminismR513,
   runGoldenPerturbationR513,
-  type GoldenScenarioR513,
-  type GoldenReferenceR513,
-  type GoldenDeterminismInputR513,
-  type GoldenDeterminismResultR513,
-  type GoldenPerturbationInputR513,
-  type GoldenPerturbationResultR513,
 } from './goldenCardLabR513';
 
 // R126/R128 permanecem internos para regressão/migração histórica.
