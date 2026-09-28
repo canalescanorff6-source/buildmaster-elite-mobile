@@ -68,6 +68,43 @@ const DIMENSION_ACTIONS: Record<Dimension, readonly string[]> = {
 
 function clamp(value:number,min=0,max=100){ return Math.max(min,Math.min(max,value)); }
 function round2(value:number){ return Math.round(value*100)/100; }
+function norm(value:unknown){ return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+
+// R508: o seletor final pós-ficha precisa preservar a semântica do estilo oficial
+// que já era autoridade no motor de skills. O delta abaixo replica deliberadamente
+// as prioridades oficiais do styleScore legado, mas é aplicado como componente
+// controlado (45%) sobre o score funcional pós-build, sem voltar a usar a saída
+// legada como autoridade.
+function officialPlaystyleSkillDeltaR508(playstyle:unknown, position:PositionCode, skill:string){
+  const style=norm(playstyle);
+  let score=0;
+  const add=(patterns:RegExp,skills:string[],points:number)=>{
+    if(patterns.test(style)&&skills.includes(skill)) score+=points;
+  };
+
+  add(/goleiro ofensivo|offensive goalkeeper/, ['Reposição baixa do goleiro','Reposição alta do goleiro','Arremesso longo do goleiro'], 34);
+  add(/goleiro ofensivo|offensive goalkeeper/, ['Espírito guerreiro','Liderança'], 12);
+  if(/goleiro ofensivo|offensive goalkeeper/.test(style)&&skill==='Pegador de pênalti') score-=55;
+
+  add(/goleiro defensivo|defensive goalkeeper/, ['Pegador de pênalti'], 96);
+  add(/goleiro defensivo|defensive goalkeeper/, ['Espírito guerreiro','Liderança'], 25);
+  add(/goleiro defensivo|defensive goalkeeper/, ['Reposição alta do goleiro'], 8);
+  if(/goleiro defensivo|defensive goalkeeper/.test(style)&&['Reposição baixa do goleiro','Arremesso longo do goleiro'].includes(skill)) score-=55;
+
+  add(/destruidor|destroyer|primeiro volante|anchor man|lateral defensivo|atacante surpresa|extra frontman/, ['Interceptação','Bloqueador','Marcação individual','Carrinho','Superioridade aérea','Espírito guerreiro'], 16);
+  add(/defensor criativo|build up/, ['Passe de primeira','Passe na medida','Passe aéreo baixo','Interceptação','Bloqueador'], 15);
+  add(/perito em cruzamento|cross specialist/, ['Cruzamento preciso','Passe na medida','Curva para fora','Passe aéreo baixo'], 17);
+  add(/armador criativo|creative playmaker|orquestrador|orchestrator|classico 10|classic no.? 10|meia versatil|box.to.box/, ['Passe de primeira','Passe em profundidade','Passe na medida','Controle com a sola','Toque de calcanhar','Passe sem olhar'], 16);
+  add(/infiltra|hole player/, ['Chute de primeira','Passe de primeira','Controle com a sola','Toque duplo','Precisão à distância'], 14);
+  add(/artilheiro|goal poacher/, ['Chute de primeira','Precisão à distância','Finalização acrobática','Chute com o peito do pé','Controle da cavadinha'], 18);
+  add(/homem de area|fox in the box/, ['Chute de primeira','Finalização acrobática','Cabeçada','Superioridade aérea'], 18);
+  add(/pivo|target man/, ['Cabeçada','Superioridade aérea','Toque de calcanhar','Passe de primeira','Espírito guerreiro'], 20);
+  add(/recuado|deep.lying forward/, ['Passe de primeira','Passe em profundidade','Controle com a sola','Toque de calcanhar','Passe na medida'], 19);
+  add(/ponta prolifico|prolific winger|flanco movel|roaming flank|lateral finalizador|full.back finisher/, ['Toque duplo','Controle com a sola','Corte com virada','Cruzamento preciso','Curva para fora','Precisão à distância'], 15);
+
+  if(position==='GK'&&!['Reposição baixa do goleiro','Reposição alta do goleiro','Arremesso longo do goleiro','Pegador de pênalti','Espírito guerreiro','Liderança'].includes(skill)) score-=200;
+  return score;
+}
 
 function projectedScoreOf(action:SkillActionInputR457){
   const value=Number(action.projectedScore);
@@ -78,9 +115,6 @@ function actionImportance(action:SkillActionInputR457){
   const frequency=clamp(Number(action.frequency)||0);
   const contribution=clamp(Number(action.contribution)||0);
   const projected=projectedScoreOf(action);
-  // R506: skill não substitui atributo. Quando a ação vem do estado final da ficha,
-  // a utilidade funcional considera se os atributos pós-build realmente sustentam a ação.
-  // Sem projectedScore, preservamos exatamente a ponderação legada R459.
   return projected===null
     ? clamp(frequency*.68+contribution*.32)
     : clamp(frequency*.50+contribution*.25+projected*.25);
@@ -118,8 +152,7 @@ function skillVector(name:string):Partial<Record<Dimension,number>>{
   return out;
 }
 
-function individualScore(name:string,actions:SkillActionInputR457[]){
-  // Base genérica preservada apenas como fallback para habilidades ainda sem mapeamento de ação.
+function individualScore(name:string,actions:SkillActionInputR457[],playstyle:unknown,position:PositionCode){
   const vector=skillVector(name);
   let genericWeighted=0,genericTotal=0;
   const genericSupport:Array<{label:string;value:number}>=[];
@@ -132,9 +165,6 @@ function individualScore(name:string,actions:SkillActionInputR457[]){
   }
   const genericScore=genericTotal>0?clamp(genericWeighted/genericTotal):0;
 
-  // R459/R506: o Top 5 usa a MESMA ação funcional que dirige a ficha e, quando
-  // disponível, o projectedScore pós-build dessa ação. Isto é relevância funcional
-  // interna; não representa bônus numérico oficial da habilidade sobre atributos.
   let specificWeighted=0,specificTotal=0;
   const actionSupport:Array<{label:string;value:number}>=[];
   for(const action of actions){
@@ -148,7 +178,9 @@ function individualScore(name:string,actions:SkillActionInputR457[]){
     actionSupport.push({label:action.label||action.id,value});
   }
   const specificScore=specificTotal>0?clamp(specificWeighted/specificTotal*100):0;
-  const score=specificTotal>0?clamp(specificScore*.82+genericScore*.18):genericScore;
+  const functionalScore=specificTotal>0?clamp(specificScore*.82+genericScore*.18):genericScore;
+  const styleDelta=officialPlaystyleSkillDeltaR508(playstyle,position,name);
+  const score=clamp(functionalScore+styleDelta*.45);
   const support=actionSupport.length?actionSupport:genericSupport;
   support.sort((a,b)=>b.value-a.value||a.label.localeCompare(b.label,'pt-BR'));
   return {score:round2(score),supportedActions:support.slice(0,3).map(item=>item.label)};
@@ -208,7 +240,7 @@ export function optimizeFinalAdditionalSkillSetR457(
   );
 
   const individual=new Map<string,{score:number;supportedActions:string[]}>();
-  for(const skill of pool) individual.set(skillIdentityKey(skill),individualScore(skill,actions));
+  for(const skill of pool) individual.set(skillIdentityKey(skill),individualScore(skill,actions,parsed.playstyle,position));
 
   const target=Math.min(5,pool.length);
   const sets=combinations(pool,target);
@@ -225,8 +257,6 @@ export function optimizeFinalAdditionalSkillSetR457(
   }
 
   const currentInstalled=current.slice(0,5);
-  // Skill instalada mas incompatível com a função continua sendo um slot real:
-  // ela vale 0 no modelo desta função e deve aparecer como candidata a SUBSTITUIR, não desaparecer.
   const currentScore=setScore(currentInstalled,individual).score;
   const finalSet=new Set(winner.map(skillIdentityKey));
   const currentSet=new Set(currentInstalled.map(skillIdentityKey));
@@ -278,9 +308,9 @@ export function optimizeFinalAdditionalSkillSetR457(
     nativeSpecialDuplicatesBlocked:winner.every(skill=>!nativeSpecial.has(skillIdentityKey(skill))),
     deterministic:true,
     modelNote:stateSource==='PROJECTED_POST_BUILD_ACTIONS'
-      ? 'R506 alinha o Top 5 às ações e ao projectedScore pós-build da ficha. A skill só recebe relevância quando a ação final é funcionalmente sustentada; nenhum bônus numérico oficial de atributo é inventado.'
+      ? 'R508 preserva no Top 5 final as ações e projectedScore pós-build da ficha e reinjeta o estilo oficial da carta como sinal funcional controlado. Nenhum bônus numérico oficial de atributo é inventado.'
       : stateSource==='PARTIAL_PROJECTED_ACTIONS'
-        ? 'R506 recebeu apenas parte dos projectedScore; usa o estado pós-build onde existe e preserva a ponderação R459 nos demais sinais sem inventar atributos.'
-        : 'Fallback R459 explícito: não havia projectedScore pós-build nas ações; frequência/contribuição permanecem a fonte funcional. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
+        ? 'R508 recebeu apenas parte dos projectedScore; usa o estado pós-build disponível, o estilo oficial e preserva a ponderação R459 nos demais sinais sem inventar atributos.'
+        : 'Fallback R459/R508 explícito: sem projectedScore pós-build, frequência/contribuição e estilo oficial permanecem sinais funcionais. Scores e sinergias são estimativas internas, não bônus oficiais de atributos.'
   };
 }
