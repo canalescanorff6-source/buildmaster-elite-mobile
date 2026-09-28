@@ -117,8 +117,9 @@ for (const regression of [
   'tests/v40-80-r510-gameplay-engine-2-regression.ts',
   'tests/v40-80-r511-possession-action-profile-regression.ts',
   'tests/v40-80-r512-joint-optimizer-v2-regression.ts',
+  'tests/v40-80-r513-golden-card-lab-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow e teto R192 preservado.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R513/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Card Lab inicial e teto R192 preservado.');
