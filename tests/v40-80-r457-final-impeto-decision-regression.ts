@@ -18,11 +18,11 @@ assert.equal(current.numericAttributeEffectVerified,false);
 assert.equal(current.automaticSpendAuthorized,false);
 assert.notEqual(current.technicalIdeal,'Cruzamento','Ímpeto existente não pode ser declarado ideal automaticamente.');
 assert.ok(current.technicalIdealScore>=48);
-assert.ok(['REPLACE_IF_ALLOWED','KEEP_CURRENT'].includes(current.action));
+assert.equal(current.action,'KEEP_CURRENT','R508 preserva qualquer Ímpeto já ativo; o ideal técnico permanece apenas informativo.');
 const unknown=evaluateFinalImpetoDecisionR457({...base,impetos:[{name:'Ímpeto não catalogado',active:true}]},finishing,'CF');
-assert.equal(unknown.action,'REVIEW_SLOT','Ímpeto atual não reconhecido não pode ser trocado por comparação inexistente.');
+assert.equal(unknown.action,'KEEP_CURRENT','Ímpeto ativo não reconhecido também deve ser preservado; ausência de catálogo não autoriza troca automática.');
 assert.equal(unknown.currentScore,null);
-
+assert.equal(unknown.automaticSpendAuthorized,false);
 
 const empty=evaluateFinalImpetoDecisionR457({...base,impetos:[],evidence:{impetoSlotStatus:'DISPONIVEL'}},finishing,'CF');
 assert.equal(empty.action,'ADD_IF_AVAILABLE');
@@ -34,4 +34,4 @@ assert.equal(noSlot.technicalIdeal,empty.technicalIdeal);
 
 const gerVariant=evaluateFinalImpetoDecisionR457({...base,overall:119},finishing,'CF');
 assert.equal(gerVariant.technicalIdeal,current.technicalIdeal,'GER não pode mudar Ímpeto técnico ideal.');
-console.log('R457 Ímpeto aprovado: ideal técnico é calculado mesmo com Ímpeto atual; gasto continua bloqueado e nenhum bônus numérico não confirmado é inventado.');
+console.log('R457 Ímpeto aprovado: todo Ímpeto ativo é preservado; ideal técnico segue informativo, gasto automático bloqueado e GER neutro.');
