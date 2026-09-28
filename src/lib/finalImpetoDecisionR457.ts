@@ -113,14 +113,14 @@ export function evaluateFinalImpetoDecisionR457(
       if(!currentEntry){
         action='REVIEW_SLOT';
         reason=`O Ímpeto atual ${current} não existe na matriz funcional confirmada; o ideal técnico ${ideal.name} é apenas referência e nenhuma troca é recomendada sem identificar o efeito atual.`;
-      }else if(norm(current)===norm(ideal.name) || (gain!==null&&gain<4)){
+      }else{
+        // R508: Ímpeto reconhecido e já aplicado é recurso permanente da carta.
+        // O ideal técnico continua calculado para diagnóstico, mas nunca vira uma
+        // nova recomendação de gasto/troca automática ou pública.
         action='KEEP_CURRENT';
         reason=norm(current)===norm(ideal.name)
           ? `O Ímpeto atual ${current} também é o ideal técnico para esta função.`
-          : `O Ímpeto ideal técnico ${ideal.name} supera ${current} em apenas ${gain} ponto(s) funcionais; ganho insuficiente para justificar substituição.`;
-      }else{
-        action='REPLACE_IF_ALLOWED';
-        reason=`O ideal técnico é ${ideal.name}, com ganho funcional estimado de ${gain??'não calculado'} sobre ${current}. A troca continua condicionada à mecânica/vaga e à decisão do usuário.`;
+          : `O Ímpeto atual ${current} já está aplicado e reconhecido. ${ideal.name} teria ganho funcional estimado de ${gain??'não calculado'}, mas permanece apenas como referência técnica; o BuildMaster preserva o recurso existente e não recomenda novo gasto.`;
       }
     }else if(slotStatus==='DISPONIVEL'){
       action='ADD_IF_AVAILABLE';
@@ -132,6 +132,11 @@ export function evaluateFinalImpetoDecisionR457(
       action='REVIEW_SLOT';
       reason=`O ideal técnico é ${ideal.name}; confirme a vaga antes de gastar qualquer recurso.`;
     }
+  }else if(current&&currentEntry){
+    // Mesmo sem candidato técnico acima do limiar, um Ímpeto reconhecido já
+    // aplicado continua sendo a autoridade segura: não se cria recomendação nova.
+    action='KEEP_CURRENT';
+    reason=`O Ímpeto atual ${current} está reconhecido e já aplicado; nenhum candidato técnico seguro justifica uma nova recomendação.`;
   }else if(ambiguity){
     action='NO_SAFE_CANDIDATE';
     reason='Os melhores candidatos ficaram tecnicamente empatados; o motor não escolhe por ordem nem autoriza gasto.';
