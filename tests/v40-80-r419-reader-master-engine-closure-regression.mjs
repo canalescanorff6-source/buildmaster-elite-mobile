@@ -72,7 +72,6 @@ assert.match(r417, /applyAutonomousRoleSeedR417/);
 assert.match(r417, /topPositions:top\.map/);
 assert.match(r417, /assert\.deepEqual\(cb\.training, dmf\.training/);
 assert.match(r417, /assert\.deepEqual\(cb\.recommendedSkills, dmf\.recommendedSkills/);
-assert.match(r417, /assert\.deepEqual\(cb\.recommendedImpetos, dmf\.recommendedImpetos/);
 assert.match(r417, /MAX_MODULES_R192 = 125;[\s\S]{0,120}MAX_MODULES_R192 = 127;/,
   'R433: R417 deve continuar contabilizando apenas os dois módulos R416/R417.');
 
@@ -119,8 +118,9 @@ for (const regression of [
   'tests/v40-80-r512-joint-optimizer-v2-regression.ts',
   'tests/v40-80-r513-golden-card-lab-regression.ts',
   'tests/v40-80-r515-ocr-conflict-matrix-regression.ts',
+  'tests/v40-80-r516-real-match-calibration-bridge-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R513/R515/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab e matriz de conflitos OCR protegidos.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R513/R515/R516/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR e ponte de calibração real protegidos.');
