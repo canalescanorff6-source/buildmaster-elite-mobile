@@ -19,17 +19,21 @@ const expectedScenarios = [
 ].sort();
 
 assert.equal(GOLDEN_CARD_LAB_R513_VERSION, '40.80-r513-golden-card-lab-v1');
-assert.equal(GOLDEN_CARD_LAB_R513_REFERENCES.length, 8,
-  'R513 deve iniciar cobrindo os oito cenários de referência pedidos no Prompt Mestre.');
+assert.ok(GOLDEN_CARD_LAB_R513_REFERENCES.length >= 32,
+  'R514 deve elevar o Golden Lab inicial para algumas dezenas de referências sintéticas.');
 assert.deepEqual(
-  GOLDEN_CARD_LAB_R513_REFERENCES.map(item => item.scenario).sort(),
+  [...new Set(GOLDEN_CARD_LAB_R513_REFERENCES.map(item => item.scenario))].sort(),
   expectedScenarios,
 );
-assert.equal(new Set(GOLDEN_CARD_LAB_R513_REFERENCES.map(item => item.id)).size, 8,
-  'R513: IDs de referência precisam ser únicos e reproduzíveis.');
+assert.equal(new Set(GOLDEN_CARD_LAB_R513_REFERENCES.map(item => item.id)).size, GOLDEN_CARD_LAB_R513_REFERENCES.length,
+  'R514: todos os IDs Golden precisam ser únicos e reproduzíveis.');
+for (const scenario of expectedScenarios) {
+  assert.ok(GOLDEN_CARD_LAB_R513_REFERENCES.filter(item => item.scenario === scenario).length >= 4,
+    `R514: ${scenario} precisa de pelo menos quatro referências para formar uma matriz útil.`);
+}
 assert.ok(GOLDEN_CARD_LAB_R513_REFERENCES.every(item => item.referenceKind === 'SYNTHETIC_ARCHETYPE'));
 assert.ok(GOLDEN_CARD_LAB_R513_REFERENCES.every(item => item.officialGameData === false),
-  'R513 não pode apresentar arquétipos de engenharia como dados oficiais do eFootball.');
+  'R514 não pode apresentar arquétipos de engenharia como dados oficiais do eFootball.');
 assert.ok(GOLDEN_CARD_LAB_R513_REFERENCES.every(item => item.style === 'POSSESSION_CENTRAL'));
 
 const state: ProjectedPlayerStateR504 = {
@@ -108,6 +112,21 @@ assert.equal(perturbation.perturbed.calibrationStatus, 'PROVISIONAL_UNCALIBRATED
 assert.equal(perturbation.certifiedForFinalWrite, false,
   'R513 Golden Lab observa/compara; ainda não promove motor para escrita final.');
 
+for (const golden of GOLDEN_CARD_LAB_R513_REFERENCES) {
+  const repeated = runGoldenDeterminismR513({ referenceId: golden.id, state, repetitions: 3 });
+  assert.equal(repeated.status, 'PASS', `R514: determinismo falhou em ${golden.id}.`);
+  assert.equal(repeated.uniqueOutputs, 1, `R514: ${golden.id} produziu mais de uma saída.`);
+
+  const matrixPerturbation = runGoldenPerturbationR513({
+    referenceId: golden.id,
+    state,
+    perturbation: { attribute: 'lowPass', from: 84, to: 85, maxExpectedPossessionDelta: 3 },
+  });
+  assert.equal(matrixPerturbation.status, 'PASS', `R514: perturbação 84→85 ficou instável em ${golden.id}.`);
+  assert.deepEqual(matrixPerturbation.changedAttributes, ['lowPass']);
+  assert.equal(matrixPerturbation.certifiedForFinalWrite, false);
+}
+
 assert.throws(() => runGoldenPerturbationR513({
   referenceId: 'golden-r513-orchestrator-possession-001',
   state,
@@ -127,4 +146,4 @@ assert.throws(() => runGoldenDeterminismR513({
 }), /referência golden/i,
 'R513 não pode cair em fallback silencioso para cenário desconhecido.');
 
-console.log('R513 aprovado: Golden Card Lab possui 8 cenários sintéticos, determinismo e perturbação fail-closed.');
+console.log(`R514 aprovado: matriz Golden com ${GOLDEN_CARD_LAB_R513_REFERENCES.length} referências sintéticas, determinismo e perturbação fail-closed.`);
