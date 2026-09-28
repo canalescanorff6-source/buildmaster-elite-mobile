@@ -38,6 +38,20 @@ export {
   type MarginalTrainingOptionR510,
 } from './gameplayEngineR510';
 
+// R511 / Fase 4: Posse central por função sobre o R510.
+// Continua somente diagnóstico; calibração permanece provisória e sem escrita final.
+export {
+  analyzePossessionR511,
+  POSSESSION_ACTION_IDS_R511,
+  POSSESSION_ENGINE_R511_VERSION,
+  POSSESSION_ENGINE_R511_CALIBRATION,
+  type PossessionActionIdR511,
+  type PossessionUsageFunctionR511,
+  type PossessionActionScoreR511,
+  type PossessionAnalysisInputR511,
+  type PossessionEngineResultR511,
+} from './possessionEngineR511';
+
 // R126/R128 permanecem internos para regressão/migração histórica.
 // Código de aplicação deve entrar exclusivamente pela fachada R138 abaixo.
 
