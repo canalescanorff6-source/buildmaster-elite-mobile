@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import type { ProjectedPlayerStateR504 } from '../src/modules/analysis/projectedPlayerStateR504';
 import {
   analyzeGameplayEngineR510,
+  GAMEPLAY_ENGINE_R510_CALIBRATION,
   type GameplayEngineContextR510,
 } from '../src/modules/analysis/gameplayEngineR510';
 
@@ -92,6 +93,19 @@ assert.equal(first.source, 'PROJECTED_PLAYER_STATE_R504');
 assert.ok(first.coverage > 0 && first.coverage <= 1, 'R510: cobertura precisa ser explícita em 0..1.');
 assert.ok(first.overallFunctionalScore > 0 && first.overallFunctionalScore <= 100, 'R510: score funcional deve permanecer em 0..100.');
 
+assert.equal(GAMEPLAY_ENGINE_R510_CALIBRATION.status, 'PROVISIONAL_UNCALIBRATED',
+  'R510: parâmetros de ação ainda não calibrados não podem se apresentar como certificados.');
+assert.equal(GAMEPLAY_ENGINE_R510_CALIBRATION.provenance, 'ENGINEERING_SEED',
+  'R510: origem dos pesos/limiares provisórios precisa ser explícita.');
+assert.equal(GAMEPLAY_ENGINE_R510_CALIBRATION.officialGameData, false,
+  'R510: sementes de engenharia não podem ser rotuladas como dado oficial do jogo.');
+assert.equal(GAMEPLAY_ENGINE_R510_CALIBRATION.certifiedForFinalWrite, false,
+  'R510: motor não calibrado não pode se autorizar a escrever ficha final.');
+assert.ok(GAMEPLAY_ENGINE_R510_CALIBRATION.calibrationRequired.includes('GOLDEN_CARD_LAB'));
+assert.ok(GAMEPLAY_ENGINE_R510_CALIBRATION.calibrationRequired.includes('REAL_MATCH_DATA'));
+assert.deepEqual(first.calibration, GAMEPLAY_ENGINE_R510_CALIBRATION,
+  'R510: toda saída precisa carregar o estado de calibração para consumidores downstream.');
+
 assert.equal(first.bottlenecks[0]?.attribute, 'lowPass',
   'R510: passe baixo insuficiente deve aparecer como gargalo funcional antes de atributos já saturados.');
 
@@ -125,5 +139,9 @@ assert.match(source, /trainingTotalCost/,
   'R510: custo marginal precisa derivar da autoridade oficial de PP.');
 assert.match(source, /TRAINING_ATTRIBUTE_GROUPS_R504/,
   'R510: grupos de treino precisam reutilizar a autoridade do Projected Player State.');
+assert.doesNotMatch(source, /95\.2380952381/,
+  'R510: normalização não pode depender de literal mágico escondido.');
+assert.match(source, /GAMEPLAY_ENGINE_R510_SEED_POLICY/,
+  'R510: pesos, metas, saturação e curva provisória precisam estar centralizados em uma política auditável.');
 
-console.log('R510 aprovado: gargalo, saturação e ganho funcional por PP são determinísticos e independentes de GER/Overall.');
+console.log('R510 aprovado: gargalo, saturação, ganho/PP e proveniência de calibração ficam explícitos e auditáveis.');
