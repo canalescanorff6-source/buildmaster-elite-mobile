@@ -59,4 +59,9 @@ const collecting = deriveMotorLabCandidateR472({
 });
 assert.equal(collecting.status, 'COLLECTING');
 
-console.log('R472 runtime aprovado: Production permanece travado; Experimental só observa; Candidate exige evidência e revisão humana.');
+// R516 fecha a cadeia de evidência real imediatamente após o lifecycle R472.
+// O import é intencional: o workflow de PR já executa test:r472, portanto
+// qualquer regressão na ponte R460 → R470 → R510/R511 → R472 quebra este gate.
+require('./v40-80-r516-real-match-calibration-bridge-regression.ts');
+
+console.log('R472 runtime aprovado: Production permanece travado; Experimental só observa; Candidate exige evidência e revisão humana; R516 também protegido.');

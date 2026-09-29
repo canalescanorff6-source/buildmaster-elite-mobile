@@ -1,0 +1,41 @@
+[
+  {"id":"golden-r513-orchestrator-possession-001","scenario":"ORCHESTRATOR_POSSESSION","label":"Orquestrador em Posse — Linha curta","position":"CMF","usageFunction":"CMF_ORGANIZER","purpose":"Linha curta, passe seguro, ruptura e saída sob pressão."},
+  {"id":"golden-r514-orchestrator-possession-002","scenario":"ORCHESTRATOR_POSSESSION","label":"Orquestrador em Posse — Pressão","position":"CMF","usageFunction":"CMF_ORGANIZER","purpose":"Receber pressionado, orientar primeiro toque e manter opção curta."},
+  {"id":"golden-r514-orchestrator-possession-003","scenario":"ORCHESTRATOR_POSSESSION","label":"Orquestrador em Posse — Progressão","position":"CMF","usageFunction":"CMF_ORGANIZER","purpose":"Progressão central, passe de ruptura e reposicionamento após soltar a bola."},
+  {"id":"golden-r514-orchestrator-possession-004","scenario":"ORCHESTRATOR_POSSESSION","label":"Orquestrador em Posse — Controle","position":"CMF","usageFunction":"CMF_ORGANIZER","purpose":"Controle de ritmo, tabela curta, giro e saída limpa sob pressão."},
+
+  {"id":"golden-r513-anchor-dmf-possession-001","scenario":"ANCHOR_DMF_POSSESSION","label":"1º volante em Posse — Proteção","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Proteção central, linha curta, segurança e contrapressão."},
+  {"id":"golden-r514-anchor-dmf-possession-002","scenario":"ANCHOR_DMF_POSSESSION","label":"1º volante em Posse — Saída","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Saída sob pressão, passe seguro e manutenção da base central."},
+  {"id":"golden-r514-anchor-dmf-possession-003","scenario":"ANCHOR_DMF_POSSESSION","label":"1º volante em Posse — Recuperação","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Recuperação, contrapressão e primeira ação segura depois do desarme."},
+  {"id":"golden-r514-anchor-dmf-possession-004","scenario":"ANCHOR_DMF_POSSESSION","label":"1º volante em Posse — Controle posicional","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Cobertura do centro, opção curta constante e circulação sem exposição."},
+
+  {"id":"golden-r513-box-striker-001","scenario":"BOX_STRIKER","label":"Homem de área — Recepção","position":"CF","usageFunction":"CF_FINISHER","purpose":"Recepção, giro, reposicionamento e conclusão da jogada central."},
+  {"id":"golden-r514-box-striker-002","scenario":"BOX_STRIKER","label":"Homem de área — Apoio de costas","position":"CF","usageFunction":"CF_FINISHER","purpose":"Proteção da bola, devolução curta e reposicionamento dentro da área."},
+  {"id":"golden-r514-box-striker-003","scenario":"BOX_STRIKER","label":"Homem de área — Giro rápido","position":"CF","usageFunction":"CF_FINISHER","purpose":"Primeiro toque, giro sob contato e ataque imediato ao espaço central."},
+  {"id":"golden-r514-box-striker-004","scenario":"BOX_STRIKER","label":"Homem de área — Conclusão central","position":"CF","usageFunction":"CF_FINISHER","purpose":"Receber entre zagueiros, ajustar curto e concluir sem abandonar o corredor central."},
+
+  {"id":"golden-r513-infiltrator-001","scenario":"INFILTRATOR","label":"Infiltração — Progressão","position":"AMF","usageFunction":"AMF_INFILTRATOR","purpose":"Primeiro toque, progressão central, ruptura e reposicionamento."},
+  {"id":"golden-r514-infiltrator-002","scenario":"INFILTRATOR","label":"Infiltração — Segunda linha","position":"AMF","usageFunction":"AMF_INFILTRATOR","purpose":"Ataque ao espaço entre linhas, aceleração curta e continuidade da tabela."},
+  {"id":"golden-r514-infiltrator-003","scenario":"INFILTRATOR","label":"Infiltração — Recepção e giro","position":"AMF","usageFunction":"AMF_INFILTRATOR","purpose":"Receber orientado, girar no centro e encontrar passe ou condução de ruptura."},
+  {"id":"golden-r514-infiltrator-004","scenario":"INFILTRATOR","label":"Infiltração — Triangulação","position":"AMF","usageFunction":"AMF_INFILTRATOR","purpose":"Tabela, 1-2, triangulação central e reaparição em zona de finalização."},
+
+  {"id":"golden-r513-box-to-box-001","scenario":"BOX_TO_BOX","label":"Meia versátil — Apoio","position":"CMF","usageFunction":"CMF_BOX_TO_BOX","purpose":"Progressão, apoio, reposicionamento e contrapressão."},
+  {"id":"golden-r514-box-to-box-002","scenario":"BOX_TO_BOX","label":"Meia versátil — Transição","position":"CMF","usageFunction":"CMF_BOX_TO_BOX","purpose":"Condução curta, progressão central e retorno rápido à estrutura."},
+  {"id":"golden-r514-box-to-box-003","scenario":"BOX_TO_BOX","label":"Meia versátil — Contrapressão","position":"CMF","usageFunction":"CMF_BOX_TO_BOX","purpose":"Pressionar após perda, recuperar e oferecer passe curto de segurança."},
+  {"id":"golden-r514-box-to-box-004","scenario":"BOX_TO_BOX","label":"Meia versátil — Circulação","position":"CMF","usageFunction":"CMF_BOX_TO_BOX","purpose":"Circular por dentro, apoiar triângulos e ocupar o espaço livre após o passe."},
+
+  {"id":"golden-r513-destroyer-001","scenario":"DESTROYER","label":"Destruidor — Duelo","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Proteção, duelo, contrapressão e passe seguro após recuperação."},
+  {"id":"golden-r514-destroyer-002","scenario":"DESTROYER","label":"Destruidor — Recuperação agressiva","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Encostar rápido no portador, recuperar no centro e não rifar a primeira bola."},
+  {"id":"golden-r514-destroyer-003","scenario":"DESTROYER","label":"Destruidor — Duelo e saída","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Vencer contato, proteger a posse recuperada e conectar passe curto."},
+  {"id":"golden-r514-destroyer-004","scenario":"DESTROYER","label":"Destruidor — Proteção central","position":"DMF","usageFunction":"DMF_PROTECTOR","purpose":"Fechar linha central, contrapressionar e manter suporte simples na posse."},
+
+  {"id":"golden-r513-build-up-cb-001","scenario":"BUILD_UP_CB","label":"Defensor criativo — Saída limpa","position":"CB","usageFunction":"CB_BUILDER","purpose":"Saída limpa, passe seguro, ruptura e reposicionamento defensivo."},
+  {"id":"golden-r514-build-up-cb-002","scenario":"BUILD_UP_CB","label":"Defensor criativo — Pressão","position":"CB","usageFunction":"CB_BUILDER","purpose":"Receber pressionado, conservar a bola e encontrar apoio curto sem forçar passe."},
+  {"id":"golden-r514-build-up-cb-003","scenario":"BUILD_UP_CB","label":"Defensor criativo — Passe vertical","position":"CB","usageFunction":"CB_BUILDER","purpose":"Reconhecer linha vertical, quebrar primeira pressão e recuperar posição defensiva."},
+  {"id":"golden-r514-build-up-cb-004","scenario":"BUILD_UP_CB","label":"Defensor criativo — Construção segura","position":"CB","usageFunction":"CB_BUILDER","purpose":"Circular por baixo, oferecer ângulo de retorno e preservar estrutura de cobertura."},
+
+  {"id":"golden-r513-defensive-fullback-001","scenario":"DEFENSIVE_FULLBACK","label":"Lateral defensivo — Segurança","position":"RB","usageFunction":"FULLBACK_DEFENSIVE","purpose":"Segurança lateral, apoio curto, proteção e saída sob pressão."},
+  {"id":"golden-r514-defensive-fullback-002","scenario":"DEFENSIVE_FULLBACK","label":"Lateral defensivo — Apoio seguro","position":"RB","usageFunction":"FULLBACK_DEFENSIVE","purpose":"Dar opção curta sem ultrapassagem excessiva e reciclar a posse por dentro."},
+  {"id":"golden-r514-defensive-fullback-003","scenario":"DEFENSIVE_FULLBACK","label":"Lateral defensivo — Cobertura interna","position":"RB","usageFunction":"FULLBACK_DEFENSIVE","purpose":"Fechar corredor interno, proteger transição e participar da circulação curta."},
+  {"id":"golden-r514-defensive-fullback-004","scenario":"DEFENSIVE_FULLBACK","label":"Lateral defensivo — Saída sob pressão","position":"RB","usageFunction":"FULLBACK_DEFENSIVE","purpose":"Receber perto da linha, escapar da pressão e devolver ao centro com segurança."}
+]
