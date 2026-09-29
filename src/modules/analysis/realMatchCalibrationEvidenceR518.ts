@@ -2,6 +2,7 @@ import type { MatchValidationRecord } from '../../lib/appEvolution';
 import type { IntelligentLearningR470Analysis } from '../../lib/intelligentLearningR470';
 import type { MotorLabLifecycleR472 } from '../../lib/motorLabLifecycleR472';
 import type { BuildOutcomeCalibrationR460 } from '../matches/buildOutcomeCalibrationR460';
+import { readMatchValidationRepositoryR137 } from '../matches/matchValidationRepositoryR137';
 import {
   GAMEPLAY_ENGINE_R510_CALIBRATION,
   GAMEPLAY_ENGINE_R510_VERSION,
@@ -491,4 +492,14 @@ export function buildRealMatchCalibrationEvidenceR518(
       ],
     },
   };
+}
+
+export function buildPersistedRealMatchCalibrationEvidenceR518(
+  contexts: readonly RealMatchCalibrationContextR518[],
+): RealMatchCalibrationEvidenceR518 {
+  return buildRealMatchCalibrationEvidenceR518({
+    origin: 'PERSISTED_REAL',
+    records: readMatchValidationRepositoryR137(),
+    contexts,
+  });
 }
