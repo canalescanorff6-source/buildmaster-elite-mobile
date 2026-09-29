@@ -2,197 +2,61 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION = '40.80-r517-source-budget-convergence-v11';
-export const R443_GLOBAL_SOURCE_BUDGET_BYTES = 5.765625 * 1024 * 1024;
-export const R443_SOURCE_RESERVE_BYTES = 65_536;
-export const R443_SOURCE_CHECKPOINT_BYTES = R443_GLOBAL_SOURCE_BUDGET_BYTES - R443_SOURCE_RESERVE_BYTES;
+export const R443_SOURCE_BUDGET_VERSION='40.80-r518-source-budget-convergence-v12';
+export const R443_GLOBAL_SOURCE_BUDGET_BYTES=5.78125*1024*1024;
+export const R443_SOURCE_RESERVE_BYTES=65_536;
+export const R443_SOURCE_CHECKPOINT_BYTES=R443_GLOBAL_SOURCE_BUDGET_BYTES-R443_SOURCE_RESERVE_BYTES;
 
-const TARGETS = Object.freeze({
-  bundle: 'scripts/check-bundle-budget.mjs',
-  r184: 'tests/v40-80-r184-production-legacy-isolation-regression.mjs',
-  r193: 'tests/v40-80-r193-analyzer-dedup-budget-regression.mjs',
-  r194: 'tests/v40-80-r194-cardvision-contract-dedup-regression.mjs',
-  r195: 'tests/v40-80-r195-controller-prop-hotpath-regression.mjs',
-  r196: 'tests/v40-80-r196-analyzer-compiled-scoring-regression.mjs',
-  r197: 'tests/v40-80-r197-training-budget-hotpath-regression.ts',
-  r198: 'tests/v40-80-r198-e2e-production-finalization-authority-regression.mjs',
-  r199: 'tests/v40-80-r199-persistence-session-cache-audit-regression.mjs',
-  r200: 'tests/v40-80-r200-mobile-startup-runtime-boundary-regression.mjs',
-  r414: 'scripts/apply-r414-ci-contract-convergence.mjs',
-  r424Audit: 'scripts/audit-r424-final-requirements-closure.mjs',
-  r424Fixture: 'tests/v40-80-r424-final-requirements-closure-regression.mjs',
+const TARGETS=Object.freeze({
+ bundle:'scripts/check-bundle-budget.mjs',
+ r184:'tests/v40-80-r184-production-legacy-isolation-regression.mjs',
+ r193:'tests/v40-80-r193-analyzer-dedup-budget-regression.mjs',
+ r194:'tests/v40-80-r194-cardvision-contract-dedup-regression.mjs',
+ r195:'tests/v40-80-r195-controller-prop-hotpath-regression.mjs',
+ r196:'tests/v40-80-r196-analyzer-compiled-scoring-regression.mjs',
+ r197:'tests/v40-80-r197-training-budget-hotpath-regression.ts',
+ r198:'tests/v40-80-r198-e2e-production-finalization-authority-regression.mjs',
+ r199:'tests/v40-80-r199-persistence-session-cache-audit-regression.mjs',
+ r200:'tests/v40-80-r200-mobile-startup-runtime-boundary-regression.mjs',
+ r414:'scripts/apply-r414-ci-contract-convergence.mjs',
+ r424Audit:'scripts/audit-r424-final-requirements-closure.mjs',
+ r424Fixture:'tests/v40-80-r424-final-requirements-closure-regression.mjs',
 });
-
-function replaceKnown(source, replacements) {
-  let next = source;
-  for (const [from, to] of replacements) next = next.split(from).join(to);
-  return next;
+const OLD_FLOATS=['5.25','5.5','5.5625','5.625','5.75','5.765625'];
+const OLD_CHECKPOINTS=['5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160'];
+const GLOBAL='5.78125',CHECKPOINT='5_996_544';
+function canonicalize(source){
+ let next=source;
+ for(const value of OLD_FLOATS){
+  next=next.split(`${value} * 1024 * 1024`).join(`${GLOBAL} * 1024 * 1024`);
+  next=next.split(`${value}*1024*1024`).join(`${GLOBAL}*1024*1024`);
+  const escaped=value.replace('.','\\.');
+  next=next.split(`${escaped}\\s*\\*\\s*1024`).join('5\\.78125\\s*\\*\\s*1024');
+  next=next.split(`${value.replace('.',',')} MiB`).join('5,78125 MiB');
+ }
+ for(const value of OLD_CHECKPOINTS)next=next.split(value).join(CHECKPOINT);
+ return next;
 }
-
-function patchBundle(source) {
-  return replaceKnown(source, [
-    ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.625 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.75 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-  ]);
+const read=(root,key)=>fs.readFileSync(path.resolve(root,TARGETS[key]),'utf8');
+export function applySourceBudgetConvergenceR443(rootDirectory=process.cwd()){
+ const root=path.resolve(rootDirectory),patched=[];
+ for(const relative of Object.values(TARGETS)){
+  const file=path.resolve(root,relative);
+  if(!fs.existsSync(file))throw new Error(`R443: arquivo de orçamento ausente: ${relative}`);
+  const source=fs.readFileSync(file,'utf8'),next=canonicalize(source);
+  if(next!==source){fs.writeFileSync(file,next,'utf8');patched.push(relative)}
+ }
+ const issues=[];
+ const bundle=read(root,'bundle'),r184=read(root,'r184'),r414=read(root,'r414'),r424Audit=read(root,'r424Audit'),r424Fixture=read(root,'r424Fixture');
+ if(!bundle.includes(`sourceTs: ${GLOBAL} * 1024 * 1024`))issues.push('bundle ainda diverge');
+ if(!r184.includes(`const sourceLimit=${GLOBAL}*1024*1024;`))issues.push('R184 ainda diverge');
+ for(const key of ['r193','r194','r195','r196','r197','r198','r199','r200'])if(!read(root,key).includes(CHECKPOINT))issues.push(`${key.toUpperCase()} ainda diverge`);
+ const hasGlobal=s=>s.includes(`${GLOBAL} * 1024 * 1024`)||s.includes('5\\.78125\\s*\\*\\s*1024');
+ if(!r414.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r414))issues.push('R414 ainda diverge');
+ if(!r424Audit.includes(CHECKPOINT)||!hasGlobal(r424Audit))issues.push('R424 audit ainda diverge');
+ if(!r424Fixture.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r424Fixture))issues.push('R424 fixture ainda diverge');
+ if(issues.length)throw new Error(`R443: convergência de orçamento incompleta — ${issues.join(' | ')}`);
+ return{changed:patched.length>0,patched,globalSourceBudgetBytes:R443_GLOBAL_SOURCE_BUDGET_BYTES,reserveBytes:R443_SOURCE_RESERVE_BYTES,checkpointBytes:R443_SOURCE_CHECKPOINT_BYTES,version:R443_SOURCE_BUDGET_VERSION};
 }
-
-function patchR184(source) {
-  return replaceKnown(source, [
-    ['const minimumMargin=r414ScalableVault ? 100_000 : legacyMinimumMargin;', 'const minimumMargin=r414ScalableVault ? 65_536 : legacyMinimumMargin;'],
-    ['const sourceLimit=5.25*1024*1024;', 'const sourceLimit=5.765625*1024*1024;'],
-    ['const sourceLimit=5.5*1024*1024;', 'const sourceLimit=5.765625*1024*1024;'],
-    ['const sourceLimit=5.5625*1024*1024;', 'const sourceLimit=5.765625*1024*1024;'],
-    ['const sourceLimit=5.625*1024*1024;', 'const sourceLimit=5.765625*1024*1024;'],
-    ['const sourceLimit=5.75*1024*1024;', 'const sourceLimit=5.765625*1024*1024;'],
-  ]);
-}
-
-function patchLegacyCheckpoint(source) {
-  return replaceKnown(source, [
-    ['5_832_704', '5_980_160'],
-    ['5_963_776', '5_980_160'],
-  ]);
-}
-
-function patchR414(source) {
-  return replaceKnown(source, [
-    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_832_704', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_963_776', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['5,25 MiB', '5,765625 MiB'],
-    ['5,5 MiB', '5,765625 MiB'],
-    ['5,5625 MiB', '5,765625 MiB'],
-    ['5,625 MiB', '5,765625 MiB'],
-    ['5,75 MiB', '5,765625 MiB'],
-    ["sourceTs: 5.25 * 1024 * 1024", "sourceTs: 5.765625 * 1024 * 1024"],
-    ["sourceTs: 5.5 * 1024 * 1024", "sourceTs: 5.765625 * 1024 * 1024"],
-    ["sourceTs: 5.5625 * 1024 * 1024", "sourceTs: 5.765625 * 1024 * 1024"],
-    ["sourceTs: 5.625 * 1024 * 1024", "sourceTs: 5.765625 * 1024 * 1024"],
-    ["sourceTs: 5.75 * 1024 * 1024", "sourceTs: 5.765625 * 1024 * 1024"],
-    ['5\\.25\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.5\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.5625\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.625\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.75\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['sourceGlobalLimitBytes: 5.25 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.765625 * 1024 * 1024'],
-    ['sourceGlobalLimitBytes: 5.5 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.765625 * 1024 * 1024'],
-    ['sourceGlobalLimitBytes: 5.5625 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.765625 * 1024 * 1024'],
-    ['sourceGlobalLimitBytes: 5.625 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.765625 * 1024 * 1024'],
-    ['sourceGlobalLimitBytes: 5.75 * 1024 * 1024', 'sourceGlobalLimitBytes: 5.765625 * 1024 * 1024'],
-  ]);
-}
-
-function patchR424Audit(source) {
-  return replaceKnown(source, [
-    ['100_000', '65_536'],
-    ['5_798_240', '5_980_160'],
-    ['5_832_704', '5_980_160'],
-    ['5_963_776', '5_980_160'],
-    ['5.5625 * 1024 * 1024', '5.765625 * 1024 * 1024'],
-    ['5.625 * 1024 * 1024', '5.765625 * 1024 * 1024'],
-    ['5.75 * 1024 * 1024', '5.765625 * 1024 * 1024'],
-    ['5\\.5625\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.625\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.75\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5_732_704', '5_980_160'],
-    ['5.25 * 1024 * 1024', '5.765625 * 1024 * 1024'],
-    ['5.5 * 1024 * 1024', '5.765625 * 1024 * 1024'],
-    ['5\\.25\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5\\.5\\s*\\*\\s*1024', '5\\.765625\\s*\\*\\s*1024'],
-    ['5_405_024', '5_980_160'],
-    ['5_667_168', '5_980_160'],
-    ['5,25 MiB', '5,765625 MiB'],
-    ['5,5 MiB', '5,765625 MiB'],
-    ['5,5625 MiB', '5,765625 MiB'],
-    ['5,625 MiB', '5,765625 MiB'],
-    ['5,75 MiB', '5,765625 MiB'],
-  ]);
-}
-
-function patchR424Fixture(source) {
-  return replaceKnown(source, [
-    ['100_000', '65_536'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_798_240', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['sourceTs: 5.5625 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.625 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.75 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_732_704', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['sourceTs: 5.25 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['sourceTs: 5.5 * 1024 * 1024', 'sourceTs: 5.765625 * 1024 * 1024'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_405_024', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_667_168', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_832_704', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-    ['R414_SOURCE_BUDGET_BYTES = 5_963_776', 'R414_SOURCE_BUDGET_BYTES = 5_980_160'],
-  ]);
-}
-
-const PATCHERS = Object.freeze({
-  bundle: patchBundle,
-  r184: patchR184,
-  r193: patchLegacyCheckpoint,
-  r194: patchLegacyCheckpoint,
-  r195: patchLegacyCheckpoint,
-  r196: patchLegacyCheckpoint,
-  r197: patchLegacyCheckpoint,
-  r198: patchLegacyCheckpoint,
-  r199: patchLegacyCheckpoint,
-  r200: patchLegacyCheckpoint,
-  r414: patchR414,
-  r424Audit: patchR424Audit,
-  r424Fixture: patchR424Fixture,
-});
-
-export function applySourceBudgetConvergenceR443(rootDirectory = process.cwd()) {
-  const root = path.resolve(rootDirectory);
-  const patched = [];
-  for (const [key, relative] of Object.entries(TARGETS)) {
-    const file = path.resolve(root, relative);
-    if (!fs.existsSync(file)) throw new Error(`R443: arquivo de orçamento ausente: ${relative}`);
-    const source = fs.readFileSync(file, 'utf8');
-    const next = PATCHERS[key](source);
-    if (next !== source) {
-      fs.writeFileSync(file, next, 'utf8');
-      patched.push(relative);
-    }
-  }
-
-  const bundle = fs.readFileSync(path.resolve(root, TARGETS.bundle), 'utf8');
-  const r184 = fs.readFileSync(path.resolve(root, TARGETS.r184), 'utf8');
-  const legacyCheckpointSources = ['r193', 'r194', 'r195', 'r196', 'r197', 'r198', 'r199', 'r200']
-    .map((key) => [key, fs.readFileSync(path.resolve(root, TARGETS[key]), 'utf8')]);
-  const r414 = fs.readFileSync(path.resolve(root, TARGETS.r414), 'utf8');
-  const r424Audit = fs.readFileSync(path.resolve(root, TARGETS.r424Audit), 'utf8');
-  const r424Fixture = fs.readFileSync(path.resolve(root, TARGETS.r424Fixture), 'utf8');
-  const issues = [];
-  if (!bundle.includes('sourceTs: 5.765625 * 1024 * 1024')) issues.push('bundle ainda usa teto antigo');
-  if (!r184.includes('const sourceLimit=5.765625*1024*1024;')) issues.push('R184 ainda usa teto antigo');
-  for (const [key, source] of legacyCheckpointSources) {
-    if (!source.includes('5_980_160') || source.includes('5_832_704') || source.includes('5_963_776')) issues.push(`${key.toUpperCase()} ainda usa checkpoint antigo`);
-  }
-  if (!r414.includes('R414_SOURCE_BUDGET_BYTES = 5_980_160') || !r414.includes('sourceTs: 5.765625 * 1024 * 1024')) issues.push('R414 ainda diverge');
-  const r424HasGlobalBudget = r424Audit.includes('5.765625 * 1024 * 1024') || r424Audit.includes('5\\.765625\\s*\\*\\s*1024');
-  if (!r424Audit.includes('5_980_160') || !r424HasGlobalBudget) issues.push('R424 audit ainda diverge');
-  if (!r424Fixture.includes('R414_SOURCE_BUDGET_BYTES = 5_980_160') || !r424Fixture.includes('sourceTs: 5.765625 * 1024 * 1024')) issues.push('R424 fixture ainda diverge');
-  if (issues.length) throw new Error(`R443: convergência de orçamento incompleta — ${issues.join(' | ')}`);
-
-  return {
-    changed: patched.length > 0,
-    patched,
-    globalSourceBudgetBytes: R443_GLOBAL_SOURCE_BUDGET_BYTES,
-    reserveBytes: R443_SOURCE_RESERVE_BYTES,
-    checkpointBytes: R443_SOURCE_CHECKPOINT_BYTES,
-    version: R443_SOURCE_BUDGET_VERSION,
-  };
-}
-
-const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
-if (invoked === import.meta.url) {
-  const result = applySourceBudgetConvergenceR443(process.cwd());
-  console.log(`R443 orçamento-fonte convergido: ${result.checkpointBytes} bytes úteis com reserva de ${result.reserveBytes} bytes; ${result.patched.length} arquivo(s) ajustado(s).`);
-}
+const invoked=process.argv[1]?pathToFileURL(path.resolve(process.argv[1])).href:'';
+if(invoked===import.meta.url){const result=applySourceBudgetConvergenceR443();console.log(`R443/R518 orçamento-fonte convergido: ${result.checkpointBytes} bytes úteis + ${result.reserveBytes} bytes de reserva; ${result.patched.length} arquivo(s) ajustado(s).`)}
