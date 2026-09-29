@@ -1,0 +1,39 @@
+name: Validar Evidência R516-R518
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: buildmaster-r516-r518-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: R516-R518 read-only evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: R516 — bridge de calibração read-only
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r516-real-match-calibration-bridge-regression.ts
+
+      - name: R517 — certificação fail-closed
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r517-engine-certification-regression.ts
