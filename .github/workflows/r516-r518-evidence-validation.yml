@@ -46,3 +46,6 @@ jobs:
 
       - name: R518 — determinismo e firewall GER
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r518-determinism-firewall-regression.ts
+
+      - name: R518 — firewall de certificação R510/R517
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r518-certification-firewall-regression.ts
