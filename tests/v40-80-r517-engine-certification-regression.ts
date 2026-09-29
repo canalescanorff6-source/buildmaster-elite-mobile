@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { CardTruthCertificationR501 } from '../src/modules/analysis/cardTruthLayerR501';
+import * as analysisFacade from '../src/modules/analysis/index';
 import {
   ENGINE_CERTIFICATION_R517_VERSION,
   buildEngineCertificationR517,
@@ -110,11 +111,20 @@ assert.deepEqual(repeatA, repeatB,
 assert.equal(repeatA.fingerprint, repeatB.fingerprint,
   'Fingerprint R517 precisa ser determinístico para a mesma entrada.');
 
+assert.equal(typeof analysisFacade.buildEngineCertificationR517, 'function',
+  'Fachada pública de análise precisa expor o R517 read-only.');
+assert.equal(analysisFacade.ENGINE_CERTIFICATION_R517_VERSION, ENGINE_CERTIFICATION_R517_VERSION);
+const facadeCertificate = analysisFacade.buildEngineCertificationR517(baseInput);
+assert.equal(facadeCertificate.productionWriteAllowed, false,
+  'Exposição pública não pode transformar certificação em autoridade de escrita.');
+
 const source = readFileSync(
   require.resolve('../src/modules/analysis/engineCertificationR517'),
   'utf8',
 );
 assert.equal(/\boverall\b|\bger\b/i.test(source), false,
   'R517 não pode depender de rating agregado para decidir certificação funcional.');
+assert.equal(/productionOrchestratorR138|jointOptimizerR512|trainingPlanCore|recommendationWriter/i.test(source), false,
+  'R517 deve consolidar evidência; não pode importar writer ou optimizer de produção.');
 
-console.log('R517 aprovado: contrato fail-closed, read-only, determinístico e sem rating agregado.');
+console.log('R517 aprovado: fail-closed, fachada read-only, determinístico e sem segundo writer.');
