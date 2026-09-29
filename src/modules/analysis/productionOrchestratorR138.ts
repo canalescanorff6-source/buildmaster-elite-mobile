@@ -3,6 +3,7 @@ import { analyzeCardForProductionR128, ensureCurrentProductionAnalysisR128 } fro
 import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { attachPendingGameplayScoutingR454 } from '@/modules/scouting/gameplayScoutingR454';
+import type { EngineCertificationR517 } from './engineCertificationR517';
 
 export const PRODUCTION_ORCHESTRATOR_R138_VERSION = '40.80-r138-production-orchestrator-v1' as const;
 
@@ -14,6 +15,10 @@ export type ProductionAnalysisRequestR138 = {
   tacticalProfile?: TacticalProfile;
   editionIdentity?: CardEditionIdentityR457 | null;
   usageFunction?: string | null;
+};
+
+export type CertifiedAnalysisResultR517 = AnalysisResult & {
+  engineCertificationR517: EngineCertificationR517;
 };
 
 /** Nova análise: sempre entra pelo parser e sai selada pela autoridade de produção. */
@@ -37,6 +42,20 @@ export function rebuildProductionAnalysisR138(result: AnalysisResult): AnalysisR
 /** Guardião barato: só reconstrói quando o selo/evidência deixou de ser atual. */
 export function ensureProductionAnalysisR138(result: AnalysisResult): AnalysisResult {
   return attachPendingGameplayScoutingR454(ensureCurrentProductionAnalysisR128(result));
+}
+
+/**
+ * R517 é metadado pós-produção. Não executa parser, optimizer, R128 ou pipeline de inteligência.
+ * O spread cria uma nova referência e preserva integralmente a recomendação já emitida.
+ */
+export function attachEngineCertificationR517(
+  result: AnalysisResult,
+  certificate: EngineCertificationR517,
+): CertifiedAnalysisResultR517 {
+  return {
+    ...result,
+    engineCertificationR517: certificate,
+  };
 }
 
 export function productionUsagePositionR138(result: AnalysisResult) {
