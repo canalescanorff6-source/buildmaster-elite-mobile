@@ -21,6 +21,24 @@ const MIN_LOCAL_SESSIONS_R518 = 3;
 const MIN_STABLE_SHARE_R518 = 70;
 const MIN_CURRENT_PATCH_SHARE_R518 = 80;
 const MIN_R470_CONFIDENCE_R518 = 88;
+const MIN_GLOBAL_MATCHES_R518 = 24;
+const MIN_GLOBAL_SESSIONS_R518 = 6;
+const MIN_GLOBAL_CONTEXTS_R518 = 3;
+const MIN_GLOBAL_PRIMITIVE_FAMILIES_R518 = 3;
+const MIN_GLOBAL_FUNCTIONAL_CONTEXTS_R518 = 3;
+
+const PRIMITIVE_FAMILY_R518: Readonly<Record<GameplayActionIdR510, string>> = {
+  shortCombination: 'CREATION',
+  lineBreakingPass: 'CREATION',
+  firstTouchUnderPressure: 'CONTROL_PROGRESSION',
+  centralCarry: 'CONTROL_PROGRESSION',
+  pressEscape: 'CONTROL_PROGRESSION',
+  attackingMovement: 'ATTACK_FINISHING',
+  finishingAction: 'ATTACK_FINISHING',
+  duelShield: 'DUEL_DEFENSIVE',
+  defensiveDuel: 'DUEL_DEFENSIVE',
+  aerialDuel: 'AERIAL',
+};
 
 export type EvidenceOriginR518 = 'PERSISTED_REAL' | 'TEST_FIXTURE' | 'UNKNOWN';
 
@@ -70,6 +88,7 @@ export type RealMatchCalibrationEvidenceR518 = {
     totalRecords: number;
     totalContexts: number;
     readyContexts: number;
+    distinctSessions: number;
   };
   qualityGates: QualityGateR518[];
   coverage: {
@@ -77,6 +96,7 @@ export type RealMatchCalibrationEvidenceR518 = {
     primitiveActions: GameplayActionIdR510[];
     primitiveFamilies: string[];
     usageFunctions: string[];
+    functionalContexts: string[];
   };
   primitiveCandidates: GameplayCalibrationPrimitiveCandidateR516[];
   blockers: string[];
@@ -99,6 +119,7 @@ type ContextEvaluationR518 = {
   blockers: string[];
   missingRequirements: string[];
   candidates: GameplayCalibrationPrimitiveCandidateR516[];
+  position: string;
   usageFunction: string;
 };
 
@@ -150,6 +171,10 @@ function completeContextR518(context: Partial<RealMatchCalibrationContextR518>):
       && context.lifecycleR472
       && context.bridgeR516,
   );
+}
+
+function recordSessionKeyR518(record: MatchValidationRecord): string {
+  return String(record.sessionIdR462 || record.playedAt || record.id || '').trim();
 }
 
 export function evaluateContextR518(
@@ -259,6 +284,7 @@ export function evaluateContextR518(
       ...candidate,
       evidenceActionIds: [...candidate.evidenceActionIds].sort(),
     })) : [],
+    position: String(outcome.position || '').trim(),
     usageFunction: String(outcome.usageFunction || '').trim(),
   };
 }
@@ -290,6 +316,14 @@ function aggregateCandidatesR518(
     .sort((left, right) => left.action.localeCompare(right.action));
 }
 
+function addGlobalRequirementR518(
+  missingRequirements: string[],
+  id: string,
+  passed: boolean,
+): void {
+  if (!passed) pushUnique(missingRequirements, id);
+}
+
 export function buildRealMatchCalibrationEvidenceR518(
   input: RealMatchCalibrationEvidenceInputR518,
 ): RealMatchCalibrationEvidenceR518 {
@@ -297,6 +331,7 @@ export function buildRealMatchCalibrationEvidenceR518(
   const missingRequirements: string[] = [];
   const contextKeys = sortedUnique(input.contexts.map(context => String(context.contextKey ?? '').trim()));
   const recordIds = sortedUnique(input.records.map(record => String(record.id ?? '').trim()));
+  const recordSessions = sortedUnique(input.records.map(recordSessionKeyR518));
   const evaluations: ContextEvaluationR518[] = [];
 
   let status: RealMatchCalibrationStatusR518 = 'COLLECTING';
@@ -328,29 +363,62 @@ export function buildRealMatchCalibrationEvidenceR518(
       evaluation.blockers.forEach(blocker => pushUnique(blockers, blocker));
       evaluation.missingRequirements.forEach(requirement => pushUnique(missingRequirements, requirement));
     }
+  }
 
+  const readyEvaluations = evaluations.filter(evaluation => evaluation.ready);
+  const primitiveCandidates = aggregateCandidatesR518(readyEvaluations);
+  const primitiveActions = primitiveCandidates.map(candidate => candidate.action);
+  const primitiveFamilies = sortedUnique(
+    primitiveActions.map(action => PRIMITIVE_FAMILY_R518[action]),
+  );
+  const usageFunctions = sortedUnique(readyEvaluations.map(evaluation => evaluation.usageFunction));
+  const functionalContexts = sortedUnique(
+    readyEvaluations.map(evaluation => `${evaluation.position}:${evaluation.usageFunction}`),
+  );
+  const qualityGates = evaluations
+    .flatMap(evaluation => evaluation.gates)
+    .sort((left, right) => left.contextKey.localeCompare(right.contextKey) || left.id.localeCompare(right.id));
+
+  const globalMatchVolumePass = input.records.length >= MIN_GLOBAL_MATCHES_R518;
+  const globalSessionDiversityPass = recordSessions.length >= MIN_GLOBAL_SESSIONS_R518;
+  const globalContextDiversityPass = readyEvaluations.length >= MIN_GLOBAL_CONTEXTS_R518;
+  const globalPrimitiveCoveragePass = primitiveFamilies.length >= MIN_GLOBAL_PRIMITIVE_FAMILIES_R518;
+  const globalFunctionalDiversityPass = functionalContexts.length >= MIN_GLOBAL_FUNCTIONAL_CONTEXTS_R518;
+
+  if (input.origin === 'PERSISTED_REAL' && readyEvaluations.length > 0) {
+    addGlobalRequirementR518(missingRequirements, 'GLOBAL_MATCH_VOLUME', globalMatchVolumePass);
+    addGlobalRequirementR518(missingRequirements, 'GLOBAL_SESSION_DIVERSITY', globalSessionDiversityPass);
+    addGlobalRequirementR518(missingRequirements, 'GLOBAL_CONTEXT_DIVERSITY', globalContextDiversityPass);
+    addGlobalRequirementR518(missingRequirements, 'GLOBAL_PRIMITIVE_FAMILY_COVERAGE', globalPrimitiveCoveragePass);
+    addGlobalRequirementR518(missingRequirements, 'GLOBAL_FUNCTION_POSITION_DIVERSITY', globalFunctionalDiversityPass);
+  }
+
+  const globalReady = input.origin === 'PERSISTED_REAL'
+    && blockers.length === 0
+    && globalMatchVolumePass
+    && globalSessionDiversityPass
+    && globalContextDiversityPass
+    && globalPrimitiveCoveragePass
+    && globalFunctionalDiversityPass;
+
+  if (input.origin === 'PERSISTED_REAL' && input.records.length > 0 && input.contexts.length > 0) {
     if (blockers.length > 0) {
       status = 'BLOCKED';
-    } else if (evaluations.some(evaluation => evaluation.ready)) {
+    } else if (globalReady) {
+      status = 'READY_FOR_R510_PROMOTION';
+    } else if (readyEvaluations.length > 0) {
       status = 'READY_FOR_REVIEW';
     } else {
       status = 'COLLECTING';
     }
   }
 
-  const readyEvaluations = evaluations.filter(evaluation => evaluation.ready);
-  const primitiveCandidates = aggregateCandidatesR518(readyEvaluations);
-  const primitiveActions = primitiveCandidates.map(candidate => candidate.action);
-  const usageFunctions = sortedUnique(readyEvaluations.map(evaluation => evaluation.usageFunction));
-  const qualityGates = evaluations
-    .flatMap(evaluation => evaluation.gates)
-    .sort((left, right) => left.contextKey.localeCompare(right.contextKey) || left.id.localeCompare(right.id));
-
   const fingerprintPayload: JsonValue = {
     version: REAL_MATCH_CALIBRATION_EVIDENCE_R518_VERSION,
     origin: input.origin,
     contextKeys,
     recordIds,
+    recordSessions,
     totalRecords: input.records.length,
     totalContexts: input.contexts.length,
     readyContexts: readyEvaluations.length,
@@ -361,6 +429,12 @@ export function buildRealMatchCalibrationEvidenceR518(
       observed: gate.observed,
       required: gate.required,
     })),
+    coverage: {
+      primitiveActions,
+      primitiveFamilies,
+      usageFunctions,
+      functionalContexts,
+    },
     primitiveCandidates: primitiveCandidates.map(candidate => ({
       action: candidate.action,
       suggestedMultiplier: candidate.suggestedMultiplier,
@@ -390,13 +464,15 @@ export function buildRealMatchCalibrationEvidenceR518(
       totalRecords: input.records.length,
       totalContexts: input.contexts.length,
       readyContexts: readyEvaluations.length,
+      distinctSessions: recordSessions.length,
     },
     qualityGates,
     coverage: {
       contextCount: contextKeys.length,
       primitiveActions,
-      primitiveFamilies: [],
+      primitiveFamilies,
       usageFunctions,
+      functionalContexts,
     },
     primitiveCandidates,
     blockers: [...blockers].sort(),
@@ -407,7 +483,7 @@ export function buildRealMatchCalibrationEvidenceR518(
       r510CertifiedForFinalWrite: GAMEPLAY_ENGINE_R510_CALIBRATION.certifiedForFinalWrite,
       notes: [
         'R518 v1 é somente leitura e não aplica calibração automaticamente.',
-        'READY_FOR_R510_PROMOTION permanece indisponível nesta etapa local.',
+        'READY_FOR_R510_PROMOTION significa apenas evidência suficiente para revisão humana de um change-set futuro.',
       ],
     },
   };
