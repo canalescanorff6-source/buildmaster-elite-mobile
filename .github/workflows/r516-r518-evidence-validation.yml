@@ -49,3 +49,6 @@ jobs:
 
       - name: R518 — firewall de certificação R510/R517
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r518-certification-firewall-regression.ts
+
+      - name: R518 — evidência persistida R137 e fachada
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r518-persisted-facade-regression.ts
