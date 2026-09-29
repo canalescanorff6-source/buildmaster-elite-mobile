@@ -37,4 +37,16 @@ export {
   type EngineCertificationInputR517,
   type EngineCertificationR517,
 } from './engineCertificationR517';
+export {
+  REAL_MATCH_CALIBRATION_EVIDENCE_R518_VERSION,
+  buildRealMatchCalibrationEvidenceR518,
+  buildPersistedRealMatchCalibrationEvidenceR518,
+  evaluateContextR518,
+  type EvidenceOriginR518,
+  type RealMatchCalibrationStatusR518,
+  type RealMatchCalibrationContextR518,
+  type RealMatchCalibrationEvidenceInputR518,
+  type QualityGateR518,
+  type RealMatchCalibrationEvidenceR518,
+} from './realMatchCalibrationEvidenceR518';
 export { createProductionAnalysisR138, rebuildProductionAnalysisR138, ensureProductionAnalysisR138, productionUsagePositionR138 } from './productionOrchestratorR138';
