@@ -124,6 +124,10 @@ type ContextEvaluationR518 = {
 };
 
 function stableStringifyR518(value: JsonValue): string {
+  if (typeof value === 'number') {
+    const canonical = Number.isFinite(value) ? Number(value.toFixed(4)) : value;
+    return JSON.stringify(canonical);
+  }
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) {
     return `[${value.map(item => stableStringifyR518(item)).join(',')}]`;
