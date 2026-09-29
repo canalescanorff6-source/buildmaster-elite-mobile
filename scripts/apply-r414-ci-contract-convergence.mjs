@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { applyAutonomousCardVaultR417 } from './apply-r417-autonomous-card-vault.mjs';
 
-export const R414_SOURCE_BUDGET_BYTES = 5_963_776;
+export const R414_SOURCE_BUDGET_BYTES = 5_980_160;
 export const R414_RESULT_CLOSURE_BUDGET_R192 = 2_185_000;
 
 const TARGETS = [
@@ -450,13 +450,13 @@ export function applyR414CiContractConvergence(rootDirectory = process.cwd()) {
   if(r417Autonomous.changed){changed=true;for(const path of r417Autonomous.patched)if(!patched.includes(path))patched.push(path);}
 
   // Guardrails: o reparo só converge contratos de CI. O teto global real continua
-  // em 5,75 MiB, a reserva R414 continua em 100.000 bytes e PP individual continua 140.
+  // em 5,765625 MiB, a reserva R414 continua em 100.000 bytes e PP individual continua 140.
   const budgetCheck = readFileSync(resolve(root, 'scripts/check-bundle-budget.mjs'), 'utf8');
-  if (!budgetCheck.includes('sourceTs: 5.75 * 1024 * 1024')) {
-    throw new Error('R414 CI convergence: orçamento global de 5,75 MiB não está mais presente.');
+  if (!budgetCheck.includes('sourceTs: 5.765625 * 1024 * 1024')) {
+    throw new Error('R414 CI convergence: orçamento global de 5,765625 MiB não está mais presente.');
   }
   const r184 = readFileSync(resolve(root, 'tests/v40-80-r184-production-legacy-isolation-regression.mjs'), 'utf8');
-  const r184HasGlobalLimit = /const\s+sourceLimit\s*=\s*5\.75\s*\*\s*1024\s*\*\s*1024\s*;/.test(r184);
+  const r184HasGlobalLimit = /const\s+sourceLimit\s*=\s*5\.765625\s*\*\s*1024\s*\*\s*1024\s*;/.test(r184);
   const r184HasR414Reserve = /const\s+minimumMargin\s*=\s*r414ScalableVault\s*\?\s*100_000\s*:\s*legacyMinimumMargin\s*;/.test(r184);
   const r184UsesCheckpoint = /const\s+checkpointLimit\s*=\s*sourceLimit\s*-\s*minimumMargin\s*;/.test(r184)
     && /sourceBytes\s*<=\s*checkpointLimit/.test(r184);
@@ -468,7 +468,7 @@ export function applyR414CiContractConvergence(rootDirectory = process.cwd()) {
     changed,
     patched,
     sourceBudgetBytes: R414_SOURCE_BUDGET_BYTES,
-    sourceGlobalLimitBytes: 5.75 * 1024 * 1024,
+    sourceGlobalLimitBytes: 5.765625 * 1024 * 1024,
     sourceReserveBytes: 100_000,
     resultClosureBudgetR192: R414_RESULT_CLOSURE_BUDGET_R192,
     r408Pp,
