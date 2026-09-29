@@ -37,3 +37,6 @@ jobs:
 
       - name: R517 — certificação fail-closed
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r517-engine-certification-regression.ts
+
+      - name: R518 — dossiê de evidência real fail-closed
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r518-real-match-calibration-evidence-regression.ts
