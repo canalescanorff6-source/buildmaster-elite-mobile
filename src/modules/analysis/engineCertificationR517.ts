@@ -32,6 +32,16 @@ export type GoldenStabilityEvidenceR517 = {
   status: 'PASS' | 'REVIEW';
 };
 
+export type RollbackEvidenceR517 = {
+  certified: boolean;
+  engineVersion: string;
+};
+
+export type RollbackDescriptorR517 = {
+  available: boolean;
+  engineVersion: string | null;
+};
+
 export type EngineCertificationInputR517 = {
   cardTruth: CardTruthCertificationR501;
   golden: {
@@ -44,6 +54,7 @@ export type EngineCertificationInputR517 = {
     skills: IntegritySignalR517;
     impeto: IntegritySignalR517;
   };
+  rollbackEvidence?: RollbackEvidenceR517 | null;
 };
 
 export type EngineCertificationR517 = {
@@ -56,6 +67,7 @@ export type EngineCertificationR517 = {
     gameplay: typeof GAMEPLAY_ENGINE_R510_VERSION;
     golden: typeof GOLDEN_CARD_LAB_R513_VERSION;
   };
+  rollback: RollbackDescriptorR517;
   fingerprint: string;
   productionWriteAllowed: false;
 };
@@ -84,6 +96,20 @@ function hashFingerprintR517(value: string): string {
 
 function pushUnique(target: string[], value: string): void {
   if (!target.includes(value)) target.push(value);
+}
+
+function rollbackDescriptorR517(input: EngineCertificationInputR517): RollbackDescriptorR517 {
+  const version = input.rollbackEvidence?.engineVersion?.trim() ?? '';
+  if (input.rollbackEvidence?.certified === true && version.length > 0) {
+    return {
+      available: true,
+      engineVersion: version,
+    };
+  }
+  return {
+    available: false,
+    engineVersion: null,
+  };
 }
 
 export function buildEngineCertificationR517(
@@ -173,6 +199,7 @@ export function buildEngineCertificationR517(
     status = 'ENGINE_CERTIFIED';
   }
 
+  const rollback = rollbackDescriptorR517(input);
   const fingerprintPayload: JsonValue = {
     certificationVersion: ENGINE_CERTIFICATION_R517_VERSION,
     authorities: {
@@ -207,6 +234,7 @@ export function buildEngineCertificationR517(
       officialGameData: GAMEPLAY_ENGINE_R510_CALIBRATION.officialGameData,
       certifiedForFinalWrite: GAMEPLAY_ENGINE_R510_CALIBRATION.certifiedForFinalWrite,
     },
+    rollback,
     status,
     blockers,
   };
@@ -221,6 +249,7 @@ export function buildEngineCertificationR517(
       gameplay: GAMEPLAY_ENGINE_R510_VERSION,
       golden: GOLDEN_CARD_LAB_R513_VERSION,
     },
+    rollback,
     fingerprint: hashFingerprintR517(stableStringifyR517(fingerprintPayload)),
     productionWriteAllowed: false,
   };
