@@ -6,11 +6,7 @@ import {
   GAMEPLAY_ENGINE_R510_CALIBRATION,
   GAMEPLAY_ENGINE_R510_VERSION,
 } from './gameplayEngineR510';
-import {
-  GOLDEN_CARD_LAB_R513_VERSION,
-  type GoldenDeterminismResultR513,
-  type GoldenPerturbationResultR513,
-} from './goldenCardLabR513';
+import { GOLDEN_CARD_LAB_R513_VERSION } from './goldenCardLabR513';
 
 export const ENGINE_CERTIFICATION_R517_VERSION = '40.80-r517-engine-certification-v1' as const;
 
@@ -25,11 +21,22 @@ export type IntegritySignalR517 = {
   reason: string;
 };
 
+export type GoldenDeterminismEvidenceR517 = {
+  version: typeof GOLDEN_CARD_LAB_R513_VERSION;
+  status: 'PASS' | 'FAIL';
+  deterministic: boolean;
+};
+
+export type GoldenStabilityEvidenceR517 = {
+  version: typeof GOLDEN_CARD_LAB_R513_VERSION;
+  status: 'PASS' | 'REVIEW';
+};
+
 export type EngineCertificationInputR517 = {
   cardTruth: CardTruthCertificationR501;
   golden: {
-    determinism: Pick<GoldenDeterminismResultR513, 'version' | 'status' | 'deterministic'>;
-    stability: Pick<GoldenPerturbationResultR513, 'version' | 'status'>;
+    determinism: GoldenDeterminismEvidenceR517;
+    stability: GoldenStabilityEvidenceR517;
   };
   integrity: {
     pp: IntegritySignalR517;
