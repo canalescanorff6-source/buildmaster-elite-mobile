@@ -119,8 +119,11 @@ for (const regression of [
   'tests/v40-80-r513-golden-card-lab-regression.ts',
   'tests/v40-80-r515-ocr-conflict-matrix-regression.ts',
   'tests/v40-80-r516-real-match-calibration-bridge-regression.ts',
+  'tests/v40-80-r517-engine-certification-regression.ts',
+  'tests/v40-80-r517-production-certificate-regression.ts',
+  'tests/v40-80-r517-certification-firewall-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R513/R515/R516/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR e ponte de calibração real protegidos.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R513/R515/R516/R517/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR, calibração real e Certification Engine read-only protegidos.');
