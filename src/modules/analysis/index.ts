@@ -29,4 +29,12 @@ export {
   GOLDEN_CARD_LAB_R513_VERSION, GOLDEN_CARD_LAB_R513_REFERENCES,
   runGoldenDeterminismR513, runGoldenPerturbationR513,
 } from './goldenCardLabR513';
+export {
+  ENGINE_CERTIFICATION_R517_VERSION,
+  buildEngineCertificationR517,
+  type EngineCertificationStatusR517,
+  type IntegritySignalR517,
+  type EngineCertificationInputR517,
+  type EngineCertificationR517,
+} from './engineCertificationR517';
 export { createProductionAnalysisR138, rebuildProductionAnalysisR138, ensureProductionAnalysisR138, productionUsagePositionR138 } from './productionOrchestratorR138';
