@@ -63,7 +63,7 @@ export function normalizeTrainingBudget(value: number | null | undefined): numbe
 }
 
 export function trainingBudgetFromCard(parsed: ParsedCard): number {
-  // R419: trainingPointsTotal é a autoridade primária. Orçamento ausente nunca vira 64.
+  // R419: trainingPointsTotal é a autoridade primária. R501 normaliza confiança; orçamento ausente nunca vira 64.
   const total = normalizeTrainingBudget(parsed.trainingPointsTotal);
   if (total > 0) return total;
 
@@ -72,7 +72,7 @@ export function trainingBudgetFromCard(parsed: ParsedCard): number {
     && (parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90));
   if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);
 
-  // R419: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate.
+  // R419: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate; R501 usa confiança canônica.
   return 0;
 }
 
