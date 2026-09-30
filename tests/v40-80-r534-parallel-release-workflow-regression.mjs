@@ -6,6 +6,7 @@ const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
 assert.match(workflow, /diagnostic-matrix:\s*\n/, 'workflow deve ter job diagnostic-matrix');
 assert.match(workflow, /strategy:\s*\n\s*fail-fast:\s*false\s*\n\s*matrix:\s*\n\s*shard:\s*\[0,\s*1,\s*2,\s*3\]/, 'matriz deve ter 4 shards e fail-fast false');
 assert.match(workflow, /--shard-index\s+\$\{\{\s*matrix\.shard\s*\}\}\s+--shard-count\s+4/, 'cada job deve executar o shard correspondente');
+assert.doesNotMatch(workflow, /\$\{\{\s*matrix\.shard\s*\+\s*1\s*\}\}/, 'expressões GitHub Actions do shard não podem usar aritmética inline inválida');
 assert.match(workflow, /Legacy CI contract marker: npm run ci:diagnose-all/, 'workflow deve manter marcador histórico sem reexecutar o diagnóstico monolítico');
 assert.match(workflow, /ci-diagnostico-r534-shard-\$\{\{\s*matrix\.shard\s*\}\}/, 'cada shard deve publicar relatório próprio');
 assert.match(workflow, /build-apk:\s*\n\s*needs:\s*\[stabilize-source,\s*diagnostic-matrix\]/, 'build final deve depender da estabilização e da matriz');
@@ -16,4 +17,4 @@ assert.match(workflow, /release:r533:verification/, 'R533 deve permanecer no rel
 assert.match(workflow, /APK_SHA256/, 'checksum do APK deve permanecer');
 assert.match(workflow, /SOURCE_SHA/, 'source SHA deve permanecer');
 
-console.log('R534 workflow aprovado: matriz 4-way, gate agregado, sem diagnóstico full duplicado e R532/R533 preservados.');
+console.log('R534 workflow aprovado: matriz 4-way, expressões válidas, gate agregado, sem diagnóstico full duplicado e R532/R533 preservados.');
