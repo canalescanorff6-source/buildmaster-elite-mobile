@@ -5,6 +5,7 @@ import { applyR503SingleReaderFinalization } from './apply-r503-single-reader-fi
 import { applyR504ProjectedPlayerState } from './apply-r504-projected-player-state.mjs';
 import { applyR505PostBuildImpeto } from './apply-r505-post-build-impeto.mjs';
 import { applyR507SingleRecommendationAuthority } from './apply-r507-single-recommendation-authority.mjs';
+import { applyR534ParallelReleaseCi } from './apply-r534-parallel-release-ci.mjs';
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const repairs = [
@@ -103,6 +104,21 @@ if (!failed) {
   } catch (error) {
     failed = true;
     console.error('Falha no reparo determinístico: Recommendation Authority R507 — saída pública única');
+    console.error(error);
+  }
+}
+
+
+if (!failed) {
+  console.log('\n[CI SAFE REPAIR] R534 — Parallel Release CI');
+  try {
+    const result = applyR534ParallelReleaseCi(process.cwd());
+    console.log(result.changed
+      ? `R534 convergiu ${result.patched.length} arquivo(s): ${result.patched.join(', ')}.`
+      : 'R534 Parallel Release CI já estava convergido.');
+  } catch (error) {
+    failed = true;
+    console.error('Falha no reparo determinístico: R534 — Parallel Release CI');
     console.error(error);
   }
 }

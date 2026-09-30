@@ -1,12 +1,6 @@
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
-import { EXPECTED_FULL_GROUPS, quickChecks, fullChecks, selectChecksForShard, parseShardArgs } from './ci-doctor-config.mjs';
+export const EXPECTED_FULL_GROUPS = 97;
 
-// R534 compatibility mirror: legacy regressions inspect this source text.
-// Runtime execution uses ci-doctor-config.mjs; test:r534 guarantees this mirror is identical.
-const LEGACY_CI_DOCTOR_CONTRACT = String.raw`
-const EXPECTED_FULL_GROUPS = 97;
+export const quickChecks = [
   ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
   ['Compatibilidade das dependências', ['run', 'quality:dependencies']],
   ['Orçamento do código-fonte', ['run', 'quality:bundle']],
@@ -22,6 +16,9 @@ const EXPECTED_FULL_GROUPS = 97;
   ['Pré-voo de produção', ['run', 'release:preflight']],
   ['Pré-voo Google Play', ['run', 'release:play-preflight']],
   ['Auditoria estrutural', ['run', 'quality:audit']],
+];
+
+export const fullChecks = [
   ['Calibração R135-R136', ['run', 'ci:calibration-gate']],
   ['Contrato R457-R463', ['run', 'ci:r463-contract']],
   ['Regressões R464-R468', ['run', 'test:r464-r468']],
@@ -104,100 +101,32 @@ const EXPECTED_FULL_GROUPS = 97;
   ['Regressões v40.60', ['run', 'test:v4060']],
   ['Regressões v40.70', ['run', 'test:v4070']],
   ['Regressões v40.80', ['run', 'test:v4080']],
-`;
-void LEGACY_CI_DOCTOR_CONTRACT;
+];
 
-const full = process.argv.includes('--full');
-const reportArgIndex = process.argv.indexOf('--report-dir');
-const reportDir = reportArgIndex >= 0 ? String(process.argv[reportArgIndex + 1] || '').trim() : '';
-if (reportDir) fs.mkdirSync(reportDir, { recursive: true });
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const CI_SOURCE_BUILD = 'v40.80-ci-edge-stack-performance-20260812-r1';
-const allChecks = full ? [...quickChecks, ...fullChecks] : quickChecks;
-if (full && allChecks.length !== EXPECTED_FULL_GROUPS) {
-  console.error(`Contrato interno do CI inválido: esperados ${EXPECTED_FULL_GROUPS} grupos, encontrados ${allChecks.length}.`);
-  process.exit(2);
-}
-
-let shardIndex = null;
-let shardCount = null;
-try {
-  ({ shardIndex, shardCount } = parseShardArgs(process.argv));
-} catch (error) {
-  console.error(`Argumentos de shard inválidos: ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(2);
-}
-const checks = shardIndex === null ? allChecks : selectChecksForShard(allChecks, shardIndex, shardCount);
-
-const failures = [];
-const startedAt = Date.now();
-
-console.log(`\nDIAGNÓSTICO CONSOLIDADO BUILMASTER ${full ? 'COMPLETO' : 'RÁPIDO'}`);
-console.log(`Fonte do diagnóstico: ${CI_SOURCE_BUILD}`);
-if (shardIndex !== null) console.log(`Shard ${shardIndex + 1}/${shardCount}: ${checks.length} grupos selecionados deterministicamente.`);
-console.log(`Executando ${checks.length} grupos sem parar na primeira falha.\n`);
-
-for (const [label, args] of checks) {
-  console.log(`\n========== ${label} ==========`);
-  const result = spawnSync(npmCommand, args, {
-    stdio: reportDir ? 'pipe' : 'inherit',
-    encoding: reportDir ? 'utf8' : undefined,
-    maxBuffer: 64 * 1024 * 1024,
-    env: process.env,
-    shell: false,
-  });
-  if (reportDir) {
-    if (result.stdout) process.stdout.write(result.stdout);
-    if (result.stderr) process.stderr.write(result.stderr);
+export function selectChecksForShard(checks, shardIndex, shardCount) {
+  if (!Number.isInteger(shardIndex) || !Number.isInteger(shardCount) || shardCount < 1 || shardIndex < 0 || shardIndex >= shardCount) {
+    throw new Error(`Invalid shard arguments: shardIndex=${shardIndex}, shardCount=${shardCount}`);
   }
-  if (result.error || result.status !== 0) {
-    const failure = { label, status: result.status ?? 'erro de execução', error: result.error?.message };
-    failures.push(failure);
-    if (reportDir) {
-      const slug = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const body = [
-        `Grupo: ${label}`,
-        `Código: ${failure.status}`,
-        failure.error ? `Erro: ${failure.error}` : '',
-        '',
-        '--- STDOUT ---',
-        result.stdout || '',
-        '',
-        '--- STDERR ---',
-        result.stderr || ''
-      ].join('\n');
-      fs.writeFileSync(path.join(reportDir, `${slug || 'falha'}.log`), body, 'utf8');
-    }
-    console.error(`✗ ${label} falhou, mas o diagnóstico continuará para revelar os demais problemas.`);
-  } else {
-    console.log(`✓ ${label} aprovado.`);
+  return checks.filter((_, index) => index % shardCount === shardIndex);
+}
+
+function readIntegerFlag(argv, flag) {
+  const index = argv.indexOf(flag);
+  if (index < 0) return null;
+  const raw = argv[index + 1];
+  if (raw == null || raw === '') throw new Error(`Missing value for ${flag} shard option`);
+  const value = Number(raw);
+  if (!Number.isInteger(value)) throw new Error(`Invalid shard integer for ${flag}: ${raw}`);
+  return value;
+}
+
+export function parseShardArgs(argv) {
+  const shardIndex = readIntegerFlag(argv, '--shard-index');
+  const shardCount = readIntegerFlag(argv, '--shard-count');
+  if (shardIndex === null && shardCount === null) return { shardIndex: null, shardCount: null };
+  if (shardIndex === null || shardCount === null) throw new Error('Both --shard-index and --shard-count are required for shard mode');
+  if (shardCount < 1 || shardIndex < 0 || shardIndex >= shardCount) {
+    throw new Error(`Invalid shard range: shardIndex=${shardIndex}, shardCount=${shardCount}`);
   }
+  return { shardIndex, shardCount };
 }
-
-const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
-console.log('\n========== RESUMO CONSOLIDADO ==========');
-console.log(`Grupos executados: ${checks.length}`);
-console.log(`Tempo aproximado: ${elapsedSeconds}s`);
-
-if (reportDir) {
-  fs.writeFileSync(path.join(reportDir, 'summary.json'), JSON.stringify({
-    source: CI_SOURCE_BUILD,
-    mode: full ? 'full' : 'quick',
-    shardIndex,
-    shardCount,
-    groupsExecuted: checks.length,
-    labels: checks.map(([label]) => label),
-    elapsedSeconds,
-    failures
-  }, null, 2) + '\n', 'utf8');
-}
-
-if (failures.length > 0) {
-  console.error(`Falhas encontradas: ${failures.length}`);
-  for (const failure of failures) {
-    console.error(`- ${failure.label} (código ${failure.status})${failure.error ? `: ${failure.error}` : ''}`);
-  }
-  process.exit(1);
-}
-
-console.log('Nenhuma falha encontrada nos grupos executados.');

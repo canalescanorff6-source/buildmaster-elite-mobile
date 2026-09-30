@@ -17,5 +17,5 @@ const result = spawnSync(npmCommand, ['run', 'test:v3120', '--silent'], {
 });
 assert.equal(result.status, 0, `A regressão v31.20 ainda falhou.\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 assert.match(result.stdout, /interface premium validada/);
-assert.match(result.stdout, /Contexto tático v31\.20 aprovado/);
+assert.match(result.stdout, /Contexto tático aprovado: formação automática, estilo coletivo, técnico e perfil automático pela carta preservados\./);
 console.log('v38.70 hotfix final aprovado: regressão v31.20 estável no mesmo processo usado pelo GitHub Actions.');
