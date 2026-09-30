@@ -1,4 +1,4 @@
-name: Gerar AAB v40.70 Google Play
+name: Gerar AAB Google Play
 
 on:
   workflow_dispatch:
@@ -55,13 +55,16 @@ jobs:
           ref: ${{ github.event.inputs.source_ref || github.ref }}
           fetch-depth: 0
 
-      - name: Carregar versão v40.70 do pacote
+      - name: Carregar versão e commit reais do pacote
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          test "$VERSION" = "40.70.0" || { echo "::error::package.json precisa estar em 40.70.0"; exit 1; }
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Versão inválida em package.json: $VERSION"; exit 1; }
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          test -n "$SOURCE_SHA" || { echo '::error::Não foi possível resolver o commit compilado.'; exit 1; }
           echo "BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
 
       - name: Configurar Node.js
         uses: actions/setup-node@v5
@@ -125,6 +128,15 @@ jobs:
       - name: Instalar dependências travadas
         run: npm ci --no-audit --no-fund
 
+      - name: Regra Zero-Red — exigir fonte já convergida
+        run: |
+          npm run ci:stabilize
+          if ! git diff --quiet; then
+            echo '::error::A fonte do AAB precisou ser alterada pela Regra Zero-Red. Commit essas correções antes de publicar no Play.'
+            git diff --stat
+            exit 1
+          fi
+
       - name: Restaurar e validar configuração TypeScript raiz
         run: npm run types:repair && npm run quality:root-tsconfig
 
@@ -132,13 +144,15 @@ jobs:
         run: npm run quality:routes
 
       - name: Diagnóstico consolidado de qualidade e Google Play
-        timeout-minutes: 35
+        timeout-minutes: 55
         run: |
+          npm run ci:gate
           npm run ci:verify
           npm run release:play-preflight
 
       - name: Preparar OCR local e gerar site estático para Capacitor
         run: |
+          export NEXT_PUBLIC_BUILDMASTER_BUILD_ID="$SOURCE_SHA"
           npm run vendor:ocr
           npm run apk:build-web
           test -s out/tesseract/worker.min.js || { echo '::error::Worker OCR local ausente no AAB.'; exit 1; }
@@ -274,7 +288,7 @@ jobs:
       - name: Publicar artefato para homologação
         uses: actions/upload-artifact@v6
         with:
-          name: buildmaster-play-v40-30-${{ env.ANDROID_VERSION_CODE }}
+          name: buildmaster-play-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ env.AAB_NAME }}
             ${{ env.AAB_NAME }}.sha256
@@ -296,9 +310,10 @@ jobs:
         env:
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           AAB_PATH: ${{ env.AAB_NAME }}
-          PLAY_RELEASE_NOTES_FILE: play-store/listing/pt-BR/release-notes/40.70.0.txt
           PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status || 'draft' }}
           ROLLOUT_PERCENTAGE: ${{ github.event.inputs.rollout_percentage || '100' }}
         run: |
+          export PLAY_RELEASE_NOTES_FILE="play-store/listing/pt-BR/release-notes/$BUILDMASTER_VERSION.txt"
+          test -s "$PLAY_RELEASE_NOTES_FILE" || { echo "::error::Notas de release ausentes para $BUILDMASTER_VERSION."; exit 1; }
           export PLAY_USER_FRACTION=$(python -c "import os; print(max(1,min(100,int(os.environ.get('ROLLOUT_PERCENTAGE','100'))))/100)")
           node scripts/publish-play-store.mjs

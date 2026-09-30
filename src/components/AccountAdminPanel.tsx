@@ -426,7 +426,7 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
 
   if (!configured) {
     return (
-      <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel">
+      <section className="account-admin-panel bm-r529-account-panel luxury-panel settings-view-panel settings-final-panel">
         <div className="settings-panel-heading"><div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Criação de contas indisponível neste APK</h3><span>A área continua no aplicativo, mas o build não recebeu a configuração do servidor de licenças.</span></div><span className="settings-state-pill">Configuração ausente</span></div>
         <div className="account-setup-warning"><AlertTriangle size={20} /><div><strong>A opção Criar contas não foi removida.</strong><span>Configure a URL pública, a chave publishable e as funções license-session e admin-users no GitHub para liberar o cadastro real.</span></div></div>
         <div className="account-setup-steps"><span>1. Executar a migração no SQL Editor.</span><span>2. Publicar <b>license-session</b> e <b>admin-users</b>.</span><span>3. Configurar as variáveis do APK.</span><span>4. Gerar e instalar um APK novo.</span></div>
@@ -436,7 +436,7 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
 
   if (account.profile.role !== 'admin') {
     return (
-      <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel">
+      <section className="account-admin-panel bm-r529-account-panel luxury-panel settings-view-panel settings-final-panel">
         <div className="settings-panel-heading"><div><p className="kicker"><ShieldCheck size={15} /> Minha licença</p><h3>{account.profile.displayName || account.profile.username}</h3><span>Consulte prazo, plano e limite de aparelhos da sua conta.</span></div><span className={statusClass(account.profile.status)}>{statusLabel(account.profile.status)}</span></div>
         <div className="account-license-grid account-license-premium-grid">
           <article><strong>@{account.profile.username}</strong><span>Usuário</span></article>
@@ -454,7 +454,7 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
 
   if (!backendHealth) {
     return (
-      <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel">
+      <section className="account-admin-panel bm-r529-account-panel luxury-panel settings-view-panel settings-final-panel">
         <div className="settings-panel-heading"><div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Verificando servidor de contas</h3><span>O aplicativo está conferindo banco, função administrativa, perfil admin e política de segurança.</span></div><span className="settings-state-pill">Diagnóstico</span></div>
         {error && <p className="auth-error" role="alert"><AlertTriangle size={15} /> {error}</p>}
         <button className="settings-diagnostic-button" type="button" onClick={() => void refreshBackendHealth()}><RefreshCw size={16} /><div><strong>Verificar novamente</strong><span>Se continuar falhando, publique as migrações e a função admin-users.</span></div></button>
@@ -465,7 +465,7 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
   if (mfaRequired && (mfaStatus === null || !mfaStatus.protected)) {
     const hasVerifiedFactor = Boolean(mfaStatus?.verifiedFactor);
     return (
-      <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel admin-mfa-gate">
+      <section className="account-admin-panel bm-r529-account-panel luxury-panel settings-view-panel settings-final-panel admin-mfa-gate">
         <div className="settings-panel-heading">
           <div><p className="kicker"><ShieldCheck size={15} /> Administração protegida</p><h3>MFA obrigatório</h3><span>As ações administrativas permanecem bloqueadas até confirmar um autenticador TOTP.</span></div>
           <span className="settings-state-pill">Fail-closed</span>
@@ -485,8 +485,8 @@ Aparelhos permitidos: ${createdCredentials.maxDevices}`;
   }
 
   return (
-    <div className="account-admin-workspace account-admin-final-workspace">
-      <section className="account-admin-panel luxury-panel settings-view-panel settings-final-panel">
+    <div className="account-admin-workspace account-admin-final-workspace bm-r529-account-workspace">
+      <section className="account-admin-panel bm-r529-account-panel luxury-panel settings-view-panel settings-final-panel">
         <div className="settings-panel-heading">
           <div><p className="kicker"><UserPlus size={15} /> Criar contas</p><h3>Contas, prazos e aparelhos</h3><span>Crie, renove, suspenda e desconecte usuários sem entrar no painel do Supabase.</span></div>
           <div className="account-admin-header-actions"><button type="button" onClick={() => void testConnection()} disabled={testingConnection || loading}>{testingConnection ? <Loader2 className="spin" size={16} /> : <Zap size={16} />} Testar Supabase</button><button type="button" onClick={() => void loadUsers()} disabled={loading}>{loading ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />} Atualizar</button></div>

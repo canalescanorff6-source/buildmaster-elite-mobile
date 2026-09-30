@@ -65,7 +65,7 @@ export function CardVisionAppChromeR185({
     <a className="skip-to-content" href="#buildmaster-main-content">Pular para o conteúdo principal</a>
     {!showSplash && deferredStartupReady && <DeferredUpdateAutoCheckerR155 onPrepareBackup={async () => { await prepareBackupForUpdate(); }} />}
     {showSplash && (
-      <div className="app-splash-screen bm-brand-splash-screen" role="status" aria-label="Carregando BuildMaster Elite Tático">
+      <div className="app-splash-screen bm-brand-splash-screen bm-r521-splash" role="status" aria-label="Carregando BuildMaster Elite Tático">
         <div className="splash-premium-shell">
           <div className="splash-brand-row"><PremiumBrand variant="hero" showVersion /></div>
           <div className="splash-secure-badge"><ShieldCheck size={15} /> Ambiente protegido</div>
@@ -84,7 +84,7 @@ export function CardVisionAppChromeR185({
       onCreatePrint={() => openMainSection('leitor')}
       onCreateManual={() => openMainSection('manual')}
     /></SectionErrorBoundary>}
-    <header className="bm-simple-topbar">
+    <header className="bm-simple-topbar bm-r521-topbar">
       <button type="button" className="bm-simple-brand" onClick={() => openMainSection('inicio')} aria-label="Abrir início">
         <span><BuildMasterMark size={35} /></span><div><strong>BuildMaster</strong><small>Fichas · Elite Tático</small></div><em className="bm-v41-product-badge">PRO SUITE</em>
       </button>
@@ -121,13 +121,13 @@ export function CardVisionAppChromeR185({
       searchActive={mainSection === 'buscar'}
     />
     {updateNotice && (
-      <button type="button" className="global-update-notice" onClick={() => { openMainSection('ajustes'); setSettingsView('atualizacoes'); setUpdateNotice(null); }}>
+      <button type="button" className="global-update-notice bm-r521-global-notice" onClick={() => { openMainSection('ajustes'); setSettingsView('atualizacoes'); setUpdateNotice(null); }}>
         <RotateCcw size={16} /><strong>{updateNotice}</strong><span>Toque para revisar, criar backup e atualizar.</span>
       </button>
     )}
     {mobileLauncher && (
       <div className="mobile-action-sheet-backdrop" role="presentation" onClick={() => setMobileLauncher(null)}>
-        <section className={`mobile-action-sheet premium-launcher-sheet luxury-panel launcher-${mobileLauncher}`} role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
+        <section className={`mobile-action-sheet premium-launcher-sheet luxury-panel bm-r521-action-sheet launcher-${mobileLauncher}`} role="dialog" aria-modal="true" aria-label={mobileLauncher === 'create' ? 'Criar ficha' : 'Mais áreas'} onClick={(event) => event.stopPropagation()}>
           <div className="mobile-sheet-handle" />
           <div className="launcher-sheet-heading">
             <div><p className="kicker">{mobileLauncher === 'create' ? 'Nova análise' : 'Central do aplicativo'}</p><h3>{mobileLauncher === 'create' ? 'Criar ficha' : 'Acesso rápido'}</h3><span>{mobileLauncher === 'create' ? 'Escolha uma opção.' : account?.profile.username || 'Conta'}</span></div>

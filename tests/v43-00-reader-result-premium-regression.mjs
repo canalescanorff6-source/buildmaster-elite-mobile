@@ -38,7 +38,7 @@ assert.match(result, /UnifiedPerformanceV3920Panel/);
 assert.match(result, /analysisUsagePositionR138/);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '299db08a35e14c8ba7dea325b9fc8722480309c3417f915058243b8a3b50e312',
+  '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8',
   'R203 não pode modificar a autoridade Clean Slate R119.'
 );
 

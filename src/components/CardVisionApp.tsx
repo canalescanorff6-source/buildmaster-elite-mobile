@@ -156,7 +156,7 @@ export function CardVisionApp() {
   const [vaultFilters, setVaultFilters] = useState<VaultFilterState>(() => createDefaultVaultFilterStateR151());
   const [appTheme, setAppTheme] = useState<AppTheme>('dark');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>('gold');
-  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('midnight-navy');
+  const [visualPreset, setVisualPreset] = useState<PremiumVisualPreset>('obsidian-gold');
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [teamAdvancedOpen, setTeamAdvancedOpen] = useState(false);
@@ -1053,7 +1053,7 @@ export function CardVisionApp() {
       )}
       {mainSection === 'time' && (
         <SectionErrorBoundary area="meu-time-completo">
-          <section className="bm-v34-team-workspace" aria-label="Meu Time">
+          <section className="bm-v34-team-workspace bm-r526-tactics" aria-label="Meu Time">
             <IntegratedTeamLab team={integratedTeam} players={integratedPlayers} records={centralMatchRecords} teamStyle={teamStyle}
               onOpenFormationLab={() => { setTeamAdvancedOpen(true); window.requestAnimationFrame(() => document.querySelector<HTMLDetailsElement>('.bm-v34-team-advanced')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
               onPrepareMatch={() => openMainSection('partidas')}
@@ -1067,7 +1067,7 @@ export function CardVisionApp() {
                     <label><span>Modelo de jogo</span><select value={teamStyle} onChange={(event) => setTeamStyle(event.target.value as TacticalStyle)}>{tacticalStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
                     <ManagerSelectionField value={managerId} onChange={(nextId, primaryStyle) => { setManagerId(nextId); if (primaryStyle) setTeamStyle(primaryStyle); }} />
                   </div>
-                  <article className="tactical-guide-card">
+                  <article className="tactical-guide-card bm-r526-tactical-guide">
                     <div className="tactical-guide-head"><div><p className="kicker">Guia tático</p><h3>{selectedFormationGuide ? selectedFormationGuide.title : 'Escolha uma formação'}</h3></div>{selectedFormationGuide && <button className="mini-action" type="button" onClick={() => setTeamStyle(selectedFormationGuide.bestStyle)}>Aplicar estilo sugerido</button>}</div>
                     {selectedFormationGuide ? <><div className="guide-highlight"><span>Melhor estilo</span><strong>{tacticalStyleName[selectedFormationGuide.bestStyle]}</strong><em>{selectedFormationGuide.styleReason}</em></div><p>{selectedFormationGuide.howToPlay}</p><div className="role-chip-grid">{selectedFormationGuide.roles.map((role) => <span key={role}>{role}</span>)}</div></> : <p>Selecione uma formação para abrir o guia correspondente.</p>}
                   </article>
@@ -1125,7 +1125,7 @@ export function CardVisionApp() {
           </section>
         )}
         {mainSection !== 'resultado' && (
-        <aside className={`control-panel luxury-panel bm2820-control-panel panel-${mainSection}`}>
+        <aside className={`control-panel luxury-panel bm2820-control-panel panel-${mainSection} ${mainSection === 'leitor' ? 'bm-r523-reader-panel' : ''}`}>
           {!isCreationSection && (
             <div className="panel-heading">
               <div>
@@ -1137,7 +1137,7 @@ export function CardVisionApp() {
           )}
           {mainSection === 'leitor' && (<>
           {advancedMode && (
-            <div className="reader-capture-mode" role="tablist" aria-label="Modo avançado de leitura do print">
+            <div className="reader-capture-mode bm-r523-capture-mode" role="tablist" aria-label="Modo avançado de leitura do print">
               <button type="button" role="tab" aria-selected={readerCaptureMode === 'complete'} className={readerCaptureMode === 'complete' ? 'active' : ''} onClick={() => { setReaderCaptureMode('complete'); setTotalReadingSession(null); setSinglePrintSession(null); setPremiumReadings([]);  }}>
                 <span><Layers size={19} /></span><div><strong>Vários prints</strong><small>Leitura avançada da mesma carta</small></div>
               </button>
@@ -1151,7 +1151,7 @@ export function CardVisionApp() {
           ) : (<>
           {pendingBackgroundCheckpoint && !loading && <ReaderInterruptedCardV3840 checkpoint={pendingBackgroundCheckpoint} onResume={() => void resumeInterruptedReading()} onDiscard={() => void discardInterruptedReading()} />}
           <ReaderImageSourceCardV4010 preview={preview} fileLabel={selectedFile?.name || fileName || 'Imagem selecionada'} playerCardImage={playerCardImage} qualityText={qualityReport ? `${qualityScore(qualityReport)}/100 de qualidade` : 'Aguardando diagnóstico'} cropResult={cardCropResult} adjustOpen={cardCropAdjustOpen} onToggleAdjust={() => setCardCropAdjustOpen((current) => !current)} onAdjust={(action) => void adjustDetectedCard(action)} onRedetect={() => void redetectPlayerCard()} onFile={async (file) => { await handleFile(file); }} />
-          <div className="vision-toolbar creation-reader-actions">
+          <div className="vision-toolbar creation-reader-actions bm-r523-reader-actions">
             <button className="manual-mode-button scanner-action" type="button" onClick={() => void analyzeSelectedImage()} disabled={!selectedFile || loading}>
               {loading ? <Loader2 className="spin" size={17} /> : <ScanText size={17} />}
               {loading ? 'Lendo a imagem...' : 'Ler imagem e continuar'}
@@ -1167,25 +1167,25 @@ export function CardVisionApp() {
             )}
           </div>
           {loading && <ReaderLiveProgressCardV3840 preview={preview} status={status} progress={readerProgress} onCancel={() => void cancelCurrentOcr()} />}
-          {!loading && advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status" aria-live="polite">
+          {!loading && advancedMode && ocrQueue.length > 0 && <div className="reader-queue-status bm-r523-queue" aria-live="polite">
             <strong>{ocrQueue.length} print(s) na fila local</strong>
             {ocrQueue.slice(0, 3).map((job) => <span key={job.id}>{job.fileName}<button type="button" onClick={() => void openQueuedPrint(job)}>Abrir</button><button type="button" aria-label={`Remover ${job.fileName}`} onClick={() => void discardQueuedPrint(job.id)}>×</button></span>)}
           </div>}
           {!loading && qualityReport && qualityReport.issues.length > 0 && (
-            <div className="bm-simple-image-warning" role="status">
+            <div className="bm-simple-image-warning bm-r523-image-warning" role="status">
               <strong>A imagem pode ficar mais nítida</strong>
               <span>{qualityReport.issues.slice(0, 2).map((issue) => issue.message).join(' ')}</span>
             </div>
           )}
           {!loading && advancedMode && qualityReport && (
-            <div className="quality-card">
+            <div className="quality-card bm-r523-quality-card">
               <strong>Detalhes da imagem</strong>
               <span>{qualityReport.width}x{qualityReport.height}px • nitidez {qualityReport.sharpness} • contraste {qualityReport.contrast}</span>
             </div>
           )}
           {!loading && advancedMode && <SectionErrorBoundary area="ocr-vision-v2930"><OcrVisionCenter session={singlePrintSession} rawText={rawText} /></SectionErrorBoundary>}
           {!loading && advancedMode && preview && qualityReport && (
-            <div className="premium-image-lab">
+            <div className="premium-image-lab bm-r523-image-lab">
               <div className="premium-image-lab-head">
                 <div><strong>Laboratório local da imagem</strong><span>Qualidade {qualityScore(qualityReport)}/100 • {qualityLabel(qualityScore(qualityReport))}</span></div>
                 <select value={enhancementMode} onChange={(event) => void changeEnhancementMode(event.target.value as PremiumEnhancementMode)}>

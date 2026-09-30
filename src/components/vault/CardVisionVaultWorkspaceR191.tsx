@@ -168,14 +168,21 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
 
   return (
     <>
-      <div className="cofre-section cofre-premium-layout bm2820-vault-screen bm-v3800-vault">
-        <section className="bm-v3800-vault-hero">
+      <div className="cofre-section cofre-premium-layout bm2820-vault-screen bm-v3800-vault bm-r527-vault">
+        <section className="bm-v3800-vault-hero bm-r527-vault-hero">
           <div>
             <p className="kicker"><History size={14} /> Cofre Clean · Coleção competitiva</p>
             <h2>{cleanVaultSummary.players ? 'Sua coleção competitiva, organizada para decidir mais rápido' : 'Seu Cofre começa com a primeira ficha'}</h2>
             <span>{cleanVaultSummary.players} jogador(es) · {cleanVaultSummary.fichas} ficha(s) ativa(s){cleanVaultSummary.archived ? ` · ${cleanVaultSummary.archived} arquivada(s)` : ''}</span>
           </div>
           <button type="button" onClick={onCreateByImage}><ImagePlus size={17} /> Nova ficha</button>
+        </section>
+
+        <section className="bm-r527-vault-metrics" aria-label="Resumo real do Cofre">
+          <article><Users size={18} /><div><span>Fichas salvas</span><strong>{dashboardStats.total}</strong><small>histórico disponível</small></div></article>
+          <article><Trophy size={18} /><div><span>Favoritos</span><strong>{dashboardStats.favorites}</strong><small>jogadores marcados</small></div></article>
+          <article><CheckCircle2 size={18} /><div><span>Prontos</span><strong>{dashboardStats.complete}</strong><small>fichas concluídas</small></div></article>
+          <article><ShieldCheck size={18} /><div><span>Revisar</span><strong>{dashboardStats.review}</strong><small>dados para conferir</small></div></article>
         </section>
 
         <VaultOperationStatusR154
@@ -185,7 +192,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
           cloudPendingCount={cloudPendingCountR154}
         />
 
-        <nav className="section-segmented-tabs vault-main-tabs r204-vault-tabs luxury-panel" aria-label="Áreas do Cofre">
+        <nav className="section-segmented-tabs vault-main-tabs r204-vault-tabs luxury-panel bm-r527-vault-tabs" aria-label="Áreas do Cofre">
           <button type="button" className={vaultView === 'jogadores' ? 'active' : ''} onClick={() => setVaultView('jogadores')}><Users size={17} /><span>Jogadores</span></button>
           <button type="button" className={vaultView === 'organizar' ? 'active' : ''} onClick={() => setVaultView('organizar')}><Layers size={17} /><span>Organizar</span></button>
           <button type="button" className={vaultView === 'comparar' ? 'active' : ''} onClick={() => setVaultView('comparar')}><Trophy size={17} /><span>Comparar</span></button>
@@ -232,7 +239,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
         )}
 
         {vaultView === 'organizar' && (
-          <section className="vault-view-panel vault-organization-panel luxury-panel">
+          <section className="vault-view-panel vault-organization-panel luxury-panel bm-r527-vault-organize">
             <div className="vault-catalog-heading">
               <div><p className="kicker"><Layers size={14} /> Organização do elenco</p><h3>Pastas, situação e progresso do Cofre</h3><span>Separe titulares, reservas, testes e grupos personalizados sem duplicar fichas.</span></div>
               <div className="vault-filter-counter"><strong>{vaultFolders.length - 1}</strong><span>pastas disponíveis</span></div>
@@ -259,7 +266,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
         )}
 
         {vaultView === 'comparar' && (
-          <section className="player-comparison-hub vault-view-panel vault-comparison-panel luxury-panel">
+          <section className="player-comparison-hub vault-view-panel vault-comparison-panel luxury-panel bm-r527-vault-compare">
             <div className="vault-catalog-heading">
               <div><p className="kicker"><Trophy size={14} /> Comparador de jogadores</p><h3>Escolha a função e encontre o melhor encaixe</h3><span>Selecione de 2 a 6 jogadores. A comparação não modifica nenhuma ficha.</span></div>
               <div className="vault-filter-counter"><strong>{comparePlayerIds.length}</strong><span>selecionado(s)</span></div>
@@ -278,7 +285,7 @@ export function CardVisionVaultWorkspaceR191(props: CardVisionVaultWorkspaceR191
         )}
 
         {vaultView === 'backup' && (
-          <section className="vault-view-panel vault-backup-panel luxury-panel">
+          <section className="vault-view-panel vault-backup-panel luxury-panel bm-r527-vault-protection">
             <div className="vault-catalog-heading">
               <div><p className="kicker"><ShieldCheck size={14} /> Proteção do Cofre</p><h3>Backup local e sincronização da conta</h3><span>Escolha o tipo de proteção sem misturar essas ações com o catálogo de jogadores.</span></div>
               <div className="vault-backup-health"><ShieldCheck size={18} /><div><strong>{renderHistory.length} ficha(s)</strong><span>{lastBackupAt ? `Último backup: ${new Date(lastBackupAt).toLocaleDateString('pt-BR')}` : 'Backup manual ainda não registrado'}</span></div></div>

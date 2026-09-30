@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, CheckCircle2, Download, FileText, Loader2, Palette, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Trash2, UploadCloud, UserPlus, Users, Zap } from 'lucide-react';
+import { Activity, Bell, CheckCircle2, Download, FileText, KeyRound, Loader2, Palette, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Trash2, UploadCloud, UserPlus, Users, Zap } from 'lucide-react';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { APP_DATA_VERSION, type BackupSection } from '@/lib/dataSafety';
@@ -71,7 +71,7 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
     restoreSections, setRestoreSections, prepareBackupForUpdate,
   } = backup;
   return (
-            <div className="settings-premium-layout settings-final-layout bm2820-settings-screen">
+            <div className="settings-premium-layout settings-final-layout bm2820-settings-screen bm-r529-settings">
               {settingsView === 'visao-geral' ? (
                 <PremiumSettingsOverview
                   username={account?.profile.username || 'Usuário'}
@@ -234,7 +234,20 @@ export function CardVisionSettingsWorkspaceR190(props: Record<string, any>) {
                     </details>
                   </section>
                 )}
-                {settingsView === 'contas' && <SectionErrorBoundary area="contas"><div className="bm2910-admin-stack"><AccountAdminPanel /><AdministrationSecurityCenter /></div></SectionErrorBoundary>}
+                {settingsView === 'contas' && <SectionErrorBoundary area="contas"><div className="bm2910-admin-stack bm-r529-account-workspace">
+                  <section className="bm-r529-account-overview luxury-panel" aria-label="Resumo da conta e segurança">
+                    <div className="bm-r529-account-heading">
+                      <div><p className="kicker"><Users size={15} /> Perfil e conta</p><h3>{account?.profile.displayName || account?.profile.username || 'Conta BuildMaster'}</h3><span>@{account?.profile.username || 'usuario'} • {account?.profile.role === 'admin' ? 'Administrador' : 'Usuário'}</span></div>
+                      <span className="settings-state-pill">{account?.cloudEnabled ? 'Conta online' : 'Modo local'}</span>
+                    </div>
+                    <div className="bm-r529-account-trust-grid">
+                      <article><ShieldCheck size={18} /><div><strong>{account?.profile.status || 'local'}</strong><span>Status da conta</span><small>Valor informado pela autoridade de autenticação.</small></div></article>
+                      <article><KeyRound size={18} /><div><strong>{account?.profile.plan || 'local'}</strong><span>Plano atual</span><small>{account?.profile.maxDevices ?? 0} aparelho(s) permitido(s).</small></div></article>
+                      <article className="bm-r529-notification-truth"><Bell size={18} /><div><strong>Avisos internos</strong><span>Pendências contextuais dentro do BuildMaster</span><small>Sem prometer push do sistema.</small></div></article>
+                    </div>
+                  </section>
+                  <AccountAdminPanel /><AdministrationSecurityCenter />
+                </div></SectionErrorBoundary>}
                 {settingsView === 'atualizacoes' && <SectionErrorBoundary area="atualizacoes"><UpdateCenterPanel onPrepareBackup={prepareBackupForUpdate} /></SectionErrorBoundary>}
               </div>
               </>}

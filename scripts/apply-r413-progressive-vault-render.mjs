@@ -86,90 +86,107 @@ export function useProgressiveVaultWorkspaceR413(vaultView: CardVisionVaultView,
     changed = true;
   }
 
-  let r = replaceRequired(
-    clean,
-    "import { useMemo } from 'react';",
-    "import { useEffect, useMemo, useRef, useState } from 'react';",
-    'hooks do catálogo Clean'
-  );
-  clean = r.source; changed ||= r.changed;
+  const sourceAlreadyConvergedR413 =
+    clean.includes('CLEAN_VAULT_RENDER_BATCH_R413 = 48') &&
+    clean.includes('groups.slice(0, effectiveRenderedGroupCountR413)') &&
+    clean.includes('progressiveGroupsR413.map((group)') &&
+    clean.includes('loadMoreSentinelR413') &&
+    !clean.includes('          {groups.map((group) => {') &&
+    workspace.includes('useProgressiveVaultWorkspaceR413(vaultView, renderHistory)') &&
+    workspace.includes('compareHistoryR413.map((item)') &&
+    workspace.includes('folderCountsR413.get(folder.id)') &&
+    workspace.includes('onClick={loadMoreCompareR413}') &&
+    !workspace.includes('{renderHistory.map((item) => {') &&
+    !workspace.includes("renderHistory.filter((item) => folderForEntry(item) === folder.id).length") &&
+    lib.includes('if (bucket) bucket.push(entry);') &&
+    !lib.includes('byPlayer.set(key, [...(byPlayer.get(key) ?? []), entry]);');
 
-  r = replaceRequired(
-    clean,
-    "export type CleanVaultSort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';",
-    "export type CleanVaultSort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';\n\nexport const CLEAN_VAULT_RENDER_BATCH_R413 = 48 as const;",
-    'batch progressivo do catálogo'
-  );
-  clean = r.source; changed ||= r.changed;
+  if (!sourceAlreadyConvergedR413) {
+    let r = replaceRequired(
+      clean,
+      "import { useMemo } from 'react';",
+      "import { useEffect, useMemo, useRef, useState } from 'react';",
+      'hooks do catálogo Clean'
+    );
+    clean = r.source; changed ||= r.changed;
 
-  const cleanStateAnchor = "  const mergeKey = (ids: string[]) => `merge:${ids.slice().sort().join('|')}`;";
-  const cleanStatePatched = `${cleanStateAnchor}\n  const [renderedGroupCountR413, setRenderedGroupCountR413] = useState<number>(CLEAN_VAULT_RENDER_BATCH_R413);\n  const loadMoreSentinelR413 = useRef<HTMLDivElement | null>(null);\n  const renderScopeR413 = [\n    props.query, props.historyFilter, props.sort, props.advancedFilters.folderId, props.advancedFilters.position,\n    props.advancedFilters.playstyle, props.advancedFilters.skill, props.advancedFilters.minConfidence,\n    props.advancedFilters.maxConfidence, props.advancedFilters.minEfficiency, props.advancedFilters.favoritesOnly,\n    props.advancedFilters.pendingOnly, props.advancedFilters.reviewOnly, props.visibleEntries.length,\n  ].join('\u001f');\n  const renderScopeRefR413 = useRef(renderScopeR413);\n  const effectiveRenderedGroupCountR413 = renderScopeRefR413.current === renderScopeR413\n    ? renderedGroupCountR413\n    : CLEAN_VAULT_RENDER_BATCH_R413;\n  const progressiveGroupsR413 = useMemo(\n    () => groups.slice(0, effectiveRenderedGroupCountR413),\n    [groups, effectiveRenderedGroupCountR413]\n  );\n  const hasMoreGroupsR413 = effectiveRenderedGroupCountR413 < groups.length;\n  const loadMoreGroupsR413 = () => {\n    renderScopeRefR413.current = renderScopeR413;\n    setRenderedGroupCountR413(Math.min(groups.length, effectiveRenderedGroupCountR413 + CLEAN_VAULT_RENDER_BATCH_R413));\n  };\n\n  useEffect(() => {\n    if (renderScopeRefR413.current === renderScopeR413) return;\n    renderScopeRefR413.current = renderScopeR413;\n    setRenderedGroupCountR413(CLEAN_VAULT_RENDER_BATCH_R413);\n  }, [renderScopeR413]);\n\n  useEffect(() => {\n    const node = loadMoreSentinelR413.current;\n    if (!node || !hasMoreGroupsR413 || typeof IntersectionObserver === 'undefined') return;\n    const observer = new IntersectionObserver((entries) => {\n      if (entries.some((entry) => entry.isIntersecting)) {\n        renderScopeRefR413.current = renderScopeR413;\n        setRenderedGroupCountR413(Math.min(groups.length, effectiveRenderedGroupCountR413 + CLEAN_VAULT_RENDER_BATCH_R413));\n      }\n    }, { rootMargin: '720px 0px' });\n    observer.observe(node);\n    return () => observer.disconnect();\n  }, [groups.length, hasMoreGroupsR413, effectiveRenderedGroupCountR413, renderScopeR413]);`;
-  r = replaceRequired(clean, cleanStateAnchor, cleanStatePatched, 'estado progressivo do catálogo');
-  clean = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      clean,
+      "export type CleanVaultSort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';",
+      "export type CleanVaultSort = 'UPDATED' | 'NAME' | 'POSITION' | 'PENDING' | 'STATUS';\n\nexport const CLEAN_VAULT_RENDER_BATCH_R413 = 48 as const;",
+      'batch progressivo do catálogo'
+    );
+    clean = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    clean,
-    "      {groups.length > 0 ? (\n        <div className=\"bm-v3800-player-groups\">",
-    "      {groups.length > 0 ? (\n        <>\n        <div className=\"bm-v3800-player-groups\">",
-    'fragmento progressivo do catálogo'
-  );
-  clean = r.source; changed ||= r.changed;
+    const cleanStateAnchor = "  const mergeKey = (ids: string[]) => `merge:${ids.slice().sort().join('|')}`;";
+    const cleanStatePatched = `${cleanStateAnchor}\n  const [renderedGroupCountR413, setRenderedGroupCountR413] = useState<number>(CLEAN_VAULT_RENDER_BATCH_R413);\n  const loadMoreSentinelR413 = useRef<HTMLDivElement | null>(null);\n  const renderScopeR413 = [\n    props.query, props.historyFilter, props.sort, props.advancedFilters.folderId, props.advancedFilters.position,\n    props.advancedFilters.playstyle, props.advancedFilters.skill, props.advancedFilters.minConfidence,\n    props.advancedFilters.maxConfidence, props.advancedFilters.minEfficiency, props.advancedFilters.favoritesOnly,\n    props.advancedFilters.pendingOnly, props.advancedFilters.reviewOnly, props.visibleEntries.length,\n  ].join('\u001f');\n  const renderScopeRefR413 = useRef(renderScopeR413);\n  const effectiveRenderedGroupCountR413 = renderScopeRefR413.current === renderScopeR413\n    ? renderedGroupCountR413\n    : CLEAN_VAULT_RENDER_BATCH_R413;\n  const progressiveGroupsR413 = useMemo(\n    () => groups.slice(0, effectiveRenderedGroupCountR413),\n    [groups, effectiveRenderedGroupCountR413]\n  );\n  const hasMoreGroupsR413 = effectiveRenderedGroupCountR413 < groups.length;\n  const loadMoreGroupsR413 = () => {\n    renderScopeRefR413.current = renderScopeR413;\n    setRenderedGroupCountR413(Math.min(groups.length, effectiveRenderedGroupCountR413 + CLEAN_VAULT_RENDER_BATCH_R413));\n  };\n\n  useEffect(() => {\n    if (renderScopeRefR413.current === renderScopeR413) return;\n    renderScopeRefR413.current = renderScopeR413;\n    setRenderedGroupCountR413(CLEAN_VAULT_RENDER_BATCH_R413);\n  }, [renderScopeR413]);\n\n  useEffect(() => {\n    const node = loadMoreSentinelR413.current;\n    if (!node || !hasMoreGroupsR413 || typeof IntersectionObserver === 'undefined') return;\n    const observer = new IntersectionObserver((entries) => {\n      if (entries.some((entry) => entry.isIntersecting)) {\n        renderScopeRefR413.current = renderScopeR413;\n        setRenderedGroupCountR413(Math.min(groups.length, effectiveRenderedGroupCountR413 + CLEAN_VAULT_RENDER_BATCH_R413));\n      }\n    }, { rootMargin: '720px 0px' });\n    observer.observe(node);\n    return () => observer.disconnect();\n  }, [groups.length, hasMoreGroupsR413, effectiveRenderedGroupCountR413, renderScopeR413]);`;
+    r = replaceRequired(clean, cleanStateAnchor, cleanStatePatched, 'estado progressivo do catálogo');
+    clean = r.source; changed ||= r.changed;
 
-  r = replaceRequired(clean, '          {groups.map((group) => {', '          {progressiveGroupsR413.map((group) => {', 'map progressivo do catálogo');
-  clean = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      clean,
+      "      {groups.length > 0 ? (\n        <div className=\"bm-v3800-player-groups\">",
+      "      {groups.length > 0 ? (\n        <>\n        <div className=\"bm-v3800-player-groups\">",
+      'fragmento progressivo do catálogo'
+    );
+    clean = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    clean,
-    "          })}\n        </div>\n      ) : props.entries.length > 0 ? (",
-    "          })}\n        </div>\n        {hasMoreGroupsR413 && (\n          <div className=\"bm-v3800-progressive-loader\" ref={loadMoreSentinelR413} role=\"status\" aria-live=\"polite\">\n            <span>Mostrando {progressiveGroupsR413.length} de {groups.length} jogador(es).</span>\n            <button type=\"button\" onClick={loadMoreGroupsR413}>Carregar mais {Math.min(CLEAN_VAULT_RENDER_BATCH_R413, groups.length - progressiveGroupsR413.length)}</button>\n          </div>\n        )}\n        </>\n      ) : props.entries.length > 0 ? (",
-    'sentinela progressiva do catálogo'
-  );
-  clean = r.source; changed ||= r.changed;
+    r = replaceRequired(clean, '          {groups.map((group) => {', '          {progressiveGroupsR413.map((group) => {', 'map progressivo do catálogo');
+    clean = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    lib,
-    "    const key = cleanVaultPlayerKey(entry);\n    byPlayer.set(key, [...(byPlayer.get(key) ?? []), entry]);",
-    "    const key = cleanVaultPlayerKey(entry);\n    const bucket = byPlayer.get(key);\n    if (bucket) bucket.push(entry);\n    else byPlayer.set(key, [entry]);",
-    'agrupamento linear do Cofre'
-  );
-  lib = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      clean,
+      "          })}\n        </div>\n      ) : props.entries.length > 0 ? (",
+      "          })}\n        </div>\n        {hasMoreGroupsR413 && (\n          <div className=\"bm-v3800-progressive-loader\" ref={loadMoreSentinelR413} role=\"status\" aria-live=\"polite\">\n            <span>Mostrando {progressiveGroupsR413.length} de {groups.length} jogador(es).</span>\n            <button type=\"button\" onClick={loadMoreGroupsR413}>Carregar mais {Math.min(CLEAN_VAULT_RENDER_BATCH_R413, groups.length - progressiveGroupsR413.length)}</button>\n          </div>\n        )}\n        </>\n      ) : props.entries.length > 0 ? (",
+      'sentinela progressiva do catálogo'
+    );
+    clean = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    workspace,
-    "import { folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';",
-    "import type { VaultFilterState, VaultFolder } from '@/lib/vaultUsability';\nimport { useProgressiveVaultWorkspaceR413 } from '@/modules/vault/useProgressiveVaultWorkspaceR413';",
-    'runtime progressivo do workspace'
-  );
-  workspace = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      lib,
+      "    const key = cleanVaultPlayerKey(entry);\n    byPlayer.set(key, [...(byPlayer.get(key) ?? []), entry]);",
+      "    const key = cleanVaultPlayerKey(entry);\n    const bucket = byPlayer.get(key);\n    if (bucket) bucket.push(entry);\n    else byPlayer.set(key, [entry]);",
+      'agrupamento linear do Cofre'
+    );
+    lib = r.source; changed ||= r.changed;
 
-  const workspaceStateAnchor = "  const vaultActionBusyR154 = (key: string) => activeVaultActionKeysR154.includes(key);";
-  const workspaceStatePatched = `${workspaceStateAnchor}\n  const { compareHistoryR413, compareHasMoreR413, compareLoadMoreRefR413, folderCountsR413, loadMoreCompareR413 } = useProgressiveVaultWorkspaceR413(vaultView, renderHistory);`;
-  r = replaceRequired(workspace, workspaceStateAnchor, workspaceStatePatched, 'hook progressivo e contagem de pastas');
-  workspace = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      workspace,
+      "import { folderForEntry, type VaultFilterState, type VaultFolder } from '@/lib/vaultUsability';",
+      "import type { VaultFilterState, VaultFolder } from '@/lib/vaultUsability';\nimport { useProgressiveVaultWorkspaceR413 } from '@/modules/vault/useProgressiveVaultWorkspaceR413';",
+      'runtime progressivo do workspace'
+    );
+    workspace = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    workspace,
-    "                const count = folder.id === 'all' ? renderHistory.length : renderHistory.filter((item) => folderForEntry(item) === folder.id).length;",
-    "                const count = folder.id === 'all' ? renderHistory.length : (folderCountsR413.get(folder.id) ?? 0);",
-    'contagem linear de pastas'
-  );
-  workspace = r.source; changed ||= r.changed;
+    const workspaceStateAnchor = "  const vaultActionBusyR154 = (key: string) => activeVaultActionKeysR154.includes(key);";
+    const workspaceStatePatched = `${workspaceStateAnchor}\n  const { compareHistoryR413, compareHasMoreR413, compareLoadMoreRefR413, folderCountsR413, loadMoreCompareR413 } = useProgressiveVaultWorkspaceR413(vaultView, renderHistory);`;
+    r = replaceRequired(workspace, workspaceStateAnchor, workspaceStatePatched, 'hook progressivo e contagem de pastas');
+    workspace = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    workspace,
-    "            {renderHistory.length ? <div className=\"compare-player-catalog\">{renderHistory.map((item) => {",
-    "            {renderHistory.length ? <><div className=\"compare-player-catalog\">{compareHistoryR413.map((item) => {",
-    'catálogo progressivo do comparador'
-  );
-  workspace = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      workspace,
+      "                const count = folder.id === 'all' ? renderHistory.length : renderHistory.filter((item) => folderForEntry(item) === folder.id).length;",
+      "                const count = folder.id === 'all' ? renderHistory.length : (folderCountsR413.get(folder.id) ?? 0);",
+      'contagem linear de pastas'
+    );
+    workspace = r.source; changed ||= r.changed;
 
-  r = replaceRequired(
-    workspace,
-    "            })}</div> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
-    "            })}</div>{compareHasMoreR413 && <div className=\"bm-v3800-progressive-loader\" ref={compareLoadMoreRefR413} role=\"status\" aria-live=\"polite\"><span>Mostrando {compareHistoryR413.length} de {renderHistory.length} ficha(s).</span><button type=\"button\" onClick={loadMoreCompareR413}>Carregar mais</button></div>}</> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
-    'sentinela progressiva do comparador'
-  );
-  workspace = r.source; changed ||= r.changed;
+    r = replaceRequired(
+      workspace,
+      "            {renderHistory.length ? <div className=\"compare-player-catalog\">{renderHistory.map((item) => {",
+      "            {renderHistory.length ? <><div className=\"compare-player-catalog\">{compareHistoryR413.map((item) => {",
+      'catálogo progressivo do comparador'
+    );
+    workspace = r.source; changed ||= r.changed;
+
+    r = replaceRequired(
+      workspace,
+      "            })}</div> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
+      "            })}</div>{compareHasMoreR413 && <div className=\"bm-v3800-progressive-loader\" ref={compareLoadMoreRefR413} role=\"status\" aria-live=\"polite\"><span>Mostrando {compareHistoryR413.length} de {renderHistory.length} ficha(s).</span><button type=\"button\" onClick={loadMoreCompareR413}>Carregar mais</button></div>}</> : <div className=\"empty-cofre-card vault-empty-state\"><div className=\"empty-icon\"><Trophy size={28} /></div><strong>Salve jogadores antes de comparar</strong><span>O comparador usa as fichas guardadas no Cofre.</span></div>}",
+      'sentinela progressiva do comparador'
+    );
+  }
+
 
   const cleanContracts = [
     'CLEAN_VAULT_RENDER_BATCH_R413 = 48',

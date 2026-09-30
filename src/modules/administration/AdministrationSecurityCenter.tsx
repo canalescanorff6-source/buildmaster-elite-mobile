@@ -150,13 +150,13 @@ export function AdministrationSecurityCenter() {
   if (!configured || account?.profile.role !== 'admin') return null;
 
   return (
-    <section className="admin-security-center luxury-panel settings-view-panel settings-final-panel" aria-label="Administração e segurança avançada">
+    <section className="admin-security-center bm-r529-security-center luxury-panel settings-view-panel settings-final-panel" aria-label="Administração e segurança avançada">
       <div className="settings-panel-heading">
         <div><p className="kicker"><ShieldCheck size={15} /> Bloco 12</p><h3>Central administrativa e segurança</h3><span>Auditoria, aparelhos, limites, MFA e bloqueio de versões antigas em um único painel.</span></div>
         <button type="button" className="bm2910-refresh" onClick={() => void loadOverview()} disabled={loading}>{loading ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />} Atualizar</button>
       </div>
 
-      <div className="bm2910-admin-score-grid">
+      <div className="bm2910-admin-score-grid bm-r529-security-score-grid">
         <article><ShieldCheck size={20} /><div><strong>{securityScore}/100</strong><span>Proteção administrativa</span><small>{securityScore >= 90 ? 'Configuração recomendada' : 'Revise os itens pendentes'}</small></div></article>
         <article><Users size={20} /><div><strong>{overview?.users.length || 0}</strong><span>Contas cadastradas</span><small>{overview?.users.filter((user) => user.status === 'active').length || 0} ativas</small></div></article>
         <article><Smartphone size={20} /><div><strong>{activeDevices.length}</strong><span>Aparelhos ativos</span><small>{protectedDevices} com prova criptográfica</small></div></article>

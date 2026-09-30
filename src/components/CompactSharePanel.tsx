@@ -18,7 +18,7 @@ function compactText(result: AnalysisResult) {
     `${result.buildName} • ${result.parsed.playstyle || 'estilo não confirmado'}`,
     `Pontos: ${result.trainingPointsTotal - result.trainingPointsRemaining}/${result.trainingPointsTotal}`,
     distribution,
-    `BuildMaster Elite Tático`
+    'BuildMaster Elite Tático'
   ].filter(Boolean).join('\n');
 }
 
@@ -26,6 +26,7 @@ export function CompactSharePanel({ result, playerImage, onExportImage }: { resu
   const usagePosition = analysisUsagePositionR138(result);
   const usageLabel = POSITION_PT[usagePosition];
   const [message, setMessage] = useState('');
+
   const copy = async () => {
     const text = compactText(result);
     try {
@@ -35,6 +36,7 @@ export function CompactSharePanel({ result, playerImage, onExportImage }: { resu
       setMessage('Não foi possível copiar automaticamente.');
     }
   };
+
   const share = async () => {
     const text = compactText(result);
     try {
@@ -46,8 +48,13 @@ export function CompactSharePanel({ result, playerImage, onExportImage }: { resu
       setMessage('Compartilhamento cancelado.');
     }
   };
-  return <article className="compact-share-panel luxury-panel wide-card">
-    <div className="compact-share-preview">
+
+  return <article className="compact-share-panel luxury-panel wide-card bm-r528-share-panel">
+    <div className="bm-r528-share-heading">
+      <div><small>COMPARTILHAMENTO RÁPIDO</small><strong>Leve a ficha para WhatsApp, galeria ou conversa</strong></div>
+      <span><Share2 size={15} /> Web Share + cópia</span>
+    </div>
+    <div className="compact-share-preview bm-r528-share-preview">
       <div className="compact-share-player">
         {playerImage ? <img src={playerImage} alt="Recorte da carta" loading="lazy" decoding="async"/> : <span>{result.parsed.playerName.slice(0, 2).toUpperCase()}</span>}
         <div><small>FICHA BUILDMASTER</small><strong>{result.parsed.playerName}</strong><em>{usageLabel} • {result.buildName}</em></div>
@@ -55,11 +62,11 @@ export function CompactSharePanel({ result, playerImage, onExportImage }: { resu
       <div className="compact-share-metrics"><span><b>{result.trainingPointsTotal - result.trainingPointsRemaining}</b> pontos usados</span><span><b>{result.parsed.confidence}%</b> confiança</span><span><b>{usagePosition}</b> destino</span></div>
       <div className="compact-share-training">{Object.entries(result.training).filter(([, value]) => Number(value) > 0).slice(0, 8).map(([key, value]) => <span key={key}>{key}<b>+{value}</b></span>)}</div>
     </div>
-    <div className="compact-share-actions">
+    <div className="compact-share-actions bm-r528-share-actions">
       <button type="button" onClick={() => void copy()}><Copy size={16}/> Copiar resumo</button>
       <button type="button" onClick={() => void share()}><Share2 size={16}/> Compartilhar</button>
       <button type="button" className="elite-button" onClick={onExportImage}><Download size={16}/> Baixar cartão</button>
     </div>
-    {message && <p role="status"><CheckCircle2 size={15}/>{message}</p>}
+    {message && <p className="bm-r528-share-status" role="status" aria-live="polite"><CheckCircle2 size={15}/>{message}</p>}
   </article>;
 }

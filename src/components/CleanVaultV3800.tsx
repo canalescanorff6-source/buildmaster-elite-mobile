@@ -171,14 +171,14 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
   }
 
   return (
-    <section className="bm-v3800-vault-panel" aria-label="Cofre clean de jogadores" aria-busy={Boolean(props.activeActionKeys?.length)}>
+    <section className="bm-v3800-vault-panel bm-r527-catalog" aria-label="Cofre clean de jogadores" aria-busy={Boolean(props.activeActionKeys?.length)}>
       {Boolean(props.activeActionKeys?.length) && (
         <div className="bm-v154-vault-operation" role="status" aria-live="polite">
           <Loader2 className="spin" size={17} />
           <div><strong>{props.operationLabel || 'Confirmando alteração no Cofre'}</strong><span>Aguarde a confirmação local. Toques repetidos na mesma ação são bloqueados.</span></div>
         </div>
       )}
-      <div className="r204-vault-catalog-intro">
+      <div className="r204-vault-catalog-intro bm-r527-catalog-intro">
         <div className="r204-vault-catalog-copy">
           <span>Biblioteca ativa</span>
           <strong>{groups.length ? `${groups.length} jogador(es) prontos para consulta` : 'Sua biblioteca ainda está vazia'}</strong>
@@ -192,7 +192,7 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
       </div>
 
       <header className="bm-v3800-vault-toolbar">
-        <div className="bm-v3800-vault-search">
+        <div className="bm-v3800-vault-search bm-r527-search">
           <Search size={19} />
           <input
             value={props.query}
@@ -213,7 +213,7 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
         </label>
       </header>
 
-      <div className="bm-v3800-vault-chips" aria-label="Filtros rápidos do Cofre">
+      <div className="bm-v3800-vault-chips bm-r527-quick-filters" aria-label="Filtros rápidos do Cofre">
         <button type="button" className={allSelected ? 'active' : ''} onClick={() => chooseQuickFilter('all')}>Todos</button>
         <button type="button" className={props.historyFilter === 'FAVORITES' ? 'active' : ''} onClick={() => chooseQuickFilter('favorites')}><Star size={14} /> Favoritos</button>
         <button type="button" className={props.historyFilter === 'COMPLETE' ? 'active' : ''} onClick={() => chooseQuickFilter('complete')}><CheckCircle2 size={14} /> Prontos</button>
@@ -221,9 +221,9 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
         <button type="button" className={archivedSelected ? 'active' : ''} onClick={() => chooseQuickFilter('archived')}><Archive size={14} /> Arquivados</button>
         <button type="button" className={trashSelected ? 'active' : ''} onClick={() => chooseQuickFilter('trash')}><Trash2 size={14} /> Lixeira</button>
       </div>
-      <div className="bm-v3800-vault-advanced-actions"><button type="button" onClick={() => setSelectedIds(allVisibleSelected?[]:visibleIds)}>{allVisibleSelected?'Limpar seleção':'Selecionar tudo'}</button>{selectedIds.length>0&&<><strong>{selectedIds.length} selecionada(s)</strong>{trashSelected?<><button type="button" onClick={()=>void runBatch('restore')}><ArchiveRestore size={14}/> Restaurar</button><button type="button" className="danger" onClick={()=>void runBatch('delete')}><Trash2 size={14}/> Excluir</button></>:<><button type="button" onClick={()=>void runBatch(archivedSelected?'unarchive':'archive')}>{archivedSelected?<ArchiveRestore size={14}/>:<Archive size={14}/>} {archivedSelected?'Restaurar':'Arquivar'}</button><button type="button" onClick={()=>void runBatch('trash')}><Trash2 size={14}/> Lixeira</button><button type="button" className="danger" onClick={()=>void runBatch('delete')}>Excluir</button></>}</>}</div>
+      <div className="bm-v3800-vault-advanced-actions bm-r527-bulk-actions"><button type="button" onClick={() => setSelectedIds(allVisibleSelected?[]:visibleIds)}>{allVisibleSelected?'Limpar seleção':'Selecionar tudo'}</button>{selectedIds.length>0&&<><strong>{selectedIds.length} selecionada(s)</strong>{trashSelected?<><button type="button" onClick={()=>void runBatch('restore')}><ArchiveRestore size={14}/> Restaurar</button><button type="button" className="danger" onClick={()=>void runBatch('delete')}><Trash2 size={14}/> Excluir</button></>:<><button type="button" onClick={()=>void runBatch(archivedSelected?'unarchive':'archive')}>{archivedSelected?<ArchiveRestore size={14}/>:<Archive size={14}/>} {archivedSelected?'Restaurar':'Arquivar'}</button><button type="button" onClick={()=>void runBatch('trash')}><Trash2 size={14}/> Lixeira</button><button type="button" className="danger" onClick={()=>void runBatch('delete')}>Excluir</button></>}</>}</div>
 
-      <details className="bm-v3800-vault-advanced">
+      <details className="bm-v3800-vault-advanced bm-r527-advanced-filters">
         <summary><SlidersHorizontal size={15} /> Mais filtros {props.activeFilterCount > 0 && <b>{props.activeFilterCount}</b>}<ChevronDown size={15} /></summary>
         <div className="bm-v3800-vault-advanced-grid">
           <label><span>Pasta</span><select value={props.advancedFilters.folderId} onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onAdvancedFiltersChange((current) => ({ ...current, folderId: event.target.value }))}>{props.folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
@@ -247,13 +247,13 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
 
       {groups.length > 0 ? (
         <>
-        <div className="bm-v3800-player-groups">
+        <div className="bm-v3800-player-groups bm-r527-player-grid">
           {progressiveGroupsR413.map((group) => {
             const primary = group.primary;
             const status = cleanVaultStatus(primary);
             const archived = cleanVaultIsArchived(primary);
             return (
-              <article className={`bm-v3800-player-card status-${status}${group.favorite ? ' favorite' : ''}`} key={group.key}>
+              <article className={`bm-v3800-player-card bm-r527-player-card status-${status}${group.favorite ? ' favorite' : ''}`} key={group.key}>
                 <label className="bm-v3800-bulk-select"><input type="checkbox" checked={group.entries.every((entry)=>selected.has(entry.id))} onChange={()=>toggleGroup(group.entries.map((entry)=>entry.id))}/> Selecionar</label>
                 <div className="bm-v3800-player-main">
                   <button type="button" className="bm-v3800-player-identity" onClick={() => props.onOpen(primary)} disabled={actionBusy(`open:${primary.id}`)}>
@@ -270,7 +270,7 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
                   </div>
                 </div>
 
-                <div className="r204-player-meta" aria-label="Resumo da ficha">
+                <div className="r204-player-meta bm-r527-player-meta" aria-label="Resumo da ficha">
                   <span><b>{group.buildCount}</b> {group.buildCount === 1 ? 'ficha' : 'fichas'}</span>
                   <span><b>{group.cardVersionCount}</b> {group.cardVersionCount === 1 ? 'versão' : 'versões'}</span>
                   <span><b>{primary.result.parsed.confidence ?? 0}%</b> confiança</span>
@@ -327,14 +327,14 @@ export function CleanVaultV3800<T extends CleanVaultEntry>(props: CleanVaultV380
         )}
         </>
       ) : props.entries.length > 0 ? (
-        <div className="bm-v3800-vault-empty">
+        <div className="bm-v3800-vault-empty bm-r527-empty">
           <Search size={25} />
           <strong>Nenhum jogador encontrado</strong>
           <span>Limpe a busca ou os filtros para voltar ao catálogo.</span>
           <button type="button" onClick={props.onResetFilters}><RotateCcw size={15} /> Limpar filtros</button>
         </div>
       ) : (
-        <div className="bm-v3800-vault-empty">
+        <div className="bm-v3800-vault-empty bm-r527-empty">
           <Folder size={28} />
           <strong>O Cofre ainda está vazio</strong>
           <span>Crie sua primeira ficha por imagem ou manualmente.</span>

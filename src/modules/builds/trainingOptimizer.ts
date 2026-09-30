@@ -1,3 +1,4 @@
+import { confidenceAtLeastR501 } from '../analysis/cardTruthLayerR501';
 import {
   MAX_PLAYER_TRAINING_BUDGET,
   MIN_PLAYER_TRAINING_BUDGET,
@@ -68,7 +69,7 @@ export function trainingBudgetFromCard(parsed: ParsedCard): number {
 
   const inferred = inferTrainingPointsFromLevel(parsed.level);
   const inferredTrusted = parsed.trainingPointSource === 'LEVEL_INFERRED'
-    && (parsed.manualConfirmed || Number(parsed.confidence ?? 0) >= 0.9);
+    && (parsed.manualConfirmed || confidenceAtLeastR501(parsed.confidence, 90));
   if (inferredTrusted && inferred) return normalizeTrainingBudget(inferred);
 
   // R419: orçamento ausente permanece 0 e deve ser bloqueado pelo Clean Slate.

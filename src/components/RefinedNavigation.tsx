@@ -121,14 +121,14 @@ export function RefinedNavigation({
 
   return (
     <>
-      <aside className="bm-v33-sidebar" aria-label="Navegação lateral principal">
+      <aside className="bm-v33-sidebar bm-r521-sidebar" aria-label="Navegação lateral principal">
         {navigationContent(false)}
       </aside>
 
       {!drawerOpen && (
         <button
           type="button"
-          className="bm-v33-drawer-trigger"
+          className="bm-v33-drawer-trigger bm-r521-menu-trigger"
           aria-label="Abrir menu lateral"
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen(true)}
@@ -138,14 +138,14 @@ export function RefinedNavigation({
       )}
 
       {drawerOpen && (
-        <div className="bm-v33-drawer-backdrop" role="presentation" onClick={() => setDrawerOpen(false)}>
-          <aside className="bm-v33-drawer" role="dialog" aria-modal="true" aria-label="Menu lateral" onClick={(event) => event.stopPropagation()}>
+        <div className="bm-v33-drawer-backdrop bm-r521-drawer-backdrop" role="presentation" onClick={() => setDrawerOpen(false)}>
+          <aside className="bm-v33-drawer bm-r521-drawer" role="dialog" aria-modal="true" aria-label="Menu lateral" onClick={(event) => event.stopPropagation()}>
             {navigationContent(true)}
           </aside>
         </div>
       )}
 
-      <nav className="bm-v36-mobile-dock" aria-label="Navegação móvel rápida">
+      <nav className="bm-v36-mobile-dock bm-r521-mobile-dock" aria-label="Navegação móvel rápida">
         <button type="button" className={group === 'inicio' ? 'active' : ''} aria-current={group === 'inicio' ? 'page' : undefined} onClick={() => run(() => onGroupChange('inicio'))}>
           <Home size={20}/><span>Início</span>
         </button>

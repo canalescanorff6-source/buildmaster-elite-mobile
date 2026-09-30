@@ -1,0 +1,118 @@
+name: Validar Aceitação Física R532
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag imutável da release testada no aparelho
+        type: string
+        required: true
+      device_acceptance_json:
+        description: Recibo JSON R532 preenchido após testar o APK físico
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: buildmaster-device-acceptance-r532-${{ github.event.inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate-device:
+    name: Conferir o mesmo APK e registrar aceite físico
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar código do validador
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+
+      - name: Baixar manifesto e APK da release imutável
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_INPUT: ${{ github.event.inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p verify-r532
+          gh release download "$RELEASE_TAG_INPUT" --pattern 'update-manifest-v*.json' --dir verify-r532
+          MANIFEST="$(find verify-r532 -maxdepth 1 -type f -name 'update-manifest-v*.json' | head -n 1)"
+          test -s "$MANIFEST" || { echo '::error::Manifesto imutável não encontrado.'; exit 1; }
+          ASSET_NAME="$(node -e "const m=require('./'$MANIFEST); process.stdout.write(m.assetName)")"
+          test -n "$ASSET_NAME" || { echo '::error::assetName ausente no manifesto.'; exit 1; }
+          gh release download "$RELEASE_TAG_INPUT" --pattern "$ASSET_NAME" --dir verify-r532
+          APK="verify-r532/$ASSET_NAME"
+          test -s "$APK" || { echo '::error::APK imutável não encontrado.'; exit 1; }
+          ACTUAL_SHA="$(sha256sum "$APK" | awk '{print $1}')"
+          MANIFEST_SHA="$(node -e "const m=require('./'$MANIFEST); process.stdout.write(m.checksum)")"
+          test "$ACTUAL_SHA" = "$MANIFEST_SHA" || { echo '::error::Checksum do APK diverge do manifesto.'; exit 1; }
+          node - "$MANIFEST" <<'NODE' >> "$GITHUB_ENV"
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const values = {
+            SOURCE_SHA: manifest.sourceSha,
+            APK_SHA256: manifest.checksum,
+            BUILDMASTER_VERSION: manifest.version,
+            ANDROID_VERSION_CODE: String(manifest.versionCode),
+            RELEASE_TAG: manifest.releaseTag,
+            RELEASE_CHANNEL: manifest.channel,
+          };
+          for (const [key, value] of Object.entries(values)) {
+            if (!value) throw new Error(`R532: ${key} ausente no manifesto da release.`);
+            process.stdout.write(`${key}=${value}\n`);
+          }
+          NODE
+
+      - name: Fixar validador no mesmo commit da release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          git checkout --detach "$SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA" || { echo '::error::Checkout do sourceSha da release falhou.'; exit 1; }
+
+      - name: Validar recibo físico R532 contra o mesmo APK
+        env:
+          R532_DEVICE_ACCEPTANCE_JSON: ${{ github.event.inputs.device_acceptance_json }}
+        run: npm run validate:r532:device
+
+      - name: Registrar recibo aceito na release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          R532_DEVICE_ACCEPTANCE_JSON: ${{ github.event.inputs.device_acceptance_json }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const receipt = JSON.parse(process.env.R532_DEVICE_ACCEPTANCE_JSON);
+          const accepted = {
+            ...receipt,
+            acceptanceStatus: 'accepted',
+            acceptedAt: new Date().toISOString(),
+            validator: 'BuildMaster R532',
+          };
+          fs.writeFileSync('verify-r532/device-acceptance-r532-accepted.json', JSON.stringify(accepted, null, 2) + '\n');
+          NODE
+          export R533_DEVICE_STATUS=DEVICE_ACCEPTED
+          export R533_RELEASE_VERIFICATION_OUT=verify-r532/release-verification-r533-accepted.json
+          npm run release:r533:verification
+          gh release upload "$RELEASE_TAG" \
+            verify-r532/device-acceptance-r532-accepted.json \
+            verify-r532/release-verification-r533-accepted.json \
+            --clobber
+
+      - name: Resumo R532
+        run: |
+          echo "### R532 — Device Acceptance" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Release: \`$RELEASE_TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Versão: \`$BUILDMASTER_VERSION\` (code $ANDROID_VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- APK SHA-256: \`$APK_SHA256\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Resultado: **ACEITA EM APARELHO FÍSICO**" >> "$GITHUB_STEP_SUMMARY"

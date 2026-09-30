@@ -76,8 +76,8 @@ export function IntegratedHomePanel({
   }
 
   return (
-    <section className="bm-premium-dashboard bm-v36-home" aria-label="Central premium do BuildMaster">
-      <header className="bm-premium-dashboard-heading bm-v36-home-header">
+    <section className="bm-premium-dashboard bm-v36-home bm-r522-home" aria-label="Central premium do BuildMaster">
+      <header className="bm-premium-dashboard-heading bm-v36-home-header bm-r522-home-header">
         <div className="bm-v36-title-block">
           <span className="bm-v36-eyebrow"><LayoutDashboard size={15} /> Central</span>
           <h1>Sua ficha, sem complicação.</h1>
@@ -90,7 +90,7 @@ export function IntegratedHomePanel({
         </div>
       </header>
 
-      <section className="bm-premium-reader-hero bm-v36-command-deck" aria-label="Criar ficha de alto desempenho">
+      <section className="bm-premium-reader-hero bm-v36-command-deck bm-r522-command-deck" aria-label="Criar ficha de alto desempenho">
         <div className="bm-premium-reader-copy bm-v36-command-copy">
           <span className="bm-premium-kicker bm-v36-command-kicker"><BrainCircuit size={16} /> Análise inteligente</span>
           <h2>Crie uma ficha precisa para a posição escolhida.</h2>
@@ -112,7 +112,7 @@ export function IntegratedHomePanel({
           </div>
         </div>
 
-        <article className="bm-premium-player-card bm-v36-spotlight-card" aria-label={latest ? `Última carta: ${latest.name}` : 'Prévia da próxima ficha'}>
+        <article className="bm-premium-player-card bm-v36-spotlight-card bm-r522-spotlight" aria-label={latest ? `Última carta: ${latest.name}` : 'Prévia da próxima ficha'}>
           <div className="bm-v36-spotlight-top">
             <span>ÚLTIMA ANÁLISE</span>
             <em>{latest ? 'Disponível' : 'Aguardando carta'}</em>
@@ -133,14 +133,14 @@ export function IntegratedHomePanel({
       <details className="bm-v3780-home-details" open>
         <summary><span><LayoutDashboard size={18} /><strong>Ver painel completo</strong><small>Elenco, partidas, tática e indicadores</small></span><ArrowRight size={17} /></summary>
         <div className="bm-v3780-home-details-content">
-      <section className="bm-v36-metrics" aria-label="Resumo do aplicativo">
+      <section className="bm-v36-metrics bm-r522-metrics" aria-label="Resumo do aplicativo">
         <article><span><Users size={18} /></span><div><strong>{dashboard.players}</strong><small>Jogadores salvos</small></div></article>
         <article><span><CheckCircle2 size={18} /></span><div><strong>{dashboard.confirmed}</strong><small>Fichas concluídas</small></div></article>
         <article><span><Gamepad2 size={18} /></span><div><strong>{dashboard.matchRecords}</strong><small>Partidas registradas</small></div></article>
         <article><span><Clock3 size={18} /></span><div><strong>{backupLabel}</strong><small>Último backup</small></div></article>
       </section>
 
-      <section className="bm-premium-feature-section bm-v36-workspace" aria-label="Áreas principais">
+      <section className="bm-premium-feature-section bm-v36-workspace bm-r522-workspace" aria-label="Áreas principais">
         <div className="bm-premium-section-heading bm-v36-section-heading">
           <div><span>Workspace</span><h2>O que você quer fazer agora?</h2></div>
           <small>{dashboard.players} carta(s) no seu ambiente</small>
@@ -155,7 +155,7 @@ export function IntegratedHomePanel({
         </div>
       </section>
 
-      <section className="bm-premium-dashboard-grid bm-v36-dashboard-grid">
+      <section className="bm-premium-dashboard-grid bm-v36-dashboard-grid bm-r522-dashboard-grid">
         <article className="bm-premium-formation-card bm-v36-team-card">
           <div className="bm-premium-card-heading bm-v36-card-heading">
             <div><span>Meu Time</span><h2>{team.formation}</h2><small>{team.styleNote}</small></div>

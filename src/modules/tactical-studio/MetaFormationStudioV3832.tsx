@@ -229,19 +229,19 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
   ];
 
   return (
-    <section className="meta-formation-studio-v3832">
-      <header className="meta-studio-header">
+    <section className="meta-formation-studio-v3832 bm-r526-meta-studio">
+      <header className="meta-studio-header bm-r526-tactical-header">
         <div><p className="kicker"><Layers3 size={15}/> Estúdio de Formações Meta</p><h2>Gerador Tático Profissional por Template</h2><span>Gere artes detalhadas no padrão azul-marinho e dourado, sem IA paga e com todos os dados táticos do projeto.</span></div>
         <span className="meta-version-pill">v40.60</span>
       </header>
 
-      <nav className="meta-mode-tabs" aria-label="Modo de criação">
+      <nav className="meta-mode-tabs bm-r526-tactical-modes" aria-label="Modo de criação">
         {([['rapido', 'Rápido'], ['personalizado', 'Personalizado'], ['inteligente', 'Inteligente']] as const).map(([value, label]) => (
           <button key={value} type="button" className={mode === value ? 'active' : ''} onClick={() => { setMode(value); updateProject((current) => ({ ...current, mode: value })); }}><WandSparkles size={16}/>{label}</button>
         ))}
       </nav>
 
-      <div className="meta-studio-config-grid">
+      <div className="meta-studio-config-grid bm-r526-tactical-config">
         <label><span>Estilo do técnico</span><select value={style} onChange={(event: { target: HTMLSelectElement }) => { const value = event.target.value as MetaCoachStyle; setStyle(value); const first = recommendMetaFormations(value, objective, mode === 'inteligente' ? answers : {})[0]; setProject(createMetaFormationProject(first.formation, objective, mode)); }}>{META_COACH_STYLES.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label><span>Objetivo</span><select value={objective} onChange={(event: { target: HTMLSelectElement }) => { const value = event.target.value as MetaObjective; setObjective(value); updateProject((current) => ({ ...current, objective: value })); }}>{META_OBJECTIVES.map((item) => <option key={item}>{item}</option>)}</select></label>
       </div>
@@ -256,7 +256,7 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
         </details>
       )}
 
-      <section className="meta-recommendations">
+      <section className="meta-recommendations bm-r526-tactical-recommendations">
         <div className="meta-section-heading"><div><p className="kicker">Recomendação</p><h3>{mode === 'personalizado' ? 'Catálogo completo' : 'Melhores estruturas para o objetivo'}</h3></div><span>{mode === 'personalizado' ? META_FORMATION_CATALOG.filter((item) => item.style === style).length : 3}</span></div>
         <div className="meta-recommendation-grid">
           {(mode === 'personalizado' ? META_FORMATION_CATALOG.filter((item) => item.style === style).map((formationItem) => ({ formation: formationItem, score: 0, reasons: formationItem.strengths.slice(0, 2) })) : recommendations.slice(0, 3)).map((entry) => (
@@ -271,10 +271,10 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
       </section>
 
       <div className="meta-editor-layout">
-        <section className="meta-field-editor luxury-panel">
+        <section className="meta-field-editor luxury-panel bm-r526-tactical-pitch">
           <div className="meta-section-heading"><div><p className="kicker">Prévia em tempo real</p><h3>{project.name}</h3></div><span>{formation.slots.length} jogadores</span></div>
           <div className="meta-svg-preview" dangerouslySetInnerHTML={{ __html: preview }}/>
-          <div className="meta-export-actions">
+          <div className="meta-export-actions bm-r526-tactical-export">
             <select aria-label="Formato da arte" value={exportFormat} onChange={(event: { target: HTMLSelectElement }) => setExportFormat(event.target.value as MetaFormationExportFormat)}><option value="complete">Versão completa</option><option value="vertical">PNG vertical</option><option value="square">PNG quadrado</option><option value="story">Story</option><option value="whatsapp">WhatsApp</option><option value="field-only">Somente campo</option></select>
             <button type="button" disabled={busy} onClick={() => void exportImage()}><ImageIcon size={16}/> Gerar PNG</button>
             <button type="button" disabled={busy} onClick={exportPdf}><FileText size={16}/> PDF</button>
@@ -283,12 +283,12 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
         </section>
 
         <aside className="meta-editor-side">
-          <section className={`meta-validation-card is-${validation.level}`}>
+          <section className={`meta-validation-card bm-r526-tactical-validation is-${validation.level}`}>
             <div><ShieldCheck size={19}/><strong>{levelLabel(validation.level)}</strong></div>
             {validation.notes.slice(0, 5).map((note, index) => <p key={`${note.text}-${index}`} className={`is-${note.level}`}>{note.level === 'positive' ? <CheckCircle2 size={15}/> : <AlertTriangle size={15}/>}<span>{note.text}</span></p>)}
           </section>
 
-          <details className="meta-studio-details" open>
+          <details className="meta-studio-details bm-r526-tactical-lineup" open>
             <summary><Users size={17}/> Jogadores e estilos</summary>
             <div className="meta-slot-list">
               {formation.slots.map((slotItem) => {
@@ -316,7 +316,7 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
             <div className="meta-arrow-list">{project.arrows.map((arrow) => <label key={arrow.id}><input type="checkbox" checked={arrow.enabled} onChange={(event: { target: HTMLInputElement }) => updateProject((current) => ({ ...current, arrows: current.arrows.map((item) => item.id === arrow.id ? { ...item, enabled: event.target.checked } : item) }))}/><span>{arrow.label}</span></label>)}</div>
           </details>
 
-          <details className="meta-studio-details">
+          <details className="meta-studio-details bm-r526-tactical-explanation">
             <summary><FileText size={17}/> Textos táticos</summary>
             <label><span>Como atacar</span><textarea value={project.customTexts.attack ?? formation.attackPlan[0]} onChange={(event: { target: HTMLTextAreaElement }) => updateProject((current) => ({ ...current, customTexts: { ...current.customTexts, attack: event.target.value } }))}/></label>
             <label><span>Como defender</span><textarea value={project.customTexts.defense ?? formation.defensePlan[0]} onChange={(event: { target: HTMLTextAreaElement }) => updateProject((current) => ({ ...current, customTexts: { ...current.customTexts, defense: event.target.value } }))}/></label>
@@ -327,7 +327,7 @@ export function MetaFormationStudioV3832({ players, defaultStyle }: MetaFormatio
         </aside>
       </div>
 
-      {saved.length > 0 && <details className="meta-studio-details meta-saved-projects"><summary><Save size={17}/> Formações salvas ({saved.length})</summary><div>{saved.map((item) => <article key={item.id}><button type="button" onClick={() => restoreProject(item)}><strong>{item.name}</strong><span>{item.style} • {item.objective}</span><small>{formatDate(item.updatedAt)}</small></button><button type="button" aria-label={`Excluir ${item.name}`} onClick={() => setSaved(deleteMetaFormationProject(item.id))}><Trash2 size={16}/></button></article>)}</div></details>}
+      {saved.length > 0 && <details className="meta-studio-details meta-saved-projects bm-r526-tactical-saved"><summary><Save size={17}/> Formações salvas ({saved.length})</summary><div>{saved.map((item) => <article key={item.id}><button type="button" onClick={() => restoreProject(item)}><strong>{item.name}</strong><span>{item.style} • {item.objective}</span><small>{formatDate(item.updatedAt)}</small></button><button type="button" aria-label={`Excluir ${item.name}`} onClick={() => setSaved(deleteMetaFormationProject(item.id))}><Trash2 size={16}/></button></article>)}</div></details>}
 
       {message && <p className="meta-studio-message" role="status"><CheckCircle2 size={16}/>{message}</p>}
       <footer><span>Marques Fichas</span><small>BuildMaster • formações, fichas, vídeos e desempenho integrados</small><button type="button" onClick={() => navigator.clipboard?.writeText(project.name)} aria-label="Copiar nome da formação"><Copy size={15}/></button><button type="button" onClick={() => void exportImage('field-only')} aria-label="Baixar somente o campo"><Download size={15}/></button></footer>

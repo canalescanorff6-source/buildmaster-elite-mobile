@@ -343,8 +343,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
   }
 
   return (
-    <section className="result-panel bm2820-result-screen">
-      <section className={`result-player-hero luxury-panel ${heroExpanded ? 'is-expanded' : ''} ${playerImage ? 'has-card-image' : ''}`}>
+    <section className="result-panel bm2820-result-screen bm-r524-result">
+      <section className={`result-player-hero luxury-panel bm-r524-result-hero ${heroExpanded ? 'is-expanded' : ''} ${playerImage ? 'has-card-image' : ''}`}>
         <figure className={`result-player-art ${playerImage ? 'has-card-image' : 'is-empty'}`}>
           {playerImage ? <img src={playerImage} alt={`Carta recortada de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
           {!playerImage && <div className="result-player-art-overlay" />}
@@ -369,7 +369,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </button>
           </div>
 
-          <div className="result-key-metrics">
+          <div className="result-key-metrics bm-r524-result-metrics">
             <article><span>Pontos usados</span><strong>{result.trainingPointsUsed}</strong><small>de {result.trainingPointsTotal}</small></article>
             <article><span>Disponíveis</span><strong>{pointsAvailable}</strong><small>pontos restantes</small></article>
             <article><span>Habilidades</span><strong>{skillInfo.done}/{skillInfo.total || 5}</strong><small>{skillInfo.total && skillInfo.done >= skillInfo.total ? 'Top 5 concluído' : `${Math.max(0, skillInfo.total - skillInfo.done)} pendente(s)`}</small></article>
@@ -377,12 +377,12 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             {advancedMode && <article><span>Qualidade</span><strong>{Math.round(result.buildVariants[0]?.qualityScore ?? result.bestPosition.score ?? 0)}</strong><small>de 100</small></article>}
           </div>
 
-          <div className="result-budget-line">
+          <div className="result-budget-line bm-r524-budget">
             <div><span>Uso do orçamento</span><strong>{pointPercent}%</strong></div>
             <i><b style={{ width: `${pointPercent}%` }} /></i>
           </div>
 
-          <div className="result-hero-actions">
+          <div className="result-hero-actions bm-r524-actions">
             <button className="result-action-primary" type="button" onClick={onSaveFicha} disabled={!onSaveFicha || saveBusy} title={!result.validation.canGenerate ? 'A ficha será salva no Cofre como “Revisar”, sem perder o resultado.' : undefined}>{saveBusy ? <Loader2 className="spin" size={17} /> : <Save size={17} />} {saveBusy ? 'Confirmando...' : result.validation.canGenerate ? 'Salvar ficha' : 'Salvar para revisar'}</button>
             <button type="button" onClick={onRecalculate}><RotateCcw size={17} /> Recalcular</button>
             <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
@@ -409,12 +409,12 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       </section>
 
       {card.warnings.length > 0 && (
-        <div className="alert-strip result-alert-strip">
+        <div className="alert-strip result-alert-strip bm-r524-alerts">
           {card.warnings.slice(0, 2).map((warning) => <span key={warning}>{warning}</span>)}
         </div>
       )}
 
-      <section className="result-navigation-shell luxury-panel">
+      <section className="result-navigation-shell luxury-panel bm-r524-navigation">
         <div className="result-navigation-head">
           <div><p className="kicker">Resultado unificado</p><strong>Ficha, habilidades, Ímpeto e encaixe em uma única tela.</strong></div>
           <span>{result.trainingPointsUsed}/{result.trainingPointsTotal} pts</span>
@@ -1014,7 +1014,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
 
       {tab === 'habilidades' && result.skillIntegrity && (
-        <div className="result-section-grid">
+        <div className="result-section-grid bm-r525-skills bm-r525-skill-integrity">
           <article className="luxury-panel wide-card">
             <div className="section-title-row"><div><p className="kicker"><ShieldCheck size={14} /> Top 5 por função v31.80</p><h3>{result.skillIntegrity.status === 'approved' ? 'Lista complementar aprovada' : 'Confirme as habilidades lidas antes de aplicar'}</h3></div><span>{result.skillIntegrity.recommendedSkills.length}/5 seguras</span></div>
             <div className="chip-cloud">{result.skillIntegrity.checks.map((check) => <span key={check}>{check}</span>)}</div>
@@ -1025,7 +1025,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
       {tab === 'habilidades' && !advancedMode && (
-        <div className="result-section-grid bm-simple-skill-result">
+        <div className="result-section-grid bm-simple-skill-result bm-r525-skills bm-r525-skill-progress">
           <article className="luxury-panel wide-card">
             <div className="section-title-row"><div><p className="kicker">Habilidades adicionais</p><h3>Somente o que ainda falta</h3></div><span>{pendingRecommendedSkills.length}/{recommendedSkills.length}</span></div>
             <p className="panel-note">Marque as que você adicionou. Se a carta já veio com uma delas, use “Já possui? Gerar outra” para recalcular uma substituta compatível.</p>
@@ -1048,7 +1048,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
       )}
 
       {tab === 'habilidades' && advancedMode && (
-        <div className="result-section-grid">
+        <div className="result-section-grid bm-r525-skills">
           <article className="luxury-panel wide-card">
             <div className="section-title-row">
               <div><p className="kicker">Habilidades especiais</p><h3>Impacto das habilidades oficiais na posição escolhida</h3></div>
@@ -1072,7 +1072,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="panel-note">Cobertura atual {result.skillPriority.ownedCoverage}/100. {result.skillPriority.context.join(' ')}</p>
           </article>
 
-          <article className="luxury-panel wide-card">
+          <article className="luxury-panel wide-card bm-r525-skill-top5">
             <p className="kicker">Top 5 habilidades adicionais</p>
             <div className="skill-grid">
               {recommendedSkills.length ? recommendedSkills.map((skill, index) => {
@@ -1095,7 +1095,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
               }) : <p className="panel-note">Nenhuma habilidade adicional segura foi encontrada.</p>}
             </div>
           </article>
-          <article className="luxury-panel wide-card">
+          <article className="luxury-panel wide-card bm-r525-skill-alternatives">
             <p className="kicker">Boas alternativas</p>
             <div className="skill-grid">
               {alternativeSkillItems.length ? alternativeSkillItems.map((item) => (
@@ -1111,7 +1111,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          <article className="luxury-panel wide-card">
+          <article className="luxury-panel wide-card bm-r525-skill-avoid">
             <p className="kicker">Evitar nesta função</p>
             <div className="skill-grid">
               {avoidSkillItems.length ? avoidSkillItems.map((item) => (
@@ -1133,8 +1133,8 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
 
       {tab === 'impetos' && (
-        <div className="result-section-grid impeto-focus-grid bm-ai-impeto-workspace">
-          <article className="luxury-panel wide-card bm-ai-impeto-winner">
+        <div className="result-section-grid impeto-focus-grid bm-ai-impeto-workspace bm-r525-impeto">
+          <article className="luxury-panel wide-card bm-ai-impeto-winner bm-r525-impeto-winner">
             <div className="section-title-row">
               <div><p className="kicker"><BrainCircuit size={14} /> Escolha final da IA local</p><h3>{bestImpeto?.name ?? 'Ímpeto ainda não definido'}</h3></div>
               <span>{bestImpeto?.score ?? 0}/100 • {bestImpeto?.confidence ?? result.localAi?.confidence ?? 0}% confiança</span>
@@ -1143,7 +1143,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             {impetoV4080 && <div className="data-grid"><div><span>Vaga de Ímpeto</span><strong>{impetoV4080.slotStatus === 'DISPONIVEL' ? 'Disponível' : impetoV4080.slotStatus === 'OCUPADO' ? 'Ocupada' : impetoV4080.slotStatus === 'SEM_VAGA' ? 'Não possui' : 'Não confirmada'}</strong></div><div><span>Gasto de Token</span><strong>{impetoV4080.canCraft ? 'Liberado' : 'Bloqueado'}</strong></div><div><span>Tipos selecionáveis</span><strong>{impetoV4080.selectableOfficialCount}</strong></div><div><span>Ímpeto atual</span><strong>{impetoV4080.primary ?? '—'}</strong></div></div>}
             {bestImpeto && <>
               <div className="bm-impeto-attribute-grid">{bestImpeto.attributes.map((attribute) => <div key={attribute}><ShieldCheck size={15} /><span>{attribute}</span></div>)}</div>
-              <div className="bm-impeto-evidence">{(bestImpeto.evidence ?? []).map((line) => <p key={line}><CheckCircle2 size={15} /> {line}</p>)}</div>
+              <div className="bm-impeto-evidence bm-r525-impeto-evidence">{(bestImpeto.evidence ?? []).map((line) => <p key={line}><CheckCircle2 size={15} /> {line}</p>)}</div>
               {(bestImpeto.warnings ?? []).length > 0 && <div className="alert-strip">{bestImpeto.warnings?.map((warning) => <span key={warning}>{warning}</span>)}</div>}
               <div className="correction-actions">
                 <button type="button" onClick={() => onPromoteImpeto?.(bestImpeto.name)}><ThumbsUp size={14} /> Confirmar que combina</button>
@@ -1153,7 +1153,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <p className="panel-note">A escolha cruza a carta exata, posição, função, atributos, distribuição final da ficha, habilidades e correções que você já ensinou ao aplicativo.</p>
           </article>
 
-          <article className="luxury-panel wide-card impeto-master-card">
+          <article className="luxury-panel wide-card impeto-master-card bm-r525-impeto-alternatives">
             <div className="section-title-row"><div><p className="kicker">Alternativas seguras</p><h3>Use apenas quando quiser mudar a função</h3></div><span>{recommendedImpetos.filter((item) => item.tier === 'alternativo').length}</span></div>
             <div className="impeto-rank-list">
               {canCraftImpeto && recommendedImpetos.filter((item) => item.tier === 'alternativo').map((item, index) => (
@@ -1168,7 +1168,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             </div>
           </article>
 
-          <article className="luxury-panel wide-card">
+          <article className="luxury-panel wide-card bm-r525-impeto-avoid">
             <p className="kicker">Ímpetos a evitar nesta carta</p>
             <div className="skill-grid">
               {recommendedImpetos.filter((item) => item.tier === 'evitar').length ? recommendedImpetos.filter((item) => item.tier === 'evitar').map((item) => (
@@ -1307,7 +1307,30 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
 
       {tab === 'exportar' && (
-        <div className="result-section-grid export-pro-grid">
+        <div className="result-section-grid export-pro-grid bm-r528-export">
+          <article className="luxury-panel wide-card export-hero-card bm-r528-export-hero">
+            <div className="section-title-row">
+              <div>
+                <p className="kicker"><Share2 size={14} /> Central de exportação</p>
+                <h3>Uma ficha, formatos diferentes, sempre com os mesmos dados validados.</h3>
+              </div>
+              <span>R528 • Saída real</span>
+            </div>
+            <p className="panel-note">Imagem, impressão/PDF, HTML e relatório técnico reutilizam a análise atual. A interface não recalcula pontos, habilidades ou Ímpeto durante a exportação.</p>
+            <div className="bm-r528-export-capabilities" aria-label="Formatos de exportação disponíveis">
+              <div><ImagePlus size={17} /><span><strong>Imagem</strong><small>PNG quando suportado • SVG como fallback</small></span></div>
+              <div><Download size={17} /><span><strong>PDF</strong><small>Impressão do sistema • Salvar como PDF</small></span></div>
+              <div><FileText size={17} /><span><strong>HTML</strong><small>Relatório profissional arquivável</small></span></div>
+              <div><Copy size={17} /><span><strong>Texto</strong><small>Markdown técnico para auditoria</small></span></div>
+            </div>
+            <div className="export-pro-actions bm-r528-export-actions">
+              <button type="button" onClick={() => onExportImage?.()}><ImagePlus size={18} /> Exportar imagem</button>
+              <button type="button" onClick={onPrintReport}><Download size={18} /> Abrir PDF / impressão</button>
+              <button type="button" onClick={onExportReport}><FileText size={18} /> Baixar HTML</button>
+              <button type="button" onClick={onExportText}><Copy size={18} /> Baixar relatório técnico</button>
+            </div>
+          </article>
+
           <PremiumCleanResultV3810
             variant="export"
             result={result}
@@ -1315,56 +1338,18 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             onShare={() => void shareCurrentResult()}
             onExportImage={onExportImage}
           />
+
           <CompactSharePanel result={result} playerImage={playerImage} onExportImage={() => onExportImage?.()} />
-          <article className="luxury-panel wide-card export-hero-card">
-            <div className="section-title-row">
-              <div>
-                <p className="kicker">Exportação profissional</p>
-                <h3>Compartilhe ou arquive esta ficha sem perder o visual premium.</h3>
-              </div>
-              <span>Ficha técnica</span>
-            </div>
-            <p className="panel-note">Todos os formatos usam a ficha validada, os pontos exatos, as 5 habilidades oficiais, os ímpetos e o plano de uso em campo.</p>
-            <div className="export-pro-actions">
-              <button type="button" onClick={() => onExportImage?.()}><ImagePlus size={18} /> Exportar imagem da ficha</button>
-              <button type="button" onClick={onPrintReport}><Download size={18} /> Gerar PDF profissional</button>
-              <button type="button" onClick={onExportReport}><FileText size={18} /> Relatório HTML</button>
-              <button type="button" onClick={onExportText}><Copy size={18} /> Relatório técnico</button>
-            </div>
-          </article>
 
-          <article className="luxury-panel wide-card printable-preview-card">
-            <p className="kicker">Prévia do relatório</p>
+          <article className="luxury-panel wide-card printable-preview-card bm-r528-export-preview">
+            <div className="section-title-row"><div><p className="kicker">Prévia do conteúdo</p><h3>O que vai junto com a ficha</h3></div><span>{result.trainingPointsUsed}/{result.trainingPointsTotal} pts</span></div>
             <div className="printable-report-preview">
-              <div>
-                <span>Jogador</span>
-                <strong>{card.playerName}</strong>
-              </div>
-              <div>
-                <span>Função real</span>
-                <strong>{result.teamMap?.functionLabel ?? result.buildName}</strong>
-              </div>
-              <div>
-                <span>Pontos</span>
-                <strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong>
-              </div>
-              <div>
-                <span>Top habilidades</span>
-                <strong>{recommendedSkills.slice(0, 3).join(' • ') || '—'}</strong>
-              </div>
+              <div><span>Jogador</span><strong>{card.playerName}</strong></div>
+              <div><span>Função real</span><strong>{result.teamMap?.functionLabel ?? result.buildName}</strong></div>
+              <div><span>Pontos</span><strong>{result.trainingPointsUsed}/{result.trainingPointsTotal}</strong></div>
+              <div><span>Top habilidades</span><strong>{recommendedSkills.slice(0, 3).join(' • ') || '—'}</strong></div>
             </div>
-          </article>
-
-          <article className="luxury-panel compact-card">
-            <p className="kicker">Imagem SVG</p>
-            <h3>Card visual</h3>
-            <p className="panel-note">Bom para galeria, WhatsApp, Drive e comparação rápida.</p>
-          </article>
-
-          <article className="luxury-panel compact-card">
-            <p className="kicker">PDF</p>
-            <h3>Relatório de impressão</h3>
-            <p className="panel-note">Abre uma tela limpa; no Android/PC escolha “Salvar como PDF”.</p>
+            <p className="panel-note">O PDF não é fingido: ele usa a tela de impressão do Android/PC. Quando PNG não estiver disponível no aparelho, a exportação visual preserva a qualidade em SVG.</p>
           </article>
         </div>
       )}

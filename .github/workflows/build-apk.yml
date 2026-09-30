@@ -40,10 +40,6 @@ on:
         description: Motivo do rollback
         type: string
         required: false
-      device_acceptance_json:
-        description: Recibo JSON opcional de aceitação física R457 do mesmo commit
-        type: string
-        required: false
   push:
     branches: [main]
 
@@ -292,14 +288,6 @@ jobs:
           print(f'Versão {version}; versionCode {version_code}; canal {channel}; rollout {rollout}%; release {release_tag}; asset {asset}')
           PY
 
-      - name: Validar aceitação física R457 quando fornecida
-        if: env.RELEASE_CHANNEL == 'stable' && github.event.inputs.device_acceptance_json != ''
-        env:
-          R457_DEVICE_ACCEPTANCE_JSON: ${{ github.event.inputs.device_acceptance_json }}
-          SOURCE_SHA: ${{ env.SOURCE_SHA }}
-          ROLLBACK_FROM_VERSION: ${{ env.ROLLBACK_FROM_VERSION }}
-        run: npm run validate:r457:device
-
       - name: Exibir versões do ambiente
         run: |
           node --version
@@ -410,7 +398,6 @@ jobs:
         timeout-minutes: 12
         env:
           BUILDMASTER_ANDROID_STATIC: '1'
-          NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
           NEXT_PUBLIC_BUILDMASTER_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_NATIVE_VERSION: ${{ env.BUILDMASTER_VERSION }}
           NEXT_PUBLIC_BUILDMASTER_UPDATE_PRIMARY_URL: https://raw.githubusercontent.com/${{ github.repository }}/buildmaster-update/update-manifest.json
@@ -420,6 +407,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
+          export NEXT_PUBLIC_BUILDMASTER_BUILD_ID="$SOURCE_SHA"
           npm run vendor:ocr
           npm run apk:build-web
 
@@ -607,6 +595,20 @@ jobs:
           cp "dist-apk/$APK_ASSET_NAME" "dist-apk/BuildMaster-Elite-Tatico-v$BUILDMASTER_VERSION.apk"
           cp "dist-apk/$APK_ASSET_NAME" "dist-apk/BuildMaster-Elite-Tatico-latest.apk"
 
+      - name: Gerar template de aceitação física R532
+        run: |
+          APK_SHA256="$(sha256sum "dist-apk/$APK_ASSET_NAME" | awk '{print $1}')"
+          echo "APK_SHA256=$APK_SHA256" >> "$GITHUB_ENV"
+          export APK_SHA256
+          export R532_ACCEPTANCE_TEMPLATE_OUT="dist-apk/device-acceptance-r532-template.json"
+          npm run acceptance:r532:template
+
+      - name: Gerar recibo de estado R533
+        env:
+          R533_DEVICE_STATUS: DEVICE_PENDING
+          R533_RELEASE_VERIFICATION_OUT: dist-apk/release-verification-r533.json
+        run: npm run release:r533:verification
+
       - name: Preparar manifestos imutável, principal e legado
         run: |
           python - <<'PY'
@@ -634,7 +636,8 @@ jobs:
             'appId': 'com.buildmaster.elitetatico',
             'version': os.environ['BUILDMASTER_VERSION'],
             'versionCode': int(version_code),
-            'buildId': f'{os.environ["GITHUB_SHA"]}-{os.environ["GITHUB_RUN_ATTEMPT"]}',
+            'buildId': f'{os.environ["SOURCE_SHA"]}-{os.environ["GITHUB_RUN_ATTEMPT"]}',
+            'sourceSha': os.environ['SOURCE_SHA'],
             'publishedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'channel': os.environ['RELEASE_CHANNEL'],
             'updateType': 'apk',
@@ -652,6 +655,11 @@ jobs:
             'paused': os.environ.get('RELEASE_PAUSED', 'false').lower() == 'true',
             'checksum': hashlib.sha256(apk.read_bytes()).hexdigest(),
             'sizeBytes': apk.stat().st_size,
+            'deviceAcceptance': {
+              'schemaVersion': 2,
+              'status': 'pending',
+              'templateAsset': 'device-acceptance-r532-template.json',
+            },
           }
           if os.environ.get('ROLLBACK_FROM_VERSION', '').strip():
               common['rollbackFromVersion'] = os.environ['ROLLBACK_FROM_VERSION'].strip()
@@ -724,7 +732,9 @@ jobs:
             dist-apk/legacy/update-manifest.json
             dist-apk/release-history.json
             dist-apk/signing-report.txt
-            MANIFESTO_PRODUCAO_V34.00.sha256
+            dist-apk/device-acceptance-r532-template.json
+            dist-apk/release-verification-r533.json
+            MANIFESTO_PRODUCAO_V40.80.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -745,7 +755,9 @@ jobs:
           gh release upload "$RELEASE_TAG" \
             "dist-apk/$APK_ASSET_NAME" \
             "dist-apk/$MANIFEST_ASSET_NAME" \
-            dist-apk/signing-report.txt
+            dist-apk/signing-report.txt \
+            dist-apk/device-acceptance-r532-template.json \
+            dist-apk/release-verification-r533.json
 
       - name: Validar release imutável publicamente
         run: |
