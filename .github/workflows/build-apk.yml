@@ -114,12 +114,62 @@ jobs:
           gh workflow run build-apk.yml --ref main
           echo "Novo workflow disparado explicitamente para validar exatamente o commit estabilizado."
 
-  build-apk:
+  # Legacy CI contract marker: npm run ci:diagnose-all agora é particionado nos 4 shards abaixo.
+  diagnostic-matrix:
     needs: stabilize-source
     if: needs.stabilize-source.outputs.changed != 'true'
-    name: Build, testes, assinatura e publicação verificada
+    name: Diagnóstico R534 — shard ${{ matrix.shard + 1 }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.source_ref || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Instalar dependências do shard sem pausa artificial
+        timeout-minutes: 30
+        env:
+          npm_config_registry: https://registry.npmjs.org/
+          npm_config_fetch_retries: '3'
+          npm_config_fetch_retry_mintimeout: '1000'
+          npm_config_fetch_retry_maxtimeout: '10000'
+        run: npm ci --no-audit --no-fund --loglevel=info
+      - name: Preparar reparos seguros
+        run: npm run ci:repair-safe
+      - name: Executar diagnóstico completo do shard
+        run: >-
+          node scripts/ci-doctor.mjs --full
+          --shard-index ${{ matrix.shard }} --shard-count 4
+          --report-dir .ci-reports/shard-${{ matrix.shard }}
+      - name: Salvar relatório do shard
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ci-diagnostico-r534-shard-${{ matrix.shard }}-${{ github.run_id }}
+          path: .ci-reports/shard-${{ matrix.shard }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-apk:
+    needs: [stabilize-source, diagnostic-matrix]
+    if: needs.stabilize-source.outputs.changed != 'true' && needs.diagnostic-matrix.result == 'success'
+    name: Build, testes, assinatura e publicação verificada
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     steps:
       - name: Baixar código
@@ -355,31 +405,10 @@ jobs:
         continue-on-error: true
         run: npm run test:r419 && npm run test:r192
 
-      - name: Diagnóstico consolidado de todos os erros
-        id: diagnose_all
-        # O diagnóstico executa 97 grupos e não pode virar RED apenas por expirar
-        # durante uma regressão longa como R174. Mantém todos os testes ativos.
-        timeout-minutes: 120
-        continue-on-error: true
-        run: npm run ci:diagnose-all
-
-      - name: Salvar relatório completo do diagnóstico
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: ci-diagnostico-completo-${{ github.run_id }}
-          path: .ci-reports
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Bloquear publicação somente após coletar todas as falhas
-        if: always() && (steps.diagnose_all.outcome != 'success' || steps.preventive_gate.outcome != 'success' || steps.root_config_check.outcome != 'success' || steps.routes_check.outcome != 'success' || steps.r193_r200_precheck.outcome != 'success' || steps.r192_r419_gate.outcome != 'success')
+      - name: Bloquear publicação se um gate rápido falhar
+        if: always() && (steps.preventive_gate.outcome != 'success' || steps.root_config_check.outcome != 'success' || steps.routes_check.outcome != 'success' || steps.r193_r200_precheck.outcome != 'success' || steps.r192_r419_gate.outcome != 'success')
         run: |
-          echo "::error::A publicação foi bloqueada somente depois da coleta consolidada. Consulte ci-diagnostico-completo-${{ github.run_id }} e os gates acima."
-          if [ -f .ci-reports/summary.json ]; then
-            cat .ci-reports/summary.json
-          fi
+          echo "::error::A matriz R534 passou, mas um gate rápido do build final falhou."
           exit 1
 
       - name: Regra Zero-Red — confirmar árvore imutável após testes
