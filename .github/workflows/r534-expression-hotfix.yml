@@ -7,9 +7,9 @@ on:
 
 permissions:
   contents: write
-\-jobs:
+
+jobs:
   fix-r534-expression:
-    if: github.actor != 'buildmaster-r534-hotfix[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
