@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { applyTotalReaderFinalizationR501 } from './apply-r501-total-reader-finalization.mjs';
+import { applyR419ReaderMasterEngineClosure } from './apply-r419-reader-master-engine-closure.mjs';
 import { applyR502StructuralCardTruthCertification } from './apply-r502-structural-card-truth-certification.mjs';
 import { applyR503SingleReaderFinalization } from './apply-r503-single-reader-finalization.mjs';
 import { applyR504ProjectedPlayerState } from './apply-r504-projected-player-state.mjs';
@@ -34,6 +35,20 @@ if (!failed) {
   } catch (error) {
     failed = true;
     console.error('Falha no reparo determinístico: Card Truth R501 — finalização do Leitor Total');
+    console.error(error);
+  }
+}
+
+if (!failed) {
+  console.log('\n[CI SAFE REPAIR] R419 — leitor/Motor Mestre antes do ponto fixo');
+  try {
+    const result = applyR419ReaderMasterEngineClosure(process.cwd());
+    console.log(result.changed
+      ? `R419 convergiu ${result.patched.length} arquivo(s) antes do ponto fixo: ${result.patched.join(', ')}.`
+      : 'R419 leitor/Motor Mestre já estava convergido antes do ponto fixo.');
+  } catch (error) {
+    failed = true;
+    console.error('Falha no reparo determinístico: R419 — leitor/Motor Mestre antes do ponto fixo');
     console.error(error);
   }
 }
@@ -107,7 +122,6 @@ if (!failed) {
     console.error(error);
   }
 }
-
 
 if (!failed) {
   console.log('\n[CI SAFE REPAIR] R534 — Parallel Release CI');

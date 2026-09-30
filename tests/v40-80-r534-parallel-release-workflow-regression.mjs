@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const workflow = fs.readFileSync('.github/workflows/build-apk.yml', 'utf8');
+const safeRepair = fs.readFileSync('scripts/ci-safe-repair.mjs', 'utf8');
 
 assert.match(workflow, /diagnostic-matrix:\s*\n/, 'workflow deve ter job diagnostic-matrix');
 assert.match(workflow, /strategy:\s*\n\s*fail-fast:\s*false\s*\n\s*matrix:\s*\n\s*shard:\s*\[0,\s*1,\s*2,\s*3\]/, 'matriz deve ter 4 shards e fail-fast false');
@@ -17,4 +18,19 @@ assert.match(workflow, /release:r533:verification/, 'R533 deve permanecer no rel
 assert.match(workflow, /APK_SHA256/, 'checksum do APK deve permanecer');
 assert.match(workflow, /SOURCE_SHA/, 'source SHA deve permanecer');
 
-console.log('R534 workflow aprovado: matriz 4-way, expressões válidas, gate agregado, sem diagnóstico full duplicado e R532/R533 preservados.');
+assert.match(
+  safeRepair,
+  /import \{ applyR419ReaderMasterEngineClosure \} from '\.\/apply-r419-reader-master-engine-closure\.mjs';/,
+  'Zero-Red deve compartilhar a materialização R419 usada pelo typecheck R151'
+);
+assert.match(
+  safeRepair,
+  /applyR419ReaderMasterEngineClosure\(process\.cwd\(\)\)/,
+  'ci:repair-safe deve materializar R419 antes de declarar ponto fixo'
+);
+const r419RepairIndex = safeRepair.indexOf('applyR419ReaderMasterEngineClosure(process.cwd())');
+const r502RepairIndex = safeRepair.indexOf('applyR502StructuralCardTruthCertification(process.cwd())');
+assert.ok(r419RepairIndex >= 0 && r502RepairIndex >= 0 && r419RepairIndex < r502RepairIndex,
+  'R419 deve convergir antes da certificação estrutural R502, espelhando a ordem do R151');
+
+console.log('R534 workflow aprovado: matriz 4-way, expressões válidas, Zero-Red materializa R419 antes dos gates, sem diagnóstico full duplicado e R532/R533 preservados.');
