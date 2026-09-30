@@ -1,0 +1,30 @@
+name: R534 expression hotfix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+\-jobs:
+  fix-r534-expression:
+    if: github.actor != 'buildmaster-r534-hotfix[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Corrigir expressão inválida e remover hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=.github/workflows/build-apk.yml
+          grep -q 'matrix\.shard + 1' "$FILE" || { echo 'Expressão já corrigida.'; exit 0; }
+          sed -i 's/matrix\.shard + 1/matrix.shard/g' "$FILE"
+          git config user.name 'buildmaster-r534-hotfix[bot]'
+          git config user.email 'buildmaster-r534-hotfix[bot]@users.noreply.github.com'
+          git rm .github/workflows/r534-expression-hotfix.yml
+          git add "$FILE"
+          git commit -m 'fix(ci): use valid R534 matrix expression'
+          git push origin HEAD:main
