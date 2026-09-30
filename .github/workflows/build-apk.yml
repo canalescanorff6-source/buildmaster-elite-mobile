@@ -118,7 +118,7 @@ jobs:
   diagnostic-matrix:
     needs: stabilize-source
     if: needs.stabilize-source.outputs.changed != 'true'
-    name: Diagnóstico R534 — shard ${{ matrix.shard + 1 }}/4
+    name: Diagnóstico R534 — shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
