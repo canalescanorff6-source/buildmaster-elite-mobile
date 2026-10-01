@@ -35,7 +35,7 @@ const basePack: ContinuousDynamicRulePackV3770 = {
   gameVersion: 'eFootball 2026',
   publishedAt: '2026-08-01T08:00:00.000Z',
   updatedAt: '2026-08-01T08:00:00.000Z',
-  expiresAt: '2026-10-01T00:00:00.000Z',
+  expiresAt: '2999-10-01T00:00:00.000Z',
   minimumAppVersion: '37.70.0',
   source: 'Pacote remoto de teste',
   releaseNotes: ['Novo catálogo de teste e regra por função.'],
