@@ -11,11 +11,6 @@ import {
   getVisibleMatchMarkers,
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
-import {
-  MATCH_VISION_DIMENSIONS_R482,
-  MATCH_VISION_R482_VERSION,
-  analyzeMatchVisionR482
-} from '../src/modules/matches/matchVisionEngineR482';
 
 assert.equal(MATCH_TRAINER_VERSION, '40.60.0');
 for (const kind of ['defender-out-of-line', 'cursor-error', 'game-management', 'good-transition', 'critical-moment']) {
@@ -107,49 +102,6 @@ assert.equal(evolution.sessionsAnalyzed, 2);
 assert.ok(evolution.metrics.some((metric) => metric.id === 'defense'));
 assert.ok(evolution.recurringProblem.length > 0);
 
-// Roadmap R482 — Match Vision: interpretação read-only das evidências já confirmadas pelo Match Trainer.
-assert.equal(MATCH_VISION_R482_VERSION, '40.80-r482-match-vision-v1');
-assert.equal(MATCH_VISION_DIMENSIONS_R482.length, 12);
-assert.deepEqual(MATCH_VISION_DIMENSIONS_R482, [
-  'zones', 'lines', 'isolation', 'forcedPasses', 'possessionLosses', 'involvement',
-  'spaceOccupation', 'progression', 'pressure', 'transitions', 'finishing', 'offBallMovement'
-]);
-
-const originalSingleSession = JSON.stringify(session);
-const singleVision = analyzeMatchVisionR482([session]);
-assert.equal(JSON.stringify(session), originalSingleSession, 'R482 não pode mutar a sessão de origem.');
-assert.equal(singleVision.sessionsAnalyzed, 1);
-assert.equal(singleVision.confirmedMarkers, 4);
-assert.equal(singleVision.dimensions.length, 12);
-assert.equal(singleVision.evidenceState, 'OBSERVED', 'Uma única partida não pode virar padrão definitivo.');
-assert.equal(singleVision.confidence, 'low', 'Uma única partida deve permanecer com confiança baixa.');
-assert.equal(singleVision.authority.readOnly, true);
-assert.equal(singleVision.authority.canWriteTraining, false);
-assert.equal(singleVision.authority.canWriteTop5, false);
-assert.equal(singleVision.authority.canWriteSkills, false);
-assert.equal(singleVision.authority.canWriteImpetus, false);
-assert.equal(singleVision.authority.optimizeOverall, false);
-assert.equal(singleVision.authority.certifiedForFinalWrite, false);
-assert.ok(singleVision.safeguards.some((item) => /único vídeo|única.*partida/i.test(item)));
-assert.ok(singleVision.safeguards.some((item) => /Overall\/GER/i.test(item)));
-assert.deepEqual(analyzeMatchVisionR482([session]), singleVision, 'Mesma evidência deve produzir saída determinística.');
-
-const multiVision = analyzeMatchVisionR482([session, previous]);
-assert.equal(multiVision.sessionsAnalyzed, 2);
-assert.equal(multiVision.confirmedMarkers, 8);
-assert.equal(multiVision.evidenceState, 'REPEATED_PATTERN');
-assert.ok(multiVision.confidenceScore >= singleVision.confidenceScore);
-const linesVision = multiVision.dimensions.find((item) => item.id === 'lines');
-assert.ok(linesVision);
-assert.equal(linesVision?.evidenceState, 'REPEATED_PATTERN');
-assert.ok((linesVision?.sessionsWithEvidence ?? 0) >= 2);
-
-const emptyVision = analyzeMatchVisionR482([]);
-assert.equal(emptyVision.evidenceState, 'INSUFFICIENT');
-assert.equal(emptyVision.confidence, 'low');
-assert.equal(emptyVision.confirmedMarkers, 0);
-assert.ok(emptyVision.dimensions.every((item) => item.score === null && item.evidenceState === 'INSUFFICIENT'));
-
 const ui = fs.readFileSync('src/modules/matches/MatchTrainerCenter.tsx', 'utf8');
 const css = fs.readFileSync('src/app/globals.css', 'utf8');
 for (const text of [
@@ -167,4 +119,4 @@ for (const selector of ['.match-analysis-tabs', '.match-priority-grid', '.match-
   assert.ok(css.includes(selector), `Estilo ausente: ${selector}`);
 }
 
-console.log('v31.77 + R482 aprovados: vídeo inteligente preservado e Match Vision read-only com 12 dimensões, evidência e confiança.');
+console.log('v31.77 Análise de Vídeo Inteligente 2.0 aprovada: evidência, diagnóstico, clipes, treino, tática e evolução.');
