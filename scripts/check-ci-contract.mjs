@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const doctor = fs.readFileSync('scripts/ci-doctor.mjs', 'utf8');
@@ -10,6 +11,21 @@ function check(condition, message) {
   if (!condition) checks.push(message);
 }
 
+function runCanonicalRegression(label, file) {
+  const result = spawnSync(process.execPath, ['-r', './tests/_ts-require.cjs', file], {
+    stdio: 'inherit',
+    env: process.env,
+    shell: false,
+  });
+  if (result.error || result.status !== 0) {
+    console.error(`✗ ${label} falhou no contrato preventivo da main.`);
+    if (result.error) console.error(result.error.message);
+    process.exit(result.status ?? 1);
+  }
+}
+
+runCanonicalRegression('R483 Build Simulator', 'tests/v40-80-r483-build-simulator-regression.ts');
+runCanonicalRegression('R484 Chemistry Graph', 'tests/v40-80-r484-chemistry-graph-regression.ts');
 
 check(packageJson.scripts?.['types:repair'], 'Script types:repair ausente.');
 check(packageJson.scripts?.['quality:root-tsconfig'], 'Script quality:root-tsconfig ausente.');
@@ -97,4 +113,4 @@ if (checks.length) {
   for (const failure of checks) console.error(`✗ ${failure}`);
   process.exit(1);
 }
-console.log('Contrato preventivo do CI aprovado: dependências, versões, orçamento e bundle compilado estão cobertos nos dois workflows.');
+console.log('Contrato preventivo do CI aprovado: R483/R484, dependências, versões, orçamento e bundle compilado estão cobertos nos dois workflows.');
