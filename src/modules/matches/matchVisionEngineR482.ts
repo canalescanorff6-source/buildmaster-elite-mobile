@@ -1,389 +1,259 @@
-import type { TacticalStyle } from '@/lib/analyzer';
-import type { TeamDiagnosis } from '@/modules/core/centralIntelligence';
-import {
-  getConfirmedMatchMarkers,
-  getVisibleMatchMarkers,
-  isAttackEvent,
-  isDefenseEvent,
-  type MatchEventKind,
-  type MatchEventMarker,
-  type MatchPhase,
-  type MatchTrainerSession
-} from './matchTrainerEngine';
+import type { MatchEventKind, MatchEventMarker, MatchTrainerSession } from './matchTrainerEngine';
 
 export const MATCH_VISION_R482_VERSION = '40.80-r482-match-vision-v1';
 
-export type MatchVisionTimelineSegmentR482 = {
-  index: number;
-  startMs: number;
-  endMs: number;
-  label: string;
-  dominantPhase: MatchPhase;
-  intensity: number;
-  confirmedEvents: number;
-  positiveEvents: number;
-  riskEvents: number;
-  attackEvents: number;
-  defenseEvents: number;
-  transitionEvents: number;
-};
+export const MATCH_VISION_DIMENSIONS_R482 = [
+  'zones',
+  'lines',
+  'isolation',
+  'forcedPasses',
+  'possessionLosses',
+  'involvement',
+  'spaceOccupation',
+  'progression',
+  'pressure',
+  'transitions',
+  'finishing',
+  'offBallMovement'
+] as const;
 
-export type MatchVisionCriticalWindowR482 = {
-  id: string;
-  centerMs: number;
-  startMs: number;
-  endMs: number;
-  score: number;
-  phase: MatchPhase;
-  title: string;
-  reason: string;
+export type MatchVisionDimensionIdR482 = (typeof MATCH_VISION_DIMENSIONS_R482)[number];
+export type MatchVisionEvidenceStateR482 = 'INSUFFICIENT' | 'OBSERVED' | 'REPEATED_PATTERN';
+export type MatchVisionConfidenceR482 = 'low' | 'medium' | 'high';
+
+export type MatchVisionDimensionR482 = {
+  id: MatchVisionDimensionIdR482;
+  evidenceCount: number;
+  sessionsWithEvidence: number;
+  positiveCount: number;
+  warningCount: number;
+  score: number | null;
+  confidence: MatchVisionConfidenceR482;
+  evidenceState: MatchVisionEvidenceStateR482;
   markerKinds: MatchEventKind[];
-  confirmedEvents: number;
-};
-
-export type MatchVisionPatternR482 = {
-  kind: MatchEventKind;
-  label: string;
-  occurrences: number;
-  impact: number;
-  moments: number[];
-  phase: MatchPhase;
 };
 
 export type MatchVisionSnapshotR482 = {
   version: string;
-  mode: 'READ_ONLY_MATCH_VISION';
-  confidence: number;
-  configuredContext: {
-    formation: string;
-    teamStyle: TacticalStyle;
-  };
-  evidence: {
-    durationMs: number;
-    videoAnalyzed: boolean;
-    videoQualityScore: number;
-    confirmedMarkers: number;
-    suggestedMarkers: number;
-    reviewedCoverage: number;
-    sampleCount: number;
-  };
-  timeline: MatchVisionTimelineSegmentR482[];
-  criticalWindows: MatchVisionCriticalWindowR482[];
-  recurringPatterns: MatchVisionPatternR482[];
-  phaseBalance: Array<{
-    phase: MatchPhase;
-    label: string;
-    confirmedEvents: number;
-    share: number;
-  }>;
-  styleObservation: string;
-  connectionGuardrail: string;
-  strengths: string[];
-  risks: string[];
+  sessionsAnalyzed: number;
+  confirmedMarkers: number;
+  dimensionsCovered: number;
+  confidenceScore: number;
+  confidence: MatchVisionConfidenceR482;
+  evidenceState: MatchVisionEvidenceStateR482;
+  dimensions: MatchVisionDimensionR482[];
+  safeguards: string[];
   authority: {
     readOnly: true;
-    canConfirmMarkersAutomatically: false;
     canWriteTraining: false;
+    canWriteTop5: false;
     canWriteSkills: false;
     canWriteImpetus: false;
+    canChangePosition: false;
+    canOverrideCleanSlate: false;
+    canOverrideR126: false;
     canOverrideR128: false;
+    optimizeOverall: false;
+    certifiedForFinalWrite: false;
   };
-  guardrails: string[];
 };
 
-type MatchVisionInputR482 = {
-  session: MatchTrainerSession;
-  team: TeamDiagnosis;
-  teamStyle: TacticalStyle;
+const AUTHORITY_R482: MatchVisionSnapshotR482['authority'] = {
+  readOnly: true,
+  canWriteTraining: false,
+  canWriteTop5: false,
+  canWriteSkills: false,
+  canWriteImpetus: false,
+  canChangePosition: false,
+  canOverrideCleanSlate: false,
+  canOverrideR126: false,
+  canOverrideR128: false,
+  optimizeOverall: false,
+  certifiedForFinalWrite: false
 };
 
-const POSITIVE_KINDS = new Set<MatchEventKind>([
-  'good-transition',
-  'good-build-up',
-  'good-play',
-  'goal-for',
-  'interception'
-]);
+const SAFEGUARDS_R482 = [
+  'Match Vision R482 é consultivo e nunca escreve a ficha final, Top 5, Skills adicionais ou Ímpeto.',
+  'Um único vídeo ou partida não estabelece padrão definitivo de gameplay.',
+  'Somente marcadores manuais ou automáticos confirmados entram como evidência.',
+  'Overall/GER não participa da autoridade, confiança ou pontuação deste motor.',
+  'Ausência de evidência permanece insuficiente; o motor não inventa eventos não observados.'
+] as const;
 
-const TRANSITION_KINDS = new Set<MatchEventKind>([
-  'dangerous-turnover',
-  'late-recomposition',
-  'good-transition',
-  'lost-counterattack',
-  'second-ball-failure'
-]);
+type MarkerPolarityR482 = 'positive' | 'warning' | 'neutral';
 
-const PHASE_ORDER: MatchPhase[] = [
-  'build-up',
-  'attack',
-  'defensive-transition',
-  'defense',
-  'set-piece',
-  'game-management',
-  'unknown'
-];
-
-const PHASE_LABELS: Record<MatchPhase, string> = {
-  'build-up': 'Construção',
-  attack: 'Ataque',
-  'defensive-transition': 'Transição defensiva',
-  defense: 'Defesa',
-  'set-piece': 'Bola parada',
-  'game-management': 'Gestão',
-  unknown: 'Não confirmado'
+type MarkerRuleR482 = {
+  dimensions: readonly MatchVisionDimensionIdR482[];
+  polarity: MarkerPolarityR482;
 };
 
-function clamp(value: number, min = 0, max = 100) {
-  return Math.max(min, Math.min(max, Math.round(value)));
+const RULES_R482: Partial<Record<MatchEventKind, MarkerRuleR482>> = {
+  'pass-error': { dimensions: ['forcedPasses', 'possessionLosses', 'progression'], polarity: 'warning' },
+  'dangerous-turnover': { dimensions: ['possessionLosses', 'transitions'], polarity: 'warning' },
+  'marking-error': { dimensions: ['zones', 'lines', 'spaceOccupation'], polarity: 'warning' },
+  'cursor-error': { dimensions: ['lines', 'pressure'], polarity: 'warning' },
+  'forced-shot': { dimensions: ['finishing'], polarity: 'warning' },
+  'defender-out-of-line': { dimensions: ['lines', 'zones', 'spaceOccupation'], polarity: 'warning' },
+  'late-recomposition': { dimensions: ['transitions', 'lines', 'spaceOccupation'], polarity: 'warning' },
+  'pressing-error': { dimensions: ['pressure', 'lines'], polarity: 'warning' },
+  'game-management': { dimensions: ['progression', 'transitions'], polarity: 'warning' },
+  'good-transition': { dimensions: ['transitions', 'progression', 'offBallMovement'], polarity: 'positive' },
+  'good-build-up': { dimensions: ['progression', 'lines', 'spaceOccupation'], polarity: 'positive' },
+  'good-play': { dimensions: ['involvement', 'spaceOccupation', 'offBallMovement'], polarity: 'positive' },
+  'delayed-pass': { dimensions: ['forcedPasses', 'progression'], polarity: 'warning' },
+  'pressured-receiver': { dimensions: ['isolation', 'forcedPasses', 'spaceOccupation'], polarity: 'warning' },
+  'late-release': { dimensions: ['forcedPasses', 'progression'], polarity: 'warning' },
+  'dangerous-dribble': { dimensions: ['isolation', 'possessionLosses'], polarity: 'warning' },
+  'unbalanced-shot': { dimensions: ['finishing'], polarity: 'warning' },
+  'predictable-attack': { dimensions: ['isolation', 'spaceOccupation', 'offBallMovement'], polarity: 'warning' },
+  'no-triangulation': { dimensions: ['isolation', 'spaceOccupation', 'offBallMovement'], polarity: 'warning' },
+  'lost-counterattack': { dimensions: ['transitions', 'progression'], polarity: 'warning' },
+  'wrong-double-mark': { dimensions: ['pressure', 'zones', 'lines'], polarity: 'warning' },
+  'premature-tackle': { dimensions: ['pressure', 'lines'], polarity: 'warning' },
+  'fullback-corridor-open': { dimensions: ['zones', 'spaceOccupation', 'lines'], polarity: 'warning' },
+  'double-defender': { dimensions: ['pressure', 'spaceOccupation'], polarity: 'warning' },
+  'central-corridor-open': { dimensions: ['zones', 'spaceOccupation', 'lines'], polarity: 'warning' },
+  'second-ball-failure': { dimensions: ['zones', 'involvement', 'transitions'], polarity: 'warning' },
+  'interception': { dimensions: ['pressure', 'lines', 'involvement'], polarity: 'positive' },
+  'command-pass-early': { dimensions: ['forcedPasses', 'progression'], polarity: 'warning' },
+  'command-sprint-excess': { dimensions: ['offBallMovement', 'spaceOccupation'], polarity: 'warning' },
+  'command-double-tap': { dimensions: ['involvement'], polarity: 'warning' }
+};
+
+function isConfirmedMarkerR482(marker: MatchEventMarker): boolean {
+  if (marker.reviewStatus === 'rejected') return false;
+  if (marker.source === 'automatic') return marker.reviewStatus === 'confirmed';
+  return marker.reviewStatus !== 'suggested';
 }
 
-function severityWeight(marker: MatchEventMarker) {
-  if (marker.severity === 'critical') return 5;
-  if (marker.severity === 'high') return 4;
-  if (marker.severity === 'medium') return 3;
-  if (marker.severity === 'low') return 2;
-  if (marker.severity === 'positive') return 1;
-  return 2;
+function confidenceFromEvidenceR482(evidenceCount: number, sessionsWithEvidence: number): MatchVisionConfidenceR482 {
+  if (evidenceCount >= 5 && sessionsWithEvidence >= 3) return 'high';
+  if (evidenceCount >= 3 && sessionsWithEvidence >= 2) return 'medium';
+  return 'low';
 }
 
-function normalizedPhase(marker: MatchEventMarker): MatchPhase {
-  if (marker.phase && PHASE_ORDER.includes(marker.phase)) return marker.phase;
-  if (isAttackEvent(marker.kind)) return 'attack';
-  if (isDefenseEvent(marker.kind)) return 'defense';
-  if (TRANSITION_KINDS.has(marker.kind)) return 'defensive-transition';
-  return 'unknown';
+function evidenceStateR482(evidenceCount: number, sessionsWithEvidence: number): MatchVisionEvidenceStateR482 {
+  if (evidenceCount === 0) return 'INSUFFICIENT';
+  if (evidenceCount >= 3 && sessionsWithEvidence >= 2) return 'REPEATED_PATTERN';
+  return 'OBSERVED';
 }
 
-function markerLabel(kind: MatchEventKind) {
-  return kind
-    .replaceAll('-', ' ')
-    .replace(/\b\w/g, (letter) => letter.toLocaleUpperCase('pt-BR'));
+function scoreDimensionR482(positiveCount: number, warningCount: number): number | null {
+  const total = positiveCount + warningCount;
+  if (total === 0) return null;
+  const raw = 50 + ((positiveCount - warningCount) / total) * 50;
+  return Math.max(0, Math.min(100, Math.round(raw)));
 }
 
-function dominantPhase(markers: MatchEventMarker[]): MatchPhase {
-  if (!markers.length) return 'unknown';
-  const counts = new Map<MatchPhase, number>();
-  for (const marker of markers) {
-    const phase = normalizedPhase(marker);
-    counts.set(phase, (counts.get(phase) ?? 0) + 1);
+function stableSessionsR482(sessions: readonly MatchTrainerSession[]): MatchTrainerSession[] {
+  return [...sessions].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function stableMarkersR482(session: MatchTrainerSession): MatchEventMarker[] {
+  return session.markers
+    .filter(isConfirmedMarkerR482)
+    .slice()
+    .sort((a, b) => a.atMs - b.atMs || a.id.localeCompare(b.id));
+}
+
+export function analyzeMatchVisionR482(sessions: readonly MatchTrainerSession[]): MatchVisionSnapshotR482 {
+  const accumulators = new Map<MatchVisionDimensionIdR482, {
+    evidenceCount: number;
+    positiveCount: number;
+    warningCount: number;
+    sessionIds: Set<string>;
+    markerKinds: Set<MatchEventKind>;
+  }>();
+
+  for (const id of MATCH_VISION_DIMENSIONS_R482) {
+    accumulators.set(id, {
+      evidenceCount: 0,
+      positiveCount: 0,
+      warningCount: 0,
+      sessionIds: new Set<string>(),
+      markerKinds: new Set<MatchEventKind>()
+    });
   }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1] || PHASE_ORDER.indexOf(a[0]) - PHASE_ORDER.indexOf(b[0]))[0]?.[0] ?? 'unknown';
-}
 
-function segmentLabel(index: number, total: number) {
-  if (index === 0) return 'Início';
-  if (index === total - 1) return 'Final';
-  if (index < total / 2) return '1ª metade';
-  return '2ª metade';
-}
+  let confirmedMarkers = 0;
+  const normalizedSessions = stableSessionsR482(sessions);
 
-function buildTimeline(markers: MatchEventMarker[], durationMs: number): MatchVisionTimelineSegmentR482[] {
-  const segmentCount = durationMs >= 60 * 60 * 1000 ? 8 : durationMs >= 25 * 60 * 1000 ? 6 : 4;
-  const safeDuration = Math.max(durationMs, 1);
-  const segmentMs = safeDuration / segmentCount;
-  return Array.from({ length: segmentCount }, (_, index) => {
-    const startMs = Math.round(index * segmentMs);
-    const endMs = index === segmentCount - 1 ? Math.round(safeDuration) : Math.round((index + 1) * segmentMs);
-    const inSegment = markers.filter((marker) => marker.atMs >= startMs && marker.atMs <= endMs);
-    const positiveEvents = inSegment.filter((marker) => POSITIVE_KINDS.has(marker.kind)).length;
-    const riskEvents = inSegment.filter((marker) => !POSITIVE_KINDS.has(marker.kind)).length;
-    const attackEvents = inSegment.filter((marker) => isAttackEvent(marker.kind)).length;
-    const defenseEvents = inSegment.filter((marker) => isDefenseEvent(marker.kind)).length;
-    const transitionEvents = inSegment.filter((marker) => TRANSITION_KINDS.has(marker.kind)).length;
-    const impact = inSegment.reduce((sum, marker) => sum + severityWeight(marker), 0);
+  for (const session of normalizedSessions) {
+    for (const marker of stableMarkersR482(session)) {
+      confirmedMarkers += 1;
+      const rule = RULES_R482[marker.kind];
+      const dimensions = new Set<MatchVisionDimensionIdR482>(rule?.dimensions ?? []);
+
+      if (marker.playerId || marker.playerLabel || marker.playerCardFingerprint) {
+        dimensions.add('involvement');
+      }
+      if (marker.annotations?.some((annotation) => annotation.kind === 'open-space' || annotation.kind === 'hold-position')) {
+        dimensions.add('offBallMovement');
+        dimensions.add('spaceOccupation');
+      }
+      if (marker.annotations?.some((annotation) => annotation.kind === 'blocked-line' || annotation.kind === 'recommended-line')) {
+        dimensions.add('lines');
+      }
+
+      for (const dimensionId of dimensions) {
+        const accumulator = accumulators.get(dimensionId);
+        if (!accumulator) continue;
+        accumulator.evidenceCount += 1;
+        accumulator.sessionIds.add(session.id);
+        accumulator.markerKinds.add(marker.kind);
+        if (rule?.polarity === 'positive' || marker.severity === 'positive') accumulator.positiveCount += 1;
+        else if (rule?.polarity === 'warning' || marker.severity === 'high' || marker.severity === 'critical' || marker.severity === 'medium') accumulator.warningCount += 1;
+      }
+    }
+  }
+
+  const dimensions = MATCH_VISION_DIMENSIONS_R482.map((id): MatchVisionDimensionR482 => {
+    const accumulator = accumulators.get(id)!;
+    const sessionsWithEvidence = accumulator.sessionIds.size;
     return {
-      index,
-      startMs,
-      endMs,
-      label: segmentLabel(index, segmentCount),
-      dominantPhase: dominantPhase(inSegment),
-      intensity: clamp(Math.min(100, impact * 12 + inSegment.length * 5)),
-      confirmedEvents: inSegment.length,
-      positiveEvents,
-      riskEvents,
-      attackEvents,
-      defenseEvents,
-      transitionEvents
+      id,
+      evidenceCount: accumulator.evidenceCount,
+      sessionsWithEvidence,
+      positiveCount: accumulator.positiveCount,
+      warningCount: accumulator.warningCount,
+      score: scoreDimensionR482(accumulator.positiveCount, accumulator.warningCount),
+      confidence: confidenceFromEvidenceR482(accumulator.evidenceCount, sessionsWithEvidence),
+      evidenceState: evidenceStateR482(accumulator.evidenceCount, sessionsWithEvidence),
+      markerKinds: [...accumulator.markerKinds].sort()
     };
   });
-}
 
-function buildCriticalWindows(markers: MatchEventMarker[], durationMs: number): MatchVisionCriticalWindowR482[] {
-  const windows = markers
-    .filter((marker) => !POSITIVE_KINDS.has(marker.kind))
-    .map((marker, index) => {
-      const startMs = Math.max(0, marker.clipStartMs ?? marker.atMs - 8000);
-      const endMs = Math.min(Math.max(durationMs, marker.atMs + 1), marker.clipEndMs ?? marker.atMs + 10000);
-      const nearby = markers.filter((candidate) => Math.abs(candidate.atMs - marker.atMs) <= 15000);
-      const score = clamp(severityWeight(marker) * 16 + Math.max(0, nearby.length - 1) * 8 + (marker.repeated ? 10 : 0));
-      return {
-        id: `vision-window-${index}-${Math.round(marker.atMs)}`,
-        centerMs: marker.atMs,
-        startMs,
-        endMs,
-        score,
-        phase: normalizedPhase(marker),
-        title: marker.title || markerLabel(marker.kind),
-        reason: marker.why || marker.detail || 'Janela com evidência confirmada que merece revisão tática.',
-        markerKinds: [...new Set(nearby.map((candidate) => candidate.kind))],
-        confirmedEvents: nearby.length
-      };
-    })
-    .sort((a, b) => b.score - a.score || a.centerMs - b.centerMs);
-
-  const picked: MatchVisionCriticalWindowR482[] = [];
-  for (const window of windows) {
-    if (picked.some((current) => Math.abs(current.centerMs - window.centerMs) < 12000)) continue;
-    picked.push(window);
-    if (picked.length >= 5) break;
-  }
-  return picked;
-}
-
-function buildPatterns(markers: MatchEventMarker[]): MatchVisionPatternR482[] {
-  const grouped = new Map<MatchEventKind, MatchEventMarker[]>();
-  for (const marker of markers) {
-    if (POSITIVE_KINDS.has(marker.kind)) continue;
-    const list = grouped.get(marker.kind) ?? [];
-    list.push(marker);
-    grouped.set(marker.kind, list);
-  }
-  return [...grouped.entries()]
-    .map(([kind, items]) => ({
-      kind,
-      label: items[0]?.title || markerLabel(kind),
-      occurrences: items.length,
-      impact: clamp(items.reduce((sum, marker) => sum + severityWeight(marker), 0) * 12),
-      moments: items.map((marker) => marker.atMs).sort((a, b) => a - b),
-      phase: dominantPhase(items)
-    }))
-    .sort((a, b) => b.occurrences - a.occurrences || b.impact - a.impact)
-    .slice(0, 6);
-}
-
-function buildPhaseBalance(markers: MatchEventMarker[]) {
-  const total = markers.length;
-  return PHASE_ORDER
-    .map((phase) => {
-      const confirmedEvents = markers.filter((marker) => normalizedPhase(marker) === phase).length;
-      return {
-        phase,
-        label: PHASE_LABELS[phase],
-        confirmedEvents,
-        share: total ? clamp((confirmedEvents / total) * 100) : 0
-      };
-    })
-    .filter((item) => item.confirmedEvents > 0 || item.phase === 'unknown');
-}
-
-function styleObservation(teamStyle: TacticalStyle, markers: MatchEventMarker[], team: TeamDiagnosis) {
-  const buildUp = markers.filter((marker) => normalizedPhase(marker) === 'build-up').length;
-  const attack = markers.filter((marker) => normalizedPhase(marker) === 'attack').length;
-  const transition = markers.filter((marker) => normalizedPhase(marker) === 'defensive-transition').length;
-  const passRisks = markers.filter((marker) => ['pass-error', 'pressured-receiver', 'late-release', 'no-triangulation'].includes(marker.kind)).length;
-  const positiveBuild = markers.filter((marker) => marker.kind === 'good-build-up').length;
-
-  if (!markers.length) return `Sem lances confirmados suficientes para comparar o comportamento observado com ${team.formation}.`;
-  if (teamStyle === 'POSSE_DE_BOLA') {
-    if (positiveBuild > passRisks && buildUp > 0) return 'Os lances confirmados mostram sinais compatíveis com circulação e construção; preserve apoios curtos e confirme em mais partidas.';
-    return 'A amostra confirmada ainda mostra interrupções na circulação ou pouca evidência de construção segura para validar plenamente o modelo de Posse de Bola.';
-  }
-  if (teamStyle === 'CONTRA_ATAQUE_RAPIDO' || teamStyle === 'CONTRA_ATAQUE') {
-    if (transition + attack >= buildUp) return 'A amostra confirmada concentra mais ações de transição/ataque do que de construção longa, coerente com um modelo vertical, sem implicar previsão de resultado.';
-    return 'Os lances confirmados mostram mais construção do que aceleração; vale revisar se a execução está correspondendo ao modelo de contra-ataque configurado.';
-  }
-  return `A leitura atual usa ${markers.length} lance(s) confirmado(s) para comparar execução e contexto do estilo configurado, sem alterar a tática automaticamente.`;
-}
-
-export function buildMatchVisionR482({ session, team, teamStyle }: MatchVisionInputR482): MatchVisionSnapshotR482 {
-  const visible = getVisibleMatchMarkers(session);
-  const confirmed = getConfirmedMatchMarkers(session);
-  const suggestedMarkers = visible.filter((marker) => marker.reviewStatus === 'suggested').length;
-  const totalReviewable = confirmed.length + suggestedMarkers;
-  const reviewedCoverage = totalReviewable ? clamp((confirmed.length / totalReviewable) * 100) : 0;
-  const durationMs = Math.max(
-    Number(session.analysis?.durationMs || 0),
-    ...confirmed.map((marker) => marker.atMs),
-    0
-  );
-  const videoQualityScore = clamp(Number(session.analysis?.qualityScore || 0));
-  const sampleCount = Number(session.analysis?.sampleCount || 0);
-  const videoEvidence = session.analysis ? Math.min(100, 35 + videoQualityScore * .45 + Math.min(20, sampleCount / 8)) : 0;
-  const confirmedEvidence = Math.min(100, confirmed.length * 11);
-  const contextEvidence = team.formation ? 10 : 0;
-  const confidence = clamp(
-    confirmedEvidence * .48 +
-    reviewedCoverage * .22 +
-    videoEvidence * .2 +
-    contextEvidence
-  );
-
-  const timeline = buildTimeline(confirmed, durationMs);
-  const criticalWindows = buildCriticalWindows(confirmed, durationMs);
-  const recurringPatterns = buildPatterns(confirmed);
-  const phaseBalance = buildPhaseBalance(confirmed);
-  const strengths = [
-    confirmed.filter((marker) => POSITIVE_KINDS.has(marker.kind)).length
-      ? `${confirmed.filter((marker) => POSITIVE_KINDS.has(marker.kind)).length} jogada(s) positiva(s) confirmada(s) para repetir.`
-      : null,
-    reviewedCoverage >= 70 ? `${reviewedCoverage}% dos momentos revisáveis já foram confirmados pelo usuário.` : null,
-    timeline.some((segment) => segment.positiveEvents > segment.riskEvents)
-      ? 'Existe ao menos um trecho com mais evidências positivas do que riscos confirmados.'
-      : null
-  ].filter((item): item is string => Boolean(item));
-
-  const risks = [
-    recurringPatterns[0]?.occurrences >= 2
-      ? `Padrão recorrente: ${recurringPatterns[0].label} apareceu ${recurringPatterns[0].occurrences} vez(es).`
-      : null,
-    suggestedMarkers > 0 ? `${suggestedMarkers} momento(s) automático(s) ainda aguardam confirmação e não entram como erro.` : null,
-    confirmed.length < 3 ? 'Amostra confirmada pequena: use a leitura como hipótese de revisão, não como conclusão definitiva.' : null
-  ].filter((item): item is string => Boolean(item));
-
-  const possibleDelayCount = confirmed.filter((marker) => marker.kind === 'possible-delay').length;
-  const freezeCount = Number(session.analysis?.possibleFreezeCount || 0);
-  const connectionGuardrail = possibleDelayCount || freezeCount
-    ? `Há ${possibleDelayCount} marcação(ões) confirmada(s) de possível atraso e ${freezeCount} pausa(s) visual(is) detectada(s). Pausa visual isolada não prova lag; valide junto com sensação de comando e conexão.`
-    : 'Nenhuma evidência confirmada suficiente para atribuir problemas táticos à conexão. O Match Vision não chama pausa visual de lag automaticamente.';
+  const dimensionsCovered = dimensions.filter((dimension) => dimension.evidenceCount > 0).length;
+  const repeatedDimensions = dimensions.filter((dimension) => dimension.evidenceState === 'REPEATED_PATTERN').length;
+  const sessionsAnalyzed = normalizedSessions.length;
+  const confidenceScore = Math.max(0, Math.min(100, Math.round(
+    Math.min(45, confirmedMarkers * 4) +
+    Math.min(30, dimensionsCovered * 2.5) +
+    Math.min(25, Math.max(0, sessionsAnalyzed - 1) * 12.5)
+  )));
+  const confidence: MatchVisionConfidenceR482 =
+    sessionsAnalyzed >= 3 && repeatedDimensions >= 3 && confidenceScore >= 75
+      ? 'high'
+      : sessionsAnalyzed >= 2 && repeatedDimensions >= 1 && confidenceScore >= 45
+        ? 'medium'
+        : 'low';
+  const evidenceState: MatchVisionEvidenceStateR482 =
+    confirmedMarkers === 0
+      ? 'INSUFFICIENT'
+      : sessionsAnalyzed >= 2 && repeatedDimensions >= 1
+        ? 'REPEATED_PATTERN'
+        : 'OBSERVED';
 
   return {
     version: MATCH_VISION_R482_VERSION,
-    mode: 'READ_ONLY_MATCH_VISION',
+    sessionsAnalyzed,
+    confirmedMarkers,
+    dimensionsCovered,
+    confidenceScore,
     confidence,
-    configuredContext: {
-      formation: team.formation,
-      teamStyle
-    },
-    evidence: {
-      durationMs,
-      videoAnalyzed: Boolean(session.analysis),
-      videoQualityScore,
-      confirmedMarkers: confirmed.length,
-      suggestedMarkers,
-      reviewedCoverage,
-      sampleCount
-    },
-    timeline,
-    criticalWindows,
-    recurringPatterns,
-    phaseBalance,
-    styleObservation: styleObservation(teamStyle, confirmed, team),
-    connectionGuardrail,
-    strengths,
-    risks,
-    authority: {
-      readOnly: true,
-      canConfirmMarkersAutomatically: false,
-      canWriteTraining: false,
-      canWriteSkills: false,
-      canWriteImpetus: false,
-      canOverrideR128: false
-    },
-    guardrails: [
-      'Somente lances confirmados entram nos padrões, fases e janelas críticas; candidatos automáticos permanecem pendentes.',
-      'O Match Vision R482 não reconhece com certeza botões, identidade de todos os jogadores ou causa de lag sem confirmação externa.',
-      'A camada é observacional: não altera automaticamente formação, escalação, ficha, Top 5 ou Ímpeto.',
-      'A autoridade final das cartas permanece R119 → R126 → R128.'
-    ]
+    evidenceState,
+    dimensions,
+    safeguards: [...SAFEGUARDS_R482],
+    authority: { ...AUTHORITY_R482 }
   };
 }
