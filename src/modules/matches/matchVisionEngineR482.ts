@@ -11,7 +11,32 @@ import {
   type MatchTrainerSession
 } from './matchTrainerEngine';
 
-export const MATCH_VISION_R482_VERSION = '40.80-r482-match-vision-v1';
+export const MATCH_VISION_R482_VERSION = '40.80-r482-match-vision-v2';
+
+export const MATCH_VISION_DIMENSIONS_R482 = [
+  'ZONES',
+  'LINES',
+  'ISOLATION',
+  'FORCED_PASSES',
+  'POSSESSION_LOSSES',
+  'INVOLVEMENT',
+  'SPACE_OCCUPATION',
+  'PROGRESSION',
+  'PRESSING',
+  'TRANSITIONS',
+  'FINISHING',
+  'OFF_BALL_MOVEMENT'
+] as const;
+
+export type MatchVisionDimensionR482 = (typeof MATCH_VISION_DIMENSIONS_R482)[number];
+export type MatchVisionEvidenceStateR482 = 'INSUFFICIENT' | 'PROVISIONAL';
+
+export type MatchVisionDimensionCoverageR482 = {
+  dimension: MatchVisionDimensionR482;
+  evidenceCount: number;
+  confidence: number;
+  markerIds: string[];
+};
 
 export type MatchVisionTimelineSegmentR482 = {
   index: number;
@@ -54,6 +79,11 @@ export type MatchVisionSnapshotR482 = {
   version: string;
   mode: 'READ_ONLY_MATCH_VISION';
   confidence: number;
+  evidenceState: MatchVisionEvidenceStateR482;
+  completeness: number;
+  definitive: false;
+  dimensionCoverage: MatchVisionDimensionCoverageR482[];
+  missingDimensions: MatchVisionDimensionR482[];
   configuredContext: {
     formation: string;
     teamStyle: TacticalStyle;
@@ -87,6 +117,10 @@ export type MatchVisionSnapshotR482 = {
     canWriteSkills: false;
     canWriteImpetus: false;
     canOverrideR128: false;
+    writesFinalCard: false;
+    writesTop5: false;
+    overallGerUsed: false;
+    certifiedForFinalWrite: false;
   };
   guardrails: string[];
 };
@@ -133,6 +167,18 @@ const PHASE_LABELS: Record<MatchPhase, string> = {
   unknown: 'Não confirmado'
 };
 
+const DIMENSION_KINDS: Partial<Record<MatchVisionDimensionR482, readonly MatchEventKind[]>> = {
+  LINES: ['defender-out-of-line'],
+  ISOLATION: ['pressured-receiver', 'no-triangulation', 'double-defender'],
+  FORCED_PASSES: ['pass-error', 'delayed-pass', 'pressured-receiver', 'late-release', 'command-pass-early'],
+  POSSESSION_LOSSES: ['dangerous-turnover', 'pass-error', 'dangerous-dribble', 'lost-counterattack'],
+  SPACE_OCCUPATION: ['no-triangulation', 'fullback-corridor-open', 'central-corridor-open', 'double-defender'],
+  PROGRESSION: ['good-build-up', 'predictable-attack', 'no-triangulation', 'late-release'],
+  PRESSING: ['pressing-error', 'pressured-receiver', 'interception', 'wrong-double-mark'],
+  FINISHING: ['forced-shot', 'unbalanced-shot', 'goal-for'],
+  OFF_BALL_MOVEMENT: ['defender-out-of-line', 'late-recomposition', 'fullback-corridor-open', 'central-corridor-open']
+};
+
 function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(value)));
 }
@@ -168,6 +214,52 @@ function dominantPhase(markers: MatchEventMarker[]): MatchPhase {
     counts.set(phase, (counts.get(phase) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || PHASE_ORDER.indexOf(a[0]) - PHASE_ORDER.indexOf(b[0]))[0]?.[0] ?? 'unknown';
+}
+
+function markerHasAnnotation(marker: MatchEventMarker, kinds: readonly NonNullable<MatchEventMarker['annotations']>[number]['kind'][]) {
+  return Boolean(marker.annotations?.some((annotation) => kinds.includes(annotation.kind)));
+}
+
+function markerSupportsDimension(marker: MatchEventMarker, dimension: MatchVisionDimensionR482) {
+  if (dimension === 'ZONES') {
+    return ['fullback-corridor-open', 'central-corridor-open'].includes(marker.kind)
+      || markerHasAnnotation(marker, ['open-space', 'danger-zone']);
+  }
+  if (dimension === 'LINES') {
+    return DIMENSION_KINDS.LINES?.includes(marker.kind)
+      || markerHasAnnotation(marker, ['blocked-line', 'recommended-line'])
+      || false;
+  }
+  if (dimension === 'INVOLVEMENT') {
+    return Boolean(marker.playerId || marker.playerLabel || marker.playerCardFingerprint || marker.playerHistoryId);
+  }
+  if (dimension === 'TRANSITIONS') return TRANSITION_KINDS.has(marker.kind);
+  if (dimension === 'SPACE_OCCUPATION') {
+    return Boolean(DIMENSION_KINDS.SPACE_OCCUPATION?.includes(marker.kind))
+      || markerHasAnnotation(marker, ['open-space', 'danger-zone', 'hold-position']);
+  }
+  if (dimension === 'OFF_BALL_MOVEMENT') {
+    return Boolean(DIMENSION_KINDS.OFF_BALL_MOVEMENT?.includes(marker.kind))
+      || markerHasAnnotation(marker, ['wrong-arrow', 'correct-arrow', 'hold-position']);
+  }
+  return DIMENSION_KINDS[dimension]?.includes(marker.kind) ?? false;
+}
+
+function buildDimensionCoverage(markers: MatchEventMarker[]): MatchVisionDimensionCoverageR482[] {
+  return MATCH_VISION_DIMENSIONS_R482.map((dimension) => {
+    const matching = markers
+      .filter((marker) => markerSupportsDimension(marker, dimension))
+      .sort((a, b) => a.atMs - b.atMs || a.id.localeCompare(b.id));
+    const confidence = matching.length
+      ? clamp(matching.reduce((sum, marker) => sum + clamp(Number(marker.confidence || 0)), 0) / matching.length)
+      : 0;
+    return {
+      dimension,
+      evidenceCount: matching.length,
+      confidence,
+      markerIds: matching.map((marker) => marker.id)
+    };
+  });
 }
 
 function segmentLabel(index: number, total: number) {
@@ -318,6 +410,14 @@ export function buildMatchVisionR482({ session, team, teamStyle }: MatchVisionIn
     contextEvidence
   );
 
+  const dimensionCoverage = buildDimensionCoverage(confirmed);
+  const coveredDimensions = dimensionCoverage.filter((item) => item.evidenceCount > 0).length;
+  const completeness = clamp((coveredDimensions / MATCH_VISION_DIMENSIONS_R482.length) * 100);
+  const missingDimensions = dimensionCoverage
+    .filter((item) => item.evidenceCount === 0)
+    .map((item) => item.dimension);
+  const evidenceState: MatchVisionEvidenceStateR482 = confirmed.length ? 'PROVISIONAL' : 'INSUFFICIENT';
+
   const timeline = buildTimeline(confirmed, durationMs);
   const criticalWindows = buildCriticalWindows(confirmed, durationMs);
   const recurringPatterns = buildPatterns(confirmed);
@@ -337,7 +437,8 @@ export function buildMatchVisionR482({ session, team, teamStyle }: MatchVisionIn
       ? `Padrão recorrente: ${recurringPatterns[0].label} apareceu ${recurringPatterns[0].occurrences} vez(es).`
       : null,
     suggestedMarkers > 0 ? `${suggestedMarkers} momento(s) automático(s) ainda aguardam confirmação e não entram como erro.` : null,
-    confirmed.length < 3 ? 'Amostra confirmada pequena: use a leitura como hipótese de revisão, não como conclusão definitiva.' : null
+    confirmed.length < 3 ? 'Amostra confirmada pequena: use a leitura como hipótese de revisão, não como conclusão definitiva.' : null,
+    missingDimensions.length > 0 ? `${missingDimensions.length} dimensão(ões) do Match Vision ainda estão sem evidência confirmada.` : null
   ].filter((item): item is string => Boolean(item));
 
   const possibleDelayCount = confirmed.filter((marker) => marker.kind === 'possible-delay').length;
@@ -350,6 +451,11 @@ export function buildMatchVisionR482({ session, team, teamStyle }: MatchVisionIn
     version: MATCH_VISION_R482_VERSION,
     mode: 'READ_ONLY_MATCH_VISION',
     confidence,
+    evidenceState,
+    completeness,
+    definitive: false,
+    dimensionCoverage,
+    missingDimensions,
     configuredContext: {
       formation: team.formation,
       teamStyle
@@ -377,12 +483,19 @@ export function buildMatchVisionR482({ session, team, teamStyle }: MatchVisionIn
       canWriteTraining: false,
       canWriteSkills: false,
       canWriteImpetus: false,
-      canOverrideR128: false
+      canOverrideR128: false,
+      writesFinalCard: false,
+      writesTop5: false,
+      overallGerUsed: false,
+      certifiedForFinalWrite: false
     },
     guardrails: [
-      'Somente lances confirmados entram nos padrões, fases e janelas críticas; candidatos automáticos permanecem pendentes.',
+      'Somente lances confirmados entram nos padrões, fases, dimensões e janelas críticas; candidatos automáticos permanecem pendentes.',
       'O Match Vision R482 não reconhece com certeza botões, identidade de todos os jogadores ou causa de lag sem confirmação externa.',
-      'A camada é observacional: não altera automaticamente formação, escalação, ficha, Top 5 ou Ímpeto.',
+      'A camada é observacional: não altera automaticamente formação, escalação, ficha, Top 5, Skills ou Ímpeto.',
+      'Uma única sessão/vídeo permanece PROVISIONAL, mesmo com cobertura ampla; não equivale a ENGINE_CERTIFIED.',
+      'Dimensões sem marcador confirmado permanecem explicitamente ausentes; o motor não inventa observações.',
+      'Overall/GER não participa da autoridade do Match Vision.',
       'A autoridade final das cartas permanece R119 → R126 → R128.'
     ]
   };
