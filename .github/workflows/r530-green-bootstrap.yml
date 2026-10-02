@@ -31,13 +31,12 @@ jobs:
         run: |
           grep -q '"test:r530"' package.json
           grep -q 'test:r530' scripts/ci-doctor-config.mjs
-          grep -q 'R530 — fechamento do redesign premium' .github/workflows/pull-request-validation.yml
           git diff --check
 
       - name: Commitar GREEN na branch
         run: |
           git config user.name 'buildmaster-ci'
           git config user.email 'buildmaster-ci@users.noreply.github.com'
-          git add package.json scripts/ci-doctor-config.mjs .github/workflows/pull-request-validation.yml
-          git commit -m 'test(ui): ligar gate R530 em GREEN'
+          git add package.json scripts/ci-doctor-config.mjs
+          git commit -m 'test(ui): ligar script R530 ao release doctor'
           git push origin HEAD:docs/r-vis-0-redesign-closure-plan
