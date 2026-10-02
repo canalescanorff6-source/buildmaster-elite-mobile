@@ -3,7 +3,6 @@ import fs from 'node:fs';
 // One-shot branch bootstrap. Remove after the persisted GREEN commit is verified.
 const packagePath = 'package.json';
 const doctorPath = 'scripts/ci-doctor-config.mjs';
-const workflowPath = '.github/workflows/pull-request-validation.yml';
 
 const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 pkg.scripts['test:r530'] = 'node tests/v44-00-r530-reference-redesign-closure-regression.mjs';
@@ -19,11 +18,4 @@ if (!doctor.includes("['Fechamento visual R530', ['run', 'test:r530']]")) {
 }
 fs.writeFileSync(doctorPath, doctor);
 
-let workflow = fs.readFileSync(workflowPath, 'utf8');
-workflow = workflow.replace(
-  '      - name: R530 TDD — executar fechamento RED\n        run: node tests/v44-00-r530-reference-redesign-closure-regression.mjs',
-  '      - name: R530 — fechamento do redesign premium\n        run: npm run test:r530'
-);
-fs.writeFileSync(workflowPath, workflow);
-
-console.log('Bootstrap R530 aplicado: package script, PR gate e release doctor alinhados.');
+console.log('Bootstrap R530 aplicado: package script e release doctor alinhados.');
