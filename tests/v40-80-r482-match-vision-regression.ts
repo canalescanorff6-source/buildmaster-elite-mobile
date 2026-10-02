@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { buildMatchVisionR482, MATCH_VISION_R482_VERSION } from '../src/modules/matches/matchVisionEngineR482';
+import {
+  buildMatchVisionR482,
+  MATCH_VISION_DIMENSIONS_R482,
+  MATCH_VISION_R482_VERSION
+} from '../src/modules/matches/matchVisionEngineR482';
 
 const confirmedPassError = {
   id: 'm1',
@@ -123,6 +127,30 @@ assert.equal(first.mode, 'READ_ONLY_MATCH_VISION');
 assert.deepEqual(first, second, 'R482 precisa ser determinístico para o mesmo snapshot.');
 assert.equal(JSON.stringify(input), before, 'R482 não pode mutar sessão, time ou análise.');
 
+assert.deepEqual(MATCH_VISION_DIMENSIONS_R482, [
+  'ZONES',
+  'LINES',
+  'ISOLATION',
+  'FORCED_PASSES',
+  'POSSESSION_LOSSES',
+  'INVOLVEMENT',
+  'SPACE_OCCUPATION',
+  'PROGRESSION',
+  'PRESSING',
+  'TRANSITIONS',
+  'FINISHING',
+  'OFF_BALL_MOVEMENT'
+]);
+assert.equal(first.dimensionCoverage.length, 12);
+assert.equal(first.evidenceState, 'PROVISIONAL', 'Uma única sessão/vídeo não pode virar verdade definitiva.');
+assert.equal(first.definitive, false);
+assert.ok(first.completeness > 0 && first.completeness < 100);
+assert.ok(first.dimensionCoverage.find((item) => item.dimension === 'FORCED_PASSES')?.markerIds.includes('m1'));
+assert.ok(first.dimensionCoverage.find((item) => item.dimension === 'POSSESSION_LOSSES')?.markerIds.includes('m2'));
+assert.ok(first.dimensionCoverage.find((item) => item.dimension === 'PROGRESSION')?.markerIds.includes('m3'));
+assert.ok(first.missingDimensions.includes('ZONES'), 'Dimensão sem evidência deve permanecer explicitamente ausente.');
+assert.ok(first.dimensionCoverage.every((item) => !item.markerIds.includes('auto-1')), 'Candidato automático não pode alimentar dimensão confirmada.');
+
 assert.equal(first.evidence.confirmedMarkers, 3);
 assert.equal(first.evidence.suggestedMarkers, 1);
 assert.equal(first.evidence.reviewedCoverage, 75);
@@ -141,9 +169,14 @@ assert.equal(first.authority.canWriteTraining, false);
 assert.equal(first.authority.canWriteSkills, false);
 assert.equal(first.authority.canWriteImpetus, false);
 assert.equal(first.authority.canOverrideR128, false);
+assert.equal(first.authority.writesFinalCard, false);
+assert.equal(first.authority.writesTop5, false);
+assert.equal(first.authority.overallGerUsed, false);
+assert.equal(first.authority.certifiedForFinalWrite, false);
 assert.equal(Object.prototype.hasOwnProperty.call(first, 'training'), false);
 assert.equal(Object.prototype.hasOwnProperty.call(first, 'recommendedSkills'), false);
 assert.equal(Object.prototype.hasOwnProperty.call(first, 'recommendedImpetos'), false);
+assert.ok(!JSON.stringify(first).includes('ENGINE_CERTIFIED'));
 
 const noConfirmed = buildMatchVisionR482({
   ...input,
@@ -158,6 +191,11 @@ assert.equal(noConfirmed.evidence.suggestedMarkers, 1);
 assert.equal(noConfirmed.criticalWindows.length, 0);
 assert.equal(noConfirmed.recurringPatterns.length, 0);
 assert.ok(noConfirmed.confidence < first.confidence);
+assert.equal(noConfirmed.evidenceState, 'INSUFFICIENT');
+assert.equal(noConfirmed.completeness, 0);
+assert.equal(noConfirmed.definitive, false);
+assert.equal(noConfirmed.missingDimensions.length, 12);
+assert.ok(noConfirmed.dimensionCoverage.every((item) => item.evidenceCount === 0));
 
 const ui = fs.readFileSync('src/modules/matches/MatchTrainerCenter.tsx', 'utf8');
 assert.match(ui, /buildMatchVisionR482/);
@@ -166,7 +204,7 @@ assert.match(ui, /matchVisionR482\.criticalWindows/);
 assert.match(ui, /matchVisionR482\.recurringPatterns/);
 assert.doesNotMatch(ui, /matchVisionR482[^\n]*setResult\(/);
 
-console.log('R482 aprovada: Match Vision determinístico, read-only e baseado apenas em evidência confirmada para diagnóstico tático.');
+console.log('R482 aprovada: Match Vision completo nas 12 dimensões, determinístico, read-only e baseado apenas em evidência confirmada.');
 
 // R483 compatibility bridge: test:r482 already belongs to the production ci:gate.
 // Keep the new read-only Build Simulator regression mandatory on main without
