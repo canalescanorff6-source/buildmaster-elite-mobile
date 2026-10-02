@@ -11,6 +11,11 @@ import {
   getVisibleMatchMarkers,
   summarizeMatchTrainerSession
 } from '../src/modules/matches/matchTrainerEngine';
+import {
+  MATCH_VISION_DIMENSIONS_R482,
+  runMatchVisionR482,
+  type MatchVisionObservationR482
+} from '../src/modules/match-vision/matchVisionEngineR482';
 
 assert.equal(MATCH_TRAINER_VERSION, '40.60.0');
 for (const kind of ['defender-out-of-line', 'cursor-error', 'game-management', 'good-transition', 'critical-moment']) {
@@ -119,4 +124,84 @@ for (const selector of ['.match-analysis-tabs', '.match-priority-grid', '.match-
   assert.ok(css.includes(selector), `Estilo ausente: ${selector}`);
 }
 
-console.log('v31.77 Análise de Vídeo Inteligente 2.0 aprovada: evidência, diagnóstico, clipes, treino, tática e evolução.');
+// Roadmap R482 — Match Vision: camada consultiva baseada apenas em evidência observada.
+assert.deepEqual(MATCH_VISION_DIMENSIONS_R482, [
+  'ZONES',
+  'LINES',
+  'ISOLATION',
+  'FORCED_PASSES',
+  'POSSESSION_LOSSES',
+  'INVOLVEMENT',
+  'SPACE_OCCUPATION',
+  'PROGRESSION',
+  'PRESSING',
+  'TRANSITIONS',
+  'FINISHING',
+  'OFF_BALL_MOVEMENT'
+]);
+
+const noEvidence = runMatchVisionR482({ matchId: 'match-empty', observations: [] });
+assert.equal(noEvidence.evidenceState, 'INSUFFICIENT');
+assert.equal(noEvidence.completeness, 0);
+assert.equal(noEvidence.confidence, 0);
+assert.equal(noEvidence.definitive, false);
+assert.equal(noEvidence.authority.certifiedForFinalWrite, false);
+
+const oneVideoObservations: MatchVisionObservationR482[] = MATCH_VISION_DIMENSIONS_R482.map((dimension, index) => ({
+  id: `video-${index + 1}`,
+  sourceId: 'video-partida-01',
+  sourceKind: 'VIDEO',
+  dimension,
+  description: `Evidência observada para ${dimension}.`,
+  confidence: 0.92,
+  timestampMs: 10_000 + index * 2_000
+}));
+const oneVideoSnapshot = JSON.parse(JSON.stringify(oneVideoObservations));
+const oneVideo = runMatchVisionR482({ matchId: 'match-one-video', observations: oneVideoObservations });
+assert.equal(oneVideo.completeness, 1);
+assert.equal(oneVideo.evidenceState, 'PROVISIONAL');
+assert.equal(oneVideo.definitive, false, 'Um único vídeo nunca pode virar verdade definitiva.');
+assert.equal(oneVideo.authority.readOnly, true);
+assert.equal(oneVideo.authority.writesFinalCard, false);
+assert.equal(oneVideo.authority.writesTop5, false);
+assert.equal(oneVideo.authority.writesSkills, false);
+assert.equal(oneVideo.authority.writesImpetus, false);
+assert.equal(oneVideo.authority.overallGerUsed, false);
+assert.equal(oneVideo.authority.certifiedForFinalWrite, false);
+assert.deepEqual(oneVideoObservations, oneVideoSnapshot, 'R482 não pode mutar a evidência de entrada.');
+
+const multiSourceObservations: MatchVisionObservationR482[] = MATCH_VISION_DIMENSIONS_R482.slice(0, 9).flatMap((dimension, index) => [
+  {
+    id: `structured-${index + 1}`,
+    sourceId: 'eventos-estruturados-01',
+    sourceKind: 'STRUCTURED_EVENT',
+    dimension,
+    description: `Evento estruturado para ${dimension}.`,
+    confidence: 0.84
+  },
+  {
+    id: `review-${index + 1}`,
+    sourceId: 'revisao-manual-01',
+    sourceKind: 'MANUAL_REVIEW',
+    dimension,
+    description: `Revisão independente para ${dimension}.`,
+    confidence: 0.78
+  }
+]);
+const validated = runMatchVisionR482({ matchId: 'match-multi-source', observations: multiSourceObservations });
+assert.equal(validated.completeness, 0.75);
+assert.equal(validated.evidenceState, 'EXPERIMENTAL_VALIDATED');
+assert.equal(validated.definitive, false);
+assert.equal(validated.authority.certifiedForFinalWrite, false);
+assert.deepEqual(validated.missingDimensions, MATCH_VISION_DIMENSIONS_R482.slice(9));
+assert.ok(!JSON.stringify(validated).includes('ENGINE_CERTIFIED'));
+
+const deterministicA = runMatchVisionR482({ matchId: 'match-deterministic', observations: [...multiSourceObservations].reverse() });
+const deterministicB = runMatchVisionR482({ matchId: 'match-deterministic', observations: multiSourceObservations });
+assert.deepEqual(deterministicA, deterministicB, 'Mesma evidência deve produzir a mesma saída, independentemente da ordem de entrada.');
+for (const finding of deterministicA.dimensions) {
+  assert.ok(finding.evidenceIds.length > 0);
+  assert.ok(finding.observations.length > 0);
+}
+
+console.log('v31.77 + R482 aprovados: vídeo inteligente e Match Vision consultivo, determinístico e sem autoridade de escrita.');
