@@ -113,6 +113,7 @@ for (const regression of [
   'tests/v40-80-r505-post-build-impeto-regression.ts',
   'tests/v40-80-r506-post-build-skills-regression.ts',
   'tests/v40-80-r507-single-recommendation-authority-regression.ts',
+  'tests/v40-80-r507-residual-bottleneck-impeto-regression.ts',
   'tests/v40-80-r510-gameplay-engine-2-regression.ts',
   'tests/v40-80-r511-possession-action-profile-regression.ts',
   'tests/v40-80-r512-joint-optimizer-v2-regression.ts',
@@ -131,4 +132,4 @@ for (const regression of [
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R507/R510/R511/R512/R513/R515/R516/R517/R518/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR, calibração real, Certification Engine e evidência R518 read-only protegidos.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R507-RESIDUAL/R510/R511/R512/R513/R515/R516/R517/R518/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, gargalo residual de Ímpeto, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR, calibração real, Certification Engine e evidência R518 read-only protegidos.');
