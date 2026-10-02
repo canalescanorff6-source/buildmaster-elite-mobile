@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 
+// One-shot branch bootstrap. Remove after the persisted GREEN commit is verified.
 const packagePath = 'package.json';
 const doctorPath = 'scripts/ci-doctor-config.mjs';
 const workflowPath = '.github/workflows/pull-request-validation.yml';
