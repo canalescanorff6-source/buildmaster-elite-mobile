@@ -6,7 +6,7 @@ import { EXPECTED_FULL_GROUPS, quickChecks, fullChecks, selectChecksForShard, pa
 // R534 compatibility mirror: legacy regressions inspect this source text.
 // Runtime execution uses ci-doctor-config.mjs; test:r534 guarantees this mirror is identical.
 const LEGACY_CI_DOCTOR_CONTRACT = String.raw`
-const EXPECTED_FULL_GROUPS = 97;
+const EXPECTED_FULL_GROUPS = 98;
   ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
   ['Compatibilidade das dependências', ['run', 'quality:dependencies']],
   ['Orçamento do código-fonte', ['run', 'quality:bundle']],
@@ -26,6 +26,7 @@ const EXPECTED_FULL_GROUPS = 97;
   ['Contrato R457-R463', ['run', 'ci:r463-contract']],
   ['Regressões R464-R468', ['run', 'test:r464-r468']],
   ['Reader/closure R419-R456', ['run', 'test:r419']],
+  ['Fechamento visual R530', ['run', 'test:r530']],
   ['TypeScript completo', ['run', 'typecheck']],
   ['Regressões v30.00', ['run', 'test:v3000:core']],
   ['Regressões v30.10', ['run', 'test:v3010']],

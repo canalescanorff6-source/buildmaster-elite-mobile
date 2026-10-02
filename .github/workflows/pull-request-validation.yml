@@ -32,6 +32,12 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: R530 — fechamento do redesign premium
+        run: npm run test:r530
+
+      - name: R530 — aceitação visual e compatibilidade R534
+        run: npm run test:r201 && npm run test:r202 && npm run test:r203 && npm run test:r204 && npm run quality:visual && npm run test:v3400 && npm run quality:bundle && npm run test:r534
+
       - name: Regressão v37.70 — fixture temporal determinístico
         run: npm run test:v3770
 
