@@ -1,7 +1,7 @@
 import type { Attributes, ParsedCard, PositionCode } from './analyzerDomain';
 import { IMPETO_FUNCTIONAL_MATRIX_R119, type ImpetoFunctionalDomainR119 } from './impetoFunctionalMatrixR119';
 
-export const FINAL_IMPETO_DECISION_R457_VERSION='40.80-r508-preserve-active-impeto-v1' as const;
+export const FINAL_IMPETO_DECISION_R457_VERSION='40.80-r508-residual-bottleneck-v2' as const;
 
 export type ImpetoActionR457 =
   | 'KEEP_CURRENT'
@@ -17,6 +17,7 @@ export type FinalImpetoCandidateR457={
   functionalFit:number;
   positionFit:number;
   attributeSupport:number;
+  residualBottleneckFit:number;
   confidence:number;
   explanation:string;
 };
@@ -33,6 +34,7 @@ export type FinalImpetoDecisionR457={
   candidates:FinalImpetoCandidateR457[];
   ambiguity:boolean;
   attributeSource:'BASE_CARD'|'PROJECTED_POST_BUILD';
+  residualBottleneckSource:'POST_BUILD_ACTION_GAPS'|'LEGACY_NO_PROJECTED_GAPS';
   numericAttributeEffectVerified:false;
   effectModel:'FUNCTIONAL_FIT_ONLY';
   automaticSpendAuthorized:false;
@@ -40,12 +42,13 @@ export type FinalImpetoDecisionR457={
   modelNote:string;
 };
 
-type ActionLike={id:string;frequency:number;contribution?:number};
+type ActionLike={id:string;frequency:number;contribution?:number;projectedScore?:number};
 function clamp(v:number,min=0,max=100){return Math.max(min,Math.min(max,v));}
 function round1(v:number){return Math.round(v*10)/10;}
 function norm(v:unknown){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
 function avg(values:number[]){return values.length?values.reduce((a,b)=>a+b,0)/values.length:0;}
 function attr(attributes:Attributes,key:string){const value=Number((attributes as Record<string,unknown>)[key]);return Number.isFinite(value)?clamp(value,1,99):50;}
+function projectedScore(action:ActionLike){const value=Number(action.projectedScore);return Number.isFinite(value)?clamp(value):null;}
 
 function categories(actions:ActionLike[]){
   const map=new Map<string,number>();
@@ -81,6 +84,8 @@ export function evaluateFinalImpetoDecisionR457(
   const slotStatus=String(parsed.evidence?.impetoSlotStatus??'NAO_CONFIRMADO');
   const cats=categories(actions);
   const actionMap=new Map(actions.map(a=>[a.id,clamp(Number(a.frequency)||0)]));
+  const projectedMap=new Map(actions.map(a=>[a.id,projectedScore(a)]));
+  const residualBottleneckSource:FinalImpetoDecisionR457['residualBottleneckSource']=actions.some(a=>projectedScore(a)!==null)?'POST_BUILD_ACTION_GAPS':'LEGACY_NO_PROJECTED_GAPS';
   const confidenceBase=clamp(Number(parsed.confidence??50));
   const attributes=projectedAttributes??parsed.attributes;
   const attributeSource:FinalImpetoDecisionR457['attributeSource']=projectedAttributes?'PROJECTED_POST_BUILD':'BASE_CARD';
@@ -88,14 +93,18 @@ export function evaluateFinalImpetoDecisionR457(
   const scored=IMPETO_FUNCTIONAL_MATRIX_R119.map((profile,index)=>{
     const domainScore=weighted(Object.entries(profile.domains).map(([key,weight])=>({value:cats.get(key as ImpetoFunctionalDomainR119)??0,weight:Number(weight??0)})));
     const actionScore=weighted(Object.entries(profile.actions).map(([key,weight])=>({value:actionMap.get(key)??0,weight:Number(weight??0)})));
+    const residualBottleneckFit=residualBottleneckSource==='POST_BUILD_ACTION_GAPS'
+      ? weighted(Object.entries(profile.actions).map(([key,weight])=>{const score=projectedMap.get(key);return{value:score===null||score===undefined?0:100-score,weight:score===null||score===undefined?0:Number(weight??0)};}))
+      : 0;
     const positionFit=clamp((profile.positions[position]??0.04)*100);
     const attributeSupport=profile.attributes.length?avg(profile.attributes.map(key=>attr(attributes,key))):50;
-    let total=domainScore*.36+actionScore*.30+positionFit*.24+attributeSupport*.10;
+    let total=domainScore*.36+actionScore*.30+positionFit*.24+attributeSupport*.10+residualBottleneckFit*.08;
     if(positionFit<30) total*=.62;
     else if(positionFit<50) total*=.82;
+    total=clamp(total);
     const functionalFit=domainScore*.48+actionScore*.52;
     const confidence=clamp(total*.58+confidenceBase*.30+Math.min(100,functionalFit)*.12);
-    return {name:profile.name,totalScore:round1(total),functionalFit:round1(functionalFit),positionFit:round1(positionFit),attributeSupport:round1(attributeSupport),confidence:round1(confidence),explanation:profile.explanation,index};
+    return {name:profile.name,totalScore:round1(total),functionalFit:round1(functionalFit),positionFit:round1(positionFit),attributeSupport:round1(attributeSupport),residualBottleneckFit:round1(residualBottleneckFit),confidence:round1(confidence),explanation:profile.explanation,index};
   }).sort((a,b)=>b.totalScore-a.totalScore||b.functionalFit-a.functionalFit||b.positionFit-a.positionFit||b.confidence-a.confidence||a.index-b.index);
 
   const best=scored[0]??null;
@@ -147,12 +156,15 @@ export function evaluateFinalImpetoDecisionR457(
     candidates:scored.slice(0,5).map(({index,...item})=>item),
     ambiguity,
     attributeSource,
+    residualBottleneckSource,
     numericAttributeEffectVerified:false,
     effectModel:'FUNCTIONAL_FIT_ONLY',
     automaticSpendAuthorized:false,
     reason,
     modelNote:attributeSource==='PROJECTED_POST_BUILD'
-      ? 'A recomendação usa encaixe funcional, posição, ações e atributos finais projetados pela ficha R504. Ímpeto já ativo é preservado e comparações com alternativas são apenas informativas; o BuildMaster não inventa bônus numéricos oficiais nem autoriza troca automática.'
+      ? residualBottleneckSource==='POST_BUILD_ACTION_GAPS'
+        ? 'A recomendação usa encaixe funcional, posição, atributos finais e gargalos residuais das ações pós-build. O gap só prioriza necessidade funcional: não representa bônus numérico oficial de Ímpeto, não autoriza gasto automático e Ímpeto já ativo continua preservado.'
+        : 'A recomendação usa encaixe funcional, posição, ações e atributos finais projetados pela ficha R504. Ímpeto já ativo é preservado e comparações com alternativas são apenas informativas; o BuildMaster não inventa bônus numéricos oficiais nem autoriza troca automática.'
       : 'Fallback explícito: a recomendação usa a carta-base porque nenhum estado pós-build foi fornecido. Ímpeto já ativo é preservado; o BuildMaster não inventa bônus numéricos oficiais nem autoriza troca automática.'
   };
 }
