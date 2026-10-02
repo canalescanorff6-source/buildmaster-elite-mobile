@@ -375,7 +375,8 @@
     "test:r532": "node tests/v40-80-r532-release-closure-device-acceptance-regression.mjs",
     "test:r533": "node tests/v40-80-r533-release-ci-source-lock-regression.mjs",
     "release:r533:verification": "node scripts/create-release-verification-r533.mjs",
-    "test:r534": "node tests/v40-80-r534-ci-doctor-sharding-regression.mjs && node tests/v40-80-r534-parallel-release-workflow-regression.mjs && node tests/v40-80-r534-migrator-regression.mjs"
+    "test:r534": "node tests/v40-80-r534-ci-doctor-sharding-regression.mjs && node tests/v40-80-r534-parallel-release-workflow-regression.mjs && node tests/v40-80-r534-migrator-regression.mjs",
+    "test:r530": "node tests/v44-00-r530-reference-redesign-closure-regression.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

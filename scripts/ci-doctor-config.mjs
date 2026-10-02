@@ -1,4 +1,4 @@
-export const EXPECTED_FULL_GROUPS = 97;
+export const EXPECTED_FULL_GROUPS = 98;
 
 export const quickChecks = [
   ['Configuração TypeScript raiz', ['run', 'quality:root-tsconfig']],
@@ -23,6 +23,7 @@ export const fullChecks = [
   ['Contrato R457-R463', ['run', 'ci:r463-contract']],
   ['Regressões R464-R468', ['run', 'test:r464-r468']],
   ['Reader/closure R419-R456', ['run', 'test:r419']],
+  ['Fechamento visual R530', ['run', 'test:r530']],
   ['TypeScript completo', ['run', 'typecheck']],
   ['Regressões v30.00', ['run', 'test:v3000:core']],
   ['Regressões v30.10', ['run', 'test:v3010']],
