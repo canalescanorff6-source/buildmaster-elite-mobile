@@ -239,7 +239,8 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
           return undefined;
         }
       }
-      await markActiveReadingSessionR470('OCR_COMPLETE', { rawTextExcerpt: (capturedSession?.canonicalText || rawText || '').slice(0, 12_000) }).catch(() => null);
+      const completedSession = capturedSession as SinglePrintSession | null;
+      await markActiveReadingSessionR470('OCR_COMPLETE', { rawTextExcerpt: (completedSession?.canonicalText || rawText || '').slice(0, 12_000) }).catch(() => null);
       return output;
     } catch (cause) {
       await markActiveReadingSessionR470('ERROR', { errorCode: 'OCR_FAILED' }).catch(() => null);
