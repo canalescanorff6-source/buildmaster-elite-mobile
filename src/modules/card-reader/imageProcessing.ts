@@ -221,26 +221,28 @@ export async function preprocessImage(file: File | Blob, mode: ImageEnhancement 
   if (!bitmap) return file;
   const plan = planAdaptiveImageSize(bitmap.width, bitmap.height, {
     workload: 'ocr-full',
-    preferredLongestSide: 2800,
-    minScale: 0.7,
-    maxScale: 2.5
+    preferredLongestSide: 1800,
+    minScale: 0.1,
+    maxScale: 1
   });
   const canvas = document.createElement('canvas');
-  canvas.width = plan.width;
-  canvas.height = plan.height;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) {
+  try {
+    canvas.width = plan.width;
+    canvas.height = plan.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return file;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    enhancePixels(imageData, mode);
+    ctx.putImageData(imageData, 0, 0);
+    return await canvasBlob(canvas, file);
+  } finally {
     bitmap.close?.();
-    return file;
+    canvas.width = 1;
+    canvas.height = 1;
   }
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  enhancePixels(imageData, mode);
-  ctx.putImageData(imageData, 0, 0);
-  bitmap.close?.();
-  return canvasBlob(canvas, file);
 }
 
 export async function cropImage(
@@ -264,19 +266,21 @@ export async function cropImage(
     maxScale: 4.2
   });
   const canvas = document.createElement('canvas');
-  canvas.width = plan.width;
-  canvas.height = plan.height;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) {
+  try {
+    canvas.width = plan.width;
+    canvas.height = plan.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return file;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    enhancePixels(imageData, mode);
+    ctx.putImageData(imageData, 0, 0);
+    return await canvasBlob(canvas, file);
+  } finally {
     bitmap.close?.();
-    return file;
+    canvas.width = 1;
+    canvas.height = 1;
   }
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  enhancePixels(imageData, mode);
-  ctx.putImageData(imageData, 0, 0);
-  bitmap.close?.();
-  return canvasBlob(canvas, file);
 }
