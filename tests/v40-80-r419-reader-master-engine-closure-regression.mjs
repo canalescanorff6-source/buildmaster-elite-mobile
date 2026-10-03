@@ -34,7 +34,7 @@ assert.match(
 );
 assert.match(
   readerActionsR187,
-  /async function analyzeSelectedImage[\s\S]{0,1300}catch \(cause\)[\s\S]{0,520}setLoading\(false\)[\s\S]{0,520}setStatus\([`'\"]Não foi possível iniciar o leitor OCR/,
+  /async function analyzeSelectedImage[\s\S]{0,1300}catch \(cause\)[\s\S]{0,520}setLoading\(false\)[\s\S]{0,520}setStatus\([`'"]Não foi possível iniciar o leitor OCR/,
   'Reader bootstrap: falha de chunk/runtime precisa terminar o loading e mostrar erro recuperável ao usuário.',
 );
 assert.match(
@@ -91,7 +91,7 @@ assert.match(truth, /PROVISIONAL_LOW_CONFIDENCE/);
 assert.match(truth, /BLOCKED_INSUFFICIENT_DATA/);
 
 assert.match(clean, /applyCriticalEvidenceR419/);
-assert.match(clean, /budgetEvidenceStateR419!==['\"]TRUSTED['\"]/);
+assert.match(clean, /budgetEvidenceStateR419!==['"]TRUSTED['"]/);
 assert.match(clean, /status:'BLOCKED_INSUFFICIENT_DATA'/);
 assert.match(clean, /ignoresOverall:true/);
 assert.match(clean, /ownedSkillDuplicatesBlocked/);
