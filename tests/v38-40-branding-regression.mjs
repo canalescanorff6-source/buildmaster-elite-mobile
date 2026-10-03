@@ -114,6 +114,7 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'buildmaster-branding-'));
 fs.mkdirSync(path.join(temp, 'scripts'), { recursive: true });
 fs.mkdirSync(path.join(temp, 'resources', 'android-branding'), { recursive: true });
 fs.cpSync('scripts/install-android-branding.mjs', path.join(temp, 'scripts', 'install-android-branding.mjs'));
+fs.cpSync('scripts/patch-android-update-progress-r520.mjs', path.join(temp, 'scripts', 'patch-android-update-progress-r520.mjs'));
 fs.cpSync('resources/android-branding/res', path.join(temp, 'resources', 'android-branding', 'res'), { recursive: true });
 const tempLegacySource = path.join(temp, 'resources', 'android-branding', 'res', 'drawable-nodpi', legacySplashResourceName);
 fs.copyFileSync(
@@ -128,6 +129,40 @@ fs.writeFileSync(path.join(fakeRes, 'values', 'launch_background.xml'), '<?xml v
 const fakeManifest = path.join(temp, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
 fs.mkdirSync(path.dirname(fakeManifest), { recursive: true });
 fs.writeFileSync(fakeManifest, '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:icon="@mipmap/old_icon"></application></manifest>');
+
+// O instalador de identidade executa R520 depois que o plugin nativo é gerado.
+// A fixture precisa representar essa ordem real para que a regressão não masque
+// a integração entre branding e o progresso nativo da atualização.
+const fakePlugin = path.join(temp, 'android', 'app', 'src', 'main', 'java', 'com', 'buildmaster', 'elitetatico', 'BuildMasterSecurityPlugin.java');
+fs.mkdirSync(path.dirname(fakePlugin), { recursive: true });
+fs.writeFileSync(fakePlugin, `class BuildMasterSecurityPlugin {
+    private static void verifyExpectedDownload(File file, Long expectedSize, String expectedChecksum, String trace) throws Exception {
+        long total = expectedSize == null ? file.length() : expectedSize;
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = input.read(buffer)) != -1) digest.update(buffer, 0, read);
+        }
+    }
+
+    void observeDownload(int status, long downloaded, long total) {
+        int percent = total > 0 ? (int) Math.min(99, (downloaded * 100L) / total) : 0;
+        emitProgress("downloading-system", percent, downloaded, total);
+    }
+
+    void finishTransport(TransportResult transportResult, Long manifestSizeBytes) {
+        emitProgress("verifying", 100, transportResult.bytes, manifestSizeBytes == null ? transportResult.bytes : manifestSizeBytes);
+    }
+
+    void verifyPackage(File apk, long total, long expectedTotal, String manifestVersionName, String downloadedName, boolean signaturesCompatible) {
+        assertApkZipHeader(apk);
+        PackageInfo current = null;
+        if (manifestVersionName != null && !manifestVersionName.equals(downloadedName)) throw new SecurityException("A versão do APK não confere com o manifesto.");
+        if (!signaturesCompatible) throw new SecurityException("Assinatura inválida.");
+    }
+}`);
+
 const install = spawnSync(process.execPath, ['scripts/install-android-branding.mjs'], { cwd: temp, encoding: 'utf8' });
 assert.equal(install.status, 0, install.stderr || install.stdout);
 assert.match(fs.readFileSync(fakeManifest, 'utf8'), /android:icon="@mipmap\/ic_launcher"/);
@@ -142,6 +177,11 @@ assert.match(installedSplashXml, /@drawable\/buildmaster_native_splash_image/);
 assert.doesNotMatch(installedSplashXml, /@drawable\/buildmaster_native_splash(?:["'])/);
 const installedValueXml = fs.readdirSync(path.join(fakeRes, 'values')).filter((name) => name.endsWith('.xml')).map((name) => fs.readFileSync(path.join(fakeRes, 'values', name), 'utf8')).join('\n');
 assert.equal((installedValueXml.match(/name=["']ic_launcher_background["']/g) || []).length, 1, 'ic_launcher_background deve existir uma única vez após instalar a identidade.');
+const patchedPlugin = fs.readFileSync(fakePlugin, 'utf8');
+assert.match(patchedPlugin, /private void verifyExpectedDownload/);
+for (const phase of ['waiting-download', 'download-paused', 'verifying-checksum', 'finalizing-file', 'verifying-package', 'verifying-signature']) {
+  assert.match(patchedPlugin, new RegExp(`emitProgress\\("${phase}"`), `R520 não publicou a etapa ${phase} na fixture Android.`);
+}
 fs.rmSync(temp, { recursive: true, force: true });
 
-console.log('v38.40 identidade premium aprovada: ícone BM, adaptive icon, modo monocromático, splash e instalação Android verificadas.');
+console.log('v38.40 identidade premium aprovada: ícone BM, adaptive icon, modo monocromático, splash e instalação Android verificadas com R520.');
