@@ -33,7 +33,7 @@ const tabs=[['gravar',Video,'Gravar e analisar',true],['competitivo',BarChart3,'
 useEffect(()=>{if(!running)return;const timer=window.setInterval(()=>setSeconds(v=>v+1),1000);return()=>window.clearInterval(timer)},[running]);
 useEffect(()=>{const refresh=()=>setFlags(readFeatureFlags());window.addEventListener(OBSERVABILITY_EVENT,refresh);return()=>window.removeEventListener(OBSERVABILITY_EVENT,refresh)},[]);
 useEffect(()=>{if(tab==='anti-delay'&&!flags.antiDelay)setTab('competitivo');if(tab==='treinador'&&!flags.smartCoach)setTab('competitivo')},[flags.antiDelay,flags.smartCoach,tab]);
-function selectTab(next:MatchTab){setTab(next);window.requestAnimationFrame(()=>panelRef.current?.scrollIntoView({behavior:'smooth',block:'start'}))}
+function selectTab(next:MatchTab){setTab(next);window.requestAnimationFrame(()=>panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))}
 function toggleError(error:string){setErrors(current=>current.includes(error)?current.filter(item=>item!==error):[...current,error])}
 function saveTrainingLog(){const entry:TrainingLog={id:`training-${Date.now()}`,at:new Date().toISOString(),error:errors.join(' • ')||'Treino concluído sem erro marcado',repetitions:reps,seconds},next=[entry,...logs].slice(0,120);setLogs(next);safeStorageSetJson(TRAINING_LOG_KEY,next);setRunning(false);setSeconds(0);setReps(0);setErrors([]);selectTab('analisar')}
 function changeGoal(value:number){setGoal(value);safeStorageSetJson(WEEKLY_GOAL_KEY,value)}
