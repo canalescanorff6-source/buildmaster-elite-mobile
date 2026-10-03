@@ -110,7 +110,6 @@ if (fs.existsSync(brandingValuesPath)) {
   }
 }
 
-
 // O template do Capacitor pode variar entre versões. Qualquer tema que ainda aponte
 // para a splash padrão passa a usar a arte oficial do BuildMaster.
 for (const file of walk(targetRes).filter((item) => item.endsWith('.xml'))) {
@@ -157,5 +156,9 @@ for (const relative of required) {
   if (!fs.existsSync(file) || fs.statSync(file).size === 0) fail(`recurso obrigatório ausente: ${relative}`);
   if (file.endsWith('.png')) validatePng(file, `android/app/src/main/res/${relative}`);
 }
+
+// O atualizador é gerado antes deste passo. R520 instrumenta o Java já criado
+// sem duplicar a fonte principal do plugin de segurança.
+await import('./patch-android-update-progress-r520.mjs');
 
 console.log('Identidade premium Android instalada: ícone legado, adaptativo, monocromático e splash nativa.');

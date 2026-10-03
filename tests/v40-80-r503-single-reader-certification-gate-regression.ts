@@ -46,7 +46,7 @@ assert.equal(missing.canPromoteResult, false);
 const reader = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
 assert.match(reader, /deriveSingleReaderFinalizationR503/,
   'R503: fluxo unitário precisa consultar a autoridade de promoção antes de confirmar.');
-assert.match(reader, /const confirmationDecisionR503=deriveSingleReaderFinalizationR503\([\s\S]{0,160}cardTruthCertificationR501[\s\S]{0,120}\);/,
+assert.match(reader, /const\s+confirmationDecisionR503\s*=\s*deriveSingleReaderFinalizationR503\([\s\S]{0,160}cardTruthCertificationR501[\s\S]{0,120}\);/,
   'R503: decisão deve usar a certificação estrutural produzida pelo Clean Slate.');
 
 const confirmedIndex = reader.indexOf('if (confirmed) {');

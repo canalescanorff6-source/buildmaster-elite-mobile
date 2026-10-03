@@ -4,169 +4,22 @@ import { CheckCircle2, Clock3, Download, Loader2, ShieldCheck, Smartphone } from
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ApkDownloadProgress } from '@/lib/secureStorage';
 
-function clamp(value: number, min = 0, max = 100) {
-  return Math.max(min, Math.min(max, Number.isFinite(value) ? value : 0));
+const clamp=(v:number,min=0,max=100)=>Math.max(min,Math.min(max,Number.isFinite(v)?v:0));
+export function formatProgressBytes(value?:number){const b=Math.max(0,Number(value||0));if(b<1024)return`${Math.round(b)} B`;if(b<1048576)return`${(b/1024).toFixed(b>=102400?0:1)} KB`;return`${(b/1048576).toFixed(b>=10485760?1:2)} MB`;}
+export function formatRemainingTime(seconds?:number|null){if(!seconds||!Number.isFinite(seconds)||seconds<=0)return'';if(seconds<10)return'menos de 10 s';if(seconds<60)return`cerca de ${Math.ceil(seconds/5)*5} s`;const m=Math.ceil(seconds/60);if(m<60)return`cerca de ${m} min`;const h=Math.floor(m/60),r=m%60;return r?`cerca de ${h} h ${r} min`:`cerca de ${h} h`;}
+
+export function updateOverallPercent(progress:ApkDownloadProgress|null){if(!progress)return 0;const transfer=clamp(progress.percent),phase:string=progress.phase;switch(phase){case'refreshing-manifest':return 1;case'preparing-backup':return 3;case'awaiting-permission':return 4;case'connecting':case'waiting-download':case'download-paused':return 6;case'downloading':case'downloading-system':case'downloading-http':return Math.round(8+transfer*.68);case'copying':return Math.round(76+transfer*.1);case'finalizing-file':return 87;case'verifying-checksum':return Math.round(87+transfer*.07);case'verifying':return 94;case'verifying-package':return 95;case'verifying-signature':return 97;case'opening-installer':return 98;case'ready':return 99;default:return transfer;}}
+export function updateStageLabel(progress:ApkDownloadProgress|null){if(!progress)return'Preparando atualização';const phase:string=progress.phase;switch(phase){case'refreshing-manifest':return'Conferindo versão publicada';case'preparing-backup':return'Protegendo seus dados';case'awaiting-permission':return'Aguardando permissão do Android';case'connecting':return'Conectando ao servidor';case'waiting-download':return'Aguardando o Android iniciar o download';case'download-paused':return'Download pausado pelo Android';case'downloading-system':return'Baixando pelo Android';case'downloading-http':return'Baixando pela rota reserva';case'downloading':return'Baixando atualização';case'copying':return'Copiando para a área segura';case'finalizing-file':return'Finalizando o arquivo baixado';case'verifying-checksum':return'Verificando integridade SHA-256';case'verifying':return'Conferindo integridade do APK';case'verifying-package':return'Conferindo pacote e versão';case'verifying-signature':return'Conferindo assinatura oficial';case'opening-installer':return'Abrindo instalador Android';case'ready':return'Instalador aberto';default:return'Atualizando aplicativo';}}
+
+const indeterminatePhases=new Set(['refreshing-manifest','preparing-backup','connecting','waiting-download','download-paused','finalizing-file','verifying-package','verifying-signature']);
+function useStageElapsed(progress:ApkDownloadProgress|null){const phase=String(progress?.phase||'');const[start,setStart]=useState(()=>Date.now()),[now,setNow]=useState(()=>Date.now());useEffect(()=>{setStart(Date.now());setNow(Date.now());if(!progress||progress.phase==='ready')return;const id=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(id);},[phase,progress?.phase]);return Math.max(0,Math.floor((now-start)/1000));}
+function useTransferEstimate(progress:ApkDownloadProgress|null){const previousRef=useRef<{at:number;bytes:number}|null>(null),speedRef=useRef(0);const[speed,setSpeed]=useState(0);useEffect(()=>{const phase=String(progress?.phase||''),active=['downloading','downloading-system','downloading-http','copying'].includes(phase);if(!progress||!active){if(['connecting','waiting-download','refreshing-manifest'].includes(phase)){previousRef.current=null;speedRef.current=0;setSpeed(0);}return;}const now=Date.now(),bytes=Math.max(0,Number(progress.downloadedBytes||0)),previous=previousRef.current;if(previous&&bytes>=previous.bytes){const elapsed=(now-previous.at)/1000;if(elapsed>=.25){const instant=(bytes-previous.bytes)/elapsed;if(instant>0){speedRef.current=speedRef.current>0?speedRef.current*.68+instant*.32:instant;setSpeed(speedRef.current);}}}previousRef.current={at:now,bytes};},[progress]);const etaSeconds=useMemo(()=>{if(!progress||speed<=0||progress.totalBytes<=progress.downloadedBytes)return null;return['downloading','downloading-system','downloading-http','copying'].includes(String(progress.phase))?(progress.totalBytes-progress.downloadedBytes)/speed:null;},[progress,speed]);return{speed,etaSeconds};}
+
+export function UpdateTransferProgressV4010({progress,targetVersion,compact=false,completed=false}:{progress:ApkDownloadProgress|null;targetVersion?:string|null;compact?:boolean;completed?:boolean}){
+  const{speed,etaSeconds}=useTransferEstimate(progress),elapsed=useStageElapsed(progress),phase=String(progress?.phase||''),overall=completed?100:updateOverallPercent(progress),stage=completed?'Atualização concluída':updateStageLabel(progress),transferActive=Boolean(progress&&['downloading','downloading-system','downloading-http','copying'].includes(phase)),checksumActive=phase==='verifying-checksum',indeterminate=!completed&&indeterminatePhases.has(phase);
+  const detail=completed?`BuildMaster v${targetVersion||'nova'} instalado com sucesso.`:phase==='ready'?'O APK foi validado. Confirme “Atualizar” no instalador do Android; essa etapa final é controlada pelo sistema.':phase==='opening-installer'?'Download e validação concluídos. Preparando a confirmação final do Android.':phase==='awaiting-permission'?'Ative “Permitir desta fonte” e volte ao BuildMaster para continuar.':phase==='waiting-download'?'O DownloadManager está na fila do Android. A tela continuará mostrando atividade até o primeiro byte chegar.':phase==='download-paused'?'O Android pausou temporariamente a transferência. O BuildMaster continua acompanhando o estado.':phase==='verifying-package'?'Conferindo se o APK pertence ao BuildMaster e se a versão é a publicada.':phase==='verifying-signature'?'Comparando o certificado do APK com a assinatura oficial já instalada.':checksumActive&&progress?`${formatProgressBytes(progress.downloadedBytes)}${progress.totalBytes>0?` de ${formatProgressBytes(progress.totalBytes)}`:''} verificados`:transferActive&&progress?`${formatProgressBytes(progress.downloadedBytes)}${progress.totalBytes>0?` de ${formatProgressBytes(progress.totalBytes)}`:''}`:'O BuildMaster acompanha esta etapa antes de avançar.';
+  return <section className={`v4020-operation-progress v4020-update-progress ${compact?'is-compact':''} ${completed?'is-complete':''}`} role="status" aria-live="polite" aria-label={`Atualização do aplicativo: ${overall}%`}><div className="v4020-progress-icon">{completed?<CheckCircle2 size={20}/>:phase==='ready'||phase==='opening-installer'?<Smartphone size={20}/>:phase.startsWith('verifying')?<ShieldCheck size={20}/>:transferActive?<Download size={20}/>:<Loader2 className="spin" size={20}/>}</div><div className="v4020-progress-main"><div className="v4020-progress-heading"><div><strong>{stage}</strong>{targetVersion&&<span>v{targetVersion}</span>}</div><b>{indeterminate?'em andamento':`${overall}%`}</b></div>{indeterminate?<progress className="v4020-progress-track" aria-label={`${stage}, em andamento`}/>:<div className="v4020-progress-track"><i style={{width:`${overall}%`}}/></div>}<div className="v4020-progress-meta"><span>{detail}</span>{indeterminate&&<span><Clock3 size={12}/> Tempo nesta etapa: {elapsed}s</span>}{transferActive&&speed>0&&<span><Clock3 size={12}/> {formatProgressBytes(speed)}/s{etaSeconds?` • faltam ${formatRemainingTime(etaSeconds)}`:''}</span>}{checksumActive&&progress&&<span><ShieldCheck size={12}/> {Math.round(clamp(progress.percent))}% do arquivo conferido</span>}</div></div></section>;
 }
 
-export function formatProgressBytes(value?: number) {
-  const bytes = Math.max(0, Number(value || 0));
-  if (bytes < 1024) return `${Math.round(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes >= 100 * 1024 ? 0 : 1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
-}
-
-export function formatRemainingTime(seconds?: number | null) {
-  if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return '';
-  if (seconds < 10) return 'menos de 10 s';
-  if (seconds < 60) return `cerca de ${Math.ceil(seconds / 5) * 5} s`;
-  const minutes = Math.ceil(seconds / 60);
-  if (minutes < 60) return `cerca de ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `cerca de ${hours} h ${rest} min` : `cerca de ${hours} h`;
-}
-
-export function updateOverallPercent(progress: ApkDownloadProgress | null) {
-  if (!progress) return 0;
-  const transfer = clamp(progress.percent);
-  switch (progress.phase) {
-    case 'refreshing-manifest': return 1;
-    case 'preparing-backup': return 3;
-    case 'awaiting-permission': return 4;
-    case 'connecting': return 5;
-    case 'downloading':
-    case 'downloading-system':
-    case 'downloading-http': return Math.round(5 + transfer * 0.75);
-    case 'copying': return Math.round(80 + transfer * 0.08);
-    case 'verifying': return 92;
-    case 'opening-installer': return 97;
-    case 'ready': return 98;
-    default: return transfer;
-  }
-}
-
-export function updateStageLabel(progress: ApkDownloadProgress | null) {
-  if (!progress) return 'Preparando atualização';
-  switch (progress.phase) {
-    case 'refreshing-manifest': return 'Conferindo versão publicada';
-    case 'preparing-backup': return 'Protegendo seus dados';
-    case 'awaiting-permission': return 'Aguardando permissão do Android';
-    case 'connecting': return 'Conectando ao servidor';
-    case 'downloading-system': return 'Baixando pelo Android';
-    case 'downloading-http': return 'Baixando pela rota reserva';
-    case 'downloading': return 'Baixando atualização';
-    case 'copying': return 'Preparando arquivo baixado';
-    case 'verifying': return 'Conferindo APK e assinatura';
-    case 'opening-installer': return 'Abrindo instalador Android';
-    case 'ready': return 'Instalador aberto';
-    default: return 'Atualizando aplicativo';
-  }
-}
-
-function useTransferEstimate(progress: ApkDownloadProgress | null) {
-  const previousRef = useRef<{ at: number; bytes: number } | null>(null);
-  const speedRef = useRef(0);
-  const [speed, setSpeed] = useState(0);
-
-  useEffect(() => {
-    if (!progress || !['downloading', 'downloading-system', 'downloading-http', 'copying'].includes(progress.phase)) {
-      if (progress?.phase === 'connecting' || progress?.phase === 'refreshing-manifest') {
-        previousRef.current = null;
-        speedRef.current = 0;
-        setSpeed(0);
-      }
-      return;
-    }
-    const now = Date.now();
-    const bytes = Math.max(0, Number(progress.downloadedBytes || 0));
-    const previous = previousRef.current;
-    if (previous && bytes >= previous.bytes) {
-      const elapsed = (now - previous.at) / 1000;
-      if (elapsed >= 0.25) {
-        const instant = (bytes - previous.bytes) / elapsed;
-        if (instant > 0) {
-          speedRef.current = speedRef.current > 0 ? speedRef.current * 0.68 + instant * 0.32 : instant;
-          setSpeed(speedRef.current);
-        }
-      }
-    }
-    previousRef.current = { at: now, bytes };
-  }, [progress]);
-
-  const etaSeconds = useMemo(() => {
-    if (!progress || speed <= 0 || progress.totalBytes <= progress.downloadedBytes) return null;
-    if (!['downloading', 'downloading-system', 'downloading-http', 'copying'].includes(progress.phase)) return null;
-    return (progress.totalBytes - progress.downloadedBytes) / speed;
-  }, [progress, speed]);
-
-  return { speed, etaSeconds };
-}
-
-export function UpdateTransferProgressV4010({ progress, targetVersion, compact = false, completed = false }: {
-  progress: ApkDownloadProgress | null;
-  targetVersion?: string | null;
-  compact?: boolean;
-  completed?: boolean;
-}) {
-  const { speed, etaSeconds } = useTransferEstimate(progress);
-  const overall = completed ? 100 : updateOverallPercent(progress);
-  const stage = completed ? 'Atualização concluída' : updateStageLabel(progress);
-  const transferActive = Boolean(progress && ['downloading', 'downloading-system', 'downloading-http', 'copying'].includes(progress.phase));
-  const detail = completed
-    ? `BuildMaster v${targetVersion || 'nova'} instalado com sucesso.`
-    : progress?.phase === 'ready'
-      ? 'O APK foi validado. Confirme “Atualizar” no instalador do Android; essa etapa final é controlada pelo sistema.'
-      : progress?.phase === 'opening-installer'
-        ? 'Download e validação concluídos. Preparando a confirmação final do Android.'
-        : progress?.phase === 'awaiting-permission'
-          ? 'Ative “Permitir desta fonte” e volte ao BuildMaster para continuar.'
-          : transferActive && progress
-            ? `${formatProgressBytes(progress.downloadedBytes)}${progress.totalBytes > 0 ? ` de ${formatProgressBytes(progress.totalBytes)}` : ''}`
-            : 'O BuildMaster acompanha cada etapa até entregar o APK ao instalador.';
-
-  return <section className={`v4020-operation-progress v4020-update-progress ${compact ? 'is-compact' : ''} ${completed ? 'is-complete' : ''}`} role="status" aria-live="polite" aria-label={`Atualização do aplicativo: ${overall}%`}>
-    <div className="v4020-progress-icon">{completed ? <CheckCircle2 size={20} /> : progress?.phase === 'ready' || progress?.phase === 'opening-installer' ? <Smartphone size={20} /> : progress?.phase === 'verifying' ? <ShieldCheck size={20} /> : transferActive ? <Download size={20} /> : <Loader2 className="spin" size={20} />}</div>
-    <div className="v4020-progress-main">
-      <div className="v4020-progress-heading"><div><strong>{stage}</strong>{targetVersion && <span>v{targetVersion}</span>}</div><b>{overall}%</b></div>
-      <div className="v4020-progress-track"><i style={{ width: `${overall}%` }} /></div>
-      <div className="v4020-progress-meta"><span>{detail}</span>{transferActive && speed > 0 && <span><Clock3 size={12} /> {formatProgressBytes(speed)}/s{etaSeconds ? ` • faltam ${formatRemainingTime(etaSeconds)}` : ''}</span>}</div>
-    </div>
-  </section>;
-}
-
-export type ReaderProgressSnapshotV4010 = {
-  percent: number;
-  phase: string;
-  detail: string;
-  startedAt: number;
-  completed?: number;
-  total?: number;
-  deadlineMs?: number;
-};
-
-export function ReaderProgressBarV4010({ progress }: { progress: ReaderProgressSnapshotV4010 | null }) {
-  const [now, setNow] = useState(() => Date.now());
-  const percent = clamp(progress?.percent ?? 0);
-
-  useEffect(() => {
-    setNow(Date.now());
-    if (!progress || percent >= 100) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [progress?.startedAt, percent]);
-
-  const elapsedSeconds = progress ? Math.max(0, (now - progress.startedAt) / 1000) : 0;
-  const deadlineSeconds = Math.max(30, Number(progress?.deadlineMs || 90_000) / 1000);
-  const completed = Math.max(0, Number(progress?.completed || 0));
-  const total = Math.max(0, Number(progress?.total || 0));
-  const byFields = completed > 0 && total > completed ? (elapsedSeconds / completed) * (total - completed) : null;
-  const safeRemaining = Math.max(0, deadlineSeconds - elapsedSeconds);
-  const eta = progress && percent >= 5 && percent < 100
-    ? Math.min(safeRemaining, byFields && Number.isFinite(byFields) ? Math.max(5, byFields) : safeRemaining)
-    : null;
-  return <div className="v4020-reader-progress" aria-label={`Progresso da leitura: ${Math.round(percent)}%`}>
-    <div className="v4020-progress-heading"><div><strong>{progress?.phase || 'Preparando leitura'}</strong>{progress?.total ? <span>{Math.min(progress.completed ?? 0, progress.total)}/{progress.total} campos</span> : null}</div><b>{Math.round(percent)}%</b></div>
-    <div className="v4020-progress-track"><i style={{ width: `${percent}%` }} /></div>
-    <div className="v4020-progress-meta"><span>{progress?.detail || 'Preparando o print.'}</span>{eta ? <span><Clock3 size={12} /> estimativa: {formatRemainingTime(eta)}</span> : null}</div>
-  </div>;
-}
+export type ReaderProgressSnapshotV4010={percent:number;phase:string;detail:string;startedAt:number;completed?:number;total?:number;deadlineMs?:number;};
+export function ReaderProgressBarV4010({progress}:{progress:ReaderProgressSnapshotV4010|null}){const[now,setNow]=useState(()=>Date.now()),percent=clamp(progress?.percent??0);useEffect(()=>{setNow(Date.now());if(!progress||percent>=100)return;const timer=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(timer);},[progress?.startedAt,percent]);const elapsedSeconds=progress?Math.max(0,(now-progress.startedAt)/1000):0,deadlineSeconds=Math.max(30,Number(progress?.deadlineMs||90000)/1000),completed=Math.max(0,Number(progress?.completed||0)),total=Math.max(0,Number(progress?.total||0)),byFields=completed>0&&total>completed?(elapsedSeconds/completed)*(total-completed):null,safeRemaining=Math.max(0,deadlineSeconds-elapsedSeconds),eta=progress&&percent>=5&&percent<100?Math.min(safeRemaining,byFields&&Number.isFinite(byFields)?Math.max(5,byFields):safeRemaining):null;return <div className="v4020-reader-progress" aria-label={`Progresso da leitura: ${Math.round(percent)}%`}><div className="v4020-progress-heading"><div><strong>{progress?.phase||'Preparando leitura'}</strong>{progress?.total?<span>{Math.min(progress.completed??0,progress.total)}/{progress.total} campos</span>:null}</div><b>{Math.round(percent)}%</b></div><div className="v4020-progress-track"><i style={{width:`${percent}%`}}/></div><div className="v4020-progress-meta"><span>{progress?.detail||'Preparando o print.'}</span>{eta?<span><Clock3 size={12}/> estimativa: {formatRemainingTime(eta)}</span>:null}</div></div>;}

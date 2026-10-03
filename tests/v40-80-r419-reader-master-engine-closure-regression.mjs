@@ -25,16 +25,16 @@ const readerRuntimeR160 = read('src/modules/card-reader/readerRuntimeR160.ts');
 const readerActionsR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
 
 // Bug real: tocar em "Ler imagem"/"Ler com os quadrados" podia apenas piscar.
-// A inicialização precisa dar feedback antes de qualquer await pesado e um chunk OCR
-// rejeitado não pode ficar preso para sempre no cache lazy.
+// R520 adicionou validação de sessão entre o loading e o runtime; o contrato é de
+// ordem/comportamento, não de uma distância textual arbitrária entre as chamadas.
+const analyzeSelectedImageR187 = readerActionsR187.match(/async function analyzeSelectedImage[\s\S]*?(?=\n\s*async function analyzeTotalCardCaptures)/)?.[0] ?? '';
+const loadingIndexR187 = analyzeSelectedImageR187.indexOf('setLoading(true)');
+const lazyRuntimeIndexR187 = analyzeSelectedImageR187.indexOf('loadReaderAnalysisRuntimeR163(');
+assert.ok(loadingIndexR187 >= 0 && lazyRuntimeIndexR187 > loadingIndexR187,
+  'Reader bootstrap: loading visível precisa começar antes do carregamento lazy pesado do OCR.');
 assert.match(
-  readerActionsR187,
-  /async function analyzeSelectedImage[\s\S]{0,420}setLoading\(true\)[\s\S]{0,520}loadReaderAnalysisRuntimeR163\(\)/,
-  'Reader bootstrap: loading visível precisa começar antes do carregamento lazy pesado do OCR.',
-);
-assert.match(
-  readerActionsR187,
-  /async function analyzeSelectedImage[\s\S]{0,1300}catch \(cause\)[\s\S]{0,520}setLoading\(false\)[\s\S]{0,520}setStatus\([`'"]Não foi possível iniciar o leitor OCR/,
+  analyzeSelectedImageR187,
+  /catch \(cause\)[\s\S]*setLoading\(false\)[\s\S]*setStatus\([`'"]Não foi possível iniciar o leitor OCR/,
   'Reader bootstrap: falha de chunk/runtime precisa terminar o loading e mostrar erro recuperável ao usuário.',
 );
 assert.match(
