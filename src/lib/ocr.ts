@@ -138,20 +138,13 @@ export async function enhanceImageLocally(file: File | Blob, mode: LocalEnhancem
   if (!bitmap) return file;
   const canvas = document.createElement('canvas');
   try {
-    const maxDimension = 1600;
-    const scale = Math.min(1, maxDimension / Math.max(1, Math.max(bitmap.width, bitmap.height)));
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return file;
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = image.data;
-    let sum = 0;
-    for (let i = 0; i < data.length; i += 4) sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    const mean = sum / Math.max(1, data.length / 4);
-    const contrast = mode === 'contrast' ? 1.7 : mode === 'sharp' ? 1.45 : mode === 'color' ? 1.22 : 1.35;
-    const brightnessLift = Math.max(-22, Math.min(28, 132 - mean));
+    const maxDimension = 1600; const scale = Math.min(1, maxDimension / Math.max(1, Math.max(bitmap.width, bitmap.height)));
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale)); canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const ctx=canvas.getContext('2d',{willReadFrequently:true}); if(!ctx)return file;
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    const image=ctx.getImageData(0,0,canvas.width,canvas.height),data=image.data; let sum=0;
+    for(let i=0;i<data.length;i+=4)sum+=data[i]*.299+data[i+1]*.587+data[i+2]*.114;
+    const mean=sum/Math.max(1,data.length/4),contrast=mode==='contrast'?1.7:mode==='sharp'?1.45:mode==='color'?1.22:1.35,brightnessLift=Math.max(-22,Math.min(28,132-mean));
 
     if (mode === 'binary' || mode === 'inverted') {
       const grayValues = new Uint8Array(data.length / 4);
