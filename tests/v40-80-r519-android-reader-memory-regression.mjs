@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import './v40-80-r535-reader-update-live-progress-regression.mjs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const ocr = read('src/lib/ocr.ts');
