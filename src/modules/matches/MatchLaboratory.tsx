@@ -14,7 +14,7 @@ import { safeStorageGetJson, safeStorageSetJson } from '@/lib/safeLocalStorage';
 import { PremiumScreenHero } from '@/components/PremiumScreenPrimitives';
 import { OBSERVABILITY_EVENT, readFeatureFlags, type FeatureFlagState } from '@/modules/observability/observabilityEngine';
 import { buildGameplayCalibrationBridgeR516 } from '@/modules/analysis/gameplayCalibrationBridgeR516';
-import { buildRealMatchCalibrationEvidenceR518, type RealMatchCalibrationContextR518 } from '@/modules/analysis/realMatchCalibrationEvidenceR518';
+import { buildRealMatchCalibrationEvidenceR518 } from '@/modules/analysis/realMatchCalibrationEvidenceR518';
 import { buildBuildOutcomeCalibrationR460 } from './buildOutcomeCalibrationR460';
 
 type MatchTab = 'gravar' | 'competitivo' | 'anti-delay' | 'treinador' | 'treinar' | 'planejar' | 'executar' | 'analisar';
@@ -22,26 +22,6 @@ type TrainingLog = { id: string; at: string; error: string; repetitions: number;
 const TRAINING_LOG_KEY = 'buildmaster_guided_training_logs_v2739';
 const WEEKLY_GOAL_KEY = 'buildmaster_weekly_training_goal_v2739';
 const ERROR_OPTIONS = ['Passe precipitado', 'Demora para soltar a bola', 'Marcação atrasada', 'Finalização forçada', 'Perdeu a compactação', 'Troca de jogador errada'];
-const R518_STATUS_LABELS = {
-  INSUFFICIENT_EVIDENCE: 'Evidência insuficiente',
-  COLLECTING: 'Coletando evidência',
-  READY_FOR_REVIEW: 'Pronto para revisão',
-  READY_FOR_R510_PROMOTION: 'Gate de promoção atingido',
-  BLOCKED: 'Bloqueado',
-} as const;
-const R518_REQUIREMENT_LABELS: Record<string, string> = {
-  REAL_MATCH_EVIDENCE_REQUIRED: 'Partidas reais e contextos completos',
-  PERSISTED_REAL_EVIDENCE_REQUIRED: 'Evidência persistida no R137',
-  GLOBAL_MATCH_VOLUME: '24 partidas reais',
-  GLOBAL_SESSION_DIVERSITY: '6 sessões distintas',
-  GLOBAL_CONTEXT_DIVERSITY: '3 contextos prontos',
-  GLOBAL_PRIMITIVE_FAMILY_COVERAGE: '3 famílias de ações',
-  GLOBAL_FUNCTION_POSITION_DIVERSITY: '3 combinações posição/função',
-};
-
-function requirementLabelR518(id: string) {
-  return R518_REQUIREMENT_LABELS[id] ?? id.replace(/_/g, ' ').toLowerCase();
-}
 
 function downloadText(name: string, content: string) {
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -69,18 +49,12 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
   const recent = useMemo(() => [...records].sort((a, b) => b.playedAt.localeCompare(a.playedAt)).slice(0, 8), [records]);
   const weekStart = useMemo(() => { const now = new Date(); const day = (now.getDay() + 6) % 7; now.setHours(0,0,0,0); now.setDate(now.getDate() - day); return now; }, []);
   const weeklySessions = useMemo(() => logs.filter((item) => new Date(item.at) >= weekStart).length, [logs, weekStart]);
-  const r518Contexts = useMemo<RealMatchCalibrationContextR518[]>(() => players.flatMap((player) => {
-    const savedOutcomeR460 = player.result.buildOutcomeCalibrationR460;
-    const learningR470 = player.result.intelligentLearningR470;
-    const lifecycleR472 = player.result.motorLabLifecycleR472;
-    if (!savedOutcomeR460 || !learningR470 || !lifecycleR472) return [];
-    const outcomeR460 = buildBuildOutcomeCalibrationR460(player.result, records);
-    const bridgeR516 = buildGameplayCalibrationBridgeR516({ outcome: outcomeR460, proposal: learningR470.proposal });
-    const generation = outcomeR460.currentGenerationSignatureR464;
-    return [{ contextKey: `${outcomeR460.cardFingerprint}:${outcomeR460.position}:${outcomeR460.usageFunction}:${generation}`, outcomeR460, learningR470, lifecycleR472, bridgeR516 }];
-  }), [players, records]);
-  const r518Readiness = useMemo(() => buildRealMatchCalibrationEvidenceR518({ origin: 'PERSISTED_REAL', records, contexts: r518Contexts }), [records, r518Contexts]);
-  const r518Pending = useMemo(() => [...new Set([...r518Readiness.blockers, ...r518Readiness.missingRequirements])].slice(0, 5), [r518Readiness]);
+  const r518 = useMemo(() => buildRealMatchCalibrationEvidenceR518({ origin: 'PERSISTED_REAL', records, contexts: players.flatMap(({ result }) => {
+    const l = result.intelligentLearningR470, c = result.motorLabLifecycleR472;
+    if (!result.buildOutcomeCalibrationR460 || !l || !c) return [];
+    const o = buildBuildOutcomeCalibrationR460(result, records), b = buildGameplayCalibrationBridgeR516({ outcome: o, proposal: l.proposal });
+    return [{ contextKey: `${o.cardFingerprint}:${o.position}:${o.usageFunction}:${o.currentGenerationSignatureR464}`, outcomeR460: o, learningR470: l, lifecycleR472: c, bridgeR516: b }];
+  }) }), [players, records]);
 
   useEffect(() => {
     if (!running) return;
@@ -157,16 +131,7 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
       ]}
     />
 
-    <article className="v27-scenario-card luxury-panel" aria-label="Evidência real R510 / R518">
-      <div className="v27-panel-heading"><div><p className="kicker"><ShieldCheck size={14}/> R137 persistido • R518 read-only</p><h3>Evidência real R510 / R518</h3></div><span>{R518_STATUS_LABELS[r518Readiness.status]}</span></div>
-      <div className="v27-scenario-sections">
-        <div><strong>Partidas reais</strong><span>{r518Readiness.evidenceSummary.totalRecords}/24 • {r518Readiness.evidenceSummary.distinctSessions}/6 sessões</span></div>
-        <div><strong>Contextos avaliáveis</strong><span>{r518Readiness.evidenceSummary.readyContexts}/{r518Readiness.evidenceSummary.totalContexts} prontos</span></div>
-        <div><strong>Cobertura funcional</strong><span>{r518Readiness.coverage.functionalContexts.join(' • ') || 'Contextos funcionais ainda não consolidados.'}</span></div>
-        <div><strong>Próximos critérios</strong>{r518Pending.length ? r518Pending.map((item) => <span key={item}><Clock3 size={14}/>{requirementLabelR518(item)}</span>) : <span><CheckCircle2 size={14}/> Gates empíricos atendidos; revisão humana ainda é obrigatória.</span>}</div>
-      </div>
-      <small>Somente leitura • {r518Readiness.authority.canCertifyR510 ? 'Revisão de certificação habilitada' : 'R518 não certifica R510'} • nenhuma calibração é aplicada automaticamente. Autoridade final: R119 → R126 → R128.</small>
-    </article>
+    <article className="v27-scenario-card luxury-panel" aria-label="Evidência real R510 / R518"><div className="v27-panel-heading"><div><p className="kicker"><ShieldCheck size={14}/> R137 persistido • R518 read-only</p><h3>Evidência real R510 / R518</h3></div><span>{r518.status.replaceAll('_',' ').toLowerCase()}</span></div><div className="v27-scenario-sections"><div><strong>Base real</strong><span>{r518.evidenceSummary.totalRecords}/24 partidas • {r518.evidenceSummary.distinctSessions}/6 sessões</span></div><div><strong>Cobertura</strong><span>{r518.evidenceSummary.readyContexts}/3 contextos • {r518.coverage.primitiveFamilies.length}/3 famílias • {r518.coverage.functionalContexts.length}/3 funções</span></div><div><strong>Pendências</strong><span>{[...new Set([...r518.blockers,...r518.missingRequirements])].slice(0,3).map(x=>x.replaceAll('_',' ').toLowerCase()).join(' • ') || 'Gates empíricos atendidos; revisão humana obrigatória.'}</span></div></div><small>Somente leitura • {r518.authority.canCertifyR510 ? 'certificação disponível' : 'R518 não certifica R510'} • sem aplicação automática • R119 → R126 → R128.</small></article>
 
     <nav className="refined-match-tabs luxury-panel" role="tablist" aria-label="Etapas de treino e partida"><button type="button" role="tab" aria-selected={tab === 'gravar'} className={tab === 'gravar' ? 'active' : ''} onClick={() => selectTab('gravar')}><Video size={17}/> Gravar e analisar</button><button type="button" role="tab" aria-selected={tab === 'competitivo'} className={tab === 'competitivo' ? 'active' : ''} onClick={() => selectTab('competitivo')}><BarChart3 size={17}/> Desempenho competitivo</button>{featureFlags.antiDelay && <button type="button" role="tab" aria-selected={tab === 'anti-delay'} className={tab === 'anti-delay' ? 'active' : ''} onClick={() => selectTab('anti-delay')}><Wifi size={17}/> Central anti-delay</button>}{featureFlags.smartCoach && <button type="button" role="tab" aria-selected={tab === 'treinador'} className={tab === 'treinador' ? 'active' : ''} onClick={() => selectTab('treinador')}><Brain size={17}/> Treinador inteligente</button>}<button type="button" role="tab" aria-selected={tab === 'treinar'} className={tab === 'treinar' ? 'active' : ''} onClick={() => selectTab('treinar')}><Trophy size={17}/> Treinos e evolução</button><button type="button" role="tab" aria-selected={tab === 'planejar'} className={tab === 'planejar' ? 'active' : ''} onClick={() => selectTab('planejar')}><Target size={17}/> Planejar partida</button><button type="button" role="tab" aria-selected={tab === 'executar'} className={tab === 'executar' ? 'active' : ''} onClick={() => selectTab('executar')}><Play size={17}/> Treino guiado</button><button type="button" role="tab" aria-selected={tab === 'analisar'} className={tab === 'analisar' ? 'active' : ''} onClick={() => selectTab('analisar')}><History size={17}/> Histórico</button>{tab !== 'treinar' && <div className="refined-week-goal"><span>Meta semanal</span><select value={weeklyGoal} onChange={(event) => changeGoal(Number(event.target.value))}>{[2,3,4,5,6,7].map((value) => <option key={value} value={value}>{value} sessões</option>)}</select><strong>{weeklySessions}/{weeklyGoal}</strong></div>}</nav>
 
