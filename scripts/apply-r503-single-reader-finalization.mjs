@@ -33,14 +33,19 @@ export function applyR503SingleReaderFinalization(rootDirectory = process.cwd())
 
   const renderGuard = "      if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');";
   const decisionBlock = `${renderGuard}\n      const cardTruthCertificationR501 = (nextResult as AnalysisResult & { cleanSlate2027R119?: { cardTruthCertificationR501?: CardTruthCertificationR501 } }).cleanSlate2027R119?.cardTruthCertificationR501 ?? null;\n      const confirmationDecisionR503=deriveSingleReaderFinalizationR503(cardTruthCertificationR501);`;
-  next = replaceOnce(next, renderGuard, decisionBlock, 'decisão pós-análise');
+  if (!next.includes('const confirmationDecisionR503=deriveSingleReaderFinalizationR503(cardTruthCertificationR501);')
+      && !next.includes('const confirmationDecisionR503 = deriveSingleReaderFinalizationR503(cardTruthCertificationR501);')) {
+    next = replaceOnce(next, renderGuard, decisionBlock, 'decisão pós-análise');
+  }
 
   const confirmedAnchor = "      if (confirmed) {\n        const edition = nextResult.parsed.editionIdentity;";
   const confirmedGuard = "      if (confirmed) {\n        if (!confirmationDecisionR503.canPersistConfirmed) {\n          await hydrateReviewFields(nextResult, singlePrintSession);\n          setDraftResult(nextResult);\n          setResult(null);\n          setManualMode(true);\n          setStatus(confirmationDecisionR503.reason);\n          return;\n        }\n        const edition = nextResult.parsed.editionIdentity;";
-  next = replaceOnce(next, confirmedAnchor, confirmedGuard, 'gate antes da persistência confirmada');
+  if (!next.includes('if (!confirmationDecisionR503.canPersistConfirmed)')) {
+    next = replaceOnce(next, confirmedAnchor, confirmedGuard, 'gate antes da persistência confirmada');
+  }
 
   if (!next.includes(finalizationImport)) throw new Error('R503: autoridade de finalização não foi importada.');
-  if (!next.includes('const confirmationDecisionR503=deriveSingleReaderFinalizationR503(cardTruthCertificationR501);')) throw new Error('R503: decisão de certificação não foi materializada.');
+  if (!next.includes('deriveSingleReaderFinalizationR503(cardTruthCertificationR501)')) throw new Error('R503: decisão de certificação não foi materializada.');
   const gateIndex = next.indexOf('if (!confirmationDecisionR503.canPersistConfirmed)');
   const persistIndex = next.indexOf('persistConfirmedAnalysisR470(nextResult');
   const promoteIndex = next.indexOf('setResult(nextResult);');
