@@ -18,12 +18,12 @@ export type OcrRecognition = {
 };
 
 type CachedRecognition = Omit<OcrRecognition, 'cached'> & { createdAt: string; version: 3 };
-
 type WorkerLike = TesseractNamespace.Worker;
 
 const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const OCR_RECOGNITION_TIMEOUT_MS = 16_000;
 const OCR_WORKER_BOOT_TIMEOUT_MS = 18_000;
+const DIGEST_CHUNK_BYTES = 256 * 1024;
 
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
@@ -129,7 +129,6 @@ export async function prewarmOcrWorker(): Promise<void> {
   armIdleWorkerRelease(Math.max(180_000, getRuntimeOptimizationProfile().ocrWorkerIdleMs));
 }
 
-
 function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: string, timeoutMs = OCR_RECOGNITION_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let settled = false;
@@ -162,19 +161,68 @@ function enqueueWorkerOperation<T>(operation: () => Promise<T>): Promise<T> {
   return queued;
 }
 
+function digestFallbackIdentity(file: File | Blob) {
+  const candidate = file as File;
+  const descriptor = `${file.size}:${file.type || ''}:${candidate.name || 'blob'}:${Number(candidate.lastModified || 0)}`;
+  let hashA = 2166136261;
+  let hashB = 0x9e3779b9;
+  for (let index = 0; index < descriptor.length; index += 1) {
+    const value = descriptor.charCodeAt(index);
+    hashA ^= value;
+    hashA = Math.imul(hashA, 16777619);
+    hashB ^= value + ((index + 1) * 131);
+    hashB = Math.imul(hashB, 2246822519);
+  }
+  return `metadata-${(hashA >>> 0).toString(16)}${(hashB >>> 0).toString(16)}-${file.size}`;
+}
+
 export async function fileDigest(file: File | Blob): Promise<string> {
-  const bytes = await file.arrayBuffer();
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
+  currentLabel = 'Pré-leitura';
+  emit('Preparando assinatura segura da imagem', 0);
+  try {
+    const useCrypto = typeof crypto !== 'undefined' && Boolean(crypto.subtle);
+    const chunkDigests: Uint8Array[] = [];
+    let fallbackA = 2166136261;
+    let fallbackB = 0x9e3779b9;
+    let processed = 0;
+
+    for (let offset = 0; offset < file.size; offset += DIGEST_CHUNK_BYTES) {
+      const bytes = new Uint8Array(await file.slice(offset, Math.min(file.size, offset + DIGEST_CHUNK_BYTES)).arrayBuffer());
+      if (useCrypto) {
+        chunkDigests.push(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+      } else {
+        for (let index = 0; index < bytes.length; index += 1) {
+          const value = bytes[index];
+          fallbackA ^= value;
+          fallbackA = Math.imul(fallbackA, 16777619);
+          fallbackB ^= value + ((processed + index + 1) & 0xffff);
+          fallbackB = Math.imul(fallbackB, 2246822519);
+        }
+      }
+      processed += bytes.byteLength;
+      emit('Preparando assinatura segura da imagem', file.size > 0 ? Math.min(0.98, processed / file.size) : 0.98);
+    }
+
+    if (useCrypto) {
+      const descriptor = new TextEncoder().encode(`r535:${file.size}:${file.type || ''}:`);
+      const merged = new Uint8Array(descriptor.length + chunkDigests.length * 32);
+      merged.set(descriptor, 0);
+      let cursor = descriptor.length;
+      for (const digest of chunkDigests) {
+        merged.set(digest, cursor);
+        cursor += digest.byteLength;
+      }
+      const digest = await crypto.subtle.digest('SHA-256', merged);
+      emit('Assinatura segura da imagem pronta', 1);
+      return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
+    }
+
+    emit('Assinatura segura da imagem pronta', 1);
+    return `fallback-${(fallbackA >>> 0).toString(16)}${(fallbackB >>> 0).toString(16)}-${file.size}`;
+  } catch {
+    emit('Assinatura simplificada pronta', 1);
+    return digestFallbackIdentity(file);
   }
-  let hash = 2166136261;
-  const data = new Uint8Array(bytes);
-  for (const value of data) {
-    hash ^= value;
-    hash = Math.imul(hash, 16777619);
-  }
-  return `fallback-${(hash >>> 0).toString(16)}-${data.length}`;
 }
 
 function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerParams> {
