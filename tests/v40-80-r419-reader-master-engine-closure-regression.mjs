@@ -21,6 +21,37 @@ assert.ok(fs.existsSync(helperPath), 'R419 precisa materializar a autoridade can
 assert.ok(fs.existsSync(truthPath), 'R501 precisa materializar a autoridade central de confiança/cobertura.');
 const r417 = read('scripts/apply-r417-autonomous-card-vault.mjs');
 const r192Closure = read('scripts/check-result-workspace-static-closure-r192.mjs');
+const readerRuntimeR160 = read('src/modules/card-reader/readerRuntimeR160.ts');
+const readerActionsR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+
+// Bug real: tocar em "Ler imagem"/"Ler com os quadrados" podia apenas piscar.
+// A inicialização precisa dar feedback antes de qualquer await pesado e um chunk OCR
+// rejeitado não pode ficar preso para sempre no cache lazy.
+assert.match(
+  readerActionsR187,
+  /async function analyzeSelectedImage[\s\S]{0,420}setLoading\(true\)[\s\S]{0,520}loadReaderAnalysisRuntimeR163\(\)/,
+  'Reader bootstrap: loading visível precisa começar antes do carregamento lazy pesado do OCR.',
+);
+assert.match(
+  readerActionsR187,
+  /async function analyzeSelectedImage[\s\S]{0,1300}catch \(cause\)[\s\S]{0,520}setLoading\(false\)[\s\S]{0,520}setStatus\([`'"]Não foi possível iniciar o leitor OCR/,
+  'Reader bootstrap: falha de chunk/runtime precisa terminar o loading e mostrar erro recuperável ao usuário.',
+);
+assert.match(
+  readerRuntimeR160,
+  /runtimePromise = Promise\.all\([\s\S]{0,2600}\.catch\(\(cause\) => \{\s*runtimePromise = null;\s*throw cause;\s*\}\)/,
+  'R160: falha ao carregar o runtime OCR precisa limpar o cache rejeitado para permitir nova tentativa.',
+);
+assert.match(
+  readerRuntimeR160,
+  /analysisRuntimePromiseR163 = import\('\.\/readerAnalysisRuntimeR163'\)\.catch\(\(cause\) => \{\s*analysisRuntimePromiseR163 = null;\s*throw cause;\s*\}\)/,
+  'R160: chunk do controller de análise precisa ser retryable após falha.',
+);
+assert.match(
+  readerRuntimeR160,
+  /interactionRuntimePromiseR164 = import\('\.\/readerInteractionRuntimeR164'\)\.catch\(\(cause\) => \{\s*interactionRuntimePromiseR164 = null;\s*throw cause;\s*\}\)/,
+  'R160: chunk de interação do leitor precisa ser retryable após falha.',
+);
 
 const repair = read('scripts/repair-critical-routes.mjs');
 const typecheck = read('scripts/check-source-types-r151.mjs');
