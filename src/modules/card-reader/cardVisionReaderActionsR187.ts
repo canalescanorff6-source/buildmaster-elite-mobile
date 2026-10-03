@@ -285,17 +285,25 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
   }
 
   async function analyzeSelectedImage(fileOverride?: File, resumed = false) {
+    if (!(fileOverride ?? selectedFile) && rawText.trim().length <= 2) {
+      setLoading(false); setOcrCancelable(false);
+      setStatus('Selecione novamente a imagem da carta para iniciar a leitura.');
+      return;
+    }
+    setLoading(true);
+    setStatus('Preparando o leitor OCR local...');
     await markActiveReadingSessionR470('OCR_RUNNING').catch(() => null);
     try {
       const runtime = await loadReaderAnalysisRuntimeR163();
       const output = await runtime.createCardVisionReaderAnalysisOperationsR163(buildReaderAnalysisContextR187()).analyzeSelectedImage(fileOverride, resumed);
-      await markActiveReadingSessionR470('OCR_COMPLETE', {
-        rawTextExcerpt: String(rawText || '').slice(0, 12_000)
-      }).catch(() => null);
+      await markActiveReadingSessionR470('OCR_COMPLETE', { rawTextExcerpt: String(rawText || '').slice(0, 12_000) }).catch(() => null);
       return output;
     } catch (cause) {
       await markActiveReadingSessionR470('ERROR', { errorCode: 'OCR_FAILED' }).catch(() => null);
-      throw cause;
+      setLoading(false); setOcrCancelable(false); setReaderProgress(null);
+      const message = cause instanceof Error ? cause.message : 'Falha ao carregar o OCR';
+      setStatus(`Não foi possível iniciar o leitor OCR. ${message} Tente novamente.`);
+      return undefined;
     }
   }
 
