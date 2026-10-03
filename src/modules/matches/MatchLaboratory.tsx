@@ -15,6 +15,7 @@ import { PremiumScreenHero } from '@/components/PremiumScreenPrimitives';
 import { OBSERVABILITY_EVENT, readFeatureFlags, type FeatureFlagState } from '@/modules/observability/observabilityEngine';
 import { buildGameplayCalibrationBridgeR516 } from '@/modules/analysis/gameplayCalibrationBridgeR516';
 import { buildRealMatchCalibrationEvidenceR518, type RealMatchCalibrationContextR518 } from '@/modules/analysis/realMatchCalibrationEvidenceR518';
+import { buildBuildOutcomeCalibrationR460 } from './buildOutcomeCalibrationR460';
 
 type MatchTab = 'gravar' | 'competitivo' | 'anti-delay' | 'treinador' | 'treinar' | 'planejar' | 'executar' | 'analisar';
 type TrainingLog = { id: string; at: string; error: string; repetitions: number; seconds: number };
@@ -69,14 +70,15 @@ export function MatchLaboratory({ team, players, records, plans, teamStyle, onVa
   const weekStart = useMemo(() => { const now = new Date(); const day = (now.getDay() + 6) % 7; now.setHours(0,0,0,0); now.setDate(now.getDate() - day); return now; }, []);
   const weeklySessions = useMemo(() => logs.filter((item) => new Date(item.at) >= weekStart).length, [logs, weekStart]);
   const r518Contexts = useMemo<RealMatchCalibrationContextR518[]>(() => players.flatMap((player) => {
-    const outcomeR460 = player.result.buildOutcomeCalibrationR460;
+    const savedOutcomeR460 = player.result.buildOutcomeCalibrationR460;
     const learningR470 = player.result.intelligentLearningR470;
     const lifecycleR472 = player.result.motorLabLifecycleR472;
-    if (!outcomeR460 || !learningR470 || !lifecycleR472) return [];
+    if (!savedOutcomeR460 || !learningR470 || !lifecycleR472) return [];
+    const outcomeR460 = buildBuildOutcomeCalibrationR460(player.result, records);
     const bridgeR516 = buildGameplayCalibrationBridgeR516({ outcome: outcomeR460, proposal: learningR470.proposal });
-    const generation = String(outcomeR460.currentGenerationSignatureR464 || 'generation-unavailable').trim();
+    const generation = outcomeR460.currentGenerationSignatureR464;
     return [{ contextKey: `${outcomeR460.cardFingerprint}:${outcomeR460.position}:${outcomeR460.usageFunction}:${generation}`, outcomeR460, learningR470, lifecycleR472, bridgeR516 }];
-  }), [players]);
+  }), [players, records]);
   const r518Readiness = useMemo(() => buildRealMatchCalibrationEvidenceR518({ origin: 'PERSISTED_REAL', records, contexts: r518Contexts }), [records, r518Contexts]);
   const r518Pending = useMemo(() => [...new Set([...r518Readiness.blockers, ...r518Readiness.missingRequirements])].slice(0, 5), [r518Readiness]);
 
