@@ -26,6 +26,14 @@ export function formatRemainingTime(seconds?: number | null) {
   return rest ? `cerca de ${hours} h ${rest} min` : `cerca de ${hours} h`;
 }
 
+function formatActivityDuration(seconds: number) {
+  const safe = Math.max(0, Math.floor(seconds));
+  if (safe < 60) return `${safe}s`;
+  const minutes = Math.floor(safe / 60);
+  const rest = safe % 60;
+  return rest ? `${minutes}min ${rest}s` : `${minutes}min`;
+}
+
 export function updateOverallPercent(progress: ApkDownloadProgress | null) {
   if (!progress) return 0;
   const transfer = clamp(progress.percent);
@@ -60,6 +68,24 @@ export function updateStageLabel(progress: ApkDownloadProgress | null) {
     case 'opening-installer': return 'Abrindo instalador Android';
     case 'ready': return 'Instalador aberto';
     default: return 'Atualizando aplicativo';
+  }
+}
+
+function updateStageIndex(progress: ApkDownloadProgress | null) {
+  if (!progress) return 1;
+  switch (progress.phase) {
+    case 'refreshing-manifest': return 1;
+    case 'preparing-backup': return 2;
+    case 'awaiting-permission': return 3;
+    case 'connecting': return 4;
+    case 'downloading':
+    case 'downloading-system':
+    case 'downloading-http': return 5;
+    case 'copying': return 6;
+    case 'verifying': return 7;
+    case 'opening-installer':
+    case 'ready': return 8;
+    default: return 1;
   }
 }
 
@@ -102,6 +128,38 @@ function useTransferEstimate(progress: ApkDownloadProgress | null) {
   return { speed, etaSeconds };
 }
 
+function useUpdatePhaseActivity(progress: ApkDownloadProgress | null) {
+  const phaseStartedAtRef = useRef(Date.now());
+  const lastByteActivityRef = useRef({ at: Date.now(), bytes: Math.max(0, Number(progress?.downloadedBytes || 0)) });
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const at = Date.now();
+    phaseStartedAtRef.current = at;
+    lastByteActivityRef.current = { at, bytes: Math.max(0, Number(progress?.downloadedBytes || 0)) };
+    setNow(at);
+  }, [progress?.phase]);
+
+  useEffect(() => {
+    if (!progress) return;
+    const bytes = Math.max(0, Number(progress.downloadedBytes || 0));
+    if (bytes !== lastByteActivityRef.current.bytes) {
+      lastByteActivityRef.current = { at: Date.now(), bytes };
+    }
+  }, [progress?.downloadedBytes, progress]);
+
+  useEffect(() => {
+    if (!progress || progress.phase === 'ready') return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [progress?.phase, progress]);
+
+  return {
+    phaseElapsedSeconds: Math.max(0, Math.floor((now - phaseStartedAtRef.current) / 1000)),
+    stalledSeconds: Math.max(0, Math.floor((now - lastByteActivityRef.current.at) / 1000)),
+  };
+}
+
 export function UpdateTransferProgressV4010({ progress, targetVersion, compact = false, completed = false }: {
   progress: ApkDownloadProgress | null;
   targetVersion?: string | null;
@@ -109,27 +167,48 @@ export function UpdateTransferProgressV4010({ progress, targetVersion, compact =
   completed?: boolean;
 }) {
   const { speed, etaSeconds } = useTransferEstimate(progress);
+  const { phaseElapsedSeconds, stalledSeconds } = useUpdatePhaseActivity(progress);
   const overall = completed ? 100 : updateOverallPercent(progress);
   const stage = completed ? 'Atualização concluída' : updateStageLabel(progress);
-  const transferActive = Boolean(progress && ['downloading', 'downloading-system', 'downloading-http', 'copying'].includes(progress.phase));
+  const downloadActive = Boolean(progress && ['downloading', 'downloading-system', 'downloading-http'].includes(progress.phase));
+  const stageIndex = completed ? 8 : updateStageIndex(progress);
+  const stageTotal = 8;
   const detail = completed
     ? `BuildMaster v${targetVersion || 'nova'} instalado com sucesso.`
     : progress?.phase === 'ready'
       ? 'O APK foi validado. Confirme “Atualizar” no instalador do Android; essa etapa final é controlada pelo sistema.'
       : progress?.phase === 'opening-installer'
-        ? 'Download e validação concluídos. Preparando a confirmação final do Android.'
-        : progress?.phase === 'awaiting-permission'
-          ? 'Ative “Permitir desta fonte” e volte ao BuildMaster para continuar.'
-          : transferActive && progress
-            ? `${formatProgressBytes(progress.downloadedBytes)}${progress.totalBytes > 0 ? ` de ${formatProgressBytes(progress.totalBytes)}` : ''}`
-            : 'O BuildMaster acompanha cada etapa até entregar o APK ao instalador.';
+        ? 'Download e validação concluídos. Entregando o APK ao instalador do Android.'
+        : progress?.phase === 'verifying'
+          ? `Conferindo SHA-256, tamanho, pacote e versão • ${formatActivityDuration(phaseElapsedSeconds)} nesta etapa.`
+          : progress?.phase === 'copying'
+            ? `Copiando o APK baixado para a área segura do instalador • ${formatActivityDuration(phaseElapsedSeconds)} nesta etapa.`
+            : progress?.phase === 'awaiting-permission'
+              ? 'Ative “Permitir desta fonte” e volte ao BuildMaster para continuar.'
+              : progress?.phase === 'preparing-backup'
+                ? `Criando a cópia de recuperação antes da troca de versão • ${formatActivityDuration(phaseElapsedSeconds)} nesta etapa.`
+                : progress?.phase === 'refreshing-manifest'
+                  ? `Consultando versão, tamanho e assinatura do pacote oficial • ${formatActivityDuration(phaseElapsedSeconds)} nesta etapa.`
+                  : progress?.phase === 'connecting'
+                    ? `Abrindo a rota oficial e aguardando o servidor responder • ${formatActivityDuration(phaseElapsedSeconds)} nesta etapa.`
+                    : downloadActive && progress
+                      ? progress.downloadedBytes <= 0
+                        ? `Aguardando os primeiros dados há ${formatActivityDuration(phaseElapsedSeconds)}. O download continua ativo.`
+                        : `${formatProgressBytes(progress.downloadedBytes)}${progress.totalBytes > 0 ? ` de ${formatProgressBytes(progress.totalBytes)}` : ''}${stalledSeconds >= 5 ? ` • sem novos bytes há ${formatActivityDuration(stalledSeconds)}` : ''}`
+                      : 'O BuildMaster acompanha cada etapa até entregar o APK ao instalador.';
+
+  const activityMeta = completed
+    ? `Etapa ${stageTotal} de ${stageTotal}`
+    : downloadActive && speed > 0
+      ? `Etapa ${stageIndex} de ${stageTotal} • ${formatProgressBytes(speed)}/s${etaSeconds ? ` • faltam ${formatRemainingTime(etaSeconds)}` : ''}`
+      : `Etapa ${stageIndex} de ${stageTotal} • ${formatActivityDuration(phaseElapsedSeconds)} nesta etapa`;
 
   return <section className={`v4020-operation-progress v4020-update-progress ${compact ? 'is-compact' : ''} ${completed ? 'is-complete' : ''}`} role="status" aria-live="polite" aria-label={`Atualização do aplicativo: ${overall}%`}>
-    <div className="v4020-progress-icon">{completed ? <CheckCircle2 size={20} /> : progress?.phase === 'ready' || progress?.phase === 'opening-installer' ? <Smartphone size={20} /> : progress?.phase === 'verifying' ? <ShieldCheck size={20} /> : transferActive ? <Download size={20} /> : <Loader2 className="spin" size={20} />}</div>
+    <div className="v4020-progress-icon">{completed ? <CheckCircle2 size={20} /> : progress?.phase === 'ready' || progress?.phase === 'opening-installer' ? <Smartphone size={20} /> : progress?.phase === 'verifying' ? <ShieldCheck size={20} /> : downloadActive || progress?.phase === 'copying' ? <Download size={20} /> : <Loader2 className="spin" size={20} />}</div>
     <div className="v4020-progress-main">
       <div className="v4020-progress-heading"><div><strong>{stage}</strong>{targetVersion && <span>v{targetVersion}</span>}</div><b>{overall}%</b></div>
       <div className="v4020-progress-track"><i style={{ width: `${overall}%` }} /></div>
-      <div className="v4020-progress-meta"><span>{detail}</span>{transferActive && speed > 0 && <span><Clock3 size={12} /> {formatProgressBytes(speed)}/s{etaSeconds ? ` • faltam ${formatRemainingTime(etaSeconds)}` : ''}</span>}</div>
+      <div className="v4020-progress-meta"><span>{detail}</span><span><Clock3 size={12} /> {activityMeta}</span></div>
     </div>
   </section>;
 }
