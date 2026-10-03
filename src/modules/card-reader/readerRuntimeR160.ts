@@ -35,12 +35,22 @@ let analysisRuntimePromiseR163: Promise<typeof import('./readerAnalysisRuntimeR1
 let interactionRuntimePromiseR164: Promise<typeof import('./readerInteractionRuntimeR164')> | null = null;
 
 export function loadBackgroundOcrRuntimeR160() {
-  if (!backgroundPromise) backgroundPromise = import('@/lib/backgroundOcrV3840');
+  if (!backgroundPromise) {
+    backgroundPromise = import('@/lib/backgroundOcrV3840').catch((cause) => {
+      backgroundPromise = null;
+      throw cause;
+    });
+  }
   return backgroundPromise;
 }
 
 export function loadOcrQueueRuntimeR160() {
-  if (!queuePromise) queuePromise = import('@/modules/card-reader/ocrQueue');
+  if (!queuePromise) {
+    queuePromise = import('@/modules/card-reader/ocrQueue').catch((cause) => {
+      queuePromise = null;
+      throw cause;
+    });
+  }
   return queuePromise;
 }
 
@@ -103,7 +113,10 @@ export function loadReaderRuntimeR160(): Promise<ReaderRuntimeR160> {
       imageSafety,
       queue,
       imageProcessing,
-    }));
+    })).catch((cause) => {
+      runtimePromise = null;
+      throw cause;
+    });
   }
   return runtimePromise;
 }
@@ -113,7 +126,12 @@ export function preloadReaderRuntimeR160(): void {
 }
 
 export function loadReaderAnalysisRuntimeR163() {
-  if (!analysisRuntimePromiseR163) analysisRuntimePromiseR163 = import('./readerAnalysisRuntimeR163');
+  if (!analysisRuntimePromiseR163) {
+    analysisRuntimePromiseR163 = import('./readerAnalysisRuntimeR163').catch((cause) => {
+      analysisRuntimePromiseR163 = null;
+      throw cause;
+    });
+  }
   return analysisRuntimePromiseR163;
 }
 
@@ -123,7 +141,12 @@ export function preloadReaderAnalysisRuntimeR163(): void {
 
 
 export function loadReaderInteractionRuntimeR164() {
-  if (!interactionRuntimePromiseR164) interactionRuntimePromiseR164 = import('./readerInteractionRuntimeR164');
+  if (!interactionRuntimePromiseR164) {
+    interactionRuntimePromiseR164 = import('./readerInteractionRuntimeR164').catch((cause) => {
+      interactionRuntimePromiseR164 = null;
+      throw cause;
+    });
+  }
   return interactionRuntimePromiseR164;
 }
 
