@@ -138,10 +138,10 @@ export async function enhanceImageLocally(file: File | Blob, mode: LocalEnhancem
   if (!bitmap) return file;
   const canvas = document.createElement('canvas');
   try {
-    const maxWidth = 1800;
-    const scale = Math.min(2.2, Math.max(1, maxWidth / Math.max(1, bitmap.width)));
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(1, Math.max(bitmap.width, bitmap.height)));
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return file;
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
