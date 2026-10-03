@@ -159,6 +159,7 @@ for (const regression of [
   'tests/v40-80-r518-determinism-firewall-regression.ts',
   'tests/v40-80-r518-certification-firewall-regression.ts',
   'tests/v40-80-r518-persisted-facade-regression.ts',
+  'tests/v40-80-r519-android-reader-memory-regression.mjs',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
