@@ -195,4 +195,22 @@ assert.equal(/persistMatchValidationRepositoryR137|writeAccountStorage|writeMatc
 assert.ok(/readMatchValidationRepositoryR137/.test(source),
   'Origem PERSISTED_REAL operacional deve vir explicitamente do leitor R137.');
 
-console.log('R518 persisted facade aprovado: TEST_FIXTURE não promove, R137 real pode alimentar readiness e a fachada permanece read-only.');
+const matchLaboratory = readFileSync('src/modules/matches/MatchLaboratory.tsx', 'utf8');
+assert.match(matchLaboratory, /buildRealMatchCalibrationEvidenceR518/,
+  'Partidas precisa calcular o readiness R518 sobre a evidência real já recebida do R137.');
+assert.match(matchLaboratory, /buildGameplayCalibrationBridgeR516/,
+  'Partidas deve reconstruir o bridge R516 oficial em memória, sem criar um writer paralelo.');
+assert.match(matchLaboratory, /origin:\s*['"]PERSISTED_REAL['"]/,
+  'O painel operacional não pode rotular fixture/síntese como evidência real.');
+assert.match(matchLaboratory, /Evidência real R510 \/ R518/,
+  'Partidas precisa expor o painel de readiness aprovado pelo usuário.');
+assert.match(matchLaboratory, /R119\s*→\s*R126\s*→\s*R128/,
+  'A UI precisa deixar explícita a autoridade final preservada.');
+assert.match(matchLaboratory, /canCertifyR510/,
+  'A UI deve derivar o aviso de não-certificação do próprio contrato de autoridade R518.');
+assert.doesNotMatch(matchLaboratory, /persistMatchValidationRepositoryR137/,
+  'O painel de readiness não pode ganhar writer R137.');
+assert.doesNotMatch(matchLaboratory, /ENGINE_CERTIFIED/,
+  'Readiness de evidência não pode ser apresentado como ENGINE_CERTIFIED.');
+
+console.log('R518 persisted facade + painel Partidas aprovado: R137 real alimenta readiness, R516 é reconstruído read-only e nenhuma autoridade final é promovida.');
