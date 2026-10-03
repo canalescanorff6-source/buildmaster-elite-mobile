@@ -285,6 +285,27 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
   }
 
   async function analyzeSelectedImage(fileOverride?: File, resumed = false) {
+    const activeFile = fileOverride ?? selectedFile;
+    if (!activeFile && rawText.trim().length <= 2) {
+      setLoading(false);
+      setOcrCancelable(false);
+      setReaderProgress(null);
+      setStatus('Selecione novamente a imagem da carta antes de iniciar a leitura.');
+      return;
+    }
+    const bootstrapStartedAt = Date.now();
+    setLoading(true);
+    setOcrCancelable(true);
+    setReaderProgress({
+      percent: 1,
+      phase: 'Preparando leitor',
+      detail: 'Carregando o motor OCR local e protegendo a leitura.',
+      startedAt: bootstrapStartedAt,
+      completed: 0,
+      total: 0,
+      deadlineMs: 90_000,
+    });
+    setStatus('Preparando o leitor OCR local...');
     await markActiveReadingSessionR470('OCR_RUNNING').catch(() => null);
     try {
       const runtime = await loadReaderAnalysisRuntimeR163();
@@ -295,7 +316,13 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       return output;
     } catch (cause) {
       await markActiveReadingSessionR470('ERROR', { errorCode: 'OCR_FAILED' }).catch(() => null);
-      throw cause;
+      setLoading(false);
+      setOcrCancelable(false);
+      setReaderProgress(null);
+      const message = cause instanceof Error ? cause.message : 'Falha ao carregar o motor OCR local';
+      void recordSafeRuntimeError({ area: 'reader-bootstrap', code: 'ocr_bootstrap_failed', message });
+      setStatus(`Não foi possível iniciar o leitor OCR. ${message} Toque em Ler imagem e continuar para tentar novamente.`);
+      return undefined;
     }
   }
 
