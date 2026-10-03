@@ -21,7 +21,7 @@ assert.match(fileDigest, /Assinatura simplificada pronta/,
 
 assert.match(progressUi, /function useUpdatePhaseActivity\(/,
   'R535: o progresso de atualização precisa manter relógio de atividade por etapa.');
-assert.match(progressUi, /Etapa \{stageIndex\} de \{stageTotal\}/,
+assert.match(progressUi, /Etapa \$\{stageIndex\} de \$\{stageTotal\}/,
   'R535: o usuário deve enxergar a posição da atualização no fluxo completo.');
 assert.match(progressUi, /sem novos bytes há/,
   'R535: download temporariamente sem bytes novos deve continuar explicando que está ativo.');
