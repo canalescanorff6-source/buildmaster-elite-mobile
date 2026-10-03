@@ -31,4 +31,18 @@ assert.match(
   'R519: cada recorte deve liberar bitmap/canvas antes do próximo quadrado para impedir acúmulo de memória.',
 );
 
-console.log('R519 aprovada: leitor Android limita buffers full-frame e libera canvases entre etapas sem alterar R119/R126/R128.');
+// R520 — o atualizador não pode parecer travado durante fila/conexão/verificação.
+const branding = read('scripts/install-android-branding.mjs');
+const updaterPatch = read('scripts/patch-android-update-progress-r520.mjs');
+const updateProgressUi = read('src/components/ProgressBarsV4010.tsx');
+assert.match(branding, /patch-android-update-progress-r520\.mjs/, 'R520: o build Android deve aplicar o patch de telemetria do atualizador.');
+for (const phase of ['waiting-download', 'download-paused', 'verifying-checksum', 'verifying-package', 'verifying-signature', 'finalizing-file']) {
+  assert.ok(updaterPatch.includes(phase), `R520: fase nativa ausente: ${phase}.`);
+  assert.ok(updateProgressUi.includes(phase), `R520: UI não reconhece a fase ${phase}.`);
+}
+assert.match(updaterPatch, /verifiedBytes[\s\S]{0,700}emitProgress\("verifying-checksum"/, 'R520: SHA-256 precisa publicar progresso incremental por bytes.');
+assert.match(updateProgressUi, /indeterminatePhases/, 'R520: etapas sem total conhecido precisam aparecer como atividade indeterminada, não barra congelada.');
+assert.match(updateProgressUi, /<progress[\s\S]{0,180}v4020-progress-track/, 'R520: a barra deve trocar para progresso indeterminado durante espera/conexão.');
+assert.match(updateProgressUi, /Tempo nesta etapa/, 'R520: o usuário deve enxergar que a etapa continua viva mesmo antes do primeiro byte.');
+
+console.log('R519/R520 aprovadas: leitor limita memória e o atualizador expõe fila, transferência e validações sem progresso falso.');
