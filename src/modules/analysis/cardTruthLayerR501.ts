@@ -5,7 +5,9 @@ export const CARD_TRUTH_LAYER_R501_VERSION = '40.80-r501-card-truth-layer-v2' as
 export function normalizeConfidenceR501(value: unknown): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
-  const normalized = numeric >= 0 && numeric < 1 ? numeric * 100 : numeric;
+  // Compatibilidade real entre produtores históricos 0–1 e atuais 0–100.
+  // 1.0 é confiança máxima na escala legada, não 1%.
+  const normalized = numeric >= 0 && numeric <= 1 ? numeric * 100 : numeric;
   return Math.max(0, Math.min(100, normalized));
 }
 
