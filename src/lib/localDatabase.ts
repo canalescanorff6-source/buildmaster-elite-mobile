@@ -1,4 +1,4 @@
-import { accountDatabaseName } from './accountStorage';
+import { accountDatabaseName, getActiveAccountIdentity } from './accountStorage';
 import { safeStorageGet, safeStorageRemove } from './safeLocalStorage';
 
 const DB_BASE_NAME = 'buildmaster_runtime_v27_10';
@@ -165,6 +165,13 @@ export async function runtimeTrimStore(storeName: RuntimeStoreName, keep = 120):
 
 export async function migrateLegacyRuntimeData(): Promise<{ migrated: number; skipped: number }> {
   if (typeof window === 'undefined') return { migrated: 0, skipped: 0 };
+
+  // Os dados globais antigos pertencem à instalação pré-contas. Assim como
+  // readAccountStorage, somente a conta administrativa pode reivindicá-los.
+  // Uma conta comum jamais pode herdar ou apagar esse legado de outra pessoa.
+  const identity = getActiveAccountIdentity();
+  if (identity && identity.role !== 'admin') return { migrated: 0, skipped: 0 };
+
   let migrated = 0;
   let skipped = 0;
   const legacyKeys = [
