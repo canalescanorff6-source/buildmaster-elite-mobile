@@ -20,11 +20,13 @@ import { emptyManualFields } from '@/modules/vault/cardHistoryStore';
 import { inspectPrintQuality, enhanceImageLocally } from '@/lib/ocr';
 import { suggestedEnhancement } from '@/lib/premiumReading';
 import { recordSafeRuntimeError } from '@/lib/safeDiagnostics';
-import { loadBackgroundOcrRuntimeR160, loadOcrQueueRuntimeR160, loadReaderRuntimeR160 } from '@/modules/card-reader/readerRuntimeR160';
+import { loadBackgroundOcrRuntimeR160, loadImageSafetyRuntimeR540, loadOcrQueueRuntimeR160, loadReaderRuntimeR160 } from '@/modules/card-reader/readerRuntimeR160';
 
 export const READER_INTERACTION_RUNTIME_R164_VERSION = '40.80-r164-reader-interaction-runtime-v1' as const;
 
 type SetState<T> = Dispatch<SetStateAction<T>>;
+
+const isAndroidReaderRuntimeR540 = () => typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
 
 type ReaderImageMemoryPortR164 = {
   replacePreview(blob: Blob): string;
@@ -106,7 +108,14 @@ export function createCardVisionReaderInteractionOperationsR164(context: ReaderI
   }
 
   async function handleFile(file: File) {
-    const { imageSafety, backgroundOcr, ocrWorker, cardPreview } = await loadReaderRuntimeR160();
+    // R540: validar/registrar a seleção sem materializar o grafo OCR inteiro.
+    // Em Android a etapa de seleção precisa manter pico de memória mínimo;
+    // crop, quality, enhancement e Tesseract continuam disponíveis quando a
+    // leitura efetivamente começar.
+    const [imageSafety, backgroundOcr] = await Promise.all([
+      loadImageSafetyRuntimeR540(),
+      loadBackgroundOcrRuntimeR160(),
+    ]);
     try {
       await imageSafety.validateImageFile(file);
     } catch (error) {
@@ -121,6 +130,15 @@ export function createCardVisionReaderInteractionOperationsR164(context: ReaderI
     setManualFields(emptyManualFields()); setManualMode(false); setRawText(''); setOcrDone(false); setLoading(false);
     setPremiumReadings([]); setTotalReadingSession(null); setSinglePrintSession(null);
     readerImageMemory.releaseEnhanced(); setEnhancedPreview(null);
+
+    if (isAndroidReaderRuntimeR540()) {
+      setQualityReport(null);
+      setEnhancementMode('original');
+      setStatus('Imagem selecionada. No Android, o OCR e os previews pesados serão preparados somente ao iniciar a leitura para evitar fechamento por memória.');
+      return;
+    }
+
+    const { ocrWorker, cardPreview } = await loadReaderRuntimeR160();
     setStatus('Imagem selecionada. Confira posição, estilo e tática antes de executar a leitura premium.');
     void ocrWorker.prewarmOcrWorker().catch(() => undefined);
     const croppedPreview = await cardPreview.createPlayerCardPreviewR130(file).catch(() => null);
