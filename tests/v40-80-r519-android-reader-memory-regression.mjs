@@ -16,19 +16,19 @@ assert.match(
 const preprocessImage = imageProcessing.match(/export async function preprocessImage[\s\S]*?\n}/)?.[0] ?? '';
 assert.match(
   preprocessImage,
-  /workload: 'ocr-full',[\s\S]{0,180}preferredLongestSide: 1800,[\s\S]{0,180}maxScale: 1/,
+  /workload:\s*['"]ocr-full['"][\s\S]{0,180}preferredLongestSide:\s*1800[\s\S]{0,180}maxScale:\s*1/,
   'R519: o passe OCR da tela completa deve ser limitado a 1800px e nunca fazer upscale.',
 );
 assert.match(
   preprocessImage,
-  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width = 1;[\s\S]{0,120}canvas\.height = 1;/,
+  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width\s*=\s*1;[\s\S]{0,120}canvas\.height\s*=\s*1;/,
   'R519: o canvas full-frame deve liberar explicitamente o backing store ao terminar.',
 );
 
 const cropImage = imageProcessing.match(/export async function cropImage[\s\S]*?\n}/)?.[0] ?? '';
 assert.match(
   cropImage,
-  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width = 1;[\s\S]{0,120}canvas\.height = 1;/,
+  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width\s*=\s*1;[\s\S]{0,120}canvas\.height\s*=\s*1;/,
   'R519: cada recorte deve liberar bitmap/canvas antes do próximo quadrado para impedir acúmulo de memória.',
 );
 
@@ -46,5 +46,6 @@ assert.match(updateProgressUi, /indeterminatePhases/, 'R520: etapas sem total co
 assert.match(updateProgressUi, /<progress[\s\S]{0,180}v4020-progress-track/, 'R520: a barra deve trocar para progresso indeterminado durante espera/conexão.');
 assert.match(updateProgressUi, /Tempo nesta etapa/, 'R520: o usuário deve enxergar que a etapa continua viva mesmo antes do primeiro byte.');
 execFileSync(process.execPath,['tests/v40-80-r520-reader-real-device-regression.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/v40-80-r538-reader-recovery-regression.mjs'],{stdio:'inherit'});
 
-console.log('R519/R520 aprovadas: leitor limita memória, falha fechado sem evidência e o atualizador expõe todas as etapas reais.');
+console.log('R519/R520/R538 aprovadas: leitor limita memória, preserva detalhe útil, falha fechado e libera OCR deterministicamente.');
