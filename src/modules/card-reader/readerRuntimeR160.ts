@@ -30,6 +30,7 @@ type ReaderRuntimeR160 = {
 
 let runtimePromise: Promise<ReaderRuntimeR160> | null = null;
 let backgroundPromise: Promise<typeof import('@/lib/backgroundOcrV3840')> | null = null;
+let imageSafetyPromiseR540: Promise<typeof import('@/modules/images/imageSafety')> | null = null;
 let queuePromise: Promise<typeof import('@/modules/card-reader/ocrQueue')> | null = null;
 let analysisRuntimePromiseR163: Promise<typeof import('./readerAnalysisRuntimeR163')> | null = null;
 let interactionRuntimePromiseR164: Promise<typeof import('./readerInteractionRuntimeR164')> | null = null;
@@ -42,6 +43,17 @@ export function loadBackgroundOcrRuntimeR160() {
     });
   }
   return backgroundPromise;
+}
+
+/** R540 — seleção de imagem não deve materializar todo o grafo OCR no Android. */
+export function loadImageSafetyRuntimeR540() {
+  if (!imageSafetyPromiseR540) {
+    imageSafetyPromiseR540 = import('@/modules/images/imageSafety').catch((cause) => {
+      imageSafetyPromiseR540 = null;
+      throw cause;
+    });
+  }
+  return imageSafetyPromiseR540;
 }
 
 export function loadOcrQueueRuntimeR160() {
@@ -72,7 +84,7 @@ export function loadReaderRuntimeR160(): Promise<ReaderRuntimeR160> {
       import('@/modules/card-reader/templateCalibration'),
       import('@/lib/ocrWorkerManager'),
       loadBackgroundOcrRuntimeR160(),
-      import('@/modules/images/imageSafety'),
+      loadImageSafetyRuntimeR540(),
       loadOcrQueueRuntimeR160(),
       import('@/modules/card-reader/imageProcessing'),
     ]).then(([
