@@ -36,6 +36,7 @@ const totalReader = require('../src/lib/totalCardReader') as typeof import('../s
 const trainingCore = require('../src/lib/trainingPlanCore') as typeof import('../src/lib/trainingPlanCore');
 const finalSkills = require('../src/lib/finalAdditionalSkillSetR457') as typeof import('../src/lib/finalAdditionalSkillSetR457');
 const trainingBudget = require('../src/modules/analysis/cardTrainingBudgetParserR130') as typeof import('../src/modules/analysis/cardTrainingBudgetParserR130');
+const skillParser = require('../src/lib/cardSkillParser') as typeof import('../src/lib/cardSkillParser');
 
 // 1) JSON corrompido deve ser preservado para recuperação, nunca apagado durante leitura.
 storage.setItem('broken-json', '{"unfinished":');
@@ -118,5 +119,11 @@ const explicitBudget = trainingBudget.parseCardTrainingBudgetR130('Nível máxim
 assert.equal(explicitBudget.level, 31);
 assert.equal(explicitBudget.pointBudget.total, 64);
 assert.equal(explicitBudget.pointBudget.source, 'OCR');
+
+// 9) Um slot adicional explícito porém não reconhecido não pode desaparecer do inventário.
+const skillInventory = skillParser.parseCardSkillInventory('HABILIDADES ADICIONAIS: Passe de primeira, Habilidade OCR ilegível');
+assert.ok(skillInventory.additional.includes('Passe de primeira'));
+assert.ok(skillInventory.additional.includes('Habilidade OCR ilegível'));
+assert.ok(skillInventory.unknown.includes('Habilidade OCR ilegível'));
 
 console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento, PP e slots de habilidade protegidos.');
