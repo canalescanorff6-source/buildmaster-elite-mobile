@@ -31,7 +31,9 @@ export type ProductionAuthorityR128 = {
 
 type WithProductionAuthorityR128 = AnalysisResult & {
   productionAuthorityR128?: ProductionAuthorityR128;
+  productionAuthorityR126?: { status?: string };
   cleanSlate2027R119?: {
+    status?: string;
     usagePosition?: string;
     usageFunction?: string;
     finalAdditionalSkillSetR457?: unknown;
@@ -75,24 +77,27 @@ function impetoFingerprint(result: AnalysisResult) {
  * Qualquer transformação posterior que mexa nesses campos torna o selo inválido.
  */
 export function productionOutputFingerprintR128(result: AnalysisResult) {
+  const protectedResult = result as WithProductionAuthorityR128;
   const source = [
     PRODUCTION_AUTHORITY_R128_VERSION,
     cardIdentityFingerprintR126(result.parsed),
     cardEvidenceFingerprintR126(result.parsed),
     String(result.bestPosition?.code ?? ''),
-    String((result as WithProductionAuthorityR128).cleanSlate2027R119?.usagePosition ?? result.bestPosition?.code ?? ''),
-    String((result as WithProductionAuthorityR128).cleanSlate2027R119?.usageFunction ?? ''),
+    String(protectedResult.cleanSlate2027R119?.usagePosition ?? result.bestPosition?.code ?? ''),
+    String(protectedResult.cleanSlate2027R119?.usageFunction ?? ''),
+    String(protectedResult.cleanSlate2027R119?.status ?? ''),
+    String(protectedResult.productionAuthorityR126?.status ?? ''),
     trainingFingerprint(result),
     result.trainingPointsTotal,
     result.trainingPointsUsed,
     result.trainingPointsRemaining,
     (result.recommendedSkills ?? []).map(normalizeText).join('>'),
     JSON.stringify((result as AnalysisResult & { finalAdditionalSkillSetR457?: unknown }).finalAdditionalSkillSetR457 ?? null),
-    JSON.stringify((result as WithProductionAuthorityR128).cleanSlate2027R119?.finalAdditionalSkillSetR457 ?? null),
+    JSON.stringify(protectedResult.cleanSlate2027R119?.finalAdditionalSkillSetR457 ?? null),
     JSON.stringify((result as AnalysisResult & { finalImpetoDecisionR457?: unknown }).finalImpetoDecisionR457 ?? null),
-    JSON.stringify((result as WithProductionAuthorityR128).cleanSlate2027R119?.finalImpetoDecisionR457 ?? null),
+    JSON.stringify(protectedResult.cleanSlate2027R119?.finalImpetoDecisionR457 ?? null),
     impetoFingerprint(result),
-    JSON.stringify((result as WithProductionAuthorityR128).cleanSlate2027R119?.gameplayImpactR458 ?? null),
+    JSON.stringify(protectedResult.cleanSlate2027R119?.gameplayImpactR458 ?? null),
     JSON.stringify((result as AnalysisResult & { buildOutcomeCalibrationR460?: unknown }).buildOutcomeCalibrationR460 ?? null)
   ].join('|');
   return `output-r128-${fnv1a(source)}`;
