@@ -5,6 +5,8 @@ const read=(path)=>fs.readFileSync(path,'utf8');
 const imageProcessing=read('src/modules/card-reader/imageProcessing.ts');
 const manualReader=read('src/modules/card-reader/manualCalibrationFastReader.ts');
 const actions=read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const interaction=read('src/modules/card-reader/readerInteractionRuntimeR164.ts');
+const readerRuntime=read('src/modules/card-reader/readerRuntimeR160.ts');
 const ocr=read('src/lib/ocr.ts');
 const worker=read('src/lib/ocrWorkerManager.ts');
 
@@ -42,4 +44,20 @@ assert.match(worker,/ocrReading[\s\S]{0,1000}terminateIdleWorker|terminateIdleWo
 assert.match(worker,/android[\s\S]{0,1400}(?:600|750|800|1000|1200)/i,
   'R536 leitor: Android precisa de janela curta de liberação do worker após o OCR, não 45–150 segundos.');
 
-console.log('R520/R536/R538 leitor aprovado: fallback, fail-closed, detalhe recuperado e memória Android limitada.');
+// R540 — selecionar um print no Android não pode carregar todo o runtime OCR nem
+// disparar pré-aquecimento/crop/análise de qualidade antes de o usuário iniciar a leitura.
+assert.match(readerRuntime,/loadImageSafetyRuntimeR540/,
+  'R540 leitor: validação da imagem precisa ter loader leve independente do runtime OCR completo.');
+assert.match(interaction,/isAndroidReaderRuntimeR540/,
+  'R540 leitor: seleção de imagem precisa reconhecer o caminho Android de baixo pico de memória.');
+assert.match(interaction,/loadImageSafetyRuntimeR540\(\)[\s\S]{0,900}loadBackgroundOcrRuntimeR160\(\)/,
+  'R540 leitor: seleção Android deve validar e limpar checkpoint sem carregar os 18 módulos do OCR.');
+const handleFile = interaction.match(/async function handleFile\(file: File\)[\s\S]*?\n  }\n\n  async function resumeInterruptedReading/)?.[0] ?? '';
+assert.match(handleFile,/if \(isAndroidReaderRuntimeR540\(\)\)[\s\S]{0,900}return;/,
+  'R540 leitor: Android deve encerrar o bootstrap leve antes do pré-aquecimento e dos previews pesados.');
+assert.match(handleFile,/if \(isAndroidReaderRuntimeR540\(\)\)[\s\S]{0,1400}return;[\s\S]{0,1000}loadReaderRuntimeR160\(\)/,
+  'R540 leitor: runtime OCR completo só pode ser carregado após o early-return Android da seleção.');
+assert.doesNotMatch(handleFile,/loadReaderRuntimeR160\(\)[\s\S]{0,1000}if \(isAndroidReaderRuntimeR540\(\)\)/,
+  'R540 leitor: não pode carregar o runtime pesado e só depois decidir pelo caminho Android leve.');
+
+console.log('R520/R536/R538/R540 leitor aprovado: fallback, fail-closed, detalhe recuperado e bootstrap Android com pico de memória limitado.');
