@@ -23,6 +23,7 @@ const r417 = read('scripts/apply-r417-autonomous-card-vault.mjs');
 const r192Closure = read('scripts/check-result-workspace-static-closure-r192.mjs');
 const readerRuntimeR160 = read('src/modules/card-reader/readerRuntimeR160.ts');
 const readerActionsR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerAnalysisR163 = read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 
 // Bug real: tocar em "Ler imagem"/"Ler com os quadrados" podia apenas piscar.
 // R520 adicionou validação de sessão entre o loading e o runtime; o contrato é de
@@ -51,6 +52,32 @@ assert.match(
   readerRuntimeR160,
   /interactionRuntimePromiseR164 = import\('\.\/readerInteractionRuntimeR164'\)\.catch\(\(cause\) => \{\s*interactionRuntimePromiseR164 = null;\s*throw cause;\s*\}\)/,
   'R160: chunk de interação do leitor precisa ser retryable após falha.',
+);
+
+// R541 — OCR físico e motor de produção não podem disputar o mesmo pico de memória no Android.
+// O controller OCR deve carregar somente tipos do domínio durante a leitura; a ficha completa
+// entra de forma lazy depois que o worker Tesseract foi encerrado.
+assert.doesNotMatch(
+  readerAnalysisR163,
+  /import\s*\{[^}]*createProductionAnalysisR138[^}]*\}\s*from\s*['"]@\/modules\/analysis['"]/,
+  'R541: readerAnalysis não pode importar o barrel pesado @/modules/analysis durante o bootstrap do OCR.',
+);
+assert.match(
+  readerAnalysisR163,
+  /import type \{[^}]*AnalysisResult[^}]*PositionCode[^}]*TacticalProfile[^}]*\} from ['"]@\/lib\/analyzerDomain['"]/,
+  'R541: tipos da ficha devem vir diretamente do domínio, sem materializar os motores R510-R518.',
+);
+assert.match(
+  readerAnalysisR163,
+  /import\(['"]@\/modules\/analysis\/productionOrchestratorR138['"]\)/,
+  'R541: produção deve ser carregada dinamicamente apenas após a leitura OCR.',
+);
+const singleReaderR541 = readerAnalysisR163.match(/async function analyzeSelectedImage[\s\S]*?(?=\n\s*async function analyzeTotalCardCaptures)/)?.[0] ?? '';
+const releaseWorkerIndexR541 = singleReaderR541.indexOf('await releaseOcrWorker()');
+const loadProductionIndexR541 = singleReaderR541.indexOf('loadProductionAnalysisRuntimeR541()');
+assert.ok(
+  releaseWorkerIndexR541 >= 0 && loadProductionIndexR541 > releaseWorkerIndexR541,
+  'R541: o worker OCR deve ser encerrado antes de materializar ficha, Skills, Ímpeto e demais motores de produção.',
 );
 
 const repair = read('scripts/repair-critical-routes.mjs');
