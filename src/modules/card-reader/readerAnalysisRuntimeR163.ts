@@ -6,7 +6,7 @@
  * mantendo OCR, evidência e produção fora da árvore inicial.
  */
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import { createProductionAnalysisR138, type AnalysisResult, type PositionCode, type TacticalProfile } from '@/modules/analysis';
+import type { AnalysisResult, PositionCode, TacticalProfile } from '@/lib/analyzerDomain';
 import { inspectPrintQuality, type OcrZone } from '@/lib/ocr';
 import { ensureZoneCoverage, type PremiumZoneReading } from '@/lib/premiumReading';
 import type { PrintQualityReport } from '@/lib/validation';
@@ -33,6 +33,18 @@ import { readPositionProficiencyGridR416 } from './positionProficiencyVisionR416
 import { deriveTotalReadingFinalizationR501 } from './totalReaderFinalizationR501';
 
 export const READER_ANALYSIS_RUNTIME_R163_VERSION = '40.80-r163-reader-analysis-runtime-v1' as const;
+
+let productionAnalysisPromiseR541: Promise<typeof import('@/modules/analysis/productionOrchestratorR138')> | null = null;
+
+async function loadProductionAnalysisRuntimeR541() {
+  if (!productionAnalysisPromiseR541) {
+    productionAnalysisPromiseR541 = import('@/modules/analysis/productionOrchestratorR138').catch((cause) => {
+      productionAnalysisPromiseR541 = null;
+      throw cause;
+    });
+  }
+  return productionAnalysisPromiseR541;
+}
 
 type SetState<T> = Dispatch<SetStateAction<T>>;
 
@@ -151,7 +163,7 @@ export function createCardVisionReaderAnalysisOperationsR163(context: ReaderAnal
     const { EFHUB_CANONICAL_NORMALIZER_VERSION, normalizeEfhubProfileImage } = efhubCanonical;
     const { buildDeterministicEfhubOcrZones, EFHUB_DETERMINISTIC_ZONES_VERSION } = efhubDeterministic;
     const { applyOcrTemplateCalibration, applyRememberedCardBox, findBestOcrTemplateCalibration } = templateCalibration;
-    const { fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } = ocrWorker;
+    const { fileDigest, recognizeWithOcrWorker, subscribeOcrProgress, releaseOcrWorker } = ocrWorker;
     const { clearBackgroundOcrCheckpoint, saveBackgroundOcrCheckpoint, startBackgroundOcrProtection, stopBackgroundOcrProtection, updateBackgroundOcrCheckpoint, updateBackgroundOcrProtection } = backgroundOcr;
     const { mergeOcrTexts, preprocessImage } = imageProcessing;
     const readerStartedAt = Date.now();
@@ -494,6 +506,9 @@ ${reading.text}`)) : fullPassText;
         : learnedText;
       const lockedText = await textWithManualLocks(discoveryText);
       setRawText(lockedText);
+      reportReaderProgress(97, 'Liberando OCR', 'Leitura visual concluída. Liberando memória antes da ficha, Skills e Ímpeto.', readerTotal, readerTotal);
+      await releaseOcrWorker().catch(() => undefined);
+      const { createProductionAnalysisR138 } = await loadProductionAnalysisRuntimeR541();
       reportReaderProgress(98, 'Gerando ficha', 'Aplicando a leitura automaticamente ao Desempenho Máximo.', readerTotal, readerTotal);
       const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       const reviewHydration = await hydrateReviewFields(autoResult, session);
@@ -550,7 +565,7 @@ ${reading.text}`)) : fullPassText;
     const { SCREEN_ZONE_TEMPLATES, buildTotalReadingSession, detectCardScreenType, extractCaptureIdentity, zoneWidthTarget } = totalCardReader;
     const { createPlayerCardPreviewR130 } = cardPreview;
     const { recognizeZoneWithHighPrecision } = highPrecision;
-    const { fileDigest, recognizeWithOcrWorker, subscribeOcrProgress } = ocrWorker;
+    const { fileDigest, recognizeWithOcrWorker, subscribeOcrProgress, releaseOcrWorker } = ocrWorker;
     const { mergeOcrTexts, preprocessImage } = imageProcessing;
     const readerStartedAt = Date.now();
     const reportTotalProgress = (percent: number, phase: string, detail: string, completed = 0, total = captures.length) => setReaderProgress({ percent: Math.max(0, Math.min(100, percent)), phase, detail, startedAt: readerStartedAt, completed, total });
@@ -654,6 +669,8 @@ ${reading.text}`)) : fullPassText;
       const learnedText = await applyLearningToText(mergedText);
       const lockedText = await textWithManualLocks(learnedText);
       setRawText(lockedText);
+      await releaseOcrWorker().catch(() => undefined);
+      const { createProductionAnalysisR138 } = await loadProductionAnalysisRuntimeR541();
       const autoResult = createProductionAnalysisR138({ rawText: lockedText, objective: 'COMPETITIVE', targetPosition, usageFunction, imageFileName: `leitura-total-${overview.file.name}`, tacticalProfile });
       await hydrateReviewFields(autoResult, null);
       const totalFinalization = deriveTotalReadingFinalizationR501(session);
