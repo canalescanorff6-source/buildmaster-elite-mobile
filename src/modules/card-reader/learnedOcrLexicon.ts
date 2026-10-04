@@ -54,6 +54,12 @@ function validTerm(category: LearnedOcrCategory, value: string) {
   return letters / Math.max(1, clean.length) >= 0.62;
 }
 
+export function shouldTrustLearnedOcrTerm(input: { manuallyConfirmed?: boolean; confirmations: number; independentScans: number }) {
+  // Repetir a mesma imagem aumenta o contador histórico, mas não cria evidência independente.
+  // Confiança automática exige scans de hashes diferentes; confirmação manual continua soberana.
+  return Boolean(input.manuallyConfirmed) || Math.max(0, input.independentScans) >= 2;
+}
+
 export async function loadLearnedOcrTerms(category?: LearnedOcrCategory, trustedOnly = true): Promise<LearnedOcrTerm[]> {
   const entries = await runtimeList<LearnedOcrTerm>('ocr-lexicon', 500).catch(() => []);
   return entries
@@ -83,7 +89,7 @@ export async function learnConfirmedOcrTerm(input: {
   const aliases = Array.from(new Set([...(nearest?.aliases ?? []), input.alias?.trim() ?? '', canonical].filter(Boolean))).slice(-16);
   const confirmations = (nearest?.confirmations ?? 0) + 1;
   const independentScans = sourceHashes.length;
-  const trusted = Boolean(input.manuallyConfirmed) || confirmations >= 2 || independentScans >= 2;
+  const trusted = shouldTrustLearnedOcrTerm({ manuallyConfirmed: input.manuallyConfirmed, confirmations, independentScans });
   const term: LearnedOcrTerm = {
     id: nearest?.id ?? termId(input.category, canonical),
     category: input.category,
