@@ -37,6 +37,9 @@ const trainingCore = require('../src/lib/trainingPlanCore') as typeof import('..
 const finalSkills = require('../src/lib/finalAdditionalSkillSetR457') as typeof import('../src/lib/finalAdditionalSkillSetR457');
 const trainingBudget = require('../src/modules/analysis/cardTrainingBudgetParserR130') as typeof import('../src/modules/analysis/cardTrainingBudgetParserR130');
 const skillParser = require('../src/lib/cardSkillParser') as typeof import('../src/lib/cardSkillParser');
+const authority126 = require('../src/lib/productionAuthorityR126') as typeof import('../src/lib/productionAuthorityR126');
+const authority128 = require('../src/lib/productionAuthorityR128') as typeof import('../src/lib/productionAuthorityR128');
+const cleanSlate = require('../src/lib/cleanSlatePerformance2027V4080R119') as typeof import('../src/lib/cleanSlatePerformance2027V4080R119');
 
 // 1) JSON corrompido deve ser preservado para recuperação, nunca apagado durante leitura.
 storage.setItem('broken-json', '{"unfinished":');
@@ -114,7 +117,6 @@ assert.equal(partialSkills.exactFive, false);
 assert.equal(partialSkills.officialOnly, false);
 
 // 8) PP explícito visível no print vence a inferência matemática do nível.
-// Nível 31 inferiria 60 PP, mas o print informa diretamente 64 PP.
 const explicitBudget = trainingBudget.parseCardTrainingBudgetR130('Nível máximo: 31\nPontos totais: 64', null);
 assert.equal(explicitBudget.level, 31);
 assert.equal(explicitBudget.pointBudget.total, 64);
@@ -126,4 +128,35 @@ assert.ok(skillInventory.additional.includes('Passe de primeira'));
 assert.ok(skillInventory.additional.includes('Habilidade OCR ilegível'));
 assert.ok(skillInventory.unknown.includes('Habilidade OCR ilegível'));
 
-console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento, PP e slots de habilidade protegidos.');
+// 10) READY/BLOCKED faz parte da autoridade: adulterar os dois lados após o selo invalida R128.
+const blockedBase = {
+  parsed: {
+    playerName: 'Jogador Teste', mainPosition: 'CMF', positions: ['CMF'], attributes: {},
+    nativeSkills: [], specialSkills: [], additionalSkills: [], impetos: [],
+  },
+  bestPosition: { code: 'CMF' },
+  training: trainingCore.emptyTraining(),
+  trainingCost: trainingCore.emptyTraining(),
+  trainingPointsTotal: 64,
+  trainingPointsUsed: 0,
+  trainingPointsRemaining: 64,
+  recommendedSkills: [],
+  recommendedImpetos: [],
+  cleanSlate2027R119: {
+    version: cleanSlate.CLEAN_SLATE_2027_R119_VERSION,
+    status: 'BLOCKED_INSUFFICIENT_DATA',
+    usagePosition: 'CMF',
+    usageFunction: 'Orquestrador',
+  },
+} as any;
+const sealed126 = authority126.sealProductionAuthorityR126(blockedBase) as any;
+const sealed128 = authority128.sealProductionAuthorityR128(sealed126) as any;
+assert.equal(authority128.isCurrentProductionAnalysisR128(sealed128), true);
+const tamperedState = {
+  ...sealed128,
+  cleanSlate2027R119: { ...sealed128.cleanSlate2027R119, status: 'READY' },
+  productionAuthorityR126: { ...sealed128.productionAuthorityR126, status: 'READY' },
+};
+assert.equal(authority128.isCurrentProductionAnalysisR128(tamperedState), false, 'resultado bloqueado não pode virar READY sem recalcular e selar novamente');
+
+console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento, PP, skills e autoridade final protegidos.');
