@@ -160,8 +160,10 @@ for (const regression of [
   'tests/v40-80-r518-certification-firewall-regression.ts',
   'tests/v40-80-r518-persisted-facade-regression.ts',
   'tests/v40-80-r519-android-reader-memory-regression.mjs',
+  'tests/r540-logical-app-audit-regression.ts',
+  'tests/r540-runtime-account-isolation-regression.ts',
 ]) {
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R507/R507-RESIDUAL/R510/R511/R512/R513/R515/R516/R517/R518/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, gargalo residual de Ímpeto, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR, calibração real, Certification Engine e evidência R518 read-only protegidos.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R507-RESIDUAL/R510/R511/R512/R513/R515/R516/R517/R518/R540/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, gargalo residual de Ímpeto, autoridade pública única, isolamento de contas, PP explícito, slots adicionais e integridade READY/BLOCKED protegidos.');
