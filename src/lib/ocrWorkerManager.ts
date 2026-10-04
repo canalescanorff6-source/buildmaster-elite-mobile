@@ -24,6 +24,7 @@ type WorkerLike = TesseractNamespace.Worker;
 const OCR_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const OCR_RECOGNITION_TIMEOUT_MS = 16_000;
 const OCR_WORKER_BOOT_TIMEOUT_MS = 18_000;
+const DIGEST_CHUNK_BYTES = 256 * 1024;
 
 let workerPromise: Promise<WorkerLike> | null = null;
 let workerInstance: WorkerLike | null = null;
@@ -44,6 +45,10 @@ function emit(status: string, progress = 0) {
 export function subscribeOcrProgress(listener: (progress: OcrProgress) => void) {
   progressListeners.add(listener);
   return () => progressListeners.delete(listener);
+}
+
+function isAndroidRuntime() {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
 }
 
 function clearReleaseTimer() {
@@ -82,6 +87,7 @@ async function createReusableWorker(): Promise<WorkerLike> {
     workerPath: '/tesseract/worker.min.js',
     corePath: '/tesseract/core',
     langPath: '/tesseract/lang',
+    workerBlobURL: false,
     gzip: false,
     logger: (message) => emit(message.status || 'processando', Number(message.progress || 0))
   });
@@ -125,10 +131,14 @@ async function getWorker(): Promise<WorkerLike> {
 }
 
 export async function prewarmOcrWorker(): Promise<void> {
+  if (isAndroidRuntime()) {
+    currentLabel = 'OCR';
+    emit('Motor local será iniciado após o primeiro recorte', 0);
+    return;
+  }
   await getWorker();
   armIdleWorkerRelease(Math.max(180_000, getRuntimeOptimizationProfile().ocrWorkerIdleMs));
 }
-
 
 function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: string, timeoutMs = OCR_RECOGNITION_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -156,25 +166,63 @@ function recognitionDeadline<T>(promise: Promise<T>, worker: WorkerLike, label: 
     });
   });
 }
+
 function enqueueWorkerOperation<T>(operation: () => Promise<T>): Promise<T> {
   const queued = operationQueue.then(operation, operation);
   operationQueue = queued.then(() => undefined, () => undefined);
   return queued;
 }
 
+function digestHex(bytes: ArrayBuffer | Uint8Array) {
+  return Array.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes))
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function yieldDigestFrame() {
+  if (typeof window === 'undefined') return;
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+}
+
 export async function fileDigest(file: File | Blob): Promise<string> {
-  const bytes = await file.arrayBuffer();
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
+  currentLabel = 'Pré-leitura';
+  emit('Preparando assinatura segura da imagem', 0);
+  const subtle = typeof crypto !== 'undefined' ? crypto.subtle : null;
+  const chunkDigests: Uint8Array[] = [];
+  let fallbackHash = 2166136261;
+  let processed = 0;
+  try {
+    for (let offset = 0; offset < file.size; offset += DIGEST_CHUNK_BYTES) {
+      const end = Math.min(file.size, offset + DIGEST_CHUNK_BYTES);
+      const chunk = new Uint8Array(await file.slice(offset, end).arrayBuffer());
+      if (subtle) {
+        chunkDigests.push(new Uint8Array(await subtle.digest('SHA-256', chunk)));
+      } else {
+        for (const value of chunk) {
+          fallbackHash ^= value;
+          fallbackHash = Math.imul(fallbackHash, 16777619);
+        }
+      }
+      processed += chunk.byteLength;
+      emit('Preparando assinatura segura da imagem', file.size ? Math.min(0.98, processed / file.size) : 0.98);
+      await yieldDigestFrame();
+    }
+    if (subtle) {
+      const sizePrefix = new TextEncoder().encode(`${file.size}:`);
+      const joined = new Uint8Array(sizePrefix.byteLength + chunkDigests.length * 32);
+      joined.set(sizePrefix, 0);
+      chunkDigests.forEach((digest, index) => joined.set(digest, sizePrefix.byteLength + index * 32));
+      const digest = await subtle.digest('SHA-256', joined);
+      emit('Assinatura segura da imagem pronta', 1);
+      return digestHex(digest);
+    }
+    emit('Assinatura segura da imagem pronta', 1);
+    return `fallback-${(fallbackHash >>> 0).toString(16)}-${file.size}`;
+  } catch {
+    const candidate = file as File;
+    emit('Assinatura simplificada pronta', 1);
+    return `metadata-${file.size}-${file.type}-${candidate.name || ''}-${candidate.lastModified || 0}`;
   }
-  let hash = 2166136261;
-  const data = new Uint8Array(bytes);
-  for (const value of data) {
-    hash ^= value;
-    hash = Math.imul(hash, 16777619);
-  }
-  return `fallback-${(hash >>> 0).toString(16)}-${data.length}`;
 }
 
 function paramsForKind(kind: OcrFieldKind): Partial<TesseractNamespace.WorkerParams> {
