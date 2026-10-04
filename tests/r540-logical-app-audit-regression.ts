@@ -34,6 +34,7 @@ const safeStorage = require('../src/lib/safeLocalStorage') as typeof import('../
 const accountStorage = require('../src/lib/accountStorage') as typeof import('../src/lib/accountStorage');
 const totalReader = require('../src/lib/totalCardReader') as typeof import('../src/lib/totalCardReader');
 const trainingCore = require('../src/lib/trainingPlanCore') as typeof import('../src/lib/trainingPlanCore');
+const finalSkills = require('../src/lib/finalAdditionalSkillSetR457') as typeof import('../src/lib/finalAdditionalSkillSetR457');
 
 // 1) JSON corrompido deve ser preservado para recuperação, nunca apagado durante leitura.
 storage.setItem('broken-json', '{"unfinished":');
@@ -66,11 +67,14 @@ const contradictory = totalReader.chooseBestZoneReading([
   { key:'name', label:'Nome', text:'Lionel Mesi', confidence:91, status:'confirmed', originPreview:null, enhancement:'sharp' },
 ]);
 assert.ok((contradictory.consistency ?? 100) < 80, 'textos contraditórios não podem receber consistência alta');
+assert.equal(contradictory.status, 'review', 'contradição multipass deve rebaixar o campo para revisão');
 
 // 5) Palavra capitalizada ou rótulo "Posição" isolado não certifica identidade/posição.
-const falseIdentity = totalReader.buildTotalReadingSession([], 'Atributos\nPosição\nProgressão');
+const falseIdentity = totalReader.buildTotalReadingSession([], 'Atributos\nPosição\nProgressão\nEstilo de jogo\nPontos disponíveis');
 assert.equal(falseIdentity.criticalFields.find((field) => field.key === 'name')?.status, 'missing');
 assert.equal(falseIdentity.criticalFields.find((field) => field.key === 'position')?.status, 'missing');
+assert.equal(falseIdentity.criticalFields.find((field) => field.key === 'style')?.status, 'review');
+assert.equal(falseIdentity.criticalFields.find((field) => field.key === 'points')?.status, 'review');
 
 // 6) Planos inválidos nunca podem propagar NaN/Infinity para custo ou orçamento.
 const invalidPlan = trainingCore.normalizeTrainingPlan({
@@ -91,4 +95,20 @@ assert.equal(invalidPlan.dribbling, 0);
 assert.ok(Number.isFinite(trainingCore.trainingPlanTotalCost(invalidPlan)));
 assert.equal(trainingCore.trainingTotalCost(Number.NaN), 0);
 
-console.log('R540 auditoria lógica: persistência, contas, OCR e orçamento protegidos.');
+// 7) Skill atual não reconhecida continua ocupando slot e bloqueia ADD/REPLACE automático.
+const partialSkills = finalSkills.optimizeFinalAdditionalSkillSetR457({
+  nativeSkills: [],
+  specialSkills: [],
+  additionalSkills: ['Passe de primeira', 'Habilidade OCR ilegível'],
+  playstyle: 'Orquestrador',
+} as any, [
+  { id:'short_creation', label:'Criação curta', frequency:90, contribution:90, projectedScore:88 },
+], 'CMF');
+assert.equal(partialSkills.status, 'PARTIAL_POOL');
+assert.ok(partialSkills.currentSkills.includes('Habilidade OCR ilegível'));
+assert.equal(partialSkills.additions.length, 0);
+assert.equal(partialSkills.removals.length, 0);
+assert.equal(partialSkills.exactFive, false);
+assert.equal(partialSkills.officialOnly, false);
+
+console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento e slots de habilidade protegidos.');
