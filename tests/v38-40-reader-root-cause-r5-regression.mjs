@@ -18,7 +18,7 @@ assert.match(reader,/TOTAL_READER_DEADLINE_MS = 90_000/);
 assert.match(reader,/targetedRetry/);
 assert.match(worker,/OCR_WORKER_BOOT_TIMEOUT_MS = 18_000/);
 assert.match(worker,/workerBootDeadline/);
-assert.match(image,/globalThis\.setTimeout\(\(\) => \{ if \(!settled\)/);
+assert.match(image,/globalThis\.setTimeout\s*\(\s*\(\)\s*=>\s*\{\s*if\s*\(\s*!settled\s*\)/);
 assert.match(single,/manualMacroReading/);
 assert.match(single,/PLAYSTYLE_OPTIONS\.some/);
 assert.match(adaptive,/const maxShift = mode === 'COMPATIVEL' \? 11 : 16/);
