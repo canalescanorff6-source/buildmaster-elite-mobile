@@ -105,13 +105,13 @@ export function createCardVisionReaderInteractionOperationsR164(context: ReaderI
     setStatus('Leitura cancelada. O print continua selecionado para uma nova tentativa.');
   }
 
-  async function handleFile(file: File) {
+  async function handleFile(file: File): Promise<boolean> {
     const { imageSafety, backgroundOcr, ocrWorker, cardPreview } = await loadReaderRuntimeR160();
     try {
       await imageSafety.validateImageFile(file);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Imagem inválida.');
-      return;
+      return false;
     }
     setPendingBackgroundCheckpoint(null);
     void backgroundOcr.clearBackgroundOcrCheckpoint().catch(() => undefined);
@@ -132,14 +132,24 @@ export function createCardVisionReaderInteractionOperationsR164(context: ReaderI
     const enhanced = await enhanceImageLocally(file, nextMode === 'original' ? 'adaptive' : nextMode).catch(() => null);
     if (enhanced) setEnhancedPreview(readerImageMemory.replaceEnhanced(enhanced));
     if (quality?.issues.length) setStatus(`Imagem selecionada, mas revise o print: ${quality.issues[0].message}`);
+    return true;
   }
 
   async function resumeInterruptedReading() {
     const backgroundOcr = await loadBackgroundOcrRuntimeR160();
     const checkpoint = pendingBackgroundCheckpoint ?? await backgroundOcr.readBackgroundOcrCheckpoint().catch(() => null);
     if (!checkpoint) { setPendingBackgroundCheckpoint(null); setStatus('Não há leitura interrompida para retomar.'); return; }
-    const restored = backgroundOcr.checkpointFile(checkpoint); setPendingBackgroundCheckpoint(null); await backgroundOcr.clearBackgroundOcrCheckpoint().catch(() => undefined); await handleFile(restored);
-    setStatus(`Retomando leitura de ${checkpoint.fileName}...`); await analyzeSelectedImage(restored, true);
+    const restored = backgroundOcr.checkpointFile(checkpoint);
+    const restoredOk = await handleFile(restored);
+    if (!restoredOk) {
+      setPendingBackgroundCheckpoint(checkpoint);
+      setStatus('A leitura interrompida não pôde ser restaurada com segurança. O checkpoint foi preservado.');
+      return;
+    }
+    setPendingBackgroundCheckpoint(null);
+    await backgroundOcr.clearBackgroundOcrCheckpoint().catch(() => undefined);
+    setStatus(`Retomando leitura de ${checkpoint.fileName}...`);
+    await analyzeSelectedImage(restored, true);
   }
 
   async function discardInterruptedReading() {
@@ -185,14 +195,16 @@ export function createCardVisionReaderInteractionOperationsR164(context: ReaderI
     try {
       await updateOcrQueueJob(job.id, { status: 'processing', attempts: job.attempts + 1, error: undefined });
       const file = queueJobAsFile(job);
-      await handleFile(file);
+      const loaded = await handleFile(file);
+      if (!loaded) throw new Error('O arquivo da fila não passou pela validação local.');
       await removeOcrQueueJob(job.id);
       await refreshOcrQueue();
       setStatus('Print carregado da fila. Toque em Executar Print Único Pro para analisar.');
     } catch (cause) {
-      await updateOcrQueueJob(job.id, { status: 'failed', attempts: job.attempts + 1, error: cause instanceof Error ? cause.message : 'Falha ao abrir' });
+      const currentAttempts = Math.max(1, job.attempts + 1);
+      await updateOcrQueueJob(job.id, { status: 'failed', attempts: currentAttempts, error: cause instanceof Error ? cause.message : 'Falha ao abrir' });
       await refreshOcrQueue();
-      setStatus('Não foi possível abrir este item da fila. Os demais continuam protegidos.');
+      setStatus('Não foi possível abrir este item da fila. O item foi preservado para revisão ou descarte manual.');
     }
   }
 
