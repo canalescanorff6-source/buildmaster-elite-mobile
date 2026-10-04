@@ -16,6 +16,6 @@ const macroPlansBlock=reader.match(/const MACRO_PLANS:\s*MacroPlan\[\]\s*=\s*\[(
 assert.ok(macroPlansBlock,'MACRO_PLANS não foi encontrado no leitor manual.');
 const macroIds=[...macroPlansBlock.matchAll(/\{\s*id:\s*'([^']+)'/g)].map((match)=>match[1]);
 assert.deepEqual(macroIds,['identity','card','bio','positions','boosters','progression','attributes','physical','skills']);
-assert.match(progress,/deadlineMs\?: number/);
+assert.match(progress,/deadlineMs\?\s*:\s*number/);
 assert.match(progress,/safeRemaining/);
 console.log('v40.30 aprovada: OCR BEST descompactado, 9 macros primários reais, teto de 90 s e ETA não explosiva.');
