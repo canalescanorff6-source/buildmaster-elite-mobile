@@ -23,21 +23,32 @@ function cleanLine(line: string) {
   return line.replace(/[|•·]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function parseSkillContent(content: string) {
-  const canonicalFromText = extractCanonicalSkillsFromText(content);
-  if (canonicalFromText.length) return canonicalizeSkillList(canonicalFromText);
+function plausibleUnresolvedSkill(raw: string): string | null {
+  const skill = cleanLine(raw).replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '');
+  const letters = (skill.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+  if (skill.length < 3 || skill.length > 54 || letters / Math.max(1, skill.length) < 0.62) return null;
+  if (/^(?:nenhuma?|nenhum|vazio|livre|n\/a|nao possui|não possui)$/i.test(skill)) return null;
+  return skill;
+}
 
-  const found: string[] = [];
+function parseSkillContent(content: string, preserveUnknown = false) {
+  const canonicalFromText = extractCanonicalSkillsFromText(content);
+  const found: string[] = [...canonicalFromText];
+  const unresolved: string[] = [];
+
   for (const raw of content.split(/[,;•|]/)) {
-    const skill = cleanLine(raw).replace(/^[+\-–—\s]+|[+\-–—\s]+$/g, '');
-    const letters = (skill.match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
-    if (skill.length < 3 || skill.length > 54 || letters / Math.max(1, skill.length) < 0.62) continue;
+    const skill = plausibleUnresolvedSkill(raw);
+    if (!skill) continue;
     const canonical = canonicalSkillName(skill);
     const provisional = resolveProvisionalSpecialSkillNameV4070(skill);
     if (canonical) found.push(canonical);
     else if (provisional) found.push(provisional);
+    else if (preserveUnknown) unresolved.push(skill);
   }
-  return canonicalizeSkillList(found);
+  return {
+    skills: canonicalizeSkillList(found),
+    unresolved: canonicalizeSkillList(unresolved)
+  };
 }
 
 function collectExplicitSkillLines(text: string) {
@@ -45,6 +56,7 @@ function collectExplicitSkillLines(text: string) {
   const additional: string[] = [];
   const special: string[] = [];
   const provisional: string[] = [];
+  const unresolvedAdditional: string[] = [];
   let sawExplicit = false;
 
   const patterns: Array<{ kind: 'native' | 'additional' | 'special' | 'provisional'; pattern: RegExp }> = [
@@ -60,16 +72,19 @@ function collectExplicitSkillLines(text: string) {
       const match = line.match(entry.pattern);
       if (!match) continue;
       sawExplicit = true;
-      const parsed = parseSkillContent(String(match[1] ?? '').trim());
-      if (entry.kind === 'native') native.push(...parsed);
-      if (entry.kind === 'additional') additional.push(...parsed);
-      if (entry.kind === 'special') special.push(...parsed);
-      if (entry.kind === 'provisional') provisional.push(...parsed);
+      const parsed = parseSkillContent(String(match[1] ?? '').trim(), entry.kind === 'additional');
+      if (entry.kind === 'native') native.push(...parsed.skills);
+      if (entry.kind === 'additional') {
+        additional.push(...parsed.skills, ...parsed.unresolved);
+        unresolvedAdditional.push(...parsed.unresolved);
+      }
+      if (entry.kind === 'special') special.push(...parsed.skills);
+      if (entry.kind === 'provisional') provisional.push(...parsed.skills, ...parsed.unresolved);
       break;
     }
   }
 
-  return { native, additional, special, provisional, sawExplicit };
+  return { native, additional, special, provisional, unresolvedAdditional, sawExplicit };
 }
 
 function scanVisibleSkills(text: string) {
@@ -106,9 +121,8 @@ function separateCategories(nativeInput: string[], additionalInput: string[], sp
 
 /**
  * Separa habilidades nativas, adicionais já instaladas e especiais.
- * Quando o print antigo possui apenas “HABILIDADES JÁ POSSUI”, mantém
- * compatibilidade classificando as oficiais comuns como nativas e movendo
- * habilidades especiais para a lista exclusiva correspondente.
+ * Slots adicionais explícitos que não puderem ser canonizados são preservados
+ * como ocupados/pendentes para impedir que o otimizador invente uma vaga livre.
  */
 export function parseCardSkillInventory(text: string): CardSkillInventory {
   const explicit = collectExplicitSkillLines(text);
@@ -117,7 +131,7 @@ export function parseCardSkillInventory(text: string): CardSkillInventory {
     const count = categories.native.length + categories.additional.length + categories.special.length;
     return {
       ...categories,
-      unknown: canonicalizeSkillList(explicit.provisional),
+      unknown: canonicalizeSkillList([...explicit.provisional, ...explicit.unresolvedAdditional]),
       source: 'explicit',
       confidence: count ? 98 : 58
     };
