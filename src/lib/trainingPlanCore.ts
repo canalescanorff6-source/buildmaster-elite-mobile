@@ -28,23 +28,32 @@ function aliasToRegex(alias: string): string {
     .join('\\s+');
 }
 
+function safeTrainingLevel(value: unknown, maxLevel = 16): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(maxLevel, Math.round(numeric)));
+}
+
 export function emptyTraining(): TrainingPlan {
   return { shooting: 0, passing: 0, dribbling: 0, dexterity: 0, lowerBodyStrength: 0, aerialStrength: 0, defending: 0, gk1: 0, gk2: 0, gk3: 0 };
 }
 
 export function normalizeTrainingPlan(plan: TrainingPlan): TrainingPlan {
   const clean = emptyTraining();
-  for (const key of TRAINING_KEYS) clean[key] = Math.max(0, Math.min(16, Math.round(Number(plan[key] ?? 0))));
+  for (const key of TRAINING_KEYS) clean[key] = safeTrainingLevel(plan[key]);
   return clean;
 }
 
 export function trainingLevelCost(level: number): number {
-  if (level <= 0) return 0;
-  return Math.ceil(level / 4);
+  const safeLevel = safeTrainingLevel(level, Number.MAX_SAFE_INTEGER);
+  if (safeLevel <= 0) return 0;
+  return Math.ceil(safeLevel / 4);
 }
 
 export function trainingTotalCost(level: number): number {
-  const n = Math.max(0, Math.floor(level)), groups = Math.floor(n / 4);
+  const n = safeTrainingLevel(level, Number.MAX_SAFE_INTEGER);
+  if (n <= 0) return 0;
+  const groups = Math.floor(n / 4);
   return (groups + 1) * (2 * groups + n % 4);
 }
 
@@ -86,17 +95,23 @@ export function parseTrainingAllocation(text: string): { plan: TrainingPlan; poi
 }
 
 export function addTrainingLevel(plan: TrainingPlan, key: TrainingKey, maxLevel = 16): boolean {
-  if ((plan[key] ?? 0) >= maxLevel) return false;
-  plan[key] = (plan[key] ?? 0) + 1;
+  const safeMax = Math.max(0, Math.floor(Number.isFinite(maxLevel) ? maxLevel : 16));
+  const current = safeTrainingLevel(plan[key], safeMax);
+  if (current >= safeMax) return false;
+  plan[key] = current + 1;
   return true;
 }
 
 export function removeTrainingLevel(plan: TrainingPlan, key: TrainingKey): boolean {
-  if ((plan[key] ?? 0) <= 0) return false;
-  plan[key] = (plan[key] ?? 0) - 1;
+  const current = safeTrainingLevel(plan[key]);
+  if (current <= 0) {
+    plan[key] = 0;
+    return false;
+  }
+  plan[key] = current - 1;
   return true;
 }
 
 export function applyPlanEntries(entries: Partial<TrainingPlan>): TrainingPlan {
-  return { ...emptyTraining(), ...entries };
+  return normalizeTrainingPlan({ ...emptyTraining(), ...entries });
 }
