@@ -106,6 +106,8 @@ export async function inspectPrintQuality(file: File | Blob): Promise<PrintQuali
 }
 
 export async function createZoneOriginPreview(file: File | Blob, zone: OcrZone): Promise<string | null> {
+  const isAndroid=typeof navigator!=='undefined'&&/Android/i.test(navigator.userAgent);
+  if(isAndroid)return null;
   if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return null;
