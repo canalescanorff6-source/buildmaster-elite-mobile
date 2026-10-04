@@ -16,19 +16,19 @@ assert.match(
 const preprocessImage = imageProcessing.match(/export async function preprocessImage[\s\S]*?\n}/)?.[0] ?? '';
 assert.match(
   preprocessImage,
-  /workload: 'ocr-full',[\s\S]{0,180}preferredLongestSide: 1800,[\s\S]{0,180}maxScale: 1/,
+  /workload:\s*['"]ocr-full['"][\s\S]{0,180}preferredLongestSide:\s*1800[\s\S]{0,180}maxScale:\s*1/,
   'R519: o passe OCR da tela completa deve ser limitado a 1800px e nunca fazer upscale.',
 );
 assert.match(
   preprocessImage,
-  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width = 1;[\s\S]{0,120}canvas\.height = 1;/,
+  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width\s*=\s*1;[\s\S]{0,120}canvas\.height\s*=\s*1;/,
   'R519: o canvas full-frame deve liberar explicitamente o backing store ao terminar.',
 );
 
 const cropImage = imageProcessing.match(/export async function cropImage[\s\S]*?\n}/)?.[0] ?? '';
 assert.match(
   cropImage,
-  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width = 1;[\s\S]{0,120}canvas\.height = 1;/,
+  /finally[\s\S]{0,260}bitmap\.close\?\.\(\)[\s\S]{0,220}canvas\.width\s*=\s*1;[\s\S]{0,120}canvas\.height\s*=\s*1;/,
   'R519: cada recorte deve liberar bitmap/canvas antes do próximo quadrado para impedir acúmulo de memória.',
 );
 
