@@ -70,16 +70,6 @@ function clamp(value:number,min=0,max=100){ return Math.max(min,Math.min(max,val
 function round2(value:number){ return Math.round(value*100)/100; }
 function norm(value:unknown){ return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
 
-/**
- * R508/R509: reconecta ao escritor final o contexto de estilo oficial que já
- * existia no motor de habilidades v35. O ajuste só desempata/prioriza dentro
- * do pool oficial e compatível da posição; não cria habilidades, não declara
- * bônus oficiais e não usa Overall/GER.
- *
- * R509 amplia a propagação aos zagueiros: Defensor Criativo preserva a demanda
- * de saída/construção, enquanto Destruidor preserva a prioridade de duelo e
- * corte. A ficha pós-build continua soberana; estilo atua apenas como contexto.
- */
 function officialPlaystyleAdjustmentR508(parsed:ParsedCard,position:PositionCode,name:string){
   const style=norm(`${parsed.playstyle??''} ${parsed.offensivePlaystyle??''} ${parsed.defensivePlaystyle??''}`);
   if(position==='GK'){
@@ -119,9 +109,6 @@ function actionImportance(action:SkillActionInputR457){
   const frequency=clamp(Number(action.frequency)||0);
   const contribution=clamp(Number(action.contribution)||0);
   const projected=projectedScoreOf(action);
-  // R506: skill não substitui atributo. Quando a ação vem do estado final da ficha,
-  // a utilidade funcional considera se os atributos pós-build realmente sustentam a ação.
-  // Sem projectedScore, preservamos exatamente a ponderação legada R459.
   return projected===null
     ? clamp(frequency*.68+contribution*.32)
     : clamp(frequency*.50+contribution*.25+projected*.25);
@@ -160,7 +147,6 @@ function skillVector(name:string):Partial<Record<Dimension,number>>{
 }
 
 function individualScore(name:string,actions:SkillActionInputR457[],parsed:ParsedCard,position:PositionCode){
-  // Base genérica preservada apenas como fallback para habilidades ainda sem mapeamento de ação.
   const vector=skillVector(name);
   let genericWeighted=0,genericTotal=0;
   const genericSupport:Array<{label:string;value:number}>=[];
@@ -173,9 +159,6 @@ function individualScore(name:string,actions:SkillActionInputR457[],parsed:Parse
   }
   const genericScore=genericTotal>0?clamp(genericWeighted/genericTotal):0;
 
-  // R459/R506: o Top 5 usa a MESMA ação funcional que dirige a ficha e, quando
-  // disponível, o projectedScore pós-build dessa ação. Isto é relevância funcional
-  // interna; não representa bônus numérico oficial da habilidade sobre atributos.
   let specificWeighted=0,specificTotal=0;
   const actionSupport:Array<{label:string;value:number}>=[];
   for(const action of actions){
@@ -241,8 +224,9 @@ export function optimizeFinalAdditionalSkillSetR457(
   const stateSource=actionStateSource(actions);
   const stateCoverage=projectedActionCoverage(actions);
   const nativeSpecial=new Set(canonicalizeSkillList([...(parsed.nativeSkills??[]),...(parsed.specialSkills??[])]).map(skillIdentityKey));
-  const current=canonicalizeSkillList(parsed.additionalSkills??[])
-    .filter(isOfficialAdditionalSkillIdentity);
+  const currentInstalled=canonicalizeSkillList(parsed.additionalSkills??[]).slice(0,5);
+  const unresolvedCurrent=currentInstalled.filter(skill=>!isOfficialAdditionalSkillIdentity(skill));
+  const current=currentInstalled.filter(isOfficialAdditionalSkillIdentity);
   const pool=canonicalizeSkillList([
     ...officialAdditionalSkillPoolForPosition(position),
     ...current
@@ -254,6 +238,47 @@ export function optimizeFinalAdditionalSkillSetR457(
 
   const individual=new Map<string,{score:number;supportedActions:string[]}>();
   for(const skill of pool) individual.set(skillIdentityKey(skill),individualScore(skill,actions,parsed,position));
+
+  // Qualquer slot já ocupado mas não reconhecido permanece ocupado. Não é seguro
+  // recomendar ADD/REPLACE sem saber se criaria duplicata ou substituiria a skill errada.
+  if(unresolvedCurrent.length){
+    const currentScore=setScore(current,individual).score;
+    const decisions=current.map((skill,index)=>({
+      slot:index+1,
+      action:'KEEP' as const,
+      skill,
+      replaces:null,
+      functionalScore:individual.get(skillIdentityKey(skill))?.score??0,
+      reason:'Habilidade atual confirmada é preservada enquanto outro slot precisa de identificação.'
+    }));
+    return {
+      version:FINAL_ADDITIONAL_SKILL_SET_R457_VERSION,
+      status:'PARTIAL_POOL',
+      position,
+      actionStateSource:stateSource,
+      projectedActionCoverage:stateCoverage,
+      currentSkills:currentInstalled,
+      finalSkills:current,
+      additions:[],
+      removals:[],
+      decisions,
+      individualScores:pool
+        .map(name=>({name,score:individual.get(skillIdentityKey(name))?.score??0,supportedActions:individual.get(skillIdentityKey(name))?.supportedActions??[]}))
+        .sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'pt-BR')),
+      currentSetScore:round2(currentScore),
+      finalSetScore:round2(currentScore),
+      estimatedSetGain:0,
+      complementPairs:setScore(current,individual).pairs,
+      candidatePoolSize:pool.length,
+      combinationsTested:0,
+      exactFive:false,
+      officialOnly:false,
+      roleCompatible:false,
+      nativeSpecialDuplicatesBlocked:true,
+      deterministic:true,
+      modelNote:`Fail-closed R540: ${unresolvedCurrent.length} slot(s) atual(is) não foram reconhecidos com identidade oficial (${unresolvedCurrent.join(', ')}). Esses slots continuam ocupados e nenhuma adição/substituição é autorizada até a leitura ser confirmada.`
+    };
+  }
 
   const target=Math.min(5,pool.length);
   const sets=combinations(pool,target);
@@ -269,9 +294,6 @@ export function optimizeFinalAdditionalSkillSetR457(
     }
   }
 
-  const currentInstalled=current.slice(0,5);
-  // Skill instalada mas incompatível com a função continua sendo um slot real:
-  // ela vale 0 no modelo desta função e deve aparecer como candidata a SUBSTITUIR, não desaparecer.
   const currentScore=setScore(currentInstalled,individual).score;
   const finalSet=new Set(winner.map(skillIdentityKey));
   const currentSet=new Set(currentInstalled.map(skillIdentityKey));
