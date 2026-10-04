@@ -40,6 +40,8 @@ const skillParser = require('../src/lib/cardSkillParser') as typeof import('../s
 const authority126 = require('../src/lib/productionAuthorityR126') as typeof import('../src/lib/productionAuthorityR126');
 const authority128 = require('../src/lib/productionAuthorityR128') as typeof import('../src/lib/productionAuthorityR128');
 const cleanSlate = require('../src/lib/cleanSlatePerformance2027V4080R119') as typeof import('../src/lib/cleanSlatePerformance2027V4080R119');
+const learnedLexicon = require('../src/modules/card-reader/learnedOcrLexicon') as typeof import('../src/modules/card-reader/learnedOcrLexicon');
+const reviewWorkflow = require('../src/modules/card-reader/cardReviewWorkflowR131') as typeof import('../src/modules/card-reader/cardReviewWorkflowR131');
 
 // 1) JSON corrompido deve ser preservado para recuperação, nunca apagado durante leitura.
 storage.setItem('broken-json', '{"unfinished":');
@@ -159,4 +161,34 @@ const tamperedState = {
 };
 assert.equal(authority128.isCurrentProductionAnalysisR128(tamperedState), false, 'resultado bloqueado não pode virar READY sem recalcular e selar novamente');
 
-console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento, PP, skills e autoridade final protegidos.');
+// 11) Repetir o mesmo print não cria evidência independente para tornar OCR aprendido confiável.
+assert.equal(learnedLexicon.shouldTrustLearnedOcrTerm({ confirmations: 2, independentScans: 1 }), false);
+assert.equal(learnedLexicon.shouldTrustLearnedOcrTerm({ confirmations: 8, independentScans: 1 }), false);
+assert.equal(learnedLexicon.shouldTrustLearnedOcrTerm({ confirmations: 2, independentScans: 2 }), true);
+assert.equal(learnedLexicon.shouldTrustLearnedOcrTerm({ confirmations: 1, independentScans: 1, manuallyConfirmed: true }), true);
+
+// 12) Memória do mesmo jogador não pode herdar posição/estilo/PP entre cartas diferentes.
+const oldCardMemory = {
+  playerName: 'Lionel Messi',
+  mainPosition: 'RWF',
+  playstyle: 'Ponta prolífico',
+  targetPosition: 'RWF',
+  trainingPointsTotal: '60',
+  updatedAt: new Date().toISOString(),
+} as any;
+const currentCardText = 'NOME DO JOGADOR: Lionel Messi\nPOSIÇÃO PRINCIPAL: AMF\nESTILO DE JOGO: Armador criativo\nPONTOS TOTAIS: 64';
+const learnedContext = reviewWorkflow.applyLearnedCardContextR131(currentCardText, oldCardMemory);
+assert.match(learnedContext, /NOME DO JOGADOR: Lionel Messi/);
+assert.doesNotMatch(learnedContext.split('[FIM APRENDIZADO]')[0], /RWF|Ponta prolífico|PONTOS TOTAIS: 60/);
+const reviewText = reviewWorkflow.buildManualReviewTextR131({
+  text: currentCardText,
+  learned: oldCardMemory,
+  manualFields: { playerName:'', level:'', trainingPointsTotal:'', attributes:{}, nativeSkills:[] },
+  cardPositionOverride:'AUTO', playstyleOverride:'AUTO', defensivePlaystyleOverride:'AUTO'
+});
+const manualBlock = reviewText.match(/\[AJUSTES MANUAIS\]([\s\S]*?)\[FIM AJUSTES\]/)?.[1] ?? '';
+assert.match(manualBlock, /NOME DO JOGADOR: Lionel Messi/);
+assert.doesNotMatch(manualBlock, /RWF|Ponta prolífico|PONTOS TOTAIS: 60/);
+assert.equal(reviewWorkflow.learnedIdentityMatchesCurrentCardR540('NOME DO JOGADOR: Cristiano Ronaldo', oldCardMemory), false);
+
+console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento, PP, skills, autoridade e DNA por carta protegidos.');
