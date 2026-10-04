@@ -185,7 +185,32 @@ export function compareCaptureIdentities(captures: Array<{ label: string; identi
   };
 }
 
+function textAgreement(leftText: string, rightText: string): number {
+  const left = normalized(leftText).replace(/\s+/g, '');
+  const right = normalized(rightText).replace(/\s+/g, '');
+  if (!left && !right) return 100;
+  if (!left || !right) return 0;
+  if (left === right) return 100;
+  if (left.length < 2 || right.length < 2) return left === right ? 100 : 0;
+
+  const counts = new Map<string, number>();
+  for (let index = 0; index < left.length - 1; index += 1) {
+    const pair = left.slice(index, index + 2);
+    counts.set(pair, (counts.get(pair) ?? 0) + 1);
+  }
+  let matches = 0;
+  for (let index = 0; index < right.length - 1; index += 1) {
+    const pair = right.slice(index, index + 2);
+    const available = counts.get(pair) ?? 0;
+    if (available <= 0) continue;
+    matches += 1;
+    counts.set(pair, available - 1);
+  }
+  return Math.max(0, Math.min(100, Math.round((2 * matches * 100) / ((left.length - 1) + (right.length - 1)))));
+}
+
 export function chooseBestZoneReading(readings: PremiumZoneReading[]): PremiumZoneReading {
+  if (!readings.length) throw new Error('Nenhuma leitura OCR disponível para escolher.');
   const ordered = [...readings].sort((a, b) => {
     const textBonusA = Math.min(20, a.text.trim().length / 18);
     const textBonusB = Math.min(20, b.text.trim().length / 18);
@@ -193,12 +218,29 @@ export function chooseBestZoneReading(readings: PremiumZoneReading[]): PremiumZo
   });
   const best = ordered[0];
   const alternatives = ordered.slice(1).map((item) => ({ text: item.text, confidence: item.confidence, enhancement: item.enhancement }));
+  const consistency = ordered.length <= 1 ? 100 : Math.round(
+    ordered.slice(1).reduce((sum, item) => {
+      const agreement = textAgreement(best.text, item.text);
+      const confidenceAgreement = Math.max(0, 100 - Math.abs(best.confidence - item.confidence));
+      return sum + agreement * 0.88 + confidenceAgreement * 0.12;
+    }, 0) / (ordered.length - 1)
+  );
+  const status = best.status === 'confirmed' && consistency < 78 ? 'review' : best.status;
   return {
     ...best,
+    status,
     passCount: readings.length,
     alternatives,
-    consistency: readings.length <= 1 ? 100 : Math.max(0, Math.round(100 - Math.abs(readings[0].confidence - readings[1].confidence)))
+    consistency
   };
+}
+
+function hasExplicitMainPosition(captures: CaptureReadingAudit[], mergedText: string) {
+  const overviewPosition = captures.some((capture) =>
+    Boolean(capture.identity.position) && (capture.declaredType === 'overview' || capture.detectedType === 'overview')
+  );
+  if (overviewPosition) return true;
+  return /(?:POSIÇÃO PRINCIPAL|POSICAO PRINCIPAL|POSIÇÃO|POSICAO)\s*[:=\-]\s*(GK|CB|LB|RB|DMF|CMF|LMF|RMF|AMF|LWF|RWF|SS|CF|GOL|ZAG|LE|LD|VOL|MLG|MAT|SA|CA)\b/i.test(mergedText);
 }
 
 export function buildTotalReadingSession(captures: CaptureReadingAudit[], mergedText: string): TotalReadingSession {
@@ -212,19 +254,22 @@ export function buildTotalReadingSession(captures: CaptureReadingAudit[], merged
   }));
   const missingCriticalScreens = coverage.filter((item) => item.required && !item.present).map((item) => item.label);
   const source = normalized(mergedText);
-  const hasName = /nome do jogador|\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ' -]{2,}\b/.test(mergedText);
-  const hasPosition = /posi[cç][aã]o|\b(GK|CB|LB|RB|DMF|CMF|LMF|RMF|AMF|LWF|RWF|SS|CF|GOL|ZAG|LE|LD|VOL|MLG|MAT|SA|CA)\b/i.test(mergedText);
-  const hasStyle = source.includes('estilo de jogo') || source.includes('orquestrador') || source.includes('primeiro volante') || source.includes('armador criativo') || source.includes('artilheiro');
-  const hasPoints = /pontos (?:totais|disponiveis|de progresso)|PONTOS TOTAIS/i.test(mergedText);
-  const hasAttributes = (source.match(/finalizacao|passe rasteiro|controle de bola|talento defensivo|resistencia/g) ?? []).length >= 2;
-  const hasSkills = source.includes('habilidades') || source.includes('interceptacao') || source.includes('toque duplo');
+  const hasName = captures.some((capture) => Boolean(capture.identity.playerName)) || Boolean(extractCaptureIdentity(mergedText).playerName);
+  const hasPosition = hasExplicitMainPosition(captures, mergedText);
+  const hasStyle = /(?:estilo de jogo)\s*[:=\-]\s*[^\n]{3,40}/i.test(mergedText)
+    || /\b(orquestrador|primeiro volante|armador criativo|artilheiro|destruidor|defensor criativo|infiltra[cç][aã]o|meia vers[aá]til|homem de [aá]rea|piv[oô])\b/i.test(mergedText);
+  const hasPoints = /(?:pontos (?:totais|dispon[ií]veis|de progresso))\s*[:=\-]?\s*\d{1,3}\b/i.test(mergedText)
+    || /\b\d{1,3}\s+pontos (?:totais|dispon[ií]veis|de progresso)\b/i.test(mergedText);
+  const attributeValueMatches = mergedText.match(/(?:finaliza[cç][aã]o|passe rasteiro|controle de bola|talento defensivo|resist[eê]ncia)\s*[:=\-]?\s*\d{1,3}\b/gi) ?? [];
+  const hasAttributes = attributeValueMatches.length >= 2;
+  const hasSkills = /\b(intercepta[cç][aã]o|toque duplo|passe de primeira|bloqueador|marca[cç][aã]o individual|superioridade a[eé]rea|esp[ií]rito guerreiro)\b/i.test(mergedText);
   const criticalFields: TotalReadingSession['criticalFields'] = [
-    { key: 'name', label: 'Nome', status: hasName ? 'confirmed' : 'missing', reason: hasName ? 'Identidade encontrada em pelo menos uma tela.' : 'Nome não encontrado com segurança.' },
-    { key: 'position', label: 'Posição principal', status: hasPosition ? 'confirmed' : 'missing', reason: hasPosition ? 'Posição detectada ou disponível para confirmação.' : 'Posição principal precisa ser confirmada.' },
-    { key: 'style', label: 'Estilo de jogo', status: hasStyle ? 'confirmed' : 'review', reason: hasStyle ? 'Estilo localizado na leitura combinada.' : 'Estilo não apareceu com clareza; confirme manualmente.' },
-    { key: 'points', label: 'Pontos disponíveis', status: hasPoints ? 'confirmed' : 'review', reason: hasPoints ? 'Orçamento encontrado na tela de progressão.' : 'Confirme o total de pontos antes da ficha final.' },
-    { key: 'attributes', label: 'Atributos', status: hasAttributes ? 'confirmed' : 'review', reason: hasAttributes ? 'Lista de atributos reconhecida.' : 'Poucos atributos foram reconhecidos.' },
-    { key: 'skills', label: 'Habilidades', status: hasSkills ? 'confirmed' : 'review', reason: hasSkills ? 'Tela de habilidades incorporada.' : 'Habilidades não confirmadas; a ficha ainda pode ser feita sem sugerir duplicatas com total segurança.' }
+    { key: 'name', label: 'Nome', status: hasName ? 'confirmed' : 'missing', reason: hasName ? 'Nome extraído explicitamente de uma leitura de identidade.' : 'Nome não encontrado com segurança.' },
+    { key: 'position', label: 'Posição principal', status: hasPosition ? 'confirmed' : 'missing', reason: hasPosition ? 'Código de posição principal extraído explicitamente.' : 'Posição principal precisa ser confirmada.' },
+    { key: 'style', label: 'Estilo de jogo', status: hasStyle ? 'confirmed' : 'review', reason: hasStyle ? 'Nome do estilo localizado na leitura combinada.' : 'Estilo não apareceu com clareza; confirme manualmente.' },
+    { key: 'points', label: 'Pontos disponíveis', status: hasPoints ? 'confirmed' : 'review', reason: hasPoints ? 'Valor numérico do orçamento encontrado na tela de progressão.' : 'Confirme o total de pontos antes da ficha final.' },
+    { key: 'attributes', label: 'Atributos', status: hasAttributes ? 'confirmed' : 'review', reason: hasAttributes ? 'Múltiplos atributos com valores numéricos reconhecidos.' : 'Poucos atributos com valor foram reconhecidos.' },
+    { key: 'skills', label: 'Habilidades', status: hasSkills ? 'confirmed' : 'review', reason: hasSkills ? 'Pelo menos uma habilidade identificável foi incorporada.' : 'Habilidades não confirmadas; a ficha ainda pode ser feita sem sugerir duplicatas com total segurança.' }
   ];
   const confidenceValues = captures.map((capture) => capture.confidence).filter(Number.isFinite);
   const mergedConfidence = confidenceValues.length ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length) : 0;
