@@ -139,10 +139,6 @@ Deno.serve(async (request) => {
 
     let { data: profile, error: profileError } = await service.from('buildmaster_profiles').select('*').eq('id', authData.user.id).single();
 
-    // A conta proprietária foi criada antes de algumas migrações de perfil.
-    // Se houver divergência apenas nessa conta conhecida, o servidor repara o
-    // perfil usando o MESMO auth.users.id. Isso preserva Cofre, fichas e dados
-    // vinculados ao usuário em vez de mandar recriar a conta.
     if (isOwnerAccount && (profileError || !profile || profile.role !== 'admin' || profile.status !== 'active' || profile.expires_at || Number(profile.max_devices || 1) < 10)) {
       const { data: repairedProfile, error: repairError } = await service.from('buildmaster_profiles').upsert({
         id: OWNER_ID,
@@ -161,8 +157,11 @@ Deno.serve(async (request) => {
     }
 
     if (profileError || !profile) throw new HttpError(403, 'PROFILE_MISSING', 'Perfil da conta não encontrado.');
-    if (profile.status === 'blocked') throw new HttpError(403, 'ACCOUNT_BLOCKED', 'Esta conta foi bloqueada pelo administrador.');
-    if (profile.status === 'suspended') throw new HttpError(403, 'ACCOUNT_SUSPENDED', 'Esta conta está suspensa.');
+    const profileStatus = String(profile.status || '').trim().toLowerCase();
+    if (profileStatus === 'blocked') throw new HttpError(403, 'ACCOUNT_BLOCKED', 'Esta conta foi bloqueada pelo administrador.');
+    if (profileStatus === 'suspended') throw new HttpError(403, 'ACCOUNT_SUSPENDED', 'Esta conta está suspensa.');
+    if (profileStatus === 'expired') throw new HttpError(403, 'ACCOUNT_EXPIRED', 'Seu prazo de acesso terminou.');
+    if (profileStatus !== 'active') throw new HttpError(403, 'ACCOUNT_STATUS_INVALID', 'O estado desta conta não é válido para acesso.');
     if (profile.expires_at && Date.parse(profile.expires_at) <= Date.now()) throw new HttpError(403, 'ACCOUNT_EXPIRED', 'Seu prazo de acesso terminou.');
 
     const deviceId = String(body.deviceId || '').trim();
@@ -213,7 +212,7 @@ Deno.serve(async (request) => {
         username: profile.username,
         display_name: profile.display_name,
         role: profile.role,
-        status: profile.status,
+        status: profileStatus,
         plan: profile.plan,
         expires_at: profile.expires_at,
         max_devices: profile.max_devices,
