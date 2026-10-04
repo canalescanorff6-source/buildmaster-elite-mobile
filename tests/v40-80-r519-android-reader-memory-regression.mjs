@@ -16,8 +16,8 @@ assert.match(
 const preprocessImage = imageProcessing.match(/export async function preprocessImage[\s\S]*?\n}/)?.[0] ?? '';
 assert.match(
   preprocessImage,
-  /workload: 'ocr-full',[\s\S]{0,180}preferredLongestSide: 1800,[\s\S]{0,180}maxScale: 1/,
-  'R519: o passe OCR da tela completa deve ser limitado a 1800px e nunca fazer upscale.',
+  /workload: 'ocr-full',[\s\S]{0,180}preferredLongestSide: 1400,[\s\S]{0,180}maxScale: 1/,
+  'R519/R536: o passe OCR da tela completa deve ser limitado a 1400px e nunca fazer upscale.',
 );
 assert.match(
   preprocessImage,
