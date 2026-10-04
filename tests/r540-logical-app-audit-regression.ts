@@ -35,6 +35,7 @@ const accountStorage = require('../src/lib/accountStorage') as typeof import('..
 const totalReader = require('../src/lib/totalCardReader') as typeof import('../src/lib/totalCardReader');
 const trainingCore = require('../src/lib/trainingPlanCore') as typeof import('../src/lib/trainingPlanCore');
 const finalSkills = require('../src/lib/finalAdditionalSkillSetR457') as typeof import('../src/lib/finalAdditionalSkillSetR457');
+const trainingBudget = require('../src/modules/analysis/cardTrainingBudgetParserR130') as typeof import('../src/modules/analysis/cardTrainingBudgetParserR130');
 
 // 1) JSON corrompido deve ser preservado para recuperação, nunca apagado durante leitura.
 storage.setItem('broken-json', '{"unfinished":');
@@ -111,4 +112,11 @@ assert.equal(partialSkills.removals.length, 0);
 assert.equal(partialSkills.exactFive, false);
 assert.equal(partialSkills.officialOnly, false);
 
-console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento e slots de habilidade protegidos.');
+// 8) PP explícito visível no print vence a inferência matemática do nível.
+// Nível 31 inferiria 60 PP, mas o print informa diretamente 64 PP.
+const explicitBudget = trainingBudget.parseCardTrainingBudgetR130('Nível máximo: 31\nPontos totais: 64', null);
+assert.equal(explicitBudget.level, 31);
+assert.equal(explicitBudget.pointBudget.total, 64);
+assert.equal(explicitBudget.pointBudget.source, 'OCR');
+
+console.log('R540 auditoria lógica: persistência, contas, OCR, orçamento, PP e slots de habilidade protegidos.');
