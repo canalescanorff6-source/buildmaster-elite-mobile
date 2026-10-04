@@ -244,7 +244,7 @@ export async function cropImage(file: File | Blob, region: { x: number; y: numbe
     const cropX = Math.max(0, Math.round(dimensions.width * region.x)), cropY = Math.max(0, Math.round(dimensions.height * region.y));
     const cropW = Math.max(1, Math.min(dimensions.width - cropX, Math.round(dimensions.width * region.w)));
     const cropH = Math.max(1, Math.min(dimensions.height - cropY, Math.round(dimensions.height * region.h)));
-    plan = planAdaptiveImageSize(cropW, cropH, { workload: 'ocr-crop', preferredLongestSide: safeTarget, minScale: 1, maxScale: 4.2 });
+    plan = planAdaptiveImageSize(cropW, cropH, { workload: 'ocr-crop', preferredLongestSide: safeTarget, minScale: 0.25, maxScale: 4.2 });
     bitmap = await croppedBitmap(file, cropX, cropY, cropW, cropH, plan);
   }
   if (!bitmap) {
@@ -252,7 +252,7 @@ export async function cropImage(file: File | Blob, region: { x: number; y: numbe
     const cropX = Math.max(0, Math.round(bitmap.width * region.x)), cropY = Math.max(0, Math.round(bitmap.height * region.y));
     const cropW = Math.max(1, Math.min(bitmap.width - cropX, Math.round(bitmap.width * region.w)));
     const cropH = Math.max(1, Math.min(bitmap.height - cropY, Math.round(bitmap.height * region.h)));
-    plan = planAdaptiveImageSize(cropW, cropH, { workload: 'ocr-crop', preferredLongestSide: safeTarget, minScale: 1, maxScale: 4.2 });
+    plan = planAdaptiveImageSize(cropW, cropH, { workload: 'ocr-crop', preferredLongestSide: safeTarget, minScale: 0.25, maxScale: 4.2 });
     fallbackCrop = { x: cropX, y: cropY, w: cropW, h: cropH };
   }
   const canvas = document.createElement('canvas');
