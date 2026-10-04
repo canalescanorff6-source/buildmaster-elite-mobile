@@ -1,8 +1,10 @@
-import { planAdaptiveImageSize } from '@/lib/invisibleOptimizationV3820';
+import { getRuntimeOptimizationProfile, planAdaptiveImageSize } from '@/lib/invisibleOptimizationV3820';
 
 export type ImageEnhancement = 'original' | 'color' | 'contrast' | 'sharp' | 'binary' | 'inverted';
 type PixelBuffer = Uint8ClampedArray<ArrayBufferLike>;
 type DecodedBitmap = ImageBitmap | (HTMLImageElement & { close?: () => void });
+const safeOcrSourceCache=new WeakMap<Blob,Promise<Blob|File>>();
+const isAndroidRuntime=()=>typeof navigator!=='undefined'&&/Android/i.test(navigator.userAgent);
 
 function normalizeLine(line: string) { return line.replace(/\s+/g, ' ').trim(); }
 export function mergeOcrTexts(...texts: string[]) {
@@ -139,8 +141,15 @@ function canvasBlob(canvas: HTMLCanvasElement, fallback: File | Blob): Promise<B
   return new Promise((resolve) => {
     let settled = false;
     const timer = globalThis.setTimeout(() => { if (!settled) { settled = true; resolve(fallback); } }, 6_000);
-    canvas.toBlob((blob) => { if (settled) return; settled = true; globalThis.clearTimeout(timer); resolve(blob ?? fallback); }, 'image/png', 0.98);
+    canvas.toBlob((blob) => { if (settled) return; settled = true; globalThis.clearTimeout(timer); resolve(blob ?? fallback); }, 'image/png', 0.96);
   });
+}
+
+export async function prepareRepeatedOcrSource(file:File|Blob):Promise<Blob|File>{
+  if(!isAndroidRuntime()||typeof document==='undefined')return file;
+  const cached=safeOcrSourceCache.get(file);if(cached)return cached;
+  const task=(async()=>{const bitmap=await imageToBitmap(file);if(!bitmap)return file;const longest=Math.max(bitmap.width,bitmap.height);if(longest<=2100){bitmap.close?.();return file;}const profile={...getRuntimeOptimizationProfile(),maxFullOcrMegapixels:3.4};const plan=planAdaptiveImageSize(bitmap.width,bitmap.height,{workload:'ocr-full',preferredLongestSide:1900,minScale:.1,maxScale:1,profile});const canvas=document.createElement('canvas');try{canvas.width=plan.width;canvas.height=plan.height;const ctx=canvas.getContext('2d');if(!ctx)return file;ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);return await canvasBlob(canvas,file);}finally{bitmap.close?.();canvas.width=1;canvas.height=1;}})();
+  safeOcrSourceCache.set(file,task);return task;
 }
 
 export function expandOcrRegion(region: { x: number; y: number; w: number; h: number }, horizontal = 0.04, vertical = 0.025) {
@@ -150,7 +159,7 @@ export function expandOcrRegion(region: { x: number; y: number; w: number; h: nu
 }
 
 export async function preprocessImage(file: File | Blob, mode: ImageEnhancement = 'contrast'): Promise<Blob | File> {
-  const bitmap = await imageToBitmap(file);
+  const source=await prepareRepeatedOcrSource(file),bitmap = await imageToBitmap(source);
   if (!bitmap) return file;
   const plan = planAdaptiveImageSize(bitmap.width, bitmap.height, { workload: 'ocr-full', preferredLongestSide: 1800, minScale: 0.1, maxScale: 1 });
   const canvas = document.createElement('canvas');
@@ -162,20 +171,19 @@ export async function preprocessImage(file: File | Blob, mode: ImageEnhancement 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height); enhancePixels(imageData, mode); ctx.putImageData(imageData, 0, 0);
     return await canvasBlob(canvas, file);
   } finally {
-    bitmap.close?.();
-    canvas.width = 1;
-    canvas.height = 1;
+    bitmap.close?.(); canvas.width = 1; canvas.height = 1;
   }
 }
 
 export async function cropImage(file: File | Blob, region: { x: number; y: number; w: number; h: number }, widthTarget = 1900, mode: ImageEnhancement = 'contrast'): Promise<Blob | File> {
   if (typeof document === 'undefined') return file;
-  const bitmap = await imageToBitmap(file); if (!bitmap) return file;
+  const source=await prepareRepeatedOcrSource(file),bitmap = await imageToBitmap(source); if (!bitmap) return file;
   const cropX = Math.max(0, Math.round(bitmap.width * region.x)), cropY = Math.max(0, Math.round(bitmap.height * region.y));
   const cropW = Math.max(1, Math.min(bitmap.width - cropX, Math.round(bitmap.width * region.w)));
   const cropH = Math.max(1, Math.min(bitmap.height - cropY, Math.round(bitmap.height * region.h)));
-  const safeTarget = Math.min(Math.max(720, widthTarget), 3200);
-  const plan = planAdaptiveImageSize(cropW, cropH, { workload: 'ocr-crop', preferredLongestSide: safeTarget, minScale: 1, maxScale: 4.2 });
+  const android=isAndroidRuntime(),safeTarget=Math.min(Math.max(720,widthTarget),android?1750:3200),baseProfile=getRuntimeOptimizationProfile();
+  const profile=android?{...baseProfile,maxCropOcrMegapixels:2.2}:baseProfile;
+  const plan = planAdaptiveImageSize(cropW, cropH, { workload: 'ocr-crop', preferredLongestSide: safeTarget, minScale: android?.35:1, maxScale: android?2.2:4.2, profile });
   const canvas = document.createElement('canvas');
   try {
     canvas.width = plan.width; canvas.height = plan.height;
@@ -185,8 +193,6 @@ export async function cropImage(file: File | Blob, region: { x: number; y: numbe
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height); enhancePixels(imageData, mode); ctx.putImageData(imageData, 0, 0);
     return await canvasBlob(canvas, file);
   } finally {
-    bitmap.close?.();
-    canvas.width = 1;
-    canvas.height = 1;
+    bitmap.close?.(); canvas.width = 1; canvas.height = 1;
   }
 }
