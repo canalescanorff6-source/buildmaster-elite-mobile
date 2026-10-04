@@ -21,5 +21,8 @@ assert.match(processing,/createImageBitmap\(file,[\s\S]{0,500}resizeWidth:\s*pla
 assert.match(processing,/createImageBitmap\(file,\s*cropX,\s*cropY,\s*cropW,\s*cropH,[\s\S]{0,500}resizeWidth:\s*plan\.width/,'R536: recortes devem usar decode direto da região, sem manter o print 12 MP inteiro em memória.');
 const preprocess = processing.match(/export async function preprocessImage[\s\S]*?\n}/)?.[0] ?? '';
 assert.match(preprocess,/preferredLongestSide:\s*1400/,'R536: o passe de identificação full-frame deve ficar em 1400 px para reduzir pico de memória no WebView.');
+const crop = processing.match(/export async function cropImage[\s\S]*?\n}/)?.[0] ?? '';
+assert.match(crop,/preferredLongestSide:\s*safeTarget,\s*minScale:\s*0\.25,\s*maxScale:\s*4\.2/,'R536: recortes maiores que 1900 px precisam poder reduzir antes de criar ImageData.');
+assert.doesNotMatch(crop,/preferredLongestSide:\s*safeTarget,\s*minScale:\s*1,\s*maxScale:\s*4\.2/,'R536: minScale 1 bloquearia o downscale e restauraria o pico de memória nos recortes grandes.');
 
 console.log('R536 aprovada: digest incremental, worker Android sem prewarm pesado e decode redimensionado\/recortado antes do OCR.');
