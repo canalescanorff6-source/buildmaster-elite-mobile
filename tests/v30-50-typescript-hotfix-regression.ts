@@ -9,7 +9,7 @@ const precision = fs.readFileSync(path.join(root, 'src/modules/card-reader/highP
 const processing = fs.readFileSync(path.join(root, 'src/modules/card-reader/imageProcessing.ts'), 'utf8');
 
 assert.doesNotMatch(cardVision, /\bocrKindForZone\b/, 'Importação não utilizada ocrKindForZone voltou ao CardVisionApp.');
-assert.match(ocr, /export type LocalEnhancementMode = 'adaptive' \| 'contrast' \| 'sharp' \| 'color' \| 'binary' \| 'inverted'/);
+assert.match(ocr, /export\s+type\s+LocalEnhancementMode\s*=\s*'adaptive'\s*\|\s*'contrast'\s*\|\s*'sharp'\s*\|\s*'color'\s*\|\s*'binary'\s*\|\s*'inverted'\s*;/);
 assert.match(precision, /readingMode: 'balanced' \| 'precision' \| 'fast'/);
 assert.match(precision, /if \(mode !== 'precision'\)/);
 assert.match(processing, /type PixelBuffer = Uint8ClampedArray<ArrayBufferLike>/);
