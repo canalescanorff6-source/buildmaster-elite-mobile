@@ -9,16 +9,32 @@ export function stripManualReviewBlockR131(text: string) {
   return String(text || '').replace(/\[AJUSTES MANUAIS\][\s\S]*?\[FIM AJUSTES\]\s*/gi, '').trimStart();
 }
 
+function normalizedIdentityR540(value: string) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function learnedIdentityMatchesCurrentCardR540(text: string, learned: LearnedCardMemory | null | undefined) {
+  if (!learned?.playerName) return false;
+  const explicitName = text.match(/(?:^|\n)\s*(?:NOME DO JOGADOR|NOME|JOGADOR)\s*[:=\-]\s*([^\n]{2,60})/i)?.[1] ?? '';
+  return Boolean(explicitName) && normalizedIdentityR540(explicitName) === normalizedIdentityR540(learned.playerName);
+}
+
 export function applyLearnedCardContextR131(text: string, learned: LearnedCardMemory | null | undefined) {
-  if (!learned) return text;
+  // R540: memória local só auxilia a identidade quando a própria leitura atual já
+  // confirma exatamente o mesmo jogador. Posição, estilo e PP pertencem à CARTA,
+  // não ao nome do atleta, e nunca são herdados entre edições diferentes.
+  if (!learnedIdentityMatchesCurrentCardR540(text, learned)) return text;
   const lines = [
     '[APRENDIZADO LOCAL]',
-    `NOME DO JOGADOR: ${learned.playerName}`,
-    `POSIÇÃO PRINCIPAL: ${learned.mainPosition}`,
-    learned.playstyle ? `ESTILO DE JOGO: ${learned.playstyle}` : '',
-    learned.trainingPointsTotal ? `PONTOS TOTAIS: ${learned.trainingPointsTotal}` : '',
+    `NOME DO JOGADOR: ${learned!.playerName}`,
     '[FIM APRENDIZADO]'
-  ].filter(Boolean);
+  ];
   return `${lines.join('\n')}\n${text}`;
 }
 
@@ -47,17 +63,16 @@ export function buildManualReviewTextR131(input: {
 
   const locks: string[] = ['[AJUSTES MANUAIS]'];
   if (confirmed) locks.push('CONFIRMAÇÃO MANUAL: SIM');
-  const learnedName = learned?.playerName ?? '';
-  const learnedPosition = learned?.mainPosition ?? 'AUTO';
-  const learnedStyle = learned?.playstyle ?? 'AUTO';
-  const learnedPoints = learned?.trainingPointsTotal ?? '';
+  const safeLearned = learnedIdentityMatchesCurrentCardR540(text, learned) ? learned : null;
+  const learnedName = safeLearned?.playerName ?? '';
 
   if (manualFields.playerName.trim() || learnedName) locks.push(`NOME DO JOGADOR: ${manualFields.playerName.trim() || learnedName}`);
-  if (cardPositionOverride !== 'AUTO' || learnedPosition !== 'AUTO') locks.push(`POSIÇÃO PRINCIPAL: ${cardPositionOverride !== 'AUTO' ? cardPositionOverride : learnedPosition}`);
-  if (playstyleOverride !== 'AUTO' || learnedStyle !== 'AUTO') locks.push(`ESTILO DE JOGO OFENSIVO: ${playstyleOverride !== 'AUTO' ? playstyleOverride : learnedStyle}`);
+  // Posição, estilo e PP só podem vir da carta atual ou de override/manual atual.
+  if (cardPositionOverride !== 'AUTO') locks.push(`POSIÇÃO PRINCIPAL: ${cardPositionOverride}`);
+  if (playstyleOverride !== 'AUTO') locks.push(`ESTILO DE JOGO OFENSIVO: ${playstyleOverride}`);
   if (defensivePlaystyleOverride !== 'AUTO') locks.push(`ESTILO DE JOGO DEFENSIVO: ${defensivePlaystyleOverride}`);
   if (manualFields.level.trim()) locks.push(`NÍVEL MÁXIMO: ${manualFields.level.trim()}`);
-  if (manualFields.trainingPointsTotal.trim() || learnedPoints) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim() || learnedPoints}`);
+  if (manualFields.trainingPointsTotal.trim()) locks.push(`PONTOS TOTAIS: ${manualFields.trainingPointsTotal.trim()}`);
 
   // R131: somente habilidades explicitamente presentes em ManualFields são tratadas
   // como posse confirmada. Candidatos provisórios do OCR não entram aqui de forma
