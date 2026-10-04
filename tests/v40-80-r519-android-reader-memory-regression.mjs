@@ -46,5 +46,6 @@ assert.match(updateProgressUi, /indeterminatePhases/, 'R520: etapas sem total co
 assert.match(updateProgressUi, /<progress[\s\S]{0,180}v4020-progress-track/, 'R520: a barra deve trocar para progresso indeterminado durante espera/conexão.');
 assert.match(updateProgressUi, /Tempo nesta etapa/, 'R520: o usuário deve enxergar que a etapa continua viva mesmo antes do primeiro byte.');
 execFileSync(process.execPath,['tests/v40-80-r520-reader-real-device-regression.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/v40-80-r538-reader-recovery-regression.mjs'],{stdio:'inherit'});
 
-console.log('R519/R520 aprovadas: leitor limita memória, falha fechado sem evidência e o atualizador expõe todas as etapas reais.');
+console.log('R519/R520/R538 aprovadas: leitor limita memória, preserva detalhe útil, falha fechado e libera OCR deterministicamente.');
