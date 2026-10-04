@@ -64,12 +64,17 @@ export function sealProductionAuthorityR126(input: AnalysisResult): AnalysisResu
 
 export function isCurrentProductionAnalysisR126(input: AnalysisResult) {
   const result = input as WithProductionAuthorityR126;
+  const cleanSlate = result.cleanSlate2027R119;
+  const authority = result.productionAuthorityR126;
   return Boolean(
-    result.cleanSlate2027R119?.version === CLEAN_SLATE_2027_R119_VERSION &&
-    result.productionAuthorityR126?.version === PRODUCTION_AUTHORITY_R126_VERSION &&
-    result.productionAuthorityR126?.cardIdentity === cardIdentityFingerprintR126(result.parsed) &&
-    result.productionAuthorityR126?.cardEvidence === cardEvidenceFingerprintR126(result.parsed) &&
-    result.productionAuthorityR126?.usagePosition === result.cleanSlate2027R119?.usagePosition &&
-    result.productionAuthorityR126?.usageFunction === result.cleanSlate2027R119?.usageFunction
+    cleanSlate?.version === CLEAN_SLATE_2027_R119_VERSION &&
+    authority?.version === PRODUCTION_AUTHORITY_R126_VERSION &&
+    authority.authority === 'PRODUCTION_SINGLE_WRITER' &&
+    authority.decisionEngine === CLEAN_SLATE_2027_R119_VERSION &&
+    authority.status === cleanSlate.status &&
+    authority.cardIdentity === cardIdentityFingerprintR126(result.parsed) &&
+    authority.cardEvidence === cardEvidenceFingerprintR126(result.parsed) &&
+    authority.usagePosition === cleanSlate.usagePosition &&
+    authority.usageFunction === cleanSlate.usageFunction
   );
 }
