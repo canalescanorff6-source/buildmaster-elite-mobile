@@ -89,8 +89,6 @@ type ManualBudgetOverride = { total: number; sourceText: string } | null;
 function manualBlockScope(text: string): { scope: string; explicitBlock: boolean } {
   const match = text.match(/\[AJUSTES MANUAIS\]([\s\S]*?)\[FIM AJUSTES\]/i);
   if (match?.[1]) return { scope: match[1], explicitBlock: true };
-  // Fora do bloco manual, somente uma declaração literalmente marcada como
-  // orçamento manual pode ter prioridade. Nível/pontos comuns pertencem ao print.
   const explicitBudget = text.match(/(?:^|\n)\s*(?:or[cç]amento\s*(?:manual|de\s*pontos\s*manual)|pontos\s*manuais)\s*[:=\-]?\s*\d{1,3}/i)?.[0] ?? '';
   return { scope: explicitBudget, explicitBlock: false };
 }
@@ -133,14 +131,11 @@ function resolveTrainingPointBudget(
   manualBudget: ManualBudgetOverride
 ): { used: number; total: number; source: 'MANUAL' | 'TRAINING_READ' | 'OCR' | 'LEVEL_INFERRED' | 'FALLBACK'; warning?: string } {
   // Prioridade máxima: o que o usuário digitou na Auditoria Elite.
-  // Se o usuário informou nível máximo ou pontos de progresso, o app deve recalcular a ficha por esse orçamento,
-  // mesmo que o OCR tenha lido uma ficha automática diferente no print.
   if (manualBudget && manualBudget.total >= MIN_AUTO_TRAINING_BUDGET && manualBudget.total <= MAX_AUTO_TRAINING_BUDGET) {
     return { used: manualBudget.total, total: manualBudget.total, source: 'MANUAL', warning: parsedPoints.ignoredReason };
   }
 
-  // Regra v6 local: se o print trouxe a ficha automática já distribuída, o app soma o custo real dela.
-  // Esse é o orçamento mais confiável porque usa os próprios níveis de treino visíveis no print.
+  // Se o print trouxe a ficha automática distribuída, somar o custo real dos níveis é a fonte mais forte da própria tela.
   if (trainingAllocationPoints && trainingAllocationPoints >= MIN_AUTO_TRAINING_BUDGET && trainingAllocationPoints <= MAX_AUTO_TRAINING_BUDGET) {
     return {
       used: trainingAllocationPoints,
@@ -148,6 +143,16 @@ function resolveTrainingPointBudget(
       source: 'TRAINING_READ',
       warning: parsedPoints.ignoredReason
     };
+  }
+
+  // R540: um total de PP explicitamente visível é evidência direta e deve vencer a inferência matemática do nível.
+  // A inferência só entra quando o print não trouxe um total direto confiável.
+  if (parsedPoints.total && parsedPoints.total >= MIN_AUTO_TRAINING_BUDGET && parsedPoints.total <= MAX_AUTO_TRAINING_BUDGET) {
+    const safeTotal = normalizeTrainingBudget(parsedPoints.total);
+    const safeUsed = parsedPoints.used !== null && Number.isFinite(parsedPoints.used) && parsedPoints.used >= 0 && parsedPoints.used <= safeTotal
+      ? parsedPoints.used
+      : safeTotal;
+    return { used: safeUsed, total: safeTotal, source: 'OCR', warning: parsedPoints.ignoredReason };
   }
 
   if (inferredPoints && inferredPoints >= MIN_AUTO_TRAINING_BUDGET && inferredPoints <= MAX_AUTO_TRAINING_BUDGET) {
@@ -159,20 +164,11 @@ function resolveTrainingPointBudget(
     };
   }
 
-  // OCR de pontos diretos fica como terceira opção. Nunca aceita 2/2, 116/116 ou número fora do teto.
-  if (parsedPoints.total && parsedPoints.total >= MIN_AUTO_TRAINING_BUDGET && parsedPoints.total <= MAX_AUTO_TRAINING_BUDGET) {
-    const safeTotal = normalizeTrainingBudget(parsedPoints.total);
-    const safeUsed = parsedPoints.used !== null && Number.isFinite(parsedPoints.used) && parsedPoints.used >= MIN_AUTO_TRAINING_BUDGET && parsedPoints.used <= safeTotal
-      ? parsedPoints.used
-      : safeTotal;
-    return { used: safeUsed, total: safeTotal, source: 'OCR', warning: parsedPoints.ignoredReason };
-  }
-
   return {
     used: SAFE_DEFAULT_TRAINING_BUDGET,
     total: SAFE_DEFAULT_TRAINING_BUDGET,
     source: 'FALLBACK',
-    warning: parsedPoints.ignoredReason ?? 'Não encontrei plano distribuído nem nível máximo com segurança; usando orçamento competitivo padrão de 64 pontos.'
+    warning: parsedPoints.ignoredReason ?? 'Não encontrei plano distribuído, PP explícito nem nível máximo com segurança; usando orçamento competitivo padrão de 64 pontos.'
   };
 }
 
