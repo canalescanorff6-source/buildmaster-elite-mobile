@@ -25,15 +25,14 @@ assert.match(actions,/const gate = readerSessionGateR520\(capturedSession\)[\s\S
 assert.match(actions,/if \(!gate\.ok\)[\s\S]{0,1200}openMainSection\('leitor'[\s\S]{0,1000}return undefined/,
   'R520 leitor: evidência insuficiente deve impedir a confirmação vazia no Resultado.');
 
-// R536 — vídeos reais Android mostraram encerramento do processo durante OCR.
-// O leitor precisa trabalhar sobre uma cópia reduzida reutilizável, limitar cada
-// recorte e desmontar o worker logo depois que a leitura ativa terminar.
+// R536/R538 — uma fonte reutilizável evita decodificar o print grande a cada
+// quadrado; R538 aperta o crop para 1.8 MP e recupera detalhe na fonte base.
 assert.match(imageProcessing,/safeOcrSourceCache|repeatedOcrSourceCache/,
-  'R536 leitor: os vários quadrados não podem decodificar o print 12 MP original do zero a cada passagem.');
+  'R536 leitor: os vários quadrados não podem decodificar o print original do zero a cada passagem.');
 assert.match(imageProcessing,/prepareRepeatedOcrSource/,
   'R536 leitor: deve existir uma fonte OCR reduzida e reutilizável para Android.');
-assert.match(imageProcessing,/maxCropOcrMegapixels[\s\S]{0,180}2\.[0-9]/,
-  'R536 leitor: recortes Android precisam de teto explícito próximo de 2 MP para conter ImageData/canvas/Tesseract.');
+assert.match(imageProcessing,/maxCropOcrMegapixels[\s\S]{0,180}1\.8/,
+  'R538 leitor: recortes Android precisam de teto explícito de 1.8 MP para conter ImageData/canvas/Tesseract.');
 assert.match(imageProcessing,/cropImage[\s\S]{0,1800}prepareRepeatedOcrSource/,
   'R536 leitor: cropImage deve usar a cópia segura antes de decodificar o recorte.');
 assert.match(ocr,/createZoneOriginPreview[\s\S]{0,500}isAndroid/i,
@@ -43,4 +42,4 @@ assert.match(worker,/ocrReading[\s\S]{0,1000}terminateIdleWorker|terminateIdleWo
 assert.match(worker,/android[\s\S]{0,1400}(?:600|750|800|1000|1200)/i,
   'R536 leitor: Android precisa de janela curta de liberação do worker após o OCR, não 45–150 segundos.');
 
-console.log('R520/R536 leitor aprovada: fallback Android, fail-closed e fechamento de memória do OCR protegidos.');
+console.log('R520/R536/R538 leitor aprovado: fallback, fail-closed, detalhe recuperado e memória Android limitada.');
