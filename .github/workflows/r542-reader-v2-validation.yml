@@ -27,3 +27,22 @@ jobs:
         uses: actions/checkout@v5
       - name: Executar gate arquitetural R542-A
         run: node tests/v40-80-r542-reader-v2-architecture-regression.mjs
+
+  worker-lifecycle:
+    name: R542-B/C — lifecycle e serialização OCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: TypeScript isolado R542
+        run: npx tsc -p tests/types-r542/tsconfig.json --pretty false
+      - name: Executar lifecycle R542-B/C
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-worker-regression.ts
