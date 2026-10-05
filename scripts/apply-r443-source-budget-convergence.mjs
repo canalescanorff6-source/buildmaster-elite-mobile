@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION='40.80-r542-source-budget-convergence-v13';
+export const R443_SOURCE_BUDGET_VERSION='40.80-r542-source-budget-convergence-v14';
 export const R443_GLOBAL_SOURCE_BUDGET_BYTES=5.84375*1024*1024;
 export const R443_SOURCE_RESERVE_BYTES=65_536;
 export const R443_SOURCE_CHECKPOINT_BYTES=R443_GLOBAL_SOURCE_BUDGET_BYTES-R443_SOURCE_RESERVE_BYTES;
@@ -52,9 +52,11 @@ export function applySourceBudgetConvergenceR443(rootDirectory=process.cwd()){
  if(!r184.includes(`const sourceLimit=${GLOBAL}*1024*1024;`))issues.push('R184 ainda diverge');
  for(const key of ['r193','r194','r195','r196','r197','r198','r199','r200'])if(!read(root,key).includes(CHECKPOINT))issues.push(`${key.toUpperCase()} ainda diverge`);
  const hasGlobal=s=>s.includes(`${GLOBAL} * 1024 * 1024`)||s.includes('5\\.84375\\s*\\*\\s*1024');
+ const auditUsesCanonicalR443=r424Audit.includes("read(root,'scripts/apply-r443-source-budget-convergence.mjs')")&&r424Audit.includes('R443_SOURCE_RESERVE_BYTES=65_536');
+ const fixtureUsesCanonicalR443=r424Fixture.includes('scripts/apply-r443-source-budget-convergence.mjs')&&r424Fixture.includes('R443_SOURCE_RESERVE_BYTES=65_536');
  if(!r414.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r414))issues.push('R414 ainda diverge');
- if(!r424Audit.includes(CHECKPOINT)||!hasGlobal(r424Audit))issues.push('R424 audit ainda diverge');
- if(!r424Fixture.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r424Fixture))issues.push('R424 fixture ainda diverge');
+ if(!auditUsesCanonicalR443&&(!r424Audit.includes(CHECKPOINT)||!hasGlobal(r424Audit)))issues.push('R424 audit ainda diverge');
+ if(!fixtureUsesCanonicalR443&&(!r424Fixture.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r424Fixture)))issues.push('R424 fixture ainda diverge');
  if(issues.length)throw new Error(`R443: convergência de orçamento incompleta — ${issues.join(' | ')}`);
  return{changed:patched.length>0,patched,globalSourceBudgetBytes:R443_GLOBAL_SOURCE_BUDGET_BYTES,reserveBytes:R443_SOURCE_RESERVE_BYTES,checkpointBytes:R443_SOURCE_CHECKPOINT_BYTES,version:R443_SOURCE_BUDGET_VERSION};
 }
