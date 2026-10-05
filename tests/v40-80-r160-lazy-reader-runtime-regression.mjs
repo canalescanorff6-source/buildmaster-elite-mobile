@@ -4,7 +4,11 @@ import fs from 'node:fs';
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const navigation = fs.readFileSync('src/hooks/useCardVisionNavigationControllerR176.ts', 'utf8');
 const runtime = fs.readFileSync('src/modules/card-reader/readerRuntimeR160.ts', 'utf8');
-const readerActionsR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerFacadeR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerV2R542 = fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts', 'utf8');
+const readerLegacyR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts', 'utf8');
+const readerActionsR187 = `${readerV2R542}\n${readerLegacyR187}`;
+assert.match(readerFacadeR187, /card-reader-v2\/cardVisionReaderActionsR542/, 'R542: a boundary pública R187 deve continuar delegando ao Reader V2.');
 const analysisRuntimeR163 = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
 const structuredEvidence = fs.readFileSync('src/modules/card-reader/cardStructuredEvidenceBoundaryR133.ts', 'utf8');
 
