@@ -5,7 +5,9 @@ const vaultActions = fs.readFileSync('src/hooks/useCardVisionVaultActionsR185.ts
 const coordinator = fs.readFileSync('src/modules/vault/useCardVisionVaultCoordinatorR153.ts', 'utf8');
 const central = fs.readFileSync('src/modules/core/centralIntelligence.ts', 'utf8');
 const readerAnalysis = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
-const readerActions = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerFacade = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerV2 = fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts', 'utf8');
+const readerLegacy = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts', 'utf8');
 const cardCrop = fs.readFileSync('src/modules/card-reader/cardArtCrop.ts', 'utf8');
 for (const name of ['logout', 'handleCentralRecommendation']) assert.match(source, new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`));
 for (const name of ['createVaultFolder','moveHistoryToFolder','archiveHistoryItem','resetVaultFilters','openCofreDeJogadores','restoreHistory','openIntegratedPlayer']) assert.match(vaultActions, new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`));
@@ -22,7 +24,9 @@ assert.match(vaultActions, /async function openIntegratedPlayer\([\s\S]*?renderH
 assert.match(source, /function handleCentralRecommendation\([\s\S]*?item\.playerId[\s\S]*?openIntegratedPlayer\(item\.playerId/);
 assert.match(source, /players:\s*'jogadores'/, 'A recomendação de jogadores deve continuar roteando para a seção Jogadores.');
 assert.match(source, /item\.action === 'vault'[\s\S]*?openCofreDeJogadores\(\)/, 'A recomendação de Cofre deve continuar abrindo a boundary canônica do Cofre.');
-assert.match(readerActions, /cardPositionOverride === 'AUTO'\s*&&\s*POSITION_LABELS\.some\(\(item\) => item\.code === hydration\.suggestedCardPosition\)/, 'Hidratação da posição sugerida deve permanecer na boundary R187 do leitor.');
+assert.match(readerFacade, /cardVisionReaderActionsR542/, 'R187 deve permanecer como fachada oficial do Reader V2.');
+assert.match(readerV2, /cardVisionReaderActionsLegacyR187/, 'Reader V2 deve preservar a delegação da hidratação para o R187 legado.');
+assert.match(readerLegacy, /cardPositionOverride === 'AUTO'\s*&&\s*POSITION_LABELS\.some\(\(item\) => item\.code === hydration\.suggestedCardPosition\)/, 'Hidratação da posição sugerida deve permanecer na implementação delegada da boundary R187 do leitor.');
 const integratedPlayerCalls = `${source}\n${vaultActions}`.match(/openIntegratedPlayer\s*\(/g) ?? []; assert.ok(integratedPlayerCalls.length >= 6);
 assert.doesNotMatch(vaultActions, /function openIntegratedPlayer[\s\S]*?window\.location\s*=/); assert.doesNotMatch(vaultActions, /function restoreHistory[\s\S]*?localStorage\.setItem\(/);
-console.log('r150 aprovada: shell consome a boundary R185 e mantém R129/R139/R140/R153.');
+console.log('r150 aprovada: shell consome R185 e a hidratação do leitor segue R187 facade -> R542 -> R187 legado.');
