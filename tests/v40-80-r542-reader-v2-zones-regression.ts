@@ -18,7 +18,7 @@ async function main() {
     },
   };
   const worker = {
-    async recognize(input: unknown, key: string) {
+    async recognize(_input: unknown, key: string) {
       order.push(`ocr:${key}`);
       if (key === 'playerName') return { key, label: key, value: 'Messi', confidence: 95 };
       if (key === 'attributes') return { key, label: key, value: '90 91 92', confidence: 92 };
