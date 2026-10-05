@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": ["node"]
+  },
+  "files": [
+    "../../src/modules/card-reader-v2/readerV2Types.ts",
+    "../../src/modules/card-reader-v2/readerV2Bridge.ts",
+    "../v40-80-r542-reader-v2-bridge-regression.ts"
+  ]
+}
