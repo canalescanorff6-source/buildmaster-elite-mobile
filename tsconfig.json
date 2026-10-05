@@ -23,9 +23,6 @@
       }
     ],
     "paths": {
-      "@/modules/card-reader/cardVisionReaderActionsR187": [
-        "./src/modules/card-reader-v2/cardVisionReaderActionsR542.ts"
-      ],
       "@/*": [
         "./src/*"
       ]
