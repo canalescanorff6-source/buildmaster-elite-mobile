@@ -6,7 +6,9 @@ const app=fs.readFileSync('src/components/CardVisionApp.tsx','utf8');
 const session=fs.readFileSync('src/modules/session/activeSessionRepositoryR137.ts','utf8');
 const autosave=fs.readFileSync('src/hooks/useActiveSessionAutosaveR157.ts','utf8');
 const startup=fs.readFileSync('src/modules/runtime/cardVisionStartupRuntimeR177.ts','utf8');
-const readerActions=fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts','utf8');
+const readerFacade=fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts','utf8');
+const readerV2=fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts','utf8');
+const readerLegacy=fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts','utf8');
 const readerRuntime=fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts','utf8');
 const orchestrator=fs.readFileSync('src/modules/analysis/productionOrchestratorR138.ts','utf8');
 const production=fs.readFileSync('src/lib/productionAnalysisR128.ts','utf8');
@@ -17,7 +19,9 @@ assert.match(app,/setUsageFunction\('AUTO'\)/);
 assert.match(session,/usageFunction: string/);
 assert.match(autosave,/snapshot\.usageFunction/);
 assert.match(startup,/setUsageFunction\(snapshot\.usageFunction\)/);
-assert.match(readerActions,/usageFunction/);
+assert.match(readerFacade,/cardVisionReaderActionsR542/,'R187 deve permanecer como fachada oficial do Reader V2.');
+assert.match(readerV2,/cardVisionReaderActionsLegacyR187/,'R542 deve delegar a análise final ao boundary legado preservado.');
+assert.match(readerLegacy,/usageFunction/);
 assert.match(readerRuntime,/usageFunction/);
 assert.match(orchestrator,/usageFunction\?: string \| null/);
 assert.match(production,/usageFunctionR457:selectedFunction/);
@@ -46,4 +50,4 @@ assert.equal(orchestratorBuild.cleanSlate2027R119?.usageFunction,'Orquestrador')
 assert.equal(boxBuild.cleanSlate2027R119?.usageFunction,'Meia versátil');
 assert.notEqual(orchestratorBuild.productionAuthorityR128?.outputFingerprint,boxBuild.productionAuthorityR128?.outputFingerprint,'Função escolhida precisa fazer parte da build selada.');
 
-console.log('R457 Stage 3B aprovada: função manual percorre UI→sessão→reader→R138→R128→Clean Slate→R126/R128.');
+console.log('R457 Stage 3B aprovada: função manual percorre UI→sessão→fachada R542→R187 legado→R138→R128→Clean Slate→R126/R128.');
