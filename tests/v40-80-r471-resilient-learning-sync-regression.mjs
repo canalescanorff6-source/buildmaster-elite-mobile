@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const engine = fs.readFileSync('src/lib/intelligentLearningR470.ts','utf8');
-const reader = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts','utf8');
+const readerFacade = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts','utf8');
+const readerV2 = fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts','utf8');
+const readerLegacy = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts','utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
 
 for (const marker of [
@@ -29,11 +31,17 @@ const authGate = fs.readFileSync('src/components/AuthGate.tsx','utf8');
 assert.ok(authGate.includes("import('@/lib/intelligentLearningR470')"), 'R471 precisa carregar o flush lazy ao reconectar.');
 assert.ok(authGate.includes('flushIntelligentLearningOutboxR471'), 'R471 precisa drenar a fila no evento online.');
 
-assert.ok(reader.includes("markActiveReadingSessionR470('NORMALIZED'"));
-assert.ok(reader.includes("markActiveReadingSessionR470('ENGINE_RUNNING'"));
-assert.ok(reader.includes("markActiveReadingSessionR470('CARD_MATCHED'"));
+// R542 transformou a ação pública em fachada e isolou o OCR V2. O ciclo
+// persistente R470/R471 deve permanecer no fluxo clássico/finalização, depois
+// que o Reader V2 já encerrou o worker e atravessou o bridge de conferência.
+assert.ok(readerFacade.includes('cardVisionReaderActionsR542'));
+assert.ok(readerLegacy.includes("markActiveReadingSessionR470('NORMALIZED'"));
+assert.ok(readerLegacy.includes("markActiveReadingSessionR470('ENGINE_RUNNING'"));
+assert.ok(readerLegacy.includes("markActiveReadingSessionR470('CARD_MATCHED'"));
+assert.ok(readerV2.includes('legacy.runAnalysis(true)'), 'R542 precisa entregar a finalização confirmada ao fluxo que preserva R470/R471.');
+assert.ok(!readerV2.includes("markActiveReadingSessionR470('NORMALIZED'"), 'R471 não pode reintroduzir lifecycle cloud/aprendizado durante OCR V2.');
 
 assert.ok(String(pkg.scripts?.['test:r471'] ?? '').includes('r471-resilient-learning-sync'));
 assert.ok(String(pkg.scripts?.['ci:gate'] ?? '').includes('test:r471'));
 
-console.log('R471 aprovado: outbox persistente, retry offline-first e ciclo NORMALIZED/CARD_MATCHED sem binários em nuvem.');
+console.log('R471/R542 aprovado: outbox offline-first preservada após a conferência e ausente do OCR isolado.');
