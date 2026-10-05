@@ -9,6 +9,7 @@ on:
       - 'tests/types-r542/**'
       - 'tests/types-r542-zones/**'
       - 'tests/types-r542-bridge/**'
+      - 'tests/types-r542-automatic/**'
       - 'src/components/CardVisionApp.tsx'
       - '.github/workflows/r542-reader-v2-validation.yml'
   workflow_dispatch:
@@ -104,3 +105,22 @@ jobs:
         run: npx tsc -p tests/types-r542-bridge/tsconfig.json --pretty false
       - name: Executar regressão do bridge R542-F
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-bridge-regression.ts
+
+  automatic:
+    name: R542-D — automático e orquestrador
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: TypeScript isolado automático
+        run: npx tsc -p tests/types-r542-automatic/tsconfig.json --pretty false
+      - name: Executar regressão automática R542-D
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-automatic-regression.ts
