@@ -5,7 +5,11 @@ const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const loader = fs.readFileSync('src/modules/card-reader/readerRuntimeR160.ts', 'utf8');
 const runtime = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
 const navigationControllerR176 = fs.readFileSync('src/hooks/useCardVisionNavigationControllerR176.ts', 'utf8');
-const readerActionsR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerFacadeR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerV2R542 = fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts', 'utf8');
+const readerLegacyR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts', 'utf8');
+const readerActionsR187 = `${readerV2R542}\n${readerLegacyR187}`;
+assert.match(readerFacadeR187, /card-reader-v2\/cardVisionReaderActionsR542/, 'R542: a boundary pública R187 deve continuar delegando ao Reader V2.');
 
 assert.ok(app.split(/\r?\n/).length <= 2900, 'R163 deve manter CardVisionApp abaixo de 2.900 linhas.');
 assert.match(app, /createCardVisionReaderActionsR187/, 'CardVisionApp deve delegar a orquestração do leitor à fronteira R187.');
