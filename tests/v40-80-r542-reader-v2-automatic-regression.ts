@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createReaderV2Orchestrator } from '../src/modules/card-reader-v2/readerV2Orchestrator';
+import { createReaderV2OcrWorkerSession } from '../src/modules/card-reader-v2/readerV2OcrWorker';
 import type { ReaderV2Zone } from '../src/modules/card-reader-v2/readerV2Types';
 
 async function main() {
@@ -17,24 +18,23 @@ async function main() {
     zones,
     openImageSession: async () => ({
       previewUrl: 'blob:image',
-      async withCrop<T>(zone: ReaderV2Zone, callback: (value: unknown) => Promise<T> | T) { return await callback(zone.key); },
+      async withCrop<T>(zone: ReaderV2Zone, callback: (value: HTMLCanvasElement) => Promise<T> | T) {
+        return await callback(zone.key as unknown as HTMLCanvasElement);
+      },
       async close() {},
       snapshot: () => ({ width:100, height:100, previewUrl:'blob:image', closed:false, cropActive:false }),
     }),
-    createWorkerSession: () => {
+    createWorkerSession: () => createReaderV2OcrWorkerSession(async () => {
       workerCreated += 1;
-      let closed = false;
       return {
-        async start() {},
-        async recognize(_input: unknown, key: string) {
+        async recognize(input: unknown) {
+          const key = String(input);
           const values: Record<string,string> = { playerName:'Messi', level:'10', points:'18', mainPosition:'SS' };
-          return { key, label:key, value:values[key] ?? '', confidence:95 };
+          return { text: values[key] ?? '', confidence:95 };
         },
-        async cancel() { closed = true; workerClosed += 1; },
-        async close() { if (!closed) { closed = true; workerClosed += 1; } },
-        snapshot: () => ({ sessionId:'s', mode:null, stage:closed ? 'ocrClosed' : 'reading', workerReady:!closed, pendingRecognitions:0, cancelled:false, imageSelected:true }),
+        async terminate() { workerClosed += 1; },
       };
-    },
+    }),
     onEvent: (event) => events.push(event),
     analysisProbe: () => { analysisCalls += 1; },
   });
