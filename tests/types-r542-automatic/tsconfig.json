@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] },
+    "types": ["node"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "files": [
+    "../../src/modules/card-reader-v2/readerV2Types.ts",
+    "../../src/modules/card-reader-v2/readerV2OcrWorker.ts",
+    "../../src/modules/card-reader-v2/readerV2ImageSession.ts",
+    "../../src/modules/card-reader-v2/readerV2ZoneProfile.ts",
+    "../../src/modules/card-reader-v2/readerV2Zones.ts",
+    "../../src/modules/card-reader-v2/readerV2Review.ts",
+    "../../src/modules/card-reader-v2/readerV2Automatic.ts",
+    "../../src/modules/card-reader-v2/readerV2Orchestrator.ts",
+    "../v40-80-r542-reader-v2-automatic-regression.ts"
+  ]
+}
