@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=(p)=>fs.readFileSync(p,'utf8');
+const runtime=read('src/modules/card-reader/readerRuntimeR160.ts');
+const boundary=read('src/modules/card-reader-v2/readerV2CardVisionBoundaryR542.ts');
+const interaction=read('src/modules/card-reader-v2/readerV2InteractionBoundaryR542.ts');
+const gate=read('src/modules/card-reader-v2/readerV2FeatureGate.ts');
+
+assert.match(gate, /'classic'\s*\|\s*'v2'/);
+assert.match(gate, /buildmaster\.reader\.backend\.r542/);
+assert.match(gate, /Android[\s\S]{0,200}'v2'/);
+assert.match(runtime, /readerV2CardVisionBoundaryR542/);
+assert.match(runtime, /readerV2InteractionBoundaryR542/);
+assert.doesNotMatch(boundary, /loadReaderRuntimeR160/);
+assert.match(boundary, /setReaderProgress\(\{ percent: 1[\s\S]{0,500}worker OCR ainda não foi criado/);
+assert.match(boundary, /efhubCalibrationActiveRef\.current \? 'zones' : 'automatic'/);
+assert.match(boundary, /bridgeReaderV2Review/);
+assert.match(boundary, /setPreFinalConfirmation/);
+assert.match(interaction, /cancelActiveReaderV2R542/);
+assert.match(interaction, /print continua selecionado/i);
+console.log('R542 integration GREEN: V2 roteado no Android com classic preservado e cancelamento dedicado.');

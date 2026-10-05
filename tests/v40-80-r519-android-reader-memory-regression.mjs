@@ -47,5 +47,6 @@ assert.match(updateProgressUi, /<progress[\s\S]{0,180}v4020-progress-track/, 'R5
 assert.match(updateProgressUi, /Tempo nesta etapa/, 'R520: o usuário deve enxergar que a etapa continua viva mesmo antes do primeiro byte.');
 execFileSync(process.execPath,['tests/v40-80-r520-reader-real-device-regression.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['tests/v40-80-r538-reader-recovery-regression.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/v40-80-r542-reader-v2-acceptance-regression.mjs'],{stdio:'inherit'});
 
-console.log('R519/R520/R538 aprovadas: leitor limita memória, preserva detalhe útil, falha fechado e libera OCR deterministicamente.');
+console.log('R519/R520/R538/R542 aprovadas: leitor limita memória, preserva detalhe útil, falha fechado, Reader V2 fica serial e libera OCR deterministicamente.');
