@@ -1,0 +1,136 @@
+name: R542 Reader V2 — TDD gates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/modules/card-reader-v2/**'
+      - 'tests/v40-80-r542-reader-v2-*'
+      - 'tests/types-r542/**'
+      - 'tests/types-r542-zones/**'
+      - 'tests/types-r542-bridge/**'
+      - 'tests/types-r542-automatic/**'
+      - 'src/components/CardVisionApp.tsx'
+      - 'tsconfig.json'
+      - '.github/workflows/r542-reader-v2-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r542-reader-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  architecture:
+    name: R542-A — isolamento arquitetural
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate arquitetural R542-A
+        run: node tests/v40-80-r542-reader-v2-architecture-regression.mjs
+
+  worker-lifecycle:
+    name: R542-B/C — lifecycle e serialização OCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: TypeScript isolado R542
+        run: npx tsc -p tests/types-r542/tsconfig.json --pretty false
+      - name: Executar lifecycle R542-B/C
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-worker-regression.ts
+
+  image-session:
+    name: R542 — sessão de imagem limitada
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate de memória da imagem
+        run: node tests/v40-80-r542-reader-v2-image-session-regression.mjs
+
+  zones-reader:
+    name: R542-E — leitura serial por quadrados
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: TypeScript isolado dos quadrados
+        run: npx tsc -p tests/types-r542-zones/tsconfig.json --pretty false
+      - name: Executar regressão de quadrados R542-E
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-zones-regression.ts
+
+  review-screen:
+    name: R542 — conferência pré-final sem OCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate da conferência R542
+        run: node tests/v40-80-r542-reader-v2-review-regression.mjs
+
+  bridge:
+    name: R542-F — bridge fail-closed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: TypeScript isolado do bridge
+        run: npx tsc -p tests/types-r542-bridge/tsconfig.json --pretty false
+      - name: Executar regressão do bridge R542-F
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-bridge-regression.ts
+
+  automatic:
+    name: R542-D — automático e orquestrador
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: TypeScript isolado automático
+        run: npx tsc -p tests/types-r542-automatic/tsconfig.json --pretty false
+      - name: Executar regressão automática R542-D
+        run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-automatic-regression.ts
+
+  integration:
+    name: R542 — integração CardVision classic/v2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate de integração R542
+        run: node tests/v40-80-r542-reader-v2-integration-regression.mjs

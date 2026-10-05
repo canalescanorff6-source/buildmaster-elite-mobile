@@ -22,22 +22,42 @@ assert.ok(fs.existsSync(truthPath), 'R501 precisa materializar a autoridade cent
 const r417 = read('scripts/apply-r417-autonomous-card-vault.mjs');
 const r192Closure = read('scripts/check-result-workspace-static-closure-r192.mjs');
 const readerRuntimeR160 = read('src/modules/card-reader/readerRuntimeR160.ts');
-const readerActionsR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerEntryR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerLegacyR187 = read('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts');
+const readerV2R542 = read('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts');
 const readerAnalysisR163 = read('src/modules/card-reader/readerAnalysisRuntimeR163.ts');
 
-// Bug real: tocar em "Ler imagem"/"Ler com os quadrados" podia apenas piscar.
-// R520 adicionou validação de sessão entre o loading e o runtime; o contrato é de
-// ordem/comportamento, não de uma distância textual arbitrária entre as chamadas.
-const analyzeSelectedImageR187 = readerActionsR187.match(/async function analyzeSelectedImage[\s\S]*?(?=\n\s*async function analyzeTotalCardCaptures)/)?.[0] ?? '';
-const loadingIndexR187 = analyzeSelectedImageR187.indexOf('setLoading(true)');
-const lazyRuntimeIndexR187 = analyzeSelectedImageR187.indexOf('loadReaderAnalysisRuntimeR163(');
-assert.ok(loadingIndexR187 >= 0 && lazyRuntimeIndexR187 > loadingIndexR187,
-  'Reader bootstrap: loading visível precisa começar antes do carregamento lazy pesado do OCR.');
+// R542 mantém o caminho público histórico, mas ele agora é uma fachada para o V2.
+// O gate mestre deve validar a nova fronteira sem reintroduzir o runtime pesado no bootstrap.
 assert.match(
-  analyzeSelectedImageR187,
-  /catch \(cause\)[\s\S]*setLoading\(false\)[\s\S]*setStatus\([`'"]Não foi possível iniciar o leitor OCR/,
-  'Reader bootstrap: falha de chunk/runtime precisa terminar o loading e mostrar erro recuperável ao usuário.',
+  readerEntryR187,
+  /createCardVisionReaderActionsR187\s*\}\s*from\s*['"]@\/modules\/card-reader-v2\/cardVisionReaderActionsR542['"]/,
+  'R542/R419: o caminho público do leitor precisa encaminhar para o Reader V2.',
 );
+const analyzeSelectedImageR542 = readerV2R542.match(/async function analyzeSelectedImage[\s\S]*?(?=\n\s*async function runAnalysis)/)?.[0] ?? '';
+const loadingIndexR542 = analyzeSelectedImageR542.indexOf('setLoading(true)');
+const progressIndexR542 = analyzeSelectedImageR542.indexOf('setReaderProgress(');
+const lazyRuntimeIndexR542 = analyzeSelectedImageR542.indexOf("import('./readerV2AppRuntime')");
+assert.ok(
+  loadingIndexR542 >= 0 && progressIndexR542 > loadingIndexR542 && lazyRuntimeIndexR542 > progressIndexR542,
+  'R542/R419: loading e progresso precisam aparecer antes do import lazy do runtime OCR V2.',
+);
+assert.match(
+  analyzeSelectedImageR542,
+  /catch\(cause\)[\s\S]*setLoading\(false\)[\s\S]*setOcrCancelable\(false\)[\s\S]*setStatus\(/,
+  'R542/R419: falha do runtime V2 precisa encerrar loading/cancelamento e mostrar erro recuperável.',
+);
+assert.doesNotMatch(
+  readerV2R542,
+  /from\s+['"]@\/modules\/analysis['"]|createProductionAnalysisR138/,
+  'R542/R419: o boundary OCR V2 não pode materializar o motor de produção.',
+);
+assert.match(
+  readerLegacyR187,
+  /createProductionAnalysisR138/,
+  'R542/R419: o leitor clássico permanece preservado apenas como fallback/compatibilidade.',
+);
+
 assert.match(
   readerRuntimeR160,
   /runtimePromise = Promise\.all\([\s\S]{0,2600}\.catch\(\(cause\) => \{\s*runtimePromise = null;\s*throw cause;\s*\}\)/,
@@ -54,9 +74,8 @@ assert.match(
   'R160: chunk de interação do leitor precisa ser retryable após falha.',
 );
 
-// R541 — OCR físico e motor de produção não podem disputar o mesmo pico de memória no Android.
-// O controller OCR deve carregar somente tipos do domínio durante a leitura; a ficha completa
-// entra de forma lazy depois que o worker Tesseract foi encerrado.
+// R541 continua protegendo o leitor clássico: se usado como fallback, OCR e produção
+// também não podem disputar o mesmo pico de memória.
 assert.doesNotMatch(
   readerAnalysisR163,
   /import\s*\{[^}]*createProductionAnalysisR138[^}]*\}\s*from\s*['"]@\/modules\/analysis['"]/,
@@ -191,4 +210,4 @@ for (const regression of [
   execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', regression], { stdio: 'inherit' });
 }
 
-console.log('R419/R501/R502/R503/R504/R505/R506/R507/R507-RESIDUAL/R510/R511/R512/R513/R515/R516/R517/R518/R456 aprovado: orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, gargalo residual de Ímpeto, autoridade pública única, Gameplay Engine 2 marginal, Posse central por função, Joint Optimizer V2 shadow, Golden Lab, conflitos OCR, calibração real, Certification Engine e evidência R518 read-only protegidos.');
+console.log('R419/R501/R502/R503/R504/R505/R506/R507/R507-RESIDUAL/R510/R511/R512/R513/R515/R516/R517/R518/R456/R542 aprovado: Reader V2 isolado, orçamento fail-closed, confiança 0–100 centralizada, cobertura/certificação explícitas, leitores fail-closed, estado pós-build centralizado, Ímpeto/Top 5 pós-build, autoridade pública única e regressões de produção protegidas.');
