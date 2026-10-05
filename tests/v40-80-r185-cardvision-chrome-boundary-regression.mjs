@@ -6,7 +6,11 @@ const appPath = 'src/components/CardVisionApp.tsx';
 const chromePath = 'src/components/CardVisionAppChromeR185.tsx';
 const app = read(appPath);
 const chrome = read(chromePath);
-const readerActionsR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerFacadeR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerV2R542 = read('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts');
+const readerLegacyR187 = read('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts');
+const readerActionsR187 = `${readerV2R542}\n${readerLegacyR187}`;
+assert.match(readerFacadeR187, /card-reader-v2\/cardVisionReaderActionsR542/, 'R542: Chrome deve continuar consumindo a boundary pública que delega ao Reader V2.');
 const resultActionsR188 = fs.existsSync('src/modules/result/cardVisionResultActionsR188.ts') ? read('src/modules/result/cardVisionResultActionsR188.ts') : '';
 const appLines = app.split('\n').length;
 
