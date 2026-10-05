@@ -9,7 +9,7 @@ assert.doesNotMatch(src, /toDataURL/);
 assert.match(src, /maxSourceDimension[^\n]*1800/);
 assert.match(src, /maxCropMegapixels[^\n]*1\.2/);
 assert.match(src, /withCrop/);
-assert.match(src, /bitmap\.close\?\.\(\)|bitmap\.close\(\)/);
+assert.match(src, /bitmap\?*\.close\?\.\(\)|bitmap\.close\(\)/);
 assert.match(src, /canvas\.width\s*=\s*1/);
 assert.match(src, /canvas\.height\s*=\s*1/);
 assert.match(src, /finally/);
