@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const path = 'src/modules/card-reader-v2/readerV2ImageSession.ts';
+assert.ok(fs.existsSync(path), 'R542 image session precisa existir.');
+const src = fs.readFileSync(path, 'utf8');
+assert.match(src, /URL\.createObjectURL/);
+assert.match(src, /URL\.revokeObjectURL/);
+assert.doesNotMatch(src, /toDataURL/);
+assert.match(src, /maxSourceDimension[^\n]*1800/);
+assert.match(src, /maxCropMegapixels[^\n]*1\.2/);
+assert.match(src, /withCrop/);
+assert.match(src, /bitmap\.close\?\.\(\)|bitmap\.close\(\)/);
+assert.match(src, /canvas\.width\s*=\s*1/);
+assert.match(src, /canvas\.height\s*=\s*1/);
+assert.match(src, /finally/);
+console.log('R542 image session GREEN: ObjectURL, fonte única e crops limitados.');
