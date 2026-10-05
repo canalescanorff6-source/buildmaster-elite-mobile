@@ -15,6 +15,7 @@ function external(id,label,details){return{id,label,status:R424_REQUIREMENT_STAT
 function walkSources(root){const start=path.resolve(root,'src'),out=[],stack=fs.existsSync(start)?[start]:[];while(stack.length){const d=stack.pop();for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory())stack.push(f);else if(TEXT_EXTENSIONS.test(e.name))out.push(f)}}return out}
 
 function evaluateR417(root){
+ // R448_R417_DETAILED_DIAGNOSTICS
  const actions=read(root,'src/hooks/useCardVisionVaultActionsR185.ts')||'',mut=read(root,'src/modules/vault/vaultHistoryMutationsR129.ts')||'',auto=read(root,'src/lib/autonomousCardR417.ts')||'',pipe=read(root,'src/lib/cardIntelligencePipeline.ts')||'',clean=read(root,'src/lib/cleanSlatePerformance2027V4080R119.ts')||'',sel=read(root,'src/modules/vault/cardVisionVaultSelectorsR151.ts')||'',ui=read(root,'src/components/CleanVaultV3800.tsx')||'';
  const checks=[
   ['R417: batchHistoryR417 ausente',actions.includes('batchHistoryR417')],
