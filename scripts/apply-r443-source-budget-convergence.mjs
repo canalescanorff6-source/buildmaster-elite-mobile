@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R443_SOURCE_BUDGET_VERSION='40.80-r518-source-budget-convergence-v12';
-export const R443_GLOBAL_SOURCE_BUDGET_BYTES=5.78125*1024*1024;
+export const R443_SOURCE_BUDGET_VERSION='40.80-r542-source-budget-convergence-v13';
+export const R443_GLOBAL_SOURCE_BUDGET_BYTES=5.84375*1024*1024;
 export const R443_SOURCE_RESERVE_BYTES=65_536;
 export const R443_SOURCE_CHECKPOINT_BYTES=R443_GLOBAL_SOURCE_BUDGET_BYTES-R443_SOURCE_RESERVE_BYTES;
 
@@ -22,17 +22,17 @@ const TARGETS=Object.freeze({
  r424Audit:'scripts/audit-r424-final-requirements-closure.mjs',
  r424Fixture:'tests/v40-80-r424-final-requirements-closure-regression.mjs',
 });
-const OLD_FLOATS=['5.25','5.5','5.5625','5.625','5.75','5.765625'];
-const OLD_CHECKPOINTS=['5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160'];
-const GLOBAL='5.78125',CHECKPOINT='5_996_544';
+const OLD_FLOATS=['5.25','5.5','5.5625','5.625','5.75','5.765625','5.78125'];
+const OLD_CHECKPOINTS=['5_405_024','5_667_168','5_732_704','5_798_240','5_832_704','5_963_776','5_980_160','5_996_544'];
+const GLOBAL='5.84375',CHECKPOINT='6_062_080';
 function canonicalize(source){
  let next=source;
  for(const value of OLD_FLOATS){
   next=next.split(`${value} * 1024 * 1024`).join(`${GLOBAL} * 1024 * 1024`);
   next=next.split(`${value}*1024*1024`).join(`${GLOBAL}*1024*1024`);
   const escaped=value.replace('.','\\.');
-  next=next.split(`${escaped}\\s*\\*\\s*1024`).join('5\\.78125\\s*\\*\\s*1024');
-  next=next.split(`${value.replace('.',',')} MiB`).join('5,78125 MiB');
+  next=next.split(`${escaped}\\s*\\*\\s*1024`).join('5\\.84375\\s*\\*\\s*1024');
+  next=next.split(`${value.replace('.',',')} MiB`).join('5,84375 MiB');
  }
  for(const value of OLD_CHECKPOINTS)next=next.split(value).join(CHECKPOINT);
  return next;
@@ -51,7 +51,7 @@ export function applySourceBudgetConvergenceR443(rootDirectory=process.cwd()){
  if(!bundle.includes(`sourceTs: ${GLOBAL} * 1024 * 1024`))issues.push('bundle ainda diverge');
  if(!r184.includes(`const sourceLimit=${GLOBAL}*1024*1024;`))issues.push('R184 ainda diverge');
  for(const key of ['r193','r194','r195','r196','r197','r198','r199','r200'])if(!read(root,key).includes(CHECKPOINT))issues.push(`${key.toUpperCase()} ainda diverge`);
- const hasGlobal=s=>s.includes(`${GLOBAL} * 1024 * 1024`)||s.includes('5\\.78125\\s*\\*\\s*1024');
+ const hasGlobal=s=>s.includes(`${GLOBAL} * 1024 * 1024`)||s.includes('5\\.84375\\s*\\*\\s*1024');
  if(!r414.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r414))issues.push('R414 ainda diverge');
  if(!r424Audit.includes(CHECKPOINT)||!hasGlobal(r424Audit))issues.push('R424 audit ainda diverge');
  if(!r424Fixture.includes(`R414_SOURCE_BUDGET_BYTES = ${CHECKPOINT}`)||!hasGlobal(r424Fixture))issues.push('R424 fixture ainda diverge');
@@ -59,4 +59,4 @@ export function applySourceBudgetConvergenceR443(rootDirectory=process.cwd()){
  return{changed:patched.length>0,patched,globalSourceBudgetBytes:R443_GLOBAL_SOURCE_BUDGET_BYTES,reserveBytes:R443_SOURCE_RESERVE_BYTES,checkpointBytes:R443_SOURCE_CHECKPOINT_BYTES,version:R443_SOURCE_BUDGET_VERSION};
 }
 const invoked=process.argv[1]?pathToFileURL(path.resolve(process.argv[1])).href:'';
-if(invoked===import.meta.url){const result=applySourceBudgetConvergenceR443();console.log(`R443/R518 orçamento-fonte convergido: ${result.checkpointBytes} bytes úteis + ${result.reserveBytes} bytes de reserva; ${result.patched.length} arquivo(s) ajustado(s).`)}
+if(invoked===import.meta.url){const result=applySourceBudgetConvergenceR443();console.log(`R443/R542 orçamento-fonte convergido: ${result.checkpointBytes} bytes úteis + ${result.reserveBytes} bytes de reserva; ${result.patched.length} arquivo(s) ajustado(s).`)}
