@@ -46,3 +46,12 @@ jobs:
         run: npx tsc -p tests/types-r542/tsconfig.json --pretty false
       - name: Executar lifecycle R542-B/C
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-worker-regression.ts
+
+  image-session:
+    name: R542 — sessão de imagem limitada
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate de memória da imagem
+        run: node tests/v40-80-r542-reader-v2-image-session-regression.mjs
