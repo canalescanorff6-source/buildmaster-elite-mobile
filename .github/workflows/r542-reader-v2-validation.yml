@@ -1,0 +1,29 @@
+name: R542 Reader V2 — TDD gates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/modules/card-reader-v2/**'
+      - 'tests/v40-80-r542-reader-v2-*'
+      - 'tests/types-r542/**'
+      - 'src/components/CardVisionApp.tsx'
+      - '.github/workflows/r542-reader-v2-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r542-reader-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  architecture:
+    name: R542-A — isolamento arquitetural
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate arquitetural R542-A
+        run: node tests/v40-80-r542-reader-v2-architecture-regression.mjs
