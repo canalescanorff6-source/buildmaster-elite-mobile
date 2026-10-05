@@ -7,7 +7,11 @@ const lazyPanels = fs.readFileSync('src/components/lazy/CardVisionLazyPanelsR174
 const panelPreload = fs.readFileSync('src/components/lazy/AppPanelPreloadR174.ts', 'utf8');
 const evidenceRuntime = fs.readFileSync('src/modules/card-reader/readerEvidenceRuntimeR161.ts', 'utf8');
 const analysisRuntimeR163 = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
-const readerActionsR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerFacadeR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerV2R542 = fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts', 'utf8');
+const readerLegacyR187 = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts', 'utf8');
+const readerActionsR187 = `${readerV2R542}\n${readerLegacyR187}`;
+assert.match(readerFacadeR187, /card-reader-v2\/cardVisionReaderActionsR542/, 'R542: a boundary pública R187 deve continuar delegando ao Reader V2.');
 
 const forbiddenStaticRuntimeImports = [
   '@/components/PhasePlaystyleSelectorR124',
