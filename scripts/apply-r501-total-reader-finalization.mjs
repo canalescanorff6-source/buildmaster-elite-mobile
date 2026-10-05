@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R501_TOTAL_READER_FINALIZATION_VERSION = '40.80-r501-total-reader-finalization-v1';
+export const R501_TOTAL_READER_FINALIZATION_VERSION = '40.80-r542-total-reader-finalization-v2';
 
 const RUNTIME = 'src/modules/card-reader/readerAnalysisRuntimeR163.ts';
 const R198 = 'tests/v40-80-r198-e2e-production-finalization-authority-regression.mjs';
@@ -39,7 +39,10 @@ function patchR198(source) {
   let next = source.replace(legacyComment, newComment);
   const legacyAssert = "assert.match(readerRuntime, /setDraftResult\\(null\\);\\s*setResult\\(autoResult\\);/, 'R198: Leitura Total deve manter contrato explícito de finalização automática.');";
   const guardedAssert = "assert.match(readerRuntime, /deriveTotalReadingFinalizationR501\\(session\\)[\\s\\S]{0,180}totalFinalization\\.canFinalize[\\s\\S]{0,360}setDraftResult\\(null\\);\\s*setResult\\(autoResult\\);/, 'R198/R501: Leitura Total só pode promover automaticamente quando a autoridade R501 liberar.');\nassert.match(readerRuntime, /setDraftResult\\(autoResult\\);\\s*setResult\\(null\\);/, 'R198/R501: Leitura Total não certificada deve permanecer prévia.');";
-  if (!next.includes('R198/R501: Leitura Total só pode promover automaticamente')) {
+  // R542 pode ajustar o texto/escopo da mensagem (por exemplo, "Leitura Total clássica")
+  // sem alterar a proteção estrutural. Se o teste já consulta deriveTotalReadingFinalizationR501,
+  // ele já está convergido e não deve ser reescrito por um migrador histórico.
+  if (!next.includes('deriveTotalReadingFinalizationR501')) {
     next = replaceOnce(next, legacyAssert, guardedAssert, 'R198 finalização do Leitor Total');
   }
   return next;
@@ -66,7 +69,7 @@ export function applyTotalReaderFinalizationR501(rootDirectory = process.cwd()) 
   if (!runtime.includes('const totalFinalization = deriveTotalReadingFinalizationR501(session);')) issues.push('autoridade R501 não consultada');
   if (!/if \(totalFinalization\.canFinalize\)[\s\S]{0,420}setDraftResult\(null\); setResult\(autoResult\);/.test(runtime)) issues.push('promoção final não está protegida por canFinalize');
   if (!runtime.includes('setDraftResult(autoResult); setResult(null);')) issues.push('ramo de prévia fail-closed ausente');
-  if (!r198.includes('R198/R501: Leitura Total só pode promover automaticamente')) issues.push('R198 ainda protege finalização incondicional');
+  if (!r198.includes('deriveTotalReadingFinalizationR501') || !r198.includes('setDraftResult\\(autoResult\\)')) issues.push('R198 não protege finalização/promoção fail-closed do Leitor Total');
   if (issues.length) throw new Error(`R501 Total Reader: convergência incompleta — ${issues.join(' | ')}`);
 
   return { changed: patched.length > 0, patched, version: R501_TOTAL_READER_FINALIZATION_VERSION };
