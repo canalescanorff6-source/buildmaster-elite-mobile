@@ -2,9 +2,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const R503_SINGLE_READER_FINALIZATION_VERSION = '40.80-r503-single-reader-finalization-patch-v1';
+export const R503_SINGLE_READER_FINALIZATION_VERSION = '40.80-r503-single-reader-finalization-patch-v2';
 
-const READER_FILE = 'src/modules/card-reader/cardVisionReaderActionsR187.ts';
+const PUBLIC_READER_FILE = 'src/modules/card-reader/cardVisionReaderActionsR187.ts';
+const LEGACY_READER_FILE = 'src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts';
+
+function resolveReaderFileR503(root) {
+  const publicFile = path.resolve(root, PUBLIC_READER_FILE);
+  if (!fs.existsSync(publicFile)) throw new Error(`R503: reader actions ausente: ${PUBLIC_READER_FILE}`);
+  const publicSource = fs.readFileSync(publicFile, 'utf8');
+  if (publicSource.includes('card-reader-v2/cardVisionReaderActionsR542')) {
+    const legacyFile = path.resolve(root, LEGACY_READER_FILE);
+    if (!fs.existsSync(legacyFile)) throw new Error(`R503: facade R542 detectada sem fallback legado: ${LEGACY_READER_FILE}`);
+    return { file: legacyFile, relative: LEGACY_READER_FILE };
+  }
+  return { file: publicFile, relative: PUBLIC_READER_FILE };
+}
 
 function replaceOnce(source, from, to, label) {
   if (source.includes(to)) return source;
@@ -15,8 +28,7 @@ function replaceOnce(source, from, to, label) {
 
 export function applyR503SingleReaderFinalization(rootDirectory = process.cwd()) {
   const root = path.resolve(rootDirectory);
-  const file = path.resolve(root, READER_FILE);
-  if (!fs.existsSync(file)) throw new Error(`R503: reader actions ausente: ${READER_FILE}`);
+  const { file, relative: readerFile } = resolveReaderFileR503(root);
 
   const source = fs.readFileSync(file, 'utf8');
   let next = source;
@@ -25,7 +37,7 @@ export function applyR503SingleReaderFinalization(rootDirectory = process.cwd())
   const finalizationImport = "import { deriveSingleReaderFinalizationR503 } from '@/modules/card-reader/singleReaderFinalizationR503';";
   const truthTypeImport = "import type { CardTruthCertificationR501 } from '@/modules/analysis/cardTruthLayerR501';";
   if (!next.includes(finalizationImport)) {
-    if (!next.includes(runtimeImport)) throw new Error('R503: âncora de import do reader runtime ausente.');
+    if (!next.includes(runtimeImport)) throw new Error(`R503: âncora de import do reader runtime ausente em ${readerFile}.`);
     next = next.replace(runtimeImport, `${runtimeImport}\n${finalizationImport}\n${truthTypeImport}`);
   } else if (!next.includes(truthTypeImport)) {
     next = next.replace(finalizationImport, `${finalizationImport}\n${truthTypeImport}`);
@@ -57,9 +69,10 @@ export function applyR503SingleReaderFinalization(rootDirectory = process.cwd())
   if (changed) fs.writeFileSync(file, next, 'utf8');
   return {
     changed,
-    patched: changed ? [READER_FILE] : [],
+    patched: changed ? [readerFile] : [],
     version: R503_SINGLE_READER_FINALIZATION_VERSION,
     manualConfirmationCannotOverrideCardTruth: true,
+    readerFile,
   };
 }
 
@@ -67,6 +80,6 @@ const invoked = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).h
 if (invoked === import.meta.url) {
   const result = applyR503SingleReaderFinalization(process.cwd());
   console.log(result.changed
-    ? 'R503: gate de certificação do leitor unitário materializado.'
-    : 'R503: gate de certificação do leitor unitário já estava materializado.');
+    ? `R503: gate de certificação do leitor unitário materializado em ${result.readerFile}.`
+    : `R503: gate de certificação do leitor unitário já estava materializado em ${result.readerFile}.`);
 }
