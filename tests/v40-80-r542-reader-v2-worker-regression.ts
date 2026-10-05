@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+import * as assert from 'node:assert/strict';
 import {
   createReaderV2OcrWorkerSession,
   type ReaderV2WorkerFactory,
@@ -92,8 +92,14 @@ async function testRecognitionErrorTerminatesWorker() {
   assert.match(session.snapshot().error ?? '', /ocr exploded/);
 }
 
-await testLifecycleAndSerialization();
-await testCancelTerminatesWorker();
-await testRecognitionErrorTerminatesWorker();
+async function main() {
+  await testLifecycleAndSerialization();
+  await testCancelTerminatesWorker();
+  await testRecognitionErrorTerminatesWorker();
+  console.log('R542-B/C aprovado: lifecycle determinístico e OCR serial.');
+}
 
-console.log('R542-B/C aprovado: lifecycle determinístico e OCR serial.');
+void main().catch((cause) => {
+  console.error(cause);
+  process.exitCode = 1;
+});
