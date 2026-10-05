@@ -59,12 +59,16 @@ const session = buildSinglePrintSession({
 assert.ok(session.blockingFields.some((field) => field.includes('Nome')));
 assert.equal(session.detailedReading.skillCandidates.length, 0);
 
-const readerActions = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerFacade = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerV2 = fs.readFileSync('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts', 'utf8');
+const readerLegacy = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts', 'utf8');
 const readerRuntime = fs.readFileSync('src/modules/card-reader/readerAnalysisRuntimeR163.ts', 'utf8');
 const learnedLexicon = fs.readFileSync('src/modules/card-reader/learnedOcrLexicon.ts', 'utf8');
 assert.match(readerRuntime, /loadLearnedOcrTerms\('playerName'/, 'O runtime canônico R163 precisa carregar nomes aprendidos.');
 assert.match(readerRuntime, /loadLearnedOcrTerms\('skill'/, 'O runtime canônico R163 precisa carregar habilidades aprendidas.');
-assert.match(readerActions, /learnConfirmedOcrBatch/, 'Confirmações humanas continuam alimentando o léxico aprendido pela autoridade R187.');
+assert.match(readerFacade, /cardVisionReaderActionsR542/, 'R187 deve permanecer como fachada oficial do Reader V2.');
+assert.match(readerV2, /cardVisionReaderActionsLegacyR187/, 'Reader V2 deve preservar a delegação de confirmações ao R187 legado.');
+assert.match(readerLegacy, /learnConfirmedOcrBatch/, 'Confirmações humanas continuam alimentando o léxico aprendido pela implementação delegada de R187.');
 assert.match(learnedLexicon, /runtimeList<LearnedOcrTerm>\('ocr-lexicon'/, 'O léxico canônico precisa continuar persistido no store ocr-lexicon.');
 const evidenceBoundary = fs.readFileSync('src/modules/card-reader/cardOcrEvidenceBoundaryR132.ts', 'utf8');
 assert.match(readerRuntime, /buildProductionOcrEvidenceTextR134\(session, zoneResults\)/, 'A evidência física final precisa continuar sendo montada no runtime R163.');

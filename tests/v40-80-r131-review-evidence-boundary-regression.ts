@@ -82,7 +82,9 @@ const root = path.resolve(__dirname, '..');
 const analyzer = fs.readFileSync(path.join(root, 'src/lib/analyzer.ts'), 'utf8');
 const cardApp = fs.readFileSync(path.join(root, 'src/components/CardVisionApp.tsx'), 'utf8');
 const readerRuntimeR163 = fs.readFileSync(path.join(root, 'src/modules/card-reader/readerAnalysisRuntimeR163.ts'), 'utf8');
-const readerActionsR187 = fs.readFileSync(path.join(root, 'src/modules/card-reader/cardVisionReaderActionsR187.ts'), 'utf8');
+const readerFacadeR187 = fs.readFileSync(path.join(root, 'src/modules/card-reader/cardVisionReaderActionsR187.ts'), 'utf8');
+const readerV2R542 = fs.readFileSync(path.join(root, 'src/modules/card-reader-v2/cardVisionReaderActionsR542.ts'), 'utf8');
+const readerLegacyR187 = fs.readFileSync(path.join(root, 'src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts'), 'utf8');
 const reviewWorkflow = fs.readFileSync(path.join(root, 'src/modules/card-reader/cardReviewWorkflowR131.ts'), 'utf8');
 const usageDiagnostics = fs.readFileSync(path.join(root, 'src/modules/analysis/analyzerUsageDiagnosticsR131.ts'), 'utf8');
 assert.ok(analyzer.split(/\r?\n/).length < 2800, 'analyzer.ts deve permanecer abaixo de 2800 linhas após R131');
@@ -90,7 +92,9 @@ assert.ok(cardApp.split(/\r?\n/).length < 4200, 'CardVisionApp deve permanecer a
 assert.match(readerRuntimeR163, /hydrateReviewFields\(autoResult, session\)/, 'Print Único deve hidratar a revisão com a sessão recém-criada, sem depender de setState assíncrono');
 assert.match(readerRuntimeR163, /hydrateReviewFields\(autoResult, null\)/, 'Leitura Total não pode herdar evidência de uma sessão Single anterior');
 assert.doesNotMatch(cardApp, /readingConfirmations|setReadingConfirmations/, 'estado morto de confirmação não deve voltar ao CardVisionApp');
-assert.match(readerActionsR187, /playerNameManuallyConfirmed:\s*true[\s\S]*skillsManuallyConfirmed:\s*false/, 'finalizar a ficha pode confirmar nome, mas não promover habilidades OCR a confirmação manual');
+assert.match(readerFacadeR187, /cardVisionReaderActionsR542/, 'R187 deve permanecer como fachada oficial do Reader V2.');
+assert.match(readerV2R542, /cardVisionReaderActionsLegacyR187/, 'Reader V2 deve preservar a delegação da confirmação ao R187 legado.');
+assert.match(readerLegacyR187, /playerNameManuallyConfirmed:\s*true[\s\S]*skillsManuallyConfirmed:\s*false/, 'finalizar a ficha pode confirmar nome, mas não promover habilidades OCR a confirmação manual');
 for (const source of [reviewWorkflow, usageDiagnostics]) {
   assert.doesNotMatch(source, /cleanSlate|sealProduction|recommendedSkills\s*=|recommendedImpetos\s*=/i, 'módulos extraídos R131 não podem virar escritores de produção');
 }
