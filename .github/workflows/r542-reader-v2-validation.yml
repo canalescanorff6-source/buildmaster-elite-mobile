@@ -7,6 +7,12 @@ on:
       - 'src/modules/card-reader-v2/**'
       - 'tests/v40-80-r542-reader-v2-*'
       - 'tests/v40-80-r150-cardvision-shell-boundary-regression.mjs'
+      - 'tests/v40-80-r160-lazy-reader-runtime-regression.mjs'
+      - 'tests/v40-80-r161-reader-surface-evidence-lazy-regression.mjs'
+      - 'tests/v40-80-r163-reader-analysis-controller-lazy-runtime-regression.mjs'
+      - 'tests/v40-80-r164-reader-interaction-light-model-regression.mjs'
+      - 'tests/v40-80-r185-cardvision-chrome-boundary-regression.mjs'
+      - 'tests/v40-80-r187-cardvision-reader-actions-boundary-regression.mjs'
       - 'tests/types-r542/**'
       - 'tests/types-r542-zones/**'
       - 'tests/types-r542-bridge/**'
@@ -137,3 +143,11 @@ jobs:
         run: node tests/v40-80-r542-reader-v2-integration-regression.mjs
       - name: Executar contrato R150 da fachada do leitor
         run: node tests/v40-80-r150-cardvision-shell-boundary-regression.mjs
+      - name: Executar contratos históricos da boundary R187/R542
+        run: |
+          node tests/v40-80-r160-lazy-reader-runtime-regression.mjs
+          node tests/v40-80-r161-reader-surface-evidence-lazy-regression.mjs
+          node tests/v40-80-r163-reader-analysis-controller-lazy-runtime-regression.mjs
+          node tests/v40-80-r164-reader-interaction-light-model-regression.mjs
+          node tests/v40-80-r185-cardvision-chrome-boundary-regression.mjs
+          node tests/v40-80-r187-cardvision-reader-actions-boundary-regression.mjs

@@ -10,7 +10,11 @@ const ocrModel = read('src/lib/ocrZonesModelR164.ts');
 const ocrRuntime = read('src/lib/ocr.ts');
 const calibrationModel = read('src/modules/card-reader/efhubCalibrationModelR164.ts');
 const backupCollector = read('src/modules/backup/backupSectionCollectorR141.ts');
-const readerActionsR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerFacadeR187 = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerV2R542 = read('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts');
+const readerLegacyR187 = read('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts');
+const readerActionsR187 = `${readerV2R542}\n${readerLegacyR187}`;
+assert.match(readerFacadeR187, /card-reader-v2\/cardVisionReaderActionsR542/, 'R542: a boundary pública R187 deve continuar delegando ao Reader V2.');
 
 assert.ok(app.split(/\r?\n/).length <= 2850, 'R164 deve manter CardVisionApp abaixo de 2.850 linhas.');
 assert.match(app, /from '@\/lib\/ocrZonesModelR164'/, 'Shell deve consumir apenas o modelo OCR leve no startup.');

@@ -4,7 +4,10 @@ import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const app = read('src/components/CardVisionApp.tsx');
-const readerActions = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerFacade = read('src/modules/card-reader/cardVisionReaderActionsR187.ts');
+const readerV2R542 = read('src/modules/card-reader-v2/cardVisionReaderActionsR542.ts');
+const readerLegacyR187 = read('src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts');
+const readerActions = `${readerV2R542}\n${readerLegacyR187}`;
 const navigation = read('src/hooks/useCardVisionNavigationControllerR176.ts');
 const pkg = JSON.parse(read('package.json'));
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
@@ -15,7 +18,8 @@ assert.match(app, /import type \{[^}]*CardVisionReaderActionsInputR187[^}]*creat
 assert.doesNotMatch(app, /^\s*import\s+\{[^\n]*createCardVisionReaderActionsR187[^\n]*\}\s+from/m, 'R187: controlador do leitor não pode voltar ao import runtime estático.');
 assert.match(app, /await import\('@\/modules\/card-reader\/cardVisionReaderActionsR187'\)/, 'R187: ações devem adquirir o controlador por import dinâmico.');
 assert.match(navigation, /if \(section === 'leitor'\)[\s\S]*import\('@\/modules\/card-reader\/cardVisionReaderActionsR187'\)/, 'R187: entrada no leitor deve antecipar o controlador após intenção do usuário.');
-assert.match(readerActions, /CARDVISION_READER_ACTIONS_R187_VERSION/, 'R187: controlador deve possuir versão explícita.');
+assert.match(readerFacade, /card-reader-v2\/cardVisionReaderActionsR542/, 'R542/R187: boundary pública deve delegar ao Reader V2.');
+assert.match(readerActions, /CARDVISION_READER_ACTIONS_R187_VERSION/, 'R187: implementação clássica preservada deve possuir versão explícita.');
 for (const marker of [
   'loadOcrQueueRuntimeR160()',
   'loadReaderEvidenceRuntimeR161()',
