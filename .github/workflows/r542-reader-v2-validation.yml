@@ -75,3 +75,12 @@ jobs:
         run: npx tsc -p tests/types-r542-zones/tsconfig.json --pretty false
       - name: Executar regressão de quadrados R542-E
         run: node -r ./tests/_ts-require.cjs tests/v40-80-r542-reader-v2-zones-regression.ts
+
+  review-screen:
+    name: R542 — conferência pré-final sem OCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v5
+      - name: Executar gate da conferência R542
+        run: node tests/v40-80-r542-reader-v2-review-regression.mjs
