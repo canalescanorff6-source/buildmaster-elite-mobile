@@ -32,8 +32,19 @@ let runtimePromise: Promise<ReaderRuntimeR160> | null = null;
 let backgroundPromise: Promise<typeof import('@/lib/backgroundOcrV3840')> | null = null;
 let imageSafetyPromiseR540: Promise<typeof import('@/modules/images/imageSafety')> | null = null;
 let queuePromise: Promise<typeof import('@/modules/card-reader/ocrQueue')> | null = null;
-let analysisRuntimePromiseR163: Promise<typeof import('@/modules/card-reader-v2/readerV2CardVisionBoundaryR542')> | null = null;
-let interactionRuntimePromiseR164: Promise<typeof import('@/modules/card-reader-v2/readerV2InteractionBoundaryR542')> | null = null;
+let analysisRuntimePromiseR163: Promise<typeof import('./readerAnalysisRuntimeR163')> | null = null;
+let interactionRuntimePromiseR164: Promise<typeof import('./readerInteractionRuntimeR164')> | null = null;
+let analysisRuntimePromiseR542: Promise<typeof import('@/modules/card-reader-v2/readerV2CardVisionBoundaryR542')> | null = null;
+let interactionRuntimePromiseR542: Promise<typeof import('@/modules/card-reader-v2/readerV2InteractionBoundaryR542')> | null = null;
+
+const isAndroidReaderRuntimeR542 = () => typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+const shouldUseReaderV2R542 = () => {
+  if (typeof window === 'undefined') return false;
+  const stored = window.localStorage.getItem('buildmaster.reader.backend.r542');
+  if (stored === 'classic') return false;
+  if (stored === 'v2') return true;
+  return isAndroidReaderRuntimeR542();
+};
 
 export function loadBackgroundOcrRuntimeR160() {
   if (!backgroundPromise) {
@@ -137,9 +148,9 @@ export function preloadReaderRuntimeR160(): void {
   void loadReaderRuntimeR160().catch(() => undefined);
 }
 
-export function loadReaderAnalysisRuntimeR163() {
+function loadClassicReaderAnalysisRuntimeR163() {
   if (!analysisRuntimePromiseR163) {
-    analysisRuntimePromiseR163 = import('@/modules/card-reader-v2/readerV2CardVisionBoundaryR542').catch((cause) => {
+    analysisRuntimePromiseR163 = import('./readerAnalysisRuntimeR163').catch((cause) => {
       analysisRuntimePromiseR163 = null;
       throw cause;
     });
@@ -147,18 +158,46 @@ export function loadReaderAnalysisRuntimeR163() {
   return analysisRuntimePromiseR163;
 }
 
+function loadReaderV2AnalysisRuntimeR542() {
+  if (!analysisRuntimePromiseR542) {
+    analysisRuntimePromiseR542 = import('@/modules/card-reader-v2/readerV2CardVisionBoundaryR542').catch((cause) => {
+      analysisRuntimePromiseR542 = null;
+      throw cause;
+    });
+  }
+  return analysisRuntimePromiseR542;
+}
+
+export function loadReaderAnalysisRuntimeR163() {
+  return shouldUseReaderV2R542() ? loadReaderV2AnalysisRuntimeR542() : loadClassicReaderAnalysisRuntimeR163();
+}
+
 export function preloadReaderAnalysisRuntimeR163(): void {
   void loadReaderAnalysisRuntimeR163().catch(() => undefined);
 }
 
-export function loadReaderInteractionRuntimeR164() {
+function loadClassicReaderInteractionRuntimeR164() {
   if (!interactionRuntimePromiseR164) {
-    interactionRuntimePromiseR164 = import('@/modules/card-reader-v2/readerV2InteractionBoundaryR542').catch((cause) => {
+    interactionRuntimePromiseR164 = import('./readerInteractionRuntimeR164').catch((cause) => {
       interactionRuntimePromiseR164 = null;
       throw cause;
     });
   }
   return interactionRuntimePromiseR164;
+}
+
+function loadReaderV2InteractionRuntimeR542() {
+  if (!interactionRuntimePromiseR542) {
+    interactionRuntimePromiseR542 = import('@/modules/card-reader-v2/readerV2InteractionBoundaryR542').catch((cause) => {
+      interactionRuntimePromiseR542 = null;
+      throw cause;
+    });
+  }
+  return interactionRuntimePromiseR542;
+}
+
+export function loadReaderInteractionRuntimeR164() {
+  return shouldUseReaderV2R542() ? loadReaderV2InteractionRuntimeR542() : loadClassicReaderInteractionRuntimeR164();
 }
 
 export function preloadReaderInteractionRuntimeR164(): void {
