@@ -6,6 +6,7 @@ import { createReaderV2TesseractWorker } from './readerV2TesseractFactory';
 import { createReaderV2Orchestrator } from './readerV2Orchestrator';
 import { readReaderV2Backend } from './readerV2FeatureGate';
 import { bridgeReaderV2Review } from './readerV2Bridge';
+import type { ReaderV2Evidence } from './readerV2Types';
 
 export const READER_V2_CARDVISION_BOUNDARY_R542_VERSION = '40.80-r542-reader-v2-cardvision-boundary-v1' as const;
 
@@ -16,6 +17,23 @@ export async function cancelActiveReaderV2R542() {
   const active = activeReaderV2;
   activeReaderV2 = null;
   if (active) await active.cancel().catch(() => undefined);
+}
+
+function publishCompatibilitySessionR542(context: ReaderAnalysisContextR163, evidence: ReaderV2Evidence) {
+  const fields = evidence.fields.map((field) => ({
+    key: field.key,
+    label: field.label,
+    value: field.value,
+    confidence: field.confidence,
+    rawText: field.rawText ?? field.value,
+  }));
+  const usefulFields = fields.filter((field) => Boolean(field.value.trim())).length;
+  context.setSinglePrintSession({
+    canonicalText: evidence.rawText,
+    fields,
+    blockingFields: evidence.uncertainKeys,
+    precisionAudit: { totalPasses: Math.max(1, usefulFields) },
+  } as never);
 }
 
 export function createCardVisionReaderAnalysisOperationsR542(context: ReaderAnalysisContextR163) {
@@ -68,6 +86,7 @@ export function createCardVisionReaderAnalysisOperationsR542(context: ReaderAnal
       const mode = context.efhubCalibrationActiveRef.current ? 'zones' : 'automatic';
       context.setReaderProgress({ percent: 3, phase: 'Reader V2', detail: 'Iniciando worker OCR dedicado.', startedAt, completed: 0, total: READER_V2_DEFAULT_ZONES.length });
       const output = await orchestrator.start(mode, mode === 'zones' ? context.efhubCalibrationZonesRef.current : undefined);
+      publishCompatibilitySessionR542(context, output.evidence);
       await bridgeReaderV2Review(output.review, output.snapshot, {
         finalize: (review) => {
           context.setRawText(review.rawText);
@@ -111,3 +130,6 @@ export function createCardVisionReaderAnalysisOperationsR542(context: ReaderAnal
 
   return { analyzeSelectedImage, analyzeTotalCardCaptures };
 }
+
+// Compatibilidade com o boundary R187: o loader continua expondo o nome canônico R163.
+export const createCardVisionReaderAnalysisOperationsR163 = createCardVisionReaderAnalysisOperationsR542;
