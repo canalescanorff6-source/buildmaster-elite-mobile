@@ -32,8 +32,8 @@ let runtimePromise: Promise<ReaderRuntimeR160> | null = null;
 let backgroundPromise: Promise<typeof import('@/lib/backgroundOcrV3840')> | null = null;
 let imageSafetyPromiseR540: Promise<typeof import('@/modules/images/imageSafety')> | null = null;
 let queuePromise: Promise<typeof import('@/modules/card-reader/ocrQueue')> | null = null;
-let analysisRuntimePromiseR163: Promise<typeof import('./readerAnalysisRuntimeR163')> | null = null;
-let interactionRuntimePromiseR164: Promise<typeof import('./readerInteractionRuntimeR164')> | null = null;
+let analysisRuntimePromiseR163: Promise<typeof import('@/modules/card-reader-v2/readerV2CardVisionBoundaryR542')> | null = null;
+let interactionRuntimePromiseR164: Promise<typeof import('@/modules/card-reader-v2/readerV2InteractionBoundaryR542')> | null = null;
 
 export function loadBackgroundOcrRuntimeR160() {
   if (!backgroundPromise) {
@@ -139,7 +139,7 @@ export function preloadReaderRuntimeR160(): void {
 
 export function loadReaderAnalysisRuntimeR163() {
   if (!analysisRuntimePromiseR163) {
-    analysisRuntimePromiseR163 = import('./readerAnalysisRuntimeR163').catch((cause) => {
+    analysisRuntimePromiseR163 = import('@/modules/card-reader-v2/readerV2CardVisionBoundaryR542').catch((cause) => {
       analysisRuntimePromiseR163 = null;
       throw cause;
     });
@@ -151,10 +151,9 @@ export function preloadReaderAnalysisRuntimeR163(): void {
   void loadReaderAnalysisRuntimeR163().catch(() => undefined);
 }
 
-
 export function loadReaderInteractionRuntimeR164() {
   if (!interactionRuntimePromiseR164) {
-    interactionRuntimePromiseR164 = import('./readerInteractionRuntimeR164').catch((cause) => {
+    interactionRuntimePromiseR164 = import('@/modules/card-reader-v2/readerV2InteractionBoundaryR542').catch((cause) => {
       interactionRuntimePromiseR164 = null;
       throw cause;
     });
