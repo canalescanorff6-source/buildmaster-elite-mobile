@@ -16,6 +16,20 @@
   "files": [
     "../../src/modules/card-reader-v2/readerV2Types.ts",
     "../../src/modules/card-reader-v2/readerV2OcrWorker.ts",
-    "../v40-80-r542-reader-v2-worker-regression.ts"
+    "../../src/modules/card-reader-v2/readerV2ImageSession.ts",
+    "../../src/modules/card-reader-v2/readerV2ZoneProfile.ts",
+    "../../src/modules/card-reader-v2/readerV2Zones.ts",
+    "../../src/modules/card-reader-v2/readerV2Review.ts",
+    "../../src/modules/card-reader-v2/readerV2Bridge.ts",
+    "../../src/modules/card-reader-v2/readerV2Automatic.ts",
+    "../../src/modules/card-reader-v2/readerV2Orchestrator.ts",
+    "../../src/modules/card-reader-v2/readerV2FeatureGate.ts",
+    "../../src/modules/card-reader-v2/readerV2TesseractFactory.ts",
+    "../../src/modules/card-reader-v2/readerV2CardVisionBoundaryR542.ts",
+    "../../src/modules/card-reader-v2/readerV2InteractionBoundaryR542.ts",
+    "../v40-80-r542-reader-v2-worker-regression.ts",
+    "../v40-80-r542-reader-v2-zones-regression.ts",
+    "../v40-80-r542-reader-v2-bridge-regression.ts",
+    "../v40-80-r542-reader-v2-automatic-regression.ts"
   ]
 }
