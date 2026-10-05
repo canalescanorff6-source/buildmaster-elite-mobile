@@ -1,5 +1,8 @@
 import { execFileSync } from 'node:child_process';
 
+const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+execFileSync(npx, ['tsc', '-p', 'tests/types-r542/tsconfig.json', '--pretty', 'false'], { stdio: 'inherit' });
+
 const jsTests = [
   'tests/v40-80-r542-reader-v2-architecture-regression.mjs',
   'tests/v40-80-r542-reader-v2-image-session-regression.mjs',
@@ -16,4 +19,4 @@ const tsTests = [
 for (const test of jsTests) execFileSync(process.execPath, [test], { stdio: 'inherit' });
 for (const test of tsTests) execFileSync(process.execPath, ['-r', './tests/_ts-require.cjs', test], { stdio: 'inherit' });
 
-console.log('R542 acceptance GREEN: arquitetura, memória, lifecycle, quadrados, review, bridge, automático e integração aprovados.');
+console.log('R542 acceptance GREEN: typecheck, arquitetura, memória, lifecycle, quadrados, review, bridge, automático e integração aprovados.');
