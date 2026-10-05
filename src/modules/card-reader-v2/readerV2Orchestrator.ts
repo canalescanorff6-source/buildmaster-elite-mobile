@@ -24,6 +24,7 @@ export type ReaderV2OrchestratorDependencies = {
 export type ReaderV2StartResult = {
   evidence: ReaderV2Evidence;
   review: ReaderV2ReviewDraft;
+  ocrSnapshot: ReaderV2SessionSnapshot;
 };
 
 export interface ReaderV2Orchestrator {
@@ -108,13 +109,13 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
 
       state = { ...syncFromWorker('closing-ocr', mode), stage: 'closing-ocr' };
       await workerSession.close();
-      const closedSnapshot = syncFromWorker('ocrClosed', mode);
+      const closedSnapshot = { ...syncFromWorker('ocrClosed', mode) };
       dependencies.assertReviewReady(closedSnapshot);
 
       const review = dependencies.buildReview(evidence, imageSession.preview);
       state = { ...closedSnapshot, stage: 'review' };
       running = false;
-      return { evidence, review };
+      return { evidence, review, ocrSnapshot: closedSnapshot };
     } catch (cause) {
       running = false;
       const message = cause instanceof Error ? cause.message : String(cause);
