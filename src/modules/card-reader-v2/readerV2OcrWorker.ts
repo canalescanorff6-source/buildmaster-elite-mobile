@@ -10,7 +10,7 @@ export type ReaderV2WorkerRecognition = {
 };
 
 export interface ReaderV2WorkerPort {
-  recognize(input: unknown): Promise<ReaderV2WorkerRecognition>;
+  recognize(input: unknown, key?: ReaderV2FieldKey): Promise<ReaderV2WorkerRecognition>;
   terminate(): Promise<void> | void;
 }
 
@@ -86,7 +86,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
       assertUsable();
       const active = await start();
       try {
-        const result = await active.recognize(input);
+        const result = await active.recognize(input, key);
         const text = result.text?.trim() ?? '';
         return {
           key,
