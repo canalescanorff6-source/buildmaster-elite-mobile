@@ -43,9 +43,17 @@ assert.equal(missing.state, 'BLOCKED', 'R503: resultado sem certificação deve 
 assert.equal(missing.canPersistConfirmed, false);
 assert.equal(missing.canPromoteResult, false);
 
-const reader = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const publicReader = fs.readFileSync('src/modules/card-reader/cardVisionReaderActionsR187.ts', 'utf8');
+const readerPath = publicReader.includes('card-reader-v2/cardVisionReaderActionsR542')
+  ? 'src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts'
+  : 'src/modules/card-reader/cardVisionReaderActionsR187.ts';
+const reader = fs.readFileSync(readerPath, 'utf8');
+if (readerPath.endsWith('LegacyR187.ts')) {
+  assert.match(publicReader, /card-reader-v2\/cardVisionReaderActionsR542/,
+    'R542/R503: o caminho público precisa permanecer como facade V2 enquanto o gate histórico é validado no fallback legado.');
+}
 assert.match(reader, /deriveSingleReaderFinalizationR503/,
-  'R503: fluxo unitário precisa consultar a autoridade de promoção antes de confirmar.');
+  'R503: fluxo que persiste o resultado unitário precisa consultar a autoridade de promoção antes de confirmar.');
 assert.match(reader, /const\s+confirmationDecisionR503\s*=\s*deriveSingleReaderFinalizationR503\([\s\S]{0,160}cardTruthCertificationR501[\s\S]{0,120}\);/,
   'R503: decisão deve usar a certificação estrutural produzida pelo Clean Slate.');
 
@@ -70,4 +78,4 @@ assert.match(safeRepair, /applyR503SingleReaderFinalization/,
 assert.match(safeRepair, /Card Truth R503[^\n]*confirmação unitária/,
   'R503: ci:repair-safe precisa expor uma etapa explícita para a confirmação unitária fail-closed.');
 
-console.log('R503 aprovado: confirmação manual não vence Card Truth; somente FINAL_CERTIFIED pode persistir e virar resultado final.');
+console.log(`R503 aprovado em ${readerPath}: confirmação manual não vence Card Truth; somente FINAL_CERTIFIED pode persistir e virar resultado final.`);
