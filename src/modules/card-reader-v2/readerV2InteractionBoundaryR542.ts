@@ -35,3 +35,6 @@ export function createCardVisionReaderInteractionOperationsR542(context: ReaderI
     changeEnhancementMode: async (...args: Parameters<ReturnType<typeof import('@/modules/card-reader/readerInteractionRuntimeR164').createCardVisionReaderInteractionOperationsR164>['changeEnhancementMode']>) => (await classic()).changeEnhancementMode(...args),
   };
 }
+
+// Compatibilidade com o boundary R187: o loader continua expondo o nome canônico R164.
+export const createCardVisionReaderInteractionOperationsR164 = createCardVisionReaderInteractionOperationsR542;
