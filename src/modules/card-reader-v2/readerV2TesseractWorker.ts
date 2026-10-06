@@ -14,12 +14,13 @@ export type ReaderV2TesseractProgress = {
 
 function paramsForKey(key?: ReaderV2FieldKey): Partial<TesseractNamespace.WorkerParams> {
   const normalized = String(key ?? 'general');
-  const numeric = normalized === 'level' || normalized === 'points';
-  const singleLine = normalized === 'playerName' || normalized === 'mainPosition' || normalized === 'playstyle' || numeric;
+  const numericColumn = normalized.startsWith('attributes-values-');
+  const numeric = normalized === 'level' || normalized === 'points' || numericColumn;
+  const singleLine = normalized === 'playerName' || normalized === 'mainPosition' || normalized === 'playstyle' || (numeric && !numericColumn);
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.";
-  const whitelist = numeric ? '0123456789/:.-' : singleLine ? letters : '';
+  const whitelist = numericColumn ? '0123456789' : numeric ? '0123456789/:.-' : singleLine ? letters : '';
   return {
-    tessedit_pageseg_mode: (singleLine ? '7' : normalized === 'skills' ? '6' : '6') as TesseractNamespace.PSM,
+    tessedit_pageseg_mode: (numericColumn ? '6' : singleLine ? '7' : normalized === 'skills' ? '6' : '6') as TesseractNamespace.PSM,
     tessedit_char_whitelist: whitelist,
     preserve_interword_spaces: '1',
     user_defined_dpi: singleLine && !numeric ? '450' : '300',
