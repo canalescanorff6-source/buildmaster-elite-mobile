@@ -241,12 +241,62 @@ async function testIdenticalGeometryReusesRecognition() {
   assert.equal(evidence.fields[1]?.value, evidence.fields[0]?.value, 'R546-A: zona duplicada deve reutilizar a evidência da primeira leitura.');
 }
 
+async function testLevelAndPointsConsistencyGoesToReview() {
+  const identityZones: ReaderV2Zone[] = [
+    { key: 'level', label: 'Nível', x: 0.10, y: 0.10, w: 0.20, h: 0.10, enabled: true },
+    { key: 'points', label: 'Pontos', x: 0.40, y: 0.10, w: 0.20, h: 0.10, enabled: true },
+  ];
+
+  const imageSession = {
+    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
+    },
+  } as Pick<ReaderV2ImageSession, 'withCrop'>;
+
+  const inconsistentWorker = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      const baseKey = key.replace(/#retry$/, '');
+      const value = baseKey === 'level' ? '34' : '60';
+      return { key, label: key, value, confidence: 96, source: 'zones', rawText: value };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const inconsistent = await readReaderV2Zones({
+    imageSession,
+    workerSession: inconsistentWorker,
+    zones: identityZones,
+  });
+
+  assert.equal(inconsistent.fields.find((field) => field.key === 'level')?.value, '34', 'R547: não corrigir/inventar o nível lido.');
+  assert.equal(inconsistent.fields.find((field) => field.key === 'points')?.value, '60', 'R547: não corrigir/inventar os pontos lidos.');
+  assert.ok(inconsistent.uncertainKeys.includes('level'), 'R547 RED: nível deve ir para revisão quando PP não corresponde a (nível - 1) × 2.');
+  assert.ok(inconsistent.uncertainKeys.includes('points'), 'R547 RED: PP deve ir para revisão quando não corresponde ao nível.');
+
+  const consistentWorker = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      const baseKey = key.replace(/#retry$/, '');
+      const value = baseKey === 'level' ? '34' : '66';
+      return { key, label: key, value, confidence: 96, source: 'zones', rawText: value };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const consistent = await readReaderV2Zones({
+    imageSession,
+    workerSession: consistentWorker,
+    zones: identityZones,
+  });
+
+  assert.ok(!consistent.uncertainKeys.includes('level'), 'R547: par nível/PP consistente e confiável não deve ser marcado por conflito.');
+  assert.ok(!consistent.uncertainKeys.includes('points'), 'R547: PP consistente e confiável não deve ser marcado por conflito.');
+}
+
 async function main() {
   await testSerialZonesAndPartialFailure();
   await testExactAttributeStripsAvoidBroadFallback();
   await testWeakOrImpossibleEvidenceGoesToReview();
   await testCriticalFieldsRetryOnceWhenWeak();
   await testIdenticalGeometryReusesRecognition();
+  await testLevelAndPointsConsistencyGoesToReview();
 }
 
 void main().then(() => {

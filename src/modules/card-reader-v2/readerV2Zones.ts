@@ -43,6 +43,37 @@ function addUncertain(list: ReaderV2FieldKey[], key: ReaderV2FieldKey) {
   if (!list.includes(key)) list.push(key);
 }
 
+function firstInteger(value: string) {
+  const token = value.match(/\d{1,4}/)?.[0];
+  if (!token) return null;
+  const numeric = Number(token);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function validateLevelPointsConsistency(
+  fields: ReaderV2FieldEvidence[],
+  uncertainKeys: ReaderV2FieldKey[],
+) {
+  const levelField = fields.find((field) => field.key === 'level');
+  const pointsField = fields.find((field) => field.key === 'points');
+  if (!levelField || !pointsField) return;
+
+  const level = firstInteger(levelField.value);
+  const points = firstInteger(pointsField.value);
+  if (level === null || points === null) return;
+
+  if (level < 1) {
+    addUncertain(uncertainKeys, 'level');
+    return;
+  }
+
+  const expectedPoints = (level - 1) * 2;
+  if (points !== expectedPoints) {
+    addUncertain(uncertainKeys, 'level');
+    addUncertain(uncertainKeys, 'points');
+  }
+}
+
 function minimumConfidence(key: ReaderV2FieldKey) {
   switch (key) {
     case 'playerName': return 45;
@@ -320,6 +351,8 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
       fieldKey: zone.key,
     });
   }
+
+  validateLevelPointsConsistency(fields, uncertainKeys);
 
   const attributes = fields.find((field) => field.key === 'attributes');
   const attributesRead = attributes ? countAttributeValues(attributes.value) : 0;
