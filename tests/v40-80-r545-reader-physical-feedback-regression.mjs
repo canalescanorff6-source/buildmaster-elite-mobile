@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+// Evidência física R545: Android chegou a 90%/9 de 10 e concluiu o worker; este gate protege o feedback exibido ao usuário.
+
 const app = fs.readFileSync('src/components/CardVisionApp.tsx', 'utf8');
 const progressCard = fs.readFileSync('src/components/ReaderRecoveryAndProgressV3840.tsx', 'utf8');
 
