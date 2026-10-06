@@ -7,6 +7,9 @@ on:
       - 'src/modules/card-reader-v2/**'
       - 'tests/v40-80-r542-reader-v2-*'
       - 'tests/v40-80-r544-field-aware-retry-regression.mjs'
+      - 'tests/v40-80-r545-reader-success-flow-ui-regression.mjs'
+      - 'src/modules/experience/statusToneR545.ts'
+      - 'src/components/CardVisionApp.tsx'
       - 'tests/v40-80-r150-cardvision-shell-boundary-regression.mjs'
       - 'tests/v40-80-r160-lazy-reader-runtime-regression.mjs'
       - 'tests/v40-80-r161-reader-surface-evidence-lazy-regression.mjs'
@@ -144,6 +147,8 @@ jobs:
         run: node tests/v40-80-r542-reader-v2-integration-regression.mjs
       - name: R544 RED/GREEN — retry OCR por campo
         run: node tests/v40-80-r544-field-aware-retry-regression.mjs
+      - name: R545 RED/GREEN — sucesso e confirmação do Reader V2
+        run: node tests/v40-80-r545-reader-success-flow-ui-regression.mjs
       - name: Executar contrato R150 da fachada do leitor
         run: node tests/v40-80-r150-cardvision-shell-boundary-regression.mjs
       - name: Executar contratos históricos da boundary R187/R542
