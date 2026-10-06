@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { mapLegacyCalibrationToReaderV2, READER_V2_DEFAULT_ZONES } from '../src/modules/card-reader-v2/readerV2ZoneProfile';
 import { readReaderV2Zones } from '../src/modules/card-reader-v2/readerV2Zones';
+import { deriveReaderCanonicalEvidenceR549 } from '../src/lib/readerCanonicalEvidenceR549';
 import type { ReaderV2ImageSession } from '../src/modules/card-reader-v2/readerV2ImageSession';
 import type { ReaderV2OcrWorkerSession } from '../src/modules/card-reader-v2/readerV2OcrWorker';
 import type { ReaderV2FieldEvidence, ReaderV2Progress, ReaderV2Zone } from '../src/modules/card-reader-v2/readerV2Types';
@@ -273,45 +274,26 @@ async function testIdenticalGeometryReusesRecognition() {
 }
 
 async function testCanonicalSkillsAndImpetoEvidence() {
-  const evidenceZones: ReaderV2Zone[] = [
-    { key: 'skills', label: 'Habilidades', x: 0.05, y: 0.65, w: 0.9, h: 0.15, enabled: true },
-    { key: 'impeto', label: 'Ímpeto / booster', x: 0.05, y: 0.82, w: 0.9, h: 0.10, enabled: true },
-  ];
-  const imageSession = {
-    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
-      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
-    },
-  } as Pick<ReaderV2ImageSession, 'withCrop'>;
-  const workerSession = {
-    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
-      const value = key === 'skills'
-        ? 'Passe de primeira  Passe em profundidade  Ply'
-        : 'Impeto / booster: Protecao de Posse +2';
-      return { key, label: key, value, confidence: 94, source: 'zones', rawText: value };
-    },
-  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
-
-  const evidence = await readReaderV2Zones({ imageSession, workerSession, zones: evidenceZones });
+  const canonical = deriveReaderCanonicalEvidenceR549([
+    { key: 'skills', value: 'Passe de primeira  Passe em profundidade  Ply' },
+    { key: 'impeto', value: 'Impeto / booster: Protecao de Posse +2' },
+  ]);
   assert.deepEqual(
-    evidence.skillValues,
+    canonical.skillValues,
     ['Passe de primeira', 'Passe em profundidade'],
-    'R549 RED: Reader V2 deve expor somente skills oficiais/canônicas, ignorando ruído OCR.',
+    'R549: pós-OCR deve expor somente skills oficiais/canônicas, ignorando ruído.',
   );
-  assert.equal(evidence.impetoName, 'Proteção de Posse', 'R549 RED: Ímpeto deve ser canonizado pelo catálogo reconhecível existente.');
-  assert.ok(!evidence.uncertainKeys.includes('skills'), 'R549: skills oficiais e confiáveis não devem cair em revisão.');
-  assert.ok(!evidence.uncertainKeys.includes('impeto'), 'R549: Ímpeto único e reconhecível não deve cair em revisão.');
+  assert.equal(canonical.impetoName, 'Proteção de Posse', 'R549: Ímpeto deve ser canonizado pelo catálogo reconhecível existente.');
+  assert.deepEqual(canonical.uncertainKeys, [], 'R549: evidência canônica única não deve exigir revisão.');
 
-  const noisyWorker = {
-    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
-      const value = key === 'skills' ? 'Ply O IN A 123' : 'Finalização fenomenal';
-      return { key, label: key, value, confidence: 98, source: 'zones', rawText: value };
-    },
-  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
-  const noisy = await readReaderV2Zones({ imageSession, workerSession: noisyWorker, zones: evidenceZones });
-  assert.equal(noisy.skillValues, undefined, 'R549 RED: ruído com alta confiança do OCR não pode virar habilidade possuída.');
-  assert.equal(noisy.impetoName, undefined, 'R549 RED: habilidade especial não pode ser confundida com Ímpeto.');
-  assert.ok(noisy.uncertainKeys.includes('skills'), 'R549 RED: skill sem nome oficial deve exigir revisão.');
-  assert.ok(noisy.uncertainKeys.includes('impeto'), 'R549 RED: Ímpeto sem correspondência única deve exigir revisão.');
+  const noisy = deriveReaderCanonicalEvidenceR549([
+    { key: 'skills', value: 'Ply O IN A 123' },
+    { key: 'impeto', value: 'Finalização fenomenal' },
+  ]);
+  assert.equal(noisy.skillValues, undefined, 'R549: ruído OCR não pode virar habilidade possuída.');
+  assert.equal(noisy.impetoName, undefined, 'R549: habilidade especial não pode ser confundida com Ímpeto.');
+  assert.ok(noisy.uncertainKeys.includes('skills'), 'R549: skill sem nome oficial deve exigir revisão.');
+  assert.ok(noisy.uncertainKeys.includes('impeto'), 'R549: Ímpeto sem correspondência única deve exigir revisão.');
 }
 
 async function testLevelAndPointsConsistencyGoesToReview() {
