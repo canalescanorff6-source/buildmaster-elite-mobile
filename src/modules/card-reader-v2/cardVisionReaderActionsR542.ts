@@ -17,7 +17,7 @@ let readerV2BridgeR542:ReaderV2Bridge<unknown>|null=null;
 const isV2=()=>readReaderV2Backend()==='v2';
 async function loadLegacyActions(input:CardVisionReaderActionsInputR187){const legacy=await import('../card-reader/cardVisionReaderActionsLegacyR187');return legacy.createCardVisionReaderActionsR187(input)}
 function clearFinal(){readerV2ClosedSnapshotR542=null;readerV2ReviewDraftR542=null;readerV2BridgeR542=null}
-function raw(review:ReaderV2ReviewDraft){return [review.fields.filter(f=>f.value.trim()).map(f=>`${f.label}: ${f.value.trim()}`).join('\n'),review.rawText.trim()].filter(Boolean).join('\n')}
+function raw(review:ReaderV2ReviewDraft){const canonical=[review.skillValues?.length?`HABILIDADES JÁ POSSUI: ${review.skillValues.join(', ')}`:'',review.impetoName?`ÍMPETO: ${review.impetoName}`:''].filter(Boolean).join('\n');return [canonical,review.fields.filter(f=>f.value.trim()).map(f=>`${f.label}: ${f.value.trim()}`).join('\n'),review.rawText.trim()].filter(Boolean).join('\n')}
 
 export function createCardVisionReaderActionsR187(input:CardVisionReaderActionsInputR187){
  async function stopV2(cancel=false){if(!readerV2OrchestratorR542)return;if(cancel)await readerV2OrchestratorR542.cancel().catch(()=>undefined);readerV2OrchestratorR542.close();readerV2OrchestratorR542=null}
