@@ -11,7 +11,7 @@ assert.match(
 );
 
 assert.ok(
-  tone.includes(String.raw`\\berros?\\b`),
+  tone.includes(String.raw`\berros?\b`),
   'R545 RED: erro deve ser reconhecido por palavra inteira para não casar com "encerrou".',
 );
 
