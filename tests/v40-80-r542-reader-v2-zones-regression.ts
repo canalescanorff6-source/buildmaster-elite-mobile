@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { mapLegacyCalibrationToReaderV2, READER_V2_DEFAULT_ZONES } from '../src/modules/card-reader-v2/readerV2ZoneProfile';
 import { readReaderV2Zones } from '../src/modules/card-reader-v2/readerV2Zones';
+import { deriveReaderCanonicalEvidenceR549 } from '../src/lib/readerCanonicalEvidenceR549';
 import type { ReaderV2ImageSession } from '../src/modules/card-reader-v2/readerV2ImageSession';
 import type { ReaderV2OcrWorkerSession } from '../src/modules/card-reader-v2/readerV2OcrWorker';
 import type { ReaderV2FieldEvidence, ReaderV2Progress, ReaderV2Zone } from '../src/modules/card-reader-v2/readerV2Types';
@@ -272,6 +273,29 @@ async function testIdenticalGeometryReusesRecognition() {
   assert.equal(evidence.fields[1]?.value, evidence.fields[0]?.value, 'R546-A: zona duplicada deve reutilizar a evidência da primeira leitura.');
 }
 
+async function testCanonicalSkillsAndImpetoEvidence() {
+  const canonical = deriveReaderCanonicalEvidenceR549([
+    { key: 'skills', value: 'Passe de primeira  Passe em profundidade  Ply' },
+    { key: 'impeto', value: 'Impeto / booster: Protecao de Posse +2' },
+  ]);
+  assert.deepEqual(
+    canonical.skillValues,
+    ['Passe de primeira', 'Passe em profundidade'],
+    'R549: pós-OCR deve expor somente skills oficiais/canônicas, ignorando ruído.',
+  );
+  assert.equal(canonical.impetoName, 'Proteção de Posse', 'R549: Ímpeto deve ser canonizado pelo catálogo reconhecível existente.');
+  assert.deepEqual(canonical.uncertainKeys, [], 'R549: evidência canônica única não deve exigir revisão.');
+
+  const noisy = deriveReaderCanonicalEvidenceR549([
+    { key: 'skills', value: 'Ply O IN A 123' },
+    { key: 'impeto', value: 'Finalização fenomenal' },
+  ]);
+  assert.equal(noisy.skillValues, undefined, 'R549: ruído OCR não pode virar habilidade possuída.');
+  assert.equal(noisy.impetoName, undefined, 'R549: habilidade especial não pode ser confundida com Ímpeto.');
+  assert.ok(noisy.uncertainKeys.includes('skills'), 'R549: skill sem nome oficial deve exigir revisão.');
+  assert.ok(noisy.uncertainKeys.includes('impeto'), 'R549: Ímpeto sem correspondência única deve exigir revisão.');
+}
+
 async function testLevelAndPointsConsistencyGoesToReview() {
   const identityZones: ReaderV2Zone[] = [
     { key: 'level', label: 'Nível', x: 0.10, y: 0.10, w: 0.20, h: 0.10, enabled: true },
@@ -328,6 +352,7 @@ async function main() {
   await testWeakOrImpossibleEvidenceGoesToReview();
   await testCriticalFieldsRetryOnceWhenWeak();
   await testIdenticalGeometryReusesRecognition();
+  await testCanonicalSkillsAndImpetoEvidence();
   await testLevelAndPointsConsistencyGoesToReview();
 }
 

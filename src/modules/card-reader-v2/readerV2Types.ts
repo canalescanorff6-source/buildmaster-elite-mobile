@@ -63,6 +63,8 @@ export interface ReaderV2ReviewDraft {
   fields: ReaderV2FieldEvidence[];
   uncertainKeys: ReaderV2FieldKey[];
   attributeValues?: number[];
+  skillValues?: string[];
+  impetoName?: string;
   preview: string | null;
 }
 
