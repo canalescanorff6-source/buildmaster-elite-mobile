@@ -124,6 +124,21 @@ function retryRecognitionKey(key: ReaderV2FieldKey): ReaderV2FieldKey {
   return `${String(key)}#retry`;
 }
 
+function zoneGeometryKey(zone: ReaderV2Zone) {
+  return [zone.x, zone.y, zone.w, zone.h]
+    .map((value) => Number(value).toFixed(6))
+    .join(':');
+}
+
+function reuseZoneField(field: ReaderV2FieldEvidence, zone: ReaderV2Zone): ReaderV2FieldEvidence {
+  return {
+    ...field,
+    key: zone.key,
+    label: zone.label,
+    source: 'zones',
+  };
+}
+
 function asZoneField(
   recognized: ReaderV2FieldEvidence,
   zone: ReaderV2Zone,
@@ -251,6 +266,7 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
   const zones = (input.zones ?? READER_V2_DEFAULT_ZONES).filter((zone) => zone.enabled);
   const fields: ReaderV2FieldEvidence[] = [];
   const uncertainKeys: ReaderV2FieldKey[] = [];
+  const reusableByGeometry = new Map<string, ReaderV2FieldEvidence>();
   const total = zones.length;
 
   for (let index = 0; index < zones.length; index += 1) {
@@ -265,24 +281,33 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
     });
 
     let field: ReaderV2FieldEvidence;
-    try {
-      if (zone.key === 'attributes') {
-        field = await readAttributeField(input, zone);
-      } else {
-        field = await readRegularField(input, zone);
-      }
+    const geometryKey = zone.key === 'attributes' ? null : zoneGeometryKey(zone);
+    const reusable = geometryKey ? reusableByGeometry.get(geometryKey) : undefined;
+
+    if (reusable) {
+      field = reuseZoneField(reusable, zone);
       if (shouldReviewField(field)) addUncertain(uncertainKeys, zone.key);
-    } catch (cause) {
-      field = {
-        key: zone.key,
-        label: zone.label,
-        value: '',
-        confidence: 0,
-        source: 'zones',
-        rawText: '',
-        error: errorMessage(cause),
-      };
-      addUncertain(uncertainKeys, zone.key);
+    } else {
+      try {
+        if (zone.key === 'attributes') {
+          field = await readAttributeField(input, zone);
+        } else {
+          field = await readRegularField(input, zone);
+        }
+        if (geometryKey && !field.error) reusableByGeometry.set(geometryKey, field);
+        if (shouldReviewField(field)) addUncertain(uncertainKeys, zone.key);
+      } catch (cause) {
+        field = {
+          key: zone.key,
+          label: zone.label,
+          value: '',
+          confidence: 0,
+          source: 'zones',
+          rawText: '',
+          error: errorMessage(cause),
+        };
+        addUncertain(uncertainKeys, zone.key);
+      }
     }
 
     fields.push(field);

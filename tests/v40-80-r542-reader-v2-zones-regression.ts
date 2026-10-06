@@ -209,11 +209,44 @@ async function testCriticalFieldsRetryOnceWhenWeak() {
   assert.ok(evidence.uncertainKeys.includes('skills'), 'R543-D: skill fraca deve continuar na revisão sem multipass pesado.');
 }
 
+async function testIdenticalGeometryReusesRecognition() {
+  const duplicateZones: ReaderV2Zone[] = [
+    { key: 'skills', label: '8. Habilidades', x: 0.01, y: 0.87, w: 0.98, h: 0.12, enabled: true },
+    { key: 'specialSkill', label: '10. Habilidade especial', x: 0.01, y: 0.87, w: 0.98, h: 0.12, enabled: true },
+  ];
+  const cropOrder: string[] = [];
+  const recognitionKeys: string[] = [];
+
+  const imageSession = {
+    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+      cropOrder.push(String(zone.key));
+      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
+    },
+  } as Pick<ReaderV2ImageSession, 'withCrop'>;
+
+  const workerSession = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      recognitionKeys.push(key);
+      const value = 'Finalizador nato Cabeçada Matadora Foguete Rasante';
+      return { key, label: key, value, confidence: 91, source: 'zones', rawText: value };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const evidence = await readReaderV2Zones({ imageSession, workerSession, zones: duplicateZones });
+
+  assert.deepEqual(cropOrder, ['skills'], 'R546-A: duas zonas com geometria idêntica devem compartilhar um único crop/OCR.');
+  assert.deepEqual(recognitionKeys, ['skills'], 'R546-A: geometria já lida não pode disparar uma segunda chamada ao worker.');
+  assert.equal(evidence.fields.length, 2, 'R546-A: deduplicar OCR não pode remover a evidência lógica da segunda zona.');
+  assert.equal(evidence.fields[1]?.key, 'specialSkill');
+  assert.equal(evidence.fields[1]?.value, evidence.fields[0]?.value, 'R546-A: zona duplicada deve reutilizar a evidência da primeira leitura.');
+}
+
 async function main() {
   await testSerialZonesAndPartialFailure();
   await testExactAttributeStripsAvoidBroadFallback();
   await testWeakOrImpossibleEvidenceGoesToReview();
   await testCriticalFieldsRetryOnceWhenWeak();
+  await testIdenticalGeometryReusesRecognition();
 }
 
 void main().then(() => {

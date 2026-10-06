@@ -131,9 +131,109 @@ async function testOrchestratorLifecycle() {
   assert.ok(events.includes('image:close'));
 }
 
+async function testSecondCardStartsFreshReaderGeneration() {
+  let workerGenerations = 0;
+  const openedImages: string[] = [];
+  const closedImages: string[] = [];
+  let currentImageName = '';
+
+  const makeEvidence = (name: string) => ({
+    mode: 'automatic' as const,
+    rawText: name,
+    fields: [
+      { key: 'playerName', label: 'Nome', value: name, confidence: 95, source: 'automatic' as const },
+      { key: 'level', label: 'Nível', value: '31', confidence: 95, source: 'automatic' as const },
+      { key: 'points', label: 'Pontos', value: '60', confidence: 95, source: 'automatic' as const },
+    ],
+    uncertainKeys: [],
+  });
+
+  const orchestrator = createReaderV2Orchestrator({
+    openImageSession: async (file) => {
+      const fileName = file instanceof File ? file.name : `blob-${openedImages.length + 1}`;
+      const preview = `blob:${fileName}`;
+      currentImageName = fileName;
+      openedImages.push(preview);
+      let closed = false;
+      return {
+        preview,
+        width: 900,
+        height: 1200,
+        async withCrop<T>(_zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+          return await operation({} as HTMLCanvasElement);
+        },
+        close() {
+          if (closed) return;
+          closed = true;
+          closedImages.push(preview);
+        },
+        snapshot() {
+          return { width: 900, height: 1200, originalWidth: 900, originalHeight: 1200, preview, cropActive: false, closed };
+        },
+      } as ReaderV2ImageSession;
+    },
+    createWorkerSession: () => {
+      workerGenerations += 1;
+      let ready = false;
+      let closed = false;
+      let stage: ReaderV2SessionSnapshot['stage'] = 'idle';
+      return {
+        async start() { ready = true; stage = 'reading'; return {} as never; },
+        async recognize() { throw new Error('not used directly by R546 fixture'); },
+        async cancel() { ready = false; stage = 'cancelled'; },
+        async close() {
+          if (closed) return;
+          closed = true;
+          ready = false;
+          stage = 'ocrClosed';
+        },
+        snapshot() {
+          return { stage, mode: null, workerReady: ready, pendingRecognitions: 0, cancelled: stage === 'cancelled', error: null };
+        },
+      } as ReaderV2OcrWorkerSession;
+    },
+    readAutomatic: async () => makeEvidence(currentImageName.includes('second') ? 'Second Player' : 'First Player'),
+    readZones: async () => makeEvidence(currentImageName.includes('second') ? 'Second Player' : 'First Player'),
+    buildReview: (value, preview) => ({
+      playerName: value.fields[0]?.value ?? '',
+      level: value.fields[1]?.value ?? '',
+      points: value.fields[2]?.value ?? '',
+      mainPosition: '',
+      rawText: value.rawText,
+      fields: value.fields,
+      uncertainKeys: value.uncertainKeys,
+      preview,
+    }),
+    assertReviewReady: (snapshot) => {
+      assert.equal(snapshot.stage, 'ocrClosed');
+      assert.equal(snapshot.workerReady, false);
+      assert.equal(snapshot.pendingRecognitions, 0);
+    },
+  });
+
+  await orchestrator.select(new File(['first'], 'first-card.png', { type: 'image/png' }));
+  const first = await orchestrator.start('automatic');
+  assert.equal(first.review.playerName, 'First Player');
+
+  await orchestrator.select(new File(['second'], 'second-card.png', { type: 'image/png' }));
+  assert.equal(orchestrator.snapshot().stage, 'image-selected', 'R546-B: selecionar a segunda carta deve limpar o estado de review anterior.');
+  const second = await orchestrator.start('automatic');
+
+  assert.equal(second.review.playerName, 'Second Player', 'R546-B: a segunda carta não pode reutilizar evidência da primeira.');
+  assert.equal(workerGenerations, 2, 'R546-B: cada carta precisa de uma geração independente do worker OCR.');
+  assert.deepEqual(openedImages, ['blob:first-card.png', 'blob:second-card.png']);
+  assert.ok(closedImages.includes('blob:first-card.png'), 'R546-B: a imagem da primeira carta deve ser liberada antes da segunda leitura.');
+  assert.equal(orchestrator.snapshot().stage, 'review');
+  assert.equal(orchestrator.snapshot().workerReady, false);
+
+  orchestrator.close();
+  assert.ok(closedImages.includes('blob:second-card.png'), 'R546-B: fechar o leitor deve liberar também a segunda imagem.');
+}
+
 async function main() {
   await testAutomaticReader();
   await testOrchestratorLifecycle();
+  await testSecondCardStartsFreshReaderGeneration();
   console.log('R542-D aprovado: automático serial e orquestrador fecha OCR antes da conferência.');
 }
 
