@@ -60,6 +60,8 @@ export function buildReaderV2ReviewDraft(
     fields: evidence.fields.map((field) => ({ ...field })),
     uncertainKeys,
     attributeValues: evidence.attributeValues ? [...evidence.attributeValues] : undefined,
+    skillValues: evidence.skillValues ? [...evidence.skillValues] : undefined,
+    impetoName: evidence.impetoName,
     preview,
   };
 }
