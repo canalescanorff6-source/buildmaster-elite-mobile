@@ -417,7 +417,7 @@ export function CardVisionApp() {
     if (!message || message === lastPremiumStatusRef.current) return;
     lastPremiumStatusRef.current = message;
     const normalized = message.toLocaleLowerCase('pt-BR');
-    if (/falha|erro|não foi possível|inválid|corrompid/.test(normalized)) {
+    if (/falha|\berros?\b|não foi possível|inválid|corrompid/.test(normalized)) {
       showPremiumToast({ title: 'Ação precisa de atenção', message, tone: 'danger', duration: 6200 });
       return;
     }
