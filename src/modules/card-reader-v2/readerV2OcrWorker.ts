@@ -25,6 +25,9 @@ export interface ReaderV2OcrWorkerSession {
 }
 
 const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
+const isRecoverableRecognitionError = (cause: unknown) => Boolean(
+  cause && typeof cause === 'object' && (cause as { readerV2Recoverable?: boolean }).readerV2Recoverable === true,
+);
 const normalizeConfidence = (value: number | undefined) => Math.max(0, Math.min(100, Number.isFinite(value) ? Number(value) : 0));
 
 export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): ReaderV2OcrWorkerSession {
@@ -40,9 +43,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
   let error: string | null = null;
   let terminated = false;
 
-  async function terminateWorker() {
-    if (terminated) return;
-    terminated = true;
+  async function recycleWorker() {
     const active = worker;
     const pendingWorker = workerPromise;
     worker = null;
@@ -58,6 +59,12 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
         .then((created) => created.terminate())
         .catch(() => undefined);
     }
+  }
+
+  async function terminateWorker() {
+    if (terminated) return;
+    terminated = true;
+    await recycleWorker();
   }
 
   function assertUsable() {
@@ -107,6 +114,8 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
       try {
         const result = await active.recognize(input, key);
         const text = result.text?.trim() ?? '';
+        error = null;
+        stage = 'reading';
         return {
           key,
           label: String(key),
@@ -118,6 +127,13 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
       } catch (cause) {
         if (cancelled) throw cause;
         error = errorMessage(cause);
+
+        if (isRecoverableRecognitionError(cause)) {
+          stage = 'reading';
+          await recycleWorker().catch(() => undefined);
+          throw cause;
+        }
+
         stage = 'error';
         failed = true;
         await terminateWorker();
