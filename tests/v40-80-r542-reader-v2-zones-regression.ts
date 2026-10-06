@@ -117,7 +117,7 @@ async function testExactAttributeStripsAvoidBroadFallback() {
   assert.deepEqual(cropOrder, ['attributes-values-left', 'attributes-values-center', 'attributes-values-right'], 'R543-C: 26 atributos completos devem usar somente as três tiras numéricas.');
   assert.equal(evidence.attributesRead, 26, 'R543-C: 10+9+7 badges válidos devem fechar os 26 atributos.');
   assert.ok(!evidence.uncertainKeys.includes('attributes'), 'R543-C: atributos completos e confiáveis não devem cair em revisão.');
-  assert.equal((evidence.fields.find((field) => field.key === 'attributes')?.value.match(/\\b\\d{1,3}\\b/g) ?? []).length, 26);
+  assert.equal((evidence.fields.find((field) => field.key === 'attributes')?.value.match(/\b\d{1,3}\b/g) ?? []).length, 26);
 }
 
 async function testWeakOrImpossibleEvidenceGoesToReview() {
