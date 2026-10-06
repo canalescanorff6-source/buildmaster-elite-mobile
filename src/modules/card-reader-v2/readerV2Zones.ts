@@ -16,6 +16,21 @@ export type ReadReaderV2ZonesInput = {
   onProgress?: (progress: ReaderV2Progress) => void;
 };
 
+type AttributeValueStrip = {
+  id: 'left' | 'center' | 'right';
+  x: number;
+  w: number;
+  expected: number;
+};
+
+const READER_V2_ATTRIBUTE_VALUE_STRIPS: AttributeValueStrip[] = [
+  { id: 'left', x: 0.255, w: 0.085, expected: 10 },
+  { id: 'center', x: 0.590, w: 0.100, expected: 9 },
+  { id: 'right', x: 0.905, w: 0.095, expected: 7 },
+];
+
+const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
+
 function countAttributeValues(text: string) {
   const numericTokens = text.match(/\b\d{1,3}\b/g) ?? [];
   return Math.min(26, numericTokens.filter((token) => {
@@ -28,7 +43,138 @@ function addUncertain(list: ReaderV2FieldKey[], key: ReaderV2FieldKey) {
   if (!list.includes(key)) list.push(key);
 }
 
-const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
+function minimumConfidence(key: ReaderV2FieldKey) {
+  switch (key) {
+    case 'playerName': return 45;
+    case 'level':
+    case 'points':
+    case 'mainPosition': return 40;
+    case 'playstyle': return 35;
+    case 'attributes': return 42;
+    case 'skills':
+    case 'impeto': return 28;
+    default: return 20;
+  }
+}
+
+function countLetters(value: string) {
+  return (value.match(/[A-Za-zÀ-ÖØ-öø-ÿ]/g) ?? []).length;
+}
+
+function hasPlausibleNumber(value: string) {
+  const tokens = value.match(/\d{1,3}/g) ?? [];
+  return tokens.some((token) => {
+    const numeric = Number(token);
+    return Number.isFinite(numeric) && numeric >= 0 && numeric <= 999;
+  });
+}
+
+function isSemanticallyPlausible(field: ReaderV2FieldEvidence) {
+  const value = field.value.trim();
+  if (!value) return false;
+
+  switch (field.key) {
+    case 'playerName':
+      return countLetters(value) >= 2 && !/\d/.test(value);
+    case 'level':
+    case 'points':
+      return hasPlausibleNumber(value);
+    case 'mainPosition':
+      return countLetters(value) >= 2 && !/\d/.test(value);
+    case 'playstyle':
+      return countLetters(value) >= 3;
+    default:
+      return true;
+  }
+}
+
+function shouldReviewField(field: ReaderV2FieldEvidence) {
+  if (field.error) return true;
+  if (!isSemanticallyPlausible(field)) return true;
+  return field.confidence < minimumConfidence(field.key);
+}
+
+function attributeStripZone(parent: ReaderV2Zone, strip: AttributeValueStrip): ReaderV2Zone {
+  const x = Math.max(0, Math.min(0.999, parent.x + parent.w * strip.x));
+  const w = Math.max(0.001, Math.min(1 - x, parent.w * strip.w));
+  return {
+    key: `attributes-values-${strip.id}`,
+    label: `${parent.label} • valores ${strip.id}`,
+    x,
+    y: parent.y,
+    w,
+    h: parent.h,
+    enabled: true,
+  };
+}
+
+function mergeAttributeFields(zone: ReaderV2Zone, fields: ReaderV2FieldEvidence[], error?: string): ReaderV2FieldEvidence {
+  const text = fields
+    .map((field) => field.rawText?.trim() || field.value.trim())
+    .filter(Boolean)
+    .join('\n');
+  const confidence = fields.length
+    ? Math.round(fields.reduce((sum, field) => sum + field.confidence, 0) / fields.length)
+    : 0;
+  return {
+    key: 'attributes',
+    label: zone.label,
+    value: text,
+    confidence,
+    source: 'zones',
+    rawText: text,
+    ...(error ? { error } : {}),
+  };
+}
+
+async function readAttributeField(
+  input: Pick<ReadReaderV2ZonesInput, 'imageSession' | 'workerSession'>,
+  zone: ReaderV2Zone,
+): Promise<ReaderV2FieldEvidence> {
+  const stripFields: ReaderV2FieldEvidence[] = [];
+  let exact = true;
+  let stripError: string | null = null;
+
+  for (const strip of READER_V2_ATTRIBUTE_VALUE_STRIPS) {
+    const stripZone = attributeStripZone(zone, strip);
+    try {
+      const recognized = await input.imageSession.withCrop(
+        stripZone,
+        (crop) => input.workerSession.recognize(crop, stripZone.key),
+      );
+      const field: ReaderV2FieldEvidence = {
+        ...recognized,
+        key: stripZone.key,
+        label: stripZone.label,
+        source: 'zones',
+      };
+      stripFields.push(field);
+      if (countAttributeValues(field.value) !== strip.expected) exact = false;
+    } catch (cause) {
+      exact = false;
+      stripError ??= errorMessage(cause);
+    }
+  }
+
+  if (exact && stripFields.length === READER_V2_ATTRIBUTE_VALUE_STRIPS.length) {
+    return mergeAttributeFields(zone, stripFields);
+  }
+
+  try {
+    const fallback = await input.imageSession.withCrop(
+      zone,
+      (crop) => input.workerSession.recognize(crop, 'attributes'),
+    );
+    return {
+      ...fallback,
+      key: 'attributes',
+      label: zone.label,
+      source: 'zones',
+    };
+  } catch (cause) {
+    return mergeAttributeFields(zone, stripFields, stripError ?? errorMessage(cause));
+  }
+}
 
 export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<ReaderV2Evidence> {
   const zones = (input.zones ?? READER_V2_DEFAULT_ZONES).filter((zone) => zone.enabled);
@@ -49,14 +195,18 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
 
     let field: ReaderV2FieldEvidence;
     try {
-      const recognized = await input.imageSession.withCrop(zone, (crop) => input.workerSession.recognize(crop, zone.key));
-      field = {
-        ...recognized,
-        key: zone.key,
-        label: zone.label,
-        source: 'zones',
-      };
-      if (!field.value.trim()) addUncertain(uncertainKeys, zone.key);
+      if (zone.key === 'attributes') {
+        field = await readAttributeField(input, zone);
+      } else {
+        const recognized = await input.imageSession.withCrop(zone, (crop) => input.workerSession.recognize(crop, zone.key));
+        field = {
+          ...recognized,
+          key: zone.key,
+          label: zone.label,
+          source: 'zones',
+        };
+      }
+      if (shouldReviewField(field)) addUncertain(uncertainKeys, zone.key);
     } catch (cause) {
       field = {
         key: zone.key,

@@ -43,15 +43,26 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
   async function terminateWorker() {
     if (terminated) return;
     terminated = true;
-    const active = worker ?? (workerPromise ? await workerPromise.catch(() => null) : null);
+    const active = worker;
+    const pendingWorker = workerPromise;
     worker = null;
     workerPromise = null;
-    if (active) await active.terminate();
+
+    if (active) {
+      await active.terminate();
+      return;
+    }
+
+    if (pendingWorker) {
+      void pendingWorker
+        .then((created) => created.terminate())
+        .catch(() => undefined);
+    }
   }
 
   function assertUsable() {
     if (cancelled) throw new Error('Sessão OCR cancelada.');
-    if (closed || closing || failed) throw new Error('Sessão OCR encerrada ou fechada.');
+    if (closed || closing || failed || terminated) throw new Error('Sessão OCR encerrada ou fechada.');
   }
 
   async function start() {
@@ -62,16 +73,24 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
     stage = 'opening';
     workerPromise = Promise.resolve()
       .then(factory)
-      .then((created) => {
+      .then(async (created) => {
+        if (cancelled || closed || closing || terminated) {
+          await Promise.resolve(created.terminate()).catch(() => undefined);
+          throw new Error(cancelled ? 'Sessão OCR cancelada.' : 'Sessão OCR encerrada ou fechada.');
+        }
         worker = created;
         stage = 'reading';
         return created;
       })
       .catch((cause) => {
+        workerPromise = null;
+        if (cancelled) {
+          stage = 'cancelled';
+          throw cause;
+        }
         error = errorMessage(cause);
         stage = 'error';
         failed = true;
-        workerPromise = null;
         throw cause;
       });
 
@@ -97,6 +116,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
           rawText: result.text ?? '',
         };
       } catch (cause) {
+        if (cancelled) throw cause;
         error = errorMessage(cause);
         stage = 'error';
         failed = true;
@@ -117,8 +137,11 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
     if (cancelled || closed) return;
     cancelled = true;
     stage = 'cancelled';
+
+    // R543-A: hard-stop primeiro. Não esperar uma fila cujo recognize pode estar travado.
+    await terminateWorker().catch(() => undefined);
     await queue.catch(() => undefined);
-    await terminateWorker();
+    stage = 'cancelled';
   }
 
   async function close() {
