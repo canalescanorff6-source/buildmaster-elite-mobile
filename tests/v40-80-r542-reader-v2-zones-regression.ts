@@ -118,6 +118,37 @@ async function testExactAttributeStripsAvoidBroadFallback() {
   assert.equal(evidence.attributesRead, 26, 'R543-C: 10+9+7 badges válidos devem fechar os 26 atributos.');
   assert.ok(!evidence.uncertainKeys.includes('attributes'), 'R543-C: atributos completos e confiáveis não devem cair em revisão.');
   assert.equal((evidence.fields.find((field) => field.key === 'attributes')?.value.match(/\b\d{1,3}\b/g) ?? []).length, 26);
+  assert.deepEqual(
+    evidence.attributeValues,
+    [90, 88, 87, 91, 92, 85, 84, 89, 86, 90, 82, 80, 79, 83, 84, 81, 85, 86, 87, 76, 77, 78, 79, 80, 81, 82],
+    'R548 RED: os 26 atributos exatos precisam sobreviver como valores estruturados e na ordem lida.',
+  );
+}
+
+async function testAttributeOverflowCannotMasqueradeAsExact26() {
+  const attributeOnly: ReaderV2Zone[] = [
+    { key: 'attributes', label: 'Atributos', x: 0.05, y: 0.2, w: 0.9, h: 0.45, enabled: true },
+  ];
+  const overflow = Array.from({ length: 27 }, (_, index) => String(70 + (index % 20))).join(' ');
+
+  const imageSession = {
+    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
+    },
+  } as Pick<ReaderV2ImageSession, 'withCrop'>;
+  const workerSession = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      if (key.startsWith('attributes-values-')) {
+        return { key, label: key, value: '', confidence: 0, source: 'zones', rawText: '' };
+      }
+      return { key, label: key, value: overflow, confidence: 96, source: 'zones', rawText: overflow };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const evidence = await readReaderV2Zones({ imageSession, workerSession, zones: attributeOnly });
+  assert.equal(evidence.attributesRead, 27, 'R548 RED: 27 valores não podem ser truncados silenciosamente para 26.');
+  assert.equal(evidence.attributeValues, undefined, 'R548 RED: lista estruturada só existe quando são exatamente 26 valores válidos.');
+  assert.ok(evidence.uncertainKeys.includes('attributes'), 'R548 RED: excesso de valores deve obrigar revisão dos atributos.');
 }
 
 async function testWeakOrImpossibleEvidenceGoesToReview() {
@@ -293,6 +324,7 @@ async function testLevelAndPointsConsistencyGoesToReview() {
 async function main() {
   await testSerialZonesAndPartialFailure();
   await testExactAttributeStripsAvoidBroadFallback();
+  await testAttributeOverflowCannotMasqueradeAsExact26();
   await testWeakOrImpossibleEvidenceGoesToReview();
   await testCriticalFieldsRetryOnceWhenWeak();
   await testIdenticalGeometryReusesRecognition();
