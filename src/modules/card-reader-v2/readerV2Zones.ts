@@ -8,6 +8,7 @@ import type {
   ReaderV2Zone,
 } from './readerV2Types';
 import { READER_V2_DEFAULT_ZONES } from './readerV2ZoneProfile';
+import { extractReaderV2ImpetoName, extractReaderV2SkillNames } from './readerV2DomainEvidence';
 
 export type ReadReaderV2ZonesInput = {
   imageSession: Pick<ReaderV2ImageSession, 'withCrop'>;
@@ -117,6 +118,10 @@ function isSemanticallyPlausible(field: ReaderV2FieldEvidence) {
       return countLetters(value) >= 2 && !/\d/.test(value);
     case 'playstyle':
       return countLetters(value) >= 3;
+    case 'skills':
+      return extractReaderV2SkillNames(value).length > 0;
+    case 'impeto':
+      return Boolean(extractReaderV2ImpetoName(value));
     default:
       return true;
   }
@@ -364,6 +369,16 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
   const attributeValues = attributesRead === attributesExpected ? parsedAttributeValues : undefined;
   if (attributes && attributesRead !== attributesExpected) addUncertain(uncertainKeys, 'attributes');
 
+  const skills = fields.find((field) => field.key === 'skills');
+  const parsedSkillValues = skills && !skills.error ? extractReaderV2SkillNames(skills.value) : [];
+  const skillValues = parsedSkillValues.length ? parsedSkillValues : undefined;
+  if (skills && !skillValues) addUncertain(uncertainKeys, 'skills');
+
+  const impeto = fields.find((field) => field.key === 'impeto');
+  const parsedImpetoName = impeto && !impeto.error ? extractReaderV2ImpetoName(impeto.value) : null;
+  const impetoName = parsedImpetoName ?? undefined;
+  if (impeto && !impetoName) addUncertain(uncertainKeys, 'impeto');
+
   const rawText = fields
     .map((field) => field.rawText?.trim() || field.value.trim())
     .filter(Boolean)
@@ -377,5 +392,7 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
     attributesExpected,
     attributesRead,
     attributeValues,
+    skillValues,
+    impetoName,
   };
 }
