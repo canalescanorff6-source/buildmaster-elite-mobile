@@ -167,6 +167,7 @@ async function testCriticalFieldsRetryOnceWhenWeak() {
     { key: 'skills', label: 'Skills', x: 0, y: 0.7, w: 1, h: 0.2, enabled: true },
   ];
   const attempts = new Map<string, number>();
+  const recognitionKeys: string[] = [];
   const cropOrder: string[] = [];
 
   const imageSession = {
@@ -178,13 +179,15 @@ async function testCriticalFieldsRetryOnceWhenWeak() {
 
   const workerSession = {
     async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
-      const attempt = (attempts.get(key) ?? 0) + 1;
-      attempts.set(key, attempt);
-      if (key === 'playerName') {
+      recognitionKeys.push(key);
+      const baseKey = key.replace(/#retry$/, '');
+      const attempt = (attempts.get(baseKey) ?? 0) + 1;
+      attempts.set(baseKey, attempt);
+      if (baseKey === 'playerName') {
         const value = attempt === 1 ? 'M3' : 'Lionel Messi';
         return { key, label: key, value, confidence: 91, source: 'zones', rawText: value };
       }
-      if (key === 'level') {
+      if (baseKey === 'level') {
         const confidence = attempt === 1 ? 18 : 94;
         return { key, label: key, value: '35', confidence, source: 'zones', rawText: '35' };
       }
@@ -197,6 +200,8 @@ async function testCriticalFieldsRetryOnceWhenWeak() {
   assert.equal(attempts.get('playerName'), 2, 'R543-D: nome implausível deve receber uma única segunda tentativa.');
   assert.equal(attempts.get('level'), 2, 'R543-D: nível de baixa confiança deve receber uma única segunda tentativa.');
   assert.equal(attempts.get('skills'), 1, 'R543-D: campos pesados não críticos não devem ganhar multipass automático.');
+  assert.ok(recognitionKeys.includes('playerName#retry'), 'R544: segunda leitura do nome deve usar o perfil alternativo #retry.');
+  assert.ok(recognitionKeys.includes('level#retry'), 'R544: segunda leitura numérica deve usar o perfil alternativo #retry.');
   assert.deepEqual(cropOrder, ['playerName', 'level', 'skills'], 'R543-D: retry crítico deve reutilizar o mesmo crop, sem ampliar o pico de memória.');
   assert.equal(evidence.fields.find((field) => field.key === 'playerName')?.value, 'Lionel Messi');
   assert.ok(!evidence.uncertainKeys.includes('playerName'), 'R543-D: segunda leitura plausível deve retirar nome da revisão.');

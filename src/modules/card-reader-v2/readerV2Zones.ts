@@ -120,6 +120,10 @@ function preferBetterField(first: ReaderV2FieldEvidence, second: ReaderV2FieldEv
   return fieldQualityScore(second) > fieldQualityScore(first) ? second : first;
 }
 
+function retryRecognitionKey(key: ReaderV2FieldKey): ReaderV2FieldKey {
+  return `${String(key)}#retry`;
+}
+
 function asZoneField(
   recognized: ReaderV2FieldEvidence,
   zone: ReaderV2Zone,
@@ -152,7 +156,7 @@ async function readRegularField(
     if (first && (!allowRetry || !shouldReviewField(first))) return first;
 
     try {
-      const second = asZoneField(await input.workerSession.recognize(crop, zone.key), zone);
+      const second = asZoneField(await input.workerSession.recognize(crop, retryRecognitionKey(zone.key)), zone);
       return first ? preferBetterField(first, second) : second;
     } catch (cause) {
       if (first) return first;
