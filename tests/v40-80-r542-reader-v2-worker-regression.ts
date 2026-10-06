@@ -76,6 +76,37 @@ async function testCancelTerminatesWorker() {
   await assert.rejects(() => session.recognize('x', 'playerName'), /cancelada|encerrada|fechada/i);
 }
 
+async function testCancelHardStopsHangingRecognition() {
+  let terminateCalls = 0;
+  let rejectRecognition: ((cause?: unknown) => void) | null = null;
+  const session = createReaderV2OcrWorkerSession(async () => ({
+    async recognize() {
+      return await new Promise<never>((_resolve, reject) => {
+        rejectRecognition = reject;
+      });
+    },
+    async terminate() {
+      terminateCalls += 1;
+      rejectRecognition?.(new Error('worker terminated'));
+    },
+  }));
+
+  await session.start();
+  const pending = session.recognize('travado', 'attributes').catch(() => null);
+  await delay(5);
+
+  const outcome = await Promise.race([
+    session.cancel().then(() => 'cancelled'),
+    delay(80).then(() => 'timeout'),
+  ]);
+
+  assert.equal(outcome, 'cancelled', 'R543-A: cancelar não pode esperar um recognize travado terminar.');
+  assert.equal(terminateCalls, 1, 'R543-A: cancelamento deve terminar o worker imediatamente.');
+  assert.equal(session.snapshot().stage, 'cancelled');
+  assert.equal(session.snapshot().workerReady, false);
+  await pending;
+}
+
 async function testRecognitionErrorTerminatesWorker() {
   let terminateCalls = 0;
   const session = createReaderV2OcrWorkerSession(async () => ({
@@ -95,8 +126,9 @@ async function testRecognitionErrorTerminatesWorker() {
 async function main() {
   await testLifecycleAndSerialization();
   await testCancelTerminatesWorker();
+  await testCancelHardStopsHangingRecognition();
   await testRecognitionErrorTerminatesWorker();
-  console.log('R542-B/C aprovado: lifecycle determinístico e OCR serial.');
+  console.log('R542-B/C + R543-A aprovado: lifecycle determinístico, OCR serial e cancelamento hard-stop.');
 }
 
 void main().catch((cause) => {
