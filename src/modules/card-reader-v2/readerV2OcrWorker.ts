@@ -75,7 +75,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
       .then(factory)
       .then(async (created) => {
         if (cancelled || closed || closing || terminated) {
-          await created.terminate().catch(() => undefined);
+          await Promise.resolve(created.terminate()).catch(() => undefined);
           throw new Error(cancelled ? 'Sessão OCR cancelada.' : 'Sessão OCR encerrada ou fechada.');
         }
         worker = created;
