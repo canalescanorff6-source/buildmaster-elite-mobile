@@ -107,6 +107,44 @@ async function testCancelHardStopsHangingRecognition() {
   await pending;
 }
 
+
+async function testRecoverableFieldTimeoutRestartsWorker() {
+  let factoryCalls = 0;
+  let terminateCalls = 0;
+
+  const session = createReaderV2OcrWorkerSession(async () => {
+    factoryCalls += 1;
+    const generation = factoryCalls;
+    return {
+      async recognize(input) {
+        if (generation === 1) {
+          throw Object.assign(new Error('field timeout'), { readerV2Recoverable: true });
+        }
+        return { text: String(input), confidence: 88 };
+      },
+      async terminate() {
+        terminateCalls += 1;
+      },
+    };
+  });
+
+  await session.start();
+  await assert.rejects(
+    () => session.recognize('campo ruim', 'playerName'),
+    /field timeout/,
+    'R543-B: o campo que excedeu o tempo deve continuar sendo reportado como falha local.',
+  );
+
+  const recovered = await session.recognize('nível 35', 'level');
+  assert.equal(recovered.value, 'nível 35', 'R543-B: o próximo campo deve continuar após recriar o worker.');
+  assert.equal(factoryCalls, 2, 'R543-B: timeout recuperável deve criar exatamente uma nova geração de worker.');
+  assert.equal(terminateCalls, 1, 'R543-B: a geração contaminada deve ser encerrada antes do restart.');
+  assert.equal(session.snapshot().workerReady, true, 'R543-B: a sessão deve voltar ao estado utilizável após o restart.');
+
+  await session.close();
+  assert.equal(terminateCalls, 2, 'R543-B: close() também deve encerrar a geração recuperada.');
+}
+
 async function testRecognitionErrorTerminatesWorker() {
   let terminateCalls = 0;
   const session = createReaderV2OcrWorkerSession(async () => ({
@@ -127,8 +165,9 @@ async function main() {
   await testLifecycleAndSerialization();
   await testCancelTerminatesWorker();
   await testCancelHardStopsHangingRecognition();
+  await testRecoverableFieldTimeoutRestartsWorker();
   await testRecognitionErrorTerminatesWorker();
-  console.log('R542-B/C + R543-A aprovado: lifecycle determinístico, OCR serial e cancelamento hard-stop.');
+  console.log('R542-B/C + R543-A/B aprovado: lifecycle determinístico, OCR serial e cancelamento hard-stop.');
 }
 
 void main().catch((cause) => {

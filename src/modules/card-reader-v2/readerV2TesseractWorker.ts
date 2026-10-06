@@ -66,6 +66,10 @@ async function bootWorker(onProgress?: (progress: ReaderV2TesseractProgress) => 
   });
 }
 
+function recoverableRecognitionError(message: string) {
+  return Object.assign(new Error(message), { readerV2Recoverable: true as const });
+}
+
 function recognizeWithDeadline(worker: TesseractWorker, input: unknown) {
   const recognizing = worker.recognize(input as Parameters<TesseractWorker['recognize']>[0]);
   return new Promise<Awaited<ReturnType<TesseractWorker['recognize']>>>((resolve, reject) => {
@@ -73,8 +77,7 @@ function recognizeWithDeadline(worker: TesseractWorker, input: unknown) {
     const timer = globalThis.setTimeout(() => {
       if (settled) return;
       settled = true;
-      void worker.terminate().catch(() => undefined);
-      reject(new Error('Um campo do Reader V2 excedeu o tempo seguro de OCR.'));
+      reject(recoverableRecognitionError('Um campo do Reader V2 excedeu o tempo seguro de OCR.'));
     }, READER_V2_RECOGNITION_TIMEOUT_MS);
     recognizing.then((value) => {
       if (settled) return;

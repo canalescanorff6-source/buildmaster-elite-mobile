@@ -159,14 +159,60 @@ async function testWeakOrImpossibleEvidenceGoesToReview() {
   assert.equal(evidence.attributesRead, 26, 'R543-B: contagem completa não pode esconder baixa confiança.');
 }
 
+
+async function testCriticalFieldsRetryOnceWhenWeak() {
+  const criticalZones: ReaderV2Zone[] = [
+    { key: 'playerName', label: 'Nome', x: 0, y: 0, w: 0.3, h: 0.1, enabled: true },
+    { key: 'level', label: 'Nível', x: 0.3, y: 0, w: 0.2, h: 0.1, enabled: true },
+    { key: 'skills', label: 'Skills', x: 0, y: 0.7, w: 1, h: 0.2, enabled: true },
+  ];
+  const attempts = new Map<string, number>();
+  const cropOrder: string[] = [];
+
+  const imageSession = {
+    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+      cropOrder.push(String(zone.key));
+      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
+    },
+  } as Pick<ReaderV2ImageSession, 'withCrop'>;
+
+  const workerSession = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      const attempt = (attempts.get(key) ?? 0) + 1;
+      attempts.set(key, attempt);
+      if (key === 'playerName') {
+        const value = attempt === 1 ? 'M3' : 'Lionel Messi';
+        return { key, label: key, value, confidence: 91, source: 'zones', rawText: value };
+      }
+      if (key === 'level') {
+        const confidence = attempt === 1 ? 18 : 94;
+        return { key, label: key, value: '35', confidence, source: 'zones', rawText: '35' };
+      }
+      return { key, label: key, value: 'Passe de primeira', confidence: 18, source: 'zones', rawText: 'Passe de primeira' };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const evidence = await readReaderV2Zones({ imageSession, workerSession, zones: criticalZones });
+
+  assert.equal(attempts.get('playerName'), 2, 'R543-D: nome implausível deve receber uma única segunda tentativa.');
+  assert.equal(attempts.get('level'), 2, 'R543-D: nível de baixa confiança deve receber uma única segunda tentativa.');
+  assert.equal(attempts.get('skills'), 1, 'R543-D: campos pesados não críticos não devem ganhar multipass automático.');
+  assert.deepEqual(cropOrder, ['playerName', 'level', 'skills'], 'R543-D: retry crítico deve reutilizar o mesmo crop, sem ampliar o pico de memória.');
+  assert.equal(evidence.fields.find((field) => field.key === 'playerName')?.value, 'Lionel Messi');
+  assert.ok(!evidence.uncertainKeys.includes('playerName'), 'R543-D: segunda leitura plausível deve retirar nome da revisão.');
+  assert.ok(!evidence.uncertainKeys.includes('level'), 'R543-D: segunda leitura confiável deve retirar nível da revisão.');
+  assert.ok(evidence.uncertainKeys.includes('skills'), 'R543-D: skill fraca deve continuar na revisão sem multipass pesado.');
+}
+
 async function main() {
   await testSerialZonesAndPartialFailure();
   await testExactAttributeStripsAvoidBroadFallback();
   await testWeakOrImpossibleEvidenceGoesToReview();
+  await testCriticalFieldsRetryOnceWhenWeak();
 }
 
 void main().then(() => {
-  console.log('R542-E + R543-B/C aprovado: quadrados seriais, evidência fraca revisável e atributos 10+9+7 com fallback único.');
+  console.log('R542-E + R543-B/C/D aprovado: quadrados seriais, evidência fraca revisável e atributos 10+9+7 com fallback único.');
 }).catch((cause) => {
   console.error(cause);
   process.exitCode = 1;
