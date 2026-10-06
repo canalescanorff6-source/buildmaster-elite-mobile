@@ -94,6 +94,73 @@ function shouldReviewField(field: ReaderV2FieldEvidence) {
   return field.confidence < minimumConfidence(field.key);
 }
 
+const READER_V2_CRITICAL_RETRY_KEYS = new Set<ReaderV2FieldKey>([
+  'playerName',
+  'level',
+  'points',
+  'mainPosition',
+  'playstyle',
+]);
+
+function isRecoverableFieldError(cause: unknown) {
+  return Boolean(
+    cause
+    && typeof cause === 'object'
+    && (cause as { readerV2Recoverable?: boolean }).readerV2Recoverable === true
+  );
+}
+
+function fieldQualityScore(field: ReaderV2FieldEvidence) {
+  const plausible = !field.error && isSemanticallyPlausible(field);
+  const textLength = Math.min(80, field.value.trim().length);
+  return (plausible ? 10_000 : 0) + Math.round(field.confidence) * 100 + textLength;
+}
+
+function preferBetterField(first: ReaderV2FieldEvidence, second: ReaderV2FieldEvidence) {
+  return fieldQualityScore(second) > fieldQualityScore(first) ? second : first;
+}
+
+function asZoneField(
+  recognized: ReaderV2FieldEvidence,
+  zone: ReaderV2Zone,
+): ReaderV2FieldEvidence {
+  return {
+    ...recognized,
+    key: zone.key,
+    label: zone.label,
+    source: 'zones',
+  };
+}
+
+async function readRegularField(
+  input: Pick<ReadReaderV2ZonesInput, 'imageSession' | 'workerSession'>,
+  zone: ReaderV2Zone,
+): Promise<ReaderV2FieldEvidence> {
+  const allowRetry = READER_V2_CRITICAL_RETRY_KEYS.has(zone.key);
+
+  return input.imageSession.withCrop(zone, async (crop) => {
+    let first: ReaderV2FieldEvidence | null = null;
+    let firstError: unknown = null;
+
+    try {
+      first = asZoneField(await input.workerSession.recognize(crop, zone.key), zone);
+    } catch (cause) {
+      firstError = cause;
+      if (!allowRetry || !isRecoverableFieldError(cause)) throw cause;
+    }
+
+    if (first && (!allowRetry || !shouldReviewField(first))) return first;
+
+    try {
+      const second = asZoneField(await input.workerSession.recognize(crop, zone.key), zone);
+      return first ? preferBetterField(first, second) : second;
+    } catch (cause) {
+      if (first) return first;
+      throw firstError ?? cause;
+    }
+  });
+}
+
 function attributeStripZone(parent: ReaderV2Zone, strip: AttributeValueStrip): ReaderV2Zone {
   const x = Math.max(0, Math.min(0.999, parent.x + parent.w * strip.x));
   const w = Math.max(0.001, Math.min(1 - x, parent.w * strip.w));
@@ -198,13 +265,7 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
       if (zone.key === 'attributes') {
         field = await readAttributeField(input, zone);
       } else {
-        const recognized = await input.imageSession.withCrop(zone, (crop) => input.workerSession.recognize(crop, zone.key));
-        field = {
-          ...recognized,
-          key: zone.key,
-          label: zone.label,
-          source: 'zones',
-        };
+        field = await readRegularField(input, zone);
       }
       if (shouldReviewField(field)) addUncertain(uncertainKeys, zone.key);
     } catch (cause) {
