@@ -13,7 +13,7 @@ const zones: ReaderV2Zone[] = [
   { key: 'skills', label: 'Habilidades', x: 0, y: 0.7, w: 1, h: 0.2, enabled: true },
 ];
 
-async function main() {
+async function testSerialZonesAndPartialFailure() {
   assert.equal(READER_V2_DEFAULT_ZONES.length, 10, 'R542-E: perfil padrão precisa manter as 10 macrozonas calibradas.');
 
   const mapped = mapLegacyCalibrationToReaderV2([
@@ -85,8 +85,52 @@ async function main() {
   assert.match(evidence.rawText, /Lionel Messi/);
 }
 
+async function testWeakOrImpossibleEvidenceGoesToReview() {
+  const weakZones: ReaderV2Zone[] = [
+    { key: 'playerName', label: 'Nome', x: 0, y: 0, w: 0.2, h: 0.1, enabled: true },
+    { key: 'level', label: 'Nível', x: 0.2, y: 0, w: 0.2, h: 0.1, enabled: true },
+    { key: 'points', label: 'Pontos', x: 0.4, y: 0, w: 0.2, h: 0.1, enabled: true },
+    { key: 'mainPosition', label: 'Posição', x: 0.6, y: 0, w: 0.2, h: 0.1, enabled: true },
+    { key: 'attributes', label: 'Atributos', x: 0, y: 0.2, w: 1, h: 0.4, enabled: true },
+    { key: 'skills', label: 'Skills', x: 0, y: 0.7, w: 1, h: 0.2, enabled: true },
+  ];
+  const exact26 = Array.from({ length: 26 }, (_, index) => String(70 + (index % 25))).join(' ');
+  const weak: Record<string, { value: string; confidence: number }> = {
+    playerName: { value: '111111', confidence: 92 },
+    level: { value: 'XX', confidence: 95 },
+    points: { value: '42', confidence: 18 },
+    mainPosition: { value: 'CA', confidence: 22 },
+    attributes: { value: exact26, confidence: 24 },
+    skills: { value: 'Finalização precisa', confidence: 18 },
+  };
+
+  const imageSession = {
+    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
+    },
+  } as Pick<ReaderV2ImageSession, 'withCrop'>;
+  const workerSession = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      const next = weak[key] ?? { value: '', confidence: 0 };
+      return { key, label: key, value: next.value, confidence: next.confidence, source: 'zones', rawText: next.value };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const evidence = await readReaderV2Zones({ imageSession, workerSession, zones: weakZones });
+  for (const key of ['playerName', 'level', 'points', 'mainPosition', 'attributes', 'skills']) {
+    assert.ok(evidence.uncertainKeys.includes(key), `R543-B: ${key} fraco/impossível deve ir para conferência.`);
+  }
+  assert.equal(evidence.fields.find((field) => field.key === 'playerName')?.value, '111111', 'R543-B: evidência fraca deve ser preservada, não inventada/corrigida.');
+  assert.equal(evidence.attributesRead, 26, 'R543-B: contagem completa não pode esconder baixa confiança.');
+}
+
+async function main() {
+  await testSerialZonesAndPartialFailure();
+  await testWeakOrImpossibleEvidenceGoesToReview();
+}
+
 void main().then(() => {
-  console.log('R542-E aprovado: quadrados seriais, progresso e falhas parciais honestas.');
+  console.log('R542-E + R543-B aprovado: quadrados seriais, falhas honestas e evidência fraca sempre revisável.');
 }).catch((cause) => {
   console.error(cause);
   process.exitCode = 1;
