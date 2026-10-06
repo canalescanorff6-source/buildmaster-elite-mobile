@@ -18,8 +18,8 @@ assert.match(
 );
 assert.match(
   progressCard,
-  /const liveMessage = progress\?\.label\?\.trim\(\) \|\| status;/,
-  'R545 RED: card físico deve priorizar o rótulo de progresso atual em vez de status inicial obsoleto.',
+  /const liveMessage = progress\?\.phase\?\.trim\(\) \|\| status;/,
+  'R545 RED: card físico deve priorizar a fase de progresso atual em vez de status inicial obsoleto.',
 );
 assert.match(
   progressCard,
