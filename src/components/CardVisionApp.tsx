@@ -72,6 +72,27 @@ import { CardVisionAppChromeR185 } from '@/components/CardVisionAppChromeR185';
 import { PremiumBrand } from '@/components/PremiumBrand';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 type ReaderCaptureMode = 'single' | 'complete';
+type PreFinalConfirmationR543 = {
+  playerName: string;
+  level: string;
+  points: string;
+  mainPosition?: string;
+  uncertainKeys?: string[];
+  preview: string | null;
+};
+const READER_V2_UNCERTAIN_FIELD_LABELS_R543: Record<string, string> = {
+  playerName: 'nome',
+  level: 'nível',
+  points: 'pontos de progressão',
+  mainPosition: 'posição principal',
+  playstyle: 'estilo de jogo',
+  attributes: 'atributos',
+  skills: 'habilidades',
+  impeto: 'Ímpeto / booster',
+};
+function readerV2UncertainFieldLabelR543(key: string) {
+  return READER_V2_UNCERTAIN_FIELD_LABELS_R543[key] ?? key;
+}
 
 // Perfis manuais antigos são migrados para o reconhecimento automático da carta.
 export function CardVisionApp() {
@@ -133,7 +154,7 @@ export function CardVisionApp() {
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
   // BM_PREFINAL_CONFIRMATION_R16
   // BM_PREFINAL_VISUAL_R104_STATE
-  const [preFinalConfirmation, setPreFinalConfirmation] = useState<{ playerName: string; level: string; points: string; preview: string | null } | null>(null);
+  const [preFinalConfirmation, setPreFinalConfirmation] = useState<PreFinalConfirmationR543 | null>(null);
   const [preFinalGenerateRequested, setPreFinalGenerateRequested] = useState(false);
   const [manualFields, setManualFields] = useState<ManualFields>(emptyManualFields());
   const [manualMode, setManualMode] = useState(false);
@@ -539,6 +560,11 @@ export function CardVisionApp() {
     }
     if (!points || Number(points) < 0) {
       setStatus('Informe os pontos de progressão disponíveis antes de gerar a ficha.');
+      return;
+    }
+    const uncertainKeys = preFinalConfirmation.uncertainKeys ?? [];
+    if (uncertainKeys.includes('mainPosition') && cardPositionOverride === 'AUTO') {
+      setStatus('A posição principal ficou incerta no OCR. Confirme a posição da carta antes de gerar a ficha.');
       return;
     }
     setManualFields((current) => ({
@@ -1482,8 +1508,26 @@ export function CardVisionApp() {
                 <div style={{ display: 'grid', gap: 6 }}>
                   <p className="kicker"><CheckCircle2 size={15} /> Leitura concluída</p>
                   <h2 style={{ margin: 0 }}>Confira antes de gerar a ficha</h2>
-                  <p style={{ margin: 0, opacity: .78 }}>Nome, nível e progressão já vêm preenchidos pela leitura. Só altere algum campo se o OCR tiver identificado algo errado.</p>
+                  <p style={{ margin: 0, opacity: .78 }}>Nome, nível, progressão e posição vêm da leitura. Confira principalmente os campos que o OCR marcou como incertos.</p>
                 </div>
+                {(preFinalConfirmation.uncertainKeys?.length ?? 0) > 0 ? (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: 12,
+                      borderRadius: 14,
+                      border: '1px solid rgba(245,158,11,.36)',
+                      background: 'rgba(120,72,8,.14)',
+                      display: 'grid',
+                      gap: 5
+                    }}
+                  >
+                    <strong>Campos que merecem conferência</strong>
+                    <span style={{ fontSize: 12, lineHeight: 1.45, opacity: .82 }}>
+                      {preFinalConfirmation.uncertainKeys?.map(readerV2UncertainFieldLabelR543).join(', ')}
+                    </span>
+                  </div>
+                ) : null}
                 {/* BM_PREFINAL_VISUAL_R104_UI */}
                 {preFinalConfirmation.preview ? (
                   <div
@@ -1588,6 +1632,26 @@ export function CardVisionApp() {
                     pattern="[0-9]*"
                     style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
                   />
+                </label>
+                <label style={{ display: 'grid', gap: 7 }}>
+                  <strong>Posição principal da carta</strong>
+                  <small style={{ opacity: .72 }}>
+                    OCR detectou: <b>{preFinalConfirmation.mainPosition?.trim() || 'não identificada'}</b>
+                  </small>
+                  <select
+                    value={cardPositionOverride}
+                    onChange={(event) => setCardPositionOverride(event.target.value as PositionCode | 'AUTO')}
+                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
+                  >
+                    {POSITION_LABELS.map((item) => (
+                      <option key={item.code} value={item.code}>{item.label}</option>
+                    ))}
+                  </select>
+                  {preFinalConfirmation.uncertainKeys?.includes('mainPosition') && cardPositionOverride === 'AUTO' ? (
+                    <small style={{ color: '#fbbf24' }}>
+                      A leitura da posição ficou incerta. Escolha a posição correta antes de gerar a ficha.
+                    </small>
+                  ) : null}
                 </label>
                 <button
                   type="button"

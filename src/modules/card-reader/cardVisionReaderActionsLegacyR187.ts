@@ -40,7 +40,7 @@ async function persistConfirmedAnalysisR470(result: AnalysisResult, payload: imp
 type SetState<T> = Dispatch<SetStateAction<T>>;
 export type CardVisionReadingModeR187 = 'precision' | 'fast';
 type ReaderImageMemoryR187 = { replacePreview(blob: Blob): string; replaceEnhanced(blob: Blob): string; releaseEnhanced(): void; releaseAll(): void };
-type PreFinalConfirmationR187 = { playerName: string; level: string; points: string; preview: string | null } | null;
+type PreFinalConfirmationR187 = { playerName: string; level: string; points: string; mainPosition?: string; uncertainKeys?: string[]; preview: string | null } | null;
 
 function readerSessionGateR520(session: SinglePrintSession | null) {
   const keys: SingleFieldEvidence['key'][] = ['playerName', 'level', 'points'];

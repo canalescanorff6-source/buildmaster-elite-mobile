@@ -9,6 +9,8 @@ export type ReaderV2PreFinalConfirmation = {
   playerName: string;
   level: string;
   points: string;
+  mainPosition: string;
+  uncertainKeys: ReaderV2FieldKey[];
   preview: string | null;
 };
 
@@ -68,6 +70,8 @@ export function toPreFinalConfirmationR542(draft: ReaderV2ReviewDraft): ReaderV2
     playerName: draft.playerName,
     level: draft.level,
     points: draft.points,
+    mainPosition: draft.mainPosition,
+    uncertainKeys: [...draft.uncertainKeys],
     preview: draft.preview,
   };
 }
