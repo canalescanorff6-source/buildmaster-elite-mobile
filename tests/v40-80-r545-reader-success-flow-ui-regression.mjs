@@ -10,9 +10,8 @@ assert.match(
   'R545 RED: precisa existir classificador explícito de status premium.',
 );
 
-assert.match(
-  tone,
-  /\berros?\b/,
+assert.ok(
+  tone.includes(String.raw`\\berros?\\b`),
   'R545 RED: erro deve ser reconhecido por palavra inteira para não casar com "encerrou".',
 );
 
