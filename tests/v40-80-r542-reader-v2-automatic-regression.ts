@@ -135,6 +135,7 @@ async function testSecondCardStartsFreshReaderGeneration() {
   let workerGenerations = 0;
   const openedImages: string[] = [];
   const closedImages: string[] = [];
+  let currentImageName = '';
 
   const makeEvidence = (name: string) => ({
     mode: 'automatic' as const,
@@ -151,6 +152,7 @@ async function testSecondCardStartsFreshReaderGeneration() {
     openImageSession: async (file) => {
       const fileName = file instanceof File ? file.name : `blob-${openedImages.length + 1}`;
       const preview = `blob:${fileName}`;
+      currentImageName = fileName;
       openedImages.push(preview);
       let closed = false;
       return {
@@ -190,8 +192,8 @@ async function testSecondCardStartsFreshReaderGeneration() {
         },
       } as ReaderV2OcrWorkerSession;
     },
-    readAutomatic: async ({ imageSession }) => makeEvidence(imageSession.preview.includes('second') ? 'Second Player' : 'First Player'),
-    readZones: async ({ imageSession }) => makeEvidence(imageSession.preview.includes('second') ? 'Second Player' : 'First Player'),
+    readAutomatic: async () => makeEvidence(currentImageName.includes('second') ? 'Second Player' : 'First Player'),
+    readZones: async () => makeEvidence(currentImageName.includes('second') ? 'Second Player' : 'First Player'),
     buildReview: (value, preview) => ({
       playerName: value.fields[0]?.value ?? '',
       level: value.fields[1]?.value ?? '',
