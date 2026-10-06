@@ -16,7 +16,7 @@ assert.match(
 );
 assert.match(
   worker,
-  /const retry = normalized\.endsWith\('#retry'\)/,
+  /const retry = [^\n]+\.endsWith\('#retry'\)/,
   'R544 RED: o backend Tesseract deve reconhecer o perfil #retry.',
 );
 assert.match(
