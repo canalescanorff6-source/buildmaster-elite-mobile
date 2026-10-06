@@ -15,6 +15,8 @@ assert.match(review, /workerReady/, 'R542 review: worker ativo precisa bloquear 
 assert.match(review, /pendingRecognitions/, 'R542 review: reconhecimentos pendentes precisam bloquear conferência.');
 assert.match(review, /toPreFinalConfirmationR542\s*\(/, 'R542 review: draft precisa adaptar para a tela pré-final existente.');
 assert.match(review, /attributeValues\s*:\s*evidence\.attributeValues/, 'R548 RED: os 26 atributos estruturados não podem ser descartados ao abrir a conferência.');
+assert.match(review, /skillValues\s*:\s*evidence\.skillValues/, 'R549 RED: Skills canônicas não podem ser descartadas ao abrir a conferência.');
+assert.match(review, /impetoName\s*:\s*evidence\.impetoName/, 'R549 RED: Ímpeto canônico não pode ser descartado ao abrir a conferência.');
 assert.doesNotMatch(review, /readerV2OcrWorker|createReaderV2OcrWorkerSession|\.start\s*\(/, 'R542 review: conferência não pode criar/reiniciar worker OCR.');
 
 assert.match(app, /preFinalConfirmation/, 'R542 review: a tela pré-final existente precisa continuar sendo reutilizada.');
