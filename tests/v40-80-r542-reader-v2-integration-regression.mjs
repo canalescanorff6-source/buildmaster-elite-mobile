@@ -51,6 +51,8 @@ const runtimeImportIndex=analyzeBlock.indexOf("import('./readerV2AppRuntime')");
 assert.ok(loadingIndex>=0 && progressIndex>loadingIndex && runtimeImportIndex>progressIndex, 'R542 boundary: loading e barra de progresso precisam aparecer antes de carregar worker/runtime V2.');
 assert.match(analyzeBlock,/mapLegacyCalibrationToReaderV2\([\s\S]{0,300}efhubCalibrationZonesRef\.current/, 'R542 boundary: modo quadrados deve usar calibração atual.');
 assert.match(analyzeBlock,/setPreFinalConfirmation\(/, 'R542 boundary: resultado OCR deve alimentar a tela pré-final existente.');
+assert.match(analyzeBlock, /import\('\.\.\/\.\.\/lib\/readerCanonicalEvidenceR549'\)/, 'R549: canonização de Skills/Ímpeto deve ser carregada somente após o OCR V2 concluir.');
+assert.match(analyzeBlock, /deriveReaderCanonicalEvidenceR549\(output\.review\.fields\)/, 'R549: a fronteira pós-OCR deve derivar evidência canônica a partir dos campos lidos.');
 assert.match(boundary, /HABILIDADES JÁ POSSUI:/, 'R549 RED: bridge textual precisa emitir Skills canônicas como posse explícita para o parser existente.');
 assert.match(boundary, /ÍMPETO:/, 'R549 RED: bridge textual precisa emitir Ímpeto canônico em formato explícito para o parser existente.');
 assert.doesNotMatch(analyzeBlock,/runAnalysis\s*\(/, 'R542 boundary: análise final não pode ocorrer automaticamente ao terminar OCR.');
