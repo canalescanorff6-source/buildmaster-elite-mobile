@@ -51,6 +51,7 @@ export interface ReaderV2Evidence {
   uncertainKeys: ReaderV2FieldKey[];
   attributesExpected?: number;
   attributesRead?: number;
+  attributeValues?: number[];
 }
 
 export interface ReaderV2ReviewDraft {
@@ -61,6 +62,7 @@ export interface ReaderV2ReviewDraft {
   rawText: string;
   fields: ReaderV2FieldEvidence[];
   uncertainKeys: ReaderV2FieldKey[];
+  attributeValues?: number[];
   preview: string | null;
 }
 

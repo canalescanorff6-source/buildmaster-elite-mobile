@@ -31,12 +31,15 @@ const READER_V2_ATTRIBUTE_VALUE_STRIPS: AttributeValueStrip[] = [
 
 const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
 
-function countAttributeValues(text: string) {
+function parseAttributeValues(text: string) {
   const numericTokens = text.match(/\b\d{1,3}\b/g) ?? [];
-  return Math.min(26, numericTokens.filter((token) => {
-    const value = Number(token);
-    return Number.isFinite(value) && value >= 0 && value <= 103;
-  }).length);
+  return numericTokens
+    .map((token) => Number(token))
+    .filter((value) => Number.isFinite(value) && value >= 0 && value <= 103);
+}
+
+function countAttributeValues(text: string) {
+  return parseAttributeValues(text).length;
 }
 
 function addUncertain(list: ReaderV2FieldKey[], key: ReaderV2FieldKey) {
@@ -355,8 +358,10 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
   validateLevelPointsConsistency(fields, uncertainKeys);
 
   const attributes = fields.find((field) => field.key === 'attributes');
-  const attributesRead = attributes ? countAttributeValues(attributes.value) : 0;
+  const parsedAttributeValues = attributes ? parseAttributeValues(attributes.value) : [];
+  const attributesRead = parsedAttributeValues.length;
   const attributesExpected = 26;
+  const attributeValues = attributesRead === attributesExpected ? parsedAttributeValues : undefined;
   if (attributes && attributesRead !== attributesExpected) addUncertain(uncertainKeys, 'attributes');
 
   const rawText = fields
@@ -371,5 +376,6 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
     uncertainKeys,
     attributesExpected,
     attributesRead,
+    attributeValues,
   };
 }
