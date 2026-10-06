@@ -13,7 +13,7 @@ assert.doesNotMatch(
 );
 assert.match(
   app,
-  /\\berros?\\b/,
+  /\\berros\?\\b/,
   'R545 RED: erro deve ser reconhecido por palavra inteira no classificador de toast.',
 );
 assert.match(
