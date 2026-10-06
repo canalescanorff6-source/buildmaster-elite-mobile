@@ -28,6 +28,9 @@ async function testSerialZonesAndPartialFailure() {
     playerName: 'Lionel Messi',
     level: '34',
     points: '',
+    'attributes-values-left': '90 88 87',
+    'attributes-values-center': '',
+    'attributes-values-right': '82',
     attributes: '90 88 87 91 92 85 84 89 86 90 82 80',
     skills: new Error('falha recuperável da zona skills'),
   };
@@ -71,7 +74,7 @@ async function testSerialZonesAndPartialFailure() {
     onProgress: (snapshot) => progress.push(snapshot),
   });
 
-  assert.deepEqual(cropOrder, ['playerName', 'level', 'points', 'attributes', 'skills'], 'R542-E: zonas devem ser lidas em ordem determinística.');
+  assert.deepEqual(cropOrder, ['playerName', 'level', 'points', 'attributes-values-left', 'attributes-values-center', 'attributes-values-right', 'attributes', 'skills'], 'R543-C: atributos devem tentar 10+9+7 serialmente e usar fallback único quando incompletos.');
   assert.equal(maxActiveCrops, 1, 'R542-E: somente um crop pode estar ativo por vez.');
   assert.equal(progress.filter((item) => item.stage === 'reading').at(-1)?.current, zones.length, 'R542-E: progresso precisa chegar ao total de zonas.');
   assert.equal(evidence.fields.length, zones.length, 'R542-E: falha de uma zona não pode cancelar as demais.');
@@ -83,6 +86,38 @@ async function testSerialZonesAndPartialFailure() {
   assert.equal(evidence.attributesRead, 12, 'R542-E: leitura parcial não pode fingir 26 atributos.');
   assert.equal(evidence.mode, 'zones');
   assert.match(evidence.rawText, /Lionel Messi/);
+}
+
+async function testExactAttributeStripsAvoidBroadFallback() {
+  const attributeOnly: ReaderV2Zone[] = [
+    { key: 'attributes', label: 'Atributos', x: 0.05, y: 0.2, w: 0.9, h: 0.45, enabled: true },
+  ];
+  const stripValues: Record<string, string> = {
+    'attributes-values-left': '90 88 87 91 92 85 84 89 86 90',
+    'attributes-values-center': '82 80 79 83 84 81 85 86 87',
+    'attributes-values-right': '76 77 78 79 80 81 82',
+  };
+  const cropOrder: string[] = [];
+
+  const imageSession = {
+    async withCrop<T>(zone: ReaderV2Zone, operation: (crop: HTMLCanvasElement) => Promise<T> | T): Promise<T> {
+      cropOrder.push(String(zone.key));
+      return await operation({ zoneKey: zone.key } as unknown as HTMLCanvasElement);
+    },
+  } as Pick<ReaderV2ImageSession, 'withCrop'>;
+  const workerSession = {
+    async recognize(_input: unknown, key: string): Promise<ReaderV2FieldEvidence> {
+      if (key === 'attributes') throw new Error('R543-C: fallback amplo não deveria rodar com 10+9+7 completos.');
+      const value = stripValues[key] ?? '';
+      return { key, label: key, value, confidence: 92, source: 'zones', rawText: value };
+    },
+  } as Pick<ReaderV2OcrWorkerSession, 'recognize'>;
+
+  const evidence = await readReaderV2Zones({ imageSession, workerSession, zones: attributeOnly });
+  assert.deepEqual(cropOrder, ['attributes-values-left', 'attributes-values-center', 'attributes-values-right'], 'R543-C: 26 atributos completos devem usar somente as três tiras numéricas.');
+  assert.equal(evidence.attributesRead, 26, 'R543-C: 10+9+7 badges válidos devem fechar os 26 atributos.');
+  assert.ok(!evidence.uncertainKeys.includes('attributes'), 'R543-C: atributos completos e confiáveis não devem cair em revisão.');
+  assert.equal((evidence.fields.find((field) => field.key === 'attributes')?.value.match(/\\b\\d{1,3}\\b/g) ?? []).length, 26);
 }
 
 async function testWeakOrImpossibleEvidenceGoesToReview() {
@@ -126,11 +161,12 @@ async function testWeakOrImpossibleEvidenceGoesToReview() {
 
 async function main() {
   await testSerialZonesAndPartialFailure();
+  await testExactAttributeStripsAvoidBroadFallback();
   await testWeakOrImpossibleEvidenceGoesToReview();
 }
 
 void main().then(() => {
-  console.log('R542-E + R543-B aprovado: quadrados seriais, falhas honestas e evidência fraca sempre revisável.');
+  console.log('R542-E + R543-B/C aprovado: quadrados seriais, evidência fraca revisável e atributos 10+9+7 com fallback único.');
 }).catch((cause) => {
   console.error(cause);
   process.exitCode = 1;
