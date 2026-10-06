@@ -52,6 +52,8 @@ export interface ReaderV2Evidence {
   attributesExpected?: number;
   attributesRead?: number;
   attributeValues?: number[];
+  skillValues?: string[];
+  impetoName?: string;
 }
 
 export interface ReaderV2ReviewDraft {
@@ -63,6 +65,8 @@ export interface ReaderV2ReviewDraft {
   fields: ReaderV2FieldEvidence[];
   uncertainKeys: ReaderV2FieldKey[];
   attributeValues?: number[];
+  skillValues?: string[];
+  impetoName?: string;
   preview: string | null;
 }
 
