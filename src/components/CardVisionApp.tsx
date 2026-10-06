@@ -18,6 +18,7 @@ import { effectivePhaseEntriesR124 } from '@/lib/efootball2027PhaseCatalogR124';
 import { useUnifiedCreationControllerV3790 } from '@/hooks/useUnifiedCreationControllerV3790';
 import { ACTIVE_SESSION_KEY, EFHUB_MANUAL_CALIBRATION_KEY, RULE_PACK_URL_KEY, formationGuides, objectives, tacticalStyleName, tacticalStyles } from '@/modules/architecture/appOptions';
 import { celebratePremiumAction, setPremiumBusy, showPremiumToast } from '@/lib/premiumExperience';
+import { classifyPremiumStatusR545 } from '@/modules/experience/statusToneR545';
 import type { CardVisionSettingsView, CardVisionVaultView, MainSection, PlayerWorkspace } from '@/lib/appNavigationR127';
 import type { CentralRecommendation } from '@/modules/core/centralIntelligence';
 import { AppCommandPalette, BuildMasterAssistant, CardVisionSettingsWorkspaceR190, CardVisionVaultWorkspaceR191, EfhubVisualCalibrator, IntegratedHomePanel, IntegratedTeamLab, MatchLaboratory, MetaFormationStudioV3832, OcrVisionCenter, PhasePlaystyleSelectorR124, PlayerLaboratory, PremiumMenuScreen, PremiumSearchScreen, ReaderImageSourceCardV4010, ReaderInterruptedCardV3840, ReaderLiveProgressCardV3840, ResultCard, ReviewPanel, SmartQuickDock, SquadMappingCenter, TeamFullMapPanel, TotalCardReaderPanel } from '@/components/lazy/CardVisionLazyPanelsR174';
@@ -417,15 +418,16 @@ export function CardVisionApp() {
     if (!message || message === lastPremiumStatusRef.current) return;
     lastPremiumStatusRef.current = message;
     const normalized = message.toLocaleLowerCase('pt-BR');
-    if (/falha|erro|não foi possível|inválid|corrompid/.test(normalized)) {
+    const tone = classifyPremiumStatusR545(message);
+    if (tone === 'danger') {
       showPremiumToast({ title: 'Ação precisa de atenção', message, tone: 'danger', duration: 6200 });
       return;
     }
-    if (/atenção|aviso|pendente|revise|confirme/.test(normalized)) {
+    if (tone === 'warning') {
       showPremiumToast({ title: 'Confira esta etapa', message, tone: 'warning', duration: 4800 });
       return;
     }
-    if (/salv|conclu|aplicad|restaurad|importad|exportad|criad|atualizad|sincronizad/.test(normalized)) {
+    if (tone === 'success') {
       showPremiumToast({ title: 'Tudo certo', message, tone: 'success', duration: 3600 });
       if (/conclu|finalizad|restaurad|importad/.test(normalized)) celebratePremiumAction('Etapa concluída');
     }
@@ -1254,7 +1256,7 @@ export function CardVisionApp() {
               </section>
             </section>
           )}
-          {isCreationSection && (
+          {isCreationSection && (mainSection !== 'leitor' || !loading) && (
             <div className="select-stack creation-config-stack">
               <div className="creation-config-heading">
                 <span className="creation-stage-number">2</span>
