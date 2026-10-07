@@ -377,6 +377,14 @@ jobs:
           echo "::error::Não foi possível instalar as dependências após 3 tentativas no registro público do npm."
           exit 1
 
+      - name: Validar runtime do leitor padrão antes do APK
+        timeout-minutes: 12
+        run: npm run test:reader
+
+      - name: Validar preservação de dados e evidências antes do APK
+        timeout-minutes: 12
+        run: npm run test:audit
+
       - name: Gate preventivo antes dos testes pesados
         id: preventive_gate
         timeout-minutes: 20

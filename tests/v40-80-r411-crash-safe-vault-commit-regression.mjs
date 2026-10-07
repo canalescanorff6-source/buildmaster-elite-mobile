@@ -12,9 +12,9 @@ assert.match(store,/NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411/);
 assert.match(store,/writeNativeHistorySecondaryAuthorityR411\('indexeddb'/);
 assert.match(store,/writeNativeHistorySecondaryAuthorityR411\('local-fallback'/);
 assert.match(store,/removeAccountStorage\(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411\)/);
-const journalWrite=store.indexOf('await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw);');
+const journalWrite=Math.max(store.indexOf('await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw);'),store.indexOf('await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(storageKey), journalRaw);'));
 const shardWrite=store.indexOf('await nativeVaultWrite(entry.key, entry.payload);');
-const manifestWrite=store.indexOf('await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw);');
+const manifestWrite=Math.max(store.indexOf('await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw);'),store.indexOf('await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(storageKey), manifestRaw);'));
 assert.ok(journalWrite>=0&&shardWrite>journalWrite&&manifestWrite>shardWrite);
 
 // Modelo de recuperação: staging nunca pode apagar shards do atual/backup.

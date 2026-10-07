@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
 const buildWf = fs.readFileSync('.github/workflows/build-apk.yml','utf8');
@@ -18,6 +21,32 @@ assert.ok(fs.existsSync(acceptanceWfPath), 'workflow separado de aceitação R53
 const validator = fs.readFileSync(validatorPath,'utf8');
 const template = fs.readFileSync(templatePath,'utf8');
 const acceptanceWf = fs.readFileSync(acceptanceWfPath,'utf8');
+
+// Exercise the exact shell commands: malformed interpolation used to prevent
+// the acceptance workflow from extracting either field from a valid manifest.
+const manifestFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildmaster-r532-manifest-'));
+try {
+  const manifestPath = path.join(manifestFixtureDir, "release's manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({
+    assetName: 'BuildMaster-Elite-Tatico-v40.80.0-2110100001.apk',
+    checksum: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  }));
+  for (const [variable, expected] of [
+    ['ASSET_NAME', 'BuildMaster-Elite-Tatico-v40.80.0-2110100001.apk'],
+    ['MANIFEST_SHA', '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'],
+  ]) {
+    const assignment = acceptanceWf.split('\n').find((line) => line.trimStart().startsWith(`${variable}=`));
+    assert.ok(assignment, `workflow R532 não extrai ${variable}`);
+    const result = spawnSync('bash', ['--noprofile', '--norc', '-euo', 'pipefail', '-c', `${assignment.trim()}\nprintf '%s' "$${variable}"`], {
+      encoding: 'utf8',
+      env: { ...process.env, BASH_ENV: '', MANIFEST: manifestPath },
+    });
+    assert.equal(result.status, 0, `R532: ${variable} precisa ser extraído sem erro: ${result.stderr}`);
+    assert.equal(result.stdout, expected, `R532: ${variable} precisa corresponder ao manifesto da release`);
+  }
+} finally {
+  fs.rmSync(manifestFixtureDir, { recursive: true, force: true });
+}
 
 for (const contract of [
   'schemaVersion===2',

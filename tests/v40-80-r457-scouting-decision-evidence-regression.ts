@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { buildScoutingDecisionEvidenceR457 } from '../src/lib/scoutingDecisionEvidenceR457';
-const result:any={gameplayScoutingR454:{status:'READY',confidence:'ALTA',sourceTypes:['OFFICIAL'],testedPositions:['CMF'],bestRoles:[{position:'CMF',label:'Orquestrador',function:'criação e passe curto',fit:'EXCELENTE',reason:'organiza saída'}],acceptableRoles:[],badRoles:[]}};
+import { cardIdentityFingerprintR126 } from '../src/lib/cardIdentityFingerprintR126';
+const parsed:any={playerName:'Scouting R457',mainPosition:'CMF',positions:['CMF'],cardType:'Epic',nativeSkills:[],specialSkills:[],editionIdentity:{officialCardId:'r457-card',officialCardIdVerified:true}};
+const cardId=cardIdentityFingerprintR126(parsed);
+const result:any={parsed,gameplayScoutingR454:{status:'READY',cardId,gameVersion:'6.0.0',confidence:'ALTA',sourceTypes:['OFFICIAL'],sources:[{id:'official',cardId,type:'OFFICIAL',label:'Fonte da edição',gameVersion:'6.0.0',confidence:'ALTA',observedAt:'2026-10-06T10:00:00Z'}],testedPositions:['CMF'],bestRoles:[{position:'CMF',label:'Orquestrador',function:'criação e passe curto',fit:'EXCELENTE',reason:'organiza saída'}],acceptableRoles:[],badRoles:[]}};
 const e=buildScoutingDecisionEvidenceR457(result,'CMF');
 assert.equal(e.status,'APPLIED');
 assert.ok(e.actionMultipliers.short_creation>1);
 assert.ok(e.actionMultipliers.short_creation<=1.06);
 assert.equal(e.safeguards.neverWritesTraining,true);
-const low=buildScoutingDecisionEvidenceR457({gameplayScoutingR454:{...result.gameplayScoutingR454,confidence:'BAIXA'}} as any,'CMF');
+const low=buildScoutingDecisionEvidenceR457({...result,gameplayScoutingR454:{...result.gameplayScoutingR454,confidence:'BAIXA'}} as any,'CMF');
 assert.equal(low.status,'IGNORED_LOW_CONFIDENCE');
 assert.deepEqual(low.actionMultipliers,{});
 console.log('R457 Scouting aprovado: scouting READY influencia somente frequência funcional, com peso limitado e auditável.');

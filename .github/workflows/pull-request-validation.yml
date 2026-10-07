@@ -32,6 +32,24 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Validar runtime do leitor padrão
+        timeout-minutes: 12
+        run: npm run test:reader
+
+      - name: Validar preservação de dados e evidências
+        timeout-minutes: 12
+        run: npm run test:audit
+
+      - name: Preparar Chromium e assets OCR locais
+        timeout-minutes: 10
+        run: |
+          npx --no-install playwright install --with-deps chromium
+          npm run vendor:ocr
+
+      - name: Validar revisão React e OCR real no navegador
+        timeout-minutes: 12
+        run: npm run test:reader:browser
+
       - name: R530 — fechamento do redesign premium
         run: npm run test:r530
 

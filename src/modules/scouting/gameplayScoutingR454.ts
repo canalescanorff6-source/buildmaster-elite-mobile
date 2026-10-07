@@ -19,6 +19,8 @@ export type TacticalFitLabelR454 = 'EXCELENTE' | 'MUITO_BOM' | 'BOM' | 'MEDIO' |
 
 export type GameplayScoutingSourceR454 = {
   id: string;
+  /** Canonical edition identity this source was checked against; absent stays review-only. */
+  cardId?: string | null;
   type: GameplayScoutingSourceTypeR454;
   label: string;
   url?: string | null;
@@ -115,6 +117,36 @@ export type GameplayScoutingRecordR454 = {
   userFeedback: UserGameplayFeedbackR454[];
   lastReviewed: string | null;
 };
+
+const SCOUTING_CONFIDENCE_ORDER_R454: GameplayScoutingConfidenceR454[] = ['BAIXA', 'MEDIA', 'ALTA'];
+
+/** Retains raw sources separately; eligibility is scoped to one edition and patch. */
+export function qualifiedGameplayScoutingSourcesR454(record: Pick<GameplayScoutingRecordR454, 'cardId' | 'gameVersion' | 'sources'>) {
+  if (!record.cardId || !record.gameVersion) return [];
+  return (record.sources ?? []).filter(source =>
+    source.cardId === record.cardId
+    && source.gameVersion === record.gameVersion
+    && (source.confidence === 'MEDIA' || source.confidence === 'ALTA')
+    && ['OFFICIAL', 'DATABASE', 'REVIEWER', 'COMMUNITY', 'USER_GAMEPLAY'].includes(source.type)
+  );
+}
+
+/** A global label never upgrades the confidence of its eligible source evidence. */
+export function boundedScoutingConfidenceR454(confidence: GameplayScoutingConfidenceR454, sources: GameplayScoutingSourceR454[]): GameplayScoutingConfidenceR454 {
+  const declared = Math.max(0, SCOUTING_CONFIDENCE_ORDER_R454.indexOf(confidence));
+  const sourceRank = sources.reduce((maximum, source) => Math.max(maximum, SCOUTING_CONFIDENCE_ORDER_R454.indexOf(source.confidence)), 0);
+  return SCOUTING_CONFIDENCE_ORDER_R454[Math.min(declared, sourceRank)];
+}
+
+/** Research context has one eligibility rule before any consumer uses its roles. */
+export function scoutingRecordCanInfluenceR454(result: AnalysisResult, record: GameplayScoutingRecordR454 | null | undefined): boolean {
+  if (!record || record.status !== 'READY' || !result.parsed
+      || record.cardId !== cardIdentityFingerprintR126(result.parsed)
+      || record.gameVersion !== CURRENT_EFOOTBALL_GAME_VERSION_R457
+      || (record.conflicts ?? []).length) return false;
+  const sources = qualifiedGameplayScoutingSourcesR454(record).filter(source => !String(source.id).startsWith('match-r136:'));
+  return sources.length > 0 && boundedScoutingConfidenceR454(record.confidence, sources) !== 'BAIXA';
+}
 
 export type TacticalFitContextR454 = {
   position: PositionCode;
@@ -288,6 +320,8 @@ export function evaluateTacticalFitR454(
   scouting?: GameplayScoutingRecordR454 | null
 ): TacticalFitResultR454 {
   const record = scouting ?? (result as AnalysisResult & { gameplayScoutingR454?: GameplayScoutingRecordR454 }).gameplayScoutingR454 ?? createPendingGameplayScoutingR454(result);
+  const research = scoutingRecordCanInfluenceR454(result, record) ? record : null;
+  const scoutingStatus: GameplayScoutingStatusR454 = research ? 'READY' : record.status === 'SOURCE_CONFLICT' ? 'SOURCE_CONFLICT' : 'SCOUTING_PENDENTE';
   const positionEvidence = context.position === result.parsed.mainPosition
     ? 100
     : result.parsed.positions?.includes(context.position)
@@ -297,14 +331,14 @@ export function evaluateTacticalFitR454(
         : 42;
   const attributes = attributeFit(result, context.position);
   const style = activeStyleState(result, context.position);
-  const role = scoutingRoleMatch(record, context);
+  const role = scoutingRoleMatch(research, context);
   const styleName = context.teamStyle ?? result.tacticalProfile?.style ?? 'AUTO';
-  const formationBoost = context.formationId && record.bestFormations.includes(context.formationId) ? 8
-    : context.formationId && record.badFormations.includes(context.formationId) ? -12 : 0;
+  const formationBoost = context.formationId && research?.bestFormations.includes(context.formationId) ? 8
+    : context.formationId && research?.badFormations.includes(context.formationId) ? -12 : 0;
   const styleText = normalize(styleName);
-  const synergyBoost = record.playstyleSynergies.some((item) => normalize(item).includes(styleText)) ? 6 : 0;
+  const synergyBoost = research?.playstyleSynergies.some((item) => normalize(item).includes(styleText)) ? 6 : 0;
   const roleText = normalize([...(context.desiredFunctions ?? [])].join(' '));
-  const roleBoost = roleText && [...record.bestRoles, ...record.acceptableRoles].some((item) => roleText.includes(normalize(item.function)) || normalize(item.function).includes(roleText)) ? 6 : 0;
+  const roleBoost = roleText && research && [...research.bestRoles, ...research.acceptableRoles].some((item) => roleText.includes(normalize(item.function)) || normalize(item.function).includes(roleText)) ? 6 : 0;
   const score = clamp(positionEvidence * .28 + attributes * .27 + style.score * .18 + role.score * .27 + formationBoost + synergyBoost + roleBoost);
   const reasons = [
     `Encaixe calculado para ${context.position}${context.slotLabel ? ` (${context.slotLabel})` : ''}, não como nota universal da carta.`,
@@ -315,8 +349,8 @@ export function evaluateTacticalFitR454(
   ];
   const warnings: string[] = [];
   if (style.active === false) warnings.push('ESTILO INATIVO NESTA POSIÇÃO');
-  if (record.status === 'SCOUTING_PENDENTE') warnings.push('SCOUTING PENDENTE — resultado usa somente evidência estrutural já disponível.');
-  if (record.status === 'SOURCE_CONFLICT') warnings.push('SOURCE_CONFLICT — há divergência entre fontes de scouting.');
+  if (scoutingStatus === 'SCOUTING_PENDENTE') warnings.push('SCOUTING PENDENTE — resultado usa somente evidência estrutural já disponível.');
+  if (scoutingStatus === 'SOURCE_CONFLICT') warnings.push('SOURCE_CONFLICT — há divergência entre fontes de scouting.');
   if (positionEvidence < 55) warnings.push('Proficiência/posição insuficiente para tratar este slot como encaixe natural.');
   return {
     score,
@@ -325,7 +359,7 @@ export function evaluateTacticalFitR454(
     formationId: context.formationId ?? null,
     teamStyle: styleName,
     activePlaystyle: style.active,
-    scoutingStatus: record.status,
+    scoutingStatus,
     reasons,
     warnings,
     guarantees: {

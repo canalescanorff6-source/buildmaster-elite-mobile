@@ -34,13 +34,9 @@ function isQuotaFailure(cause: unknown): boolean {
   return name.includes('quota') || message.includes('quota') || (message.includes('storage') && message.includes('full'));
 }
 
-function releaseLegacyStorage(storage: Storage, protectedKey: string): number {
+function releaseDisposableCaches(storage: Storage, protectedKey: string): number {
+  // Saved vaults, scans, diagnostics and update history may be the only surviving copy.
   const removableMarkers = [
-    'buildmaster_history_v24_',
-    'buildmaster_ocr_scan_history_v27',
-    'buildmaster_diagnostics_v27',
-    'buildmaster_update_audit_v1',
-    'buildmaster_update_audit_v2',
     'buildmaster_ocr_cache',
     'buildmaster_image_thumbnail'
   ];
@@ -73,7 +69,7 @@ export function safeStorageSet(key: string, value: string): boolean {
   } catch (cause) {
     if (isQuotaFailure(cause)) {
       try {
-        releaseLegacyStorage(storage, key);
+        releaseDisposableCaches(storage, key);
         storage.setItem(key, value);
         return true;
       } catch (retryCause) {

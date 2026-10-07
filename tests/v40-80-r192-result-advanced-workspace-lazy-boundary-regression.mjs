@@ -63,7 +63,7 @@ for (const forbidden of ['createProductionAnalysisR138', 'runCanonicalVaultMutat
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8',
+  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
   'R192/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.',
 );
 assert.match(String(pkg.scripts?.['test:v4080'] ?? ''), /npm run test:r192(?: && npm run test:r193)?(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/, 'R192: cadeia v40.80 deve preservar R192 antes do gate seguinte.');

@@ -1,5 +1,5 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
-import { clearActiveAccountIdentity, setActiveAccountIdentity } from '@/lib/accountStorage';
+import { activeAccountNamespace, clearActiveAccountIdentity, getActiveAccountIdentity, setActiveAccountIdentity } from '@/lib/accountStorage';
 import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import {
   getNativeDeviceIdentity,
@@ -51,6 +51,28 @@ let sessionReadInFlight: Promise<AccountSession | null> | null = null;
 let refreshSessionInFlight: Promise<AccountSession> | null = null;
 let licenseValidationInFlight: { key: string; promise: Promise<LicenseValidation> } | null = null;
 let restoreAccessInFlight: Promise<LicenseValidation | null> | null = null;
+let sessionGeneration = 0;
+let credentialStorageQueue: Promise<void> = Promise.resolve();
+
+function assertSessionGeneration(generation: number) {
+  if (generation !== sessionGeneration) throw new Error('A sessão mudou. A operação anterior foi cancelada.');
+}
+
+function serializeCredentialStorage<T>(operation: () => Promise<T>): Promise<T> {
+  const pending = credentialStorageQueue.then(operation);
+  credentialStorageQueue = pending.then(() => undefined, () => undefined);
+  return pending;
+}
+
+async function writeCredential(key: string, value: string, generation: number) {
+  assertSessionGeneration(generation);
+  await secureSet(key, value);
+  if (generation !== sessionGeneration) {
+    // Native writes cannot be cancelled; remove their result before the next queued account can write.
+    await secureRemove(key).catch(() => undefined);
+    assertSessionGeneration(generation);
+  }
+}
 
 function waitForStorage(milliseconds: number) {
   return new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds));
@@ -231,10 +253,13 @@ function decodeJwtClaims(token: string): Record<string, unknown> {
   }
 }
 
-async function saveSession(session: AccountSession) {
-  await secureSet(SESSION_KEY, JSON.stringify(session));
-  memorySession = session;
-  await secureRemove(LEGACY_SESSION_KEY).catch(() => undefined);
+async function saveSession(session: AccountSession, generation: number) {
+  await serializeCredentialStorage(async () => {
+    await writeCredential(SESSION_KEY, JSON.stringify(session), generation);
+    await secureRemove(LEGACY_SESSION_KEY).catch(() => undefined);
+    assertSessionGeneration(generation);
+    memorySession = session;
+  });
 }
 
 function parseStoredSession(raw: string | null): AccountSession | null {
@@ -247,49 +272,61 @@ function parseStoredSession(raw: string | null): AccountSession | null {
   }
 }
 
-async function readSessionFromStorage(): Promise<AccountSession | null> {
-  let lastError: unknown = null;
-  for (const delay of [0, 90, 220]) {
-    if (delay) await waitForStorage(delay);
-    try {
-      let raw = await secureGet(SESSION_KEY);
-      if (!raw) {
-        raw = await migrateLegacyValueToSecureStorage(LEGACY_SESSION_KEY);
-        if (raw) await secureSet(SESSION_KEY, raw);
+async function readSessionFromStorage(generation = sessionGeneration): Promise<AccountSession | null> {
+  return serializeCredentialStorage(async () => {
+    let lastError: unknown = null;
+    for (const delay of [0, 90, 220]) {
+      if (delay) await waitForStorage(delay);
+      if (generation !== sessionGeneration) return null;
+      try {
+        let raw = await secureGet(SESSION_KEY);
+        if (generation !== sessionGeneration) return null;
+        if (!raw) {
+          raw = await migrateLegacyValueToSecureStorage(LEGACY_SESSION_KEY);
+          if (generation !== sessionGeneration) return null;
+          if (raw) await writeCredential(SESSION_KEY, raw, generation);
+        }
+        if (raw) return parseStoredSession(raw);
+      } catch (error) {
+        lastError = error;
       }
-      if (raw) return parseStoredSession(raw);
-      continue;
-    } catch (error) {
-      lastError = error;
     }
-  }
-  if (memorySession !== undefined) return memorySession;
-  if (lastError) console.warn('BuildMaster: armazenamento seguro temporariamente indisponível.', lastError);
-  return null;
+    if (generation !== sessionGeneration) return null;
+    if (memorySession !== undefined) return memorySession;
+    if (lastError) console.warn('BuildMaster: armazenamento seguro temporariamente indisponível.', lastError);
+    return null;
+  });
 }
 
 async function readSession(): Promise<AccountSession | null> {
   if (memorySession !== undefined) return memorySession;
   if (sessionReadInFlight) return sessionReadInFlight;
-  sessionReadInFlight = readSessionFromStorage()
+  const generation = sessionGeneration;
+  const pending = readSessionFromStorage(generation)
     .then((session) => {
+      if (generation !== sessionGeneration) return null;
       memorySession = session;
       return session;
     })
-    .finally(() => { sessionReadInFlight = null; });
-  return sessionReadInFlight;
+    .finally(() => { if (sessionReadInFlight === pending) sessionReadInFlight = null; });
+  sessionReadInFlight = pending;
+  return pending;
 }
 
-async function clearSessionStorage() {
+async function clearSessionStorage(options: { preserveWorkspaceIdentity?: boolean } = {}) {
+  const generation = ++sessionGeneration;
   memorySession = null;
   sessionReadInFlight = null;
-  await Promise.allSettled([
-    secureRemove(SESSION_KEY),
-    secureRemove(LICENSE_CACHE_KEY),
-    secureRemove(LEGACY_SESSION_KEY),
-    secureRemove(LEGACY_LICENSE_CACHE_KEY)
-  ]);
-  clearActiveAccountIdentity();
+  await serializeCredentialStorage(async () => {
+    if (generation !== sessionGeneration) return;
+    await Promise.allSettled([
+      secureRemove(SESSION_KEY),
+      secureRemove(LICENSE_CACHE_KEY),
+      secureRemove(LEGACY_SESSION_KEY),
+      secureRemove(LEGACY_LICENSE_CACHE_KEY)
+    ]);
+    if (generation === sessionGeneration && !options.preserveWorkspaceIdentity) clearActiveAccountIdentity();
+  });
 }
 
 async function getLegacyWebDeviceId(): Promise<string> {
@@ -466,16 +503,20 @@ async function performWebFetch(url: string, init: RequestInit, headers: Headers,
 }
 
 async function performSessionRefresh(current: AccountSession): Promise<AccountSession> {
+  const generation = sessionGeneration;
   const response = await supabaseFetch('/auth/v1/token?grant_type=refresh_token', {
     method: 'POST',
     body: JSON.stringify({ refresh_token: current.refreshToken })
   });
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+  assertSessionGeneration(generation);
   if (!response.ok) {
     if (response.status === 400 || response.status === 401) {
       const latest = memorySession ?? await readSessionFromStorage();
+      assertSessionGeneration(generation);
       if (latest && latest.refreshToken !== current.refreshToken && latest.expiresAt > Date.now()) return latest;
-      await clearSessionStorage();
+      // The offline workspace can remain open after refresh rejection; only remote credentials expire.
+      await clearSessionStorage({ preserveWorkspaceIdentity: true });
       throw new Error('Sua sessão expirou. Entre novamente.');
     }
     if (response.status === 429) throw new Error('O servidor recebeu muitas tentativas. A sessão será mantida e validada novamente em instantes.');
@@ -489,19 +530,22 @@ async function performSessionRefresh(current: AccountSession): Promise<AccountSe
     expiresAt: Date.now() + Number(payload.expires_in || 3600) * 1000,
     userId: String((payload.user as { id?: string } | undefined)?.id || current.userId)
   };
-  await saveSession(next);
+  await saveSession(next, generation);
   return next;
 }
 
 async function refreshSession(current: AccountSession): Promise<AccountSession> {
   if (refreshSessionInFlight) return refreshSessionInFlight;
-  refreshSessionInFlight = performSessionRefresh(current)
-    .finally(() => { refreshSessionInFlight = null; });
-  return refreshSessionInFlight;
+  const pending = performSessionRefresh(current)
+    .finally(() => { if (refreshSessionInFlight === pending) refreshSessionInFlight = null; });
+  refreshSessionInFlight = pending;
+  return pending;
 }
 
 export async function getValidAccountSession(): Promise<AccountSession | null> {
+  const generation = sessionGeneration;
   const session = await readSession();
+  if (generation !== sessionGeneration) return null;
   if (!session) return null;
   if (session.expiresAt - Date.now() > 120_000) return session;
   return refreshSession(session);
@@ -527,31 +571,40 @@ function normalizeProfile(input: Record<string, unknown>): AccountProfile {
   };
 }
 
-async function cacheLicense(validation: LicenseValidation) {
-  await secureSet(LICENSE_CACHE_KEY, JSON.stringify(validation));
-  await secureRemove(LEGACY_LICENSE_CACHE_KEY).catch(() => undefined);
-  setActiveAccountIdentity({
-    id: validation.profile.id,
-    username: validation.profile.username,
-    role: validation.profile.role,
-    expiresAt: validation.profile.expiresAt,
-    mode: 'cloud'
+async function cacheLicense(validation: LicenseValidation, generation: number) {
+  await serializeCredentialStorage(async () => {
+    await writeCredential(LICENSE_CACHE_KEY, JSON.stringify(validation), generation);
+    await secureRemove(LEGACY_LICENSE_CACHE_KEY).catch(() => undefined);
+    assertSessionGeneration(generation);
+    setActiveAccountIdentity({
+      id: validation.profile.id,
+      username: validation.profile.username,
+      role: validation.profile.role,
+      expiresAt: validation.profile.expiresAt,
+      mode: 'cloud'
+    });
   });
 }
 
 async function readCachedLicense(): Promise<LicenseValidation | null> {
-  try {
-    let raw = await secureGet(LICENSE_CACHE_KEY);
-    if (!raw) {
-      raw = await migrateLegacyValueToSecureStorage(LEGACY_LICENSE_CACHE_KEY);
-      if (raw) await secureSet(LICENSE_CACHE_KEY, raw);
+  const generation = sessionGeneration;
+  return serializeCredentialStorage(async () => {
+    if (generation !== sessionGeneration) return null;
+    try {
+      let raw = await secureGet(LICENSE_CACHE_KEY);
+      if (generation !== sessionGeneration) return null;
+      if (!raw) {
+        raw = await migrateLegacyValueToSecureStorage(LEGACY_LICENSE_CACHE_KEY);
+        if (generation !== sessionGeneration) return null;
+        if (raw) await writeCredential(LICENSE_CACHE_KEY, raw, generation);
+      }
+      const value = JSON.parse(raw || 'null') as LicenseValidation | null;
+      if (!value?.profile?.id || !value.validatedAt) return null;
+      return value;
+    } catch {
+      return null;
     }
-    const value = JSON.parse(raw || 'null') as LicenseValidation | null;
-    if (!value?.profile?.id || !value.validatedAt) return null;
-    return value;
-  } catch {
-    return null;
-  }
+  });
 }
 
 export function evaluateCachedLicense(validation: LicenseValidation, now = Date.now()): { valid: boolean; reason?: string } {
@@ -591,6 +644,7 @@ async function invokeFunction<T>(name: string, body: unknown, accessToken: strin
 }
 
 async function performOnlineLicenseValidation(active: AccountSession): Promise<LicenseValidation> {
+  const generation = sessionGeneration;
   const device = await buildDeviceProof(active.userId);
   const payload = await invokeFunction<{ profile: Record<string, unknown>; validatedAt?: string; minimumVersion?: string }>('license-session', {
     action: 'validate',
@@ -612,7 +666,7 @@ async function performOnlineLicenseValidation(active: AccountSession): Promise<L
     offline: false,
     minimumVersion: payload.minimumVersion
   };
-  await cacheLicense(validation);
+  await cacheLicense(validation, generation);
   return validation;
 }
 
@@ -647,6 +701,10 @@ export async function signInWithUsername(username: string, password: string): Pr
   const usernameError = validateUsername(username);
   if (usernameError) throw new Error(usernameError);
   if (password.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
+  const generation = ++sessionGeneration;
+  refreshSessionInFlight = null;
+  licenseValidationInFlight = null;
+  restoreAccessInFlight = null;
   let response: Response;
   try {
     response = await supabaseFetch('/auth/v1/token?grant_type=password', {
@@ -658,6 +716,7 @@ export async function signInWithUsername(username: string, password: string): Pr
     throw new Error('Não foi possível alcançar o servidor de contas. Verifique a internet e tente novamente.');
   }
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+  assertSessionGeneration(generation);
   if (!response.ok || !payload?.access_token || !payload.refresh_token) throw new Error(explainAuthFailure(payload, response.status));
   const session: AccountSession = {
     accessToken: String(payload.access_token),
@@ -665,11 +724,11 @@ export async function signInWithUsername(username: string, password: string): Pr
     expiresAt: Date.now() + Number(payload.expires_in || 3600) * 1000,
     userId: String((payload.user as { id?: string } | undefined)?.id || '')
   };
-  await saveSession(session);
+  await saveSession(session, generation);
   try {
     return await validateOnlineLicense(session);
   } catch (error) {
-    if (!isTransientAccountError(error) && !String(error).includes('APK foi bloqueado')) await clearSessionStorage();
+    if (generation === sessionGeneration && !isTransientAccountError(error) && !String(error).includes('APK foi bloqueado')) await clearSessionStorage();
     throw error;
   }
 }
@@ -697,12 +756,13 @@ export function isTransientAccountError(error: unknown) {
 }
 
 async function restoreCachedLicenseOrThrow(error: unknown): Promise<LicenseValidation> {
+  const generation = sessionGeneration;
   const cached = await readCachedLicense();
   if (cached) {
     const status = evaluateCachedLicense(cached);
     if (status.valid) {
       const offline = { ...cached, offline: true };
-      await cacheLicense(offline);
+      await cacheLicense(offline, generation);
       return offline;
     }
     throw new Error(status.reason || 'Sua licença precisa ser validada novamente.');
@@ -711,6 +771,7 @@ async function restoreCachedLicenseOrThrow(error: unknown): Promise<LicenseValid
 }
 
 export async function restoreCachedAccessForUsername(username: string): Promise<LicenseValidation | null> {
+  const generation = sessionGeneration;
   const normalized = normalizeUsername(username);
   if (!normalized) return null;
   const cached = await readCachedLicense();
@@ -718,7 +779,7 @@ export async function restoreCachedAccessForUsername(username: string): Promise<
   const status = evaluateCachedLicense(cached);
   if (!status.valid) return null;
   const offline = { ...cached, offline: true };
-  await cacheLicense(offline);
+  await cacheLicense(offline, generation);
   return offline;
 }
 
@@ -747,7 +808,10 @@ export async function restoreAccountAccess(): Promise<LicenseValidation | null> 
 }
 
 export async function signOutAccount() {
+  // Invalidate pending results before waiting for the remote logout request.
+  const generation = ++sessionGeneration;
   const session = await readSession();
+  if (generation !== sessionGeneration) return;
   refreshSessionInFlight = null;
   licenseValidationInFlight = null;
   restoreAccessInFlight = null;
@@ -755,7 +819,7 @@ export async function signOutAccount() {
     if (session && isCloudAccountsConfigured()) await supabaseFetch('/auth/v1/logout', { method: 'POST' }, session.accessToken);
   } catch {
   }
-  await clearSessionStorage();
+  if (generation === sessionGeneration) await clearSessionStorage();
 }
 
 export async function adminAccountRequest<T = { users?: AdminUserRow[]; success?: boolean }>(action: AdminUserAction): Promise<T> {
@@ -818,6 +882,7 @@ export async function beginAdminMfaEnrollment(): Promise<AdminMfaEnrollment> {
 }
 
 export async function verifyAdminMfa(factorId: string, code: string): Promise<AdminMfaStatus> {
+  const generation = sessionGeneration;
   const cleanCode = code.replace(/\D/g, '').slice(0, 8);
   if (cleanCode.length !== 6) throw new Error('Digite o código de 6 números do aplicativo autenticador.');
   const session = await getValidAccountSession();
@@ -839,7 +904,7 @@ export async function verifyAdminMfa(factorId: string, code: string): Promise<Ad
     refreshToken: String(verified.refresh_token),
     expiresAt: Date.now() + Number(verified.expires_in || 3600) * 1000,
     userId: String((verified.user as { id?: string } | undefined)?.id || session.userId)
-  });
+  }, generation);
   return getAdminMfaStatus();
 }
 
@@ -853,65 +918,108 @@ async function upsertIntelligentLearningRowsR470(
   table: 'card_reading_sessions_r470' | 'card_build_history_r470' | 'learning_models_r470',
   conflict: string,
   rows: Array<Record<string, unknown>>,
-  session: AccountSession
+  session: AccountSession,
+  current: () => boolean
 ) {
-  if (!rows.length) return;
+  if (!current()) return false;
+  if (!rows.length) return true;
   const body = rows.map((row) => ({ ...row, user_id: session.userId }));
   const response = await supabaseFetch(`/rest/v1/${table}?on_conflict=${encodeURIComponent(conflict)}`, {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(body)
   }, session.accessToken);
+  if (!current()) return false;
   if (!response.ok) throw new Error(`R470: falha ao sincronizar ${table}.`);
+  return true;
 }
 
-export async function syncIntelligentLearningR470(payload: IntelligentLearningCloudPayloadR470): Promise<boolean> {
+export async function syncIntelligentLearningR470(payload: IntelligentLearningCloudPayloadR470, current: () => boolean = () => true): Promise<boolean> {
   if (!isCloudAccountsConfigured()) return false;
+  const owner = captureAccountVaultOwner();
+  const isCurrent = () => {
+    try { assertAccountVaultOwner(owner); return current(); } catch { return false; }
+  };
+  if (!isCurrent()) return false;
   let session: AccountSession | null = null;
   try {
     session = await getValidAccountSession();
   } catch {
     return false;
   }
-  if (!session) return false;
+  if (!isCurrent() || !session || (owner.userId && owner.userId !== session.userId)) return false;
   const reading = payload.readingSession ? [payload.readingSession] : [];
   const build = payload.buildHistory ? [payload.buildHistory] : [];
   const models = Array.isArray(payload.learningModels) ? payload.learningModels : [];
-  await upsertIntelligentLearningRowsR470('card_reading_sessions_r470', 'user_id,session_key', reading, session);
-  await upsertIntelligentLearningRowsR470('card_build_history_r470', 'user_id,build_fingerprint', build, session);
-  await upsertIntelligentLearningRowsR470('learning_models_r470', 'user_id,scope,scope_key', models, session);
-  return true;
+  if (!await upsertIntelligentLearningRowsR470('card_reading_sessions_r470', 'user_id,session_key', reading, session, isCurrent)) return false;
+  if (!await upsertIntelligentLearningRowsR470('card_build_history_r470', 'user_id,build_fingerprint', build, session, isCurrent)) return false;
+  if (!await upsertIntelligentLearningRowsR470('learning_models_r470', 'user_id,scope,scope_key', models, session, isCurrent)) return false;
+  return isCurrent();
 }
 
 type R471SyncGlobal=typeof globalThis&{__bmR471Sync?:typeof syncIntelligentLearningR470};
 (globalThis as R471SyncGlobal).__bmR471Sync=syncIntelligentLearningR470;
 
-export async function syncAccountVault(payload: unknown): Promise<void> {
+export type AccountVaultOwner = {
+  generation: number;
+  namespace: string;
+  workspaceId: string | null;
+  userId: string | null;
+};
+
+export function captureAccountVaultOwner(): AccountVaultOwner {
+  const identity = getActiveAccountIdentity();
+  return { generation: sessionGeneration, namespace: activeAccountNamespace(), workspaceId: identity?.id ?? null, userId: identity?.id ?? memorySession?.userId ?? null };
+}
+
+export function assertAccountVaultOwner(owner: AccountVaultOwner) {
+  assertSessionGeneration(owner.generation);
+  if (owner.namespace !== activeAccountNamespace() || owner.workspaceId !== (getActiveAccountIdentity()?.id ?? null)) {
+    throw new Error('A conta mudou. A sincronização anterior foi cancelada.');
+  }
+}
+
+async function getAccountVaultSession(owner: AccountVaultOwner): Promise<AccountSession> {
+  assertAccountVaultOwner(owner);
   const session = await getValidAccountSession();
+  assertAccountVaultOwner(owner);
   if (!session) throw new Error('Entre novamente para sincronizar.');
+  if (owner.userId && owner.userId !== session.userId) throw new Error('A conta do Cofre não corresponde à sessão. Entre novamente.');
+  return session;
+}
+
+export async function syncAccountVault(payload: unknown, owner = captureAccountVaultOwner()): Promise<void> {
+  const session = await getAccountVaultSession(owner);
+  assertAccountVaultOwner(owner);
   const response = await supabaseFetch('/rest/v1/user_vault_snapshots?on_conflict=user_id', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({ user_id: session.userId, payload, updated_at: new Date().toISOString() })
   }, session.accessToken);
+  assertAccountVaultOwner(owner);
   if (!response.ok) throw new Error('Não consegui salvar seu Cofre na nuvem.');
 }
 
-export async function loadAccountVault<T>(): Promise<T | null> {
-  const session = await getValidAccountSession();
-  if (!session) throw new Error('Entre novamente para sincronizar.');
+export async function loadAccountVault<T>(owner = captureAccountVaultOwner()): Promise<T | null> {
+  const session = await getAccountVaultSession(owner);
+  assertAccountVaultOwner(owner);
   const response = await supabaseFetch(`/rest/v1/user_vault_snapshots?user_id=eq.${encodeURIComponent(session.userId)}&select=payload&limit=1`, {
     method: 'GET',
     headers: { Accept: 'application/json' }
   }, session.accessToken);
   const payload = await response.json().catch(() => []) as Array<{ payload?: T }>;
+  assertAccountVaultOwner(owner);
   if (!response.ok) throw new Error('Não consegui baixar seu Cofre da nuvem.');
   return payload[0]?.payload ?? null;
 }
 
-export async function deleteAccountVault(): Promise<void> {
+export async function deleteAccountVault(owner = captureAccountVaultOwner()): Promise<void> {
+  assertAccountVaultOwner(owner);
   const session = await getValidAccountSession();
+  assertAccountVaultOwner(owner);
   if (!session) return;
+  if (owner.userId && owner.userId !== session.userId) throw new Error('A conta do Cofre não corresponde à sessão. Entre novamente.');
   const response = await supabaseFetch(`/rest/v1/user_vault_snapshots?user_id=eq.${encodeURIComponent(session.userId)}`, { method: 'DELETE' }, session.accessToken);
+  assertAccountVaultOwner(owner);
   if (!response.ok) throw new Error('Não consegui apagar o Cofre da nuvem.');
 }

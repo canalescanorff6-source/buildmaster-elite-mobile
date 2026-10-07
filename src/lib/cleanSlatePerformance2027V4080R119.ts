@@ -8,6 +8,7 @@ import type {
   TrainingKey,
   TrainingPlan
 } from './analyzerDomain';
+import { ATTRIBUTE_PT } from './analyzerDomain';
 import {
   emptyTraining,
   trainingLevelCost,
@@ -28,11 +29,12 @@ import { inspectPlaystyleActivationR124 } from './efootball2027PhaseCatalogR124'
 import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { applyCriticalEvidenceR419 } from '../modules/analysis/cardEvidenceAuthorityR419';
 import { deriveCardTruthCertificationR501, type CardTruthCertificationR501 } from '../modules/analysis/cardTruthLayerR501';
+import { deriveCriticalAttributeEvidenceR501 } from '../modules/analysis/cardTruthLayerR501';
 import { deriveProjectedPlayerStateR504, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';
 import { rankAutonomousRolesR417 } from './autonomousCardR417';
 import { GAMEPLAY_IMPACT_R458_VERSION, functionActionDemandR458, teamStyleActionDemandR458, skillActionSupportR458, skillActionSupportDetailR459, type GameplayImpactR458 } from './gameplayImpactR458';
 
-export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r406-match-calibration-group-return-fix5' as const;
+export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r550-verified-card-evidence-v1' as const;
 // BM_R457_SOURCE_CANONICAL_R406: source cru já contém a autoridade R406-fix5; sanitize é compatibilidade, não requisito funcional.
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R143_VERSION = '40.80-r143-equivalent-state-cache-v1' as const;
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R144_VERSION = '40.80-r144-frontier-dedup-diagnostic-memo-v1' as const;
@@ -489,9 +491,7 @@ const attr = (attrs:Attributes,key:AttributeKey) => clamp(Number(attrs[key] ?? 5
 const round1 = (v:number) => Number(v.toFixed(1));
 
 function effectiveAttributeCountR452(parsed: ParsedCard) {
-  const evidenceCount = Number(parsed.evidence?.attributeCount ?? 0);
-  const actualCount = Object.values(parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length;
-  return Math.max(Number.isFinite(evidenceCount) ? evidenceCount : 0, actualCount);
+  return deriveCriticalAttributeEvidenceR501(parsed).count;
 }
 
 function cardKey(parsed:ParsedCard) {
@@ -1868,7 +1868,7 @@ function usageFunctionR457(input:AnalysisResult, context:UsageContextR125) {
       bestRoles?: Array<{position?:string;label?:string;function?:string}>;
     };
   }).gameplayScoutingR454;
-  if(scouting?.status==='READY') {
+  if(scouting?.status==='READY' && (context.scoutingEvidenceR457.status==='APPLIED' || context.scoutingEvidenceR457.status==='NO_STRUCTURED_SIGNAL')) {
     const role=scouting.bestRoles?.find((item)=>item.position===context.targetPosition);
     const scoutingFunction=String(role?.function ?? role?.label ?? '').trim();
     if(scoutingFunction) return scoutingFunction;
@@ -1899,11 +1899,13 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   const budgetCandidate=Number(parsed.trainingPointsTotal ?? input.trainingPointsTotal ?? 0);
   const budget=Number.isFinite(budgetCandidate)&&budgetCandidate>0?Math.round(budgetCandidate):0;
   const confidence=normalizedConfidence(parsed);
-  const attributeCount=effectiveAttributeCountR452(parsed);
-  const minimum=usageContext.targetPosition==='GK'?4:10;
-  const limitedEvidence=attributeCount<minimum;
+  const attributeEvidence=deriveCriticalAttributeEvidenceR501(parsed);
+  const attributeCount=attributeEvidence.count;
+  const minimum=attributeEvidence.minimum;
+  const totalAttributes=Object.keys(ATTRIBUTE_PT).length;
+  const limitedEvidence=attributeCount<totalAttributes;
   const budgetEvidenceStateR419=parsed.evidence?.trainingBudgetStateR419??'MISSING';
-  if(!budget || budgetEvidenceStateR419!=='TRUSTED') {
+  if(!budget || budgetEvidenceStateR419!=='TRUSTED' || attributeEvidence.state!=='TRUSTED') {
     const zero=emptyTraining();
     const projectedPlayerStateR504=deriveProjectedPlayerStateR504(parsed,zero);
     const actions=naturalActionDetails(parsed,functionalUsageContext);
@@ -1963,7 +1965,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       impetoReason:blockedPublicRecommendationsR507.impeto.reason,
       impetoSlotStatus:blockedPublicRecommendationsR507.impeto.slotStatus,
       guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
-      reasons:[`Leitura insuficiente para gerar a ficha: atributos utilizáveis ${attributeCount}/${minimum}; orçamento ${budget || 0}. Nenhuma ficha antiga ou genérica foi usada como fallback.`,playstyleContext.note,'Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']
+      reasons:[`Leitura insuficiente para gerar a ficha: atributos utilizáveis ${attributeCount}/${minimum}; orçamento ${budget || 0}. Complete os atributos críticos antes de distribuir PP. Nenhuma ficha antiga ou genérica foi usada como fallback.`,...attributeEvidence.reasons,playstyleContext.note,'Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']
     };
     return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:blockedPublicRecommendationsR507.skills,recommendedImpetos:blockedPublicRecommendationsR507.impeto.recommendations,skillIntegrity,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
@@ -2078,7 +2080,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     reasons:[
       `Clean Slate r149 avaliou ${searchOptimizationR149.generatedStates} estados com hot path escalar de score no mesmo kernel de avaliação, sem objetos de resultado/online/detalhes por candidato; preservou r148, beam 20 e orçamento ${spent}/${budget}.`,
       ...(limitedEvidence
-        ? [`R452: ficha provisória foi gerada mesmo com cobertura parcial (${attributeCount}/${minimum} atributos mínimos recomendados). Valores ausentes ficam neutros e a ficha permanece marcada para revisão, em vez de voltar 0/${budget}.`]
+        ? [`R452: ficha provisória foi gerada com cobertura útil parcial (${attributeCount}/${totalAttributes} atributos; mínimo crítico ${minimum}). Complete os atributos ausentes antes da certificação final.`]
         : []),
       `Certificação R457: ${optimized.optimalityCertificateR457.status}; ${optimized.optimalityCertificateR457.exactStatesEvaluated} combinações exatas; ganho vs Beam ${optimized.optimalityCertificateR457.scoreGainVsBeam>=0?'+':''}${optimized.optimalityCertificateR457.scoreGainVsBeam}.`,
       `Otimização conjunta R457: ${optimized.jointConfigurationR457.status}; ${optimized.jointConfigurationR457.equivalentTrainingCandidates} ficha(s) dentro da faixa exata foram comparadas com Top 5 e Ímpeto; sacrifício de score-base ${optimized.jointConfigurationR457.baseScoreSacrifice}.`,

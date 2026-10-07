@@ -7,7 +7,7 @@ const ui=fs.readFileSync('src/components/UnifiedPerformanceV3920Panel.tsx','utf8
 const r126=fs.readFileSync('src/lib/productionAuthorityR126.ts','utf8');
 const r128=fs.readFileSync('src/lib/productionAuthorityR128.ts','utf8');
 
-assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r406-match-calibration-group-return-fix5'/);
+assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r550-verified-card-evidence-v1'/);
 assert.match(clean,/BM_R457_SOURCE_CANONICAL_R406/);
 assert.doesNotMatch(pipeline,/Clean Slate r125 é o único escritor/);
 assert.match(pipeline,/BM_R457_AUTHORITY_CHAIN/);
@@ -23,4 +23,4 @@ assert.match(clean,/const suppressHistoricalR467 = outcome\?\.status === 'CONVER
 assert.match(clean,/const baseAdjustment=!suppressHistoricalR467 && calibration\?\.status==='ACTIVE' \? clamp\(Number\(calibration\.actionNeedAdjustments\?\.\[actionId\]\?\?0\),0,\.12\) : 0;/);
 assert.match(clean,/const learnedMultiplier=outcome\?\.status==='ACTIVE' \? clamp\(Number\(outcome\.actionLearningMultipliers\?\.\[actionId\]\?\?1\),1,1\.06\) : 1;/);
 assert.match(clean,/return clamp\(\(1\+baseAdjustment\)\*learnedMultiplier,1,1\.18\);/);
-console.log('R457 Stage 1 aprovada: source cru materializa R406-fix5; R126 sela; R128 protege; UI não fixa R125.');
+console.log('R457 Stage 1 aprovada: source cru materializa R550; R126 sela; R128 protege; UI não fixa R125.');

@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 const SOURCE='src/lib/cleanSlatePerformance2027V4080R119.ts';
 const VERSION_OLD="export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r406-match-calibration-precedence-fix4' as const;";
 const VERSION_NEW="export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r406-match-calibration-group-return-fix5' as const;";
+const VERSION_R550="export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r550-verified-card-evidence-v1' as const;";
 const IDENTITY_OLD="    const identityBonusByLevel=Array.from({length:17},(_,level)=>level?level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16:0);";
 const IDENTITY_NEW="    const matchNeed=actions.reduce((m,item)=>TRAINING_ATTRIBUTES[key].some(a=>item.action.attrs.includes(a)&&Number(item.action.weights?.[a]??1)>=.95)?Math.max(m,item.matchNeedMultiplier-1):m,0);\n    const identityBonusByLevel=Array.from({length:17},(_,level)=>level?level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16+Math.min(level,8)*matchNeed*1.1:0);";
 const GOLDEN_TESTS=["tests/v40-80-r143-clean-slate-equivalent-state-cache-regression.ts", "tests/v40-80-r144-clean-slate-frontier-dedup-regression.ts", "tests/v40-80-r145-incremental-state-key-beam-regression.ts", "tests/v40-80-r146-compiled-evaluation-kernel-regression.ts", "tests/v40-80-r147-compact-search-state-regression.ts", "tests/v40-80-r148-fused-evaluation-pass-regression.ts", "tests/v40-80-r149-scalar-score-hot-path-regression.ts"];
@@ -35,7 +36,7 @@ export function applyCalibratedGroupReturnR406Fix5(rootDirectory=process.cwd()){
   const root=resolve(rootDirectory),sourcePath=resolve(root,SOURCE);
   if(!existsSync(sourcePath)) throw new Error(`R406-fix5: fonte ausente: ${SOURCE}`);
   let source=readFileSync(sourcePath,'utf8'),sourceChanged=false;
-  if(source.includes(VERSION_NEW)&&source.includes('const matchNeed=actions.reduce(')) {
+  if((source.includes(VERSION_NEW)||source.includes(VERSION_R550))&&source.includes('const matchNeed=actions.reduce(')) {
     sourceChanged=false;
   } else {
     source=replaceOnce(source,VERSION_OLD,VERSION_NEW,'version');
@@ -51,5 +52,5 @@ export function applyCalibratedGroupReturnR406Fix5(rootDirectory=process.cwd()){
     const patched=patchGoldenContract(before,relative.split('/').pop().replace(/\..*$/,''));
     if(patched.changed){writeFileSync(file,patched.text,'utf8');testsChanged++;}
   }
-  return {sourceChanged,testsChanged,version:'40.80-r406-match-calibration-group-return-fix5'};
+  return {sourceChanged,testsChanged,version:source.match(/CLEAN_SLATE_2027_R119_VERSION = '([^']+)'/)?.[1]};
 }

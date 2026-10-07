@@ -13,6 +13,22 @@ const fullAttributes = {
   acceleration: 85,
   kickingPower: 82,
   stamina: 81,
+  loftedPass: 74,
+  heading: 72,
+  placeKicking: 68,
+  curl: 73,
+  defensiveAwareness: 48,
+  defensiveEngagement: 50,
+  tackling: 45,
+  aggression: 60,
+  goalkeeperAwareness: 40,
+  goalkeeperCatching: 40,
+  goalkeeperParrying: 40,
+  goalkeeperReflexes: 40,
+  goalkeeperReach: 40,
+  jump: 75,
+  physicalContact: 76,
+  balance: 82,
 };
 
 function card(overrides: Record<string, unknown> = {}) {
@@ -39,7 +55,7 @@ function card(overrides: Record<string, unknown> = {}) {
     attributes: fullAttributes,
     physicalProfile: {},
     manualConfirmed: false,
-    evidence: { positionLocked: true, playstyleLocked: true, attributeCount: 10, positionRatingsCount: 1 },
+    evidence: { positionLocked: true, playstyleLocked: true, attributeCount: 26, positionRatingsCount: 1 },
     internalId: 'r501-certification',
     confidence: 92,
     warnings: [],
@@ -56,8 +72,14 @@ assert.equal(
 );
 assert.equal(finalCertification.canFinalize, true, 'R501: somente FINAL_CERTIFIED pode autorizar promoção para resultado final.');
 
-const nine = { ...fullAttributes } as Record<string, number>;
-delete nine.stamina;
+const usefulTen = Object.fromEntries(Object.entries(fullAttributes).slice(0, 10));
+const usefulPartial = applyCriticalEvidenceR419(card({ attributes: usefulTen }));
+assert.equal(usefulPartial.evidence.criticalStateR419, 'TRUSTED', 'Os 10 atributos reais autorizam progressão útil.');
+const usefulPartialCertification = deriveCardTruthCertificationR501(usefulPartial);
+assert.equal(usefulPartialCertification.state, 'PROVISIONAL_HIGH_CONFIDENCE', 'Cobertura mínima de progressão não equivale à leitura completa dos 26 atributos.');
+assert.equal(usefulPartialCertification.canFinalize, false, 'Atributos declarados 26 com apenas 10 valores não podem certificar um resultado final.');
+
+const nine = Object.fromEntries(Object.entries(fullAttributes).slice(0, 9));
 const partialHigh = applyCriticalEvidenceR419(card({
   attributes: nine,
   evidence: { positionLocked: true, playstyleLocked: true, attributeCount: 9, positionRatingsCount: 1 },
@@ -80,7 +102,7 @@ const partialLowCertification = deriveCardTruthCertificationR501(partialLow);
 assert.equal(
   partialLowCertification.state,
   'PROVISIONAL_LOW_CONFIDENCE',
-  'R501/R452: ficha 56/56 pode continuar visível sem atributos, mas precisa ser explicitamente provisória baixa.',
+  'R501: identidade e orçamento sem atributos permanecem uma prévia baixa, sem autorização final.',
 );
 assert.equal(partialLowCertification.canFinalize, false, 'R501: provisória baixa nunca pode parecer ficha final.');
 

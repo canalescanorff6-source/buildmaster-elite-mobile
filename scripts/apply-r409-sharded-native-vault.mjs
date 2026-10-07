@@ -72,7 +72,7 @@ export function applyShardedNativeVaultR409(rootDirectory = process.cwd()) {
   }
 
   if (!store.includes('nativeAuthoritativeR409')) throw new Error('R409: autoridade nativa não instalada.');
-  if (!store.includes('writeNativeHistoryShardedR409(compacted)')) throw new Error('R409: persistência em shards não instalada.');
+  if (!store.includes('writeNativeHistoryShardedR409(compacted)') && !store.includes('writeNativeHistoryShardedR409(compacted, () => assertHistoryNamespace(namespace))')) throw new Error('R409: persistência em shards não instalada.');
   if (store.includes('const payload = JSON.stringify(compactHistoryForNativeStorage(next));')) throw new Error('R409: escrita monolítica antiga ainda ativa.');
   if (!store.includes('if (!nativeAuthoritativeR409)')) throw new Error('R409: rotas antigas ainda podem ressuscitar fichas removidas.');
 

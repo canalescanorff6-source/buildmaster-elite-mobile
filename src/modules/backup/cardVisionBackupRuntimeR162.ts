@@ -20,10 +20,10 @@ import { exportCreatorBuildResearch, importCreatorBuildResearch } from '@/lib/cr
 import { runtimePut, runtimeTrimStore } from '@/lib/localDatabase';
 import { replaceMetaFormationProjects } from '@/modules/tactical-studio/metaFormationStudioV3832';
 import { replaceMatchTrainerSessions } from '@/modules/matches/matchTrainerEngine';
-import { readMatchValidationRepositoryR137 } from '@/modules/matches/matchValidationRepositoryR137';
+import { persistMatchValidationRepositoryR137, readMatchValidationRepositoryR137 } from '@/modules/matches/matchValidationRepositoryR137';
 import { writeActiveSessionBackupPayloadR157 } from '@/modules/session/activeSessionRepositoryR137';
 import { getActiveAccountIdentity, readAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
-import { loadAccountVault, syncAccountVault } from '@/lib/accountAuth';
+import { assertAccountVaultOwner, captureAccountVaultOwner, loadAccountVault, syncAccountVault, type AccountVaultOwner } from '@/lib/accountAuth';
 import { decryptBackupPayload, encryptBackupPayload, isEncryptedBackupFile, validateBackupPassword } from '@/lib/backupCrypto';
 import { secureGet, secureSet } from '@/lib/secureStorage';
 import { createSafeDiagnosticReport, recordSafeRuntimeError } from '@/lib/safeDiagnostics';
@@ -46,7 +46,7 @@ import { collectFullBackupSectionsR141, collectPlayersBackupSectionsR141 } from 
 import { commitCriticalVaultRestoreR140, commitVaultHistoryR140 } from '@/modules/vault/vaultPersistenceCoordinatorR140';
 import { runSerializedVaultCloudMutationR128 } from '@/modules/vault/vaultCloudQueueR128';
 import { downloadClientTextExportR129 } from '@/modules/export/clientTextExportR129';
-import { LEARNING_KEY, normalizeHistoryList, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
+import { LEARNING_KEY, normalizeHistoryList, persistHistoryStore, type SavedAnalysis } from '@/modules/vault/cardHistoryStore';
 import type { CardVisionBackupControllerInputR162 } from './cardVisionBackupControllerTypesR170';
 
 export const CARDVISION_BACKUP_RUNTIME_R162_VERSION = '40.80-r162-backup-runtime-v1' as const;
@@ -332,7 +332,9 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
     writeAccountStorage(key, typeof value === 'string' ? value : JSON.stringify(value));
   }
 
-  async function applyBackupEnvelope(envelope: BackupEnvelope, selected: Record<BackupSection, boolean> = restoreSections) {
+  async function applyBackupEnvelope(envelope: BackupEnvelope, selected: Record<BackupSection, boolean> = restoreSections, owner?: AccountVaultOwner) {
+    const assertOwner = () => { if (owner) assertAccountVaultOwner(owner); };
+    assertOwner();
     const migrated = migrateBackup(envelope);
     const sections = migrated.envelope.sections;
     const stagedHistory = selected.history && Array.isArray(sections.history)
@@ -345,7 +347,12 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
       currentHistory: renderHistory,
       nextHistory: stagedHistory,
       nextMatchValidation: stagedEvolution ? (stagedEvolution.matchValidation ?? []) : undefined
-    });
+    }, owner ? {
+      persistHistory: (items) => { assertOwner(); return persistHistoryStore(items); },
+      readMatches: () => { assertOwner(); return readMatchValidationRepositoryR137(); },
+      writeMatches: (records, detail) => { assertOwner(); return persistMatchValidationRepositoryR137(records, detail); },
+    } : undefined);
+    assertOwner();
     if (!criticalRestore.ok) throw new Error(criticalRestore.error ?? 'A restauração crítica do Cofre não foi confirmada.');
     if (stagedHistory) {
       if (!criticalRestore.historyPersistence?.saved || criticalRestore.historyPersistence.items !== stagedHistory.length) {
@@ -392,7 +399,7 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
         for (const rawTerm of calibration.ocrLexicon) {
           if (!rawTerm || typeof rawTerm !== 'object') continue;
           const term = rawTerm as { id?: string };
-          if (term.id) await runtimePut('ocr-lexicon', term.id, rawTerm);
+          if (term.id) { assertOwner(); await runtimePut('ocr-lexicon', term.id, rawTerm); assertOwner(); }
         }
         void runtimeTrimStore('ocr-lexicon', 420).catch(() => undefined);
       }
@@ -437,7 +444,7 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
       }
     }
     if (selected.customFormations && Array.isArray(sections.customFormations)) writeStorage('buildmaster_custom_formations_v26_77', sections.customFormations);
-    if (selected.imageGallery && sections.imageGallery) await importTacticalImageLibrary(sections.imageGallery);
+    if (selected.imageGallery && sections.imageGallery) { assertOwner(); await importTacticalImageLibrary(sections.imageGallery); assertOwner(); }
     if (selected.performance && sections.performance && typeof sections.performance === 'object') {
       const performance = sections.performance as Record<string, unknown>;
       writeStorage(COMPETITIVE_MATCH_STORAGE_KEY, performance.competitiveMatches ?? []);
@@ -466,8 +473,10 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
     return migrated;
   }
 
-  async function persistBackupSnapshots(next: BackupSnapshot[]) {
+  async function persistBackupSnapshots(next: BackupSnapshot[], owner?: AccountVaultOwner) {
+    if (owner) assertAccountVaultOwner(owner);
     const clean = await persistBackupSnapshotsR141(next);
+    if (owner) assertAccountVaultOwner(owner);
     setBackupSnapshots(clean);
     return clean;
   }
@@ -483,23 +492,30 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
   }
 
   async function syncFullCloudBackup() {
+    const owner = captureAccountVaultOwner();
     await runGuardedVaultActionR154({ key: 'cloud-full-sync', label: 'Sincronizando backup integral' }, async () => {
       setCloudLoading(true);
       try {
+        assertAccountVaultOwner(owner);
         const localEnvelope = createBackupEnvelope(await collectFullBackupSections());
+        assertAccountVaultOwner(owner);
         const safety = createBackupSnapshot(localEnvelope, 'Antes da sincronização completa', currentDeviceLabelR141());
-        const nextSnapshots = await persistBackupSnapshots([safety, ...backupSnapshots]);
+        const nextSnapshots = await persistBackupSnapshots([safety, ...backupSnapshots], owner);
         const transaction = await runSerializedVaultCloudMutationR128(async () => {
+          assertAccountVaultOwner(owner);
           requireSecureAccountCloud();
-          const rawRemote = await loadAccountVault<unknown>();
+          const rawRemote = await loadAccountVault<unknown>(owner);
+          assertAccountVaultOwner(owner);
           const remotePayload = normalizeCloudVaultPayload(rawRemote);
           const merged = remotePayload?.fullBackup ? mergeBackupEnvelopes(localEnvelope, remotePayload.fullBackup) : localEnvelope;
           const conflicts = remotePayload?.fullBackup ? compareBackupEnvelopes(localEnvelope, remotePayload.fullBackup) : [];
-          await applyBackupEnvelope(merged, DEFAULT_RESTORE_SECTIONS_R162);
+          await applyBackupEnvelope(merged, DEFAULT_RESTORE_SECTIONS_R162, owner);
+          assertAccountVaultOwner(owner);
           const payload = buildCloudVaultPayload(merged, nextSnapshots, currentDeviceLabelR141());
-          await syncAccountVault(payload);
+          await syncAccountVault(payload, owner);
           return { remotePayload, merged, conflicts, payload };
         });
+        assertAccountVaultOwner(owner);
         if (transaction.remotePayload?.fullBackup) setRemoteFullBackup(transaction.remotePayload.fullBackup);
         setSyncConflicts(transaction.conflicts);
         const syncedAt = new Date().toISOString();
@@ -520,25 +536,33 @@ export function createCardVisionBackupOperationsR162(context: CardVisionBackupRu
   }
 
   async function pullAndMergeFullCloudBackup() {
+    const owner = captureAccountVaultOwner();
     await runGuardedVaultActionR154({ key: 'cloud-full-pull', label: 'Baixando e mesclando backup integral' }, async () => {
       setCloudLoading(true);
       try {
+        assertAccountVaultOwner(owner);
         const localEnvelope = createBackupEnvelope(await collectFullBackupSections());
+        assertAccountVaultOwner(owner);
         const safety = createBackupSnapshot(localEnvelope, 'Antes de baixar e mesclar a nuvem', currentDeviceLabelR141());
         const transaction = await runSerializedVaultCloudMutationR128(async () => {
+          assertAccountVaultOwner(owner);
           requireSecureAccountCloud();
-          const rawRemote = await loadAccountVault<unknown>();
+          const rawRemote = await loadAccountVault<unknown>(owner);
+          assertAccountVaultOwner(owner);
           const remotePayload = normalizeCloudVaultPayload(rawRemote);
           if (!remotePayload?.fullBackup) return { fallback: true as const };
-          const nextSnapshots = await persistBackupSnapshots([safety, ...backupSnapshots, ...remotePayload.snapshots]);
+          const nextSnapshots = await persistBackupSnapshots([safety, ...backupSnapshots, ...remotePayload.snapshots], owner);
           const conflicts = compareBackupEnvelopes(localEnvelope, remotePayload.fullBackup);
           const merged = mergeBackupEnvelopes(localEnvelope, remotePayload.fullBackup);
-          await applyBackupEnvelope(merged, DEFAULT_RESTORE_SECTIONS_R162);
-          await syncAccountVault(buildCloudVaultPayload(merged, nextSnapshots, currentDeviceLabelR141()));
+          await applyBackupEnvelope(merged, DEFAULT_RESTORE_SECTIONS_R162, owner);
+          assertAccountVaultOwner(owner);
+          await syncAccountVault(buildCloudVaultPayload(merged, nextSnapshots, currentDeviceLabelR141()), owner);
           return { fallback: false as const, remotePayload, nextSnapshots, conflicts, merged };
         });
+        assertAccountVaultOwner(owner);
         if (transaction.fallback) {
           await pullCloudHistory();
+          assertAccountVaultOwner(owner);
           setCloudStatus('A conta ainda possui o formato antigo. O Cofre foi baixado sem substituir as demais áreas.');
           return;
         }

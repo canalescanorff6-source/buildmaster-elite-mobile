@@ -14,7 +14,8 @@ async function testAutomaticReader() {
     },
   } as Pick<ReaderV2ImageSession, 'withCrop'>;
   const values: Record<string, string> = {
-    playerName: 'Neymar Jr',
+    playerName: 'Neymar Jr\nArmador criativo',
+    identityMeta: 'Nível máximo: 31\nPontos totais: 60\nPosição principal: PTE',
     level: '31',
     points: '60',
     mainPosition: 'LWF',
@@ -33,8 +34,9 @@ async function testAutomaticReader() {
   assert.equal(evidence.mode, 'automatic');
   assert.equal(evidence.attributesRead, 26);
   assert.ok(seen.includes('playerName'));
-  assert.ok(seen.includes('level'));
-  assert.ok(seen.includes('points'));
+  assert.ok(seen.includes('identityMeta'));
+  assert.ok(seen.includes('attributes-values-left'));
+  assert.ok(seen.includes('skills'));
   assert.ok(evidence.fields.every((field) => field.source === 'automatic'));
 }
 

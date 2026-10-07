@@ -13,6 +13,7 @@ export function buildMatchScoutingSourceR457(calibration:MatchEvidenceCalibratio
   if(!calibration.rawMatches)return null;
   return {
     id:`${MATCH_SCOUTING_SOURCE_PREFIX_R457}${calibration.evidenceFingerprint}`,
+    cardId:calibration.cardFingerprint,
     type:'USER_GAMEPLAY',
     label:`Partidas reais R136 • ${calibration.rawMatches} jogo(s) • ${calibration.distinctSessions} sessão(ões)`,
     gameVersion:CURRENT_EFOOTBALL_GAME_VERSION_R457,

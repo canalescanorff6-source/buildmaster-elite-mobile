@@ -85,6 +85,21 @@ const noAttributes = applyCriticalEvidenceR419(card({
 }));
 assert.equal(noAttributes.evidence.criticalStateR419, 'MISSING', 'R501: zero atributos críticos deve permanecer MISSING.');
 
+const declaredWithoutValues = applyCriticalEvidenceR419(card({
+  trainingPointSource: 'MANUAL',
+  confidence: 100,
+  attributes: {},
+  evidence: { positionLocked: true, playstyleLocked: true, attributeCount: 26, positionRatingsCount: 1 },
+}));
+assert.equal(declaredWithoutValues.evidence.criticalStateR419, 'MISSING', 'Contagem declarada não pode fabricar cobertura crítica sem valores reais.');
+
+const invalidValues = applyCriticalEvidenceR419(card({
+  trainingPointSource: 'MANUAL',
+  attributes: { finishing: null, speed: 0, acceleration: NaN, ballControl: Infinity, unknownAttribute: 90 },
+  evidence: { positionLocked: true, playstyleLocked: true, attributeCount: 26, positionRatingsCount: 1 },
+}));
+assert.equal(invalidValues.evidence.criticalStateR419, 'MISSING', 'Valores inválidos e nomes que não são atributos não podem autorizar uma ficha.');
+
 const nineAttributes = { ...attrs10 } as Record<string, number>;
 delete nineAttributes.stamina;
 const partialOutfield = applyCriticalEvidenceR419(card({

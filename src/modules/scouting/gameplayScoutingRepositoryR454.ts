@@ -5,7 +5,9 @@ import {
   CURRENT_EFOOTBALL_GAME_VERSION_R457,
   GAMEPLAY_SCOUTING_STORAGE_KEY_R454,
   GAMEPLAY_SCOUTING_R454_VERSION,
+  boundedScoutingConfidenceR454,
   createPendingGameplayScoutingR454,
+  qualifiedGameplayScoutingSourcesR454,
   type GameplayScoutingRecordR454,
   type GameplayScoutingSourceR454,
   type UserGameplayFeedbackR454
@@ -31,15 +33,18 @@ function writeStore(store: ScoutingStoreR454) {
 }
 
 function normalizeRecord(record: GameplayScoutingRecordR454): GameplayScoutingRecordR454 {
-  const sourceTypes = [...new Set((record.sources ?? []).map((source) => source.type))];
+  const eligibleSources = qualifiedGameplayScoutingSourcesR454(record);
+  const confidence = boundedScoutingConfidenceR454(record.confidence, eligibleSources);
+  const sourceTypes = [...new Set(eligibleSources.map((source) => source.type))];
   const sourceLinks = [...new Set((record.sources ?? []).map((source) => source.url).filter((value): value is string => Boolean(value)))];
-  const status = (record.conflicts ?? []).length ? 'SOURCE_CONFLICT' : (record.sources ?? []).length ? 'READY' : 'SCOUTING_PENDENTE';
+  const status = (record.conflicts ?? []).length ? 'SOURCE_CONFLICT' : eligibleSources.length && confidence !== 'BAIXA' ? 'READY' : 'SCOUTING_PENDENTE';
   return {
     ...record,
     version: GAMEPLAY_SCOUTING_R454_VERSION,
     status,
     sourceTypes,
     sourceLinks,
+    confidence,
     testedByUser: (record.userFeedback ?? []).length > 0 || record.testedByUser
   };
 }

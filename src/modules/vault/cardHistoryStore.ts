@@ -11,6 +11,7 @@ import { cardIdentityAliasesR457 } from '@/lib/cardIdentityFingerprintR126';
 import { analysisUsageFunctionR457, analysisUsageIdentityKeyR138, analysisUsagePositionR138, optionalAnalysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { buildVaultIdentitySealR134 } from './vaultIdentitySealR134';
 import {
+  activeAccountNamespace,
   accountDatabaseName,
   getActiveAccountIdentity,
   readAccountStorage,
@@ -88,9 +89,9 @@ export const NATIVE_HISTORY_SHARD_VERSION_R409 = 2;
 export const NATIVE_HISTORY_READ_CONCURRENCY_R410 = 8;
 export const NATIVE_HISTORY_MAX_INFLIGHT_ITEMS_R412 = 2048;
 
-const NATIVE_HISTORY_MANIFEST_KEY_R409 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_manifest_v2`;
-const NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_manifest_backup_v2`;
-const NATIVE_HISTORY_BUCKET_KEY_R409 = (index: number, fingerprint: string) => `${NATIVE_HISTORY_STORAGE_KEY()}__r409_b${index}_${fingerprint}`;
+const NATIVE_HISTORY_MANIFEST_KEY_R409 = (storageKey = NATIVE_HISTORY_STORAGE_KEY()) => `${storageKey}__r409_manifest_v2`;
+const NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409 = (storageKey = NATIVE_HISTORY_STORAGE_KEY()) => `${storageKey}__r409_manifest_backup_v2`;
+const NATIVE_HISTORY_BUCKET_KEY_R409 = (index: number, fingerprint: string, storageKey = NATIVE_HISTORY_STORAGE_KEY()) => `${storageKey}__r409_b${index}_${fingerprint}`;
 
 type NativeHistoryBucketManifestR409 = { index: number; key: string; fingerprint: string; count: number };
 type NativeHistoryManifestR409 = {
@@ -126,7 +127,7 @@ function bucketIndexR409(saveKey: string): number {
 }
 
 export const NATIVE_HISTORY_TRANSACTION_VERSION_R411 = 1;
-const NATIVE_HISTORY_TRANSACTION_KEY_R411 = () => `${NATIVE_HISTORY_STORAGE_KEY()}__r411_transaction_v1`;
+const NATIVE_HISTORY_TRANSACTION_KEY_R411 = (storageKey = NATIVE_HISTORY_STORAGE_KEY()) => `${storageKey}__r411_transaction_v1`;
 const NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411 = `${HISTORY_KEY}_native_fallback_authority_r411`;
 
 type NativeHistoryTransactionJournalR411 = {
@@ -192,24 +193,29 @@ function manifestProtectedBucketKeysR411(...manifests: Array<NativeHistoryManife
   return new Set(manifests.flatMap((manifest) => (manifest?.buckets ?? []).map((bucket) => bucket.key)));
 }
 
-async function verifyNativePayloadR411(key: string, expected: string, label: string): Promise<void> {
+async function verifyNativePayloadR411(key: string, expected: string, label: string, assertOwner: () => void = () => undefined): Promise<void> {
+  assertOwner();
   const stored = await nativeVaultRead(key);
+  assertOwner();
   if (stored !== expected) throw new Error(`R411: confirmação de escrita falhou em ${label}.`);
 }
 
-async function cleanupInterruptedNativeTransactionR411(): Promise<void> {
+async function cleanupInterruptedNativeTransactionR411(storageKey = NATIVE_HISTORY_STORAGE_KEY(), assertOwner: () => void = () => undefined): Promise<void> {
+  assertOwner();
   if (nativeHistoryTransactionActiveR411) return;
   let journalRaw: string | null;
   try {
-    journalRaw = await nativeVaultRead(NATIVE_HISTORY_TRANSACTION_KEY_R411());
+    journalRaw = await nativeVaultRead(NATIVE_HISTORY_TRANSACTION_KEY_R411(storageKey));
   } catch {
     return;
   }
+  assertOwner();
   if (!journalRaw) return;
 
   const journal = parseNativeHistoryTransactionJournalR411(journalRaw);
   if (!journal) {
-    await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411()).catch(() => undefined);
+    await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411(storageKey)).catch(() => undefined);
+    assertOwner();
     return;
   }
 
@@ -217,13 +223,14 @@ async function cleanupInterruptedNativeTransactionR411(): Promise<void> {
   let backupRaw: string | null;
   try {
     [currentRaw, backupRaw] = await Promise.all([
-      nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()),
-      nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()),
+      nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409(storageKey)),
+      nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(storageKey)),
     ]);
   } catch {
     // Sem saber quais shards ainda estão protegidos por um manifesto, não removemos nada.
     return;
   }
+  assertOwner();
 
   const protectedKeys = manifestProtectedBucketKeysR411(
     parseNativeHistoryManifestR409(currentRaw),
@@ -231,14 +238,18 @@ async function cleanupInterruptedNativeTransactionR411(): Promise<void> {
   );
   let cleanupFailed = false;
   for (const key of journal.cleanupKeys) {
+    assertOwner();
     if (protectedKeys.has(key)) continue;
     try {
       await nativeVaultRemove(key);
+      assertOwner();
     } catch {
       cleanupFailed = true;
     }
   }
-  if (!cleanupFailed) await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411()).catch(() => undefined);
+  assertOwner();
+  if (!cleanupFailed) await nativeVaultRemove(NATIVE_HISTORY_TRANSACTION_KEY_R411(storageKey)).catch(() => undefined);
+  assertOwner();
 }
 
 function parseNativeHistoryManifestR409(raw: string | null): NativeHistoryManifestR409 | null {
@@ -401,14 +412,19 @@ async function readNativeHistoryShardedR409(): Promise<SavedAnalysis[] | null> {
   throw new Error('R410: nenhum snapshot nativo íntegro disponível.');
 }
 
-async function writeNativeHistoryShardedR409(items: SavedAnalysis[]): Promise<void> {
-  await cleanupInterruptedNativeTransactionR411();
+async function writeNativeHistoryShardedR409(items: SavedAnalysis[], assertOwner: () => void = () => undefined): Promise<void> {
+  assertOwner();
+  const storageKey = NATIVE_HISTORY_STORAGE_KEY();
+  await cleanupInterruptedNativeTransactionR411(storageKey, assertOwner);
+  assertOwner();
   nativeHistoryTransactionActiveR411 = true;
   let committed = false;
   try {
-    const currentManifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409()).catch(() => null);
+    const currentManifestRaw = await nativeVaultRead(NATIVE_HISTORY_MANIFEST_KEY_R409(storageKey)).catch(() => null);
+    assertOwner();
     const currentManifest = parseNativeHistoryManifestR409(currentManifestRaw);
-    const oldBackupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409()).catch(() => null);
+    const oldBackupRaw = await nativeVaultRead(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(storageKey)).catch(() => null);
+    assertOwner();
     const oldBackup = parseNativeHistoryManifestR409(oldBackupRaw);
     const currentByIndex = new Map((currentManifest?.buckets ?? []).map((bucket) => [bucket.index, bucket]));
     const buckets = Array.from({ length: NATIVE_HISTORY_BUCKET_COUNT_R409 }, () => [] as SavedAnalysis[]);
@@ -426,7 +442,7 @@ async function writeNativeHistoryShardedR409(items: SavedAnalysis[]): Promise<vo
         nextBuckets.push(previous);
         continue;
       }
-      const key = NATIVE_HISTORY_BUCKET_KEY_R409(index, fingerprint);
+      const key = NATIVE_HISTORY_BUCKET_KEY_R409(index, fingerprint, storageKey);
       staged.push({ key, payload, fingerprint, index, count: bucketItems.length });
       nextBuckets.push({ index, key, fingerprint, count: bucketItems.length });
     }
@@ -454,34 +470,35 @@ async function writeNativeHistoryShardedR409(items: SavedAnalysis[]): Promise<vo
 
     // O journal é persistido e confirmado antes de qualquer shard novo. Se o APK for
     // interrompido, a próxima abertura sabe exatamente quais arquivos podem ter ficado órfãos.
-    await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw);
-    await verifyNativePayloadR411(NATIVE_HISTORY_TRANSACTION_KEY_R411(), journalRaw, 'journal transacional');
+    await nativeVaultWrite(NATIVE_HISTORY_TRANSACTION_KEY_R411(storageKey), journalRaw);
+    await verifyNativePayloadR411(NATIVE_HISTORY_TRANSACTION_KEY_R411(storageKey), journalRaw, 'journal transacional', assertOwner);
 
     for (const entry of staged) {
       await nativeVaultWrite(entry.key, entry.payload);
-      await verifyNativePayloadR411(entry.key, entry.payload, `shard ${entry.index}`);
+      await verifyNativePayloadR411(entry.key, entry.payload, `shard ${entry.index}`, assertOwner);
     }
 
     // Snapshot anterior vira recuperação e é confirmado antes do ponteiro atual. Portanto, uma interrupção durante
     // a troca do manifesto nunca exige misturar uma geração antiga com shards novos.
     if (currentManifest && currentManifestRaw) {
-      await nativeVaultWrite(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw);
-      await verifyNativePayloadR411(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(), currentManifestRaw, 'manifesto de recuperação');
+      await nativeVaultWrite(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(storageKey), currentManifestRaw);
+      await verifyNativePayloadR411(NATIVE_HISTORY_BACKUP_MANIFEST_KEY_R409(storageKey), currentManifestRaw, 'manifesto de recuperação', assertOwner);
     }
 
-    await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw);
-    await verifyNativePayloadR411(NATIVE_HISTORY_MANIFEST_KEY_R409(), manifestRaw, 'manifesto atual');
+    await nativeVaultWrite(NATIVE_HISTORY_MANIFEST_KEY_R409(storageKey), manifestRaw);
+    await verifyNativePayloadR411(NATIVE_HISTORY_MANIFEST_KEY_R409(storageKey), manifestRaw, 'manifesto atual', assertOwner);
     committed = true;
 
     // O monólito legado só deixa de existir depois de o commit atual ter sido lido de volta.
-    await nativeVaultRemove(NATIVE_HISTORY_STORAGE_KEY()).catch(() => undefined);
+    await nativeVaultRemove(storageKey).catch(() => undefined);
+    assertOwner();
   } finally {
     nativeHistoryTransactionActiveR411 = false;
   }
 
   // Depois do commit, o coletor preserva automaticamente todos os shards referenciados pelo
   // atual e pelo backup e remove somente staging/gerações antigas realmente órfãs.
-  if (committed) await cleanupInterruptedNativeTransactionR411();
+  if (committed) await cleanupInterruptedNativeTransactionR411(storageKey, assertOwner);
 }
 
 export type LearnedCardMemory = {
@@ -680,14 +697,14 @@ export function buildDashboardStats(history: SavedAnalysis[]) {
   return { total, pending, complete, favorites, positions: positions.size, review, skillsTotal, skillsDone, completion };
 }
 
-export function openHistoryDb(): Promise<IDBDatabase> {
+export function openHistoryDb(databaseName = accountDatabaseName(HISTORY_DB_NAME)): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !('indexedDB' in window)) {
       reject(new Error('IndexedDB indisponível'));
       return;
     }
 
-    const request = window.indexedDB.open(accountDatabaseName(HISTORY_DB_NAME), 1);
+    const request = window.indexedDB.open(databaseName, 1);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(HISTORY_STORE_NAME)) {
@@ -741,8 +758,10 @@ export async function readLegacyIndexedHistoryForAdmin(): Promise<SavedAnalysis[
   });
 }
 
-export async function writeIndexedHistory(items: SavedAnalysis[]): Promise<void> {
-  const db = await openHistoryDb();
+export async function writeIndexedHistory(items: SavedAnalysis[], namespace = activeAccountNamespace()): Promise<void> {
+  assertHistoryNamespace(namespace);
+  const db = await openHistoryDb(`${HISTORY_DB_NAME}__${namespace}`);
+  try { assertHistoryNamespace(namespace); } catch (error) { db.close(); throw error; }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(HISTORY_STORE_NAME, 'readwrite');
     const store = tx.objectStore(HISTORY_STORE_NAME);
@@ -974,7 +993,18 @@ export type HistoryPersistenceResult =
 
 let historyPersistenceQueue: Promise<HistoryPersistenceResult> = Promise.resolve({ saved: true, backend: 'indexeddb', items: 0 });
 
-async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
+const HISTORY_ACCOUNT_CHANGED_ERROR = 'A conta mudou. O salvamento anterior do Cofre foi cancelado.';
+
+function assertHistoryNamespace(namespace: string) {
+  if (namespace !== activeAccountNamespace()) throw new Error(HISTORY_ACCOUNT_CHANGED_ERROR);
+}
+
+function cancelledHistoryCommit(): HistoryPersistenceResult {
+  return { saved: false, backend: 'none', items: 0, error: HISTORY_ACCOUNT_CHANGED_ERROR };
+}
+
+async function persistHistoryStoreImmediate(items: SavedAnalysis[], namespace: string): Promise<HistoryPersistenceResult> {
+  if (namespace !== activeAccountNamespace()) return cancelledHistoryCommit();
   const next = [...items];
   const compacted = compactHistoryForNativeStorage(next);
   let nativeError: unknown = null;
@@ -983,7 +1013,8 @@ async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<His
 
   if (nativeAvailableR411) {
     try {
-      await writeNativeHistoryShardedR409(compacted);
+      await writeNativeHistoryShardedR409(compacted, () => assertHistoryNamespace(namespace));
+      if (namespace !== activeAccountNamespace()) return cancelledHistoryCommit();
       removeAccountStorage(NATIVE_HISTORY_FALLBACK_AUTHORITY_KEY_R411);
       removeAccountStorage(HISTORY_KEY);
       for (const key of OLD_HISTORY_KEYS) removeAccountStorage(key);
@@ -993,8 +1024,10 @@ async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<His
     }
   }
 
+  if (namespace !== activeAccountNamespace()) return cancelledHistoryCommit();
   try {
-    await writeIndexedHistory(compacted);
+    await writeIndexedHistory(compacted, namespace);
+    if (namespace !== activeAccountNamespace()) return cancelledHistoryCommit();
     removeAccountStorage(HISTORY_KEY);
     if (nativeAvailableR411 && nativeError) {
       const authoritySaved = writeNativeHistorySecondaryAuthorityR411('indexeddb', next.length);
@@ -1012,6 +1045,7 @@ async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<His
     indexedError = cause;
   }
 
+  if (namespace !== activeAccountNamespace()) return cancelledHistoryCommit();
   const fallbackSaved = writeAccountStorage(HISTORY_KEY, JSON.stringify(compactHistoryForLocalFallback(next)));
   if (fallbackSaved) {
     if (nativeAvailableR411 && nativeError) {
@@ -1037,10 +1071,11 @@ async function persistHistoryStoreImmediate(items: SavedAnalysis[]): Promise<His
 }
 
 export function persistHistoryStore(items: SavedAnalysis[]): Promise<HistoryPersistenceResult> {
+  const namespace = activeAccountNamespace();
   const snapshot = [...items];
   historyPersistenceQueue = historyPersistenceQueue
     .catch(() => ({ saved: false, backend: 'none', items: 0, error: 'Falha anterior de salvamento ignorada.' } as HistoryPersistenceResult))
-    .then(() => persistHistoryStoreImmediate(snapshot));
+    .then(() => persistHistoryStoreImmediate(snapshot, namespace));
   return historyPersistenceQueue;
 }
 

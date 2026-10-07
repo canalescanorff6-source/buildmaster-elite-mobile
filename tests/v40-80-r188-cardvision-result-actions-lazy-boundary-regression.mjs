@@ -42,7 +42,7 @@ for (const movedMarker of [
 ]) assert.ok(!app.includes(movedMarker), `R188: implementação de resultado voltou ao shell: ${movedMarker}`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8',
+  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
   'R188: R119 não pode mudar durante modularização de resultado.',
 );
 assert.ok(String(pkg.scripts?.['test:v4080'] ?? '').includes('npm run test:r188'), 'R188: cadeia v40.80 deve preservar o gate R188.');

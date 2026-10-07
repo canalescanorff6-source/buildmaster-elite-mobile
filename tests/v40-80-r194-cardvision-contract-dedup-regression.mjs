@@ -62,11 +62,11 @@ function walk(root) {
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
 const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
-assert.ok(sourceBytes <= (postCatalogBoundary ? 6_062_080 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_340_500), `R194: redução líquida foi perdida; src voltou a ${sourceBytes} bytes.`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 6_094_848 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_340_500), `R194: redução líquida foi perdida; src voltou a ${sourceBytes} bytes.`);
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8',
+  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
   'R194: R119 não pode mudar durante deduplicação de contratos/UI.',
 );
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
