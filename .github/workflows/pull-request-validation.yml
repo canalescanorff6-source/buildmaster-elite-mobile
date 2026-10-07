@@ -133,6 +133,9 @@ jobs:
           npm run test:v3176
           npm run test:v3177
 
+      - name: Gate completo de publicação — regressões de calibração e fonte
+        run: npm run ci:gate
+
       - name: Cofre nativo — regressão completa v38.40
         run: npm run test:v3840
 
