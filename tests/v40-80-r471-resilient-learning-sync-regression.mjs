@@ -18,7 +18,8 @@ for (const marker of [
   "status: 'SYNCED'"
 ]) assert.ok(engine.includes(marker), `R471 sem marcador: ${marker}`);
 
-assert.ok(engine.includes('await queueIntelligentLearningSyncR471(finalized.sessionKey, cloudPayload)'));
+assert.match(engine,/await queueIntelligentLearningSyncR471\(finalized\.sessionKey,\s*cloudPayload,\s*current\)/, 'A fila precisa respeitar a mesma conta e geração da ficha.');
+assert.match(engine,/await sync\(envelope\.payload,\s*current\)/, 'O upload precisa receber a guarda até o último await.');
 assert.ok(engine.includes('void flushIntelligentLearningOutboxR471().catch'));
 assert.ok(engine.includes('left.attempts-right.attempts||left.createdAt.localeCompare(right.createdAt)'), 'R471 deve priorizar pendências com menos falhas para evitar starvation.');
 assert.ok(!engine.includes('bytea'));

@@ -28,9 +28,9 @@ async function beginReadingSessionR470(file: File) {
   const runtime = await import('@/lib/intelligentLearningR470');
   return runtime.beginReadingSessionR470(file);
 }
-async function markActiveReadingSessionR470(status: import('@/lib/intelligentLearningR470').ReadingStatusR470, patch: Parameters<typeof import('@/lib/intelligentLearningR470').markActiveReadingSessionR470>[1] = {}) {
+async function markActiveReadingSessionR470(status: import('@/lib/intelligentLearningR470').ReadingStatusR470, patch: Parameters<typeof import('@/lib/intelligentLearningR470').markActiveReadingSessionR470>[1] = {}, isAnalysisCurrent?: () => boolean) {
   const runtime = await import('@/lib/intelligentLearningR470');
-  return runtime.markActiveReadingSessionR470(status, patch);
+  return runtime.markActiveReadingSessionR470(status, patch, isAnalysisCurrent);
 }
 async function persistConfirmedAnalysisR470(result: AnalysisResult, payload: import('@/lib/intelligentLearningR470').PersistConfirmedAnalysisInputR470) {
   const runtime = await import('@/lib/intelligentLearningR470');
@@ -39,8 +39,12 @@ async function persistConfirmedAnalysisR470(result: AnalysisResult, payload: imp
 
 type SetState<T> = Dispatch<SetStateAction<T>>;
 export type CardVisionReadingModeR187 = 'precision' | 'fast';
+export type CardVisionAnalysisOutcomeR187 = {
+  status: 'preview' | 'review' | 'completed' | 'failed';
+  persistenceStarted: boolean;
+};
 type ReaderImageMemoryR187 = { replacePreview(blob: Blob): string; replaceEnhanced(blob: Blob): string; releaseEnhanced(): void; releaseAll(): void };
-type PreFinalConfirmationR187 = { playerName: string; level: string; points: string; preview: string | null } | null;
+type PreFinalConfirmationR187 = { playerName: string; level: string; points: string; preview: string | null;mainPosition?:string;uncertainKeys?:string[] } | null;
 
 function readerSessionGateR520(session: SinglePrintSession | null) {
   const keys: SingleFieldEvidence['key'][] = ['playerName', 'level', 'points'];
@@ -52,6 +56,7 @@ function readerSessionGateR520(session: SinglePrintSession | null) {
 }
 
 export type CardVisionReaderActionsInputR187 = {
+  isAnalysisCurrent?: () => boolean;
   selectedFile: File | null;
   cardCropResult: CardCropResult | null;
   pendingBackgroundCheckpoint: BackgroundOcrCheckpoint | null;
@@ -135,6 +140,7 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
   async function hydrateReviewFields(nextResult: AnalysisResult, sessionOverride: SinglePrintSession | null = singlePrintSession) {
     const { physicalEvidence } = await loadReaderEvidenceRuntimeR161();
     const hydration = physicalEvidence.buildReviewHydrationR134(nextResult, sessionOverride);
+    if (input.isAnalysisCurrent?.() === false) return hydration;
     setManualFields(hydration.manualFields);
     if (cardPositionOverride === 'AUTO' && POSITION_LABELS.some((item) => item.code === hydration.suggestedCardPosition)) setCardPositionOverride(hydration.suggestedCardPosition as PositionCode);
     if (playstyleOverride === 'AUTO' && hydration.suggestedOffensivePlaystyle !== 'AUTO') setPlaystyleOverride(hydration.suggestedOffensivePlaystyle);
@@ -142,16 +148,23 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
     return hydration;
   }
 
-  async function runAnalysis(confirmed = false) {
+  async function runAnalysis(confirmed = false): Promise<CardVisionAnalysisOutcomeR187> {
+    let persistenceStarted = false;
+    const current = () => input.isAnalysisCurrent?.() !== false;
+    const stale = (): CardVisionAnalysisOutcomeR187 => ({status:'failed',persistenceStarted});
+    if (!current()) return stale();
     setStatus(confirmed ? 'Finalizando plano Elite confirmado...' : 'Atualizando prévia para conferência...');
     try {
       const safeObjective: Objective = 'COMPETITIVE';
       if (objective !== 'COMPETITIVE') setObjective('COMPETITIVE');
       const lockedText = await textWithManualLocks(rawText, confirmed);
+      if (!current()) return stale();
       if (lockedText !== rawText) setRawText(lockedText);
       if (confirmed) {
-        await markActiveReadingSessionR470('NORMALIZED', { rawTextExcerpt: lockedText.slice(0, 12_000), qualityScore: null }).catch(() => null);
-        await markActiveReadingSessionR470('ENGINE_RUNNING').catch(() => null);
+        await markActiveReadingSessionR470('NORMALIZED', { rawTextExcerpt: lockedText.slice(0, 12_000), qualityScore: null }, current).catch(() => null);
+        if (!current()) return stale();
+        await markActiveReadingSessionR470('ENGINE_RUNNING', {}, current).catch(() => null);
+        if (!current()) return stale();
       }
       const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
@@ -160,11 +173,14 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       if (confirmed) {
         if (!confirmationDecisionR503.canPersistConfirmed) {
           await hydrateReviewFields(nextResult, singlePrintSession);
-          setDraftResult(nextResult); setResult(null); setManualMode(true); setStatus(confirmationDecisionR503.reason); return;
+          if (!current()) return stale();
+          setDraftResult(nextResult); setResult(null); setManualMode(true); setStatus(confirmationDecisionR503.reason); return {status:'review',persistenceStarted:false};
         }
         const edition = nextResult.parsed.editionIdentity;
-        if (edition?.officialCardIdVerified || edition?.catalogCardId) await markActiveReadingSessionR470('CARD_MATCHED').catch(() => null);
+        if (edition?.officialCardIdVerified || edition?.catalogCardId) await markActiveReadingSessionR470('CARD_MATCHED', {}, current).catch(() => null);
+        if (!current()) return stale();
         const confirmedReaderRuntime = singlePrintSession ? await loadReaderRuntimeR160() : null;
+        if (!current()) return stale();
         if (singlePrintSession && confirmedReaderRuntime) {
           const { createCorrectionRecord } = confirmedReaderRuntime.singlePrint;
           const correctionValues: Array<[SingleFieldEvidence['key'], string]> = [
@@ -173,28 +189,37 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
           ];
           for (const [field, correctedValue] of correctionValues) {
             const correction = createCorrectionRecord(singlePrintSession, field, correctedValue);
-            if (correction) void runtimePut('ocr-corrections', correction.id, correction).then(() => runtimeTrimStore('ocr-corrections', 120)).catch(() => undefined);
+            if (correction) void runtimePut('ocr-corrections', correction.id, correction).then(() => current() ? runtimeTrimStore('ocr-corrections', 120) : undefined).catch(() => undefined);
           }
         }
-        await persistConfirmedAnalysisR470(nextResult, { rawText: lockedText, sourceFileName: fileName, qualityScore: null }).catch(() => null);
+        if (!current()) return stale();
+        persistenceStarted = true;
+        await persistConfirmedAnalysisR470(nextResult, { rawText: lockedText, sourceFileName: fileName, qualityScore: null, isAnalysisCurrent: current }).catch(() => null);
+        if (!current()) return stale();
         saveLearnedCard({ playerName: nextResult.parsed.playerName, mainPosition: nextResult.parsed.mainPosition, playstyle: nextResult.parsed.playstyle, targetPosition, trainingPointsTotal: String(nextResult.trainingPointsTotal), updatedAt: new Date().toISOString() });
         if (singlePrintSession && confirmedReaderRuntime) {
           const { reviewWorkflow } = await loadReaderEvidenceRuntimeR161();
+          if (!current()) return stale();
           const confirmedSkills = reviewWorkflow.confirmedOcrSkillsForLearningR131(singlePrintSession);
           void confirmedReaderRuntime.learnedLexicon.learnConfirmedOcrBatch({ imageHash: singlePrintSession.imageHash, playerName: nextResult.parsed.playerName, skills: confirmedSkills, playerNameManuallyConfirmed: true, skillsManuallyConfirmed: false }).catch(() => undefined);
           void confirmedReaderRuntime.templateCalibration.learnOcrTemplateCalibration({ template: singlePrintSession.template, width: singlePrintSession.width, height: singlePrintSession.height, layoutBounds: singlePrintSession.layoutBounds, zones: singlePrintSession.template === 'detailed-profile' ? undefined : singlePrintSession.zoneBoxes, cardBox: cardCropResult?.box, qualityScore: singlePrintSession.scanQuality?.score, manualCrop: cardCropResult?.method === 'manual-adjustment' }).catch(() => undefined);
         }
+        if (!current()) return stale();
         setPremiumReadings([]); readerImageMemory.releaseAll(); setSelectedFile(null); setCardCropResult(null); setCardCropAdjustOpen(false);
         setQualityReport(null); setTotalReadingSession(null); setSinglePrintSession(null); setOcrCancelable(false); setReaderProgress(null);
         setEnhancedPreview(null); setPreview(null); setDraftResult(null); setResult(nextResult); setMainSection('resultado'); setStatus(nextResult.note);
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.(22);
+        return {status:'completed',persistenceStarted};
       } else {
         setDraftResult(nextResult); setResult(null); setStatus('Prévia Elite atualizada. Revise os dados e finalize o plano premium.');
+        return {status:'preview',persistenceStarted:false};
       }
     } catch (error) {
+      if (!current()) return stale();
       console.error('Falha ao gerar ficha', error);
       void recordSafeRuntimeError({ area: 'ficha', code: 'analysis_failed', message: error instanceof Error ? error.message : 'Falha ao gerar ficha' });
       setResult(null); setStatus('Não foi possível finalizar a ficha. Os dados foram preservados; revise objetivo, posição e pontos e tente novamente.');
+      return {status:'failed',persistenceStarted};
     }
   }
 
@@ -204,7 +229,7 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
       efhubCalibrationActiveRef, efhubCalibrationZonesRef,
       setReaderProgress, setLoading, setOcrCancelable, setResult, setDraftResult, setManualFields, setManualMode, setRawText,
       setOcrDone, setPremiumReadings, setTotalReadingSession, setSinglePrintSession, setStatus, setQualityReport, setOcrZones,
-      setPlayerCardImage, setCardCropResult, setFileName, setPreFinalConfirmation, openMainSection, runAnalysis,
+      setPlayerCardImage, setCardCropResult, setFileName, setPreFinalConfirmation, openMainSection, runAnalysis: async(confirmed) => { await runAnalysis(confirmed); },
       applyLearningToText, textWithManualLocks, hydrateReviewFields,
     };
   }

@@ -5,9 +5,24 @@ on:
     branches: [main]
     paths:
       - 'src/modules/card-reader-v2/**'
+      - 'src/modules/card-reader/readerAnalysisContextR163.ts'
+      - 'src/modules/card-reader/readerAnalysisRuntimeR163.ts'
+      - 'src/modules/card-reader/cardVisionReaderActionsR187.ts'
+      - 'src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts'
+      - 'src/components/PreFinalCardReviewR548.tsx'
+      - 'src/lib/readerCanonicalEvidenceR549.ts'
       - 'tests/v40-80-r542-reader-v2-*'
       - 'tests/v40-80-r544-field-aware-retry-regression.mjs'
       - 'tests/v40-80-r545-reader-success-flow-ui-regression.mjs'
+      - 'tests/reader-v2-*.ts'
+      - 'tests/reader-v2-*.mjs'
+      - 'tests/reader-prefinal-*.mjs'
+      - 'tests/helpers/reader-prefinal-react-harness.mjs'
+      - 'tests/reader-runtime-ci-gate-regression.mjs'
+      - 'scripts/run-reader-tests.mjs'
+      - 'scripts/vendor-tesseract-assets.mjs'
+      - 'package.json'
+      - 'package-lock.json'
       - 'src/modules/experience/statusToneR545.ts'
       - 'src/components/CardVisionApp.tsx'
       - 'tests/v40-80-r150-cardvision-shell-boundary-regression.mjs'
@@ -21,7 +36,43 @@ on:
       - 'tests/types-r542-zones/**'
       - 'tests/types-r542-bridge/**'
       - 'tests/types-r542-automatic/**'
+      - 'tsconfig.json'
+      - '.github/workflows/r542-reader-v2-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/modules/card-reader-v2/**'
+      - 'src/modules/card-reader/readerAnalysisContextR163.ts'
+      - 'src/modules/card-reader/readerAnalysisRuntimeR163.ts'
+      - 'src/modules/card-reader/cardVisionReaderActionsR187.ts'
+      - 'src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts'
+      - 'src/components/PreFinalCardReviewR548.tsx'
+      - 'src/lib/readerCanonicalEvidenceR549.ts'
+      - 'tests/v40-80-r542-reader-v2-*'
+      - 'tests/v40-80-r544-field-aware-retry-regression.mjs'
+      - 'tests/v40-80-r545-reader-success-flow-ui-regression.mjs'
+      - 'tests/reader-v2-*.ts'
+      - 'tests/reader-v2-*.mjs'
+      - 'tests/reader-prefinal-*.mjs'
+      - 'tests/helpers/reader-prefinal-react-harness.mjs'
+      - 'tests/reader-runtime-ci-gate-regression.mjs'
+      - 'scripts/run-reader-tests.mjs'
+      - 'scripts/vendor-tesseract-assets.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/modules/experience/statusToneR545.ts'
       - 'src/components/CardVisionApp.tsx'
+      - 'tests/v40-80-r150-cardvision-shell-boundary-regression.mjs'
+      - 'tests/v40-80-r160-lazy-reader-runtime-regression.mjs'
+      - 'tests/v40-80-r161-reader-surface-evidence-lazy-regression.mjs'
+      - 'tests/v40-80-r163-reader-analysis-controller-lazy-runtime-regression.mjs'
+      - 'tests/v40-80-r164-reader-interaction-light-model-regression.mjs'
+      - 'tests/v40-80-r185-cardvision-chrome-boundary-regression.mjs'
+      - 'tests/v40-80-r187-cardvision-reader-actions-boundary-regression.mjs'
+      - 'tests/types-r542/**'
+      - 'tests/types-r542-zones/**'
+      - 'tests/types-r542-bridge/**'
+      - 'tests/types-r542-automatic/**'
       - 'tsconfig.json'
       - '.github/workflows/r542-reader-v2-validation.yml'
   workflow_dispatch:
@@ -143,6 +194,25 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v5
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: Executar gate compartilhado do leitor padrão
+        timeout-minutes: 12
+        run: npm run test:reader
+      - name: Preparar Chromium e assets OCR locais
+        timeout-minutes: 10
+        run: |
+          npx --no-install playwright install --with-deps chromium
+          npm run vendor:ocr
+      - name: Validar revisão React e OCR real no navegador
+        timeout-minutes: 12
+        run: npm run test:reader:browser
       - name: Executar gate de integração R542
         run: node tests/v40-80-r542-reader-v2-integration-regression.mjs
       - name: R544 RED/GREEN — retry OCR por campo

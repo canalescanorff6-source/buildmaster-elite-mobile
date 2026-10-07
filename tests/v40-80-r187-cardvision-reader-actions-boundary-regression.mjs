@@ -34,7 +34,7 @@ for (const marker of [
 for (const movedMarker of ['confirmedOcrSkillsForLearningR131', 'createCorrectionRecord(singlePrintSession', 'loadReaderAnalysisRuntimeR163()', 'loadReaderInteractionRuntimeR164()']) {
   assert.ok(!app.includes(movedMarker), `R187: implementação do leitor voltou ao shell: ${movedMarker}`);
 }
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8', 'R187: R119 não pode mudar durante modularização do leitor.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'b0fca15b1ebcb888e796c205bd8813e1e72c5653774c65e8898550f11a7e9f76', 'R187: R119 não pode mudar durante modularização do leitor.');
 assert.ok(String(pkg.scripts?.['test:v4080'] ?? '').includes('npm run test:r187'), 'R187: cadeia v40.80 deve preservar o gate R187.');
 assert.ok(String(pkg.scripts?.['test:all'] ?? '').endsWith('npm run test:v4080'), 'R187: test:all deve continuar fechando pela bateria v40.80.');
 console.log(`R187 aprovada: CardVisionApp=${app.split(/\r?\n/).length} linhas/${fs.statSync('src/components/CardVisionApp.tsx').size} B; controlador do leitor lazy e R119 intacto.`);

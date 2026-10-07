@@ -35,7 +35,7 @@ function parseAttributeValues(text: string) {
   const numericTokens = text.match(/\b\d{1,3}\b/g) ?? [];
   return numericTokens
     .map((token) => Number(token))
-    .filter((value) => Number.isFinite(value) && value >= 0 && value <= 103);
+    .filter((value) => Number.isFinite(value) && value >= 1 && value <= 110);
 }
 
 function countAttributeValues(text: string) {
@@ -277,7 +277,7 @@ async function readAttributeField(
   }
 
   if (exact && stripFields.length === READER_V2_ATTRIBUTE_VALUE_STRIPS.length) {
-    return mergeAttributeFields(zone, stripFields);
+    return { ...mergeAttributeFields(zone, stripFields), attributeValues: stripFields.flatMap(field => parseAttributeValues(field.value)) };
   }
 
   try {
@@ -361,8 +361,8 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
   const parsedAttributeValues = attributes ? parseAttributeValues(attributes.value) : [];
   const attributesRead = parsedAttributeValues.length;
   const attributesExpected = 26;
-  const attributeValues = attributesRead === attributesExpected ? parsedAttributeValues : undefined;
-  if (attributes && attributesRead !== attributesExpected) addUncertain(uncertainKeys, 'attributes');
+  const attributeValues = attributesRead === attributesExpected ? attributes?.attributeValues : undefined;
+  if (attributes && (attributesRead !== attributesExpected || !attributeValues)) addUncertain(uncertainKeys, 'attributes');
 
   const rawText = fields
     .map((field) => field.rawText?.trim() || field.value.trim())

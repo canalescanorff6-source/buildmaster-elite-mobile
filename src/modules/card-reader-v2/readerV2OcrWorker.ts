@@ -42,6 +42,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
   let failed = false;
   let error: string | null = null;
   let terminated = false;
+  let interruptRecognition: (() => void) | null = null;
 
   async function recycleWorker() {
     const active = worker;
@@ -112,7 +113,10 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
       assertUsable();
       const active = await start();
       try {
-        const result = await active.recognize(input, key);
+        const interrupted = new Promise<never>((_resolve, reject) => {
+          interruptRecognition = () => reject(new Error('Sessão OCR cancelada.'));
+        });
+        const result = await Promise.race([active.recognize(input, key), interrupted]);
         const text = result.text?.trim() ?? '';
         error = null;
         stage = 'reading';
@@ -145,6 +149,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
     try {
       return await operation;
     } finally {
+      interruptRecognition = null;
       pendingRecognitions = Math.max(0, pendingRecognitions - 1);
     }
   }
@@ -153,6 +158,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
     if (cancelled || closed) return;
     cancelled = true;
     stage = 'cancelled';
+    interruptRecognition?.();
 
     // R543-A: hard-stop primeiro. Não esperar uma fila cujo recognize pode estar travado.
     await terminateWorker().catch(() => undefined);

@@ -39,6 +39,7 @@ import { CREATOR_BUILD_RESEARCH_EVENT, COMPETITIVE_FUSION_EVENT, GLOBAL_PRO_BUIL
 import { clearActiveSessionSnapshotR157 } from '@/modules/session/activeSessionRepositoryR137';
 import type { ResultTabRequest } from '@/components/result/ResultWorkspace';
 import { removeAccountStorage, writeAccountStorage } from '@/lib/accountStorage';
+import { captureReaderContextAuthorityR549 } from '@/lib/readerContextAuthorityR549';
 import type { AccentTheme, AppTheme, DensityMode, MotionPreference, PerformanceMode, PremiumVisualPreset, TextScale } from '@/lib/easyExperience';
 import { isStartupSafeModeV3840, safeStartupInitializerV3840 } from '@/lib/startupResilienceV3840';
 import type { PremiumCleanExportFormat } from '@/lib/premiumCleanResultV3810';
@@ -71,6 +72,8 @@ import { createDefaultVaultFilterStateR151, type CardVisionHistoryFilterR151, ty
 import { useCardVisionVaultCoordinatorR153 } from '@/modules/vault/useCardVisionVaultCoordinatorR153';
 import { CardVisionAppChromeR185 } from '@/components/CardVisionAppChromeR185';
 import { PremiumBrand } from '@/components/PremiumBrand';
+import { PreFinalCardReviewR548 } from '@/components/PreFinalCardReviewR548';
+import type { ReaderV2PreFinalConfirmation } from '@/modules/card-reader-v2/readerV2Review';
 import { FORMATION_SELECTION_OPTIONS_R191, SETTINGS_COMMANDS_R195 } from '@/modules/experience/cardVisionShellCatalogR191';
 type ReaderCaptureMode = 'single' | 'complete';
 
@@ -94,6 +97,8 @@ export function CardVisionApp() {
   const [preview, setPreview] = useState<string | null>(null), [playerCardImage, setPlayerCardImage] = useState<string | null>(null);
   const [cardCropResult, setCardCropResult] = useState<CardCropResult | null>(null), [cardCropAdjustOpen, setCardCropAdjustOpen] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null), [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const readerContextRefR549 = useRef({ selectedFile, fileName });
+  readerContextRefR549.current = { selectedFile, fileName };
   const [ocrDone, setOcrDone] = useState(false);
   const [rawText, setRawText] = useState('');
   const [objective, setObjective] = useState<Objective>('COMPETITIVE');
@@ -134,8 +139,7 @@ export function CardVisionApp() {
   const [draftResult, setDraftResult] = useState<AnalysisResult | null>(null);
   // BM_PREFINAL_CONFIRMATION_R16
   // BM_PREFINAL_VISUAL_R104_STATE
-  const [preFinalConfirmation, setPreFinalConfirmation] = useState<{ playerName: string; level: string; points: string; preview: string | null } | null>(null);
-  const [preFinalGenerateRequested, setPreFinalGenerateRequested] = useState(false);
+  const [preFinalConfirmation, setPreFinalConfirmation] = useState<ReaderV2PreFinalConfirmation | null>(null);
   const [manualFields, setManualFields] = useState<ManualFields>(emptyManualFields());
   const [manualMode, setManualMode] = useState(false);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
@@ -476,7 +480,7 @@ export function CardVisionApp() {
     resetAll: () => {
       readerImageMemoryR156.releaseAll();
       setPreview(null); setPlayerCardImage(null); setCardCropResult(null); setCardCropAdjustOpen(false); setFileName(null); setSelectedFile(null);
-      setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setPreFinalConfirmation(null); setPreFinalGenerateRequested(false); setManualFields(emptyManualFields()); setManualMode(false);
+      setOcrDone(false); setRawText(''); setResult(null); setDraftResult(null); setPreFinalConfirmation(null); setManualFields(emptyManualFields()); setManualMode(false);
       setTargetPosition('AUTO'); setUsageFunction('AUTO'); setCardPositionOverride('AUTO'); setPlaystyleOverride('AUTO'); setQualityReport(null); setPremiumReadings([]);
       setTotalReadingSession(null); setSinglePrintSession(null);  setEnhancedPreview(null); setActiveHistoryId(null);
       clearActiveSessionSnapshotR157(ACTIVE_SESSION_KEY);
@@ -526,38 +530,14 @@ export function CardVisionApp() {
     openCofreDeJogadores, openIntegratedPlayer, saveCurrentFicha, toggleSavedSkill,
     updateAlwaysDeletePermanently, batchFavoriteHistory, batchStatusHistory, mergeSelectedHistory,
   } = vaultActionsR185;
-  function confirmPreFinalCardDataR16() {
-    if (!preFinalConfirmation) return;
-    const playerName = preFinalConfirmation.playerName.trim();
-    const level = preFinalConfirmation.level.replace(/[^0-9]/g, '').slice(0, 3);
-    const points = preFinalConfirmation.points.replace(/[^0-9]/g, '').slice(0, 4);
-    if (!playerName) {
-      setStatus('Confira o nome do jogador antes de gerar a ficha.');
-      return;
-    }
-    if (!level || Number(level) <= 0) {
-      setStatus('Informe o nível máximo correto da carta antes de gerar a ficha.');
-      return;
-    }
-    if (!points || Number(points) < 0) {
-      setStatus('Informe os pontos de progressão disponíveis antes de gerar a ficha.');
-      return;
-    }
-    setManualFields((current) => ({
-      ...current,
-      playerName,
-      level,
-      trainingPointsTotal: points
-    }));
-    setPreFinalGenerateRequested(true);
-    setStatus('Dados confirmados. Recalculando a ficha com o nível e o orçamento informados...');
+  async function confirmPreFinalCardDataR16(confirmedFields: ManualFields) {
+    const confirmedReview = preFinalConfirmation;
+    setManualFields(confirmedFields);
+    const { createCardVisionReaderActionsR187 } = await import('@/modules/card-reader/cardVisionReaderActionsR187');
+    const outcome = await createCardVisionReaderActionsR187({ ...readerActionContextR187, manualFields: confirmedFields }).runAnalysis(true);
+    if (outcome?.status === 'completed') setPreFinalConfirmation(current => current === confirmedReview ? null : current);
+    return outcome;
   }
-  useEffect(() => {
-    if (!preFinalGenerateRequested) return;
-    setPreFinalGenerateRequested(false);
-    setPreFinalConfirmation(null);
-    runAnalysis(true);
-  }, [preFinalGenerateRequested, manualFields.playerName, manualFields.level, manualFields.trainingPointsTotal]);
   useEffect(() => {
     if (!startupGateReady || startupSafeMode || !sessionHydrated) return;
     if (!deferredStartupReadyR155 && mainSection !== 'leitor') return;
@@ -718,7 +698,6 @@ export function CardVisionApp() {
     setTotalReadingSession(null);
     setSinglePrintSession(null);
     setPreFinalConfirmation(null);
-    setPreFinalGenerateRequested(false);
     setManualMode(true);
     setManualFields({
       playerName: card.playerName,
@@ -767,7 +746,6 @@ export function CardVisionApp() {
     setTotalReadingSession(null);
     setSinglePrintSession(null);
     setPreFinalConfirmation(null);
-    setPreFinalGenerateRequested(false);
     setManualMode(true);
     setManualFields({
       playerName: player.name,
@@ -816,6 +794,7 @@ export function CardVisionApp() {
     setStatus('Central de Precisão Manual aberta. Preencha os dados, revise e finalize o plano premium.');
   }
   const readerActionContextR187: CardVisionReaderActionsInputR187 = {
+    isAnalysisCurrent: captureReaderContextAuthorityR549(readerContextRefR549),
     selectedFile, cardCropResult, pendingBackgroundCheckpoint, readerImageMemory: readerImageMemoryR156,
     mainSection, rawText, fileName, preview, qualityReport, readingMode, objective, targetPosition, usageFunction, tacticalProfile,
     manualFields, cardPositionOverride, playstyleOverride, defensivePlaystyleOverride, singlePrintSession,
@@ -1473,134 +1452,21 @@ export function CardVisionApp() {
         {(mainSection === 'resultado' || mainSection === 'leitor' || mainSection === 'manual') && (
         <section className="preview-panel bm2820-preview-panel">
           {mainSection === 'resultado' ? (
-            loading && !result && !draftResult ? (
+            preFinalConfirmation ? (
+              <PreFinalCardReviewR548
+                preFinalConfirmation={preFinalConfirmation} setPreFinalConfirmation={setPreFinalConfirmation}
+                manualFields={manualFields} setManualFields={setManualFields}
+                cardPositionOverride={cardPositionOverride} setCardPositionOverride={setCardPositionOverride}
+                targetPosition={targetPosition} setTargetPosition={setTargetPosition}
+                status={status} setStatus={setStatus} onGenerate={confirmPreFinalCardDataR16}
+                onCompleted={() => setPreFinalConfirmation(current => current === preFinalConfirmation ? null : current)}
+              />
+            ) : loading && !result && !draftResult ? (
               <div className="creation-processing-card luxury-panel" role="status" aria-live="polite">
                 <div className="creation-processing-visual"><span><ScanText size={30} /></span><i /><i /><i /></div>
                 <div><p className="kicker"><Loader2 className="spin" size={14} /> Leitura em andamento</p><h2>Analisando carta</h2><p>{status}</p></div>
                 <div className="creation-processing-steps"><span className="done"><CheckCircle2 size={15} /> Imagem recebida</span><span className="active"><Loader2 className="spin" size={15} /> Lendo dados</span><span>Validação automática</span><span>Ficha final</span></div>
               </div>
-            ) : preFinalConfirmation ? (
-              <section className="luxury-panel" aria-label="Confirmação antes da ficha" style={{ maxWidth: 620, width: '100%', margin: '0 auto', padding: 22, display: 'grid', gap: 18 }}>
-                <div style={{ display: 'grid', gap: 6 }}>
-                  <p className="kicker"><CheckCircle2 size={15} /> Leitura concluída</p>
-                  <h2 style={{ margin: 0 }}>Confira antes de gerar a ficha</h2>
-                  <p style={{ margin: 0, opacity: .78 }}>Nome, nível e progressão já vêm preenchidos pela leitura. Só altere algum campo se o OCR tiver identificado algo errado.</p>
-                </div>
-                {/* BM_PREFINAL_VISUAL_R104_UI */}
-                {preFinalConfirmation.preview ? (
-                  <div
-                    aria-label="Print original para conferência"
-                    style={{
-                      display: 'grid',
-                      gap: 10,
-                      padding: 12,
-                      borderRadius: 16,
-                      border: '1px solid rgba(96,165,250,.32)',
-                      background: 'rgba(5,15,29,.78)'
-                    }}
-                  >
-                    <div style={{ display: 'grid', gap: 3 }}>
-                      <strong>Print original da carta</strong>
-                      <span style={{ fontSize: 12, opacity: .72, lineHeight: 1.4 }}>
-                        Confira o nível máximo e os pontos de progressão no mesmo print usado no scan.
-                      </span>
-                    </div>
-                    <a
-                      href={preFinalConfirmation.preview}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="Abrir print original em tamanho maior"
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        maxHeight: '46vh',
-                        overflow: 'auto',
-                        borderRadius: 13,
-                        background: '#050b14',
-                        border: '1px solid rgba(255,255,255,.08)'
-                      }}
-                    >
-                      <img
-                        src={preFinalConfirmation.preview}
-                        alt="Print original usado na leitura"
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          height: 'auto',
-                          maxHeight: '46vh',
-                          objectFit: 'contain',
-                          objectPosition: 'top center'
-                        }}
-                      />
-                    </a>
-                    <small style={{ opacity: .68 }}>
-                      Toque na imagem para abrir maior. Ela fica presa a esta leitura até você gerar a ficha.
-                    </small>
-                  </div>
-                ) : (
-                  <div
-                    role="status"
-                    style={{
-                      padding: 11,
-                      borderRadius: 13,
-                      border: '1px solid rgba(245,158,11,.28)',
-                      background: 'rgba(120,72,8,.12)',
-                      fontSize: 12,
-                      lineHeight: 1.45
-                    }}
-                  >
-                    O print desta leitura não está disponível. Volte à leitura e selecione a imagem novamente.
-                  </div>
-                )}
-                <label style={{ display: 'grid', gap: 7 }}>
-                  <strong>Nome do jogador</strong>
-                  <input
-                    value={preFinalConfirmation.playerName}
-                    onChange={(event) => setPreFinalConfirmation((current) => current ? { ...current, playerName: event.target.value } : current)}
-                    autoComplete="off"
-                    inputMode="text"
-                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
-                  />
-                </label>
-                <label style={{ display: 'grid', gap: 7 }}>
-                  <strong>Nível máximo da carta</strong>
-                  <input
-                    value={preFinalConfirmation.level}
-                    onChange={(event) => {
-                      const nextLevel = event.target.value.replace(/[^0-9]/g, '').slice(0, 3);
-                      const levelNumber = Number(nextLevel || 0);
-                      const nextPoints = levelNumber > 0 ? String(Math.max(0, (levelNumber - 1) * 2)) : '';
-                      setPreFinalConfirmation((current) => current ? { ...current, level: nextLevel, points: nextPoints } : current);
-                    }}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
-                  />
-                  {/* BM_PREFINAL_AUTO_PROGRESS_R105 */}
-                  <small style={{ opacity: .68 }}>
-                    O progresso é recalculado automaticamente pelo nível: 31 → 60, 34 → 66.
-                  </small>
-                </label>
-                <label style={{ display: 'grid', gap: 7 }}>
-                  <strong>Pontos de progressão disponíveis</strong>
-                  <input
-                    value={preFinalConfirmation.points}
-                    onChange={(event) => setPreFinalConfirmation((current) => current ? { ...current, points: event.target.value.replace(/[^0-9]/g, '').slice(0, 4) } : current)}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    style={{ width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="elite-button"
-                  onClick={confirmPreFinalCardDataR16}
-                  disabled={preFinalGenerateRequested}
-                  style={{ minHeight: 54, width: '100%', justifyContent: 'center' }}
-                >
-                  {preFinalGenerateRequested ? <><Loader2 className="spin" size={17} /> Gerando ficha...</> : <><Sparkles size={17} /> Gerar ficha</>}
-                </button>
-              </section>
             ) : result ? (            <ResultSafetyBoundary onRecover={() => { setResult(null); setDraftResult(null); setMainSection('manual'); setStatus('Resultado incompatível removido. Revise os dados e gere novamente.'); }}><ResultCard result={result} playerImage={playerCardImage ?? preview} skillProgress={activeSavedAnalysis?.skillProgress} onSkillToggle={toggleSavedSkill} onSaveFicha={saveCurrentFicha} saveBusy={activeVaultActionKeysR154.includes('save-current')} onRecalculate={() => runAnalysis(false)} onExportReport={exportCurrentReport} onPrintReport={printCurrentReport} onExportImage={exportCurrentVisualCard} onExportText={exportCurrentMarkdownReport} onRejectSkill={rejectSkillLocally} onPromoteSkill={promoteSkillLocally} onReplaceOwnedSkill={replaceOwnedSkillIntelligently} onRejectImpeto={rejectImpetoLocally} onPromoteImpeto={promoteImpetoLocally} onResetCorrections={resetLocalCorrectionsForCurrent} onApplyGameplayProfile={applyGameplayProfile} rulesUrl={rulesUrl} setRulesUrl={setRulesUrl} rulesStatus={rulesStatus} rulePackInfo={rulePackInfo} onLoadRulesFromUrl={loadRulesFromUrl} onResetRules={resetRulesToDefault} onExportRulePack={exportRulePack} onRestoreRulePackVersion={restoreRulePackVersion} advancedMode={advancedMode} requestedTab={resultTabRequest} onRequestedTabHandled={() => setResultTabRequest(null)} /></ResultSafetyBoundary>) : draftResult ? (            <ReviewPanel
               draft={draftResult}
               playerImage={playerCardImage ?? preview}

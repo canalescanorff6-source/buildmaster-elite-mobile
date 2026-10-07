@@ -46,13 +46,13 @@ jobs:
           gh release download "$RELEASE_TAG_INPUT" --pattern 'update-manifest-v*.json' --dir verify-r532
           MANIFEST="$(find verify-r532 -maxdepth 1 -type f -name 'update-manifest-v*.json' | head -n 1)"
           test -s "$MANIFEST" || { echo '::error::Manifesto imutável não encontrado.'; exit 1; }
-          ASSET_NAME="$(node -e "const m=require('./'$MANIFEST); process.stdout.write(m.assetName)")"
+          ASSET_NAME="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(m.assetName)' "$MANIFEST")"
           test -n "$ASSET_NAME" || { echo '::error::assetName ausente no manifesto.'; exit 1; }
           gh release download "$RELEASE_TAG_INPUT" --pattern "$ASSET_NAME" --dir verify-r532
           APK="verify-r532/$ASSET_NAME"
           test -s "$APK" || { echo '::error::APK imutável não encontrado.'; exit 1; }
           ACTUAL_SHA="$(sha256sum "$APK" | awk '{print $1}')"
-          MANIFEST_SHA="$(node -e "const m=require('./'$MANIFEST); process.stdout.write(m.checksum)")"
+          MANIFEST_SHA="$(node -e 'const fs=require("node:fs"); const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(m.checksum)' "$MANIFEST")"
           test "$ACTUAL_SHA" = "$MANIFEST_SHA" || { echo '::error::Checksum do APK diverge do manifesto.'; exit 1; }
           node - "$MANIFEST" <<'NODE' >> "$GITHUB_ENV"
           const fs = require('node:fs');

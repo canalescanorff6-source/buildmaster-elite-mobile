@@ -40,6 +40,7 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
   let imageSession: ReaderV2ImageSession | null = null;
   let workerSession: ReaderV2OcrWorkerSession | null = null;
   let running = false;
+  let generation = 0;
   let state: ReaderV2SessionSnapshot = {
     stage: 'idle',
     mode: null,
@@ -63,12 +64,14 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
   }
 
   function publish(progress: ReaderV2Progress) {
+    if (!running || state.cancelled) return;
     syncFromWorker(progress.stage, state.mode);
     dependencies.onProgress?.(progress);
   }
 
   async function select(file: File | Blob) {
     if (running) throw new Error('Não é possível trocar a imagem enquanto o Reader V2 está lendo.');
+    generation += 1;
     imageSession?.close();
     imageSession = null;
     if (workerSession) await workerSession.close().catch(() => undefined);
@@ -89,13 +92,23 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
     if (running) throw new Error('O Reader V2 já está executando uma leitura.');
 
     running = true;
+    const activeGeneration = generation;
+    const assertCurrent = () => {
+      if (activeGeneration !== generation || state.cancelled) throw new Error('Leitura do Reader V2 cancelada ou encerrada.');
+    };
     state = { ...state, stage: 'opening', mode, cancelled: false, error: null };
 
     try {
       imageSession?.close();
-      imageSession = await dependencies.openImageSession(selectedFile);
+      const openedImage = await dependencies.openImageSession(selectedFile);
+      if (activeGeneration !== generation || state.cancelled) {
+        openedImage.close();
+        assertCurrent();
+      }
+      imageSession = openedImage;
       workerSession = dependencies.createWorkerSession();
       await workerSession.start();
+      assertCurrent();
       syncFromWorker('reading', mode);
 
       const shared = {
@@ -106,9 +119,11 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
       const evidence = mode === 'automatic'
         ? await dependencies.readAutomatic(shared)
         : await dependencies.readZones({ ...shared, zones: calibration });
+      assertCurrent();
 
       state = { ...syncFromWorker('closing-ocr', mode), stage: 'closing-ocr' };
       await workerSession.close();
+      assertCurrent();
       const closedSnapshot = { ...syncFromWorker('ocrClosed', mode) };
       dependencies.assertReviewReady(closedSnapshot);
 
@@ -117,6 +132,7 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
       running = false;
       return { evidence, review, ocrSnapshot: closedSnapshot };
     } catch (cause) {
+      if (activeGeneration !== generation || state.cancelled) throw cause;
       running = false;
       const message = cause instanceof Error ? cause.message : String(cause);
       if (workerSession) await workerSession.cancel().catch(() => undefined);
@@ -132,7 +148,9 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
   }
 
   async function cancel() {
+    generation += 1;
     running = false;
+    state = { ...state, stage: 'cancelled', cancelled: true };
     if (workerSession) await workerSession.cancel().catch(() => undefined);
     imageSession?.close();
     imageSession = null;
@@ -146,6 +164,7 @@ export function createReaderV2Orchestrator(dependencies: ReaderV2OrchestratorDep
   }
 
   function close() {
+    generation += 1;
     running = false;
     imageSession?.close();
     imageSession = null;

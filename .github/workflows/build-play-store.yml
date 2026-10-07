@@ -150,6 +150,14 @@ jobs:
           npm run ci:verify
           npm run release:play-preflight
 
+      - name: Validar runtime do leitor padrão antes do AAB
+        timeout-minutes: 12
+        run: npm run test:reader
+
+      - name: Validar preservação de dados e evidências antes do AAB
+        timeout-minutes: 12
+        run: npm run test:audit
+
       - name: Preparar OCR local e gerar site estático para Capacitor
         run: |
           export NEXT_PUBLIC_BUILDMASTER_BUILD_ID="$SOURCE_SHA"

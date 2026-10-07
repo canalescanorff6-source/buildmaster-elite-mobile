@@ -24,9 +24,13 @@ export type StoredTacticalImage = {
 
 export type TacticalImageSummary = Omit<StoredTacticalImage, 'original' | 'thumbnail'> & { thumbnail: Blob };
 
-function openDatabase(): Promise<IDBDatabase> {
+function assertDatabaseOwner(databaseName: string) {
+  if (databaseName !== accountDatabaseName(DB_BASE_NAME)) throw new Error('A conta mudou. A operação anterior da galeria foi cancelada.');
+}
+
+function openDatabase(databaseName: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(accountDatabaseName(DB_BASE_NAME), DB_VERSION);
+    const request = indexedDB.open(databaseName, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
@@ -36,9 +40,11 @@ function openDatabase(): Promise<IDBDatabase> {
   });
 }
 
-async function run<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore, resolve: (value: T) => void, reject: (reason?: unknown) => void) => void): Promise<T> {
-  const db = await openDatabase();
-  return new Promise<T>((resolve, reject) => {
+async function run<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore, resolve: (value: T) => void, reject: (reason?: unknown) => void) => void, databaseName = accountDatabaseName(DB_BASE_NAME)): Promise<T> {
+  assertDatabaseOwner(databaseName);
+  const db = await openDatabase(databaseName);
+  try { assertDatabaseOwner(databaseName); } catch (error) { db.close(); throw error; }
+  const result = await new Promise<T>((resolve, reject) => {
     const transaction = db.transaction(STORE, mode);
     const store = transaction.objectStore(STORE);
     transaction.oncomplete = () => db.close();
@@ -46,6 +52,8 @@ async function run<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore, 
     transaction.onabort = () => { db.close(); reject(transaction.error || new Error('Operação cancelada.')); };
     action(store, resolve, reject);
   });
+  assertDatabaseOwner(databaseName);
+  return result;
 }
 
 export async function listTacticalImages(): Promise<TacticalImageSummary[]> {
@@ -138,6 +146,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export async function importTacticalImageLibrary(value: unknown): Promise<number> {
+  const databaseName = accountDatabaseName(DB_BASE_NAME);
   if (!Array.isArray(value)) throw new Error('A galeria de imagens do backup é inválida.');
   if (value.length > IMAGE_IMPORT_LIMITS.maxLibraryItems) throw new Error('O backup ultrapassa o limite de 40 imagens.');
   const prepared: StoredTacticalImage[] = [];
@@ -147,9 +156,11 @@ export async function importTacticalImageLibrary(value: unknown): Promise<number
     const originalBlob = dataUrlToBlob(raw.originalDataUrl);
     const file = new File([originalBlob], String(raw.name || 'imagem-restaurada').slice(0, 120), { type: originalBlob.type || String(raw.mime || '') });
     const validated = await validateImageFile(file);
+    assertDatabaseOwner(databaseName);
     const thumbnail = validated.previewAvailable
       ? await createImageThumbnail(validated.sanitizedBlob)
       : createUnavailableImageThumbnail(file.name);
+    assertDatabaseOwner(databaseName);
     totalBytes += validated.size + thumbnail.size;
     if (totalBytes > IMAGE_IMPORT_LIMITS.maxLibraryBytes) throw new Error('A galeria restaurada ultrapassa 160 MB.');
     const now = new Date().toISOString();
@@ -181,6 +192,6 @@ export async function importTacticalImageLibrary(value: unknown): Promise<number
         request.onsuccess = () => { pending -= 1; if (pending === 0) resolve(); };
       }
     };
-  });
+  }, databaseName);
   return prepared.length;
 }

@@ -1,4 +1,5 @@
 import type { CardEvidenceStateR419, ParsedCard } from '../../lib/analyzerDomain';
+import { ATTRIBUTE_PT } from '../../lib/analyzerDomain';
 
 export const CARD_TRUTH_LAYER_R501_VERSION = '40.80-r501-card-truth-layer-v2' as const;
 
@@ -22,9 +23,15 @@ export type CriticalAttributeEvidenceR501 = {
 };
 
 export function deriveCriticalAttributeEvidenceR501(parsed: ParsedCard): CriticalAttributeEvidenceR501 {
-  const declared = Number(parsed.evidence?.attributeCount ?? 0);
-  const actual = Object.values(parsed.attributes ?? {}).filter((value) => Number.isFinite(Number(value))).length;
-  const count = Math.max(Number.isFinite(declared) ? Math.max(0, Math.floor(declared)) : 0, actual);
+  // A declared OCR count is metadata; only actual, valid attribute values can
+  // authorize training. Otherwise a stale count can certify an empty card.
+  const count = Object.entries(parsed.attributes ?? {}).filter(([key, value]) =>
+    Object.prototype.hasOwnProperty.call(ATTRIBUTE_PT, key)
+    && typeof value === 'number'
+    && Number.isFinite(value)
+    && value >= 1
+    && value <= 110
+  ).length;
   const minimum = parsed.mainPosition === 'GK' ? 4 : 10;
   const coveragePercent = Math.max(0, Math.min(100, Math.round((count / minimum) * 100)));
 
@@ -81,6 +88,9 @@ export function deriveCardTruthCertificationR501(parsed: ParsedCard): CardTruthC
   const trainingBudgetState = evidenceState(parsed.evidence?.trainingBudgetStateR419);
   const levelState = evidenceState(parsed.evidence?.levelStateR419);
   const reasons = [...(parsed.evidence?.criticalReasonsR419 ?? [])];
+  const attributeEvidence = deriveCriticalAttributeEvidenceR501(parsed);
+  const totalAttributes = Object.keys(ATTRIBUTE_PT).length;
+  const completeAttributes = attributeEvidence.count === totalAttributes;
 
   if (trainingBudgetState !== 'TRUSTED') {
     reasons.push(`Orçamento de progressão não confiável: ${trainingBudgetState}.`);
@@ -102,11 +112,12 @@ export function deriveCardTruthCertificationR501(parsed: ParsedCard): CardTruthC
     || (parsed.evidence?.positionLocked === true && parsed.evidence?.playstyleLocked === true);
 
   if (criticalState === 'TRUSTED'
+      && completeAttributes
       && levelState === 'TRUSTED'
       && identityPresent
       && identityLocked
       && confidencePercent >= 90) {
-    reasons.push('Cobertura crítica, identidade, nível e PP atingiram o contrato final R501.');
+    reasons.push('Todos os atributos, identidade, nível e PP atingiram o contrato final R501.');
     return {
       state: 'FINAL_CERTIFIED',
       confidencePercent,
@@ -146,7 +157,8 @@ export function deriveCardTruthCertificationR501(parsed: ParsedCard): CardTruthC
     };
   }
 
-  if (criticalState === 'UNCERTAIN' || !identityLocked || levelState !== 'TRUSTED' || confidencePercent < 90) {
+  if (criticalState === 'UNCERTAIN' || !completeAttributes || !identityLocked || levelState !== 'TRUSTED' || confidencePercent < 90) {
+    if (!completeAttributes) reasons.push(`Leitura parcial: ${attributeEvidence.count}/${totalAttributes} atributos reais; a ficha permanece provisória.`);
     reasons.push('A carta possui dados úteis, mas ainda não atende todos os requisitos de certificação final.');
     return {
       state: confidencePercent >= 60 ? 'PROVISIONAL_HIGH_CONFIDENCE' : 'PROVISIONAL_LOW_CONFIDENCE',

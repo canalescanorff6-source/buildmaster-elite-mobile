@@ -18,7 +18,7 @@ function paramsForKey(key?: ReaderV2FieldKey): Partial<TesseractNamespace.Worker
   const normalized = retry ? rawKey.slice(0, -'#retry'.length) : rawKey;
   const numericColumn = normalized.startsWith('attributes-values-');
   const numeric = normalized === 'level' || normalized === 'points' || numericColumn;
-  const singleLine = normalized === 'playerName' || normalized === 'mainPosition' || normalized === 'playstyle' || (numeric && !numericColumn);
+  const singleLine = normalized === 'mainPosition' || normalized === 'playstyle' || (numeric && !numericColumn);
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÀÃÂÉÊÍÓÔÕÚÇáàãâéêíóôõúç '-.";
   const whitelist = numericColumn ? '0123456789' : numeric ? '0123456789/:.-' : singleLine ? letters : '';
   return {

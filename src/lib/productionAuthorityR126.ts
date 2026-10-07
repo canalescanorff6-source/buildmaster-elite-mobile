@@ -1,6 +1,8 @@
 import type { AnalysisResult } from './analyzerDomain';
+import { ATTRIBUTE_PT } from './analyzerDomain';
 import { CLEAN_SLATE_2027_R119_VERSION, type CleanSlate2027R119 } from './cleanSlatePerformance2027V4080R119';
 import { cardEvidenceFingerprintR126, cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
+import { deriveCriticalAttributeEvidenceR501 } from '../modules/analysis/cardTruthLayerR501';
 
 export const PRODUCTION_AUTHORITY_R126_VERSION = '40.80-r126-production-contract-v2' as const;
 
@@ -66,6 +68,8 @@ export function isCurrentProductionAnalysisR126(input: AnalysisResult) {
   const result = input as WithProductionAuthorityR126;
   return Boolean(
     result.cleanSlate2027R119?.version === CLEAN_SLATE_2027_R119_VERSION &&
+    (result.cleanSlate2027R119.status !== 'READY' || deriveCriticalAttributeEvidenceR501(result.parsed).state === 'TRUSTED') &&
+    (result.cleanSlate2027R119.cardTruthCertificationR501?.canFinalize !== true || deriveCriticalAttributeEvidenceR501(result.parsed).count === Object.keys(ATTRIBUTE_PT).length) &&
     result.productionAuthorityR126?.version === PRODUCTION_AUTHORITY_R126_VERSION &&
     result.productionAuthorityR126?.cardIdentity === cardIdentityFingerprintR126(result.parsed) &&
     result.productionAuthorityR126?.cardEvidence === cardEvidenceFingerprintR126(result.parsed) &&

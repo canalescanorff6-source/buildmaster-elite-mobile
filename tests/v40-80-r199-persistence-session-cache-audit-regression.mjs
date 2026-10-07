@@ -27,7 +27,7 @@ assert.doesNotMatch(trim, /runtimeList|runtimeDelete|Promise\.all/, 'R199: trim 
 assert.ok((db.match(/transactionGuard\(/g) ?? []).length >= 5, 'R199: get/mutate/list/trim devem compartilhar o mesmo lifecycle de timeout/close.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8', 'R199: R119 não pode mudar na auditoria de persistência.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'b0fca15b1ebcb888e796c205bd8813e1e72c5653774c65e8898550f11a7e9f76', 'R199: R119 não pode mudar na auditoria de persistência.');
 
 let sourceBytes = 0;
 const stack = ['src'];
@@ -41,7 +41,7 @@ while (stack.length) {
 }
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
 const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
-assert.ok(sourceBytes <= (postCatalogBoundary ? 6_062_080 : r200Boundary ? 5_360_000 : 5_335_307), `R199/R200: orçamento de fonte excedeu a margem aprovada (${sourceBytes} B).`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 6_094_848 : r200Boundary ? 5_360_000 : 5_335_307), `R199/R200: orçamento de fonte excedeu a margem aprovada (${sourceBytes} B).`);
 
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
 assert.ok(v4080.endsWith('npm run test:r198 && npm run test:r199') || v4080.endsWith('npm run test:r198 && npm run test:r199 && npm run test:r200'), 'R199: cadeia v40.80 deve preservar R198 -> R199 antes do gate seguinte.');

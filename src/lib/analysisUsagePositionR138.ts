@@ -1,5 +1,6 @@
 import type { AnalysisResult, PositionCode } from './analyzerDomain';
 import { cardUsageIdentityKeyR126 } from './cardIdentityFingerprintR126';
+import { scoutingRecordCanInfluenceR454 } from '../modules/scouting/gameplayScoutingR454';
 
 export const ANALYSIS_USAGE_POSITION_R138_VERSION = '40.80-r138-canonical-usage-position-v1' as const;
 
@@ -41,7 +42,7 @@ export function analysisUsageFunctionR457(result: AnalysisResult) {
   if(finalized) return finalized;
   const explicit=String(current.usageFunctionR457 ?? '').trim();
   if(explicit && explicit.toUpperCase()!=='AUTO') return explicit;
-  if(current.gameplayScoutingR454?.status==='READY') {
+  if(scoutingRecordCanInfluenceR454(result,result.gameplayScoutingR454) && current.gameplayScoutingR454?.status==='READY') {
     const role=current.gameplayScoutingR454.bestRoles?.find((item)=>item.position===analysisUsagePositionR138(result));
     const scouting=String(role?.function ?? role?.label ?? '').trim();
     if(scouting) return scouting;

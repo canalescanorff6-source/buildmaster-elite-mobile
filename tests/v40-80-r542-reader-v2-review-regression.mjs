@@ -7,6 +7,7 @@ const appPath = 'src/components/CardVisionApp.tsx';
 assert.equal(fs.existsSync(reviewPath), true, 'R542 review: readerV2Review.ts precisa existir.');
 const review = fs.readFileSync(reviewPath, 'utf8');
 const app = fs.readFileSync(appPath, 'utf8');
+const reviewUi = fs.readFileSync('src/components/PreFinalCardReviewR548.tsx', 'utf8');
 
 assert.match(review, /buildReaderV2ReviewDraft\s*\(/, 'R542 review: precisa existir builder puro do draft.');
 assert.match(review, /assertReaderV2ReviewReady\s*\(/, 'R542 review: conferência precisa validar lifecycle antes de abrir.');
@@ -18,8 +19,9 @@ assert.match(review, /attributeValues\s*:\s*evidence\.attributeValues/, 'R548 RE
 assert.doesNotMatch(review, /readerV2OcrWorker|createReaderV2OcrWorkerSession|\.start\s*\(/, 'R542 review: conferência não pode criar/reiniciar worker OCR.');
 
 assert.match(app, /preFinalConfirmation/, 'R542 review: a tela pré-final existente precisa continuar sendo reutilizada.');
-assert.match(app, /value=\{preFinalConfirmation\.playerName\}[\s\S]{0,500}onChange=/, 'R542 review: nome precisa continuar editável.');
-assert.match(app, /value=\{preFinalConfirmation\.level\}[\s\S]{0,700}onChange=/, 'R542 review: nível precisa continuar editável.');
-assert.match(app, /value=\{preFinalConfirmation\.points\}[\s\S]{0,500}onChange=/, 'R542 review: pontos precisam continuar editáveis.');
+assert.match(app, /<PreFinalCardReviewR548/, 'R542 review: shell precisa renderizar o componente de conferência.');
+assert.match(reviewUi, /value=\{preFinalConfirmation\.playerName\}[\s\S]{0,500}onChange=/, 'R542 review: nome precisa continuar editável.');
+assert.match(reviewUi, /value=\{preFinalConfirmation\.level\}[\s\S]{0,700}onChange=/, 'R542 review: nível precisa continuar editável.');
+assert.match(reviewUi, /value=\{preFinalConfirmation\.points\}[\s\S]{0,500}onChange=/, 'R542 review: pontos precisam continuar editáveis.');
 
 console.log('R542 review aprovado: pré-final reutilizada e OCR encerrado antes da conferência.');
