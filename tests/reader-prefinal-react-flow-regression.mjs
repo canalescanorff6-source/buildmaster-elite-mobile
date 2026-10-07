@@ -148,6 +148,7 @@ try {
   await incomplete.getByLabel('Onde o jogador vai jogar?', {exact:true}).selectOption('LWF');
   await incomplete.getByRole('button', {name:'Gerar ficha',exact:true}).click();
   assert.equal((await requests(incomplete)).length, 0, 'Atributos insuficientes devem impedir geração silenciosa.');
+  await incomplete.getByText('Atributos da carta: 0/26',{exact:true}).click();
   for (const [label,value] of [['Talento ofensivo','90'],['Controle de bola','88'],['Drible','87'],['Condução firme','82'],['Passe rasteiro','71'],['Passe alto','63'],['Finalização','96'],['Cabeçada','88'],['Bola parada','83'],['Curva','80']]) await incomplete.getByRole('textbox',{name:label,exact:true}).fill(value);
   await incomplete.getByText(/Ficha provisória: 10 de 26 atributos/).waitFor();
   await incomplete.getByRole('button', {name:'Gerar ficha',exact:true}).click();

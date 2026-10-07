@@ -7,6 +7,7 @@ import type {
 export type ReaderV2WorkerRecognition = {
   text: string;
   confidence?: number;
+  attributeRows?: Array<number | null>;
 };
 
 export interface ReaderV2WorkerPort {
@@ -127,6 +128,7 @@ export function createReaderV2OcrWorkerSession(factory: ReaderV2WorkerFactory): 
           confidence: normalizeConfidence(result.confidence),
           source: 'automatic' as const,
           rawText: result.text ?? '',
+          ...(result.attributeRows ? {attributeRows:[...result.attributeRows]} : {}),
         };
       } catch (cause) {
         if (cancelled) throw cause;

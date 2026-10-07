@@ -43,6 +43,8 @@ export interface ReaderV2FieldEvidence {
   rawText?: string;
   error?: string;
   attributeValues?: number[];
+  /** Fixed cell order; null preserves an unreadable badge. */
+  attributeRows?: Array<number | null>;
 }
 
 export interface ReaderV2Evidence {
@@ -53,17 +55,22 @@ export interface ReaderV2Evidence {
   attributesExpected?: number;
   attributesRead?: number;
   attributeValues?: number[];
+  /** Fixed cell order; null preserves an unreadable badge. */
+  attributeRows?: Array<number | null>;
 }
 
 export interface ReaderV2ReviewDraft {
   playerName: string;
   level: string;
   points: string;
+  pointsSource?: 'print' | 'level' | 'manual';
   mainPosition: string;
   rawText: string;
   fields: ReaderV2FieldEvidence[];
   uncertainKeys: ReaderV2FieldKey[];
   attributeValues?: number[];
+  /** Fixed cell order; null preserves an unreadable badge. */
+  attributeRows?: Array<number | null>;
   skillValues?: string[];
   impetoName?: string;
   preview: string | null;
