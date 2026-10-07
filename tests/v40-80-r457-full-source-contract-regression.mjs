@@ -18,7 +18,7 @@ const ui=fs.readFileSync('src/components/UnifiedPerformanceV3920Panel.tsx','utf8
 const pro=fs.readFileSync('src/lib/professionalSquadEngine.ts','utf8');
 const rotation=fs.readFileSync('src/lib/squadRotation.ts','utf8');
 
-assert.match(clean,/r406-match-calibration-group-return-fix5/);
+assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r550-verified-card-evidence-v1'/);
 assert.match(clean,/certifyExactTrainingR457/);
 assert.match(clean,/selectJointConfigurationR457/);
 assert.match(clean,/canonicalDnaR457/);
