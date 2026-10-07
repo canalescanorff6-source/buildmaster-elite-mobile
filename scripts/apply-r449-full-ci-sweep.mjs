@@ -75,6 +75,8 @@ function patchPrintZip(source) {
 }
 
 function patchR420(source) {
+  const preservingRegex = "/import \\{([^}]*\\bLEARNING_KEY\\b[^}]*\\bnormalizeHistoryList\\b[^}]*)\\} from '@\\/modules\\/vault\\/cardHistoryStore';/";
+  if (source.includes(preservingRegex) && source.includes('(_match, imported) => {') && source.includes("names.join(', ')")) return source;
   const oldRegex = "/import \\{ HISTORY_LIMIT, LEARNING_KEY, normalizeHistoryList \\} from '@\\/modules\\/vault\\/cardHistoryStore';/";
   const newRegex = "/import \\{[^}]*\\bLEARNING_KEY\\b[^}]*\\bnormalizeHistoryList\\b[^}]*\\} from '@\\/modules\\/vault\\/cardHistoryStore';/";
   if (source.includes(newRegex)) return source;

@@ -55,7 +55,7 @@ const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.
 assert.ok(sourceBytes <= (postCatalogBoundary ? 6_094_848 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_337_000), `R195: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  'b0fca15b1ebcb888e796c205bd8813e1e72c5653774c65e8898550f11a7e9f76',
+  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
   'R195: R119 não pode mudar durante otimização de controllers/hot path.',
 );
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');

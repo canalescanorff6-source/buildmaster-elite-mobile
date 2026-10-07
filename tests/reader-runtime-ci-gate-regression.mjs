@@ -141,6 +141,7 @@ if (process.env.READER_CI_FAIL_COMMAND === 'playwright-install') process.exit(Nu
   assert.deepEqual(eventPaths('push'), prPaths, 'R542: PR e push main precisam da mesma cobertura');
   for (const relevant of [
     'src/components/PreFinalCardReviewR548.tsx', 'src/lib/readerCanonicalEvidenceR549.ts',
+    'src/lib/readerContextAuthorityR549.ts', 'tests/reader-confirmed-authority-regression.ts',
     'src/modules/card-reader/readerAnalysisContextR163.ts', 'src/modules/card-reader/readerAnalysisRuntimeR163.ts',
     'src/modules/card-reader/cardVisionReaderActionsR187.ts', 'src/modules/card-reader/cardVisionReaderActionsLegacyR187.ts',
     'tests/reader-prefinal-*.mjs', 'tests/helpers/reader-prefinal-react-harness.mjs',

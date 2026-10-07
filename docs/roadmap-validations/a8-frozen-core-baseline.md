@@ -2,6 +2,11 @@
 
 Status: `CORE_FROZEN_GATE_B`.
 
+Atualização funcional autorizada no PR #115: o R119 passou ao baseline
+`40.80-r550-verified-card-evidence-v1`. A justificativa, fingerprints e
+regressões próprias estão no [rebaseline de evidência de 7 de outubro de 2026](2026-10-07-reader-evidence-core-rebaseline.md).
+O baseline abaixo permanece como registro histórico do congelamento anterior.
+
 Baseline semântico congelado: `ce4ad62a4b5b95fd8de0f4729235a6e967b33ea7`.
 
 ## Objetivo

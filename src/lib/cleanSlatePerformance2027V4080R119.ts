@@ -34,7 +34,7 @@ import { deriveProjectedPlayerStateR504, TRAINING_ATTRIBUTE_GROUPS_R504, type Pr
 import { rankAutonomousRolesR417 } from './autonomousCardR417';
 import { GAMEPLAY_IMPACT_R458_VERSION, functionActionDemandR458, teamStyleActionDemandR458, skillActionSupportR458, skillActionSupportDetailR459, type GameplayImpactR458 } from './gameplayImpactR458';
 
-export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r406-match-calibration-group-return-fix5' as const;
+export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r550-verified-card-evidence-v1' as const;
 // BM_R457_SOURCE_CANONICAL_R406: source cru já contém a autoridade R406-fix5; sanitize é compatibilidade, não requisito funcional.
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R143_VERSION = '40.80-r143-equivalent-state-cache-v1' as const;
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R144_VERSION = '40.80-r144-frontier-dedup-diagnostic-memo-v1' as const;

@@ -56,8 +56,8 @@ for (const source of readOnlyVisualSurfaces) {
 
 assert.equal(
   sha256(r119),
-  '48e317ccc20d775e86ed2aaf050462aa3555f361deec84ae7eabfd959674ddd8',
-  'R530: a autoridade R119 divergiu do baseline congelado.'
+  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
+  'R530: a autoridade R119 divergiu do rebaseline R550 documentado em 2026-10-07.'
 );
 
 assert.match(packageJson, /"test:r530"\s*:/, 'R530: package.json precisa expor npm run test:r530.');
@@ -65,4 +65,4 @@ assert.match(prWorkflow, /R530 — fechamento do redesign premium/, 'R530: Pull 
 assert.match(prWorkflow, /run:\s*npm run test:r530/, 'R530: Pull Request deve chamar npm run test:r530.');
 assert.match(doctorConfig, /test:r530/, 'R530: diagnóstico completo de release precisa executar test:r530.');
 
-console.log('R530 aprovada: redesign R521-R530 fechado, superfícies canônicas preservadas e core R119 intacto.');
+console.log('R530 aprovada: redesign R521-R530 fechado, superfícies canônicas preservadas e baseline R550 íntegro.');

@@ -11,7 +11,7 @@ const mutations=read('src/modules/vault/vaultHistoryMutationsR129.ts');
 const native=read('src/lib/nativeVaultStorage.ts');
 const vaultUi=read('src/components/CleanVaultV3800.tsx');
 
-assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r406-match-calibration-group-return-fix5'/,'Source cru precisa carregar a mesma base Clean Slate compilada.');
+assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r550-verified-card-evidence-v1'/,'Source cru precisa carregar a mesma base Clean Slate compilada.');
 assert.match(store,/export const HISTORY_LIMIT = Infinity;/,'Source cru do Cofre não pode voltar ao teto 200.');
 assert.match(startup,/export const HISTORY_LIMIT_R200 = (?:Infinity|Number\.MAX_SAFE_INTEGER);/);
 assert.match(store,/STARTUP_NATIVE_HISTORY_MAX_BYTES = 0;/);

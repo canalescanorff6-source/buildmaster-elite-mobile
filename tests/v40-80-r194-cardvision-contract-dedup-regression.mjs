@@ -66,7 +66,7 @@ assert.ok(sourceBytes <= (postCatalogBoundary ? 6_094_848 : r2004Boundary ? 5_36
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  'b0fca15b1ebcb888e796c205bd8813e1e72c5653774c65e8898550f11a7e9f76',
+  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
   'R194: R119 não pode mudar durante deduplicação de contratos/UI.',
 );
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');

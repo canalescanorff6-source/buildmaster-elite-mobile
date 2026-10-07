@@ -89,7 +89,7 @@ const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.
 const postCatalogBoundary = fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
 assert.ok(sourceBytes <= (postCatalogBoundary ? 6_094_848 : r2004Boundary ? 5_360_000 : r200Boundary ? 5_341_000 : 5_335_500), `R197: redução líquida perdida; src voltou a ${sourceBytes} bytes.`);
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'b0fca15b1ebcb888e796c205bd8813e1e72c5653774c65e8898550f11a7e9f76', 'R197: R119 não pode mudar.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd', 'R197: R119 não pode mudar.');
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');

@@ -66,7 +66,7 @@ assert.ok(decisionIndex >= 0 && decisionIndex < persistIndex,
   'R503: certificação precisa ser avaliada antes da persistência confirmada.');
 
 assert.match(reader,
-  /if\s*\(!confirmationDecisionR503\.canPersistConfirmed\)[\s\S]{0,700}setDraftResult\(nextResult\);[\s\S]{0,180}setResult\(null\);[\s\S]{0,300}return;/,
+  /if\s*\(!confirmationDecisionR503\.canPersistConfirmed\)[\s\S]{0,700}setDraftResult\(nextResult\);[\s\S]{0,180}setResult\(null\);[\s\S]{0,300}return\s*\{status:'review',persistenceStarted:false\};/,
   'R503: ficha não certificada deve permanecer como prévia e interromper a promoção/persistência.');
 assert.match(reader,
   /if\s*\(confirmed\)[\s\S]{0,1800}confirmationDecisionR503\.canPersistConfirmed[\s\S]{0,3000}persistConfirmedAnalysisR470\(nextResult/,
