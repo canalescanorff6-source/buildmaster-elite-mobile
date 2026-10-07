@@ -1460,6 +1460,7 @@ export function CardVisionApp() {
                 targetPosition={targetPosition} setTargetPosition={setTargetPosition}
                 status={status} setStatus={setStatus} onGenerate={confirmPreFinalCardDataR16}
                 onCompleted={() => setPreFinalConfirmation(current => current === preFinalConfirmation ? null : current)}
+                onReadAgain={() => { setPreFinalConfirmation(null); openMainSection('leitor'); setStatus('Selecione o print original da carta para preencher os dados automaticamente.'); }}
               />
             ) : loading && !result && !draftResult ? (
               <div className="creation-processing-card luxury-panel" role="status" aria-live="polite">

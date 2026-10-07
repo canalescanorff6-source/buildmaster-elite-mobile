@@ -1,4 +1,5 @@
 import type { ReaderV2Zone } from './readerV2Types';
+import { prepareReaderV2Crop } from './readerV2CropPreparation';
 
 export const DEFAULT_MAX_SOURCE_DIMENSION = 1800;
 export const DEFAULT_MAX_CROP_MEGAPIXELS = 1.2;
@@ -116,7 +117,7 @@ export async function openReaderV2ImageSession(
       const sourceWidth = Math.max(1, Math.min(width - sourceX, Math.round(width * w)));
       const sourceHeight = Math.max(1, Math.min(height - sourceY, Math.round(height * h)));
       const maxCropPixels = maxCropMegapixels * 1_000_000;
-      const cropScale = Math.min(1, Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
+      const cropScale = Math.min(3, Math.max(1,1600/height), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
 
       canvas.width = Math.max(1, Math.round(sourceWidth * cropScale));
       canvas.height = Math.max(1, Math.round(sourceHeight * cropScale));
@@ -133,6 +134,7 @@ export async function openReaderV2ImageSession(
         canvas.width,
         canvas.height,
       );
+      prepareReaderV2Crop(canvas,String(zone.key));
       return await operation(canvas);
     } finally {
       canvas.width = 1;

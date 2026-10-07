@@ -44,7 +44,7 @@ export type CardVisionAnalysisOutcomeR187 = {
   persistenceStarted: boolean;
 };
 type ReaderImageMemoryR187 = { replacePreview(blob: Blob): string; replaceEnhanced(blob: Blob): string; releaseEnhanced(): void; releaseAll(): void };
-type PreFinalConfirmationR187 = { playerName: string; level: string; points: string; preview: string | null;mainPosition?:string;uncertainKeys?:string[] } | null;
+type PreFinalConfirmationR187 = { playerName: string; level: string; points: string; pointsSource?: 'print' | 'level' | 'manual'; preview: string | null;mainPosition?:string;uncertainKeys?:string[] } | null;
 
 function readerSessionGateR520(session: SinglePrintSession | null) {
   const keys: SingleFieldEvidence['key'][] = ['playerName', 'level', 'points'];

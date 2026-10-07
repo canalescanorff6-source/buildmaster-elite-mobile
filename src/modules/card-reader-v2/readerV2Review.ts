@@ -14,6 +14,7 @@ export type ReaderV2PreFinalConfirmation = {
   playerName: string;
   level: string;
   points: string;
+  pointsSource?: 'print' | 'level' | 'manual';
   preview: string | null;
   mainPosition?: string;
   uncertainKeys?: string[];
@@ -43,6 +44,12 @@ function reviewedNumber(direct: string, candidates: string[], key: string, uncer
 
 /** Ordem EFHub comprovada pelas três tiras: esquerda 10, centro 9, direita 7. */
 export function readerV2ReviewAttributes(draft: ReaderV2ReviewDraft): Record<string, string> {
+  if (draft.attributeRows?.length === ATTRIBUTE_INPUTS.length) {
+    return Object.fromEntries(ATTRIBUTE_INPUTS.flatMap((item,index) => {
+      const value=draft.attributeRows![index];
+      return typeof value==='number' && Number.isInteger(value) && value>=1 && value<=110 ? [[item.key,String(value)]] : [];
+    }));
+  }
   if (draft.uncertainKeys.includes('attributes') || draft.attributeValues?.length !== ATTRIBUTE_INPUTS.length) return {};
   if (draft.attributeValues.some(value => !Number.isInteger(value) || value < 1 || value > 110)) return {};
   return Object.fromEntries(ATTRIBUTE_INPUTS.map((item, index) => [item.key, String(draft.attributeValues![index])]));
@@ -108,7 +115,23 @@ export function buildReaderV2ReviewDraft(
   const styleLine = nameLines.find(line => canonicalizeOffensivePlaystyleR124(line));
   if (styleLine && !fieldValue(evidence, 'playstyle')) fields.push({key:'playstyle',label:'Estilo de jogo',value:styleLine,confidence:fields.find(field => field.key === 'playerName')?.confidence ?? 0,source:evidence.mode});
   const level = reviewedNumber(fieldValue(evidence, 'level'), labeledNumbers(fields, /\bnivel(?:\s+(?:maximo|max\.?))?\s*[:=\-]?\s*(\d{1,3})(?:\s*\/\s*(\d{1,3}))?/g), 'level', uncertainKeys);
-  const points = reviewedNumber(fieldValue(evidence, 'points'), labeledNumbers(fields, /\bpontos(?:\s+(?:de\s+)?(?:progresso|progressao|totais|disponiveis))?\s*[:=\-]\s*(\d{1,3})/g), 'points', uncertainKeys);
+  const readPoints = reviewedNumber(fieldValue(evidence, 'points'), labeledNumbers(fields, /\bpontos(?:\s+(?:de\s+)?(?:progresso|progressao|totais|disponiveis))?\s*[:=\-]\s*(\d{1,3})/g), 'points', uncertainKeys);
+  const trustedMaximum = fields.some(field => {
+    const fraction=field.key==='level' && /^\d{1,3}\s*\/\s*\d{1,3}$/.test(field.value.trim());
+    if (field.error || field.confidence<80 || (!fraction && /\b(?:atual|current)\b/.test(normalizedText((field.label??'')+' '+field.value)))) return false;
+    const direct=field.key==='level' && (/maximo|maximum|\bmax\b/.test(normalizedText(field.label??'')) || fraction)
+      ? field.value.trim().match(/^(?:\d{1,3}\s*\/\s*)?(\d{1,3})$/)?.[1] : undefined;
+    const maximums=labeledNumbers([field],/\bnivel\s+(?:maximo|max\.?)\s*[:=\-]?\s*(\d{1,3})(?:\s*\/\s*(\d{1,3}))?/g);
+    return [direct,...maximums].some(value=>value===level);
+  });
+  const derivePoints=!readPoints && trustedMaximum && level && !uncertainKeys.includes('level') && Number(level)>=1 && Number(level)<=100;
+  const points=readPoints || (derivePoints?String((Number(level)-1)*2):'');
+  const pointsSource=readPoints?'print' as const:derivePoints?'level' as const:undefined;
+  const unreadPrintedPoints=fields.some(field=>field.key==='points' && (field.error || field.value.trim()));
+  if (derivePoints && !unreadPrintedPoints) {
+    const index=uncertainKeys.indexOf('points');
+    if(index>=0)uncertainKeys.splice(index,1);
+  }
   const labeledPosition = fields.map(field => normalizedText(field.value).match(/posicao (?:principal|da carta)\s*[:=-]\s*([a-z]{2,3})\b/)?.[1]).find(Boolean) ?? '';
   const mainPosition = normalizeReaderV2Position(fieldValue(evidence, 'mainPosition')) ?? normalizeReaderV2Position(labeledPosition) ?? '';
   const canonical = deriveReaderCanonicalEvidenceR549(fields);
@@ -124,11 +147,13 @@ export function buildReaderV2ReviewDraft(
     playerName,
     level,
     points,
+    pointsSource,
     mainPosition,
     rawText: evidence.rawText,
     fields,
     uncertainKeys,
     attributeValues: evidence.attributeValues ? [...evidence.attributeValues] : undefined,
+    attributeRows: evidence.attributeRows ? [...evidence.attributeRows] : undefined,
     skillValues: canonical.skillValues,
     impetoName: canonical.impetoName,
     preview,
@@ -140,6 +165,7 @@ export function toPreFinalConfirmationR542(draft: ReaderV2ReviewDraft): ReaderV2
     playerName: draft.playerName,
     level: draft.level,
     points: draft.points,
+    pointsSource: draft.pointsSource,
     preview: draft.preview,
     mainPosition: draft.mainPosition,
     uncertainKeys: [...draft.uncertainKeys],

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = process.cwd();
 const assets = [
+  ['public/tesseract/lang/eng.traineddata', 'https://cdn.jsdelivr.net/gh/tesseract-ocr/tessdata_fast@4.1.0/eng.traineddata', 4_000_000],
   ['public/tesseract/worker.min.js', 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js', 50_000],
   ['public/tesseract/core/tesseract-core.wasm.js', 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm.js', 100_000],
   ['public/tesseract/core/tesseract-core-simd.wasm.js', 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-simd.wasm.js', 100_000],
