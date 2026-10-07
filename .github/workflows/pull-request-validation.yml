@@ -133,6 +133,9 @@ jobs:
           npm run test:v3176
           npm run test:v3177
 
+      - name: Cofre nativo — regressão completa v38.40
+        run: npm run test:v3840
+
       - name: R457 — contrato completo da fonte R550
         run: node tests/v40-80-r457-full-source-contract-regression.mjs
 

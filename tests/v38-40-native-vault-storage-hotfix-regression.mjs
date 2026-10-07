@@ -30,9 +30,10 @@ assert.ok(history.includes('compactHistoryForNativeStorage'));
 assert.ok(history.includes('historyPersistenceQueue'), 'gravações sucessivas precisam ser serializadas para evitar sobrescrita fora de ordem');
 assert.ok(history.includes('fullPreview: null'));
 
-const shardedNativeWrite = history.indexOf('await writeNativeHistoryShardedR409(compacted)');
+// Account-pinned persistence must retain the native-first ordering and ownership guards.
+const shardedNativeWrite = history.indexOf('await writeNativeHistoryShardedR409(compacted, () => assertHistoryNamespace(namespace))');
 const legacyNativeWrite = history.indexOf('await nativeVaultWrite(NATIVE_HISTORY_STORAGE_KEY(), payload)');
-const indexedShardedWrite = history.indexOf('await writeIndexedHistory(compacted)');
+const indexedShardedWrite = history.indexOf('await writeIndexedHistory(compacted, namespace)');
 const indexedLegacyWrite = history.indexOf('await writeIndexedHistory(compactHistoryForNativeStorage(next))');
 const nativeWrite = shardedNativeWrite >= 0 ? shardedNativeWrite : legacyNativeWrite;
 const indexedWrite = indexedShardedWrite >= 0 ? indexedShardedWrite : indexedLegacyWrite;
