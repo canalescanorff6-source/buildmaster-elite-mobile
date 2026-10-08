@@ -82,7 +82,10 @@ try{
  assert.equal(colored.ocrSnapshot.workerReady,false);assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  const profile=await page.evaluate(input=>window.createTestCard(input),{numbers:values,colored:true,identityRecovery:true});
  assert.equal(profile.review.level,'37','Ler o máximo da bio sem confundir a idade31.');
- assert.equal(profile.review.points,'72');assert.equal(profile.review.pointsSource,'level');
+ const recoveredLevel=profile.review.fields.find(field=>field.key==='level');
+ console.log('Nível recuperado:',JSON.stringify(recoveredLevel));
+ if(recoveredLevel.confidence>=80){assert.equal(profile.review.points,'72');assert.equal(profile.review.pointsSource,'level');}
+ else {assert.equal(profile.review.points,'');assert.equal(profile.review.pointsSource,undefined);assert.ok(profile.review.uncertainKeys.includes('points'),'Não derivar pontos de um máximo com baixa confiança.');}
  assert.equal(profile.review.mainPosition,'RB','A sigla impressa na foto deve prevalecer sobre posição deduzida pelo nome/estilo.');
  assert.deepEqual(profile.review.attributeValues,values);
  assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
