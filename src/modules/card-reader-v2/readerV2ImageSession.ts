@@ -121,7 +121,7 @@ export async function openReaderV2ImageSession(
       const maxCropPixels = maxCropMegapixels * 1_000_000;
       // Phone prints have 8–12 px glyphs. Enlarge the crop, keeping the same
       // pixel budget and releasing it before the next recognition.
-      const cropScale = Math.min(3, Math.max(1, 1600 / height), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
+      const cropScale = Math.min(3, Math.max(1, 1600 / height, zone.key==='mainPosition'?320/sourceWidth:1), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
 
       canvas.width = Math.max(1, Math.round(sourceWidth * cropScale));
       canvas.height = Math.max(1, Math.round(sourceHeight * cropScale));
@@ -138,7 +138,7 @@ export async function openReaderV2ImageSession(
         canvas.width,
         canvas.height,
       );
-      prepareReaderV2Crop(canvas, String(zone.key));
+      prepareReaderV2Crop(canvas, String(zone.key), zone.lightText);
       return await operation(canvas);
     } finally {
       canvas.width = 1;

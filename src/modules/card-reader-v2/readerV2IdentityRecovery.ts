@@ -22,11 +22,17 @@ export async function recoverReaderV2Identity(
     x:bio.x,y:bio.y + bio.h * (310 / 360),w:bio.w * (75 / 420),h:bio.h * (32 / 360),
   });
   if ((!draft.mainPosition || draft.uncertainKeys.includes('mainPosition')) && card) candidates.push({
-    key:'mainPosition',label:'Posição impressa na carta',enabled:true,
+    key:'mainPosition',label:'Posição impressa na carta',enabled:true,lightText:true,
     x:card.x + card.w * (5 / 260),y:card.y + card.h * (55 / 355),w:card.w * (110 / 260),h:card.h * (40 / 355),
   });
 
+  const levelRetry=candidates.find(zone=>zone.key==='level');
+  if(levelRetry&&bio)candidates.push({...levelRetry,y:bio.y+bio.h*.797,w:bio.w*(75/420),h:bio.h*.244});
+  const positionRetry=candidates.find(zone=>zone.key==='mainPosition');
+  if(positionRetry&&card)candidates.push({...positionRetry,x:card.x+card.w*(30/260),y:card.y+card.h*(60/355),w:card.w*(70/260),h:card.h*(30/355)},{...positionRetry,x:card.x+card.w*(30/260),y:card.y+card.h*(65/355),w:card.w*(50/260),h:card.h*(22/355)});
   for (const zone of candidates) {
+    if(zone!==positionRetry&&zone.key==='mainPosition'&&fields.some(field=>field.key==='mainPosition'&&!field.error&&field.confidence>=40&&normalizeReaderV2Position(field.value)))continue;
+    if(zone!==levelRetry&&zone.key==='level'&&fields.some(field=>field.key==='level'&&!field.error&&field.confidence>=80&&/^\d{1,3}$/.test(field.value.trim())))continue;
     const recovered = await readField(zone);
     const previous = fields.findIndex(field => field.key === zone.key);
     const valid = (field: ReaderV2FieldEvidence) => !field.error && field.confidence >= 40

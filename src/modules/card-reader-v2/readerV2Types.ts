@@ -92,4 +92,5 @@ export interface ReaderV2Zone {
   h: number;
   enabled: boolean;
   attributeLayout?: 'labels';
+  lightText?: boolean;
 }
