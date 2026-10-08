@@ -18,7 +18,7 @@ type Props = {
   setTargetPosition: SetState<PositionCode | 'AUTO'>;
   status: string;
   setStatus: SetState<string>;
-  onGenerate: (fields: ManualFields) => Promise<CardVisionAnalysisOutcomeR187 | undefined>;
+  onGenerate: (fields: ManualFields, confirmed: boolean) => Promise<CardVisionAnalysisOutcomeR187 | undefined>;
   onCompleted: () => void;
   onReadAgain?: () => void;
 };
@@ -43,7 +43,8 @@ export function PreFinalCardReviewR548({ preFinalConfirmation, setPreFinalConfir
   const levelNumber = Number(maximumLevel(preFinalConfirmation.level));
   const suggestedPoints = levelNumber > 0 ? String((levelNumber - 1) * 2) : '';
   const pointsMismatch = suggestedPoints !== '' && /^\d{1,4}$/.test(preFinalConfirmation.points) && Number(preFinalConfirmation.points) !== Number(suggestedPoints);
-  const attributeCount = ATTRIBUTE_INPUTS.filter(item => validAttribute(manualFields.attributes[item.key])).length;
+  const missingAttributes = ATTRIBUTE_INPUTS.filter(item => !validAttribute(manualFields.attributes[item.key]));
+  const attributeCount = ATTRIBUTE_INPUTS.length - missingAttributes.length;
   const minimumAttributes = cardPositionOverride === 'GK' ? 4 : 10;
   const partialAttributes = attributeCount < ATTRIBUTE_INPUTS.length;
   const inputStyle = { width: '100%', minHeight: 52, borderRadius: 14, padding: '0 15px' };
@@ -58,15 +59,15 @@ export function PreFinalCardReviewR548({ preFinalConfirmation, setPreFinalConfir
     if (cardPositionOverride === 'AUTO') { setStatus('A posição natural ficou ilegível. Use o print original para repetir a leitura automática.'); return; }
     if (attributeCount < minimumAttributes) { setStatus('A imagem não forneceu atributos suficientes. Use o print original para repetir a leitura automática.'); return; }
     if (pointsMismatch && !budgetReviewed) { setStatus('Confira no print o nível e os pontos divergentes e marque a confirmação antes de gerar.'); return; }
-    if (partialAttributes && !partialReviewed) { setStatus('A leitura de atributos está incompleta. Confira os valores e aceite a ficha provisória antes de gerar.'); return; }
+    if (partialAttributes && !partialReviewed) { setStatus('A leitura está incompleta. Repita a leitura com o print original ou aceite uma prévia com os dados disponíveis.'); return; }
     const confirmedFields = { ...manualFields, playerName, level, trainingPointsTotal: points };
     inFlight.current = true;
     setGenerating(true);
-    setStatus('Dados confirmados. Gerando ficha com o nível e o orçamento informados...');
+    setStatus(partialAttributes ? 'Gerando prévia com os dados disponíveis, sem salvar como ficha final...' : 'Dados confirmados. Gerando ficha com o nível e o orçamento informados...');
     try {
-      const outcome = await onGenerate(confirmedFields);
+      const outcome = await onGenerate(confirmedFields, !partialAttributes);
       if (!mounted.current) return;
-      if (outcome?.status === 'completed') onCompleted();
+      if (outcome?.status === 'completed' || (outcome?.status === 'preview' && !outcome.persistenceStarted)) onCompleted();
       else {
         setManualFields(confirmedFields);
         setRetryBlocked(!outcome || outcome.persistenceStarted);
@@ -166,13 +167,14 @@ export function PreFinalCardReviewR548({ preFinalConfirmation, setPreFinalConfir
         </div>
       </details>
       {partialAttributes && <div role="group" aria-label="Conferência de atributos incompletos">
-        <p>Ficha provisória: {attributeCount} de {ATTRIBUTE_INPUTS.length} atributos confirmados. Os atributos ausentes não foram lidos; a ficha permanece incompleta.</p>
-        {attributeCount >= minimumAttributes && <label><input type="checkbox" checked={partialReviewed} onChange={(event) => setPartialReviewed(event.target.checked)} disabled={disabled} /> Aceito gerar uma ficha provisória incompleta com os atributos conferidos.</label>}
+        <p>Ficha provisória: {attributeCount} de {ATTRIBUTE_INPUTS.length} atributos confirmados. Sem leitura: {missingAttributes.map(item => item.label).join(', ')}.</p>
+        <p>A prévia usa apenas os dados disponíveis. Para a ficha final, repita a leitura com o print original ou confira os campos ausentes.</p>
+        {attributeCount >= minimumAttributes && <label><input type="checkbox" checked={partialReviewed} onChange={(event) => setPartialReviewed(event.target.checked)} disabled={disabled} /> Aceito gerar uma prévia incompleta com os atributos conferidos, sem salvar como ficha final.</label>}
       </div>}
       <p role="status" aria-live="polite" style={{ margin: 0 }}>{status}</p>
       {retryBlocked && <p role="alert">A gravação da ficha já começou ou seu estado não foi confirmado. Confira o Cofre antes de gerar novamente.</p>}
       <button type="button" className="elite-button" onClick={() => { void confirm(); }} disabled={disabled} style={{ minHeight: 54, width: '100%', justifyContent: 'center' }}>
-        {generating ? <><Loader2 className="spin" size={17} /> Gerando ficha...</> : <><Sparkles size={17} /> Gerar ficha</>}
+        {generating ? <><Loader2 className="spin" size={17} /> {partialAttributes ? 'Gerando prévia...' : 'Gerando ficha...'}</> : <><Sparkles size={17} /> {partialAttributes ? 'Gerar prévia' : 'Gerar ficha'}</>}
       </button>
     </section>
   );

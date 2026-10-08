@@ -44,6 +44,7 @@ try {
   await pending.getByRole('textbox', {name:'Nome do jogador',exact:true}).fill('Drogba conferido');
   await pending.getByRole('button', {name:'Gerar ficha',exact:true}).click();
   await pending.waitForFunction(() => window.__reviewControl.requests.length === 1);
+  assert.equal((await requests(pending))[0].confirmed, true, 'Dados completos devem seguir a confirmação final protegida.');
   assert.equal(await pending.getByRole('heading', {name:'Confira antes de gerar a ficha'}).count(), 1, 'A conferência deve permanecer visível durante a geração assíncrona.');
   const busyButton = pending.getByRole('button', {name:'Gerando ficha...'});
   assert.equal(await busyButton.isDisabled(), true, 'Geração pendente deve mostrar progresso e bloquear novo envio.');
@@ -125,16 +126,39 @@ try {
   await resolve(edits, {status:'completed',persistenceStarted:true});
   await edits.close();
 
+  const partial = await openReview({manualFields:{...fixture.manualFields,attributes:{...attributes,goalkeeperCatching:'',goalkeeperReach:''}}});
+  assert.match(await partial.getByRole('group', {name:'Conferência de atributos incompletos'}).textContent(), /Sem leitura: Firmeza de GO, Alcance de GO/);
+  await partial.getByRole('checkbox', {name:/Aceito gerar uma prévia incompleta/}).check();
+  await partial.getByRole('button', {name:'Gerar prévia',exact:true}).click();
+  await partial.waitForFunction(() => window.__reviewControl.requests.length === 1);
+  assert.equal((await requests(partial))[0].confirmed, false, '24/26 atributos devem abrir prévia sem tentar salvar como ficha final.');
+  await resolve(partial, {status:'preview',persistenceStarted:false});
+  await partial.getByText('Prévia da ficha', {exact:true}).waitFor();
+  assert.equal(await partial.getByRole('heading', {name:'Confira antes de gerar a ficha'}).count(), 0, 'Prévia concluída deve sair da conferência, sem ficar presa no aviso de certificação.');
+  await partial.close();
+
+  const repaired = await openReview({manualFields:{...fixture.manualFields,attributes:{...attributes,goalkeeperCatching:'',goalkeeperReach:''}}});
+  await repaired.getByText('Atributos da carta: 24/26', {exact:true}).click();
+  await repaired.getByRole('textbox', {name:'Firmeza de GO',exact:true}).fill('41');
+  await repaired.getByRole('textbox', {name:'Alcance de GO',exact:true}).fill('41');
+  assert.equal(await repaired.getByRole('group', {name:'Conferência de atributos incompletos'}).count(), 0, 'Lista de ausentes deve desaparecer após corrigir todos os atributos.');
+  await repaired.getByRole('button', {name:'Gerar ficha',exact:true}).click();
+  await repaired.waitForFunction(() => window.__reviewControl.requests.length === 1);
+  assert.equal((await requests(repaired))[0].confirmed, true);
+  await resolve(repaired, {status:'completed',persistenceStarted:true});
+  await repaired.getByText('Ficha gerada', {exact:true}).waitFor();
+  await repaired.close();
+
   const cleared = await openReview();
   await cleared.getByText('Atributos da carta: 26/26', {exact:true}).click();
   await cleared.getByRole('textbox', {name:'Finalização',exact:true}).fill('');
   await cleared.getByText(/Ficha provisória: 25 de 26 atributos/).waitFor();
-  await cleared.getByRole('checkbox', {name:/Aceito gerar uma ficha provisória incompleta/}).check();
-  await cleared.getByRole('button', {name:'Gerar ficha',exact:true}).click();
+  await cleared.getByRole('checkbox', {name:/Aceito gerar uma prévia incompleta/}).check();
+  await cleared.getByRole('button', {name:'Gerar prévia',exact:true}).click();
   await cleared.waitForFunction(() => window.__reviewControl.requests.length === 1);
   assert.equal((await requests(cleared))[0].fields.attributes.finishing, '', 'Atributo apagado na conferência deve chegar vazio ao gerador.');
   await resolve(cleared, {status:'review',persistenceStarted:false});
-  await cleared.getByRole('button', {name:'Gerar ficha',exact:true}).waitFor();
+  await cleared.getByRole('button', {name:'Gerar prévia',exact:true}).waitFor();
   assert.equal(await cleared.getByRole('textbox', {name:'Finalização',exact:true}).inputValue(), '');
   await cleared.close();
 
@@ -142,19 +166,19 @@ try {
     confirmation:{...fixture.confirmation,mainPosition:'',uncertainKeys:['mainPosition','attributes']},
     manualFields:{...fixture.manualFields,attributes:{}},position:'AUTO',
   });
-  await incomplete.getByRole('button', {name:'Gerar ficha',exact:true}).click();
+  await incomplete.getByRole('button', {name:'Gerar prévia',exact:true}).click();
   assert.equal((await requests(incomplete)).length, 0, 'Posição natural ausente deve impedir geração silenciosa.');
   await incomplete.getByLabel('Posição natural da carta', {exact:true}).selectOption('CF');
   await incomplete.getByLabel('Onde o jogador vai jogar?', {exact:true}).selectOption('LWF');
-  await incomplete.getByRole('button', {name:'Gerar ficha',exact:true}).click();
+  await incomplete.getByRole('button', {name:'Gerar prévia',exact:true}).click();
   assert.equal((await requests(incomplete)).length, 0, 'Atributos insuficientes devem impedir geração silenciosa.');
   await incomplete.getByText('Atributos da carta: 0/26',{exact:true}).click();
   for (const [label,value] of [['Talento ofensivo','90'],['Controle de bola','88'],['Drible','87'],['Condução firme','82'],['Passe rasteiro','71'],['Passe alto','63'],['Finalização','96'],['Cabeçada','88'],['Bola parada','83'],['Curva','80']]) await incomplete.getByRole('textbox',{name:label,exact:true}).fill(value);
   await incomplete.getByText(/Ficha provisória: 10 de 26 atributos/).waitFor();
-  await incomplete.getByRole('button', {name:'Gerar ficha',exact:true}).click();
+  await incomplete.getByRole('button', {name:'Gerar prévia',exact:true}).click();
   assert.equal((await requests(incomplete)).length, 0, 'Ficha incompleta exige aceite visível.');
-  await incomplete.getByRole('checkbox', {name:/Aceito gerar uma ficha provisória incompleta/}).check();
-  await incomplete.getByRole('button', {name:'Gerar ficha',exact:true}).click();
+  await incomplete.getByRole('checkbox', {name:/Aceito gerar uma prévia incompleta/}).check();
+  await incomplete.getByRole('button', {name:'Gerar prévia',exact:true}).click();
   await incomplete.waitForFunction(() => window.__reviewControl.requests.length === 1);
   assert.equal((await requests(incomplete))[0].naturalPosition, 'CF');
   assert.equal((await requests(incomplete))[0].targetPosition, 'LWF');

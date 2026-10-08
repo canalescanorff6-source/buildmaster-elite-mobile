@@ -55,10 +55,10 @@ export function createCardVisionReaderActionsR187(input:CardVisionReaderActionsI
   const generation=readerV2GenerationR542,namespace=activeAccountNamespace();
   const isAnalysisCurrent=()=>generation===readerV2GenerationR542&&namespace===activeAccountNamespace()&&(!isV2()||!input.selectedFile||readerV2SelectedFileR542===undefined||input.selectedFile===readerV2SelectedFileR542)&&input.isAnalysisCurrent?.()!==false;
   if(!isAnalysisCurrent())return {status:'failed' as const,persistenceStarted:false};
-  if(confirmed&&isV2()&&input.selectedFile===readerV2SourceFileR542&&readerV2ClosedSnapshotR542&&readerV2ReviewDraftR542){
+  if(isV2()&&input.selectedFile===readerV2SourceFileR542&&readerV2ClosedSnapshotR542&&readerV2ReviewDraftR542){
    const draft={...readerV2ReviewDraftR542,playerName:input.manualFields.playerName.trim(),level:input.manualFields.level.trim(),points:input.manualFields.trainingPointsTotal.trim()};readerV2ReviewDraftR542=draft;
-   const pipeline=async(review:ReaderV2ReviewDraft)=>{const legacy=await loadLegacyActions({...input,rawText:readerV2ReviewRawText(review,input.manualFields),isAnalysisCurrent});return legacy.runAnalysis(true)};
-   if(!readerV2BridgeR542){const {createReaderV2Bridge}=await import('./readerV2Bridge');readerV2BridgeR542=createReaderV2Bridge(pipeline,outcome=>!outcome.persistenceStarted&&(outcome.status==='review'||outcome.status==='failed'))}
+   const pipeline=async(review:ReaderV2ReviewDraft)=>{const legacy=await loadLegacyActions({...input,rawText:readerV2ReviewRawText(review,input.manualFields),isAnalysisCurrent});return confirmed?legacy.runAnalysis(true):legacy.runAnalysis(false)};
+   if(!readerV2BridgeR542){const {createReaderV2Bridge}=await import('./readerV2Bridge');readerV2BridgeR542=createReaderV2Bridge(pipeline,outcome=>!outcome.persistenceStarted&&(outcome.status==='preview'||outcome.status==='review'||outcome.status==='failed'))}
    return readerV2BridgeR542.forward(readerV2ClosedSnapshotR542,draft,pipeline)
   }
   return (await loadLegacyActions({...input,isAnalysisCurrent})).runAnalysis(confirmed)
