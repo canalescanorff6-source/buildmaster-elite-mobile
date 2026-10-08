@@ -28,7 +28,7 @@ async function htmlImageFallback(file:File|Blob):Promise<DecodedBitmap|null>{
   });
 }
 
-async function imageToBitmap(file:File|Blob):Promise<DecodedBitmap|null>{
+export async function imageToBitmap(file:File|Blob):Promise<DecodedBitmap|null>{
   if(typeof document==='undefined')return null;
   if(typeof createImageBitmap!=='undefined'){
     const bitmap=await new Promise<ImageBitmap|null>((resolve)=>{
