@@ -5,7 +5,7 @@ export function readerV2ValueRows(canvas: HTMLCanvasElement): ValueRow[] | undef
 }
 
 /** Prepare a single temporary crop. The original print and preview stay intact. */
-export function prepareReaderV2Crop(canvas: HTMLCanvasElement, key: string): void {
+export function prepareReaderV2Crop(canvas: HTMLCanvasElement, key: string, lightText=false): void {
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) return;
   const image = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -17,6 +17,14 @@ export function prepareReaderV2Crop(canvas: HTMLCanvasElement, key: string): voi
     return max > 180 && max - min > 65;
   };
 
+  if(key==='mainPosition'&&lightText){
+    const light=(i:number)=>Math.min(data[i],data[i+1],data[i+2])>160&&Math.max(data[i],data[i+1],data[i+2])-Math.min(data[i],data[i+1],data[i+2])<75;
+    let count=0;for(let i=0;i<data.length;i+=4)if(light(i))count++;
+    if(count>width*height*.01&&count<width*height*.45){
+      for(let i=0;i<data.length;i+=4){const value=light(i)?0:255;data[i]=data[i+1]=data[i+2]=value;}
+      context.putImageData(image,0,0);return;
+    }
+  }
   if (numericColumn) {
     // EFHub puts black digits inside red, yellow and green badges. Isolate the
     // badge column before removing its colors; inversion of the whole strip

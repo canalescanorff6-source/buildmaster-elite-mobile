@@ -15,7 +15,7 @@ async function main() {
   const evidence = await readReaderV2Zones({
     zones:[{key:'attributes',label:'Atributos',x:0,y:0,w:1,h:1,enabled:true}],
     imageSession:{withCrop:async(zone,operation) => {crops.push(zone.key);return operation({} as HTMLCanvasElement);}},
-    workerSession:{recognize:async(_input,key) => ({key,label:key,value:rows[key].map(value=>value??'').join('\n'),confidence:90,source:'zones',attributeRows:rows[key]})},
+    workerSession:{recognize:async(_input,key) => ({key,label:key,value:(rows[key]??[]).map(value=>value??'').join('\n'),confidence:90,source:'zones',attributeRows:rows[key]})},
   });
   const attributes = readerV2ReviewAttributes(buildReaderV2ReviewDraft(evidence,null));
   assert.equal(evidence.attributesRead,25,'Uma célula ilegível não pode descartar os outros25 valores.');
@@ -25,7 +25,21 @@ async function main() {
   assert.equal(attributes[ATTRIBUTE_INPUTS[25].key],'85');
   assert.equal(evidence.attributeValues,undefined,'A lista completa não pode esconder um valor ausente.');
   assert.ok(evidence.uncertainKeys.includes('attributes'));
-  assert.deepEqual(crops,['attributes-values-left','attributes-values-center','attributes-values-right']);
+  assert.deepEqual(crops,['attributes-values-left','attributes-values-center','attributes-values-right','attributes']);
+  let fallbackText=ATTRIBUTE_INPUTS.map((item,index)=>`${item.label}: ${values[index]}`).join('\n');
+  const recover=()=>readReaderV2Zones({
+    zones:[{key:'attributes',label:'Atributos',x:0,y:0,w:1,h:1,enabled:true}],
+    imageSession:{withCrop:async(_zone,operation)=>operation({} as HTMLCanvasElement)},
+    workerSession:{recognize:async(_input,key)=>({key,label:key,value:key==='attributes'?fallbackText:(rows[key]??[]).map(value=>value??'').join('\n'),confidence:90,source:'zones',attributeRows:rows[key]})},
+  });
+  const recovered=await recover();
+  assert.equal(recovered.attributesRead,26,'Reler o bloco com nomes deve recuperar células ausentes sem deslocar vizinhas.');
+  assert.deepEqual(recovered.attributeValues,values);
+  fallbackText=ATTRIBUTE_INPUTS.map((item,index)=>`${item.label}: ${index===0?99:values[index]}`).join('\n');
+  const conflict=await recover();assert.equal(conflict.attributesRead,25,'Segunda leitura conflitante não pode preencher células por engano.');
+  assert.equal(conflict.attributeRows?.[0],60);
+  fallbackText=`${ATTRIBUTE_INPUTS[2].label}: 1000`;assert.equal((await recover()).attributesRead,25,'Não truncar números de quatro dígitos.');
+  fallbackText=`${ATTRIBUTE_INPUTS[2].label}: 62\n${ATTRIBUTE_INPUTS[2].label}: 91`;assert.equal((await recover()).attributesRead,25,'Valores conflitantes devem permanecer ausentes.');
   const invalid = readerV2ReviewAttributes({...buildReaderV2ReviewDraft(evidence,null),attributeRows:[...values.slice(0,25),999]} as any);
   assert.equal(invalid[ATTRIBUTE_INPUTS[25].key],undefined,'Descartar valores inválidos sem destruir os outros atributos.');
   assert.equal(Object.keys(invalid).length,25);

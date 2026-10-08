@@ -25,6 +25,7 @@ let pendingCancel: Promise<void> | null = null;
 let cancelEntered: (()=>void) | null = null;
 const originalLoad = (Module as unknown as {_load:Function})._load;
 (Module as unknown as {_load:Function})._load = function(request:string,...args:unknown[]) {
+  if(request === '../card-reader/cardPreviewServiceR130') return {createPlayerCardPreviewR130:async(file:File)=>({preview:'data:cover:'+file.name})};
   if(request === './readerV2AppRuntime') return {createReaderV2AppOrchestrator:()=>({
     select:async()=>{selectEntered?.();await pendingSelect;},start:async()=>{starts++;if(startError)throw startError;return {review:outputReview,evidence:{fields:outputReview.fields},ocrSnapshot:closed};},
     cancel:async()=>{cancelEntered?.();await pendingCancel;},close:()=>{},
@@ -57,6 +58,7 @@ function context() {
 async function main() {
   const c=context(); const file=new File(['print'],'carta.png',{type:'image/png'});
   await c.actions().handleFile(file); await c.actions().analyzeSelectedImage();
+  assert.equal(c.state.playerCardImage,'data:cover:carta.png','Toda carta importada deve receber a capa extraída.');
   assert.equal(c.state.mainSection,'resultado','OCR concluído deve abrir a tela onde a conferência é renderizada.');
   assert.equal(c.state.preFinalConfirmation.preview,'blob:original-preview');
   assert.equal(c.state.manualFields.attributes.finishing,'96','26 valores estruturados devem chegar aos campos do gerador.');

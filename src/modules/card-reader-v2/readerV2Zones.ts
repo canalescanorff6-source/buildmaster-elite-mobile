@@ -1,3 +1,5 @@
+import { ATTRIBUTE_INPUTS } from '../../lib/analyzerDomain';
+import { parseAttributes } from '../analysis/cardEvidenceParserR130';
 import type { ReaderV2ImageSession } from './readerV2ImageSession';
 import type { ReaderV2OcrWorkerSession } from './readerV2OcrWorker';
 import type {
@@ -37,6 +39,21 @@ function parseAttributeValues(text: string) {
   return numericTokens
     .map((token) => Number(token))
     .filter((value) => Number.isFinite(value) && value >= 1 && value <= 110);
+}
+
+function namedAttributeValues(text:string){
+  const values:Record<string,number>={};
+  const conflicts=new Set<string>();
+  for(const line of text.split(/\r?\n/)){
+    if(/\b\d{4,}\b/.test(line))continue;
+    for(const [key,value] of Object.entries(parseAttributes(line))){
+      if(typeof value!=='number')continue;
+      if(values[key]!==undefined&&values[key]!==value)conflicts.add(key);
+      else values[key]=value;
+    }
+  }
+  for(const key of conflicts)delete values[key];
+  return values;
 }
 
 function countAttributeValues(text: string) {
@@ -252,6 +269,12 @@ async function readAttributeField(
   input: Pick<ReadReaderV2ZonesInput, 'imageSession' | 'workerSession'>,
   zone: ReaderV2Zone,
 ): Promise<ReaderV2FieldEvidence> {
+  if(zone.attributeLayout==='labels'){
+    const field=await input.imageSession.withCrop(zone,crop=>input.workerSession.recognize(crop,'attributes'));
+    const named=namedAttributeValues(field.rawText||field.value);
+    const rows=ATTRIBUTE_INPUTS.map(item=>{const value=named[item.key];return !field.error&&field.confidence>=60&&typeof value==='number'&&Number.isInteger(value)&&value>=10&&value<=110?value:null;});
+    return {...asZoneField(field,zone),attributeRows:rows,...(rows.every(value=>value!==null)?{attributeValues:rows as number[]}: {})};
+  }
   const stripFields: ReaderV2FieldEvidence[] = [];
   const orderedRows: Array<number | null> = [];
   let hasOrderedRows = false;
@@ -290,6 +313,19 @@ async function readAttributeField(
   }
 
   if (hasOrderedRows) {
+    if (orderedRows.some(value => value === null)) {
+      try {
+        const fallback = await input.imageSession.withCrop(zone, crop => input.workerSession.recognize(crop, 'attributes'));
+        const named = namedAttributeValues(fallback.rawText || fallback.value);
+        const agrees = ATTRIBUTE_INPUTS.every((item,index) => named[item.key] === undefined || orderedRows[index] === null || named[item.key] === orderedRows[index]);
+        if (!fallback.error && fallback.confidence >= 60 && agrees) {
+          ATTRIBUTE_INPUTS.forEach((item,index) => {
+            const value = named[item.key];
+            if (orderedRows[index] === null && typeof value === 'number' && Number.isInteger(value) && value >= 10 && value <= 110) orderedRows[index] = value;
+          });
+        }
+      } catch { /* Preserve confirmed cells when the second reading fails. */ }
+    }
     const complete = orderedRows.every(value => value !== null);
     return {
       ...mergeAttributeFields(zone, stripFields),

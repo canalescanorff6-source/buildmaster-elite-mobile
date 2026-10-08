@@ -1,3 +1,4 @@
+import {imageToBitmap} from './imageProcessing';
 import type { OcrZone } from '@/lib/ocr';
 
 export type CardCropBox = { x: number; y: number; w: number; h: number };
@@ -210,8 +211,9 @@ function generateLocalRefinementCandidates(base: CardCropBox, imageWidth: number
   const candidates: CardCropBox[] = [base];
   const pxX = 1 / Math.max(1, imageWidth);
   const pxY = 1 / Math.max(1, imageHeight);
-  const stepsX = [pxX * 2, pxX * 5, base.w * 0.006, base.w * 0.012];
-  const stepsY = [pxY * 2, pxY * 5, base.h * 0.005, base.h * 0.010];
+  // Meio passo da grade inicial alcança bordas entre os candidatos.
+  const stepsX = [pxX * 2, pxX * 5, base.w * 0.006, base.w * 0.08];
+  const stepsY = [pxY * 2, pxY * 5, base.h * 0.005, base.h * 0.06];
   for (const dx of stepsX) {
     candidates.push(clampCardCropBox({ ...base, x: base.x - dx }));
     candidates.push(clampCardCropBox({ ...base, x: base.x + dx }));
@@ -243,8 +245,8 @@ function generateLocalRefinementCandidates(base: CardCropBox, imageWidth: number
 }
 
 function expandCardBox(box: CardCropBox, imageWidth: number, imageHeight: number) {
-  const marginX = Math.max(2 / imageWidth, box.w * 0.012);
-  const marginY = Math.max(2 / imageHeight, box.h * 0.009);
+  const marginX = Math.max(2 / imageWidth, box.w * 0.04);
+  const marginY = Math.max(2 / imageHeight, box.h * 0.04);
   return clampCardCropBox({
     x: box.x - marginX,
     y: box.y - marginY,
@@ -273,8 +275,8 @@ export function derivePlayerPortraitBox(cardBox: CardCropBox, imageWidth: number
 type RenderCropOptions = { expandBorder: boolean; squareOutput: boolean };
 
 async function renderCropPreview(file: File | Blob, box: CardCropBox, options: RenderCropOptions): Promise<string | null> {
-  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (typeof document === 'undefined') return null;
+  const bitmap = await imageToBitmap(file).catch(() => null);
   if (!bitmap) return null;
   const canvas = document.createElement('canvas');
   try {
@@ -301,8 +303,8 @@ async function renderCropPreview(file: File | Blob, box: CardCropBox, options: R
 }
 
 export async function renderPlayerPortraitPreview(file: File | Blob, cardBox: CardCropBox): Promise<{ preview: string; box: CardCropBox } | null> {
-  if (typeof createImageBitmap === 'undefined') return null;
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (typeof document === 'undefined') return null;
+  const bitmap = await imageToBitmap(file).catch(() => null);
   if (!bitmap) return null;
   const portraitBox = derivePlayerPortraitBox(cardBox, bitmap.width, bitmap.height);
   bitmap.close?.();
@@ -315,8 +317,8 @@ export async function renderCardCropPreview(file: File | Blob, box: CardCropBox)
 }
 
 export async function createSmartCardPreview(file: File | Blob, preferredZone?: OcrZone | CardCropBox): Promise<CardCropResult | null> {
-  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (typeof document === 'undefined') return null;
+  const bitmap = await imageToBitmap(file).catch(() => null);
   if (!bitmap) return null;
   const imageWidth = bitmap.width;
   const imageHeight = bitmap.height;
@@ -420,8 +422,8 @@ export function deriveEfhubPlayerPortraitBox(cardBox: CardCropBox, imageWidth: n
 }
 
 export async function renderEfhubPlayerPortraitPreview(file: File | Blob, cardBox: CardCropBox): Promise<{ preview: string; box: CardCropBox } | null> {
-  if (typeof createImageBitmap === 'undefined') return null;
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (typeof document === 'undefined') return null;
+  const bitmap = await imageToBitmap(file).catch(() => null);
   if (!bitmap) return null;
   const portraitBox = deriveEfhubPlayerPortraitBox(cardBox, bitmap.width, bitmap.height);
   bitmap.close?.();
@@ -435,8 +437,8 @@ export async function createManualEfhubCardPreview(file: File | Blob, preferredZ
   if (!preview) return null;
   const portrait = await renderEfhubPlayerPortraitPreview(file, box).catch(() => null);
   let aspectRatio = CARD_ASPECT;
-  if (typeof createImageBitmap !== 'undefined') {
-    const bitmap = await createImageBitmap(file).catch(() => null);
+  if (typeof document !== 'undefined') {
+    const bitmap = await imageToBitmap(file).catch(() => null);
     if (bitmap) {
       aspectRatio = cardCropAspect(box, bitmap.width, bitmap.height);
       bitmap.close?.();

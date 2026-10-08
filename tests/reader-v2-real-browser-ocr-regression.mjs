@@ -9,6 +9,9 @@ import {buildReaderReviewHarness} from './helpers/reader-prefinal-react-harness.
 const values=[90,88,87,82,71,63,96,88,83,80,45,52,43,44,41,41,41,41,41,75,79,94,92,88,86,85];
 assert.ok(fs.existsSync('public/tesseract/lang/por.traineddata'),'Prepare os assets reais com npm run vendor:ocr.');
 const bundle=await build({stdin:{contents:`
+ import {openReaderV2ImageSession} from './src/modules/card-reader-v2/readerV2ImageSession';
+ import {createPlayerCardPreviewR130} from './src/modules/card-reader/cardPreviewServiceR130';
+ window.testImageFallback=async()=>{const native=window.createImageBitmap;try{window.createImageBitmap=async()=>{throw new Error('decoder unavailable')};const session=await openReaderV2ImageSession(window.cardFile,{maxSourceDimension:320});const size=session.snapshot();session.close();const cover=await createPlayerCardPreviewR130(window.cardFile);return {size,closed:session.snapshot().closed,cover:cover?.preview};}finally{window.createImageBitmap=native;}};
  import {createReaderV2AppOrchestrator} from './src/modules/card-reader-v2/readerV2AppRuntime';
  import {READER_V2_DEFAULT_ZONES} from './src/modules/card-reader-v2/readerV2ZoneProfile';
  import {readerV2ReviewAttributes,readerV2ReviewRawText} from './src/modules/card-reader-v2/readerV2Review';
@@ -67,6 +70,7 @@ try{
  assert.deepEqual(output.review.skillValues,['Cabeçada','Chute de primeira','Passe de primeira']);assert.equal(output.review.impetoName,'Agilidade');
  assert.equal(output.ocrSnapshot.stage,'ocrClosed');assert.equal(output.ocrSnapshot.workerReady,false);assert.equal(output.ocrSnapshot.pendingRecognitions,0);
  assert.deepEqual(external,[],'Leitura pessoal deve funcionar com assets locais, sem serviço de IA externo.');assert.deepEqual(errors,[]);
+ const fallback=await page.evaluate(()=>window.testImageFallback());assert.equal(fallback.size.height,320);assert.equal(fallback.closed,true);assert.match(fallback.cover??'',/^data:image\/jpeg/,'Decodificação HTML precisa permitir capa real após bitmap rejeitado.');
  const automatic=await page.evaluate(()=>window.readCard(window.cardFile,'automatic'));
  assert.equal(automatic.review.playerName,'D. Drogba');
  assert.equal(automatic.review.level,'32','O modo automático deve ler a bio do mesmo layout usado na calibração padrão.');

@@ -32,7 +32,7 @@ function validateImageInput(file: File | Blob) {
   if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
     throw new Error('O Reader V2 aceita somente arquivos de imagem.');
   }
-  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') {
+  if (typeof document === 'undefined') {
     throw new Error('O runtime atual não oferece decodificação de imagem compatível com o Reader V2.');
   }
 }
@@ -51,14 +51,16 @@ export async function openReaderV2ImageSession(
   const maxSourceDimension = Math.max(320, Math.floor(options.maxSourceDimension ?? DEFAULT_MAX_SOURCE_DIMENSION));
   const maxCropMegapixels = Math.max(0.2, options.maxCropMegapixels ?? DEFAULT_MAX_CROP_MEGAPIXELS);
   const preview = URL.createObjectURL(file);
-  let sourceBitmap: ImageBitmap | null = null;
+  let sourceBitmap: (CanvasImageSource & {width:number;height:number;close?:()=>void}) | null = null;
   let originalWidth = 0;
   let originalHeight = 0;
   let cropActive = false;
   let closed = false;
 
   try {
-    const decoded = await createImageBitmap(file);
+    const {imageToBitmap}=await import('../card-reader/imageProcessing');
+    const decoded = await imageToBitmap(file);
+    if(!decoded)throw new Error('Não foi possível abrir a imagem da carta.');
     originalWidth = decoded.width;
     originalHeight = decoded.height;
     const scale = Math.min(1, maxSourceDimension / Math.max(1, Math.max(decoded.width, decoded.height)));
@@ -71,11 +73,11 @@ export async function openReaderV2ImageSession(
         const context = canvas.getContext('2d');
         if (!context) throw new Error('Não foi possível preparar a fonte reduzida do Reader V2.');
         context.drawImage(decoded, 0, 0, canvas.width, canvas.height);
-        sourceBitmap = await createImageBitmap(canvas);
+        try{sourceBitmap = typeof createImageBitmap==='function'?await createImageBitmap(canvas):canvas;}catch{sourceBitmap=canvas;}
+        if(sourceBitmap===canvas)sourceBitmap.close=()=>{canvas.width=1;canvas.height=1;};
       } finally {
         decoded.close?.();
-        canvas.width = 1;
-        canvas.height = 1;
+        if(sourceBitmap!==canvas){canvas.width = 1;canvas.height = 1;}
       }
     } else {
       sourceBitmap = decoded;
@@ -119,7 +121,7 @@ export async function openReaderV2ImageSession(
       const maxCropPixels = maxCropMegapixels * 1_000_000;
       // Phone prints have 8–12 px glyphs. Enlarge the crop, keeping the same
       // pixel budget and releasing it before the next recognition.
-      const cropScale = Math.min(3, Math.max(1, 1600 / height), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
+      const cropScale = Math.min(3, Math.max(1, 1600 / height, zone.key==='mainPosition'?320/sourceWidth:1), Math.sqrt(maxCropPixels / Math.max(1, sourceWidth * sourceHeight)));
 
       canvas.width = Math.max(1, Math.round(sourceWidth * cropScale));
       canvas.height = Math.max(1, Math.round(sourceHeight * cropScale));
@@ -136,7 +138,7 @@ export async function openReaderV2ImageSession(
         canvas.width,
         canvas.height,
       );
-      prepareReaderV2Crop(canvas, String(zone.key));
+      prepareReaderV2Crop(canvas, String(zone.key), zone.lightText);
       return await operation(canvas);
     } finally {
       canvas.width = 1;
