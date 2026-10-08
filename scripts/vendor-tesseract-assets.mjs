@@ -10,6 +10,7 @@ const assets = [
   ['public/tesseract/core/tesseract-core-lstm.wasm.js', 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-lstm.wasm.js', 100_000],
   ['public/tesseract/core/tesseract-core-simd-lstm.wasm.js', 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core-simd-lstm.wasm.js', 100_000],
   ['public/tesseract/lang/por.traineddata', 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/por@1.0.0/4.0.0_best_int/por.traineddata.gz', 1_000_000, 'gunzip'],
+  ['public/tesseract/lang/eng.traineddata', 'https://cdn.jsdelivr.net/gh/tesseract-ocr/tessdata_fast@4.1.0/eng.traineddata', 4_000_000],
 ];
 
 async function valid(path, minBytes) {

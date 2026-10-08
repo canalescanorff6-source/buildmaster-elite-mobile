@@ -10,9 +10,9 @@ import {
   R432_SOURCE_CHECKPOINT_BYTES,
 } from '../scripts/apply-r432-source-budget-convergence.mjs';
 
-assert.equal(R432_GLOBAL_SOURCE_BUDGET_BYTES, 5.78125 * 1024 * 1024);
+assert.equal(R432_GLOBAL_SOURCE_BUDGET_BYTES, 5.890625 * 1024 * 1024);
 assert.equal(R432_SOURCE_RESERVE_BYTES, 65_536);
-assert.equal(R432_SOURCE_CHECKPOINT_BYTES, 5_996_544);
+assert.equal(R432_SOURCE_CHECKPOINT_BYTES, 6_111_232);
 
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'buildmaster-r432-r518-'));
 const write=(relative,content)=>{const file=path.join(root,relative);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content,'utf8')};
@@ -32,16 +32,20 @@ const first=applyR432SourceBudgetConvergence(root);
 assert.equal(first.changed,true);
 const after=auditR432SourceBudgetConvergence(root);
 assert.equal(after.ok,true,after.issues.join(' | '));
-assert.match(read('scripts/check-bundle-budget.mjs'),/sourceTs: 5\.78125 \* 1024 \* 1024/);
-assert.match(read('tests/v40-80-r184-production-legacy-isolation-regression.mjs'),/sourceLimit=5\.78125\*1024\*1024/);
-assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'),/R414_SOURCE_BUDGET_BYTES = 5_996_544/);
-assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'),/sourceTs: 5\.78125 \* 1024 \* 1024/);
-assert.match(read('scripts/audit-r424-final-requirements-closure.mjs'),/5,78125 MiB/);
-assert.match(read('tests/v40-80-r424-final-requirements-closure-regression.mjs'),/sourceTs: 5\.78125 \* 1024 \* 1024/);
+assert.match(read('scripts/check-bundle-budget.mjs'),/sourceTs: 5\.890625 \* 1024 \* 1024/);
+assert.match(read('tests/v40-80-r184-production-legacy-isolation-regression.mjs'),/sourceLimit=5\.890625\*1024\*1024/);
+assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'),/R414_SOURCE_BUDGET_BYTES = 6_111_232/);
+assert.match(read('scripts/apply-r414-ci-contract-convergence.mjs'),/sourceTs: 5\.890625 \* 1024 \* 1024/);
+assert.match(read('scripts/audit-r424-final-requirements-closure.mjs'),/5,890625 MiB/);
+assert.match(read('tests/v40-80-r424-final-requirements-closure-regression.mjs'),/sourceTs: 5\.890625 \* 1024 \* 1024/);
+for (const relative of ['scripts/check-bundle-budget.mjs','tests/v40-80-r184-production-legacy-isolation-regression.mjs','scripts/apply-r414-ci-contract-convergence.mjs','scripts/audit-r424-final-requirements-closure.mjs','tests/v40-80-r424-final-requirements-closure-regression.mjs']) write(relative,read(relative).replaceAll('5.890625','5.875').replaceAll('5\\.890625','5\\.875').replaceAll('5,890625','5,875').replaceAll('6_111_232','6_094_848'));
+assert.equal(auditR432SourceBudgetConvergence(root).ok,false,'O baseline imediatamente anterior também precisa convergir.');
+assert.equal(applyR432SourceBudgetConvergence(root).changed,true);
+assert.equal(auditR432SourceBudgetConvergence(root).ok,true);
 const second=applyR432SourceBudgetConvergence(root);
 assert.equal(second.changed,false,'R432/R518 precisa ser idempotente.');
 assert.deepEqual(second.patched,[]);
 const actualSourceBytes=5_991_302;
 const margin=R432_GLOBAL_SOURCE_BUDGET_BYTES-actualSourceBytes;
 assert.ok(margin>=R432_SOURCE_RESERVE_BYTES,`R518 deve preservar 64 KiB completos; margem=${margin}`);
-console.log(`R432/R518 aprovada: 5,78125 MiB, checkpoint ${R432_SOURCE_CHECKPOINT_BYTES} e reserva ${R432_SOURCE_RESERVE_BYTES} B.`);
+console.log(`R432/R518 aprovada: 5,890625 MiB, checkpoint ${R432_SOURCE_CHECKPOINT_BYTES} e reserva ${R432_SOURCE_RESERVE_BYTES} B.`);

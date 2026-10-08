@@ -1,6 +1,8 @@
 import type TesseractNamespace from 'tesseract.js';
 import type { ReaderV2WorkerFactory, ReaderV2WorkerPort } from './readerV2OcrWorker';
 import type { ReaderV2FieldKey } from './readerV2Types';
+import { readerV2ValueRows } from './readerV2CropPreparation';
+import { readerV2CellNumber, thresholdReaderV2Cell } from './readerV2NumericCell';
 
 const READER_V2_WORKER_BOOT_TIMEOUT_MS = 18_000;
 const READER_V2_RECOGNITION_TIMEOUT_MS = 16_000;
@@ -37,6 +39,8 @@ async function bootWorker(onProgress?: (progress: ReaderV2TesseractProgress) => 
     corePath: '/tesseract/core',
     langPath: '/tesseract/lang',
     gzip: false,
+    // Failed jobs already reject their promises; avoid a second uncaught throw.
+    errorHandler: () => undefined,
     logger: (message) => onProgress?.({
       status: message.status || 'processando',
       progress: Number(message.progress || 0),
@@ -72,16 +76,15 @@ function recoverableRecognitionError(message: string) {
   return Object.assign(new Error(message), { readerV2Recoverable: true as const });
 }
 
-function recognizeWithDeadline(worker: TesseractWorker, input: unknown) {
-  const recognizing = worker.recognize(input as Parameters<TesseractWorker['recognize']>[0]);
-  return new Promise<Awaited<ReturnType<TesseractWorker['recognize']>>>((resolve, reject) => {
+function operationWithDeadline<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
     let settled = false;
     const timer = globalThis.setTimeout(() => {
       if (settled) return;
       settled = true;
       reject(recoverableRecognitionError('Um campo do Reader V2 excedeu o tempo seguro de OCR.'));
-    }, READER_V2_RECOGNITION_TIMEOUT_MS);
-    recognizing.then((value) => {
+    }, timeoutMs);
+    operation.then((value) => {
       if (settled) return;
       settled = true;
       globalThis.clearTimeout(timer);
@@ -95,16 +98,88 @@ function recognizeWithDeadline(worker: TesseractWorker, input: unknown) {
   });
 }
 
+function recognizeWithDeadline(worker: TesseractWorker, input: unknown, timeoutMs = READER_V2_RECOGNITION_TIMEOUT_MS) {
+  return operationWithDeadline(worker.recognize(input as Parameters<TesseractWorker['recognize']>[0]),timeoutMs);
+}
+
 export function createReaderV2TesseractWorkerFactory(
   onProgress?: (progress: ReaderV2TesseractProgress) => void,
 ): ReaderV2WorkerFactory {
   return async (): Promise<ReaderV2WorkerPort> => {
     const worker = await bootWorker(onProgress);
     let terminated = false;
+    let language: 'por' | 'eng' = 'por';
+    async function useLanguage(next: 'por' | 'eng', timeoutMs = READER_V2_RECOGNITION_TIMEOUT_MS) {
+      if (language === next) return;
+      try { await operationWithDeadline(worker.reinitialize(next),Math.max(1,timeoutMs)); }
+      catch { throw recoverableRecognitionError('Não foi possível preparar o modelo local de OCR no tempo seguro.'); }
+      language = next;
+    }
 
     return {
       async recognize(input, key) {
         if (terminated) throw new Error('Worker OCR do Reader V2 já encerrado.');
+        const rows = typeof HTMLCanvasElement !== 'undefined' && input instanceof HTMLCanvasElement
+          ? readerV2ValueRows(input) : undefined;
+        if (rows?.length) {
+          const attributeRows: Array<number|null> = [];
+          const confidences: number[] = [];
+          const cell = document.createElement('canvas');
+          const deadline = Date.now() + READER_V2_RECOGNITION_TIMEOUT_MS;
+          try {
+            for (const rectangle of rows) {
+              cell.width = rectangle.width;
+              cell.height = rectangle.height;
+              const context = cell.getContext('2d');
+              if (!context) throw new Error('Não foi possível preparar uma célula de atributo.');
+              context.drawImage(input as HTMLCanvasElement, rectangle.left, rectangle.top, rectangle.width, rectangle.height, 0, 0, cell.width, cell.height);
+              const candidates: Array<{value:number;confidence:number}> = [];
+              let accepted: number|null = null;
+              await useLanguage('por',deadline-Date.now());
+              for (const preparation of ['baseline','binary','clean'] as const) {
+                if (preparation !== 'baseline') thresholdReaderV2Cell(cell,preparation === 'clean');
+                for (const psm of ['7','6'] as const) {
+                  // Restricting the LSTM alphabet can erase valid96 or force a
+                  // partial9. Decode freely, then validate the complete cell.
+                  await worker.setParameters({...paramsForKey(key),tessedit_char_whitelist:'',tessedit_pageseg_mode:psm as TesseractNamespace.PSM});
+                  const remaining=deadline-Date.now();
+                  if (remaining<=0) throw recoverableRecognitionError('A coluna de atributos excedeu o tempo seguro de OCR.');
+                  const data=(await recognizeWithDeadline(worker,cell,remaining)).data;
+                  const value=readerV2CellNumber(String(data.text??''),Number(data.confidence||0));
+                  if (value !== null) {
+                    const confidence=Number(data.confidence||0);
+                    if (confidence>=80 || candidates.some(candidate=>candidate.value===value)) accepted=value;
+                    candidates.push({value,confidence});
+                  }
+                  if (accepted !== null) break;
+                }
+                if (accepted !== null) break;
+              }
+              if (accepted === null) {
+                // The alternative model only sees the original prepared cell.
+                // Its transformed reads are not independent corroboration.
+                context.clearRect(0,0,cell.width,cell.height);
+                context.drawImage(input as HTMLCanvasElement,rectangle.left,rectangle.top,rectangle.width,rectangle.height,0,0,cell.width,cell.height);
+                await useLanguage('eng',deadline-Date.now());
+                await worker.setParameters({...paramsForKey(key),tessedit_char_whitelist:'',tessedit_pageseg_mode:'7' as TesseractNamespace.PSM});
+                const remaining=deadline-Date.now();
+                if (remaining<=0) throw recoverableRecognitionError('A coluna de atributos excedeu o tempo seguro de OCR.');
+                const data=(await recognizeWithDeadline(worker,cell,remaining)).data;
+                const confidence=Number(data.confidence||0);
+                const value=readerV2CellNumber(String(data.text??''),confidence);
+                if (value!==null && confidence>=90) {accepted=value;candidates.push({value,confidence});}
+              }
+              attributeRows.push(accepted);
+              confidences.push(accepted===null?0:Math.max(...candidates.filter(candidate=>candidate.value===accepted).map(candidate=>candidate.confidence)));
+            }
+          } finally { cell.width = 1; cell.height = 1; }
+          return {
+            text: attributeRows.map(value=>value??'').join('\n'),
+            confidence: Math.round(confidences.reduce((sum,value)=>sum+value,0)/confidences.length),
+            attributeRows,
+          };
+        }
+        await useLanguage('por');
         await worker.setParameters(paramsForKey(key));
         const result = await recognizeWithDeadline(worker, input);
         return {
