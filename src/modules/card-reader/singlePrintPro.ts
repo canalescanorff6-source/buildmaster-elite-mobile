@@ -5,7 +5,7 @@ import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
 import type { PremiumZoneReading } from '@/lib/premiumReading';
 import type { PrintQualityReport } from '@/lib/validation';
 import { looksLikeCompleteProfile, readDetailedPrint, type DetailedPrintReading } from './detailedPrintReader';
-import { EFHUB_CARD_ART_ZONE, EFHUB_PROFILE_ZONES, isLikelyEfhubProfileGeometry, looksLikeEfhubProfileText } from './efhubProfile';
+import { EFHUB_CARD_ART_ZONE, EFHUB_PROFILE_ZONES, looksLikeEfhubProfileText } from './efhubProfile';
 import { buildEfhubLayoutPlan, mapEfhubMacroZones, mapEfhubOcrZones, type EfhubLayoutAudit } from './efhubLayoutGeometry';
 import { HIGH_PRECISION_OCR_VERSION, precisionAccuracyEstimate, precisionBlockingReasons, textSimilarity } from './highPrecisionOcr';
 
@@ -107,7 +107,7 @@ const POSITION_ALIASES: Record<string, PositionCode> = {
 const DETAILED_PROFILE_ZONES: OcrZone[] = EFHUB_PROFILE_ZONES;
 
 export function detectSinglePrintTemplate(width: number, height: number): SinglePrintTemplate {
-  if (isLikelyEfhubProfileGeometry(width, height)) return 'detailed-profile';
+  if (width>0&&height>0&&width/height>=.80&&width/height<=.93) return 'detailed-profile';
   if (width > height) return 'landscape';
   const ratio = width / Math.max(1, height);
   return ratio < 0.62 ? 'tall' : 'classic';

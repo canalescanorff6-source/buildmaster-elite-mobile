@@ -1,8 +1,10 @@
+import {detectSinglePrintTemplate} from '../src/modules/card-reader/singlePrintPro';
 import {createPlayerCardPreviewR130} from '../src/modules/card-reader/cardPreviewServiceR130';
 import * as assert from 'node:assert/strict';
 import {renderCardCropPreview} from '../src/modules/card-reader/cardArtCrop';
 import { openReaderV2ImageSession } from '../src/modules/card-reader-v2/readerV2ImageSession';
 async function main(){
+  assert.equal(detectSinglePrintTemplate(566,652),'detailed-profile','Reduzir a resolução do perfil não pode mudar o recorte da capa.');
   const original={document:globalThis.document,Image:globalThis.Image,bitmap:globalThis.createImageBitmap};
   let revoked=0;
   const revoke=URL.revokeObjectURL; URL.revokeObjectURL=()=>{revoked++;};
