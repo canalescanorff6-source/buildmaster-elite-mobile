@@ -211,8 +211,9 @@ function generateLocalRefinementCandidates(base: CardCropBox, imageWidth: number
   const candidates: CardCropBox[] = [base];
   const pxX = 1 / Math.max(1, imageWidth);
   const pxY = 1 / Math.max(1, imageHeight);
-  const stepsX = [pxX * 2, pxX * 5, base.w * 0.006, base.w * 0.012];
-  const stepsY = [pxY * 2, pxY * 5, base.h * 0.005, base.h * 0.010];
+  // Meio passo da grade inicial alcança bordas entre os candidatos.
+  const stepsX = [pxX * 2, pxX * 5, base.w * 0.006, base.w * 0.08];
+  const stepsY = [pxY * 2, pxY * 5, base.h * 0.005, base.h * 0.06];
   for (const dx of stepsX) {
     candidates.push(clampCardCropBox({ ...base, x: base.x - dx }));
     candidates.push(clampCardCropBox({ ...base, x: base.x + dx }));
@@ -244,8 +245,8 @@ function generateLocalRefinementCandidates(base: CardCropBox, imageWidth: number
 }
 
 function expandCardBox(box: CardCropBox, imageWidth: number, imageHeight: number) {
-  const marginX = Math.max(2 / imageWidth, box.w * 0.012);
-  const marginY = Math.max(2 / imageHeight, box.h * 0.009);
+  const marginX = Math.max(2 / imageWidth, box.w * 0.04);
+  const marginY = Math.max(2 / imageHeight, box.h * 0.04);
   return clampCardCropBox({
     x: box.x - marginX,
     y: box.y - marginY,

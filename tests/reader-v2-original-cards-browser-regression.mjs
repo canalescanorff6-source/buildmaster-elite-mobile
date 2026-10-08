@@ -55,7 +55,16 @@ try{
  assert.equal(Object.keys(output.attributes).length,26,'Todos os26 atributos legíveis devem ser preenchidos.');
  for(const [index,key] of output.keys.entries())assert.equal(output.attributes[key],String(card.values[index]),`Célula ${key} deve corresponder ao valor impresso.`);
  assert.equal(output.review.playerName.normalize('NFD').replace(/[\u0300-\u036f]/g,''),card.name.normalize('NFD').replace(/[\u0300-\u036f]/g,''));observations.push([output.review.level,card.level]);assert.equal(output.review.points,card.points);observations.push([output.review.mainPosition,card.position]);
- const cover=await page.evaluate(()=>window.readCover(window.cardFile));assert.match(cover?.preview??'',/^data:image\/jpeg/);
+ const cover=await page.evaluate(async()=>{
+  const draw=CanvasRenderingContext2D.prototype.drawImage;const crops=[];
+  CanvasRenderingContext2D.prototype.drawImage=function(...args){
+   if(args.length===9&&this.canvas.height>this.canvas.width*1.25&&this.canvas.width>=240)crops.push(args.slice(1,5));
+   return draw.apply(this,args);
+  };
+  try{return {...await window.readCover(window.cardFile),crops};}finally{CanvasRenderingContext2D.prototype.drawImage=draw;}
+ });assert.match(cover?.preview??'',/^data:image\/jpeg/);
+ const frame=card.file.startsWith('dani')?[117,156,408,571]:[122,164,420,590];
+ assert.ok(cover.crops.some(([x,y,w,h])=>x<=frame[0]&&y<=frame[1]&&x+w>=frame[2]&&y+h>=frame[3]),'O recorte deve preservar as quatro bordas da carta original: '+JSON.stringify(cover.crops));
  assert.equal(output.ocrSnapshot.workerReady,false);assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  }
  for(const [actual,expected] of observations)assert.equal(actual,expected);
