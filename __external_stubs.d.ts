@@ -85,6 +85,7 @@ declare module 'tesseract.js' {
     interface WorkerParams { [key: string]: string | number | boolean | undefined; }
     interface RecognizeResult { data: { text?: string; confidence?: number; [key: string]: unknown } }
     interface Worker {
+      reinitialize(languages: string | string[]): Promise<unknown>;
       setParameters(params: Partial<WorkerParams>): Promise<void>;
       recognize(image: File | Blob | string): Promise<RecognizeResult>;
       terminate(): Promise<void>;

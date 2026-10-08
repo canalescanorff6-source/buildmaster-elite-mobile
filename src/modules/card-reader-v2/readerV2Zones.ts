@@ -8,6 +8,7 @@ import type {
   ReaderV2Zone,
 } from './readerV2Types';
 import { READER_V2_DEFAULT_ZONES } from './readerV2ZoneProfile';
+import { recoverReaderV2Identity } from './readerV2IdentityRecovery';
 
 export type ReadReaderV2ZonesInput = {
   imageSession: Pick<ReaderV2ImageSession, 'withCrop'>;
@@ -252,6 +253,8 @@ async function readAttributeField(
   zone: ReaderV2Zone,
 ): Promise<ReaderV2FieldEvidence> {
   const stripFields: ReaderV2FieldEvidence[] = [];
+  const orderedRows: Array<number | null> = [];
+  let hasOrderedRows = false;
   let exact = true;
   let stripError: string | null = null;
 
@@ -269,11 +272,30 @@ async function readAttributeField(
         source: 'zones',
       };
       stripFields.push(field);
+      const rows = field.attributeRows;
+      const values = parseAttributeValues(field.value);
+      if (!field.error && rows?.length === strip.expected) {
+        orderedRows.push(...rows.map(value => typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 110 ? value : null));
+        hasOrderedRows = true;
+      } else if (!field.error && field.confidence >= 42 && values.length === strip.expected) {
+        orderedRows.push(...values);
+        hasOrderedRows = true;
+      } else orderedRows.push(...Array<null>(strip.expected).fill(null));
       if (countAttributeValues(field.value) !== strip.expected) exact = false;
     } catch (cause) {
       exact = false;
       stripError ??= errorMessage(cause);
+      orderedRows.push(...Array<null>(strip.expected).fill(null));
     }
+  }
+
+  if (hasOrderedRows) {
+    const complete = orderedRows.every(value => value !== null);
+    return {
+      ...mergeAttributeFields(zone, stripFields),
+      attributeRows: orderedRows,
+      ...(complete ? {attributeValues: orderedRows as number[]} : {}),
+    };
   }
 
   if (exact && stripFields.length === READER_V2_ATTRIBUTE_VALUE_STRIPS.length) {
@@ -309,7 +331,7 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
       stage: 'reading',
       current: index,
       total,
-      percent: total ? Math.round((index / total) * 100) : 100,
+      percent: total ? Math.round((index / total) * 90) : 90,
       label: `Lendo ${zone.label}`,
       fieldKey: zone.key,
     });
@@ -349,17 +371,24 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
       stage: 'reading',
       current: index + 1,
       total,
-      percent: total ? Math.round(((index + 1) / total) * 100) : 100,
+      percent: total ? Math.round(((index + 1) / total) * 90) : 90,
       label: `${zone.label} concluído`,
       fieldKey: zone.key,
     });
   }
 
+  await recoverReaderV2Identity(fields, uncertainKeys, zones, async zone => {
+    input.onProgress?.({stage:'reading',current:total,total,percent:95,label:`Conferindo ${zone.label}`,fieldKey:zone.key});
+    try { return await readRegularField(input, zone); }
+    catch (cause) { return {key:zone.key,label:zone.label,value:'',confidence:0,source:'zones',error:errorMessage(cause)}; }
+  });
+  input.onProgress?.({stage:'reading',current:total,total,percent:100,label:'Leitura dos campos concluída'});
   validateLevelPointsConsistency(fields, uncertainKeys);
 
   const attributes = fields.find((field) => field.key === 'attributes');
   const parsedAttributeValues = attributes ? parseAttributeValues(attributes.value) : [];
-  const attributesRead = parsedAttributeValues.length;
+  const attributeRows = attributes?.attributeRows;
+  const attributesRead = attributeRows ? attributeRows.filter(value => value !== null).length : parsedAttributeValues.length;
   const attributesExpected = 26;
   const attributeValues = attributesRead === attributesExpected ? attributes?.attributeValues : undefined;
   if (attributes && (attributesRead !== attributesExpected || !attributeValues)) addUncertain(uncertainKeys, 'attributes');
@@ -377,5 +406,6 @@ export async function readReaderV2Zones(input: ReadReaderV2ZonesInput): Promise<
     attributesExpected,
     attributesRead,
     attributeValues,
+    attributeRows,
   };
 }
