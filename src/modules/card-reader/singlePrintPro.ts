@@ -1,3 +1,4 @@
+import {imageToBitmap} from './imageProcessing';
 import {zone,CLASSIC_ZONES,TALL_ZONES,LANDSCAPE_ZONES} from './singlePrintZonePresets';
 import { PLAYSTYLE_OPTIONS, type PositionCode } from '@/lib/analyzerDomain';
 import type { OcrZone, OcrZoneKey } from '@/lib/ocr';
@@ -696,7 +697,7 @@ function fullBounds(): SinglePrintContentBounds {
   return { x: 0, y: 0, w: 1, h: 1 };
 }
 
-async function detectContentBounds(bitmap: ImageBitmap): Promise<LayoutAnchorReport> {
+async function detectContentBounds(bitmap: CanvasImageSource & {width:number;height:number}): Promise<LayoutAnchorReport> {
   if (typeof document === 'undefined') return { bounds: fullBounds(), confidence: 0, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0 };
   const sampleWidth = Math.min(260, Math.max(120, bitmap.width));
   const sampleHeight = Math.max(120, Math.round(bitmap.height * (sampleWidth / Math.max(1, bitmap.width))));
@@ -758,21 +759,8 @@ async function detectContentBounds(bitmap: ImageBitmap): Promise<LayoutAnchorRep
 }
 
 export async function inspectSinglePrintGeometry(file: File | Blob): Promise<{ width: number; height: number; template: SinglePrintTemplate; zones: OcrZone[]; cardArtZone: OcrZone; anchorReport: LayoutAnchorReport }> {
-  if (typeof createImageBitmap === 'undefined') {
-    const adaptive = getAdaptiveSinglePrintZones(1400, 1600);
-    const baseAnchor = { bounds: fullBounds(), confidence: 0, topInset: 0, bottomInset: 0, leftInset: 0, rightInset: 0 };
-    if (adaptive.template === 'detailed-profile') {
-      const plan = buildEfhubLayoutPlan(1400, 1600, baseAnchor.bounds);
-      const zones = mapEfhubOcrZones(plan);
-      return {
-        width: 1400, height: 1600, template: adaptive.template, zones,
-        cardArtZone: zones.find((item) => item.key === 'cardType') ?? getCardArtZone(adaptive.template),
-        anchorReport: { ...baseAnchor, confidence: plan.audit.confidence, efhubLayout: plan.audit, displayZones: mapEfhubMacroZones(plan) }
-      };
-    }
-    return { width: 1400, height: 1600, template: adaptive.template, zones: adaptive.zones, cardArtZone: getCardArtZone(adaptive.template), anchorReport: baseAnchor };
-  }
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const bitmap=await imageToBitmap(file);
+  if(!bitmap)throw new Error('Não foi possível decodificar o print.');
   const width = bitmap.width;
   const height = bitmap.height;
   const adaptive = getAdaptiveSinglePrintZones(width, height);
