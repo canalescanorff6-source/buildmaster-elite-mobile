@@ -33,7 +33,7 @@ assert.match(readerFlowR163,/Confira Nome, Nível máximo e Pontos de progressã
 assert.doesNotMatch(review,/premium-confirmation-card/); // confirmação ocorre antes do ResultWorkspace
 assert.doesNotMatch(review,/Confirme as etapas obrigatórias/);
 assert.match(review,/premium-reading-audit-v4070/);
-assert.match(review,/zero confirmações obrigatórias/);
+assert.match(review,/Sem confirmações obrigatórias\./);
 assert.match(review,/visibleSpecialSkills/);
 assert.match(season,/stableVersion:\s*'6\.0\.0'/);
 assert.match(season,/stableSeason:\s*'eFootball 2027'/);
