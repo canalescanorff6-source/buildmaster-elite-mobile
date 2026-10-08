@@ -30,7 +30,7 @@ const originalLoad = (Module as unknown as {_load:Function})._load;
     cancel:async()=>{cancelEntered?.();await pendingCancel;},close:()=>{},
   })};
   if(request === '../card-reader/cardVisionReaderActionsLegacyR187') return {createCardVisionReaderActionsR187:(input:CardVisionReaderActionsInputR187)=>({
-    runAnalysis:async()=>{legacyCalls++;pipelineInput=input;if(rejectNext){rejectNext=false;return {status:'review',persistenceStarted:false};}return {status:'completed',persistenceStarted:true};},
+    runAnalysis:async(confirmed=false)=>{legacyCalls++;pipelineInput=input;if(!confirmed)return {status:'preview',persistenceStarted:false};if(rejectNext){rejectNext=false;return {status:'review',persistenceStarted:false};}return {status:'completed',persistenceStarted:true};},
   })};
   return originalLoad.call(this,request,...args);
 };
@@ -66,6 +66,17 @@ async function main() {
   assert.deepEqual(c.state.manualFields.nativeSkills,['Cabeçada','Chute de primeira','Passe de primeira'],'Habilidades lidas da própria carta devem chegar ao gerador.');
   c.state.manualFields.playerName='Drogba conferido';
   c.state.manualFields.level='33'; c.state.manualFields.trainingPointsTotal='64';
+  c.state.manualFields.attributes.finishing='';
+  c.state.manualFields.attributes.speed='78';
+  c.state.manualFields.nativeSkills=['Cabeçada'];
+  const preview=await c.actions().runAnalysis(false);
+  assert.deepEqual(preview,{status:'preview',persistenceStarted:false},'Prévia não pode iniciar persistência.');
+  assert.doesNotMatch(pipelineInput?.rawText??'',/Finalização: 96/,'A prévia não pode recuperar um atributo apagado do OCR original.');
+  assert.match(pipelineInput?.rawText??'',/Velocidade: 78/,'A prévia deve usar o atributo corrigido na conferência.');
+  assert.doesNotMatch(pipelineInput?.rawText??'',/Passe de primeira/,'Habilidade removida não pode reaparecer na prévia.');
+  assert.equal(pipelineInput?.manualFields.trainingPointsTotal,'64');
+  await c.actions().runAnalysis(false);
+  c.state.manualFields.attributes.finishing='96';
   await c.actions().runAnalysis(true);
   assert.equal(pipelineInput?.manualFields.playerName,'Drogba conferido');
   assert.match(pipelineInput?.rawText??'',/Finalização: 96/,'Bridge precisa entregar atributos com nomes, não números soltos.');

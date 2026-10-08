@@ -530,12 +530,12 @@ export function CardVisionApp() {
     openCofreDeJogadores, openIntegratedPlayer, saveCurrentFicha, toggleSavedSkill,
     updateAlwaysDeletePermanently, batchFavoriteHistory, batchStatusHistory, mergeSelectedHistory,
   } = vaultActionsR185;
-  async function confirmPreFinalCardDataR16(confirmedFields: ManualFields) {
+  async function confirmPreFinalCardDataR16(confirmedFields: ManualFields, confirmed = true) {
     const confirmedReview = preFinalConfirmation;
     setManualFields(confirmedFields);
     const { createCardVisionReaderActionsR187 } = await import('@/modules/card-reader/cardVisionReaderActionsR187');
-    const outcome = await createCardVisionReaderActionsR187({ ...readerActionContextR187, manualFields: confirmedFields }).runAnalysis(true);
-    if (outcome?.status === 'completed') setPreFinalConfirmation(current => current === confirmedReview ? null : current);
+    const outcome = await createCardVisionReaderActionsR187({ ...readerActionContextR187, manualFields: confirmedFields }).runAnalysis(confirmed);
+    if (outcome?.status === 'completed' || (outcome?.status === 'preview' && !outcome.persistenceStarted)) setPreFinalConfirmation(current => current === confirmedReview ? null : current);
     return outcome;
   }
   useEffect(() => {

@@ -99,8 +99,8 @@ export function ReviewPanel({
   return (
     <section className="review-panel result-panel creation-review-panel bm2820-review-screen">
       <div className="review-workflow-banner luxury-panel">
-        <div><span className="creation-stage-number">3</span><div><p className="kicker">Revisão opcional</p><h2>Sem etapas obrigatórias</h2><p>O OCR v40.70 gera a ficha automaticamente. Use esta tela apenas se quiser corrigir algum campo; dado incerto fica nulo ou sinalizado e não exige clique de confirmação.</p></div></div>
-        <div className="review-progress-summary"><strong>Auto</strong><span>zero confirmações obrigatórias</span><i><b style={{ width: '100%' }} /></i></div>
+        <div><span className="creation-stage-number">3</span><div><p className="kicker">Prévia da leitura</p><h2>Ficha em conferência</h2><p>Esta prévia usa os dados disponíveis. Valores ausentes permanecem vazios; somente uma leitura validada pode gerar a ficha final.</p></div></div>
+        <div className="review-progress-summary"><strong>Prévia</strong><span>ainda não finalizada</span><i><b style={{ width: '100%' }} /></i></div>
       </div>
 
       <div className="result-head luxury-panel">
@@ -116,7 +116,7 @@ export function ReviewPanel({
         <div className="result-intro">
           <p className="kicker"><ShieldCheck size={16} /> Auditoria Elite</p>
           <h2>Revise antes do plano final</h2>
-          <p className="review-copy">Fluxo zero-confirmação: o leitor usa consenso e regras de segurança. Esta tela existe apenas para correções opcionais, sem cinco etapas obrigatórias.</p>
+          <p className="review-copy">Confira os dados com o print original. Se a leitura estiver incompleta, repita a leitura no leitor; também é possível corrigir os campos abaixo.</p>
           <div className="metric-grid">
             <div><span>Confiança</span><strong>{card.confidence}%</strong></div>
             <div><span>Posição lida</span><strong>{card.mainPositionPt}</strong></div>
@@ -381,7 +381,7 @@ export function ReviewPanel({
       </div>
 
       <div className="review-finalize-shell luxury-panel">
-        <div className="review-finalize-copy"><span className="creation-stage-number">4</span><div><p className="kicker">Gerar ficha</p><h3>Ajustes opcionais</h3><p>A ficha já pode ser usada. Recalcule apenas se você alterou algum campo manualmente.</p></div></div>
+        <div className="review-finalize-copy"><span className="creation-stage-number">4</span><div><p className="kicker">Gerar ficha</p><h3>Concluir após validação</h3><p>A prévia ainda não foi salva como ficha final. A geração verifica identidade, nível, pontos e todos os atributos antes de concluir.</p></div></div>
         <div className="review-actions">
           <button type="button" className="secondary-action" onClick={onRefresh}>Recalcular prévia</button>
           <button type="button" className="elite-button" onClick={onConfirm}><CheckCircle2 size={18} /> Aplicar ajustes e gerar ficha</button>

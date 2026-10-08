@@ -19,7 +19,7 @@ export function deriveSingleReaderFinalizationR503(
       state: 'BLOCKED',
       canPersistConfirmed: false,
       canPromoteResult: false,
-      reason: 'A ficha ainda não possui certificação Card Truth. Revise os dados críticos antes de finalizar.',
+      reason: 'Os dados desta ficha ainda não foram validados. Repita a leitura com o print original antes de finalizar.',
     };
   }
 
@@ -57,6 +57,6 @@ export function deriveSingleReaderFinalizationR503(
     state: 'REVIEW_REQUIRED',
     canPersistConfirmed: false,
     canPromoteResult: false,
-    reason: `A ficha continua provisória (${certification.state}). Revise e confirme os campos críticos antes de finalizar.`,
+    reason: `A ficha continua em prévia. ${certification.reasons.join(' ')} Repita a leitura com o print original ou confira os dados pendentes antes de finalizar.`,
   };
 }
