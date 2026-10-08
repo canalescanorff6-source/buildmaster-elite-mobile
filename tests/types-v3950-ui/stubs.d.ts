@@ -8,6 +8,7 @@ declare module 'tesseract.js' {
   export type PSM = string | number;
   export type WorkerParams = Record<string, string>;
   export interface Worker {
+    reinitialize(languages: string | string[]): Promise<unknown>;
     setParameters(params: Partial<WorkerParams>): Promise<void>;
     recognize(image: File | Blob): Promise<{ data: { text?: string; confidence?: number } }>;
     terminate(): Promise<void>;
