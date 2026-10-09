@@ -7,6 +7,7 @@ const originalLoad=(Module as unknown as {_load:Function})._load;
  if(request==='../../lib/accountStorage')return {activeAccountNamespace:()=>account};
  if(request==='./readerV2AppRuntime')return {createReaderV2AppOrchestrator:()=>({select:async()=>{},start:async()=>({review:{...review},evidence:{fields:[]},ocrSnapshot:{stage:'ocrClosed',workerReady:false,pendingRecognitions:0}}),cancel:async()=>{},close:()=>{}})};
  if(request==='../card-reader/cardPreviewServiceR130')return {createPlayerCardPreviewR130:async()=>({preview:'blob:cover',box:{x:0,y:0,w:1,h:1}})};
+ if(request==='../card-reader/cardArtCrop')return {adjustCardCropBox:(box:any)=>({...box,x:.1}),renderCardCropPreview:async()=> 'blob:adjusted',renderPlayerPortraitPreview:async()=>({preview:'blob:portrait-adjusted',box:{x:.1,y:0,w:.8,h:1}})};
  if(request==='../card-catalog/readerCardEdition')return {identifyReadCardEdition:async()=>{if(wait){entered();await new Promise<void>(done=>release=done)}return null}};
  return originalLoad.call(this,request,...args);
 };
@@ -19,9 +20,13 @@ async function scenario(duringRecognition:boolean){
  const {createCardVisionReaderActionsR187}=await import('../src/modules/card-reader-v2/cardVisionReaderActionsR542');
  const actions=()=>createCardVisionReaderActionsR187({...input,...state});
  await actions().handleFile(new File(['old'],'old.png',{type:'image/png'}));
+ assert.equal(state.playerCardImage,'blob:cover','Selecionar o print deve preparar a foto antes de iniciar OCR.');
+ await actions().adjustDetectedCard('right');
+ assert.equal(state.playerCardImage,'blob:portrait-adjusted');
  const reading=actions().analyzeSelectedImage();
  if(duringRecognition){await ready;account='second';release();}else{await reading;account='second';}
  await reading;
+ assert.equal(state.playerCardImage,'blob:portrait-adjusted','A conclusão do OCR deve preservar o enquadramento ajustado.');
  if(duringRecognition){assert.equal(state.loading,false);assert.equal(state.ocrCancelable,false);}
  assert.deepEqual(await actions().runAnalysis(true),{status:'failed',persistenceStarted:false},'A revisão da conta anterior não pode iniciar análise ou gravação na conta nova.');
 }
