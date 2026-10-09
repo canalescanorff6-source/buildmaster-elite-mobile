@@ -37,7 +37,7 @@ import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList } from '@/lib/officialSkillIdentity';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
-import { cardChatContext } from '@/lib/cardChatContext';
+import { CardChatConsultation } from './CardChatConsultation';
 import { POSITION_PT, TACTICAL_STYLE_NAME } from '@/lib/analyzerDomain';
 import type { DynamicRulePack } from '@/modules/builds/dynamicRules';
 import {
@@ -390,13 +390,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
           </div>
           {shareMessage && <p className="result-share-feedback"><CheckCircle2 size={15} /> {shareMessage}</p>}
-          <details className="result-chat-consultation">
-            <summary>Consultar esta carta no ChatGPT</summary>
-            <p>Copie os dados e cole em uma nova conversa. A consulta usa o ChatGPT fora do app.</p>
-            <textarea aria-label="Contexto desta carta para o ChatGPT" readOnly value={cardChatContext(result)} rows={4} />
-            <button type="button" onClick={()=>{if(!navigator.clipboard){setShareMessage('Selecione e copie o texto acima para consultar no ChatGPT.');return}void navigator.clipboard.writeText(cardChatContext(result)).then(()=>setShareMessage('Dados desta carta copiados. Cole em uma nova conversa no ChatGPT.')).catch(()=>setShareMessage('Selecione e copie o texto acima para consultar no ChatGPT.'))}}><Copy size={17}/> Copiar dados da carta</button>
-            <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Abrir ChatGPT</a>
-          </details>
+          <CardChatConsultation result={result} onMessage={setShareMessage} />
 
           {heroExpanded && (
             <div className="result-expanded-details">
