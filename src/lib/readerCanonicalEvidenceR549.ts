@@ -5,7 +5,7 @@ type ReaderFieldLikeR549 = {key:string;value:string;error?:string};
 export type ReaderCanonicalEvidenceR549 = {skillValues?:string[];impetoName?:ReaderCanonicalImpetoNameR549;uncertainKeys:Array<'skills'|'impeto'>};
 function normalized(value:string|null|undefined){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
 export function extractReaderImpetoNameR549(value:string|null|undefined):ReaderCanonicalImpetoNameR549|null{
- const text=normalized(value);if(!text)return null;if(/\bsem\s+(?:impeto|booster|reforco)\b/.test(text))return 'Sem Ímpeto';
+ const text=normalized(value);if(!text)return null;if(/\bsem\s+(?:impeto|impulso|booster|reforco)\b/.test(text))return 'Sem Ímpeto';
  const matches=RECOGNIZABLE_IMPETO_NAMES.filter(name=>(` ${text} `).includes(` ${normalized(name)} `));
  return matches.length===1?matches[0]:null;
 }

@@ -127,7 +127,9 @@ function isSemanticallyPlausible(field: ReaderV2FieldEvidence) {
 
   switch (field.key) {
     case 'playerName':
-      return countLetters(value) >= 2 && !/\d/.test(value);
+      // The header also contains the style (for example Clássica nº 10).
+      // Validate the name line without rejecting a correctly read header.
+      return countLetters(value.split(/\r?\n/)[0]) >= 2 && !/\d/.test(value.split(/\r?\n/)[0]);
     case 'level':
     case 'points':
       return hasPlausibleNumber(value);

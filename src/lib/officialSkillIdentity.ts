@@ -242,6 +242,13 @@ export function extractCanonicalSkillsFromText(value: string | null | undefined)
       }
       cursor = index + Math.max(1, needle.length - 1);
     }
+    // OCR can remove every space inside a capsule. Match the entire token
+    // exactly, without fuzzy completion or substring matches.
+    const compact = entry.normalized.replace(/\s+/g, '');
+    if (compact !== entry.normalized && padded.includes(` ${compact} `)) {
+      const start = padded.indexOf(` ${compact} `) + 1;
+      matches.push({ canonical: entry.canonical, start, end: start + compact.length, confidence: 1 });
+    }
   }
 
   // Segunda passagem conservadora para erros pequenos do OCR. Só aceita

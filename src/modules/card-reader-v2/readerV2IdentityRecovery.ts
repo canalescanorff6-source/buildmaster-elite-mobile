@@ -29,6 +29,7 @@ export async function recoverReaderV2Identity(
   const levelRetry=candidates.find(zone=>zone.key==='level');
   if(levelRetry&&bio)candidates.push({...levelRetry,y:bio.y+bio.h*.797,w:bio.w*(75/420),h:bio.h*.244});
   const positionRetry=candidates.find(zone=>zone.key==='mainPosition');
+  if(positionRetry&&card)candidates.push({...positionRetry,x:card.x+card.w*.13,y:card.y+card.h*.15,w:card.w*.25,h:card.h*.07},{...positionRetry,x:card.x+card.w*.13,y:card.y+card.h*.15,w:card.w*.25,h:card.h*.07,lightText:false});
   if(positionRetry&&card)candidates.push({...positionRetry,x:card.x+card.w*(30/260),y:card.y+card.h*(60/355),w:card.w*(70/260),h:card.h*(30/355)},{...positionRetry,x:card.x+card.w*(30/260),y:card.y+card.h*(65/355),w:card.w*(50/260),h:card.h*(22/355)});
   for (const zone of candidates) {
     if(zone!==positionRetry&&zone.key==='mainPosition'&&fields.some(field=>field.key==='mainPosition'&&!field.error&&field.confidence>=40&&normalizeReaderV2Position(field.value)))continue;

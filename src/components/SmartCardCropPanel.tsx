@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crop, Loader2, ScanText, ZoomIn } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crop, ScanText, ZoomIn } from 'lucide-react';
 import type { CardCropResult } from '@/modules/card-reader/cardArtCrop';
 
 
@@ -51,11 +51,11 @@ export function SmartCardCropPanel({
         {playerCardImage ? (
           <img src={playerCardImage} alt="Foto quadrada do jogador detectada dentro da carta" />
         ) : (
-          <div className="smart-card-crop-loading"><Loader2 className="spin" size={24} /><span>Detectando somente a carta...</span></div>
+          <img src={fullPreview} alt="Print original enquanto a foto é preparada" />
         )}
         <figcaption>
-          <span><Crop size={14} /> Foto do jogador detectada</span>
-          <strong>{cropResult ? `${cropResult.confidence}% de confiança` : 'Preparando recorte'}</strong>
+          <span><Crop size={14} /> {cropResult ? 'Foto do jogador detectada' : 'Print original preservado'}</span>
+          <strong>{cropResult ? `${cropResult.confidence}% de confiança` : 'Recorte ainda não disponível'}</strong>
         </figcaption>
       </figure>
 
@@ -65,6 +65,7 @@ export function SmartCardCropPanel({
         <button type="button" onClick={onToggleAdjust} disabled={!cropResult}>
           <Crop size={15} /> {adjustOpen ? 'Fechar ajuste' : 'Ajustar recorte'}
         </button>
+        {!cropResult && <button type="button" onClick={onRedetect}><ScanText size={16} /> Redetectar foto</button>}
       </div>
 
       {adjustOpen && cropResult && (
