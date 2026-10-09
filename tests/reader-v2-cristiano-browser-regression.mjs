@@ -5,10 +5,10 @@ import path from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 
-// Fixture: the full EFHub Rivaldo print embedded in the user's app-review
-// screenshot (02-1000715539.png), cropped without resizing or invented text.
+// Fixture: EFHub Cristiano print embedded in app review (03-1000716829.png).
+// Lossless crop (96,345,827,1181), without resizing or invented text.
 
-const cards=[{file:'rivaldo-efhub-from-review.png',name:'Rivaldo',level:'31',points:'60',position:'AMF',values:[91,99,92,94,82,83,91,66,93,94,49,52,51,55,41,41,41,41,41,81,78,96,68,78,81,84]}];
+const cards=[{file:'cristiano-efhub-from-review.png',name:'Cristiano Ronaldo',level:'32',points:'62',position:'CF',values:[97,84,84,82,71,63,96,88,83,87,43,43,42,44,41,41,41,41,41,92,93,96,92,88,86,87]}];
 assert.ok(fs.existsSync('public/tesseract/lang/por.traineddata'),'Prepare os assets reais com npm run vendor:ocr.');
 const bundle=await build({stdin:{contents:`
  import {createPlayerCardPreviewR130} from './src/modules/card-reader/cardPreviewServiceR130';
@@ -51,13 +51,18 @@ try{
  for(const mode of ['automatic','zones'])for(const card of cards){
  const output=await page.evaluate(async ({encoded,mode})=>{
   const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
-  window.cardFile=new File([bytes],'card.jpg',{type:'image/jpeg'});
+  window.cardFile=new File([bytes],'card.png',{type:'image/png'});
   return window.readCard(window.cardFile,mode);
  },{encoded:fs.readFileSync('tests/fixtures/reader/'+card.file).toString('base64'),mode});
- console.log(JSON.stringify({card:card.name,name:output.review.playerName,level:output.review.level,position:output.review.mainPosition,skills:output.review.skillValues,impeto:output.review.impetoName}));
- assert.equal(output.review.playerName,'Rivaldo');
- assert.equal(output.review.impetoName,'Sem Ímpeto','Sem Impulso no print significa ausência de ímpeto ativo.');
- assert.equal(output.review.skillValues.length,10,'Ler todas as dez habilidades visíveis.');
+ console.log(JSON.stringify({card:card.name,mode,name:output.review.playerName,position:output.review.mainPosition,attributes:Object.keys(output.attributes).length}));
+ assert.deepEqual(output.review.impetoNames,['Instinto artilheiro','Fisicalidade']);
+ assert.ok(!output.review.uncertainKeys.includes('impeto'));
+ assert.equal(output.review.skillValues.length,7);
+ assert.deepEqual(output.review.specialSkillValues,['Finalização fenomenal','Cabeçada fulminante','Chute rasteiro fulminante']);
+ assert.match(output.raw,/ÍMPETO: Instinto artilheiro \+4/);assert.match(output.raw,/ÍMPETO: Fisicalidade \+3/);
+ assert.equal(output.review.playerName,card.name);
+
+
  assert.equal(Object.keys(output.attributes).length,26,'Todos os26 atributos legíveis devem ser preenchidos.');
  for(const [index,key] of output.keys.entries())assert.equal(output.attributes[key],String(card.values[index]),`Célula ${key} deve corresponder ao valor impresso.`);
  assert.equal(output.review.playerName.normalize('NFD').replace(/[\u0300-\u036f]/g,''),card.name.normalize('NFD').replace(/[\u0300-\u036f]/g,''));observations.push([output.review.level,card.level]);assert.equal(output.review.points,card.points);observations.push([output.review.mainPosition,card.position]);
@@ -72,7 +77,7 @@ try{
  assert.equal(output.ocrSnapshot.workerReady,false);assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
  }
  for(const [actual,expected] of observations)assert.equal(actual,expected);
- console.log('Rivaldo: nome, dez habilidades, ausência de ímpeto,26 atributos e capa aprovados.');
+ console.log('Cristiano: nome, posição,26 atributos, dois ímpetos, habilidades especiais e capa aprovados.');
 }finally{
  await browser?.close();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
 }

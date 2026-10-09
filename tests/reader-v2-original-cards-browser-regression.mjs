@@ -45,12 +45,12 @@ try{
  await page.goto(origin);
  assert.deepEqual(errors,[],'O runtime OCR deve carregar antes de iniciar uma leitura.');
  const observations=[];
- for(const card of cards){
- const output=await page.evaluate(async encoded=>{
+ for(const mode of ['automatic','zones'])for(const card of cards){
+ const output=await page.evaluate(async ({encoded,mode})=>{
   const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
   window.cardFile=new File([bytes],'card.jpg',{type:'image/jpeg'});
-  return window.readCard(window.cardFile,'automatic');
- },fs.readFileSync('tests/fixtures/reader/'+card.file).toString('base64'));
+  return window.readCard(window.cardFile,mode);
+ },{encoded:fs.readFileSync('tests/fixtures/reader/'+card.file).toString('base64'),mode});
  console.log(JSON.stringify({card:card.name,name:output.review.playerName,level:output.review.level,position:output.review.mainPosition,attrs:output.attributes,fields:output.evidence.fields.filter(f=>['mainPosition','level'].includes(f.key))}));
  assert.equal(Object.keys(output.attributes).length,26,'Todos os26 atributos legíveis devem ser preenchidos.');
  for(const [index,key] of output.keys.entries())assert.equal(output.attributes[key],String(card.values[index]),`Célula ${key} deve corresponder ao valor impresso.`);

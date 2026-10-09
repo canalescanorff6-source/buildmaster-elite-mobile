@@ -10,6 +10,15 @@ async function main() {
   assert.equal(fields.find(f=>f.key==='mainPosition')?.value,'RB','Uma posição inválida com confiança alta não pode bloquearRB válido.');
   assert.equal(fields.find(f=>f.key==='level')?.value,'37','Idade/ruído não pode prevalecer sobre o nível máximo do perfil.');
   assert.deepEqual(uncertain,[]);
+  const unnamed=[field('physicalModel','Comprimento da perna\nTamanho da cintura'),field('playerName','',0),field('level','32'),field('mainPosition','AMF')];
+  const missingName=['playerName'];let nameZone:any;
+  await recoverReaderV2Identity(unnamed,missingName,READER_V2_DEFAULT_ZONES,async zone=>{nameZone=zone;return field(zone.key,'Nome longo de jogador',93)});
+  assert.equal(unnamed.find(item=>item.key==='playerName')?.value,'Nome longo de jogador');assert.deepEqual(missingName,[]);
+  const originalName=READER_V2_DEFAULT_ZONES.find(zone=>zone.key==='playerName')!;
+  assert.ok(nameZone.w>originalName.w&&nameZone.h<originalName.h,'Recuperar o nome pela linha superior, sem misturar o estilo menor.');
+  const styleOnly=[field('physicalModel','Comprimento da perna\nTamanho da cintura'),field('playerName','',0),field('level','32'),field('mainPosition','AMF')];
+  await recoverReaderV2Identity(styleOnly,['playerName'],READER_V2_DEFAULT_ZONES,async zone=>field(zone.key,'Clássica nº 10',95));
+  assert.equal(styleOnly.find(item=>item.key==='playerName')?.value,'');
   const unsupported=[field('physicalModel','Comprimento da perna'),field('playerName','Cafu')];
   let reads=0;
   await recoverReaderV2Identity(unsupported,['level'],READER_V2_DEFAULT_ZONES,async zone=>{reads++;return field(zone.key,'37');});
