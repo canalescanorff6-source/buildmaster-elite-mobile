@@ -76,7 +76,8 @@ export function readerV2ReviewRawText(draft: ReaderV2ReviewDraft, confirmed?: {a
     normalizeReaderV2Position(draft.mainPosition) ? `POSIÇÃO PRINCIPAL: ${normalizeReaderV2Position(draft.mainPosition)}` : '',
     style ? `ESTILO DE JOGO OFENSIVO: ${style}` : '',
     skills?.length ? `HABILIDADES JÁ POSSUI: ${skills.join('; ')}` : '',
-    canonical.impetoName ? `ÍMPETO: ${canonical.impetoName}` : '',
+    canonical.specialSkillValues?.length ? `HABILIDADES ESPECIAIS: ${canonical.specialSkillValues.join('; ')}` : '',
+    ...(canonical.activeImpetos??[]).map(item=>`ÍMPETO: ${item.name}${item.value===null?'':` +${item.value}`}`),
     ...ATTRIBUTE_INPUTS.flatMap(item => attributes[item.key] ? [`${item.label}: ${attributes[item.key]}`] : []),
     source.trim(),
   ].filter(Boolean).join('\n');
@@ -158,6 +159,8 @@ export function buildReaderV2ReviewDraft(
     attributeRows: evidence.attributeRows ? [...evidence.attributeRows] : undefined,
     skillValues: canonical.skillValues,
     impetoName: canonical.impetoName,
+    impetoNames: canonical.impetoNames,
+    specialSkillValues: canonical.specialSkillValues,
     preview,
   };
 }

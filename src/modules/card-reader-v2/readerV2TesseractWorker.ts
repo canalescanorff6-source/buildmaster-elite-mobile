@@ -169,6 +169,28 @@ export function createReaderV2TesseractWorkerFactory(
                 const value=readerV2CellNumber(String(data.text??''),confidence);
                 if (value!==null && confidence>=90) {accepted=value;candidates.push({value,confidence});}
               }
+              if (accepted === null) {
+                // Retry unresolved cells from the original pixels with a quiet
+                // border. Never reinterpret punctuation as a digit.
+                const padding = 20;
+                cell.width = rectangle.width * 2 + padding * 2;
+                cell.height = rectangle.height * 2 + padding * 2;
+                const padded = cell.getContext('2d')!;
+                padded.fillStyle = '#fff';
+                padded.fillRect(0,0,cell.width,cell.height);
+                padded.drawImage(input as HTMLCanvasElement,rectangle.left,rectangle.top,rectangle.width,rectangle.height,padding,padding,rectangle.width*2,rectangle.height*2);
+                for (const model of ['por','eng'] as const) {
+                  await useLanguage(model,deadline-Date.now());
+                  await worker.setParameters({...paramsForKey(key),tessedit_char_whitelist:'',tessedit_pageseg_mode:'7' as TesseractNamespace.PSM});
+                  const remaining=deadline-Date.now();
+                  if (remaining<=0) throw recoverableRecognitionError('A coluna de atributos excedeu o tempo seguro de OCR.');
+                  const data=(await recognizeWithDeadline(worker,cell,remaining)).data;
+                  const confidence=Number(data.confidence||0);
+                  const value=readerV2CellNumber(String(data.text??''),confidence);
+
+                  if (value!==null && confidence>=90) {accepted=value;candidates.push({value,confidence});break;}
+                }
+              }
               attributeRows.push(accepted);
               confidences.push(accepted===null?0:Math.max(...candidates.filter(candidate=>candidate.value===accepted).map(candidate=>candidate.confidence)));
             }

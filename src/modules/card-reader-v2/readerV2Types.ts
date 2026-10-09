@@ -73,6 +73,8 @@ export interface ReaderV2ReviewDraft {
   attributeRows?: Array<number | null>;
   skillValues?: string[];
   impetoName?: string;
+  impetoNames?: string[];
+  specialSkillValues?: string[];
   preview: string | null;
 }
 

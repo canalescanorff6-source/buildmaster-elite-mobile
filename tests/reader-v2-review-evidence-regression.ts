@@ -1,5 +1,7 @@
 import * as assert from 'node:assert/strict';
-import { buildReaderV2ReviewDraft } from '../src/modules/card-reader-v2/readerV2Review';
+import { parseImpetos } from '../src/modules/analysis/cardEvidenceParserR130';
+import { deriveReaderCanonicalEvidenceR549 } from '../src/lib/readerCanonicalEvidenceR549';
+import { readerV2ReviewRawText, buildReaderV2ReviewDraft } from '../src/modules/card-reader-v2/readerV2Review';
 import { readReaderV2Zones } from '../src/modules/card-reader-v2/readerV2Zones';
 
 async function main() {
@@ -19,6 +21,23 @@ async function main() {
   const noLabel=buildReaderV2ReviewDraft({...evidence,fields:[evidence.fields[0],{key:'identityMeta',value:'28 183 32 62',confidence:97,source:'zones'}]},null);
   assert.equal(noLabel.level,'','Não adivinhar nível pelo primeiro inteiro da bio.');
   assert.equal(noLabel.points,'');
+
+  const boosters=deriveReaderCanonicalEvidenceR549([{key:'impeto',value:'Instinto artilheiro +4 Fisicalidade +3'}]);
+  assert.deepEqual(boosters.impetoNames,['Instinto artilheiro','Fisicalidade']);
+  assert.deepEqual(boosters.activeImpetos,[{name:'Instinto artilheiro',value:4},{name:'Fisicalidade',value:3}]);
+  assert.deepEqual(boosters.uncertainKeys,[]);
+  assert.equal(deriveReaderCanonicalEvidenceR549([{key:'impeto',value:'Passe 3'}]).activeImpetos?.[0].value,null,'Sem sinal + não atribuir um nível ao ímpeto.');
+  assert.deepEqual(deriveReaderCanonicalEvidenceR549([{key:'impeto',value:'Rompe-barreira +3 Fisicalidade +4'}]).activeImpetos,[{name:'Rompe-barreira',value:3},{name:'Fisicalidade',value:4}]);
+  assert.deepEqual(deriveReaderCanonicalEvidenceR549([{key:'impeto',value:'Instinto\nartilheiro +4 Fisicalidade +3'}]).activeImpetos,boosters.activeImpetos);
+  assert.equal(boosters.impetoName,undefined,'Não transformar dois ímpetos em uma seleção única.');
+  assert.deepEqual(deriveReaderCanonicalEvidenceR549([{key:'impeto',value:'Sem Impulso Passe +3'}]).impetoNames,['Passe']);
+  assert.deepEqual(deriveReaderCanonicalEvidenceR549([{key:'impeto',value:'Sem Impulso Sem Impulso'}]).impetoNames,['Sem Ímpeto']);
+  const special=deriveReaderCanonicalEvidenceR549([{key:'skills',value:'Cabeceio Finalizador nato Cabeçada Matadora Foguete Rasante'}]);
+  assert.deepEqual(special.skillValues,['Cabeçada']);
+  assert.deepEqual(special.specialSkillValues,['Finalização fenomenal','Cabeçada fulminante','Chute rasteiro fulminante']);
+  const serialized=readerV2ReviewRawText({...review,fields:[{key:'impeto',value:'Instinto artilheiro +4 Fisicalidade +3'}] as any});
+  assert.match(serialized,/ÍMPETO: Instinto artilheiro/);assert.match(serialized,/ÍMPETO: Fisicalidade/);
+  assert.deepEqual(parseImpetos(serialized).filter(item=>item.active).map(item=>({name:item.name.toLowerCase(),value:item.value})),[{name:'instinto artilheiro',value:4},{name:'fisicalidade',value:3}]);
 
   const attributeZone:any={key:'attributes',label:'Atributos',x:0,y:0,w:1,h:1,enabled:true};
   const ambiguous=await readReaderV2Zones({zones:[attributeZone],
