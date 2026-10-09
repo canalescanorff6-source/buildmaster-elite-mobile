@@ -831,7 +831,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
   const staminaActionIds=['press_recover','cover_space','cross_support','attack_space','carry'];
   const staminaDemand=clamp(average(staminaActionIds.map(id=>actionFrequencies.get(id)??0)),0,1);
   return {
-    canonicalDnaR457,actions,groupProfiles,attributeBases,stamina:compileAttribute('stamina'),staminaDemand,staminaFloor:68+staminaDemand*20,
+    canonicalDnaR457,actions,groupProfiles,attributeBases,stamina:compileAttribute('stamina'),staminaDemand,staminaFloor:evaluationTargetPosition==='GK'?45+staminaDemand*12:68+staminaDemand*20,
     aerialSupport:Math.max(
       actionFrequencies.get('aerial_finish')??0,
       actionFrequencies.get('aerial_defend')??0,

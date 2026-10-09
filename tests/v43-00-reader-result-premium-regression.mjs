@@ -38,7 +38,7 @@ assert.match(result, /UnifiedPerformanceV3920Panel/);
 assert.match(result, /analysisUsagePositionR138/);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  'ad3738dc1c46276b2084f2acf9a930a35358a9c7f5b134f1307dedebf00c46d0',
+  '02208171c61e6576107ebb3a22a94357755fb07f5b752b20dda78ca12b2ccadb',
   'R203 precisa preservar o baseline Clean Slate R551 documentado em 2026-10-09.'
 );
 

@@ -5,9 +5,9 @@ A alteração do motor foi solicitada para considerar a edição, os atributos r
 | Estado | Versão | SHA-256 do R119 |
 | --- | --- | --- |
 | Anterior | 40.80-r550-verified-card-evidence-v1 | 630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd |
-| Atual | 40.80-r551-card-needs-v1 | ad3738dc1c46276b2084f2acf9a930a35358a9c7f5b134f1307dedebf00c46d0 |
+| Atual | 40.80-r551-card-needs-v1 | 02208171c61e6576107ebb3a22a94357755fb07f5b752b20dda78ca12b2ccadb |
 
-Mudanças autorizadas: utilidade marginal heurística dos atributos, base de nível 1 com prova da edição, posição escolhida preservada, grupos de goleiro corretos, salto compartilhado e bônus confirmados acima de 99. A heurística não é um limiar oficial de gameplay. Dados lidos permanecem separados da base pesquisada, e a falta de base é sinalizada na proposta.
+Mudanças autorizadas: utilidade marginal heurística dos atributos, base de nível 1 com prova da edição, posição escolhida preservada, grupos e exigência de resistência próprios do goleiro, salto compartilhado e bônus confirmados acima de 99. A heurística não é um limiar oficial de gameplay. Dados lidos permanecem separados da base pesquisada, e a falta de base é sinalizada na proposta.
 
 O R119 continua o escritor final único. Habilidades e ímpetos mantêm as autoridades R457/R507. Bases, bônus e função entram na invalidação de evidência; revisões não atravessam contas.
 

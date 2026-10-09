@@ -84,3 +84,12 @@ const jumpValues=Object.fromEntries(Object.entries(jumpReference.attributes).map
 assert.ok(referenceBaseAgreesWithPrint(jumpReference,{...jumpValues,goalkeeperAwareness:String(Number(jumpValues.goalkeeperAwareness)+4),jump:'107'}),'A valid boosted jump above99 must retain its base authority.');
 
 assert.equal(deriveProjectedPlayerStateR504({attributes:{speed:103}} as any,zero()).finalAttributes.speed,103,'Unknown bonus origins cannot erase a value actually read above99.');
+
+const cechRef=references.cards.find(c=>c.capture==='168')!;
+const goalkeeperResult:any=resultFor({name:'Petr Cech',main:'GK',best:'GK',style:'Básico',defensive:'Goleiro defensivo',attrs:cechRef.baseAttributes as any,native:['Reposição baixa do GO','Arremesso longo do GO','Pegador de pênaltis','Liderança','Comandante da defesa (GO)']});
+goalkeeperResult.trainingPointsTotal=56;goalkeeperResult.parsed.trainingPointsTotal=56;goalkeeperResult.parsed.height=196;goalkeeperResult.tacticalProfile.style='POSSE_DE_BOLA';
+goalkeeperResult.parsed.editionIdentity={schemaVersion:1,officialCardId:cechRef.id,officialCardIdVerified:true,source:'MASTER_CATALOG',confidence:99};
+goalkeeperResult.parsed.trainingBase={cardId:cechRef.id,attributes:cechRef.baseAttributes,fixedBonus:cechRef.fixedBonus,sources:cechRef.sources};
+const keeperOutput:any=applyCleanSlatePerformance2027R119(goalkeeperResult);assert.ok(keeperOutput.training.lowerBodyStrength<=2,'The keeper must not spend18PP to meet an outfield stamina floor.');
+assert.equal(keeperOutput.trainingPointsUsed,56);
+console.log('Real keeper role: no outfield stamina recipe PASS');
