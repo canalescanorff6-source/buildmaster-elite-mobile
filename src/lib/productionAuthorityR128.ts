@@ -82,6 +82,7 @@ export function productionOutputFingerprintR128(result: AnalysisResult) {
     String(result.bestPosition?.code ?? ''),
     String((result as WithProductionAuthorityR128).cleanSlate2027R119?.usagePosition ?? result.bestPosition?.code ?? ''),
     String((result as WithProductionAuthorityR128).cleanSlate2027R119?.usageFunction ?? ''),
+    result.requestedUsagePosition ?? '',
     trainingFingerprint(result),
     result.trainingPointsTotal,
     result.trainingPointsUsed,

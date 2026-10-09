@@ -210,6 +210,8 @@ export type CardEditionIdentityR457 = {
   /** ID canônico interno do Catálogo Mestre BuildMaster R438. */
   catalogCardId?: string | null;
   releaseDate?: string | null;
+  cardType?: string | null;
+  cardLabel?: string | null;
   source: 'OFFICIAL' | 'MASTER_CATALOG' | 'FINGERPRINT_FALLBACK';
   confidence: number;
 };
@@ -223,6 +225,7 @@ export type ParsedCard = {
   specialTag?: string | null;
   /** Identidade da edição; não inclui ficha, GER, skills adicionais, Ímpeto ou versão do jogo. */
   editionIdentity?: CardEditionIdentityR457 | null;
+  trainingBase?: { cardId: string; attributes: Attributes; fixedBonus?: Attributes; sources: string[] } | null;
   country?: string | null;
   mainPosition: PositionCode;
   mainPositionPt: string;
@@ -2226,6 +2229,7 @@ export type PositionUsageR416Analysis={version:'40.80-r416-universal-position-us
 
 export type AnalysisResult = {
   objective?: Objective;
+  requestedUsagePosition?: PositionCode | null;
   parsed: ParsedCard;
   bestPosition: { code: PositionCode; label: string; score: number };
   positionScores: Array<{ code: PositionCode; label: string; score: number; role: string; cardRating?: number | null }>;

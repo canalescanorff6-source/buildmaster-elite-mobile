@@ -1,4 +1,4 @@
-import type { AnalysisResult, CardEditionIdentityR457, Objective, PositionCode, TacticalProfile } from '@/lib/analyzerDomain';
+import type { AnalysisResult, CardEditionIdentityR457, ParsedCard, Objective, PositionCode, TacticalProfile } from '@/lib/analyzerDomain';
 import { analyzeCardForProductionR128, ensureCurrentProductionAnalysisR128 } from '@/lib/productionAnalysisR128';
 import { applyCompleteCardIntelligence } from '@/lib/cardIntelligencePipeline';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
@@ -15,6 +15,7 @@ export type ProductionAnalysisRequestR138 = {
   tacticalProfile?: TacticalProfile;
   editionIdentity?: CardEditionIdentityR457 | null;
   usageFunction?: string | null;
+  trainingBase?: ParsedCard['trainingBase'];
 };
 
 export type CertifiedAnalysisResultR517 = AnalysisResult & {
@@ -30,7 +31,8 @@ export function createProductionAnalysisR138(request: ProductionAnalysisRequestR
     request.imageFileName ?? null,
     request.tacticalProfile ?? { formation: 'AUTO', style: 'AUTO' },
     request.editionIdentity ?? null,
-    request.usageFunction ?? null
+    request.usageFunction ?? null,
+    request.trainingBase ?? null
   ));
 }
 

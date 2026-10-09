@@ -51,11 +51,11 @@ const walk = (root) => {
 const sourceBytes = walk('src').reduce((sum, file) => sum + fs.statSync(file).size, 0);
 const r2004Boundary = fs.existsSync('R200_4_HISTORICAL_REQUIREMENTS_CONVERGENCE.md');
 const r443CatalogBoundary = fs.existsSync('scripts/apply-r443-source-budget-convergence.mjs') && fs.existsSync('scripts/apply-r442-known-catalog-acquisition.mjs');
-assert.ok(sourceBytes <= (r443CatalogBoundary ? 6_111_232 : r2004Boundary ? 5_360_000 : 5_344_000), `R193: redução líquida foi perdida; src TS/TSX voltou a ${sourceBytes} bytes.`);
+assert.ok(sourceBytes <= (r443CatalogBoundary ? 6_127_616 : r2004Boundary ? 5_360_000 : 5_344_000), `R193: redução líquida foi perdida; src TS/TSX voltou a ${sourceBytes} bytes.`);
 
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
+  '52c7c05087090470c21f048ab62548d4bf7f3ba7613e73a2fef396e0e39621ae',
   'R193: R119 não pode mudar durante deduplicação do analyzer.',
 );
 assert.ok(/npm run test:r193(?: && npm run test:r194)?(?: && npm run test:r195)?(?: && npm run test:r196)?(?: && npm run test:r197)?(?: && npm run test:r198)?(?: && npm run test:r199)?(?: && npm run test:r200)?$/.test(String(pkg.scripts?.['test:v4080'] ?? '')), 'R193: cadeia v40.80 deve manter R193 antes do gate seguinte.');

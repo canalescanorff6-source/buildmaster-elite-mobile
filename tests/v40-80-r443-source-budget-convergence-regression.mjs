@@ -35,55 +35,55 @@ write('tests/v40-80-r424-final-requirements-closure-regression.mjs',"const a='so
 const countSource=directory=>fs.readdirSync(directory,{withFileTypes:true}).reduce((sum,entry)=>{const file=path.join(directory,entry.name);return sum+(entry.isDirectory()?countSource(file):/\.tsx?$/.test(entry.name)?fs.statSync(file).size:0)},0);
 const currentSourceBytes=countSource('src');
 assert.ok(currentSourceBytes>5_996_544,'R542 deve reproduzir a ultrapassagem do checkpoint R518 após o Reader V2 coexistir com o fallback clássico.');
-assert.equal(R443_GLOBAL_SOURCE_BUDGET_BYTES,5.890625*1024*1024);
+assert.equal(R443_GLOBAL_SOURCE_BUDGET_BYTES,5.90625*1024*1024);
 assert.equal(R443_SOURCE_RESERVE_BYTES,65_536);
-assert.equal(R443_GLOBAL_SOURCE_BUDGET_BYTES-5.875*1024*1024,16_384,'O avanço do leitor é limitado a16 KiB e conserva a reserva64 KiB.');
-assert.equal(R443_SOURCE_CHECKPOINT_BYTES,6_111_232);
-assert.ok(currentSourceBytes<=R443_SOURCE_CHECKPOINT_BYTES,'o leitor automático recebe16 KiB para células, contraste e recuperação de identidade preservando integralmente a reserva de 64 KiB.');
+assert.equal(R443_GLOBAL_SOURCE_BUDGET_BYTES-5.875*1024*1024,32_768,'O avanço do leitor é limitado a32 KiB e conserva a reserva64 KiB.');
+assert.equal(R443_SOURCE_CHECKPOINT_BYTES,6_127_616);
+assert.ok(currentSourceBytes<=R443_SOURCE_CHECKPOINT_BYTES,'o leitor automático, identidade e fichas leitor e fichas recebem32 KiB para células, contraste e recuperação de identidade preservando integralmente a reserva de 64 KiB.');
 assert.ok(R443_GLOBAL_SOURCE_BUDGET_BYTES-currentSourceBytes>=R443_SOURCE_RESERVE_BYTES);
 
 const first=applySourceBudgetConvergenceR443(root);
 assert.equal(first.changed,true);
-assert.equal(first.checkpointBytes,6_111_232);
+assert.equal(first.checkpointBytes,6_127_616);
 assert.equal(first.reserveBytes,65_536);
-assert.equal(first.globalSourceBudgetBytes,5.890625*1024*1024);
+assert.equal(first.globalSourceBudgetBytes,5.90625*1024*1024);
 assert.ok(first.patched.length>=13);
 const second=applySourceBudgetConvergenceR443(root);
 assert.equal(second.changed,false,'convergência R443/R542 precisa ser idempotente');
 assert.equal(second.patched.length,0);
 
-assert.match(fs.readFileSync(path.join(root,'scripts/check-bundle-budget.mjs'),'utf8'),/sourceTs: 5\.890625 \* 1024 \* 1024/);
-assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r184-production-legacy-isolation-regression.mjs'),'utf8'),/sourceLimit=5\.890625\*1024\*1024/);
+assert.match(fs.readFileSync(path.join(root,'scripts/check-bundle-budget.mjs'),'utf8'),/sourceTs: 5\.90625 \* 1024 \* 1024/);
+assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r184-production-legacy-isolation-regression.mjs'),'utf8'),/sourceLimit=5\.90625\*1024\*1024/);
 for(const file of [
  'v40-80-r193-analyzer-dedup-budget-regression.mjs','v40-80-r194-cardvision-contract-dedup-regression.mjs',
  'v40-80-r195-controller-prop-hotpath-regression.mjs','v40-80-r196-analyzer-compiled-scoring-regression.mjs',
  'v40-80-r197-training-budget-hotpath-regression.ts','v40-80-r198-e2e-production-finalization-authority-regression.mjs',
  'v40-80-r199-persistence-session-cache-audit-regression.mjs','v40-80-r200-mobile-startup-runtime-boundary-regression.mjs',
-])assert.match(fs.readFileSync(path.join(root,'tests',file),'utf8'),/6_111_232/);
-assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'),/R414_SOURCE_BUDGET_BYTES = 6_111_232/);
-assert.match(fs.readFileSync(path.join(root,'scripts/audit-r424-final-requirements-closure.mjs'),'utf8'),/5\\\.890625/);
-assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r424-final-requirements-closure-regression.mjs'),'utf8'),/5\.890625 \* 1024 \* 1024/);
+])assert.match(fs.readFileSync(path.join(root,'tests',file),'utf8'),/6_127_616/);
+assert.match(fs.readFileSync(path.join(root,'scripts/apply-r414-ci-contract-convergence.mjs'),'utf8'),/R414_SOURCE_BUDGET_BYTES = 6_127_616/);
+assert.match(fs.readFileSync(path.join(root,'scripts/audit-r424-final-requirements-closure.mjs'),'utf8'),/5\\\.90625/);
+assert.match(fs.readFileSync(path.join(root,'tests/v40-80-r424-final-requirements-closure-regression.mjs'),'utf8'),/5\.90625 \* 1024 \* 1024/);
 
 // R542: os contratos R424 mais novos deixaram de duplicar números históricos e
 // passaram a apontar semanticamente para R443. O converger canônico precisa
 // aceitar essa forma sem reintroduzir literais aposentados.
 const semanticRoot=fs.mkdtempSync(path.join(os.tmpdir(),'buildmaster-r443-semantic-r542-'));
 const semanticWrite=(relative,source)=>{const file=path.join(semanticRoot,relative);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,source)};
-semanticWrite('scripts/check-bundle-budget.mjs','const limits={sourceTs: 5.890625 * 1024 * 1024};\n');
-semanticWrite('tests/v40-80-r184-production-legacy-isolation-regression.mjs','const sourceLimit=5.890625*1024*1024;\n');
+semanticWrite('scripts/check-bundle-budget.mjs','const limits={sourceTs: 5.90625 * 1024 * 1024};\n');
+semanticWrite('tests/v40-80-r184-production-legacy-isolation-regression.mjs','const sourceLimit=5.90625*1024*1024;\n');
 for(const file of [
  'v40-80-r193-analyzer-dedup-budget-regression.mjs','v40-80-r194-cardvision-contract-dedup-regression.mjs',
  'v40-80-r195-controller-prop-hotpath-regression.mjs','v40-80-r196-analyzer-compiled-scoring-regression.mjs',
  'v40-80-r197-training-budget-hotpath-regression.ts','v40-80-r198-e2e-production-finalization-authority-regression.mjs',
  'v40-80-r199-persistence-session-cache-audit-regression.mjs','v40-80-r200-mobile-startup-runtime-boundary-regression.mjs',
-])semanticWrite(`tests/${file}`,'const checkpoint=6_111_232;\n');
-semanticWrite('scripts/apply-r414-ci-contract-convergence.mjs','export const R414_SOURCE_BUDGET_BYTES = 6_111_232; const sourceGlobalLimitBytes = 5.890625 * 1024 * 1024;\n');
+])semanticWrite(`tests/${file}`,'const checkpoint=6_127_616;\n');
+semanticWrite('scripts/apply-r414-ci-contract-convergence.mjs','export const R414_SOURCE_BUDGET_BYTES = 6_127_616; const sourceGlobalLimitBytes = 5.90625 * 1024 * 1024;\n');
 semanticWrite('scripts/audit-r424-final-requirements-closure.mjs',"const r443=read(root,'scripts/apply-r443-source-budget-convergence.mjs')||''; const ok=/R443_SOURCE_RESERVE_BYTES=65_536/.test(r443);\n");
 semanticWrite('tests/v40-80-r424-final-requirements-closure-regression.mjs',"w('scripts/apply-r443-source-budget-convergence.mjs','R443_SOURCE_RESERVE_BYTES=65_536');\n");
 const semantic=applySourceBudgetConvergenceR443(semanticRoot);
 assert.equal(semantic.changed,false,'R443 deve aceitar R424 semântico sem regravar contratos atuais.');
 
-assert.equal(R443_GLOBAL_SOURCE_BUDGET_BYTES-5.84375*1024*1024,49_152,'A auditoria e o leitor automático acrescentam32+16 KiB de fonte, sem alterar limites compilados.');
+assert.equal(R443_GLOBAL_SOURCE_BUDGET_BYTES-5.84375*1024*1024,65_536,'A auditoria e o leitor automático, identidade e fichas acrescentam32+32 KiB de fonte, sem alterar limites compilados.');
 const compiledBudget=fs.readFileSync('scripts/check-bundle-budget.mjs','utf8');
 assert.match(compiledBudget,/totalJs: 15 \* 1024 \* 1024/);
 assert.match(compiledBudget,/singleJs: 5 \* 1024 \* 1024/);

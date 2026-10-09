@@ -16,7 +16,7 @@ export function applyMatchCalibrationPrecedenceR406Fix4(rootDirectory=process.cw
   if(!existsSync(file)) throw new Error(`R406-fix4: fonte ausente: ${SOURCE}`);
   let source=readFileSync(file,'utf8');
   const before=source;
-  const successorR457=(source.includes(VERSION_LATER)||source.includes(VERSION_R550))&&source.includes('const matchNeed=actions.reduce(')&&source.includes('const exactR457=certifyExactTrainingR457(');
+  const successorR457=(source.includes(VERSION_LATER)||(source.includes(VERSION_R550)||source.includes("40.80-r551-card-needs-v1")))&&source.includes('const matchNeed=actions.reduce(')&&source.includes('const exactR457=certifyExactTrainingR457(');
   if(((source.includes(VERSION_NEW)||source.includes(VERSION_LATER))&&source.includes(NEW))||successorR457) return {changed:false,version:source.match(/CLEAN_SLATE_2027_R119_VERSION = '([^']+)'/)?.[1],successorR457};
   if(!source.includes(VERSION_OLD)) throw new Error('R406-fix4: versão R406 base não encontrada');
   const first=source.indexOf(OLD);

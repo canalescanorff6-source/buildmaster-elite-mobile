@@ -1,5 +1,5 @@
 import { analyzeCardProductionBaseR142 } from './analyzer';
-import type { AnalysisResult, CardEditionIdentityR457, Objective, PositionCode, TacticalProfile } from './analyzerDomain';
+import type { AnalysisResult, CardEditionIdentityR457, ParsedCard, Objective, PositionCode, TacticalProfile } from './analyzerDomain';
 import { applyCompleteCardIntelligence } from './cardIntelligencePipeline';
 import { isCurrentProductionAnalysisR128 } from './productionAuthorityR128';
 import { matchEvidenceCalibrationCurrentR136 } from '../modules/matches/matchEvidenceCalibrationR136';
@@ -16,14 +16,16 @@ export function analyzeCardForProductionR128(
   imageFileName?: string | null,
   tacticalProfile: TacticalProfile = { formation: 'AUTO', style: 'AUTO' },
   editionIdentity?: CardEditionIdentityR457 | null,
-  usageFunction?: string | null
+  usageFunction?: string | null,
+  trainingBase?: ParsedCard['trainingBase']
 ) {
   const base = analyzeCardProductionBaseR142(rawText, objective, targetPosition, imageFileName, tacticalProfile);
-  const identified = editionIdentity ? { ...base, parsed: { ...base.parsed, editionIdentity } } : base;
+  const identified = editionIdentity ? { ...base, parsed: { ...base.parsed, editionIdentity, trainingBase, cardType: editionIdentity.cardType || base.parsed.cardType } } : base;
+  const selectedUsage = { ...identified, requestedUsagePosition: targetPosition === 'AUTO' ? null : targetPosition };
   const selectedFunction=String(usageFunction ?? '').trim();
   const functionScoped = selectedFunction && selectedFunction.toUpperCase()!=='AUTO'
-    ? { ...identified, usageFunctionR457:selectedFunction }
-    : identified;
+    ? { ...selectedUsage, usageFunctionR457:selectedFunction }
+    : selectedUsage;
   // R457 Stage 10: scouting persistido entra como evidência read-only antes do único escritor final.
   const withScouting = { ...functionScoped, gameplayScoutingR454: readGameplayScoutingForResultR454(functionScoped) } as AnalysisResult;
   const analyzed = synchronizeFinalBuildDiagnosticsR142(applyCompleteCardIntelligence(withScouting));

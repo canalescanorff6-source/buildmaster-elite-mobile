@@ -127,7 +127,7 @@ export function CardVisionApp() {
   const readerImageMemoryR156 = useReaderImageMemoryR156();
   const [enhancementMode, setEnhancementMode] = useState<PremiumEnhancementMode>('adaptive');
   const [formation, setFormation] = useState<TacticalFormation>('AUTO');
-  const [teamStyle, setTeamStyle] = useState<TacticalStyle>('AUTO');
+  const [teamStyle, setTeamStyle] = useState<TacticalStyle>('POSSE_DE_BOLA');
   const [managerId, setManagerId] = useState<string>('AUTO');
   const [gameplayMode, setGameplayMode] = useState<GameplayMode>('UNIVERSAL');
   const [connectionProfile, setConnectionProfile] = useState<ConnectionProfile>('VARIABLE');

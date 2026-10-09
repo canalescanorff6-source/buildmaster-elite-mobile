@@ -69,6 +69,8 @@ export function readerV2ReviewRawText(draft: ReaderV2ReviewDraft, confirmed?: {a
   const style = fieldValue({fields:draft.fields} as ReaderV2Evidence, 'playstyle');
   return [
     draft.playerName ? `NOME DO JOGADOR: ${draft.playerName}` : '',
+    draft.editionIdentity?.cardType ? `TIPO DA CARTA: ${draft.editionIdentity.cardType}` : '',
+    draft.editionIdentity?.cardLabel ? `EDIÇÃO: ${draft.editionIdentity.cardLabel}` : '',
     draft.level ? `NÍVEL MÁXIMO: ${draft.level}` : '',
     draft.points ? `PONTOS TOTAIS: ${draft.points}` : '',
     normalizeReaderV2Position(draft.mainPosition) ? `POSIÇÃO PRINCIPAL: ${normalizeReaderV2Position(draft.mainPosition)}` : '',

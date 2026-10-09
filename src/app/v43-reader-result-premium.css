@@ -1206,3 +1206,5 @@
   .bm-v4100-product .premium-app .total-capture-card,
   .bm-v4100-product .premium-app .total-capture-empty { transition:none !important; }
 }
+
+.result-chat-consultation{margin-top:1rem;padding:1rem;border:1px solid rgba(148,163,184,.3);border-radius:1rem}.result-chat-consultation summary{cursor:pointer;font-weight:700}.result-chat-consultation textarea{width:100%;min-height:8rem;margin:.6rem 0;padding:.7rem;border-radius:.6rem;background:#0b1421;color:#dbeafe;resize:vertical}.result-chat-consultation button,.result-chat-consultation a{display:inline-flex;gap:.4rem;align-items:center;margin:.4rem .6rem .4rem 0;padding:.7rem;border-radius:.6rem;color:#dbeafe;background:#183148}

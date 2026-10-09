@@ -22,7 +22,7 @@ export function applyR504ProjectedPlayerState(rootDirectory = process.cwd()) {
   let next = source;
 
   const truthImport = "import { deriveCardTruthCertificationR501, type CardTruthCertificationR501 } from '../modules/analysis/cardTruthLayerR501';";
-  const projectedImport = "import { deriveProjectedPlayerStateR504, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';";
+  const projectedImport = source.includes('verifiedTrainingBaseAttributes') ? "import { deriveProjectedPlayerStateR504, verifiedTrainingBaseAttributes, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';" : "import { deriveProjectedPlayerStateR504, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';";
   if (!next.includes(projectedImport)) {
     if (!next.includes(truthImport)) throw new Error('R504: import R501 do Clean Slate ausente.');
     next = next.replace(truthImport, `${truthImport}\n${projectedImport}`);
