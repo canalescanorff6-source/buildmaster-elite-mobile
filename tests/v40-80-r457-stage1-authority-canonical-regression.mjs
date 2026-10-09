@@ -7,7 +7,7 @@ const ui=fs.readFileSync('src/components/UnifiedPerformanceV3920Panel.tsx','utf8
 const r126=fs.readFileSync('src/lib/productionAuthorityR126.ts','utf8');
 const r128=fs.readFileSync('src/lib/productionAuthorityR128.ts','utf8');
 
-assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r550-verified-card-evidence-v1'/);
+assert.match(clean,/CLEAN_SLATE_2027_R119_VERSION = '40\.80-r551-card-needs-v1'/);
 assert.match(clean,/BM_R457_SOURCE_CANONICAL_R406/);
 assert.doesNotMatch(pipeline,/Clean Slate r125 é o único escritor/);
 assert.match(pipeline,/BM_R457_AUTHORITY_CHAIN/);
