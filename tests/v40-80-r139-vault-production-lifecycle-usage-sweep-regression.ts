@@ -78,7 +78,7 @@ const legacy: any = {
 };
 const migrated = migrateAnalysisResult(legacy, rawText, 'legacy-r139.png');
 assert.ok(migrated);
-assert.equal(analysisUsagePositionR138(migrated!), 'CF', 'Migração deve convergir para a função automática R417 da carta, sem ressuscitar alvo manual antigo.');
+assert.equal(analysisUsagePositionR138(migrated!), 'CB', 'R551: migração deve preservar a posição de uso registrada na ficha.');
 
 const root = path.resolve(__dirname, '..');
 const analysisFacade = fs.readFileSync(path.join(root, 'src/modules/analysis/index.ts'), 'utf8');
