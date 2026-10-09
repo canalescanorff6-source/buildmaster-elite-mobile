@@ -72,3 +72,15 @@ const unchanged=Object.fromEntries(Object.entries(reference.attributes).map(([ke
 assert.ok(referenceBaseAgreesWithPrint(reference,unchanged));
 assert.equal(referenceBaseAgreesWithPrint(reference,{...unchanged,jump:String(Number(unchanged.jump)+20)}),false,'Jump cannot gain without aerial or GK1 progress.');
 console.log('Shared jump base validation rejects impossible evidence PASS');
+
+const boosted:any={...input.parsed,trainingBase:{...input.parsed.trainingBase,attributes:{...input.parsed.trainingBase.attributes,speed:95},fixedBonus:{speed:8}}};
+const boostProjection=deriveProjectedPlayerStateR504(boosted,{...zero(),lowerBodyStrength:4});
+assert.equal(boostProjection.baseAttributes.speed,103);
+assert.equal(boostProjection.finalAttributes.speed,107,'A booster is applied after the raw training cap; it can exceed99.');
+console.log('Verified boosters remain above99 after training PASS');
+
+const jumpReference:any={...reference,attributes:{...reference.attributes,jump:95},fixedBonus:{...reference.fixedBonus,jump:8}};
+const jumpValues=Object.fromEntries(Object.entries(jumpReference.attributes).map(([key,value])=>[key,String(Number(value)+Number(jumpReference.fixedBonus?.[key]??0))]));
+assert.ok(referenceBaseAgreesWithPrint(jumpReference,{...jumpValues,goalkeeperAwareness:String(Number(jumpValues.goalkeeperAwareness)+4),jump:'107'}),'A valid boosted jump above99 must retain its base authority.');
+
+assert.equal(deriveProjectedPlayerStateR504({attributes:{speed:103}} as any,zero()).finalAttributes.speed,103,'Unknown bonus origins cannot erase a value actually read above99.');

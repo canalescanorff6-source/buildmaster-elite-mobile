@@ -38,8 +38,8 @@ assert.match(result, /UnifiedPerformanceV3920Panel/);
 assert.match(result, /analysisUsagePositionR138/);
 assert.equal(
   crypto.createHash('sha256').update(r119).digest('hex'),
-  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
-  'R203 precisa preservar o baseline Clean Slate R550 documentado em 2026-10-07.'
+  'ad3738dc1c46276b2084f2acf9a930a35358a9c7f5b134f1307dedebf00c46d0',
+  'R203 precisa preservar o baseline Clean Slate R551 documentado em 2026-10-09.'
 );
 
 console.log('R203 aprovada: Leitor e Resultado premium unificados, hierarquia operacional mobile e autoridade R119 preservada.');

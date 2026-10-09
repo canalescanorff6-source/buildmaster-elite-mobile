@@ -395,7 +395,7 @@ type UsageContextR125 = {
 
 type CompactPlanR147 = number[];
 type BeamState = { levels: CompactPlanR147; score: number; cacheKey: number };
-type CompiledAttributeR146 = { key:AttributeKey; base:number; groupIndex:number; observed:boolean };
+type CompiledAttributeR146 = { key:AttributeKey; base:number; bonus?:number; groupIndex:number; observed:boolean };
 type CompiledActionAttributeR146 = CompiledAttributeR146 & { weight:number; primary:boolean };
 type EvaluationActionR143 = {
   action:ActionDef;
@@ -613,7 +613,7 @@ function styleActionEvidence(action:ActionDef,context:UsageContextR125) {
 
 /** Heurística de retorno decrescente; não representa um limiar oficial de gameplay. */
 export function cardAttributeUtility(value:number) {
-  const observed=clamp(value,1,99);
+  const observed=clamp(value,1,120);
   return observed<=85?observed:85+14*Math.log1p((observed-85)/14);
 }
 
@@ -703,7 +703,7 @@ function materializeTrainingPlanR147(levels:CompactPlanR147):TrainingPlan {
 }
 
 function projectedCompiledAttributeR147(levels:CompactPlanR147,attribute:CompiledAttributeR146) {
-  return clamp(attribute.base+(attribute.groupIndex>=0?Number(levels[attribute.groupIndex]??0):0)+(attribute.key==='jump'?Number(levels[TRAINING_KEY_INDEX_R147.gk1]??0):0),1,99);
+  return clamp(attribute.base-Number(attribute.bonus??0)+(attribute.groupIndex>=0?Number(levels[attribute.groupIndex]??0):0)+(attribute.key==='jump'?Number(levels[TRAINING_KEY_INDEX_R147.gk1]??0):0),1,99)+Number(attribute.bonus??0);
 }
 
 function projectedActionQualityR147(levels:CompactPlanR147,item:EvaluationActionR143) {
@@ -749,6 +749,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     })
     .filter(item=>item.frequency>.01);
   const canonicalDnaR457=buildCanonicalDnaR457(parsed,actionSeeds.map(item=>({id:item.action.id,frequency:item.frequency*100})));
+  const trainingBonus=verifiedTrainingBaseAttributes(parsed)?parsed.trainingBase?.fixedBonus??{}:Object.fromEntries(Object.entries(parsed.attributes).map(([k,v])=>[k,Math.max(0,Number(v)-99)]));
   const attributeBases:Partial<Record<AttributeKey,number>>={};
   const requiredAttributes=new Set<AttributeKey>();
   for(const item of actionSeeds) {
@@ -756,10 +757,10 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     for(const key of item.pressureKeys) requiredAttributes.add(key);
   }
   for(const attributes of Object.values(TRAINING_ATTRIBUTES)) for(const key of attributes) requiredAttributes.add(key);
-  for(const key of requiredAttributes) if(Number.isFinite(Number(parsed.attributes[key]))) attributeBases[key]=clamp(Number(parsed.attributes[key]),1,99);
+  for(const key of requiredAttributes) if(Number.isFinite(Number(parsed.attributes[key]))) attributeBases[key]=clamp(Number(parsed.attributes[key]),1,120);
   const compileAttribute=(key:AttributeKey):CompiledAttributeR146=>{
     const group=ATTRIBUTE_TRAINING_GROUP_R144[key], observed=Number.isFinite(Number(parsed.attributes[key]));
-    return {key,base:observed?clamp(Number(parsed.attributes[key]),1,99):0,groupIndex:observed&&group!==undefined?TRAINING_KEY_INDEX_R147[group]:-1,observed};
+    return {key,base:observed?clamp(Number(parsed.attributes[key]),1,120):0,bonus:Number(trainingBonus[key]??0),groupIndex:observed&&group!==undefined?TRAINING_KEY_INDEX_R147[group]:-1,observed};
   };
   const actions:EvaluationActionR143[]=actionSeeds.map(item=>({
     ...item,
@@ -806,9 +807,9 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
           1
         )
       : 0;
-    const observedGroup=TRAINING_ATTRIBUTES[key].map(attribute=>Number(parsed.attributes[attribute])).filter(Number.isFinite);
+    const observedGroup=TRAINING_ATTRIBUTES[key].filter(attribute=>Number.isFinite(Number(parsed.attributes[attribute])));
     const identityBonusByLevel=Array.from({length:17},(_,level)=>{
-      const useful=observedGroup.length?average(observedGroup.map(base=>cardAttributeUtility(base+level)-cardAttributeUtility(base))):0;
+      const useful=observedGroup.length?average(observedGroup.map(a=>cardAttributeUtility(Math.min(99,Number(parsed.attributes[a])-Number(trainingBonus[a]??0)+level)+Number(trainingBonus[a]??0))-cardAttributeUtility(Number(parsed.attributes[a])))):0;
       return useful*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
         +Math.min(useful,12)*matchNeed*12
         +(aerialIdentityQualified?Math.min(useful,8)*aerialIdentityEvidence*(defensiveAerialIdentity ? 3.6 : 1.15):0);
@@ -821,7 +822,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
         const support=Math.min(1,impacted/1.8);
         excessPenalty+=(level-10)*(.12+(1-support)*.42);
       }
-      const saturated=TRAINING_ATTRIBUTES[key].filter(attribute=>attr(parsed.attributes,attribute)+level>=99).length/TRAINING_ATTRIBUTES[key].length;
+      const saturated=TRAINING_ATTRIBUTES[key].filter(attribute=>attr(parsed.attributes,attribute)-Number(trainingBonus[attribute]??0)+level>=99).length/TRAINING_ATTRIBUTES[key].length;
       if(saturated>0) excessPenalty+=level*saturated*.055;
       return excessPenalty;
     });
@@ -1016,9 +1017,9 @@ const EXACT_TRAINING_CACHE_R457=new Map<string,{winner:BeamState|undefined;final
 function exactTrainingCacheKeyR457(context:EvaluationContextR143,allowed:TrainingKey[],budget:number){
   return JSON.stringify([
     budget,allowed,
-    context.actions.map(item=>[item.action.id,item.frequency,item.natural,item.matchNeedMultiplier,item.decisionWeight,item.compiledAttributes.map(a=>[a.key,a.base,a.groupIndex,a.observed?1:0,a.weight,a.primary?1:0]),item.compiledPressureAttributes.map(a=>[a.key,a.base,a.groupIndex,a.observed?1:0])]),
+    context.actions.map(item=>[item.action.id,item.frequency,item.natural,item.matchNeedMultiplier,item.decisionWeight,item.compiledAttributes.map(a=>[a.key,a.base,a.bonus??0,a.groupIndex,a.observed?1:0,a.weight,a.primary?1:0]),item.compiledPressureAttributes.map(a=>[a.key,a.base,a.bonus??0,a.groupIndex,a.observed?1:0])]),
     context.groupProfiles.map(group=>[group.naturalStrength,group.impacted,group.identityFit,group.identityBonusByLevel,group.weakRepairPenaltyByLevel,group.excessPenaltyByLevel]),
-    [context.stamina.key,context.stamina.base,context.stamina.groupIndex,context.stamina.observed?1:0],context.staminaDemand,context.staminaFloor,context.aerialSupport
+    [context.stamina.key,context.stamina.base,context.stamina.bonus??0,context.stamina.groupIndex,context.stamina.observed?1:0],context.staminaDemand,context.staminaFloor,context.aerialSupport
   ]);
 }
 function cloneExactCertificationR457(entry:{winner:BeamState|undefined;finalists:BeamState[];equivalentStates:BeamState[];certificate:CleanSlateOptimalityCertificateR457},cacheHit:boolean){
@@ -1539,7 +1540,7 @@ function buildGameplayImpactR458(
       if(!observed) return [];
       const group=ATTRIBUTE_TRAINING_GROUP_R144[key];
       const weight=Math.max(.05,Number(action.weights?.[key]??1));
-      return [{key,base:clamp(Number(parsed.attributes[key]),1,99),groupIndex:group===undefined?-1:TRAINING_KEY_INDEX_R147[group],observed:true,weight,primary:weight>=.95}];
+      return [{key,base:clamp(Number(parsed.attributes[key]),1,120),bonus:Number(verifiedTrainingBaseAttributes(parsed)?parsed.trainingBase?.fixedBonus?.[key]??0:Math.max(0,Number(parsed.attributes[key])-99)),groupIndex:group===undefined?-1:TRAINING_KEY_INDEX_R147[group],observed:true,weight,primary:weight>=.95}];
     }),
     compiledPressureAttributes:[],
     skillSupport:skillActionEvidence(action,parsed)

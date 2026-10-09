@@ -56,8 +56,8 @@ for (const source of readOnlyVisualSurfaces) {
 
 assert.equal(
   sha256(r119),
-  '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd',
-  'R530: a autoridade R119 divergiu do rebaseline R550 documentado em 2026-10-07.'
+  'ad3738dc1c46276b2084f2acf9a930a35358a9c7f5b134f1307dedebf00c46d0',
+  'R530: a autoridade R119 divergiu do rebaseline R551 documentado em 2026-10-09.'
 );
 
 assert.match(packageJson, /"test:r530"\s*:/, 'R530: package.json precisa expor npm run test:r530.');

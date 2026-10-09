@@ -31,7 +31,7 @@ export function matchReadCardEdition(name:string, visual:CardVisualFingerprintR4
 export function referenceBaseAgreesWithPrint(base:NonNullable<ParsedCard['trainingBase']>,values:Record<string,string>) {
   const delta=(key:string)=>Number(values[key])-Number(base.attributes[key as keyof Attributes])-Number(base.fixedBonus?.[key as keyof Attributes]??0);
   const jump=delta('jump'),expected=delta('goalkeeperAwareness')+(delta('heading')+delta('physicalContact'))/2;
-  if(!Number.isFinite(jump)||jump< -1||Math.abs(jump-Math.min(expected,99-Number(base.attributes.jump)-Number(base.fixedBonus?.jump??0)))>3)return false;
+  if(!Number.isFinite(jump)||jump< -1||Math.abs(jump-Math.min(expected,99-Number(base.attributes.jump)))>3)return false;
   return Object.values(TRAINING_ATTRIBUTE_GROUPS_R504).every(keys=>{
     const deltas=keys.filter(key=>key!=='jump').map(key=>Number(values[key])-Number(base.attributes[key])-Number(base.fixedBonus?.[key]??0));
     return deltas.every(d=>Number.isFinite(d)&&d>=-1&&d<=21) && Math.max(...deltas)-Math.min(...deltas)<=3;

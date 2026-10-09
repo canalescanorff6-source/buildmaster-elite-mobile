@@ -44,13 +44,15 @@ export function deriveProjectedPlayerStateR504(parsed: ParsedCard, training: Tra
   const baseAttributes = {} as Attributes;
   const finalAttributes = {} as Attributes;
 
-  for (const [key, rawValue] of Object.entries(verifiedTrainingBaseAttributes(parsed) ?? parsed.attributes ?? {}) as Array<[AttributeKey, unknown]>) {
+  const verifiedBase=verifiedTrainingBaseAttributes(parsed);
+  for (const [key, rawValue] of Object.entries(verifiedBase ?? parsed.attributes ?? {}) as Array<[AttributeKey, unknown]>) {
     const numeric = Number(rawValue);
     if (!Number.isFinite(numeric)) continue;
-    const base = clampAttribute(numeric);
+    const bonus=verifiedBase?Number(parsed.trainingBase?.fixedBonus?.[key]??0):Math.max(0,numeric-99);
+    const base = clampAttribute(numeric-bonus);
     const gain = Object.entries(TRAINING_ATTRIBUTE_GROUPS_R504).reduce((sum,[group,keys])=>sum+(keys.includes(key)?Number(normalizedTraining[group as TrainingKey]??0):0),0);
-    baseAttributes[key] = base;
-    finalAttributes[key] = clampAttribute(base + gain);
+    baseAttributes[key] = base+bonus;
+    finalAttributes[key] = clampAttribute(base + gain)+bonus;
   }
 
   return {

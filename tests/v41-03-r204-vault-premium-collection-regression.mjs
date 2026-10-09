@@ -16,6 +16,6 @@ assert.match(vault,/Buscar jogador, posição, estilo ou habilidade/);
 assert.match(vault,/r204-player-meta/);
 for (const selector of ['.r204-vault-tabs','.r204-vault-catalog-intro','.r204-vault-catalog-kpis','.r204-player-meta']) assert.ok(css.includes(selector),`R204: CSS ausente ${selector}`);
 for (const forbidden of ['localStorage.setItem','indexedDB','nativeVaultWrite','supabase.from(']) assert.ok(!workspace.includes(forbidden),`R204: writer proibido no workspace: ${forbidden}`);
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'),'630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd','R204: baseline R550 documentado em 2026-10-07 foi alterado.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'),'ad3738dc1c46276b2084f2acf9a930a35358a9c7f5b134f1307dedebf00c46d0','R204: baseline R551 documentado em 2026-10-09 foi alterado.');
 assert.ok(fs.statSync('src/components/vault/CardVisionVaultWorkspaceR191.tsx').size<=26000,'R204: boundary R191 excedeu 26 KB.');
 console.log('R204 aprovada: Cofre virou coleção competitiva premium, quatro áreas visíveis e autoridade canônica preservada.');

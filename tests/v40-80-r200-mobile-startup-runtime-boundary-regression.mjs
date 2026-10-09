@@ -46,7 +46,7 @@ assert.match(fusion, /from '\.\/appEvolution'/);
 assert.match(pro, /from '\.\/appEvolution'/);
 
 const r119 = read('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '52c7c05087090470c21f048ab62548d4bf7f3ba7613e73a2fef396e0e39621ae', 'R200: R119 não pode mudar no trabalho de startup.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), 'ad3738dc1c46276b2084f2acf9a930a35358a9c7f5b134f1307dedebf00c46d0', 'R200: R119 não pode mudar no trabalho de startup.');
 const srcFiles = [];
 function walk(dir) { for (const name of fs.readdirSync(dir)) { const p = path.join(dir, name); const st = fs.statSync(p); if (st.isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(name)) srcFiles.push(p); } }
 walk('src');
