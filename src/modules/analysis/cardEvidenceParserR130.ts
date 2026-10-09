@@ -217,14 +217,15 @@ export function detectPositionRatings(text: string): PositionRatings {
 }
 
 export function detectCardType(text: string) {
-  const normalized = normalize(text).toLowerCase();
+  const explicit = text.match(/^\s*(?:tipo\s+(?:da\s+)?carta|card\s+type)\s*[:=]\s*([^\n\r]+)/im)?.[1];
+  const normalized = normalize(explicit ?? text).toLowerCase();
   if (/show\s*time/.test(normalized)) return 'Show Time';
   if (/big\s*time/.test(normalized)) return 'Big Time';
-  if (/epic|epico/.test(normalized)) return 'Epic';
+  if (/\bepic\b|epic[oa]/.test(normalized)) return 'Epic';
   if (/potw|player\s+of\s+the\s+week/.test(normalized)) return 'POTW';
   if (/featured|destaque/.test(normalized)) return 'Featured';
   if (/legend|lenda/.test(normalized)) return 'Legend';
-  if (/highlight/.test(normalized)) return 'Highlight';
+  if (/highlight|distinguido/.test(normalized)) return 'Highlight';
   if (/standard|padrao|padrão/.test(normalized)) return 'Standard';
   return 'Carta analisada';
 }

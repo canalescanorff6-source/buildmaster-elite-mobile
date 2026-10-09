@@ -59,6 +59,8 @@ export interface ReaderV2Evidence {
 }
 
 export interface ReaderV2ReviewDraft {
+  editionIdentity?: import('../../lib/analyzerDomain').CardEditionIdentityR457 | null;
+  trainingBase?: import('../../lib/analyzerDomain').ParsedCard['trainingBase'];
   playerName: string;
   level: string;
   points: string;

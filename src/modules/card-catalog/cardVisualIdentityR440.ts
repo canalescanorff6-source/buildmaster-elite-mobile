@@ -1,5 +1,6 @@
 import type { OcrZone } from '@/lib/ocr';
 import type { CardCropBox } from '@/modules/card-reader/cardArtCrop';
+import { imageToBitmap } from '@/modules/card-reader/imageProcessing';
 
 export const CARD_VISUAL_IDENTITY_R440_VERSION = '40.80-r440-card-visual-identity-v1' as const;
 export const CARD_VISUAL_HASH_ALGORITHM_R440 = 'dhash64-v1' as const;
@@ -97,8 +98,8 @@ function qualityFromLumaR440(values: ArrayLike<number>) {
 }
 
 export async function extractCardVisualFingerprintR440(file: File | Blob, zone: OcrZone | CardCropBox): Promise<CardVisualFingerprintR440 | null> {
-  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return null;
-  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (typeof document === 'undefined') return null;
+  const bitmap = await imageToBitmap(file).catch(() => null);
   if (!bitmap) return null;
   const canvas = document.createElement('canvas');
   canvas.width = 9;

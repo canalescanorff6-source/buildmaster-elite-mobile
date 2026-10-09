@@ -18,15 +18,27 @@ export function buildMasterCardAnalysisRawTextR438(card: MasterCardCatalogEntryR
     `PONTOS TOTAIS: ${points}`
   ];
   if (card.level !== null) lines.push(`NÍVEL MÁXIMO: ${card.level}`);
+  if (card.cardType) lines.push(`TIPO DA CARTA: ${card.cardType}`);
   const style = card.offensivePlaystyle || card.playstyle;
   if (style) lines.push(`ESTILO DE JOGO: ${style}`, `ESTILO DE JOGO OFENSIVO: ${style}`);
   if (card.defensivePlaystyle) lines.push(`ESTILO DE JOGO DEFENSIVO: ${card.defensivePlaystyle}`);
   if (card.overall !== null) lines.push(`GER: ${Math.round(card.overall)}`);
   if (card.positions.length) lines.push(`POSIÇÕES: ${card.positions.join(', ')}`);
-  const skills = Array.from(new Set([...card.nativeSkills, ...card.additionalSkills]));
-  if (skills.length) lines.push(`HABILIDADES JÁ POSSUI: ${skills.join(', ')}`);
+  if (card.nativeSkills.length) lines.push(`HABILIDADES NATIVAS: ${card.nativeSkills.join(', ')}`);
+  if (card.additionalSkills.length) lines.push(`HABILIDADES ADICIONAIS: ${card.additionalSkills.join(', ')}`);
   if (card.specialSkills.length) lines.push(`HABILIDADES ESPECIAIS: ${card.specialSkills.join(', ')}`);
-  if (card.impetos.length) lines.push(`ÍMPETOS: ${card.impetos.map((item) => item.name).join(', ')}`);
+  if (card.impetos.length) lines.push(`ÍMPETOS: ${card.impetos.filter(item=>item.active!==false).map(item => `${item.name}${item.value !== null && item.value !== undefined ? ` +${item.value}` : ''}`).join(', ')}`);
+  for (const [label, value] of [['Altura',card.height],['Peso',card.weight],['Idade',card.age]] as const) {
+    if (typeof value === 'number' && Number.isFinite(value)) lines.push(`${label}: ${value}`);
+  }
+  for (const [key,label] of Object.entries({weakFootFrequency:'Pior pé (frequência)',weakFootAccuracy:'Pior pé (precisão)',form:'Condição física',injuryResistance:'Resistência a lesão'})) {
+    const value = card.condition[key as keyof typeof card.condition];
+    if (value) lines.push(`${label}: ${value}`);
+  }
+  const physicalLabels: Record<string,string> = {armLength:'Comprimento do braço',shoulderWidth:'Largura dos ombros',neckLength:'Comprimento do pescoço',chest:'Chest',neckSize:'Tamanho do pescoço',shoulderHeight:'Altura do ombro',legLength:'Comprimento da perna',thighSize:'Tamanho da coxa',waistSize:'Tamanho da cintura',armSize:'Tamanho do braço',calfSize:'Tamanho da panturrilha',legCoverageRadius:'Raio de cobertura das pernas',armCoverageRadius:'Raio de cobertura dos braços',jumpHeight:'Altura de salto',trunkCollision:'Colisão do tronco',baseHeight:'Altura com base no comprimento'};
+  for (const [key,value] of Object.entries(card.physicalProfile)) {
+    if (physicalLabels[key] && typeof value === 'number' && Number.isFinite(value)) lines.push(`${physicalLabels[key]}: ${value}`);
+  }
   for (const [key, value] of Object.entries(card.attributes)) {
     if (typeof value !== 'number' || !Number.isFinite(value)) continue;
     lines.push(`${ATTRIBUTE_PT[key as keyof typeof ATTRIBUTE_PT] ?? key}: ${Math.round(value)}`);
@@ -45,12 +57,14 @@ export function createMasterCardProductionAnalysisR438(card: MasterCardCatalogEn
     objective: input?.objective ?? 'COMPETITIVE',
     targetPosition: input?.targetPosition ?? card.mainPosition,
     imageFileName: `catalogo-r438-${card.catalogCardId}`,
-    tacticalProfile: input?.tacticalProfile ?? { formation: 'AUTO', style: 'AUTO' },
+    tacticalProfile: input?.tacticalProfile ?? { formation: 'AUTO', style: 'POSSE_DE_BOLA' },
     editionIdentity: {
       schemaVersion: 1,
       officialCardId: null,
       officialCardIdVerified: false,
       catalogCardId: card.catalogCardId,
+      cardType: card.cardType,
+      cardLabel: card.cardLabel,
       releaseDate: card.releaseDate,
       source: 'MASTER_CATALOG',
       confidence: card.confidence

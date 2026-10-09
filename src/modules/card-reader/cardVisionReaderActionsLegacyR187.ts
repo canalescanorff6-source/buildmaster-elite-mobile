@@ -56,6 +56,8 @@ function readerSessionGateR520(session: SinglePrintSession | null) {
 }
 
 export type CardVisionReaderActionsInputR187 = {
+  editionIdentity?: import('../../lib/analyzerDomain').CardEditionIdentityR457 | null;
+  trainingBase?: import('../../lib/analyzerDomain').ParsedCard['trainingBase'];
   isAnalysisCurrent?: () => boolean;
   selectedFile: File | null;
   cardCropResult: CardCropResult | null;
@@ -166,7 +168,7 @@ export function createCardVisionReaderActionsR187(input: CardVisionReaderActions
         await markActiveReadingSessionR470('ENGINE_RUNNING', {}, current).catch(() => null);
         if (!current()) return stale();
       }
-      const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile });
+      const nextResult = createProductionAnalysisR138({ rawText: lockedText, objective: safeObjective, targetPosition, usageFunction, imageFileName: fileName, tacticalProfile, editionIdentity:input.editionIdentity, trainingBase:input.trainingBase });
       if (!isRenderableAnalysisResult(nextResult)) throw new Error('Resultado incompleto para renderização');
       const cardTruthCertificationR501 = (nextResult as AnalysisResult & { cleanSlate2027R119?: { cardTruthCertificationR501?: CardTruthCertificationR501 } }).cleanSlate2027R119?.cardTruthCertificationR501 ?? null;
       const confirmationDecisionR503 = deriveSingleReaderFinalizationR503(cardTruthCertificationR501);

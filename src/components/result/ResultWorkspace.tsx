@@ -37,6 +37,7 @@ import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList } from '@/lib/officialSkillIdentity';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { CardChatConsultation } from './CardChatConsultation';
 import { POSITION_PT, TACTICAL_STYLE_NAME } from '@/lib/analyzerDomain';
 import type { DynamicRulePack } from '@/modules/builds/dynamicRules';
 import {
@@ -357,6 +358,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <div>
               <p className="kicker"><Sparkles size={14} /> Resultado validado</p>
               <h2>{card.playerName}</h2>
+              <p>{card.editionIdentity?.cardLabel || card.cardType}</p>
               <div className="result-identity-line">
                 <span className="result-position-badge">{usagePositionLabel}</span>
                 <span>Ataque: {card.offensivePlaystyle ?? card.playstyle ?? 'Básico'}</span>
@@ -388,6 +390,7 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
             <button type="button" onClick={() => void shareCurrentResult()}><Share2 size={17} /> Compartilhar</button>
           </div>
           {shareMessage && <p className="result-share-feedback"><CheckCircle2 size={15} /> {shareMessage}</p>}
+          <CardChatConsultation result={result} onMessage={setShareMessage} />
 
           {heroExpanded && (
             <div className="result-expanded-details">

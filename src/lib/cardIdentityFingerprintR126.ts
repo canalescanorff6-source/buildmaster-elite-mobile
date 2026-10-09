@@ -2,7 +2,7 @@ import type { ParsedCard, PositionCode } from './analyzerDomain';
 import { TRAINING_KEYS } from './trainingPlanCore';
 
 export const CARD_IDENTITY_FINGERPRINT_R126_VERSION = '40.80-r126-card-identity-v2' as const;
-export const CARD_EVIDENCE_FINGERPRINT_R126_VERSION = '40.80-r126-card-evidence-v1' as const;
+export const CARD_EVIDENCE_FINGERPRINT_R126_VERSION = '40.80-r126-card-evidence-v2' as const;
 
 function normalizeText(value: unknown) {
   return String(value ?? '')
@@ -123,6 +123,11 @@ export function cardEvidenceFingerprintR126(parsed: ParsedCard) {
     sortedRecord(parsed.attributes as Record<string, unknown>),
     sortedRecord(parsed.positionRatings as Record<string, unknown>),
     normalizedList(parsed.additionalSkills ?? []),
+    parsed.editionIdentity?.officialCardIdVerified ? 1 : 0,
+    parsed.trainingBase?.cardId ?? '',
+    sortedRecord(parsed.trainingBase?.attributes),
+    sortedRecord(parsed.trainingBase?.fixedBonus),
+    normalizedList(parsed.trainingBase?.sources),
     impetos,
     parsed.trainingPointsTotal ?? '',
     parsed.trainingPointsUsed ?? '',

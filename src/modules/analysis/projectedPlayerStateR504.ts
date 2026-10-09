@@ -11,18 +11,10 @@ export const TRAINING_ATTRIBUTE_GROUPS_R504: Record<TrainingKey, AttributeKey[]>
   lowerBodyStrength: ['speed', 'kickingPower', 'stamina'],
   aerialStrength: ['heading', 'jump', 'physicalContact'],
   defending: ['defensiveAwareness', 'defensiveEngagement', 'tackling', 'aggression'],
-  gk1: ['goalkeeperAwareness', 'goalkeeperCatching'],
-  gk2: ['goalkeeperParrying', 'goalkeeperReflexes'],
-  gk3: ['goalkeeperReach'],
+  gk1: ['goalkeeperAwareness', 'jump'],
+  gk2: ['goalkeeperParrying', 'goalkeeperReach'],
+  gk3: ['goalkeeperCatching', 'goalkeeperReflexes'],
 };
-
-const ATTRIBUTE_TRAINING_GROUP_R504: Partial<Record<AttributeKey, TrainingKey>> = (() => {
-  const mapping: Partial<Record<AttributeKey, TrainingKey>> = {};
-  for (const [group, attributes] of Object.entries(TRAINING_ATTRIBUTE_GROUPS_R504) as Array<[TrainingKey, AttributeKey[]]>) {
-    for (const attribute of attributes) mapping[attribute] = group;
-  }
-  return mapping;
-})();
 
 export type ProjectedPlayerStateR504 = {
   version: typeof PROJECTED_PLAYER_STATE_R504_VERSION;
@@ -38,19 +30,29 @@ function clampAttribute(value: number): number {
   return Math.max(1, Math.min(99, value));
 }
 
+export function verifiedTrainingBaseAttributes(parsed:ParsedCard):Attributes|null {
+  const base=parsed.trainingBase;
+  if(!base || !parsed.editionIdentity?.officialCardIdVerified || base.cardId!==parsed.editionIdentity.officialCardId || !base.sources.some(url=>/^https:\/\//.test(url)))return null;
+  const keys=Object.values(TRAINING_ATTRIBUTE_GROUPS_R504).flat();
+  if(keys.some(key=>typeof base.attributes[key]!=='number'||!Number.isFinite(base.attributes[key])||base.attributes[key]!<1||base.attributes[key]!>120))return null;
+  if(Object.values(base.fixedBonus??{}).some(value=>typeof value!=='number'||!Number.isFinite(value)||value<0||value>20))return null;
+  return Object.fromEntries(keys.map(key=>[key,base.attributes[key]!+Number(base.fixedBonus?.[key]??0)]));
+}
+
 export function deriveProjectedPlayerStateR504(parsed: ParsedCard, training: TrainingPlan): ProjectedPlayerStateR504 {
   const normalizedTraining = normalizeTrainingPlan(training);
   const baseAttributes = {} as Attributes;
   const finalAttributes = {} as Attributes;
 
-  for (const [key, rawValue] of Object.entries(parsed.attributes ?? {}) as Array<[AttributeKey, unknown]>) {
+  const verifiedBase=verifiedTrainingBaseAttributes(parsed);
+  for (const [key, rawValue] of Object.entries(verifiedBase ?? parsed.attributes ?? {}) as Array<[AttributeKey, unknown]>) {
     const numeric = Number(rawValue);
     if (!Number.isFinite(numeric)) continue;
-    const base = clampAttribute(numeric);
-    const group = ATTRIBUTE_TRAINING_GROUP_R504[key];
-    const gain = group ? Number(normalizedTraining[group] ?? 0) : 0;
-    baseAttributes[key] = base;
-    finalAttributes[key] = clampAttribute(base + gain);
+    const bonus=verifiedBase?Number(parsed.trainingBase?.fixedBonus?.[key]??0):Math.max(0,numeric-99);
+    const base = clampAttribute(numeric-bonus);
+    const gain = Object.entries(TRAINING_ATTRIBUTE_GROUPS_R504).reduce((sum,[group,keys])=>sum+(keys.includes(key)?Number(normalizedTraining[group as TrainingKey]??0):0),0);
+    baseAttributes[key] = base+bonus;
+    finalAttributes[key] = clampAttribute(base + gain)+bonus;
   }
 
   return {

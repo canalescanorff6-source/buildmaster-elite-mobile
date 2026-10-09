@@ -6,6 +6,10 @@ export const R507_SINGLE_RECOMMENDATION_AUTHORITY_VERSION = '40.80-r507-single-r
 const CLEAN_SLATE_FILE = 'src/lib/cleanSlatePerformance2027V4080R119.ts';
 
 function replaceOnce(source, from, to, label) {
+  if(source.includes('parsed:{...parsed,attributes:displayedAttributes}')){
+    from=from.replace('...input,parsed,training:zero','...input,parsed:{...parsed,attributes:displayedAttributes},training:zero');
+    to=to.replace('...input,parsed,training:zero','...input,parsed:{...parsed,attributes:displayedAttributes},training:zero');
+  }
   if (source.includes(to)) return source;
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`R507: contrato inesperado em ${label}; ocorrências=${count}.`);

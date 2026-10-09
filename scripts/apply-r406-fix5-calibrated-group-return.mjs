@@ -36,7 +36,7 @@ export function applyCalibratedGroupReturnR406Fix5(rootDirectory=process.cwd()){
   const root=resolve(rootDirectory),sourcePath=resolve(root,SOURCE);
   if(!existsSync(sourcePath)) throw new Error(`R406-fix5: fonte ausente: ${SOURCE}`);
   let source=readFileSync(sourcePath,'utf8'),sourceChanged=false;
-  if((source.includes(VERSION_NEW)||source.includes(VERSION_R550))&&source.includes('const matchNeed=actions.reduce(')) {
+  if((source.includes(VERSION_NEW)||(source.includes(VERSION_R550)||source.includes("40.80-r551-card-needs-v1")))&&source.includes('const matchNeed=actions.reduce(')) {
     sourceChanged=false;
   } else {
     source=replaceOnce(source,VERSION_OLD,VERSION_NEW,'version');

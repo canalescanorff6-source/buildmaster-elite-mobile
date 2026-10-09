@@ -30,11 +30,11 @@ import { cardIdentityFingerprintR126 } from './cardIdentityFingerprintR126';
 import { applyCriticalEvidenceR419 } from '../modules/analysis/cardEvidenceAuthorityR419';
 import { deriveCardTruthCertificationR501, type CardTruthCertificationR501 } from '../modules/analysis/cardTruthLayerR501';
 import { deriveCriticalAttributeEvidenceR501 } from '../modules/analysis/cardTruthLayerR501';
-import { deriveProjectedPlayerStateR504, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';
+import { deriveProjectedPlayerStateR504, verifiedTrainingBaseAttributes, TRAINING_ATTRIBUTE_GROUPS_R504, type ProjectedPlayerStateR504 } from '../modules/analysis/projectedPlayerStateR504';
 import { rankAutonomousRolesR417 } from './autonomousCardR417';
 import { GAMEPLAY_IMPACT_R458_VERSION, functionActionDemandR458, teamStyleActionDemandR458, skillActionSupportR458, skillActionSupportDetailR459, type GameplayImpactR458 } from './gameplayImpactR458';
 
-export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r550-verified-card-evidence-v1' as const;
+export const CLEAN_SLATE_2027_R119_VERSION = '40.80-r551-card-needs-v1' as const;
 // BM_R457_SOURCE_CANONICAL_R406: source cru já contém a autoridade R406-fix5; sanitize é compatibilidade, não requisito funcional.
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R143_VERSION = '40.80-r143-equivalent-state-cache-v1' as const;
 export const CLEAN_SLATE_SEARCH_OPTIMIZATION_R144_VERSION = '40.80-r144-frontier-dedup-diagnostic-memo-v1' as const;
@@ -395,7 +395,7 @@ type UsageContextR125 = {
 
 type CompactPlanR147 = number[];
 type BeamState = { levels: CompactPlanR147; score: number; cacheKey: number };
-type CompiledAttributeR146 = { key:AttributeKey; base:number; groupIndex:number; observed:boolean };
+type CompiledAttributeR146 = { key:AttributeKey; base:number; bonus?:number; groupIndex:number; observed:boolean };
 type CompiledActionAttributeR146 = CompiledAttributeR146 & { weight:number; primary:boolean };
 type EvaluationActionR143 = {
   action:ActionDef;
@@ -435,7 +435,7 @@ const TRAINING_ATTRIBUTES: Record<TrainingKey, AttributeKey[]> = TRAINING_ATTRIB
 const ATTRIBUTE_TRAINING_GROUP_R144: Partial<Record<AttributeKey,TrainingKey>> = (()=>{
   const mapping:Partial<Record<AttributeKey,TrainingKey>>={};
   for(const [group,attributes] of Object.entries(TRAINING_ATTRIBUTES) as Array<[TrainingKey,AttributeKey[]]>) {
-    for(const attribute of attributes) mapping[attribute]=group;
+    for(const attribute of attributes) mapping[attribute]??=group;
   }
   return mapping;
 })();
@@ -611,7 +611,14 @@ function styleActionEvidence(action:ActionDef,context:UsageContextR125) {
   return clamp(Math.max(offensiveProof,defensiveProof),0,1);
 }
 
-function actionQualityFromValuesR458(values:Array<{value:number;weight:number;primary:boolean}>) {
+/** Heurística de retorno decrescente; não representa um limiar oficial de gameplay. */
+export function cardAttributeUtility(value:number) {
+  const observed=clamp(value,1,120);
+  return observed<=85?observed:85+14*Math.log1p((observed-85)/14);
+}
+
+function actionQualityFromValuesR458(observed:Array<{value:number;weight:number;primary:boolean}>) {
+  const values=observed.map(item=>({...item,value:cardAttributeUtility(item.value)}));
   if(!values.length) return 0;
   const totalWeight=values.reduce((sum,item)=>sum+item.weight,0);
   const mean=values.reduce((sum,item)=>sum+item.value*item.weight,0)/Math.max(.01,totalWeight);
@@ -696,7 +703,7 @@ function materializeTrainingPlanR147(levels:CompactPlanR147):TrainingPlan {
 }
 
 function projectedCompiledAttributeR147(levels:CompactPlanR147,attribute:CompiledAttributeR146) {
-  return clamp(attribute.base+(attribute.groupIndex>=0?Number(levels[attribute.groupIndex]??0):0),1,99);
+  return clamp(attribute.base-Number(attribute.bonus??0)+(attribute.groupIndex>=0?Number(levels[attribute.groupIndex]??0):0)+(attribute.key==='jump'?Number(levels[TRAINING_KEY_INDEX_R147.gk1]??0):0),1,99)+Number(attribute.bonus??0);
 }
 
 function projectedActionQualityR147(levels:CompactPlanR147,item:EvaluationActionR143) {
@@ -742,6 +749,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     })
     .filter(item=>item.frequency>.01);
   const canonicalDnaR457=buildCanonicalDnaR457(parsed,actionSeeds.map(item=>({id:item.action.id,frequency:item.frequency*100})));
+  const trainingBonus=verifiedTrainingBaseAttributes(parsed)?parsed.trainingBase?.fixedBonus??{}:Object.fromEntries(Object.entries(parsed.attributes).map(([k,v])=>[k,Math.max(0,Number(v)-99)]));
   const attributeBases:Partial<Record<AttributeKey,number>>={};
   const requiredAttributes=new Set<AttributeKey>();
   for(const item of actionSeeds) {
@@ -749,10 +757,10 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
     for(const key of item.pressureKeys) requiredAttributes.add(key);
   }
   for(const attributes of Object.values(TRAINING_ATTRIBUTES)) for(const key of attributes) requiredAttributes.add(key);
-  for(const key of requiredAttributes) if(Number.isFinite(Number(parsed.attributes[key]))) attributeBases[key]=clamp(Number(parsed.attributes[key]),1,99);
+  for(const key of requiredAttributes) if(Number.isFinite(Number(parsed.attributes[key]))) attributeBases[key]=clamp(Number(parsed.attributes[key]),1,120);
   const compileAttribute=(key:AttributeKey):CompiledAttributeR146=>{
     const group=ATTRIBUTE_TRAINING_GROUP_R144[key], observed=Number.isFinite(Number(parsed.attributes[key]));
-    return {key,base:observed?clamp(Number(parsed.attributes[key]),1,99):0,groupIndex:observed&&group!==undefined?TRAINING_KEY_INDEX_R147[group]:-1,observed};
+    return {key,base:observed?clamp(Number(parsed.attributes[key]),1,120):0,bonus:Number(trainingBonus[key]??0),groupIndex:observed&&group!==undefined?TRAINING_KEY_INDEX_R147[group]:-1,observed};
   };
   const actions:EvaluationActionR143[]=actionSeeds.map(item=>({
     ...item,
@@ -799,11 +807,13 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
           1
         )
       : 0;
-    const identityBonusByLevel=Array.from({length:17},(_,level)=>level
-      ? level*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
-        +Math.min(level,12)*matchNeed*12
-        +(aerialIdentityQualified?Math.min(level,8)*aerialIdentityEvidence*(defensiveAerialIdentity ? 3.6 : 1.15):0)
-      : 0);
+    const observedGroup=TRAINING_ATTRIBUTES[key].filter(attribute=>Number.isFinite(Number(parsed.attributes[attribute])));
+    const identityBonusByLevel=Array.from({length:17},(_,level)=>{
+      const useful=observedGroup.length?average(observedGroup.map(a=>cardAttributeUtility(Math.min(99,Number(parsed.attributes[a])-Number(trainingBonus[a]??0)+level)+Number(trainingBonus[a]??0))-cardAttributeUtility(Number(parsed.attributes[a])))):0;
+      return useful*Math.pow(naturalStrength/100,1.8)*Math.min(1.25,impacted*.22)*.16
+        +Math.min(useful,12)*matchNeed*12
+        +(aerialIdentityQualified?Math.min(useful,8)*aerialIdentityEvidence*(defensiveAerialIdentity ? 3.6 : 1.15):0);
+    });
     const weakRepairPenaltyByLevel=Array.from({length:17},(_,level)=>level && naturalStrength<60 && impacted<1.05?level*(60-naturalStrength)*.018:0);
     const excessPenaltyByLevel=Array.from({length:17},(_,level)=>{
       if(!level) return 0;
@@ -812,7 +822,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
         const support=Math.min(1,impacted/1.8);
         excessPenalty+=(level-10)*(.12+(1-support)*.42);
       }
-      const saturated=TRAINING_ATTRIBUTES[key].filter(attribute=>attr(parsed.attributes,attribute)+level>=99).length/TRAINING_ATTRIBUTES[key].length;
+      const saturated=TRAINING_ATTRIBUTES[key].filter(attribute=>attr(parsed.attributes,attribute)-Number(trainingBonus[attribute]??0)+level>=99).length/TRAINING_ATTRIBUTES[key].length;
       if(saturated>0) excessPenalty+=level*saturated*.055;
       return excessPenalty;
     });
@@ -821,7 +831,7 @@ function buildEvaluationContextR143(input:AnalysisResult,parsed:ParsedCard,actio
   const staminaActionIds=['press_recover','cover_space','cross_support','attack_space','carry'];
   const staminaDemand=clamp(average(staminaActionIds.map(id=>actionFrequencies.get(id)??0)),0,1);
   return {
-    canonicalDnaR457,actions,groupProfiles,attributeBases,stamina:compileAttribute('stamina'),staminaDemand,staminaFloor:68+staminaDemand*20,
+    canonicalDnaR457,actions,groupProfiles,attributeBases,stamina:compileAttribute('stamina'),staminaDemand,staminaFloor:evaluationTargetPosition==='GK'?45+staminaDemand*12:68+staminaDemand*20,
     aerialSupport:Math.max(
       actionFrequencies.get('aerial_finish')??0,
       actionFrequencies.get('aerial_defend')??0,
@@ -871,7 +881,7 @@ function evaluateCompactKernelR149(levels:CompactPlanR147,context:EvaluationCont
       let pressureSum=0;
       let weakest=Infinity;
       for(const attribute of item.compiledPressureAttributes) {
-        const value=projectedCompiledAttributeR147(levels,attribute);
+        const value=cardAttributeUtility(projectedCompiledAttributeR147(levels,attribute));
         pressureSum+=value;
         weakest=Math.min(weakest,value);
       }
@@ -1007,9 +1017,9 @@ const EXACT_TRAINING_CACHE_R457=new Map<string,{winner:BeamState|undefined;final
 function exactTrainingCacheKeyR457(context:EvaluationContextR143,allowed:TrainingKey[],budget:number){
   return JSON.stringify([
     budget,allowed,
-    context.actions.map(item=>[item.action.id,item.frequency,item.natural,item.matchNeedMultiplier,item.decisionWeight,item.compiledAttributes.map(a=>[a.key,a.base,a.groupIndex,a.observed?1:0,a.weight,a.primary?1:0]),item.compiledPressureAttributes.map(a=>[a.key,a.base,a.groupIndex,a.observed?1:0])]),
+    context.actions.map(item=>[item.action.id,item.frequency,item.natural,item.matchNeedMultiplier,item.decisionWeight,item.compiledAttributes.map(a=>[a.key,a.base,a.bonus??0,a.groupIndex,a.observed?1:0,a.weight,a.primary?1:0]),item.compiledPressureAttributes.map(a=>[a.key,a.base,a.bonus??0,a.groupIndex,a.observed?1:0])]),
     context.groupProfiles.map(group=>[group.naturalStrength,group.impacted,group.identityFit,group.identityBonusByLevel,group.weakRepairPenaltyByLevel,group.excessPenaltyByLevel]),
-    [context.stamina.key,context.stamina.base,context.stamina.groupIndex,context.stamina.observed?1:0],context.staminaDemand,context.staminaFloor,context.aerialSupport
+    [context.stamina.key,context.stamina.base,context.stamina.bonus??0,context.stamina.groupIndex,context.stamina.observed?1:0],context.staminaDemand,context.staminaFloor,context.aerialSupport
   ]);
 }
 function cloneExactCertificationR457(entry:{winner:BeamState|undefined;finalists:BeamState[];equivalentStates:BeamState[];certificate:CleanSlateOptimalityCertificateR457},cacheHit:boolean){
@@ -1530,7 +1540,7 @@ function buildGameplayImpactR458(
       if(!observed) return [];
       const group=ATTRIBUTE_TRAINING_GROUP_R144[key];
       const weight=Math.max(.05,Number(action.weights?.[key]??1));
-      return [{key,base:clamp(Number(parsed.attributes[key]),1,99),groupIndex:group===undefined?-1:TRAINING_KEY_INDEX_R147[group],observed:true,weight,primary:weight>=.95}];
+      return [{key,base:clamp(Number(parsed.attributes[key]),1,120),bonus:Number(verifiedTrainingBaseAttributes(parsed)?parsed.trainingBase?.fixedBonus?.[key]??0:Math.max(0,Number(parsed.attributes[key])-99)),groupIndex:group===undefined?-1:TRAINING_KEY_INDEX_R147[group],observed:true,weight,primary:weight>=.95}];
     }),
     compiledPressureAttributes:[],
     skillSupport:skillActionEvidence(action,parsed)
@@ -1892,6 +1902,9 @@ function usageFunctionR457(input:AnalysisResult, context:UsageContextR125) {
 export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnapshot?:ParsedCard):WithR119 {
   const parsed:ParsedCard=applyCriticalEvidenceR419(rawSnapshot ? JSON.parse(JSON.stringify(rawSnapshot)) as ParsedCard : JSON.parse(JSON.stringify(input.parsed)) as ParsedCard);
   const cardTruthCertificationR501=deriveCardTruthCertificationR501(parsed);
+  const displayedAttributes={...parsed.attributes};
+  const trainingBase=verifiedTrainingBaseAttributes(parsed);
+  if(trainingBase) parsed.attributes=trainingBase;
   const usageContext=buildUsageContextR125(input,parsed);
   const playstyleContext=publicPlaystyleContextR125(usageContext);
   const usageFunction=usageFunctionR457(input,usageContext);
@@ -1967,7 +1980,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
       guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget:false,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:true,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
       reasons:[`Leitura insuficiente para gerar a ficha: atributos utilizáveis ${attributeCount}/${minimum}; orçamento ${budget || 0}. Complete os atributos críticos antes de distribuir PP. Nenhuma ficha antiga ou genérica foi usada como fallback.`,...attributeEvidence.reasons,playstyleContext.note,'Top 5 permaneceu disponível porque posição e habilidades possuídas podem ser validadas independentemente do orçamento da ficha.']
     };
-    return {...input,parsed,training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:blockedPublicRecommendationsR507.skills,recommendedImpetos:blockedPublicRecommendationsR507.impeto.recommendations,skillIntegrity,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
+    return {...input,parsed:{...parsed,attributes:displayedAttributes},training:zero,trainingCost:trainingPlanCost(zero),trainingPointsUsed:0,trainingPointsTotal:budget,trainingPointsRemaining:budget,recommendedSkills:blockedPublicRecommendationsR507.skills,recommendedImpetos:blockedPublicRecommendationsR507.impeto.recommendations,skillIntegrity,finalAdditionalSkillSetR457:blockedFinalSkillSetR457,finalImpetoDecisionR457:blockedFinalImpetoR457,cleanSlate2027R119:analysis,recommendationExplanation:[`r119 bloqueou apenas a ficha por dados insuficientes; Top 5 seguro: ${top5.join(', ')||'indisponível'}.`,'Nenhum motor legado foi usado como fallback.',...input.recommendationExplanation]} as WithR119;
   }
   let optimized=optimizeTraining(input,parsed,budget,functionalUsageContext);
   let recommendationContext=functionalUsageContext;
@@ -1983,7 +1996,9 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     const naturalUnderTarget=evaluatePlan(input,parsed,naturalOptimized.plan,targetOptimized.frequencies,true,targetOptimized.evaluationContext);
     const targetGain=targetOptimized.evaluation.score-naturalUnderTarget.score;
     const planDistance=trainingPlanDistanceR184(targetOptimized.plan,naturalOptimized.plan);
-    const targetAdaptation = Boolean(String((input as AnalysisResult & { usageFunctionR457?: string }).usageFunctionR457 ?? '').trim()) && targetGain >= POSITION_STABILITY_GAIN_THRESHOLD_R184;
+    const proficiency=parsed.positionProficiencies?.[usageContext.targetPosition];
+    const explicitReady=input.requestedUsagePosition===usageContext.targetPosition && (proficiency==='HIGH'||proficiency==='INTERMEDIATE');
+    const targetAdaptation = (explicitReady || Boolean(String((input as AnalysisResult & { usageFunctionR457?: string }).usageFunctionR457 ?? '').trim())) && targetGain >= POSITION_STABILITY_GAIN_THRESHOLD_R184;
     positionStabilityR184={
       version:POSITION_STABILITY_R184_VERSION,
       decision:targetAdaptation?'TARGET_ADAPTATION':'NATURAL_ANCHOR',
@@ -2078,6 +2093,8 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
     impetoIdealScore:publicRecommendationsR507.impeto.idealScore,impetoIdealConfidence:publicRecommendationsR507.impeto.idealConfidence,impetoReason:publicRecommendationsR507.impeto.reason,impetoSlotStatus:publicRecommendationsR507.impeto.slotStatus,
     guards:{ignoresIncomingTraining:true,ignoresOverall:true,noFloorPeakCeiling:true,rawSnapshotProtected:true,exactBudget,ownedSkillDuplicatesBlocked:duplicatesBlocked,existingImpetoNeverRepeated:publicRecommendationsR507.impeto.existingImpetoNeverRepeated,selectedPositionDoesNotRewriteSignature:true,legacyEnginesReadOnly:true,onlineObjectiveActive:true,nameAgnosticScoring:true,marginalReturnAudited:true,saturationAudited:true,confidenceSeparatedFromOverall:true,abLabReadOnly:true,usagePositionAffectsBuildNotCardIdentity:true,inactivePlaystyleDoesNotForceRecipe:true,actionAttributesHaveFunctionalWeights:true,matchEvidenceCalibrated:true},
     reasons:[
+      ...(trainingBase ? ['Atributos do print preservados; treino calculado com a base de nível 1 confirmada da edição.'] : ['Base de nível 1 ainda não confirmada: a proposta usa os atributos lidos e precisa ser conferida se o print já inclui treino ou bônus.']),
+      'O retorno adicional dos atributos altos é reduzido no modelo. Esta curva é uma heurística; o desempenho em partidas precisa de validação.',
       `Clean Slate r149 avaliou ${searchOptimizationR149.generatedStates} estados com hot path escalar de score no mesmo kernel de avaliação, sem objetos de resultado/online/detalhes por candidato; preservou r148, beam 20 e orçamento ${spent}/${budget}.`,
       ...(limitedEvidence
         ? [`R452: ficha provisória foi gerada com cobertura útil parcial (${attributeCount}/${totalAttributes} atributos; mínimo crítico ${minimum}). Complete os atributos ausentes antes da certificação final.`]
@@ -2106,7 +2123,7 @@ export function applyCleanSlatePerformance2027R119(input:AnalysisResult, rawSnap
   };
   return {
     ...input,
-    parsed,
+    parsed:{...parsed,attributes:displayedAttributes},
     training,
     trainingCost:trainingPlanCost(training),
     trainingPointsUsed:spent,

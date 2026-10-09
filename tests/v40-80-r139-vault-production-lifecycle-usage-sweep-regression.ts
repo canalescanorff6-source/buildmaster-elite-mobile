@@ -16,16 +16,14 @@ const rawText = `[AJUSTES MANUAIS]\nCONFIRMAÇÃO MANUAL: SIM\nNOME DO JOGADOR: 
 
 const cb: any = createProductionAnalysisR138({ rawText, objective: 'COMPETITIVE', targetPosition: 'CB', imageFileName: 'r139-cb.png' });
 const dmf: any = createProductionAnalysisR138({ rawText, objective: 'COMPETITIVE', targetPosition: 'DMF', imageFileName: 'r139-dmf.png' });
-assert.equal(analysisUsagePositionR138(cb), 'CF', 'R417 deve ignorar alvo manual e usar a função automática do DNA.');
-assert.equal(analysisUsagePositionR138(dmf), 'CF', 'A mesma carta deve convergir para a mesma função automática.');
-assert.equal(cb.cleanSlate2027R119?.usageFunction, dmf.cleanSlate2027R119?.usageFunction, 'R417/R469: alvos manuais rejeitados não podem deixar funções diferentes na identidade canônica.');
-assert.equal(resultHistoryKey(cb), resultHistoryKey(dmf), 'A mesma carta não deve duplicar ficha só porque um alvo manual diferente foi solicitado.');
-assert.equal(correctionKeysForResult(cb).role, correctionKeysForResult(dmf).role, 'Correção funcional deve seguir a função automática canônica da carta.');
-assert.deepEqual(cb.training, dmf.training, 'Alvos manuais diferentes não podem reescrever a progressão permanente R417.');
-assert.deepEqual(cb.recommendedSkills, dmf.recommendedSkills, 'Top 5 deve permanecer igual para a mesma carta.');
-assert.deepEqual(cb.recommendedImpetos, dmf.recommendedImpetos, 'Ímpeto deve permanecer igual para a mesma carta.');
+assert.equal(analysisUsagePositionR138(cb), 'CB', 'R551 deve preservar a posição explicitamente escolhida.');
+assert.equal(analysisUsagePositionR138(dmf), 'DMF', 'R551 deve preservar cada função de uso escolhida.');
+assert.notEqual(resultHistoryKey(cb), resultHistoryKey(dmf), 'Fichas de funções diferentes precisam de identidades distintas.');
+assert.notEqual(correctionKeysForResult(cb).role, correctionKeysForResult(dmf).role, 'Calibração não deve misturar funções de uso.');
+const automatic: any = createProductionAnalysisR138({ rawText, objective: 'COMPETITIVE', imageFileName: 'r139-auto.png' });
+assert.equal(analysisUsagePositionR138(automatic), 'CF', 'Sem escolha explícita, a função continua automática por DNA.');
 
-const cfWithDiagnosticCb: any = { ...cb, bestPosition: { ...cb.bestPosition, code: 'CB', label: 'ZAG', score: 99 } };
+const cfWithDiagnosticCb: any = { ...automatic, bestPosition: { ...automatic.bestPosition, code: 'CB', label: 'ZAG', score: 99 } };
 assert.equal(analysisUsagePositionR138(cfWithDiagnosticCb), 'CF', 'diagnóstico mutável não pode substituir a função automática selada no Clean Slate.');
 const teamReport = buildEliteTeamReport([cfWithDiagnosticCb], '4-2-2-2', 'POSSE_DE_BOLA');
 assert.ok(teamReport);
@@ -34,7 +32,7 @@ const rotationReport = buildSquadRotationReport([cfWithDiagnosticCb], '4-2-2-2',
 assert.ok(rotationReport);
 assert.equal(rotationReport!.starters[0]?.position, 'CF', 'Rotação deve carregar a função automática canônica.');
 
-const saved = prepareVaultSaveR139({ history: [], result: cb, rawText, playerImage: null, fullPreview: null, now: '04/09/2026, 16:30:00' });
+const saved = prepareVaultSaveR139({ history: [], result: automatic, rawText, playerImage: null, fullPreview: null, now: '04/09/2026, 16:30:00' });
 assert.equal(saved.nextHistory.length, 1);
 assert.equal(saved.item.result, saved.productionResult);
 assert.equal(saved.item.saveKey, resultHistoryKey(saved.productionResult), 'R457: saveKey deve ser exatamente a identidade canônica moderna da ficha.');
@@ -73,14 +71,14 @@ assert.deepEqual(opened.restored.result.training, saved.productionResult.trainin
 assert.equal(savedIdentitySealCurrentR134(opened.nextHistory[0]), true);
 
 const legacy: any = {
-  parsed: { ...cb.parsed, mainPosition: 'CF', mainPositionPt: 'CA' },
+  parsed: { ...automatic.parsed, mainPosition: 'CF', mainPositionPt: 'CA' },
   bestPosition: { code: 'CF', label: 'CA', score: 99 },
   cleanSlate2027R119: { usagePosition: 'CB' },
   trainingPointsTotal: 60
 };
 const migrated = migrateAnalysisResult(legacy, rawText, 'legacy-r139.png');
 assert.ok(migrated);
-assert.equal(analysisUsagePositionR138(migrated!), 'CF', 'Migração deve convergir para a função automática R417 da carta, sem ressuscitar alvo manual antigo.');
+assert.equal(analysisUsagePositionR138(migrated!), 'CB', 'R551: migração deve preservar a posição de uso registrada na ficha.');
 
 const root = path.resolve(__dirname, '..');
 const analysisFacade = fs.readFileSync(path.join(root, 'src/modules/analysis/index.ts'), 'utf8');
@@ -120,4 +118,4 @@ for (const [file, forbidden] of usageSensitiveFiles) {
   assert.doesNotMatch(source, forbidden, `${file} ainda confunde bestPosition/mainPosition com posição real de uso.`);
 }
 
-console.log('r139 aprovada: Cofre converge para a função automática R417, mesma carta mantém ficha única e selos/lifecycle preservam a autoridade canônica.');
+console.log('r139 aprovada: Cofre preserva escolha explícita R551 e seleção automática sem alvo e selos/lifecycle preservam a autoridade canônica.');

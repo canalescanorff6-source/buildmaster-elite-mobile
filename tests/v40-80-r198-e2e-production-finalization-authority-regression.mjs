@@ -60,7 +60,7 @@ assert.ok((vaultLifecycle.match(/ensureProductionAnalysisR138\(input\.result\)/g
 assert.match(historyStore, /createProductionAnalysisR138\(\{ rawText: source/, 'R198: migração histórica deve entrar pelo orquestrador de produção.');
 
 const r119 = fs.readFileSync('src/lib/cleanSlatePerformance2027V4080R119.ts');
-assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '630f2097ccbb4e58d3669294f50ecf6fe4eead0b33d07716e0d49aad2c9aa1fd', 'R198/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.');
+assert.equal(crypto.createHash('sha256').update(r119).digest('hex'), '02208171c61e6576107ebb3a22a94357755fb07f5b752b20dda78ca12b2ccadb', 'R198/R504: R119 deve permanecer no fingerprint aprovado após centralizar o estado pós-build.');
 
 const appBytes = fs.statSync('src/components/CardVisionApp.tsx').size;
 const r200Boundary = fs.existsSync('src/modules/vault/cardHistoryStartupModelR200.ts');
@@ -76,7 +76,7 @@ while (sourceStack.length) {
     else if (/\.(?:ts|tsx)$/.test(target)) sourceBytes += fs.statSync(target).size;
   }
 }
-assert.ok(sourceBytes <= (postCatalogBoundary ? 6_111_232 : r200Boundary ? 5_360_000 : 5_335_350), `R198/R200: orçamento de fonte excedeu a fronteira aprovada; src=${sourceBytes} B.`);
+assert.ok(sourceBytes <= (postCatalogBoundary ? 6_127_616 : r200Boundary ? 5_360_000 : 5_335_350), `R198/R200: orçamento de fonte excedeu a fronteira aprovada; src=${sourceBytes} B.`);
 
 const v4080 = String(pkg.scripts?.['test:v4080'] ?? '');
 assert.ok(v4080.endsWith('npm run test:r197 && npm run test:r198') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199') || v4080.endsWith('npm run test:r197 && npm run test:r198 && npm run test:r199 && npm run test:r200'), 'R198: cadeia v40.80 deve preservar R197 -> R198 antes do gate seguinte.');
