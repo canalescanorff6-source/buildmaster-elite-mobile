@@ -2,6 +2,7 @@ import type { AnalysisResult, TacticalFormation, TacticalStyle } from '@/lib/ana
 import { buildFormationLineup, FORMATION_BLUEPRINTS, getFormationBlueprint, scorePlayerForFormationSlot, styleAdviceForFormation } from '@/lib/formationRoleEngine';
 import type { MatchValidationRecord } from '@/lib/appStartupContractsR200';
 import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
+import { buildManualFormationLineupR573, type ManualTeamLayoutR573 } from '@/lib/manualTeamEditorR573';
 import { createPendingGameplayScoutingR454, evaluatePairSynergyR454 } from '@/modules/scouting/gameplayScoutingR454';
 
 export const CENTRAL_SCHEMA_VERSION = 27;
@@ -164,9 +165,9 @@ function normalize(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle): TeamDiagnosis {
+export function buildTeamDiagnosis(players: IntegratedPlayerRecord[], formation: TacticalFormation, style: TacticalStyle, manualLayout?: ManualTeamLayoutR573 | null): TeamDiagnosis {
   const blueprint = getFormationBlueprint(formation === 'AUTO' ? '4-2-2-2' : formation);
-  const lineup = buildFormationLineup(players.map((player) => player.result), blueprint, style);
+  const lineup = buildManualFormationLineupR573(players.map((player) => player.result), blueprint, style, manualLayout);
   const styleFit = styleAdviceForFormation(blueprint, style);
   const filledSlots = lineup.filter((item) => item.player).length;
   const lineScores = [
