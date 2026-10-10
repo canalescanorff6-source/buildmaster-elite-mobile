@@ -43,6 +43,7 @@ import type { MatchFeedback } from '@/lib/realMatchCalibration';
 import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import { cardUsageIdentityKeyR126 } from '@/lib/cardIdentityFingerprintR126';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import { PerformanceCertificationPanelR564 } from '@/components/PerformanceCertificationPanelR564';
 
 const KEYS: TrainingKey[] = ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending','gk1','gk2','gk3'];
 const FEEDBACK: Array<{ key: MatchFeedbackKey; label: string }> = [
@@ -178,6 +179,7 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
 
   return (
     <section className="precision-build-shell ficha-workspace-shell">
+      <PerformanceCertificationPanelR564 result={result} />
       <article className="ficha-workspace-header luxury-panel">
         <div className="ficha-workspace-identity">
           <span className="ficha-workspace-icon"><Sparkles size={22}/></span>
