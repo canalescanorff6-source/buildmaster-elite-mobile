@@ -1,6 +1,7 @@
 import { canonicalizeOffensivePlaystyleR124 } from '../../lib/efootball2027PhaseCatalogR124';
 import { ATTRIBUTE_INPUTS, type PositionCode } from '../../lib/analyzerDomain';
 import { deriveReaderCanonicalEvidenceR549 } from '../../lib/readerCanonicalEvidenceR549';
+import { assessReaderEvidenceQualityR569 } from '../../lib/readerEvidenceQualityR569';
 import { inspectReaderV2OptionalFieldsR563 } from './readerV2OptionalCaptureR563';
 import { extractCanonicalSkillsFromText } from '../../lib/officialSkillIdentity';
 import { parseAttributes } from '../analysis/cardEvidenceParserR130';
@@ -148,6 +149,12 @@ export function buildReaderV2ReviewDraft(
   if (!points) addUncertain(uncertainKeys, 'points');
   if (!mainPosition) addUncertain(uncertainKeys, 'mainPosition');
 
+  // Evidence-only annotation. It cannot clear warnings or rewrite the OCR.
+  const readQualityR569 = assessReaderEvidenceQualityR569({
+    playerName, level, points, pointsSource, mainPosition,
+    attributeRows: evidence.attributeRows,
+    fields, uncertainKeys,
+  });
   return {
     playerName,
     level,
@@ -161,6 +168,7 @@ export function buildReaderV2ReviewDraft(
     attributeRows: evidence.attributeRows ? [...evidence.attributeRows] : undefined,
     skillValues: canonical.skillValues,
     optionalCaptureR563,
+    readQualityR569,
     impetoName: canonical.impetoName,
     impetoNames: canonical.impetoNames,
     specialSkillValues: canonical.specialSkillValues,
