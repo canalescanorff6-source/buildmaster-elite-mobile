@@ -104,6 +104,12 @@ O comando `--strict` retorna erro se faltar corpus, assinatura de imagem, origem
 
 O relatório contém apenas métricas agregadas e códigos de erro; não inclua capturas ou nomes dos jogadores nos artefatos públicos. Prints em diferentes níveis, temas e versões do jogo exigem revalidação do corpus.
 
+## Build Android debug preventivo
+
+A PR R571 também executa um workflow **Build Android debug sem publicar**. Ele recompila o projeto web com OCR local, recria o Android nativo via Capacitor, instala os módulos internos e exige `assembleDebug` GREEN. O artefato de teste é salvo como `r571-buildmaster-debug-apk-<run_id>` por cinco dias.
+
+**Atenção:** o APK debug NÃO é o APK assinado oficial e NÃO substitui a release do canal direto. Um teste feito com o debug não pode preencher o recibo R532, que exige a mesma assinatura/versão/SHA-256 do APK imutável distribuído. A compilação debug não comprova ausência de travamentos em hardware real.
+
 ## Aceite físico e fechamento da versão
 
 1. Confirmar GitHub Actions GREEN para o último commit, inclusive build do APK assinado.
