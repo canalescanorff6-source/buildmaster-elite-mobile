@@ -42,6 +42,8 @@ export function evaluateOcrCorpusR571(manifest,{rootDir='.',strict=false,sourceS
   const items=safeArray(manifest?.cases);
   if(manifest?.schemaVersion!==OCR_CORPUS_R571_SCHEMA)structural.push('schemaVersion deve ser 1.');
   if(manifest?.kind!=='REAL_DEVICE_OCR_CORPUS')structural.push('kind deve ser REAL_DEVICE_OCR_CORPUS.');
+  if(typeof manifest?.gameVersion!=='string'||!/^\d+\.\d+\.\d+$/.test(manifest.gameVersion))
+    structural.push('gameVersion do eFootball ausente ou inválida.');
   const ids=new Set();
   let total=0,done=0,correctName=0,correctLevel=0,correctPoints=0,correctAttrs=0,allCorrect=0;
   let optionalSkillsTotal=0,optionalSkillsCorrect=0,optionalBoostersTotal=0,optionalBoostersCorrect=0;
@@ -54,6 +56,7 @@ export function evaluateOcrCorpusR571(manifest,{rootDir='.',strict=false,sourceS
       structural.push(id+': exige print real e rótulo revisado manualmente.');continue;
     }
     if(!['automatic','zones'].includes(item?.mode))structural.push(id+': modo automatic/zones ausente.');
+    if(item?.gameVersion!==manifest?.gameVersion)structural.push(id+': versão do jogo diverge do corpus.');
     const ty=String(item?.cardType??'').trim(), mo=String(item?.deviceModel??'').trim();
     const res=String(item?.resolution??'').trim();
     if(!ty||!mo||! /^\d{3,5}x\d{3,5}$/.test(res))structural.push(id+': cartão, aparelho ou resolução incompletos.');
@@ -71,7 +74,9 @@ export function evaluateOcrCorpusR571(manifest,{rootDir='.',strict=false,sourceS
         ||expected.attributeRows.some(x=>!Number.isSafeInteger(x)||x<1||x>120)) {
       structural.push(id+': rótulos de 26 atributos ausentes ou inválidos.');continue;
     }
-    if(!expected.playerName || !Number.isSafeInteger(expected.level) || !Number.isSafeInteger(expected.points)){
+    if(!String(expected.playerName??'').trim() || !Number.isSafeInteger(expected.level)
+      || expected.level<1 || expected.level>100 || !Number.isSafeInteger(expected.points)
+      || expected.points<0 || expected.points>999){
       structural.push(id+': rótulos críticos de nome/nível/pontos incompletos.');continue;
     }
     if(!['completed','crash','timeout','worker_error'].includes(item?.outcome)){
