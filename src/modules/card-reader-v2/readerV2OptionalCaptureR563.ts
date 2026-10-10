@@ -1,5 +1,5 @@
 import { extractCanonicalSkillsFromText, normalizeSkillIdentity } from '../../lib/officialSkillIdentity';
-import { RECOGNIZABLE_IMPETO_NAMES } from '../../lib/officialImpetoCatalog';
+import { READER_V2_BOOSTER_NAMES_R563 } from '../../lib/readerOptionalVocabularyR563';
 import type { ReaderV2FieldEvidence } from './readerV2Types';
 
 /** R563: OCR candidates are not proof of possession. Never persist them as confirmed slots. */
@@ -79,7 +79,7 @@ export function inspectReaderV2OptionalFieldsR563(fields: ReaderV2FieldEvidence[
   const simplified = (value:string) => normalizeReaderV2OptionalTextR563(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const boosterText = ` ${simplified(booster?.value ?? '')} `;
   const names = booster && !booster.error && booster.confidence >= 65
-    ? RECOGNIZABLE_IMPETO_NAMES.filter(name => boosterText.includes(` ${simplified(name)} `))
+    ? READER_V2_BOOSTER_NAMES_R563.filter(name => boosterText.includes(` ${simplified(name)} `))
        .sort((left,right) => boosterText.indexOf(` ${simplified(left)} `) - boosterText.indexOf(` ${simplified(right)} `)) : [];
   const validBoosters = booster && !booster.error && booster.confidence >= 65 && names.length >= 1 && names.length <= 2;
   const boosters: ReaderV2OptionalCaptureR563['boosters'] = validBoosters
