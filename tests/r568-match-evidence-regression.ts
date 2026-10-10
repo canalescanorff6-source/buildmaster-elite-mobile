@@ -58,7 +58,7 @@ assert.equal(listMatchEvidenceContextsR568(missingVersion).reduce((sum,g)=>sum+g
 
 const ui=readFileSync('src/components/MatchEvidenceLabR568.tsx','utf8');
 const panel=readFileSync('src/components/MatchValidationCenter.tsx','utf8');
-assert.match(ui,/winner/);
+assert.match(ui,/não declara vencedor/,'UI must explicitly explain that no winner is inferred.');
 assert.match(ui,/listMatchEvidenceContextsR568/);
 assert.match(panel,/<MatchEvidenceLabR568 records=\{currentRecords\}/);
 console.log('R568 GREEN: context isolation, evidence, sample gates, duplicate sessions and no invented winner');
