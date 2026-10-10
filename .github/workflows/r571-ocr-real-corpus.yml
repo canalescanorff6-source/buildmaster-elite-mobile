@@ -45,3 +45,67 @@ jobs:
           path: .ci-reports/r571-ocr-status.json
           if-no-files-found: warn
           retention-days: 7
+
+  android-debug-smoke:
+    name: Build Android debug sem publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      NEXT_PUBLIC_BUILDMASTER_DISTRIBUTION: direct
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_BUILDMASTER_BUILD_ID: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Preparar SDK Android API 36
+        run: |
+          yes | sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools' || true
+          test -d "$ANDROID_HOME/platforms/android-36"
+      - name: Instalar dependências travadas
+        run: npm ci --no-audit --no-fund
+      - name: Verificar apenas variáveis públicas exigidas pelo aplicativo
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      - name: Empacotar OCR local e páginas estáticas
+        timeout-minutes: 25
+        run: |
+          npm run vendor:ocr
+          npm run apk:build-web
+          test -s out/tesseract/worker.min.js
+          test -s out/tesseract/lang/por.traineddata
+      - name: Gerar projeto Android nativo e instalar módulos
+        run: |
+          npx --no-install cap add android
+          node scripts/install-android-security-plugin.mjs
+          node scripts/install-match-recorder-plugin.mjs
+          node scripts/install-native-vault-storage-plugin.mjs
+          node scripts/install-android-branding.mjs
+          npx --no-install cap sync android
+      - name: Compilar APK debug sem chave de produção
+        timeout-minutes: 20
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+      - name: Gerar hash e declarar limites
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk
+          echo "### Android Debug Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "APK debug gerado do commit \`${GITHUB_SHA}\`. NÃO é release assinada nem aceite físico R532." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r571-buildmaster-debug-apk-${{ github.run_id }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 5
