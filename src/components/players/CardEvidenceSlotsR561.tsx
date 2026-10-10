@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, CircleHelp, LockKeyhole, Sparkles } from 'lucide-react';
+import { CheckCircle2, Info, LockKeyhole, Sparkles } from 'lucide-react';
 import type { ParsedCard } from '@/lib/analyzerDomain';
 import { buildCardSlotsViewR561, type DisplaySlotR561 } from '@/lib/cardVisualEvidenceR561';
 
@@ -26,7 +26,7 @@ function SlotsRow({ title, items }: { title: string; items: DisplaySlotR561[] })
           {item.status === 'CONFIRMADO' || item.status === 'LIVRE_CONFIRMADA'
             ? <CheckCircle2 size={12} aria-hidden="true" />
             : item.status === 'SEM_VAGA' ? <LockKeyhole size={12} aria-hidden="true" />
-              : <CircleHelp size={12} aria-hidden="true" />}
+              : <Info size={12} aria-hidden="true" />}
           <b>{item.id.startsWith('skill') ? item.label.replace('Habilidade ', '#') : item.label}</b>
           <span style={{ overflowWrap: 'anywhere' }}>{item.value || (item.status === 'LIVRE_CONFIRMADA' ? 'Livre' : item.status === 'SEM_VAGA' ? 'Sem vaga' : '—')}</span>
         </span>;
