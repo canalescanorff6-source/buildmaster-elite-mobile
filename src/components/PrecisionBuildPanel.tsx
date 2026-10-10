@@ -44,6 +44,7 @@ import { CALIBRATION_STORAGE_KEY } from '@/modules/matches/calibrationStorage';
 import { cardUsageIdentityKeyR126 } from '@/lib/cardIdentityFingerprintR126';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
 import { PerformanceCertificationPanelR564 } from '@/components/PerformanceCertificationPanelR564';
+import { comparePerformanceBuildsR565 } from '@/lib/buildComparisonR565';
 
 const KEYS: TrainingKey[] = ['shooting','passing','dribbling','dexterity','lowerBodyStrength','aerialStrength','defending','gk1','gk2','gk3'];
 const FEEDBACK: Array<{ key: MatchFeedbackKey; label: string }> = [
@@ -108,6 +109,23 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
   }), [result, selectedRoleId, dataRevision]);
 
   const comparison = useMemo(() => compareTrainingPlan(result, customPlan), [result, customPlan]);
+  // R565 reads real existing proposals, never invents a third-party score.
+  // A screenshot does not establish unboosted base attributes or a verified budget.
+  const certifiedProposalsR565 = useMemo(() => comparePerformanceBuildsR565({
+    card: result.parsed,
+    budget: result.parsed.manualConfirmed && result.parsed.trainingPointSource === 'MANUAL'
+      && Number.isSafeInteger(result.trainingPointsTotal) ? result.trainingPointsTotal : null,
+    baseProvenance: 'UNKNOWN',
+    confirmedBaseAttributeKeys: [],
+    candidates: intelligence.profileComparison.map(proposal => ({
+      id: proposal.id,
+      objective: proposal.id === 'balanced' ? 'EQUILIBRADA' as const
+        : proposal.id === 'offensive' ? 'ESPECIALISTA' as const : 'COMPETITIVA' as const,
+      training: proposal.training,
+      // Existing in-app ratings are NOT experimentally calibrated match evidence.
+      calibration: 'UNVERIFIED' as const,
+    })),
+  }), [result, intelligence.profileComparison]);
   const feedbackCorrection = useMemo(() => buildFeedbackCorrection(result, feedback), [result, feedback]);
   const activeKeys = KEYS.filter((key) => usagePosition === 'GK'
     ? key.startsWith('gk') || key === 'lowerBodyStrength' || key === 'aerialStrength'
@@ -256,6 +274,18 @@ export function PrecisionBuildPanel({ result }: { result: AnalysisResult }) {
           <article className="luxury-panel precision-proposals-card ficha-section-card">
             <div className="section-title-row"><div><p className="kicker"><BrainCircuit size={14}/> Três perfis completos</p><h3>Ofensiva, equilibrada e competitiva</h3></div><span>mesmo orçamento real</span></div>
             <p className="panel-note">A competitiva busca o maior rendimento total. A ofensiva amplia a principal arma da carta. A equilibrada reduz oscilações e distribui responsabilidades.</p>
+            <div className="panel-note" role="status" style={{ marginBottom: 12 }}>
+              <strong>Certificação R565: {certifiedProposalsR565.verdict}</strong>
+              <p style={{ margin: '4px 0' }}>{certifiedProposalsR565.reason}</p>
+              {certifiedProposalsR565.candidates.map(candidate => (
+                <span key={candidate.id} style={{ display: 'inline-block', marginRight: 12 }}>
+                  {candidate.objective}: {candidate.status} ({candidate.spent ?? '—'}/{result.trainingPointsTotal} pts)
+                </span>
+              ))}
+              <small style={{ display: 'block', marginTop: 6 }}>
+                As notas internas não são medições de desempenho em partidas. Nenhuma ficha é promovida sem evidência.
+              </small>
+            </div>
             <div className="precision-proposal-grid ficha-proposal-grid">
               {intelligence.profileComparison.map((proposal) => (
                 <div key={proposal.id} className={`precision-proposal proposal-${proposal.id} ${activeProposalId === proposal.id ? 'selected' : ''}`}>
