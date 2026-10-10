@@ -3,6 +3,7 @@
 import type { AnalysisResult } from '@/lib/analyzer';
 import type { ManagerRecord } from '@/lib/managers';
 import { SkillBoosterPlanningPanelR567 } from '@/components/result/SkillBoosterPlanningPanelR567';
+import { FinalDecisionPanelR570 } from '@/components/result/FinalDecisionPanelR570';
 import { cardIdentityFingerprintR126 } from '@/lib/cardIdentityFingerprintR126';
 import { buildCardSlotsViewR561, buildManagerAttributeViewR561 } from '@/lib/cardVisualEvidenceR561';
 
@@ -14,6 +15,7 @@ export function ResultEvidencePanelR561({ result, selectedManager }: {
   const slots = buildCardSlotsViewR561(result.parsed);
   const manager = buildManagerAttributeViewR561(result, selectedManager);
   return (
+    <>
     <details className="luxury-panel" style={{ marginBlock: 12, padding: 14 }}>
       <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Evidências da carta R561 — habilidades, ímpetos e técnico</summary>
       <p className="panel-note">Os cinco slots adicionais e dois ímpetos respeitam a origem dos dados. REGISTRADO não é confirmação de posse.</p>
@@ -41,5 +43,7 @@ export function ResultEvidencePanelR561({ result, selectedManager }: {
           JSON.stringify(result.parsed.impetos ?? [])}
         result={result} />
     </details>
+    <FinalDecisionPanelR570 result={result} selectedManager={selectedManager} />
+    </>
   );
 }
