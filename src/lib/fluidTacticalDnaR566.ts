@@ -78,6 +78,8 @@ export function buildFluidTacticalAuditR566(args: {
     if (!defensiveStyle) notes.push('Estilo defensivo não identificado.');
     if (offense?.status === 'LIKELY_INACTIVE') notes.push(offense.message);
     if (defenseFinding?.status === 'LIKELY_INACTIVE') notes.push(defenseFinding.message);
+    const offensiveUnverifiedAtCmf = offense?.canonical === 'Infiltração' && fit.slot.position === 'CMF';
+    if (offensiveUnverifiedAtCmf) notes.push('Infiltração em MLG/CMF depende de comprovação em campo; não afirmar ativação.');
     const rawDefense = status(defenseFinding);
     return {
       attackSlot: fit.slot.id,
@@ -87,7 +89,7 @@ export function buildFluidTacticalAuditR566(args: {
       defensePosition: defenseSlot?.position ?? null,
       offensiveStyle,
       defensiveStyle,
-      offense: status(offense),
+      offense: offensiveUnverifiedAtCmf ? 'PENDENTE' : status(offense),
       defense: card?.defensivePlaystyleConfirmed === true ? rawDefense : 'PENDENTE',
       notes,
     };
