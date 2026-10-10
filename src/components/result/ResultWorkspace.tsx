@@ -37,6 +37,8 @@ import { APP_RELEASE_VERSION } from '@/lib/appUpdates';
 import { CLEAN_RESULT_PRIMARY_VIEWS } from '@/lib/cleanExperience';
 import { canonicalizeSkillList } from '@/lib/officialSkillIdentity';
 import { analysisUsagePositionR138 } from '@/lib/analysisUsagePositionR138';
+import type { ManagerRecord } from '@/lib/managers';
+import { buildCardSlotsViewR561, buildManagerAttributeViewR561 } from '@/lib/cardVisualEvidenceR561';
 import { CardChatConsultation } from './CardChatConsultation';
 import { POSITION_PT, TACTICAL_STYLE_NAME } from '@/lib/analyzerDomain';
 import type { DynamicRulePack } from '@/modules/builds/dynamicRules';
@@ -211,7 +213,7 @@ const ResultAdvancedWorkspaceR192 = dynamic(
 
 export type ResultTabRequest = { tab: ResultTab; token: number };
 
-export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, onSaveFicha, saveBusy = false, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onReplaceOwnedSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; saveBusy?: boolean; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onReplaceOwnedSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
+export function ResultCard({ result, selectedManager, playerImage, skillProgress, onSkillToggle, onSaveFicha, saveBusy = false, onRecalculate, onExportReport, onPrintReport, onExportImage, onExportText, onRejectSkill, onPromoteSkill, onReplaceOwnedSkill, onRejectImpeto, onPromoteImpeto, onResetCorrections, onApplyGameplayProfile, rulesUrl, setRulesUrl, rulesStatus, rulePackInfo, onLoadRulesFromUrl, onResetRules, onExportRulePack, onRestoreRulePackVersion, requestedTab, onRequestedTabHandled, advancedMode = false }: { result: AnalysisResult; selectedManager?: ManagerRecord | null; playerImage: string | null; skillProgress?: SavedSkillProgress; onSkillToggle?: (skill: string) => void; onSaveFicha?: () => void; saveBusy?: boolean; onRecalculate?: () => void; onExportReport?: () => void; onPrintReport?: () => void; onExportImage?: (format?: PremiumCleanExportFormat) => void; onExportText?: () => void; onRejectSkill?: (skill: string) => void; onPromoteSkill?: (skill: string) => void; onReplaceOwnedSkill?: (skill: string) => void; onRejectImpeto?: (impeto: string) => void; onPromoteImpeto?: (impeto: string) => void; onResetCorrections?: () => void; onApplyGameplayProfile?: (profileId: GameplayDnaProfileId) => void; rulesUrl: string; setRulesUrl: (value: string) => void; rulesStatus: string; rulePackInfo: DynamicRulePack; onLoadRulesFromUrl: () => void; onResetRules: () => void; onExportRulePack: () => void; onRestoreRulePackVersion: (version: string) => void; requestedTab?: ResultTabRequest | null; onRequestedTabHandled?: () => void; advancedMode?: boolean }) {
   const [tab, setTab] = useState<ResultTab>('resumo');
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -345,6 +347,29 @@ export function ResultCard({ result, playerImage, skillProgress, onSkillToggle, 
 
   return (
     <section className="result-panel bm2820-result-screen bm-r524-result">
+      <details className="luxury-panel" style={{ marginBlock: 12, padding: 14 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Evidências da carta R561 — habilidades, ímpetos e técnico</summary>
+        <p className="panel-note">Os 5 slots adicionais e 2 ímpetos abaixo respeitam a proveniência. REGISTRADO não é confirmação de posse.</p>
+        <div className="v27-pairing-list">
+          {buildCardSlotsViewR561(result.parsed).skills.map(slot => (
+            <span key={slot.label}>{slot.label}: {slot.value ?? '—'} [{slot.status}]</span>
+          ))}
+          {buildCardSlotsViewR561(result.parsed).boosters.map(slot => (
+            <span key={slot.label}>{slot.label}: {slot.value ?? '—'} [{slot.status}]</span>
+          ))}
+        </div>
+        {buildManagerAttributeViewR561(result, selectedManager) && (
+          <div className="v27-pairing-list">
+            <strong>{selectedManager?.name}: projeção do técnico (não é atributo observado)</strong>
+            {buildManagerAttributeViewR561(result, selectedManager)?.rows.map(row => (
+              <span key={row.key}>{row.key}: {row.status === 'APLICADO'
+                ? String(row.base) + ' + ' + row.bonus + ' = ' + row.projected + ' (PROJEÇÃO)'
+                : 'PENDENTE — + ' + row.bonus + ' não aplicado ao print'}</span>
+            ))}
+          </div>
+        )}
+        <small>A base sem bônus precisa ser comprovada separadamente. Nenhum atributo do print ou do Cofre foi alterado.</small>
+      </details>
       <section className={`result-player-hero luxury-panel bm-r524-result-hero ${heroExpanded ? 'is-expanded' : ''} ${playerImage ? 'has-card-image' : ''}`}>
         <figure className={`result-player-art ${playerImage ? 'has-card-image' : 'is-empty'}`}>
           {playerImage ? <img src={playerImage} alt={`Carta recortada de ${card.playerName}`} /> : <div className="result-player-art-empty"><Trophy size={42} /><span>Sem imagem da carta</span></div>}
